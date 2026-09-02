@@ -1,0 +1,52 @@
+{
+  "name": "Nhà máy Ngọc Sơn Thanh Hóa",
+  "short_name": "Ngọc Sơn",
+  "description": "Hệ thống quản lý & theo dõi sản xuất - Nhà máy Ngọc Sơn Thanh Hóa. Hoạt động hoàn toàn offline.",
+  "lang": "vi",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#14532d",
+  "theme_color": "#14532d",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Thêm Lô Nan Mới",
+      "short_name": "Thêm Lô",
+      "description": "Nhanh chóng thêm lô nan tre mới",
+      "url": "./index.html?action=add-batch"
+    },
+    {
+      "name": "Tổng Quan Dashboard",
+      "short_name": "Dashboard",
+      "description": "Xem tổng quan số liệu sản xuất",
+      "url": "./index.html?view=dashboard"
+    }
+  ]
+}

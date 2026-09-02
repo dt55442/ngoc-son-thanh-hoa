@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nhà máy Ngọc Sơn Thanh Hóa - Quản Lý & Theo Dõi Sản Xuất</title>
+
+  <!-- PWA Manifest & Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#14532d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ngọc Sơn">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  
+  <!-- Local Fonts: Inter & JetBrains Mono (OFFLINE) -->
+  <link rel="stylesheet" href="fonts/fonts.css">
+  
+  <!-- Local Lucide Icons (OFFLINE) -->
+  <script src="vendor/lucide.min.js"></script>
+
+  <!-- Local Chart.js (OFFLINE) -->
+  <script src="vendor/chart.umd.js"></script>
+
+  <!-- Local SheetJS xlsx (OFFLINE) -->
+  <script src="vendor/xlsx.full.min.js"></script>
+
+  <!-- Firebase SDK (ONLINE - khi mất mạng các script này lỗi và app tự chuyển OFFLINE) -->
+  <!-- Firebase SDK: nạp bản LOCAL trong vendor/ (nhanh + hoạt động offline) -->
+  <script src="vendor/firebase-app-compat.js"></script>
+  <script src="vendor/firebase-auth-compat.js"></script>
+  <script src="vendor/firebase-firestore-compat.js"></script>
+
+  <!-- CSS Style -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="light-theme">
+
+  <!-- Header Application Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-logo">
+        <div class="logo-icon">
+          <i data-lucide="factory"></i>
+        </div>
+        <div class="logo-text">
+          <h1>Nhà máy Ngọc Sơn</h1>
+          <span class="sub-title">Thanh Hóa</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Desktop & Tablet) — Dashboard là màn hình mặc định -->
+      <nav class="main-nav">
+        <button class="nav-btn active" data-target="dashboard-view" id="nav-dashboard">
+          <i data-lucide="bar-chart-3"></i>
+          <span>Tổng Quan (Dashboard)</span>
+        </button>
+        <button class="nav-btn" data-target="kanban-view" id="nav-kanban">
+          <i data-lucide="layout-grid"></i>
+          <span>Công Đoạn (Kanban)</span>
+        </button>
+        <button class="nav-btn" data-target="planning-view" id="nav-planning">
+          <i data-lucide="clipboard-list"></i>
+          <span>Kế Hoạch Sản Xuất</span>
+        </button>
+        <button class="nav-btn" data-target="press-view" id="nav-press">
+          <i data-lucide="factory"></i>
+          <span>Sản Lượng Ép Ván</span>
+        </button>
+        <button class="nav-btn" data-target="materials-view" id="nav-materials">
+          <i data-lucide="package-plus"></i>
+          <span>Nguyên Liệu</span>
+        </button>
+      </nav>
+
+      <!-- Action Tools & User Profile -->
+      <div class="header-actions">
+        <!-- Undo Button -->
+        <button class="btn btn-outline btn-icon" id="btn-undo" title="Hoàn tác thao tác (Ctrl+Z)" disabled>
+          <i data-lucide="undo-2"></i>
+        </button>
+
+        <!-- File Storage Status -->
+        <div class="file-storage-status" id="file-storage-status" title="Trạng thái lưu dữ liệu vào file (cùng thư mục với ứng dụng)">
+          <i data-lucide="hard-drive" style="width:12px;height:12px;"></i> File: Chưa kết nối
+        </div>
+
+        <!-- Nút Đăng Nhập (hiện khi CHƯA đăng nhập - chế độ xem công khai) -->
+        <button class="btn btn-primary" id="btn-open-login" style="display:none;">
+          <i data-lucide="log-in"></i>
+          <span class="hide-mobile">Đăng Nhập</span>
+        </button>
+
+        <!-- User Profile Pill -->
+        <div class="user-profile-pill" id="user-profile-badge" title="Tài khoản hiện tại">
+          <i data-lucide="user-check"></i>
+          <span class="user-name" id="current-user-name">Quản trị</span>
+          <span class="role-tag" id="current-user-role">ADMIN</span>
+        </div>
+
+        <div class="more-options-dropdown">
+          <button class="btn btn-outline btn-icon" id="btn-more-menu" title="Tùy chọn khác">
+            <i data-lucide="more-vertical"></i>
+          </button>
+          <div class="dropdown-menu" id="header-dropdown">
+            <button class="dropdown-item" id="btn-select-data-folder">
+              <i data-lucide="folder-open" style="color:#0284c7;"></i> Chọn Thư Mục Dữ Liệu (File)
+            </button>
+            <button class="dropdown-item" id="btn-disconnect-data-folder" style="display:none;">
+              <i data-lucide="folder-x" style="color:var(--danger);"></i> Ngắt Kết Nối Thư Mục
+            </button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="btn-save-local">
+              <i data-lucide="save" style="color:#15803d;"></i> Lưu Dữ Liệu Cục Bộ (Máy)
+            </button>
+            <button class="dropdown-item" id="btn-open-users-mgr">
+              <i data-lucide="users"></i> Quản Lý Người Chỉnh Sửa
+            </button>
+            <button class="dropdown-item" id="btn-dropdown-share">
+              <i data-lucide="share-2"></i> Chia Sẻ & Đồng Bộ Dữ Liệu
+            </button>
+            <button class="dropdown-item" id="btn-upload-cloud">
+              <i data-lucide="cloud-upload" style="color:#0284c7;"></i> Đồng Bộ Dữ Liệu Máy Lên Mây
+            </button>
+            <button class="dropdown-item" id="btn-dropdown-export">
+              <i data-lucide="file-spreadsheet"></i> Xuất Báo Cáo Excel Tùy Chỉnh
+            </button>
+            <button class="dropdown-item" id="btn-export-json">
+              <i data-lucide="download"></i> Sao Lưu Dữ Liệu (JSON)
+            </button>
+            <button class="dropdown-item" id="btn-import-json">
+              <i data-lucide="upload"></i> Phục Hồi Dữ Liệu (JSON)
+            </button>
+            <input type="file" id="file-import-json" accept=".json" style="display: none;">
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="btn-logout" style="color: var(--danger);">
+              <i data-lucide="log-out"></i> Đăng Xuất
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Bottom Tab Navigation — Dashboard là màn hình mặc định -->
+  <div class="mobile-bottom-nav">
+    <button class="mobile-nav-item active" data-target="dashboard-view">
+      <i data-lucide="pie-chart"></i>
+      <span>Tổng Quan</span>
+    </button>
+    <button class="mobile-nav-item" data-target="kanban-view">
+      <i data-lucide="layout-grid"></i>
+      <span>Công Đoạn</span>
+    </button>
+    <button class="mobile-nav-item" data-target="planning-view">
+      <i data-lucide="clipboard-list"></i>
+      <span>Kế Hoạch</span>
+    </button>
+    <button class="mobile-nav-item" data-target="press-view">
+      <i data-lucide="factory"></i>
+      <span>Ép Ván</span>
+    </button>
+    <button class="mobile-nav-item" data-target="materials-view">
+      <i data-lucide="package-plus"></i>
+      <span>Nguyên Liệu</span>
+    </button>
+    <button class="mobile-nav-item primary" id="mobile-add-btn">
+      <i data-lucide="plus"></i>
+      <span>Tạo Mới</span>
+    </button>
+  </div>
+
+  <!-- Main Container -->
+  <main class="app-main">
+    
+    <!-- 1. KANBAN BOARD VIEW -->
+    <section id="kanban-view" class="view-panel">
+
+      <!-- Header Bar: nút Thêm Lô Nan & Xuất Excel thuộc RIÊNG tab Công Đoạn -->
+      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
+            <i data-lucide="layout-grid"></i> Công Đoạn Sản Xuất
+          </h3>
+          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+            Theo dõi lô nan tre theo các công đoạn: Sấy 1 → Sấy 2 → Kho Lưu Trữ → Bào Tinh.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success" id="btn-open-export-modal" title="Xuất file Excel tùy chỉnh">
+            <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
+          </button>
+          <button class="btn btn-primary" id="btn-add-batch">
+            <i data-lucide="plus-circle"></i> <span class="hide-mobile">Thêm Lô Nan</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Stats Bar — chỉ hiển thị ở tab Công Đoạn (Kanban) -->
+      <section class="quick-stats-bar">
+        <div class="quick-stat-group">
+          <span class="stat-group-label"><i data-lucide="layers" style="width:12px;height:12px;"></i> Sấy 1 + Sấy 2 + Kho</span>
+          <div class="quick-stat-item">
+            <span class="stat-label">Thể tích:</span>
+            <span class="stat-value highlight" id="quick-process-vol">0.0000 m³</span>
+          </div>
+          <div class="quick-stat-item">
+            <span class="stat-label">Số thanh:</span>
+            <span class="stat-value" id="quick-process-qty">0 thanh</span>
+          </div>
+          <div class="quick-stat-item">
+            <span class="stat-label">Số lô:</span>
+            <span class="stat-value" id="quick-process-batches">0 lô</span>
+          </div>
+        </div>
+        <div class="quick-stat-divider"></div>
+        <div class="quick-stat-group quick-stat-group-bao">
+          <span class="stat-group-label"><i data-lucide="hammer" style="width:12px;height:12px;"></i> Bào Tinh</span>
+          <div class="quick-stat-item">
+            <span class="stat-label">Thể tích:</span>
+            <span class="stat-value highlight" id="quick-bao-vol">0.0000 m³</span>
+          </div>
+          <div class="quick-stat-item">
+            <span class="stat-label">Số thanh:</span>
+            <span class="stat-value" id="quick-bao-qty">0 thanh</span>
+          </div>
+          <div class="quick-stat-item">
+            <span class="stat-label">Số lô:</span>
+            <span class="stat-value" id="quick-bao-batches">0 lô</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Mobile Stage Tabs Selector -->
+      <div class="mobile-stage-tabs">
+        <button class="stage-tab active" data-stage="all">Tất cả</button>
+        <button class="stage-tab" data-stage="say1"><i class="icon-tick" aria-hidden="true"></i> Sấy 1 <span id="badge-say1">0</span></button>
+        <button class="stage-tab" data-stage="say2">Sấy 2 <span class="badge-count" id="badge-say2">0</span></button>
+        <button class="stage-tab" data-stage="kho">Kho <span class="badge-count" id="badge-kho">0</span></button>
+        <button class="stage-tab" data-stage="bao_tinh">Bào tinh <span class="badge-count" id="badge-bao-tinh">0</span></button>
+      </div>
+
+      <!-- Bộ lọc Ngày / Vị trí / Kích thước nan nằm trên từng cột Kanban -->
+
+      <!-- Thanh công cụ Kanban -->
+      <div class="kanban-toolbar">
+        <button class="btn btn-outline btn-sm" id="btn-multi-transfer">
+          <i data-lucide="list-checks"></i> Chọn nhiều lô để chuyển
+        </button>
+      </div>
+
+      <!-- Kanban Columns Container -->
+      <div class="kanban-board">
+        
+        <!-- Column 1: Sấy 1 -->
+        <div class="kanban-column" data-stage-col="say1">
+          <div class="column-filter-bar">
+            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('say1')">
+              <i data-lucide="filter"></i> Lọc Cột
+              <span class="column-filter-count" id="col-filter-count-say1"></span>
+            </button>
+            <div class="column-search-wrap">
+              <i data-lucide="search" class="column-search-icon"></i>
+              <input type="text" class="column-search-input" id="col-search-say1" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                     onfocus="app.onColumnSearchFocus('say1')" oninput="app.onColumnSearchInput('say1', this.value)"
+                     onkeydown="app.onColumnSearchKeydown(event, 'say1')">
+              <button type="button" class="column-search-clear hidden" id="col-search-clear-say1" onclick="app.clearColumnSearch('say1')" title="Xóa từ khóa tìm kiếm">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-say1">
+              <div class="column-filter-sections">
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                  <div class="filter-options" id="col-filter-dates-say1"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                  <div class="filter-options" id="col-filter-locations-say1"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                  <div class="filter-options" id="col-filter-dims-say1"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                  <div class="filter-options" id="col-filter-qtys-say1"></div>
+                </div>
+              </div>
+              <div class="column-filter-actions">
+                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('say1')">
+                  <i data-lucide="x"></i> Xóa Lọc Cột
+                </button>
+                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('say1')">
+                  <i data-lucide="check"></i> OK
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="column-header stage-say1">
+            <div class="header-title">
+              <span class="stage-dot say1"></span>
+              <h3>1. Sấy 1</h3>
+              <span class="count-badge" id="count-say1">0</span>
+            </div>
+            <div class="column-metrics">
+              <span id="vol-say1">0.000 m³</span> • <span id="qty-say1">0 thanh</span>
+            </div>
+          </div>
+          <div class="column-cards-wrapper" id="cards-say1">
+            <!-- Cards populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Column 2: Sấy 2 -->
+        <div class="kanban-column" data-stage-col="say2">
+          <div class="column-filter-bar">
+            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('say2')">
+              <i data-lucide="filter"></i> Lọc Cột
+              <span class="column-filter-count" id="col-filter-count-say2"></span>
+            </button>
+            <div class="column-search-wrap">
+              <i data-lucide="search" class="column-search-icon"></i>
+              <input type="text" class="column-search-input" id="col-search-say2" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                     onfocus="app.onColumnSearchFocus('say2')" oninput="app.onColumnSearchInput('say2', this.value)"
+                     onkeydown="app.onColumnSearchKeydown(event, 'say2')">
+              <button type="button" class="column-search-clear hidden" id="col-search-clear-say2" onclick="app.clearColumnSearch('say2')" title="Xóa từ khóa tìm kiếm">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-say2">
+              <div class="column-filter-sections">
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                  <div class="filter-options" id="col-filter-dates-say2"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                  <div class="filter-options" id="col-filter-locations-say2"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                  <div class="filter-options" id="col-filter-dims-say2"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                  <div class="filter-options" id="col-filter-qtys-say2"></div>
+                </div>
+              </div>
+              <div class="column-filter-actions">
+                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('say2')">
+                  <i data-lucide="x"></i> Xóa Lọc Cột
+                </button>
+                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('say2')">
+                  <i data-lucide="check"></i> OK
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="column-header stage-say2">
+            <div class="header-title">
+              <span class="stage-dot say2"></span>
+              <h3>2. Sấy 2</h3>
+              <span class="count-badge" id="count-say2">0</span>
+            </div>
+            <div class="column-metrics">
+              <span id="vol-say2">0.000 m³</span> • <span id="qty-say2">0 thanh</span>
+            </div>
+          </div>
+          <div class="column-cards-wrapper" id="cards-say2">
+            <!-- Cards populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Column 3: Kho -->
+        <div class="kanban-column" data-stage-col="kho">
+          <div class="column-filter-bar">
+            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('kho')">
+              <i data-lucide="filter"></i> Lọc Cột
+              <span class="column-filter-count" id="col-filter-count-kho"></span>
+            </button>
+            <div class="column-search-wrap">
+              <i data-lucide="search" class="column-search-icon"></i>
+              <input type="text" class="column-search-input" id="col-search-kho" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                     onfocus="app.onColumnSearchFocus('kho')" oninput="app.onColumnSearchInput('kho', this.value)"
+                     onkeydown="app.onColumnSearchKeydown(event, 'kho')">
+              <button type="button" class="column-search-clear hidden" id="col-search-clear-kho" onclick="app.clearColumnSearch('kho')" title="Xóa từ khóa tìm kiếm">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-kho">
+              <div class="column-filter-sections">
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                  <div class="filter-options" id="col-filter-dates-kho"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                  <div class="filter-options" id="col-filter-locations-kho"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                  <div class="filter-options" id="col-filter-dims-kho"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                  <div class="filter-options" id="col-filter-qtys-kho"></div>
+                </div>
+              </div>
+              <div class="column-filter-actions">
+                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('kho')">
+                  <i data-lucide="x"></i> Xóa Lọc Cột
+                </button>
+                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('kho')">
+                  <i data-lucide="check"></i> OK
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="column-header stage-kho">
+            <div class="header-title">
+              <span class="stage-dot kho"></span>
+              <h3>3. Kho Lưu Trữ</h3>
+              <span class="count-badge" id="count-kho">0</span>
+            </div>
+            <div class="column-metrics">
+              <span id="vol-kho">0.000 m³</span> • <span id="qty-kho">0 thanh</span>
+            </div>
+          </div>
+          <div class="column-cards-wrapper" id="cards-kho">
+            <!-- Cards populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Column 4: Bào Tinh -->
+        <div class="kanban-column" data-stage-col="bao_tinh">
+          <div class="column-filter-bar">
+            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('bao_tinh')">
+              <i data-lucide="filter"></i> Lọc Cột
+              <span class="column-filter-count" id="col-filter-count-bao-tinh"></span>
+            </button>
+            <div class="column-search-wrap">
+              <i data-lucide="search" class="column-search-icon"></i>
+              <input type="text" class="column-search-input" id="col-search-bao_tinh" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                     onfocus="app.onColumnSearchFocus('bao_tinh')" oninput="app.onColumnSearchInput('bao_tinh', this.value)"
+                     onkeydown="app.onColumnSearchKeydown(event, 'bao_tinh')">
+              <button type="button" class="column-search-clear hidden" id="col-search-clear-bao_tinh" onclick="app.clearColumnSearch('bao_tinh')" title="Xóa từ khóa tìm kiếm">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-bao_tinh">
+              <div class="column-filter-sections">
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                  <div class="filter-options" id="col-filter-dates-bao_tinh"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                  <div class="filter-options" id="col-filter-locations-bao_tinh"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                  <div class="filter-options" id="col-filter-dims-bao_tinh"></div>
+                </div>
+                <div class="filter-section">
+                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                  <div class="filter-options" id="col-filter-qtys-bao_tinh"></div>
+                </div>
+              </div>
+              <div class="column-filter-actions">
+                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('bao_tinh')">
+                  <i data-lucide="x"></i> Xóa Lọc Cột
+                </button>
+                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('bao_tinh')">
+                  <i data-lucide="check"></i> OK
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="column-header stage-bao-tinh">
+            <div class="header-title">
+              <span class="stage-dot bao_tinh"></span>
+              <h3>4. Bào Tinh</h3>
+              <span class="count-badge" id="count-bao-tinh">0</span>
+            </div>
+            <div class="column-metrics">
+              <span id="vol-bao-tinh">0.000 m³</span> • <span id="qty-bao-tinh">0 thanh</span>
+            </div>
+          </div>
+          <div class="column-cards-wrapper" id="cards-bao-tinh">
+            <!-- Cards populated dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 2. DASHBOARD VIEW (màn hình mặc định) -->
+    <section id="dashboard-view" class="view-panel active">
+
+      <!-- Stage Flow Progression Summary -->
+      <div class="dashboard-card flow-summary-card">
+        <div class="card-header">
+          <h3><i data-lucide="arrow-right-left"></i> Phân Bổ Khối Lượng Theo Công Đoạn</h3>
+        </div>
+        <div class="stage-flow-pipeline">
+          <div class="flow-step say1">
+            <div class="step-info">
+              <span class="step-name">1. Sấy 1</span>
+              <span class="step-vol" id="flow-vol-say1">0 m³</span>
+            </div>
+            <div class="step-progress-track">
+              <div class="step-progress-bar say1" id="flow-bar-say1" style="width: 0%"></div>
+            </div>
+            <span class="step-count" id="flow-count-say1">0 lô - 0 thanh</span>
+          </div>
+
+          <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+
+          <div class="flow-step say2">
+            <div class="step-info">
+              <span class="step-name">2. Sấy 2</span>
+              <span class="step-vol" id="flow-vol-say2">0 m³</span>
+            </div>
+            <div class="step-progress-track">
+              <div class="step-progress-bar say2" id="flow-bar-say2" style="width: 0%"></div>
+            </div>
+            <span class="step-count" id="flow-count-say2">0 lô - 0 thanh</span>
+          </div>
+
+          <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+
+          <div class="flow-step kho">
+            <div class="step-info">
+              <span class="step-name">3. Kho Lưu Trữ</span>
+              <span class="step-vol" id="flow-vol-kho">0 m³</span>
+            </div>
+            <div class="step-progress-track">
+              <div class="step-progress-bar kho" id="flow-bar-kho" style="width: 0%"></div>
+            </div>
+            <span class="step-count" id="flow-count-kho">0 lô - 0 thanh</span>
+          </div>
+
+          <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+
+          <div class="flow-step bao_tinh">
+            <div class="step-info">
+              <span class="step-name">4. Bào Tinh</span>
+              <span class="step-vol" id="flow-vol-bao-tinh">0 m³</span>
+            </div>
+            <div class="step-progress-track">
+              <div class="step-progress-bar bao_tinh" id="flow-bar-bao-tinh" style="width: 0%"></div>
+            </div>
+            <span class="step-count" id="flow-count-bao-tinh">0 lô - 0 thanh</span>
+          </div>
+        </div>
+      </div>
+      <!-- ======================================================= -->
+      <!-- BIỂU ĐỒ TĨNH: KẾ HOẠCH vs ĐÃ ÉP (theo sản phẩm)         -->
+      <!-- Gộp 2 nguồn dữ liệu — biểu đồ tùy chỉnh không làm được  -->
+      <!-- ======================================================= -->
+      <div class="planning-card press-chart-card pv-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Đã Ép (Theo Sản Phẩm)</h4>
+          <div class="pv-toolbar">
+            <div class="pv-unit-toggle" role="group" aria-label="Chọn đơn vị hiển thị">
+              <button type="button" class="pv-unit-btn" id="pv-unit-qty" title="Hiển thị số lượng (tấm) trên cột — chiều cao cột vẫn theo m³">Tấm</button>
+              <button type="button" class="pv-unit-btn active" id="pv-unit-vol" title="Hiển thị thể tích (m³) trên cột và trục Y">m³</button>
+            </div>
+            <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
+              <button type="button" class="pv-week-btn" id="pv-week-prev" title="Tuần trước"><i data-lucide="chevron-left"></i></button>
+              <select id="pv-week-filter" title="Hiển thị theo tuần"></select>
+              <button type="button" class="pv-week-btn" id="pv-week-next" title="Tuần sau"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <div class="filter-item">
+              <label for="pv-year-filter">Năm:</label>
+              <select id="pv-year-filter"></select>
+            </div>
+            <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
+              <i data-lucide="maximize"></i>
+            </button>
+          </div>
+        </div>
+        <div class="press-chart-box">
+          <canvas id="plan-vs-press-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- BIỂU ĐỒ TĨNH: KHẢ NĂNG ĐÁP ỨNG KẾ HOẠCH                 -->
+      <!-- So sánh "Có thể ép" (tồn khả dụng) với số Kế hoạch      -->
+      <!-- ======================================================= -->
+      <div class="planning-card press-chart-card pv-card" id="plan-capacity-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="gauge"></i> Khả Năng Đáp Ứng Kế Hoạch</h4>
+          <span class="pv-cap-hint">Xanh: đủ 100% • vàng: thiếu — rê/chạm cột để xem nguyên nhân</span>
+          <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
+            <i data-lucide="maximize"></i>
+          </button>
+        </div>
+        <!-- Bộ lọc RIÊNG của biểu đồ này (tách khỏi Kế Hoạch vs Đã Ép) -->
+        <div class="pv-cap-toolbar">
+          <div class="filter-item">
+            <label for="pv-cap-year-filter">Năm:</label>
+            <select id="pv-cap-year-filter"></select>
+          </div>
+          <div class="pv-cap-window" role="group" aria-label="Cửa sổ tuần hiển thị">
+            <button type="button" class="pv-week-btn" id="pv-cap-prev" title="Cửa sổ tuần trước"><i data-lucide="chevron-left"></i></button>
+            <input type="range" id="pv-cap-slider" class="pv-cap-slider" min="0" max="0" value="0" step="1" title="Trượt để chọn cửa sổ tuần" aria-label="Cửa sổ tuần">
+            <button type="button" class="pv-week-btn" id="pv-cap-next" title="Cửa sổ tuần sau"><i data-lucide="chevron-right"></i></button>
+            <span class="pv-cap-window-label" id="pv-cap-window-label"></span>
+          </div>
+        </div>
+        <div class="press-chart-box">
+          <canvas id="plan-capacity-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- VÙNG CƠ BẢN — mọi người đều xem được                    -->
+      <!-- ======================================================= -->
+      <div class="dash-zone" id="dash-zone-basic">
+        <div class="dash-zone-header">
+          <div class="dash-zone-title">
+            <span class="dash-zone-icon zone-basic" style="--chip-color:var(--primary);"><i data-lucide="users"></i></span>
+            <div>
+              <h3><span class="zone-badge zone-badge-basic">CƠ BẢN</span> Biểu Đồ Chung Của Các Tab</h3>
+              <p>Tổng hợp biểu đồ từ tất cả các tab (Công Đoạn, Kế Hoạch, Ép Ván, Nguyên Liệu) — mọi người đều xem được</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-primary btn-sm" id="btn-open-chart-builder">
+              <i data-lucide="plus-circle"></i> + Tạo Biểu Đồ
+            </button>
+          </div>
+        </div>
+        <!-- DYNAMIC BASIC CHARTS GRID -->
+        <div id="custom-charts-grid" class="charts-grid" style="grid-template-columns: repeat(2, 1fr);">
+          <!-- Rendered dynamically by JavaScript -->
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- VÙNG NÂNG CAO — chỉ Admin & Ban Quản Lý                 -->
+      <!-- ======================================================= -->
+      <div class="dash-zone dash-zone-advanced" id="dash-zone-advanced">
+        <div class="dash-zone-header">
+          <div class="dash-zone-title">
+            <span class="dash-zone-icon zone-advanced" style="--chip-color:#d97706;"><i data-lucide="shield"></i></span>
+            <div>
+              <h3><span class="zone-badge zone-badge-advanced">NÂNG CAO</span> Phân Tích Chuyên Sâu</h3>
+              <p>Chỉ dành cho Admin &amp; Ban Quản Lý — chứa các chỉ số nội bộ, định mức, năng suất nhân viên...</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-primary btn-sm" id="btn-add-chart-advanced" style="display:none;">
+              <i data-lucide="plus-circle"></i> + Tạo Biểu Đồ Nâng Cao
+            </button>
+          </div>
+        </div>
+        <!-- DYNAMIC ADVANCED CHARTS GRID -->
+        <div id="advanced-charts-grid" class="charts-grid" style="grid-template-columns: repeat(2, 1fr);">
+          <!-- Rendered dynamically by JavaScript -->
+        </div>
+        <!-- KHÓA: hiển thị khi không đủ quyền -->
+        <div class="zone-lock-card" id="advanced-zone-lock">
+          <div class="zone-lock-icon"><i data-lucide="lock"></i></div>
+          <h4>Vùng Nâng Cao — Được Bảo Vệ</h4>
+          <p>Nội dung chuyên sâu chỉ hiển thị cho <strong>Admin</strong> và <strong>Ban Quản Lý</strong> (hoặc người được cấp quyền riêng).<br>
+          Vui lòng liên hệ Quản trị viên nếu bạn cần quyền truy cập.</p>
+          <button class="btn btn-outline btn-sm" id="btn-open-login-lock" onclick="app.requestAdvancedAccess();">
+            <i data-lucide="log-in"></i> Đăng Nhập / Yêu Cầu Quyền
+          </button>
+        </div>
+      </div>
+
+
+    </section>
+
+    <!-- 4. KẾ HOẠCH SẢN XUẤT VIEW -->
+    <section id="planning-view" class="view-panel">
+      
+      <!-- Header Bar (không nút — nút Thêm Kế Hoạch đặt cuối card) -->
+      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
+            <i data-lucide="clipboard-list"></i> Tính Kế Hoạch Ép Ván & Bullig
+          </h3>
+          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+            Nhập định mức nguyên vật liệu cho từng loại sản phẩm, nhập kế hoạch sản xuất theo tuần, Bảng Kế Hoạch tổng hợp theo Tuần để đối chiếu với số nan hiện có
+          </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success" id="btn-open-export-planning" title="Xuất kế hoạch sản xuất ra Excel">
+            <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- BẢNG KẾ HOẠCH TỔNG HỢP (BẢNG KẾ HOẠCH MỚI) -->
+      <div class="planning-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="calendar-range"></i> Kế Hoạch Tổng Hợp Theo Tuần</h4>
+          <div class="planning-controls">
+            <div class="filter-item">
+              <label for="planning-year-filter">Năm:</label>
+              <select id="planning-year-filter"></select>
+            </div>
+            <span class="planning-assume-hint" style="font-size:0.72rem; color:var(--text-muted); display:flex; align-items:center; gap:4px;">
+              <i data-lucide="info" style="width:12px;height:12px;"></i>
+              Bấm "Giả Định" / "Xóa" ở từng tuần trong bảng
+            </span>
+          </div>
+        </div>
+        <p class="matrix-note" style="margin:0 0 6px 0; color:var(--text-muted);">
+          <i data-lucide="smartphone" style="width:12px;height:12px;vertical-align:-2px;"></i>
+          Chế độ điện thoại: TỒN= Tổng tồn · DK= Dự kiến · CN= Cần · ĐA= Đáp ứng · V/B= Ván/Bullig. Chạm giữ vào ô số để xem giá trị đầy đủ.
+        </p>
+        <div class="table-responsive">
+          <table class="data-table planning-table planning-matrix" id="planning-matrix-table">
+            <thead id="planning-matrix-head">
+              <!-- Generated by JS -->
+            </thead>
+            <tbody id="planning-matrix-body">
+              <!-- Generated by JS -->
+            </tbody>
+            <tfoot id="planning-matrix-foot">
+              <!-- Generated by JS -->
+            </tfoot>
+          </table>
+        </div>
+        <!-- Danh sách kế hoạch (quản lý các số lượng sản phẩm) -->
+        <div class="planning-list-section" id="planning-list-section"></div>
+        <div class="planning-card-footer">
+          <button class="btn btn-primary btn-sm" id="btn-add-planning-item">
+            <i data-lucide="plus-circle"></i> Thêm Kế Hoạch
+          </button>
+        </div>
+      </div>
+
+      <!-- BẢNG PHỤ: ĐỊNH MỨC (chuyển xuống dưới) -->
+      <div class="planning-card" id="rate-main-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="book-open"></i> Định Mức Nguyên Vật Liệu (Bảng Phụ)</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-rate-main" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table planning-table" id="material-rate-table">
+            <thead>
+              <tr>
+                <th>Sản Phẩm</th>
+                <th>Loại Nan 1</th>
+                <th>Số Lượng</th>
+                <th>Loại Nan 2</th>
+                <th>Số Lượng</th>
+                <th>Loại Nan 3</th>
+                <th>Số Lượng</th>
+                <th>Keo (kg)</th>
+                <th>Phụ Gia (kg)</th>
+                <th>Hiệu Suất (%)</th>
+                <th>SL Quy Đổi</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="material-rate-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="planning-card-footer">
+          <button class="btn btn-outline btn-sm" id="btn-add-material-rate">
+            <i data-lucide="plus"></i> Thêm Định Mức
+          </button>
+        </div>
+      </div>
+
+      <!-- BẢNG PHỤ 2: ĐỊNH MỨC VÁN THÔ → THÀNH PHẨM -->
+      <div class="planning-card" id="rate-bom-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="layers"></i> Định Mức Ván Thô → Thành Phẩm (Bảng Phụ)</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-rate-bom" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <p style="margin:0; padding:10px 16px; font-size:0.78rem; color:var(--text-muted);">
+          Quy đổi tồn <strong>Ván Thô</strong> (tổng hợp từ mục "Ván Thô Tạo Ra" trong các lượt ép) ra số lượng
+          <strong>Thành Phẩm</strong>: mỗi thành phẩm ghép từ 1–3 loại ván thô với tỷ lệ tương ứng.
+          Sản lượng = min(tồn từng loại ÷ tỷ lệ).
+        </p>
+        <div class="table-responsive">
+          <table class="data-table planning-table" id="product-bom-table">
+            <thead>
+              <tr>
+                <th>Thành Phẩm</th>
+                <th>Công Thức (Ván Thô × Tỷ Lệ)</th>
+                <th>Số Loại</th>
+                <th>SL Quy Đổi</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="product-bom-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="planning-card-footer">
+          <button class="btn btn-outline btn-sm" id="btn-add-product-bom">
+            <i data-lucide="plus"></i> Thêm Định Mức Ván Thô
+          </button>
+        </div>
+      </div>
+
+      <datalist id="bom-dim-list"></datalist>
+
+      <!-- MODAL: THÊM/SỬA ĐỊNH MỨC VÁN THÔ (BOM PHỤ) -->
+      <div class="modal-overlay" id="modal-product-bom">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 id="bom-modal-title"><i data-lucide="layers"></i> Thêm / Sửa Định Mức Ván Thô</h3>
+            <button class="modal-close-btn" id="btn-close-product-bom"><i data-lucide="x"></i></button>
+          </div>
+          <form id="product-bom-form" style="padding:20px;">
+            <input type="hidden" id="bom-id">
+            <div class="form-group col-span-full">
+              <label for="bom-product">Thành Phẩm <span class="required">*</span></label>
+              <select id="bom-product" required>
+                <option value="">-- Chọn thành phẩm (theo Kế hoạch sản xuất) --</option>
+              </select>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                Mỗi thành phẩm chỉ có một định mức ván thô. Danh sách lấy từ Định Mức Nguyên Vật Liệu.
+              </div>
+            </div>
+            <div class="form-group col-span-full">
+              <label>Ván Thô Cấu Thành (tối đa 3 loại) <span class="required">*</span></label>
+              <div id="bom-lines"></div>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-add-bom-line" style="margin-top:8px;">
+                <i data-lucide="plus"></i> Thêm Ván Thô
+              </button>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                <i data-lucide="info" style="width:12px; height:12px; display:inline;"></i>
+                Tỷ lệ = số tấm ván thô cần để ghép 1 tấm thành phẩm. VD: Ván 1100×260×26 = 1200×260×18 (tỷ lệ 1) + 1200×260×5 (tỷ lệ 2).
+              </div>
+            </div>
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-cancel-product-bom">Hủy Bỏ</button>
+              <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Định Mức</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL: THÊM/SỬA ĐỊNH MỨC -->
+      <div class="modal-overlay" id="modal-material-rate">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 id="material-rate-modal-title"><i data-lucide="book-open"></i> Thêm / Sửa Định Mức</h3>
+            <button class="modal-close-btn" id="btn-close-material-rate"><i data-lucide="x"></i></button>
+          </div>
+          <form id="material-rate-form" class="material-rate-form" style="padding:20px;">
+            <input type="hidden" id="mat-rate-id">
+            <div class="form-grid">
+              <div class="form-group col-span-full">
+                <label for="mat-rate-product">Tên Sản Phẩm <span class="required">*</span></label>
+                <input type="text" id="mat-rate-product" placeholder="VD: Ván 1200x300x12, Bullig 1200x200x80..." required>
+              </div>
+
+              <!-- Nan 1 -->
+              <div class="form-group col-span-full">
+                <label>Nan Loại 1</label>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                  <select id="mat-rate-nan1">
+                    <option value="">-- Chọn loại nan --</option>
+                  </select>
+                  <input type="text" id="mat-rate-nan1-qty" inputmode="decimal" placeholder="VD: 16 hoặc 1/6" title="Số thanh nan cho 1 sản phẩm. VD: 16 = 16 thanh/tấm, 1/6 = 1 thanh làm được 6 sản phẩm">
+                </div>
+              </div>
+
+              <!-- Nan 2 -->
+              <div class="form-group col-span-full">
+                <label>Nan Loại 2 <span style="font-size:0.75rem; color:var(--text-muted);">(không bắt buộc)</span></label>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                  <select id="mat-rate-nan2">
+                    <option value="">-- Chọn loại nan --</option>
+                  </select>
+                  <input type="text" id="mat-rate-nan2-qty" inputmode="decimal" placeholder="VD: 16 hoặc 1/6" title="Số thanh nan cho 1 sản phẩm. VD: 16 = 16 thanh/tấm, 1/6 = 1 thanh làm được 6 sản phẩm">
+                </div>
+              </div>
+
+              <!-- Nan 3 -->
+              <div class="form-group col-span-full">
+                <label>Nan Loại 3 <span style="font-size:0.75rem; color:var(--text-muted);">(không bắt buộc)</span></label>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                  <select id="mat-rate-nan3">
+                    <option value="">-- Chọn loại nan --</option>
+                  </select>
+                  <input type="text" id="mat-rate-nan3-qty" inputmode="decimal" placeholder="VD: 16 hoặc 1/6" title="Số thanh nan cho 1 sản phẩm. VD: 16 = 16 thanh/tấm, 1/6 = 1 thanh làm được 6 sản phẩm">
+                </div>
+              </div>
+
+              <!-- Keo & Phụ gia -->
+              <div class="form-group">
+                <label for="mat-rate-glue">Keo (kg / tấm) <span class="required">*</span></label>
+                <input type="number" id="mat-rate-glue" min="0" step="0.01" placeholder="VD: 1" required>
+              </div>
+              <div class="form-group">
+                <label for="mat-rate-additive">Phụ Gia (kg / tấm) <span class="required">*</span></label>
+                <input type="number" id="mat-rate-additive" min="0" step="0.01" placeholder="VD: 0.12" required>
+              </div>
+
+              <!-- Hiệu suất -->
+              <div class="form-group col-span-full">
+                <label for="mat-rate-efficiency">Hiệu Suất Chuyển Đổi Nan (%) <span class="required">*</span></label>
+                <input type="number" id="mat-rate-efficiency" min="1" max="100" step="1" placeholder="VD: 70 hoặc 75" required>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                  <i data-lucide="info" style="width:12px; height:12px; display:inline;"></i>
+                  Hiệu suất = % số nan đạt yêu cầu sau khi chế biến. VD: 70% nghĩa là dùng 70 nan đầu vào để đạt được đủ số nan cần thiết cho 1 tấm.
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-cancel-material-rate">Hủy Bỏ</button>
+              <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Định Mức</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL: THÊM KẾ HOẠCH -->
+      <div class="modal-overlay" id="modal-planning-item">
+        <div class="modal-card modal-sm">
+          <div class="modal-header">
+            <h3><i data-lucide="calendar-range"></i> Thêm Kế Hoạch Sản Xuất</h3>
+            <button class="modal-close-btn" id="btn-close-planning-item"><i data-lucide="x"></i></button>
+          </div>
+          <form id="planning-item-form" style="padding:20px;">
+              <div class="form-group">
+                <label for="plan-item-year">Năm Sản Xuất <span class="required">*</span></label>
+                <select id="plan-item-year" class="form-select" required>
+                  <option value="">-- Chọn năm --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="plan-item-week">Tuần Sản Xuất <span class="required">*</span></label>
+                <select id="plan-item-week" class="form-select" required>
+                  <option value="">-- Chọn tuần --</option>
+                </select>
+              </div>
+            <div class="form-group">
+              <label>Sản Phẩm (Loại Ván) <span class="required">*</span></label>
+              <div class="plan-product-selector" id="plan-product-selector">
+                <!-- Visual product cards rendered by JS -->
+              </div>
+              <input type="hidden" id="plan-item-product" required>
+            </div>
+            <div class="form-group">
+              <label for="plan-item-qty">Số Lượng (tấm) <span class="required">*</span></label>
+              <input type="number" id="plan-item-qty" min="1" step="1" placeholder="VD: 100" required>
+            </div>
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-cancel-planning-item">Hủy Bỏ</button>
+              <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Thêm Kế Hoạch</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL: NHÂN BẢN / SỬA THẺ KẾ HOẠCH -->
+      <div class="modal-overlay" id="modal-planning-edit">
+        <div class="modal-card modal-sm">
+          <div class="modal-header">
+            <h3 id="plan-edit-title"><i data-lucide="copy"></i> Nhân Bản Thẻ Kế Hoạch</h3>
+            <button class="modal-close-btn" id="btn-close-plan-edit"><i data-lucide="x"></i></button>
+          </div>
+          <form id="plan-edit-form" style="padding:20px;">
+            <input type="hidden" id="plan-edit-mode" value="dup">
+            <input type="hidden" id="plan-edit-id" value="">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="plan-edit-year">Năm Sản Xuất <span class="required">*</span></label>
+                <select id="plan-edit-year" class="form-select" required>
+                  <option value="">-- Chọn năm --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="plan-edit-week">Tuần Sản Xuất <span class="required">*</span></label>
+                <select id="plan-edit-week" class="form-select" required>
+                  <option value="">-- Chọn tuần --</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:14px;">
+              <label>Danh Sách Sản Phẩm (Loại Ván) & Số Lượng</label>
+              <div id="plan-edit-items" class="plan-edit-items"></div>
+            </div>
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-cancel-plan-edit">Hủy Bỏ</button>
+              <button type="submit" class="btn btn-success" id="btn-save-plan-edit"><i data-lucide="copy"></i> Nhân Bản</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+
+    </section>
+
+
+
+
+
+    <!-- SẢN LƯỢNG ÉP VÁN VIEW -->
+    <section id="press-view" class="view-panel">
+
+      <!-- Header Bar -->
+      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
+            <i data-lucide="factory"></i> Sản Lượng Ép Ván
+          </h3>
+          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+            Ghi nhận từng lượt ép: thanh thô từ Bào Tinh → ván thô → thành phẩm. Thành phẩm lấy theo kế hoạch sản xuất cùng tuần.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success" id="btn-open-export-press" title="Xuất sản lượng ép ván ra Excel">
+            <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KHU VỰC BIỂU ĐỒ: thể tích ván ép mỗi ngày (nhóm theo tuần) -->
+      <div class="planning-card press-chart-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="bar-chart-3"></i> Thể Tích Ván Ép Theo Ngày (Nhóm Theo Tuần)</h4>
+          <div class="planning-controls">
+            <div class="filter-item">
+              <label for="press-year-filter">Năm:</label>
+              <select id="press-year-filter"></select>
+            </div>
+            <div class="filter-item">
+              <label for="press-week-filter">Tuần:</label>
+              <select id="press-week-filter"></select>
+            </div>
+            <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
+              <i data-lucide="maximize"></i>
+            </button>
+          </div>
+        </div>
+        <div class="press-chart-box">
+          <canvas id="press-chart"></canvas>
+        </div>
+        <div class="press-chart-legend-hint">
+          <span><span class="legend-dot" style="background:#94a3b8;"></span> Ván thô (m³)</span>
+          <span><span class="legend-dot" style="background:var(--primary);"></span> Thành phẩm (m³)</span>
+        </div>
+        <div class="press-chart-footer">
+          <button class="btn btn-primary" id="btn-add-press">
+            <i data-lucide="plus-circle"></i> Thêm Lượt Ép
+          </button>
+        </div>
+      </div>
+
+      <!-- DANH SÁCH LƯỢT ÉP -->
+      <div class="planning-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="layers"></i> Danh Sách Lượt Ép Ván</h4>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table planning-table" id="press-table">
+            <thead>
+              <tr>
+                <th>Ngày (Tuần)</th>
+                <th>Thành Phẩm</th>
+                <th>Ván Thô Sử Dụng</th>
+                <th>Thanh Thô (Bào Tinh)</th>
+                <th>SL Ván Thô</th>
+                <th>SL Thành Phẩm</th>
+                <th>Keo (kg)</th>
+                <th>Phụ Gia (kg)</th>
+                <th>Công Nhân Ép</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="press-table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MODAL: THÊM / SỬA LƯỢT ÉP VÁN -->
+      <div class="modal-overlay" id="modal-press-record">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 id="press-modal-title"><i data-lucide="factory"></i> Thêm Lượt Ép Ván</h3>
+            <button class="modal-close-btn" id="btn-close-press-modal"><i data-lucide="x"></i></button>
+          </div>
+          <form id="press-record-form" style="padding:20px;">
+            <input type="hidden" id="press-id" value="">
+            <div class="form-grid">
+              <!-- Ngày ép + Tuần tự động -->
+              <div class="form-group">
+                <label for="press-date">Ngày Ép <span class="required">*</span></label>
+                <input type="date" id="press-date" required>
+              </div>
+              <div class="form-group">
+                <label for="press-week">Tuần (Tự động theo Ngày)</label>
+                <input type="text" id="press-week" readonly class="readonly-input" placeholder="Tự động tính theo Ngày">
+              </div>
+            </div>
+
+            <!-- Sử dụng thanh thô từ Bào Tinh (1..3 loại) -->
+            <div class="form-group col-span-full">
+              <label>Sử Dụng Thanh Thô (Từ Bào Tinh) <span style="font-size:0.75rem; color:var(--text-muted);">(1 đến 3 loại)</span></label>
+              <div id="press-sticks"></div>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-stick" style="margin-top:6px;">
+                <i data-lucide="plus"></i> Thêm Loại Thanh Thô
+              </button>
+            </div>
+
+            <!-- Ván thô tạo ra (1..3 loại) -->
+            <div class="form-group col-span-full">
+              <label>Ván Thô Tạo Ra <span style="font-size:0.75rem; color:var(--text-muted);">(1 đến 3 loại — chỉ nhập số lượng cho 1 loại, các loại khác để 0)</span></label>
+              <div id="press-lines"></div>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-line" style="margin-top:6px;">
+                <i data-lucide="plus"></i> Thêm Loại Ván Thô
+              </button>
+            </div>
+
+            <!-- Thành phẩm & vật tư -->
+            <div class="form-grid">
+              <div class="form-group col-span-full">
+                <label for="press-product">Thành Phẩm (Theo Kế Hoạch Cùng Tuần) <span class="required">*</span></label>
+                                <select id="press-product" required>
+                  <option value="">-- Chọn ngày để xem sản phẩm --</option>
+                </select>
+              </div>
+              <!-- Sản lượng tối đa từ ván thô có sẵn (tính năng tính sản lượng) -->
+              <div class="form-group col-span-full">
+                <div class="press-capacity-info" id="press-capacity-info"></div>
+              </div>
+              <div class="form-group">
+                <label for="press-fp-qty">Số Lượng Thành Phẩm (tấm)</label>
+                <input type="number" id="press-fp-qty" min="0" step="1" readonly class="readonly-input" placeholder="Tự động tính">
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+                  Thành phẩm 1 loại ván thô: SL = số ván thô đã ép (÷ tỷ lệ nếu khác 1) · Ghép nhiều loại: SL = số ván thô có số lượng × (thể tích ván thô ÷ thể tích thành phẩm), làm tròn xuống — chỉ nhập số lượng cho 1 loại ván thô
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="press-glue">Số Lượng Keo (kg)</label>
+                <input type="number" id="press-glue" min="0" step="0.01" placeholder="Gợi ý theo định mức">
+              </div>
+              <div class="form-group">
+                <label for="press-additive">Số Lượng Phụ Gia (kg)</label>
+                <input type="number" id="press-additive" min="0" step="0.01" placeholder="Gợi ý theo định mức">
+              </div>
+              <div class="form-group col-span-full">
+                <label for="press-worker">Tên Công Nhân Ép <span class="required">*</span></label>
+                <input type="text" id="press-worker" list="press-worker-list" placeholder="VD: Nguyễn Văn A" required>
+                <datalist id="press-worker-list"></datalist>
+              </div>
+            </div>
+
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-cancel-press">Hủy Bỏ</button>
+              <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lượt Ép</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- NHẬP NGUYÊN LIỆU VIEW -->
+    <section id="materials-view" class="view-panel">
+
+      <!-- Header Bar -->
+      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
+            <i data-lucide="package-plus"></i> Nhập Nguyên Liệu
+          </h3>
+          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+            Ghi nhận nguyên liệu nhập cho Lò hơi, Xưởng 1, Xưởng 2 — trọng lượng tự tính = chỉ số đầu vào − chỉ số đầu ra, thành tiền tự tính = trọng lượng × đơn giá.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success" id="btn-open-export-materials" title="Xuất nhật ký nguyên liệu ra Excel">
+            <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
+          </button>
+          <button class="btn btn-outline" id="btn-refresh-materials" title="Tải lại bảng">
+            <i data-lucide="refresh-cw"></i> <span class="hide-mobile">Tải Lại</span>
+          </button>
+          <button class="btn btn-primary" id="btn-add-material">
+            <i data-lucide="package-plus"></i> Nhập Nguyên Liệu
+          </button>
+        </div>
+      </div>
+
+      <!-- Bộ lọc thời gian cho thẻ KPI: Tất Cả / Tuần / Tháng / Năm -->
+      <div class="material-kpi-filter" id="material-kpi-filter"></div>
+
+      <!-- Thống kê nhanh -->
+      <div class="material-stats" id="material-stats"></div>
+
+      <!-- Tab chọn vị trí: Tất Cả / Lò hơi / Xưởng 1 / Xưởng 2 -->
+      <div class="material-tabs" id="material-location-tabs"></div>
+
+      <!-- Bảng dữ liệu -->
+      <div class="planning-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="table-2"></i> Nhật Ký Nhập Nguyên Liệu</h4>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="material-table">
+            <thead>
+              <tr>
+                <th style="width:70px;">Ảnh</th>
+                <th style="width:110px;">Ngày</th>
+                <th>Loại Nguyên Liệu</th>
+                <th>Nhà Cung Cấp</th>
+                <th style="width:100px;">Dùng Cho</th>
+                <th class="text-right" style="width:100px;">Đầu Vào</th>
+                <th class="text-right" style="width:100px;">Đầu Ra</th>
+                <th class="text-right" style="width:110px;">Trọng Lượng</th>
+                <th class="text-right" style="width:110px;">Đơn Giá (đ/kg)</th>
+                <th class="text-right" style="width:120px;">Thành Tiền</th>
+                <th class="text-right" style="width:90px;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="material-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: NHẬP / SỬA NGUYÊN LIỆU -->
+  <div class="modal-overlay" id="modal-material">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="material-modal-title"><i data-lucide="package-plus"></i> Nhập Nguyên Liệu</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-material"><i data-lucide="x"></i></button>
+      </div>
+      <form id="material-form" style="padding:20px;">
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label for="material-location">Dùng Cho (Vị Trí) <span class="required">*</span></label>
+            <select id="material-location" required></select>
+          </div>
+          <div class="form-group">
+            <label for="material-date">Ngày <span class="required">*</span></label>
+            <input type="date" id="material-date" required>
+          </div>
+          <div class="form-group">
+            <label for="material-type">Loại Nguyên Liệu <span class="required">*</span></label>
+            <input type="text" id="material-type" list="material-type-suggestions" placeholder="VD: Tre nguyên liệu, Keo UF..." required>
+            <datalist id="material-type-suggestions"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="material-supplier">Nhà Cung Cấp</label>
+            <input type="text" id="material-supplier" list="material-supplier-suggestions" placeholder="VD: Công ty TNHH A...">
+            <datalist id="material-supplier-suggestions"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="material-input">Chỉ Số Đầu Vào <span class="required">*</span></label>
+            <input type="number" id="material-input" step="any" min="0" placeholder="0" required>
+          </div>
+          <div class="form-group">
+            <label for="material-output">Chỉ Số Đầu Ra <span class="required">*</span></label>
+            <input type="number" id="material-output" step="any" min="0" placeholder="0" required>
+          </div>
+          <div class="form-group">
+            <label for="material-unit-price">Đơn Giá (đ/kg)</label>
+            <input type="number" id="material-unit-price" step="any" min="0" placeholder="0" style="text-align:right;">
+          </div>
+        </div>
+        <div class="material-weight-box">
+          <span><i data-lucide="scale"></i> Trọng Lượng (Đầu vào − Đầu ra):</span>
+          <strong id="material-weight-display">— kg</strong>
+        </div>
+        <div class="material-weight-box" style="margin-top:8px;">
+          <span><i data-lucide="banknote"></i> Thành Tiền (Trọng lượng × Đơn giá):</span>
+          <strong id="material-amount-display" style="color:#b45309;">— đ</strong>
+        </div>
+        <div class="form-group" style="margin-top:14px;">
+          <label for="material-images"><i data-lucide="camera"></i> Hình Ảnh (tối đa 6, tự nén để nhẹ)</label>
+          <input type="file" id="material-images" accept="image/*" multiple>
+          <div id="material-image-previews" class="material-image-previews"></div>
+        </div>
+        <div class="form-group">
+          <label for="material-note">Ghi Chú</label>
+          <textarea id="material-note" rows="2" placeholder="Ghi chú thêm (không bắt buộc)"></textarea>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-material">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lần Nhập</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: XEM HÌNH ẢNH (LIGHTBOX) -->
+  <div class="modal-overlay" id="modal-material-photo">
+    <div class="modal-card material-photo-card">
+      <div class="modal-header">
+        <h3 id="material-photo-caption">Hình Ảnh</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-material-photo"><i data-lucide="x"></i></button>
+      </div>
+      <div class="material-photo-body">
+        <button type="button" class="material-photo-nav material-photo-prev" id="material-photo-prev" title="Ảnh trước"><i data-lucide="chevron-left"></i></button>
+        <img id="material-photo-img" src="" alt="Hình ảnh nguyên liệu">
+        <button type="button" class="material-photo-nav material-photo-next" id="material-photo-next" title="Ảnh sau"><i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: ADD / EDIT BATCH -->
+  <div class="modal-overlay" id="modal-batch-form">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-form-title"><i data-lucide="plus-circle"></i> Thêm Lô Nan Tre Mới</h3>
+        <button class="modal-close-btn" id="btn-close-form"><i data-lucide="x"></i></button>
+      </div>
+
+      <form id="batch-form">
+        <input type="hidden" id="form-batch-id">
+
+        <div class="form-grid">
+          <!-- Ngày tạo / nhập -->
+          <div class="form-group">
+            <label for="form-date">Ngày Tạo/Nhập <span class="required">*</span></label>
+            <input type="date" id="form-date" required>
+          </div>
+
+          <!-- Tuần (Tự động) -->
+          <div class="form-group">
+            <label for="form-week">Tuần Tự Tạo theo Ngày</label>
+            <input type="text" id="form-week" readonly class="readonly-input" placeholder="Tự động tính theo Ngày">
+          </div>
+
+          <!-- Mã Lô Nan (Tự động theo YYMMDD) -->
+          <div class="form-group col-span-2">
+            <label for="form-code">Mã Lô Nan Tre (Tự động YYMMDD) <span class="required">*</span></label>
+            <div class="input-with-action">
+              <input type="text" id="form-code" placeholder="VD: 260813-01" required>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-regen-code" title="Tạo lại mã">
+                <i data-lucide="refresh-cw"></i> Tạo Mã
+              </button>
+            </div>
+          </div>
+
+          <!-- Công đoạn ban đầu -->
+          <div class="form-group">
+            <label for="form-stage">Công Đoạn Hiện Tại <span class="required">*</span></label>
+            <select id="form-stage" required>
+              <option value="say1">1. Sấy 1</option>
+              <option value="say2">2. Sấy 2</option>
+              <option value="kho">3. Kho Lưu Trữ</option>
+              <option value="bao_tinh">4. Bào Tinh</option>
+            </select>
+          </div>
+
+          <!-- Vị trí -->
+          <div class="form-group">
+            <label for="form-location">Vị Trí (Kệ/Kho/Máy) <span class="required">*</span></label>
+            <input type="text" id="form-location" placeholder="VD: LS2, K11, Bào 01" required>
+          </div>
+
+          <!-- Kích thước: Dài x Rộng x Dày (CẬP NHẬT ĐÚNG THỨ TỰ!) -->
+          <div class="form-group col-span-3">
+            <label>Kích Thước Nan (mm): <strong style="color:var(--primary);">Dài × Rộng × Dày</strong> <span class="required">*</span></label>
+            <div class="dimension-inputs">
+              <div>
+                <span class="dim-label">Dài (mm)</span>
+                <input type="number" id="form-length" step="1" min="1" placeholder="Dài" required>
+              </div>
+              <span class="dim-separator">×</span>
+              <div>
+                <span class="dim-label">Rộng (mm)</span>
+                <input type="number" id="form-width" step="0.1" min="0.1" placeholder="Rộng" required>
+              </div>
+              <span class="dim-separator">×</span>
+              <div>
+                <span class="dim-label">Dày (mm)</span>
+                <input type="number" id="form-thickness" step="0.1" min="0.1" placeholder="Dày" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Số lượng -->
+          <div class="form-group">
+            <label for="form-quantity">Số Lượng Nan (Thanh) <span class="required">*</span></label>
+            <input type="number" id="form-quantity" min="1" step="1" placeholder="VD: 5000" required>
+          </div>
+
+          <!-- Calculated Volume Box -->
+          <div class="form-group col-span-2">
+            <label>Thể Tích Quy Đổi m³</label>
+            <div class="volume-preview-box">
+              <span class="vol-num" id="form-calculated-vol">0.0000 m³</span>
+              <span class="vol-formula" id="form-formula-detail">(Dài × Rộng × Dày / 1.000.000.000) × Số Lượng</span>
+            </div>
+          </div>
+
+          <!-- Loại nan (Lựa chọn: A, A1, B) -->
+          <div class="form-group">
+            <label for="form-bamboo-type">Loại Nan <span class="required">*</span></label>
+            <select id="form-bamboo-type" required>
+              <option value="A">Loại A</option>
+              <option value="A1">Loại A1</option>
+              <option value="B">Loại B</option>
+            </select>
+          </div>
+
+          <!-- Dùng cho (lựa chọn: Ván, Bullig) -->
+          <div class="form-group">
+            <label for="form-use-for">Dùng Cho <span class="required">*</span></label>
+            <select id="form-use-for" required>
+              <option value="Ván">Ván</option>
+              <option value="Bullig">Bullig</option>
+            </select>
+          </div>
+
+          <!-- Ghi chú -->
+          <div class="form-group col-span-full">
+            <label for="form-notes">Ghi Chú Kỹ Thuật</label>
+            <textarea id="form-notes" rows="2" placeholder="Nhập ghi chú chi tiết..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btn-cancel-form">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Thẻ Nan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: TRANSFER STAGE (ĐIỀU CHUYỂN CÔNG ĐOẠN) -->
+  <div class="modal-overlay" id="modal-transfer">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="arrow-right-left"></i> Điều Chuyển Công Đoạn</h3>
+        <button class="modal-close-btn" id="btn-close-transfer"><i data-lucide="x"></i></button>
+      </div>
+
+      <form id="transfer-form">
+        <input type="hidden" id="transfer-batch-id">
+
+        <!-- Card summary info -->
+        <div class="transfer-batch-preview">
+          <div class="batch-preview-title" id="transfer-batch-title">LÔ NAN TRE: 260813-01</div>
+          <div class="batch-preview-details">
+            <div><strong>Kích thước (Dài x Rộng x Dày):</strong> <span id="transfer-preview-dim">1200 × 20 × 15 mm</span></div>
+            <div><strong>Số lượng hiện có:</strong> <span class="highlight-qty" id="transfer-preview-qty">5,000 thanh</span></div>
+            <div><strong>Thể tích hiện tại:</strong> <span id="transfer-preview-vol">0.3600 m³</span></div>
+          </div>
+        </div>
+
+        <!-- Stage Transfer Flow visual -->
+        <div class="stage-selector-group">
+          <div class="stage-from">
+            <span class="label">Từ Công Đoạn:</span>
+            <div class="stage-tag" id="transfer-from-tag">Sấy 1</div>
+          </div>
+          <i data-lucide="arrow-right" class="transfer-arrow-icon"></i>
+          <div class="stage-to">
+            <span class="label">Sang Công Đoạn:</span>
+            <select id="transfer-target-stage" class="form-select-lg" required>
+              <option value="say2">2. Sấy 2</option>
+              <option value="kho">3. Kho Lưu Trữ</option>
+              <option value="bao_tinh">4. Bào Tinh</option>
+              <option value="say1">1. Sấy 1</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Vị trí mới & Ghi chú -->
+        <div class="form-group">
+          <label for="transfer-new-location"><i data-lucide="map-pin" style="width:12px;height:12px;"></i> Vị Trí Mới</label>
+          <input type="text" id="transfer-new-location" placeholder="VD: LS2, K11, Bào 01">
+        </div>
+        <div class="form-group">
+          <label for="transfer-new-notes"><i data-lucide="file-text" style="width:12px;height:12px;"></i> Ghi Chú Mới</label>
+          <textarea id="transfer-new-notes" rows="2" placeholder="Nhập ghi chú cho công đoạn mới..."></textarea>
+        </div>
+
+        <!-- Thông báo chuyển toàn bộ lô -->
+        <div class="transfer-full-note">
+          <i data-lucide="check-circle-2"></i>
+          <span>Toàn bộ số lượng lô sẽ được chuyển sang công đoạn mới</span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btn-cancel-transfer">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="check-circle"></i> Xác Nhận Điều Chuyển</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: LOGIN OVERLAY (EMPTY FIELDS FOR MANUAL INPUT) -->
+  <div class="modal-overlay" id="modal-login">
+    <div class="modal-card modal-sm">
+      <div class="login-modal-banner">
+        <div class="logo-icon large">
+          <i data-lucide="factory"></i>
+        </div>
+        <h2>Nhà máy Ngọc Sơn Thanh Hóa</h2>
+        <p>Đăng nhập hệ thống theo dõi sản xuất</p>
+      </div>
+
+      <form id="login-form" class="login-form-body">
+        <div class="form-group">
+          <label for="login-username">Tên Đăng Nhập / Email</label>
+          <input type="text" id="login-username" placeholder="Nhập tên đăng nhập hoặc email (VD: admin)" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Mật Khẩu</label>
+          <input type="password" id="login-password" placeholder="Nhập mật khẩu" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px; width:100%;">
+          <i data-lucide="log-in"></i> Đăng Nhập
+        </button>
+
+        <button type="button" class="btn btn-outline btn-block" id="btn-toggle-register" style="width:100%; margin-top:10px;">
+          <i data-lucide="user-plus"></i> Chưa có tài khoản? Đăng Ký
+        </button>
+      </form>
+
+      <!-- Form đăng ký tài khoản (chỉ bản ONLINE - tạo tài khoản Firebase mà không cần vào console) -->
+      <form id="register-form" class="login-form-body" style="display:none; border-top:1px solid var(--border-color); margin-top:12px; padding-top:16px;">
+        <h4 style="margin:0 0 4px 0; display:flex; align-items:center; gap:6px;"><i data-lucide="user-plus"></i> Đăng Ký Tài Khoản</h4>
+        <p class="sub-text" style="margin:0 0 12px 0; font-size:0.75rem;">Tạo tài khoản đăng nhập. Tài khoản mới mặc định chỉ XEM, quản trị viên sẽ cấp quyền nhập liệu sau.</p>
+        <div class="form-group">
+          <label for="reg-email">Email</label>
+          <input type="email" id="reg-email" placeholder="email@congty.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Mật Khẩu</label>
+          <input type="password" id="reg-password" placeholder="Tối thiểu 6 ký tự" required autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="reg-password-confirm">Xác Nhận Mật Khẩu</label>
+          <input type="password" id="reg-password-confirm" placeholder="Nhập lại mật khẩu" required autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-success btn-block" style="width:100%; margin-top:12px;">
+          <i data-lucide="check-circle"></i> Tạo Tài Khoản
+        </button>
+        <button type="button" class="btn btn-outline btn-block" id="btn-back-login" style="width:100%; margin-top:8px;">Quay Lại Đăng Nhập</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: USER MANAGEMENT (ADMIN ONLY) -->
+  <div class="modal-overlay" id="modal-users-mgr">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="users"></i> Quản Lý Người Chỉnh Sửa (Admin Panel)</h3>
+        <button class="modal-close-btn" id="btn-close-users"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="users-mgr-body" style="padding: 20px;">
+        
+        <!-- Ghi chú thông minh theo chế độ Online/Offline -->
+        <div id="users-mode-note" class="users-mode-note" style="margin-bottom:14px; padding:10px 12px; border-radius:var(--radius-md); background:#eff6ff; border:1px solid #bfdbfe; font-size:0.78rem; color:#1e40af; line-height:1.6;"></div>
+
+        <!-- Add New User Form -->
+        <div class="add-user-box">
+          <h4><i data-lucide="user-plus"></i> Thêm Người Dùng & Cấp Quyền</h4>
+          <form id="add-user-form" class="form-grid" style="padding: 12px 0 0 0;">
+            <div class="form-group">
+              <label for="new-user-fullname">Họ và Tên</label>
+              <input type="text" id="new-user-fullname" placeholder="VD: Nguyễn Văn A">
+            </div>
+            <div class="form-group">
+              <label for="new-user-username">Email / Tên Đăng Nhập</label>
+              <input type="text" id="new-user-username" placeholder="VD: nguyenvana  hoặc  email@congty.com" required>
+            </div>
+            <div class="form-group" id="group-new-user-password">
+              <label for="new-user-password">Mật Khẩu</label>
+              <input type="password" id="new-user-password" placeholder="Mật khẩu (chỉ bản offline)" required>
+            </div>
+            <div class="form-group">
+              <label for="new-user-role">Vai Trò / Quyền</label>
+              <select id="new-user-role" required>
+                <option value="viewer">Người Xem (Viewer - chỉ đọc vùng cơ bản)</option>
+                <option value="editor">Người Chỉnh Sửa (Editor - sửa theo tab)</option>
+                <option value="manager">Ban Quản Lý (Manager - xem vùng nâng cao)</option>
+                <option value="admin">Quản Trị Viên (Admin - toàn quyền)</option>
+              </select>
+            </div>
+            <div class="form-group col-span-full" id="group-new-user-edit-tabs">
+              <label>Tab Được Phép Chỉnh Sửa <span style="font-size:0.75rem; color:var(--text-muted);">(áp dụng cho Editor &amp; Ban Quản Lý)</span></label>
+              <div class="edit-tabs-checks" id="new-user-edit-tabs">
+                <label class="edit-tab-check"><input type="checkbox" value="kanban" checked> Công Đoạn (Kanban)</label>
+                <label class="edit-tab-check"><input type="checkbox" value="planning" checked> Kế Hoạch Sản Xuất</label>
+                <label class="edit-tab-check"><input type="checkbox" value="press" checked> Sản Lượng Ép Ván</label>
+                <label class="edit-tab-check"><input type="checkbox" value="materials" checked> Nhập Nguyên Liệu</label>
+                <label class="edit-tab-check"><input type="checkbox" value="dashboard" checked> Dashboard (Biểu đồ)</label>
+              </div>
+            </div>
+            <div class="form-group col-span-full text-right">
+              <button type="submit" class="btn btn-success btn-sm">
+                <i data-lucide="plus"></i> Thêm / Cấp Quyền
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Registered Users Table -->
+        <h4 style="margin: 20px 0 10px 0;"><i data-lucide="list"></i> Danh Sách Người Dùng Hợp Lệ</h4>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Họ và Tên</th>
+                <th>Email / Tên Đăng Nhập</th>
+                <th>Vai Trò</th>
+                <th>Quyền Chi Tiết</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-users">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CẤU HÌNH QUYỀN CHI TIẾT THEO NGƯỜI DÙNG (ADMIN ONLY) -->
+  <div class="modal-overlay" id="modal-user-perms">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="user-perms-title"><i data-lucide="user-cog"></i> Cấu Hình Quyền Chi Tiết</h3>
+        <button class="modal-close-btn" id="btn-close-user-perms"><i data-lucide="x"></i></button>
+      </div>
+      <form id="user-perms-form" style="padding:20px;">
+        <input type="hidden" id="user-perms-target" value="">
+        <div class="form-group">
+          <label>Vai Trò</label>
+          <div class="user-perms-role-badge" id="user-perms-role-badge">—</div>
+        </div>
+        <div class="form-group">
+          <label>Tab Được Phép Chỉnh Sửa</label>
+          <div class="edit-tabs-checks" id="user-perms-edit-tabs">
+            <label class="edit-tab-check"><input type="checkbox" value="kanban"> Công Đoạn (Kanban)</label>
+            <label class="edit-tab-check"><input type="checkbox" value="planning"> Kế Hoạch Sản Xuất</label>
+            <label class="edit-tab-check"><input type="checkbox" value="press"> Sản Lượng Ép Ván</label>
+            <label class="edit-tab-check"><input type="checkbox" value="materials"> Nhập Nguyên Liệu</label>
+            <label class="edit-tab-check"><input type="checkbox" value="dashboard"> Dashboard (Biểu đồ)</label>
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+            Người dùng chỉ có thể tạo/sửa dữ liệu ở các tab được tích. Admin luôn có toàn quyền.
+          </p>
+        </div>
+        <div class="form-group">
+          <label class="edit-tab-check" style="font-size:0.85rem;">
+            <input type="checkbox" id="user-perms-allow-advanced">
+            <i data-lucide="shield" style="width:14px;height:14px;color:#d97706;"></i>
+            Được xem <strong>Vùng Nâng Cao</strong> trên Dashboard
+          </label>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+            Vùng nâng cao chứa phân tích chuyên sâu — mặc định chỉ Admin &amp; Ban Quản Lý được xem.
+          </p>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-user-perms">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Quyền</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: SHARE & DATA SYNC -->
+  <div class="modal-overlay" id="modal-share-data">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="share-2"></i> Chia Sẻ File & Đồng Bộ Dữ Liệu</h3>
+        <button class="modal-close-btn" id="btn-close-share"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="share-modal-body" style="padding: 20px;">
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:16px;">
+          Chia sẻ dữ liệu đến người chỉnh sửa khác để thông tin sản xuất luôn được cập nhật thường xuyên.
+        </p>
+
+        <!-- Option 1: Share Token Code -->
+        <div class="share-option-box">
+          <h4><i data-lucide="link"></i> 1. Mã Đồng Bộ Nhanh (Share Code)</h4>
+          <p class="sub-text">Sao chép mã dữ liệu rút gọn để gửi qua Zalo/Email cho người chỉnh sửa:</p>
+          <div class="share-token-field">
+            <input type="text" id="share-token-input" readonly class="readonly-input">
+            <button class="btn btn-primary btn-sm" id="btn-copy-token">
+              <i data-lucide="copy"></i> Sao Chép
+            </button>
+          </div>
+        </div>
+
+        <!-- Option 2: Import Sync Token / File -->
+        <div class="share-option-box" style="margin-top:16px;">
+          <h4><i data-lucide="download-cloud"></i> 2. Nạp Mã / Tệp Đồng Bộ Từ Người Khác</h4>
+          <p class="sub-text">Dán Mã Đồng Bộ nhận được từ người chỉnh sửa khác để cập nhật ngay:</p>
+          <div class="form-group">
+            <textarea id="import-token-area" rows="3" placeholder="Dán Mã Đồng Bộ (Share Code) vào đây..."></textarea>
+          </div>
+          <button class="btn btn-success btn-sm" id="btn-apply-token-sync" style="margin-top:8px; width:100%;">
+            <i data-lucide="refresh-cw"></i> Cập Nhật & Đồng Bộ Dữ Liệu Ngay
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-share">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: CUSTOM EXPORT EXCEL MODAL (.xlsx) -->
+  <div class="modal-overlay" id="modal-custom-export">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Xuất Nhật Ký Than Hóa (.xlsx)</h3>
+        <button class="modal-close-btn" id="btn-close-export-modal"><i data-lucide="x"></i></button>
+      </div>
+
+      <form id="custom-export-form" style="padding: 20px;">
+        <!-- Report Header Info -->
+        <div style="background:var(--surface-alt); border-radius:8px; padding:12px; margin-bottom:14px; border:1px solid var(--border);">
+          <p style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;">Thông tin tiêu đề báo cáo</p>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label for="export-requester" style="font-size:0.8rem;"><i data-lucide="user"></i> Họ và tên người đề nghị</label>
+            <input type="text" id="export-requester" placeholder="Ví dụ: Nguyễn Văn An" style="height:36px; font-size:0.85rem;">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="export-department" style="font-size:0.8rem;"><i data-lucide="building-2"></i> Bộ phận</label>
+            <input type="text" id="export-department" placeholder="Ví dụ: Phân Xưởng Sấy" style="height:36px; font-size:0.85rem;">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-stage-select"><i data-lucide="layers"></i> Lọc Theo Công Đoạn</label>
+          <select id="export-stage-select">
+            <option value="all">Tất Cả Công Đoạn</option>
+            <option value="say1">1. Sấy 1</option>
+            <option value="say2">2. Sấy 2</option>
+            <option value="kho">3. Kho Lưu Trữ</option>
+            <option value="bao_tinh">4. Bào Tinh</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label><i data-lucide="calendar"></i> Lọc Theo Khoảng Ngày</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Từ ngày:</span>
+              <input type="date" id="export-date-from">
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Đến ngày:</span>
+              <input type="date" id="export-date-to">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-location-select"><i data-lucide="map-pin"></i> Lọc Theo Vị Trí Lưu Kho/Kệ</label>
+          <select id="export-location-select">
+            <option value="all">Tất Cả Vị Trí</option>
+          </select>
+        </div>
+
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-export">Hủy</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 6B: XUẤT EXCEL KẾ HOẠCH SẢN XUẤT -->
+  <div class="modal-overlay" id="modal-export-planning">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Xuất Kế Hoạch Sản Xuất (.xlsx)</h3>
+        <button class="modal-close-btn" id="btn-close-export-planning"><i data-lucide="x"></i></button>
+      </div>
+      <form id="planning-export-form" style="padding: 20px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-planning-year"><i data-lucide="calendar-range"></i> Lọc Theo Năm</label>
+          <select id="export-planning-year">
+            <option value="all">Tất Cả Các Năm</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-planning-week"><i data-lucide="calendar-check"></i> Lọc Theo Tuần</label>
+          <select id="export-planning-week">
+            <option value="all">Tất Cả Các Tuần</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-planning-product"><i data-lucide="package"></i> Lọc Theo Sản Phẩm</label>
+          <select id="export-planning-product">
+            <option value="all">Tất Cả Sản Phẩm</option>
+          </select>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-export-planning">Hủy</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 6C: XUẤT EXCEL SẢN LƯỢNG ÉP VÁN -->
+  <div class="modal-overlay" id="modal-export-press">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Xuất Sản Lượng Ép Ván (.xlsx)</h3>
+        <button class="modal-close-btn" id="btn-close-export-press"><i data-lucide="x"></i></button>
+      </div>
+      <form id="press-export-form" style="padding: 20px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-press-year"><i data-lucide="calendar-range"></i> Lọc Theo Năm</label>
+          <select id="export-press-year">
+            <option value="all">Tất Cả Các Năm</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-press-week"><i data-lucide="calendar-check"></i> Lọc Theo Tuần</label>
+          <select id="export-press-week">
+            <option value="all">Tất Cả Các Tuần</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-press-product"><i data-lucide="package"></i> Lọc Theo Thành Phẩm</label>
+          <select id="export-press-product">
+            <option value="all">Tất Cả Thành Phẩm</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-press-worker"><i data-lucide="user"></i> Lọc Theo Công Nhân</label>
+          <select id="export-press-worker">
+            <option value="all">Tất Cả Công Nhân</option>
+          </select>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-export-press">Hủy</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 6D: XUẤT EXCEL NHẬT KÝ NGUYÊN LIỆU -->
+  <div class="modal-overlay" id="modal-export-materials">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Xuất Nhật Ký Nguyên Liệu (.xlsx)</h3>
+        <button class="modal-close-btn" id="btn-close-export-materials"><i data-lucide="x"></i></button>
+      </div>
+      <form id="materials-export-form" style="padding: 20px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-materials-location"><i data-lucide="map-pin"></i> Lọc Theo Vị Trí (Dùng Cho)</label>
+          <select id="export-materials-location">
+            <option value="all">Tất Cả Vị Trí</option>
+            <option value="lo-hoi">Lò hơi</option>
+            <option value="xuong-1">Xưởng 1</option>
+            <option value="xuong-2">Xưởng 2</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-materials-type"><i data-lucide="package"></i> Lọc Theo Loại Nguyên Liệu</label>
+          <select id="export-materials-type">
+            <option value="all">Tất Cả Loại</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-materials-supplier"><i data-lucide="truck"></i> Lọc Theo Nhà Cung Cấp</label>
+          <select id="export-materials-supplier">
+            <option value="all">Tất Cả Nhà Cung Cấp</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label><i data-lucide="calendar"></i> Lọc Theo Khoảng Ngày</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Từ ngày:</span>
+              <input type="date" id="export-materials-date-from">
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Đến ngày:</span>
+              <input type="date" id="export-materials-date-to">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-export-materials">Hủy</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+  <!-- MODAL 7: LƯU DỮ LIỆU CỤC BỘ -->
+  <div class="modal-overlay" id="modal-save-local">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="save"></i> Lưu Dữ Liệu Cục Bộ</h3>
+        <button class="modal-close-btn" id="btn-close-save-local"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="save-local-body" style="padding: 20px;">
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:16px;">
+          Lưu toàn bộ dữ liệu (lô nan, biểu đồ, cấu hình) thành một file trên máy tính của bạn để sao lưu hoặc chuyển sang máy khác.
+        </p>
+
+        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <i data-lucide="database" style="color:var(--primary);"></i>
+            <strong style="font-size:0.9rem;">Nội dung sẽ lưu:</strong>
+          </div>
+          <ul style="margin:0; padding-left:20px; font-size:0.82rem; color:var(--text-muted);">
+            <li>Toàn bộ lô nan tre (dữ liệu sản xuất)</li>
+            <li>Biểu đồ tùy chỉnh & vị trí sắp xếp</li>
+            <li>Danh sách người dùng & tài khoản</li>
+            <li>Cấu hình hệ thống</li>
+          </ul>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <button class="btn btn-primary" id="btn-save-local-file" style="justify-content:center; padding:10px;">
+            <i data-lucide="download"></i> Lưu File (.json)
+          </button>
+          <button class="btn btn-success" id="btn-load-local-file" style="justify-content:center; padding:10px;">
+            <i data-lucide="upload"></i> Nạp File Đã Lưu
+          </button>
+        </div>
+        <input type="file" id="file-load-local" accept=".json" style="display: none;">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-save-local">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 8: CUSTOM CHART BUILDER & CUSTOMIZER -->
+  <div class="modal-overlay" id="modal-chart-builder">
+    <div class="modal-card" style="max-width: 780px;">
+      <div class="modal-header">
+        <h3 id="chart-builder-modal-title">
+          <i data-lucide="sliders"></i> Tạo & Tùy Chỉnh Biểu Đồ Dashboard
+        </h3>
+        <button class="modal-close-btn" id="btn-close-chart-builder"><i data-lucide="x"></i></button>
+      </div>
+
+      <form id="chart-builder-form" style="padding: 20px; max-height: calc(85vh - 120px); overflow-y: auto;">
+        <input type="hidden" id="builder-chart-id" value="">
+
+        <!-- Top Section: Title & Chart Type -->
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-title" style="font-weight:600;">
+              <i data-lucide="type"></i> Tên Biểu Đồ
+            </label>
+            <input type="text" id="builder-title" placeholder="VD: Phân bổ Thể tích theo Vị trí lưu kho" required>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-type" style="font-weight:600;">
+              <i data-lucide="bar-chart-3"></i> Loại Biểu Đồ
+            </label>
+            <select id="builder-type" required>
+              <option value="bar">📊 Cột Đứng (Vertical Bar)</option>
+              <option value="horizontalBar">📊 Cột Ngang (Horizontal Bar)</option>
+              <option value="line">📈 Đường Xu Hướng (Line)</option>
+              <option value="pie">🥧 Biểu Đồ Tròn (Pie)</option>
+              <option value="doughnut">🍩 Biểu Đồ Vành Khăn (Doughnut)</option>
+              <option value="stackedBar">📑 Cột Xếp Chồng (Stacked Bar)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- NGUỒN DỮ LIỆU & VÙNG HIỂN THỊ & ĐỘ RỘNG -->
+        <div style="display:grid; grid-template-columns: 1.4fr 1fr 1fr; gap:12px; margin-bottom:14px; padding:12px; background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-source" style="font-weight:600;">
+              <i data-lucide="database"></i> Nguồn Dữ Liệu (Tab)
+            </label>
+            <select id="builder-source">
+              <option value="kanban">Công Đoạn (Lô Nan)</option>
+              <option value="planning">Kế Hoạch Sản Xuất</option>
+              <option value="press">Sản Lượng Ép Ván</option>
+              <option value="materials">Nhập Nguyên Liệu</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-zone" style="font-weight:600;">
+              <i data-lucide="shield"></i> Vùng Hiển Thị
+            </label>
+            <select id="builder-zone">
+              <option value="basic">Cơ Bản (mọi người)</option>
+              <option value="advanced">Nâng Cao (Admin/BQL)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-width" style="font-weight:600;">
+              <i data-lucide="move-horizontal"></i> Độ Rộng Thẻ
+            </label>
+            <select id="builder-width">
+              <option value="half">Nửa hàng (mặc định)</option>
+              <option value="full">Toàn hàng</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Middle Section: Grouping & Metric -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-group-by" style="font-weight:600;">
+              <i data-lucide="list-tree"></i> Phân Nhóm Chính (Trục X)
+            </label>
+            <select id="builder-group-by" required>
+              <option value="stage">1. Theo Công Đoạn (Sấy 1, Sấy 2, Kho, Bào tinh)</option>
+              <option value="thickness">2. Theo Độ Dày Nan (Nan 6mm, 7mm, 8mm...)</option>
+              <option value="dimFull">3. Theo Kích Thước Đầy Đủ Dài × Rộng × Dày</option>
+              <option value="bambooType">4. Theo Loại Nan (Loại A, Loại A1, Loại B)</option>
+              <option value="useFor">5. Theo Mục Đích Sử Dụng (Ván, Bullig)</option>
+              <option value="location">6. Theo Vị Trí Lưu Kho / Kệ Sấy</option>
+              <option value="week">7. Theo Tuần Sản Xuất</option>
+              <option value="date">8. Theo Ngày Nhập / Chế Biến</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-metric" style="font-weight:600;">
+              <i data-lucide="calculator"></i> Chỉ Số Tính Toán (Metric)
+            </label>
+            <select id="builder-metric" required>
+              <option value="volume">Tổng Thể Tích Nan ($m^3$)</option>
+              <option value="quantity">Tổng Số Lượng Thanh (Thanh)</option>
+              <option value="batchCount">Số Lượng Lô Nan (Lô)</option>
+              <option value="avgVolume">Thể Tích Trung Bình / Lô ($m^3$)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Stacking & Color Palette -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-stack-by" style="font-weight:600;">
+              <i data-lucide="layers"></i> Phân Nhóm Phụ / Xếp Tầng (Sub-group)
+            </label>
+            <select id="builder-stack-by">
+              <option value="none">Không phân nhóm phụ (Đơn)</option>
+              <option value="stage">Phân theo Công Đoạn</option>
+              <option value="dimRatio">Theo Quy Cách Dài × Rộng</option>
+              <option value="bambooType">Phân theo Loại Nan (A / A1 / B)</option>
+              <option value="useFor">Phân theo Dùng Cho (Ván / Bullig)</option>
+              <option value="location">Phân theo Vị Trí Kho</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="builder-palette" style="font-weight:600;">
+              <i data-lucide="palette"></i> Bảng Màu Sắc
+            </label>
+            <select id="builder-palette">
+              <option value="vibrant">🌈 Đa Sắc Rực Rỡ (Vibrant Multi)</option>
+              <option value="green">🌿 Xanh Tre Tự Nhiên (Bamboo Forest)</option>
+              <option value="amber">🍂 Vàng Hổ Phách (Warm Amber)</option>
+              <option value="blue">🌊 Xanh Biển Sâu (Ocean Blue)</option>
+              <option value="purple">🔮 Tím Thạch Anh (Royal Purple)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Filters Box: nội dung bộ lọc được sinh động theo nguồn dữ liệu (dashboard.js → renderBuilderFilters) -->
+        <div id="builder-filters-box" style="background:var(--surface-alt); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px;"></div>
+
+        <!-- Preview Canvas -->
+        <div class="chart-builder-preview-box" style="margin-top:8px;">
+          <p style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;">
+            <i data-lucide="eye"></i> Xem Trước
+          </p>
+          <div style="position:relative; width:100%; height:220px; background:var(--bg-subtle); border-radius:8px; overflow:hidden;">
+            <canvas id="chart-builder-preview-canvas" style="width:100% !important; height:100% !important;"></canvas>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-builder-refresh-preview" style="margin-top:8px;">
+            <i data-lucide="refresh-cw"></i> Làm Mới Xem Trước
+          </button>
+        </div>
+
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-chart-builder">Hủy</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Biểu Đồ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Floating bar: chuyển nhiều lô cùng lúc -->
+  <div class="multi-transfer-bar" id="multi-transfer-bar">
+    <div class="mtb-info">
+      <i data-lucide="list-checks"></i>
+      <span>Đã chọn <strong id="mtb-count">0</strong> lô</span>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-mtb-select-all">Chọn tất cả</button>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-mtb-clear">Bỏ chọn</button>
+    </div>
+    <div class="mtb-actions">
+      <select id="mtb-target-stage">
+        <option value="">-- Chọn công đoạn đến --</option>
+        <option value="say1">1. Sấy 1</option>
+        <option value="say2">2. Sấy 2</option>
+        <option value="kho">3. Kho Lưu Trữ</option>
+        <option value="bao_tinh">4. Bào Tinh</option>
+      </select>
+      <input type="text" id="mtb-new-location" placeholder="Vị trí cho mọi lô (trống = giữ cũ)" title="Vị Trí mới áp dụng cho TẤT CẢ các lô được chuyển. Để trống nếu muốn giữ vị trí hiện có của từng lô." autocomplete="off">
+      <input type="text" id="mtb-new-notes" placeholder="Ghi chú cho mọi lô (trống = giữ cũ)" title="Ghi Chú mới áp dụng cho TẤT CẢ các lô được chuyển. Để trống nếu muốn giữ ghi chú hiện có của từng lô." autocomplete="off">
+      <button type="button" class="btn btn-success btn-sm" id="btn-mtb-confirm">
+        <i data-lucide="arrow-right-left"></i> Chuyển
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" id="btn-mtb-cancel">Thoát</button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- App Script -->
+  <script src="firebase-config.js"></script>
+  <script type="module" src="js/main.js"></script>
+
+  <!-- BOOT WATCHDOG: phát hiện lỗi nạp (mở trực tiếp file:// hoặc cache/SW cũ chặn module) -->
+  <script>
+  (function () {
+    'use strict';
+    function show(title, linesHtml) {
+      if (document.getElementById('boot-guard')) return;
+      var d = document.createElement('div');
+      d.id = 'boot-guard';
+      d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.9);display:flex;align-items:center;justify-content:center;padding:16px';
+      var h = ['<div style="max-width:540px;background:#fff;border-radius:12px;padding:22px;font-family:sans-serif;color:#0f172a">'];
+      h.push('<h2 style="margin:0 0 8px;font-size:18px">' + title + '</h2>');
+      linesHtml.forEach(function (t) { h.push('<p style="margin:6px 0;font-size:14px;line-height:1.55">' + t + '</p>'); });
+      h.push('<button id="boot-fix-btn" style="margin-top:12px;padding:9px 16px;font-size:14px;background:#2563eb;color:#fff;border:0;border-radius:8px;cursor:pointer">Khắc phục &amp; tải lại</button>');
+      h.push('</div>');
+      d.innerHTML = h.join('');
+      document.body.appendChild(d);
+      document.getElementById('boot-fix-btn').addEventListener('click', function () {
+        var fin = function () { location.reload(); };
+        var clean = function () {};
+        try {
+          if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations && 'caches' in window) {
+            navigator.serviceWorker.getRegistrations().then(function (rs) {
+              rs.forEach(function (r) { r.unregister(); });
+              return caches.keys();
+            }).then(function (keys) {
+              keys.forEach(function (k) { caches.delete(k); });
+            }).catch(function () {}).then(fin);
+          } else { fin(); }
+        } catch (e) { clean(); fin(); }
+      });
+    }
+    // 1) Mở trực tiếp qua file:// -> ES Modules luôn bị trình duyệt chặn
+    if (location.protocol === 'file:') {
+      window.addEventListener('DOMContentLoaded', function () {
+        show('Không thể chạy khi mở trực tiếp file HTML',
+          ['Ứng dụng dùng JavaScript Module nên cần chạy qua một máy chủ cục bộ.',
+           '<b>Cách mở đúng:</b> nhấp đúp vào <b>chay_app.bat</b> trong thư mục ứng dụng, giữ cửa sổ đó mở, rồi truy cập <b>http://localhost:8080</b> trên trình duyệt.']);
+      });
+      return;
+    }
+    // 2) Qua HTTP nhưng sau vài giây app vẫn chưa boot -> nghi Service Worker/cache cũ
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        if (!window.__BOOT_OK) {
+          show('Ứng dụng chưa khởi động được',
+            ['Trình duyệt có thể đang dùng <b>Service Worker / dữ liệu cache của phiên bản cũ</b>.',
+             'Bấm nút bên dưới để gỡ sạch cache cũ và tải lại bản mới nhất.']);
+        }
+      }, 4000);
+    });
+  })();
+  </script>
+</body>
+</html>

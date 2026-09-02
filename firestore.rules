@@ -1,0 +1,85 @@
+// ============================================
+// FIRESTORE SECURITY RULES - Bamboo Tracker
+// Dán vào: Firebase Console -> Firestore Database -> Rules -> Publish
+// Phiên bản: v2 (cú pháp chuẩn đã kiểm chứng - dùng 'in' / 'diff', KHÔNG dùng .has()/+)
+// ============================================
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── HÀM TIỆN ÍCH ──────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function userEmail() {
+      return (isSignedIn()
+              && request.auth.token.email != null)
+             ? request.auth.token.email.toLowerCase()
+             : '';
+    }
+
+    // >>> CHỦ SỞ HỮU HỆ THỐNG: đây là "chìa khóa cứu hộ" — owner luôn có quyền Admin
+    // kể cả khi doc quyền bị hỏng. Phải KHỚP với ownerEmail trong firebase-config.js <<<
+    function isOwner() {
+      return userEmail() == 'dt55442@gmail.com';
+    }
+
+    function rolesData() {
+      return get(/databases/$(database)/documents/settings/roles).data;
+    }
+    // Có guard tồn tại TRƯỚC để tránh lỗi get() khi doc chưa được tạo (bootstrap)
+    function rolesHas(field) {
+      return exists(/databases/$(database)/documents/settings/roles)
+             && rolesData()[field] != null
+             && userEmail() != ''
+             && userEmail() in rolesData()[field];
+    }
+    function isAdmin() {
+      return isSignedIn() && (isOwner() || rolesHas('adminEmails'));
+    }
+    function isEditor() {
+      return isAdmin() || rolesHas('editorEmails');
+    }
+
+    // ── DỮ LIỆU ỨNG DỤNG (apps/main) ──────────────
+    // AI CŨNG ĐỌC ĐƯỢC (xem công khai).
+    // GHI: editor/admin. Bootstrap: nếu mây CHƯA có doc quyền -> người đăng nhập đầu tiên được tạo.
+    match /apps/{doc} {
+      allow read: if true;
+      allow create: if isSignedIn()
+                    && (!exists(/databases/$(database)/documents/settings/roles)
+                        || isEditor());
+      allow update: if isEditor();
+      allow delete: if isAdmin();
+    }
+
+    // ── QUYỀN (settings/roles) ────────────────────
+    // - Người đăng nhập ĐẦU TIÊN tạo doc này và trở thành Admin duy nhất
+    //   (bắt buộc adminEmails == [email của chính họ]).
+    // - Sau đó CHỈ Admin sửa được.
+    match /settings/roles {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && !exists(/databases/$(database)/documents/settings/roles)
+                    && request.resource.data.adminEmails == [request.auth.token.email];
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── TÊN HIỂN THỊ (settings/displayNames) ──────
+    // Admin sửa được hết; người thường chỉ tự đổi tên của chính mình.
+    match /settings/displayNames {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.size() == 1
+                    && request.resource.data.keys()[0] == userEmail();
+      allow update: if isAdmin()
+                    || (isSignedIn()
+                        && userEmail() in request.resource.data.keys()
+                        && resource.data[userEmail()] != null
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly([userEmail()]));
+      allow delete: if isAdmin();
+    }
+  }
+}

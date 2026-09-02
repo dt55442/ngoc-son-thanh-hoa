@@ -174,6 +174,34 @@ check('CD: Độ dày sắp số học 7 < 10 < 11', thVals.join(',') === '7,10,
 const planWeekPairs = dash.BUILDER_SCHEMA.planning.filters.find(f => f.id === 'week').options().map(dash.asOptPair);
 check('KH: bộ lọc Tuần không còn nhãn undefined', planWeekPairs.length >= 2 && planWeekPairs.every(([, l]) => l !== undefined && l !== 'undefined'));
 
+console.log('--- PHÂN NHÓM PHỤ "DÀI × RỘNG" (dimRatio) CỦA NGUỒN CÔNG ĐOẠN ---');
+
+// Option đã mở khóa trong dropdown "Phân Nhóm Phụ / Xếp Tầng" của nguồn Công Đoạn
+const dimRatioPair = dash.BUILDER_SCHEMA.kanban.stackBy.find(([v]) => v === 'dimRatio');
+check('CD: stackBy có option dimRatio', !!dimRatioPair);
+check('CD: nhãn dimRatio thân thiện (không undefined/rỗng)', !!dimRatioPair && String(dimRatioPair[1]).trim() !== '' && dimRatioPair[1] !== 'undefined');
+// Phụ đề thẻ biểu đồ ("Xếp tầng: ...") tra nhãn từ schema.groupBy → phải có dimRatio
+check('CD: groupBy có dimRatio (tra nhãn phụ đề "Xếp tầng")', dash.BUILDER_SCHEMA.kanban.groupBy.some(([v]) => v === 'dimRatio'));
+
+// Tổng hợp xếp tầng theo Dài × Rộng — trùng quy cách dù KHÁC độ dày vẫn gộp chung
+state.batches = [
+  { id: 'd1', code: 'D01', stage: 'say1', quantity: 100, volume: 1.0, length: 1250, width: 18, thickness: 7, date: '2026-08-01' },
+  { id: 'd2', code: 'D02', stage: 'say1', quantity: 200, volume: 2.0, length: 1250, width: 18, thickness: 8, date: '2026-08-02' },
+  { id: 'd3', code: 'D03', stage: 'kho',  quantity: 300, volume: 3.0, length: 1250, width: 22, thickness: 7, date: '2026-08-03' },
+  { id: 'd4', code: 'D04', stage: 'bao_tinh', quantity: 50, volume: 0.5, length: 950, width: 15, thickness: 6, date: '2026-08-04' }
+];
+const dimStack = xlsx.computeChartData({ type: 'stackedBar', source: 'kanban', groupBy: 'stage', stackBy: 'dimRatio', metric: 'quantity' }, state.batches);
+check('CD: xếp tầng Dài×Rộng có 3 dataset', dimStack.datasets.length === 3);
+check('CD: nhãn dataset đúng format "1250×18 mm"', dimStack.datasets.map(d => d.label).join('|') === '950×15 mm|1250×18 mm|1250×22 mm');
+check('CD: gộp đúng 1250×18 = 100+200 = 300 (bỏ qua độ dày)', dimStack.datasets.find(d => d.label === '1250×18 mm').data.reduce((a, b) => a + b, 0) === 300);
+check('CD: 1250×22 = 300', dimStack.datasets.find(d => d.label === '1250×22 mm').data.reduce((a, b) => a + b, 0) === 300);
+check('CD: 950×15 = 50', dimStack.datasets.find(d => d.label === '950×15 mm').data.reduce((a, b) => a + b, 0) === 50);
+// Sắp số học tự nhiên: 950×15 đứng TRƯỚC 1250×18 (chữ '1250' < '950' là SAI)
+check('CD: sắp số học 950×15 đứng trước 1250×18', dimStack.datasets[0].label === '950×15 mm');
+// Nhóm trục X theo Dài × Rộng cũng hoạt động
+const dimGroup = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'dimRatio', metric: 'quantity' }, state.batches);
+check('CD: nhóm chính Dài×Rộng → 3 nhãn, tổng 650', dimGroup.labels.length === 3 && dimGroup.datasets[0].data.reduce((a, b) => a + b, 0) === 650);
+
 console.log('--- KHẢ NĂNG ĐÁP ỨNG KẾ HOẠCH (bottleneck từ BOM phụ) ---');
 // Dùng đúng ID đang có trong materialRates ở đầu file: rate-live1 (còn định mức)
 // và rate-1756759612345 (mồ côi — không có định mức) cho nhánh "không tính được".

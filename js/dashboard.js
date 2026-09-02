@@ -256,7 +256,18 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
             legend: {
               display: ['pie', 'doughnut'].includes(chartDef.type) || (chartDef.stackBy && chartDef.stackBy !== 'none'),
               position: 'top',
-              labels: { font: { size: 11 }, boxWidth: 12 }
+              labels: {
+                font: { size: 11, weight: 'bold' },
+                boxWidth: 12,
+                // Mỗi nhãn legend được tô ĐÚNG màu của chuỗi dữ liệu tương ứng
+                // (pie/doughnut: màu theo từng lát; cột: màu theo từng tầng/dataset)
+                // → các tên nhãn nổi bật bằng màu sắc khác nhau, phân biệt tức thì
+                color: (c) => {
+                  const bg = c.dataset && c.dataset.backgroundColor;
+                  if (Array.isArray(bg)) return bg[c.index != null ? c.index : c.datasetIndex] || bg[0] || '#334155';
+                  return (typeof bg === 'string' && bg) ? bg : '#334155';
+                }
+              }
             },
             tooltip: {
               callbacks: {
@@ -748,14 +759,14 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       label: 'Công Đoạn (Lô Nan)',
       groupBy: [
         ['stage', 'Công Đoạn'], ['thickness', 'Độ Dày'], ['dimFull', 'Kích Thước Đầy Đủ'],
-        ['bambooType', 'Loại Nan'], ['useFor', 'Dùng Cho'], ['location', 'Vị Trí Lưu Kho'],
-        ['week', 'Tuần Nhập'], ['date', 'Ngày Nhập']
+        ['dimRatio', 'Dài × Rộng'], ['bambooType', 'Loại Nan'], ['useFor', 'Dùng Cho'],
+        ['location', 'Vị Trí Lưu Kho'], ['week', 'Tuần Nhập'], ['date', 'Ngày Nhập']
       ],
       metric: [
         ['volume', 'Thể Tích (m³)'], ['quantity', 'Số Lượng (thanh)'],
         ['batchCount', 'Số Lô'], ['avgVolume', 'Thể Tích TB / Lô']
       ],
-      stackBy: [['none', 'Không xếp tầng'], ['bambooType', 'Loại Nan'], ['useFor', 'Dùng Cho'], ['location', 'Vị Trí Lưu Kho'], ['week', 'Tuần Nhập'], ['stage', 'Công Đoạn'], ['thickness', 'Độ Dày']],
+      stackBy: [['none', 'Không xếp tầng'], ['dimRatio', 'Dài × Rộng (1250×18, 1250×22...)'], ['bambooType', 'Loại Nan'], ['useFor', 'Dùng Cho'], ['location', 'Vị Trí Lưu Kho'], ['week', 'Tuần Nhập'], ['stage', 'Công Đoạn'], ['thickness', 'Độ Dày']],
       filters: [
         { id: 'stage',      label: 'Công Đoạn',      type: 'select', options: () => Object.entries(STAGES).map(([v, s]) => [v, s.short || s.name || v]) },
         { id: 'bambooType', label: 'Loại Nan',       type: 'select', options: () => uniqSorted(state.batches.map(b => b.bambooType)) },
@@ -904,6 +915,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       if (titleEl) titleEl.innerHTML = `<i data-lucide="sliders"></i> Tạo Biểu Đồ Mới`;
       document.getElementById('builder-chart-id').value = '';
       document.getElementById('builder-title').value = 'Biểu Đồ Mới';
+      // Xoay vòng bảng màu mặc định theo số biểu đồ hiện có → biểu đồ mới liên tiếp
+      // có chuỗi màu KHÁC nhau (vibrant → purple → amber → blue → green), dễ phân biệt
+      const PAL_CYCLE = ['vibrant', 'purple', 'amber', 'blue', 'green'];
+      const palSelNew = document.getElementById('builder-palette');
+      if (palSelNew) palSelNew.value = PAL_CYCLE[(state.customCharts.length || 0) % PAL_CYCLE.length];
     }
 
     // Nguồn dữ liệu & Vùng & Độ rộng

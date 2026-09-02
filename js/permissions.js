@@ -25,10 +25,10 @@ export const ROLE_ORDER = ['admin', 'manager', 'editor', 'viewer'];
 // Khi thêm tab mới: thêm 1 dòng tại đây — Dashboard, vùng biểu đồ và
 // bảng phân quyền sẽ tự động nhận tab mới.
 export const APP_TABS = [
-  { id: 'kanban',   viewId: 'kanban-view',   name: 'Công Đoạn (Kanban)', short: 'Công Đoạn',  icon: 'layout-grid',    color: 'var(--primary)' },
+  { id: 'kanban',   viewId: 'kanban-view',   name: 'Công Đoạn (Kanban)', short: 'Công Đoạn',  icon: 'layout-grid',    color: '#059669' },
   { id: 'planning', viewId: 'planning-view', name: 'Kế Hoạch Sản Xuất',  short: 'Kế Hoạch',   icon: 'clipboard-list', color: '#7c3aed' },
   { id: 'press',    viewId: 'press-view',    name: 'Sản Lượng Ép Ván',   short: 'Ép Ván',     icon: 'factory',        color: '#ea580c' },
-  { id: 'materials',viewId: 'materials-view',name: 'Nhập Nguyên Liệu',   short: 'Nguyên Liệu',icon: 'package-plus',   color: '#059669' }
+  { id: 'materials',viewId: 'materials-view',name: 'Nhập Nguyên Liệu',   short: 'Nguyên Liệu',icon: 'package-plus',   color: '#db2777' }
 ];
 
 // Tab dùng cho chỉnh sửa = các tab dữ liệu + Dashboard (biểu đồ)

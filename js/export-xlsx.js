@@ -928,8 +928,10 @@ import { friendlyMaterialWeek, materialLocationLabel } from './materials.js';
         table[gKey][subKey] = (table[gKey][subKey] || 0) + getMetricValue(b, chartDef.metric);
       });
 
-      const sortedGroupKeys = Array.from(groupKeys).sort();
-      const sortedSubKeys = Array.from(subGroupKeys).sort();
+      // Sắp số học tự nhiên (giống các nguồn khác): "950×15 mm" đứng trước "1250×18 mm",
+      // "Tuần 2" trước "Tuần 10" — KHÔNG dùng .sort() chữ vì '1250' < '950' sai thứ tự
+      const sortedGroupKeys = sortKeysSmart(Array.from(groupKeys));
+      const sortedSubKeys = sortKeysSmart(Array.from(subGroupKeys));
       const colors = getPaletteColors(chartDef.palette);
 
       const datasets = sortedSubKeys.map((subK, idx) => ({

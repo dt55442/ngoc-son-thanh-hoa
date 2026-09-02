@@ -265,6 +265,24 @@ h1, h2, h3, h4, h5 {
   }
 }
 
+/* Màu đặc trưng cho từng tab điều hướng (desktop .nav-btn + mobile .mobile-nav-item).
+   Được tái sử dụng cho trạng thái hover và highlight tab đang chọn. */
+.nav-btn[data-target="dashboard-view"],   .mobile-nav-item[data-target="dashboard-view"] {
+  --tab-accent: #0284c7; --tab-accent-soft: rgba(2, 132, 199, 0.14);
+}
+.nav-btn[data-target="kanban-view"],      .mobile-nav-item[data-target="kanban-view"] {
+  --tab-accent: #059669; --tab-accent-soft: rgba(5, 150, 105, 0.14);
+}
+.nav-btn[data-target="planning-view"],    .mobile-nav-item[data-target="planning-view"] {
+  --tab-accent: #7c3aed; --tab-accent-soft: rgba(124, 58, 237, 0.14);
+}
+.nav-btn[data-target="press-view"],       .mobile-nav-item[data-target="press-view"] {
+  --tab-accent: #ea580c; --tab-accent-soft: rgba(234, 88, 12, 0.14);
+}
+.nav-btn[data-target="materials-view"],   .mobile-nav-item[data-target="materials-view"] {
+  --tab-accent: #db2777; --tab-accent-soft: rgba(219, 39, 119, 0.14);
+}
+
 .nav-btn {
   display: flex;
   align-items: center;
@@ -280,15 +298,18 @@ h1, h2, h3, h4, h5 {
   transition: var(--transition-fast);
 }
 
+/* Hover: chữ + icon đổi sang màu đặc trưng của tab đó */
 .nav-btn:hover {
-  color: var(--text-main);
+  color: var(--tab-accent, var(--text-main));
 }
 
+/* Tab đang chọn: nền thẻ trắng, chữ/icon màu đặc trưng, gạch chân đậm màu tab + quầng sáng nhạt */
 .nav-btn.active {
   background-color: var(--bg-card);
-  color: var(--primary);
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
+  color: var(--tab-accent, var(--primary));
+  font-weight: 700;
+  box-shadow: 0 2px 10px var(--tab-accent-soft, rgba(41, 128, 197, 0.25)),
+              inset 0 -3px 0 var(--tab-accent, var(--primary));
 }
 
 .header-actions {
@@ -467,9 +488,12 @@ h1, h2, h3, h4, h5 {
   height: 22px;
 }
 
+/* Tab mobile đang chọn: pill nền màu nhạt + chữ/icon màu đặc trưng của tab đó */
 .mobile-nav-item.active {
-  color: var(--primary);
-  font-weight: 600;
+  color: var(--tab-accent, var(--primary));
+  font-weight: 700;
+  background: var(--tab-accent-soft, rgba(41, 128, 197, 0.12));
+  border-radius: 12px;
 }
 
 .mobile-nav-item.primary {
@@ -1832,8 +1856,18 @@ h1, h2, h3, h4, h5 {
   margin: 2px 0 0 0;
 }
 
-/* Chip (nguồn/vùng) trên nắp thư mục: nền trắng mờ cho dễ đọc */
-.custom-chart-card .custom-card-header .chart-source-chip,
+/* Chip nguồn (tab) trên nắp thư mục: VIÊN TRẮNG NỔI BẬT với chữ màu riêng của tab
+   (Công Đoạn = xanh lá, Kế Hoạch = tím, Ép Ván = cam, Nguyên Liệu = xanh ngọc)
+   → thẻ tab được chọn được highlight rõ ràng trên nền header xanh dương */
+.custom-chart-card .custom-card-header .chart-source-chip {
+  background: #ffffff;
+  color: var(--chip-color, #15803d);
+  border-color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(23, 90, 145, 0.35);
+}
+
+/* Chip vùng nâng cao: giữ nền trắng mờ để không lấn át chip nguồn */
 .custom-chart-card .custom-card-header .chart-zone-chip {
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
@@ -1875,11 +1909,14 @@ h1, h2, h3, h4, h5 {
   border-color: rgba(255, 160, 160, 0.65);
 }
 
-/* Khung vẽ = "tờ giấy" trắng bo góc nằm trong thân thư mục (chiều cao lớn để đọc dễ) */
+/* Khung vẽ = "tờ giấy" trắng bo góc nằm trong thân thư mục.
+   CHIỀU CAO CỐ ĐỊNH 460px CHUNG CHO MỌI LOẠI BIỂU ĐỒ (cột, tròn, vành khăn, đường)
+   → các thẻ luôn cao bằng nhau. flex: 0 0 auto để tránh flex-basis:0%
+   (cũ là `flex: 1`) ép teo khung làm biểu đồ cột thấp hơn biểu đồ tròn. */
 .custom-chart-canvas-box {
   position: relative;
   height: 460px;
-  flex: 1;
+  flex: 0 0 auto;
   margin: 0 12px 14px;
   padding: 8px;
   background: rgba(255, 255, 255, 0.95);

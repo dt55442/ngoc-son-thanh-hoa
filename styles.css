@@ -283,6 +283,10 @@ h1, h2, h3, h4, h5 {
   --tab-accent: #db2777; --tab-accent-soft: rgba(219, 39, 119, 0.14);
 }
 
+.nav-btn[data-target="qc-view"],          .mobile-nav-item[data-target="qc-view"] {
+  --tab-accent: #0d9488; --tab-accent-soft: rgba(13, 148, 136, 0.14);
+}
+
 .nav-btn {
   display: flex;
   align-items: center;
@@ -4306,4 +4310,69 @@ body.can-advanced .advanced-locked-note { display: none !important; }
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* ═══ QC — Bảng Xuất Hàng (tab QC) ═══════════════════════════ */
+/* Thanh công cụ điền nhanh tuần cho cả danh sách */
+.qc-quick-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 16px 12px 16px;
+}
+.qc-quick-toolbar .filter-item { display: flex; align-items: center; gap: 6px; margin: 0; }
+.qc-quick-toolbar .filter-item label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+.qc-quick-toolbar .filter-item select { min-width: 110px; }
+
+/* Ô nhập liệu sửa trực tiếp trên từng dòng */
+.qc-row-input {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+.qc-row-input:focus { outline: none; border-color: var(--primary); }
+.qc-row-input:disabled { background: var(--bg-subtle); color: var(--text-muted); }
+.qc-row-qty { text-align: right; }
+.qc-product-name { font-weight: 600; color: var(--text-primary); font-size: 0.82rem; overflow-wrap: anywhere; }
+
+/* Nhãn "ngoài kế hoạch" cho thành phẩm thêm tay */
+.qc-custom-badge {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 7px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+/* Nút xóa dòng */
+.qc-row-delete {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  opacity: 0.7;
+}
+.qc-row-delete svg { width: 15px; height: 15px; }
+.qc-row-delete:hover { opacity: 1; background: rgba(220, 38, 38, 0.08); }
+.qc-row-delete:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Dòng tổng cộng */
+#qc-table-foot td {
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-top: 2px solid var(--border-color);
+  background: var(--bg-subtle);
+}
+.qc-total-row td { display: table-cell; }
 

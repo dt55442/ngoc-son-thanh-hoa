@@ -28,7 +28,8 @@ export const APP_TABS = [
   { id: 'kanban',   viewId: 'kanban-view',   name: 'Công Đoạn (Kanban)', short: 'Công Đoạn',  icon: 'layout-grid',    color: '#059669' },
   { id: 'planning', viewId: 'planning-view', name: 'Kế Hoạch Sản Xuất',  short: 'Kế Hoạch',   icon: 'clipboard-list', color: '#7c3aed' },
   { id: 'press',    viewId: 'press-view',    name: 'Sản Lượng Ép Ván',   short: 'Ép Ván',     icon: 'factory',        color: '#ea580c' },
-  { id: 'materials',viewId: 'materials-view',name: 'Nhập Nguyên Liệu',   short: 'Nguyên Liệu',icon: 'package-plus',   color: '#db2777' }
+  { id: 'materials',viewId: 'materials-view',name: 'Nhập Nguyên Liệu',   short: 'Nguyên Liệu',icon: 'package-plus',   color: '#db2777' },
+  { id: 'qc',       viewId: 'qc-view',       name: 'QC — Xuất Hàng',     short: 'QC',         icon: 'clipboard-check',color: '#0d9488' }
 ];
 
 // Tab dùng cho chỉnh sửa = các tab dữ liệu + Dashboard (biểu đồ)
@@ -77,11 +78,16 @@ export function getEditableTabs() {
   return tabs.filter(t => ALL_EDITABLE_IDS.includes(t));
 }
 
+// Nguồn biểu đồ 'materialsPlan' (Kế hoạch vs Thực tế nguyên liệu) thuộc quyền
+// chỉnh sửa của tab Nguyên Liệu — ánh xạ để nút sửa/xóa hiện đúng cho editor.
+const CHART_SOURCE_TAB_ALIAS = { materialsPlan: 'materials' };
+
 export function canEditTab(tabId) {
   const u = currentUser();
   if (!u) return false;
+  const t = CHART_SOURCE_TAB_ALIAS[tabId] || tabId;
   if (roleInfo(u.role).editAll) return true;
-  return getEditableTabs().includes(tabId);
+  return getEditableTabs().includes(t);
 }
 
 // Sửa được biểu đồ ở vùng nào (biểu đồ vùng nâng cao cần cả 2 quyền)

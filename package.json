@@ -5,7 +5,7 @@
   "description": "Hệ thống theo dõi sản xuất - Nhà máy Ngọc Sơn Thanh Hóa - PWA offline-first",
   "type": "module",
   "scripts": {
-    "test": "node tests/smoke.mjs && node tests/roles-charts.test.mjs && node tests/transfer-fields.test.mjs && node tests/chart-filters.test.mjs && node tests/materials.test.mjs && node tests/export-tabs.test.mjs",
+    "test": "node tests/smoke.mjs && node tests/roles-charts.test.mjs && node tests/transfer-fields.test.mjs && node tests/chart-filters.test.mjs && node tests/materials.test.mjs && node tests/export-tabs.test.mjs && node tests/qc.test.mjs",
     "start": "node server.cjs"
   }
 }

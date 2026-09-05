@@ -76,6 +76,10 @@
           <i data-lucide="package-plus"></i>
           <span>Nguyên Liệu</span>
         </button>
+        <button class="nav-btn" data-target="qc-view" id="nav-qc">
+          <i data-lucide="clipboard-check"></i>
+          <span>QC</span>
+        </button>
       </nav>
 
       <!-- Action Tools & User Profile -->
@@ -171,6 +175,10 @@
     <button class="mobile-nav-item" data-target="materials-view">
       <i data-lucide="package-plus"></i>
       <span>Nguyên Liệu</span>
+    </button>
+    <button class="mobile-nav-item" data-target="qc-view">
+      <i data-lucide="clipboard-check"></i>
+      <span>QC</span>
     </button>
     <button class="mobile-nav-item primary" id="mobile-add-btn">
       <i data-lucide="plus"></i>
@@ -1315,6 +1323,118 @@
 
     </section>
 
+    <!-- QC — BẢNG XUẤT HÀNG VIEW -->
+    <section id="qc-view" class="view-panel">
+
+      <!-- Header Bar -->
+      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
+            <i data-lucide="clipboard-check"></i> QC — Bảng Xuất Hàng
+          </h3>
+          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+            Danh sách hàng xuất theo tuần. Tên hàng lấy từ thành phẩm trong Kế Hoạch Sản Xuất (có thể thêm thành phẩm ngoài danh sách). Số lượng xuất hiển thị cạnh các mã hàng trong biểu đồ Kế Hoạch vs Đã Ép.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" id="btn-add-qc-export">
+            <i data-lucide="plus-circle"></i> Thêm Dòng Xuất
+          </button>
+        </div>
+      </div>
+
+      <!-- BẢNG XUẤT HÀNG -->
+      <div class="planning-card" id="qc-table-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="truck"></i> Bảng Xuất Hàng</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-qc-table" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <p style="margin:0; padding:10px 16px; font-size:0.78rem; color:var(--text-muted);">
+          Sửa trực tiếp Số Lượng Xuất &amp; Ghi Chú trên bảng. Chọn năm + tuần rồi bấm
+          <strong>Điền Cho Tất Cả</strong> để áp dụng tuần cho toàn bộ danh sách.
+        </p>
+        <!-- Điền nhanh tuần cho cả danh sách -->
+        <div class="qc-quick-toolbar">
+          <div class="filter-item">
+            <label for="qc-quick-year">Năm:</label>
+            <select id="qc-quick-year"></select>
+          </div>
+          <div class="filter-item">
+            <label for="qc-quick-week">Tuần:</label>
+            <select id="qc-quick-week"></select>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-qc-apply-week-all" title="Điền năm + tuần đang chọn cho toàn bộ các dòng bên dưới">
+            <i data-lucide="list-checks"></i> Điền Cho Tất Cả
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table planning-table" id="qc-table">
+            <thead>
+              <tr>
+                <th style="min-width:220px;">Tên Hàng</th>
+                <th style="width:110px;">Tuần</th>
+                <th style="width:120px;">Số Lượng Xuất</th>
+                <th style="min-width:160px;">Ghi Chú</th>
+                <th class="text-right" style="width:70px;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="qc-table-body"></tbody>
+            <tfoot id="qc-table-foot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- MODAL: THÊM DÒNG XUẤT HÀNG -->
+      <div class="modal-overlay" id="modal-qc-export">
+        <div class="modal-card modal-sm">
+          <div class="modal-header">
+            <h3><i data-lucide="truck"></i> Thêm Dòng Xuất Hàng</h3>
+            <button type="button" class="modal-close-btn" id="btn-close-qc-export"><i data-lucide="x"></i></button>
+          </div>
+          <form id="qc-export-form" style="padding:20px;">
+            <div class="form-group">
+              <label for="qc-product">Tên Hàng (Thành Phẩm) <span class="required">*</span></label>
+              <select id="qc-product" class="form-select" required>
+                <option value="">-- Chọn thành phẩm (theo Kế hoạch sản xuất) --</option>
+              </select>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                Danh sách lấy từ các thành phẩm trong Kế Hoạch Sản Xuất. Chọn lựa chọn cuối để thêm thành phẩm ngoài danh sách.
+              </div>
+            </div>
+            <div class="form-group" id="qc-custom-name-group" style="display:none;">
+              <label for="qc-custom-name">Tên Thành Phẩm Mới <span class="required">*</span></label>
+              <input type="text" id="qc-custom-name" placeholder="VD: Ván 1200x382x12 (đơn hàng khách A)">
+            </div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="form-group">
+                <label for="qc-year">Năm <span class="required">*</span></label>
+                <select id="qc-year" class="form-select" required></select>
+              </div>
+              <div class="form-group">
+                <label for="qc-week">Tuần <span class="required">*</span></label>
+                <select id="qc-week" class="form-select" required></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="qc-qty">Số Lượng Xuất (tấm) <span class="required">*</span></label>
+              <input type="number" id="qc-qty" min="1" step="1" placeholder="VD: 100" required>
+            </div>
+            <div class="form-group">
+              <label for="qc-note">Ghi Chú</label>
+              <textarea id="qc-note" rows="2" placeholder="Ghi chú thêm (không bắt buộc)"></textarea>
+            </div>
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-cancel-qc-export">Hủy Bỏ</button>
+              <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Thêm Dòng</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </section>
+
   </main>
 
 
@@ -1683,6 +1803,7 @@
                 <label class="edit-tab-check"><input type="checkbox" value="planning" checked> Kế Hoạch Sản Xuất</label>
                 <label class="edit-tab-check"><input type="checkbox" value="press" checked> Sản Lượng Ép Ván</label>
                 <label class="edit-tab-check"><input type="checkbox" value="materials" checked> Nhập Nguyên Liệu</label>
+                <label class="edit-tab-check"><input type="checkbox" value="qc" checked> QC (Xuất Hàng)</label>
                 <label class="edit-tab-check"><input type="checkbox" value="dashboard" checked> Dashboard (Biểu đồ)</label>
               </div>
             </div>
@@ -1741,6 +1862,7 @@
             <label class="edit-tab-check"><input type="checkbox" value="planning"> Kế Hoạch Sản Xuất</label>
             <label class="edit-tab-check"><input type="checkbox" value="press"> Sản Lượng Ép Ván</label>
             <label class="edit-tab-check"><input type="checkbox" value="materials"> Nhập Nguyên Liệu</label>
+            <label class="edit-tab-check"><input type="checkbox" value="qc"> QC (Xuất Hàng)</label>
             <label class="edit-tab-check"><input type="checkbox" value="dashboard"> Dashboard (Biểu đồ)</label>
           </div>
           <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
@@ -2072,6 +2194,7 @@
               <option value="pie">🥧 Biểu Đồ Tròn (Pie)</option>
               <option value="doughnut">🍩 Biểu Đồ Vành Khăn (Doughnut)</option>
               <option value="stackedBar">📑 Cột Xếp Chồng (Stacked Bar)</option>
+              <option value="planVsActual">🎯 Kế Hoạch vs Thực Tế (Cột Lồng)</option>
             </select>
           </div>
         </div>
@@ -2087,6 +2210,7 @@
               <option value="planning">Kế Hoạch Sản Xuất</option>
               <option value="press">Sản Lượng Ép Ván</option>
               <option value="materials">Nhập Nguyên Liệu</option>
+              <option value="materialsPlan">Kế Hoạch vs Thực Tế Nguyên Liệu</option>
             </select>
           </div>
           <div class="form-group" style="margin-bottom:0;">

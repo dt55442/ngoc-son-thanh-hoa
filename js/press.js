@@ -785,9 +785,27 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       pressVol[r.productId] = (pressVol[r.productId] || 0) + dimVolume(r.fpDim || getProductDimsStr(r.productId), q);
     });
 
-    const ids = [...new Set([...Object.keys(planQty), ...Object.keys(pressQty)])];
-    // Sắp xếp: sản phẩm có tổng số lượng lớn nhất đứng trước
-    ids.sort((a, b) => ((planQty[b] || 0) + (pressQty[b] || 0)) - ((planQty[a] || 0) + (pressQty[a] || 0)));
+    // SỐ LƯỢNG XUẤT (tab QC — Bảng Xuất Hàng): gộp theo mã hàng với cùng
+    // bộ lọc năm/tuần. Dòng "ngoài danh sách" (không có productId) được thử
+    // khớp theo TÊN với định mức; không khớp mã nào thì bỏ qua (biểu đồ
+    // hiển thị theo mã hàng kế hoạch).
+    const exportQty = {};
+    (state.qcExports || []).forEach(q => {
+      if (!q || !yOn(q.year) || !wkOn(getWeekNumber(q.week))) return;
+      let pid = q.productId || null;
+      if (!pid) {
+        const nm = String(q.name || '').trim().toLowerCase();
+        if (!nm) return;
+        const rate = state.materialRates.find(r => String(r.product || '').trim().toLowerCase() === nm);
+        if (!rate) return;
+        pid = rate.id;
+      }
+      exportQty[pid] = (exportQty[pid] || 0) + (Number(q.qty) || 0);
+    });
+
+    const ids = [...new Set([...Object.keys(planQty), ...Object.keys(pressQty), ...Object.keys(exportQty)])];
+    // Sắp xếp: sản phẩm có tổng số lượng (kế hoạch + ép + xuất) lớn nhất đứng trước
+    ids.sort((a, b) => ((planQty[b] || 0) + (pressQty[b] || 0) + (exportQty[b] || 0)) - ((planQty[a] || 0) + (pressQty[a] || 0) + (exportQty[a] || 0)));
     const labelOf = id => (state.materialRates.find(r => r.id === id) || {}).product || 'Sản phẩm đã xóa';
 
     // Đơn vị HIỂN THỊ số liệu: 'vol' (m³, mặc định) hoặc 'qty' (tấm).
@@ -796,19 +814,23 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     // theo m³ sẽ gây hiểu nhầm với số tấm).
     const isVol = state.planVsPressUnit === 'vol';
     const unitVol = id => dimVolume(getProductDimsStr(id), 1);
-    const planVolData  = ids.map(id => (planQty[id] || 0) * unitVol(id));
-    const pressVolData = ids.map(id => pressVol[id] || 0);
-    const planQtyData  = ids.map(id => planQty[id] || 0);
-    const pressQtyData = ids.map(id => pressQty[id] || 0);
+    const planVolData   = ids.map(id => (planQty[id] || 0) * unitVol(id));
+    const pressVolData  = ids.map(id => pressVol[id] || 0);
+    const exportVolData = ids.map(id => (exportQty[id] || 0) * unitVol(id));
+    const planQtyData   = ids.map(id => planQty[id] || 0);
+    const pressQtyData  = ids.map(id => pressQty[id] || 0);
+    const exportQtyData = ids.map(id => exportQty[id] || 0);
     const fmtVol = v => String(+Number(v).toFixed(3));
     const fmtQty = v => Math.round(Number(v)).toLocaleString('vi-VN');
     const valOf  = (dIdx, i) => (dIdx === 0
       ? (isVol ? planVolData[i] : planQtyData[i])
-      : (isVol ? pressVolData[i] : pressQtyData[i]));
+      : dIdx === 1
+      ? (isVol ? pressVolData[i] : pressQtyData[i])
+      : (isVol ? exportVolData[i] : exportQtyData[i]));
     const fmtVal = v => (isVol ? fmtVol(v) : fmtQty(v));
     const fmtTick = v => String(Number(Number(v).toFixed(2)));
 
-    // Plugin vẽ số THỰC TẾ lên đỉnh TỪNG cột (cả 2 dataset)
+    // Plugin vẽ số THỰC TẾ lên đỉnh TỪNG cột (cả 3 dataset: Kế Hoạch / Đã Ép / Số Lượng Xuất)
     const valueLabelPlugin = {
       id: 'pvValueLabels',
       afterDatasetsDraw(chart) {
@@ -835,8 +857,9 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       data: {
         labels: ids.map(labelOf),
         datasets: [
-          { label: 'Kế Hoạch', data: planVolData, backgroundColor: 'rgba(124, 58, 237, 0.78)', borderColor: '#7c3aed', borderWidth: 1, borderRadius: 4 },
-          { label: 'Đã Ép',    data: pressVolData, backgroundColor: 'rgba(22, 163, 74, 0.78)', borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 }
+          { label: 'Kế Hoạch',       data: planVolData,   backgroundColor: 'rgba(124, 58, 237, 0.78)', borderColor: '#7c3aed', borderWidth: 1, borderRadius: 4 },
+          { label: 'Đã Ép',          data: pressVolData,  backgroundColor: 'rgba(22, 163, 74, 0.78)',  borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 },
+          { label: 'Số Lượng Xuất',  data: exportVolData, backgroundColor: 'rgba(37, 99, 235, 0.78)',  borderColor: '#2563eb', borderWidth: 1, borderRadius: 4 }
         ]
       },
       options: {
@@ -851,8 +874,12 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
             callbacks: {
               label: c => {
                 const i = c.dataIndex;
-                const qty = c.datasetIndex === 0 ? planQtyData[i] : pressQtyData[i];
-                const vol = c.datasetIndex === 0 ? planVolData[i] : pressVolData[i];
+                const qty = c.datasetIndex === 0 ? planQtyData[i]
+                  : c.datasetIndex === 1 ? pressQtyData[i]
+                  : exportQtyData[i];
+                const vol = c.datasetIndex === 0 ? planVolData[i]
+                  : c.datasetIndex === 1 ? pressVolData[i]
+                  : exportVolData[i];
                 return ` ${c.dataset.label}: ${isVol ? `${fmtVol(vol)} m³` : fmtQty(qty)}`;
               }
             }

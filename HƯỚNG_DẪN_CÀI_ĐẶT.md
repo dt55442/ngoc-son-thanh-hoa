@@ -110,7 +110,8 @@ Admin cấu hình **"tab được phép chỉnh sửa"** (Công Đoạn / Kế H
 - Kéo thả để sắp xếp biểu đồ, kéo phải để mở rộng thẻ
 
 ### Thêm tab mới trong tương lai
-Khai báo 1 dòng trong `APP_TABS` (file `js/permissions.js`) + schema dữ liệu trong `BUILDER_SCHEMA` (file `js/dashboard.js`) — Dashboard và bảng phân quyền **tự nhận tab mới**.
+Khai báo 1 dòng trong `APP_TABS` (file `js/permissions.js`) + schema dữ liệu trong `BUILDER_SCHEMA` (file `js/dashboard.js`) — Dashboard và bảng phân quyền **tự động nhận tab mới**.
+Tab QC (Xuất Hàng) là ví dụ mẫu: `APP_TABS` + section `qc-view` trong `index.html` + module `js/qc.js` + đồng bộ `qcExports` trong `js/cloud.js`.
 
 ---
 
@@ -175,7 +176,9 @@ Rồi mở `http://localhost:8080`
 │   ├── batch-modals.js ← Modal thêm/sửa lô, chuyển lô, chuyển nhiều lô
 │   ├── export-xlsx.js  ← Xuất Excel tùy chỉnh + builder cấu hình
 │   ├── planning.js     ← Kế hoạch sản xuất: định mức, ma trận 52 tuần, giả định
-│   └── press.js        ← Sản lượng ép ván: nhập liệu, tính thành phẩm
+│   ├── press.js        ← Sản lượng ép ván: nhập liệu, tính thành phẩm
+│   ├── materials.js    ← Nhập nguyên liệu: 3 vị trí, ảnh, kế hoạch nguyên liệu
+│   └── qc.js           ← Tab QC: bảng xuất hàng (tên hàng từ kế hoạch, tuần, SL xuất, ghi chú)
 ├── tests/smoke.mjs     ← Kiểm thử khởi động headless: `node tests/smoke.mjs`
 ├── manifest.json       ← PWA manifest
 ├── sw.js               ← Service Worker (offline, cache v11 trọn bộ js/)

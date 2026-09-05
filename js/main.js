@@ -11,6 +11,7 @@ import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilter
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { deleteMaterialRate, deletePlanningItem, deleteProductBom, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, loadProductBoms, openMaterialRateModal, openProductBomModal, removeBomLine, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressRecords, openPressModal, removePressLine, removePressStick, renderPressView } from './press.js';
+import { loadQcExports, renderQcView } from './qc.js';
 import { canViewAdvanced } from './permissions.js';
 import { state } from './state.js';
 import { autoReconnectDataFolder, loadData, updateFileStorageUI } from './storage.js';
@@ -31,6 +32,7 @@ import { setupFormCalculations } from './utils.js';
     loadPressRecords();
     loadMaterialRecords();
     loadMaterialPlan();
+    loadQcExports();
     // Nhớ lại trạng thái thu gọn của các bảng dữ liệu (định mức, lượt ép, nguyên liệu)
     restoreRateTableCollapse();
     setupEventListeners();
@@ -71,6 +73,7 @@ import { setupFormCalculations } from './utils.js';
     if (targetViewId === 'planning-view') renderPlanningView();
     if (targetViewId === 'press-view') renderPressView();
     if (targetViewId === 'materials-view') renderMaterialView();
+    if (targetViewId === 'qc-view') renderQcView();
   }
 
   function filterMobileKanbanColumns() {
@@ -132,6 +135,7 @@ import { setupFormCalculations } from './utils.js';
     if (state.activeView === 'planning-view') renderPlanningView();
     if (state.activeView === 'press-view') renderPressView();
     if (state.activeView === 'materials-view') renderMaterialView();
+    if (state.activeView === 'qc-view') renderQcView();
     initLucide();
   }
 

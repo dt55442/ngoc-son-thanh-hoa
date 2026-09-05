@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-05T09:01:17.670Z",
+  "savedAt": "2026-09-05T14:37:09.993Z",
   "batches": [
     {
       "bambooType": "A1",
@@ -10394,7 +10394,7 @@
       "type": "bar",
       "source": "materials",
       "zone": "basic",
-      "groupBy": "date",
+      "groupBy": "week",
       "metric": "weight",
       "stackBy": "location",
       "palette": "vibrant",
@@ -10405,8 +10405,9 @@
       "week": "all",
       "dateFrom": "",
       "dateTo": "",
+      "mpcWeek": "2026-W36",
       "width": "half",
-      "createdAt": "2026-09-05T07:42:39.606Z"
+      "createdAt": "2026-09-05T12:29:23.675Z"
     }
   ],
   "materialRecords": [
@@ -10596,6 +10597,54 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-05T06:49:15.928Z"
+    },
+    {
+      "id": "mat-1788611223639-wamqa",
+      "date": "2026-09-05",
+      "week": "2026-W36",
+      "type": "Vầu",
+      "supplier": "Băng",
+      "location": "xuong-1",
+      "inputIndex": 6430,
+      "outputIndex": 4410,
+      "weight": 2020,
+      "unitPrice": 4000,
+      "totalAmount": 8080000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-05T12:27:03.639Z"
+    },
+    {
+      "id": "mat-1788611314188-kcnnv",
+      "date": "2026-09-05",
+      "week": "2026-W36",
+      "type": "Gỗ",
+      "supplier": "Triệu",
+      "location": "lo-hoi",
+      "inputIndex": 5180,
+      "outputIndex": 2860,
+      "weight": 2320,
+      "unitPrice": 1100,
+      "totalAmount": 2552000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-05T12:28:34.188Z"
+    },
+    {
+      "id": "mat-1788613974102-bqhdb",
+      "date": "2026-09-05",
+      "week": "2026-W36",
+      "type": "Luồng cây xô",
+      "supplier": "Tế",
+      "location": "xuong-2",
+      "inputIndex": 20690,
+      "outputIndex": 8270,
+      "weight": 12420,
+      "unitPrice": 1900,
+      "totalAmount": 23598000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-05T13:12:54.102Z"
     }
   ]
 }

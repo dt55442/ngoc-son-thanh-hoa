@@ -396,6 +396,58 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     return (Math.round(v * 100) / 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
   }
 
+  // Ô chọn tuần cho Chart Builder (nguồn Nguyên liệu): tuần 1..N của năm hiện tại
+  // Dạng [value, label, isCurrent] — isCurrent=true để builder mặc định chọn tuần này
+  function materialPlanWeekOptions() {
+    const cur = currentPlanWeekKey();
+    const year = cur.split('-W')[0];
+    const curW = parseInt(cur.split('-W')[1], 10);
+    return Array.from({ length: isoWeeksInYear(year) }, (_, i) => {
+      const w = i + 1;
+      const key = `${year}-W${String(w).padStart(2, '0')}`;
+      return [key, `Tuần ${w} · ${year}`, w === curW];
+    });
+  }
+
+  // Dựng labels + datasets CỘT LỒNG cho 1 tuần — dùng chung bởi biểu đồ tĩnh
+  // (renderMaterialPlanChart) và Chart Builder (loại 'planVsActual').
+  // Trả { labels, datasets, days, slotCount, weekCaption }.
+  function buildMaterialPlanVsActualData(weekKey) {
+    const wk = weekKey || currentPlanWeekKey();
+    const days = mpWeekDates(wk);
+    const labels = [];
+    days.forEach((d) => { for (let i = 0; i < MATERIAL_LOCATIONS.length; i++) labels.push(d.label); });
+    const slotCount = MATERIAL_LOCATIONS.length;
+
+    const datasets = MATERIAL_LOCATIONS.map((loc, li) => {
+      const color = MP_LOC_COLORS[loc.key] || '#64748b';
+      const plan = new Array(labels.length).fill(null);
+      const actual = new Array(labels.length).fill(null);
+      days.forEach((d, di) => {
+        const base = di * slotCount + li;
+        const avg = planAvgOf(wk, loc.key);
+        plan[base] = avg === null ? 0 : avg;                    // vỏ: TB/ngày của tuần
+        actual[base] = mpActualOf(d.iso, loc.key);             // lấp: thực tế trong ngày
+      });
+      return [
+        {
+          label: `${loc.label} (KH)`, data: plan, order: 2,
+          backgroundColor: color + '22', borderColor: color, borderWidth: 2,
+          borderRadius: 6, borderSkipped: false, grouped: false,
+          barPercentage: 1.0, categoryPercentage: 0.92
+        },
+        {
+          label: `${loc.label} (TT)`, data: actual, order: 1,
+          backgroundColor: color, borderColor: color, borderWidth: 0,
+          borderRadius: 4, grouped: false,
+          barPercentage: 0.72, categoryPercentage: 0.92
+        }
+      ];
+    }).flat();
+    const wn = parseInt(wk.split('-W')[1], 10);
+    return { labels, datasets, days, slotCount, weekCaption: `Tuần ${wn} (${wk.split('-W')[0]})` };
+  }
+
   // Ô chọn tuần: danh sách tuần 1..N của năm đang xem
   function renderMaterialPlanChartWeekSelect() {
     const sel = document.getElementById('mpc-week-filter');
@@ -435,35 +487,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const caption = document.getElementById('mpc-caption');
     if (caption) caption.textContent = `Tuần ${parseInt(weekKey.split('-W')[1], 10)} (${weekKey.split('-W')[0]}) · ${days.length ? days[0].label + ' → ' + days[6].label : ''}`;
 
-    const labels = [];
-    days.forEach((d) => { for (let i = 0; i < MATERIAL_LOCATIONS.length; i++) labels.push(d.label); });
-    const slotCount = MATERIAL_LOCATIONS.length;
-
-    const datasets = MATERIAL_LOCATIONS.map((loc, li) => {
-      const color = MP_LOC_COLORS[loc.key] || '#64748b';
-      const plan = new Array(labels.length).fill(null);
-      const actual = new Array(labels.length).fill(null);
-      days.forEach((d, di) => {
-        const base = di * slotCount + li;
-        const avg = planAvgOf(weekKey, loc.key);
-        plan[base] = avg === null ? 0 : avg;                    // vỏ: TB/ngày của tuần
-        actual[base] = mpActualOf(d.iso, loc.key);             // lấp: thực tế trong ngày
-      });
-      return [
-        {
-          label: `${loc.label} (KH)`, data: plan, order: 2,
-          backgroundColor: color + '22', borderColor: color, borderWidth: 2,
-          borderRadius: 6, borderSkipped: false, grouped: false,
-          barPercentage: 1.0, categoryPercentage: 0.92
-        },
-        {
-          label: `${loc.label} (TT)`, data: actual, order: 1,
-          backgroundColor: color, borderColor: color, borderWidth: 0,
-          borderRadius: 4, grouped: false,
-          barPercentage: 0.72, categoryPercentage: 0.92
-        }
-      ];
-    }).flat();
+    // Labels + datasets dựng bởi helper dùng chung (biểu đồ tĩnh + Chart Builder)
+    const built = buildMaterialPlanVsActualData(weekKey);
+    const labels = built.labels;
+    const datasets = built.datasets;
+    const slotCount = built.slotCount;
 
     // Zoom / pan (chartjs-plugin-zoom + Hammer đã nạp trong index.html):
     // chụm 2 ngón / lăn chuột để phóng trục X, kéo ngang để dịch, nhấp đúp
@@ -1101,6 +1129,7 @@ export {
   MATERIAL_LOCATIONS,
   MATERIAL_TYPE_SUGGESTIONS,
   addMaterialPlanWeek,
+  buildMaterialPlanVsActualData,
   canEditMaterials,
   closeMaterialModal,
   closeMaterialPhotoModal,
@@ -1120,6 +1149,7 @@ export {
   loadMaterialRecords,
   materialLocationLabel,
   materialMonthKey,
+  materialPlanWeekOptions,
   materialPhotoNav,
   materialWeekLabel,
   migrateMaterialImages,

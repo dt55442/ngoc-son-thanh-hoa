@@ -11,6 +11,7 @@ import { filterMobileKanbanColumns, renderAll, switchView } from './main.js';
 import { addBomLine, closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, closeProductBomModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, handleProductBomSubmit, openMaterialRateModal, openPlanningItemModal, openProductBomModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, applyBomToPressLines, closePressModal, handlePressRecordSubmit, openPressModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
+import { applyQcWeekToAll, closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -462,6 +463,29 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-add-material-plan-week', 'click', () => addMaterialPlanWeek());
     // Thu gọn / mở rộng bảng kế hoạch nguyên liệu
     safeOn('btn-toggle-material-plan', 'click', () => toggleRateTableCollapse('material-plan-card'));
+
+    // ── QC — Bảng Xuất Hàng ──
+    safeOn('btn-add-qc-export', 'click', openQcExportModal);
+    safeOn('btn-close-qc-export', 'click', closeQcExportModal);
+    safeOn('btn-cancel-qc-export', 'click', closeQcExportModal);
+    safeOn('qc-export-form', 'submit', handleQcExportSubmit);
+    safeOn('qc-product', 'change', onQcProductChange);
+    safeOn('btn-qc-apply-week-all', 'click', applyQcWeekToAll);
+    // Thu gọn / mở rộng bảng xuất hàng
+    safeOn('btn-toggle-qc-table', 'click', () => toggleRateTableCollapse('qc-table-card'));
+    // Sửa trực tiếp từng dòng (tuần / số lượng / ghi chú) — sự kiện 'change'
+    document.addEventListener('change', (e) => {
+      const el = e.target;
+      if (el && el.dataset && el.dataset.qcId && el.dataset.qcField) {
+        updateQcExportRow(el.dataset.qcId, el.dataset.qcField, el.value);
+      }
+    });
+    // Xóa dòng xuất hàng (ủy quyền click trong tbody)
+    document.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-qc-delete]');
+      if (delBtn) deleteQcExport(delBtn.getAttribute('data-qc-delete'));
+    });
+
     // ── Biểu đồ Kế hoạch vs Thực tế nguyên liệu theo ngày ──
     safeOn('mpc-week-filter', 'change', (e) => {
       state.materialPlanChartWeek = e.target.value;

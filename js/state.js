@@ -16,6 +16,7 @@
   const STORAGE_KEY_PLANNING_STOCK = 'bamboo_tracker_planning_stock_v1';
   const STORAGE_KEY_PRESS_RECORDS = 'bamboo_tracker_press_records_v1';
   const STORAGE_KEY_MATERIALS = 'bamboo_tracker_material_records_v1';
+  const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
 
   const STAGES = {
     say1:     { id: 'say1',     name: '1. Sấy 1',        short: 'Sấy 1',    next: 'say2'     },
@@ -56,6 +57,8 @@
     // Nhập nguyên liệu (Lò hơi / Xưởng 1 / Xưởng 2)
     // [{ id, date, week, type, supplier, location, inputIndex, outputIndex, weight, note, images[], createdAt }]
     materialRecords: [],
+    // QC — Bảng xuất hàng: [{ id, productId (null = ngoài danh sách kế hoạch), name, week 'Tuần 34', year, qty, note, createdAt, updatedAt }]
+    qcExports: [],
     materialActiveLoc: 'all', // 'all' | 'lo-hoi' | 'xuong-1' | 'xuong-2'
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
@@ -111,6 +114,7 @@ export {
   STORAGE_KEY_PLANNING_STOCK,
   STORAGE_KEY_PRESS_RECORDS,
   STORAGE_KEY_PRODUCT_BOMS,
+  STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,
   state

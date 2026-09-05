@@ -4,7 +4,7 @@
 import { saveSession, updateUserProfileHeader } from './auth.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PRODUCT_BOMS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PRODUCT_BOMS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { restoreMaterialRecords, saveData } from './storage.js';
 import { showToast } from './utils.js';
 
@@ -281,6 +281,7 @@ import { showToast } from './utils.js';
       planningItems: state.planningItems,
       planningForecast: state.planningForecast,
       planningStock: state.planningStock,
+      qcExports: state.qcExports || [],
       pressRecords: state.pressRecords,
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
       updatedAt: new Date().toISOString()
@@ -296,6 +297,7 @@ import { showToast } from './utils.js';
       planningItems: obj.planningItems || [],
       productBoms: obj.productBoms || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
+      qcExports: obj.qcExports || [],
       pressRecords: obj.pressRecords || []
     });
   }
@@ -382,6 +384,7 @@ import { showToast } from './utils.js';
     if (remote.productBoms) state.productBoms = m(state.productBoms, remote.productBoms);
     if (remote.materialRates) state.materialRates = m(state.materialRates, remote.materialRates);
     if (remote.customCharts) state.customCharts = m(state.customCharts, remote.customCharts);
+    if (remote.qcExports) state.qcExports = m(state.qcExports || [], remote.qcExports);
     if (!onlyAddMissing) {
       if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
       if (remote.planningStock) state.planningStock = mergeKeyedDict(state.planningStock, remote.planningStock);
@@ -407,6 +410,7 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
   }
 
   function handleRemoteSnapshot(snap) {
@@ -471,6 +475,7 @@ import { showToast } from './utils.js';
       if (data.planningItems) state.planningItems = data.planningItems;
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
       if (data.planningStock !== undefined) state.planningStock = data.planningStock;
+      if (data.qcExports) state.qcExports = data.qcExports;
       if (data.pressRecords) state.pressRecords = data.pressRecords;
       persistAllLocal();
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác

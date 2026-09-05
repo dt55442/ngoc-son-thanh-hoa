@@ -7,7 +7,7 @@ import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { dimVolume } from './press.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
-import { friendlyMaterialWeek, materialLocationLabel } from './materials.js';
+import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 
   // ─── CUSTOM XLSX EXPORT ───────────────────────────────────────
   function openCustomExportModal() {
@@ -802,6 +802,11 @@ import { friendlyMaterialWeek, materialLocationLabel } from './materials.js';
   }
 
   function computeMaterialChartData(chartDef) {
+    // Kiểu đặc biệt: Kế Hoạch vs Thực Tế theo ngày (cột lồng) — vỏ = số TB/ngày
+    // từ bảng kế hoạch nguyên liệu, lấp = tổng thực tế nhật ký từng ngày/vị trí.
+    if (chartDef.type === 'planVsActual') {
+      return buildMaterialPlanVsActualData(String(chartDef.mpcWeek || ''));
+    }
     const records = (state.materialRecords || []).filter(r => materialPassesFilters(r, chartDef));
     const getGroupKey = (r, f) => {
       switch (f) {

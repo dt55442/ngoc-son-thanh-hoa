@@ -4,7 +4,7 @@
  * Chiến lược: Cache First - cập nhật nền (stale-while-revalidate)
  */
 
-const CACHE_NAME = 'nha-may-ngoc-son-v57';
+const CACHE_NAME = 'nha-may-ngoc-son-v59';
 const APP_SHELL = [
   './',
   './index.html',
@@ -24,6 +24,7 @@ const APP_SHELL = [
   './js/planning.js',
   './js/press.js',
   './js/materials.js',
+  './js/qc.js',
   './firebase-config.js',
   './manifest.json',
   './vendor/lucide.min.js',

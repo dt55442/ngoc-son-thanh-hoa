@@ -11,7 +11,7 @@
 import { initLucide, requireEditPermission, requireTabEditPermission } from './cloud.js';
 import { computeChartData, getPaletteColors, saveCustomCharts } from './export-xlsx.js';
 import { canEditChartZone, canEditTab, canViewAdvanced, getTabDef } from './permissions.js';
-import { MATERIAL_LOCATIONS, renderMaterialPlanChart } from './materials.js';
+import { MATERIAL_LOCATIONS, materialPlanWeekOptions, renderMaterialPlanChart } from './materials.js';
 import { renderPlanVsPressChart, renderPlanCapacityChart } from './press.js';
 import { STAGES, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
@@ -151,7 +151,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   registerChartDataLabelsPlugin();
   // ─── THẺ BIỂU ĐỒ & CÁC VÙNG HIỂN THỊ ─────────────────────────
-  const TYPE_ICONS = { bar: 'bar-chart-3', horizontalBar: 'bar-chart-2', stackedBar: 'layers', line: 'trending-up', pie: 'pie-chart', doughnut: 'loader' };
+  const TYPE_ICONS = { bar: 'bar-chart-3', horizontalBar: 'bar-chart-2', stackedBar: 'layers', line: 'trending-up', pie: 'pie-chart', doughnut: 'loader', planVsActual: 'layers' };
 
   // Nhãn nguồn dữ liệu (tab) của biểu đồ
   function sourceChipHtml(source) {
@@ -171,7 +171,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const schema = BUILDER_SCHEMA[chartDef.source || 'kanban'];
     const groupLabel = (schema.groupBy.find(g => g[0] === chartDef.groupBy) || [, chartDef.groupBy])[1];
     const metricLabel = (schema.metric.find(g => g[0] === chartDef.metric) || [, chartDef.metric])[1];
-    let subtitle = `Nhóm: ${groupLabel} • Chỉ số: ${metricLabel}`;
+    let subtitle = chartDef.type === 'planVsActual'
+      ? 'Kế hoạch TB/ngày (vỏ) vs Thực tế nhập kho (lấp) theo từng ngày của tuần đã chọn'
+      : `Nhóm: ${groupLabel} • Chỉ số: ${metricLabel}`;
     if (chartDef.stackBy && chartDef.stackBy !== 'none') {
       const stackLabel = (schema.groupBy.find(g => g[0] === chartDef.stackBy) || [, chartDef.stackBy])[1];
       subtitle += ` • Xếp tầng: ${stackLabel}`;
@@ -248,6 +250,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       let indexAxis = 'x';
       if (chartType === 'horizontalBar') { chartType = 'bar'; indexAxis = 'y'; }
       if (chartType === 'stackedBar')    { chartType = 'bar'; }
+      if (chartType === 'planVsActual')  { chartType = 'bar'; } // cột lồng: datasets tự mang grouped/barPercentage riêng
       const isStacked = chartDef.type === 'stackedBar';
 
       state.customChartInstances[chartDef.id] = new Chart(ctx, {
@@ -259,7 +262,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              display: ['pie', 'doughnut'].includes(chartDef.type) || (chartDef.stackBy && chartDef.stackBy !== 'none'),
+              display: ['pie', 'doughnut'].includes(chartDef.type) || chartDef.type === 'planVsActual' || (chartDef.stackBy && chartDef.stackBy !== 'none'),
               position: 'top',
               labels: {
                 font: { size: 11, weight: 'bold' },
@@ -818,7 +821,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         { id: 'year',     label: 'Năm Nhập',          type: 'select', options: () => numSortedDesc((state.materialRecords || []).map(r => (r.date || '').slice(0, 4))) },
         { id: 'week',     label: 'Tuần Nhập',         type: 'select', options: () => uniqSorted((state.materialRecords || []).map(r => r.week)) },
         { id: 'dateFrom', label: 'Từ Ngày',           type: 'date' },
-        { id: 'dateTo',   label: 'Đến Ngày',          type: 'date' }
+        { id: 'dateTo',   label: 'Đến Ngày',          type: 'date' },
+        { id: 'mpcWeek',  label: 'Tuần (cho loại Kế Hoạch vs Thực Tế)', type: 'week' }
       ]
     }
   };
@@ -935,7 +939,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     ((BUILDER_SCHEMA[source] || {}).filters || []).forEach(fd => {
       const ctl = document.getElementById(`builder-${fd.id}`);
       if (!ctl) return;
-      if (fd.type === 'date') { vals[fd.id] = ctl.value || ''; return; }
+      if (fd.type === 'date' || fd.type === 'week') { vals[fd.id] = ctl.value || ''; return; }
       const panel = document.getElementById(`builder-${fd.id}-panel`);
       const boxes = (panel && typeof panel.querySelectorAll === 'function')
         ? Array.from(panel.querySelectorAll('input[type="checkbox"]'))
@@ -973,6 +977,15 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
               <input type="date" id="builder-${fd.id}" value="${escapeHTML(String(curDate(fd)))}">
             </div>`;
           }
+          if (fd.type === 'week') {
+            const optsW = materialPlanWeekOptions();
+            const savedW = chartDef ? String(chartDef[fd.id] || '') : '';
+            const selW = savedW && optsW.some(o => o[0] === savedW) ? savedW : ((optsW.find(o => o[2]) || optsW[0] || [''])[0]);
+            return `<div class="form-group" style="margin-bottom:0;">
+              <label for="builder-${fd.id}" style="font-size:0.8rem;" title="Chỉ dùng cho loại biểu đồ 'Kế Hoạch vs Thực Tế'">${escapeHTML(fd.label)}</label>
+              <select id="builder-${fd.id}">${optsW.map(o => `<option value="${o[0]}"${o[0] === selW ? ' selected' : ''}>${escapeHTML(o[1])}</option>`).join('')}</select>
+            </div>`;
+          }
           const opts = fd.options().map(asOptPair);
           const selVals = savedMsSelections(chartDef ? chartDef[fd.id] : undefined);
           // Giá trị đã lưu nhưng không còn trong danh sách (dữ liệu bị đổi/xóa):
@@ -1001,7 +1014,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       </div>`;
     // Sự kiện: date đổi → cập nhật xem trước; dropdown đa chọn tự gắn listener trong wireChartMultiSelect
     fds.forEach(fd => {
-      if (fd.type === 'date') {
+      if (fd.type === 'date' || fd.type === 'week') {
         const ctl = document.getElementById(`builder-${fd.id}`);
         if (ctl) ctl.addEventListener('change', updateChartBuilderPreview);
         return;
@@ -1135,6 +1148,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     let indexAxis = 'x';
     if (chartType === 'horizontalBar') { chartType = 'bar'; indexAxis = 'y'; }
     if (chartType === 'stackedBar') { chartType = 'bar'; }
+    if (chartType === 'planVsActual') { chartType = 'bar'; } // cột lồng: datasets tự mang cấu hình riêng
 
     const isStacked = tempDef.type === 'stackedBar';
 
@@ -1147,7 +1161,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: ['pie', 'doughnut'].includes(tempDef.type) || (tempDef.stackBy && tempDef.stackBy !== 'none'),
+            display: ['pie', 'doughnut'].includes(tempDef.type) || tempDef.type === 'planVsActual' || (tempDef.stackBy && tempDef.stackBy !== 'none'),
             position: 'top',
             labels: { font: { size: 10 }, boxWidth: 10 }
           }

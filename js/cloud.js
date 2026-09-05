@@ -28,13 +28,16 @@ import { showToast } from './utils.js';
   let fbApplying = false;         // đang áp dụng remote (tránh lặp vô hạn)
   let fbUnsubDoc = null;
   let fbPushTimer = null;
-  let fbSeedCore = null; // trạng thái lúc khởi động (data mẫu) - không đẩy lên
+  let fbSeedCore = null; // core dữ liệu tại lần đồng bộ (đẩy/áp mây) gần nhất - nhận diện "chưa có thay đổi thật"
   let fbRemoteDocExists = false;   // doc apps/main đã tồn tại trên mây
   let fbRemoteHasData = false;     // doc trên mây có dữ liệu thực (khác rỗng)
+  let fbLastRemote = null;         // bản snapshot mây gần nhất (nút tải về + gộp khéo trước khi đẩy)
   let fbUploadPromptShown = false; // đã hỏi đẩy dữ liệu máy lên mây chưa
-  let fbConflictPrompted = false;  // đã hỏi khi mây khác máy (tránh ghi đè bất ngờ)
+  let fbConflictAskedAt = 0;       // thời điểm hỏi conflict gần nhất (chống hỏi liên tục)
+  let fbConflictRemoteCore = '';   // core mây lần hỏi conflict gần nhất (chỉ hỏi lại khi mây THAY ĐỔI)
   let fbDirty = false;             // có thay đổi CHƯA được đẩy lên mây
   let fbSyncWarnAt = 0;            // thời điểm lần cuối cảnh báo không đồng bộ được (chống spam)
+  let fbListenWarnAt = 0;          // thời điểm lần cuối cảnh báo lỗi lắng nghe mây (chống spam)
 
   // ─── Chẩn đoán lỗi quyền (permission-denied) ───────────────────
   function isPermDeniedErr(e) {
@@ -255,7 +258,14 @@ import { showToast } from './utils.js';
     if (fbUnsubDoc) return;
     fbUnsubDoc = fbDb.collection(FB_COLL).doc(FB_DOC).onSnapshot(
       (snap) => handleRemoteSnapshot(snap),
-      (err) => console.warn('[FB] Lỗi lắng nghe dữ liệu', err)
+      (err) => {
+        console.warn('[FB] Lỗi lắng nghe dữ liệu', err);
+        // Trước đây chỉ console.warn -> máy nhận "mù" dữ liệu mây mà không ai hay biết
+        if (Date.now() - fbListenWarnAt > 30000) {
+          fbListenWarnAt = Date.now();
+          showToast('Mất kết nối lắng nghe dữ liệu mây: ' + ((err && err.message) || err), 'error');
+        }
+      }
     );
   }
 
@@ -288,9 +298,102 @@ import { showToast } from './utils.js';
     });
   }
 
+  // ─── GỘP DỮ LIỆU TỪ MÂY (chống mất bản ghi khi nhiều máy cùng nhập) ──
+  // Dấu thời gian so sánh bản ghi (ưu tiên updatedAt)
+  function recStamp(r) {
+    return String((r && (r.updatedAt || r.createdAt)) || '');
+  }
+  // Gộp 2 danh sách theo id: bản ghi chỉ có ở một phía vẫn được giữ lại;
+  // trùng id -> bản có dấu thời gian MỚI HƠN thắng (bằng/thiếu -> giữ bản máy đang có).
+  function mergeById(localArr, incomingArr) {
+    const local = Array.isArray(localArr) ? localArr : [];
+    const incoming = Array.isArray(incomingArr) ? incomingArr : [];
+    const map = new Map();
+    const localNoIdKeys = new Set();
+    const incomingNoId = [];
+    for (const r of local) {
+      if (!r) continue;
+      if (!r.id) { localNoIdKeys.add(JSON.stringify(r)); continue; }
+    }
+    for (const r of incoming) {
+      if (!r) continue;
+      if (!r.id) {
+        // bản ngoài không có id: chỉ nhận nếu máy chưa có bản y hệt (tránh nhân đôi)
+        const key = JSON.stringify(r);
+        if (!localNoIdKeys.has(key)) { incomingNoId.push(r); localNoIdKeys.add(key); }
+        continue;
+      }
+      const cur = map.get(r.id);
+      if (!cur || recStamp(r) >= recStamp(cur)) map.set(r.id, r);
+    }
+    for (const r of local) {
+      if (!r || !r.id) continue;
+      const cur = map.get(r.id);
+      if (!cur || recStamp(r) >= recStamp(cur)) map.set(r.id, r);
+    }
+    return [...incomingNoId, ...map.values()];
+  }
+  // Chỉ BỔ SUNG bản ghi mà máy CHƯA có (không đụng bản trùng id) - dùng trước khi
+  // đẩy máy lên mây để không bao giờ xóa mất dữ liệu người khác vừa thêm trên mây.
+  function mergeAddMissing(localArr, incomingArr) {
+    const local = Array.isArray(localArr) ? localArr : [];
+    const incoming = Array.isArray(incomingArr) ? incomingArr : [];
+    const ids = new Set(local.filter(r => r && r.id).map(r => r.id));
+    const add = incoming.filter(r => r && r.id && !ids.has(r.id));
+    return add.length ? [...local, ...add] : local;
+  }
+  // Gộp dict theo khóa trên cùng (planningForecast / planningStock: { năm: {...} })
+  function mergeKeyedDict(localObj, remoteObj) {
+    const out = Object.assign({}, (localObj && typeof localObj === 'object') ? localObj : {});
+    const src = (remoteObj && typeof remoteObj === 'object') ? remoteObj : {};
+    for (const k of Object.keys(src)) if (!(k in out)) out[k] = src[k];
+    return out;
+  }
+  // Gộp bản snapshot mây vào state máy. onlyAddMissing=true: chỉ bổ sung bản ghi máy thiếu.
+  // Trả về true nếu có thay đổi (đã tự lưu localStorage + render lại).
+  function mergeRemoteIntoLocal(remote, onlyAddMissing) {
+    if (!remote || typeof remote !== 'object') return false;
+    const before = cloudCore(collectCloudSnapshot());
+    const m = onlyAddMissing ? mergeAddMissing : mergeById;
+    if (remote.batches) state.batches = m(state.batches, remote.batches);
+    if (remote.pressRecords) state.pressRecords = m(state.pressRecords, remote.pressRecords);
+    if (remote.materialRecords) {
+      if (onlyAddMissing) state.materialRecords = mergeAddMissing(state.materialRecords, remote.materialRecords);
+      else restoreMaterialRecords(remote.materialRecords); // đã có logic gộp theo dấu thời gian riêng
+    }
+    if (remote.planningItems) state.planningItems = m(state.planningItems, remote.planningItems);
+    if (remote.productBoms) state.productBoms = m(state.productBoms, remote.productBoms);
+    if (remote.materialRates) state.materialRates = m(state.materialRates, remote.materialRates);
+    if (remote.customCharts) state.customCharts = m(state.customCharts, remote.customCharts);
+    if (!onlyAddMissing) {
+      if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
+      if (remote.planningStock) state.planningStock = mergeKeyedDict(state.planningStock, remote.planningStock);
+    }
+    const after = cloudCore(collectCloudSnapshot());
+    if (after !== before) {
+      persistAllLocal();
+      renderAll();
+      return true;
+    }
+    return false;
+  }
+  // Ghi toàn bộ dữ liệu state xuống localStorage (dùng chung cho apply/merge)
+  function persistAllLocal() {
+    try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(state.batches)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_CUSTOM_CHARTS, JSON.stringify(state.customCharts)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(state.materialRecords)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_PRODUCT_BOMS, JSON.stringify(state.productBoms)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
+  }
+
   function handleRemoteSnapshot(snap) {
     fbDidLoadRemote = true;
     const remote = snap.exists ? (snap.data() || {}) : {};
+    fbLastRemote = remote;
     fbRemoteDocExists = snap.exists;
     fbRemoteHasData = hasCloudData(remote);
     if (fbApplying) return;               // bỏ qua bản ta vừa ghi
@@ -307,10 +410,16 @@ import { showToast } from './utils.js';
     }
   }
 
-  // Khi dữ liệu trên mây KHÁC máy: để người nhập liệu chọn thủ công
+  // Khi dữ liệu trên mây KHÁC máy: để người nhập liệu chọn thủ công.
+  // FIX lỗi "đẩy thành công nhưng máy khác không bao giờ thấy dữ liệu mới":
+  //  - Trước đây chỉ hỏi MỘT lần mỗi phiên (fbConflictPrompted chốt vĩnh viễn) ->
+  //    mọi dữ liệu mới từ mây về sau đều bị BỎ QUA IM LẶNG cho tới khi tải lại trang.
+  //  - Giờ: hỏi lại mỗi khi mây THAY ĐỔI (tối thiểu cách nhau 30 giây để chống spam).
   function handleRemoteConflict(remote) {
-    if (fbConflictPrompted) return;
-    fbConflictPrompted = true;
+    const remoteCore = cloudCore(remote);
+    if (remoteCore === fbConflictRemoteCore && Date.now() - fbConflictAskedAt < 30000) return;
+    fbConflictAskedAt = Date.now();
+    fbConflictRemoteCore = remoteCore;
     const keepCloud = confirm(
       'Dữ liệu trên MÂY khác với dữ liệu trên MÁY bạn đang mở.\n\n' +
       '➡️  Nhấn OK:  LẤY dữ liệu trên MÂY (ghi đè máy này).\n' +
@@ -321,8 +430,8 @@ import { showToast } from './utils.js';
     } else {
       const keepLocal = confirm(
         'Bạn muốn GIỮ dữ liệu trên MÁY và ĐẨY LÊN MÂY (ghi đè mây) không?\n\n' +
-        '➡️  OK:  Giữ máy & đẩy lên mây.\n' +
-        '⬅️  Cancel:  Bỏ qua - tiếp tục xem dữ liệu máy (sẽ không tự đẩy, dùng nút "Đồng Bộ Dữ Liệu Máy Lên Mây" khi cần).'
+        '➡️  OK:  Giữ máy & đẩy lên mây (app sẽ TỰ GỘP thêm các bản ghi đang có trên mây mà máy này chưa có - không mất dữ liệu người khác).\n' +
+        '⬅️  Cancel:  Bỏ qua - sẽ được hỏi lại khi mây có dữ liệu mới.'
       );
       if (keepLocal) uploadLocalDataToCloud();
     }
@@ -343,15 +452,9 @@ import { showToast } from './utils.js';
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
       if (data.planningStock !== undefined) state.planningStock = data.planningStock;
       if (data.pressRecords) state.pressRecords = data.pressRecords;
-      try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(state.batches)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_CUSTOM_CHARTS, JSON.stringify(state.customCharts)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(state.materialRecords)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_PRODUCT_BOMS, JSON.stringify(state.productBoms)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock)); } catch (e) {}
-      try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
+      persistAllLocal();
+      // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
+      try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       renderAll();
     } finally { fbApplying = false; }
   }
@@ -392,7 +495,14 @@ import { showToast } from './utils.js';
   }
 
   async function doFirePush() {
-    if (!fbDidLoadRemote) return; // chờ nhận dữ liệu remote 1 lần trước
+    if (!fbDidLoadRemote) {
+      // Chưa nhận dữ liệu mây lần nào -> hẹn thử lại thay vì bỏ im lặng (dữ liệu kẹt trên máy)
+      if (fbDirty) {
+        clearTimeout(fbPushTimer);
+        fbPushTimer = setTimeout(() => { if (fbDirty) doFirePush(); }, 3000);
+      }
+      return;
+    }
     if (fbSeedCore && cloudCore(collectCloudSnapshot()) === fbSeedCore) { fbDirty = false; return; } // chưa có thay đổi thực tế
     if (!isFirebaseOnline() || !state.currentUser ||
         (state.currentUser.role !== 'admin' && state.currentUser.role !== 'editor')) return; // giữ cờ bẩn, chờ lần sau
@@ -400,6 +510,7 @@ import { showToast } from './utils.js';
     try {
       await fbDb.collection(FB_COLL).doc(FB_DOC).set(collectCloudSnapshot());
       fbDirty = false;
+      try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
     } catch (e) {
       console.warn('[FB] Lỗi đẩy dữ liệu', e);
       showToast('Không đồng bộ lên mây: ' + e.message, 'error');
@@ -462,15 +573,41 @@ import { showToast } from './utils.js';
     if (fbApplying) return;
     fbApplying = true;
     try {
+      // GỘP KHÉO trước khi đẩy: bổ sung các bản ghi đang có trên mây mà máy này
+      // CHƯA có -> nút "Đồng Bộ Dữ Liệu Máy Lên Mây" không còn nguy cơ xóa mất
+      // dữ liệu mới vừa được máy khác thêm lên mây (nguyên nhân "thành công
+      // nhưng dữ liệu mới biến mất").
+      let mergedFromCloud = false;
+      if (fbRemoteDocExists && fbRemoteHasData && fbLastRemote &&
+          cloudCore(fbLastRemote) !== cloudCore(collectCloudSnapshot())) {
+        mergedFromCloud = mergeRemoteIntoLocal(fbLastRemote, true);
+      }
       await fbDb.collection(FB_COLL).doc(FB_DOC).set(collectCloudSnapshot());
       fbUploadPromptShown = true;
-      showToast('Đã đẩy dữ liệu trên máy (kèm vị trí thẻ) lên mây thành công!', 'success');
+      fbDirty = false;
+      try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+      const counts = 'lô: ' + ((state.batches || []).length)
+        + ', nguyên liệu: ' + ((state.materialRecords || []).length)
+        + ', ép ván: ' + ((state.pressRecords || []).length);
+      showToast('Đã đẩy dữ liệu lên mây thành công! (' + counts
+        + (mergedFromCloud ? ' — đã gộp thêm bản ghi từ mây' : '') + ')', 'success');
     } catch (e) {
       console.warn('[FB] Lỗi đẩy dữ liệu lên mây', e);
       showToast('Lỗi khi đẩy dữ liệu lên mây: ' + e.message
         + (isPermDeniedErr(e) ? '. ' + fbOwnerHint() : ''), 'error');
       if (isPermDeniedErr(e)) deepPermissionDiagnosis();
     } finally { fbApplying = false; }
+  }
+
+  // TẢI dữ liệu từ mây về máy (ghi đè máy) - chiều NGƯỢC LẠI với uploadLocalDataToCloud.
+  // Dùng khi máy này bị "tua ngược"/thiếu dữ liệu và muốn lấy đúng bản mới nhất trên mây.
+  function pullCloudToLocal() {
+    if (!fbRemoteDocExists || !fbLastRemote || !hasCloudData(fbLastRemote)) {
+      showToast('Trên mây chưa có dữ liệu để tải về.', 'error');
+      return;
+    }
+    applyFireSnapshot(fbLastRemote);
+    showToast('Đã tải dữ liệu từ mây về máy thành công! (ghi đè dữ liệu máy)', 'success');
   }
 
   // Đăng ký Service Worker - cho phép ứng dụng hoạt động ngoại tuyến hoàn toàn
@@ -544,7 +681,6 @@ export {
   doFirePush,
   fbApplying,
   fbAuthLoaded,
-  fbConflictPrompted,
   fbDb,
   fbDidLoadRemote,
   fbEnabled,
@@ -566,6 +702,7 @@ export {
   localHasAnyData,
   maybePromptUpload,
   openShareModal,
+  pullCloudToLocal,
   registerServiceWorker,
   requireEditPermission,
   requireTabEditPermission,

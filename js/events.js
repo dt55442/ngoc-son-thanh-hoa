@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
 import { clearMultiSelection, closeBatchFormModal, closeTransferModal, confirmMultiTransfer, exitMultiTransferMode, handleBatchFormSubmit, handleTransferSubmit, openBatchFormModal, selectAllMulti, toggleBatchSelection, toggleMultiTransferMode } from './batch-modals.js';
-import { applyImportedShareToken, applyRoleToUI, closeShareModal, copyShareTokenToClipboard, isFirebaseOnline, openShareModal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
+import { applyImportedShareToken, applyRoleToUI, closeShareModal, copyShareTokenToClipboard, isFirebaseOnline, openShareModal, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, openCustomExportModal, openMaterialsExportModal, openPlanningExportModal, openPressExportModal } from './export-xlsx.js';
 import { closeColumnFilters } from './kanban.js';
@@ -215,6 +215,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Share & Sync
     safeOn('btn-dropdown-share',    'click', openShareModal);
     safeOn('btn-upload-cloud',      'click', uploadLocalDataToCloud);
+    safeOn('btn-pull-cloud',        'click', pullCloudToLocal);
     safeOn('btn-close-share',       'click', closeShareModal);
     safeOn('btn-cancel-share',      'click', closeShareModal);
     safeOn('btn-copy-token',        'click', copyShareTokenToClipboard);

@@ -4,7 +4,7 @@
 import { saveSession, updateUserProfileHeader } from './auth.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PRODUCT_BOMS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PRODUCT_BOMS, state } from './state.js';
 import { restoreMaterialRecords, saveData } from './storage.js';
 import { showToast } from './utils.js';
 
@@ -276,6 +276,7 @@ import { showToast } from './utils.js';
       customCharts: state.customCharts,
       materialRates: state.materialRates,
       materialRecords: state.materialRecords,
+      materialPlan: state.materialPlan || {},
       productBoms: state.productBoms,
       planningItems: state.planningItems,
       planningForecast: state.planningForecast,
@@ -291,6 +292,7 @@ import { showToast } from './utils.js';
     return JSON.stringify({
       batches: obj.batches || [], customCharts: obj.customCharts || [],
       materialRates: obj.materialRates || [], materialRecords: obj.materialRecords || [],
+      materialPlan: obj.materialPlan || {},
       planningItems: obj.planningItems || [],
       productBoms: obj.productBoms || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
@@ -349,6 +351,21 @@ import { showToast } from './utils.js';
     for (const k of Object.keys(src)) if (!(k in out)) out[k] = src[k];
     return out;
   }
+  // Gộp kế hoạch nguyên liệu ({ '2026-W36': { 'lo-hoi': x, ... } }): tuần chỉ có ở
+  // một phía -> giữ lại; trùng tuần -> gộp theo TỪNG vị trí (máy thiếu vị trí nào
+  // thì nhận vị trí đó từ mây, không ghi đè vị trí máy đã nhập).
+  function mergeMaterialPlan(localObj, remoteObj) {
+    const out = Object.assign({}, (localObj && typeof localObj === 'object') ? localObj : {});
+    const src = (remoteObj && typeof remoteObj === 'object') ? remoteObj : {};
+    for (const wk of Object.keys(src)) {
+      const rWeek = (src[wk] && typeof src[wk] === 'object') ? src[wk] : {};
+      if (!out[wk] || typeof out[wk] !== 'object') { out[wk] = Object.assign({}, rWeek); continue; }
+      for (const k of Object.keys(rWeek)) {
+        if (!(k in out[wk]) || out[wk][k] === null || out[wk][k] === undefined) out[wk][k] = rWeek[k];
+      }
+    }
+    return out;
+  }
   // Gộp bản snapshot mây vào state máy. onlyAddMissing=true: chỉ bổ sung bản ghi máy thiếu.
   // Trả về true nếu có thay đổi (đã tự lưu localStorage + render lại).
   function mergeRemoteIntoLocal(remote, onlyAddMissing) {
@@ -368,6 +385,7 @@ import { showToast } from './utils.js';
     if (!onlyAddMissing) {
       if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
       if (remote.planningStock) state.planningStock = mergeKeyedDict(state.planningStock, remote.planningStock);
+      if (remote.materialPlan) state.materialPlan = mergeMaterialPlan(state.materialPlan, remote.materialPlan);
     }
     const after = cloudCore(collectCloudSnapshot());
     if (after !== before) {
@@ -383,6 +401,7 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_CUSTOM_CHARTS, JSON.stringify(state.customCharts)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(state.materialRecords)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_MATERIAL_PLAN, JSON.stringify(state.materialPlan || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRODUCT_BOMS, JSON.stringify(state.productBoms)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast)); } catch (e) {}
@@ -447,6 +466,7 @@ import { showToast } from './utils.js';
       // GỘP theo dấu thời gian (mới hơn thắng) thay vì ghi đè — tránh mất
       // đơn giá/ảnh của các lần nhập nguyên liệu mới hơn bản trên mây.
       if (data.materialRecords) restoreMaterialRecords(data.materialRecords);
+      if (data.materialPlan !== undefined) state.materialPlan = data.materialPlan || {};
       if (data.productBoms) state.productBoms = data.productBoms;
       if (data.planningItems) state.planningItems = data.planningItems;
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
@@ -528,6 +548,7 @@ import { showToast } from './utils.js';
         arrFilled(data.pressRecords) || arrFilled(data.materialRecords)) return true;
     if (data.planningForecast && typeof data.planningForecast === 'object' && Object.keys(data.planningForecast).length > 0) return true;
     if (data.planningStock && typeof data.planningStock === 'object' && Object.keys(data.planningStock).length > 0) return true;
+    if (data.materialPlan && typeof data.materialPlan === 'object' && Object.keys(data.materialPlan).length > 0) return true;
     return false;
   }
 
@@ -541,6 +562,7 @@ import { showToast } from './utils.js';
     if (Array.isArray(state.materialRecords) && state.materialRecords.length) return true;
     if (state.planningForecast && typeof state.planningForecast === 'object' && Object.keys(state.planningForecast).length) return true;
     if (state.planningStock && typeof state.planningStock === 'object' && Object.keys(state.planningStock).length) return true;
+    if (state.materialPlan && typeof state.materialPlan === 'object' && Object.keys(state.materialPlan).length) return true;
     return false;
   }
 

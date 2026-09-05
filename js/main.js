@@ -8,8 +8,8 @@ import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, toggle
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
-import { loadMaterialRecords, renderMaterialView } from './materials.js';
-import { deleteMaterialRate, deletePlanningItem, deleteProductBom, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, loadProductBoms, openMaterialRateModal, openProductBomModal, removeBomLine, renderPlanningView, selectPlanningProduct } from './planning.js';
+import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
+import { deleteMaterialRate, deletePlanningItem, deleteProductBom, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, loadProductBoms, openMaterialRateModal, openProductBomModal, removeBomLine, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressRecords, openPressModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { canViewAdvanced } from './permissions.js';
 import { state } from './state.js';
@@ -30,6 +30,9 @@ import { setupFormCalculations } from './utils.js';
     loadPlanningStock();
     loadPressRecords();
     loadMaterialRecords();
+    loadMaterialPlan();
+    // Nhớ lại trạng thái thu gọn của các bảng dữ liệu (định mức, lượt ép, nguyên liệu)
+    restoreRateTableCollapse();
     setupEventListeners();
     setupFormCalculations();
     updateUndoButton();
@@ -215,6 +218,8 @@ import { setupFormCalculations } from './utils.js';
     // Giả định / Xóa Dự kiến theo từng tuần
     forecastAssumeWeek,
     forecastClearWeek,
+    // Kế hoạch nguyên liệu cần nhập (bảng phụ tab Nguyên liệu)
+    removeMaterialPlanWeek,
     // Yêu cầu quyền xem Vùng Nâng Cao (từ thẻ khóa trên Dashboard)
     requestAdvancedAccess,
     // Cấu hình quyền chi tiết người dùng (Admin)

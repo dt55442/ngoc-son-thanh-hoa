@@ -10,7 +10,7 @@ import { closeColumnFilters } from './kanban.js';
 import { filterMobileKanbanColumns, renderAll, switchView } from './main.js';
 import { addBomLine, closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, closeProductBomModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, handleProductBomSubmit, openMaterialRateModal, openPlanningItemModal, openProductBomModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, applyBomToPressLines, closePressModal, handlePressRecordSubmit, openPressModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
-import { closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, renderMaterialImagePreviews, renderMaterialView, updateMaterialWeight } from './materials.js';
+import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -395,6 +395,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
           renderPlanningMatrix();
         }
       }
+      // Kế hoạch nguyên liệu cần nhập (tab Nguyên liệu): ô số TB/ngày theo tuần + vị trí
+      if (e.target && e.target.id && e.target.id.startsWith('mat-plan-')) {
+        handleMaterialPlanInput(e.target);
+      }
     });
 
     // ── Sản lượng ép ván ──
@@ -442,10 +446,29 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       renderPressChart();
       renderPressTable();
     });
+    // Thu gọn / mở rộng bảng danh sách lượt ép
+    safeOn('btn-toggle-press-table', 'click', () => toggleRateTableCollapse('press-table-card'));
 
     // ── Nhập nguyên liệu (Lò hơi / Xưởng 1 / Xưởng 2) ──
     safeOn('btn-add-material', 'click', () => openMaterialModal());
     safeOn('btn-refresh-materials', 'click', () => renderMaterialView());
+    // Thu gọn / mở rộng nhật ký nhập nguyên liệu
+    safeOn('btn-toggle-material-table', 'click', () => toggleRateTableCollapse('material-table-card'));
+    // ── Kế hoạch nguyên liệu cần nhập (bảng phụ theo tuần) ──
+    safeOn('material-plan-year', 'change', (e) => {
+      state.materialPlanYear = e.target.value;
+      renderMaterialPlanTable();
+    });
+    safeOn('btn-add-material-plan-week', 'click', () => addMaterialPlanWeek());
+    // Thu gọn / mở rộng bảng kế hoạch nguyên liệu
+    safeOn('btn-toggle-material-plan', 'click', () => toggleRateTableCollapse('material-plan-card'));
+    // ── Biểu đồ Kế hoạch vs Thực tế nguyên liệu theo ngày ──
+    safeOn('mpc-week-filter', 'change', (e) => {
+      state.materialPlanChartWeek = e.target.value;
+      renderMaterialPlanChart();
+    });
+    safeOn('mpc-week-prev', 'click', () => shiftMaterialPlanChartWeek(-1));
+    safeOn('mpc-week-next', 'click', () => shiftMaterialPlanChartWeek(1));
     safeOn('btn-close-material', 'click', closeMaterialModal);
     safeOn('btn-cancel-material', 'click', closeMaterialModal);
     safeOn('material-form', 'submit', handleMaterialSubmit);

@@ -24,6 +24,8 @@
 
   <!-- Local Chart.js (OFFLINE) -->
   <script src="vendor/chart.umd.js"></script>
+  <script src="vendor/hammer.min.js"></script>
+  <script src="vendor/chartjs-plugin-zoom.min.js"></script>
 
   <!-- Local SheetJS xlsx (OFFLINE) -->
   <script src="vendor/xlsx.full.min.js"></script>
@@ -624,6 +626,32 @@
       </div>
 
       <!-- ======================================================= -->
+      <!-- BIỂU ĐỒ TĨNH: KẾ HOẠCH vs THỰC TẾ NGUYÊN LIỆU (THEO NGÀY) -->
+      <!-- Vỏ cột = kế hoạch TB/ngày (bảng Kế Hoạch Nguyên Liệu ở    -->
+      <!-- tab Nguyên liệu) · cột đặc = thực tế nhập trong ngày      -->
+      <!-- ======================================================= -->
+      <div class="planning-card press-chart-card pv-card" id="material-plan-chart-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)</h4>
+          <span class="pv-cap-hint">Chụm 2 ngón / lăn chuột để phóng to • Kéo ngang để dịch • Nhấp đúp để về mặc định</span>
+          <div class="pv-toolbar">
+            <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
+              <button type="button" class="pv-week-btn" id="mpc-week-prev" title="Tuần trước"><i data-lucide="chevron-left"></i></button>
+              <select id="mpc-week-filter" title="Chọn tuần hiển thị"></select>
+              <button type="button" class="pv-week-btn" id="mpc-week-next" title="Tuần sau"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <span class="material-kpi-caption" id="mpc-caption"></span>
+            <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
+              <i data-lucide="maximize"></i>
+            </button>
+          </div>
+        </div>
+        <div class="press-chart-box">
+          <canvas id="material-plan-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
       <!-- VÙNG CƠ BẢN — mọi người đều xem được                    -->
       <!-- ======================================================= -->
       <div class="dash-zone" id="dash-zone-basic">
@@ -1069,9 +1097,12 @@
       </div>
 
       <!-- DANH SÁCH LƯỢT ÉP -->
-      <div class="planning-card">
+      <div class="planning-card" id="press-table-card">
         <div class="planning-card-header">
           <h4><i data-lucide="layers"></i> Danh Sách Lượt Ép Ván</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-press-table" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
         </div>
         <div class="table-responsive">
           <table class="data-table planning-table" id="press-table">
@@ -1215,9 +1246,12 @@
       <div class="material-tabs" id="material-location-tabs"></div>
 
       <!-- Bảng dữ liệu -->
-      <div class="planning-card">
+      <div class="planning-card" id="material-table-card">
         <div class="planning-card-header">
           <h4><i data-lucide="table-2"></i> Nhật Ký Nhập Nguyên Liệu</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-material-table" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
         </div>
         <div style="overflow-x:auto;">
           <table class="data-table" id="material-table">
@@ -1240,9 +1274,49 @@
           </table>
         </div>
       </div>
+
+      <!-- BẢNG PHỤ: KẾ HOẠCH NGUYÊN LIỆU CẦN NHẬP (theo tuần) -->
+      <div class="planning-card" id="material-plan-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="clipboard-list"></i> Kế Hoạch Nguyên Liệu Cần Nhập (Bảng Phụ)</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-material-plan" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <p style="margin:0; padding:10px 16px; font-size:0.78rem; color:var(--text-muted);">
+          Kế hoạch nhập nguyên liệu <strong>theo tuần</strong> cho 3 vị trí. Số nhập vào là
+          <strong>trung bình MỖI NGÀY</strong> trong tuần — tổng cả tuần tự tính = TB/ngày × 7 (hiển thị ngay dưới ô nhập).
+        </p>
+        <div class="material-plan-controls">
+          <div class="filter-item">
+            <label for="material-plan-year">Năm:</label>
+            <select id="material-plan-year"></select>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-add-material-plan-week">
+            <i data-lucide="plus"></i> Thêm Tuần
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table planning-table" id="material-plan-table">
+            <thead>
+              <tr>
+                <th style="width:170px;">Tuần</th>
+                <th>Lò Hơi (TB/ngày)</th>
+                <th>Xưởng 1 (TB/ngày)</th>
+                <th>Xưởng 2 (TB/ngày)</th>
+                <th class="text-right" style="width:70px;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="material-plan-body"></tbody>
+            <tfoot id="material-plan-foot"></tfoot>
+          </table>
+        </div>
+      </div>
+
     </section>
 
   </main>
+
 
   <!-- MODAL: NHẬP / SỬA NGUYÊN LIỆU -->
   <div class="modal-overlay" id="modal-material">

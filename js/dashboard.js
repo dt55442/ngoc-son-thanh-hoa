@@ -11,7 +11,7 @@
 import { initLucide, requireEditPermission, requireTabEditPermission } from './cloud.js';
 import { computeChartData, getPaletteColors, saveCustomCharts } from './export-xlsx.js';
 import { canEditChartZone, canEditTab, canViewAdvanced, getTabDef } from './permissions.js';
-import { MATERIAL_LOCATIONS } from './materials.js';
+import { MATERIAL_LOCATIONS, renderMaterialPlanChart } from './materials.js';
 import { renderPlanVsPressChart, renderPlanCapacityChart } from './press.js';
 import { STAGES, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
@@ -21,6 +21,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     renderStageFlow();
     renderPlanVsPressChart();
     renderPlanCapacityChart();
+    renderMaterialPlanChart();
     renderDashboardZones();
   }
 

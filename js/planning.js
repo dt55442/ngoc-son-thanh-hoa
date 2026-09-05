@@ -1000,14 +1000,18 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     initLucide();
   }
 
-  // ── Thu gọn / mở rộng bảng định mức (bảng chính & bảng phụ ván thô) ──
+  // ── Thu gọn / mở rộng bảng dữ liệu trong thẻ .planning-card ──
+  // Áp dụng chung cho: 2 bảng định mức (Kế hoạch), danh sách lượt ép (Sản lượng ép),
+  // nhật ký nhập nguyên liệu (Nguyên liệu). Trạng thái lưu localStorage, nhớ từng thẻ.
   const RATE_COLLAPSE_KEY = 'bamboo_tracker_rate_collapse_v1';
+  const COLLAPSE_CARDS = ['rate-main-card', 'rate-bom-card', 'press-table-card', 'material-table-card', 'material-plan-card'];
   function saveRateCollapseState() {
     try {
-      localStorage.setItem(RATE_COLLAPSE_KEY, JSON.stringify({
-        'rate-main-card': document.getElementById('rate-main-card')?.classList.contains('rate-table-collapsed') || false,
-        'rate-bom-card':  document.getElementById('rate-bom-card')?.classList.contains('rate-table-collapsed') || false
-      }));
+      const data = {};
+      COLLAPSE_CARDS.forEach((id) => {
+        data[id] = document.getElementById(id)?.classList.contains('rate-table-collapsed') || false;
+      });
+      localStorage.setItem(RATE_COLLAPSE_KEY, JSON.stringify(data));
     } catch (e) {}
   }
   function toggleRateTableCollapse(cardId) {
@@ -1021,8 +1025,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(RATE_COLLAPSE_KEY)); } catch (e) {}
     if (!saved) return;
-    if (saved['rate-main-card']) document.getElementById('rate-main-card')?.classList.add('rate-table-collapsed');
-    if (saved['rate-bom-card'])  document.getElementById('rate-bom-card')?.classList.add('rate-table-collapsed');
+    COLLAPSE_CARDS.forEach((id) => {
+      if (saved[id]) document.getElementById(id)?.classList.add('rate-table-collapsed');
+    });
   }
 
   // Render bảng ĐỊNH MỨC VÁN THÔ → THÀNH PHẨM (bảng phụ 2) kèm cột sản lượng quy đổi.

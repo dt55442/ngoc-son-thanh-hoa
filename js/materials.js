@@ -12,7 +12,7 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { dataUrlToBlob, deletePhotos, getPhotoURL, photosAvailable, putPhoto } from './photo-store.js';
-import { STORAGE_KEY_MATERIALS, state } from './state.js';
+import { STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIALS, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   // Ghi/xóa file ảnh qua storage.js (import động để tránh vòng phụ thuộc module)
@@ -147,6 +147,423 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     firePushSync(); // đồng bộ lên mây nếu online (payload đã gồm materialRecords)
   }
 
+  // ─── KẾ HOẠCH NGUYÊN LIỆU CẦN NHẬP (BẢNG PHỤ THEO TUẦN) ─────
+  // state.materialPlan: { '2026-W36': { 'lo-hoi': 12, 'xuong-1': 30, 'xuong-2': 25 } }
+  // Số nhập vào = TRUNG BÌNH MỖI NGÀY của tuần; tổng cả tuần tự tính = TB/ngày × 7.
+  // Lưu localStorage + đồng bộ mây (firePushSync) như planningStock.
+  function loadMaterialPlan() {
+    const raw = localStorage.getItem(STORAGE_KEY_MATERIAL_PLAN);
+    if (raw) {
+      try { state.materialPlan = JSON.parse(raw) || {}; }
+      catch (e) { state.materialPlan = {}; }
+    } else {
+      state.materialPlan = {};
+    }
+  }
+
+  function saveMaterialPlan() {
+    try {
+      localStorage.setItem(STORAGE_KEY_MATERIAL_PLAN, JSON.stringify(state.materialPlan || {}));
+    } catch (err) {
+      showToast('Không lưu được kế hoạch vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu vẫn còn trên màn hình.', 'error');
+    }
+    firePushSync();
+  }
+
+  // Tuần ISO hiện tại dạng "2026-W36"
+  function currentPlanWeekKey() {
+    return materialWeekLabel(new Date().toISOString().split('T')[0]);
+  }
+
+  // Số tuần ISO của một năm (52 hoặc 53)
+  function isoWeeksInYear(year) {
+    const y = parseInt(year, 10) || new Date().getFullYear();
+    const d = new Date(Date.UTC(y, 11, 28));
+    const dayNr = (d.getUTCDay() + 6) % 7;
+    d.setUTCDate(d.getUTCDate() - dayNr + 3);
+    const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const fDayNr = (firstThursday.getUTCDay() + 6) % 7;
+    firstThursday.setUTCDate(firstThursday.getUTCDate() - fDayNr + 3);
+    return 1 + Math.round((d - firstThursday) / (7 * 86400000));
+  }
+
+  // Thứ 2 của tuần ISO "2026-W36" -> Date (UTC để tính ngày chính xác)
+  function mondayOfISOWeek(weekKey) {
+    const m = /^(\d{4})-W(\d{1,2})$/.exec(String(weekKey || ''));
+    if (!m) return null;
+    const y = parseInt(m[1], 10), w = parseInt(m[2], 10);
+    const jan4 = new Date(Date.UTC(y, 0, 4));
+    const dayNr = (jan4.getUTCDay() + 6) % 7;
+    const week1Thu = new Date(jan4.getTime());
+    week1Thu.setUTCDate(jan4.getUTCDate() - dayNr + 3);
+    const mon = new Date(week1Thu.getTime());
+    mon.setUTCDate(week1Thu.getUTCDate() - 3 + (w - 1) * 7);
+    return mon;
+  }
+
+  // Khoảng ngày "dd/MM → dd/MM" của tuần ISO
+  function planWeekRangeLabel(weekKey) {
+    const mon = mondayOfISOWeek(weekKey);
+    if (!mon) return '';
+    const sun = new Date(mon.getTime());
+    sun.setUTCDate(mon.getUTCDate() + 6);
+    const fmt = (d) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    return `${fmt(mon)} → ${fmt(sun)}`;
+  }
+
+  // Danh sách năm có trong dữ liệu kế hoạch + năm hiện tại (giảm dần)
+  function planYears() {
+    const years = new Set([String(new Date().getFullYear())]);
+    Object.keys(state.materialPlan || {}).forEach((wk) => {
+      const m = /^(\d{4})-W/.exec(wk);
+      if (m) years.add(m[1]);
+    });
+    return [...years].sort((a, b) => b.localeCompare(a));
+  }
+
+  function renderMaterialPlanYearFilter() {
+    const sel = document.getElementById('material-plan-year');
+    if (!sel) return;
+    const years = planYears();
+    if (!state.materialPlanYear || !years.includes(state.materialPlanYear)) {
+      state.materialPlanYear = String(new Date().getFullYear());
+    }
+    sel.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+    sel.value = state.materialPlanYear;
+  }
+
+  // Các tuần cần hiển thị của năm đang chọn: tuần có dữ liệu + luôn có tuần hiện tại
+  function planWeeksToShow() {
+    const year = state.materialPlanYear || String(new Date().getFullYear());
+    const weeks = Object.keys(state.materialPlan || {})
+      .filter((wk) => wk.startsWith(`${year}-W`))
+      .sort((a, b) => parseInt(a.split('-W')[1], 10) - parseInt(b.split('-W')[1], 10));
+    const cur = currentPlanWeekKey();
+    if (cur.startsWith(`${year}-W`) && !weeks.includes(cur)) weeks.push(cur);
+    return weeks;
+  }
+
+  function planAvgOf(weekKey, locKey) {
+    const entry = state.materialPlan && state.materialPlan[weekKey];
+    const v = entry ? Number(entry[locKey]) : NaN;
+    return Number.isFinite(v) ? v : null;
+  }
+
+  function renderMaterialPlanTable() {
+    renderMaterialPlanYearFilter();
+    const tbody = document.getElementById('material-plan-body');
+    if (!tbody) return;
+    const editable = canEditMaterials();
+    const locs = MATERIAL_LOCATIONS;
+    const weeks = planWeeksToShow();
+    const curWeek = currentPlanWeekKey();
+    const disabled = editable ? '' : 'disabled';
+
+    const rowsHtml = weeks.map((wk) => {
+      const wn = parseInt(wk.split('-W')[1], 10);
+      const cells = locs.map((l) => {
+        const avg = planAvgOf(wk, l.key);
+        const total = avg === null ? null : avg * 7;
+        return `<td class="mat-input-cell mat-plan-cell">
+          <input type="number" min="0" step="0.01" id="mat-plan-${l.key}-${wk}" value="${avg === null ? '' : avg}" placeholder="0" ${disabled}
+            title="Số TB MỖI NGÀY cần nhập cho ${escapeHTML(l.label)} trong tuần ${wn} — tổng tuần = TB × 7">
+          <span class="mat-plan-week-total">${total === null ? '&mdash;' : '&asymp; ' + total.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + '/tuần'}</span>
+        </td>`;
+      }).join('');
+      return `<tr class="${wk === curWeek ? 'mat-plan-current' : ''}">
+        <td>
+          <strong>Tuần ${wn}</strong>
+          <span class="mat-plan-range">${escapeHTML(planWeekRangeLabel(wk))}${wk === curWeek ? ' · tuần này' : ''}</span>
+        </td>
+        ${cells}
+        <td class="text-right">${editable ? `<button class="btn btn-icon btn-danger" title="Xóa kế hoạch tuần ${wn}" onclick="app.removeMaterialPlanWeek('${wk}')"><i data-lucide="trash-2"></i></button>` : ''}</td>
+      </tr>`;
+    }).join('');
+
+    tbody.innerHTML = rowsHtml || `
+      <tr><td colspan="5" class="text-center" style="color:var(--text-muted); padding:24px 10px;">
+        Chưa có kế hoạch tuần nào — bấm <strong>Thêm Tuần</strong> để bắt đầu.
+      </td></tr>`;
+
+    // Dòng tổng cộng: tổng cả tuần (TB/ngày × 7) của các tuần đang hiển thị, theo từng vị trí
+    const foot = document.getElementById('material-plan-foot');
+    if (foot) {
+      if (!weeks.length) { foot.innerHTML = ''; }
+      else {
+        const totals = locs.map((l) => weeks.reduce((s, wk) => {
+          const avg = planAvgOf(wk, l.key);
+          return s + (avg === null ? 0 : avg * 7);
+        }, 0));
+        foot.innerHTML = `
+          <tr>
+            <td><strong>Tổng cộng (${weeks.length} tuần)</strong></td>
+            ${totals.map((t) => `<td class="text-right mat-plan-foot-cell"><strong>${t > 0 ? '&asymp; ' + t.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '&mdash;'}</strong></td>`).join('')}
+            <td></td>
+          </tr>`;
+      }
+    }
+    initLucide();
+  }
+
+  // Thêm 1 tuần kế hoạch: tuần kế tiếp sau tuần cuối đang có (bảng trống -> tuần hiện tại).
+  // Hết tuần của năm -> tự chuyển sang tuần 1 năm sau (kèm đổi bộ lọc năm).
+  function addMaterialPlanWeek() {
+    if (!canEditMaterials()) return;
+    const year = state.materialPlanYear || String(new Date().getFullYear());
+    const existing = Object.keys(state.materialPlan || {}).filter((wk) => wk.startsWith(`${year}-W`));
+    let nextKey;
+    if (existing.length === 0) {
+      nextKey = currentPlanWeekKey().startsWith(`${year}-W`) ? currentPlanWeekKey() : `${year}-W01`;
+    } else {
+      const maxWeek = Math.max(...existing.map((wk) => parseInt(wk.split('-W')[1], 10)));
+      if (maxWeek >= isoWeeksInYear(year)) {
+        const nextYear = String(parseInt(year, 10) + 1);
+        nextKey = `${nextYear}-W01`;
+        state.materialPlanYear = nextYear;
+      } else {
+        nextKey = `${year}-W${String(maxWeek + 1).padStart(2, '0')}`;
+      }
+    }
+    if (!state.materialPlan) state.materialPlan = {};
+    if (!state.materialPlan[nextKey]) state.materialPlan[nextKey] = {};
+    saveMaterialPlan();
+    renderMaterialPlanTable();
+    showToast(`Đã thêm ${friendlyMaterialWeek(nextKey)} vào kế hoạch!`, 'success');
+  }
+
+  function removeMaterialPlanWeek(weekKey) {
+    if (!canEditMaterials()) return;
+    if (!state.materialPlan || !state.materialPlan[weekKey]) return;
+    if (!confirm(`Xóa kế hoạch ${friendlyMaterialWeek(weekKey)}?`)) return;
+    delete state.materialPlan[weekKey];
+    saveMaterialPlan();
+    renderMaterialPlanTable();
+    showToast(`Đã xóa ${friendlyMaterialWeek(weekKey)} khỏi kế hoạch!`, 'success');
+  }
+
+  // Người dùng sửa ô TB/ngày (id: mat-plan-<vị trí>-<năm>-W<t>): lưu giá trị;
+  // ô trống = xóa giá trị vị trí đó; cả 3 vị trí trống -> xóa luôn tuần khỏi kế hoạch.
+  function handleMaterialPlanInput(inputEl) {
+    if (!canEditMaterials()) return;
+    const m = /^mat-plan-(.+)-(\d{4}-W\d{1,2})$/.exec(inputEl.id || '');
+    if (!m) return;
+    const locKey = m[1];
+    const weekKey = m[2];
+    if (!MATERIAL_LOCATIONS.some((l) => l.key === locKey)) return;
+    if (!state.materialPlan) state.materialPlan = {};
+    if (!state.materialPlan[weekKey]) state.materialPlan[weekKey] = {};
+    const rawVal = String(inputEl.value).trim();
+    if (rawVal === '' || !Number.isFinite(parseFloat(rawVal))) {
+      delete state.materialPlan[weekKey][locKey];
+    } else {
+      state.materialPlan[weekKey][locKey] = parseFloat(rawVal);
+    }
+    state.materialPlan[weekKey].updatedAt = new Date().toISOString();
+    const remaining = MATERIAL_LOCATIONS.filter((l) => Number.isFinite(Number(state.materialPlan[weekKey][l.key])));
+    if (remaining.length === 0) delete state.materialPlan[weekKey];
+    saveMaterialPlan();
+    renderMaterialPlanTable();
+  }
+
+  // ─── BIỂU ĐỒ: KẾ HOẠCH vs THỰC TẾ NGUYÊN LIỆU THEO NGÀY ─────
+  // Vỏ cột (nền nhạt + viền đậm) = kế hoạch TRUNG BÌNH MỖI NGÀY của tuần
+  // (từ bảng kế hoạch phía trên); cột đặc bên trong = thực tế đã nhập trong
+  // ngày (tổng trọng lượng nhật ký theo vị trí).
+  const MP_LOC_COLORS = { 'lo-hoi': '#f59e0b', 'xuong-1': '#16a34a', 'xuong-2': '#2563eb' };
+  const MP_DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+  // 7 ngày (thứ 2 → chủ nhật) của tuần ISO: [{ iso: '2026-09-01', label: '01/09' }]
+  function mpWeekDates(weekKey) {
+    const mon = mondayOfISOWeek(weekKey);
+    if (!mon) return [];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mon.getTime());
+      d.setUTCDate(mon.getUTCDate() + i);
+      return {
+        iso: d.toISOString().split('T')[0],
+        label: `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+      };
+    });
+  }
+
+  // Tổng trọng lượng thực tế đã nhập trong 1 ngày của 1 vị trí (kg)
+  function mpActualOf(dayIso, locKey) {
+    return state.materialRecords.reduce((s, r) =>
+      ((r.date === dayIso && r.location === locKey) ? s + (Number(r.weight) || 0) : s), 0);
+  }
+
+  function mpFmtKg(v) {
+    return (Math.round(v * 100) / 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  }
+
+  // Ô chọn tuần: danh sách tuần 1..N của năm đang xem
+  function renderMaterialPlanChartWeekSelect() {
+    const sel = document.getElementById('mpc-week-filter');
+    if (!sel) return;
+    if (!state.materialPlanChartWeek) state.materialPlanChartWeek = currentPlanWeekKey();
+    const m = /^(\d{4})-W(\d{1,2})$/.exec(state.materialPlanChartWeek);
+    const year = m ? m[1] : String(new Date().getFullYear());
+    const wn = m ? parseInt(m[2], 10) : 1;
+    sel.innerHTML = Array.from({ length: isoWeeksInYear(year) }, (_, i) => i + 1)
+      .map((w) => `<option value="${year}-W${String(w).padStart(2, '0')}"${w === wn ? ' selected' : ''}>Tuần ${w} · ${year}</option>`)
+      .join('');
+  }
+
+  // Lùi/tiến 1 tuần (±1) rồi vẽ lại biểu đồ
+  function shiftMaterialPlanChartWeek(delta) {
+    if (!state.materialPlanChartWeek) state.materialPlanChartWeek = currentPlanWeekKey();
+    const mon = mondayOfISOWeek(state.materialPlanChartWeek);
+    if (!mon) return;
+    mon.setUTCDate(mon.getUTCDate() + delta * 7);
+    state.materialPlanChartWeek = materialWeekLabel(mon.toISOString().split('T')[0]);
+    renderMaterialPlanChart();
+  }
+
+  // Vẽ biểu đồ cột lồng: 7 ngày × 3 vị trí.
+  // VỎ (viền đậm + nền nhạt) = kế hoạch TB/ngày của tuần (bảng kế hoạch trên).
+  // CỘT ĐẶC bên trong = thực tế nhập trong ngày (tổng trọng lượng nhật ký).
+  // Kỹ thuật: mỗi vị trí là 1 dataset có grouped:false (các dataset CHỒNG lên
+  // nhau tại mỗi nhãn); điền null xen kẽ để 3 cặp vỏ+lấp đứng cạnh nhau:
+  // nhãn = [T2,T2,T2,T3,T3,T3,...] (21 nhãn), mỗi vị trí chiếm các cột
+  // [0,3,6,...] / [1,4,7,...] / [2,5,8,...].
+  function renderMaterialPlanChart() {
+    const canvas = document.getElementById('material-plan-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    renderMaterialPlanChartWeekSelect();
+    const weekKey = state.materialPlanChartWeek || currentPlanWeekKey();
+    const days = mpWeekDates(weekKey);
+    const caption = document.getElementById('mpc-caption');
+    if (caption) caption.textContent = `Tuần ${parseInt(weekKey.split('-W')[1], 10)} (${weekKey.split('-W')[0]}) · ${days.length ? days[0].label + ' → ' + days[6].label : ''}`;
+
+    const labels = [];
+    days.forEach((d) => { for (let i = 0; i < MATERIAL_LOCATIONS.length; i++) labels.push(d.label); });
+    const slotCount = MATERIAL_LOCATIONS.length;
+
+    const datasets = MATERIAL_LOCATIONS.map((loc, li) => {
+      const color = MP_LOC_COLORS[loc.key] || '#64748b';
+      const plan = new Array(labels.length).fill(null);
+      const actual = new Array(labels.length).fill(null);
+      days.forEach((d, di) => {
+        const base = di * slotCount + li;
+        const avg = planAvgOf(weekKey, loc.key);
+        plan[base] = avg === null ? 0 : avg;                    // vỏ: TB/ngày của tuần
+        actual[base] = mpActualOf(d.iso, loc.key);             // lấp: thực tế trong ngày
+      });
+      return [
+        {
+          label: `${loc.label} (KH)`, data: plan, order: 2,
+          backgroundColor: color + '22', borderColor: color, borderWidth: 2,
+          borderRadius: 6, borderSkipped: false, grouped: false,
+          barPercentage: 1.0, categoryPercentage: 0.92
+        },
+        {
+          label: `${loc.label} (TT)`, data: actual, order: 1,
+          backgroundColor: color, borderColor: color, borderWidth: 0,
+          borderRadius: 4, grouped: false,
+          barPercentage: 0.72, categoryPercentage: 0.92
+        }
+      ];
+    }).flat();
+
+    // Zoom / pan (chartjs-plugin-zoom + Hammer đã nạp trong index.html):
+    // chụm 2 ngón / lăn chuột để phóng trục X, kéo ngang để dịch, nhấp đúp
+    // để về mặc định. Thiếu thư viện -> biểu đồ vẫn vẽ bình thường (không zoom).
+    const mpZoom = (typeof Chart !== 'undefined' && window.ChartZoom) ? (() => {
+      try { Chart.register(window.ChartZoom); } catch (e) {}
+      return {
+        pan: { enabled: true, mode: 'x' },
+        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+        limits: { x: { minRange: 3 } } // không phóng nhỏ quá 1 ngày (mỗi ngày = 3 cột)
+      };
+    })() : false;
+    if (mpZoom) {
+      canvas.style.touchAction = 'pan-y'; // chạm 1 ngón vẫn cuộn dọc trang bình thường
+      if (!canvas.__mpDblClickBound) {
+        canvas.__mpDblClickBound = true;
+        canvas.addEventListener('dblclick', () => {
+          try { if (state.materialPlanChartInstance) state.materialPlanChartInstance.resetZoom(); } catch (e) {}
+        });
+      }
+    }
+
+    const cfg = {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: true },
+        plugins: {
+          zoom: mpZoom,
+          legend: {
+            position: 'bottom',
+            labels: {
+              boxWidth: 14, boxHeight: 14, padding: 14,
+              // Gộp chú thích: mỗi vị trí 1 màu — bỏ dòng "(KH)/(TT)" trùng
+              generateLabels: (chart) => MATERIAL_LOCATIONS.map((loc, li) => ({
+                text: loc.label,
+                fillStyle: MP_LOC_COLORS[loc.key] || '#64748b',
+                strokeStyle: MP_LOC_COLORS[loc.key] || '#64748b',
+                lineWidth: 1, hidden: false, index: li * 2
+              }))
+            },
+            onClick: () => {} // tắt ẩn/hiện dataset (cặp vỏ+lấp phải luôn đi cùng nhau)
+          },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                const day = days[Math.floor(idx / slotCount)];
+                return day ? `${MP_DAY_NAMES[idx % slotCount] || ''} ${day.label}` : '';
+              },
+              label: (item) => {
+                const isPlan = item.datasetIndex % 2 === 0;
+                const li = Math.floor(item.datasetIndex / 2);
+                const loc = MATERIAL_LOCATIONS[li];
+                const locName = loc ? loc.label : '';
+                const v = item.parsed.y;
+                return isPlan
+                  ? `${locName} — Kế hoạch: ${mpFmtKg(v)} kg/ngày`
+                  : `${locName} — Thực tế: ${mpFmtKg(v)} kg`;
+              },
+              afterBody: (items) => {
+                const it = items[0];
+                const li = Math.floor(it.datasetIndex / 2);
+                const ds = it.chart.data.datasets;
+                const p = Number(ds[li * 2].data[it.dataIndex]) || 0;
+                const a = Number(ds[li * 2 + 1].data[it.dataIndex]) || 0;
+                if (p > 0) return `Hoàn thành: ${Math.round((a / p) * 100)}%`;
+                return [];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              autoSkip: false, maxRotation: 0,
+              // Chỉ hiện nhãn ngày ở cột ĐẦU TIÊN của mỗi ngày (tránh lặp 3 lần)
+              callback: function (val, idx) {
+                return idx % slotCount === 0 ? this.getLabelForValue(val) : '';
+              }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(148,163,184,0.15)' },
+            ticks: { callback: (v) => mpFmtKg(v) },
+            title: { display: true, text: 'Trọng lượng (kg)' }
+          }
+        }
+      }
+    };
+
+    if (state.materialPlanChartInstance) {
+      state.materialPlanChartInstance.destroy();
+    }
+    state.materialPlanChartInstance = new Chart(canvas.getContext('2d'), cfg);
+  }
+
   // ─── QUYỀN ───────────────────────────────────────────────────
   function canEditMaterials() {
     // currentTabId() ánh xạ materials-view → 'materials' qua TAB_DEFS
@@ -154,11 +571,13 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
 
   // ─── GIAO DIỆN TAB ───────────────────────────────────────────
+  // (Biểu đồ Kế hoạch vs Thực tế đã chuyển sang Dashboard — dashboard.js)
   function renderMaterialView() {
     renderMaterialKpiFilter();
     renderMaterialTabs();
     renderMaterialStats();
     renderMaterialTable();
+    renderMaterialPlanTable();
     initLucide();
   }
 
@@ -681,6 +1100,7 @@ export {
   MATERIAL_KPI_PERIODS,
   MATERIAL_LOCATIONS,
   MATERIAL_TYPE_SUGGESTIONS,
+  addMaterialPlanWeek,
   canEditMaterials,
   closeMaterialModal,
   closeMaterialPhotoModal,
@@ -688,6 +1108,7 @@ export {
   deleteMaterial,
   friendlyMaterialWeek,
   handleMaterialImageSelect,
+  handleMaterialPlanInput,
   handleMaterialSubmit,
   imgFullSrcSync,
   imgPhotoId,
@@ -695,6 +1116,7 @@ export {
   imgThumbSrc,
   kpiPeriodCaption,
   kpiPeriodFilteredRecords,
+  loadMaterialPlan,
   loadMaterialRecords,
   materialLocationLabel,
   materialMonthKey,
@@ -703,13 +1125,18 @@ export {
   migrateMaterialImages,
   openMaterialModal,
   openMaterialPhotoModal,
+  removeMaterialPlanWeek,
   renderMaterialImagePreviews,
   renderMaterialKpiFilter,
+  renderMaterialPlanChart,
+  renderMaterialPlanTable,
   renderMaterialStats,
   renderMaterialTable,
   renderMaterialTabs,
   renderMaterialView,
+  saveMaterialPlan,
   saveMaterialRecords,
+  shiftMaterialPlanChartWeek,
   updateMaterialAmount,
   updateMaterialWeight
 };

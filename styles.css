@@ -3726,9 +3726,42 @@ body.multi-select .card-actions {
 .planning-card.rate-table-collapsed .table-responsive,
 .planning-card.rate-table-collapsed .planning-card-footer,
 .planning-card.rate-table-collapsed > p { display: none; }
+/* Thu gọn chung: ẩn mọi nội dung trừ header — áp dụng cho cả bảng lượt ép (Sản lượng ép)
+   và nhật ký nguyên liệu (thẻ này bọc bảng bằng div overflow riêng, không phải .table-responsive) */
+.planning-card.rate-table-collapsed > *:not(.planning-card-header) { display: none; }
 .planning-card.rate-table-collapsed .rate-toggle-btn span { display: none; }
 .planning-card.rate-table-collapsed .rate-toggle-btn svg { transform: rotate(180deg); transition: transform 0.2s; }
 .bom-capacity { font-weight: 600; color: var(--primary, #2563eb); }
+
+/* ═══ Kế hoạch Nguyên liệu cần nhập (bảng phụ theo tuần — tab Nguyên liệu) ═══ */
+.material-plan-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px 0;
+}
+.mat-plan-cell { text-align: center; min-width: 130px; }
+.mat-plan-cell input {
+  width: 110px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  text-align: right;
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+.mat-plan-cell input:focus { outline: none; border-color: var(--primary); }
+.mat-plan-cell input:disabled { background: var(--bg-subtle); color: var(--text-muted); }
+.mat-plan-week-total { display: block; font-size: 0.68rem; color: var(--text-muted); margin-top: 3px; white-space: nowrap; }
+.mat-plan-range { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+tr.mat-plan-current td { background: var(--primary-light); }
+.mat-plan-foot-cell { color: #b45309; }
+@media (max-width: 540px) {
+  .mat-plan-cell input { width: 84px; }
+  .mat-plan-cell { min-width: 100px; }
+}
 
 /* ═══════════════════════════════════════════════════════════
    DASHBOARD NÂNG CẤP: VÙNG CƠ BẢN / VÙNG NÂNG CAO

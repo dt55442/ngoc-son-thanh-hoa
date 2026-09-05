@@ -8,6 +8,7 @@
   const STORAGE_KEY_USERS         = 'bamboo_tracker_users_v3';
   const STORAGE_KEY_SESSION       = 'bamboo_tracker_session_v3';
   const STORAGE_KEY_CUSTOM_CHARTS = 'bamboo_tracker_custom_charts_v1';
+  const STORAGE_KEY_MATERIAL_PLAN = 'bamboo_tracker_material_plan_v1';
   const STORAGE_KEY_MATERIAL_RATES = 'bamboo_tracker_material_rates_v1';
   const STORAGE_KEY_PRODUCT_BOMS = 'bamboo_tracker_product_boms_v1';
   const STORAGE_KEY_PLANNING_ITEMS = 'bamboo_tracker_planning_items_v1';
@@ -60,6 +61,13 @@
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
     materialFormImages: [],   // ảnh (dataURL) đang có trong form
     materialLightbox: null,   // { recordId, index } đang mở trong lightbox
+    // Kế hoạch nguyên liệu cần nhập (bảng phụ tab Nguyên liệu)
+    // { '2026-W36': { 'lo-hoi': 12, 'xuong-1': 30, 'xuong-2': 25 } }
+    // Giá trị nhập = SỐ TRUNG BÌNH MỖI NGÀY trong tuần; tổng tuần = TB/ngày × 7
+    materialPlan: {},
+    materialPlanYear: '',     // năm đang chọn trong bộ lọc của bảng kế hoạch nguyên liệu
+    materialPlanChartWeek: '',      // tuần đang xem của biểu đồ Kế hoạch vs Thực tế ('2026-W36')
+    materialPlanChartInstance: null, // instance Chart.js của biểu đồ kế hoạch vs thực tế
     // Biểu đồ tĩnh Kế Hoạch vs Đã Ép (Dashboard)
     planVsPressUnit: 'vol',     // 'vol' = m³ (mặc định) | 'qty' = tấm — chỉ đổi SỐ hiển thị, chiều cao cột luôn theo m³
     planVsPressYear: 'current', // 'current' = năm hiện tại | 'all' | năm cụ thể (VD '2026')
@@ -95,6 +103,7 @@ export {
   STAGES,
   STORAGE_KEY_CUSTOM_CHARTS,
   STORAGE_KEY_DATA,
+  STORAGE_KEY_MATERIAL_PLAN,
   STORAGE_KEY_MATERIAL_RATES,
   STORAGE_KEY_MATERIALS,
   STORAGE_KEY_PLANNING_FORECAST,

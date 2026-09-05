@@ -175,20 +175,24 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       const stackLabel = (schema.groupBy.find(g => g[0] === chartDef.stackBy) || [, chartDef.stackBy])[1];
       subtitle += ` • Xếp tầng: ${stackLabel}`;
     }
-    // Tóm tắt bộ lọc đang bật của biểu đồ (theo schema của nguồn)
+    // Tóm tắt bộ lọc đang bật của biểu đồ (theo schema của nguồn).
+    // Giá trị bộ lọc có thể là chuỗi đơn (bản cũ) hoặc MẢNG nhiều giá trị (đa chọn).
     const activeFilters = ((BUILDER_SCHEMA[chartDef.source || 'kanban'] || {}).filters || [])
       .map(f => ({ f, val: chartDef[f.id] }))
-      .filter(x => x.val !== undefined && x.val !== null && x.val !== '' && x.val !== 'all')
+      .filter(x => x.val !== undefined && x.val !== null && x.val !== '' && x.val !== 'all' && !(Array.isArray(x.val) && x.val.length === 0))
       .map(x => {
-        let disp = String(x.val);
+        const valArr = (Array.isArray(x.val) ? x.val : [x.val]).map(String);
         // Ánh xạ giá trị thô → nhãn thân thiện (options là hàm sinh theo schema)
+        let disp = valArr;
         try {
           const opts = (typeof x.f.options === 'function' ? x.f.options() : (x.f.opts || x.f.options || [])).map(asOptPair);
-          const m = opts.find(([v]) => String(v) === disp);
-          if (m) disp = String(m[1]);
+          disp = valArr.map(v => {
+            const m = opts.find(([ov]) => String(ov) === v);
+            return m ? String(m[1]) : v;
+          });
         } catch (e) { /* giữ giá trị thô */ }
-        if (x.f.type === 'date') disp = formatDateDDMMYY(disp) || disp;
-        return `${x.f.label}: ${disp}`;
+        if (x.f.type === 'date') disp = disp.map(d => formatDateDDMMYY(d) || d);
+        return `${x.f.label}: ${disp.join(', ')}`;
       });
     if (activeFilters.length) {
       subtitle += ` • Lọc: ${activeFilters.slice(0, 3).join(' • ')}${activeFilters.length > 3 ? ` (+${activeFilters.length - 3})` : ''}`;
@@ -818,8 +822,135 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     }
   };
 
+  // ─── BỘ LỌC ĐA CHỌN CỦA CHART BUILDER (chọn 1 hoặc nhiều giá trị) ──
+  // Giao diện: nút tóm tắt + panel checkbox; mục "Tất Cả" (MS_ALL) = bỏ lọc.
+  // Giá trị LƯU trên chartDef theo fd.id:
+  //   • 'all'      → Tất Cả (không lọc) — tương thích dữ liệu cũ
+  //   • chuỗi đơn  → 1 giá trị (biểu đồ đã lưu từ bản cũ, vẫn đọc/hiển thị được)
+  //   • mảng chuỗi → nhiều giá trị đã chọn
+  const MS_ALL = '__all__';
+
+  // Giá trị đã lưu → danh sách mục đang chọn (không gồm MS_ALL). [] = Tất Cả.
+  function savedMsSelections(saved) {
+    if (Array.isArray(saved)) return saved.map(String).filter(v => v && v !== MS_ALL);
+    if (saved === undefined || saved === null || saved === '' || saved === 'all') return [];
+    return [String(saved)];
+  }
+  // Nhãn tóm tắt trên nút dropdown: "Tất Cả" / nhãn mục đơn / "Đã chọn N mục"
+  function msSummaryLabel(selVals, opts) {
+    if (!selVals.length) return 'Tất Cả';
+    if (selVals.length === 1) {
+      const m = opts.find(([v]) => String(v) === String(selVals[0]));
+      return m ? String(m[1]) : String(selVals[0]);
+    }
+    return `Đã chọn ${selVals.length} mục`;
+  }
+  // Đóng mọi dropdown đa chọn đang mở (trừ wrap chỉ định)
+  function closeAllChartMs(exceptWrap) {
+    document.querySelectorAll('.chart-ms.open').forEach(w => {
+      if (w === exceptWrap || (exceptWrap && typeof exceptWrap.contains === 'function' && exceptWrap.contains(w))) return;
+      w.classList.remove('open');
+      const t = w.querySelector && w.querySelector('.chart-ms-toggle');
+      if (t) t.setAttribute('aria-expanded', 'false');
+    });
+  }
+  // Bấm ra ngoài các dropdown → đóng hết (gắn listener đúng 1 lần)
+  let _chartMsOutsideWired = false;
+  function ensureChartMsOutsideClose() {
+    if (_chartMsOutsideWired) return;
+    _chartMsOutsideWired = true;
+    document.addEventListener('click', (e) => {
+      document.querySelectorAll('.chart-ms.open').forEach(w => {
+        if (typeof w.contains === 'function' && !w.contains(e.target)) w.classList.remove('open');
+      });
+    });
+  }
+  // Gắn sự kiện cho 1 dropdown đa chọn (gọi sau khi render xong innerHTML)
+  function wireChartMultiSelect(fid) {
+    const toggle = document.getElementById(`builder-${fid}`);
+    if (toggle) {
+      toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        const wrap = typeof toggle.closest === 'function' ? toggle.closest('.chart-ms') : null;
+        const willOpen = !(wrap && wrap.classList.contains('open'));
+        closeAllChartMs(wrap);
+        if (wrap) wrap.classList.toggle('open', willOpen);
+        toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+    }
+    const panel = document.getElementById(`builder-${fid}-panel`);
+    if (!panel) return;
+    // Ủy quyền sự kiện change cho mọi checkbox trong panel
+    panel.addEventListener('change', (e) => {
+      const box = e.target;
+      if (!box || box.type !== 'checkbox') return;
+      syncChartMsChecks(fid, panel, box);
+      updateChartBuilderPreview();
+    });
+  }
+  // Đồng bộ trạng thái checkbox của 1 dropdown đa chọn:
+  //  • tick "Tất Cả"     → bỏ tick mọi mục
+  //  • tick 1 mục        → bỏ "Tất Cả"; nếu đủ TẤT CẢ các mục → thu gọn về "Tất Cả"
+  //  • bỏ tick còn 0 mục → tự tick lại "Tất Cả"
+  //  • cập nhật nhãn tóm tắt + trạng thái has-value trên nút dropdown
+  function syncChartMsChecks(fid, panel, changed) {
+    const boxes = Array.from(panel.querySelectorAll('input[type="checkbox"]'));
+    const allBox = boxes.find(b => b.value === MS_ALL);
+    const valBoxes = boxes.filter(b => b.value !== MS_ALL);
+    const picked = () => valBoxes.filter(b => b.checked);
+    if (changed === allBox) {
+      if (allBox.checked) valBoxes.forEach(b => { b.checked = false; });
+      else if (!picked().length) allBox.checked = true;
+    } else if (changed.checked) {
+      if (allBox) allBox.checked = false;
+      if (valBoxes.length && valBoxes.every(b => b.checked)) {
+        valBoxes.forEach(b => { b.checked = false; });
+        if (allBox) allBox.checked = true;
+      }
+    } else if (!picked().length && allBox) {
+      allBox.checked = true;
+    }
+    const sel = picked();
+    const summary = document.getElementById(`builder-${fid}-summary`);
+    if (summary) {
+      if (!sel.length) summary.textContent = 'Tất Cả';
+      else if (sel.length === 1) {
+        const lab = typeof sel[0].closest === 'function' ? sel[0].closest('label') : null;
+        const span = lab && lab.querySelector ? lab.querySelector('span') : null;
+        summary.textContent = (span && span.textContent ? String(span.textContent) : sel[0].value).trim();
+      } else {
+        summary.textContent = `Đã chọn ${sel.length} mục`;
+      }
+    }
+    const wrap = typeof panel.closest === 'function' ? panel.closest('.chart-ms') : null;
+    if (wrap) wrap.classList.toggle('has-value', sel.length > 0);
+  }
+
+  // Gom giá trị bộ lọc hiện tại của Chart Builder theo schema của nguồn đang chọn.
+  //  • select (đa chọn): 'all' khi "Tất Cả"/không chọn gì; ngược lại MẢNG giá trị đã chọn
+  //  • date: chuỗi 'yyyy-mm-dd' ('' = không lọc)
+  function collectBuilderFilterVals(source) {
+    const vals = {};
+    ((BUILDER_SCHEMA[source] || {}).filters || []).forEach(fd => {
+      const ctl = document.getElementById(`builder-${fd.id}`);
+      if (!ctl) return;
+      if (fd.type === 'date') { vals[fd.id] = ctl.value || ''; return; }
+      const panel = document.getElementById(`builder-${fd.id}-panel`);
+      const boxes = (panel && typeof panel.querySelectorAll === 'function')
+        ? Array.from(panel.querySelectorAll('input[type="checkbox"]'))
+        : [];
+      if (!boxes.length) { vals[fd.id] = ctl.value || 'all'; return; } // fallback: select đơn kiểu cũ
+      const allBox = boxes.find(b => b.value === MS_ALL);
+      const pickedVals = boxes.filter(b => b.value !== MS_ALL && b.checked).map(b => b.value);
+      vals[fd.id] = (allBox && allBox.checked) || !pickedVals.length ? 'all' : pickedVals;
+    });
+    return vals;
+  }
+
   // Sinh khối bộ lọc động trong Chart Builder theo schema của nguồn đang chọn.
-  // chartDef (khi sửa biểu đồ): khôi phục giá trị bộ lọc đã lưu.
+  // chartDef (khi sửa biểu đồ): khôi phục giá trị bộ lọc đã lưu (chuỗi đơn hoặc mảng).
+  // Bộ lọc dạng select là ĐA CHỌN: dropdown + checkbox, chọn 1 hoặc nhiều mục;
+  // "Tất Cả" = bỏ lọc. Bộ lọc ngày (dateFrom/dateTo) giữ nguyên kiểu khoảng ngày.
   function renderBuilderFilters(source, chartDef) {
     const box = document.getElementById('builder-filters-box');
     if (!box) return;
@@ -827,41 +958,57 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const fds = schema.filters || [];
     if (!fds.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = '';
-    const cur = fd => {
-      const saved = chartDef ? chartDef[fd.id] : undefined;
-      if (fd.type === 'date') return saved || '';
-      return (saved === undefined || saved === null || saved === '') ? 'all' : String(saved);
-    };
+    const curDate = fd => (chartDef ? chartDef[fd.id] : undefined) || '';
     box.innerHTML = `
       <p style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:.05em;">
         <i data-lucide="filter"></i> Bộ Lọc Dữ Liệu — Riêng Theo Nguồn: ${escapeHTML(schema.label || '')}
+        <span style="text-transform:none; letter-spacing:0; font-weight:500;">(chọn 1 hoặc nhiều giá trị)</span>
       </p>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
         ${fds.map(fd => {
           if (fd.type === 'date') {
             return `<div class="form-group" style="margin-bottom:0;">
               <label for="builder-${fd.id}" style="font-size:0.8rem;">${escapeHTML(fd.label)}</label>
-              <input type="date" id="builder-${fd.id}" value="${escapeHTML(cur(fd))}">
+              <input type="date" id="builder-${fd.id}" value="${escapeHTML(String(curDate(fd)))}">
             </div>`;
           }
-          const opts = [['all', 'Tất Cả'], ...fd.options().map(asOptPair)];
-          // Khôi phục giá trị đã lưu nhưng không còn trong danh sách (dữ liệu bị đổi/xóa)
-          const savedVal = cur(fd);
-          if (savedVal !== 'all' && !opts.some(([v]) => String(v) === savedVal)) opts.push([savedVal, `${savedVal} (giá trị cũ)`]);
-          return `<div class="form-group" style="margin-bottom:0;">
-            <label for="builder-${fd.id}" style="font-size:0.8rem;">${escapeHTML(fd.label)}</label>
-            <select id="builder-${fd.id}">
-              ${opts.map(([v, l]) => `<option value="${escapeHTML(String(v))}"${String(v) === cur(fd) ? ' selected' : ''}>${escapeHTML(String(l))}</option>`).join('')}
-            </select>
+          const opts = fd.options().map(asOptPair);
+          const selVals = savedMsSelections(chartDef ? chartDef[fd.id] : undefined);
+          // Giá trị đã lưu nhưng không còn trong danh sách (dữ liệu bị đổi/xóa):
+          // giữ lại dưới dạng mục đã đánh dấu "(giá trị cũ)" để không mất bộ lọc.
+          const known = new Set(opts.map(([v]) => String(v)));
+          const extra = selVals.filter(v => !known.has(v));
+          const optHtml = opts.map(([v, l]) =>
+            `<label class="chart-ms-opt"><input type="checkbox" value="${escapeHTML(String(v))}"${selVals.includes(String(v)) ? ' checked' : ''}><span>${escapeHTML(String(l))}</span></label>`
+          ).join('');
+          const extraHtml = extra.map(v =>
+            `<label class="chart-ms-opt"><input type="checkbox" value="${escapeHTML(v)}" checked><span>${escapeHTML(v)} (giá trị cũ)</span></label>`
+          ).join('');
+          const emptyHtml = (!opts.length && !extra.length) ? '<p class="chart-ms-empty">Chưa có dữ liệu để lọc</p>' : '';
+          return `<div class="form-group chart-ms${selVals.length ? ' has-value' : ''}" data-ms="${escapeHTML(fd.id)}" style="margin-bottom:0;">
+            <label style="font-size:0.8rem;">${escapeHTML(fd.label)}</label>
+            <button type="button" class="chart-ms-toggle" id="builder-${fd.id}" aria-expanded="false" title="Chọn 1 hoặc nhiều giá trị để lọc">
+              <span class="chart-ms-summary" id="builder-${fd.id}-summary">${escapeHTML(msSummaryLabel(selVals, opts))}</span>
+              <i data-lucide="chevrons-up-down"></i>
+            </button>
+            <div class="chart-ms-panel" id="builder-${fd.id}-panel">
+              <label class="chart-ms-opt chart-ms-opt-all"><input type="checkbox" value="${MS_ALL}"${selVals.length ? '' : ' checked'}><span>Tất Cả</span></label>
+              ${optHtml}${extraHtml}${emptyHtml}
+            </div>
           </div>`;
         }).join('')}
       </div>`;
-    // Preview cập nhật ngay khi đổi bộ lọc
+    // Sự kiện: date đổi → cập nhật xem trước; dropdown đa chọn tự gắn listener trong wireChartMultiSelect
     fds.forEach(fd => {
-      const ctl = document.getElementById(`builder-${fd.id}`);
-      if (ctl) ctl.addEventListener('change', updateChartBuilderPreview);
+      if (fd.type === 'date') {
+        const ctl = document.getElementById(`builder-${fd.id}`);
+        if (ctl) ctl.addEventListener('change', updateChartBuilderPreview);
+        return;
+      }
+      wireChartMultiSelect(fd.id);
     });
     initLucide();
+    ensureChartMsOutsideClose();
   }
 
   // Đổ tùy chọn cho select + bộ lọc theo nguồn dữ liệu đang chọn
@@ -961,13 +1108,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (!canvas) return;
 
     const srcVal = document.getElementById('builder-source')?.value || 'kanban';
-    // Gom giá trị bộ lọc động theo schema của nguồn đang chọn
-    const filterVals = {};
-    ((BUILDER_SCHEMA[srcVal] || {}).filters || []).forEach(fd => {
-      const ctl = document.getElementById(`builder-${fd.id}`);
-      if (!ctl) return;
-      filterVals[fd.id] = fd.type === 'date' ? (ctl.value || '') : (ctl.value || 'all');
-    });
+    // Gom giá trị bộ lọc động (đa chọn) theo schema của nguồn đang chọn
+    const filterVals = collectBuilderFilterVals(srcVal);
 
     const tempDef = {
       title: document.getElementById('builder-title')?.value || 'Xem Trước',
@@ -1028,13 +1170,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     // Phải có quyền sửa đúng tab nguồn
     if (!requireTabEditPermission(source)) return;
 
-    // Gom giá trị bộ lọc động theo schema của nguồn đang chọn
-    const filterVals = {};
-    ((BUILDER_SCHEMA[source] || {}).filters || []).forEach(fd => {
-      const ctl = document.getElementById(`builder-${fd.id}`);
-      if (!ctl) return;
-      filterVals[fd.id] = fd.type === 'date' ? (ctl.value || '') : (ctl.value || 'all');
-    });
+    // Gom giá trị bộ lọc động (đa chọn) theo schema của nguồn đang chọn
+    const filterVals = collectBuilderFilterVals(source);
 
     const chartDef = {
       id: chartId || `chart-custom-${Date.now()}`,
@@ -1208,21 +1345,26 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   });
 
 export {
+  MS_ALL,
   asOptPair,
   BUILDER_SCHEMA,
   closeChartBuilderModal,
+  collectBuilderFilterVals,
   deleteCustomChart,
   formatChartValue,
   handleChartBuilderSubmit,
   openChartBuilderModal,
   populateBuilderOptions,
   registerChartDataLabelsPlugin,
+  renderBuilderFilters,
   renderChartCard,
   renderCustomCharts,
   renderDashboardCharts,
   renderDashboardZones,
+  savedMsSelections,
   setupChartDragAndDrop,
   setupChartResize,
+  syncChartMsChecks,
   toggleChartExpand,
   updateChartBuilderPreview
 };

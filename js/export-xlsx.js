@@ -539,39 +539,67 @@ import { friendlyMaterialWeek, materialLocationLabel } from './materials.js';
   // ─── BỘ LỌC BIỂU ĐỒ (trường phẳng trên chartDef, khai báo trong BUILDER_SCHEMA) ───
   // Kanban: stage/bambooType/useFor/location/thickness/dateFrom/dateTo
   //         (+ giữ tương thích trường cũ filterStage/filterType/filterUse của biểu đồ đã lưu)
+  // GIÁ TRỊ BỘ LỌC nhận 1 trong các dạng (đa chọn chọn 1 hoặc nhiều mục):
+  //   • 'all' / undefined / rỗng → không lọc (Tất Cả)
+  //   • chuỗi đơn                → khớp 1 giá trị (biểu đồ đã lưu từ bản cũ)
+  //   • mảng chuỗi               → khớp nếu giá trị dữ liệu nằm trong danh sách
+  //                                (mảng rỗng coi như Tất Cả — đã bỏ chọn hết)
+  function isAllFilterVal(v) {
+    return v === undefined || v === null || v === '' || v === 'all' || (Array.isArray(v) && v.length === 0);
+  }
+  function matchFilterVal(fval, rawVal) {
+    if (isAllFilterVal(fval)) return true;
+    const raw = String(rawVal === undefined || rawVal === null ? '' : rawVal);
+    if (Array.isArray(fval)) return fval.some(v => String(v) === raw);
+    return String(fval) === raw;
+  }
+  // Danh sách giá trị đã chọn của 1 bộ lọc (null = không lọc / Tất Cả).
+  // Dùng cho trường hợp đặc biệt cần biết nguyên danh sách, VD '__orphan__' (sản phẩm mồ côi).
+  function filterValList(fval) {
+    if (isAllFilterVal(fval)) return null;
+    return (Array.isArray(fval) ? fval : [fval]).map(String);
+  }
   function kanbanPassesFilters(b, f) {
-    if (f.stage       && f.stage       !== 'all' && b.stage      !== f.stage)       return false;
-    if (f.filterStage && f.filterStage !== 'all' && b.stage      !== f.filterStage) return false;
-    if (f.bambooType  && f.bambooType  !== 'all' && b.bambooType !== f.bambooType)  return false;
-    if (f.filterType  && f.filterType  !== 'all' && b.bambooType !== f.filterType)  return false;
-    if (f.useFor      && f.useFor      !== 'all' && b.useFor     !== f.useFor)      return false;
-    if (f.filterUse   && f.filterUse   !== 'all' && b.useFor     !== f.filterUse)   return false;
-    if (f.location    && f.location    !== 'all' && b.location   !== f.location)    return false;
-    if (f.thickness   && f.thickness   !== 'all' && String(b.thickness) !== String(f.thickness)) return false;
+    if (!matchFilterVal(f.stage,       b.stage))      return false;
+    if (!matchFilterVal(f.filterStage, b.stage))      return false;
+    if (!matchFilterVal(f.bambooType,  b.bambooType)) return false;
+    if (!matchFilterVal(f.filterType,  b.bambooType)) return false;
+    if (!matchFilterVal(f.useFor,      b.useFor))     return false;
+    if (!matchFilterVal(f.filterUse,   b.useFor))     return false;
+    if (!matchFilterVal(f.location,    b.location))   return false;
+    if (!matchFilterVal(f.thickness,   b.thickness))  return false;
     if (f.dateFrom && (!b.date || b.date < f.dateFrom)) return false;
     if (f.dateTo   && (!b.date || b.date > f.dateTo))   return false;
     return true;
   }
   // Kế hoạch: year/product/week
   function planningPassesFilters(p, f) {
-    if (f.year    && f.year    !== 'all' && String(p.year || '')      !== String(f.year))    return false;
-    if (f.product && f.product !== 'all') {
+    if (!matchFilterVal(f.year, p.year)) return false;
+    const prodVals = filterValList(f.product);
+    if (prodVals) {
       // '__orphan__' = các mục kế hoạch không còn định mức (đã xóa/đổi mã)
-      if (f.product === '__orphan__') { if (rateExists(p.productId)) return false; }
-      else if (String(p.productId || '') !== String(f.product)) return false;
+      const hasOrphan = prodVals.includes('__orphan__');
+      const ok = (hasOrphan && !rateExists(p.productId)) ||
+                 prodVals.some(v => v !== '__orphan__' && String(p.productId || '') === v);
+      if (!ok) return false;
     }
-    if (f.week    && f.week    !== 'all' && String(p.week || '')      !== String(f.week))    return false;
+    if (!matchFilterVal(f.week, p.week)) return false;
     return true;
   }
   // Ép ván: year/product/worker/dateFrom/dateTo
   function pressPassesFilters(r, f) {
-    if (f.year     && f.year     !== 'all' && String(r.year || (r.date || '').slice(0, 4)) !== String(f.year)) return false;
-    if (f.product  && f.product  !== 'all') {
+    if (!matchFilterVal(f.year, r.year || (r.date || '').slice(0, 4))) return false;
+    const prodVals = filterValList(f.product);
+    if (prodVals) {
       // '__orphan__' = nhóm các sản phẩm không còn định mức (đã xóa/đổi mã)
-      if (f.product === '__orphan__') { if (rateExists(r.productId)) return false; }
-      else if (String(r.productId || '') !== String(f.product)) return false;
+      const hasOrphan = prodVals.includes('__orphan__');
+      const ok = (hasOrphan && !rateExists(r.productId)) ||
+                 prodVals.some(v => v !== '__orphan__' && String(r.productId || '') === v);
+      if (!ok) return false;
     }
-    if (f.worker   && f.worker   !== 'all' && normWorker(r.worker) !== String(f.worker)) return false;
+    // Công nhân: so sau chuẩn hóa (gộp biến thể 'Nam'/'nam '/'NAM')
+    const workerVals = filterValList(f.worker);
+    if (workerVals && !workerVals.some(v => normWorker(r.worker) === v)) return false;
     if (f.dateFrom && (!r.date || r.date < f.dateFrom)) return false;
     if (f.dateTo   && (!r.date || r.date > f.dateTo))   return false;
     return true;
@@ -763,11 +791,11 @@ import { friendlyMaterialWeek, materialLocationLabel } from './materials.js';
   // LƯU Ý: id bộ lọc là 'matType' (KHÔNG dùng 'type') vì chartDef.type
   // đã bị Chart Builder dùng cho kiểu biểu đồ (bar/line/pie...).
   function materialPassesFilters(r, f) {
-    if (f.location && f.location !== 'all' && String(r.location || '') !== String(f.location)) return false;
-    if (f.matType  && f.matType  !== 'all' && String(r.type || '')     !== String(f.matType))  return false;
-    if (f.supplier && f.supplier !== 'all' && String(r.supplier || '') !== String(f.supplier)) return false;
-    if (f.year     && f.year     !== 'all' && String((r.date || '').slice(0, 4)) !== String(f.year)) return false;
-    if (f.week     && f.week     !== 'all' && String(r.week || '')     !== String(f.week))     return false;
+    if (!matchFilterVal(f.location, r.location))                    return false;
+    if (!matchFilterVal(f.matType,  r.type))                        return false;
+    if (!matchFilterVal(f.supplier, r.supplier))                    return false;
+    if (!matchFilterVal(f.year,     (r.date || '').slice(0, 4)))    return false;
+    if (!matchFilterVal(f.week,     r.week))                        return false;
     if (f.dateFrom && (!r.date || r.date < f.dateFrom)) return false;
     if (f.dateTo   && (!r.date || r.date > f.dateTo))   return false;
     return true;
@@ -955,12 +983,15 @@ export {
   closePlanningExportModal,
   closePressExportModal,
   computeChartData,
+  filterValList,
   getPaletteColors,
   handleCustomExportSubmit,
   handleMaterialsExportSubmit,
   handlePlanningExportSubmit,
   handlePressExportSubmit,
+  isAllFilterVal,
   loadCustomCharts,
+  matchFilterVal,
   openCustomExportModal,
   openMaterialsExportModal,
   openPlanningExportModal,

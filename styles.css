@@ -4172,3 +4172,105 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 .material-photo-nav:hover { border-color: var(--primary); color: var(--primary); }
 .material-photo-nav svg { width: 18px; height: 18px; }
 
+/* ══════════════════════════════════════════════════════════════
+   BỘ LỌC ĐA CHỌN CỦA CHART BUILDER (Dashboard — biểu đồ tùy chỉnh)
+   Nút tóm tắt + panel checkbox; chọn 1 hoặc nhiều giá trị;
+   mục "Tất Cả" = bỏ lọc. Khung dropdown cố định trong form-group.
+   ══════════════════════════════════════════════════════════════ */
+.chart-ms { position: relative; }
+.chart-ms-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.chart-ms-toggle:hover { border-color: var(--primary); }
+.chart-ms-toggle:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+/* Đang lọc ít nhất 1 giá trị: viền + nền nhấn để nhận ra ngay */
+.chart-ms.has-value .chart-ms-toggle {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  font-weight: 600;
+}
+.chart-ms-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-ms-toggle svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+.chart-ms-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 70;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.chart-ms.open .chart-ms-panel { display: block; }
+.chart-ms-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--text-main);
+  cursor: pointer;
+  user-select: none;
+}
+.chart-ms-opt:hover { background: var(--bg-subtle); }
+.chart-ms-opt input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.chart-ms-opt span { min-width: 0; overflow-wrap: anywhere; }
+/* Dòng "Tất Cả" dính đầu panel khi cuộn danh sách dài */
+.chart-ms-opt-all {
+  position: sticky;
+  top: -6px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-weight: 600;
+}
+.chart-ms-empty {
+  margin: 0;
+  padding: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+

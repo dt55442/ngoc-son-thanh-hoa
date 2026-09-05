@@ -7,6 +7,7 @@
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
+    _h: {},
     open: true, textContent: '', innerHTML: '', style: {}, dataset: {},
     offsetWidth: 800, offsetHeight: 500,
     classList: { _s: new Set(), add(c){ this._s.add(c); }, remove(c){ this._s.delete(c); }, toggle(c, f){ if (f === undefined) f = !this._s.has(c); if (f) this._s.add(c); else this._s.delete(c); return f; }, contains(c){ return this._s.has(c); } },
@@ -229,6 +230,121 @@ const capWeeks = pressExports.planCapacityWeeks(2026);
 check('Cap: danh sách tuần có kế hoạch sắp tăng & không trùng', JSON.stringify(capWeeks) === JSON.stringify([...new Set(capWeeks)].sort((a, b) => a - b)) && capWeeks.length >= 1);
 // Cửa sổ hiển thị: 1 (màn hẹp/stub) hoặc 2 (màn rộng ≥900px)
 check('Cap: cửa sổ 1–2 tuần tùy bề rộng màn hình', [1, 2].includes(pressExports.planCapacityWinSize()));
+
+console.log('--- BỘ LỌC ĐA CHỌN (chọn 1 hoặc nhiều giá trị) ---');
+
+// Engine: giá trị "Tất Cả" / đơn / mảng
+check('Engine: isAllFilterVal nhận all/rỗng/mảng rỗng',
+  xlsx.isAllFilterVal('all') && xlsx.isAllFilterVal(undefined) && xlsx.isAllFilterVal('') &&
+  xlsx.isAllFilterVal([]) && !xlsx.isAllFilterVal(['kho']));
+check('Engine: matchFilterVal mảng khớp 1 trong danh sách',
+  xlsx.matchFilterVal(['say1', 'kho'], 'kho') && !xlsx.matchFilterVal(['say1', 'kho'], 'bao_tinh'));
+check('Engine: matchFilterVal chuỗi đơn giữ tương thích bản cũ',
+  xlsx.matchFilterVal('kho', 'kho') && !xlsx.matchFilterVal('kho', 'say1'));
+
+// savedMsSelections: chuẩn hóa giá trị đã lưu của dropdown đa chọn
+check('MS saved: chuỗi đơn (bản cũ) → 1 lựa chọn', JSON.stringify(dash.savedMsSelections('kho')) === JSON.stringify(['kho']));
+check('MS saved: "all"/undefined/rỗng → [] (Tất Cả)',
+  dash.savedMsSelections('all').length === 0 && dash.savedMsSelections(undefined).length === 0 && dash.savedMsSelections('').length === 0);
+check('MS saved: mảng lọc bỏ phần tử rỗng/MS_ALL',
+  JSON.stringify(dash.savedMsSelections(['kho', '', dash.MS_ALL])) === JSON.stringify(['kho']));
+
+// Dữ liệu Công Đoạn cho test đa chọn
+state.batches = [
+  { id: 'm1', code: 'M01', stage: 'say1',     quantity: 100, volume: 1.0, bambooType: 'A',  useFor: 'Ván',    location: 'Kệ A', thickness: 7,  date: '2026-08-01' },
+  { id: 'm2', code: 'M02', stage: 'kho',      quantity: 200, volume: 2.0, bambooType: 'A1', useFor: 'Bullig', location: 'Kệ B', thickness: 10, date: '2026-08-02' },
+  { id: 'm3', code: 'M03', stage: 'bao_tinh', quantity: 50,  volume: 0.5, bambooType: 'B',  useFor: 'Nan',    location: 'LS1',  thickness: 11, date: '2026-08-03' }
+];
+const sum = d => d.datasets[0].data.reduce((a, b) => a + b, 0);
+const msNoFilter = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'stage', metric: 'volume' }, state.batches);
+check('MS CD: không lọc → 3 nhóm, tổng 3.5', msNoFilter.labels.length === 3 && Math.abs(sum(msNoFilter) - 3.5) < 1e-9);
+const msMulti = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'stage', metric: 'volume', stage: ['say1', 'kho'] }, state.batches);
+check('MS CD: mảng [say1,kho] → 2 nhóm, tổng 3.0', msMulti.labels.length === 2 && Math.abs(sum(msMulti) - 3.0) < 1e-9);
+const msEmptyArr = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'stage', metric: 'volume', stage: [] }, state.batches);
+check('MS CD: mảng rỗng coi như Tất Cả (tổng 3.5)', msEmptyArr.labels.length === 3 && Math.abs(sum(msEmptyArr) - 3.5) < 1e-9);
+const msSingle = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'stage', metric: 'volume', stage: 'bao_tinh' }, state.batches);
+check('MS CD: chuỗi đơn (bản cũ) vẫn lọc đúng 0.5', Math.abs(sum(msSingle) - 0.5) < 1e-9);
+const msMultiType = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'stage', metric: 'quantity', bambooType: ['A', 'B'] }, state.batches);
+check('MS CD: đa chọn Loại Nan [A,B] → 150 (bỏ A1)', Math.abs(sum(msMultiType) - 150) < 1e-9);
+const msThick = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'stage', metric: 'quantity', thickness: ['7', '10'] }, state.batches);
+check('MS CD: đa chọn Độ Dày ["7","10"] khớp số → 300', Math.abs(sum(msThick) - 300) < 1e-9);
+
+// Kế hoạch: đa chọn tuần & sản phẩm (gồm cả mồ côi)
+const msPlanWeek = xlsx.computeChartData({ type: 'bar', source: 'planning', groupBy: 'product', metric: 'qty', week: ['Tuần 33', 'Tuần 10'] });
+check('MS KH: đa chọn tuần 33 + 10 → 500 + 120 = 620', Math.abs(sum(msPlanWeek) - 620) < 1e-9);
+const msPlanProd = xlsx.computeChartData({ type: 'bar', source: 'planning', groupBy: 'year', metric: 'qty', product: ['rate-live2', '__orphan__'] });
+check('MS KH: sản phẩm [live2 + mồ côi] → 300+120+80 = 500', Math.abs(sum(msPlanProd) - 500) < 1e-9);
+const msPlanProdMix = xlsx.computeChartData({ type: 'bar', source: 'planning', groupBy: 'year', metric: 'qty', product: ['__orphan__', 'rate-live1'] });
+check('MS KH: [mồ côi + live1] → 500+120+80 = 700', Math.abs(sum(msPlanProdMix) - 700) < 1e-9);
+
+// Ép ván: đa chọn công nhân (gộp biến thể viết 'Nam'/'nam '/'NAM'; r5 đã thêm ở mục Capacity)
+const msPressHung = xlsx.computeChartData({ type: 'bar', source: 'press', groupBy: 'week', metric: 'finishedQty', worker: ['hùng'] });
+check('MS ÉP: ["hùng"] → 50', Math.abs(sum(msPressHung) - 50) < 1e-9);
+const msPressNam = xlsx.computeChartData({ type: 'bar', source: 'press', groupBy: 'week', metric: 'finishedQty', worker: ['nam'] });
+check('MS ÉP: ["nam"] gộp cả "Nam"/"nam "/"NAM" → 290', Math.abs(sum(msPressNam) - 290) < 1e-9);
+
+// Nguyên liệu: đa chọn loại & nhà cung cấp
+state.materialRecords = [
+  { id: 'n1', date: '2026-08-11', week: '2026-W33', location: 'x', type: 'Tre nguyên liệu', supplier: 'NCC A', weight: 300, amount: 1000 },
+  { id: 'n2', date: '2026-08-12', week: '2026-W33', location: 'y', type: 'Tre nguyên liệu', supplier: 'NCC B', weight: 380, amount: 2000 },
+  { id: 'n3', date: '2026-08-13', week: '2026-W34', location: 'y', type: 'Tre tinh chế',   supplier: 'NCC A', weight: 100, amount: 500 }
+];
+const msMatType = xlsx.computeChartData({ type: 'bar', source: 'materials', groupBy: 'supplier', metric: 'weight', matType: ['Tre nguyên liệu', 'Tre tinh chế'] });
+check('MS NL: đa chọn loại NL [nguyên liệu + tinh chế] → 780', Math.abs(sum(msMatType) - 780) < 1e-9);
+const msMatSup = xlsx.computeChartData({ type: 'bar', source: 'materials', groupBy: 'type', metric: 'weight', supplier: ['NCC A'] });
+check('MS NL: đa chọn nhà cung cấp [NCC A] → 400', Math.abs(sum(msMatSup) - 400) < 1e-9);
+
+// UI Chart Builder: renderBuilderFilters sinh dropdown đa chọn & khôi phục giá trị đã lưu
+dash.renderBuilderFilters('kanban', { stage: ['say1', 'kho'], thickness: '10' });
+const boxHtml = document.getElementById('builder-filters-box').innerHTML;
+check('MS UI: box có panel checkbox & mục "Tất Cả"', boxHtml.includes('chart-ms-panel') && boxHtml.includes('Tất Cả'));
+check('MS UI: khôi phục mảng đã lưu (say1 & kho được tick)',
+  (boxHtml.match(/value="say1" checked/g) || []).length === 1 && (boxHtml.match(/value="kho" checked/g) || []).length === 1);
+check('MS UI: khôi phục chuỗi đơn đã lưu (độ dày 10 được tick)', /value="10" checked/.test(boxHtml));
+check('MS UI: tóm tắt đa chọn "Đã chọn 2 mục"', boxHtml.includes('Đã chọn 2 mục'));
+check('MS UI: tóm tắt đơn giá trị → nhãn "10"', boxHtml.includes('id="builder-thickness-summary">10<'));
+
+// UI Chart Builder: collectBuilderFilterVals gom 'all' / mảng theo checkbox
+const stageBoxes = [
+  { type: 'checkbox', value: dash.MS_ALL, checked: true },
+  { type: 'checkbox', value: 'say1', checked: false },
+  { type: 'checkbox', value: 'kho',  checked: false }
+];
+document.getElementById('builder-stage-panel').querySelectorAll = () => stageBoxes;
+document.getElementById('builder-dateFrom').value = '2026-08-01';
+let got = dash.collectBuilderFilterVals('kanban');
+check('MS UI: chỉ "Tất Cả" → "all" (không lọc)', got.stage === 'all');
+check('MS UI: bộ lọc ngày trả chuỗi yyyy-mm-dd', got.dateFrom === '2026-08-01');
+stageBoxes[0].checked = false; stageBoxes[1].checked = true; stageBoxes[2].checked = true;
+got = dash.collectBuilderFilterVals('kanban');
+check('MS UI: 2 mục được tick → mảng ["say1","kho"]', JSON.stringify(got.stage) === JSON.stringify(['say1', 'kho']));
+stageBoxes[1].checked = false; stageBoxes[2].checked = false;
+got = dash.collectBuilderFilterVals('kanban');
+check('MS UI: không tick mục nào → "all" (không lọc)', got.stage === 'all');
+
+// UI Chart Builder: syncChartMsChecks — ràng buộc "Tất Cả" ↔ các mục
+const syncBoxes = [
+  { type: 'checkbox', value: dash.MS_ALL, checked: true },
+  { type: 'checkbox', value: 'say1', checked: false },
+  { type: 'checkbox', value: 'kho',  checked: false }
+];
+const syncPanel = { querySelectorAll: () => syncBoxes };
+document.getElementById('builder-stage-summary').textContent = '';
+syncBoxes[1].checked = true; // người dùng tick "say1"
+dash.syncChartMsChecks('stage', syncPanel, syncBoxes[1]); // tick 1 mục
+check('MS sync: tick 1 mục → bỏ "Tất Cả"', syncBoxes[0].checked === false && syncBoxes[1].checked === true);
+check('MS sync: tóm tắt hiện giá trị mục được tick', document.getElementById('builder-stage-summary').textContent === 'say1');
+syncBoxes[2].checked = true;
+dash.syncChartMsChecks('stage', syncPanel, syncBoxes[2]); // tick mục còn lại → đủ tất cả
+check('MS sync: tick đủ mọi mục → thu gọn về "Tất Cả"', syncBoxes[0].checked === true && !syncBoxes[1].checked && !syncBoxes[2].checked);
+syncBoxes[0].checked = false;
+dash.syncChartMsChecks('stage', syncPanel, syncBoxes[0]); // bỏ "Tất Cả" khi không còn mục nào được tick
+check('MS sync: bỏ "Tất Cả" khi trống → tự tick lại', syncBoxes[0].checked === true);
+
+// Phụ đề thẻ biểu đồ: liệt kê nhiều giá trị, bỏ qua mảng rỗng
+const subCard = dash.renderChartCard({ id: 'sub-ms', title: 'T', type: 'bar', source: 'kanban', zone: 'basic', groupBy: 'stage', metric: 'volume', stage: ['say1', 'kho'], thickness: [] }, false);
+check('MS thẻ: phụ đề liệt kê "Công Đoạn: Sấy 1, Kho"', subCard.includes('Công Đoạn: Sấy 1, Kho'));
+check('MS thẻ: mảng rỗng không hiện trong phụ đề', !subCard.includes('Độ Dày:'));
 
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed ? 1 : 0);

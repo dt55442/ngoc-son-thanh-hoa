@@ -244,17 +244,24 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
 
   // ─── 2) SẢN LƯỢNG ÉP VÁN ──────────────────────────────────────
-  // Nhãn thành phẩm: ưu tiên snapshot trên lượt ép, fallback về định mức hiện tại
+  // Nhãn thành phẩm: ưu tiên snapshot trên lượt ép, fallback về định mức hiện tại.
+  // Lượt ép CHƯA ép thành phẩm (không có productId) → "Chưa ép thành phẩm".
   function pressProductLabelOf(r) {
     if (r.productName) return r.productName;
+    if (!r.productId) return 'Chưa ép thành phẩm';
     const rate = (state.materialRates || []).find(x => x.id === r.productId);
-    return (rate && rate.product) || (r.productId ? 'Sản phẩm cũ (định mức đã xóa)' : 'Không rõ');
+    return (rate && rate.product) || 'Sản phẩm cũ (định mức đã xóa)';
   }
   function pressVanThoSummary(r) {
     return (r.vanTho || []).map(v => `${v.vtDim || '?'} ×${v.vtQty || 0}`).join(', ') || '—';
   }
   function pressSticksSummary(r) {
-    return (r.sticks || []).map(s => `${s.nanKey || '?'}: ${s.sticks || 0} thanh`).join(', ') || '—';
+    return (r.sticks || []).map(s => {
+      const key = String(s.nanKey || '?');
+      // Key dạng kích thước (l×w×t) → ván thô đã ép trước đó, tính bằng "tấm"
+      const isDim = /^\d+(?:[.,]\d+)?×\d+(?:[.,]\d+)?×\d+(?:[.,]\d+)?$/.test(key.toLowerCase().replace(/[x*]/g, '×'));
+      return `${key}: ${s.sticks || 0} ${isDim ? 'tấm' : 'thanh'}`;
+    }).join(', ') || '—';
   }
 
   function openPressExportModal() {

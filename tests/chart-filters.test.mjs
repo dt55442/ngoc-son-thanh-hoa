@@ -203,19 +203,17 @@ check('CD: sắp số học 950×15 đứng trước 1250×18', dimStack.dataset
 const dimGroup = xlsx.computeChartData({ type: 'bar', source: 'kanban', groupBy: 'dimRatio', metric: 'quantity' }, state.batches);
 check('CD: nhóm chính Dài×Rộng → 3 nhãn, tổng 650', dimGroup.labels.length === 3 && dimGroup.datasets[0].data.reduce((a, b) => a + b, 0) === 650);
 
-console.log('--- KHẢ NĂNG ĐÁP ỨNG KẾ HOẠCH (bottleneck từ BOM phụ) ---');
-// Dùng đúng ID đang có trong materialRates ở đầu file: rate-live1 (còn định mức)
-// và rate-1756759612345 (mồ côi — không có định mức) cho nhánh "không tính được".
-state.productBoms = [{ id: 'b1', productId: 'rate-live1', lines: [{ vtDim: '1200×260×18', ratio: 2 }] }];
-state.pressRecords.push({ id: 'r5', date: '2026-08-11', week: '2026-W33', year: 2026, productId: 'rate-live1', productName: 'Ván 1200x382x12', finishedQty: 60, glue: 0.5, additive: 0.05, worker: 'Nam', vanTho: [{ vtDim: '1200×260×18', vtQty: 1600, ratio: 2 }] });
+console.log('--- KHẢ NĂNG ĐÁP ỨNG KẾ HOẠCH (theo định mức nan — BOM phụ đã bỏ) ---');
+// BOM phụ đã xóa: capacity chỉ tính từ định mức nan (rate-live1/rate-1756... đều
+// không có nan1..3 → không tính được).
+state.pressRecords.push({ id: 'r5', date: '2026-08-11', week: '2026-W33', year: 2026, productId: 'rate-live1', productName: 'Ván 1200x382x12', finishedQty: 60, glue: 0.5, additive: 0.05, worker: 'Nam', vanTho: [{ vtDim: '1200×260×18', vtQty: 1600 }] });
 const mp1 = planMod.getMaxProductionForProduct(2026, 'rate-live1', 33);
-check('Capacity: tính được từ tồn ván thô qua BOM phụ (1600÷2=800)', !!mp1 && mp1.source === 'bom' && mp1.maxProduction === 800);
-check('Capacity: bottleneck chỉ đúng loại ván thô giới hạn', !!mp1 && mp1.bottleneck && mp1.bottleneck.vtDim === '1200×260×18' && mp1.bottleneck.available === 1600 && mp1.bottleneck.ratio === 2);
+check('Capacity: sản phẩm không có định mức nan → không tính được (null)', mp1 === null || mp1 === undefined);
 const mp2 = planMod.getMaxProductionForProduct(2026, 'rate-1756759612345', 33);
-check('Capacity: sản phẩm không có định mức → không tính được (null)', mp2 === null || mp2 === undefined);
+check('Capacity: sản phẩm mồ côi → không tính được (null)', mp2 === null || mp2 === undefined);
 const reason = pressExports.planCapacityReason;
 const rc1 = reason('rate-live1', 2026, 33);
-check('Capacity: đủ tồn → cap = 800', rc1.cap === 800);
+check('Capacity: thiếu định mức → cap null + lý giải', rc1.cap === null && /định mức/.test(rc1.reason));
 const rc2 = reason('rate-1756759612345', 2026, 33);
 check('Capacity: thiếu định mức → cap null + lý giải', rc2.cap === null && /định mức/.test(rc2.reason));
 

@@ -10,7 +10,6 @@
   const STORAGE_KEY_CUSTOM_CHARTS = 'bamboo_tracker_custom_charts_v1';
   const STORAGE_KEY_MATERIAL_PLAN = 'bamboo_tracker_material_plan_v1';
   const STORAGE_KEY_MATERIAL_RATES = 'bamboo_tracker_material_rates_v1';
-  const STORAGE_KEY_PRODUCT_BOMS = 'bamboo_tracker_product_boms_v1';
   const STORAGE_KEY_PLANNING_ITEMS = 'bamboo_tracker_planning_items_v1';
   const STORAGE_KEY_PLANNING_FORECAST = 'bamboo_tracker_planning_forecast_v1';
   const STORAGE_KEY_PLANNING_STOCK = 'bamboo_tracker_planning_stock_v1';
@@ -43,7 +42,6 @@
     charts: {},
     // Kế hoạch sản xuất
     materialRates: [],
-    productBoms: [], // Định mức ván thô → thành phẩm (BOM phụ): [{ id, productId, lines: [{ vtDim, ratio }] }]
     planningItems: [],
     planningYearFilter: 'all',
     planningPendingScroll: true, // chỉ trượt tới tuần hiện tại khi mới mở tab / reset trang
@@ -113,7 +111,6 @@ export {
   STORAGE_KEY_PLANNING_ITEMS,
   STORAGE_KEY_PLANNING_STOCK,
   STORAGE_KEY_PRESS_RECORDS,
-  STORAGE_KEY_PRODUCT_BOMS,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,

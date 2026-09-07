@@ -3624,22 +3624,11 @@ body.multi-select .card-actions {
   margin-top: 2px;
 }
 
-/* Thông tin sản lượng trong modal ép ván */
-.press-capacity-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+/* Hint tuần hiển thị cạnh ô Ngày Ép trong modal lượt ép */
+.press-week-hint {
   font-size: 0.72rem;
   color: var(--text-muted);
-  padding: 4px 0;
-}
-
-.press-capacity-info strong {
-  color: var(--primary);
-}
-
-.press-capacity-info i {
-  color: var(--primary);
+  font-weight: 600;
 }
 
 /* Các dòng thành phần trong modal lượt ép */
@@ -3735,7 +3724,6 @@ body.multi-select .card-actions {
 .planning-card.rate-table-collapsed > *:not(.planning-card-header) { display: none; }
 .planning-card.rate-table-collapsed .rate-toggle-btn span { display: none; }
 .planning-card.rate-table-collapsed .rate-toggle-btn svg { transform: rotate(180deg); transition: transform 0.2s; }
-.bom-capacity { font-weight: 600; color: var(--primary, #2563eb); }
 
 /* ═══ Kế hoạch Nguyên liệu cần nhập (bảng phụ theo tuần — tab Nguyên liệu) ═══ */
 .material-plan-controls {

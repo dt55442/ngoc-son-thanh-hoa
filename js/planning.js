@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { getDateYear, getPressedQtyForPlan, pressRecordWeek } from './press.js';
-import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRODUCT_BOMS, state } from './state.js';
+import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, state } from './state.js';
 import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from './utils.js';
 
   // =============================================================
@@ -23,29 +23,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   function saveMaterialRates() {
     localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates));
     firePushSync();
-  }
-
-  // ── ĐỊNH MỨC VÁN THÔ (BOM phụ) ──────────────────────────────
-  // Mỗi bản ghi: { id, productId, lines: [{ vtDim: '1200×260×18', ratio: 1 }] }
-  // productId trỏ tới định mức sản phẩm (materialRates.id) trong Kế hoạch sản xuất.
-  function loadProductBoms() {
-    const raw = localStorage.getItem(STORAGE_KEY_PRODUCT_BOMS);
-    if (raw) {
-      try { state.productBoms = JSON.parse(raw); }
-      catch (e) { state.productBoms = []; }
-    } else {
-      state.productBoms = [];
-    }
-  }
-
-  function saveProductBoms() {
-    localStorage.setItem(STORAGE_KEY_PRODUCT_BOMS, JSON.stringify(state.productBoms));
-    firePushSync();
-  }
-
-  // Lấy định mức ván thô của một sản phẩm (theo productId) | null
-  function getProductBom(productId) {
-    return state.productBoms.find(b => b.productId === productId) || null;
   }
 
   function loadPlanningItems() {
@@ -942,7 +919,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   function renderPlanningView() {
     restoreRateTableCollapse();
     renderMaterialRatesTable();
-    renderProductBomTable();
     populatePlanningProductSelect();
     populatePlanningYearFilter();
     renderPlanningMatrix();
@@ -956,13 +932,12 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     tbody.innerHTML = '';
 
     if (state.materialRates.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="12" class="text-center" style="padding:30px;color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="11" class="text-center" style="padding:30px;color:var(--text-muted);">
         <i data-lucide="book-open" style="width:28px;height:28px;margin-bottom:8px;"></i>
         <p>Chưa có định mức nào. Hãy thêm định mức nguyên vật liệu cho từng loại sản phẩm.</p></td></tr>`;
       return;
     }
 
-    const yr = parseInt(state.planningYearFilter) || new Date().getFullYear();
     state.materialRates.forEach(rate => {
       const tr = document.createElement('tr');
       const nan1QtyDisplay = formatNanQty(rate.nan1Qty);
@@ -971,11 +946,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
       const nan1 = rate.nan1 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan1)}</strong><br>${nan1QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
       const nan2 = rate.nan2 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan2)}</strong><br>${nan2QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
       const nan3 = rate.nan3 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan3)}</strong><br>${nan3QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
-      // Sản lượng quy đổi từ tồn VÁN THÔ đã ép (nếu sản phẩm có định mức ván thô)
-      const bomMp = getProductBom(rate.id) ? getMaxProductionForProduct(yr, rate.id, null) : null;
-      const bomCapacityCell = (bomMp && bomMp.maxProduction > 0)
-        ? `<span class="bom-capacity" title="Quy đổi từ tổng Ván Thô Tạo Ra trong các lượt ép (định mức ván thô)">${bomMp.maxProduction.toLocaleString('vi-VN')} tấm</span>`
-        : '<span class="text-muted">-</span>';
 
       tr.innerHTML = `
         <td><span class="rate-product-name">${escapeHTML(rate.product)}</span></td>
@@ -988,7 +958,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
         <td>${rate.glue} kg</td>
         <td>${rate.additive} kg</td>
         <td>${rate.efficiency}%</td>
-        <td>${bomCapacityCell}</td>
         <td class="text-right">
           <div style="display:flex;justify-content:flex-end;gap:4px;">
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.editMaterialRate('${rate.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
@@ -1004,7 +973,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   // Áp dụng chung cho: 2 bảng định mức (Kế hoạch), danh sách lượt ép (Sản lượng ép),
   // nhật ký nhập nguyên liệu (Nguyên liệu). Trạng thái lưu localStorage, nhớ từng thẻ.
   const RATE_COLLAPSE_KEY = 'bamboo_tracker_rate_collapse_v1';
-  const COLLAPSE_CARDS = ['rate-main-card', 'rate-bom-card', 'press-table-card', 'material-table-card', 'material-plan-card'];
+  const COLLAPSE_CARDS = ['rate-main-card', 'press-table-card', 'material-table-card', 'material-plan-card'];
   function saveRateCollapseState() {
     try {
       const data = {};
@@ -1028,46 +997,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     COLLAPSE_CARDS.forEach((id) => {
       if (saved[id]) document.getElementById(id)?.classList.add('rate-table-collapsed');
     });
-  }
-
-  // Render bảng ĐỊNH MỨC VÁN THÔ → THÀNH PHẨM (bảng phụ 2) kèm cột sản lượng quy đổi.
-  // Sản lượng = min(floor(tồn vt_i ÷ tỷ lệ i)) với tồn vt = tổng "Ván Thô Tạo Ra" các lượt ép.
-  function renderProductBomTable() {
-    const tbody = document.getElementById('product-bom-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    if (state.productBoms.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:30px;color:var(--text-muted);">
-        <i data-lucide="layers" style="width:28px;height:28px;margin-bottom:8px;"></i>
-        <p>Chưa có định mức ván thô nào. Thêm để quy đổi tồn ván thô ra số thành phẩm.</p></td></tr>`;
-      return;
-    }
-
-    const yr = parseInt(state.planningYearFilter) || new Date().getFullYear();
-    state.productBoms.forEach(bom => {
-      const rate = state.materialRates.find(r => r.id === bom.productId);
-      const tr = document.createElement('tr');
-      const formula = (bom.lines || []).map(l => `${escapeHTML(l.vtDim)} ×${l.ratio}`).join(' &nbsp;+&nbsp; ') || '-';
-      const mp = getMaxProductionForProduct(yr, bom.productId, null);
-      const capacityCell = (mp && mp.maxProduction > 0)
-        ? `<span class="bom-capacity" title="Tổng tồn ván thô đã ép (lượt ép ván) quy đổi theo công thức">${mp.maxProduction.toLocaleString('vi-VN')} tấm</span>`
-        : '<span class="text-muted">0 tấm</span>';
-
-      tr.innerHTML = `
-        <td><span class="rate-product-name">${rate ? escapeHTML(rate.product) : '<em>Sản phẩm đã xóa</em>'}</span></td>
-        <td>${formula}</td>
-        <td>${(bom.lines || []).length}/3</td>
-        <td>${capacityCell}</td>
-        <td class="text-right">
-          <div style="display:flex;justify-content:flex-end;gap:4px;">
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.editProductBom('${bom.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteProductBom('${bom.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
-          </div>
-        </td>`;
-      tbody.appendChild(tr);
-    });
-    initLucide();
   }
 
   // Tính nhu cầu nguyên liệu cho một kế hoạch
@@ -1143,59 +1072,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     return { maxProduction, components, useFor: useForSpr, bottleneck, efficiency };
   }
 
-  // Tính số thành phẩm tối đa theo ĐỊNH MỨC VÁN THÔ (BOM phụ):
-  //   SP_i = floor(tồn_i ÷ tỷ lệ_i)   ;   Sản lượng = min(SP_i)
-  // Tồn_i: tổng "Ván Thô Tạo Ra" đã ghi nhận ở các lượt ép (pressRecords.vanTho)
-  // đến tuần upToWeek — phản ánh ván thô được ép ở các ngày/thời điểm khác nhau.
-  // Kết quả: { maxProduction, components, bottleneck, source: 'bom' } | null
-  function calculateMaxProductionFromBom(bom, vanThoStock) {
-    if (!bom || !(bom.lines || []).length || !vanThoStock) return null;
-    const norm = (k) => String(k || '').trim().toLowerCase().replace(/[x*]/g, '×');
-    const stock = {};
-    Object.keys(vanThoStock).forEach(k => { stock[norm(k)] = vanThoStock[k] || 0; });
-
-    const components = [];
-    bom.lines.forEach((l, idx) => {
-      const vtDim = norm(l.vtDim);
-      const ratio = parseFloat(l.ratio);
-      if (!vtDim || !ratio || ratio <= 0) return;
-      const available = Math.max(0, stock[vtDim] || 0);
-      components.push({
-        field: `vt${idx + 1}`,
-        vtDim,
-        available,
-        ratio,
-        maxProducts: Math.floor(available / ratio)
-      });
-    });
-
-    if (components.length === 0) return null;
-    const maxProduction = Math.min(...components.map(c => c.maxProducts));
-    const bottleneck = components.reduce((min, c) =>
-      c.maxProducts < min.maxProducts ? c : min, components[0]);
-    return { maxProduction, components, bottleneck, source: 'bom' };
-  }
-
-  // Tồn kho VÁN THÔ (lũy kế đến tuần upToWeek) gom từ các lượt ép ván:
-  // mỗi lượt ép có "Ván Thô Tạo Ra" [{ vtDim, vtQty, ratio }] — tổng vtQty theo vtDim.
-  // Kết quả: { '1200×260×18': 123, ... }
-  function getVanThoStockByWeek(yearNum, upToWeek) {
-    const year = parseInt(yearNum);
-    const stock = {};
-    const norm = (k) => String(k || '').trim().toLowerCase().replace(/[x*]/g, '×');
-    const maxWeek = (upToWeek && upToWeek > 0) ? Math.min(Math.floor(upToWeek), 53) : 53;
-    state.pressRecords.forEach(r => {
-      if ((r.year || getDateYear(r.date)) !== year) return;
-      const w = pressRecordWeek(r);
-      if (!w || w > maxWeek) return;
-      (r.vanTho || []).forEach(l => {
-        const k = norm(l.vtDim);
-        if (k) stock[k] = (stock[k] || 0) + (parseFloat(l.vtQty) || 0);
-      });
-    });
-    return stock;
-  }
-
   // Tổng hợp tồn kho ván thô KHẢ DỤNG đến tuần upToWeek — ĐỒNG BỘ với công thức
   // trượt của bảng ma trận kế hoạch (xem renderPlanningView):
   //   Tồn hiển thị tuần W = Lũy kế(W) + Dự kiến(W)
@@ -1242,23 +1118,13 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   }
 
   // Lấy sản lượng tối đa có thể sản xuất của một sản phẩm (theo productId)
-  // tại một tuần. ƯU TIÊN ĐỊNH MỨC VÁN THÔ (BOM phụ) — tồn từ các lượt ép;
-  // sản phẩm chưa có BOM phụ → suy từ định mức nan:
+  // tại một tuần — suy từ ĐỊNH MỨC NAN:
   //   Tồn khả dụng = Tồn thực tế + Σ Dự kiến(1..W) − Σ Cần(1..W−1).
   // weekNum = null → tính đến cuối năm.
   function getMaxProductionForProduct(yearNum, productId, weekNum) {
     const rate = state.materialRates.find(r => r.id === productId);
     if (!rate) return null;
 
-    // 1) BOM phụ: quy đổi trực tiếp từ tồn "Ván Thô Tạo Ra"
-    const bom = getProductBom(productId);
-    if (bom) {
-      const vanThoStock = getVanThoStockByWeek(yearNum, weekNum);
-      const fromBom = calculateMaxProductionFromBom(bom, vanThoStock);
-      if (fromBom) return fromBom;
-    }
-
-    // 2) Fallback: định mức nan (cơ chế cũ, giữ tương thích dữ liệu)
     const inventory = getCumulativeInventoryByWeek(yearNum, weekNum);
     const fromNan = calculateMaxProductionFromInventory(rate, inventory);
     return fromNan ? { ...fromNan, source: 'nan' } : fromNan;
@@ -1273,165 +1139,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
       if (mp) result[rate.id] = mp;
     });
     return result;
-  }
-
-  // ═══ MODAL: ĐỊNH MỨC VÁN THÔ → THÀNH PHẨM (BOM PHỤ) ═══
-  function populateBomProductSelect() {
-    const sel = document.getElementById('bom-product');
-    if (!sel) return;
-    const opts = state.materialRates.map(r => `<option value="${r.id}">${escapeHTML(r.product)}</option>`).join('');
-    sel.innerHTML = '<option value="">-- Chọn thành phẩm (theo Kế hoạch sản xuất) --</option>' + opts;
-  }
-
-  // Gợi ý kích thước ván thô đã từng nhập ở các lượt ép
-  function populateBomDimList() {
-    const dl = document.getElementById('bom-dim-list');
-    if (!dl) return;
-    const dims = new Set();
-    state.pressRecords.forEach(r => (r.vanTho || []).forEach(l => {
-      if (l.vtDim) dims.add(String(l.vtDim).trim().toLowerCase().replace(/[x*]/g, '×'));
-    }));
-    dl.innerHTML = [...dims].sort().map(d => `<option value="${escapeHTML(d)}"></option>`).join('');
-  }
-
-  function buildBomLineHTML(idx, line = {}) {
-    return `
-      <div class="press-line-row" data-line-idx="${idx}">
-        <div class="press-line-fields">
-          <input type="text" class="bl-vtdim" list="bom-dim-list" placeholder="Kích thước ván thô (VD: 1200×260×18)" value="${escapeHTML(line.vtDim || '')}" style="flex:2;">
-          <input type="number" class="bl-ratio" min="0" step="any" placeholder="Tỷ lệ (VD: 2)" title="Số tấm ván thô này cần để ghép 1 tấm thành phẩm" value="${line.ratio || ''}" style="flex:1;">
-          <button type="button" class="press-line-remove" onclick="app.removeBomLine(this)" title="Bỏ loại ván thô này"><i data-lucide="trash-2"></i></button>
-        </div>
-      </div>`;
-  }
-
-  function addBomLine(line = {}) {
-    const container = document.getElementById('bom-lines');
-    if (!container) return;
-    const count = container.querySelectorAll('.press-line-row').length;
-    if (count >= 3) { showToast('Tối đa 3 loại ván thô cho một thành phẩm!', 'error'); return; }
-    container.insertAdjacentHTML('beforeend', buildBomLineHTML(count, line));
-    initLucide();
-  }
-
-  function removeBomLine(btn) {
-    const container = document.getElementById('bom-lines');
-    if (!container) return;
-    const rows = container.querySelectorAll('.press-line-row');
-    if (rows.length <= 1) { container.innerHTML = ''; addBomLine(); return; }
-    btn.closest('.press-line-row')?.remove();
-  }
-
-  function collectBomLines() {
-    const lines = [];
-    document.querySelectorAll('#bom-lines .press-line-row').forEach(row => {
-      lines.push({
-        vtDim: row.querySelector('.bl-vtdim')?.value.trim() || '',
-        ratio: parseFloat(row.querySelector('.bl-ratio')?.value) || 0
-      });
-    });
-    return lines;
-  }
-
-  // Chuẩn hóa khóa kích thước: '1200x260X18' -> '1200×260×18'
-  function normalizeDimKey(k) {
-    return String(k || '').trim().toLowerCase().replace(/[x*]/g, '×');
-  }
-
-  // Mở modal thêm/sửa định mức
-  function openProductBomModal(bomId = null) {
-    if (!requireEditPermission()) return;
-    const modal = document.getElementById('modal-product-bom');
-    const form = document.getElementById('product-bom-form');
-    const titleEl = document.getElementById('bom-modal-title');
-    if (!modal || !form) return;
-
-    form.reset();
-    populateBomProductSelect();
-    populateBomDimList();
-    document.getElementById('bom-lines').innerHTML = '';
-    document.getElementById('bom-id').value = '';
-
-    if (bomId) {
-      const bom = state.productBoms.find(b => b.id === bomId);
-      if (!bom) return;
-      const rate = state.materialRates.find(r => r.id === bom.productId);
-      if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Định Mức Ván Thô: ${rate ? escapeHTML(rate.product) : '?'}`;
-      document.getElementById('bom-id').value = bom.id;
-      const sel = document.getElementById('bom-product');
-      if (sel && ![...sel.options].some(o => o.value === bom.productId)) {
-        sel.insertAdjacentHTML('beforeend', `<option value="${bom.productId}">(Sản phẩm đã xóa)</option>`);
-      }
-      sel.value = bom.productId;
-      (bom.lines && bom.lines.length ? bom.lines : [{}]).forEach(l => addBomLine(l));
-    } else {
-      if (titleEl) titleEl.innerHTML = `<i data-lucide="layers"></i> Thêm Định Mức Ván Thô`;
-      addBomLine();
-      addBomLine();
-    }
-
-    modal.classList.add('show');
-    initLucide();
-  }
-
-  function closeProductBomModal() {
-    document.getElementById('modal-product-bom')?.classList.remove('show');
-  }
-
-  function handleProductBomSubmit(e) {
-    e.preventDefault();
-    if (!requireEditPermission()) return;
-    const bomId = document.getElementById('bom-id').value;
-    const productId = document.getElementById('bom-product').value;
-    const lines = collectBomLines().filter(l => l.vtDim || l.ratio > 0);
-
-    if (!productId) { showToast('Vui lòng chọn thành phẩm!', 'error'); return; }
-    const rate = state.materialRates.find(r => r.id === productId);
-    if (!rate) { showToast('Thành phẩm không tồn tại trong định mức kế hoạch!', 'error'); return; }
-    if (lines.length === 0) { showToast('Cần ít nhất 1 loại ván thô (kích thước + tỷ lệ)!', 'error'); return; }
-    for (let i = 0; i < lines.length; i++) {
-      const l = lines[i];
-      if (!normalizeDimKey(l.vtDim)) { showToast(`Dòng ván thô #${i + 1}: thiếu kích thước (VD: 1200×260×18)!`, 'error'); return; }
-      if (!(l.ratio > 0)) { showToast(`Dòng ván thô #${i + 1}: tỷ lệ phải lớn hơn 0!`, 'error'); return; }
-    }
-    const dims = lines.map(l => normalizeDimKey(l.vtDim));
-    if (new Set(dims).size !== dims.length) { showToast('Không được nhập trùng kích thước ván thô!', 'error'); return; }
-    // Mỗi thành phẩm chỉ có MỘT định mức ván thô
-    const dup = state.productBoms.find(b => b.productId === productId && b.id !== bomId);
-    if (dup) { showToast(`Sản phẩm "${rate.product}" đã có định mức ván thô! Hãy sửa định mức hiện có.`, 'error'); return; }
-
-    const bomData = {
-      id: bomId || `bom-${Date.now()}`,
-      productId,
-      lines: lines.map(l => ({ vtDim: normalizeDimKey(l.vtDim), ratio: l.ratio })),
-      createdAt: new Date().toISOString()
-    };
-
-    if (bomId) {
-      const idx = state.productBoms.findIndex(b => b.id === bomId);
-      if (idx !== -1) state.productBoms[idx] = bomData;
-      showToast('Đã cập nhật định mức ván thô!', 'success');
-    } else {
-      state.productBoms.push(bomData);
-      showToast('Đã thêm định mức ván thô!', 'success');
-    }
-
-    saveProductBoms();
-    closeProductBomModal();
-    renderPlanningView();
-  }
-
-  function deleteProductBom(bomId) {
-    if (!requireEditPermission()) return;
-    const bom = state.productBoms.find(b => b.id === bomId);
-    if (!bom) return;
-    const rate = state.materialRates.find(r => r.id === bom.productId);
-    if (confirm(`Xóa định mức ván thô của "${rate ? rate.product : bom.productId}"?`)) {
-      state.productBoms = state.productBoms.filter(b => b.id !== bomId);
-      saveProductBoms();
-      renderPlanningView();
-      showToast('Đã xóa định mức ván thô', 'info');
-    }
   }
 
   function openMaterialRateModal(rateId = null) {
@@ -1731,20 +1438,16 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   }
 
 export {
-  addBomLine,
   buildPlanningEditItems,
-  calculateMaxProductionFromBom,
   calculateMaxProductionFromInventory,
   calculatePlanningNeeds,
   closeMaterialRateModal,
   closePlanningEditModal,
   closePlanningItemModal,
-  closeProductBomModal,
   computeMaxProductionByProduct,
   computePlanningWeekNeeds,
   deleteMaterialRate,
   deletePlanningItem,
-  deleteProductBom,
   dimUseKey,
   duplicatePlanningGroup,
   editPlanningGroup,
@@ -1758,48 +1461,39 @@ export {
   getForecastVal,
   getNanDisplayRows,
   getNanInventoryByWeek,
-  getProductBom,
   getPlanningItemsOfWeek,
   getRateNanSummary,
   getSay1WeeklyQuantities,
   getUniqueNanTypes,
   getUnitVolume,
   getUseForFromName,
-  getVanThoStockByWeek,
   getWeekNumber,
   getYearFromWeek,
   handleMaterialRateSubmit,
   handlePlanningEditSubmit,
   handlePlanningItemSubmit,
-  handleProductBomSubmit,
   loadMaterialRates,
   loadPlanningForecast,
   loadPlanningItems,
   loadPlanningStock,
-  loadProductBoms,
   openMaterialRateModal,
   openPlanningEditModal,
   openPlanningItemModal,
-  openProductBomModal,
   parseFractionValue,
-  populateBomProductSelect,
   populateNanSelects,
   populatePlanningEditYearWeek,
   populatePlanningItemYearWeekDefaults,
   populatePlanningProductSelect,
   populatePlanningYearFilter,
-  removeBomLine,
   renderMaterialRatesTable,
   renderPlanningListSection,
   renderPlanningMatrix,
   renderPlanningView,
-  renderProductBomTable,
   restoreRateTableCollapse,
   saveMaterialRates,
   savePlanningForecast,
   savePlanningItems,
   savePlanningStock,
-  saveProductBoms,
   scrollMatrixToCurrentWeek,
   selectPlanningProduct,
   toggleRateTableCollapse,

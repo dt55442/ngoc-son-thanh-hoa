@@ -4,7 +4,7 @@
 import { saveSession, updateUserProfileHeader } from './auth.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PRODUCT_BOMS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { restoreMaterialRecords, saveData } from './storage.js';
 import { showToast } from './utils.js';
 
@@ -277,7 +277,6 @@ import { showToast } from './utils.js';
       materialRates: state.materialRates,
       materialRecords: state.materialRecords,
       materialPlan: state.materialPlan || {},
-      productBoms: state.productBoms,
       planningItems: state.planningItems,
       planningForecast: state.planningForecast,
       planningStock: state.planningStock,
@@ -295,7 +294,6 @@ import { showToast } from './utils.js';
       materialRates: obj.materialRates || [], materialRecords: obj.materialRecords || [],
       materialPlan: obj.materialPlan || {},
       planningItems: obj.planningItems || [],
-      productBoms: obj.productBoms || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
       qcExports: obj.qcExports || [],
       pressRecords: obj.pressRecords || []
@@ -381,7 +379,6 @@ import { showToast } from './utils.js';
       else restoreMaterialRecords(remote.materialRecords); // đã có logic gộp theo dấu thời gian riêng
     }
     if (remote.planningItems) state.planningItems = m(state.planningItems, remote.planningItems);
-    if (remote.productBoms) state.productBoms = m(state.productBoms, remote.productBoms);
     if (remote.materialRates) state.materialRates = m(state.materialRates, remote.materialRates);
     if (remote.customCharts) state.customCharts = m(state.customCharts, remote.customCharts);
     if (remote.qcExports) state.qcExports = m(state.qcExports || [], remote.qcExports);
@@ -405,7 +402,6 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(state.materialRecords)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_MATERIAL_PLAN, JSON.stringify(state.materialPlan || {})); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_PRODUCT_BOMS, JSON.stringify(state.productBoms)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock)); } catch (e) {}
@@ -471,7 +467,6 @@ import { showToast } from './utils.js';
       // đơn giá/ảnh của các lần nhập nguyên liệu mới hơn bản trên mây.
       if (data.materialRecords) restoreMaterialRecords(data.materialRecords);
       if (data.materialPlan !== undefined) state.materialPlan = data.materialPlan || {};
-      if (data.productBoms) state.productBoms = data.productBoms;
       if (data.planningItems) state.planningItems = data.planningItems;
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
       if (data.planningStock !== undefined) state.planningStock = data.planningStock;

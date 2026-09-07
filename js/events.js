@@ -8,8 +8,8 @@ import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal
 import { closeCustomExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, openCustomExportModal, openMaterialsExportModal, openPlanningExportModal, openPressExportModal } from './export-xlsx.js';
 import { closeColumnFilters } from './kanban.js';
 import { filterMobileKanbanColumns, renderAll, switchView } from './main.js';
-import { addBomLine, closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, closeProductBomModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, handleProductBomSubmit, openMaterialRateModal, openPlanningItemModal, openProductBomModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, applyBomToPressLines, closePressModal, handlePressRecordSubmit, openPressModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
+import { closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
+import { addPressLine, addPressStick, closePressModal, handlePressRecordSubmit, openPressModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { applyQcWeekToAll, closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
 import { state } from './state.js';
@@ -301,15 +301,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-material-rate', 'click', closeMaterialRateModal);
     safeOn('material-rate-form', 'submit', handleMaterialRateSubmit);
 
-    // ── Định mức ván thô → thành phẩm (BOM phụ) ──
-    safeOn('btn-add-product-bom', 'click', () => openProductBomModal());
-    safeOn('btn-close-product-bom', 'click', closeProductBomModal);
-    safeOn('btn-cancel-product-bom', 'click', closeProductBomModal);
-    safeOn('product-bom-form', 'submit', handleProductBomSubmit);
-    safeOn('btn-add-bom-line', 'click', () => addBomLine());
-    // Thu gọn / mở rộng bảng định mức (bảng chính & bảng phụ ván thô)
+    // Thu gọn / mở rộng bảng định mức (bảng chính)
     safeOn('btn-toggle-rate-main', 'click', () => toggleRateTableCollapse('rate-main-card'));
-    safeOn('btn-toggle-rate-bom', 'click', () => toggleRateTableCollapse('rate-bom-card'));
 
     safeOn('btn-add-planning-item', 'click', openPlanningItemModal);
     safeOn('btn-close-planning-item', 'click', closePlanningItemModal);
@@ -409,18 +402,17 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('press-record-form', 'submit', handlePressRecordSubmit);
     safeOn('btn-add-press-line', 'click', () => addPressLine());
     safeOn('btn-add-press-stick', 'click', () => addPressStick());
-    // Đổi ngày ép: cập nhật tuần tự động + danh sách thành phẩm cùng tuần
+    // Đổi ngày ép: cập nhật tuần tự động (hint cạnh nhãn) + danh sách thành phẩm cùng tuần
     safeOn('press-date', 'change', () => {
       const dateVal = document.getElementById('press-date')?.value;
-      const weekEl = document.getElementById('press-week');
-      if (weekEl) weekEl.value = dateVal ? getISOWeekString(dateVal) : '';
+      const weekHint = document.getElementById('press-week-hint');
+      if (weekHint) weekHint.textContent = dateVal ? getISOWeekString(dateVal) : '';
       refreshPressProductSelect();
       recalcPressQuantities();
     });
-    // Đổi thành phẩm: tự điền Ván Thô theo định mức ván thô (nếu có) +
-    // gợi ý kích thước TP + keo/phụ gia theo định mức
+    // Đổi thành phẩm: reset chế độ sửa tay SL + gợi ý keo/phụ gia theo định mức + tính lại SL
     safeOn('press-product', 'change', () => {
-      applyBomToPressLines();
+      document.getElementById('press-fp-qty')?.removeAttribute('data-manual');
       suggestPressMaterialFields(true);
       recalcPressQuantities();
     });
@@ -428,9 +420,14 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     ['press-glue', 'press-additive'].forEach(fid => {
       safeOn(fid, 'input', (e) => { e.target.setAttribute('data-manual', '1'); });
     });
-    // Nhập liệu trên các dòng thành phần -> tính lại số lượng thành phẩm
+    // Số lượng thành phẩm có thể sửa tay — đánh dấu để tự tính không ghi đè
+    safeOn('press-fp-qty', 'input', (e) => {
+      e.target.setAttribute('data-manual', '1');
+      suggestPressMaterialFields(false);
+    });
+    // Nhập liệu trên các dòng thành phần (ván thô tạo ra / đầu vào) -> tính lại số lượng thành phẩm
     document.addEventListener('input', (e) => {
-      if (e.target && e.target.closest && e.target.closest('#press-lines')) {
+      if (e.target && e.target.closest && (e.target.closest('#press-lines') || e.target.closest('#press-sticks'))) {
         recalcPressQuantities();
       }
     });

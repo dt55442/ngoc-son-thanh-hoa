@@ -9,7 +9,7 @@ import { setupEventListeners, undoLastAction, updateUndoButton } from './events.
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
-import { deleteMaterialRate, deletePlanningItem, deleteProductBom, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, loadProductBoms, openMaterialRateModal, openProductBomModal, removeBomLine, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
+import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressRecords, openPressModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
 import { canViewAdvanced } from './permissions.js';
@@ -25,7 +25,6 @@ import { setupFormCalculations } from './utils.js';
     loadData();
     loadCustomCharts();
     loadMaterialRates();
-    loadProductBoms();
     loadPlanningItems();
     loadPlanningForecast();
     loadPlanningStock();
@@ -205,9 +204,6 @@ import { setupFormCalculations } from './utils.js';
     // Kế hoạch sản xuất
     editMaterialRate: id => openMaterialRateModal(id),
     deleteMaterialRate,
-    editProductBom: id => openProductBomModal(id),
-    deleteProductBom,
-    removeBomLine,
     deletePlanningItem,
     selectPlanningProduct,
     duplicatePlanningGroup,

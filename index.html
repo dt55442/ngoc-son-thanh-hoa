@@ -803,7 +803,6 @@
                 <th>Keo (kg)</th>
                 <th>Phụ Gia (kg)</th>
                 <th>Hiệu Suất (%)</th>
-                <th>SL Quy Đổi</th>
                 <th class="text-right">Thao Tác</th>
               </tr>
             </thead>
@@ -816,81 +815,6 @@
           <button class="btn btn-outline btn-sm" id="btn-add-material-rate">
             <i data-lucide="plus"></i> Thêm Định Mức
           </button>
-        </div>
-      </div>
-
-      <!-- BẢNG PHỤ 2: ĐỊNH MỨC VÁN THÔ → THÀNH PHẨM -->
-      <div class="planning-card" id="rate-bom-card">
-        <div class="planning-card-header">
-          <h4><i data-lucide="layers"></i> Định Mức Ván Thô → Thành Phẩm (Bảng Phụ)</h4>
-          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-rate-bom" title="Thu gọn / Mở rộng">
-            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
-          </button>
-        </div>
-        <p style="margin:0; padding:10px 16px; font-size:0.78rem; color:var(--text-muted);">
-          Quy đổi tồn <strong>Ván Thô</strong> (tổng hợp từ mục "Ván Thô Tạo Ra" trong các lượt ép) ra số lượng
-          <strong>Thành Phẩm</strong>: mỗi thành phẩm ghép từ 1–3 loại ván thô với tỷ lệ tương ứng.
-          Sản lượng = min(tồn từng loại ÷ tỷ lệ).
-        </p>
-        <div class="table-responsive">
-          <table class="data-table planning-table" id="product-bom-table">
-            <thead>
-              <tr>
-                <th>Thành Phẩm</th>
-                <th>Công Thức (Ván Thô × Tỷ Lệ)</th>
-                <th>Số Loại</th>
-                <th>SL Quy Đổi</th>
-                <th class="text-right">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody id="product-bom-body">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-        </div>
-        <div class="planning-card-footer">
-          <button class="btn btn-outline btn-sm" id="btn-add-product-bom">
-            <i data-lucide="plus"></i> Thêm Định Mức Ván Thô
-          </button>
-        </div>
-      </div>
-
-      <datalist id="bom-dim-list"></datalist>
-
-      <!-- MODAL: THÊM/SỬA ĐỊNH MỨC VÁN THÔ (BOM PHỤ) -->
-      <div class="modal-overlay" id="modal-product-bom">
-        <div class="modal-card">
-          <div class="modal-header">
-            <h3 id="bom-modal-title"><i data-lucide="layers"></i> Thêm / Sửa Định Mức Ván Thô</h3>
-            <button class="modal-close-btn" id="btn-close-product-bom"><i data-lucide="x"></i></button>
-          </div>
-          <form id="product-bom-form" style="padding:20px;">
-            <input type="hidden" id="bom-id">
-            <div class="form-group col-span-full">
-              <label for="bom-product">Thành Phẩm <span class="required">*</span></label>
-              <select id="bom-product" required>
-                <option value="">-- Chọn thành phẩm (theo Kế hoạch sản xuất) --</option>
-              </select>
-              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
-                Mỗi thành phẩm chỉ có một định mức ván thô. Danh sách lấy từ Định Mức Nguyên Vật Liệu.
-              </div>
-            </div>
-            <div class="form-group col-span-full">
-              <label>Ván Thô Cấu Thành (tối đa 3 loại) <span class="required">*</span></label>
-              <div id="bom-lines"></div>
-              <button type="button" class="btn btn-outline btn-sm" id="btn-add-bom-line" style="margin-top:8px;">
-                <i data-lucide="plus"></i> Thêm Ván Thô
-              </button>
-              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
-                <i data-lucide="info" style="width:12px; height:12px; display:inline;"></i>
-                Tỷ lệ = số tấm ván thô cần để ghép 1 tấm thành phẩm. VD: Ván 1100×260×26 = 1200×260×18 (tỷ lệ 1) + 1200×260×5 (tỷ lệ 2).
-              </div>
-            </div>
-            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-              <button type="button" class="btn btn-outline" id="btn-cancel-product-bom">Hủy Bỏ</button>
-              <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Định Mức</button>
-            </div>
-          </form>
         </div>
       </div>
 
@@ -1062,7 +986,7 @@
             <i data-lucide="factory"></i> Sản Lượng Ép Ván
           </h3>
           <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Ghi nhận từng lượt ép: thanh thô từ Bào Tinh → ván thô → thành phẩm. Thành phẩm lấy theo kế hoạch sản xuất cùng tuần.
+            Ghi nhận từng lượt ép: thanh thô/ván thô đầu vào → ván thô tạo ra &amp; thành phẩm. Phần nào không nhập thì thể tích phần đó = 0.
           </p>
         </div>
         <div style="display:flex; gap:8px;">
@@ -1145,29 +1069,28 @@
           <form id="press-record-form" style="padding:20px;">
             <input type="hidden" id="press-id" value="">
             <div class="form-grid">
-              <!-- Ngày ép + Tuần tự động -->
+              <!-- Ngày ép (tuần tự động hiển thị cạnh nhãn — bỏ ô tuần thừa) -->
               <div class="form-group">
-                <label for="press-date">Ngày Ép <span class="required">*</span></label>
+                <label for="press-date">Ngày Ép <span class="required">*</span> <span class="press-week-hint" id="press-week-hint"></span></label>
                 <input type="date" id="press-date" required>
-              </div>
-              <div class="form-group">
-                <label for="press-week">Tuần (Tự động theo Ngày)</label>
-                <input type="text" id="press-week" readonly class="readonly-input" placeholder="Tự động tính theo Ngày">
               </div>
             </div>
 
-            <!-- Sử dụng thanh thô từ Bào Tinh (1..3 loại) -->
+            <!-- Gợi ý loại đầu vào: thanh thô (Bào Tinh) + ván thô đã ép trước đó -->
+            <datalist id="press-input-type-list"></datalist>
+
+            <!-- Đầu vào: thanh thô từ Bào Tinh hoặc ván thô đã ép trước đó (1..3 loại) -->
             <div class="form-group col-span-full">
-              <label>Sử Dụng Thanh Thô (Từ Bào Tinh) <span style="font-size:0.75rem; color:var(--text-muted);">(1 đến 3 loại)</span></label>
+              <label>Sử Dụng Thanh Thô / Ván Thô Đã Ép (Đầu Vào) <span style="font-size:0.75rem; color:var(--text-muted);">(1 đến 3 loại — gõ kí tự để thấy gợi ý)</span></label>
               <div id="press-sticks"></div>
               <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-stick" style="margin-top:6px;">
-                <i data-lucide="plus"></i> Thêm Loại Thanh Thô
+                <i data-lucide="plus"></i> Thêm Loại Thanh Thô / Ván Thô
               </button>
             </div>
 
-            <!-- Ván thô tạo ra (1..3 loại) -->
+            <!-- Ván thô tạo ra (1..3 loại) — không nhập thì thể tích ván thô = 0 -->
             <div class="form-group col-span-full">
-              <label>Ván Thô Tạo Ra <span style="font-size:0.75rem; color:var(--text-muted);">(1 đến 3 loại — chỉ nhập số lượng cho 1 loại, các loại khác để 0)</span></label>
+              <label>Ván Thô Tạo Ra <span style="font-size:0.75rem; color:var(--text-muted);">(không bắt buộc — 1 đến 3 loại, chỉ nhập số lượng cho 1 loại)</span></label>
               <div id="press-lines"></div>
               <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-line" style="margin-top:6px;">
                 <i data-lucide="plus"></i> Thêm Loại Ván Thô
@@ -1176,21 +1099,20 @@
 
             <!-- Thành phẩm & vật tư -->
             <div class="form-grid">
-              <div class="form-group col-span-full">
-                <label for="press-product">Thành Phẩm (Theo Kế Hoạch Cùng Tuần) <span class="required">*</span></label>
-                                <select id="press-product" required>
-                  <option value="">-- Chọn ngày để xem sản phẩm --</option>
-                </select>
-              </div>
-              <!-- Sản lượng tối đa từ ván thô có sẵn (tính năng tính sản lượng) -->
-              <div class="form-group col-span-full">
-                <div class="press-capacity-info" id="press-capacity-info"></div>
-              </div>
-              <div class="form-group">
-                <label for="press-fp-qty">Số Lượng Thành Phẩm (tấm)</label>
-                <input type="number" id="press-fp-qty" min="0" step="1" readonly class="readonly-input" placeholder="Tự động tính">
-                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
-                  Thành phẩm 1 loại ván thô: SL = số ván thô đã ép (÷ tỷ lệ nếu khác 1) · Ghép nhiều loại: SL = số ván thô có số lượng × (thể tích ván thô ÷ thể tích thành phẩm), làm tròn xuống — chỉ nhập số lượng cho 1 loại ván thô
+              <!-- Thành phẩm — không chọn thì thể tích thành phẩm = 0 -->
+              <div class="form-grid col-span-full">
+                <div class="form-group col-span-full">
+                  <label for="press-product">Thành Phẩm (Theo Kế Hoạch Cùng Tuần) <span style="font-size:0.75rem; color:var(--text-muted);">(không bắt buộc)</span></label>
+                  <select id="press-product">
+                    <option value="">-- Chọn ngày để xem sản phẩm --</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="press-fp-qty">Số Lượng Thành Phẩm (tấm) <span style="font-size:0.75rem; color:var(--text-muted);">(có thể sửa tay)</span></label>
+                  <input type="number" id="press-fp-qty" min="0" step="1" placeholder="Tự động tính từ ván thô — hoặc nhập tay">
+                  <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+                    Tự động tính khi có ván thô (quy đổi theo thể tích); không nhập ván thô thì tự nhập số lượng.
+                  </div>
                 </div>
               </div>
               <div class="form-group">

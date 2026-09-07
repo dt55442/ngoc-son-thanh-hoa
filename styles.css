@@ -3631,6 +3631,83 @@ body.multi-select .card-actions {
   font-weight: 600;
 }
 
+/* Highlight dòng bảng lượt ép khi bấm chọn cột tương ứng trong biểu đồ */
+#press-table-body tr.press-row-highlight td {
+  background: rgba(37, 99, 235, 0.10);
+  transition: background 0.3s;
+}
+
+#press-table-body tr.press-row-highlight td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary, #2563eb);
+}
+
+@keyframes press-row-flash {
+  0% { background-color: rgba(37, 99, 235, 0.38); }
+  100% { background-color: rgba(37, 99, 235, 0.10); }
+}
+
+#press-table-body tr.press-row-highlight.press-row-flash td {
+  animation: press-row-flash 1.4s ease-out;
+}
+
+/* Biểu tượng "!" vàng cảnh báo ngày có ghi chú giải trình */
+.press-note-badge {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  vertical-align: middle;
+  margin-left: 4px;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+
+/* Popover nội dung ghi chú giải trình (hover/bấm vào dấu "!" vàng) */
+#press-note-popover {
+  position: fixed;
+  z-index: 3000;
+  max-width: 280px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #78350f;
+  white-space: pre-wrap;
+  display: none;
+}
+
+#press-note-popover .press-note-popover-text {
+  display: block;
+}
+
+#press-note-popover .press-note-popover-edit {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b45309;
+  background: transparent;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#press-note-popover .press-note-popover-edit:hover {
+  background: #fef3c7;
+}
+
 /* Các dòng thành phần trong modal lượt ép */
 .press-line-row {
   background: var(--bg-subtle);

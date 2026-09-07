@@ -10,15 +10,19 @@
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
-    open: true, textContent: '', innerHTML: '', style: {}, dataset: {}, _h: {},
+    open: true, textContent: '', style: {}, dataset: {}, _h: {}, _kids: [], _html: '',
+    get innerHTML() { return this._html || ''; },
+    set innerHTML(v) { this._html = String(v); this._kids = []; },
     offsetWidth: 800, offsetHeight: 500,
     classList: { _s: new Set(), add(c){ this._s.add(c); }, remove(c){ this._s.delete(c); }, toggle(c, f){ if (f === undefined) f = !this._s.has(c); if (f) this._s.add(c); else this._s.delete(c); return f; }, contains(c){ return this._s.has(c); } },
     addEventListener(t, f) { (el._h[t] = el._h[t] || []).push(f); },
-    appendChild(c) { return c; }, removeChild(c) { return c; },
+    appendChild(c) { (el._kids = el._kids || []).push(c); return c; }, removeChild(c) { return c; },
     remove(){}, setAttribute(){}, getAttribute: () => null,
     insertAdjacentHTML(){}, reset(){},
-    querySelector: () => makeEl(), querySelectorAll: () => [],
+    querySelector: () => makeEl(),
+    querySelectorAll(sel) { return (el._kids || []).filter(k => (k._tag || '') === String(sel).toLowerCase()); },
     closest: () => null, matches: () => false,
+    scrollIntoView(){},
     getContext: () => ({ measureText: () => ({ width: 10 }), createLinearGradient: () => ({ addColorStop(){} }), createRadialGradient: () => ({ addColorStop(){} }), drawImage(){} }),
     toDataURL: () => 'data:image/jpeg;base64,CANVASOK',
     getBoundingClientRect: () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600 }),
@@ -31,7 +35,7 @@ global.document = {
   body: makeEl('body'), head: makeEl('head'), documentElement: makeEl('html'),
   activeElement: null, readyState: 'complete', visibilityState: 'visible',
   getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
-  createElement: () => makeEl(), createTextNode: (t) => ({ textContent: t }),
+  createElement: (tag) => { const e = makeEl(); e._tag = String(tag || '').toLowerCase(); return e; }, createTextNode: (t) => ({ textContent: t }),
   querySelector: () => null, querySelectorAll: () => [],
   addEventListener(){}, removeEventListener(){}, escapeCSS: (s) => s
 };
@@ -252,6 +256,48 @@ setLineRows([]);
 fpEl.value = '77'; fpManualFlag = '1';
 press.recalcPressQuantities();
 check('recalc: không ván thô → giữ SL người dùng tự nhập (77)', String(fpEl.value) === '77');
+
+// ═══════════════════════════════════════════════════════════
+// 9) Bấm cột biểu đồ → highlight dòng cùng ngày trong bảng + cuộn tới
+// ═══════════════════════════════════════════════════════════
+press.renderPressTable();
+const pressTbody = document.getElementById('press-table-body');
+const pressRows = pressTbody.querySelectorAll('tr');
+check('Highlight: bảng lượt ép gắn data-date cho từng dòng', pressRows.length > 0 && pressRows.every(r => typeof r.dataset.date === 'string' && r.dataset.date));
+const targetDate = pressRows[0].dataset.date; // dòng đầu = ngày mới nhất
+pressRows.forEach(r => { r.__scrollCalls = 0; r.scrollIntoView = function () { this.__scrollCalls++; }; });
+press.highlightPressTableRowsByDate(targetDate);
+const highlighted = pressRows.filter(r => r.classList.contains('press-row-highlight'));
+check('Highlight: chỉ các dòng cùng ngày được đánh dấu', highlighted.length >= 1 && highlighted.every(r => r.dataset.date === targetDate));
+check('Highlight: dòng đầu tiên được cuộn tới (scrollIntoView)', highlighted.some(r => r.__scrollCalls > 0));
+const otherDate = pressRows.map(r => r.dataset.date).find(d => d !== targetDate);
+press.highlightPressTableRowsByDate(otherDate);
+check('Highlight: bấm ngày khác → chuyển highlight sang nhóm dòng đó', pressRows.filter(r => r.classList.contains('press-row-highlight')).length > 0 && pressRows.filter(r => r.classList.contains('press-row-highlight')).every(r => r.dataset.date === otherDate));
+
+// ═══════════════════════════════════════════════════════════
+// 10) Ghi chú giải trình theo ngày (dấu "!" vàng + popover)
+// ═══════════════════════════════════════════════════════════
+const evNote = { preventDefault(){} };
+setVal('press-note-id', '');
+setVal('press-note-date', '2026-08-13');
+setVal('press-note-text', 'Máy ép 1 hỏng bạc trục, chờ thay linh kiện');
+press.handlePressNoteSubmit(evNote);
+check('Ghi chú: lưu được ghi chú cho ngày 13/08', (state.pressNotes || []).some(n => n.date === '2026-08-13' && n.text.includes('hỏng bạc trục')));
+press.renderPressTable();
+const rows13 = document.getElementById('press-table-body').querySelectorAll('tr').filter(r => r.dataset.date === '2026-08-13');
+check('Ghi chú: dòng ngày có ghi chú hiển thị biểu tượng "!" vàng', rows13.length >= 1 && rows13.every(r => r.innerHTML.includes('press-note-badge')));
+check('Ghi chú: badge mang nội dung giải trình', rows13.length >= 1 && rows13[0].innerHTML.includes('Máy ép 1 hỏng bạc trục'));
+// 1 ngày 1 ghi chú — lưu tiếp cùng ngày → cập nhật thay vì thêm mới
+setVal('press-note-id', '');
+setVal('press-note-date', '2026-08-13');
+setVal('press-note-text', 'Đã sửa xong từ buổi chiều');
+press.handlePressNoteSubmit(evNote);
+const notes13 = state.pressNotes.filter(n => n.date === '2026-08-13');
+check('Ghi chú: 1 ngày chỉ 1 ghi chú (cập nhật thay vì thêm mới)', notes13.length === 1 && notes13[0].text === 'Đã sửa xong từ buổi chiều');
+// Xóa ghi chú
+setVal('press-note-id', notes13[0].id);
+press.handlePressNoteDelete();
+check('Ghi chú: xóa ghi chú khỏi danh sách', !(state.pressNotes || []).some(n => n.date === '2026-08-13'));
 
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed > 0 ? 1 : 0);

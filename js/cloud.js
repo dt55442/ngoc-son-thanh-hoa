@@ -4,7 +4,7 @@
 import { saveSession, updateUserProfileHeader } from './auth.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { restoreMaterialRecords, saveData } from './storage.js';
 import { showToast } from './utils.js';
 
@@ -282,6 +282,7 @@ import { showToast } from './utils.js';
       planningStock: state.planningStock,
       qcExports: state.qcExports || [],
       pressRecords: state.pressRecords,
+      pressNotes: state.pressNotes || [],
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
       updatedAt: new Date().toISOString()
     };
@@ -294,6 +295,7 @@ import { showToast } from './utils.js';
       materialRates: obj.materialRates || [], materialRecords: obj.materialRecords || [],
       materialPlan: obj.materialPlan || {},
       planningItems: obj.planningItems || [],
+      pressNotes: obj.pressNotes || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
       qcExports: obj.qcExports || [],
       pressRecords: obj.pressRecords || []
@@ -379,6 +381,7 @@ import { showToast } from './utils.js';
       else restoreMaterialRecords(remote.materialRecords); // đã có logic gộp theo dấu thời gian riêng
     }
     if (remote.planningItems) state.planningItems = m(state.planningItems, remote.planningItems);
+    if (remote.pressNotes) state.pressNotes = m(state.pressNotes || [], remote.pressNotes);
     if (remote.materialRates) state.materialRates = m(state.materialRates, remote.materialRates);
     if (remote.customCharts) state.customCharts = m(state.customCharts, remote.customCharts);
     if (remote.qcExports) state.qcExports = m(state.qcExports || [], remote.qcExports);
@@ -406,6 +409,7 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
   }
 
@@ -472,6 +476,7 @@ import { showToast } from './utils.js';
       if (data.planningStock !== undefined) state.planningStock = data.planningStock;
       if (data.qcExports) state.qcExports = data.qcExports;
       if (data.pressRecords) state.pressRecords = data.pressRecords;
+      if (data.pressNotes) state.pressNotes = data.pressNotes;
       persistAllLocal();
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}

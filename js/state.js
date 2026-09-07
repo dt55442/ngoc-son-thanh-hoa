@@ -14,6 +14,7 @@
   const STORAGE_KEY_PLANNING_FORECAST = 'bamboo_tracker_planning_forecast_v1';
   const STORAGE_KEY_PLANNING_STOCK = 'bamboo_tracker_planning_stock_v1';
   const STORAGE_KEY_PRESS_RECORDS = 'bamboo_tracker_press_records_v1';
+  const STORAGE_KEY_PRESS_NOTES = 'bamboo_tracker_press_notes_v1';
   const STORAGE_KEY_MATERIALS = 'bamboo_tracker_material_records_v1';
   const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
 
@@ -44,6 +45,7 @@
     materialRates: [],
     planningItems: [],
     planningYearFilter: 'all',
+    pressNotes: [], // Ghi chú giải trình theo ngày (sản lượng không đáp ứng): [{ id, date, text, createdAt, updatedAt }]
     planningPendingScroll: true, // chỉ trượt tới tuần hiện tại khi mới mở tab / reset trang
     planningForecast: {}, // { year: { week: { nanKey: qty } } }
     planningStock: {}, // { year: { week: { glue: qty, additive: qty } } }
@@ -111,6 +113,7 @@ export {
   STORAGE_KEY_PLANNING_ITEMS,
   STORAGE_KEY_PLANNING_STOCK,
   STORAGE_KEY_PRESS_RECORDS,
+  STORAGE_KEY_PRESS_NOTES,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,

@@ -1381,5 +1381,6 @@ export {
   setupChartResize,
   syncChartMsChecks,
   toggleChartExpand,
+  collapseChartCard,
   updateChartBuilderPreview
 };

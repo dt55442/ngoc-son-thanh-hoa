@@ -2,8 +2,9 @@
 // js/press.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
-import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct } from './planning.js';
-import { STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
+import { collapseChartCard } from './dashboard.js';
+import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, toggleRateTableCollapse } from './planning.js';
+import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
 import { escapeHTML, getISOWeekString, showToast } from './utils.js';
 
   // =============================================================
@@ -35,6 +36,30 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
   function savePressRecords() {
     localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords));
     firePushSync();
+  }
+
+  // ── GHI CHÚ GIẢI TRÌNH THEO NGÀY (sản lượng không đáp ứng) ──
+  // Mỗi bản ghi: { id, date: 'YYYY-MM-DD', text, createdAt, updatedAt }
+  function loadPressNotes() {
+    const raw = localStorage.getItem(STORAGE_KEY_PRESS_NOTES);
+    if (raw) {
+      try { state.pressNotes = JSON.parse(raw); }
+      catch (e) { state.pressNotes = []; }
+    } else {
+      state.pressNotes = [];
+    }
+  }
+
+  function savePressNotes() {
+    localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || []));
+    firePushSync();
+  }
+
+  // Map ngày -> nội dung ghi chú (dùng cho biểu đồ & bảng)
+  function getPressNotesByDate() {
+    const map = new Map();
+    (state.pressNotes || []).forEach(n => { if (n.date && n.text) map.set(n.date, n.text); });
+    return map;
   }
 
   // Năm từ chuỗi ngày 'YYYY-MM-DD'
@@ -591,6 +616,57 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       weeks.map(w => `<option value="${w}" ${String(w) === String(state.pressWeekFilter) ? 'selected' : ''}>Tuần ${w}</option>`).join('');
   }
 
+  // Plugin vẽ dấu "!" màu vàng phía trên các ngày có ghi chú giải trình,
+  // đồng thời lưu vị trí (hit-area) để bắt hover/chạm hiển thị nội dung ghi chú.
+  let pressNoteMarkerHits = [];
+  const pressNoteMarkerPlugin = {
+    id: 'pressNoteMarkers',
+    afterDatasetsDraw(chart) {
+      pressNoteMarkerHits = [];
+      const cfg = (chart.options.plugins && chart.options.plugins.pressNoteMarkers) || {};
+      const dts = cfg.dates || [];
+      const values = cfg.values || [];
+      const notesByDate = cfg.notesByDate;
+      if (!dts.length || !notesByDate || notesByDate.size === 0) return;
+      const xs = chart.scales.x;
+      const ys = chart.scales.y;
+      if (!xs || !ys) return;
+      const ctx = chart.ctx;
+      const top = chart.chartArea ? chart.chartArea.top : 0;
+      dts.forEach((d, i) => {
+        const text = notesByDate.get(d);
+        if (!text) return;
+        const x = xs.getPixelForValue(i);
+        let y = ys.getPixelForValue(values[i] || 0) - 14;
+        if (y < top + 12) y = top + 12;
+        pressNoteMarkerHits.push({ x, y, r: 12, date: d, text });
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', x, y + 0.5);
+        ctx.restore();
+      });
+    }
+  };
+
+  // Tìm dấu "!" vàng tại vị trí con trỏ (evt của Chart.js v4 có sẵn tọa độ x/y)
+  function findPressNoteMarkerHit(evt) {
+    if (!evt || !pressNoteMarkerHits.length) return null;
+    const x = (evt.x != null) ? evt.x : (evt.native ? evt.native.offsetX : null);
+    const y = (evt.y != null) ? evt.y : (evt.native ? evt.native.offsetY : null);
+    if (x == null || y == null) return null;
+    return pressNoteMarkerHits.find(m => Math.hypot(x - m.x, y - m.y) <= m.r) || null;
+  }
+
   // Biểu đồ: thể tích ván thô & thành phẩm mỗi ngày, nhóm theo tuần (label 2 dòng)
   function renderPressChart() {
     const canvas = document.getElementById('press-chart');
@@ -637,9 +713,11 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
 
     const VT_COLOR = '#94a3b8';
     const FP_COLOR = '#15803d';
+    const notesByDate = getPressNotesByDate();
     const ctx = canvas.getContext('2d');
     state.pressChartInstance = new Chart(ctx, {
       type: 'bar',
+      plugins: [pressNoteMarkerPlugin],
       data: {
         labels,
         datasets: [
@@ -650,7 +728,35 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // Bấm/chạm vào CỘT → highlight các dòng cùng ngày trong bảng lượt ép;
+        // bấm/chạm vào dấu "!" vàng → hiển thị nội dung ghi chú giải trình
+        onClick: (evt, elements) => {
+          const markerHit = findPressNoteMarkerHit(evt);
+          if (markerHit) {
+            showPressNotePopover(markerHit.text, evt.native ? evt.native.clientX : 0, evt.native ? evt.native.clientY : 0, markerHit.date, null);
+            return;
+          }
+          hidePressNotePopover();
+          if (!elements || !elements.length) return;
+          const date = dates[elements[0].index];
+          if (date) highlightPressTableRowsByDate(date);
+        },
+        onHover: (evt, elements) => {
+          const target = evt && evt.native ? evt.native.target : null;
+          const markerHit = findPressNoteMarkerHit(evt);
+          if (target) target.style.cursor = markerHit ? 'help' : ((elements && elements.length) ? 'pointer' : 'default');
+          if (markerHit && evt.native) {
+            showPressNotePopover(markerHit.text, evt.native.clientX, evt.native.clientY, markerHit.date, null);
+          } else if (!markerHit) {
+            hidePressNotePopover();
+          }
+        },
         plugins: {
+          pressNoteMarkers: {
+            dates,
+            values: dates.map(d => Math.max(byDay[d].vt, byDay[d].fp)),
+            notesByDate
+          },
           legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
           tooltip: {
             callbacks: {
@@ -671,11 +777,42 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     });
   }
 
+  // Bấm/chạm vào CỘT trong biểu đồ "Thể Tích Ván Ép Theo Ngày" → highlight các
+  // dòng cùng ngày trong bảng lượt ép bên dưới và cuộn khung nhìn tới vùng đó.
+  function highlightPressTableRowsByDate(date) {
+    if (!date) return;
+    // Thoát chế độ biểu đồ toàn màn hình (nếu đang bật) để thấy bảng bên dưới
+    const canvas = document.getElementById('press-chart');
+    const card = canvas && canvas.closest ? canvas.closest('.press-chart-card') : null;
+    if (card && card.classList.contains('chart-expanded')) collapseChartCard(card);
+    // Bảng đang thu gọn → mở rộng trước
+    const tableCard = document.getElementById('press-table-card');
+    if (tableCard && tableCard.classList.contains('rate-table-collapsed')) {
+      toggleRateTableCollapse('press-table-card');
+    }
+    const tbody = document.getElementById('press-table-body');
+    if (!tbody || !tbody.querySelectorAll) return;
+    let first = null;
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const match = tr.dataset && tr.dataset.date === date;
+      tr.classList.toggle('press-row-highlight', match);
+      if (match && !first) first = tr;
+    });
+    if (first && first.scrollIntoView) {
+      first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      // Nhấp nháy để dễ định vị (bấm lại cùng cột vẫn chạy hiệu ứng)
+      first.classList.remove('press-row-flash');
+      void first.offsetWidth;
+      first.classList.add('press-row-flash');
+    }
+  }
+
   // Bảng danh sách lượt ép
   function renderPressTable() {
     const tbody = document.getElementById('press-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
+    const notesByDate = getPressNotesByDate();
 
     let records = [...state.pressRecords];
     if (state.pressYearFilter !== 'all') {
@@ -697,6 +834,10 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     records.forEach(r => {
       const vanThoList = r.vanTho || [];
       const sticksList = r.sticks || [];
+      const noteText = notesByDate.get(r.date) || '';
+      const noteBadge = noteText
+        ? ` <span class="press-note-badge" data-note="${escapeHTML(noteText)}" data-date="${escapeHTML(r.date)}" title="Ghi chú giải trình">!</span>`
+        : '';
       const vtDesc = vanThoList.map(l =>
         `${escapeHTML(l.vtDim)} ×${(l.vtQty || 0).toLocaleString('vi-VN')}`).join('<br>');
       const stickDesc = sticksList.map(s =>
@@ -710,8 +851,9 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
         ? `<strong style="color:var(--primary);">${(r.finishedQty || 0).toLocaleString('vi-VN')}</strong> tấm`
         : '<span class="text-muted">—</span>';
       const tr = document.createElement('tr');
+      tr.dataset.date = r.date || ''; // phục vụ highlight từ biểu đồ khi bấm vào cột
       tr.innerHTML = `
-        <td><strong>${fmtDateDM(r.date)}</strong><br><span class="text-muted">T${getWeekNumber(r.week)}</span></td>
+        <td><strong>${fmtDateDM(r.date)}</strong>${noteBadge}<br><span class="text-muted">T${getWeekNumber(r.week)}</span></td>
         <td>${productCell}</td>
         <td>${vtDesc}</td>
         <td>${stickDesc}</td>
@@ -729,6 +871,129 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       tbody.appendChild(tr);
     });
     initLucide();
+  }
+
+  // ── POPOVER hiển thị nội dung ghi chú (dùng chung cho biểu đồ & bảng) ──
+  let notePopoverSource = null;
+  function ensureNotePopoverEl() {
+    let el = document.getElementById('press-note-popover');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'press-note-popover';
+      el.innerHTML = '<div class="press-note-popover-text"></div>' +
+        '<button type="button" class="press-note-popover-edit"><i data-lucide="edit-3"></i> Sửa ghi chú</button>';
+      document.body.appendChild(el);
+      initLucide();
+    }
+    return el;
+  }
+
+  function showPressNotePopover(text, clientX, clientY, date, sourceEl) {
+    if (!text) return;
+    const el = ensureNotePopoverEl();
+    // Bấm lại đúng biểu tượng đang mở → ẩn (toggle cho cảm ứng)
+    if (sourceEl && notePopoverSource === sourceEl && el.style.display === 'block') {
+      hidePressNotePopover();
+      return;
+    }
+    notePopoverSource = sourceEl || null;
+    const textEl = el.querySelector('.press-note-popover-text');
+    if (textEl) textEl.textContent = text;
+    const editBtn = el.querySelector('.press-note-popover-edit');
+    if (editBtn) {
+      editBtn.style.display = (date && requireEditPermission()) ? 'inline-flex' : 'none';
+      editBtn.dataset.date = date || '';
+    }
+    el.style.display = 'block';
+    // Đo kích thước & kẹp trong khung nhìn
+    const rect = el.getBoundingClientRect();
+    let left = clientX + 12;
+    let top = clientY + 14;
+    if (Number.isFinite(window.innerWidth) && left + rect.width > window.innerWidth - 8) {
+      left = Math.max(8, clientX - rect.width - 12);
+    }
+    if (Number.isFinite(window.innerHeight) && top + rect.height > window.innerHeight - 8) {
+      top = Math.max(8, clientY - rect.height - 14);
+    }
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+  }
+
+  function hidePressNotePopover() {
+    const el = document.getElementById('press-note-popover');
+    if (el) el.style.display = 'none';
+    notePopoverSource = null;
+  }
+
+  // ── MODAL: tạo/sửa/xóa ghi chú giải trình ──
+  function openPressNoteModal(date) {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-press-note');
+    if (!modal) return;
+    const form = document.getElementById('press-note-form');
+    if (form) form.reset();
+    hidePressNotePopover();
+    const note = date ? (state.pressNotes || []).find(n => n.date === date) : null;
+    document.getElementById('press-note-id').value = note ? note.id : '';
+    document.getElementById('press-note-date').value = note ? note.date : (date || todayLocalISO());
+    document.getElementById('press-note-text').value = note ? note.text : '';
+    const delBtn = document.getElementById('btn-delete-press-note');
+    if (delBtn) delBtn.style.display = note ? '' : 'none';
+    const titleEl = document.getElementById('press-note-modal-title');
+    if (titleEl) {
+      titleEl.innerHTML = `<i data-lucide="sticky-note"></i> ${note ? 'Sửa Ghi Chú Giải Trình' : 'Thêm Ghi Chú Giải Trình'}`;
+    }
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closePressNoteModal() {
+    document.getElementById('modal-press-note')?.classList.remove('show');
+  }
+
+  function handlePressNoteSubmit(e) {
+    e.preventDefault();
+    if (!requireEditPermission()) return;
+    const id = document.getElementById('press-note-id').value;
+    const date = document.getElementById('press-note-date').value;
+    const text = document.getElementById('press-note-text').value.trim();
+    if (!date) { showToast('Vui lòng chọn ngày!', 'error'); return; }
+    if (!text) { showToast('Vui lòng nhập nội dung giải trình!', 'error'); return; }
+    state.pressNotes = state.pressNotes || [];
+    // 1 ngày 1 ghi chú — nếu ngày đã có ghi chú khác thì cập nhật nội dung bản ghi đó
+    const dup = state.pressNotes.find(n => n.date === date && n.id !== id);
+    const nowIso = new Date().toISOString();
+    if (dup) {
+      dup.text = text;
+      dup.updatedAt = nowIso;
+      showToast(`Ngày ${fmtDateDM(date)} đã có ghi chú — đã cập nhật nội dung.`, 'info');
+    } else if (id) {
+      const idx = state.pressNotes.findIndex(n => n.id === id);
+      if (idx !== -1) {
+        state.pressNotes[idx] = { ...state.pressNotes[idx], date, text, updatedAt: nowIso };
+      } else {
+        state.pressNotes.push({ id, date, text, createdAt: nowIso, updatedAt: nowIso });
+      }
+    } else {
+      state.pressNotes.push({ id: `pnote-${Date.now()}`, date, text, createdAt: nowIso, updatedAt: nowIso });
+    }
+    savePressNotes();
+    closePressNoteModal();
+    renderPressView();
+    showToast('Đã lưu ghi chú giải trình!', 'success');
+  }
+
+  function handlePressNoteDelete() {
+    if (!requireEditPermission()) return;
+    const id = document.getElementById('press-note-id').value;
+    const note = (state.pressNotes || []).find(n => n.id === id);
+    if (!note) return;
+    if (!confirm(`Xóa ghi chú giải trình ngày ${fmtDateDM(note.date)}?`)) return;
+    state.pressNotes = state.pressNotes.filter(n => n.id !== id);
+    savePressNotes();
+    closePressNoteModal();
+    renderPressView();
+    showToast('Đã xóa ghi chú giải trình', 'info');
   }
 
   // ─── BIỂU ĐỒ TĨNH: KẾ HOẠCH vs ĐÃ ÉP (Dashboard) ─────────────
@@ -1236,6 +1501,7 @@ export {
   buildPressLineHTML,
   buildPressStickHTML,
   closePressModal,
+  closePressNoteModal,
   collectPressLines,
   collectPressSticks,
   computeFinishedQtyFromLines,
@@ -1247,9 +1513,15 @@ export {
   getPressProductsForWeek,
   getPressedQtyForPlan,
   handlePressRecordSubmit,
+  handlePressNoteDelete,
+  handlePressNoteSubmit,
+  hidePressNotePopover,
+  highlightPressTableRowsByDate,
   loadPressRecords,
+  loadPressNotes,
   migratePressRecord,
   openPressModal,
+  openPressNoteModal,
   parseDimString,
   populatePressInputTypeList,
   populatePressWeekFilter,
@@ -1268,6 +1540,7 @@ export {
   shiftPlanCapacityWindow,
   renderPressChart,
   renderPressTable,
+  showPressNotePopover,
   setPlanVsPressUnit,
   shiftPlanVsPressWeek,
   renderPressView,

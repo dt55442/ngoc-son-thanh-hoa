@@ -9,7 +9,7 @@ import { closeCustomExportModal, closeMaterialsExportModal, closePlanningExportM
 import { closeColumnFilters } from './kanban.js';
 import { filterMobileKanbanColumns, renderAll, switchView } from './main.js';
 import { closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, closePressModal, handlePressRecordSubmit, openPressModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
+import { addPressLine, addPressStick, closePressModal, closePressNoteModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { applyQcWeekToAll, closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
 import { state } from './state.js';
@@ -400,6 +400,36 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-press-modal', 'click', closePressModal);
     safeOn('btn-cancel-press', 'click', closePressModal);
     safeOn('press-record-form', 'submit', handlePressRecordSubmit);
+    // ── Ghi chú giải trình (ngày sản lượng không đáp ứng) ──
+    safeOn('btn-add-press-note', 'click', () => openPressNoteModal());
+    safeOn('btn-close-press-note', 'click', closePressNoteModal);
+    safeOn('btn-cancel-press-note', 'click', closePressNoteModal);
+    safeOn('press-note-form', 'submit', handlePressNoteSubmit);
+    safeOn('btn-delete-press-note', 'click', handlePressNoteDelete);
+    // Di chuột/bấm vào biểu tượng "!" trong bảng → hiển thị nội dung giải trình
+    document.addEventListener('mouseover', (e) => {
+      const badge = e.target && e.target.closest ? e.target.closest('.press-note-badge') : null;
+      if (badge) showPressNotePopover(badge.dataset.note, e.clientX, e.clientY, badge.dataset.date, badge);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (e.target && e.target.closest && e.target.closest('.press-note-badge')) hidePressNotePopover();
+    });
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'press-chart') return; // biểu đồ tự quản popover qua onClick
+      const badge = e.target && e.target.closest ? e.target.closest('.press-note-badge') : null;
+      if (badge) {
+        showPressNotePopover(badge.dataset.note, e.clientX, e.clientY, badge.dataset.date, badge);
+        return;
+      }
+      const editBtn = e.target && e.target.closest ? e.target.closest('.press-note-popover-edit') : null;
+      if (editBtn) {
+        hidePressNotePopover();
+        openPressNoteModal(editBtn.dataset.date);
+        return;
+      }
+      if (!e.target.closest || !e.target.closest('#press-note-popover')) hidePressNotePopover();
+    });
+    window.addEventListener('scroll', hidePressNotePopover, { passive: true, capture: true });
     safeOn('btn-add-press-line', 'click', () => addPressLine());
     safeOn('btn-add-press-stick', 'click', () => addPressStick());
     // Đổi ngày ép: cập nhật tuần tự động (hint cạnh nhãn) + danh sách thành phẩm cùng tuần

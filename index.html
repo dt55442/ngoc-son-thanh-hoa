@@ -1020,10 +1020,14 @@
         <div class="press-chart-legend-hint">
           <span><span class="legend-dot" style="background:#94a3b8;"></span> Ván thô (m³)</span>
           <span><span class="legend-dot" style="background:var(--primary);"></span> Thành phẩm (m³)</span>
+          <span><span style="display:inline-flex;width:13px;height:13px;border-radius:50%;background:#f59e0b;color:#fff;font-size:9px;font-weight:800;align-items:center;justify-content:center;">!</span> Ngày có ghi chú giải trình — di chuột/bấm để xem</span>
         </div>
-        <div class="press-chart-footer">
+        <div class="press-chart-footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
           <button class="btn btn-primary" id="btn-add-press">
             <i data-lucide="plus-circle"></i> Thêm Lượt Ép
+          </button>
+          <button class="btn btn-outline" id="btn-add-press-note" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
+            <i data-lucide="alert-triangle"></i> Ghi Chú Giải Trình
           </button>
         </div>
       </div>
@@ -1133,6 +1137,41 @@
             <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
               <button type="button" class="btn btn-outline" id="btn-cancel-press">Hủy Bỏ</button>
               <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lượt Ép</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL: GHI CHÚ GIẢI TRÌNH SẢN LƯỢNG -->
+      <div class="modal-overlay" id="modal-press-note">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 id="press-note-modal-title"><i data-lucide="sticky-note"></i> Ghi Chú Giải Trình</h3>
+            <button class="modal-close-btn" id="btn-close-press-note"><i data-lucide="x"></i></button>
+          </div>
+          <form id="press-note-form" style="padding:20px;">
+            <input type="hidden" id="press-note-id" value="">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="press-note-date">Ngày <span class="required">*</span></label>
+                <input type="date" id="press-note-date" required>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+                  Ghi chú giải trình cho ngày sản lượng không đáp ứng (1 ngày 1 ghi chú).
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label for="press-note-text">Nội dung giải trình <span class="required">*</span></label>
+              <textarea id="press-note-text" rows="4" required placeholder="VD: Máy ép 1 hỏng bạc trục, chờ thay linh kiện nên cả ngày chỉ đạt 40% kế hoạch..."></textarea>
+            </div>
+            <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px; display:flex; gap:8px; justify-content:space-between; flex-wrap:wrap;">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-delete-press-note" style="color:var(--danger); display:none;">
+                <i data-lucide="trash-2"></i> Xóa Ghi Chú
+              </button>
+              <div style="display:flex; gap:8px; margin-left:auto;">
+                <button type="button" class="btn btn-outline" id="btn-cancel-press-note">Hủy Bỏ</button>
+                <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Ghi Chú</button>
+              </div>
             </div>
           </form>
         </div>

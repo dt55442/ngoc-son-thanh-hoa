@@ -29,7 +29,8 @@ export const APP_TABS = [
   { id: 'planning', viewId: 'planning-view', name: 'Kế Hoạch Sản Xuất',  short: 'Kế Hoạch',   icon: 'clipboard-list', color: '#7c3aed' },
   { id: 'press',    viewId: 'press-view',    name: 'Sản Lượng Ép Ván',   short: 'Ép Ván',     icon: 'factory',        color: '#ea580c' },
   { id: 'materials',viewId: 'materials-view',name: 'Nhập Nguyên Liệu',   short: 'Nguyên Liệu',icon: 'package-plus',   color: '#db2777' },
-  { id: 'qc',       viewId: 'qc-view',       name: 'QC — Xuất Hàng',     short: 'QC',         icon: 'clipboard-check',color: '#0d9488' }
+  { id: 'qc',       viewId: 'qc-view',       name: 'QC — Xuất Hàng',     short: 'QC',         icon: 'clipboard-check',color: '#0d9488' },
+  { id: 'hr',       viewId: 'hr-view',       name: 'Nhân Sự',            short: 'Nhân Sự',     icon: 'users',         color: '#2563eb' }
 ];
 
 // Tab dùng cho chỉnh sửa = các tab dữ liệu + Dashboard (biểu đồ)
@@ -125,7 +126,6 @@ export function syncPermissionUI() {
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
   // Mục chỉ dành cho Admin trong menu
   show('btn-open-users-mgr', role === 'admin');
-  show('btn-dropdown-share', role === 'admin');
   show('btn-import-json', role === 'admin');
   // Khách: hiện nút Đăng Nhập, ẩn pill hồ sơ; đã đăng nhập: ngược lại
   show('btn-open-login', !u);

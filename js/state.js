@@ -17,6 +17,10 @@
   const STORAGE_KEY_PRESS_NOTES = 'bamboo_tracker_press_notes_v1';
   const STORAGE_KEY_MATERIALS = 'bamboo_tracker_material_records_v1';
   const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
+  // Tab Nhân Sự: nhân viên, đơn nghỉ phép, nhu cầu tuyển dụng
+  const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
+  const STORAGE_KEY_HR_LEAVES      = 'bamboo_tracker_hr_leaves_v1';
+  const STORAGE_KEY_HR_RECRUITMENT = 'bamboo_tracker_hr_recruitment_v1';
 
   const STAGES = {
     say1:     { id: 'say1',     name: '1. Sấy 1',        short: 'Sấy 1',    next: 'say2'     },
@@ -46,6 +50,7 @@
     planningItems: [],
     planningYearFilter: 'all',
     pressNotes: [], // Ghi chú giải trình theo ngày (sản lượng không đáp ứng): [{ id, date, text, createdAt, updatedAt }]
+    pressNotesExpanded: false, // Đang hiển thị nội dung TẤT CẢ ghi chú trên biểu đồ ép ván (nút "Hiện Ghi Chú")
     planningPendingScroll: true, // chỉ trượt tới tuần hiện tại khi mới mở tab / reset trang
     planningForecast: {}, // { year: { week: { nanKey: qty } } }
     planningStock: {}, // { year: { week: { glue: qty, additive: qty } } }
@@ -58,6 +63,10 @@
     // [{ id, date, week, type, supplier, location, inputIndex, outputIndex, weight, note, images[], createdAt }]
     materialRecords: [],
     // QC — Bảng xuất hàng: [{ id, productId (null = ngoài danh sách kế hoạch), name, week 'Tuần 34', year, qty, note, createdAt, updatedAt }]
+    // Tab Nhân Sự
+    hrEmployees: [],   // [{ id, code, name, gender, birthDate, phone, idCard, address, department, position, title, joinDate, status, notes, createdAt, updatedAt }]
+    hrLeaves: [],      // [{ id, employeeId, type, from, to, days, reason, status pending|approved|rejected, approvedBy, approvedAt, createdAt }]
+    hrRecruitment: [], // [{ id, department, position, needQty, hiredQty, needDate, status open|done, notes, createdAt, updatedAt }]
     qcExports: [],
     materialActiveLoc: 'all', // 'all' | 'lo-hoi' | 'xuong-1' | 'xuong-2'
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
@@ -115,6 +124,9 @@ export {
   STORAGE_KEY_PRESS_RECORDS,
   STORAGE_KEY_PRESS_NOTES,
   STORAGE_KEY_QC_EXPORTS,
+  STORAGE_KEY_HR_EMPLOYEES,
+  STORAGE_KEY_HR_LEAVES,
+  STORAGE_KEY_HR_RECRUITMENT,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,
   state

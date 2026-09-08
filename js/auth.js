@@ -248,6 +248,7 @@ import { escapeHTML, showToast } from './utils.js';
             <td>${permsChipsHtml(userLike)}</td>
             <td class="text-right">
               ${isSelf ? '<span class="text-muted">Chính bạn</span>' : `
+                <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserEditModal('${escapeHTML(ent.key)}')" title="Sửa thông tin / vai trò"><i data-lucide="edit-3"></i></button>
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserPermsModal('${escapeHTML(ent.key)}')" title="Cấu hình quyền chi tiết"><i data-lucide="user-cog"></i></button>
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteUser('${escapeHTML(ent.key)}')" style="color:var(--danger);" title="Xóa quyền"><i data-lucide="trash-2"></i></button>`}
             </td>`;
@@ -267,7 +268,10 @@ import { escapeHTML, showToast } from './utils.js';
         <td>${roleTagHtml(u.role)}</td>
         <td>${permsChipsHtml(u)}</td>
         <td class="text-right">
-          ${u.username === 'admin' ? '<span class="text-muted">Mặc định</span>' : `
+          ${u.username === 'admin' ? `
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserEditModal('${u.id}')" title="Sửa họ tên / đổi mật khẩu Admin"><i data-lucide="edit-3"></i></button>
+            <span class="text-muted">Mặc định</span>` : `
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserEditModal('${u.id}')" title="Sửa thông tin / đổi mật khẩu / vai trò"><i data-lucide="edit-3"></i></button>
             ${!isSelf ? `<button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserPermsModal('${u.id}')" title="Cấu hình quyền chi tiết"><i data-lucide="user-cog"></i></button>` : ''}
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteUser('${u.id}')" style="color:var(--danger);" title="Xóa"><i data-lucide="trash-2"></i></button>`}
         </td>`;
@@ -345,6 +349,148 @@ import { escapeHTML, showToast } from './utils.js';
       console.warn('[FB] Lỗi cấp quyền', err);
       showToast('Lỗi khi cấp quyền: ' + err.message + ' (Hãy đảm bảo là Admin và có kết nối)', 'error');
     }
+  }
+
+  // ─── MODAL SỬA THÔNG TIN NGƯỜI DÙNG (ADMIN ONLY) ──────────────
+  // Offline: truyền user.id; Online: truyền email (email = tài khoản
+  // Firebase Auth nên không đổi được — chỉ sửa họ tên hiển thị & vai trò)
+  function openUserEditModal(userIdOrEmail) {
+    if (state.currentUser?.role !== 'admin') { showToast('Chỉ Admin mới có quyền sửa!', 'error'); return; }
+    const modal = document.getElementById('modal-user-edit');
+    const targetInput = document.getElementById('user-edit-target');
+    const usernameInput = document.getElementById('user-edit-username');
+    const usernameNote = document.getElementById('user-edit-username-note');
+    const pwdGrp = document.getElementById('group-user-edit-password');
+    const roleSel = document.getElementById('user-edit-role');
+    const titleEl = document.getElementById('user-edit-modal-title');
+    const fullnameInput = document.getElementById('user-edit-fullname');
+    const pwdInput = document.getElementById('user-edit-password');
+    if (!modal || !targetInput || !usernameInput || !roleSel) return;
+    roleSel.disabled = false;
+
+    if (isFirebaseOnline()) {
+      const email = String(userIdOrEmail || '').trim().toLowerCase();
+      fetchRolesDoc().then(roles => {
+        const all = [...roles.adminEmails, ...roles.managerEmails, ...roles.editorEmails, ...roles.viewerEmails];
+        if (!all.includes(email)) { showToast('Không tìm thấy người dùng này!', 'error'); return; }
+        const role = roles.adminEmails.includes(email) ? 'admin'
+          : roles.managerEmails.includes(email) ? 'manager'
+          : roles.editorEmails.includes(email) ? 'editor' : 'viewer';
+        targetInput.value = `email:${email}`;
+        if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Người Dùng: ${escapeHTML(email)}`;
+        if (fullnameInput) { fullnameInput.value = ''; fullnameInput.placeholder = 'Họ tên hiển thị (không bắt buộc)'; }
+        usernameInput.value = email;
+        usernameInput.readOnly = true;
+        if (usernameNote) {
+          usernameNote.style.display = '';
+          usernameNote.textContent = 'Email là tài khoản đăng nhập Firebase — không thể đổi. Mật khẩu do chính chủ tài khoản tự đổi.';
+        }
+        if (pwdGrp) pwdGrp.style.display = 'none';
+        if (pwdInput) pwdInput.value = '';
+        roleSel.value = role;
+        modal.classList.add('show');
+        initLucide();
+      });
+      return;
+    }
+
+    // OFFLINE: sửa họ tên / tên đăng nhập / mật khẩu / vai trò
+    const user = state.users.find(u => u.id === userIdOrEmail);
+    if (!user) { showToast('Không tìm thấy người dùng này!', 'error'); return; }
+    const isDefaultAdmin = user.username === 'admin';
+    targetInput.value = `id:${user.id}`;
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Người Dùng: ${escapeHTML(user.fullname || user.username)}`;
+    if (fullnameInput) { fullnameInput.value = user.fullname || ''; fullnameInput.placeholder = 'VD: Nguyễn Văn A'; }
+    usernameInput.value = user.username || '';
+    usernameInput.readOnly = isDefaultAdmin;
+    if (usernameNote) {
+      usernameNote.style.display = isDefaultAdmin ? '' : 'none';
+      if (isDefaultAdmin) usernameNote.textContent = 'Tài khoản Admin mặc định — không đổi được tên đăng nhập & vai trò.';
+    }
+    if (pwdGrp) pwdGrp.style.display = '';
+    if (pwdInput) { pwdInput.value = ''; pwdInput.placeholder = 'Bỏ trống = giữ mật khẩu hiện tại'; }
+    roleSel.value = user.role || 'viewer';
+    if (isDefaultAdmin) { roleSel.disabled = true; roleSel.title = 'Admin mặc định luôn toàn quyền'; }
+    else roleSel.title = '';
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closeUserEditModal() {
+    document.getElementById('modal-user-edit')?.classList.remove('show');
+  }
+
+  async function handleUserEditSubmit(e) {
+    e.preventDefault();
+    if (state.currentUser?.role !== 'admin') { showToast('Chỉ Admin mới có quyền sửa!', 'error'); return; }
+    const target = document.getElementById('user-edit-target').value || '';
+    const [kind, ...rest] = target.split(':');
+    const key = rest.join(':');
+    const fullname = document.getElementById('user-edit-fullname').value.trim();
+    const role = document.getElementById('user-edit-role').value;
+    if (!role) { showToast('Vui lòng chọn vai trò!', 'error'); return; }
+
+    // ONLINE: đổi vai trò (chuyển nhóm email) + lưu họ tên hiển thị
+    if (kind === 'email') {
+      const roles = await fetchRolesDoc();
+      const exists = [...roles.adminEmails, ...roles.managerEmails, ...roles.editorEmails, ...roles.viewerEmails].includes(key);
+      if (!exists) { showToast('Người dùng không còn trong danh sách!', 'error'); return; }
+      roles.adminEmails   = roles.adminEmails.filter(x => x !== key);
+      roles.managerEmails = roles.managerEmails.filter(x => x !== key);
+      roles.editorEmails  = roles.editorEmails.filter(x => x !== key);
+      roles.viewerEmails  = roles.viewerEmails.filter(x => x !== key);
+      roles[rolesDocKey(role)].push(key);
+      // Quyền chi tiết: giữ tab đã cấu hình (nếu có), cập nhật vùng nâng cao theo vai trò mới
+      roles.userGrants = roles.userGrants || {};
+      const grants = roles.userGrants[key] || {};
+      roles.userGrants[key] = {
+        editTabs: Array.isArray(grants.editTabs) && grants.editTabs.length ? grants.editTabs : [...ALL_EDITABLE_IDS],
+        allowAdvanced: role === 'admin' || role === 'manager'
+      };
+      try {
+        await saveRolesDoc(roles);
+        if (fullname) {
+          try {
+            const un = fbDb.collection(FB_SETTINGS_COLL).doc('displayNames');
+            await un.set({ [key]: fullname }, { merge: true });
+          } catch (err) {}
+        }
+        renderUsersTable();
+        closeUserEditModal();
+        showToast(`Đã cập nhật ${key} (${ROLES[role]?.name || role})!`, 'success');
+      } catch (err) {
+        console.warn('[FB] Lỗi sửa người dùng', err);
+        showToast('Lỗi khi lưu: ' + err.message, 'error');
+      }
+      return;
+    }
+
+    // OFFLINE: cập nhật user cục bộ
+    const user = state.users.find(u => u.id === key);
+    if (!user) { showToast('Không tìm thấy người dùng này!', 'error'); return; }
+    const prevUsername = user.username;
+    const usernameInput = document.getElementById('user-edit-username');
+    const newUsername = usernameInput.readOnly ? user.username : usernameInput.value.trim();
+    const newPassword = (document.getElementById('user-edit-password')?.value || '').trim();
+    if (!newUsername) { showToast('Tên đăng nhập không được để trống!', 'error'); return; }
+    if (state.users.some(u => u.id !== user.id && u.username.toLowerCase() === newUsername.toLowerCase())) {
+      showToast('Tên đăng nhập đã tồn tại!', 'error'); return;
+    }
+    user.username = newUsername;
+    user.fullname = fullname || user.fullname;
+    if (user.username !== 'admin') user.role = role; // Admin mặc định giữ toàn quyền
+    if (newPassword) user.password = newPassword;
+    user.allowAdvanced = user.role === 'admin' || user.role === 'manager';
+    saveUsers(); renderUsersTable(); closeUserEditModal();
+    // Sửa chính mình → cập nhật phiên & giao diện phân quyền ngay
+    if (state.currentUser && state.currentUser.username === prevUsername) {
+      state.currentUser.username = user.username;
+      state.currentUser.fullname = user.fullname;
+      state.currentUser.role = user.role;
+      state.currentUser.allowAdvanced = user.allowAdvanced;
+      saveSession(); applyRoleToUI(user.role); updateUserProfileHeader(); renderAll();
+    }
+    showToast(`Đã cập nhật người dùng ${user.fullname || user.username}!`, 'success');
   }
 
   function deleteUser(userIdOrEmail) {
@@ -477,6 +623,7 @@ import { escapeHTML, showToast } from './utils.js';
 
 export {
   checkAuthAndRender,
+  closeUserEditModal,
   closeUserPermsModal,
   closeUsersMgrModal,
   deleteOnlineRole,
@@ -485,9 +632,11 @@ export {
   handleAddOnlineRole,
   handleAddUserSubmit,
   handleRegisterSubmit,
+  handleUserEditSubmit,
   handleUserPermsSubmit,
   loadSession,
   loadUsers,
+  openUserEditModal,
   openUserPermsModal,
   openUsersMgrModal,
   renderUsersTable,

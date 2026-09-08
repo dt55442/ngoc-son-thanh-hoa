@@ -491,16 +491,13 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
     // ---------- BODY ----------
     // Tính tồn kho lũy kế theo từng tuần (thời gian thực)
-    // Công thức: Tổng tồn tuần (n+1) = Tổng tồn tuần (n) - Cần tuần (n) + Dự kiến tuần (n+1)
-    // Tuần 1: Tổng tồn = tổng tồn kho thực tế cả năm + Dự kiến tuần 1
+    // Công thức: Tổng tồn tuần (n+1) = Tổng tồn tuần (n) − Cần tuần (n) + Tồn thực tế nhập tuần (n+1) + Dự kiến tuần (n+1)
+    // Tồn thực tế tuần W = các lô nan NHẬP VỀ trong tuần W — lô nhập tuần nào thì
+    // số lượng chỉ xuất hiện từ tuần đó trở đi (dữ liệu mới có từ tuần 34 thì
+    // các tuần 1-33 tồn = 0, KHÔNG đổ tồn cả năm về tuần 1 như bản cũ).
+    // Tuần 1: Tổng tồn = Tồn thực tế tuần 1 + Dự kiến tuần 1
     const cumulativeInventory = {};
     gridCells.forEach(c => { cumulativeInventory[c.ucKey] = 0; });
-
-    // Khởi tạo tồn kho ban đầu = tổng tồn kho thực tế của tất cả các tuần trong năm
-    for (const c of gridCells) {
-      cumulativeInventory[c.ucKey] = Object.keys(inventoryByWeek).reduce(
-        (s, weekNum) => s + (inventoryByWeek[weekNum]?.[c.ucKey] || 0), 0);
-    }
 
     // Pre-compute dữ liệu từng tuần để dùng cho cả body và footer
     const weekData = {}; // week -> { nan: { key: { ton, dk, can } }, glue, additive }
@@ -533,14 +530,17 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
       cumulativeGlueStock = glueTon - needs.glue;
       cumulativeAdditiveStock = additiveTon - needs.additive;
 
+      const invWeek = inventoryByWeek[week] || {};
       gridCells.forEach(c => {
         const dkVal = getForecastVal(yearNum, weekKey, c);
         const cellNeeds = needs[c.ucKey] || 0;
+        // Cộng dồn tồn kho thực tế của các lô nan nhập về trong tuần này
+        cumulativeInventory[c.ucKey] += invWeek[c.ucKey] || 0;
         // Tổng tồn tuần hiện tại = tồn kho lũy kế + Dự kiến tuần hiện tại
         const tonVal = cumulativeInventory[c.ucKey] + dkVal;
         weekData[week].nan[c.ucKey] = { ton: tonVal, dk: dkVal, can: cellNeeds };
-        // Trừ lượng "Cần" của tuần hiện tại để tính tồn cho tuần tiếp theo
-        cumulativeInventory[c.ucKey] -= cellNeeds;
+        // Trượt sang tuần sau: Tồn hiển thị − Cần (Dự kiến đã được cộng vào lũy kế)
+        cumulativeInventory[c.ucKey] = tonVal - cellNeeds;
       });
     }
 
@@ -932,7 +932,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     tbody.innerHTML = '';
 
     if (state.materialRates.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="11" class="text-center" style="padding:30px;color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="14" class="text-center" style="padding:30px;color:var(--text-muted);">
         <i data-lucide="book-open" style="width:28px;height:28px;margin-bottom:8px;"></i>
         <p>Chưa có định mức nào. Hãy thêm định mức nguyên vật liệu cho từng loại sản phẩm.</p></td></tr>`;
       return;
@@ -949,6 +949,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
       tr.innerHTML = `
         <td><span class="rate-product-name">${escapeHTML(rate.product)}</span></td>
+        <td>${rate.productCode ? escapeHTML(rate.productCode) : '—'}</td>
+        <td>${rate.fullName ? escapeHTML(rate.fullName) : '—'}</td>
+        <td>${rate.pressType ? escapeHTML(rate.pressType) : '—'}</td>
         <td>${nan1}</td>
         <td>${nan1QtyDisplay || '-'}</td>
         <td>${nan2}</td>
@@ -1073,14 +1076,14 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   }
 
   // Tổng hợp tồn kho ván thô KHẢ DỤNG đến tuần upToWeek — ĐỒNG BỘ với công thức
-  // trượt của bảng ma trận kế hoạch (xem renderPlanningView):
+  // trượt của bảng ma trận kế hoạch (xem renderPlanningMatrix):
   //   Tồn hiển thị tuần W = Lũy kế(W) + Dự kiến(W)
   //   Lũy kế(W + 1)       = Tồn hiển thị(W) − Cần(W)
-  //   Lũy kế tuần 1       = tổng tồn kho thực tế cả năm (các lô đang tồn hiện tại)
-  // ⇒ Kết quả cho tuần W = Tồn thực tế + Σ Dự kiến(1..W) − Σ Cần(1..W−1)
+  //   Lũy kế tuần 1       = 0 (chưa có lô nan nào nhập về)
+  // ⇒ Kết quả cho tuần W = Σ Tồn thực tế(1..W) + Σ Dự kiến(1..W) − Σ Cần(1..W−1)
   //   (tuần W không tự trừ Cần(W) — Cần(W) chính là thứ cần đánh giá khả năng đáp ứng)
-  // Phản ánh "ván thô có thể được sản xuất ở các ngày/thời điểm khác nhau trước
-  // khi đưa vào ghép" → tồn lũy kế cộng dồn Dự kiến nhiều tuần, trừ Cần các tuần trước.
+  // Tồn thực tế của lô chỉ được cộng ĐÚNG tuần lô nhập về (lô nan nhập từ tuần 34
+  // thì các tuần 1-33 tồn = 0) — không còn đổ tồn cả năm về tuần 1 như bản cũ.
   // upToWeek = null/0 → tính cho tuần 52 (toàn năm).
   function getCumulativeInventoryByWeek(yearNum, upToWeek) {
     const year = parseInt(yearNum);
@@ -1098,17 +1101,20 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
       Object.keys(needs).forEach(k => { if (isNanKey(k)) keys.add(k); });
     }
 
-    // Tồn ban đầu = tổng tồn kho thực tế CẢ NĂM (các lô đang tồn kho hiện tại)
-    const cumulative = {};
-    keys.forEach(k => {
-      cumulative[k] = Object.keys(inventoryByWeek).reduce((s, w) => s + (inventoryByWeek[w]?.[k] || 0), 0);
-    });
-
-    // Trượt tuần 1 → upToWeek: + Dự kiến tuần w ; − Cần các tuần TRƯỚC tuần đích
     const maxWeek = (upToWeek && upToWeek > 0) ? Math.min(Math.floor(upToWeek), 52) : 52;
+
+    // Trượt tuần 1 → upToWeek:
+    //   + Tồn thực tế tuần w (lô nan nhập về đúng tuần đó — tuần sau mới xuất hiện)
+    //   + Dự kiến tuần w (cộng dồn vì Dự kiến đã về là còn nằm trong lũy kế)
+    //   − Cần các tuần TRƯỚC tuần đích
+    const cumulative = {};
+    keys.forEach(k => { cumulative[k] = 0; });
     for (let w = 1; w <= maxWeek; w++) {
       const fc = state.planningForecast[year]?.[String(w)] || {};
-      keys.forEach(k => { cumulative[k] += parseFloat(fc[k]) || 0; });
+      const inv = inventoryByWeek[w] || {};
+      keys.forEach(k => {
+        cumulative[k] += (inv[k] || 0) + (parseFloat(fc[k]) || 0);
+      });
       if (w < maxWeek) {
         const needs = weekNeeds[w] || {};
         keys.forEach(k => { cumulative[k] -= parseFloat(needs[k]) || 0; });
@@ -1119,7 +1125,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
   // Lấy sản lượng tối đa có thể sản xuất của một sản phẩm (theo productId)
   // tại một tuần — suy từ ĐỊNH MỨC NAN:
-  //   Tồn khả dụng = Tồn thực tế + Σ Dự kiến(1..W) − Σ Cần(1..W−1).
+  //   Tồn khả dụng = Σ Tồn thực tế(1..W) + Σ Dự kiến(1..W) − Σ Cần(1..W−1).
   // weekNum = null → tính đến cuối năm.
   function getMaxProductionForProduct(yearNum, productId, weekNum) {
     const rate = state.materialRates.find(r => r.id === productId);
@@ -1157,6 +1163,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
       if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Định Mức: ${escapeHTML(rate.product)}`;
       document.getElementById('mat-rate-id').value = rate.id;
       document.getElementById('mat-rate-product').value = rate.product;
+      document.getElementById('mat-rate-code').value = rate.productCode || '';
+      document.getElementById('mat-rate-fullname').value = rate.fullName || '';
+      document.getElementById('mat-rate-press-type').value = rate.pressType || '';
       document.getElementById('mat-rate-nan1').value = rate.nan1 || '';
       document.getElementById('mat-rate-nan1-qty').value = formatNanQty(rate.nan1Qty);
       document.getElementById('mat-rate-nan2').value = rate.nan2 || '';
@@ -1184,6 +1193,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     e.preventDefault();
     const rateId = document.getElementById('mat-rate-id').value;
     const product = document.getElementById('mat-rate-product').value.trim();
+    const productCode = document.getElementById('mat-rate-code').value.trim();
+    const fullName = document.getElementById('mat-rate-fullname').value.trim();
+    const pressType = document.getElementById('mat-rate-press-type').value.trim();
     const nan1 = document.getElementById('mat-rate-nan1').value;
     const nan1Qty = parseFractionValue(document.getElementById('mat-rate-nan1-qty').value);
     const nan2 = document.getElementById('mat-rate-nan2').value;
@@ -1202,6 +1214,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     const rateData = {
       id: rateId || `rate-${Date.now()}`,
       product,
+      // Thông tin bổ sung (không bắt buộc) — Tên sản phẩm vẫn là khóa chính
+      productCode: productCode || null,
+      fullName: fullName || null,
+      pressType: pressType || null,
       nan1, nan1Qty,
       nan2: nan2 || null, nan2Qty: nan2 ? nan2Qty : 0,
       nan3: nan3 || null, nan3Qty: nan3 ? nan3Qty : 0,

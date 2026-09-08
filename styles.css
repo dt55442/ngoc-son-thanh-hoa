@@ -1721,37 +1721,12 @@ h1, h2, h3, h4, h5 {
   gap: 14px;
 }
 
-/* USER MGR & SHARE BOXES */
-.add-user-box, .share-option-box {
+/* USER MGR BOXES */
+.add-user-box {
   background-color: var(--bg-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 14px;
-}
-
-.share-option-box h4 {
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.share-option-box .sub-text {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-}
-
-.share-token-field {
-  display: flex;
-  gap: 8px;
-}
-
-.share-token-field input {
-  flex: 1;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
 }
 
 /* ---------------------------------------------------- */
@@ -2066,7 +2041,6 @@ body.chart-expanded-open { overflow: hidden; }
   max-height: 100%;
 }
 
-.chart-expanded .press-chart-legend-hint,
 .chart-expanded .press-chart-footer { flex-shrink: 0; }
 .chart-expanded .press-chart-footer { padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); }
 
@@ -2914,7 +2888,6 @@ body.chart-expanded-open { overflow: hidden; }
 
 /* Viewer + Editor: ẩn các mục chỉ dành riêng Admin */
 body:not(.is-admin) #btn-open-users-mgr,
-body:not(.is-admin) #btn-dropdown-share,
 body:not(.is-admin) #btn-import-json,
 body:not(.is-admin) #btn-reset-data {
   display: none !important;
@@ -3599,29 +3572,6 @@ body.multi-select .card-actions {
   box-shadow: 0 3px 10px rgba(23, 90, 145, 0.18);
 }
 
-.press-chart-legend-hint {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-  font-size: 0.72rem;
-  color: #eef8ff;
-}
-
-.press-chart-legend-hint span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  display: inline-block;
-}
-
 /* Nút Thêm Lượt Ép đặt dưới biểu đồ */
 .press-chart-footer {
   display: flex;
@@ -3629,6 +3579,13 @@ body.multi-select .card-actions {
   margin-top: 12px;
   padding: 10px 16px 16px;
   border-top: 1px dashed rgba(255, 255, 255, 0.55);
+}
+
+/* Nút "Hiện Ghi Chú" đang bật (hiển thị nội dung ghi chú trên biểu đồ) */
+#btn-toggle-press-notes.notes-on {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #b45309;
 }
 
 /* Số "Đã ép - KH / KH" trên thẻ kế hoạch */
@@ -4486,3 +4443,202 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 }
 .qc-total-row td { display: table-cell; }
 
+
+/* ======================================================= */
+/* XEM TRƯỚC & CHỈNH SỬA BÁO CÁO TRƯỚC KHI XUẤT / IN        */
+/* ======================================================= */
+.modal-export-preview-card { max-width: min(1100px, 96vw); width: 100%; }
+
+.export-preview-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px 0;
+}
+
+.export-preview-info { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
+
+.export-preview-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 16px 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.export-preview-hint svg { width: 13px; height: 13px; flex: 0 0 auto; }
+
+.export-preview-table-box {
+  margin: 10px 16px 0;
+  max-height: calc(90vh - 230px);
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+table.export-preview-table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-size: 0.78rem;
+  table-layout: fixed;
+}
+
+.export-preview-table td {
+  border: 1px solid #cbd5e1;
+  padding: 4px 8px;
+  background: #fff;
+  color: #0f172a;
+  overflow-wrap: break-word;
+  vertical-align: top;
+}
+
+.export-preview-table td[data-r]:hover { outline: 2px solid var(--primary); outline-offset: -2px; cursor: text; }
+.export-preview-table td[data-r]:focus  { outline: 2px solid var(--primary); outline-offset: -2px; background: #f0f9ff; }
+
+/* Ô gộp tràn cả bảng: dòng tiêu đề chữ to + đậm; dòng ngày xuất / bộ lọc đậm */
+.export-preview-table td.cell-title    { font-size: 1.2rem; font-weight: 800; }
+.export-preview-table td.cell-subtitle { font-weight: 700; }
+
+.export-preview-table .export-preview-actions {
+  position: sticky;
+  right: 0;
+  background: #f1f5f9;
+  text-align: center;
+  padding: 2px 6px;
+}
+
+.export-preview-del-btn {
+  border: 1px solid #fca5a5;
+  background: #fff;
+  color: #dc2626;
+  border-radius: var(--radius-sm);
+  width: 22px;
+  height: 22px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.export-preview-del-btn:hover { background: #fee2e2; }
+
+/* ── Bản in: chỉ in bảng báo cáo đã chỉnh, khổ giấy ngang ── */
+#export-preview-print-area { display: none; }
+
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  body.export-preview-printing > *:not(#export-preview-print-area) { display: none !important; }
+  body.export-preview-printing #export-preview-print-area { display: block !important; }
+
+  #export-preview-print-area table { border-collapse: collapse; width: 100%; }
+  #export-preview-print-area td { border: 1px solid #000; padding: 3px 5px; font-size: 9.5pt; color: #000; }
+  #export-preview-print-area td.cell-title    { font-size: 14pt; font-weight: bold; }
+  #export-preview-print-area td.cell-subtitle { font-weight: bold; }
+}
+
+/* ======================================================= */
+/* TAB NHÂN SỰ                                             */
+/* ======================================================= */
+.hr-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px 0;
+}
+
+.hr-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Chip trạng thái nhân viên / đơn nghỉ / tuyển dụng */
+.hr-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hr-chip.ok   { background: #dcfce7; color: #15803d; }
+.hr-chip.warn { background: #fef9c3; color: #a16207; }
+.hr-chip.off  { background: #fee2e2; color: #b91c1c; }
+
+/* Dải chip thống kê nghỉ phép */
+.hr-stat-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px 0;
+}
+
+.hr-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  color: var(--text-main);
+}
+
+.hr-stat-chip svg { width: 14px; height: 14px; color: var(--primary); }
+
+/* Cột mã NV & ghi chú gọn trong bảng nhân viên */
+#hr-employees-table .hr-emp-code { font-family: var(--font-mono); font-weight: 700; }
+#hr-employees-table .hr-notes,
+#hr-leaves-table .hr-notes,
+#hr-recruit-table .hr-notes {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Ô gợi ý nhân viên (combobox) trong form xin nghỉ phép ── */
+.hr-combobox { position: relative; }
+
+.hr-combobox-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  max-height: 220px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hr-combobox-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hr-combobox-item:last-child { border-bottom: none; }
+.hr-combobox-item:hover,
+.hr-combobox-item.active { background: var(--primary-light); }
+
+.hr-combobox-meta { font-size: 0.72rem; color: var(--text-muted); }
+
+.hr-combobox-empty { padding: 10px 12px; font-size: 0.78rem; color: var(--text-muted); }

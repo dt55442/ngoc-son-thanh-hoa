@@ -80,6 +80,10 @@
           <i data-lucide="clipboard-check"></i>
           <span>QC</span>
         </button>
+        <button class="nav-btn" data-target="hr-view" id="nav-hr">
+          <i data-lucide="users"></i>
+          <span>Nhân Sự</span>
+        </button>
       </nav>
 
       <!-- Action Tools & User Profile -->
@@ -125,17 +129,11 @@
             <button class="dropdown-item" id="btn-open-users-mgr">
               <i data-lucide="users"></i> Quản Lý Người Chỉnh Sửa
             </button>
-            <button class="dropdown-item" id="btn-dropdown-share">
-              <i data-lucide="share-2"></i> Chia Sẻ & Đồng Bộ Dữ Liệu
-            </button>
             <button class="dropdown-item" id="btn-upload-cloud">
               <i data-lucide="cloud-upload" style="color:#0284c7;"></i> Đồng Bộ Dữ Liệu Máy Lên Mây
             </button>
             <button class="dropdown-item" id="btn-pull-cloud">
               <i data-lucide="cloud-download" style="color:#0284c7;"></i> Tải Dữ Liệu Từ Mây Về Máy
-            </button>
-            <button class="dropdown-item" id="btn-dropdown-export">
-              <i data-lucide="file-spreadsheet"></i> Xuất Báo Cáo Excel Tùy Chỉnh
             </button>
             <button class="dropdown-item" id="btn-export-json">
               <i data-lucide="download"></i> Sao Lưu Dữ Liệu (JSON)
@@ -179,6 +177,10 @@
     <button class="mobile-nav-item" data-target="qc-view">
       <i data-lucide="clipboard-check"></i>
       <span>QC</span>
+    </button>
+    <button class="mobile-nav-item" data-target="hr-view">
+      <i data-lucide="users"></i>
+      <span>Nhân Sự</span>
     </button>
     <button class="mobile-nav-item primary" id="mobile-add-btn">
       <i data-lucide="plus"></i>
@@ -770,6 +772,9 @@
             <thead>
               <tr>
                 <th>Sản Phẩm</th>
+                <th>Mã SP</th>
+                <th>Tên Đầy Đủ</th>
+                <th>Loại Ép</th>
                 <th>Loại Nan 1</th>
                 <th>Số Lượng</th>
                 <th>Loại Nan 2</th>
@@ -807,6 +812,24 @@
               <div class="form-group col-span-full">
                 <label for="mat-rate-product">Tên Sản Phẩm <span class="required">*</span></label>
                 <input type="text" id="mat-rate-product" placeholder="VD: Ván 1200x300x12, Bullig 1200x200x80..." required>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+                  <i data-lucide="info" style="width:12px; height:12px; display:inline;"></i>
+                  Tên sản phẩm (VD: Ván 1200x382x12) là khóa chính — vẫn hiển thị trên các tab liên quan khác.
+                </div>
+              </div>
+
+              <!-- Thông tin bổ sung: Mã sản phẩm / Tên đầy đủ / Loại ép -->
+              <div class="form-group">
+                <label for="mat-rate-code">Mã Sản Phẩm</label>
+                <input type="text" id="mat-rate-code" placeholder="VD: VS38, BL80...">
+              </div>
+              <div class="form-group">
+                <label for="mat-rate-press-type">Loại Ép</label>
+                <input type="text" id="mat-rate-press-type" placeholder="VD: Ép 1 lần, Ép 2 lần...">
+              </div>
+              <div class="form-group col-span-full">
+                <label for="mat-rate-fullname">Tên Đầy Đủ</label>
+                <input type="text" id="mat-rate-fullname" placeholder="Tên gọi đầy đủ của sản phẩm (hiện thêm ở bảng định mức)">
               </div>
 
               <!-- Nan 1 -->
@@ -993,16 +1016,15 @@
         <div class="press-chart-box">
           <canvas id="press-chart"></canvas>
         </div>
-        <div class="press-chart-legend-hint">
-          <span>Cột trái: tổng thể tích ép/ngày (xếp chồng 3 loại) · Cột phải: thành phẩm</span>
-          <span><span style="display:inline-flex;width:13px;height:13px;border-radius:50%;background:#f59e0b;color:#fff;font-size:9px;font-weight:800;align-items:center;justify-content:center;">!</span> Ngày có ghi chú giải trình — bấm vào "!" để xem/sửa</span>
-        </div>
         <div class="press-chart-footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
           <button class="btn btn-primary" id="btn-add-press">
             <i data-lucide="plus-circle"></i> Thêm Lượt Ép
           </button>
           <button class="btn btn-outline" id="btn-add-press-note" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
             <i data-lucide="alert-triangle"></i> Ghi Chú Giải Trình
+          </button>
+          <button class="btn btn-outline" id="btn-toggle-press-notes" title="Hiện nội dung tất cả ghi chú giải trình ngay trên biểu đồ">
+            <i data-lucide="sticky-note"></i> <span id="btn-toggle-press-notes-label">Hiện Ghi Chú</span>
           </button>
         </div>
       </div>
@@ -1371,8 +1393,394 @@
 
     </section>
 
+    <!-- 7. NHÂN SỰ VIEW -->
+    <section id="hr-view" class="view-panel">
+
+      <!-- Header Bar -->
+      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
+            <i data-lucide="users"></i> Nhân Sự
+          </h3>
+          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+            Quản lý nhân viên, xin nghỉ phép (ban lãnh đạo duyệt), thống kê ngày nghỉ &amp; nhu cầu tuyển dụng.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btn-add-employee">
+            <i data-lucide="user-plus"></i> Thêm Nhân Viên
+          </button>
+          <button class="btn btn-outline" id="btn-import-employees" title="Nhập danh sách nhân viên từ file Excel (.xlsx/.xls/.csv) — tự nhận cột">
+            <i data-lucide="file-spreadsheet"></i> Nhập Từ Excel
+          </button>
+          <button class="btn btn-outline" id="btn-add-leave" title="Gửi đơn xin nghỉ phép">
+            <i data-lucide="calendar-x"></i> Xin Nghỉ Phép
+          </button>
+          <button class="btn btn-outline" id="btn-add-recruitment" title="Thêm nhu cầu nhân sự / tuyển dụng">
+            <i data-lucide="user-search"></i> Nhân Sự Cần
+          </button>
+        </div>
+      </div>
+
+      <!-- BẢNG 1: DANH SÁCH NHÂN VIÊN -->
+      <div class="planning-card" id="hr-emp-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="users"></i> Danh Sách Nhân Viên</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-emp" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item">
+            <label for="hr-emp-filter-dept">Bộ phận:</label>
+            <select id="hr-emp-filter-dept"></select>
+          </div>
+          <div class="filter-item">
+            <label for="hr-emp-filter-status">Trạng thái:</label>
+            <select id="hr-emp-filter-status">
+              <option value="all">Tất Cả</option>
+              <option value="active">Đang làm việc</option>
+              <option value="pause">Tạm nghỉ</option>
+              <option value="quit">Đã nghỉ việc</option>
+            </select>
+          </div>
+          <div class="filter-item" style="flex:1 1 180px;">
+            <label for="hr-emp-search">Tìm kiếm:</label>
+            <input type="text" id="hr-emp-search" placeholder="Tên, mã NV, SĐT, vị trí..." autocomplete="off">
+          </div>
+          <span class="hr-count" id="hr-employees-count"></span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-employees-table">
+            <thead>
+              <tr>
+                <th>Mã NV</th>
+                <th>Họ và Tên</th>
+                <th>Giới Tính</th>
+                <th>Ngày Sinh</th>
+                <th>SĐT</th>
+                <th>Bộ Phận</th>
+                <th>Vị Trí</th>
+                <th>Chức Vụ</th>
+                <th>Ngày Vào Làm</th>
+                <th>Trạng Thái</th>
+                <th>Ghi Chú</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="hr-employees-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG 2: XIN NGHỈ PHÉP -->
+      <div class="planning-card" id="hr-leave-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="calendar-x"></i> Xin Nghỉ Phép</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="hr-count" id="hr-leaves-count"></span>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-leave" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-leaves-table">
+            <thead>
+              <tr>
+                <th>Nhân Viên</th>
+                <th>Loại</th>
+                <th>Từ Ngày</th>
+                <th>Đến Ngày</th>
+                <th>Số Ngày</th>
+                <th>Lý Do</th>
+                <th>Trạng Thái</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="hr-leaves-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG 3: THỐNG KÊ NGHỈ PHÉP & TOP -->
+      <div class="planning-card" id="hr-stats-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="bar-chart-3"></i> Thống Kê Nghỉ Phép — TOP Theo Số Ngày Nghỉ</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-stats" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <div id="hr-leave-stat-chips" class="hr-stat-chips"></div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-leave-stats-table">
+            <thead>
+              <tr>
+                <th style="width:56px;">Hạng</th>
+                <th>Nhân Viên</th>
+                <th>Bộ Phận</th>
+                <th>Số Lần Nghỉ</th>
+                <th>Số Ngày Nghỉ</th>
+              </tr>
+            </thead>
+            <tbody id="hr-leave-stats-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG 4: NHÂN SỰ CẦN — TUYỂN DỤNG -->
+      <div class="planning-card" id="hr-recruit-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="user-search"></i> Nhân Sự Cần — Tuyển Dụng</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-recruit" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item">
+            <label for="hr-recruit-filter-dept">Bộ phận:</label>
+            <select id="hr-recruit-filter-dept"></select>
+          </div>
+          <span class="hr-count" id="hr-recruit-count"></span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-recruit-table">
+            <thead>
+              <tr>
+                <th>Bộ Phận</th>
+                <th>Vị Trí</th>
+                <th>Số Người Cần</th>
+                <th>Đã Tuyển</th>
+                <th>Còn Thiếu</th>
+                <th>Ngày Cần</th>
+                <th>Trạng Thái</th>
+                <th>Ghi Chú</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="hr-recruit-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
   </main>
 
+
+  <!-- MODAL HR-1: THÊM / SỬA NHÂN VIÊN -->
+  <div class="modal-overlay" id="modal-employee">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="employee-modal-title"><i data-lucide="user-plus"></i> Thêm Nhân Viên Mới</h3>
+        <button class="modal-close-btn" id="btn-close-employee"><i data-lucide="x"></i></button>
+      </div>
+      <form id="employee-form" style="padding: 20px;">
+        <input type="hidden" id="employee-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="employee-code">Mã Nhân Viên</label>
+            <input type="text" id="employee-code" placeholder="VD: NV001">
+          </div>
+          <div class="form-group">
+            <label for="employee-name">Họ và Tên <span class="required">*</span></label>
+            <input type="text" id="employee-name" placeholder="VD: Nguyễn Văn A" required>
+          </div>
+          <div class="form-group">
+            <label for="employee-gender">Giới Tính</label>
+            <select id="employee-gender">
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="employee-birth">Ngày Sinh</label>
+            <input type="date" id="employee-birth">
+          </div>
+          <div class="form-group">
+            <label for="employee-phone">Số Điện Thoại</label>
+            <input type="tel" id="employee-phone" placeholder="VD: 0912 345 678">
+          </div>
+          <div class="form-group">
+            <label for="employee-idcard">CCCD / CMND</label>
+            <input type="text" id="employee-idcard" placeholder="Số CCCD">
+          </div>
+          <div class="form-group col-span-full">
+            <label for="employee-address">Địa Chỉ</label>
+            <input type="text" id="employee-address" placeholder="Địa chỉ thường trú">
+          </div>
+          <div class="form-group">
+            <label for="employee-department">Bộ Phận</label>
+            <select id="employee-department"></select>
+          </div>
+          <div class="form-group">
+            <label for="employee-position">Vị Trí Làm Việc</label>
+            <input type="text" id="employee-position" placeholder="VD: Vận hành máy ép">
+          </div>
+          <div class="form-group">
+            <label for="employee-title">Chức Vụ</label>
+            <input type="text" id="employee-title" placeholder="VD: Tổ trưởng, Công nhân...">
+          </div>
+          <div class="form-group">
+            <label for="employee-joindate">Ngày Vào Làm</label>
+            <input type="date" id="employee-joindate">
+          </div>
+          <div class="form-group">
+            <label for="employee-status">Trạng Thái</label>
+            <select id="employee-status">
+              <option value="active">Đang làm việc</option>
+              <option value="pause">Tạm nghỉ</option>
+              <option value="quit">Đã nghỉ việc</option>
+            </select>
+          </div>
+          <div class="form-group col-span-full">
+            <label for="employee-notes">Ghi Chú</label>
+            <textarea id="employee-notes" rows="2" placeholder="Ghi chú thêm về nhân viên..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-employee">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Nhân Viên</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-2: XIN NGHỈ PHÉP -->
+  <div class="modal-overlay" id="modal-leave">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="calendar-x"></i> Xin Nghỉ Phép</h3>
+        <button class="modal-close-btn" id="btn-close-leave"><i data-lucide="x"></i></button>
+      </div>
+      <form id="leave-form" style="padding: 20px;">
+        <div class="form-group">
+          <label for="leave-employee">Nhân Viên <span class="required">*</span></label>
+          <div class="hr-combobox">
+            <input type="text" id="leave-employee" placeholder="Gõ tên / mã NV / SĐT để tìm..." autocomplete="off">
+            <input type="hidden" id="leave-employee-id">
+            <div class="hr-combobox-list" id="leave-employee-suggest"></div>
+          </div>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+            Gõ vài chữ cái trong tên (hoặc mã NV) → chọn nhanh từ danh sách gợi ý.
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="leave-type">Loại Nghỉ</label>
+          <select id="leave-type"></select>
+        </div>
+        <div class="form-group">
+          <label>Từ Ngày → Đến Ngày <span class="required">*</span></label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <input type="date" id="leave-from" required>
+            <input type="date" id="leave-to" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="leave-reason">Lý Do</label>
+          <textarea id="leave-reason" rows="2" placeholder="Lý do xin nghỉ..."></textarea>
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">
+          <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+          Đơn gửi đi ở trạng thái "Chờ duyệt" — ban lãnh đạo (Admin/Ban Quản Lý) sẽ duyệt Đồng ý / Không đồng ý.
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-leave">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="send"></i> Gửi Đơn</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-3: NHÂN SỰ CẦN — TUYỂN DỤNG -->
+  <div class="modal-overlay" id="modal-recruitment">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="recruitment-modal-title"><i data-lucide="user-search"></i> Thêm Nhu Cầu Nhân Sự</h3>
+        <button class="modal-close-btn" id="btn-close-recruitment"><i data-lucide="x"></i></button>
+      </div>
+      <form id="recruitment-form" style="padding: 20px;">
+        <input type="hidden" id="recruit-id">
+        <div class="form-group">
+          <label for="recruit-department">Bộ Phận</label>
+          <select id="recruit-department"></select>
+        </div>
+        <div class="form-group">
+          <label for="recruit-position">Vị Trí Cần Tuyển <span class="required">*</span></label>
+          <input type="text" id="recruit-position" placeholder="VD: Vận hành máy ép" required>
+        </div>
+        <div class="form-group">
+          <label>Số Người Cần / Đã Tuyển <span class="required">*</span></label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <input type="number" id="recruit-need" min="1" step="1" required>
+            <input type="number" id="recruit-hired" min="0" step="1" placeholder="Đã tuyển">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="recruit-needdate">Ngày Cần</label>
+          <input type="date" id="recruit-needdate">
+        </div>
+        <div class="form-group">
+          <label for="recruit-status">Trạng Thái</label>
+          <select id="recruit-status">
+            <option value="open">Đang tuyển</option>
+            <option value="done">Đã đủ người</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="recruit-notes">Ghi Chú</label>
+          <textarea id="recruit-notes" rows="2" placeholder="Yêu cầu công việc, lương, ghi chú..."></textarea>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-recruitment">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-4: NHẬP NHÂN VIÊN TỪ EXCEL -->
+  <div class="modal-overlay" id="modal-employee-import">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Nhập Nhân Viên Từ Excel</h3>
+        <button class="modal-close-btn" id="btn-close-employee-import"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding: 20px;">
+        <div class="form-group">
+          <label for="employee-import-file">Chọn file Excel (.xlsx / .xls / .csv)</label>
+          <input type="file" id="employee-import-file" accept=".xlsx,.xls,.csv">
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">
+          <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+          Dòng 1 phải là tiêu đề cột (Họ và Tên, Mã NV, Giới tính, Ngày sinh, SĐT, CCCD, Địa chỉ, Bộ phận, Vị trí, Chức vụ, Ngày vào làm, Trạng thái, Ghi chú...).
+          Hệ thống <strong>tự nhận cột</strong> dù thứ tự khác — bạn vẫn đổi được ánh xạ từng cột bên dưới. Ngày nhận dạng dd/MM/yyyy hoặc yyyy-MM-dd.
+        </div>
+        <div id="emp-import-mapping-box"></div>
+        <div class="form-group">
+          <label>Chế độ nhập</label>
+          <label style="display:flex; gap:6px; align-items:center; font-weight:400;">
+            <input type="radio" name="emp-import-mode" id="emp-import-mode-add" value="add" checked> Thêm mới tất cả các dòng
+          </label>
+          <label style="display:flex; gap:6px; align-items:center; font-weight:400;">
+            <input type="radio" name="emp-import-mode" id="emp-import-mode-upsert" value="upsert"> Cập nhật nhân viên trùng Mã NV (chưa có thì thêm mới)
+          </label>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-employee-import">Hủy Bỏ</button>
+          <button type="button" class="btn btn-primary" id="btn-do-employee-import" disabled><i data-lucide="upload"></i> Nhập Dữ Liệu</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: NHẬP / SỬA NGUYÊN LIỆU -->
   <div class="modal-overlay" id="modal-material">
@@ -1778,6 +2186,49 @@
     </div>
   </div>
 
+  <!-- MODAL: SỬA NGƯỜI DÙNG (ADMIN ONLY) -->
+  <div class="modal-overlay" id="modal-user-edit">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="user-edit-modal-title"><i data-lucide="edit-3"></i> Sửa Người Dùng</h3>
+        <button class="modal-close-btn" id="btn-close-user-edit"><i data-lucide="x"></i></button>
+      </div>
+      <form id="user-edit-form" style="padding: 20px;">
+        <input type="hidden" id="user-edit-target" value="">
+        <div class="form-group">
+          <label for="user-edit-fullname">Họ và Tên</label>
+          <input type="text" id="user-edit-fullname" placeholder="VD: Nguyễn Văn A">
+        </div>
+        <div class="form-group">
+          <label for="user-edit-username">Email / Tên Đăng Nhập</label>
+          <input type="text" id="user-edit-username" autocomplete="off">
+          <div id="user-edit-username-note" style="font-size:0.7rem; color:var(--text-muted); margin-top:4px; display:none;"></div>
+        </div>
+        <div class="form-group" id="group-user-edit-password">
+          <label for="user-edit-password">Mật Khẩu Mới</label>
+          <input type="password" id="user-edit-password" placeholder="Bỏ trống = giữ mật khẩu hiện tại" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="user-edit-role">Vai Trò / Quyền</label>
+          <select id="user-edit-role">
+            <option value="viewer">Người Xem (Viewer - chỉ đọc vùng cơ bản)</option>
+            <option value="editor">Người Chỉnh Sửa (Editor - sửa theo tab)</option>
+            <option value="manager">Ban Quản Lý (Manager - xem vùng nâng cao)</option>
+            <option value="admin">Quản Trị Viên (Admin - toàn quyền)</option>
+          </select>
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">
+          <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+          Tab được phép sửa &amp; Vùng Nâng Cao chỉnh tiếp qua nút ⚙️ trong danh sách người dùng.
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-user-edit">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Thay Đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: CẤU HÌNH QUYỀN CHI TIẾT THEO NGƯỜI DÙNG (ADMIN ONLY) -->
   <div class="modal-overlay" id="modal-user-perms">
     <div class="modal-card modal-sm">
@@ -1820,50 +2271,6 @@
           <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Quyền</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- MODAL 5: SHARE & DATA SYNC -->
-  <div class="modal-overlay" id="modal-share-data">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3><i data-lucide="share-2"></i> Chia Sẻ File & Đồng Bộ Dữ Liệu</h3>
-        <button class="modal-close-btn" id="btn-close-share"><i data-lucide="x"></i></button>
-      </div>
-
-      <div class="share-modal-body" style="padding: 20px;">
-        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:16px;">
-          Chia sẻ dữ liệu đến người chỉnh sửa khác để thông tin sản xuất luôn được cập nhật thường xuyên.
-        </p>
-
-        <!-- Option 1: Share Token Code -->
-        <div class="share-option-box">
-          <h4><i data-lucide="link"></i> 1. Mã Đồng Bộ Nhanh (Share Code)</h4>
-          <p class="sub-text">Sao chép mã dữ liệu rút gọn để gửi qua Zalo/Email cho người chỉnh sửa:</p>
-          <div class="share-token-field">
-            <input type="text" id="share-token-input" readonly class="readonly-input">
-            <button class="btn btn-primary btn-sm" id="btn-copy-token">
-              <i data-lucide="copy"></i> Sao Chép
-            </button>
-          </div>
-        </div>
-
-        <!-- Option 2: Import Sync Token / File -->
-        <div class="share-option-box" style="margin-top:16px;">
-          <h4><i data-lucide="download-cloud"></i> 2. Nạp Mã / Tệp Đồng Bộ Từ Người Khác</h4>
-          <p class="sub-text">Dán Mã Đồng Bộ nhận được từ người chỉnh sửa khác để cập nhật ngay:</p>
-          <div class="form-group">
-            <textarea id="import-token-area" rows="3" placeholder="Dán Mã Đồng Bộ (Share Code) vào đây..."></textarea>
-          </div>
-          <button class="btn btn-success btn-sm" id="btn-apply-token-sync" style="margin-top:8px; width:100%;">
-            <i data-lucide="refresh-cw"></i> Cập Nhật & Đồng Bộ Dữ Liệu Ngay
-          </button>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="btn-cancel-share">Đóng</button>
-      </div>
     </div>
   </div>
 
@@ -1923,6 +2330,7 @@
 
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-export">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-custom" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
           <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
         </div>
       </form>
@@ -1957,6 +2365,7 @@
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-export-planning">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-planning" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
           <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
         </div>
       </form>
@@ -1997,6 +2406,7 @@
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-export-press">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-press" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
           <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
         </div>
       </form>
@@ -2047,6 +2457,7 @@
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-export-materials">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-materials" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
           <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
         </div>
       </form>
@@ -2054,6 +2465,32 @@
   </div>
 
 
+
+  <!-- MODAL 6E: XEM TRƯỚC & CHỈNH SỬA BÁO CÁO TRƯỚC KHI XUẤT / IN -->
+  <div class="modal-overlay" id="modal-export-preview">
+    <div class="modal-card modal-export-preview-card">
+      <div class="modal-header">
+        <h3 id="export-preview-title"><i data-lucide="table"></i> Xem Trước Báo Cáo</h3>
+        <button class="modal-close-btn" id="btn-close-export-preview"><i data-lucide="x"></i></button>
+      </div>
+      <div class="export-preview-toolbar">
+        <span id="export-preview-info" class="export-preview-info"></span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-preview-refresh" title="Làm mới bảng theo bộ lọc (bỏ mọi chỉnh sửa hiện tại)"><i data-lucide="refresh-cw"></i> Làm Mới</button>
+          <button type="button" class="btn btn-success" id="btn-preview-export-xlsx"><i data-lucide="file-spreadsheet"></i> Xuất Excel (.xlsx)</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-print"><i data-lucide="printer"></i> In / Lưu PDF</button>
+        </div>
+      </div>
+      <p class="export-preview-hint"><i data-lucide="pencil-line"></i> Bấm ô để sửa (điền cả cột Ghi Chú trống) · kéo mép phải ô để đổi độ rộng cột · ✕ bỏ dòng (chỉ ảnh hưởng bản xuất/in, không đổi dữ liệu app)</p>
+      <div class="export-preview-table-box" id="export-preview-table-box"></div>
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button type="button" class="btn btn-outline" id="btn-cancel-export-preview">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vùng in chuyên dụng: chỉ hiển thị khi In/Lưu PDF từ màn xem trước -->
+  <div id="export-preview-print-area" aria-hidden="true"></div>
 
   <!-- MODAL 7: LƯU DỮ LIỆU CỤC BỘ -->
   <div class="modal-overlay" id="modal-save-local">

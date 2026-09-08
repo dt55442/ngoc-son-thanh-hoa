@@ -623,6 +623,46 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
   //     bắt hover/chạm và mở form sửa ghi chú khi bấm)
   let pressNoteMarkerHits = [];
   const fmtVolShort = (v) => String(+(+v).toFixed(2));
+
+  // Vẽ hình chữ nhật bo góc (hỗ trợ trình duyệt không có ctx.roundRect)
+  function roundedRectPath(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, rr); return; }
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  // Tách văn bản ghi chú thành nhiều dòng vừa khung vẽ (canvas không tự wrap),
+  // tối đa maxLines dòng; nếu còn dư thì thêm dấu "…" vào dòng cuối.
+  function wrapNoteText(ctx, text, maxWidth, maxLines) {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const lines = [];
+    let cur = '';
+    for (let i = 0; i < words.length; i++) {
+      const cand = cur ? cur + ' ' + words[i] : words[i];
+      if (!cur || ctx.measureText(cand).width <= maxWidth) {
+        cur = cand;
+      } else {
+        lines.push(cur);
+        cur = words[i];
+        if (lines.length >= maxLines) break;
+      }
+    }
+    if (cur && lines.length < maxLines) lines.push(cur);
+    const shownWords = lines.join(' ').split(/\s+/).filter(Boolean).length;
+    if (shownWords < words.length && lines.length) {
+      let last = lines[lines.length - 1];
+      while (last && ctx.measureText(last + '…').width > maxWidth) last = last.slice(0, -1);
+      lines[lines.length - 1] = last.replace(/[\s,.:;]+$/, '') + '…';
+    }
+    return lines;
+  }
+
   const pressNoteMarkerPlugin = {
     id: 'pressNoteMarkers',
     afterDatasetsDraw(chart) {
@@ -698,22 +738,69 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
         ctx.fillText(fmtVolShort(epVal), epBar.x, y);
         ctx.restore();
       });
+
+      // Lượt 3: nội dung đầy đủ của TẤT CẢ ghi chú (khi bật nút "Hiện Ghi Chú")
+      if (!cfg.showText) return;
+      const noteFont = '10px sans-serif';
+      const maxTextW = 150;
+      const maxLines = 4;
+      const lineH = 12;
+      const padX = 6, padY = 4;
+      dts.forEach((d, i) => {
+        const text = notesByDate.get(d);
+        if (!text) return;
+        const m = markerByDate[d];
+        if (!m) return;
+        ctx.save();
+        ctx.font = noteFont;
+        const lines = wrapNoteText(ctx, text, maxTextW, maxLines);
+        if (!lines.length) { ctx.restore(); return; }
+        const boxW = Math.min(maxTextW, Math.max(...lines.map(l => ctx.measureText(l).width))) + padX * 2;
+        const boxH = lines.length * lineH + padY * 2 - 2;
+        let bx = m.x - boxW / 2;
+        const minX = chart.chartArea.left + 2;
+        const maxX = chart.chartArea.right - boxW - 2;
+        if (bx < minX) bx = minX;
+        if (bx > maxX) bx = maxX;
+        let by = m.y - 12 - boxH; // đặt phía trên dấu "!"
+        if (by < top + 2) by = top + 2;
+        roundedRectPath(ctx, bx, by, boxW, boxH, 5);
+        ctx.fillStyle = 'rgba(255, 251, 235, 0.96)';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#f59e0b';
+        ctx.stroke();
+        ctx.fillStyle = '#92400e';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        lines.forEach((ln, li) => ctx.fillText(ln, bx + padX, by + padY + li * lineH));
+        ctx.restore();
+        // Bấm vào nội dung ghi chú cũng mở form sửa (thêm vùng bấm hình chữ nhật)
+        pressNoteMarkerHits.push({ rect: { x: bx, y: by, w: boxW, h: boxH }, date: d, text });
+      });
     }
   };
 
-  // Tìm dấu "!" vàng tại vị trí con trỏ (evt của Chart.js v4 có sẵn tọa độ x/y)
+  // Tìm dấu "!" vàng / nhãn ghi chú tại vị trí con trỏ (evt của Chart.js v4 có sẵn tọa độ x/y)
   function findPressNoteMarkerHit(evt) {
     if (!evt || !pressNoteMarkerHits.length) return null;
     const x = (evt.x != null) ? evt.x : (evt.native ? evt.native.offsetX : null);
     const y = (evt.y != null) ? evt.y : (evt.native ? evt.native.offsetY : null);
     if (x == null || y == null) return null;
-    return pressNoteMarkerHits.find(m => Math.hypot(x - m.x, y - m.y) <= m.r) || null;
+    return pressNoteMarkerHits.find(m => {
+      if (m.rect) { // vùng nhãn nội dung ghi chú (hình chữ nhật)
+        return x >= m.rect.x && x <= m.rect.x + m.rect.w && y >= m.rect.y && y <= m.rect.y + m.rect.h;
+      }
+      return Math.hypot(x - m.x, y - m.y) <= m.r;
+    }) || null;
   }
 
   // Biểu đồ: thể tích ván thô & thành phẩm mỗi ngày, nhóm theo tuần (label 2 dòng)
   function renderPressChart() {
     const canvas = document.getElementById('press-chart');
     if (!canvas || !window.Chart) return;
+    // Đồng bộ nhãn nút "Hiện Ghi Chú" với trạng thái đang lưu
+    updatePressNotesToggleButton();
     if (state.pressChartInstance) { state.pressChartInstance.destroy(); state.pressChartInstance = null; }
 
     // Lọc theo năm
@@ -809,7 +896,8 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
             dates,
             epTotals: dates.map(d => +(byDay[d].t1 + byDay[d].t2 + byDay[d].t3).toFixed(4)),
             fpValues: dates.map(d => +(byDay[d].fp).toFixed(4)),
-            notesByDate
+            notesByDate,
+            showText: !!state.pressNotesExpanded // nút "Hiện Ghi Chú" đang bật → vẽ nội dung tất cả ghi chú
           },
           legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
           tooltip: {
@@ -829,6 +917,28 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
         }
       }
     });
+  }
+
+  // Bật/tắt hiển thị NỘI DUNG của tất cả ghi chú giải trình ngay trên biểu đồ
+  // (nút "Hiện Ghi Chú" dưới biểu đồ ép ván)
+  function togglePressNotesExpanded() {
+    state.pressNotesExpanded = !state.pressNotesExpanded;
+    updatePressNotesToggleButton();
+    hidePressNotePopover();
+    renderPressChart();
+  }
+
+  // Đồng bộ nhãn / màu / chú thích của nút "Hiện Ghi Chú" theo trạng thái
+  function updatePressNotesToggleButton() {
+    const btn = document.getElementById('btn-toggle-press-notes');
+    if (!btn) return;
+    const on = !!state.pressNotesExpanded;
+    const label = document.getElementById('btn-toggle-press-notes-label');
+    if (label) label.textContent = on ? 'Ẩn Ghi Chú' : 'Hiện Ghi Chú';
+    btn.classList.toggle('notes-on', on);
+    btn.title = on
+      ? 'Ẩn nội dung tất cả ghi chú giải trình trên biểu đồ'
+      : 'Hiện nội dung tất cả ghi chú giải trình ngay trên biểu đồ';
   }
 
   // Bấm/chạm vào CỘT trong biểu đồ "Thể Tích Ván Ép Theo Ngày" → highlight các
@@ -1605,6 +1715,7 @@ export {
   renderPressView,
   savePressRecords,
   suggestPressMaterialFields,
+  togglePressNotesExpanded,
   todayLocalISO,
   updatePressRemoveButtons
 };

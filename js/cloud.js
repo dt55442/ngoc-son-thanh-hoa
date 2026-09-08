@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
 import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
-import { restoreMaterialRecords, saveData } from './storage.js';
+import { restoreMaterialRecords } from './storage.js';
 import { showToast } from './utils.js';
 
   // Nhãn danh sách tab được sửa (dùng trong thông báo phân quyền)
@@ -32,9 +32,6 @@ import { showToast } from './utils.js';
   let fbRemoteDocExists = false;   // doc apps/main đã tồn tại trên mây
   let fbRemoteHasData = false;     // doc trên mây có dữ liệu thực (khác rỗng)
   let fbLastRemote = null;         // bản snapshot mây gần nhất (nút tải về + gộp khéo trước khi đẩy)
-  let fbUploadPromptShown = false; // đã hỏi đẩy dữ liệu máy lên mây chưa
-  let fbConflictAskedAt = 0;       // thời điểm hỏi conflict gần nhất (chống hỏi liên tục)
-  let fbConflictRemoteCore = '';   // core mây lần hỏi conflict gần nhất (chỉ hỏi lại khi mây THAY ĐỔI)
   let fbDirty = false;             // có thay đổi CHƯA được đẩy lên mây
   let fbSyncWarnAt = 0;            // thời điểm lần cuối cảnh báo không đồng bộ được (chống spam)
   let fbListenWarnAt = 0;          // thời điểm lần cuối cảnh báo lỗi lắng nghe mây (chống spam)
@@ -283,6 +280,9 @@ import { showToast } from './utils.js';
       qcExports: state.qcExports || [],
       pressRecords: state.pressRecords,
       pressNotes: state.pressNotes || [],
+      hrEmployees: state.hrEmployees || [],
+      hrLeaves: state.hrLeaves || [],
+      hrRecruitment: state.hrRecruitment || [],
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
       updatedAt: new Date().toISOString()
     };
@@ -298,7 +298,8 @@ import { showToast } from './utils.js';
       pressNotes: obj.pressNotes || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
       qcExports: obj.qcExports || [],
-      pressRecords: obj.pressRecords || []
+      pressRecords: obj.pressRecords || [],
+      hrEmployees: obj.hrEmployees || [], hrLeaves: obj.hrLeaves || [], hrRecruitment: obj.hrRecruitment || []
     });
   }
 
@@ -385,6 +386,9 @@ import { showToast } from './utils.js';
     if (remote.materialRates) state.materialRates = m(state.materialRates, remote.materialRates);
     if (remote.customCharts) state.customCharts = m(state.customCharts, remote.customCharts);
     if (remote.qcExports) state.qcExports = m(state.qcExports || [], remote.qcExports);
+    if (remote.hrEmployees) state.hrEmployees = m(state.hrEmployees || [], remote.hrEmployees);
+    if (remote.hrLeaves) state.hrLeaves = m(state.hrLeaves || [], remote.hrLeaves);
+    if (remote.hrRecruitment) state.hrRecruitment = m(state.hrRecruitment || [], remote.hrRecruitment);
     if (!onlyAddMissing) {
       if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
       if (remote.planningStock) state.planningStock = mergeKeyedDict(state.planningStock, remote.planningStock);
@@ -411,6 +415,9 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}
   }
 
   function handleRemoteSnapshot(snap) {
@@ -420,45 +427,15 @@ import { showToast } from './utils.js';
     fbRemoteDocExists = snap.exists;
     fbRemoteHasData = hasCloudData(remote);
     if (fbApplying) return;               // bỏ qua bản ta vừa ghi
-    if (!snap.exists) { maybePromptUpload(); return; } // mây chưa có dữ liệu -> có thể đẩy local lên
-    if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) { maybePromptUpload(); return; } // giống nhau
+    if (!snap.exists) return;             // mây chưa có dữ liệu -> KHÔNG hỏi, dùng nút thủ công khi cần
+    if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) return; // giống nhau
     // Máy này chưa có dữ liệu thật -> nhận theo mây luôn, KHÔNG hỏi (tránh ghi đè mất dữ liệu)
-    if (!localHasAnyData()) { applyFireSnapshot(remote); maybePromptUpload(); return; }
-    // Khác nhau -> hỏi admin/editor nên giữ bên nào, tránh mất dữ liệu
-    if (state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'editor')) {
-      handleRemoteConflict(remote);
-    } else {
-      applyFireSnapshot(remote); // viewer: mặc định theo mây
-      maybePromptUpload();
-    }
-  }
-
-  // Khi dữ liệu trên mây KHÁC máy: để người nhập liệu chọn thủ công.
-  // FIX lỗi "đẩy thành công nhưng máy khác không bao giờ thấy dữ liệu mới":
-  //  - Trước đây chỉ hỏi MỘT lần mỗi phiên (fbConflictPrompted chốt vĩnh viễn) ->
-  //    mọi dữ liệu mới từ mây về sau đều bị BỎ QUA IM LẶNG cho tới khi tải lại trang.
-  //  - Giờ: hỏi lại mỗi khi mây THAY ĐỔI (tối thiểu cách nhau 30 giây để chống spam).
-  function handleRemoteConflict(remote) {
-    const remoteCore = cloudCore(remote);
-    if (remoteCore === fbConflictRemoteCore && Date.now() - fbConflictAskedAt < 30000) return;
-    fbConflictAskedAt = Date.now();
-    fbConflictRemoteCore = remoteCore;
-    const keepCloud = confirm(
-      'Dữ liệu trên MÂY khác với dữ liệu trên MÁY bạn đang mở.\n\n' +
-      '➡️  Nhấn OK:  LẤY dữ liệu trên MÂY (ghi đè máy này).\n' +
-      '⬅️  Nhấn Cancel:  GIỮ dữ liệu trên MÁY.'
-    );
-    if (keepCloud) {
-      applyFireSnapshot(remote);
-    } else {
-      const keepLocal = confirm(
-        'Bạn muốn GIỮ dữ liệu trên MÁY và ĐẨY LÊN MÂY (ghi đè mây) không?\n\n' +
-        '➡️  OK:  Giữ máy & đẩy lên mây (app sẽ TỰ GỘP thêm các bản ghi đang có trên mây mà máy này chưa có - không mất dữ liệu người khác).\n' +
-        '⬅️  Cancel:  Bỏ qua - sẽ được hỏi lại khi mây có dữ liệu mới.'
-      );
-      if (keepLocal) uploadLocalDataToCloud();
-    }
-    maybePromptUpload();
+    if (!localHasAnyData()) { applyFireSnapshot(remote); return; }
+    // Dữ liệu mây KHÁC máy -> KHÔNG HỎI nữa (tránh bấm nhầm gây ghi đè):
+    // chỉ TỰ GỘP THÊM các bản ghi trên mây mà máy này chưa có (an toàn, không
+    // mất dữ liệu). Muốn ghi đè theo mây / đẩy máy lên mây thì dùng 2 nút
+    // "Đồng Bộ Dữ Liệu Máy Lên Mây" & "Tải Dữ Liệu Từ Mây Về Máy" trong menu ⋮.
+    if (fbRemoteHasData) mergeRemoteIntoLocal(remote, true);
   }
 
   function applyFireSnapshot(data) {
@@ -477,6 +454,9 @@ import { showToast } from './utils.js';
       if (data.qcExports) state.qcExports = data.qcExports;
       if (data.pressRecords) state.pressRecords = data.pressRecords;
       if (data.pressNotes) state.pressNotes = data.pressNotes;
+      if (data.hrEmployees) state.hrEmployees = data.hrEmployees;
+      if (data.hrLeaves) state.hrLeaves = data.hrLeaves;
+      if (data.hrRecruitment) state.hrRecruitment = data.hrRecruitment;
       persistAllLocal();
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
@@ -571,22 +551,7 @@ import { showToast } from './utils.js';
     return false;
   }
 
-  // Hỏi admin/editor: có nên đẩy dữ liệu trên máy (kèm vị trí thẻ) lên mây không
-  function maybePromptUpload() {
-    if (fbUploadPromptShown || !state.currentUser) return;
-    const r = state.currentUser.role;
-    if (r !== 'admin' && r !== 'editor') return;
-    if (fbRemoteDocExists && fbRemoteHasData) return; // mây đã có dữ liệu -> không ghi đè
-    if (!localHasAnyData()) return;                    // máy không có gì -> không đẩy
-    fbUploadPromptShown = true;
-    setTimeout(() => {
-      if (confirm('Dữ liệu trên mây đang trống, nhưng máy này có dữ liệu cũ (kể cả vị trí/định dạng thẻ, biểu đồ).\n\nBạn có muốn ĐẨY dữ liệu từ máy lên mây để dùng chung không?')) {
-        uploadLocalDataToCloud();
-      }
-    }, 900);
-  }
-
-  // Đẩy MẠNH toàn bộ dữ liệu hiện tại (local) lên mây - dùng cho nút thủ công & prompt
+  // Đẩy MẠNH toàn bộ dữ liệu hiện tại (local) lên mây - dùng cho nút thủ công
   async function uploadLocalDataToCloud() {
     if (!isFirebaseOnline()) { showToast('Chưa ở chế độ online (cần kết nối mạng + SDK)', 'error'); return; }
     if (!state.currentUser) { showToast('Chưa đăng nhập', 'error'); return; }
@@ -610,7 +575,6 @@ import { showToast } from './utils.js';
         mergedFromCloud = mergeRemoteIntoLocal(fbLastRemote, true);
       }
       await fbDb.collection(FB_COLL).doc(FB_DOC).set(collectCloudSnapshot());
-      fbUploadPromptShown = true;
       fbDirty = false;
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       const counts = 'lô: ' + ((state.batches || []).length)
@@ -652,59 +616,17 @@ import { showToast } from './utils.js';
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // ─── SHARE & SYNC MODAL ───────────────────────────────────────
-  function openShareModal() {
-    const tokenData = { timestamp: new Date().toISOString(), sender: state.currentUser?.fullname || 'Quản trị', batches: state.batches };
-    const shareCode = btoa(encodeURIComponent(JSON.stringify(tokenData)));
-    document.getElementById('share-token-input').value  = shareCode;
-    document.getElementById('import-token-area').value  = '';
-    document.getElementById('modal-share-data')?.classList.add('show');
-    initLucide();
-  }
-
-  function closeShareModal() {
-    document.getElementById('modal-share-data')?.classList.remove('show');
-  }
-
-  function copyShareTokenToClipboard() {
-    const inp = document.getElementById('share-token-input');
-    if (!inp) return;
-    inp.select(); inp.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(inp.value).then(() => {
-      showToast('Đã sao chép Mã Đồng Bộ!', 'success');
-    }).catch(() => {
-      showToast('Đã chọn mã chia sẻ! Ấn Ctrl+C để sao chép', 'info');
-    });
-  }
-
-  function applyImportedShareToken() {
-    if (!requireEditPermission()) return;
-    const raw = document.getElementById('import-token-area')?.value.trim();
-    if (!raw) { showToast('Vui lòng dán Mã Đồng Bộ!', 'error'); return; }
-    try {
-      const payload = JSON.parse(decodeURIComponent(atob(raw)));
-      if (payload && Array.isArray(payload.batches)) {
-        state.batches = payload.batches;
-        saveData(); renderAll(); closeShareModal();
-        showToast(`Đã đồng bộ dữ liệu từ ${payload.sender || 'Người chỉnh sửa'}!`, 'success');
-      } else { showToast('Mã đồng bộ không hợp lệ!', 'error'); }
-    } catch (e) { showToast('Không thể đọc mã đồng bộ: ' + e.message, 'error'); }
-  }
-
 export {
   FB_COLL,
   FB_DOC,
   FB_ROLES_DOC,
   FB_SETTINGS_COLL,
   applyFireSnapshot,
-  applyImportedShareToken,
   applyRoleToUI,
   canEditNow,
   checkAuthAndRenderFirebase,
-  closeShareModal,
   cloudCore,
   collectCloudSnapshot,
-  copyShareTokenToClipboard,
   doFirePush,
   fbApplying,
   fbAuthLoaded,
@@ -716,19 +638,15 @@ export {
   fbRemoteHasData,
   fbSeedCore,
   fbUnsubDoc,
-  fbUploadPromptShown,
   firePushSync,
   flushPendingCloudPush,
   handleFirebaseAuth,
-  handleRemoteConflict,
   handleRemoteSnapshot,
   hasCloudData,
   initFirebase,
   initLucide,
   isFirebaseOnline,
   localHasAnyData,
-  maybePromptUpload,
-  openShareModal,
   pullCloudToLocal,
   registerServiceWorker,
   requireEditPermission,

@@ -5,7 +5,7 @@ import { firePushSync, initLucide } from './cloud.js';
 import { renderCustomCharts } from './dashboard.js';
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
-import { dimVolume } from './press.js';
+import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 
@@ -25,13 +25,10 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     document.getElementById('modal-custom-export')?.classList.remove('show');
   }
 
-  function handleCustomExportSubmit(e) {
-    e.preventDefault();
-
-    if (!window.XLSX) {
-      showToast('Thư viện .xlsx chưa sẵn sàng. Kiểm tra kết nối mạng!', 'error');
-      return;
-    }
+  // Dựng dữ liệu báo cáo Nhật Ký Than Hóa (dùng chung cho xuất file & xem trước)
+  // Trả về { title, countLabel, aoa, merges, cols, rowH, sheetName, filename } | null
+  function buildCustomExportData() {
+    if (!requireXlsxLib()) return null;
 
     const selectedStage = document.getElementById('export-stage-select').value;
     const dateFrom      = document.getElementById('export-date-from').value;
@@ -51,10 +48,9 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
     if (filtered.length === 0) {
       showToast('Không tìm thấy lô nan nào thỏa mãn điều kiện!', 'error');
-      return;
+      return null;
     }
 
-    const wb  = XLSX.utils.book_new();
     const aoa = [];
 
     const stageLabel = selectedStage === 'all' ? 'Tất Cả' : (STAGES[selectedStage]?.short || selectedStage);
@@ -93,10 +89,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     aoa.push(['', '', '', '', '', '', '', '', '', '', '']);
     aoa.push(['NGƯỜI ĐỀ NGHỊ', '', '', '', '', '', '', '', '', '', '']);
 
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-    // Merge cells matching template
-    ws['!merges'] = [
+    const merges = [
       { s:{r:0,c:0}, e:{r:0,c:10} },   // Title A1:K1
       { s:{r:1,c:4}, e:{r:1,c:6}  },   // Date E2:G2
       { s:{r:2,c:2}, e:{r:2,c:4}  },   // Requester B3:E3
@@ -114,13 +107,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
       { s:{r:4,c:7}, e:{r:4,c:9}  },   // Số lượng (A+A1+B span)
       { s:{r:4,c:10},e:{r:5,c:10} }    // Ghi chú
     ];
-
-    ws['!cols'] = [
-      {wch:5},{wch:18},{wch:10},{wch:14},{wch:14},{wch:17},{wch:13},{wch:10},{wch:10},{wch:10},{wch:22}
-    ];
-    ws['!rows'] = [{ hpt: 22 }];
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Nhật Ký Than Hóa');
+    const cols = [{wch:5},{wch:18},{wch:10},{wch:14},{wch:14},{wch:17},{wch:13},{wch:10},{wch:10},{wch:10},{wch:22}];
 
     let suffix = '';
     if (selectedStage !== 'all') suffix += `_${stageLabel.replace(/\s/g,'_')}`;
@@ -128,11 +115,22 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     if (dateTo)                  suffix += `_den_${dateTo}`;
     if (selectedLoc !== 'all')   suffix += `_${locLabel.replace(/\s/g,'_')}`;
 
-    const filename = `NhatKy_ThanHoa${suffix}_${today.toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    return {
+      title: 'Nhật Ký Than Hóa',
+      countLabel: `${filtered.length} lô nan`,
+      aoa, merges, cols, rowH: 22,
+      sheetName: 'Nhật Ký Than Hóa',
+      filename: `NhatKy_ThanHoa${suffix}_${today.toISOString().split('T')[0]}.xlsx`
+    };
+  }
 
+  function handleCustomExportSubmit(e) {
+    e.preventDefault();
+    const d = buildCustomExportData();
+    if (!d) return;
+    exportDataToXlsx(d);
     closeCustomExportModal();
-    showToast(`Đã xuất ${filtered.length} lô nan ra file ${filename}!`, 'success');
+    showToast(`Đã xuất ${d.countLabel} ra file ${d.filename}!`, 'success');
   }
 
   // =============================================================
@@ -152,6 +150,17 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   }
   function modalShow(id) { document.getElementById(id)?.classList.add('show'); initLucide(); }
   function modalHide(id) { document.getElementById(id)?.classList.remove('show'); }
+
+  // Ghi dữ liệu báo cáo { aoa, merges, cols, rowH, sheetName, filename } ra file .xlsx
+  function exportDataToXlsx(d) {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(d.aoa);
+    if (d.merges && d.merges.length) ws['!merges'] = d.merges;
+    if (d.cols) ws['!cols'] = d.cols;
+    if (d.rowH) ws['!rows'] = [{ hpt: d.rowH }];
+    XLSX.utils.book_append_sheet(wb, ws, d.sheetName);
+    XLSX.writeFile(wb, d.filename);
+  }
 
   // ─── 1) KẾ HOẠCH SẢN XUẤT ─────────────────────────────────────
   function planningProductNameOf(productId) {
@@ -196,9 +205,9 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
   function closePlanningExportModal() { modalHide('modal-export-planning'); }
 
-  function handlePlanningExportSubmit(e) {
-    e.preventDefault();
-    if (!requireXlsxLib()) return;
+  // Dựng dữ liệu xuất Kế Hoạch (dùng chung cho xuất file & xem trước)
+  function buildPlanningExportData() {
+    if (!requireXlsxLib()) return null;
     const year    = document.getElementById('export-planning-year')?.value || 'all';
     const week    = document.getElementById('export-planning-week')?.value || 'all';
     const product = document.getElementById('export-planning-product')?.value || 'all';
@@ -211,35 +220,65 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     });
     if (filtered.length === 0) {
       showToast('Không tìm thấy kế hoạch nào thỏa mãn điều kiện!', 'error');
-      return;
+      return null;
     }
 
-    const wb  = XLSX.utils.book_new();
+    // Bố cục theo yêu cầu: 3 dòng đầu (tiêu đề / ngày xuất / bộ lọc) được GỘP
+    // tràn cả bảng; BỎ cột Năm & Tuần (thông tin năm/tuần nằm ở dòng Bộ lọc);
+    // cột: Stt, Mã SP, Tên SP, Tên Đầy Đủ, Số Lượng, Thể Tích, Loại Ép, Ghi Chú
+    // (Ghi Chú để trống — tự điền trong màn Xem Trước trước khi xuất/in).
     const aoa = [
       ['KẾ HOẠCH SẢN XUẤT'],
       [`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`],
       [`Bộ lọc: ${year === 'all' ? 'Tất cả năm' : 'Năm ' + year} · ${week === 'all' ? 'Tất cả tuần' : week} · ${product === 'all' ? 'Tất cả sản phẩm' : planningProductNameOf(product)}`],
       [],
-      ['Stt', 'Năm', 'Tuần', 'Sản Phẩm', 'Số Lượng (tấm)']
+      ['Stt', 'Mã SP', 'Tên SP', 'Tên Đầy Đủ', 'Số Lượng (tấm)', 'Thể Tích (m³)', 'Loại Ép', 'Ghi Chú']
     ];
     const sorted = [...filtered].sort((a, b) =>
       (a.year - b.year) || String(a.week).localeCompare(String(b.week), 'vi', { numeric: true }));
-    let totalQty = 0;
+    let totalQty = 0, totalVol = 0;
     sorted.forEach((p, i) => {
       totalQty += p.qty || 0;
-      aoa.push([i + 1, p.year, p.week, planningProductNameOf(p.productId), p.qty || 0]);
+      const rate = (state.materialRates || []).find(r => r.id === p.productId);
+      // Thể tích dự kiến = số tấm × thể tích 1 tấm (theo kích thước trong tên sản phẩm)
+      const vol = dimVolume(computeFpDimFromProduct(p.productId), p.qty || 0);
+      totalVol += vol;
+      aoa.push([i + 1,
+        (rate && rate.productCode) || '',
+        planningProductNameOf(p.productId),
+        (rate && rate.fullName) || '',
+        p.qty || 0,
+        vol ? +vol.toFixed(3) : '',
+        (rate && rate.pressType) || '',
+        p.note || '']);
     });
-    aoa.push(['', '', '', 'TỔNG CỘNG', totalQty]);
+    aoa.push(['', '', '', 'TỔNG CỘNG', totalQty, totalVol ? +totalVol.toFixed(3) : '', '', '']);
 
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{ wch:5 },{ wch:8 },{ wch:10 },{ wch:34 },{ wch:14 }];
-    ws['!rows'] = [{ hpt: 20 }];
-    XLSX.utils.book_append_sheet(wb, ws, 'Kế Hoạch SX');
+    // Gộp 3 dòng đầu tràn cả bảng (áp dụng cho cả file Excel & bảng xem trước)
+    const merges = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } }
+    ];
 
-    const filename = `KeHoach_SanXuat_${todayStamp()}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    return {
+      title: 'Kế Hoạch Sản Xuất',
+      countLabel: `${filtered.length} dòng kế hoạch`,
+      aoa, merges,
+      cols: [{ wch:5 },{ wch:10 },{ wch:30 },{ wch:32 },{ wch:13 },{ wch:13 },{ wch:11 },{ wch:26 }],
+      rowH: 20,
+      sheetName: 'Kế Hoạch SX',
+      filename: `KeHoach_SanXuat_${todayStamp()}.xlsx`
+    };
+  }
+
+  function handlePlanningExportSubmit(e) {
+    e.preventDefault();
+    const d = buildPlanningExportData();
+    if (!d) return;
+    exportDataToXlsx(d);
     closePlanningExportModal();
-    showToast(`Đã xuất ${filtered.length} dòng kế hoạch ra file ${filename}!`, 'success');
+    showToast(`Đã xuất ${d.countLabel} ra file ${d.filename}!`, 'success');
   }
 
 
@@ -318,9 +357,9 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
   function closePressExportModal() { modalHide('modal-export-press'); }
 
-  function handlePressExportSubmit(e) {
-    e.preventDefault();
-    if (!requireXlsxLib()) return;
+  // Dựng dữ liệu xuất Sản Lượng Ép Ván (dùng chung cho xuất file & xem trước)
+  function buildPressExportData() {
+    if (!requireXlsxLib()) return null;
     const year    = document.getElementById('export-press-year')?.value || 'all';
     const week    = document.getElementById('export-press-week')?.value || 'all';
     const product = document.getElementById('export-press-product')?.value || 'all';
@@ -335,39 +374,56 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     });
     if (filtered.length === 0) {
       showToast('Không tìm thấy lượt ép nào thỏa mãn điều kiện!', 'error');
-      return;
+      return null;
     }
 
-    const wb  = XLSX.utils.book_new();
     const aoa = [
       ['SẢN LƯỢNG ÉP VÁN'],
       [`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`],
       [`Bộ lọc: ${year === 'all' ? 'Tất cả năm' : year} · ${week === 'all' ? 'Tất cả tuần' : friendlyWeek(week)} · ${product === 'all' ? 'Tất cả thành phẩm' : 'Thành phẩm đã chọn'} · ${worker === 'all' ? 'Tất cả công nhân' : 'Công nhân đã chọn'}`],
       [],
-      ['Stt', 'Ngày', 'Tuần', 'Thành Phẩm', 'Công Nhân', 'Kích Thước TP', 'SL TP (tấm)', 'Ván Thô', 'Thanh Thô', 'Keo (kg)', 'Phụ Gia (kg)']
+      ['Stt', 'Ngày', 'Tuần', 'Thành Phẩm', 'Mã SP', 'Tên Đầy Đủ', 'Loại Ép', 'Công Nhân', 'Kích Thước TP', 'SL TP (tấm)', 'Ván Thô', 'Thanh Thô', 'Keo (kg)', 'Phụ Gia (kg)']
     ];
     const sorted = [...filtered].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
     let totalQty = 0, totalGlue = 0, totalAdd = 0;
     sorted.forEach((r, i) => {
       const qty = r.finishedQty || 0;
       totalQty += qty; totalGlue += r.glue || 0; totalAdd += r.additive || 0;
+      const rate = (state.materialRates || []).find(x => x.id === r.productId);
       aoa.push([
         i + 1, formatDateDDMMYY(r.date), friendlyWeek(r.week), pressProductLabelOf(r),
+        (rate && rate.productCode) || '', (rate && rate.fullName) || '', (rate && rate.pressType) || '',
         r.worker || '—', r.fpDim || '—', qty,
         pressVanThoSummary(r), pressSticksSummary(r), r.glue || 0, r.additive || 0
       ]);
     });
-    aoa.push(['', '', '', '', '', 'TỔNG CỘNG', totalQty, '', '', totalGlue, totalAdd]);
+    aoa.push(['', '', '', '', '', '', '', '', 'TỔNG CỘNG', totalQty, '', '', totalGlue, totalAdd]);
 
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:5},{wch:11},{wch:14},{wch:26},{wch:14},{wch:16},{wch:11},{wch:28},{wch:24},{wch:10},{wch:11}];
-    ws['!rows'] = [{ hpt: 20 }];
-    XLSX.utils.book_append_sheet(wb, ws, 'Ép Ván');
+    // Gộp 3 dòng đầu (tiêu đề / ngày xuất / bộ lọc) tràn cả bảng
+    const merges = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }
+    ];
 
-    const filename = `SanLuong_EpVan_${todayStamp()}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    return {
+      title: 'Sản Lượng Ép Ván',
+      countLabel: `${filtered.length} lượt ép`,
+      aoa, merges,
+      cols: [{wch:5},{wch:11},{wch:14},{wch:26},{wch:10},{wch:30},{wch:12},{wch:14},{wch:16},{wch:11},{wch:28},{wch:24},{wch:10},{wch:11}],
+      rowH: 20,
+      sheetName: 'Ép Ván',
+      filename: `SanLuong_EpVan_${todayStamp()}.xlsx`
+    };
+  }
+
+  function handlePressExportSubmit(e) {
+    e.preventDefault();
+    const d = buildPressExportData();
+    if (!d) return;
+    exportDataToXlsx(d);
     closePressExportModal();
-    showToast(`Đã xuất ${filtered.length} lượt ép ra file ${filename}!`, 'success');
+    showToast(`Đã xuất ${d.countLabel} ra file ${d.filename}!`, 'success');
   }
 
   // ─── 3) NHẬT KÝ NGUYÊN LIỆU ───────────────────────────────────
@@ -403,9 +459,9 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
   function closeMaterialsExportModal() { modalHide('modal-export-materials'); }
 
-  function handleMaterialsExportSubmit(e) {
-    e.preventDefault();
-    if (!requireXlsxLib()) return;
+  // Dựng dữ liệu xuất Nhật Ký Nguyên Liệu (dùng chung cho xuất file & xem trước)
+  function buildMaterialsExportData() {
+    if (!requireXlsxLib()) return null;
     const location = document.getElementById('export-materials-location')?.value || 'all';
     const type     = document.getElementById('export-materials-type')?.value || 'all';
     const supplier = document.getElementById('export-materials-supplier')?.value || 'all';
@@ -422,7 +478,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     });
     if (filtered.length === 0) {
       showToast('Không tìm thấy lần nhập nguyên liệu nào thỏa mãn điều kiện!', 'error');
-      return;
+      return null;
     }
 
     // Nhãn vị trí dùng chung với tab Nguyên Liệu
@@ -430,7 +486,6 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     const locLabel = k => MAT_LOC_LABELS[k] || k || '—';
     const fmtNum = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
 
-    const wb  = XLSX.utils.book_new();
     const aoa = [
       ['NHẬT KÝ NHẬP NGUYÊN LIỆU'],
       [`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`],
@@ -465,16 +520,232 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     });
     aoa.push(['', '', '', '', '', 'TỔNG CỘNG', '', '', fmtNum(totalWeight), '', fmtNum(totalAmount), '', '']);
 
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:5},{wch:11},{wch:13},{wch:20},{wch:18},{wch:15},{wch:13},{wch:13},{wch:14},{wch:13},{wch:14},{wch:22},{wch:8}];
-    ws['!rows'] = [{ hpt: 20 }];
-    XLSX.utils.book_append_sheet(wb, ws, 'Nguyên Liệu');
+    // Gộp 3 dòng đầu (tiêu đề / ngày xuất / bộ lọc) tràn cả bảng
+    const merges = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } }
+    ];
 
-    const filename = `NhatKy_NguyenLieu_${todayStamp()}.xlsx`;
-    XLSX.writeFile(wb, filename);
-    closeMaterialsExportModal();
-    showToast(`Đã xuất ${filtered.length} lần nhập nguyên liệu ra file ${filename}!`, 'success');
+    return {
+      title: 'Nhật Ký Nhập Nguyên Liệu',
+      countLabel: `${filtered.length} lần nhập nguyên liệu`,
+      aoa, merges,
+      cols: [{wch:5},{wch:11},{wch:13},{wch:20},{wch:18},{wch:15},{wch:13},{wch:13},{wch:14},{wch:13},{wch:14},{wch:22},{wch:8}],
+      rowH: 20,
+      sheetName: 'Nguyên Liệu',
+      filename: `NhatKy_NguyenLieu_${todayStamp()}.xlsx`
+    };
   }
+
+  function handleMaterialsExportSubmit(e) {
+    e.preventDefault();
+    const d = buildMaterialsExportData();
+    if (!d) return;
+    exportDataToXlsx(d);
+    closeMaterialsExportModal();
+    showToast(`Đã xuất ${d.countLabel} ra file ${d.filename}!`, 'success');
+  }
+
+  // =============================================================
+  // XEM TRƯỚC & CHỈNH SỬA BÁO CÁO TRƯỚC KHI XUẤT / IN
+  // =============================================================
+  // Mọi báo cáo xuất Excel đều được dựng thành bảng AOA → dùng chung
+  // 1 màn "Xem Trước": sửa ô trực tiếp, bỏ dòng tùy ý (chỉ ảnh hưởng bản
+  // xuất/in — KHÔNG đổi dữ liệu của app), rồi:
+  //   • "Xuất Excel (.xlsx)": ghi đúng bảng đã chỉnh (giữ ô gộp)
+  //   • "In / Lưu PDF": window.print() với CSS in riêng, chỉ in bảng báo cáo
+  let exportPreviewState = null; // { data, builder, deletedRows:Set, overrides:{} }
+
+  function openExportPreview(sourceModalId, builder) {
+    if (!requireXlsxLib()) return;
+    const data = builder();
+    if (!data) return;
+    exportPreviewState = buildPreviewState(data, builder);
+    if (sourceModalId) modalHide(sourceModalId);
+    renderExportPreview();
+    modalShow('modal-export-preview');
+  }
+
+  // Trạng thái màn xem trước: chỉnh sửa của người dùng (ô sửa, dòng bỏ)
+  // + độ rộng cột mặc định lấy theo chuẩn cột của file Excel (!cols).
+  function buildPreviewState(data, builder) {
+    return {
+      data, builder,
+      deletedRows: new Set(),
+      overrides: {},
+      colWidths: (data.cols || []).map(c => Math.max(48, Math.round((c.wch || 10) * 8)))
+    };
+  }
+
+  function closeExportPreviewModal() { modalHide('modal-export-preview'); }
+
+  // Vẽ lại bảng xem trước (giữ nguyên ô đã sửa & dòng đã bỏ)
+  function renderExportPreview() {
+    if (!exportPreviewState) return;
+    const box = document.getElementById('export-preview-table-box');
+    if (!box) return;
+    const { data, deletedRows, overrides, colWidths } = exportPreviewState;
+    box.innerHTML = buildExportPreviewTableHTML(data.aoa, data.merges || [], deletedRows, overrides, false, colWidths);
+    const titleEl = document.getElementById('export-preview-title');
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="table"></i> Xem Trước: ${escapeHTML(data.title)}`;
+    const infoEl = document.getElementById('export-preview-info');
+    if (infoEl) infoEl.textContent = `${data.countLabel} · sửa trực tiếp trên bảng trước khi xuất/in`;
+    initLucide();
+  }
+
+  // Bảng HTML dựng từ AOA + ô gộp (hàm thuần — dùng cho cả xem trước & bản in).
+  // deletedRows: Set chỉ số dòng bị bỏ; overrides: {'r,c': nội dung đã sửa}.
+  // colWidths: mảng độ rộng cột (px) → dựng <colgroup> đúng cân đối như file Excel.
+  function buildExportPreviewTableHTML(aoa, merges, deletedRows, overrides, forPrint, colWidths) {
+    deletedRows = deletedRows || new Set();
+    overrides = overrides || {};
+    const maxCols = aoa.reduce((m, row) => Math.max(m, row.length), 0);
+    let colgroup = '';
+    if (!forPrint && Array.isArray(colWidths)) {
+      colgroup = '<colgroup>' + Array.from({ length: maxCols }, (_, c) =>
+        (colWidths[c] ? `<col style="width:${colWidths[c]}px">` : '<col>')).join('') + '</colgroup>';
+    }
+    const covered = {};   // ô bị che bởi merge (không tự vẽ)
+    const mergeAt = {};   // ô neo của merge
+    (merges || []).forEach(m => {
+      mergeAt[m.s.r + ',' + m.s.c] = m;
+      for (let r = m.s.r; r <= m.e.r; r++)
+        for (let c = m.s.c; c <= m.e.c; c++)
+          if (r !== m.s.r || c !== m.s.c) covered[r + ',' + c] = true;
+    });
+    const rowsHtml = aoa.map((row, r) => {
+      if (deletedRows.has(r)) return '';
+      let tds = '';
+      for (let c = 0; c < maxCols; c++) {
+        if (covered[r + ',' + c]) continue;
+        const merge = mergeAt[r + ',' + c];
+        const spanAttrs = merge
+          ? (merge.e.c > merge.s.c ? ` colspan="${merge.e.c - merge.s.c + 1}"` : '') +
+            (merge.e.r > merge.s.r ? ` rowspan="${merge.e.r - merge.s.r + 1}"` : '')
+          : '';
+        // Ô gộp TRÀN CẢ BẢNG (3 dòng đầu: tiêu đề / ngày xuất / bộ lọc):
+        // dòng tiêu đề -> chữ to & đậm; các dòng đầu còn lại -> đậm
+        let cellCls = '';
+        if (merge && (merge.e.c - merge.s.c + 1) === maxCols) {
+          cellCls = r === 0 ? ' class="cell-title"' : ' class="cell-subtitle"';
+        }
+        const key = r + ',' + c;
+        const shown = Object.prototype.hasOwnProperty.call(overrides, key)
+          ? String(overrides[key])
+          : ((row[c] === undefined || row[c] === null) ? '' : String(row[c]));
+        const editable = forPrint ? '' : ' contenteditable="true"';
+        tds += `<td data-r="${r}" data-c="${c}"${cellCls}${spanAttrs}${editable}>${escapeHTML(shown)}</td>`;
+      }
+      const action = forPrint ? '' :
+        `<td class="export-preview-actions"><button type="button" class="export-preview-del-btn" data-del-row="${r}" title="Bỏ dòng này khỏi bản xuất/in (không ảnh hưởng dữ liệu app)">✕</button></td>`;
+      return `<tr data-r="${r}">${tds}${action}</tr>`;
+    }).join('');
+    return `<table class="${forPrint ? 'export-preview-print-table' : 'export-preview-table'}">${colgroup}<tbody>${rowsHtml}</tbody></table>`;
+  }
+
+  // Ghi nhận nội dung người dùng vừa sửa 1 ô (đi qua input delegation từ events.js)
+  function noteExportPreviewEdit(r, c, text) {
+    if (!exportPreviewState) return;
+    exportPreviewState.overrides[r + ',' + c] = text;
+  }
+
+  // Bỏ 1 dòng khỏi bản xuất/in (vẽ lại, vẫn giữ các ô đã sửa)
+  function deleteExportPreviewRow(r) {
+    if (!exportPreviewState) return;
+    exportPreviewState.deletedRows.add(r);
+    renderExportPreview();
+  }
+
+  // Đổi độ rộng 1 cột (kéo mép phải ô trên desktop) — cập nhật trực tiếp <col>
+  // để kéo mượt, không cần vẽ lại cả bảng
+  function setExportPreviewColWidth(c, w) {
+    if (!exportPreviewState) return;
+    if (!Array.isArray(exportPreviewState.colWidths)) exportPreviewState.colWidths = [];
+    exportPreviewState.colWidths[c] = Math.max(40, Math.round(w));
+    const box = document.getElementById('export-preview-table-box');
+    if (box && box.querySelectorAll) {
+      const cols = box.querySelectorAll('col');
+      if (cols && cols[c] && cols[c].style) cols[c].style.width = exportPreviewState.colWidths[c] + 'px';
+    }
+  }
+
+  // Làm mới bảng theo bộ lọc hiện tại (xóa mọi chỉnh sửa trong màn xem trước)
+  function refreshExportPreview() {
+    if (!exportPreviewState) return;
+    const data = exportPreviewState.builder();
+    if (!data) return;
+    exportPreviewState = buildPreviewState(data, exportPreviewState.builder);
+    renderExportPreview();
+    showToast('Đã làm mới bảng theo bộ lọc', 'info');
+  }
+
+  // Bảng AOA đã chỉnh: ô sửa (giữ số nếu gốc là số để Excel còn tính toán) + dòng bỏ
+  function collectPreviewAoa() {
+    const { data, overrides, deletedRows } = exportPreviewState;
+    const aoa = data.aoa.map(row => [...row]);
+    Object.keys(overrides).forEach(k => {
+      const [r, c] = k.split(',').map(Number);
+      if (!aoa[r]) return;
+      const text = String(overrides[k]).replace(/\u00a0/g, ' ').trim();
+      const orig = aoa[r][c];
+      if (typeof orig === 'number') {
+        const num = text.replace(',', '.');
+        aoa[r][c] = (text !== '' && /^-?[\d.]+$/.test(num) && !isNaN(Number(num))) ? Number(num) : text;
+      } else {
+        aoa[r][c] = text;
+      }
+    });
+    return aoa.filter((row, r) => !deletedRows.has(r));
+  }
+
+  // Đổi chỉ số ô gộp sau khi bỏ dòng (merge dính dòng bị bỏ thì loại luôn cho an toàn)
+  function remapPreviewMerges(merges, deletedRows, originalRows) {
+    if (!merges || !deletedRows.size) return merges || null;
+    const rowMap = {}; let nr = 0;
+    for (let r = 0; r < originalRows; r++) if (!deletedRows.has(r)) rowMap[r] = nr++;
+    return merges.filter(m => {
+      for (let r = m.s.r; r <= m.e.r; r++) if (deletedRows.has(r)) return false;
+      return true;
+    }).map(m => ({ s: { r: rowMap[m.s.r], c: m.s.c }, e: { r: rowMap[m.e.r], c: m.e.c } }));
+  }
+
+  // Xuất .xlsx từ bảng ĐÃ CHỈNH trong màn xem trước
+  function exportPreviewToXlsx() {
+    if (!exportPreviewState) return;
+    const { data, deletedRows } = exportPreviewState;
+    const aoa = collectPreviewAoa();
+    const merges = remapPreviewMerges(data.merges || null, deletedRows, data.aoa.length);
+    exportDataToXlsx({ ...data, aoa, merges });
+    const kept = data.aoa.length - deletedRows.size;
+    closeExportPreviewModal();
+    showToast(`Đã xuất ${kept} dòng (theo bảng đã chỉnh sửa) ra file ${data.filename}!`, 'success');
+  }
+
+  // In / Lưu PDF: bản in = bảng đã chỉnh, không có cột thao tác (CSS @media print riêng)
+  function printExportPreview() {
+    if (!exportPreviewState) return;
+    const area = document.getElementById('export-preview-print-area');
+    if (!area) return;
+    const { data, deletedRows } = exportPreviewState;
+    const aoa = collectPreviewAoa();
+    const merges = remapPreviewMerges(data.merges || null, deletedRows, data.aoa.length);
+    area.innerHTML = buildExportPreviewTableHTML(aoa, merges || [], new Set(), null, true);
+    document.body.classList.add('export-preview-printing');
+    const cleanup = () => {
+      document.body.classList.remove('export-preview-printing');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    setTimeout(cleanup, 1500); // dự phòng trình duyệt/PWA không bắn sự kiện afterprint
+  }
+
+  // Cửa vào xem trước cho từng loại báo cáo (đóng modal lọc, mở màn xem trước)
+  function openCustomExportPreview()   { openExportPreview('modal-custom-export',     buildCustomExportData); }
+  function openPlanningExportPreview() { openExportPreview('modal-export-planning',   buildPlanningExportData); }
+  function openPressExportPreview()     { openExportPreview('modal-export-press',     buildPressExportData); }
+  function openMaterialsExportPreview() { openExportPreview('modal-export-materials', buildMaterialsExportData); }
 
   function loadCustomCharts() {
     const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CHARTS);
@@ -990,11 +1261,15 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   }
 
 export {
+  buildExportPreviewTableHTML,
   closeCustomExportModal,
+  closeExportPreviewModal,
   closeMaterialsExportModal,
   closePlanningExportModal,
   closePressExportModal,
   computeChartData,
+  deleteExportPreviewRow,
+  exportPreviewToXlsx,
   filterValList,
   getPaletteColors,
   handleCustomExportSubmit,
@@ -1004,9 +1279,17 @@ export {
   isAllFilterVal,
   loadCustomCharts,
   matchFilterVal,
+  noteExportPreviewEdit,
   openCustomExportModal,
+  openCustomExportPreview,
   openMaterialsExportModal,
+  openMaterialsExportPreview,
   openPlanningExportModal,
+  openPlanningExportPreview,
   openPressExportModal,
-  saveCustomCharts
+  openPressExportPreview,
+  printExportPreview,
+  refreshExportPreview,
+  saveCustomCharts,
+  setExportPreviewColWidth
 };

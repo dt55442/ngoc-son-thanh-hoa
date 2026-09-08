@@ -1,17 +1,18 @@
 // ═══════════════════════════════════════════════════════════
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { checkAuthAndRender, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
+import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
 import { clearMultiSelection, closeBatchFormModal, closeTransferModal, confirmMultiTransfer, exitMultiTransferMode, handleBatchFormSubmit, handleTransferSubmit, openBatchFormModal, selectAllMulti, toggleBatchSelection, toggleMultiTransferMode } from './batch-modals.js';
-import { applyImportedShareToken, applyRoleToUI, closeShareModal, copyShareTokenToClipboard, isFirebaseOnline, openShareModal, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
+import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
-import { closeCustomExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, openCustomExportModal, openMaterialsExportModal, openPlanningExportModal, openPressExportModal } from './export-xlsx.js';
+import { closeCustomExportModal, closeExportPreviewModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth } from './export-xlsx.js';
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, closePressModal, closePressNoteModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
+import { addPressLine, addPressStick, closePressModal, closePressNoteModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { applyQcWeekToAll, closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
+import { closeEmployeeImportModal, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, doEmployeeImport, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openRecruitmentModal, pickLeaveEmployee, renderLeaveEmployeeSuggestions, renderHrView } from './hr.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -240,19 +241,17 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-users',    'click', closeUsersMgrModal);
     safeOn('btn-cancel-users',   'click', closeUsersMgrModal);
     safeOn('add-user-form',      'submit', handleAddUserSubmit);
+    // Sửa người dùng (Admin)
+    safeOn('btn-close-user-edit', 'click', closeUserEditModal);
+    safeOn('btn-cancel-user-edit', 'click', closeUserEditModal);
+    safeOn('user-edit-form',      'submit', handleUserEditSubmit);
 
-    // Share & Sync
-    safeOn('btn-dropdown-share',    'click', openShareModal);
+    // Đồng bộ đám mây (Firebase) — thao tác THỦ CÔNG qua 2 nút trong menu ⋮, KHÔNG tự hỏi/nhắc nhở
     safeOn('btn-upload-cloud',      'click', uploadLocalDataToCloud);
     safeOn('btn-pull-cloud',        'click', pullCloudToLocal);
-    safeOn('btn-close-share',       'click', closeShareModal);
-    safeOn('btn-cancel-share',      'click', closeShareModal);
-    safeOn('btn-copy-token',        'click', copyShareTokenToClipboard);
-    safeOn('btn-apply-token-sync',  'click', applyImportedShareToken);
 
-    // Custom XLSX Export
+    // Custom XLSX Export (nút "Xuất Excel" riêng của tab Công Đoạn)
     safeOn('btn-open-export-modal',  'click', openCustomExportModal);
-    safeOn('btn-dropdown-export',    'click', openCustomExportModal);
     safeOn('btn-close-export-modal', 'click', closeCustomExportModal);
     safeOn('btn-cancel-export',      'click', closeCustomExportModal);
     safeOn('custom-export-form',     'submit', handleCustomExportSubmit);
@@ -270,6 +269,46 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-export-materials',  'click', closeMaterialsExportModal);
     safeOn('btn-cancel-export-materials', 'click', closeMaterialsExportModal);
     safeOn('materials-export-form',       'submit', handleMaterialsExportSubmit);
+
+    // ── Xem trước & chỉnh sửa báo cáo trước khi xuất/in ──
+    safeOn('btn-preview-custom',    'click', openCustomExportPreview);
+    safeOn('btn-preview-planning',  'click', openPlanningExportPreview);
+    safeOn('btn-preview-press',    'click', openPressExportPreview);
+    safeOn('btn-preview-materials','click', openMaterialsExportPreview);
+    safeOn('btn-preview-refresh',   'click', refreshExportPreview);
+    safeOn('btn-preview-export-xlsx', 'click', exportPreviewToXlsx);
+    safeOn('btn-preview-print',     'click', printExportPreview);
+    safeOn('btn-close-export-preview',  'click', closeExportPreviewModal);
+    safeOn('btn-cancel-export-preview', 'click', closeExportPreviewModal);
+    // Bảng xem trước render động → event delegation: nút ✕ (bỏ dòng) + sửa ô
+    const exportPreviewBox = document.getElementById('export-preview-table-box');
+    if (exportPreviewBox) {
+      exportPreviewBox.addEventListener('click', (e) => {
+        const delBtn = e.target && e.target.closest ? e.target.closest('[data-del-row]') : null;
+        if (delBtn) deleteExportPreviewRow(parseInt(delBtn.getAttribute('data-del-row'), 10));
+      });
+      exportPreviewBox.addEventListener('input', (e) => {
+        const td = e.target && e.target.closest ? e.target.closest('td[data-r][data-c]') : null;
+        if (td) noteExportPreviewEdit(parseInt(td.dataset.r, 10), parseInt(td.dataset.c, 10), td.textContent);
+      });
+      // Kéo mép phải ô (băng qua mép cột) để đổi độ rộng cột — cập nhật mượt qua <col>
+      let colDragInfo = null;
+      exportPreviewBox.addEventListener('mousedown', (e) => {
+        const td = e.target && e.target.closest ? e.target.closest('td[data-r][data-c]') : null;
+        if (!td || td.colSpan !== 1) return;
+        const rect = td.getBoundingClientRect ? td.getBoundingClientRect() : null;
+        if (!rect || rect.width <= 0) return;
+        if ((e.clientX - rect.left) >= rect.width - 6) {
+          colDragInfo = { c: parseInt(td.dataset.c, 10), startX: e.clientX, startW: rect.width };
+          e.preventDefault();
+        }
+      });
+      document.addEventListener('mousemove', (e) => {
+        if (!colDragInfo) return;
+        setExportPreviewColWidth(colDragInfo.c, colDragInfo.startW + (e.clientX - colDragInfo.startX));
+      });
+      document.addEventListener('mouseup', () => { colDragInfo = null; });
+    }
 
     // File Storage (Lưu dữ liệu vào file cùng thư mục)
     safeOn('btn-select-data-folder',      'click', selectDataFolder);
@@ -434,6 +473,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-press-note', 'click', closePressNoteModal);
     safeOn('press-note-form', 'submit', handlePressNoteSubmit);
     safeOn('btn-delete-press-note', 'click', handlePressNoteDelete);
+    // Nút "Hiện Ghi Chú": hiện/ẩn nội dung TẤT CẢ ghi chú giải trình trên biểu đồ ép ván
+    safeOn('btn-toggle-press-notes', 'click', togglePressNotesExpanded);
     // Di chuột/bấm vào biểu tượng "!" trong bảng → hiển thị nội dung giải trình
     document.addEventListener('mouseover', (e) => {
       const badge = e.target && e.target.closest ? e.target.closest('.press-note-badge') : null;
@@ -540,6 +581,58 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const delBtn = e.target.closest('[data-qc-delete]');
       if (delBtn) deleteQcExport(delBtn.getAttribute('data-qc-delete'));
     });
+
+    // ── Tab Nhân Sự ──
+    // Nhân viên
+    safeOn('btn-add-employee', 'click', () => openEmployeeModal());
+    safeOn('btn-close-employee', 'click', closeEmployeeModal);
+    safeOn('btn-cancel-employee', 'click', closeEmployeeModal);
+    safeOn('employee-form', 'submit', handleEmployeeSubmit);
+    // Nhập nhân viên từ Excel
+    safeOn('btn-import-employees', 'click', openEmployeeImportModal);
+    safeOn('btn-close-employee-import', 'click', closeEmployeeImportModal);
+    safeOn('btn-cancel-employee-import', 'click', closeEmployeeImportModal);
+    safeOn('employee-import-file', 'change', handleEmployeeImportFile);
+    safeOn('btn-do-employee-import', 'click', doEmployeeImport);
+    // Xin nghỉ phép
+    safeOn('btn-add-leave', 'click', openLeaveModal);
+    safeOn('btn-close-leave', 'click', closeLeaveModal);
+    safeOn('btn-cancel-leave', 'click', closeLeaveModal);
+    safeOn('leave-form', 'submit', handleLeaveSubmit);
+    // Ô nhân viên: gõ tên → danh sách gợi ý → chọn (chuột hoặc bàn phím)
+    const leaveEmpInput = document.getElementById('leave-employee');
+    if (leaveEmpInput) {
+      leaveEmpInput.addEventListener('input', renderLeaveEmployeeSuggestions);
+      leaveEmpInput.addEventListener('focus', renderLeaveEmployeeSuggestions);
+      leaveEmpInput.addEventListener('keydown', handleLeaveEmployeeKeydown);
+    }
+    const leaveSuggestBox = document.getElementById('leave-employee-suggest');
+    if (leaveSuggestBox) {
+      // mousedown để chọn TRƯỚC khi input mất focus
+      leaveSuggestBox.addEventListener('mousedown', (e) => {
+        const item = e.target && e.target.closest ? e.target.closest('[data-emp-id]') : null;
+        if (item) { e.preventDefault(); pickLeaveEmployee(item.getAttribute('data-emp-id')); }
+      });
+    }
+    // Bấm ra ngoài ô gợi ý → đóng danh sách
+    document.addEventListener('click', (e) => {
+      if (!(e.target && e.target.closest && e.target.closest('.hr-combobox'))) hideLeaveEmployeeSuggestions();
+    });
+    // Nhân sự cần — tuyển dụng
+    safeOn('btn-add-recruitment', 'click', () => openRecruitmentModal());
+    safeOn('btn-close-recruitment', 'click', closeRecruitmentModal);
+    safeOn('btn-cancel-recruitment', 'click', closeRecruitmentModal);
+    safeOn('recruitment-form', 'submit', handleRecruitmentSubmit);
+    // Bộ lọc nhân viên & tuyển dụng — vẽ lại bảng khi đổi
+    safeOn('hr-emp-filter-dept', 'change', renderHrView);
+    safeOn('hr-emp-filter-status', 'change', renderHrView);
+    safeOn('hr-emp-search', 'input', renderHrView);
+    safeOn('hr-recruit-filter-dept', 'change', renderHrView);
+    // Thu gọn / mở rộng các thẻ bảng Nhân Sự
+    safeOn('btn-toggle-hr-emp', 'click', () => toggleRateTableCollapse('hr-emp-card'));
+    safeOn('btn-toggle-hr-leave', 'click', () => toggleRateTableCollapse('hr-leave-card'));
+    safeOn('btn-toggle-hr-stats', 'click', () => toggleRateTableCollapse('hr-stats-card'));
+    safeOn('btn-toggle-hr-recruit', 'click', () => toggleRateTableCollapse('hr-recruit-card'));
 
     // ── Biểu đồ Kế hoạch vs Thực tế nguyên liệu theo ngày ──
     safeOn('mpc-week-filter', 'change', (e) => {

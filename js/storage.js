@@ -141,7 +141,7 @@ import { escapeHTML, showToast } from './utils.js';
         statusEl.innerHTML = `<i data-lucide="hard-drive" style="width:12px;height:12px;"></i> File: ${escapeHTML(state.fileStorage.folderName)}`;
       } else if (isMobile) {
         statusEl.classList.remove('connected');
-        statusEl.innerHTML = `<i data-lucide="smartphone" style="width:12px;height:12px;"></i> Mobile: Dùng Mã Đồng Bộ`;
+        statusEl.innerHTML = `<i data-lucide="smartphone" style="width:12px;height:12px;"></i> Mobile: Dùng Lưu/Nạp File`;
       } else {
         statusEl.classList.remove('connected');
         statusEl.innerHTML = `<i data-lucide="hard-drive" style="width:12px;height:12px;"></i> File: Chưa kết nối`;
@@ -156,7 +156,7 @@ import { escapeHTML, showToast } from './utils.js';
   // Chọn thư mục dữ liệu (lưu file bamboo_data.json trong thư mục đó)
   async function selectDataFolder() {
     if (!window.showDirectoryPicker) {
-      showToast('Trên điện thoại: dùng "Chia Sẻ & Đồng Bộ Dữ Liệu" hoặc "Lưu/Nạp File" để đồng bộ!', 'info');
+      showToast('Trên điện thoại: dùng "Sao Lưu / Phục Hồi (JSON)" hoặc nút đồng bộ đám mây trong menu ⋮!', 'info');
       return;
     }
     try {

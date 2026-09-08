@@ -70,10 +70,11 @@ Khi cần xuất dữ liệu JSON:
 
 ## 🔄 ĐỒNG BỘ DỮ LIỆU GIỮA CÁC MÁY
 
-App hỗ trợ mã đồng bộ nhanh:
-1. Chạm **⋮** → **"Chia Sẻ & Đồng Bộ Dữ Liệu"**
-2. **Sao chép mã đồng bộ** → gửi qua Zalo/Email
-3. Máy khác mở app → dán mã → **"Cập Nhật & Đồng Bộ Dữ Liệu Ngay"**
+Khi online (Firebase), dữ liệu được đồng bộ qua đám mây **KHÔNG hỏi nhắc** (tránh bấm nhầm ghi đè):
+- Mây có bản ghi mà máy chưa có → **tự gộp thêm** (an toàn, không ghi đè).
+- Muốn thao tác chủ động → dùng 2 nút trong menu **⋮**:
+  1. **"Đồng Bộ Dữ Liệu Máy Lên Mây"** — đẩy dữ liệu máy lên đám mây (tự gộp khéo các bản ghi mây đang có).
+  2. **"Tải Dữ Liệu Từ Mây Về Máy"** — tải bản mới nhất từ đám mây về máy.
 
 ---
 
@@ -113,6 +114,7 @@ Admin cấu hình **"tab được phép chỉnh sửa"** (Công Đoạn / Kế H
 ### Thêm tab mới trong tương lai
 Khai báo 1 dòng trong `APP_TABS` (file `js/permissions.js`) + schema dữ liệu trong `BUILDER_SCHEMA` (file `js/dashboard.js`) — Dashboard và bảng phân quyền **tự động nhận tab mới**.
 Tab QC (Xuất Hàng) là ví dụ mẫu: `APP_TABS` + section `qc-view` trong `index.html` + module `js/qc.js` + đồng bộ `qcExports` trong `js/cloud.js`.
+**Tab Nhân Sự** (nhân viên, xin nghỉ phép có duyệt của ban lãnh đạo, thống kê/TOP ngày nghỉ, nhu cầu tuyển dụng) cũng làm theo đúng mô hình này: `hr` trong `APP_TABS` + section `hr-view` + module `js/hr.js` + đồng bộ `hrEmployees/hrLeaves/hrRecruitment` trong `js/cloud.js`. *(Ma trận vị trí làm việc theo ngày sẽ bổ sung sau trên nền tab này.)*
 
 ---
 

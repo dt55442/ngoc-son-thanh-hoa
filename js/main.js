@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // js/main.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserPermsModal } from './auth.js';
+import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
 import { deleteBatch, openBatchFormModal, openTransferModal } from './batch-modals.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
 import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, renderStageFlow, toggleChartExpand } from './dashboard.js';
@@ -12,6 +12,7 @@ import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMa
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
+import { approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteEmployee, deleteLeave, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openRecruitmentModal, rejectLeave, renderHrView } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { state } from './state.js';
 import { autoReconnectDataFolder, loadData, updateFileStorageUI } from './storage.js';
@@ -33,6 +34,7 @@ import { setupFormCalculations } from './utils.js';
     loadMaterialRecords();
     loadMaterialPlan();
     loadQcExports();
+    loadHrData();
     // Nhớ lại trạng thái thu gọn của các bảng dữ liệu (định mức, lượt ép, nguyên liệu)
     restoreRateTableCollapse();
     setupEventListeners();
@@ -82,6 +84,7 @@ import { setupFormCalculations } from './utils.js';
     if (targetViewId === 'press-view') renderPressView();
     if (targetViewId === 'materials-view') renderMaterialView();
     if (targetViewId === 'qc-view') renderQcView();
+    if (targetViewId === 'hr-view') renderHrView();
   }
 
   function filterMobileKanbanColumns() {
@@ -176,6 +179,7 @@ import { setupFormCalculations } from './utils.js';
     if (state.activeView === 'press-view') renderPressView();
     if (state.activeView === 'materials-view') renderMaterialView();
     if (state.activeView === 'qc-view') renderQcView();
+    if (state.activeView === 'hr-view') renderHrView();
     initLucide();
   }
 
@@ -265,8 +269,18 @@ import { setupFormCalculations } from './utils.js';
     requestAdvancedAccess,
     // Cấu hình quyền chi tiết người dùng (Admin)
     openUserPermsModal,
+    // Sửa thông tin người dùng (Admin)
+    openUserEditModal,
     // Đồng bộ dữ liệu máy lên mây (Firebase)
-    uploadLocalDataToCloud
+    uploadLocalDataToCloud,
+    // Tab Nhân Sự — thao tác từ bảng (onclick trong HTML render động)
+    hrEditEmployee: openEmployeeModal,
+    hrDeleteEmployee: deleteEmployee,
+    hrApproveLeave: approveLeave,
+    hrRejectLeave: rejectLeave,
+    hrDeleteLeave: deleteLeave,
+    hrEditRecruitment: openRecruitmentModal,
+    hrDeleteRecruitment: deleteRecruitment
   };
   // Cờ báo hiệu module đã nạp & gán API thành công (watchdog trong index.html dựa vào đây)
   window.__BOOT_OK = true;

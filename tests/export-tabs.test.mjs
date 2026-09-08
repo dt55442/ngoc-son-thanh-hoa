@@ -81,12 +81,13 @@ state.currentUser = { username: 'admin', role: 'admin', editTabs: ['kanban', 'pl
 // ─── XLSX GHÉP ĐỂ BẮT FILE + SHEET ───────────────────────────────
 let writtenFiles = [];
 let lastSheetAoa = null;
+let lastSheetMerges = null;
 let lastSheetName = '';
 global.XLSX = {
   utils: {
     book_new: () => ({ sheets: [] }),
     aoa_to_sheet: (aoa) => ({ aoa }),
-    book_append_sheet: (wb, ws, name) => { wb.sheets.push({ name, aoa: ws.aoa }); lastSheetAoa = ws.aoa; lastSheetName = name; }
+    book_append_sheet: (wb, ws, name) => { wb.sheets.push({ name, aoa: ws.aoa }); lastSheetAoa = ws.aoa; lastSheetName = name; lastSheetMerges = ws['!merges'] || null; }
   },
   writeFile: (wb, filename) => { writtenFiles.push({ filename, wb }); },
   write: () => new ArrayBuffer(8)
@@ -99,8 +100,8 @@ function lastFile() { return writtenFiles[writtenFiles.length - 1]; }
 
 // ─── DỮ LIỆU GIẢ ──────────────────────────────────────────────
 state.materialRates = [
-  { id: 'rate-1', product: 'Ván ép 9mm' },
-  { id: 'rate-2', product: 'Ván ép 12mm' }
+  { id: 'rate-1', product: 'Ván ép 9mm', productCode: 'VS9',  fullName: 'Ván ép tre 9mm tiêu chuẩn', pressType: 'Ép 2 lần' },
+  { id: 'rate-2', product: 'Ván ép 12mm', productCode: 'VS12', fullName: 'Ván ép tre 12mm',           pressType: 'Ép 1 lần' }
 ];
 
 state.planningItems = [
@@ -135,10 +136,15 @@ check('KH: xuất được 1 file', writtenFiles.length === 1);
 check('KH: tên file KeHoach_SanXuat_*.xlsx', /^KeHoach_SanXuat_\d{4}-\d{2}-\d{2}\.xlsx$/.test(lastFile().filename));
 check('KH: sheet "Kế Hoạch SX"', lastSheetName === 'Kế Hoạch SX');
 const khAoa = lastSheetAoa;
+const khMerges = lastSheetMerges;
 check('KH: đủ 3 dòng dữ liệu + header + tổng (9 dòng)', khAoa.length === 9);
-check('KH: sắp xếp năm tăng dần (2025 trước 2026)', khAoa[5][1] === 2025);
-check('KH: tuần sắp xếp số học (Tuần 2 trước Tuần 10 trong 2026)', khAoa[6][2] === 'Tuần 2' && khAoa[7][2] === 'Tuần 10');
+check('KH: sắp xếp năm tăng dần (2025 trước 2026)', khAoa[5][1] === 'VS9' && khAoa[5][2] === 'Ván ép 9mm');
+check('KH: tuần sắp xếp số học (Tuần 2 trước Tuần 10 trong 2026)', khAoa[6][1] === 'VS12' && khAoa[7][1] === 'VS9');
+check('KH: 3 dòng đầu (tiêu đề/ngày/bộ lọc) gộp tràn cả bảng', khMerges && khMerges.length === 3 && khMerges.every(m => m.s.c === 0 && m.e.c === 7));
 check('KH: dòng TỔNG CỘNG = 180 tấm', khAoa[8][3] === 'TỔNG CỘNG' && khAoa[8][4] === 180);
+check('KH: header đúng thứ tự Stt/Mã SP/Tên SP/Tên Đầy Đủ/SL/Thể Tích/Loại Ép/Ghi Chú', khAoa[4][0] === 'Stt' && khAoa[4][1] === 'Mã SP' && khAoa[4][2] === 'Tên SP' && khAoa[4][3] === 'Tên Đầy Đủ' && khAoa[4][4] === 'Số Lượng (tấm)' && khAoa[4][5] === 'Thể Tích (m³)' && khAoa[4][6] === 'Loại Ép' && khAoa[4][7] === 'Ghi Chú');
+check('KH: dòng dữ liệu có Mã SP + Tên đầy đủ + Loại Ép của định mức', khAoa[5][1] === 'VS9' && khAoa[5][3] === 'Ván ép tre 9mm tiêu chuẩn' && khAoa[5][6] === 'Ép 2 lần');
+check('KH: Thể tích trống khi tên SP không có kích thước', khAoa[5][5] === '');
 check('KH: đóng modal sau khi xuất', !modalShown('modal-export-planning'));
 
 // Lọc theo năm 2026
@@ -176,13 +182,16 @@ check('ÉV: xuất được file', writtenFiles.length === beforeEvExport + 1);
 check('ÉV: tên file SanLuong_EpVan_*.xlsx', /^SanLuong_EpVan_\d{4}-\d{2}-\d{2}\.xlsx$/.test(lastFile().filename));
 check('ÉV: sheet "Ép Ván"', lastSheetName === 'Ép Ván');
 const evAoa = lastSheetAoa;
+check('ÉV: 3 dòng đầu (tiêu đề/ngày/bộ lọc) gộp tràn cả bảng', lastSheetMerges && lastSheetMerges.length === 3 && lastSheetMerges.every(m => m.s.c === 0 && m.e.c === 13));
 check('ÉV: đủ 3 dòng dữ liệu + header + tổng (9 dòng)', evAoa.length === 9);
 check('ÉV: sắp xếp ngày tăng dần (2025 trước)', evAoa[5][1] === '30/12/25');
 check('ÉV: tuần thân thiện trên dòng dữ liệu', evAoa[6][2] === 'Tuần 33 (2026)');
-check('ÉV: tóm tắt ván thô "1200x600x9 ×50"', evAoa[6][7] === '1200x600x9 ×50');
-check('ÉV: tóm tắt thanh thô "A1: 120 thanh"', evAoa[6][8] === 'A1: 120 thanh');
-check('ÉV: dòng TỔNG CỘNG = 75 tấm', evAoa[8][5] === 'TỔNG CỘNG' && evAoa[8][6] === 75);
-check('ÉV: tổng keo/phụ gia cộng đúng', Math.abs(evAoa[8][9] - 16.5) < 1e-9 && Math.abs(evAoa[8][10] - 2.3) < 1e-9);
+check('ÉV: tóm tắt ván thô "1200x600x9 ×50"', evAoa[6][10] === '1200x600x9 ×50');
+check('ÉV: tóm tắt thanh thô "A1: 120 thanh"', evAoa[6][11] === 'A1: 120 thanh');
+check('ÉV: có cột Mã SP / Tên Đầy Đủ / Loại Ép', evAoa[4][4] === 'Mã SP' && evAoa[4][5] === 'Tên Đầy Đủ' && evAoa[4][6] === 'Loại Ép');
+check('ÉV: dòng dữ liệu có Mã SP + Loại Ép của định mức', evAoa[6][4] === 'VS9' && evAoa[6][5] === 'Ván ép tre 9mm tiêu chuẩn' && evAoa[6][6] === 'Ép 2 lần');
+check('ÉV: dòng TỔNG CỘNG = 75 tấm', evAoa[8][8] === 'TỔNG CỘNG' && evAoa[8][9] === 75);
+check('ÉV: tổng keo/phụ gia cộng đúng', Math.abs(evAoa[8][12] - 16.5) < 1e-9 && Math.abs(evAoa[8][13] - 2.3) < 1e-9);
 check('ÉV: đóng modal sau khi xuất', !modalShown('modal-export-press'));
 
 // Lọc theo công nhân "nam" (gộp cả "Nam" lẫn "nam")
@@ -190,7 +199,7 @@ xlsxMod.openPressExportModal();
 setVal('export-press-worker', 'nam');
 xlsxMod.handlePressExportSubmit(ev);
 check('ÉV: lọc công nhân còn 2 dòng', lastSheetAoa.length === 5 + 2 + 1);
-check('ÉV: tổng SL công nhân nam = 50 tấm', lastSheetAoa[lastSheetAoa.length - 1][6] === 50);
+check('ÉV: tổng SL công nhân nam = 50 tấm', lastSheetAoa[lastSheetAoa.length - 1][9] === 50);
 
 // Lọc theo tuần 2026-W33
 xlsxMod.openPressExportModal();

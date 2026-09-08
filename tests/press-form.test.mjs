@@ -299,6 +299,37 @@ setVal('press-note-id', notes13[0].id);
 press.handlePressNoteDelete();
 check('Ghi chú: xóa ghi chú khỏi danh sách', !(state.pressNotes || []).some(n => n.date === '2026-08-13'));
 
+// ═══════════════════════════════════════════════════════════
+// 11) Biểu đồ 2 cột: cột ép xếp chồng 3 loại + cột thành phẩm
+// ═══════════════════════════════════════════════════════════
+state.pressRecords = [
+  // Loại 1 — ép ra CẢ ván thô (2 m³) & thành phẩm (1 m³)
+  { id: 'c1', date: '2026-08-10', week: '2026-W33', year: 2026, worker: 'A',
+    sticks: [{ nanKey: 'A1', sticks: 100 }],
+    vanTho: [{ vtDim: '1000×1000×1000', vtQty: 2 }],
+    productId: 'rate-1', productName: 'Ván 1200x600x9', fpDim: '1000×1000×1000', finishedQty: 1 },
+  // Loại 2 — chỉ ép ván thô (3 m³), chưa ép thành phẩm
+  { id: 'c2', date: '2026-08-10', week: '2026-W33', year: 2026, worker: 'B',
+    sticks: [{ nanKey: 'A1', sticks: 100 }],
+    vanTho: [{ vtDim: '1000×1000×1000', vtQty: 3 }] },
+  // Loại 3 — chỉ ép thành phẩm (2 m³) từ ván thô đã ép trước (đầu vào 2 m³)
+  { id: 'c3', date: '2026-08-11', week: '2026-W33', year: 2026, worker: 'C',
+    sticks: [{ nanKey: '2000×1000×1000', sticks: 1 }],
+    vanTho: [], productId: 'rate-1', fpDim: '1000×1000×1000', finishedQty: 2 }
+];
+press.renderPressChart();
+const chartCfg = state.pressChartInstance.config;
+const ds = chartCfg.data.datasets;
+check('2 cột: 4 dataset (3 loại xếp chồng + cột thành phẩm)', ds.length === 4);
+check('2 cột: 3 loại dùng stack ép, thành phẩm stack riêng', ds[0].stack === 'ep' && ds[1].stack === 'ep' && ds[2].stack === 'ep' && ds[3].stack === 'fp');
+check('2 cột: trục xếp chồng (stacked: true)', chartCfg.options.scales.x.stacked === true && chartCfg.options.scales.y.stacked === true);
+check('2 cột: loại 1 ngày 10/08 = 2 m³', JSON.stringify(ds[0].data) === JSON.stringify([2, 0]));
+check('2 cột: loại 2 ngày 10/08 = 3 m³', JSON.stringify(ds[1].data) === JSON.stringify([3, 0]));
+check('2 cột: loại 3 ngày 11/08 = 2 m³ (ván thô đầu vào)', JSON.stringify(ds[2].data) === JSON.stringify([0, 2]));
+check('2 cột: thành phẩm ngày = 1 và 2 m³', JSON.stringify(ds[3].data) === JSON.stringify([1, 2]));
+check('2 cột: nhãn 3 loại đã đổi tên (TP ngay / Chỉ BTP / BTP sang TP)', ds[0].label === 'Có thể chuyển TP ngay' && ds[1].label === 'Chỉ BTP' && ds[2].label === 'BTP sang TP');
+check('2 cột: trục Y hiển thị 1 số thập phân (2 → "2.0", 3.5 → "3.5")', chartCfg.options.scales.y.ticks.callback(2) === '2.0' && chartCfg.options.scales.y.ticks.callback(3.5) === '3.5');
+
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed > 0 ? 1 : 0);
 

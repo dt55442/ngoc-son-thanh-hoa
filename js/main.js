@@ -4,7 +4,7 @@
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserPermsModal } from './auth.js';
 import { deleteBatch, openBatchFormModal, openTransferModal } from './batch-modals.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
-import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, toggleChartExpand } from './dashboard.js';
+import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, renderStageFlow, toggleChartExpand } from './dashboard.js';
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
@@ -51,6 +51,12 @@ import { setupFormCalculations } from './utils.js';
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') flushPendingCloudPush();
     });
+    // Xoay màn hình / đổi kích thước: áp dụng lại chế độ xem công đoạn của Kanban
+    let kanbanResizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(kanbanResizeTimer);
+      kanbanResizeTimer = setTimeout(filterMobileKanbanColumns, 150);
+    });
     window.addEventListener('pagehide', flushPendingCloudPush);
     window.addEventListener('online', flushPendingCloudPush);
   });
@@ -70,6 +76,8 @@ import { setupFormCalculations } from './utils.js';
       btn.classList.toggle('active', btn.getAttribute('data-target') === targetViewId);
     });
     if (targetViewId === 'dashboard-view') renderDashboardCharts();
+    // Thẻ "Phân bổ khối lượng theo công đoạn" nay nằm ở tab Công Đoạn
+    if (targetViewId === 'kanban-view') renderStageFlow();
     if (targetViewId === 'planning-view') renderPlanningView();
     if (targetViewId === 'press-view') renderPressView();
     if (targetViewId === 'materials-view') renderMaterialView();
@@ -77,10 +85,39 @@ import { setupFormCalculations } from './utils.js';
   }
 
   function filterMobileKanbanColumns() {
+    // Điện thoại/máy tính bảng: xem từng công đoạn (mặc định 1 công đoạn,
+    // vuốt ngang hoặc bấm tab để chuyển). Desktop (≥1024px): luôn hiện đủ 4 cột
+    // và xóa style inline để lưới Kanban tự chia cột.
+    const vw = (typeof window !== 'undefined' && window.innerWidth) || 1280;
+    const showAll = vw >= 1024 || state.activeMobileStage === 'all';
+    let visible = 0;
     document.querySelectorAll('.kanban-column').forEach(col => {
       const stage = col.getAttribute('data-stage-col');
-      col.style.display = (state.activeMobileStage === 'all' || state.activeMobileStage === stage) ? 'flex' : 'none';
+      const show = showAll || state.activeMobileStage === stage;
+      col.style.display = show ? 'flex' : 'none';
+      if (show) visible++;
     });
+    // Khi chỉ xem 1 công đoạn -> cột chiếm trọn chiều ngang bảng
+    const board = document.querySelector('.kanban-board');
+    if (board) board.classList.toggle('single-stage', !showAll && visible === 1);
+  }
+
+  // Chọn công đoạn đang xem trên mobile: đồng bộ tab + lọc cột + hiệu ứng trượt.
+  // direction: 0 = bấm tab (không trượt), 1 = sang công đoạn sau, -1 = công đoạn trước
+  function setActiveMobileStage(stage, direction = 0) {
+    state.activeMobileStage = stage;
+    document.querySelectorAll('.stage-tab').forEach(t => {
+      t.classList.toggle('active', t.getAttribute('data-stage') === stage);
+    });
+    filterMobileKanbanColumns();
+    if (direction !== 0) {
+      const col = document.querySelector(`.kanban-column[data-stage-col="${stage}"]`);
+      if (col) {
+        col.classList.remove('slide-in-left', 'slide-in-right');
+        void col.offsetWidth; // ép reflow để animation chạy lại từ đầu
+        col.classList.add(direction > 0 ? 'slide-in-right' : 'slide-in-left');
+      }
+    }
   }
 
   // Người dùng bấm vào thẻ khóa Vùng Nâng Cao:
@@ -131,6 +168,9 @@ import { setupFormCalculations } from './utils.js';
     const filtered = getFilteredBatches();
     renderQuickStats(filtered);
     renderKanbanBoard(filtered);
+    // Thẻ "Phân bổ khối lượng theo công đoạn" (tab Công Đoạn) + giữ đúng cột đang xem trên điện thoại
+    renderStageFlow();
+    filterMobileKanbanColumns();
     if (state.activeView === 'dashboard-view') renderDashboardCharts();
     if (state.activeView === 'planning-view') renderPlanningView();
     if (state.activeView === 'press-view') renderPressView();
@@ -237,5 +277,6 @@ export {
   getFilteredBatches,
   renderAll,
   renderQuickStats,
+  setActiveMobileStage,
   switchView
 };

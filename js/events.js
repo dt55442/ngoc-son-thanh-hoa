@@ -7,7 +7,7 @@ import { applyImportedShareToken, applyRoleToUI, closeShareModal, copyShareToken
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, openCustomExportModal, openMaterialsExportModal, openPlanningExportModal, openPressExportModal } from './export-xlsx.js';
 import { closeColumnFilters } from './kanban.js';
-import { filterMobileKanbanColumns, renderAll, switchView } from './main.js';
+import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
@@ -68,15 +68,43 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       });
     });
 
-    // Mobile Stage Tabs
+    // Mobile Stage Tabs — chọn công đoạn xem trên điện thoại/máy tính bảng
     document.querySelectorAll('.stage-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        state.activeMobileStage = tab.getAttribute('data-stage');
-        filterMobileKanbanColumns();
+        setActiveMobileStage(tab.getAttribute('data-stage'));
       });
     });
+
+    // ─── VUỐT NGANG CHUYỂN CÔNG ĐOẠN TRÊN BẢNG KANBAN (điện thoại) ───
+    // Vuốt sang trái -> công đoạn kế tiếp (Sấy 1 → Sấy 2 → Kho → Bào Tinh)
+    // Vuốt sang phải -> công đoạn trước
+    const kanbanBoard = document.querySelector('.kanban-board');
+    if (kanbanBoard) {
+      const STAGE_ORDER = ['say1', 'say2', 'kho', 'bao_tinh'];
+      let touchStartX = 0, touchStartY = 0, isTracking = false;
+      kanbanBoard.addEventListener('touchstart', (e) => {
+        if (!e.touches || e.touches.length !== 1) { isTracking = false; return; }
+        isTracking = true;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      kanbanBoard.addEventListener('touchend', (e) => {
+        if (!isTracking) return;
+        isTracking = false;
+        const touch = e.changedTouches && e.changedTouches[0];
+        if (!touch) return;
+        const dx = touch.clientX - touchStartX;
+        const dy = touch.clientY - touchStartY;
+        // Chỉ nhận cú vuốt ngang rõ ràng, không nhầm với cuộn dọc
+        if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+        const curIdx = STAGE_ORDER.indexOf(state.activeMobileStage);
+        if (curIdx === -1) return; // đang ở chế độ "Tất cả" (xem dọc) -> không vuốt
+        const nextIdx = curIdx + (dx < 0 ? 1 : -1);
+        if (nextIdx < 0 || nextIdx >= STAGE_ORDER.length) return;
+        closeColumnFilters();
+        setActiveMobileStage(STAGE_ORDER[nextIdx], dx < 0 ? 1 : -1);
+      }, { passive: true });
+    }
 
     // Dropdown Menu
     const moreBtn = document.getElementById('btn-more-menu');

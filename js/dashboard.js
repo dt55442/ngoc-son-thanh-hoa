@@ -1376,6 +1376,7 @@ export {
   renderCustomCharts,
   renderDashboardCharts,
   renderDashboardZones,
+  renderStageFlow,
   savedMsSelections,
   setupChartDragAndDrop,
   setupChartResize,

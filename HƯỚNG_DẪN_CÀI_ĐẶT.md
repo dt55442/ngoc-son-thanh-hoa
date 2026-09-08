@@ -90,9 +90,10 @@ App hỗ trợ mã đồng bộ nhanh:
 
 ### Dashboard là màn hình mặc định
 Mở app sẽ vào thẳng **Dashboard Tổng Quan** gồm:
-1. **Phân bổ khối lượng theo công đoạn** (Sấy 1 → Sấy 2 → Kho → Bào Tinh)
-2. **VÙNG CƠ BẢN** — biểu đồ chung của tất cả các tab, **mọi người đều xem được**
-4. **VÙNG NÂNG CAO** 🔒 — phân tích chuyên sâu, **chỉ Admin & Ban Quản Lý** (hoặc người được cấp riêng) xem được; người khác thấy thẻ khóa
+1. **VÙNG CƠ BẢN** — biểu đồ chung của tất cả các tab, **mọi người đều xem được**
+2. **VÙNG NÂNG CAO** 🔒 — phân tích chuyên sâu, **chỉ Admin & Ban Quản Lý** (hoặc người được cấp riêng) xem được; người khác thấy thẻ khóa
+
+> 📌 Thẻ KPI **"Phân bổ khối lượng theo công đoạn"** (Sấy 1 → Sấy 2 → Kho → Bào Tinh) đã chuyển sang **tab Công Đoạn**, thu gọn nằm cùng hàng với 2 thẻ KPI tổng hợp. Trên điện thoại, tab Công Đoạn mặc định xem từng công đoạn một — **vuốt ngang** trên bảng (hoặc bấm tab Sấy 1 / Sấy 2 / Kho / Bào tinh) để chuyển công đoạn.
 
 ### Bốn vai trò
 | Vai trò | Xem vùng cơ bản | Xem vùng nâng cao | Chỉnh sửa |

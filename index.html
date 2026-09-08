@@ -245,16 +245,48 @@
             <span class="stat-value" id="quick-bao-batches">0 lô</span>
           </div>
         </div>
+        <div class="quick-stat-divider"></div>
+        <!-- Phân bổ khối lượng theo công đoạn (chuyển từ Dashboard, thu gọn cùng hàng 2 thẻ KPI) -->
+        <div class="quick-stat-group quick-stat-group-flow" title="Phân bổ khối lượng theo công đoạn">
+          <span class="stat-group-label"><i data-lucide="arrow-right-left" style="width:12px;height:12px;"></i> Phân bổ khối lượng theo công đoạn</span>
+          <div class="stage-flow-mini">
+            <div class="flow-mini-row">
+              <span class="flow-mini-name">Sấy 1</span>
+              <div class="flow-mini-track"><div class="step-progress-bar say1" id="flow-bar-say1" style="width:0%"></div></div>
+              <span class="flow-mini-vol" id="flow-vol-say1">0 m³</span>
+              <span class="flow-mini-count" id="flow-count-say1">0 lô - 0 thanh</span>
+            </div>
+            <div class="flow-mini-row">
+              <span class="flow-mini-name">Sấy 2</span>
+              <div class="flow-mini-track"><div class="step-progress-bar say2" id="flow-bar-say2" style="width:0%"></div></div>
+              <span class="flow-mini-vol" id="flow-vol-say2">0 m³</span>
+              <span class="flow-mini-count" id="flow-count-say2">0 lô - 0 thanh</span>
+            </div>
+            <div class="flow-mini-row">
+              <span class="flow-mini-name">Kho</span>
+              <div class="flow-mini-track"><div class="step-progress-bar kho" id="flow-bar-kho" style="width:0%"></div></div>
+              <span class="flow-mini-vol" id="flow-vol-kho">0 m³</span>
+              <span class="flow-mini-count" id="flow-count-kho">0 lô - 0 thanh</span>
+            </div>
+            <div class="flow-mini-row">
+              <span class="flow-mini-name">Bào Tinh</span>
+              <div class="flow-mini-track"><div class="step-progress-bar bao_tinh" id="flow-bar-bao-tinh" style="width:0%"></div></div>
+              <span class="flow-mini-vol" id="flow-vol-bao-tinh">0 m³</span>
+              <span class="flow-mini-count" id="flow-count-bao-tinh">0 lô - 0 thanh</span>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <!-- Mobile Stage Tabs Selector -->
+      <!-- Mobile Stage Tabs Selector — điện thoại mặc định xem 1 công đoạn, vuốt ngang để chuyển -->
       <div class="mobile-stage-tabs">
-        <button class="stage-tab active" data-stage="all">Tất cả</button>
-        <button class="stage-tab" data-stage="say1"><i class="icon-tick" aria-hidden="true"></i> Sấy 1 <span id="badge-say1">0</span></button>
+        <button class="stage-tab" data-stage="all">Tất cả</button>
+        <button class="stage-tab active" data-stage="say1">Sấy 1 <span class="badge-count" id="badge-say1">0</span></button>
         <button class="stage-tab" data-stage="say2">Sấy 2 <span class="badge-count" id="badge-say2">0</span></button>
         <button class="stage-tab" data-stage="kho">Kho <span class="badge-count" id="badge-kho">0</span></button>
         <button class="stage-tab" data-stage="bao_tinh">Bào tinh <span class="badge-count" id="badge-bao-tinh">0</span></button>
       </div>
+      <p class="stage-swipe-hint"><i data-lucide="move-horizontal"></i> Vuốt ngang trên bảng để chuyển công đoạn</p>
 
       <!-- Bộ lọc Ngày / Vị trí / Kích thước nan nằm trên từng cột Kanban -->
 
@@ -515,63 +547,7 @@
     <!-- 2. DASHBOARD VIEW (màn hình mặc định) -->
     <section id="dashboard-view" class="view-panel active">
 
-      <!-- Stage Flow Progression Summary -->
-      <div class="dashboard-card flow-summary-card">
-        <div class="card-header">
-          <h3><i data-lucide="arrow-right-left"></i> Phân Bổ Khối Lượng Theo Công Đoạn</h3>
-        </div>
-        <div class="stage-flow-pipeline">
-          <div class="flow-step say1">
-            <div class="step-info">
-              <span class="step-name">1. Sấy 1</span>
-              <span class="step-vol" id="flow-vol-say1">0 m³</span>
-            </div>
-            <div class="step-progress-track">
-              <div class="step-progress-bar say1" id="flow-bar-say1" style="width: 0%"></div>
-            </div>
-            <span class="step-count" id="flow-count-say1">0 lô - 0 thanh</span>
-          </div>
-
-          <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-
-          <div class="flow-step say2">
-            <div class="step-info">
-              <span class="step-name">2. Sấy 2</span>
-              <span class="step-vol" id="flow-vol-say2">0 m³</span>
-            </div>
-            <div class="step-progress-track">
-              <div class="step-progress-bar say2" id="flow-bar-say2" style="width: 0%"></div>
-            </div>
-            <span class="step-count" id="flow-count-say2">0 lô - 0 thanh</span>
-          </div>
-
-          <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-
-          <div class="flow-step kho">
-            <div class="step-info">
-              <span class="step-name">3. Kho Lưu Trữ</span>
-              <span class="step-vol" id="flow-vol-kho">0 m³</span>
-            </div>
-            <div class="step-progress-track">
-              <div class="step-progress-bar kho" id="flow-bar-kho" style="width: 0%"></div>
-            </div>
-            <span class="step-count" id="flow-count-kho">0 lô - 0 thanh</span>
-          </div>
-
-          <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-
-          <div class="flow-step bao_tinh">
-            <div class="step-info">
-              <span class="step-name">4. Bào Tinh</span>
-              <span class="step-vol" id="flow-vol-bao-tinh">0 m³</span>
-            </div>
-            <div class="step-progress-track">
-              <div class="step-progress-bar bao_tinh" id="flow-bar-bao-tinh" style="width: 0%"></div>
-            </div>
-            <span class="step-count" id="flow-count-bao-tinh">0 lô - 0 thanh</span>
-          </div>
-        </div>
-      </div>
+      <!-- Thẻ "Phân bổ khối lượng theo công đoạn" đã CHUYỂN sang tab Công Đoạn (quick-stats-bar) -->
       <!-- ======================================================= -->
       <!-- BIỂU ĐỒ TĨNH: KẾ HOẠCH vs ĐÃ ÉP (theo sản phẩm)         -->
       <!-- Gộp 2 nguồn dữ liệu — biểu đồ tùy chỉnh không làm được  -->
@@ -1018,9 +994,8 @@
           <canvas id="press-chart"></canvas>
         </div>
         <div class="press-chart-legend-hint">
-          <span><span class="legend-dot" style="background:#94a3b8;"></span> Ván thô (m³)</span>
-          <span><span class="legend-dot" style="background:var(--primary);"></span> Thành phẩm (m³)</span>
-          <span><span style="display:inline-flex;width:13px;height:13px;border-radius:50%;background:#f59e0b;color:#fff;font-size:9px;font-weight:800;align-items:center;justify-content:center;">!</span> Ngày có ghi chú giải trình — di chuột/bấm để xem</span>
+          <span>Cột trái: tổng thể tích ép/ngày (xếp chồng 3 loại) · Cột phải: thành phẩm</span>
+          <span><span style="display:inline-flex;width:13px;height:13px;border-radius:50%;background:#f59e0b;color:#fff;font-size:9px;font-weight:800;align-items:center;justify-content:center;">!</span> Ngày có ghi chú giải trình — bấm vào "!" để xem/sửa</span>
         </div>
         <div class="press-chart-footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
           <button class="btn btn-primary" id="btn-add-press">

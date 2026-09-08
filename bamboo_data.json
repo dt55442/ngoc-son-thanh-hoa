@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-07T09:31:37.090Z",
+  "savedAt": "2026-09-08T03:56:29.527Z",
   "batches": [
     {
       "bambooType": "A1",
@@ -10314,6 +10314,29 @@
       "createdAt": "2026-09-07T09:31:36.714Z"
     },
     {
+      "id": "chart-custom-1788775352492",
+      "title": "Biểu Đồ Mới",
+      "type": "bar",
+      "source": "materials",
+      "zone": "basic",
+      "groupBy": "week",
+      "metric": "amount",
+      "stackBy": "location",
+      "palette": "vibrant",
+      "location": "all",
+      "matType": [
+        "Luồng cây xô"
+      ],
+      "supplier": "all",
+      "year": "all",
+      "week": "all",
+      "dateFrom": "",
+      "dateTo": "",
+      "mpcWeek": "2026-W37",
+      "width": "half",
+      "createdAt": "2026-09-07T10:02:32.492Z"
+    },
+    {
       "stage": [
         "say1",
         "say2",
@@ -10690,6 +10713,38 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-07T08:58:44.796Z"
+    },
+    {
+      "id": "mat-1788778338978-p2mq0",
+      "date": "2026-09-06",
+      "week": "2026-W36",
+      "type": "Luồng cây xô",
+      "supplier": "Hương",
+      "location": "xuong-2",
+      "inputIndex": 15460,
+      "outputIndex": 6530,
+      "weight": 8930,
+      "unitPrice": 1900,
+      "totalAmount": 16967000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-07T10:52:18.979Z"
+    },
+    {
+      "id": "mat-1788778393023-05c0c",
+      "date": "2026-09-06",
+      "week": "2026-W36",
+      "type": "Luồng cây xô",
+      "supplier": "Tế",
+      "location": "xuong-2",
+      "inputIndex": 21190,
+      "outputIndex": 8250,
+      "weight": 12940,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-07T10:53:13.023Z"
     }
   ]
 }

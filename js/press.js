@@ -616,29 +616,54 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       weeks.map(w => `<option value="${w}" ${String(w) === String(state.pressWeekFilter) ? 'selected' : ''}>Tuần ${w}</option>`).join('');
   }
 
-  // Plugin vẽ dấu "!" màu vàng phía trên các ngày có ghi chú giải trình,
-  // đồng thời lưu vị trí (hit-area) để bắt hover/chạm hiển thị nội dung ghi chú.
+  // Plugin vẽ lên biểu đồ ngày:
+  //   • đơn vị "m³" trên đỉnh trục Y
+  //   • tổng thể tích trên đỉnh cột ép (cột trái)
+  //   • dấu "!" vàng cho ngày có ghi chú giải trình (+ lưu hit-area để
+  //     bắt hover/chạm và mở form sửa ghi chú khi bấm)
   let pressNoteMarkerHits = [];
+  const fmtVolShort = (v) => String(+(+v).toFixed(2));
   const pressNoteMarkerPlugin = {
     id: 'pressNoteMarkers',
     afterDatasetsDraw(chart) {
       pressNoteMarkerHits = [];
       const cfg = (chart.options.plugins && chart.options.plugins.pressNoteMarkers) || {};
       const dts = cfg.dates || [];
-      const values = cfg.values || [];
-      const notesByDate = cfg.notesByDate;
-      if (!dts.length || !notesByDate || notesByDate.size === 0) return;
+      const epTotals = cfg.epTotals || [];
+      const fpValues = cfg.fpValues || [];
+      const notesByDate = cfg.notesByDate || new Map();
+      if (!dts.length) return;
       const xs = chart.scales.x;
       const ys = chart.scales.y;
-      if (!xs || !ys) return;
+      if (!xs || !ys || !chart.chartArea) return;
       const ctx = chart.ctx;
-      const top = chart.chartArea ? chart.chartArea.top : 0;
+      const top = chart.chartArea.top;
+      const epMeta = chart.getDatasetMeta(0); // cột ép xếp chồng 3 loại
+      const fpMeta = chart.getDatasetMeta(3); // cột thành phẩm
+
+      // Đơn vị "m³" nằm trên cùng của trục Y (không lặp lại ở từng vạch)
+      ctx.save();
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('m³', chart.chartArea.left - 6, top - 4);
+      ctx.restore();
+
+      // Lượt 1: dấu "!" vàng cho các ngày có ghi chú giải trình
+      const markerByDate = {};
       dts.forEach((d, i) => {
         const text = notesByDate.get(d);
         if (!text) return;
-        const x = xs.getPixelForValue(i);
-        let y = ys.getPixelForValue(values[i] || 0) - 14;
+        const epVal = epTotals[i] || 0;
+        const fpVal = fpValues[i] || 0;
+        const useFp = fpVal > epVal;
+        const meta = useFp ? fpMeta : epMeta;
+        const bar = meta && meta.data ? meta.data[i] : null;
+        const x = bar ? bar.x : xs.getPixelForValue(i);
+        let y = ys.getPixelForValue(useFp ? fpVal : epVal) - 14;
         if (y < top + 12) y = top + 12;
+        markerByDate[d] = { x, y, onEp: !useFp };
         pressNoteMarkerHits.push({ x, y, r: 12, date: d, text });
         ctx.save();
         ctx.beginPath();
@@ -653,6 +678,24 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('!', x, y + 0.5);
+        ctx.restore();
+      });
+
+      // Lượt 2: tổng thể tích trên đỉnh cột ép bên trái (né dấu "!" nếu có)
+      dts.forEach((d, i) => {
+        const epVal = epTotals[i] || 0;
+        if (epVal <= 0) return;
+        const epBar = epMeta && epMeta.data ? epMeta.data[i] : null;
+        if (!epBar) return;
+        let y = ys.getPixelForValue(epVal) - 4;
+        const m = markerByDate[d];
+        if (m && m.onEp && m.y - 10 < y) y = m.y - 10;
+        ctx.save();
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(fmtVolShort(epVal), epBar.x, y);
         ctx.restore();
       });
     }
@@ -683,11 +726,21 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     }
 
     // Gom thể tích theo ngày (TỔNG của các loại ván thô/thành phẩm trong ngày)
-    const byDay = {}; // date -> { vt, fp }
+    // Phân loại từng lượt ép trong ngày thành 3 loại thể tích ép:
+    //   Loại 1 — ép ra CẢ ván thô & thành phẩm (thể tích = ván thô tạo ra)
+    //   Loại 2 — chỉ ép ván thô, chưa ép thành phẩm (thể tích = ván thô tạo ra)
+    //   Loại 3 — chỉ ép thành phẩm từ ván thô đã ép trước (thể tích = ván thô đầu vào)
+    const byDay = {}; // date -> { t1, t2, t3, fp }
     records.forEach(r => {
-      if (!byDay[r.date]) byDay[r.date] = { vt: 0, fp: 0 };
-      (r.vanTho || []).forEach(l => { byDay[r.date].vt += dimVolume(l.vtDim, l.vtQty); });
-      byDay[r.date].fp += dimVolume(r.fpDim, r.finishedQty);
+      if (!byDay[r.date]) byDay[r.date] = { t1: 0, t2: 0, t3: 0, fp: 0 };
+      const d = byDay[r.date];
+      const vt = (r.vanTho || []).reduce((s, l) => s + dimVolume(l.vtDim, l.vtQty), 0);
+      const fp = dimVolume(r.fpDim, r.finishedQty);
+      const inputVt = (r.sticks || []).reduce((s, x) => s + dimVolume(x.nanKey, x.sticks), 0);
+      if (vt > 0 && fp > 0) d.t1 += vt;
+      else if (vt > 0) d.t2 += vt;
+      else if (fp > 0) d.t3 += inputVt;
+      d.fp += fp;
     });
 
     const dates = Object.keys(byDay).sort();
@@ -711,8 +764,6 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       labels.push(isWeekStart ? [`Tuần ${wk}`, fmtDateDM(d)] : ['', fmtDateDM(d)]);
     });
 
-    const VT_COLOR = '#94a3b8';
-    const FP_COLOR = '#15803d';
     const notesByDate = getPressNotesByDate();
     const ctx = canvas.getContext('2d');
     state.pressChartInstance = new Chart(ctx, {
@@ -721,22 +772,24 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       data: {
         labels,
         datasets: [
-          { label: 'Ván thô (m³)', data: dates.map(d => +byDay[d].vt.toFixed(4)), backgroundColor: VT_COLOR, borderRadius: 4 },
-          { label: 'Thành phẩm (m³)', data: dates.map(d => +byDay[d].fp.toFixed(4)), backgroundColor: FP_COLOR, borderRadius: 4 }
+          { label: 'Có thể chuyển TP ngay', data: dates.map(d => +(byDay[d].t1).toFixed(4)), backgroundColor: '#0ea5e9', stack: 'ep', borderRadius: 4 },
+          { label: 'Chỉ BTP', data: dates.map(d => +(byDay[d].t2).toFixed(4)), backgroundColor: '#94a3b8', stack: 'ep', borderRadius: 4 },
+          { label: 'BTP sang TP', data: dates.map(d => +(byDay[d].t3).toFixed(4)), backgroundColor: '#8b5cf6', stack: 'ep', borderRadius: 4 },
+          { label: 'Thành phẩm (m³)', data: dates.map(d => +(byDay[d].fp).toFixed(4)), backgroundColor: '#15803d', stack: 'fp', borderRadius: 4 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         // Bấm/chạm vào CỘT → highlight các dòng cùng ngày trong bảng lượt ép;
-        // bấm/chạm vào dấu "!" vàng → hiển thị nội dung ghi chú giải trình
+        // bấm/chạm vào dấu "!" vàng → mở form sửa ghi chú giải trình ngày đó
         onClick: (evt, elements) => {
           const markerHit = findPressNoteMarkerHit(evt);
           if (markerHit) {
-            showPressNotePopover(markerHit.text, evt.native ? evt.native.clientX : 0, evt.native ? evt.native.clientY : 0, markerHit.date, null);
+            hidePressNotePopover();
+            openPressNoteModal(markerHit.date); // tự thoát toàn màn hình nếu đang bật
             return;
           }
-          hidePressNotePopover();
           if (!elements || !elements.length) return;
           const date = dates[elements[0].index];
           if (date) highlightPressTableRowsByDate(date);
@@ -754,7 +807,8 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
         plugins: {
           pressNoteMarkers: {
             dates,
-            values: dates.map(d => Math.max(byDay[d].vt, byDay[d].fp)),
+            epTotals: dates.map(d => +(byDay[d].t1 + byDay[d].t2 + byDay[d].t3).toFixed(4)),
+            fpValues: dates.map(d => +(byDay[d].fp).toFixed(4)),
             notesByDate
           },
           legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
@@ -770,8 +824,8 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
           }
         },
         scales: {
-          x: { beginAtZero: true, ticks: { font: { size: 10 } } },
-          y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => v + ' m³' } }
+          x: { beginAtZero: true, stacked: true, ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, stacked: true, ticks: { font: { size: 10 }, callback: (v) => Number(v).toFixed(1) } }
         }
       }
     });
@@ -928,6 +982,11 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
   // ── MODAL: tạo/sửa/xóa ghi chú giải trình ──
   function openPressNoteModal(date) {
     if (!requireEditPermission()) return;
+    // Thoát chế độ toàn màn hình của biểu đồ (nếu đang bật) để form ghi chú
+    // hiển thị đúng trên điện thoại (fullscreen chỉ render nội dung thẻ biểu đồ)
+    const pressCanvas = document.getElementById('press-chart');
+    const chartCard = pressCanvas && pressCanvas.closest ? pressCanvas.closest('.press-chart-card') : null;
+    if (chartCard && chartCard.classList.contains('chart-expanded')) collapseChartCard(chartCard);
     const modal = document.getElementById('modal-press-note');
     if (!modal) return;
     const form = document.getElementById('press-note-form');

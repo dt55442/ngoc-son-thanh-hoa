@@ -36,7 +36,7 @@
     users: [],
     batches: [],
     activeView: 'dashboard-view', // Dashboard là màn hình hiển thị ban đầu
-    activeMobileStage: 'all',
+    activeMobileStage: 'say1', // Điện thoại mặc định xem 1 công đoạn (vuốt ngang / bấm tab để chuyển)
     customCharts: [],
     customChartInstances: {},
     previewChartInstance: null,

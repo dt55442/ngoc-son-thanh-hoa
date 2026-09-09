@@ -24,8 +24,6 @@
 
   <!-- Local Chart.js (OFFLINE) -->
   <script src="vendor/chart.umd.js"></script>
-  <script src="vendor/hammer.min.js"></script>
-  <script src="vendor/chartjs-plugin-zoom.min.js"></script>
 
   <!-- Local SheetJS xlsx (OFFLINE) -->
   <script src="vendor/xlsx.full.min.js"></script>
@@ -619,7 +617,7 @@
       <div class="planning-card press-chart-card pv-card" id="material-plan-chart-card">
         <div class="planning-card-header">
           <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)</h4>
-          <span class="pv-cap-hint">Chụm 2 ngón / lăn chuột để phóng to • Kéo ngang để dịch • Nhấp đúp để về mặc định</span>
+          <span class="pv-cap-hint">Vuốt trái/phải để xem thêm (2 tuần ~42 cột máy tính · 1 tuần ~21 cột điện thoại)</span>
           <div class="pv-toolbar">
             <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
               <button type="button" class="pv-week-btn" id="mpc-week-prev" title="Tuần trước"><i data-lucide="chevron-left"></i></button>
@@ -1026,6 +1024,10 @@
           <button class="btn btn-outline" id="btn-toggle-press-notes" title="Hiện nội dung tất cả ghi chú giải trình ngay trên biểu đồ">
             <i data-lucide="sticky-note"></i> <span id="btn-toggle-press-notes-label">Hiện Ghi Chú</span>
           </button>
+          <span style="flex-basis:100%; text-align:center; font-size:0.72rem; color:var(--text-muted);">
+            <i data-lucide="move-horizontal" style="width:12px;height:12px;vertical-align:-2px;"></i>
+            Vuốt trái/phải trên biểu đồ để xem thêm các ngày (máy tính: tối đa 14 ngày ≈ 2 tuần · điện thoại: 7 ngày ≈ 1 tuần)
+          </span>
         </div>
       </div>
 
@@ -1056,6 +1058,40 @@
             <tbody id="press-table-body">
               <!-- Populated by JS -->
             </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BÀO TINH ↔ ĐÃ ÉP: HIỆU SUẤT CHUYỂN ĐỔI THEO TUẦN -->
+      <div class="planning-card" id="baotinh-eff-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="git-merge"></i> Bào Tinh ↔ Đã Ép — Hiệu Suất Chuyển Đổi Theo Tuần</h4>
+          <div class="planning-controls">
+            <div class="filter-item">
+              <label for="bt-year-filter">Năm:</label>
+              <select id="bt-year-filter"></select>
+            </div>
+          </div>
+        </div>
+        <p style="margin:-4px 14px 10px; font-size:0.75rem; color:var(--text-muted);">
+          <strong>Đã bào tinh</strong> = số thanh chuyển vào Bào Tinh theo tuần (lịch sử chuyển công đoạn) ·
+          <strong>Đã ép</strong> = số thanh đạt dùng cho lượt ép thực tế ·
+          <strong>Còn lại (lũy kế)</strong> = Đã bào tinh − Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận ·
+          <strong>Hiệu suất</strong> = Đã ép ÷ Đã bào tinh (lũy kế).
+        </p>
+        <div class="table-responsive">
+          <table class="data-table planning-table" id="baotinh-eff-table">
+            <thead>
+              <tr>
+                <th>Tuần</th>
+                <th>Đã Bào Tinh (thanh)</th>
+                <th>Đã Ép (thanh)</th>
+                <th>Còn Lại Lũy Kế (Chưa Dùng + Lỗi)</th>
+                <th>Hiệu Suất (Lũy Kế)</th>
+              </tr>
+            </thead>
+            <tbody id="baotinh-eff-body"></tbody>
+            <tfoot id="baotinh-eff-foot"></tfoot>
           </table>
         </div>
       </div>
@@ -1908,6 +1944,15 @@
             </select>
           </div>
 
+          <!-- Ngày vào Bào Tinh thực tế (chỉ hiện khi công đoạn = Bào Tinh) -->
+          <div class="form-group" id="form-baotinh-date-group" style="display:none;">
+            <label for="form-baotinh-date">Ngày Vào Bào Tinh (Thực Tế)</label>
+            <input type="date" id="form-baotinh-date">
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+              Sửa lại nếu ngày bào tinh thật khác ngày ghi nhận trên hệ thống.
+            </div>
+          </div>
+
           <!-- Vị trí -->
           <div class="form-group">
             <label for="form-location">Vị Trí (Kệ/Kho/Máy) <span class="required">*</span></label>
@@ -2020,6 +2065,15 @@
               <option value="bao_tinh">4. Bào Tinh</option>
               <option value="say1">1. Sấy 1</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Ngày vào Bào Tinh thực tế (chỉ hiện khi chuyển sang Bào Tinh) -->
+        <div class="form-group" id="transfer-baotinh-date-group" style="display:none;">
+          <label for="transfer-baotinh-date"><i data-lucide="calendar-clock" style="width:12px;height:12px;"></i> Ngày Vào Bào Tinh (Thực Tế)</label>
+          <input type="date" id="transfer-baotinh-date">
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+            Mặc định là hôm nay — sửa lại nếu việc bào tinh thực tế diễn ra sớm hơn ngày nhập hệ thống.
           </div>
         </div>
 
@@ -2691,6 +2745,36 @@
     </div>
   </div>
 
+  <!-- MODAL: CHI TIẾT TÍNH TOÁN Ô MA TRẬN KẾ HOẠCH (bấm vào ô TỔNG TỒN) -->
+  <div class="modal-overlay" id="modal-matrix-trace">
+    <div class="modal-card" style="max-width:760px; width:94vw;">
+      <div class="modal-header">
+        <h3 id="matrix-trace-title"><i data-lucide="calculator"></i> Chi Tiết Tính Toán</h3>
+        <button class="modal-close-btn" id="btn-close-matrix-trace"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding:16px 20px 20px;">
+        <div id="matrix-trace-expression" style="background:#f1f5f9; border:1px solid var(--border-color); border-radius:8px; padding:10px 14px; font-size:0.85rem; line-height:1.6; margin-bottom:12px;"></div>
+        <div class="table-responsive" style="max-height:55vh; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px;">
+          <table class="data-table planning-table" id="matrix-trace-table">
+            <thead>
+              <tr>
+                <th>Tuần</th>
+                <th>+ Nhập thực tế</th>
+                <th>+ Dự kiến</th>
+                <th>− Trượt (tuần đó)</th>
+                <th>= TỔNG TỒN hiển thị</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-trace-body"></tbody>
+          </table>
+        </div>
+        <p style="margin:10px 0 0; font-size:0.75rem; color:var(--text-muted);">
+          Nhập thực tế = các lô nan nhập về đúng tuần đó · Trượt: tuần đã qua trừ <strong>Đã bào tinh (thực tế)</strong>, từ tuần hiện tại trừ <strong>Cần (kế hoạch)</strong> · TỔNG TỒN = lũy kế đầu tuần + Nhập + Dự kiến.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating bar: chuyển nhiều lô cùng lúc -->
   <div class="multi-transfer-bar" id="multi-transfer-bar">
     <div class="mtb-info">
@@ -2707,6 +2791,7 @@
         <option value="kho">3. Kho Lưu Trữ</option>
         <option value="bao_tinh">4. Bào Tinh</option>
       </select>
+      <input type="date" id="mtb-baotinh-date" style="display:none;" title="Ngày vào Bào Tinh thực tế — áp dụng cho mọi lô chuyển sang Bào Tinh. Mặc định hôm nay, sửa lại nếu bào tinh diễn ra sớm hơn ngày nhập hệ thống.">
       <input type="text" id="mtb-new-location" placeholder="Vị trí cho mọi lô (trống = giữ cũ)" title="Vị Trí mới áp dụng cho TẤT CẢ các lô được chuyển. Để trống nếu muốn giữ vị trí hiện có của từng lô." autocomplete="off">
       <input type="text" id="mtb-new-notes" placeholder="Ghi chú cho mọi lô (trống = giữ cũ)" title="Ghi Chú mới áp dụng cho TẤT CẢ các lô được chuyển. Để trống nếu muốn giữ ghi chú hiện có của từng lô." autocomplete="off">
       <button type="button" class="btn btn-success btn-sm" id="btn-mtb-confirm">

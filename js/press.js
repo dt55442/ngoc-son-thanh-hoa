@@ -3,9 +3,9 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { collapseChartCard } from './dashboard.js';
-import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, toggleRateTableCollapse } from './planning.js';
+import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
-import { escapeHTML, getISOWeekString, showToast } from './utils.js';
+import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
 
   // =============================================================
   // SẢN LƯỢNG ÉP VÁN (PRESS VIEW)
@@ -569,12 +569,97 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     showToast('Đã xóa lượt ép', 'info');
   }
 
+  // ─── BẢNG: BÀO TINH ↔ ĐÃ ÉP — HIỆU SUẤT CHUYỂN ĐỔI THEO TUẦN ──
+  // Cân đối đầu ra công đoạn Bào Tinh với lượng thanh đạt dùng ép thực tế:
+  //   Đã bào tinh (tuần) = số thanh chuyển vào Bào Tinh theo lịch sử chuyển công đoạn
+  //   Đã ép (tuần)       = số thanh đạt dùng cho lượt ép thực tế (sticks) trong tuần
+  //   Còn lại (lũy kế)   = Σ Đã bào tinh − Σ Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận
+  //   Hiệu suất          = Σ Đã ép ÷ Σ Đã bào tinh (lũy kế, %)
+  // Dữ liệu thuần (dùng cho cả render bảng & kiểm thử)
+  function computeBaoTinhEfficiencyByWeek(yearNum) {
+    const year = parseInt(yearNum);
+    const convByWeek = getBaoTinhConvertedByWeek(year);
+    const pressedByWeek = getActualPressedByWeek(year);
+    const sumVals = (o) => Object.values(o || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+
+    const weekSet = new Set();
+    Object.keys(convByWeek).forEach(w => weekSet.add(Number(w)));
+    Object.keys(pressedByWeek).forEach(w => weekSet.add(Number(w)));
+
+    let cumConv = 0, cumPressed = 0;
+    const rows = [...weekSet].sort((a, b) => a - b).map(w => {
+      const conv = sumVals(convByWeek[w]);
+      const pressed = sumVals(pressedByWeek[w]);
+      cumConv += conv; cumPressed += pressed;
+      return {
+        week: w,
+        conv, pressed,
+        cumConv, cumPressed,
+        remaining: cumConv - cumPressed,
+        effPct: cumConv > 0 ? Math.round((cumPressed / cumConv) * 1000) / 10 : null
+      };
+    });
+
+    // Tồn Bào Tinh hiện tại (thanh đạt chờ ép) quy về năm chuyển đổi + ước tính thanh lỗi:
+    //   Thanh lỗi ≈ Σ Đã bào tinh − Σ Đã ép − Tồn Bào Tinh hiện tại (kẹp ≥ 0)
+    const stockByYear = getBaoTinhStockByConversionYear();
+    const currentBtStock = stockByYear[year] || 0;
+    const estDefect = Math.max(0, cumConv - cumPressed - currentBtStock);
+    return { rows, totalConv: cumConv, totalPressed: cumPressed, currentBtStock, estDefect };
+  }
+
+  // Render bảng theo dõi hiệu suất chuyển đổi Bào Tinh + bộ lọc năm (tab Ép Ván)
+  function renderBaoTinhEffTable() {
+    const body = document.getElementById('baotinh-eff-body');
+    const foot = document.getElementById('baotinh-eff-foot');
+    const yearSel = document.getElementById('bt-year-filter');
+    if (!body || !foot || !yearSel) return;
+
+    // Điền năm: năm hiện tại + các năm có lô chuyển bào tinh / lượt ép
+    const years = new Set([new Date().getFullYear()]);
+    Object.keys(getBaoTinhStockByConversionYear()).forEach(y => years.add(Number(y)));
+    state.pressRecords.forEach(r => years.add(Number(r.year || getDateYear(r.date))));
+    const yearList = [...years].filter(y => !isNaN(y)).sort((a, b) => b - a);
+    if (state.btEffYear == null || !yearList.includes(Number(state.btEffYear))) {
+      state.btEffYear = yearList.includes(new Date().getFullYear()) ? new Date().getFullYear() : yearList[0];
+    }
+    yearSel.innerHTML = yearList
+      .map(y => `<option value="${y}"${Number(state.btEffYear) === y ? ' selected' : ''}>Năm ${y}</option>`).join('');
+
+    const data = computeBaoTinhEfficiencyByWeek(state.btEffYear);
+    const fmt = (v) => (Number(v) || 0).toLocaleString('vi-VN');
+    if (!data.rows.length) {
+      body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa có dữ liệu bào tinh / lượt ép trong năm ${state.btEffYear}</td></tr>`;
+      foot.innerHTML = '';
+      initLucide();
+      return;
+    }
+    body.innerHTML = data.rows.map(r => `
+      <tr>
+        <td><strong>Tuần ${r.week}</strong></td>
+        <td>${fmt(r.conv)}</td>
+        <td>${fmt(r.pressed)}</td>
+        <td title="Σ Đã bào tinh − Σ Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận">${fmt(r.remaining)}</td>
+        <td style="${r.effPct != null && r.effPct < 80 ? 'color:#dc2626; font-weight:600;' : ''}">${r.effPct != null ? r.effPct.toLocaleString('vi-VN') + '%' : '—'}</td>
+      </tr>`).join('');
+    foot.innerHTML = `
+      <tr>
+        <td style="font-weight:700;">TỔNG CỘNG (lũy kế)</td>
+        <td style="font-weight:700;">${fmt(data.totalConv)}</td>
+        <td style="font-weight:700;">${fmt(data.totalPressed)}</td>
+        <td style="font-weight:700;" title="Đã bào tinh − Đã ép. Trong đó: Tồn Bào Tinh hiện tại (đạt chờ ép) = ${fmt(data.currentBtStock)} thanh → ước tính thanh lỗi = ${fmt(data.estDefect)} thanh">${fmt(data.totalConv - data.totalPressed)}</td>
+        <td style="font-weight:700;">${data.totalConv > 0 ? (Math.round(data.totalPressed / data.totalConv * 1000) / 10).toLocaleString('vi-VN') + '%' : '—'}</td>
+      </tr>`;
+    initLucide();
+  }
+
   // Render toàn bộ view Sản Lượng Ép Ván
   function renderPressView() {
     populatePressYearFilter();
     populatePressWeekFilter();
     renderPressChart();
     renderPressTable();
+    renderBaoTinhEffTable();
     initLucide();
   }
 
@@ -795,15 +880,13 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     }) || null;
   }
 
-  // Biểu đồ: thể tích ván thô & thành phẩm mỗi ngày, nhóm theo tuần (label 2 dòng)
-  function renderPressChart() {
-    const canvas = document.getElementById('press-chart');
-    if (!canvas || !window.Chart) return;
-    // Đồng bộ nhãn nút "Hiện Ghi Chú" với trạng thái đang lưu
-    updatePressNotesToggleButton();
-    if (state.pressChartInstance) { state.pressChartInstance.destroy(); state.pressChartInstance = null; }
-
-    // Lọc theo năm
+  // ── Cửa sổ hiển thị của biểu đồ ép ván ──
+  // Chỉ vẽ tối đa 14 cột (≈2 tuần) trên máy tính / 7 cột (≈1 tuần) trên điện thoại;
+  // vuốt trái/phải (chuột hoặc cảm ứng) trên biểu đồ để xem thêm các ngày khác.
+  function pressWinSize() {
+    return uiChartWinSize(); // 14 cột máy tính / 7 cột điện thoại (dùng chung utils)
+  }
+  function pressChartFilteredRecords() {
     let records = state.pressRecords.filter(r => r.date);
     if (state.pressYearFilter !== 'all') {
       records = records.filter(r => String(r.year || getDateYear(r.date)) === String(state.pressYearFilter));
@@ -811,6 +894,99 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     if (state.pressWeekFilter !== 'all') {
       records = records.filter(r => pressRecordWeek(r) === parseInt(state.pressWeekFilter));
     }
+    return records;
+  }
+  // Cửa sổ hiện tại: { start (cột đầu), size (số cột), total (tổng ngày có dữ liệu) }
+  // Mặc định neo CUỐI (hiện các tuần mới nhất); start được kẹp vào [0, total − size].
+  function pressChartWindow(total) {
+    const size = Math.max(1, Math.min(pressWinSize(), Math.max(total, 1)));
+    const raw = state.pressChartWinStart;
+    let start = (raw == null) ? NaN : Number(raw); // null/undefined → mặc định neo cuối
+    if (!Number.isFinite(start) || start < 0) start = Math.max(0, total - size);
+    start = Math.min(Math.max(start, 0), Math.max(0, total - size));
+    return { start, size, total };
+  }
+
+  // ── Vuốt trái/phải trên biểu đồ (chuột/cảm ứng) → dịch cửa sổ hiển thị ──
+  // Dùng chung attachChartPanDrag (utils.js) — cùng cơ chế với biểu đồ Nguyên liệu.
+  let pressChartPan = null;
+  function pressChartFilteredDates() {
+    return [...new Set(pressChartFilteredRecords().map(r => r.date))].sort();
+  }
+  function attachPressChartDrag() {
+    const canvas = document.getElementById('press-chart');
+    if (!canvas) return;
+    if (!pressChartPan) {
+      const total = () => pressChartFilteredDates().length;
+      pressChartPan = attachChartPanDrag(canvas, {
+        canDrag: () => total() > pressChartWindow(total()).size,
+        getStart: () => pressChartWindow(total()).start,
+        setStart: (v) => { state.pressChartWinStart = v; },
+        clamp: (v) => {
+          const t = total();
+          return Math.min(Math.max(v, 0), Math.max(0, t - pressChartWindow(t).size));
+        },
+        span: () => pressChartWindow(total()).size,
+        onShift: () => renderPressChart()
+      });
+    }
+    return pressChartPan;
+  }
+
+  // ── Dải màu tuần trên trục X: các ngày cùng tuần chung 1 dải, xen kẽ màu theo
+  // tuần, tên "Tuần X" căn giữa trong dải (vẽ trong vùng chừa dưới trục X) ──
+  const pressWeekBandPlugin = {
+    id: 'pressWeekBands',
+    afterDraw(chart, args, opts) {
+      const groups = opts && opts.groups;
+      const xScale = chart.scales && chart.scales.x;
+      const area = chart.chartArea;
+      if (!groups || !groups.length || !xScale || !area) return;
+      const count = groups[groups.length - 1].i1 + 1;
+      const half = count > 1 ? Math.abs(xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2 : area.width / 2;
+      const H = 20;
+      const y1 = chart.height - 4;
+      const y0 = y1 - H;
+      const colors = [
+        { fill: 'rgba(14,165,233,0.16)', text: '#0369a1' },
+        { fill: 'rgba(139,92,246,0.16)', text: '#6d28d9' }
+      ];
+      const ctx = chart.ctx;
+      ctx.save();
+      groups.forEach((g, gi) => {
+        const c = colors[gi % 2];
+        const x0 = Math.max(area.left, xScale.getPixelForValue(g.i0) - half + 1);
+        const x1 = Math.min(area.right, xScale.getPixelForValue(g.i1) + half - 1);
+        if (x1 - x0 < 2) return;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') ctx.roundRect(x0, y0, x1 - x0, H, 5);
+        else ctx.rect(x0, y0, x1 - x0, H);
+        ctx.fillStyle = c.fill;
+        ctx.fill();
+        ctx.fillStyle = c.text;
+        ctx.font = '600 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`Tuần ${g.week}`, (x0 + x1) / 2, y0 + H / 2);
+      });
+      ctx.restore();
+    }
+  };
+
+  // Biểu đồ: thể tích ván thô & thành phẩm tương đương mỗi ngày, nhóm theo tuần
+  function renderPressChart() {
+    const canvas = document.getElementById('press-chart');
+    if (!canvas || !window.Chart) return;
+    attachPressChartDrag(); // vuốt trái/phải để xem thêm các ngày (gắn 1 lần)
+    // Đồng bộ nhãn nút "Hiện Ghi Chú" với trạng thái đang lưu
+    updatePressNotesToggleButton();
+    if (state.pressChartInstance) { state.pressChartInstance.destroy(); state.pressChartInstance = null; }
+
+    const records = pressChartFilteredRecords();
+    const allDates = pressChartFilteredDates();
+    const win = pressChartWindow(allDates.length);
+    const dates = allDates.slice(win.start, win.start + win.size); // chỉ vẽ cửa sổ hiện tại
+    const inWindow = new Set(dates);
 
     // Gom thể tích theo ngày (TỔNG của các loại ván thô/thành phẩm trong ngày)
     // Phân loại từng lượt ép trong ngày thành 3 loại thể tích ép:
@@ -819,6 +995,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     //   Loại 3 — chỉ ép thành phẩm từ ván thô đã ép trước (thể tích = ván thô đầu vào)
     const byDay = {}; // date -> { t1, t2, t3, fp }
     records.forEach(r => {
+      if (!inWindow.has(r.date)) return; // ngày ngoài cửa sổ hiển thị
       if (!byDay[r.date]) byDay[r.date] = { t1: 0, t2: 0, t3: 0, fp: 0 };
       const d = byDay[r.date];
       const vt = (r.vanTho || []).reduce((s, l) => s + dimVolume(l.vtDim, l.vtQty), 0);
@@ -830,7 +1007,6 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       d.fp += fp;
     });
 
-    const dates = Object.keys(byDay).sort();
     if (dates.length === 0) {
       const ctx = canvas.getContext('2d');
       state.pressChartInstance = new Chart(ctx, {
@@ -841,36 +1017,41 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       return;
     }
 
-    // Nhãn nhóm tuần: ngày đầu tuần có dòng "Tuần X", các ngày sau dòng rỗng
-    const labels = [];
-    let prevWeek = null;
-    dates.forEach(d => {
+    // Nhãn trục X: ngày (dd/mm) — tên tuần hiển thị trong DẢI MÀU dưới trục (plugin)
+    const labels = dates.map(d => fmtDateDM(d));
+
+    // Nhóm ngày theo tuần → dải màu xen kẽ dưới trục X, tên "Tuần X" căn giữa
+    const weekGroups = [];
+    dates.forEach((d, i) => {
       const wk = getWeekNumber(getISOWeekString(d));
-      const isWeekStart = wk !== prevWeek;
-      prevWeek = wk;
-      labels.push(isWeekStart ? [`Tuần ${wk}`, fmtDateDM(d)] : ['', fmtDateDM(d)]);
+      const last = weekGroups[weekGroups.length - 1];
+      if (last && last.week === wk) last.i1 = i;
+      else weekGroups.push({ week: wk, i0: i, i1: i });
     });
 
     const notesByDate = getPressNotesByDate();
     const ctx = canvas.getContext('2d');
     state.pressChartInstance = new Chart(ctx, {
       type: 'bar',
-      plugins: [pressNoteMarkerPlugin],
+      plugins: [pressNoteMarkerPlugin, pressWeekBandPlugin],
       data: {
         labels,
         datasets: [
           { label: 'Có thể chuyển TP ngay', data: dates.map(d => +(byDay[d].t1).toFixed(4)), backgroundColor: '#0ea5e9', stack: 'ep', borderRadius: 4 },
           { label: 'Chỉ BTP', data: dates.map(d => +(byDay[d].t2).toFixed(4)), backgroundColor: '#94a3b8', stack: 'ep', borderRadius: 4 },
           { label: 'BTP sang TP', data: dates.map(d => +(byDay[d].t3).toFixed(4)), backgroundColor: '#8b5cf6', stack: 'ep', borderRadius: 4 },
-          { label: 'Thành phẩm (m³)', data: dates.map(d => +(byDay[d].fp).toFixed(4)), backgroundColor: '#15803d', stack: 'fp', borderRadius: 4 }
+          { label: 'Thành phẩm tương đương (m³)', data: dates.map(d => +(byDay[d].fp).toFixed(4)), backgroundColor: '#15803d', stack: 'fp', borderRadius: 4 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // Chừa dải dưới trục X cho dải màu tuần (plugin pressWeekBands)
+        layout: { padding: { bottom: 28 } },
         // Bấm/chạm vào CỘT → highlight các dòng cùng ngày trong bảng lượt ép;
         // bấm/chạm vào dấu "!" vàng → mở form sửa ghi chú giải trình ngày đó
         onClick: (evt, elements) => {
+          if (pressChartPan && pressChartPan.consumeMoved()) return; // vừa vuốt xong → không phải click
           const markerHit = findPressNoteMarkerHit(evt);
           if (markerHit) {
             hidePressNotePopover();
@@ -882,6 +1063,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
           if (date) highlightPressTableRowsByDate(date);
         },
         onHover: (evt, elements) => {
+          if (pressChartPan && (pressChartPan.dragging() || pressChartPan.consumeMoved())) { hidePressNotePopover(); return; } // đang/vừa vuốt
           const target = evt && evt.native ? evt.native.target : null;
           const markerHit = findPressNoteMarkerHit(evt);
           if (target) target.style.cursor = markerHit ? 'help' : ((elements && elements.length) ? 'pointer' : 'default');
@@ -899,6 +1081,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
             notesByDate,
             showText: !!state.pressNotesExpanded // nút "Hiện Ghi Chú" đang bật → vẽ nội dung tất cả ghi chú
           },
+          pressWeekBands: { groups: weekGroups }, // dải màu tuần dưới trục X
           legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
           tooltip: {
             callbacks: {
@@ -1673,6 +1856,7 @@ export {
   closePressNoteModal,
   collectPressLines,
   collectPressSticks,
+  computeBaoTinhEfficiencyByWeek,
   computeFinishedQtyFromLines,
   computeFpDimFromProduct,
   deletePressRecord,
@@ -1695,7 +1879,9 @@ export {
   populatePressInputTypeList,
   populatePressWeekFilter,
   populatePressYearFilter,
+  pressChartWindow,
   pressRecordWeek,
+  pressWinSize,
   recalcPressQuantities,
   refreshPressProductSelect,
   removePressLine,
@@ -1704,6 +1890,7 @@ export {
   planCapacityPct,
   planCapacityWeeks,
   planCapacityWinSize,
+  renderBaoTinhEffTable,
   renderPlanVsPressChart,
   renderPlanCapacityChart,
   shiftPlanCapacityWindow,

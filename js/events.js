@@ -8,8 +8,8 @@ import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal
 import { closeCustomExportModal, closeExportPreviewModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth } from './export-xlsx.js';
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
-import { closeMaterialRateModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, closePressModal, closePressNoteModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
+import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
+import { addPressLine, addPressStick, closePressModal, closePressNoteModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { applyQcWeekToAll, closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
 import { closeEmployeeImportModal, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, doEmployeeImport, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openRecruitmentModal, pickLeaveEmployee, renderLeaveEmployeeSuggestions, renderHrView } from './hr.js';
@@ -219,6 +219,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-transfer',  'click', closeTransferModal);
     safeOn('btn-cancel-transfer', 'click', closeTransferModal);
     safeOn('transfer-form',       'submit', handleTransferSubmit);
+    // ── Ngày Vào Bào Tinh thực tế: chỉ hiện khi công đoạn đích được chọn là Bào Tinh ──
+    const syncBtDateVisibility = (selectId, targetId) => {
+      const sel = document.getElementById(selectId);
+      const target = document.getElementById(targetId);
+      if (sel && target) target.style.display = (sel.value === 'bao_tinh') ? '' : 'none';
+    };
+    safeOn('transfer-target-stage', 'change', () => syncBtDateVisibility('transfer-target-stage', 'transfer-baotinh-date-group'));
+    safeOn('form-stage',            'change', () => syncBtDateVisibility('form-stage',            'form-baotinh-date-group'));
+    safeOn('mtb-target-stage',      'change', () => syncBtDateVisibility('mtb-target-stage',      'mtb-baotinh-date'));
 
     // ── Chọn nhiều lô để chuyển cùng lúc ──
     safeOn('btn-multi-transfer',  'click', toggleMultiTransferMode);
@@ -533,6 +542,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Bộ lọc năm của biểu đồ
     safeOn('press-year-filter', 'change', (e) => {
       state.pressYearFilter = e.target.value;
+      state.pressChartWinStart = null; // đổi năm → về mặc định (các tuần mới nhất)
       populatePressWeekFilter(); // danh sách tuần phụ thuộc năm đang chọn
       renderPressChart();
       renderPressTable();
@@ -540,8 +550,23 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Bộ lọc tuần của biểu đồ & bảng lượt ép
     safeOn('press-week-filter', 'change', (e) => {
       state.pressWeekFilter = e.target.value;
+      state.pressChartWinStart = null; // đổi tuần → về mặc định (các tuần mới nhất)
       renderPressChart();
       renderPressTable();
+    });
+    // ── Bấm vào ô TỔNG TỒN của ma trận kế hoạch → hộp thoại chi tiết tính toán ──
+    safeOn('planning-matrix-body', 'click', (e) => {
+      const cell = e.target.closest ? e.target.closest('td[data-trace]') : null;
+      if (!cell) return;
+      const parts = (cell.getAttribute('data-trace') || '').split('|');
+      if (parts.length !== 3) return;
+      openMatrixTraceModal(parts[0], parts[1], Number(parts[2]) || 1);
+    });
+    safeOn('btn-close-matrix-trace', 'click', closeMatrixTraceModal);
+    // Bộ lọc năm của bảng Bào Tinh ↔ Đã Ép (hiệu suất chuyển đổi)
+    safeOn('bt-year-filter', 'change', (e) => {
+      state.btEffYear = Number(e.target.value) || state.btEffYear;
+      renderBaoTinhEffTable();
     });
     // Thu gọn / mở rộng bảng danh sách lượt ép
     safeOn('btn-toggle-press-table', 'click', () => toggleRateTableCollapse('press-table-card'));
@@ -637,6 +662,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── Biểu đồ Kế hoạch vs Thực tế nguyên liệu theo ngày ──
     safeOn('mpc-week-filter', 'change', (e) => {
       state.materialPlanChartWeek = e.target.value;
+      state.materialPlanChartWinStart = null; // đổi tuần → về đầu tuần
       renderMaterialPlanChart();
     });
     safeOn('mpc-week-prev', 'click', () => shiftMaterialPlanChartWeek(-1));

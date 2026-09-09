@@ -3478,6 +3478,9 @@ body.multi-select .card-actions {
 /* Hiệu ứng trượt khi bấm ← / → đổi cửa sổ tuần */
 .press-chart-box.pv-cap-in-left  { animation: pvCapInLeft 0.28s ease-out; }
 .press-chart-box.pv-cap-in-right { animation: pvCapInRight 0.28s ease-out; }
+/* Vuốt ngang biểu đồ ép ván & biểu đồ Nguyên liệu để xem thêm các ngày (dọc vẫn cuộn trang) */
+#press-chart, #material-plan-chart { touch-action: pan-y; cursor: grab; }
+#press-chart.panning, #material-plan-chart.panning { cursor: grabbing; }
 @keyframes pvCapInLeft {
   from { opacity: 0.25; transform: translateX(-26px); }
   to   { opacity: 1;    transform: translateX(0); }

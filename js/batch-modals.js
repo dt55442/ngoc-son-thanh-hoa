@@ -7,6 +7,7 @@ import { getFilteredBatches, renderAll } from './main.js';
 import { STAGES, state } from './state.js';
 import { saveData } from './storage.js';
 import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString, showToast, validateBatchInput } from './utils.js';
+import { getBaoTinhConversion } from './planning.js';
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -34,6 +35,15 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
       document.getElementById('form-use-for').value     = batch.useFor || 'Ván';
       document.getElementById('form-location').value    = batch.location || '';
       document.getElementById('form-notes').value       = batch.notes || '';
+      // Ngày Vào Bào Tinh thực tế: chỉ hiện khi lô đang ở Bào Tinh — cho sửa ngày
+      // bào tinh khác với ngày hệ thống ghi nhận việc chuyển
+      const btGroupEd = document.getElementById('form-baotinh-date-group');
+      const btInputEd = document.getElementById('form-baotinh-date');
+      if (btGroupEd && btInputEd) {
+        const isBt = batch.stage === 'bao_tinh';
+        btGroupEd.style.display = isBt ? '' : 'none';
+        btInputEd.value = isBt ? (batch.baoTinhDate || getBaoTinhConversion(batch).date || '') : '';
+      }
       const volDisp = document.getElementById('form-calculated-vol');
       if (volDisp) volDisp.textContent = `${calculateVolume(batch.length, batch.width, batch.thickness, batch.quantity).toFixed(4)} m³`;
     } else {
@@ -45,6 +55,9 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
       document.getElementById('form-code').value  = generateBatchCodeYYMMDD(today);
       const volDisp = document.getElementById('form-calculated-vol');
       if (volDisp) volDisp.textContent = '0.0000 m³';
+      const btGroupNew = document.getElementById('form-baotinh-date-group');
+      const btInputNew = document.getElementById('form-baotinh-date');
+      if (btGroupNew && btInputNew) { btGroupNew.style.display = 'none'; btInputNew.value = today; }
     }
 
     modal.classList.add('show');
@@ -70,6 +83,10 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
     const nowISO  = new Date().toISOString();
     const stageVal = document.getElementById('form-stage').value;
     const dateVal  = document.getElementById('form-date').value;
+    // Ngày Vào Bào Tinh thực tế (chỉ áp dụng khi công đoạn là Bào Tinh) — có thể khác
+    // ngày hệ thống ghi nhận; dùng cho thống kê tuần bào tinh & hiệu suất chuyển đổi
+    const btDateEl  = document.getElementById('form-baotinh-date');
+    const btDateVal = (stageVal === 'bao_tinh' && btDateEl && btDateEl.value) ? btDateEl.value : '';
 
     const batchData = {
       id:          batchId || `batch-${Date.now()}`,
@@ -85,6 +102,8 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
       stageHistory: [{ stage: stageVal, date: dateVal }],
       updatedAt:   nowISO
     };
+    // Ghi NGÀY BÀO TINH THỰC TẾ (được ưu tiên hơn mốc tự động trong stageHistory)
+    if (btDateVal) batchData.baoTinhDate = btDateVal;
 
     if (batchId) {
       pushUndo(`Sửa lô ${batchData.code}`);
@@ -95,6 +114,12 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
         batchData.stageHistory = (old.stageHistory && old.stageHistory.length > 0)
           ? old.stageHistory
           : [{ stage: old.stage, date: old.date }];
+        // Đồng bộ mốc 'bao_tinh' cuối trong lịch sử theo ngày thực tế (lô đang ở Bào Tinh)
+        if (batchData.baoTinhDate) {
+          const btEntries = batchData.stageHistory.filter(h => h && h.stage === 'bao_tinh');
+          if (btEntries.length) btEntries[btEntries.length - 1].date = batchData.baoTinhDate;
+          else batchData.stageHistory.push({ stage: 'bao_tinh', date: batchData.baoTinhDate });
+        }
         state.batches[idx] = batchData;
         showToast('Đã cập nhật thẻ nan tre thành công!', 'success');
       }
@@ -141,6 +166,12 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
     const notesEl = document.getElementById('transfer-new-notes');
     if (notesEl) notesEl.value = batch.notes || '';
 
+    // Ngày Vào Bào Tinh thực tế: mặc định hôm nay, chỉ hiện khi đích là Bào Tinh
+    const btDateEl = document.getElementById('transfer-baotinh-date');
+    if (btDateEl) btDateEl.value = new Date().toISOString().split('T')[0];
+    const btGroupEl = document.getElementById('transfer-baotinh-date-group');
+    if (btGroupEl) btGroupEl.style.display = (nextStage === 'bao_tinh') ? '' : 'none';
+
     modal.classList.add('show');
     initLucide();
   }
@@ -168,6 +199,11 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
 
     const nowISO   = new Date().toISOString();
     const todayStr = new Date().toISOString().split('T')[0];
+    // Ngày Vào Bào Tinh thực tế (khi đích là Bào Tinh) — có thể sớm hơn ngày nhập hệ thống
+    const btDateEl = document.getElementById('transfer-baotinh-date');
+    const btEffectiveDate = (targetStage === 'bao_tinh' && btDateEl && btDateEl.value)
+      ? btDateEl.value
+      : todayStr;
 
     // Chuyển TOÀN BỘ lô sang công đoạn mới (giữ nguyên kích thước & số lượng)
     pushUndo(`Chuyển lô ${src.code} sang ${STAGES[targetStage].name}`);
@@ -181,7 +217,8 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
     src.location  = newLocation; // GHI ĐÈ vị trí mới lên thông tin cũ
     src.notes     = newNotes;    // GHI ĐÈ ghi chú mới lên thông tin cũ
     src.updatedAt = nowISO;
-    src.stageHistory.push({ stage: targetStage, date: todayStr });
+    src.stageHistory.push({ stage: targetStage, date: (targetStage === 'bao_tinh' ? btEffectiveDate : todayStr) });
+    if (targetStage === 'bao_tinh') src.baoTinhDate = btEffectiveDate; // ngày bào tinh thực tế (ưu tiên khi thống kê)
 
     showToast(`Đã chuyển toàn bộ lô ${src.code} (${src.quantity.toLocaleString('vi-VN')} thanh) sang ${STAGES[targetStage].name}`, 'success');
 
@@ -292,6 +329,9 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
     pushUndo(`Chuyển ${toMove.length} lô sang ${STAGES[targetStage].name}`);
     const nowISO   = new Date().toISOString();
     const todayStr = new Date().toISOString().split('T')[0];
+    // Ngày Vào Bào Tinh thực tế dùng chung (khi đích là Bào Tinh) — trống = hôm nay
+    const btDateEl = document.getElementById('mtb-baotinh-date');
+    const btDateVal = (targetStage === 'bao_tinh' && btDateEl && btDateEl.value) ? btDateEl.value : todayStr;
 
     toMove.forEach(b => {
       if (!b.stageHistory || b.stageHistory.length === 0) {
@@ -301,12 +341,15 @@ import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString,
       if (newNotes    !== '') b.notes    = newNotes;    // GHI ĐÈ ghi chú dùng chung
       b.stage     = targetStage;
       b.updatedAt = nowISO;
-      b.stageHistory.push({ stage: targetStage, date: todayStr });
+      const effDate = (targetStage === 'bao_tinh') ? btDateVal : todayStr;
+      b.stageHistory.push({ stage: targetStage, date: effDate });
+      if (targetStage === 'bao_tinh') b.baoTinhDate = effDate; // ngày bào tinh thực tế
     });
 
     // Xóa ô nhập để lần sau không vô tình áp dụng lại giá trị cũ
     if (locEl) locEl.value = '';
     if (notesEl) notesEl.value = '';
+    if (btDateEl) btDateEl.value = new Date().toISOString().split('T')[0];
 
     saveData();
     exitMultiTransferMode();

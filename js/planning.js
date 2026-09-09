@@ -295,9 +295,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
                   const nanInfo = rate ? getRateNanSummary(rate) : '';
                   const pressedQty = getPressedQtyForPlan(yearNum, weekNum, item.productId);
                   const doneCls = pressedQty >= (item.qty || 0) ? 'done' : '';
-                  // Sản lượng tối đa có thể ép từ ván thô lũy kế tuần 1 → tuần kế hoạch
+                  // Sản lượng tối đa có thể ép từ THANH ĐẠT (đầu ra bào tinh) lũy kế tuần 1 → tuần kế hoạch
                   const maxProd = getMaxProductionForProduct(yearNum, item.productId, weekNum);
-                  const maxProdHtml = maxProd ? `<span class="plan-item-capacity" title="Sản lượng tối đa từ ván thô KHẢ DỤNG đến tuần ${weekNum} (Tồn thực tế + Σ Dự kiến − Σ Cần các tuần trước, đồng bộ ma trận). Bottleneck: ${escapeHTML(maxProd.bottleneck.nanKey)} ×${maxProd.bottleneck.rate} — còn ${maxProd.bottleneck.available.toLocaleString('vi-VN')} thanh"><i data-lucide="layers" style="width:10px;height:10px;"></i> Có thể ép: <strong>${maxProd.maxProduction.toLocaleString('vi-VN')}</strong></span>` : '';
+                  const maxProdHtml = maxProd ? `<span class="plan-item-capacity" title="Sản lượng tối đa từ thanh đạt KHẢ DỤNG đến tuần ${weekNum} (Σ Đã bào tinh + Σ Dự kiến − Σ Đã ép thực tế các tuần đã qua − Σ Cần từ tuần hiện tại, đồng bộ bảng Bào Tinh ↔ Đã Ép). Bottleneck: ${escapeHTML(maxProd.bottleneck.nanKey)} ×${maxProd.bottleneck.rate} — còn ${maxProd.bottleneck.available.toLocaleString('vi-VN')} thanh"><i data-lucide="layers" style="width:10px;height:10px;"></i> Có thể ép: <strong>${maxProd.maxProduction.toLocaleString('vi-VN')}</strong></span>` : '';
                   return `
                     <div class="planning-week-item">
                       <div class="planning-week-item-info">
@@ -412,6 +412,165 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     return v.toLocaleString('vi-VN'); // <=9.999 giữ nguyên cho chính xác
   }
 
+  // Pre-compute dữ liệu từng tuần của BẢNG KẾ HOẠCH TỔNG HỢP (dùng cho body + footer).
+  // Trả về: weekData[week] = { nan: { ucKey: { ton, dk, can } }, glue, additive,
+  //          glueTon, additiveTon, glueInput, additiveInput }
+  // Tồn kho lũy kế theo tuần (thời gian thực):
+  //   Tồn thực tế tuần W = các lô nan NHẬP VỀ trong tuần W — lô nhập tuần nào thì
+  //   số lượng chỉ xuất hiện từ tuần đó trở đi (dữ liệu mới có từ tuần 34 thì
+  //   các tuần 1-33 tồn = 0, KHÔNG đổ tồn cả năm về tuần 1 như bản cũ).
+  //   Tuần 1: Tổng tồn = Tồn thực tế tuần 1 + Dự kiến tuần 1
+  // Phép trượt tồn sang tuần sau (nếu tuần hiện tại là "n"):
+  //   - Tuần ĐÃ QUÁ KHỨ (< n): Tổng tồn = tồn số thanh của tuần đó − số thanh
+  //     ĐÃ CHUYỂN BÀO TINH (từ lịch sử chuyển công đoạn) — bào tinh là mốc nguyên
+  //     liệu rời kho: trong quá trình bào tinh thanh lỗi bị loại, thanh đạt chuyển
+  //     sang ép ván (theo dõi riêng ở bảng "Bào Tinh ↔ Đã Ép" tab Ép Ván).
+  //   - Tuần HIỆN TẠI (n) TRỞ ĐI: Tổng tồn = tồn lũy kế − số thanh THEO KẾ HOẠCH
+  //     ("Cần") vì chưa có lượng đã bào tinh là bao nhiêu.
+  // Tồn keo & phụ gia lũy kế (kế thừa qua các tuần) — vẫn trừ Cần kế hoạch:
+  //   Tồn tuần (n) = Tồn tuần (n-1) - Cần tuần (n-1) + Nhập tay tuần (n)
+  function computePlanningWeekData(yearNum) {
+    const year = parseInt(yearNum);
+    const purposeList = ['Ván', 'Bullig'];
+    const nanTypes = getUniqueNanTypes();
+    const rowByUc = {};
+    getNanDisplayRows().forEach(r => { rowByUc[r.ucKey] = r; });
+    const gridCells = [];
+    nanTypes.forEach(dim => purposeList.forEach(p => {
+      const ucKey = dimUseKey(dim.key, p);
+      gridCells.push(rowByUc[ucKey] || { dimKey: dim.key, ucKey, useFor: p, label: dim.key, length: 0, width: 0, thickness: 0 });
+    }));
+
+    const weekNeeds = computePlanningWeekNeeds(year);
+    const inventoryByWeek = getNanInventoryByWeek(year);      // Tồn nguyên liệu theo tuần (mọi lô tính tại tuần nhập)
+    const convertedByWeek = getBaoTinhConvertedByWeek(year);  // Số thanh ĐÃ CHUYỂN BÀO TINH theo tuần
+
+    const cumulativeInventory = {};
+    gridCells.forEach(c => { cumulativeInventory[c.ucKey] = 0; });
+    const weekData = {}; // week -> { nan: { key: { ton, dk, can } }, glue, additive }
+    // Sổ theo dõi từng ô tồn (tra cứu "số này từ đâu ra"): ledger[ucKey][week-1] =
+    // { week, carryIn (lũy kế đầu tuần), import (nhập thực tế), dk (dự kiến),
+    //   deduct + deductLabel (trượt: đã bào tinh / cần kế hoạch), ton (hiển thị) }
+    // → dùng cho tooltip biểu thức & hộp thoại chi tiết khi bấm vào ô TỔNG TỒN.
+    const ledger = {};
+    gridCells.forEach(c => { ledger[c.ucKey] = []; });
+
+    let cumulativeGlueStock = 0;
+    let cumulativeAdditiveStock = 0;
+
+    for (let week = 1; week <= 52; week++) {
+      const weekKey = String(week);
+      const needs = weekNeeds[week] || { glue: 0, additive: 0 };
+      weekData[week] = { nan: {}, glue: needs.glue, additive: needs.additive };
+
+      // Lấy số tồn nhập tay cho tuần này (nếu có)
+      const stockWeek = state.planningStock[year]?.[weekKey] || {};
+      const glueInput = parseFloat(stockWeek.glue) || 0;
+      const additiveInput = parseFloat(stockWeek.additive) || 0;
+
+      // Tồn keo/phụ gia tuần hiện tại = tồn lũy kế + nhập tay tuần này
+      const glueTon = cumulativeGlueStock + glueInput;
+      const additiveTon = cumulativeAdditiveStock + additiveInput;
+      weekData[week].glueTon = glueTon;
+      weekData[week].additiveTon = additiveTon;
+      weekData[week].glueInput = glueInput;
+      weekData[week].additiveInput = additiveInput;
+
+      // Trừ lượng "Cần" của tuần hiện tại để tính tồn cho tuần tiếp theo
+      cumulativeGlueStock = glueTon - needs.glue;
+      cumulativeAdditiveStock = additiveTon - needs.additive;
+
+      const invWeek = inventoryByWeek[week] || {};
+      const convWeek = convertedByWeek[week] || {};
+      const weekIsPast = isPlanningWeekPast(year, week);
+      gridCells.forEach(c => {
+        const carryIn = cumulativeInventory[c.ucKey]; // lũy kế đầu tuần (chưa cộng nhập của tuần này)
+        const dkVal = getForecastVal(year, weekKey, c);
+        const cellNeeds = needs[c.ucKey] || 0;
+        // Cộng dồn tồn kho thực tế của các lô nan nhập về trong tuần này
+        cumulativeInventory[c.ucKey] += invWeek[c.ucKey] || 0;
+        // Tổng tồn tuần hiện tại = tồn kho lũy kế + Dự kiến tuần hiện tại
+        const tonVal = cumulativeInventory[c.ucKey] + dkVal;
+        weekData[week].nan[c.ucKey] = { ton: tonVal, dk: dkVal, can: cellNeeds };
+        // Trượt sang tuần sau (Dự kiến đã được cộng vào lũy kế):
+        //  - Tuần đã qua: trừ số thanh ĐÃ CHUYỂN BÀO TINH của tuần đó (thanh lỗi bị
+        //    loại ngay ở công đoạn bào tinh — nguyên liệu rời kho ở mốc này)
+        //  - Tuần hiện tại trở đi: trừ số thanh THEO KẾ HOẠCH (Cần)
+        const deduction = weekIsPast ? (convWeek[c.ucKey] || 0) : cellNeeds;
+        cumulativeInventory[c.ucKey] = tonVal - deduction;
+        // Ghi sổ theo dõi cho ô này
+        ledger[c.ucKey].push({
+          week,
+          carryIn,
+          import: invWeek[c.ucKey] || 0,
+          dk: dkVal,
+          deduct: deduction,
+          deductLabel: weekIsPast ? 'đã bào tinh (thực tế)' : 'cần (kế hoạch)',
+          ton: tonVal
+        });
+      });
+    }
+    weekData.ledger = ledger; // đính kèm sổ theo dõi (không trùng khóa tuần 1..52)
+    return weekData;
+  }
+
+  // Dòng biểu thức "Tồn(W) = ..." từ sổ theo dõi — dùng cho tooltip & hộp thoại chi tiết:
+  //   Tồn(W) = Tồn hiển thị(W−1) − trượt(W−1) + Nhập thực tế(W) + Dự kiến(W)
+  function buildTonExpression(entry, prevEntry) {
+    const f = (v) => (Math.round((Number(v) || 0) * 100) / 100).toLocaleString('vi-VN');
+    const parts = [];
+    if (prevEntry) {
+      parts.push({ sign: '', text: `${f(prevEntry.ton)} tồn tuần ${prevEntry.week}` });
+      if (prevEntry.deduct) parts.push({ sign: '−', text: `${f(prevEntry.deduct)} ${prevEntry.deductLabel} tuần ${prevEntry.week}` });
+    }
+    parts.push({ sign: prevEntry ? '+' : '', text: `${f(entry.import)} nhập mới tuần ${entry.week}` });
+    if (entry.dk) parts.push({ sign: '+', text: `${f(entry.dk)} dự kiến tuần ${entry.week}` });
+    return `${f(entry.ton)} = ` + parts.map((p, i) => (i === 0 ? p.text : ` ${p.sign} ${p.text}`)).join('');
+  }
+
+  // Hộp thoại chi tiết một ô TỔNG TỒN: biểu thức tính + chuỗi tích lũy từng tuần
+  // (yearNum, ucKey "kích thước@mục đích", week) — đọc từ data-trace trên ô bảng.
+  function openMatrixTraceModal(yearNum, ucKey, week) {
+    const modal = document.getElementById('modal-matrix-trace');
+    if (!modal) return;
+    const year = parseInt(yearNum);
+    const w = Math.min(Math.max(parseInt(week) || 1, 1), 52);
+    const weekData = computePlanningWeekData(year); // tính lại để luôn khớp dữ liệu mới nhất
+    const rows = (weekData.ledger || {})[ucKey] || [];
+    const entry = rows[w - 1];
+    if (!entry) return;
+    const prevEntry = w > 1 ? rows[w - 2] : null;
+
+    const rowInfo = getNanDisplayRows().find(r => r.ucKey === ucKey);
+    const rowLabel = rowInfo ? rowInfo.label : ucKey;
+    const f = (v) => (Math.round((Number(v) || 0) * 100) / 100).toLocaleString('vi-VN');
+
+    const titleEl = document.getElementById('matrix-trace-title');
+    const exprEl = document.getElementById('matrix-trace-expression');
+    const bodyEl = document.getElementById('matrix-trace-body');
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="calculator"></i> Chi Tiết: ${escapeHTML(rowLabel)} — Tuần ${w} · Năm ${year}`;
+    if (exprEl) {
+      exprEl.innerHTML = `<strong>${escapeHTML(buildTonExpression(entry, prevEntry))}</strong>` +
+        (prevEntry ? ` <span style="color:var(--text-muted);">(tồn tuần ${prevEntry.week} − ${prevEntry.deductLabel} tuần ${prevEntry.week} + nhập/dự kiến tuần ${w})</span>` : '');
+    }
+    if (bodyEl) {
+      bodyEl.innerHTML = rows.slice(0, w).map(r => `
+        <tr${r.week === w ? ' style="background:rgba(124,58,237,0.08);"' : ''}>
+          <td><strong>Tuần ${r.week}</strong>${r.week === w ? ' ←' : ''}</td>
+          <td>${r.import ? f(r.import) : '—'}</td>
+          <td>${r.dk ? f(r.dk) : '—'}</td>
+          <td>${r.deduct ? `− ${f(r.deduct)} <small style="color:var(--text-muted);">(${escapeHTML(r.deductLabel)})</small>` : '—'}</td>
+          <td><strong>${f(r.ton)}</strong></td>
+        </tr>`).join('');
+    }
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closeMatrixTraceModal() {
+    document.getElementById('modal-matrix-trace')?.classList.remove('show');
+  }
+
   function renderPlanningMatrix() {
     const thead = document.getElementById('planning-matrix-head');
     const tbody = document.getElementById('planning-matrix-body');
@@ -424,8 +583,6 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     const yearNum = parseInt(year) || new Date().getFullYear();
     const nanTypes = getUniqueNanTypes();
     const nanRows = getNanDisplayRows(); // danh sách (kích thước nan, mục đích)
-    const weekNeeds = computePlanningWeekNeeds(yearNum);
-    const inventoryByWeek = getNanInventoryByWeek(yearNum); // Tồn thực tế theo từng tuần (thời gian thực)
 
     // Bố cục / tuần: 4 KHỐI CHÍNH (Tổng tồn, Dự kiến, Cần, Đáp ứng); trong mỗi khối
     // là 2 cột con theo MỤC ĐÍCH: Ván | Bullig.
@@ -490,59 +647,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     thead.innerHTML = `<tr>${groupHeader}</tr><tr>${metricHeader}</tr><tr>${subHeader}</tr>`;
 
     // ---------- BODY ----------
-    // Tính tồn kho lũy kế theo từng tuần (thời gian thực)
-    // Công thức: Tổng tồn tuần (n+1) = Tổng tồn tuần (n) − Cần tuần (n) + Tồn thực tế nhập tuần (n+1) + Dự kiến tuần (n+1)
-    // Tồn thực tế tuần W = các lô nan NHẬP VỀ trong tuần W — lô nhập tuần nào thì
-    // số lượng chỉ xuất hiện từ tuần đó trở đi (dữ liệu mới có từ tuần 34 thì
-    // các tuần 1-33 tồn = 0, KHÔNG đổ tồn cả năm về tuần 1 như bản cũ).
-    // Tuần 1: Tổng tồn = Tồn thực tế tuần 1 + Dự kiến tuần 1
-    const cumulativeInventory = {};
-    gridCells.forEach(c => { cumulativeInventory[c.ucKey] = 0; });
-
-    // Pre-compute dữ liệu từng tuần để dùng cho cả body và footer
-    const weekData = {}; // week -> { nan: { key: { ton, dk, can } }, glue, additive }
-
-    // Tồn keo & phụ gia lũy kế (kế thừa qua các tuần)
-    // Công thức: Tồn tuần (n) = Tồn tuần (n-1) - Cần tuần (n-1) + Nhập tay tuần (n)
-    // Tuần 1: Tồn = Nhập tay tuần 1
-    let cumulativeGlueStock = 0;
-    let cumulativeAdditiveStock = 0;
-
-    for (let week = 1; week <= 52; week++) {
-      const weekKey = String(week);
-      const needs = weekNeeds[week] || { glue: 0, additive: 0 };
-      weekData[week] = { nan: {}, glue: needs.glue, additive: needs.additive };
-
-      // Lấy số tồn nhập tay cho tuần này (nếu có)
-      const stockWeek = state.planningStock[yearNum]?.[weekKey] || {};
-      const glueInput = parseFloat(stockWeek.glue) || 0;
-      const additiveInput = parseFloat(stockWeek.additive) || 0;
-
-      // Tồn keo/phụ gia tuần hiện tại = tồn lũy kế + nhập tay tuần này
-      const glueTon = cumulativeGlueStock + glueInput;
-      const additiveTon = cumulativeAdditiveStock + additiveInput;
-      weekData[week].glueTon = glueTon;
-      weekData[week].additiveTon = additiveTon;
-      weekData[week].glueInput = glueInput;
-      weekData[week].additiveInput = additiveInput;
-
-      // Trừ lượng "Cần" của tuần hiện tại để tính tồn cho tuần tiếp theo
-      cumulativeGlueStock = glueTon - needs.glue;
-      cumulativeAdditiveStock = additiveTon - needs.additive;
-
-      const invWeek = inventoryByWeek[week] || {};
-      gridCells.forEach(c => {
-        const dkVal = getForecastVal(yearNum, weekKey, c);
-        const cellNeeds = needs[c.ucKey] || 0;
-        // Cộng dồn tồn kho thực tế của các lô nan nhập về trong tuần này
-        cumulativeInventory[c.ucKey] += invWeek[c.ucKey] || 0;
-        // Tổng tồn tuần hiện tại = tồn kho lũy kế + Dự kiến tuần hiện tại
-        const tonVal = cumulativeInventory[c.ucKey] + dkVal;
-        weekData[week].nan[c.ucKey] = { ton: tonVal, dk: dkVal, can: cellNeeds };
-        // Trượt sang tuần sau: Tồn hiển thị − Cần (Dự kiến đã được cộng vào lũy kế)
-        cumulativeInventory[c.ucKey] = tonVal - cellNeeds;
-      });
-    }
+    // Pre-compute dữ liệu từng tuần (tồn lũy kế, Dự kiến, Cần, keo, phụ gia) —
+    // xem computePlanningWeekData() phía trên: tuần đã qua trượt tồn bằng SỐ THANH
+    // ĐÃ ÉP THỰC TẾ (tab Ép Ván), tuần hiện tại trở đi trượt bằng số thanh KẾ HOẠCH (Cần).
+    const weekData = computePlanningWeekData(yearNum);
 
     const rows = [];
 
@@ -568,13 +676,21 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
             else if (pct >= 50) dapUngClass += ' warn';
             else dapUngClass += ' danger';
           }
-          return { purpose, data, dapUngClass, dapUngText };
+          return { purpose, ucKey: c.ucKey, data, dapUngClass, dapUngText };
         });
 
-        // Khối TỔNG TỒN (Ván | Bullig) - điện thoại hiển thị số rút gọn (title giữ giá trị đủ)
+        // Khối TỔNG TỒN (Ván | Bullig) — tooltip kèm BIỂU THỨC TÍNH, bấm vào ô mở
+        // hộp thoại chi tiết chuỗi tích lũy từng tuần (xem openMatrixTraceModal)
         cellInfo.forEach(ci => {
           const fullTon = ci.data.ton.toLocaleString('vi-VN');
-          tr += `<td class="mat-cell-ton" title="${escapeHTML(fullTon)}">${fmtShortVal(ci.data.ton)}</td>`;
+          const led = weekData.ledger ? weekData.ledger[ci.ucKey] : null;
+          const entry = led ? led[week - 1] : null;
+          const prevEntry = (led && week > 1) ? led[week - 2] : null;
+          const expr = entry ? buildTonExpression(entry, prevEntry) : '';
+          const title = expr
+            ? `TỔNG TỒN: ${fullTon} thanh\n${expr}\n— Bấm vào ô để xem chi tiết từng tuần —`
+            : `TỔNG TỒN: ${fullTon} thanh`;
+          tr += `<td class="mat-cell-ton" data-trace="${yearNum}|${ci.ucKey}|${week}" title="${escapeHTML(title)}">${fmtShortVal(ci.data.ton)}</td>`;
         });
         // Khối DỰ KIẾN (Ván | Bullig) - ô nhập tay
         cellInfo.forEach(ci => {
@@ -773,42 +889,145 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     });
   }
 
-  // Tính tồn kho nan theo từng tuần (thời gian thực)
-  // Chỉ tính các lô ở Sấy 1, Sấy 2, Kho (chưa bào tinh) theo tuần nhập
-  // Lô Bào Tinh: CHỈ tính số lượng trong TUẦN CHUYỂN ĐỔI (tuần vào Bào Tinh),
-  // sang tuần sau không còn tính số lượng này nữa (đã chuyển sang công đoạn khác)
+  // Tính tồn kho THANH NGUYÊN LIỆU theo từng tuần (thời gian thực) — bao gồm cả lô
+  // đã chuyển Bào Tinh (tính tại tuần NHẬP lô, vì trước khi chuyển nó vẫn là tồn kho).
+  // Lượng thanh RỜI kho nguyên liệu được trừ ở TUẦN CHUYỂN BÀO TINH — xem
+  // getBaoTinhConvertedByWeek() + phép trượt trong computePlanningWeekData():
+  // bào tinh là mốc thanh lỗi bị loại khỏi tồn, thanh đạt chuyển sang ép ván.
   // Nếu dữ liệu chỉ có tuần 33, 34 thì các tuần 1-32 sẽ có tồn = 0
   function getNanInventoryByWeek(year) {
     const inventoryByWeek = {}; // weekNum -> { nanKey: qty }
     const yearNum = parseInt(year);
     state.batches.forEach(b => {
       if (!b.date) return;
-
-      // Xác định ngày & tuần để tính tồn cho lô này
-      let effectiveDate = b.date;
-      let effectiveWeek = b.week;
-
-      if (b.stage === 'bao_tinh') {
-        // Lô Bào Tinh: chỉ tính trong tuần chuyển đổi (tuần vào Bào Tinh)
-        // Tìm mốc stageHistory có stage = 'bao_tinh' để lấy ngày chuyển đổi
-        const history = getBatchStageHistory(b);
-        const baoEntry = history.find(h => h.stage === 'bao_tinh');
-        if (baoEntry && baoEntry.date) {
-          effectiveDate = baoEntry.date;
-          effectiveWeek = getISOWeekString(baoEntry.date);
-        }
-        // Nếu không có stageHistory thì dùng ngày hiện tại của lô
-      }
-
-      const batchYear = parseInt(String(effectiveDate).split('-')[0]);
+      const batchYear = parseInt(String(b.date).split('-')[0]);
       if (batchYear !== yearNum) return;
-      const weekNum = getWeekNumber(effectiveWeek);
+      const weekNum = getWeekNumber(b.week);
       if (!weekNum) return;
       const key = dimUseKey(`${b.length}×${b.width}×${b.thickness}`, b.useFor);
       if (!inventoryByWeek[weekNum]) inventoryByWeek[weekNum] = {};
       inventoryByWeek[weekNum][key] = (inventoryByWeek[weekNum][key] || 0) + (b.quantity || 0);
     });
     return inventoryByWeek;
+  }
+
+  // Ngày & tuần CHUYỂN BÀO TINH của một lô:
+  //   ƯU TIÊN 1 — "Ngày Bào Tinh thực tế" (b.baoTinhDate) do người dùng khai báo/sửa:
+  //     người nhập có thể thao tác trên hệ thống chậm hơn thực tế nên ngày bấm chuyển
+  //     tự động có thể không phải ngày bào tinh thật.
+  //   ƯU TIÊN 2 — nhận diện tự động: mốc 'bao_tinh' CUỐI cùng trong stageHistory
+  //     (lô có thể chuyển đi và chuyển lại).
+  //   Fallback — lô nhập trực tiếp ở Bào Tinh không có lịch sử: dùng ngày/tuần của lô.
+  function getBaoTinhConversion(b) {
+    if (b.baoTinhDate) {
+      const weekNum = getWeekNumber(getISOWeekString(b.baoTinhDate));
+      if (weekNum) return { date: b.baoTinhDate, weekNum };
+    }
+    const history = getBatchStageHistory(b);
+    const baoEntries = history.filter(h => h && h.stage === 'bao_tinh' && h.date);
+    if (baoEntries.length) {
+      const date = baoEntries[baoEntries.length - 1].date;
+      return { date, weekNum: getWeekNumber(getISOWeekString(date)) };
+    }
+    return { date: b.date, weekNum: getWeekNumber(b.week) };
+  }
+
+  // Số thanh ĐÃ CHUYỂN BÀO TINH theo tuần (nguồn: lịch sử chuyển công đoạn của lô).
+  // Trả về { [weekNum]: { [ucKey]: số thanh } } — đây là lượng thanh RỜI kho nguyên
+  // liệu ở tuần đó: trong quá trình bào tinh thanh lỗi bị loại, phần thanh đạt dùng ép.
+  function getBaoTinhConvertedByWeek(year) {
+    const convertedByWeek = {}; // weekNum -> { ucKey: qty }
+    const yearNum = parseInt(year);
+    state.batches.forEach(b => {
+      if (b.stage !== 'bao_tinh') return; // chỉ lô ĐANG ở Bào Tinh (đã rời kho nguyên liệu)
+      if (!b.quantity) return;
+      const conv = getBaoTinhConversion(b);
+      if (!conv.date || !conv.weekNum) return;
+      const batchYear = parseInt(String(conv.date).split('-')[0]);
+      if (batchYear !== yearNum) return;
+      const key = dimUseKey(`${b.length}×${b.width}×${b.thickness}`, b.useFor);
+      if (!convertedByWeek[conv.weekNum]) convertedByWeek[conv.weekNum] = {};
+      convertedByWeek[conv.weekNum][key] = (convertedByWeek[conv.weekNum][key] || 0) + (b.quantity || 0);
+    });
+    return convertedByWeek;
+  }
+
+  // Tồn Bào Tinh HIỆN TẠI (thanh đạt chờ ép) quy về NĂM CHUYỂN ĐỔI của từng lô —
+  // dùng để tách "thanh đạt chưa sử dụng" khỏi "thanh lỗi ước tính" trong bảng hiệu suất.
+  function getBaoTinhStockByConversionYear() {
+    const byYear = {}; // year -> qty
+    state.batches.forEach(b => {
+      if (b.stage !== 'bao_tinh') return;
+      const conv = getBaoTinhConversion(b);
+      const y = conv.date ? parseInt(String(conv.date).split('-')[0]) : NaN;
+      if (isNaN(y)) return;
+      byYear[y] = (byYear[y] || 0) + (b.quantity || 0);
+    });
+    return byYear;
+  }
+
+  // ─── Số thanh ĐÃ ÉP THỰC TẾ theo tuần (nguồn: các lượt ép trong tab Ép Ván) ──
+  // Trả về { [weekNum]: { [ucKey]: số thanh đã dùng } } với ucKey là khóa composite
+  // "kích thước@mục đích" đồng bộ với bảng kế hoạch (dimUseKey).
+  // Ánh xạ từng dòng đầu vào (sticks[].nanKey) của lượt ép:
+  //  - nanKey là KÍCH THƯỚC (VD: 1250×18×7) → khóa trực tiếp; mục đích suy từ sản
+  //    phẩm của lượt ép (getUseForFromName).
+  //  - nanKey là MÃ RIÊNG (VD: A1) → suy kích thước theo thứ tự:
+  //      (1) định mức của sản phẩm lượt ép nếu chỉ khai báo ĐÚNG 1 loại nan;
+  //      (2) các lô nan cùng loại (bambooType) nếu cùng duy nhất 1 kích thước.
+  //    Không suy được → bỏ qua dòng này (không trừ tồn).
+  function getActualPressedByWeek(yearNum) {
+    const pressedByWeek = {}; // weekNum -> { ucKey: qty }
+    const year = parseInt(yearNum);
+    // Chuỗi kích thước chuẩn (thay x/* bằng ×, viết thường) — trả null nếu không phải kích thước
+    const asDimKey = (k) => {
+      const norm = String(k || '').trim().toLowerCase().replace(/[x*]/g, '×');
+      const parts = norm.split('×').map(parseFloat);
+      return (parts.length === 3 && parts.every(p => !isNaN(p) && p > 0)) ? norm : null;
+    };
+    // Suy khóa composite từ MÃ loại thanh qua các lô nan (bambooType trùng mã)
+    const batchDimByCode = (code) => {
+      const ucKeys = new Set();
+      state.batches.forEach(b => {
+        if (String(b.bambooType || '').trim().toLowerCase() !== code) return;
+        const dim = asDimKey(`${b.length}×${b.width}×${b.thickness}`);
+        if (dim) ucKeys.add(dimUseKey(dim, b.useFor || ''));
+      });
+      return ucKeys.size === 1 ? [...ucKeys][0] : null;
+    };
+    state.pressRecords.forEach(r => {
+      const ry = r.year || getDateYear(r.date);
+      if (ry !== year) return;
+      const weekNum = pressRecordWeek(r);
+      if (!weekNum) return;
+      const rate = state.materialRates.find(rt => rt.id === r.productId) || null;
+      const useForSpr = rate ? getUseForFromName(rate.product) : '';
+      // Định mức chỉ có 1 loại nan → mã riêng cũng quy về kích thước đó
+      const rateDims = rate ? [rate.nan1, rate.nan2, rate.nan3].filter(Boolean).map(asDimKey).filter(Boolean) : [];
+      const singleRateKey = rateDims.length === 1 ? dimUseKey(rateDims[0], useForSpr) : null;
+      (r.sticks || []).forEach(s => {
+        const qty = parseFloat(s.sticks) || 0;
+        const rawKey = String(s.nanKey || '').trim();
+        if (!qty || !rawKey) return;
+        const dim = asDimKey(rawKey);
+        const ucKey = dim
+          ? dimUseKey(dim, useForSpr)
+          : (singleRateKey || batchDimByCode(rawKey.toLowerCase()));
+        if (!ucKey) return; // không suy được kích thước → bỏ qua
+        if (!pressedByWeek[weekNum]) pressedByWeek[weekNum] = {};
+        pressedByWeek[weekNum][ucKey] = (pressedByWeek[weekNum][ucKey] || 0) + qty;
+      });
+    });
+    return pressedByWeek;
+  }
+
+  // Tuần (năm, tuần) đã qua chưa so với hiện tại — quyết định nguồn số liệu tiêu hao
+  // khi trượt tồn sang tuần sau: tuần đã qua dùng số ĐÃ ÉP thực tế, còn lại dùng KẾ HOẠCH.
+  function isPlanningWeekPast(yearNum, week) {
+    const now = new Date();
+    const y = parseInt(yearNum);
+    if (y !== now.getFullYear()) return y < now.getFullYear();
+    return parseInt(week) < getCurrentISOWeeks();
   }
 
   // Điền danh sách loại nan vào các select trong modal định mức
@@ -1075,25 +1294,25 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     return { maxProduction, components, useFor: useForSpr, bottleneck, efficiency };
   }
 
-  // Tổng hợp tồn kho ván thô KHẢ DỤNG đến tuần upToWeek — ĐỒNG BỘ với công thức
-  // trượt của bảng ma trận kế hoạch (xem renderPlanningMatrix):
-  //   Tồn hiển thị tuần W = Lũy kế(W) + Dự kiến(W)
-  //   Lũy kế(W + 1)       = Tồn hiển thị(W) − Cần(W)
-  //   Lũy kế tuần 1       = 0 (chưa có lô nan nào nhập về)
-  // ⇒ Kết quả cho tuần W = Σ Tồn thực tế(1..W) + Σ Dự kiến(1..W) − Σ Cần(1..W−1)
-  //   (tuần W không tự trừ Cần(W) — Cần(W) chính là thứ cần đánh giá khả năng đáp ứng)
-  // Tồn thực tế của lô chỉ được cộng ĐÚNG tuần lô nhập về (lô nan nhập từ tuần 34
-  // thì các tuần 1-33 tồn = 0) — không còn đổ tồn cả năm về tuần 1 như bản cũ.
+  // Tổng hợp tồn kho THANH ĐẠT (đầu ra Bào Tinh) KHẢ DỤNG đến tuần upToWeek —
+  // ĐỒNG BỘ với cột "Còn lại (lũy kế)" của bảng "Bào Tinh ↔ Đã Ép" (tab Ép Ván):
+  //   Tồn thanh đạt tuần W = Σ ĐÃ BÀO TINH(1..W) + Σ Dự kiến(1..W)
+  //                          − Σ ĐÃ ÉP thực tế(các tuần ĐÃ QUÁ KHỨ trước W)
+  //                          − Σ Cần(các tuần từ HIỆN TẠI → W−1)
+  //   (tuần W không tự trừ lượng tiêu hao của tuần W — đó chính là thứ cần đánh giá)
+  // Tuần đã qua: đã có số liệu ÉP THỰC TẾ (tab Ép Ván) → trừ số đã ép.
+  // Tuần hiện tại trở đi: chưa có số đã ép thực tế → trừ số thanh THEO KẾ HOẠCH (Cần).
   // upToWeek = null/0 → tính cho tuần 52 (toàn năm).
   function getCumulativeInventoryByWeek(yearNum, upToWeek) {
     const year = parseInt(yearNum);
-    const inventoryByWeek = getNanInventoryByWeek(year);
+    const convertedByWeek = getBaoTinhConvertedByWeek(year); // thanh đạt đầu ra bào tinh (theo tuần chuyển)
     const weekNeeds = computePlanningWeekNeeds(year);
+    const pressedByWeek = getActualPressedByWeek(year);
     const isNanKey = (k) => k !== 'glue' && k !== 'additive';
 
-    // Gom toàn bộ khóa composite (kích thước@mục đích) từ 3 nguồn: lô thực tế + Dự kiến + Cần
+    // Gom toàn bộ khóa composite (kích thước@mục đích) từ 3 nguồn: đã bào tinh + Dự kiến + Cần
     const keys = new Set();
-    Object.values(inventoryByWeek).forEach(wk => Object.keys(wk).forEach(k => keys.add(k)));
+    Object.values(convertedByWeek).forEach(wk => Object.keys(wk).forEach(k => keys.add(k)));
     for (let w = 1; w <= 52; w++) {
       const fc = state.planningForecast[year]?.[String(w)] || {};
       Object.keys(fc).forEach(k => keys.add(k));
@@ -1104,28 +1323,34 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     const maxWeek = (upToWeek && upToWeek > 0) ? Math.min(Math.floor(upToWeek), 52) : 52;
 
     // Trượt tuần 1 → upToWeek:
-    //   + Tồn thực tế tuần w (lô nan nhập về đúng tuần đó — tuần sau mới xuất hiện)
+    //   + Số thanh ĐÃ BÀO TINH tuần w (thanh đạt xuất hiện đúng tuần chuyển bào tinh)
     //   + Dự kiến tuần w (cộng dồn vì Dự kiến đã về là còn nằm trong lũy kế)
-    //   − Cần các tuần TRƯỚC tuần đích
+    //   − Số thanh ĐÃ ÉP thực tế của các tuần ĐÃ QUÁ KHỨ trước tuần đích
+    //   − Số thanh THEO KẾ HOẠCH (Cần) của các tuần từ HIỆN TẠI trở đi trước tuần đích
     const cumulative = {};
     keys.forEach(k => { cumulative[k] = 0; });
     for (let w = 1; w <= maxWeek; w++) {
       const fc = state.planningForecast[year]?.[String(w)] || {};
-      const inv = inventoryByWeek[w] || {};
+      const conv = convertedByWeek[w] || {};
       keys.forEach(k => {
-        cumulative[k] += (inv[k] || 0) + (parseFloat(fc[k]) || 0);
+        cumulative[k] += (conv[k] || 0) + (parseFloat(fc[k]) || 0);
       });
       if (w < maxWeek) {
+        const weekIsPast = isPlanningWeekPast(year, w);
         const needs = weekNeeds[w] || {};
-        keys.forEach(k => { cumulative[k] -= parseFloat(needs[k]) || 0; });
+        const pressed = pressedByWeek[w] || {};
+        keys.forEach(k => {
+          cumulative[k] -= weekIsPast ? (pressed[k] || 0) : (parseFloat(needs[k]) || 0);
+        });
       }
     }
     return cumulative;
   }
 
   // Lấy sản lượng tối đa có thể sản xuất của một sản phẩm (theo productId)
-  // tại một tuần — suy từ ĐỊNH MỨC NAN:
-  //   Tồn khả dụng = Σ Tồn thực tế(1..W) + Σ Dự kiến(1..W) − Σ Cần(1..W−1).
+  // tại một tuần — suy từ ĐỊNH MỨC NAN trên TỒN THANH ĐẠT (đầu ra Bào Tinh):
+  //   Tồn khả dụng = Σ ĐÃ BÀO TINH(1..W) + Σ Dự kiến(1..W)
+  //                  − Σ ĐÃ ÉP thực tế(các tuần đã qua) − Σ Cần(từ tuần hiện tại → W−1).
   // weekNum = null → tính đến cuối năm.
   function getMaxProductionForProduct(yearNum, productId, weekNum) {
     const rate = state.materialRates.find(r => r.id === productId);
@@ -1455,12 +1680,15 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
 export {
   buildPlanningEditItems,
+  buildTonExpression,
   calculateMaxProductionFromInventory,
   calculatePlanningNeeds,
   closeMaterialRateModal,
+  closeMatrixTraceModal,
   closePlanningEditModal,
   closePlanningItemModal,
   computeMaxProductionByProduct,
+  computePlanningWeekData,
   computePlanningWeekNeeds,
   deleteMaterialRate,
   deletePlanningItem,
@@ -1470,7 +1698,11 @@ export {
   forecastAssumeWeek,
   forecastClearWeek,
   formatNanQty,
+  getActualPressedByWeek,
   getAvailablePlanningYears,
+  getBaoTinhConversion,
+  getBaoTinhConvertedByWeek,
+  getBaoTinhStockByConversionYear,
   getCumulativeInventoryByWeek,
   getCurrentISOWeeks,
   getMaxProductionForProduct,
@@ -1493,6 +1725,7 @@ export {
   loadPlanningItems,
   loadPlanningStock,
   openMaterialRateModal,
+  openMatrixTraceModal,
   openPlanningEditModal,
   openPlanningItemModal,
   parseFractionValue,

@@ -162,7 +162,64 @@ import { state } from './state.js';
     }, 3500);
   }
 
+  // ── Vuốt ngang (chuột/cảm ứng) trên canvas biểu đồ để dịch cửa sổ hiển thị ──
+  // Dùng cho các biểu đồ có nhiều cột dữ liệu: chỉ vẽ 1 cửa sổ (VD 14 cột máy tính
+  // / 7 cột điện thoại), vuốt trái/phải để xem các cột còn lại.
+  // opts = {
+  //   canDrag : () => bool   — có cần vuốt không (tổng dữ liệu > cỡ cửa sổ)
+  //   getStart: () => số     — vị trí cửa sổ hiện tại (đã kẹp trong khoảng hợp lệ)
+  //   setStart: (v) => void  — lưu vị trí mới (v đã qua clamp)
+  //   clamp   : (v) => số    — kẹp vị trí vào [0, tổng − cỡ cửa sổ]
+  //   span    : () => số     — số cột hiển thị (đổi px kéo → số cột)
+  //   unit    : () => số     — số cột mỗi bước vuốt (VD 3 cột = 1 ngày; mặc định 1)
+  //   onShift : () => void   — vẽ lại biểu đồ sau khi dịch
+  // }
+  // Trả { dragging, consumeMoved }: chặn hover & click phát sinh ngay sau vuốt.
+  // Cỡ cửa sổ hiển thị mặc định theo màn hình: 14 cột máy tính / 7 cột điện thoại.
+  function uiChartWinSize() {
+    return (window.matchMedia && window.matchMedia('(min-width: 900px)').matches) ? 14 : 7;
+  }
+  function attachChartPanDrag(canvas, opts) {
+    if (!canvas || !canvas.addEventListener || canvas.__panDrag) {
+      return { dragging: () => false, consumeMoved: () => false };
+    }
+    canvas.__panDrag = true;
+    if (canvas.style) canvas.style.touchAction = 'pan-y'; // ngang = vuốt biểu đồ, dọc = cuộn trang
+    let active = false, startX = 0, baseStart = 0, moved = false, dragging = false;
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!opts || typeof opts.canDrag !== 'function' || !opts.canDrag()) return;
+      active = true; dragging = true;
+      startX = e.clientX; baseStart = opts.getStart(); moved = false;
+      if (canvas.classList) canvas.classList.add('panning');
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!active) return;
+      const span = Math.max(1, (opts.span ? opts.span() : uiChartWinSize()) || 1);
+      const unit = Math.max(1, (opts.unit ? opts.unit() : 1) || 1); // bước vuốt theo cột
+      const colW = Math.max(1, (canvas.clientWidth || 800) / span);
+      if (Math.abs(e.clientX - startX) > 6) moved = true;
+      const rawTarget = baseStart + Math.round((startX - e.clientX) / (colW * unit)) * unit;
+      const target = (opts.clamp ? opts.clamp : (v) => v)(rawTarget);
+      if (typeof opts.getStart === 'function' && target !== opts.getStart()) {
+        opts.setStart(target);
+        if (opts.onShift) opts.onShift();
+      }
+    });
+    const endDrag = () => {
+      active = false; dragging = false;
+      if (canvas.classList) canvas.classList.remove('panning');
+    };
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
+    canvas.addEventListener('pointerleave', endDrag);
+    return {
+      dragging: () => dragging,
+      consumeMoved: () => { const m = moved; moved = false; return m; }
+    };
+  }
+
 export {
+  attachChartPanDrag,
   calculateStageDays,
   calculateVolume,
   escapeHTML,
@@ -175,5 +232,6 @@ export {
   getStageDaysLabel,
   setupFormCalculations,
   showToast,
+  uiChartWinSize,
   validateBatchInput
 };

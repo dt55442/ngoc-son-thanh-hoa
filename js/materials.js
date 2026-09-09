@@ -13,7 +13,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { dataUrlToBlob, deletePhotos, getPhotoURL, photosAvailable, putPhoto } from './photo-store.js';
 import { STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIALS, state } from './state.js';
-import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
+import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWinSize } from './utils.js';
 
   // Ghi/xóa file ảnh qua storage.js (import động để tránh vòng phụ thuộc module)
   function storageModule() {
@@ -396,6 +396,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     return (Math.round(v * 100) / 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
   }
 
+  // Định dạng vạch chia trục Y theo TẤN (VD: 5T, 15T, 60T)
+  function mpFmtTon(v) {
+    return `${(v / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}T`;
+  }
+
   // Ô chọn tuần cho Chart Builder (nguồn Nguyên liệu): tuần 1..N của năm hiện tại
   // Dạng [value, label, isCurrent] — isCurrent=true để builder mặc định chọn tuần này
   function materialPlanWeekOptions() {
@@ -434,7 +439,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           label: `${loc.label} (KH)`, data: plan, order: 2,
           backgroundColor: color + '22', borderColor: color, borderWidth: 2,
           borderRadius: 6, borderSkipped: false, grouped: false,
-          barPercentage: 1.0, categoryPercentage: 0.92
+          barPercentage: 0.72, categoryPercentage: 0.92 // co cột KH = độ rộng cột thực tế
         },
         {
           label: `${loc.label} (TT)`, data: actual, order: 1,
@@ -446,6 +451,73 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     }).flat();
     const wn = parseInt(wk.split('-W')[1], 10);
     return { labels, datasets, days, slotCount, weekCaption: `Tuần ${wn} (${wk.split('-W')[0]})` };
+  }
+
+  // ── Phạm vi biểu đồ: từ tuần đang chọn đến hết năm đó (mỗi tuần = 7 ngày,
+  // đủ cả thứ 7 & chủ nhật; mỗi ngày dùng kế hoạch TB/ngày của tuần chứa nó) ──
+  function mpSpanWeeks(startWeekKey) {
+    const mon0 = mondayOfISOWeek(startWeekKey);
+    if (!mon0) return [startWeekKey];
+    const year = parseInt(String(startWeekKey).split('-W')[0], 10);
+    const weeks = [];
+    for (let i = 0; i < 60; i++) { // an toàn: tối đa 60 tuần
+      const d = new Date(mon0.getTime());
+      d.setUTCDate(mon0.getUTCDate() + i * 7);
+      const wk = materialWeekLabel(d.toISOString().split('T')[0]);
+      if (parseInt(String(wk).split('-W')[0], 10) !== year) break; // sang năm khác → dừng
+      weeks.push(wk);
+    }
+    return weeks;
+  }
+
+  // Dựng labels + datasets CỘT LỒNG cho NHIỀU TUẦN (từ tuần chọn đến hết năm).
+  // Trả { labels, datasets, slotCount, daySlots } — daySlots[i] = { weekKey, weekNum, day }.
+  function buildMaterialPlanSpanData(startWeekKey) {
+    const slotCount = MATERIAL_LOCATIONS.length;
+    const weeks = mpSpanWeeks(startWeekKey || currentPlanWeekKey());
+    const labels = [];
+    const daySlots = [];
+    weeks.forEach(wk => {
+      const wn = parseInt(wk.split('-W')[1], 10);
+      mpWeekDates(wk).forEach(d => {
+        for (let i = 0; i < slotCount; i++) {
+          labels.push(d.label);
+          daySlots.push({ weekKey: wk, weekNum: wn, day: d, li: i }); // li = vị trí nguyên liệu của cột
+        }
+      });
+    });
+    const planCache = {};
+    const avgOf = (wk, locKey) => {
+      const k = wk + '|' + locKey;
+      if (!(k in planCache)) planCache[k] = planAvgOf(wk, locKey);
+      return planCache[k];
+    };
+    const datasets = MATERIAL_LOCATIONS.map((loc, li) => {
+      const color = MP_LOC_COLORS[loc.key] || '#64748b';
+      const plan = new Array(labels.length).fill(null);
+      const actual = new Array(labels.length).fill(null);
+      daySlots.forEach((s, si) => {
+        if (s.li !== li) return; // null xen kẽ: mỗi vị trí chiếm cột RIÊNG trong ngày
+        const avg = avgOf(s.weekKey, loc.key);
+        plan[si] = avg === null ? 0 : avg;           // vỏ: TB/ngày của tuần chứa ngày đó
+        actual[si] = mpActualOf(s.day.iso, loc.key); // lấp: thực tế nhập trong ngày
+      });
+      return [
+        {
+          label: `${loc.label} (KH)`, data: plan, order: 2,
+          backgroundColor: color + '22', borderColor: color, borderWidth: 2,
+          borderRadius: 6, borderSkipped: false, grouped: false,
+          barPercentage: 0.72, categoryPercentage: 0.92 // co cột KH = độ rộng cột thực tế
+        },
+        {
+          label: `${loc.label} (TT)`, data: actual, order: 1,
+          backgroundColor: color, borderColor: color, borderWidth: 0,
+          borderRadius: 4, grouped: false,
+          barPercentage: 0.72, categoryPercentage: 0.92
+        }
+      ];
+    }).flat();
+    return { labels, datasets, slotCount, daySlots };
   }
 
   // Ô chọn tuần: danh sách tuần 1..N của năm đang xem
@@ -468,8 +540,116 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (!mon) return;
     mon.setUTCDate(mon.getUTCDate() + delta * 7);
     state.materialPlanChartWeek = materialWeekLabel(mon.toISOString().split('T')[0]);
+    state.materialPlanChartWinStart = null; // đổi tuần → về đầu tuần
     renderMaterialPlanChart();
   }
+
+  // ── Vuốt ngang trong phạm vi (thay thu phóng): hiển thị 2 tuần (~42 cột) trên
+  // máy tính · 1 tuần (~21 cột) trên điện thoại — theo cỡ cửa sổ chung × 3 vị trí ──
+  function mpWinSlots() {
+    return uiChartWinSize() * MATERIAL_LOCATIONS.length; // 14×3 = 42 · 7×3 = 21
+  }
+  function mpChartWindow(slotTotal) {
+    const size = Math.max(1, Math.min(mpWinSlots(), Math.max(slotTotal, 1)));
+    const raw = state.materialPlanChartWinStart;
+    let start = (raw == null) ? NaN : Number(raw);
+    if (!Number.isFinite(start) || start < 0) start = 0; // mặc định: từ đầu tuần chọn
+    start = Math.min(Math.max(start, 0), Math.max(0, slotTotal - size));
+    return { start, size, total: slotTotal };
+  }
+  function mpSpanSlotTotal() {
+    return mpSpanWeeks(state.materialPlanChartWeek || currentPlanWeekKey()).length * 7 * MATERIAL_LOCATIONS.length;
+  }
+  let mpPanCtl = null;
+  function attachMaterialPlanPanDrag() {
+    const canvas = document.getElementById('material-plan-chart');
+    if (!canvas) return;
+    if (!mpPanCtl) {
+      const total = () => mpSpanSlotTotal();
+      mpPanCtl = attachChartPanDrag(canvas, {
+        canDrag: () => total() > mpChartWindow(total()).size,
+        getStart: () => mpChartWindow(total()).start,
+        setStart: (v) => { state.materialPlanChartWinStart = v; },
+        clamp: (v) => {
+          const w = mpChartWindow(total());
+          return Math.min(Math.max(v, 0), Math.max(0, w.total - w.size));
+        },
+        span: () => mpChartWindow(total()).size,
+        unit: () => MATERIAL_LOCATIONS.length, // mỗi bước vuốt = 1 ngày (3 cột)
+        onShift: () => renderMaterialPlanChart()
+      });
+    }
+    return mpPanCtl;
+  }
+
+  // ── Plugin vẽ nhãn NGÀY căn giữa nhóm cột của ngày + dải màu TUẦN xen kẽ dưới
+  // trục X (Tuần X căn giữa trong dải) ──
+  const mpAxisBandPlugin = {
+    id: 'mpAxisBands',
+    afterDraw(chart, args, opts) {
+      const dayGroups = opts && opts.dayGroups;
+      const xScale = chart.scales && chart.scales.x;
+      const area = chart.chartArea;
+      if (!dayGroups || !dayGroups.length || !xScale || !area) return;
+      const count = dayGroups[dayGroups.length - 1].i1 + 1;
+      const half = count > 1 ? Math.abs(xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2 : area.width / 2;
+      const ctx = chart.ctx;
+      ctx.save();
+      // Hàng 1: tên ngày (dd/mm) căn giữa trên nhóm 3 cột của ngày đó
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 10px system-ui, -apple-system, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      dayGroups.forEach(g => {
+        const x0 = Math.max(area.left, xScale.getPixelForValue(g.i0) - half);
+        const x1 = Math.min(area.right, xScale.getPixelForValue(g.i1) + half);
+        if (x1 - x0 < 2) return;
+        ctx.fillText(g.label, (x0 + x1) / 2, area.bottom + 10);
+      });
+      // Hàng 2: dải màu tuần xen kẽ + tên "Tuần X" căn giữa
+      const wColors = [
+        { fill: 'rgba(14,165,233,0.16)', text: '#0369a1' },
+        { fill: 'rgba(139,92,246,0.16)', text: '#6d28d9' }
+      ];
+      const bandH = 18;
+      const by1 = chart.height - 4;
+      const by0 = by1 - bandH;
+      (opts.weekGroups || []).forEach((g, gi) => {
+        const c = wColors[gi % 2];
+        const x0 = Math.max(area.left, xScale.getPixelForValue(g.i0) - half + 1);
+        const x1 = Math.min(area.right, xScale.getPixelForValue(g.i1) + half - 1);
+        if (x1 - x0 < 2) return;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') ctx.roundRect(x0, by0, x1 - x0, bandH, 5);
+        else ctx.rect(x0, by0, x1 - x0, bandH);
+        ctx.fillStyle = c.fill;
+        ctx.fill();
+        ctx.fillStyle = c.text;
+        ctx.font = '600 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+        ctx.fillText(`Tuần ${g.weekNum}`, (x0 + x1) / 2, by0 + bandH / 2);
+      });
+      ctx.restore();
+    }
+  };
+
+  // ── Plugin ghi nhãn "Tấn" NĂM NGANG trên đỉnh trục Y (gọn hơn nhãn xoay dọc) ──
+  const mpYTitlePlugin = {
+    id: 'mpYTitle',
+    afterDraw(chart, args, opts) {
+      if (!opts || !opts.text) return;
+      const yScale = chart.scales && chart.scales.y;
+      const area = chart.chartArea;
+      if (!yScale || !area) return;
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(opts.text, ((yScale.left || 0) + area.left) / 2, area.top - 4);
+      ctx.restore();
+    }
+  };
 
   // Vẽ biểu đồ cột lồng: 7 ngày × 3 vị trí.
   // VỎ (viền đậm + nền nhạt) = kế hoạch TB/ngày của tuần (bảng kế hoạch trên).
@@ -483,45 +663,67 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (!canvas || typeof Chart === 'undefined') return;
     renderMaterialPlanChartWeekSelect();
     const weekKey = state.materialPlanChartWeek || currentPlanWeekKey();
-    const days = mpWeekDates(weekKey);
     const caption = document.getElementById('mpc-caption');
-    if (caption) caption.textContent = `Tuần ${parseInt(weekKey.split('-W')[1], 10)} (${weekKey.split('-W')[0]}) · ${days.length ? days[0].label + ' → ' + days[6].label : ''}`;
 
-    // Labels + datasets dựng bởi helper dùng chung (biểu đồ tĩnh + Chart Builder)
-    const built = buildMaterialPlanVsActualData(weekKey);
+    // Labels + datasets cho PHẠM VI từ tuần đang chọn đến hết năm đó
+    // (đủ cả thứ 7 & chủ nhật của mỗi tuần)
+    const built = buildMaterialPlanSpanData(weekKey);
     const labels = built.labels;
     const datasets = built.datasets;
     const slotCount = built.slotCount;
 
-    // Zoom / pan (chartjs-plugin-zoom + Hammer đã nạp trong index.html):
-    // chụm 2 ngón / lăn chuột để phóng trục X, kéo ngang để dịch, nhấp đúp
-    // để về mặc định. Thiếu thư viện -> biểu đồ vẫn vẽ bình thường (không zoom).
-    const mpZoom = (typeof Chart !== 'undefined' && window.ChartZoom) ? (() => {
-      try { Chart.register(window.ChartZoom); } catch (e) {}
-      return {
-        pan: { enabled: true, mode: 'x' },
-        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-        limits: { x: { minRange: 3 } } // không phóng nhỏ quá 1 ngày (mỗi ngày = 3 cột)
-      };
-    })() : false;
-    if (mpZoom) {
-      canvas.style.touchAction = 'pan-y'; // chạm 1 ngón vẫn cuộn dọc trang bình thường
-      if (!canvas.__mpDblClickBound) {
-        canvas.__mpDblClickBound = true;
-        canvas.addEventListener('dblclick', () => {
-          try { if (state.materialPlanChartInstance) state.materialPlanChartInstance.resetZoom(); } catch (e) {}
-        });
-      }
+    // ── Cửa sổ hiển thị: 2 tuần (~42 cột) trên máy tính · 1 tuần (~21 cột) trên
+    // điện thoại — vuốt trái/phải để xem thêm các tuần sau trong phạm vi ──
+    const slotTotal = labels.length;
+    const win = mpChartWindow(slotTotal);
+    const idxs = [];
+    for (let i = win.start; i < Math.min(win.start + win.size, slotTotal); i++) idxs.push(i);
+    const viewLabels = idxs.map(i => labels[i]);
+    const viewDatasets = datasets.map(ds => ({ ...ds, data: idxs.map(i => ds.data[i]) }));
+    attachMaterialPlanPanDrag();
+
+    // Nhóm cột theo NGÀY (để căn giữa nhãn ngày) & theo TUẦN (dải màu xen kẽ)
+    const dayGroups = [];
+    const weekGroups = [];
+    idxs.forEach((gi, vi) => {
+      const s = built.daySlots[gi];
+      const ld = dayGroups[dayGroups.length - 1];
+      if (ld && ld.iso === s.day.iso) ld.i1 = vi;
+      else dayGroups.push({ iso: s.day.iso, label: s.day.label, i0: vi, i1: vi });
+      const lw = weekGroups[weekGroups.length - 1];
+      if (lw && lw.weekNum === s.weekNum) lw.i1 = vi;
+      else weekGroups.push({ weekNum: s.weekNum, i0: vi, i1: vi });
+    });
+
+    // Chú thích: dải tuần/ngày đang hiển thị
+    if (caption) {
+      const s0 = built.daySlots[idxs[0]];
+      const s1 = built.daySlots[idxs[idxs.length - 1]];
+      caption.textContent = (s0 && s1)
+        ? `Tuần ${s0.weekNum} → Tuần ${s1.weekNum} (${weekKey.split('-W')[0]}) · ${s0.day.label} → ${s1.day.label}`
+        : '';
     }
+
+    // Max dữ liệu trong cửa sổ → cộng thêm 1 vạch chia (×1,2) để cột cao nhất
+    // không chạm trần (VD: max 50.000 kg → vạch chia lớn nhất 60T)
+    let mpYMax = 0;
+    viewDatasets.forEach(ds => ds.data.forEach(v => {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > mpYMax) mpYMax = n;
+    }));
 
     const cfg = {
       type: 'bar',
-      data: { labels, datasets },
+      plugins: [mpAxisBandPlugin, mpYTitlePlugin],
+      data: { labels: viewLabels, datasets: viewDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
+        // Chừa chỗ: nhãn "Tấn" trên đỉnh trục Y + nhãn ngày & dải tuần dưới trục X
+        layout: { padding: { top: 18, bottom: 48 } },
         interaction: { mode: 'nearest', intersect: true },
         plugins: {
-          zoom: mpZoom,
+          mpAxisBands: { dayGroups, weekGroups },
+          mpYTitle: { text: 'Tấn' },
           legend: {
             position: 'bottom',
             labels: {
@@ -539,9 +741,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           tooltip: {
             callbacks: {
               title: (items) => {
-                const idx = items[0].dataIndex;
-                const day = days[Math.floor(idx / slotCount)];
-                return day ? `${MP_DAY_NAMES[idx % slotCount] || ''} ${day.label}` : '';
+                const gi = idxs[items[0].dataIndex]; // cột trong tuần (qua cửa sổ hiển thị)
+                const slot = built.daySlots[gi];
+                return slot ? `${MP_DAY_NAMES[gi % slotCount] || ''} ${slot.day.label}` : '';
               },
               label: (item) => {
                 const isPlan = item.datasetIndex % 2 === 0;
@@ -568,19 +770,14 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         scales: {
           x: {
             grid: { display: false },
-            ticks: {
-              autoSkip: false, maxRotation: 0,
-              // Chỉ hiện nhãn ngày ở cột ĐẦU TIÊN của mỗi ngày (tránh lặp 3 lần)
-              callback: function (val, idx) {
-                return idx % slotCount === 0 ? this.getLabelForValue(val) : '';
-              }
-            }
+            ticks: { display: false } // nhãn ngày & dải tuần vẽ bằng plugin mpAxisBands
           },
           y: {
             beginAtZero: true,
             grid: { color: 'rgba(148,163,184,0.15)' },
-            ticks: { callback: (v) => mpFmtKg(v) },
-            title: { display: true, text: 'Trọng lượng (kg)' }
+            ticks: { callback: (v) => mpFmtTon(v) }, // vạch chia theo TẤN (5T, 15T, …)
+            // Thêm 1 vạch chia trên đỉnh để cột cao nhất không chạm trần
+            suggestedMax: mpYMax > 0 ? mpYMax * 1.2 : undefined
           }
         }
       }
@@ -1153,6 +1350,8 @@ export {
   materialPhotoNav,
   materialWeekLabel,
   migrateMaterialImages,
+  buildMaterialPlanSpanData,
+  mpChartWindow,
   openMaterialModal,
   openMaterialPhotoModal,
   removeMaterialPlanWeek,

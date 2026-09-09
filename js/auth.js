@@ -247,7 +247,9 @@ import { escapeHTML, showToast } from './utils.js';
             <td>${roleTagHtml(ent.role)}</td>
             <td>${permsChipsHtml(userLike)}</td>
             <td class="text-right">
-              ${isSelf ? '<span class="text-muted">Chính bạn</span>' : `
+              ${isSelf ? `
+                <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserEditModal('${escapeHTML(ent.key)}')" title="Đổi tên hiển thị của bạn (Mr Khá...)"><i data-lucide="edit-3"></i></button>
+                <span class="text-muted">Chính bạn</span>` : `
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserEditModal('${escapeHTML(ent.key)}')" title="Sửa thông tin / vai trò"><i data-lucide="edit-3"></i></button>
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserPermsModal('${escapeHTML(ent.key)}')" title="Cấu hình quyền chi tiết"><i data-lucide="user-cog"></i></button>
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteUser('${escapeHTML(ent.key)}')" style="color:var(--danger);" title="Xóa quyền"><i data-lucide="trash-2"></i></button>`}
@@ -370,6 +372,8 @@ import { escapeHTML, showToast } from './utils.js';
 
     if (isFirebaseOnline()) {
       const email = String(userIdOrEmail || '').trim().toLowerCase();
+      // Tự sửa chính mình: chỉ đổi tên hiển thị, khóa vai trò (tránh tự hạ quyền)
+      const isSelf = state.currentUser && email === (state.currentUser.email || '').toLowerCase();
       fetchRolesDoc().then(roles => {
         const all = [...roles.adminEmails, ...roles.managerEmails, ...roles.editorEmails, ...roles.viewerEmails];
         if (!all.includes(email)) { showToast('Không tìm thấy người dùng này!', 'error'); return; }
@@ -378,7 +382,10 @@ import { escapeHTML, showToast } from './utils.js';
           : roles.editorEmails.includes(email) ? 'editor' : 'viewer';
         targetInput.value = `email:${email}`;
         if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Người Dùng: ${escapeHTML(email)}`;
-        if (fullnameInput) { fullnameInput.value = ''; fullnameInput.placeholder = 'Họ tên hiển thị (không bắt buộc)'; }
+        if (fullnameInput) {
+          fullnameInput.value = (isSelf && state.currentUser.fullname && state.currentUser.fullname !== email) ? state.currentUser.fullname : '';
+          fullnameInput.placeholder = isSelf ? 'Đổi tên hiển thị. VD: Mr Khá' : 'Họ tên hiển thị (không bắt buộc)';
+        }
         usernameInput.value = email;
         usernameInput.readOnly = true;
         if (usernameNote) {
@@ -388,6 +395,8 @@ import { escapeHTML, showToast } from './utils.js';
         if (pwdGrp) pwdGrp.style.display = 'none';
         if (pwdInput) pwdInput.value = '';
         roleSel.value = role;
+        roleSel.disabled = isSelf;
+        if (isSelf) roleSel.title = 'Không thể tự đổi vai trò của chính mình';
         modal.classList.add('show');
         initLucide();
       });
@@ -457,6 +466,14 @@ import { escapeHTML, showToast } from './utils.js';
         }
         renderUsersTable();
         closeUserEditModal();
+        // Sửa chính mình → đổi tên hiển thị trên pill hồ sơ NGAY và giữ cho các lần đăng nhập sau
+        if (state.currentUser && key === (state.currentUser.email || '').toLowerCase()) {
+          if (fullname) state.currentUser.fullname = fullname;
+          state.currentUser.role = role;
+          saveSession();
+          updateUserProfileHeader();
+          applyRoleToUI(state.currentUser.role);
+        }
         showToast(`Đã cập nhật ${key} (${ROLES[role]?.name || role})!`, 'success');
       } catch (err) {
         console.warn('[FB] Lỗi sửa người dùng', err);

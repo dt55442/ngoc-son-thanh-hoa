@@ -21,6 +21,11 @@
   const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
   const STORAGE_KEY_HR_LEAVES      = 'bamboo_tracker_hr_leaves_v1';
   const STORAGE_KEY_HR_RECRUITMENT = 'bamboo_tracker_hr_recruitment_v1';
+  // Chấm công & phân vị theo ngày + danh mục vị trí làm việc
+  const STORAGE_KEY_HR_POSITIONS  = 'bamboo_tracker_hr_positions_v1';
+  const STORAGE_KEY_HR_ATTENDANCE = 'bamboo_tracker_hr_attendance_v1';
+  // Giờ nạp từ máy chấm công (Excel): 1 bản ghi / NV / ngày {in, out, punches}
+  const STORAGE_KEY_HR_CHECKINS   = 'bamboo_tracker_hr_checkins_v1';
 
   const STAGES = {
     say1:     { id: 'say1',     name: '1. Sấy 1',        short: 'Sấy 1',    next: 'say2'     },
@@ -67,6 +72,11 @@
     hrEmployees: [],   // [{ id, code, name, gender, birthDate, phone, idCard, address, department, position, title, joinDate, status, notes, createdAt, updatedAt }]
     hrLeaves: [],      // [{ id, employeeId, type, from, to, days, reason, status pending|approved|rejected, approvedBy, approvedAt, createdAt }]
     hrRecruitment: [], // [{ id, department, position, needQty, hiredQty, needDate, status open|done, notes, createdAt, updatedAt }]
+    hrPositions: [],   // [{ id, name, department, note, createdAt, updatedAt }] — danh mục vị trí làm việc của xưởng
+    hrAttendance: [],  // [{ id, date, employeeId, status 'work'|'absent', positions[], note, createdAt, updatedAt }] — chấm công & phân vị theo ngày (sparse)
+    hrAttDate: '',     // ngày đang xem của bảng chấm công ('YYYY-MM-DD')
+    hrAttMonth: '',    // tháng đang xem của thống kê đi làm ('YYYY-MM')
+    hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
     qcExports: [],
     materialActiveLoc: 'all', // 'all' | 'lo-hoi' | 'xuong-1' | 'xuong-2'
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
@@ -127,6 +137,9 @@ export {
   STORAGE_KEY_HR_EMPLOYEES,
   STORAGE_KEY_HR_LEAVES,
   STORAGE_KEY_HR_RECRUITMENT,
+  STORAGE_KEY_HR_POSITIONS,
+  STORAGE_KEY_HR_ATTENDANCE,
+  STORAGE_KEY_HR_CHECKINS,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,
   state

@@ -114,7 +114,7 @@ Admin cấu hình **"tab được phép chỉnh sửa"** (Công Đoạn / Kế H
 ### Thêm tab mới trong tương lai
 Khai báo 1 dòng trong `APP_TABS` (file `js/permissions.js`) + schema dữ liệu trong `BUILDER_SCHEMA` (file `js/dashboard.js`) — Dashboard và bảng phân quyền **tự động nhận tab mới**.
 Tab QC (Xuất Hàng) là ví dụ mẫu: `APP_TABS` + section `qc-view` trong `index.html` + module `js/qc.js` + đồng bộ `qcExports` trong `js/cloud.js`.
-**Tab Nhân Sự** (nhân viên, xin nghỉ phép có duyệt của ban lãnh đạo, thống kê/TOP ngày nghỉ, nhu cầu tuyển dụng) cũng làm theo đúng mô hình này: `hr` trong `APP_TABS` + section `hr-view` + module `js/hr.js` + đồng bộ `hrEmployees/hrLeaves/hrRecruitment` trong `js/cloud.js`. *(Ma trận vị trí làm việc theo ngày sẽ bổ sung sau trên nền tab này.)*
+**Tab Nhân Sự** (nhân viên + kỹ năng đa vị trí, chấm công & phân vị theo ngày, xin nghỉ phép có duyệt của ban lãnh đạo, thống kê đi làm theo tháng/TOP ngày nghỉ, nhu cầu tuyển dụng) cũng làm theo đúng mô hình này: `hr` trong `APP_TABS` + section `hr-view` + module `js/hr.js` + đồng bộ `hrEmployees/hrLeaves/hrRecruitment/hrPositions/hrAttendance/hrCheckins` trong `js/cloud.js`. *(Chấm công: "Nghỉ có phép" suy ra từ đơn nghỉ đã duyệt — không lưu trùng; nạp giờ Excel từ máy chấm công tự nhận cột, đối chiếu rồi mới áp dụng; test riêng tại `tests/hr-attendance.test.mjs`.)*
 
 ---
 

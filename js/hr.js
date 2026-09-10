@@ -2,26 +2,34 @@
 // js/hr.js — TAB NHÂN SỰ (Quản lý nhân sự)
 // ───────────────────────────────────────────────────────────
 // Gồm:
-//   1. DANH SÁCH NHÂN VIÊN (thông tin cơ sở, thêm/sửa/xóa, lọc theo bộ phận)
+//   1. DANH SÁCH NHÂN VIÊN (thông tin cơ sở, thêm/sửa/xóa, lọc theo bộ phận,
+//      kỹ năng — các vị trí có thể làm)
 //   2. XIN NGHỈ PHÉP (gửi đơn; ban lãnh đạo (Admin/Ban Quản Lý) duyệt
 //      Đồng ý / Không đồng ý)
 //   3. THỐNG KÊ NGHỈ PHÉP + TOP NHÂN VIÊN THEO SỐ NGÀY NGHỈ
 //   4. NHÂN SỰ CẦN — TUYỂN DỤNG (dữ liệu cho biểu đồ kiểm soát nhân sự)
+//   5. CHẤM CÔNG & PHÂN VỊ THEO NGÀY (đi làm / vắng; "nghỉ có phép" suy ra
+//      từ đơn nghỉ ĐÃ DUYỆT; phân vị trí theo kỹ năng từng người)
+//   6. VỊ TRÍ LÀM VIỆC & KỸ NĂNG (danh mục vị trí; mỗi NV 1-nhiều vị trí)
+//   7. THỐNG KÊ ĐI LÀM THEO THÁNG (ngày công, nghỉ phép, vắng, tỷ lệ đi làm)
 // Lưu localStorage + đồng bộ mây (firePushSync) như các tab khác.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { canViewAdvanced } from './permissions.js';
-import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, state } from './state.js';
+import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── HẰNG SỐ NHÂN SỰ ────────────────────────────────────────────
-  // Bộ phận cố định theo mô hình nhà máy (ma trận vị trí làm việc
-  // theo ngày sẽ được bổ sung ở giai đoạn sau trên nền này)
-  const HR_DEPARTMENTS = ['Văn Phòng', 'QC', 'Cơ Điện', 'Xưởng 1', 'Xưởng 2', 'Lò Hơi'];
+  // Bộ phận cố định theo mô hình nhà máy — thứ tự này cũng dùng để SẮP XẾP
+  // nhóm bộ phận trên bảng chấm công (Văn Phòng -> Cơ Điện -> QC -> Xưởng 1 -> Xưởng 2)
+  const HR_DEPARTMENTS = ['Văn Phòng', 'Cơ Điện', 'QC', 'Xưởng 1', 'Xưởng 2', 'Lò Hơi'];
   const EMP_STATUS  = { active: 'Đang làm việc', pause: 'Tạm nghỉ', quit: 'Đã nghỉ việc' };
   const LEAVE_TYPES  = ['Nghỉ phép', 'Nghỉ không lương', 'Ốm', 'Việc gia đình', 'Khác'];
   const LEAVE_STATUS = { pending: 'Chờ duyệt', approved: 'Đồng ý', rejected: 'Không đồng ý' };
   const RECRUIT_STATUS = { open: 'Đang tuyển', done: 'Đã đủ người' };
+  // Chấm công thủ công: đi làm / vắng. Riêng "Nghỉ có phép" KHÔNG lưu trùng —
+  // suy ra trực tiếp từ đơn nghỉ đã duyệt (xem approvedLeaveOn).
+  const ATT_STATUS = { work: 'Đi làm', absent: 'Vắng (không phép)' };
 
   // Ban lãnh đạo = Admin & Ban Quản Lý (hoặc được cấp riêng) — duyệt đơn nghỉ
   function canApproveLeave() { return canViewAdvanced(); }
@@ -31,12 +39,18 @@ import { escapeHTML, showToast } from './utils.js';
     try { state.hrEmployees  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_EMPLOYEES))  || []; } catch (e) { state.hrEmployees  = []; }
     try { state.hrLeaves     = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_LEAVES))     || []; } catch (e) { state.hrLeaves     = []; }
     try { state.hrRecruitment = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_RECRUITMENT)) || []; } catch (e) { state.hrRecruitment = []; }
+    try { state.hrPositions  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_POSITIONS))  || []; } catch (e) { state.hrPositions  = []; }
+    try { state.hrAttendance = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_ATTENDANCE)) || []; } catch (e) { state.hrAttendance = []; }
+    try { state.hrCheckins   = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CHECKINS))   || []; } catch (e) { state.hrCheckins   = []; }
   }
 
   function saveHrData() {
     localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || []));
     localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || []));
     localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || []));
+    localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || []));
+    localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || []));
+    localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || []));
     firePushSync(); // đồng bộ lên mây nếu online
   }
 
@@ -54,23 +68,46 @@ import { escapeHTML, showToast } from './utils.js';
     if (!from || !to || to < from) return 1;
     return Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
   }
+  function hrPosById(id) { return (state.hrPositions || []).find(p => p.id === id) || null; }
+  function hrPosName(id) { const p = hrPosById(id); return p ? p.name : 'Vị trí đã xóa'; }
+  // Hôm nay theo GIỜ MÁY (yyyy-mm-dd) — không dùng toISOString (UTC) để tránh lệch ngày buổi tối
+  function hrTodayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  // Cộng/trừ n ngày trên chuỗi yyyy-mm-dd (đi qua Date địa phương, an toàn timezone)
+  function hrShiftDateISO(iso, days) {
+    const [y, m, d] = String(iso).split('-').map(Number);
+    const dt = new Date(y, (m || 1) - 1, (d || 1) + days);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  }
 
   // ─── RENDER TOÀN TAB ────────────────────────────────────────────
   function renderHrView() {
     populateHrSelects();
     renderHrEmployeesTable();
+    renderHrAttendanceCard();
+    renderHrCheckinTable();
+    renderHrPositionsTable();
     renderHrLeavesTable();
     renderHrLeaveStats();
+    renderHrAttendanceStats();
     renderHrRecruitmentTable();
     initLucide();
   }
 
-  // Điền danh sách nhân viên vào select đơn nghỉ + select lọc bộ phận
+  // Điền danh sách nhân viên vào select đơn nghỉ + select lọc bộ phận.
+  // QUAN TRỌNG: giữ nguyên lựa chọn đang có (cur) qua các lần render lại —
+  // nếu không, mỗi lần đổi bộ lọc (gọi renderHrView) select "Bộ phận" bị xây
+  // lại và snap về "Tất Cả" khiến bộ lọc tưởng như không hoạt động.
   function populateHrSelects() {
-    ['hr-emp-filter-dept', 'hr-recruit-filter-dept'].forEach(selId => {
+    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept'].forEach(selId => {
       const sel = document.getElementById(selId);
-      if (sel) sel.innerHTML = '<option value="all">Tất Cả Bộ Phận</option>' +
+      if (!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = '<option value="all">Tất Cả Bộ Phận</option>' +
         HR_DEPARTMENTS.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
+      if (cur) sel.value = cur;
     });
   }
 
@@ -163,6 +200,8 @@ import { escapeHTML, showToast } from './utils.js';
       document.getElementById('employee-gender').value = 'Nam';
       document.getElementById('employee-code').value = `NV${String((state.hrEmployees || []).length + 1).padStart(3, '0')}`;
     }
+    // Kỹ năng — các vị trí nhân viên có thể làm (tick nhiều vị trí)
+    renderEmployeeSkillsBox(id ? (hrEmpById(id)?.skills || []) : []);
     modal.classList.add('show');
     initLucide();
   }
@@ -192,6 +231,7 @@ import { escapeHTML, showToast } from './utils.js';
       title: document.getElementById('employee-title').value.trim(),
       joinDate: document.getElementById('employee-joindate').value,
       status: document.getElementById('employee-status').value,
+      skills: collectEmployeeSkills(),
       notes: document.getElementById('employee-notes').value.trim(),
       updatedAt: new Date().toISOString()
     };
@@ -214,12 +254,49 @@ import { escapeHTML, showToast } from './utils.js';
     if (!requireEditPermission()) return;
     const e = hrEmpById(id);
     if (!e) return;
-    if (!confirm(`Xóa nhân viên "${e.name}"? Các đơn nghỉ phép của người này cũng bị xóa.`)) return;
+    if (!confirm(`Xóa nhân viên "${e.name}"? Các đơn nghỉ phép & dữ liệu chấm công/phân vị của người này cũng bị xóa.`)) return;
     state.hrEmployees = state.hrEmployees.filter(x => x.id !== id);
     state.hrLeaves = (state.hrLeaves || []).filter(l => l.employeeId !== id);
+    state.hrAttendance = (state.hrAttendance || []).filter(a => a.employeeId !== id);
+    state.hrCheckins = (state.hrCheckins || []).filter(c => c.employeeId !== id);
     saveHrData();
     renderHrView();
     showToast(`Đã xóa nhân viên ${e.name}`, 'info');
+  }
+
+  // ─── KỸ NĂNG NHÂN VIÊN (vị trí có thể làm) TRONG MODAL NHÂN VIÊN ──
+  // Nhóm chip tick: bấm chọn nhiều vị trí; chip "on" = đã chọn.
+  // Vị trí hiển thị THEO BỘ PHẬN đang chọn của nhân viên (+ vị trí chưa phân
+  // bộ phận + những kỹ năng đã chọn trước đó để vẫn bỏ tick được).
+  function renderEmployeeSkillsBox(selected) {
+    const box = document.getElementById('employee-skills-box');
+    if (!box) return;
+    const list = state.hrPositions || [];
+    if (!list.length) {
+      box.innerHTML = '<span style="font-size:0.72rem;color:var(--text-muted);">Chưa có vị trí nào — thêm ở bảng "Vị Trí Làm Việc" bên dưới để đánh dấu kỹ năng.</span>';
+      return;
+    }
+    const dept = document.getElementById('employee-department')?.value || '';
+    const sel = selected || [];
+    const visible = list.filter(p => !p.department || p.department === dept || sel.includes(p.id));
+    if (!visible.length) {
+      box.innerHTML = '<span style="font-size:0.72rem;color:var(--text-muted);">Bộ phận này chưa có vị trí làm việc — thêm ở bảng "Vị Trí Làm Việc" (chọn cùng bộ phận).</span>';
+      return;
+    }
+    box.innerHTML = visible.map(p => `
+      <label class="att-pos-chip${sel.includes(p.id) ? ' on' : ''}" title="Bấm chọn nếu nhân viên làm được vị trí này">
+        <input type="checkbox" value="${escapeHTML(p.id)}" ${sel.includes(p.id) ? 'checked' : ''} style="display:none;">
+        ${escapeHTML(p.name)}${p.department ? ` <span style="font-weight:400;opacity:0.75;">· ${escapeHTML(p.department)}</span>` : ''}
+      </label>`).join('');
+    box.querySelectorAll('input[type="checkbox"]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        inp.closest('.att-pos-chip')?.classList.toggle('on', inp.checked);
+      });
+    });
+  }
+
+  function collectEmployeeSkills() {
+    return [...document.querySelectorAll('#employee-skills-box input[type="checkbox"]:checked')].map(i => i.value);
   }
 
   // ─── Ô GỢI Ý NHÂN VIÊN (COMBOBOX) TRONG FORM XIN NGHỈ PHÉP ──────
@@ -477,6 +554,810 @@ import { escapeHTML, showToast } from './utils.js';
         <td>${s.times} lần</td>
         <td><strong>${s.days}</strong> ngày</td>
       </tr>`).join('');
+  }
+
+  // ─── 5) CHẤM CÔNG & PHÂN VỊ THEO NGÀY ────────────────────────────
+  // Mỗi nhân viên/ngày tối đa 1 bản ghi (sparse: chỉ lưu người ĐÃ chấm).
+  // "Nghỉ có phép" KHÔNG lưu trùng — suy ra trực tiếp từ đơn nghỉ ĐÃ DUYỆT
+  // (hrLeaves) phủ ngày đang xem, nên luôn khớp phê duyệt của ban lãnh đạo.
+  function attRecordOf(employeeId, date) {
+    return (state.hrAttendance || []).find(a => a.employeeId === employeeId && a.date === date) || null;
+  }
+
+  // Đơn nghỉ ĐÃ DUYỆT phủ đúng ngày của nhân viên (nếu có)
+  function approvedLeaveOn(employeeId, date) {
+    return (state.hrLeaves || []).find(l => l.employeeId === employeeId
+      && (l.status || 'pending') === 'approved' && String(l.from) <= date && date <= String(l.to)) || null;
+  }
+  // Đơn nghỉ CHỜ DUYỆT phủ ngày (chỉ để gợi ý trên bảng chấm công)
+  function pendingLeaveOn(employeeId, date) {
+    return (state.hrLeaves || []).find(l => l.employeeId === employeeId
+      && (l.status || 'pending') === 'pending' && String(l.from) <= date && date <= String(l.to)) || null;
+  }
+
+  // Trạng thái chấm công hiển thị: 'work' | 'absent' | 'leave' (phép đã duyệt) | '' (chưa chấm)
+  function attStatusOf(employeeId, date) {
+    const rec = attRecordOf(employeeId, date);
+    if (rec && (rec.status === 'work' || rec.status === 'absent')) return rec.status;
+    if (approvedLeaveOn(employeeId, date)) return 'leave';
+    return '';
+  }
+
+  function ensureAttRecord(employeeId, date) {
+    let rec = attRecordOf(employeeId, date);
+    if (!rec) {
+      rec = { id: `att-${date}-${employeeId}`, date, employeeId, status: 'work', positions: [], note: '', createdAt: new Date().toISOString() };
+      state.hrAttendance.push(rec);
+    }
+    return rec;
+  }
+
+  function setAttendanceStatus(employeeId, date, status) {
+    if (!requireEditPermission()) return;
+    const idx = (state.hrAttendance || []).findIndex(a => a.employeeId === employeeId && a.date === date);
+    const rec = idx !== -1 ? state.hrAttendance[idx] : null;
+    if (status === '') {
+      // Bỏ chấm: xóa hẳn bản ghi (hỏi lại nếu đã có phân vị / ghi chú)
+      if (rec && (((rec.positions || []).length) || (rec.note || '').trim())) {
+        if (!confirm('Bỏ chấm sẽ xóa cả phân vị & ghi chú của ngày này. Tiếp tục?')) { renderHrAttendanceCard(); return; }
+      }
+      if (rec) state.hrAttendance.splice(idx, 1);
+      saveHrData();
+      renderHrAttendanceCard();
+      showToast(`Đã bỏ chấm công ${hrEmpName(employeeId)} ngày ${fmtDateDMY(date)}`, 'info');
+      return;
+    }
+    if (status !== 'work' && status !== 'absent') return;
+    const r = ensureAttRecord(employeeId, date);
+    r.status = status;
+    r.updatedAt = new Date().toISOString();
+    saveHrData();
+    renderHrAttendanceCard();
+    showToast(status === 'work'
+      ? `Đã chấm ĐI LÀM: ${hrEmpName(employeeId)} (${fmtDateDMY(date)})`
+      : `Đã ghi VẮNG (không phép): ${hrEmpName(employeeId)} (${fmtDateDMY(date)})`, status === 'work' ? 'success' : 'info');
+  }
+
+  // Bật/tắt 1 vị trí trong ngày. Nếu ngày chưa chấm → tự chấm "Đi làm".
+  function toggleAttendancePosition(employeeId, date, positionId) {
+    if (!requireEditPermission()) return;
+    if (attStatusOf(employeeId, date) === 'leave') {
+      showToast(`${hrEmpName(employeeId)} đang nghỉ CÓ PHÉP (đơn đã duyệt) — không phân vị trí.`, 'info');
+      return;
+    }
+    const autoWork = !attRecordOf(employeeId, date);
+    const r = ensureAttRecord(employeeId, date);
+    r.positions = Array.isArray(r.positions) ? r.positions : [];
+    const i = r.positions.indexOf(positionId);
+    if (i === -1) {
+      r.positions.push(positionId);
+      const emp = hrEmpById(employeeId);
+      if (emp && !(emp.skills || []).includes(positionId)) {
+        showToast(`Lưu ý: ${hrEmpName(employeeId)} chưa có kỹ năng "${hrPosName(positionId)}" — vẫn cho phân nếu thực tế làm được.`, 'info');
+      }
+    } else {
+      r.positions.splice(i, 1);
+    }
+    r.updatedAt = new Date().toISOString();
+    saveHrData();
+    renderHrAttendanceCard();
+    if (autoWork) showToast(`Đã chấm ĐI LÀM: ${hrEmpName(employeeId)} (${fmtDateDMY(date)})`, 'success');
+  }
+
+  function setAttendanceNote(employeeId, date, note) {
+    if (!requireEditPermission()) return;
+    const rec = attRecordOf(employeeId, date);
+    if (!rec) {
+      if (!(note || '').trim()) return; // chưa chấm + ghi chú rỗng → bỏ qua
+      const r = ensureAttRecord(employeeId, date);
+      r.note = (note || '').trim();
+      r.updatedAt = new Date().toISOString();
+      saveHrData();
+      return;
+    }
+    rec.note = (note || '').trim();
+    rec.updatedAt = new Date().toISOString();
+    saveHrData(); // cố ý KHÔNG render lại — tránh mất focus khi đang gõ
+  }
+
+  // Điều hướng ngày trên bảng chấm công
+  function hrAttSetDate(iso) {
+    state.hrAttDate = /^\d{4}-\d{2}-\d{2}$/.test(String(iso || '')) ? iso : hrTodayISO();
+    renderHrAttendanceCard();
+  }
+  function hrAttShiftDay(delta) { hrAttSetDate(hrShiftDateISO(state.hrAttDate || hrTodayISO(), delta)); }
+  function hrAttGoToday() { hrAttSetDate(hrTodayISO()); }
+  function hrAttSetMonth(v) {
+    state.hrAttMonth = /^\d{4}-\d{2}$/.test(String(v || '')) ? v : hrTodayISO().slice(0, 7);
+    renderHrAttendanceStats();
+  }
+
+  // Vị trí hiển thị theo BỘ PHẬN của nhân viên: chọn bộ phận nào thì chỉ hiện
+  // vị trí của bộ phận đó + vị trí chưa phân bộ phận (dùng chung) + những vị trí
+  // người đó đã có kỹ năng (★) để vẫn phân được khi kỹ năng chéo bộ phận.
+  // Sắp xếp: kỹ năng có sẵn (★) lên đầu, còn lại theo thứ tự danh mục.
+  function attPositionsFor(emp) {
+    const skills = (emp && emp.skills) || [];
+    const dept = (emp && emp.department) || '';
+    const all = state.hrPositions || [];
+    const visible = all.filter(p => !p.department || p.department === dept || skills.includes(p.id));
+    return [...visible.filter(p => skills.includes(p.id)), ...visible.filter(p => !skills.includes(p.id))];
+  }
+
+  function renderHrAttendanceCard() {
+    if (!state.hrAttDate) state.hrAttDate = hrTodayISO();
+    const dateInput = document.getElementById('hr-att-date');
+    if (dateInput && dateInput.value !== state.hrAttDate) dateInput.value = state.hrAttDate;
+    const dept = document.getElementById('hr-att-filter-dept')?.value || 'all';
+    const q = hrStripDiacritics(document.getElementById('hr-att-search')?.value || '');
+
+    // Lọc đang làm việc + bộ phận + tìm nhanh (tên / mã NV), rồi sắp xếp theo
+    // NHÓM BỘ PHẬN (Văn Phòng -> Cơ Điện -> QC -> Xưởng 1 -> Xưởng 2 -> Lò Hơi),
+    // trong cùng bộ phận xếp theo tên.
+    const deptOrder = d => { const i = HR_DEPARTMENTS.indexOf(d); return i === -1 ? HR_DEPARTMENTS.length : i; };
+    const list = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active')
+      .filter(e => dept === 'all' || e.department === dept)
+      .filter(e => !q || hrStripDiacritics(`${e.name || ''} ${e.code || ''}`).includes(q))
+      .sort((a, b) => deptOrder(a.department) - deptOrder(b.department) ||
+        String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
+
+    // Đếm tổng hợp theo ngày + số người mỗi vị trí (để tổ trưởng nhìn bao quát)
+    let work = 0, leave = 0, absent = 0, unmarked = 0;
+    const posCount = {};
+    list.forEach(e => {
+      const st = attStatusOf(e.id, state.hrAttDate);
+      if (st === 'work') {
+        work++;
+        (attRecordOf(e.id, state.hrAttDate)?.positions || []).forEach(pid => { posCount[pid] = (posCount[pid] || 0) + 1; });
+      }
+      else if (st === 'leave') leave++;
+      else if (st === 'absent') absent++;
+      else unmarked++;
+    });
+
+    const chipsEl = document.getElementById('hr-att-chips');
+    if (chipsEl) {
+      const posPart = Object.keys(posCount).map(pid => `${escapeHTML(hrPosName(pid))}: <strong>${posCount[pid]}</strong>`).join(' · ');
+      chipsEl.innerHTML =
+        `<span class="hr-stat-chip"><i data-lucide="users"></i> Tổng: <strong>${list.length}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="check-circle-2"></i> Đi làm: <strong>${work}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="calendar-check"></i> Nghỉ có phép: <strong>${leave}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="user-x"></i> Vắng: <strong>${absent}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="circle-dashed"></i> Chưa chấm: <strong>${unmarked}</strong></span>` +
+        (posPart ? `<span class="hr-stat-chip"><i data-lucide="git-branch"></i> Phân vị: ${posPart}</span>` : '');
+    }
+
+    const countEl = document.getElementById('hr-att-count');
+    if (countEl) countEl.textContent = `Ngày ${fmtDateDMY(state.hrAttDate)}`;
+
+    const tbody = document.getElementById('hr-att-body');
+    if (!tbody) return;
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:26px;color:var(--text-muted);">
+        <i data-lucide="clipboard-list" style="width:26px;height:26px;margin-bottom:6px;"></i>
+        <p>Chưa có nhân viên đang làm việc. Thêm nhân viên ở bảng trên.</p></td></tr>`;
+      initLucide();
+      return;
+    }
+
+    tbody.innerHTML = list.map(e => {
+      const st = attStatusOf(e.id, state.hrAttDate);
+      const rec = attRecordOf(e.id, state.hrAttDate);
+      const leaveL = approvedLeaveOn(e.id, state.hrAttDate);
+      const pendL = pendingLeaveOn(e.id, state.hrAttDate);
+      const skills = e.skills || [];
+      const ci = checkinRecordOf(e.id, state.hrAttDate);
+      const ciBadge = ci ? `<br><span class="hr-emp-code" style="font-size:0.68rem;color:var(--text-muted);" title="Giờ máy chấm công đã nạp">⏱ ${escapeHTML(ci.in || '?')}${ci.out ? '–' + escapeHTML(ci.out) : ''}</span>` : '';
+
+      // Ngày có đơn nghỉ ĐÃ DUYỆT → hiển thị chip, khóa select (trừ khi đã
+      // chấm tay "Đi làm" — trường hợp hủy nghỉ, đơn vẫn quản lý ở tab nghỉ phép)
+      let statusCell;
+      if (st === 'leave') {
+        statusCell = `<span class="hr-chip warn" title="Có đơn nghỉ đã được ban lãnh đạo duyệt">Nghỉ Có Phép ✓</span>`;
+      } else {
+        statusCell = `<select data-att-emp="${escapeHTML(e.id)}" data-att-field="status" title="Chọn trạng thái đi làm ngày này">
+          <option value="" ${st === '' ? 'selected' : ''}>— Chưa chấm —</option>
+          <option value="work" ${st === 'work' ? 'selected' : ''}>${ATT_STATUS.work}</option>
+          <option value="absent" ${st === 'absent' ? 'selected' : ''}>${ATT_STATUS.absent}</option>
+        </select>`;
+      }
+
+      let leaveCell = '<span style="color:var(--text-muted);">—</span>';
+      if (leaveL) {
+        leaveCell = `<span class="hr-chip ok" title="${escapeHTML((leaveL.type || '') + (leaveL.reason ? ' — ' + leaveL.reason : ''))}">${escapeHTML(leaveL.type || 'Nghỉ phép')}</span>` +
+          `<br><span style="font-size:0.68rem;color:var(--text-muted);">duyệt bởi ${escapeHTML(leaveL.approvedBy || 'ban lãnh đạo')}</span>`;
+      } else if (pendL) {
+        leaveCell = `<span class="hr-chip warn" title="Có đơn nghỉ đang chờ ban lãnh đạo duyệt">Đơn chờ duyệt</span>`;
+      }
+
+      const posChips = attPositionsFor(e).map(p => {
+        const on = (rec?.positions || []).includes(p.id);
+        const skilled = skills.includes(p.id);
+        return `<button type="button" class="att-pos-chip${on ? ' on' : ''}${skilled ? ' skilled' : ''}"` +
+          ` data-att-emp="${escapeHTML(e.id)}" data-att-pos="${escapeHTML(p.id)}"` +
+          `${st === 'leave' ? ' disabled' : ''}` +
+          ` title="${escapeHTML(p.name)}${p.department ? ' · ' + escapeHTML(p.department) : ''}${skilled ? ' (kỹ năng có sẵn)' : ''}">${skilled ? '★ ' : ''}${escapeHTML(p.name)}</button>`;
+      }).join('') || '<span style="font-size:0.72rem;color:var(--text-muted);">Chưa có vị trí nào</span>';
+
+      return `<tr${st === 'leave' ? ' style="opacity:0.75;"' : ''}>
+        <td><strong>${escapeHTML(e.name || '')}</strong>${e.code ? `<br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(e.code)}</span>` : ''}</td>
+        <td>${escapeHTML(e.department || '—')}</td>
+        <td>${statusCell}${ciBadge}</td>
+        <td>${leaveCell}</td>
+        <td><div class="att-pos-chips">${posChips}</div></td>
+        <td><input type="text" data-att-emp="${escapeHTML(e.id)}" data-att-field="note" value="${escapeHTML(rec?.note || '')}" placeholder="Ghi chú..." style="min-width:110px;"></td>
+      </tr>`;
+    }).join('');
+    initLucide();
+  }
+
+  // ─── 8) NẠP GIỜ TỪ MÁY CHẤM CÔNG (EXCEL) + ĐỐI CHIẾU ─────────────
+  // Máy xuất file mỗi hãng một kiểu — TỰ NHẬN CỘT (Mã NV/Tên, Ngày, Giờ vào,
+  // Giờ ra). Máy xuất từng LẦN QUÉT (cột "Thời gian"): gộp theo NV+ngày,
+  // lần quét ĐẦU = giờ vào, lần CUỐI = giờ ra. Giờ máy chỉ dùng ĐỐI CHIẾU +
+  // ÁP DỤNG (tự chấm Đi làm cho ngày thiếu/lech), không ghi đè đơn nghỉ đã duyệt.
+  function ciNormTime(v) {
+    if (v instanceof Date) return `${String(v.getHours()).padStart(2, '0')}:${String(v.getMinutes()).padStart(2, '0')}`;
+    const s = String(v || '').trim();
+    let m = s.match(/(\d{1,2})[:h](\d{2})/);
+    if (m) return `${String(+m[1]).padStart(2, '0')}:${m[2]}`;
+    if (/^\d{3,4}$/.test(s)) { const t = s.padStart(4, '0'); return `${t.slice(0, 2)}:${t.slice(2)}`; }
+    return '';
+  }
+  // Giải mã 1 ô Ngày / Ngày-giờ -> { date 'yyyy-mm-dd', time 'HH:mm' | '' }
+  function ciNormDateTime(v) {
+    if (v instanceof Date) {
+      return { date: `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`,
+               time: `${String(v.getHours()).padStart(2, '0')}:${String(v.getMinutes()).padStart(2, '0')}` };
+    }
+    const s = String(v || '').trim();
+    // Thử định dạng ISO (yyyy-MM-dd [HH:mm]) TRƯỚC để regex dd/MM không khớp nhầm "2024-06-05"
+    let m = s.match(/(\d{4})-(\d{2})-(\d{2})(?:[ T]+(\d{1,2})[:h.](\d{2}))?/);
+    if (m) return { date: `${m[1]}-${m[2]}-${m[3]}`, time: m[4] ? ciNormTime(`${m[4]}:${m[5]}`) : '' };
+    m = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:[ T]+(\d{1,2})[:h.](\d{2}))?/); // dd/MM/yyyy [HH:mm]
+    if (m) {
+      let y = +m[3]; if (y < 100) y += 2000;
+      return { date: `${y}-${String(+m[2]).padStart(2, '0')}-${String(+m[1]).padStart(2, '0')}`,
+               time: m[4] ? ciNormTime(`${m[4]}:${m[5]}`) : '' };
+    }
+    return { date: '', time: '' };
+  }
+  // Tìm dòng tiêu đề: quét ~20 dòng đầu (file máy chấm công có các dòng đầu trang
+  // "Công ty TNHH..." / "BÁO CÁO DỮ LIỆU CHẤM CÔNG" / "Từ ngày... Đến ngày...")
+  function ciFindHeaderRow(aoa) {
+    const limit = Math.min(aoa.length, 20);
+    for (let r = 0; r < limit; r++) {
+      const cells = (aoa[r] || []).map(h => hrStripDiacritics(String(h ?? '')));
+      if (!cells.length) continue;
+      const hasCode = cells.some(h => /ma ?nv|ma nhan vien|user ?id|userid/.test(h));
+      const hasName = cells.some(h => /ho ?ten|ten nhan vien|^ten$|name/.test(h));
+      const hasDate = cells.some(h => /ngay|date/.test(h));
+      if ((hasCode || hasName) && hasDate) return r;
+    }
+    return -1;
+  }
+  // Tự nhận cột theo tiêu đề (bỏ dấu, không phân biệt hoa/thường)
+  function ciAutoMapCols(headers) {
+    const norm = headers.map(h => hrStripDiacritics(h));
+    const find = (pred) => norm.findIndex(pred);
+    const col = {
+      code:     find(h => /ma ?nv|ma nhan vien|ma ?the|user ?id|userid|enroll|ma ?so/.test(h)),
+      name:     find(h => /ho ?ten|ten nhan vien|^ten$|name/.test(h)),
+      date:     find(h => /ngay|date/.test(h) && !/ngay ?gio|thoi ?gian/.test(h)),
+      timeIn:   find(h => /gio ?vao|check ?in|^in$|vao ?lam/.test(h)),
+      timeOut:  find(h => /gio ?ra|check ?out|^out$/.test(h)),
+      dateTime: find(h => /thoi ?gian|ngay ?gio|time|checkpoint/.test(h)),
+      // Các cột "Lần 1".."Lần N" — máy chấm công xuất mỗi lần quét một cột (ngang)
+      punchCols: norm
+        .map((h, i) => ({ h, i }))
+        .filter(x => /^lan\s*\d+$/.test(x.h))
+        .sort((a, b) => (parseInt(a.h.replace(/\D/g, ''), 10) || 0) - (parseInt(b.h.replace(/\D/g, ''), 10) || 0))
+        .map(x => x.i)
+    };
+    // Không có cột Ngày riêng -> cột "Thời gian/Ngày giờ" chính là datetime từng lần quét
+    if (col.date === -1 && col.dateTime !== -1) { col.date = col.dateTime; col.dateTime = -1; }
+    return col;
+  }
+  function ciResolveEmployee(code, name) {
+    const byCode = code ? (state.hrEmployees || []).find(e =>
+      String(e.code || '').trim().toLowerCase() === String(code).trim().toLowerCase()) : null;
+    if (byCode) return byCode;
+    const byName = name ? (state.hrEmployees || []).find(e =>
+      String(e.name || '').trim().toLowerCase() === String(name).trim().toLowerCase()) : null;
+    return byName || null;
+  }
+
+  // Đọc lại ánh xạ + nhập sheet vào state.hrCheckins.
+  // Hỗ trợ 3 kiểu file máy chấm công:
+  //   (a) từng dòng 1 NGÀY có cột Giờ vào / Giờ ra riêng;
+  //   (b) từng dòng 1 LẦN QUÉT (cột "Thời gian" datetime) -> gộp theo NV+ngày;
+  //   (c) lưới cột "Lần 1".."Lần N" (mỗi dòng 1 ngày, các lần quét nằm ngang,
+  //       giờ HH:MM:SS) -> lần đầu = vào, lần cuối = ra.
+  function importCheckinsFromSheet(aoa, col, fileName) {
+    const res = { punches: 0, added: 0, updated: 0, unmatched: [], matched: 0 };
+    const hasInOut = col.timeIn !== -1;                 // kiểu (a): dòng theo NGÀY
+    const punchCols = (col.timeIn === -1 && Array.isArray(col.punchCols)) ? col.punchCols : []; // kiểu (c)
+    const punches = []; // [{empId, date, time}] — cho kiểu (b) và (c)
+    for (let r = 1; r < aoa.length; r++) {
+      const row = aoa[r];
+      if (!row || !row.length) continue;
+      const get = i => (i === undefined || i === null || i < 0) ? '' : row[i];
+      const emp = ciResolveEmployee(get(col.code), get(col.name));
+      if (!emp) {
+        const key = String(get(col.code) || get(col.name) || '').trim();
+        if (key && !res.unmatched.some(u => u.key === key && u.row === r + 1)) res.unmatched.push({ key, row: r + 1 });
+        continue;
+      }
+      if (hasInOut) {
+        // Kiểu (a): dòng theo ngày, giờ vào/ra riêng
+        const dt = ciNormDateTime(get(col.date));
+        if (!dt.date) continue;
+        const inT = ciNormTime(get(col.timeIn));
+        const outT = ciNormTime(get(col.timeOut));
+        if (!inT && !outT) continue;
+        res.punches++;
+        if (upsertCheckin(emp.id, dt.date, inT, outT, 1, fileName)) res.added++; else res.updated++;
+      } else if (punchCols.length) {
+        // Kiểu (c): lưới cột "Lần 1..N" — mỗi dòng 1 ngày, thời gian HH:MM(:SS)
+        const dt = ciNormDateTime(get(col.date));
+        if (!dt.date) continue;
+        const times = punchCols.map(i => ciNormTime(get(i))).filter(Boolean).sort();
+        if (!times.length) continue; // ngày không quét (nghỉ) -> bỏ qua
+        times.forEach(t => punches.push({ empId: emp.id, date: dt.date, time: t }));
+        res.punches += times.length;
+      } else {
+        // Kiểu (b): từng lần quét — cột Ngày (datetime) chứa cả ngày & giờ
+        const dt = ciNormDateTime(get(col.date));
+        if (!dt.date || !dt.time) continue;
+        punches.push({ empId: emp.id, date: dt.date, time: dt.time });
+        res.punches++;
+      }
+    }
+    if (!hasInOut && punches.length) {
+      // Gộp lần quét theo NV + ngày (chung cho kiểu b & c)
+      const groups = {};
+      punches.forEach(p => { (groups[`${p.empId}|${p.date}`] = groups[`${p.empId}|${p.date}`] || []).push(p.time); });
+      Object.keys(groups).forEach(k => {
+        const [empId, date] = k.split('|');
+        const times = [...groups[k]].sort();
+        if (upsertCheckin(empId, date, times[0], times.length > 1 ? times[times.length - 1] : '', times.length, fileName)) res.added++; else res.updated++;
+      });
+    }
+    res.matched = res.added + res.updated;
+    saveHrData();
+    return res;
+  }
+  // Upsert 1 bản ghi giờ máy. Trả về true nếu thêm mới, false nếu cập nhật.
+  function upsertCheckin(employeeId, date, inT, outT, punchCount, fileName) {
+    const rec = (state.hrCheckins || []).find(c => c.employeeId === employeeId && c.date === date);
+    const now = new Date().toISOString();
+    if (rec) {
+      rec.in = inT || rec.in; rec.out = outT || rec.out;
+      rec.punches = punchCount || rec.punches; rec.fileName = fileName || rec.fileName;
+      rec.updatedAt = now;
+      return false;
+    }
+    state.hrCheckins.push({ id: `ci-${date}-${employeeId}`, employeeId, date, in: inT, out: outT, punches: punchCount || 1, fileName: fileName || '', createdAt: now, updatedAt: now });
+    return true;
+  }
+  function checkinRecordOf(employeeId, date) {
+    return (state.hrCheckins || []).find(c => c.employeeId === employeeId && c.date === date) || null;
+  }
+
+  // Áp dụng 1 ngày theo máy chấm công: tự chấm "Đi làm" (không đụng đơn nghỉ đã duyệt)
+  function applyCheckinRecord(employeeId, date) {
+    if (!requireEditPermission()) return;
+    const rec = checkinRecordOf(employeeId, date);
+    if (!rec) return;
+    if (attStatusOf(employeeId, date) === 'leave') {
+      showToast(`${hrEmpName(employeeId)} ngày ${fmtDateDMY(date)} đang nghỉ CÓ PHÉP (đơn đã duyệt) — không áp dụng theo máy.`, 'info');
+      return;
+    }
+    const hadOld = !!attRecordOf(employeeId, date);
+    ensureAttRecord(employeeId, date).status = 'work';
+    saveHrData();
+    renderHrView();
+    showToast(`Đã chấm ĐI LÀM theo máy chấm công: ${hrEmpName(employeeId)} ${fmtDateDMY(date)} (${rec.in || '?'}${rec.out ? '–' + rec.out : ''})${hadOld ? ' (đã đổi từ trạng thái cũ)' : ''}`, 'success');
+  }
+  // Áp dụng TẤT CẢ ngày máy xác nhận mà chấm tay còn thiếu / lệch
+  function applyAllCheckins() {
+    if (!requireEditPermission()) return;
+    const targets = (state.hrCheckins || []).filter(c => {
+      const st = attStatusOf(c.employeeId, c.date);
+      return st === '' || st === 'absent';
+    });
+    if (!targets.length) { showToast('Không có ngày nào cần áp dụng — chấm tay đã khớp máy chấm công.', 'info'); return; }
+    if (!confirm(`Áp dụng "Đi làm" theo máy chấm công cho ${targets.length} ngày (ngày còn thiếu hoặc đang ghi Vắng)? Tiếp tục?`)) return;
+    targets.forEach(c => {
+      const r = ensureAttRecord(c.employeeId, c.date);
+      r.status = 'work';
+      r.updatedAt = new Date().toISOString();
+    });
+    saveHrData();
+    renderHrView();
+    showToast(`Đã áp dụng "Đi làm" theo máy chấm công cho ${targets.length} ngày`, 'success');
+  }
+  function deleteCheckin(id) {
+    if (!requireEditPermission()) return;
+    state.hrCheckins = (state.hrCheckins || []).filter(c => c.id !== id);
+    saveHrData();
+    renderHrView();
+    showToast('Đã xóa 1 bản ghi giờ máy chấm công', 'info');
+  }
+  function deleteCheckinsAll() {
+    if (!requireEditPermission()) return;
+    const n = (state.hrCheckins || []).length;
+    if (!n) return;
+    if (!confirm(`Xóa toàn bộ ${n} bản ghi giờ đã nạp từ máy chấm công? (Không đụng dữ liệu chấm công tay)`)) return;
+    state.hrCheckins = [];
+    saveHrData();
+    renderHrView();
+    showToast('Đã xóa toàn bộ dữ liệu giờ máy chấm công đã nạp', 'info');
+  }
+  // Bảng đối chiếu: NV | Ngày | Giờ máy | Chấm tay | Trạng thái khớp | Thao tác
+  function renderHrCheckinTable() {
+    const tbody = document.getElementById('hr-ci-body');
+    if (!tbody) return;
+    const list = (state.hrCheckins || []).slice()
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)) ||
+        String(hrEmpName(a.employeeId)).localeCompare(String(hrEmpName(b.employeeId)), 'vi'));
+    const countEl = document.getElementById('hr-ci-count');
+    if (countEl) {
+      const miss = list.filter(c => attStatusOf(c.employeeId, c.date) === '').length;
+      const lech = list.filter(c => attStatusOf(c.employeeId, c.date) === 'absent').length;
+      countEl.textContent = `${list.length} ngày (${miss} chưa chấm tay${lech ? `, ${lech} lệch` : ''})`;
+    }
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:26px;color:var(--text-muted);">
+        <i data-lucide="clock" style="width:26px;height:26px;margin-bottom:6px;"></i>
+        <p>Chưa nạp giờ nào. Bấm "Nạp Giờ Máy Chấm Công" để chọn file Excel máy xuất.</p></td></tr>`;
+      initLucide();
+      return;
+    }
+    tbody.innerHTML = list.slice(0, 400).map(c => {
+      const st = attStatusOf(c.employeeId, c.date);
+      const time = `${c.in || '?'}${c.out ? '–' + c.out : ''}${c.punches > 2 ? ` (${c.punches} lần quét)` : ''}`;
+      let matchCell, action = '';
+      if (st === 'leave') {
+        matchCell = `<span class="hr-chip ok" title="Có đơn nghỉ đã được ban lãnh đạo duyệt — giờ máy không áp dụng">Nghỉ có phép</span>`;
+      } else if (st === 'work') {
+        matchCell = `<span class="hr-chip ok">Khớp ✓</span>`;
+      } else if (st === 'absent') {
+        matchCell = `<span class="hr-chip off" title="Chấm tay ghi Vắng nhưng máy có vân tay">⚠ Chấm tay "Vắng"</span>`;
+        action = `<button class="btn btn-success btn-sm" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')" title="Đổi thành Đi làm theo máy"><i data-lucide="check"></i> Áp Dụng</button>`;
+      } else {
+        matchCell = `<span class="hr-chip warn" title="Máy có vân tay nhưng chưa ai chấm tay">Chưa chấm tay</span>`;
+        action = `<button class="btn btn-success btn-sm" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')"><i data-lucide="check"></i> Áp Dụng</button>`;
+      }
+      return `<tr>
+        <td><strong>${escapeHTML(hrEmpName(c.employeeId))}</strong>${hrEmpDept(c.employeeId) !== '—' ? `<br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(hrEmpDept(c.employeeId))}</span>` : ''}</td>
+        <td>${fmtDateDMY(c.date)}</td>
+        <td class="hr-emp-code">${escapeHTML(time)}</td>
+        <td>${matchCell}</td>
+        <td class="text-right">${action}</td>
+        <td class="text-right"><button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteCheckin('${escapeHTML(c.id)}')" title="Xóa bản ghi giờ này" style="color:var(--danger);"><i data-lucide="trash-2"></i></button></td>
+      </tr>`;
+    }).join('');
+    initLucide();
+  }
+
+  // Modal nạp file Excel máy chấm công
+  let checkinImportSheet = null;
+  function openCheckinImportModal() {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-checkin-import');
+    if (!modal) return;
+    if (!(state.hrEmployees || []).length) {
+      showToast('Chưa có nhân viên nào — máy chấm công cần MÃ NV trùng "Mã Nhân Viên" trong danh sách!', 'error');
+      return;
+    }
+    checkinImportSheet = null;
+    const fileEl = document.getElementById('checkin-import-file');
+    if (fileEl) fileEl.value = '';
+    document.getElementById('checkin-import-summary').innerHTML = '';
+    document.getElementById('btn-do-checkin-import').disabled = true;
+    modal.classList.add('show');
+    initLucide();
+  }
+  function closeCheckinImportModal() {
+    document.getElementById('modal-checkin-import')?.classList.remove('show');
+  }
+  function handleCheckinImportFile(e) {
+    const file = e.target && e.target.files && e.target.files[0];
+    const box = document.getElementById('checkin-import-summary');
+    const doBtn = document.getElementById('btn-do-checkin-import');
+    if (!file || !box || !doBtn) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true });
+        if (!aoa.length) throw new Error('File rỗng');
+        // File máy chấm công thường có các dòng đầu trang (tên công ty, "Từ ngày... Đến ngày...")
+        const headerRow = ciFindHeaderRow(aoa);
+        if (headerRow === -1) throw new Error('Không tìm thấy dòng tiêu đề (cần cột Mã NV / Họ Tên và Ngày)');
+        const headers = (aoa[headerRow] || []).map(h => String(h ?? ''));
+        const col = ciAutoMapCols(headers);
+        if (col.code === -1 && col.name === -1) throw new Error('Không nhận ra cột Mã NV / Họ tên');
+        if (col.date === -1) throw new Error('Không nhận ra cột Ngày');
+        const dataAoa = aoa.slice(headerRow); // nạp từ dòng tiêu đề trở xuống
+        // Đếm nhanh số dòng hợp lệ + khớp NV để hiển thị trước khi nạp
+        let valid = 0, empOk = 0;
+        for (let r = 1; r < dataAoa.length; r++) {
+          const row = dataAoa[r];
+          if (!row || !row.length) continue;
+          const dt = ciNormDateTime(col.date >= 0 ? row[col.date] : '');
+          if (dt.date) { valid++; if (ciResolveEmployee(col.code >= 0 ? row[col.code] : '', col.name >= 0 ? row[col.name] : '')) empOk++; }
+        }
+        checkinImportSheet = { aoa: dataAoa, col, fileName: file.name };
+        doBtn.disabled = false;
+        const colDesc = [
+          col.code !== -1 ? `Mã NV "${headers[col.code]}"` : null,
+          col.name !== -1 ? `Họ tên "${headers[col.name]}"` : null,
+          `Ngày "${headers[col.date]}"`,
+          col.timeIn !== -1
+            ? `Giờ vào "${headers[col.timeIn]}"` + (col.timeOut !== -1 ? ` / Giờ ra "${headers[col.timeOut]}"` : '')
+            : (col.punchCols && col.punchCols.length
+              ? `${col.punchCols.length} cột lần quét ("Lần 1" → "Lần ${col.punchCols.length}") → đầu = vào, cuối = ra`
+              : `Từng lần quét "${col.dateTime !== -1 ? headers[col.dateTime] : headers[col.date]}" → đầu = vào, cuối = ra`)
+        ].filter(Boolean).join(' · ');
+        box.innerHTML = `<div style="font-size:0.75rem; line-height:1.7; padding:8px 10px; background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+          <strong>${escapeHTML(file.name)}</strong> — tiêu đề tại dòng ${headerRow + 1}, nhận cột: ${escapeHTML(colDesc)}<br>
+          ${valid} dòng có ngày hợp lệ · <strong>${empOk} khớp nhân viên</strong>${valid - empOk > 0 ? ` · <span style="color:var(--danger);">${valid - empOk} dòng không khớp Mã NV/Tên (bỏ qua)</span>` : ''}
+        </div>`;
+      } catch (err) {
+        checkinImportSheet = null;
+        doBtn.disabled = true;
+        box.innerHTML = `<div style="font-size:0.75rem; color:var(--danger); padding:8px 10px; background:#fee2e2; border-radius:var(--radius-md);">Không đọc được file: ${escapeHTML(err.message || String(err))}. Hãy xuất file Excel (.xlsx/.xls/.csv) từ máy chấm công.</div>`;
+      }
+      initLucide();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  function doCheckinImport() {
+    if (!requireEditPermission()) return;
+    if (!checkinImportSheet) return;
+    const col = checkinImportSheet.col;
+    const mode = col.timeIn !== -1 ? 'theo ngày (giờ vào/ra riêng)'
+      : (col.punchCols && col.punchCols.length ? `lưới "Lần 1..N" (${col.punchCols.length} cột lần quét, đầu = vào, cuối = ra)`
+      : 'gộp từng lần quét (đầu = vào, cuối = ra)');
+    const res = importCheckinsFromSheet(checkinImportSheet.aoa, col, checkinImportSheet.fileName);
+    closeCheckinImportModal();
+    renderHrView();
+    showToast(`Nạp xong từ "${checkinImportSheet.fileName}" (${mode}): ${res.matched} ngày khớp nhân viên` +
+      (res.unmatched.length ? ` · ${res.unmatched.length} dòng KHÔNG khớp Mã NV/Tên đã bỏ qua` : ''), 'success');
+  }
+
+  // ─── 6) THỐNG KÊ ĐI LÀM THEO THÁNG ───────────────────────────────
+  // Tính theo ngày dương lịch trong tháng: đi làm / nghỉ có phép (đơn duyệt) /
+  // vắng / chưa chấm. Tỷ lệ đi làm = đi làm / (đi làm + nghỉ phép + vắng).
+  // Tháng hiện tại chỉ tính tới hôm nay; bỏ ngày trước ngày vào làm.
+  function computeAttendanceStats(month) {
+    const [y, m] = String(month || '').split('-').map(Number);
+    if (!y || !m) return [];
+    const today = hrTodayISO();
+    const monthStart = `${month}-01`;
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const monthEnd = `${month}-${String(daysInMonth).padStart(2, '0')}`;
+    const lastDay = monthEnd > today ? today : monthEnd;
+    const dates = [];
+    for (let d = monthStart; d <= lastDay; d = hrShiftDateISO(d, 1)) dates.push(d);
+
+    return (state.hrEmployees || [])
+      .filter(e => (e.status || 'active') === 'active')
+      .map(e => {
+        const join = e.joinDate || '';
+        let work = 0, leave = 0, absent = 0, unmarked = 0;
+        dates.forEach(d => {
+          if (join && d < join) return; // ngày trước khi vào làm
+          const st = attStatusOf(e.id, d);
+          if (st === 'work') work++;
+          else if (st === 'leave') leave++;
+          else if (st === 'absent') absent++;
+          else unmarked++;
+        });
+        const counted = work + leave + absent;
+        return { emp: e, work, leave, absent, unmarked, counted, rate: counted ? Math.round(work * 1000 / counted) / 10 : null };
+      })
+      .filter(s => s.counted > 0 || s.unmarked > 0)
+      .sort((a, b) => (b.absent - a.absent) || ((a.rate ?? 101) - (b.rate ?? 101)) ||
+        String(a.emp.name || '').localeCompare(String(b.emp.name || ''), 'vi'));
+  }
+
+  function renderHrAttendanceStats() {
+    if (!/^\d{4}-\d{2}$/.test(state.hrAttMonth || '')) state.hrAttMonth = hrTodayISO().slice(0, 7);
+    const monthInput = document.getElementById('hr-att-month');
+    if (monthInput && monthInput.value !== state.hrAttMonth) monthInput.value = state.hrAttMonth;
+
+    const stats = computeAttendanceStats(state.hrAttMonth);
+    const t = { work: 0, leave: 0, absent: 0, unmarked: 0 };
+    stats.forEach(s => { t.work += s.work; t.leave += s.leave; t.absent += s.absent; t.unmarked += s.unmarked; });
+    const countedAll = t.work + t.leave + t.absent;
+
+    const chipsEl = document.getElementById('hr-att-stats-chips');
+    if (chipsEl) {
+      chipsEl.innerHTML =
+        `<span class="hr-stat-chip"><i data-lucide="check-circle-2"></i> Ngày công: <strong>${t.work}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="calendar-check"></i> Nghỉ phép: <strong>${t.leave}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="user-x"></i> Vắng: <strong>${t.absent}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="circle-dashed"></i> Chưa chấm: <strong>${t.unmarked}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="percent"></i> Tỷ lệ đi làm: <strong>${countedAll ? (Math.round(t.work * 1000 / countedAll) / 10) + '%' : '—'}</strong></span>`;
+    }
+
+    const tbody = document.getElementById('hr-att-stats-body');
+    if (!tbody) return;
+    if (!stats.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:22px;color:var(--text-muted);">Chưa có dữ liệu chấm công trong tháng này.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = stats.map(s => `<tr>
+        <td><strong>${escapeHTML(s.emp.name || '')}</strong>${s.emp.code ? ` <span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(s.emp.code)}</span>` : ''}</td>
+        <td>${escapeHTML(s.emp.department || '—')}</td>
+        <td><strong>${s.work}</strong></td>
+        <td>${s.leave}</td>
+        <td>${s.absent ? `<strong style="color:var(--danger);">${s.absent}</strong>` : '0'}</td>
+        <td>${s.unmarked}</td>
+        <td>${s.rate === null ? '—' : `<strong>${s.rate}%</strong>`}</td>
+      </tr>`).join('');
+  }
+
+  // ─── 7) VỊ TRÍ LÀM VIỆC & KỸ NĂNG ────────────────────────────────
+  // Danh mục vị trí của xưởng (Ép ván, Bào tinh, Sấy, Lò hơi...). Nhân viên
+  // đánh dấu kỹ năng theo vị trí này (1-nhiều) và được phân vị theo ngày.
+  function renderHrPositionsTable() {
+    const tbody = document.getElementById('hr-positions-body');
+    if (!tbody) return;
+    const list = state.hrPositions || [];
+    const countEl = document.getElementById('hr-positions-count');
+    if (countEl) countEl.textContent = `${list.length} vị trí`;
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:26px;color:var(--text-muted);">
+        <i data-lucide="git-branch" style="width:26px;height:26px;margin-bottom:6px;"></i>
+        <p>Chưa có vị trí làm việc nào. Bấm "Thêm Vị Trí" (VD: Ép ván, Bào tinh, Sấy, Lò hơi, Đóng gói...).</p></td></tr>`;
+      initLucide();
+      return;
+    }
+    tbody.innerHTML = list.map(p => {
+      const skilled = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active' && (e.skills || []).includes(p.id));
+      // Số NV "từng được phân" vị trí này theo ngày (lịch sử chấm công) — gợi ý để đồng bộ
+      const everSet = new Set((state.hrAttendance || [])
+        .filter(a => Array.isArray(a.positions) && a.positions.includes(p.id))
+        .map(a => a.employeeId)
+        .filter(id => { const e = hrEmpById(id); return e && (e.status || 'active') === 'active'; }));
+      const cellTitle = skilled.length
+        ? skilled.map(x => x.name).join(', ')
+        : (everSet.size
+          ? `Chưa ai được TICK kỹ năng này trong hồ sơ. Nhưng ${everSet.size} NV từng được phân vị theo ngày — bấm "Đồng Bộ Kỹ Năng" để tự cập nhật.`
+          : 'Chưa có ai được tick kỹ năng — mở Sửa Nhân Viên để tick, hoặc phân vị theo ngày rồi bấm "Đồng Bộ Kỹ Năng".');
+      return `<tr>
+        <td><strong>${escapeHTML(p.name)}</strong></td>
+        <td>${escapeHTML(p.department || '—')}</td>
+        <td title="${escapeHTML(cellTitle)}"><span class="hr-chip ${skilled.length ? 'ok' : 'off'}">${skilled.length} NV</span>
+          <span style="font-size:0.72rem;color:var(--text-muted);">${escapeHTML(skilled.slice(0, 3).map(x => x.name).join(', '))}${skilled.length > 3 ? ` +${skilled.length - 3}` : ''}</span>${(!skilled.length && everSet.size) ? `<br><span style="font-size:0.68rem;color:#a16207;" title="Bấm Đồng Bộ Kỹ Năng để tự thêm từ lịch sử phân vị">từng phân: ${everSet.size} NV</span>` : ''}</td>
+        <td class="hr-notes" title="${escapeHTML(p.note || '')}">${escapeHTML(p.note || '—')}</td>
+        <td class="text-right">
+          <div style="display:flex;justify-content:flex-end;gap:4px;">
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrEditPosition('${p.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeletePosition('${p.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+    initLucide();
+  }
+
+  // Đồng bộ kỹ năng từ lịch sử phân vị: quét toàn bộ bản ghi chấm công
+  // (hrAttendance.positions), gộp cặp (NV, vị trí) đã từng phân vào
+  // hrEmployees.skills. Tường minh (bấm nút) — không tự ghi khi bấm chip
+  // để tránh kỹ năng "ảo" từ phân ca tạm thời 1 ngày.
+  function syncSkillsFromAssignments() {
+    if (!requireEditPermission()) return;
+    // Lập kế hoạch trước (chưa đụng dữ liệu) để confirm đúng số liệu
+    const plan = new Map(); // empId -> Set(posId cần thêm)
+    (state.hrAttendance || []).forEach(a => {
+      if (!a.employeeId || !Array.isArray(a.positions)) return;
+      if (!hrEmpById(a.employeeId)) return;
+      const skills = Array.isArray(hrEmpById(a.employeeId).skills) ? hrEmpById(a.employeeId).skills : [];
+      a.positions.forEach(pid => {
+        if (!pid || !hrPosById(pid)) return;
+        if (!skills.includes(pid)) {
+          if (!plan.has(a.employeeId)) plan.set(a.employeeId, new Set());
+          plan.get(a.employeeId).add(pid);
+        }
+      });
+    });
+    const empCount = plan.size;
+    const posCount = [...plan.values()].reduce((s, set) => s + set.size, 0);
+    if (!empCount) {
+      showToast('Không có kỹ năng mới nào để đồng bộ — lịch sử phân vị đã khớp với kỹ năng hiện có.', 'info');
+      return;
+    }
+    if (!confirm(`Đồng bộ kỹ năng từ lịch sử phân vị theo ngày?\n\nSẽ thêm ${posCount} kỹ năng cho ${empCount} nhân viên (kỹ năng đã có giữ nguyên, không tự xóa kỹ năng nào).`)) return;
+    plan.forEach((set, empId) => {
+      const emp = hrEmpById(empId);
+      emp.skills = Array.isArray(emp.skills) ? emp.skills : [];
+      set.forEach(pid => emp.skills.push(pid));
+      emp.updatedAt = new Date().toISOString();
+    });
+    saveHrData();
+    renderHrView();
+    showToast(`Đã đồng bộ: thêm ${posCount} kỹ năng cho ${empCount} nhân viên (theo lịch sử phân vị)`, 'success');
+  }
+
+  function openPositionModal(id) {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-position');
+    const form = document.getElementById('position-form');
+    if (!modal || !form) return;
+    form.reset();
+    const deptSel = document.getElementById('position-department');
+    if (deptSel) deptSel.innerHTML = '<option value="">— Không phân bộ phận —</option>' +
+      HR_DEPARTMENTS.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
+    const titleEl = document.getElementById('position-modal-title');
+    if (id) {
+      const p = hrPosById(id);
+      if (!p) return;
+      if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Vị Trí: ${escapeHTML(p.name)}`;
+      document.getElementById('position-id').value = p.id;
+      document.getElementById('position-name').value = p.name || '';
+      document.getElementById('position-department').value = p.department || '';
+      document.getElementById('position-note').value = p.note || '';
+    } else {
+      if (titleEl) titleEl.innerHTML = `<i data-lucide="git-branch-plus"></i> Thêm Vị Trí Làm Việc`;
+      document.getElementById('position-id').value = '';
+    }
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closePositionModal() {
+    document.getElementById('modal-position')?.classList.remove('show');
+  }
+
+  function handlePositionSubmit(e) {
+    e.preventDefault();
+    if (!requireEditPermission()) return;
+    const id = document.getElementById('position-id').value;
+    const name = document.getElementById('position-name').value.trim();
+    if (!name) { showToast('Tên vị trí không được để trống!', 'error'); return; }
+    const dup = (state.hrPositions || []).find(p =>
+      hrStripDiacritics(p.name) === hrStripDiacritics(name) && p.id !== id);
+    if (dup) { showToast(`Đã có vị trí "${dup.name}"!`, 'error'); return; }
+    const data = {
+      name,
+      department: document.getElementById('position-department').value,
+      note: document.getElementById('position-note').value.trim(),
+      updatedAt: new Date().toISOString()
+    };
+    if (id) {
+      const p = hrPosById(id);
+      if (!p) return;
+      Object.assign(p, data);
+      showToast(`Đã cập nhật vị trí ${name}!`, 'success');
+    } else {
+      data.id = `pos-${Date.now()}`;
+      data.createdAt = new Date().toISOString();
+      state.hrPositions.push(data);
+      showToast(`Đã thêm vị trí ${name}!`, 'success');
+    }
+    saveHrData();
+    closePositionModal();
+    renderHrView();
+  }
+
+  function deletePosition(id) {
+    if (!requireEditPermission()) return;
+    const p = hrPosById(id);
+    if (!p) return;
+    const users = (state.hrEmployees || []).filter(e => (e.skills || []).includes(id)).length;
+    if (!confirm(`Xóa vị trí "${p.name}"? Kỹ năng này sẽ gỡ khỏi ${users} nhân viên và khỏi phân vị đã lưu.`)) return;
+    state.hrPositions = (state.hrPositions || []).filter(x => x.id !== id);
+    (state.hrEmployees || []).forEach(e => { if (Array.isArray(e.skills)) e.skills = e.skills.filter(s => s !== id); });
+    (state.hrAttendance || []).forEach(a => { if (Array.isArray(a.positions)) a.positions = a.positions.filter(s => s !== id); });
+    saveHrData();
+    renderHrView();
+    showToast(`Đã xóa vị trí ${p.name}`, 'info');
   }
 
   // ─── 4) NHÂN SỰ CẦN — TUYỂN DỤNG ────────────────────────────────
@@ -860,33 +1741,74 @@ import { escapeHTML, showToast } from './utils.js';
 
 export {
   HR_DEPARTMENTS,
+  ATT_STATUS,
+  approvedLeaveOn,
+  attStatusOf,
+  attRecordOf,
   autoMapEmployeeField,
   approveLeave,
   canApproveLeave,
   closeEmployeeImportModal,
   closeEmployeeModal,
   closeLeaveModal,
+  closePositionModal,
   closeRecruitmentModal,
+  collectEmployeeSkills,
+  computeAttendanceStats,
   computeLeaveStats,
   deleteEmployee,
   deleteLeave,
+  deletePosition,
   deleteRecruitment,
   doEmployeeImport,
   handleEmployeeImportFile,
   handleEmployeeSubmit,
   handleLeaveEmployeeKeydown,
   handleLeaveSubmit,
+  handlePositionSubmit,
   handleRecruitmentSubmit,
   hideLeaveEmployeeSuggestions,
+  hrAttGoToday,
+  hrAttSetDate,
+  hrAttSetMonth,
+  hrAttShiftDay,
+  hrTodayISO,
   importEmployeesFromSheet,
   leaveEmployeeSuggestions,
   loadHrData,
   openEmployeeImportModal,
   openEmployeeModal,
   openLeaveModal,
+  openPositionModal,
   openRecruitmentModal,
+  pendingLeaveOn,
   pickLeaveEmployee,
+  renderEmployeeSkillsBox,
+  renderHrAttendanceCard,
+  renderHrAttendanceStats,
+  renderHrEmployeesTable,
+  renderHrPositionsTable,
+  renderHrRecruitmentTable,
+  renderHrView,
+  renderHrCheckinTable,
+  applyAllCheckins,
+  applyCheckinRecord,
+  checkinRecordOf,
+  ciAutoMapCols,
+  ciFindHeaderRow,
+  ciNormDateTime,
+  ciNormTime,
+  closeCheckinImportModal,
+  deleteCheckin,
+  deleteCheckinsAll,
+  doCheckinImport,
+  handleCheckinImportFile,
+  importCheckinsFromSheet,
+  openCheckinImportModal,
   renderLeaveEmployeeSuggestions,
   rejectLeave,
-  renderHrView
+  setAttendanceNote,
+  setAttendanceStatus,
+  syncSkillsFromAssignments,
+  toggleAttendancePosition
 };

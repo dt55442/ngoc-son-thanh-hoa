@@ -1337,6 +1337,40 @@
         </div>
       </div>
 
+      <!-- THẺ TỔNG HỢP XUẤT HÀNG: lọc Năm + chọn 1/nhiều Tuần -->
+      <div class="planning-card" id="qc-summary-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="sigma"></i> Tổng Hợp Xuất Hàng</h4>
+          <div class="qc-sum-toolbar">
+            <div class="filter-item">
+              <label for="qc-sum-year">Năm:</label>
+              <select id="qc-sum-year"></select>
+            </div>
+          </div>
+        </div>
+        <div class="qc-sum-weeks-wrap">
+          <span class="qc-sum-weeks-label">Tuần:</span>
+          <div class="qc-sum-chips" id="qc-sum-weeks"></div>
+        </div>
+        <div class="qc-sum-kpis">
+          <div class="qc-sum-kpi">
+            <span class="qc-sum-kpi-label"><i data-lucide="package"></i> Số Lượng Xuất</span>
+            <span class="qc-sum-kpi-value" id="qc-sum-qty">0</span>
+            <span class="qc-sum-kpi-unit">tấm</span>
+          </div>
+          <div class="qc-sum-kpi">
+            <span class="qc-sum-kpi-label"><i data-lucide="boxes"></i> Thể Tích Quy Đổi</span>
+            <span class="qc-sum-kpi-value" id="qc-sum-vol">0</span>
+            <span class="qc-sum-kpi-unit">m³</span>
+          </div>
+          <div class="qc-sum-kpi">
+            <span class="qc-sum-kpi-label"><i data-lucide="rows-3"></i> Số Dòng</span>
+            <span class="qc-sum-kpi-value" id="qc-sum-count">0</span>
+            <span class="qc-sum-kpi-unit">dòng</span>
+          </div>
+        </div>
+      </div>
+
       <!-- BẢNG XUẤT HÀNG -->
       <div class="planning-card" id="qc-table-card">
         <div class="planning-card-header">
@@ -1346,23 +1380,9 @@
           </button>
         </div>
         <p style="margin:0; padding:10px 16px; font-size:0.78rem; color:var(--text-muted);">
-          Sửa trực tiếp Số Lượng Xuất &amp; Ghi Chú trên bảng. Chọn năm + tuần rồi bấm
-          <strong>Điền Cho Tất Cả</strong> để áp dụng tuần cho toàn bộ danh sách.
+          Sửa trực tiếp Số Lượng Xuất &amp; Ghi Chú trên bảng. Xem tổng hợp theo Năm/Tuần
+          (chọn 1 hoặc nhiều tuần) tại thẻ <strong>Tổng Hợp Xuất Hàng</strong> phía trên.
         </p>
-        <!-- Điền nhanh tuần cho cả danh sách -->
-        <div class="qc-quick-toolbar">
-          <div class="filter-item">
-            <label for="qc-quick-year">Năm:</label>
-            <select id="qc-quick-year"></select>
-          </div>
-          <div class="filter-item">
-            <label for="qc-quick-week">Tuần:</label>
-            <select id="qc-quick-week"></select>
-          </div>
-          <button type="button" class="btn btn-outline btn-sm" id="btn-qc-apply-week-all" title="Điền năm + tuần đang chọn cho toàn bộ các dòng bên dưới">
-            <i data-lucide="list-checks"></i> Điền Cho Tất Cả
-          </button>
-        </div>
         <div class="table-responsive">
           <table class="data-table planning-table" id="qc-table">
             <thead>
@@ -1370,12 +1390,14 @@
                 <th style="min-width:220px;">Tên Hàng</th>
                 <th style="width:110px;">Tuần</th>
                 <th style="width:120px;">Số Lượng Xuất</th>
+                <th class="text-right" style="width:130px;">Thể Tích (m³)</th>
                 <th style="min-width:160px;">Ghi Chú</th>
                 <th class="text-right" style="width:70px;">Thao Tác</th>
               </tr>
             </thead>
+            <!-- Dòng TỔNG đặt TRÊN đầu để luôn nhìn thấy khi danh sách dài -->
+            <tbody id="qc-table-total"></tbody>
             <tbody id="qc-table-body"></tbody>
-            <tfoot id="qc-table-foot"></tfoot>
           </table>
         </div>
       </div>
@@ -1439,7 +1461,7 @@
             <i data-lucide="users"></i> Nhân Sự
           </h3>
           <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Quản lý nhân viên, xin nghỉ phép (ban lãnh đạo duyệt), thống kê ngày nghỉ &amp; nhu cầu tuyển dụng.
+            Quản lý nhân viên &amp; kỹ năng, chấm công — phân vị theo ngày, xin nghỉ phép (ban lãnh đạo duyệt), thống kê đi làm/ngày nghỉ &amp; nhu cầu tuyển dụng.
           </p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1451,6 +1473,9 @@
           </button>
           <button class="btn btn-outline" id="btn-add-leave" title="Gửi đơn xin nghỉ phép">
             <i data-lucide="calendar-x"></i> Xin Nghỉ Phép
+          </button>
+          <button class="btn btn-outline" id="btn-import-checkins" title="Nạp file Excel giờ vào/ra từ máy chấm công để đối chiếu">
+            <i data-lucide="clock"></i> Nạp Giờ Máy Chấm Công
           </button>
           <button class="btn btn-outline" id="btn-add-recruitment" title="Thêm nhu cầu nhân sự / tuyển dụng">
             <i data-lucide="user-search"></i> Nhân Sự Cần
@@ -1486,7 +1511,7 @@
           </div>
           <span class="hr-count" id="hr-employees-count"></span>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive hr-table-scroll">
           <table class="data-table" id="hr-employees-table">
             <thead>
               <tr>
@@ -1511,7 +1536,126 @@
         </div>
       </div>
 
-      <!-- BẢNG 2: XIN NGHỈ PHÉP -->
+      <!-- BẢNG 2: CHẤM CÔNG & PHÂN VỊ THEO NGÀY -->
+      <div class="planning-card" id="hr-att-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="clipboard-list"></i> Chấm Công &amp; Phân Vị Theo Ngày</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="hr-count" id="hr-att-count"></span>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-att" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item" style="display:flex; gap:4px; align-items:center;">
+            <button class="btn btn-outline btn-sm" id="btn-att-prev" title="Ngày trước"><i data-lucide="chevron-left"></i></button>
+            <input type="date" id="hr-att-date" style="width:150px;">
+            <button class="btn btn-outline btn-sm" id="btn-att-next" title="Ngày sau"><i data-lucide="chevron-right"></i></button>
+            <button class="btn btn-outline btn-sm" id="btn-att-today" title="Về hôm nay">Hôm Nay</button>
+          </div>
+          <div class="filter-item">
+            <label for="hr-att-filter-dept">Bộ phận:</label>
+            <select id="hr-att-filter-dept"></select>
+          </div>
+          <div class="filter-item" style="flex:1 1 170px;">
+            <label for="hr-att-search">Tìm nhanh:</label>
+            <input type="text" id="hr-att-search" placeholder="Tên hoặc mã NV..." autocomplete="off">
+          </div>
+          <span class="hr-count">★ = kỹ năng có sẵn · vị trí hiển thị theo bộ phận của nhân viên · bấm chip để phân/bỏ phân (tự chấm Đi làm)</span>
+        </div>
+        <div id="hr-att-chips" class="hr-stat-chips"></div>
+        <div class="table-responsive hr-table-scroll">
+          <table class="data-table" id="hr-att-table">
+            <thead>
+              <tr>
+                <th>Nhân Viên</th>
+                <th>Bộ Phận</th>
+                <th>Trạng Thái</th>
+                <th>Đơn Nghỉ</th>
+                <th>Vị Trí Trong Ngày</th>
+                <th>Ghi Chú</th>
+              </tr>
+            </thead>
+            <tbody id="hr-att-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG 3: VỊ TRÍ LÀM VIỆC & KỸ NĂNG -->
+      <div class="planning-card" id="hr-pos-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="git-branch"></i> Vị Trí Làm Việc &amp; Kỹ Năng</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="hr-count" id="hr-positions-count"></span>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-skills" title="Quét toàn bộ lịch sử phân vị theo ngày, tự thêm vào Kỹ Năng của từng nhân viên (không xóa kỹ năng đã có)">
+              <i data-lucide="refresh-cw"></i> Đồng Bộ Kỹ Năng
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-position" title="Thêm vị trí làm việc">
+              <i data-lucide="git-branch-plus"></i> Thêm Vị Trí
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-pos" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-positions-table">
+            <thead>
+              <tr>
+                <th>Vị Trí</th>
+                <th>Bộ Phận</th>
+                <th>NV Có Kỹ Năng</th>
+                <th>Ghi Chú</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="hr-positions-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG 3.5: GIỜ MÁY CHẤM CÔNG — ĐỐI CHIẾU -->
+      <div class="planning-card" id="hr-ci-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="clock"></i> Giờ Máy Chấm Công — Đối Chiếu</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="hr-count" id="hr-ci-count"></span>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-apply-all-checkins" title="Tự chấm Đi làm cho các ngày máy xác nhận mà chấm tay còn thiếu hoặc đang ghi Vắng">
+              <i data-lucide="check-check"></i> Áp Dụng Tất Cả
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-delete-checkins-all" title="Xóa toàn bộ giờ đã nạp (không đụng chấm công tay)" style="color:var(--danger);">
+              <i data-lucide="trash-2"></i> Xóa Hết
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-ci" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-ci-table">
+            <thead>
+              <tr>
+                <th>Nhân Viên</th>
+                <th>Ngày</th>
+                <th>Giờ Máy (vào–ra)</th>
+                <th>Đối Chiếu Chấm Tay</th>
+                <th class="text-right">Áp Dụng</th>
+                <th class="text-right">Xóa</th>
+              </tr>
+            </thead>
+            <tbody id="hr-ci-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG 4: XIN NGHỈ PHÉP -->
       <div class="planning-card" id="hr-leave-card">
         <div class="planning-card-header">
           <h4><i data-lucide="calendar-x"></i> Xin Nghỉ Phép</h4>
@@ -1543,7 +1687,7 @@
         </div>
       </div>
 
-      <!-- BẢNG 3: THỐNG KÊ NGHỈ PHÉP & TOP -->
+      <!-- BẢNG 5: THỐNG KÊ NGHỈ PHÉP & TOP -->
       <div class="planning-card" id="hr-stats-card">
         <div class="planning-card-header">
           <h4><i data-lucide="bar-chart-3"></i> Thống Kê Nghỉ Phép — TOP Theo Số Ngày Nghỉ</h4>
@@ -1570,7 +1714,43 @@
         </div>
       </div>
 
-      <!-- BẢNG 4: NHÂN SỰ CẦN — TUYỂN DỤNG -->
+      <!-- BẢNG 6: THỐNG KÊ ĐI LÀM THEO THÁNG -->
+      <div class="planning-card" id="hr-att-stats-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="calendar-check-2"></i> Thống Kê Đi Làm Theo Tháng</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-att-stats" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item">
+            <label for="hr-att-month">Tháng:</label>
+            <input type="month" id="hr-att-month" style="width:160px;">
+          </div>
+          <span class="hr-count">Tỷ lệ đi làm = ngày công / (công + nghỉ phép + vắng) — tháng hiện tại tính tới hôm nay</span>
+        </div>
+        <div id="hr-att-stats-chips" class="hr-stat-chips"></div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-att-stats-table">
+            <thead>
+              <tr>
+                <th>Nhân Viên</th>
+                <th>Bộ Phận</th>
+                <th>Ngày Công</th>
+                <th>Nghỉ Phép</th>
+                <th>Vắng</th>
+                <th>Chưa Chấm</th>
+                <th>Tỷ Lệ Đi Làm</th>
+              </tr>
+            </thead>
+            <tbody id="hr-att-stats-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG 7: NHÂN SỰ CẦN — TUYỂN DỤNG -->
       <div class="planning-card" id="hr-recruit-card">
         <div class="planning-card-header">
           <h4><i data-lucide="user-search"></i> Nhân Sự Cần — Tuyển Dụng</h4>
@@ -1676,6 +1856,10 @@
               <option value="pause">Tạm nghỉ</option>
               <option value="quit">Đã nghỉ việc</option>
             </select>
+          </div>
+          <div class="form-group col-span-full">
+            <label><i data-lucide="git-branch" style="width:13px;height:13px;display:inline;"></i> Kỹ Năng — Các Vị Trí Có Thể Làm <span style="font-weight:400; font-size:0.72rem; color:var(--text-muted);">(chọn 1 hoặc nhiều vị trí)</span></label>
+            <div id="employee-skills-box" class="att-pos-chips" style="padding:4px 0;"></div>
           </div>
           <div class="form-group col-span-full">
             <label for="employee-notes">Ghi Chú</label>
@@ -1815,6 +1999,63 @@
           <button type="button" class="btn btn-primary" id="btn-do-employee-import" disabled><i data-lucide="upload"></i> Nhập Dữ Liệu</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL HR-6: NẠP GIỜ TỪ MÁY CHẤM CÔNG -->
+  <div class="modal-overlay" id="modal-checkin-import">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="clock"></i> Nạp Giờ Từ Máy Chấm Công</h3>
+        <button class="modal-close-btn" id="btn-close-checkin-import"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding: 20px;">
+        <div class="form-group">
+          <label for="checkin-import-file">Chọn file Excel máy chấm công xuất (.xlsx / .xls / .csv)</label>
+          <input type="file" id="checkin-import-file" accept=".xlsx,.xls,.csv">
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">
+          <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+          Hệ thống <strong>tự nhận cột</strong> (Mã NV/Tên, Ngày, Giờ vào, Giờ ra). Nếu máy xuất
+          <strong>từng lần quét</strong> (cột "Thời gian" dạng Ngày Giờ) thì tự gộp: lần quét đầu = giờ vào, lần cuối = giờ ra.
+          Khớp nhân viên theo <strong>Mã NV</strong> (dự phòng: đúng Họ tên). Giờ máy chỉ dùng để
+          <strong>đối chiếu &amp; áp dụng</strong> — không đụng đơn nghỉ đã duyệt.
+        </div>
+        <div id="checkin-import-summary"></div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-checkin-import">Hủy Bỏ</button>
+          <button type="button" class="btn btn-primary" id="btn-do-checkin-import" disabled><i data-lucide="upload"></i> Nạp Dữ Liệu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL HR-5: THÊM / SỬA VỊ TRÍ LÀM VIỆC -->
+  <div class="modal-overlay" id="modal-position">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="position-modal-title"><i data-lucide="git-branch-plus"></i> Thêm Vị Trí Làm Việc</h3>
+        <button class="modal-close-btn" id="btn-close-position"><i data-lucide="x"></i></button>
+      </div>
+      <form id="position-form" style="padding: 20px;">
+        <input type="hidden" id="position-id">
+        <div class="form-group">
+          <label for="position-name">Tên Vị Trí <span class="required">*</span></label>
+          <input type="text" id="position-name" placeholder="VD: Ép ván, Bào tinh, Sấy, Lò hơi, Đóng gói..." required>
+        </div>
+        <div class="form-group">
+          <label for="position-department">Bộ Phận</label>
+          <select id="position-department"></select>
+        </div>
+        <div class="form-group">
+          <label for="position-note">Ghi Chú</label>
+          <textarea id="position-note" rows="2" placeholder="Mô tả ngắn về vị trí, yêu cầu kỹ năng..."></textarea>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-position">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Vị Trí</button>
+        </div>
+      </form>
     </div>
   </div>
 

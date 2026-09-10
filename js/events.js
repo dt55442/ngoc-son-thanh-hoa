@@ -11,8 +11,8 @@ import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { applyQcWeekToAll, closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
-import { closeEmployeeImportModal, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, doEmployeeImport, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openRecruitmentModal, pickLeaveEmployee, renderLeaveEmployeeSuggestions, renderHrView } from './hr.js';
+import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
+import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -591,7 +591,27 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-qc-export', 'click', closeQcExportModal);
     safeOn('qc-export-form', 'submit', handleQcExportSubmit);
     safeOn('qc-product', 'change', onQcProductChange);
-    safeOn('btn-qc-apply-week-all', 'click', applyQcWeekToAll);
+    // ── Thẻ tổng hợp xuất hàng: Năm + chips chọn 1/nhiều tuần ──
+    safeOn('qc-sum-year', 'change', (e) => {
+      state.qcSumYear = e.target.value;
+      state.qcSumWeeks = []; // đổi năm → xem tất cả các tuần
+      renderQcSummary();
+    });
+    document.addEventListener('click', (e) => {
+      const chip = e.target.closest ? e.target.closest('[data-qc-sum-week]') : null;
+      if (chip) {
+        const w = Number(chip.getAttribute('data-qc-sum-week'));
+        const set = new Set(state.qcSumWeeks || []);
+        if (set.has(w)) set.delete(w); else set.add(w);
+        state.qcSumWeeks = [...set].sort((a, b) => a - b);
+        renderQcSummary();
+        return;
+      }
+      if (e.target.closest && e.target.closest('[data-qc-sum-all]')) {
+        state.qcSumWeeks = []; // bỏ chọn hết = tất cả các tuần
+        renderQcSummary();
+      }
+    });
     // Thu gọn / mở rộng bảng xuất hàng
     safeOn('btn-toggle-qc-table', 'click', () => toggleRateTableCollapse('qc-table-card'));
     // Sửa trực tiếp từng dòng (tuần / số lượng / ghi chú) — sự kiện 'change'
@@ -648,16 +668,61 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-recruitment', 'click', closeRecruitmentModal);
     safeOn('btn-cancel-recruitment', 'click', closeRecruitmentModal);
     safeOn('recruitment-form', 'submit', handleRecruitmentSubmit);
-    // Bộ lọc nhân viên & tuyển dụng — vẽ lại bảng khi đổi
-    safeOn('hr-emp-filter-dept', 'change', renderHrView);
-    safeOn('hr-emp-filter-status', 'change', renderHrView);
-    safeOn('hr-emp-search', 'input', renderHrView);
-    safeOn('hr-recruit-filter-dept', 'change', renderHrView);
+    // Bộ lọc nhân viên — chỉ vẽ lại BẢNG NHÂN VIÊN (nhanh, không reset bộ lọc)
+    safeOn('hr-emp-filter-dept', 'change', renderHrEmployeesTable);
+    safeOn('hr-emp-filter-status', 'change', renderHrEmployeesTable);
+    safeOn('hr-emp-search', 'input', renderHrEmployeesTable);
+    safeOn('hr-recruit-filter-dept', 'change', renderHrRecruitmentTable);
     // Thu gọn / mở rộng các thẻ bảng Nhân Sự
     safeOn('btn-toggle-hr-emp', 'click', () => toggleRateTableCollapse('hr-emp-card'));
     safeOn('btn-toggle-hr-leave', 'click', () => toggleRateTableCollapse('hr-leave-card'));
     safeOn('btn-toggle-hr-stats', 'click', () => toggleRateTableCollapse('hr-stats-card'));
     safeOn('btn-toggle-hr-recruit', 'click', () => toggleRateTableCollapse('hr-recruit-card'));
+    // ── Chấm công & phân vị theo ngày ──
+    safeOn('btn-att-prev', 'click', () => hrAttShiftDay(-1));
+    safeOn('btn-att-next', 'click', () => hrAttShiftDay(1));
+    safeOn('btn-att-today', 'click', () => hrAttGoToday());
+    safeOn('hr-att-date', 'change', (e) => hrAttSetDate(e.target.value));
+    safeOn('hr-att-filter-dept', 'change', renderHrAttendanceCard);
+    // Tìm nhanh nhân viên (tên / mã NV) trên bảng chấm công
+    safeOn('hr-att-search', 'input', renderHrAttendanceCard);
+    // Đổi Bộ Phận trong modal nhân viên -> lọc lại danh sách vị trí kỹ năng
+    safeOn('employee-department', 'change', () => renderEmployeeSkillsBox(collectEmployeeSkills()));
+    safeOn('btn-toggle-hr-att', 'click', () => toggleRateTableCollapse('hr-att-card'));
+    // Sửa trực tiếp từng dòng chấm công (đổi trạng thái / ghi chú) — sự kiện 'change'
+    document.addEventListener('change', (e) => {
+      const el = e.target;
+      if (el && el.dataset && el.dataset.attEmp && el.dataset.attField === 'status') {
+        setAttendanceStatus(el.dataset.attEmp, state.hrAttDate, el.value);
+      }
+      if (el && el.dataset && el.dataset.attEmp && el.dataset.attField === 'note') {
+        setAttendanceNote(el.dataset.attEmp, state.hrAttDate, el.value);
+      }
+    });
+    // Bấm chip vị trí để phân / bỏ phân vị trong ngày (ủy quyền click trong tbody)
+    document.addEventListener('click', (e) => {
+      const chip = e.target && e.target.closest ? e.target.closest('[data-att-pos]') : null;
+      if (chip) toggleAttendancePosition(chip.getAttribute('data-att-emp'), state.hrAttDate, chip.getAttribute('data-att-pos'));
+    });
+    // ── Thống kê đi làm theo tháng ──
+    safeOn('hr-att-month', 'change', (e) => hrAttSetMonth(e.target.value));
+    safeOn('btn-toggle-hr-att-stats', 'click', () => toggleRateTableCollapse('hr-att-stats-card'));
+    // ── Vị trí làm việc & kỹ năng ──
+    safeOn('btn-add-position', 'click', () => openPositionModal());
+    safeOn('btn-sync-skills', 'click', syncSkillsFromAssignments);
+    safeOn('btn-close-position', 'click', closePositionModal);
+    safeOn('btn-cancel-position', 'click', closePositionModal);
+    safeOn('position-form', 'submit', handlePositionSubmit);
+    safeOn('btn-toggle-hr-pos', 'click', () => toggleRateTableCollapse('hr-pos-card'));
+    // ── Giờ máy chấm công (nạp Excel + đối chiếu) ──
+    safeOn('btn-import-checkins', 'click', openCheckinImportModal);
+    safeOn('btn-close-checkin-import', 'click', closeCheckinImportModal);
+    safeOn('btn-cancel-checkin-import', 'click', closeCheckinImportModal);
+    safeOn('checkin-import-file', 'change', handleCheckinImportFile);
+    safeOn('btn-do-checkin-import', 'click', doCheckinImport);
+    safeOn('btn-apply-all-checkins', 'click', applyAllCheckins);
+    safeOn('btn-delete-checkins-all', 'click', deleteCheckinsAll);
+    safeOn('btn-toggle-hr-ci', 'click', () => toggleRateTableCollapse('hr-ci-card'));
 
     // ── Biểu đồ Kế hoạch vs Thực tế nguyên liệu theo ngày ──
     safeOn('mpc-week-filter', 'change', (e) => {

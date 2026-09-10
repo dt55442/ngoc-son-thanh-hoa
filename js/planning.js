@@ -1195,7 +1195,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   // Áp dụng chung cho: 2 bảng định mức (Kế hoạch), danh sách lượt ép (Sản lượng ép),
   // nhật ký nhập nguyên liệu (Nguyên liệu). Trạng thái lưu localStorage, nhớ từng thẻ.
   const RATE_COLLAPSE_KEY = 'bamboo_tracker_rate_collapse_v1';
-  const COLLAPSE_CARDS = ['rate-main-card', 'press-table-card', 'material-table-card', 'material-plan-card'];
+  const COLLAPSE_CARDS = ['rate-main-card', 'press-table-card', 'material-table-card', 'material-plan-card', 'qc-table-card'];
   function saveRateCollapseState() {
     try {
       const data = {};

@@ -4,7 +4,7 @@
 import { saveSession, updateUserProfileHeader } from './auth.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { showToast } from './utils.js';
 
@@ -283,6 +283,9 @@ import { showToast } from './utils.js';
       hrEmployees: state.hrEmployees || [],
       hrLeaves: state.hrLeaves || [],
       hrRecruitment: state.hrRecruitment || [],
+      hrPositions: state.hrPositions || [],
+      hrAttendance: state.hrAttendance || [],
+      hrCheckins: state.hrCheckins || [],
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
       updatedAt: new Date().toISOString()
     };
@@ -299,7 +302,8 @@ import { showToast } from './utils.js';
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
       qcExports: obj.qcExports || [],
       pressRecords: obj.pressRecords || [],
-      hrEmployees: obj.hrEmployees || [], hrLeaves: obj.hrLeaves || [], hrRecruitment: obj.hrRecruitment || []
+      hrEmployees: obj.hrEmployees || [], hrLeaves: obj.hrLeaves || [], hrRecruitment: obj.hrRecruitment || [],
+      hrPositions: obj.hrPositions || [], hrAttendance: obj.hrAttendance || [], hrCheckins: obj.hrCheckins || []
     });
   }
 
@@ -388,6 +392,9 @@ import { showToast } from './utils.js';
     if (remote.qcExports) state.qcExports = m(state.qcExports || [], remote.qcExports);
     if (remote.hrEmployees) state.hrEmployees = m(state.hrEmployees || [], remote.hrEmployees);
     if (remote.hrLeaves) state.hrLeaves = m(state.hrLeaves || [], remote.hrLeaves);
+    if (remote.hrPositions) state.hrPositions = m(state.hrPositions || [], remote.hrPositions);
+    if (remote.hrAttendance) state.hrAttendance = m(state.hrAttendance || [], remote.hrAttendance);
+    if (remote.hrCheckins) state.hrCheckins = m(state.hrCheckins || [], remote.hrCheckins);
     if (remote.hrRecruitment) state.hrRecruitment = m(state.hrRecruitment || [], remote.hrRecruitment);
     if (!onlyAddMissing) {
       if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
@@ -418,6 +425,9 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || [])); } catch (e) {}
   }
 
   function handleRemoteSnapshot(snap) {
@@ -457,6 +467,9 @@ import { showToast } from './utils.js';
       if (data.hrEmployees) state.hrEmployees = data.hrEmployees;
       if (data.hrLeaves) state.hrLeaves = data.hrLeaves;
       if (data.hrRecruitment) state.hrRecruitment = data.hrRecruitment;
+      if (data.hrPositions) state.hrPositions = data.hrPositions;
+      if (data.hrAttendance) state.hrAttendance = data.hrAttendance;
+      if (data.hrCheckins) state.hrCheckins = data.hrCheckins;
       persistAllLocal();
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}

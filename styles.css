@@ -4382,17 +4382,35 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 }
 
 /* ═══ QC — Bảng Xuất Hàng (tab QC) ═══════════════════════════ */
-/* Thanh công cụ điền nhanh tuần cho cả danh sách */
-.qc-quick-toolbar {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 0 16px 12px 16px;
+/* Thẻ tổng hợp xuất hàng: KPI + chips chọn 1/nhiều tuần */
+.qc-sum-toolbar .filter-item { display: flex; align-items: center; gap: 6px; margin: 0; }
+.qc-sum-toolbar .filter-item label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+.qc-sum-toolbar .filter-item select { min-width: 110px; }
+.qc-sum-weeks-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 16px 10px 16px; }
+.qc-sum-weeks-label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+.qc-sum-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.qc-sum-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 12px; border-radius: 999px;
+  border: 1px solid var(--border-color); background: var(--bg-card);
+  font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s;
 }
-.qc-quick-toolbar .filter-item { display: flex; align-items: center; gap: 6px; margin: 0; }
-.qc-quick-toolbar .filter-item label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
-.qc-quick-toolbar .filter-item select { min-width: 110px; }
+.qc-sum-chip svg { width: 13px; height: 13px; }
+.qc-sum-chip:hover { border-color: var(--primary-border); color: var(--primary); }
+.qc-sum-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.qc-sum-kpis { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 16px 14px 16px; }
+.qc-sum-kpi {
+  flex: 1 1 160px; min-width: 150px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: linear-gradient(168deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid var(--border-color); border-radius: 12px;
+  padding: 12px 16px;
+}
+.qc-sum-kpi-label { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+.qc-sum-kpi-label svg { width: 14px; height: 14px; }
+.qc-sum-kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); line-height: 1.2; }
+.qc-sum-kpi-unit { font-size: 0.75rem; color: var(--text-muted); }
 
 /* Ô nhập liệu sửa trực tiếp trên từng dòng */
 .qc-row-input {
@@ -4645,3 +4663,51 @@ table.export-preview-table {
 .hr-combobox-meta { font-size: 0.72rem; color: var(--text-muted); }
 
 .hr-combobox-empty { padding: 10px 12px; font-size: 0.78rem; color: var(--text-muted); }
+
+/* ── Chấm công & phân vị / kỹ năng: chip vị trí bật-tắt ── */
+.att-pos-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.att-pos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.att-pos-chip:hover:not(:disabled) { border-color: var(--primary); }
+.att-pos-chip.skilled { border-style: dashed; border-color: var(--primary); }
+.att-pos-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.att-pos-chip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Ô điều khiển trong dòng chấm công */
+#hr-att-table select,
+#hr-att-table input[type="text"] { min-width: 120px; }
+#hr-att-table td { vertical-align: middle; }
+
+/* Bảng Nhân Sự cuộn (~10 dòng): Danh sách nhân viên & Chấm công theo ngày —
+   tiêu đề cột dính khi cuộn để luôn biết đang nhìn cột nào */
+.hr-table-scroll {
+  max-height: 640px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.hr-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-card);
+  box-shadow: 0 1px 0 var(--border-color);
+}

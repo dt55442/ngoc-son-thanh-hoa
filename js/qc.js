@@ -11,6 +11,8 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { canEditTab } from './permissions.js';
+import { restoreRateTableCollapse } from './planning.js';
+import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { escapeHTML, getISOWeekString, showToast } from './utils.js';
 
@@ -30,9 +32,22 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
   function qcCurrentWeekNum() { return parseWeekNum(getISOWeekString(qcTodayISO())); }
   function qcCurrentYear() { return new Date().getFullYear(); }
 
-  // Trạng thái chọn của toolbar điền nhanh tuần (giữ nguyên giữa các lần render)
-  let qcQuickYear = '';
-  let qcQuickWeek = '';
+  // Thể tích quy đổi của 1 dòng xuất (m³) = thể tích 1 thành phẩm × số lượng.
+  // Kích thước thành phẩm suy từ tên định mức (VD: 'Ván 1200x382x9' → 1200×382×9).
+  // Dòng ngoài danh sách (không có mã) hoặc chưa có số lượng → 0 (hiển thị "—").
+  function qcRowVolume(row) {
+    const qty = Number(row.qty) || 0;
+    if (!qty || !row.productId) return 0;
+    const rate = state.materialRates.find(r => r.id === row.productId);
+    if (!rate) return 0;
+    const dim = computeFpDimFromProduct(rate.id);
+    return dim ? dimVolume(dim, qty) : 0;
+  }
+
+  // Định dạng thể tích hiển thị trên bảng
+  function qcFmtVol(v) {
+    return v > 0 ? `${v.toLocaleString('vi-VN', { maximumFractionDigits: 4 })} m³` : '—';
+  }
 
   // Danh sách năm có thể chọn (năm hiện tại + năm trong kế hoạch + năm đã xuất)
   function qcYearList() {
@@ -88,27 +103,53 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
 
   // ─── RENDER ──────────────────────────────────────────────────
   function renderQcView() {
-    renderQcQuickToolbar();
+    restoreRateTableCollapse(); // nhớ trạng thái thu gọn bảng xuất hàng
+    renderQcSummary();
     renderQcTable();
     initLucide();
   }
 
-  // Toolbar điền nhanh tuần cho cả danh sách
-  function renderQcQuickToolbar() {
-    const yearSel = document.getElementById('qc-quick-year');
+  // ─── THẺ TỔNG HỢP XUẤT HÀNG (lọc Năm + chọn 1/nhiều Tuần) ────
+  // state.qcSumYear  : năm đang xem (mặc định năm hiện tại)
+  // state.qcSumWeeks : danh sách tuần đã chọn — RỖNG = tất cả các tuần
+  function renderQcSummary() {
+    if (state.qcSumYear == null || !qcYearList().includes(String(state.qcSumYear))) {
+      state.qcSumYear = String(qcCurrentYear());
+    }
+    if (!Array.isArray(state.qcSumWeeks)) state.qcSumWeeks = [];
+    const yearStr = String(state.qcSumYear);
+
+    const yearSel = document.getElementById('qc-sum-year');
     if (yearSel) {
-      const years = qcYearList();
-      if (!qcQuickYear || !years.includes(String(qcQuickYear))) qcQuickYear = String(qcCurrentYear());
-      yearSel.innerHTML = years.map(y => `<option value="${y}"${String(qcQuickYear) === y ? ' selected' : ''}>Năm ${y}</option>`).join('');
+      yearSel.innerHTML = qcYearList()
+        .map(y => `<option value="${y}"${y === yearStr ? ' selected' : ''}>Năm ${y}</option>`).join('');
     }
-    const weekSel = document.getElementById('qc-quick-week');
-    if (weekSel) {
-      if (!qcQuickWeek) qcQuickWeek = qcCurrentWeekNum();
-      weekSel.innerHTML = Array.from({ length: 53 }, (_, i) => i + 1)
-        .map(w => `<option value="${w}"${Number(qcQuickWeek) === w ? ' selected' : ''}>Tuần ${w}</option>`).join('');
+
+    // Chip tuần: các tuần CÓ dữ liệu trong năm đang chọn (sắp tăng) + chip "Tất cả"
+    const rowsOfYear = (state.qcExports || []).filter(r => String(r.year) === yearStr);
+    const weeks = [...new Set(rowsOfYear.map(r => parseWeekNum(r.week)).filter(Boolean))].sort((a, b) => a - b);
+    const chipsEl = document.getElementById('qc-sum-weeks');
+    if (chipsEl) {
+      const allActive = state.qcSumWeeks.length === 0;
+      chipsEl.innerHTML =
+        `<button type="button" class="qc-sum-chip${allActive ? ' active' : ''}" data-qc-sum-all title="Hiện tất cả các tuần"><i data-lucide="list"></i> Tất cả</button>` +
+        weeks.map(w => `<button type="button" class="qc-sum-chip${state.qcSumWeeks.includes(w) ? ' active' : ''}" data-qc-sum-week="${w}">Tuần ${w}</button>`).join('');
     }
+
+    // KPI: lọc theo năm + các tuần đã chọn (không chọn tuần nào = tất cả)
+    const rows = rowsOfYear.filter(r => state.qcSumWeeks.length === 0 || state.qcSumWeeks.includes(parseWeekNum(r.week)));
+    const totalQty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
+    const totalVol = rows.reduce((a, r) => a + qcRowVolume(r), 0);
+    const qtyEl = document.getElementById('qc-sum-qty');
+    const volEl = document.getElementById('qc-sum-vol');
+    const cntEl = document.getElementById('qc-sum-count');
+    if (qtyEl) qtyEl.textContent = totalQty.toLocaleString('vi-VN');
+    if (volEl) volEl.textContent = totalVol.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+    if (cntEl) cntEl.textContent = String(rows.length);
+    initLucide();
   }
 
+  // ─── RENDER ──────────────────────────────────────────────────
   function renderQcTable() {
     const tbody = document.getElementById('qc-table-body');
     if (!tbody) return;
@@ -117,7 +158,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     const rows = state.qcExports || [];
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:28px 12px; color:var(--text-muted); font-size:0.85rem;">
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px 12px; color:var(--text-muted); font-size:0.85rem;">
         Chưa có dòng xuất hàng nào — bấm <strong>+ Thêm Dòng Xuất</strong> để bắt đầu.
       </td></tr>`;
     } else {
@@ -141,6 +182,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
             <td style="width:120px;">
               <input type="number" min="0" step="1" class="qc-row-input qc-row-qty" data-qc-id="${row.id}" data-qc-field="qty" value="${Number(row.qty) || ''}" placeholder="0" ${dis}>
             </td>
+            <td class="text-right" style="width:130px;" data-qc-vol="${row.id}">${qcFmtVol(qcRowVolume(row))}</td>
             <td>
               <input type="text" class="qc-row-input qc-row-note" data-qc-id="${row.id}" data-qc-field="note" value="${escapeHTML(row.note || '')}" placeholder="Ghi chú..." ${dis}>
             </td>
@@ -151,23 +193,35 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       }).join('');
     }
 
-    // Dòng tổng cộng
-    const total = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
-    const tfoot = document.getElementById('qc-table-foot');
-    if (tfoot) {
-      tfoot.innerHTML = `<tr class="qc-total-row">
-        <td colspan="2"><i data-lucide="sigma" style="width:13px;height:13px;"></i> Tổng số lượng xuất</td>
-        <td class="text-right"><strong>${total.toLocaleString('vi-VN')}</strong></td>
+    // Dòng TỔNG CỘNG đặt TRÊN CÙNG bảng (toàn bộ dòng — tổng hợp theo bộ lọc xem thẻ phía trên)
+    const totalQty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
+    const totalVol = rows.reduce((a, r) => a + qcRowVolume(r), 0);
+    const totalBody = document.getElementById('qc-table-total');
+    if (totalBody) {
+      totalBody.innerHTML = `<tr class="qc-total-row">
+        <td colspan="2"><i data-lucide="sigma" style="width:13px;height:13px;"></i> <strong>Tổng cộng (tất cả)</strong> — ${rows.length} dòng</td>
+        <td class="text-right"><strong>${totalQty.toLocaleString('vi-VN')}</strong></td>
+        <td class="text-right"><strong>${qcFmtVol(totalVol)}</strong></td>
         <td colspan="2"></td>
       </tr>`;
     }
   }
 
-  // Cập nhật dòng tổng mà không vẽ lại bảng (giữ focus khi đang gõ)
+  // Cập nhật dòng Tổng (trên đầu bảng) + ô thể tích mà không vẽ lại bảng (giữ focus)
   function refreshQcTotal() {
-    const total = (state.qcExports || []).reduce((a, r) => a + (Number(r.qty) || 0), 0);
-    const footCell = document.querySelector('#qc-table-foot .qc-total-row td strong');
-    if (footCell) footCell.textContent = total.toLocaleString('vi-VN');
+    const rows = state.qcExports || [];
+    const totalQty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
+    const totalVol = rows.reduce((a, r) => a + qcRowVolume(r), 0);
+    const totalBody = document.getElementById('qc-table-total');
+    if (!totalBody) return;
+    const strongs = totalBody.querySelectorAll('.qc-total-row td strong');
+    if (strongs[1]) strongs[1].textContent = totalQty.toLocaleString('vi-VN');
+    if (strongs[2]) strongs[2].textContent = qcFmtVol(totalVol);
+    // Cập nhật ô thể tích quy đổi của từng dòng hiển thị
+    rows.forEach(r => {
+      const cell = document.querySelector(`td[data-qc-vol="${r.id}"]`);
+      if (cell) cell.textContent = qcFmtVol(qcRowVolume(r));
+    });
   }
 
   // ─── SỬA TRỰC TIẾP TRÊN BẢNG ────────────────────────────────
@@ -186,7 +240,9 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     }
     row.updatedAt = new Date().toISOString();
     saveQcExports();
-    refreshQcTotal();
+    if (field === 'week') renderQcTable(); // dòng có thể ra/vào bộ lọc → vẽ lại bảng
+    else refreshQcTotal(); // chỉ cập nhật tổng + ô thể tích (giữ focus khi đang gõ)
+    renderQcSummary(); // KPI thẻ tổng hợp thay theo
   }
 
   function deleteQcExport(id) {
@@ -197,25 +253,9 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     state.qcExports = state.qcExports.filter(q => q.id !== id);
     saveQcExports();
     renderQcTable();
+    renderQcSummary();
     initLucide();
     showToast('Đã xóa dòng xuất hàng', 'info');
-  }
-
-  // Điền nhanh: áp dụng năm + tuần đang chọn cho TOÀN BỘ danh sách
-  function applyQcWeekToAll() {
-    if (!requireEditPermission()) return;
-    const rows = state.qcExports || [];
-    if (!rows.length) { showToast('Chưa có dòng nào để điền tuần!', 'error'); return; }
-    const weekSel = document.getElementById('qc-quick-week');
-    const yearSel = document.getElementById('qc-quick-year');
-    const weekNum = parseInt(weekSel?.value, 10) || 0;
-    const yearNum = parseInt(yearSel?.value, 10) || qcCurrentYear();
-    if (!weekNum) { showToast('Vui lòng chọn tuần cần điền!', 'error'); return; }
-    rows.forEach(r => { r.week = `Tuần ${weekNum}`; r.year = yearNum; r.updatedAt = new Date().toISOString(); });
-    saveQcExports();
-    renderQcTable();
-    initLucide();
-    showToast(`Đã điền Tuần ${weekNum} (Năm ${yearNum}) cho ${rows.length} dòng!`, 'success');
   }
 
   // ─── MODAL THÊM DÒNG XUẤT HÀNG ───────────────────────────────
@@ -318,18 +358,20 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     saveQcExports();
     closeQcExportModal();
     renderQcTable();
+    renderQcSummary();
     initLucide();
     showToast('Đã thêm dòng xuất hàng!', 'success');
   }
 
 export {
-  applyQcWeekToAll,
   closeQcExportModal,
   deleteQcExport,
   handleQcExportSubmit,
   loadQcExports,
   onQcProductChange,
   openQcExportModal,
+  qcRowVolume,
+  renderQcSummary,
   renderQcTable,
   renderQcView,
   saveQcExports,

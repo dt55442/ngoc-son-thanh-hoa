@@ -12,7 +12,7 @@ import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMa
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
-import { approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteEmployee, deleteLeave, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openRecruitmentModal, rejectLeave, renderHrView } from './hr.js';
+import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, rejectLeave, renderHrView } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { state } from './state.js';
 import { autoReconnectDataFolder, loadData, updateFileStorageUI } from './storage.js';
@@ -280,7 +280,13 @@ import { setupFormCalculations } from './utils.js';
     hrRejectLeave: rejectLeave,
     hrDeleteLeave: deleteLeave,
     hrEditRecruitment: openRecruitmentModal,
-    hrDeleteRecruitment: deleteRecruitment
+    hrDeleteRecruitment: deleteRecruitment,
+    // Vị trí làm việc (onclick trong HTML render động)
+    hrEditPosition: openPositionModal,
+    hrDeletePosition: deletePosition,
+    // Giờ máy chấm công (onclick trong HTML render động)
+    hrApplyCheckin: applyCheckinRecord,
+    hrDeleteCheckin: deleteCheckin
   };
   // Cờ báo hiệu module đã nạp & gán API thành công (watchdog trong index.html dựa vào đây)
   window.__BOOT_OK = true;

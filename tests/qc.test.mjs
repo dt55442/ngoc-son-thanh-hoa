@@ -100,16 +100,19 @@ storeBacking.set(STORAGE_KEY_QC_EXPORTS, JSON.stringify([
 qc.loadQcExports();
 check('QC: load từ localStorage + tự điền năm thiếu', state.qcExports.length === 1 && state.qcExports[0].year === new Date().getFullYear());
 
-// ─── B. RENDER BẢNG ───────────────────────────────────────────
+// ─── B. RENDER BẢNG + THẺ TỔNG HỢP ────────────────────────────
 qc.renderQcView();
 const tbodyEl = document.getElementById('qc-table-body');
-check('QC: toolbar điền nhanh tuần có 53 tuần', (document.getElementById('qc-quick-week').innerHTML.match(/<option/g) || []).length === 53);
+check('QC: thẻ tổng hợp — chip "Tất cả" + chip tuần có dữ liệu (Tuần 33)', document.getElementById('qc-sum-weeks').innerHTML.includes('data-qc-sum-all') && document.getElementById('qc-sum-weeks').innerHTML.includes('data-qc-sum-week="33"'));
+check('QC: thẻ tổng hợp — KPI số lượng mặc định (tất cả tuần) = 10', document.getElementById('qc-sum-qty').textContent === '10');
 check('QC: bảng hiển thị tên hàng tra từ định mức', tbodyEl.innerHTML.includes('Ván 1200x382x9'));
+const unitVolR1 = (1200 * 382 * 9) / 1e9;
+check('QC: cột thể tích quy đổi = thể tích 1 TP × số lượng (10 × 0,004126 m³)', tbodyEl.innerHTML.includes('0,0413'));
 
 state.qcExports.push({ id: 'qc-custom', productId: null, name: 'Hàng mẫu khách B', week: 'Tuần 33', year: 2026, qty: 5, note: '' });
 qc.renderQcTable();
 check('QC: dòng ngoài danh sách có nhãn "ngoài kế hoạch"', tbodyEl.innerHTML.includes('ngoài kế hoạch') && tbodyEl.innerHTML.includes('Hàng mẫu khách B'));
-check('QC: dòng tổng hiển thị đúng (10 + 5 = 15)', document.getElementById('qc-table-foot').innerHTML.includes('15'));
+check('QC: dòng tổng hiển thị đúng (10 + 5 = 15)', document.getElementById('qc-table-total').innerHTML.includes('15'));
 
 // ─── C. MODAL THÊM DÒNG ───────────────────────────────────────
 qc.openQcExportModal();
@@ -166,10 +169,23 @@ check('QC: sửa ghi chú trực tiếp (cắt khoảng trắng)', added.note ==
 const persisted = JSON.parse(storeBacking.get(STORAGE_KEY_QC_EXPORTS));
 check('QC: sửa dòng được ghi xuống localStorage', persisted.some(r => r.id === added.id && r.qty === 55));
 
-// ─── H. ĐIỀN NHANH TUẦN CHO CẢ DANH SÁCH ─────────────────────
-setVal('qc-quick-week', '36'); setVal('qc-quick-year', '2026');
-qc.applyQcWeekToAll();
-check('QC: điền nhanh áp dụng tuần + năm cho TẤT CẢ các dòng', state.qcExports.every(r => r.week === 'Tuần 36' && r.year === 2026));
+// ─── H. THẺ TỔNG HỢP — LỌC NĂM + CHỌN 1/NHIỀU TUẦN ────────────
+// Dữ liệu lúc này: Tuần 33 (10 + 5), Tuần 34 (55 + 7) — tất cả năm 2026
+state.qcSumYear = '2026'; state.qcSumWeeks = [33];
+qc.renderQcSummary();
+check('QC: thẻ tổng hợp — chọn Tuần 33 → SL = 10 + 5 = 15', document.getElementById('qc-sum-qty').textContent === '15');
+check('QC: thẻ tổng hợp — chọn Tuần 33 → thể tích ≈ 0,041 m³', document.getElementById('qc-sum-vol').textContent.includes('0,041'));
+state.qcSumWeeks = [33, 34];
+qc.renderQcSummary();
+check('QC: thẻ tổng hợp — chọn Tuần 33+34 → SL = 77', document.getElementById('qc-sum-qty').textContent === '77');
+state.qcSumWeeks = [];
+qc.renderQcSummary();
+check('QC: thẻ tổng hợp — không chọn tuần nào → tất cả = 77', document.getElementById('qc-sum-qty').textContent === '77');
+state.qcSumYear = '2025'; state.qcSumWeeks = [];
+qc.renderQcSummary();
+check('QC: thẻ tổng hợp — năm không có trong danh sách → tự về năm hiện tại (KPI = 77)', state.qcSumYear === '2026' && document.getElementById('qc-sum-qty').textContent === '77');
+state.qcSumYear = '2026'; state.qcSumWeeks = [];
+qc.renderQcSummary();
 
 // ─── I. XÓA DÒNG ──────────────────────────────────────────────
 n = state.qcExports.length;

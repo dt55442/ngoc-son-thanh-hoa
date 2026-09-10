@@ -684,6 +684,39 @@ import { escapeHTML, showToast } from './utils.js';
     return [...visible.filter(p => skills.includes(p.id)), ...visible.filter(p => !skills.includes(p.id))];
   }
 
+  // ─── LIÊN KẾT NHÂN SỰ ↔ SẢN LƯỢNG ÉP VÁN ────────────────────────
+  // Tra nhân viên theo TÊN (bỏ dấu, không phân biệt hoa/thường, gộp khoảng
+  // trắng thừa — tên nhập tay hay bị "Nguyễn Văn  A" 2 dấu cách).
+  function hrEmpByName(name) {
+    const key = hrStripForMatch(name);
+    if (!key) return null;
+    return (state.hrEmployees || []).find(e => hrStripForMatch(e.name || '') === key) || null;
+  }
+  // Tên các vị trí được phân trong ngày của 1 nhân viên (từ bảng chấm công)
+  function hrPositionsNamesOf(employeeId, date) {
+    const rec = attRecordOf(employeeId, date);
+    return ((rec && rec.positions) || []).map(pid => hrPosName(pid));
+  }
+  // Danh sách công nhân được phân VỊ ÉP (tên vị trí chứa "ép") trong ngày date —
+  // nguồn dữ liệu: bảng Chấm Công & Phân Vị Theo Ngày (tab Nhân Sự). Chỉ nhận
+  // người đang ĐI LÀM (status work — người nghỉ có phép/vắng không tính).
+  // Dùng cho: cột "Công nhân ép" tự động của lượt ép ván + bảng đối chiếu.
+  function hrWorkersForPress(date) {
+    return (state.hrEmployees || [])
+      .filter(e => (e.status || 'active') === 'active')
+      .filter(e => attStatusOf(e.id, date) === 'work')
+      .map(e => {
+        const positions = hrPositionsNamesOf(e.id, date);
+        return { id: e.id, name: e.name || '', code: e.code || '', department: e.department || '', positions, isPress: positions.some(n => /ép/i.test(n)) };
+      })
+      .filter(w => w.isPress)
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
+  }
+  // Chỉ danh sách TÊN công nhân ép trong ngày (dùng cho Dashboard/Xuất Excel)
+  function hrPressWorkersNamesOf(date) {
+    return hrWorkersForPress(date).map(w => w.name);
+  }
+
   function renderHrAttendanceCard() {
     if (!state.hrAttDate) state.hrAttDate = hrTodayISO();
     const dateInput = document.getElementById('hr-att-date');
@@ -1510,6 +1543,11 @@ import { escapeHTML, showToast } from './utils.js';
     return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
   }
+  // Chuẩn hóa tên để SO KHỚP (gộp khoảng trắng thừa — nhập tay hay bị
+  // "Nguyễn Văn  A" 2 dấu cách). Dùng chung cho HR + Xuất Excel + Biểu đồ.
+  function hrStripForMatch(s) {
+    return hrStripDiacritics(s).replace(/\s+/g, ' ');
+  }
 
   // Tự ánh xạ 1 tiêu đề cột → trường nhân viên (tránh trùng trường đã dùng)
   function autoMapEmployeeField(headerText, usedKeys) {
@@ -1773,6 +1811,11 @@ export {
   hrAttSetMonth,
   hrAttShiftDay,
   hrTodayISO,
+  hrEmpByName,
+  hrPosName,
+  hrPositionsNamesOf,
+  hrPressWorkersNamesOf,
+  hrWorkersForPress,
   importEmployeesFromSheet,
   leaveEmployeeSuggestions,
   loadHrData,
@@ -1810,5 +1853,8 @@ export {
   setAttendanceNote,
   setAttendanceStatus,
   syncSkillsFromAssignments,
-  toggleAttendancePosition
+  toggleAttendancePosition,
+  // Helpers dùng chung cho Sản Lượng Ép + Xuất Excel + Biểu đồ
+  hrStripForMatch,
+  hrStripDiacritics
 };

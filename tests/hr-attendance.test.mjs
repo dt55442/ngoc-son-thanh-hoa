@@ -409,6 +409,38 @@ check('FILTER: renderHrView giữ nguyên lựa chọn "Xưởng 1" (không snap
 // Dọn bộ lọc cho test render cuối
 document.getElementById('hr-emp-filter-dept').value = 'all';
 
+// ─── O. LIÊN KẾT NHÂN SỰ ↔ CÔNG NHÂN ÉP (tab Sản lượng ép ván) ────
+state.hrEmployees = [
+  { id: 'empA', code: 'NV001', name: 'Nguyễn Văn A', department: 'Xưởng 2', status: 'active', skills: [] },
+  { id: 'empD', code: 'NV004', name: 'Phạm Thị D',   department: 'Xưởng 2', status: 'active', skills: [] },
+  { id: 'empE', code: 'NV005', name: 'Võ Văn E',     department: 'Xưởng 2', status: 'active', skills: [] }
+];
+state.hrPositions = [{ id: 'px1', name: 'Ép ván', department: 'Xưởng 2' }, { id: 'pchung', name: 'Hỗ trợ chung', department: '' }];
+state.hrAttendance = [];
+// Ngày 05/06: A và D được phân "Ép ván", E phân vị khác
+hr.toggleAttendancePosition('empA', '2024-06-05', 'px1');
+hr.toggleAttendancePosition('empD', '2024-06-05', 'px1');
+hr.toggleAttendancePosition('empE', '2024-06-05', 'pchung');
+check('PRES-W: hrWorkersForPress chỉ lấy người được phân vị Ép (A, D)', hr.hrWorkersForPress('2024-06-05').map(w => w.id).join(',') === 'empA,empD');
+check('PRES-W: hrEmpByName khớp tên bỏ dấu/hoa-thường ("nguyễn văn  a")', !!hr.hrEmpByName('nguyễn văn  a') && hr.hrEmpByName('nguyễn văn  a').id === 'empA');
+check('PRES-W: tên không có trong Nhân Sự -> null', hr.hrEmpByName('Người Lạ') === null);
+// Modal chi tiết công nhân ép: 1 khớp hồ sơ + 1 chưa có hồ sơ
+const press = await import('../js/press.js');
+state.pressRecords = [{ id: 'pr1', date: '2024-06-05', worker: 'Nguyễn Văn A, Người Lạ', sticks: [], vanTho: [] }];
+press.openPressWorkersModal('pr1');
+check('PRES-W: mở modal chi tiết công nhân ép', document.getElementById('modal-press-workers').classList._s.has('show'));
+const pwHTML = document.getElementById('press-workers-body').innerHTML;
+check('PRES-W: dòng khớp hồ sơ hiện Mã NV + "Đi làm ✓" + phân vị Ép', pwHTML.includes('NV001') && pwHTML.includes('Đi làm ✓') && pwHTML.includes('Ép ván'));
+check('PRES-W: tên ngoài Nhân Sự cảnh báo "Chưa có hồ sơ"', pwHTML.includes('Người Lạ') && pwHTML.includes('Chưa có hồ sơ'));
+check('PRES-W: chips tổng hợp đếm đúng (1 khớp, 1 phân vị Ép)', document.getElementById('press-workers-summary').innerHTML.includes('Khớp hồ sơ Nhân Sự: <strong>1</strong>') && document.getElementById('press-workers-summary').innerHTML.includes('Được phân vị Ép: <strong>1</strong>'));
+press.closePressWorkersModal();
+check('PRES-W: đóng modal', !document.getElementById('modal-press-workers').classList._s.has('show'));
+// Nhân viên nghỉ có phép vẫn có tên trong lượt ép -> cảnh báo
+state.hrLeaves.push({ id: 'lv', employeeId: 'empA', type: 'Ốm', from: '2024-06-06', to: '2024-06-06', days: 1, reason: '', status: 'approved', createdAt: '2024-06-01T00:00:00Z' });
+state.pressRecords = [{ id: 'pr2', date: '2024-06-06', worker: 'Nguyễn Văn A', sticks: [], vanTho: [] }];
+press.openPressWorkersModal('pr2');
+check('PRES-W: ngày có đơn nghỉ duyệt -> chip "Nghỉ có phép" cảnh báo', document.getElementById('press-workers-body').innerHTML.includes('Nghỉ có phép'));
+
 // ─── I. RENDER TOÀN TAB KHÔNG LỖI ─────────────────────────────
 let renderOk = true;
 try { hr.renderHrView(); } catch (e) { renderOk = false; console.log('renderHrView error:', e && e.message); }

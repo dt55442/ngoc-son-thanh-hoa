@@ -6,6 +6,7 @@ import { renderCustomCharts } from './dashboard.js';
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
+import { hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 
@@ -283,6 +284,27 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
 
   // ─── 2) SẢN LƯỢNG ÉP VÁN ──────────────────────────────────────
+  // Công nhân ép LẤY TỰ ĐỘNG từ phân vị "Ép" theo ngày lượt ép (tab Nhân Sự;
+  // hrPressWorkersNamesOf) — không còn nhập tay. Cột cũ `r.worker` chỉ giữ để
+  // đọc dữ liệu lịch sử (migrate) khi chưa có phân vị cùng ngày.
+  function pressWorkersOf(r) {
+    const auto = (typeof hrPressWorkersNamesOf === 'function' ? hrPressWorkersNamesOf(r && r.date) : []) || [];
+    const legacy = String((r && r.worker) || '').split(',').map(s => s.trim()).filter(Boolean);
+    // GỘP cả 2 nguồn (tự động từ phân vị + dữ liệu cũ), khử trùng theo key chuẩn hóa
+    const seen = new Set();
+    const out = [];
+    [...auto, ...legacy].forEach(n => {
+      const k = normWorker(n);
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      out.push(n);
+    });
+    return out;
+  }
+  // Key chuẩn hóa để so khớp công nhân (dùng hrStripForMatch: bỏ dấu + gộp khoảng trắng)
+  function normWorker(s) {
+    return hrStripForMatch(s);
+  }
   // Nhãn thành phẩm: ưu tiên snapshot trên lượt ép, fallback về định mức hiện tại.
   // Lượt ép CHƯA ép thành phẩm (không có productId) → "Chưa ép thành phẩm".
   function pressProductLabelOf(r) {
@@ -333,14 +355,16 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
           .sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'vi'))
           .map(([id, name]) => `<option value="${escapeHTML(id)}">${escapeHTML(name)}</option>`).join('');
     }
-    // Công nhân (chuẩn hóa như engine biểu đồ)
+    // Công nhân (chuẩn hóa như engine biểu đồ) — nguồn TỰ ĐỘNG từ phân vị tab Nhân Sự
     const workerSel = document.getElementById('export-press-worker');
     if (workerSel) {
       const seen = new Map();
       recs.forEach(r => {
-        const raw = String(r.worker || '').trim(); if (!raw) return;
-        const key = normWorker(raw);
-        if (!seen.has(key)) seen.set(key, raw);
+        pressWorkersOf(r).forEach(raw => {
+          const key = normWorker(raw);
+          if (!key) return;
+          if (!seen.has(key)) seen.set(key, raw);
+        });
       });
       workerSel.innerHTML = '<option value="all">Tất Cả Công Nhân</option>' +
         [...seen.entries()]
@@ -369,7 +393,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
       if (year !== 'all' && String(r.date || '').slice(0, 4) !== year) return false;
       if (week !== 'all' && r.week !== week) return false;
       if (product !== 'all' && String(r.productId || '') !== product) return false;
-      if (worker !== 'all' && normWorker(r.worker) !== worker) return false;
+      if (worker !== 'all' && !pressWorkersOf(r).some(n => normWorker(n) === worker)) return false;
       return true;
     });
     if (filtered.length === 0) {
@@ -393,7 +417,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
       aoa.push([
         i + 1, formatDateDDMMYY(r.date), friendlyWeek(r.week), pressProductLabelOf(r),
         (rate && rate.productCode) || '', (rate && rate.fullName) || '', (rate && rate.pressType) || '',
-        r.worker || '—', r.fpDim || '—', qty,
+        pressWorkersOf(r).join(', ') || '—', r.fpDim || '—', qty,
         pressVanThoSummary(r), pressSticksSummary(r), r.glue || 0, r.additive || 0
       ]);
     });
@@ -865,6 +889,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     return true;
   }
   // Ép ván: year/product/worker/dateFrom/dateTo
+  // worker so theo DANH SÁCH TỰ ĐỘNG từ phân vị (fallback dữ liệu cũ)
   function pressPassesFilters(r, f) {
     if (!matchFilterVal(f.year, r.year || (r.date || '').slice(0, 4))) return false;
     const prodVals = filterValList(f.product);
@@ -875,9 +900,14 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
                  prodVals.some(v => v !== '__orphan__' && String(r.productId || '') === v);
       if (!ok) return false;
     }
-    // Công nhân: so sau chuẩn hóa (gộp biến thể 'Nam'/'nam '/'NAM')
+    // Công nhân: lượt ép có BẤT KỲ công nhân nào khớp giá trị lọc đã chuẩn hóa
+    // (chuẩn hóa cả 2 phía qua normWorker — lọc 'hùng' khớp dữ liệu 'Hùng')
     const workerVals = filterValList(f.worker);
-    if (workerVals && !workerVals.some(v => normWorker(r.worker) === v)) return false;
+    if (workerVals) {
+      const recKeys = pressWorkersOf(r).map(normWorker).filter(Boolean);
+      const wantKeys = workerVals.map(normWorker).filter(Boolean);
+      if (!wantKeys.some(v => recKeys.includes(v))) return false;
+    }
     if (f.dateFrom && (!r.date || r.date < f.dateFrom)) return false;
     if (f.dateTo   && (!r.date || r.date > f.dateTo))   return false;
     return true;
@@ -887,10 +917,6 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   // ID sản phẩm còn định mức hay không
   function rateExists(productId) {
     return !!(productId && (state.materialRates || []).some(r => r.id === productId));
-  }
-  // Chuẩn hóa tên công nhân: cắt/kẹp khoảng trắng, gộp không phân biệt hoa/thường
-  function normWorker(s) {
-    return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
   // Tuần dạng máy "2026-W33" → người dùng đọc "Tuần 33 (2026)"; giữ nguyên dạng đã thân thiện
   function friendlyWeek(w) {
@@ -977,15 +1003,17 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
   // ─── NGUỒN ÉP VÁN (pressRecords) ─────────────────────────────
   function computePressChartData(chartDef) {
-    // Áp bộ lọc schema (year/product/worker/khoảng ngày) trước khi nhóm
+    // Ép ván: công nhân lấy TỰ ĐỘNG từ phân vị cùng ngày (fallback dữ liệu cũ `worker`)
     const records = (state.pressRecords || []).filter(r => pressPassesFilters(r, chartDef));
     const monthKey = r => (r.date || '').slice(0, 7); // YYYY-MM
     // Nhãn công nhân: biến thể viết phổ biến nhất trong nhóm đã chuẩn hóa
     const workerVariants = {};
     records.forEach(r => {
-      const key = normWorker(r.worker); if (!key) return;
-      (workerVariants[key] = workerVariants[key] || {});
-      workerVariants[key][String(r.worker).trim()] = (workerVariants[key][String(r.worker).trim()] || 0) + 1;
+      pressWorkersOf(r).forEach(raw => {
+        const key = normWorker(raw); if (!key) return;
+        (workerVariants[key] = workerVariants[key] || {});
+        workerVariants[key][String(raw).trim()] = (workerVariants[key][String(raw).trim()] || 0) + 1;
+      });
     });
     const workerBestLabel = key => {
       const entries = Object.entries(workerVariants[key] || {});
@@ -1002,7 +1030,11 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
         case 'product': return pressProductLabel(r);
         case 'week':    return friendlyWeek(r.week) || 'Tuần';
         case 'month':   return monthKey(r) || 'Tháng';
-        case 'worker':  { const key = normWorker(r.worker); return key ? workerBestLabel(key) : 'Chưa ghi'; }
+        case 'worker':  {
+          const names = pressWorkersOf(r);
+          const key = names.length ? normWorker(names.slice().sort((a, b) => normWorker(a).localeCompare(normWorker(b)))[0]) : '';
+          return key ? workerBestLabel(key) : 'Chưa ghi';
+        }
         case 'fpDim':   return r.fpDim || 'Không rõ';
         case 'date':    return formatDateDDMMYY(r.date);
         default:        return r[f] || 'Khác';

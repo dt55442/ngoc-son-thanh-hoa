@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { collapseChartCard } from './dashboard.js';
+import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrWorkersForPress } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
@@ -10,7 +11,9 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
   // =============================================================
   // SẢN LƯỢNG ÉP VÁN (PRESS VIEW)
   // =============================================================
-  // Chuyển đổi bản ghi cũ (mảng lines gộp) sang cấu trúc mới (sticks + vanTho tách riêng)
+  // Chuyển đổi bản ghi cũ (mảng lines gộp) sang cấu trúc mới (sticks + vanTho tách riêng).
+  // Đồng thời XÓA trường "worker" nhập tay cũ — công nhân ép giờ LẤY TỰ ĐỘNG
+  // từ phân vị "Ép" theo ngày ở tab Nhân Sự (không còn lưu trong lượt ép).
   function migratePressRecord(r) {
     if (!r) return r;
     if ((!r.sticks || !r.sticks.length) && (!r.vanTho || !r.vanTho.length) && Array.isArray(r.lines)) {
@@ -19,6 +22,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     }
     if (!r.sticks) r.sticks = [];
     if (!r.vanTho) r.vanTho = [];
+    if (r.worker !== undefined) delete r.worker; // dọn dữ liệu công nhân ép nhập tay cũ
     return r;
   }
 
@@ -425,13 +429,9 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     document.getElementById('press-lines').innerHTML = '';
     document.getElementById('press-id').value = recordId || '';
 
-    // Gợi ý loại đầu vào (thanh thô + VÁN THÔ ĐÃ ÉP TRƯỚC ĐÓ) & tên công nhân
+    // Gợi ý loại đầu vào (thanh thô + VÁN THÔ ĐÃ ÉP TRƯỚC ĐÓ) — công nhân ép
+    // giờ lấy TỰ ĐỘNG theo phân vị (preview ở ô "Công Nhân Ép")
     populatePressInputTypeList();
-    const workerList = document.getElementById('press-worker-list');
-    if (workerList) {
-      const names = [...new Set(state.pressRecords.map(r => r.worker).filter(Boolean))];
-      workerList.innerHTML = names.map(n => `<option value="${escapeHTML(n)}"></option>`).join('');
-    }
 
     const titleEl = document.getElementById('press-modal-title');
     if (recordId) {
@@ -447,7 +447,6 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       document.getElementById('press-fp-qty').value = rec.finishedQty || '';
       document.getElementById('press-glue').value = rec.glue ?? '';
       document.getElementById('press-additive').value = rec.additive ?? '';
-      document.getElementById('press-worker').value = rec.worker || '';
       ['press-glue', 'press-additive'].forEach(id => {
         document.getElementById(id)?.setAttribute('data-manual', '1');
       });
@@ -461,6 +460,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       refreshPressProductSelect();
     }
     suggestPressMaterialFields(false);
+    refreshPressWorkersPreview();
 
     modal.classList.add('show');
     initLucide();
@@ -480,12 +480,12 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     const productId = document.getElementById('press-product').value || '';
     const glue = parseFloat(document.getElementById('press-glue').value) || 0;
     const additive = parseFloat(document.getElementById('press-additive').value) || 0;
-    const worker = document.getElementById('press-worker').value.trim();
     const sticks = collectPressSticks().filter(s => s.nanKey || s.sticks > 0);
     const lines = collectPressLines().filter(l => l.vtDim || l.vtQty > 0);
 
     if (!dateVal) { showToast('Vui lòng chọn ngày ép!', 'error'); return; }
-    if (!worker) { showToast('Vui lòng nhập tên công nhân ép!', 'error'); return; }
+    // Công nhân ép KHÔNG còn nhập tay — suy ra tự động từ phân vị "Ép" theo
+    // ngày ép (tab Nhân Sự); chưa có dữ liệu thì lượt ép để trống công nhân.
     if (sticks.length === 0) { showToast('Cần ít nhất 1 dòng đầu vào (chọn loại thanh thô/ván thô + số lượng)!', 'error'); return; }
     for (let i = 0; i < sticks.length; i++) {
       const s = sticks[i];
@@ -535,7 +535,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       productName: productId ? ((state.materialRates.find(r => r.id === productId) || {}).product || '') : '',
       fpDim,
       finishedQty,
-      glue, additive, worker,
+      glue, additive,
       updatedAt: new Date().toISOString()
     };
 
@@ -1190,6 +1190,17 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       const stickDesc = sticksList.map(s =>
         `${escapeHTML(s.nanKey)} ×${(s.sticks || 0).toLocaleString('vi-VN')}`).join('<br>');
       const vtQtyTotal = vanThoList.reduce((a, l) => a + (l.vtQty || 0), 0);
+      // Cột "Công Nhân Ép" — LẤY TỰ ĐỘNG từ phân vị "Ép" theo ngày lượt ép
+      // (tab Nhân Sự). Hiện tối đa 3 tên + chip đếm + nút Chi tiết; chưa có
+      // dữ liệu phân vị thì để trống (hiện "—").
+      const autoWorkers = hrWorkersForPress(r.date);
+      const workerShort = autoWorkers.slice(0, 3).map(w => escapeHTML(w.name)).join(', ')
+        + (autoWorkers.length > 3 ? ` <strong style="color:var(--primary);">+${autoWorkers.length - 3}</strong>` : '');
+      const workerCell = autoWorkers.length
+        ? `<span title="${escapeHTML(autoWorkers.map(w => w.name).join(', '))}">${workerShort}</span>` +
+          ` <span class="hr-chip ok" style="margin:1px 2px;">${autoWorkers.length} người</span>` +
+          ` <button class="btn btn-outline btn-icon btn-sm" onclick="app.pressWorkersDetail('${r.id}')" title="Xem chi tiết công nhân ép — đối chiếu chấm công & phân vị"><i data-lucide="users"></i></button>`
+        : `<span class="text-muted" title="Chưa có ai được phân vị Ép ngày này ở tab Nhân Sự (Chấm Công & Phân Vị Theo Ngày)">—</span>`;
       // Lượt ép CHƯA ép thành phẩm (không có thành phẩm) → hiển thị "—"
       const productCell = r.productId
         ? `<span class="rate-product-name">${escapeHTML(r.productName || 'Đã xóa')}</span>`
@@ -1208,7 +1219,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
         <td>${fpCell}</td>
         <td>${(r.glue || 0).toFixed(2)}</td>
         <td>${(r.additive || 0).toFixed(2)}</td>
-        <td>${escapeHTML(r.worker)}</td>
+        <td>${workerCell}</td>
         <td class="text-right">
           <div style="display:flex;justify-content:flex-end;gap:4px;">
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.editPressRecord('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
@@ -1218,6 +1229,108 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       tbody.appendChild(tr);
     });
     initLucide();
+  }
+
+  // ── CÔNG NHÂN ÉP: suy ra TỰ ĐỘNG từ phân vị "Ép" theo ngày (tab Nhân Sự) ──
+  // Không còn nhập tay: cột trong bảng, preview trong form và modal chi tiết
+  // đều đọc từ hrWorkersForPress(ngày lượt ép) — người ĐI LÀM & được phân vị Ép.
+  // Modal chi tiết: từng công nhân kèm bộ phận, ghi chú chấm công và các vị trí
+  // được phân trong ngày. Cột "Giờ Ép" từng người sẽ bổ sung ở giai đoạn sau.
+  function openPressWorkersModal(recordId) {
+    const r = (state.pressRecords || []).find(x => x.id === recordId);
+    if (!r) return;
+    const modal = document.getElementById('modal-press-workers');
+    if (!modal) return;
+    const titleEl = document.getElementById('press-workers-modal-title');
+    const dateLabel = fmtDateDM(r.date);
+    const summaryEl = document.getElementById('press-workers-summary');
+    const tbody = document.getElementById('press-workers-body');
+    if (!tbody) return;
+
+    // Danh sách công nhân: ƯU TIÊN tên đã lưu trên lượt ép (kể cả trước khi có
+    // chấm công — theo quy trình mới: chưa có dữ liệu Nhân Sự thì để trống nên
+    // lượt ép cũ có thể vẫn giữ tên tay). Nếu lượt ép KHÔNG lưu tên (quy trình
+    // mới) → suy ra từ phân vị "Ép" theo ngày ở tab Nhân Sự.
+    // Mỗi tên được đối chiếu: hồ sơ Nhân Sự + chấm công + phân vị + đơn nghỉ duyệt.
+    const savedNames = String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean);
+    const names = savedNames.length ? savedNames : hrWorkersForPress(r.date).map(w => w.name);
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="users"></i> Công Nhân Ép — Lượt ${dateLabel} (${names.length} người)`;
+
+    if (!names.length) {
+      if (summaryEl) summaryEl.innerHTML = `<span class="hr-stat-chip"><i data-lucide="info"></i> Chưa có ai được phân vị Ép ngày <strong>${dateLabel}</strong> — cập nhật ở tab Nhân Sự.</span>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:22px;color:var(--text-muted);">
+        <i data-lucide="user-x" style="width:24px;height:24px;margin-bottom:6px;"></i>
+        <p>Chưa có phân vị Ép trong ngày này — vào tab Nhân Sự, bảng "Chấm Công &amp; Phân Vị Theo Ngày" để phân.</p></td></tr>`;
+      modal.classList.add('show');
+      initLucide();
+      return;
+    }
+
+    const rows = names.map(rawName => {
+      const emp = hrEmpByName(rawName);
+      const status = emp ? attStatusOf(emp.id, r.date) : '';
+      const positions = emp ? hrPositionsNamesOf(emp.id, r.date) : [];
+      const leave = emp ? approvedLeaveOn(emp.id, r.date) : null;
+      return { name: rawName, emp, status, positions, leave, isPress: positions.some(n => /ép/i.test(n)) };
+    });
+    const matched = rows.filter(x => x.emp).length;
+    const pressCount = rows.filter(x => x.isPress).length;
+
+    const statusCell = (x) => {
+      if (!x.emp) return '<span class="hr-chip warn">Chưa có hồ sơ</span>';
+      if (x.leave || x.status === 'leave') return '<span class="hr-chip warn">Nghỉ có phép</span>';
+      if (x.status === 'work') return '<span class="hr-chip ok">Đi làm ✓</span>';
+      if (x.status === 'absent') return '<span class="hr-chip bad">Vắng</span>';
+      return '<span class="text-muted">— Chưa chấm —</span>';
+    };
+
+    tbody.innerHTML = rows.map((x, i) => {
+      const posCell = (x.positions || []).length
+        ? x.positions.map(n => `<span class="hr-chip ${/ép/i.test(n) ? 'ok' : ''}" style="${/ép/i.test(n) ? '' : 'background:var(--bg-subtle);color:var(--text-main);'}">${escapeHTML(n)}</span>`).join(' ')
+        : '<span class="text-muted">—</span>';
+      const note = (x.emp && (attRecordOf(x.emp.id, r.date) || {}).note) || '';
+      return `<tr>
+        <td>${i + 1}</td>
+        <td><strong>${escapeHTML(x.name)}</strong>${x.emp && x.leave ? ' <span class="hr-chip warn" title="Có đơn nghỉ đã duyệt trong ngày này">Nghỉ có phép</span>' : ''}</td>
+        <td class="hr-emp-code">${x.emp ? escapeHTML(x.emp.code || '—') : '<span class="text-muted">Chưa có hồ sơ</span>'}</td>
+        <td>${x.emp ? escapeHTML(x.emp.department || '—') : '—'}</td>
+        <td>${statusCell(x)}${note ? `<div class="text-muted" style="font-size:0.75rem;" title="${escapeHTML(note)}">${escapeHTML(note)}</div>` : ''}</td>
+        <td>${posCell}</td>
+      </tr>`;
+    }).join('');
+
+    if (summaryEl) {
+      summaryEl.innerHTML =
+        `<span class="hr-stat-chip"><i data-lucide="users"></i> Công nhân: <strong>${rows.length}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="user-check"></i> Khớp hồ sơ Nhân Sự: <strong>${matched}</strong></span>` +
+        `<span class="hr-stat-chip"><i data-lucide="check-circle-2"></i> Được phân vị Ép: <strong>${pressCount}</strong></span>`;
+    }
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closePressWorkersModal() {
+    document.getElementById('modal-press-workers')?.classList.remove('show');
+  }
+
+  // Ô xem trước trong FORM lượt ép: danh sách công nhân tự động theo Ngày Ép
+  function refreshPressWorkersPreview() {
+    const box = document.getElementById('press-workers-auto');
+    if (!box) return;
+    const dateVal = document.getElementById('press-date')?.value;
+    if (!dateVal) {
+      box.innerHTML = 'Chọn <strong>Ngày Ép</strong> để xem danh sách công nhân tự động.';
+      box.classList.add('muted');
+      return;
+    }
+    const workers = hrWorkersForPress(dateVal);
+    if (!workers.length) {
+      box.innerHTML = `Chưa có ai được phân vị Ép ngày <strong>${fmtDateDM(dateVal)}</strong> — công nhân ép để trống. Cập nhật ở tab Nhân Sự (Chấm Công &amp; Phân Vị Theo Ngày).`;
+      box.classList.add('muted');
+      return;
+    }
+    box.classList.remove('muted');
+    box.innerHTML = `<strong>${workers.length} người:</strong> ${workers.map(w => escapeHTML(w.name)).join(', ')}`;
   }
 
   // ── POPOVER hiển thị nội dung ghi chú (dùng chung cho biểu đồ & bảng) ──
@@ -1849,6 +1962,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
 export {
   addPressLine,
   addPressStick,
+  closePressWorkersModal,
   dimVolume,
   buildPressLineHTML,
   buildPressStickHTML,
@@ -1875,6 +1989,7 @@ export {
   migratePressRecord,
   openPressModal,
   openPressNoteModal,
+  openPressWorkersModal,
   parseDimString,
   populatePressInputTypeList,
   populatePressWeekFilter,
@@ -1884,6 +1999,7 @@ export {
   pressWinSize,
   recalcPressQuantities,
   refreshPressProductSelect,
+  refreshPressWorkersPreview,
   removePressLine,
   removePressStick,
   planCapacityReason,

@@ -1161,9 +1161,8 @@
                 <input type="number" id="press-additive" min="0" step="0.01" placeholder="Gợi ý theo định mức">
               </div>
               <div class="form-group col-span-full">
-                <label for="press-worker">Tên Công Nhân Ép <span class="required">*</span></label>
-                <input type="text" id="press-worker" list="press-worker-list" placeholder="VD: Nguyễn Văn A" required>
-                <datalist id="press-worker-list"></datalist>
+                <label>Công Nhân Ép <span style="font-size:0.72rem; color:var(--text-muted); font-weight:400;">(tự động từ phân vị Ép theo Ngày Ép — tab Nhân Sự)</span></label>
+                <div id="press-workers-auto" class="press-workers-auto muted">Chọn <strong>Ngày Ép</strong> để xem danh sách công nhân tự động.</div>
               </div>
             </div>
 
@@ -2056,6 +2055,38 @@
           <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Vị Trí</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CHI TIẾT CÔNG NHÂN ÉP (đối chiếu chấm công & phân vị từ tab Nhân Sự) -->
+  <div class="modal-overlay" id="modal-press-workers">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="press-workers-modal-title"><i data-lucide="users"></i> Công Nhân Ép — Chi Tiết</h3>
+        <button class="modal-close-btn" id="btn-close-press-workers"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding: 16px 20px 20px;">
+        <div id="press-workers-summary" class="hr-stat-chips" style="padding:0 0 10px;"></div>
+        <div class="table-responsive hr-table-scroll" style="max-height:480px;">
+          <table class="data-table" id="press-workers-table">
+            <thead>
+              <tr>
+                <th style="width:40px;">#</th>
+                <th>Họ Tên</th>
+                <th>Mã NV</th>
+                <th>Bộ Phận</th>
+                <th>Chấm Công</th>
+                <th>Phân Vị Trong Ngày</th>
+              </tr>
+            </thead>
+            <tbody id="press-workers-body"></tbody>
+          </table>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:10px;">
+          <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+          Đối chiếu từ tab Nhân Sự (Chấm Công &amp; Phân Vị Theo Ngày). Tính năng nhập <strong>giờ ép từng người</strong> sẽ bổ sung ở giai đoạn sau.
+        </div>
+      </div>
     </div>
   </div>
 

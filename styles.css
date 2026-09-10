@@ -4711,3 +4711,13 @@ table.export-preview-table {
   background: var(--bg-card);
   box-shadow: 0 1px 0 var(--border-color);
 }
+/* Ô xem trước công nhân ép TỰ ĐỘNG trong form lượt ép (từ phân vị tab Nhân Sự) */
+.press-workers-auto {
+  padding: 9px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  background: var(--bg-subtle);
+}
+.press-workers-auto.muted { color: var(--text-muted); }

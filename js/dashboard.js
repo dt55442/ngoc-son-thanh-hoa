@@ -11,6 +11,7 @@
 import { initLucide, requireEditPermission, requireTabEditPermission } from './cloud.js';
 import { computeChartData, getPaletteColors, saveCustomCharts } from './export-xlsx.js';
 import { canEditChartZone, canEditTab, canViewAdvanced, getTabDef } from './permissions.js';
+import { hrPressWorkersNamesOf, hrStripForMatch } from './hr.js';
 import { MATERIAL_LOCATIONS, materialPlanWeekOptions, renderMaterialPlanChart } from './materials.js';
 import { renderPlanVsPressChart, renderPlanCapacityChart } from './press.js';
 import { STAGES, state } from './state.js';
@@ -745,17 +746,34 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (orphans.length) opts.push([ORPHAN_PRODUCT, orphans.length > 1 ? `Sản phẩm cũ (định mức đã xóa — ${orphans.length} mã)` : 'Sản phẩm cũ (định mức đã xóa)']);
     return opts;
   };
-  // Công nhân: nhập tay nên dễ trùng lặp kiểu "Nam" / "Nam " / "nam" — chuẩn hóa
-  // (cắt khoảng trắng + gộp không phân biệt hoa/thường) và dùng biến thể phổ biến nhất làm nhãn.
-  const normWorker = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  // Công nhân ép: LẤY TỰ ĐỘNG từ phân vị "Ép" theo ngày lượt ép (tab Nhân Sự;
+  // hrPressWorkersNamesOf) — fallback dữ liệu cũ `r.worker` khi chưa có phân vị.
+  // Danh sách cố định theo ngày: lượt ép GHI NGÀY NÀO là lấy phân vị đúng ngày đó.
+  const pressWorkersOf = r => {
+    const auto = (typeof hrPressWorkersNamesOf === 'function' ? hrPressWorkersNamesOf(r && r.date) : []) || [];
+    const legacy = String((r && r.worker) || '').split(',').map(s => s.trim()).filter(Boolean);
+    // GỘP cả 2 nguồn (tự động từ phân vị + dữ liệu cũ), khử trùng theo key chuẩn hóa
+    const seen = new Set();
+    const out = [];
+    [...auto, ...legacy].forEach(n => {
+      const k = normWorker(n);
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      out.push(n);
+    });
+    return out;
+  };
+  const normWorker = s => hrStripForMatch(s);
   const workerOptions = items => {
     const map = new Map();
     (items || []).forEach(r => {
-      const raw = String(r.worker || '').trim(); if (!raw) return;
-      const key = normWorker(raw);
-      if (!map.has(key)) map.set(key, {});
-      const variants = map.get(key);
-      variants[raw] = (variants[raw] || 0) + 1;
+      pressWorkersOf(r).forEach(raw => {
+        const key = normWorker(raw);
+        if (!key) return;
+        if (!map.has(key)) map.set(key, {});
+        const variants = map.get(key);
+        variants[raw] = (variants[raw] || 0) + 1;
+      });
     });
     return [...map.entries()].map(([key, variants]) =>
       [key, Object.entries(variants).sort((a, b) => b[1] - a[1])[0][0]]

@@ -10,7 +10,7 @@ import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
-import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, removePressLine, removePressStick, renderPressView } from './press.js';
+import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, openPressWorkersModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
 import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, rejectLeave, renderHrView } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
@@ -260,6 +260,8 @@ import { setupFormCalculations } from './utils.js';
     removePressStick,
     editPressRecord: id => openPressModal(id),
     deletePressRecord,
+    // Chi tiết công nhân ép của 1 lượt ép (đối chiếu chấm công & phân vị)
+    pressWorkersDetail: openPressWorkersModal,
     // Giả định / Xóa Dự kiến theo từng tuần
     forecastAssumeWeek,
     forecastClearWeek,

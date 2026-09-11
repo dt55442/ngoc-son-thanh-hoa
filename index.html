@@ -1453,42 +1453,81 @@
     <!-- 7. NHÂN SỰ VIEW -->
     <section id="hr-view" class="view-panel">
 
-      <!-- Header Bar -->
-      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
-        <div>
-          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
-            <i data-lucide="users"></i> Nhân Sự
-          </h3>
-          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Quản lý nhân viên &amp; kỹ năng, chấm công — phân vị theo ngày, xin nghỉ phép (ban lãnh đạo duyệt), thống kê đi làm/ngày nghỉ &amp; nhu cầu tuyển dụng.
-          </p>
+      <!-- BẢNG 0: THẺ NÔI (LAUNCHER) — KATALOG BẢNG NHÂN SỰ: mỗi bảng là
+           một thẻ rút gọn; bấm thẻ để mở bảng chi tiết (xem / chỉnh sửa) -->
+      <div class="hr-cards-overview">
+        <div class="hr-cards-title">
+          <h4><i data-lucide="layout-grid"></i> Bảng Nhân Sự</h4>
         </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" id="btn-add-employee">
-            <i data-lucide="user-plus"></i> Thêm Nhân Viên
+        <div class="hr-cards" id="hr-cards-grid">
+          <button type="button" class="hr-mini-card" data-hr-card="hr-emp-card" aria-expanded="false" title="Danh sách nhân viên — thêm / sửa / xóa">
+            <span class="hr-mini-ic"><i data-lucide="users"></i></span>
+            <span class="hr-mini-title">Nhân Viên</span>
+            <span class="hr-mini-desc">Danh sách nhân viên</span>
+            <span class="hr-mini-count" id="hr-mini-count-emp">–</span>
           </button>
-          <button class="btn btn-outline" id="btn-import-employees" title="Nhập danh sách nhân viên từ file Excel (.xlsx/.xls/.csv) — tự nhận cột">
-            <i data-lucide="file-spreadsheet"></i> Nhập Từ Excel
+          <button type="button" class="hr-mini-card" data-hr-card="hr-att-card" aria-expanded="false" title="Chấm công & phân vị — đi làm / vắng / nghỉ có phép theo ngày">
+            <span class="hr-mini-ic"><i data-lucide="clipboard-list"></i></span>
+            <span class="hr-mini-title">Chấm Công</span>
+            <span class="hr-mini-desc">Phân vị theo ngày</span>
+            <span class="hr-mini-count" id="hr-mini-count-att">–</span>
           </button>
-          <button class="btn btn-outline" id="btn-add-leave" title="Gửi đơn xin nghỉ phép">
-            <i data-lucide="calendar-x"></i> Xin Nghỉ Phép
+          <button type="button" class="hr-mini-card" data-hr-card="hr-pos-card" aria-expanded="false" title="Vị trí làm việc &amp; kỹ năng — danh mục vị trí">
+            <span class="hr-mini-ic"><i data-lucide="git-branch"></i></span>
+            <span class="hr-mini-title">Vị Trí &amp; Kỹ Năng</span>
+            <span class="hr-mini-desc">Vị trí làm việc</span>
+            <span class="hr-mini-count" id="hr-mini-count-pos">–</span>
           </button>
-          <button class="btn btn-outline" id="btn-import-checkins" title="Nạp file Excel giờ vào/ra từ máy chấm công để đối chiếu">
-            <i data-lucide="clock"></i> Nạp Giờ Máy Chấm Công
+          <button type="button" class="hr-mini-card" data-hr-card="hr-ci-card" aria-expanded="false" title="Giờ máy chấm công — nạp Excel + đối chiếu với chấm công tay">
+            <span class="hr-mini-ic"><i data-lucide="clock"></i></span>
+            <span class="hr-mini-title">Giờ Máy Chấm Công</span>
+            <span class="hr-mini-desc">Nạp Excel / đối chiếu</span>
+            <span class="hr-mini-count" id="hr-mini-count-ci">–</span>
           </button>
-          <button class="btn btn-outline" id="btn-add-recruitment" title="Thêm nhu cầu nhân sự / tuyển dụng">
-            <i data-lucide="user-search"></i> Nhân Sự Cần
+          <button type="button" class="hr-mini-card" data-hr-card="hr-leave-card" aria-expanded="false" title="Xin nghỉ phép — đơn + duyệt ban lãnh đạo">
+            <span class="hr-mini-ic"><i data-lucide="calendar-x"></i></span>
+            <span class="hr-mini-title">Xin Nghỉ Phép</span>
+            <span class="hr-mini-desc">Đơn nghỉ + duyệt</span>
+            <span class="hr-mini-count" id="hr-mini-count-leave">–</span>
+          </button>
+          <button type="button" class="hr-mini-card" data-hr-card="hr-stats-card" aria-expanded="false" title="Thống kê nghỉ phép — TOP nhân viên theo số ngày nghỉ">
+            <span class="hr-mini-ic"><i data-lucide="bar-chart-3"></i></span>
+            <span class="hr-mini-title">Thống Kê Nghỉ</span>
+            <span class="hr-mini-desc">TOP theo ngày nghỉ</span>
+            <span class="hr-mini-count" id="hr-mini-count-stats">–</span>
+          </button>
+          <button type="button" class="hr-mini-card" data-hr-card="hr-att-stats-card" aria-expanded="false" title="Thống kê đi làm theo tháng">
+            <span class="hr-mini-ic"><i data-lucide="calendar-check-2"></i></span>
+            <span class="hr-mini-title">Thống Kê Đi Làm</span>
+            <span class="hr-mini-desc">Tỷ lè đi làm theo tháng</span>
+            <span class="hr-mini-count" id="hr-mini-count-att-stats">–</span>
+          </button>
+          <button type="button" class="hr-mini-card" data-hr-card="hr-recruit-card" aria-expanded="false" title="Nhân sự cần — nhu cầu tuyển dụng">
+            <span class="hr-mini-ic"><i data-lucide="user-search"></i></span>
+            <span class="hr-mini-title">Nhân Sự Cần</span>
+            <span class="hr-mini-desc">Nhu cầu tuyển dụng</span>
+            <span class="hr-mini-count" id="hr-mini-count-recruit">–</span>
           </button>
         </div>
       </div>
 
+            <!-- BẢNG CHI TIẾT — bao bới bởi stack; chỉ bật (nổi lên) khi bấm thẻ -->
+      <div id="hr-details-stack">
       <!-- BẢNG 1: DANH SÁCH NHÂN VIÊN -->
-      <div class="planning-card" id="hr-emp-card">
+      <div class="planning-card hr-card-hidden" id="hr-emp-card">
         <div class="planning-card-header">
           <h4><i data-lucide="users"></i> Danh Sách Nhân Viên</h4>
-          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-emp" title="Thu gọn / Mở rộng">
-            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
-          </button>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-employee" title="Thêm nhân viên mới">
+              <i data-lucide="user-plus"></i> Thêm Nhân Viên
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-import-employees" title="Nhập danh sách nhân viên từ file Excel (.xlsx/.xls/.csv) — tự nhận cột">
+              <i data-lucide="file-spreadsheet"></i> Nhập Từ Excel
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-emp" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
         </div>
         <div class="hr-filter-toolbar">
           <div class="filter-item">
@@ -1536,7 +1575,7 @@
       </div>
 
       <!-- BẢNG 2: CHẤM CÔNG & PHÂN VỊ THEO NGÀY -->
-      <div class="planning-card" id="hr-att-card">
+      <div class="planning-card hr-card-hidden" id="hr-att-card">
         <div class="planning-card-header">
           <h4><i data-lucide="clipboard-list"></i> Chấm Công &amp; Phân Vị Theo Ngày</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -1584,7 +1623,7 @@
       </div>
 
       <!-- BẢNG 3: VỊ TRÍ LÀM VIỆC & KỸ NĂNG -->
-      <div class="planning-card" id="hr-pos-card">
+      <div class="planning-card hr-card-hidden" id="hr-pos-card">
         <div class="planning-card-header">
           <h4><i data-lucide="git-branch"></i> Vị Trí Làm Việc &amp; Kỹ Năng</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -1619,15 +1658,18 @@
       </div>
 
       <!-- BẢNG 3.5: GIỜ MÁY CHẤM CÔNG — ĐỐI CHIẾU -->
-      <div class="planning-card" id="hr-ci-card">
+      <div class="planning-card hr-card-hidden" id="hr-ci-card">
         <div class="planning-card-header">
           <h4><i data-lucide="clock"></i> Giờ Máy Chấm Công — Đối Chiếu</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="hr-count" id="hr-ci-count"></span>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-import-checkins" title="Nạp file Excel giờ vào/ra từ máy chấm công để đối chiếu">
+              <i data-lucide="clock"></i> Nạp Giờ Máy
+            </button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-apply-all-checkins" title="Tự chấm Đi làm cho các ngày máy xác nhận mà chấm tay còn thiếu hoặc đang ghi Vắng">
               <i data-lucide="check-check"></i> Áp Dụng Tất Cả
             </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-delete-checkins-all" title="Xóa toàn bộ giờ đã nạp (không đụng chấm công tay)" style="color:var(--danger);">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-delete-checkins-all" title="Xóa toàn bộ giờ đã nạp (không ảnh hưởng chấm công tay)" style="color:var(--danger);">
               <i data-lucide="trash-2"></i> Xóa Hết
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-ci" title="Thu gọn / Mở rộng">
@@ -1655,11 +1697,14 @@
       </div>
 
       <!-- BẢNG 4: XIN NGHỈ PHÉP -->
-      <div class="planning-card" id="hr-leave-card">
+      <div class="planning-card hr-card-hidden" id="hr-leave-card">
         <div class="planning-card-header">
           <h4><i data-lucide="calendar-x"></i> Xin Nghỉ Phép</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="hr-count" id="hr-leaves-count"></span>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-leave" title="Gửi đơn xin nghỉ phép">
+              <i data-lucide="calendar-x"></i> Xin Nghỉ Phép
+            </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-leave" title="Thu gọn / Mở rộng">
               <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
             </button>
@@ -1687,7 +1732,7 @@
       </div>
 
       <!-- BẢNG 5: THỐNG KÊ NGHỈ PHÉP & TOP -->
-      <div class="planning-card" id="hr-stats-card">
+      <div class="planning-card hr-card-hidden" id="hr-stats-card">
         <div class="planning-card-header">
           <h4><i data-lucide="bar-chart-3"></i> Thống Kê Nghỉ Phép — TOP Theo Số Ngày Nghỉ</h4>
           <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-stats" title="Thu gọn / Mở rộng">
@@ -1714,7 +1759,7 @@
       </div>
 
       <!-- BẢNG 6: THỐNG KÊ ĐI LÀM THEO THÁNG -->
-      <div class="planning-card" id="hr-att-stats-card">
+      <div class="planning-card hr-card-hidden" id="hr-att-stats-card">
         <div class="planning-card-header">
           <h4><i data-lucide="calendar-check-2"></i> Thống Kê Đi Làm Theo Tháng</h4>
           <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-att-stats" title="Thu gọn / Mở rộng">
@@ -1750,12 +1795,17 @@
       </div>
 
       <!-- BẢNG 7: NHÂN SỰ CẦN — TUYỂN DỤNG -->
-      <div class="planning-card" id="hr-recruit-card">
+      <div class="planning-card hr-card-hidden" id="hr-recruit-card">
         <div class="planning-card-header">
           <h4><i data-lucide="user-search"></i> Nhân Sự Cần — Tuyển Dụng</h4>
-          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-recruit" title="Thu gọn / Mở rộng">
-            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
-          </button>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-recruitment" title="Thêm nhu cầu nhân sự / tuyển dụng">
+              <i data-lucide="user-search"></i> Nhân Sự Cần
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-recruit" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
         </div>
         <div class="hr-filter-toolbar">
           <div class="filter-item">
@@ -1779,10 +1829,22 @@
                 <th class="text-right">Thao Tác</th>
               </tr>
             </thead>
-            <tbody id="hr-recruit-body">
+                                                <tbody id="hr-recruit-body">
               <!-- Populated by JS -->
             </tbody>
           </table>
+        </div>
+      </div>
+      </div> <!-- /#hr-details-stack -->
+
+      <!-- POP-UP: overlay chi tiết bảng Nhân Sự — hiển thị NỔI LÊN khi bấm thẻ -->
+            <div class="modal-overlay" id="hr-detail-overlay" tabindex="-1" aria-hidden="true">
+        <div class="modal-card hr-detail-modal" id="hr-detail-card" role="dialog" aria-modal="true" aria-labelledby="hr-detail-title">
+          <div class="modal-header">
+            <h3 id="hr-detail-title"><i data-lucide="users"></i> Chi Tiết Nhân Sự</h3>
+            <button type="button" class="modal-close-btn" id="btn-close-hr-detail" title="Đóng (Esc)"><i data-lucide="x"></i></button>
+          </div>
+          <div class="hr-detail-content" id="hr-detail-content"></div>
         </div>
       </div>
 
@@ -2018,7 +2080,7 @@
           Hệ thống <strong>tự nhận cột</strong> (Mã NV/Tên, Ngày, Giờ vào, Giờ ra). Nếu máy xuất
           <strong>từng lần quét</strong> (cột "Thời gian" dạng Ngày Giờ) thì tự gộp: lần quét đầu = giờ vào, lần cuối = giờ ra.
           Khớp nhân viên theo <strong>Mã NV</strong> (dự phòng: đúng Họ tên). Giờ máy chỉ dùng để
-          <strong>đối chiếu &amp; áp dụng</strong> — không đụng đơn nghỉ đã duyệt.
+          <strong>đối chiếu &amp; áp dụng</strong> — không ảnh hưởng đơn nghỉ đã duyệt.
         </div>
         <div id="checkin-import-summary"></div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">

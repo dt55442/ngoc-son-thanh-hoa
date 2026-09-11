@@ -12,7 +12,7 @@ import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, 
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
-import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
+import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -677,11 +677,31 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('hr-emp-filter-status', 'change', renderHrEmployeesTable);
     safeOn('hr-emp-search', 'input', renderHrEmployeesTable);
     safeOn('hr-recruit-filter-dept', 'change', renderHrRecruitmentTable);
-    // Thu gọn / mở rộng các thẻ bảng Nhân Sự
-    safeOn('btn-toggle-hr-emp', 'click', () => toggleRateTableCollapse('hr-emp-card'));
-    safeOn('btn-toggle-hr-leave', 'click', () => toggleRateTableCollapse('hr-leave-card'));
-    safeOn('btn-toggle-hr-stats', 'click', () => toggleRateTableCollapse('hr-stats-card'));
-    safeOn('btn-toggle-hr-recruit', 'click', () => toggleRateTableCollapse('hr-recruit-card'));
+    // Thu gọn / mở rộng các thẻ bảng Nhân Sự (obok lśni thẻ nôi)
+    safeOn('btn-toggle-hr-emp', 'click', () => { toggleRateTableCollapse('hr-emp-card'); syncHrMiniActive(); });
+    safeOn('btn-toggle-hr-leave', 'click', () => { toggleRateTableCollapse('hr-leave-card'); syncHrMiniActive(); });
+    safeOn('btn-toggle-hr-stats', 'click', () => { toggleRateTableCollapse('hr-stats-card'); syncHrMiniActive(); });
+    safeOn('btn-toggle-hr-recruit', 'click', () => { toggleRateTableCollapse('hr-recruit-card'); syncHrMiniActive(); });
+    // Bấm thẻ launcher (grid 5/3/2) → mở bảng chi tiết dạng pop-up modal (nổi lên)
+    document.querySelectorAll('.hr-mini-card').forEach(t => {
+      t.addEventListener('click', () => hrOpenCard(t.getAttribute('data-hr-card')));
+    });
+    // Đóng bảng chi tiết pop-up: nút Đóng / bấm nền mờ / phím Esc
+    safeOn('btn-close-hr-detail', 'click', hrCloseOpenCard);
+    const overlay = document.getElementById('hr-detail-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) hrCloseOpenCard(); });
+      overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') hrCloseOpenCard(); });
+    }
+        // Esc toàn cục khi modal đang mở (dù con trỏ/focus đang ở trong bảng)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('hr-detail-overlay') && document.getElementById('hr-detail-overlay').classList.contains('show')) hrCloseOpenCard();
+    });
+    // Đổi kích thước cửa sổ → đặt lại đỉnh pop-up đúng dưới header
+    window.addEventListener('resize', () => {
+      const ov = document.getElementById('hr-detail-overlay');
+      if (ov && ov.classList.contains('show') && typeof hrPositionDetailOverlay === 'function') hrPositionDetailOverlay();
+    });
     // ── Chấm công & phân vị theo ngày ──
     safeOn('btn-att-prev', 'click', () => hrAttShiftDay(-1));
     safeOn('btn-att-next', 'click', () => hrAttShiftDay(1));
@@ -692,7 +712,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('hr-att-search', 'input', renderHrAttendanceCard);
     // Đổi Bộ Phận trong modal nhân viên -> lọc lại danh sách vị trí kỹ năng
     safeOn('employee-department', 'change', () => renderEmployeeSkillsBox(collectEmployeeSkills()));
-    safeOn('btn-toggle-hr-att', 'click', () => toggleRateTableCollapse('hr-att-card'));
+    safeOn('btn-toggle-hr-att', 'click', () => { toggleRateTableCollapse('hr-att-card'); syncHrMiniActive(); });
     // Sửa trực tiếp từng dòng chấm công (đổi trạng thái / ghi chú) — sự kiện 'change'
     document.addEventListener('change', (e) => {
       const el = e.target;
@@ -710,14 +730,14 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     });
     // ── Thống kê đi làm theo tháng ──
     safeOn('hr-att-month', 'change', (e) => hrAttSetMonth(e.target.value));
-    safeOn('btn-toggle-hr-att-stats', 'click', () => toggleRateTableCollapse('hr-att-stats-card'));
+    safeOn('btn-toggle-hr-att-stats', 'click', () => { toggleRateTableCollapse('hr-att-stats-card'); syncHrMiniActive(); });
     // ── Vị trí làm việc & kỹ năng ──
     safeOn('btn-add-position', 'click', () => openPositionModal());
     safeOn('btn-sync-skills', 'click', syncSkillsFromAssignments);
     safeOn('btn-close-position', 'click', closePositionModal);
     safeOn('btn-cancel-position', 'click', closePositionModal);
     safeOn('position-form', 'submit', handlePositionSubmit);
-    safeOn('btn-toggle-hr-pos', 'click', () => toggleRateTableCollapse('hr-pos-card'));
+    safeOn('btn-toggle-hr-pos', 'click', () => { toggleRateTableCollapse('hr-pos-card'); syncHrMiniActive(); });
     // ── Giờ máy chấm công (nạp Excel + đối chiếu) ──
     safeOn('btn-import-checkins', 'click', openCheckinImportModal);
     safeOn('btn-close-checkin-import', 'click', closeCheckinImportModal);
@@ -726,7 +746,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-do-checkin-import', 'click', doCheckinImport);
     safeOn('btn-apply-all-checkins', 'click', applyAllCheckins);
     safeOn('btn-delete-checkins-all', 'click', deleteCheckinsAll);
-    safeOn('btn-toggle-hr-ci', 'click', () => toggleRateTableCollapse('hr-ci-card'));
+    safeOn('btn-toggle-hr-ci', 'click', () => { toggleRateTableCollapse('hr-ci-card'); syncHrMiniActive(); });
 
     // ── Biểu đồ Kế hoạch vs Thực tế nguyên liệu theo ngày ──
     safeOn('mpc-week-filter', 'change', (e) => {

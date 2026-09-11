@@ -12,7 +12,7 @@ import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMa
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, openPressWorkersModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
-import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, rejectLeave, renderHrView } from './hr.js';
+import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, rejectLeave,   renderHrView, hrOpenCard, hrCloseOpenCard, HR_CARD_DEFS } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { state } from './state.js';
 import { autoReconnectDataFolder, loadData, updateFileStorageUI } from './storage.js';
@@ -286,6 +286,9 @@ import { setupFormCalculations } from './utils.js';
     // Vị trí làm việc (onclick trong HTML render động)
     hrEditPosition: openPositionModal,
     hrDeletePosition: deletePosition,
+    // Thẻ Nhân Sự — launcher 5/3/2 (mở nổi lên dạng pop-up modal)
+    hrOpenCard,
+    hrCloseCard: hrCloseOpenCard,
     // Giờ máy chấm công (onclick trong HTML render động)
     hrApplyCheckin: applyCheckinRecord,
     hrDeleteCheckin: deleteCheckin

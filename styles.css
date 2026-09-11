@@ -4711,7 +4711,182 @@ table.export-preview-table {
   background: var(--bg-card);
   box-shadow: 0 1px 0 var(--border-color);
 }
+
+/* ═══ Nhân sự: THẺ NÔI (launcher) — bảng Nhân Sự jako karty ═══
+   Desktop: 5 thẻ na wiersz, tablet (≤1024px): 3, telefon w pionie (≤640px): 2.
+   Hover: karta unosi się (translateY + większy cień). */
+.hr-cards-overview {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.hr-cards-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hr-cards-title h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+}
+
+/* Bảngi Nhân Sự całkowicie ukryte — pojawiają się dopiero po bấm thẻ */
+.planning-card.hr-card-hidden { display: none; }
+
+.hr-cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+@media (max-width: 1024px) {
+  .hr-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .hr-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── Kolory thẻ: każda bảng ma własny akcent (trựcualne) ── */
+.hr-mini-card {
+  --card-accent: var(--primary);
+  --card-accent-bg: var(--bg-subtle);
+}
+.hr-mini-card[data-hr-card="hr-emp-card"]       { --card-accent: #0284c7; --card-accent-bg: #e0f2fe; } /* Niebieski   — Nhân Viên */
+.hr-mini-card[data-hr-card="hr-att-card"]       { --card-accent: #15803d; --card-accent-bg: #dcfce7; } /* Zielony     — Chấm Công */
+.hr-mini-card[data-hr-card="hr-pos-card"]       { --card-accent: #7c3aed; --card-accent-bg: #ede9fe; } /* Fioletowy   — Vị Trí */
+.hr-mini-card[data-hr-card="hr-ci-card"]        { --card-accent: #d97706; --card-accent-bg: #fef3c7; } /* Złoty       — Giờ Máy */
+.hr-mini-card[data-hr-card="hr-leave-card"]     { --card-accent: #ea580c; --card-accent-bg: #ffedd5; } /* Pomarańczowy— Xin Nghỉ Phép */
+.hr-mini-card[data-hr-card="hr-stats-card"]     { --card-accent: #0d9488; --card-accent-bg: #ccfbf1; } /* Morski      — Thống Kê Nghỉ */
+.hr-mini-card[data-hr-card="hr-att-stats-card"] { --card-accent: #0891b2; --card-accent-bg: #cffafe; } /* Cyjan       — Thống Kê Đi Làm */
+.hr-mini-card[data-hr-card="hr-recruit-card"]   { --card-accent: #db2777; --card-accent-bg: #fce7f3; } /* Różowy      — Nhân Sự Cần */
+
+.hr-mini-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 14px;
+  background: var(--card-accent-bg, var(--bg-card));
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--card-accent, var(--primary));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-main);
+  font: inherit;
+  line-height: 1.3;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.hr-mini-card:hover,
+.hr-mini-card:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--card-accent, var(--primary));
+}
+
+.hr-mini-card:focus-visible {
+  outline: 2px solid var(--card-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+.hr-mini-card:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.hr-mini-card.hr-mini-active {
+  background: var(--card-accent-bg, var(--primary-light));
+  border-color: var(--card-accent, var(--primary));
+  box-shadow: var(--shadow-md);
+}
+
+.hr-mini-ic {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--card-accent, var(--primary));
+  color: #fff;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.hr-mini-ic svg { width: 20px; height: 20px; }
+
+.hr-mini-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.hr-mini-desc {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hr-mini-count {
+  margin-top: 8px;
+  align-self: flex-end;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--card-accent, var(--primary));
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* Ô xem trước công nhân ép TỰ ĐỘNG trong form lượt ép (từ phân vị tab Nhân Sự) */
+/* ── POP-UP: modal chi tiết bảng Nhân Sự (nổi lên khi bấm thẻ) ──
+   Vùng pop-up = toàn bộ vùng hiển thị của trang (TRỪ header — header không
+   bị che / làm mờ). Khung viền đầy đủ quanh panel để tách bạch, đẹp hơn. */
+#hr-detail-overlay {
+  top: 64px;                 /* JS cập nhật đúng theo chiều cao header khi mở */
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: none;     /* không làm mờ nội dung phía sau */
+  align-items: stretch;      /* panel chiếm full chiều cao vùng còn lại */
+}
+.hr-detail-modal {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border: 2px solid var(--primary, #2563eb);   /* khung viền đầy đủ */
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px rgba(15, 23, 42, 0.35);
+  overflow: hidden;          /* header modal cố định, nội dung cuộn bên dưới */
+}
+.hr-detail-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+@media (max-width: 639.98px) {
+  #hr-detail-overlay { padding: 8px; }
+  .hr-detail-content { padding: 10px; }
+}
+
 .press-workers-auto {
   padding: 9px 12px;
   border: 1px dashed var(--border-color);

@@ -93,6 +93,8 @@ import { escapeHTML, showToast } from './utils.js';
     renderHrLeaveStats();
     renderHrAttendanceStats();
     renderHrRecruitmentTable();
+    updateHrCardGrid();
+    syncHrMiniActive();
     initLucide();
   }
 
@@ -1021,7 +1023,7 @@ import { escapeHTML, showToast } from './utils.js';
     if (!requireEditPermission()) return;
     const n = (state.hrCheckins || []).length;
     if (!n) return;
-    if (!confirm(`Xóa toàn bộ ${n} bản ghi giờ đã nạp từ máy chấm công? (Không đụng dữ liệu chấm công tay)`)) return;
+    if (!confirm(`Xóa toàn bộ ${n} bản ghi giờ đã nạp từ máy chấm công? (Không ảnh hưởng dữ liệu chấm công tay)`)) return;
     state.hrCheckins = [];
     saveHrData();
     renderHrView();
@@ -1777,6 +1779,133 @@ import { escapeHTML, showToast } from './utils.js';
       (res.added + res.updated) > 0 ? 'success' : 'info');
   }
 
+// ─── 8) THẺ NÔI — LAUNCHER BẂG NHÂN SỰ ─────────────────────────
+  // Każda bảng Nhân Sự ma skróconą, pływającą kartę (hr-mini-card) w siatce
+  // 5 thẻ na wiersz (desktop) / 3 (tablet) / 2 (telefon w pionie).
+  // Bấm thẻ → otwórz szczegółowy bảng (xem / edycja), ponowne bấm → schowaj.
+  const HR_CARD_DEFS = {
+    'hr-emp-card': { el: 'hr-mini-count-emp', count: () => {
+      const all = state.hrEmployees || [];
+      const act = all.filter(e => (e.status || 'active') === 'active').length;
+      return all.length ? `${act}/${all.length} NV` : '0 NV';
+    } },
+    'hr-att-card': { el: 'hr-mini-count-att', count: () => {
+      const d = state.hrAttDate || hrTodayISO();
+      const work = (state.hrAttendance || []).filter(a => a.date === d && a.status === 'work').length;
+      const pend = (state.hrLeaves || []).filter(l => (l.status || 'pending') === 'pending').length;
+      return `${fmtDateDMY(d)} · ${work} đi làm${pend ? ` · ${pend} chờ` : ''}`;
+    } },
+    'hr-pos-card': { el: 'hr-mini-count-pos', count: () => `${(state.hrPositions || []).length} vị trí` },
+    'hr-ci-card': { el: 'hr-mini-count-ci', count: () => `${(state.hrCheckins || []).length} giờ máy` },
+    'hr-leave-card': { el: 'hr-mini-count-leave', count: () => {
+      const pend = (state.hrLeaves || []).filter(l => (l.status || 'pending') === 'pending').length;
+      return pend ? `${pend} chờ duyệt` : `${(state.hrLeaves || []).length} đơn`;
+    } },
+    'hr-stats-card': { el: 'hr-mini-count-stats', count: () => {
+      const days = (state.hrLeaves || []).filter(l => (l.status || 'pending') === 'approved')
+        .reduce((s, l) => s + (l.days || leaveDaysCount(l.from, l.to)), 0);
+      return `${days} ngày nghỉ`;
+    } },
+    'hr-att-stats-card': { el: 'hr-mini-count-att-stats', count: () => {
+      if (!/^\d{4}-\d{2}$/.test(state.hrAttMonth || '')) state.hrAttMonth = hrTodayISO().slice(0, 7);
+      const stats = computeAttendanceStats(state.hrAttMonth);
+      let work = 0, leave = 0, absent = 0;
+      stats.forEach(s => { work += s.work; leave += s.leave; absent += s.absent; });
+      const c = work + leave + absent;
+      const rate = c ? Math.round(work * 1000 / c) / 10 : null;
+      return rate === null ? `${state.hrAttMonth}` : `${rate}% đi làm`;
+    } },
+    'hr-recruit-card': { el: 'hr-mini-count-recruit', count: () => {
+      const open = (state.hrRecruitment || []).filter(r => (r.status || 'open') === 'open');
+      const missing = open.reduce((s, r) => s + Math.max(0, (r.needQty || 0) - (r.hiredQty || 0)), 0);
+      return `${open.length} tuyển${missing ? ` · ${missing} thiếu` : ''}`;
+    } }
+  };
+
+  // Odśwież liczniki na thẻ — wywoływane z renderHrView po wlożeniu danych.
+  function updateHrCardGrid() {
+    Object.keys(HR_CARD_DEFS).forEach(cardId => {
+      try {
+        const el = document.getElementById(HR_CARD_DEFS[cardId].el);
+        if (el) el.textContent = String(HR_CARD_DEFS[cardId].count());
+      } catch (e) { /* nie blokuj rendera tab Nhân Sự */ }
+    });
+  }
+
+  // Zsynchronizuj podświetlenie thẻ ze stanem bảng — otwarta = widoczna
+  // (bez hr-card-hidden) i rozwinięta (bez rate-table-collapsed).
+  function syncHrMiniActive() {
+    let openId = null;
+    Object.keys(HR_CARD_DEFS).forEach(cardId => {
+      const c = document.getElementById(cardId);
+      if (c && !c.classList.contains('hr-card-hidden') && !c.classList.contains('rate-table-collapsed')) openId = cardId;
+    });
+    document.querySelectorAll('.hr-mini-card').forEach(t => {
+      const act = t.getAttribute('data-hr-card') === openId;
+      t.classList.toggle('hr-mini-active', act);
+      t.setAttribute('aria-expanded', act ? 'true' : 'false');
+    });
+  }
+
+  // Bang chi tiet Nhan Su bat dang POP-UP (noi len tren overlay) thay vi
+  // truot xuong duoi. Bam the → bang (DOM node, giu nguyen bang Live + su kien)
+  // duoc di chuyen vao modal overlay; bam lai cung the / nut Dong / bam
+  // nen mo → dong va tra bang ve stack goc (accordion: chi 1 bang mo).
+    let openDetailCard = null;
+  // Đặt đỉnh pop-up ngay dưới header — header không bị che / không bị làm mờ
+  function hrPositionDetailOverlay() {
+    const overlay = document.getElementById("hr-detail-overlay");
+    if (!overlay) return;
+    const header = document.querySelector('.app-header');
+    if (header && typeof header.getBoundingClientRect === 'function') {
+      const bottom = header.getBoundingClientRect().bottom;
+      if (bottom > 0) overlay.style.top = Math.round(bottom) + 'px';
+    }
+  }
+  function hrOpenCard(cardId) {
+    const card = document.getElementById(cardId);
+    if (!card) return false;
+    // Bam lai the dang mo → dong popup (dong = tra ve condensed view)
+    if (openDetailCard === card) { hrCloseOpenCard(); return false; }
+    // Dong bang dang mo (neu co) truoc khi mo bang moi (accordion)
+    if (openDetailCard) hrCloseOpenCard();
+    // Mo bang: bo an + di chuyen DOM node vao trong modal overlay
+    card.classList.remove('hr-card-hidden');
+    card.classList.remove('rate-table-collapsed');
+    const content = document.getElementById("hr-detail-content");
+    if (content) content.appendChild(card);
+    openDetailCard = card;
+    const h4 = card.querySelector && card.querySelector('.planning-card-header h4');
+    const titleText = (h4 && typeof h4.textContent === 'string') ? h4.textContent.trim() : '';
+    const titleEl = document.getElementById("hr-detail-title");
+    if (titleEl) titleEl.textContent = titleText || 'Chi Tiết Nhân Sự';
+    const overlay = document.getElementById("hr-detail-overlay");
+        if (overlay) {
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden', 'false');
+      hrPositionDetailOverlay();
+      if (typeof overlay.focus === 'function') overlay.focus({ preventScroll: true });
+    }
+    syncHrMiniActive();
+    initLucide();
+    return true;
+  }
+  function hrCloseOpenCard() {
+    const overlay = document.getElementById("hr-detail-overlay");
+    if (!openDetailCard) {
+      if (overlay) { overlay.classList.remove('show'); overlay.setAttribute('aria-hidden', 'true'); }
+      return;
+    }
+    const card = openDetailCard;
+    const stack = document.getElementById("hr-details-stack");
+    if (stack) stack.appendChild(card); else document.getElementById('hr-view')?.appendChild(card);
+    card.classList.add('hr-card-hidden');
+    openDetailCard = null;
+    if (overlay) { overlay.classList.remove('show'); overlay.setAttribute('aria-hidden', 'true'); }
+    syncHrMiniActive();
+    initLucide();
+  }
+
 export {
   HR_DEPARTMENTS,
   ATT_STATUS,
@@ -1812,6 +1941,10 @@ export {
   hrAttShiftDay,
   hrTodayISO,
   hrEmpByName,
+      hrOpenCard,
+  hrCloseOpenCard,
+  hrPositionDetailOverlay,
+  HR_CARD_DEFS,
   hrPosName,
   hrPositionsNamesOf,
   hrPressWorkersNamesOf,
@@ -1852,8 +1985,10 @@ export {
   rejectLeave,
   setAttendanceNote,
   setAttendanceStatus,
+  syncHrMiniActive,
   syncSkillsFromAssignments,
   toggleAttendancePosition,
+  updateHrCardGrid,
   // Helpers dùng chung cho Sản Lượng Ép + Xuất Excel + Biểu đồ
   hrStripForMatch,
   hrStripDiacritics

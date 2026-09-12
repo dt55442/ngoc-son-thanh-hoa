@@ -1370,6 +1370,21 @@
         </div>
       </div>
 
+      <!-- TÌM KIẾM LỊCH SỬ XUẤT HÀNG: tra sản phẩm đã xuất bao nhiêu (SL + thể tích) -->
+      <div class="planning-card" id="qc-search-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="search"></i> Lịch Sử Xuất Hàng Sản Phẩm</h4>
+        </div>
+        <div class="qc-search-bar">
+          <i data-lucide="search"></i>
+          <input type="text" id="qc-search-input" placeholder="Gõ tên sản phẩm để xem lịch sử đã xuất (tổng số lượng & thể tích)..." autocomplete="off">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-clear-qc-search" title="Xóa tìm kiếm"><i data-lucide="x"></i></button>
+        </div>
+        <div id="qc-search-results" class="qc-search-results">
+          <div class="text-muted" style="padding:10px 16px; font-size:0.8rem;">Gõ tên sản phẩm (một phần cũng được) để xem tổng hợp lịch sử xuất hàng.</div>
+        </div>
+      </div>
+
       <!-- BẢNG XUẤT HÀNG -->
       <div class="planning-card" id="qc-table-card">
         <div class="planning-card-header">
@@ -1401,48 +1416,51 @@
         </div>
       </div>
 
-      <!-- MODAL: THÊM DÒNG XUẤT HÀNG -->
+      <!-- MODAL: TẠO DÒNG XUẤT HÀNG THEO TUẦN (nạp toàn bộ TP theo kế hoạch) -->
       <div class="modal-overlay" id="modal-qc-export">
-        <div class="modal-card modal-sm">
+        <div class="modal-card qc-imp-card">
           <div class="modal-header">
-            <h3><i data-lucide="truck"></i> Thêm Dòng Xuất Hàng</h3>
+            <h3><i data-lucide="truck"></i> Tạo Dòng Xuất Hàng Theo Tuần</h3>
             <button type="button" class="modal-close-btn" id="btn-close-qc-export"><i data-lucide="x"></i></button>
           </div>
           <form id="qc-export-form" style="padding:20px;">
-            <div class="form-group">
-              <label for="qc-product">Tên Hàng (Thành Phẩm) <span class="required">*</span></label>
-              <select id="qc-product" class="form-select" required>
-                <option value="">-- Chọn thành phẩm (theo Kế hoạch sản xuất) --</option>
-              </select>
-              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
-                Danh sách lấy từ các thành phẩm trong Kế Hoạch Sản Xuất. Chọn lựa chọn cuối để thêm thành phẩm ngoài danh sách.
-              </div>
-            </div>
-            <div class="form-group" id="qc-custom-name-group" style="display:none;">
-              <label for="qc-custom-name">Tên Thành Phẩm Mới <span class="required">*</span></label>
-              <input type="text" id="qc-custom-name" placeholder="VD: Ván 1200x382x12 (đơn hàng khách A)">
-            </div>
             <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
               <div class="form-group">
-                <label for="qc-year">Năm <span class="required">*</span></label>
-                <select id="qc-year" class="form-select" required></select>
+                <label for="qc-imp-year">Năm <span class="required">*</span></label>
+                <select id="qc-imp-year" class="form-select" required></select>
               </div>
               <div class="form-group">
-                <label for="qc-week">Tuần <span class="required">*</span></label>
-                <select id="qc-week" class="form-select" required></select>
+                <label for="qc-imp-week">Tuần Xuất <span class="required">*</span></label>
+                <select id="qc-imp-week" class="form-select" required></select>
               </div>
             </div>
-            <div class="form-group">
-              <label for="qc-qty">Số Lượng Xuất (tấm) <span class="required">*</span></label>
-              <input type="number" id="qc-qty" min="1" step="1" placeholder="VD: 100" required>
+            <div class="qc-imp-plan-info" id="qc-imp-plan-info">
+              <i data-lucide="clipboard-list"></i> <span id="qc-imp-plan-text">Chọn tuần để nạp danh sách thành phẩm theo kế hoạch.</span>
+            </div>
+            <div class="qc-imp-toolbar">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-qc-imp-refresh-plan" title="Nạp lại danh sách thành phẩm theo kế hoạch của tuần đã chọn">
+                <i data-lucide="clipboard-list"></i> Nạp Kế Hoạch Tuần Này
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-qc-imp-add-custom" title="Thêm thành phẩm không có trong kế hoạch tuần">
+                <i data-lucide="plus-circle"></i> Thêm Sản Phẩm Ngoài Kế Hoạch
+              </button>
+            </div>
+            <div class="qc-imp-list" id="qc-imp-products">
+              <!-- Dòng thành phẩm render động: checkbox + tên + SỐ LƯỢNG (điền tay) + nút bỏ dòng -->
+            </div>
+            <div class="form-group" id="qc-custom-name-group" style="display:none;">
+              <label for="qc-custom-name">Tên Thành Phẩm Ngoài Kế Hoạch <span class="required">*</span></label>
+              <input type="text" id="qc-custom-name" placeholder="VD: Ván 1200x382x12 (đơn hàng khách A)">
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Bấm "Thêm Sản Phẩm Ngoài Kế Hoạch" để đưa tên này vào danh sách.</div>
             </div>
             <div class="form-group">
-              <label for="qc-note">Ghi Chú</label>
-              <textarea id="qc-note" rows="2" placeholder="Ghi chú thêm (không bắt buộc)"></textarea>
+              <label for="qc-imp-note">Ghi Chú Chung (áp dụng cho các dòng tạo ra)</label>
+              <textarea id="qc-imp-note" rows="2" placeholder="Ghi chú thêm (không bắt buộc)"></textarea>
             </div>
+            <div class="qc-imp-footer-info" id="qc-imp-footer-info"></div>
             <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
               <button type="button" class="btn btn-outline" id="btn-cancel-qc-export">Hủy Bỏ</button>
-              <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Thêm Dòng</button>
+              <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Tạo Các Dòng Đã Chọn</button>
             </div>
           </form>
         </div>

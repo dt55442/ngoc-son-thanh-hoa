@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { collapseChartCard } from './dashboard.js';
-import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrWorkersForPress } from './hr.js';
+import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrWorkersForPress, hrWorkersForProduct, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
@@ -1190,10 +1190,11 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       const stickDesc = sticksList.map(s =>
         `${escapeHTML(s.nanKey)} ×${(s.sticks || 0).toLocaleString('vi-VN')}`).join('<br>');
       const vtQtyTotal = vanThoList.reduce((a, l) => a + (l.vtQty || 0), 0);
-      // Cột "Công Nhân Ép" — LẤY TỰ ĐỘNG từ phân vị "Ép" theo ngày lượt ép
-      // (tab Nhân Sự). Hiện tối đa 3 tên + chip đếm + nút Chi tiết; chưa có
-      // dữ liệu phân vị thì để trống (hiện "—").
-      const autoWorkers = hrWorkersForPress(r.date);
+      // Cột "Công Nhân Ép" — LẤY TỰ ĐỘNG theo thành phẩm & phân vị ngày lượt ép
+      // (tab Nhân Sự): TP "Bullig..." → vị trí "Chọn thanh Bullig"; TP thường →
+      // vị trí Ép. Hiện tối đa 3 tên + chip đếm + nút Chi tiết; chưa có dữ liệu
+      // phân vị thì để trống (hiện "—").
+      const autoWorkers = hrWorkersForProduct(r.date, r.productName);
       const workerShort = autoWorkers.slice(0, 3).map(w => escapeHTML(w.name)).join(', ')
         + (autoWorkers.length > 3 ? ` <strong style="color:var(--primary);">+${autoWorkers.length - 3}</strong>` : '');
       const workerCell = autoWorkers.length
@@ -1250,10 +1251,12 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     // Danh sách công nhân: ƯU TIÊN tên đã lưu trên lượt ép (kể cả trước khi có
     // chấm công — theo quy trình mới: chưa có dữ liệu Nhân Sự thì để trống nên
     // lượt ép cũ có thể vẫn giữ tên tay). Nếu lượt ép KHÔNG lưu tên (quy trình
-    // mới) → suy ra từ phân vị "Ép" theo ngày ở tab Nhân Sự.
+    // mới) → suy ra theo THÀNH PHẨM: TP "Bullig..." lấy phân vị "Chọn thanh
+    // Bullig", TP thường lấy phân vị "Ép" — theo ngày lượt ép ở tab Nhân Sự.
     // Mỗi tên được đối chiếu: hồ sơ Nhân Sự + chấm công + phân vị + đơn nghỉ duyệt.
     const savedNames = String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean);
-    const names = savedNames.length ? savedNames : hrWorkersForPress(r.date).map(w => w.name);
+    const posPattern = pressPositionPatternFor(r.productName);
+    const names = savedNames.length ? savedNames : hrWorkersForProduct(r.date, r.productName).map(w => w.name);
     if (titleEl) titleEl.innerHTML = `<i data-lucide="users"></i> Công Nhân Ép — Lượt ${dateLabel} (${names.length} người)`;
 
     if (!names.length) {
@@ -1271,7 +1274,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       const status = emp ? attStatusOf(emp.id, r.date) : '';
       const positions = emp ? hrPositionsNamesOf(emp.id, r.date) : [];
       const leave = emp ? approvedLeaveOn(emp.id, r.date) : null;
-      return { name: rawName, emp, status, positions, leave, isPress: positions.some(n => /ép/i.test(n)) };
+            return { name: rawName, emp, status, positions, leave, isPress: positions.some(n => posPattern.test(n)) };
     });
     const matched = rows.filter(x => x.emp).length;
     const pressCount = rows.filter(x => x.isPress).length;
@@ -1286,7 +1289,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
 
     tbody.innerHTML = rows.map((x, i) => {
       const posCell = (x.positions || []).length
-        ? x.positions.map(n => `<span class="hr-chip ${/ép/i.test(n) ? 'ok' : ''}" style="${/ép/i.test(n) ? '' : 'background:var(--bg-subtle);color:var(--text-main);'}">${escapeHTML(n)}</span>`).join(' ')
+                ? x.positions.map(n => `<span class="hr-chip ${posPattern.test(n) ? 'ok' : ''}" style="${posPattern.test(n) ? '' : 'background:var(--bg-subtle);color:var(--text-main);'}">${escapeHTML(n)}</span>`).join(' ')
         : '<span class="text-muted">—</span>';
       const note = (x.emp && (attRecordOf(x.emp.id, r.date) || {}).note) || '';
       return `<tr>
@@ -1323,14 +1326,29 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       box.classList.add('muted');
       return;
     }
-    const workers = hrWorkersForPress(dateVal);
+    const productName = selectedPressProductName();
+    const workers = hrWorkersForProduct(dateVal, productName);
+    const posLabel = pressWorkersPositionLabel(productName);
     if (!workers.length) {
-      box.innerHTML = `Chưa có ai được phân vị Ép ngày <strong>${fmtDateDM(dateVal)}</strong> — công nhân ép để trống. Cập nhật ở tab Nhân Sự (Chấm Công &amp; Phân Vị Theo Ngày).`;
+      box.innerHTML = `Chưa có ai được phân vị <strong>${escapeHTML(posLabel)}</strong> ngày <strong>${fmtDateDM(dateVal)}</strong> — công nhân để trống. Cập nhật ở tab Nhân Sự (Chấm Công &amp; Phân Vị Theo Ngày).`;
       box.classList.add('muted');
       return;
     }
     box.classList.remove('muted');
-    box.innerHTML = `<strong>${workers.length} người:</strong> ${workers.map(w => escapeHTML(w.name)).join(', ')}`;
+    box.innerHTML = `<strong>${posLabel} — ${workers.length} người:</strong> ${workers.map(w => escapeHTML(w.name)).join(', ')}`;
+  }
+
+  // Nhãn vị trí phân theo thành phẩm (cho thông báo trong form lượt ép):
+  // TP "Bullig..." → "Chọn thanh Bullig"; TP thường → "Ép".
+    function pressWorkersPositionLabel(productName) {
+    return /bullig/i.test(String(productName || '')) ? 'Chọn thanh Bullig' : 'Ép';
+  }
+
+  // Tên thành phẩm đang chọn trong form (theo id select #press-product)
+  function selectedPressProductName() {
+    const productId = document.getElementById('press-product')?.value || '';
+    const rate = (state.materialRates || []).find(r => r.id === productId);
+    return rate ? (rate.product || rate.name || '') : '';
   }
 
   // ── POPOVER hiển thị nội dung ghi chú (dùng chung cho biểu đồ & bảng) ──

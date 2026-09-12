@@ -703,16 +703,36 @@ import { escapeHTML, showToast } from './utils.js';
   // nguồn dữ liệu: bảng Chấm Công & Phân Vị Theo Ngày (tab Nhân Sự). Chỉ nhận
   // người đang ĐI LÀM (status work — người nghỉ có phép/vắng không tính).
   // Dùng cho: cột "Công nhân ép" tự động của lượt ép ván + bảng đối chiếu.
-  function hrWorkersForPress(date) {
+  function hrWorkersForPosition(date, positionPattern) {
     return (state.hrEmployees || [])
       .filter(e => (e.status || 'active') === 'active')
       .filter(e => attStatusOf(e.id, date) === 'work')
       .map(e => {
         const positions = hrPositionsNamesOf(e.id, date);
-        return { id: e.id, name: e.name || '', code: e.code || '', department: e.department || '', positions, isPress: positions.some(n => /ép/i.test(n)) };
+        return { id: e.id, name: e.name || '', code: e.code || '', department: e.department || '', positions, isPress: positions.some(n => positionPattern.test(n)) };
       })
       .filter(w => w.isPress)
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
+  }
+  function hrWorkersForPress(date) {
+    return hrWorkersForPosition(date, /ép/i);
+  }
+  // Vị trí phân theo LOẠI THÀNH PHẨM của lượt ép:
+  //  - Thành phẩm "Bullig..." → vị trí "Chọn thanh Bullig" (CHỈ khớp tên vị trí
+  //    đầy đủ "Chọn thanh Bullig" — KHÔNG khớp các vị trí "Bullig" khác)
+  //  - Thành phẩm thường (Ván...) → vị trí Ép (tên vị trí chứa "ép")
+  // Matcher so khớp BỎ DẤU + không phân biệt hoa/thường (ổ/ó/ỏ... đều nhận)
+  const BULLIG_POS_MATCHER = {
+    test(name) {
+      return /chon\s+thanh\s+bullig/i.test(hrStripDiacritics(String(name || '')));
+    }
+  };
+  function pressPositionPatternFor(productName) {
+    return /bullig/i.test(String(productName || '')) ? BULLIG_POS_MATCHER : /ép/i;
+  }
+  // Danh sách công nhân theo THÀNH PHẨM của lượt ép (tên TP quyết định vị trí)
+  function hrWorkersForProduct(date, productName) {
+    return hrWorkersForPosition(date, pressPositionPatternFor(productName));
   }
   // Chỉ danh sách TÊN công nhân ép trong ngày (dùng cho Dashboard/Xuất Excel)
   function hrPressWorkersNamesOf(date) {
@@ -1948,7 +1968,9 @@ export {
   hrPosName,
   hrPositionsNamesOf,
   hrPressWorkersNamesOf,
-  hrWorkersForPress,
+    hrWorkersForPress,
+  hrWorkersForProduct,
+  pressPositionPatternFor,
   importEmployeesFromSheet,
   leaveEmployeeSuggestions,
   loadHrData,

@@ -4455,6 +4455,88 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 .qc-row-delete:hover { opacity: 1; background: rgba(220, 38, 38, 0.08); }
 .qc-row-delete:disabled { opacity: 0.3; cursor: not-allowed; }
 
+/* Nhãn kế hoạch tuần trong modal tạo dòng */
+.qc-imp-plan-badge {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 7px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+/* Modal tạo dòng xuất theo tuần */
+.modal-card.qc-imp-card { max-width: min(680px, 94vw); width: 100%; }
+.qc-imp-plan-info {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 4px 0 10px; padding: 9px 12px;
+  font-size: 0.78rem; color: var(--text-main);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+}
+.qc-imp-plan-info svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; color: var(--primary); }
+.qc-imp-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.qc-imp-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+  padding: 8px; background: var(--bg-card);
+}
+.qc-imp-empty { font-size: 0.78rem; color: var(--text-muted); padding: 14px 10px; text-align: center; }
+.qc-imp-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+.qc-imp-check-label { display: flex; align-items: center; cursor: pointer; }
+.qc-imp-check { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.qc-imp-name-cell { flex: 1 1 auto; min-width: 0; }
+.qc-imp-qty { flex: 0 0 150px; width: 150px; }
+.qc-imp-footer-info {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 10px; font-size: 0.76rem; color: var(--text-muted);
+}
+.qc-imp-footer-info svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* Tìm kiếm lịch sử xuất hàng sản phẩm */
+.qc-search-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px 10px 16px;
+}
+.qc-search-bar > svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+.qc-search-bar input {
+  flex: 1 1 auto; min-width: 0;
+  padding: 7px 10px; font-size: 0.82rem;
+  border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+  background: var(--bg-card); color: var(--text-main);
+}
+.qc-search-bar input:focus { outline: none; border-color: var(--primary); }
+.qc-search-results { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 14px 16px; }
+.qc-search-item {
+  border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+  padding: 10px 12px; background: var(--bg-card);
+}
+.qc-search-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.qc-search-chip {
+  flex-shrink: 0; padding: 1px 9px; font-size: 0.7rem; font-weight: 600;
+  border-radius: 999px; background: var(--bg-subtle);
+  border: 1px solid var(--border-color); color: var(--text-muted);
+}
+.qc-search-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.78rem; color: var(--text-main); }
+.qc-search-stat { display: inline-flex; align-items: center; gap: 5px; }
+.qc-search-stat svg { width: 13px; height: 13px; color: var(--primary); }
+.qc-search-detail { margin-top: 6px; font-size: 0.76rem; }
+.qc-search-detail summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+.qc-search-mini-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.76rem; }
+.qc-search-mini-table th, .qc-search-mini-table td {
+  padding: 4px 8px; border-bottom: 1px solid var(--border-color); text-align: left;
+}
+.qc-search-mini-table .text-right { text-align: right; }
+
 /* Dòng tổng cộng */
 #qc-table-foot td {
   font-size: 0.82rem;

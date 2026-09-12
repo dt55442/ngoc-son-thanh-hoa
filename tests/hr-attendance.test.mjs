@@ -441,6 +441,40 @@ state.pressRecords = [{ id: 'pr2', date: '2024-06-06', worker: 'Nguyễn Văn A'
 press.openPressWorkersModal('pr2');
 check('PRES-W: ngày có đơn nghỉ duyệt -> chip "Nghỉ có phép" cảnh báo', document.getElementById('press-workers-body').innerHTML.includes('Nghỉ có phép'));
 
+// ─── P. THÀNH PHẨM BULLIG → PHÂN VỊ "CHỌN THANH BULLIG" ─────────
+// Thêm vị trí "Chọn thanh Bullig" + phân vị ngày 07/06: D bullig, A ép thường
+state.hrPositions = [
+  { id: 'px1', name: 'Ép ván', department: 'Xưởng 2' },
+  { id: 'pchung', name: 'Hỗ trợ chung', department: '' },
+  { id: 'pbull', name: 'Chọn thanh Bullig', department: 'Xưởng 2' }
+];
+state.hrAttendance = [];
+hr.toggleAttendancePosition('empA', '2024-06-07', 'px1');    // A: Ép ván
+hr.toggleAttendancePosition('empD', '2024-06-07', 'pbull');  // D: Chọn thanh Bullig
+// Thành phẩm thường (Ván...) → vẫn lấy phân vị Ép
+check('BULLIG: TP "Ván..." -> hrWorkersForProduct lấy phân vị Ép (A)', hr.hrWorkersForProduct('2024-06-07', 'Ván 1200x300x12').map(w => w.id).join(',') === 'empA');
+// Thành phẩm "Bullig..." → CHỈ lấy vị trí "Chọn thanh Bullig" (không khớp vị trí "Bullig" khác)
+state.hrPositions.push({ id: 'pbul2', name: 'Vận chuyển Bullig', department: 'Xưởng 2' });
+hr.toggleAttendancePosition('empE', '2024-06-07', 'pbul2'); // E: vị trí "Bullig" khác — KHÔNG được tính
+check('BULLIG: TP "Bullig..." -> chỉ lấy vị trí "Chọn thanh Bullig" (D), bỏ qua vị trí "Bullig" khác (E)', hr.hrWorkersForProduct('2024-06-07', 'Bullig 1200x200x80').map(w => w.id).join(',') === 'empD');
+check('BULLIG: pressPositionPatternFor — TP thường trả về mẫu /ép/, TP Bullig trả về matcher "Chọn thanh Bullig"', hr.pressPositionPatternFor('Ván 900x600').source === 'ép' && hr.pressPositionPatternFor('bullig 304x14x7').test('Chọn thanh Bullig') === true && hr.pressPositionPatternFor('bullig 304x14x7').test('Vận chuyển Bullig') === false);
+// Cột bảng + modal chi tiết theo THÀNH PHẨM của lượt ép
+state.pressRecords = [
+  { id: 'prVan', date: '2024-06-07', productId: 'tp1', productName: 'Ván 1200x300x12', worker: '', sticks: [], vanTho: [] },
+  { id: 'prBul', date: '2024-06-07', productId: 'tp2', productName: 'Bullig 1200x200x80', worker: '', sticks: [], vanTho: [] }
+];
+press.renderPressTable();
+const vanRow = [...document.querySelectorAll('#press-table-body tr')].find(tr => tr.textContent.includes('Ván 1200x300x12'));
+const bulRow = [...document.querySelectorAll('#press-table-body tr')].find(tr => tr.textContent.includes('Bullig 1200x200x80'));
+let tblOk = true;
+try { press.renderPressTable(); } catch (e) { tblOk = false; console.log('renderPressTable error:', e && e.message); }
+check('BULLIG: renderPressTable chạy không lỗi với 2 lượt (Ván + Bullig)', tblOk);
+press.openPressWorkersModal('prBul');
+const bulHTML = document.getElementById('press-workers-body').innerHTML;
+check('BULLIG: modal lượt Bullig — D "Đi làm ✓" + chip vị trí Chọn thanh Bullig', bulHTML.includes('Phạm Thị D') && bulHTML.includes('Đi làm ✓') && bulHTML.includes('Chọn thanh Bullig'));
+check('BULLIG: modal lượt Bullig — không lẫn A (chỉ phân vị Ép)', !bulHTML.includes('Nguyễn Văn A'));
+press.closePressWorkersModal();
+
 // ─── I. RENDER TOÀN TAB KHÔNG LỖI ─────────────────────────────
 let renderOk = true;
 try { hr.renderHrView(); } catch (e) { renderOk = false; console.log('renderHrView error:', e && e.message); }

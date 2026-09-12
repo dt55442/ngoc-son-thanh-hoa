@@ -102,10 +102,11 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
   }
 
   // ─── RENDER ──────────────────────────────────────────────────
-  function renderQcView() {
+    function renderQcView() {
     restoreRateTableCollapse(); // nhớ trạng thái thu gọn bảng xuất hàng
     renderQcSummary();
     renderQcTable();
+    renderQcSearch(); // giữ kết quả tìm kiếm theo từ khóa đang gõ
     initLucide();
   }
 
@@ -258,38 +259,149 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     showToast('Đã xóa dòng xuất hàng', 'info');
   }
 
-  // ─── MODAL THÊM DÒNG XUẤT HÀNG ───────────────────────────────
+  // ─── MODAL TẠO DÒNG XUẤT HÀNG THEO TUẦN ──────────────────────
+  // Quy trình mới: chọn Tuần xuất → tự nạp TOÀN BỘ thành phẩm theo kế hoạch
+  // tuần đó (checkbox tick sẵn, SỐ LƯỢNG để TRỐNG điền tay số thực tế).
+  // Mỗi dòng có nút bỏ dòng (không xuất trong tuần). Có nút thêm thành phẩm
+  // ngoài kế hoạch. Submit tạo các dòng đã tick có số lượng > 0.
+  let qcImpCustomIdx = 0; // đếm số TP ngoài kế hoạch đã thêm trong 1 lần mở
+  // Danh sách dòng đang soạn trong modal ({ key, productId, name, planQty, plan, qty, checked })
+  let qcImpRows = [];
+
+  // Thành phẩm theo KẾ HOẠCH của năm + tuần (distinct theo mã, giữ thứ tự plan)
+  function qcPlanProductsFor(yearVal, weekNum) {
+    const ids = [...new Set((state.planningItems || [])
+      .filter(p => String(p.year || qcCurrentYear()) === String(yearVal))
+      .filter(p => parseWeekNum(p.week) === Number(weekNum))
+      .map(p => p.productId).filter(Boolean))];
+    return ids.map(id => {
+      const rate = state.materialRates.find(r => r.id === id);
+      if (!rate) return null;
+      const planQty = (state.planningItems || [])
+        .filter(p => p.productId === id && parseWeekNum(p.week) === Number(weekNum) && String(p.year) === String(yearVal))
+        .reduce((a, p) => a + (Number(p.qty) || 0), 0);
+      return { id: rate.id, name: rate.product, planQty };
+    }).filter(Boolean);
+  }
+
+  function qcImpPlanInfo() {
+    const yearVal = document.getElementById('qc-imp-year')?.value || '';
+    const weekNum = parseInt(document.getElementById('qc-imp-week')?.value, 10) || 0;
+    const plan = qcPlanProductsFor(yearVal, weekNum);
+    const txt = document.getElementById('qc-imp-plan-text');
+    if (txt) {
+      txt.innerHTML = plan.length
+        ? `Kế hoạch tuần <strong>${weekNum}</strong> năm <strong>${yearVal}</strong>: <strong>${plan.length}</strong> thành phẩm (tổng KH <strong>${plan.reduce((a, p) => a + p.planQty, 0).toLocaleString('vi-VN')}</strong> tấm). Bỏ tick / bấm nút xóa dòng KHÔNG xuất, điền tay số lượng thực tế.`
+        : `Kế hoạch tuần <strong>${weekNum}</strong> năm <strong>${yearVal}</strong>: <strong>không có</strong> thành phẩm nào. Dùng "Nạp Kế Hoạch Tuần Này" hoặc "Thêm Sản Phẩm Ngoài Kế Hoạch".`;
+    }
+    return plan;
+  }
+
+  // Vẽ lại danh sách dòng trong modal (giữ số lượng người dùng đã điền qua qcImpRows)
+  function renderQcImpRows() {
+    const box = document.getElementById('qc-imp-products');
+    if (!box) return;
+    if (!qcImpRows.length) {
+      box.innerHTML = `<div class="qc-imp-empty">Chưa có dòng nào — bấm <strong>Nạp Kế Hoạch Tuần Này</strong> hoặc <strong>Thêm Sản Phẩm Ngoài Kế Hoạch</strong>.</div>`;
+    } else {
+      box.innerHTML = qcImpRows.map(r => {
+        const planBadge = r.plan
+          ? `<span class="qc-imp-plan-badge" title="Số lượng kế hoạch tuần này">KH: ${(r.planQty || 0).toLocaleString('vi-VN')}</span>`
+          : `<span class="qc-custom-badge">ngoài kế hoạch</span>`;
+        return `<div class="qc-imp-row" data-qc-imp-key="${r.key}">
+          <label class="qc-imp-check-label"><input type="checkbox" class="qc-imp-check" data-qc-imp-check="${r.key}"${r.checked === false ? '' : ' checked'} title="Tick để tạo dòng xuất"></label>
+          <div class="qc-imp-name-cell">
+            <div class="qc-product-name">${escapeHTML(r.name)}</div>
+            ${planBadge}
+          </div>
+          <input type="number" min="0" step="1" class="qc-imp-qty qc-row-qty" data-qc-imp-qty="${r.key}" value="${(Number(r.qty) || 0) > 0 ? Number(r.qty) : ''}" placeholder="Số lượng thực tế" title="Điền số lượng xuất thực tế (để trống = bỏ qua dòng này)">
+          <button type="button" class="qc-row-delete" data-qc-imp-remove="${r.key}" title="Bỏ dòng này (không xuất trong tuần)"><i data-lucide="trash-2"></i></button>
+        </div>`;
+      }).join('');
+    }
+    qcImpFooterInfo();
+    initLucide();
+  }
+
+  // Dòng thông tin dưới cùng: sẽ tạo bao nhiêu dòng / tổng tấm
+  function qcImpFooterInfo() {
+    const info = document.getElementById('qc-imp-footer-info');
+    if (!info) return;
+    const picked = qcImpRows.filter(r => r.checked !== false && (Number(r.qty) || 0) > 0);
+    info.innerHTML = picked.length
+      ? `<i data-lucide="info"></i> Sẽ tạo <strong>${picked.length}</strong> dòng xuất — tổng <strong>${picked.reduce((a, r) => a + (Number(r.qty) || 0), 0).toLocaleString('vi-VN')}</strong> tấm (dòng tick nhưng chưa điền số lượng sẽ BỎ QUA).`
+      : `<i data-lucide="info"></i> Chưa điền số lượng nào — dòng tick mà số lượng trống sẽ bị bỏ qua.`;
+    initLucide();
+  }
+
+  // Nạp danh sách theo kế hoạch (giữ số lượng đã điền cho dòng cùng mã)
+  // keepQty=true: giữ lại số lượng đã điền tay cho các mã còn tồn tại
+  // Xóa 1 dòng khỏi danh sách đang soạn (dùng cho nút bỏ dòng — tránh gán
+  // trực tiếp binding import ở events.js vì ES-module import là read-only)
+  function qcImpRemoveRow(key) {
+    qcImpRows = qcImpRows.filter(r => r.key !== key);
+    renderQcImpRows();
+  }
+
+  function qcImpLoadPlan(keepQty = true) {
+    const yearVal = document.getElementById('qc-imp-year')?.value || '';
+    const weekNum = parseInt(document.getElementById('qc-imp-week')?.value, 10) || 0;
+    if (!yearVal || !weekNum) { showToast('Vui lòng chọn Năm và Tuần Xuất trước!', 'error'); return; }
+    const prevQty = {};
+    if (keepQty) qcImpRows.forEach(r => { if ((Number(r.qty) || 0) > 0) prevQty[r.productId || r.name] = Number(r.qty); });
+    const plan = qcImpPlanInfo();
+    const planRows = plan.map(p => ({
+      key: `p-${p.id}`, productId: p.id, name: p.name, planQty: p.planQty, plan: true,
+      qty: keepQty ? (prevQty[p.id] || 0) : 0, checked: true
+    }));
+    const customs = qcImpRows.filter(r => !r.plan); // dòng ngoài kế hoạch giữ nguyên
+    qcImpRows = [...planRows, ...customs];
+    renderQcImpRows();
+  }
+
+  // Thêm thành phẩm ngoài kế hoạch (từ ô nhập tên)
+  function qcImpAddCustom() {
+    const input = document.getElementById('qc-custom-name');
+    const name = String(input?.value || '').trim();
+    if (!name) { showToast('Vui lòng nhập tên thành phẩm!', 'error'); input?.focus(); return; }
+    if (qcImpRows.some(r => (r.name || '').toLowerCase() === name.toLowerCase())) {
+      showToast('Thành phẩm này đã có trong danh sách!', 'error'); return;
+    }
+    qcImpCustomIdx++;
+    qcImpRows.push({ key: `c-${Date.now()}-${qcImpCustomIdx}`, productId: null, name, planQty: 0, plan: false, qty: 0, checked: true });
+    if (input) input.value = '';
+    const group = document.getElementById('qc-custom-name-group');
+    if (group) group.style.display = 'none';
+    renderQcImpRows();
+    showToast(`Đã thêm "${name}" vào danh sách soạn!`, 'success');
+  }
+
   function openQcExportModal() {
     if (!requireEditPermission()) return;
     const modal = document.getElementById('modal-qc-export');
     if (!modal) return;
     const form = document.getElementById('qc-export-form');
     if (form) form.reset();
-
-    // Select thành phẩm: danh sách từ Kế Hoạch Sản Xuất + lựa chọn thêm ngoài danh sách
-    const productSel = document.getElementById('qc-product');
-    if (productSel) {
-      const products = qcPlanProducts();
-      productSel.innerHTML = '<option value="">-- Chọn thành phẩm (theo Kế hoạch sản xuất) --</option>' +
-        products.map(p => `<option value="${escapeHTML(p.id)}">${escapeHTML(p.name)}</option>`).join('') +
-        '<option value="__custom__">＋ Thêm thành phẩm ngoài danh sách…</option>';
-    }
-    hideQcCustomName();
+    qcImpCustomIdx = 0;
+    qcImpRows = [];
 
     // Năm + tuần: mặc định là hiện tại
-    const yearSel = document.getElementById('qc-year');
+    const yearSel = document.getElementById('qc-imp-year');
     if (yearSel) {
       yearSel.innerHTML = qcYearList()
         .map(y => `<option value="${y}"${Number(y) === qcCurrentYear() ? ' selected' : ''}>Năm ${y}</option>`).join('');
     }
-    const weekSel = document.getElementById('qc-week');
+    const weekSel = document.getElementById('qc-imp-week');
     if (weekSel) {
       const curW = qcCurrentWeekNum();
-      weekSel.innerHTML = '<option value="">-- Chọn tuần --</option>' +
-        Array.from({ length: 53 }, (_, i) => i + 1)
-          .map(w => `<option value="${w}"${w === curW ? ' selected' : ''}>Tuần ${w}</option>`).join('');
+      weekSel.innerHTML = Array.from({ length: 53 }, (_, i) => i + 1)
+        .map(w => `<option value="${w}"${w === curW ? ' selected' : ''}>Tuần ${w}</option>`).join('');
     }
+    const noteEl = document.getElementById('qc-imp-note');
+    if (noteEl) noteEl.value = '';
+    hideQcCustomName();
 
+    qcImpLoadPlan(false); // nạp kế hoạch tuần hiện tại ngay khi mở modal
     modal.classList.add('show');
     initLucide();
   }
@@ -302,7 +414,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     const group = document.getElementById('qc-custom-name-group');
     if (group) group.style.display = '';
     const input = document.getElementById('qc-custom-name');
-    if (input) input.required = true;
+    if (input) { input.required = false; input.focus(); }
   }
 
   function hideQcCustomName() {
@@ -312,68 +424,131 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     if (input) { input.required = false; input.value = ''; }
   }
 
-  // Chọn "ngoài danh sách" -> hiện ô nhập tên thành phẩm mới
-  function onQcProductChange() {
-    const sel = document.getElementById('qc-product');
-    if (!sel) return;
-    if (sel.value === '__custom__') showQcCustomName();
-    else hideQcCustomName();
-  }
+  // (Giữ tương thích tên cũ — select chọn TP đơn lẻ đã thay bằng danh sách tuần)
+  function onQcProductChange() { showQcCustomName(); }
 
+  // Tạo các dòng xuất từ danh sách đã soạn (tick + số lượng > 0)
   function handleQcExportSubmit(e) {
     e.preventDefault();
-    const productSel = document.getElementById('qc-product');
-    const customInput = document.getElementById('qc-custom-name');
-    const yearVal = parseInt(document.getElementById('qc-year')?.value, 10) || 0;
-    const weekNum = parseInt(document.getElementById('qc-week')?.value, 10) || 0;
-    const qty = parseInt(document.getElementById('qc-qty')?.value, 10) || 0;
-    const note = String(document.getElementById('qc-note')?.value || '').trim();
-
-    let productId = null, name = '';
-    if (productSel && productSel.value === '__custom__') {
-      name = String(customInput?.value || '').trim();
-      if (!name) { showToast('Vui lòng nhập tên thành phẩm!', 'error'); return; }
-    } else {
-      productId = productSel?.value || '';
-      if (!productId) { showToast('Vui lòng chọn thành phẩm (hoặc thêm thành phẩm ngoài danh sách)!', 'error'); return; }
-      const rate = state.materialRates.find(r => r.id === productId);
-      name = rate ? rate.product : 'Sản phẩm đã xóa';
-    }
+    const yearVal = parseInt(document.getElementById('qc-imp-year')?.value, 10) || 0;
+    const weekNum = parseInt(document.getElementById('qc-imp-week')?.value, 10) || 0;
+    const note = String(document.getElementById('qc-imp-note')?.value || '').trim();
     if (!yearVal) { showToast('Năm xuất hàng không được để trống!', 'error'); return; }
     if (!weekNum) { showToast('Vui lòng chọn tuần xuất hàng!', 'error'); return; }
-    if (qty <= 0) { showToast('Số lượng xuất phải lớn hơn 0!', 'error'); return; }
 
-    (state.qcExports = state.qcExports || []).push({
+    const picked = qcImpRows.filter(r => r.checked !== false && (Number(r.qty) || 0) > 0);
+    if (!picked.length) {
+      showToast('Chưa có dòng nào có số lượng — điền số lượng thực tế cho các dòng cần xuất!', 'error');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    (state.qcExports = state.qcExports || []).push(...picked.map(r => ({
       id: `qc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      productId: productId || null,
-      name,
+      productId: r.productId || null,
+      name: r.name,
       week: `Tuần ${weekNum}`,
       year: yearVal,
-      qty,
+      qty: Number(r.qty) || 0,
       note,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
+      createdAt: now,
+      updatedAt: now
+    })));
 
+    const totalQty = picked.reduce((a, r) => a + (Number(r.qty) || 0), 0);
     saveQcExports();
     closeQcExportModal();
     renderQcTable();
     renderQcSummary();
+    renderQcSearch();
     initLucide();
-    showToast('Đã thêm dòng xuất hàng!', 'success');
+    showToast(`Đã tạo ${picked.length} dòng xuất (tổng ${totalQty.toLocaleString('vi-VN')} tấm) — Tuần ${weekNum}/${yearVal}!`, 'success');
+  }
+
+  // ─── TÌM KIẾM LỊCH SỬ XUẤT HÀNG SẢN PHẨM ─────────────────────
+  // Gộp các dòng xuất THEO TÊN sản phẩm: tổng số lượng + thể tích quy đổi.
+  function qcStripForSearch(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+  }
+  function renderQcSearch() {
+    const box = document.getElementById('qc-search-results');
+    if (!box) return;
+    const qRaw = String(document.getElementById('qc-search-input')?.value || '').trim();
+    const rows = state.qcExports || [];
+    if (!rows.length) {
+      box.innerHTML = `<div class="text-muted" style="padding:10px 16px; font-size:0.8rem;">Chưa có dòng xuất hàng nào.</div>`;
+      return;
+    }
+    if (!qRaw) {
+      box.innerHTML = `<div class="text-muted" style="padding:10px 16px; font-size:0.8rem;">Gõ tên sản phẩm (một phần cũng được) để xem tổng hợp lịch sử xuất hàng.</div>`;
+      return;
+    }
+    const q = qcStripForSearch(qRaw);
+    const groups = {};
+    rows.forEach(r => {
+      const name = qcRowName(r);
+      const g = groups[qcStripForSearch(name)] || (groups[qcStripForSearch(name)] = { name, rows: [] });
+      g.rows.push(r);
+    });
+    const totalOf = g => g.rows.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+    const matches = Object.values(groups).filter(g => qcStripForSearch(g.name).includes(q))
+      .sort((a, b) => totalOf(b) - totalOf(a));
+    if (!matches.length) {
+      box.innerHTML = `<div class="text-muted" style="padding:12px 16px; font-size:0.82rem;">Không tìm thấy sản phẩm nào khớp "<strong>${escapeHTML(qRaw)}</strong>" trong lịch sử xuất hàng.</div>`;
+      return;
+    }
+    box.innerHTML = matches.map(g => {
+      const totalQty = totalOf(g);
+      const totalVol = g.rows.reduce((s, r) => s + qcRowVolume(r), 0);
+      const weeks = [...new Set(g.rows.map(r => `${r.week || '—'}/${r.year || qcCurrentYear()}`))].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+      const latest = [...g.rows].sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))[0];
+      return `<div class="qc-search-item">
+        <div class="qc-search-head">
+          <div class="qc-product-name">${escapeHTML(g.name)}</div>
+          <span class="qc-search-chip" title="Số dòng xuất">${g.rows.length} dòng</span>
+        </div>
+        <div class="qc-search-stats">
+          <span class="qc-search-stat" title="Tổng số lượng đã xuất"><i data-lucide="package"></i> Tổng SL: <strong>${totalQty.toLocaleString('vi-VN')}</strong> tấm</span>
+          <span class="qc-search-stat" title="Tổng thể tích quy đổi"><i data-lucide="boxes"></i> Tổng thể tích: <strong>${totalVol > 0 ? totalVol.toLocaleString('vi-VN', { maximumFractionDigits: 4 }) + ' m³' : '—'}</strong></span>
+          <span class="qc-search-stat" title="Tuần đã xuất"><i data-lucide="calendar-range"></i> ${weeks.length > 4 ? `${weeks.slice(0, 4).join(', ')} +${weeks.length - 4}` : weeks.join(', ')}</span>
+          <span class="qc-search-stat" title="Lần xuất gần nhất"><i data-lucide="clock"></i> Gần nhất: ${latest?.week || '—'}/${latest?.year || qcCurrentYear()} — ${(Number(latest?.qty) || 0).toLocaleString('vi-VN')} tấm</span>
+        </div>
+        <details class="qc-search-detail">
+          <summary>Xem ${g.rows.length} dòng chi tiết</summary>
+          <table class="qc-search-mini-table">
+            <thead><tr><th>Tuần</th><th class="text-right">Số Lượng</th><th class="text-right">Thể Tích</th><th>Ghi Chú</th></tr></thead>
+            <tbody>${[...g.rows].sort((a, b) => (parseWeekNum(b.week) || 0) - (parseWeekNum(a.week) || 0)).map(r => `<tr>
+              <td>${escapeHTML(r.week || '—')}/${r.year || qcCurrentYear()}</td>
+              <td class="text-right">${(Number(r.qty) || 0).toLocaleString('vi-VN')}</td>
+              <td class="text-right">${qcFmtVol(qcRowVolume(r))}</td>
+              <td>${escapeHTML(r.note || '—')}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </details>
+      </div>`;
+    }).join('');
+    initLucide();
   }
 
 export {
   closeQcExportModal,
   deleteQcExport,
   handleQcExportSubmit,
+  hideQcCustomName,
   loadQcExports,
   onQcProductChange,
   openQcExportModal,
+  qcImpAddCustom,
+  qcImpFooterInfo,
+  qcImpLoadPlan,
+  qcImpRemoveRow,
   qcRowVolume,
+  renderQcImpRows,
+  renderQcSearch,
   renderQcSummary,
   renderQcTable,
   renderQcView,
   saveQcExports,
+  showQcCustomName,
   updateQcExportRow
 };

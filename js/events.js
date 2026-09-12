@@ -11,7 +11,7 @@ import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, onQcProductChange, openQcExportModal, updateQcExportRow } from './qc.js';
+import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, renderQcImpRows, renderQcSearch, renderQcSummary, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
@@ -522,11 +522,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       refreshPressWorkersPreview();
       recalcPressQuantities();
     });
-    // Đổi thành phẩm: reset chế độ sửa tay SL + gợi ý keo/phụ gia theo định mức + tính lại SL
+    // Đổi thành phẩm: reset chế độ sửa tay SL + gợi ý keo/phụ gia theo định mức +
+    // tính lại SL + cập nhật danh sách công nhân (Bullig → "Chọn thanh Bullig")
     safeOn('press-product', 'change', () => {
       document.getElementById('press-fp-qty')?.removeAttribute('data-manual');
       suggestPressMaterialFields(true);
       recalcPressQuantities();
+      refreshPressWorkersPreview();
     });
     // Người dùng sửa tay keo/phụ gia -> đánh dấu không tự gợi ý nữa
     ['press-glue', 'press-additive'].forEach(fid => {
@@ -590,11 +592,71 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-toggle-material-plan', 'click', () => toggleRateTableCollapse('material-plan-card'));
 
     // ── QC — Bảng Xuất Hàng ──
+    // Bộ lọc áp nhanh cho toàn bảng (Nam + tuần): nhập/sửa xong ÁP DỤNG NGAY,
+    // không cần chuyển tab đi/quay lại (sửa lỗi phản ứng chậm của bộ lọc cũ).
+    safeOn('qc-filter-year', 'change', (e) => {
+      state.qcFilterYear = e.target.value;
+      renderQcSummary();
+      renderQcTable();
+      renderQcSearch();
+    });
+    safeOn('qc-filter-week', 'change', (e) => {
+      state.qcFilterWeek = e.target.value;
+      renderQcSummary();
+      renderQcTable();
+      renderQcSearch();
+    });
+    safeOn('btn-clear-qc-filter', 'click', () => {
+      state.qcFilterYear = 'all';
+      state.qcFilterWeek = 'all';
+      renderQcSummary();
+      renderQcTable();
+      renderQcSearch();
+    });
     safeOn('btn-add-qc-export', 'click', openQcExportModal);
     safeOn('btn-close-qc-export', 'click', closeQcExportModal);
     safeOn('btn-cancel-qc-export', 'click', closeQcExportModal);
     safeOn('qc-export-form', 'submit', handleQcExportSubmit);
-    safeOn('qc-product', 'change', onQcProductChange);
+    // ── Modal tạo dòng theo tuần: đổi Năm/Tuần → nạp lại danh sách kế hoạch ──
+    ['qc-imp-year', 'qc-imp-week'].forEach(fid => {
+      safeOn(fid, 'change', () => qcImpLoadPlan(false));
+    });
+    safeOn('btn-qc-imp-refresh-plan', 'click', () => qcImpLoadPlan(true)); // giữ SL đã điền
+    safeOn('btn-qc-imp-add-custom', 'click', () => {
+      const group = document.getElementById('qc-custom-name-group');
+      if (group && group.style.display === 'none') { showQcCustomName(); return; }
+      qcImpAddCustom(); // lần 2: nhập tên rồi bấm để thêm vào danh sách
+    });
+    // Delegation trong danh sách soạn: tick / điền SL / bỏ dòng
+    document.addEventListener('change', (e) => {
+      const el = e.target;
+      if (!el || !el.dataset) return;
+      if (el.dataset.qcImpCheck) {
+        const row = qcImpRows.find(r => r.key === el.dataset.qcImpCheck);
+        if (row) { row.checked = el.checked; qcImpFooterInfo(); }
+      }
+      if (el.dataset.qcImpQty) {
+        const row = qcImpRows.find(r => r.key === el.dataset.qcImpQty);
+        if (row) { row.qty = Math.max(0, parseInt(el.value, 10) || 0); qcImpFooterInfo(); }
+      }
+    });
+    document.addEventListener('click', (e) => {
+      const rm = e.target && e.target.closest && e.target.closest('[data-qc-imp-remove]');
+      if (rm) {
+        qcImpRemoveRow(rm.getAttribute('data-qc-imp-remove'));
+      }
+    });
+    // Ô nhập tên TP ngoài kế hoạch: Enter trong ô = thêm vào danh sách
+    safeOn('qc-custom-name', 'keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); qcImpAddCustom(); }
+    });
+    // ── Tìm kiếm lịch sử xuất hàng: gõ là hiện kết quả ──
+    safeOn('qc-search-input', 'input', () => renderQcSearch());
+    safeOn('btn-clear-qc-search', 'click', () => {
+      const inp = document.getElementById('qc-search-input');
+      if (inp) inp.value = '';
+      renderQcSearch();
+    });
     // ── Thẻ tổng hợp xuất hàng: Năm + chips chọn 1/nhiều tuần ──
     safeOn('qc-sum-year', 'change', (e) => {
       state.qcSumYear = e.target.value;

@@ -2,9 +2,10 @@
 // js/cloud.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { saveSession, updateUserProfileHeader } from './auth.js';
+import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { showToast } from './utils.js';
 
@@ -286,6 +287,7 @@ import { showToast } from './utils.js';
       hrPositions: state.hrPositions || [],
       hrAttendance: state.hrAttendance || [],
       hrCheckins: state.hrCheckins || [],
+      history: state.history || [],
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
       updatedAt: new Date().toISOString()
     };
@@ -303,7 +305,8 @@ import { showToast } from './utils.js';
       qcExports: obj.qcExports || [],
       pressRecords: obj.pressRecords || [],
       hrEmployees: obj.hrEmployees || [], hrLeaves: obj.hrLeaves || [], hrRecruitment: obj.hrRecruitment || [],
-      hrPositions: obj.hrPositions || [], hrAttendance: obj.hrAttendance || [], hrCheckins: obj.hrCheckins || []
+      hrPositions: obj.hrPositions || [], hrAttendance: obj.hrAttendance || [], hrCheckins: obj.hrCheckins || [],
+      history: obj.history || []
     });
   }
 
@@ -396,11 +399,19 @@ import { showToast } from './utils.js';
     if (remote.hrAttendance) state.hrAttendance = m(state.hrAttendance || [], remote.hrAttendance);
     if (remote.hrCheckins) state.hrCheckins = m(state.hrCheckins || [], remote.hrCheckins);
     if (remote.hrRecruitment) state.hrRecruitment = m(state.hrRecruitment || [], remote.hrRecruitment);
+    // Lịch sử sửa đổi: gộp thêm các dòng máy này chưa có (mỗi dòng 1 id riêng)
+    if (remote.history) {
+      state.history = mergeAddMissing(state.history || [], remote.history || []);
+      if (state.history.length > HISTORY_LIMIT) state.history = state.history.slice(-HISTORY_LIMIT);
+    }
     if (!onlyAddMissing) {
       if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
       if (remote.planningStock) state.planningStock = mergeKeyedDict(state.planningStock, remote.planningStock);
       if (remote.materialPlan) state.materialPlan = mergeMaterialPlan(state.materialPlan, remote.materialPlan);
     }
+    // Dữ liệu vừa gộp từ mây (không phải thao tác sửa trên máy này) ->
+    // đặt lại nền so sánh lịch sử để lần lưu sau không ghi log ảo
+    syncHistorySnapshots();
     const after = cloudCore(collectCloudSnapshot());
     if (after !== before) {
       persistAllLocal();
@@ -428,6 +439,8 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(state.history || [])); } catch (e) {}
+    syncHistorySnapshots(); // thay đổi đến từ mây/nạp file → đặt lại nền so sánh lịch sử
   }
 
   function handleRemoteSnapshot(snap) {
@@ -470,6 +483,12 @@ import { showToast } from './utils.js';
       if (data.hrPositions) state.hrPositions = data.hrPositions;
       if (data.hrAttendance) state.hrAttendance = data.hrAttendance;
       if (data.hrCheckins) state.hrCheckins = data.hrCheckins;
+      if (data.history) {
+        // Lịch sử từ mây: gộp thêm các dòng máy chưa có + giới hạn số dòng
+        state.history = mergeAddMissing(state.history || [], data.history || []);
+        if (state.history.length > HISTORY_LIMIT) state.history = state.history.slice(-HISTORY_LIMIT);
+      }
+      syncHistorySnapshots();
       persistAllLocal();
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}

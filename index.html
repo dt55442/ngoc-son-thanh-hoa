@@ -203,6 +203,9 @@
           </p>
         </div>
         <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-kanban" title="Lịch sử thay đổi của tab này (chỉ Admin)">
+            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+          </button>
           <button class="btn btn-success" id="btn-open-export-modal" title="Xuất file Excel tùy chỉnh">
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
           </button>
@@ -557,7 +560,7 @@
           <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Đã Ép (Theo Sản Phẩm)</h4>
           <div class="pv-toolbar">
             <div class="pv-unit-toggle" role="group" aria-label="Chọn đơn vị hiển thị">
-              <button type="button" class="pv-unit-btn" id="pv-unit-qty" title="Hiển thị số lượng (tấm) trên cột — chiều cao cột vẫn theo m³">Tấm</button>
+              <button type="button" class="pv-unit-btn" id="pv-unit-qty" title="Hiển thị số lượng trên cột — chiều cao cột vẫn theo m³">Số lượng</button>
               <button type="button" class="pv-unit-btn active" id="pv-unit-vol" title="Hiển thị thể tích (m³) trên cột và trục Y">m³</button>
             </div>
             <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
@@ -586,24 +589,22 @@
       <div class="planning-card press-chart-card pv-card" id="plan-capacity-card">
         <div class="planning-card-header">
           <h4><i data-lucide="gauge"></i> Khả Năng Đáp Ứng Kế Hoạch</h4>
-          <span class="pv-cap-hint">Xanh: đủ 100% • vàng: thiếu — rê/chạm cột để xem nguyên nhân</span>
-          <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
-            <i data-lucide="maximize"></i>
-          </button>
-        </div>
-        <!-- Bộ lọc RIÊNG của biểu đồ này (tách khỏi Kế Hoạch vs Đã Ép) -->
-        <div class="pv-cap-toolbar">
-          <div class="filter-item">
-            <label for="pv-cap-year-filter">Năm:</label>
-            <select id="pv-cap-year-filter"></select>
-          </div>
-          <div class="pv-cap-window" role="group" aria-label="Cửa sổ tuần hiển thị">
-            <button type="button" class="pv-week-btn" id="pv-cap-prev" title="Cửa sổ tuần trước"><i data-lucide="chevron-left"></i></button>
-            <input type="range" id="pv-cap-slider" class="pv-cap-slider" min="0" max="0" value="0" step="1" title="Trượt để chọn cửa sổ tuần" aria-label="Cửa sổ tuần">
-            <button type="button" class="pv-week-btn" id="pv-cap-next" title="Cửa sổ tuần sau"><i data-lucide="chevron-right"></i></button>
-            <span class="pv-cap-window-label" id="pv-cap-window-label"></span>
+          <div class="pv-toolbar">
+            <div class="filter-item">
+              <label for="pv-cap-year-filter">Năm:</label>
+              <select id="pv-cap-year-filter"></select>
+            </div>
+            <div class="pv-week-nav" role="group" aria-label="Cửa sổ tuần hiển thị">
+              <button type="button" class="pv-week-btn" id="pv-cap-prev" title="Lùi 1 tuần"><i data-lucide="chevron-left"></i></button>
+              <span class="pv-cap-window-label" id="pv-cap-window-label"></span>
+              <button type="button" class="pv-week-btn" id="pv-cap-next" title="Tiến 1 tuần"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
+              <i data-lucide="maximize"></i>
+            </button>
           </div>
         </div>
+        <div class="pv-cap-hint-row"><span class="pv-cap-hint">Xanh: đủ 100% • vàng: thiếu — rê/chạm cột để xem nguyên nhân</span></div>
         <div class="press-chart-box">
           <canvas id="plan-capacity-chart"></canvas>
         </div>
@@ -617,7 +618,6 @@
       <div class="planning-card press-chart-card pv-card" id="material-plan-chart-card">
         <div class="planning-card-header">
           <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)</h4>
-          <span class="pv-cap-hint">Vuốt trái/phải để xem thêm (2 tuần ~42 cột máy tính · 1 tuần ~21 cột điện thoại)</span>
           <div class="pv-toolbar">
             <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
               <button type="button" class="pv-week-btn" id="mpc-week-prev" title="Tuần trước"><i data-lucide="chevron-left"></i></button>
@@ -648,6 +648,9 @@
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-dashboard" title="Lịch sử thay đổi biểu đồ Dashboard (chỉ Admin)">
+              <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+            </button>
             <button class="btn btn-primary btn-sm" id="btn-open-chart-builder">
               <i data-lucide="plus-circle"></i> + Tạo Biểu Đồ
             </button>
@@ -710,6 +713,9 @@
           </p>
         </div>
         <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-planning" title="Lịch sử thay đổi của tab này (chỉ Admin)">
+            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+          </button>
           <button class="btn btn-success" id="btn-open-export-planning" title="Xuất kế hoạch sản xuất ra Excel">
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
           </button>
@@ -987,6 +993,9 @@
           </p>
         </div>
         <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-press" title="Lịch sử thay đổi của tab này (chỉ Admin)">
+            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+          </button>
           <button class="btn btn-success" id="btn-open-export-press" title="Xuất sản lượng ép ván ra Excel">
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
           </button>
@@ -1225,6 +1234,9 @@
           </p>
         </div>
         <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-materials" title="Lịch sử thay đổi của tab này (chỉ Admin)">
+            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+          </button>
           <button class="btn btn-success" id="btn-open-export-materials" title="Xuất nhật ký nguyên liệu ra Excel">
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
           </button>
@@ -1293,6 +1305,10 @@
             <label for="material-plan-year">Năm:</label>
             <select id="material-plan-year"></select>
           </div>
+          <div class="filter-item">
+            <label for="material-plan-week">Tuần:</label>
+            <select id="material-plan-week"></select>
+          </div>
           <button type="button" class="btn btn-outline btn-sm" id="btn-add-material-plan-week">
             <i data-lucide="plus"></i> Thêm Tuần
           </button>
@@ -1319,38 +1335,82 @@
     <!-- QC — BẢNG XUẤT HÀNG VIEW -->
     <section id="qc-view" class="view-panel">
 
-      <!-- Header Bar -->
-      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
-        <div>
-          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
-            <i data-lucide="clipboard-check"></i> QC — Bảng Xuất Hàng
-          </h3>
-          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Danh sách hàng xuất theo tuần. Tên hàng lấy từ thành phẩm trong Kế Hoạch Sản Xuất (có thể thêm thành phẩm ngoài danh sách). Số lượng xuất hiển thị cạnh các mã hàng trong biểu đồ Kế Hoạch vs Đã Ép.
-          </p>
+      <!-- BẢNG 0: THẺ NÔI (LAUNCHER) — KATALOG BẢNG QC: mỗi bảng là
+           một thẻ rút gọn; bấm thẻ để mở bảng chi tiết (xem / chỉnh sửa) -->
+      <div class="qc-cards-overview">
+        <div class="qc-cards-title" style="justify-content:space-between;">
+          <h4><i data-lucide="layout-grid"></i> Bảng QC</h4>
+          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-qc" title="Lịch sử thay đổi của tab QC (chỉ Admin)">
+            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+          </button>
         </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" id="btn-add-qc-export">
-            <i data-lucide="plus-circle"></i> Thêm Dòng Xuất
+        <div class="qc-cards" id="qc-cards-grid">
+          <button type="button" class="qc-mini-card" data-qc-card="qc-export-card" aria-expanded="false" title="Xuất Hàng — bảng xuất theo tuần: thêm dòng, lọc năm/tuần, tìm kiếm, sửa trực tiếp">
+            <span class="qc-mini-ic"><i data-lucide="truck"></i></span>
+            <span class="qc-mini-title">Xuất Hàng</span>
+            <span class="qc-mini-desc">Bảng xuất theo tuần</span>
+            <span class="qc-mini-count" id="qc-mini-count-export">–</span>
+          </button>
+          <button type="button" class="qc-mini-card" data-qc-card="qc-incoming-card" aria-expanded="false" title="Kiểm Đầu Vào — kiểm tra chất lượng nguyên liệu / nan đầu vào (sắp bổ sung)">
+            <span class="qc-mini-ic"><i data-lucide="scan-search"></i></span>
+            <span class="qc-mini-title">Kiểm Đầu Vào</span>
+            <span class="qc-mini-desc">Kiểm tra nguyên liệu đầu vào</span>
+            <span class="qc-mini-count" id="qc-mini-count-incoming">–</span>
+          </button>
+          <button type="button" class="qc-mini-card" data-qc-card="qc-final-card" aria-expanded="false" title="Kiểm Sau Sản Xuất — kiểm tra thành phẩm trước khi xuất xưởng (sắp bổ sung)">
+            <span class="qc-mini-ic"><i data-lucide="badge-check"></i></span>
+            <span class="qc-mini-title">Kiểm Sau Sản Xuất</span>
+            <span class="qc-mini-desc">Kiểm tra thành phẩm xuất xưởng</span>
+            <span class="qc-mini-count" id="qc-mini-count-final">–</span>
           </button>
         </div>
       </div>
 
-      <!-- THẺ TỔNG HỢP XUẤT HÀNG: lọc Năm + chọn 1/nhiều Tuần -->
-      <div class="planning-card" id="qc-summary-card">
+      <!-- BẢNG CHI TIẾT — bao bới bởi stack; chỉ bật (nổi lên) khi bấm thẻ -->
+      <div id="qc-details-stack">
+
+      <!-- MODULE XUẤT HÀNG: bảng xuất + đầy đủ nút chức năng ngay trong thẻ.
+           Chọn bộ lọc (năm/tuần) hoặc gõ tìm kiếm → bảng chỉ hiển thị kết quả
+           khớp. Cột Tuần chỉ đọc (tuần đã nhập đầu vào thì không cần sửa). -->
+      <div class="planning-card qc-card-hidden" id="qc-export-card">
         <div class="planning-card-header">
-          <h4><i data-lucide="sigma"></i> Tổng Hợp Xuất Hàng</h4>
-          <div class="qc-sum-toolbar">
-            <div class="filter-item">
-              <label for="qc-sum-year">Năm:</label>
-              <select id="qc-sum-year"></select>
-            </div>
+          <h4><i data-lucide="truck"></i> Xuất Hàng</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-qc-export" title="Tạo dòng xuất hàng theo tuần (tự nạp kế hoạch của tuần)">
+              <i data-lucide="plus-circle"></i> Thêm Dòng Xuất
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-qc-table" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
           </div>
         </div>
+        <p style="margin:0; padding:10px 16px 0 16px; font-size:0.78rem; color:var(--text-muted);">
+          Sửa trực tiếp Số Lượng Xuất &amp; Ghi Chú trên bảng. Chọn Năm/Tuần hoặc gõ từ khóa — bảng chỉ hiện kết quả khớp. Tuần đã nhập đầu vào là khóa, không cần sửa.
+        </p>
+
+        <!-- THANH CÔNG CỤ: tìm kiếm + bộ lọc năm + xóa lọc + đếm kết quả -->
+        <div class="qc-table-toolbar">
+          <div class="qc-search-bar" style="flex:1 1 240px; min-width:190px;">
+            <i data-lucide="search"></i>
+            <input type="text" id="qc-search-input" placeholder="Tìm trong bảng xuất (tên sản phẩm)..." autocomplete="off">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-clear-qc-search" title="Xóa từ khóa tìm kiếm"><i data-lucide="x"></i></button>
+          </div>
+          <div class="filter-item">
+            <label for="qc-sum-year">Năm:</label>
+            <select id="qc-sum-year"></select>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-clear-qc-filter" title="Bỏ mọi bộ lọc (năm + tuần + từ khóa)">
+            <i data-lucide="filter-x"></i> <span class="hide-mobile">Xóa Lọc</span>
+          </button>
+          <span class="qc-filter-count" id="qc-filter-count"></span>
+        </div>
+
+        <!-- CHIPS TUẦN: chọn 1 / nhiều tuần (chỉ liệt kê tuần có dữ liệu) -->
         <div class="qc-sum-weeks-wrap">
           <span class="qc-sum-weeks-label">Tuần:</span>
           <div class="qc-sum-chips" id="qc-sum-weeks"></div>
         </div>
+        <!-- KPI TỔNG HỢP: tính trên đúng tập kết quả đang lọc -->
         <div class="qc-sum-kpis">
           <div class="qc-sum-kpi">
             <span class="qc-sum-kpi-label"><i data-lucide="package"></i> Số Lượng Xuất</span>
@@ -1368,35 +1428,9 @@
             <span class="qc-sum-kpi-unit">dòng</span>
           </div>
         </div>
-      </div>
+        <!-- DẢI KẾT QUẢ LỌC: hiện khi đang lọc / tìm kiếm -->
+        <div id="qc-filter-info" class="qc-filter-info" style="display:none;"></div>
 
-      <!-- TÌM KIẾM LỊCH SỬ XUẤT HÀNG: tra sản phẩm đã xuất bao nhiêu (SL + thể tích) -->
-      <div class="planning-card" id="qc-search-card">
-        <div class="planning-card-header">
-          <h4><i data-lucide="search"></i> Lịch Sử Xuất Hàng Sản Phẩm</h4>
-        </div>
-        <div class="qc-search-bar">
-          <i data-lucide="search"></i>
-          <input type="text" id="qc-search-input" placeholder="Gõ tên sản phẩm để xem lịch sử đã xuất (tổng số lượng & thể tích)..." autocomplete="off">
-          <button type="button" class="btn btn-outline btn-sm" id="btn-clear-qc-search" title="Xóa tìm kiếm"><i data-lucide="x"></i></button>
-        </div>
-        <div id="qc-search-results" class="qc-search-results">
-          <div class="text-muted" style="padding:10px 16px; font-size:0.8rem;">Gõ tên sản phẩm (một phần cũng được) để xem tổng hợp lịch sử xuất hàng.</div>
-        </div>
-      </div>
-
-      <!-- BẢNG XUẤT HÀNG -->
-      <div class="planning-card" id="qc-table-card">
-        <div class="planning-card-header">
-          <h4><i data-lucide="truck"></i> Bảng Xuất Hàng</h4>
-          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-qc-table" title="Thu gọn / Mở rộng">
-            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
-          </button>
-        </div>
-        <p style="margin:0; padding:10px 16px; font-size:0.78rem; color:var(--text-muted);">
-          Sửa trực tiếp Số Lượng Xuất &amp; Ghi Chú trên bảng. Xem tổng hợp theo Năm/Tuần
-          (chọn 1 hoặc nhiều tuần) tại thẻ <strong>Tổng Hợp Xuất Hàng</strong> phía trên.
-        </p>
         <div class="table-responsive">
           <table class="data-table planning-table" id="qc-table">
             <thead>
@@ -1409,10 +1443,48 @@
                 <th class="text-right" style="width:70px;">Thao Tác</th>
               </tr>
             </thead>
-            <!-- Dòng TỔNG đặt TRÊN đầu để luôn nhìn thấy khi danh sách dài -->
+            <!-- Dòng TỔNG đặt TRÊN đầu để luôn nhìn thấy khi danh sách dài
+                 (tính trên đúng tập kết quả đang lọc) -->
             <tbody id="qc-table-total"></tbody>
             <tbody id="qc-table-body"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- MODULE KIỂM ĐẦU VÀO — bố cục sẵn, nội dung dự án sẽ bổ sung sau -->
+      <div class="planning-card qc-card-hidden" id="qc-incoming-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="scan-search"></i> Kiểm Đầu Vào</h4>
+        </div>
+        <div class="qc-placeholder">
+          <span class="qc-placeholder-ic"><i data-lucide="scan-search"></i></span>
+          <strong>Chức năng đang được xây dựng</strong>
+          <p>Kiểm tra chất lượng nguyên liệu / nan đầu vào: kết quả kiểm, lỗi phát hiện, ảnh chụp... Thông tin dự án sẽ bổ sung sau.</p>
+        </div>
+      </div>
+
+      <!-- MODULE KIỂM SAU SẢN XUẤT — bố cục sẵn, nội dung dự án sẽ bổ sung sau -->
+      <div class="planning-card qc-card-hidden" id="qc-final-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="badge-check"></i> Kiểm Sau Sản Xuất</h4>
+        </div>
+        <div class="qc-placeholder">
+          <span class="qc-placeholder-ic"><i data-lucide="badge-check"></i></span>
+          <strong>Chức năng đang được xây dựng</strong>
+          <p>Kiểm tra thành phẩm sau sản xuất trước khi xuất xưởng: kết quả kiểm, tiêu chí đạt / không đạt, ảnh chụp... Thông tin dự án sẽ bổ sung sau.</p>
+        </div>
+      </div>
+
+      </div> <!-- /#qc-details-stack -->
+
+      <!-- POP-UP: overlay chi tiết bảng QC — hiển thị NỔI LÊN khi bấm thẻ -->
+      <div class="modal-overlay" id="qc-detail-overlay" tabindex="-1" aria-hidden="true">
+        <div class="modal-card qc-detail-modal" id="qc-detail-card" role="dialog" aria-modal="true" aria-labelledby="qc-detail-title">
+          <div class="modal-header">
+            <h3 id="qc-detail-title"><i data-lucide="clipboard-check"></i> Chi Tiết QC</h3>
+            <button type="button" class="modal-close-btn" id="btn-close-qc-detail" title="Đóng (Esc)"><i data-lucide="x"></i></button>
+          </div>
+          <div class="qc-detail-content" id="qc-detail-content"></div>
         </div>
       </div>
 
@@ -1474,8 +1546,11 @@
       <!-- BẢNG 0: THẺ NÔI (LAUNCHER) — KATALOG BẢNG NHÂN SỰ: mỗi bảng là
            một thẻ rút gọn; bấm thẻ để mở bảng chi tiết (xem / chỉnh sửa) -->
       <div class="hr-cards-overview">
-        <div class="hr-cards-title">
+        <div class="hr-cards-title" style="justify-content:space-between;">
           <h4><i data-lucide="layout-grid"></i> Bảng Nhân Sự</h4>
+          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-hr" title="Lịch sử thay đổi của tab Nhân Sự (chỉ Admin)">
+            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+          </button>
         </div>
         <div class="hr-cards" id="hr-cards-grid">
           <button type="button" class="hr-mini-card" data-hr-card="hr-emp-card" aria-expanded="false" title="Danh sách nhân viên — thêm / sửa / xóa">
@@ -2937,6 +3012,39 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btn-cancel-save-local">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LỊCH SỬ SỬA ĐỔI (ADMIN ONLY) — ai đã sửa gì, ở tab nào, lúc nào -->
+  <div class="modal-overlay" id="modal-history">
+    <div class="modal-card modal-history-card">
+      <div class="modal-header">
+        <h3 id="history-modal-title"><i data-lucide="history"></i> Lịch Sử Thay Đổi</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-history" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="history-toolbar">
+        <div class="filter-item">
+          <label for="history-tab-filter">Tab:</label>
+          <select id="history-tab-filter"></select>
+        </div>
+        <div class="filter-item">
+          <label for="history-user-filter">Người:</label>
+          <select id="history-user-filter"></select>
+        </div>
+        <span style="flex:1;"></span>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-clear-history" title="Xóa lịch sử của vùng đang chọn (không thể hoàn tác)">
+          <i data-lucide="trash-2"></i> Xóa
+        </button>
+      </div>
+
+      <div class="history-list" id="history-list">
+        <!-- Rendered by js/history.js -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-history">Đóng</button>
       </div>
     </div>
   </div>

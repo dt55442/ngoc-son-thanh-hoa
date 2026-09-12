@@ -4,6 +4,7 @@
 import { saveUsers } from './auth.js';
 import { firePushSync, initLucide } from './cloud.js';
 import { saveCustomCharts } from './export-xlsx.js';
+import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
 import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, state } from './state.js';
@@ -23,6 +24,8 @@ import { escapeHTML, showToast } from './utils.js';
 
   function saveData() {
     localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(state.batches));
+    // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa lô nan nào)
+    logDataChange(['batches']);
     // Đồng thời ghi vào file nếu đã kết nối thư mục dữ liệu
     if (state.fileStorage.connected) {
       writeDataToFile();
@@ -68,6 +71,7 @@ import { escapeHTML, showToast } from './utils.js';
     if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
       writeDataToFile(); // nâng cấp file lên bản gộp mới nhất để lần sau không "tua ngược"
     }
+    syncHistorySnapshots(); // gộp hàng loạt (không phải thao tác sửa) → đặt lại nền so sánh
     return merged;
   }
 

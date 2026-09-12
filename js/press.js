@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { collapseChartCard } from './dashboard.js';
+import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrWorkersForPress, hrWorkersForProduct, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
@@ -39,6 +40,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
 
   function savePressRecords() {
     localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords));
+    logDataChange(['pressRecords']);
     firePushSync();
   }
 
@@ -56,6 +58,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
 
   function savePressNotes() {
     localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || []));
+    logDataChange(['pressNotes']);
     firePushSync();
   }
 
@@ -1483,7 +1486,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
   // Gộp 2 nguồn dữ liệu (planningItems + pressRecords) — thứ mà biểu
   // đồ tùy chỉnh không làm được. Chiều cao cột LUÔN theo m³ (quy đổi
   // theo kích thước đọc từ tên sản phẩm, VD: 'Ván 1200x382x12'); nút
-  // Tấm/m³ chỉ đổi SỐ HIỂN THỊ trên cột & tooltip, giữ nguyên tỷ lệ cột.
+  // Số lượng/m³ chỉ đổi SỐ HIỂN THỊ trên cột & tooltip, giữ nguyên tỷ lệ cột.
   function getProductDimsStr(productId) {
     const rate = state.materialRates.find(r => r.id === productId);
     if (!rate) return '';
@@ -1562,10 +1565,10 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     ids.sort((a, b) => ((planQty[b] || 0) + (pressQty[b] || 0) + (exportQty[b] || 0)) - ((planQty[a] || 0) + (pressQty[a] || 0) + (exportQty[a] || 0)));
     const labelOf = id => (state.materialRates.find(r => r.id === id) || {}).product || 'Sản phẩm đã xóa';
 
-    // Đơn vị HIỂN THỊ số liệu: 'vol' (m³, mặc định) hoặc 'qty' (tấm).
+    // Đơn vị HIỂN THỊ số liệu: 'vol' (m³, mặc định) hoặc 'qty' (Số lượng).
     // Chiều cao cột LUÔN tính theo m³ — bấm nút chuyển chỉ thay số trên
-    // cột/tooltip, giữ nguyên tỷ lệ; khi xem "tấm" thì ẩn trục Y (vạch chia
-    // theo m³ sẽ gây hiểu nhầm với số tấm).
+    // cột/tooltip, giữ nguyên tỷ lệ; khi xem "Số lượng" thì ẩn trục Y (vạch chia
+    // theo m³ sẽ gây hiểu nhầm với số lượng).
     const isVol = state.planVsPressUnit === 'vol';
     const unitVol = id => dimVolume(getProductDimsStr(id), 1);
     const planVolData   = ids.map(id => (planQty[id] || 0) * unitVol(id));
@@ -1641,7 +1644,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
         },
         scales: {
           x: { ticks: { font: { size: 10 } } },
-          // Xem "tấm": chiều cao cột theo m³ → ẩn trục Y để tránh hiểu nhầm
+          // Xem "Số lượng": chiều cao cột theo m³ → ẩn trục Y để tránh hiểu nhầm
           y: { display: isVol, beginAtZero: true, ticks: { font: { size: 10 }, callback: v => fmtTick(v) } }
         }
       }
@@ -1677,7 +1680,10 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     return { cap: mp.maxProduction, reason };
   }
 
-  // Danh sách tuần (số ISO) có mục kế hoạch của 1 năm — dùng cho cửa sổ hiển thị & thanh trượt
+  // Khoảng tuần LIÊN TỤC (từ tuần đầu đến tuần cuối có kế hoạch) của 1 năm —
+  // dùng cho cửa sổ hiển thị của biểu đồ Khả Năng Đáp Ứng: mỗi lượt bấm ◀/▶
+  // dịch ĐÚNG 1 TUẦN LỊCH (kể cả tuần không có kế hoạch — hiển thị trống),
+  // cửa sổ luôn tối đa 2 tuần.
   function planCapacityWeeks(yearNum) {
     const set = new Set();
     (state.planningItems || []).forEach(p => {
@@ -1685,11 +1691,15 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       const w = getWeekNumber(p.week);
       if (w > 0) set.add(w);
     });
-    return [...set].sort((a, b) => a - b);
+    if (!set.size) return [];
+    const first = Math.min(...set), last = Math.max(...set);
+    const out = [];
+    for (let w = first; w <= last; w++) out.push(w);
+    return out;
   }
-  // Số tuần trong 1 cửa sổ hiển thị: màn hình rộng (≥900px) = 2 tuần, điện thoại = 1 tuần
+  // Số tuần trong 1 cửa sổ hiển thị: luôn tối đa 2 tuần (mỗi lượt nút ◀/▶ dịch 1 tuần)
   function planCapacityWinSize() {
-    return (window.matchMedia && window.matchMedia('(min-width: 900px)').matches) ? 2 : 1;
+    return 2;
   }
   // % đáp ứng = Có thể ép / Kế hoạch — kẹp trần 100%; không tính được (cap null) = 0
   function planCapacityPct(cap, plan) {
@@ -1717,12 +1727,10 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
         .map(y => `<option value="${y}"${String(y) === String(state.planCapYear) ? ' selected' : ''}>${y}</option>`).join('');
     }
 
-    // Danh sách tuần có kế hoạch của năm + cửa sổ hiển thị (2 tuần trên màn rộng)
+    // Khoảng tuần liên tục của năm + cửa sổ hiển thị (tối đa 2 tuần, mỗi bước ◀/▶ = 1 tuần)
     const weeks = planCapacityWeeks(yearNum);
-    const sliderEl = document.getElementById('pv-cap-slider');
     const winLabel = document.getElementById('pv-cap-window-label');
     if (!weeks.length) {
-      if (sliderEl) { sliderEl.disabled = true; sliderEl.max = 0; sliderEl.value = 0; }
       if (winLabel) winLabel.textContent = `Không có kế hoạch năm ${yearNum}`;
       return;
     }
@@ -1730,14 +1738,17 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     const maxStart = Math.max(0, weeks.length - winSize);
     let startIdx = (state.planCapStartIdx == null) ? null : Number(state.planCapStartIdx);
     if (startIdx == null || !Number.isFinite(startIdx)) {
-      startIdx = weeks.indexOf(getWeekNumber(getISOWeekString(todayLocalISO()))); // mặc định: tuần hiện tại
+      // Mặc định: neo tuần hiện tại (ngoài khoảng thì kẹp về đầu/cuối)
+      const cur = getWeekNumber(getISOWeekString(todayLocalISO()));
+      if (cur < weeks[0]) startIdx = 0;
+      else if (cur > weeks[weeks.length - 1]) startIdx = maxStart;
+      else startIdx = cur - weeks[0];
     }
     if (!Number.isFinite(startIdx) || startIdx < 0) startIdx = 0;
     startIdx = Math.min(startIdx, maxStart);
     state.planCapStartIdx = startIdx;
     const winWeeks = weeks.slice(startIdx, startIdx + winSize);
-    if (sliderEl) { sliderEl.disabled = maxStart === 0; sliderEl.max = maxStart; sliderEl.value = startIdx; }
-    if (winLabel) winLabel.textContent = `Tuần ${winWeeks.join(' – ')} • ${startIdx + 1}–${Math.min(startIdx + winSize, weeks.length)}/${weeks.length} tuần`;
+    if (winLabel) winLabel.textContent = `Tuần ${winWeeks[0]} – ${winWeeks[winWeeks.length - 1]}`;
 
     const labelOf = id => (state.materialRates.find(r => r.id === id) || {}).product || 'Sản phẩm đã xóa';
     const fmtQty = v => Math.round(Number(v) || 0).toLocaleString('vi-VN');
@@ -1752,6 +1763,11 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       });
       const ids = Object.keys(planQty).filter(id => planQty[id] > 0).sort((a, b) => planQty[b] - planQty[a]);
       const startCol = labels.length;
+      if (!ids.length) {
+        // Tuần KHÔNG có kế hoạch: giữ 1 nhóm trống (chỉ vẽ thẻ tuần, không có cột)
+        labels.push('');
+        planArr.push(null); capArr.push(null); pctArr.push(null); reasonArr.push(''); weekArr.push(w);
+      }
       ids.forEach(id => {
         const plan = planQty[id];
         const info = planCapacityReason(id, yearNum, w);
@@ -1762,19 +1778,16 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       });
       groups.push({ week: w, start: startCol, end: labels.length - 1 });
     });
-    if (!labels.length) {
-      if (winLabel) winLabel.textContent = 'Không có kế hoạch trong các tuần này';
-      return;
-    }
 
     // ── Cấu hình Chart: cột xếp tầng TRÊN TRỤC % 0–100% ──
     // Mọi cột CAO BẰNG NHAU (đúng 100% — đáp ứng là tỉ lệ):
     //  - đủ 100%   -> lấp đầy màu XANH
     //  - dưới 100% -> lấp đến % "Có thể ép" màu VÀNG, phần trên xám rỗng
     //  - không tính được (thiếu định mức/BOM) -> cột xám rỗng toàn bộ
-    // Tooltip vẫn hiện số TẤM thật (kế hoạch / có thể ép).
-    const fillData  = labels.map((_, i) => (capArr[i] == null ? 0 : pctArr[i]));
-    const shortData = labels.map((_, i) => 100 - fillData[i]);
+    //  - tuần không có kế hoạch -> không vẽ cột (chỉ còn thẻ nền của tuần)
+    // Tooltip vẫn hiện số LƯỢNG thật (kế hoạch / có thể ép).
+    const fillData  = labels.map((_, i) => (capArr[i] == null || planArr[i] == null ? 0 : pctArr[i]));
+    const shortData = labels.map((_, i) => (planArr[i] == null ? 0 : 100 - fillData[i]));
     const fillColors = labels.map((_, i) =>
       capArr[i] == null ? 'rgba(148, 163, 184, 0.35)' :
       (capArr[i] >= planArr[i] ? 'rgba(22, 163, 74, 0.85)' : 'rgba(234, 179, 8, 0.85)')
@@ -1921,8 +1934,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
             stacked: true,
             min: 0,
             max: 110, // cột 100% dừng đúng vạch 100, chừa ~10% khoảng thở trên khung
-            ticks: { callback: v => (v > 100 ? '' : `${v}%`), font: { size: 10 }, stepSize: 25 },
-            title: { display: true, text: 'Khả năng đáp ứng (%)', font: { size: 10 } }
+            ticks: { callback: v => (v > 100 ? '' : `${v}%`), font: { size: 10 }, stepSize: 25 }
           }
         }
       }
@@ -1951,7 +1963,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     renderPlanVsPressChart();
   }
 
-  // Lùi/tiến cửa sổ tuần của biểu đồ Khả Năng Đáp Ứng (bộ lọc RIÊNG + hiệu ứng trượt)
+  // Lùi/tiến cửa sổ tuần của biểu đồ Khả Năng Đáp Ứng (mỗi lượt = 1 tuần + hiệu ứng trượt)
   function shiftPlanCapacityWindow(dir) {
     const curYearStr = String(getDateYear(todayLocalISO()));
     const yearNum = (!state.planCapYear || state.planCapYear === 'current') ? Number(curYearStr) : Number(state.planCapYear);
@@ -1961,8 +1973,11 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     const maxStart = Math.max(0, weeks.length - winSize);
     let startIdx = (state.planCapStartIdx == null) ? null : Number(state.planCapStartIdx);
     if (startIdx == null || !Number.isFinite(startIdx) || startIdx < 0) {
-      const curIdx = weeks.indexOf(getWeekNumber(getISOWeekString(todayLocalISO())));
-      startIdx = Math.min(curIdx < 0 ? 0 : curIdx, maxStart); // mặc định: tuần hiện tại
+      // Mặc định: neo tuần hiện tại (ngoài khoảng thì kẹp về đầu/cuối)
+      const cur = getWeekNumber(getISOWeekString(todayLocalISO()));
+      if (cur < weeks[0]) startIdx = 0;
+      else if (cur > weeks[weeks.length - 1]) startIdx = maxStart;
+      else startIdx = cur - weeks[0];
     }
     const next = Math.max(0, Math.min(maxStart, startIdx + dir));
     if (next === startIdx) return; // đã ở biên — không trượt

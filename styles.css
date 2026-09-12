@@ -3433,48 +3433,14 @@ body.multi-select .card-actions {
   max-width: 46ch;
   text-align: right;
 }
-/* ─── Khả Năng Đáp Ứng: bộ lọc RIÊNG (năm + cửa sổ tuần có thanh trượt) ─── */
-.pv-cap-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 10px 14px 0;
-}
-.pv-cap-window {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 230px;
-}
-.pv-cap-window .pv-week-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 50%;
-  background: #fff;
-  color: var(--text-main, #334155);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.pv-cap-window .pv-week-btn:hover { background: var(--surface-2, #f1f5f9); }
-.pv-cap-slider {
-  flex: 1;
-  min-width: 90px;
-  accent-color: var(--primary, #2563eb);
-  cursor: pointer;
-}
-.pv-cap-slider:disabled { cursor: default; opacity: 0.45; }
+/* ─── Khả Năng Đáp Ứng: nhãn cửa sổ tuần trên đầu biểu đồ ─── */
 .pv-cap-window-label {
   font-size: 0.72rem;
   color: var(--text-muted);
   white-space: nowrap;
 }
+/* Dòng gợi ý màu cột (xanh = đủ, vàng = thiếu) dưới tiêu đề */
+.pv-cap-hint-row { padding: 2px 14px 0; }
 /* Hiệu ứng trượt khi bấm ← / → đổi cửa sổ tuần */
 .press-chart-box.pv-cap-in-left  { animation: pvCapInLeft 0.28s ease-out; }
 .press-chart-box.pv-cap-in-right { animation: pvCapInRight 0.28s ease-out; }
@@ -3490,9 +3456,8 @@ body.multi-select .card-actions {
   to   { opacity: 1;    transform: translateX(0); }
 }
 @media (max-width: 640px) {
-  .pv-cap-toolbar { gap: 8px; padding: 8px 10px 0; }
-  .pv-cap-window { flex-wrap: wrap; }
-  .pv-cap-window-label { white-space: normal; flex-basis: 100%; }
+  .pv-cap-window-label { white-space: normal; }
+  .pv-week-nav .pv-cap-window-label { padding: 0 2px; }
 }
 .pv-card .pv-toolbar {
   display: flex;
@@ -4382,10 +4347,7 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 }
 
 /* ═══ QC — Bảng Xuất Hàng (tab QC) ═══════════════════════════ */
-/* Thẻ tổng hợp xuất hàng: KPI + chips chọn 1/nhiều tuần */
-.qc-sum-toolbar .filter-item { display: flex; align-items: center; gap: 6px; margin: 0; }
-.qc-sum-toolbar .filter-item label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
-.qc-sum-toolbar .filter-item select { min-width: 110px; }
+/* Thẻ tổng hợp xuất hàng (trong thẻ Xuất Hàng): KPI + chips chọn 1/nhiều tuần */
 .qc-sum-weeks-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 16px 10px 16px; }
 .qc-sum-weeks-label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
 .qc-sum-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -4502,10 +4464,10 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 }
 .qc-imp-footer-info svg { width: 14px; height: 14px; flex-shrink: 0; }
 
-/* Tìm kiếm lịch sử xuất hàng sản phẩm */
+/* Tìm kiếm trong bảng xuất (trong thanh công cụ của thẻ Xuất Hàng) */
 .qc-search-bar {
   display: flex; align-items: center; gap: 8px;
-  padding: 0 16px 10px 16px;
+  padding: 0;
 }
 .qc-search-bar > svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
 .qc-search-bar input {
@@ -4515,27 +4477,60 @@ body.can-advanced .advanced-locked-note { display: none !important; }
   background: var(--bg-card); color: var(--text-main);
 }
 .qc-search-bar input:focus { outline: none; border-color: var(--primary); }
-.qc-search-results { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 14px 16px; }
-.qc-search-item {
+
+/* Thanh công cụ của thẻ Xuất Hàng: tìm kiếm + lọc năm + xóa lọc + đếm kết quả */
+.qc-table-toolbar {
+  display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+  padding: 10px 16px 4px 16px;
+}
+.qc-table-toolbar .filter-item { display: flex; align-items: center; gap: 6px; margin: 0; }
+.qc-table-toolbar .filter-item label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+.qc-table-toolbar .filter-item select { min-width: 110px; }
+.qc-filter-count {
+  margin-left: auto;
+  font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+  white-space: nowrap;
+}
+/* Dải kết quả lọc: hiện khi đang lọc năm/tuần hoặc gõ từ khóa */
+.qc-filter-info {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 16px 10px 16px; padding: 8px 12px;
+  font-size: 0.78rem; color: var(--text-main);
+  background: linear-gradient(168deg, #eff6ff 0%, #dbeafe 100%);
   border: 1px solid var(--border-color); border-radius: var(--radius-sm);
-  padding: 10px 12px; background: var(--bg-card);
 }
-.qc-search-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-.qc-search-chip {
-  flex-shrink: 0; padding: 1px 9px; font-size: 0.7rem; font-weight: 600;
-  border-radius: 999px; background: var(--bg-subtle);
-  border: 1px solid var(--border-color); color: var(--text-muted);
+.qc-filter-info svg { width: 14px; height: 14px; color: var(--primary); flex-shrink: 0; }
+.qc-filter-info strong { color: var(--primary); }
+/* Badge tuần CHỈ ĐỌC trên bảng (tuần đã nhập đầu vào là khóa) */
+.qc-week-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  font-size: 0.72rem; font-weight: 700;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  white-space: nowrap;
 }
-.qc-search-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.78rem; color: var(--text-main); }
-.qc-search-stat { display: inline-flex; align-items: center; gap: 5px; }
-.qc-search-stat svg { width: 13px; height: 13px; color: var(--primary); }
-.qc-search-detail { margin-top: 6px; font-size: 0.76rem; }
-.qc-search-detail summary { cursor: pointer; color: var(--primary); font-weight: 600; }
-.qc-search-mini-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.76rem; }
-.qc-search-mini-table th, .qc-search-mini-table td {
-  padding: 4px 8px; border-bottom: 1px solid var(--border-color); text-align: left;
+/* Placeholder các module QC sắp bổ sung (Kiểm Đầu Vào / Kiểm Sau Sản Xuất) */
+.qc-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center;
+  margin: 14px 16px 18px 16px; padding: 30px 18px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
 }
-.qc-search-mini-table .text-right { text-align: right; }
+.qc-placeholder strong { font-size: 0.9rem; color: var(--text-main); }
+.qc-placeholder p { margin: 0; font-size: 0.8rem; max-width: 480px; line-height: 1.5; }
+.qc-placeholder-ic {
+  display: grid; place-items: center;
+  width: 46px; height: 46px; border-radius: 12px;
+  background: var(--primary-light, var(--bg-card));
+  color: var(--primary);
+}
+.qc-placeholder-ic svg { width: 24px; height: 24px; }
 
 /* Dòng tổng cộng */
 #qc-table-foot td {
@@ -4545,6 +4540,176 @@ body.can-advanced .advanced-locked-note { display: none !important; }
   background: var(--bg-subtle);
 }
 .qc-total-row td { display: table-cell; }
+
+/* ═══ QC: THẺ NÔI (launcher) — bảng QC dạng thẻ nhỏ như tab Nhân Sự ═══
+   Desktop: 3 thẻ/nhóm, tablet (≤1024px): 3, điện thoại (≤640px): 2.
+   Hover: thẻ nhô lên (translateY + bóng lớn hơn). */
+.qc-cards-overview {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.qc-cards-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qc-cards-title h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+}
+
+/* Các bảng QC hoàn toàn ẩn — chỉ hiện khi bấm thẻ */
+.planning-card.qc-card-hidden { display: none; }
+
+.qc-cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+@media (max-width: 1024px) {
+  .qc-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .qc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── Màu thẻ: mỗi bảng QC một màu nhấn riêng ── */
+.qc-mini-card {
+  --card-accent: var(--primary);
+  --card-accent-bg: var(--bg-subtle);
+}
+.qc-mini-card[data-qc-card="qc-export-card"]   { --card-accent: #0d9488; --card-accent-bg: #ccfbf1; } /* Mòng két    — Xuất Hàng */
+.qc-mini-card[data-qc-card="qc-incoming-card"] { --card-accent: #0284c7; --card-accent-bg: #e0f2fe; } /* Xanh dương — Kiểm Đầu Vào */
+.qc-mini-card[data-qc-card="qc-final-card"]    { --card-accent: #7c3aed; --card-accent-bg: #ede9fe; } /* Tím        — Kiểm Sau Sản Xuất */
+
+.qc-mini-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 14px;
+  background: var(--card-accent-bg, var(--bg-card));
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--card-accent, var(--primary));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-main);
+  font: inherit;
+  line-height: 1.3;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.qc-mini-card:hover,
+.qc-mini-card:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--card-accent, var(--primary));
+}
+
+.qc-mini-card:focus-visible {
+  outline: 2px solid var(--card-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+.qc-mini-card:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.qc-mini-card.qc-mini-active {
+  background: var(--card-accent-bg, var(--primary-light));
+  border-color: var(--card-accent, var(--primary));
+  box-shadow: var(--shadow-md);
+}
+
+.qc-mini-ic {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--card-accent, var(--primary));
+  color: #fff;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.qc-mini-ic svg { width: 20px; height: 20px; }
+
+.qc-mini-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.qc-mini-desc {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.qc-mini-count {
+  margin-top: 8px;
+  align-self: flex-end;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--card-accent, var(--primary));
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── POP-UP: modal chi tiết bảng QC (nổi lên khi bấm thẻ) ──
+   Vùng pop-up = toàn bộ vùng hiển thị của trang (TRỪ header — header
+   không bị che / làm mờ). Khung viền đầy đủ quanh panel để tách bạch. */
+#qc-detail-overlay {
+  top: 64px;                 /* JS cập nhật đúng theo chiều cao header khi mở */
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: none;     /* không làm mờ nội dung phía sau */
+  align-items: stretch;      /* panel chiếm full chiều cao vùng còn lại */
+}
+.qc-detail-modal {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border: 2px solid var(--primary, #2563eb);   /* khung viền đầy đủ */
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px rgba(15, 23, 42, 0.35);
+  overflow: hidden;          /* header modal cố định, nội dung cuộn bên dưới */
+}
+.qc-detail-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+@media (max-width: 639.98px) {
+  #qc-detail-overlay { padding: 8px; }
+  .qc-detail-content { padding: 10px; }
+}
 
 
 /* ======================================================= */
@@ -4977,4 +5142,116 @@ table.export-preview-table {
   line-height: 1.7;
   background: var(--bg-subtle);
 }
+.press-workers-auto.muted { color: var(--text-muted); }
+
+/* ======================================================= */
+/* LỊCH SỬ SỬA ĐỔI (AUDIT LOG) — modal chỉ dành cho Admin   */
+/* ======================================================= */
+/* Nút "Lịch Sử" trên từng tab: ẩn với mọi vai trò, chỉ hiện với Admin */
+.history-admin-btn { display: none !important; }
+body.is-admin .history-admin-btn { display: inline-flex !important; }
+
+.modal-history-card { max-width: 660px; }
+
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+}
+
+.history-list {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding: 6px 16px 12px;
+}
+
+.history-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px dashed var(--border-color);
+  font-size: 0.8rem;
+}
+.history-row:last-child { border-bottom: none; }
+
+.history-time {
+  flex-shrink: 0;
+  width: 128px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.history-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.hb-add    { background: var(--primary-light); color: var(--success); }
+.hb-edit   { background: #eff6ff; color: #1d4ed8; }
+.hb-delete { background: var(--danger-bg); color: var(--danger); }
+.hb-import { background: var(--bamboo-light); color: var(--bamboo-gold); }
+
+.history-main { flex: 1; min-width: 0; }
+
+.history-line1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.history-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.history-user svg { width: 12px; height: 12px; }
+
+.history-domain {
+  color: var(--info);
+  font-size: 0.72rem;
+  background: rgba(2, 132, 199, 0.08);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+}
+
+.history-detail {
+  color: var(--text-muted);
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-muted);
+}
+.history-empty svg { width: 40px; height: 40px; opacity: 0.4; margin-bottom: 8px; }
+.history-empty p { margin: 4px 0; font-size: 0.9rem; }
+.history-empty-sub { font-size: 0.78rem !important; opacity: 0.8; }
+
+/* Điện thoại: gọn hơn */
+@media (max-width: 639px) {
+  .history-time { width: 96px; font-size: 0.66rem; }
+  .history-row { font-size: 0.74rem; }
+}
+
 .press-workers-auto.muted { color: var(--text-muted); }

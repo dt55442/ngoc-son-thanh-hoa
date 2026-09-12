@@ -6,12 +6,13 @@ import { clearMultiSelection, closeBatchFormModal, closeTransferModal, confirmMu
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeExportPreviewModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth } from './export-xlsx.js';
+import { clearHistory, closeHistoryModal, openHistoryModal, setHistoryTabFilter, setHistoryUserFilter } from './history.js';
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, renderQcImpRows, renderQcSearch, renderQcSummary, showQcCustomName, updateQcExportRow } from './qc.js';
+import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
@@ -409,21 +410,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('pv-week-prev', 'click', () => shiftPlanVsPressWeek(-1));
     safeOn('pv-week-next', 'click', () => shiftPlanVsPressWeek(1));
 
-    // ── Biểu đồ Khả Năng Đáp Ứng — bộ lọc RIÊNG (năm + cửa sổ tuần, tách khỏi biểu đồ trên) ──
+    // ── Biểu đồ Khả Năng Đáp Ứng — bộ lọc RIÊNG (năm + điều hướng tuần, tách khỏi biểu đồ trên) ──
     safeOn('pv-cap-year-filter', 'change', (e) => {
       state.planCapYear = e.target.value;
       state.planCapStartIdx = null; // đổi năm -> về mặc định (tuần hiện tại)
       renderPlanCapacityChart();
     });
+    // Mỗi lượt bấm ◀ / ▶ dịch cửa sổ hiển thị đúng 1 TUẦN (biểu đồ luôn hiện tối đa 2 tuần)
     safeOn('pv-cap-prev', 'click', () => shiftPlanCapacityWindow(-1));
     safeOn('pv-cap-next', 'click', () => shiftPlanCapacityWindow(1));
-    // Thanh trượt: kéo là vẽ lại ngay (input) — mượt và cảm nhận trực quan
-    safeOn('pv-cap-slider', 'input', (e) => {
-      const v = Number(e.target.value);
-      if (!Number.isFinite(v) || v < 0) return;
-      state.planCapStartIdx = v;
-      renderPlanCapacityChart();
-    });
 
     // Cập nhật dự kiến khi người dùng sửa ô input
     // Dùng sự kiện 'change' (Enter hoặc nhấp chuột ra ngoài) để cho phép
@@ -591,24 +586,75 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Thu gọn / mở rộng bảng kế hoạch nguyên liệu
     safeOn('btn-toggle-material-plan', 'click', () => toggleRateTableCollapse('material-plan-card'));
 
-    // ── QC — Bảng Xuất Hàng ──
-    // Bộ lọc áp nhanh cho toàn bảng (Nam + tuần): nhập/sửa xong ÁP DỤNG NGAY,
-    // không cần chuyển tab đi/quay lại (sửa lỗi phản ứng chậm của bộ lọc cũ).
-    safeOn('qc-filter-year', 'change', (e) => {
-      state.qcFilterYear = e.target.value;
+    // ── QC — Module thẻ (launcher) + Bảng Xuất Hàng ──
+    // Bấm thẻ launcher (grid) → mở bảng chi tiết dạng pop-up modal (nổi lên)
+    document.querySelectorAll('.qc-mini-card').forEach(t => {
+      t.addEventListener('click', () => qcOpenCard(t.getAttribute('data-qc-card')));
+    });
+    // Đóng bảng chi tiết pop-up: nút Đóng / bấm nền mờ / phím Esc
+    safeOn('btn-close-qc-detail', 'click', qcCloseOpenCard);
+    const qcOverlay = document.getElementById('qc-detail-overlay');
+    if (qcOverlay) {
+      qcOverlay.addEventListener('click', (e) => { if (e.target === qcOverlay) qcCloseOpenCard(); });
+      qcOverlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') qcCloseOpenCard(); });
+    }
+    // Esc toàn cục khi pop-up QC đang mở (dù con trỏ/focus đang ở trong bảng)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('qc-detail-overlay')?.classList.contains('show')) qcCloseOpenCard();
+    });
+    // Đổi kích thước cửa sổ → đặt lại đỉnh pop-up đúng dưới header
+    window.addEventListener('resize', () => {
+      const ov = document.getElementById('qc-detail-overlay');
+      if (ov && ov.classList.contains('show') && typeof qcPositionDetailOverlay === 'function') qcPositionDetailOverlay();
+    });
+    // ── Bộ lọc trong thẻ Xuất Hàng: chọn năm / tuần / từ khóa → bảng chỉ
+    //    hiện kết quả khớp (áp dụng NGAY, không cần chuyển tab) ──
+    safeOn('qc-sum-year', 'change', (e) => {
+      state.qcSumYear = e.target.value;
+      state.qcSumWeeks = []; // đổi năm → xem tất cả các tuần
       renderQcSummary();
       renderQcTable();
       renderQcSearch();
     });
-    safeOn('qc-filter-week', 'change', (e) => {
-      state.qcFilterWeek = e.target.value;
-      renderQcSummary();
+    document.addEventListener('click', (e) => {
+      const chip = e.target.closest ? e.target.closest('[data-qc-sum-week]') : null;
+      if (chip) {
+        const w = Number(chip.getAttribute('data-qc-sum-week'));
+        const set = new Set(state.qcSumWeeks || []);
+        if (set.has(w)) set.delete(w); else set.add(w);
+        state.qcSumWeeks = [...set].sort((a, b) => a - b);
+        renderQcSummary();
+        renderQcTable();
+        renderQcSearch();
+        return;
+      }
+      if (e.target.closest && e.target.closest('[data-qc-sum-all]')) {
+        state.qcSumWeeks = []; // bỏ chọn hết = tất cả các tuần
+        renderQcSummary();
+        renderQcTable();
+        renderQcSearch();
+      }
+    });
+    // Tìm kiếm trong bảng xuất: gõ là lọc ngay (chỉ hiện dòng khớp)
+    safeOn('qc-search-input', 'input', (e) => {
+      state.qcSearchQ = e.target.value;
       renderQcTable();
       renderQcSearch();
     });
+    safeOn('btn-clear-qc-search', 'click', () => {
+      state.qcSearchQ = '';
+      const inp = document.getElementById('qc-search-input');
+      if (inp) inp.value = '';
+      renderQcTable();
+      renderQcSearch();
+    });
+    // Xóa MỌI bộ lọc (năm + tuần + từ khóa) → hiện lại toàn bộ dòng
     safeOn('btn-clear-qc-filter', 'click', () => {
-      state.qcFilterYear = 'all';
-      state.qcFilterWeek = 'all';
+      state.qcSumYear = 'all';
+      state.qcSumWeeks = [];
+      state.qcSearchQ = '';
+      const inp = document.getElementById('qc-search-input');
+      if (inp) inp.value = '';
       renderQcSummary();
       renderQcTable();
       renderQcSearch();
@@ -628,17 +674,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       qcImpAddCustom(); // lần 2: nhập tên rồi bấm để thêm vào danh sách
     });
     // Delegation trong danh sách soạn: tick / điền SL / bỏ dòng
+    // (qcImpRows là trạng thái riêng của qc.js — cập nhật qua hàm xuất khẩu,
+    //  không tham chiếu trực tiếp được vì ES-module import là read-only)
     document.addEventListener('change', (e) => {
       const el = e.target;
       if (!el || !el.dataset) return;
-      if (el.dataset.qcImpCheck) {
-        const row = qcImpRows.find(r => r.key === el.dataset.qcImpCheck);
-        if (row) { row.checked = el.checked; qcImpFooterInfo(); }
-      }
-      if (el.dataset.qcImpQty) {
-        const row = qcImpRows.find(r => r.key === el.dataset.qcImpQty);
-        if (row) { row.qty = Math.max(0, parseInt(el.value, 10) || 0); qcImpFooterInfo(); }
-      }
+      if (el.dataset.qcImpCheck) qcImpSetChecked(el.dataset.qcImpCheck, el.checked);
+      if (el.dataset.qcImpQty) qcImpSetQty(el.dataset.qcImpQty, el.value);
     });
     document.addEventListener('click', (e) => {
       const rm = e.target && e.target.closest && e.target.closest('[data-qc-imp-remove]');
@@ -650,36 +692,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('qc-custom-name', 'keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); qcImpAddCustom(); }
     });
-    // ── Tìm kiếm lịch sử xuất hàng: gõ là hiện kết quả ──
-    safeOn('qc-search-input', 'input', () => renderQcSearch());
-    safeOn('btn-clear-qc-search', 'click', () => {
-      const inp = document.getElementById('qc-search-input');
-      if (inp) inp.value = '';
-      renderQcSearch();
-    });
-    // ── Thẻ tổng hợp xuất hàng: Năm + chips chọn 1/nhiều tuần ──
-    safeOn('qc-sum-year', 'change', (e) => {
-      state.qcSumYear = e.target.value;
-      state.qcSumWeeks = []; // đổi năm → xem tất cả các tuần
-      renderQcSummary();
-    });
-    document.addEventListener('click', (e) => {
-      const chip = e.target.closest ? e.target.closest('[data-qc-sum-week]') : null;
-      if (chip) {
-        const w = Number(chip.getAttribute('data-qc-sum-week'));
-        const set = new Set(state.qcSumWeeks || []);
-        if (set.has(w)) set.delete(w); else set.add(w);
-        state.qcSumWeeks = [...set].sort((a, b) => a - b);
-        renderQcSummary();
-        return;
-      }
-      if (e.target.closest && e.target.closest('[data-qc-sum-all]')) {
-        state.qcSumWeeks = []; // bỏ chọn hết = tất cả các tuần
-        renderQcSummary();
-      }
-    });
-    // Thu gọn / mở rộng bảng xuất hàng
-    safeOn('btn-toggle-qc-table', 'click', () => toggleRateTableCollapse('qc-table-card'));
+    // Thu gọn / mở rộng bảng xuất hàng (trong thẻ Xuất Hàng)
+    safeOn('btn-toggle-qc-table', 'click', () => toggleRateTableCollapse('qc-export-card'));
     // Sửa trực tiếp từng dòng (tuần / số lượng / ghi chú) — sự kiện 'change'
     document.addEventListener('change', (e) => {
       const el = e.target;
@@ -841,6 +855,21 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         .sort((a, b) => a.localeCompare(b, 'vi'));
       supDl.innerHTML = sups.map(s => `<option value="${escapeHTML(s)}">`).join('');
     }
+
+    // ── LỊCH SỬ SỬA ĐỔI (modal — chỉ Admin mới xem được) ──
+    safeOn('btn-history-kanban',    'click', () => openHistoryModal('kanban'));
+    safeOn('btn-history-planning',  'click', () => openHistoryModal('planning'));
+    safeOn('btn-history-press',     'click', () => openHistoryModal('press'));
+    safeOn('btn-history-materials', 'click', () => openHistoryModal('materials'));
+    safeOn('btn-history-qc',        'click', () => openHistoryModal('qc'));
+    safeOn('btn-history-hr',        'click', () => openHistoryModal('hr'));
+    safeOn('btn-history-dashboard', 'click', () => openHistoryModal('dashboard'));
+    safeOn('btn-close-history',     'click', closeHistoryModal);
+    safeOn('btn-cancel-history',    'click', closeHistoryModal);
+    safeOn('history-tab-filter',    'change', (e) => setHistoryTabFilter(e.target.value));
+    safeOn('history-user-filter',   'change', (e) => setHistoryUserFilter(e.target.value));
+    safeOn('btn-clear-history',     'click', clearHistory);
+
     // Click ủy quyền trong tab Nguyên Liệu: đổi tab vị trí, sửa/xóa bản ghi,
     // mở lightbox ảnh, xóa ảnh xem trước trong form
     document.addEventListener('click', (e) => {

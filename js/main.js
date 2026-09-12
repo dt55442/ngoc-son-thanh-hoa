@@ -14,6 +14,7 @@ import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPre
 import { loadQcExports, renderQcView } from './qc.js';
 import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, rejectLeave,   renderHrView, hrOpenCard, hrCloseOpenCard, HR_CARD_DEFS } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
+import { initHistory } from './history.js';
 import { state } from './state.js';
 import { autoReconnectDataFolder, loadData, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations } from './utils.js';
@@ -35,6 +36,9 @@ import { setupFormCalculations } from './utils.js';
     loadMaterialPlan();
     loadQcExports();
     loadHrData();
+    // Lịch sử sửa đổi: nạp + lập snapshot nền SAU CÙNG (sau khi toàn bộ
+    // load*() đã xong) — để lần sửa đầu tiên là so sánh được chính xác
+    initHistory();
     // Nhớ lại trạng thái thu gọn của các bảng dữ liệu (định mức, lượt ép, nguyên liệu)
     restoreRateTableCollapse();
     setupEventListeners();

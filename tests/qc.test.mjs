@@ -114,50 +114,60 @@ qc.renderQcTable();
 check('QC: dòng ngoài danh sách có nhãn "ngoài kế hoạch"', tbodyEl.innerHTML.includes('ngoài kế hoạch') && tbodyEl.innerHTML.includes('Hàng mẫu khách B'));
 check('QC: dòng tổng hiển thị đúng (10 + 5 = 15)', document.getElementById('qc-table-total').innerHTML.includes('15'));
 
-// ─── C. MODAL THÊM DÒNG ───────────────────────────────────────
+// ─── C. MODAL TẠO DÒNG THEO TUẦN (luồng mới: nạp cả kế hoạch tuần) ──
 qc.openQcExportModal();
-const prodSel = document.getElementById('qc-product');
 check('QC: mở modal thành công', modalShown('modal-qc-export'));
-check('QC: select thành phẩm lấy từ kế hoạch (rate-1)', prodSel.innerHTML.includes('rate-1') && prodSel.innerHTML.includes('Ván 1200x382x9'));
-check('QC: có lựa chọn thêm ngoài danh sách', prodSel.innerHTML.includes('__custom__'));
-check('QC: select tuần của modal có 53 tuần + mục rỗng', (document.getElementById('qc-week').innerHTML.match(/<option/g) || []).length === 54);
+check('QC: select năm của modal có năm hiện tại (2026)', document.getElementById('qc-imp-year').innerHTML.includes('2026'));
+check('QC: select tuần của modal có đủ 53 tuần', (document.getElementById('qc-imp-week').innerHTML.match(/<option/g) || []).length === 53);
 
-setVal('qc-product', '__custom__');
-qc.onQcProductChange();
-check('QC: chọn ngoài danh sách -> hiện ô nhập tên mới', document.getElementById('qc-custom-name-group').style.display === '' && document.getElementById('qc-custom-name').required === true);
-setVal('qc-product', '');
-qc.onQcProductChange();
-check('QC: bỏ chọn -> ẩn ô nhập tên mới', document.getElementById('qc-custom-name-group').style.display === 'none');
+setVal('qc-imp-year', '2026'); setVal('qc-imp-week', '33');
+qc.qcImpLoadPlan(false); // đổi tuần -> tự nạp danh sách thành phẩm theo kế hoạch
+check('QC: nạp kế hoạch tuần 33 -> dòng thành phẩm theo kế hoạch (rate-2, KH 100)', document.getElementById('qc-imp-products').innerHTML.includes('Ván 1200x382x12') && document.getElementById('qc-imp-products').innerHTML.includes('KH: 100'));
+check('QC: thông tin kế hoạch tuần hiển thị đúng', document.getElementById('qc-imp-plan-text').innerHTML.includes('Kế hoạch tuần'));
 
-// ─── D. SUBMIT: thành phẩm trong kế hoạch ─────────────────────
+qc.onQcProductChange(); // (tên tương thích) = hiện ô nhập TP ngoài kế hoạch
+check('QC: thêm TP ngoài kế hoạch -> hiện ô nhập tên (không dùng required trình duyệt)', document.getElementById('qc-custom-name-group').style.display === '' && document.getElementById('qc-custom-name').required === false);
+qc.hideQcCustomName();
+check('QC: ẩn ô nhập tên mới', document.getElementById('qc-custom-name-group').style.display === 'none');
+
+// ─── D. SUBMIT: thành phẩm theo kế hoạch tuần ──────────────────
 const beforeSubmit = state.qcExports.length;
-setVal('qc-product', 'rate-1'); setVal('qc-year', '2026'); setVal('qc-week', '33');
-setVal('qc-qty', '25'); setVal('qc-note', '  gấp  ');
+setVal('qc-imp-year', '2026'); setVal('qc-imp-week', '33');
+qc.qcImpLoadPlan(false);
+setVal('qc-imp-note', '  gấp  ');
+qc.qcImpSetQty('p-rate-2', 25); // mô phỏng điền số lượng (cùng đường ủy quyền data-qc-imp-qty)
 qc.handleQcExportSubmit(ev);
 const added = state.qcExports[state.qcExports.length - 1];
 check('QC: submit từ danh sách -> thêm đúng 1 dòng', state.qcExports.length === beforeSubmit + 1);
-check('QC: dòng mới đủ trường (tên/mã/tuần/năm/SL/ghi chú)', added.productId === 'rate-1' && added.name === 'Ván 1200x382x9' && added.week === 'Tuần 33' && added.year === 2026 && added.qty === 25 && added.note === 'gấp');
+check('QC: dòng mới đủ trường (tên/mã/tuần/năm/SL/ghi chú)', added.productId === 'rate-2' && added.name === 'Ván 1200x382x12' && added.week === 'Tuần 33' && added.year === 2026 && added.qty === 25 && added.note === 'gấp');
 check('QC: đóng modal sau khi thêm', !modalShown('modal-qc-export'));
 
-// ─── E. SUBMIT: thành phẩm ngoài danh sách ────────────────────
-setVal('qc-product', '__custom__'); qc.onQcProductChange();
-setVal('qc-custom-name', 'Đơn lẻ khách C'); setVal('qc-year', '2026'); setVal('qc-week', '34');
-setVal('qc-qty', '7'); setVal('qc-note', '');
+// ─── E. THÊM THÀNH PHẨM NGOÀI KẾ HOẠCH ────────────────────────
+qc.openQcExportModal();
+setVal('qc-imp-year', '2026'); setVal('qc-imp-week', '34');
+qc.qcImpLoadPlan(false); // tuần 34 không có kế hoạch -> danh sách rỗng
+setVal('qc-custom-name', 'Đơn lẻ khách C');
+qc.qcImpAddCustom();
+const impBox = document.getElementById('qc-imp-products').innerHTML;
+check('QC: thêm TP ngoài kế hoạch -> hiện dòng "ngoài kế hoạch"', impBox.includes('Đơn lẻ khách C') && impBox.includes('ngoài kế hoạch'));
+const keyCustom = (impBox.match(/data-qc-imp-qty="([^"]+)"/) || [])[1];
+qc.qcImpSetQty(keyCustom, '7');
 qc.handleQcExportSubmit(ev);
 const custom = state.qcExports[state.qcExports.length - 1];
-check('QC: thêm thành phẩm ngoài danh sách -> lưu tên + không có mã', custom.productId === null && custom.name === 'Đơn lẻ khách C' && custom.week === 'Tuần 34' && custom.qty === 7);
+check('QC: thêm TP ngoài kế hoạch -> lưu tên + không có mã', custom.productId === null && custom.name === 'Đơn lẻ khách C' && custom.week === 'Tuần 34' && custom.year === 2026 && custom.qty === 7);
 
 // ─── F. VALIDATE ──────────────────────────────────────────────
 let n = state.qcExports.length;
-setVal('qc-product', 'rate-1'); setVal('qc-year', '2026'); setVal('qc-week', '33'); setVal('qc-qty', '0');
+qc.openQcExportModal(); // modal reset + nạp lại (tuần 34, chưa điền SL nào)
 qc.handleQcExportSubmit(ev);
-check('QC: chặn số lượng <= 0', state.qcExports.length === n);
-setVal('qc-qty', '10'); setVal('qc-week', '');
+check('QC: chặn khi chưa điền số lượng nào', state.qcExports.length === n);
+setVal('qc-imp-week', '');
 qc.handleQcExportSubmit(ev);
 check('QC: chặn thiếu tuần', state.qcExports.length === n);
-setVal('qc-week', '33'); setVal('qc-product', '__custom__'); qc.onQcProductChange(); setVal('qc-custom-name', '   ');
-qc.handleQcExportSubmit(ev);
-check('QC: chặn thành phẩm ngoài danh sách thiếu tên', state.qcExports.length === n);
+setVal('qc-imp-week', '34');
+setVal('qc-custom-name', '   ');
+qc.qcImpAddCustom(); // tên trống -> bị chặn, KHÔNG thêm dòng vào danh sách
+check('QC: chặn thành phẩm ngoài danh sách thiếu tên', !document.getElementById('qc-imp-products').innerHTML.includes('Đơn lẻ') && document.getElementById('qc-imp-products').innerHTML.includes('Chưa có dòng nào'));
 
 // ─── G. SỬA TRỰC TIẾP TRÊN BẢNG ───────────────────────────────
 qc.updateQcExportRow(added.id, 'qty', '55');
@@ -183,7 +193,7 @@ qc.renderQcSummary();
 check('QC: thẻ tổng hợp — không chọn tuần nào → tất cả = 77', document.getElementById('qc-sum-qty').textContent === '77');
 state.qcSumYear = '2025'; state.qcSumWeeks = [];
 qc.renderQcSummary();
-check('QC: thẻ tổng hợp — năm không có trong danh sách → tự về năm hiện tại (KPI = 77)', state.qcSumYear === '2026' && document.getElementById('qc-sum-qty').textContent === '77');
+check('QC: thẻ tổng hợp — năm không có trong danh sách → tự về "Tất cả các năm" (KPI = 77)', state.qcSumYear === 'all' && document.getElementById('qc-sum-qty').textContent === '77');
 state.qcSumYear = '2026'; state.qcSumWeeks = [];
 qc.renderQcSummary();
 
@@ -232,6 +242,52 @@ check('Mây: snapshot chứa qcExports', Array.isArray(snap.qcExports) && snap.q
 check('Mây: cloudCore bao gồm qcExports', cloud.cloudCore(snap).includes('"qcExports"'));
 cloud.applyFireSnapshot({ qcExports: [{ id: 'qc-remote', productId: 'rate-2', name: '', week: 'Tuần 40', year: 2026, qty: 9, note: '' }] });
 check('Mây: applyFireSnapshot nhận qcExports từ mây', state.qcExports.length === 1 && state.qcExports[0].id === 'qc-remote');
+
+// ─── M. THẺ NÔI (LAUNCHER) + BỘ LỌC TRONG THẺ XUẤT HÀNG ────────
+// Mô phỏng trạng thái mặc định trong index.html: mọi bảng chi tiết ẩn.
+['qc-export-card', 'qc-incoming-card', 'qc-final-card'].forEach(id => document.getElementById(id).classList.add('qc-card-hidden'));
+state.qcExports = [
+  { id: 'm1', productId: 'rate-1', name: 'Ván 1200x382x9',  week: 'Tuần 33', year: 2026, qty: 10, note: '' },
+  { id: 'm2', productId: 'rate-2', name: 'Ván 1200x382x12', week: 'Tuần 33', year: 2026, qty: 5,  note: '' },
+  { id: 'm3', productId: 'rate-1', name: 'Ván 1200x382x9',  week: 'Tuần 34', year: 2026, qty: 7,  note: '' },
+  { id: 'm4', productId: null,     name: 'Đơn lẻ khách D',  week: 'Tuần 10', year: 2025, qty: 3,  note: '' }
+];
+state.qcSumYear = 'all'; state.qcSumWeeks = []; state.qcSearchQ = '';
+qc.renderQcView();
+const fsMod = await import('node:fs');
+const qcHTML = fsMod.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+check('THẺ QC: index.html có launcher 3 thẻ (Xuất Hàng / Kiểm Đầu Vào / Kiểm Sau Sản Xuất)',
+  qcHTML.includes('data-qc-card="qc-export-card"') && qcHTML.includes('data-qc-card="qc-incoming-card"') && qcHTML.includes('data-qc-card="qc-final-card"'));
+check('THẺ QC: đếm thẻ Xuất Hàng = "4 dòng · 25 tấm"', document.getElementById('qc-mini-count-export').textContent === '4 dòng · 25 tấm');
+check('THẺ QC: đếm thẻ Kiểm Đầu Vào = "Sắp có" (bổ sung sau)', document.getElementById('qc-mini-count-incoming').textContent === 'Sắp có');
+check('BẢNG: không lọc → hiện đủ 4 dòng', (document.getElementById('qc-table-body').innerHTML.match(/<tr>/g) || []).length === 4);
+check('BẢNG: cột Tuần chỉ đọc (badge — tuần đã nhập đầu vào không cần sửa)', !document.getElementById('qc-table-body').innerHTML.includes('qc-row-week') && document.getElementById('qc-table-body').innerHTML.includes('qc-week-badge'));
+check('THẺ QC: qcOpenCard(xuất hàng) mở pop-up (overlay show)', qc.qcOpenCard('qc-export-card') === true && document.getElementById('qc-detail-overlay').classList._s.has('show'));
+check('THẺ QC: bảng xuất bỏ ẩn khi mở pop-up', !document.getElementById('qc-export-card').classList.contains('qc-card-hidden'));
+check('THẺ QC: bấm lại cùng thẻ → đóng pop-up + thẻ ẩn lại', qc.qcOpenCard('qc-export-card') === false
+  && document.getElementById('qc-export-card').classList.contains('qc-card-hidden')
+  && !document.getElementById('qc-detail-overlay').classList._s.has('show'));
+// Tìm kiếm → bảng CHỈ hiện dòng khớp
+state.qcSearchQ = '1200x382x9';
+qc.renderQcTable(); qc.renderQcSearch();
+check('LỌC: tìm "1200x382x9" → bảng chỉ còn 2 dòng khớp (m1, m3)', (document.getElementById('qc-table-body').innerHTML.match(/<tr>/g) || []).length === 2 && !document.getElementById('qc-table-body').innerHTML.includes('Đơn lẻ khách D'));
+check('LỌC: dòng tổng tính trên kết quả lọc (10 + 7 = 17)', document.getElementById('qc-table-total').innerHTML.includes('17'));
+check('LỌC: dải kết quả lọc tổng hợp (2/4 dòng)', document.getElementById('qc-filter-info').style.display === '' && document.getElementById('qc-filter-info').innerHTML.includes('2/4'));
+// Bộ lọc năm + chips tuần
+state.qcSearchQ = ''; state.qcSumYear = '2026'; state.qcSumWeeks = [33];
+qc.renderQcTable(); qc.renderQcSummary(); qc.renderQcSearch();
+check('LỌC: năm 2026 + Tuần 33 → bảng chỉ còn 2 dòng tuần 33', (document.getElementById('qc-table-body').innerHTML.match(/<tr>/g) || []).length === 2 && !document.getElementById('qc-table-body').innerHTML.includes('Đơn lẻ khách D'));
+check('LỌC: KPI số lượng theo bộ lọc = 15', document.getElementById('qc-sum-qty').textContent === '15');
+// Xóa lọc → hiện lại tất cả
+state.qcSumYear = 'all'; state.qcSumWeeks = []; state.qcSearchQ = '';
+qc.renderQcTable(); qc.renderQcSummary(); qc.renderQcSearch();
+check('LỌC: xóa lọc → hiện lại đủ 4 dòng + dải kết quả ẩn', (document.getElementById('qc-table-body').innerHTML.match(/<tr>/g) || []).length === 4 && document.getElementById('qc-filter-info').style.display === 'none');
+// Không dòng nào khớp → báo rỗng + gợi ý Xóa Lọc
+state.qcSearchQ = 'khong-ton-tai';
+qc.renderQcTable();
+check('LỌC: không khớp → bảng báo rỗng + gợi ý "Xóa Lọc"', document.getElementById('qc-table-body').innerHTML.includes('Không có dòng nào khớp'));
+state.qcSearchQ = '';
+qc.renderQcTable(); qc.renderQcSearch();
 
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed > 0 ? 1 : 0);

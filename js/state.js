@@ -26,6 +26,8 @@
   const STORAGE_KEY_HR_ATTENDANCE = 'bamboo_tracker_hr_attendance_v1';
   // Giờ nạp từ máy chấm công (Excel): 1 bản ghi / NV / ngày {in, out, punches}
   const STORAGE_KEY_HR_CHECKINS   = 'bamboo_tracker_hr_checkins_v1';
+  // Lịch sử sửa đổi (audit log): ai đã sửa gì, ở tab nào, lúc nào — chỉ Admin xem được
+  const STORAGE_KEY_HISTORY = 'bamboo_tracker_history_v1';
 
   const STAGES = {
     say1:     { id: 'say1',     name: '1. Sấy 1',        short: 'Sấy 1',    next: 'say2'     },
@@ -78,6 +80,11 @@
     hrAttMonth: '',    // tháng đang xem của thống kê đi làm ('YYYY-MM')
     hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
     qcExports: [],
+    // Bộ lọc hợp nhất trong thẻ Xuất Hàng (tab QC): năm ('all' = tất cả) +
+    // chips tuần (mảng rỗng = tất cả) + từ khóa tìm kiếm theo tên sản phẩm
+    qcSumYear: 'all',
+    qcSumWeeks: [],
+    qcSearchQ: '',
     materialActiveLoc: 'all', // 'all' | 'lo-hoi' | 'xuong-1' | 'xuong-2'
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
@@ -91,13 +98,13 @@
     materialPlanChartWeek: '',      // tuần đang xem của biểu đồ Kế hoạch vs Thực tế ('2026-W36')
     materialPlanChartInstance: null, // instance Chart.js của biểu đồ kế hoạch vs thực tế
     // Biểu đồ tĩnh Kế Hoạch vs Đã Ép (Dashboard)
-    planVsPressUnit: 'vol',     // 'vol' = m³ (mặc định) | 'qty' = tấm — chỉ đổi SỐ hiển thị, chiều cao cột luôn theo m³
+    planVsPressUnit: 'vol',     // 'vol' = m³ (mặc định) | 'qty' = Số lượng — chỉ đổi SỐ hiển thị, chiều cao cột luôn theo m³
     planVsPressYear: 'current', // 'current' = năm hiện tại | 'all' | năm cụ thể (VD '2026')
     planVsPressWeek: 'current', // 'current' = tuần hiện tại | 'all' | số tuần (1..53)
     planVsPressInstance: null,
     planCapacityInstance: null,
     planCapYear: 'current',     // 'current' = năm hiện tại | năm cụ thể (VD '2026') — RIÊNG của biểu đồ khả năng đáp ứng
-    planCapStartIdx: null,      // vị trí bắt đầu cửa sổ tuần trong danh sách tuần có kế hoạch (null = mặc định tuần hiện tại)
+    planCapStartIdx: null,      // vị trí tuần bắt đầu cửa sổ trong khoảng tuần liên tục (mỗi bước ◀/▶ = 1 tuần, cửa sổ tối đa 2 tuần; null = mặc định tuần hiện tại)
     // Bộ lọc theo từng cột Kanban (multi-select)
     // Mỗi stage: { dates: [], locations: [], dimensions: [], quantities: [] }
     columnFilters: {
@@ -108,6 +115,8 @@
     },
     // Lịch sử thao tác để hoàn tác (undo) khi nhập sai
     undoStack: [],
+    // Lịch sử sửa đổi (audit log) — tối đa HISTORY_LIMIT dòng gần nhất, chỉ Admin xem được
+    history: [],
     // Chế độ chọn nhiều lô để chuyển công đoạn cùng lúc
     multiTransferMode: false,
     multiSelectedIds: [],
@@ -125,6 +134,7 @@ export {
   STAGES,
   STORAGE_KEY_CUSTOM_CHARTS,
   STORAGE_KEY_DATA,
+  STORAGE_KEY_HISTORY,
   STORAGE_KEY_MATERIAL_PLAN,
   STORAGE_KEY_MATERIAL_RATES,
   STORAGE_KEY_MATERIALS,

@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide } from './cloud.js';
 import { renderCustomCharts } from './dashboard.js';
+import { logDataChange } from './history.js';
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
@@ -800,6 +801,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
   function saveCustomCharts() {
     localStorage.setItem(STORAGE_KEY_CUSTOM_CHARTS, JSON.stringify(state.customCharts));
+    logDataChange(['customCharts']); // lịch sử sửa đổi (tab Dashboard)
     // Đồng thời ghi vào file nếu đã kết nối thư mục dữ liệu
     if (state.fileStorage.connected) {
       writeDataToFile();

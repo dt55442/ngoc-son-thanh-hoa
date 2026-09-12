@@ -11,6 +11,7 @@
 // (firePushSync), và là nguồn 'materials' cho biểu đồ Dashboard.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { logDataChange } from './history.js';
 import { dataUrlToBlob, deletePhotos, getPhotoURL, photosAvailable, putPhoto } from './photo-store.js';
 import { STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIALS, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWinSize } from './utils.js';
@@ -137,6 +138,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
       // Quota vượt / trình duyệt chặn: dữ liệu vẫn còn trong state + file/mây
       showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu sẽ thử ghi qua file/mây.', 'error');
     }
+    // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa lần nhập nào)
+    logDataChange(['materialRecords']);
     // Ghi file bamboo_data.json NGAY LẶP TỨC (không đợi saveData của lô hàng):
     // nếu không, file luôn cũ hơn localStorage và khi mở trang sẽ "tua ngược" dữ liệu.
     // (import động — trước đây gọi thẳng writeDataToFile gây ReferenceError và
@@ -167,6 +170,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     } catch (err) {
       showToast('Không lưu được kế hoạch vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu vẫn còn trên màn hình.', 'error');
     }
+    logDataChange(['materialPlan']);
     firePushSync();
   }
 
@@ -232,6 +236,61 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     sel.value = state.materialPlanYear;
   }
 
+  // Ô chọn tuần tùy chỉnh cạnh nút "Thêm Tuần": liệt kê Tuần 1..N của năm
+  // đang lọc, tuần đã có trong kế hoạch được đánh dấu "(đã có)".
+  // Mặc định trỏ tới tuần tiếp theo sau tuần cuối đang có (giữ hành vi cũ).
+  function defaultMaterialPlanWeekKey() {
+    const year = state.materialPlanYear || String(new Date().getFullYear());
+    const total = isoWeeksInYear(year);
+    const existingNums = Object.keys(state.materialPlan || {})
+      .filter((wk) => wk.startsWith(`${year}-W`))
+      .map((wk) => parseInt(wk.split('-W')[1], 10))
+      .filter((n) => Number.isFinite(n));
+    const existingSet = new Set(existingNums);
+    if (existingNums.length === 0) {
+      const cur = currentPlanWeekKey();
+      if (cur.startsWith(`${year}-W`) && !existingSet.has(parseInt(cur.split('-W')[1], 10))) return cur;
+      return `${year}-W01`;
+    }
+    const maxWeek = Math.max(...existingNums);
+    if (maxWeek < total && !existingSet.has(maxWeek + 1)) {
+      return `${year}-W${String(maxWeek + 1).padStart(2, '0')}`;
+    }
+    for (let w = 1; w <= total; w++) {
+      if (!existingSet.has(w)) return `${year}-W${String(w).padStart(2, '0')}`;
+    }
+    return `${year}-W${String(maxWeek).padStart(2, '0')}`;
+  }
+
+  function renderMaterialPlanWeekSelect() {
+    const sel = document.getElementById('material-plan-week');
+    if (!sel) return;
+    const prevVal = sel.value ? String(sel.value) : '';
+    const year = state.materialPlanYear || String(new Date().getFullYear());
+    const total = isoWeeksInYear(year);
+    const existingSet = new Set(
+      Object.keys(state.materialPlan || {})
+        .filter((wk) => wk.startsWith(`${year}-W`))
+        .map((wk) => parseInt(wk.split('-W')[1], 10))
+    );
+    const curWeek = currentPlanWeekKey();
+    let html = '';
+    for (let w = 1; w <= total; w++) {
+      const key = `${year}-W${String(w).padStart(2, '0')}`;
+      const existed = existingSet.has(w);
+      const range = planWeekRangeLabel(key);
+      const curMark = key === curWeek ? ' · tuần này' : '';
+      html += `<option value="${key}"${existed ? ' data-existed="1"' : ''}>Tuần ${w}${existed ? ' (đã có)' : ''} · ${range}${curMark}</option>`;
+    }
+    sel.innerHTML = html;
+    // Giữ lựa chọn cũ của người dùng nếu vẫn thuộc năm đang lọc; ngược lại
+    // mặc định trỏ tới tuần tiếp theo (giữ hành vi cũ của nút Thêm Tuần).
+    const stillValid = prevVal && prevVal.startsWith(`${year}-W`);
+    sel.value = stillValid ? prevVal : defaultMaterialPlanWeekKey();
+    try { sel.disabled = !canEditMaterials(); } catch (e) { /* bỏ qua */ }
+    sel.title = 'Chọn tuần muốn thêm vào kế hoạch rồi bấm Thêm Tuần';
+  }
+
   // Các tuần cần hiển thị của năm đang chọn: tuần có dữ liệu + luôn có tuần hiện tại
   function planWeeksToShow() {
     const year = state.materialPlanYear || String(new Date().getFullYear());
@@ -251,6 +310,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
 
   function renderMaterialPlanTable() {
     renderMaterialPlanYearFilter();
+    renderMaterialPlanWeekSelect();
     const tbody = document.getElementById('material-plan-body');
     if (!tbody) return;
     const editable = canEditMaterials();
@@ -305,30 +365,41 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     initLucide();
   }
 
-  // Thêm 1 tuần kế hoạch: tuần kế tiếp sau tuần cuối đang có (bảng trống -> tuần hiện tại).
-  // Hết tuần của năm -> tự chuyển sang tuần 1 năm sau (kèm đổi bộ lọc năm).
-  function addMaterialPlanWeek() {
+  // Thêm 1 tuần kế hoạch theo tuần người dùng CHỌN trong ô "Tuần"
+  // (mặc định ô này đã trỏ tới tuần kế tiếp sau tuần cuối đang có nên
+  // vẫn giữ hành vi cũ khi người dùng chỉ bấm Thêm Tuần).
+  // Tuần đã có -> báo đã có; trống -> thêm. Hết tuần của năm -> báo hết.
+  function addMaterialPlanWeek(weekKey) {
     if (!canEditMaterials()) return;
     const year = state.materialPlanYear || String(new Date().getFullYear());
-    const existing = Object.keys(state.materialPlan || {}).filter((wk) => wk.startsWith(`${year}-W`));
-    let nextKey;
-    if (existing.length === 0) {
-      nextKey = currentPlanWeekKey().startsWith(`${year}-W`) ? currentPlanWeekKey() : `${year}-W01`;
-    } else {
-      const maxWeek = Math.max(...existing.map((wk) => parseInt(wk.split('-W')[1], 10)));
-      if (maxWeek >= isoWeeksInYear(year)) {
-        const nextYear = String(parseInt(year, 10) + 1);
-        nextKey = `${nextYear}-W01`;
-        state.materialPlanYear = nextYear;
-      } else {
-        nextKey = `${year}-W${String(maxWeek + 1).padStart(2, '0')}`;
-      }
+    let targetKey = typeof weekKey === 'string' && weekKey ? weekKey.trim() : '';
+    if (!targetKey) {
+      const sel = document.getElementById('material-plan-week');
+      targetKey = sel && sel.value ? String(sel.value) : defaultMaterialPlanWeekKey();
     }
+    const m = /^(\d{4})-W(\d{1,2})$/.exec(targetKey);
+    if (!m) {
+      showToast('Tuần chọn không hợp lệ!', 'error');
+      return;
+    }
+    // Nếu chọn tuần thuộc năm khác -> tự chuyển bộ lọc năm theo tuần đó.
+    if (m[1] !== year) state.materialPlanYear = m[1];
     if (!state.materialPlan) state.materialPlan = {};
-    if (!state.materialPlan[nextKey]) state.materialPlan[nextKey] = {};
+    if (state.materialPlan[targetKey]) {
+      renderMaterialPlanTable();
+      showToast(`${friendlyMaterialWeek(targetKey)} đã có trong kế hoạch!`, 'info');
+      return;
+    }
+    const total = isoWeeksInYear(m[1]);
+    const wn = parseInt(m[2], 10);
+    if (wn < 1 || wn > total) {
+      showToast(`Năm ${m[1]} chỉ có ${total} tuần ISO!`, 'error');
+      return;
+    }
+    state.materialPlan[targetKey] = {};
     saveMaterialPlan();
     renderMaterialPlanTable();
-    showToast(`Đã thêm ${friendlyMaterialWeek(nextKey)} vào kế hoạch!`, 'success');
+    showToast(`Đã thêm ${friendlyMaterialWeek(targetKey)} vào kế hoạch!`, 'success');
   }
 
   function removeMaterialPlanWeek(weekKey) {
@@ -651,9 +722,69 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     }
   };
 
+  // ── Plugin nhãn & gióng KẾ HOẠCH của biểu đồ Kế Hoạch vs Thực Tế NL ──
+  //  • Cột THỰC TẾ (dataset lẻ)      → vẽ số trên đỉnh cột đặc
+  //  • Cột KẾ HOẠCH (dataset chẵn)   → KHÔNG vẽ số; vẽ đường gióng NÉT ĐỨT
+  //    từ đỉnh cột KH (cột vỏ) chạy ngang SANG TRỤC Y — người dùng đọc giá
+  //    trị kế hoạch theo vạch chia tấn trên trục. Đường gióng vẽ Ở DƯỚI cột
+  //    (beforeDatasetsDraw) để không che số liệu.
+  const mpLabelsGuidePlugin = {
+    id: 'mpLabelsGuide',
+    // Đường gióng nét đứt của cột KẾ HOẠCH (nằm dưới mọi cột)
+    beforeDatasetsDraw(chart) {
+      const area = chart.chartArea;
+      if (!area) return;
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds, dIdx) => {
+        if (dIdx % 2 !== 0) return; // chỉ cột Kế hoạch (dataset chẵn)
+        const meta = chart.getDatasetMeta(dIdx);
+        if (!meta || !meta.data) return;
+        const color = ds.borderColor || '#64748b';
+        meta.data.forEach((bar, i) => {
+          const v = Number(ds.data[i]);
+          if (!Number.isFinite(v) || v <= 0) return;
+          const colLeft = bar.x - (bar.width || 0) / 2;
+          if (colLeft - area.left < 6) return; // cột sát trục — không còn chỗ gióng
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([4, 3]);
+          ctx.strokeStyle = color;
+          ctx.globalAlpha = 0.55;
+          ctx.lineWidth = 1;
+          ctx.moveTo(area.left, bar.y);
+          ctx.lineTo(colLeft, bar.y);
+          ctx.stroke();
+          ctx.restore();
+        });
+      });
+    },
+    // Số THỰC TẾ trên đỉnh cột đặc (nằm trên cùng)
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds, dIdx) => {
+        if (dIdx % 2 !== 1) return; // chỉ cột Thực tế (dataset lẻ)
+        const meta = chart.getDatasetMeta(dIdx);
+        if (!meta || !meta.data) return;
+        meta.data.forEach((bar, i) => {
+          const v = Number(ds.data[i]) || 0;
+          if (v <= 0) return;
+          ctx.save();
+          ctx.font = 'bold 10px "Inter", system-ui, -apple-system, "Segoe UI", sans-serif';
+          ctx.fillStyle = '#1e293b';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(v.toLocaleString('vi-VN'), bar.x, bar.y - 4);
+          ctx.restore();
+        });
+      });
+    }
+  };
+
   // Vẽ biểu đồ cột lồng: 7 ngày × 3 vị trí.
   // VỎ (viền đậm + nền nhạt) = kế hoạch TB/ngày của tuần (bảng kế hoạch trên).
   // CỘT ĐẶC bên trong = thực tế nhập trong ngày (tổng trọng lượng nhật ký).
+  // SỐ TRÊN CỘT: chỉ cột Thực tế có số; cột Kế hoạch KHÔNG vẽ số — thay bằng
+  // đường gióng NÉT ĐỨT từ đỉnh cột KH chạy sang trục Y (đọc giá trị theo vạch tấn).
   // Kỹ thuật: mỗi vị trí là 1 dataset có grouped:false (các dataset CHỒNG lên
   // nhau tại mỗi nhãn); điền null xen kẽ để 3 cặp vỏ+lấp đứng cạnh nhau:
   // nhãn = [T2,T2,T2,T3,T3,T3,...] (21 nhãn), mỗi vị trí chiếm các cột
@@ -714,7 +845,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
 
     const cfg = {
       type: 'bar',
-      plugins: [mpAxisBandPlugin, mpYTitlePlugin],
+      plugins: [mpAxisBandPlugin, mpYTitlePlugin, mpLabelsGuidePlugin],
       data: { labels: viewLabels, datasets: viewDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
@@ -724,6 +855,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         plugins: {
           mpAxisBands: { dayGroups, weekGroups },
           mpYTitle: { text: 'Tấn' },
+          // Tắt plugin số tự động (bambooDataLabels) — số THỰC TẾ & đường gióng
+          // KẾ HOẠCH do mpLabelsGuidePlugin vẽ riêng (KH không vẽ số)
+          bambooDataLabels: false,
           legend: {
             position: 'bottom',
             labels: {
@@ -1331,6 +1465,7 @@ export {
   closeMaterialModal,
   closeMaterialPhotoModal,
   compressImageFile,
+  defaultMaterialPlanWeekKey,
   deleteMaterial,
   friendlyMaterialWeek,
   handleMaterialImageSelect,
@@ -1359,6 +1494,7 @@ export {
   renderMaterialKpiFilter,
   renderMaterialPlanChart,
   renderMaterialPlanTable,
+  renderMaterialPlanWeekSelect,
   renderMaterialStats,
   renderMaterialTable,
   renderMaterialTabs,

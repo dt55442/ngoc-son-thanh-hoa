@@ -15,6 +15,7 @@
 // Lưu localStorage + đồng bộ mây (firePushSync) như các tab khác.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { logDataChange } from './history.js';
 import { canViewAdvanced } from './permissions.js';
 import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
@@ -51,6 +52,8 @@ import { escapeHTML, showToast } from './utils.js';
     localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || []));
     localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || []));
     localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || []));
+    // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa mục Nhân Sự nào)
+    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositions', 'hrAttendance', 'hrCheckins']);
     firePushSync(); // đồng bộ lên mây nếu online
   }
 

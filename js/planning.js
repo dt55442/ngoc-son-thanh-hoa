@@ -2,6 +2,7 @@
 // js/planning.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { logDataChange } from './history.js';
 import { getDateYear, getPressedQtyForPlan, pressRecordWeek } from './press.js';
 import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, state } from './state.js';
 import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from './utils.js';
@@ -22,6 +23,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
   function saveMaterialRates() {
     localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates));
+    logDataChange(['materialRates']);
     firePushSync();
   }
 
@@ -38,6 +40,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
   function savePlanningItems() {
     localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems));
+    logDataChange(['planningItems']);
     firePushSync();
   }
 
@@ -53,6 +56,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
   function savePlanningForecast() {
     localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast));
+    logDataChange(['planningForecast']);
     firePushSync();
   }
 
@@ -68,6 +72,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
 
   function savePlanningStock() {
     localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock));
+    logDataChange(['planningStock']);
     firePushSync();
   }
 
@@ -1195,7 +1200,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   // Áp dụng chung cho: 2 bảng định mức (Kế hoạch), danh sách lượt ép (Sản lượng ép),
   // nhật ký nhập nguyên liệu (Nguyên liệu). Trạng thái lưu localStorage, nhớ từng thẻ.
   const RATE_COLLAPSE_KEY = 'bamboo_tracker_rate_collapse_v1';
-  const COLLAPSE_CARDS = ['rate-main-card', 'press-table-card', 'material-table-card', 'material-plan-card', 'qc-table-card'];
+  const COLLAPSE_CARDS = ['rate-main-card', 'press-table-card', 'material-table-card', 'material-plan-card', 'qc-export-card'];
   function saveRateCollapseState() {
     try {
       const data = {};

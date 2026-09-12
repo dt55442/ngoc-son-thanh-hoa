@@ -1,15 +1,18 @@
 // ═══════════════════════════════════════════════════════════
-// js/qc.js — Tab QC — BẢNG XUẤT HÀNG
-// Ghi nhận hàng xuất theo tuần:
-//   - Tên hàng: lấy từ danh sách thành phẩm trong Kế Hoạch Sản Xuất
-//     (có nút "thêm thành phẩm ngoài danh sách" khi nhập dòng mới).
-//   - Tuần: chọn nhanh áp dụng cho CẢ DANH SÁCH (toolbar) hoặc từng dòng.
-//   - Số lượng xuất & Ghi chú: sửa trực tiếp trên bảng.
+// js/qc.js — Tab QC — MODULE THẺ (launcher) + BẢNG XUẤT HÀNG
+// Cấu trúc giống tab Nhân Sự: lưới thẻ nhỏ (Xuất Hàng / Kiểm Đầu Vào /
+// Kiểm Sau Sản Xuất); bấm thẻ mở bảng chi tiết dạng pop-up.
+// Module Xuất Hàng = bảng xuất theo tuần với ĐẦY ĐỦ nút chức năng ngay
+// trong thẻ: thêm dòng, tìm kiếm, lọc Năm + Tuần (chips), xóa lọc, KPI.
+//   - Khi chọn bộ lọc / gõ tìm kiếm → bảng CHỈ hiển thị kết quả khớp.
+//   - Tuần (đầu vào) đã nhập là KHÓA — hiển thị badge chỉ đọc, không sửa.
+//   - Tên hàng lấy từ thành phẩm trong Kế Hoạch Sản Xuất.
 // Dữ liệu state.qcExports: [{ id, productId, name, week 'Tuần 34', year, qty, note, createdAt, updatedAt }]
 // Lưu localStorage + đồng bộ mây (firePushSync); là nguồn dữ liệu
 // cột "Số Lượng Xuất" trong biểu đồ Kế Hoạch vs Đã Ép (press.js).
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { logDataChange } from './history.js';
 import { canEditTab } from './permissions.js';
 import { restoreRateTableCollapse } from './planning.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
@@ -98,36 +101,71 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
 
   function saveQcExports() {
     localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || []));
+    logDataChange(['qcExports']);
     firePushSync();
   }
 
   // ─── RENDER ──────────────────────────────────────────────────
-    function renderQcView() {
+  function renderQcView() {
     restoreRateTableCollapse(); // nhớ trạng thái thu gọn bảng xuất hàng
     renderQcSummary();
     renderQcTable();
-    renderQcSearch(); // giữ kết quả tìm kiếm theo từ khóa đang gõ
+    renderQcSearch(); // dải kết quả lọc theo từ khóa / bộ lọc đang chọn
+    updateQcCardGrid(); // đếm số liệu trên các thẻ launcher
+    syncQcMiniActive(); // highlight thẻ đang mở
     initLucide();
   }
 
-  // ─── THẺ TỔNG HỢP XUẤT HÀNG (lọc Năm + chọn 1/nhiều Tuần) ────
-  // state.qcSumYear  : năm đang xem (mặc định năm hiện tại)
+  // ─── BỘ LỌC HỢP NHẤT (dùng chung cho bảng + KPI + dải kết quả) ─
+  // state.qcSumYear  : 'all' = tất cả các năm, hoặc '2026'...
   // state.qcSumWeeks : danh sách tuần đã chọn — RỖNG = tất cả các tuần
-  function renderQcSummary() {
-    if (state.qcSumYear == null || !qcYearList().includes(String(state.qcSumYear))) {
-      state.qcSumYear = String(qcCurrentYear());
+  // state.qcSearchQ  : từ khóa tìm kiếm theo tên sản phẩm ('' = không lọc)
+  function qcNormSumState() {
+    if (state.qcSumYear == null || (state.qcSumYear !== 'all' && !qcYearList().includes(String(state.qcSumYear)))) {
+      state.qcSumYear = 'all';
     }
     if (!Array.isArray(state.qcSumWeeks)) state.qcSumWeeks = [];
+    if (state.qcSearchQ == null) state.qcSearchQ = '';
+  }
+
+  // Đang bật bộ lọc nào đó không (năm cụ thể / chips tuần / từ khóa)?
+  function isQcFilterActive() {
+    qcNormSumState();
+    return state.qcSumYear !== 'all'
+      || (state.qcSumWeeks || []).length > 0
+      || String(state.qcSearchQ || '').trim() !== '';
+  }
+
+  // Danh sách dòng ĐANG HIỂN THỊ = dữ liệu lọc qua năm + tuần + từ khóa.
+  // Khi không chọn gì → toàn bộ dòng xuất (mọi năm, mọi tuần).
+  function qcFilteredRows() {
+    qcNormSumState();
+    const yearStr = String(state.qcSumYear);
+    const weeks = state.qcSumWeeks || [];
+    const q = qcStripForSearch(state.qcSearchQ || '');
+    return (state.qcExports || []).filter(r =>
+      (yearStr === 'all' || String(r.year ?? '') === yearStr) &&
+      (weeks.length === 0 || weeks.includes(parseWeekNum(r.week))) &&
+      (!q || qcStripForSearch(qcRowName(r)).includes(q))
+    );
+  }
+
+  // ─── THẺ TỔNG HỢP XUẤT HÀNG (trong thẻ Xuất Hàng: lọc Năm + chips Tuần) ──
+  function renderQcSummary() {
+    qcNormSumState();
     const yearStr = String(state.qcSumYear);
 
     const yearSel = document.getElementById('qc-sum-year');
     if (yearSel) {
-      yearSel.innerHTML = qcYearList()
-        .map(y => `<option value="${y}"${y === yearStr ? ' selected' : ''}>Năm ${y}</option>`).join('');
+      const opts = [`<option value="all"${yearStr === 'all' ? ' selected' : ''}>Tất cả các năm</option>`];
+      qcYearList().forEach(y => opts.push(`<option value="${y}"${y === yearStr ? ' selected' : ''}>Năm ${y}</option>`));
+      yearSel.innerHTML = opts.join('');
     }
 
-    // Chip tuần: các tuần CÓ dữ liệu trong năm đang chọn (sắp tăng) + chip "Tất cả"
-    const rowsOfYear = (state.qcExports || []).filter(r => String(r.year) === yearStr);
+    // Chip tuần: các tuần CÓ dữ liệu trong phạm vi năm đang chọn (sắp tăng) + chip "Tất cả"
+    const rowsOfYear = yearStr === 'all'
+      ? (state.qcExports || [])
+      : (state.qcExports || []).filter(r => String(r.year) === yearStr);
     const weeks = [...new Set(rowsOfYear.map(r => parseWeekNum(r.week)).filter(Boolean))].sort((a, b) => a - b);
     const chipsEl = document.getElementById('qc-sum-weeks');
     if (chipsEl) {
@@ -137,8 +175,8 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
         weeks.map(w => `<button type="button" class="qc-sum-chip${state.qcSumWeeks.includes(w) ? ' active' : ''}" data-qc-sum-week="${w}">Tuần ${w}</button>`).join('');
     }
 
-    // KPI: lọc theo năm + các tuần đã chọn (không chọn tuần nào = tất cả)
-    const rows = rowsOfYear.filter(r => state.qcSumWeeks.length === 0 || state.qcSumWeeks.includes(parseWeekNum(r.week)));
+    // KPI: tính trên đúng tập kết quả đang lọc (năm + tuần + từ khóa)
+    const rows = qcFilteredRows();
     const totalQty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
     const totalVol = rows.reduce((a, r) => a + qcRowVolume(r), 0);
     const qtyEl = document.getElementById('qc-sum-qty');
@@ -150,23 +188,24 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     initLucide();
   }
 
-  // ─── RENDER ──────────────────────────────────────────────────
+  // ─── BẢNG XUẤT HÀNG (chỉ hiển thị kết quả khớp bộ lọc/tìm kiếm) ────
   function renderQcTable() {
     const tbody = document.getElementById('qc-table-body');
     if (!tbody) return;
     const canEdit = canEditTab('qc');
     const dis = canEdit ? '' : 'disabled';
-    const rows = state.qcExports || [];
+    const rows = qcFilteredRows(); // CHỈ dòng khớp bộ lọc / từ khóa
+    const allCount = (state.qcExports || []).length;
 
     if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px 12px; color:var(--text-muted); font-size:0.85rem;">
-        Chưa có dòng xuất hàng nào — bấm <strong>+ Thêm Dòng Xuất</strong> để bắt đầu.
+        ${allCount
+          ? 'Không có dòng nào khớp bộ lọc / từ khóa — bấm <strong>Xóa Lọc</strong> để hiện tất cả.'
+          : 'Chưa có dòng xuất hàng nào — bấm <strong>+ Thêm Dòng Xuất</strong> để bắt đầu.'}
       </td></tr>`;
     } else {
       tbody.innerHTML = rows.map(row => {
         const weekNum = parseWeekNum(row.week);
-        const weekOpts = Array.from({ length: 53 }, (_, i) => i + 1)
-          .map(w => `<option value="${w}"${w === weekNum ? ' selected' : ''}>Tuần ${w}</option>`).join('');
         const isCustom = !row.productId;
         return `
           <tr>
@@ -175,10 +214,8 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
               ${isCustom ? '<span class="qc-custom-badge" title="Thành phẩm thêm ngoài danh sách kế hoạch">ngoài kế hoạch</span>' : ''}
             </td>
             <td style="width:110px;">
-              <select class="qc-row-input qc-row-week" data-qc-id="${row.id}" data-qc-field="week" ${dis} title="Năm ${row.year || qcCurrentYear()} — chọn tuần xuất">
-                <option value="">--</option>
-                ${weekOpts}
-              </select>
+              <span class="qc-week-badge" title="Tuần xuất đã nhập đầu vào — không cần sửa">${weekNum ? `Tuần ${weekNum}` : '—'}</span>
+              <div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">${row.year || qcCurrentYear()}</div>
             </td>
             <td style="width:120px;">
               <input type="number" min="0" step="1" class="qc-row-input qc-row-qty" data-qc-id="${row.id}" data-qc-field="qty" value="${Number(row.qty) || ''}" placeholder="0" ${dis}>
@@ -194,23 +231,30 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       }).join('');
     }
 
-    // Dòng TỔNG CỘNG đặt TRÊN CÙNG bảng (toàn bộ dòng — tổng hợp theo bộ lọc xem thẻ phía trên)
+    // Dòng TỔNG CỘNG đặt TRÊN CÙNG bảng — tính trên đúng tập đang lọc
     const totalQty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
     const totalVol = rows.reduce((a, r) => a + qcRowVolume(r), 0);
+    const filtered = isQcFilterActive();
     const totalBody = document.getElementById('qc-table-total');
     if (totalBody) {
       totalBody.innerHTML = `<tr class="qc-total-row">
-        <td colspan="2"><i data-lucide="sigma" style="width:13px;height:13px;"></i> <strong>Tổng cộng (tất cả)</strong> — ${rows.length} dòng</td>
+        <td colspan="2"><i data-lucide="sigma" style="width:13px;height:13px;"></i> <strong>${filtered ? 'Tổng cộng (bộ lọc)' : 'Tổng cộng (tất cả)'}</strong> — ${rows.length}/${allCount} dòng</td>
         <td class="text-right"><strong>${totalQty.toLocaleString('vi-VN')}</strong></td>
         <td class="text-right"><strong>${qcFmtVol(totalVol)}</strong></td>
         <td colspan="2"></td>
       </tr>`;
     }
+    // Nhãn đếm kết quả ngay trên toolbar
+    const cnt = document.getElementById('qc-filter-count');
+    if (cnt) {
+      cnt.textContent = filtered ? `Hiện ${rows.length}/${allCount} dòng` : `${allCount} dòng`;
+    }
   }
 
   // Cập nhật dòng Tổng (trên đầu bảng) + ô thể tích mà không vẽ lại bảng (giữ focus)
+  // — tính trên đúng tập dòng đang lọc.
   function refreshQcTotal() {
-    const rows = state.qcExports || [];
+    const rows = qcFilteredRows();
     const totalQty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
     const totalVol = rows.reduce((a, r) => a + qcRowVolume(r), 0);
     const totalBody = document.getElementById('qc-table-total');
@@ -223,6 +267,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       const cell = document.querySelector(`td[data-qc-vol="${r.id}"]`);
       if (cell) cell.textContent = qcFmtVol(qcRowVolume(r));
     });
+    renderQcSummary(); // KPI thẻ tổng hợp thay theo
   }
 
   // ─── SỬA TRỰC TIẾP TRÊN BẢNG ────────────────────────────────
@@ -243,7 +288,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     saveQcExports();
     if (field === 'week') renderQcTable(); // dòng có thể ra/vào bộ lọc → vẽ lại bảng
     else refreshQcTotal(); // chỉ cập nhật tổng + ô thể tích (giữ focus khi đang gõ)
-    renderQcSummary(); // KPI thẻ tổng hợp thay theo
+    renderQcSearch(); // dải kết quả lọc thay theo
   }
 
   function deleteQcExport(id) {
@@ -255,6 +300,8 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     saveQcExports();
     renderQcTable();
     renderQcSummary();
+    renderQcSearch();
+    updateQcCardGrid();
     initLucide();
     showToast('Đã xóa dòng xuất hàng', 'info');
   }
@@ -341,6 +388,18 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
   function qcImpRemoveRow(key) {
     qcImpRows = qcImpRows.filter(r => r.key !== key);
     renderQcImpRows();
+  }
+
+  // events.js ủy quyền tick / điền số lượng từ danh sách soạn (qcImpRows là
+  // trạng thái riêng của module — phải cập nhật qua các hàm này, không tham
+  // chiếu trực tiếp được vì ES-module import là read-only)
+  function qcImpSetChecked(key, checked) {
+    const row = qcImpRows.find(r => r.key === key);
+    if (row) { row.checked = checked !== false; qcImpFooterInfo(); }
+  }
+  function qcImpSetQty(key, value) {
+    const row = qcImpRows.find(r => r.key === key);
+    if (row) { row.qty = Math.max(0, parseInt(value, 10) || 0); qcImpFooterInfo(); }
   }
 
   function qcImpLoadPlan(keepQty = true) {
@@ -461,87 +520,160 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     renderQcTable();
     renderQcSummary();
     renderQcSearch();
+    updateQcCardGrid();
     initLucide();
     showToast(`Đã tạo ${picked.length} dòng xuất (tổng ${totalQty.toLocaleString('vi-VN')} tấm) — Tuần ${weekNum}/${yearVal}!`, 'success');
   }
 
-  // ─── TÌM KIẾM LỊCH SỬ XUẤT HÀNG SẢN PHẨM ─────────────────────
-  // Gộp các dòng xuất THEO TÊN sản phẩm: tổng số lượng + thể tích quy đổi.
+  // ─── TÌM KIẾM / DẢI KẾT QUẢ LỌC ─────────────────────────────
+  // Chuẩn hóa chuỗi tìm kiếm: bỏ dấu tiếng Việt + lowercase (không phân biệt dấu).
   function qcStripForSearch(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
   }
+  // Dải thông tin kết quả lọc: hiện khi đang lọc năm/tuần hoặc gõ từ khóa —
+  // tổng hợp số dòng / số lượng / thể tích của ĐÚNG tập kết quả đang hiển thị.
   function renderQcSearch() {
-    const box = document.getElementById('qc-search-results');
+    const box = document.getElementById('qc-filter-info');
     if (!box) return;
-    const qRaw = String(document.getElementById('qc-search-input')?.value || '').trim();
-    const rows = state.qcExports || [];
-    if (!rows.length) {
-      box.innerHTML = `<div class="text-muted" style="padding:10px 16px; font-size:0.8rem;">Chưa có dòng xuất hàng nào.</div>`;
+    qcNormSumState();
+    const qRaw = String(state.qcSearchQ || '').trim();
+    const rows = qcFilteredRows();
+    const allCount = (state.qcExports || []).length;
+    if (!isQcFilterActive()) {
+      box.style.display = 'none';
+      box.innerHTML = '';
       return;
     }
-    if (!qRaw) {
-      box.innerHTML = `<div class="text-muted" style="padding:10px 16px; font-size:0.8rem;">Gõ tên sản phẩm (một phần cũng được) để xem tổng hợp lịch sử xuất hàng.</div>`;
-      return;
+    const totalQty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
+    const totalVol = rows.reduce((a, r) => a + qcRowVolume(r), 0);
+    const parts = [];
+    if (state.qcSumYear !== 'all') parts.push(`Năm <strong>${escapeHTML(state.qcSumYear)}</strong>`);
+    if ((state.qcSumWeeks || []).length) {
+      const ws = [...state.qcSumWeeks].sort((a, b) => a - b).map(w => `Tuần ${w}`).join(', ');
+      parts.push(`Tuần <strong>${ws}</strong>`);
     }
-    const q = qcStripForSearch(qRaw);
-    const groups = {};
-    rows.forEach(r => {
-      const name = qcRowName(r);
-      const g = groups[qcStripForSearch(name)] || (groups[qcStripForSearch(name)] = { name, rows: [] });
-      g.rows.push(r);
+    if (qRaw) parts.push(`khớp "<strong>${escapeHTML(qRaw)}</strong>"`);
+    box.style.display = '';
+    box.innerHTML = `<i data-lucide="filter"></i> Kết quả lọc ${parts.join(' · ')}: <strong>${rows.length}/${allCount}</strong> dòng · tổng <strong>${totalQty.toLocaleString('vi-VN')}</strong> tấm · ${qcFmtVol(totalVol)}`;
+    initLucide();
+  }
+
+  // ─── THẺ NÔI — LAUNCHER BẢNG QC (giống tab Nhân Sự) ─────────────
+  // Mỗi bảng QC là một thẻ nhỏ (qc-mini-card) trong lưới; bấm thẻ → bảng
+  // chi tiết nổi lên trong pop-up (qc-detail-overlay), bấm lại → thu về.
+  const QC_CARD_DEFS = {
+    'qc-export-card': { el: 'qc-mini-count-export', count: () => {
+      const rows = state.qcExports || [];
+      const qty = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0);
+      return rows.length ? `${rows.length} dòng · ${qty.toLocaleString('vi-VN')} tấm` : 'Chưa có';
+    } },
+    'qc-incoming-card': { el: 'qc-mini-count-incoming', count: () => 'Sắp có' },
+    'qc-final-card':    { el: 'qc-mini-count-final',    count: () => 'Sắp có' }
+  };
+
+  // Cập nhật số đếm trên các thẻ — gọi từ renderQcView sau khi có dữ liệu.
+  function updateQcCardGrid() {
+    Object.keys(QC_CARD_DEFS).forEach(cardId => {
+      try {
+        const el = document.getElementById(QC_CARD_DEFS[cardId].el);
+        if (el) el.textContent = String(QC_CARD_DEFS[cardId].count());
+      } catch (e) { /* không chặn render tab QC */ }
     });
-    const totalOf = g => g.rows.reduce((s, r) => s + (Number(r.qty) || 0), 0);
-    const matches = Object.values(groups).filter(g => qcStripForSearch(g.name).includes(q))
-      .sort((a, b) => totalOf(b) - totalOf(a));
-    if (!matches.length) {
-      box.innerHTML = `<div class="text-muted" style="padding:12px 16px; font-size:0.82rem;">Không tìm thấy sản phẩm nào khớp "<strong>${escapeHTML(qRaw)}</strong>" trong lịch sử xuất hàng.</div>`;
+  }
+
+  // Đồng bộ highlight thẻ với bảng đang mở (thẻ mở = không qc-card-hidden).
+  function syncQcMiniActive() {
+    let openId = null;
+    Object.keys(QC_CARD_DEFS).forEach(cardId => {
+      const c = document.getElementById(cardId);
+      if (c && !c.classList.contains('qc-card-hidden') && !c.classList.contains('rate-table-collapsed')) openId = cardId;
+    });
+    document.querySelectorAll('.qc-mini-card').forEach(t => {
+      const act = t.getAttribute('data-qc-card') === openId;
+      t.classList.toggle('qc-mini-active', act);
+      t.setAttribute('aria-expanded', act ? 'true' : 'false');
+    });
+  }
+
+  // Bảng chi tiết QC nổi lên dạng POP-UP (giống tab Nhân Sự): bấm thẻ →
+  // DOM node của bảng (giữ nguyên bảng + sự kiện) được chuyển vào modal
+  // overlay; bấm lại cùng thẻ / nút Đóng / bấm nền mờ → đóng, trả bảng về
+  // stack gốc (accordion: chỉ 1 bảng mở tại một thời điểm).
+  let openQcDetailCard = null;
+  // Đặt đỉnh pop-up ngay dưới header — header không bị che / làm mờ
+  function qcPositionDetailOverlay() {
+    const overlay = document.getElementById('qc-detail-overlay');
+    if (!overlay) return;
+    const header = document.querySelector('.app-header');
+    if (header && typeof header.getBoundingClientRect === 'function') {
+      const bottom = header.getBoundingClientRect().bottom;
+      if (bottom > 0) overlay.style.top = Math.round(bottom) + 'px';
+    }
+  }
+  function qcOpenCard(cardId) {
+    const card = document.getElementById(cardId);
+    if (!card) return false;
+    // Bấm lại thẻ đang mở → đóng popup (thu về dạng thu gọn)
+    if (openQcDetailCard === card) { qcCloseOpenCard(); return false; }
+    // Đóng bảng đang mở (nếu có) trước khi mở bảng mới (accordion)
+    if (openQcDetailCard) qcCloseOpenCard();
+    // Mở bảng: bỏ ẩn + chuyển DOM node vào trong modal overlay
+    card.classList.remove('qc-card-hidden');
+    card.classList.remove('rate-table-collapsed');
+    const content = document.getElementById('qc-detail-content');
+    if (content) content.appendChild(card);
+    openQcDetailCard = card;
+    const h4 = card.querySelector && card.querySelector('.planning-card-header h4');
+    const titleText = (h4 && typeof h4.textContent === 'string') ? h4.textContent.trim() : '';
+    const titleEl = document.getElementById('qc-detail-title');
+    if (titleEl) titleEl.textContent = titleText || 'Chi Tiết QC';
+    const overlay = document.getElementById('qc-detail-overlay');
+    if (overlay) {
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden', 'false');
+      qcPositionDetailOverlay();
+      if (typeof overlay.focus === 'function') overlay.focus({ preventScroll: true });
+    }
+    syncQcMiniActive();
+    initLucide();
+    return true;
+  }
+  function qcCloseOpenCard() {
+    const overlay = document.getElementById('qc-detail-overlay');
+    if (!openQcDetailCard) {
+      if (overlay) { overlay.classList.remove('show'); overlay.setAttribute('aria-hidden', 'true'); }
       return;
     }
-    box.innerHTML = matches.map(g => {
-      const totalQty = totalOf(g);
-      const totalVol = g.rows.reduce((s, r) => s + qcRowVolume(r), 0);
-      const weeks = [...new Set(g.rows.map(r => `${r.week || '—'}/${r.year || qcCurrentYear()}`))].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
-      const latest = [...g.rows].sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))[0];
-      return `<div class="qc-search-item">
-        <div class="qc-search-head">
-          <div class="qc-product-name">${escapeHTML(g.name)}</div>
-          <span class="qc-search-chip" title="Số dòng xuất">${g.rows.length} dòng</span>
-        </div>
-        <div class="qc-search-stats">
-          <span class="qc-search-stat" title="Tổng số lượng đã xuất"><i data-lucide="package"></i> Tổng SL: <strong>${totalQty.toLocaleString('vi-VN')}</strong> tấm</span>
-          <span class="qc-search-stat" title="Tổng thể tích quy đổi"><i data-lucide="boxes"></i> Tổng thể tích: <strong>${totalVol > 0 ? totalVol.toLocaleString('vi-VN', { maximumFractionDigits: 4 }) + ' m³' : '—'}</strong></span>
-          <span class="qc-search-stat" title="Tuần đã xuất"><i data-lucide="calendar-range"></i> ${weeks.length > 4 ? `${weeks.slice(0, 4).join(', ')} +${weeks.length - 4}` : weeks.join(', ')}</span>
-          <span class="qc-search-stat" title="Lần xuất gần nhất"><i data-lucide="clock"></i> Gần nhất: ${latest?.week || '—'}/${latest?.year || qcCurrentYear()} — ${(Number(latest?.qty) || 0).toLocaleString('vi-VN')} tấm</span>
-        </div>
-        <details class="qc-search-detail">
-          <summary>Xem ${g.rows.length} dòng chi tiết</summary>
-          <table class="qc-search-mini-table">
-            <thead><tr><th>Tuần</th><th class="text-right">Số Lượng</th><th class="text-right">Thể Tích</th><th>Ghi Chú</th></tr></thead>
-            <tbody>${[...g.rows].sort((a, b) => (parseWeekNum(b.week) || 0) - (parseWeekNum(a.week) || 0)).map(r => `<tr>
-              <td>${escapeHTML(r.week || '—')}/${r.year || qcCurrentYear()}</td>
-              <td class="text-right">${(Number(r.qty) || 0).toLocaleString('vi-VN')}</td>
-              <td class="text-right">${qcFmtVol(qcRowVolume(r))}</td>
-              <td>${escapeHTML(r.note || '—')}</td>
-            </tr>`).join('')}</tbody>
-          </table>
-        </details>
-      </div>`;
-    }).join('');
+    const card = openQcDetailCard;
+    const stack = document.getElementById('qc-details-stack');
+    if (stack) stack.appendChild(card); else document.getElementById('qc-view')?.appendChild(card);
+    card.classList.add('qc-card-hidden');
+    openQcDetailCard = null;
+    if (overlay) { overlay.classList.remove('show'); overlay.setAttribute('aria-hidden', 'true'); }
+    syncQcMiniActive();
     initLucide();
   }
 
 export {
+  QC_CARD_DEFS,
   closeQcExportModal,
   deleteQcExport,
   handleQcExportSubmit,
   hideQcCustomName,
+  isQcFilterActive,
   loadQcExports,
   onQcProductChange,
   openQcExportModal,
+  qcCloseOpenCard,
+  qcFilteredRows,
   qcImpAddCustom,
   qcImpFooterInfo,
   qcImpLoadPlan,
   qcImpRemoveRow,
+  qcImpSetChecked,
+  qcImpSetQty,
+  qcOpenCard,
+  qcPositionDetailOverlay,
   qcRowVolume,
   renderQcImpRows,
   renderQcSearch,
@@ -550,5 +682,7 @@ export {
   renderQcView,
   saveQcExports,
   showQcCustomName,
+  syncQcMiniActive,
+  updateQcCardGrid,
   updateQcExportRow
 };

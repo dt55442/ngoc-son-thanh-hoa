@@ -21,6 +21,13 @@
   const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
   const STORAGE_KEY_HR_LEAVES      = 'bamboo_tracker_hr_leaves_v1';
   const STORAGE_KEY_HR_RECRUITMENT = 'bamboo_tracker_hr_recruitment_v1';
+  // Bảng trung gian "Nhân sự cần tại các vị trí": số người cần / số người hiện có
+  // theo từng vị trí của từng bộ phận — nguồn cho các bảng/chức năng sắp bổ sung
+  const STORAGE_KEY_HR_POSNEEDS   = 'bamboo_tracker_hr_posneeds_v1';
+  // Bảng điều khiển bố trí vị trí theo ngày: cài đặt ca làm việc theo bộ phận
+  // + bản ghi gán người vào vị trí (giờ bắt đầu/kết thúc — nguồn cho chấm công)
+  const STORAGE_KEY_HR_SHIFTS     = 'bamboo_tracker_hr_shifts_v1';
+  const STORAGE_KEY_HR_ASSIGN     = 'bamboo_tracker_hr_assignments_v1';
   // Chấm công & phân vị theo ngày + danh mục vị trí làm việc
   const STORAGE_KEY_HR_POSITIONS  = 'bamboo_tracker_hr_positions_v1';
   const STORAGE_KEY_HR_ATTENDANCE = 'bamboo_tracker_hr_attendance_v1';
@@ -28,6 +35,9 @@
   const STORAGE_KEY_HR_CHECKINS   = 'bamboo_tracker_hr_checkins_v1';
   // Lịch sử sửa đổi (audit log): ai đã sửa gì, ở tab nào, lúc nào — chỉ Admin xem được
   const STORAGE_KEY_HISTORY = 'bamboo_tracker_history_v1';
+  // Dấu vết xóa (tombstone) cho đồng bộ mây: { <tên-danh-sách>: { <id>: <thời điểm xóa ISO> } }
+  // Giúp lần XÓA lan truyền qua mọi máy (bản ghi đã xóa không bị máy khác đẩy ngược lên mây) — xem js/tombstone.js
+  const STORAGE_KEY_DELETED_IDS = 'bamboo_tracker_deleted_ids_v1';
 
   const STAGES = {
     say1:     { id: 'say1',     name: '1. Sấy 1',        short: 'Sấy 1',    next: 'say2'     },
@@ -74,6 +84,11 @@
     hrEmployees: [],   // [{ id, code, name, gender, birthDate, phone, idCard, address, department, position, title, joinDate, status, notes, createdAt, updatedAt }]
     hrLeaves: [],      // [{ id, employeeId, type, from, to, days, reason, status pending|approved|rejected, approvedBy, approvedAt, createdAt }]
     hrRecruitment: [], // [{ id, department, position, needQty, hiredQty, needDate, status open|done, notes, createdAt, updatedAt }]
+    hrPositionNeeds: [], // BẢNG TRUNG GIAN "Nhân sự cần tại các vị trí": [{ id, department, position, positionId, needQty, haveQty, notes, createdAt, updatedAt }]
+    hrShifts: [],      // Cài đặt ca làm việc theo bộ phận: [{ id: dept, type 'hanhchinh'|'lamca', shifts: [{ name, start, end }] }]
+    hrAssignments: [], // Bố trí vị trí theo ngày: [{ id, date, department, positionId, shiftIdx, employeeId, start, end, createdAt, updatedAt }]
+    hrBoardDate: '',   // ngày đang xem của bảng bố trí ('yyyy-mm-dd')
+    hrBoardDept: '',   // bộ phận đang xem của bảng bố trí (mặc định 'Xưởng 2')
     hrPositions: [],   // [{ id, name, department, note, createdAt, updatedAt }] — danh mục vị trí làm việc của xưởng
     hrAttendance: [],  // [{ id, date, employeeId, status 'work'|'absent', positions[], note, createdAt, updatedAt }] — chấm công & phân vị theo ngày (sparse)
     hrAttDate: '',     // ngày đang xem của bảng chấm công ('YYYY-MM-DD')
@@ -115,6 +130,9 @@
     },
     // Lịch sử thao tác để hoàn tác (undo) khi nhập sai
     undoStack: [],
+    // Dấu vết xóa (tombstone) cho đồng bộ mây: { <danh-sách>: { <id>: <thời điểm xóa ISO> } }
+    // Xem js/tombstone.js — giúp lần xóa lan truyền, bản ghi đã xóa không bị "hồi sinh"
+    deletedIds: {},
     // Lịch sử sửa đổi (audit log) — tối đa HISTORY_LIMIT dòng gần nhất, chỉ Admin xem được
     history: [],
     // Chế độ chọn nhiều lô để chuyển công đoạn cùng lúc
@@ -134,6 +152,7 @@ export {
   STAGES,
   STORAGE_KEY_CUSTOM_CHARTS,
   STORAGE_KEY_DATA,
+  STORAGE_KEY_DELETED_IDS,
   STORAGE_KEY_HISTORY,
   STORAGE_KEY_MATERIAL_PLAN,
   STORAGE_KEY_MATERIAL_RATES,
@@ -147,6 +166,9 @@ export {
   STORAGE_KEY_HR_EMPLOYEES,
   STORAGE_KEY_HR_LEAVES,
   STORAGE_KEY_HR_RECRUITMENT,
+  STORAGE_KEY_HR_POSNEEDS,
+  STORAGE_KEY_HR_SHIFTS,
+  STORAGE_KEY_HR_ASSIGN,
   STORAGE_KEY_HR_POSITIONS,
   STORAGE_KEY_HR_ATTENDANCE,
   STORAGE_KEY_HR_CHECKINS,

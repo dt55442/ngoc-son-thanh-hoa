@@ -1,0 +1,236 @@
+// tests/hr-posneeds.test.mjs — Kiểm thử module "NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ"
+// (bảng dữ liệu trung gian: số người cần / số người hiện có theo vị trí + bộ phận):
+// render bảng, bộ lọc bộ phận, đếm từ hồ sơ (Đồng Bộ Từ Hồ Sơ), lưu localStorage,
+// card-launcher counter, đồng bộ mây (collectCloudSnapshot / cloudCore).
+'use strict';
+
+// ─── Stubs môi trường (giống hr-cards.test.mjs) ─────────────────
+function makeEl(id) {
+  const el = {
+    id: id || '', value: '', checked: false, disabled: false, hidden: false,
+    open: true, textContent: '', innerHTML: '', style: {}, dataset: {}, _h: {},
+    offsetWidth: 800, offsetHeight: 500,
+    classList: { _s: new Set(), add(c){ this._s.add(c); }, remove(c){ this._s.delete(c); }, toggle(c, f){ if (f === undefined) f = !this._s.has(c); if (f) this._s.add(c); else this._s.delete(c); return f; }, contains(c){ return this._s.has(c); } },
+    addEventListener(t, f) { (el._h[t] = el._h[t] || []).push(f); },
+    appendChild(c) { return c; }, removeChild(c) { return c; },
+    remove(){}, setAttribute(){}, removeAttribute(){}, getAttribute: () => null,
+    querySelector: () => makeEl(), querySelectorAll: () => [],
+    closest: () => null, matches: () => false,
+    getContext: () => ({ measureText: () => ({ width: 10 }), createLinearGradient: () => ({ addColorStop(){} }), createRadialGradient: () => ({ addColorStop(){} }), drawImage(){} }),
+    getBoundingClientRect: () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600 }),
+    reset(){}, focus(){}, click(){}, animate(){ return { cancel(){} }; }
+  };
+  return el;
+}
+const els = new Map();
+global.document = {
+  body: makeEl('body'), head: makeEl('head'), documentElement: makeEl('html'),
+  activeElement: null, readyState: 'complete', visibilityState: 'visible',
+  getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
+  createElement: () => makeEl(), createTextNode: (t) => ({ textContent: t }),
+  querySelector: () => makeEl(), querySelectorAll: () => [],
+  addEventListener(){}, removeEventListener(){}, escapeCSS: (s) => s
+};
+global.location = { href: 'http://localhost:8080/', origin: 'http://localhost:8080', pathname: '/', search: '', hash: '', reload(){} };
+global.history = { replaceState(){}, pushState(){}, back(){}, state: null };
+Object.defineProperty(global, "navigator", { value: { onLine: true, userAgent: 'node-test', language: 'vi' }, configurable: true });
+global.matchMedia = () => ({ matches: false, media: '', addListener(){}, removeListener(){}, addEventListener(){} });
+const storeBacking = new Map();
+global.localStorage = {
+  getItem: (k) => (storeBacking.has(k) ? storeBacking.get(k) : null),
+  setItem: (k, v) => { storeBacking.set(k, String(v)); },
+  removeItem: (k) => { storeBacking.delete(k); },
+  clear: () => storeBacking.clear(),
+  key: (i) => [...storeBacking.keys()][i] ?? null,
+  get length() { return storeBacking.size; }
+};
+global.addEventListener = () => {}; global.removeEventListener = () => {}; global.dispatchEvent = () => true;
+global.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
+global.cancelAnimationFrame = clearTimeout;
+global.window = global; global.self = global;
+global.alert = () => {}; global.confirm = () => true; global.prompt = () => '';
+global.lucide = { createIcons(){} };
+global.Chart = class {
+  constructor(ctx, cfg) { this.ctx = ctx; this.config = cfg; this.data = (cfg && cfg.data) || { labels: [], datasets: [] }; }
+  update(){} resize(){} destroy(){} render(){} reset(){} getDatasetMeta(){ return { data: [] }; }
+};
+Chart.register = () => {};
+if (!global.URL.createObjectURL) global.URL.createObjectURL = () => 'blob:stub';
+if (!global.URL.revokeObjectURL) global.URL.revokeObjectURL = () => {};
+
+let pass = 0, fail = 0;
+function check(name, cond) { if (cond) { pass++; console.log('PASS — ' + name); } else { fail++; console.log('FAIL — ' + name); } }
+
+
+// ─── Dữ liệu giả lập ────────────────────────────────────────────
+const { state, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN } = await import('../js/state.js');
+const hr = await import('../js/hr.js');
+const cloud = await import('../js/cloud.js');
+
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
+state.hrEmployees = [
+  { id: 'empA', code: 'NV001', name: 'Nguyễn Văn A', department: 'Xưởng 2', status: 'active', skills: ['px2'] },
+  { id: 'empB', code: 'NV002', name: 'Hà Văn Chiến', department: 'Xưởng 2', status: 'active', skills: [] },
+  { id: 'empC', code: 'NV003', name: 'Trần Thị C',   department: 'QC',      status: 'active', skills: [] }
+];
+state.hrPositions = [
+  { id: 'px2',  name: 'Ép ván X2', department: 'Xưởng 2', note: '' },
+  { id: 'pkh2', name: 'Kho X2',    department: 'Xưởng 2', note: '' }
+];
+state.hrPositionNeeds = [
+  { id: 'posneed-pos-px2',  department: 'Xưởng 2', position: 'Ép ván X2', positionId: 'px2',  needQty: 3, haveQty: 1 },
+  { id: 'posneed-pos-pkh2', department: 'Xưởng 2', position: 'Kho X2',    positionId: 'pkh2', needQty: 2, haveQty: 0 }
+];
+state.hrShifts = [];
+state.hrAssignments = [];
+state.hrAttendance = [];
+
+// ─── A. HELPERS ────────────────────────────────────────────────
+check('BOARD: hrShortName "Hà Văn Chiến" -> "H.V.Chiến"', hr.hrShortName('Hà Văn Chiến') === 'H.V.Chiến');
+check('BOARD: fmtHour "07:00" -> "7h00"', hr.fmtHour('07:00') === '7h00');
+check('BOARD: ca mặc định Hành chính 07:00–17:30', (() => {
+  const cfg = hr.hrShiftCfg('Xưởng 2');
+  return cfg.type === 'hanhchinh' && cfg.shifts[0].start === '07:00' && cfg.shifts[cfg.shifts.length - 1].end === '17:30';
+})());
+check('BOARD: preset Làm ca = 2 ca (ngày/đêm)', hr.BOARD_SHIFT_PRESETS.lamca.shifts.length === 2);
+
+// ─── B. RENDER BOARD (mặc định Xưởng 2) ────────────────────────
+hr.renderHrView();
+check('BOARD: mặc định mở Xưởng 2', state.hrBoardDept === 'Xưởng 2');
+check('BOARD: tab bộ phận render đủ 6 bộ phận', (document.getElementById('hr-board-dept-tabs').innerHTML.match(/data-board-dept/g) || []).length === 6);
+const boardHTML = document.getElementById('hr-board').innerHTML;
+check('BOARD: lưới thẻ — 2 cột vị trí (board-col)', (boardHTML.match(/board-col-head/g) || []).length === 2);
+check('BOARD: 5 ô trống "?" (cần 3 + 2, chưa gán ai)', (boardHTML.match(/slot empty/g) || []).length === 5);
+check('BOARD: chip tổng hợp "Đã bố trí 0/5"', document.getElementById('hr-board-count').innerHTML.includes('Đã bố trí') && document.getElementById('hr-board-count').innerHTML.includes('0</strong>/5'));
+check('BOARD: nhãn cột "Hành chính" + giờ 7h00–17h30', boardHTML.includes('Hành chính') && boardHTML.includes('7h00') && boardHTML.includes('17h30'));
+check('BOARD: chấm tròn trạng thái chưa đủ (warn)', boardHTML.includes('board-col-dot warn'));
+check('BOARD: badge "cần" trên đầu cột', boardHTML.includes('cần 3') && boardHTML.includes('cần 2'));
+
+// ─── C. GÁN NGƯỜI VÀO Ô (3 bước) ───────────────────────────────
+// Mô phỏng modal đã điền: chọn NV B (chưa có kỹ năng Ép ván), bắt đầu 7h30, kết thúc trống (= hết ca)
+document.getElementById('board-assign-mode').value = '';
+document.getElementById('board-assign-movefrom').value = '';
+document.getElementById('board-assign-date').value = state.hrBoardDate;
+document.getElementById('board-assign-pos').value = 'px2';
+document.getElementById('board-assign-shiftidx').value = '0';
+document.getElementById('board-assign-employee-id').value = 'empB';
+document.getElementById('board-assign-start').value = '07:30';
+document.getElementById('board-assign-end').value = '';
+const ev = { preventDefault(){} };
+hr.handleBoardAssignSubmit(ev);
+check('BOARD: gán người -> hrAssignments có 1 bản ghi', (state.hrAssignments || []).length === 1);
+const asg = state.hrAssignments[0];
+check('BOARD: bản ghi đúng vị trí + ca + giờ bắt đầu 07:30', asg.positionId === 'px2' && asg.start === '07:30' && asg.end === '' && (asg.shiftIdx || 0) === 0);
+check('BOARD: gán người -> tự chấm Đi làm ngày đó', (state.hrAttendance || []).some(a => a.employeeId === 'empB' && a.date === asg.date && a.status === 'work'));
+check('BOARD: người gán tự học kỹ năng vị trí', (state.hrEmployees.find(e => e.id === 'empB').skills || []).includes('px2'));
+check('BOARD: board render ô XANH avatar + tên rút gọn + giờ', document.getElementById('hr-board').innerHTML.includes('H.V.Chiến') && document.getElementById('hr-board').innerHTML.includes('7h30') && document.getElementById('hr-board').innerHTML.includes('>HC<'));
+check('BOARD: nút "+" Thêm người cho từng cột vị trí (2 cột -> 2 nút)', (document.getElementById('hr-board').innerHTML.match(/slot add/g) || []).length === 2);
+check('BOARD: đã bỏ thẻ mini — board luôn hiển thị trực tiếp', typeof hr.HR_CARD_DEFS['hr-board-card'] === 'undefined' && document.getElementById('hr-board-card') !== null);
+
+// ─── D. 1 NGƯỜI NHIỀU VỊ TRÍ TRONG NGÀY ────────────────────────
+document.getElementById('board-assign-pos').value = 'pkh2';
+document.getElementById('board-assign-employee-id').value = 'empB';
+document.getElementById('board-assign-start').value = '09:00';
+document.getElementById('board-assign-end').value = '11:30';
+hr.handleBoardAssignSubmit(ev);
+check('BOARD: empB làm 2 vị trí trong ngày (2 bản ghi)', (state.hrAssignments || []).filter(a => a.employeeId === 'empB').length === 2);
+const times = hr.hrAssignTimesOf('empB', state.hrBoardDate);
+check('BOARD: hrAssignTimesOf trả giờ làm sắp theo bắt đầu', times.length === 2 && times[0].start === '07:30' && times[1].start === '09:00');
+
+// ─── E. CÀI ĐẶT CA: LÀM CA -> 2 CỘT ────────────────────────────
+state.hrShifts = [{ id: 'Xưởng 2', type: 'lamca', shifts: [{ name: 'Ca ngày', start: '07:00', end: '19:00' }, { name: 'Ca đêm', start: '19:00', end: '07:00' }] }];
+hr.renderHrBoard();
+check('BOARD: Làm ca -> 2 cột (Ca ngày / Ca đêm)', document.getElementById('hr-board').innerHTML.includes('Ca ngày') && document.getElementById('hr-board').innerHTML.includes('Ca đêm'));
+check('BOARD: bản ghi gán trước (cột 0) vẫn hiển thị sau đổi ca', document.getElementById('hr-board').innerHTML.includes('H.V.Chiến'));
+state.hrShifts = [];
+
+// ─── E2. KÉO SANG VỊ TRÍ KHÁC: GIỮ LỊCH SỬ TẠI VỊ TRÍ CŨ ───────
+// Mô phỏng dời bản ghi đầu (px2 07:30) sang pkh2 bắt đầu 12:00
+document.getElementById('board-assign-mode').value = '';
+document.getElementById('board-assign-movefrom').value = asg.id;
+document.getElementById('board-assign-pos').value = 'pkh2';
+document.getElementById('board-assign-shiftidx').value = '0';
+document.getElementById('board-assign-employee-id').value = 'empB';
+document.getElementById('board-assign-start').value = '12:00';
+document.getElementById('board-assign-end').value = '';
+hr.handleBoardAssignSubmit(ev);
+const oldHist = state.hrAssignments.find(a => a.id === asg.id);
+check('BOARD: kéo đi -> bản ghi cũ VẪN còn tại vị trí cũ (lịch sử)', !!oldHist && oldHist.positionId === 'px2');
+check('BOARD: giờ cũ tự chấm dứt lúc giờ mới (07:30–12:00)', oldHist.end === '12:00');
+check('BOARD: bản ghi mới tại vị trí kéo đến (12:00 -> hết ca)', (state.hrAssignments || []).some(a => a.positionId === 'pkh2' && a.employeeId === 'empB' && a.start === '12:00' && a.end === ''));
+// Dời với giờ mới <= giờ cũ -> dời hẳn (bản ghi cũ bị xóa)
+const moved = state.hrAssignments.find(a => a.positionId === 'pkh2' && a.start === '12:00');
+document.getElementById('board-assign-movefrom').value = moved.id;
+document.getElementById('board-assign-pos').value = 'px2';
+document.getElementById('board-assign-start').value = '07:30';
+document.getElementById('board-assign-end').value = '11:00';
+hr.handleBoardAssignSubmit(ev);
+check('BOARD: giờ mới <= giờ cũ -> dời hẳn (bản ghi cũ bị xóa)', (state.hrAssignments || []).every(a => a.id !== moved.id));
+check('BOARD: bản ghi mới về px2 07:30–11:00', (state.hrAssignments || []).some(a => a.positionId === 'px2' && a.employeeId === 'empB' && a.start === '07:30' && a.end === '11:00'));
+
+// ─── F. XÓA GÁN + ĐỒNG BỘ MÂY ──────────────────────────────────
+hr.hrBoardRemoveAssign(state.hrAssignments[0].id);
+check('BOARD: bỏ người khỏi vị trí -> còn 2 bản ghi + tombstone', (state.hrAssignments || []).length === 2 && (state.deletedIds.hrAssignments || {})[asg.id]);
+const snap = cloud.collectCloudSnapshot();
+check('BOARD: snapshot mây chứa hrAssignments + hrShifts', Array.isArray(snap.hrAssignments) && Array.isArray(snap.hrShifts));
+check('BOARD: cloudCore có 2 khóa mới', cloud.cloudCore(snap).includes('"hrAssignments"') && cloud.cloudCore(snap).includes('"hrShifts"'));
+const savedAssignments = state.hrAssignments;
+cloud.applyFireSnapshot({ hrAssignments: [{ id: 'asg-remote', date: state.hrBoardDate, department: 'Xưởng 2', positionId: 'px2', shiftIdx: 1, employeeId: 'empC', start: '19:00', end: '' }] });
+check('BOARD: applyFireSnapshot nhận gán từ mây', (state.hrAssignments || []).some(a => a.id === 'asg-remote'));
+check('BOARD: dữ liệu mây lưu localStorage', JSON.parse(storeBacking.get(STORAGE_KEY_HR_ASSIGN) || '[]').some(a => a.id === 'asg-remote'));
+// applyFireSnapshot THAY THẾ toàn bộ collection theo mây — khôi phục dữ liệu
+// địa phương để các test sau (HC/TC, chấm công) tiếp tục với bản ghi đã tạo
+state.hrAssignments = savedAssignments;
+
+// ─── G. TÁCH GIỜ HC (hành chính) / TC (tăng ca) + hiển thị chấm công ──
+// Quy tắc: HC = trong giờ ca chuẩn (07:00–17:30), nghỉ trưa 11:30–13:00
+// KHÔNG tính vào HC lẫn TC; TC = chỉ phần ngoài giờ ca (trước 7h00 / sau 17h30)
+check('HC/TC: làm đủ ngày 07:00–17h30 -> HC 9h, TC 0', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '07:00', '17:30', 0);
+  return r.hc === 540 && r.tc === 0;
+})());
+check('HC/TC: 07:00–18:00 -> HC 9h, TC 0h30 (ví dụ của khách)', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '07:00', '18:00', 0);
+  return r.hc === 540 && r.tc === 30;
+})());
+check('HC/TC: 07:00–19:00 -> HC 9h, TC 1h30', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '07:00', '19:00', 0);
+  return r.hc === 540 && r.tc === 90;
+})());
+check('HC/TC: 06:30–18:00 -> HC 9h, TC 1h (sớm 30p + muộn 30p)', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '06:30', '18:00', 0);
+  return r.hc === 540 && r.tc === 60;
+})());
+check('HC/TC: trong ca (08:00–11:00) -> HC 3h, TC 0', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '08:00', '11:00', 0);
+  return r.hc === 180 && r.tc === 0;
+})());
+check('HC/TC: vắng mặt cả ngày (12:00–12:30 đúng nghỉ trưa) -> HC 0, TC 0', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '12:00', '12:30', 0);
+  return r.hc === 0 && r.tc === 0;
+})());
+state.hrShifts = [{ id: 'Xưởng 2', type: 'lamca', shifts: [{ name: 'Ca ngày', start: '07:00', end: '19:00' }, { name: 'Ca đêm', start: '19:00', end: '07:00' }] }];
+check('HC/TC: làm ca 07:00–20:30 -> HC 12h, TC 1h30', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '07:00', '20:30', 0);
+  return r.hc === 720 && r.tc === 90;
+})());
+check('HC/TC: ca đêm 19:00–07:00 (qua đêm) -> HC 12h, TC 0', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '19:00', '07:00', 1);
+  return r.hc === 720 && r.tc === 0;
+})());
+state.hrShifts = [];
+
+// Chấm công: có bố trí qua Board -> chỉ hiện vị trí hôm đó + badge HC/TC
+state.hrAttDate = state.hrBoardDate;
+hr.renderHrAttendanceCard();
+const attHTML2 = document.getElementById('hr-att-body').innerHTML;
+const fsDbg = await import('node:fs');
+fsDbg.writeFileSync('debug-att.html', attHTML2);
+check('HC/TC: chấm công hiện badge HC (empB: 07:30–11:00 + 09:00–11:30 = 6h)', attHTML2.includes('HC <strong>6h</strong>'));
+check('HC/TC: không có TC khi làm trong giờ', attHTML2.includes('TC <strong>') === false);
+check('HC/TC: chip vị trí chỉ hiện vị trí đã gán (Ép ván X2 7h30–11h00 + Kho X2)', attHTML2.includes('Ép ván X2') && attHTML2.includes('Kho X2') && attHTML2.includes('7h30–11h00') && attHTML2.includes('9h00–11h30'));
+
+console.log(`\nWYNIK: ${pass} pass, ${fail} fail`);
+if (fail > 0) process.exit(1);
+
+

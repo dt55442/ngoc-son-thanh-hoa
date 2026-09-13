@@ -1,7 +1,9 @@
 // ============================================
 // FIRESTORE SECURITY RULES - Bamboo Tracker
 // Dán vào: Firebase Console -> Firestore Database -> Rules -> Publish
-// Phiên bản: v2 (cú pháp chuẩn đã kiểm chứng - dùng 'in' / 'diff', KHÔNG dùng .has()/+)
+// Phiên bản: v3 — Ban Quản Lý (managerEmails) cũng được GHI dữ liệu apps/main
+//   (trước đây chỉ editor/admin được ghi: lần XÓA của Ban Quản Lý không bao giờ
+//   lên mây, khiến dòng đã xóa "sống lại" khi máy khác đẩy dữ liệu lên mây)
 // ============================================
 rules_version = '2';
 service cloud.firestore {
@@ -40,16 +42,19 @@ service cloud.firestore {
     function isEditor() {
       return isAdmin() || rolesHas('editorEmails');
     }
+    function isManager() {
+      return isEditor() || rolesHas('managerEmails');
+    }
 
     // ── DỮ LIỆU ỨNG DỤNG (apps/main) ──────────────
     // AI CŨNG ĐỌC ĐƯỢC (xem công khai).
-    // GHI: editor/admin. Bootstrap: nếu mây CHƯA có doc quyền -> người đăng nhập đầu tiên được tạo.
+    // GHI: manager/editor/admin. Bootstrap: nếu mây CHƯA có doc quyền -> người đăng nhập đầu tiên được tạo.
     match /apps/{doc} {
       allow read: if true;
       allow create: if isSignedIn()
                     && (!exists(/databases/$(database)/documents/settings/roles)
-                        || isEditor());
-      allow update: if isEditor();
+                        || isManager());
+      allow update: if isManager();
       allow delete: if isAdmin();
     }
 

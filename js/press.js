@@ -2,6 +2,7 @@
 // js/press.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrWorkersForPress, hrWorkersForProduct, pressPositionPatternFor } from './hr.js';
@@ -565,6 +566,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     const rec = state.pressRecords.find(r => r.id === recordId);
     if (!rec) return;
     if (!confirm(`Xóa lượt ép ngày ${rec.date} (${rec.finishedQty} tấm)?`)) return;
+    trackDeleted('pressRecords', recordId); // tombstone: lượt ép đã xóa không bị máy khác đẩy ngược lên mây
     state.pressRecords = state.pressRecords.filter(r => r.id !== recordId);
     savePressRecords();
     renderPressView();
@@ -1475,6 +1477,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     const note = (state.pressNotes || []).find(n => n.id === id);
     if (!note) return;
     if (!confirm(`Xóa ghi chú giải trình ngày ${fmtDateDM(note.date)}?`)) return;
+    trackDeleted('pressNotes', id);
     state.pressNotes = state.pressNotes.filter(n => n.id !== id);
     savePressNotes();
     closePressNoteModal();

@@ -4,6 +4,7 @@
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
 import { deleteBatch, openBatchFormModal, openTransferModal } from './batch-modals.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
+import { loadDeletedIds } from './tombstone.js';
 import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, renderStageFlow, toggleChartExpand } from './dashboard.js';
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
@@ -12,7 +13,7 @@ import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMa
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, openPressWorkersModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
-import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, rejectLeave,   renderHrView, hrOpenCard, hrCloseOpenCard, HR_CARD_DEFS } from './hr.js';
+import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave,   renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { state } from './state.js';
@@ -25,6 +26,7 @@ import { setupFormCalculations } from './utils.js';
     loadUsers();
     loadSession();
     loadData();
+    loadDeletedIds(); // dấu vết xóa (tombstone) cho đồng bộ mây — nạp trước mọi thao tác
     loadCustomCharts();
     loadMaterialRates();
     loadPlanningItems();
@@ -290,6 +292,16 @@ import { setupFormCalculations } from './utils.js';
     // Vị trí làm việc (onclick trong HTML render động)
     hrEditPosition: openPositionModal,
     hrDeletePosition: deletePosition,
+    // Nhân sự cần tại các vị trí — bảng dữ liệu trung gian (onclick render động)
+    hrEditPositionNeed: openPositionNeedModal,
+    hrDeletePositionNeed: deletePositionNeed,
+    hrSetPositionNeedQty,
+    // Bảng bố trí vị trí theo ngày (onclick render động: ô board / kéo thả / cài ca)
+    hrBoardOpenAssign,
+    hrBoardRemoveAssign,
+    hrBoardDragStart,
+    hrBoardDrop,
+    hrShiftTypePreset: setShiftTypePreset,
     // Thẻ Nhân Sự — launcher 5/3/2 (mở nổi lên dạng pop-up modal)
     hrOpenCard,
     hrCloseCard: hrCloseOpenCard,

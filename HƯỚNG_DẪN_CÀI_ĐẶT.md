@@ -76,6 +76,16 @@ Khi online (Firebase), dữ liệu được đồng bộ qua đám mây **KHÔNG
   1. **"Đồng Bộ Dữ Liệu Máy Lên Mây"** — đẩy dữ liệu máy lên đám mây (tự gộp khéo các bản ghi mây đang có).
   2. **"Tải Dữ Liệu Từ Mây Về Máy"** — tải bản mới nhất từ đám mây về máy.
 
+### 🗑️ Lần XÓA cũng được đồng bộ (tombstone)
+- Khi xóa 1 dòng (lượt ép, lô nan, nhân viên...), app ghi lại **"dấu vết xóa"** (id + thời điểm xóa) và đẩy lên mây cùng dữ liệu.
+- Máy khác nhận dấu vết xóa → **tự gỡ dòng tương ứng** trên máy mình → dòng đã xóa **không còn "sống lại"** khi tải lại trang hay khi máy khác đẩy dữ liệu.
+- Nếu nhập lại dòng cùng id với mốc thời gian **mới hơn lần xóa** (hoặc bấm Hoàn tác) → dòng được **hồi sinh** và gỡ dấu vết xóa.
+- Dấu vết xóa được giữ tối đa **90 ngày** rồi tự dọn.
+
+### ✍️ Quyền đẩy dữ liệu lên mây
+- **Admin / Editor / Ban Quản Lý** đều được đẩy dữ liệu lên mây (trước đây Ban Quản Lý bị chặn → lần xóa của họ không bao giờ lên mây, khiến dòng đã xóa hồi sinh sau mỗi lần tải lại trang).
+- **Viewer / khách** chỉ xem. Nếu rules Firebase chưa cập nhật, hãy dán lại file `firestore.rules` (v3) vào Firebase Console → Rules → **Publish**.
+
 ---
 
 ## 💡 LƯU Ý

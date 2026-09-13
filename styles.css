@@ -1599,6 +1599,94 @@ h1, h2, h3, h4, h5 {
   font-weight: 600;
 }
 
+/* Ô nhập số người cần/hiện có ngay trên bảng "Nhân sự cần tại các vị trí" */
+.pos-need-qty-input {
+  width: 76px;
+  min-height: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-family: inherit;
+  background-color: var(--bg-card);
+  text-align: center;
+  transition: var(--transition-fast);
+}
+.pos-need-qty-input:hover { border-color: var(--primary); }
+.pos-need-qty-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
+
+/* ── BẢNG ĐIỀU KHIỂN BỐ TRÍ VỊ TRÍ THEO NGÀY (visual board, tinh gọn) ── */
+.hr-board-tabs { display:flex; gap:8px; flex-wrap:wrap; padding:8px 0 12px; }
+.hr-board-tab {
+  padding: 7px 16px; border: 1px solid var(--border-color); border-radius: 999px;
+  background: var(--bg-card); font-size: 0.84rem; font-weight: 600; cursor: pointer;
+  transition: var(--transition-fast); color: var(--text-muted);
+}
+.hr-board-tab:hover { border-color: var(--primary); color: var(--primary); }
+.hr-board-tab.on { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25); }
+
+/* Lưới các cột vị trí — cuộn ngang khi nhiều vị trí */
+.board-grid { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; align-items: flex-start; }
+.board-col {
+  flex: 0 0 208px; min-width: 208px; display: flex; flex-direction: column;
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05); overflow: hidden;
+  transition: var(--transition-fast);
+}
+.board-col.complete { border-color: rgba(22, 163, 74, 0.35); }
+.board-col-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border-color); background: var(--bg-subtle); }
+.board-col-title { flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.board-col-need { flex: 0 0 auto; font-size: 0.66rem; font-weight: 700; color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.board-col-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; }
+.board-col-dot.ok { background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15); }
+.board-col-dot.warn { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15); }
+.board-col-body { display: flex; gap: 10px; padding: 10px; }
+.board-shift { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.board-shift + .board-shift { padding-left: 10px; border-left: 1px dashed var(--border-color); }
+.board-shift-name { text-align: center; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); line-height: 1.3; }
+.board-shift-name span { display: block; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text-muted); opacity: 0.85; }
+.board-slots { display: flex; flex-direction: column; gap: 6px; }
+
+/* Ô người: trống "?" / đã gán chip xanh avatar */
+.slot { position: relative; display: flex; align-items: center; gap: 8px; min-height: 46px; border-radius: 10px; padding: 6px 8px; cursor: pointer; transition: var(--transition-fast); user-select: none; }
+.slot.empty { justify-content: center; border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #94a3b8; font-size: 1.15rem; font-weight: 800; }
+.slot.empty:hover { border-color: var(--primary); color: var(--primary); background: #eef4ff; }
+.slot.empty.over { border-color: var(--primary); border-style: solid; background: #e4edff; color: var(--primary); }
+.slot.filled { border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff, #dbeafe); }
+.slot.filled:hover { box-shadow: 0 3px 10px rgba(37, 99, 235, 0.18); transform: translateY(-1px); }
+.slot-ava { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; }
+.slot-info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.slot-info b { font-size: 0.8rem; font-weight: 700; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-info i { font-style: normal; font-size: 0.66rem; color: var(--text-muted); }
+.slot-x { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border: none; border-radius: 50%; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transition: var(--transition-fast); }
+.slot.filled:hover .slot-x { opacity: 1; }
+.slot-x:hover { background: #fee2e2; color: var(--danger); }
+.slot-x svg { width: 11px; height: 11px; }
+
+/* Nút "+" thêm nhanh nhân viên cuối cột vị trí */
+.slot.add {
+  justify-content: center; gap: 6px; min-height: 34px;
+  border: 1.5px dashed var(--border-color); background: transparent;
+  color: var(--text-muted); font-size: 0.74rem; font-weight: 700; padding: 4px 8px;
+}
+.slot.add:hover { border-color: var(--primary); color: var(--primary); background: #eef4ff; }
+.slot.add svg { width: 13px; height: 13px; }
+
+/* Trạng thái rỗng của cả board */
+.board-empty { width: 100%; text-align: center; padding: 34px 16px; color: var(--text-muted); border: 1.5px dashed var(--border-color); border-radius: 14px; }
+.board-empty svg { width: 28px; height: 28px; margin-bottom: 8px; opacity: 0.6; }
+.board-empty p { font-size: 0.85rem; }
+
+/* Điện thoại: cột hẹp hơn, vẫn cuộn ngang */
+@media (max-width: 640px) {
+  .board-col { flex: 0 0 172px; min-width: 172px; }
+  .slot { min-height: 42px; }
+  .slot-ava { width: 26px; height: 26px; font-size: 0.62rem; }
+}
+
+/* Bỏ khối CSS board dạng bảng cũ (không còn dùng):
+   .hr-board-table, .board-slot-stack, .board-cell* — đã thay bằng board-col/slot */
+
 .input-with-action {
   display: flex;
   gap: 8px;

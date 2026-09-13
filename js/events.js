@@ -4,6 +4,7 @@
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
 import { clearMultiSelection, closeBatchFormModal, closeTransferModal, confirmMultiTransfer, exitMultiTransferMode, handleBatchFormSubmit, handleTransferSubmit, openBatchFormModal, selectAllMulti, toggleBatchSelection, toggleMultiTransferMode } from './batch-modals.js';
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
+import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeExportPreviewModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth } from './export-xlsx.js';
 import { clearHistory, closeHistoryModal, openHistoryModal, setHistoryTabFilter, setHistoryUserFilter } from './history.js';
@@ -13,7 +14,7 @@ import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, 
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
-import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
+import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -38,6 +39,9 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       return;
     }
     state.batches = last.batches;
+    // Hoàn tác có thể khôi phục lại lô đã xóa -> gỡ tombstone của các id đang sống lại,
+    // nếu không lần đẩy mây sau sẽ mang theo dấu vết xóa che mất lô vừa được phục hồi
+    untrackDeleted('batches', (state.batches || []).map(b => b.id));
     saveData();
     renderAll();
     updateUndoButton();
@@ -748,6 +752,47 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-recruitment', 'click', closeRecruitmentModal);
     safeOn('btn-cancel-recruitment', 'click', closeRecruitmentModal);
     safeOn('recruitment-form', 'submit', handleRecruitmentSubmit);
+    // Nhân sự cần tại các vị trí — bảng dữ liệu trung gian
+    safeOn('btn-add-posneed', 'click', () => openPositionNeedModal());
+    safeOn('btn-close-posneed', 'click', closePositionNeedModal);
+    safeOn('btn-cancel-posneed', 'click', closePositionNeedModal);
+    safeOn('position-need-form', 'submit', handlePositionNeedSubmit);
+    safeOn('btn-sync-posneed', 'click', syncPositionNeedsFromEmployees);
+    safeOn('hr-posneed-filter-dept', 'change', renderPositionNeedsTable);
+    // ── Bảng bố trí vị trí theo ngày ──
+    safeOn('btn-board-prev', 'click', () => hrBoardShiftDay(-1));
+    safeOn('btn-board-next', 'click', () => hrBoardShiftDay(1));
+    safeOn('btn-board-today', 'click', hrBoardGoToday);
+    safeOn('hr-board-date', 'change', (e) => hrBoardSetDate(e.target.value));
+    safeOn('btn-board-shifts', 'click', openShiftModal);
+    safeOn('btn-close-board-assign', 'click', closeBoardAssignModal);
+    safeOn('btn-cancel-board-assign', 'click', closeBoardAssignModal);
+    safeOn('board-assign-form', 'submit', handleBoardAssignSubmit);
+    safeOn('btn-close-shift', 'click', closeShiftModal);
+    safeOn('btn-cancel-shift', 'click', closeShiftModal);
+    safeOn('shift-form', 'submit', handleShiftSubmit);
+    // Gợi ý nhân viên trong modal bố trí (gõ để tìm, ưu tiên kỹ năng)
+    const boardSuggestInput = document.getElementById('board-assign-employee');
+    const boardSuggestBox = document.getElementById('board-assign-suggest');
+    if (boardSuggestInput && boardSuggestBox) {
+      boardSuggestInput.addEventListener('input', () => renderBoardAssignSuggestions(boardSuggestInput.value));
+      boardSuggestInput.addEventListener('focus', () => renderBoardAssignSuggestions(boardSuggestInput.value));
+      boardSuggestBox.addEventListener('mousedown', (e) => {
+        const item = e.target && e.target.closest ? e.target.closest('[data-emp-id]') : null;
+        if (item) { e.preventDefault(); pickBoardAssignEmployee(item.getAttribute('data-emp-id')); }
+      });
+      document.addEventListener('click', (e) => {
+        if (!(e.target && e.target.closest && e.target.closest('.hr-combobox')) && boardSuggestBox) boardSuggestBox.style.display = 'none';
+      });
+    }
+    // Bấm tab bộ phận trên board (render động → delegate)
+    const boardTabs = document.getElementById('hr-board-dept-tabs');
+    if (boardTabs) {
+      boardTabs.addEventListener('click', (e) => {
+        const tab = e.target && e.target.closest ? e.target.closest('[data-board-dept]') : null;
+        if (tab) hrBoardSetDept(tab.getAttribute('data-board-dept'));
+      });
+    }
     // Bộ lọc nhân viên — chỉ vẽ lại BẢNG NHÂN VIÊN (nhanh, không reset bộ lọc)
     safeOn('hr-emp-filter-dept', 'change', renderHrEmployeesTable);
     safeOn('hr-emp-filter-status', 'change', renderHrEmployeesTable);
@@ -758,6 +803,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-toggle-hr-leave', 'click', () => { toggleRateTableCollapse('hr-leave-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-stats', 'click', () => { toggleRateTableCollapse('hr-stats-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-recruit', 'click', () => { toggleRateTableCollapse('hr-recruit-card'); syncHrMiniActive(); });
+    safeOn('btn-toggle-hr-posneed', 'click', () => { toggleRateTableCollapse('hr-posneed-card'); syncHrMiniActive(); });
     // Bấm thẻ launcher (grid 5/3/2) → mở bảng chi tiết dạng pop-up modal (nổi lên)
     document.querySelectorAll('.hr-mini-card').forEach(t => {
       t.addEventListener('click', () => hrOpenCard(t.getAttribute('data-hr-card')));

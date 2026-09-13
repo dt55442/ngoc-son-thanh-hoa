@@ -5,8 +5,9 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
+import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
 import { showToast } from './utils.js';
 
   // Nhãn danh sách tab được sửa (dùng trong thông báo phân quyền)
@@ -284,10 +285,14 @@ import { showToast } from './utils.js';
       hrEmployees: state.hrEmployees || [],
       hrLeaves: state.hrLeaves || [],
       hrRecruitment: state.hrRecruitment || [],
+      hrPositionNeeds: state.hrPositionNeeds || [],
+      hrShifts: state.hrShifts || [],
+      hrAssignments: state.hrAssignments || [],
       hrPositions: state.hrPositions || [],
       hrAttendance: state.hrAttendance || [],
       hrCheckins: state.hrCheckins || [],
       history: state.history || [],
+      deletedIds: state.deletedIds || {},
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
       updatedAt: new Date().toISOString()
     };
@@ -305,8 +310,12 @@ import { showToast } from './utils.js';
       qcExports: obj.qcExports || [],
       pressRecords: obj.pressRecords || [],
       hrEmployees: obj.hrEmployees || [], hrLeaves: obj.hrLeaves || [], hrRecruitment: obj.hrRecruitment || [],
+      hrPositionNeeds: obj.hrPositionNeeds || [],
+      hrShifts: obj.hrShifts || [],
+      hrAssignments: obj.hrAssignments || [],
       hrPositions: obj.hrPositions || [], hrAttendance: obj.hrAttendance || [], hrCheckins: obj.hrCheckins || [],
-      history: obj.history || []
+      history: obj.history || [],
+      deletedIds: obj.deletedIds || {}
     });
   }
 
@@ -364,12 +373,23 @@ import { showToast } from './utils.js';
   // Gộp kế hoạch nguyên liệu ({ '2026-W36': { 'lo-hoi': x, ... } }): tuần chỉ có ở
   // một phía -> giữ lại; trùng tuần -> gộp theo TỪNG vị trí (máy thiếu vị trí nào
   // thì nhận vị trí đó từ mây, không ghi đè vị trí máy đã nhập).
-  function mergeMaterialPlan(localObj, remoteObj) {
+  // deletedWeeks: tombstone của materialPlan ({ tuần: thời điểm xóa }) — tuần đã
+  // bị xóa thì KHÔNG nhận lại từ mây (trừ khi mây có bản MỚI HƠN lần xóa ->
+  // hồi sinh: gỡ dấu vết xóa). Máy có bản MỚI HƠN mây -> giữ nguyên bản máy
+  // (không nhận lại vị trí đã bị máy xóa/ghi trống).
+  function mergeMaterialPlan(localObj, remoteObj, deletedWeeks, changedTomb) {
     const out = Object.assign({}, (localObj && typeof localObj === 'object') ? localObj : {});
     const src = (remoteObj && typeof remoteObj === 'object') ? remoteObj : {};
     for (const wk of Object.keys(src)) {
       const rWeek = (src[wk] && typeof src[wk] === 'object') ? src[wk] : {};
+      const rStamp = String((rWeek && rWeek.updatedAt) || '');
+      const delTs = deletedWeeks ? String(deletedWeeks[wk] || '') : '';
+      if (delTs) {
+        if (rStamp > delTs) untrackDeleted('materialPlan', wk); // tạo/sửa lại sau khi xóa -> hồi sinh
+        else continue;                                          // tuần đã bị xóa -> không nhận lại
+      }
       if (!out[wk] || typeof out[wk] !== 'object') { out[wk] = Object.assign({}, rWeek); continue; }
+      if (String((out[wk] && out[wk].updatedAt) || '') >= rStamp) continue; // máy mới hơn -> giữ máy
       for (const k of Object.keys(rWeek)) {
         if (!(k in out[wk]) || out[wk][k] === null || out[wk][k] === undefined) out[wk][k] = rWeek[k];
       }
@@ -381,24 +401,34 @@ import { showToast } from './utils.js';
   function mergeRemoteIntoLocal(remote, onlyAddMissing) {
     if (!remote || typeof remote !== 'object') return false;
     const before = cloudCore(collectCloudSnapshot());
+    // Hợp nhất dấu vết xóa (tombstone) từ mây TRƯỚC TIÊN: lần xóa từ máy khác
+    // phải chặn bản ghi cũ — không nhận về máy và gỡ luôn bản cũ còn sót.
+    const changedTomb = { flag: false };
+    mergeTombstones(remote.deletedIds, changedTomb);
     const m = onlyAddMissing ? mergeAddMissing : mergeById;
-    if (remote.batches) state.batches = m(state.batches, remote.batches);
-    if (remote.pressRecords) state.pressRecords = m(state.pressRecords, remote.pressRecords);
+    // Lọc tombstone cả HAI phía: danh sách mây gửi về & danh sách đang có trên máy
+    const clean = (colKey, arr) => applyTombstonesToRecordList(colKey, arr, changedTomb);
+    if (remote.batches) state.batches = m(clean('batches', state.batches), clean('batches', remote.batches));
+    if (remote.pressRecords) state.pressRecords = m(clean('pressRecords', state.pressRecords), clean('pressRecords', remote.pressRecords));
     if (remote.materialRecords) {
-      if (onlyAddMissing) state.materialRecords = mergeAddMissing(state.materialRecords, remote.materialRecords);
-      else restoreMaterialRecords(remote.materialRecords); // đã có logic gộp theo dấu thời gian riêng
+      state.materialRecords = clean('materialRecords', state.materialRecords);
+      if (onlyAddMissing) state.materialRecords = mergeAddMissing(state.materialRecords, clean('materialRecords', remote.materialRecords));
+      else restoreMaterialRecords(clean('materialRecords', remote.materialRecords)); // đã có logic gộp theo dấu thời gian riêng
     }
-    if (remote.planningItems) state.planningItems = m(state.planningItems, remote.planningItems);
-    if (remote.pressNotes) state.pressNotes = m(state.pressNotes || [], remote.pressNotes);
-    if (remote.materialRates) state.materialRates = m(state.materialRates, remote.materialRates);
-    if (remote.customCharts) state.customCharts = m(state.customCharts, remote.customCharts);
-    if (remote.qcExports) state.qcExports = m(state.qcExports || [], remote.qcExports);
-    if (remote.hrEmployees) state.hrEmployees = m(state.hrEmployees || [], remote.hrEmployees);
-    if (remote.hrLeaves) state.hrLeaves = m(state.hrLeaves || [], remote.hrLeaves);
-    if (remote.hrPositions) state.hrPositions = m(state.hrPositions || [], remote.hrPositions);
-    if (remote.hrAttendance) state.hrAttendance = m(state.hrAttendance || [], remote.hrAttendance);
-    if (remote.hrCheckins) state.hrCheckins = m(state.hrCheckins || [], remote.hrCheckins);
-    if (remote.hrRecruitment) state.hrRecruitment = m(state.hrRecruitment || [], remote.hrRecruitment);
+    if (remote.planningItems) state.planningItems = m(clean('planningItems', state.planningItems), clean('planningItems', remote.planningItems));
+    if (remote.pressNotes) state.pressNotes = m(clean('pressNotes', state.pressNotes || []), clean('pressNotes', remote.pressNotes));
+    if (remote.materialRates) state.materialRates = m(clean('materialRates', state.materialRates), clean('materialRates', remote.materialRates));
+    if (remote.customCharts) state.customCharts = m(clean('customCharts', state.customCharts), clean('customCharts', remote.customCharts));
+    if (remote.qcExports) state.qcExports = m(clean('qcExports', state.qcExports || []), clean('qcExports', remote.qcExports));
+    if (remote.hrEmployees) state.hrEmployees = m(clean('hrEmployees', state.hrEmployees || []), clean('hrEmployees', remote.hrEmployees));
+    if (remote.hrLeaves) state.hrLeaves = m(clean('hrLeaves', state.hrLeaves || []), clean('hrLeaves', remote.hrLeaves));
+    if (remote.hrPositions) state.hrPositions = m(clean('hrPositions', state.hrPositions || []), clean('hrPositions', remote.hrPositions));
+    if (remote.hrAttendance) state.hrAttendance = m(clean('hrAttendance', state.hrAttendance || []), clean('hrAttendance', remote.hrAttendance));
+    if (remote.hrCheckins) state.hrCheckins = m(clean('hrCheckins', state.hrCheckins || []), clean('hrCheckins', remote.hrCheckins));
+    if (remote.hrRecruitment) state.hrRecruitment = m(clean('hrRecruitment', state.hrRecruitment || []), clean('hrRecruitment', remote.hrRecruitment));
+    if (remote.hrPositionNeeds) state.hrPositionNeeds = m(clean('hrPositionNeeds', state.hrPositionNeeds || []), clean('hrPositionNeeds', remote.hrPositionNeeds));
+    if (remote.hrShifts) state.hrShifts = m(clean('hrShifts', state.hrShifts || []), clean('hrShifts', remote.hrShifts));
+    if (remote.hrAssignments) state.hrAssignments = m(clean('hrAssignments', state.hrAssignments || []), clean('hrAssignments', remote.hrAssignments));
     // Lịch sử sửa đổi: gộp thêm các dòng máy này chưa có (mỗi dòng 1 id riêng)
     if (remote.history) {
       state.history = mergeAddMissing(state.history || [], remote.history || []);
@@ -407,8 +437,9 @@ import { showToast } from './utils.js';
     if (!onlyAddMissing) {
       if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
       if (remote.planningStock) state.planningStock = mergeKeyedDict(state.planningStock, remote.planningStock);
-      if (remote.materialPlan) state.materialPlan = mergeMaterialPlan(state.materialPlan, remote.materialPlan);
+      if (remote.materialPlan) state.materialPlan = mergeMaterialPlan(state.materialPlan, remote.materialPlan, getDeletedMap('materialPlan'), changedTomb);
     }
+    if (changedTomb.flag) saveDeletedIds(); // tombstone đổi (hợp nhất/hồi sinh) -> lưu ngay
     // Dữ liệu vừa gộp từ mây (không phải thao tác sửa trên máy này) ->
     // đặt lại nền so sánh lịch sử để lần lưu sau không ghi log ảo
     syncHistorySnapshots();
@@ -436,10 +467,14 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_POSNEEDS, JSON.stringify(state.hrPositionNeeds || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_SHIFTS, JSON.stringify(state.hrShifts || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_ASSIGN, JSON.stringify(state.hrAssignments || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(state.history || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_DELETED_IDS, JSON.stringify(state.deletedIds || {})); } catch (e) {}
     syncHistorySnapshots(); // thay đổi đến từ mây/nạp file → đặt lại nền so sánh lịch sử
   }
 
@@ -458,36 +493,47 @@ import { showToast } from './utils.js';
     // chỉ TỰ GỘP THÊM các bản ghi trên mây mà máy này chưa có (an toàn, không
     // mất dữ liệu). Muốn ghi đè theo mây / đẩy máy lên mây thì dùng 2 nút
     // "Đồng Bộ Dữ Liệu Máy Lên Mây" & "Tải Dữ Liệu Từ Mây Về Máy" trong menu ⋮.
-    if (fbRemoteHasData) mergeRemoteIntoLocal(remote, true);
+    // Mây chỉ có DẤU VẾT XÓA (danh sách rỗng) cũng phải gộp: để GỠ bản ghi cũ
+    // còn sót trên máy theo tombstone — không thì lần đẩy sau sẽ "hồi sinh".
+    if (fbRemoteHasData || hasDeletedIds(remote)) mergeRemoteIntoLocal(remote, true);
   }
 
   function applyFireSnapshot(data) {
     fbApplying = true;
     try {
-      if (data.batches) state.batches = data.batches;
-      if (data.customCharts) state.customCharts = data.customCharts;
-      if (data.materialRates) state.materialRates = data.materialRates;
+      // Hợp nhất dấu vết xóa (tombstone) từ mây TRƯỚC, rồi lọc mọi danh sách:
+      // bản ghi đã bị xóa từ máy khác không được hồi sinh qua "tải từ mây về máy".
+      const changedTomb = { flag: false };
+      mergeTombstones(data.deletedIds, changedTomb);
+      const clean = (colKey, arr) => applyTombstonesToRecordList(colKey, arr, changedTomb);
+      if (data.batches) state.batches = clean('batches', data.batches);
+      if (data.customCharts) state.customCharts = clean('customCharts', data.customCharts);
+      if (data.materialRates) state.materialRates = clean('materialRates', data.materialRates);
       // GỘP theo dấu thời gian (mới hơn thắng) thay vì ghi đè — tránh mất
       // đơn giá/ảnh của các lần nhập nguyên liệu mới hơn bản trên mây.
-      if (data.materialRecords) restoreMaterialRecords(data.materialRecords);
-      if (data.materialPlan !== undefined) state.materialPlan = data.materialPlan || {};
-      if (data.planningItems) state.planningItems = data.planningItems;
+      if (data.materialRecords) restoreMaterialRecords(clean('materialRecords', data.materialRecords));
+      if (data.materialPlan !== undefined) state.materialPlan = stripTombstonedPlanWeeks(data.materialPlan || {}, changedTomb);
+      if (data.planningItems) state.planningItems = clean('planningItems', data.planningItems);
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
       if (data.planningStock !== undefined) state.planningStock = data.planningStock;
-      if (data.qcExports) state.qcExports = data.qcExports;
-      if (data.pressRecords) state.pressRecords = data.pressRecords;
-      if (data.pressNotes) state.pressNotes = data.pressNotes;
-      if (data.hrEmployees) state.hrEmployees = data.hrEmployees;
-      if (data.hrLeaves) state.hrLeaves = data.hrLeaves;
-      if (data.hrRecruitment) state.hrRecruitment = data.hrRecruitment;
-      if (data.hrPositions) state.hrPositions = data.hrPositions;
-      if (data.hrAttendance) state.hrAttendance = data.hrAttendance;
-      if (data.hrCheckins) state.hrCheckins = data.hrCheckins;
+      if (data.qcExports) state.qcExports = clean('qcExports', data.qcExports);
+      if (data.pressRecords) state.pressRecords = clean('pressRecords', data.pressRecords);
+      if (data.pressNotes) state.pressNotes = clean('pressNotes', data.pressNotes);
+      if (data.hrEmployees) state.hrEmployees = clean('hrEmployees', data.hrEmployees);
+      if (data.hrLeaves) state.hrLeaves = clean('hrLeaves', data.hrLeaves);
+      if (data.hrRecruitment) state.hrRecruitment = clean('hrRecruitment', data.hrRecruitment);
+      if (data.hrPositionNeeds) state.hrPositionNeeds = clean('hrPositionNeeds', data.hrPositionNeeds);
+      if (data.hrShifts) state.hrShifts = clean('hrShifts', data.hrShifts);
+      if (data.hrAssignments) state.hrAssignments = clean('hrAssignments', data.hrAssignments);
+      if (data.hrPositions) state.hrPositions = clean('hrPositions', data.hrPositions);
+      if (data.hrAttendance) state.hrAttendance = clean('hrAttendance', data.hrAttendance);
+      if (data.hrCheckins) state.hrCheckins = clean('hrCheckins', data.hrCheckins);
       if (data.history) {
         // Lịch sử từ mây: gộp thêm các dòng máy chưa có + giới hạn số dòng
         state.history = mergeAddMissing(state.history || [], data.history || []);
         if (state.history.length > HISTORY_LIMIT) state.history = state.history.slice(-HISTORY_LIMIT);
       }
+      if (changedTomb.flag) saveDeletedIds();
       syncHistorySnapshots();
       persistAllLocal();
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
@@ -496,10 +542,17 @@ import { showToast } from './utils.js';
     } finally { fbApplying = false; }
   }
 
-  // Đẩy dữ liệu hiện tại lên mây (chỉ admin/editor; debounce 600ms)
+  // Có quyền ghi dữ liệu lên mây không? (Quản Trị / Người Chỉnh Sửa / Ban Quản Lý)
+  // Trước đây Ban Quản Lý bị chặn đẩy dữ liệu: lần XÓA của họ không bao giờ lên
+  // mây → dòng đã xóa "sống lại" sau mỗi lần tải lại trang (nguyên nhân chính).
+  function canPushToCloud() {
+    const r = state.currentUser ? state.currentUser.role : null;
+    return r === 'admin' || r === 'editor' || r === 'manager';
+  }
+
+  // Đẩy dữ liệu hiện tại lên mây (admin/editor/manager; debounce 600ms)
   function firePushSync() {
-    if (!isFirebaseOnline() || !fbAuthLoaded || !state.currentUser ||
-        (state.currentUser.role !== 'admin' && state.currentUser.role !== 'editor')) {
+    if (!isFirebaseOnline() || !fbAuthLoaded || !state.currentUser || !canPushToCloud()) {
       // Có thay đổi nhưng điều kiện đẩy chưa đủ -> đánh dấu "bẩn" và cảnh báo ít thôi
       fbDirty = true;
       warnSyncBlocked();
@@ -519,7 +572,7 @@ import { showToast } from './utils.js';
     } else if (!state.currentUser) {
       showToast('Có thay đổi mới nhưng CHƯA ĐĂNG NHÂP — hãy đăng nhập quyền Sửa/Quản trị để dữ liệu lên mây dùng chung.', 'info');
     } else {
-      showToast(`Tài khoản "${state.currentUser.fullname || state.currentUser.email}" không có quyền ghi dữ liệu lên mây (cần Sửa/Quản trị).`, 'info');
+      showToast(`Tài khoản "${state.currentUser.fullname || state.currentUser.email}" chỉ xem — không có quyền ghi dữ liệu lên mây (cần Người Chỉnh Sửa / Ban Quản Lý / Quản Trị).`, 'info');
     }
   }
 
@@ -541,8 +594,7 @@ import { showToast } from './utils.js';
       return;
     }
     if (fbSeedCore && cloudCore(collectCloudSnapshot()) === fbSeedCore) { fbDirty = false; return; } // chưa có thay đổi thực tế
-    if (!isFirebaseOnline() || !state.currentUser ||
-        (state.currentUser.role !== 'admin' && state.currentUser.role !== 'editor')) return; // giữ cờ bẩn, chờ lần sau
+    if (!isFirebaseOnline() || !state.currentUser || !canPushToCloud()) return; // giữ cờ bẩn, chờ lần sau
     fbApplying = true;
     try {
       await fbDb.collection(FB_COLL).doc(FB_DOC).set(collectCloudSnapshot());
@@ -587,8 +639,7 @@ import { showToast } from './utils.js';
   async function uploadLocalDataToCloud() {
     if (!isFirebaseOnline()) { showToast('Chưa ở chế độ online (cần kết nối mạng + SDK)', 'error'); return; }
     if (!state.currentUser) { showToast('Chưa đăng nhập', 'error'); return; }
-    const r = state.currentUser.role;
-    if (r !== 'admin' && r !== 'editor') { showToast('Bạn không có quyền ghi dữ liệu lên mây', 'error'); return; }
+    if (!canPushToCloud()) { showToast('Bạn không có quyền ghi dữ liệu lên mây (cần Người Chỉnh Sửa / Ban Quản Lý / Quản Trị).', 'error'); return; }
     if (!fbDidLoadRemote) {
       showToast('Đang chờ dữ liệu từ mây... Thử lại sau 1 giây', 'info');
       setTimeout(uploadLocalDataToCloud, 1200);
@@ -600,9 +651,11 @@ import { showToast } from './utils.js';
       // GỘP KHÉO trước khi đẩy: bổ sung các bản ghi đang có trên mây mà máy này
       // CHƯA có -> nút "Đồng Bộ Dữ Liệu Máy Lên Mây" không còn nguy cơ xóa mất
       // dữ liệu mới vừa được máy khác thêm lên mây (nguyên nhân "thành công
-      // nhưng dữ liệu mới biến mất").
+      // nhưng dữ liệu mới biến mất"). Tombstone từ mây cũng được gộp trước để
+      // bản ghi đã bị máy khác xóa KHÔNG bị đẩy ngược lại lên mây.
       let mergedFromCloud = false;
-      if (fbRemoteDocExists && fbRemoteHasData && fbLastRemote &&
+      if (fbRemoteDocExists && fbLastRemote &&
+          (fbRemoteHasData || hasDeletedIds(fbLastRemote)) &&
           cloudCore(fbLastRemote) !== cloudCore(collectCloudSnapshot())) {
         mergedFromCloud = mergeRemoteIntoLocal(fbLastRemote, true);
       }
@@ -656,6 +709,7 @@ export {
   applyFireSnapshot,
   applyRoleToUI,
   canEditNow,
+  canPushToCloud,
   checkAuthAndRenderFirebase,
   cloudCore,
   collectCloudSnapshot,

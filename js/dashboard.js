@@ -9,6 +9,7 @@
 // Toàn bộ biểu đồ tùy chỉnh của các tab được TẬP TRUNG tại Dashboard.
 // ═══════════════════════════════════════════════════════════
 import { initLucide, requireEditPermission, requireTabEditPermission } from './cloud.js';
+import { trackDeleted } from './tombstone.js';
 import { computeChartData, getPaletteColors, saveCustomCharts } from './export-xlsx.js';
 import { canEditChartZone, canEditTab, canViewAdvanced, getTabDef } from './permissions.js';
 import { hrPressWorkersNamesOf, hrStripForMatch } from './hr.js';
@@ -1244,6 +1245,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       return;
     }
     if (confirm(`Bạn có chắc muốn xóa biểu đồ "${chart.title}"?`)) {
+      trackDeleted('customCharts', chartId);
       state.customCharts = state.customCharts.filter(c => c.id !== chartId);
       saveCustomCharts();
       renderDashboardCharts();

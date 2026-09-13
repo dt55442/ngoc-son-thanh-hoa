@@ -2,6 +2,7 @@
 // js/planning.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { getDateYear, getPressedQtyForPlan, pressRecordWeek } from './press.js';
 import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, state } from './state.js';
@@ -1474,6 +1475,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     const rate = state.materialRates.find(r => r.id === rateId);
     if (!rate) return;
     if (confirm(`Bạn có chắc muốn xóa định mức "${rate.product}"?`)) {
+      trackDeleted('materialRates', rateId);
       state.materialRates = state.materialRates.filter(r => r.id !== rateId);
       saveMaterialRates();
       renderPlanningView();
@@ -1536,6 +1538,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     const item = state.planningItems.find(p => p.id === itemId);
     if (!item) return;
     if (confirm('Bạn có chắc muốn xóa kế hoạch này?')) {
+      trackDeleted('planningItems', itemId);
       state.planningItems = state.planningItems.filter(p => p.id !== itemId);
       savePlanningItems();
       renderPlanningView();

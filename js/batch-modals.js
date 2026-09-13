@@ -6,6 +6,7 @@ import { pushUndo } from './events.js';
 import { getFilteredBatches, renderAll } from './main.js';
 import { STAGES, state } from './state.js';
 import { saveData } from './storage.js';
+import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, generateBatchCodeYYMMDD, getISOWeekString, showToast, validateBatchInput } from './utils.js';
 import { getBaoTinhConversion } from './planning.js';
 
@@ -137,6 +138,7 @@ import { getBaoTinhConversion } from './planning.js';
     if (!batch) return;
     if (confirm(`Bạn có chắc chắn muốn xóa lô nan "${batch.code}"?`)) {
       pushUndo(`Xóa lô ${batch.code}`);
+      trackDeleted('batches', batchId); // dấu vết xóa: chặn máy khác đẩy ngược lô này lên mây
       state.batches = state.batches.filter(b => b.id !== batchId);
       saveData(); renderAll();
       showToast(`Đã xóa lô nan ${batch.code}`, 'info');

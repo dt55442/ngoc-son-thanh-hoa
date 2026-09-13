@@ -12,6 +12,7 @@
 // cột "Số Lượng Xuất" trong biểu đồ Kế Hoạch vs Đã Ép (press.js).
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { canEditTab } from './permissions.js';
 import { restoreRateTableCollapse } from './planning.js';
@@ -296,6 +297,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     const row = (state.qcExports || []).find(q => q.id === id);
     if (!row) return;
     if (!confirm(`Xóa dòng xuất hàng "${qcRowName(row)}" (${row.week || 'chưa chọn tuần'})?`)) return;
+    trackDeleted('qcExports', id);
     state.qcExports = state.qcExports.filter(q => q.id !== id);
     saveQcExports();
     renderQcTable();

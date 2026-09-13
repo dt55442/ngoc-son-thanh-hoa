@@ -15,9 +15,10 @@
 // Lưu localStorage + đồng bộ mây (firePushSync) như các tab khác.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { canViewAdvanced } from './permissions.js';
-import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, state } from './state.js';
+import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── HẰNG SỐ NHÂN SỰ ────────────────────────────────────────────
@@ -40,6 +41,9 @@ import { escapeHTML, showToast } from './utils.js';
     try { state.hrEmployees  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_EMPLOYEES))  || []; } catch (e) { state.hrEmployees  = []; }
     try { state.hrLeaves     = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_LEAVES))     || []; } catch (e) { state.hrLeaves     = []; }
     try { state.hrRecruitment = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_RECRUITMENT)) || []; } catch (e) { state.hrRecruitment = []; }
+    try { state.hrPositionNeeds = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_POSNEEDS)) || []; } catch (e) { state.hrPositionNeeds = []; }
+    try { state.hrShifts = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_SHIFTS)) || []; } catch (e) { state.hrShifts = []; }
+    try { state.hrAssignments = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_ASSIGN)) || []; } catch (e) { state.hrAssignments = []; }
     try { state.hrPositions  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_POSITIONS))  || []; } catch (e) { state.hrPositions  = []; }
     try { state.hrAttendance = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_ATTENDANCE)) || []; } catch (e) { state.hrAttendance = []; }
     try { state.hrCheckins   = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CHECKINS))   || []; } catch (e) { state.hrCheckins   = []; }
@@ -49,11 +53,14 @@ import { escapeHTML, showToast } from './utils.js';
     localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || []));
     localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || []));
     localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || []));
+    localStorage.setItem(STORAGE_KEY_HR_POSNEEDS, JSON.stringify(state.hrPositionNeeds || []));
+    localStorage.setItem(STORAGE_KEY_HR_SHIFTS, JSON.stringify(state.hrShifts || []));
+    localStorage.setItem(STORAGE_KEY_HR_ASSIGN, JSON.stringify(state.hrAssignments || []));
     localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || []));
     localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || []));
     localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || []));
     // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa mục Nhân Sự nào)
-    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositions', 'hrAttendance', 'hrCheckins']);
+    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositionNeeds', 'hrShifts', 'hrAssignments', 'hrPositions', 'hrAttendance', 'hrCheckins']);
     firePushSync(); // đồng bộ lên mây nếu online
   }
 
@@ -96,6 +103,8 @@ import { escapeHTML, showToast } from './utils.js';
     renderHrLeaveStats();
     renderHrAttendanceStats();
     renderHrRecruitmentTable();
+    renderPositionNeedsTable();
+    renderHrBoard();
     updateHrCardGrid();
     syncHrMiniActive();
     initLucide();
@@ -106,7 +115,7 @@ import { escapeHTML, showToast } from './utils.js';
   // nếu không, mỗi lần đổi bộ lọc (gọi renderHrView) select "Bộ phận" bị xây
   // lại và snap về "Tất Cả" khiến bộ lọc tưởng như không hoạt động.
   function populateHrSelects() {
-    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept'].forEach(selId => {
+    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept', 'hr-posneed-filter-dept'].forEach(selId => {
       const sel = document.getElementById(selId);
       if (!sel) return;
       const cur = sel.value;
@@ -260,6 +269,11 @@ import { escapeHTML, showToast } from './utils.js';
     const e = hrEmpById(id);
     if (!e) return;
     if (!confirm(`Xóa nhân viên "${e.name}"? Các đơn nghỉ phép & dữ liệu chấm công/phân vị của người này cũng bị xóa.`)) return;
+    trackDeleted('hrEmployees', id);
+    // Cascade xóa: đơn nghỉ + chấm công + giờ máy chấm công của người này cũng bị xóa
+    trackDeleted('hrLeaves', (state.hrLeaves || []).filter(l => l.employeeId === id).map(l => l.id));
+    trackDeleted('hrAttendance', (state.hrAttendance || []).filter(a => a.employeeId === id).map(a => a.id));
+    trackDeleted('hrCheckins', (state.hrCheckins || []).filter(c => c.employeeId === id).map(c => c.id));
     state.hrEmployees = state.hrEmployees.filter(x => x.id !== id);
     state.hrLeaves = (state.hrLeaves || []).filter(l => l.employeeId !== id);
     state.hrAttendance = (state.hrAttendance || []).filter(a => a.employeeId !== id);
@@ -509,6 +523,7 @@ import { escapeHTML, showToast } from './utils.js';
 
   function deleteLeave(id) {
     if (!requireEditPermission() && !canApproveLeave()) return;
+    trackDeleted('hrLeaves', id);
     state.hrLeaves = (state.hrLeaves || []).filter(l => l.id !== id);
     saveHrData();
     renderHrView();
@@ -606,7 +621,7 @@ import { escapeHTML, showToast } from './utils.js';
       if (rec && (((rec.positions || []).length) || (rec.note || '').trim())) {
         if (!confirm('Bỏ chấm sẽ xóa cả phân vị & ghi chú của ngày này. Tiếp tục?')) { renderHrAttendanceCard(); return; }
       }
-      if (rec) state.hrAttendance.splice(idx, 1);
+      if (rec) { trackDeleted('hrAttendance', rec.id); state.hrAttendance.splice(idx, 1); }
       saveHrData();
       renderHrAttendanceCard();
       showToast(`Đã bỏ chấm công ${hrEmpName(employeeId)} ngày ${fmtDateDMY(date)}`, 'info');
@@ -837,12 +852,36 @@ import { escapeHTML, showToast } from './utils.js';
           ` title="${escapeHTML(p.name)}${p.department ? ' · ' + escapeHTML(p.department) : ''}${skilled ? ' (kỹ năng có sẵn)' : ''}">${skilled ? '★ ' : ''}${escapeHTML(p.name)}</button>`;
       }).join('') || '<span style="font-size:0.72rem;color:var(--text-muted);">Chưa có vị trí nào</span>';
 
+      // CỘT VỊ TRÍ TRONG NGÀY — gọn theo dữ liệu Board:
+      //  • Có bố trí qua Board -> chỉ hiện ĐÚNG các vị trí đã gán hôm đó (kèm
+      //    giờ làm) + badge tổng HC (giờ hành chính) / TC (tăng ca) trong ngày.
+      //  • Chưa có dữ liệu Board -> giữ chip phân vị thủ công như cũ (fallback).
+      const dayAs = hrAssignmentsOf(state.hrAttDate).filter(a => a.employeeId === e.id)
+        .sort((a, b) => String(a.start).localeCompare(String(b.start)));
+      let posCell;
+      if (dayAs.length) {
+        const chips = dayAs.map(a =>
+          `<span class="att-pos-chip on" title="${escapeHTML(hrPosName(a.positionId))} · ${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}">` +
+          `${escapeHTML(hrPosName(a.positionId))} <b style="font-weight:600;">${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ''}</b></span>`).join('');
+        const tot = dayAs.reduce((acc, a) => {
+          const r = hrSplitHoursHC(a.department || e.department, a.start, a.end, a.shiftIdx || 0);
+          acc.hc += r.hc; acc.tc += r.tc; return acc;
+        }, { hc: 0, tc: 0 });
+        const badge = `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
+          <span class="hr-chip" title="Giờ làm trong giờ hành chính/ca chuẩn của bộ phận">HC <strong>${fmtHm(tot.hc)}</strong></span>` +
+          (tot.tc > 0 ? `<span class="hr-chip warn" title="Giờ tăng ca — ngoài giờ ca chuẩn">TC <strong>${fmtHm(tot.tc)}</strong></span>` : '') +
+          `</div>`;
+        posCell = `<div class="att-pos-chips">${chips}</div>${badge}`;
+      } else {
+        posCell = `<div class="att-pos-chips">${posChips}</div>`;
+      }
+
       return `<tr${st === 'leave' ? ' style="opacity:0.75;"' : ''}>
         <td><strong>${escapeHTML(e.name || '')}</strong>${e.code ? `<br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(e.code)}</span>` : ''}</td>
         <td>${escapeHTML(e.department || '—')}</td>
         <td>${statusCell}${ciBadge}</td>
         <td>${leaveCell}</td>
-        <td><div class="att-pos-chips">${posChips}</div></td>
+        <td>${posCell}</td>
         <td><input type="text" data-att-emp="${escapeHTML(e.id)}" data-att-field="note" value="${escapeHTML(rec?.note || '')}" placeholder="Ghi chú..." style="min-width:110px;"></td>
       </tr>`;
     }).join('');
@@ -1037,6 +1076,7 @@ import { escapeHTML, showToast } from './utils.js';
   }
   function deleteCheckin(id) {
     if (!requireEditPermission()) return;
+    trackDeleted('hrCheckins', id);
     state.hrCheckins = (state.hrCheckins || []).filter(c => c.id !== id);
     saveHrData();
     renderHrView();
@@ -1047,6 +1087,7 @@ import { escapeHTML, showToast } from './utils.js';
     const n = (state.hrCheckins || []).length;
     if (!n) return;
     if (!confirm(`Xóa toàn bộ ${n} bản ghi giờ đã nạp từ máy chấm công? (Không ảnh hưởng dữ liệu chấm công tay)`)) return;
+    trackDeleted('hrCheckins', (state.hrCheckins || []).map(c => c.id));
     state.hrCheckins = [];
     saveHrData();
     renderHrView();
@@ -1410,6 +1451,7 @@ import { escapeHTML, showToast } from './utils.js';
     if (!p) return;
     const users = (state.hrEmployees || []).filter(e => (e.skills || []).includes(id)).length;
     if (!confirm(`Xóa vị trí "${p.name}"? Kỹ năng này sẽ gỡ khỏi ${users} nhân viên và khỏi phân vị đã lưu.`)) return;
+    trackDeleted('hrPositions', id);
     state.hrPositions = (state.hrPositions || []).filter(x => x.id !== id);
     (state.hrEmployees || []).forEach(e => { if (Array.isArray(e.skills)) e.skills = e.skills.filter(s => s !== id); });
     (state.hrAttendance || []).forEach(a => { if (Array.isArray(a.positions)) a.positions = a.positions.filter(s => s !== id); });
@@ -1537,12 +1579,744 @@ import { escapeHTML, showToast } from './utils.js';
 
   function deleteRecruitment(id) {
     if (!requireEditPermission()) return;
+    trackDeleted('hrRecruitment', id);
     state.hrRecruitment = (state.hrRecruitment || []).filter(r => r.id !== id);
     saveHrData();
     renderHrView();
     showToast('Đã xóa nhu cầu tuyển dụng', 'info');
   }
 
+  // ─── 4b) NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ — BẢNG DỮ LIỆU TRUNG GIAN ────
+  // Mỗi dòng = 1 vị trí của 1 bộ phận: SỐ NGƯỜI CẦN + SỐ NGƯỜI HIỆN CÓ.
+  // Đây là bảng trung gian: dữ liệu có thể NHẬP TAY hoặc LẤY TỪ BẢNG KHÁC
+  // (nút "Đồng Bộ Từ Hồ Sơ" đếm tự động từ danh sách nhân viên), đồng thời
+  // CUNG CẤP DỮ LIỆU cho các bảng/chức năng sắp bổ sung (biểu đồ kiểm soát
+  // nhân sự, so sánh kế hoạch - hiện trạng...).
+  function renderPositionNeedsTable() {
+    const tbody = document.getElementById('hr-posneed-body');
+    if (!tbody) return;
+    // TỰ ĐỘNG NẠP: mỗi vị trí trong danh mục (hrPositions) có 1 dòng trong bảng
+    // (chỉ thêm lần đầu / khi có vị trí mới — dòng đã xóa tay không hồi sinh).
+    ensurePositionNeedsFromPositions();
+    const dept = document.getElementById('hr-posneed-filter-dept')?.value || 'all';
+    const list = (state.hrPositionNeeds || []).filter(r => dept === 'all' || r.department === dept);
+
+    const countEl = document.getElementById('hr-posneed-count');
+    if (countEl) {
+      const need = (state.hrPositionNeeds || []).reduce((s, r) => s + (r.needQty || 0), 0);
+      const have = (state.hrPositionNeeds || []).reduce((s, r) => s + (r.haveQty || 0), 0);
+      countEl.textContent = `Cần ${need} — hiện có ${have} — còn thiếu ${Math.max(0, need - have)} (${list.length} dòng)`;
+    }
+
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:22px;color:var(--text-muted);">
+        <i data-lucide="target" style="width:26px;height:26px;margin-bottom:6px;"></i>
+        <p>Chưa có vị trí nào — thêm Vị Trí Làm Việc ở thẻ <b>"Vị Trí &amp; Kỹ Năng"</b>, dòng sẽ tự động xuất hiện tại đây. Có thể bấm "Thêm Vị Trí Cần" để tạo dòng thủ công.</p></td></tr>`;
+      initLucide();
+      return;
+    }
+
+    tbody.innerHTML = [...list].sort((a, b) =>
+      String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
+      String(a.position || '').localeCompare(String(b.position || ''), 'vi')).map(r => {
+      const missing = Math.max(0, (r.needQty || 0) - (r.haveQty || 0));
+      return `<tr>
+        <td>${escapeHTML(r.department || '—')}</td>
+        <td><strong>${escapeHTML(r.position || '—')}</strong></td>
+        <td><input type="number" min="0" class="form-input" style="width:74px;padding:3px 6px;" value="${parseInt(r.needQty, 10) || 0}"
+          onchange="app.hrSetPositionNeedQty('${r.id}','needQty',this.value)" title="Số người cần (chỉnh sửa tay)"></td>
+        <td><input type="number" min="0" class="form-input" style="width:74px;padding:3px 6px;" value="${parseInt(r.haveQty, 10) || 0}"
+          onchange="app.hrSetPositionNeedQty('${r.id}','haveQty',this.value)" title="Số người hiện có (chỉnh sửa tay hoặc bấm Đồng Bộ)"></td>
+        <td><strong style="color:${missing > 0 ? 'var(--danger)' : '#16a34a'};">${missing}</strong></td>
+        <td class="hr-notes" title="${escapeHTML(r.notes || '')}">${escapeHTML(r.notes || '—')}</td>
+        <td class="text-right">
+          <div style="display:flex;justify-content:flex-end;gap:4px;">
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrEditPositionNeed('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeletePositionNeed('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function openPositionNeedModal(id) {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-position-need');
+    const form = document.getElementById('position-need-form');
+    if (!modal || !form) return;
+    form.reset();
+    const deptSel = document.getElementById('posneed-department');
+    if (deptSel) deptSel.innerHTML = hrDeptOptions();
+    const titleEl = document.getElementById('posneed-modal-title');
+
+    if (id) {
+      const r = (state.hrPositionNeeds || []).find(x => x.id === id);
+      if (!r) return;
+      if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Vị Trí Cần: ${escapeHTML(r.position || '')}`;
+      document.getElementById('posneed-id').value = r.id;
+      document.getElementById('posneed-department').value = r.department || HR_DEPARTMENTS[0];
+      fillPosNeedPositionSelect(r.positionId, r.position);
+      document.getElementById('posneed-need').value = r.needQty || 1;
+      document.getElementById('posneed-have').value = r.haveQty || 0;
+      document.getElementById('posneed-notes').value = r.notes || '';
+    } else {
+      if (titleEl) titleEl.innerHTML = `<i data-lucide="target"></i> Thêm Vị Trí Cần Nhân Sự`;
+      document.getElementById('posneed-id').value = '';
+      fillPosNeedPositionSelect();
+      document.getElementById('posneed-need').value = 1;
+      document.getElementById('posneed-have').value = 0;
+    }
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  // Điền select Vị Trí trong modal (lọc theo bộ phận đang chọn; vị trí
+  // "chung" không gán bộ phận luôn hiển thị). Giữ lại tên vị trí cũ nếu
+  // không còn trong danh mục (dòng dữ liệu cũ vẫn sửa được).
+  function fillPosNeedPositionSelect(positionId, keepName) {
+    const sel = document.getElementById('posneed-position');
+    if (!sel) return;
+    const dept = document.getElementById('posneed-department')?.value || '';
+    const opts = (state.hrPositions || [])
+      .filter(p => !dept || !p.department || p.department === dept)
+      .map(p => `<option value="${escapeHTML(p.name)}" data-pos-id="${escapeHTML(p.id)}">${escapeHTML(p.name)}${p.department ? ' — ' + escapeHTML(p.department) : ''}</option>`).join('');
+    sel.innerHTML = '<option value="">— Chọn vị trí —</option>' + opts +
+      (keepName && !(state.hrPositions || []).some(p => p.name === keepName)
+        ? `<option value="${escapeHTML(keepName)}">${escapeHTML(keepName)} (không còn trong danh mục)</option>` : '');
+    if (keepName) sel.value = keepName; else if (positionId) {
+      const p = (state.hrPositions || []).find(x => x.id === positionId);
+      if (p) sel.value = p.name;
+    }
+  }
+
+  function closePositionNeedModal() {
+    document.getElementById('modal-position-need')?.classList.remove('show');
+  }
+
+  function handlePositionNeedSubmit(e) {
+    e.preventDefault();
+    if (!requireEditPermission()) return;
+    const id = document.getElementById('posneed-id').value;
+    const position = document.getElementById('posneed-position').value.trim();
+    const department = document.getElementById('posneed-department').value;
+    const needQty = parseInt(document.getElementById('posneed-need').value) || 0;
+    if (!position) { showToast('Vị trí không được để trống!', 'error'); return; }
+    // Trùng (bộ phận + vị trí): yêu cầu sửa dòng có sẵn thay vì tạo dòng trùng lặp
+    const dup = (state.hrPositionNeeds || []).find(r =>
+      r.id !== id && r.department === department && (r.position || '').trim() === position);
+    if (dup) { showToast(`Vị trí "${position}" của bộ phận ${department} đã có trong bảng — sửa dòng đã có nhé!`, 'error'); return; }
+    if (needQty <= 0) { showToast('Số người cần phải lớn hơn 0!', 'error'); return; }
+    const posDef = (state.hrPositions || []).find(p => p.name === position);
+    const data = {
+      id: id || `posneed-${Date.now()}`,
+      department,
+      position,
+      positionId: posDef ? posDef.id : '',
+      needQty,
+      haveQty: parseInt(document.getElementById('posneed-have').value) || 0,
+      notes: document.getElementById('posneed-notes').value.trim(),
+      updatedAt: new Date().toISOString()
+    };
+    if (id) {
+      const idx = state.hrPositionNeeds.findIndex(x => x.id === id);
+      if (idx !== -1) state.hrPositionNeeds[idx] = { ...state.hrPositionNeeds[idx], ...data };
+      showToast(`Đã cập nhật "${position}" (${department})!`, 'success');
+    } else {
+      data.createdAt = new Date().toISOString();
+      state.hrPositionNeeds.push(data);
+      showToast(`Đã thêm "${position}" (${department})!`, 'success');
+    }
+    saveHrData();
+    closePositionNeedModal();
+    renderHrView();
+  }
+
+  function deletePositionNeed(id) {
+    if (!requireEditPermission()) return;
+    trackDeleted('hrPositionNeeds', id);
+    state.hrPositionNeeds = (state.hrPositionNeeds || []).filter(r => r.id !== id);
+    saveHrData();
+    renderHrView();
+    showToast('Đã xóa dòng "Nhân sự cần tại vị trí" (vị trí sẽ không tự nạp lại)', 'info');
+  }
+
+  // ── TỰ ĐỘNG NẠP VỊ TRÍ VÀO BẢNG TRUNG GIAN ──────────────────────
+  // Mỗi vị trí trong danh mục (hrPositions) được bảo đảm có 1 dòng trong
+  // bảng "Nhân sự cần tại các vị trí": gọi khi mở tab (nạp lần đầu / vị trí
+  // mới) và khi thêm vị trí mới trong thẻ "Vị Trí & Kỹ Năng". Dòng dùng id
+  // ổn định `posneed-pos-<vị trí id>` — nếu người dùng XÓA dòng đó, dấu vết
+  // xóa (tombstone) giữ cho vị trí không được nạp lại. Số người hiện có
+  // mặc định được đếm tự động từ hồ sơ; số người cần = 1 (chỉnh sửa tay).
+  function posNeedIdForPosition(posId) { return `posneed-pos-${posId}`; }
+
+  function ensurePositionNeedsFromPositions() {
+    const positions = state.hrPositions || [];
+    if (!positions.length) return false;
+    const have = new Set((state.hrPositionNeeds || []).map(r => r.id));
+    const dead = (state.deletedIds && state.deletedIds.hrPositionNeeds) || {};
+    let added = false;
+    positions.forEach(p => {
+      const id = posNeedIdForPosition(p.id);
+      if (have.has(id) || dead[id]) return;
+      state.hrPositionNeeds = state.hrPositionNeeds || [];
+      state.hrPositionNeeds.push({
+        id,
+        department: p.department || 'Chung',
+        position: p.name,
+        positionId: p.id,
+        needQty: 1,
+        haveQty: hrCountEmployeesAtPosition(p.department || '', p.id, p.name),
+        notes: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        autoFrom: 'hrPositions' // nguồn dữ liệu (bảng khác) — dùng cho chức năng sắp bổ sung
+      });
+      added = true;
+    });
+    if (added) {
+      saveHrData();
+      updateHrCardGrid();
+    }
+    return added;
+  }
+
+  // CHỈNH SỬA TAY từng ô "Số người cần" / "Số người hiện có" ngay trên bảng
+  function hrSetPositionNeedQty(id, field, rawVal) {
+    if (!requireEditPermission()) return;
+    const r = (state.hrPositionNeeds || []).find(x => x.id === id);
+    if (!r || (field !== 'needQty' && field !== 'haveQty')) return;
+    const v = Math.max(0, parseInt(rawVal, 10) || 0);
+    r[field] = v;
+    r.updatedAt = new Date().toISOString();
+    saveHrData();
+    renderHrView();
+  }
+
+  // LẤY DỮ LIỆU TỪ BẢNG KHÁC: cập nhật "Số người hiện có" của mọi dòng
+  // bằng cách đếm từ danh sách nhân viên (trạng thái "Đang làm việc").
+  function syncPositionNeedsFromEmployees() {
+    if (!requireEditPermission()) return;
+    const list = state.hrPositionNeeds || [];
+    if (!list.length) { showToast('Chưa có dòng nào để đồng bộ.', 'info'); return; }
+    list.forEach(r => { r.haveQty = hrCountEmployeesAtPosition(r.department, r.positionId, r.position); r.updatedAt = new Date().toISOString(); });
+    saveHrData();
+    renderHrView();
+    showToast(`Đã đồng bộ số người hiện có cho ${list.length} dòng từ hồ sơ nhân viên.`, 'success');
+  }
+
+  // Đếm số nhân viên ĐANG LÀM VIỆC tại 1 vị trí của 1 bộ phận:
+  //   - ưu tiên khớp kỹ năng (skills chứa positionId), nếu không có
+  //     positionId thì khớp theo tên vị trí trong hồ sơ nhân viên.
+  function hrCountEmployeesAtPosition(department, positionId, positionName) {
+    return (state.hrEmployees || []).filter(e => {
+      if ((e.status || 'active') !== 'active') return false;
+      if (department && (e.department || '') !== department) return false;
+      if (positionId && Array.isArray(e.skills) && e.skills.includes(positionId)) return true;
+      return positionName && (e.position || '').trim() === positionName.trim();
+    }).length;
+  }
+
+
+
+  // ─── 9) BỐ TRÍ VỊ TRÍ THEO NGÀY — BẢNG ĐIỀU KHIỂN TRỰC QUAN ──────
+  // Cột Y = số người (ô xếp chồng theo "Số Người Cần" của bảng trung gian),
+  // cột X = các vị trí, mỗi bộ phận hiển thị riêng (mặc định Xưởng 2).
+  // Ô trống = "?" màu xám; ô đã gán người = xanh + tên rút gọn (Hà Văn Chiến
+  // → H.V.Chiến) + giờ làm. Bộ phận "Hành chính" hiển thị 1 cột/vị trí,
+  // "Làm ca" hiển thị 2 cột (Ca ngày / Ca đêm — chỉnh trong Cài Đặt Ca).
+  // Dữ liệu giờ (hrAssignments) là nguồn cho bảng chấm công: công thường + tăng ca.
+  const BOARD_SHIFT_PRESETS = {
+    hanhchinh: { type: 'hanhchinh', shifts: [
+      { name: 'Sáng',  start: '07:00', end: '11:30' },
+      { name: 'Chiều', start: '13:00', end: '17:30' }
+    ] },
+    lamca: { type: 'lamca', shifts: [
+      { name: 'Ca ngày', start: '07:00', end: '19:00' },
+      { name: 'Ca đêm',  start: '19:00', end: '07:00' }
+    ] }
+  };
+
+  // Cấu hình ca của 1 bộ phận (mặc định Hành chính cho mọi bộ phận)
+  function hrShiftCfg(dept) {
+    return (state.hrShifts || []).find(s => s.id === dept) || { id: dept, type: 'hanhchinh', shifts: BOARD_SHIFT_PRESETS.hanhchinh.shifts };
+  }
+  // Tên rút gọn "Hà Văn Chiến" → "H.V.Chiến" (chữ cuối nguyên vẹn, các chữ đầu lấy nguyên âm đầu)
+  function hrShortName(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) return parts[0] || '';
+    const cap = w => (w[0] || '').toUpperCase() + (w.length > 1 ? w.slice(1) : '');
+    return parts.slice(0, -1).map(w => cap(w[0]) + '.').join('') + cap(parts[parts.length - 1]);
+  }
+  // '07:00' → '7h00' (hiển thị trên board & chấm công)
+  function fmtHour(t) {
+    const m = String(t || '').match(/^(\d{1,2}):(\d{2})$/);
+    return m ? `${+m[1]}h${m[2]}` : (t || '—');
+  }
+  // Danh sách mốc giờ 30 phút (05:00 → 23:30) cho select giờ bắt đầu/kết thúc
+  function hrHalfHourOptions() {
+    const out = [];
+    for (let h = 5; h <= 23; h++) { out.push(`${String(h).padStart(2, '0')}:00`, `${String(h).padStart(2, '0')}:30`); }
+    return out;
+  }
+  // Khoảng giờ làm của 1 cột (shift) trong ngày: hành chính gộp Sáng+Chiều
+  function hrShiftRange(cfg, shiftIdx) {
+    if (!cfg.shifts.length) return { start: '07:00', end: '17:30' };
+    if (cfg.type === 'hanhchinh') {
+      return { start: cfg.shifts[0].start, end: cfg.shifts[cfg.shifts.length - 1].end, label: 'Hành chính' };
+    }
+    const s = cfg.shifts[shiftIdx] || cfg.shifts[0];
+    return { start: s.start, end: s.end, label: s.name };
+  }
+  // Các bản ghi gán người của 1 ngày (tùy chọn lọc vị trí)
+  function hrAssignmentsOf(date, positionId) {
+    return (state.hrAssignments || [])
+      .filter(a => a.date === date && (!positionId || a.positionId === positionId));
+  }
+  // Giờ làm của 1 nhân viên trong ngày (từ board) — nguồn cho chấm công/tăng ca:
+  // [{ position, positionId, start, end, shiftLabel }] đã sắp theo giờ bắt đầu
+  function hrAssignTimesOf(employeeId, date) {
+    return (state.hrAssignments || [])
+      .filter(a => a.date === date && a.employeeId === employeeId)
+      .map(a => ({ position: hrPosName(a.positionId), positionId: a.positionId, start: a.start, end: a.end, shiftLabel: a.shiftLabel || '' }))
+      .sort((x, y) => String(x.start).localeCompare(String(y.start)));
+  }
+
+  // '540' phút -> '9h' / '390' -> '6h30'
+  function fmtHm(min) {
+    min = Math.max(0, Math.round(min));
+    const h = Math.floor(min / 60), m = min % 60;
+    return `${h}h${m ? String(m).padStart(2, '0') : ''}`;
+  }
+
+  // Tách giờ làm việc thành HC (hành chính) và TC (tăng ca) theo quy tắc:
+  //  • HC  = phần làm việc NẰM TRONG giờ ca chuẩn của bộ phận (theo Cài Đặt
+  //    Ca). Hành chính 07:00–17:30 có 1h30 nghỉ trưa 11:30–13:00 — nghỉ trưa
+  //    KHÔNG tính vào HC lẫn TC → làm đủ ngày = 9h HC.
+  //  • TC  = chỉ tính phần NGOÀI giờ ca chuẩn (trước giờ vào / sau giờ ra,
+  //    VD làm đến 18h00 → 9h HC + 0h30 TC). Làm ca: ngoài khung ca đã chọn.
+  //  • Ca đêm có end < start tự động tính sang ngày hôm sau.
+  // Trả về phút: { hc, tc } (nghỉ trưa không nằm trong cả hai).
+  function hrSplitHoursHC(dept, start, end, shiftIdx) {
+    const cfg = hrShiftCfg(dept);
+    const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+    let s = toMin(start);
+    let e = toMin(end);
+    if (!e || e === s) { const r = hrShiftRange(cfg, shiftIdx); e = e || toMin(r.end); if (e <= s) e = s + 480; }
+    if (e <= s) e += 1440; // làm qua nửa đêm
+    // Các cửa sổ giờ HC (hành chính: từng buổi, đã loại nghỉ trưa)
+    const hcWindows = [];
+    if (cfg.type === 'lamca') {
+      const sh = cfg.shifts[shiftIdx] || cfg.shifts[0];
+      let ws = toMin(sh.start), we = toMin(sh.end);
+      if (we <= ws) we += 1440;
+      hcWindows.push([ws, we]);
+    } else {
+      cfg.shifts.forEach(sh => hcWindows.push([toMin(sh.start), toMin(sh.end)]));
+    }
+    // HC = giao của giờ làm với các cửa sổ HC
+    let hc = 0;
+    hcWindows.forEach(([ws, we]) => {
+      [0, 1440].forEach(off => {
+        const a = Math.max(s, ws + off), b = Math.min(e, we + off);
+        if (b > a) hc += b - a;
+      });
+    });
+    // Nghỉ trưa (khoảng hở GIỮA các buổi) — không tính vào HC lẫn TC
+    let gap = 0;
+    if (cfg.type !== 'lamca') {
+      for (let i = 0; i < hcWindows.length - 1; i++) {
+        const gs = hcWindows[i][1], ge = hcWindows[i + 1][0];
+        [0, 1440].forEach(off => {
+          const a = Math.max(s, gs + off), b = Math.min(e, ge + off);
+          if (b > a) gap += b - a;
+        });
+      }
+    }
+    // TC = phần còn lại của giờ làm ngoài HC và ngoài nghỉ trưa
+    //     (= làm trước giờ vào / sau giờ ra của ca chuẩn)
+    return { hc, tc: Math.max(0, (e - s) - hc - gap) };
+  }
+
+  // Đồng bộ cột "Vị Trí Trong Ngày" của chấm công theo dữ liệu Board:
+  // rec.positions = các vị trí ĐANG được gán trong ngày (nguồn cho liên kết
+  // công nhân ép ván + thống kê phân vị)
+  function hrSyncAttPositionsFromAssignments(employeeId, date) {
+    const rec = attRecordOf(employeeId, date);
+    if (!rec) return;
+    rec.positions = [...new Set((state.hrAssignments || [])
+      .filter(a => a.date === date && a.employeeId === employeeId)
+      .map(a => a.positionId))];
+    rec.updatedAt = new Date().toISOString();
+  }
+
+  // ── RENDER BOARD — BẢNG ĐIỀU KHIỂN TRỰC QUAN (kiểu Kanban) ──────
+  // Mỗi VỊ TRÍ = 1 thẻ cột; bên trong là các Ô NGƯỜI xếp chồng (số ô =
+  // "Số Người Cần" của bảng trung gian). Ô trống "?" xám; ô đã gán = chip
+  // xanh avatar + tên rút gọn + giờ. Bộ phận "Làm ca" tách 2 cột ca/thẻ.
+  function hrInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function renderHrBoard() {
+    const board = document.getElementById('hr-board');
+    if (!board) return;
+    if (!state.hrBoardDate) state.hrBoardDate = hrTodayISO();
+    if (!state.hrBoardDept) state.hrBoardDept = 'Xưởng 2';
+    const dateInput = document.getElementById('hr-board-date');
+    if (dateInput && dateInput.value !== state.hrBoardDate) dateInput.value = state.hrBoardDate;
+    const deptTabs = document.getElementById('hr-board-dept-tabs');
+    if (deptTabs) {
+      deptTabs.innerHTML = HR_DEPARTMENTS.map(d =>
+        `<button type="button" class="hr-board-tab${d === state.hrBoardDept ? ' on' : ''}" data-board-dept="${escapeHTML(d)}">${escapeHTML(d)}</button>`).join('');
+    }
+    const dept = state.hrBoardDept;
+    const cfg = hrShiftCfg(dept);
+    const colCount = cfg.type === 'lamca' ? Math.max(1, cfg.shifts.length) : 1;
+    const positions = (state.hrPositions || []).filter(p => p.department === dept);
+    const posNeedOf = pid => (state.hrPositionNeeds || []).find(r => r.positionId === pid);
+    const assigns = hrAssignmentsOf(state.hrBoardDate).filter(a => positions.some(p => p.id === a.positionId));
+
+    // Chip tổng hợp tinh gọn trên đầu board
+    const countEl = document.getElementById('hr-board-count');
+    if (countEl) {
+      const totalNeed = positions.reduce((s, p) => s + (Math.max(0, parseInt(posNeedOf(p.id)?.needQty, 10) || 1)) * colCount, 0);
+      const fullCols = positions.reduce((s, p) => {
+        for (let si = 0; si < colCount; si++) {
+          const c = assigns.filter(a => a.positionId === p.id && (a.shiftIdx || 0) === si).length;
+          s += Math.min(c, Math.max(0, parseInt(posNeedOf(p.id)?.needQty, 10) || 1));
+        }
+        return s;
+      }, 0);
+      countEl.innerHTML =
+        `<span class="hr-stat-chip"><i data-lucide="calendar-days"></i> ${fmtDateDMY(state.hrBoardDate)}</span>` +
+        `<span class="hr-stat-chip"><i data-lucide="layout-panel-left"></i> ${escapeHTML(dept)}</span>` +
+        `<span class="hr-stat-chip"><i data-lucide="${cfg.type === 'lamca' ? 'moon-star' : 'sun'}"></i> ${cfg.type === 'lamca' ? colCount + ' ca' : 'Hành chính'}</span>` +
+        `<span class="hr-stat-chip"><i data-lucide="users"></i> Đã bố trí <strong>${assigns.length}</strong>/${totalNeed}</span>`;
+    }
+
+    if (!positions.length) {
+      board.innerHTML = `<div class="board-empty">
+        <i data-lucide="layout-panel-left"></i>
+        <p>Chưa có vị trí nào thuộc bộ phận <b>${escapeHTML(dept)}</b>.<br>Thêm ở thẻ "Vị Trí &amp; Kỹ Năng" (chọn Bộ Phận = ${escapeHTML(dept)}) — board tự lên cột.</p>
+      </div>`;
+      initLucide();
+      return;
+    }
+
+    board.innerHTML = positions.map(p => {
+      const need = Math.max(0, parseInt(posNeedOf(p.id)?.needQty, 10) || 1);
+      let complete = true;
+      const shifts = Array.from({ length: colCount }, (_, si) => {
+        const range = hrShiftRange(cfg, si);
+        const mine = assigns.filter(a => a.positionId === p.id && (a.shiftIdx || 0) === si)
+          .sort((a, b) => String(a.start).localeCompare(String(b.start)));
+        if (mine.length < need) complete = false;
+        const slots = mine.map(a => {
+          const emp = hrEmpById(a.employeeId);
+          const timeTxt = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}`;
+          return `<div class="slot filled" draggable="true" title="${escapeHTML(emp?.name || '')} · ${escapeHTML(timeTxt)}"
+            ondragstart="app.hrBoardDragStart(event, '${a.id}')" onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '${a.id}')">
+            <span class="slot-ava">${escapeHTML(hrInitials(emp?.name))}</span>
+            <span class="slot-info"><b>${escapeHTML(hrShortName(emp?.name || 'Đã xóa'))}</b><i>${escapeHTML(timeTxt)}</i></span>
+            <button type="button" class="slot-x" title="Bỏ người khỏi vị trí" onclick="event.stopPropagation(); app.hrBoardRemoveAssign('${a.id}')"><i data-lucide="x"></i></button>
+          </div>`;
+        });
+        for (let k = mine.length; k < need; k++) {
+          slots.push(`<div class="slot empty" title="Chưa có người — bấm để thêm"
+            onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '')"
+            ondragover="event.preventDefault()" ondragenter="this.classList.add('over')" ondragleave="this.classList.remove('over')"
+            ondrop="app.hrBoardDrop(event, '${p.id}', ${si})"><span>?</span></div>`);
+        }
+        // Nút "+" thêm nhanh nhân viên cho vị trí (mở cùng hộp thoại 3 bước)
+        slots.push(`<button type="button" class="slot add" title="Thêm nhân viên cho vị trí này"
+          onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '')"><i data-lucide="plus"></i><span>Thêm người</span></button>`);
+        return `<div class="board-shift">
+          <div class="board-shift-name">${escapeHTML(colCount > 1 ? (cfg.shifts[si]?.name || ('Ca ' + (si + 1))) : 'Hành chính')}<span>${fmtHour(range.start)}–${fmtHour(range.end)}</span></div>
+          <div class="board-slots">${slots.join('')}</div>
+        </div>`;
+      }).join('');
+      return `<div class="board-col${complete ? ' complete' : ''}">
+        <div class="board-col-head">
+          <span class="board-col-title" title="${escapeHTML(p.name)}">${escapeHTML(p.name)}</span>
+          <span class="board-col-need">cần ${need}${colCount > 1 ? `×${colCount}` : ''}</span>
+          <span class="board-col-dot${complete ? ' ok' : ' warn'}" title="${complete ? 'Đã đủ người' : 'Chưa đủ người'}"></span>
+        </div>
+        <div class="board-col-body">${shifts}</div>
+      </div>`;
+    }).join('');
+    initLucide();
+  }
+
+  function hrBoardSetDate(d) { state.hrBoardDate = d || hrTodayISO(); renderHrBoard(); }
+  function hrBoardShiftDay(days) { state.hrBoardDate = hrShiftDateISO(state.hrBoardDate || hrTodayISO(), days); renderHrBoard(); }
+  function hrBoardGoToday() { state.hrBoardDate = hrTodayISO(); renderHrBoard(); }
+  function hrBoardSetDept(dept) { if (!dept) return; state.hrBoardDept = dept; renderHrBoard(); }
+
+  // ── MODAL GÁN NGƯỜI VÀO Ô (3 bước: nhân viên → giờ bắt đầu → giờ kết thúc) ──
+  // mode: '' = thêm mới (bấm ô trống) | id bản ghi = sửa | 'move:<id>' = kéo ô
+  // sang vị trí khác (điền giờ bắt đầu mới tại vị trí mới, bản ghi cũ được dời)
+  let hrBoardSuggestFor = ''; // positionId đang gợi ý nhân viên (ưu tiên kỹ năng)
+  function hrBoardAssignCandidates(positionId, q) {
+    const pos = hrPosById(positionId);
+    const dept = pos?.department || '';
+    const key = hrStripForMatch(q || '');
+    return (state.hrEmployees || [])
+      .filter(e => (e.status || 'active') === 'active')
+      .filter(e => !key || hrStripForMatch(`${e.name || ''} ${e.code || ''}`).includes(key))
+      .sort((a, b) => {
+        const sk = x => ((x.skills || []).includes(positionId) ? 0 : 1);
+        const dp = x => (x.department === dept ? 0 : 1);
+        return sk(a) - sk(b) || dp(a) - dp(b) || String(a.name || '').localeCompare(String(b.name || ''), 'vi');
+      });
+  }
+  function renderBoardAssignSuggestions(q) {
+    const box = document.getElementById('board-assign-suggest');
+    if (!box || !hrBoardSuggestFor) return;
+    const list = hrBoardAssignCandidates(hrBoardSuggestFor, q).slice(0, 12);
+    if (!list.length) {
+      box.innerHTML = '<div class="hr-combobox-empty">Không tìm thấy nhân viên nào</div>';
+      box.style.display = 'block';
+      return;
+    }
+    box.innerHTML = list.map(e => {
+      const skilled = (e.skills || []).includes(hrBoardSuggestFor);
+      return `<div class="hr-combobox-item" data-emp-id="${escapeHTML(e.id)}">
+        <strong>${escapeHTML(e.name)}</strong>
+        <span class="hr-combobox-meta">${escapeHTML((e.code ? e.code + ' · ' : '') + (e.department || ''))}${skilled ? ' · ★ có kỹ năng' : ''}</span>
+      </div>`;
+    }).join('');
+    box.style.display = 'block';
+  }
+  function pickBoardAssignEmployee(id) {
+    const e = hrEmpById(id);
+    const input = document.getElementById('board-assign-employee');
+    const hidden = document.getElementById('board-assign-employee-id');
+    if (e && input) input.value = e.name;
+    if (hidden) hidden.value = id;
+    const box = document.getElementById('board-assign-suggest');
+    if (box) box.style.display = 'none';
+  }
+  function fillBoardAssignTimeSelects(cfg, shiftIdx, defStart, defEnd) {
+    const startSel = document.getElementById('board-assign-start');
+    const endSel = document.getElementById('board-assign-end');
+    if (!startSel || !endSel) return;
+    const range = hrShiftRange(cfg, shiftIdx);
+    const opts = hrHalfHourOptions();
+    startSel.innerHTML = opts.map(t => `<option value="${t}" ${t === (defStart || range.start) ? 'selected' : ''}>${fmtHour(t)}</option>`).join('');
+    endSel.innerHTML = `<option value="">— Hết ca (${fmtHour(range.end)}) —</option>` +
+      opts.map(t => `<option value="${t}" ${t === defEnd ? 'selected' : ''}>${fmtHour(t)}</option>`).join('');
+  }
+
+  function hrBoardOpenAssign(positionId, shiftIdx, assignId) {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-board-assign');
+    const form = document.getElementById('board-assign-form');
+    if (!modal || !form) return;
+    form.reset();
+    const dept = state.hrBoardDept || 'Xưởng 2';
+    const cfg = hrShiftCfg(dept);
+    hrBoardSuggestFor = positionId;
+    const pos = hrPosById(positionId);
+    const mode = String(assignId || '').startsWith('move:') ? 'move' : (assignId ? 'edit' : 'new');
+    const srcId = mode === 'move' ? String(assignId).slice(5) : assignId;
+    const src = srcId ? (state.hrAssignments || []).find(a => a.id === srcId) : null;
+    const range = hrShiftRange(cfg, shiftIdx);
+
+    document.getElementById('board-assign-mode').value = mode === 'new' ? '' : (srcId || '');
+    document.getElementById('board-assign-movefrom').value = mode === 'move' ? srcId : '';
+    document.getElementById('board-assign-date').value = state.hrBoardDate;
+    document.getElementById('board-assign-pos').value = positionId;
+    document.getElementById('board-assign-shiftidx').value = shiftIdx;
+    const titleEl = document.getElementById('board-assign-title');
+    if (titleEl) {
+      titleEl.innerHTML = mode === 'new'
+        ? `<i data-lucide="user-plus"></i> Bố Trí: ${escapeHTML(pos?.name || '')} (${escapeHTML(range.label || '')})`
+        : `<i data-lucide="edit-3"></i> Sửa Bố Trí: ${escapeHTML(pos?.name || '')}`;
+    }
+    if (src && mode !== 'new') {
+      pickBoardAssignEmployee(src.employeeId);
+      fillBoardAssignTimeSelects(cfg, shiftIdx, src.start, src.end);
+    } else {
+      fillBoardAssignTimeSelects(cfg, shiftIdx, range.start, '');
+      const inp = document.getElementById('board-assign-employee');
+      if (inp) inp.value = '';
+    }
+    const box = document.getElementById('board-assign-suggest');
+    if (box) box.style.display = 'none';
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closeBoardAssignModal() {
+    document.getElementById('modal-board-assign')?.classList.remove('show');
+    hrBoardSuggestFor = '';
+  }
+
+  function handleBoardAssignSubmit(e) {
+    e.preventDefault();
+    if (!requireEditPermission()) return;
+    const date = document.getElementById('board-assign-date').value;
+    const positionId = document.getElementById('board-assign-pos').value;
+    const shiftIdx = parseInt(document.getElementById('board-assign-shiftidx').value, 10) || 0;
+    const employeeId = document.getElementById('board-assign-employee-id').value;
+    const start = document.getElementById('board-assign-start').value;
+    const end = document.getElementById('board-assign-end').value; // '' = mặc định hết ca
+    const editId = document.getElementById('board-assign-mode').value;
+    const moveFromId = document.getElementById('board-assign-movefrom').value;
+    if (!employeeId) { showToast('Chọn nhân viên trước đã!', 'error'); return; }
+    if (!date || !positionId) { showToast('Thiếu vị trí / ngày.', 'error'); return; }
+    const dept = state.hrBoardDept || 'Xưởng 2';
+    const cfg = hrShiftCfg(dept);
+    const data = {
+      id: editId || `asg-${Date.now()}`,
+      date, department: dept, positionId, shiftIdx,
+      employeeId, start, end,
+      shiftLabel: cfg.type === 'lamca' ? (cfg.shifts[shiftIdx]?.name || '') : 'Hành chính',
+      updatedAt: new Date().toISOString()
+    };
+    // Dời ô (kéo thả): GIỮ LỊCH SỬ tại vị trí cũ — bản ghi cũ được CHẤM DỨT
+    // lúc giờ bắt đầu ca mới (VD: L.V.Tuấn 7h00–9h00 tại Bổ ống 2, sau đó
+    // 9h00–hết ca tại Bốc luồng). Nếu giờ mới <= giờ cũ thì coi như dời hẳn.
+    if (moveFromId && moveFromId !== editId) {
+      const src = (state.hrAssignments || []).find(a => a.id === moveFromId);
+      if (src) {
+        if (start > src.start) {
+          src.end = start;
+          src.updatedAt = new Date().toISOString();
+        } else {
+          trackDeleted('hrAssignments', moveFromId);
+          state.hrAssignments = (state.hrAssignments || []).filter(a => a.id !== moveFromId);
+        }
+        hrSyncAttPositionsFromAssignments(src.employeeId, src.date);
+      }
+    }
+    if (editId) {
+      const idx = (state.hrAssignments || []).findIndex(a => a.id === editId);
+      if (idx !== -1) state.hrAssignments[idx] = { ...state.hrAssignments[idx], ...data };
+      else state.hrAssignments.push(data);
+    } else {
+      data.createdAt = new Date().toISOString();
+      state.hrAssignments.push(data);
+    }
+    // Gán người = có mặt làm việc: tự chấm "Đi làm" nếu ngày chưa chấm tay
+    const rec = ensureAttRecord(employeeId, date);
+    if (rec.status !== 'leave') rec.status = 'work';
+    rec.updatedAt = new Date().toISOString();
+    // Cột "Vị Trí Trong Ngày" của chấm công = đúng các vị trí được gán hôm đó
+    hrSyncAttPositionsFromAssignments(employeeId, date);
+    // Người làm vị trí này → tự học kỹ năng (như cơ chế phân vị chấm công)
+    const emp = hrEmpById(employeeId);
+    if (emp && !(emp.skills || []).includes(positionId)) emp.skills = [...(emp.skills || []), positionId];
+    saveHrData();
+    closeBoardAssignModal();
+    renderHrView();
+    showToast(`Đã bố trí ${hrEmpName(employeeId)} — ${hrPosName(positionId)} ${fmtHour(start)}${end ? '–' + fmtHour(end) : ''}`, 'success');
+  }
+
+  function hrBoardRemoveAssign(id) {
+    if (!requireEditPermission()) return;
+    const a = (state.hrAssignments || []).find(x => x.id === id);
+    if (!a) return;
+    trackDeleted('hrAssignments', id);
+    state.hrAssignments = (state.hrAssignments || []).filter(x => x.id !== id);
+    hrSyncAttPositionsFromAssignments(a.employeeId, a.date);
+    saveHrData();
+    renderHrView();
+    showToast(`Đã bỏ ${hrEmpName(a.employeeId)} khỏi ${hrPosName(a.positionId)}`, 'info');
+  }
+
+  // ── KÉO Ô NGƯỜI SANG VỊ TRÍ KHÁC ────────────────────────────────
+  let hrBoardDraggingId = '';
+  function hrBoardDragStart(ev, assignId) {
+    hrBoardDraggingId = assignId;
+    if (ev && ev.dataTransfer) {
+      ev.dataTransfer.effectAllowed = 'move';
+      try { ev.dataTransfer.setData('text/plain', assignId); } catch (e) {}
+    }
+  }
+  function hrBoardDrop(ev, positionId, shiftIdx) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    const id = hrBoardDraggingId || (ev && ev.dataTransfer ? ev.dataTransfer.getData('text/plain') : '');
+    hrBoardDraggingId = '';
+    if (!id) return;
+    const src = (state.hrAssignments || []).find(a => a.id === id);
+    if (!src) return;
+    if (src.positionId === positionId && (src.shiftIdx || 0) === shiftIdx) return;
+    // Dời người: giữ nguyên nhân viên, điền giờ bắt đầu mới tại vị trí mới
+    hrBoardOpenAssign(positionId, shiftIdx, `move:${id}`);
+    const cfg = hrShiftCfg(state.hrBoardDept || 'Xưởng 2');
+    fillBoardAssignTimeSelects(cfg, shiftIdx, src.start, '');
+    showToast(`Giờ chọn tại vị trí mới cũng là giờ kết thúc tại "${hrPosName(src.positionId)}" — lịch sử cũ được giữ lại.`, 'info');
+  }
+
+  // ── CÀI ĐẶT CA LÀM VIỆC THEO BỘ PHẬN (bảng cấu hình — linh hoạt chỉnh sau) ──
+  function openShiftModal() {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-shift');
+    if (!modal) return;
+    const dept = state.hrBoardDept || 'Xưởng 2';
+    const cfg = hrShiftCfg(dept);
+    document.getElementById('shift-dept').value = dept;
+    const labelEl = document.getElementById('shift-dept-label');
+    if (labelEl) labelEl.textContent = dept;
+    renderShiftRows(cfg);
+    document.getElementById('modal-shift').classList.add('show');
+    initLucide();
+  }
+  // Vẽ các dòng thời gian ca: hành chính = Sáng/Chiều; làm ca = Ca ngày/Ca đêm
+  function renderShiftRows(cfg) {
+    const type = cfg.type || 'hanhchinh';
+    const preset = BOARD_SHIFT_PRESETS[type];
+    const shifts = (cfg.shifts && cfg.shifts.length) ? cfg.shifts : preset.shifts;
+    document.querySelectorAll('input[name="shift-type"]').forEach(r => { r.checked = r.value === type; });
+    const box = document.getElementById('shift-rows');
+    if (!box) return;
+    box.innerHTML = shifts.map((s, i) => `
+      <div style="display:grid; grid-template-columns:110px 1fr 1fr; gap:8px; align-items:center; margin-bottom:6px;">
+        <input type="text" data-shift-i="${i}" data-shift-f="name" value="${escapeHTML(s.name || '')}" placeholder="Tên ca">
+        <input type="time" data-shift-i="${i}" data-shift-f="start" value="${escapeHTML(s.start || '')}" step="1800">
+        <input type="time" data-shift-i="${i}" data-shift-f="end" value="${escapeHTML(s.end || '')}" step="1800">
+      </div>`).join('') +
+      `<div style="font-size:0.72rem;color:var(--text-muted);">Hành chính: các ca gộp thành 1 cột/ngày · Làm ca: mỗi ca là 1 cột riêng.</div>`;
+  }
+  // Đổi loại ca trong modal → nạp lại giờ mặc định của loại đó (chưa lưu)
+  function setShiftTypePreset(type) {
+    if (!BOARD_SHIFT_PRESETS[type]) return;
+    const dept = state.hrBoardDept || 'Xưởng 2';
+    const cfg = hrShiftCfg(dept);
+    const cur = { ...cfg, type };
+    cur.shifts = (cfg.type === type) ? (cfg.shifts || preset.shifts) : BOARD_SHIFT_PRESETS[type].shifts;
+    renderShiftRows(cur);
+  }
+  function closeShiftModal() {
+    document.getElementById('modal-shift')?.classList.remove('show');
+  }
+  function handleShiftSubmit(e) {
+    e.preventDefault();
+    if (!requireEditPermission()) return;
+    const dept = document.getElementById('shift-dept').value;
+    const typeEl = document.querySelector('input[name="shift-type"]:checked');
+    const type = typeEl ? typeEl.value : 'hanhchinh';
+    const rows = {};
+    document.querySelectorAll('#shift-rows [data-shift-i]').forEach(inp => {
+      const i = inp.getAttribute('data-shift-i');
+      rows[i] = rows[i] || { name: '', start: '', end: '' };
+      rows[i][inp.getAttribute('data-shift-f')] = inp.value.trim();
+    });
+    const shifts = Object.keys(rows).sort((a, b) => a - b).map(i => rows[i]).filter(s => s.start && s.end);
+    if (!shifts.length) { showToast('Cần ít nhất 1 ca có giờ bắt đầu và giờ kết thúc!', 'error'); return; }
+    const idx = (state.hrShifts || []).findIndex(s => s.id === dept);
+    const cfg = { id: dept, type, shifts, updatedAt: new Date().toISOString() };
+    if (idx !== -1) state.hrShifts[idx] = { ...state.hrShifts[idx], ...cfg };
+    else { cfg.createdAt = new Date().toISOString(); state.hrShifts.push(cfg); }
+    saveHrData();
+    closeShiftModal();
+    renderHrView();
+    showToast(`Đã lưu ca làm việc cho ${dept}: ${type === 'lamca' ? shifts.length + ' ca' : 'Hành chính'}`, 'success');
+  }
 
   // ─── NHẬP NHÂN VIÊN TỪ FILE EXCEL ──────────────────────────────
   // Đọc file .xlsx/.xls/.csv → tự nhận cột theo tiêu đề → xem trước &
@@ -1842,6 +2616,12 @@ import { escapeHTML, showToast } from './utils.js';
       const open = (state.hrRecruitment || []).filter(r => (r.status || 'open') === 'open');
       const missing = open.reduce((s, r) => s + Math.max(0, (r.needQty || 0) - (r.hiredQty || 0)), 0);
       return `${open.length} tuyển${missing ? ` · ${missing} thiếu` : ''}`;
+    } },
+    'hr-posneed-card': { el: 'hr-mini-count-posneed', count: () => {
+      const list = state.hrPositionNeeds || [];
+      const need = list.reduce((s, r) => s + (r.needQty || 0), 0);
+      const missing = list.reduce((s, r) => s + Math.max(0, (r.needQty || 0) - (r.haveQty || 0)), 0);
+      return `${list.length} vị trí${missing ? ` · thiếu ${missing}` : ''}`;
     } }
   };
 
@@ -1943,6 +2723,7 @@ export {
   closeLeaveModal,
   closePositionModal,
   closeRecruitmentModal,
+  closePositionNeedModal,
   collectEmployeeSkills,
   computeAttendanceStats,
   computeLeaveStats,
@@ -1950,6 +2731,9 @@ export {
   deleteLeave,
   deletePosition,
   deleteRecruitment,
+  deletePositionNeed,
+  hrSetPositionNeedQty,
+  ensurePositionNeedsFromPositions,
   doEmployeeImport,
   handleEmployeeImportFile,
   handleEmployeeSubmit,
@@ -1957,6 +2741,7 @@ export {
   handleLeaveSubmit,
   handlePositionSubmit,
   handleRecruitmentSubmit,
+  handlePositionNeedSubmit,
   hideLeaveEmployeeSuggestions,
   hrAttGoToday,
   hrAttSetDate,
@@ -1982,6 +2767,7 @@ export {
   openLeaveModal,
   openPositionModal,
   openRecruitmentModal,
+  openPositionNeedModal,
   pendingLeaveOn,
   pickLeaveEmployee,
   renderEmployeeSkillsBox,
@@ -1990,6 +2776,30 @@ export {
   renderHrEmployeesTable,
   renderHrPositionsTable,
   renderHrRecruitmentTable,
+  renderPositionNeedsTable,
+  renderHrBoard,
+  hrBoardSetDate,
+  hrBoardShiftDay,
+  hrBoardGoToday,
+  hrBoardSetDept,
+  hrBoardOpenAssign,
+  closeBoardAssignModal,
+  handleBoardAssignSubmit,
+  hrBoardRemoveAssign,
+  hrBoardDragStart,
+  hrBoardDrop,
+  renderBoardAssignSuggestions,
+  pickBoardAssignEmployee,
+  openShiftModal,
+  closeShiftModal,
+  handleShiftSubmit,
+  setShiftTypePreset,
+  hrShiftCfg,
+  hrAssignTimesOf,
+  hrSplitHoursHC,
+  hrShortName,
+  fmtHour,
+  BOARD_SHIFT_PRESETS,
   renderHrView,
   renderHrCheckinTable,
   applyAllCheckins,
@@ -2008,6 +2818,7 @@ export {
   openCheckinImportModal,
   renderLeaveEmployeeSuggestions,
   rejectLeave,
+  syncPositionNeedsFromEmployees,
   setAttendanceNote,
   setAttendanceStatus,
   syncHrMiniActive,

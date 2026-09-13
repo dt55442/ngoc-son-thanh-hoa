@@ -11,6 +11,7 @@
 // (firePushSync), và là nguồn 'materials' cho biểu đồ Dashboard.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { dataUrlToBlob, deletePhotos, getPhotoURL, photosAvailable, putPhoto } from './photo-store.js';
 import { STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIALS, state } from './state.js';
@@ -406,6 +407,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     if (!canEditMaterials()) return;
     if (!state.materialPlan || !state.materialPlan[weekKey]) return;
     if (!confirm(`Xóa kế hoạch ${friendlyMaterialWeek(weekKey)}?`)) return;
+    trackDeleted('materialPlan', weekKey); // tombstone: tuần đã xóa không được mây nhận lại
     delete state.materialPlan[weekKey];
     saveMaterialPlan();
     renderMaterialPlanTable();
@@ -431,7 +433,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     }
     state.materialPlan[weekKey].updatedAt = new Date().toISOString();
     const remaining = MATERIAL_LOCATIONS.filter((l) => Number.isFinite(Number(state.materialPlan[weekKey][l.key])));
-    if (remaining.length === 0) delete state.materialPlan[weekKey];
+    if (remaining.length === 0) { trackDeleted('materialPlan', weekKey); delete state.materialPlan[weekKey]; }
     saveMaterialPlan();
     renderMaterialPlanTable();
   }
@@ -1445,6 +1447,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     const label = `${rec.type || 'nguyên liệu'} (${materialLocationLabel(rec.location)}, ${formatDateDDMMYY(rec.date)})`;
     if (!confirm(`Xóa lần nhập ${label}?`)) return;
     const photoIds = imgPhotoIds(rec.images); // ảnh full trong kho cần dọn theo
+    trackDeleted('materialRecords', recordId); // tombstone: bản ghi đã xóa không bị mây/máy khác hồi sinh
     state.materialRecords = state.materialRecords.filter(r => r.id !== recordId);
     if (photoIds.length) {
       deletePhotos(photoIds); // dọn kho IndexedDB (fire-and-forget)

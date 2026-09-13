@@ -1601,7 +1601,45 @@
             <span class="hr-mini-desc">Nhu cầu tuyển dụng</span>
             <span class="hr-mini-count" id="hr-mini-count-recruit">–</span>
           </button>
+          <button type="button" class="hr-mini-card" data-hr-card="hr-posneed-card" aria-expanded="false" title="Nhân sự cần tại các vị trí — số người cần / số người hiện có theo từng vị trí của từng bộ phận (bảng dữ liệu trung gian)">
+            <span class="hr-mini-ic"><i data-lucide="target"></i></span>
+            <span class="hr-mini-title">Nhân Sự Cần Tại Vị Trí</span>
+            <span class="hr-mini-desc">Cần / hiện có theo vị trí</span>
+            <span class="hr-mini-count" id="hr-mini-count-posneed">–</span>
+          </button>
         </div>
+      </div>
+
+      <!-- BẢNG ĐIỀU KHIỂN BỐ TRÍ VỊ TRÍ — HIỂN THỊ TRỰC TIẾP ngay dưới
+           menu launcher (không cần bấm thẻ). Cột X = vị trí, các ô người
+           xếp chồng = Số Người Cần (từ bảng trung gian). Ô trống "?" xám,
+           đã gán người = chip xanh tên rút gọn + giờ. Ca làm việc cấu hình
+           theo bộ phận (Hành chính 1 cột / Làm ca 2 cột). Giờ làm = nguồn
+           chấm công thường + tăng ca -->
+      <div class="planning-card" id="hr-board-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="layout-panel-left"></i> Bố Trí Vị Trí Làm Việc Theo Ngày</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-board-shifts" title="Cài đặt ca làm việc cho bộ phận đang xem (Hành chính / Làm ca + giờ)">
+              <i data-lucide="settings-2"></i> Ca Làm Việc
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-board" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item" style="display:flex; gap:4px; align-items:center;">
+            <button class="btn btn-outline btn-sm" id="btn-board-prev" title="Ngày trước"><i data-lucide="chevron-left"></i></button>
+            <input type="date" id="hr-board-date" style="width:150px;">
+            <button class="btn btn-outline btn-sm" id="btn-board-next" title="Ngày sau"><i data-lucide="chevron-right"></i></button>
+            <button class="btn btn-outline btn-sm" id="btn-board-today" title="Về hôm nay">Hôm Nay</button>
+          </div>
+          <span class="hr-count">Ô "?" = trống · ô xanh = đã có người · bấm ô hoặc "+" để thêm · kéo chip để chuyển vị trí (giữ lịch sử giờ tại vị trí cũ)</span>
+          <span class="hr-count" id="hr-board-count"></span>
+        </div>
+        <div id="hr-board-dept-tabs" class="hr-board-tabs"></div>
+        <div id="hr-board" class="board-grid"></div>
       </div>
 
             <!-- BẢNG CHI TIẾT — bao bới bởi stack; chỉ bật (nổi lên) khi bấm thẻ -->
@@ -1928,6 +1966,53 @@
           </table>
         </div>
       </div>
+
+      <!-- BẢNG 8: NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ — BẢNG DỮ LIỆU TRUNG GIAN:
+           số người cần / số người hiện có cho mỗi vị trí của từng bộ phận.
+           Nhập tay HOẶC lấy từ bảng khác (nút Đồng Bộ Từ Hồ Sơ đếm từ danh
+           sách nhân viên); cung cấp dữ liệu cho các chức năng sắp bổ sung -->
+      <div class="planning-card hr-card-hidden" id="hr-posneed-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="target"></i> Nhân Sự Cần Tại Các Vị Trí</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-posneed" title="Thêm dòng vị trí cần nhân sự">
+              <i data-lucide="plus"></i> Thêm Vị Trí Cần
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-posneed" title="Cập nhật &quot;Số người hiện có&quot; của mọi dòng từ danh sách nhân viên đang làm việc">
+              <i data-lucide="refresh-cw"></i> Đồng Bộ Từ Hồ Sơ
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-posneed" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item">
+            <label for="hr-posneed-filter-dept">Bộ phận:</label>
+            <select id="hr-posneed-filter-dept"></select>
+          </div>
+          <span class="hr-count">Bảng dữ liệu trung gian — nhập tay hoặc đồng bộ từ hồ sơ; nguồn cho các bảng/chức năng sắp bổ sung</span>
+          <span class="hr-count" id="hr-posneed-count"></span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-posneed-table">
+            <thead>
+              <tr>
+                <th>Bộ Phận</th>
+                <th>Vị Trí</th>
+                <th>Số Người Cần</th>
+                <th>Số Người Hiện Có</th>
+                <th>Còn Thiếu</th>
+                <th>Ghi Chú</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="hr-posneed-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
       </div> <!-- /#hr-details-stack -->
 
       <!-- POP-UP: overlay chi tiết bảng Nhân Sự — hiển thị NỔI LÊN khi bấm thẻ -->
@@ -2115,6 +2200,119 @@
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-recruitment">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-9a: BỐ TRÍ NGƯỜI VÀO Ô (nhân viên → giờ bắt đầu → giờ kết thúc) -->
+  <div class="modal-overlay" id="modal-board-assign">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="board-assign-title"><i data-lucide="user-plus"></i> Bố Trí Người</h3>
+        <button class="modal-close-btn" id="btn-close-board-assign"><i data-lucide="x"></i></button>
+      </div>
+      <form id="board-assign-form" style="padding: 20px;">
+        <input type="hidden" id="board-assign-mode">
+        <input type="hidden" id="board-assign-movefrom">
+        <input type="hidden" id="board-assign-date">
+        <input type="hidden" id="board-assign-pos">
+        <input type="hidden" id="board-assign-shiftidx">
+        <div class="form-group">
+          <label for="board-assign-employee">Bước 1 — Nhân Viên <span class="required">*</span></label>
+          <div class="hr-combobox">
+            <input type="text" id="board-assign-employee" placeholder="Gõ tên / mã NV để tìm..." autocomplete="off">
+            <input type="hidden" id="board-assign-employee-id">
+            <div class="hr-combobox-list" id="board-assign-suggest"></div>
+          </div>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+            Ưu tiên hiển thị nhân viên có ★ kỹ năng tương ứng vị trí này.
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="board-assign-start">Bước 2 — Giờ Bắt Đầu <span class="required">*</span> <span style="font-weight:400; font-size:0.72rem; color:var(--text-muted);">(làm tròn 30 phút)</span></label>
+          <select id="board-assign-start"></select>
+        </div>
+        <div class="form-group">
+          <label for="board-assign-end">Bước 3 — Giờ Kết Thúc <span style="font-weight:400; font-size:0.72rem; color:var(--text-muted);">(bỏ trống = hết ca của ngày)</span></label>
+          <select id="board-assign-end"></select>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-board-assign">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Bố Trí</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-9b: CÀI ĐẶT CA LÀM VIỆC THEO BỘ PHẬN -->
+  <div class="modal-overlay" id="modal-shift">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="settings-2"></i> Ca Làm Việc — <span id="shift-dept-label"></span></h3>
+        <button class="modal-close-btn" id="btn-close-shift"><i data-lucide="x"></i></button>
+      </div>
+      <form id="shift-form" style="padding: 20px;">
+        <input type="hidden" id="shift-dept">
+        <div class="form-group">
+          <label>Loại Ca</label>
+          <div style="display:flex; gap:18px;">
+            <label style="display:flex; gap:6px; align-items:center; font-weight:400;">
+              <input type="radio" name="shift-type" value="hanhchinh" checked onchange="app.hrShiftTypePreset('hanhchinh')"> Hành chính (1 cột)
+            </label>
+            <label style="display:flex; gap:6px; align-items:center; font-weight:400;">
+              <input type="radio" name="shift-type" value="lamca" onchange="app.hrShiftTypePreset('lamca')"> Làm ca (mỗi ca 1 cột)
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Thời Gian Ca (tên ca / bắt đầu / kết thúc)</label>
+          <div id="shift-rows"></div>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-shift">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-3b: NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ (bảng dữ liệu trung gian) -->
+  <div class="modal-overlay" id="modal-position-need">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="posneed-modal-title"><i data-lucide="target"></i> Thêm Vị Trí Cần Nhân Sự</h3>
+        <button class="modal-close-btn" id="btn-close-posneed"><i data-lucide="x"></i></button>
+      </div>
+      <form id="position-need-form" style="padding: 20px;">
+        <input type="hidden" id="posneed-id">
+        <div class="form-group">
+          <label for="posneed-department">Bộ Phận</label>
+          <select id="posneed-department"></select>
+        </div>
+        <div class="form-group">
+          <label for="posneed-position">Vị Trí <span class="required">*</span></label>
+          <select id="posneed-position" required>
+            <option value="">— Chọn vị trí —</option>
+          </select>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+            Danh mục vị trí theo Bộ Phận (thêm vị trí mới tại thẻ "Vị Trí &amp; Kỹ Năng").
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Số Người Cần / Số Người Hiện Có <span class="required">*</span></label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <input type="number" id="posneed-need" min="1" step="1" required>
+            <input type="number" id="posneed-have" min="0" step="1" placeholder="Hiện có">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="posneed-notes">Ghi Chú</label>
+          <textarea id="posneed-notes" rows="2" placeholder="Ghi chú (nguồn dữ liệu, mục đích sử dụng...)."></textarea>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-posneed">Hủy Bỏ</button>
           <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu</button>
         </div>
       </form>

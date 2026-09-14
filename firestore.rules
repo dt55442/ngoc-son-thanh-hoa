@@ -1,9 +1,12 @@
 // ============================================
 // FIRESTORE SECURITY RULES - Bamboo Tracker
 // Dán vào: Firebase Console -> Firestore Database -> Rules -> Publish
-// Phiên bản: v3 — Ban Quản Lý (managerEmails) cũng được GHI dữ liệu apps/main
-//   (trước đây chỉ editor/admin được ghi: lần XÓA của Ban Quản Lý không bao giờ
-//   lên mây, khiến dòng đã xóa "sống lại" khi máy khác đẩy dữ liệu lên mây)
+// Phiên bản: v4 — THÊM QUYỀN CHO MẢNH DỮ LIỆU apps/main/shards/* :
+//   Khi dữ liệu vượt giới hạn 1 MiB của MỘT document, app tự NÉN GZIP và (nếu
+//   vẫn lớn) CHIA NHỎ thành các mảnh trong subcollection apps/main/shards.
+//   Firestore rules KHÔNG tự áp dụng xuống subcollection → phải khai báo riêng.
+//   LƯU Ý: Bắt buộc Publish rules này trước khi dữ liệu lớn tới mức phải shard.
+//   (v3 — Ban Quản Lý (managerEmails) cũng được GHI dữ liệu apps/main)
 // ============================================
 rules_version = '2';
 service cloud.firestore {
@@ -56,6 +59,18 @@ service cloud.firestore {
                         || isManager());
       allow update: if isManager();
       allow delete: if isAdmin();
+
+      // ── MẢNH DỮ LIỆU LỚN (apps/main/shards/*) ─────
+      // Cùng quyền với apps/main; riêng DELETE nới cho isManager() vì việc dọn
+      // mảnh thừa chạy tự động trên máy của người đẩy dữ liệu (editor/manager).
+      match /{document=**} {
+        allow read: if true;
+        allow create: if isSignedIn()
+                      && (!exists(/databases/$(database)/documents/settings/roles)
+                          || isManager());
+        allow update: if isManager();
+        allow delete: if isManager();
+      }
     }
 
     // ── QUYỀN (settings/roles) ────────────────────

@@ -137,7 +137,7 @@ const remoteSnapshot = {
   deletedIds: { pressRecords: { p1: '2026-09-10T00:00:00Z' } },
   updatedBy: 'a@factory', updatedAt: '2026-09-10T00:05:00Z'
 };
-cloud.handleRemoteSnapshot({ exists: true, data: () => remoteSnapshot });
+await cloud.handleRemoteSnapshot({ exists: true, data: () => remoteSnapshot });
 check('MÁY B: bản p1 đã bị máy A xóa bị GỠ khỏi máy (không còn sống lại)', !state.pressRecords.some(r => r.id === 'p1'));
 check('MÁY B: tombstone p1 được hợp nhất từ mây', state.deletedIds.pressRecords && state.deletedIds.pressRecords.p1 === '2026-09-10T00:00:00Z');
 check('MÁY B: tombstone p1 được lưu localStorage', storedTomb().pressRecords && storedTomb().pressRecords.p1 === '2026-09-10T00:00:00Z');

@@ -97,7 +97,7 @@ import { showToast } from './utils.js';
           return;
         }
         try {
-          await fbDb.collection(FB_COLL).doc(FB_DOC).set(collectCloudSnapshot());
+          await writeCloudSnapshot();
           fbDirty = false;
           showToast('ĐÃ TỰ CỨU HỘ: thêm ' + email + ' vào adminEmails trên mây và đẩy dữ liệu thành công!', 'success');
         } catch (e3) {
@@ -115,6 +115,158 @@ import { showToast } from './utils.js';
   const FB_DOC = 'main';
   const FB_SETTINGS_COLL = 'settings';
   const FB_ROLES_DOC = 'roles';
+  const FB_SHARDS_COLL = 'shards';
+  // ─── GIỚI HẠN KÍCH THƯỚC DOC (nguyên nhân lỗi "exceeds the maximum allowed
+  // size of 1,048,576 bytes") ────────────────────────────────────────────────
+  // Firestore giới hạn MỖI document 1 MiB. Trước đây toàn bộ dữ liệu nằm trong
+  // 1 doc apps/main → khi vượt mức, MỌI lần đẩy lên mây đều lỗi vĩnh viễn.
+  // Giải pháp 2 lớp:
+  //   1) NÉN GZIP (CompressionStream có sẵn của trình duyệt) bản JSON trước khi
+  //      đẩy — JSON lặp khóa rất nhiều nên thường giảm ~85-90% dung lượng.
+  //   2) Nếu nén rồi vẫn vượt mức cho phép → CHIA NHỎ (shard) thành nhiều doc
+  //      con apps/main/shards/0..N-1; doc apps/main chỉ còn là "mục lục".
+  // Định dạng doc apps/main trên mây (trường __fmt báo hiệu):
+  //   - KHÔNG có __fmt        : JSON trơn nguyên vẹn (định dạng cũ, ≤ ~800KB)
+  //   - __fmt 'gzip'          : { payload: base64(gzip(json)) }  — 1 doc duy nhất
+  //   - __fmt 'shard-gzip'    : { shards: N, epoch } + shards/i = { part, idx, epoch, ts }
+  //   - __fmt 'shard-plain'   : như trên nhưng mảnh là JSON trơn (trình duyệt cũ)
+  const CLOUD_PLAIN_LIMIT = 800 * 1024;      // JSON trơn ≤ 800KB → giữ định dạng cũ (tương thích 100%)
+  const CLOUD_GZIP_LIMIT = 900 * 1024;       // base64 là ASCII: byte = ký tự → ≤ 900KB trong 1 doc
+  const CLOUD_SHARD_PART_GZIP = 700 * 1024;  // mỗi mảnh gzip-base64 ≤ 700KB (giới hạn 1MiB/doc, chừa biên)
+  const CLOUD_SHARD_PART_PLAIN = 250000;     // mảnh JSON trơn: ký tự có thể tốn 3 bytes UTF-8 → biên ~750KB
+  let fbRemoteSeq = 0;             // chống "đua": chỉ áp dụng bản lắp ráp mây MỚI NHẤT
+  let fbReadWarnAt = 0;            // chống spam cảnh báo lỗi đọc/lắp ráp mây
+  let fbWriteChain = Promise.resolve(); // xâu đợi ghi: tránh 2 lần đẩy cùng lúc trộn mảnh shard của nhau
+  let fbShardCleanupCount = -1;    // số mảnh đã dọn lần trước (-1: chưa dọn lần nào)
+
+  // ── Tiện ích byte / nén gzip (không cần thư viện ngoài) ──────────────────
+  function utf8Bytes(str) {
+    try { return new TextEncoder().encode(str).length; } catch (e) { return str.length; }
+  }
+  function isGzipSupported() {
+    return typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+  }
+  function bytesToBase64(bytes) {
+    let bin = '';
+    const CH = 0x8000;
+    for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    return btoa(bin);
+  }
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  async function gzipStringToBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+    const buf = await new Response(stream).arrayBuffer();
+    return bytesToBase64(new Uint8Array(buf));
+  }
+  async function gunzipBase64ToString(b64) {
+    const stream = new Blob([base64ToBytes(b64)]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const buf = await new Response(stream).arrayBuffer();
+    return new TextDecoder('utf-8').decode(new Uint8Array(buf));
+  }
+  // Chia chuỗi theo SỐ KÝ TỰ (an toàn tuyệt đối: ghép đúng thứ tự → khôi phục nguyên vẹn)
+  function chunkString(str, size) {
+    const parts = [];
+    for (let i = 0; i < str.length; i += size) parts.push(str.slice(i, i + size));
+    return parts.length ? parts : [''];
+  }
+  function cloudDocRef() { return fbDb.collection(FB_COLL).doc(FB_DOC); }
+  function shardColRef() { return cloudDocRef().collection(FB_SHARDS_COLL); }
+
+  // Dọn mảnh shard cũ không còn mục lục dùng (best-effort, không chặn đẩy dữ liệu).
+  // Chỉ xóa mảnh "già" (>5 phút) để không đụng mảnh máy khác VỪA ghi; mảnh mới
+  // thừa sẽ được dọn trong các lần đẩy sau.
+  function cleanupStaleShards(keepCount, epoch) {
+    if (fbShardCleanupCount === keepCount || !fbDb) return;
+    fbShardCleanupCount = keepCount;
+    const hotBefore = Date.now() - 5 * 60 * 1000;
+    shardColRef().where('idx', '>=', keepCount).get().then((qs) => {
+      const dels = [];
+      qs.forEach((d) => {
+        const dd = d.data() || {};
+        const ts = Number(dd.ts) || 0;
+        if (ts && ts >= hotBefore) return;   // mảnh vừa ghi (máy khác/đua) → để lần dọn sau
+        if (dd.epoch === epoch) return;      // mảnh của mục lục hiện tại thì tuyệt đối không đụng
+        dels.push(d.ref.delete());
+      });
+      return Promise.all(dels);
+    }).catch(() => { fbShardCleanupCount = -1; });
+  }
+
+  // ĐẨY dữ liệu lên mây (tự chọn định dạng: trơn / gzip / shard). Trả về { mode, ... }.
+  // Khi shard: ghi các MẢNH trước (epoch mới) → mục lục apps/main SAU CÙNG. Nếu
+  // ghi dở giữa chừng, mục lục vẫn trỏ dữ liệu cũ nguyên vẹn → không mất dữ liệu mây.
+  function writeCloudSnapshot() {
+    const run = () => doWriteCloudSnapshot();
+    const p = fbWriteChain.then(run, run);
+    fbWriteChain = p.catch(() => {});
+    return p;
+  }
+  async function doWriteCloudSnapshot() {
+    const snap = collectCloudSnapshot();
+    const docRef = cloudDocRef();
+    const raw = JSON.stringify(snap);
+    const size = utf8Bytes(raw);
+    if (size <= CLOUD_PLAIN_LIMIT) {
+      await docRef.set(snap);   // nhỏ → giữ nguyên định dạng cũ (mọi phiên bản đọc được)
+      cleanupStaleShards(0);
+      return { mode: 'plain', size };
+    }
+    let payload = null;
+    if (isGzipSupported()) {
+      const b64 = await gzipStringToBase64(raw);
+      if (b64.length <= CLOUD_GZIP_LIMIT) {
+        await docRef.set({ __fmt: 'gzip', payload: b64, updatedBy: snap.updatedBy, updatedAt: snap.updatedAt });
+        cleanupStaleShards(0);
+        return { mode: 'gzip', size: b64.length };
+      }
+      payload = b64; // nén rồi vẫn lớn → shard base64
+    }
+    const isGzipShard = payload !== null;
+    const fmt = isGzipShard ? 'shard-gzip' : 'shard-plain';
+    const partSize = isGzipShard ? CLOUD_SHARD_PART_GZIP : CLOUD_SHARD_PART_PLAIN;
+    const parts = chunkString(isGzipShard ? payload : raw, partSize);
+    const epoch = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    await Promise.all(parts.map((part, i) =>
+      shardColRef().doc(String(i)).set({ part, idx: i, epoch, ts: Date.now() })));
+    await docRef.set({
+      __fmt: fmt, shards: parts.length, epoch,
+      updatedBy: snap.updatedBy, updatedAt: snap.updatedAt
+    });
+    cleanupStaleShards(parts.length, epoch);
+    return { mode: fmt, parts: parts.length, size: isGzipShard ? payload.length : size };
+  }
+
+  // LẮP RÁP dữ liệu mây từ mục lục → object dữ liệu đầy đủ (như định dạng cũ).
+  // plain: trả nguyên doc; gzip: giải nén; shard: nạp đủ mảnh cùng epoch → ghép → giải nén.
+  async function assembleRemoteObject(meta) {
+    const fmt = (meta && meta.__fmt) || 'plain';
+    if (fmt === 'plain') return meta;
+    if (fmt === 'gzip') return JSON.parse(await gunzipBase64ToString(meta.payload || ''));
+    const n = Math.max(0, Math.floor(meta.shards) || 0);
+    if (!n) throw new Error('Mục lục mây (apps/main) thiếu số mảnh dữ liệu (shards)');
+    const parts = new Array(n).fill(null);
+    const gets = [];
+    for (let i = 0; i < n; i++) gets.push(shardColRef().doc(String(i)).get());
+    const snaps = await Promise.all(gets);
+    for (let i = 0; i < snaps.length; i++) {
+      const s = snaps[i];
+      if (s && s.exists) {
+        const d = s.data() || {};
+        const idx = Number.isFinite(d.idx) ? d.idx : i;
+        if (d.epoch === meta.epoch && typeof d.part === 'string' && idx >= 0 && idx < n) parts[idx] = d.part;
+      }
+    }
+    const missing = parts.filter((p) => p === null).length;
+    if (missing) throw new Error('Thiếu ' + missing + '/' + n + ' mảnh dữ liệu trên mây — bấm Đồng Bộ lần nữa để ghi lại');
+    const joined = parts.join('');
+    return fmt === 'shard-gzip' ? JSON.parse(await gunzipBase64ToString(joined)) : JSON.parse(joined);
+  }
 
   function isFirebaseOnline() {
     return !!window.__BAMBOO_FIREBASE_READY__ && fbEnabled;
@@ -480,22 +632,36 @@ import { showToast } from './utils.js';
 
   function handleRemoteSnapshot(snap) {
     fbDidLoadRemote = true;
-    const remote = snap.exists ? (snap.data() || {}) : {};
-    fbLastRemote = remote;
     fbRemoteDocExists = snap.exists;
-    fbRemoteHasData = hasCloudData(remote);
-    if (fbApplying) return;               // bỏ qua bản ta vừa ghi
-    if (!snap.exists) return;             // mây chưa có dữ liệu -> KHÔNG hỏi, dùng nút thủ công khi cần
-    if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) return; // giống nhau
-    // Máy này chưa có dữ liệu thật -> nhận theo mây luôn, KHÔNG hỏi (tránh ghi đè mất dữ liệu)
-    if (!localHasAnyData()) { applyFireSnapshot(remote); return; }
-    // Dữ liệu mây KHÁC máy -> KHÔNG HỎI nữa (tránh bấm nhầm gây ghi đè):
-    // chỉ TỰ GỘP THÊM các bản ghi trên mây mà máy này chưa có (an toàn, không
-    // mất dữ liệu). Muốn ghi đè theo mây / đẩy máy lên mây thì dùng 2 nút
-    // "Đồng Bộ Dữ Liệu Máy Lên Mây" & "Tải Dữ Liệu Từ Mây Về Máy" trong menu ⋮.
-    // Mây chỉ có DẤU VẾT XÓA (danh sách rỗng) cũng phải gộp: để GỠ bản ghi cũ
-    // còn sót trên máy theo tombstone — không thì lần đẩy sau sẽ "hồi sinh".
-    if (fbRemoteHasData || hasDeletedIds(remote)) mergeRemoteIntoLocal(remote, true);
+    const meta = snap.exists ? (snap.data() || {}) : {};
+    // Dữ liệu mây có thể ở dạng gzip/shard → phải LẮP RÁP BẤT ĐỒNG BỘ trước khi
+    // gộp về máy. fbRemoteSeq: nếu mục lục đổi giữa chừng (máy khác vừa đẩy) thì
+    // kết quả lắp ráp của bản cũ bị bỏ qua — chỉ áp dụng bản MỚI NHẤT.
+    // Trả về promise để có thể chờ (dùng trong kiểm thử / đồng bộ tuần tự).
+    const seq = ++fbRemoteSeq;
+    return assembleRemoteObject(meta).then((remote) => {
+      if (seq !== fbRemoteSeq) return;      // đã có bản mây mới hơn → bỏ qua
+      fbLastRemote = remote;
+      fbRemoteHasData = hasCloudData(remote);
+      if (fbApplying) return;               // bỏ qua bản ta vừa ghi
+      if (!snap.exists) return;             // mây chưa có dữ liệu -> KHÔNG hỏi, dùng nút thủ công khi cần
+      if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) return; // giống nhau
+      // Máy này chưa có dữ liệu thật -> nhận theo mây luôn, KHÔNG hỏi (tránh ghi đè mất dữ liệu)
+      if (!localHasAnyData()) { applyFireSnapshot(remote); return; }
+      // Dữ liệu mây KHÁC máy -> KHÔNG HỎI nữa (tránh bấm nhầm gây ghi đè):
+      // chỉ TỰ GỘP THÊM các bản ghi trên mây mà máy này chưa có (an toàn, không
+      // mất dữ liệu). Muốn ghi đè theo mây / đẩy máy lên mây thì dùng 2 nút
+      // "Đồng Bộ Dữ Liệu Máy Lên Mây" & "Tải Dữ Liệu Từ Mây Về Máy" trong menu ⋮.
+      // Mây chỉ có DẤU VẾT XÓA (danh sách rỗng) cũng phải gộp: để GỠ bản ghi cũ
+      // còn sót trên máy theo tombstone — không thì lần đẩy sau sẽ "hồi sinh".
+      if (fbRemoteHasData || hasDeletedIds(remote)) mergeRemoteIntoLocal(remote, true);
+    }).catch((e) => {
+      console.warn('[FB] Lỗi đọc/lắp ráp dữ liệu mây', e);
+      if (Date.now() - fbReadWarnAt > 30000) {
+        fbReadWarnAt = Date.now();
+        showToast('Lỗi đọc dữ liệu từ mây: ' + ((e && e.message) || e), 'error');
+      }
+    });
   }
 
   function applyFireSnapshot(data) {
@@ -597,7 +763,7 @@ import { showToast } from './utils.js';
     if (!isFirebaseOnline() || !state.currentUser || !canPushToCloud()) return; // giữ cờ bẩn, chờ lần sau
     fbApplying = true;
     try {
-      await fbDb.collection(FB_COLL).doc(FB_DOC).set(collectCloudSnapshot());
+      await writeCloudSnapshot();
       fbDirty = false;
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
     } catch (e) {
@@ -659,13 +825,16 @@ import { showToast } from './utils.js';
           cloudCore(fbLastRemote) !== cloudCore(collectCloudSnapshot())) {
         mergedFromCloud = mergeRemoteIntoLocal(fbLastRemote, true);
       }
-      await fbDb.collection(FB_COLL).doc(FB_DOC).set(collectCloudSnapshot());
+      const w = await writeCloudSnapshot();
       fbDirty = false;
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       const counts = 'lô: ' + ((state.batches || []).length)
         + ', nguyên liệu: ' + ((state.materialRecords || []).length)
         + ', ép ván: ' + ((state.pressRecords || []).length);
-      showToast('Đã đẩy dữ liệu lên mây thành công! (' + counts
+      const note = w.mode === 'gzip' ? ' — đã nén gzip (' + Math.round(w.size / 1024) + ' KB trên mây)'
+        : (w.mode === 'shard-gzip' ? ' — đã nén + chia ' + w.parts + ' mảnh'
+          : (w.mode === 'shard-plain' ? ' — chia ' + w.parts + ' mảnh' : ''));
+      showToast('Đã đẩy dữ liệu lên mây thành công! (' + counts + note
         + (mergedFromCloud ? ' — đã gộp thêm bản ghi từ mây' : '') + ')', 'success');
     } catch (e) {
       console.warn('[FB] Lỗi đẩy dữ liệu lên mây', e);
@@ -702,15 +871,22 @@ import { showToast } from './utils.js';
   }
 
 export {
+  CLOUD_GZIP_LIMIT,
+  CLOUD_PLAIN_LIMIT,
+  CLOUD_SHARD_PART_GZIP,
+  CLOUD_SHARD_PART_PLAIN,
   FB_COLL,
   FB_DOC,
   FB_ROLES_DOC,
   FB_SETTINGS_COLL,
+  FB_SHARDS_COLL,
   applyFireSnapshot,
   applyRoleToUI,
+  assembleRemoteObject,
   canEditNow,
   canPushToCloud,
   checkAuthAndRenderFirebase,
+  chunkString,
   cloudCore,
   collectCloudSnapshot,
   doFirePush,
@@ -726,6 +902,8 @@ export {
   fbUnsubDoc,
   firePushSync,
   flushPendingCloudPush,
+  gzipStringToBase64,
+  gunzipBase64ToString,
   handleFirebaseAuth,
   handleRemoteSnapshot,
   hasCloudData,
@@ -739,5 +917,7 @@ export {
   requireTabEditPermission,
   resolveFirebaseRole,
   setupFirestoreSync,
-  uploadLocalDataToCloud
+  uploadLocalDataToCloud,
+  utf8Bytes,
+  writeCloudSnapshot
 };

@@ -1405,6 +1405,10 @@ import { escapeHTML, showToast } from './utils.js';
     } else {
       if (titleEl) titleEl.innerHTML = `<i data-lucide="git-branch-plus"></i> Thêm Vị Trí Làm Việc`;
       document.getElementById('position-id').value = '';
+      // Mặc định Bộ Phận theo bộ phận ĐANG XEM trên Board (nếu có) — tránh
+      // thêm nhầm vào "Không phân bộ phận" rồi không thấy vị trí trên Board
+      const defDept = state.hrBoardDept || '';
+      if (deptSel && defDept && HR_DEPARTMENTS.includes(defDept)) deptSel.value = defDept;
     }
     modal.classList.add('show');
     initLucide();
@@ -1419,13 +1423,17 @@ import { escapeHTML, showToast } from './utils.js';
     if (!requireEditPermission()) return;
     const id = document.getElementById('position-id').value;
     const name = document.getElementById('position-name').value.trim();
+    const department = document.getElementById('position-department').value;
     if (!name) { showToast('Tên vị trí không được để trống!', 'error'); return; }
+    // Trùng = cùng TÊN + cùng BỘ PHẬN (khác bộ phận vẫn thêm được — VD
+    // "Ép ván" có ở cả Xưởng 1 và Xưởng 2 là 2 vị trí riêng biệt)
     const dup = (state.hrPositions || []).find(p =>
-      hrStripDiacritics(p.name) === hrStripDiacritics(name) && p.id !== id);
-    if (dup) { showToast(`Đã có vị trí "${dup.name}"!`, 'error'); return; }
+      hrStripDiacritics(p.name) === hrStripDiacritics(name) &&
+      (p.department || '') === (department || '') && p.id !== id);
+    if (dup) { showToast(`Đã có vị trí "${dup.name}" tại bộ phận ${department || 'chưa phân bộ phận'}!`, 'error'); return; }
     const data = {
       name,
-      department: document.getElementById('position-department').value,
+      department,
       note: document.getElementById('position-note').value.trim(),
       updatedAt: new Date().toISOString()
     };
@@ -2018,7 +2026,7 @@ import { escapeHTML, showToast } from './utils.js';
           const emp = hrEmpById(a.employeeId);
           const timeTxt = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}`;
           return `<div class="slot filled" draggable="true" title="${escapeHTML(emp?.name || '')} · ${escapeHTML(timeTxt)}"
-            ondragstart="app.hrBoardDragStart(event, '${a.id}')" onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '${a.id}')">
+            ondragstart="app.hrBoardDragStart(event, '${a.id}')" ondragend="this.classList.remove('dragging')" onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '${a.id}')">
             <span class="slot-ava">${escapeHTML(hrInitials(emp?.name))}</span>
             <span class="slot-info"><b>${escapeHTML(hrShortName(emp?.name || 'Đã xóa'))}</b><i>${escapeHTML(timeTxt)}</i></span>
             <button type="button" class="slot-x" title="Bỏ người khỏi vị trí" onclick="event.stopPropagation(); app.hrBoardRemoveAssign('${a.id}')"><i data-lucide="x"></i></button>
@@ -2083,9 +2091,16 @@ import { escapeHTML, showToast } from './utils.js';
     }
     box.innerHTML = list.map(e => {
       const skilled = (e.skills || []).includes(hrBoardSuggestFor);
-      return `<div class="hr-combobox-item" data-emp-id="${escapeHTML(e.id)}">
+      // Người đã được bố trí trong ngày -> đánh dấu "Đã bố trí: ..." ngay trên
+      // dòng gợi ý (VẪN chọn được — phục vụ 1 người nhiều công đoạn theo khung giờ)
+      const mine = hrAssignmentsOf(state.hrBoardDate).filter(a => a.employeeId === e.id)
+        .sort((a, b) => String(a.start).localeCompare(String(b.start)));
+      const mineTxt = mine.length
+        ? ` · Đã bố trí: ${mine.map(a => `${hrPosName(a.positionId)} ${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : '→hết ca'}`).join(', ')}`
+        : '';
+      return `<div class="hr-combobox-item${mine.length ? ' picked' : ''}" data-emp-id="${escapeHTML(e.id)}">
         <strong>${escapeHTML(e.name)}</strong>
-        <span class="hr-combobox-meta">${escapeHTML((e.code ? e.code + ' · ' : '') + (e.department || ''))}${skilled ? ' · ★ có kỹ năng' : ''}</span>
+        <span class="hr-combobox-meta">${escapeHTML((e.code ? e.code + ' · ' : '') + (e.department || ''))}${skilled ? ' · ★ có kỹ năng' : ''}${escapeHTML(mineTxt)}</span>
       </div>`;
     }).join('');
     box.style.display = 'block';
@@ -2125,7 +2140,7 @@ import { escapeHTML, showToast } from './utils.js';
     const src = srcId ? (state.hrAssignments || []).find(a => a.id === srcId) : null;
     const range = hrShiftRange(cfg, shiftIdx);
 
-    document.getElementById('board-assign-mode').value = mode === 'new' ? '' : (srcId || '');
+    document.getElementById('board-assign-mode').value = mode === 'edit' ? srcId : '';
     document.getElementById('board-assign-movefrom').value = mode === 'move' ? srcId : '';
     document.getElementById('board-assign-date').value = state.hrBoardDate;
     document.getElementById('board-assign-pos').value = positionId;
@@ -2134,11 +2149,13 @@ import { escapeHTML, showToast } from './utils.js';
     if (titleEl) {
       titleEl.innerHTML = mode === 'new'
         ? `<i data-lucide="user-plus"></i> Bố Trí: ${escapeHTML(pos?.name || '')} (${escapeHTML(range.label || '')})`
-        : `<i data-lucide="edit-3"></i> Sửa Bố Trí: ${escapeHTML(pos?.name || '')}`;
+        : mode === 'move'
+          ? `<i data-lucide="move"></i> Dời Người → ${escapeHTML(pos?.name || '')} <span style="font-weight:400;font-size:0.72rem;">(giờ mới = giờ kết thúc tại vị trí cũ)</span>`
+          : `<i data-lucide="edit-3"></i> Sửa Bố Trí: ${escapeHTML(pos?.name || '')}`;
     }
     if (src && mode !== 'new') {
       pickBoardAssignEmployee(src.employeeId);
-      fillBoardAssignTimeSelects(cfg, shiftIdx, src.start, src.end);
+      fillBoardAssignTimeSelects(cfg, shiftIdx, src.start, mode === 'move' ? '' : src.end);
     } else {
       fillBoardAssignTimeSelects(cfg, shiftIdx, range.start, '');
       const inp = document.getElementById('board-assign-employee');
@@ -2177,21 +2194,39 @@ import { escapeHTML, showToast } from './utils.js';
       shiftLabel: cfg.type === 'lamca' ? (cfg.shifts[shiftIdx]?.name || '') : 'Hành chính',
       updatedAt: new Date().toISOString()
     };
-    // Dời ô (kéo thả): GIỮ LỊCH SỬ tại vị trí cũ — bản ghi cũ được CHẤM DỨT
-    // lúc giờ bắt đầu ca mới (VD: L.V.Tuấn 7h00–9h00 tại Bổ ống 2, sau đó
-    // 9h00–hết ca tại Bốc luồng). Nếu giờ mới <= giờ cũ thì coi như dời hẳn.
+    // Dời ô (kéo thả): LUÔN GIỮ LỊCH SỬ tại vị trí cũ — bản ghi cũ được chấm
+    // dứt lúc giờ bắt đầu của vị trí mới (giờ mới = giờ kết thúc cũ, VD:
+    // L.V.Tuấn 7h00–9h00 tại Bổ ống 2 → 9h00–hết ca tại Bốc luồng). Nếu giờ
+    // mới <= giờ cũ thì bản ghi cũ GIỮ NGUYÊN — không bao giờ xóa lịch sử.
     if (moveFromId && moveFromId !== editId) {
       const src = (state.hrAssignments || []).find(a => a.id === moveFromId);
       if (src) {
         if (start > src.start) {
           src.end = start;
           src.updatedAt = new Date().toISOString();
-        } else {
-          trackDeleted('hrAssignments', moveFromId);
-          state.hrAssignments = (state.hrAssignments || []).filter(a => a.id !== moveFromId);
         }
         hrSyncAttPositionsFromAssignments(src.employeeId, src.date);
       }
+    }
+    // Chặn TRÙNG: cùng người + cùng vị trí + cùng cột ca mà KHUNG GIỜ giao
+    // nhau -> chặn (tránh ghi nhầm 2 lần). Người làm thêm ở KHUNG GIỜ KHÁC
+    // nhau (kể cả quay lại đúng vị trí cũ) vẫn thêm bình thường.
+    const toMinT = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+    const newStart = toMinT(start);
+    let newEnd = toMinT(end);
+    if (!newEnd || newEnd <= newStart) { const r = hrShiftRange(cfg, shiftIdx); newEnd = newEnd ? newEnd + 1440 : toMinT(r.end); if (newEnd <= newStart) newEnd = newStart + 480; }
+    const conflict = (state.hrAssignments || []).find(a =>
+      a.id !== editId && a.id !== moveFromId && a.date === date &&
+      a.employeeId === employeeId && a.positionId === positionId && (a.shiftIdx || 0) === shiftIdx &&
+      (() => {
+        const as = toMinT(a.start);
+        let ae = toMinT(a.end);
+        if (!ae || ae <= as) { ae = ae ? ae + 1440 : toMinT(hrShiftRange(cfg, a.shiftIdx || 0).end); if (ae <= as) ae = as + 480; }
+        return as < newEnd && newStart < ae;
+      })());
+    if (conflict) {
+      showToast(`Đã bố trí ${hrEmpName(employeeId)} tại "${hrPosName(positionId)}" lúc ${fmtHour(conflict.start)}${conflict.end ? '–' + fmtHour(conflict.end) : ' → hết ca'} — trùng khung giờ. Chọn khung giờ khác nếu muốn làm thêm.`, 'error');
+      return;
     }
     if (editId) {
       const idx = (state.hrAssignments || []).findIndex(a => a.id === editId);
@@ -2232,6 +2267,7 @@ import { escapeHTML, showToast } from './utils.js';
   let hrBoardDraggingId = '';
   function hrBoardDragStart(ev, assignId) {
     hrBoardDraggingId = assignId;
+    if (ev && ev.target && ev.target.classList) ev.target.classList.add('dragging'); // hiệu ứng mờ chip đang kéo
     if (ev && ev.dataTransfer) {
       ev.dataTransfer.effectAllowed = 'move';
       try { ev.dataTransfer.setData('text/plain', assignId); } catch (e) {}

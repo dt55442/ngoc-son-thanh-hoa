@@ -215,6 +215,27 @@
         </div>
       </div>
 
+      <!-- ======================================================= -->
+      <!-- KHU VỰC XƯỞNG 2 — THẺ MINI/LAUNCHER CÁC VỊ TRÍ CÔNG ĐOẠN -->
+      <!-- Mỗi vị trí = 1 thẻ; bấm thẻ mở bảng chi tiết nổi lên.     -->
+      <!-- Nguồn dữ liệu: lô nguyên liệu ĐẦU VÀO Xưởng 2 ở tab       -->
+      <!-- Nguyên Liệu ("Luồng cây xô", "Luồng ống", ...)            -->
+      <!-- ======================================================= -->
+      <div class="x2-cards-overview">
+        <div class="x2-cards-title">
+          <h4><i data-lucide="warehouse"></i> Vị Trí Xưởng 2</h4>
+          <span class="x2-cards-hint">Bấm thẻ để mở bảng vị trí · nguyên liệu đầu vào lấy từ tab Nguyên Liệu (Xưởng 2)</span>
+        </div>
+        <div class="x2-cards" id="x2-cards-grid">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-cut-card" aria-expanded="false" title="Cắt Chọn — chọn luồng từ lô nguyên liệu đầu vào của Xưởng 2 (tự link nhà cung cấp, mã số, khối lượng đầu vào)">
+            <span class="x2-mini-ic"><i data-lucide="scissors"></i></span>
+            <span class="x2-mini-title">Cắt Chọn</span>
+            <span class="x2-mini-desc">Chọn luồng từ lô nguyên liệu Xưởng 2</span>
+            <span class="x2-mini-count" id="x2-mini-count-cut">–</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Quick Stats Bar — chỉ hiển thị ở tab Công Đoạn (Kanban) -->
       <section class="quick-stats-bar">
         <div class="quick-stat-group">
@@ -543,6 +564,125 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- XƯỞNG 2 — CÁC BẢNG CHI TIẾT VỊ TRÍ (ẩn sẵn; nổi lên khi   -->
+      <!-- bấm thẻ launcher ở đầu tab — tương tự thẻ Nhân Sự)       -->
+      <!-- ======================================================= -->
+      <div id="x2-details-stack">
+
+        <!-- VỊ TRÍ: CẮT CHỌN — chọn luồng từ nguyên liệu đầu vào Xưởng 2 -->
+        <div class="planning-card x2-card-hidden" id="x2-cut-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="scissors"></i> Cắt Chọn — Xưởng 2</h4>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-add-x2-cut" title="Xóa form và ghi nhận lượt cắt/chọn mới">
+                <i data-lucide="plus-circle"></i> Ghi Cắt/Chọn
+              </button>
+            </div>
+          </div>
+
+          <!-- FORM: chọn lô nguyên liệu đầu vào Xưởng 2 → tự link NCC / Mã số / KL đầu vào -->
+          <div class="x2-cut-form-wrap">
+            <h5 id="x2-cut-form-title"><i data-lucide="plus-circle"></i> Ghi Nhận Lượt Cắt/Chọn Mới</h5>
+            <form id="x2-cut-form">
+              <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label for="x2-cut-material">Nguyên Liệu Đầu Vào (Xưởng 2) <span class="required">*</span></label>
+                  <select id="x2-cut-material" required></select>
+                  <small style="color:var(--text-muted);">Danh sách lấy từ tab Nguyên Liệu — các lần nhập cho Xưởng 2 (Luồng cây xô, Luồng ống, ...)</small>
+                </div>
+                <div class="form-group">
+                  <label for="x2-cut-date">Ngày Cắt/Chọn <span class="required">*</span></label>
+                  <input type="date" id="x2-cut-date" required>
+                </div>
+                <div class="form-group">
+                  <label for="x2-cut-ongluong">KL Ống Luồng (kg)</label>
+                  <input type="number" id="x2-cut-ongluong" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label for="x2-cut-cuidot">KL Củi Đốt (kg)</label>
+                  <input type="number" id="x2-cut-cuidot" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label for="x2-cut-cayloai">KL Cây Loại (kg)</label>
+                  <input type="number" id="x2-cut-cayloai" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label for="x2-cut-note">Ghi Chú</label>
+                  <input type="text" id="x2-cut-note" placeholder="Ghi chú thêm (không bắt buộc)">
+                </div>
+              </div>
+
+              <!-- Trường TỰ ĐỘNG LINK từ lần nhập nguyên liệu đang chọn -->
+              <div class="x2-linked-grid">
+                <div class="x2-linked-item">
+                  <span class="x2-linked-label"><i data-lucide="package"></i> Loại Nguyên Liệu</span>
+                  <strong id="x2-cut-type">—</strong>
+                </div>
+                <div class="x2-linked-item">
+                  <span class="x2-linked-label"><i data-lucide="user"></i> Tên Nhà Cung Cấp</span>
+                  <strong id="x2-cut-supplier">—</strong>
+                </div>
+                <div class="x2-linked-item">
+                  <span class="x2-linked-label"><i data-lucide="hash"></i> Mã Số</span>
+                  <strong id="x2-cut-code">—</strong>
+                </div>
+                <div class="x2-linked-item">
+                  <span class="x2-linked-label"><i data-lucide="scale"></i> Khối Lượng Đầu Vào</span>
+                  <strong id="x2-cut-inweight">—</strong>
+                </div>
+              </div>
+
+              <div class="material-weight-box" style="margin-top:10px;">
+                <span><i data-lucide="calculator"></i> KL Ngọn/Ống Loại (Tự tính = KL đầu vào − KL ống luồng − KL củi đốt − KL cây loại):</span>
+                <strong id="x2-cut-remain-display">— kg</strong>
+              </div>
+
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-cancel-x2-cut">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Cắt/Chọn</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Thống kê nhanh -->
+          <div class="material-stats" id="x2-cut-stats"></div>
+
+          <!-- Bảng lịch sử cắt/chọn -->
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="x2-cut-table">
+              <thead>
+                <tr>
+                  <th style="width:90px;">Ngày Cắt/Chọn</th>
+                  <th>Loại Nguyên Liệu</th>
+                  <th>Nhà Cung Cấp</th>
+                  <th style="width:90px;">Mã Số</th>
+                  <th class="text-right" style="width:110px;">KL Đầu Vào (kg)</th>
+                  <th class="text-right" style="width:100px;">KL Ống Luồng</th>
+                  <th class="text-right" style="width:95px;">KL Củi Đốt</th>
+                  <th class="text-right" style="width:95px;">KL Cây Loại</th>
+                  <th class="text-right" style="width:120px;">KL Ngọn/Ống Loại</th>
+                  <th class="text-right" style="width:90px;">Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody id="x2-cut-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div> <!-- /#x2-details-stack -->
+
+      <!-- POP-UP: overlay chi tiết vị trí Xưởng 2 — nổi lên khi bấm thẻ launcher -->
+      <div class="modal-overlay" id="x2-detail-overlay" tabindex="-1" aria-hidden="true">
+        <div class="modal-card x2-detail-modal" id="x2-detail-card" role="dialog" aria-modal="true" aria-labelledby="x2-detail-title">
+          <div class="modal-header">
+            <h3 id="x2-detail-title">Vị Trí Xưởng 2</h3>
+            <button type="button" class="modal-close-btn" id="btn-close-x2-detail" title="Đóng (Esc)"><i data-lucide="x"></i></button>
+          </div>
+          <div class="x2-detail-content" id="x2-detail-content"></div>
+        </div>
       </div>
 
     </section>
@@ -1340,9 +1480,14 @@
       <div class="qc-cards-overview">
         <div class="qc-cards-title" style="justify-content:space-between;">
           <h4><i data-lucide="layout-grid"></i> Bảng QC</h4>
-          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-qc" title="Lịch sử thay đổi của tab QC (chỉ Admin)">
-            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
-          </button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-success" id="btn-open-export-qc" title="Xuất bảng Xuất Hàng QC ra file Excel (.xlsx)">
+              <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
+            </button>
+            <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-qc" title="Lịch sử thay đổi của tab QC (chỉ Admin)">
+              <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+            </button>
+          </div>
         </div>
         <div class="qc-cards" id="qc-cards-grid">
           <button type="button" class="qc-mini-card" data-qc-card="qc-export-card" aria-expanded="false" title="Xuất Hàng — bảng xuất theo tuần: thêm dòng, lọc năm/tuần, tìm kiếm, sửa trực tiếp">
@@ -1548,9 +1693,14 @@
       <div class="hr-cards-overview">
         <div class="hr-cards-title" style="justify-content:space-between;">
           <h4><i data-lucide="layout-grid"></i> Bảng Nhân Sự</h4>
-          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-hr" title="Lịch sử thay đổi của tab Nhân Sự (chỉ Admin)">
-            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
-          </button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-success" id="btn-open-export-hr" title="Xuất dữ liệu Nhân Sự ra file Excel (.xlsx) — chọn theo từng thẻ nhanh">
+              <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
+            </button>
+            <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-hr" title="Lịch sử thay đổi của tab Nhân Sự (chỉ Admin)">
+              <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+            </button>
+          </div>
         </div>
         <div class="hr-cards" id="hr-cards-grid">
           <button type="button" class="hr-mini-card" data-hr-card="hr-emp-card" aria-expanded="false" title="Danh sách nhân viên — thêm / sửa / xóa">
@@ -2541,17 +2691,17 @@
             <input type="date" id="form-date" required>
           </div>
 
-          <!-- Tuần (Tự động) -->
-          <div class="form-group">
+          <!-- Tuần (Tự động) — ẩn khỏi form, dữ liệu vẫn tự tính & hiển thị trên thẻ -->
+          <div class="form-group" style="display:none;">
             <label for="form-week">Tuần Tự Tạo theo Ngày</label>
             <input type="text" id="form-week" readonly class="readonly-input" placeholder="Tự động tính theo Ngày">
           </div>
 
-          <!-- Mã Lô Nan (Tự động theo YYMMDD) -->
-          <div class="form-group col-span-2">
+          <!-- Mã Lô Nan (Tự động theo YYMMDD) — ẩn khỏi form, mã vẫn tự sinh & hiển thị trên thẻ -->
+          <div class="form-group" style="display:none;">
             <label for="form-code">Mã Lô Nan Tre (Tự động YYMMDD) <span class="required">*</span></label>
             <div class="input-with-action">
-              <input type="text" id="form-code" placeholder="VD: 260813-01" required>
+              <input type="text" id="form-code" placeholder="VD: 260813-01">
               <button type="button" class="btn btn-secondary btn-sm" id="btn-regen-code" title="Tạo lại mã">
                 <i data-lucide="refresh-cw"></i> Tạo Mã
               </button>
@@ -2575,6 +2725,24 @@
             <input type="date" id="form-baotinh-date">
             <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
               Sửa lại nếu ngày bào tinh thật khác ngày ghi nhận trên hệ thống.
+            </div>
+          </div>
+
+          <!-- Ngày vào Sấy 2 thực tế (chỉ hiện khi công đoạn = Sấy 2) -->
+          <div class="form-group" id="form-say2-date-group" style="display:none;">
+            <label for="form-say2-date">Ngày Vào Sấy 2 (Thực Tế)</label>
+            <input type="date" id="form-say2-date">
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+              Sửa lại nếu ngày vào Sấy 2 thật khác ngày ghi nhận trên hệ thống.
+            </div>
+          </div>
+
+          <!-- Ngày vào Kho thực tế (chỉ hiện khi công đoạn = Kho Lưu Trữ) -->
+          <div class="form-group" id="form-kho-date-group" style="display:none;">
+            <label for="form-kho-date">Ngày Vào Kho (Thực Tế)</label>
+            <input type="date" id="form-kho-date">
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+              Sửa lại nếu ngày vào kho thật khác ngày ghi nhận trên hệ thống.
             </div>
           </div>
 
@@ -2605,38 +2773,38 @@
             </div>
           </div>
 
-          <!-- Số lượng -->
-          <div class="form-group">
-            <label for="form-quantity">Số Lượng Nan (Thanh) <span class="required">*</span></label>
-            <input type="number" id="form-quantity" min="1" step="1" placeholder="VD: 5000" required>
+          <!-- Số Lượng + Loại Nan + Dùng Cho: cùng 1 hàng cho gọn -->
+          <div class="form-group col-span-2" style="padding:0;">
+            <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:10px; align-items:end;">
+              <div>
+                <label for="form-quantity">Số Lượng (Thanh) <span class="required">*</span></label>
+                <input type="number" id="form-quantity" min="1" step="1" placeholder="VD: 5000" required>
+              </div>
+              <div>
+                <label for="form-bamboo-type">Loại Nan <span class="required">*</span></label>
+                <select id="form-bamboo-type" required>
+                  <option value="A">Loại A</option>
+                  <option value="A1">Loại A1</option>
+                  <option value="B">Loại B</option>
+                </select>
+              </div>
+              <div>
+                <label for="form-use-for">Dùng Cho <span class="required">*</span></label>
+                <select id="form-use-for" required>
+                  <option value="Ván">Ván</option>
+                  <option value="Bullig">Bullig</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <!-- Calculated Volume Box -->
-          <div class="form-group col-span-2">
+          <!-- Calculated Volume Box — ẩn khỏi form, thể tích vẫn tự tính & hiển thị trên thẻ -->
+          <div class="form-group col-span-2" style="display:none;">
             <label>Thể Tích Quy Đổi m³</label>
             <div class="volume-preview-box">
               <span class="vol-num" id="form-calculated-vol">0.0000 m³</span>
               <span class="vol-formula" id="form-formula-detail">(Dài × Rộng × Dày / 1.000.000.000) × Số Lượng</span>
             </div>
-          </div>
-
-          <!-- Loại nan (Lựa chọn: A, A1, B) -->
-          <div class="form-group">
-            <label for="form-bamboo-type">Loại Nan <span class="required">*</span></label>
-            <select id="form-bamboo-type" required>
-              <option value="A">Loại A</option>
-              <option value="A1">Loại A1</option>
-              <option value="B">Loại B</option>
-            </select>
-          </div>
-
-          <!-- Dùng cho (lựa chọn: Ván, Bullig) -->
-          <div class="form-group">
-            <label for="form-use-for">Dùng Cho <span class="required">*</span></label>
-            <select id="form-use-for" required>
-              <option value="Ván">Ván</option>
-              <option value="Bullig">Bullig</option>
-            </select>
           </div>
 
           <!-- Ghi chú -->
@@ -2693,12 +2861,12 @@
           </div>
         </div>
 
-        <!-- Ngày vào Bào Tinh thực tế (chỉ hiện khi chuyển sang Bào Tinh) -->
-        <div class="form-group" id="transfer-baotinh-date-group" style="display:none;">
-          <label for="transfer-baotinh-date"><i data-lucide="calendar-clock" style="width:12px;height:12px;"></i> Ngày Vào Bào Tinh (Thực Tế)</label>
-          <input type="date" id="transfer-baotinh-date">
+        <!-- Ngày vào công đoạn thực tế (hiện khi chuyển sang Sấy 2 / Kho / Bào Tinh) -->
+        <div class="form-group" id="transfer-stage-date-group" style="display:none;">
+          <label for="transfer-stage-date"><i data-lucide="calendar-clock" style="width:12px;height:12px;"></i> <span id="transfer-stage-date-label">Ngày Vào Công Đoạn (Thực Tế)</span></label>
+          <input type="date" id="transfer-stage-date">
           <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
-            Mặc định là hôm nay — sửa lại nếu việc bào tinh thực tế diễn ra sớm hơn ngày nhập hệ thống.
+            Mặc định là hôm nay — sửa lại nếu ngày vào công đoạn thực tế khác ngày nhập hệ thống (nhập muộn).
           </div>
         </div>
 
@@ -3145,6 +3313,89 @@
 
 
 
+  <!-- MODAL 6D2: XUẤT EXCEL QC — BẢNG XUẤT HÀNG -->
+  <div class="modal-overlay" id="modal-export-qc">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Xuất QC — Bảng Xuất Hàng (.xlsx)</h3>
+        <button class="modal-close-btn" id="btn-close-export-qc"><i data-lucide="x"></i></button>
+      </div>
+      <form id="qc-xlsx-export-form" style="padding: 20px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-qc-year"><i data-lucide="calendar-range"></i> Lọc Theo Năm</label>
+          <select id="export-qc-year">
+            <option value="all">Tất Cả Các Năm</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-qc-week"><i data-lucide="calendar-check"></i> Lọc Theo Tuần</label>
+          <select id="export-qc-week">
+            <option value="all">Tất Cả Các Tuần</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-qc-product"><i data-lucide="package"></i> Lọc Theo Thành Phẩm</label>
+          <select id="export-qc-product">
+            <option value="all">Tất Cả Thành Phẩm</option>
+          </select>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-export-qc">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-qc" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 6D3: XUẤT EXCEL NHÂN SỰ — CHỌN THEO THẺ NHANH (MINI CARD) -->
+  <div class="modal-overlay" id="modal-export-hr">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Xuất Nhân Sự (.xlsx)</h3>
+        <button class="modal-close-btn" id="btn-close-export-hr"><i data-lucide="x"></i></button>
+      </div>
+      <form id="hr-xlsx-export-form" style="padding: 20px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-hr-card"><i data-lucide="layout-grid"></i> Chọn Nội Dung Xuất (theo thẻ nhanh)</label>
+          <select id="export-hr-card">
+            <option value="hr-emp">Nhân Viên — Danh Sách Nhân Viên</option>
+            <option value="hr-att-day">Chấm Công &amp; Phân Vị — Theo Ngày</option>
+            <option value="hr-att-stats">Thống Kê Đi Làm — Theo Tháng</option>
+            <option value="hr-pos">Vị Trí Làm Việc &amp; Kỹ Năng</option>
+            <option value="hr-ci">Giờ Máy Chấm Công</option>
+            <option value="hr-leave">Đơn Xin Nghỉ Phép</option>
+            <option value="hr-leave-stats">Thống Kê Nghỉ Phép — Theo Nhân Viên</option>
+            <option value="hr-recruit">Nhân Sự Cần — Tuyển Dụng</option>
+            <option value="hr-posneed">Nhân Sự Cần Tại Các Vị Trí</option>
+          </select>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+            Mỗi lựa chọn tương ứng một thẻ nhanh trên tab Nhân Sự.
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="export-hr-dept"><i data-lucide="map-pin"></i> Lọc Theo Bộ Phận</label>
+          <select id="export-hr-dept">
+            <option value="all">Tất Cả Bộ Phận</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px; display:none;" id="export-hr-date-row">
+          <label for="export-hr-date"><i data-lucide="calendar"></i> Ngày Chấm Công (dùng cho "Chấm Công &amp; Phân Vị")</label>
+          <input type="date" id="export-hr-date">
+        </div>
+        <div class="form-group" style="margin-bottom: 12px; display:none;" id="export-hr-month-row">
+          <label for="export-hr-month"><i data-lucide="calendar-days"></i> Tháng Thống Kê (dùng cho "Thống Kê Đi Làm")</label>
+          <input type="month" id="export-hr-month">
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-export-hr">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-hr" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL 6E: XEM TRƯỚC & CHỈNH SỬA BÁO CÁO TRƯỚC KHI XUẤT / IN -->
   <div class="modal-overlay" id="modal-export-preview">
     <div class="modal-card modal-export-preview-card">
@@ -3449,7 +3700,7 @@
         <option value="kho">3. Kho Lưu Trữ</option>
         <option value="bao_tinh">4. Bào Tinh</option>
       </select>
-      <input type="date" id="mtb-baotinh-date" style="display:none;" title="Ngày vào Bào Tinh thực tế — áp dụng cho mọi lô chuyển sang Bào Tinh. Mặc định hôm nay, sửa lại nếu bào tinh diễn ra sớm hơn ngày nhập hệ thống.">
+      <input type="date" id="mtb-stage-date" style="display:none;" title="Ngày vào công đoạn thực tế — áp dụng cho mọi lô được chuyển (Sấy 2 / Kho / Bào Tinh). Mặc định hôm nay, sửa lại nếu ngày thực tế khác ngày nhập hệ thống.">
       <input type="text" id="mtb-new-location" placeholder="Vị trí cho mọi lô (trống = giữ cũ)" title="Vị Trí mới áp dụng cho TẤT CẢ các lô được chuyển. Để trống nếu muốn giữ vị trí hiện có của từng lô." autocomplete="off">
       <input type="text" id="mtb-new-notes" placeholder="Ghi chú cho mọi lô (trống = giữ cũ)" title="Ghi Chú mới áp dụng cho TẤT CẢ các lô được chuyển. Để trống nếu muốn giữ ghi chú hiện có của từng lô." autocomplete="off">
       <button type="button" class="btn btn-success btn-sm" id="btn-mtb-confirm">

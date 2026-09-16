@@ -10,6 +10,7 @@ import { setupEventListeners, undoLastAction, updateUndoButton } from './events.
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
+import { loadXuong2Cuts, renderXuong2Cards } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, openPressWorkersModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
@@ -18,7 +19,7 @@ import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { state } from './state.js';
 import { autoReconnectDataFolder, loadData, updateFileStorageUI } from './storage.js';
-import { setupFormCalculations } from './utils.js';
+import { setupFormCalculations, initVnDateInputs } from './utils.js';
 
   // ─── INIT ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
@@ -36,6 +37,7 @@ import { setupFormCalculations } from './utils.js';
     loadPressNotes();
     loadMaterialRecords();
     loadMaterialPlan();
+    loadXuong2Cuts(); // vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn)
     loadQcExports();
     loadHrData();
     // Lịch sử sửa đổi: nạp + lập snapshot nền SAU CÙNG (sau khi toàn bộ
@@ -45,6 +47,17 @@ import { setupFormCalculations } from './utils.js';
     restoreRateTableCollapse();
     setupEventListeners();
     setupFormCalculations();
+    // Mọi ô chọn ngày hiển thị & nhập theo dd/mm/yyyy (văn hóa Việt Nam):
+    // khởi tạo cho các ô có sẵn + tự bắt các ô ngày được tạo động sau này
+    initVnDateInputs();
+    if (typeof MutationObserver === 'function') {
+      let vnDateMoTimer = null;
+      const vnDateMo = new MutationObserver(() => {
+        clearTimeout(vnDateMoTimer);
+        vnDateMoTimer = setTimeout(() => initVnDateInputs(), 200);
+      });
+      vnDateMo.observe(document.body, { childList: true, subtree: true });
+    }
     updateUndoButton();
     updateFileStorageUI();
     checkAuthAndRender();
@@ -84,8 +97,8 @@ import { setupFormCalculations } from './utils.js';
       btn.classList.toggle('active', btn.getAttribute('data-target') === targetViewId);
     });
     if (targetViewId === 'dashboard-view') renderDashboardCharts();
-    // Thẻ "Phân bổ khối lượng theo công đoạn" nay nằm ở tab Công Đoạn
-    if (targetViewId === 'kanban-view') renderStageFlow();
+    // Thẻ "Phân bổ khối lượng theo công đoạn" + khu Vị Trí Xưởng 2 (tab Công Đoạn)
+    if (targetViewId === 'kanban-view') { renderStageFlow(); renderXuong2Cards(); }
     if (targetViewId === 'planning-view') renderPlanningView();
     if (targetViewId === 'press-view') renderPressView();
     if (targetViewId === 'materials-view') renderMaterialView();
@@ -179,6 +192,7 @@ import { setupFormCalculations } from './utils.js';
     renderKanbanBoard(filtered);
     // Thẻ "Phân bổ khối lượng theo công đoạn" (tab Công Đoạn) + giữ đúng cột đang xem trên điện thoại
     renderStageFlow();
+    renderXuong2Cards(); // đếm trên thẻ launcher Vị Trí Xưởng 2 (tab Công Đoạn)
     filterMobileKanbanColumns();
     if (state.activeView === 'dashboard-view') renderDashboardCharts();
     if (state.activeView === 'planning-view') renderPlanningView();

@@ -7,8 +7,8 @@ import { logDataChange } from './history.js';
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
-import { hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
-import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
+import { HR_DEPARTMENTS, attStatusOf, computeAttendanceStats, computeLeaveStats, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
+import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 
   // ─── CUSTOM XLSX EXPORT ───────────────────────────────────────
@@ -39,50 +39,82 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     const requester     = document.getElementById('export-requester')?.value.trim()  || '';
     const department    = document.getElementById('export-department')?.value.trim() || '';
 
-    // Filter
+    // Filter — lọc theo NGÀY VÀO CÔNG ĐOẠN (thực tế), KHÔNG phải ngày tạo lô:
+    //   • chọn 1 công đoạn  → ngày vào công đoạn đó (Sấy 2/Kho/Bào Tinh lấy ngày
+    //     thực tế người dùng khai báo hoặc mốc trong lịch sử chuyển; Sấy 1 = ngày tạo)
+    //   • Tất Cả công đoạn  → ngày vào công đoạn HIỆN TẠI của từng lô
+    const stageDateOf = (b) => getBatchStageEntryDate(b, selectedStage === 'all' ? b.stage : selectedStage);
     const filtered = state.batches.filter(b => {
-      if (selectedStage !== 'all' && b.stage    !== selectedStage) return false;
-      if (dateFrom      && b.date < dateFrom)                       return false;
-      if (dateTo        && b.date > dateTo)                         return false;
+      if (selectedStage !== 'all' && b.stage !== selectedStage) return false;
+      const d = stageDateOf(b);
+      if (dateFrom      && d < dateFrom)                            return false;
+      if (dateTo        && d > dateTo)                              return false;
       if (selectedLoc !== 'all' && b.location !== selectedLoc)      return false;
       return true;
     });
 
     if (filtered.length === 0) {
-      showToast('Không tìm thấy lô nan nào thỏa mãn điều kiện!', 'error');
+      // Chẩn đoán thân thiện: cho biết công đoạn nào đang CÓ dữ liệu để người dùng
+      // nhận ra ngay nếu dữ liệu lô dùng mã công đoạn khác chuẩn (say1/say2/kho/bao_tinh)
+      const stagesInData = [...new Set(state.batches.map(b => b.stage).filter(Boolean))];
+      const stageNames   = stagesInData.map(s => STAGES[s]?.short || s);
+      let msg = selectedStage === 'all'
+        ? 'Không có lô nan nào thỏa mãn điều kiện!'
+        : `Không có lô nan nào ở "${STAGES[selectedStage]?.short || selectedStage}" thỏa mãn bộ lọc!`;
+      if (stagesInData.length) msg += ` Các công đoạn đang có dữ liệu: ${stageNames.join(', ')}.`;
+      else msg += ' Dữ liệu lô nan đang trống.';
+      showToast(msg, 'error');
       return null;
     }
 
     const aoa = [];
 
     const stageLabel = selectedStage === 'all' ? 'Tất Cả' : (STAGES[selectedStage]?.short || selectedStage);
+    // Tên công đoạn dùng cho tiêu đề / tên sheet:
+    //   chọn 1 công đoạn → "Sấy 1", "Bào Tinh"... ; chọn Tất Cả → giữ tên gốc "Than Hóa"
+    const stageSheet = selectedStage === 'all' ? 'Than Hóa' : (STAGES[selectedStage]?.short || selectedStage);
+    const stageTitle = stageSheet.toUpperCase();
     const locLabel   = selectedLoc   === 'all' ? 'Tất Cả' : selectedLoc;
     const today      = new Date();
     const dayLabel   = `Ngày  ${today.getDate()}  Tháng  ${today.getMonth() + 1}  năm  ${today.getFullYear()}`;
 
-    // Rows 1-6: Header block
-    aoa.push(['NHẬT KÝ THAN HÓA', '', '', '', '', '', '', '', '', '', '']);
+    // Rows 1-6: Header block — tiêu đề = NHẬT KÝ + TÊN CÔNG ĐOẠN (VD: NHẬT KÝ SẤY 1)
+    aoa.push([`NHẬT KÝ ${stageTitle}`, '', '', '', '', '', '', '', '', '', '']);
     aoa.push(['', '', '', '', dayLabel, '', '', '', '', '', '']);
-    aoa.push(['Họ và tên người đề nghị:', requester, '', '', '', 'Bộ phận:', department, '', '', '', '']);
+    // A3:B3 gộp làm ô nhãn rộng cho "Họ và tên người đề nghị:", giá trị điền sang C3:E3
+    aoa.push(['Họ và tên người đề nghị:', '', requester, '', '', 'Bộ phận:', department, '', '', '', '']);
+    // A4:B4 gộp làm ô nhãn "Công đoạn:", tên công đoạn hiển thị sang C4:F4
     aoa.push(['Công đoạn:', '', stageLabel, '', '', '', 'Vị trí:', '', '', locLabel, '']);
     aoa.push(['Stt', 'Tên vật tư - hàng hóa', 'Loại', 'Lần than hóa', 'Lô than hóa', 'Thông số than hóa', 'Thời gian', 'Số lượng', '', '', 'Ghi chú']);
     aoa.push(['', '', '', '', '', '', '', 'A', 'A1', 'B', '']);
 
-    // Data rows
+    // Data rows — gia cố chống lỗi dữ liệu lệch chuẩn (thể tích/số lượng dạng chữ,
+    // thiếu kích thước, trường rỗng...): lô nào dựng dòng lỗi thì BỎ QUA + ghi nhận
+    // cảnh báo thay vì làm hỏng cả file xuất của công đoạn đó.
     let stt = 1, totalA = 0, totalA1 = 0, totalB = 0;
+    const skippedBadRows = [];
     filtered.forEach(b => {
-      const dimStr = `${b.length}x${b.width}x${b.thickness}`;
-      const qtyA   = b.bambooType === 'A'  ? (b.quantity || 0) : '';
-      const qtyA1  = b.bambooType === 'A1' ? (b.quantity || 0) : '';
-      const qtyB   = b.bambooType === 'B'  ? (b.quantity || 0) : '';
-      if (typeof qtyA  === 'number') totalA  += qtyA;
-      if (typeof qtyA1 === 'number') totalA1 += qtyA1;
-      if (typeof qtyB  === 'number') totalB  += qtyB;
-      aoa.push([stt++, dimStr, b.useFor || '', '', b.code || '', `${(b.volume||0).toFixed(4)} m³`, formatDateDDMMYY(b.date), qtyA, qtyA1, qtyB, b.notes || '']);
+      try {
+        const len = parseFloat(b.length), wid = parseFloat(b.width), thk = parseFloat(b.thickness);
+        const dimStr = (len > 0 && wid > 0 && thk > 0) ? `${len}x${wid}x${thk}` : '—';
+        const vol    = parseFloat(b.volume); // chấp nhận cả số dạng chữ "0.3719"
+        const volStr = isNaN(vol) ? '0.0000 m³' : `${vol.toFixed(4)} m³`;
+        const qty    = parseInt(b.quantity, 10) || 0;
+        const qtyA   = b.bambooType === 'A'  ? qty : '';
+        const qtyA1  = b.bambooType === 'A1' ? qty : '';
+        const qtyB   = b.bambooType === 'B'  ? qty : '';
+        if (b.bambooType === 'A')  totalA  += qty;
+        if (b.bambooType === 'A1') totalA1 += qty;
+        if (b.bambooType === 'B')  totalB  += qty;
+        aoa.push([stt++, dimStr, b.useFor || '', '', b.code || '', volStr, formatDateDDMMYY(stageDateOf(b)), qtyA, qtyA1, qtyB, b.notes || '']);
+      } catch (err) {
+        skippedBadRows.push(b.code || b.id || '(không mã)');
+      }
     });
 
     // Blank rows to pad to at least 16 data rows (matching the form)
-    for (let i = 0; i < Math.max(0, 16 - filtered.length); i++) {
+    const writtenRows = filtered.length - skippedBadRows.length;
+    for (let i = 0; i < Math.max(0, 16 - writtenRows); i++) {
       aoa.push(['', '', '', '', '', '', '', '', '', '', '']);
     }
 
@@ -92,11 +124,13 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     aoa.push(['NGƯỜI ĐỀ NGHỊ', '', '', '', '', '', '', '', '', '', '']);
 
     const merges = [
-      { s:{r:0,c:0}, e:{r:0,c:10} },   // Title A1:K1
+      { s:{r:0,c:0}, e:{r:0,c:10} },   // Title A1:K1 (NHẬT KÝ + TÊN CÔNG ĐOẠN)
       { s:{r:1,c:4}, e:{r:1,c:6}  },   // Date E2:G2
-      { s:{r:2,c:2}, e:{r:2,c:4}  },   // Requester B3:E3
-      { s:{r:2,c:6}, e:{r:2,c:10} },   // Department G3:K3
-      { s:{r:3,c:2}, e:{r:3,c:5}  },   // Stage B4:F4
+      { s:{r:2,c:0}, e:{r:2,c:1}  },   // Nhãn người đề nghị A3:B3 (gộp cho chữ dài)
+      { s:{r:2,c:2}, e:{r:2,c:4}  },   // Ô điền tên người đề nghị C3:E3
+      { s:{r:2,c:6}, e:{r:2,c:10} },   // Ô bộ phận G3:K3
+      { s:{r:3,c:0}, e:{r:3,c:1}  },   // Nhãn công đoạn A4:B4 (gộp)
+      { s:{r:3,c:2}, e:{r:3,c:5}  },   // Tên công đoạn C4:F4
       { s:{r:3,c:7}, e:{r:3,c:8}  },   // Vị trí label H4:I4
       { s:{r:3,c:9}, e:{r:3,c:10} },   // Vị trí value J4:K4
       { s:{r:4,c:0}, e:{r:5,c:0}  },   // Stt
@@ -118,10 +152,13 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     if (selectedLoc !== 'all')   suffix += `_${locLabel.replace(/\s/g,'_')}`;
 
     return {
-      title: 'Nhật Ký Than Hóa',
-      countLabel: `${filtered.length} lô nan`,
+      title: `NHẬT KÝ ${stageTitle}`,
+      countLabel: `${writtenRows} lô nan`,
+      warning: skippedBadRows.length
+        ? `Cảnh báo: bỏ qua ${skippedBadRows.length} lô có dữ liệu lỗi (${skippedBadRows.slice(0, 5).join(', ')}${skippedBadRows.length > 5 ? '...' : ''}).`
+        : null,
       aoa, merges, cols, rowH: 22,
-      sheetName: 'Nhật Ký Than Hóa',
+      sheetName: `Nhật Ký ${stageSheet}`,
       filename: `NhatKy_ThanHoa${suffix}_${today.toISOString().split('T')[0]}.xlsx`
     };
   }
@@ -132,6 +169,10 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     if (!d) return;
     exportDataToXlsx(d);
     closeCustomExportModal();
+    if (d.warning) {
+      // File vẫn được xuất đủ các dòng đạt — chỉ cảnh báo các lô dữ liệu lỗi bị bỏ qua
+      showToast(d.warning, 'error');
+    }
     showToast(`Đã xuất ${d.countLabel} ra file ${d.filename}!`, 'success');
   }
 
@@ -573,8 +614,405 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   }
 
   // =============================================================
+  // 4) QC — BẢNG XUẤT HÀNG (tab QC)
+  // =============================================================
+  // Tên hiển thị của 1 dòng xuất QC (ưu tiên tra định mức theo productId)
+  function qcXlsxRowName(row) {
+    if (row.productId) {
+      const rate = (state.materialRates || []).find(r => r.id === row.productId);
+      if (rate) return rate.product;
+    }
+    return row.name || '—';
+  }
+  // Thể tích quy đổi 1 dòng (m³) = thể tích 1 thành phẩm × số lượng
+  // (kích thước thành phẩm suy từ tên định mức — giống cột thể tích trên bảng QC)
+  function qcXlsxRowVolume(row) {
+    const qty = Number(row.qty) || 0;
+    if (!qty || !row.productId) return 0;
+    const rate = (state.materialRates || []).find(r => r.id === row.productId);
+    if (!rate) return 0;
+    const dim = computeFpDimFromProduct(rate.id);
+    return dim ? dimVolume(dim, qty) : 0;
+  }
+  const qcXlsxWeekNum = w => parseInt(String(w || '').replace(/\D/g, ''), 10) || 0;
+
+  function openQcXlsxExportModal() {
+    const recs = state.qcExports || [];
+    // Năm: năm hiện tại + năm trong kế hoạch + năm đã xuất
+    const yearSel = document.getElementById('export-qc-year');
+    if (yearSel) {
+      const years = new Set([String(new Date().getFullYear())]);
+      (state.planningItems || []).forEach(p => { if (p.year) years.add(String(p.year)); });
+      recs.forEach(q => { if (q.year) years.add(String(q.year)); });
+      const sorted = [...years].filter(Boolean).sort((a, b) => Number(a) - Number(b));
+      yearSel.innerHTML = '<option value="all">Tất Cả Các Năm</option>' +
+        sorted.map(y => `<option value="${y}">${y}</option>`).join('');
+      yearSel.value = 'all';
+    }
+    // Tuần: các tuần CÓ dữ liệu xuất
+    const weekSel = document.getElementById('export-qc-week');
+    if (weekSel) {
+      const weeks = [...new Set(recs.map(r => qcXlsxWeekNum(r.week)).filter(Boolean))].sort((a, b) => a - b);
+      weekSel.innerHTML = '<option value="all">Tất Cả Các Tuần</option>' +
+        weeks.map(w => `<option value="${w}">Tuần ${w}</option>`).join('');
+      weekSel.value = 'all';
+    }
+    // Thành phẩm: các thành phẩm đã xuất (gộp trùng theo mã/tên)
+    const prodSel = document.getElementById('export-qc-product');
+    if (prodSel) {
+      const seen = new Set();
+      const opts = [];
+      recs.forEach(r => {
+        const key = r.productId || `__name__:${r.name || ''}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        opts.push(`<option value="${escapeHTML(key)}">${escapeHTML(qcXlsxRowName(r))}</option>`);
+      });
+      prodSel.innerHTML = '<option value="all">Tất Cả Thành Phẩm</option>' + opts.join('');
+      prodSel.value = 'all';
+    }
+    modalShow('modal-export-qc');
+  }
+
+  function closeQcXlsxExportModal() { modalHide('modal-export-qc'); }
+
+  function buildQcXlsxExportData() {
+    if (!requireXlsxLib()) return null;
+    const year = document.getElementById('export-qc-year')?.value || 'all';
+    const week = document.getElementById('export-qc-week')?.value || 'all';
+    const prod = document.getElementById('export-qc-product')?.value || 'all';
+    const weekNum = week === 'all' ? 0 : qcXlsxWeekNum(week);
+    const filtered = (state.qcExports || []).filter(r =>
+      (year === 'all' || String(r.year ?? '') === String(year)) &&
+      (!weekNum || qcXlsxWeekNum(r.week) === weekNum) &&
+      (prod === 'all' || (r.productId ? r.productId === prod : (r.name || '') === prod))
+    );
+    if (!filtered.length) {
+      showToast('Không có dòng xuất hàng nào thỏa mãn bộ lọc!', 'error');
+      return null;
+    }
+
+    // Sắp theo năm → tuần → tên thành phẩm cho dễ đối chiếu
+    const sorted = [...filtered].sort((a, b) =>
+      (Number(a.year) || 0) - (Number(b.year) || 0) ||
+      qcXlsxWeekNum(a.week) - qcXlsxWeekNum(b.week) ||
+      qcXlsxRowName(a).localeCompare(qcXlsxRowName(b), 'vi'));
+
+    const aoa = [];
+    const today = new Date();
+    const dayLabel = `Ngày  ${today.getDate()}  Tháng  ${today.getMonth() + 1}  năm  ${today.getFullYear()}`;
+    aoa.push(['QC — BẢNG XUẤT HÀNG', '', '', '', '', '', '']);
+    aoa.push([dayLabel, '', '', '', '', '', '']);
+    aoa.push(['Stt', 'Thành Phẩm', 'Tuần', 'Năm', 'Số Lượng Xuất', 'Thể Tích Quy Đổi (m³)', 'Ghi Chú']);
+
+    let stt = 1, totalQty = 0, totalVol = 0;
+    sorted.forEach(r => {
+      const qty = Number(r.qty) || 0;
+      const vol = Math.round(qcXlsxRowVolume(r) * 10000) / 10000;
+      totalQty += qty;
+      totalVol += vol;
+      const w = qcXlsxWeekNum(r.week);
+      aoa.push([stt++, qcXlsxRowName(r), w ? `Tuần ${w}` : '', r.year || '', qty, vol || '', r.note || '']);
+    });
+    aoa.push(['', 'TỔNG CỘNG', '', '', totalQty, Math.round(totalVol * 10000) / 10000, '']);
+    const totalIdx = aoa.length - 1;
+
+    const merges = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },   // Tiêu đề A1:G1
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },   // Ngày xuất A2:G2
+      { s: { r: totalIdx, c: 1 }, e: { r: totalIdx, c: 3 } } // Nhãn tổng B:D
+    ];
+
+    let suffix = '';
+    if (year !== 'all') suffix += `_${year}`;
+    if (week !== 'all') suffix += `_T${week}`;
+    if (prod !== 'all') suffix += `_SP`;
+
+    return {
+      title: 'QC — Bảng Xuất Hàng',
+      countLabel: `${filtered.length} dòng xuất hàng`,
+      aoa, merges,
+      cols: [{wch:5},{wch:26},{wch:9},{wch:7},{wch:14},{wch:19},{wch:26}],
+      rowH: 20,
+      sheetName: 'QC Xuất Hàng',
+      filename: `QC_XuatHang${suffix}_${todayStamp()}.xlsx`
+    };
+  }
+
+  function handleQcXlsxExportSubmit(e) {
+    e.preventDefault();
+    const d = buildQcXlsxExportData();
+    if (!d) return;
+    exportDataToXlsx(d);
+    closeQcXlsxExportModal();
+    showToast(`Đã xuất ${d.countLabel} ra file ${d.filename}!`, 'success');
+  }
+
+  // =============================================================
+  // 5) NHÂN SỰ — XUẤT EXCEL THEO THẺ NHANH (mini card tab Nhân Sự)
+  // =============================================================
+  // Mỗi mini card trên tab Nhân Sự tương ứng 1 lựa chọn xuất; nhãn khớp tên thẻ.
+  const HR_EMP_STATUS_L     = { active: 'Đang làm việc', pause: 'Tạm nghỉ', quit: 'Đã nghỉ việc' };
+  const HR_LEAVE_STATUS_L   = { pending: 'Chờ duyệt', approved: 'Đồng ý', rejected: 'Không đồng ý' };
+  const HR_RECRUIT_STATUS_L = { open: 'Đang tuyển', done: 'Đã đủ người' };
+  const HR_XLSX_CARDS = [
+    { id: 'hr-emp',         label: 'Nhân Viên — Danh Sách Nhân Viên',     sheet: 'Nhân Viên',      file: 'NhanVien' },
+    { id: 'hr-att-day',     label: 'Chấm Công & Phân Vị — Theo Ngày',     sheet: 'Chấm Công Ngày', file: 'ChamCongNgay' },
+    { id: 'hr-att-stats',   label: 'Thống Kê Đi Làm — Theo Tháng',        sheet: 'TK Đi Làm',      file: 'TK_DiLam' },
+    { id: 'hr-pos',         label: 'Vị Trí Làm Việc & Kỹ Năng',           sheet: 'Vị Trí',         file: 'ViTri' },
+    { id: 'hr-ci',          label: 'Giờ Máy Chấm Công',                   sheet: 'Giờ Máy',        file: 'GioMay' },
+    { id: 'hr-leave',       label: 'Đơn Xin Nghỉ Phép',                   sheet: 'Nghỉ Phép',      file: 'NghiPhep' },
+    { id: 'hr-leave-stats', label: 'Thống Kê Nghỉ Phép — Theo Nhân Viên', sheet: 'TK Nghỉ Phép',   file: 'TK_NghiPhep' },
+    { id: 'hr-recruit',     label: 'Nhân Sự Cần — Tuyển Dụng',            sheet: 'Tuyển Dụng',     file: 'TuyenDung' },
+    { id: 'hr-posneed',     label: 'Nhân Sự Cần Tại Các Vị Trí',          sheet: 'Nhân Sự Cần',    file: 'NhanSuCan' }
+  ];
+
+  function hrXlsxEmpName(id) {
+    const e = (state.hrEmployees || []).find(x => x.id === id);
+    return (e && e.name) || '—';
+  }
+  function hrXlsxEmpDept(id) {
+    const e = (state.hrEmployees || []).find(x => x.id === id);
+    return (e && e.department) || '—';
+  }
+  function hrXlsxPosName(pid) {
+    const p = (state.hrPositions || []).find(x => x.id === pid);
+    return (p && p.name) || pid || '';
+  }
+  // Đơn nghỉ ĐÃ DUYỆT áp dụng cho ngày này?
+  function hrXlsxApprovedLeaveOn(eid, date) {
+    return (state.hrLeaves || []).find(l => l.employeeId === eid &&
+      (l.status || 'pending') === 'approved' &&
+      String(l.from || '') <= date && date <= String(l.to || ''));
+  }
+  function hrXlsxAttRecOf(eid, date) {
+    return (state.hrAttendance || []).find(a => a.employeeId === eid && a.date === date) || null;
+  }
+  function hrXlsxAttLabel(eid, date) {
+    if (hrXlsxApprovedLeaveOn(eid, date)) return 'Nghỉ Có Phép';
+    const st = attStatusOf(eid, date);
+    if (st === 'work') return 'Đi làm';
+    if (st === 'absent') return 'Vắng (không phép)';
+    return 'Chưa chấm';
+  }
+  function hrXlsxLeaveDays(l) {
+    return l.days || (l.from && l.to ? Math.round((new Date(l.to) - new Date(l.from)) / 86400000) + 1 : 0);
+  }
+
+  function openHrXlsxExportModal() {
+    // Bộ phận lọc (áp dụng cho các xuất theo nhân viên) — reset về Tất Cả mỗi lần mở
+    const deptSel = document.getElementById('export-hr-dept');
+    if (deptSel) {
+      deptSel.innerHTML = '<option value="all">Tất Cả Bộ Phận</option>' +
+        HR_DEPARTMENTS.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
+      deptSel.value = 'all';
+    }
+    // Tháng (thống kê đi làm) & Ngày (chấm công theo ngày) — mặc định theo tab
+    const monthEl = document.getElementById('export-hr-month');
+    if (monthEl && !monthEl.value) monthEl.value = state.hrAttMonth || new Date().toISOString().split('T')[0].slice(0, 7);
+    const dateEl = document.getElementById('export-hr-date');
+    if (dateEl && !dateEl.value) dateEl.value = state.hrAttDate || new Date().toISOString().split('T')[0];
+    syncHrXlsxCardUI();
+    modalShow('modal-export-hr');
+  }
+
+  function closeHrXlsxExportModal() { modalHide('modal-export-hr'); }
+
+  // Hiện/ẩn ô Tháng (thống kê đi làm) và ô Ngày (chấm công theo ngày) theo thẻ đang chọn
+  function syncHrXlsxCardUI() {
+    const card = document.getElementById('export-hr-card')?.value || 'hr-emp';
+    const mRow = document.getElementById('export-hr-month-row');
+    const dRow = document.getElementById('export-hr-date-row');
+    if (mRow) mRow.style.display = (card === 'hr-att-stats') ? '' : 'none';
+    if (dRow) dRow.style.display = (card === 'hr-att-day') ? '' : 'none';
+  }
+
+  function buildHrXlsxExportData() {
+    if (!requireXlsxLib()) return null;
+    const cardId = document.getElementById('export-hr-card')?.value || 'hr-emp';
+    const def = HR_XLSX_CARDS.find(c => c.id === cardId) || HR_XLSX_CARDS[0];
+    const dept = document.getElementById('export-hr-dept')?.value || 'all';
+    const inDept = d => dept === 'all' || (d || '—') === dept;
+    const today = new Date();
+    const dayLabel = `Ngày  ${today.getDate()}  Tháng  ${today.getMonth() + 1}  năm  ${today.getFullYear()}`;
+
+    let header = [], rows = [], totalRow = null, extraNote = '';
+    const noData = () => { showToast('Không có dữ liệu nào thỏa mãn bộ lọc!', 'error'); return null; };
+
+    switch (def.id) {
+      case 'hr-emp': {
+        header = ['Stt', 'Mã NV', 'Họ Tên', 'Giới Tính', 'Ngày Sinh', 'Điện Thoại', 'Bộ Phận', 'Vị Trí', 'Chức Danh', 'Ngày Vào', 'Trạng Thái', 'Ghi Chú'];
+        rows = (state.hrEmployees || [])
+          .filter(e => inDept(e.department))
+          .sort((a, b) => String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
+            String(a.name || '').localeCompare(String(b.name || ''), 'vi'))
+          .map((e, i) => [i + 1, e.code || '', e.name || '', e.gender || '',
+            e.birthDate ? formatDateDDMMYY(e.birthDate) : '', e.phone || '', e.department || '',
+            e.position || '', e.title || '', e.joinDate ? formatDateDDMMYY(e.joinDate) : '',
+            HR_EMP_STATUS_L[e.status || 'active'] || e.status || '', e.notes || '']);
+        if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
+        break;
+      }
+      case 'hr-att-day': {
+        const date = document.getElementById('export-hr-date')?.value || state.hrAttDate || new Date().toISOString().split('T')[0];
+        header = ['Stt', 'Họ Tên', 'Mã NV', 'Bộ Phận', 'Trạng Thái', 'Vị Trí / Phân Vị Trong Ngày'];
+        rows = (state.hrEmployees || [])
+          .filter(e => (e.status || 'active') !== 'quit' && inDept(e.department))
+          .sort((a, b) => String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
+            String(a.name || '').localeCompare(String(b.name || ''), 'vi'))
+          .map((e, i) => {
+            const asg = (state.hrAssignments || []).filter(a => a.date === date && a.employeeId === e.id);
+            let posText = '';
+            if (asg.length) {
+              posText = asg.map(a => `${hrXlsxPosName(a.positionId)}${a.start ? ` (${a.start}${a.end ? '–' + a.end : ''})` : ''}`).join(', ');
+            } else {
+              const rec = hrXlsxAttRecOf(e.id, date);
+              if (rec && Array.isArray(rec.positions)) posText = rec.positions.map(hrXlsxPosName).join(', ');
+            }
+            return [i + 1, e.name || '', e.code || '', e.department || '', hrXlsxAttLabel(e.id, date), posText];
+          });
+        extraNote = `Ngày chấm công: ${formatDateDDMMYY(date)}`;
+        break;
+      }
+      case 'hr-att-stats': {
+        const month = document.getElementById('export-hr-month')?.value || state.hrAttMonth || new Date().toISOString().split('T')[0].slice(0, 7);
+        header = ['Nhân Viên', 'Mã NV', 'Bộ Phận', 'Ngày Công', 'Nghỉ Phép', 'Vắng', 'Chưa Chấm', 'Tỷ Lệ (%)'];
+        rows = computeAttendanceStats(month)
+          .filter(s => inDept(s.emp.department))
+          .map(s => [s.emp.name || '', s.emp.code || '', s.emp.department || '',
+            s.work, s.leave, s.absent, s.unmarked, s.rate === null ? '' : s.rate]);
+        const t = { work: 0, leave: 0, absent: 0, unmarked: 0 };
+        rows.forEach(r => { t.work += r[3]; t.leave += r[4]; t.absent += r[5]; t.unmarked += r[6]; });
+        const counted = t.work + t.leave + t.absent;
+        totalRow = ['TỔNG CỘNG', '', '', t.work, t.leave, t.absent, t.unmarked, counted ? Math.round(t.work * 1000 / counted) / 10 : ''];
+        extraNote = `Tháng: ${month}`;
+        break;
+      }
+      case 'hr-pos': {
+        header = ['Stt', 'Vị Trí', 'Bộ Phận', 'Số NV Có Kỹ Năng', 'Nhân Viên Có Kỹ Năng', 'Ghi Chú'];
+        rows = (state.hrPositions || [])
+          .filter(p => inDept(p.department))
+          .sort((a, b) => String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
+            String(a.name || '').localeCompare(String(b.name || ''), 'vi'))
+          .map((p, i) => {
+            const skilled = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active' && (e.skills || []).includes(p.id));
+            return [i + 1, p.name || '', p.department || '', skilled.length,
+              skilled.map(x => x.name).join(', '), p.note || ''];
+          });
+        if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
+        break;
+      }
+
+      case 'hr-ci': {
+        header = ['Stt', 'Nhân Viên', 'Bộ Phận', 'Ngày', 'Giờ Vào', 'Giờ Ra', 'Lần Quét', 'Chấm Tay'];
+        rows = (state.hrCheckins || [])
+          .filter(c => inDept(hrXlsxEmpDept(c.employeeId)))
+          .slice()
+          .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) ||
+            hrXlsxEmpName(a.employeeId).localeCompare(hrXlsxEmpName(b.employeeId), 'vi'))
+          .map((c, i) => {
+            let label = 'Chưa chấm tay';
+            if (hrXlsxApprovedLeaveOn(c.employeeId, c.date)) label = 'Nghỉ có phép';
+            else {
+              const st = attStatusOf(c.employeeId, c.date);
+              if (st === 'work') label = 'Khớp — Đi làm';
+              else if (st === 'absent') label = 'Lệch — Chấm tay Vắng';
+            }
+            return [i + 1, hrXlsxEmpName(c.employeeId), hrXlsxEmpDept(c.employeeId),
+              c.date ? formatDateDDMMYY(c.date) : '', c.in || '', c.out || '', c.punches || 0, label];
+          });
+        if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
+        break;
+      }
+      case 'hr-leave': {
+        header = ['Stt', 'Nhân Viên', 'Bộ Phận', 'Loại Nghỉ', 'Từ Ngày', 'Đến Ngày', 'Số Ngày', 'Lý Do', 'Trạng Thái', 'Người Duyệt'];
+        rows = (state.hrLeaves || [])
+          .filter(l => inDept(hrXlsxEmpDept(l.employeeId)))
+          .slice()
+          .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+          .map((l, i) => [i + 1, hrXlsxEmpName(l.employeeId), hrXlsxEmpDept(l.employeeId),
+            l.type || 'Nghỉ phép', l.from ? formatDateDDMMYY(l.from) : '', l.to ? formatDateDDMMYY(l.to) : '',
+            hrXlsxLeaveDays(l), l.reason || '', HR_LEAVE_STATUS_L[l.status || 'pending'] || l.status || '',
+            l.approvedBy || '']);
+        if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
+        break;
+      }
+      case 'hr-leave-stats': {
+        header = ['#', 'Nhân Viên', 'Bộ Phận', 'Số Lần Nghỉ', 'Tổng Ngày Nghỉ'];
+        const stats = computeLeaveStats().filter(s => inDept(s.dept));
+        rows = stats.map((s, i) => [i + 1, s.name, s.dept, s.times, s.days]);
+        totalRow = ['', 'TỔNG CỘNG', '', stats.reduce((a, s) => a + s.times, 0), stats.reduce((a, s) => a + s.days, 0)];
+        if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
+        break;
+      }
+      case 'hr-recruit': {
+        header = ['Bộ Phận', 'Vị Trí Tuyển', 'Cần Tuyển', 'Đã Tuyển', 'Còn Thiếu', 'Ngày Cần', 'Trạng Thái', 'Ghi Chú'];
+        const list = (state.hrRecruitment || []).filter(r => inDept(r.department))
+          .sort((a, b) => String(a.department || '').localeCompare(String(b.department || ''), 'vi'));
+        rows = list.map(r => [r.department || '', r.position || '', r.needQty || 0, r.hiredQty || 0,
+          Math.max(0, (r.needQty || 0) - (r.hiredQty || 0)),
+          r.needDate ? formatDateDDMMYY(r.needDate) : '',
+          HR_RECRUIT_STATUS_L[r.status || 'open'] || r.status || '', r.notes || '']);
+        const tNeed = list.reduce((a, r) => a + (r.needQty || 0), 0);
+        const tHired = list.reduce((a, r) => a + (r.hiredQty || 0), 0);
+        totalRow = ['TỔNG CỘNG', '', tNeed, tHired, Math.max(0, tNeed - tHired), '', '', ''];
+        if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
+        break;
+      }
+      case 'hr-posneed': {
+        header = ['Bộ Phận', 'Vị Trí', 'Cần', 'Hiện Có', 'Còn Thiếu', 'Ghi Chú'];
+        const list = (state.hrPositionNeeds || []).filter(r => inDept(r.department))
+          .sort((a, b) => String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
+            String(a.position || '').localeCompare(String(b.position || ''), 'vi'));
+        rows = list.map(r => [r.department || '', r.position || '', parseInt(r.needQty, 10) || 0,
+          parseInt(r.haveQty, 10) || 0, Math.max(0, (parseInt(r.needQty, 10) || 0) - (parseInt(r.haveQty, 10) || 0)), r.notes || '']);
+        const tNeed = list.reduce((a, r) => a + (parseInt(r.needQty, 10) || 0), 0);
+        const tHave = list.reduce((a, r) => a + (parseInt(r.haveQty, 10) || 0), 0);
+        totalRow = ['TỔNG CỘNG', '', tNeed, tHave, Math.max(0, tNeed - tHave), ''];
+        if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
+        break;
+      }
+    }
+
+    if (!rows.length) return noData();
+
+    const aoa = [];
+    aoa.push([`NHÂN SỰ — ${def.label.toUpperCase()}`]);
+    aoa.push([dayLabel + (extraNote ? `  ·  ${extraNote}` : '')]);
+    aoa.push(header);
+    rows.forEach(r => aoa.push(r));
+    if (totalRow) aoa.push(totalRow);
+
+    const span = Math.max(1, header.length - 1);
+    const merges = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: span } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: span } }
+    ];
+
+    return {
+      title: `Nhân Sự — ${def.label}`,
+      countLabel: `${rows.length} dòng`,
+      aoa, merges,
+      cols: header.map((h, i) => ({ wch: i === 0 ? 5 : Math.max(10, Math.min(34, String(h).length + 8)) })),
+      rowH: 20,
+      sheetName: def.sheet,
+      filename: `NhanSu_${def.file}_${todayStamp()}.xlsx`
+    };
+  }
+
+  function handleHrXlsxExportSubmit(e) {
+    e.preventDefault();
+    const d = buildHrXlsxExportData();
+    if (!d) return;
+    exportDataToXlsx(d);
+    closeHrXlsxExportModal();
+    showToast(`Đã xuất ${d.countLabel} ra file ${d.filename}!`, 'success');
+  }
+
+  // =============================================================
   // XEM TRƯỚC & CHỈNH SỬA BÁO CÁO TRƯỚC KHI XUẤT / IN
   // =============================================================
+
   // Mọi báo cáo xuất Excel đều được dựng thành bảng AOA → dùng chung
   // 1 màn "Xem Trước": sửa ô trực tiếp, bỏ dòng tùy ý (chỉ ảnh hưởng bản
   // xuất/in — KHÔNG đổi dữ liệu của app), rồi:
@@ -586,6 +1024,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     if (!requireXlsxLib()) return;
     const data = builder();
     if (!data) return;
+    if (data.warning) showToast(data.warning, 'error');
     exportPreviewState = buildPreviewState(data, builder);
     if (sourceModalId) modalHide(sourceModalId);
     renderExportPreview();
@@ -771,6 +1210,8 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   function openPlanningExportPreview() { openExportPreview('modal-export-planning',   buildPlanningExportData); }
   function openPressExportPreview()     { openExportPreview('modal-export-press',     buildPressExportData); }
   function openMaterialsExportPreview() { openExportPreview('modal-export-materials', buildMaterialsExportData); }
+  function openQcXlsxExportPreview()    { openExportPreview('modal-export-qc',        buildQcXlsxExportData); }
+  function openHrXlsxExportPreview()    { openExportPreview('modal-export-hr',        buildHrXlsxExportData); }
 
   function loadCustomCharts() {
     const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CHARTS);
@@ -1296,34 +1737,45 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
 export {
   buildExportPreviewTableHTML,
+  buildHrXlsxExportData,
+  buildQcXlsxExportData,
   closeCustomExportModal,
   closeExportPreviewModal,
+  closeHrXlsxExportModal,
   closeMaterialsExportModal,
   closePlanningExportModal,
   closePressExportModal,
+  closeQcXlsxExportModal,
   computeChartData,
   deleteExportPreviewRow,
   exportPreviewToXlsx,
   filterValList,
   getPaletteColors,
   handleCustomExportSubmit,
+  handleHrXlsxExportSubmit,
   handleMaterialsExportSubmit,
   handlePlanningExportSubmit,
   handlePressExportSubmit,
+  handleQcXlsxExportSubmit,
   isAllFilterVal,
   loadCustomCharts,
   matchFilterVal,
   noteExportPreviewEdit,
   openCustomExportModal,
   openCustomExportPreview,
+  openHrXlsxExportModal,
+  openHrXlsxExportPreview,
   openMaterialsExportModal,
   openMaterialsExportPreview,
   openPlanningExportModal,
   openPlanningExportPreview,
   openPressExportModal,
   openPressExportPreview,
+  openQcXlsxExportModal,
+  openQcXlsxExportPreview,
   printExportPreview,
   refreshExportPreview,
   saveCustomCharts,
-  setExportPreviewColWidth
+  setExportPreviewColWidth,
+  syncHrXlsxCardUI
 };

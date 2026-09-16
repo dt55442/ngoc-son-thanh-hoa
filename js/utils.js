@@ -142,7 +142,123 @@ import { state } from './state.js';
     [lInput, wInput, tInput, qInput].forEach(inp => { if (inp) inp.addEventListener('input', updateVol); });
   }
 
-  // ─── TOAST NOTIFICATIONS ──────────────────────────────────────
+  // ─── NGÀY VÀO CÔNG ĐOẠN (THỰC TẾ) ─────────────────────────────
+  // Ngày lô BẮT ĐẦU ở một công đoạn, theo thứ tự ưu tiên:
+  //   1) ngày thực tế người dùng khai báo (say2Date / khoDate / baoTinhDate)
+  //   2) mốc CUỐI cùng của công đoạn đó trong stageHistory (lô có thể qua đi quay lại)
+  //   3) ngày tạo lô (fallback: lô nhập trực tiếp ở công đoạn đó / dữ liệu cũ)
+  // Dùng cho thống kê theo tuần & xuất Excel theo công đoạn.
+  function getBatchStageEntryDate(batch, stage) {
+    if (!batch) return '';
+    if (!stage || stage === 'say1') return batch.date || '';
+    const overrideKey = stage === 'say2' ? 'say2Date' : stage === 'kho' ? 'khoDate' : stage === 'bao_tinh' ? 'baoTinhDate' : null;
+    if (overrideKey && batch[overrideKey]) return batch[overrideKey];
+    const entries = (Array.isArray(batch.stageHistory) ? batch.stageHistory : []).filter(h => h && h.stage === stage && h.date);
+    if (entries.length) return entries[entries.length - 1].date;
+    return batch.date || '';
+  }
+
+  // ─── ĐỊNH DẠNG NGÀY dd/mm/yyyy CHO Ô CHỌN NGÀY ────────────────
+  // Ô <input type="date"> hiển thị theo ngôn ngữ trình duyệt (thường mm/dd/yyyy).
+  // Bộ này phủ một ô chữ dd/mm/yyyy LÊN TRƯỚC ô gốc (ô gốc ẩn đi nhưng vẫn giữ
+  // nguyên id + giá trị ISO 'YYYY-MM-DD'), nên toàn bộ logic cũ đọc/ghi .value,
+  // lắng nghe 'change'… hoạt động như cũ, còn người dùng nhìn & gõ dd/mm/yyyy.
+  const pad2 = n => String(n).padStart(2, '0');
+
+  function isoToDmy(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '').trim());
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+  }
+
+  function dmyToIso(str) {
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(str || '').trim());
+    if (!m) return '';
+    const d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+    return `${y}-${pad2(mo)}-${pad2(d)}`;
+  }
+
+  function fireInputEvent(el, type) {
+    try { el.dispatchEvent(new Event(type, { bubbles: true })); } catch (e) { /* môi trường thử nghiệm không có Event */ }
+  }
+
+  function enhanceVnDateInput(input) {
+    if (!input || input.dataset.vnDate === '1') return;
+    const parent = input.parentNode;
+    if (!parent || typeof parent.insertBefore !== 'function' || typeof document.createElement !== 'function') return;
+    input.dataset.vnDate = '1';
+
+    // Ô chữ hiển thị dd/mm/yyyy cho người dùng
+    const txt = document.createElement('input');
+    txt.type = 'text';
+    txt.id = input.id ? `${input.id}-vn` : '';
+    txt.className = input.className || '';
+    txt.style.cssText = input.style.cssText || '';
+    txt.inputMode = 'numeric';
+    txt.autocomplete = 'off';
+    txt.placeholder = 'dd/mm/yyyy';
+    // required chuyển sang ô chữ (ô gốc ẩn, trình duyệt không focus được để báo lỗi)
+    if (input.required) { txt.required = true; input.removeAttribute('required'); }
+
+    parent.insertBefore(txt, input);
+    input.style.display = 'none';
+
+    const syncTextFromNative = () => {
+      const d = isoToDmy(input.value);
+      if (txt.value !== d) txt.value = d;
+    };
+
+    // Code khác gán .value cho ô gốc (VD: mở modal điền sẵn) → ô chữ tự cập nhật
+    try {
+      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      if (desc && desc.set) {
+        Object.defineProperty(input, 'value', {
+          configurable: true,
+          get() { return desc.get.call(input); },
+          set(v) { desc.set.call(input, v); const d = isoToDmy(v); if (txt.value !== d) txt.value = d; }
+        });
+      }
+    } catch (e) { /* không ghi đè được thì vẫn chạy qua listener change */ }
+
+    // Người dùng gõ/sửa → ghi ngày chuẩn vào ô gốc + bắn sự kiện cho logic cũ
+    txt.addEventListener('input', () => {
+      const raw = txt.value.replace(/[^0-9/]/g, '');
+      if (raw !== txt.value) txt.value = raw;
+      const trimmed = txt.value.trim();
+      if (trimmed === '') { input.value = ''; fireInputEvent(input, 'change'); fireInputEvent(input, 'input'); return; }
+      const iso = dmyToIso(txt.value);
+      if (iso) { input.value = iso; fireInputEvent(input, 'change'); fireInputEvent(input, 'input'); }
+    });
+    txt.addEventListener('change', () => {
+      const trimmed = txt.value.trim();
+      const iso = dmyToIso(txt.value);
+      if (iso) { input.value = iso; fireInputEvent(input, 'change'); }
+      else if (trimmed === '') { input.value = ''; fireInputEvent(input, 'change'); }
+      else { showToast('Ngày không hợp lệ — nhập theo dd/mm/yyyy!', 'error'); syncTextFromNative(); }
+    });
+    // Logic cũ dispatch 'change' lên ô gốc → ô chữ cập nhật theo
+    input.addEventListener('change', syncTextFromNative);
+    input.addEventListener('input', syncTextFromNative);
+    // form.reset() đặt lại giá trị nội bộ (không qua setter) → đồng bộ sau khi reset xong
+    const form = input.closest ? input.closest('form') : null;
+    if (form) form.addEventListener('reset', () => setTimeout(syncTextFromNative, 0));
+    // Bấm vào ô chữ → mở lịch chọn ngày của ô gốc
+    const openNativePicker = () => { try { if (input.showPicker) input.showPicker(); } catch (e) { /* trình duyệt chặn */ } };
+    txt.addEventListener('click', openNativePicker);
+    txt.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); openNativePicker(); } });
+
+    syncTextFromNative();
+  }
+
+  function initVnDateInputs(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    if (!scope || !scope.querySelectorAll) return;
+    scope.querySelectorAll('input[type="date"]').forEach(enhanceVnDateInput);
+  }
+
+
   function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -222,14 +338,18 @@ export {
   attachChartPanDrag,
   calculateStageDays,
   calculateVolume,
+  dmyToIso,
   escapeHTML,
   formatDateDDMMYY,
   generateBatchCodeYYMMDD,
+  getBatchStageEntryDate,
   getBatchStageHistory,
   getHistoryEntryDays,
   getISOWeekString,
   getStageDaysClass,
   getStageDaysLabel,
+  initVnDateInputs,
+  isoToDmy,
   setupFormCalculations,
   showToast,
   uiChartWinSize,

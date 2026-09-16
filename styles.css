@@ -1654,6 +1654,7 @@ h1, h2, h3, h4, h5 {
 .slot.empty.over { border-color: var(--primary); border-style: solid; background: #e4edff; color: var(--primary); }
 .slot.filled { border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff, #dbeafe); }
 .slot.filled:hover { box-shadow: 0 3px 10px rgba(37, 99, 235, 0.18); transform: translateY(-1px); }
+.slot.filled.dragging { opacity: 0.35; filter: grayscale(0.4); }
 .slot-ava { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; }
 .slot-info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
 .slot-info b { font-size: 0.8rem; font-weight: 700; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1671,6 +1672,10 @@ h1, h2, h3, h4, h5 {
 }
 .slot.add:hover { border-color: var(--primary); color: var(--primary); background: #eef4ff; }
 .slot.add svg { width: 13px; height: 13px; }
+
+/* Gợi ý nhân viên: dòng đã được bố trí trong ngày — nền vàng nhạt + viền trái */
+.hr-combobox-item.picked { background: #fffbeb; border-left: 3px solid #f59e0b; }
+.hr-combobox-item.picked .hr-combobox-meta { color: #b45309; }
 
 /* Trạng thái rỗng của cả board */
 .board-empty { width: 100%; text-align: center; padding: 34px 16px; color: var(--text-muted); border: 1.5px dashed var(--border-color); border-radius: 14px; }
@@ -5342,4 +5347,241 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
   .history-row { font-size: 0.74rem; }
 }
 
-.press-workers-auto.muted { color: var(--text-muted); }
+/* ======================================================= */
+/* XƯỞNG 2 — THẺ MINI/LAUNCHER CÁC VỊ TRÍ CÔNG ĐOẠN        */
+/* (tab Công Đoạn — bấm thẻ mở bảng chi tiết dạng pop-up;   */
+/*  cùng mẫu thiết kế với thẻ launcher Nhân Sự hr-mini-card)*/
+/* ======================================================= */
+.x2-cards-overview {
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+.x2-cards-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.x2-cards-title h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+}
+
+.x2-cards-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.x2-cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+@media (max-width: 1024px) {
+  .x2-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .x2-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .x2-cards-hint { display: none; }
+}
+
+/* Màu riêng từng vị trí (bổ sung vị trí mới = thêm 1 dòng) */
+.x2-mini-card {
+  --card-accent: var(--primary);
+  --card-accent-bg: var(--bg-subtle);
+}
+.x2-mini-card[data-x2-card="x2-cut-card"] { --card-accent: #0f766e; --card-accent-bg: #ccfbf1; } /* Teal — Cắt Chọn */
+
+.x2-mini-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 14px;
+  background: var(--card-accent-bg, var(--bg-card));
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--card-accent, var(--primary));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-main);
+  font: inherit;
+  line-height: 1.3;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.x2-mini-card:hover,
+.x2-mini-card:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--card-accent, var(--primary));
+}
+
+.x2-mini-card:focus-visible {
+  outline: 2px solid var(--card-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+.x2-mini-card:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.x2-mini-card.x2-mini-active {
+  background: var(--card-accent-bg, var(--primary-light));
+  border-color: var(--card-accent, var(--primary));
+  box-shadow: var(--shadow-md);
+}
+
+.x2-mini-ic {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--card-accent, var(--primary));
+  color: #fff;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.x2-mini-ic svg { width: 20px; height: 20px; }
+
+.x2-mini-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.x2-mini-desc {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.x2-mini-count {
+  margin-top: 8px;
+  align-self: flex-end;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--card-accent, var(--primary));
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bảng chi tiết vị trí Xưởng 2: ẩn khi nằm trong stack —
+   chỉ hiện (nổi lên trong pop-up) khi bấm thẻ launcher */
+.planning-card.x2-card-hidden { display: none; }
+
+/* Form ghi nhận lượt cắt/chọn (đặt trên bảng lịch sử) */
+.x2-cut-form-wrap {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+}
+
+.x2-cut-form-wrap h5 {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+}
+
+/* Ô TỰ ĐỘNG LINK từ lần nhập nguyên liệu (NCC / Mã số / KL đầu vào) */
+.x2-linked-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .x2-linked-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  .x2-linked-grid { grid-template-columns: 1fr; }
+}
+
+.x2-linked-item {
+  padding: 9px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.x2-linked-item strong {
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.x2-linked-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── POP-UP: overlay chi tiết vị trí Xưởng 2 (nổi lên khi bấm thẻ) ──
+   Vùng pop-up = toàn bộ vùng hiển thị của trang TRỪ header (giống tab Nhân Sự) */
+#x2-detail-overlay {
+  top: 64px;                 /* JS cập nhật đúng theo chiều cao header khi mở */
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: none;     /* không làm mờ nội dung phía sau */
+  align-items: stretch;      /* panel chiếm full chiều cao vùng còn lại */
+}
+
+.x2-detail-modal {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border: 2px solid #0f766e;   /* khung viền màu teal — màu của vị trí Cắt Chọn */
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px rgba(15, 23, 42, 0.35);
+  overflow: hidden;            /* header modal cố định, nội dung cuộn bên dưới */
+}
+
+.x2-detail-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+@media (max-width: 639.98px) {
+  #x2-detail-overlay { padding: 8px; }
+  .x2-detail-content { padding: 10px; }
+}

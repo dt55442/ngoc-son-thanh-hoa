@@ -36,15 +36,28 @@ import { getBaoTinhConversion } from './planning.js';
       document.getElementById('form-use-for').value     = batch.useFor || 'Ván';
       document.getElementById('form-location').value    = batch.location || '';
       document.getElementById('form-notes').value       = batch.notes || '';
-      // Ngày Vào Bào Tinh thực tế: chỉ hiện khi lô đang ở Bào Tinh — cho sửa ngày
-      // bào tinh khác với ngày hệ thống ghi nhận việc chuyển
-      const btGroupEd = document.getElementById('form-baotinh-date-group');
-      const btInputEd = document.getElementById('form-baotinh-date');
-      if (btGroupEd && btInputEd) {
-        const isBt = batch.stage === 'bao_tinh';
-        btGroupEd.style.display = isBt ? '' : 'none';
-        btInputEd.value = isBt ? (batch.baoTinhDate || getBaoTinhConversion(batch).date || '') : '';
-      }
+      // Ngày vào công đoạn THỰC TẾ (Sấy 2 / Kho / Bào Tinh): chỉ hiện theo công
+      // đoạn hiện tại — cho sửa ngày thật khác với ngày hệ thống ghi nhận việc chuyển
+      const stageDateFields = [
+        { stage: 'say2',     group: 'form-say2-date-group',    input: 'form-say2-date' },
+        { stage: 'kho',      group: 'form-kho-date-group',     input: 'form-kho-date' },
+        { stage: 'bao_tinh', group: 'form-baotinh-date-group', input: 'form-baotinh-date' }
+      ];
+      stageDateFields.forEach(({ stage, group, input }) => {
+        const g = document.getElementById(group);
+        const i = document.getElementById(input);
+        if (!g || !i) return;
+        const show = batch.stage === stage;
+        g.style.display = show ? '' : 'none';
+        if (!show) { i.value = ''; return; }
+        if (stage === 'bao_tinh') {
+          i.value = batch.baoTinhDate || getBaoTinhConversion(batch).date || '';
+        } else {
+          const overrideKey = stage === 'say2' ? 'say2Date' : 'khoDate';
+          const hist = (batch.stageHistory || []).filter(h => h && h.stage === stage && h.date);
+          i.value = batch[overrideKey] || (hist.length ? hist[hist.length - 1].date : '') || '';
+        }
+      });
       const volDisp = document.getElementById('form-calculated-vol');
       if (volDisp) volDisp.textContent = `${calculateVolume(batch.length, batch.width, batch.thickness, batch.quantity).toFixed(4)} m³`;
     } else {
@@ -56,9 +69,15 @@ import { getBaoTinhConversion } from './planning.js';
       document.getElementById('form-code').value  = generateBatchCodeYYMMDD(today);
       const volDisp = document.getElementById('form-calculated-vol');
       if (volDisp) volDisp.textContent = '0.0000 m³';
-      const btGroupNew = document.getElementById('form-baotinh-date-group');
-      const btInputNew = document.getElementById('form-baotinh-date');
-      if (btGroupNew && btInputNew) { btGroupNew.style.display = 'none'; btInputNew.value = today; }
+      // Ẩn sạch các ô ngày thực tế (lô mới chưa qua công đoạn nào khác)
+      ['form-say2-date-group', 'form-kho-date-group', 'form-baotinh-date-group'].forEach(id => {
+        const g = document.getElementById(id);
+        if (g) g.style.display = 'none';
+      });
+      ['form-say2-date', 'form-kho-date', 'form-baotinh-date'].forEach(id => {
+        const i = document.getElementById(id);
+        if (i) i.value = '';
+      });
     }
 
     modal.classList.add('show');
@@ -84,10 +103,11 @@ import { getBaoTinhConversion } from './planning.js';
     const nowISO  = new Date().toISOString();
     const stageVal = document.getElementById('form-stage').value;
     const dateVal  = document.getElementById('form-date').value;
-    // Ngày Vào Bào Tinh thực tế (chỉ áp dụng khi công đoạn là Bào Tinh) — có thể khác
-    // ngày hệ thống ghi nhận; dùng cho thống kê tuần bào tinh & hiệu suất chuyển đổi
-    const btDateEl  = document.getElementById('form-baotinh-date');
-    const btDateVal = (stageVal === 'bao_tinh' && btDateEl && btDateEl.value) ? btDateEl.value : '';
+    // Ngày vào công đoạn THỰC TẾ (chỉ áp dụng cho công đoạn hiện tại của lô) — có thể
+    // khác ngày hệ thống ghi nhận; dùng cho thống kê tuần & xuất Excel theo công đoạn
+    const stageDateInputId = { say2: 'form-say2-date', kho: 'form-kho-date', bao_tinh: 'form-baotinh-date' }[stageVal];
+    const stageDateEl = stageDateInputId ? document.getElementById(stageDateInputId) : null;
+    const stageDateVal = (stageDateEl && stageDateEl.value) ? stageDateEl.value : '';
 
     const batchData = {
       id:          batchId || `batch-${Date.now()}`,
@@ -103,8 +123,12 @@ import { getBaoTinhConversion } from './planning.js';
       stageHistory: [{ stage: stageVal, date: dateVal }],
       updatedAt:   nowISO
     };
-    // Ghi NGÀY BÀO TINH THỰC TẾ (được ưu tiên hơn mốc tự động trong stageHistory)
-    if (btDateVal) batchData.baoTinhDate = btDateVal;
+    // Ghi NGÀY VÀO CÔNG ĐOẠN THỰC TẾ (được ưu tiên hơn mốc tự động trong stageHistory)
+    if (stageDateVal) {
+      if (stageVal === 'bao_tinh')      batchData.baoTinhDate = stageDateVal;
+      else if (stageVal === 'say2')     batchData.say2Date    = stageDateVal;
+      else if (stageVal === 'kho')      batchData.khoDate     = stageDateVal;
+    }
 
     if (batchId) {
       pushUndo(`Sửa lô ${batchData.code}`);
@@ -115,11 +139,11 @@ import { getBaoTinhConversion } from './planning.js';
         batchData.stageHistory = (old.stageHistory && old.stageHistory.length > 0)
           ? old.stageHistory
           : [{ stage: old.stage, date: old.date }];
-        // Đồng bộ mốc 'bao_tinh' cuối trong lịch sử theo ngày thực tế (lô đang ở Bào Tinh)
-        if (batchData.baoTinhDate) {
-          const btEntries = batchData.stageHistory.filter(h => h && h.stage === 'bao_tinh');
-          if (btEntries.length) btEntries[btEntries.length - 1].date = batchData.baoTinhDate;
-          else batchData.stageHistory.push({ stage: 'bao_tinh', date: batchData.baoTinhDate });
+        // Đồng bộ mốc cuối của công đoạn hiện tại trong lịch sử theo ngày thực tế
+        if (stageDateVal) {
+          const entries = batchData.stageHistory.filter(h => h && h.stage === stageVal);
+          if (entries.length) entries[entries.length - 1].date = stageDateVal;
+          else batchData.stageHistory.push({ stage: stageVal, date: stageDateVal });
         }
         state.batches[idx] = batchData;
         showToast('Đã cập nhật thẻ nan tre thành công!', 'success');
@@ -168,11 +192,10 @@ import { getBaoTinhConversion } from './planning.js';
     const notesEl = document.getElementById('transfer-new-notes');
     if (notesEl) notesEl.value = batch.notes || '';
 
-    // Ngày Vào Bào Tinh thực tế: mặc định hôm nay, chỉ hiện khi đích là Bào Tinh
-    const btDateEl = document.getElementById('transfer-baotinh-date');
-    if (btDateEl) btDateEl.value = new Date().toISOString().split('T')[0];
-    const btGroupEl = document.getElementById('transfer-baotinh-date-group');
-    if (btGroupEl) btGroupEl.style.display = (nextStage === 'bao_tinh') ? '' : 'none';
+    // Ngày vào công đoạn thực tế: mặc định hôm nay, hiện khi đích là Sấy 2 / Kho / Bào Tinh
+    const stDateEl = document.getElementById('transfer-stage-date');
+    if (stDateEl) stDateEl.value = new Date().toISOString().split('T')[0];
+    syncTransferStageDateUI(nextStage);
 
     modal.classList.add('show');
     initLucide();
@@ -180,6 +203,25 @@ import { getBaoTinhConversion } from './planning.js';
 
   function closeTransferModal() {
     document.getElementById('modal-transfer')?.classList.remove('show');
+  }
+
+  // Hiện/ẩn + đổi nhãn ô "Ngày Vào Công Đoạn (Thực Tế)" theo công đoạn đích
+  // (Sấy 2 / Kho / Bào Tinh có mốc ngày riêng; Sấy 1 = ngày tạo lô nên không cần)
+  function syncTransferStageDateUI(stage) {
+    const group = document.getElementById('transfer-stage-date-group');
+    const label = document.getElementById('transfer-stage-date-label');
+    if (group) group.style.display = (stage && stage !== 'say1') ? '' : 'none';
+    if (label && stage) label.textContent = `Ngày Vào ${STAGES[stage]?.short || 'Công Đoạn'} (Thực Tế)`;
+  }
+
+  // Hiện/ẩn + đổi chú thích ô ngày thực tế dùng chung của thanh chuyển nhiều lô
+  function syncMtbStageDateUI(stage) {
+    const el = document.getElementById('mtb-stage-date');
+    if (!el) return;
+    el.style.display = (stage && stage !== 'say1') ? '' : 'none';
+    el.title = stage
+      ? `Ngày vào ${STAGES[stage]?.short || stage} thực tế — áp dụng cho mọi lô được chuyển. Mặc định hôm nay, sửa lại nếu ngày thực tế khác ngày nhập hệ thống.`
+      : 'Ngày vào công đoạn thực tế';
   }
 
   function handleTransferSubmit(e) {
@@ -201,11 +243,10 @@ import { getBaoTinhConversion } from './planning.js';
 
     const nowISO   = new Date().toISOString();
     const todayStr = new Date().toISOString().split('T')[0];
-    // Ngày Vào Bào Tinh thực tế (khi đích là Bào Tinh) — có thể sớm hơn ngày nhập hệ thống
-    const btDateEl = document.getElementById('transfer-baotinh-date');
-    const btEffectiveDate = (targetStage === 'bao_tinh' && btDateEl && btDateEl.value)
-      ? btDateEl.value
-      : todayStr;
+    // Ngày vào công đoạn thực tế (khi đích là Sấy 2 / Kho / Bào Tinh) — có thể sớm
+    // hơn ngày nhập hệ thống; để trống thì lấy hôm nay
+    const stDateEl = document.getElementById('transfer-stage-date');
+    const stageEffectiveDate = (stDateEl && stDateEl.value) ? stDateEl.value : todayStr;
 
     // Chuyển TOÀN BỘ lô sang công đoạn mới (giữ nguyên kích thước & số lượng)
     pushUndo(`Chuyển lô ${src.code} sang ${STAGES[targetStage].name}`);
@@ -219,8 +260,11 @@ import { getBaoTinhConversion } from './planning.js';
     src.location  = newLocation; // GHI ĐÈ vị trí mới lên thông tin cũ
     src.notes     = newNotes;    // GHI ĐÈ ghi chú mới lên thông tin cũ
     src.updatedAt = nowISO;
-    src.stageHistory.push({ stage: targetStage, date: (targetStage === 'bao_tinh' ? btEffectiveDate : todayStr) });
-    if (targetStage === 'bao_tinh') src.baoTinhDate = btEffectiveDate; // ngày bào tinh thực tế (ưu tiên khi thống kê)
+    src.stageHistory.push({ stage: targetStage, date: stageEffectiveDate });
+    // Ngày vào công đoạn thực tế (ưu tiên khi thống kê & xuất Excel theo công đoạn)
+    if (targetStage === 'bao_tinh')      src.baoTinhDate = stageEffectiveDate;
+    else if (targetStage === 'say2')     src.say2Date    = stageEffectiveDate;
+    else if (targetStage === 'kho')      src.khoDate     = stageEffectiveDate;
 
     showToast(`Đã chuyển toàn bộ lô ${src.code} (${src.quantity.toLocaleString('vi-VN')} thanh) sang ${STAGES[targetStage].name}`, 'success');
 
@@ -331,9 +375,9 @@ import { getBaoTinhConversion } from './planning.js';
     pushUndo(`Chuyển ${toMove.length} lô sang ${STAGES[targetStage].name}`);
     const nowISO   = new Date().toISOString();
     const todayStr = new Date().toISOString().split('T')[0];
-    // Ngày Vào Bào Tinh thực tế dùng chung (khi đích là Bào Tinh) — trống = hôm nay
-    const btDateEl = document.getElementById('mtb-baotinh-date');
-    const btDateVal = (targetStage === 'bao_tinh' && btDateEl && btDateEl.value) ? btDateEl.value : todayStr;
+    // Ngày vào công đoạn thực tế dùng chung (khi đích là Sấy 2 / Kho / Bào Tinh) — trống = hôm nay
+    const stDateEl  = document.getElementById('mtb-stage-date');
+    const stageDateVal = (stDateEl && stDateEl.value) ? stDateEl.value : todayStr;
 
     toMove.forEach(b => {
       if (!b.stageHistory || b.stageHistory.length === 0) {
@@ -343,15 +387,17 @@ import { getBaoTinhConversion } from './planning.js';
       if (newNotes    !== '') b.notes    = newNotes;    // GHI ĐÈ ghi chú dùng chung
       b.stage     = targetStage;
       b.updatedAt = nowISO;
-      const effDate = (targetStage === 'bao_tinh') ? btDateVal : todayStr;
-      b.stageHistory.push({ stage: targetStage, date: effDate });
-      if (targetStage === 'bao_tinh') b.baoTinhDate = effDate; // ngày bào tinh thực tế
+      b.stageHistory.push({ stage: targetStage, date: stageDateVal });
+      // Ngày vào công đoạn thực tế (ưu tiên khi thống kê & xuất Excel theo công đoạn)
+      if (targetStage === 'bao_tinh')      b.baoTinhDate = stageDateVal;
+      else if (targetStage === 'say2')     b.say2Date    = stageDateVal;
+      else if (targetStage === 'kho')      b.khoDate     = stageDateVal;
     });
 
     // Xóa ô nhập để lần sau không vô tình áp dụng lại giá trị cũ
     if (locEl) locEl.value = '';
     if (notesEl) notesEl.value = '';
-    if (btDateEl) btDateEl.value = new Date().toISOString().split('T')[0];
+    if (stDateEl) stDateEl.value = new Date().toISOString().split('T')[0];
 
     saveData();
     exitMultiTransferMode();
@@ -371,6 +417,8 @@ export {
   openBatchFormModal,
   openTransferModal,
   selectAllMulti,
+  syncMtbStageDateUI,
+  syncTransferStageDateUI,
   toggleBatchSelection,
   toggleMultiTransferMode,
   updateMultiBar

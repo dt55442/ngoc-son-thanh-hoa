@@ -2,17 +2,18 @@
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
-import { clearMultiSelection, closeBatchFormModal, closeTransferModal, confirmMultiTransfer, exitMultiTransferMode, handleBatchFormSubmit, handleTransferSubmit, openBatchFormModal, selectAllMulti, toggleBatchSelection, toggleMultiTransferMode } from './batch-modals.js';
+import { clearMultiSelection, closeBatchFormModal, closeTransferModal, confirmMultiTransfer, exitMultiTransferMode, handleBatchFormSubmit, handleTransferSubmit, openBatchFormModal, selectAllMulti, syncMtbStageDateUI, syncTransferStageDateUI, toggleBatchSelection, toggleMultiTransferMode } from './batch-modals.js';
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
-import { closeCustomExportModal, closeExportPreviewModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth } from './export-xlsx.js';
+import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
 import { clearHistory, closeHistoryModal, openHistoryModal, setHistoryTabFilter, setHistoryUserFilter } from './history.js';
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
+import { deleteXuong2Cut, editXuong2Cut, handleXuong2CutSubmit, resetXuong2CutForm, updateXuong2CutLinked, updateXuong2CutRemain, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
@@ -224,15 +225,24 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-transfer',  'click', closeTransferModal);
     safeOn('btn-cancel-transfer', 'click', closeTransferModal);
     safeOn('transfer-form',       'submit', handleTransferSubmit);
-    // ── Ngày Vào Bào Tinh thực tế: chỉ hiện khi công đoạn đích được chọn là Bào Tinh ──
-    const syncBtDateVisibility = (selectId, targetId) => {
-      const sel = document.getElementById(selectId);
-      const target = document.getElementById(targetId);
-      if (sel && target) target.style.display = (sel.value === 'bao_tinh') ? '' : 'none';
-    };
-    safeOn('transfer-target-stage', 'change', () => syncBtDateVisibility('transfer-target-stage', 'transfer-baotinh-date-group'));
-    safeOn('form-stage',            'change', () => syncBtDateVisibility('form-stage',            'form-baotinh-date-group'));
-    safeOn('mtb-target-stage',      'change', () => syncBtDateVisibility('mtb-target-stage',      'mtb-baotinh-date'));
+    // ── Ngày vào công đoạn thực tế: hiện theo công đoạn được chọn (Sấy 2 / Kho / Bào Tinh) ──
+    safeOn('transfer-target-stage', 'change', () => syncTransferStageDateUI(document.getElementById('transfer-target-stage')?.value));
+    safeOn('form-stage',            'change', () => {
+      const stage = document.getElementById('form-stage')?.value;
+      // Form thêm/sửa thẻ: mỗi công đoạn có ô ngày thực tế riêng của nó
+      const map = { say2: 'form-say2-date-group', kho: 'form-kho-date-group', bao_tinh: 'form-baotinh-date-group' };
+      ['form-say2-date-group', 'form-kho-date-group', 'form-baotinh-date-group'].forEach(id => {
+        const g = document.getElementById(id);
+        if (!g) return;
+        g.style.display = (map[stage] === id) ? '' : 'none';
+        if (map[stage] === id) {
+          // Điền sẵn hôm nay nếu ô còn trống (ngày thực tế khác thì sửa lại)
+          const inp = document.getElementById(id.replace('-group', ''));
+          if (inp && !inp.value) inp.value = new Date().toISOString().split('T')[0];
+        }
+      });
+    });
+    safeOn('mtb-target-stage',      'change', () => syncMtbStageDateUI(document.getElementById('mtb-target-stage')?.value));
 
     // ── Chọn nhiều lô để chuyển cùng lúc ──
     safeOn('btn-multi-transfer',  'click', toggleMultiTransferMode);
@@ -283,6 +293,19 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-export-materials',  'click', closeMaterialsExportModal);
     safeOn('btn-cancel-export-materials', 'click', closeMaterialsExportModal);
     safeOn('materials-export-form',       'submit', handleMaterialsExportSubmit);
+    // Xuất Excel tab QC — Bảng Xuất Hàng
+    safeOn('btn-open-export-qc',   'click', openQcXlsxExportModal);
+    safeOn('btn-close-export-qc',  'click', closeQcXlsxExportModal);
+    safeOn('btn-cancel-export-qc', 'click', closeQcXlsxExportModal);
+    safeOn('qc-xlsx-export-form',  'submit', handleQcXlsxExportSubmit);
+    safeOn('btn-preview-qc',       'click', openQcXlsxExportPreview);
+    // Xuất Excel tab Nhân Sự — chọn theo thẻ nhanh (mini card)
+    safeOn('btn-open-export-hr',   'click', openHrXlsxExportModal);
+    safeOn('btn-close-export-hr',  'click', closeHrXlsxExportModal);
+    safeOn('btn-cancel-export-hr', 'click', closeHrXlsxExportModal);
+    safeOn('hr-xlsx-export-form',  'submit', handleHrXlsxExportSubmit);
+    safeOn('btn-preview-hr',       'click', openHrXlsxExportPreview);
+    safeOn('export-hr-card',       'change', syncHrXlsxCardUI);
 
     // ── Xem trước & chỉnh sửa báo cáo trước khi xuất/in ──
     safeOn('btn-preview-custom',    'click', openCustomExportPreview);
@@ -949,6 +972,41 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
           renderMaterialImagePreviews();
         }
       }
+    });
+
+    // ── XƯỞNG 2 (tab Công Đoạn): thẻ launcher các vị trí công đoạn ──
+    // Bấm thẻ mini → mở bảng chi tiết dạng pop-up nổi lên (giống thẻ Nhân Sự)
+    document.querySelectorAll('.x2-mini-card').forEach(t => {
+      t.addEventListener('click', () => x2OpenCard(t.getAttribute('data-x2-card')));
+    });
+    // Đóng pop-up: nút Đóng / bấm nền mờ / phím Esc
+    safeOn('btn-close-x2-detail', 'click', x2CloseOpenCard);
+    const x2Overlay = document.getElementById('x2-detail-overlay');
+    if (x2Overlay) {
+      x2Overlay.addEventListener('click', (e) => { if (e.target === x2Overlay) x2CloseOpenCard(); });
+      x2Overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') x2CloseOpenCard(); });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('x2-detail-overlay')?.classList.contains('show')) x2CloseOpenCard();
+    });
+    // Đổi kích thước cửa sổ → đặt lại đỉnh pop-up đúng dưới header
+    window.addEventListener('resize', () => {
+      const ov = document.getElementById('x2-detail-overlay');
+      if (ov && ov.classList.contains('show')) x2PositionDetailOverlay();
+    });
+    // Form cắt/chọn: đổi nguyên liệu → tự link NCC / Mã số / KL đầu vào;
+    // gõ khối lượng → tự tính KL ngọn/ống loại; submit → lưu
+    safeOn('btn-add-x2-cut', 'click', () => resetXuong2CutForm());
+    safeOn('btn-cancel-x2-cut', 'click', () => resetXuong2CutForm());
+    safeOn('x2-cut-material', 'change', updateXuong2CutLinked);
+    ['x2-cut-ongluong', 'x2-cut-cuidot', 'x2-cut-cayloai'].forEach(id => safeOn(id, 'input', updateXuong2CutRemain));
+    safeOn('x2-cut-form', 'submit', handleXuong2CutSubmit);
+    // Click ủy quyền trong bảng lịch sử cắt/chọn: sửa / xóa lượt
+    document.addEventListener('click', (e) => {
+      const cutEdit = e.target.closest('[data-x2-cut-edit]');
+      if (cutEdit) { editXuong2Cut(cutEdit.getAttribute('data-x2-cut-edit')); return; }
+      const cutDel = e.target.closest('[data-x2-cut-delete]');
+      if (cutDel) { deleteXuong2Cut(cutDel.getAttribute('data-x2-cut-delete')); return; }
     });
   }
 

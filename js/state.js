@@ -16,6 +16,9 @@
   const STORAGE_KEY_PRESS_RECORDS = 'bamboo_tracker_press_records_v1';
   const STORAGE_KEY_PRESS_NOTES = 'bamboo_tracker_press_notes_v1';
   const STORAGE_KEY_MATERIALS = 'bamboo_tracker_material_records_v1';
+  // Vị trí công đoạn Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký cắt/chọn.
+  // Mỗi lượt cắt/chọn link 1 lượt nhập nguyên liệu đầu vào của Xưởng 2 (tab Nguyên Liệu)
+  const STORAGE_KEY_XUONG2_CUTS = 'bamboo_tracker_xuong2_cuts_v1';
   const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
   // Tab Nhân Sự: nhân viên, đơn nghỉ phép, nhu cầu tuyển dụng
   const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
@@ -101,10 +104,14 @@
     qcSumWeeks: [],
     qcSearchQ: '',
     materialActiveLoc: 'all', // 'all' | 'lo-hoi' | 'xuong-1' | 'xuong-2'
+    materialLightbox: null,   // { recordId, index } đang mở trong lightbox
+    // Vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn):
+    // nhật ký cắt/chọn — mỗi bản ghi link 1 lượt nhập nguyên liệu Xưởng 2
+    xuong2CutRecords: [],
+    x2CutEditId: null,        // id lượt cắt/chọn đang sửa trong form (null = ghi mới)
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
     materialFormImages: [],   // ảnh (dataURL) đang có trong form
-    materialLightbox: null,   // { recordId, index } đang mở trong lightbox
     // Kế hoạch nguyên liệu cần nhập (bảng phụ tab Nguyên liệu)
     // { '2026-W36': { 'lo-hoi': 12, 'xuong-1': 30, 'xuong-2': 25 } }
     // Giá trị nhập = SỐ TRUNG BÌNH MỖI NGÀY trong tuần; tổng tuần = TB/ngày × 7
@@ -157,6 +164,7 @@ export {
   STORAGE_KEY_MATERIAL_PLAN,
   STORAGE_KEY_MATERIAL_RATES,
   STORAGE_KEY_MATERIALS,
+  STORAGE_KEY_XUONG2_CUTS,
   STORAGE_KEY_PLANNING_FORECAST,
   STORAGE_KEY_PLANNING_ITEMS,
   STORAGE_KEY_PLANNING_STOCK,

@@ -158,19 +158,56 @@ const oldHist = state.hrAssignments.find(a => a.id === asg.id);
 check('BOARD: kéo đi -> bản ghi cũ VẪN còn tại vị trí cũ (lịch sử)', !!oldHist && oldHist.positionId === 'px2');
 check('BOARD: giờ cũ tự chấm dứt lúc giờ mới (07:30–12:00)', oldHist.end === '12:00');
 check('BOARD: bản ghi mới tại vị trí kéo đến (12:00 -> hết ca)', (state.hrAssignments || []).some(a => a.positionId === 'pkh2' && a.employeeId === 'empB' && a.start === '12:00' && a.end === ''));
-// Dời với giờ mới <= giờ cũ -> dời hẳn (bản ghi cũ bị xóa)
+// Giờ mới <= giờ cũ -> bản ghi cũ GIỮ NGUYÊN (không bao giờ xóa lịch sử)
+state.hrPositions.push({ id: 'pkh3', name: 'Kho TP X2', department: 'Xưởng 2', note: '' });
 const moved = state.hrAssignments.find(a => a.positionId === 'pkh2' && a.start === '12:00');
 document.getElementById('board-assign-movefrom').value = moved.id;
-document.getElementById('board-assign-pos').value = 'px2';
-document.getElementById('board-assign-start').value = '07:30';
+document.getElementById('board-assign-pos').value = 'pkh3';
+document.getElementById('board-assign-start').value = '07:00';
+document.getElementById('board-assign-end').value = '';
+hr.handleBoardAssignSubmit(ev);
+check('BOARD: giờ mới <= giờ cũ -> bản ghi cũ GIỮ NGUYÊN (không xóa)', (state.hrAssignments || []).some(a => a.id === moved.id && a.positionId === 'pkh2' && a.end === ''));
+check('BOARD: bản ghi mới tại vị trí mới (07:00 -> hết ca)', (state.hrAssignments || []).some(a => a.positionId === 'pkh3' && a.employeeId === 'empB' && a.start === '07:00' && a.end === ''));
+
+// ─── E2b. LUỒNG KÉO THẺ THẬT (qua hrBoardOpenAssign mode=move) ──
+// Kéo chip pkh3 07h00 sang px2, điền giờ mới 12h00:
+//   bản ghi cũ pkh3 GIỮ + chấm dứt 07:00–12:00; bản ghi MỚI px2 12:00→hết ca
+const asg4 = state.hrAssignments.find(a => a.positionId === 'pkh3' && a.start === '07:00');
+hr.hrBoardOpenAssign('px2', 0, `move:${asg4.id}`);
+check('BOARD: luồng kéo thật -> modal ở chế độ TẠO MỚI (mode rỗng) + movefrom đúng', document.getElementById('board-assign-mode').value === '' && document.getElementById('board-assign-movefrom').value === asg4.id);
+document.getElementById('board-assign-date').value = state.hrBoardDate;
+document.getElementById('board-assign-start').value = '12:00';
+document.getElementById('board-assign-end').value = '';
+hr.handleBoardAssignSubmit(ev);
+check('BOARD: kéo (luồng thật) -> bản ghi cũ pkh3 GIỮ, chấm dứt 07:00–12:00', (state.hrAssignments || []).some(a => a.id === asg4.id && a.positionId === 'pkh3' && a.start === '07:00' && a.end === '12:00'));
+check('BOARD: kéo (luồng thật) -> bản ghi MỚI px2 12:00→hết ca (không ghi đè cũ)', (state.hrAssignments || []).some(a => a.positionId === 'px2' && a.employeeId === 'empB' && a.start === '12:00' && a.end === ''));
+
+// ─── E3. CHẶN TRÙNG + CHO PHÉP NHIỀU KHUNG GIỜ ─────────────────
+const cntBefore = state.hrAssignments.length;
+document.getElementById('board-assign-mode').value = '';
+document.getElementById('board-assign-movefrom').value = '';
+document.getElementById('board-assign-pos').value = 'pkh2';
+document.getElementById('board-assign-shiftidx').value = '0';
+document.getElementById('board-assign-employee-id').value = 'empB';
+document.getElementById('board-assign-start').value = '10:00';
 document.getElementById('board-assign-end').value = '11:00';
 hr.handleBoardAssignSubmit(ev);
-check('BOARD: giờ mới <= giờ cũ -> dời hẳn (bản ghi cũ bị xóa)', (state.hrAssignments || []).every(a => a.id !== moved.id));
-check('BOARD: bản ghi mới về px2 07:30–11:00', (state.hrAssignments || []).some(a => a.positionId === 'px2' && a.employeeId === 'empB' && a.start === '07:30' && a.end === '11:00'));
+check('BOARD: chặn trùng — cùng vị trí, khung giờ giao nhau (10h–11h giao 9h–11h30)', state.hrAssignments.length === cntBefore);
+// Khung giờ KHÔNG giao nhau (07h00–09h00) -> cho phép (người làm nhiều khung giờ)
+document.getElementById('board-assign-start').value = '07:00';
+document.getElementById('board-assign-end').value = '09:00';
+hr.handleBoardAssignSubmit(ev);
+check('BOARD: cùng vị trí, khung giờ KHÁC -> vẫn thêm được', state.hrAssignments.length === cntBefore + 1);
+// Gợi ý: người đã bố trí được ĐÁNH DẤU (không ẩn) kèm tóm tắt giờ đã làm
+hr.hrBoardOpenAssign('px2', 0, '');
+hr.renderBoardAssignSuggestions('');
+const sugHTML = document.getElementById('board-assign-suggest').innerHTML;
+check('BOARD: gợi ý đánh dấu "Đã bố trí" cho người đã có giờ (vẫn chọn được)', sugHTML.includes('Đã bố trí') && sugHTML.includes('data-emp-id="empB"'));
+hr.closeBoardAssignModal();
 
 // ─── F. XÓA GÁN + ĐỒNG BỘ MÂY ──────────────────────────────────
 hr.hrBoardRemoveAssign(state.hrAssignments[0].id);
-check('BOARD: bỏ người khỏi vị trí -> còn 2 bản ghi + tombstone', (state.hrAssignments || []).length === 2 && (state.deletedIds.hrAssignments || {})[asg.id]);
+check('BOARD: bỏ người khỏi vị trí -> còn 5 bản ghi + tombstone', (state.hrAssignments || []).length === 5 && (state.deletedIds.hrAssignments || {})[asg.id]);
 const snap = cloud.collectCloudSnapshot();
 check('BOARD: snapshot mây chứa hrAssignments + hrShifts', Array.isArray(snap.hrAssignments) && Array.isArray(snap.hrShifts));
 check('BOARD: cloudCore có 2 khóa mới', cloud.cloudCore(snap).includes('"hrAssignments"') && cloud.cloudCore(snap).includes('"hrShifts"'));
@@ -226,9 +263,28 @@ hr.renderHrAttendanceCard();
 const attHTML2 = document.getElementById('hr-att-body').innerHTML;
 const fsDbg = await import('node:fs');
 fsDbg.writeFileSync('debug-att.html', attHTML2);
-check('HC/TC: chấm công hiện badge HC (empB: 07:30–11:00 + 09:00–11:30 = 6h)', attHTML2.includes('HC <strong>6h</strong>'));
+check('HC/TC: badge tổng HC 18h (5 lượt gán của empB)', attHTML2.includes('HC <strong>18h</strong>'));
 check('HC/TC: không có TC khi làm trong giờ', attHTML2.includes('TC <strong>') === false);
-check('HC/TC: chip vị trí chỉ hiện vị trí đã gán (Ép ván X2 7h30–11h00 + Kho X2)', attHTML2.includes('Ép ván X2') && attHTML2.includes('Kho X2') && attHTML2.includes('7h30–11h00') && attHTML2.includes('9h00–11h30'));
+check('HC/TC: chip từng lượt gán (Kho TP X2 7h00–12h00 · Kho X2 7h00–9h00 · 12h00)', attHTML2.includes('Kho TP X2') && attHTML2.includes('7h00–12h00') && attHTML2.includes('7h00–9h00') && attHTML2.includes('12h00'));
+
+// ─── H. THÊM VỊ TRÍ: trùng tên KHÁC bộ phận vẫn thêm được ─────────
+// ("Kho X2" đã tồn tại ở Xưởng 2 — thêm "Kho X2" cho QC phải được phép)
+const posCntBefore = state.hrPositions.length;
+document.getElementById('position-id').value = '';
+document.getElementById('position-name').value = 'Kho X2';
+document.getElementById('position-department').value = 'QC';
+document.getElementById('position-note').value = '';
+hr.handlePositionSubmit(ev);
+check('POS: thêm vị trí TRÙNG TÊN nhưng KHÁC bộ phận -> thành công', state.hrPositions.length === posCntBefore + 1 && state.hrPositions.some(p => p.name === 'Kho X2' && p.department === 'QC'));
+// Trùng tên + trùng bộ phận -> chặn (đúng là trùng)
+hr.handlePositionSubmit(ev);
+check('POS: trùng tên + trùng bộ phận -> chặn (không thêm)', state.hrPositions.length === posCntBefore + 1);
+// Modal thêm vị trí mặc định Bộ Phận theo bộ phận đang xem trên Board
+hr.openPositionModal();
+check('POS: modal thêm vị trí mặc định Bộ Phận = bộ phận Board đang xem', document.getElementById('position-department').value === 'Xưởng 2');
+hr.closePositionModal();
+// Vị trí mới tự xuất hiện trong bảng trung gian + Board (tự nạp)
+check('POS: vị trí mới tự có dòng trong "Nhân sự cần tại vị trí"', (state.hrPositionNeeds || []).some(r => r.position === 'Kho X2' && r.department === 'QC'));
 
 console.log(`\nWYNIK: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

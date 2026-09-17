@@ -17,8 +17,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
-import { canEditTab, canViewAdvanced } from './permissions.js';
-import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, state } from './state.js';
+import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_OVERTIMES, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── HẰNG SỐ NHÂN SỰ ────────────────────────────────────────────
@@ -33,8 +32,13 @@ import { escapeHTML, showToast } from './utils.js';
   // suy ra trực tiếp từ đơn nghỉ đã duyệt (xem approvedLeaveOn).
   const ATT_STATUS = { work: 'Đi làm', absent: 'Vắng (không phép)' };
 
-  // Ban lãnh đạo = Admin & Ban Quản Lý (hoặc được cấp riêng) — duyệt đơn nghỉ
-  function canApproveLeave() { return canViewAdvanced(); }
+  // Duyệt/xóa đơn nghỉ: CHỈ Admin & Ban Quản Lý — xét theo VAI TRÒ (trước đây
+  // dựa trên quyền "xem vùng nâng cao" nên editor được cấp riêng vẫn duyệt được).
+  // Editor dù được cấp tab Nhân Sự cũng chỉ được TẠO đơn mới, không được duyệt/xóa.
+  function canApproveLeave() {
+    const role = state.currentUser ? state.currentUser.role : null;
+    return role === 'admin' || role === 'manager';
+  }
 
   // ─── LƯU / NẠP DỮ LIỆU ──────────────────────────────────────────
   function loadHrData() {
@@ -47,6 +51,7 @@ import { escapeHTML, showToast } from './utils.js';
     try { state.hrPositions  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_POSITIONS))  || []; } catch (e) { state.hrPositions  = []; }
     try { state.hrAttendance = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_ATTENDANCE)) || []; } catch (e) { state.hrAttendance = []; }
     try { state.hrCheckins   = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CHECKINS))   || []; } catch (e) { state.hrCheckins   = []; }
+    try { state.hrOvertimes  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_OVERTIMES))  || []; } catch (e) { state.hrOvertimes  = []; }
   }
 
   function saveHrData() {
@@ -59,8 +64,9 @@ import { escapeHTML, showToast } from './utils.js';
     localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || []));
     localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || []));
     localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || []));
+    localStorage.setItem(STORAGE_KEY_HR_OVERTIMES, JSON.stringify(state.hrOvertimes || []));
     // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa mục Nhân Sự nào)
-    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositionNeeds', 'hrShifts', 'hrAssignments', 'hrPositions', 'hrAttendance', 'hrCheckins']);
+    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositionNeeds', 'hrShifts', 'hrAssignments', 'hrPositions', 'hrAttendance', 'hrCheckins', 'hrOvertimes']);
     firePushSync(); // đồng bộ lên mây nếu online
   }
 
@@ -77,6 +83,46 @@ import { escapeHTML, showToast } from './utils.js';
   function leaveDaysCount(from, to) {
     if (!from || !to || to < from) return 1;
     return Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
+  }
+
+  // ─── THỜI GIAN NGHỈ: cả ngày / nửa ngày (0.5) / theo giờ ─────────
+  // 1 ngày làm việc chuẩn = 8 giờ. Chế độ "theo giờ" quy đổi ra ngày lẻ
+  // (VD: 4 giờ = 0.5 ngày) để thống kê ngày nghỉ vẫn cộng đúng.
+  const LEAVE_WORK_HOURS_PER_DAY = 8;
+  // Nhãn dạng chữ (toast/thống kê): "3 ngày" | "0.5 ngày" | "4 giờ (≈ 0.5 ngày)"
+  function leaveDurationText(l) {
+    const days = l.days || leaveDaysCount(l.from, l.to);
+    if (l.durationMode === 'hours' && l.hours) {
+      return `${Number(l.hours).toLocaleString('vi-VN')} giờ (≈ ${days} ngày)`;
+    }
+    return `${days} ngày`;
+  }
+  // Nhãn dạng HTML cho bảng đơn nghỉ (bản ghi cũ không có durationMode → như trước)
+  function leaveDurationLabel(l) {
+    const days = l.days || leaveDaysCount(l.from, l.to);
+    if (l.durationMode === 'hours' && l.hours) {
+      return `<strong>${Number(l.hours).toLocaleString('vi-VN')} giờ</strong> <span style="font-size:0.68rem;color:var(--text-muted);">(≈ ${days} ngày)</span>`;
+    }
+    return `<strong>${days}</strong> ngày`;
+  }
+  // Đồng bộ UI form theo chế độ thời gian đã chọn:
+  //  - "Cả ngày": chọn khoảng từ ngày → đến ngày (như cũ)
+  //  - "Nửa ngày" / "Theo giờ": nghỉ TRONG MỘT ngày → khóa "Đến ngày" = "Từ ngày";
+  //    riêng "Theo giờ" hiện thêm ô nhập số giờ.
+  function syncLeaveDurationUI() {
+    const mode = document.getElementById('leave-duration')?.value || 'full';
+    const fromInput = document.getElementById('leave-from');
+    const toInput = document.getElementById('leave-to');
+    const hoursGroup = document.getElementById('group-leave-hours');
+    if (!toInput) return;
+    if (mode === 'full') {
+      toInput.disabled = false;
+      if (hoursGroup) hoursGroup.style.display = 'none';
+      return;
+    }
+    if (fromInput && fromInput.value) toInput.value = fromInput.value;
+    toInput.disabled = true;
+    if (hoursGroup) hoursGroup.style.display = mode === 'hours' ? '' : 'none';
   }
   function hrPosById(id) { return (state.hrPositions || []).find(p => p.id === id) || null; }
   function hrPosName(id) { const p = hrPosById(id); return p ? p.name : 'Vị trí đã xóa'; }
@@ -100,6 +146,7 @@ import { escapeHTML, showToast } from './utils.js';
     renderHrCheckinTable();
     renderHrPositionsTable();
     renderHrLeavesTable();
+    renderHrOvertimesTable();
     renderHrLeaveStats();
     renderHrAttendanceStats();
     renderHrRecruitmentTable();
@@ -115,7 +162,7 @@ import { escapeHTML, showToast } from './utils.js';
   // nếu không, mỗi lần đổi bộ lọc (gọi renderHrView) select "Bộ phận" bị xây
   // lại và snap về "Tất Cả" khiến bộ lọc tưởng như không hoạt động.
   function populateHrSelects() {
-    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept', 'hr-posneed-filter-dept'].forEach(selId => {
+    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept', 'hr-attstats-filter-dept', 'hr-posneed-filter-dept'].forEach(selId => {
       const sel = document.getElementById(selId);
       if (!sel) return;
       const cur = sel.value;
@@ -414,15 +461,16 @@ import { escapeHTML, showToast } from './utils.js';
       // IM LẶNG lúc render: dùng canEditTab('hr') thay vì requireEditPermission()
       // (trước đây render bảng đơn nghỉ bắn toast "không có quyền" MỖI lần
       // chuyển sang tab Nhân Sự — nguyên nhân chính của cảnh báo phiền toái).
-      if (canEditTab('hr') || approver) {
-        actions.push(`<button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeleteLeave('${l.id}')" title="Xóa đơn" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
+      // Xóa đơn: chỉ ban lãnh đạo (Admin & Ban Quản Lý) — editor chỉ tạo đơn mới
+      if (approver) {
+        actions.push(`<button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteLeave('${l.id}')" title="Xóa đơn" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
       }
       return `<tr>
         <td><strong>${escapeHTML(hrEmpName(l.employeeId))}</strong><br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(hrEmpDept(l.employeeId))}</span></td>
         <td>${escapeHTML(l.type || 'Nghỉ phép')}</td>
         <td>${fmtDateDMY(l.from)}</td>
         <td>${fmtDateDMY(l.to)}</td>
-        <td><strong>${l.days || leaveDaysCount(l.from, l.to)}</strong> ngày</td>
+        <td>${leaveDurationLabel(l)}</td>
         <td class="hr-notes" title="${escapeHTML(l.reason || '')}">${escapeHTML(l.reason || '—')}</td>
         <td><span class="hr-chip ${stCls}">${LEAVE_STATUS[st]}</span>${l.approvedBy ? `<br><span style="font-size:0.68rem;color:var(--text-muted);">bởi ${escapeHTML(l.approvedBy)}</span>` : ''}</td>
         <td class="text-right"><div style="display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap;">${actions.join('')}</div></td>
@@ -445,6 +493,8 @@ import { escapeHTML, showToast } from './utils.js';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('leave-from').value = today;
     document.getElementById('leave-to').value = today;
+    // Thời gian nghỉ về mặc định "Cả ngày" (reset form đã trả select về mặc định)
+    syncLeaveDurationUI();
     // Xóa nội dung ô tìm kiếm nhân viên + ẩn gợi ý
     const empInput = document.getElementById('leave-employee');
     if (empInput) empInput.value = '';
@@ -473,16 +523,33 @@ import { escapeHTML, showToast } from './utils.js';
     if (!employeeId) { showToast('Vui lòng gõ tên và chọn nhân viên từ danh sách gợi ý!', 'error'); return; }
     const type = document.getElementById('leave-type').value;
     const from = document.getElementById('leave-from').value;
-    const to = document.getElementById('leave-to').value;
+    let to = document.getElementById('leave-to').value;
     const reason = document.getElementById('leave-reason').value.trim();
     if (!employeeId) { showToast('Vui lòng chọn nhân viên!', 'error'); return; }
     if (!from || !to) { showToast('Vui lòng chọn ngày nghỉ (từ ngày → đến ngày)!', 'error'); return; }
     if (to < from) { showToast('"Đến ngày" không được trước "Từ ngày"!', 'error'); return; }
 
+    // Thời gian nghỉ: Cả ngày / Nửa ngày (0.5) / Theo giờ (1 ngày làm = 8 giờ)
+    const mode = document.getElementById('leave-duration')?.value || 'full';
+    let days = leaveDaysCount(from, to);
+    let hours = null;
+    if (mode === 'half') {
+      to = from;            // nửa ngày chỉ áp dụng TRONG MỘT ngày
+      days = 0.5;
+    } else if (mode === 'hours') {
+      to = from;            // nghỉ theo giờ cũng trong 1 ngày
+      hours = parseFloat((document.getElementById('leave-hours')?.value || '').replace(',', '.'));
+      if (!hours || hours <= 0) { showToast('Vui lòng nhập số giờ nghỉ (VD: 4)!', 'error'); return; }
+      if (hours > 12) { showToast('Số giờ nghỉ tối đa 12 giờ (1 ngày làm = 8 giờ).', 'error'); return; }
+      days = Math.round((hours / LEAVE_WORK_HOURS_PER_DAY) * 100) / 100; // VD: 4 giờ = 0.5 ngày
+    }
+
     state.hrLeaves.push({
       id: `leave-${Date.now()}`,
       employeeId, type, from, to,
-      days: leaveDaysCount(from, to),
+      days,
+      durationMode: mode,                    // 'full' | 'half' | 'hours'
+      hours: (mode === 'hours') ? hours : null,
       reason,
       status: 'pending',
       createdAt: new Date().toISOString()
@@ -490,7 +557,198 @@ import { escapeHTML, showToast } from './utils.js';
     saveHrData();
     closeLeaveModal();
     renderHrView();
-    showToast(`Đã gửi đơn nghỉ ${leaveDaysCount(from, to)} ngày cho ${hrEmpName(employeeId)} — chờ ban lãnh đạo duyệt`, 'success');
+    showToast(`Đã gửi đơn nghỉ ${leaveDurationText({ durationMode: mode, hours, days, from, to })} cho ${hrEmpName(employeeId)} — chờ ban lãnh đạo duyệt`, 'success');
+  }
+
+  // ═══ 2b) ĐĂNG KÝ TĂNG CA (mini card tương đồng "Xin Nghỉ Phép") ═══
+  // Người đăng ký nhập GIỜ DỰ KIẾN (từ → đến). Giờ tăng ca THỰC TẾ KHÔNG
+  // lưu cứng — tự tính từ Bảng bố trí vị trí theo ngày (hrAssignments):
+  // khi giờ làm được cập nhật lại (sự cố, kéo dài ca) thì số giờ TC hiển
+  // thị tự thay đổi theo (overtimeActualMin + hrSplitHoursHC).
+  function toMinT(t) { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; }
+
+  // Giờ TC THỰC TẾ (phút) của 1 đăng ký: tổng phần NGOÀI ca chuẩn của các
+  // lượt gán người đó trong ngày trên Bảng bố trí. Chưa có dữ liệu → 0.
+  function overtimeActualMin(ot) {
+    if (!ot || !ot.employeeId || !ot.date) return 0;
+    return (state.hrAssignments || [])
+      .filter(a => a.date === ot.date && a.employeeId === ot.employeeId)
+      .reduce((sum, a) => sum + hrSplitHoursHC(a.department || hrEmpDept(ot.employeeId), a.start, a.end, a.shiftIdx).tc, 0);
+  }
+  // Nhãn giờ DỰ KIẾN: "17:30 → 19:30 · 2h"
+  function overtimePlannedText(ot) {
+    let m = toMinT(ot.end) - toMinT(ot.start);
+    if (m <= 0) m += 1440; // qua nửa đêm
+    return `${fmtHour(ot.start)} → ${fmtHour(ot.end)} · ${fmtHm(m)}`;
+  }
+
+  function renderHrOvertimesTable() {
+    const tbody = document.getElementById('hr-ot-body');
+    if (!tbody) return;
+    const list = state.hrOvertimes || [];
+    const countEl = document.getElementById('hr-ot-count');
+    if (countEl) {
+      const pend = list.filter(o => (o.status || 'pending') === 'pending').length;
+      countEl.textContent = `${list.length} đơn (${pend} chờ duyệt)`;
+    }
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:26px;color:var(--text-muted);">
+        <i data-lucide="clock-plus" style="width:26px;height:26px;margin-bottom:6px;"></i>
+        <p>Chưa có đăng ký tăng ca nào. Bấm "Đăng Ký Tăng Ca" để gửi đăng ký.</p></td></tr>`;
+      initLucide();
+      return;
+    }
+    const approver = canApproveLeave(); // duyệt/xóa: chỉ Admin & Ban Quản Lý
+    const sorted = [...list].sort((a, b) =>
+      String(b.date || '').localeCompare(String(a.date || '')) ||
+      String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    tbody.innerHTML = sorted.map(o => {
+      const st = o.status || 'pending';
+      const stCls = st === 'approved' ? 'ok' : (st === 'rejected' ? 'off' : 'warn');
+      const actMin = overtimeActualMin(o);
+      const actHtml = actMin > 0
+        ? `<span class="hr-chip on" title="Giờ tăng ca THỰC TẾ — tự tính từ Bảng bố trí theo ngày (tự cập nhật khi sửa giờ/sự cố)"><i data-lucide="check"></i> TC <strong>${fmtHm(actMin)}</strong></span>`
+        : '<span style="color:var(--text-muted);font-size:0.75rem;" title="Chưa có giờ làm trong Bảng bố trí theo ngày">— chưa có</span>';
+      const actions = [];
+      if (st === 'pending' && approver) {
+        actions.push(`<button class="btn btn-success btn-sm" onclick="app.hrApproveOvertime('${o.id}')" title="Duyệt Đồng ý"><i data-lucide="check"></i> Đồng Ý</button>`);
+        actions.push(`<button class="btn btn-outline btn-sm" onclick="app.hrRejectOvertime('${o.id}')" title="Không duyệt" style="color:var(--danger);"><i data-lucide="x"></i> Không Đồng Ý</button>`);
+      }
+      if (approver) {
+        actions.push(`<button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteOvertime('${o.id}')" title="Xóa đăng ký" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
+      }
+      return `<tr>
+        <td><strong>${escapeHTML(hrEmpName(o.employeeId))}</strong><br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(hrEmpDept(o.employeeId))}</span></td>
+        <td>${fmtDateDMY(o.date)}</td>
+        <td>${overtimePlannedText(o)}</td>
+        <td>${actHtml}</td>
+        <td><span class="hr-chip ${stCls}">${LEAVE_STATUS[st]}</span>${o.approvedBy ? `<br><span style="font-size:0.68rem;color:var(--text-muted);">bởi ${escapeHTML(o.approvedBy)}</span>` : ''}</td>
+        <td class="hr-notes" title="${escapeHTML(o.reason || '')}">${escapeHTML(o.reason || '—')}</td>
+        <td class="text-right"><div style="display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap;">${actions.join('')}</div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ─── Ô gợi ý nhân viên (combobox) trong form Đăng Ký Tăng Ca ─────
+  // Tái dùng bộ lọc leaveEmployeeSuggestions; riêng phần DOM dùng id "ot-"
+  function renderOvertimeEmployeeSuggestions() {
+    const box = document.getElementById('ot-employee-suggest');
+    if (!box) return;
+    const list = leaveEmployeeSuggestions(document.getElementById('ot-employee')?.value || '');
+    if (!list.length) {
+      box.innerHTML = '<div class="hr-combobox-empty">Không tìm thấy nhân viên nào</div>';
+      box.style.display = 'block';
+      return;
+    }
+    box.innerHTML = list.map(e => `
+      <div class="hr-combobox-item" data-emp-id="${escapeHTML(e.id)}">
+        <strong>${escapeHTML(e.name)}</strong>
+        <span class="hr-combobox-meta">${escapeHTML((e.code ? e.code + ' · ' : '') + (e.department || '') + (e.position ? ' · ' + e.position : ''))}</span>
+      </div>`).join('');
+    box.style.display = 'block';
+  }
+
+  function hideOvertimeEmployeeSuggestions() {
+    const box = document.getElementById('ot-employee-suggest');
+    if (box) box.style.display = 'none';
+  }
+
+  function pickOvertimeEmployee(id) {
+    const e = hrEmpById(id);
+    const input = document.getElementById('ot-employee');
+    const hidden = document.getElementById('ot-employee-id');
+    if (e && input) input.value = e.name;
+    if (hidden) hidden.value = id;
+    hideOvertimeEmployeeSuggestions();
+  }
+
+  function handleOvertimeEmployeeKeydown(evt) {
+    const box = document.getElementById('ot-employee-suggest');
+    if (!box || box.style.display === 'none') return;
+    const items = box.querySelectorAll ? Array.from(box.querySelectorAll('.hr-combobox-item')) : [];
+    if (!items.length) return;
+    let activeIdx = items.findIndex(it => it.classList && it.classList.contains('active'));
+    if (evt.key === 'ArrowDown' || evt.key === 'ArrowUp') {
+      evt.preventDefault();
+      const delta = evt.key === 'ArrowDown' ? 1 : -1;
+      activeIdx = (activeIdx + delta + items.length) % items.length;
+      items.forEach((it, i) => it.classList && it.classList.toggle('active', i === activeIdx));
+      if (items[activeIdx] && items[activeIdx].scrollIntoView) items[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (evt.key === 'Enter') {
+      evt.preventDefault();
+      const target = items[activeIdx >= 0 ? activeIdx : 0];
+      if (target) pickOvertimeEmployee(target.getAttribute('data-emp-id'));
+    } else if (evt.key === 'Escape') {
+      hideOvertimeEmployeeSuggestions();
+    }
+  }
+
+  function openOvertimeModal() {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-overtime');
+    const form = document.getElementById('ot-form');
+    if (!modal || !form) return;
+    form.reset();
+    if (!(state.hrEmployees || []).length) {
+      showToast('Chưa có nhân viên nào — thêm nhân viên trước khi đăng ký tăng ca!', 'error');
+      return;
+    }
+    // Danh sách mốc 30 phút (05:00 → 23:30) cho giờ dự kiến
+    const opts = `<option value="">--</option>` + hrHalfHourOptions().map(t => `<option value="${t}">${t}</option>`).join('');
+    const startSel = document.getElementById('ot-start');
+    const endSel = document.getElementById('ot-end');
+    if (startSel) startSel.innerHTML = opts;
+    if (endSel) endSel.innerHTML = opts;
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('ot-date').value = today;
+    if (startSel) startSel.value = '17:30';
+    if (endSel) endSel.value = '19:30';
+    const empInput = document.getElementById('ot-employee');
+    const empHidden = document.getElementById('ot-employee-id');
+    if (empInput) empInput.value = '';
+    if (empHidden) empHidden.value = '';
+    hideOvertimeEmployeeSuggestions();
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closeOvertimeModal() {
+    document.getElementById('modal-overtime')?.classList.remove('show');
+  }
+
+  function handleOvertimeSubmit(e) {
+    e.preventDefault();
+    if (!requireEditPermission()) return;
+    const empInput = (document.getElementById('ot-employee')?.value || '').trim();
+    let employeeId = document.getElementById('ot-employee-id')?.value || '';
+    if (!employeeId && empInput) {
+      const exact = (state.hrEmployees || []).filter(x =>
+        (x.status || 'active') !== 'quit' && x.name.toLowerCase() === empInput.toLowerCase());
+      if (exact.length === 1) employeeId = exact[0].id;
+    }
+    if (!employeeId) { showToast('Vui lòng gõ tên và chọn nhân viên từ danh sách gợi ý!', 'error'); return; }
+    const date = document.getElementById('ot-date')?.value || '';
+    const start = document.getElementById('ot-start')?.value || '';
+    const end = document.getElementById('ot-end')?.value || '';
+    const reason = (document.getElementById('ot-reason')?.value || '').trim();
+    if (!date) { showToast('Vui lòng chọn ngày tăng ca!', 'error'); return; }
+    if (!start || !end) { showToast('Vui lòng chọn giờ tăng ca dự kiến (từ → đến)!', 'error'); return; }
+    let plannedMin = toMinT(end) - toMinT(start);
+    if (plannedMin < 0) plannedMin += 1440; // làm qua nửa đêm
+    if (plannedMin === 0) { showToast('Giờ kết thúc phải khác giờ bắt đầu!', 'error'); return; }
+
+    state.hrOvertimes.push({
+      id: `ot-${Date.now()}`,
+      employeeId, date, start, end,
+      plannedMin,
+      reason,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+    saveHrData();
+    closeOvertimeModal();
+    renderHrView();
+    showToast(`Đã gửi đăng ký tăng ca ${fmtHour(start)} → ${fmtHour(end)} (${fmtHm(plannedMin)}) cho ${hrEmpName(employeeId)} — chờ ban lãnh đạo duyệt`, 'success');
   }
 
   // Ban lãnh đạo duyệt: Đồng ý / Không đồng ý (chỉ đơn đang chờ)
@@ -506,7 +764,7 @@ import { escapeHTML, showToast } from './utils.js';
     l.approvedAt = new Date().toISOString();
     saveHrData();
     renderHrView();
-    showToast(`Đã ĐỒNG Ý đơn nghỉ của ${hrEmpName(l.employeeId)} (${l.days} ngày)`, 'success');
+    showToast(`Đã ĐỒNG Ý đơn nghỉ của ${hrEmpName(l.employeeId)} (${leaveDurationText(l)})`, 'success');
   }
 
   function rejectLeave(id) {
@@ -524,8 +782,60 @@ import { escapeHTML, showToast } from './utils.js';
     showToast(`Đã KHÔNG ĐỒNG Ý đơn nghỉ của ${hrEmpName(l.employeeId)}`, 'info');
   }
 
+  // Duyệt / không duyệt / xóa đăng ký tăng ca — chỉ Admin & Ban Quản Lý
+  // (dùng chung cổng canApproveLeave với đơn nghỉ; editor chỉ gửi đăng ký).
+  function approveOvertime(id) {
+    if (!canApproveLeave()) {
+      showToast('Chỉ Admin & Ban Quản Lý mới được duyệt đăng ký tăng ca!', 'error');
+      return;
+    }
+    const o = (state.hrOvertimes || []).find(x => x.id === id);
+    if (!o || (o.status || 'pending') !== 'pending') return;
+    o.status = 'approved';
+    o.approvedBy = state.currentUser ? (state.currentUser.fullname || state.currentUser.username) : '';
+    o.approvedAt = new Date().toISOString();
+    o.updatedAt = o.approvedAt;
+    saveHrData();
+    renderHrView();
+    const act = overtimeActualMin(o);
+    showToast(`Đã ĐỒNG Ý tăng ca của ${hrEmpName(o.employeeId)} (${overtimePlannedText(o)}${act > 0 ? ` · thực tế TC ${fmtHm(act)}` : ''})`, 'success');
+  }
+
+  function rejectOvertime(id) {
+    if (!canApproveLeave()) {
+      showToast('Chỉ Admin & Ban Quản Lý mới được duyệt đăng ký tăng ca!', 'error');
+      return;
+    }
+    const o = (state.hrOvertimes || []).find(x => x.id === id);
+    if (!o || (o.status || 'pending') !== 'pending') return;
+    o.status = 'rejected';
+    o.approvedBy = state.currentUser ? (state.currentUser.fullname || state.currentUser.username) : '';
+    o.approvedAt = new Date().toISOString();
+    o.updatedAt = o.approvedAt;
+    saveHrData();
+    renderHrView();
+    showToast(`Đã KHÔNG duyệt đăng ký tăng ca của ${hrEmpName(o.employeeId)}`, 'info');
+  }
+
+  function deleteOvertime(id) {
+    // Chỉ Admin & Ban Quản Lý — editor chỉ được GỬI đăng ký mới
+    if (!canApproveLeave()) {
+      showToast('Chỉ Admin & Ban Quản Lý mới được xóa đăng ký tăng ca!', 'error');
+      return;
+    }
+    trackDeleted('hrOvertimes', id);
+    state.hrOvertimes = (state.hrOvertimes || []).filter(o => o.id !== id);
+    saveHrData();
+    renderHrView();
+    showToast('Đã xóa đăng ký tăng ca', 'info');
+  }
+
   function deleteLeave(id) {
-    if (!requireEditPermission() && !canApproveLeave()) return;
+    // Chỉ Admin & Ban Quản Lý được xóa đơn nghỉ — editor chỉ được TẠO đơn mới
+    if (!canApproveLeave()) {
+      showToast('Chỉ Admin & Ban Quản Lý mới được xóa đơn nghỉ phép!', 'error');
+      return;
+    }
     trackDeleted('hrLeaves', id);
     state.hrLeaves = (state.hrLeaves || []).filter(l => l.id !== id);
     saveHrData();
@@ -1267,15 +1577,39 @@ import { escapeHTML, showToast } from './utils.js';
         String(a.emp.name || '').localeCompare(String(b.emp.name || ''), 'vi'));
   }
 
+  // Tỷ lệ đi làm GỘP THEO BỘ PHẬN (không phụ thuộc bộ lọc): gộp ngày công /
+  // nghỉ phép / vắng của tất cả NV cùng bộ phận rồi tính % — mỗi NV trong
+  // bảng hiển thị tỷ lệ của bộ phận mình đang thuộc.
+  function computeDeptAttendanceRates(month) {
+    const stats = computeAttendanceStats(month);
+    const map = new Map(); // dept -> { work, leave, absent }
+    stats.forEach(s => {
+      const d = s.emp.department || '—';
+      if (!map.has(d)) map.set(d, { work: 0, leave: 0, absent: 0 });
+      const t = map.get(d);
+      t.work += s.work; t.leave += s.leave; t.absent += s.absent;
+    });
+    const rates = new Map();
+    map.forEach((t, d) => {
+      const counted = t.work + t.leave + t.absent;
+      rates.set(d, counted ? Math.round(t.work * 1000 / counted) / 10 : null);
+    });
+    return rates;
+  }
+
   function renderHrAttendanceStats() {
     if (!/^\d{4}-\d{2}$/.test(state.hrAttMonth || '')) state.hrAttMonth = hrTodayISO().slice(0, 7);
     const monthInput = document.getElementById('hr-att-month');
     if (monthInput && monthInput.value !== state.hrAttMonth) monthInput.value = state.hrAttMonth;
 
-    const stats = computeAttendanceStats(state.hrAttMonth);
+    const allStats = computeAttendanceStats(state.hrAttMonth);
+    // Bộ lọc bộ phận chỉ THU HẸP bảng hiển thị; chips + tỷ lệ bộ phận vẫn tính từ toàn bộ nhân viên
+    const deptFilter = document.getElementById('hr-attstats-filter-dept')?.value || 'all';
+    const stats = deptFilter === 'all' ? allStats : allStats.filter(s => (s.emp.department || '—') === deptFilter);
     const t = { work: 0, leave: 0, absent: 0, unmarked: 0 };
-    stats.forEach(s => { t.work += s.work; t.leave += s.leave; t.absent += s.absent; t.unmarked += s.unmarked; });
+    allStats.forEach(s => { t.work += s.work; t.leave += s.leave; t.absent += s.absent; t.unmarked += s.unmarked; });
     const countedAll = t.work + t.leave + t.absent;
+    const deptRates = computeDeptAttendanceRates(state.hrAttMonth);
 
     const chipsEl = document.getElementById('hr-att-stats-chips');
     if (chipsEl) {
@@ -1290,10 +1624,12 @@ import { escapeHTML, showToast } from './utils.js';
     const tbody = document.getElementById('hr-att-stats-body');
     if (!tbody) return;
     if (!stats.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:22px;color:var(--text-muted);">Chưa có dữ liệu chấm công trong tháng này.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding:22px;color:var(--text-muted);">${allStats.length ? 'Không có nhân viên nào khớp bộ lọc bộ phận trong tháng này.' : 'Chưa có dữ liệu chấm công trong tháng này.'}</td></tr>`;
       return;
     }
-    tbody.innerHTML = stats.map(s => `<tr>
+    tbody.innerHTML = stats.map(s => {
+      const deptRate = deptRates.get(s.emp.department || '—');
+      return `<tr>
         <td><strong>${escapeHTML(s.emp.name || '')}</strong>${s.emp.code ? ` <span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(s.emp.code)}</span>` : ''}</td>
         <td>${escapeHTML(s.emp.department || '—')}</td>
         <td><strong>${s.work}</strong></td>
@@ -1301,7 +1637,9 @@ import { escapeHTML, showToast } from './utils.js';
         <td>${s.absent ? `<strong style="color:var(--danger);">${s.absent}</strong>` : '0'}</td>
         <td>${s.unmarked}</td>
         <td>${s.rate === null ? '—' : `<strong>${s.rate}%</strong>`}</td>
-      </tr>`).join('');
+        <td>${deptRate === null || deptRate === undefined ? '—' : `<strong>${deptRate}%</strong>`}</td>
+      </tr>`;
+    }).join('');
   }
 
   // ─── 7) VỊ TRÍ LÀM VIỆC & KỸ NĂNG ────────────────────────────────
@@ -2637,6 +2975,11 @@ import { escapeHTML, showToast } from './utils.js';
       const pend = (state.hrLeaves || []).filter(l => (l.status || 'pending') === 'pending').length;
       return pend ? `${pend} chờ duyệt` : `${(state.hrLeaves || []).length} đơn`;
     } },
+    'hr-ot-card': { el: 'hr-mini-count-ot', count: () => {
+      const list = state.hrOvertimes || [];
+      const pend = list.filter(o => (o.status || 'pending') === 'pending').length;
+      return pend ? `${pend} chờ duyệt` : `${list.length} đơn`;
+    } },
     'hr-stats-card': { el: 'hr-mini-count-stats', count: () => {
       const days = (state.hrLeaves || []).filter(l => (l.status || 'pending') === 'approved')
         .reduce((s, l) => s + (l.days || leaveDaysCount(l.from, l.to)), 0);
@@ -2672,6 +3015,99 @@ import { escapeHTML, showToast } from './utils.js';
         if (el) el.textContent = String(HR_CARD_DEFS[cardId].count());
       } catch (e) { /* nie blokuj rendera tab Nhân Sự */ }
     });
+    try { renderHrAttMiniAnim(); } catch (e) { /* hiệu ứng động không chặn render */ }
+  }
+
+  // ─── HIỆU ỨNG ĐỘNG MINI CARD "THỐNG KÊ ĐI LÀM" ───────────────────
+  // 6 khung luân chuyển (CSS animation, JS chỉ render nội dung 1 lần):
+  //   khung 0: tên card; khung 1-5: Xưởng 1 → Xưởng 2 → QC → Cơ Điện → Văn Phòng
+  //   với mini chart đường (tỷ lệ đi làm từng ngày từ đầu tháng) + tỷ lệ hôm nay.
+  function hrAttMiniAnimSeries(dept, dates) {
+    const emps = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active' && (e.department || '') === dept);
+    return dates.map(d => {
+      let work = 0, total = 0;
+      emps.forEach(e => {
+        if (e.joinDate && d < e.joinDate) return; // bỏ ngày trước khi vào làm
+        total++;                                  // mẫu số = TỔNG số NV bộ phận (không phải số ngày đã chấm)
+        if (attStatusOf(e.id, d) === 'work') work++;
+      });
+      return total ? Math.round(work * 100 / total) : null;
+    });
+  }
+
+  // Mini chart phong cách ticker: trục Y 0..100 (gióng ngang mỗi 10), trục X
+  // vạch tượng trưng, điểm nút trên line, <90% -> đỏ. SVG co giãn LẤP ĐẦY thẻ
+  // (preserveAspectRatio="none"); nhãn trục Y là HTML định vị % (chữ không méo).
+  function hrAttMiniSparkline(series) {
+    const W = 110, H = 52, padL = 8, padR = 4, padT = 4, padB = 7;
+    const idx = series.map((v, i) => [i, v]).filter(([, v]) => v !== null);
+    if (!idx.length) return null;
+    const x = i => padL + i * (W - padL - padR) / Math.max(series.length - 1, 1);
+    const y = v => H - padB - (v / 100) * (H - padT - padB);
+    // Đường gióng ngang mỗi 10% (nhãn do HTML lo — ngoài SVG)
+    let grid = '';
+    for (let v = 0; v <= 100; v += 10) {
+      const yy = y(v).toFixed(1);
+      grid += `<line class="hr-anim-grid" x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}"/>`;
+    }
+    // Trục X: vạch tượng trưng tại mỗi điểm dữ liệu (không điền ngày)
+    let ticks = '';
+    idx.forEach(([i]) => {
+      ticks += `<line class="hr-anim-xtick" x1="${x(i).toFixed(1)}" y1="${H - padB}" x2="${x(i).toFixed(1)}" y2="${H - padB + 2.2}"/>`;
+    });
+    const pts = idx.map(([i, v]) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+    const last = idx[idx.length - 1];
+    const lx = x(last[0]).toFixed(1), ly = y(last[1]).toFixed(1);
+    const tone = last[1] >= 90 ? 'up' : 'down';           // <90% -> đỏ
+    const color = tone === 'up' ? '#34d399' : '#f87171';
+    const area = `M${pts[0]} L${pts.join(' L')} L${lx},${H - padB} L${x(idx[0][0]).toFixed(1)},${H - padB} Z`;
+    const nodes = idx.map(([i, v]) => `<circle class="hr-anim-node" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="1.5" fill="${color}"/>`).join('');
+    const svg = `<svg class="hr-anim-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">` +
+      grid + ticks +
+      `<path class="hr-anim-area" d="${area}" fill="${color}" opacity="0.12"/>` +
+      `<polyline points="${pts.join(' ')}" stroke="${color}" vector-effect="non-scaling-stroke"/>` +
+      nodes +
+      `<circle class="hr-anim-dot" cx="${lx}" cy="${ly}" r="2.2" fill="${color}" stroke="${color}" vector-effect="non-scaling-stroke"/>` +
+      `</svg>`;
+    // Nhãn trục Y (0..100 mỗi 10) — HTML định vị % theo cùng thang toạ độ
+    const ylabels = [];
+    for (let v = 0; v <= 100; v += 10) {
+      const bottomPct = ((padB + (v / 100) * (H - padT - padB)) / H * 100).toFixed(2);
+      ylabels.push(`<span class="hr-anim-ylabel" style="bottom:${bottomPct}%">${v}</span>`);
+    }
+    return { svg, ylabels: ylabels.join(''), today: last[1], tone };
+  }
+
+  function renderHrAttMiniAnim() {
+    const box = document.getElementById('hr-mini-anim-att-stats');
+    if (!box) return;
+    if (!/^\d{4}-\d{2}$/.test(state.hrAttMonth || '')) state.hrAttMonth = hrTodayISO().slice(0, 7);
+    const today = hrTodayISO();
+    const monthStart = `${state.hrAttMonth}-01`;
+    const lastDay = monthStart > today ? monthStart : today; // tháng khác → cả tháng; tháng hiện tại → tới hôm nay
+    const dates = [];
+    for (let d = monthStart; d <= lastDay && d <= `${state.hrAttMonth}-31`; d = hrShiftDateISO(d, 1)) dates.push(d);
+    const depts = ['Xưởng 1', 'Xưởng 2', 'QC', 'Cơ Điện', 'Văn Phòng'];
+    const frames = [`<span class="hr-anim-frame hr-anim-show" style="animation-delay:0s"><span class="hr-anim-name">Thống Kê Đi Làm</span><span class="hr-anim-dept">${state.hrAttMonth}</span></span>`];
+    depts.forEach((dept, i) => {
+      const series = hrAttMiniAnimSeries(dept, dates);
+      const chart = hrAttMiniSparkline(series);
+      const svg = chart ? chart.svg : '';
+      const todayRate = chart ? chart.today : null;
+      const toneCls = chart ? chart.tone : 'down';
+      // So sánh với ngày trước (mũi tên tăng/giảm như bảng điện chứng khoán)
+      const prevRate = series.length > 1 ? series[series.length - 2] : null;
+      const delta = (todayRate !== null && prevRate !== null) ? todayRate - prevRate : null;
+      const deltaTxt = delta === null ? '' : (delta > 0 ? '▲' : delta < 0 ? '▼' : '▬');
+      const deltaCls = delta === null ? '' : (delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat');
+      frames.push(`<span class="hr-anim-frame hr-anim-show" style="animation-delay:${(i + 1) * 3}s">` +
+        `<span class="hr-anim-dept">${escapeHTML(dept)}</span>` +
+        `<span class="hr-anim-wrap">${svg}${chart ? chart.ylabels : ''}</span>` +
+        `<span class="hr-anim-foot"><span class="hr-anim-today ${toneCls}">${todayRate === null ? '—' : todayRate + '%'}</span>` +
+        (deltaTxt ? `<span class="hr-anim-delta ${deltaCls}">${deltaTxt}</span>` : '') +
+        `</span></span>`);
+    });
+    box.innerHTML = frames.join('');
   }
 
   // Zsynchronizuj podświetlenie thẻ ze stanem bảng — otwarta = widoczna
@@ -2757,6 +3193,19 @@ export {
   autoMapEmployeeField,
   approveLeave,
   canApproveLeave,
+  syncLeaveDurationUI,
+  overtimeActualMin,
+  renderHrOvertimesTable,
+  openOvertimeModal,
+  closeOvertimeModal,
+  handleOvertimeSubmit,
+  approveOvertime,
+  rejectOvertime,
+  deleteOvertime,
+  renderOvertimeEmployeeSuggestions,
+  pickOvertimeEmployee,
+  handleOvertimeEmployeeKeydown,
+  hideOvertimeEmployeeSuggestions,
   closeEmployeeImportModal,
   closeEmployeeModal,
   closeLeaveModal,

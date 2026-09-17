@@ -14,7 +14,7 @@ import { loadXuong2Cuts, renderXuong2Cards } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, openPressWorkersModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
-import { applyCheckinRecord, approveLeave, closeEmployeeModal, closeLeaveModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave,   renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS } from './hr.js';
+import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { state } from './state.js';
@@ -316,6 +316,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     hrApproveLeave: approveLeave,
     hrRejectLeave: rejectLeave,
     hrDeleteLeave: deleteLeave,
+    // Đăng ký tăng ca (mini card tab Nhân Sự — duyệt/xóa chỉ Admin & Ban Quản Lý)
+    hrApproveOvertime: approveOvertime,
+    hrRejectOvertime: rejectOvertime,
+    hrDeleteOvertime: deleteOvertime,
     hrEditRecruitment: openRecruitmentModal,
     hrDeleteRecruitment: deleteRecruitment,
     // Vị trí làm việc (onclick trong HTML render động)

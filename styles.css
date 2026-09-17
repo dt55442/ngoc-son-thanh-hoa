@@ -5125,6 +5125,7 @@ table.export-preview-table {
 .hr-mini-card[data-hr-card="hr-pos-card"]       { --card-accent: #7c3aed; --card-accent-bg: #ede9fe; } /* Fioletowy   — Vị Trí */
 .hr-mini-card[data-hr-card="hr-ci-card"]        { --card-accent: #d97706; --card-accent-bg: #fef3c7; } /* Złoty       — Giờ Máy */
 .hr-mini-card[data-hr-card="hr-leave-card"]     { --card-accent: #ea580c; --card-accent-bg: #ffedd5; } /* Pomarańczowy— Xin Nghỉ Phép */
+.hr-mini-card[data-hr-card="hr-ot-card"]        { --card-accent: #7c3aed; --card-accent-bg: #ede9fe; } /* Tím          — Đăng Ký Tăng Ca */
 .hr-mini-card[data-hr-card="hr-stats-card"]     { --card-accent: #0d9488; --card-accent-bg: #ccfbf1; } /* Morski      — Thống Kê Nghỉ */
 .hr-mini-card[data-hr-card="hr-att-stats-card"] { --card-accent: #0891b2; --card-accent-bg: #cffafe; } /* Cyjan       — Thống Kê Đi Làm */
 .hr-mini-card[data-hr-card="hr-recruit-card"]   { --card-accent: #db2777; --card-accent-bg: #fce7f3; } /* Różowy      — Nhân Sự Cần */
@@ -5601,4 +5602,150 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 @media (max-width: 639.98px) {
   #x2-detail-overlay { padding: 8px; }
   .x2-detail-content { padding: 10px; }
+}
+
+/* ═══ HIỆU ỨNG ĐỘNG MINI CARD "THỐNG KÊ ĐI LÀM" — PHONG CÁCH TICKER ═══
+   Luân chuyển 6 khung (tên card → Xưởng 1 → Xưởng 2 → QC → Cơ Điện → Văn Phòng),
+   mỗi khung 3s. Panel tối như bảng điện chứng khoán: đường giá + vùng tô
+   gradient + điểm cuối nhấp nháy + số % font mono đổi màu theo mức. */
+.hr-mini-card { position: relative; overflow: hidden; }
+#hr-mini-count-att-stats { display: none; }   /* ẩn dòng đếm cũ, thay bằng animation */
+
+.hr-mini-anim {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;      /* không chặn bấm thẻ để mở bảng */
+  z-index: 2;
+  border-radius: inherit;
+}
+.hr-anim-frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;      /* chart co giãn full chiều ngang */
+  padding: 4px 6px;
+  gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+  text-align: center;
+  /* Nền panel tối kiểu widget tài chính — nổi trên thẻ sáng */
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.86));
+  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.25), 0 2px 10px rgba(15, 23, 42, 0.35);
+  border-radius: inherit;
+}
+.hr-anim-frame.hr-anim-show {
+  opacity: 1;
+  visibility: visible;
+  animation: hr-anim-cycle 18s ease-in-out infinite;
+  animation-fill-mode: backwards;  /* trong lúc chờ delay: đứng ở 0% (mờ) — không lộ khung sớm */
+}
+@keyframes hr-anim-cycle {
+  0%, 16.6%   { opacity: 0; }     /* 0–3s: fade in */
+  8.3%, 15%   { opacity: 1; }     /* 1.5–2.7s: giữ */
+  23.3%, 100% { opacity: 0; }     /* 3s: fade out rồi chờ tới lượt */
+}
+.hr-anim-dept {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #94a3b8;                       /* slate nhạt trên nền tối */
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  line-height: 1.1;
+}
+.hr-anim-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  line-height: 1.1;
+}
+.hr-anim-chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.45));
+}
+.hr-anim-wrap {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.hr-anim-chart polyline {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hr-anim-grid {
+  stroke: rgba(148, 163, 184, 0.16);       /* đường gióng ngang mờ */
+  stroke-width: 0.5;
+}
+.hr-anim-ylabel {
+  position: absolute;
+  left: -2px;
+  transform: translateY(50%);
+  font-size: 0.5rem;
+  line-height: 1;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color: #64748b;
+}
+.hr-anim-xtick {
+  stroke: rgba(148, 163, 184, 0.35);       /* vạch chia trục X (tượng trưng) */
+  stroke-width: 0.6;
+}
+.hr-anim-node {
+  stroke: rgba(15, 23, 42, 0.9);           /* viền tối cho điểm nút nổi trên line */
+  stroke-width: 0.6;
+}
+.hr-anim-chart .hr-anim-area { stroke: none; }
+.hr-anim-chart .hr-anim-dot {
+  stroke-width: 1.2;
+  animation: hr-anim-pulse 1.6s ease-in-out infinite;   /* điểm giá live nhấp nháy */
+}
+@keyframes hr-anim-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.hr-anim-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1;
+}
+.hr-anim-today {
+  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;   /* số không nhảy chữ — kiểu bảng điện */
+  color: #34d399;
+  line-height: 1;
+}
+.hr-anim-today.flat { color: #fbbf24; } /* 70–85%: vàng — trung bình */
+.hr-anim-today.down { color: #f87171; } /* <90%: đỏ — cần chú ý */
+.hr-anim-delta {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #64748b;
+}
+.hr-anim-delta.up   { color: #34d399; }  /* ▲ so với hôm trước */
+.hr-anim-delta.down { color: #f87171; }  /* ▼ so với hôm trước */
+/* Tạm dừng luân chuyển khi rê chuột — xem kỹ 1 bộ phận */
+.hr-mini-card:hover .hr-anim-frame.hr-anim-show,
+.hr-mini-card:focus-visible .hr-anim-frame.hr-anim-show {
+  animation-play-state: paused;
+}
+.hr-mini-card:hover .hr-anim-dot,
+.hr-mini-card:focus-visible .hr-anim-dot {
+  animation-play-state: paused;
+}
+/* Tôn trọng tùy chọn giảm chuyển động của người dùng */
+@media (prefers-reduced-motion: reduce) {
+  .hr-anim-frame { animation: none !important; }
+  .hr-anim-frame.hr-anim-show { opacity: 1; }
+  .hr-anim-chart .hr-anim-dot { animation: none !important; }
 }

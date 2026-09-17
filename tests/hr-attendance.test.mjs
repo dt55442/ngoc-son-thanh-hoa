@@ -183,6 +183,31 @@ hr.renderHrAttendanceStats();
 check('HR-ATT: chips thống kê có tỷ lệ đi làm tổng', document.getElementById('hr-att-stats-chips').innerHTML.includes('Tỷ lệ đi làm'));
 check('HR-ATT: bảng thống kê có cột tỷ lệ 25% cho NV A', document.getElementById('hr-att-stats-body').innerHTML.includes('25%'));
 
+// Bộ lọc bộ phận (ID RIÊNG hr-attstats-filter-dept — đừng trùng hr-att-filter-dept của card Chấm Công)
+document.getElementById('hr-attstats-filter-dept').value = 'Xưởng 2';
+hr.renderHrAttendanceStats();
+const bodyX2 = document.getElementById('hr-att-stats-body').innerHTML;
+check('HR-ATT: lọc bộ phận "Xưởng 2" -> chỉ còn NV B (không NV A)', bodyX2.includes('Trần Thị B') && !bodyX2.includes('Nguyễn Văn A'));
+document.getElementById('hr-attstats-filter-dept').value = 'all';
+hr.renderHrAttendanceStats();
+const bodyAll = document.getElementById('hr-att-stats-body').innerHTML;
+check('HR-ATT: bỏ lọc ("all") -> hiện lại cả NV A và NV B', bodyAll.includes('Nguyễn Văn A') && bodyAll.includes('Trần Thị B'));
+
+// Hiệu ứng động mini card Thống Kê Đi Làm (6 khung: tên + 5 bộ phận)
+hr.renderHrView();
+const animHTML = document.getElementById('hr-mini-anim-att-stats').innerHTML;
+check('HR-ATT: anim có 6 khung (tên card + 5 bộ phận)', (animHTML.match(/hr-anim-frame/g) || []).length === 6);
+check('HR-ATT: anim đủ 5 bộ phận Xưởng 1/Xưởng 2/QC/Cơ Điện/Văn Phòng', ['Xưởng 1', 'Xưởng 2', 'QC', 'Cơ Điện', 'Văn Phòng'].every(d => animHTML.includes(d)));
+check('HR-ATT: anim có sparkline SVG + nhãn hôm nay', animHTML.includes('<svg class="hr-anim-chart"') && animHTML.includes('hr-anim-today'));
+// Trục Y 0..100 + vạch chia + điểm nút trên line
+check('HR-ATT: anim chart có trục Y (gióng ngang + nhãn 0..100)', animHTML.includes('hr-anim-grid') && animHTML.includes('hr-anim-ylabel') && animHTML.includes('>100<'));
+check('HR-ATT: anim chart có vạch trục X + điểm nút', animHTML.includes('hr-anim-xtick') && animHTML.includes('hr-anim-node'));
+// Công thức %: mẫu số = TỔNG số NV bộ phận ĐÃ VÀO LÀM ngày đó (Xưởng 1: A + D từ 20/06).
+// Ngày 05/06 chỉ A thuộc mẫu (D chưa vào) và A đi làm -> 100%;
+// ngày cuối tháng 30/06 cả A+D thuộc mẫu (2 NV) mà không ai được chấm -> 0% (đỏ).
+check('HR-ATT: anim Xưởng 1 tỷ lệ hôm nay 0% (mẫu số = 2 NV, không ai chấm)', /Xưởng 1[\s\S]{0,20000}?hr-anim-today[^>]*>0%/.test(animHTML));
+check('HR-ATT: anim Xưởng 1 có điểm 100% ngày 05/06 (1/1 NV thuộc mẫu đi làm)', /Xưởng 1[\s\S]{0,20000}?>100[\s\S]{0,20000}?hr-anim-today/.test(animHTML));
+
 // ─── G. XÓA NHÂN VIÊN / VỊ TRÍ DỌN DẸP ────────────────────────
 hr.toggleAttendancePosition('empB', '2024-06-15', p2);
 hr.deleteEmployee('empB');

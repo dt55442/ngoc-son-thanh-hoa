@@ -1733,6 +1733,12 @@
             <span class="hr-mini-desc">Đơn nghỉ + duyệt</span>
             <span class="hr-mini-count" id="hr-mini-count-leave">–</span>
           </button>
+          <button type="button" class="hr-mini-card" data-hr-card="hr-ot-card" aria-expanded="false" title="Đăng ký tăng ca — giờ dự kiến + giờ TC thực tế tự lấy từ Bảng bố trí theo ngày">
+            <span class="hr-mini-ic"><i data-lucide="clock-plus"></i></span>
+            <span class="hr-mini-title">Tăng Ca</span>
+            <span class="hr-mini-desc">Đăng ký + duyệt</span>
+            <span class="hr-mini-count" id="hr-mini-count-ot">–</span>
+          </button>
           <button type="button" class="hr-mini-card" data-hr-card="hr-stats-card" aria-expanded="false" title="Thống kê nghỉ phép — TOP nhân viên theo số ngày nghỉ">
             <span class="hr-mini-ic"><i data-lucide="bar-chart-3"></i></span>
             <span class="hr-mini-title">Thống Kê Nghỉ</span>
@@ -1742,8 +1748,11 @@
           <button type="button" class="hr-mini-card" data-hr-card="hr-att-stats-card" aria-expanded="false" title="Thống kê đi làm theo tháng">
             <span class="hr-mini-ic"><i data-lucide="calendar-check-2"></i></span>
             <span class="hr-mini-title">Thống Kê Đi Làm</span>
-            <span class="hr-mini-desc">Tỷ lè đi làm theo tháng</span>
+            <span class="hr-mini-desc">Tỷ lệ đi làm theo tháng</span>
             <span class="hr-mini-count" id="hr-mini-count-att-stats">–</span>
+            <!-- Hiệu ứng động luân chuyển: tên card → tỷ lệ đi làm từng bộ phận
+                 (mini chart đường từ đầu tháng + tỷ lệ hôm nay). Render trong hr.js -->
+            <span class="hr-mini-anim" id="hr-mini-anim-att-stats"></span>
           </button>
           <button type="button" class="hr-mini-card" data-hr-card="hr-recruit-card" aria-expanded="false" title="Nhân sự cần — nhu cầu tuyển dụng">
             <span class="hr-mini-ic"><i data-lucide="user-search"></i></span>
@@ -2012,6 +2021,46 @@
         </div>
       </div>
 
+      <!-- Thẻ "Đăng Ký Tăng Ca" — tương đồng "Xin Nghỉ Phép": giờ dự kiến do người
+           đăng ký nhập; giờ TC THỰC TẾ tự tính từ Bảng bố trí vị trí theo ngày -->
+      <div class="planning-card hr-card-hidden" id="hr-ot-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="clock-plus"></i> Đăng Ký Tăng Ca</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="hr-count" id="hr-ot-count"></span>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-overtime" data-perm="hr" title="Gửi đăng ký tăng ca">
+              <i data-lucide="clock-plus"></i> Đăng Ký Tăng Ca
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-ot" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-ot-table">
+            <thead>
+              <tr>
+                <th>Nhân Viên</th>
+                <th>Ngày</th>
+                <th>Giờ Dự Kiến</th>
+                <th>TC Thực Tế</th>
+                <th>Trạng Thái</th>
+                <th>Lý Do</th>
+                <th class="text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="hr-ot-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:8px; padding: 0 12px 10px;">
+          <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+          Cột "TC Thực Tế" tự tính từ <strong>Bảng bố trí vị trí theo ngày</strong> — giờ kết thúc dự kiến có thể
+          thay đổi do sự cố, nên khi giờ làm được cập nhật lại trên bảng, giờ tăng ca thực tế tự thay đổi theo.
+        </div>
+      </div>
+
       <!-- BẢNG 5: THỐNG KÊ NGHỈ PHÉP & TOP -->
       <div class="planning-card hr-card-hidden" id="hr-stats-card">
         <div class="planning-card-header">
@@ -2052,7 +2101,11 @@
             <label for="hr-att-month">Tháng:</label>
             <input type="month" id="hr-att-month" style="width:160px;">
           </div>
-          <span class="hr-count">Tỷ lệ đi làm = ngày công / (công + nghỉ phép + vắng) — tháng hiện tại tính tới hôm nay</span>
+          <div class="filter-item">
+            <label for="hr-attstats-filter-dept">Bộ phận:</label>
+            <select id="hr-attstats-filter-dept"></select>
+          </div>
+          <span class="hr-count">Tỷ lệ đi làm = ngày công / (công + nghỉ phép + vắng) — tháng hiện tại tính tới hôm nay. Tỷ Lệ Bộ Phận tính gộp toàn bộ NV cùng bộ phận (không phụ thuộc bộ lọc).</span>
         </div>
         <div id="hr-att-stats-chips" class="hr-stat-chips"></div>
         <div class="table-responsive">
@@ -2065,7 +2118,8 @@
                 <th>Nghỉ Phép</th>
                 <th>Vắng</th>
                 <th>Chưa Chấm</th>
-                <th>Tỷ Lệ Đi Làm</th>
+                <th>Tỷ Lệ Đi Làm (Cá Nhân)</th>
+                <th>Tỷ Lệ Đi Làm (Bộ Phận)</th>
               </tr>
             </thead>
             <tbody id="hr-att-stats-body">
@@ -2292,6 +2346,21 @@
             <input type="date" id="leave-from" required>
             <input type="date" id="leave-to" required>
           </div>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+            Chọn "Nửa ngày" hoặc "Theo giờ" ở mục Thời Gian Nghỉ để nghỉ trong 1 ngày.
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="leave-duration">Thời Gian Nghỉ</label>
+          <select id="leave-duration">
+            <option value="full" selected>Cả ngày</option>
+            <option value="half">Nửa ngày (0.5 ngày)</option>
+            <option value="hours">Theo giờ (nghỉ trong ngày)</option>
+          </select>
+        </div>
+        <div class="form-group" id="group-leave-hours" style="display:none;">
+          <label for="leave-hours">Số Giờ Nghỉ <span class="required">*</span> <span style="font-size:0.75rem; color:var(--text-muted);">(1 ngày làm = 8 giờ — VD: 4 giờ = 0.5 ngày)</span></label>
+          <input type="number" id="leave-hours" min="0.5" max="12" step="0.5" value="4" inputmode="decimal" placeholder="VD: 4">
         </div>
         <div class="form-group">
           <label for="leave-reason">Lý Do</label>
@@ -2304,6 +2373,55 @@
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-leave">Hủy Bỏ</button>
           <button type="submit" class="btn btn-primary"><i data-lucide="send"></i> Gửi Đơn</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-3: ĐĂNG KÝ TĂNG CA (giờ kết thúc chỉ là DỰ KIẾN — giờ thực tế
+       tự lấy từ Bảng bố trí vị trí theo ngày khi được cập nhật lại) -->
+  <div class="modal-overlay" id="modal-overtime">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="clock-plus"></i> Đăng Ký Tăng Ca</h3>
+        <button class="modal-close-btn" id="btn-close-overtime"><i data-lucide="x"></i></button>
+      </div>
+      <form id="ot-form" style="padding: 20px;">
+        <div class="form-group">
+          <label for="ot-employee">Nhân Viên <span class="required">*</span></label>
+          <div class="hr-combobox">
+            <input type="text" id="ot-employee" placeholder="Gõ tên / mã NV / SĐT để tìm..." autocomplete="off">
+            <input type="hidden" id="ot-employee-id">
+            <div class="hr-combobox-list" id="ot-employee-suggest"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="ot-date">Ngày Tăng Ca <span class="required">*</span></label>
+          <input type="date" id="ot-date" required>
+        </div>
+        <div class="form-group">
+          <label>Giờ Dự Kiến (từ → đến) <span class="required">*</span></label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <select id="ot-start" required></select>
+            <select id="ot-end" required></select>
+          </div>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+            Giờ kết thúc CHỈ LÀ DỰ KIẾN — có thể thay đổi do sự cố. Giờ tăng ca
+            <strong>thực tế</strong> sẽ tự lấy theo giờ làm cập nhật trong
+            <strong>Bảng bố trí vị trí theo ngày</strong>.
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="ot-reason">Lý Do</label>
+          <textarea id="ot-reason" rows="2" placeholder="VD: gấp đơn hàng, sửa máy, thiếu người..."></textarea>
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">
+          <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+          Đăng ký gửi đi ở trạng thái "Chờ duyệt" — ban lãnh đạo (Admin/Ban Quản Lý) sẽ duyệt Đồng ý / Không đồng ý.
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-overtime">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="send"></i> Gửi Đăng Ký</button>
         </div>
       </form>
     </div>

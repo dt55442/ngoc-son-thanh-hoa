@@ -203,7 +203,19 @@ import { state } from './state.js';
     if (input.required) { txt.required = true; input.removeAttribute('required'); }
 
     parent.insertBefore(txt, input);
-    input.style.display = 'none';
+    // Ẩn ô gốc NHƯNG vẫn giữ nó được bốc dàn trang (position:fixed, out-of-flow):
+    // nếu dùng display:none thì input.showPicker() KHÔNG có điểm neo → bảng lịch
+    // bị trình duyệt (Chrome/Edge) đẩy lên góc trên-trái màn hình, rất bất tiện.
+    // Ô gốc trong suốt + không nhận chuột; trước khi mở picker sẽ được neo đúng
+    // vị trí ô chữ (xem openNativePicker bên dưới).
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    input.style.top = '0px';
+    input.style.width = '1px';
+    input.style.height = '1px';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    input.style.zIndex = '-1';
 
     const syncTextFromNative = () => {
       const d = isoToDmy(input.value);
@@ -244,8 +256,19 @@ import { state } from './state.js';
     // form.reset() đặt lại giá trị nội bộ (không qua setter) → đồng bộ sau khi reset xong
     const form = input.closest ? input.closest('form') : null;
     if (form) form.addEventListener('reset', () => setTimeout(syncTextFromNative, 0));
-    // Bấm vào ô chữ → mở lịch chọn ngày của ô gốc
-    const openNativePicker = () => { try { if (input.showPicker) input.showPicker(); } catch (e) { /* trình duyệt chặn */ } };
+    // Bấm vào ô chữ → mở lịch chọn ngày của ô gốc, neo ĐÚNG vị trí ô chữ:
+    // đặt ô gốc (invisible) đè lên ô chữ theo tọa độ khung nhìn rồi mới gọi
+    // showPicker() — không thì lịch hiện bừa ở góc trên-trái màn hình.
+    const openNativePicker = () => {
+      try {
+        const r = txt.getBoundingClientRect();
+        input.style.left = Math.round(r.left) + 'px';
+        input.style.top = Math.round(r.top) + 'px';
+        input.style.width = Math.max(1, Math.round(r.width)) + 'px';
+        input.style.height = Math.max(1, Math.round(r.height)) + 'px';
+        if (input.showPicker) input.showPicker();
+      } catch (e) { /* trình duyệt chặn */ }
+    };
     txt.addEventListener('click', openNativePicker);
     txt.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); openNativePicker(); } });
 

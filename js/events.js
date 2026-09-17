@@ -15,7 +15,7 @@ import { addPressLine, addPressStick, closePressModal, closePressNoteModal, clos
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { deleteXuong2Cut, editXuong2Cut, handleXuong2CutSubmit, resetXuong2CutForm, updateXuong2CutLinked, updateXuong2CutRemain, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
-import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
+import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -751,6 +751,33 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-leave', 'click', closeLeaveModal);
     safeOn('btn-cancel-leave', 'click', closeLeaveModal);
     safeOn('leave-form', 'submit', handleLeaveSubmit);
+    // Thời gian nghỉ: cả ngày / nửa ngày (0.5) / theo giờ — đổi chế độ hoặc
+    // đổi "Từ ngày" → đồng bộ lại form (khóa "Đến ngày", hiện ô số giờ)
+    safeOn('leave-duration', 'change', syncLeaveDurationUI);
+    safeOn('leave-from', 'change', syncLeaveDurationUI);
+    // ── Đăng ký tăng ca (mini card tương đồng "Xin Nghỉ Phép") ──
+    safeOn('btn-add-overtime', 'click', openOvertimeModal);
+    safeOn('btn-close-overtime', 'click', closeOvertimeModal);
+    safeOn('btn-cancel-overtime', 'click', closeOvertimeModal);
+    safeOn('ot-form', 'submit', handleOvertimeSubmit);
+    const otEmpInput = document.getElementById('ot-employee');
+    if (otEmpInput) {
+      otEmpInput.addEventListener('input', renderOvertimeEmployeeSuggestions);
+      otEmpInput.addEventListener('focus', renderOvertimeEmployeeSuggestions);
+      otEmpInput.addEventListener('keydown', handleOvertimeEmployeeKeydown);
+    }
+    const otSuggestBox = document.getElementById('ot-employee-suggest');
+    if (otSuggestBox) {
+      // mousedown để chọn TRƯỚC khi input mất focus
+      otSuggestBox.addEventListener('mousedown', (e) => {
+        const item = e.target && e.target.closest ? e.target.closest('[data-emp-id]') : null;
+        if (item) { e.preventDefault(); pickOvertimeEmployee(item.getAttribute('data-emp-id')); }
+      });
+    }
+    // Bấm ra ngoài ô gợi ý tăng ca → đóng danh sách
+    document.addEventListener('click', (e) => {
+      if (!(e.target && e.target.closest && e.target.closest('.hr-combobox'))) hideOvertimeEmployeeSuggestions();
+    });
     // Ô nhân viên: gõ tên → danh sách gợi ý → chọn (chuột hoặc bàn phím)
     const leaveEmpInput = document.getElementById('leave-employee');
     if (leaveEmpInput) {
@@ -824,6 +851,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Thu gọn / mở rộng các thẻ bảng Nhân Sự (obok lśni thẻ nôi)
     safeOn('btn-toggle-hr-emp', 'click', () => { toggleRateTableCollapse('hr-emp-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-leave', 'click', () => { toggleRateTableCollapse('hr-leave-card'); syncHrMiniActive(); });
+    safeOn('btn-toggle-hr-ot', 'click', () => { toggleRateTableCollapse('hr-ot-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-stats', 'click', () => { toggleRateTableCollapse('hr-stats-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-recruit', 'click', () => { toggleRateTableCollapse('hr-recruit-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-posneed', 'click', () => { toggleRateTableCollapse('hr-posneed-card'); syncHrMiniActive(); });
@@ -875,6 +903,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     });
     // ── Thống kê đi làm theo tháng ──
     safeOn('hr-att-month', 'change', (e) => hrAttSetMonth(e.target.value));
+    // Bộ lọc bộ phận bảng thống kê đi làm (ID RIÊNG — hr-att-filter-dept là bộ lọc của card Chấm Công) — chỉ thu hẹp bảng
+    safeOn('hr-attstats-filter-dept', 'change', renderHrAttendanceStats);
     safeOn('btn-toggle-hr-att-stats', 'click', () => { toggleRateTableCollapse('hr-att-stats-card'); syncHrMiniActive(); });
     // ── Vị trí làm việc & kỹ năng ──
     safeOn('btn-add-position', 'click', () => openPositionModal());

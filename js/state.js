@@ -36,6 +36,11 @@
   const STORAGE_KEY_HR_ATTENDANCE = 'bamboo_tracker_hr_attendance_v1';
   // Giờ nạp từ máy chấm công (Excel): 1 bản ghi / NV / ngày {in, out, punches}
   const STORAGE_KEY_HR_CHECKINS   = 'bamboo_tracker_hr_checkins_v1';
+  // Đăng ký tăng ca: { id, employeeId, date, start, end (giờ DỰ KIẾN), plannedMin,
+  // reason, status pending|approved|rejected, approvedBy, approvedAt, createdAt, updatedAt }
+  // Giờ tăng ca THỰC TẾ KHÔNG lưu ở đây — tự tính từ Bảng bố trí vị trí theo ngày
+  // (hrAssignments) nên luôn khớp giờ thật sau khi sửa/sự cố (js/hr.js overtimeActualMin)
+  const STORAGE_KEY_HR_OVERTIMES  = 'bamboo_tracker_hr_overtimes_v1';
   // Lịch sử sửa đổi (audit log): ai đã sửa gì, ở tab nào, lúc nào — chỉ Admin xem được
   const STORAGE_KEY_HISTORY = 'bamboo_tracker_history_v1';
   // Dấu vết xóa (tombstone) cho đồng bộ mây: { <tên-danh-sách>: { <id>: <thời điểm xóa ISO> } }
@@ -97,6 +102,7 @@
     hrAttDate: '',     // ngày đang xem của bảng chấm công ('YYYY-MM-DD')
     hrAttMonth: '',    // tháng đang xem của thống kê đi làm ('YYYY-MM')
     hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
+    hrOvertimes: [],   // [{ id, employeeId, date, start, end (dự kiến), plannedMin, reason, status, approvedBy, approvedAt, ... }] — đăng ký tăng ca (giờ thực tế tự tính từ hrAssignments)
     qcExports: [],
     // Bộ lọc hợp nhất trong thẻ Xuất Hàng (tab QC): năm ('all' = tất cả) +
     // chips tuần (mảng rỗng = tất cả) + từ khóa tìm kiếm theo tên sản phẩm
@@ -180,6 +186,7 @@ export {
   STORAGE_KEY_HR_POSITIONS,
   STORAGE_KEY_HR_ATTENDANCE,
   STORAGE_KEY_HR_CHECKINS,
+  STORAGE_KEY_HR_OVERTIMES,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,
   state

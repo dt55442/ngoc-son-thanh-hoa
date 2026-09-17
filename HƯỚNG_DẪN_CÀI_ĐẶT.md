@@ -86,6 +86,19 @@ Khi online (Firebase), dữ liệu được đồng bộ qua đám mây **KHÔNG
 - **Admin / Editor / Ban Quản Lý** đều được đẩy dữ liệu lên mây (trước đây Ban Quản Lý bị chặn → lần xóa của họ không bao giờ lên mây, khiến dòng đã xóa hồi sinh sau mỗi lần tải lại trang).
 - **Viewer / khách** chỉ xem. Nếu rules Firebase chưa cập nhật, hãy dán lại file `firestore.rules` (v3) vào Firebase Console → Rules → **Publish**.
 
+### 🟢 Badge trạng thái đồng bộ (góc trên phải)
+- **Đã đồng bộ** (xanh) — dữ liệu máy đã nằm trên mây, mọi máy đang thấy cùng dữ liệu.
+- **Đang chờ đẩy / đang nhận…** (vàng nhấp nháy) — app đang tự đồng bộ, chờ 1–2 giây là xong.
+- **Mất mạng** (đỏ) — thay đổi được giữ trên máy, có mạng lại là tự đẩy lên, không mất.
+- **Chưa đăng nhập / Chỉ xem / Máy cục bộ** (xám) — máy này chỉ xem; muốn nhập liệu và đồng bộ thì đăng nhập tài khoản quyền Sửa/Quản trị.
+- Badge chỉ để THEO DÕI — **không cần bấm nút "Tải Từ Mây"** chỉ vì badge vàng; 2 nút trong menu ⋮ chỉ dùng khi nghi máy bị thiếu/tua ngược dữ liệu.
+
+### 🛟 AUTO BACKUP — chống mất dữ liệu do sai xót/xóa nhầm (3 lớp)
+1. **Bản cất trên máy** — app tự cất tối đa 10 snapshot gần nhất (nén gzip) tại các thời điểm rủi ro: trước khi tải dữ liệu từ mây về, trước khi nạp file JSON, sau mỗi lần đồng bộ mây (tối đa 1 lần/5 phút). Admin mở qua menu ⋮ → **"Phục Hồi Tự Động (Bản Cất Trên Máy)"**.
+2. **Bản cất trên mây** — mỗi ngày 1 bản (giữ 14 ngày), tự cất sau lần đẩy mây đầu tiên trong ngày. Admin mở qua menu ⋮ → **"Bản Cất Dự Phòng Trên Mây"**. Phòng cả trường hợp máy hỏng localStorage/Windows.
+3. **Bản cất trong thư mục dữ liệu** — nếu đã chọn thư mục dữ liệu: trước khi ghi đè `bamboo_data.json`, app tự copy bản cũ sang thư mục `backups/` (giữ 10 bản, tối đa 1 bản/10 phút).
+- Phục hồi (bản cất nào cũng vậy) luôn **GỘP KHÉO**: bản ghi có mốc thời gian mới hơn thắng, dữ liệu máy/mây đang có mà mới hơn sẽ không bị ghi đè; bản ghi đã xóa đúng quy trình (có dấu vết xóa) không bị hồi sinh.
+
 ---
 
 ## 💡 LƯU Ý

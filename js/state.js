@@ -46,6 +46,8 @@
   // Dấu vết xóa (tombstone) cho đồng bộ mây: { <tên-danh-sách>: { <id>: <thời điểm xóa ISO> } }
   // Giúp lần XÓA lan truyền qua mọi máy (bản ghi đã xóa không bị máy khác đẩy ngược lên mây) — xem js/tombstone.js
   const STORAGE_KEY_DELETED_IDS = 'bamboo_tracker_deleted_ids_v1';
+  // Auto backup cục bộ: ring buffer 10 snapshot gần nhất — xem js/autobackup.js
+  const STORAGE_KEY_AUTOBACKUP = 'bamboo_tracker_autobackup_v1';
 
   const STAGES = {
     say1:     { id: 'say1',     name: '1. Sấy 1',        short: 'Sấy 1',    next: 'say2'     },
@@ -148,6 +150,9 @@
     deletedIds: {},
     // Lịch sử sửa đổi (audit log) — tối đa HISTORY_LIMIT dòng gần nhất, chỉ Admin xem được
     history: [],
+    // Bản cất tự động (auto backup cục bộ): [{ ts, by, reason, data }] — js/autobackup.js
+    // data = chuỗi JSON snapshot toàn bộ dữ liệu (hoặc { gz: '<base64 gzip>' } sau nén nền)
+    autoBackups: [],
     // Chế độ chọn nhiều lô để chuyển công đoạn cùng lúc
     multiTransferMode: false,
     multiSelectedIds: [],
@@ -166,6 +171,7 @@ export {
   STORAGE_KEY_CUSTOM_CHARTS,
   STORAGE_KEY_DATA,
   STORAGE_KEY_DELETED_IDS,
+  STORAGE_KEY_AUTOBACKUP,
   STORAGE_KEY_HISTORY,
   STORAGE_KEY_MATERIAL_PLAN,
   STORAGE_KEY_MATERIAL_RATES,

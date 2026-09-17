@@ -96,6 +96,12 @@
           <i data-lucide="hard-drive" style="width:12px;height:12px;"></i> File: Chưa kết nối
         </div>
 
+        <!-- Badge trạng thái đồng bộ mây (tự động 2 chiều — js/cloud.js updateSyncBadge) -->
+        <div class="sync-status-badge off" id="sync-status-badge" title="Trạng thái đồng bộ dữ liệu mây (tự động 2 chiều)">
+          <span class="sync-dot"></span>
+          <span id="sync-status-text">Máy cục bộ (offline)</span>
+        </div>
+
         <!-- Nút Đăng Nhập (hiện khi CHƯA đăng nhập - chế độ xem công khai) -->
         <button class="btn btn-primary" id="btn-open-login" style="display:none;">
           <i data-lucide="log-in"></i>
@@ -132,6 +138,12 @@
             </button>
             <button class="dropdown-item" id="btn-pull-cloud">
               <i data-lucide="cloud-download" style="color:#0284c7;"></i> Tải Dữ Liệu Từ Mây Về Máy
+            </button>
+            <button class="dropdown-item" id="btn-open-autobackup" style="display:none;">
+              <i data-lucide="archive" style="color:#7c3aed;"></i> Phục Hồi Tự Động (Bản Cất Trên Máy)
+            </button>
+            <button class="dropdown-item" id="btn-open-cloud-backup" style="display:none;">
+              <i data-lucide="cloud" style="color:#0284c7;"></i> Bản Cất Dự Phòng Trên Mây
             </button>
             <button class="dropdown-item" id="btn-export-json">
               <i data-lucide="download"></i> Sao Lưu Dữ Liệu (JSON)
@@ -3541,6 +3553,51 @@
 
   <!-- Vùng in chuyên dụng: chỉ hiển thị khi In/Lưu PDF từ màn xem trước -->
   <div id="export-preview-print-area" aria-hidden="true"></div>
+
+  <!-- MODAL: PHỤC HỒI TỰ ĐỘNG — BẢN CẤT TRÊN MÁY (ADMIN ONLY) -->
+  <!-- App tự cất snapshot tại các thời điểm rủi ro; phục hồi luôn GỘP KHÉO — js/autobackup.js -->
+  <div class="modal-overlay" id="modal-autobackup">
+    <div class="modal-card" style="max-width:560px;">
+      <div class="modal-header">
+        <h3><i data-lucide="archive"></i> Bản Cất Tự Động Trên Máy</h3>
+        <button class="modal-close-btn" id="btn-close-autobackup"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding:16px 20px;">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
+          App tự cất tối đa <strong>10 bản</strong> snapshot toàn bộ dữ liệu tại các thời điểm nhạy cảm:
+          trước khi tải từ mây về, trước khi nạp file JSON, và sau mỗi lần đồng bộ mây (tối đa 1 lần/5 phút).
+          Phục hồi luôn <strong>gộp khéo</strong> — bản ghi mới hơn của máy/mây vẫn được giữ, không ghi đè mù quáng.
+        </p>
+        <div id="autobackup-list" style="display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow:auto;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-autobackup">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BẢN CẤT DỰ PHÒNG TRÊN MÂY (ADMIN ONLY) — 1 bản/ngày, giữ 14 ngày -->
+  <div class="modal-overlay" id="modal-cloud-backup">
+    <div class="modal-card" style="max-width:560px;">
+      <div class="modal-header">
+        <h3><i data-lucide="cloud"></i> Bản Cất Dự Phòng Trên Mây</h3>
+        <button class="modal-close-btn" id="btn-close-cloud-backup"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding:16px 20px;">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
+          Mỗi ngày 1 bản (nén gzip, giữ <strong>14 ngày</strong>), tự cất sau lần đẩy dữ liệu lên mây
+          đầu tiên trong ngày. Dùng để phục hồi khi máy hỏng localStorage/Windows — phòng sâu hơn bản cất trên máy.
+        </p>
+        <div id="cloudbackup-list" style="display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow:auto;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-reload-cloudbackups" title="Nạp lại danh sách từ mây">
+          <i data-lucide="refresh-cw"></i> Nạp Lại
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-cancel-cloud-backup">Đóng</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL 7: LƯU DỮ LIỆU CỤC BỘ -->
   <div class="modal-overlay" id="modal-save-local">

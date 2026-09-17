@@ -7,6 +7,7 @@ import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
 import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
+import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
 import { showToast } from './utils.js';
 
@@ -300,6 +301,8 @@ import { showToast } from './utils.js';
     try { if (fbSeedCore === null) fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
     // XEM CÔNG KHAI: lắng nghe dữ liệu ngay cả khi CHƯA đăng nhập
     setupFirestoreSync();
+    wireSyncBadgeListeners();
+    updateSyncBadge();
     applyRoleToUI(state.currentUser ? state.currentUser.role : null);
     try {
       window.firebase.auth().onAuthStateChanged((user) => handleFirebaseAuth(user));
@@ -735,7 +738,7 @@ import { showToast } from './utils.js';
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       renderAll();
-    } finally { fbApplying = false; }
+    } finally { fbApplying = false; updateSyncBadge(); }
   }
 
   // Có quyền ghi dữ liệu lên mây không? (Quản Trị / Người Chỉnh Sửa / Ban Quản Lý)
@@ -744,6 +747,34 @@ import { showToast } from './utils.js';
   function canPushToCloud() {
     const r = state.currentUser ? state.currentUser.role : null;
     return r === 'admin' || r === 'editor' || r === 'manager';
+  }
+
+  // ─── BADGE TRẠNG THÁI ĐỒNG BỘ (header) ────────────────────────
+  // Cho người dùng biết dữ liệu đã lên mây hay chưa mà không phải đoán/bấm nút:
+  //   🟢 Đã đồng bộ · 🟡 Đang chờ đẩy / đang nhận · 🔴 Mất mạng · ⚪ chưa đăng nhập/offline
+  let fbBadgeWired = false;
+  function updateSyncBadge() {
+    const el = document.getElementById('sync-status-badge');
+    if (!el) return;
+    const txt = document.getElementById('sync-status-text');
+    let cls = 'ok', label = 'Đã đồng bộ';
+    if (!window.__BAMBOO_FIREBASE_READY__ || !fbEnabled) { cls = 'off'; label = 'Máy cục bộ (offline)'; }
+    else if (!navigator.onLine) { cls = 'err'; label = 'Mất mạng — chờ đồng bộ lại'; }
+    else if (!fbAuthLoaded) { cls = 'wait'; label = 'Đang kết nối mây…'; }
+    else if (!state.currentUser) { cls = 'off'; label = 'Chưa đăng nhập — chỉ xem'; }
+    else if (!canPushToCloud()) { cls = 'off'; label = 'Chỉ xem — không đẩy mây'; }
+    else if (fbApplying) { cls = 'wait'; label = 'Đang nhận dữ liệu mây…'; }
+    else if (fbDirty) { cls = 'wait'; label = 'Đang chờ đẩy lên mây…'; }
+    el.className = 'sync-status-badge ' + cls;
+    if (txt) txt.textContent = label;
+    el.title = 'Trạng thái đồng bộ dữ liệu mây (tự động 2 chiều)';
+  }
+  function wireSyncBadgeListeners() {
+    if (fbBadgeWired) return;
+    fbBadgeWired = true;
+    window.addEventListener('online', updateSyncBadge);
+    window.addEventListener('offline', updateSyncBadge);
+    document.addEventListener('visibilitychange', updateSyncBadge);
   }
 
   // Đẩy dữ liệu hiện tại lên mây (admin/editor/manager; debounce 600ms)
@@ -757,6 +788,7 @@ import { showToast } from './utils.js';
     fbDirty = true;
     clearTimeout(fbPushTimer);
     fbPushTimer = setTimeout(() => doFirePush(), 600);
+    updateSyncBadge();
   }
 
   // Cảnh báo (tối đa 1 lần/90 giây) vì sao dữ liệu chưa lên mây
@@ -796,11 +828,14 @@ import { showToast } from './utils.js';
       await writeCloudSnapshot();
       fbDirty = false;
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+      // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
+      captureAutoBackup('Sau khi đồng bộ mây', false);
+      maybeWriteCloudBackup();
     } catch (e) {
       console.warn('[FB] Lỗi đẩy dữ liệu', e);
       showToast('Không đồng bộ lên mây: ' + e.message, 'error');
       if (isPermDeniedErr(e)) deepPermissionDiagnosis();
-    } finally { fbApplying = false; }
+    } finally { fbApplying = false; updateSyncBadge(); }
   }
 
   // Dữ liệu có "thật" trên mây: materialRecords (tab Nguyên Liệu) cũng là dữ liệu thực —
@@ -858,6 +893,9 @@ import { showToast } from './utils.js';
       const w = await writeCloudSnapshot();
       fbDirty = false;
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+      // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
+      captureAutoBackup('Sau khi đồng bộ mây (thủ công)', false);
+      maybeWriteCloudBackup();
       const counts = 'lô: ' + ((state.batches || []).length)
         + ', nguyên liệu: ' + ((state.materialRecords || []).length)
         + ', ép ván: ' + ((state.pressRecords || []).length);
@@ -881,6 +919,8 @@ import { showToast } from './utils.js';
       showToast('Trên mây chưa có dữ liệu để tải về.', 'error');
       return;
     }
+    // AUTO BACKUP (lớp 1): chụp dữ liệu máy TRƯỚC khi bị ghi đè theo mây
+    captureAutoBackup('Trước khi tải dữ liệu từ mây về máy', true);
     applyFireSnapshot(fbLastRemote);
     showToast('Đã tải dữ liệu từ mây về máy thành công! (ghi đè dữ liệu máy)', 'success');
   }
@@ -941,6 +981,7 @@ export {
   initLucide,
   isFirebaseOnline,
   localHasAnyData,
+  mergeRemoteIntoLocal,
   pullCloudToLocal,
   registerServiceWorker,
   requireEditPermission,

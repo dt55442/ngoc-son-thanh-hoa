@@ -17,6 +17,7 @@ import { deleteXuong2Cut, editXuong2Cut, handleXuong2CutSubmit, resetXuong2CutFo
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
+import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
 
@@ -274,6 +275,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-upload-cloud',      'click', uploadLocalDataToCloud);
     safeOn('btn-pull-cloud',        'click', pullCloudToLocal);
 
+    // Auto backup — phục hồi bản cất trên máy / trên mây (js/autobackup.js, chỉ Admin)
+    safeOn('btn-open-autobackup',     'click', openAutoBackupModal);
+    safeOn('btn-close-autobackup',    'click', closeAutoBackupModal);
+    safeOn('btn-cancel-autobackup',   'click', closeAutoBackupModal);
+    safeOn('btn-open-cloud-backup',   'click', openCloudBackupModal);
+    safeOn('btn-close-cloud-backup',  'click', closeCloudBackupModal);
+    safeOn('btn-cancel-cloud-backup', 'click', closeCloudBackupModal);
+    safeOn('btn-reload-cloudbackups', 'click', renderCloudBackupList);
+
     // Custom XLSX Export (nút "Xuất Excel" riêng của tab Công Đoạn)
     safeOn('btn-open-export-modal',  'click', openCustomExportModal);
     safeOn('btn-close-export-modal', 'click', closeCustomExportModal);
@@ -365,7 +375,11 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const fi = document.getElementById('file-load-local');
       if (fi) fi.click();
     });
-    safeOn('file-load-local', 'change', loadDataFromLocalFile);
+    // AUTO BACKUP (lớp 1): chụp bản cất TRƯỚC khi nạp file cục bộ đã lưu
+    safeOn('file-load-local', 'change', (e) => {
+      captureAutoBackup('Trước khi nạp file cục bộ (.json)', true);
+      loadDataFromLocalFile(e);
+    });
 
     // Custom Chart Builder Listeners
     safeOn('btn-open-chart-builder',   'click', () => openChartBuilderModal(null, { zone: 'basic' }));
@@ -397,7 +411,11 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const fi = document.getElementById('file-import-json');
       if (fi) fi.click();
     });
-    safeOn('file-import-json', 'change', handleImportJSON);
+    // AUTO BACKUP (lớp 1): chụp bản cất TRƯỚC khi nạp file JSON ghi đè dữ liệu
+    safeOn('file-import-json', 'change', (e) => {
+      captureAutoBackup('Trước khi nạp file JSON', true);
+      handleImportJSON(e);
+    });
 
     // ── KẾ HOẠCH SẢN XUẤT (PLANNING VIEW) ──
     safeOn('btn-add-material-rate', 'click', () => openMaterialRateModal());

@@ -314,6 +314,10 @@ import { escapeHTML, showToast } from './utils.js';
   async function writeDataToFile() {
     if (!state.fileStorage.dirHandle) return;
     try {
+      // ── AUTO BACKUP LỚP 3 (js/autobackup.js mô tả tổng thể) ──
+      // Copy bản bamboo_data.json ĐANG CÓ sang backups/ TRƯỚC khi ghi đè
+      // (giữ 10 bản gần nhất) — phòng khi nội dung mới bị hỏng/xóa nhầm.
+      await backupDataFileToFolder();
       let fileHandle;
       try {
         fileHandle = await state.fileStorage.dirHandle.getFileHandle(DATA_FILE_NAME, { create: true });
@@ -336,6 +340,54 @@ import { escapeHTML, showToast } from './utils.js';
     } catch (e) {
       showToast('Lỗi ghi file dữ liệu: ' + e.message, 'error');
     }
+  }
+
+
+  // ─── AUTO BACKUP FILE (LỚP 3 — thư mục dữ liệu) ───────────────
+  // Trước mỗi lần ghi đè bamboo_data.json, copy bản cũ sang backups/
+  // bamboo_data_<ngày-giờ>.json (giữ 10 bản gần nhất). Throttle 10 phút/lần
+  // để không phình thư mục khi nhập liệu dồn dập — bản chính vẫn ghi mỗi lần lưu.
+  const FILE_BACKUP_DIR = 'backups';
+  const FILE_BACKUP_KEEP = 10;
+  const FILE_BACKUP_GAP_KEY = 'bamboo_tracker_filebackup_gap_v1'; // mốc thời gian lần copy gần nhất
+  const FILE_BACKUP_GAP_MS = 10 * 60 * 1000;
+  let fileBackupBusy = false;
+  async function backupDataFileToFolder() {
+    if (!state.fileStorage.dirHandle || fileBackupBusy) return;
+    fileBackupBusy = true;
+    try {
+      const last = Number(localStorage.getItem(FILE_BACKUP_GAP_KEY) || 0);
+      if (Date.now() - last < FILE_BACKUP_GAP_MS) return; // vừa copy gần đây → bỏ qua
+      // Đọc nội dung file hiện tại (chưa có file → không có gì để cất)
+      let text = '';
+      try {
+        const fh = await state.fileStorage.dirHandle.getFileHandle(DATA_FILE_NAME);
+        const f = await fh.getFile();
+        text = await f.text();
+      } catch (e) { return; }
+      if (!text || text.length < 20) return;
+      const dir = await state.fileStorage.dirHandle.getDirectoryHandle(FILE_BACKUP_DIR, { create: true });
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const stamp = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+      const fh = await dir.getFileHandle('bamboo_data_' + stamp + '.json', { create: true });
+      const w = await fh.createWritable();
+      await w.write(text);
+      await w.close();
+      localStorage.setItem(FILE_BACKUP_GAP_KEY, String(Date.now()));
+      // Dọn bản cũ: giữ 10 bản mới nhất (tên có dấu thời gian → sắp tên là đủ)
+      const names = [];
+      for await (const [name] of dir.entries()) {
+        if (/^bamboo_data_\d{8}-\d{6}\.json$/.test(name)) names.push(name);
+      }
+      names.sort();
+      while (names.length > FILE_BACKUP_KEEP) {
+        try { await dir.removeEntry(names.shift()); } catch (e) {}
+      }
+      console.log('[AUTOBACKUP] Đã cất bản file cũ vào ' + FILE_BACKUP_DIR + '/bamboo_data_' + stamp + '.json');
+    } catch (e) {
+      console.warn('[AUTOBACKUP] Lỗi copy file backup (không ảnh hưởng ghi dữ liệu chính)', e);
+    } finally { fileBackupBusy = false; }
   }
 
   // Ngắt kết nối thư mục dữ liệu

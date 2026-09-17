@@ -127,6 +127,9 @@ export function syncPermissionUI() {
   // Mục chỉ dành cho Admin trong menu
   show('btn-open-users-mgr', role === 'admin');
   show('btn-import-json', role === 'admin');
+  // Auto backup (phục hồi bản cất trên máy / trên mây) — chỉ Admin
+  show('btn-open-autobackup', role === 'admin');
+  show('btn-open-cloud-backup', role === 'admin');
   // Khách: hiện nút Đăng Nhập, ẩn pill hồ sơ; đã đăng nhập: ngược lại
   show('btn-open-login', !u);
   show('user-profile-badge', !!u);

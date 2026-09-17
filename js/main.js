@@ -4,6 +4,7 @@
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
 import { deleteBatch, openBatchFormModal, openTransferModal } from './batch-modals.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
+import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
 import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, renderStageFlow, toggleChartExpand } from './dashboard.js';
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
@@ -28,6 +29,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadSession();
     loadData();
     loadDeletedIds(); // dấu vết xóa (tombstone) cho đồng bộ mây — nạp trước mọi thao tác
+    loadAutoBackups(); // bản cất tự động (auto backup cục bộ) — js/autobackup.js
     loadCustomCharts();
     loadMaterialRates();
     loadPlanningItems();
@@ -310,6 +312,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     openUserEditModal,
     // Đồng bộ dữ liệu máy lên mây (Firebase)
     uploadLocalDataToCloud,
+    // Auto backup — phục hồi bản cất trên máy / trên mây (Admin)
+    restoreAutoBackup,
+    deleteAutoBackup,
+    restoreCloudBackup,
     // Tab Nhân Sự — thao tác từ bảng (onclick trong HTML render động)
     hrEditEmployee: openEmployeeModal,
     hrDeleteEmployee: deleteEmployee,

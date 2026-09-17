@@ -11,6 +11,7 @@
 // (firePushSync), và là nguồn 'materials' cho biểu đồ Dashboard.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { canEditTab } from './permissions.js';
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { dataUrlToBlob, deletePhotos, getPhotoURL, photosAvailable, putPhoto } from './photo-store.js';
@@ -927,8 +928,11 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
 
   // ─── QUYỀN ───────────────────────────────────────────────────
   function canEditMaterials() {
-    // currentTabId() ánh xạ materials-view → 'materials' qua TAB_DEFS
-    return requireEditPermission();
+    // DÙNG LÚC RENDER (bảng, select, nút) nên phải IM LẶNG — không toast:
+    // trước đây gọi requireEditPermission() làm hiện cảnh báo mỗi lần vào tab.
+    // Nút sửa/xóa đã được ẩn sẵn qua data-perm="materials" (styles.css) với
+    // người không đủ quyền; hàm này chỉ còn vai trò chặn thao tác ngầm.
+    return canEditTab('materials');
   }
 
   // ─── GIAO DIỆN TAB ───────────────────────────────────────────
@@ -1052,8 +1056,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
           <td class="text-right">${unitPrice ? unitPrice.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '—'}</td>
           <td class="text-right"><strong style="color:#b45309;">${totalAmount ? Math.round(totalAmount).toLocaleString('vi-VN') : '—'}</strong>${totalAmount ? ' đ' : ''}</td>
           <td class="text-right">
-            <button class="btn btn-icon btn-outline" title="Sửa" data-mat-edit="${r.id}"><i data-lucide="pencil"></i></button>
-            <button class="btn btn-icon btn-danger" title="Xóa" data-mat-delete="${r.id}"><i data-lucide="trash-2"></i></button>
+            <button class="btn btn-icon btn-outline" title="Sửa" data-perm="materials" data-mat-edit="${r.id}"><i data-lucide="pencil"></i></button>
+            <button class="btn btn-icon btn-danger" title="Xóa" data-perm="materials" data-mat-delete="${r.id}"><i data-lucide="trash-2"></i></button>
           </td>
         </tr>`;
     }).join('');

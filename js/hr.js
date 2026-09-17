@@ -17,7 +17,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
-import { canViewAdvanced } from './permissions.js';
+import { canEditTab, canViewAdvanced } from './permissions.js';
 import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -170,7 +170,7 @@ import { escapeHTML, showToast } from './utils.js';
         <td><span class="hr-chip ${stCls}">${EMP_STATUS[st]}</span></td>
         <td class="hr-notes" title="${escapeHTML(e.notes || '')}">${escapeHTML(e.notes || '—')}</td>
         <td class="text-right">
-          <div style="display:flex;justify-content:flex-end;gap:4px;">
+          <div style="display:flex;justify-content:flex-end;gap:4px;" data-perm="hr">
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrEditEmployee('${e.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteEmployee('${e.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>
@@ -411,8 +411,11 @@ import { escapeHTML, showToast } from './utils.js';
         actions.push(`<button class="btn btn-success btn-sm" onclick="app.hrApproveLeave('${l.id}')" title="Duyệt Đồng ý"><i data-lucide="check"></i> Đồng Ý</button>`);
         actions.push(`<button class="btn btn-outline btn-sm" onclick="app.hrRejectLeave('${l.id}')" title="Không duyệt" style="color:var(--danger);"><i data-lucide="x"></i> Không Đồng Ý</button>`);
       }
-      if (requireEditPermission() || approver) {
-        actions.push(`<button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteLeave('${l.id}')" title="Xóa đơn" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
+      // IM LẶNG lúc render: dùng canEditTab('hr') thay vì requireEditPermission()
+      // (trước đây render bảng đơn nghỉ bắn toast "không có quyền" MỖI lần
+      // chuyển sang tab Nhân Sự — nguyên nhân chính của cảnh báo phiền toái).
+      if (canEditTab('hr') || approver) {
+        actions.push(`<button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeleteLeave('${l.id}')" title="Xóa đơn" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
       }
       return `<tr>
         <td><strong>${escapeHTML(hrEmpName(l.employeeId))}</strong><br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(hrEmpDept(l.employeeId))}</span></td>
@@ -1123,10 +1126,10 @@ import { escapeHTML, showToast } from './utils.js';
         matchCell = `<span class="hr-chip ok">Khớp ✓</span>`;
       } else if (st === 'absent') {
         matchCell = `<span class="hr-chip off" title="Chấm tay ghi Vắng nhưng máy có vân tay">⚠ Chấm tay "Vắng"</span>`;
-        action = `<button class="btn btn-success btn-sm" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')" title="Đổi thành Đi làm theo máy"><i data-lucide="check"></i> Áp Dụng</button>`;
+        action = `<button class="btn btn-success btn-sm" data-perm="hr" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')" title="Đổi thành Đi làm theo máy"><i data-lucide="check"></i> Áp Dụng</button>`;
       } else {
         matchCell = `<span class="hr-chip warn" title="Máy có vân tay nhưng chưa ai chấm tay">Chưa chấm tay</span>`;
-        action = `<button class="btn btn-success btn-sm" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')"><i data-lucide="check"></i> Áp Dụng</button>`;
+        action = `<button class="btn btn-success btn-sm" data-perm="hr" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')"><i data-lucide="check"></i> Áp Dụng</button>`;
       }
       return `<tr>
         <td><strong>${escapeHTML(hrEmpName(c.employeeId))}</strong>${hrEmpDept(c.employeeId) !== '—' ? `<br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(hrEmpDept(c.employeeId))}</span>` : ''}</td>
@@ -1134,7 +1137,7 @@ import { escapeHTML, showToast } from './utils.js';
         <td class="hr-emp-code">${escapeHTML(time)}</td>
         <td>${matchCell}</td>
         <td class="text-right">${action}</td>
-        <td class="text-right"><button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteCheckin('${escapeHTML(c.id)}')" title="Xóa bản ghi giờ này" style="color:var(--danger);"><i data-lucide="trash-2"></i></button></td>
+        <td class="text-right"><button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeleteCheckin('${escapeHTML(c.id)}')" title="Xóa bản ghi giờ này" style="color:var(--danger);"><i data-lucide="trash-2"></i></button></td>
       </tr>`;
     }).join('');
     initLucide();
@@ -1337,8 +1340,8 @@ import { escapeHTML, showToast } from './utils.js';
         <td class="hr-notes" title="${escapeHTML(p.note || '')}">${escapeHTML(p.note || '—')}</td>
         <td class="text-right">
           <div style="display:flex;justify-content:flex-end;gap:4px;">
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrEditPosition('${p.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeletePosition('${p.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrEditPosition('${p.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeletePosition('${p.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>
         </td>
       </tr>`;
@@ -1506,8 +1509,8 @@ import { escapeHTML, showToast } from './utils.js';
         <td class="hr-notes" title="${escapeHTML(r.notes || '')}">${escapeHTML(r.notes || '—')}</td>
         <td class="text-right">
           <div style="display:flex;justify-content:flex-end;gap:4px;">
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrEditRecruitment('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteRecruitment('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrEditRecruitment('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeleteRecruitment('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>
         </td>
       </tr>`;
@@ -1639,8 +1642,8 @@ import { escapeHTML, showToast } from './utils.js';
         <td class="hr-notes" title="${escapeHTML(r.notes || '')}">${escapeHTML(r.notes || '—')}</td>
         <td class="text-right">
           <div style="display:flex;justify-content:flex-end;gap:4px;">
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrEditPositionNeed('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeletePositionNeed('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrEditPositionNeed('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeletePositionNeed('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>
         </td>
       </tr>`;

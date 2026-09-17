@@ -180,7 +180,7 @@
       <i data-lucide="users"></i>
       <span>Nhân Sự</span>
     </button>
-    <button class="mobile-nav-item primary" id="mobile-add-btn">
+    <button class="mobile-nav-item primary" id="mobile-add-btn" data-perm="kanban">
       <i data-lucide="plus"></i>
       <span>Tạo Mới</span>
     </button>
@@ -209,7 +209,7 @@
           <button class="btn btn-success" id="btn-open-export-modal" title="Xuất file Excel tùy chỉnh">
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
           </button>
-          <button class="btn btn-primary" id="btn-add-batch">
+          <button class="btn btn-primary" id="btn-add-batch" data-perm="kanban">
             <i data-lucide="plus-circle"></i> <span class="hide-mobile">Thêm Lô Nan</span>
           </button>
         </div>
@@ -316,7 +316,7 @@
 
       <!-- Thanh công cụ Kanban -->
       <div class="kanban-toolbar">
-        <button class="btn btn-outline btn-sm" id="btn-multi-transfer">
+        <button class="btn btn-outline btn-sm" id="btn-multi-transfer" data-perm="kanban">
           <i data-lucide="list-checks"></i> Chọn nhiều lô để chuyển
         </button>
       </div>
@@ -577,7 +577,7 @@
           <div class="planning-card-header">
             <h4><i data-lucide="scissors"></i> Cắt Chọn — Xưởng 2</h4>
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-add-x2-cut" title="Xóa form và ghi nhận lượt cắt/chọn mới">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-add-x2-cut" data-perm="kanban" title="Xóa form và ghi nhận lượt cắt/chọn mới">
                 <i data-lucide="plus-circle"></i> Ghi Cắt/Chọn
               </button>
             </div>
@@ -897,7 +897,7 @@
         <!-- Danh sách kế hoạch (quản lý các số lượng sản phẩm) -->
         <div class="planning-list-section" id="planning-list-section"></div>
         <div class="planning-card-footer">
-          <button class="btn btn-primary btn-sm" id="btn-add-planning-item">
+          <button class="btn btn-primary btn-sm" id="btn-add-planning-item" data-perm="planning">
             <i data-lucide="plus-circle"></i> Thêm Kế Hoạch
           </button>
         </div>
@@ -937,7 +937,7 @@
           </table>
         </div>
         <div class="planning-card-footer">
-          <button class="btn btn-outline btn-sm" id="btn-add-material-rate">
+          <button class="btn btn-outline btn-sm" id="btn-add-material-rate" data-perm="planning">
             <i data-lucide="plus"></i> Thêm Định Mức
           </button>
         </div>
@@ -1164,10 +1164,10 @@
           <canvas id="press-chart"></canvas>
         </div>
         <div class="press-chart-footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-          <button class="btn btn-primary" id="btn-add-press">
+          <button class="btn btn-primary" id="btn-add-press" data-perm="press">
             <i data-lucide="plus-circle"></i> Thêm Lượt Ép
           </button>
-          <button class="btn btn-outline" id="btn-add-press-note" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
+          <button class="btn btn-outline" id="btn-add-press-note" data-perm="press" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
             <i data-lucide="alert-triangle"></i> Ghi Chú Giải Trình
           </button>
           <button class="btn btn-outline" id="btn-toggle-press-notes" title="Hiện nội dung tất cả ghi chú giải trình ngay trên biểu đồ">
@@ -1383,7 +1383,7 @@
           <button class="btn btn-outline" id="btn-refresh-materials" title="Tải lại bảng">
             <i data-lucide="refresh-cw"></i> <span class="hide-mobile">Tải Lại</span>
           </button>
-          <button class="btn btn-primary" id="btn-add-material">
+          <button class="btn btn-primary" id="btn-add-material" data-perm="materials">
             <i data-lucide="package-plus"></i> Nhập Nguyên Liệu
           </button>
         </div>
@@ -1449,7 +1449,7 @@
             <label for="material-plan-week">Tuần:</label>
             <select id="material-plan-week"></select>
           </div>
-          <button type="button" class="btn btn-outline btn-sm" id="btn-add-material-plan-week">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-add-material-plan-week" data-perm="materials">
             <i data-lucide="plus"></i> Thêm Tuần
           </button>
         </div>
@@ -1521,7 +1521,7 @@
         <div class="planning-card-header">
           <h4><i data-lucide="truck"></i> Xuất Hàng</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-add-qc-export" title="Tạo dòng xuất hàng theo tuần (tự nạp kế hoạch của tuần)">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-qc-export" data-perm="qc" title="Tạo dòng xuất hàng theo tuần (tự nạp kế hoạch của tuần)">
               <i data-lucide="plus-circle"></i> Thêm Dòng Xuất
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-qc-table" title="Thu gọn / Mở rộng">
@@ -1799,10 +1799,10 @@
         <div class="planning-card-header">
           <h4><i data-lucide="users"></i> Danh Sách Nhân Viên</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-add-employee" title="Thêm nhân viên mới">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-employee" data-perm="hr" title="Thêm nhân viên mới">
               <i data-lucide="user-plus"></i> Thêm Nhân Viên
             </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-import-employees" title="Nhập danh sách nhân viên từ file Excel (.xlsx/.xls/.csv) — tự nhận cột">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-import-employees" data-perm="hr" title="Nhập danh sách nhân viên từ file Excel (.xlsx/.xls/.csv) — tự nhận cột">
               <i data-lucide="file-spreadsheet"></i> Nhập Từ Excel
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-emp" title="Thu gọn / Mở rộng">
@@ -1909,10 +1909,10 @@
           <h4><i data-lucide="git-branch"></i> Vị Trí Làm Việc &amp; Kỹ Năng</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="hr-count" id="hr-positions-count"></span>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-skills" title="Quét toàn bộ lịch sử phân vị theo ngày, tự thêm vào Kỹ Năng của từng nhân viên (không xóa kỹ năng đã có)">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-skills" data-perm="hr" title="Quét toàn bộ lịch sử phân vị theo ngày, tự thêm vào Kỹ Năng của từng nhân viên (không xóa kỹ năng đã có)">
               <i data-lucide="refresh-cw"></i> Đồng Bộ Kỹ Năng
             </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-add-position" title="Thêm vị trí làm việc">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-position" data-perm="hr" title="Thêm vị trí làm việc">
               <i data-lucide="git-branch-plus"></i> Thêm Vị Trí
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-pos" title="Thu gọn / Mở rộng">
@@ -1944,7 +1944,7 @@
           <h4><i data-lucide="clock"></i> Giờ Máy Chấm Công — Đối Chiếu</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="hr-count" id="hr-ci-count"></span>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-import-checkins" title="Nạp file Excel giờ vào/ra từ máy chấm công để đối chiếu">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-import-checkins" data-perm="hr" title="Nạp file Excel giờ vào/ra từ máy chấm công để đối chiếu">
               <i data-lucide="clock"></i> Nạp Giờ Máy
             </button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-apply-all-checkins" title="Tự chấm Đi làm cho các ngày máy xác nhận mà chấm tay còn thiếu hoặc đang ghi Vắng">
@@ -1983,7 +1983,7 @@
           <h4><i data-lucide="calendar-x"></i> Xin Nghỉ Phép</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="hr-count" id="hr-leaves-count"></span>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-add-leave" title="Gửi đơn xin nghỉ phép">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-leave" data-perm="hr" title="Gửi đơn xin nghỉ phép">
               <i data-lucide="calendar-x"></i> Xin Nghỉ Phép
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-leave" title="Thu gọn / Mở rộng">
@@ -2080,7 +2080,7 @@
         <div class="planning-card-header">
           <h4><i data-lucide="user-search"></i> Nhân Sự Cần — Tuyển Dụng</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-add-recruitment" title="Thêm nhu cầu nhân sự / tuyển dụng">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-recruitment" data-perm="hr" title="Thêm nhu cầu nhân sự / tuyển dụng">
               <i data-lucide="user-search"></i> Nhân Sự Cần
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-recruit" title="Thu gọn / Mở rộng">
@@ -2125,7 +2125,7 @@
         <div class="planning-card-header">
           <h4><i data-lucide="target"></i> Nhân Sự Cần Tại Các Vị Trí</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-add-posneed" title="Thêm dòng vị trí cần nhân sự">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-posneed" data-perm="hr" title="Thêm dòng vị trí cần nhân sự">
               <i data-lucide="plus"></i> Thêm Vị Trí Cần
             </button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-sync-posneed" title="Cập nhật &quot;Số người hiện có&quot; của mọi dòng từ danh sách nhân viên đang làm việc">
@@ -2995,6 +2995,7 @@
                 <label class="edit-tab-check"><input type="checkbox" value="press" checked> Sản Lượng Ép Ván</label>
                 <label class="edit-tab-check"><input type="checkbox" value="materials" checked> Nhập Nguyên Liệu</label>
                 <label class="edit-tab-check"><input type="checkbox" value="qc" checked> QC (Xuất Hàng)</label>
+                <label class="edit-tab-check"><input type="checkbox" value="hr" checked> Nhân Sự</label>
                 <label class="edit-tab-check"><input type="checkbox" value="dashboard" checked> Dashboard (Biểu đồ)</label>
               </div>
             </div>
@@ -3097,6 +3098,7 @@
             <label class="edit-tab-check"><input type="checkbox" value="press"> Sản Lượng Ép Ván</label>
             <label class="edit-tab-check"><input type="checkbox" value="materials"> Nhập Nguyên Liệu</label>
             <label class="edit-tab-check"><input type="checkbox" value="qc"> QC (Xuất Hàng)</label>
+            <label class="edit-tab-check"><input type="checkbox" value="hr"> Nhân Sự</label>
             <label class="edit-tab-check"><input type="checkbox" value="dashboard"> Dashboard (Biểu đồ)</label>
           </div>
           <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">

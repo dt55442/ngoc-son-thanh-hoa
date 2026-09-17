@@ -288,7 +288,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
             <div class="planning-week-card">
               <div class="planning-week-card-header">
                 <span class="planning-week-badge"><i data-lucide="calendar" style="width:12px;height:12px;"></i> Tuần ${weekNum}</span>
-                <span class="planning-week-card-actions">
+                <span class="planning-week-card-actions" data-perm="planning">
                   <button class="plan-week-btn" onclick="app.duplicatePlanningGroup(${weekNum}, ${yearNum})" title="Nhân bản thẻ kế hoạch"><i data-lucide="copy"></i></button>
                   <button class="plan-week-btn" onclick="app.editPlanningGroup(${weekNum}, ${yearNum})" title="Sửa tuần & số lượng ván"><i data-lucide="pencil"></i></button>
                   <span class="planning-week-total">${weekTotal.toLocaleString('vi-VN')} tấm</span>
@@ -315,7 +315,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
                       <div class="planning-week-item-qty">
                         <strong>${item.qty.toLocaleString('vi-VN')}</strong> tấm
                       </div>
-                      <button class="plan-item-delete" onclick="app.deletePlanningItem('${item.id}')" title="Xóa kế hoạch"><i data-lucide="x"></i></button>
+                      <button class="plan-item-delete" data-perm="planning" onclick="app.deletePlanningItem('${item.id}')" title="Xóa kế hoạch"><i data-lucide="x"></i></button>
                     </div>`;
                 }).join('')}
               </div>
@@ -626,7 +626,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
         `<th${curCls} colspan="2" style="padding:2px 3px;">
           <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
             <span style="font-size:0.68rem;font-weight:700;"><span class="hl-full">DỰ KIẾN</span><span class="hl-short">DK</span></span>
-            <div style="display:flex; gap:3px;">
+            <div style="display:flex; gap:3px;" data-perm="planning">
               <button class="btn btn-forecast-week" title="Giả định Dự kiến cho Tuần ${w}" onclick="app.forecastAssumeWeek(${w})" style="white-space:nowrap;">
                 <i data-lucide="wand-2" style="width:10px;height:10px;"></i><span class="btn-lbl">Giả Định</span>
               </button>
@@ -1187,7 +1187,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
         <td>${rate.additive} kg</td>
         <td>${rate.efficiency}%</td>
         <td class="text-right">
-          <div style="display:flex;justify-content:flex-end;gap:4px;">
+          <div style="display:flex;justify-content:flex-end;gap:4px;" data-perm="planning">
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.editMaterialRate('${rate.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteMaterialRate('${rate.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>

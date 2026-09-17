@@ -244,7 +244,27 @@ import { showToast } from './utils.js';
 
   // LẮP RÁP dữ liệu mây từ mục lục → object dữ liệu đầy đủ (như định dạng cũ).
   // plain: trả nguyên doc; gzip: giải nén; shard: nạp đủ mảnh cùng epoch → ghép → giải nén.
+  // CACHE THEO EPOCH: epoch trên mây chỉ đổi khi CÓ LẦN ĐẨY MỚI → cùng epoch là
+  // cùng dữ liệu. Trước đây MỖI snapshot (kể cả echo/kill metadata của chính mình
+  // và snapshot trùng) đều nạp lại TOÀN BỘ N mảnh qua mạng → nguyên nhân chính
+  // làm web chậm/lag khi online. Giờ chỉ nạp lại khi epoch (lần đẩy) đổi.
+  let fbAssembleCache = { epoch: null, promise: null };
   async function assembleRemoteObject(meta) {
+    const fmt = (meta && meta.__fmt) || 'plain';
+    if (fmt === 'plain') return meta; // JSON trơn nằm ngay trong doc mục lục
+    const epoch = (meta && meta.epoch) || null;
+    if (epoch && fbAssembleCache.epoch === epoch && fbAssembleCache.promise) {
+      return fbAssembleCache.promise; // đã lắp ráp bản này rồi — dùng lại, không nạp mảnh
+    }
+    const p = assembleRemoteObjectFresh(meta).catch((e) => {
+      // Lỗi lắp ráp → gỡ cache để lần snapshot sau thử nạp lại từ đầu
+      if (epoch && fbAssembleCache.epoch === epoch) { fbAssembleCache.epoch = null; fbAssembleCache.promise = null; }
+      throw e;
+    });
+    if (epoch) { fbAssembleCache.epoch = epoch; fbAssembleCache.promise = p; }
+    return p;
+  }
+  async function assembleRemoteObjectFresh(meta) {
     const fmt = (meta && meta.__fmt) || 'plain';
     if (fmt === 'plain') return meta;
     if (fmt === 'gzip') return JSON.parse(await gunzipBase64ToString(meta.payload || ''));

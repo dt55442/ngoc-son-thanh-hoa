@@ -2998,6 +2998,23 @@ body:not(.can-edit) #user-profile-badge,
 body:not(.can-edit) #btn-logout {
   display: none !important;
 }
+/* ── PHÂN QUYỀN THEO TAB: ẨN NÚT THÊM/SỬA/XÓA ─────────────────
+   syncPermissionUI() đặt data-edit-tabs="<các tab được sửa>" lên <body>
+   (Admin luôn chứa đủ mọi tab; khách/viewer = rỗng). Mỗi nút/khối thao tác
+   gắn data-perm="<tabId>" — không đủ quyền tab đó => ẨN HẲN, không hiện
+   cảnh báo khi bấm. Đây là cơ chế áp dụng cho CẢ nút tĩnh (index.html)
+   và nút render động (js/) — thêm data-perm khi tạo nút mới. */
+body:not([data-edit-tabs~="kanban"])    [data-perm="kanban"],
+body:not([data-edit-tabs~="planning"])  [data-perm="planning"],
+body:not([data-edit-tabs~="press"])     [data-perm="press"],
+body:not([data-edit-tabs~="materials"]) [data-perm="materials"],
+body:not([data-edit-tabs~="qc"])        [data-perm="qc"],
+body:not([data-edit-tabs~="hr"])        [data-perm="hr"],
+body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
+  display: none !important;
+}
+
+
 
 /* ======================================================= */
 /* FORM ĐIỀU CHUYỂN CÔNG ĐOẠN — GIAO DIỆN VIỀN NỔI        */

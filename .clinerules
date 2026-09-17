@@ -1,0 +1,68 @@
+# ─── NGỮ CẢNH DỰ ÁN (Cline tự đọc file này ở MỌI tác vụ) ───
+# Giữ file này CẬP NHẬT khi kiến trúc/thuật ngữ thay đổi. Gọn — tra cứu nhanh — không lặp chi tiết có sẵn trong code.
+
+## 1. Dự án là gì
+- **Nhà máy Ngọc Sơn Thanh Hóa** (`nha-may-ngoc-son-thanh-hoa` v4.1.0): hệ thống quản lý & theo dõi sản xuất **nan tre** (KHSX — kế hoạch sản xuất, ép ván, nguyên liệu, QC, nhân sự).
+- **PWA offline-first**: chạy 100% offline (localStorage + IndexedDB); khi online thì đồng bộ mây Firebase (Auth + Firestore compat).
+- Giao diện & comment: **tiếng Việt**. Đây là quy ước bắt buộc khi viết code mới.
+- Deploy: **GitHub Pages** → https://dt55442.github.io/ngoc-son-thanh-hoa/ (push bằng `day-len-github.bat`).
+
+## 2. Stack & ràng buộc
+- **Vanilla JS ES Modules — KHÔNG framework, KHÔNG build step, KHÔNG npm dependencies.** `package.json` chỉ có `npm test` + `npm start`.
+- Thư viện offline trong `vendor/`, nạp bằng `<script>` trong `index.html`: lucide (icon), chart.umd + chartjs-plugin-zoom + hammer (biểu đồ), xlsx.full (Excel), firebase-app/auth/firestore compat.
+- Lưu trữ: localStorage (các key `bamboo_tracker_*` — khai báo trong `js/state.js`), IndexedDB cho ảnh (photo-store.js), File System Access API cho thư mục dữ liệu (storage.js).
+- Firebase: `window.FIREBASE_CONFIG` trong `firebase-config.js` (project `quan-ly-nan-tre`, ownerEmail `dt55442@gmail.com`). Không có SDK/network → app tự về OFFLINE.
+
+## 3. Cấu trúc & vai trò module (js/ — ES modules, dùng import/export)
+Số dòng ghi chú để ước lượng: đọc bằng grep trước khi đọc nguyên file lớn.
+| Module | ~dòng | Vai trò |
+|---|---|---|
+| main.js | 337 | Điểm vào: boot DOMContentLoaded, switchView giữa các tab, `renderAll()`, xuất **`window.app`** (API công khai — smoke test kiểm tra). |
+| state.js | 186 | State toàn cục (object `state`), các hằng STORAGE_KEY `bamboo_tracker_*`, STAGES công đoạn, DEFAULT_USERS (admin/admin123, quanly1/123456, editor1/123456 — chỉ dữ liệu dev). |
+| storage.js | 581 | localStorage loadData/saveData, backup/restore JSON, lưu ra thư mục (File System Access), autoReconnectDataFolder. |
+| auth.js | 667 | Đăng nhập/đăng ký phiên cục bộ, quản trị người dùng, phân quyền. |
+| cloud.js | 928 | Đồng bộ Firebase: đẩy/lấy apps/main, gzip+shard khi >1MiB, share modal, đăng ký Service Worker, flushPendingCloudPush. |
+| events.js | 1018 | Toàn bộ wiring sự kiện UI + undo (undoStack). |
+| kanban.js | 356 | Bảng công đoạn (4 cột) + bộ lọc từng cột. |
+| dashboard.js | 1406 | Tổng quan: biểu đồ tĩnh + biểu đồ tùy chỉnh (customCharts), renderStageFlow. |
+| batch-modals.js | 425 | Modal thêm/sửa/xóa lô nan, chuyển lô, chuyển nhiều lô (multiTransferMode). |
+| export-xlsx.js | 1781 | Xuất Excel tùy chỉnh + builder cấu hình xuất. |
+| planning.js | 1758 | Kế hoạch SX: định mức (materialRates), planningItems, dự báo (planningForecast), tồn kho (planningStock). |
+| press.js | 2060 | Sản lượng ép ván: pressRecords, ghi chú giải trình pressNotes, tính thành phẩm. |
+| materials.js | 1510 | Nhập nguyên liệu 3 vị trí (lò hơi/xưởng 1/xưởng 2) + ảnh + kế hoạch nguyên liệu. |
+| qc.js | 690 | Bảng xuất hàng QC (qcExports), bộ lọc năm/tuần/tìm kiếm. |
+| hr.js | 2867 | Nhân sự: nhân viên, nghỉ phép, tuyển dụng, posNeeds, ca/bố trí, chấm công, máy chấm công (hrCheckins), thống kê. |
+| xuong2.js | 514 | Nhật ký cắt/chọn Xưởng 2 (xuong2CutRecords), link sang tab Nguyên liệu. |
+| history.js | 367 | Audit log "Lịch sử sửa đổi" (chỉ Admin), snapshot nền khi initHistory. |
+| tombstone.js | 182 | Dấu vết xóa `deletedIds` — bắt buộc cho đồng bộ xóa đa máy; giữ tối đa 90 ngày. |
+| permissions.js | 132 | canViewAdvanced() — che tính năng nâng cao theo vai trò. |
+| utils.js | 357 | Ngày/tuần ISO, thể tích, validate, toast, dd/mm/yyyy (initVnDateInputs + MutationObserver). |
+| lunar.js | 188 | Âm lịch Việt Nam (Hồ Ngọc Đức). |
+| photo-store.js | 136 | Ảnh IndexedDB (dataURL), thư mục `materials-photos/` là ảnh user — đừng xóa/sửa. |
+
+File khác: `index.html` (~3.8k dòng — toàn bộ 7 view + modal, nav qua `data-target`), `styles.css` (~5.6k dòng), `sw.js` (140 dòng), `firestore.rules` (v4), `server.cjs`/`server.ps1`, `tests/` (19 file .mjs).
+
+## 4. Tabs (view-panel, switchView trong main.js)
+`dashboard-view` (Tổng Quan, mặc định) · `kanban-view` (Công Đoạn + thẻ Xưởng 2) · `planning-view` (Kế Hoạch) · `press-view` (Ép Ván) · `materials-view` (Nguyên Liệu) · `qc-view` (QC) · `hr-view` (Nhân Sự).
+Công đoạn (STAGES trong state.js): **say1 (Sấy 1) → say2 (Sấy 2) → kho (Kho Lưu Trữ) → bao_tinh (Bào Tinh)**; lô nan = `state.batches` [{id, code, quantity, stage, ...}].
+
+## 5. Luồng quan trọng
+- **Boot (DOMContentLoaded trong main.js):** loadUsers → loadSession → loadData → loadDeletedIds → load*() từng module (charts, planning, press, materials, xuong2, qc, hr) → **initHistory() CUỐI CÙNG** (snapshot nền) → setupEventListeners → checkAuthAndRender → registerServiceWorker → initFirebase.
+- **Ghi dữ liệu:** luôn `saveData()` (→ tự ghi history) rồi `renderAll()`; thao tác xóa lô phải `trackDeleted('batches', id)` TRƯỚC; phục hồi (undo) phải `untrackDeleted(...)`.
+- **Đồng bộ mây:** 2 chiều chủ động qua 2 nút menu (đẩy lên / tải về); tự gộp không ghi đè; visibilitychange/pagehide/online → flushPendingCloudPush. Firestore: doc `apps/main` (+ `apps/main/shards/*` khi gzip vẫn >1MiB), `settings/roles` (adminEmails/editorEmails/managerEmails — người đăng nhập ĐẦU TIÊN tạo doc và thành Admin), `settings/displayNames`. Owner (`dt55442@gmail.com`) luôn là Admin — phải khớp giữa firebase-config.js và firestore.rules.
+
+## 6. Quy tắc BẮT BUỘC khi sửa code
+1. **Tăng `CACHE_NAME` trong `sw.js`** (hiện `nha-may-ngoc-son-v78` → v79, v80...) mỗi lần đổi index.html/styles.css/js/vendor — nếu không PWA sẽ dùng cache cũ mãi. Thêm file js mới thì thêm vào APP_SHELL của sw.js.
+2. Comment/nhãn UI/log bằng **tiếng Việt**, giữ style comment có mục `// ─── ... ───`.
+3. Ngày nhập/hiển thị **dd/mm/yyyy** (initVnDateInputs đã tự bắn cho element động — đừng tự format riêng).
+4. Mọi state mới đặt trong `state` (state.js) + STORAGE_KEY riêng (`bamboo_tracker_<tên>_v1`) + hàm load/save + nạp trong boot + đưa vào luồng tombstone/đồng bộ nếu cần xóa đa máy.
+5. Sau sửa code: chạy **`npm test`** (19 test Node thuần, headless — smoke.mjs dựng stub DOM/localStorage rồi import js/main.js và bắn DOMContentLoaded; KHÔNG có framework test, không cần cài gì).
+6. File lớn (hr.js, press.js, export-xlsx.js, planning.js, materials.js, index.html, styles.css): **grep trước, đọc đúng vùng cần** — đừng đọc cả file.
+7. **Ẩn nút sửa/xóa theo quyền tab**: gắn `data-perm="<tabId>"` lên nút/khối thao tác — CSS (styles.css, khối "PHÂN QUYỀN THEO TAB") tự ẩn khi `body[data-edit-tabs]` (đặt bởi `syncPermissionUI()`) không chứa tab đó. LỨC RENDER chỉ dùng `canEditTab()` (im lặng) — TUYỆT ĐỐI đừng gọi `requireEditPermission()` lúc render (nó bắn toast → cảnh báo phiền mỗi lần chuyển tab; chỉ dùng trong handler khi click). Cache sw.js hiện **v79**.
+
+## 7. Chạy / kiểm thử / deploy
+- Chạy app: `npm start` (node server.cjs, cổng 8080) hoặc double-click `chay_app.bat`; fallback server.ps1 nếu thiếu Node. Mở file:// chỉ để test nhanh (Service Worker không chạy).
+- Test: `npm test` hoặc từng file `node tests/<tên>.mjs`.
+- Deploy: `day-len-github.bat` (git add -A → commit → push origin main; web tự cập nhật sau ~1 phút).
+- Đổi icon: `make-icons.cjs`. `debug-att.html`, `bamboo_data.json` (dữ liệu mẫu), `materials-photos/` (ảnh user) — không xóa bừa.
+

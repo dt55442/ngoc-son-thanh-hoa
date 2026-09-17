@@ -1227,7 +1227,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
         <td>${(r.additive || 0).toFixed(2)}</td>
         <td>${workerCell}</td>
         <td class="text-right">
-          <div style="display:flex;justify-content:flex-end;gap:4px;">
+          <div style="display:flex;justify-content:flex-end;gap:4px;" data-perm="press">
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.editPressRecord('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.deletePressRecord('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>

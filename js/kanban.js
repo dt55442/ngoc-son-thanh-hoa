@@ -325,7 +325,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <span class="tag-badge tag-location"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
       </div>
       ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}
-      <div class="card-actions">
+      <div class="card-actions" data-perm="kanban">
         <button class="btn btn-transfer btn-sm" onclick="app.openTransferModal('${batch.id}')">
           <i data-lucide="arrow-right-left"></i> Chuyển Công Đoạn ${nextStage ? `(${nextName})` : ''}
         </button>

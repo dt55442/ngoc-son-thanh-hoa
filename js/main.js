@@ -98,7 +98,15 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     });
     if (targetViewId === 'dashboard-view') renderDashboardCharts();
     // Thẻ "Phân bổ khối lượng theo công đoạn" + khu Vị Trí Xưởng 2 (tab Công Đoạn)
-    if (targetViewId === 'kanban-view') { renderStageFlow(); renderXuong2Cards(); }
+    if (targetViewId === 'kanban-view') {
+      // Vẽ ĐỦ khu Kanban khi vừa mở tab (trước đây renderAll luôn vẽ sẵn —
+      // giờ renderAll chỉ vẽ khi đang đứng ở tab này để bớt công vô ích).
+      renderQuickStats(getFilteredBatches());
+      renderKanbanBoard(getFilteredBatches());
+      renderStageFlow();
+      renderXuong2Cards();
+      filterMobileKanbanColumns();
+    }
     if (targetViewId === 'planning-view') renderPlanningView();
     if (targetViewId === 'press-view') renderPressView();
     if (targetViewId === 'materials-view') renderMaterialView();
@@ -189,11 +197,18 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
   function renderAll() {
     const filtered = getFilteredBatches();
     renderQuickStats(filtered);
-    renderKanbanBoard(filtered);
-    // Thẻ "Phân bổ khối lượng theo công đoạn" (tab Công Đoạn) + giữ đúng cột đang xem trên điện thoại
-    renderStageFlow();
-    renderXuong2Cards(); // đếm trên thẻ launcher Vị Trí Xưởng 2 (tab Công Đoạn)
-    filterMobileKanbanColumns();
+    // TỐI ƯU: chỉ vẽ lại khu Kanban khi tab Công Đoạn đang mở. Trước đây MỖI
+    // lần lưu/đồng bộ mây đều vẽ lại toàn bộ bảng Kanban (mỗi thẻ 1 khối DOM)
+    // dù người dùng đang ở tab khác — gây giật/lag đặc biệt khi online (mỗi
+    // snapshot mây đều gọi renderAll). Khi chuyển sang tab Công Đoạn,
+    // switchView() sẽ tự vẽ đầy đủ khu này.
+    if (state.activeView === 'kanban-view') {
+      renderKanbanBoard(filtered);
+      // Thẻ "Phân bổ khối lượng theo công đoạn" + giữ đúng cột đang xem trên điện thoại
+      renderStageFlow();
+      renderXuong2Cards(); // đếm trên thẻ launcher Vị Trí Xưởng 2 (tab Công Đoạn)
+      filterMobileKanbanColumns();
+    }
     if (state.activeView === 'dashboard-view') renderDashboardCharts();
     if (state.activeView === 'planning-view') renderPlanningView();
     if (state.activeView === 'press-view') renderPressView();

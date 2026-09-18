@@ -18,6 +18,18 @@ window.FIREBASE_CONFIG = {
 
 window.__BAMBOO_FIREBASE_READY__ = false;
 
+// ============================================
+// TRỢ LÝ AI (Google Gemini — gói MIỄN PHÍ)
+// ============================================
+// Lấy API key miễn phí: https://aistudio.google.com/app/apikey
+// LƯU Ý BẢO MẬT: file này CÔNG KHAI trên GitHub — KHÔNG ghi key thật vào
+// đây nếu không muốn lộ. Cách khuyến nghị: để trống geminiKey và nhập key
+// qua nút AI trong app (key lưu cục bộ từng máy, không lên mây/GitHub).
+window.AI_CONFIG = {
+  model: 'gemini-3.8-flash', // (tham khảo) app tự quản danh sách model trong js/ai.js — field này hiện không dùng
+  geminiKey: ''              // (tùy chọn) điền key ở đây nếu muốn dùng chung — xem lưu ý trên
+};
+
 (function () {
   try {
     if (window.firebase && window.firebase.initializeApp) {

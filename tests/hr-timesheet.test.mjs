@@ -20,7 +20,7 @@ function makeEl(id) {
     getContext: () => ({ measureText: () => ({ width: 10 }), createLinearGradient: () => ({ addColorStop(){} }), createRadialGradient: () => ({ addColorStop(){} }), drawImage(){} }),
     toDataURL: () => 'data:image/jpeg;base64,CANVASOK',
     getBoundingClientRect: () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600 }),
-    focus(){}, click(){}, animate(){ return { cancel(){} }; }
+    focus(){}, click(){}, reset(){}, animate(){ return { cancel(){} }; }
   };
   return el;
 }
@@ -149,10 +149,13 @@ const d = xlsxMod.buildHrXlsxExportData();
 check('TS: dựng được dữ liệu xuất', !!d && Array.isArray(d.aoa));
 check('TS: tiêu đề "BẢNG CHẤM CÔNG BỘ PHẬN XƯỞNG 2"', d.aoa[0][0] === 'BẢNG CHẤM CÔNG BỘ PHẬN XƯỞNG 2');
 check('TS: dòng "Tháng 9 năm 2026"', d.aoa[1][0] === 'Tháng 9 năm 2026');
-check('TS: ghi chú Khối/xưởng', d.aoa[3].includes('Khối/xưởng : Xưởng 2'));
-check('TS: header có Họ tên / Chức vụ / Công', d.aoa[6][0] === 'Họ tên' && d.aoa[6][1] === 'Chức vụ' && d.aoa[6][2] === 'Công');
-check('TS: dòng thứ có CN', d.aoa[7].includes('CN'));
-check('TS: cột tổng có "Ngày Công"', d.aoa[5].includes('Ngày Công'));
+check('TS: ĐÃ BỎ dòng "Khối/xưởng" (bộ phận nằm trong tiêu đề)', !d.aoa.some(r => String(r[0]).includes('Khối/xưởng')));
+check('TS: tiêu đề GỘP TOÀN BỘ chiều rộng bảng (36 cột)', d.merges.some(m => m.s.r === 0 && m.s.c === 0 && m.e.r === 0 && m.e.c === 36));
+check('TS: tiêu đề bôi đậm + căn giữa', !!d.styleCells && d.styleCells['0,0'] && d.styleCells['0,0'].bold === true && d.styleCells['0,0'].align === 'center');
+check('TS: chú giải gộp 5 ô cuối (32→36)', d.merges.some(m => m.s.r === 3 && m.s.c === 32 && m.e.r === 3 && m.e.c === 36));
+check('TS: header có Họ tên / Chức vụ / Công', d.aoa[5][0] === 'Họ tên' && d.aoa[5][1] === 'Chức vụ' && d.aoa[5][2] === 'Công');
+check('TS: dòng thứ có CN', d.aoa[6].includes('CN'));
+check('TS: cột tổng có "Ngày Công"', d.aoa[4].includes('Ngày Công'));
 
 const rHc = d.aoa.find(r => r[0] === 'Hà Thị Bích');
 const rTc = d.aoa[d.aoa.indexOf(rHc) + 1];
@@ -174,10 +177,10 @@ check('TS: Giờ TC e1 = 12', rHc[35] === 12);
 const rTot = d.aoa.find(r => r[0] === 'TỔNG CỘNG');
 check('TS: có dòng TỔNG CỘNG', !!rTot);
 check('TS: tổng Giờ TC = 21 (12 + 9)', rTot[35] === 21);
-check('TS: fills tô cột Chủ nhật (xanh) & lễ (vàng)', d.fills['5,8'] === 'DDEBF7' && d.fills['5,4'] === 'FFF2CC');
-check('TS: fills tô vùng dữ liệu cột nghỉ', d.fills['8,8'] === 'DDEBF7' && d.fills['8,4'] === 'FFF2CC');
-check('TS: định dạng số 1 chữ số lẻ (9.0)', d.zCells['8,5'] === '0.0');
-check('TS: gộp ô tên 2 dòng', d.merges.some(m => m.s.r === 8 && m.s.c === 0 && m.e.r === 9 && m.e.c === 0));
+check('TS: fills tô cột Chủ nhật (xanh) & lễ (vàng)', d.fills['4,8'] === 'DDEBF7' && d.fills['4,4'] === 'FFF2CC');
+check('TS: fills tô vùng dữ liệu cột nghỉ', d.fills['7,8'] === 'DDEBF7' && d.fills['7,4'] === 'FFF2CC');
+check('TS: định dạng số 1 chữ số lẻ (9.0)', d.zCells['7,5'] === '0.0');
+check('TS: gộp ô tên 2 dòng', d.merges.some(m => m.s.r === 7 && m.s.c === 0 && m.e.r === 8 && m.e.c === 0));
 
 writtenFiles = [];
 xlsxMod.handleHrXlsxExportSubmit(ev);
@@ -207,8 +210,8 @@ const d2 = xlsxMod.buildHrXlsxExportData();
 const rHc2 = d2.aoa.find(r => r[0] === 'Hà Thị Bích');
 const rTc2 = d2.aoa[d2.aoa.indexOf(rHc2) + 1];
 check('BÙ: bảng chấm công — CN 06 làm bù -> HC 9 + TC 1.5 (không còn TC 10.5)', rHc2[8] === 9 && rTc2[8] === 1.5);
-check('BÙ: cột làm bù không còn tô màu nghỉ', d2.fills['5,8'] === undefined);
-check('BÙ: Chủ nhật 13/09 (không làm bù) vẫn tô màu nghỉ', d2.fills['5,15'] === 'DDEBF7');
+check('BÙ: cột làm bù không còn tô màu nghỉ', d2.fills['4,8'] === undefined);
+check('BÙ: Chủ nhật 13/09 (không làm bù) vẫn tô màu nghỉ', d2.fills['4,15'] === 'DDEBF7');
 
 // TẮT HẲN nghỉ định kỳ Chủ nhật của tháng 12 (bấm tắt nút CN)
 hr.hrCalSetMonth('2026-12');
@@ -217,6 +220,48 @@ hr.handleHrCalendarSubmit(ev);
 check('TẮT CN: weekdaysOff lưu rỗng', Array.isArray(state.hrWorkCalendar['2026-12'].weekdaysOff) &&
   state.hrWorkCalendar['2026-12'].weekdaysOff.length === 0);
 check('TẮT CN: Chủ nhật 06/12 thành ngày làm việc', hr.hrDayKindOf('2026-12-06') === 'work' && !hr.hrIsRestDay('2026-12-06'));
+
+// ─── D3. NGHỈ VIỆC GIỮA THÁNG: xuất đến hết tháng nghỉ, tháng sau ẩn ──
+// Form nhân viên: chọn "Đã nghỉ việc" -> hiện ô Ngày Nghỉ Việc; submit lưu quitDate
+hr.openEmployeeModal('');
+check('FORM: mở modal nhân viên -> ô ngày nghỉ ẩn (trạng thái đang làm)',
+  document.getElementById('employee-quitdate-row').style.display === 'none');
+document.getElementById('employee-status').value = 'quit';
+hr.syncEmployeeQuitDateRow();
+check('FORM: chọn "Đã nghỉ việc" -> hiện ô ngày nghỉ việc',
+  document.getElementById('employee-quitdate-row').style.display === '');
+setVal('employee-code', 'NV99'); setVal('employee-name', 'Trần Nghỉ Việc');
+setVal('employee-quitdate', '2026-10-31');
+hr.handleEmployeeSubmit(ev);
+check('FORM: submit lưu ngày nghỉ việc vào hồ sơ nhân viên', state.hrEmployees.some(x =>
+  x.name === 'Trần Nghỉ Việc' && x.status === 'quit' && x.quitDate === '2026-10-31'));
+
+// Người nghỉ 15/9: vẫn xuất trong bảng chấm công tháng 9; ngày > 15 để trống
+state.hrEmployees.push({ id: 'e3', code: 'NV03', name: 'Lê Văn Nghỉ', department: 'Xưởng 2', title: 'CN', position: '', status: 'quit', quitDate: '2026-09-15', skills: [] });
+state.hrAssignments.push(
+  { id: 'a4', date: '2026-09-14', department: 'Xưởng 2', positionId: '', employeeId: 'e3', start: '07:00', end: '19:00', shiftIdx: 0 },
+  { id: 'a5', date: '2026-09-15', department: 'Xưởng 2', positionId: '', employeeId: 'e3', start: '07:00', end: '17:30', shiftIdx: 0 }
+);
+setVal('export-hr-card', 'hr-timesheet'); setVal('export-hr-dept', 'Xưởng 2'); setVal('export-hr-month', '2026-09');
+const d3 = xlsxMod.buildHrXlsxExportData();
+const rQ = d3.aoa.find(r => String(r[0]).includes('Lê Văn Nghỉ'));
+check('NGHỈ: người nghỉ 15/9 vẫn có trong bảng tháng 9', !!rQ);
+check('NGHỈ: tên kèm "(nghỉ từ 15/09/26)"', !!rQ && String(rQ[0]).includes('(nghỉ từ 15/09/26)'));
+const rQTc = d3.aoa[d3.aoa.indexOf(rQ) + 1];
+check('NGHỈ: HC ngày 14 = 9, TC 1.5', rQ[16] === 9 && rQTc[16] === 1.5);
+check('NGHỈ: ngày 15 (ngày nghỉ cuối) HC 9', rQ[17] === 9);
+check('NGHỈ: sau ngày nghỉ (CN 20/9) ô TRỐNG, không phải "-"', rQ[22] === '' && (rQTc[22] === '' || rQTc[22] === undefined));
+check('NGHỈ: Ngày Công e3 = 2 (14 + 15)', rQ[33] === 2);
+setVal('export-hr-month', '2026-10');
+const d4 = xlsxMod.buildHrXlsxExportData();
+check('NGHỈ: từ tháng sau ẩn khỏi bảng chấm công', !d4.aoa.some(r => String(r[0]).includes('Lê Văn Nghỉ')));
+// Bảng chấm công theo NGÀY: 15/9 vẫn có, 16/9 không còn
+setVal('export-hr-card', 'hr-att-day'); setVal('export-hr-date', '2026-09-15'); setVal('export-hr-dept', 'all');
+const d5 = xlsxMod.buildHrXlsxExportData();
+check('NGHỈ: bảng chấm công ngày 15/9 vẫn có người nghỉ', d5.aoa.some(r => r[1] === 'Lê Văn Nghỉ'));
+setVal('export-hr-date', '2026-09-16');
+const d6 = xlsxMod.buildHrXlsxExportData();
+check('NGHỈ: bảng ngày 16/9 (sau ngày nghỉ) không còn', !d6.aoa.some(r => r[1] === 'Lê Văn Nghỉ'));
 
 // ─── E. ĐỒNG BỘ MÂY ───────────────────────────────────────────
 const snap = cloud.collectCloudSnapshot();

@@ -2315,6 +2315,13 @@
               <option value="quit">Đã nghỉ việc</option>
             </select>
           </div>
+          <div class="form-group" id="employee-quitdate-row" style="display:none;">
+            <label for="employee-quitdate">Ngày Nghỉ Việc</label>
+            <input type="date" id="employee-quitdate">
+            <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+              Ngày làm việc cuối cùng. Bảng chấm công vẫn xuất người này đến hết tháng nghỉ; từ tháng sau tự ẩn.
+            </div>
+          </div>
           <div class="form-group col-span-full">
             <label><i data-lucide="git-branch" style="width:13px;height:13px;display:inline;"></i> Kỹ Năng — Các Vị Trí Có Thể Làm <span style="font-weight:400; font-size:0.72rem; color:var(--text-muted);">(chọn 1 hoặc nhiều vị trí)</span></label>
             <div id="employee-skills-box" class="att-pos-chips" style="padding:4px 0;"></div>
@@ -3997,5 +4004,63 @@
     });
   })();
   </script>
+
+  <!-- ═══ NÚT NỔI + MODAL: TRỢ LÝ AI (Google Gemini — gói miễn phí) ═══
+       Nhắc việc: tự tính từ dữ liệu app (offline, không cần key).
+       Phân tích: gộp số liệu then chốt gửi Gemini (cần internet + API key —
+       key nhập qua modal, lưu cục bộ từng máy, không lên mây/GitHub). -->
+  <button type="button" class="ai-fab" id="btn-open-ai" title="Trợ lý AI — nhắc việc &amp; phân tích số liệu">
+    <i data-lucide="sparkles"></i>
+  </button>
+
+  <div class="modal-overlay" id="modal-ai">
+    <div class="modal-card modal-ai-card">
+      <div class="modal-header">
+        <h3><i data-lucide="sparkles"></i> Trợ Lý AI — Nhắc Việc &amp; Phân Tích</h3>
+        <button class="modal-close-btn" id="btn-close-ai"><i data-lucide="x"></i></button>
+      </div>
+      <div class="ai-body">
+        <div class="ai-section">
+          <h4><i data-lucide="bell-ring"></i> Nhắc Việc (tự tính offline — không cần API key)</h4>
+          <ul id="ai-reminders" class="ai-reminders"></ul>
+        </div>
+        <div class="ai-section" id="ai-key-row" style="display:none;">
+          <h4><i data-lucide="key-round"></i> API Key Gemini (miễn phí)</h4>
+          <div class="ai-key-line">
+            <input type="password" id="ai-key-input" placeholder="Dán API key (bắt đầu bằng AIza...)" autocomplete="off">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-ai-save-key"><i data-lucide="save"></i> Lưu Key</button>
+          </div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">
+            Lấy key miễn phí tại <b>aistudio.google.com/app/apikey</b> (đăng nhập Google → Create API key).
+            Key được lưu <b>chỉ trên máy này</b> (localStorage) — không đồng bộ mây, không đưa lên GitHub.
+          </div>
+        </div>
+        <div class="ai-section">
+          <div class="ai-out-head">
+            <h4><i data-lucide="brain-circuit"></i> Phân Tích Bằng AI</h4>
+            <span id="ai-key-status" class="ai-key-status"></span>
+          </div>
+          <div class="ai-model-row">
+            <label for="ai-model-select"><i data-lucide="cpu"></i> Model:</label>
+            <select id="ai-model-select">
+              <option value="auto">Tự động (khuyến nghị — model chính quá tải thì tự chuyển model khác)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash (mới nhất — đôi khi quá tải)</option>
+              <option value="gemini-3.6-flash">gemini-3.6-flash (ổn định — khuyến nghị cho key mới)</option>
+              <option value="gemini-3.5-flash">gemini-3.5-flash (trước đó — đủ dùng)</option>
+              <option value="gemini-flash-latest">gemini-flash-latest (alias — tự cập nhật bản mới)</option>
+              <option value="gemini-flash-lite-latest">gemini-flash-lite-latest (nhẹ nhất — tự cập nhật)</option>
+            </select>
+            <div style="font-size:0.68rem; color:var(--text-muted);">Google không mở model 2.x trở xuống cho key mới.</div>
+          </div>
+          <div id="ai-output" class="ai-output">Bấm "Phân Tích Bằng AI" để nhận nhận xét &amp; gợi ý việc cần làm từ Gemini.</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding-left:20px; padding-right:20px; padding-bottom:16px;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-ai-key-toggle" title="Xóa key đã lưu để nhập key khác"><i data-lucide="key-round"></i> Đổi Key</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-ai-copy" title="Chép kết quả AI"><i data-lucide="copy"></i> Chép</button>
+        <button type="button" class="btn btn-success" id="btn-ai-run" title="Gửi số liệu then chốt cho Gemini để phân tích (cần internet + API key)"><i data-lucide="sparkles"></i> Phân Tích Bằng AI</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

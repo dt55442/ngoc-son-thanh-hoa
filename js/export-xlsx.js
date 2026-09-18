@@ -219,6 +219,22 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
         if (ws[addr] && typeof ws[addr].v === 'number') ws[addr].z = d.zCells[k];
       });
     }
+    // Ô định dạng chữ (VD tiêu đề bôi đậm + căn giữa): SheetJS bản free BỎ QUA
+    // style khi ghi — khai báo vẫn giữ (best-effort) để dùng khi nâng cấp thư viện;
+    // màn Xem Trước/In tự đậm tiêu đề nhờ ô gộp tràn bảng (class cell-title).
+    if (d.styleCells) {
+      Object.keys(d.styleCells).forEach(k => {
+        const [r, c] = k.split(',').map(Number);
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { t: 'z' };
+        const cur = ws[addr].s || {};
+        const st = Object.assign({}, cur);
+        const cfgS = d.styleCells[k] || {};
+        if (cfgS.bold) st.font = Object.assign({}, cur.font || {}, { bold: true });
+        if (cfgS.align) st.alignment = Object.assign({}, cur.alignment || {}, { horizontal: cfgS.align, vertical: 'center' });
+        ws[addr].s = st;
+      });
+    }
     XLSX.utils.book_append_sheet(wb, ws, d.sheetName);
     XLSX.writeFile(wb, d.filename);
   }
@@ -877,8 +893,15 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
       case 'hr-att-day': {
         const date = document.getElementById('export-hr-date')?.value || state.hrAttDate || new Date().toISOString().split('T')[0];
         header = ['Stt', 'Họ Tên', 'Mã NV', 'Bộ Phận', 'Trạng Thái', 'Vị Trí / Phân Vị Trong Ngày'];
+        // Người ĐÃ NGHỈ VIỆC vẫn xuất nếu ngày xuất CHƯA qua ngày nghỉ việc
+        // (vd nghỉ 15/9 thì các bảng ngày 15/9 trở về trước vẫn có người đó)
         rows = (state.hrEmployees || [])
-          .filter(e => (e.status || 'active') !== 'quit' && inDept(e.department))
+          .filter(e => {
+            const st = e.status || 'active';
+            if (st !== 'quit') return inDept(e.department);
+            const qd = String(e.quitDate || '');
+            return /^\d{4}-\d{2}-\d{2}$/.test(qd) && qd >= date && inDept(e.department);
+          })
           .sort((a, b) => String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
             String(a.name || '').localeCompare(String(b.name || ''), 'vi'))
           .map((e, i) => {
@@ -1067,48 +1090,61 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     const dates = Array.from({ length: nDays }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`);
     const today = new Date();
 
-    // Nhân viên đang làm việc (+ lọc bộ phận), sắp theo nhóm bộ phận chuẩn rồi tên
+    // Nhân viên xuất trong bảng: đang làm việc / tạm nghỉ luôn có mặt; người
+    // ĐÃ NGHỈ VIỆC chỉ xuất trong THÁNG NGHỈ (quitDate cùng tháng xuất) — từ
+    // tháng tiếp theo tự ẩn khỏi bảng chấm công.
     const deptOrder = d => { const i = HR_DEPARTMENTS.indexOf(d); return i === -1 ? HR_DEPARTMENTS.length : i; };
     const list = (state.hrEmployees || [])
-      .filter(e => (e.status || 'active') !== 'quit' && (dept === 'all' || (e.department || '—') === dept))
+      .filter(e => {
+        const st = e.status || 'active';
+        const okDept = dept === 'all' || (e.department || '—') === dept;
+        if (!okDept) return false;
+        if (st !== 'quit') return true;
+        const qd = String(e.quitDate || '');
+        return /^\d{4}-\d{2}-\d{2}$/.test(qd) && qd.slice(0, 7) === month;
+      })
       .sort((a, b) => deptOrder(a.department) - deptOrder(b.department) ||
         String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
     if (!list.length) { showToast('Không có nhân viên nào thỏa mãn bộ lọc!', 'error'); return null; }
 
     const SUM_COLS = ['Ngày Công', 'Giờ HC', 'Giờ TC', 'Tổng Giờ'];
     const lastCol = 3 + nDays + SUM_COLS.length - 1;   // chỉ số cột cuối cùng (0-based)
-    const fills = {};    // {'r,c': 'DDEBF7'} — tô nền cột nghỉ (Xem Trước; Excel best-effort)
-    const zCells = {};   // {'r,c': '0.0'} — định dạng số 1 chữ số lẻ (hiển thị 9.0)
+    const fills = {};      // {'r,c': 'DDEBF7'} — tô nền cột nghỉ (Xem Trước; Excel best-effort)
+    const zCells = {};     // {'r,c': '0.0'} — định dạng số 1 chữ số lẻ (hiển thị 9.0)
+    const styleCells = {}; // {'r,c': {bold, align}} — tiêu đề đậm/căn giữa (best-effort Excel)
     const merges = [];
     const hour = mins => Math.round((mins / 60) * 100) / 100;  // phút → giờ thập phân
 
     // ── Dựng bảng ────────────────────────────────────────────────
-    // r0 tiêu đề · r1 tháng/năm · r2 trống · r3 khối/xưởng · r4 chú thích ·
-    // r5 "Ngày/ thứ trong tháng" + nhãn cột tổng · r6 số ngày · r7 thứ trong tuần
+    // r0 tiêu đề GỘP TOÀN BỘ chiều rộng bảng (đậm + căn giữa, không xuống dòng)
+    // · r1 tháng/năm · r2 trống · r3 chú giải GỘP 5 Ô CUỐI (không xuống dòng) ·
+    // r4 "Ngày/ thứ trong tháng" + nhãn cột tổng · r5 số ngày · r6 thứ trong tuần
+    // (Bỏ dòng "Khối/xưởng" — tên bộ phận đã nằm ngay trong dòng tiêu đề.)
     const aoa = [];
     aoa.push([dept === 'all' ? 'BẢNG CHẤM CÔNG TOÀN NHÀ MÁY' : `BẢNG CHẤM CÔNG BỘ PHẬN ${String(dept).toUpperCase()}`]);
     aoa.push([`Tháng ${mm} năm ${yy}`]);
     aoa.push([]);
     aoa.push(new Array(lastCol + 1).fill(''));
+    aoa[3][lastCol - 4] = '*Công HC: hành chính; TC: tăng ca; NL: nghỉ/lễ; "-" nghỉ theo lịch; P: nghỉ có phép; V: vắng';
+    // r4: "Ngày/ thứ trong tháng" (gộp vùng cột ngày) + nhãn 4 cột tổng (gộp dọc r4:r6)
     aoa.push(new Array(lastCol + 1).fill(''));
-    aoa[3][lastCol - 4] = `Khối/xưởng : ${dept === 'all' ? 'Tất cả bộ phận' : dept}`;
-    aoa[4][lastCol - 4] = '*Công HC: hành chính; TC: tăng ca; NL: nghỉ/lễ; "-" nghỉ theo lịch; P: nghỉ có phép; V: vắng';
-    // r5: "Ngày/ thứ trong tháng" (gộp vùng cột ngày) + nhãn 4 cột tổng (gộp dọc r5:r7)
-    aoa.push(new Array(lastCol + 1).fill(''));
-    aoa[5][3] = 'Ngày/ thứ trong tháng';
-    SUM_COLS.forEach((s, k) => { aoa[5][3 + nDays + k] = s; merges.push({ s: { r: 5, c: 3 + nDays + k }, e: { r: 7, c: 3 + nDays + k } }); });
-    // r6: số ngày + 3 nhãn cột trái (gộp dọc r6:r7) · r7: thứ trong tuần
+    aoa[4][3] = 'Ngày/ thứ trong tháng';
+    SUM_COLS.forEach((s, k) => { aoa[4][3 + nDays + k] = s; merges.push({ s: { r: 4, c: 3 + nDays + k }, e: { r: 6, c: 3 + nDays + k } }); });
+    // r5: số ngày + 3 nhãn cột trái (gộp dọc r5:r6) · r6: thứ trong tuần
     aoa.push(['Họ tên', 'Chức vụ', 'Công', ...dates.map((_, i) => String(i + 1).padStart(2, '0')), '', '', '', '']);
     aoa.push(['', '', '', ...dates.map(d => HR_DOW_SHORT[new Date(d + 'T00:00:00').getDay()]), '', '', '', '']);
-    merges.push({ s: { r: 6, c: 0 }, e: { r: 7, c: 0 } });
-    merges.push({ s: { r: 6, c: 1 }, e: { r: 7, c: 1 } });
-    merges.push({ s: { r: 6, c: 2 }, e: { r: 7, c: 2 } });
-    merges.push({ s: { r: 5, c: 3 }, e: { r: 5, c: 3 + nDays - 1 } });
-    // Tô nền cột ngày nghỉ trên vùng tiêu đề (r5..r7)
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } });             // tiêu đề gộp toàn bộ bảng
+    styleCells['0,0'] = { bold: true, align: 'center' };                      // tiêu đề đậm + căn giữa
+    merges.push({ s: { r: 3, c: lastCol - 4 }, e: { r: 3, c: lastCol } });   // chú giải gộp 5 ô cuối
+    merges.push({ s: { r: 5, c: 0 }, e: { r: 6, c: 0 } });
+    merges.push({ s: { r: 5, c: 1 }, e: { r: 6, c: 1 } });
+    merges.push({ s: { r: 5, c: 2 }, e: { r: 6, c: 2 } });
+    merges.push({ s: { r: 4, c: 3 }, e: { r: 4, c: 3 + nDays - 1 } });
+    // Tô nền cột ngày nghỉ trên vùng tiêu đề (r4..r6)
     dates.forEach((d, i) => {
       const kind = hrDayKindOf(d);
       if (kind === 'work') return;
-      for (let r = 5; r <= 7; r++) fills[`${r},${3 + i}`] = kind === 'holiday' ? 'FFF2CC' : 'DDEBF7';
+      for (let r = 4; r <= 6; r++) fills[`${r},${3 + i}`] = kind === 'holiday' ? 'FFF2CC' : 'DDEBF7';
     });
 
     // ── Dòng dữ liệu: mỗi nhân viên 2 dòng HC / TC ──
@@ -1117,7 +1153,9 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
       const rHc = aoa.length;              // dòng HC (dòng TC = rHc + 1)
       const hcRow = new Array(lastCol + 1).fill('');
       const tcRow = new Array(lastCol + 1).fill('');
-      hcRow[0] = e.name || '';
+      // Người nghỉ việc: tên kèm ngày nghỉ (ngày làm cuối) để dễ đối chiếu
+      const quitDate = /^\d{4}-\d{2}-\d{2}$/.test(String(e.quitDate || '')) ? String(e.quitDate) : '';
+      hcRow[0] = (e.name || '') + (quitDate ? ` (nghỉ từ ${formatDateDDMMYY(quitDate)})` : '');
       hcRow[1] = e.title || e.position || '';
       hcRow[2] = 'HC';
       tcRow[2] = 'TC';
@@ -1125,19 +1163,22 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
       dates.forEach((d, i) => {
         const kind = hrDayKindOf(d);
         const { hc, tc, worked } = allDay[ei][i];
-        sHc += hc; sTc += tc;
-        if (worked) nWork++;
         const c = 3 + i;
-        if (worked) {
-          if (hc > 0) { hcRow[c] = hour(hc); zCells[`${rHc},${c}`] = '0.0'; }
-          if (tc > 0) { tcRow[c] = hour(tc); zCells[`${rHc + 1},${c}`] = '0.0'; }
-          else tcRow[c] = '-';           // có đi làm nhưng không có giờ ngoài ca
-        } else if (kind === 'holiday') hcRow[c] = 'NL';
-        else if (kind === 'off') hcRow[c] = '-';
-        else {
-          const st = attStatusOf(e.id, d);
-          if (st === 'leave') hcRow[c] = 'P';
-          else if (st === 'absent') hcRow[c] = 'V';
+        const afterQuit = quitDate && d > quitDate; // đã nghỉ việc — ô trống, không tính
+        if (!afterQuit) {
+          sHc += hc; sTc += tc;
+          if (worked) nWork++;
+          if (worked) {
+            if (hc > 0) { hcRow[c] = hour(hc); zCells[`${rHc},${c}`] = '0.0'; }
+            if (tc > 0) { tcRow[c] = hour(tc); zCells[`${rHc + 1},${c}`] = '0.0'; }
+            else tcRow[c] = '-';           // có đi làm nhưng không có giờ ngoài ca
+          } else if (kind === 'holiday') hcRow[c] = 'NL';
+          else if (kind === 'off') hcRow[c] = '-';
+          else {
+            const st = attStatusOf(e.id, d);
+            if (st === 'leave') hcRow[c] = 'P';
+            else if (st === 'absent') hcRow[c] = 'V';
+          }
         }
         if (kind !== 'work') {
           const rgb = kind === 'holiday' ? 'FFF2CC' : 'DDEBF7';
@@ -1188,7 +1229,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
       title: `Bảng Chấm Công Theo Tháng — ${dept === 'all' ? 'Toàn Nhà Máy' : dept} (${month})`,
       countLabel: `${list.length} nhân viên · tháng ${month}`,
       aoa, merges, cols,
-      fills, zCells,
+      fills, zCells, styleCells,
       rowH: 18,
       sheetName: def.sheet,
       filename: `NhanSu_ChamCongThang_${month}_${todayStamp()}.xlsx`

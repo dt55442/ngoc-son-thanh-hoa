@@ -208,6 +208,9 @@ import { escapeHTML, showToast } from './utils.js';
     tbody.innerHTML = list.map(e => {
       const st = e.status || 'active';
       const stCls = st === 'active' ? 'ok' : (st === 'pause' ? 'warn' : 'off');
+      // Người đã nghỉ việc: chip trạng thái kèm NGÀY NGHỈ VIỆC (ngày làm cuối)
+      const stCell = `<span class="hr-chip ${stCls}">${EMP_STATUS[st]}</span>` +
+        (st === 'quit' && e.quitDate ? ` <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">nghỉ ${fmtDateDMY(e.quitDate)}</span>` : '');
       return `<tr>
         <td class="hr-emp-code">${escapeHTML(e.code || '—')}</td>
         <td><strong>${escapeHTML(e.name || '')}</strong></td>
@@ -218,7 +221,7 @@ import { escapeHTML, showToast } from './utils.js';
         <td>${escapeHTML(e.position || '—')}</td>
         <td>${escapeHTML(e.title || '—')}</td>
         <td>${fmtDateDMY(e.joinDate)}</td>
-        <td><span class="hr-chip ${stCls}">${EMP_STATUS[st]}</span></td>
+        <td>${stCell}</td>
         <td class="hr-notes" title="${escapeHTML(e.notes || '')}">${escapeHTML(e.notes || '—')}</td>
         <td class="text-right">
           <div style="display:flex;justify-content:flex-end;gap:4px;" data-perm="hr">
@@ -228,6 +231,12 @@ import { escapeHTML, showToast } from './utils.js';
         </td>
       </tr>`;
     }).join('');
+  }
+
+  // Ẩn/hiện ô "Ngày Nghỉ Việc" theo Trạng Thái (chỉ hiện khi "Đã nghỉ việc")
+  function syncEmployeeQuitDateRow() {
+    const row = document.getElementById('employee-quitdate-row');
+    if (row) row.style.display = document.getElementById('employee-status')?.value === 'quit' ? '' : 'none';
   }
 
   function openEmployeeModal(id) {
@@ -257,6 +266,7 @@ import { escapeHTML, showToast } from './utils.js';
       document.getElementById('employee-title').value = e.title || '';
       document.getElementById('employee-joindate').value = e.joinDate || '';
       document.getElementById('employee-status').value = e.status || 'active';
+      document.getElementById('employee-quitdate').value = e.quitDate || '';
       document.getElementById('employee-notes').value = e.notes || '';
     } else {
       if (titleEl) titleEl.innerHTML = `<i data-lucide="user-plus"></i> Thêm Nhân Viên Mới`;
@@ -267,6 +277,7 @@ import { escapeHTML, showToast } from './utils.js';
     }
     // Kỹ năng — các vị trí nhân viên có thể làm (tick nhiều vị trí)
     renderEmployeeSkillsBox(id ? (hrEmpById(id)?.skills || []) : []);
+    syncEmployeeQuitDateRow();
     modal.classList.add('show');
     initLucide();
   }
@@ -282,6 +293,8 @@ import { escapeHTML, showToast } from './utils.js';
     const name = document.getElementById('employee-name').value.trim();
     if (!name) { showToast('Họ và tên không được để trống!', 'error'); return; }
 
+    const status = document.getElementById('employee-status').value;
+    const quitDate = status === 'quit' ? (document.getElementById('employee-quitdate')?.value || '') : '';
     const data = {
       id: id || `emp-${Date.now()}`,
       code: document.getElementById('employee-code').value.trim(),
@@ -295,7 +308,10 @@ import { escapeHTML, showToast } from './utils.js';
       position: document.getElementById('employee-position').value.trim(),
       title: document.getElementById('employee-title').value.trim(),
       joinDate: document.getElementById('employee-joindate').value,
-      status: document.getElementById('employee-status').value,
+      status,
+      // Ngày nghỉ việc (ngày làm cuối) — chỉ có ý nghĩa khi "Đã nghỉ việc";
+      // bảng chấm công vẫn xuất người này đến hết tháng nghỉ, tháng sau tự ẩn.
+      quitDate,
       skills: collectEmployeeSkills(),
       notes: document.getElementById('employee-notes').value.trim(),
       updatedAt: new Date().toISOString()
@@ -1081,11 +1097,19 @@ import { escapeHTML, showToast } from './utils.js';
     const dept = document.getElementById('hr-att-filter-dept')?.value || 'all';
     const q = hrStripDiacritics(document.getElementById('hr-att-search')?.value || '');
 
-    // Lọc đang làm việc + bộ phận + tìm nhanh (tên / mã NV), rồi sắp xếp theo
-    // NHÓM BỘ PHẬN (Văn Phòng -> Cơ Điện -> QC -> Xưởng 1 -> Xưởng 2 -> Lò Hơi),
+    // Lọc đang làm việc (+ người ĐÃ NGHỈ VIỆC nhưng CHƯA qua ngày nghỉ — vẫn
+    // hiện trên chấm công để chấm đủ ngày làm cuối) + bộ phận + tìm nhanh,
+    // rồi sắp xếp theo NHÓM BỘ PHẬN (Văn Phòng -> Cơ Điện -> QC -> Xưởng 1 -> Xưởng 2 -> Lò Hơi),
     // trong cùng bộ phận xếp theo tên.
     const deptOrder = d => { const i = HR_DEPARTMENTS.indexOf(d); return i === -1 ? HR_DEPARTMENTS.length : i; };
-    const list = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active')
+    const list = (state.hrEmployees || []).filter(e => {
+      const st = e.status || 'active';
+      if (st === 'quit') {
+        const qd = String(e.quitDate || '');
+        return /^\d{4}-\d{2}-\d{2}$/.test(qd) && qd >= state.hrAttDate; // hiện tới ngày nghỉ việc
+      }
+      return st === 'active';
+    })
       .filter(e => dept === 'all' || e.department === dept)
       .filter(e => !q || hrStripDiacritics(`${e.name || ''} ${e.code || ''}`).includes(q))
       .sort((a, b) => deptOrder(a.department) - deptOrder(b.department) ||
@@ -1548,7 +1572,8 @@ import { escapeHTML, showToast } from './utils.js';
   // ─── 6) THỐNG KÊ ĐI LÀM THEO THÁNG ───────────────────────────────
   // Tính theo ngày dương lịch trong tháng: đi làm / nghỉ có phép (đơn duyệt) /
   // vắng / chưa chấm. Tỷ lệ đi làm = đi làm / (đi làm + nghỉ phép + vắng).
-  // Tháng hiện tại chỉ tính tới hôm nay; bỏ ngày trước ngày vào làm.
+  // Tháng hiện tại chỉ tính tới hôm nay; bỏ ngày trước ngày vào làm. Người ĐÃ
+  // NGHỈ VIỆC vẫn tính đến hết tháng nghỉ (ngày sau ngày nghỉ không tính gì).
   function computeAttendanceStats(month) {
     const [y, m] = String(month || '').split('-').map(Number);
     if (!y || !m) return [];
@@ -1561,12 +1586,22 @@ import { escapeHTML, showToast } from './utils.js';
     for (let d = monthStart; d <= lastDay; d = hrShiftDateISO(d, 1)) dates.push(d);
 
     return (state.hrEmployees || [])
-      .filter(e => (e.status || 'active') === 'active')
+      .filter(e => {
+        const st = e.status || 'active';
+        if (st === 'active') return true;
+        if (st === 'quit') {
+          const qd = String(e.quitDate || '');
+          return /^\d{4}-\d{2}-\d{2}$/.test(qd) && qd >= monthStart; // còn trong tháng nghỉ
+        }
+        return false;
+      })
       .map(e => {
         const join = e.joinDate || '';
+        const quit = (e.status || 'active') === 'quit' ? String(e.quitDate || '') : '';
         let work = 0, leave = 0, absent = 0, unmarked = 0;
         dates.forEach(d => {
           if (join && d < join) return; // ngày trước khi vào làm
+          if (quit && d > quit) return; // ngày sau khi nghỉ việc — không tính
           const st = attStatusOf(e.id, d);
           if (st === 'work') work++;
           else if (st === 'leave') leave++;
@@ -2760,6 +2795,25 @@ import { escapeHTML, showToast } from './utils.js';
       data.createdAt = new Date().toISOString();
       state.hrAssignments.push(data);
     }
+    // ĐIỀN TAY (thêm mới / sửa giờ) tại vị trí khác — KHUNG GIỜ KHÁC: giờ BẮT
+    // ĐẦU tại vị trí mới cũng là GIỜ KẾT THÚC tại các vị trí cũ của cùng nhân
+    // viên (cùng ngày + cùng cột ca + cùng bộ phận) — giờ cũ tự cắt, không
+    // chồng lấn. Chỉ cắt khi giờ mới MUỘN hơn giờ bắt đầu cũ (giữ lịch sử, GIỐNG
+    // logic kéo thẻ: L.V.Tuấn 7h00–9h00 tại Bổ ống 2 → 9h00–hết ca tại Bốc luồng).
+    const cutPos = [];
+    (state.hrAssignments || []).forEach(a => {
+      if (a.id === editId || a.id === moveFromId) return; // bỏ qua bản đang tạo/sửa/dời
+      if (a.date !== date || a.employeeId !== employeeId) return;
+      if (a.department !== dept || (a.shiftIdx || 0) !== shiftIdx) return;
+      const as = toMinT(a.start);
+      let ae = toMinT(a.end);
+      if (!ae || ae <= as) { ae = toMinT(hrShiftRange(cfg, a.shiftIdx || 0).end); if (ae <= as) ae += 1440; if (ae <= as) ae = as + 480; }
+      if (newStart > as && ae > newStart) {
+        a.end = start;
+        a.updatedAt = new Date().toISOString();
+        cutPos.push(hrPosName(a.positionId));
+      }
+    });
     // Gán người = có mặt làm việc: tự chấm "Đi làm" nếu ngày chưa chấm tay
     const rec = ensureAttRecord(employeeId, date);
     if (rec.status !== 'leave') rec.status = 'work';
@@ -2773,6 +2827,9 @@ import { escapeHTML, showToast } from './utils.js';
     closeBoardAssignModal();
     renderHrView();
     showToast(`Đã bố trí ${hrEmpName(employeeId)} — ${hrPosName(positionId)} ${fmtHour(start)}${end ? '–' + fmtHour(end) : ''}`, 'success');
+    if (cutPos.length) {
+      showToast(`Giờ ${fmtHour(start)} tại "${hrPosName(positionId)}" cũng là giờ kết thúc tại: ${cutPos.join(', ')} — lịch sử cũ được giữ lại.`, 'info');
+    }
   }
 
   function hrBoardRemoveAssign(id) {
@@ -3435,6 +3492,7 @@ export {
   loadHrData,
   openEmployeeImportModal,
   openEmployeeModal,
+  syncEmployeeQuitDateRow,
   openLeaveModal,
   openPositionModal,
   openRecruitmentModal,

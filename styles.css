@@ -5782,3 +5782,100 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 /* Ẩn mục auto backup cho người không phải Admin (như btn-import-json) */
 body:not(.is-admin) #btn-open-autobackup,
 body:not(.is-admin) #btn-open-cloud-backup { display: none !important; }
+/* ─── LỊCH LÀM VIỆC THEO THÁNG (modal-hr-calendar) ───────────────
+   Cài đặt ngày nghỉ theo thứ + ngày nghỉ/lễ riêng từng tháng.
+   Đi làm ngày nghỉ/lễ → toàn bộ giờ làm trong ngày tính vào TĂNG CA. */
+.hr-cal-weekdays {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.hr-cal-wd {
+  min-width: 44px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border, #d6d3d1);
+  border-radius: 8px;
+  background: var(--surface-2, #f5f5f4);
+  color: var(--text, #292524);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.hr-cal-wd:hover { border-color: var(--primary, #b45309); }
+.hr-cal-wd.on {
+  background: rgba(37, 99, 235, 0.14);
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+.hr-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.hr-cal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 7px 2px 5px;
+  border: 1.5px solid var(--border, #d6d3d1);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  cursor: pointer;
+  line-height: 1.1;
+  transition: all 0.15s ease;
+}
+.hr-cal-cell b { font-size: 0.85rem; }
+.hr-cal-cell span { font-size: 0.62rem; color: var(--text-muted, #78716c); }
+.hr-cal-cell:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)); }
+.hr-cal-cell.hr-cal-empty { background: transparent; border-color: transparent; cursor: default; }
+.hr-cal-cell.hr-cal-empty:hover { transform: none; box-shadow: none; }
+/* Nghỉ định kỳ theo thứ (mặc định Chủ nhật) — xanh nhạt */
+.hr-cal-cell.hr-cal-off {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+.hr-cal-cell.hr-cal-off span { color: #1d4ed8; }
+/* Ngày LÀM BÙ — xanh lá (đi làm bình thường dù rơi vào thứ nghỉ) */
+.hr-cal-cell.hr-cal-workday {
+  background: #dcfce7;
+  border-color: #4ade80;
+}
+.hr-cal-cell.hr-cal-workday span { color: #15803d; font-weight: 700; }
+/* Nghỉ/Lễ riêng của tháng — vàng cam */
+.hr-cal-cell.hr-cal-holiday {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+.hr-cal-cell.hr-cal-holiday span { color: #b45309; font-weight: 700; }
+.hr-cal-cell.today { outline: 2px solid var(--primary, #b45309); outline-offset: 1px; }
+.hr-cal-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.hr-cal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #d6d3d1);
+}
+.hr-cal-chip::before { content: ''; width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.hr-cal-chip.work::before { background: var(--surface, #fff); border: 1px solid var(--border, #d6d3d1); }
+.hr-cal-chip.off::before { background: #dbeafe; }
+.hr-cal-chip.holiday::before { background: #fef3c7; }
+.hr-cal-chip.workday::before { background: #dcfce7; }
+.hr-cal-status {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--primary, #b45309);
+  background: var(--primary-light, rgba(180, 83, 9, 0.08));
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+

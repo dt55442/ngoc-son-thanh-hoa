@@ -17,7 +17,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
-import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_OVERTIMES, state } from './state.js';
+import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── HẰNG SỐ NHÂN SỰ ────────────────────────────────────────────
@@ -52,6 +52,9 @@ import { escapeHTML, showToast } from './utils.js';
     try { state.hrAttendance = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_ATTENDANCE)) || []; } catch (e) { state.hrAttendance = []; }
     try { state.hrCheckins   = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CHECKINS))   || []; } catch (e) { state.hrCheckins   = []; }
     try { state.hrOvertimes  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_OVERTIMES))  || []; } catch (e) { state.hrOvertimes  = []; }
+    // Lịch làm việc theo tháng (ngày nghỉ/lễ) — object theo khóa 'YYYY-MM'
+    try { state.hrWorkCalendar = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CALENDAR)) || {}; } catch (e) { state.hrWorkCalendar = {}; }
+    if (!state.hrWorkCalendar || typeof state.hrWorkCalendar !== 'object') state.hrWorkCalendar = {};
   }
 
   function saveHrData() {
@@ -65,8 +68,9 @@ import { escapeHTML, showToast } from './utils.js';
     localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || []));
     localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || []));
     localStorage.setItem(STORAGE_KEY_HR_OVERTIMES, JSON.stringify(state.hrOvertimes || []));
+    localStorage.setItem(STORAGE_KEY_HR_CALENDAR, JSON.stringify(state.hrWorkCalendar || {}));
     // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa mục Nhân Sự nào)
-    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositionNeeds', 'hrShifts', 'hrAssignments', 'hrPositions', 'hrAttendance', 'hrCheckins', 'hrOvertimes']);
+    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositionNeeds', 'hrShifts', 'hrAssignments', 'hrPositions', 'hrAttendance', 'hrCheckins', 'hrOvertimes', 'hrWorkCalendar']);
     firePushSync(); // đồng bộ lên mây nếu online
   }
 
@@ -573,7 +577,7 @@ import { escapeHTML, showToast } from './utils.js';
     if (!ot || !ot.employeeId || !ot.date) return 0;
     return (state.hrAssignments || [])
       .filter(a => a.date === ot.date && a.employeeId === ot.employeeId)
-      .reduce((sum, a) => sum + hrSplitHoursHC(a.department || hrEmpDept(ot.employeeId), a.start, a.end, a.shiftIdx).tc, 0);
+      .reduce((sum, a) => sum + hrSplitHoursHCDate(a.department || hrEmpDept(ot.employeeId), ot.date, a.start, a.end, a.shiftIdx).tc, 0);
   }
   // Nhãn giờ DỰ KIẾN: "17:30 → 19:30 · 2h"
   function overtimePlannedText(ot) {
@@ -1177,7 +1181,7 @@ import { escapeHTML, showToast } from './utils.js';
           `<span class="att-pos-chip on" title="${escapeHTML(hrPosName(a.positionId))} · ${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}">` +
           `${escapeHTML(hrPosName(a.positionId))} <b style="font-weight:600;">${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ''}</b></span>`).join('');
         const tot = dayAs.reduce((acc, a) => {
-          const r = hrSplitHoursHC(a.department || e.department, a.start, a.end, a.shiftIdx || 0);
+          const r = hrSplitHoursHCDate(a.department || e.department, state.hrAttDate, a.start, a.end, a.shiftIdx || 0);
           acc.hc += r.hc; acc.tc += r.tc; return acc;
         }, { hc: 0, tc: 0 });
         const badge = `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
@@ -2286,6 +2290,185 @@ import { escapeHTML, showToast } from './utils.js';
     return { hc, tc: Math.max(0, (e - s) - hc - gap) };
   }
 
+  // ─── LỊCH LÀM VIỆC THEO THÁNG (ngày nghỉ / lễ) ──────────────────
+  // Cấu hình theo từng tháng { 'YYYY-MM': { weekdaysOff, restDays, workDays } }:
+  //  • weekdaysOff: nghỉ ĐỊNH KỲ theo thứ (mặc định [0] = nghỉ Chủ nhật;
+  //    mảng RỖNG = tắt hẳn nghỉ định kỳ — mọi ngày đều là ngày làm việc)
+  //  • restDays   : nghỉ/LỄ RIÊNG của tháng (1/9, 2/9, nghỉ toàn nhà máy...)
+  //  • workDays   : LÀM BÙ theo TỪNG ngày — đi làm bình thường dù rơi vào thứ
+  //    nghỉ (VD Chủ nhật làm bù; các Chủ nhật khác vẫn nghỉ theo thứ)
+  // Quy tắc tính giờ: đi làm vào ngày nghỉ/lễ → TOÀN BỘ giờ làm trong ngày
+  // (theo cửa sổ ca chuẩn của bộ phận, đã trừ nghỉ trưa) được tính vào TC.
+  const HR_DOW_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']; // theo Date.getDay() (0 = Chủ nhật)
+  const HR_DOW_GRID  = [1, 2, 3, 4, 5, 6, 0];                      // thứ tự lưới lịch bắt đầu Thứ 2
+  // Cấu hình lịch của 1 tháng (null nếu chưa cài — mặc định nghỉ Chủ nhật)
+  function hrCalCfgOf(month) {
+    const cal = state.hrWorkCalendar;
+    if (!cal || typeof cal !== 'object') return null;
+    const cfg = cal[month];
+    return (cfg && typeof cfg === 'object') ? cfg : null;
+  }
+  // Loại ngày: 'work' (ngày làm việc — gồm cả LÀM BÙ) | 'off' (nghỉ định kỳ
+  // theo thứ) | 'holiday' (nghỉ/lễ riêng). Ưu tiên: restDays > workDays > weekdaysOff.
+  function hrDayKindOf(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return 'work';
+    const cfg = hrCalCfgOf(String(iso).slice(0, 7));
+    if (cfg && Array.isArray(cfg.restDays) && cfg.restDays.includes(iso)) return 'holiday';
+    if (cfg && Array.isArray(cfg.workDays) && cfg.workDays.includes(iso)) return 'work'; // ngày làm bù
+    const wdOff = (cfg && Array.isArray(cfg.weekdaysOff)) ? cfg.weekdaysOff : [0]; // mặc định nghỉ CN
+    let dow = -1;
+    try { dow = new Date(iso + 'T00:00:00').getDay(); } catch (e) { dow = -1; }
+    return (dow >= 0 && wdOff.includes(dow)) ? 'off' : 'work';
+  }
+  // Ngày nghỉ (định kỳ hoặc lễ) — đi làm ngày này thì giờ làm tính vào TC
+  function hrIsRestDay(iso) { return hrDayKindOf(iso) !== 'work'; }
+  // Tách giờ HC/TC CÓ XÉT LỊCH THÁNG: ngày nghỉ/lễ thì phần giờ nằm trong
+  // cửa sổ ca chuẩn KHÔNG tính HC nữa mà chuyển hết sang TC (hc=0, tc=hc+tc).
+  function hrSplitHoursHCDate(dept, date, start, end, shiftIdx) {
+    const r = hrSplitHoursHC(dept, start, end, shiftIdx);
+    if (date && hrIsRestDay(date) && r.hc > 0) return { hc: 0, tc: r.hc + r.tc };
+    return r;
+  }
+
+  // ── MODAL CÀI ĐẶT LỊCH LÀM VIỆC THEO THÁNG ──
+  // Bản nháp đang chỉnh (Lưu mới ghi vào state + localStorage + mây)
+  let hrCalDraft = { month: '', weekdaysOff: [0], restDays: [], workDays: [] };
+
+  function openHrCalendarModal() {
+    if (!requireEditPermission()) return;
+    const input = document.getElementById('hr-calendar-month');
+    const month = (input && /^\d{4}-\d{2}$/.test(input.value)) ? input.value
+      : (/^\d{4}-\d{2}$/.test(state.hrCalMonth || '') ? state.hrCalMonth : hrTodayISO().slice(0, 7));
+    hrCalSetMonth(month);
+    const modal = document.getElementById('modal-hr-calendar');
+    if (modal) { modal.classList.add('show'); initLucide(); }
+  }
+
+  function closeHrCalendarModal() {
+    document.getElementById('modal-hr-calendar')?.classList.remove('show');
+  }
+
+  // Đổi tháng trong modal — nạp cấu hình hiện có vào bản nháp rồi vẽ lại
+  function hrCalSetMonth(month) {
+    if (!/^\d{4}-\d{2}$/.test(String(month || ''))) return;
+    state.hrCalMonth = month;
+    const cfg = hrCalCfgOf(month) || {};
+    hrCalDraft = {
+      month,
+      weekdaysOff: Array.isArray(cfg.weekdaysOff) ? [...cfg.weekdaysOff] : [0],
+      restDays: Array.isArray(cfg.restDays) ? [...cfg.restDays] : [],
+      workDays: Array.isArray(cfg.workDays) ? [...cfg.workDays] : []
+    };
+    const input = document.getElementById('hr-calendar-month');
+    if (input && input.value !== month) input.value = month;
+    renderHrCalendarModal();
+  }
+
+  // Bật/tắt trạng thái của 1 ngày (click ô lịch) — chu kỳ:
+  //   ngày làm việc  → nghỉ/lễ riêng → (bấm nữa) ngày làm việc
+  //   nghỉ theo thứ  → LÀM BÙ (đi làm bình thường) → (bấm nữa) nghỉ theo thứ
+  function hrCalToggleDay(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || '')) || iso.slice(0, 7) !== hrCalDraft.month) return;
+    let dow = -1;
+    try { dow = new Date(iso + 'T00:00:00').getDay(); } catch (e) { dow = -1; }
+    const iRest = hrCalDraft.restDays.indexOf(iso);
+    const iWork = hrCalDraft.workDays.indexOf(iso);
+    if (iRest !== -1) {
+      hrCalDraft.restDays.splice(iRest, 1);              // đang nghỉ/lễ riêng -> bỏ đánh dấu
+    } else if (iWork !== -1) {
+      hrCalDraft.workDays.splice(iWork, 1);              // đang làm bù -> trả lại nghỉ theo thứ
+    } else if (dow >= 0 && hrCalDraft.weekdaysOff.includes(dow)) {
+      hrCalDraft.workDays.push(iso);                     // nghỉ theo thứ -> LÀM BÙ ngày này
+      showToast(`Đã đánh dấu LÀM BÙ ngày ${iso} — đi làm bình thường, giờ tính như ngày làm việc. (Các ${HR_DOW_SHORT[dow]} khác vẫn nghỉ)`, 'info');
+    } else {
+      hrCalDraft.restDays.push(iso);                     // ngày làm việc -> nghỉ/lễ riêng
+    }
+    renderHrCalendarModal();
+  }
+
+  // Bật/tắt nghỉ định kỳ theo thứ (CN..T7)
+  function hrCalToggleWeekday(dow) {
+    const i = hrCalDraft.weekdaysOff.indexOf(dow);
+    if (i !== -1) hrCalDraft.weekdaysOff.splice(i, 1);
+    else hrCalDraft.weekdaysOff.push(dow);
+    renderHrCalendarModal();
+  }
+
+  // Vẽ nội dung modal lịch (grid tháng + các nút nghỉ theo thứ)
+  function renderHrCalendarModal() {
+    const labelEl = document.getElementById('hr-calendar-month-label');
+    if (labelEl) labelEl.textContent = hrCalDraft.month;
+    // Các nút "Nghỉ định kỳ theo thứ"
+    const wdBox = document.getElementById('hr-calendar-weekdays');
+    if (wdBox) {
+      wdBox.innerHTML = HR_DOW_GRID.map(d =>
+        `<button type="button" class="hr-cal-wd${hrCalDraft.weekdaysOff.includes(d) ? ' on' : ''}" data-cal-wd="${d}" ` +
+        `title="${hrCalDraft.weekdaysOff.includes(d) ? 'Nghỉ' : 'Làm việc'} định kỳ mỗi ${HR_DOW_SHORT[d]}">${HR_DOW_SHORT[d]}</button>`).join('');
+    }
+    // Lưới ngày của tháng (bắt đầu Thứ 2)
+    const grid = document.getElementById('hr-calendar-grid');
+    if (grid && /^\d{4}-\d{2}$/.test(hrCalDraft.month)) {
+      const [yy, mm] = hrCalDraft.month.split('-').map(Number);
+      const nDays = new Date(yy, mm, 0).getDate();
+      const firstDow = new Date(yy, mm - 1, 1).getDay();        // 0 = CN
+      const pad = (firstDow + 6) % 7;                            // lưới bắt đầu T2
+      const todayISO = hrTodayISO();
+      let html = '';
+      for (let p = 0; p < pad; p++) html += '<span class="hr-cal-cell hr-cal-empty"></span>';
+      for (let d = 1; d <= nDays; d++) {
+        const iso = `${hrCalDraft.month}-${String(d).padStart(2, '0')}`;
+        const dow = new Date(yy, mm - 1, d).getDay();
+        const inRest = hrCalDraft.restDays.includes(iso);
+        const inWork = hrCalDraft.workDays.includes(iso);
+        const isOff = hrCalDraft.weekdaysOff.includes(dow);
+        const kind = inRest ? 'holiday' : (inWork ? 'workday' : (isOff ? 'off' : 'work'));
+        const cls = kind === 'holiday' ? 'hr-cal-holiday'
+          : (kind === 'workday' ? 'hr-cal-workday'
+          : (kind === 'off' ? 'hr-cal-off' : 'hr-cal-work'));
+        const tips = {
+          work: 'Ngày làm việc',
+          workday: 'Ngày LÀM BÙ — đi làm bình thường dù rơi vào thứ nghỉ (bấm để trả lại nghỉ theo thứ)',
+          off: `Nghỉ định kỳ (${HR_DOW_SHORT[dow]}) — bấm để đánh dấu LÀM BÙ cho riêng ngày này`,
+          holiday: 'Nghỉ/Lễ riêng — đi làm sẽ tính hết giờ vào TC'
+        };
+        html += `<button type="button" class="hr-cal-cell ${cls}${iso === todayISO ? ' today' : ''}" data-cal-day="${iso}" title="${tips[kind]}">` +
+          `<b>${d}</b><span>${HR_DOW_SHORT[dow]}${kind === 'workday' ? ' · bù' : ''}</span></button>`;
+      }
+      grid.innerHTML = html;
+    }
+    // Dòng trạng thái
+    const stEl = document.getElementById('hr-calendar-status');
+    if (stEl) {
+      const nRest = hrCalDraft.restDays.length;
+      const nWork = hrCalDraft.workDays.length;
+      const wdTxt = hrCalDraft.weekdaysOff.length
+        ? 'nghỉ định kỳ: ' + hrCalDraft.weekdaysOff.slice().sort((a, b) => a - b).map(d => HR_DOW_SHORT[d]).join(', ')
+        : 'KHÔNG nghỉ định kỳ theo thứ nào (mọi ngày đều là ngày làm việc)';
+      stEl.textContent = `${hrCalDraft.month} — ${wdTxt} · ${nRest} ngày nghỉ/lễ riêng · ${nWork} ngày làm bù`;
+    }
+    initLucide();
+  }
+
+  // Lưu lịch tháng đang chỉnh vào state + localStorage (+ đồng bộ mây qua saveHrData)
+  function handleHrCalendarSubmit(e) {
+    e.preventDefault();
+    const month = hrCalDraft.month;
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Tháng không hợp lệ — hãy chọn tháng trước khi lưu!', 'error'); return; }
+    state.hrWorkCalendar[month] = {
+      weekdaysOff: [...new Set(hrCalDraft.weekdaysOff)].sort((a, b) => a - b),
+      restDays: [...new Set(hrCalDraft.restDays)].sort(),
+      workDays: [...new Set(hrCalDraft.workDays)].sort(),
+      updatedAt: new Date().toISOString(),
+      updatedBy: state.currentUser ? (state.currentUser.email || state.currentUser.username || '') : ''
+    };
+    saveHrData();
+    closeHrCalendarModal();
+    renderHrView();
+    const saved = state.hrWorkCalendar[month];
+    showToast(`Đã lưu lịch làm việc tháng ${month} (${saved.restDays.length} ngày nghỉ/lễ riêng` +
+      `${saved.workDays.length ? ` · ${saved.workDays.length} ngày làm bù` : ''})`, 'success');
+  }
+
   // Đồng bộ cột "Vị Trí Trong Ngày" của chấm công theo dữ liệu Board:
   // rec.positions = các vị trí ĐANG được gán trong ngày (nguồn cho liên kết
   // công nhân ép ván + thống kê phân vị)
@@ -3285,6 +3468,18 @@ export {
   hrShiftCfg,
   hrAssignTimesOf,
   hrSplitHoursHC,
+  hrCalCfgOf,
+  hrDayKindOf,
+  hrIsRestDay,
+  hrSplitHoursHCDate,
+  openHrCalendarModal,
+  closeHrCalendarModal,
+  hrCalSetMonth,
+  hrCalToggleDay,
+  hrCalToggleWeekday,
+  renderHrCalendarModal,
+  handleHrCalendarSubmit,
+  HR_DOW_SHORT,
   hrShortName,
   fmtHour,
   BOARD_SHIFT_PRESETS,

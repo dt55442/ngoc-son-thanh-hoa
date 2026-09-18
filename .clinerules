@@ -5,6 +5,7 @@
 - **Nhà máy Ngọc Sơn Thanh Hóa** (`nha-may-ngoc-son-thanh-hoa` v4.1.0): hệ thống quản lý & theo dõi sản xuất **nan tre** (KHSX — kế hoạch sản xuất, ép ván, nguyên liệu, QC, nhân sự).
 - **PWA offline-first**: chạy 100% offline (localStorage + IndexedDB); khi online thì đồng bộ mây Firebase (Auth + Firestore compat).
 - Giao diện & comment: **tiếng Việt**. Đây là quy ước bắt buộc khi viết code mới.
+- **OUTPUT BẮT BUỘC TIẾNG VIỆT CÓ DẤU**: mọi nội dung trả lời cho người dùng (giải thích, báo cáo, tóm tắt), comment code, nhãn UI, thông báo/toast, log, commit message phải là **tiếng Việt đầy đủ dấu** (oà, ề, ẩ... — tuyệt đối không viết tiếng Việt không dấu/không dấu đầy đủ, không lồng câu tiếng Anh vào output). Suy nghĩ/lập kế hoạch nội bộ được phép dùng tiếng Anh, nhưng kết quả xuất ra cho người dùng và code phải là tiếng Việt có dấu.
 - Deploy: **GitHub Pages** → https://dt55442.github.io/ngoc-son-thanh-hoa/ (push bằng `day-len-github.bat`).
 
 ## 2. Stack & ràng buộc
@@ -34,6 +35,7 @@ Số dòng ghi chú để ước lượng: đọc bằng grep trước khi đọ
 | hr.js | 2867 | Nhân sự: nhân viên, nghỉ phép, tuyển dụng, posNeeds, ca/bố trí, chấm công, máy chấm công (hrCheckins), thống kê. |
 | xuong2.js | 514 | Nhật ký cắt/chọn Xưởng 2 (xuong2CutRecords), link sang tab Nguyên liệu. |
 | (trong hr.js) | — | **Đăng Ký Tăng Ca** (mini card `hr-ot-card`): lưu `hrOvertimes` (key `bamboo_tracker_hr_overtimes_v1`) chỉ là GIỜ DỰ KIẾN; giờ TC THỰC TẾ KHÔNG lưu cứng — `overtimeActualMin()` tự tính từ `hrAssignments` (Bảng bố trí theo ngày) qua `hrSplitHoursHC`, nên sửa giờ/sự cố trên board là số TC tự đổi. Duyệt/xóa dùng chung cổng `canApproveLeave()` (Admin/Manager). |
+| (trong hr.js) | — | **Lịch Làm Việc Theo Tháng** (nút `btn-hr-calendar` "Lịch Tháng" ở card Bố Trí + modal `modal-hr-calendar`): lưu `hrWorkCalendar` (key `bamboo_tracker_hr_calendar_v1`, dạng `{ 'YYYY-MM': { weekdaysOff: [0..6], restDays: ['YYYY-MM-DD'], workDays: ['YYYY-MM-DD'] } }`, mặc định không cài = nghỉ CN). `hrDayKindOf(iso)` → 'work'/'off'/'holiday' (ưu tiên restDays > workDays > weekdaysOff; weekdaysOff rỗng = tắt hẳn nghỉ định kỳ); `workDays` = **ngày làm bù theo từng ngày** (bấm ô nghỉ theo thứ → làm bù → bấm nữa → trả lại nghỉ; đi làm ngày làm bù tính giờ như ngày thường). `hrSplitHoursHCDate(dept,date,...)` = `hrSplitHoursHC` + quy tắc **ngày nghỉ/lễ đi làm → toàn bộ giờ theo cửa sổ ca thành TC** (đã áp vào `overtimeActualMin` + badge HC/TC chấm công). `export-xlsx.js` dùng để dựng **Bảng Chấm Công Theo Tháng** (lựa chọn `hr-timesheet` trong modal Xuất Nhân Sự — mỗi NV 2 dòng HC/TC theo ngày, 'NL'/'-'/'P'/'V', cột Ngày Công/Giờ HC/Giờ TC/Tổng Giờ, dòng TỔNG CỘNG; `fills` màu cột nghỉ chỉ hiện ở Xem Trước vì SheetJS CE không ghi style, `zCells` '0.0' ghi được). Test: `tests/hr-timesheet.test.mjs`. |
 | history.js | 367 | Audit log "Lịch sử sửa đổi" (chỉ Admin), snapshot nền khi initHistory. |
 | tombstone.js | 182 | Dấu vết xóa `deletedIds` — bắt buộc cho đồng bộ xóa đa máy; giữ tối đa 90 ngày. |
 | autobackup.js | 275 | **AUTO BACKUP 3 lớp** chống xóa nhầm: (1) ring buffer 10 bản cất cục bộ (`bamboo_tracker_autobackup_v1`, nén gzip nền) chụp TRƯỚC tải-mây-về/nạp-JSON + throttle 5 phút sau push; (2) backup mây 1 bản/ngày doc `apps/backups/dates/<ngày>` giữ 14 ngày (wildcard rules sẵn có đã phủ, KHÔNG cần publish rules); (3) storage.js copy `bamboo_data.json` cũ sang `backups/`. Phục hồi luôn GỘP KHÉO qua `mergeRemoteIntoLocal` (mới-hơn-thắng, tôn trọng tombstone). Badge `#sync-status-badge` (Đã đồng bộ/Đang chờ/Mất mạng/Chưa đăng nhập) — `updateSyncBadge()` trong cloud.js. Menu ⋮: 2 nút chỉ Admin (`permissions.js` show + CSS `body:not(.is-admin)`). |
@@ -42,7 +44,7 @@ Số dòng ghi chú để ước lượng: đọc bằng grep trước khi đọ
 | lunar.js | 188 | Âm lịch Việt Nam (Hồ Ngọc Đức). |
 | photo-store.js | 136 | Ảnh IndexedDB (dataURL), thư mục `materials-photos/` là ảnh user — đừng xóa/sửa. |
 
-File khác: `index.html` (~3.8k dòng — toàn bộ 7 view + modal, nav qua `data-target`), `styles.css` (~5.6k dòng), `sw.js` (140 dòng), `firestore.rules` (v4), `server.cjs`/`server.ps1`, `tests/` (21 file .mjs).
+File khác: `index.html` (~3.8k dòng — toàn bộ 7 view + modal, nav qua `data-target`), `styles.css` (~5.8k dòng), `sw.js` (140 dòng), `firestore.rules` (v4), `server.cjs`/`server.ps1`, `tests/` (22 file .mjs).
 
 ## 4. Tabs (view-panel, switchView trong main.js)
 `dashboard-view` (Tổng Quan, mặc định) · `kanban-view` (Công Đoạn + thẻ Xưởng 2) · `planning-view` (Kế Hoạch) · `press-view` (Ép Ván) · `materials-view` (Nguyên Liệu) · `qc-view` (QC) · `hr-view` (Nhân Sự).
@@ -55,7 +57,7 @@ Công đoạn (STAGES trong state.js): **say1 (Sấy 1) → say2 (Sấy 2) → k
 
 ## 6. Quy tắc BẮT BUỘC khi sửa code
 1. **Tăng `CACHE_NAME` trong `sw.js`** (hiện `nha-may-ngoc-son-v89` → v90, v91...) mỗi lần đổi index.html/styles.css/js/vendor — nếu không PWA sẽ dùng cache cũ mãi. Thêm file js mới thì thêm vào APP_SHELL của sw.js.
-2. Comment/nhãn UI/log bằng **tiếng Việt**, giữ style comment có mục `// ─── ... ───`.
+2. Comment/nhãn UI/log bằng **tiếng Việt có dấu đầy đủ** (bắt buộc — xem quy tắc OUTPUT ở mục 1), giữ style comment có mục `// ─── ... ───`.
 3. Ngày nhập/hiển thị **dd/mm/yyyy** (initVnDateInputs đã tự bắn cho element động — đừng tự format riêng).
 4. Mọi state mới đặt trong `state` (state.js) + STORAGE_KEY riêng (`bamboo_tracker_<tên>_v1`) + hàm load/save + nạp trong boot + đưa vào luồng tombstone/đồng bộ nếu cần xóa đa máy.
 5. Sau sửa code: chạy **`npm test`** (21 test Node thuần, headless — smoke.mjs dựng stub DOM/localStorage rồi import js/main.js và bắn DOMContentLoaded; KHÔNG có framework test, không cần cài gì).

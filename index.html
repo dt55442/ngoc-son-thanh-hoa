@@ -1794,6 +1794,9 @@
             <button type="button" class="btn btn-outline btn-sm" id="btn-board-shifts" title="Cài đặt ca làm việc cho bộ phận đang xem (Hành chính / Làm ca + giờ)">
               <i data-lucide="settings-2"></i> Ca Làm Việc
             </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-hr-calendar" title="Cài đặt lịch làm việc từng tháng: ngày nghỉ theo thứ + ngày nghỉ/lễ riêng — đi làm ngày nghỉ thì giờ làm tính vào TĂNG CA">
+              <i data-lucide="calendar-range"></i> Lịch Tháng
+            </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-board" title="Thu gọn / Mở rộng">
               <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
             </button>
@@ -2553,6 +2556,53 @@
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-shift">Hủy Bỏ</button>
           <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HR-9c: LỊCH LÀM VIỆC THEO THÁNG — ngày nghỉ theo thứ + ngày nghỉ/lễ riêng.
+       Đi làm vào ngày nghỉ/lễ thì toàn bộ giờ làm trong ngày được tính vào TĂNG CA
+       (hrSplitHoursHCDate) và hiển thị trong Bảng Chấm Công Theo Tháng. -->
+  <div class="modal-overlay" id="modal-hr-calendar">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="calendar-range"></i> Lịch Làm Việc — <span id="hr-calendar-month-label"></span></h3>
+        <button class="modal-close-btn" id="btn-close-hr-calendar"><i data-lucide="x"></i></button>
+      </div>
+      <form id="hr-calendar-form" style="padding: 20px;">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label for="hr-calendar-month"><i data-lucide="calendar-days"></i> Chọn Tháng</label>
+          <input type="month" id="hr-calendar-month" style="width:100%;">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Nghỉ Định Kỳ Theo Thứ (bấm bật/tắt — tắt hẳn một thứ = các ngày đó thành ngày làm việc)</label>
+          <div id="hr-calendar-weekdays" class="hr-cal-weekdays"></div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+            VD: bấm tắt "CN" → toàn bộ Chủ nhật trong tháng thành ngày làm việc bình thường (giờ làm không còn bị tính hết vào tăng ca do nghỉ).
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>Ngày Nghỉ/Lễ Riêng &amp; Ngày Làm Bù Của Tháng (bấm vào ô ngày để bật/tắt)</label>
+          <div id="hr-calendar-grid" class="hr-cal-grid"></div>
+          <div class="hr-cal-legend">
+            <span class="hr-cal-chip work">Ngày làm việc</span>
+            <span class="hr-cal-chip off">Nghỉ theo thứ</span>
+            <span class="hr-cal-chip holiday">Nghỉ/Lễ riêng</span>
+            <span class="hr-cal-chip workday">Làm bù</span>
+          </div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">
+            Quy tắc: nếu nhân viên <b>đi làm vào ngày nghỉ/lễ</b> thì toàn bộ giờ làm trong ngày
+            (theo ca chuẩn của bộ phận) được tính vào <b>TĂNG CA (TC)</b>. Bấm vào ô ngày
+            <b>nghỉ theo thứ</b> để đánh dấu riêng ngày đó là <b>LÀM BÙ</b> (xanh lá — đi làm bình thường,
+            giờ tính như ngày thường; các ngày cùng thứ khác vẫn nghỉ). Chưa cài lịch cho tháng nào thì
+            mặc định nghỉ Chủ nhật.
+          </div>
+        </div>
+        <div class="hr-cal-status" id="hr-calendar-status"></div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-hr-calendar">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lịch</button>
         </div>
       </form>
     </div>
@@ -3492,6 +3542,7 @@
           <label for="export-hr-card"><i data-lucide="layout-grid"></i> Chọn Nội Dung Xuất (theo thẻ nhanh)</label>
           <select id="export-hr-card">
             <option value="hr-emp">Nhân Viên — Danh Sách Nhân Viên</option>
+            <option value="hr-timesheet">Bảng Chấm Công Theo Tháng (HC/TC)</option>
             <option value="hr-att-day">Chấm Công &amp; Phân Vị — Theo Ngày</option>
             <option value="hr-att-stats">Thống Kê Đi Làm — Theo Tháng</option>
             <option value="hr-pos">Vị Trí Làm Việc &amp; Kỹ Năng</option>

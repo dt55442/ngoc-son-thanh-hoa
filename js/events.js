@@ -15,7 +15,7 @@ import { addPressLine, addPressStick, closePressModal, closePressNoteModal, clos
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { deleteXuong2Cut, editXuong2Cut, handleXuong2CutSubmit, resetXuong2CutForm, updateXuong2CutLinked, updateXuong2CutRemain, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
-import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
+import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
@@ -316,6 +316,28 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('hr-xlsx-export-form',  'submit', handleHrXlsxExportSubmit);
     safeOn('btn-preview-hr',       'click', openHrXlsxExportPreview);
     safeOn('export-hr-card',       'change', syncHrXlsxCardUI);
+
+    // ── Lịch làm việc theo tháng (ngày nghỉ/lễ — modal Lịch Tháng) ──
+    safeOn('btn-hr-calendar',          'click', openHrCalendarModal);
+    safeOn('btn-close-hr-calendar',    'click', closeHrCalendarModal);
+    safeOn('btn-cancel-hr-calendar',   'click', closeHrCalendarModal);
+    safeOn('hr-calendar-form',         'submit', handleHrCalendarSubmit);
+    safeOn('hr-calendar-month',        'change', (e) => hrCalSetMonth(e.target.value));
+    // Lưới lịch + nút thứ render động → event delegation (click bật/tắt)
+    const hrCalBox = document.getElementById('hr-calendar-grid');
+    if (hrCalBox) {
+      hrCalBox.addEventListener('click', (e) => {
+        const cell = e.target && e.target.closest ? e.target.closest('[data-cal-day]') : null;
+        if (cell) hrCalToggleDay(cell.getAttribute('data-cal-day'));
+      });
+    }
+    const hrCalWdBox = document.getElementById('hr-calendar-weekdays');
+    if (hrCalWdBox) {
+      hrCalWdBox.addEventListener('click', (e) => {
+        const wd = e.target && e.target.closest ? e.target.closest('[data-cal-wd]') : null;
+        if (wd) hrCalToggleWeekday(parseInt(wd.getAttribute('data-cal-wd'), 10));
+      });
+    }
 
     // ── Xem trước & chỉnh sửa báo cáo trước khi xuất/in ──
     safeOn('btn-preview-custom',    'click', openCustomExportPreview);

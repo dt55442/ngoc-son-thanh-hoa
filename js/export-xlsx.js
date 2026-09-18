@@ -7,7 +7,7 @@ import { logDataChange } from './history.js';
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
-import { HR_DEPARTMENTS, attStatusOf, computeAttendanceStats, computeLeaveStats, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
+import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 
@@ -195,12 +195,30 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   function modalHide(id) { document.getElementById(id)?.classList.remove('show'); }
 
   // Ghi dữ liệu báo cáo { aoa, merges, cols, rowH, sheetName, filename } ra file .xlsx
+  // Bổ sung tùy chọn: fills {'r,c': mã màu RGB 6 số} + zCells {'r,c': định dạng số
+  // '0.0'} — SheetJS bản free GHI ĐƯỢC định dạng số nhưng BỎ QUA màu nền (màu
+  // chỉ hiện ở màn Xem Trước); khai báo vẫn giữ để dùng khi nâng cấp thư viện.
   function exportDataToXlsx(d) {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(d.aoa);
     if (d.merges && d.merges.length) ws['!merges'] = d.merges;
     if (d.cols) ws['!cols'] = d.cols;
     if (d.rowH) ws['!rows'] = [{ hpt: d.rowH }];
+    if (d.fills) {
+      Object.keys(d.fills).forEach(k => {
+        const [r, c] = k.split(',').map(Number);
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { t: 'z' };
+        ws[addr].s = { fill: { patternType: 'solid', fgColor: { rgb: d.fills[k] } } };
+      });
+    }
+    if (d.zCells) {
+      Object.keys(d.zCells).forEach(k => {
+        const [r, c] = k.split(',').map(Number);
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (ws[addr] && typeof ws[addr].v === 'number') ws[addr].z = d.zCells[k];
+      });
+    }
     XLSX.utils.book_append_sheet(wb, ws, d.sheetName);
     XLSX.writeFile(wb, d.filename);
   }
@@ -757,6 +775,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   const HR_RECRUIT_STATUS_L = { open: 'Đang tuyển', done: 'Đã đủ người' };
   const HR_XLSX_CARDS = [
     { id: 'hr-emp',         label: 'Nhân Viên — Danh Sách Nhân Viên',     sheet: 'Nhân Viên',      file: 'NhanVien' },
+    { id: 'hr-timesheet',   label: 'Bảng Chấm Công Theo Tháng (HC/TC)',   sheet: 'Chấm Công Tháng', file: 'ChamCongThang' },
     { id: 'hr-att-day',     label: 'Chấm Công & Phân Vị — Theo Ngày',     sheet: 'Chấm Công Ngày', file: 'ChamCongNgay' },
     { id: 'hr-att-stats',   label: 'Thống Kê Đi Làm — Theo Tháng',        sheet: 'TK Đi Làm',      file: 'TK_DiLam' },
     { id: 'hr-pos',         label: 'Vị Trí Làm Việc & Kỹ Năng',           sheet: 'Vị Trí',         file: 'ViTri' },
@@ -818,12 +837,12 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
 
   function closeHrXlsxExportModal() { modalHide('modal-export-hr'); }
 
-  // Hiện/ẩn ô Tháng (thống kê đi làm) và ô Ngày (chấm công theo ngày) theo thẻ đang chọn
+  // Hiện/ẩn ô Tháng (thống kê đi làm & bảng chấm công tháng) và ô Ngày (chấm công theo ngày) theo thẻ đang chọn
   function syncHrXlsxCardUI() {
     const card = document.getElementById('export-hr-card')?.value || 'hr-emp';
     const mRow = document.getElementById('export-hr-month-row');
     const dRow = document.getElementById('export-hr-date-row');
-    if (mRow) mRow.style.display = (card === 'hr-att-stats') ? '' : 'none';
+    if (mRow) mRow.style.display = (card === 'hr-att-stats' || card === 'hr-timesheet') ? '' : 'none';
     if (dRow) dRow.style.display = (card === 'hr-att-day') ? '' : 'none';
   }
 
@@ -832,6 +851,8 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     const cardId = document.getElementById('export-hr-card')?.value || 'hr-emp';
     const def = HR_XLSX_CARDS.find(c => c.id === cardId) || HR_XLSX_CARDS[0];
     const dept = document.getElementById('export-hr-dept')?.value || 'all';
+    // Bảng chấm công theo tháng (HC/TC) có bố cục riêng (lưới ngày) — dựng hàm riêng
+    if (def.id === 'hr-timesheet') return buildHrTimesheetExportData(def, dept);
     const inDept = d => dept === 'all' || (d || '—') === dept;
     const today = new Date();
     const dayLabel = `Ngày  ${today.getDate()}  Tháng  ${today.getMonth() + 1}  năm  ${today.getFullYear()}`;
@@ -1010,6 +1031,171 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   }
 
   // =============================================================
+  // 5b) BẢNG CHẤM CÔNG THEO THÁNG (HC/TC) — theo mẫu "Bảng chấm công bộ phận"
+  // =============================================================
+  // Mỗi nhân viên 2 dòng: HC (giờ hành chính / ca chuẩn) + TC (tăng ca) theo
+  // từng ngày của tháng. Nguồn giờ: Bảng bố trí vị trí theo ngày (hrAssignments);
+  // không có bố trí thì lấy giờ máy chấm công (hrCheckins). Ngày nghỉ/lễ theo
+  // Lịch Làm Việc tháng: đi làm → toàn bộ giờ tính vào TC; không làm → hiện
+  // NL (nghỉ/lễ riêng) hoặc '-' (nghỉ định kỳ theo thứ, mặc định Chủ nhật).
+  // Tính giờ ngày của 1 nhân viên: { hc, tc } (phút) — date-aware (xét lịch tháng)
+  function hrTimesheetDayHours(e, dept, date) {
+    const asg = (state.hrAssignments || []).filter(a => a.date === date && a.employeeId === e.id);
+    let hc = 0, tc = 0;
+    if (asg.length) {
+      asg.forEach(a => {
+        const r = hrSplitHoursHCDate(a.department || e.department || dept, date, a.start, a.end, a.shiftIdx || 0);
+        hc += r.hc; tc += r.tc;
+      });
+    } else {
+      const ci = (state.hrCheckins || []).find(c => c.employeeId === e.id && c.date === date && c.in && c.out);
+      if (ci) {
+        const r = hrSplitHoursHCDate(e.department || dept, date, ci.in, ci.out, 0);
+        hc = r.hc; tc = r.tc;
+      }
+    }
+    return { hc, tc, worked: (hc + tc) > 0 };
+  }
+
+  function buildHrTimesheetExportData(def, dept) {
+    const monthEl = document.getElementById('export-hr-month');
+    const month = (monthEl && /^\d{4}-\d{2}$/.test(monthEl.value)) ? monthEl.value
+      : (/^\d{4}-\d{2}$/.test(state.hrAttMonth || '') ? state.hrAttMonth : new Date().toISOString().split('T')[0].slice(0, 7));
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Tháng thống kê không hợp lệ!', 'error'); return null; }
+    const [yy, mm] = month.split('-').map(Number);
+    const nDays = new Date(yy, mm, 0).getDate();
+    const dates = Array.from({ length: nDays }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`);
+    const today = new Date();
+
+    // Nhân viên đang làm việc (+ lọc bộ phận), sắp theo nhóm bộ phận chuẩn rồi tên
+    const deptOrder = d => { const i = HR_DEPARTMENTS.indexOf(d); return i === -1 ? HR_DEPARTMENTS.length : i; };
+    const list = (state.hrEmployees || [])
+      .filter(e => (e.status || 'active') !== 'quit' && (dept === 'all' || (e.department || '—') === dept))
+      .sort((a, b) => deptOrder(a.department) - deptOrder(b.department) ||
+        String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
+    if (!list.length) { showToast('Không có nhân viên nào thỏa mãn bộ lọc!', 'error'); return null; }
+
+    const SUM_COLS = ['Ngày Công', 'Giờ HC', 'Giờ TC', 'Tổng Giờ'];
+    const lastCol = 3 + nDays + SUM_COLS.length - 1;   // chỉ số cột cuối cùng (0-based)
+    const fills = {};    // {'r,c': 'DDEBF7'} — tô nền cột nghỉ (Xem Trước; Excel best-effort)
+    const zCells = {};   // {'r,c': '0.0'} — định dạng số 1 chữ số lẻ (hiển thị 9.0)
+    const merges = [];
+    const hour = mins => Math.round((mins / 60) * 100) / 100;  // phút → giờ thập phân
+
+    // ── Dựng bảng ────────────────────────────────────────────────
+    // r0 tiêu đề · r1 tháng/năm · r2 trống · r3 khối/xưởng · r4 chú thích ·
+    // r5 "Ngày/ thứ trong tháng" + nhãn cột tổng · r6 số ngày · r7 thứ trong tuần
+    const aoa = [];
+    aoa.push([dept === 'all' ? 'BẢNG CHẤM CÔNG TOÀN NHÀ MÁY' : `BẢNG CHẤM CÔNG BỘ PHẬN ${String(dept).toUpperCase()}`]);
+    aoa.push([`Tháng ${mm} năm ${yy}`]);
+    aoa.push([]);
+    aoa.push(new Array(lastCol + 1).fill(''));
+    aoa.push(new Array(lastCol + 1).fill(''));
+    aoa[3][lastCol - 4] = `Khối/xưởng : ${dept === 'all' ? 'Tất cả bộ phận' : dept}`;
+    aoa[4][lastCol - 4] = '*Công HC: hành chính; TC: tăng ca; NL: nghỉ/lễ; "-" nghỉ theo lịch; P: nghỉ có phép; V: vắng';
+    // r5: "Ngày/ thứ trong tháng" (gộp vùng cột ngày) + nhãn 4 cột tổng (gộp dọc r5:r7)
+    aoa.push(new Array(lastCol + 1).fill(''));
+    aoa[5][3] = 'Ngày/ thứ trong tháng';
+    SUM_COLS.forEach((s, k) => { aoa[5][3 + nDays + k] = s; merges.push({ s: { r: 5, c: 3 + nDays + k }, e: { r: 7, c: 3 + nDays + k } }); });
+    // r6: số ngày + 3 nhãn cột trái (gộp dọc r6:r7) · r7: thứ trong tuần
+    aoa.push(['Họ tên', 'Chức vụ', 'Công', ...dates.map((_, i) => String(i + 1).padStart(2, '0')), '', '', '', '']);
+    aoa.push(['', '', '', ...dates.map(d => HR_DOW_SHORT[new Date(d + 'T00:00:00').getDay()]), '', '', '', '']);
+    merges.push({ s: { r: 6, c: 0 }, e: { r: 7, c: 0 } });
+    merges.push({ s: { r: 6, c: 1 }, e: { r: 7, c: 1 } });
+    merges.push({ s: { r: 6, c: 2 }, e: { r: 7, c: 2 } });
+    merges.push({ s: { r: 5, c: 3 }, e: { r: 5, c: 3 + nDays - 1 } });
+    // Tô nền cột ngày nghỉ trên vùng tiêu đề (r5..r7)
+    dates.forEach((d, i) => {
+      const kind = hrDayKindOf(d);
+      if (kind === 'work') return;
+      for (let r = 5; r <= 7; r++) fills[`${r},${3 + i}`] = kind === 'holiday' ? 'FFF2CC' : 'DDEBF7';
+    });
+
+    // ── Dòng dữ liệu: mỗi nhân viên 2 dòng HC / TC ──
+    const allDay = list.map(e => dates.map(d => hrTimesheetDayHours(e, e.department || dept, d)));
+    list.forEach((e, ei) => {
+      const rHc = aoa.length;              // dòng HC (dòng TC = rHc + 1)
+      const hcRow = new Array(lastCol + 1).fill('');
+      const tcRow = new Array(lastCol + 1).fill('');
+      hcRow[0] = e.name || '';
+      hcRow[1] = e.title || e.position || '';
+      hcRow[2] = 'HC';
+      tcRow[2] = 'TC';
+      let nWork = 0, sHc = 0, sTc = 0;
+      dates.forEach((d, i) => {
+        const kind = hrDayKindOf(d);
+        const { hc, tc, worked } = allDay[ei][i];
+        sHc += hc; sTc += tc;
+        if (worked) nWork++;
+        const c = 3 + i;
+        if (worked) {
+          if (hc > 0) { hcRow[c] = hour(hc); zCells[`${rHc},${c}`] = '0.0'; }
+          if (tc > 0) { tcRow[c] = hour(tc); zCells[`${rHc + 1},${c}`] = '0.0'; }
+          else tcRow[c] = '-';           // có đi làm nhưng không có giờ ngoài ca
+        } else if (kind === 'holiday') hcRow[c] = 'NL';
+        else if (kind === 'off') hcRow[c] = '-';
+        else {
+          const st = attStatusOf(e.id, d);
+          if (st === 'leave') hcRow[c] = 'P';
+          else if (st === 'absent') hcRow[c] = 'V';
+        }
+        if (kind !== 'work') {
+          const rgb = kind === 'holiday' ? 'FFF2CC' : 'DDEBF7';
+          fills[`${rHc},${c}`] = rgb; fills[`${rHc + 1},${c}`] = rgb;
+        }
+      });
+      // 4 cột tổng (gộp dọc 2 dòng của nhân viên)
+      hcRow[3 + nDays] = nWork;
+      hcRow[4 + nDays] = hour(sHc);
+      hcRow[5 + nDays] = hour(sTc);
+      hcRow[6 + nDays] = hour(sHc + sTc);
+      for (let k = 1; k <= 3; k++) zCells[`${rHc},${3 + nDays + k}`] = '0.0';
+      aoa.push(hcRow, tcRow);
+      merges.push({ s: { r: rHc, c: 0 }, e: { r: rHc + 1, c: 0 } });
+      merges.push({ s: { r: rHc, c: 1 }, e: { r: rHc + 1, c: 1 } });
+      for (let k = 0; k < SUM_COLS.length; k++) merges.push({ s: { r: rHc, c: 3 + nDays + k }, e: { r: rHc + 1, c: 3 + nDays + k } });
+    });
+
+    // ── Dòng TỔNG CỘNG: tổng giờ làm từng ngày + tổng cột ──
+    const rTot = aoa.length;
+    const totRow = new Array(lastCol + 1).fill('');
+    totRow[0] = 'TỔNG CỘNG';
+    let tWork = 0, tHc = 0, tTc = 0;
+    dates.forEach((d, i) => {
+      let dayMin = 0;
+      list.forEach((_, ei) => { dayMin += allDay[ei][i].hc + allDay[ei][i].tc; });
+      if (dayMin > 0) { totRow[3 + i] = hour(dayMin); zCells[`${rTot},${3 + i}`] = '0.0'; }
+      const kind = hrDayKindOf(d);
+      if (kind !== 'work') fills[`${rTot},${3 + i}`] = kind === 'holiday' ? 'FFF2CC' : 'DDEBF7';
+    });
+    list.forEach((_, ei) => {
+      allDay[ei].forEach(h => { tHc += h.hc; tTc += h.tc; if (h.worked) tWork++; });
+    });
+    totRow[3 + nDays] = tWork;
+    totRow[4 + nDays] = hour(tHc);
+    totRow[5 + nDays] = hour(tTc);
+    totRow[6 + nDays] = hour(tHc + tTc);
+    for (let k = 0; k <= 3; k++) zCells[`${rTot},${3 + nDays + k}`] = '0.0';
+    aoa.push(totRow);
+    merges.push({ s: { r: rTot, c: 0 }, e: { r: rTot, c: 2 } });
+
+    // ── Độ rộng cột + thông tin file ──
+    const cols = [{ wch: 24 }, { wch: 9 }, { wch: 7 },
+      ...dates.map(() => ({ wch: 5.5 })),
+      { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 10 }];
+
+    return {
+      title: `Bảng Chấm Công Theo Tháng — ${dept === 'all' ? 'Toàn Nhà Máy' : dept} (${month})`,
+      countLabel: `${list.length} nhân viên · tháng ${month}`,
+      aoa, merges, cols,
+      fills, zCells,
+      rowH: 18,
+      sheetName: def.sheet,
+      filename: `NhanSu_ChamCongThang_${month}_${todayStamp()}.xlsx`
+    };
+  }
+
+  // =============================================================
   // XEM TRƯỚC & CHỈNH SỬA BÁO CÁO TRƯỚC KHI XUẤT / IN
   // =============================================================
 
@@ -1050,7 +1236,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     const box = document.getElementById('export-preview-table-box');
     if (!box) return;
     const { data, deletedRows, overrides, colWidths } = exportPreviewState;
-    box.innerHTML = buildExportPreviewTableHTML(data.aoa, data.merges || [], deletedRows, overrides, false, colWidths);
+    box.innerHTML = buildExportPreviewTableHTML(data.aoa, data.merges || [], deletedRows, overrides, false, colWidths, data.fills || null);
     const titleEl = document.getElementById('export-preview-title');
     if (titleEl) titleEl.innerHTML = `<i data-lucide="table"></i> Xem Trước: ${escapeHTML(data.title)}`;
     const infoEl = document.getElementById('export-preview-info');
@@ -1061,9 +1247,11 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
   // Bảng HTML dựng từ AOA + ô gộp (hàm thuần — dùng cho cả xem trước & bản in).
   // deletedRows: Set chỉ số dòng bị bỏ; overrides: {'r,c': nội dung đã sửa}.
   // colWidths: mảng độ rộng cột (px) → dựng <colgroup> đúng cân đối như file Excel.
-  function buildExportPreviewTableHTML(aoa, merges, deletedRows, overrides, forPrint, colWidths) {
+  // fills: {'r,c': 'DDEBF7'} — màu nền minh họa (VD cột Chủ nhật của bảng chấm công tháng).
+  function buildExportPreviewTableHTML(aoa, merges, deletedRows, overrides, forPrint, colWidths, fills) {
     deletedRows = deletedRows || new Set();
     overrides = overrides || {};
+    fills = fills || {};
     const maxCols = aoa.reduce((m, row) => Math.max(m, row.length), 0);
     let colgroup = '';
     if (!forPrint && Array.isArray(colWidths)) {
@@ -1099,7 +1287,9 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
           ? String(overrides[key])
           : ((row[c] === undefined || row[c] === null) ? '' : String(row[c]));
         const editable = forPrint ? '' : ' contenteditable="true"';
-        tds += `<td data-r="${r}" data-c="${c}"${cellCls}${spanAttrs}${editable}>${escapeHTML(shown)}</td>`;
+        const fill = fills[r + ',' + c];
+        const fillStyle = fill ? ` style="background:#${fill};"` : '';
+        tds += `<td data-r="${r}" data-c="${c}"${cellCls}${spanAttrs}${fillStyle}${editable}>${escapeHTML(shown)}</td>`;
       }
       const action = forPrint ? '' :
         `<td class="export-preview-actions"><button type="button" class="export-preview-del-btn" data-del-row="${r}" title="Bỏ dòng này khỏi bản xuất/in (không ảnh hưởng dữ liệu app)">✕</button></td>`;
@@ -1194,7 +1384,7 @@ import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLa
     const { data, deletedRows } = exportPreviewState;
     const aoa = collectPreviewAoa();
     const merges = remapPreviewMerges(data.merges || null, deletedRows, data.aoa.length);
-    area.innerHTML = buildExportPreviewTableHTML(aoa, merges || [], new Set(), null, true);
+    area.innerHTML = buildExportPreviewTableHTML(aoa, merges || [], new Set(), null, true, null, data.fills || null);
     document.body.classList.add('export-preview-printing');
     const cleanup = () => {
       document.body.classList.remove('export-preview-printing');

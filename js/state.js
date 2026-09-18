@@ -41,6 +41,16 @@
   // Giờ tăng ca THỰC TẾ KHÔNG lưu ở đây — tự tính từ Bảng bố trí vị trí theo ngày
   // (hrAssignments) nên luôn khớp giờ thật sau khi sửa/sự cố (js/hr.js overtimeActualMin)
   const STORAGE_KEY_HR_OVERTIMES  = 'bamboo_tracker_hr_overtimes_v1';
+  // Lịch làm việc theo tháng (tab Nhân Sự): xác định ngày nghỉ/lễ của từng tháng.
+  // { 'YYYY-MM': { weekdaysOff: [0=CN..6=T7] (nghỉ định kỳ theo thứ — MẢNG RỖNG
+  //                = không nghỉ định kỳ nào, các ngày đó thành ngày làm việc),
+  //                restDays: ['YYYY-MM-DD'...] (nghỉ/lễ riêng của tháng),
+  //                workDays: ['YYYY-MM-DD'...] (LÀM BÙ — đi làm bình thường dù
+  //                rơi vào thứ nghỉ; ưu tiên hơn weekdaysOff),
+  //                updatedAt, updatedBy } }
+  // Quy tắc: nếu nhân viên đi làm vào ngày nghỉ/lễ thì TOÀN BỘ giờ làm trong
+  // ngày được tính vào TĂNG CA (xem hrSplitHoursHCDate trong js/hr.js).
+  const STORAGE_KEY_HR_CALENDAR   = 'bamboo_tracker_hr_calendar_v1';
   // Lịch sử sửa đổi (audit log): ai đã sửa gì, ở tab nào, lúc nào — chỉ Admin xem được
   const STORAGE_KEY_HISTORY = 'bamboo_tracker_history_v1';
   // Dấu vết xóa (tombstone) cho đồng bộ mây: { <tên-danh-sách>: { <id>: <thời điểm xóa ISO> } }
@@ -105,6 +115,10 @@
     hrAttMonth: '',    // tháng đang xem của thống kê đi làm ('YYYY-MM')
     hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
     hrOvertimes: [],   // [{ id, employeeId, date, start, end (dự kiến), plannedMin, reason, status, approvedBy, approvedAt, ... }] — đăng ký tăng ca (giờ thực tế tự tính từ hrAssignments)
+    // Lịch làm việc theo tháng: { 'YYYY-MM': { weekdaysOff: [0..6], restDays: ['YYYY-MM-DD'...] } }
+    // Ngày nghỉ/lễ: đi làm vào ngày đó thì toàn bộ giờ làm được tính vào TĂNG CA (js/hr.js)
+    hrWorkCalendar: {},  // không có cấu hình cho tháng nào -> mặc định nghỉ Chủ nhật (wd 0)
+    hrCalMonth: '',    // tháng đang xem/cài đặt trong modal Lịch Làm Việc ('YYYY-MM')
     qcExports: [],
     // Bộ lọc hợp nhất trong thẻ Xuất Hàng (tab QC): năm ('all' = tất cả) +
     // chips tuần (mảng rỗng = tất cả) + từ khóa tìm kiếm theo tên sản phẩm
@@ -193,6 +207,7 @@ export {
   STORAGE_KEY_HR_ATTENDANCE,
   STORAGE_KEY_HR_CHECKINS,
   STORAGE_KEY_HR_OVERTIMES,
+  STORAGE_KEY_HR_CALENDAR,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,
   state

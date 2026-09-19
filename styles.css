@@ -5971,4 +5971,11 @@ body:not(.is-admin) #btn-open-cloud-backup { display: none !important; }
 .ai-error { color: var(--danger, #dc2626); }
 @media print { .ai-fab { display: none !important; } }
 
+/* ─── Điện thoại: ẨN nút "Thêm Lô Nan" ở header bar tab Công Đoạn ───
+   Trên mobile đã có nút nổi "Tạo Mới" (#mobile-add-btn) trong thanh điều
+   hướng dưới cùng mở cùng một modal → nút ở header là dư thừa, che mất chỗ. */
+@media (max-width: 640px) {
+  #btn-add-batch { display: none !important; }
+}
+
 

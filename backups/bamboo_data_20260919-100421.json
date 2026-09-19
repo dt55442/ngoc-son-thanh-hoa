@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-18T08:37:35.974Z",
+  "savedAt": "2026-09-19T00:43:23.607Z",
   "batches": [
     {
       "id": "batch-1789697186869",
@@ -18668,6 +18668,22 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-18T02:55:34.322Z"
+    },
+    {
+      "id": "mat-1789722840149-zc4vy",
+      "date": "2026-09-12",
+      "week": "2026-W37",
+      "type": "Mắt luồng",
+      "supplier": "Tâm Sơn",
+      "location": "lo-hoi",
+      "inputIndex": 21700,
+      "outputIndex": 8470,
+      "weight": 13230,
+      "unitPrice": 950,
+      "totalAmount": 12568500,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-18T09:14:00.149Z"
     }
   ],
   "xuong2CutRecords": [

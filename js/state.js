@@ -145,6 +145,8 @@
     planVsPressUnit: 'vol',     // 'vol' = m³ (mặc định) | 'qty' = Số lượng — chỉ đổi SỐ hiển thị, chiều cao cột luôn theo m³
     planVsPressYear: 'current', // 'current' = năm hiện tại | 'all' | năm cụ thể (VD '2026')
     planVsPressWeek: 'current', // 'current' = tuần hiện tại | 'all' | số tuần (1..53)
+    planVsPressSpan: 1,         // 1 = hiển thị 1 tuần (mặc định) | 2 = gộp 2 tuần (tuần chọn + tuần kế tiếp) — theo tần suất xuất hàng 1 hoặc 2 tuần/lần
+    planVsPressTotal: false,    // true = nút Total: gộp toàn bộ sản phẩm theo nhóm tên (Bullig / Ván) thay vì từng mã hàng
     planVsPressInstance: null,
     planCapacityInstance: null,
     planCapYear: 'current',     // 'current' = năm hiện tại | năm cụ thể (VD '2026') — RIÊNG của biểu đồ khả năng đáp ứng

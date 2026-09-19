@@ -6,7 +6,7 @@ import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrWorkersForPress, hrWorkersForProduct, pressPositionPatternFor } from './hr.js';
-import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
+import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
 
@@ -1530,7 +1530,16 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
         Array.from({ length: 53 }, (_, i) => i + 1)
           .map(w => `<option value="${w}"${String(state.planVsPressWeek) === String(w) ? ' selected' : ''}>Tuần ${w}</option>`).join('');
     }
-    const wkOn = w => state.planVsPressWeek === 'all' || Number(w) === Number(state.planVsPressWeek);
+    // Khoảng tuần áp dụng: 1 tuần (mặc định) hoặc CẶP 2 TUẦN KHÔNG CHỒNG LẮN —
+    // ghép tuần LẺ với tuần kế: (33-34), (35-36), (37-38)...; chọn tuần chẵn
+    // thì tự lùi về cặp chứa nó (chọn Tuần 34 -> xem cặp 33-34). Phục vụ tần
+    // suất xuất hàng 1 hoặc 2 tuần/lần; áp cho cả 3 nguồn: kế hoạch / đã ép /
+    // xuất hàng. Tuần 53 lẻ -> chỉ tuần 53 (không có tuần 54).
+    const pvSpan = state.planVsPressSpan === 2 ? 2 : 1;
+    const pvPairStart = pvSpan === 2 ? (wkNum % 2 === 1 ? wkNum : wkNum - 1) : wkNum;
+    const pvPairEnd = pvSpan === 2 ? (pvPairStart >= 53 ? null : pvPairStart + 1) : wkNum;
+    const wkOn = w => state.planVsPressWeek === 'all' || Number(w) === Number(state.planVsPressWeek)
+      || (pvSpan === 2 && pvPairEnd != null && (Number(w) === pvPairStart || Number(w) === pvPairEnd));
 
     // Gộp số liệu theo sản phẩm (lọc năm + tuần)
     const planQty = {}, pressQty = {}, pressVol = {};
@@ -1574,12 +1583,68 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     // theo m³ sẽ gây hiểu nhầm với số lượng).
     const isVol = state.planVsPressUnit === 'vol';
     const unitVol = id => dimVolume(getProductDimsStr(id), 1);
-    const planVolData   = ids.map(id => (planQty[id] || 0) * unitVol(id));
-    const pressVolData  = ids.map(id => pressVol[id] || 0);
-    const exportVolData = ids.map(id => (exportQty[id] || 0) * unitVol(id));
-    const planQtyData   = ids.map(id => planQty[id] || 0);
-    const pressQtyData  = ids.map(id => pressQty[id] || 0);
-    const exportQtyData = ids.map(id => exportQty[id] || 0);
+    // Chế độ TOTAL: gộp toàn bộ sản phẩm theo NHÓM đọc từ TÊN sản phẩm —
+    // tên chứa "Bullig" → nhóm Bullig, chứa "Ván" → nhóm Ván, còn lại → nhóm
+    // "Khác" (chỉ hiện khi có dữ liệu). Mỗi nhóm vẫn đủ 3 cột Kế Hoạch /
+    // Đã Ép / Số Lượng Xuất; quy tắc hiển thị (đơn vị, màu, nhãn số, tooltip) giữ nguyên.
+    const isTotalMode = state.planVsPressTotal === true;
+    const groupOfId = id => {
+      const nm = String(labelOf(id)).toLowerCase();
+      if (nm.includes('bullig')) return 'Bullig';
+      if (nm.includes('ván')) return 'Ván';
+      return 'Khác';
+    };
+    const GROUP_ORDER = { Bullig: 0, 'Ván': 1, 'Khác': 2 };
+    // Dựng từng dòng số liệu theo sản phẩm, rồi (nếu bật Total) gộp theo nhóm
+    let pvRows = ids.map(id => ({
+      label: labelOf(id),
+      planVol: (planQty[id] || 0) * unitVol(id),
+      pressVol: pressVol[id] || 0,
+      exportVol: (exportQty[id] || 0) * unitVol(id),
+      planQty: planQty[id] || 0,
+      pressQty: pressQty[id] || 0,
+      exportQty: exportQty[id] || 0
+    }));
+    if (isTotalMode) {
+      pvRows = [...new Set(ids.map(groupOfId))]
+        .sort((a, b) => (GROUP_ORDER[a] ?? 9) - (GROUP_ORDER[b] ?? 9))
+        .map(g => ids.reduce((acc, id) => {
+          if (groupOfId(id) !== g) return acc;
+          acc.planVol += (planQty[id] || 0) * unitVol(id);
+          acc.pressVol += pressVol[id] || 0;
+          acc.exportVol += (exportQty[id] || 0) * unitVol(id);
+          acc.planQty += planQty[id] || 0;
+          acc.pressQty += pressQty[id] || 0;
+          acc.exportQty += exportQty[id] || 0;
+          return acc;
+        }, { label: g, planVol: 0, pressVol: 0, exportVol: 0, planQty: 0, pressQty: 0, exportQty: 0 }));
+    }
+    const planVolData   = pvRows.map(r => r.planVol);
+    const pressVolData  = pvRows.map(r => r.pressVol);
+    const exportVolData = pvRows.map(r => r.exportVol);
+    const planQtyData   = pvRows.map(r => r.planQty);
+    const pressQtyData  = pvRows.map(r => r.pressQty);
+    const exportQtyData = pvRows.map(r => r.exportQty);
+    const labelsData    = pvRows.map(r => r.label);
+
+    // Sticker "Đạt x%" kiểu dấu đỏ nghiêng (CHỈ hiện ở chế độ Total): tỉ lệ
+    // XUẤT HÀNG so với KẾ HOẠCH theo đơn vị đang hiển thị (m³ hoặc Số lượng),
+    // tính trên TOÀN BỘ các nhóm đang có trong biểu đồ.
+    const stampEl = document.getElementById('pv-total-stamp');
+    if (stampEl) {
+      if (isTotalMode) {
+        const sumPlan = (isVol ? planVolData : planQtyData).reduce((s, v) => s + (Number(v) || 0), 0);
+        const sumExport = (isVol ? exportVolData : exportQtyData).reduce((s, v) => s + (Number(v) || 0), 0);
+        if (sumPlan > 0) {
+          stampEl.textContent = `Đạt ${Math.round((sumExport / sumPlan) * 100)}%`;
+          stampEl.classList.add('show');
+        } else {
+          stampEl.classList.remove('show');
+        }
+      } else {
+        stampEl.classList.remove('show');
+      }
+    }
     const fmtVol = v => String(+Number(v).toFixed(3));
     const fmtQty = v => Math.round(Number(v)).toLocaleString('vi-VN');
     const valOf  = (dIdx, i) => (dIdx === 0
@@ -1615,7 +1680,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       type: 'bar',
       plugins: [valueLabelPlugin],
       data: {
-        labels: ids.map(labelOf),
+        labels: labelsData,
         datasets: [
           { label: 'Kế Hoạch',       data: planVolData,   backgroundColor: 'rgba(124, 58, 237, 0.78)', borderColor: '#7c3aed', borderWidth: 1, borderRadius: 4 },
           { label: 'Đã Ép',          data: pressVolData,  backgroundColor: 'rgba(22, 163, 74, 0.78)',  borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 },
@@ -1664,16 +1729,36 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     renderPlanVsPressChart();
   }
 
+  // Chuyển khoảng hiển thị của biểu đồ: 1 tuần (mặc định) hoặc 2 tuần —
+  // chế độ 2 tuần gộp số liệu của tuần đang chọn + tuần kế tiếp
+  function setPlanVsPressSpan(span) {
+    state.planVsPressSpan = span === 2 ? 2 : 1;
+    const s1 = document.getElementById('pv-span-1');
+    const s2 = document.getElementById('pv-span-2');
+    if (s1) s1.classList.toggle('active', state.planVsPressSpan === 1);
+    if (s2) s2.classList.toggle('active', state.planVsPressSpan === 2);
+    renderPlanVsPressChart();
+  }
+
+  // Bật/tắt chế độ Total: gộp toàn bộ sản phẩm theo nhóm (Bullig / Ván)
+  function setPlanVsPressTotal(on) {
+    state.planVsPressTotal = !!on;
+    const t = document.getElementById('pv-total-toggle');
+    if (t) t.classList.toggle('active', state.planVsPressTotal);
+    renderPlanVsPressChart();
+  }
+
   // ─── BIỂU ĐỒ TĨNH: KHẢ NĂNG ĐÁP ỨNG KẾ HOẠCH (Dashboard) ─────
-  // So sánh "Có thể ép" (tồn ván thô khả dụng đến tuần chọn — cùng cơ chế
-  // "Có thể ép" ở tab Kế Hoạch qua getMaxProductionForProduct) với số Kế hoạch.
+  // So sánh "Có thể ép" (tồn thanh khả dụng đến tuần chọn — cùng cơ chế
+  // "Có thể ép" ở tab Kế Hoạch qua getMaxProductionForProduct, ĐỒNG BỘ cột
+  // "Tồn" của Bảng Kế Hoạch) với số Kế hoạch.
   // 1 cột / mã thành phẩm: đủ 100% → cột xanh đầy; thiếu → lấp đúng % và màu vàng.
   // Trả { cap, reason }: cap = số ép tối đa (null = không tính được),
   // reason = nhân tố giới hạn (bottleneck) — tooltip ghép thành "Thiếu ...".
-  function planCapacityReason(productId, yearNum, weekNum) {
+  function planCapacityReason(productId, yearNum, weekNum, tonPre) {
     const rate = state.materialRates.find(r => r.id === productId);
     if (!rate) return { cap: null, reason: 'Sản phẩm chưa có định mức nguyên vật liệu để tính khả năng ép' };
-    const mp = getMaxProductionForProduct(yearNum, productId, weekNum);
+    const mp = getMaxProductionForProduct(yearNum, productId, weekNum, tonPre);
     if (!mp || !Number.isFinite(mp.maxProduction)) {
       return { cap: null, reason: 'Sản phẩm chưa có định mức nguyên vật liệu để tính khả năng ép' };
     }
@@ -1755,6 +1840,9 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
 
     const labelOf = id => (state.materialRates.find(r => r.id === id) || {}).product || 'Sản phẩm đã xóa';
     const fmtQty = v => Math.round(Number(v) || 0).toLocaleString('vi-VN');
+    // Tồn khả dụng theo tuần — tính 1 LẦN cho mọi sản phẩm/tuần trong cửa sổ
+    // (đồng bộ cột "Tồn" của Bảng Kế Hoạch: gồm cả thanh chưa chuyển Bào Tinh)
+    const tonPre = getPlanningTonByWeek(yearNum);
     // Mỗi tuần = 1 nhóm cột; cột quy về % đáp ứng nên CAO BẰNG NHAU (tổng đúng 100%)
     const labels = [], planArr = [], capArr = [], pctArr = [], reasonArr = [], weekArr = [];
     const groups = [];
@@ -1773,7 +1861,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       }
       ids.forEach(id => {
         const plan = planQty[id];
-        const info = planCapacityReason(id, yearNum, w);
+        const info = planCapacityReason(id, yearNum, w, tonPre);
         const cap = (info.cap == null || !Number.isFinite(info.cap)) ? null : info.cap;
         const pct = planCapacityPct(cap, plan);
         labels.push(labelOf(id));
@@ -2050,6 +2138,8 @@ export {
   renderPressTable,
   showPressNotePopover,
   setPlanVsPressUnit,
+  setPlanVsPressSpan,
+  setPlanVsPressTotal,
   shiftPlanVsPressWeek,
   renderPressView,
   savePressRecords,

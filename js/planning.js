@@ -275,6 +275,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     // Tổng toàn năm
     const totalQty = items.reduce((sum, item) => sum + (item.qty || 0), 0);
 
+    // Tồn khả dụng theo tuần — tính 1 LẦN cho mọi sản phẩm (đồng bộ cột "Tồn"
+    // của Bảng Kế Hoạch: gồm cả thanh chưa chuyển Bào Tinh đang nằm ở Sấy/Kho)
+    const tonPre = getPlanningTonByWeek(yearNum);
+
     container.innerHTML = `
       <div class="planning-list-header">
         <h5><i data-lucide="list"></i> Kế Hoạch Sản Xuất Năm ${year}</h5>
@@ -301,9 +305,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
                   const nanInfo = rate ? getRateNanSummary(rate) : '';
                   const pressedQty = getPressedQtyForPlan(yearNum, weekNum, item.productId);
                   const doneCls = pressedQty >= (item.qty || 0) ? 'done' : '';
-                  // Sản lượng tối đa có thể ép từ THANH ĐẠT (đầu ra bào tinh) lũy kế tuần 1 → tuần kế hoạch
-                  const maxProd = getMaxProductionForProduct(yearNum, item.productId, weekNum);
-                  const maxProdHtml = maxProd ? `<span class="plan-item-capacity" title="Sản lượng tối đa từ thanh đạt KHẢ DỤNG đến tuần ${weekNum} (Σ Đã bào tinh + Σ Dự kiến − Σ Đã ép thực tế các tuần đã qua − Σ Cần từ tuần hiện tại, đồng bộ bảng Bào Tinh ↔ Đã Ép). Bottleneck: ${escapeHTML(maxProd.bottleneck.nanKey)} ×${maxProd.bottleneck.rate} — còn ${maxProd.bottleneck.available.toLocaleString('vi-VN')} thanh"><i data-lucide="layers" style="width:10px;height:10px;"></i> Có thể ép: <strong>${maxProd.maxProduction.toLocaleString('vi-VN')}</strong></span>` : '';
+                  // Sản lượng tối đa có thể ép từ TỒN THANH KHẢ DỤNG đến tuần kế hoạch (đồng bộ cột "Tồn" bảng Kế Hoạch)
+                  const maxProd = getMaxProductionForProduct(yearNum, item.productId, weekNum, tonPre);
+                  const maxProdHtml = maxProd ? `<span class="plan-item-capacity" title="Sản lượng tối đa từ TỒN THANH KHẢ DỤNG đến tuần ${weekNum} (đồng bộ cột Tồn của Bảng Kế Hoạch: Σ Nhập thực tế + Σ Dự kiến − Σ Đã bào tinh các tuần đã qua − Σ Cần các tuần từ hiện tại). Bottleneck: ${escapeHTML(maxProd.bottleneck.nanKey)} ×${maxProd.bottleneck.rate} — còn ${maxProd.bottleneck.available.toLocaleString('vi-VN')} thanh"><i data-lucide="layers" style="width:10px;height:10px;"></i> Có thể ép: <strong>${maxProd.maxProduction.toLocaleString('vi-VN')}</strong></span>` : '';
                   return `
                     <div class="planning-week-item">
                       <div class="planning-week-item-info">
@@ -1353,16 +1357,44 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     return cumulative;
   }
 
+  // Tồn thanh KHẢ DỤNG theo từng tuần cho phép tính "Có thể ép" — ĐỒNG BỘ 1:1
+  // với cột "TỔNG TỒN" của Bảng Kế Hoạch Tổng Hợp (computePlanningWeekData):
+  //   Tồn(W) = Σ Nhập thực tế(1..W) + Σ Dự kiến(1..W) − Σ trượt(1..W−1)
+  //   (tuần đã qua trượt SỐ THANH ĐÃ BÀO TINH; tuần hiện tại trở đi trượt CẦN kế hoạch)
+  // Trước đây "Có thể ép" chỉ tính từ tồn THANH ĐẠT (đầu ra bào tinh) khiến
+  // nguyên liệu còn nằm ở Sấy/Kho (chưa chuyển Bào Tinh) bị coi là 0 dù kho còn
+  // rất nhiều — biểu đồ Khả Năng Đáp Ứng báo "còn 0 thanh" sai thực tế.
+  // Trả về: { [ucKey]: { [week]: tồn } }
+  function getPlanningTonByWeek(yearNum) {
+    const weekData = computePlanningWeekData(yearNum);
+    const out = {};
+    for (let w = 1; w <= 52; w++) {
+      const nan = (weekData[w] && weekData[w].nan) || {};
+      Object.keys(nan).forEach(k => {
+        (out[k] = out[k] || {})[w] = nan[k].ton;
+      });
+    }
+    return out;
+  }
+
   // Lấy sản lượng tối đa có thể sản xuất của một sản phẩm (theo productId)
-  // tại một tuần — suy từ ĐỊNH MỨC NAN trên TỒN THANH ĐẠT (đầu ra Bào Tinh):
-  //   Tồn khả dụng = Σ ĐÃ BÀO TINH(1..W) + Σ Dự kiến(1..W)
-  //                  − Σ ĐÃ ÉP thực tế(các tuần đã qua) − Σ Cần(từ tuần hiện tại → W−1).
-  // weekNum = null → tính đến cuối năm.
-  function getMaxProductionForProduct(yearNum, productId, weekNum) {
+  // tại một tuần — suy từ ĐỊNH MỨC NAN trên TỒN THANH KHẢ DỤNG, ĐỒNG BỘ cột
+  // "TỔNG TỒN" của Bảng Kế Hoạch (gồm cả thanh chưa chuyển Bào Tinh):
+  //   Tồn khả dụng(W) = Tồn hiển thị của Bảng Kế Hoạch tại tuần W
+  // weekNum = null → tính đến cuối năm (tuần 52).
+  // tonPre (tùy chọn) = { [ucKey]: { [week]: tồn } } tính sẵn từ getPlanningTonByWeek
+  // → truyền vào khi gọi NHIỀU sản phẩm liên tiếp để tránh tính lặp.
+  function getMaxProductionForProduct(yearNum, productId, weekNum, tonPre) {
     const rate = state.materialRates.find(r => r.id === productId);
     if (!rate) return null;
 
-    const inventory = getCumulativeInventoryByWeek(yearNum, weekNum);
+    const targetWeek = (weekNum && weekNum > 0) ? Math.min(Math.floor(weekNum), 52) : 52;
+    const tonByWeek = tonPre || getPlanningTonByWeek(yearNum);
+    const inventory = {};
+    Object.keys(tonByWeek).forEach(k => {
+      const t = tonByWeek[k][targetWeek];
+      inventory[k] = (t && t > 0) ? t : 0; // tồn âm (kế hoạch vượt tồn) coi như 0
+    });
     const fromNan = calculateMaxProductionFromInventory(rate, inventory);
     return fromNan ? { ...fromNan, source: 'nan' } : fromNan;
   }
@@ -1371,8 +1403,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   // → { [productId]: { maxProduction, components[], bottleneck, ... } }
   function computeMaxProductionByProduct(yearNum, weekNum) {
     const result = {};
+    const tonPre = getPlanningTonByWeek(yearNum); // tính tồn 1 lần cho mọi sản phẩm
     state.materialRates.forEach(rate => {
-      const mp = getMaxProductionForProduct(yearNum, rate.id, weekNum);
+      const mp = getMaxProductionForProduct(yearNum, rate.id, weekNum, tonPre);
       if (mp) result[rate.id] = mp;
     });
     return result;
@@ -1712,6 +1745,7 @@ export {
   getBaoTinhConvertedByWeek,
   getBaoTinhStockByConversionYear,
   getCumulativeInventoryByWeek,
+  getPlanningTonByWeek,
   getCurrentISOWeeks,
   getMaxProductionForProduct,
   getForecastVal,

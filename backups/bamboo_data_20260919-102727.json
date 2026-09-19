@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-18T03:44:39.601Z",
+  "savedAt": "2026-09-19T03:04:21.416Z",
   "batches": [
     {
       "id": "batch-1789697186869",
@@ -18668,24 +18668,56 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-18T02:55:34.322Z"
+    },
+    {
+      "id": "mat-1789722840149-zc4vy",
+      "date": "2026-09-12",
+      "week": "2026-W37",
+      "type": "Mắt luồng",
+      "supplier": "Tâm Sơn",
+      "location": "lo-hoi",
+      "inputIndex": 21700,
+      "outputIndex": 8470,
+      "weight": 13230,
+      "unitPrice": 950,
+      "totalAmount": 12568500,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-18T09:14:00.149Z"
     }
   ],
   "xuong2CutRecords": [
     {
-      "id": "x2cut-1789554473307-8fbd5",
-      "materialId": "mat-1789185993069-6052d",
-      "materialType": "Luồng ống",
-      "supplier": "Thanh Hiệu",
+      "id": "x2cut-1789717317499-0p1da",
+      "materialId": "mat-1789640009066-29x1y",
+      "materialType": "Luồng cây xô",
+      "supplier": "Hiệu Tam Lư",
       "code": "",
-      "inputWeight": 6110,
-      "date": "2026-09-11",
-      "week": "2026-W37",
-      "klOngLuong": 4500,
-      "klCuiDot": 1000,
+      "inputWeight": 12720,
+      "date": "2026-09-17",
+      "week": "2026-W38",
+      "klOngLuong": 5328,
+      "klCuiDot": 1697,
       "klCayLoai": 0,
-      "klNgonOngLoai": 610,
+      "klNgonOngLoai": 5695,
       "note": "",
-      "createdAt": "2026-09-16T10:27:53.307Z"
+      "createdAt": "2026-09-18T07:41:57.499Z"
+    },
+    {
+      "id": "x2cut-1789717382976-x3oug",
+      "materialId": "mat-1789640539058-5f2xg",
+      "materialType": "Luồng cây xô",
+      "supplier": "Quy",
+      "code": "",
+      "inputWeight": 10650,
+      "date": "2026-09-17",
+      "week": "2026-W38",
+      "klOngLuong": 4913,
+      "klCuiDot": 1453,
+      "klCayLoai": 0,
+      "klNgonOngLoai": 4284,
+      "note": "",
+      "createdAt": "2026-09-18T07:43:02.976Z"
     }
   ]
 }

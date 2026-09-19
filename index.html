@@ -715,6 +715,13 @@
               <button type="button" class="pv-unit-btn" id="pv-unit-qty" title="Hiển thị số lượng trên cột — chiều cao cột vẫn theo m³">Số lượng</button>
               <button type="button" class="pv-unit-btn active" id="pv-unit-vol" title="Hiển thị thể tích (m³) trên cột và trục Y">m³</button>
             </div>
+            <div class="pv-unit-toggle" role="group" aria-label="Khoảng tuần hiển thị">
+              <button type="button" class="pv-unit-btn" id="pv-span-2" title="Tổng số liệu 2 tuần (tuần đang chọn + tuần kế tiếp)">2 tuần</button>
+              <button type="button" class="pv-unit-btn active" id="pv-span-1" title="Chỉ hiển thị 1 tuần đang chọn">1 tuần</button>
+            </div>
+            <div class="pv-unit-toggle" role="group" aria-label="Chế độ tính tổng">
+              <button type="button" class="pv-unit-btn" id="pv-total-toggle" title="Tính tổng theo nhóm sản phẩm (Bullig / Ván)">Total</button>
+            </div>
             <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
               <button type="button" class="pv-week-btn" id="pv-week-prev" title="Tuần trước"><i data-lucide="chevron-left"></i></button>
               <select id="pv-week-filter" title="Hiển thị theo tuần"></select>
@@ -730,6 +737,7 @@
           </div>
         </div>
         <div class="press-chart-box">
+          <span class="pv-total-stamp" id="pv-total-stamp" aria-hidden="true"></span>
           <canvas id="plan-vs-press-chart"></canvas>
         </div>
       </div>
@@ -3622,8 +3630,10 @@
       </div>
       <div style="padding:16px 20px;">
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
-          App tự cất tối đa <strong>10 bản</strong> snapshot toàn bộ dữ liệu tại các thời điểm nhạy cảm:
-          trước khi tải từ mây về, trước khi nạp file JSON, và sau mỗi lần đồng bộ mây (tối đa 1 lần/5 phút).
+          App tự cất tối đa <strong>10 bản</strong> snapshot toàn bộ dữ liệu theo cơ chế <strong>bậc thang</strong>:
+          luôn giữ 3 bản mới nhất + các bản mốc dung lượng tăng dần + bản lớn nhất (bỏ bản trùng và bản gần như không đổi).
+          Nếu dữ liệu <strong>giảm đột biến</strong> (có thể do xóa nhầm), app tạm dừng cất và giữ nguyên các bản lớn cũ.
+          Cất tại các thời điểm nhạy cảm: trước khi tải từ mây về, trước khi nạp file JSON, và sau mỗi lần đồng bộ mây (tối đa 1 lần/5 phút).
           Phục hồi luôn <strong>gộp khéo</strong> — bản ghi mới hơn của máy/mây vẫn được giữ, không ghi đè mù quáng.
         </p>
         <div id="autobackup-list" style="display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow:auto;"></div>

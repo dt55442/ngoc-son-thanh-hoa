@@ -185,7 +185,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── Đăng ký tài khoản (online) ──
     // Add Batch
     safeOn('btn-add-batch', 'click', () => openBatchFormModal());
-    safeOn('mobile-add-btn', 'click', () => openBatchFormModal());
 
     // Undo / Hoàn tác khi nhập sai
     safeOn('btn-undo', 'click', undoLastAction);

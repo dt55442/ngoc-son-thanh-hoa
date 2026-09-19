@@ -83,6 +83,20 @@ state.materialRecords = [
   { id: 'mat-c', type: 'Thanh tre thô', supplier: 'Khác',  location: 'xuong-1', inputIndex: 500,  outputIndex: 0,   weight: 500,  date: '2026-09-12', createdAt: '2026-09-12T02:00:00.000Z' }
 ];
 state.xuong2CutRecords = [];
+// Bảng Thông Tin Nhà Cung (tab Nguyên Liệu) — để kiểm tra Mã NCC khớp mềm "Tế" ≡ "Nhà Tế"
+state.suppliers = [{ id: 'sup-te', name: 'Nhà Tế', code: 'NCC01', createdAt: '2026-09-01T00:00:00.000Z' }];
+// Dữ liệu Nhân Sự (tab Nhân Sự): NGƯỜI CẮT + THỜI GIAN CẮT TỰ ĐỘNG từ Bảng bố trí
+// (vị trí tên chứa "cắt" của Xưởng 2, đúng ngày cắt — ngày 10/09 có 2 người)
+state.hrEmployees = [
+  { id: 'empA', name: 'Nguyễn Văn A', quitDate: '' },
+  { id: 'empB', name: 'Nguyễn Văn B', quitDate: '' },
+  { id: 'empC', name: 'Trần Văn C', quitDate: '' }
+];
+state.hrPositions = [{ id: 'pcat', name: 'Cắt Chọn', department: 'Xưởng 2' }];
+state.hrAssignments = [
+  { id: 'asg-1', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcat', employeeId: 'empA', start: '07:00', end: '12:00' },
+  { id: 'asg-2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcat', employeeId: 'empB', start: '13:00', end: '' }
+];
 
 const x2 = await import('../js/xuong2.js');
 
@@ -114,20 +128,23 @@ check('Ô CHỌN: có "Luồng cây xô" (lô Xưởng 2)', optHtml.includes('Lu
 check('Ô CHỌN: có "Luồng ống" (lô Xưởng 2)', optHtml.includes('Luồng ống'));
 check('Ô CHỌN: KHÔNG chứa lô Xưởng 1 ("Thanh tre thô")', !optHtml.includes('Thanh tre thô'));
 
-// ─── C. TỰ ĐỘNG LINK NHÀ CUNG CẤP / MÃ SỐ / KL ĐẦU VÀO ──────────
+// ─── C. LINK: NGÀY MẶC ĐỊNH + THANH TỒN NGUYÊN LIỆU CHỜ CẮT ─────
 sel.value = 'mat-a';
 x2.updateXuong2CutLinked();
-check('LINK: Tên nhà cung cấp = "Tế"', document.getElementById('x2-cut-supplier').textContent === 'Tế');
-check('LINK: Loại nguyên liệu = "Luồng cây xô"', document.getElementById('x2-cut-type').textContent === 'Luồng cây xô');
-check('LINK: Mã số hiển thị "Chưa có" (trường sắp bổ sung bên tab Nguyên Liệu)',
-  document.getElementById('x2-cut-code').textContent.includes('Chưa có'));
-check('LINK: KL đầu vào = "1.000 kg" (weight = đầu vào − đầu ra)',
-  document.getElementById('x2-cut-inweight').textContent === '1.000 kg');
-check('LINK: KL đầu vào lưu dataset.value = "1000"', document.getElementById('x2-cut-inweight').dataset.value === '1000');
 check('LINK: Ngày cắt/chọn mặc định theo ngày nhập NL = 2026-09-10',
   document.getElementById('x2-cut-date').value === '2026-09-10');
 check('LINK: KL ngọn/ống loại ban đầu = KL đầu vào = "1.000 kg"',
   document.getElementById('x2-cut-remain-display').textContent === '1.000 kg');
+// Thanh Tồn TRÊN CÙNG thẻ: tổng + chip từng lô còn lại (bấm chip → chọn vào form)
+const stockBarHtml = document.getElementById('x2-stock-bar').innerHTML;
+check('TỒN BAR: hiện tổng "2" lô · "1.800" kg (mat-a + mat-b chờ cắt)',
+  stockBarHtml.includes('<strong>2</strong> lô') && stockBarHtml.includes('<strong>1.800</strong> kg'));
+check('TỒN BAR: chip từng lô có "Luồng cây xô" + "Luồng ống" kèm NCC "Tế"',
+  stockBarHtml.includes('Luồng cây xô') && stockBarHtml.includes('Luồng ống') && stockBarHtml.includes('Tế'));
+x2.pickX2Stock('mat-b');
+check('TỒN BAR: bấm chip → chọn đúng lô vào form (mat-b)', sel.value === 'mat-b');
+sel.value = 'mat-a';
+x2.updateXuong2CutLinked(); // về lại lô A cho các test sau
 
 // ─── D. TỰ TÍNH KL NGỌN/ỐNG LOẠI ────────────────────────────────
 document.getElementById('x2-cut-ongluong').value = '400';
@@ -136,6 +153,8 @@ document.getElementById('x2-cut-cayloai').value  = '150';
 x2.updateXuong2CutRemain();
 check('TỰ TÍNH: KL ngọn/ống loại = 1000 − 400 − 100 − 150 = "350 kg"',
   document.getElementById('x2-cut-remain-display').textContent === '350 kg');
+check('TỶ LỆ QUY ĐỔI: KL ống luồng : KL đầu vào = 400/1000 = "40%"',
+  document.getElementById('x2-cut-ratio-display').textContent === '40%');
 
 // ─── E. LƯU LƯỢT CẮT/CHỌN ───────────────────────────────────────
 document.getElementById('x2-cut-note').value = 'luồng đạt chuẩn';
@@ -148,14 +167,37 @@ check('LƯU: snapshot KL đầu vào = 1000', rec.inputWeight === 1000);
 check('LƯU: KL ống luồng = 400, củi đốt = 100, cây loại = 150',
   rec.klOngLuong === 400 && rec.klCuiDot === 100 && rec.klCayLoai === 150);
 check('LƯU: KL ngọn/ống loại tự tính = 350', rec.klNgonOngLoai === 350);
+check('LƯU: NGƯỜI CẮT tự động từ Bảng bố trí Nhân Sự (2 người ngày 10/09)',
+  rec.cutter === 'Nguyễn Văn A, Nguyễn Văn B');
+check('LƯU: THỜI GIAN CẮT tự động = "07:00–12:00, 13:00"', rec.cutTime === '07:00–12:00, 13:00');
 check('LƯU: tuần tự tạo theo ngày (2026-W…)', String(rec.week || '').startsWith('2026-W'));
 check('LƯU: form reset về chế độ ghi mới (x2CutEditId = null)', state.x2CutEditId === null);
 check('LƯU: localStorage đã ghi danh sách', JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_CUTS) || '[]').length === 1);
-check('BẢNG: dòng lịch sử có nhà cung cấp + KL ngọn/ống loại',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('Tế')
-  && document.getElementById('x2-cut-table-body').innerHTML.includes('350'));
+check('LỌC: lô ĐÃ cắt (mat-a "Luồng cây xô") tự ẩn khỏi ô chọn', !sel.innerHTML.includes('Luồng cây xô'));
+check('BẢNG: dòng lịch sử có NCC + Mã NCC "NCC01" + tỷ lệ QĐ "40%"',
+  document.getElementById('x2-cut-table-body').innerHTML.includes('Tế') &&
+  document.getElementById('x2-cut-table-body').innerHTML.includes('NCC01') &&
+  document.getElementById('x2-cut-table-body').innerHTML.includes('40%'));
+check('BẢNG (NGƯỜI CẮT SỐNG): từng người kèm giờ từ Bảng bố trí (07:00–12:00 / 13:00)',
+  document.getElementById('x2-cut-table-body').innerHTML.includes('Nguyễn Văn A') &&
+  document.getElementById('x2-cut-table-body').innerHTML.includes('07:00–12:00') &&
+  document.getElementById('x2-cut-table-body').innerHTML.includes('Nguyễn Văn B') &&
+  document.getElementById('x2-cut-table-body').innerHTML.includes('13:00'));
+check('TỒN BAR: sau cắt còn "1" lô · "800" kg chờ xử lý',
+  document.getElementById('x2-stock-bar').innerHTML.includes('<strong>1</strong> lô') &&
+  document.getElementById('x2-stock-bar').innerHTML.includes('<strong>800</strong> kg'));
+check('BẢNG: đếm lịch sử hiển thị "1 lượt đã cắt/chọn"',
+  document.getElementById('x2-cut-table-count').textContent === '1 lượt đã cắt/chọn');
 check('THẺ: đếm trên thẻ sau lưu = "1 lượt · 1.000 kg"',
   document.getElementById('x2-mini-count-cut').textContent === '1 lượt · 1.000 kg');
+// Phòng mất dữ liệu Nhân Sự: bố trí bị xóa → bảng dùng snapshot đã lưu cùng lượt cắt
+const hrBackup = state.hrAssignments;
+state.hrAssignments = [];
+x2.renderXuong2CutCard();
+check('NGƯỜI CẮT (SNAPSHOT): bố trí Nhân Sự bị xóa → bảng vẫn hiện người cắt đã lưu',
+  document.getElementById('x2-cut-table-body').innerHTML.includes('Nguyễn Văn A'));
+state.hrAssignments = hrBackup;
+x2.renderXuong2CutCard();
 
 // ─── F. SỬA LƯỢT CẮT/CHỌN ───────────────────────────────────────
 x2.editXuong2Cut(rec.id);
@@ -182,6 +224,15 @@ x2.deleteXuong2Cut(rec.id);
 check('XÓA: danh sách về rỗng', (state.xuong2CutRecords || []).length === 0);
 check('XÓA: localStorage cũng rỗng', JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_CUTS) || '[]').length === 0);
 check('XÓA: đã ghi tombstone (xuong2CutRecords)', !!(state.deletedIds && state.deletedIds.xuong2CutRecords && state.deletedIds.xuong2CutRecords[rec.id]));
+check('LỌC: xóa lượt cắt → lô "Luồng cây xô" hiện lại trong ô chọn', sel.innerHTML.includes('Luồng cây xô'));
+
+// ─── I. BẢNG LỊCH SỬ: THU GỌN / MỞ RỘNG ─────────────────────────
+x2.toggleX2CutTable();
+check('BẢNG: nút thu gọn hoạt động (wrap có class x2-cut-collapsed)',
+  document.getElementById('x2-cut-table-wrap').classList.contains('x2-cut-collapsed'));
+x2.toggleX2CutTable();
+check('BẢNG: mở rộng lại (bỏ class x2-cut-collapsed)',
+  !document.getElementById('x2-cut-table-wrap').classList.contains('x2-cut-collapsed'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

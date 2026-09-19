@@ -1510,6 +1510,23 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     const wkNum = Number(state.planVsPressWeek);
     if (state.planVsPressWeek !== 'all' && (!Number.isFinite(wkNum) || wkNum < 1 || wkNum > 53)) state.planVsPressWeek = curWeekNum;
 
+    // Khoảng tuần áp dụng: 1 tuần (mặc định) hoặc CẶP 2 TUẦN KHÔNG CHỒNG LẮN —
+    // ghép tuần LẺ với tuần kế: (33-34), (35-36), (37-38)...; chọn tuần chẵn
+    // thì tự lùi về cặp chứa nó (chọn Tuần 34 -> xem cặp 33-34). Phục vụ tần
+    // suất xuất hàng 1 hoặc 2 tuần/lần; áp cho cả 3 nguồn: kế hoạch / đã ép /
+    // xuất hàng. Tuần 53 lẻ -> chỉ tuần 53 (không có tuần 54).
+    const pvSpan = state.planVsPressSpan === 2 ? 2 : 1;
+    const wkNow = Number(state.planVsPressWeek);
+    let pvPairStart = wkNow;
+    if (pvSpan === 2 && state.planVsPressWeek !== 'all') {
+      pvPairStart = wkNow % 2 === 1 ? wkNow : wkNow - 1;
+      // Neo tuần đang chọn về tuần ĐẦU cặp để ô chọn tuần hiển thị đúng cặp
+      if (wkNow !== pvPairStart) state.planVsPressWeek = pvPairStart;
+    }
+    const pvPairEnd = pvSpan === 2 ? (pvPairStart >= 53 ? null : pvPairStart + 1) : wkNow;
+    const wkOn = w => state.planVsPressWeek === 'all' || Number(w) === Number(state.planVsPressWeek)
+      || (pvSpan === 2 && pvPairEnd != null && (Number(w) === pvPairStart || Number(w) === pvPairEnd));
+
     // Điền bộ lọc năm (năm hiện tại + năm gộp từ cả 2 nguồn dữ liệu)
     const years = new Set([curYearStr]);
     (state.planningItems || []).forEach(p => { if (p.year) years.add(String(p.year)); });
@@ -1523,23 +1540,23 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     }
     const yOn = y => state.planVsPressYear === 'all' || String(y) === String(state.planVsPressYear);
 
-    // Điền ô chọn tuần (Tất Cả + Tuần 1..53)
+    // Điền ô chọn tuần: 1 tuần = Tuần 1..53; 2 tuần = các CẶP "Tuần 1-2"…
+    // "Tuần 53" — giá trị option = tuần ĐẦU của cặp (khớp phép gộp số liệu)
     const wkSel = document.getElementById('pv-week-filter');
     if (wkSel) {
-      wkSel.innerHTML = '<option value="all">Tất Cả</option>' +
-        Array.from({ length: 53 }, (_, i) => i + 1)
-          .map(w => `<option value="${w}"${String(state.planVsPressWeek) === String(w) ? ' selected' : ''}>Tuần ${w}</option>`).join('');
+      if (pvSpan === 2) {
+        wkSel.innerHTML = '<option value="all">Tất Cả</option>' +
+          Array.from({ length: 27 }, (_, i) => i * 2 + 1)
+            .map(w => {
+              const lbl = w >= 53 ? `Tuần ${w}` : `Tuần ${w}-${w + 1}`;
+              return `<option value="${w}"${String(state.planVsPressWeek) === String(w) ? ' selected' : ''}>${lbl}</option>`;
+            }).join('');
+      } else {
+        wkSel.innerHTML = '<option value="all">Tất Cả</option>' +
+          Array.from({ length: 53 }, (_, i) => i + 1)
+            .map(w => `<option value="${w}"${String(state.planVsPressWeek) === String(w) ? ' selected' : ''}>Tuần ${w}</option>`).join('');
+      }
     }
-    // Khoảng tuần áp dụng: 1 tuần (mặc định) hoặc CẶP 2 TUẦN KHÔNG CHỒNG LẮN —
-    // ghép tuần LẺ với tuần kế: (33-34), (35-36), (37-38)...; chọn tuần chẵn
-    // thì tự lùi về cặp chứa nó (chọn Tuần 34 -> xem cặp 33-34). Phục vụ tần
-    // suất xuất hàng 1 hoặc 2 tuần/lần; áp cho cả 3 nguồn: kế hoạch / đã ép /
-    // xuất hàng. Tuần 53 lẻ -> chỉ tuần 53 (không có tuần 54).
-    const pvSpan = state.planVsPressSpan === 2 ? 2 : 1;
-    const pvPairStart = pvSpan === 2 ? (wkNum % 2 === 1 ? wkNum : wkNum - 1) : wkNum;
-    const pvPairEnd = pvSpan === 2 ? (pvPairStart >= 53 ? null : pvPairStart + 1) : wkNum;
-    const wkOn = w => state.planVsPressWeek === 'all' || Number(w) === Number(state.planVsPressWeek)
-      || (pvSpan === 2 && pvPairEnd != null && (Number(w) === pvPairStart || Number(w) === pvPairEnd));
 
     // Gộp số liệu theo sản phẩm (lọc năm + tuần)
     const planQty = {}, pressQty = {}, pressVol = {};
@@ -2040,16 +2057,19 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     return w > 0 ? w : 52;
   }
 
-  // Lùi/tiến 1 tuần cho biểu đồ Kế Hoạch vs Đã Ép (dir: -1 = tuần trước, 1 = tuần sau)
+  // Lùi/tiến 1 tuần cho biểu đồ Kế Hoạch vs Đã Ép (dir: -1 = tuần trước, 1 = tuần sau).
+  // Chế độ 2 tuần: mỗi bấm ◀/▶ dịch MỘT CẶP (33-34 -> 35-36...).
   function shiftPlanVsPressWeek(dir) {
     const w = Number(state.planVsPressWeek);
     if (!w || state.planVsPressWeek === 'all') return; // đang "Tất Cả" thì không điều hướng
     const curYearStr = String(getDateYear(todayLocalISO()));
     const yNum = state.planVsPressYear === 'all' ? Number(curYearStr) : Number(state.planVsPressYear);
     const maxWk = weeksInISOYear(yNum || Number(curYearStr));
-    let nw = w + dir;
+    const step = state.planVsPressSpan === 2 ? 2 : 1;
+    let nw = w + dir * step;
     if (nw > maxWk) nw = 1;     // tuần cuối -> quay về tuần 1
     if (nw < 1) nw = maxWk;     // tuần 1 -> lùi về tuần cuối
+    if (state.planVsPressSpan === 2 && nw % 2 === 0) nw -= 1; // neo về tuần ĐẦU cặp (lẻ)
     state.planVsPressWeek = nw;
     renderPlanVsPressChart();
   }

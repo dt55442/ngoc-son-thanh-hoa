@@ -13,8 +13,9 @@ import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
-import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, MATERIAL_TYPE_SUGGESTIONS, openMaterialModal, openMaterialPhotoModal, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { deleteXuong2Cut, editXuong2Cut, handleXuong2CutSubmit, resetXuong2CutForm, updateXuong2CutLinked, updateXuong2CutRemain, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
+import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
+import { deleteXuong2Cut, editXuong2Cut, handleXuong2CutSubmit, pickX2Stock, resetXuong2CutForm, toggleX2CutTable, updateXuong2CutLinked, updateXuong2CutRemain, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
+import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
@@ -666,6 +667,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-add-material-plan-week', 'click', () => addMaterialPlanWeek());
     // Thu gọn / mở rộng bảng kế hoạch nguyên liệu
     safeOn('btn-toggle-material-plan', 'click', () => toggleRateTableCollapse('material-plan-card'));
+    // ── Thông Tin Nhà Cung (bảng phụ tab Nguyên Liệu) ──
+    safeOn('btn-add-supplier', 'click', () => openSupplierModal());
+    safeOn('btn-sup-normalize', 'click', normalizeSupplierNames);
+    safeOn('btn-close-supplier', 'click', closeSupplierModal);
+    safeOn('btn-cancel-supplier', 'click', closeSupplierModal);
+    safeOn('supplier-form', 'submit', handleSupplierSubmit);
+    safeOn('btn-toggle-supplier', 'click', () => toggleRateTableCollapse('supplier-card'));
 
     // ── QC — Module thẻ (launcher) + Bảng Xuất Hàng ──
     // Bấm thẻ launcher (grid) → mở bảng chi tiết dạng pop-up modal (nổi lên)
@@ -1000,9 +1008,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-material-photo', 'click', closeMaterialPhotoModal);
     safeOn('material-photo-prev', 'click', () => materialPhotoNav(-1));
     safeOn('material-photo-next', 'click', () => materialPhotoNav(1));
-    // Gợi ý loại nguyên liệu (datalist)
-    const matDl = document.getElementById('material-type-suggestions');
-    if (matDl) matDl.innerHTML = MATERIAL_TYPE_SUGGESTIONS.map(t => `<option value="${escapeHTML(t)}">`).join('');
+    // Gợi ý loại nguyên liệu: CHỈ các loại ĐÃ NHẬP trong nhật ký (bỏ gợi ý cứng)
+    refreshMaterialTypeSuggestions();
     // Gợi ý nhà cung cấp: lấy từ các lần nhập trước
     const supDl = document.getElementById('material-supplier-suggestions');
     if (supDl) {
@@ -1045,6 +1052,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       if (editBtn) { openMaterialModal(editBtn.getAttribute('data-mat-edit')); return; }
       const delBtn = e.target.closest('[data-mat-delete]');
       if (delBtn) { deleteMaterial(delBtn.getAttribute('data-mat-delete')); return; }
+      // Nhà cung cấp: sửa / xóa dòng trong bảng + chip "Khai báo nhanh" tên cũ
+      const supEditBtn = e.target.closest('[data-sup-edit]');
+      if (supEditBtn) { openSupplierModal(supEditBtn.getAttribute('data-sup-edit')); return; }
+      const supDelBtn = e.target.closest('[data-sup-delete]');
+      if (supDelBtn) { deleteSupplier(supDelBtn.getAttribute('data-sup-delete')); return; }
+      const supQuickBtn = e.target.closest('[data-sup-quick]');
+      if (supQuickBtn) { openSupplierModal(null, supQuickBtn.getAttribute('data-sup-quick')); return; }
       const photoEl = e.target.closest('[data-mat-photo]');
       if (photoEl) {
         openMaterialPhotoModal(photoEl.getAttribute('data-mat-photo'), parseInt(photoEl.getAttribute('data-mat-photo-idx'), 10) || 0);
@@ -1080,15 +1094,20 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const ov = document.getElementById('x2-detail-overlay');
       if (ov && ov.classList.contains('show')) x2PositionDetailOverlay();
     });
-    // Form cắt/chọn: đổi nguyên liệu → tự link NCC / Mã số / KL đầu vào;
-    // gõ khối lượng → tự tính KL ngọn/ống loại; submit → lưu
+    // Form cắt/chọn: đổi nguyên liệu → tự link + mặc định ngày theo lô;
+    // gõ khối lượng → tự tính KL ngọn/ống loại + Tỷ lệ quy đổi; submit → lưu
+    // (Người cắt + Thời gian cắt TỰ ĐỘNG từ Bảng bố trí Nhân Sự — không có ô nhập tay)
     safeOn('btn-add-x2-cut', 'click', () => resetXuong2CutForm());
     safeOn('btn-cancel-x2-cut', 'click', () => resetXuong2CutForm());
     safeOn('x2-cut-material', 'change', updateXuong2CutLinked);
     ['x2-cut-ongluong', 'x2-cut-cuidot', 'x2-cut-cayloai'].forEach(id => safeOn(id, 'input', updateXuong2CutRemain));
     safeOn('x2-cut-form', 'submit', handleXuong2CutSubmit);
-    // Click ủy quyền trong bảng lịch sử cắt/chọn: sửa / xóa lượt
+    // Bảng lịch sử cắt/chọn: thu gọn / mở rộng (viền riêng + cuộn)
+    safeOn('btn-toggle-x2cut-table', 'click', toggleX2CutTable);
+    // Click ủy quyền trong bảng lịch sử cắt/chọn: sửa / xóa lượt + chip TỒN (chọn lô vào form)
     document.addEventListener('click', (e) => {
+      const stockChip = e.target.closest && e.target.closest('[data-x2-stock-pick]');
+      if (stockChip) { pickX2Stock(stockChip.getAttribute('data-x2-stock-pick')); return; }
       const cutEdit = e.target.closest('[data-x2-cut-edit]');
       if (cutEdit) { editXuong2Cut(cutEdit.getAttribute('data-x2-cut-edit')); return; }
       const cutDel = e.target.closest('[data-x2-cut-delete]');

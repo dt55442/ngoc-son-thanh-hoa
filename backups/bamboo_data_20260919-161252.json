@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-19T11:01:12.365Z",
+  "savedAt": "2026-09-19T09:10:55.264Z",
   "batches": [
     {
       "id": "batch-1789697186869",
@@ -17158,7 +17158,7 @@
       "date": "2026-09-05",
       "week": "2026-W36",
       "type": "Gỗ",
-      "supplier": "Nhà Thắng",
+      "supplier": "Nhà Thắng Sơn Điện",
       "location": "lo-hoi",
       "inputIndex": 14940,
       "outputIndex": 6790,
@@ -17168,7 +17168,7 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-05T06:40:57.895Z",
-      "updatedAt": "2026-09-19T09:15:14.824Z"
+      "updatedAt": "2026-09-19T09:09:34.164Z"
     },
     {
       "id": "mat-1788590599543-8xc6k",
@@ -18774,24 +18774,6 @@
       "note": "",
       "createdAt": "2026-09-18T07:43:02.976Z",
       "updatedAt": "2026-09-19T09:09:34.164Z"
-    },
-    {
-      "id": "x2cut-1789813308497-wxm7k",
-      "materialId": "mat-1789640429408-r222v",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "code": "",
-      "inputWeight": 12270,
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "klOngLuong": 5559,
-      "klCuiDot": 2004,
-      "klCayLoai": 0,
-      "klNgonOngLoai": 4707,
-      "cutter": "Vi Văn Thiệu",
-      "cutTime": "17:21",
-      "note": "",
-      "createdAt": "2026-09-19T10:21:48.497Z"
     }
   ],
   "suppliers": [
@@ -18884,42 +18866,6 @@
       "name": "Nhà Thuận",
       "code": "8645",
       "createdAt": "2026-09-19T09:10:55.075Z"
-    },
-    {
-      "id": "sup-1789809172367-4iugi",
-      "name": "Nhà Tâm",
-      "code": "9569",
-      "createdAt": "2026-09-19T09:12:52.367Z"
-    },
-    {
-      "id": "sup-1789809342630-waco6",
-      "name": "Nhà Thắng",
-      "code": "9511",
-      "createdAt": "2026-09-19T09:15:42.630Z"
-    },
-    {
-      "id": "sup-1789809456662-j4auv",
-      "name": "Nhà Bính",
-      "code": "8872",
-      "createdAt": "2026-09-19T09:17:36.662Z"
-    },
-    {
-      "id": "sup-1789809548678-ds1zb",
-      "name": "Nhà Tâm Sơn",
-      "code": "8729",
-      "createdAt": "2026-09-19T09:19:08.678Z"
-    },
-    {
-      "id": "sup-1789809569675-2l24c",
-      "name": "Nhà Triệu",
-      "code": "8868",
-      "createdAt": "2026-09-19T09:19:29.675Z"
-    },
-    {
-      "id": "sup-1789809615703-c38wd",
-      "name": "Nhà Thắng Sơn Điện",
-      "code": "",
-      "createdAt": "2026-09-19T09:20:15.703Z"
     }
   ]
 }

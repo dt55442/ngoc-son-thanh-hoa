@@ -40,6 +40,7 @@ import { escapeHTML, showToast } from './utils.js';
     materialRecords:   { tab: 'materials', label: 'Nhật ký nguyên liệu',  get: () => state.materialRecords },
     materialPlan:      { tab: 'materials', label: 'Kế hoạch nguyên liệu', get: () => state.materialPlan },
     xuong2CutRecords:  { tab: 'kanban',    label: 'Cắt chọn Xưởng 2',     get: () => state.xuong2CutRecords },
+    suppliers:         { tab: 'materials', label: 'Nhà cung cấp',         get: () => state.suppliers },
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
     hrEmployees:       { tab: 'hr',        label: 'Nhân viên',            get: () => state.hrEmployees },
     hrLeaves:          { tab: 'hr',        label: 'Đơn nghỉ phép',        get: () => state.hrLeaves },

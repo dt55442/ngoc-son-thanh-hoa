@@ -19,6 +19,11 @@
   // Vị trí công đoạn Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký cắt/chọn.
   // Mỗi lượt cắt/chọn link 1 lượt nhập nguyên liệu đầu vào của Xưởng 2 (tab Nguyên Liệu)
   const STORAGE_KEY_XUONG2_CUTS = 'bamboo_tracker_xuong2_cuts_v1';
+  // Bảng "Thông Tin Nhà Cung" (tab Nguyên Liệu): danh mục nhà cung cấp do
+  // người dùng khai báo (tên + mã số điền tay); các số liệu (tổng KL, số chuyến,
+  // trung bình, tỷ lệ đạt, số lần nhắc nhở, đánh giá) TỰ TÍNH từ materialRecords
+  // + xuong2CutRecords (10 chuyến gần nhất) — xem js/suppliers.js
+  const STORAGE_KEY_SUPPLIERS = 'bamboo_tracker_suppliers_v1';
   const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
   // Tab Nhân Sự: nhân viên, đơn nghỉ phép, nhu cầu tuyển dụng
   const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
@@ -125,6 +130,10 @@
     qcSumYear: 'all',
     qcSumWeeks: [],
     qcSearchQ: '',
+    x2CutEditId: null,        // id lượt cắt/chọn đang sửa trong form (null = ghi mới)
+    // Thông Tin Nhà Cung (tab Nguyên Liệu): [{ id, name, code, createdAt, updatedAt }]
+    suppliers: [],
+    supplierEditId: null,     // id nhà cung cấp đang sửa trong modal (null = thêm mới)
     materialActiveLoc: 'all', // 'all' | 'lo-hoi' | 'xuong-1' | 'xuong-2'
     materialLightbox: null,   // { recordId, index } đang mở trong lightbox
     // Vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn):
@@ -193,6 +202,7 @@ export {
   STORAGE_KEY_MATERIAL_RATES,
   STORAGE_KEY_MATERIALS,
   STORAGE_KEY_XUONG2_CUTS,
+  STORAGE_KEY_SUPPLIERS,
   STORAGE_KEY_PLANNING_FORECAST,
   STORAGE_KEY_PLANNING_ITEMS,
   STORAGE_KEY_PLANNING_STOCK,

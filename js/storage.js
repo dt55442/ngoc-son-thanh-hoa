@@ -7,7 +7,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
@@ -105,6 +105,43 @@ import { escapeHTML, showToast } from './utils.js';
     const merged = mergeXuong2Records(state.xuong2CutRecords, incomingArr);
     state.xuong2CutRecords = merged;
     try { localStorage.setItem(STORAGE_KEY_XUONG2_CUTS, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
+
+  // ─── GỘP BẢNG THÔNG TIN NHÀ CUNG (từ file bamboo_data.json / backup) ──
+  // Dấu thời gian so sánh bản ghi (ưu tiên updatedAt); bản chỉ có ở một phía giữ lại.
+  function supplierRecStamp(r) {
+    return String((r && (r.updatedAt || r.createdAt)) || '');
+  }
+
+  function mergeSuppliers(localArr, incomingArr) {
+    const local = Array.isArray(localArr) ? localArr : [];
+    const incoming = Array.isArray(incomingArr) ? incomingArr : [];
+    const map = new Map();
+    const noId = [];
+    for (const r of incoming) {
+      if (r && r.id) map.set(r.id, r); // bản từ nguồn ngoài (file/mây/backup) làm nền
+    }
+    for (const r of local) {
+      if (!r) continue;
+      if (!r.id) { noId.push(r); continue; }
+      const cur = map.get(r.id);
+      if (!cur || supplierRecStamp(r) >= supplierRecStamp(cur)) map.set(r.id, r);
+    }
+    return [...noId, ...map.values()];
+  }
+
+  // Khôi phục suppliers từ nguồn ngoài: luôn GỘP thay vì ghi đè,
+  // rồi lưu lại localStorage + file (nếu đang kết nối).
+  function restoreSuppliers(incomingArr) {
+    const before = JSON.stringify(state.suppliers || []);
+    const merged = mergeSuppliers(state.suppliers, incomingArr);
+    state.suppliers = merged;
+    try { localStorage.setItem(STORAGE_KEY_SUPPLIERS, JSON.stringify(merged)); } catch (err) {}
     if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
       writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
     }
@@ -231,6 +268,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.xuong2CutRecords && Array.isArray(loaded.xuong2CutRecords)) {
           restoreXuong2Cuts(loaded.xuong2CutRecords); // GỘP — không ghi đè mất bản mới hơn
         }
+        if (loaded.suppliers && Array.isArray(loaded.suppliers)) {
+          restoreSuppliers(loaded.suppliers); // GỘP — không ghi đè mất bản mới hơn
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -282,6 +322,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.xuong2CutRecords && Array.isArray(loaded.xuong2CutRecords)) {
           restoreXuong2Cuts(loaded.xuong2CutRecords); // GỘP — không ghi đè mất bản mới hơn
         }
+        if (loaded.suppliers && Array.isArray(loaded.suppliers)) {
+          restoreSuppliers(loaded.suppliers); // GỘP — không ghi đè mất bản mới hơn
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -332,7 +375,8 @@ import { escapeHTML, showToast } from './utils.js';
         users: state.users,
         customCharts: state.customCharts,
         materialRecords: state.materialRecords || [],
-        xuong2CutRecords: state.xuong2CutRecords || []
+        xuong2CutRecords: state.xuong2CutRecords || [],
+        suppliers: state.suppliers || []
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -419,7 +463,8 @@ import { escapeHTML, showToast } from './utils.js';
       users: state.users,
       customCharts: state.customCharts,
       materialRecords: state.materialRecords || [],
-      xuong2CutRecords: state.xuong2CutRecords || []
+      xuong2CutRecords: state.xuong2CutRecords || [],
+      suppliers: state.suppliers || []
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -459,6 +504,10 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && Array.isArray(imported.xuong2CutRecords)) {
           restoreXuong2Cuts(imported.xuong2CutRecords); // GỘP — không xóa lượt cắt/chọn mới hơn backup
+        }
+
+        if (imported && Array.isArray(imported.suppliers)) {
+          restoreSuppliers(imported.suppliers); // GỘP — không xóa nhà cung cấp mới hơn backup
         }
 
         renderAll();

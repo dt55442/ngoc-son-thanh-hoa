@@ -13,6 +13,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { canEditTab } from './permissions.js';
 import { trackDeleted } from './tombstone.js';
+import { renderSuppliers } from './suppliers.js';
 import { logDataChange } from './history.js';
 import { dataUrlToBlob, deletePhotos, getPhotoURL, photosAvailable, putPhoto } from './photo-store.js';
 import { STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIALS, state } from './state.js';
@@ -31,11 +32,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     { key: 'xuong-2', label: 'Xưởng 2', icon: 'warehouse' }
   ];
 
-  // Gợi ý loại nguyên liệu (datalist — vẫn nhập tay tự do được)
-  const MATERIAL_TYPE_SUGGESTIONS = [
-    'Tre nguyên liệu', 'Thanh tre thô', 'Dăm tre', 'Keo UF', 'Phụ gia',
-    'Bao bì', 'Màng PE', 'Giấy nhám', 'Khác'
-  ];
+  // Gợi ý loại nguyên liệu KHÔNG còn danh sách cứng — chỉ gợi ý các loại
+  // ĐÃ NHẬP trong nhật ký nguyên liệu (refreshMaterialTypeSuggestions).
 
   // Nhãn vị trí từ key hoặc label cũ (dữ liệu đồng bộ từ máy khác)
   function materialLocationLabel(loc) {
@@ -943,6 +941,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     renderMaterialStats();
     renderMaterialTable();
     renderMaterialPlanTable();
+    renderSuppliers(); // Bảng Thông Tin Nhà Cung (bảng phụ dưới cùng tab)
     initLucide();
   }
 
@@ -1064,6 +1063,19 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     initLucide();
   }
 
+  // ─── GỢI Ý LOẠI NGUYÊN LIỆU (datalist ô "Loại Nguyên Liệu" modal nhập) ──
+  // CHỈ gợi ý các loại ĐÃ NHẬP trong nhật ký nguyên liệu — bỏ các gợi ý cứng
+  // không có trong dữ liệu. Vẫn gõ tay tự do (datalist không chặn giá trị mới).
+  function refreshMaterialTypeSuggestions() {
+    const dl = document.getElementById('material-type-suggestions');
+    if (!dl) return;
+    const types = [...new Set((state.materialRecords || [])
+      .map(r => String(r.type || '').trim())
+      .filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'vi'));
+    dl.innerHTML = types.map(t => `<option value="${escapeHTML(t)}">`).join('');
+  }
+
   // ─── MODAL NHẬP / SỬA ────────────────────────────────────────
   function openMaterialModal(recordId = null) {
     if (!canEditMaterials()) return;
@@ -1081,15 +1093,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         : (MATERIAL_LOCATIONS.some(l => l.key === state.materialActiveLoc) ? state.materialActiveLoc : MATERIAL_LOCATIONS[0].key);
     }
 
-    // Gợi ý loại nguyên liệu & nhà cung cấp (từ dữ liệu đã nhập)
-    const typeList = document.getElementById('material-type-suggestions');
-    if (typeList) {
-      typeList.innerHTML = [...new Set([
-        ...MATERIAL_TYPE_SUGGESTIONS,
-        ...state.materialRecords.map(r => (r.type || '').trim()).filter(Boolean)
-      ])].sort((a, b) => a.localeCompare(b, 'vi'))
-        .map(t => `<option value="${escapeHTML(t)}"></option>`).join('');
-    }
+    // Gợi ý loại nguyên liệu: CHỈ các loại ĐÃ NHẬP trong nhật ký (bỏ gợi ý cứng)
+    refreshMaterialTypeSuggestions();
     const supList = document.getElementById('material-supplier-suggestions');
     if (supList) {
       supList.innerHTML = [...new Set(state.materialRecords.map(r => (r.supplier || '').trim()).filter(Boolean))]
@@ -1465,7 +1470,6 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
 export {
   MATERIAL_KPI_PERIODS,
   MATERIAL_LOCATIONS,
-  MATERIAL_TYPE_SUGGESTIONS,
   addMaterialPlanWeek,
   buildMaterialPlanVsActualData,
   canEditMaterials,
@@ -1506,6 +1510,7 @@ export {
   renderMaterialTable,
   renderMaterialTabs,
   renderMaterialView,
+  refreshMaterialTypeSuggestions,
   saveMaterialPlan,
   saveMaterialRecords,
   shiftMaterialPlanChartWeek,

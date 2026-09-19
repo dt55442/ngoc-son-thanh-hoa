@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-19T11:01:12.365Z",
+  "savedAt": "2026-09-19T09:20:15.956Z",
   "batches": [
     {
       "id": "batch-1789697186869",
@@ -18774,24 +18774,6 @@
       "note": "",
       "createdAt": "2026-09-18T07:43:02.976Z",
       "updatedAt": "2026-09-19T09:09:34.164Z"
-    },
-    {
-      "id": "x2cut-1789813308497-wxm7k",
-      "materialId": "mat-1789640429408-r222v",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "code": "",
-      "inputWeight": 12270,
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "klOngLuong": 5559,
-      "klCuiDot": 2004,
-      "klCayLoai": 0,
-      "klNgonOngLoai": 4707,
-      "cutter": "Vi Văn Thiệu",
-      "cutTime": "17:21",
-      "note": "",
-      "createdAt": "2026-09-19T10:21:48.497Z"
     }
   ],
   "suppliers": [

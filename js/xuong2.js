@@ -19,6 +19,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { logDataChange } from './history.js';
 import { materialWeekLabel } from './materials.js';
+import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
@@ -73,6 +74,63 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
 
   const fmtKg = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  const fmtRatio = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+
+  // ─── TỒN CHƯA CẮT + MÃ NCC + NGƯỜI CẮT (nguồn tab Nhân Sự) ────
+  // Tồn hiện tại = các lô nguyên liệu đầu vào Xưởng 2 CHƯA có lượt cắt/chọn nào
+  function cutMaterialIds() {
+    return new Set((state.xuong2CutRecords || []).map(r => r.materialId).filter(Boolean));
+  }
+  function xuong2PendingInputs() {
+    const cutIds = cutMaterialIds();
+    return xuong2MaterialInputs().filter(r => !cutIds.has(r.id));
+  }
+  // Mã NCC từ Bảng Thông Tin Nhà Cung (khớp tên mềm "Tế" ≡ "Nhà Tế")
+  function supplierCodeOf(name) {
+    const k = supplierKey(name);
+    if (!k) return '';
+    const sup = (state.suppliers || []).find(s => supplierKey(s.name) === k);
+    return sup ? String(sup.code || '').trim() : '';
+  }
+  // ─── NGƯỜI CẮT + THỜI GIAN CẮT — TỰ ĐỘNG từ tab Nhân Sự ──────
+  // Nguồn: Bảng bố trí vị trí theo ngày (hrAssignments) — các lượt bố trí tại
+  // bộ phận "Xưởng 2" vào vị trí có TÊN chứa "cắt" đúng ngày cắt. Trả về MẢNG
+  // (một ngày có thể nhiều người/ca) để sau này tính công suất từng vị trí:
+  // [{ employeeId, name, positionName, start, end }]
+  function hrCutAssignmentsOf(dateVal) {
+    if (!dateVal) return [];
+    const posNameOf = id => {
+      const p = (state.hrPositions || []).find(x => x.id === id);
+      return String((p && p.name) || '').trim();
+    };
+    const emplOf = id => (state.hrEmployees || []).find(x => x.id === id) || null;
+    return (state.hrAssignments || [])
+      .filter(a => a.date === dateVal &&
+                   String(a.department || '').trim() === 'Xưởng 2' &&
+                   posNameOf(a.positionId).toLowerCase().includes('cắt'))
+      .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')))
+      .map(a => {
+        const e = emplOf(a.employeeId);
+        return {
+          employeeId: a.employeeId || '',
+          name: String((e && e.name) || a.employeeId || '').trim(),
+          positionName: posNameOf(a.positionId),
+          start: String(a.start || '').trim(),
+          end: String(a.end || '').trim()
+        };
+      });
+  }
+  // Chuỗi giờ 1 lượt bố trí: "07:00–12:00" (thiếu giờ ra → hiện mỗi "07:00")
+  const cutTimeStr = a => (a.end ? `${a.start}–${a.end}` : a.start);
+  // Snapshot lúc lưu lượt cắt/chọn (phòng khi bố trí Nhân Sự bị xóa về sau):
+  // cutter = "Tên A, Tên B" · cutTime = "07:00–12:00, 13:00–17:00"
+  function hrCutSnapshot(dateVal) {
+    const list = hrCutAssignmentsOf(dateVal);
+    return {
+      cutter: list.map(a => a.name).filter(Boolean).join(', '),
+      cutTime: list.map(cutTimeStr).filter(s => s).join(', ')
+    };
+  }
 
   // ─── NẠP / LƯU DỮ LIỆU CẮT CHỌN ──────────────────────────────
   function loadXuong2Cuts() {
@@ -115,13 +173,26 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       date: r.date || '',
       materialType: mat ? (mat.type || '') : (r.materialType || ''),
       supplier: mat ? (mat.supplier || '') : (r.supplier || ''),
-      code: mat ? materialCodeOf(mat) : (r.code || ''),
+      // Mã NCC: từ Bảng Thông Tin Nhà Cung (khớp mềm tên NCC; mất gốc → theo snapshot)
+      supplierCode: mat ? supplierCodeOf(mat.supplier) : supplierCodeOf(r.supplier || ''),
+      // Người cắt + thời gian cắt: TỰ ĐỘNG theo NGÀY CẮT từ Bảng bố trí Nhân Sự
+      // (dữ liệu SỐNG — sửa giờ trên board là bảng tự đổi); bố trí đã xóa →
+      // dùng snapshot (cutter/cutTime) lưu cùng lượt cắt/chọn.
+      cutterRows: (() => {
+        const live = hrCutAssignmentsOf(r.date || '');
+        if (live.length) return live.map(a => ({ name: a.name, time: cutTimeStr(a) }));
+        const names = String(r.cutter || '').split(',').map(s => s.trim()).filter(Boolean);
+        const times = String(r.cutTime || '').split(',').map(s => s.trim());
+        return names.map((name, i) => ({ name, time: times[i] || '' }));
+      })(),
       inputWeight,
       klOngLuong,
       klCuiDot,
       klCayLoai,
       // KL ngọn/ống loại = KL đầu vào − KL ống luồng − KL củi đốt − KL cây loại
       klNgonOngLoai: inputWeight - klOngLuong - klCuiDot - klCayLoai,
+      // Tỷ lệ quy đổi = KL ống luồng : KL đầu vào (%)
+      ratio: inputWeight > 0 ? (klOngLuong / inputWeight) * 100 : null,
       note: r.note || ''
     };
   }
@@ -218,64 +289,30 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
 
   // ─── FORM GHI NHẬN LƯỢT CẮT/CHỌN ─────────────────────────────
-  // Đổ danh sách nguyên liệu đầu vào của Xưởng 2 vào ô chọn
+  // Đổ danh sách nguyên liệu đầu vào của Xưởng 2 vào ô chọn.
+  // CHỈ hiện các lô CHƯA cắt/chọn (lô đã cắt tự ẩn); đang SỬA 1 lượt cắt
+  // → vẫn giữ lại đúng lô của lượt đó để chỉnh số liệu.
   function fillXuong2CutMaterialOptions() {
     const sel = document.getElementById('x2-cut-material');
     if (!sel) return;
-    const mats = xuong2MaterialInputs();
+    const cutIds = cutMaterialIds();
+    const editing = state.x2CutEditId ? (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId) : null;
+    const mats = xuong2MaterialInputs().filter(r => !cutIds.has(r.id) || (editing && r.id === editing.materialId));
     let html = mats.map(r => {
       const w = materialInputWeightOf(r);
       return `<option value="${escapeHTML(r.id)}">${escapeHTML(r.type || 'Nguyên liệu')} · NCC ${escapeHTML(r.supplier || '—')} · ${formatDateDDMMYY(r.date)} · ${fmtKg(w)} kg</option>`;
     }).join('');
-    // Đang sửa nhưng bản ghi nguyên liệu gốc đã bị xóa → giữ lựa chọn cũ
-    // (các trường tự link sẽ dùng số liệu đã lưu trong lượt cắt/chọn)
-    const editing = state.x2CutEditId ? (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId) : null;
-    if (editing && editing.materialId && !mats.some(r => r.id === editing.materialId)) {
-      html = `<option value="${escapeHTML(editing.materialId)}">(bản ghi nguyên liệu đã xóa — dùng số liệu đã lưu)</option>` + html;
-    }
-    if (!html) html = `<option value="">— Chưa có nguyên liệu đầu vào nào của Xưởng 2 —</option>`;
+    if (!html) html = `<option value="">— Hết lô chờ cắt (mọi lô Xưởng 2 đã được cắt/chọn) —</option>`;
     sel.innerHTML = html;
     updateXuong2CutLinked();
   }
 
-  // TỰ ĐỘNG LINK các trường từ lần nhập nguyên liệu đang chọn:
-  // Tên nhà cung cấp · Mã số · KL đầu vào (+ mặc định Ngày cắt/chọn)
+  // Ô chọn lô đổi / đang sửa: mặc định Ngày cắt theo ngày nhập nguyên liệu (ghi mới).
+  // (Khối "thông tin lặp lại" dưới form đã BỎ — KL đầu vào được đọc trực tiếp
+  //  từ dữ liệu trong updateXuong2CutRemain qua currentInputWeight.)
   function updateXuong2CutLinked() {
     const sel = document.getElementById('x2-cut-material');
-    const matId = sel ? sel.value : '';
-    const mat = (state.materialRecords || []).find(r => r.id === matId) || null;
-    let supplier = mat ? (mat.supplier || '—') : '—';
-    let code     = mat ? materialCodeOf(mat) : '';
-    let inWeight = mat ? materialInputWeightOf(mat) : 0;
-    let matType  = mat ? (mat.type || '') : '';
-    // Bản ghi nguyên liệu gốc đã xóa (đang sửa) → dùng snapshot đã lưu
-    if (!mat && state.x2CutEditId) {
-      const cut = (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId);
-      if (cut) {
-        supplier = cut.supplier || '—';
-        code     = cut.code || '';
-        inWeight = Number(cut.inputWeight) || 0;
-        matType  = cut.materialType || '';
-      }
-    }
-    const supEl = document.getElementById('x2-cut-supplier');
-    if (supEl) supEl.textContent = supplier || '—';
-    const codeEl = document.getElementById('x2-cut-code');
-    if (codeEl) {
-      if (code) { codeEl.textContent = code; codeEl.style.color = ''; }
-      else {
-        codeEl.textContent = mat ? 'Chưa có (sắp bổ sung ở tab Nguyên Liệu)' : '—';
-        codeEl.style.color = mat ? 'var(--text-muted)' : '';
-      }
-    }
-    const typeEl = document.getElementById('x2-cut-type');
-    if (typeEl) typeEl.textContent = matType || '—';
-    const inwEl = document.getElementById('x2-cut-inweight');
-    if (inwEl) {
-      inwEl.textContent = `${fmtKg(inWeight)} kg`;
-      inwEl.dataset.value = String(inWeight); // nguồn số cho KL ngọn/ống loại
-    }
-    // Ngày cắt/chọn: mặc định theo ngày nhập nguyên liệu (chế độ ghi mới)
+    const mat = (state.materialRecords || []).find(r => r.id === (sel ? sel.value : '')) || null;
     if (!state.x2CutEditId && mat) {
       const d = document.getElementById('x2-cut-date');
       if (d && !d.value) d.value = mat.date || todayISO();
@@ -283,12 +320,24 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     updateXuong2CutRemain();
   }
 
+  // KL đầu vào của lô ĐANG CHỌN trong form (lô gốc đã xóa khi đang sửa → dùng snapshot)
+  function currentInputWeight() {
+    const sel = document.getElementById('x2-cut-material');
+    const mat = (state.materialRecords || []).find(r => r.id === (sel ? sel.value : '')) || null;
+    if (mat) return materialInputWeightOf(mat);
+    if (state.x2CutEditId) {
+      const cut = (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId);
+      if (cut) return Number(cut.inputWeight) || 0;
+    }
+    return 0;
+  }
+
   // KL ngọn/ống loại TỰ TÍNH = KL đầu vào − KL ống luồng − KL củi đốt − KL cây loại
+  // + TỶ LỆ QUY ĐỔI = KL ống luồng : KL đầu vào (%)
   function updateXuong2CutRemain() {
     const disp = document.getElementById('x2-cut-remain-display');
     if (!disp) return;
-    const inwEl = document.getElementById('x2-cut-inweight');
-    const inputWeight = inwEl ? (Number(inwEl.dataset && inwEl.dataset.value) || 0) : 0;
+    const inputWeight = currentInputWeight();
     const val = id => Number((document.getElementById(id) || {}).value) || 0;
     const ongLuong = val('x2-cut-ongluong');
     const cuiDot   = val('x2-cut-cuidot');
@@ -296,6 +345,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const remain = inputWeight - ongLuong - cuiDot - cayLoai;
     disp.textContent = `${fmtKg(remain)} kg`;
     disp.style.color = remain < 0 ? 'var(--danger)' : 'var(--primary)';
+    const ratioEl = document.getElementById('x2-cut-ratio-display');
+    if (ratioEl) {
+      ratioEl.textContent = inputWeight > 0 ? `${fmtRatio((ongLuong / inputWeight) * 100)}%` : '—';
+    }
   }
 
   // Form về trạng thái "ghi mới" (sau Lưu / nút Làm Mới Form)
@@ -339,6 +392,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       return;
     }
     const note = (((document.getElementById('x2-cut-note') || {}).value) || '').trim();
+    // NGƯỜI CẮT + THỜI GIAN CẮT: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "cắt" —
+    // Xưởng 2, đúng ngày cắt) — không điền tay; lưu snapshot phòng khi bố trí bị xóa
+    const snap = hrCutSnapshot(dateVal);
 
     // TỰ ĐỘNG LINK: snapshot nhà cung cấp / mã số / KL đầu vào từ lần nhập NL
     const payload = {
@@ -350,6 +406,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       date: dateVal,
       week: materialWeekLabel(dateVal),
       klOngLuong, klCuiDot, klCayLoai, klNgonOngLoai,
+      cutter: snap.cutter, cutTime: snap.cutTime,
       note
     };
 
@@ -415,12 +472,14 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   // ─── RENDER BẢNG CHI TIẾT CẮT/CHỌN ───────────────────────────
   function renderXuong2CutCard() {
     fillXuong2CutMaterialOptions();
+    renderX2StockBar();
     renderXuong2CutStats();
     renderXuong2CutTable();
     updateXuong2CardCounts();
   }
 
   // Thống kê nhanh của vị trí Cắt Chọn
+  // (Tồn chờ cắt hiển thị riêng ở THANH TRÊN CÙNG thẻ — x2-stock-bar)
   function renderXuong2CutStats() {
     const box = document.getElementById('x2-cut-stats');
     if (!box) return;
@@ -447,7 +506,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       </div>`;
   }
 
-  // Bảng lịch sử cắt/chọn (mới nhất lên đầu)
+  // Bảng lịch sử cắt/chọn (mới nhất lên đầu) — có Mã NCC, Tỷ lệ quy đổi, Người cắt
   function renderXuong2CutTable() {
     const tbody = document.getElementById('x2-cut-table-body');
     if (!tbody) return;
@@ -455,9 +514,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       if ((b.date || '') !== (a.date || '')) return (b.date || '').localeCompare(a.date || '');
       return (b.createdAt || '').localeCompare(a.createdAt || '');
     });
+    const countEl = document.getElementById('x2-cut-table-count');
+    if (countEl) countEl.textContent = cuts.length ? `${cuts.length} lượt đã cắt/chọn` : '';
     if (!cuts.length) {
       tbody.innerHTML = `
-        <tr><td colspan="10" class="text-center" style="color:var(--text-muted); padding:28px 10px;">
+        <tr><td colspan="12" class="text-center" style="color:var(--text-muted); padding:28px 10px;">
           <i data-lucide="scissors" style="width:30px;height:30px;opacity:.5;"></i>
           <div style="margin-top:8px;">Chưa có lượt cắt/chọn nào.<br>Chọn <strong>nguyên liệu đầu vào của Xưởng 2</strong> ở form trên rồi bấm <strong>Lưu Lượt Cắt/Chọn</strong>.</div>
         </td></tr>`;
@@ -466,17 +527,25 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     }
     tbody.innerHTML = cuts.map(r => {
       const d = cutDisplay(r);
+      const ratioTxt = d.ratio == null ? '—' : `${fmtRatio(d.ratio)}%`;
       return `
         <tr data-x2-cut-row="${escapeHTML(r.id)}">
           <td>${formatDateDDMMYY(d.date)}</td>
           <td><strong>${escapeHTML(d.materialType || '—')}</strong></td>
           <td>${escapeHTML(d.supplier || '—')}${d.note ? `<div style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(d.note)}</div>` : ''}</td>
-          <td>${d.code ? escapeHTML(d.code) : '<span style="color:var(--text-muted);">Chưa có</span>'}</td>
+          <td>${d.supplierCode ? escapeHTML(d.supplierCode) : '<span style="color:var(--text-muted);" title="Chưa khai báo Mã Số trong Bảng Thông Tin Nhà Cung (tab Nguyên Liệu)">—</span>'}</td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.inputWeight)}</strong></td>
           <td class="text-right">${fmtKg(d.klOngLuong)}</td>
           <td class="text-right">${fmtKg(d.klCuiDot)}</td>
           <td class="text-right">${fmtKg(d.klCayLoai)}</td>
           <td class="text-right"><strong style="color:#b45309;">${fmtKg(d.klNgonOngLoai)}</strong></td>
+          <td class="text-right"><strong style="color:#0f766e;" title="Tỷ lệ quy đổi = KL ống luồng : KL đầu vào">${ratioTxt}</strong></td>
+          <td>${d.cutterRows.length
+            ? d.cutterRows.map(x => `
+              <div class="x2-cut-cutter-row" title="${escapeHTML(x.name)}${x.time ? ' · ' + escapeHTML(x.time) : ''} (tự động từ Bảng bố trí Nhân Sự)">
+                <strong>${escapeHTML(x.name)}</strong>${x.time ? `<span class="x2-cut-when"><i data-lucide="clock"></i> ${escapeHTML(x.time)}</span>` : ''}
+              </div>`).join('')
+            : '<span style="color:var(--text-muted);" title="Ngày này chưa bố trí ai ở vị trí Cắt (tab Nhân Sự — Bảng bố trí)">—</span>'}</td>
           <td class="text-right">
             <button class="btn btn-icon btn-outline" title="Sửa" data-x2-cut-edit="${escapeHTML(r.id)}"><i data-lucide="pencil"></i></button>
             <button class="btn btn-icon btn-danger" title="Xóa" data-x2-cut-delete="${escapeHTML(r.id)}"><i data-lucide="trash-2"></i></button>
@@ -484,6 +553,49 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         </tr>`;
     }).join('');
     initLucide();
+  }
+
+  // Thu gọn / mở rộng BẢNG LỊCH SỬ cắt/chọn (form vẫn hiện để tiếp tục nhập)
+  function toggleX2CutTable() {
+    const wrap = document.getElementById('x2-cut-table-wrap');
+    if (!wrap) return;
+    wrap.classList.toggle('x2-cut-collapsed');
+    initLucide();
+  }
+
+  // ─── TỒN NGUYÊN LIỆU CHỜ CẮT (thanh TRÊN CÙNG thẻ) ───────────
+  // Trả lời "tồn nguyên liệu Xưởng 2 còn lại là bao nhiêu": tổng số lô + tổng kg
+  // + chip TỪNG LÔ còn lại; BẤM CHIP → chọn đúng lô đó vào form để cắt tiếp.
+  function renderX2StockBar() {
+    const bar = document.getElementById('x2-stock-bar');
+    if (!bar) return;
+    const pending = xuong2PendingInputs();
+    const totalW = pending.reduce((s, r) => s + materialInputWeightOf(r), 0);
+    if (!pending.length) {
+      bar.innerHTML = `
+        <span class="x2-stock-title"><i data-lucide="boxes"></i> Tồn nguyên liệu chờ cắt:</span>
+        <span class="x2-stock-empty">Không còn lô nào chờ cắt — mọi lô Xưởng 2 đã được cắt/chọn.</span>`;
+      initLucide();
+      return;
+    }
+    bar.innerHTML = `
+      <span class="x2-stock-title"><i data-lucide="boxes"></i> Tồn nguyên liệu chờ cắt:</span>
+      <span class="x2-stock-total" title="Số lô và tổng khối lượng nguyên liệu Xưởng 2 CHƯA được cắt/chọn"><strong>${pending.length}</strong> lô · <strong>${fmtKg(totalW)}</strong> kg</span>
+      <span class="x2-stock-chips">${pending.map(r =>
+        `<button type="button" class="x2-stock-chip" data-x2-stock-pick="${escapeHTML(r.id)}" title="Bấm để chọn lô này vào form ghi cắt/chọn">
+           ${escapeHTML(r.type || 'NL')} · ${escapeHTML(r.supplier || '—')} · ${formatDateDDMMYY(r.date)} · <strong>${fmtKg(materialInputWeightOf(r))}</strong> kg
+         </button>`).join('')}</span>`;
+    initLucide();
+  }
+
+  // Bấm chip tồn → chọn lô đó vào ô Nguyên Liệu Đầu Vào của form
+  function pickX2Stock(materialId) {
+    const sel = document.getElementById('x2-cut-material');
+    if (!sel) return;
+    // Lô không có trong danh sách (đã cắt?) → bỏ qua im lặng
+    if (sel.options && sel.options.length && !Array.from(sel.options).some(o => o.value === materialId)) return;
+    sel.value = materialId;
+    updateXuong2CutLinked();
   }
 
   // ─── RENDER KHU VỰC XƯỞNG 2 (gọi từ main.js) ─────────────────
@@ -500,11 +612,14 @@ export {
   fillXuong2CutMaterialOptions,
   handleXuong2CutSubmit,
   loadXuong2Cuts,
+  pickX2Stock,
+  renderX2StockBar,
   renderXuong2Cards,
   renderXuong2CutCard,
   resetXuong2CutForm,
   saveXuong2Cuts,
   syncX2MiniActive,
+  toggleX2CutTable,
   updateXuong2CardCounts,
   updateXuong2CutLinked,
   updateXuong2CutRemain,

@@ -591,61 +591,53 @@
             </div>
           </div>
 
-          <!-- FORM: chọn lô nguyên liệu đầu vào Xưởng 2 → tự link NCC / Mã số / KL đầu vào -->
+          <!-- TỒN NGUYÊN LIỆU XƯỞNG 2 CHƯA CẮT — hiện trên cùng; bấm chip lô để chọn vào form -->
+          <div class="x2-stock-bar" id="x2-stock-bar"></div>
+
+          <!-- FORM: chọn lô nguyên liệu đầu vào Xưởng 2
+               (bố cục thu gọn 2 dòng: NL + Ghi chú cùng dòng · Ngày + các ô khối lượng cùng dòng) -->
           <div class="x2-cut-form-wrap">
             <h5 id="x2-cut-form-title"><i data-lucide="plus-circle"></i> Ghi Nhận Lượt Cắt/Chọn Mới</h5>
             <form id="x2-cut-form">
-              <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:12px;">
-                <div class="form-group" style="grid-column:1/-1;">
+              <!-- DÒNG 1: nguyên liệu đầu vào + ghi chú -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
                   <label for="x2-cut-material">Nguyên Liệu Đầu Vào (Xưởng 2) <span class="required">*</span></label>
                   <select id="x2-cut-material" required></select>
-                  <small style="color:var(--text-muted);">Danh sách lấy từ tab Nguyên Liệu — các lần nhập cho Xưởng 2 (Luồng cây xô, Luồng ống, ...)</small>
+                  <small style="color:var(--text-muted);">Chỉ hiện lô CHƯA cắt — lô đã cắt tự ẩn (sửa lượt cũ vẫn thấy đúng lô của lượt đó)</small>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-cut-note">Ghi Chú (nhắc nhở nhà cung cấp...)</label>
+                  <input type="text" id="x2-cut-note" placeholder="VD: cây nhiều mắt, nhắc NCC chặt gọn...">
+                </div>
+              </div>
+              <!-- DÒNG 2: ngày cắt + các ô khối lượng -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-cut-date">Ngày Cắt/Chọn <span class="required">*</span></label>
                   <input type="date" id="x2-cut-date" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex:1;">
                   <label for="x2-cut-ongluong">KL Ống Luồng (kg)</label>
                   <input type="number" id="x2-cut-ongluong" step="any" min="0" placeholder="0">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex:1;">
                   <label for="x2-cut-cuidot">KL Củi Đốt (kg)</label>
                   <input type="number" id="x2-cut-cuidot" step="any" min="0" placeholder="0">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex:1;">
                   <label for="x2-cut-cayloai">KL Cây Loại (kg)</label>
                   <input type="number" id="x2-cut-cayloai" step="any" min="0" placeholder="0">
                 </div>
-                <div class="form-group" style="grid-column:1/-1;">
-                  <label for="x2-cut-note">Ghi Chú</label>
-                  <input type="text" id="x2-cut-note" placeholder="Ghi chú thêm (không bắt buộc)">
-                </div>
               </div>
+              <!-- NGƯỜI CẮT + THỜI GIAN CẮT: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Cắt" —
+                   Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay, chỉ hiện ở Bảng Lịch Sử Cắt/Chọn -->
 
-              <!-- Trường TỰ ĐỘNG LINK từ lần nhập nguyên liệu đang chọn -->
-              <div class="x2-linked-grid">
-                <div class="x2-linked-item">
-                  <span class="x2-linked-label"><i data-lucide="package"></i> Loại Nguyên Liệu</span>
-                  <strong id="x2-cut-type">—</strong>
-                </div>
-                <div class="x2-linked-item">
-                  <span class="x2-linked-label"><i data-lucide="user"></i> Tên Nhà Cung Cấp</span>
-                  <strong id="x2-cut-supplier">—</strong>
-                </div>
-                <div class="x2-linked-item">
-                  <span class="x2-linked-label"><i data-lucide="hash"></i> Mã Số</span>
-                  <strong id="x2-cut-code">—</strong>
-                </div>
-                <div class="x2-linked-item">
-                  <span class="x2-linked-label"><i data-lucide="scale"></i> Khối Lượng Đầu Vào</span>
-                  <strong id="x2-cut-inweight">—</strong>
-                </div>
-              </div>
-
-              <div class="material-weight-box" style="margin-top:10px;">
+              <div class="material-weight-box" style="margin-top:10px; flex-wrap:wrap; gap:4px 14px;">
                 <span><i data-lucide="calculator"></i> KL Ngọn/Ống Loại (Tự tính = KL đầu vào − KL ống luồng − KL củi đốt − KL cây loại):</span>
                 <strong id="x2-cut-remain-display">— kg</strong>
+                <span><i data-lucide="percent"></i> Tỷ Lệ Quy Đổi (Ống luồng : Đầu vào):</span>
+                <strong id="x2-cut-ratio-display" style="color:#0f766e;">—</strong>
               </div>
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
@@ -658,25 +650,36 @@
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-cut-stats"></div>
 
-          <!-- Bảng lịch sử cắt/chọn -->
-          <div style="overflow-x:auto;">
-            <table class="data-table" id="x2-cut-table">
-              <thead>
-                <tr>
-                  <th style="width:90px;">Ngày Cắt/Chọn</th>
-                  <th>Loại Nguyên Liệu</th>
-                  <th>Nhà Cung Cấp</th>
-                  <th style="width:90px;">Mã Số</th>
-                  <th class="text-right" style="width:110px;">KL Đầu Vào (kg)</th>
-                  <th class="text-right" style="width:100px;">KL Ống Luồng</th>
-                  <th class="text-right" style="width:95px;">KL Củi Đốt</th>
-                  <th class="text-right" style="width:95px;">KL Cây Loại</th>
-                  <th class="text-right" style="width:120px;">KL Ngọn/Ống Loại</th>
-                  <th class="text-right" style="width:90px;">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody id="x2-cut-table-body"></tbody>
-            </table>
+          <!-- BẢNG LỊCH SỬ CẮT/CHỌN — viền riêng tách khỏi form, thu gọn được, cuộn khi dài -->
+          <div class="x2-cut-table-wrap" id="x2-cut-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Cắt/Chọn</h5>
+              <span class="x2-cut-table-count" id="x2-cut-table-count"></span>
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2cut-table" title="Thu gọn / Mở rộng bảng lịch sử">
+                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+              </button>
+            </div>
+            <div class="x2-cut-table-scroll">
+              <table class="data-table" id="x2-cut-table">
+                <thead>
+                  <tr>
+                    <th style="width:88px;">Ngày</th>
+                    <th>Loại Nguyên Liệu</th>
+                    <th>Nhà Cung Cấp</th>
+                    <th style="width:80px;">Mã NCC</th>
+                    <th class="text-right" style="width:100px;">KL Đầu Vào</th>
+                    <th class="text-right" style="width:92px;">KL Ống Luồng</th>
+                    <th class="text-right" style="width:88px;">KL Củi Đốt</th>
+                    <th class="text-right" style="width:88px;">KL Cây Loại</th>
+                    <th class="text-right" style="width:105px;">KL Ngọn/Ống Loại</th>
+                    <th class="text-right" style="width:80px;">Tỷ Lệ QĐ</th>
+                    <th style="width:140px;">Người Cắt</th>
+                    <th class="text-right" style="width:84px;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="x2-cut-table-body"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -1482,6 +1485,58 @@
             </thead>
             <tbody id="material-plan-body"></tbody>
             <tfoot id="material-plan-foot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- BẢNG PHỤ: THÔNG TIN NHÀ CUNG (tên + mã số điền tay, số liệu tự tính) -->
+      <div class="planning-card" id="supplier-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="building-2"></i> Thông Tin Nhà Cung</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-sup-normalize" data-perm="materials" title="Thêm tiền tố 'Nhà' cho những tên nhà cung cấp còn thiếu (dữ liệu cũ). VD: 'Tế' → 'Nhà Tế'">
+              <i data-lucide="wand-2"></i> <span class="hide-mobile">Chuẩn Hóa Tên</span>
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-supplier" data-perm="materials" title="Khai báo nhà cung cấp (tên + mã số)">
+              <i data-lucide="plus-circle"></i> Thêm Nhà Cung Cấp
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-supplier" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            </button>
+          </div>
+        </div>
+        <p style="margin:0; padding:10px 16px 0 16px; font-size:0.78rem; color:var(--text-muted);">
+          Tên &amp; mã số điền tay (tên theo định dạng <strong>Nhà + Tên</strong>, VD: Nhà Tế). Các cột còn lại tự tính từ nhật ký nhập nguyên liệu + lượt cắt/chọn Xưởng 2 (tab Công Đoạn).
+          <strong>Tỷ lệ đạt</strong> = trung bình 10 chuyến gần nhất, mỗi chuyến = (KL đầu vào − KL cây loại) ÷ KL đầu vào. <strong>Số lần nhắc nhở</strong> = số lượt cắt/chọn có ghi chú trong 10 chuyến gần nhất.
+        </p>
+        <details style="margin:8px 16px 0 16px; font-size:0.75rem; color:var(--text-muted);">
+          <summary style="cursor:pointer; font-weight:600; user-select:none;">Tiêu chí đánh giá (1–5 sao)</summary>
+          <div style="padding-top:6px; line-height:1.7;">
+            • Khối lượng trung bình/chuyến (trọng số 30%): ≥15 tấn → 5★ · ≥10 tấn → 4★ · ≥6 tấn → 3★ · ≥3 tấn → 2★ · thấp hơn → 1★<br>
+            • Tỷ lệ đạt (trọng số 50%): ≥95% → 5★ · ≥90% → 4★ · ≥85% → 3★ · ≥80% → 2★ · thấp hơn → 1★ (chưa có lượt cắt/chọn → 3★ trung lập, không phạt)<br>
+            • Số lần nhắc nhở trong 10 chuyến gần nhất (trọng số 20%): 0 lần → 5★ · 1 lần → 4★ · 2 lần → 3★ · 3 lần → 2★ · ≥4 lần → 1★<br>
+            Điểm tổng = 30% KL trung bình + 50% tỷ lệ đạt + 20% nhắc nhở, làm tròn 0,5, tối đa 5★.
+          </div>
+        </details>
+        <div class="sup-summary" id="sup-summary"></div>
+        <div class="sup-unknown" id="sup-unknown" style="display:none;"></div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="supplier-table">
+            <thead>
+              <tr>
+                <th style="min-width:150px;">Nhà Cung Cấp</th>
+                <th style="width:90px;">Mã Số</th>
+                <th style="min-width:150px;">Loại Nguyên Liệu</th>
+                <th style="width:150px;">Đánh Giá</th>
+                <th class="text-right" style="width:120px;">Tổng KL Đã Nhập</th>
+                <th class="text-right" style="width:80px;">Số Chuyến</th>
+                <th class="text-right" style="width:110px;">Trung Bình</th>
+                <th class="text-right" style="width:100px;">Tỷ Lệ Đạt</th>
+                <th class="text-right" style="width:100px;">Nhắc Nhở</th>
+                <th class="text-right" style="width:90px;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="supplier-table-body"></tbody>
           </table>
         </div>
       </div>
@@ -2844,6 +2899,34 @@
         <div class="modal-footer" style="padding-left:0; padding-right:0;">
           <button type="button" class="btn btn-outline" id="btn-cancel-material">Hủy Bỏ</button>
           <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lần Nhập</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: THÊM / SỬA NHÀ CUNG CẤP (Thông Tin Nhà Cung — tab Nguyên Liệu) -->
+  <div class="modal-overlay" id="modal-supplier">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="supplier-modal-title"><i data-lucide="building-2"></i> Thêm Nhà Cung Cấp</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-supplier"><i data-lucide="x"></i></button>
+      </div>
+      <form id="supplier-form" style="padding:20px;">
+        <div class="form-grid" style="grid-template-columns: 1fr; gap:12px;">
+          <div class="form-group">
+            <label for="supplier-name">Tên Nhà Cung Cấp <span class="required">*</span></label>
+            <input type="text" id="supplier-name" list="supplier-name-suggestions" placeholder="VD: Nhà Tế" required autocomplete="off">
+            <datalist id="supplier-name-suggestions"></datalist>
+            <small style="color:var(--text-muted); font-size:0.72rem;">Định dạng tên: <strong>Nhà + Tên</strong> (VD: Nhà Tế). App tự thêm "Nhà" nếu bạn quên.</small>
+          </div>
+          <div class="form-group">
+            <label for="supplier-code">Mã Số</label>
+            <input type="text" id="supplier-code" placeholder="VD: NCC01 (tự đặt)" autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-supplier">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Nhà Cung Cấp</button>
         </div>
       </form>
     </div>

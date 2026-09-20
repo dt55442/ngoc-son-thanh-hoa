@@ -225,21 +225,93 @@
 
       <!-- ======================================================= -->
       <!-- KHU VỰC XƯỞNG 2 — THẺ MINI/LAUNCHER CÁC VỊ TRÍ CÔNG ĐOẠN -->
+      <!-- 12 vị trí theo đúng LUỒNG SX của Xưởng 2:                 -->
+      <!--   Bốc Luồng → Cắt Chọn → Bổ Ống → Chạy Máy Bào Thô →      -->
+      <!--   Chọn Nan Thô → Than Hóa + Sấy → Bào Tinh → Ép Ván →     -->
+      <!--   Bullig → Cắt Ván → Bào Ván → Hỗ Trợ + Công Đoạn Lẻ      -->
       <!-- Mỗi vị trí = 1 thẻ; bấm thẻ mở bảng chi tiết nổi lên.     -->
+      <!-- Thẻ còn chip "Sắp có" = launcher placeholder (CHƯA có bảng -->
+      <!-- số liệu — chức năng sẽ bổ sung dần, xem .x2-soon-note).    -->
       <!-- Nguồn dữ liệu: lô nguyên liệu ĐẦU VÀO Xưởng 2 ở tab       -->
-      <!-- Nguyên Liệu ("Luồng cây xô", "Luồng ống", ...)            -->
+      <!-- Nguyên Liệu ("Luồng cây xô", "Luồng ống", ...) + Nhân Sự. -->
       <!-- ======================================================= -->
       <div class="x2-cards-overview">
         <div class="x2-cards-title">
           <h4><i data-lucide="warehouse"></i> Vị Trí Xưởng 2</h4>
-          <span class="x2-cards-hint">Bấm thẻ để mở bảng vị trí · nguyên liệu đầu vào lấy từ tab Nguyên Liệu (Xưởng 2)</span>
+          <span class="x2-cards-hint">Bấm thẻ để mở bảng vị trí · nguyên liệu đầu vào lấy từ tab Nguyên Liệu (Xưởng 2) · thẻ Sắp có = chức năng đang được bổ sung</span>
         </div>
         <div class="x2-cards" id="x2-cards-grid">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bo-luong-card" aria-expanded="false" title="Bốc Luồng — bốc/xếp luồng tre từ chuyến xe vào Xưởng 2 (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="forklift"></i></span>
+            <span class="x2-mini-title">Bốc Luồng</span>
+            <span class="x2-mini-desc">Bốc/xếp luồng tre nhập về Xưởng 2</span>
+            <span class="x2-mini-count" id="x2-mini-count-bo-luong">–</span>
+          </button>
           <button type="button" class="x2-mini-card" data-x2-card="x2-cut-card" aria-expanded="false" title="Cắt Chọn — chọn luồng từ lô nguyên liệu đầu vào của Xưởng 2 (tự link nhà cung cấp, mã số, khối lượng đầu vào)">
             <span class="x2-mini-ic"><i data-lucide="scissors"></i></span>
             <span class="x2-mini-title">Cắt Chọn</span>
             <span class="x2-mini-desc">Chọn luồng từ lô nguyên liệu Xưởng 2</span>
             <span class="x2-mini-count" id="x2-mini-count-cut">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bo-ong-card" aria-expanded="false" title="Bổ Ống — bổ ống luồng sau khi cắt chọn (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="split"></i></span>
+            <span class="x2-mini-title">Bổ Ống</span>
+            <span class="x2-mini-desc">Bổ ống luồng sau khi cắt chọn</span>
+            <span class="x2-mini-count" id="x2-mini-count-bo-ong">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-tho-card" aria-expanded="false" title="Chạy Máy Bào Thô — sản lượng máy bào thô ống luồng (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="cog"></i></span>
+            <span class="x2-mini-title">Chạy Máy Bào Thô</span>
+            <span class="x2-mini-desc">Chạy máy bào thô ống luồng</span>
+            <span class="x2-mini-count" id="x2-mini-count-bao-tho">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-chon-nan-tho-card" aria-expanded="false" title="Chọn Nan Thô — chọn nan thô đạt trước khi vào lò (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="list-checks"></i></span>
+            <span class="x2-mini-title">Chọn Nan Thô</span>
+            <span class="x2-mini-desc">Chọn nan thô đạt trước khi vào lò</span>
+            <span class="x2-mini-count" id="x2-mini-count-chon-nan-tho">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-than-hoa-card" aria-expanded="false" title="Than Hóa + Sấy — mẻ than hóa và lô sấy nan thô (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="flame"></i></span>
+            <span class="x2-mini-title">Than Hóa + Sấy</span>
+            <span class="x2-mini-desc">Than hóa + sấy nan thô</span>
+            <span class="x2-mini-count" id="x2-mini-count-than-hoa">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-tinh-card" aria-expanded="false" title="Bào Tinh — bào tinh nan thành phẩm (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="sparkles"></i></span>
+            <span class="x2-mini-title">Bào Tinh</span>
+            <span class="x2-mini-desc">Bào tinh nan thành phẩm</span>
+            <span class="x2-mini-count" id="x2-mini-count-bao-tinh">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-ep-van-card" aria-expanded="false" title="Ép Ván — liên kết số liệu ép ván từ tab Ép Ván (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="layers"></i></span>
+            <span class="x2-mini-title">Ép Ván</span>
+            <span class="x2-mini-desc">Ép ván từ nan bào tinh</span>
+            <span class="x2-mini-count" id="x2-mini-count-ep-van">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bullig-card" aria-expanded="false" title="Bullig — sản lượng sản phẩm Bullig (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="package"></i></span>
+            <span class="x2-mini-title">Bullig</span>
+            <span class="x2-mini-desc">Sản lượng sản phẩm Bullig</span>
+            <span class="x2-mini-count" id="x2-mini-count-bullig">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-cat-van-card" aria-expanded="false" title="Cắt Ván — cắt ván theo quy cách (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="crop"></i></span>
+            <span class="x2-mini-title">Cắt Ván</span>
+            <span class="x2-mini-desc">Cắt ván theo quy cách</span>
+            <span class="x2-mini-count" id="x2-mini-count-cat-van">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-van-card" aria-expanded="false" title="Bào Ván — bào bề mặt ván (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="wind"></i></span>
+            <span class="x2-mini-title">Bào Ván</span>
+            <span class="x2-mini-desc">Bào bề mặt ván sau cắt</span>
+            <span class="x2-mini-count" id="x2-mini-count-bao-van">–</span>
+          </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-ho-tro-card" aria-expanded="false" title="Hỗ Trợ + Công Đoạn Lẻ — công việc hỗ trợ và công đoạn lẻ khác (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="life-buoy"></i></span>
+            <span class="x2-mini-title">Hỗ Trợ + Công Đoạn Lẻ</span>
+            <span class="x2-mini-desc">Công việc hỗ trợ, công đoạn lẻ khác</span>
+            <span class="x2-mini-count" id="x2-mini-count-ho-tro">–</span>
           </button>
         </div>
       </div>
@@ -664,6 +736,127 @@
             <div class="x2-cut-table-scroll">
               <div id="x2-day-cards"></div>
             </div>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: BỐC LUỒNG — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-bo-luong-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="forklift"></i> Bốc Luồng — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận số chuyến bốc + khối lượng luồng cây/ống nhập về Xưởng 2 (tự link tab Nguyên Liệu) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: BỔ ỐNG — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-bo-ong-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="split"></i> Bổ Ống — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận lượt bổ ống (nguồn ống luồng từ Cắt Chọn, khối lượng ống sau bổ, tỷ lệ đạt) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: CHẠY MÁY BÀO THÔ — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-bao-tho-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="cog"></i> Chạy Máy Bào Thô — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận sản lượng máy bào thô theo ngày + giờ chạy máy sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: CHỌN NAN THÔ — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-chon-nan-tho-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="list-checks"></i> Chọn Nan Thô — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận chọn nan thô (số thanh đạt/loại, người chọn tự lấy từ Bảng bố trí Nhân Sự) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: THAN HÓA + SẤY — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-than-hoa-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="flame"></i> Than Hóa + Sấy — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận mẻ than hóa + lô sấy (thời gian, khối lượng vào/ra) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: BÀO TINH — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-bao-tinh-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="sparkles"></i> Bào Tinh — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận bào tinh (khối lượng vào/ra, tỷ lệ đạt, khớp công đoạn Bào Tinh trên bảng Kanban) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: ÉP VÁN — placeholder (số liệu lấy từ tab Ép Ván) -->
+        <div class="planning-card x2-card-hidden" id="x2-ep-van-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="layers"></i> Ép Ván — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng liên kết số liệu ÉP VÁN từ tab Ép Ván (theo tuần/lô) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: BULLIG — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-bullig-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="package"></i> Bullig — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận sản lượng BULLIG theo ngày/tuần sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: CẮT VÁN — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-cat-van-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="crop"></i> Cắt Ván — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận cắt ván (khớp vị trí Cắt Ván ở tab Nhân Sự — tự lấy người + giờ làm) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: BÀO VÁN — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-bao-van-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="wind"></i> Bào Ván — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận bào ván (khối lượng vào/ra, tỷ lệ đạt) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- VỊ TRÍ: HỖ TRỢ + CÔNG ĐOẠN LẺ — placeholder (chức năng bổ sung sau) -->
+        <div class="planning-card x2-card-hidden" id="x2-ho-tro-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="life-buoy"></i> Hỗ Trợ + Công Đoạn Lẻ — Xưởng 2</h4>
+          </div>
+          <div class="x2-soon-note">
+            <i data-lucide="hard-hat"></i>
+            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận công việc hỗ trợ + công đoạn lẻ khác (ai làm, việc gì, trong bao lâu) sẽ được cập nhật ngay sau đây.</p>
           </div>
         </div>
 

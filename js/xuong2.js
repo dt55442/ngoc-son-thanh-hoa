@@ -36,10 +36,25 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
 
   // ─── HẰNG SỐ: CÁC VỊ TRÍ CÔNG ĐOẠN XƯỞNG 2 (launcher) ────────
-  // Bổ sung vị trí mới: thêm 1 thẻ button trong index.html (#x2-cards-grid)
+  // 12 vị trí theo đúng LUỒNG SX (thứ tự hiển thị trong #x2-cards-grid —
+  // index.html). Bổ sung vị trí mới: thêm 1 thẻ button trong index.html
   // + 1 dòng ở đây (cardId ↔ id ô đếm trên thẻ).
+  //   soon: true → thẻ chỉ là LAUNCHER PLACEHOLDER (bảng chi tiết hiện ghi
+  //   chú "Sắp có" — .x2-soon-note). Khi bổ sung chức năng cho vị trí:
+  //   gỡ cờ `soon`, viết hàm render riêng + thêm nhánh trong x2OpenCard.
   const X2_CARD_DEFS = {
-    'x2-cut-card': { el: 'x2-mini-count-cut' }
+    'x2-bo-luong-card':     { el: 'x2-mini-count-bo-luong',     soon: true }, // Bốc Luồng
+    'x2-cut-card':          { el: 'x2-mini-count-cut' },                      // Cắt Chọn (ĐÃ CÓ chức năng)
+    'x2-bo-ong-card':       { el: 'x2-mini-count-bo-ong',       soon: true }, // Bổ Ống
+    'x2-bao-tho-card':      { el: 'x2-mini-count-bao-tho',      soon: true }, // Chạy Máy Bào Thô
+    'x2-chon-nan-tho-card': { el: 'x2-mini-count-chon-nan-tho', soon: true }, // Chọn Nan Thô
+    'x2-than-hoa-card':     { el: 'x2-mini-count-than-hoa',     soon: true }, // Than Hóa + Sấy
+    'x2-bao-tinh-card':     { el: 'x2-mini-count-bao-tinh',     soon: true }, // Bào Tinh
+    'x2-ep-van-card':       { el: 'x2-mini-count-ep-van',       soon: true }, // Ép Ván
+    'x2-bullig-card':       { el: 'x2-mini-count-bullig',       soon: true }, // Bullig
+    'x2-cat-van-card':      { el: 'x2-mini-count-cat-van',      soon: true }, // Cắt Ván
+    'x2-bao-van-card':      { el: 'x2-mini-count-bao-van',      soon: true }, // Bào Ván
+    'x2-ho-tro-card':       { el: 'x2-mini-count-ho-tro',       soon: true }  // Hỗ Trợ + Công Đoạn Lẻ
   };
 
 
@@ -336,7 +351,13 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   function updateXuong2CardCounts() {
     Object.keys(X2_CARD_DEFS).forEach(cardId => {
       const el = document.getElementById(X2_CARD_DEFS[cardId].el);
-      if (el) el.textContent = x2CardCountText(cardId);
+      if (!el) return;
+      const txt = x2CardCountText(cardId);
+      el.textContent = txt;
+      // Chip "Sắp có" tô XÁM (thẻ chưa có bảng số liệu); khi bổ sung số liệu
+      // thật (text khác 'Sắp có') chip tự về màu accent của thẻ đó.
+      if (txt === 'Sắp có') el.classList.add('x2-count-soon');
+      else el.classList.remove('x2-count-soon');
     });
   }
 
@@ -349,6 +370,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       const totalW = pending.reduce((s, r) => s + materialInputWeightOf(r), 0);
       return `Tồn ${fmtKg(totalW)} kg`;
     }
+    // Thẻ mới thêm CHƯA có bảng số liệu → chip "Sắp có" (chức năng bổ sung sau)
+    const def = X2_CARD_DEFS[cardId];
+    if (def && def.soon) return 'Sắp có';
     return '–';
   }
 
@@ -392,7 +416,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const content = document.getElementById('x2-detail-content');
     if (content) content.appendChild(card);
     openX2Card = card;
-    renderXuong2CutCard(); // luôn vẽ dữ liệu mới nhất mỗi lần mở
+    // Luôn vẽ dữ liệu mới nhất mỗi lần mở — hiện CHỈ thẻ Cắt Chọn có bảng số
+    // liệu; các thẻ "Sắp có" chỉ hiện placeholder (render riêng sẽ bổ sung
+    // theo từng vị trí khi làm chức năng).
+    if (cardId === 'x2-cut-card') renderXuong2CutCard();
     const h4 = card.querySelector && card.querySelector('.planning-card-header h4');
     const titleText = (h4 && typeof h4.textContent === 'string') ? h4.textContent.trim() : '';
     const titleEl = document.getElementById('x2-detail-title');
@@ -767,8 +794,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   // ─── RENDER KHU VỰC XƯỞNG 2 (gọi từ main.js) ─────────────────
   function renderXuong2Cards() {
     updateXuong2CardCounts();
-    // Bảng chi tiết đang mở → làm mới luôn (nguồn nguyên liệu có thể vừa đổi)
-    if (openX2Card) renderXuong2CutCard();
+    // Bảng chi tiết đang mở → làm mới luôn (nguồn nguyên liệu có thể vừa đổi).
+    // Chỉ thẻ Cắt Chọn có nội dung render động; thẻ "Sắp có" là placeholder tĩnh.
+    if (openX2Card && openX2Card.id === 'x2-cut-card') renderXuong2CutCard();
   }
 
 export {

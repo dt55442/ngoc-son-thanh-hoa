@@ -93,10 +93,11 @@ state.hrEmployees = [
   { id: 'empB', name: 'Nguyễn Văn B', quitDate: '' },
   { id: 'empC', name: 'Trần Văn C', quitDate: '' }
 ];
-state.hrPositions = [{ id: 'pcat', name: 'Cắt Chọn', department: 'Xưởng 2' }];
+state.hrPositions = [{ id: 'pcat', name: 'Cắt Chọn', department: 'Xưởng 2' }, { id: 'pcv', name: 'Cắt Ván', department: 'Xưởng 2' }];
 state.hrAssignments = [
   { id: 'asg-1', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcat', employeeId: 'empA', start: '07:00', end: '12:00' },
-  { id: 'asg-2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcat', employeeId: 'empB', start: '13:00', end: '' }
+  { id: 'asg-2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcat', employeeId: 'empB', start: '13:00', end: '' },
+  { id: 'asg-cv', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcv', employeeId: 'empC', start: '07:00', end: '' }
 ];
 
 const x2 = await import('../js/xuong2.js');
@@ -151,13 +152,11 @@ check('FORM GỌN (index.html): đã bỏ dòng tự tính + các ô lặp + nú
   !idxHtml.includes('x2-cut-inweight') && !idxHtml.includes('"x2-cut-type"') &&
   !idxHtml.includes('"x2-cut-supplier"') && !idxHtml.includes('"x2-cut-code"') &&
   !idxHtml.includes('btn-add-x2-cut') && !idxHtml.includes('x2-cut-form-title'));
-check('CẤU TRÚC (index.html): bảng công suất riêng ĐÃ BỎ — gộp nhóm ngày vào lịch sử',
-  !idxHtml.includes('x2-capacity-body') && !idxHtml.includes('x2-capacity-wrap') &&
-  !idxHtml.includes('btn-toggle-x2capacity') && idxHtml.includes('x2-cut-table-wrap') &&
-  idxHtml.includes('Tỷ lệ QĐ</th>'));
-check('CẤU TRÚC (index.html): thanh ĐỊNH MỨC CÔNG SUẤT + cột "Giá ống tương đương" + "KL ống đạt"',
+check('CẤU TRÚC (index.html): vùng THẺ NGÀY (x2-day-cards) + bảng lô gọn trong thẻ',
+  idxHtml.includes('x2-day-cards') && idxHtml.includes('x2-cut-table-wrap'));
+check('CẤU TRÚC (index.html): thanh ĐỊNH MỨC CÔNG SUẤT có sẵn + bảng lô render động trong thẻ',
   idxHtml.includes('x2-rate-month') && idxHtml.includes('btn-x2-rate-save') &&
-  idxHtml.includes('Giá ống tương đương</th>') && idxHtml.includes('KL ống đạt</th>'));
+  idxHtml.includes('x2-day-cards') && !idxHtml.includes('x2-cut-table-body'));
 // Seed ĐỊNH MỨC công suất tháng 9 = 3000 kg/h (nguồn cột Hiệu suất)
 state.x2CapRates = { '2026-09': 3000 };
 // Điền khối lượng (dùng cho lưu ở mục E — validate khi lưu thay cho dòng tự tính đã gỡ)
@@ -176,46 +175,45 @@ check('LƯU: snapshot KL đầu vào = 1000', rec.inputWeight === 1000);
 check('LƯU: KL ống luồng = 400, củi đốt = 100, cây loại = 150',
   rec.klOngLuong === 400 && rec.klCuiDot === 100 && rec.klCayLoai === 150);
 check('LƯU: KL ngọn/ống loại tự tính = 350', rec.klNgonOngLoai === 350);
-check('LƯU: NGƯỜI CẮT tự động từ Bảng bố trí Nhân Sự (2 người ngày 10/09)',
+check('LƯU: NGƯỜI CẮT tự động từ Bảng bố trí Nhân Sự (2 người CẮT CHỌN ngày 10/09)',
   rec.cutter === 'Nguyễn Văn A, Nguyễn Văn B');
-check('LƯU: THỜI GIAN CẮT tự động = "07:00–12:00, 13:00"', rec.cutTime === '07:00–12:00, 13:00');
-check('LƯU: SỐ GIỜ CẮT tự động = 4,5 giờ (07:00–12:00 TRỪ nghỉ trưa 11:30–12:00)', rec.cutHours === 4.5);
-check('LƯU: GIỜ CẮT tách HC/TC = 4,5h HC / 0h TC (07:00–11:30 trong ca hành chính; 11:30–12:00 nghỉ trưa)',
-  rec.cutHoursHC === 4.5 && rec.cutHoursTC === 0);
+check('LỌC VỊ TRÍ: KHÔNG nhầm người "Cắt Ván" (Trần Văn C) vào cắt chọn',
+  !rec.cutter.includes('Trần Văn C'));
+check('LƯU: THỜI GIAN CẮT tự động = "07:00–12:00, 13:00 → hết ca" (giờ ra trống = hết ca)', rec.cutTime === '07:00–12:00, 13:00 → hết ca');
+check('LƯU: SỐ GIỜ CẮT tự động = 9 giờ HC (07:00–12:00 + 13:00→hết ca 17h30, TRỪ nghỉ trưa)', rec.cutHours === 9);
+check('LƯU: GIỜ CẮT tách HC/TC = 9h HC / 0h TC (07:00–11:30 + 13:00–17:30 trong ca hành chính)',
+  rec.cutHoursHC === 9 && rec.cutHoursTC === 0);
 check('LƯU: ĐỊNH MỨC tháng 9 = 3000 kg/h có trong state + localStorage (lưu cùng lượt cắt)',
   state.x2CapRates['2026-09'] === 3000);
 check('LƯU: tuần tự tạo theo ngày (2026-W…)', String(rec.week || '').startsWith('2026-W'));
 check('LƯU: form reset về chế độ ghi mới (x2CutEditId = null)', state.x2CutEditId === null);
 check('LƯU: localStorage đã ghi danh sách', JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_CUTS) || '[]').length === 1);
 check('LỌC: lô ĐÃ cắt (mat-a "Luồng cây xô") tự ẩn khỏi ô chọn', !sel.innerHTML.includes('Luồng cây xô'));
-check('BẢNG: dòng lô có NCC "Tế" + tỷ lệ QĐ "40%" (bảng theo mẫu: không cột Mã NCC)',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('Tế') &&
-  !document.getElementById('x2-cut-table-body').innerHTML.includes('NCC01') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('40%'));
-check('BẢNG (NGƯỜI CẮT SỐNG): người chính kèm giờ + đếm "+1 người khác" (rê chuột xem tên + giờ)',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('Nguyễn Văn A') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('07:00–12:00') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('+1 người khác') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('13:00'));
-check('NHÓM NGÀY: dòng nhóm hiển thị Ngày 10/09/26 + kèm thứ trong tuần',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('10/09/26') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('x2-day-head'));
-check('NHÓM NGÀY: giờ cắt tách badge HC/TC = "4,5" / "0" (đặt trước các dòng lô)',
-  (() => {
-    const tb = document.getElementById('x2-cut-table-body').innerHTML;
-    return tb.includes('class="text-center x2-hours-hc"') && tb.includes('4,5') &&
-           tb.includes('class="text-center x2-hours-tc"') && tb.includes('0h TC') === false;
-  })());
-check('NHÓM NGÀY: CÔNG SUẤT THỰC TẾ = KL đầu vào ÷ giờ = 1000/4,5 = "222,22 kg/h"',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('222,22 kg/h'));
-check('NHÓM NGÀY: HIỆU SUẤT = Công suất thực tế ÷ Định mức = 222,22/3000 = "7,4%"',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('7,4%'));
-check('DÒNG LÔ: dưới dòng nhóm có đủ 4 khối lượng + tỷ lệ QĐ 40% + ô Giá ống trống (lô "Luồng cây xô")',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('Luồng cây xô') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('400') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('350') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('40%') &&
-  document.getElementById('x2-cut-table-body').innerHTML.includes('Giá ống tương đương — bổ sung sau'));
+check('THẺ NGÀY: đầu thẻ có NCC "Tế" + tỷ lệ QĐ "40%" (thẻ ngày: không cột Mã NCC trong bảng lô)',
+  document.getElementById('x2-day-cards').innerHTML.includes('Tế') &&
+  !document.getElementById('x2-day-cards').innerHTML.includes('NCC01') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('40%'));
+check('THẺ NGÀY (NGƯỜI CẮT SỐNG): người chính kèm giờ + đếm "+1 người khác" (rê chuột xem tên + giờ)',
+  document.getElementById('x2-day-cards').innerHTML.includes('Nguyễn Văn A') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('07:00–12:00') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('+1 người khác') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('13:00'));
+check('THẺ NGÀY: đầu thẻ hiển thị Ngày 10/09/26 (định dạng dd/mm/yy)',
+  document.getElementById('x2-day-cards').innerHTML.includes('10/09/26') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('x2-day-head'));
+check('THẺ NGÀY: giờ cắt tách badge HC/TC = "9h HC" / "0h TC" (giờ ra trống = hết ca)',
+  document.getElementById('x2-day-cards').innerHTML.includes('9h HC') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('0h TC'));
+check('THẺ NGÀY: CÔNG SUẤT THỰC TẾ = KL đầu vào ÷ giờ = 1000/9 = "111,11 kg/h"',
+  document.getElementById('x2-day-cards').innerHTML.includes('111,11 kg/h'));
+check('THẺ NGÀY: HIỆU SUẤT = Công suất thực tế ÷ Định mức = 111,11/3000 = "3,7%"',
+  document.getElementById('x2-day-cards').innerHTML.includes('3,7%'));
+check('BẢNG LÔ TRONG THẺ: đủ 4 khối lượng + tỷ lệ QĐ 40% + ô Giá ống trống (lô "Luồng cây xô")',
+  document.getElementById('x2-day-cards').innerHTML.includes('Luồng cây xô') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('400') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('350') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('40%') &&
+  document.getElementById('x2-day-cards').innerHTML.includes('Giá ống tương đương — bổ sung sau'));
 check('TỒN GỌN: sau cắt còn "1 lô · 800 kg" chờ xử lý',
   document.getElementById('x2-stock-bar').innerHTML.includes('1 lô · 800 kg'));
 check('BẢNG: đếm lịch sử hiển thị "1 lượt đã cắt/chọn"',
@@ -226,8 +224,8 @@ check('THẺ: sau lưu mini card cập nhật tồn còn lại = "Tồn 800 kg"'
 const hrBackup = state.hrAssignments;
 state.hrAssignments = [];
 x2.renderXuong2CutCard();
-check('NGƯỜI CẮT (SNAPSHOT): bố trí Nhân Sự bị xóa → bảng vẫn hiện người cắt đã lưu',
-  document.getElementById('x2-cut-table-body').innerHTML.includes('Nguyễn Văn A'));
+check('THẺ NGÀY (SNAPSHOT): bố trí Nhân Sự bị xóa → thẻ vẫn hiện người cắt đã lưu',
+  document.getElementById('x2-day-cards').innerHTML.includes('Nguyễn Văn A'));
 state.hrAssignments = hrBackup;
 x2.renderXuong2CutCard();
 

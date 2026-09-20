@@ -5690,32 +5690,71 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 .x2-rate-bar input[type="number"] { width: 110px; text-align: right; }
 .x2-rate-unit { color: var(--text-muted); }
 
-/* ── Bảng lịch sử cắt/chọn NHÓM THEO NGÀY ──
-   Dòng NHÓM ngày trải theo cột bảng (theo mẫu Excel): Ngày | Người cắt |
-   Giờ cắt HC | TC | Công suất thực tế | Hiệu suất | (4 ô trống).
-   Dòng nhóm nền xanh dương nhạt để nổi bật; dòng lô phía dưới. */
-.x2-day-head td { background: rgba(37, 99, 235, 0.06); font-size: 0.78rem; vertical-align: middle; }
-.x2-day-date { font-weight: 700; color: #1d4ed8; white-space: nowrap; }
-.x2-day-cutters-cell { min-width: 170px; }
+/* ── THẺ NGÀY CẮT/CHỌN: mỗi ngày 1 THỂ RIÊNG ──
+   Đầu thẻ = thông tin chung (Ngày · Người cắt · Giờ cắt HC/TC · Công suất
+   thực tế · Hiệu suất); trong thẻ = bảng các lô của ngày. */
+.x2-day-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin: 0 12px 12px 12px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.x2-day-card:first-child { margin-top: 12px; }
+.x2-day-card-empty { padding: 26px 12px; text-align: center; color: var(--text-muted); }
+.x2-day-card-empty svg { width: 30px; height: 30px; opacity: 0.5; margin-bottom: 6px; }
+.x2-day-head {
+  display: flex;
+  align-items: center;
+  gap: 8px 20px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: rgba(15, 118, 110, 0.07);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.78rem;
+}
+.x2-day-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #0f766e;
+  white-space: nowrap;
+}
+.x2-day-date svg { width: 15px; height: 15px; }
+.x2-day-cutters { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.x2-day-cutters svg { width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; }
 .x2-day-cutters-more {
   display: inline-block;
-  margin-left: 4px; padding: 0 6px;
+  margin-left: 4px; padding: 0 7px;
   border: 1px dashed var(--border-color); border-radius: 999px;
   font-size: 0.68rem; font-style: normal; color: var(--text-muted);
   white-space: nowrap;
 }
-.x2-day-head .x2-hours-hc, .x2-day-head .x2-hours-tc {
+.x2-day-hours { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+.x2-hours-hc, .x2-hours-tc {
   display: inline-block;
-  min-width: 52px; text-align: center;
+  min-width: 56px; text-align: center;
   padding: 2px 8px; border-radius: 6px;
-  font-weight: 700; white-space: nowrap;
+  font-weight: 700; white-space: nowrap; font-size: 0.75rem;
 }
 .x2-hours-hc { background: rgba(37, 99, 235, 0.12); color: #1d4ed8; } /* giờ hành chính */
 .x2-hours-tc { background: rgba(217, 119, 6, 0.14); color: #b45309; } /* giờ tăng ca */
-.x2-day-cap { white-space: nowrap; }
-.x2-day-cap strong { font-size: 0.82rem; }
-.x2-day-eff strong { font-size: 0.82rem; }
-.x2-day-row td { background: rgba(15, 118, 110, 0.02); }
+.x2-day-cap, .x2-day-eff { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); white-space: nowrap; }
+.x2-day-cap strong { color: #0f766e; font-size: 0.85rem; }
+.x2-day-eff strong { font-size: 0.85rem; }
+/* bảng lô trong thẻ */
+.x2-day-table { width: 100%; }
+.x2-day-table thead th {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  padding: 7px 10px;
+}
+.x2-day-table td { font-size: 0.78rem; padding: 7px 10px; }
 .x2-row-note { font-size: 0.7rem; color: var(--text-muted); }
 
 /* ── BANNER "ĐANG SỬA LƯỢT CẮT/CHỌN" — chỉ hiện khi đang sửa (thay tiêu đề form) ── */

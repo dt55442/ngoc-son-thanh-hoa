@@ -93,9 +93,17 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
   // ─── NGƯỜI CẮT + THỜI GIAN CẮT — TỰ ĐỘNG từ tab Nhân Sự ──────
   // Nguồn: Bảng bố trí vị trí theo ngày (hrAssignments) — các lượt bố trí tại
-  // bộ phận "Xưởng 2" vào vị trí có TÊN chứa "cắt" đúng ngày cắt. Trả về MẢNG
+  // bộ phận "Xưởng 2" vào vị trí CẮT CHỌN đúng ngày cắt. Trả về MẢNG
   // (một ngày có thể nhiều người/ca) để sau này tính công suất từng vị trí:
-  // [{ employeeId, name, positionName, start, end }]
+  // [{ employeeId, name, positionName, shiftIdx, start, end }]
+  // Chỉ khớp vị trí CẮT CHỌN (chứa "cắt chọn" — bỏ dấu, không phân biệt hoa/
+  // thường) — KHÔNG nhầm với "Cắt ván"/"Cắt ghép"... của công đoạn khác.
+  function isCutSelectPos(name) {
+    const s = String(name || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ').trim();
+    return s.includes('cat chon');
+  }
   function hrCutAssignmentsOf(dateVal) {
     if (!dateVal) return [];
     const posNameOf = id => {
@@ -106,7 +114,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     return (state.hrAssignments || [])
       .filter(a => a.date === dateVal &&
                    String(a.department || '').trim() === 'Xưởng 2' &&
-                   posNameOf(a.positionId).toLowerCase().includes('cắt'))
+                   isCutSelectPos(posNameOf(a.positionId)))
       .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')))
       .map(a => {
         const e = emplOf(a.employeeId);
@@ -120,8 +128,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         };
       });
   }
-  // Chuỗi giờ 1 lượt bố trí: "07:00–12:00" (thiếu giờ ra → hiện mỗi "07:00")
-  const cutTimeStr = a => (a.end ? `${a.start}–${a.end}` : a.start);
+  // Chuỗi giờ 1 lượt bố trí: "07:00–12:00"; giờ ra TRỐNG = làm đến HẾT CA
+  // (mặc định theo quy ước Bảng bố trí Nhân Sự) → hiển thị "07:00 → hết ca"
+  const cutTimeStr = a => (a.end ? `${a.start}–${a.end}` : `${a.start} → hết ca`);
 
   // ─── ĐỊNH MỨC CÔNG SUẤT CẮT (kg/giờ) THEO TỪNG THÁNG ─────────
   // Người quản lý đặt riêng cho từng tháng (VD tháng 9 = 3000 kg/h, tháng 10 = 3200
@@ -200,11 +209,12 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   // Tổng SỐ GIỜ CẮT tách theo HC/TC (giờ hành chính / giờ tăng ca):
   // mỗi lượt bố trí (giờ vào–giờ ra) được tách theo CỬA SỔ CA làm việc của
   // bộ phận Xưởng 2 (hrSplitHoursHCDate — ngày nghỉ/lễ đi làm → toàn TC).
-  // Lượt thiếu giờ ra chưa tính (chưa chấm giờ ra thì chưa biết thời lượng).
+  // GIỜ RA TRỐNG = làm đến HẾT CA (quy ước Bảng bố trí) — hrSplitHoursHCDate
+  // tự mặc định giờ ra = giờ kết thúc ca → VD 07:00 → hết ca = 9h HC.
   function sumCutHoursSplit(list, dateVal) {
     let hc = 0, tc = 0;
     (list || []).forEach(a => {
-      if (!a.start || !a.end) return;
+      if (!a.start) return;
       const r = hrSplitHoursHCDate('Xưởng 2', dateVal, a.start, a.end, a.shiftIdx || 0);
       hc += r.hc || 0; tc += r.tc || 0;
     });
@@ -629,8 +639,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   // KL củi đốt | KL cây loại | KL ngọn/ống loại | Tỷ lệ QĐ | Giá ống tương đương |
   // Thao tác. Nguồn giờ cắt: Bảng bố trí Nhân Sự (dữ liệu SỐNG); mất bố trí → snapshot.
   function renderXuong2CutTable() {
-    const tbody = document.getElementById('x2-cut-table-body');
-    if (!tbody) return;
+    const box = document.getElementById('x2-day-cards');
+    if (!box) return;
     const cuts = [...(state.xuong2CutRecords || [])].sort((a, b) => {
       if ((b.date || '') !== (a.date || '')) return (b.date || '').localeCompare(a.date || '');
       return (b.createdAt || '').localeCompare(a.createdAt || '');
@@ -638,11 +648,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const countEl = document.getElementById('x2-cut-table-count');
     if (countEl) countEl.textContent = cuts.length ? `${cuts.length} lượt đã cắt/chọn` : '';
     if (!cuts.length) {
-      tbody.innerHTML = `
-        <tr><td colspan="10" class="text-center" style="color:var(--text-muted); padding:28px 10px;">
-          <i data-lucide="scissors" style="width:30px;height:30px;opacity:.5;"></i>
-          <div style="margin-top:8px;">Chưa có lượt cắt/chọn nào.<br>Chọn <strong>nguyên liệu đầu vào của Xưởng 2</strong> ở form trên rồi bấm <strong>Lưu Lượt Cắt/Chọn</strong>.</div>
-        </td></tr>`;
+      box.innerHTML = `
+        <div class="x2-day-card x2-day-card-empty">
+          <i data-lucide="scissors"></i>
+          <div>Chưa có lượt cắt/chọn nào.<br>Chọn <strong>nguyên liệu đầu vào của Xưởng 2</strong> ở form trên rồi bấm <strong>Lưu Lượt Cắt/Chọn</strong>.</div>
+        </div>`;
       initLucide();
       return;
     }
@@ -678,17 +688,17 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           </td>
         </tr>`;
       }).join('');
-      // ── DÒNG NHÓM NGÀY (thông tin chung) — trải 6 ô đầu, 4 ô cuối trống
+      // ── ĐẦU THẺ: thông tin chung của ngày + bảng lô trong thẻ
       const hours = first.cutHours || 0; // tổng giờ làm việc (HC + TC) từ Nhân Sự
       const cap = hours > 0 ? (totalIn / hours) : null; // Công suất thực tế (kg/h)
       const rate = capRateOf(date); // Công suất định mức của tháng (kg/h)
       const eff = (cap != null && rate) ? (cap / rate) * 100 : null; // Hiệu suất (%)
       const effTxt = eff == null
-        ? '<span style="color:var(--text-muted);" title="Chưa đủ dữ liệu (thiếu giờ cắt hoặc chưa đặt Định mức công suất cho tháng này)">—</span>'
-        : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};" title="Hiệu suất = Công suất thực tế (${fmtKg(cap)} kg/h) ÷ Công suất định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} kg/h)">${fmtRatio(eff)}%</strong>`;
-      const capTxt = cap != null
-        ? `<strong style="color:#0f766e;">${fmtKg(cap)} kg/h</strong>`
-        : '<span style="color:var(--text-muted);" title="Chưa có giờ ra trong bố trí Nhân Sự">—</span>';
+        ? '<em style="color:var(--text-muted);">—</em>'
+        : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
+      const effTip = eff == null
+        ? 'Chưa đủ dữ liệu (thiếu giờ cắt hoặc chưa đặt Định mức công suất cho tháng này)'
+        : `Hiệu suất = Công suất thực tế (${fmtKg(cap)} kg/h) ÷ Công suất định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} kg/h)`;
       const hcTxt = first.cutHoursHC != null ? fmtRatio(first.cutHoursHC) : '—';
       const tcTxt = first.cutHoursTC != null ? fmtRatio(first.cutHoursTC) : '—';
       const cutters = first.cutterRows.filter(x => x.name);
@@ -699,18 +709,34 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(cutters.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${cutters.length - 1} người khác</em>`
         : '';
       html += `
-        <tr class="x2-day-head">
-          <td class="x2-day-date">${formatDateDDMMYY(date)}</td>
-          <td class="x2-day-cutters-cell">${cuttersMain || '<em style="color:var(--text-muted);" title="Ngày này chưa bố trí ai ở vị trí Cắt (tab Nhân Sự — Bảng bố trí)">chưa bố trí người cắt</em>'}${cuttersMore}</td>
-          <td class="text-center x2-hours-hc" title="Giờ hành chính (trong ca)">${hcTxt}</td>
-          <td class="text-center x2-hours-tc" title="Giờ tăng ca (ngoài ca / ngày nghỉ đi làm)">${tcTxt}</td>
-          <td class="text-right x2-day-cap" title="Công suất thực tế = Tổng KL đầu vào (${fmtKg(totalIn)} kg) ÷ tổng số giờ làm việc (${fmtRatio(hours)} h — từ tab Nhân Sự)">${capTxt}</td>
-          <td class="text-right x2-day-eff">${effTxt}</td>
-          <td colspan="4" class="x2-day-rest"></td>
-        </tr>`;
-      html += rowsHtml;
+        <div class="x2-day-card">
+          <div class="x2-day-head">
+            <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
+            <span class="x2-day-cutters" title="Người cắt/chọn tự động từ Bảng bố trí Nhân Sự (vị trí Cắt — Xưởng 2)"><i data-lucide="users"></i> ${cuttersMain || '<em style="color:var(--text-muted);">chưa bố trí người cắt</em>'}${cuttersMore}</span>
+            <span class="x2-day-hours" title="Số giờ cắt = tổng giờ công vị trí Cắt trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ cắt: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
+            <span class="x2-day-cap" title="Công suất thực tế = Tổng KL đầu vào (${fmtKg(totalIn)} kg) ÷ tổng số giờ làm việc (${fmtRatio(hours)} h)">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
+            <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
+          </div>
+          <table class="data-table x2-day-table">
+            <thead>
+              <tr>
+                <th>Loại nguyên liệu</th>
+                <th>Nhà cung cấp</th>
+                <th class="text-right">KL đầu vào</th>
+                <th class="text-right">KL ống đạt</th>
+                <th class="text-right">KL củi đốt</th>
+                <th class="text-right">KL cây loại</th>
+                <th class="text-right">KL ngọn/ống loại</th>
+                <th class="text-right">Tỷ lệ QĐ</th>
+                <th class="text-right">Giá ống tương đương</th>
+                <th class="text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>`;
     }
-    tbody.innerHTML = html;
+    box.innerHTML = html;
     initLucide();
   }
 

@@ -650,35 +650,19 @@
             <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="kanban" title="Lưu định mức công suất của tháng"><i data-lucide="save"></i> Lưu</button>
           </div>
 
-          <!-- BẢNG LỊCH SỬ CẮT/CHỌN — NHÓM THEO NGÀY: dòng NHÓM ngày (Ngày · Người cắt ·
-               Giờ cắt HC/TC · Công suất thực tế · Hiệu suất) trước, rồi các dòng lô trong ngày.
-               Viền riêng tách khỏi form, thu gọn được, cuộn khi dài. -->
+          <!-- THẺ NGÀY CẮT/CHỌN — mỗi ngày 1 THỂ RIÊNG: đầu thẻ = thông tin chung
+               (Ngày · Người cắt · Giờ cắt HC/TC · Công suất thực tế · Hiệu suất),
+               trong thẻ là bảng các lô của ngày. Thu gọn được, cuộn khi dài. -->
           <div class="x2-cut-table-wrap" id="x2-cut-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Cắt/Chọn</h5>
               <span class="x2-cut-table-count" id="x2-cut-table-count"></span>
-              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2cut-table" title="Thu gọn / Mở rộng bảng lịch sử">
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2cut-table" title="Thu gọn / Mở rộng">
                 <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
               </button>
             </div>
             <div class="x2-cut-table-scroll">
-              <table class="data-table" id="x2-cut-table">
-                <thead>
-                  <tr>
-                    <th>Loại nguyên liệu</th>
-                    <th>Nhà cung cấp</th>
-                    <th class="text-right" style="width:100px;">KL đầu vào</th>
-                    <th class="text-right" style="width:88px;">KL ống đạt</th>
-                    <th class="text-right" style="width:88px;">KL củi đốt</th>
-                    <th class="text-right" style="width:88px;">KL cây loại</th>
-                    <th class="text-right" style="width:105px;">KL ngọn/ống loại</th>
-                    <th class="text-right" style="width:80px;">Tỷ lệ QĐ</th>
-                    <th class="text-right" style="width:105px;">Giá ống tương đương</th>
-                    <th class="text-right" style="width:84px;">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody id="x2-cut-table-body"></tbody>
-              </table>
+              <div id="x2-day-cards"></div>
             </div>
           </div>
         </div>

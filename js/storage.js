@@ -7,7 +7,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
@@ -149,6 +149,22 @@ import { escapeHTML, showToast } from './utils.js';
     return merged;
   }
 
+  // Khôi phục ĐỊNH MỨC CÔNG SUẤT CẮT theo tháng ({ 'YYYY-MM': kg/h }) từ nguồn
+  // ngoài: gộp theo khóa tháng (bản máy có sẵn ưu tiên hơn bản trống).
+  function restoreX2CapRates(incoming) {
+    const src = (incoming && typeof incoming === 'object') ? incoming : {};
+    const cur = (state.x2CapRates && typeof state.x2CapRates === 'object') ? state.x2CapRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.x2CapRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_CAP_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
   // ─── FILE STORAGE (LƯU DỮ LIỆU VÀO FILE CÙNG THƯ MỤC) ─────────
   // Sử dụng File System Access API để đọc/ghi file bamboo_data.json
   // trong thư mục người dùng chọn. Directory handle được lưu trong IndexedDB
@@ -271,6 +287,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.suppliers && Array.isArray(loaded.suppliers)) {
           restoreSuppliers(loaded.suppliers); // GỘP — không ghi đè mất bản mới hơn
         }
+        if (loaded.x2CapRates) {
+          restoreX2CapRates(loaded.x2CapRates); // GỘP theo tháng — không đè số đã đặt
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -325,6 +344,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.suppliers && Array.isArray(loaded.suppliers)) {
           restoreSuppliers(loaded.suppliers); // GỘP — không ghi đè mất bản mới hơn
         }
+        if (loaded.x2CapRates) {
+          restoreX2CapRates(loaded.x2CapRates); // GỘP theo tháng — không đè số đã đặt
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -376,7 +398,8 @@ import { escapeHTML, showToast } from './utils.js';
         customCharts: state.customCharts,
         materialRecords: state.materialRecords || [],
         xuong2CutRecords: state.xuong2CutRecords || [],
-        suppliers: state.suppliers || []
+        suppliers: state.suppliers || [],
+        x2CapRates: state.x2CapRates || {}
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -464,7 +487,8 @@ import { escapeHTML, showToast } from './utils.js';
       customCharts: state.customCharts,
       materialRecords: state.materialRecords || [],
       xuong2CutRecords: state.xuong2CutRecords || [],
-      suppliers: state.suppliers || []
+      suppliers: state.suppliers || [],
+      x2CapRates: state.x2CapRates || {}
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -508,6 +532,10 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && Array.isArray(imported.suppliers)) {
           restoreSuppliers(imported.suppliers); // GỘP — không xóa nhà cung cấp mới hơn backup
+        }
+
+        if (imported && imported.x2CapRates) {
+          restoreX2CapRates(imported.x2CapRates); // GỘP theo tháng — không đè số đã đặt
         }
 
         renderAll();

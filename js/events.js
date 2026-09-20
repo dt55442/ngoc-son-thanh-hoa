@@ -14,7 +14,7 @@ import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { deleteXuong2Cut, editXuong2Cut, handleXuong2CutSubmit, pickX2Stock, resetXuong2CutForm, toggleX2CutTable, updateXuong2CutLinked, updateXuong2CutRemain, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
+import { deleteXuong2Cut, editXuong2Cut, handleX2CapRateSave, handleXuong2CutSubmit, resetXuong2CutForm, toggleX2CutTable, updateXuong2CutLinked, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
@@ -1094,23 +1094,20 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const ov = document.getElementById('x2-detail-overlay');
       if (ov && ov.classList.contains('show')) x2PositionDetailOverlay();
     });
-    // Form cắt/chọn: đổi nguyên liệu → tự link + mặc định ngày theo lô;
-    // gõ khối lượng → tự tính KL ngọn/ống loại + Tỷ lệ quy đổi; submit → lưu
-    // (Người cắt + Thời gian cắt TỰ ĐỘNG từ Bảng bố trí Nhân Sự — không có ô nhập tay)
-    safeOn('btn-add-x2-cut', 'click', () => resetXuong2CutForm());
+    // Form cắt/chọn: đổi nguyên liệu → mặc định ngày theo lô; submit → lưu.
+    // (Nút "Ghi Cắt/Chọn" ở header đã BỎ — form luôn hiển thị sẵn;
+    //  Người cắt + Thời gian + Số giờ cắt TỰ ĐỘNG từ Bảng bố trí Nhân Sự)
     safeOn('btn-cancel-x2-cut', 'click', () => resetXuong2CutForm());
     safeOn('x2-cut-material', 'change', updateXuong2CutLinked);
-    ['x2-cut-ongluong', 'x2-cut-cuidot', 'x2-cut-cayloai'].forEach(id => safeOn(id, 'input', updateXuong2CutRemain));
     safeOn('x2-cut-form', 'submit', handleXuong2CutSubmit);
-    // Bảng lịch sử cắt/chọn: thu gọn / mở rộng (viền riêng + cuộn)
+    // Bảng lịch sử (nhóm theo ngày): thu gọn / mở rộng + lưu Định mức công suất
     safeOn('btn-toggle-x2cut-table', 'click', toggleX2CutTable);
-    // Click ủy quyền trong bảng lịch sử cắt/chọn: sửa / xóa lượt + chip TỒN (chọn lô vào form)
+    safeOn('btn-x2-rate-save', 'click', handleX2CapRateSave);
+    // Click ủy quyền trong bảng lịch sử cắt/chọn: sửa / xóa lượt
     document.addEventListener('click', (e) => {
-      const stockChip = e.target.closest && e.target.closest('[data-x2-stock-pick]');
-      if (stockChip) { pickX2Stock(stockChip.getAttribute('data-x2-stock-pick')); return; }
-      const cutEdit = e.target.closest('[data-x2-cut-edit]');
+      const cutEdit = e.target.closest && e.target.closest('[data-x2-cut-edit]');
       if (cutEdit) { editXuong2Cut(cutEdit.getAttribute('data-x2-cut-edit')); return; }
-      const cutDel = e.target.closest('[data-x2-cut-delete]');
+      const cutDel = e.target.closest && e.target.closest('[data-x2-cut-delete]');
       if (cutDel) { deleteXuong2Cut(cutDel.getAttribute('data-x2-cut-delete')); return; }
     });
   }

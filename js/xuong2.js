@@ -18,9 +18,10 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { logDataChange } from './history.js';
+import { hrSplitHoursHCDate } from './hr.js';
 import { materialWeekLabel } from './materials.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_X2_CAP_RATE, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
@@ -41,8 +42,6 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     'x2-cut-card': { el: 'x2-mini-count-cut' }
   };
 
-  const X2_FORM_TITLE_NEW  = '<i data-lucide="plus-circle"></i> Ghi Nhận Lượt Cắt/Chọn Mới';
-  const X2_FORM_TITLE_EDIT = '<i data-lucide="pencil"></i> Sửa Lượt Cắt/Chọn';
 
   // ─── NGUỒN DỮ LIỆU: NGUYÊN LIỆU ĐẦU VÀO CỦA XƯỞNG 2 ──────────
   // Các lượt nhập nguyên liệu cho vị trí 'xuong-2' ở tab Nguyên Liệu
@@ -115,6 +114,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           employeeId: a.employeeId || '',
           name: String((e && e.name) || a.employeeId || '').trim(),
           positionName: posNameOf(a.positionId),
+          shiftIdx: Number(a.shiftIdx) || 0,
           start: String(a.start || '').trim(),
           end: String(a.end || '').trim()
         };
@@ -122,13 +122,120 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
   // Chuỗi giờ 1 lượt bố trí: "07:00–12:00" (thiếu giờ ra → hiện mỗi "07:00")
   const cutTimeStr = a => (a.end ? `${a.start}–${a.end}` : a.start);
+
+  // ─── ĐỊNH MỨC CÔNG SUẤT CẮT (kg/giờ) THEO TỪNG THÁNG ─────────
+  // Người quản lý đặt riêng cho từng tháng (VD tháng 9 = 3000 kg/h, tháng 10 = 3200
+  // kg/h) — nguồn cho cột "Hiệu suất" = Công suất thực tế ÷ Công suất định mức.
+  function loadX2CapRates() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_CAP_RATE);
+    if (raw) {
+      try {
+        const obj = JSON.parse(raw);
+        state.x2CapRates = (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+      } catch (e) { state.x2CapRates = {}; }
+    } else {
+      state.x2CapRates = {};
+    }
+  }
+
+  function saveX2CapRates() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X2_CAP_RATE, JSON.stringify(state.x2CapRates || {}));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?).', 'error');
+    }
+    // Ghi file + đồng bộ mây (định mức ít đổi — gọn, gởi cùng dữ liệu)
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+
+  // Định mức công suất của tháng chứa dateVal (kg/giờ) — null nếu chưa đặt
+  function capRateOf(dateVal) {
+    const key = String(dateVal || '').slice(0, 7);
+    const v = Number((state.x2CapRates || {})[key]);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  }
+
+  // Lưu định mức 1 tháng (từ thanh điền nhanh trên bảng)
+  function handleX2CapRateSave() {
+    if (!requireEditPermission()) return;
+    const monthEl = document.getElementById('x2-rate-month');
+    const valEl = document.getElementById('x2-rate-value');
+    const month = String((monthEl && monthEl.value) || '').trim();
+    const v = Number((valEl && valEl.value) || 0);
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chưa chọn tháng để lưu định mức!', 'error'); return; }
+    if (!Number.isFinite(v) || v <= 0) { showToast('Định mức công suất phải là số kg/giờ lớn hơn 0!', 'error'); return; }
+    (state.x2CapRates = state.x2CapRates || {})[month] = v;
+    saveX2CapRates();
+    renderX2RateBar();
+    renderXuong2CutTable(); // cột Hiệu suất tự cập nhật
+    showToast(`Đã lưu định mức công suất ${fmtKg(v)} kg/giờ cho tháng ${month.slice(5)}!`, 'success');
+  }
+
+  // Thanh điền ĐỊNH MỨC: chọn tháng (gợi ý các tháng có lượt cắt + tháng hiện tại)
+  function renderX2RateBar() {
+    const bar = document.getElementById('x2-rate-bar');
+    if (!bar) return;
+    const sel = bar.querySelector('#x2-rate-month');
+    const valEl = bar.querySelector('#x2-rate-value');
+    if (!sel) return;
+    const months = new Set([...(state.xuong2CutRecords || []).map(r => String(r.date || '').slice(0, 7)), new Date().toISOString().slice(0, 7)]);
+    const curMonth = sel.value || new Date().toISOString().slice(0, 7);
+    sel.innerHTML = [...months].filter(Boolean).sort((a, b) => b.localeCompare(a))
+      .map(m => `<option value="${escapeHTML(m)}">Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</option>`).join('');
+    sel.value = months.has(curMonth) ? curMonth : [...months][0] || '';
+    if (valEl) {
+      const v = Number((state.x2CapRates || {})[sel.value]);
+      valEl.value = Number.isFinite(v) && v > 0 ? v : '';
+    }
+  }
+
+  // ─── SỐ GIỜ CẮT — TÁCH HC/TC (dùng cho CÔNG SUẤT) ────────────
+  function hhmmToMin(s) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '').trim());
+    return m ? (parseInt(m[1], 10) * 60) + parseInt(m[2], 10) : null;
+  }
+  // Tổng SỐ GIỜ CẮT tách theo HC/TC (giờ hành chính / giờ tăng ca):
+  // mỗi lượt bố trí (giờ vào–giờ ra) được tách theo CỬA SỔ CA làm việc của
+  // bộ phận Xưởng 2 (hrSplitHoursHCDate — ngày nghỉ/lễ đi làm → toàn TC).
+  // Lượt thiếu giờ ra chưa tính (chưa chấm giờ ra thì chưa biết thời lượng).
+  function sumCutHoursSplit(list, dateVal) {
+    let hc = 0, tc = 0;
+    (list || []).forEach(a => {
+      if (!a.start || !a.end) return;
+      const r = hrSplitHoursHCDate('Xưởng 2', dateVal, a.start, a.end, a.shiftIdx || 0);
+      hc += r.hc || 0; tc += r.tc || 0;
+    });
+    return { hc: hc / 60, tc: tc / 60 }; // giờ
+  }
+  // Giờ cắt từ SNAPSHOT cutTime lưu cùng lượt ("07:00–12:00, 13:00–17:00") —
+  // dự phòng khi bố trí Nhân Sự đã bị xóa; lượt chỉ có giờ vào = 0 giờ
+  function snapshotCutHours(cutTimeStr) {
+    let min = 0;
+    String(cutTimeStr || '').split(',').forEach(part => {
+      const rng = part.trim().split('–');
+      if (rng.length === 2) {
+        const st = hhmmToMin(rng[0]), en = hhmmToMin(rng[1]);
+        if (st != null && en != null && en > st) min += en - st;
+      }
+    });
+    return min / 60;
+  }
+
   // Snapshot lúc lưu lượt cắt/chọn (phòng khi bố trí Nhân Sự bị xóa về sau):
-  // cutter = "Tên A, Tên B" · cutTime = "07:00–12:00, 13:00–17:00"
+  // cutter = "Tên A, Tên B" · cutTime = "07:00–12:00, 13:00–17:00" ·
+  // cutHours = tổng giờ · cutHoursHC/cutHoursTC = giờ tách theo HC/TC
   function hrCutSnapshot(dateVal) {
     const list = hrCutAssignmentsOf(dateVal);
+    const split = sumCutHoursSplit(list, dateVal);
     return {
       cutter: list.map(a => a.name).filter(Boolean).join(', '),
-      cutTime: list.map(cutTimeStr).filter(s => s).join(', ')
+      cutTime: list.map(cutTimeStr).filter(s => s).join(', '),
+      cutHours: split.hc + split.tc,
+      cutHoursHC: split.hc,
+      cutHoursTC: split.tc
     };
   }
 
@@ -169,22 +276,40 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const klOngLuong = Number(r.klOngLuong) || 0;
     const klCuiDot   = Number(r.klCuiDot)   || 0;
     const klCayLoai  = Number(r.klCayLoai)  || 0;
+    // Người cắt + giờ cắt: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot
+    const liveCut = hrCutAssignmentsOf(r.date || '');
+    const cutterRows = liveCut.length
+      ? liveCut.map(a => ({ name: a.name, time: cutTimeStr(a) }))
+      : String(r.cutter || '').split(',').map(s => s.trim()).filter(Boolean)
+          .map((name, i) => ({ name, time: String(r.cutTime || '').split(',').map(s => s.trim())[i] || '' }));
+    // Giờ cắt: SỐNG từ Bảng bố trí (tách HC/TC theo cửa sổ ca); mất bố trí →
+    // snapshot (cutHoursHC/TC của bản mới; cutHours tổng của bản cũ — chưa tách)
+    let cutHours = 0, cutHoursHC = null, cutHoursTC = null;
+    if (liveCut.length) {
+      const sp = sumCutHoursSplit(liveCut, r.date || '');
+      cutHours = sp.hc + sp.tc;
+      cutHoursHC = sp.hc; cutHoursTC = sp.tc;
+    } else if (Number.isFinite(Number(r.cutHoursHC)) || Number.isFinite(Number(r.cutHoursTC))) {
+      cutHoursHC = Number(r.cutHoursHC) || 0;
+      cutHoursTC = Number(r.cutHoursTC) || 0;
+      cutHours = cutHoursHC + cutHoursTC;
+      if (!cutHours && Number(r.cutHours) > 0) cutHours = Number(r.cutHours);
+    } else if (Number(r.cutHours) > 0) {
+      cutHours = Number(r.cutHours); // bản cũ chỉ có tổng (chưa tách HC/TC)
+    } else {
+      cutHours = snapshotCutHours(r.cutTime);
+    }
     return {
       date: r.date || '',
       materialType: mat ? (mat.type || '') : (r.materialType || ''),
       supplier: mat ? (mat.supplier || '') : (r.supplier || ''),
       // Mã NCC: từ Bảng Thông Tin Nhà Cung (khớp mềm tên NCC; mất gốc → theo snapshot)
       supplierCode: mat ? supplierCodeOf(mat.supplier) : supplierCodeOf(r.supplier || ''),
-      // Người cắt + thời gian cắt: TỰ ĐỘNG theo NGÀY CẮT từ Bảng bố trí Nhân Sự
-      // (dữ liệu SỐNG — sửa giờ trên board là bảng tự đổi); bố trí đã xóa →
-      // dùng snapshot (cutter/cutTime) lưu cùng lượt cắt/chọn.
-      cutterRows: (() => {
-        const live = hrCutAssignmentsOf(r.date || '');
-        if (live.length) return live.map(a => ({ name: a.name, time: cutTimeStr(a) }));
-        const names = String(r.cutter || '').split(',').map(s => s.trim()).filter(Boolean);
-        const times = String(r.cutTime || '').split(',').map(s => s.trim());
-        return names.map((name, i) => ({ name, time: times[i] || '' }));
-      })(),
+      // Người cắt (từng người kèm giờ) + SỐ GIỜ CẮT ngày (tách HC/TC theo ca)
+      cutterRows,
+      cutHours,
+      cutHoursHC,
+      cutHoursTC,
       inputWeight,
       klOngLuong,
       klCuiDot,
@@ -207,10 +332,12 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   function x2CardCountText(cardId) {
     if (cardId === 'x2-cut-card') {
-      const cuts = state.xuong2CutRecords || [];
-      if (!cuts.length) return 'Chưa có';
-      const totalIn = cuts.reduce((s, r) => s + (Number(r.inputWeight) || 0), 0);
-      return `${cuts.length} lượt · ${Math.round(totalIn).toLocaleString('vi-VN')} kg`;
+      // Trả lời "tồn nguyên liệu X2 còn lại bao nhiêu" ngay trên mini card:
+      // tổng KL các lô đầu vào Xưởng 2 CHƯA có lượt cắt/chọn
+      const pending = xuong2PendingInputs();
+      if (!pending.length) return 'Hết tồn';
+      const totalW = pending.reduce((s, r) => s + materialInputWeightOf(r), 0);
+      return `Tồn ${fmtKg(totalW)} kg`;
     }
     return '–';
   }
@@ -308,8 +435,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
 
   // Ô chọn lô đổi / đang sửa: mặc định Ngày cắt theo ngày nhập nguyên liệu (ghi mới).
-  // (Khối "thông tin lặp lại" dưới form đã BỎ — KL đầu vào được đọc trực tiếp
-  //  từ dữ liệu trong updateXuong2CutRemain qua currentInputWeight.)
+  // (Đã gỡ khối "thông tin lặp lại" và dòng tự tính dưới form — bảng lịch sử
+  //  + bảng công suất là nơi hiển thị các số liệu này.)
   function updateXuong2CutLinked() {
     const sel = document.getElementById('x2-cut-material');
     const mat = (state.materialRecords || []).find(r => r.id === (sel ? sel.value : '')) || null;
@@ -317,39 +444,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       const d = document.getElementById('x2-cut-date');
       if (d && !d.value) d.value = mat.date || todayISO();
     }
-    updateXuong2CutRemain();
   }
 
-  // KL đầu vào của lô ĐANG CHỌN trong form (lô gốc đã xóa khi đang sửa → dùng snapshot)
-  function currentInputWeight() {
-    const sel = document.getElementById('x2-cut-material');
-    const mat = (state.materialRecords || []).find(r => r.id === (sel ? sel.value : '')) || null;
-    if (mat) return materialInputWeightOf(mat);
-    if (state.x2CutEditId) {
-      const cut = (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId);
-      if (cut) return Number(cut.inputWeight) || 0;
-    }
-    return 0;
-  }
-
-  // KL ngọn/ống loại TỰ TÍNH = KL đầu vào − KL ống luồng − KL củi đốt − KL cây loại
-  // + TỶ LỆ QUY ĐỔI = KL ống luồng : KL đầu vào (%)
-  function updateXuong2CutRemain() {
-    const disp = document.getElementById('x2-cut-remain-display');
-    if (!disp) return;
-    const inputWeight = currentInputWeight();
-    const val = id => Number((document.getElementById(id) || {}).value) || 0;
-    const ongLuong = val('x2-cut-ongluong');
-    const cuiDot   = val('x2-cut-cuidot');
-    const cayLoai  = val('x2-cut-cayloai');
-    const remain = inputWeight - ongLuong - cuiDot - cayLoai;
-    disp.textContent = `${fmtKg(remain)} kg`;
-    disp.style.color = remain < 0 ? 'var(--danger)' : 'var(--primary)';
-    const ratioEl = document.getElementById('x2-cut-ratio-display');
-    if (ratioEl) {
-      ratioEl.textContent = inputWeight > 0 ? `${fmtRatio((ongLuong / inputWeight) * 100)}%` : '—';
-    }
-  }
+    // KL ngọn/ống loại TỰ TÍNH = KL đầu vào − KL ống luồng − KL củi đốt − KL cây loại
+    // (đã gỡ dòng hiển thị tự tính dưới form — chỉ còn dùng trong handleXuong2CutSubmit)
 
   // Form về trạng thái "ghi mới" (sau Lưu / nút Làm Mới Form)
   function resetXuong2CutForm() {
@@ -360,9 +458,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     });
     const d = document.getElementById('x2-cut-date');
     if (d) d.value = '';
-    fillXuong2CutMaterialOptions(); // gồm cả updateXuong2CutLinked + Remain
-    const t = document.getElementById('x2-cut-form-title');
-    if (t) { t.innerHTML = X2_FORM_TITLE_NEW; initLucide(); }
+    fillXuong2CutMaterialOptions(); // gồm cả updateXuong2CutLinked
+    syncX2CutEditBanner();
   }
 
   // ─── LƯU FORM (THÊM / SỬA) ───────────────────────────────────
@@ -407,6 +504,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       week: materialWeekLabel(dateVal),
       klOngLuong, klCuiDot, klCayLoai, klNgonOngLoai,
       cutter: snap.cutter, cutTime: snap.cutTime,
+      cutHours: snap.cutHours, cutHoursHC: snap.cutHoursHC, cutHoursTC: snap.cutHoursTC,
       note
     };
 
@@ -450,9 +548,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (cay) cay.value = (rec.klCayLoai ?? '') === '' ? '' : String(rec.klCayLoai);
     const note = document.getElementById('x2-cut-note');
     if (note) note.value = rec.note || '';
-    updateXuong2CutRemain();
-    const t = document.getElementById('x2-cut-form-title');
-    if (t) { t.innerHTML = X2_FORM_TITLE_EDIT; initLucide(); }
+    syncX2CutEditBanner();
   }
 
   function deleteXuong2Cut(id) {
@@ -469,14 +565,32 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     showToast('Đã xóa lượt cắt/chọn!', 'success');
   }
 
+  function syncX2CutEditBanner() {
+    const banner = document.getElementById('x2-cut-edit-banner');
+    if (!banner) return;
+    const txt = document.getElementById('x2-cut-edit-text');
+    if (state.x2CutEditId) {
+      const rec = (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId);
+      txt.textContent = rec
+        ? `Đang sửa lượt cắt/chọn ngày ${formatDateDDMMYY(rec.date)} — bấm "Lưu Lượt Cắt/Chọn" hoặc "Làm Mới Form" để thoát.`
+        : 'Đang sửa lượt cắt/chọn.';
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
   // ─── RENDER BẢNG CHI TIẾT CẮT/CHỌN ───────────────────────────
   function renderXuong2CutCard() {
     fillXuong2CutMaterialOptions();
     renderX2StockBar();
+    renderX2RateBar(); // Định mức công suất theo tháng (cho cột Hiệu suất)
     renderXuong2CutStats();
-    renderXuong2CutTable();
+    renderXuong2CutTable(); // nhóm theo ngày: nhóm ngày (chung) + các dòng lô
+    syncX2CutEditBanner(); // banner "Đang sửa" luôn đồng bộ trạng thái
     updateXuong2CardCounts();
   }
+
 
   // Thống kê nhanh của vị trí Cắt Chọn
   // (Tồn chờ cắt hiển thị riêng ở THANH TRÊN CÙNG thẻ — x2-stock-bar)
@@ -506,7 +620,14 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       </div>`;
   }
 
-  // Bảng lịch sử cắt/chọn (mới nhất lên đầu) — có Mã NCC, Tỷ lệ quy đổi, Người cắt
+  // ─── BẢNG LỊCH SỬ CẮT/CHỌN — NHÓM THEO NGÀY (theo mẫu Excel) ─
+  // DÒNG NHÓM NGÀY: Ngày | Người cắt | Giờ cắt HC | TC | Công suất thực tế |
+  // Hiệu suất (= Công suất thực tế ÷ Công suất định mức của tháng).
+  //   Công suất thực tế = TỔNG KL ĐẦU VÀO ÷ tổng số giờ làm việc (kg/h) —
+  //   tổng giờ làm việc lấy từ tab Nhân Sự (Bảng bố trí/chấm công vị trí Cắt).
+  // Sau đó các DÒNG LÔ trong ngày: Loại NL | NCC | KL đầu vào | KL ống đạt |
+  // KL củi đốt | KL cây loại | KL ngọn/ống loại | Tỷ lệ QĐ | Giá ống tương đương |
+  // Thao tác. Nguồn giờ cắt: Bảng bố trí Nhân Sự (dữ liệu SỐNG); mất bố trí → snapshot.
   function renderXuong2CutTable() {
     const tbody = document.getElementById('x2-cut-table-body');
     if (!tbody) return;
@@ -518,40 +639,78 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (countEl) countEl.textContent = cuts.length ? `${cuts.length} lượt đã cắt/chọn` : '';
     if (!cuts.length) {
       tbody.innerHTML = `
-        <tr><td colspan="12" class="text-center" style="color:var(--text-muted); padding:28px 10px;">
+        <tr><td colspan="10" class="text-center" style="color:var(--text-muted); padding:28px 10px;">
           <i data-lucide="scissors" style="width:30px;height:30px;opacity:.5;"></i>
           <div style="margin-top:8px;">Chưa có lượt cắt/chọn nào.<br>Chọn <strong>nguyên liệu đầu vào của Xưởng 2</strong> ở form trên rồi bấm <strong>Lưu Lượt Cắt/Chọn</strong>.</div>
         </td></tr>`;
       initLucide();
       return;
     }
-    tbody.innerHTML = cuts.map(r => {
-      const d = cutDisplay(r);
-      const ratioTxt = d.ratio == null ? '—' : `${fmtRatio(d.ratio)}%`;
-      return `
-        <tr data-x2-cut-row="${escapeHTML(r.id)}">
-          <td>${formatDateDDMMYY(d.date)}</td>
+    // Gộp theo ngày (đã sort mới nhất lên đầu — Map giữ đúng thứ tự nhóm)
+    const groups = new Map();
+    cuts.forEach(r => {
+      const key = r.date || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    let html = '';
+    for (const [date, list] of groups) {
+      const first = cutDisplay(list[0]); // thông tin CHUNG của ngày (người cắt/giờ)
+      let totalIn = 0;
+      const rowsHtml = list.map(r => {
+        const d = cutDisplay(r);
+        totalIn += d.inputWeight;
+        const ratioTxt = d.ratio == null ? '—' : `${fmtRatio(d.ratio)}%`;
+        return `
+        <tr class="x2-day-row" data-x2-cut-row="${escapeHTML(r.id)}">
           <td><strong>${escapeHTML(d.materialType || '—')}</strong></td>
-          <td>${escapeHTML(d.supplier || '—')}${d.note ? `<div style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(d.note)}</div>` : ''}</td>
-          <td>${d.supplierCode ? escapeHTML(d.supplierCode) : '<span style="color:var(--text-muted);" title="Chưa khai báo Mã Số trong Bảng Thông Tin Nhà Cung (tab Nguyên Liệu)">—</span>'}</td>
+          <td>${escapeHTML(d.supplier || '—')}${d.note ? `<div class="x2-row-note">${escapeHTML(d.note)}</div>` : ''}</td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.inputWeight)}</strong></td>
           <td class="text-right">${fmtKg(d.klOngLuong)}</td>
           <td class="text-right">${fmtKg(d.klCuiDot)}</td>
           <td class="text-right">${fmtKg(d.klCayLoai)}</td>
           <td class="text-right"><strong style="color:#b45309;">${fmtKg(d.klNgonOngLoai)}</strong></td>
           <td class="text-right"><strong style="color:#0f766e;" title="Tỷ lệ quy đổi = KL ống luồng : KL đầu vào">${ratioTxt}</strong></td>
-          <td>${d.cutterRows.length
-            ? d.cutterRows.map(x => `
-              <div class="x2-cut-cutter-row" title="${escapeHTML(x.name)}${x.time ? ' · ' + escapeHTML(x.time) : ''} (tự động từ Bảng bố trí Nhân Sự)">
-                <strong>${escapeHTML(x.name)}</strong>${x.time ? `<span class="x2-cut-when"><i data-lucide="clock"></i> ${escapeHTML(x.time)}</span>` : ''}
-              </div>`).join('')
-            : '<span style="color:var(--text-muted);" title="Ngày này chưa bố trí ai ở vị trí Cắt (tab Nhân Sự — Bảng bố trí)">—</span>'}</td>
+          <td class="text-right"><span style="color:var(--text-muted);" title="Giá ống tương đương — bổ sung sau">—</span></td>
           <td class="text-right">
             <button class="btn btn-icon btn-outline" title="Sửa" data-x2-cut-edit="${escapeHTML(r.id)}"><i data-lucide="pencil"></i></button>
             <button class="btn btn-icon btn-danger" title="Xóa" data-x2-cut-delete="${escapeHTML(r.id)}"><i data-lucide="trash-2"></i></button>
           </td>
         </tr>`;
-    }).join('');
+      }).join('');
+      // ── DÒNG NHÓM NGÀY (thông tin chung) — trải 6 ô đầu, 4 ô cuối trống
+      const hours = first.cutHours || 0; // tổng giờ làm việc (HC + TC) từ Nhân Sự
+      const cap = hours > 0 ? (totalIn / hours) : null; // Công suất thực tế (kg/h)
+      const rate = capRateOf(date); // Công suất định mức của tháng (kg/h)
+      const eff = (cap != null && rate) ? (cap / rate) * 100 : null; // Hiệu suất (%)
+      const effTxt = eff == null
+        ? '<span style="color:var(--text-muted);" title="Chưa đủ dữ liệu (thiếu giờ cắt hoặc chưa đặt Định mức công suất cho tháng này)">—</span>'
+        : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};" title="Hiệu suất = Công suất thực tế (${fmtKg(cap)} kg/h) ÷ Công suất định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} kg/h)">${fmtRatio(eff)}%</strong>`;
+      const capTxt = cap != null
+        ? `<strong style="color:#0f766e;">${fmtKg(cap)} kg/h</strong>`
+        : '<span style="color:var(--text-muted);" title="Chưa có giờ ra trong bố trí Nhân Sự">—</span>';
+      const hcTxt = first.cutHoursHC != null ? fmtRatio(first.cutHoursHC) : '—';
+      const tcTxt = first.cutHoursTC != null ? fmtRatio(first.cutHoursTC) : '—';
+      const cutters = first.cutterRows.filter(x => x.name);
+      const cuttersMain = cutters.length
+        ? `${escapeHTML(cutters[0].name)}${cutters[0].time ? ` (${escapeHTML(cutters[0].time)})` : ''}`
+        : '';
+      const cuttersMore = cutters.length > 1
+        ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(cutters.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${cutters.length - 1} người khác</em>`
+        : '';
+      html += `
+        <tr class="x2-day-head">
+          <td class="x2-day-date">${formatDateDDMMYY(date)}</td>
+          <td class="x2-day-cutters-cell">${cuttersMain || '<em style="color:var(--text-muted);" title="Ngày này chưa bố trí ai ở vị trí Cắt (tab Nhân Sự — Bảng bố trí)">chưa bố trí người cắt</em>'}${cuttersMore}</td>
+          <td class="text-center x2-hours-hc" title="Giờ hành chính (trong ca)">${hcTxt}</td>
+          <td class="text-center x2-hours-tc" title="Giờ tăng ca (ngoài ca / ngày nghỉ đi làm)">${tcTxt}</td>
+          <td class="text-right x2-day-cap" title="Công suất thực tế = Tổng KL đầu vào (${fmtKg(totalIn)} kg) ÷ tổng số giờ làm việc (${fmtRatio(hours)} h — từ tab Nhân Sự)">${capTxt}</td>
+          <td class="text-right x2-day-eff">${effTxt}</td>
+          <td colspan="4" class="x2-day-rest"></td>
+        </tr>`;
+      html += rowsHtml;
+    }
+    tbody.innerHTML = html;
     initLucide();
   }
 
@@ -563,39 +722,20 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     initLucide();
   }
 
-  // ─── TỒN NGUYÊN LIỆU CHỜ CẮT (thanh TRÊN CÙNG thẻ) ───────────
-  // Trả lời "tồn nguyên liệu Xưởng 2 còn lại là bao nhiêu": tổng số lô + tổng kg
-  // + chip TỪNG LÔ còn lại; BẤM CHIP → chọn đúng lô đó vào form để cắt tiếp.
+  // ─── TỒN NGUYÊN LIỆU CHỜ CẮT (thanh gọn TRÊN CÙNG thẻ) ────────
+  // Trả lời "tồn nguyên liệu Xưởng 2 còn lại bao nhiêu" — MỘT Ô NHỎ tóm tắt
+  // số lô + tổng kg (chi tiết từng lô đã có ở ô chọn trong form).
   function renderX2StockBar() {
     const bar = document.getElementById('x2-stock-bar');
     if (!bar) return;
     const pending = xuong2PendingInputs();
     const totalW = pending.reduce((s, r) => s + materialInputWeightOf(r), 0);
     if (!pending.length) {
-      bar.innerHTML = `
-        <span class="x2-stock-title"><i data-lucide="boxes"></i> Tồn nguyên liệu chờ cắt:</span>
-        <span class="x2-stock-empty">Không còn lô nào chờ cắt — mọi lô Xưởng 2 đã được cắt/chọn.</span>`;
-      initLucide();
-      return;
+      bar.innerHTML = `<span class="x2-stock-title" title="Tất cả lô nguyên liệu Xưởng 2 đã được cắt/chọn"><i data-lucide="check-circle-2"></i> Tồn chờ cắt: <strong>Hết tồn</strong></span>`;
+    } else {
+      bar.innerHTML = `<span class="x2-stock-title" title="Tổng khối lượng các lô nguyên liệu Xưởng 2 CHƯA được cắt/chọn (chi tiết từng lô ở ô chọn trong form)"><i data-lucide="boxes"></i> Tồn chờ cắt: <strong>${pending.length} lô · ${fmtKg(totalW)} kg</strong></span>`;
     }
-    bar.innerHTML = `
-      <span class="x2-stock-title"><i data-lucide="boxes"></i> Tồn nguyên liệu chờ cắt:</span>
-      <span class="x2-stock-total" title="Số lô và tổng khối lượng nguyên liệu Xưởng 2 CHƯA được cắt/chọn"><strong>${pending.length}</strong> lô · <strong>${fmtKg(totalW)}</strong> kg</span>
-      <span class="x2-stock-chips">${pending.map(r =>
-        `<button type="button" class="x2-stock-chip" data-x2-stock-pick="${escapeHTML(r.id)}" title="Bấm để chọn lô này vào form ghi cắt/chọn">
-           ${escapeHTML(r.type || 'NL')} · ${escapeHTML(r.supplier || '—')} · ${formatDateDDMMYY(r.date)} · <strong>${fmtKg(materialInputWeightOf(r))}</strong> kg
-         </button>`).join('')}</span>`;
     initLucide();
-  }
-
-  // Bấm chip tồn → chọn lô đó vào ô Nguyên Liệu Đầu Vào của form
-  function pickX2Stock(materialId) {
-    const sel = document.getElementById('x2-cut-material');
-    if (!sel) return;
-    // Lô không có trong danh sách (đã cắt?) → bỏ qua im lặng
-    if (sel.options && sel.options.length && !Array.from(sel.options).some(o => o.value === materialId)) return;
-    sel.value = materialId;
-    updateXuong2CutLinked();
   }
 
   // ─── RENDER KHU VỰC XƯỞNG 2 (gọi từ main.js) ─────────────────
@@ -610,9 +750,11 @@ export {
   deleteXuong2Cut,
   editXuong2Cut,
   fillXuong2CutMaterialOptions,
+  handleX2CapRateSave,
   handleXuong2CutSubmit,
+  loadX2CapRates,
   loadXuong2Cuts,
-  pickX2Stock,
+  renderX2RateBar,
   renderX2StockBar,
   renderXuong2Cards,
   renderXuong2CutCard,
@@ -622,7 +764,6 @@ export {
   toggleX2CutTable,
   updateXuong2CardCounts,
   updateXuong2CutLinked,
-  updateXuong2CutRemain,
   x2CloseOpenCard,
   x2OpenCard,
   x2PositionDetailOverlay

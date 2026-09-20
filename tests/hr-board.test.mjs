@@ -95,6 +95,10 @@ check('BOARD: ca mặc định Hành chính 07:00–17:30', (() => {
 check('BOARD: preset Làm ca = 2 ca (ngày/đêm)', hr.BOARD_SHIFT_PRESETS.lamca.shifts.length === 2);
 
 // ─── B. RENDER BOARD (mặc định Xưởng 2) ────────────────────────
+// CỐ ĐỊNH ngày làm việc thường (thứ Ba 15/09) — tránh test flaky theo ngày hệ
+// thống: nếu chạy vào Chủ nhật/lễ, quy tắc "ngày nghỉ đi làm → toàn TC" làm
+// badge HC/TC lệch so với kỳ vọng (đã gặp khi chạy vào CN 20/09/2026).
+state.hrBoardDate = '2026-09-15';
 hr.renderHrView();
 check('BOARD: mặc định mở Xưởng 2', state.hrBoardDept === 'Xưởng 2');
 check('BOARD: tab bộ phận render đủ 6 bộ phận', (document.getElementById('hr-board-dept-tabs').innerHTML.match(/data-board-dept/g) || []).length === 6);

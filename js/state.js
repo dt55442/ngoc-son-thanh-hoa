@@ -19,6 +19,10 @@
   // Vị trí công đoạn Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký cắt/chọn.
   // Mỗi lượt cắt/chọn link 1 lượt nhập nguyên liệu đầu vào của Xưởng 2 (tab Nguyên Liệu)
   const STORAGE_KEY_XUONG2_CUTS = 'bamboo_tracker_xuong2_cuts_v1';
+  // ĐỊNH MỨC CÔNG SUẤT CẮT (kg/giờ) theo TỪNG THÁNG — dùng tính Hiệu suất
+  // của công đoạn Cắt Chọn Xưởng 2 (Hiệu suất = Công suất thực tế ÷ Định mức).
+  // { 'YYYY-MM': số kg/h } — VD tháng 9 đặt 3000, tháng 10 đặt 3200.
+  const STORAGE_KEY_X2_CAP_RATE = 'bamboo_tracker_x2_capacity_rate_v1';
   // Bảng "Thông Tin Nhà Cung" (tab Nguyên Liệu): danh mục nhà cung cấp do
   // người dùng khai báo (tên + mã số điền tay); các số liệu (tổng KL, số chuyến,
   // trung bình, tỷ lệ đạt, số lần nhắc nhở, đánh giá) TỰ TÍNH từ materialRecords
@@ -134,6 +138,8 @@
     // Thông Tin Nhà Cung (tab Nguyên Liệu): [{ id, name, code, createdAt, updatedAt }]
     suppliers: [],
     supplierEditId: null,     // id nhà cung cấp đang sửa trong modal (null = thêm mới)
+    // Định mức công suất cắt theo tháng (Cắt Chọn Xưởng 2): { 'YYYY-MM': kg/h }
+    x2CapRates: {},
     materialActiveLoc: 'all', // 'all' | 'lo-hoi' | 'xuong-1' | 'xuong-2'
     materialLightbox: null,   // { recordId, index } đang mở trong lightbox
     // Vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn):
@@ -202,6 +208,7 @@ export {
   STORAGE_KEY_MATERIAL_RATES,
   STORAGE_KEY_MATERIALS,
   STORAGE_KEY_XUONG2_CUTS,
+  STORAGE_KEY_X2_CAP_RATE,
   STORAGE_KEY_SUPPLIERS,
   STORAGE_KEY_PLANNING_FORECAST,
   STORAGE_KEY_PLANNING_ITEMS,

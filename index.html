@@ -584,11 +584,6 @@
         <div class="planning-card x2-card-hidden" id="x2-cut-card">
           <div class="planning-card-header">
             <h4><i data-lucide="scissors"></i> Cắt Chọn — Xưởng 2</h4>
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-add-x2-cut" data-perm="kanban" title="Xóa form và ghi nhận lượt cắt/chọn mới">
-                <i data-lucide="plus-circle"></i> Ghi Cắt/Chọn
-              </button>
-            </div>
           </div>
 
           <!-- TỒN NGUYÊN LIỆU XƯỞNG 2 CHƯA CẮT — hiện trên cùng; bấm chip lô để chọn vào form -->
@@ -597,7 +592,9 @@
           <!-- FORM: chọn lô nguyên liệu đầu vào Xưởng 2
                (bố cục thu gọn 2 dòng: NL + Ghi chú cùng dòng · Ngày + các ô khối lượng cùng dòng) -->
           <div class="x2-cut-form-wrap">
-            <h5 id="x2-cut-form-title"><i data-lucide="plus-circle"></i> Ghi Nhận Lượt Cắt/Chọn Mới</h5>
+            <div class="x2-cut-edit-banner" id="x2-cut-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x2-cut-edit-text"></span>
+            </div>
             <form id="x2-cut-form">
               <!-- DÒNG 1: nguyên liệu đầu vào + ghi chú -->
               <div class="x2-form-row">
@@ -630,15 +627,9 @@
                   <input type="number" id="x2-cut-cayloai" step="any" min="0" placeholder="0">
                 </div>
               </div>
-              <!-- NGƯỜI CẮT + THỜI GIAN CẮT: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Cắt" —
-                   Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay, chỉ hiện ở Bảng Lịch Sử Cắt/Chọn -->
-
-              <div class="material-weight-box" style="margin-top:10px; flex-wrap:wrap; gap:4px 14px;">
-                <span><i data-lucide="calculator"></i> KL Ngọn/Ống Loại (Tự tính = KL đầu vào − KL ống luồng − KL củi đốt − KL cây loại):</span>
-                <strong id="x2-cut-remain-display">— kg</strong>
-                <span><i data-lucide="percent"></i> Tỷ Lệ Quy Đổi (Ống luồng : Đầu vào):</span>
-                <strong id="x2-cut-ratio-display" style="color:#0f766e;">—</strong>
-              </div>
+              <!-- NGƯỜI CẮT + THỜI GIAN CẮT + SỐ GIỜ CẮT: TỰ ĐỘNG từ Bảng bố trí Nhân Sự
+                   (vị trí "Cắt" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay, chỉ hiện ở
+                   Bảng Lịch Sử Cắt/Chọn + Bảng Công Suất Theo Ngày -->
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cut">Làm Mới Form</button>
@@ -650,7 +641,18 @@
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-cut-stats"></div>
 
-          <!-- BẢNG LỊCH SỬ CẮT/CHỌN — viền riêng tách khỏi form, thu gọn được, cuộn khi dài -->
+          <!-- THANH ĐỊNH MỨC CÔNG SUẤT CẮT (theo tháng) — nguồn cho cột Hiệu suất -->
+          <div class="x2-rate-bar" id="x2-rate-bar">
+            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất cắt:</span>
+            <select id="x2-rate-month" title="Chọn tháng"></select>
+            <input type="number" id="x2-rate-value" min="0" step="any" placeholder="VD: 3000" title="Công suất định mức của tháng (kg/giờ)">
+            <span class="x2-rate-unit">kg/h</span>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="kanban" title="Lưu định mức công suất của tháng"><i data-lucide="save"></i> Lưu</button>
+          </div>
+
+          <!-- BẢNG LỊCH SỬ CẮT/CHỌN — NHÓM THEO NGÀY: dòng NHÓM ngày (Ngày · Người cắt ·
+               Giờ cắt HC/TC · Công suất thực tế · Hiệu suất) trước, rồi các dòng lô trong ngày.
+               Viền riêng tách khỏi form, thu gọn được, cuộn khi dài. -->
           <div class="x2-cut-table-wrap" id="x2-cut-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Cắt/Chọn</h5>
@@ -663,18 +665,16 @@
               <table class="data-table" id="x2-cut-table">
                 <thead>
                   <tr>
-                    <th style="width:88px;">Ngày</th>
-                    <th>Loại Nguyên Liệu</th>
-                    <th>Nhà Cung Cấp</th>
-                    <th style="width:80px;">Mã NCC</th>
-                    <th class="text-right" style="width:100px;">KL Đầu Vào</th>
-                    <th class="text-right" style="width:92px;">KL Ống Luồng</th>
-                    <th class="text-right" style="width:88px;">KL Củi Đốt</th>
-                    <th class="text-right" style="width:88px;">KL Cây Loại</th>
-                    <th class="text-right" style="width:105px;">KL Ngọn/Ống Loại</th>
-                    <th class="text-right" style="width:80px;">Tỷ Lệ QĐ</th>
-                    <th style="width:140px;">Người Cắt</th>
-                    <th class="text-right" style="width:84px;">Thao Tác</th>
+                    <th>Loại nguyên liệu</th>
+                    <th>Nhà cung cấp</th>
+                    <th class="text-right" style="width:100px;">KL đầu vào</th>
+                    <th class="text-right" style="width:88px;">KL ống đạt</th>
+                    <th class="text-right" style="width:88px;">KL củi đốt</th>
+                    <th class="text-right" style="width:88px;">KL cây loại</th>
+                    <th class="text-right" style="width:105px;">KL ngọn/ống loại</th>
+                    <th class="text-right" style="width:80px;">Tỷ lệ QĐ</th>
+                    <th class="text-right" style="width:105px;">Giá ống tương đương</th>
+                    <th class="text-right" style="width:84px;">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody id="x2-cut-table-body"></tbody>

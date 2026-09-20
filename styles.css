@@ -5668,20 +5668,82 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 }
 .x2-cut-cutter-row + .x2-cut-cutter-row { border-top: 1px dashed var(--border-color); }
 
-/* ── TỒN NGUYÊN LIỆU CHỜ CẮT (thanh TRÊN CÙNG thẻ Cắt Chọn — Xưởng 2) ──
-   Trả lời "tồn còn lại bao nhiêu": tổng lô + tổng kg + chip từng lô;
-   bấm chip → chọn lô đó vào form. Màu teal đồng bộ với accent thẻ Cắt Chọn. */
-.x2-stock-bar {
+/* ── THANH ĐỊNH MỨC CÔNG SUẤT CẮT (theo tháng) ── */
+.x2-rate-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin: 0 16px 12px 16px;
-  padding: 9px 12px;
+  margin: 0 16px 10px 16px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  font-size: 0.78rem;
+}
+.x2-rate-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--primary); }
+.x2-rate-title svg { width: 14px; height: 14px; }
+.x2-rate-bar select, .x2-rate-bar input[type="number"] {
+  padding: 4px 8px; font-size: 0.78rem; border: 1px solid var(--border-color);
+  border-radius: 6px; background: var(--bg-card); color: var(--text-main, #292524);
+}
+.x2-rate-bar input[type="number"] { width: 110px; text-align: right; }
+.x2-rate-unit { color: var(--text-muted); }
+
+/* ── Bảng lịch sử cắt/chọn NHÓM THEO NGÀY ──
+   Dòng NHÓM ngày trải theo cột bảng (theo mẫu Excel): Ngày | Người cắt |
+   Giờ cắt HC | TC | Công suất thực tế | Hiệu suất | (4 ô trống).
+   Dòng nhóm nền xanh dương nhạt để nổi bật; dòng lô phía dưới. */
+.x2-day-head td { background: rgba(37, 99, 235, 0.06); font-size: 0.78rem; vertical-align: middle; }
+.x2-day-date { font-weight: 700; color: #1d4ed8; white-space: nowrap; }
+.x2-day-cutters-cell { min-width: 170px; }
+.x2-day-cutters-more {
+  display: inline-block;
+  margin-left: 4px; padding: 0 6px;
+  border: 1px dashed var(--border-color); border-radius: 999px;
+  font-size: 0.68rem; font-style: normal; color: var(--text-muted);
+  white-space: nowrap;
+}
+.x2-day-head .x2-hours-hc, .x2-day-head .x2-hours-tc {
+  display: inline-block;
+  min-width: 52px; text-align: center;
+  padding: 2px 8px; border-radius: 6px;
+  font-weight: 700; white-space: nowrap;
+}
+.x2-hours-hc { background: rgba(37, 99, 235, 0.12); color: #1d4ed8; } /* giờ hành chính */
+.x2-hours-tc { background: rgba(217, 119, 6, 0.14); color: #b45309; } /* giờ tăng ca */
+.x2-day-cap { white-space: nowrap; }
+.x2-day-cap strong { font-size: 0.82rem; }
+.x2-day-eff strong { font-size: 0.82rem; }
+.x2-day-row td { background: rgba(15, 118, 110, 0.02); }
+.x2-row-note { font-size: 0.7rem; color: var(--text-muted); }
+
+/* ── BANNER "ĐANG SỬA LƯỢT CẮT/CHỌN" — chỉ hiện khi đang sửa (thay tiêu đề form) ── */
+.x2-cut-edit-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 10px 0;
+  padding: 7px 12px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  font-size: 0.78rem;
+  color: #b45309;
+}
+.x2-cut-edit-banner svg { width: 14px; height: 14px; }
+
+/* ── TỒN NGUYÊN LIỆU CHỜ CẮT (thanh gọn TRÊN CÙNG thẻ Cắt Chọn — Xưởng 2) ──
+   1 ô nhỏ tóm tắt số lô + tổng kg (chi tiết từng lô ở ô chọn trong form).
+   Màu teal đồng bộ với accent thẻ Cắt Chọn. */
+.x2-stock-bar {
+  margin: 0 16px 10px 16px;
+  padding: 7px 12px;
   border: 1px solid rgba(15, 118, 110, 0.35);
   border-radius: 10px;
   background: rgba(15, 118, 110, 0.07);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 .x2-stock-title {
   display: inline-flex;
@@ -5691,24 +5753,8 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
   color: #0f766e;
   white-space: nowrap;
 }
-.x2-stock-title svg { width: 15px; height: 15px; }
-.x2-stock-total { white-space: nowrap; }
-.x2-stock-total strong { font-size: 0.95rem; color: #0f766e; }
-.x2-stock-empty { color: var(--text-muted); }
-.x2-stock-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 200px; }
-.x2-stock-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  font-size: 0.72rem;
-  cursor: pointer;
-  border: 1px solid rgba(15, 118, 110, 0.4);
-  border-radius: 999px;
-  background: var(--bg-card);
-  color: var(--text-main, #292524);
-}
-.x2-stock-chip:hover { background: #ccfbf1; border-color: #0f766e; }
+.x2-stock-title svg { width: 14px; height: 14px; }
+.x2-stock-title strong { font-size: 0.9rem; }
 
 /* ── POP-UP: overlay chi tiết vị trí Xưởng 2 (nổi lên khi bấm thẻ) ──
    Vùng pop-up = toàn bộ vùng hiển thị của trang TRỪ header (giống tab Nhân Sự) */

@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
@@ -470,6 +470,7 @@ import { showToast } from './utils.js';
       hrWorkCalendar: state.hrWorkCalendar || {},
       xuong2CutRecords: state.xuong2CutRecords || [],
       suppliers: state.suppliers || [],
+      x2CapRates: state.x2CapRates || {},
       history: state.history || [],
       deletedIds: state.deletedIds || {},
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
@@ -497,6 +498,7 @@ import { showToast } from './utils.js';
       hrWorkCalendar: obj.hrWorkCalendar || {},
       xuong2CutRecords: obj.xuong2CutRecords || [],
       suppliers: obj.suppliers || [],
+      x2CapRates: obj.x2CapRates || {},
       history: obj.history || [],
       deletedIds: obj.deletedIds || {}
     });
@@ -618,6 +620,8 @@ import { showToast } from './utils.js';
     if (remote.xuong2CutRecords) state.xuong2CutRecords = m(clean('xuong2CutRecords', state.xuong2CutRecords || []), clean('xuong2CutRecords', remote.xuong2CutRecords));
     // Thông Tin Nhà Cung (tab Nguyên Liệu)
     if (remote.suppliers) state.suppliers = m(clean('suppliers', state.suppliers || []), clean('suppliers', remote.suppliers));
+    // Định mức công suất cắt theo tháng (dict theo 'YYYY-MM')
+    if (remote.x2CapRates) state.x2CapRates = mergeKeyedDict(state.x2CapRates || {}, remote.x2CapRates);
     // Lịch sử sửa đổi: gộp thêm các dòng máy này chưa có (mỗi dòng 1 id riêng)
     if (remote.history) {
       state.history = mergeAddMissing(state.history || [], remote.history || []);
@@ -654,6 +658,7 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_SUPPLIERS, JSON.stringify(state.suppliers || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_CAP_RATE, JSON.stringify(state.x2CapRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}

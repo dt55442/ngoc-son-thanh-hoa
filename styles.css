@@ -2928,10 +2928,20 @@ body.chart-expanded-open { overflow: hidden; }
     min-width: 750px;
   }
 
-  /* Responsive cho kế hoạch gom nhóm theo tuần */
+  /* Responsive cho kế hoạch gom nhóm theo tuần: thẻ tuần xếp 1 HÀNG NGANG,
+     vuốt ngang xem thêm — không xuống dòng (hết cảnh "2 cột rồi nhảy dòng") */
   .planning-week-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 6px; /* chừa chỗ cho thanh cuộn ngang, không đè bóng thẻ */
+    scroll-snap-type: x proximity;
+  }
+  .planning-week-card {
+    flex: 0 0 auto;
+    width: min(78vw, 300px); /* gần full màn + "méo" thẻ kế bên → biết là vuốt được */
+    scroll-snap-align: start;
   }
 
   .planning-week-card-header {
@@ -6171,7 +6181,7 @@ body:not(.is-admin) #btn-open-cloud-backup { display: none !important; }
   padding: 7px 10px;
 }
 
-/* ─── TRỢ LÝ AI (Google Gemini) — nút nổi + modal ──────────────── */
+/* ─── TRỢ LÝ AI (Google Gemini) — nút nổi KÉO ĐƯỢC + modal ─────── */
 .ai-fab {
   position: fixed;
   right: 16px;
@@ -6188,10 +6198,142 @@ body:not(.is-admin) #btn-open-cloud-backup { display: none !important; }
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-lg, 0 10px 24px rgba(0, 0, 0, 0.22));
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  /* Cho phép KÉO DI CHUYỂN: chặn cuộn trang/chọn chữ khi giữ nút trên cảm ứng */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .ai-fab:hover { transform: translateY(-2px) scale(1.05); }
+/* Đang kéo: phóng nhẹ + bóng đậm, tắt chuyển động để nút bám sát tay
+   (đặt sau :hover để đè hiệu ứng hover khi giữ nút) */
+.ai-fab.ai-fab-dragging {
+  transition: none;
+  transform: scale(1.12);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
+  cursor: grabbing;
+  opacity: 0.95;
+}
 .ai-fab svg { width: 22px; height: 22px; }
+/* Ô hỏi AI tự do + chip hỏi nhanh theo tab/nội dung */
+.ai-question-row { margin-bottom: 10px; }
+.ai-question-row textarea {
+  width: 100%;
+  min-height: 62px;
+  max-height: 150px;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: var(--surface-2, #fafaf9);
+  color: var(--text-main, #1c1917);
+}
+.ai-question-row textarea:focus { outline: 2px solid rgba(124, 58, 237, 0.22); border-color: #7c3aed; }
+.ai-quick-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.ai-quick-chip {
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.ai-quick-chip:hover { background: #ede9fe; border-color: #c4b5fd; }
+/* Dòng nhắc lại câu hỏi phía trên kết quả AI */
+.ai-q-echo {
+  font-size: 0.78rem;
+  color: var(--text-main, #1c1917);
+  background: #f5f3ff;
+  border-left: 3px solid #7c3aed;
+  border-radius: 0 8px 8px 0;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+/* ─── Bong bóng gợi ý tự động "Nan Bot" (bám nút AI nổi) ────────── */
+.ai-fab-bubble {
+  display: none;
+  position: fixed;
+  z-index: 1260; /* trên nút AI (1250), dưới modal (10000) */
+  max-width: min(300px, 78vw);
+  background: var(--surface, #ffffff);
+  border: 1px solid #ddd6fe;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-main, #1c1917);
+  cursor: pointer;
+}
+.ai-fab-bubble.show { display: block; animation: aiBubblePop 0.18s ease; }
+@keyframes aiBubblePop {
+  from { transform: translateY(6px) scale(0.96); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+/* Đuôi tam giác nhỏ hướng xuống nút AI (đổi mép theo anchor) */
+.ai-fab-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: var(--surface, #ffffff);
+  border-right: 1px solid #ddd6fe;
+  border-bottom: 1px solid #ddd6fe;
+  transform: rotate(45deg);
+}
+.ai-fab-bubble.anchor-right::after { right: 18px; }
+.ai-fab-bubble.anchor-left::after { left: 18px; }
+.ai-fab-bubble-text { overflow-wrap: anywhere; }
+.ai-fab-bubble-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; min-height: 18px; }
+.ai-fab-bubble-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #78716c);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.ai-fab-bubble-close:hover { background: #f5f3ff; color: #6d28d9; }
+/* 3 chấm "đang suy nghĩ" (CSS thuần — không JS timer) */
+.ai-fab-bubble-thinking { display: none; gap: 3px; align-items: center; }
+.ai-fab-bubble-thinking.show { display: inline-flex; }
+.ai-fab-bubble-thinking i { width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; animation: aiThinkBounce 1s infinite; }
+.ai-fab-bubble-thinking i:nth-child(2) { animation-delay: 0.15s; }
+.ai-fab-bubble-thinking i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes aiThinkBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+/* Dòng "đang suy nghĩ" dùng chung trong modal AI */
+.ai-thinking { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted, #78716c); font-style: italic; }
+.ai-thinking i { width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; animation: aiThinkBounce 1s infinite; }
+.ai-thinking i:nth-child(2) { animation-delay: 0.15s; }
+.ai-thinking i:nth-child(3) { animation-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab-bubble-thinking i, .ai-thinking i { animation: none; }
+}
+/* Hàng công tắc gợi ý tự động trong modal */
+.ai-autogreet-row {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed #ddd6fe;
+  border-radius: 8px;
+  background: #fafaff;
+  font-size: 0.75rem;
+}
+.ai-autogreet-row label { display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+.ai-autogreet-note { display: block; color: var(--text-muted, #78716c); margin-top: 3px; }
 .modal-ai-card { width: min(680px, 96vw); max-height: 88vh; display: flex; flex-direction: column; }
 .ai-body { padding: 16px 20px; overflow-y: auto; }
 .ai-section { margin-bottom: 14px; }
@@ -6284,5 +6426,382 @@ body:not(.is-admin) #btn-open-cloud-backup { display: none !important; }
   border: 1px solid var(--border-color, #e7e5e4); border-radius: 999px;
   background: var(--surface-2, #fafaf9); color: var(--text-main, #292524);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   THEME ĐÊM KÍNH (SCI-FI NIGHT) — js/theme.js đặt data-theme="night"
+   Toàn bộ chỉ kích hoạt khi <body data-theme="night"> — giao diện SÁNG
+   giữ nguyên 100%. data-fx="low" (Giảm hiệu ứng) tắt kính + animation.
+   Bảng màu: xám xanh sáng #1a2438 (đọc rõ trong xưởng), nhấn tím
+   #8b5cf6 (thương hiệu) + xanh trời #38bdf8 (HUD). Bảng dữ liệu dùng
+   nền ĐỤC để đọc rõ trong xưởng.
+   ═══════════════════════════════════════════════════════════ */
+body[data-theme="night"] {
+  --bg-main: #1a2438;
+  --bg-card: #223050;
+  --bg-subtle: #1e2a45;
+  --surface: #1f2b48;
+  --surface-2: #26345a;
+  --text-main: #f1f5f9;
+  --text-muted: #a9b8d8;
+  --text-inverse: #1a2438;
+  --border-color: #34456e;
+  --primary: #8b5cf6;
+  --primary-hover: #a78bfa;
+  --primary-light: rgba(139, 92, 246, 0.20);
+  --primary-border: #6d28d9;
+  --bamboo-gold: #fcd34d;
+  --bamboo-light: #243252;
+  --danger: #fb7185;
+  --danger-bg: rgba(251, 113, 133, 0.16);
+  --warning: #fbbf24;
+  --success: #4ade80;
+  --info: #38bdf8;
+  /* Màu 4 công đoạn phiên bản đêm (sáng vừa đủ đọc rõ) */
+  --stage-say1-bg: rgba(251, 146, 60, 0.18);
+  --stage-say1-color: #fdba74;
+  --stage-say1-border: rgba(251, 146, 60, 0.40);
+  --stage-say2-bg: rgba(250, 204, 21, 0.16);
+  --stage-say2-color: #fde047;
+  --stage-say2-border: rgba(250, 204, 21, 0.36);
+  --stage-kho-bg: rgba(56, 189, 248, 0.18);
+  --stage-kho-color: #7dd3fc;
+  --stage-kho-border: rgba(56, 189, 248, 0.38);
+  --stage-bao-bg: rgba(52, 211, 153, 0.18);
+  --stage-bao-color: #6ee7b7;
+  --stage-bao-border: rgba(52, 211, 153, 0.38);
+  color-scheme: dark;
+}
+/* Nền "không gian": tia tím/cyan rõ hơn + nền xanh xám sáng hơn */
+body[data-theme="night"] {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(139, 92, 246, 0.20), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(56, 189, 248, 0.12), transparent 60%),
+    linear-gradient(180deg, #1b2538 0%, #162032 100%);
+  background-attachment: fixed;
+}
+/* Lưới mờ phủ toàn màn — nằm DƯỚI mọi nội dung (z-index âm) */
+body[data-theme="night"]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px;
+}
+/* Nội dung chính trong suốt để lộ nền không gian */
+body[data-theme="night"] .view-panel,
+body[data-theme="night"] main,
+body[data-theme="night"] .main-content { background: transparent; }
+
+/* ── THẺ = KHUNG HUD NHẸ (mọi .card + mini card): cắt vát 10px, viền +
+   ngạnh góc VẼ BẰNG NỀN nhiều lớp (không pseudo, không filter) → rẻ, không
+   đụng hiệu ứng ::before/::after sẵn có, không ép z-index cho con. Bóng dùng
+   box-shadow inset (sống sót qua clip-path; bóng ngoài bị xén nên bỏ). ── */
+body[data-theme="night"] .card {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+  border: none;
+  color: var(--text-main);
+  background-image:
+    linear-gradient(90deg, rgba(34, 211, 238, 0.70), rgba(139, 92, 246, 0.70)), /* viền trên */
+    linear-gradient(90deg, rgba(139, 92, 246, 0.65), rgba(34, 211, 238, 0.60)), /* viền dưới */
+    linear-gradient(180deg, rgba(34, 211, 238, 0.70), rgba(139, 92, 246, 0.65)), /* viền trái */
+    linear-gradient(180deg, rgba(139, 92, 246, 0.65), rgba(34, 211, 238, 0.60)), /* viền phải */
+    linear-gradient(rgba(34, 211, 238, 0.90), rgba(34, 211, 238, 0.90)), /* ngạnh góc trái-trên: ngang */
+    linear-gradient(rgba(34, 211, 238, 0.90), rgba(34, 211, 238, 0.90)), /* trái-trên: dọc */
+    linear-gradient(rgba(34, 211, 238, 0.90), rgba(34, 211, 238, 0.90)), /* trái-dưới: ngang */
+    linear-gradient(rgba(34, 211, 238, 0.90), rgba(34, 211, 238, 0.90)), /* trái-dưới: dọc */
+    linear-gradient(rgba(34, 211, 238, 0.90), rgba(34, 211, 238, 0.90)), /* phải-dưới: ngang */
+    linear-gradient(rgba(34, 211, 238, 0.90), rgba(34, 211, 238, 0.90)), /* phải-dưới: dọc */
+    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px), /* lưới mờ trong */
+    linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(36, 50, 84, 0.95), rgba(29, 41, 68, 0.95)); /* mặt trong */
+  background-repeat: no-repeat;
+  background-size:
+    100% 1px, 100% 1px, 1px 100%, 1px 100%,
+    10px 1px, 1px 10px,
+    10px 1px, 1px 10px,
+    10px 1px, 1px 10px,
+    100% 100%, 100% 100%,
+    100% 100%;
+  background-position:
+    0 0, 0 100%, 0 0, 100% 0,
+    left 4px top 4px, left 4px top 4px,
+    left 4px bottom 4px, left 4px bottom 4px,
+    right 4px bottom 4px, right 4px bottom 4px,
+    0 0, 0 0,
+    0 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(56, 189, 248, 0.07);
+}
+body[data-theme="night"] .card-title,
+body[data-theme="night"] h1, body[data-theme="night"] h2,
+body[data-theme="night"] h3, body[data-theme="night"] h4 { color: #f3f7ff; }
+body[data-theme="night"] .kanban-column {
+  background: rgba(24, 35, 62, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+/* ── BẢNG DỮ LIỆU (nền đặc, viền cyan mờ, hover tím) ── */
+body[data-theme="night"] table { color: var(--text-main); background: rgba(24, 34, 58, 0.97); }
+body[data-theme="night"] table th {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.32), rgba(56, 189, 248, 0.14));
+  color: #e8f1ff;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.42);
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+body[data-theme="night"] table td { border-bottom: 1px solid rgba(52, 66, 102, 0.9); }
+body[data-theme="night"] table tbody tr:nth-child(even) { background: rgba(148, 163, 184, 0.06); }
+body[data-theme="night"] table tbody tr:hover { background: rgba(139, 92, 246, 0.16); }
+body[data-theme="night"] .table-container,
+body[data-theme="night"] .table-wrapper { background: rgba(24, 34, 58, 0.97); }
+
+/* ── Ô NHẬP / CHỌN / TEXTAREA ── */
+body[data-theme="night"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+body[data-theme="night"] select,
+body[data-theme="night"] textarea {
+  background: rgba(18, 27, 48, 0.90);
+  border-color: #3a4d7d;
+  color: var(--text-main);
+}
+body[data-theme="night"] input::placeholder { color: #8598bd; }
+body[data-theme="night"] select option { background: #1f2b48; color: #f1f5f9; }
+body[data-theme="night"] input:focus,
+body[data-theme="night"] select:focus,
+body[data-theme="night"] textarea:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22);
+}
+
+/* ── NÚT ── */
+body[data-theme="night"] .btn-primary { background: linear-gradient(135deg, #7c3aed, #4f46e5); border-color: transparent; }
+body[data-theme="night"] .btn-primary:hover { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+body[data-theme="night"] .btn-outline { background: rgba(24, 34, 58, 0.70); border-color: #3a4d7d; color: #dbe4f5; }
+body[data-theme="night"] .btn-outline:hover { border-color: #8b5cf6; color: #fff; background: rgba(139, 92, 246, 0.22); }
+body[data-theme="night"] .btn-success { background: linear-gradient(135deg, #059669, #0d9488); }
+body[data-theme="night"] .btn-danger,
+body[data-theme="night"] .dropdown-item.danger { color: #fca5a5; }
+
+/* ── HEADER + NAV ── */
+body[data-theme="night"] header {
+  background: rgba(14, 21, 38, 0.90);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.40);
+}
+body[data-theme="night"][data-fx="normal"] header { backdrop-filter: blur(12px) saturate(1.3); }
+body[data-theme="night"] .mobile-bottom-nav {
+  background: rgba(14, 21, 38, 0.95);
+  border-top: 1px solid rgba(139, 92, 246, 0.40);
+}
+body[data-theme="night"] .nav-btn.active,
+body[data-theme="night"] .mobile-nav-item.active {
+  color: #22d3ee;
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.55);
+}
+/* Icon nút đổi nhanh: sáng hiện vầng trăng, đêm hiện mặt trời (đổi về sáng) */
+.theme-toggle .ico-to-light { display: none; }
+body[data-theme="night"] .theme-toggle .ico-to-night { display: none; }
+body[data-theme="night"] .theme-toggle .ico-to-light { display: block; }
+
+/* ── MODAL + DROPDOWN + BADGE HEADER ── */
+body[data-theme="night"] .modal-overlay { background: rgba(8, 14, 28, 0.70); }
+body[data-theme="night"][data-fx="normal"] .modal-overlay { backdrop-filter: blur(6px); }
+body[data-theme="night"] .modal-card {
+  background: linear-gradient(180deg, #1a2643, #15203a);
+  border: 1px solid rgba(139, 92, 246, 0.50);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.50), 0 0 0 1px rgba(56, 189, 248, 0.08);
+  color: var(--text-main);
+}
+body[data-theme="night"] .modal-header {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.34), rgba(56, 189, 248, 0.16));
+  border-bottom: 1px solid rgba(139, 92, 246, 0.45);
+  position: relative;
+}
+body[data-theme="night"] .modal-header::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, #38bdf8, rgba(56, 189, 248, 0.08) 65%, transparent);
+}
+body[data-theme="night"] .dropdown-menu {
+  background: rgba(20, 29, 50, 0.97);
+  border-color: rgba(139, 92, 246, 0.55);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+body[data-theme="night"] .dropdown-item { color: #dbe4f5; }
+body[data-theme="night"] .dropdown-item:hover { background: rgba(139, 92, 246, 0.24); color: #fff; }
+body[data-theme="night"] .dropdown-item.theme-active {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.32), rgba(56, 189, 248, 0.14));
+  border-left: 2px solid #38bdf8;
+  color: #fff;
+}
+.dropdown-label {
+  padding: 6px 14px 2px;
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--text-muted); font-weight: 700;
+}
+body[data-theme="night"] .sync-status-badge,
+body[data-theme="night"] .file-storage-status,
+body[data-theme="night"] .user-profile-pill {
+  background: rgba(20, 29, 50, 0.90);
+  border-color: rgba(139, 92, 246, 0.45);
+}
+
+/* ── Thanh cuộn ── */
+body[data-theme="night"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+body[data-theme="night"] ::-webkit-scrollbar-thumb { background: #33456e; border-radius: 8px; }
+body[data-theme="night"] ::-webkit-scrollbar-track { background: #131c2e; }
+
+/* ── KHUNG CẮT VÁT HUD (chỉ modal có class hud-frame — hiếm mới chất) ──
+   Kỹ thuật: element = LỚP VIỀN gradient neon + clip-path; ::after = mặt trong
+   (nền + lưới + 6 ngạnh góc cyan) cách mép 1px để lộ viền. Bóng đổ dùng
+   filter: drop-shadow để BÁM THEO HÌNH CẮT (box-shadow bị clip-path xén). */
+body[data-theme="night"] .hud-frame {
+  position: relative;
+  border: none !important;
+  border-radius: 0 !important;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.90), rgba(139, 92, 246, 0.85) 45%, rgba(56, 189, 248, 0.55));
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+  filter: drop-shadow(0 18px 44px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 22px rgba(56, 189, 248, 0.16));
+}
+body[data-theme="night"] .hud-frame::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: polygon(0 0, calc(100% - 17px) 0, 100% 17px, 100% 100%, 0 100%);
+  background-image:
+    linear-gradient(#38bdf8, #38bdf8), /* ngạnh góc trái-trên: ngang */
+    linear-gradient(#38bdf8, #38bdf8), /* trái-trên: dọc */
+    linear-gradient(#38bdf8, #38bdf8), /* trái-dưới: ngang */
+    linear-gradient(#38bdf8, #38bdf8), /* trái-dưới: dọc */
+    linear-gradient(#38bdf8, #38bdf8), /* phải-dưới: ngang */
+    linear-gradient(#38bdf8, #38bdf8), /* phải-dưới: dọc */
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px), /* lưới trong */
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, #1a2643, #15203a); /* mặt trong */
+  background-repeat: no-repeat;
+  background-size:
+    16px 2px, 2px 16px,
+    16px 2px, 2px 16px,
+    16px 2px, 2px 16px,
+    100% 100%, 100% 100%,
+    100% 100%;
+  background-position:
+    left 8px top 8px, left 8px top 8px,
+    left 8px bottom 8px, left 8px bottom 8px,
+    right 8px bottom 8px, right 8px bottom 8px,
+    0 0, 0 0,
+    0 0;
+}
+body[data-theme="night"] .hud-frame > * { position: relative; z-index: 1; }
+
+/* ── NAN BOT phiên bản đêm: bong bóng "hologram" cắt vát ── */
+body[data-theme="night"] .ai-fab-bubble {
+  background: linear-gradient(180deg, rgba(20, 29, 50, 0.97), rgba(15, 23, 40, 0.97));
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.18), 0 12px 28px rgba(0, 0, 0, 0.45);
+  color: #e6f1ff;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+body[data-theme="night"] .ai-fab-bubble::after { display: none; } /* đuôi tam giác nhường chỗ cho góc cắt */
+/* Dòng năng lượng: chỉ khi Nan Bot đang "suy nghĩ" — tự tắt khi xong */
+body[data-theme="night"] .ai-fab-bubble:has(.ai-fab-bubble-thinking.show) {
+  animation: aiEnergyPulse 1.2s ease-in-out infinite;
+}
+@keyframes aiEnergyPulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(56, 189, 248, 0.14), 0 12px 28px rgba(0, 0, 0, 0.45); }
+  50% { box-shadow: 0 0 36px rgba(56, 189, 248, 0.42), 0 12px 28px rgba(0, 0, 0, 0.45); }
+}
+
+/* ── KHUNG BIỂU ĐỒ "HUD TECH" (áp cho MỌI hộp canvas): CHỈ cắt góc
+   phải-trên, 3 góc vuông; gạch góc trái-trên màu VÀNG HỔ PHÁCH nổi bật
+   (tách khỏi tông cyan của viền); viền 4px phát sáng nhẹ; mặt trong xanh
+   lục bảo SÁNG. Giao diện SÁNG giữ nguyên 100%. ── */
+body[data-theme="night"] .press-chart-box,
+body[data-theme="night"] .custom-chart-canvas-box {
+  position: relative;
+  border: none;
+  border-radius: 0;
+  background: linear-gradient(135deg, #a5f3fc, #38bdf8 50%, #67e8f9);
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%); /* chỉ cắt phải-trên */
+  filter: drop-shadow(0 0 12px rgba(165, 243, 252, 0.45)) drop-shadow(0 0 30px rgba(56, 189, 248, 0.25));
+}
+body[data-theme="night"] .press-chart-box::before,
+body[data-theme="night"] .custom-chart-canvas-box::before {
+  content: '';
+  position: absolute;
+  inset: 4px; /* viền 4px dày */
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  background-image:
+    linear-gradient(135deg, #fef9c3, #f59e0b), /* gạch góc trái-trên: ngang — VÀNG nổi bật */
+    linear-gradient(135deg, #fef9c3, #f59e0b), /* trái-trên: dọc */
+    linear-gradient(rgba(125, 211, 252, 0.10) 1px, transparent 1px), /* lưới mờ */
+    linear-gradient(90deg, rgba(125, 211, 252, 0.10) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(20, 56, 86, 0.96), rgba(14, 42, 66, 0.96)); /* mặt trong SÁNG hơn trước */
+  background-repeat: no-repeat;
+  background-size:
+    16px 3px, 3px 16px,
+    100% 100%, 100% 100%,
+    100% 100%;
+  background-position:
+    left 3px top 3px, left 3px top 3px,
+    0 0, 0 0,
+    0 0;
+}
+/* Nâng canvas + các con trực tiếp lên trên mặt trong (::before);
+   Riêng sticker .pv-total-stamp đã tự định vị + z-index 5 — KHÔNG đụng tới */
+body[data-theme="night"] .press-chart-box > *:not(.pv-total-stamp),
+body[data-theme="night"] .custom-chart-canvas-box > * { position: relative; z-index: 1; }
+body[data-theme="night"][data-fx="low"] .press-chart-box,
+body[data-theme="night"][data-fx="low"] .custom-chart-canvas-box { filter: none; }
+
+/* ── KHUNG THẺ BIỂU ĐỒ (áp cho MỌI .press-chart-card): viền 3px cyan sáng,
+   CHỈ cắt góc phải-trên 26px, gạch góc trái-trên VÀNG HỔ PHÁCH dày 4px
+   (đã bỏ 2 gạch dưới vì chồng lấn), mặt trong xanh thép SÁNG — tương phản
+   với mặt hộp đậm hơn bên trong. ── */
+body[data-theme="night"] .press-chart-card {
+  position: relative;
+  border: none;
+  border-radius: 0;
+  background: linear-gradient(135deg, #a5f3fc, #38bdf8 45%, #67e8f9);
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%); /* chỉ cắt phải-trên */
+  filter: drop-shadow(0 0 14px rgba(165, 243, 252, 0.40)) drop-shadow(0 0 40px rgba(56, 189, 248, 0.22)) drop-shadow(0 14px 30px rgba(0, 0, 0, 0.40));
+}
+body[data-theme="night"] .press-chart-card::before {
+  content: '';
+  position: absolute;
+  inset: 3px; /* viền 3px */
+  clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+  background-image:
+    linear-gradient(135deg, #fef9c3, #f59e0b), /* gạch góc trái-trên: ngang — VÀNG nổi bật */
+    linear-gradient(135deg, #fef9c3, #f59e0b), /* trái-trên: dọc */
+    linear-gradient(rgba(125, 211, 252, 0.08) 1px, transparent 1px), /* lưới mờ */
+    linear-gradient(90deg, rgba(125, 211, 252, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(44, 102, 148, 0.97), rgba(32, 84, 126, 0.97)); /* mặt trong SÁNG hơn */
+  background-repeat: no-repeat;
+  background-size:
+    26px 4px, 4px 26px,
+    100% 100%, 100% 100%,
+    100% 100%;
+  background-position:
+    left 3px top 3px, left 3px top 3px,
+    0 0, 0 0,
+    0 0;
+}
+body[data-theme="night"] .press-chart-card > * { position: relative; z-index: 1; }
+
+/* ── GIẢM HIỆU ỨNG (máy yếu): tắt kính mờ + animation, GIỮ màu theme ── */
+body[data-theme="night"][data-fx="low"] * { backdrop-filter: none !important; }
+body[data-theme="night"][data-fx="low"] .hud-frame { filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45)); }
+body[data-theme="night"][data-fx="low"] .modal-card,
+body[data-theme="night"][data-fx="low"] .ai-fab-bubble.show,
+body[data-theme="night"][data-fx="low"] .dropdown-menu { animation: none !important; }
+body[data-theme="night"][data-fx="low"] .ai-fab-bubble:has(.ai-fab-bubble-thinking.show) { animation: none !important; }
+
+/* ── IN ẤN: theme đêm phải ra giấy trắng chữ đen ── */
+@media print {
+  body[data-theme="night"] { background: #fff !important; color: #000 !important; }
+  body[data-theme="night"]::before { display: none !important; }
+}
+
 
 

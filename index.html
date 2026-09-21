@@ -115,6 +115,12 @@
           <span class="role-tag" id="current-user-role">ADMIN</span>
         </div>
 
+        <!-- Đổi nhanh giao diện Sáng / Đêm Kính (js/theme.js) — icon đổi theo theme -->
+        <button class="btn btn-outline btn-icon theme-toggle" id="btn-theme-toggle" title="Đổi nhanh giao diện Sáng / Đêm Kính (Sci-Fi)">
+          <i data-lucide="moon" class="ico-to-night"></i>
+          <i data-lucide="sun" class="ico-to-light"></i>
+        </button>
+
         <div class="more-options-dropdown">
           <button class="btn btn-outline btn-icon" id="btn-more-menu" title="Tùy chọn khác">
             <i data-lucide="more-vertical"></i>
@@ -152,6 +158,20 @@
               <i data-lucide="upload"></i> Phục Hồi Dữ Liệu (JSON)
             </button>
             <input type="file" id="file-import-json" accept=".json" style="display: none;">
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-label">Giao diện</div>
+            <button class="dropdown-item" id="btn-theme-light" title="Giao diện sáng hiện tại — mặc định cho xưởng, không đổi gì">
+              <i data-lucide="sun" style="color:#d97706;"></i> Sáng (Xưởng)
+            </button>
+            <button class="dropdown-item" id="btn-theme-night" title="Nền tối xanh than + kính + viền cắt góc HUD — chất khoa học viễn tưởng">
+              <i data-lucide="moon-star" style="color:#7c3aed;"></i> Đêm Kính (Sci-Fi)
+            </button>
+            <button class="dropdown-item" id="btn-theme-auto" title="Sáng ban ngày, tối tự chuyển theo hệ điều hành máy">
+              <i data-lucide="sparkles" style="color:#0284c7;"></i> Tự Động Theo Máy
+            </button>
+            <button class="dropdown-item" id="btn-fx-low" title="Tắt kính mờ + animation để máy yếu chạy mượt (giữ nguyên màu theme)">
+              <i data-lucide="gauge" style="color:#64748b;"></i> Giảm Hiệu Ứng (Máy Yếu)
+            </button>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item" id="btn-logout" style="color: var(--danger);">
               <i data-lucide="log-out"></i> Đăng Xuất
@@ -879,7 +899,7 @@
       <!-- BIỂU ĐỒ TĨNH: KẾ HOẠCH vs ĐÃ ÉP (theo sản phẩm)         -->
       <!-- Gộp 2 nguồn dữ liệu — biểu đồ tùy chỉnh không làm được  -->
       <!-- ======================================================= -->
-      <div class="planning-card press-chart-card pv-card">
+      <div class="planning-card press-chart-card pv-card" id="plan-vs-press-card">
         <div class="planning-card-header">
           <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Đã Ép (Theo Sản Phẩm)</h4>
           <div class="pv-toolbar">
@@ -2804,7 +2824,7 @@
        Đi làm vào ngày nghỉ/lễ thì toàn bộ giờ làm trong ngày được tính vào TĂNG CA
        (hrSplitHoursHCDate) và hiển thị trong Bảng Chấm Công Theo Tháng. -->
   <div class="modal-overlay" id="modal-hr-calendar">
-    <div class="modal-card modal-sm">
+    <div class="modal-card modal-sm hud-frame">
       <div class="modal-header">
         <h3><i data-lucide="calendar-range"></i> Lịch Làm Việc — <span id="hr-calendar-month-label"></span></h3>
         <button class="modal-close-btn" id="btn-close-hr-calendar"><i data-lucide="x"></i></button>
@@ -3122,7 +3142,7 @@
 
   <!-- MODAL 1: ADD / EDIT BATCH -->
   <div class="modal-overlay" id="modal-batch-form">
-    <div class="modal-card">
+    <div class="modal-card hud-frame">
       <div class="modal-header">
         <h3 id="modal-form-title"><i data-lucide="plus-circle"></i> Thêm Lô Nan Tre Mới</h3>
         <button class="modal-close-btn" id="btn-close-form"><i data-lucide="x"></i></button>
@@ -3271,7 +3291,7 @@
 
   <!-- MODAL 2: TRANSFER STAGE (ĐIỀU CHUYỂN CÔNG ĐOẠN) -->
   <div class="modal-overlay" id="modal-transfer">
-    <div class="modal-card modal-sm">
+    <div class="modal-card modal-sm hud-frame">
       <div class="modal-header">
         <h3><i data-lucide="arrow-right-left"></i> Điều Chuyển Công Đoạn</h3>
         <button class="modal-close-btn" id="btn-close-transfer"><i data-lucide="x"></i></button>
@@ -3572,7 +3592,7 @@
 
   <!-- MODAL 6: CUSTOM EXPORT EXCEL MODAL (.xlsx) -->
   <div class="modal-overlay" id="modal-custom-export">
-    <div class="modal-card modal-sm">
+    <div class="modal-card modal-sm hud-frame">
       <div class="modal-header">
         <h3><i data-lucide="file-spreadsheet"></i> Xuất Nhật Ký Than Hóa (.xlsx)</h3>
         <button class="modal-close-btn" id="btn-close-export-modal"><i data-lucide="x"></i></button>
@@ -3964,7 +3984,7 @@
 
   <!-- MODAL: LỊCH SỬ SỬA ĐỔI (ADMIN ONLY) — ai đã sửa gì, ở tab nào, lúc nào -->
   <div class="modal-overlay" id="modal-history">
-    <div class="modal-card modal-history-card">
+    <div class="modal-card modal-history-card hud-frame">
       <div class="modal-header">
         <h3 id="history-modal-title"><i data-lucide="history"></i> Lịch Sử Thay Đổi</h3>
         <button type="button" class="modal-close-btn" id="btn-close-history" title="Đóng"><i data-lucide="x"></i></button>
@@ -4271,14 +4291,22 @@
        Nhắc việc: tự tính từ dữ liệu app (offline, không cần key).
        Phân tích: gộp số liệu then chốt gửi Gemini (cần internet + API key —
        key nhập qua modal, lưu cục bộ từng máy, không lên mây/GitHub). -->
-  <button type="button" class="ai-fab" id="btn-open-ai" title="Trợ lý AI — nhắc việc &amp; phân tích số liệu">
+  <button type="button" class="ai-fab" id="btn-open-ai" title="Trợ lý AI — nhắc việc &amp; phân tích số liệu (giữ + kéo để di chuyển nút)">
     <i data-lucide="sparkles"></i>
   </button>
+  <!-- Bong bóng gợi ý tự động "Nan Bot" (đặt/xóa vị trí bằng JS, bám nút AI) -->
+  <div class="ai-fab-bubble" id="ai-fab-bubble" role="status">
+    <div class="ai-fab-bubble-text" id="ai-fab-bubble-text"></div>
+    <div class="ai-fab-bubble-foot">
+      <span class="ai-fab-bubble-thinking" id="ai-fab-bubble-thinking"><i></i><i></i><i></i></span>
+      <button type="button" class="ai-fab-bubble-close" id="btn-ai-bubble-close" title="Ẩn gợi ý này">✕</button>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="modal-ai">
-    <div class="modal-card modal-ai-card">
+    <div class="modal-card modal-ai-card hud-frame">
       <div class="modal-header">
-        <h3><i data-lucide="sparkles"></i> Trợ Lý AI — Nhắc Việc &amp; Phân Tích</h3>
+        <h3><i data-lucide="sparkles"></i> Trợ Lý AI — Nhắc Việc &amp; Hỏi Đáp Số Liệu</h3>
         <button class="modal-close-btn" id="btn-close-ai"><i data-lucide="x"></i></button>
       </div>
       <div class="ai-body">
@@ -4314,13 +4342,28 @@
             </select>
             <div style="font-size:0.68rem; color:var(--text-muted);">Google không mở model 2.x trở xuống cho key mới.</div>
           </div>
-          <div id="ai-output" class="ai-output">Bấm "Phân Tích Bằng AI" để nhận nhận xét &amp; gợi ý việc cần làm từ Gemini.</div>
+          <div class="ai-autogreet-row">
+            <label for="ai-autogreet-toggle"><input type="checkbox" id="ai-autogreet-toggle" checked> Gợi ý tự động vui nhộn khi chuyển tab (bong bóng cạnh nút AI)</label>
+            <span class="ai-autogreet-note">Câu nhanh: tự tính offline — miễn phí, không cần mạng. Câu "Nan Bot" qua Gemini: tối đa 20 lượt/ngày khi có key (giới hạn để không hết hạn mức miễn phí).</span>
+          </div>
+          <div class="ai-question-row">
+            <textarea id="ai-question" rows="2" placeholder="Gõ yêu cầu cho AI… VD: “Kế hoạch tuần này ổn chưa? Cần ép thêm bao nhiêu tấm?” — hỏi được mọi tab (Kế Hoạch, Ép Ván, Nguyên Liệu, QC, Nhân Sự, lô nan…). Để trống = phân tích tổng quát toàn nhà máy. (Ctrl+Enter để chạy nhanh)"></textarea>
+            <div class="ai-quick-chips" id="ai-quick-chips">
+              <button type="button" class="ai-quick-chip" data-ai-q="Tóm tắt tình hình sản xuất hôm nay của toàn nhà máy và gợi ý việc cần làm ngay.">Tổng Quan</button>
+              <button type="button" class="ai-quick-chip" data-ai-q="Phân tích kế hoạch sản xuất tuần này: đã ép được bao nhiêu so với kế hoạch, còn thiếu bao nhiêu, cần làm gì?">Kế Hoạch tuần này</button>
+              <button type="button" class="ai-quick-chip" data-ai-q="Đánh giá nguyên liệu đầu vào 7 ngày qua và tháng này: có đủ để chạy ép không, cần nhập thêm không?">Nguyên Liệu</button>
+              <button type="button" class="ai-quick-chip" data-ai-q="Lô nan nào đang chậm tiến độ? Nguyên nhân có thể là gì và cách xử lý?">Lô Nan chậm</button>
+              <button type="button" class="ai-quick-chip" data-ai-q="So sánh sản lượng ép ván với số xuất hàng QC tuần này: tỷ lệ đạt bao nhiêu phần trăm, có đáng lo gì không?">Ép &amp; QC</button>
+              <button type="button" class="ai-quick-chip" data-ai-q="Nhân sự hôm nay: đi làm, vắng mặt, đơn chờ duyệt — có vấn đề gì cần xử lý không?">Nhân Sự</button>
+            </div>
+          </div>
+          <div id="ai-output" class="ai-output">Bấm "Phân Tích Bằng AI" hoặc gõ/chọn câu hỏi phía trên để nhận nhận xét &amp; gợi ý từ Gemini.</div>
         </div>
       </div>
       <div class="modal-footer" style="padding-left:20px; padding-right:20px; padding-bottom:16px;">
         <button type="button" class="btn btn-outline btn-sm" id="btn-ai-key-toggle" title="Xóa key đã lưu để nhập key khác"><i data-lucide="key-round"></i> Đổi Key</button>
         <button type="button" class="btn btn-outline btn-sm" id="btn-ai-copy" title="Chép kết quả AI"><i data-lucide="copy"></i> Chép</button>
-        <button type="button" class="btn btn-success" id="btn-ai-run" title="Gửi số liệu then chốt cho Gemini để phân tích (cần internet + API key)"><i data-lucide="sparkles"></i> Phân Tích Bằng AI</button>
+        <button type="button" class="btn btn-success" id="btn-ai-run" title="Gửi số liệu + yêu cầu của bạn cho Gemini (cần internet + API key — Ctrl+Enter trong ô hỏi cũng chạy)"><i data-lucide="sparkles"></i> Phân Tích Bằng AI</button>
       </div>
     </div>
   </div>

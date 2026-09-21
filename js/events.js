@@ -8,7 +8,7 @@ import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
 import { closeHistoryModal, openHistoryModal, setHistoryTabFilter, setHistoryUserFilter, clearHistory } from './history.js';
-import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey, aiSetModel, runAiAnalysis } from './ai.js';
+import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey, aiSetModel, runAiAnalysis, initAiFabDrag, aiFabDragConsumed, aiQuickAsk, aiHideBubble, aiSetAutoGreet } from './ai.js';
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
@@ -19,6 +19,7 @@ import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupp
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
+import { setTheme, getThemeChoice, toggleThemeQuick, setFxLow, getFxLow, applyThemeForUser } from './theme.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -163,6 +164,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         state.currentUser = user;
         saveSession();
         applyRoleToUI(user.role); // phân quyền đã dồn về js/permissions.js
+        applyThemeForUser(user.username); // áp giao diện người này đã chọn (nếu có)
         checkAuthAndRender();
         showToast(`Xin chào ${user.fullname || user.username}!`, 'success');
       } else {
@@ -340,10 +342,67 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       });
     }
 
-    // ── Trợ lý AI (Google Gemini miễn phí) — nút nổi góc phải ──
-    safeOn('btn-open-ai', 'click', openAiAssistant);
+    // ── Trợ lý AI (Google Gemini miễn phí) — nút nổi KÉO ĐƯỢC góc màn hình ──
+    initAiFabDrag(); // gắn giữ + rê để di chuyển nút (chỉ gắn 1 lần, nhớ vị trí cục bộ)
+    safeOn('btn-open-ai', 'click', (e) => {
+      if (aiFabDragConsumed()) return; // vừa kéo nút xong — cú click sinh ra từ kéo → bỏ qua
+      openAiAssistant();
+    });
     safeOn('btn-close-ai', 'click', closeAiAssistant);
     safeOn('btn-ai-run', 'click', runAiAnalysis);
+    // Ô hỏi AI tự do: Ctrl+Enter (hoặc Cmd+Enter) cũng chạy phân tích
+    safeOn('ai-question', 'keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        runAiAnalysis();
+      }
+    });
+    // Chip hỏi nhanh theo tab/nội dung — bấm là điền câu hỏi và chạy luôn
+    const aiChipsBox = document.getElementById('ai-quick-chips');
+    if (aiChipsBox) aiChipsBox.addEventListener('click', (e) => {
+      const chip = e.target && e.target.closest ? e.target.closest('[data-ai-q]') : null;
+      if (chip) aiQuickAsk(chip.getAttribute('data-ai-q'));
+    });
+    // Bong bóng gợi ý tự động "Nan Bot": bấm vào nội dung mở modal AI, nút ✕ chỉ đóng
+    safeOn('btn-ai-bubble-close', 'click', aiHideBubble);
+    safeOn('ai-fab-bubble', 'click', (e) => {
+      if (e.target && e.target.closest && e.target.closest('#btn-ai-bubble-close')) return;
+      openAiAssistant();
+    });
+    // Công tắc gợi ý tự động trong modal (lưu localStorage từng máy)
+    safeOn('ai-autogreet-toggle', 'change', (e) => aiSetAutoGreet(e.target.checked));
+
+    // ── Bộ chọn giao diện (Sáng / Đêm Kính Sci-Fi) — js/theme.js ──
+    function syncThemeMenuUi() {
+      const pick = getThemeChoice();
+      ['light', 'night', 'auto'].forEach((t) => {
+        const b = document.getElementById('btn-theme-' + t);
+        if (b) b.classList.toggle('theme-active', pick === t);
+      });
+      const fx = document.getElementById('btn-fx-low');
+      if (fx) fx.classList.toggle('theme-active', getFxLow());
+    }
+    const applyThemeAndRender = (choice, label) => {
+      setTheme(choice);
+      syncThemeMenuUi();
+      renderAll(); // vẽ lại biểu đồ với màu trục/lưới theo theme mới
+      showToast(label, 'success');
+    };
+    safeOn('btn-theme-light', 'click', () => applyThemeAndRender('light', 'Đã chuyển giao diện SÁNG (xưởng) ☀️'));
+    safeOn('btn-theme-night', 'click', () => applyThemeAndRender('night', 'Đã chuyển giao diện ĐÊM KÍNH (Sci-Fi) 🌌'));
+    safeOn('btn-theme-auto', 'click', () => applyThemeAndRender('auto', 'Giao diện sẽ TỰ ĐỘNG theo sáng/tối của máy.'));
+    safeOn('btn-theme-toggle', 'click', () => {
+      const now = toggleThemeQuick();
+      syncThemeMenuUi();
+      renderAll();
+      showToast(now === 'night' ? 'Đã bật ĐÊM KÍNH (Sci-Fi) 🌌' : 'Đã về giao diện SÁNG ☀️', 'success');
+    });
+    safeOn('btn-fx-low', 'click', () => {
+      setFxLow(!getFxLow());
+      syncThemeMenuUi();
+      showToast(getFxLow() ? 'Đã GIẢM hiệu ứng — máy yếu chạy mượt hơn.' : 'Đã bật lại đầy đủ hiệu ứng kính.', 'info');
+    });
+    syncThemeMenuUi();
     safeOn('btn-ai-copy', 'click', copyAiResult);
     safeOn('btn-ai-save-key', 'click', aiSaveKey);
     safeOn('btn-ai-key-toggle', 'click', aiToggleKey);

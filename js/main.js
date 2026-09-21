@@ -3,6 +3,8 @@
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
 import { deleteBatch, openBatchFormModal, openTransferModal } from './batch-modals.js';
+import { aiAutoGreet } from './ai.js';
+import { initTheme } from './theme.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
@@ -29,6 +31,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     initLucide();
     loadUsers();
     loadSession();
+    initTheme(); // Áp giao diện đã chọn (theo máy + theo người đăng nhập) — trước khi vẽ biểu đồ
     loadData();
     loadDeletedIds(); // dấu vết xóa (tombstone) cho đồng bộ mây — nạp trước mọi thao tác
     loadAutoBackups(); // bản cất tự động (auto backup cục bộ) — js/autobackup.js
@@ -67,6 +70,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     updateUndoButton();
     updateFileStorageUI();
     checkAuthAndRender();
+    // "Nan Bot" chào mở màn khi vừa vào app (tự kiểm tra: chỉ chào khi đã đăng nhập)
+    try { aiAutoGreet('dashboard-view'); } catch (e) { /* bỏ qua */ }
     // Tự động kết nối lại thư mục dữ liệu đã chọn trước đó
     autoReconnectDataFolder();
     // Đăng ký Service Worker để hoạt động OFFLINE (PWA)
@@ -118,6 +123,9 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     if (targetViewId === 'materials-view') renderMaterialView();
     if (targetViewId === 'qc-view') renderQcView();
     if (targetViewId === 'hr-view') renderHrView();
+    // "Nan Bot" chào + nhắc nhanh theo tab vừa mở (tầng offline hiện ngay,
+    // tầng AI lầy hơn sẽ tự thay câu khi có key + mạng + còn quota)
+    try { aiAutoGreet(targetViewId); } catch (e) { /* lỗi gợi ý tự động — bỏ qua */ }
   }
 
   function filterMobileKanbanColumns() {

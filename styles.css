@@ -2487,6 +2487,24 @@ body.chart-expanded-open { overflow: hidden; }
   color: var(--danger);
 }
 
+/* ═══ Danh sách "Kế Hoạch Sản Xuất Năm …": khung cuộn dọc gọn gàng ═══ */
+/* Thẻ tuần tăng dần theo thời gian — giới hạn chiều cao khung, cuộn trong khung thay
+   vì kéo dài cả trang; tiêu đề năm + tổng ghim trên khi cuộn. */
+.planning-list-section {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  overflow-x: auto;
+}
+.planning-list-section .planning-list-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  /* Phủ kín 2 mép ngang + vùng đệm trên; đệm đáy nền đục để thẻ tuần trượt qua không lộ */
+  margin: -12px -18px 0;
+  padding: 12px 18px 10px;
+}
+
 /* Danh sách kế hoạch sản phẩm dưới bảng matrix */
 /* Ghi chú hướng dẫn ma trận: mặc định ẩn, @media bên dưới bật cho điện thoại */
 .matrix-note {
@@ -3207,11 +3225,21 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
 
 /* ======================================================= */
 /* CHỌN NHIỀU LÔ ĐỂ CHUYỂN CÙNG LÚC                        */
+/* (thanh công cụ Kanban nay nằm trong thẻ "Than Hóa + Sấy" */
+/*  — chứa nút Thêm Lô Nan + Chọn nhiều lô)                */
 /* ======================================================= */
 .kanban-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 0 4px 10px;
+}
+
+/* Nút Thêm Lô Nan + Chọn nhiều lô (trong thanh công cụ) */
+.kanban-toolbar .btn-primary {
+  min-height: 42px;
+  font-weight: 700;
 }
 
 #btn-multi-transfer.active {
@@ -3279,14 +3307,16 @@ body.multi-select .card-actions {
   display: none !important;
 }
 
-/* Thanh hành động nổi dưới màn hình */
+/* Thanh hành động nổi dưới màn hình — z-index 10100 > 10000 (pop-up chi tiết
+   vị trí Xưởng 2 .modal-overlay.show) vì nút "Chọn nhiều lô" giờ nằm TRONG
+   pop-up: đang bật chế độ chọn thì thanh này phải nổi TRÊN nền mờ pop-up */
 .multi-transfer-bar {
   display: none;
   position: fixed;
   left: 50%;
   bottom: 18px;
   transform: translateX(-50%);
-  z-index: 160;
+  z-index: 10100;
   width: min(720px, calc(100% - 24px));
   flex-wrap: wrap;
   gap: 10px;
@@ -3415,9 +3445,11 @@ body.multi-select .card-actions {
     margin-bottom: 10px;
   }
 
-  /* ── Kanban ── */
+  /* ── Kanban (thanh công cụ nay nằm trong thẻ "Than Hóa + Sấy") ── */
   .kanban-toolbar { padding: 0 0 10px; }
+  .kanban-toolbar .btn-primary,
   #btn-multi-transfer {
+    flex: 1 1 100%;
     width: 100%;
     justify-content: center;
     min-height: 42px;

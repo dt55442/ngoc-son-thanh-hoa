@@ -1,4 +1,0 @@
-[FB] SKIP - chế độ OFFLINE
-BOOT OK - exports: 66
-OK   undoLastAction
-KẾT QUẢ: 57 pass, 0 fail

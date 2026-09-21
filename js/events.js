@@ -1080,14 +1080,21 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       t.addEventListener('click', () => x2OpenCard(t.getAttribute('data-x2-card')));
     });
     // Đóng pop-up: nút Đóng / bấm nền mờ / phím Esc
-    safeOn('btn-close-x2-detail', 'click', x2CloseOpenCard);
+    // (đang bật "Chọn nhiều lô để chuyển" thì tự THOÁT chế độ chọn trước —
+    //  nút này nằm trong pop-up, đóng pop-up mà giữ chế độ chọn sẽ kẹt
+    //  thanh nổi "Đã chọn N lô" trên nền mờ không có nút thoát)
+    const exitMultiIfActive = () => {
+      if (state.multiTransferMode) exitMultiTransferMode();
+      x2CloseOpenCard();
+    };
+    safeOn('btn-close-x2-detail', 'click', exitMultiIfActive);
     const x2Overlay = document.getElementById('x2-detail-overlay');
     if (x2Overlay) {
-      x2Overlay.addEventListener('click', (e) => { if (e.target === x2Overlay) x2CloseOpenCard(); });
-      x2Overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') x2CloseOpenCard(); });
+      x2Overlay.addEventListener('click', (e) => { if (e.target === x2Overlay) exitMultiIfActive(); });
+      x2Overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitMultiIfActive(); });
     }
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.getElementById('x2-detail-overlay')?.classList.contains('show')) x2CloseOpenCard();
+      if (e.key === 'Escape' && document.getElementById('x2-detail-overlay')?.classList.contains('show')) exitMultiIfActive();
     });
     // Đổi kích thước cửa sổ → đặt lại đỉnh pop-up đúng dưới header
     window.addEventListener('resize', () => {

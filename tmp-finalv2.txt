@@ -1,2 +1,0 @@
-BOOT OK - exports: 66
-KẾT QUẢ: 58 pass, 0 fail

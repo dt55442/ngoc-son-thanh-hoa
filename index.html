@@ -200,14 +200,15 @@
     <!-- 1. KANBAN BOARD VIEW -->
     <section id="kanban-view" class="view-panel">
 
-      <!-- Header Bar: nút Thêm Lô Nan & Xuất Excel thuộc RIÊNG tab Công Đoạn -->
+      <!-- Header Bar: Lịch Sử & Xuất Excel thuộc RIÊNG tab Công Đoạn
+           (nút Thêm Lô Nan + Chọn nhiều lô đã chuyển vào thẻ "Than Hóa + Sấy") -->
       <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
         <div>
           <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
             <i data-lucide="layout-grid"></i> Công Đoạn Sản Xuất
           </h3>
           <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Theo dõi lô nan tre theo các công đoạn: Sấy 1 → Sấy 2 → Kho Lưu Trữ → Bào Tinh.
+            Bảng Kanban lô nan nằm trong thẻ "Than Hóa + Sấy" — bấm thẻ để mở (Sấy 1 → Sấy 2 → Kho Lưu Trữ → Bào Tinh).
           </p>
         </div>
         <div style="display:flex; gap:8px;">
@@ -216,9 +217,6 @@
           </button>
           <button class="btn btn-success" id="btn-open-export-modal" title="Xuất file Excel tùy chỉnh">
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
-          </button>
-          <button class="btn btn-primary" id="btn-add-batch" data-perm="kanban">
-            <i data-lucide="plus-circle"></i> <span class="hide-mobile">Thêm Lô Nan</span>
           </button>
         </div>
       </div>
@@ -271,10 +269,10 @@
             <span class="x2-mini-desc">Chọn nan thô đạt trước khi vào lò</span>
             <span class="x2-mini-count" id="x2-mini-count-chon-nan-tho">–</span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-than-hoa-card" aria-expanded="false" title="Than Hóa + Sấy — mẻ than hóa và lô sấy nan thô (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-than-hoa-card" aria-expanded="false" title="Than Hóa + Sấy — Bảng Kanban theo dõi lô nan tre: Sấy 1 → Sấy 2 → Kho Lưu Trữ → Bào Tinh (thêm lô, chuyển lô, chọn nhiều lô)">
             <span class="x2-mini-ic"><i data-lucide="flame"></i></span>
             <span class="x2-mini-title">Than Hóa + Sấy</span>
-            <span class="x2-mini-desc">Than hóa + sấy nan thô</span>
+            <span class="x2-mini-desc">Bảng Kanban lô nan theo công đoạn</span>
             <span class="x2-mini-count" id="x2-mini-count-than-hoa">–</span>
           </button>
           <button type="button" class="x2-mini-card" data-x2-card="x2-bao-tinh-card" aria-expanded="false" title="Bào Tinh — bào tinh nan thành phẩm (chức năng đang bổ sung)">
@@ -381,270 +379,6 @@
           </div>
         </div>
       </section>
-
-      <!-- Mobile Stage Tabs Selector — điện thoại mặc định xem 1 công đoạn, vuốt ngang để chuyển -->
-      <div class="mobile-stage-tabs">
-        <button class="stage-tab" data-stage="all">Tất cả</button>
-        <button class="stage-tab active" data-stage="say1">Sấy 1 <span class="badge-count" id="badge-say1">0</span></button>
-        <button class="stage-tab" data-stage="say2">Sấy 2 <span class="badge-count" id="badge-say2">0</span></button>
-        <button class="stage-tab" data-stage="kho">Kho <span class="badge-count" id="badge-kho">0</span></button>
-        <button class="stage-tab" data-stage="bao_tinh">Bào tinh <span class="badge-count" id="badge-bao-tinh">0</span></button>
-      </div>
-      <p class="stage-swipe-hint"><i data-lucide="move-horizontal"></i> Vuốt ngang trên bảng để chuyển công đoạn</p>
-
-      <!-- Bộ lọc Ngày / Vị trí / Kích thước nan nằm trên từng cột Kanban -->
-
-      <!-- Thanh công cụ Kanban -->
-      <div class="kanban-toolbar">
-        <button class="btn btn-outline btn-sm" id="btn-multi-transfer" data-perm="kanban">
-          <i data-lucide="list-checks"></i> Chọn nhiều lô để chuyển
-        </button>
-      </div>
-
-      <!-- Kanban Columns Container -->
-      <div class="kanban-board">
-        
-        <!-- Column 1: Sấy 1 -->
-        <div class="kanban-column" data-stage-col="say1">
-          <div class="column-filter-bar">
-            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('say1')">
-              <i data-lucide="filter"></i> Lọc Cột
-              <span class="column-filter-count" id="col-filter-count-say1"></span>
-            </button>
-            <div class="column-search-wrap">
-              <i data-lucide="search" class="column-search-icon"></i>
-              <input type="text" class="column-search-input" id="col-search-say1" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
-                     onfocus="app.onColumnSearchFocus('say1')" oninput="app.onColumnSearchInput('say1', this.value)"
-                     onkeydown="app.onColumnSearchKeydown(event, 'say1')">
-              <button type="button" class="column-search-clear hidden" id="col-search-clear-say1" onclick="app.clearColumnSearch('say1')" title="Xóa từ khóa tìm kiếm">
-                <i data-lucide="x"></i>
-              </button>
-            </div>
-            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-say1">
-              <div class="column-filter-sections">
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
-                  <div class="filter-options" id="col-filter-dates-say1"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
-                  <div class="filter-options" id="col-filter-locations-say1"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
-                  <div class="filter-options" id="col-filter-dims-say1"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
-                  <div class="filter-options" id="col-filter-qtys-say1"></div>
-                </div>
-              </div>
-              <div class="column-filter-actions">
-                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('say1')">
-                  <i data-lucide="x"></i> Xóa Lọc Cột
-                </button>
-                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('say1')">
-                  <i data-lucide="check"></i> OK
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="column-header stage-say1">
-            <div class="header-title">
-              <span class="stage-dot say1"></span>
-              <h3>1. Sấy 1</h3>
-              <span class="count-badge" id="count-say1">0</span>
-            </div>
-            <div class="column-metrics">
-              <span id="vol-say1">0.000 m³</span> • <span id="qty-say1">0 thanh</span>
-            </div>
-          </div>
-          <div class="column-cards-wrapper" id="cards-say1">
-            <!-- Cards populated dynamically -->
-          </div>
-        </div>
-
-        <!-- Column 2: Sấy 2 -->
-        <div class="kanban-column" data-stage-col="say2">
-          <div class="column-filter-bar">
-            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('say2')">
-              <i data-lucide="filter"></i> Lọc Cột
-              <span class="column-filter-count" id="col-filter-count-say2"></span>
-            </button>
-            <div class="column-search-wrap">
-              <i data-lucide="search" class="column-search-icon"></i>
-              <input type="text" class="column-search-input" id="col-search-say2" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
-                     onfocus="app.onColumnSearchFocus('say2')" oninput="app.onColumnSearchInput('say2', this.value)"
-                     onkeydown="app.onColumnSearchKeydown(event, 'say2')">
-              <button type="button" class="column-search-clear hidden" id="col-search-clear-say2" onclick="app.clearColumnSearch('say2')" title="Xóa từ khóa tìm kiếm">
-                <i data-lucide="x"></i>
-              </button>
-            </div>
-            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-say2">
-              <div class="column-filter-sections">
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
-                  <div class="filter-options" id="col-filter-dates-say2"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
-                  <div class="filter-options" id="col-filter-locations-say2"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
-                  <div class="filter-options" id="col-filter-dims-say2"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
-                  <div class="filter-options" id="col-filter-qtys-say2"></div>
-                </div>
-              </div>
-              <div class="column-filter-actions">
-                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('say2')">
-                  <i data-lucide="x"></i> Xóa Lọc Cột
-                </button>
-                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('say2')">
-                  <i data-lucide="check"></i> OK
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="column-header stage-say2">
-            <div class="header-title">
-              <span class="stage-dot say2"></span>
-              <h3>2. Sấy 2</h3>
-              <span class="count-badge" id="count-say2">0</span>
-            </div>
-            <div class="column-metrics">
-              <span id="vol-say2">0.000 m³</span> • <span id="qty-say2">0 thanh</span>
-            </div>
-          </div>
-          <div class="column-cards-wrapper" id="cards-say2">
-            <!-- Cards populated dynamically -->
-          </div>
-        </div>
-
-        <!-- Column 3: Kho -->
-        <div class="kanban-column" data-stage-col="kho">
-          <div class="column-filter-bar">
-            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('kho')">
-              <i data-lucide="filter"></i> Lọc Cột
-              <span class="column-filter-count" id="col-filter-count-kho"></span>
-            </button>
-            <div class="column-search-wrap">
-              <i data-lucide="search" class="column-search-icon"></i>
-              <input type="text" class="column-search-input" id="col-search-kho" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
-                     onfocus="app.onColumnSearchFocus('kho')" oninput="app.onColumnSearchInput('kho', this.value)"
-                     onkeydown="app.onColumnSearchKeydown(event, 'kho')">
-              <button type="button" class="column-search-clear hidden" id="col-search-clear-kho" onclick="app.clearColumnSearch('kho')" title="Xóa từ khóa tìm kiếm">
-                <i data-lucide="x"></i>
-              </button>
-            </div>
-            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-kho">
-              <div class="column-filter-sections">
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
-                  <div class="filter-options" id="col-filter-dates-kho"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
-                  <div class="filter-options" id="col-filter-locations-kho"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
-                  <div class="filter-options" id="col-filter-dims-kho"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
-                  <div class="filter-options" id="col-filter-qtys-kho"></div>
-                </div>
-              </div>
-              <div class="column-filter-actions">
-                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('kho')">
-                  <i data-lucide="x"></i> Xóa Lọc Cột
-                </button>
-                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('kho')">
-                  <i data-lucide="check"></i> OK
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="column-header stage-kho">
-            <div class="header-title">
-              <span class="stage-dot kho"></span>
-              <h3>3. Kho Lưu Trữ</h3>
-              <span class="count-badge" id="count-kho">0</span>
-            </div>
-            <div class="column-metrics">
-              <span id="vol-kho">0.000 m³</span> • <span id="qty-kho">0 thanh</span>
-            </div>
-          </div>
-          <div class="column-cards-wrapper" id="cards-kho">
-            <!-- Cards populated dynamically -->
-          </div>
-        </div>
-
-        <!-- Column 4: Bào Tinh -->
-        <div class="kanban-column" data-stage-col="bao_tinh">
-          <div class="column-filter-bar">
-            <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('bao_tinh')">
-              <i data-lucide="filter"></i> Lọc Cột
-              <span class="column-filter-count" id="col-filter-count-bao-tinh"></span>
-            </button>
-            <div class="column-search-wrap">
-              <i data-lucide="search" class="column-search-icon"></i>
-              <input type="text" class="column-search-input" id="col-search-bao_tinh" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
-                     onfocus="app.onColumnSearchFocus('bao_tinh')" oninput="app.onColumnSearchInput('bao_tinh', this.value)"
-                     onkeydown="app.onColumnSearchKeydown(event, 'bao_tinh')">
-              <button type="button" class="column-search-clear hidden" id="col-search-clear-bao_tinh" onclick="app.clearColumnSearch('bao_tinh')" title="Xóa từ khóa tìm kiếm">
-                <i data-lucide="x"></i>
-              </button>
-            </div>
-            <div class="column-filter-dropdown hidden" id="col-filter-dropdown-bao_tinh">
-              <div class="column-filter-sections">
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
-                  <div class="filter-options" id="col-filter-dates-bao_tinh"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
-                  <div class="filter-options" id="col-filter-locations-bao_tinh"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
-                  <div class="filter-options" id="col-filter-dims-bao_tinh"></div>
-                </div>
-                <div class="filter-section">
-                  <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
-                  <div class="filter-options" id="col-filter-qtys-bao_tinh"></div>
-                </div>
-              </div>
-              <div class="column-filter-actions">
-                <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('bao_tinh')">
-                  <i data-lucide="x"></i> Xóa Lọc Cột
-                </button>
-                <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('bao_tinh')">
-                  <i data-lucide="check"></i> OK
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="column-header stage-bao-tinh">
-            <div class="header-title">
-              <span class="stage-dot bao_tinh"></span>
-              <h3>4. Bào Tinh</h3>
-              <span class="count-badge" id="count-bao-tinh">0</span>
-            </div>
-            <div class="column-metrics">
-              <span id="vol-bao-tinh">0.000 m³</span> • <span id="qty-bao-tinh">0 thanh</span>
-            </div>
-          </div>
-          <div class="column-cards-wrapper" id="cards-bao-tinh">
-            <!-- Cards populated dynamically -->
-          </div>
-        </div>
-
-      </div>
 
       <!-- ======================================================= -->
       <!-- XƯỞNG 2 — CÁC BẢNG CHI TIẾT VỊ TRÍ (ẩn sẵn; nổi lên khi   -->
@@ -783,14 +517,276 @@
           </div>
         </div>
 
-        <!-- VỊ TRÍ: THAN HÓA + SẤY — placeholder (chức năng bổ sung sau) -->
+        <!-- VỊ TRÍ: THAN HÓA + SẤY — CHỨA BẢNG KANBAN lô nan (4 cột công đoạn) + nút Thêm Lô Nan / Chọn nhiều lô -->
         <div class="planning-card x2-card-hidden" id="x2-than-hoa-card">
           <div class="planning-card-header">
             <h4><i data-lucide="flame"></i> Than Hóa + Sấy — Xưởng 2</h4>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận mẻ than hóa + lô sấy (thời gian, khối lượng vào/ra) sẽ được cập nhật ngay sau đây.</p>
+          <!-- Mobile Stage Tabs Selector — điện thoại mặc định xem 1 công đoạn, vuốt ngang để chuyển -->
+          <div class="mobile-stage-tabs">
+            <button class="stage-tab" data-stage="all">Tất cả</button>
+            <button class="stage-tab active" data-stage="say1">Sấy 1 <span class="badge-count" id="badge-say1">0</span></button>
+            <button class="stage-tab" data-stage="say2">Sấy 2 <span class="badge-count" id="badge-say2">0</span></button>
+            <button class="stage-tab" data-stage="kho">Kho <span class="badge-count" id="badge-kho">0</span></button>
+            <button class="stage-tab" data-stage="bao_tinh">Bào tinh <span class="badge-count" id="badge-bao-tinh">0</span></button>
+          </div>
+          <p class="stage-swipe-hint"><i data-lucide="move-horizontal"></i> Vuốt ngang trên bảng để chuyển công đoạn</p>
+
+          <!-- Bộ lọc Ngày / Vị trí / Kích thước nan nằm trên từng cột Kanban -->
+
+          <!-- Thanh công cụ Kanban: Thêm Lô Nan + Chọn nhiều lô (nay nằm trong thẻ "Than Hóa + Sấy") -->
+          <div class="kanban-toolbar">
+            <button class="btn btn-primary" id="btn-add-batch" data-perm="kanban" title="Thêm lô nan mới vào công đoạn">
+              <i data-lucide="plus-circle"></i> Thêm Lô Nan
+            </button>
+            <button class="btn btn-outline btn-sm" id="btn-multi-transfer" data-perm="kanban">
+              <i data-lucide="list-checks"></i> Chọn nhiều lô để chuyển
+            </button>
+          </div>
+
+          <!-- Kanban Columns Container -->
+          <div class="kanban-board">
+        
+            <!-- Column 1: Sấy 1 -->
+            <div class="kanban-column" data-stage-col="say1">
+              <div class="column-filter-bar">
+                <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('say1')">
+                  <i data-lucide="filter"></i> Lọc Cột
+                  <span class="column-filter-count" id="col-filter-count-say1"></span>
+                </button>
+                <div class="column-search-wrap">
+                  <i data-lucide="search" class="column-search-icon"></i>
+                  <input type="text" class="column-search-input" id="col-search-say1" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                         onfocus="app.onColumnSearchFocus('say1')" oninput="app.onColumnSearchInput('say1', this.value)"
+                         onkeydown="app.onColumnSearchKeydown(event, 'say1')">
+                  <button type="button" class="column-search-clear hidden" id="col-search-clear-say1" onclick="app.clearColumnSearch('say1')" title="Xóa từ khóa tìm kiếm">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+                <div class="column-filter-dropdown hidden" id="col-filter-dropdown-say1">
+                  <div class="column-filter-sections">
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                      <div class="filter-options" id="col-filter-dates-say1"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                      <div class="filter-options" id="col-filter-locations-say1"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                      <div class="filter-options" id="col-filter-dims-say1"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                      <div class="filter-options" id="col-filter-qtys-say1"></div>
+                    </div>
+                  </div>
+                  <div class="column-filter-actions">
+                    <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('say1')">
+                      <i data-lucide="x"></i> Xóa Lọc Cột
+                    </button>
+                    <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('say1')">
+                      <i data-lucide="check"></i> OK
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="column-header stage-say1">
+                <div class="header-title">
+                  <span class="stage-dot say1"></span>
+                  <h3>1. Sấy 1</h3>
+                  <span class="count-badge" id="count-say1">0</span>
+                </div>
+                <div class="column-metrics">
+                  <span id="vol-say1">0.000 m³</span> • <span id="qty-say1">0 thanh</span>
+                </div>
+              </div>
+              <div class="column-cards-wrapper" id="cards-say1">
+                <!-- Cards populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Column 2: Sấy 2 -->
+            <div class="kanban-column" data-stage-col="say2">
+              <div class="column-filter-bar">
+                <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('say2')">
+                  <i data-lucide="filter"></i> Lọc Cột
+                  <span class="column-filter-count" id="col-filter-count-say2"></span>
+                </button>
+                <div class="column-search-wrap">
+                  <i data-lucide="search" class="column-search-icon"></i>
+                  <input type="text" class="column-search-input" id="col-search-say2" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                         onfocus="app.onColumnSearchFocus('say2')" oninput="app.onColumnSearchInput('say2', this.value)"
+                         onkeydown="app.onColumnSearchKeydown(event, 'say2')">
+                  <button type="button" class="column-search-clear hidden" id="col-search-clear-say2" onclick="app.clearColumnSearch('say2')" title="Xóa từ khóa tìm kiếm">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+                <div class="column-filter-dropdown hidden" id="col-filter-dropdown-say2">
+                  <div class="column-filter-sections">
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                      <div class="filter-options" id="col-filter-dates-say2"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                      <div class="filter-options" id="col-filter-locations-say2"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                      <div class="filter-options" id="col-filter-dims-say2"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                      <div class="filter-options" id="col-filter-qtys-say2"></div>
+                    </div>
+                  </div>
+                  <div class="column-filter-actions">
+                    <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('say2')">
+                      <i data-lucide="x"></i> Xóa Lọc Cột
+                    </button>
+                    <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('say2')">
+                      <i data-lucide="check"></i> OK
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="column-header stage-say2">
+                <div class="header-title">
+                  <span class="stage-dot say2"></span>
+                  <h3>2. Sấy 2</h3>
+                  <span class="count-badge" id="count-say2">0</span>
+                </div>
+                <div class="column-metrics">
+                  <span id="vol-say2">0.000 m³</span> • <span id="qty-say2">0 thanh</span>
+                </div>
+              </div>
+              <div class="column-cards-wrapper" id="cards-say2">
+                <!-- Cards populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Column 3: Kho -->
+            <div class="kanban-column" data-stage-col="kho">
+              <div class="column-filter-bar">
+                <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('kho')">
+                  <i data-lucide="filter"></i> Lọc Cột
+                  <span class="column-filter-count" id="col-filter-count-kho"></span>
+                </button>
+                <div class="column-search-wrap">
+                  <i data-lucide="search" class="column-search-icon"></i>
+                  <input type="text" class="column-search-input" id="col-search-kho" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                         onfocus="app.onColumnSearchFocus('kho')" oninput="app.onColumnSearchInput('kho', this.value)"
+                         onkeydown="app.onColumnSearchKeydown(event, 'kho')">
+                  <button type="button" class="column-search-clear hidden" id="col-search-clear-kho" onclick="app.clearColumnSearch('kho')" title="Xóa từ khóa tìm kiếm">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+                <div class="column-filter-dropdown hidden" id="col-filter-dropdown-kho">
+                  <div class="column-filter-sections">
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                      <div class="filter-options" id="col-filter-dates-kho"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                      <div class="filter-options" id="col-filter-locations-kho"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                      <div class="filter-options" id="col-filter-dims-kho"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                      <div class="filter-options" id="col-filter-qtys-kho"></div>
+                    </div>
+                  </div>
+                  <div class="column-filter-actions">
+                    <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('kho')">
+                      <i data-lucide="x"></i> Xóa Lọc Cột
+                    </button>
+                    <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('kho')">
+                      <i data-lucide="check"></i> OK
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="column-header stage-kho">
+                <div class="header-title">
+                  <span class="stage-dot kho"></span>
+                  <h3>3. Kho Lưu Trữ</h3>
+                  <span class="count-badge" id="count-kho">0</span>
+                </div>
+                <div class="column-metrics">
+                  <span id="vol-kho">0.000 m³</span> • <span id="qty-kho">0 thanh</span>
+                </div>
+              </div>
+              <div class="column-cards-wrapper" id="cards-kho">
+                <!-- Cards populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Column 4: Bào Tinh -->
+            <div class="kanban-column" data-stage-col="bao_tinh">
+              <div class="column-filter-bar">
+                <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('bao_tinh')">
+                  <i data-lucide="filter"></i> Lọc Cột
+                  <span class="column-filter-count" id="col-filter-count-bao-tinh"></span>
+                </button>
+                <div class="column-search-wrap">
+                  <i data-lucide="search" class="column-search-icon"></i>
+                  <input type="text" class="column-search-input" id="col-search-bao_tinh" placeholder="Tìm: x18, LS1, 2016…" autocomplete="off"
+                         onfocus="app.onColumnSearchFocus('bao_tinh')" oninput="app.onColumnSearchInput('bao_tinh', this.value)"
+                         onkeydown="app.onColumnSearchKeydown(event, 'bao_tinh')">
+                  <button type="button" class="column-search-clear hidden" id="col-search-clear-bao_tinh" onclick="app.clearColumnSearch('bao_tinh')" title="Xóa từ khóa tìm kiếm">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+                <div class="column-filter-dropdown hidden" id="col-filter-dropdown-bao_tinh">
+                  <div class="column-filter-sections">
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="calendar"></i> Ngày</span>
+                      <div class="filter-options" id="col-filter-dates-bao_tinh"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="map-pin"></i> Vị trí</span>
+                      <div class="filter-options" id="col-filter-locations-bao_tinh"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="maximize"></i> Kích thước nan</span>
+                      <div class="filter-options" id="col-filter-dims-bao_tinh"></div>
+                    </div>
+                    <div class="filter-section">
+                      <span class="filter-section-title"><i data-lucide="hash"></i> Số lượng</span>
+                      <div class="filter-options" id="col-filter-qtys-bao_tinh"></div>
+                    </div>
+                  </div>
+                  <div class="column-filter-actions">
+                    <button class="btn btn-outline btn-sm column-filter-clear" type="button" onclick="app.clearColumnFilter('bao_tinh')">
+                      <i data-lucide="x"></i> Xóa Lọc Cột
+                    </button>
+                    <button class="btn btn-primary btn-sm column-filter-ok" type="button" onclick="app.closeColumnFilter('bao_tinh')">
+                      <i data-lucide="check"></i> OK
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="column-header stage-bao-tinh">
+                <div class="header-title">
+                  <span class="stage-dot bao_tinh"></span>
+                  <h3>4. Bào Tinh</h3>
+                  <span class="count-badge" id="count-bao-tinh">0</span>
+                </div>
+                <div class="column-metrics">
+                  <span id="vol-bao-tinh">0.000 m³</span> • <span id="qty-bao-tinh">0 thanh</span>
+                </div>
+              </div>
+              <div class="column-cards-wrapper" id="cards-bao-tinh">
+                <!-- Cards populated dynamically -->
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -1208,17 +1204,17 @@
               <!-- Keo & Phụ gia -->
               <div class="form-group">
                 <label for="mat-rate-glue">Keo (kg / tấm) <span class="required">*</span></label>
-                <input type="number" id="mat-rate-glue" min="0" step="0.01" placeholder="VD: 1" required>
+                <input type="number" id="mat-rate-glue" min="0" step="0.001" placeholder="VD: 1" title="Tối đa 3 số thập phân (VD: 0.125)" required>
               </div>
               <div class="form-group">
                 <label for="mat-rate-additive">Phụ Gia (kg / tấm) <span class="required">*</span></label>
-                <input type="number" id="mat-rate-additive" min="0" step="0.01" placeholder="VD: 0.12" required>
+                <input type="number" id="mat-rate-additive" min="0" step="0.001" placeholder="VD: 0.12" title="Tối đa 3 số thập phân (VD: 0.125)" required>
               </div>
 
               <!-- Hiệu suất -->
               <div class="form-group col-span-full">
                 <label for="mat-rate-efficiency">Hiệu Suất Chuyển Đổi Nan (%) <span class="required">*</span></label>
-                <input type="number" id="mat-rate-efficiency" min="1" max="100" step="1" placeholder="VD: 70 hoặc 75" required>
+                <input type="number" id="mat-rate-efficiency" min="1" max="100" step="0.001" placeholder="VD: 70 hoặc 72.5" title="Tối đa 3 số thập phân (VD: 72.5)" required>
                 <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
                   <i data-lucide="info" style="width:12px; height:12px; display:inline;"></i>
                   Hiệu suất = % số nan đạt yêu cầu sau khi chế biến. VD: 70% nghĩa là dùng 70 nan đầu vào để đạt được đủ số nan cần thiết cho 1 tấm.

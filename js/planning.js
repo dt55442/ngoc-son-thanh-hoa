@@ -1466,9 +1466,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     const nan2Qty = parseFractionValue(document.getElementById('mat-rate-nan2-qty').value);
     const nan3 = document.getElementById('mat-rate-nan3').value;
     const nan3Qty = parseFractionValue(document.getElementById('mat-rate-nan3-qty').value);
-    const glue = parseFloat(document.getElementById('mat-rate-glue').value) || 0;
-    const additive = parseFloat(document.getElementById('mat-rate-additive').value) || 0;
-    const efficiency = parseInt(document.getElementById('mat-rate-efficiency').value) || 70;
+    // Cho phép tối đa 3 số thập phân (khớp step="0.001" của form) — làm tròn chống lỗi số thực
+    const glue = Math.round((parseFloat(document.getElementById('mat-rate-glue').value) || 0) * 1000) / 1000;
+    const additive = Math.round((parseFloat(document.getElementById('mat-rate-additive').value) || 0) * 1000) / 1000;
+    const efficiency = Math.round((parseFloat(document.getElementById('mat-rate-efficiency').value) || 70) * 1000) / 1000;
 
     if (!product) { showToast('Tên sản phẩm không được để trống!', 'error'); return; }
     if (!nan1 || nan1Qty <= 0) { showToast('Phải chọn ít nhất 1 loại nan và số lượng!', 'error'); return; }

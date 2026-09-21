@@ -48,7 +48,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     'x2-bo-ong-card':       { el: 'x2-mini-count-bo-ong',       soon: true }, // Bổ Ống
     'x2-bao-tho-card':      { el: 'x2-mini-count-bao-tho',      soon: true }, // Chạy Máy Bào Thô
     'x2-chon-nan-tho-card': { el: 'x2-mini-count-chon-nan-tho', soon: true }, // Chọn Nan Thô
-    'x2-than-hoa-card':     { el: 'x2-mini-count-than-hoa',     soon: true }, // Than Hóa + Sấy
+    'x2-than-hoa-card':     { el: 'x2-mini-count-than-hoa' },                 // Than Hóa + Sấy (CHỨA BẢNG KANBAN lô nan)
     'x2-bao-tinh-card':     { el: 'x2-mini-count-bao-tinh',     soon: true }, // Bào Tinh
     'x2-ep-van-card':       { el: 'x2-mini-count-ep-van',       soon: true }, // Ép Ván
     'x2-bullig-card':       { el: 'x2-mini-count-bullig',       soon: true }, // Bullig
@@ -373,6 +373,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     // Thẻ mới thêm CHƯA có bảng số liệu → chip "Sắp có" (chức năng bổ sung sau)
     const def = X2_CARD_DEFS[cardId];
     if (def && def.soon) return 'Sắp có';
+    // Thẻ "Than Hóa + Sấy" chứa bảng Kanban lô nan → chip = số lô đang có
+    if (cardId === 'x2-than-hoa-card') {
+      const n = (state.batches || []).length;
+      return `${n.toLocaleString('vi-VN')} lô`;
+    }
     return '–';
   }
 

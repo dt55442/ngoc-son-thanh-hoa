@@ -1698,10 +1698,13 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
       plugins: [valueLabelPlugin],
       data: {
         labels: labelsData,
+        // Màu cột: Kế Hoạch TÍM · Đã Ép XANH LÁ · Số Lượng Xuất CAM (`#ea580c` —
+        // trước đây là xanh dương `#2563eb`). KHÔNG ghép xanh lá + xanh nước
+        // biển trong cùng một biểu đồ (quy tắc đổ màu — xem .clinerules mục 12).
         datasets: [
           { label: 'Kế Hoạch',       data: planVolData,   backgroundColor: 'rgba(124, 58, 237, 0.78)', borderColor: '#7c3aed', borderWidth: 1, borderRadius: 4 },
           { label: 'Đã Ép',          data: pressVolData,  backgroundColor: 'rgba(22, 163, 74, 0.78)',  borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 },
-          { label: 'Số Lượng Xuất',  data: exportVolData, backgroundColor: 'rgba(37, 99, 235, 0.78)',  borderColor: '#2563eb', borderWidth: 1, borderRadius: 4 }
+          { label: 'Số Lượng Xuất',  data: exportVolData, backgroundColor: 'rgba(234, 88, 12, 0.78)',  borderColor: '#ea580c', borderWidth: 1, borderRadius: 4 }
         ]
       },
       options: {

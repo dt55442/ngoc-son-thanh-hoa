@@ -23,6 +23,19 @@
   // của công đoạn Cắt Chọn Xưởng 2 (Hiệu suất = Công suất thực tế ÷ Định mức).
   // { 'YYYY-MM': số kg/h } — VD tháng 9 đặt 3000, tháng 10 đặt 3200.
   const STORAGE_KEY_X2_CAP_RATE = 'bamboo_tracker_x2_capacity_rate_v1';
+  // Vị trí "BỔ ỐNG" Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký bổ ống —
+  // mỗi lượt bổ link 1 LÔ ỐNG của công đoạn Cắt Chọn (xuong2CutRecords).
+  const STORAGE_KEY_XUONG2_BO_ONG = 'bamboo_tracker_xuong2_bo_ong_v1';
+  // ĐỊNH MỨC CÔNG SUẤT BỔ ỐNG (kg/giờ) theo TỪNG THÁNG — dùng tính Hiệu suất
+  // của công đoạn Bổ Ống (Hiệu suất = Công suất thực tế ÷ Định mức).
+  // { 'YYYY-MM': số kg/h } — VD tháng 9 đặt 2500, tháng 10 đặt 2700.
+  const STORAGE_KEY_X2_BO_ONG_RATE = 'bamboo_tracker_x2_bo_ong_rate_v1';
+  // Vị trí "CHẠY MÁY BÀO THÔ" Xưởng 2: nhật ký chạy máy — mỗi lượt link 1 LÔ ĐÃ
+  // BỔ (lượt Bổ Ống) + khai báo loại nan (Dài/Rộng/Dày, mỗi thông tin có thể
+  // nhiều giá trị ngăn cách bằng dấu phẩy).
+  const STORAGE_KEY_XUONG2_BAO_THO = 'bamboo_tracker_xuong2_bao_tho_v1';
+  // ĐỊNH MỨC CÔNG SUẤT BÀO THÔ (thanh/giờ) theo TỪNG THÁNG — { 'YYYY-MM': thanh/h }
+  const STORAGE_KEY_X2_BAO_THO_RATE = 'bamboo_tracker_x2_bao_tho_rate_v1';
   // Bảng "Thông Tin Nhà Cung" (tab Nguyên Liệu): danh mục nhà cung cấp do
   // người dùng khai báo (tên + mã số điền tay); các số liệu (tổng KL, số chuyến,
   // trung bình, tỷ lệ đạt, số lần nhắc nhở, đánh giá) TỰ TÍNH từ materialRecords
@@ -146,6 +159,17 @@
     // nhật ký cắt/chọn — mỗi bản ghi link 1 lượt nhập nguyên liệu Xưởng 2
     xuong2CutRecords: [],
     x2CutEditId: null,        // id lượt cắt/chọn đang sửa trong form (null = ghi mới)
+    // Nhật ký bổ ống (vị trí Bổ Ống — Xưởng 2): mỗi lượt link 1 lô ống của Cắt Chọn
+    xuong2BoOngRecords: [],
+    x2BoOngEditId: null,      // id lượt bổ ống đang sửa trong form (null = ghi mới)
+    // Định mức công suất bổ ống theo tháng (Bổ Ống — Xưởng 2): { 'YYYY-MM': kg/h }
+    x2BoOngRates: {},
+    // Nhật ký chạy máy bào thô (vị trí Chạy Máy Bào Thô — Xưởng 2): mỗi lượt
+    // link 1 lô đã bổ + loại nan (Dài/Rộng/Dày — mỗi ô có thể nhiều giá trị)
+    xuong2BaoThoRecords: [],
+    x2BaoThoEditId: null,     // id lượt chạy máy đang sửa trong form (null = ghi mới)
+    // Định mức công suất bào thô theo tháng (thanh/giờ): { 'YYYY-MM': thanh/h }
+    x2BaoThoRates: {},
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
     materialFormImages: [],   // ảnh (dataURL) đang có trong form
@@ -208,7 +232,11 @@ export {
   STORAGE_KEY_MATERIAL_RATES,
   STORAGE_KEY_MATERIALS,
   STORAGE_KEY_XUONG2_CUTS,
+  STORAGE_KEY_XUONG2_BO_ONG,
+  STORAGE_KEY_XUONG2_BAO_THO,
   STORAGE_KEY_X2_CAP_RATE,
+  STORAGE_KEY_X2_BO_ONG_RATE,
+  STORAGE_KEY_X2_BAO_THO_RATE,
   STORAGE_KEY_SUPPLIERS,
   STORAGE_KEY_PLANNING_FORECAST,
   STORAGE_KEY_PLANNING_ITEMS,

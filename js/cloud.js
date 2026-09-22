@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
@@ -469,8 +469,12 @@ import { showToast } from './utils.js';
       hrOvertimes: state.hrOvertimes || [],
       hrWorkCalendar: state.hrWorkCalendar || {},
       xuong2CutRecords: state.xuong2CutRecords || [],
+      xuong2BoOngRecords: state.xuong2BoOngRecords || [],
+      xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       suppliers: state.suppliers || [],
       x2CapRates: state.x2CapRates || {},
+      x2BoOngRates: state.x2BoOngRates || {},
+      x2BaoThoRates: state.x2BaoThoRates || {},
       history: state.history || [],
       deletedIds: state.deletedIds || {},
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
@@ -497,8 +501,12 @@ import { showToast } from './utils.js';
       hrOvertimes: obj.hrOvertimes || [],
       hrWorkCalendar: obj.hrWorkCalendar || {},
       xuong2CutRecords: obj.xuong2CutRecords || [],
+      xuong2BoOngRecords: obj.xuong2BoOngRecords || [],
+      xuong2BaoThoRecords: obj.xuong2BaoThoRecords || [],
       suppliers: obj.suppliers || [],
       x2CapRates: obj.x2CapRates || {},
+      x2BoOngRates: obj.x2BoOngRates || {},
+      x2BaoThoRates: obj.x2BaoThoRates || {},
       history: obj.history || [],
       deletedIds: obj.deletedIds || {}
     });
@@ -618,10 +626,18 @@ import { showToast } from './utils.js';
     if (remote.hrWorkCalendar) state.hrWorkCalendar = mergeKeyedDict(state.hrWorkCalendar || {}, remote.hrWorkCalendar);
     // Vị trí công đoạn Xưởng 2 — nhật ký cắt/chọn (thẻ launcher tab Công Đoạn)
     if (remote.xuong2CutRecords) state.xuong2CutRecords = m(clean('xuong2CutRecords', state.xuong2CutRecords || []), clean('xuong2CutRecords', remote.xuong2CutRecords));
+    // Vị trí công đoạn Xưởng 2 — nhật ký bổ ống (thẻ launcher tab Công Đoạn)
+    if (remote.xuong2BoOngRecords) state.xuong2BoOngRecords = m(clean('xuong2BoOngRecords', state.xuong2BoOngRecords || []), clean('xuong2BoOngRecords', remote.xuong2BoOngRecords));
+    // Vị trí công đoạn Xưởng 2 — nhật ký chạy máy bào thô
+    if (remote.xuong2BaoThoRecords) state.xuong2BaoThoRecords = m(clean('xuong2BaoThoRecords', state.xuong2BaoThoRecords || []), clean('xuong2BaoThoRecords', remote.xuong2BaoThoRecords));
     // Thông Tin Nhà Cung (tab Nguyên Liệu)
     if (remote.suppliers) state.suppliers = m(clean('suppliers', state.suppliers || []), clean('suppliers', remote.suppliers));
     // Định mức công suất cắt theo tháng (dict theo 'YYYY-MM')
     if (remote.x2CapRates) state.x2CapRates = mergeKeyedDict(state.x2CapRates || {}, remote.x2CapRates);
+    // Định mức công suất bổ ống theo tháng (dict theo 'YYYY-MM')
+    if (remote.x2BoOngRates) state.x2BoOngRates = mergeKeyedDict(state.x2BoOngRates || {}, remote.x2BoOngRates);
+    // Định mức công suất bào thô theo tháng (thanh/giờ)
+    if (remote.x2BaoThoRates) state.x2BaoThoRates = mergeKeyedDict(state.x2BaoThoRates || {}, remote.x2BaoThoRates);
     // Lịch sử sửa đổi: gộp thêm các dòng máy này chưa có (mỗi dòng 1 id riêng)
     if (remote.history) {
       state.history = mergeAddMissing(state.history || [], remote.history || []);
@@ -659,6 +675,8 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_SUPPLIERS, JSON.stringify(state.suppliers || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_CAP_RATE, JSON.stringify(state.x2CapRates || {})); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_BO_ONG_RATE, JSON.stringify(state.x2BoOngRates || {})); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_BAO_THO_RATE, JSON.stringify(state.x2BaoThoRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}
@@ -671,6 +689,8 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_HR_OVERTIMES, JSON.stringify(state.hrOvertimes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_CALENDAR, JSON.stringify(state.hrWorkCalendar || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_CUTS, JSON.stringify(state.xuong2CutRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_BO_ONG, JSON.stringify(state.xuong2BoOngRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_THO, JSON.stringify(state.xuong2BaoThoRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(state.history || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_DELETED_IDS, JSON.stringify(state.deletedIds || {})); } catch (e) {}
     syncHistorySnapshots(); // thay đổi đến từ mây/nạp file → đặt lại nền so sánh lịch sử

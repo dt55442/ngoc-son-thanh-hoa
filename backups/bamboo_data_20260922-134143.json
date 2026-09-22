@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-21T12:40:25.246Z",
+  "savedAt": "2026-09-22T06:16:01.934Z",
   "batches": [
     {
       "id": "batch-1789895190755",
@@ -15674,6 +15674,54 @@
       "images": [],
       "createdAt": "2026-09-18T09:14:00.149Z",
       "updatedAt": "2026-09-19T07:21:20.438Z"
+    },
+    {
+      "id": "mat-1790048322745-ojuwh",
+      "date": "2026-09-20",
+      "week": "2026-W38",
+      "type": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "location": "xuong-2",
+      "inputIndex": 4100,
+      "outputIndex": 2280,
+      "weight": 1820,
+      "unitPrice": 1900,
+      "totalAmount": 3458000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T03:38:42.745Z"
+    },
+    {
+      "id": "mat-1790048372302-ne6xh",
+      "date": "2026-09-21",
+      "week": "2026-W39",
+      "type": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "location": "xuong-2",
+      "inputIndex": 3580,
+      "outputIndex": 2290,
+      "weight": 1290,
+      "unitPrice": 1900,
+      "totalAmount": 2451000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T03:39:32.302Z"
+    },
+    {
+      "id": "mat-1790048410986-7rung",
+      "date": "2026-09-21",
+      "week": "2026-W39",
+      "type": "Luồng ống",
+      "supplier": "Nhà Tế",
+      "location": "xuong-2",
+      "inputIndex": 21940,
+      "outputIndex": 8400,
+      "weight": 13540,
+      "unitPrice": 1600,
+      "totalAmount": 21664000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T03:40:10.986Z"
     }
   ],
   "xuong2CutRecords": [

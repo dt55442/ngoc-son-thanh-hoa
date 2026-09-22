@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-22T06:16:01.934Z",
+  "savedAt": "2026-09-22T07:40:39.470Z",
   "batches": [
     {
       "id": "batch-1789895190755",
@@ -15711,7 +15711,7 @@
       "id": "mat-1790048410986-7rung",
       "date": "2026-09-21",
       "week": "2026-W39",
-      "type": "Luồng ống",
+      "type": "Luồng cây xô",
       "supplier": "Nhà Tế",
       "location": "xuong-2",
       "inputIndex": 21940,
@@ -15721,7 +15721,24 @@
       "totalAmount": 21664000,
       "note": "",
       "images": [],
-      "createdAt": "2026-09-22T03:40:10.986Z"
+      "createdAt": "2026-09-22T03:40:10.986Z",
+      "updatedAt": "2026-09-22T06:42:31.182Z"
+    },
+    {
+      "id": "mat-1790059301694-w8cms",
+      "date": "2026-09-21",
+      "week": "2026-W39",
+      "type": "Gỗ",
+      "supplier": "Nhà Chiến",
+      "location": "lo-hoi",
+      "inputIndex": 7340,
+      "outputIndex": 2660,
+      "weight": 4680,
+      "unitPrice": 1100,
+      "totalAmount": 5148000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T06:41:41.694Z"
     }
   ],
   "xuong2CutRecords": [
@@ -15800,6 +15817,8 @@
       "updatedAt": "2026-09-20T09:08:59.977Z"
     }
   ],
+  "xuong2BoOngRecords": [],
+  "xuong2BaoThoRecords": [],
   "suppliers": [
     {
       "id": "sup-1789808030672-9fhu0",
@@ -15930,5 +15949,7 @@
   ],
   "x2CapRates": {
     "2026-09": 415
-  }
+  },
+  "x2BoOngRates": {},
+  "x2BaoThoRates": {}
 }

@@ -14,7 +14,7 @@ import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { deleteXuong2Cut, editXuong2Cut, handleX2CapRateSave, handleXuong2CutSubmit, resetXuong2CutForm, toggleX2CutTable, updateXuong2CutLinked, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
+import { deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2Cut, editXuong2BaoTho, editXuong2BoOng, editXuong2Cut, handleX2BaoThoRateSave, handleX2BoOngRateSave, handleX2CapRateSave, handleXuong2BaoThoSubmit, handleXuong2BoOngSubmit, handleXuong2CutSubmit, renderX2BaoThoCalc, renderX2BaoThoRateBar, renderX2BoOngRateBar, resetXuong2BaoThoForm, resetXuong2BoOngForm, resetXuong2CutForm, toggleX2BaoThoTable, toggleX2BoOngTable, toggleX2CutTable, updateXuong2BaoThoLinked, updateXuong2BoOngLinked, updateXuong2CutLinked, x2CloseOpenCard, x2OpenCard, x2PositionDetailOverlay } from './xuong2.js';
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
@@ -1169,12 +1169,63 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Bảng lịch sử (nhóm theo ngày): thu gọn / mở rộng + lưu Định mức công suất
     safeOn('btn-toggle-x2cut-table', 'click', toggleX2CutTable);
     safeOn('btn-x2-rate-save', 'click', handleX2CapRateSave);
-    // Click ủy quyền trong bảng lịch sử cắt/chọn: sửa / xóa lượt
+    // ── Vị trí BỔ ỐNG (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
+    // Form: đổi lô ống (điền sẵn phần còn lại vào ô KL ống bổ) / gõ số lượng bổ
+    // hoặc KL ống loại → tự tính lại; submit → lưu.
+    // (Người bổ + Thời gian bổ TỰ ĐỘNG từ Bảng bố trí Nhân Sự — không điền tay)
+    safeOn('x2-bo-ong-cut', 'change', () => updateXuong2BoOngLinked(true));
+    safeOn('x2-bo-ong-bo', 'input', () => updateXuong2BoOngLinked(false));
+    safeOn('x2-bo-ong-loai', 'input', () => updateXuong2BoOngLinked(false));
+    safeOn('x2-bo-ong-form', 'submit', handleXuong2BoOngSubmit);
+    safeOn('btn-cancel-x2-bo-ong', 'click', () => resetXuong2BoOngForm());
+    // Bảng lịch sử bổ ống: thu gọn / mở rộng + lưu Định mức công suất bổ ống
+    safeOn('btn-toggle-x2ong-table', 'click', toggleX2BoOngTable);
+    safeOn('btn-x2-ong-rate-save', 'click', handleX2BoOngRateSave);
+    safeOn('x2-ong-rate-month', 'change', renderX2BoOngRateBar); // đổi tháng → nạp định mức đã đặt
+    // ── Vị trí CHẠY MÁY BÀO THÔ (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
+    // Form: chọn lô đã bổ (theo lô) / nhập Dài-Rộng-Dày (nhiều giá trị cách dấu
+    // phẩy) → tự tính tổ hợp + thể tích 1 thanh; submit → lưu.
+    // (Người chạy máy + thời gian TỰ ĐỘNG từ Bảng bố trí Nhân Sự — không điền tay)
+    safeOn('x2-bao-tho-lot', 'change', updateXuong2BaoThoLinked);
+    safeOn('x2-bao-tho-form', 'submit', handleXuong2BaoThoSubmit);
+    safeOn('btn-cancel-x2-bao-tho', 'click', () => resetXuong2BaoThoForm());
+    ['x2-bao-tho-dai', 'x2-bao-tho-rong', 'x2-bao-tho-day'].forEach(id => {
+      safeOn(id, 'input', renderX2BaoThoCalc);
+    });
+    // Bảng lịch sử chạy máy: thu gọn / mở rộng + lưu Định mức công suất bào thô
+    safeOn('btn-toggle-x2bt-table', 'click', toggleX2BaoThoTable);
+    safeOn('btn-x2-bt-rate-save', 'click', handleX2BaoThoRateSave);
+    safeOn('x2-bt-rate-month', 'change', renderX2BaoThoRateBar);
+    // Click ủy quyền trong bảng lịch sử cắt/chọn + bổ ống: sửa / xóa lượt
     document.addEventListener('click', (e) => {
       const cutEdit = e.target.closest && e.target.closest('[data-x2-cut-edit]');
       if (cutEdit) { editXuong2Cut(cutEdit.getAttribute('data-x2-cut-edit')); return; }
       const cutDel = e.target.closest && e.target.closest('[data-x2-cut-delete]');
       if (cutDel) { deleteXuong2Cut(cutDel.getAttribute('data-x2-cut-delete')); return; }
+      // Chip tháng đã đặt định mức → nạp tháng + số kg/h vào ô nhập để sửa lại
+      const rateChip = e.target.closest && e.target.closest('[data-x2-ong-rate]');
+      if (rateChip) {
+        const m = rateChip.getAttribute('data-x2-ong-rate');
+        const selEl = document.getElementById('x2-ong-rate-month');
+        if (selEl && m) { selEl.value = m; renderX2BoOngRateBar(); }
+        return;
+      }
+      const ongEdit = e.target.closest && e.target.closest('[data-x2-ong-edit]');
+      if (ongEdit) { editXuong2BoOng(ongEdit.getAttribute('data-x2-ong-edit')); return; }
+      const ongDel = e.target.closest && e.target.closest('[data-x2-ong-delete]');
+      if (ongDel) { deleteXuong2BoOng(ongDel.getAttribute('data-x2-ong-delete')); return; }
+      // Chip tháng đã đặt định mức bào thô → nạp tháng + số thanh/h vào ô nhập
+      const btRateChip = e.target.closest && e.target.closest('[data-x2-bt-rate]');
+      if (btRateChip) {
+        const m = btRateChip.getAttribute('data-x2-bt-rate');
+        const selEl = document.getElementById('x2-bt-rate-month');
+        if (selEl && m) { selEl.value = m; renderX2BaoThoRateBar(); }
+        return;
+      }
+      const btEdit = e.target.closest && e.target.closest('[data-x2-bt-edit]');
+      if (btEdit) { editXuong2BaoTho(btEdit.getAttribute('data-x2-bt-edit')); return; }
+      const btDel = e.target.closest && e.target.closest('[data-x2-bt-delete]');
+      if (btDel) { deleteXuong2BaoTho(btDel.getAttribute('data-x2-bt-delete')); return; }
     });
   }
 

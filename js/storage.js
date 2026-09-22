@@ -7,7 +7,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
@@ -165,6 +165,64 @@ import { escapeHTML, showToast } from './utils.js';
     return cur;
   }
 
+  // ─── GỘP NHẬT KÝ BỔ ỐNG XƯỞNG 2 (từ file bamboo_data.json / backup / mây) ──
+  // Cùng quy tắc với lượt cắt/chọn: bản chỉ có ở một phía vẫn giữ; trùng id →
+  // bản có dấu thời gian mới hơn thắng (dùng lại mergeXuong2Records).
+  function restoreXuong2BoOng(incomingArr) {
+    const before = JSON.stringify(state.xuong2BoOngRecords || []);
+    const merged = mergeXuong2Records(state.xuong2BoOngRecords, incomingArr);
+    state.xuong2BoOngRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_BO_ONG, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
+
+  // Khôi phục ĐỊNH MỨC CÔNG SUẤT BỔ ỐNG theo tháng ({ 'YYYY-MM': kg/h }).
+  function restoreX2BoOngRates(incoming) {
+    const src = (incoming && typeof incoming === 'object') ? incoming : {};
+    const cur = (state.x2BoOngRates && typeof state.x2BoOngRates === 'object') ? state.x2BoOngRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.x2BoOngRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_BO_ONG_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
+  // ─── GỘP NHẬT KÝ CHẠY MÁY BÀO THÔ XƯỞNG 2 (file / backup / mây) ──
+  function restoreXuong2BaoTho(incomingArr) {
+    const before = JSON.stringify(state.xuong2BaoThoRecords || []);
+    const merged = mergeXuong2Records(state.xuong2BaoThoRecords, incomingArr);
+    state.xuong2BaoThoRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_THO, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
+
+  // Khôi phục ĐỊNH MỨC CÔNG SUẤT BÀO THÔ theo tháng ({ 'YYYY-MM': thanh/giờ }).
+  function restoreX2BaoThoRates(incoming) {
+    const src = (incoming && typeof incoming === 'object') ? incoming : {};
+    const cur = (state.x2BaoThoRates && typeof state.x2BaoThoRates === 'object') ? state.x2BaoThoRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.x2BaoThoRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_BAO_THO_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
   // ─── FILE STORAGE (LƯU DỮ LIỆU VÀO FILE CÙNG THƯ MỤC) ─────────
   // Sử dụng File System Access API để đọc/ghi file bamboo_data.json
   // trong thư mục người dùng chọn. Directory handle được lưu trong IndexedDB
@@ -290,6 +348,18 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2CapRates) {
           restoreX2CapRates(loaded.x2CapRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (loaded.xuong2BoOngRecords && Array.isArray(loaded.xuong2BoOngRecords)) {
+          restoreXuong2BoOng(loaded.xuong2BoOngRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2BoOngRates) {
+          restoreX2BoOngRates(loaded.x2BoOngRates); // GỘP theo tháng — không đè số đã đặt
+        }
+        if (loaded.xuong2BaoThoRecords && Array.isArray(loaded.xuong2BaoThoRecords)) {
+          restoreXuong2BaoTho(loaded.xuong2BaoThoRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2BaoThoRates) {
+          restoreX2BaoThoRates(loaded.x2BaoThoRates); // GỘP theo tháng — không đè số đã đặt
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -347,6 +417,18 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2CapRates) {
           restoreX2CapRates(loaded.x2CapRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (loaded.xuong2BoOngRecords && Array.isArray(loaded.xuong2BoOngRecords)) {
+          restoreXuong2BoOng(loaded.xuong2BoOngRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2BoOngRates) {
+          restoreX2BoOngRates(loaded.x2BoOngRates); // GỘP theo tháng — không đè số đã đặt
+        }
+        if (loaded.xuong2BaoThoRecords && Array.isArray(loaded.xuong2BaoThoRecords)) {
+          restoreXuong2BaoTho(loaded.xuong2BaoThoRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2BaoThoRates) {
+          restoreX2BaoThoRates(loaded.x2BaoThoRates); // GỘP theo tháng — không đè số đã đặt
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -398,8 +480,12 @@ import { escapeHTML, showToast } from './utils.js';
         customCharts: state.customCharts,
         materialRecords: state.materialRecords || [],
         xuong2CutRecords: state.xuong2CutRecords || [],
+        xuong2BoOngRecords: state.xuong2BoOngRecords || [],
+        xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
         suppliers: state.suppliers || [],
-        x2CapRates: state.x2CapRates || {}
+        x2CapRates: state.x2CapRates || {},
+        x2BoOngRates: state.x2BoOngRates || {},
+        x2BaoThoRates: state.x2BaoThoRates || {}
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -487,8 +573,12 @@ import { escapeHTML, showToast } from './utils.js';
       customCharts: state.customCharts,
       materialRecords: state.materialRecords || [],
       xuong2CutRecords: state.xuong2CutRecords || [],
+      xuong2BoOngRecords: state.xuong2BoOngRecords || [],
+      xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       suppliers: state.suppliers || [],
-      x2CapRates: state.x2CapRates || {}
+      x2CapRates: state.x2CapRates || {},
+      x2BoOngRates: state.x2BoOngRates || {},
+      x2BaoThoRates: state.x2BaoThoRates || {}
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -536,6 +626,22 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && imported.x2CapRates) {
           restoreX2CapRates(imported.x2CapRates); // GỘP theo tháng — không đè số đã đặt
+        }
+
+        if (imported && Array.isArray(imported.xuong2BoOngRecords)) {
+          restoreXuong2BoOng(imported.xuong2BoOngRecords); // GỘP — không xóa lượt bổ ống mới hơn backup
+        }
+
+        if (imported && imported.x2BoOngRates) {
+          restoreX2BoOngRates(imported.x2BoOngRates); // GỘP theo tháng — không đè số đã đặt
+        }
+
+        if (imported && Array.isArray(imported.xuong2BaoThoRecords)) {
+          restoreXuong2BaoTho(imported.xuong2BaoThoRecords); // GỘP — không xóa lượt chạy máy mới hơn backup
+        }
+
+        if (imported && imported.x2BaoThoRates) {
+          restoreX2BaoThoRates(imported.x2BaoThoRates); // GỘP theo tháng — không đè số đã đặt
         }
 
         renderAll();
@@ -698,6 +804,10 @@ export {
   readPhotoFile,
   removeDirHandleFromIDB,
   restoreMaterialRecords,
+  restoreX2BaoThoRates,
+  restoreX2BoOngRates,
+  restoreXuong2BaoTho,
+  restoreXuong2BoOng,
   saveData,
   saveDataToLocalFile,
   saveDirHandleToIDB,

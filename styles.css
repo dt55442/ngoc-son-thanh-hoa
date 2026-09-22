@@ -5771,6 +5771,87 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 }
 .x2-rate-bar input[type="number"] { width: 110px; text-align: right; }
 .x2-rate-unit { color: var(--text-muted); }
+/* Chip các tháng ĐÃ ĐẶT định mức (bấm chip để nạp vào ô nhập rồi chỉnh lại) */
+.x2-rate-chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.x2-rate-chip {
+  padding: 2px 9px;
+  border: 1px dashed var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.x2-rate-chip:hover, .x2-rate-chip:focus-visible { border-color: var(--primary); color: var(--primary); }
+
+/* ── Ô TỰ TÍNH KL ỐNG BỔ (form Bổ Ống): ống đầu vào → ống bổ ── */
+.x2-ong-calc {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  font-size: 0.78rem;
+}
+.x2-ong-calc-item { display: inline-flex; align-items: baseline; gap: 6px; }
+.x2-ong-calc-label { color: var(--text-muted); }
+.x2-ong-calc-eq { font-style: normal; font-size: 0.72rem; color: var(--text-muted); }
+.x2-ong-calc-item strong { font-size: 0.95rem; }
+.x2-ong-calc-in strong { color: var(--primary); }
+.x2-ong-calc-bo strong { color: #0f766e; }
+.x2-ong-calc-after strong { color: #b45309; }
+/* Chip "còn X kg" trong dòng nhánh của thẻ ngày (lô chưa bổ hết) */
+.x2-ong-rest {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px dashed rgba(217, 119, 6, 0.5);
+  border-radius: 999px;
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── LOẠI NAN (Bào Thô): chip từng tổ hợp kích thước Dài × Rộng × Dày ── */
+.x2-nan-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.x2-nan-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border: 1px solid rgba(15, 118, 110, 0.35);
+  border-radius: 6px;
+  background: rgba(15, 118, 110, 0.07);
+  color: #0f766e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.x2-nan-chip-more {
+  border-style: dashed;
+  border-color: var(--border-color);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+/* Ô "Số lượng: chờ Chọn Nan Thô" — số lượng lấy tự động từ công đoạn sau */
+.x2-qty-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px dashed var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-style: italic;
+  white-space: nowrap;
+}
+.x2-qty-pending svg { width: 12px; height: 12px; }
 
 /* ── THẺ NGÀY CẮT/CHỌN: mỗi ngày 1 THỂ RIÊNG ──
    Đầu thẻ = thông tin chung (Ngày · Người cắt · Giờ cắt HC/TC · Công suất

@@ -15,7 +15,7 @@ import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilter
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, renderXuong2Cards } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
-import { loadX2CapRates } from './xuong2.js';
+import { loadX2BaoThoRates, loadX2BoOngRates, loadX2CapRates, loadXuong2BaoTho, loadXuong2BoOng } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, openPressWorkersModal, removePressLine, removePressStick, renderPressView } from './press.js';
 import { loadQcExports, renderQcView } from './qc.js';
@@ -45,8 +45,12 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadMaterialRecords();
     loadMaterialPlan();
     loadXuong2Cuts(); // vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn)
+    loadXuong2BoOng(); // Nhật ký Bổ Ống Xưởng 2 (link lô ống từ Cắt Chọn)
+    loadXuong2BaoTho(); // Nhật ký Chạy Máy Bào Thô Xưởng 2 (link lô đã bổ)
     loadSuppliers(); // Bảng Thông Tin Nhà Cung (tab Nguyên Liệu)
     loadX2CapRates(); // Định mức công suất cắt theo tháng (tab Công Đoạn)
+    loadX2BoOngRates(); // Định mức công suất bổ ống theo tháng (tab Công Đoạn)
+    loadX2BaoThoRates(); // Định mức công suất bào thô theo tháng (thanh/giờ)
     loadQcExports();
     loadHrData();
     // Lịch sử sửa đổi: nạp + lập snapshot nền SAU CÙNG (sau khi toàn bộ

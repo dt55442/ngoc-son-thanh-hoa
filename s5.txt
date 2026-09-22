@@ -1,5 +1,0 @@
-34:FAIL — HC/TC: hành chính 07:00–19:00 -> HC 9h, TC 6h
-39:FAIL — HC/TC: chấm công hiện badge HC (empB: 07:30–11:00 + 09:00–11:30 = 6h)
-40:FAIL — HC/TC: không có TC khi làm trong giờ
-41:FAIL — HC/TC: chip vị trí chỉ hiện vị trí đã gán (Ép ván X2 + Kho X2, không vị trí khác)
-WYNIK: 37 pass, 4 fail

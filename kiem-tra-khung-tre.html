@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiểm Tra Khung Tre — Trang Thử Nghiệm</title>
+<!-- Trang chỉ để XEM THỬ khung tre (không thuộc app, không nằm trong sw.js).
+     Mở bằng http://localhost:8080/kiem-tra-khung-tre.html (npm start).
+     Xong việc có thể xóa file này. -->
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { padding: 18px; }
+  .khung-tre-note { margin: 0 0 14px; font-size: 0.85rem; line-height: 1.6; }
+  .khung-tre-note code { background: rgba(46,125,50,0.12); padding: 1px 5px; border-radius: 4px; }
+  .khung-tre-sample { margin-bottom: 26px; }
+  .khung-tre-sep { height: 1px; background: var(--border-color); margin: 22px 0; }
+  .khung-tre-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+</style>
+</head>
+<body data-theme="night">
+
+  <h2 style="margin-bottom:4px;">Kiểm tra khung tre đan dây</h2>
+  <p class="khung-tre-note">
+    Trang này nạp <code>styles.css</code> thật với <code>body data-theme="night"</code>.<br>
+    Cần xem: 4 thân tre phải <strong>chạy liền mạch</strong> hết mỗi cạnh (đốt tre cách đều ~85px),
+    4 góc có <strong>nút dây chữ X</strong>, khung ôm <strong>sát</strong> nội dung (cách ~5–10px).<br>
+    Đổi nhanh sáng/đêm: bấm nút bên dưới. Nhớ <strong>Ctrl+F5</strong> để nạp CSS mới nhất.
+  </p>
+  <button class="btn btn-primary" onclick="doiTheme(this)" style="margin-bottom:18px;">Đổi: Sáng ⇄ Tre Sáng</button>
+
+  <!-- 1. Thẻ biểu đồ lớn (26px) -->
+  <div class="khung-tre-sample">
+    <div class="planning-card press-chart-card" style="margin:0;">
+      <div class="planning-card-header">
+        <h4>1. Thẻ biểu đồ lớn — Kế Hoạch vs Đã Ép (khung 26px)</h4>
+        <div class="filter-item"><label>Năm:</label><select><option>2026</option></select></div>
+      </div>
+      <div class="press-chart-box" style="height:150px; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">
+        (vùng canvas biểu đồ — khung tre chỉ bao NGOÀI, không vẽ vào đây)
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Bảng dữ liệu trong planning-card (26px) -->
+  <div class="khung-tre-sample">
+    <div class="planning-card" style="margin:0;">
+      <div class="planning-card-header"><h4>2. Bảng dữ liệu — planning-card (khung 26px)</h4></div>
+      <div class="table-responsive">
+        <table>
+          <thead><tr><th>Ngày</th><th>Sản phẩm</th><th>Số lượng</th></tr></thead>
+          <tbody>
+            <tr><td>21/09/2026</td><td>Bullig 304x10x7</td><td>120</td></tr>
+            <tr><td>21/09/2026</td><td>Ván 1200x382x12</td><td>85</td></tr>
+            <tr><td>22/09/2026</td><td>Ván 1200x340x33</td><td>210</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Thẻ tổng quan dashboard-card (26px) -->
+  <div class="khung-tre-sample">
+    <div class="dashboard-card">
+      <div class="card-header"><h3>3. Thẻ Tổng Quan — dashboard-card (khung 26px)</h3></div>
+      <p style="margin:0; color:var(--text-muted);">Nội dung thẻ tổng quan nằm gọn bên trong khung tre.</p>
+    </div>
+  </div>
+
+  <!-- 4. Thẻ .card (22px) + modal-card / hud-frame (22–26px) -->
+  <div class="khung-tre-sample khung-tre-grid">
+    <div class="card" style="flex:1 1 320px; padding:14px;">
+      <h4 style="margin:0 0 8px;">4a. Thẻ .card (khung 22px)</h4>
+      <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">Thẻ thông tin thường.</p>
+    </div>
+    <div class="modal-card" style="flex:1 1 320px; max-width:420px; max-height:none;">
+      <div class="modal-header"><h3>4b. Modal thường (khung 22px)</h3></div>
+      <div style="padding:14px;">
+        <div class="form-group">
+          <label>Ô nhập liệu mẫu</label>
+          <input type="text" placeholder="Nhập gì đó…">
+        </div>
+      </div>
+    </div>
+    <div class="modal-card hud-frame" style="flex:1 1 320px; max-width:420px; max-height:none;">
+      <div class="modal-header"><h3>4c. Modal chính — hud-frame (khung 26px)</h3></div>
+      <div style="padding:14px;">
+        <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">6 modal chính của app dùng khung to hơn.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="khung-tre-sep"></div>
+
+  <!-- 5. Thẻ lô nan bamboo-card (26px) -->
+  <div class="khung-tre-sample">
+    <div class="bamboo-card" style="max-width:380px;">
+      <div class="card-top">
+        <div class="batch-code">LÔ NAN MẪU #01</div>
+        <span class="week-pill">Tuần 39</span>
+      </div>
+      <div class="card-quantities" style="margin-top:8px; color:var(--text-muted); font-size:0.85rem;">1.850 thanh · Sấy 2</div>
+    </div>
+  </div>
+
+  <!-- 6. Mini card (12px) -->
+  <div class="khung-tre-sample">
+    <h4 style="margin:0 0 10px;">6. Mini card — QC / Nhân Sự / Xưởng 2 (khung nhỏ 12px)</h4>
+    <div class="khung-tre-grid">
+      <button type="button" class="qc-mini-card" data-qc-card="qc-export-card" style="flex:0 0 210px;">
+        <span class="qc-mini-label">Xuất Hàng QC</span>
+        <span class="qc-mini-value">128 lô</span>
+      </button>
+      <button type="button" class="hr-mini-card" data-hr-card="hr-emp-card" style="flex:0 0 210px;">
+        <span>Nhân Viên</span>
+        <span style="font-weight:700;">77/80 NV</span>
+      </button>
+      <button type="button" class="x2-mini-card" data-x2-card="x2-cut-card" style="flex:0 0 210px;">
+        <span>Cắt Chọn Xưởng 2</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Đổi nhanh giao diện Sáng ⇄ Tre Sáng để so sánh khung
+    function doiTheme(btn) {
+      const b = document.body;
+      const dangTre = b.getAttribute('data-theme') === 'night';
+      if (dangTre) b.removeAttribute('data-theme'); else b.setAttribute('data-theme', 'night');
+      btn.textContent = dangTre ? 'Đang Sáng — bấm để xem Tre Sáng' : 'Đang Tre Sáng — bấm để xem Sáng';
+    }
+  </script>
+</body>
+</html>

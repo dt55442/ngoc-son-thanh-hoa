@@ -77,7 +77,7 @@ const r1 = theme.setTheme('night');
 check('setTheme("night"): trả về night', r1 === 'night');
 check('setTheme("night"): body có data-theme="night"', body.getAttribute('data-theme') === 'night');
 check('lưu lựa chọn theo MÁY (localStorage)', storeBacking.get('bamboo_tracker_ui_theme_v1') === 'night');
-check('Chart.js defaults đổi màu trục theo theme đêm', global.Chart.defaults.color === '#dbe4f5');
+check('Chart.js defaults đổi màu trục theo theme đêm', global.Chart.defaults.color === '#3a4535');
 
 // ─── C. THEO NGƯỜI DÙNG: An thích đêm, Bình thích sáng ─────────
 state.currentUser = { username: 'an', role: 'admin', fullname: 'Nguyễn Văn An' };

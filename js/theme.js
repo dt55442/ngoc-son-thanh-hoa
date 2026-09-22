@@ -52,8 +52,8 @@ export function applyTheme() {
   // bộ màu chuẩn hóa của dự án — đã kiểm không vi phạm quy tắc green/blue)
   if (typeof window !== 'undefined' && window.Chart && window.Chart.defaults) {
     if (resolved === 'night') {
-      window.Chart.defaults.color = '#dbe4f5'; // chữ trục + legend SÁNG, dễ đọc trên nền tối
-      window.Chart.defaults.borderColor = 'rgba(148, 163, 184, 0.30)'; // lưới rõ hơn hẳn
+      window.Chart.defaults.color = '#3a4535'; // chữ trục + legend TỐI, dễ đọc trên nền kem sáng
+      window.Chart.defaults.borderColor = 'rgba(90, 110, 70, 0.25)'; // lưới xanh rêu mờ
     } else {
       window.Chart.defaults.color = '#666666';
       window.Chart.defaults.borderColor = 'rgba(0, 0, 0, 0.1)';

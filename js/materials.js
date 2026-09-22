@@ -10,6 +10,7 @@
 // Dữ liệu state.materialRecords: lưu localStorage + file + mây
 // (firePushSync), và là nguồn 'materials' cho biểu đồ Dashboard.
 // ═══════════════════════════════════════════════════════════
+import { stemBarsPlugin, stemShapeForLocation } from './chart-stems.js';
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { canEditTab } from './permissions.js';
 import { trackDeleted } from './tombstone.js';
@@ -441,7 +442,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
   // Vỏ cột (nền nhạt + viền đậm) = kế hoạch TRUNG BÌNH MỖI NGÀY của tuần
   // (từ bảng kế hoạch phía trên); cột đặc bên trong = thực tế đã nhập trong
   // ngày (tổng trọng lượng nhật ký theo vị trí).
-  const MP_LOC_COLORS = { 'lo-hoi': '#f59e0b', 'xuong-1': '#16a34a', 'xuong-2': '#2563eb' };
+  // Bảng màu 3 vị trí — theo ĐÚNG hình dạng cột mới (js/chart-stems.js):
+  // gỗ NÂU (Lò hơi) · nứa VÀNG XÁM (Xưởng 1) · tre XANH (Xưởng 2).
+  // Không còn xanh dương đứng cạnh xanh lá (quy tắc màu biểu đồ của dự án).
+  const MP_LOC_COLORS = { 'lo-hoi': '#8b5e34', 'xuong-1': '#b3a271', 'xuong-2': '#4caf50' };
   const MP_DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
   // 7 ngày (thứ 2 → chủ nhật) của tuần ISO: [{ iso: '2026-09-01', label: '01/09' }]
@@ -655,9 +659,46 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
   }
 
   // ── Plugin vẽ nhãn NGÀY căn giữa nhóm cột của ngày + dải màu TUẦN xen kẽ dưới
-  // trục X (Tuần X căn giữa trong dải) ──
+  // trục X (Tuần X căn giữa trong dải) + DẢI HIGHLIGHT NGÀY HÔM NAY ──
+  // Khung hoành độ (x0..x1) của nhóm cột thuộc 1 ngày — dùng chung cho các dải
+  function mpDayBox(xScale, area, g, half) {
+    const x0 = Math.max(area.left, xScale.getPixelForValue(g.i0) - half);
+    const x1 = Math.min(area.right, xScale.getPixelForValue(g.i1) + half);
+    return { x0, x1 };
+  }
+  // "Hôm nay" theo GIỜ MÁY (không dùng UTC) để dải highlight khớp ngày người xem
+  function mpTodayIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
   const mpAxisBandPlugin = {
     id: 'mpAxisBands',
+    // DẢI HIGHLIGHT NGÀY HÔM NAY: nền vàng cam nhạt + 2 vạch nét đứt 2 bên —
+    // vẽ ở beforeDatasetsDraw nên nằm DƯỚI các cột (không che số liệu)
+    beforeDatasetsDraw(chart, args, opts) {
+      const dayGroups = opts && opts.dayGroups;
+      const xScale = chart.scales && chart.scales.x;
+      const area = chart.chartArea;
+      if (!opts || !opts.todayIso || !dayGroups || !dayGroups.length || !xScale || !area) return;
+      const tg = dayGroups.find(g => g.iso === opts.todayIso);
+      if (!tg) return; // hôm nay không nằm trong khung đang xem
+      const count = dayGroups[dayGroups.length - 1].i1 + 1;
+      const half = count > 1 ? Math.abs(xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2 : area.width / 2;
+      const { x0, x1 } = mpDayBox(xScale, area, tg, half);
+      if (x1 - x0 < 2) return;
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.fillStyle = 'rgba(234, 88, 12, 0.10)'; // nền cam nhạt
+      ctx.fillRect(x0, area.top, x1 - x0, area.bottom - area.top);
+      ctx.setLineDash([5, 4]);                    // 2 vạch nét đứt đánh dấu 2 mép ngày
+      ctx.strokeStyle = 'rgba(194, 65, 12, 0.85)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x0 + 0.5, area.top); ctx.lineTo(x0 + 0.5, area.bottom);
+      ctx.moveTo(x1 - 0.5, area.top); ctx.lineTo(x1 - 0.5, area.bottom);
+      ctx.stroke();
+      ctx.restore();
+    },
     afterDraw(chart, args, opts) {
       const dayGroups = opts && opts.dayGroups;
       const xScale = chart.scales && chart.scales.x;
@@ -667,21 +708,38 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
       const half = count > 1 ? Math.abs(xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2 : area.width / 2;
       const ctx = chart.ctx;
       ctx.save();
-      // Hàng 1: tên ngày (dd/mm) căn giữa trên nhóm 3 cột của ngày đó
-      ctx.fillStyle = '#475569';
-      ctx.font = '600 10px system-ui, -apple-system, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      // Hàng 1: tên ngày (dd/mm) căn giữa trên nhóm 3 cột của ngày đó.
+      // NGÀY HÔM NAY: chữ ĐẬM màu cam + CHIP "HÔM NAY" trên đỉnh dải highlight
+      const todayIso = opts && opts.todayIso;
       dayGroups.forEach(g => {
-        const x0 = Math.max(area.left, xScale.getPixelForValue(g.i0) - half);
-        const x1 = Math.min(area.right, xScale.getPixelForValue(g.i1) + half);
+        const { x0, x1 } = mpDayBox(xScale, area, g, half);
         if (x1 - x0 < 2) return;
-        ctx.fillText(g.label, (x0 + x1) / 2, area.bottom + 10);
+        const cx = (x0 + x1) / 2;
+        const isToday = !!todayIso && g.iso === todayIso;
+        ctx.fillStyle = isToday ? '#c2410c' : '#475569';
+        ctx.font = `${isToday ? 700 : 600} 10px system-ui, -apple-system, "Segoe UI", sans-serif`;
+        ctx.fillText(g.label, cx, area.bottom + 10);
+        if (!isToday) return;
+        const text = 'HÔM NAY';
+        ctx.font = '700 9px system-ui, -apple-system, "Segoe UI", sans-serif';
+        const tw = ctx.measureText(text).width + 10;
+        const ty = area.top - 6; // nằm trong khoảng chừa trên biểu đồ, không đè cột
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') ctx.roundRect(cx - tw / 2, ty - 7, tw, 14, 7);
+        else ctx.rect(cx - tw / 2, ty - 7, tw, 14);
+        ctx.fillStyle = '#c2410c';
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillText(text, cx, ty);
       });
       // Hàng 2: dải màu tuần xen kẽ + tên "Tuần X" căn giữa
+      // (tông TRUNG TÍNH xám nâu — không dùng xanh dương/tím để không lẫn với
+      //  cột tre xanh và để dải highlight "HÔM NAY" màu cam nổi bật)
       const wColors = [
-        { fill: 'rgba(14,165,233,0.16)', text: '#0369a1' },
-        { fill: 'rgba(139,92,246,0.16)', text: '#6d28d9' }
+        { fill: 'rgba(100, 116, 139, 0.10)', text: '#475569' },
+        { fill: 'rgba(120, 113, 108, 0.16)', text: '#57534e' }
       ];
       const bandH = 18;
       const by1 = chart.height - 4;
@@ -811,7 +869,22 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     const idxs = [];
     for (let i = win.start; i < Math.min(win.start + win.size, slotTotal); i++) idxs.push(i);
     const viewLabels = idxs.map(i => labels[i]);
-    const viewDatasets = datasets.map(ds => ({ ...ds, data: idxs.map(i => ds.data[i]) }));
+    // Cột hiển thị dạng THÂN CÂY: dataset chẵn = KẾ HOẠCH (vẽ KHUNG RỖNG),
+    // dataset lẻ = THỰC TẾ (vẽ ĐẶC theo giá trị ⇒ lấp đầy theo tỷ lệ).
+    // Tắt cột chữ nhật mặc định của Chart.js (nền trong suốt, viền 0) rồi để
+    // plugin stemBars vẽ hình cây tre / ống nứa / khúc gỗ.
+    const viewDatasets = datasets.map((ds, di) => {
+      const locKey = (MATERIAL_LOCATIONS[Math.floor(di / 2)] || {}).key;
+      return {
+        ...ds,
+        data: idxs.map(i => ds.data[i]),
+        stemShape: stemShapeForLocation(locKey),
+        stemFilled: di % 2 === 1,
+        stemColor: MP_LOC_COLORS[locKey] || ds.borderColor,
+        backgroundColor: 'transparent',
+        borderWidth: 0
+      };
+    });
     attachMaterialPlanPanDrag();
 
     // Nhóm cột theo NGÀY (để căn giữa nhãn ngày) & theo TUẦN (dải màu xen kẽ)
@@ -846,7 +919,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
 
     const cfg = {
       type: 'bar',
-      plugins: [mpAxisBandPlugin, mpYTitlePlugin, mpLabelsGuidePlugin],
+      plugins: [mpAxisBandPlugin, mpYTitlePlugin, stemBarsPlugin, mpLabelsGuidePlugin],
       data: { labels: viewLabels, datasets: viewDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
@@ -854,8 +927,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         layout: { padding: { top: 18, bottom: 48 } },
         interaction: { mode: 'nearest', intersect: true },
         plugins: {
-          mpAxisBands: { dayGroups, weekGroups },
+          mpAxisBands: { dayGroups, weekGroups, todayIso: mpTodayIso() }, // todayIso → dải highlight NGÀY HÔM NAY
           mpYTitle: { text: 'Tấn' },
+          stemBars: { enabled: true }, // cột = cây tre · ống nứa · khúc gỗ (js/chart-stems.js)
           // Tắt plugin số tự động (bambooDataLabels) — số THỰC TẾ & đường gióng
           // KẾ HOẠCH do mpLabelsGuidePlugin vẽ riêng (KH không vẽ số)
           bambooDataLabels: false,

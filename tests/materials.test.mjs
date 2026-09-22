@@ -312,5 +312,66 @@ mat.deleteMaterial('mat-legacy-1');
 check('Xóa: bản ghi bị gỡ khỏi danh sách', state.materialRecords.length === delBefore - 1);
 check('Xóa: ảnh dạng {id, thumb} không làm Crash hàm xóa', state.materialRecords.every(r => !!r.id));
 
+// ─── DẢI HIGHLIGHT NGÀY HÔM NAY (biểu đồ Kế Hoạch vs Thực Tế Nguyên Liệu) ───
+console.log('--- DẢI HIGHLIGHT NGÀY HÔM NAY ---');
+// Ngày hôm nay theo GIỜ MÁY — cùng cách tính như js/materials.js
+const _now = new Date();
+const TODAY = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
+// Bắt lấy config biểu đồ do materials.js dựng (Chart stub ở trên chỉ lưu this.config)
+const captured = [];
+const BaseChart = global.Chart;
+global.Chart = class extends BaseChart {
+  constructor(ctx, cfg) { super(ctx, cfg); captured.push(cfg); }
+};
+state.materialPlanChartWeek = TODAY.slice(0, 7) + '-W01';
+mat.renderMaterialPlanChart();
+global.Chart = BaseChart;
+
+const cfgChart = captured[captured.length - 1];
+const bandOpts = cfgChart && cfgChart.options && cfgChart.options.plugins && cfgChart.options.plugins.mpAxisBands;
+const bandPlugin = cfgChart && (cfgChart.plugins || []).find(p => p && p.id === 'mpAxisBands');
+check('Biểu đồ NL: có truyền todayIso cho dải ngày (theo giờ máy)', !!bandOpts && bandOpts.todayIso === TODAY);
+check('Biểu đồ NL: plugin mpAxisBands có hook beforeDatasetsDraw (dải nằm DƯỚI cột)',
+  !!bandPlugin && typeof bandPlugin.beforeDatasetsDraw === 'function');
+check('Biểu đồ NL: vẫn giữ hook afterDraw (nhãn ngày + dải tuần + chip)',
+  !!bandPlugin && typeof bandPlugin.afterDraw === 'function');
+
+// Chart giả để soi nét vẽ của plugin
+function fakeBandChart() {
+  const calls = [];
+  const ctx = {
+    calls,
+    fillStyle: '', strokeStyle: '', font: '', lineWidth: 1, textAlign: '', textBaseline: '',
+    save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, setLineDash() {},
+    roundRect() {}, rect() {}, fill() { calls.push('fill'); },
+    fillRect() { calls.push('fillRect'); },
+    fillText(t) { calls.push('text:' + t); },
+    measureText: () => ({ width: 40 })
+  };
+  return {
+    ctx, _calls: calls,
+    chartArea: { left: 60, right: 600, top: 20, bottom: 300, width: 540, height: 280 },
+    scales: { x: { getPixelForValue: (v) => 60 + v * 30 } }
+  };
+}
+const groupsToday = [
+  { iso: '2026-09-01', label: '01/09', i0: 0, i1: 2 },
+  { iso: TODAY, label: 'hôm nay', i0: 3, i1: 5 }
+];
+const fToday = fakeBandChart();
+bandPlugin.beforeDatasetsDraw(fToday, {}, { dayGroups: groupsToday, weekGroups: [], todayIso: TODAY });
+check('Dải hôm nay: có TÔ NỀN sau cột (fillRect)', fToday._calls.includes('fillRect'));
+const fChip = fakeBandChart();
+bandPlugin.afterDraw(fChip, {}, { dayGroups: groupsToday, weekGroups: [], todayIso: TODAY });
+check('Dải hôm nay: có CHIP "HÔM NAY"', fChip._calls.some(c => String(c).includes('HÔM NAY')));
+check('Dải hôm nay: nhãn ngày hôm nay vẫn được vẽ', fChip._calls.some(c => String(c) === 'text:hôm nay'));
+const fOut = fakeBandChart();
+bandPlugin.beforeDatasetsDraw(fOut, {}, { dayGroups: groupsToday, weekGroups: [], todayIso: '1999-01-01' });
+check('Dải hôm nay: hôm nay NGOÀI khung đang xem → không tô gì', fOut._calls.length === 0);
+const fNone = fakeBandChart();
+bandPlugin.beforeDatasetsDraw(fNone, {}, { dayGroups: groupsToday, weekGroups: [] });
+check('Dải hôm nay: thiếu todayIso → không tô gì', fNone._calls.length === 0);
+
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed ? 1 : 0);

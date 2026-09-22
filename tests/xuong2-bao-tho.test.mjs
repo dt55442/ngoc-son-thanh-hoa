@@ -205,30 +205,34 @@ check('ĐỊNH MỨC: chip tháng đã đặt "T9 = 900 thanh/h"',
 
 
 // ─── G. SỐ LƯỢNG + THỂ TÍCH TỰ ĐỘNG (nguồn công đoạn Chọn Nan Thô) ──
-// Giả lập dữ liệu công đoạn "Chọn Nan Thô" (sẽ làm sau): số thanh ĐẠT theo kích thước
+// Dữ liệu công đoạn "Chọn Nan Thô" ghi cho ĐÚNG lô bào thô này (link baothoId)
 state.xuong2ChonNanThoRecords = [
-  { id: 'cn-1', dims: [1250, 80, 12], quantity: 1000 },
-  { id: 'cn-2', dims: [1300, 80, 12], quantity: 500 }
+  { id: 'cn-1', baothoId: rec.id, dims: [1250, 80, 12], sizeKey: '1250×80×12', cls: 'A', quantity: 1000, unitVol: 0.0012, volume: 1.2 },
+  { id: 'cn-2', baothoId: rec.id, dims: [1300, 80, 12], sizeKey: '1300×80×12', cls: 'B', quantity: 500, unitVol: 0.001248, volume: 0.624 },
+  // Lượt "nhập ở NGOÀI công đoạn" → KHÔNG được cộng sang Chạy Máy Bào Thô
+  { id: 'cn-ext', baothoId: rec.id, external: true, dims: [1250, 80, 12], sizeKey: '1250×80×12', cls: 'A', quantity: 9000, unitVol: 0.0012, volume: 10.8 }
 ];
 x2.renderX2BaoThoCard();
 const withQtyHtml = document.getElementById('x2-bt-day-cards').innerHTML;
-check('TỰ ĐỘNG: số lượng = 1.000 + 500 = 1.500 thanh (khớp theo 2 tổ hợp kích thước)',
+check('LIÊN KẾT: số lượng = 1.000 + 500 = 1.500 thanh (lấy từ Chọn Nan Thô theo lô)',
   withQtyHtml.includes('1.500') && withQtyHtml.includes('thanh'));
-check('TỰ ĐỘNG: thể tích quy đổi = 1.500 × 0,001224 = 1,8360 m³',
-  withQtyHtml.includes('1.8360'));
+check('LIÊN KẾT: lượt "nhập ngoài công đoạn" (9.000 thanh) KHÔNG cộng vào Bào Thô',
+  !withQtyHtml.includes('10.500'));
+check('LIÊN KẾT: thể tích quy đổi = 1,2000 + 0,6240 = 1,8240 m³ (chính xác từng lượt chọn)',
+  withQtyHtml.includes('1.8240'));
 check('CÔNG SUẤT: 1.500 thanh ÷ 9 giờ chạy máy = 167 thanh/h (đầu thẻ ngày)',
   withQtyHtml.includes('167 thanh/h'));
 check('HIỆU SUẤT: 167 thanh/h ÷ định mức 900 thanh/h (tháng 9) = 18,5%',
   withQtyHtml.includes('18,5%'));
 check('MINI CARD: "1 lượt · 1.500 thanh"',
   document.getElementById('x2-mini-count-bao-tho').textContent === '1 lượt · 1.500 thanh');
-check('THỐNG KÊ: tổng số thanh 1.500 + thể tích quy đổi 1,8360 m³',
+check('THỐNG KÊ: tổng số thanh 1.500 + thể tích quy đổi 1,8240 m³',
   document.getElementById('x2-bt-stats').innerHTML.includes('1.500') &&
-  document.getElementById('x2-bt-stats').innerHTML.includes('1.8360'));
-// Bỏ nguồn giả lập → thẻ quay về "chờ Chọn Nan Thô" (KHÔNG bịa số)
-delete state.xuong2ChonNanThoRecords;
+  document.getElementById('x2-bt-stats').innerHTML.includes('1.8240'));
+// Bỏ dữ liệu chọn nan → thẻ quay về "chờ Chọn Nan Thô" (KHÔNG bịa số)
+state.xuong2ChonNanThoRecords = [];
 x2.renderX2BaoThoCard();
-check('TỰ ĐỘNG: chưa có dữ liệu Chọn Nan Thô → "Chờ Chọn Nan Thô" + công suất "—"',
+check('LIÊN KẾT: chưa có dữ liệu Chọn Nan Thô → "Chờ Chọn Nan Thô" + công suất "—"',
   document.getElementById('x2-bt-day-cards').innerHTML.includes('Chờ Chọn Nan Thô') &&
   document.getElementById('x2-bt-day-cards').innerHTML.includes('Công suất: <strong>—</strong>'));
 

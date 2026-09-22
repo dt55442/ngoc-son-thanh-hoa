@@ -7,7 +7,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
@@ -223,6 +223,34 @@ import { escapeHTML, showToast } from './utils.js';
     return cur;
   }
 
+  // ─── GỘP NHẬT KÝ CHỌN NAN THÔ XƯỞNG 2 (file / backup / mây) ──
+  function restoreXuong2ChonNan(incomingArr) {
+    const before = JSON.stringify(state.xuong2ChonNanThoRecords || []);
+    const merged = mergeXuong2Records(state.xuong2ChonNanThoRecords, incomingArr);
+    state.xuong2ChonNanThoRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
+
+  // Khôi phục ĐỊNH MỨC CÔNG SUẤT CHỌN NAN theo tháng ({ 'YYYY-MM': thanh/giờ }).
+  function restoreX2ChonNanRates(incoming) {
+    const src = (incoming && typeof incoming === 'object') ? incoming : {};
+    const cur = (state.x2ChonNanRates && typeof state.x2ChonNanRates === 'object') ? state.x2ChonNanRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.x2ChonNanRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_CHON_NAN_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
   // ─── FILE STORAGE (LƯU DỮ LIỆU VÀO FILE CÙNG THƯ MỤC) ─────────
   // Sử dụng File System Access API để đọc/ghi file bamboo_data.json
   // trong thư mục người dùng chọn. Directory handle được lưu trong IndexedDB
@@ -360,6 +388,12 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2BaoThoRates) {
           restoreX2BaoThoRates(loaded.x2BaoThoRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (loaded.xuong2ChonNanThoRecords && Array.isArray(loaded.xuong2ChonNanThoRecords)) {
+          restoreXuong2ChonNan(loaded.xuong2ChonNanThoRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2ChonNanRates) {
+          restoreX2ChonNanRates(loaded.x2ChonNanRates); // GỘP theo tháng — không đè số đã đặt
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -429,6 +463,12 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2BaoThoRates) {
           restoreX2BaoThoRates(loaded.x2BaoThoRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (loaded.xuong2ChonNanThoRecords && Array.isArray(loaded.xuong2ChonNanThoRecords)) {
+          restoreXuong2ChonNan(loaded.xuong2ChonNanThoRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2ChonNanRates) {
+          restoreX2ChonNanRates(loaded.x2ChonNanRates); // GỘP theo tháng — không đè số đã đặt
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -482,10 +522,12 @@ import { escapeHTML, showToast } from './utils.js';
         xuong2CutRecords: state.xuong2CutRecords || [],
         xuong2BoOngRecords: state.xuong2BoOngRecords || [],
         xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
+        xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
         suppliers: state.suppliers || [],
         x2CapRates: state.x2CapRates || {},
         x2BoOngRates: state.x2BoOngRates || {},
-        x2BaoThoRates: state.x2BaoThoRates || {}
+        x2BaoThoRates: state.x2BaoThoRates || {},
+        x2ChonNanRates: state.x2ChonNanRates || {}
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -575,10 +617,12 @@ import { escapeHTML, showToast } from './utils.js';
       xuong2CutRecords: state.xuong2CutRecords || [],
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
+      xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
       suppliers: state.suppliers || [],
       x2CapRates: state.x2CapRates || {},
       x2BoOngRates: state.x2BoOngRates || {},
-      x2BaoThoRates: state.x2BaoThoRates || {}
+      x2BaoThoRates: state.x2BaoThoRates || {},
+      x2ChonNanRates: state.x2ChonNanRates || {}
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -642,6 +686,14 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && imported.x2BaoThoRates) {
           restoreX2BaoThoRates(imported.x2BaoThoRates); // GỘP theo tháng — không đè số đã đặt
+        }
+
+        if (imported && Array.isArray(imported.xuong2ChonNanThoRecords)) {
+          restoreXuong2ChonNan(imported.xuong2ChonNanThoRecords); // GỘP — không xóa lượt chọn nan mới hơn backup
+        }
+
+        if (imported && imported.x2ChonNanRates) {
+          restoreX2ChonNanRates(imported.x2ChonNanRates); // GỘP theo tháng — không đè số đã đặt
         }
 
         renderAll();
@@ -806,8 +858,10 @@ export {
   restoreMaterialRecords,
   restoreX2BaoThoRates,
   restoreX2BoOngRates,
+  restoreX2ChonNanRates,
   restoreXuong2BaoTho,
   restoreXuong2BoOng,
+  restoreXuong2ChonNan,
   saveData,
   saveDataToLocalFile,
   saveDirHandleToIDB,

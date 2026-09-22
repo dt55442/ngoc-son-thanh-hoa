@@ -36,6 +36,13 @@
   const STORAGE_KEY_XUONG2_BAO_THO = 'bamboo_tracker_xuong2_bao_tho_v1';
   // ĐỊNH MỨC CÔNG SUẤT BÀO THÔ (thanh/giờ) theo TỪNG THÁNG — { 'YYYY-MM': thanh/h }
   const STORAGE_KEY_X2_BAO_THO_RATE = 'bamboo_tracker_x2_bao_tho_rate_v1';
+  // Vị trí "CHỌN NAN THÔ" Xưởng 2: nhật ký chọn nan — mỗi lượt link 1 LÔ ĐÃ BÀO
+  // THÔ (để lấy kích thước) + phân loại (A / A1 / B / Loại hẳn) + số lượng thanh.
+  // Lượt "nhập ở NGOÀI công đoạn" (loại nan thêm mới, không có trong lô bào thô)
+  // được đánh dấu external = true → KHÔNG cộng vào tổng của Chạy Máy Bào Thô.
+  const STORAGE_KEY_XUONG2_CHON_NAN = 'bamboo_tracker_xuong2_chon_nan_tho_v1';
+  // ĐỊNH MỨC CÔNG SUẤT CHỌN NAN THÔ (thanh/giờ) theo TỪNG THÁNG
+  const STORAGE_KEY_X2_CHON_NAN_RATE = 'bamboo_tracker_x2_chon_nan_rate_v1';
   // Bảng "Thông Tin Nhà Cung" (tab Nguyên Liệu): danh mục nhà cung cấp do
   // người dùng khai báo (tên + mã số điền tay); các số liệu (tổng KL, số chuyến,
   // trung bình, tỷ lệ đạt, số lần nhắc nhở, đánh giá) TỰ TÍNH từ materialRecords
@@ -170,6 +177,12 @@
     x2BaoThoEditId: null,     // id lượt chạy máy đang sửa trong form (null = ghi mới)
     // Định mức công suất bào thô theo tháng (thanh/giờ): { 'YYYY-MM': thanh/h }
     x2BaoThoRates: {},
+    // Nhật ký chọn nan thô (vị trí Chọn Nan Thô — Xưởng 2): mỗi lượt link 1 lô
+    // đã bào thô + kích thước + phân loại + số lượng (thanh)
+    xuong2ChonNanThoRecords: [],
+    x2ChonNanEditId: null,    // id lượt chọn nan đang sửa trong form (null = ghi mới)
+    // Định mức công suất chọn nan thô theo tháng (thanh/giờ)
+    x2ChonNanRates: {},
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
     materialFormImages: [],   // ảnh (dataURL) đang có trong form
@@ -234,9 +247,11 @@ export {
   STORAGE_KEY_XUONG2_CUTS,
   STORAGE_KEY_XUONG2_BO_ONG,
   STORAGE_KEY_XUONG2_BAO_THO,
+  STORAGE_KEY_XUONG2_CHON_NAN,
   STORAGE_KEY_X2_CAP_RATE,
   STORAGE_KEY_X2_BO_ONG_RATE,
   STORAGE_KEY_X2_BAO_THO_RATE,
+  STORAGE_KEY_X2_CHON_NAN_RATE,
   STORAGE_KEY_SUPPLIERS,
   STORAGE_KEY_PLANNING_FORECAST,
   STORAGE_KEY_PLANNING_ITEMS,

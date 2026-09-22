@@ -42,6 +42,7 @@ import { escapeHTML, showToast } from './utils.js';
     xuong2CutRecords:  { tab: 'kanban',    label: 'Cắt chọn Xưởng 2',     get: () => state.xuong2CutRecords },
     xuong2BoOngRecords:{ tab: 'kanban',    label: 'Bổ ống Xưởng 2',       get: () => state.xuong2BoOngRecords },
     xuong2BaoThoRecords:{ tab: 'kanban',   label: 'Chạy máy bào thô X2',  get: () => state.xuong2BaoThoRecords },
+    xuong2ChonNanThoRecords:{ tab: 'kanban', label: 'Chọn nan thô Xưởng 2', get: () => state.xuong2ChonNanThoRecords },
     suppliers:         { tab: 'materials', label: 'Nhà cung cấp',         get: () => state.suppliers },
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
     hrEmployees:       { tab: 'hr',        label: 'Nhân viên',            get: () => state.hrEmployees },

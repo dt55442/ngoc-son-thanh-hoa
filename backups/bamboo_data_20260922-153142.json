@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-22T02:42:59.565Z",
+  "savedAt": "2026-09-22T07:51:01.264Z",
   "batches": [
     {
       "id": "batch-1789895190755",
@@ -14294,7 +14294,7 @@
       "date": "2026-09-06",
       "week": "2026-W36",
       "type": "Luồng cây xô",
-      "supplier": "Nhà Hướng Tam Lư",
+      "supplier": "Nhà Hiệu Tam Lư",
       "location": "xuong-2",
       "inputIndex": 17100,
       "outputIndex": 8180,
@@ -14304,7 +14304,7 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-07T08:58:44.796Z",
-      "updatedAt": "2026-09-19T09:09:34.164Z"
+      "updatedAt": "2026-09-22T07:47:26.703Z"
     },
     {
       "id": "mat-1788778338978-p2mq0",
@@ -14464,7 +14464,7 @@
       "date": "2026-09-07",
       "week": "2026-W37",
       "type": "Luồng ống",
-      "supplier": "Nhà Thanh Hiệu",
+      "supplier": "Nhà Hiệu Tam Lư",
       "location": "xuong-2",
       "inputIndex": 12310,
       "outputIndex": 6170,
@@ -14491,7 +14491,7 @@
         }
       ],
       "createdAt": "2026-09-12T03:38:24.550Z",
-      "updatedAt": "2026-09-19T09:09:34.164Z"
+      "updatedAt": "2026-09-22T07:50:59.917Z"
     },
     {
       "id": "mat-1789184460756-jhgtn",
@@ -14966,7 +14966,7 @@
       "date": "2026-09-11",
       "week": "2026-W37",
       "type": "Luồng ống",
-      "supplier": "Nhà Thanh Hiệu",
+      "supplier": "Nhà Hiệu Tam Lư",
       "location": "xuong-2",
       "inputIndex": 12240,
       "outputIndex": 6130,
@@ -14993,7 +14993,7 @@
         }
       ],
       "createdAt": "2026-09-12T04:06:33.069Z",
-      "updatedAt": "2026-09-19T07:22:02.771Z"
+      "updatedAt": "2026-09-22T07:50:13.481Z"
     },
     {
       "id": "mat-1789186655232-fks67",
@@ -15674,6 +15674,71 @@
       "images": [],
       "createdAt": "2026-09-18T09:14:00.149Z",
       "updatedAt": "2026-09-19T07:21:20.438Z"
+    },
+    {
+      "id": "mat-1790048322745-ojuwh",
+      "date": "2026-09-20",
+      "week": "2026-W38",
+      "type": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "location": "xuong-2",
+      "inputIndex": 4100,
+      "outputIndex": 2280,
+      "weight": 1820,
+      "unitPrice": 1900,
+      "totalAmount": 3458000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T03:38:42.745Z"
+    },
+    {
+      "id": "mat-1790048372302-ne6xh",
+      "date": "2026-09-21",
+      "week": "2026-W39",
+      "type": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "location": "xuong-2",
+      "inputIndex": 3580,
+      "outputIndex": 2290,
+      "weight": 1290,
+      "unitPrice": 1900,
+      "totalAmount": 2451000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T03:39:32.302Z"
+    },
+    {
+      "id": "mat-1790048410986-7rung",
+      "date": "2026-09-21",
+      "week": "2026-W39",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Tế",
+      "location": "xuong-2",
+      "inputIndex": 21940,
+      "outputIndex": 8400,
+      "weight": 13540,
+      "unitPrice": 1600,
+      "totalAmount": 21664000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T03:40:10.986Z",
+      "updatedAt": "2026-09-22T06:42:31.182Z"
+    },
+    {
+      "id": "mat-1790059301694-w8cms",
+      "date": "2026-09-21",
+      "week": "2026-W39",
+      "type": "Gỗ",
+      "supplier": "Nhà Chiến",
+      "location": "lo-hoi",
+      "inputIndex": 7340,
+      "outputIndex": 2660,
+      "weight": 4680,
+      "unitPrice": 1100,
+      "totalAmount": 5148000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-09-22T06:41:41.694Z"
     }
   ],
   "xuong2CutRecords": [
@@ -15752,6 +15817,8 @@
       "updatedAt": "2026-09-20T09:08:59.977Z"
     }
   ],
+  "xuong2BoOngRecords": [],
+  "xuong2BaoThoRecords": [],
   "suppliers": [
     {
       "id": "sup-1789808030672-9fhu0",
@@ -15878,9 +15945,29 @@
       "name": "Nhà Thắng Sơn Điện",
       "code": "",
       "createdAt": "2026-09-19T09:20:15.703Z"
+    },
+    {
+      "id": "sup-1790063303381-m8jsd",
+      "name": "Nhà Mới",
+      "code": "9572",
+      "createdAt": "2026-09-22T07:48:23.381Z"
+    },
+    {
+      "id": "sup-1790063346195-kqms4",
+      "name": "Nhà Thấm",
+      "code": "8831",
+      "createdAt": "2026-09-22T07:49:06.195Z"
+    },
+    {
+      "id": "sup-1790063380743-it8bv",
+      "name": "Nhà Chiến",
+      "code": "8874",
+      "createdAt": "2026-09-22T07:49:40.743Z"
     }
   ],
   "x2CapRates": {
     "2026-09": 415
-  }
+  },
+  "x2BoOngRates": {},
+  "x2BaoThoRates": {}
 }

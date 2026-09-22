@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-22T07:40:39.470Z",
+  "savedAt": "2026-09-22T08:35:38.195Z",
   "batches": [
     {
       "id": "batch-1789895190755",
@@ -14294,7 +14294,7 @@
       "date": "2026-09-06",
       "week": "2026-W36",
       "type": "Luồng cây xô",
-      "supplier": "Nhà Hướng Tam Lư",
+      "supplier": "Nhà Hiệu Tam Lư",
       "location": "xuong-2",
       "inputIndex": 17100,
       "outputIndex": 8180,
@@ -14304,7 +14304,7 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-07T08:58:44.796Z",
-      "updatedAt": "2026-09-19T09:09:34.164Z"
+      "updatedAt": "2026-09-22T07:47:26.703Z"
     },
     {
       "id": "mat-1788778338978-p2mq0",
@@ -14464,7 +14464,7 @@
       "date": "2026-09-07",
       "week": "2026-W37",
       "type": "Luồng ống",
-      "supplier": "Nhà Thanh Hiệu",
+      "supplier": "Nhà Hiệu Tam Lư",
       "location": "xuong-2",
       "inputIndex": 12310,
       "outputIndex": 6170,
@@ -14491,7 +14491,7 @@
         }
       ],
       "createdAt": "2026-09-12T03:38:24.550Z",
-      "updatedAt": "2026-09-19T09:09:34.164Z"
+      "updatedAt": "2026-09-22T07:50:59.917Z"
     },
     {
       "id": "mat-1789184460756-jhgtn",
@@ -14966,7 +14966,7 @@
       "date": "2026-09-11",
       "week": "2026-W37",
       "type": "Luồng ống",
-      "supplier": "Nhà Thanh Hiệu",
+      "supplier": "Nhà Hiệu Tam Lư",
       "location": "xuong-2",
       "inputIndex": 12240,
       "outputIndex": 6130,
@@ -14993,7 +14993,7 @@
         }
       ],
       "createdAt": "2026-09-12T04:06:33.069Z",
-      "updatedAt": "2026-09-19T07:22:02.771Z"
+      "updatedAt": "2026-09-22T07:50:13.481Z"
     },
     {
       "id": "mat-1789186655232-fks67",
@@ -15817,8 +15817,205 @@
       "updatedAt": "2026-09-20T09:08:59.977Z"
     }
   ],
-  "xuong2BoOngRecords": [],
-  "xuong2BaoThoRecords": [],
+  "xuong2BoOngRecords": [
+    {
+      "id": "x2bo-1790065927075-so6nl",
+      "cutId": "x2cut-1789895321264-xxhk3",
+      "materialId": "mat-1789640914869-w27fh",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "cutDate": "2026-09-18",
+      "lotOng": 3744,
+      "inputOng": 3744,
+      "klOngLoai": 0,
+      "klOngBo": 3744,
+      "date": "2026-09-18",
+      "week": "2026-W38",
+      "worker": "Lục Văn Tuấn",
+      "workTime": "07:00 → hết ca",
+      "workHours": 9,
+      "workHoursHC": 9,
+      "workHoursTC": 0,
+      "createdAt": "2026-09-22T08:32:07.075Z"
+    }
+  ],
+  "xuong2BaoThoRecords": [
+    {
+      "id": "x2bt-1790066019230-tlbu2",
+      "boOngId": "x2bo-1790065927075-so6nl",
+      "materialId": "mat-1789640914869-w27fh",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "boDate": "2026-09-18",
+      "cutDate": "2026-09-18",
+      "klOngBo": 3744,
+      "date": "2026-09-18",
+      "week": "2026-W38",
+      "daiText": "1250",
+      "rongText": "22",
+      "dayText": "7,8,9,10",
+      "dais": [
+        1250
+      ],
+      "rongs": [
+        22
+      ],
+      "thicks": [
+        7,
+        8,
+        9,
+        10
+      ],
+      "worker": "Hà Thị Bâng, Hà Văn Quân, Vi Văn Nhêu, Vi Văn Hem",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 13:00 → hết ca",
+      "workHours": 31.5,
+      "workHoursHC": 31.5,
+      "workHoursTC": 0,
+      "createdAt": "2026-09-22T08:33:39.230Z"
+    }
+  ],
+  "xuong2ChonNanThoRecords": [
+    {
+      "id": "x2cn-1790066068435-2xgh5",
+      "baothoId": "x2bt-1790066019230-tlbu2",
+      "external": false,
+      "materialId": "mat-1789640914869-w27fh",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "boDate": "2026-09-18",
+      "btDate": "2026-09-18",
+      "date": "2026-09-18",
+      "week": "2026-W38",
+      "dims": [
+        1250,
+        22,
+        7
+      ],
+      "sizeKey": "1250×22×7",
+      "cls": "A",
+      "quantity": 2016,
+      "unitVol": 0.0001925,
+      "volume": 0.3881,
+      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-09-22T08:34:28.435Z"
+    },
+    {
+      "id": "x2cn-1790066088086-8lzc3",
+      "baothoId": "x2bt-1790066019230-tlbu2",
+      "external": false,
+      "materialId": "mat-1789640914869-w27fh",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "boDate": "2026-09-18",
+      "btDate": "2026-09-18",
+      "date": "2026-09-18",
+      "week": "2026-W38",
+      "dims": [
+        1250,
+        22,
+        7
+      ],
+      "sizeKey": "1250×22×7",
+      "cls": "A1",
+      "quantity": 1500,
+      "unitVol": 0.0001925,
+      "volume": 0.2888,
+      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-09-22T08:34:48.086Z"
+    },
+    {
+      "id": "x2cn-1790066107189-ldrnu",
+      "baothoId": "x2bt-1790066019230-tlbu2",
+      "external": false,
+      "materialId": "mat-1789640914869-w27fh",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "boDate": "2026-09-18",
+      "btDate": "2026-09-18",
+      "date": "2026-09-18",
+      "week": "2026-W38",
+      "dims": [
+        1250,
+        22,
+        8
+      ],
+      "sizeKey": "1250×22×8",
+      "cls": "B",
+      "quantity": 200,
+      "unitVol": 0.00022,
+      "volume": 0.044,
+      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-09-22T08:35:07.189Z"
+    },
+    {
+      "id": "x2cn-1790066116815-7zrwp",
+      "baothoId": "x2bt-1790066019230-tlbu2",
+      "external": false,
+      "materialId": "mat-1789640914869-w27fh",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "boDate": "2026-09-18",
+      "btDate": "2026-09-18",
+      "date": "2026-09-18",
+      "week": "2026-W38",
+      "dims": [
+        1250,
+        22,
+        8
+      ],
+      "sizeKey": "1250×22×8",
+      "cls": "A",
+      "quantity": 1500,
+      "unitVol": 0.00022,
+      "volume": 0.33,
+      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-09-22T08:35:16.815Z"
+    },
+    {
+      "id": "x2cn-1790066137505-ticog",
+      "baothoId": "x2bt-1790066019230-tlbu2",
+      "external": false,
+      "materialId": "mat-1789640914869-w27fh",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "boDate": "2026-09-18",
+      "btDate": "2026-09-18",
+      "date": "2026-09-18",
+      "week": "2026-W38",
+      "dims": [
+        1250,
+        22,
+        8
+      ],
+      "sizeKey": "1250×22×8",
+      "cls": "reject",
+      "quantity": 100,
+      "unitVol": 0.00022,
+      "volume": 0.022,
+      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-09-22T08:35:37.505Z"
+    }
+  ],
   "suppliers": [
     {
       "id": "sup-1789808030672-9fhu0",
@@ -15945,11 +16142,30 @@
       "name": "Nhà Thắng Sơn Điện",
       "code": "",
       "createdAt": "2026-09-19T09:20:15.703Z"
+    },
+    {
+      "id": "sup-1790063303381-m8jsd",
+      "name": "Nhà Mới",
+      "code": "9572",
+      "createdAt": "2026-09-22T07:48:23.381Z"
+    },
+    {
+      "id": "sup-1790063346195-kqms4",
+      "name": "Nhà Thấm",
+      "code": "8831",
+      "createdAt": "2026-09-22T07:49:06.195Z"
+    },
+    {
+      "id": "sup-1790063380743-it8bv",
+      "name": "Nhà Chiến",
+      "code": "8874",
+      "createdAt": "2026-09-22T07:49:40.743Z"
     }
   ],
   "x2CapRates": {
     "2026-09": 415
   },
   "x2BoOngRates": {},
-  "x2BaoThoRates": {}
+  "x2BaoThoRates": {},
+  "x2ChonNanRates": {}
 }

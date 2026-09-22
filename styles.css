@@ -5853,6 +5853,47 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 }
 .x2-qty-pending svg { width: 12px; height: 12px; }
 
+/* ── PHÂN LOẠI NAN (Chọn Nan Thô): chip A / A1 / B / Loại hẳn ── */
+.x2-nan-cls {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.x2-nan-cls-A      { background: rgba(22, 163, 74, 0.14);  border-color: rgba(22, 163, 74, 0.4);  color: #15803d; }
+.x2-nan-cls-A1     { background: rgba(15, 118, 110, 0.13); border-color: rgba(15, 118, 110, 0.4); color: #0f766e; }
+.x2-nan-cls-B      { background: rgba(217, 119, 6, 0.14);  border-color: rgba(217, 119, 6, 0.4);  color: #b45309; }
+.x2-nan-cls-reject { background: rgba(220, 38, 38, 0.13);  border-color: rgba(220, 38, 38, 0.4);  color: #b91c1c; }
+/* Chip "ngoài công đoạn" (số lượng KHÔNG cộng sang Chạy Máy Bào Thô) */
+.x2-nan-ext {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+  padding: 0 7px;
+  border: 1px dashed rgba(180, 83, 9, 0.5);
+  border-radius: 999px;
+  background: rgba(180, 83, 9, 0.08);
+  color: #b45309;
+  font-size: 0.68rem;
+  font-style: italic;
+  white-space: nowrap;
+}
+.x2-nan-ext svg { width: 11px; height: 11px; }
+/* Thông tin tổng hợp ở ĐẦU THẺ NGÀY (tổng thanh · tổng thể tích · tỷ lệ loại) */
+.x2-day-sum {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.x2-day-sum svg { width: 13px; height: 13px; }
+.x2-day-sum strong { color: #0f766e; font-size: 0.85rem; }
+
 /* ── THẺ NGÀY CẮT/CHỌN: mỗi ngày 1 THỂ RIÊNG ──
    Đầu thẻ = thông tin chung (Ngày · Người cắt · Giờ cắt HC/TC · Công suất
    thực tế · Hiệu suất); trong thẻ = bảng các lô của ngày. */

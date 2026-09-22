@@ -283,7 +283,7 @@
             <span class="x2-mini-desc">Chạy máy bào thô ống luồng</span>
             <span class="x2-mini-count" id="x2-mini-count-bao-tho">–</span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-chon-nan-tho-card" aria-expanded="false" title="Chọn Nan Thô — chọn nan thô đạt trước khi vào lò (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-chon-nan-tho-card" aria-expanded="false" title="Chọn Nan Thô — chọn nan theo kích thước của lô đã bào thô, phân loại A / A1 / B / Loại hẳn, số lượng tự cộng sang thẻ Chạy Máy Bào Thô">
             <span class="x2-mini-ic"><i data-lucide="list-checks"></i></span>
             <span class="x2-mini-title">Chọn Nan Thô</span>
             <span class="x2-mini-desc">Chọn nan thô đạt trước khi vào lò</span>
@@ -674,14 +674,113 @@
           </div>
         </div>
 
-        <!-- VỊ TRÍ: CHỌN NAN THÔ — placeholder (chức năng bổ sung sau) -->
+        <!-- VỊ TRÍ: CHỌN NAN THÔ — chọn nan theo kích thước của LÔ ĐÃ BÀO THÔ -->
         <div class="planning-card x2-card-hidden" id="x2-chon-nan-tho-card">
           <div class="planning-card-header">
             <h4><i data-lucide="list-checks"></i> Chọn Nan Thô — Xưởng 2</h4>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận chọn nan thô (số thanh đạt/loại, người chọn tự lấy từ Bảng bố trí Nhân Sự) sẽ được cập nhật ngay sau đây.</p>
+
+          <!-- TIẾN ĐỘ: lô đã bào thô nhưng chưa ghi lượt chọn nan nào -->
+          <div class="x2-stock-bar" id="x2-cn-stock-bar"></div>
+
+          <!-- FORM: chọn lô (theo ngày bào thô) + ngày chọn + loại nan + phân loại + số lượng -->
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x2-cn-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x2-cn-edit-text"></span>
+            </div>
+            <form id="x2-cn-form">
+              <!-- DÒNG 1: lô đã bào thô (chọn theo ngày bào thô) + ngày chọn nan -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:2; min-width:320px;">
+                  <label for="x2-cn-baotho">Lô Đã Bào Thô (chọn theo ngày bào thô) <span class="required">*</span></label>
+                  <select id="x2-cn-baotho" required></select>
+                  <small style="color:var(--text-muted);">Nhãn hiện <strong>ngày bào thô</strong> · Loại NL · NCC · các kích thước của lô · số lượt đã chọn — gõ vào ô để tìm theo ngày/NCC</small>
+                </div>
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x2-cn-date">Ngày Chọn <span class="required">*</span></label>
+                  <input type="date" id="x2-cn-date" required>
+                </div>
+              </div>
+              <!-- DÒNG 2: loại nan (từ lô bào thô, có "Thêm loại mới") + phân loại + số lượng -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5; min-width:240px;">
+                  <label for="x2-cn-size">Loại Nan (kích thước) <span class="required">*</span></label>
+                  <select id="x2-cn-size" required></select>
+                  <small style="color:var(--text-muted);">Lấy từ kích thước của lô bào thô · chọn <strong>Thêm loại mới</strong> khi nan nhập ở ngoài công đoạn (không cộng sang Bào Thô)</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-cn-class">Phân Loại <span class="required">*</span></label>
+                  <select id="x2-cn-class">
+                    <option value="A">A</option>
+                    <option value="A1">A1 – Ít bọng cật</option>
+                    <option value="B">B – Nhiều bọng cật</option>
+                    <option value="reject">Loại hẳn</option>
+                  </select>
+                </div>
+                <div class="form-group" style="flex:0 0 150px;">
+                  <label for="x2-cn-qty">Số Lượng (thanh) <span class="required">*</span></label>
+                  <input type="number" id="x2-cn-qty" step="1" min="0" placeholder="0">
+                </div>
+              </div>
+              <!-- DÒNG 3 (CHỈ hiện khi chọn "Thêm loại mới"): kích thước nhập ngoài công đoạn -->
+              <div class="x2-form-row" id="x2-cn-new-size-row" style="display:none;">
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-cn-dai">Dài (mm)</label>
+                  <input type="number" id="x2-cn-dai" step="any" min="0" placeholder="VD: 1250">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-cn-rong">Rộng (mm)</label>
+                  <input type="number" id="x2-cn-rong" step="any" min="0" placeholder="VD: 80">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-cn-day">Dày (mm)</label>
+                  <input type="number" id="x2-cn-day" step="any" min="0" placeholder="VD: 12">
+                </div>
+              </div>
+              <!-- Ô TỰ TÍNH: thể tích 1 thanh · thể tích lượt · NGUỒN (cộng/không cộng) -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label>Khối Lượng (tự tính)</label>
+                  <div class="x2-ong-calc" id="x2-cn-calc"></div>
+                </div>
+              </div>
+              <!-- NGƯỜI CHỌN NAN + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự
+                   (vị trí "Chọn nan" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay -->
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-cancel-x2-cn">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Chọn Nan</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Thống kê nhanh -->
+          <div class="material-stats" id="x2-cn-stats"></div>
+          <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT CHỌN NAN theo THÁNG (thanh/giờ) —
+               nguồn cho cột Hiệu suất của từng thẻ ngày -->
+          <div class="x2-rate-bar" id="x2-cn-rate-bar">
+            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất chọn nan:</span>
+            <select id="x2-cn-rate-month" title="Chọn tháng"></select>
+            <input type="number" id="x2-cn-rate-value" min="0" step="any" placeholder="VD: 700" title="Công suất định mức của tháng (thanh/giờ)">
+            <span class="x2-rate-unit">thanh/h</span>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-cn-rate-save" data-perm="kanban" title="Lưu định mức công suất chọn nan của tháng"><i data-lucide="save"></i> Lưu</button>
+            <div class="x2-rate-chips" id="x2-cn-rate-chips"></div>
+          </div>
+
+          <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
+               đầu thẻ = thông tin CHUNG của ngày (Ngày · Người chọn nan · Thời gian ·
+               Công suất · Hiệu suất · Tổng số thanh · Tổng thể tích · Tỷ lệ loại);
+               trong thẻ = từng nhánh (Loại nan · Phân loại · Số lượng · Thể tích · Tỷ lệ loại) -->
+          <div class="x2-cut-table-wrap" id="x2-cn-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Chọn Nan Thô</h5>
+              <span class="x2-cut-table-count" id="x2-cn-table-count"></span>
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2cn-table" title="Thu gọn / Mở rộng">
+                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+              </button>
+            </div>
+            <div class="x2-cut-table-scroll">
+              <div id="x2-cn-day-cards"></div>
+            </div>
           </div>
         </div>
 

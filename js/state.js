@@ -43,6 +43,22 @@
   const STORAGE_KEY_XUONG2_CHON_NAN = 'bamboo_tracker_xuong2_chon_nan_tho_v1';
   // ĐỊNH MỨC CÔNG SUẤT CHỌN NAN THÔ (thanh/giờ) theo TỪNG THÁNG
   const STORAGE_KEY_X2_CHON_NAN_RATE = 'bamboo_tracker_x2_chon_nan_rate_v1';
+  // Vị trí "BÀO TINH" Xưởng 2 (thẻ launcher tab Công Đoạn): nhật ký bào tinh —
+  // mỗi lượt ghi Loại bào (Bào tinh / Bào tinh hạ cấp / Bào thanh) + nguồn thanh
+  // (lô ở Kho / thanh lỗi của Bào Tinh theo cỡ / tự nhập kích thước + số lượng)
+  // + KÍCH THƯỚC SAU BÀO + SL thanh đạt + SL thanh lỗi.
+  const STORAGE_KEY_XUONG2_BAO_TINH = 'bamboo_tracker_xuong2_bao_tinh_v1';
+  // ĐỊNH MỨC CÔNG SUẤT BÀO TINH (thanh/giờ) theo TỪNG THÁNG — { 'YYYY-MM': thanh/h }
+  const STORAGE_KEY_X2_BAO_TINH_RATE = 'bamboo_tracker_x2_bao_tinh_rate_v1';
+  // ĐỊNH MỨC CÔNG SUẤT ÉP VÁN (m³/giờ) theo TỪNG THÁNG — { 'YYYY-MM': m³/h }.
+  // Thẻ Ép Ván (launcher tab Công Đoạn): KHÔNG đặt định mức → thẻ ngày chỉ hiện
+  // công suất m³/ngày; CÓ định mức → hiện thêm m³/h (tổng m³ ÷ giờ phân vị "Ép"
+  // từ Bảng bố trí Nhân Sự) + Hiệu suất = m³/h ÷ định mức.
+  const STORAGE_KEY_X2_EP_VAN_RATE = 'bamboo_tracker_x2_ep_van_rate_v1';
+  // DANH SÁCH VỊ TRÍ SẤY KHAI BÁO THÊM (Than Hóa + Sấy): ô "Vị Trí" của modal
+  // Thêm Lô Sấy Mới hiện sẵn LS1..LS15, người dùng bấm nút "Thêm" để khai báo
+  // vị trí khác (VD: LS16, Lò 01) — mảng chuỗi tên vị trí, xem js/batch-modals.js
+  const STORAGE_KEY_X2_LOT_LOCATIONS = 'bamboo_tracker_x2_lot_locations_v1';
   // Bảng "Thông Tin Nhà Cung" (tab Nguyên Liệu): danh mục nhà cung cấp do
   // người dùng khai báo (tên + mã số điền tay); các số liệu (tổng KL, số chuyến,
   // trung bình, tỷ lệ đạt, số lần nhắc nhở, đánh giá) TỰ TÍNH từ materialRecords
@@ -183,6 +199,22 @@
     x2ChonNanEditId: null,    // id lượt chọn nan đang sửa trong form (null = ghi mới)
     // Định mức công suất chọn nan thô theo tháng (thanh/giờ)
     x2ChonNanRates: {},
+    // Nhật ký BÀO TINH (vị trí Bào Tinh — Xưởng 2): mỗi lượt ghi Loại bào
+    // (Bào tinh / Bào tinh hạ cấp / Bào thanh) + nguồn thanh + kích thước sau bào
+    // + SL thanh đạt + SL thanh lỗi (thanh lỗi gom theo cỡ để HẠ CẤP lại).
+    xuong2BaoTinhRecords: [],
+    x2BaoTinhEditId: null,    // id lượt bào tinh đang sửa trong form (null = ghi mới)
+    // Định mức công suất bào tinh theo tháng (thanh/giờ): { 'YYYY-MM': thanh/h }
+    x2BaoTinhRates: {},
+    // Định mức công suất ÉP VÁN theo tháng (m³/giờ): { 'YYYY-MM': m³/h } —
+    // không đặt thì thẻ ngày Ép Ván chỉ hiện công suất m³/ngày.
+    x2EpVanRates: {},
+    // Thẻ Xưởng 2 đang mở ở tab Công Đoạn (id thẻ, null = không mở thẻ nào) —
+    // dùng cho nút Lịch Sử / Xuất Excel dùng chung + gợi ý của Trợ Lý AI.
+    x2OpenCardId: null,
+    // Vị trí sấy khai báo THÊM ngoài LS1..LS15 (nút "Thêm" ở ô Vị Trí của modal
+    // Thêm Lô Sấy Mới) — VD ['LS16', 'Lò 01']. Dùng để dựng danh sách vị trí.
+    x2LotLocations: [],
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
     materialFormImages: [],   // ảnh (dataURL) đang có trong form
@@ -252,6 +284,10 @@ export {
   STORAGE_KEY_X2_BO_ONG_RATE,
   STORAGE_KEY_X2_BAO_THO_RATE,
   STORAGE_KEY_X2_CHON_NAN_RATE,
+  STORAGE_KEY_XUONG2_BAO_TINH,
+  STORAGE_KEY_X2_BAO_TINH_RATE,
+  STORAGE_KEY_X2_EP_VAN_RATE,
+  STORAGE_KEY_X2_LOT_LOCATIONS,
   STORAGE_KEY_SUPPLIERS,
   STORAGE_KEY_PLANNING_FORECAST,
   STORAGE_KEY_PLANNING_ITEMS,

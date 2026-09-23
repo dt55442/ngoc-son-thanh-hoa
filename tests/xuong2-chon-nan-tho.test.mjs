@@ -139,10 +139,16 @@ selBt.value = 'bt-1';
 x2.updateXuong2ChonNanLinked();
 check('LINK: Ngày chọn mặc định theo ngày bào thô = 2026-09-10',
   document.getElementById('x2-cn-date').value === '2026-09-10');
-check('LOẠI NAN: danh sách lấy từ kích thước của lô bào thô (2 tổ hợp) + nút Thêm loại mới',
+check('LOẠI NAN: danh sách lấy từ kích thước của lô bào thô (2 tổ hợp) — KHÔNG còn "Thêm loại mới" ở đây',
   selSize.innerHTML.includes('1250 × 80 × 12') && selSize.innerHTML.includes('1300 × 80 × 12') &&
-  selSize.innerHTML.includes('Thêm loại mới (nhập ở ngoài công đoạn)'));
-check('THÊM MỚI: 3 ô Dài/Rộng/Dày đang ẩn (chỉ hiện khi chọn Thêm loại mới)',
+  !selSize.innerHTML.includes('__new__') && !selSize.innerHTML.includes('Thêm loại mới'));
+check('LÔ ĐÃ BÀO THÔ: có lựa chọn "Thêm loại mới" (nan mua NGOÀI công đoạn) ngay trong ô Lô',
+  selBt.innerHTML.includes('value="__new__"') && selBt.innerHTML.includes('Thêm loại mới'));
+check('Ô CHỌN LÔ: nhãn GỌN — KHÔNG liệt kê kích thước (đã có ở ô Loại nan)',
+  !selBt.innerHTML.includes('1250 × 80 × 12') && !selBt.innerHTML.includes('1300 × 80 × 12'));
+check('CHẾ ĐỘ LÔ: đang chọn lô có sẵn → hiện ô Loại nan, ẨN ô Nhà cung cấp + 3 ô kích thước',
+  document.getElementById('x2-cn-size-group').style.display === '' &&
+  document.getElementById('x2-cn-ncc-group').style.display === 'none' &&
   document.getElementById('x2-cn-new-size-row').style.display === 'none');
 
 // ─── C. LƯU LƯỢT CHỌN NAN (loại nan LẤY TỪ LÔ BÀO THÔ) ───────────
@@ -177,6 +183,14 @@ check('LƯU: ô chọn lô hiện chip "đã chọn 1 lượt"',
   selBt.innerHTML.includes('đã chọn 1 lượt'));
 check('LƯU: danh sách loại nan hiện "đã chọn 1.000 thanh" cho cỡ 1250 × 80 × 12',
   selSize.innerHTML.includes('đã chọn 1.000 thanh'));
+// GIỮ NGUYÊN lựa chọn sau khi lưu (nhập số lượng liên tiếp không phải chọn lại)
+check('LƯU XONG: GIỮ NGUYÊN ô chọn lô (bt-1) · ngày chọn (2026-09-16) · Loại nan (1250×80×12) · Phân loại (A)',
+  selBt.value === 'bt-1' && document.getElementById('x2-cn-date').value === '2026-09-16' &&
+  selSize.value === '1250×80×12' && document.getElementById('x2-cn-class').value === 'A');
+check('LƯU XONG: CHỈ xoá ô Số lượng (để nhập tiếp số lượng khác)',
+  document.getElementById('x2-cn-qty').value === '');
+check('LƯU XONG: đếm "đã chọn X thanh" của cỡ đó tự cập nhật lên 1.000',
+  selSize.innerHTML.includes('đã chọn 1.000 thanh'));
 
 // ─── D. LIÊN KẾT SANG CHẠY MÁY BÀO THÔ ─────────────────────────
 check('LIÊN KẾT: thẻ Chạy Máy Bào Thô nhận số lượng 1.000 thanh của lô bt-1',
@@ -187,11 +201,13 @@ const btQty = state.xuong2ChonNanThoRecords.filter(r => r.baothoId === 'bt-1' &&
   .reduce((s, r) => s + (Number(r.volume) || 0), 0);
 check('LIÊN KẾT: tổng thể tích của lô bào thô = 1,2000 m³', Math.abs(btQty - 1.2) < 1e-9);
 
-// ─── E. THÊM LOẠI MỚI (nhập NGOÀI công đoạn — KHÔNG cộng sang Bào Thô) ──
-selSize.value = '__new__';
-x2.syncX2ChonNanNewSizeRow();
-check('THÊM MỚI: chọn "Thêm loại mới" → 3 ô Dài/Rộng/Dày HIỆN ra',
-  document.getElementById('x2-cn-new-size-row').style.display === '');
+// ─── E. THÊM LOẠI MỚI (nan MUA NGOÀI — tự khai NCC + kích thước) ──
+selBt.value = '__new__';
+x2.updateXuong2ChonNanLinked();
+check('THÊM MỚI: chọn ở ô LÔ → ô "Loại nan" ẨN, ô "Nhà cung cấp" HIỆN',
+  document.getElementById('x2-cn-size-group').style.display === 'none' &&
+  document.getElementById('x2-cn-ncc-group').style.display === '');
+check('THÊM MỚI: 3 ô Dài/Rộng/Dày HIỆN ra', document.getElementById('x2-cn-new-size-row').style.display === '');
 document.getElementById('x2-cn-dai').value = '900';
 document.getElementById('x2-cn-rong').value = '70';
 document.getElementById('x2-cn-day').value = '10';
@@ -200,12 +216,26 @@ x2.renderX2ChonNanCalc();
 const calc2 = document.getElementById('x2-cn-calc').innerHTML;
 check('THÊM MỚI: tự tính thể tích + báo nguồn "ngoài công đoạn" (0,0006 m³/thanh · 0,1890 m³)',
   calc2.includes('0.0006 m³') && calc2.includes('0.1890 m³') && calc2.includes('ngoài công đoạn'));
-document.getElementById('x2-cn-class').value = 'B';
+// CHẶN: nan mua ngoài mà CHƯA ghi Nhà cung cấp
+document.getElementById('x2-cn-ncc').value = '';
+const cntExt0 = state.xuong2ChonNanThoRecords.length;
 document.getElementById('x2-cn-date').value = '2026-09-16';
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
+check('THÊM MỚI (CHẶN): chưa ghi Nhà cung cấp → không lưu',
+  state.xuong2ChonNanThoRecords.length === cntExt0);
+document.getElementById('x2-cn-ncc').value = 'Luồng thanh - NCC';
+document.getElementById('x2-cn-class').value = 'B';
+x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 const cnExt = state.xuong2ChonNanThoRecords.find(r => r.external);
-check('THÊM MỚI: lưu lượt có external = true + kích thước tự nhập (900×70×10)',
-  !!cnExt && cnExt.dims[0] === 900 && cnExt.cls === 'B' && cnExt.quantity === 300);
+check('THÊM MỚI: lưu lượt external = true + NCC tự khai + kích thước tự nhập (900×70×10), KHÔNG gắn lô bào thô',
+  !!cnExt && cnExt.baothoId === '' && cnExt.supplier === 'Luồng thanh - NCC' &&
+  cnExt.dims[0] === 900 && cnExt.cls === 'B' && cnExt.quantity === 300);
+check('LƯU XONG (thêm mới): GIỮ NGUYÊN chế độ "Thêm loại mới" + NCC + 3 ô kích thước để nhập tiếp',
+  selBt.value === '__new__' && document.getElementById('x2-cn-ncc').value === 'Luồng thanh - NCC' &&
+  document.getElementById('x2-cn-ncc-group').style.display === '' &&
+  document.getElementById('x2-cn-dai').value === '900' &&
+  document.getElementById('x2-cn-rong').value === '70' && document.getElementById('x2-cn-day').value === '10' &&
+  document.getElementById('x2-cn-new-size-row').style.display === '');
 
 // ─── F. BẢNG DỮ LIỆU: THẺ NGÀY (đầu thẻ chung + nhánh trong thẻ) ──
 const dayHtml = document.getElementById('x2-cn-day-cards').innerHTML;
@@ -227,8 +257,9 @@ check('THẺ NGÀY: CÔNG SUẤT = 1.000 thanh ÷ 9 giờ = 111 thanh/h',
 check('TRONG THẺ: dòng nhánh có chip Loại nan + chip phân loại A / B',
   dayHtml.includes('1250 × 80 × 12') && dayHtml.includes('x2-nan-cls-A') &&
   dayHtml.includes('x2-nan-cls-B'));
-check('TRONG THẺ: lượt "nhập ngoài công đoạn" có chip cảnh báo + kích thước 900 × 70 × 10',
-  dayHtml.includes('ngoài công đoạn') && dayHtml.includes('900 × 70 × 10'));
+check('TRONG THẺ: lượt "nhập ngoài công đoạn" có chip cảnh báo + kích thước 900 × 70 × 10 + NCC tự khai',
+  dayHtml.includes('ngoài công đoạn') && dayHtml.includes('900 × 70 × 10') &&
+  dayHtml.includes('Nan mua ngoài · NCC Luồng thanh - NCC'));
 check('TRONG THẺ: cột Số lượng + Thể tích của các nhánh (1.000/1,2000 · 300/0,1890)',
   dayHtml.includes('1.000') && dayHtml.includes('1.2000') &&
   dayHtml.includes('300') && dayHtml.includes('0.1890'));
@@ -291,22 +322,35 @@ check('SỬA: số lượng 250 → 125 (tỷ lệ loại cỡ 1250×80×12 còn
   document.getElementById('x2-cn-day-cards').innerHTML.includes('11,1%'));
 check('SỬA: sau lưu về lại chế độ ghi mới', state.x2ChonNanEditId === null);
 
+// SỬA LƯỢT NAN MUA NGOÀI: form quay lại chế độ "Thêm loại mới" + nạp lại NCC
+x2.editXuong2ChonNan(cnExt.id);
+check('SỬA (nan mua ngoài): ô Lô về "Thêm loại mới" + nạp lại NCC + hiện ô Nhà cung cấp + ẩn ô Loại nan',
+  selBt.value === '__new__' && document.getElementById('x2-cn-ncc').value === 'Luồng thanh - NCC' &&
+  document.getElementById('x2-cn-ncc-group').style.display === '' &&
+  document.getElementById('x2-cn-size-group').style.display === 'none' &&
+  document.getElementById('x2-cn-dai').value === '900');
+x2.resetXuong2ChonNanForm();
+
 // ─── J. CHẶN DỮ LIỆU KHÔNG HỢP LỆ ──────────────────────────────
 const cntBefore = state.xuong2ChonNanThoRecords.length;
 document.getElementById('x2-cn-qty').value = '0';
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 check('CHẶN: số lượng = 0 → không lưu', state.xuong2ChonNanThoRecords.length === cntBefore);
 document.getElementById('x2-cn-qty').value = '100';
-selSize.value = '__new__';
-x2.syncX2ChonNanNewSizeRow();
+selBt.value = '__new__';
+x2.updateXuong2ChonNanLinked();
+document.getElementById('x2-cn-ncc').value = 'NCC Test';
 ['x2-cn-dai', 'x2-cn-rong', 'x2-cn-day'].forEach(id => { document.getElementById(id).value = ''; });
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 check('CHẶN: "Thêm loại mới" mà thiếu Dài/Rộng/Dày → không lưu',
   state.xuong2ChonNanThoRecords.length === cntBefore);
 x2.resetXuong2ChonNanForm();
-check('RESET: form về chế độ ghi mới + phân loại về A + 3 ô kích thước trống',
+check('RESET: về chế độ ghi mới + phân loại A + NCC & 3 ô kích thước trống + về chế độ LÔ có sẵn',
   state.x2ChonNanEditId === null && document.getElementById('x2-cn-class').value === 'A' &&
-  document.getElementById('x2-cn-dai').value === '');
+  document.getElementById('x2-cn-dai').value === '' &&
+  document.getElementById('x2-cn-ncc').value === '' &&
+  document.getElementById('x2-cn-ncc-group').style.display === 'none' &&
+  document.getElementById('x2-cn-size-group').style.display === '');
 
 // ─── K. XÓA LƯỢT CHỌN NAN (+ tombstone) ─────────────────────────
 x2.deleteXuong2ChonNan(cnRej.id);
@@ -333,6 +377,10 @@ check('CẤU TRÚC (index.html): form có lô bào thô + ngày + loại nan + p
   idxHtml.includes('"x2-cn-size"') && idxHtml.includes('"x2-cn-class"') &&
   idxHtml.includes('"x2-cn-qty"') && idxHtml.includes('x2-cn-new-size-row') &&
   idxHtml.includes('"x2-cn-dai"') && idxHtml.includes('"x2-cn-rong"') && idxHtml.includes('"x2-cn-day"'));
+check('CẤU TRÚC (index.html): ô "Nhà cung cấp" (nan mua ngoài) gợi ý sẵn "Luồng thanh - NCC" + datalist',
+  idxHtml.includes('id="x2-cn-ncc"') && idxHtml.includes('placeholder="Luồng thanh - NCC"') &&
+  idxHtml.includes('id="x2-cn-ncc-list"') && idxHtml.includes('id="x2-cn-ncc-group"') &&
+  idxHtml.includes('id="x2-cn-size-group"'));
 check('CẤU TRÚC (index.html): 4 mức phân loại A / A1 / B / Loại hẳn trong ô chọn',
   idxHtml.includes('>A1 – Ít bọng cật<') && idxHtml.includes('>B – Nhiều bọng cật<') &&
   idxHtml.includes('>Loại hẳn<'));

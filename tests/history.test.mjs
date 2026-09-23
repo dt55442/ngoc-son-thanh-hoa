@@ -85,7 +85,10 @@ state.pressRecords = [{ id: 'pr1', date: '2026-09-12', week: 'Tuần 37', year: 
 press.savePressRecords();
 check('HIST-2: thêm lượt ép -> có 1 dòng lịch sử', state.history.length === 1);
 check('HIST-3: đúng người dùng (fullname)', state.history[0].user === 'Quản trị viên');
-check('HIST-4: đúng tab (press)', state.history[0].tab === 'press');
+check('HIST-4: đúng tab (kanban — lượt ép ván nay thuộc tab Công Đoạn sau khi thẻ Ép Ván dời vào)',
+  state.history[0].tab === 'kanban');
+check('HIST-4b: đúng VÙNG DỮ LIỆU (domain = pressRecords) + nhãn vùng',
+  state.history[0].domain === 'pressRecords' && state.history[0].domainLabel === 'Lượt ép ván');
 check('HIST-5: đúng thao tác (add)', state.history[0].action === 'add');
 check('HIST-6: chi tiết có nhãn nhận dạng (ngày)', String(state.history[0].detail).includes('2026-09-12'));
 
@@ -126,11 +129,11 @@ check('HIST-14: đã lưu localStorage', Array.isArray(saved) && saved.length ==
 
 // ─── CHỈ ADMIN MỞ ĐƯỢC MODAL ──────────────────────────────────
 state.currentUser = { username: 'viewer1', fullname: 'Người Xem', email: 'v@x.vn', role: 'viewer' };
-historyMod.openHistoryModal('press');
+historyMod.openHistoryModal('kanban');
 check('HIST-15: viewer mở modal -> bị chặn', !modalShown('modal-history'));
 
 state.currentUser = { username: 'admin', fullname: 'Quản trị viên', email: 'admin@x.vn', role: 'admin' };
-historyMod.openHistoryModal('press');
+historyMod.openHistoryModal('kanban');
 check('HIST-16: admin mở modal -> hiển thị', modalShown('modal-history'));
 check('HIST-17: danh sách render theo tab đã chọn', document.getElementById('history-list').innerHTML.includes('Lượt ép ván'));
 
@@ -138,8 +141,19 @@ check('HIST-17: danh sách render theo tab đã chọn', document.getElementById
 historyMod.setHistoryTabFilter('qc');
 check('HIST-18: tab QC không có log -> hiện thông báo rỗng', document.getElementById('history-list').innerHTML.includes('Chưa có lịch sử'));
 
+// Lọc theo VÙNG DỮ LIỆU (nút Lịch Sử dùng chung ở tab Công Đoạn mở đúng vùng của thẻ)
+historyMod.openHistoryModal('kanban', 'pressRecords');
+check('HIST-18b: mở Lịch Sử theo VÙNG DỮ LIỆU (pressRecords) -> chỉ hiện log của vùng đó',
+  document.getElementById('history-list').innerHTML.includes('Lượt ép ván') ||
+  document.getElementById('history-modal-title').innerHTML.includes('Lượt ép ván'));
+historyMod.setHistoryDomainFilter('xuong2BaoTinhRecords');
+check('HIST-18c: đổi vùng sang Bào tinh (không có log) -> danh sách rỗng',
+  document.getElementById('history-list').innerHTML.includes('Chưa có lịch sử'));
+historyMod.setHistoryTabFilter('kanban');
+historyMod.setHistoryDomainFilter('all');   // bỏ lọc vùng trước khi kiểm tra lọc người
+
 // Lọc theo người dùng
-historyMod.setHistoryTabFilter('press');
+historyMod.setHistoryTabFilter('kanban');
 historyMod.setHistoryUserFilter('Người lạ');
 check('HIST-19: lọc người không tồn tại -> danh sách rỗng', document.getElementById('history-list').innerHTML.includes('Chưa có lịch sử'));
 historyMod.setHistoryUserFilter('Quản trị viên');

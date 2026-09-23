@@ -5853,7 +5853,151 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 }
 .x2-qty-pending svg { width: 12px; height: 12px; }
 
-/* ── PHÂN LOẠI NAN (Chọn Nan Thô): chip A / A1 / B / Loại hẳn ── */
+/* ─────────────────────────────────────────────────────────────
+   TẠM ẨN CỘT "4. BÀO TINH" trong bảng Kanban (Than Hóa + Sấy)
+   CỜ XÓA SAU: công đoạn Than Hóa + Sấy chỉ dùng 3 thẻ Sấy 1 / Sấy 2 / Kho.
+   KHÔNG xóa markup/mã công đoạn bao_tinh (planning, press, dashboard,
+   xuất Excel vẫn dùng) — chỉ ẩn cột + chỉnh lưới còn 3 cột cho rộng rãi.
+   Muốn hiện lại: xóa 3 dòng CSS trong khối này và trả tab mobile "Bào tinh".
+   ───────────────────────────────────────────────────────────── */
+.kanban-column[data-stage-col="bao_tinh"],
+.kanban-column[data-x2-hidden="1"] { display: none !important; }
+@media (min-width: 1200px) {
+  /* 3 cột thay vì 4 → mỗi cột rộng hơn ~33% (đủ chỗ cho thông tin giờ làm việc/công suất) */
+  .kanban-board { grid-template-columns: repeat(3, 1fr); }
+}
+/* ─────────────────────────────────────────────────────────── */
+
+/* ── Ô "Thông Tin Lấy Từ Nguồn" trong modal Thêm Lô Sấy Mới ── */
+.al-source-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  font-size: 0.8rem;
+}
+.al-source-info .al-k { color: var(--text-muted); margin-right: 4px; }
+.al-source-info strong { color: var(--primary); }
+.al-source-info .al-warn { color: #b45309; font-weight: 700; }
+
+/* ── Ô CHỌN NHIỀU NGUỒN (nút "Chọn Lô Nan") + Ô CHỌN VỊ TRÍ (LS1..LS15) ──
+   Chọn được NHIỀU thẻ nguồn cùng lúc: mỗi thẻ là 1 nút tick (data-al-pick). */
+.al-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+.al-picker-btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 42px;
+  font-weight: 600;
+}
+.al-picker-btn svg { width: 16px; height: 16px; }
+.al-picked-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--border-color);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.al-picked-count.has-pick {
+  background: var(--primary-light);
+  border-color: var(--primary-border);
+  color: var(--primary);
+}
+.al-picker {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+.al-picker-tools { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.al-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.al-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.al-card:hover { border-color: var(--primary); }
+.al-card.picked {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: inset 0 0 0 1px var(--primary-border);
+}
+.al-card-check { display: inline-flex; }
+.al-card-check svg { width: 16px; height: 16px; color: var(--text-muted); }
+.al-card.picked .al-card-check svg { color: var(--primary); }
+.al-card-body { display: flex; flex-direction: column; min-width: 0; }
+.al-card-main { font-size: 0.8rem; font-weight: 700; }
+.al-card-sub { font-size: 0.7rem; color: var(--text-muted); }
+.al-empty { font-size: 0.8rem; color: var(--text-muted); font-style: italic; padding: 6px 2px; }
+.al-loc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.al-loc-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.al-loc-chip:hover { border-color: var(--primary); color: var(--primary); }
+.al-loc-chip.picked { background: var(--primary); border-color: var(--primary); color: #fff; }
+.al-loc-add-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.al-loc-add-row input { flex: 1; min-width: 0; }
+/* ── Vị trí đã khai báo: có nút × để XÓA (LS1..LS15 là mặc định, không có nút) ── */
+.al-loc-item { display: inline-flex; align-items: center; gap: 3px; }
+.al-loc-item .al-loc-chip { padding-right: 10px; }
+.al-loc-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: 50%;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.al-loc-del:hover, .al-loc-del:focus-visible { background: var(--danger); color: #fff; border-color: var(--danger); }
+.al-loc-del svg { width: 13px; height: 13px; }
+.al-loc-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.al-loc-hint svg { width: 13px; height: 13px; flex: 0 0 auto; }
 .x2-nan-cls {
   display: inline-block;
   padding: 1px 8px;
@@ -6029,6 +6173,73 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 @media (max-width: 639.98px) {
   #x2-detail-overlay { padding: 8px; }
   .x2-detail-content { padding: 10px; }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   POP-UP THẺ CHI TIẾT (Xưởng 2 / QC / Nhân Sự) — CHỈ GIỮ 1 KHUNG
+   Trước đây mỗi pop-up có 2 khung lồng nhau: khung NGOÀI của shell
+   pop-up (22px khung tre ở giao diện "Tre Sáng", 2px teal ở giao diện
+   sáng) + padding 16px + KHUNG của thẻ bên trong (26px) ⇒ mất gần
+   140px chiều ngang, rất chật, nhất là trên điện thoại.
+   Nay: BỎ khung ngoài + padding của shell ⇒ KHUNG CỦA THẺ BÊN TRONG
+   "nổi lên" bằng đúng mép pop-up — chỉ còn 1 khung và rộng rãi tối đa.
+   Shell vẫn giữ nền, bo góc, thanh tiêu đề + nút ×.
+   Muốn quay lại kiểu cũ (2 khung): xóa khối này.
+   ───────────────────────────────────────────────────────────── */
+#x2-detail-card, #qc-detail-card, #hr-detail-card {
+  border: none;                 /* bỏ khung ngoài (thắng cả khung tre 22/26px) */
+  border-image: none;
+  padding: 0;                   /* bỏ luôn padding shell → thẻ bên trong sát mép */
+  box-shadow: 0 12px 44px rgba(15, 23, 42, 0.32);
+}
+.x2-detail-content, .qc-detail-content, .hr-detail-content { padding: 0; }
+/* Thẻ bên trong pop-up là khung DUY NHẤT của panel — kéo cao hết panel để
+   khung dưới luôn sát đáy (không hở khoảng trống không khung) */
+.x2-detail-content > .planning-card,
+.qc-detail-content > .planning-card,
+.hr-detail-content > .planning-card {
+  margin: 0;
+  min-height: 100%;
+  border-radius: 12px;
+}
+/* Giao diện "Tre Sáng": khung tre của thẻ trong nổi lên đúng mép pop-up nên
+   giữ bề dày chuẩn (không bị khung ngoài ép nhỏ) */
+body[data-theme="night"] .x2-detail-content > .planning-card,
+body[data-theme="night"] .qc-detail-content > .planning-card,
+body[data-theme="night"] .hr-detail-content > .planning-card {
+  border-width: 22px;
+  border-image-width: 22px;
+}
+@media (max-width: 639.98px) {
+  /* Điện thoại: chừa mép màn hình ít hơn để khung trong rộng tối đa */
+  #x2-detail-overlay, #qc-detail-overlay, #hr-detail-overlay { padding: 6px; }
+}
+
+/* ── ẨN HÀNG TIÊU ĐỀ LẶP LẠI của thẻ khi nằm trong pop-up ──
+   Tiêu đề thẻ đã in trên thanh pop-up (`.modal-header` của shell, tự lấy từ
+   `.planning-card-header h4`) → hàng tiêu đề bên trong là LẶP, chỉ tốn chỗ.
+   CHỈ ẩn khi hàng đó KHÔNG chứa nút/ô chức năng — nhiều thẻ có nút ở hàng
+   tiêu đề (Thêm nhân viên · Thêm dòng xuất hàng · Thu gọn/Mở rộng · …) nên
+   phải giữ nguyên. Trình duyệt không hỗ trợ :has() → tự động bỏ qua (giữ như cũ). */
+.x2-detail-content > .planning-card > .planning-card-header:not(:has(button)):not(:has(select)):not(:has(input)),
+.qc-detail-content > .planning-card > .planning-card-header:not(:has(button)):not(:has(select)):not(:has(input)),
+.hr-detail-content > .planning-card > .planning-card-header:not(:has(button)):not(:has(select)):not(:has(input)) {
+  display: none;
+}
+
+/* ── THẺ ÉP VÁN: các thẻ LỒNG BÊN TRONG (biểu đồ · bảng chi tiết) trả về
+   viền mảnh — giữ đúng quy tắc "pop-up CHỈ 1 KHUNG", không lồng khung tre */
+.x2-detail-content > #x2-ep-van-card .x2-epv-frame .planning-card {
+  border: none;
+  border-image: none;
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
+}
+.x2-detail-content > #x2-ep-van-card .x2-epv-frame .planning-card > .planning-card-header {
+  padding: 0 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* ═══ HIỆU ỨNG ĐỘNG MINI CARD "THỐNG KÊ ĐI LÀM" — PHONG CÁCH TICKER ═══
@@ -6890,6 +7101,60 @@ body[data-theme="night"] .x2-mini-card {
   border-radius: 0;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   ĐIỆN THOẠI (≤639px): CHỈ THẺ CHA GIỮ KHUNG TRE
+   • Thẻ CON (thẻ lô nan Kanban, mini card Xưởng 2 / QC / Nhân Sự, .card
+     lồng trong thẻ cha) TRẢ VỀ viền mảnh → đọc được nhiều thông tin hơn.
+   • Khung tre của thẻ CHA mảnh hơn (14px thay vì 22/26px) cho đỡ chật.
+   • ≤480px: thu nhỏ (zoom) vùng nội dung 1 nhịp — "scale toàn bộ" theo
+     yêu cầu cho màn hình nhỏ, danh sách thẻ nguồn về 1 cột dễ chạm.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 639.98px) {
+  /* ── THẺ CON: bỏ khung tre, chỉ còn viền mảnh ── */
+  body[data-theme="night"] .bamboo-card,
+  body[data-theme="night"] .x2-mini-card,
+  body[data-theme="night"] .qc-mini-card,
+  body[data-theme="night"] .hr-mini-card,
+  body[data-theme="night"] .card .card,
+  body[data-theme="night"] .planning-card .card,
+  body[data-theme="night"] .dashboard-card .card,
+  body[data-theme="night"] .hud-frame .card {
+    border: 1px solid rgba(46, 125, 50, 0.35);
+    border-image: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(80, 70, 30, 0.12);
+  }
+  /* ── THẺ CHA: khung tre mảnh hơn ── */
+  body[data-theme="night"] .card,
+  body[data-theme="night"] .dashboard-card,
+  body[data-theme="night"] .planning-card,
+  body[data-theme="night"] .custom-chart-card,
+  body[data-theme="night"] .press-chart-card,
+  body[data-theme="night"] .hud-frame {
+    border-width: 14px !important;
+    border-image-width: 14px !important;
+    border-radius: 9px;
+  }
+  /* Thẻ lô nan (thẻ con) gọn thêm cho khỏi tràn ngang */
+  body[data-theme="night"] .bamboo-card { padding: 8px 10px; }
+}
+@media (max-width: 639.98px) {
+  /* Thẻ lô nan là THẺ CON → bỏ LUÔN khung trang trí (thân tre 2 bên + lá tre)
+     trên điện thoại (cả giao diện sáng) để nội dung rộng rãi; chỉ thẻ CHA
+     "Than Hóa + Sấy" giữ khung bao ngoài. */
+  .bamboo-card::before,
+  .bamboo-card::after { display: none !important; }
+  .bamboo-card { padding-left: 10px; padding-right: 10px; }
+}
+@media (max-width: 480px) {
+  /* Thu nhỏ toàn bộ nội dung 1 nhịp để hiển thị được nhiều dữ liệu hơn */
+  @supports (zoom: 1) {
+    body[data-theme="night"] .view-panel { zoom: 0.9; }
+  }
+  /* Danh sách thẻ nguồn: 1 cột cho dễ chạm */
+  .al-card-list { grid-template-columns: 1fr; }
+}
+
 /* ── GIẢM HIỆU ỨNG (máy yếu): tắt kính mờ + animation, GIỮ màu theme ── */
 body[data-theme="night"][data-fx="low"] * { backdrop-filter: none !important; }
 body[data-theme="night"][data-fx="low"] .modal-card,
@@ -7061,6 +7326,275 @@ body[data-fx="low"] .bamboo-card::after {
 @media print {
   body[data-theme="night"] { background: #fff !important; color: #000 !important; }
   body[data-theme="night"]::before { display: none !important; }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   THẺ BÀO TINH — FORM GỌN / TỐI GIẢN
+   • Hàng hẹp, nhãn nhỏ; nút "Chọn thanh" mở DANH SÁCH THẺ — bấm cả
+     thẻ để CHỌN / BỎ CHỌN (KHÔNG dùng ô vuông tích), thẻ 2 dòng:
+     dòng 1 = kích thước · loại nan · số lượng, dòng 2 = vị trí.
+   • Bảng tổng hợp theo KÍCH THƯỚC CHUNG: mỗi dòng có KÍCH THƯỚC
+     SAU BÀO riêng + ô "SL thanh đạt"; SL thanh lỗi tự tính KHÔNG
+     hiện ở form (chỉ ở bảng lịch sử). Ô kích thước HẸP (3–5 chữ số).
+   • "Bào thanh": mỗi hàng tự nhập k.thước trước bào + số lượng,
+     nút "Thêm hàng thông tin khác" → nhập nhiều hàng rồi LƯU 1 LẦN.
+   ═════════════════════════════════════════════════════════════ */
+#x2-bao-tinh-card .x2-btinh-row { gap: 10px; margin-bottom: 8px; }
+#x2-bao-tinh-card .x2-form-row .form-group { gap: 2px; }
+#x2-bao-tinh-card .x2-form-row .form-group label { font-size: 0.78rem; }
+#x2-bao-tinh-card .x2-form-row .form-group small { margin-top: 2px; }
+/* MỘT HÀNG: Ngày Bào · Loại Bào · Chọn Thanh (≤640px thì tự xuống dòng) */
+#x2-bao-tinh-card .x2-btinh-date-g { flex: 0 0 150px; }
+#x2-bao-tinh-card .x2-btinh-kind-g { flex: 0 0 180px; }
+#x2-bao-tinh-card .x2-btinh-pick-g { flex: 1 1 220px; position: relative; }
+#x2-bao-tinh-card .x2-cut-form-wrap { padding-top: 0; }
+.x2-btinh-picker { padding: 8px; }
+.x2-btinh-picker .al-card-list { max-height: 46vh; gap: 6px; }
+.x2-btinh-card {
+  min-height: 0;
+  padding: 8px 10px;
+  align-items: flex-start;
+}
+.x2-btinh-card .al-card-body { gap: 1px; }
+.x2-btinh-card .al-card-main { font-size: 0.82rem; }
+.x2-btinh-card .al-card-sub { font-size: 0.73rem; }
+.x2-btinh-groups { margin: 2px 0 10px; }
+.x2-btinh-groups-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.x2-btinh-groups-head svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.x2-btinh-group-table { font-size: 0.8rem; }
+.x2-btinh-group-table th, .x2-btinh-group-table td { padding: 5px 8px; }
+.x2-btinh-group-table tfoot td {
+  border-top: 2px solid var(--border-color);
+  background: var(--bg-subtle);
+}
+/* Kích thước 3–5 chữ số → ô hẹp, không để khoảng trống rộng */
+.x2-btinh-dims { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.x2-dim-x { color: var(--text-muted); font-size: 0.72rem; }
+.x2-btinh-dim,
+.x2-btinh-qty {
+  width: 62px;
+  min-width: 0;
+  min-height: 0;
+  padding: 3px 5px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+.x2-btinh-dim::-webkit-outer-spin-button,
+.x2-btinh-dim::-webkit-inner-spin-button,
+.x2-btinh-qty::-webkit-outer-spin-button,
+.x2-btinh-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.x2-btinh-dim, .x2-btinh-qty { -moz-appearance: textfield; appearance: textfield; }
+.x2-btinh-qty { width: 84px; }
+.x2-btinh-group-scroll { overflow-x: auto; }
+.x2-btinh-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+.x2-btinh-ok {
+  width: 84px;
+  min-height: 0;
+  padding: 4px 8px;
+  font-size: 0.86rem;
+  text-align: right;
+}
+.x2-btinh-src { color: var(--text-muted); }
+.x2-btinh-err small { color: var(--text-muted); }
+
+/* ═════════════════════════════════════════════════════════════
+   THẺ ÉP VÁN (launcher tab Công Đoạn) — 2 KHUNG: Lượt Ép / Biểu Đồ
+   • Nút chuyển khung nằm trong hàng tiêu đề thẻ; khung không dùng
+     nút nào thì ẩn (thuộc tính hidden).
+   • Khung 1 = thẻ NGÀY như các công đoạn Xưởng 2 (dùng lại .x2-day-card)
+     + mỗi lượt ép 1 dòng .x2-epv-row (nội dung + nút sửa/xóa).
+   • Khung 2 = card biểu đồ ép ván (dời từ tab cũ) — bo viền trong thẻ.
+   ═════════════════════════════════════════════════════════════ */
+.x2-epv-header { flex-wrap: wrap; gap: 8px; }
+.x2-epv-controls { flex-wrap: wrap; gap: 6px; align-items: center; }
+.x2-epv-tabs { display: inline-flex; gap: 4px; }
+.x2-epv-tab { white-space: nowrap; }
+.x2-epv-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.x2-epv-frame { padding: 0 14px 14px; }
+.x2-epv-frame[hidden] { display: none; }
+.x2-epv-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0 10px;
+}
+.x2-epv-count { font-size: 0.74rem; color: var(--text-muted); }
+.x2-epv-chart-card { box-shadow: none; margin: 0; }
+/* 2 nút DÙNG CHUNG trong thanh tiêu đề pop-up thẻ Xưởng 2 (Lịch Sử · Xuất Dữ Liệu) */
+.x2-detail-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.x2-detail-actions .btn { white-space: nowrap; }
+.x2-epv-chart-card .planning-card-header h4 { font-size: 0.95rem; }
+/* Từng LƯỢT ÉP trong thẻ ngày */
+.x2-epv-rows { display: flex; flex-direction: column; gap: 4px; }
+.x2-epv-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+.x2-epv-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  line-height: 1.5;
+}
+.x2-epv-row-actions { flex: 0 0 auto; display: flex; gap: 4px; }
+#x2-epv-day-cards .x2-day-card { margin-bottom: 8px; }
+#x2-epv-day-wrap .x2-cut-table-scroll { max-height: 380px; overflow-y: auto; }
+#x2-epv-day-wrap { margin: 0 0 12px; }
+#press-table-card { margin: 0; }
+
+/* ═════════════════════════════════════════════════════════════
+   TỐI ƯU ĐIỆN THOẠI (≤639.98px) — khối CUỐI file nên thắng mọi quy
+   tắc phía trên cùng độ ưu tiên. Gồm 8 nhóm:
+   (1) khoá tỉ lệ chữ (iOS không tự phóng to khi xoay máy)
+   (2) bỏ độ trễ 300ms + chặn zoom do chạm 2 lần (touch-action)
+   (3) ô nhập ≥16px — iOS KHÔNG tự phóng to trang khi chạm ô nhập
+   (4) modal cao theo màn hình THẬT (dvh) + thanh nút Lưu dính đáy
+   (5) cuộn mượt, không "lây" cuộn sang trang phía sau
+   (6) cột Kanban thấp lại để còn thấy tab công đoạn/thanh công cụ
+   (7) ô chọn nguồn / vị trí trong modal: chạm vừa ngón tay (≥46px)
+   (8) bảng dữ liệu gọn chữ, vuốt ngang dễ hơn
+   ═════════════════════════════════════════════════════════════ */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Khoá cuộn trang nền khi modal ĐANG THỰC SỰ hiển thị — CHỈ các trường hợp:
+   (a) modal cấp trang:            body > .modal-overlay.show        (38 modal)
+   (b) modal trong <main>:         body > main > .modal-overlay.show (2 modal — form ép ván)
+   (c) pop-up trong TAB ĐANG MỞ:   .view-panel.active .modal-overlay.show (7 modal)
+   LƯU Ý (đã sửa lỗi mất cuộn): 7 modal/pop-up nằm BÊN TRONG view-panel (Xưởng 2,
+   Kế Hoạch, QC, Nhân Sự). Rời tab mà chưa đóng → overlay bị display:none nhưng
+   VẪN giữ class .show; rule cũ `body:has(.modal-overlay.show)` vẫn khớp ⇒ khoá
+   cuộn CẢ TRANG, mọi tab không cuộn xuống được. Nay chỉ tính overlay đang hiện
+   (thêm lớp JS: rời tab thì đóng pop-up của tab đó — closeViewScopedModals). */
+body:has(> .modal-overlay.show),
+body:has(> main > .modal-overlay.show),
+body:has(.view-panel.active .modal-overlay.show) { overflow: hidden; }
+
+@media (max-width: 639.98px) {
+  /* (2) ── Chạm nhạy, không dính zoom do bấm nhanh 2 lần ── */
+  .btn, button, select, input, textarea,
+  .al-loc-chip, .al-loc-del, .al-card,
+  .x2-mini-card, .qc-mini-card, .hr-mini-card,
+  .column-filter-btn, .stage-tab, .mobile-nav-item {
+    touch-action: manipulation;
+  }
+
+  /* (3) ── Ô nhập 16px: iOS không còn tự phóng to trang khi focus ── */
+  .form-group input, .form-group select, .form-group textarea,
+  .modal-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .modal-card select, .modal-card textarea,
+  .column-search-input, .multi-transfer-bar input, .multi-transfer-bar select,
+  #ai-question,
+  .x2-detail-modal input, .x2-detail-modal select, .x2-detail-modal textarea {
+    font-size: 16px;
+  }
+  /* Ô nhập trong BẢNG TỔNG HỢP Bào Tinh: đủ to để chạm (≥40px), ô hẹp vì
+     kích thước chỉ 3–5 chữ số — không để khoảng trống rộng */
+  .x2-btinh-dim, .x2-btinh-qty, .x2-btinh-ok {
+    min-height: 40px;
+    padding: 3px 4px;
+  }
+  .x2-btinh-dim { width: 66px; }
+  .x2-btinh-group-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  .x2-btinh-group-table th, .x2-btinh-group-table td { padding: 4px 5px; }
+  .x2-btinh-actions .btn { min-height: 44px; }
+
+  /* (3b) ── THẺ ÉP VÁN: 2 nút chuyển khung đủ to để chạm, khung gọn lại ── */
+  .x2-epv-tab { min-height: 40px; padding: 6px 10px; font-size: 0.82rem; }
+  .x2-epv-frame { padding: 0 10px 10px; }
+  .x2-epv-row { align-items: flex-start; }
+  .x2-epv-row-main { font-size: 0.76rem; }
+  .x2-epv-row-actions .btn { min-width: 40px; min-height: 40px; }
+  #x2-epv-day-wrap .x2-cut-table-scroll { max-height: 320px; }
+
+  /* (4) ── Modal vừa màn hình thật; thanh nút luôn trong tầm tay ── */
+  .modal-overlay { padding: 8px; }
+  .modal-card {
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    overscroll-behavior: contain;
+  }
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* (5) ── Cuộn mượt + chặn cuộn lây sang trang phía sau (đỡ giật) ── */
+  .modal-card, .al-picker, .al-card-list, .column-cards-wrapper,
+  .table-responsive, .x2-cut-table-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* (6) ── Cột Kanban thấp lại: luôn thấy tab công đoạn + nút công cụ ── */
+  .kanban-column { max-height: 74vh; }
+  .column-cards-wrapper { min-height: 120px; }
+
+  /* (7) ── Ô chọn nguồn / vị trí: nút to, danh sách 1 cột dễ chạm ── */
+  .al-picker { padding: 10px; }
+  .al-picker-btn { min-height: 46px; }
+  .al-picker-tools { gap: 6px; }
+  .al-picker-tools .btn { flex: 1 1 0; justify-content: center; }
+  .al-card-list { grid-template-columns: 1fr; max-height: 44vh; gap: 8px; }
+  .al-card { min-height: 46px; padding: 10px 12px; }
+  .al-card-main { font-size: 0.86rem; }
+  .al-loc-chips { gap: 8px; }
+  .al-loc-chip { min-height: 38px; padding: 6px 12px; font-size: 0.84rem; }
+  .al-loc-item { gap: 4px; }
+  .al-loc-del { width: 30px; height: 30px; }
+  .al-loc-del svg { width: 15px; height: 15px; }
+  .al-loc-add-row { gap: 8px; }
+  .al-loc-add-row .btn { flex: 0 0 auto; min-height: 44px; }
+
+  /* (8) ── Bảng dữ liệu: chữ gọn, không bị bóp cột ── */
+  table th, table td { font-size: 0.8rem; }
+
+  /* (9) ── Bỏ "nháy xám" khi chạm — thay bằng sắc xanh tre rất nhạt ── */
+  .btn, button, .al-card, .al-loc-chip, .al-loc-del,
+  .x2-mini-card, .qc-mini-card, .hr-mini-card, .bamboo-card, .card {
+    -webkit-tap-highlight-color: rgba(46, 125, 50, 0.14);
+  }
+
+  /* (10) ── Nút đóng modal đủ to cho ngón tay (≥44px) ── */
+  .modal-close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 

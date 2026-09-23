@@ -35,14 +35,17 @@ import { escapeHTML, showToast } from './utils.js';
     planningItems:     { tab: 'planning',  label: 'Kế hoạch sản xuất',    get: () => state.planningItems },
     planningForecast:  { tab: 'planning',  label: 'Giả định kế hoạch',    get: () => state.planningForecast },
     planningStock:     { tab: 'planning',  label: 'Tồn kho (Kế hoạch)',   get: () => state.planningStock },
-    pressRecords:      { tab: 'press',     label: 'Lượt ép ván',          get: () => state.pressRecords },
-    pressNotes:        { tab: 'press',     label: 'Ghi chú giải trình',   get: () => state.pressNotes },
+    pressRecords:      { tab: 'kanban',    label: 'Lượt ép ván',          get: () => state.pressRecords },
+    pressNotes:        { tab: 'kanban',    label: 'Ghi chú giải trình',   get: () => state.pressNotes },
     materialRecords:   { tab: 'materials', label: 'Nhật ký nguyên liệu',  get: () => state.materialRecords },
     materialPlan:      { tab: 'materials', label: 'Kế hoạch nguyên liệu', get: () => state.materialPlan },
     xuong2CutRecords:  { tab: 'kanban',    label: 'Cắt chọn Xưởng 2',     get: () => state.xuong2CutRecords },
     xuong2BoOngRecords:{ tab: 'kanban',    label: 'Bổ ống Xưởng 2',       get: () => state.xuong2BoOngRecords },
     xuong2BaoThoRecords:{ tab: 'kanban',   label: 'Chạy máy bào thô X2',  get: () => state.xuong2BaoThoRecords },
     xuong2ChonNanThoRecords:{ tab: 'kanban', label: 'Chọn nan thô Xưởng 2', get: () => state.xuong2ChonNanThoRecords },
+    xuong2BaoTinhRecords: { tab: 'kanban', label: 'Bào tinh Xưởng 2',     get: () => state.xuong2BaoTinhRecords },
+    x2LotLocations:    { tab: 'kanban',    label: 'Vị trí sấy (khai báo)', get: () => state.x2LotLocations },
+    x2EpVanRates:      { tab: 'kanban',    label: 'Định mức ép ván (m³/h)', get: () => state.x2EpVanRates },
     suppliers:         { tab: 'materials', label: 'Nhà cung cấp',         get: () => state.suppliers },
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
     hrEmployees:       { tab: 'hr',        label: 'Nhân viên',            get: () => state.hrEmployees },
@@ -55,10 +58,11 @@ import { escapeHTML, showToast } from './utils.js';
   };
 
   // Tab trong dropdown của modal: các tab dữ liệu + Dashboard
+  // (thẻ Ép Ván đã dời vào tab Công Đoạn nên KHÔNG còn tab 'press'; các vùng
+  //  dữ liệu của Ép Ván — lượt ép, ghi chú, định mức m³/h — đã gom về 'kanban')
   const HISTORY_TABS = [
     { id: 'kanban', name: 'Công Đoạn (Kanban)' },
     { id: 'planning', name: 'Kế Hoạch Sản Xuất' },
-    { id: 'press', name: 'Sản Lượng Ép Ván' },
     { id: 'materials', name: 'Nguyên Liệu' },
     { id: 'qc', name: 'QC — Xuất Hàng' },
     { id: 'hr', name: 'Nhân Sự' },
@@ -258,7 +262,9 @@ import { escapeHTML, showToast } from './utils.js';
   }
 
   // ─── MODAL XEM LỊCH SỬ (CHỈ ADMIN) ────────────────────────────
-  let historyView = { tab: 'all', user: 'all' };
+  // historyView.domain = lọc theo VÙNG DỮ LIỆU (khóa trong DOMAINS) — dùng cho
+  // nút "Lịch Sử" DÙNG CHUNG ở tab Công Đoạn: mở đúng vùng của THẺ đang mở.
+  let historyView = { tab: 'all', user: 'all', domain: 'all' };
 
   function historyActionLabel(a) {
     return { add: 'Thêm', edit: 'Sửa', delete: 'Xóa', import: 'Nạp dữ liệu' }[a] || 'Lưu';
@@ -270,9 +276,14 @@ import { escapeHTML, showToast } from './utils.js';
     return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   }
 
-  function openHistoryModal(tabId) {
+  // Mở modal lịch sử. tabId: tab dữ liệu ('kanban' | 'all' | ...).
+  // domain: khóa VÙNG DỮ LIỆU (DOMAINS) — vd 'xuong2BaoTinhRecords' khi mở từ
+  // thẻ Bào Tinh; bỏ trống = tất cả vùng của tab.
+  function openHistoryModal(tabId, domain) {
     if (!isAdmin()) { showToast('Lịch sử sửa đổi chỉ dành cho Quản Trị (Admin)!', 'error'); return; }
-    historyView = { tab: tabId || 'all', user: 'all' };
+    const domKey = (domain && DOMAINS[domain]) ? domain : 'all';
+    const tab = tabId || (domKey !== 'all' ? DOMAINS[domKey].tab : 'all');
+    historyView = { tab, user: 'all', domain: domKey };
     populateHistoryFilters();
     renderHistoryList();
     document.getElementById('modal-history')?.classList.add('show');
@@ -286,22 +297,44 @@ import { escapeHTML, showToast } from './utils.js';
   // Đổi bộ lọc từ dropdown trong modal (gọi từ events.js)
   function setHistoryTabFilter(tabId) {
     historyView.tab = tabId || 'all';
+    // Đổi tab → bỏ lọc vùng dữ liệu cũ nếu vùng đó không thuộc tab mới
+    if (historyView.domain !== 'all') {
+      const dom = DOMAINS[historyView.domain];
+      if (!dom || (historyView.tab !== 'all' && dom.tab !== historyView.tab)) historyView.domain = 'all';
+    }
+    populateHistoryFilters();
     renderHistoryList();
   }
   function setHistoryUserFilter(user) {
     historyView.user = user || 'all';
     renderHistoryList();
   }
+  // Đổi bộ lọc VÙNG DỮ LIỆU (Lịch Sử dùng chung cho các thẻ Xưởng 2)
+  function setHistoryDomainFilter(domain) {
+    historyView.domain = (domain && DOMAINS[domain]) ? domain : 'all';
+    renderHistoryList();
+  }
 
   function populateHistoryFilters() {
     const tabSel = document.getElementById('history-tab-filter');
     const userSel = document.getElementById('history-user-filter');
+    const domSel = document.getElementById('history-domain-filter');
     if (tabSel) {
       tabSel.innerHTML = '<option value="all">Tất cả các tab</option>' + HISTORY_TABS
         .map(t => `<option value="${t.id}"${historyView.tab === t.id ? ' selected' : ''}>${escapeHTML(t.name)}</option>`)
         .join('');
       tabSel.value = historyView.tab;
       if (!tabSel.value) tabSel.value = 'all';
+    }
+    // Vùng dữ liệu: chỉ liệt kê các vùng thuộc TAB đang chọn (đỡ rối)
+    if (domSel) {
+      const keys = Object.keys(DOMAINS).filter(k =>
+        historyView.tab === 'all' || DOMAINS[k].tab === historyView.tab);
+      domSel.innerHTML = '<option value="all">Tất cả vùng dữ liệu</option>' + keys
+        .map(k => `<option value="${k}"${historyView.domain === k ? ' selected' : ''}>${escapeHTML(DOMAINS[k].label)}</option>`)
+        .join('');
+      domSel.value = historyView.domain;
+      if (!domSel.value) domSel.value = 'all';
     }
     if (userSel) {
       const users = [...new Set((state.history || []).map(h => h.user).filter(Boolean))];
@@ -319,13 +352,15 @@ import { escapeHTML, showToast } from './utils.js';
     const all = (state.history || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
     const rows = all.filter(h =>
       (historyView.tab === 'all' || h.tab === historyView.tab) &&
+      (historyView.domain === 'all' || h.domain === historyView.domain) &&
       (historyView.user === 'all' || h.user === historyView.user));
     const tabName = historyView.tab === 'all' ? 'Tất cả các tab' : ((HISTORY_TABS.find(t => t.id === historyView.tab) || {}).name || historyView.tab);
+    const domName = historyView.domain === 'all' ? '' : ` · ${(DOMAINS[historyView.domain] || {}).label || historyView.domain}`;
     const titleEl = document.getElementById('history-modal-title');
-    if (titleEl) titleEl.innerHTML = `<i data-lucide="history"></i> Lịch Sử Thay Đổi — ${escapeHTML(tabName)}`;
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="history"></i> Lịch Sử Thay Đổi — ${escapeHTML(tabName)}${escapeHTML(domName)}`;
 
     if (!rows.length) {
-      box.innerHTML = `<div class="history-empty"><i data-lucide="inbox"></i><p>Chưa có lịch sử thay đổi nào${historyView.tab !== 'all' ? ' cho tab này' : ''}.</p><p class="history-empty-sub">Mỗi lần ai đó sửa dữ liệu và tab được lưu, thao tác sẽ được ghi lại tại đây (tối đa ${HISTORY_LIMIT} dòng gần nhất).</p></div>`;
+      box.innerHTML = `<div class="history-empty"><i data-lucide="inbox"></i><p>Chưa có lịch sử thay đổi nào${historyView.tab !== 'all' || historyView.domain !== 'all' ? ' cho vùng dữ liệu này' : ''}.</p><p class="history-empty-sub">Mỗi lần ai đó sửa dữ liệu và tab được lưu, thao tác sẽ được ghi lại tại đây (tối đa ${HISTORY_LIMIT} dòng gần nhất).</p></div>`;
       historyIcons();
       return;
     }
@@ -344,14 +379,24 @@ import { escapeHTML, showToast } from './utils.js';
     historyIcons();
   }
 
-  // Xóa lịch sử của tab đang chọn (hoặc toàn bộ) — chỉ Admin
+  // Xóa lịch sử của tab / vùng dữ liệu đang chọn (hoặc toàn bộ) — chỉ Admin
   function clearHistory() {
     if (!isAdmin()) return;
-    const scope = historyView.tab === 'all'
+    const tabLabel = (HISTORY_TABS.find(t => t.id === historyView.tab) || {}).name || historyView.tab;
+    const domLabel = historyView.domain === 'all' ? '' : ` · vùng "${(DOMAINS[historyView.domain] || {}).label || historyView.domain}"`;
+    const scope = historyView.tab === 'all' && historyView.domain === 'all'
       ? 'toàn bộ lịch sử'
-      : `lịch sử của tab "${(HISTORY_TABS.find(t => t.id === historyView.tab) || {}).name || historyView.tab}"`;
+      : `lịch sử của tab "${tabLabel}"${historyView.domain === 'all' ? '' : domLabel}`;
     if (!confirm(`Xóa ${scope}? Thao tác này không thể hoàn tác.`)) return;
-    state.history = historyView.tab === 'all' ? [] : (state.history || []).filter(h => h.tab !== historyView.tab);
+    if (historyView.tab === 'all' && historyView.domain === 'all') state.history = [];
+    else {
+      state.history = (state.history || []).filter(h => {
+        if (historyView.tab !== 'all' && h.tab !== historyView.tab) return true;
+        if (historyView.domain !== 'all' && h.domain !== historyView.domain) return true;
+        if (historyView.tab === 'all' && historyView.domain !== 'all' && h.domain !== historyView.domain) return true;
+        return false;
+      });
+    }
     saveHistoryLocal();
     renderHistoryList();
     showToast('Đã xóa ' + scope + '!', 'success');
@@ -365,6 +410,7 @@ export {
   logDataChange,
   openHistoryModal,
   renderHistoryList,
+  setHistoryDomainFilter,
   setHistoryTabFilter,
   setHistoryUserFilter,
   syncHistorySnapshots

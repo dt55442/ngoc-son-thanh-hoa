@@ -7,7 +7,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
@@ -251,6 +251,70 @@ import { escapeHTML, showToast } from './utils.js';
     return cur;
   }
 
+  // ─── GỘP NHẬT KÝ BÀO TINH XƯỞNG 2 (file / backup / mây) ──
+  function restoreXuong2BaoTinh(incomingArr) {
+    const before = JSON.stringify(state.xuong2BaoTinhRecords || []);
+    const merged = mergeXuong2Records(state.xuong2BaoTinhRecords, incomingArr);
+    state.xuong2BaoTinhRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_TINH, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
+
+  // Khôi phục ĐỊNH MỨC CÔNG SUẤT BÀO TINH theo tháng ({ 'YYYY-MM': thanh/giờ }).
+  function restoreX2BaoTinhRates(incoming) {
+    const src = (incoming && typeof incoming === 'object') ? incoming : {};
+    const cur = (state.x2BaoTinhRates && typeof state.x2BaoTinhRates === 'object') ? state.x2BaoTinhRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.x2BaoTinhRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_BAO_TINH_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
+  // Khôi phục ĐỊNH MỨC CÔNG SUẤT ÉP VÁN theo tháng ({ 'YYYY-MM': m³/giờ }).
+  function restoreX2EpVanRates(incoming) {
+    const src = (incoming && typeof incoming === 'object') ? incoming : {};
+    const cur = (state.x2EpVanRates && typeof state.x2EpVanRates === 'object') ? state.x2EpVanRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.x2EpVanRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_EP_VAN_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
+  // Khôi phục DANH SÁCH VỊ TRÍ SẤY khai báo thêm (mảng chuỗi) từ file/backup.
+  // Luôn GỘP (không ghi đè) để không mất vị trí đã khai báo trên máy này.
+  function restoreX2LotLocations(incoming) {
+    const src = Array.isArray(incoming) ? incoming : [];
+    const cur = Array.isArray(state.x2LotLocations) ? state.x2LotLocations : [];
+    const seen = new Set(cur.map(v => String(v || '').trim().toLowerCase()));
+    let changed = false;
+    src.forEach(v => {
+      const name = String(v || '').trim();
+      if (!name || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      cur.push(name);
+      changed = true;
+    });
+    if (changed) {
+      state.x2LotLocations = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_LOT_LOCATIONS, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
   // ─── FILE STORAGE (LƯU DỮ LIỆU VÀO FILE CÙNG THƯ MỤC) ─────────
   // Sử dụng File System Access API để đọc/ghi file bamboo_data.json
   // trong thư mục người dùng chọn. Directory handle được lưu trong IndexedDB
@@ -394,6 +458,18 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2ChonNanRates) {
           restoreX2ChonNanRates(loaded.x2ChonNanRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (Array.isArray(loaded.x2LotLocations)) {
+          restoreX2LotLocations(loaded.x2LotLocations); // GỘP — không mất vị trí sấy đã khai báo
+        }
+        if (Array.isArray(loaded.xuong2BaoTinhRecords)) {
+          restoreXuong2BaoTinh(loaded.xuong2BaoTinhRecords); // GỘP — không mất lượt bào tinh mới hơn
+        }
+        if (loaded.x2BaoTinhRates) {
+          restoreX2BaoTinhRates(loaded.x2BaoTinhRates); // GỘP theo tháng — không đè số đã đặt
+        }
+        if (loaded.x2EpVanRates) {
+          restoreX2EpVanRates(loaded.x2EpVanRates); // Định mức ép ván (m³/h) — gộp theo tháng
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -469,6 +545,18 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2ChonNanRates) {
           restoreX2ChonNanRates(loaded.x2ChonNanRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (Array.isArray(loaded.x2LotLocations)) {
+          restoreX2LotLocations(loaded.x2LotLocations); // GỘP — không mất vị trí sấy đã khai báo
+        }
+        if (Array.isArray(loaded.xuong2BaoTinhRecords)) {
+          restoreXuong2BaoTinh(loaded.xuong2BaoTinhRecords); // GỘP — không mất lượt bào tinh mới hơn
+        }
+        if (loaded.x2BaoTinhRates) {
+          restoreX2BaoTinhRates(loaded.x2BaoTinhRates); // GỘP theo tháng — không đè số đã đặt
+        }
+        if (loaded.x2EpVanRates) {
+          restoreX2EpVanRates(loaded.x2EpVanRates); // Định mức ép ván (m³/h) — gộp theo tháng
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -527,7 +615,11 @@ import { escapeHTML, showToast } from './utils.js';
         x2CapRates: state.x2CapRates || {},
         x2BoOngRates: state.x2BoOngRates || {},
         x2BaoThoRates: state.x2BaoThoRates || {},
-        x2ChonNanRates: state.x2ChonNanRates || {}
+        x2ChonNanRates: state.x2ChonNanRates || {},
+        xuong2BaoTinhRecords: state.xuong2BaoTinhRecords || [],
+        x2BaoTinhRates: state.x2BaoTinhRates || {},
+        x2EpVanRates: state.x2EpVanRates || {},
+        x2LotLocations: state.x2LotLocations || []
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -622,7 +714,11 @@ import { escapeHTML, showToast } from './utils.js';
       x2CapRates: state.x2CapRates || {},
       x2BoOngRates: state.x2BoOngRates || {},
       x2BaoThoRates: state.x2BaoThoRates || {},
-      x2ChonNanRates: state.x2ChonNanRates || {}
+      x2ChonNanRates: state.x2ChonNanRates || {},
+      xuong2BaoTinhRecords: state.xuong2BaoTinhRecords || [],
+      x2BaoTinhRates: state.x2BaoTinhRates || {},
+      x2EpVanRates: state.x2EpVanRates || {},
+      x2LotLocations: state.x2LotLocations || []
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -694,6 +790,21 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && imported.x2ChonNanRates) {
           restoreX2ChonNanRates(imported.x2ChonNanRates); // GỘP theo tháng — không đè số đã đặt
+        }
+
+        if (imported && Array.isArray(imported.x2LotLocations)) {
+          restoreX2LotLocations(imported.x2LotLocations); // GỘP — không mất vị trí đã khai báo
+        }
+
+        if (imported && Array.isArray(imported.xuong2BaoTinhRecords)) {
+          restoreXuong2BaoTinh(imported.xuong2BaoTinhRecords); // GỘP — không xóa lượt bào tinh mới hơn backup
+        }
+
+        if (imported && imported.x2BaoTinhRates) {
+          restoreX2BaoTinhRates(imported.x2BaoTinhRates); // GỘP theo tháng — không đè số đã đặt
+        }
+        if (imported && imported.x2EpVanRates) {
+          restoreX2EpVanRates(imported.x2EpVanRates); // Định mức ép ván (m³/h)
         }
 
         renderAll();
@@ -859,9 +970,12 @@ export {
   restoreX2BaoThoRates,
   restoreX2BoOngRates,
   restoreX2ChonNanRates,
+  restoreX2LotLocations,
   restoreXuong2BaoTho,
   restoreXuong2BoOng,
   restoreXuong2ChonNan,
+  restoreXuong2BaoTinh,
+  restoreX2BaoTinhRates,
   saveData,
   saveDataToLocalFile,
   saveDirHandleToIDB,

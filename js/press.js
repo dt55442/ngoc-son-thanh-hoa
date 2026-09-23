@@ -5,10 +5,10 @@ import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
-import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrWorkersForPress, hrWorkersForProduct, pressPositionPatternFor } from './hr.js';
+import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
-import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, state } from './state.js';
-import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
+import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
+import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
 
   // =============================================================
   // SẢN LƯỢNG ÉP VÁN (PRESS VIEW)
@@ -77,6 +77,10 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
   }
 
   // Định dạng ngày hiển thị DD/MM
+  // Định dạng số gọn (thanh / m³) — dùng cho thẻ ngày Ép Ván + chip định mức
+  const fmtThanh = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  // Định dạng tỷ lệ / số giờ (1 chữ số thập phân) — giờ HC/TC + hiệu suất %
+  const fmtRatio = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
   function fmtDateDM(dateStr) {
     const parts = String(dateStr || '').split('-');
     if (parts.length !== 3) return String(dateStr || '');
@@ -556,7 +560,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
 
     savePressRecords();
     closePressModal();
-    renderPressView();
+    renderX2EpVanCard();
     renderPlanningView(); // cập nhật số "Đã ép" trên thẻ kế hoạch
     showToast(recordId ? 'Đã cập nhật lượt ép!' : 'Đã ghi nhận lượt ép ván!', 'success');
   }
@@ -569,7 +573,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     trackDeleted('pressRecords', recordId); // tombstone: lượt ép đã xóa không bị máy khác đẩy ngược lên mây
     state.pressRecords = state.pressRecords.filter(r => r.id !== recordId);
     savePressRecords();
-    renderPressView();
+    renderX2EpVanCard();
     renderPlanningView();
     showToast('Đã xóa lượt ép', 'info');
   }
@@ -658,13 +662,241 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     initLucide();
   }
 
-  // Render toàn bộ view Sản Lượng Ép Ván
-  function renderPressView() {
+  // ─── THẺ ÉP VÁN (launcher tab Công Đoạn) — 2 KHUNG: Lượt Ép / Biểu Đồ ──
+  // M³ của 1 lượt ép — CÙNG CÔNG THỨC với biểu đồ (renderPressChart):
+  //   có ván thô tạo ra → thể tích = ván thô; chỉ ép thành phẩm từ thanh
+  //   đã ép trước → thể tích = ván thô ĐẦU VÀO (thanh bào tinh).
+  function pressRecordVolumeOf(r) {
+    if (!r) return 0;
+    const vt = (r.vanTho || []).reduce((s, l) => s + dimVolume(l.vtDim, l.vtQty), 0);
+    if (vt > 0) return vt;
+    return (r.sticks || []).reduce((s, x) => s + dimVolume(x.nanKey, x.sticks), 0);
+  }
+  // Tổng m³ của danh sách lượt ép (mini card + thẻ ngày dùng chung)
+  function pressVolumeTotalOf(list) {
+    return (list || []).reduce((s, r) => s + pressRecordVolumeOf(r), 0);
+  }
+
+  // ── GIỜ ÉP HC/TC (tự động từ Bảng bố trí Nhân Sự, vị trí tên chứa "ép") ──
+  // Trả về { workers, hours, hoursHC, hoursTC } — workers ĐI LÀM & được phân vị
+  // Ép đúng ngày (giống cột Công Nhân Ép của bảng); giờ cộng theo từng khung bố trí.
+  function epVanSnapshotOf(date) {
+    const workers = hrWorkersForPress(date);
+    let hours = 0, hoursHC = 0, hoursTC = 0;
+    (state.hrAssignments || []).forEach(a => {
+      if ((a.date || '') !== date) return;
+      const posName = hrPosName(a.positionId);
+      if (!posName || !/ép/i.test(String(posName))) return;
+      const h = hrSplitHoursHCDate(a.department || '', date, a.start, a.end, a.shiftIdx || 0);
+      if (!h) return;
+      // hrSplitHoursHC trả về PHÚT → chia 60 để ra GIỜ (giống sumPosHoursSplit)
+      hours += ((h.hc || 0) + (h.tc || 0)) / 60;
+      hoursHC += (h.hc || 0) / 60;
+      hoursTC += (h.tc || 0) / 60;
+    });
+    return {
+      workers,
+      hours: Math.round(hours * 100) / 100,
+      hoursHC: Math.round(hoursHC * 100) / 100,
+      hoursTC: Math.round(hoursTC * 100) / 100
+    };
+  }
+
+  // ── ĐỊNH MỨC CÔNG SUẤT ÉP VÁN theo tháng (m³/giờ) ──────────────
+  function epVanRateOf(month) {
+    const m = String(month || '').slice(0, 7);
+    const v = Number((state.x2EpVanRates || {})[m]);
+    return v > 0 ? v : null;
+  }
+  function renderX2EpVanRateBar() {
+    const sel = document.getElementById('x2-epv-rate-month');
+    const chips = document.getElementById('x2-epv-rate-chips');
+    // Nạp danh sách tháng 1 lần (18 tháng gần nhất). Dùng 'innerHTML === ""' thay vì
+    // sel.options.length để chạy được cả khi môi trường test không có .options.
+    const empty = !sel || sel.innerHTML === '' || !sel.innerHTML;
+    if (sel && empty) {
+      const now = new Date();
+      const opts = [];
+      for (let i = 0; i < 18; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        opts.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+      sel.innerHTML = opts.map(m => `<option value="${m}">T${Number(m.slice(5))}/${m.slice(2, 4)}</option>`).join('');
+      sel.value = opts[0];
+    }
+    if (sel) {
+      const v = (state.x2EpVanRates || {})[sel.value];
+      const inp = document.getElementById('x2-epv-rate-value');
+      if (inp && document.activeElement !== inp) inp.value = (v > 0 ? v : '');
+    }
+    if (chips) {
+      const dict = state.x2EpVanRates || {};
+      const keys = Object.keys(dict).filter(k => Number(dict[k]) > 0).sort().reverse().slice(0, 6);
+      chips.innerHTML = keys.length
+        ? keys.map(m => `<button type="button" class="x2-rate-chip" data-x2-epv-rate="${m}" title="Bấm để nạp định mức tháng này vào ô nhập">T${Number(m.slice(5))}/${m.slice(2, 4)} = ${fmtThanh(Number(dict[m]))} m³/h</button>`).join('')
+        : '<span class="text-muted" style="font-size:0.72rem;">Chưa đặt định mức — thẻ ngày chỉ hiện m³/ngày</span>';
+    }
+  }
+  function handleX2EpVanRateSave() {
+    const sel = document.getElementById('x2-epv-rate-month');
+    const inp = document.getElementById('x2-epv-rate-value');
+    if (!sel || !inp) return;
+    const v = Number(inp.value);
+    if (!(v > 0)) { showToast('Nhập định mức công suất ép (m³/giờ) lớn hơn 0!', 'error'); return; }
+    state.x2EpVanRates = state.x2EpVanRates || {};
+    state.x2EpVanRates[sel.value] = v;
+    try { localStorage.setItem(STORAGE_KEY_X2_EP_VAN_RATE, JSON.stringify(state.x2EpVanRates)); } catch (err) {}
+    logDataChange('x2EpVanRates');
+    firePushSync();
+    renderX2EpVanRateBar();
+    renderX2EpVanDayCards(); // cột m³/h + hiệu suất cập nhật theo định mức mới
+    showToast(`Đã lưu định mức ép ván T${Number(sel.value.slice(5))}/${sel.value.slice(2, 4)} = ${fmtThanh(v)} m³/h!`, 'success');
+  }
+  function loadX2EpVanRates() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEY_X2_EP_VAN_RATE) || '{}');
+      state.x2EpVanRates = (raw && typeof raw === 'object') ? raw : {};
+    } catch (err) { state.x2EpVanRates = {}; }
+  }
+
+  // Chip "Người ép" trên đầu thẻ ngày (tự động từ phân vị Ép — tab Nhân Sự)
+  function epVanWorkerBadge(list) {
+    const ws = (list || []).filter(w => w && w.name);
+    if (!ws.length) {
+      return '<span class="x2-day-cutters" title="Chưa có ai được phân vị Ép ngày này ở tab Nhân Sự (Chấm Công & Phân Vị Theo Ngày)"><i data-lucide="users"></i> <em style="color:var(--text-muted);">Chưa phân vị Ép</em></span>';
+    }
+    const more = ws.length > 1
+      ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(ws.slice(1).map(w => w.name).join(', '))}">+${ws.length - 1} người khác</em>`
+      : '';
+    return `<span class="x2-day-cutters" title="Người ép — tự động từ Bảng bố trí vị trí 'Ép' (tab Nhân Sự) đúng ngày"><i data-lucide="users"></i> ${escapeHTML(ws[0].name)} ${more}</span>`;
+  }
+  // KHUNG 1: BẢNG DỮ LIỆU ÉP VÁN = THẺ NGÀY (như các công đoạn Xưởng 2)
+  function renderX2EpVanDayCards() {
+    const box = document.getElementById('x2-epv-day-cards');
+    if (!box) return;
+    const notesByDate = getPressNotesByDate();
+    let records = [...(state.pressRecords || [])];
+    if (state.pressYearFilter !== 'all') {
+      records = records.filter(r => String(r.year || getDateYear(r.date)) === String(state.pressYearFilter));
+    }
+    if (state.pressWeekFilter !== 'all') {
+      records = records.filter(r => pressRecordWeek(r) === parseInt(state.pressWeekFilter));
+    }
+    const countEl = document.getElementById('x2-epv-day-count');
+    if (countEl) countEl.textContent = records.length ? `${records.length} lượt ép` : '';
+    const noteEl = document.getElementById('x2-epv-day-note');
+    if (noteEl) {
+      const vol = records.reduce((s, r) => s + pressRecordVolumeOf(r), 0);
+      noteEl.textContent = records.length ? `${records.length} lượt · ${fmtThanh(vol)} m³` : '';
+    }
+    records.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    if (!records.length) {
+      box.innerHTML = `
+        <div class="x2-day-card x2-day-card-empty">
+          <i data-lucide="factory"></i>
+          <div>Chưa có lượt ép nào. Bấm <strong>Thêm Lượt Ép</strong> để ghi nhận sản lượng ép ván.</div>
+        </div>`;
+      initLucide();
+      return;
+    }
+    // Gom theo ngày (một ngày có thể nhiều lượt ép) — định mức lấy theo THÁNG của ngày đó
+    const groups = new Map();
+    records.forEach(r => {
+      const key = r.date || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    let html = '';
+    for (const [date, rows] of groups) {
+      const snap = epVanSnapshotOf(date);
+      const vol = rows.reduce((s, r) => s + pressRecordVolumeOf(r), 0);
+      const fpQty = rows.reduce((s, r) => s + (Number(r.finishedQty) || 0), 0);
+      const rate = epVanRateOf(date);
+      const perHour = (snap.hours > 0 && vol > 0) ? (vol / snap.hours) : null;
+      const eff = (perHour != null && rate) ? (perHour / rate) * 100 : null;
+      const m3hTxt = (rate && perHour != null)
+        ? `<span class="x2-day-cap" title="m³/h = tổng thể tích ép trong ngày ÷ tổng giờ phân vị Ép">m³/h: <strong>${fmtThanh(perHour)}</strong></span>
+           <span class="x2-day-eff" title="Hiệu suất = m³/h thực tế ÷ định mức ép ván tháng ${Number(String(date).slice(5, 7))}">Hiệu suất: <strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong></span>`
+        : '';
+      const rateBadge = rate
+        ? `<span class="x2-day-cap" title="Định mức công suất ép ván của tháng">ĐM: <strong>${fmtThanh(rate)} m³/h</strong></span>`
+        : '';
+      const hourTxt = snap.hours > 0
+        ? `<span class="x2-day-hours" title="Thời gian = tổng giờ công vị trí Ép trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)"><span class="x2-hours-hc">${fmtRatio(snap.hoursHC)}h HC</span><span class="x2-hours-tc">${fmtRatio(snap.hoursTC)}h TC</span></span>`
+        : '';
+      const rowsHtml = rows.map(r => {
+        const vol1 = pressRecordVolumeOf(r);
+        const noteText = notesByDate.get(r.date) || '';
+        const noteBadge = noteText
+          ? ` <span class="press-note-badge" data-note="${escapeHTML(noteText)}" data-date="${escapeHTML(r.date)}" title="Ghi chú giải trình">!</span>`
+          : '';
+        const vtDesc = (r.vanTho || []).map(l => `${escapeHTML(l.vtDim)} ×${(l.vtQty || 0).toLocaleString('vi-VN')}`).join(' · ') || '—';
+        const stickDesc = (r.sticks || []).map(s => `${escapeHTML(s.nanKey)} ×${(s.sticks || 0).toLocaleString('vi-VN')}`).join(' · ') || '—';
+        return `<div class="x2-epv-row">
+          <div class="x2-epv-row-main">
+            <span class="x2-nan-chip" title="Thành phẩm của lượt ép">${escapeHTML(r.productName || '— (chưa ép TP)')}</span>
+            <strong style="color:var(--primary);">${(r.finishedQty || 0).toLocaleString('vi-VN')}</strong> tấm
+            · <span title="Ván thô tạo ra">${vtDesc}</span>
+            · <span title="Thanh thô (bào tinh) đầu vào">${stickDesc}</span>
+            · Keo <strong>${(Number(r.glue) || 0).toFixed(2)}</strong> kg
+            · Phụ gia <strong>${(Number(r.additive) || 0).toFixed(2)}</strong> kg
+            · <strong>${fmtThanh(vol1)} m³</strong>${noteBadge}
+          </div>
+          <div class="x2-epv-row-actions" data-perm="press">
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.editPressRecord('${r.id}')" title="Sửa lượt ép"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" style="color:var(--danger);" onclick="app.deletePressRecord('${r.id}')" title="Xóa lượt ép"><i data-lucide="trash-2"></i></button>
+          </div>
+        </div>`;
+      }).join('');
+      html += `
+        <div class="x2-day-card">
+          <div class="x2-day-head">
+            <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
+            ${epVanWorkerBadge(snap.workers)}
+            ${hourTxt}
+            <span class="x2-day-cap" title="Công suất thực tế = tổng thể tích ép trong ngày (m³)"><i data-lucide="gauge"></i> Công suất: <strong>${fmtThanh(vol)} m³/ngày</strong></span>
+            ${m3hTxt}${rateBadge}
+            <span class="x2-day-cap" title="Tổng thành phẩm trong ngày">Thành phẩm: <strong>${fpQty.toLocaleString('vi-VN')} tấm</strong></span>
+          </div>
+          <div class="x2-epv-rows">${rowsHtml}</div>
+        </div>`;
+    }
+    box.innerHTML = html;
+    initLucide();
+  }
+
+  // Nút chuyển 2 KHUNG của thẻ Ép Ván (Lượt Ép ↔ Biểu Đồ)
+  function switchX2EpVanFrame(frame) {
+    const list = document.getElementById('x2-epv-frame-list');
+    const chart = document.getElementById('x2-epv-frame-chart');
+    if (!list || !chart) return;
+    const isChart = frame === 'chart';
+    list.hidden = isChart;
+    chart.hidden = !isChart;
+    const tabList = document.getElementById('x2-epv-tab-list');
+    const tabChart = document.getElementById('x2-epv-tab-chart');
+    if (tabList) tabList.classList.toggle('active', !isChart);
+    if (tabChart) tabChart.classList.toggle('active', isChart);
+    if (isChart) renderPressChart(); // vẽ khi khung đã hiển thị (canvas phải visible)
+  }
+
+  // Render toàn bộ THẺ ÉP VÁN (gọi khi mở pop-up + khi dữ liệu đổi)
+  function renderX2EpVanCard() {
     populatePressYearFilter();
     populatePressWeekFilter();
-    renderPressChart();
+    renderX2EpVanRateBar();
+    renderX2EpVanDayCards();
+    const chartFrame = document.getElementById('x2-epv-frame-chart');
+    if (chartFrame && !chartFrame.hidden) renderPressChart(); // đang ở khung Biểu Đồ
     renderPressTable();
-    renderBaoTinhEffTable();
+    renderBaoTinhEffTable(); // bảng phụ "Bào Tinh ↔ Đã Ép" đã dời vào thẻ Bào Tinh
+    // Cập nhật LUÔN chip trên mini card (đổi lượt ép ở bất kỳ màn hình nào cũng đúng)
+    const chip = document.getElementById('x2-mini-count-ep-van');
+    if (chip) {
+      const list = state.pressRecords || [];
+      chip.textContent = list.length ? `${list.length} lượt · ${fmtThanh(pressVolumeTotalOf(list))} m³` : 'Chưa ép';
+      chip.classList.remove('x2-count-soon');
+    }
     initLucide();
   }
 
@@ -1467,7 +1699,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     }
     savePressNotes();
     closePressNoteModal();
-    renderPressView();
+    renderX2EpVanCard();
     showToast('Đã lưu ghi chú giải trình!', 'success');
   }
 
@@ -1481,7 +1713,7 @@ import { attachChartPanDrag, escapeHTML, getISOWeekString, showToast, uiChartWin
     state.pressNotes = state.pressNotes.filter(n => n.id !== id);
     savePressNotes();
     closePressNoteModal();
-    renderPressView();
+    renderX2EpVanCard();
     showToast('Đã xóa ghi chú giải trình', 'info');
   }
 
@@ -2164,7 +2396,16 @@ export {
   setPlanVsPressSpan,
   setPlanVsPressTotal,
   shiftPlanVsPressWeek,
-  renderPressView,
+  renderX2EpVanCard,
+  switchX2EpVanFrame,
+  renderX2EpVanDayCards,
+  renderX2EpVanRateBar,
+  handleX2EpVanRateSave,
+  loadX2EpVanRates,
+  pressRecordVolumeOf,
+  pressVolumeTotalOf,
+  epVanRateOf,
+  epVanSnapshotOf,
   savePressRecords,
   suggestPressMaterialFields,
   togglePressNotesExpanded,

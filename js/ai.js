@@ -344,10 +344,14 @@ function aiTabContextOf(viewId) {
   // Tiến độ kế hoạch vs đã ép (Tổng Quan / Kế Hoạch / Ép Ván)
   if (viewId === 'planning-view' && !week.planQty) push(`Kế hoạch tuần ${weekLabel}: CHƯA CÓ mục nào — cần lập gấp`, true);
   if (week.planQty > 0) push(`Kế hoạch ${weekLabel}: ${week.planQty} sản phẩm, đã ép ${week.pressQty} tấm thành phẩm (${week.pct}%) sau ${week.dow}/7 ngày`, !week.onPace);
-  if ((viewId === 'press-view' || viewId === 'dashboard-view' || viewId === 'kanban-view') && slow.length) {
+  // Thẻ ÉP VÁN (launcher Xưởng 2) nay nằm TRONG tab Công Đoạn → nhận diện qua
+  // state.x2OpenCardId để gợi ý AI nói đúng ngữ cảnh Ép Ván như trước.
+  const epVanCardOpen = state.x2OpenCardId === 'x2-ep-van-card';
+  const isPressCtx = viewId === 'press-view' || epVanCardOpen;
+  if ((isPressCtx || viewId === 'dashboard-view' || viewId === 'kanban-view') && slow.length) {
     push(`Lô chậm: ${slow.slice(0, 4).map(x => `${x.code} (${x.stage}, ${x.days} ngày)`).join('; ')}${slow.length > 4 ? '…' : ''} — tổng ${slow.length} lô`, true);
   }
-  if (viewId === 'press-view' || viewId === 'dashboard-view') {
+  if (isPressCtx || viewId === 'dashboard-view') {
     const pr7 = (state.pressRecords || []).filter(r => (r.date || '') >= weekAgo);
     push(`Ép ván 7 ngày qua: ${pr7.length} lượt, ${pr7.reduce((a, r) => a + (r.finishedQty || 0), 0)} tấm thành phẩm`, false);
   }
@@ -358,7 +362,12 @@ function aiTabContextOf(viewId) {
     if (pendLeave || pendOT) push(`Chờ duyệt: ${pendLeave} đơn nghỉ phép, ${pendOT} đăng ký tăng ca`, true);
   }
   if (!facts.length) push(`Tab ${AI_TAB_LABELS[viewId] || viewId}: không có số liệu nóng hổi nào hôm nay`, false);
-  return { viewId, tabLabel: AI_TAB_LABELS[viewId] || 'Tổng Quan', facts, warn, week, slow, mat7Count: mat7.length, mat7kg, qcQty, emps: emps.length, unmarked, pendLeave, pendOT };
+  return {
+    viewId,
+    // Thẻ Ép Ván đang mở ở tab Công Đoạn → coi như ngữ cảnh "Ép Ván"
+    tabLabel: epVanCardOpen ? 'Ép Ván' : (AI_TAB_LABELS[viewId] || 'Tổng Quan'),
+    facts, warn, week, slow, mat7Count: mat7.length, mat7kg, qcQty, emps: emps.length, unmarked, pendLeave, pendOT
+  };
 }
 
 // Kho mẫu câu vui TẦNG OFFLINE — số liệu chèn trực tiếp nên 100% đúng thực tế.

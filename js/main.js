@@ -2,7 +2,7 @@
 // js/main.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
-import { deleteBatch, openBatchFormModal, openTransferModal } from './batch-modals.js';
+import { deleteBatch, loadX2LotLocations, openBatchFormModal, openTransferModal } from './batch-modals.js';
 import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
@@ -13,12 +13,12 @@ import { setupEventListeners, undoLastAction, updateUndoButton } from './events.
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
-import { loadXuong2Cuts, renderXuong2Cards } from './xuong2.js';
+import { loadXuong2Cuts, renderXuong2Cards, x2CloseOpenCard } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
-import { loadX2BaoThoRates, loadX2BoOngRates, loadX2CapRates, loadX2ChonNanRates, loadXuong2BaoTho, loadXuong2BoOng, loadXuong2ChonNan } from './xuong2.js';
+import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2CapRates, loadX2ChonNanRates, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2ChonNan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
-import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, openPressModal, openPressWorkersModal, removePressLine, removePressStick, renderPressView } from './press.js';
-import { loadQcExports, renderQcView } from './qc.js';
+import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
+import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
 import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
@@ -53,6 +53,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2BoOngRates(); // Định mức công suất bổ ống theo tháng (tab Công Đoạn)
     loadX2BaoThoRates(); // Định mức công suất bào thô theo tháng (thanh/giờ)
     loadX2ChonNanRates(); // Định mức công suất chọn nan theo tháng (thanh/giờ)
+    loadXuong2BaoTinh(); // Nhật ký Bào Tinh Xưởng 2 (loại bào · nguồn thanh · đạt/lỗi)
+    loadX2BaoTinhRates(); // Định mức công suất bào tinh theo tháng (thanh/giờ)
+    loadX2EpVanRates(); // Định mức công suất ÉP VÁN theo tháng (m³/giờ) — thẻ Ép Ván
+    loadX2LotLocations(); // Vị trí sấy khai báo thêm ngoài LS1..LS15 (Than Hóa + Sấy)
     loadQcExports();
     loadHrData();
     // Lịch sử sửa đổi: nạp + lập snapshot nền SAU CÙNG (sau khi toàn bộ
@@ -99,6 +103,21 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     window.addEventListener('online', flushPendingCloudPush);
   });
   // ─── VIEW SWITCHING ───────────────────────────────────────────
+  // ─── ĐÓNG POP-UP / MODAL THUỘC TAB VỪA RỜI KHI CHUYỂN TAB ──────
+  // 7 modal/pop-up nằm BÊN TRONG view-panel (Xưởng 2, Kế Hoạch ×3, QC ×2,
+  // Nhân Sự). Rời tab mà chưa đóng → overlay ẩn nhưng VẪN giữ class .show ⇒
+  // rule CSS khoá cuộn nền sẽ khoá cả trang (mọi tab không cuộn xuống được).
+  // Vì vậy: rời tab nào thì đóng pop-up/modal của tab đó (đúng UX + cập nhật
+  // luôn trạng thái "thẻ đang mở" của Xưởng 2 / QC / Nhân Sự).
+  function closeViewScopedModals(viewEl) {
+    if (!viewEl) return;
+    if (viewEl.id === 'kanban-view') { try { x2CloseOpenCard(); } catch (e) {} }
+    if (viewEl.id === 'qc-view') { try { qcCloseOpenCard(); } catch (e) {} }
+    if (viewEl.id === 'hr-view') { try { hrCloseOpenCard(); } catch (e) {} }
+    if (typeof viewEl.querySelectorAll !== 'function') return;
+    viewEl.querySelectorAll('.modal-overlay.show').forEach(o => o.classList.remove('show'));
+  }
+
   function switchView(targetViewId) {
     const prevView = state.activeView;
     state.activeView = targetViewId;
@@ -113,6 +132,9 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     document.querySelectorAll('.nav-btn, .mobile-nav-item').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-target') === targetViewId);
     });
+    // Rời tab → đóng pop-up/modal THUỘC TAB VỪA RỜI (tránh overlay ẩn còn class
+    // .show làm mất cuộn ở tab mới — xem closeViewScopedModals)
+    if (prevView && prevView !== targetViewId) closeViewScopedModals(document.getElementById(prevView));
     if (targetViewId === 'dashboard-view') renderDashboardCharts();
     // Thẻ "Phân bổ khối lượng theo công đoạn" + khu Vị Trí Xưởng 2 (tab Công Đoạn)
     if (targetViewId === 'kanban-view') {
@@ -125,7 +147,6 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       filterMobileKanbanColumns();
     }
     if (targetViewId === 'planning-view') renderPlanningView();
-    if (targetViewId === 'press-view') renderPressView();
     if (targetViewId === 'materials-view') renderMaterialView();
     if (targetViewId === 'qc-view') renderQcView();
     if (targetViewId === 'hr-view') renderHrView();
@@ -231,7 +252,6 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     }
     if (state.activeView === 'dashboard-view') renderDashboardCharts();
     if (state.activeView === 'planning-view') renderPlanningView();
-    if (state.activeView === 'press-view') renderPressView();
     if (state.activeView === 'materials-view') renderMaterialView();
     if (state.activeView === 'qc-view') renderQcView();
     if (state.activeView === 'hr-view') renderHrView();

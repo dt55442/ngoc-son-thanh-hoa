@@ -89,6 +89,15 @@ const ctxP = ai.aiTabContextOf('press-view');
 check('gói sự kiện Ép Ván: ghi đúng 10% tiến độ (plan 1000 / ép 100)', ctxP.facts.join(' | ').includes('(10%)'));
 check('gói sự kiện Ép Ván: có dòng ép 7 ngày qua', ctxP.facts.join(' | ').includes('Ép ván 7 ngày qua'));
 check('gói sự kiện: lô chậm >=4 ngày BẬT cảnh báo', ctxP.warn === true);
+// Thẻ ÉP VÁN nay nằm trong tab Công Đoạn → mở thẻ phải cho ĐÚNG ngữ cảnh Ép Ván
+state.x2OpenCardId = 'x2-ep-van-card';
+const ctxEpv = ai.aiTabContextOf('kanban-view');
+check('gói sự kiện: mở THẺ ÉP VÁN ở tab Công Đoạn → nhãn "Ép Ván" + có dòng ép 7 ngày qua',
+  ctxEpv.tabLabel === 'Ép Ván' && ctxEpv.facts.join(' | ').includes('Ép ván 7 ngày qua'));
+state.x2OpenCardId = null;
+const ctxKan = ai.aiTabContextOf('kanban-view');
+check('gói sự kiện: không mở thẻ nào → tab Công Đoạn giữ nhãn "Công Đoạn (Kanban)"',
+  ctxKan.tabLabel === 'Công Đoạn (Kanban)');
 const ctxQ = ai.aiTabContextOf('qc-view');
 check('gói sự kiện QC: chưa xuất hàng tuần này', ctxQ.facts.join(' | ').includes('0 sản phẩm'));
 const ctxH = ai.aiTabContextOf('hr-view');

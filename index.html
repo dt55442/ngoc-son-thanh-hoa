@@ -66,10 +66,6 @@
           <i data-lucide="clipboard-list"></i>
           <span>Kế Hoạch Sản Xuất</span>
         </button>
-        <button class="nav-btn" data-target="press-view" id="nav-press">
-          <i data-lucide="factory"></i>
-          <span>Sản Lượng Ép Ván</span>
-        </button>
         <button class="nav-btn" data-target="materials-view" id="nav-materials">
           <i data-lucide="package-plus"></i>
           <span>Nguyên Liệu</span>
@@ -196,10 +192,6 @@
       <i data-lucide="clipboard-list"></i>
       <span>Kế Hoạch</span>
     </button>
-    <button class="mobile-nav-item" data-target="press-view">
-      <i data-lucide="factory"></i>
-      <span>Ép Ván</span>
-    </button>
     <button class="mobile-nav-item" data-target="materials-view">
       <i data-lucide="package-plus"></i>
       <span>Nguyên Liệu</span>
@@ -295,13 +287,13 @@
             <span class="x2-mini-desc">Bảng Kanban lô nan theo công đoạn</span>
             <span class="x2-mini-count" id="x2-mini-count-than-hoa">–</span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-tinh-card" aria-expanded="false" title="Bào Tinh — bào tinh nan thành phẩm (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-tinh-card" aria-expanded="false" title="Bào Tinh — bào tinh / bào tinh hạ cấp / bào thanh: nguồn thanh, kích thước sau bào, SL thanh đạt &amp; thanh lỗi">
             <span class="x2-mini-ic"><i data-lucide="sparkles"></i></span>
             <span class="x2-mini-title">Bào Tinh</span>
-            <span class="x2-mini-desc">Bào tinh nan thành phẩm</span>
+            <span class="x2-mini-desc">Bào tinh · hạ cấp · bào thanh</span>
             <span class="x2-mini-count" id="x2-mini-count-bao-tinh">–</span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-ep-van-card" aria-expanded="false" title="Ép Ván — liên kết số liệu ép ván từ tab Ép Ván (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-ep-van-card" aria-expanded="false" title="Ép Ván — Sản lượng ép ván: 2 khung (Lượt Ép theo thẻ ngày: công suất thực tế · người ép · giờ HC/TC · hiệu suất | Biểu Đồ thể tích ván ép theo ngày)">
             <span class="x2-mini-ic"><i data-lucide="layers"></i></span>
             <span class="x2-mini-title">Ép Ván</span>
             <span class="x2-mini-desc">Ép ván từ nan bào tinh</span>
@@ -694,19 +686,27 @@
                 <div class="form-group" style="flex:2; min-width:320px;">
                   <label for="x2-cn-baotho">Lô Đã Bào Thô (chọn theo ngày bào thô) <span class="required">*</span></label>
                   <select id="x2-cn-baotho" required></select>
-                  <small style="color:var(--text-muted);">Nhãn hiện <strong>ngày bào thô</strong> · Loại NL · NCC · các kích thước của lô · số lượt đã chọn — gõ vào ô để tìm theo ngày/NCC</small>
+                  <small style="color:var(--text-muted);">Chọn theo <strong>ngày bào thô</strong> — nhãn hiện ngày bào thô · Loại NL · NCC · số lượt đã chọn (gõ vào ô để tìm theo ngày/NCC). Kích thước nan chọn ở ô <strong>Loại nan</strong> bên dưới · chọn <strong>Thêm loại mới</strong> khi nan mua ở <strong>ngoài công đoạn</strong> (tự khai Nhà cung cấp + kích thước, không cộng sang Bào Thô).</small>
                 </div>
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-cn-date">Ngày Chọn <span class="required">*</span></label>
                   <input type="date" id="x2-cn-date" required>
                 </div>
               </div>
-              <!-- DÒNG 2: loại nan (từ lô bào thô, có "Thêm loại mới") + phân loại + số lượng -->
+              <!-- DÒNG 2: loại nan (kích thước của lô đã bào thô) + phân loại + số lượng
+                   Khi chọn "Thêm loại mới" ở ô Lô đã bào thô: ô Loại nan được THAY bằng
+                   ô Nhà cung cấp (nan mua ngoài — tự khai NCC và kích thước Dài/Rộng/Dày). -->
               <div class="x2-form-row">
-                <div class="form-group" style="flex:1.5; min-width:240px;">
+                <div class="form-group" id="x2-cn-size-group" style="flex:1.5; min-width:240px;">
                   <label for="x2-cn-size">Loại Nan (kích thước) <span class="required">*</span></label>
-                  <select id="x2-cn-size" required></select>
-                  <small style="color:var(--text-muted);">Lấy từ kích thước của lô bào thô · chọn <strong>Thêm loại mới</strong> khi nan nhập ở ngoài công đoạn (không cộng sang Bào Thô)</small>
+                  <select id="x2-cn-size"></select>
+                  <small style="color:var(--text-muted);">Lấy từ kích thước của lô bào thô đã chọn (kèm số thanh đã chọn của từng cỡ).</small>
+                </div>
+                <div class="form-group" id="x2-cn-ncc-group" style="display:none; flex:1.5; min-width:240px;">
+                  <label for="x2-cn-ncc">Nhà Cung Cấp <span class="required">*</span></label>
+                  <input type="text" id="x2-cn-ncc" list="x2-cn-ncc-list" placeholder="Luồng thanh - NCC" autocomplete="off">
+                  <datalist id="x2-cn-ncc-list"></datalist>
+                  <small style="color:var(--text-muted);">Nan mua ở <strong>ngoài công đoạn</strong> — ghi rõ nhà cung cấp (VD: <strong>Luồng thanh - NCC</strong>).</small>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x2-cn-class">Phân Loại <span class="required">*</span></label>
@@ -722,7 +722,8 @@
                   <input type="number" id="x2-cn-qty" step="1" min="0" placeholder="0">
                 </div>
               </div>
-              <!-- DÒNG 3 (CHỈ hiện khi chọn "Thêm loại mới"): kích thước nhập ngoài công đoạn -->
+              <!-- DÒNG 3 (CHỈ hiện khi chọn "Thêm loại mới" ở ô Lô đã bào thô):
+                   kích thước loại nan nhập ở ngoài công đoạn -->
               <div class="x2-form-row" id="x2-cn-new-size-row" style="display:none;">
                 <div class="form-group" style="flex:1;">
                   <label for="x2-cn-dai">Dài (mm)</label>
@@ -784,27 +785,36 @@
           </div>
         </div>
 
-        <!-- VỊ TRÍ: THAN HÓA + SẤY — CHỨA BẢNG KANBAN lô nan (4 cột công đoạn) + nút Thêm Lô Nan / Chọn nhiều lô -->
+        <!-- VỊ TRÍ: THAN HÓA + SẤY — BẢNG KANBAN lô nan (Sấy 1 → Sấy 2 → Kho) + nút
+             Thêm Lô Sấy Mới / Chuyển Kho / Chọn nhiều lô.
+             CỜ XÓA SAU: cột "4. Bào Tinh" đã TẠM ẨN (không dùng ở công đoạn này —
+             xem khối CSS "TẠM ẨN CỘT BÀO TINH" trong styles.css). Logic công đoạn
+             bao_tinh vẫn giữ nguyên (planning/press/dashboard/Excel dùng) nên
+             KHÔNG xóa hẳn cột/mã để tránh vỡ cấu trúc. -->
         <div class="planning-card x2-card-hidden" id="x2-than-hoa-card">
           <div class="planning-card-header">
             <h4><i data-lucide="flame"></i> Than Hóa + Sấy — Xưởng 2</h4>
           </div>
-          <!-- Mobile Stage Tabs Selector — điện thoại mặc định xem 1 công đoạn, vuốt ngang để chuyển -->
+          <!-- Mobile Stage Tabs Selector — điện thoại mặc định xem 1 công đoạn, vuốt ngang để chuyển
+               (KHÔNG có tab "Bào tinh" — công đoạn này chỉ dùng 3 thẻ Sấy 1 / Sấy 2 / Kho) -->
           <div class="mobile-stage-tabs">
             <button class="stage-tab" data-stage="all">Tất cả</button>
             <button class="stage-tab active" data-stage="say1">Sấy 1 <span class="badge-count" id="badge-say1">0</span></button>
             <button class="stage-tab" data-stage="say2">Sấy 2 <span class="badge-count" id="badge-say2">0</span></button>
             <button class="stage-tab" data-stage="kho">Kho <span class="badge-count" id="badge-kho">0</span></button>
-            <button class="stage-tab" data-stage="bao_tinh">Bào tinh <span class="badge-count" id="badge-bao-tinh">0</span></button>
+            <!-- CỜ XÓA SAU: tab "Bào tinh" đã bỏ khỏi công đoạn Than Hóa + Sấy -->
           </div>
           <p class="stage-swipe-hint"><i data-lucide="move-horizontal"></i> Vuốt ngang trên bảng để chuyển công đoạn</p>
 
           <!-- Bộ lọc Ngày / Vị trí / Kích thước nan nằm trên từng cột Kanban -->
 
-          <!-- Thanh công cụ Kanban: Thêm Lô Nan + Chọn nhiều lô (nay nằm trong thẻ "Than Hóa + Sấy") -->
+          <!-- Thanh công cụ Kanban: Thêm Lô Sấy Mới + Chuyển Kho + Chọn nhiều lô -->
           <div class="kanban-toolbar">
-            <button class="btn btn-primary" id="btn-add-batch" data-perm="kanban" title="Thêm lô nan mới vào công đoạn">
-              <i data-lucide="plus-circle"></i> Thêm Lô Nan
+            <button class="btn btn-primary" id="btn-add-batch" data-perm="kanban" title="Thêm lô nan mới vào Sấy 1 (nguồn: công đoạn Chọn Nan Thô) hoặc Sấy 2 (nguồn: lô đang ở Kho)">
+              <i data-lucide="plus-circle"></i> Thêm Lô Sấy Mới
+            </button>
+            <button class="btn btn-outline" id="btn-transfer-kho" data-perm="kanban" title="Chuyển lô từ Sấy 1 / Sấy 2 vào Kho — hoặc tạo lô mới vào thẳng Kho">
+              <i data-lucide="warehouse"></i> Chuyển Kho
             </button>
             <button class="btn btn-outline btn-sm" id="btn-multi-transfer" data-perm="kanban">
               <i data-lucide="list-checks"></i> Chọn nhiều lô để chuyển
@@ -994,8 +1004,10 @@
               </div>
             </div>
 
-            <!-- Column 4: Bào Tinh -->
-            <div class="kanban-column" data-stage-col="bao_tinh">
+            <!-- Column 4: Bào Tinh — CỜ XÓA SAU: TẠM ẨN (công đoạn Than Hóa + Sấy chỉ
+                 dùng 3 thẻ Sấy 1 / Sấy 2 / Kho). KHÔNG xóa markup/mã vì công đoạn
+                 bao_tinh còn được planning/press/dashboard/Excel sử dụng. -->
+            <div class="kanban-column" data-stage-col="bao_tinh" data-x2-hidden="1">
               <div class="column-filter-bar">
                 <button class="column-filter-btn" type="button" onclick="app.toggleColumnFilter('bao_tinh')">
                   <i data-lucide="filter"></i> Lọc Cột
@@ -1057,25 +1069,269 @@
           </div>
         </div>
 
-        <!-- VỊ TRÍ: BÀO TINH — placeholder (chức năng bổ sung sau) -->
+        <!-- VỊ TRÍ: BÀO TINH — ghi lượt bào tinh (thay placeholder cũ)
+             • Loại bào: Bào tinh (nguồn = lô đang ở KHO, đã qua Sấy 2)
+                         Bào tinh hạ cấp (nguồn = thanh LỖI của công đoạn Bào Tinh, gom theo cỡ)
+                         Bào thanh (tự nhập kích thước thanh + số lượng)
+             • Kết quả mỗi lượt: KÍCH THƯỚC SAU BÀO · SL thanh ĐẠT · SL thanh LỖI
+             • Người bào + giờ HC/TC tự động từ Bảng bố trí Nhân Sự (vị trí Bào tinh) -->
         <div class="planning-card x2-card-hidden" id="x2-bao-tinh-card">
           <div class="planning-card-header">
             <h4><i data-lucide="sparkles"></i> Bào Tinh — Xưởng 2</h4>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận bào tinh (khối lượng vào/ra, tỷ lệ đạt, khớp công đoạn Bào Tinh trên bảng Kanban) sẽ được cập nhật ngay sau đây.</p>
+
+          <!-- TIẾN ĐỘ: thanh LỖI của công đoạn bào tinh đang chờ hạ cấp lại -->
+          <div class="x2-stock-bar" id="x2-btinh-stock-bar"></div>
+
+          <!-- FORM: ngày bào + loại bào + chọn thanh (đổi theo loại bào) + kết quả -->
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x2-btinh-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x2-btinh-edit-text"></span>
+            </div>
+            <form id="x2-btinh-form">
+              <!-- DÒNG 1 (MỘT HÀNG): Ngày Bào · Loại Bào · Chọn Thanh
+                   Ghi chú KHÔNG in ra màn hình (đỡ dài ô) — nằm ở TOOLTIP:
+                   dê chuột vào Loại Bào sẽ hiện ghi chú của loại đang chọn
+                   (Bào tinh = lấy thanh từ Kho đã qua Sấy 2 · hạ cấp = thanh lỗi
+                   của Bào Tinh · bào thanh = tự nhập kích thước + số lượng). -->
+              <div class="x2-form-row x2-btinh-row" id="x2-btinh-top-row">
+                <div class="form-group x2-btinh-date-g">
+                  <label for="x2-btinh-date">Ngày Bào <span class="required">*</span></label>
+                  <input type="date" id="x2-btinh-date" required>
+                </div>
+                <div class="form-group x2-btinh-kind-g">
+                  <label for="x2-btinh-kind">Loại Bào <span class="required">*</span></label>
+                  <select id="x2-btinh-kind">
+                    <option value="tinh" title="Bào tinh — lấy thanh từ Kho (đã qua Sấy 2)">Bào tinh</option>
+                    <option value="ha_cap" title="Bào tinh hạ cấp — lấy thanh lỗi của công đoạn Bào Tinh (gom theo cỡ)">Bào tinh hạ cấp</option>
+                    <option value="bao_thanh" title="Bào thanh — tự nhập kích thước trước/sau bào + số lượng (thêm được nhiều hàng)">Bào thanh</option>
+                  </select>
+                </div>
+                <div class="form-group x2-btinh-pick-g" id="x2-btinh-picker-row">
+                  <label>Chọn Thanh <span class="required">*</span></label>
+                  <button type="button" class="btn btn-outline al-picker-btn" id="x2-btinh-picker-btn" aria-controls="x2-btinh-picker" aria-expanded="false" title="Bấm để mở danh sách THẺ thanh — bấm 1 thẻ để CHỌN, bấm lần nữa để BỎ CHỌN (chọn được nhiều thẻ)">
+                    <i data-lucide="list-checks"></i>
+                    <span id="x2-btinh-picker-text">Chọn thanh nan</span>
+                    <span class="al-picked-count" id="x2-btinh-picked-count">Chưa chọn</span>
+                  </button>
+                  <div class="al-picker x2-btinh-picker" id="x2-btinh-picker" hidden>
+                    <div class="al-picker-tools">
+                      <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-pick-all">Chọn tất cả</button>
+                      <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-pick-clear">Bỏ chọn</button>
+                    </div>
+                    <div class="al-card-list" id="x2-btinh-list"></div>
+                  </div>
+                </div>
+              </div>
+              <!-- DÒNG 2: BẢNG TỔNG HỢP theo KÍCH THƯỚC CHUNG (gộp, không chia phân loại)
+                   MỖI DÒNG điền: KÍCH THƯỚC SAU BÀO (Dài × Rộng × Dày) + SL thanh ĐẠT.
+                   SL thanh LỖI tự tính (vào − đạt) — KHÔNG hiện ở form, chỉ ở bảng lịch sử.
+                   • Bào thanh: mỗi dòng tự nhập KÍCH THƯỚC TRƯỚC bào + SỐ LƯỢNG,
+                     có nút "Thêm hàng thông tin khác" → nhập nhiều hàng rồi lưu 1 lần. -->
+              <div class="x2-btinh-groups" id="x2-btinh-groups" style="display:none;"></div>
+              <div class="x2-btinh-actions" id="x2-btinh-actions" style="display:none;">
+                <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-add-row" data-perm="kanban" title="Thêm 1 hàng thông tin (kích thước trước bào · số lượng · kích thước sau bào · SL thanh đạt) — nhập nhiều hàng rồi lưu 1 lần">
+                  <i data-lucide="plus"></i> Thêm hàng thông tin khác
+                </button>
+                <div class="x2-ong-calc" id="x2-btinh-calc"></div>
+              </div>
+              <!-- NGƯỜI BÀO + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí
+                   chứa "bào tinh" / "bào thanh" — Xưởng 2, đúng ngày) -->
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:10px;">
+                <button type="button" class="btn btn-outline" id="btn-cancel-x2-btinh">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Bào Tinh</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Thống kê nhanh -->
+          <div class="material-stats" id="x2-btinh-stats"></div>
+
+          <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT BÀO TINH theo THÁNG (thanh/giờ) —
+               nguồn cho cột Hiệu suất của từng thẻ ngày -->
+          <div class="x2-rate-bar" id="x2-btinh-rate-bar">
+            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bào tinh:</span>
+            <select id="x2-btinh-rate-month" title="Chọn tháng"></select>
+            <input type="number" id="x2-btinh-rate-value" min="0" step="any" placeholder="VD: 800" title="Công suất định mức của tháng (thanh/giờ)">
+            <span class="x2-rate-unit">thanh/h</span>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-btinh-rate-save" data-perm="kanban" title="Lưu định mức công suất bào tinh của tháng"><i data-lucide="save"></i> Lưu</button>
+            <div class="x2-rate-chips" id="x2-btinh-rate-chips"></div>
+          </div>
+
+          <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
+               đầu thẻ = NỘI DUNG CHUNG (Ngày · Người bào · Giờ HC/TC · Công suất ·
+               Hiệu suất · Tổng đạt/lỗi); trong thẻ = NỘI DUNG RIÊNG từng nhánh -->
+          <div class="x2-cut-table-wrap" id="x2-btinh-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Bào Tinh</h5>
+              <span class="x2-cut-table-count" id="x2-btinh-table-count"></span>
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2btinh-table" title="Thu gọn / Mở rộng">
+                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+              </button>
+            </div>
+            <div class="x2-cut-table-scroll">
+              <div id="x2-btinh-day-cards"></div>
+            </div>
+          </div>
+
+          <!-- BẢNG PHỤ (DỜI TỪ TAB ÉP VÁN): BÀO TINH ↔ ĐÃ ÉP — hiệu suất chuyển
+               đổi theo tuần. Đứng ở thẻ Bào Tinh vì bảng này so sánh ĐÃ BÀO TINH
+               (thanh chuyển vào Bào Tinh) với ĐÃ ÉP (thanh dùng cho lượt ép). -->
+          <div class="planning-card" id="baotinh-eff-card">
+            <div class="planning-card-header">
+              <h4><i data-lucide="git-merge"></i> Bào Tinh ↔ Đã Ép — Hiệu Suất Chuyển Đổi Theo Tuần</h4>
+              <div class="planning-controls">
+                <div class="filter-item">
+                  <label for="bt-year-filter">Năm:</label>
+                  <select id="bt-year-filter"></select>
+                </div>
+              </div>
+            </div>
+            <p style="margin:-4px 14px 10px; font-size:0.75rem; color:var(--text-muted);">
+              <strong>Đã bào tinh</strong> = số thanh chuyển vào Bào Tinh theo tuần (lịch sử chuyển công đoạn) ·
+              <strong>Đã ép</strong> = số thanh đạt dùng cho lượt ép thực tế ·
+              <strong>Còn lại (lũy kế)</strong> = Đã bào tinh − Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận ·
+              <strong>Hiệu suất</strong> = Đã ép ÷ Đã bào tinh (lũy kế).
+            </p>
+            <div class="table-responsive">
+              <table class="data-table planning-table" id="baotinh-eff-table">
+                <thead>
+                  <tr>
+                    <th>Tuần</th>
+                    <th>Đã Bào Tinh (thanh)</th>
+                    <th>Đã Ép (thanh)</th>
+                    <th>Còn Lại Lũy Kế (Chưa Dùng + Lỗi)</th>
+                    <th>Hiệu Suất (Lũy Kế)</th>
+                  </tr>
+                </thead>
+                <tbody id="baotinh-eff-body"></tbody>
+                <tfoot id="baotinh-eff-foot"></tfoot>
+              </table>
+            </div>
           </div>
         </div>
 
-        <!-- VỊ TRÍ: ÉP VÁN — placeholder (số liệu lấy từ tab Ép Ván) -->
+        <!-- VỊ TRÍ: ÉP VÁN — 2 KHUNG (Lượt Ép / Biểu Đồ) của module Sản Lượng Ép Ván
+             Khung 1 = thẻ ngày (Ngày · Người ép tự động · Giờ HC/TC · Công suất
+             m³/ngày · có định mức thì thêm m³/h + Hiệu suất) + bảng chi tiết.
+             Khung 2 = biểu đồ thể tích ván ép theo ngày (nhóm theo tuần) + lọc
+             Năm/Tuần + nút phóng to + ghi chú giải trình. -->
         <div class="planning-card x2-card-hidden" id="x2-ep-van-card">
-          <div class="planning-card-header">
-            <h4><i data-lucide="layers"></i> Ép Ván — Xưởng 2</h4>
+          <div class="planning-card-header x2-epv-header">
+            <h4><i data-lucide="layers"></i> Ép Ván — Sản Lượng Ép Ván</h4>
+            <div class="planning-controls x2-epv-controls">
+              <div class="x2-epv-tabs" role="tablist" aria-label="Chuyển khung hiển thị">
+                <button type="button" class="btn btn-outline btn-sm x2-epv-tab active" id="x2-epv-tab-list" data-epv-frame="list" role="tab" aria-selected="true" title="Xem danh sách lượt ép theo thẻ NGÀY (công suất thực tế · người ép · giờ HC/TC)"><i data-lucide="list"></i> Lượt Ép</button>
+                <button type="button" class="btn btn-outline btn-sm x2-epv-tab" id="x2-epv-tab-chart" data-epv-frame="chart" role="tab" aria-selected="false" title="Xem biểu đồ thể tích ván ép theo ngày (nhóm theo tuần)"><i data-lucide="bar-chart-3"></i> Biểu Đồ</button>
+              </div>
+            </div>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng liên kết số liệu ÉP VÁN từ tab Ép Ván (theo tuần/lô) sẽ được cập nhật ngay sau đây.</p>
+
+          <!-- ═══ KHUNG 1 (mặc định): LƯỢT ÉP — thẻ NGÀY như các công đoạn Xưởng 2 ═══ -->
+          <div class="x2-epv-frame" id="x2-epv-frame-list">
+            <div class="x2-epv-actions">
+              <button class="btn btn-primary" id="btn-add-press-2" data-perm="press" title="Mở form nhập lượt ép ván (ván thô · thanh · keo · phụ gia · thành phẩm)">
+                <i data-lucide="plus-circle"></i> Thêm Lượt Ép
+              </button>
+              <button class="btn btn-outline" id="btn-add-press-note-2" data-perm="press" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
+                <i data-lucide="alert-triangle"></i> Ghi Chú Giải Trình
+              </button>
+              <span class="x2-epv-count" id="x2-epv-day-count"></span>
+            </div>
+
+            <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT ÉP VÁN theo THÁNG (m³/giờ) — có đặt
+                 định mức thì thẻ ngày mới hiện thêm m³/h + Hiệu suất -->
+            <div class="x2-rate-bar" id="x2-epv-rate-bar">
+              <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất ép ván:</span>
+              <select id="x2-epv-rate-month" title="Chọn tháng"></select>
+              <input type="number" id="x2-epv-rate-value" min="0" step="any" placeholder="VD: 12" title="Công suất định mức của tháng (m³/giờ)">
+              <span class="x2-rate-unit">m³/h</span>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-x2-epv-rate-save" data-perm="press" title="Lưu định mức công suất ép ván của tháng"><i data-lucide="save"></i> Lưu</button>
+              <div class="x2-rate-chips" id="x2-epv-rate-chips"></div>
+            </div>
+
+            <!-- BẢNG DỮ LIỆU = THẺ NGÀY (đầu thẻ: Ngày · Người ép · Giờ HC/TC ·
+                 Công suất m³/ngày [· m³/h · Hiệu suất khi có định mức] · Thành phẩm) -->
+            <div class="x2-cut-table-wrap" id="x2-epv-day-wrap">
+              <div class="x2-cut-table-head">
+                <h5><i data-lucide="history"></i> Lịch Sử Ép Ván (theo ngày)</h5>
+                <span class="x2-cut-table-count" id="x2-epv-day-note"></span>
+              </div>
+              <div class="x2-cut-table-scroll">
+                <div id="x2-epv-day-cards"></div>
+              </div>
+            </div>
+
+            <!-- BẢNG CHI TIẾT ĐẦY ĐỦ (giữ nguyên bảng cũ — thu gọn được) -->
+            <div class="planning-card" id="press-table-card">
+              <div class="planning-card-header">
+                <h4><i data-lucide="layers"></i> Danh Sách Lượt Ép Ván (chi tiết)</h4>
+                <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-press-table" title="Thu gọn / Mở rộng">
+                  <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table planning-table" id="press-table">
+                  <thead>
+                    <tr>
+                      <th>Ngày (Tuần)</th>
+                      <th>Thành Phẩm</th>
+                      <th>Ván Thô Sử Dụng</th>
+                      <th>Thanh Thô (Bào Tinh)</th>
+                      <th>SL Ván Thô</th>
+                      <th>SL Thành Phẩm</th>
+                      <th>Keo (kg)</th>
+                      <th>Phụ Gia (kg)</th>
+                      <th>Công Nhân Ép</th>
+                      <th class="text-right">Thao Tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="press-table-body">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ KHUNG 2: BIỂU ĐỒ (mặc định ẩn — bấm tab "Biểu Đồ") ═══ -->
+          <div class="x2-epv-frame" id="x2-epv-frame-chart" hidden>
+            <div class="planning-card press-chart-card x2-epv-chart-card">
+              <div class="planning-card-header">
+                <h4><i data-lucide="bar-chart-3"></i> Thể Tích Ván Ép Theo Ngày (Nhóm Theo Tuần)</h4>
+                <div class="planning-controls">
+                  <div class="filter-item">
+                    <label for="press-year-filter">Năm:</label>
+                    <select id="press-year-filter"></select>
+                  </div>
+                  <div class="filter-item">
+                    <label for="press-week-filter">Tuần:</label>
+                    <select id="press-week-filter"></select>
+                  </div>
+                  <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
+                    <i data-lucide="maximize"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="press-chart-box">
+                <canvas id="press-chart"></canvas>
+              </div>
+              <div class="press-chart-footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="btn-add-press" data-perm="press">
+                  <i data-lucide="plus-circle"></i> Thêm Lượt Ép
+                </button>
+                <button class="btn btn-outline" id="btn-add-press-note" data-perm="press" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
+                  <i data-lucide="alert-triangle"></i> Ghi Chú Giải Trình
+                </button>
+                <button class="btn btn-outline" id="btn-toggle-press-notes" title="Hiện nội dung tất cả ghi chú giải trình ngay trên biểu đồ">
+                  <i data-lucide="sticky-note"></i> <span id="btn-toggle-press-notes-label">Hiện Ghi Chú</span>
+                </button>
+                <span style="flex-basis:100%; text-align:center; font-size:0.72rem; color:var(--text-muted);">
+                  <i data-lucide="move-horizontal" style="width:12px;height:12px;vertical-align:-2px;"></i>
+                  Vuốt trái/phải trên biểu đồ để xem thêm các ngày (máy tính: tối đa 14 ngày ≈ 2 tuần · điện thoại: 7 ngày ≈ 1 tuần)
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1130,6 +1386,16 @@
         <div class="modal-card x2-detail-modal" id="x2-detail-card" role="dialog" aria-modal="true" aria-labelledby="x2-detail-title">
           <div class="modal-header">
             <h3 id="x2-detail-title">Vị Trí Xưởng 2</h3>
+            <!-- 2 nút DÙNG CHUNG cho MỌI thẻ Xưởng 2 — luôn thấy khi mở bất kỳ thẻ
+                 nào; tự phục vụ đúng VÙNG DỮ LIỆU / NGUỒN XUẤT của thẻ đang mở -->
+            <div class="x2-detail-actions">
+              <button type="button" class="btn btn-outline btn-sm history-admin-btn" id="btn-history-x2" title="Lịch sử thay đổi của VÙNG DỮ LIỆU thuộc thẻ đang mở (chỉ Admin)">
+                <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-export-x2" title="Xuất Excel dữ liệu của THẺ đang mở (đổi được vùng dữ liệu trong form xuất)">
+                <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Dữ Liệu</span>
+              </button>
+            </div>
             <button type="button" class="modal-close-btn" id="btn-close-x2-detail" title="Đóng (Esc)"><i data-lucide="x"></i></button>
           </div>
           <div class="x2-detail-content" id="x2-detail-content"></div>
@@ -1579,131 +1845,6 @@
 
 
     <!-- SẢN LƯỢNG ÉP VÁN VIEW -->
-    <section id="press-view" class="view-panel">
-
-      <!-- Header Bar -->
-      <div class="planning-header-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);">
-        <div>
-          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px; color:var(--primary);">
-            <i data-lucide="factory"></i> Sản Lượng Ép Ván
-          </h3>
-          <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Ghi nhận từng lượt ép: thanh thô/ván thô đầu vào → ván thô tạo ra &amp; thành phẩm. Phần nào không nhập thì thể tích phần đó = 0.
-          </p>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-press" title="Lịch sử thay đổi của tab này (chỉ Admin)">
-            <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
-          </button>
-          <button class="btn btn-success" id="btn-open-export-press" title="Xuất sản lượng ép ván ra Excel">
-            <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- KHU VỰC BIỂU ĐỒ: thể tích ván ép mỗi ngày (nhóm theo tuần) -->
-      <div class="planning-card press-chart-card">
-        <div class="planning-card-header">
-          <h4><i data-lucide="bar-chart-3"></i> Thể Tích Ván Ép Theo Ngày (Nhóm Theo Tuần)</h4>
-          <div class="planning-controls">
-            <div class="filter-item">
-              <label for="press-year-filter">Năm:</label>
-              <select id="press-year-filter"></select>
-            </div>
-            <div class="filter-item">
-              <label for="press-week-filter">Tuần:</label>
-              <select id="press-week-filter"></select>
-            </div>
-            <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
-              <i data-lucide="maximize"></i>
-            </button>
-          </div>
-        </div>
-        <div class="press-chart-box">
-          <canvas id="press-chart"></canvas>
-        </div>
-        <div class="press-chart-footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-          <button class="btn btn-primary" id="btn-add-press" data-perm="press">
-            <i data-lucide="plus-circle"></i> Thêm Lượt Ép
-          </button>
-          <button class="btn btn-outline" id="btn-add-press-note" data-perm="press" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
-            <i data-lucide="alert-triangle"></i> Ghi Chú Giải Trình
-          </button>
-          <button class="btn btn-outline" id="btn-toggle-press-notes" title="Hiện nội dung tất cả ghi chú giải trình ngay trên biểu đồ">
-            <i data-lucide="sticky-note"></i> <span id="btn-toggle-press-notes-label">Hiện Ghi Chú</span>
-          </button>
-          <span style="flex-basis:100%; text-align:center; font-size:0.72rem; color:var(--text-muted);">
-            <i data-lucide="move-horizontal" style="width:12px;height:12px;vertical-align:-2px;"></i>
-            Vuốt trái/phải trên biểu đồ để xem thêm các ngày (máy tính: tối đa 14 ngày ≈ 2 tuần · điện thoại: 7 ngày ≈ 1 tuần)
-          </span>
-        </div>
-      </div>
-
-      <!-- DANH SÁCH LƯỢT ÉP -->
-      <div class="planning-card" id="press-table-card">
-        <div class="planning-card-header">
-          <h4><i data-lucide="layers"></i> Danh Sách Lượt Ép Ván</h4>
-          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-press-table" title="Thu gọn / Mở rộng">
-            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
-          </button>
-        </div>
-        <div class="table-responsive">
-          <table class="data-table planning-table" id="press-table">
-            <thead>
-              <tr>
-                <th>Ngày (Tuần)</th>
-                <th>Thành Phẩm</th>
-                <th>Ván Thô Sử Dụng</th>
-                <th>Thanh Thô (Bào Tinh)</th>
-                <th>SL Ván Thô</th>
-                <th>SL Thành Phẩm</th>
-                <th>Keo (kg)</th>
-                <th>Phụ Gia (kg)</th>
-                <th>Công Nhân Ép</th>
-                <th class="text-right">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody id="press-table-body">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- BÀO TINH ↔ ĐÃ ÉP: HIỆU SUẤT CHUYỂN ĐỔI THEO TUẦN -->
-      <div class="planning-card" id="baotinh-eff-card">
-        <div class="planning-card-header">
-          <h4><i data-lucide="git-merge"></i> Bào Tinh ↔ Đã Ép — Hiệu Suất Chuyển Đổi Theo Tuần</h4>
-          <div class="planning-controls">
-            <div class="filter-item">
-              <label for="bt-year-filter">Năm:</label>
-              <select id="bt-year-filter"></select>
-            </div>
-          </div>
-        </div>
-        <p style="margin:-4px 14px 10px; font-size:0.75rem; color:var(--text-muted);">
-          <strong>Đã bào tinh</strong> = số thanh chuyển vào Bào Tinh theo tuần (lịch sử chuyển công đoạn) ·
-          <strong>Đã ép</strong> = số thanh đạt dùng cho lượt ép thực tế ·
-          <strong>Còn lại (lũy kế)</strong> = Đã bào tinh − Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận ·
-          <strong>Hiệu suất</strong> = Đã ép ÷ Đã bào tinh (lũy kế).
-        </p>
-        <div class="table-responsive">
-          <table class="data-table planning-table" id="baotinh-eff-table">
-            <thead>
-              <tr>
-                <th>Tuần</th>
-                <th>Đã Bào Tinh (thanh)</th>
-                <th>Đã Ép (thanh)</th>
-                <th>Còn Lại Lũy Kế (Chưa Dùng + Lỗi)</th>
-                <th>Hiệu Suất (Lũy Kế)</th>
-              </tr>
-            </thead>
-            <tbody id="baotinh-eff-body"></tbody>
-            <tfoot id="baotinh-eff-foot"></tfoot>
-          </table>
-        </div>
-      </div>
-
       <!-- MODAL: THÊM / SỬA LƯỢT ÉP VÁN -->
       <div class="modal-overlay" id="modal-press-record">
         <div class="modal-card">
@@ -1816,8 +1957,6 @@
           </form>
         </div>
       </div>
-
-    </section>
 
     <!-- NHẬP NGUYÊN LIỆU VIEW -->
     <section id="materials-view" class="view-panel">
@@ -3536,6 +3675,201 @@
     </div>
   </div>
 
+  <!-- MODAL 0: THÊM LÔ SẤY MỚI (thay cơ chế "Thêm Lô Nan" cho Than Hóa + Sấy)
+       • Sấy 1 → nguồn là THẺ NAN của công đoạn CHỌN NAN THÔ
+       • Sấy 2 → nguồn là LÔ đang ở KHO (chuyển Kho → Sấy 2)
+       • Nguồn: bấm nút "Chọn Lô Nan" → mở danh sách thẻ, CHỌN ĐƯỢC NHIỀU nguồn
+         cùng lúc; số lượng lấy NGUYÊN theo nguồn (đã có ở thẻ Chọn Nan Thô)
+         nên KHÔNG còn ô nhập số lượng.
+       • Vị Trí: bấm nút → hiện LS1..LS15 + nút "Thêm" khai báo vị trí khác.
+       • Ngày = ngày vào công đoạn (dùng cho badge đếm ngày Sấy 1 / Sấy 2) -->
+  <div class="modal-overlay" id="modal-add-lot">
+    <div class="modal-card hud-frame">
+      <div class="modal-header">
+        <h3 id="add-lot-title"><i data-lucide="plus-circle"></i> Thêm Lô Sấy Mới</h3>
+        <button class="modal-close-btn" id="btn-close-add-lot"><i data-lucide="x"></i></button>
+      </div>
+      <form id="add-lot-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="al-stage">Chọn Công Đoạn <span class="required">*</span></label>
+            <select id="al-stage" required>
+              <option value="say1">1. Sấy 1 (nguồn: Chọn Nan Thô)</option>
+              <option value="say2">2. Sấy 2 (nguồn: lô ở Kho)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="al-date">Chọn Ngày <span class="required">*</span></label>
+            <input type="date" id="al-date" required>
+            <div class="al-hint">
+              Ngày vào công đoạn — dùng cho badge đếm ngày của Sấy 1 / Sấy 2.
+            </div>
+          </div>
+
+          <!-- NGUỒN: nút "Chọn Lô Nan" → danh sách THẺ, chọn được NHIỀU nguồn -->
+          <div class="form-group col-span-full">
+            <label>Chọn Thẻ Nan / Lô Nguồn <span class="required">*</span></label>
+            <input type="hidden" id="al-source">
+            <button type="button" class="btn btn-outline al-picker-btn" id="al-source-btn" aria-controls="al-source-panel" aria-expanded="false">
+              <i data-lucide="list-checks"></i>
+              <span id="al-source-btn-text">Chọn Lô Nan</span>
+              <span class="al-picked-count" id="al-picked-count">Chưa chọn</span>
+            </button>
+            <div class="al-picker" id="al-source-panel" hidden>
+              <div class="al-picker-tools">
+                <button type="button" class="btn btn-outline btn-sm" id="al-pick-all"><i data-lucide="check-check"></i> Chọn tất cả</button>
+                <button type="button" class="btn btn-outline btn-sm" id="al-pick-clear"><i data-lucide="eraser"></i> Bỏ chọn</button>
+              </div>
+              <div class="al-card-list" id="al-source-list"></div>
+            </div>
+            <div class="al-hint" id="al-source-hint"></div>
+          </div>
+
+          <!-- VỊ TRÍ: nút chọn → LS1..LS15 + nút "Thêm" (khai báo vị trí mới) -->
+          <div class="form-group col-span-full">
+            <label>Vị Trí (Kệ/Kho/Máy) <span class="required">*</span></label>
+            <input type="hidden" id="al-location">
+            <button type="button" class="btn btn-outline al-picker-btn" id="al-location-btn" aria-controls="al-location-panel" aria-expanded="false">
+              <i data-lucide="map-pin"></i> Chọn Vị Trí
+            </button>
+            <div class="al-picker" id="al-location-panel" hidden>
+              <div class="al-loc-chips" id="al-location-chips"></div>
+              <div class="al-loc-hint" id="al-location-hint">
+                <i data-lucide="info"></i> Bấm <strong>×</strong> trên chip để xóa vị trí đã khai báo
+                (LS1..LS15 là vị trí mặc định, không xóa được).
+              </div>
+              <div class="al-loc-add-row" id="al-location-new-row" hidden>
+                <input type="text" id="al-location-new" placeholder="VD: LS16, Lò 01" autocomplete="off">
+                <button type="button" class="btn btn-primary btn-sm" id="al-location-new-save"><i data-lucide="check"></i> Lưu</button>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" id="al-location-add"><i data-lucide="plus"></i> Thêm</button>
+            </div>
+          </div>
+
+          <div class="form-group col-span-full" id="al-info-group">
+            <label>Thông Tin Lấy Từ Nguồn</label>
+            <div class="al-source-info" id="al-source-info"></div>
+          </div>
+          <div class="form-group col-span-full">
+            <label for="al-notes">Ghi Chú</label>
+            <textarea id="al-notes" rows="2" placeholder="Không bắt buộc..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btn-cancel-add-lot">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lô Sấy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 0b: CHUYỂN KHO (Sấy 1 / Sấy 2 → Kho, hoặc THÊM MỚI tạo lô vào thẳng Kho) -->
+  <div class="modal-overlay" id="modal-transfer-kho">
+    <div class="modal-card hud-frame">
+      <div class="modal-header">
+        <h3><i data-lucide="warehouse"></i> Chuyển Kho</h3>
+        <button class="modal-close-btn" id="btn-close-transfer-kho"><i data-lucide="x"></i></button>
+      </div>
+      <form id="transfer-kho-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="ck-stage">Chọn Công Đoạn <span class="required">*</span></label>
+            <select id="ck-stage" required>
+              <option value="say1">1. Sấy 1 → Kho</option>
+              <option value="say2">2. Sấy 2 → Kho</option>
+              <option value="new">➕ Thêm mới (tạo lô vào thẳng Kho)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ck-date">Ngày <span class="required">*</span></label>
+            <input type="date" id="ck-date" required>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+              Ngày vào Kho — dùng cho badge đếm ngày của cột Kho.
+            </div>
+          </div>
+
+          <!-- CHUYỂN CẢ VỊ TRÍ (Sấy 1 / Sấy 2) → Kho -->
+          <div class="form-group col-span-full" id="ck-lot-group">
+            <label for="ck-lot">Chọn Vị Trí <span class="required">*</span></label>
+            <select id="ck-lot"></select>
+            <div class="al-hint">
+              Chỉ hiện các VỊ TRÍ đang có lô ở công đoạn đã chọn — chọn 1 vị trí là
+              TẤT CẢ lô nan trong vị trí đó cùng chuyển vào Kho.
+            </div>
+          </div>
+          <div class="form-group col-span-full" id="ck-pos-info-group">
+            <label>Thông Tin Vị Trí Đã Chọn</label>
+            <div class="al-source-info" id="ck-pos-info"></div>
+          </div>
+          <div class="form-group col-span-full" id="ck-new-loc-group">
+            <label for="ck-new-loc">Vị Trí Mới Ở Kho (để trống = giữ nguyên vị trí cũ)</label>
+            <input type="text" id="ck-new-loc" list="ck-new-loc-list" placeholder="Nhập tay: VD K11, Kệ 2…" autocomplete="off">
+            <datalist id="ck-new-loc-list"></datalist>
+          </div>
+
+          <!-- THÊM MỚI LÔ VÀO KHO -->
+          <div class="form-group" id="ck-new-group" style="display:none;">
+            <label for="ck-new-loc-new">Vị Trí (Kệ/Kho) <span class="required">*</span></label>
+            <input type="text" id="ck-new-loc-new" placeholder="VD: K11, Kệ 2">
+          </div>
+          <div class="form-group" id="ck-new-qty-group" style="display:none;">
+            <label for="ck-new-qty">Số Lượng (Thanh) <span class="required">*</span></label>
+            <input type="number" id="ck-new-qty" min="1" step="1" placeholder="VD: 5000">
+          </div>
+          <div class="form-group col-span-2" id="ck-new-dims-group" style="display:none;">
+            <label>Kích Thước Nan (mm): Dài × Rộng × Dày <span class="required">*</span></label>
+            <div class="dimension-inputs">
+              <div>
+                <span class="dim-label">Dài (mm)</span>
+                <input type="number" id="ck-new-length" step="1" min="1" placeholder="Dài">
+              </div>
+              <span class="dim-separator">×</span>
+              <div>
+                <span class="dim-label">Rộng (mm)</span>
+                <input type="number" id="ck-new-width" step="0.1" min="0.1" placeholder="Rộng">
+              </div>
+              <span class="dim-separator">×</span>
+              <div>
+                <span class="dim-label">Dày (mm)</span>
+                <input type="number" id="ck-new-thickness" step="0.1" min="0.1" placeholder="Dày">
+              </div>
+            </div>
+          </div>
+          <div class="form-group" id="ck-new-type-group" style="display:none;">
+            <label for="ck-new-type">Loại Nan <span class="required">*</span></label>
+            <select id="ck-new-type">
+              <option value="A">Loại A</option>
+              <option value="A1">Loại A1</option>
+              <option value="B">Loại B</option>
+            </select>
+          </div>
+          <div class="form-group" id="ck-new-use-group" style="display:none;">
+            <label for="ck-new-use">Dùng Cho <span class="required">*</span></label>
+            <select id="ck-new-use">
+              <option value="Ván">Ván</option>
+              <option value="Bullig">Bullig</option>
+            </select>
+          </div>
+          <div class="form-group col-span-full" id="ck-new-vol-group" style="display:none;">
+            <label>Thể Tích Quy Đổi</label>
+            <div class="volume-preview-box">
+              <span class="vol-num" id="ck-new-vol">0.0000 m³</span>
+              <span class="vol-formula">(Dài × Rộng × Dày / 1.000.000.000) × Số Lượng</span>
+            </div>
+          </div>
+          <div class="form-group col-span-full">
+            <label for="ck-notes">Ghi Chú</label>
+            <textarea id="ck-notes" rows="2" placeholder="Không bắt buộc..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btn-cancel-transfer-kho">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Chuyển Vào Kho</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL 2: TRANSFER STAGE (ĐIỀU CHUYỂN CÔNG ĐOẠN) -->
   <div class="modal-overlay" id="modal-transfer">
     <div class="modal-card modal-sm hud-frame">
@@ -3706,7 +4040,7 @@
               <div class="edit-tabs-checks" id="new-user-edit-tabs">
                 <label class="edit-tab-check"><input type="checkbox" value="kanban" checked> Công Đoạn (Kanban)</label>
                 <label class="edit-tab-check"><input type="checkbox" value="planning" checked> Kế Hoạch Sản Xuất</label>
-                <label class="edit-tab-check"><input type="checkbox" value="press" checked> Sản Lượng Ép Ván</label>
+                <label class="edit-tab-check"><input type="checkbox" value="press" checked> Ép Ván (thẻ trong Công Đoạn)</label>
                 <label class="edit-tab-check"><input type="checkbox" value="materials" checked> Nhập Nguyên Liệu</label>
                 <label class="edit-tab-check"><input type="checkbox" value="qc" checked> QC (Xuất Hàng)</label>
                 <label class="edit-tab-check"><input type="checkbox" value="hr" checked> Nhân Sự</label>
@@ -3809,7 +4143,7 @@
           <div class="edit-tabs-checks" id="user-perms-edit-tabs">
             <label class="edit-tab-check"><input type="checkbox" value="kanban"> Công Đoạn (Kanban)</label>
             <label class="edit-tab-check"><input type="checkbox" value="planning"> Kế Hoạch Sản Xuất</label>
-            <label class="edit-tab-check"><input type="checkbox" value="press"> Sản Lượng Ép Ván</label>
+            <label class="edit-tab-check"><input type="checkbox" value="press"> Ép Ván (thẻ trong Công Đoạn)</label>
             <label class="edit-tab-check"><input type="checkbox" value="materials"> Nhập Nguyên Liệu</label>
             <label class="edit-tab-check"><input type="checkbox" value="qc"> QC (Xuất Hàng)</label>
             <label class="edit-tab-check"><input type="checkbox" value="hr"> Nhân Sự</label>
@@ -3936,6 +4270,39 @@
   </div>
 
   <!-- MODAL 6C: XUẤT EXCEL SẢN LƯỢNG ÉP VÁN -->
+  <!-- MODAL: XUẤT DỮ LIỆU XƯỞNG 2 — DÙNG CHUNG cho các THẺ ở tab Công Đoạn.
+       Nút "Xuất Dữ Liệu X2" tự chọn VÙNG DỮ LIỆU theo thẻ đang mở; đổi được
+       bằng dropdown. Nguồn "Ép Ván" mở form xuất Ép Ván chuyên sâu. -->
+  <div class="modal-overlay" id="modal-export-x2">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="file-spreadsheet"></i> Xuất Dữ Liệu Xưởng 2 (.xlsx)</h3>
+        <button class="modal-close-btn" id="btn-close-export-x2"><i data-lucide="x"></i></button>
+      </div>
+      <form id="x2-export-form" style="padding: 20px;">
+        <div class="form-group">
+          <label for="export-x2-source"><i data-lucide="database"></i> Vùng dữ liệu (theo thẻ đang mở)</label>
+          <select id="export-x2-source"></select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label for="export-x2-from">Từ ngày</label>
+            <input type="date" id="export-x2-from">
+          </div>
+          <div class="form-group">
+            <label for="export-x2-to">Đến ngày</label>
+            <input type="date" id="export-x2-to">
+          </div>
+        </div>
+        <p id="export-x2-hint" style="margin:0; font-size:0.75rem; color:var(--text-muted);"></p>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-export-x2">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="download"></i> Xuất Excel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modal-export-press">
     <div class="modal-card modal-sm">
       <div class="modal-header">
@@ -4243,6 +4610,10 @@
           <select id="history-tab-filter"></select>
         </div>
         <div class="filter-item">
+          <label for="history-domain-filter">Vùng dữ liệu:</label>
+          <select id="history-domain-filter" title="Lọc theo VÙNG DỮ LIỆU — nút Lịch Sử ở tab Công Đoạn tự mở đúng vùng của thẻ đang xem"></select>
+        </div>
+        <div class="filter-item">
           <label for="history-user-filter">Người:</label>
           <select id="history-user-filter"></select>
         </div>
@@ -4308,7 +4679,7 @@
             <select id="builder-source">
               <option value="kanban">Công Đoạn (Lô Nan)</option>
               <option value="planning">Kế Hoạch Sản Xuất</option>
-              <option value="press">Sản Lượng Ép Ván</option>
+              <option value="press">Ép Ván (Sản Lượng Ép Ván)</option>
               <option value="materials">Nhập Nguyên Liệu</option>
               <option value="materialsPlan">Kế Hoạch vs Thực Tế Nguyên Liệu</option>
             </select>

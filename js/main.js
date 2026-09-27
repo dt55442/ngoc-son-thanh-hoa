@@ -2,7 +2,7 @@
 // js/main.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
-import { deleteBatch, loadX2LotLocations, openBatchFormModal, openTransferModal } from './batch-modals.js';
+import { deleteBatch, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
 import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
@@ -15,7 +15,7 @@ import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilter
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, renderXuong2Cards, x2CloseOpenCard } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
-import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2CapRates, loadX2ChonNanRates, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2ChonNan } from './xuong2.js';
+import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2SayRates, loadX2SayTimes, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
@@ -48,15 +48,20 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadXuong2BoOng(); // Nhật ký Bổ Ống Xưởng 2 (link lô ống từ Cắt Chọn)
     loadXuong2BaoTho(); // Nhật ký Chạy Máy Bào Thô Xưởng 2 (link lô đã bổ)
     loadXuong2ChonNan(); // Nhật ký Chọn Nan Thô Xưởng 2 (link lô đã bào thô)
+    loadXuong2Bullig(); // Nhật ký Bullig Xưởng 2 (Gia công + Chọn thanh)
     loadSuppliers(); // Bảng Thông Tin Nhà Cung (tab Nguyên Liệu)
     loadX2CapRates(); // Định mức công suất cắt theo tháng (tab Công Đoạn)
     loadX2BoOngRates(); // Định mức công suất bổ ống theo tháng (tab Công Đoạn)
     loadX2BaoThoRates(); // Định mức công suất bào thô theo tháng (thanh/giờ)
     loadX2ChonNanRates(); // Định mức công suất chọn nan theo tháng (thanh/giờ)
+    loadX2BulligRates(); // Định mức công suất Bullig theo tháng + công đoạn (thanh/giờ)
     loadXuong2BaoTinh(); // Nhật ký Bào Tinh Xưởng 2 (loại bào · nguồn thanh · đạt/lỗi)
     loadX2BaoTinhRates(); // Định mức công suất bào tinh theo tháng (thanh/giờ)
     loadX2EpVanRates(); // Định mức công suất ÉP VÁN theo tháng (m³/giờ) — thẻ Ép Ván
     loadX2LotLocations(); // Vị trí sấy khai báo thêm ngoài LS1..LS15 (Than Hóa + Sấy)
+    loadX2SayRates(); // Định mức THỜI GIAN THAN HÓA (phút/m³) theo tháng + công đoạn sấy
+    loadX2SayTimes(); // Số lần than hóa THẬT theo nhóm (ngày + công đoạn sấy của thẻ Than Hóa + Sấy)
+    loadX2SayIncidents(); // Giờ SỰ CỐ CHO PHÉP theo ngày (tính Hiệu suất ngày than hóa)
     loadQcExports();
     loadHrData();
     // Lịch sử sửa đổi: nạp + lập snapshot nền SAU CÙNG (sau khi toàn bộ
@@ -299,7 +304,6 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
   window.app = {
     openBatchFormModal,
     openEditModal: id => openBatchFormModal(id),
-    openTransferModal,
     openCustomExportModal,
     openChartBuilderModal: (chartId, preset) => openChartBuilderModal(chartId, preset),
     openEditChartModal: id => openChartBuilderModal(id),

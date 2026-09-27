@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
@@ -472,12 +472,17 @@ import { showToast } from './utils.js';
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
+      xuong2BulligRecords: state.xuong2BulligRecords || [],
       xuong2BaoTinhRecords: state.xuong2BaoTinhRecords || [],
       suppliers: state.suppliers || [],
       x2CapRates: state.x2CapRates || {},
       x2BoOngRates: state.x2BoOngRates || {},
       x2BaoThoRates: state.x2BaoThoRates || {},
       x2ChonNanRates: state.x2ChonNanRates || {},
+      x2BulligRates: state.x2BulligRates || { gc: {}, ct: {} },
+      x2SayRates: state.x2SayRates || { s1: {}, s2: {} },
+      x2SayTimes: state.x2SayTimes || {},
+      x2SayIncidents: state.x2SayIncidents || {},
       x2BaoTinhRates: state.x2BaoTinhRates || {},
       x2EpVanRates: state.x2EpVanRates || {},
       x2LotLocations: state.x2LotLocations || [],
@@ -510,12 +515,17 @@ import { showToast } from './utils.js';
       xuong2BoOngRecords: obj.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: obj.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: obj.xuong2ChonNanThoRecords || [],
+      xuong2BulligRecords: obj.xuong2BulligRecords || [],
       xuong2BaoTinhRecords: obj.xuong2BaoTinhRecords || [],
       suppliers: obj.suppliers || [],
       x2CapRates: obj.x2CapRates || {},
       x2BoOngRates: obj.x2BoOngRates || {},
       x2BaoThoRates: obj.x2BaoThoRates || {},
       x2ChonNanRates: obj.x2ChonNanRates || {},
+      x2BulligRates: obj.x2BulligRates || { gc: {}, ct: {} },
+      x2SayRates: obj.x2SayRates || { s1: {}, s2: {} },
+      x2SayTimes: obj.x2SayTimes || {},
+      x2SayIncidents: obj.x2SayIncidents || {},
       x2BaoTinhRates: obj.x2BaoTinhRates || {},
       x2EpVanRates: obj.x2EpVanRates || {},
       x2LotLocations: obj.x2LotLocations || [],
@@ -646,6 +656,7 @@ import { showToast } from './utils.js';
     if (remote.xuong2ChonNanThoRecords) state.xuong2ChonNanThoRecords = m(clean('xuong2ChonNanThoRecords', state.xuong2ChonNanThoRecords || []), clean('xuong2ChonNanThoRecords', remote.xuong2ChonNanThoRecords));
     // Vị trí công đoạn Xưởng 2 — nhật ký BÀO TINH (loại bào · nguồn thanh · đạt/lỗi)
     if (remote.xuong2BaoTinhRecords) state.xuong2BaoTinhRecords = m(clean('xuong2BaoTinhRecords', state.xuong2BaoTinhRecords || []), clean('xuong2BaoTinhRecords', remote.xuong2BaoTinhRecords));
+    if (remote.xuong2BulligRecords) state.xuong2BulligRecords = m(clean('xuong2BulligRecords', state.xuong2BulligRecords || []), clean('xuong2BulligRecords', remote.xuong2BulligRecords));
     // Thông Tin Nhà Cung (tab Nguyên Liệu)
     if (remote.suppliers) state.suppliers = m(clean('suppliers', state.suppliers || []), clean('suppliers', remote.suppliers));
     // Định mức công suất cắt theo tháng (dict theo 'YYYY-MM')
@@ -658,6 +669,25 @@ import { showToast } from './utils.js';
     if (remote.x2ChonNanRates) state.x2ChonNanRates = mergeKeyedDict(state.x2ChonNanRates || {}, remote.x2ChonNanRates);
     // Định mức công suất bào tinh theo tháng (thanh/giờ)
     if (remote.x2BaoTinhRates) state.x2BaoTinhRates = mergeKeyedDict(state.x2BaoTinhRates || {}, remote.x2BaoTinhRates);
+    if (remote.x2BulligRates) {
+      const src = remote.x2BulligRates || {};
+      state.x2BulligRates = state.x2BulligRates || { gc: {}, ct: {} };
+      ['gc', 'ct'].forEach(k => {
+        if (src[k]) state.x2BulligRates[k] = mergeKeyedDict(state.x2BulligRates[k] || {}, src[k]);
+      });
+    }
+    // SỐ LẦN THAN HÓA THẬT theo nhóm (ngày + công đoạn sấy) — dict theo key
+    if (remote.x2SayTimes) state.x2SayTimes = mergeKeyedDict(state.x2SayTimes || {}, remote.x2SayTimes);
+    // GIỜ SỰ CỐ CHO PHÉP theo ngày (Than Hóa + Sấy) — dict theo 'YYYY-MM-DD'
+    if (remote.x2SayIncidents) state.x2SayIncidents = mergeKeyedDict(state.x2SayIncidents || {}, remote.x2SayIncidents);
+    // Định mức THỜI GIAN THAN HÓA theo tháng + công đoạn sấy (phút/m³)
+    if (remote.x2SayRates) {
+      const src = remote.x2SayRates || {};
+      state.x2SayRates = state.x2SayRates || { s1: {}, s2: {} };
+      ['s1', 's2'].forEach(k => {
+        if (src[k]) state.x2SayRates[k] = mergeKeyedDict(state.x2SayRates[k] || {}, src[k]);
+      });
+    }
     // Định mức công suất ÉP VÁN theo tháng (m³/giờ)
     if (remote.x2EpVanRates) state.x2EpVanRates = mergeKeyedDict(state.x2EpVanRates || {}, remote.x2EpVanRates);
     // Vị trí sấy khai báo THÊM (Than Hóa + Sấy) — GỘP 2 chiều, không mất vị trí nào
@@ -729,6 +759,11 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_THO, JSON.stringify(state.xuong2BaoThoRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_TINH, JSON.stringify(state.xuong2BaoTinhRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_BULLIG, JSON.stringify(state.xuong2BulligRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_BULLIG_RATE, JSON.stringify(state.x2BulligRates || { gc: {}, ct: {} })); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_SAY_RATE, JSON.stringify(state.x2SayRates || { s1: {}, s2: {} })); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_SAY_TIMES, JSON.stringify(state.x2SayTimes || {})); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_SAY_INCIDENT, JSON.stringify(state.x2SayIncidents || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_BAO_TINH_RATE, JSON.stringify(state.x2BaoTinhRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_EP_VAN_RATE, JSON.stringify(state.x2EpVanRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(state.history || [])); } catch (e) {}

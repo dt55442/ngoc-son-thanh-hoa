@@ -1065,8 +1065,18 @@ import { escapeHTML, showToast } from './utils.js';
       .filter(w => w.isPress)
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
   }
+  // Vị trí ÉP VÁN thực sự — dùng cho giờ/công nhân của công đoạn ÉP VÁN:
+  //   • Tên vị trí PHẢI chứa "ép" (giữ dấu — nên "Xếp nan" KHÔNG bị nhận nhầm)
+  //   • KHÔNG được là vị trí của các công đoạn Xưởng 2 đã có thẻ + giờ riêng
+  //     (Bullig / Chọn thanh / Gia công) — Ép Ván KHÔNG cộng giờ của chúng.
+  function isPressEpPos(name) {
+    const s = String(name || '');
+    if (!/ép/i.test(s)) return false;
+    const n = hrStripDiacritics(s);
+    return !/bullig|chon thanh|gia cong/.test(n);
+  }
   function hrWorkersForPress(date) {
-    return hrWorkersForPosition(date, /ép/i);
+    return hrWorkersForPosition(date, { test: isPressEpPos });
   }
   // Vị trí phân theo LOẠI THÀNH PHẨM của lượt ép:
   //  - Thành phẩm "Bullig..." → vị trí "Chọn thanh Bullig" (CHỈ khớp tên vị trí
@@ -1078,8 +1088,11 @@ import { escapeHTML, showToast } from './utils.js';
       return /chon\s+thanh\s+bullig/i.test(hrStripDiacritics(String(name || '')));
     }
   };
+  // Vị trí ÉP VÁN thật (dùng chung isPressEpPos: loại vị trí công đoạn Xưởng 2 —
+  // Bullig / Chọn thanh / Gia công để Ép Ván KHÔNG cộng giờ của các công đoạn đó)
+  const PRESS_EP_PATTERN = { test: isPressEpPos, source: 'ép' };
   function pressPositionPatternFor(productName) {
-    return /bullig/i.test(String(productName || '')) ? BULLIG_POS_MATCHER : /ép/i;
+    return /bullig/i.test(String(productName || '')) ? BULLIG_POS_MATCHER : PRESS_EP_PATTERN;
   }
   // Danh sách công nhân theo THÀNH PHẨM của lượt ép (tên TP quyết định vị trí)
   function hrWorkersForProduct(date, productName) {
@@ -3485,6 +3498,7 @@ export {
   hrPositionsNamesOf,
   hrPressWorkersNamesOf,
     hrWorkersForPress,
+  isPressEpPos,
   hrWorkersForProduct,
   pressPositionPatternFor,
   importEmployeesFromSheet,

@@ -28,9 +28,9 @@ import { hrSplitHoursHCDate } from './hr.js';
 import { materialWeekLabel } from './materials.js';
 import { pressVolumeTotalOf, renderBaoTinhEffTable, renderX2EpVanCard } from './press.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, state } from './state.js';
+import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
+import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, showToast } from './utils.js';
 
   // Ghi file dữ liệu qua storage.js (import động để tránh vòng phụ thuộc module
   // — giống cách materials.js dùng)
@@ -58,7 +58,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     'x2-than-hoa-card':     { el: 'x2-mini-count-than-hoa' },                 // Than Hóa + Sấy (CHỨA BẢNG KANBAN lô nan)
     'x2-bao-tinh-card':     { el: 'x2-mini-count-bao-tinh' },                 // Bào Tinh (ĐÃ CÓ chức năng)
     'x2-ep-van-card':       { el: 'x2-mini-count-ep-van' },                    // Ép Ván (ĐÃ CÓ chức năng — 2 khung: Lượt Ép / Biểu Đồ)
-    'x2-bullig-card':       { el: 'x2-mini-count-bullig',       soon: true }, // Bullig
+    'x2-bullig-card':       { el: 'x2-mini-count-bullig' },                   // Bullig (ĐÃ CÓ chức năng — Gia công + Chọn thanh)
     'x2-cat-van-card':      { el: 'x2-mini-count-cat-van',      soon: true }, // Cắt Ván
     'x2-bao-van-card':      { el: 'x2-mini-count-bao-van',      soon: true }, // Bào Ván
     'x2-ho-tro-card':       { el: 'x2-mini-count-ho-tro',       soon: true }  // Hỗ Trợ + Công Đoạn Lẻ
@@ -76,6 +76,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     'x2-chon-nan-tho-card': 'xuong2ChonNanThoRecords',
     'x2-than-hoa-card': 'batches',
     'x2-bao-tinh-card': 'xuong2BaoTinhRecords',
+    'x2-bullig-card': 'xuong2BulligRecords',
     'x2-ep-van-card': 'pressRecords'
   };
   const X2_CARD_EXPORT_SOURCE = {
@@ -85,6 +86,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     'x2-chon-nan-tho-card': 'chonnan',
     'x2-than-hoa-card': 'batch',
     'x2-bao-tinh-card': 'baotinh',
+    'x2-bullig-card': 'bullig',
     'x2-ep-van-card': 'epvan'
   };
   // Thẻ đang mở (null = không thẻ nào) — Lịch Sử/Xuất Excel dùng chung + gợi ý AI
@@ -206,6 +208,581 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   // (mặc định theo quy ước Bảng bố trí Nhân Sự) → hiển thị "07:00 → hết ca"
   const posTimeStr = a => (a.end ? `${a.start}–${a.end}` : `${a.start} → hết ca`);
   const cutTimeStr = posTimeStr; // tên cũ (lượt cắt/chọn) — giữ để không phá code khác
+
+  // ─── THAN HÓA + SẤY: ĐỊNH MỨC 1 LẦN THAN HÓA (theo tháng + công đoạn sấy) ───
+  // Mỗi LẦN than hóa là 1 mẻ: đưa nan vào lò than hóa → ra vị trí sấy.
+  //   • Sấy 1: mọi lô nan trong lần đó đều qua 105 phút (mặc định)
+  //   • Sấy 2: 50 phút (mặc định)
+  //   • 1 lần than hóa chứa bao nhiêu m³ → dùng hệ số 2 m³/lần để QUY ĐỔI cho
+  //     dữ liệu cũ/chưa nhập số lần: lô 3,5 m³ → 2 lần than hóa.
+  // Người dùng nhập số lần THẬT sau này (ô "Số lần TH" trên bảng thống kê hoặc
+  // form Sửa Lô) → số đó được dùng thay cho quy đổi.
+  function isThanHoaPos(name) {
+    const n = normPosName(name);
+    // Vị trí "Than hóa" là chính; nới thêm "sấy" phòng khi nhà máy khai riêng
+    // một vị trí cho công đoạn sấy (bỏ dấu nên "Sấy" → "say").
+    return n.includes('than hoa') || n.includes('say');
+  }
+  function hrThanHoaAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isThanHoaPos); }
+
+  // Mặc định 1 LẦN than hóa: phút mỗi lần (105' cho Sấy 1 · 50' cho Sấy 2) +
+  // hệ số quy đổi m³ mỗi lần (2 m³/lần) — cả 2 chỉnh được theo tháng.
+  const SAY_RATE_DEFAULT = { s1: { phut: 105, m3: 2 }, s2: { phut: 50, m3: 2 } };
+  const sayRateGroup = stage => (stage === 'say2' ? 's2' : 's1');
+  const fmtPhut = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+  const fmtM3   = v => (Number(v) || 0).toLocaleString('vi-VN', { minimumFractionDigits: 3, maximumFractionDigits: 4 });
+  const fmtGio  = v => (Number(v) || 0).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtNum  = (v, d) => (Number(v) || 0).toLocaleString('vi-VN', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  // Định mức của 1 THÁNG + công đoạn sấy → { phut, m3, custom }
+  // (custom = tháng đó đã được khai định mức riêng hay đang dùng mặc định)
+  function sayRateEntryOf(dateVal, stage) {
+    const key = sayRateGroup(stage);
+    const def = SAY_RATE_DEFAULT[key];
+    const g = ((state.x2SayRates || {})[key]) || {};
+    const v = g[String(dateVal || '').slice(0, 7)];
+    const phut = Number(v && v.phut) > 0 ? Number(v.phut) : def.phut;
+    const m3 = Number(v && v.m3) > 0 ? Number(v.m3) : def.m3;
+    return { phut, m3, custom: !!v };
+  }
+  // Số PHÚT của 1 lần than hóa (Sấy 1 mặc định 105' · Sấy 2 mặc định 50')
+  function sayMinutesPerCharge(dateVal, stage) { return sayRateEntryOf(dateVal, stage).phut; }
+  // Số m³ quy đổi cho 1 lần than hóa (mặc định 2 m³/lần)
+  function sayM3PerCharge(dateVal, stage) { return sayRateEntryOf(dateVal, stage).m3; }
+
+  // Dọn định mức đã lưu: chấp nhận cả BẢN CŨ (1 số = phút/m³ → hiểu là số PHÚT
+  // mỗi lần) lẫn bản mới ({ phut, m3 }).
+  function loadX2SayRates() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_SAY_RATE);
+    state.x2SayRates = { s1: {}, s2: {} };
+    if (!raw) return;
+    try {
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      ['s1', 's2'].forEach(k => {
+        const g = (obj[k] && typeof obj[k] === 'object') ? obj[k] : {};
+        const out = {};
+        Object.keys(g).forEach(month => {
+          if (!/^\d{4}-\d{2}$/.test(month)) return;
+          const v = g[month];
+          if (typeof v === 'number') {
+            out[month] = { phut: v, m3: SAY_RATE_DEFAULT[k].m3 };
+          } else if (v && typeof v === 'object') {
+            out[month] = {
+              phut: Number(v.phut) > 0 ? Number(v.phut) : SAY_RATE_DEFAULT[k].phut,
+              m3: Number(v.m3) > 0 ? Number(v.m3) : SAY_RATE_DEFAULT[k].m3
+            };
+          }
+        });
+        state.x2SayRates[k] = out;
+      });
+    } catch (e) {}
+  }
+
+  function saveX2SayRates() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X2_SAY_RATE, JSON.stringify(state.x2SayRates || { s1: {}, s2: {} }));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?).', 'error');
+    }
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+
+  // Lưu định mức 1 LẦN than hóa cho công đoạn + tháng đang chọn (PHÚT/lần + m³/lần)
+  function handleX2SayRateSave() {
+    if (!requireEditPermission()) return;
+    const stEl = document.getElementById('x2-say-rate-stage');
+    const monthEl = document.getElementById('x2-say-rate-month');
+    const phutEl = document.getElementById('x2-say-rate-phut');
+    const m3El = document.getElementById('x2-say-rate-m3');
+    const stage = (stEl && stEl.value === 'say2') ? 'say2' : 'say1';
+    const grp = sayRateGroup(stage);
+    const month = String((monthEl && monthEl.value) || '').trim();
+    const cur = sayRateEntryOf(month, stage);
+    const phut = Number((phutEl && phutEl.value) || cur.phut);
+    const m3 = Number((m3El && m3El.value) || cur.m3);
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chưa chọn tháng để lưu định mức!', 'error'); return; }
+    if (!Number.isFinite(phut) || phut <= 0) { showToast('Số PHÚT mỗi lần than hóa phải lớn hơn 0!', 'error'); return; }
+    if (!Number.isFinite(m3) || m3 <= 0) { showToast('Số m³ mỗi lần than hóa phải lớn hơn 0!', 'error'); return; }
+    state.x2SayRates = state.x2SayRates || { s1: {}, s2: {} };
+    (state.x2SayRates[grp] = state.x2SayRates[grp] || {})[month] = { phut, m3 };
+    saveX2SayRates();
+    renderX2SayRateBar();
+    renderX2SayStats();
+    showToast(`Đã lưu định mức ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'} tháng ${month.slice(5)}: ${fmtPhut(phut)} phút/lần · ${fmtM3(m3)} m³/lần!`, 'success');
+  }
+
+  // Thanh điền ĐỊNH MỨC 1 LẦN THAN HÓA: công đoạn + tháng + phút/lần + m³/lần
+  function renderX2SayRateBar() {
+    const bar = document.getElementById('x2-say-rate-bar');
+    if (!bar) return;
+    const stEl = bar.querySelector('#x2-say-rate-stage');
+    const sel = bar.querySelector('#x2-say-rate-month');
+    const phutEl = bar.querySelector('#x2-say-rate-phut');
+    const m3El = bar.querySelector('#x2-say-rate-m3');
+    const chipsEl = bar.querySelector('#x2-say-rate-chips');
+    if (!sel) return;
+    const stage = (stEl && stEl.value === 'say2') ? 'say2' : 'say1';
+    const grp = ((state.x2SayRates || {})[sayRateGroup(stage)]) || {};
+    // Tháng gợi ý = tháng có lô vào sấy + tháng đã đặt định mức + tháng hiện tại
+    const months = new Set(Object.keys(grp));
+    sayChargeRows().forEach(r => months.add(String(r.date || '').slice(0, 7)));
+    months.add(new Date().toISOString().slice(0, 7));
+    const curMonth = sel.value || new Date().toISOString().slice(0, 7);
+    sel.innerHTML = [...months].filter(m => /^\d{4}-\d{2}$/.test(m)).sort((a, b) => b.localeCompare(a))
+      .map(m => `<option value="${escapeHTML(m)}">Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</option>`).join('');
+    sel.value = months.has(curMonth) ? curMonth : ([...months][0] || '');
+    const def = SAY_RATE_DEFAULT[sayRateGroup(stage)];
+    const entry = grp[sel.value];
+    if (phutEl) {
+      const v = Number(entry && entry.phut);
+      phutEl.value = Number.isFinite(v) && v > 0 ? v : '';
+      phutEl.placeholder = `Mặc định ${def.phut}`;
+    }
+    if (m3El) {
+      const v = Number(entry && entry.m3);
+      m3El.value = Number.isFinite(v) && v > 0 ? v : '';
+      m3El.placeholder = `Mặc định ${def.m3}`;
+    }
+    if (chipsEl) {
+      const keys = Object.keys(grp).filter(m => grp[m] && (Number(grp[m].phut) > 0 || Number(grp[m].m3) > 0)).sort((a, b) => b.localeCompare(a));
+      chipsEl.innerHTML = keys.length
+        ? keys.map(m => {
+            const e = sayRateEntryOf(m, stage);
+            return `<button type="button" class="x2-rate-chip" data-x2-say-rate="${escapeHTML(m)}" data-x2-say-rate-stage="${stage}" title="Bấm để nạp tháng này vào 2 ô nhập rồi sửa lại">${escapeHTML(m.slice(5) + '/' + m.slice(0, 4))} · ${fmtPhut(e.phut)} phút/lần · ${fmtM3(e.m3)} m³/lần</button>`;
+          }).join('')
+        : `<span class="x2-rate-empty">Chưa khai — đang dùng mặc định <strong>${def.phut} phút/lần</strong> · <strong>${def.m3} m³/lần</strong> cho ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}.</span>`;
+    }
+  }
+
+  // ─── SỐ LIỆU SẤY THEO NGÀY (m³ vào Sấy 1 / Sấy 2 + giờ than hóa) ───
+  // Thể tích (m³) của 1 lô nan — lô dữ liệu cũ thiếu volume → tự tính lại
+  // từ Dài × Rộng × Dày × số lượng.
+  function batchVolumeOf(b) {
+    if (!b) return 0;
+    const v = Number(b.volume);
+    if (Number.isFinite(v) && v > 0) return v;
+    return unitVolOf(Number(b.length) || 0, Number(b.width) || 0, Number(b.thickness) || 0) * (Number(b.quantity) || 0);
+  }
+  // Lô có TỪNG đi qua 1 công đoạn hay không (dựa vào công đoạn hiện tại + mốc
+  // stageHistory). Lô tạo THẲNG vào Kho (không qua Sấy 1) sẽ không bị tính nhầm
+  // là đã vào Sấy 1; lô dữ liệu cũ chưa có stageHistory thì suy theo thứ tự
+  // công đoạn (Sấy 1 → Sấy 2 → Kho → Bào Tinh).
+  function batchPassedStage(b, stage) {
+    if (!b) return false;
+    if (b.stage === stage) return true;
+    const hist = Array.isArray(b.stageHistory) ? b.stageHistory.filter(h => h && h.stage) : [];
+    if (hist.length) return hist.some(h => h.stage === stage);
+    const order = { say1: 0, say2: 1, kho: 2, bao_tinh: 3 };
+    return (order[b.stage] || 0) >= (order[stage] || 0);
+  }
+  // NGÀY vào Sấy 2 THẬT của lô — chỉ khi có khai báo (say2Date hoặc mốc
+  // stageHistory 'say2'); lô cũ không có thông tin thì trả '' (KHÔNG lấy ngày
+  // tạo lô gán nhầm vào Sấy 2 rồi thổi phồng số liệu).
+  function say2EntryDateOf(b) {
+    if (!b) return '';
+    const d = String(b.say2Date || '').trim();
+    if (d) return d;
+    const hist = (Array.isArray(b.stageHistory) ? b.stageHistory : []).filter(h => h && h.stage === 'say2' && h.date);
+    return hist.length ? String(hist[hist.length - 1].date).trim() : '';
+  }
+  // ─── GOM LẦN THAN HÓA THEO NGÀY + CÔNG ĐOẠN SẤY ───────────────
+  // Định mức m³/lần (mặc định 2 m³) áp cho TỔNG thể tích các lô trong NGÀY của
+  // từng công đoạn sấy: gộp lần lượt theo thứ tự lô cho đến khi thêm lô kế sẽ
+  // VƯỢT m³/lần thì đóng lần đó (phần còn lại = lần cuối) — VD ngày tổng 3 m³
+  // ⇒ 2 lần than hóa (≈2 m³ + phần còn lại). Lô đơn lẻ vượt m³/lần vẫn là
+  // 1 lần riêng (lô 5 m³ = 1 lần 5 m³).
+  // Người dùng nhập SỐ LẦN THAN HÓA THẬT cho nhóm ngày + công đoạn
+  // (state.x2SayTimes['YYYY-MM-DD|say1']) → chia lại ĐÚNG số lần đó.
+  function sayTimesKey(dateVal, stage) {
+    return `${String(dateVal || '').trim()}|${stage === 'say2' ? 'say2' : 'say1'}`;
+  }
+  // Số lần THẬT người dùng đã nhập cho nhóm (0 = chưa nhập → tự gộp theo m³/lần)
+  function sayManualTimesOf(dateVal, stage) {
+    const v = Number((state.x2SayTimes || {})[sayTimesKey(dateVal, stage)]);
+    return Number.isFinite(v) && v > 0 ? Math.round(v) : 0;
+  }
+  // Các lô của 1 nhóm (ngày vào công đoạn + công đoạn) — theo thứ tự trong
+  // state.batches (lô mới đứng trước) để việc gộp nhóm ổn định, dễ đối chiếu.
+  function sayGroupLots(dateVal, stage) {
+    return (state.batches || []).filter(b => {
+      if (!b || !batchPassedStage(b, stage)) return false;
+      if (!(batchVolumeOf(b) > 0)) return false;
+      const d = stage === 'say2' ? say2EntryDateOf(b) : String(b.date || '').trim();
+      return d === dateVal;
+    }).map(b => ({ batch: b, code: b.code || '', location: b.location || '', vol: batchVolumeOf(b) }));
+  }
+  // Nhãn của 1 lần: các mã lô (ghi kèm "(một phần)" nếu lô bị chia) + vị trí
+  function sayChargeLocationText(charge) {
+    return [...new Set((charge.lots || []).map(l => l.location).filter(Boolean))].join(' + ') || '—';
+  }
+  function sayChargeCodeText(charge) {
+    return (charge.lots || []).map(l => `${l.code || '—'}${l.part ? ' (một phần)' : ''}`).join(' + ') || '—';
+  }
+  // Dựng danh sách LẦN than hóa của 1 nhóm (ngày + công đoạn)
+  //   • Nhập tay số lần N → chia ĐỀU tổng thể tích nhóm thành N lần (theo thứ tự
+  //     lô, 1 lô có thể nằm ở 2 lần liền kề).
+  //   • Tự động → gộp lần lượt các lô, mỗi lần tối đa m³/lần.
+  function sayBuildCharges(dateVal, stage, perCharge) {
+    const lots = sayGroupLots(dateVal, stage);
+    if (!lots.length) return [];
+    const cap = perCharge > 0 ? perCharge : 2;
+    const manual = sayManualTimesOf(dateVal, stage);
+    const charges = [];
+    if (manual > 0) {
+      const each = lots.reduce((s, l) => s + l.vol, 0) / manual;
+      for (let i = 0; i < manual; i++) charges.push({ lots: [], vol: 0, part: false });
+      let ci = 0, remain = each;
+      lots.forEach(l => {
+        let left = l.vol;
+        while (left > 1e-9 && ci < manual) {
+          const take = Math.min(left, remain);
+          const part = take < l.vol - 1e-9;
+          charges[ci].lots.push({ code: l.code, location: l.location, vol: take, part });
+          charges[ci].vol += take;
+          if (part) charges[ci].part = true;
+          left -= take; remain -= take;
+          if (remain <= 1e-9) { ci++; remain = each; }
+        }
+      });
+      return charges.filter(c => c.vol > 1e-9);
+    }
+    let cur = { lots: [], vol: 0, part: false };
+    lots.forEach(l => {
+      if (cur.vol > 1e-9 && cur.vol + l.vol > cap + 1e-9) {
+        charges.push(cur);
+        cur = { lots: [], vol: 0, part: false };
+      }
+      cur.lots.push({ code: l.code, location: l.location, vol: l.vol, part: false });
+      cur.vol += l.vol;
+    });
+    if (cur.vol > 1e-9) charges.push(cur);
+    return charges;
+  }
+
+  // Bảng thống kê than hóa: mỗi NGÀY 1 dòng đầu → mỗi NHÓM công đoạn 1 dòng
+  // (mang ô nhập "Số lần TH" thật của nhóm) → MỖI LẦN THAN HÓA 1 dòng.
+  function sayChargeRows() {
+    const days = new Map();
+    const dayOf = d => {
+      if (!days.has(d)) days.set(d, { date: d, stages: new Set() });
+      return days.get(d);
+    };
+    (state.batches || []).forEach(b => {
+      if (!b) return;
+      if (!(batchVolumeOf(b) > 0)) return;
+      if (batchPassedStage(b, 'say1')) {
+        const d1 = String(b.date || '').trim();
+        if (d1) dayOf(d1).stages.add('say1');
+      }
+      if (batchPassedStage(b, 'say2')) {
+        const d2 = say2EntryDateOf(b);
+        if (d2) dayOf(d2).stages.add('say2');
+      }
+    });
+    return [...days.values()].map(day => {
+      // Mỗi công đoạn 1 NHÓM: gộp các lô trong ngày thành các lần than hóa
+      const groups = ['say1', 'say2'].filter(st => day.stages.has(st)).map(stage => {
+        const minutes = sayMinutesPerCharge(day.date, stage);
+        const lotList = sayGroupLots(day.date, stage);
+        const charges = sayBuildCharges(day.date, stage, sayM3PerCharge(day.date, stage))
+          .map(c => ({
+            stage, lots: c.lots, vol: c.vol,
+            locationText: sayChargeLocationText(c),
+            codeText: sayChargeCodeText(c),
+            minutes, need: minutes / 60
+          }));
+        return {
+          stage, charges,
+          lots: lotList.length,
+          vol: charges.reduce((s, c) => s + c.vol, 0),
+          count: charges.length,
+          manual: sayManualTimesOf(day.date, stage),
+          per: sayM3PerCharge(day.date, stage)
+        };
+      });
+      const charges = groups.flatMap(g => g.charges);
+      // Giờ HC/TC THẬT của ngày (Bảng bố trí vị trí "Than hóa") chia cho các lần
+      // theo tỉ lệ PHÚT (mỗi lần tiêu tốn đúng 105' hoặc 50') → cộng lại đúng
+      // bằng giờ thật của ngày.
+      const live = hrThanHoaAssignmentsOf(day.date);
+      const split = live.length ? sumPosHoursSplit(live, day.date) : { hc: 0, tc: 0 };
+      const totalMinutes = charges.reduce((s, c) => s + c.minutes, 0);
+      charges.forEach((c, i) => {
+        const share = totalMinutes > 0 ? c.minutes / totalMinutes : 0;
+        c.lan = i + 1;                                   // Lần 1, 2, 3… trong ngày
+        c.hc = split.hc * share;
+        c.tc = split.tc * share;
+        c.hours = c.hc + c.tc;
+        c.cap = c.hours > 0 ? c.vol / c.hours : null;     // công suất của lần (m³/h)
+      });
+      // HIỆU SUẤT của NGÀY = Giờ cần ÷ (Giờ thực tế − Giờ sự cố cho phép)
+      const hours = split.hc + split.tc;
+      const need = charges.reduce((s, c) => s + c.need, 0);
+      const incident = sayIncidentOf(day.date);
+      const effBase = hours - incident;
+      const eff = (need > 0 && effBase > 0) ? need / effBase : null;
+      return {
+        date: day.date,
+        groups, charges,
+        lanCount: charges.length,
+        vol: charges.reduce((s, c) => s + c.vol, 0),
+        need, hours, incident, eff,
+        workers: [...new Set(live.map(a => a.name).filter(Boolean))],
+        timeStr: live.map(posTimeStr).join(', '),
+        hasAssign: live.length > 0,
+        hc: split.hc, tc: split.tc
+      };
+    }).filter(d => d.lanCount > 0).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  }
+  function saveX2SayTimes() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X2_SAY_TIMES, JSON.stringify(state.x2SayTimes || {}));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?).', 'error');
+    }
+    logDataChange(['x2SayTimes']);
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+  function loadX2SayTimes() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_SAY_TIMES);
+    state.x2SayTimes = {};
+    if (!raw) return;
+    try {
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      Object.keys(obj).forEach(k => {
+        const v = Number(obj[k]);
+        if (/^\d{4}-\d{2}-\d{2}\|(say1|say2)$/.test(k) && Number.isFinite(v) && v > 0) state.x2SayTimes[k] = Math.round(v);
+      });
+    } catch (e) {}
+  }
+  // Lưu SỐ LẦN THAN HÓA THẬT của 1 NHÓM (ngày + công đoạn) — ô nhập trên bảng.
+  // Để trống / 0 → xóa số nhập tay: quay lại tự gộp theo m³/lần (gần 2 m³/lần).
+  function setSayGroupTimes(dateVal, stage, value) {
+    if (!requireEditPermission()) return false;
+    const keyStr = sayTimesKey(dateVal, stage);
+    const v = Number(value);
+    state.x2SayTimes = state.x2SayTimes || {};
+    if (!Number.isFinite(v) || v <= 0) {
+      if (state.x2SayTimes[keyStr] == null) return false;
+      delete state.x2SayTimes[keyStr];
+      showToast(`Ngày ${formatDateDDMMYY(dateVal)} · ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}: bỏ số lần nhập tay — tự gộp theo ${fmtM3(sayM3PerCharge(dateVal, stage))} m³/lần.`, 'info');
+    } else {
+      state.x2SayTimes[keyStr] = Math.round(v);
+      showToast(`Ngày ${formatDateDDMMYY(dateVal)} · ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}: ${state.x2SayTimes[keyStr]} lần than hóa.`, 'success');
+    }
+    saveX2SayTimes();
+    renderX2SayStats();
+    initLucide();
+    return true;
+  }
+
+  function loadX2SayIncidents() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_SAY_INCIDENT);
+    state.x2SayIncidents = {};
+    if (!raw) return;
+    try {
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      Object.keys(obj).forEach(k => {
+        const v = Number(obj[k]);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(k) && Number.isFinite(v) && v > 0) state.x2SayIncidents[k] = v;
+      });
+    } catch (e) {}
+  }
+  function saveX2SayIncidents() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X2_SAY_INCIDENT, JSON.stringify(state.x2SayIncidents || {}));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?).', 'error');
+    }
+    logDataChange(['x2SayIncidents']);
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+  // Giờ SỰ CỐ CHO PHÉP của 1 ngày (0 = chưa nhập)
+  function sayIncidentOf(dateVal) {
+    const v = Number((state.x2SayIncidents || {})[String(dateVal || '').trim()]);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+  // Lưu Giờ sự cố cho phép của 1 NGÀY (ô nhập ở dòng đầu ngày của bảng thống kê).
+  // Để trống / 0 → xoá (coi như không có sự cố).
+  function setSayIncident(dateVal, value) {
+    if (!requireEditPermission()) return false;
+    const key = String(dateVal || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+    const v = Number(value);
+    state.x2SayIncidents = state.x2SayIncidents || {};
+    if (!Number.isFinite(v) || v <= 0) {
+      if (state.x2SayIncidents[key] == null) return false;
+      delete state.x2SayIncidents[key];
+      showToast(`Ngày ${formatDateDDMMYY(key)}: bỏ giờ sự cố cho phép (coi như 0 giờ).`, 'info');
+    } else {
+      state.x2SayIncidents[key] = v;
+      showToast(`Ngày ${formatDateDDMMYY(key)}: giờ sự cố cho phép ${fmtGio(v)}h.`, 'success');
+    }
+    saveX2SayIncidents();
+    renderX2SayStats();
+    initLucide();
+    return true;
+  }
+  // Uỷ nhiệm change cho ô "Sự cố cho phép" (dòng đầu ngày)
+  function onSayIncidentChange(e) {
+    const t = e && e.target;
+    if (!t || typeof t.getAttribute !== 'function') return;
+    const dateVal = t.getAttribute('data-say-incident');
+    if (!dateVal) return;
+    setSayIncident(dateVal, t.value);
+  }
+
+  // ─── BẢNG THỐNG KÊ THAN HÓA + SẤY THEO TỪNG LẦN THAN HÓA ──────
+  // Mỗi NGÀY 1 DÒNG ĐẦU (Ngày · Người làm vị trí "Than hóa" · tổng lần · m³ ·
+  // giờ cần · HC/TC) → mỗi NHÓM công đoạn 1 DÒNG NHÓM (Sấy 1/Sấy 2 · số lô · m³ ·
+  // ô nhập "Số lần TH" thật của nhóm) → MỖI LẦN THAN HÓA 1 dòng:
+  //   Lần N | Vị Trí | Lô | m³ | Phút | Giờ Cần | Giờ HC | Giờ TC | Hiệu Suất
+  function renderX2SayStats() {
+    applyX2KanbanCollapsed();
+    renderX2SayRateBar();
+    const tbody = document.getElementById('x2-say-day-rows');
+    const countEl = document.getElementById('x2-say-stats-count');
+    if (!tbody) return;
+    const all = sayChargeRows();
+    const rows = all.slice(0, SAY_STATS_MAX_DAYS);
+    if (countEl) {
+      const lan = all.reduce((s, r) => s + r.lanCount, 0);
+      const vol = all.reduce((s, r) => s + r.vol, 0);
+      const need = all.reduce((s, r) => s + r.need, 0);
+      const hc = all.reduce((s, r) => s + r.hc, 0);
+      const tc = all.reduce((s, r) => s + r.tc, 0);
+      countEl.textContent = all.length
+        ? `${all.length} ngày · ${lan} lần than hóa · ${fmtM3(vol)} m³ · Giờ cần ${fmtGio(need)}h · HC ${fmtGio(hc)}h · TC ${fmtGio(tc)}h`
+        : 'Chưa có lô nan nào vào Sấy 1 / Sấy 2';
+    }
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="x2-say-empty">Chưa có số liệu — thêm lô ở Sấy 1 (nguồn: Chọn Nan Thô) hoặc chuyển lô sang Sấy 2 (nguồn: lô ở Kho) thì bảng tự cập nhật.</td></tr>`;
+      return;
+    }
+    const dash = '<span class="x2-say-dash" title="Ngày này chưa có bố trí vị trí \'Than hóa\' ở Bảng bố trí Nhân Sự — chưa có giờ HC/TC">—</span>';
+    const rowHtml = c => {
+      return `<tr class="x2-say-row x2-say-row-${c.stage}">
+        <td class="x2-say-lan"><span class="x2-say-lan-badge">Lần ${c.lan}</span></td>
+        <td class="x2-say-loc">${escapeHTML(c.locationText || '—')}</td>
+        <td class="x2-say-code">${escapeHTML(c.codeText || '—')}</td>
+        <td class="x2-say-vol">${fmtM3(c.vol)}</td>
+        <td class="x2-say-min">${fmtPhut(c.minutes)}'</td>
+        <td class="x2-say-need" title="1 lần than hóa = ${fmtPhut(c.minutes)} phút = ${fmtGio(c.need)} giờ">${fmtGio(c.need)} h</td>
+        <td>${c.hours > 0 ? fmtGio(c.hc) : dash}</td>
+        <td>${c.hours > 0 ? fmtGio(c.tc) : dash}</td>
+      </tr>`;
+    };
+    // Dòng NHÓM (ngày + công đoạn): tổng lô/m³ + ô nhập "Số lần TH" THẬT của nhóm
+    const groupHtml = (day, g) => {
+      const label = g.stage === 'say2' ? 'Sấy 2' : 'Sấy 1';
+      const auto = g.count;
+      const note = g.manual
+        ? `Nhập tay ${g.manual} lần`
+        : `Tự gộp theo ${fmtM3(g.per)} m³/lần → ${auto} lần`;
+      return `<tr class="x2-say-group-head x2-say-row-${g.stage}">
+        <td class="x2-say-lan"><span class="x2-say-lan-badge">${label}</span></td>
+        <td class="x2-say-loc">${g.lots} lô</td>
+        <td class="x2-say-code">${fmtM3(g.vol)} m³</td>
+        <td class="x2-say-times-cell" colspan="3">
+          <span class="x2-say-group-lbl">Số lần TH:</span>
+          <input type="number" class="x2-say-times-input${g.manual ? ' manual' : ''}" data-say-times="${escapeHTML(day.date)}" data-say-stage="${g.stage}" min="1" step="1" value="${g.manual || ''}" placeholder="${auto}" title="Số lần than hóa THẬT của ${label} ngày ${escapeHTML(formatDateDDMMYY(day.date))} — để trống = tự gộp các lô theo ${fmtM3(g.per)} m³/lần">
+          <span class="x2-say-times-auto">× ${auto} lần · ${note}</span>
+        </td>
+        <td colspan="2"></td>
+      </tr>`;
+    };
+    tbody.innerHTML = rows.map(r => {
+      const effTxt = r.eff == null ? dash : `${fmtNum(r.eff * 100, 0)}%`;
+      const effCls = r.eff == null ? '' : (r.eff >= 1 ? ' x2-say-eff-good' : ' x2-say-eff-low');
+      const needTxt = `Giờ cần ${fmtGio(r.need)}h · Thực tế ${r.hasAssign ? fmtGio(r.hours) + 'h' : '—'}`;
+      const workers = r.workers.length ? escapeHTML(r.workers.join(', ')) : 'chưa bố trí vị trí "Than hóa"';
+      const head = `<tr class="x2-say-day-head"><td colspan="8">
+        <span class="x2-say-day-date"><i data-lucide="calendar-days"></i> ${escapeHTML(formatDateDDMMYY(r.date))}</span>
+        <span class="x2-say-day-workers" title="${escapeHTML(r.timeStr || '')}">${workers}</span>
+        <span class="x2-say-day-inc">
+          <label>Sự cố cho phép:</label>
+          <input type="number" class="x2-say-inc-input" data-say-incident="${escapeHTML(r.date)}" min="0" step="any" value="${r.incident > 0 ? r.incident : ''}" placeholder="0" title="Giờ SỰ CỐ CHO PHÉP của ngày (giờ kết thúc dự kiến bị đẩy lùi do máy hỏng/thiếu nan…) — Hiệu suất = Giờ cần ÷ (Giờ thực tế − Giờ sự cố cho phép)">
+          <span class="x2-say-inc-unit">h</span>
+        </span>
+        <span class="x2-say-eff-badge${effCls}" title="${needTxt}${r.incident > 0 ? ' · Sự cố ' + fmtGio(r.incident) + 'h' : ''} → Hiệu suất = Giờ cần ÷ (Giờ thực tế − Sự cố)">Hiệu suất ${effTxt}</span>
+        <span class="x2-say-day-sum">${r.lanCount} lần · ${fmtM3(r.vol)} m³ · Cần ${fmtGio(r.need)}h · HC ${r.hasAssign ? fmtGio(r.hc) + 'h' : '—'} · TC ${r.hasAssign ? fmtGio(r.tc) + 'h' : '—'}</span>
+      </td></tr>`;
+      const body = r.groups.map(g => groupHtml(r, g) + (g.charges.length ? g.charges.map(rowHtml).join('') : '')).join('');
+      return head + body;
+    }).join('');
+    initLucide();
+  }
+
+  // Ô "Số lần TH" của NHÓM (ngày + công đoạn): gõ số lần than hóa THẬT rồi
+  // Enter / rời ô → lưu ngay (uỷ nhiệm sự kiện change trên tbody).
+  function onSayTimesChange(e) {
+    const t = e && e.target;
+    if (!t || typeof t.getAttribute !== 'function') return;
+    const dateVal = t.getAttribute('data-say-times');
+    if (!dateVal) return;
+    setSayGroupTimes(dateVal, t.getAttribute('data-say-stage') || 'say1', t.value);
+  }
+
+
+
+  // Số ngày gần nhất hiện trên bảng thống kê (bảng quá dài sẽ khó xem)
+  const SAY_STATS_MAX_DAYS = 30;
+
+  // (Bảng thống kê nay vẽ theo TỪNG LẦN than hóa — xem renderX2SayStats phía trên)
+
+  // ─── THU GỌN BẢNG KANBAN LÔ NAN (thẻ Than Hóa + Sấy) ─────────
+  // Bảng Kanban rất dài → cho thu gọn: khi thu gọn vẫn thấy thanh công cụ
+  // (Thêm Lô Sấy Mới / Chuyển Kho), dòng tổng quan số lô từng công đoạn và bảng
+  // thống kê sấy; trạng thái nhớ theo máy (localStorage).
+  function kanbanCollapsedSaved() {
+    try { return localStorage.getItem(STORAGE_KEY_X2_KANBAN_COLLAPSED) === '1'; } catch (e) { return false; }
+  }
+  // Dòng tổng quan: Sấy 1 / Sấy 2 / Kho — số lô · m³ · số thanh (hiện khi thu gọn)
+  function renderX2KanbanSummary() {
+    const el = document.getElementById('x2-kanban-summary');
+    if (!el) return;
+    const label = { say1: 'Sấy 1', say2: 'Sấy 2', kho: 'Kho' };
+    const part = stage => {
+      const list = (state.batches || []).filter(b => b && b.stage === stage);
+      const vol = list.reduce((s, b) => s + batchVolumeOf(b), 0);
+      const qty = list.reduce((s, b) => s + (Number(b.quantity) || 0), 0);
+      return `<span class="x2-kanban-sum-item"><b>${label[stage]}</b>: ${list.length} lô · ${fmtM3(vol)} m³ · ${qty.toLocaleString('vi-VN')} thanh</span>`;
+    };
+    el.innerHTML = ['say1', 'say2', 'kho'].map(part).join('');
+  }
+  // Áp trạng thái thu gọn đã lưu (gọi mỗi lần vẽ thẻ)
+  function applyX2KanbanCollapsed() {
+    const card = document.getElementById('x2-than-hoa-card');
+    if (!card) return;
+    const collapsed = kanbanCollapsedSaved();
+    card.classList.toggle('kanban-board-collapsed', collapsed);
+    const label = document.getElementById('x2-kanban-toggle-label');
+    if (label) label.textContent = collapsed ? 'Mở bảng lô' : 'Thu gọn bảng lô';
+    renderX2KanbanSummary();
+  }
+  function toggleX2KanbanBoard() {
+    const card = document.getElementById('x2-than-hoa-card');
+    if (!card) return;
+    const next = !card.classList.contains('kanban-board-collapsed');
+    card.classList.toggle('kanban-board-collapsed', next);
+    try { localStorage.setItem(STORAGE_KEY_X2_KANBAN_COLLAPSED, next ? '1' : '0'); } catch (e) {}
+    const label = document.getElementById('x2-kanban-toggle-label');
+    if (label) label.textContent = next ? 'Mở bảng lô' : 'Thu gọn bảng lô';
+    renderX2KanbanSummary();
+    initLucide();
+  }
 
   // ─── ĐỊNH MỨC CÔNG SUẤT CẮT (kg/giờ) THEO TỪNG THÁNG ─────────
   // Người quản lý đặt riêng cho từng tháng (VD tháng 9 = 3000 kg/h, tháng 10 = 3200
@@ -497,6 +1074,13 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       const ok = list.reduce((s, r) => s + (Number(r.qtyOk) || 0), 0);
       return `${list.length} lượt · ${fmtThanh(ok)} thanh`;
     }
+    // Thẻ "Bullig": số lượt (Gia công + Chọn thanh) + tổng thanh ĐẠT đã chọn
+    if (cardId === 'x2-bullig-card') {
+      const list = state.xuong2BulligRecords || [];
+      if (!list.length) return 'Chưa ghi';
+      const ok = list.filter(r => r.kind === 'ct').reduce((s, r) => s + (Number(r.qtyOk) || 0), 0);
+      return `${list.length} lượt · ${fmtThanh(ok)} thanh`;
+    }
     // Thẻ mới thêm CHƯA có bảng số liệu → chip "Sắp có" (chức năng bổ sung sau)
     const def = X2_CARD_DEFS[cardId];
     if (def && def.soon) return 'Sắp có';
@@ -562,7 +1146,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (cardId === 'x2-bo-ong-card') renderX2BoOngCard();
     if (cardId === 'x2-bao-tho-card') renderX2BaoThoCard();
     if (cardId === 'x2-chon-nan-tho-card') renderX2ChonNanCard();
+    if (cardId === 'x2-than-hoa-card') renderX2SayStats(); // bảng thống kê Sấy 1/Sấy 2 theo ngày
     if (cardId === 'x2-bao-tinh-card') renderX2BaoTinhCard();
+    if (cardId === 'x2-bullig-card') renderX2BulligCard();
     if (cardId === 'x2-ep-van-card') renderX2EpVanCard();
     const h4 = card.querySelector && card.querySelector('.planning-card-header h4');
     const titleText = (h4 && typeof h4.textContent === 'string') ? h4.textContent.trim() : '';
@@ -2894,6 +3480,1076 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   // ─── RENDER KHU VỰC XƯỞNG 2 (gọi từ main.js) ─────────────────
   // ═══════════════════════════════════════════════════════════
+  // VỊ TRÍ: BULLIG — Xưởng 2 (thẻ launcher tab Công Đoạn)
+  // ═══════════════════════════════════════════════════════════
+  // 2 công đoạn nhỏ chạy ĐỒNG THỜI trong 1 thẻ (bảng lịch sử chia 2 VÙNG trên 1 thẻ ngày):
+  //   • 'gc' GIA CÔNG  — nguồn = LÔ Ở KHO đã qua Sấy 2, Dùng Cho = Bullig;
+  //     SL nhập "x / tổng đã chọn" (chọn được nhiều lô) + KÍCH THƯỚC THÀNH PHẨM
+  //     (gợi ý từ lịch sử gia công đã nhập, có thể sửa lại).
+  //   • 'ct' CHỌN THANH — nguồn = THÀNH PHẨM GIA CÔNG (chọn Loại thanh = kích thước
+  //     thành phẩm) → SL ĐẠT + SL LỖI → TỔNG tự tính = đạt + lỗi.
+  //   • NGƯỜI LÀM + GIỜ HC/TC tự động từ Bảng bố trí Nhân Sự (vị trí chứa
+  //     "gia công" hoặc "chọn thanh" — Xưởng 2, đúng ngày; giờ tách HC/TC).
+  //   • ĐỊNH MỨC CÔNG SUẤT theo THÁNG + TỪNG CÔNG ĐOẠN NHỎ (thanh/giờ) → Hiệu suất.
+  // Dữ liệu: state.xuong2BulligRecords (localStorage + file + mây, tombstone).
+  const BULLIG_KINDS = [
+    { id: 'gc', label: 'Gia công' },
+    { id: 'ct', label: 'Chọn thanh' }
+  ];
+  function bulligKindLabel(id) { const k = BULLIG_KINDS.find(x => x.id === id); return k ? k.label : (id || '—'); }
+  // So khớp MỀM chuỗi trong thẻ Bullig (bỏ dấu, 'đ'→'d', thường hóa) — dùng cho
+  // "Dùng Cho = Bullig" và ô tìm nhanh (KHÔNG phụ thuộc module khác).
+  function bulligNorm(s) {
+    return String(s || '').toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').trim();
+  }
+  // Đọc KÍCH THƯỚC THÀNH PHẨM từ ô nhập 1 dòng: chấp nhận "1250x80x12",
+  // "1250 × 80 × 12", "1250*80*12" hoặc "1250,80,12" — GIỮ ĐÚNG THỨ TỰ
+  // Dài → Rộng → Dày (KHÔNG dùng parseDimList vì hàm đó sắp xếp lại giá trị,
+  // chỉ hợp với ô MỘT loại kích thước của Chạy Máy Bào Thô).
+  function bulligParseOutDims(text) {
+    return String(text || '')
+      .split(/[x×*,;\s]+/)
+      .map(s => Number(String(s).trim()))
+      .filter(v => Number.isFinite(v) && v > 0)
+      .slice(0, 3);
+  }
+  // ─── HỆ SỐ QUY ĐỔI "1 THANH THÔ = N THANH GIA CÔNG" ────────────
+  // Lấy từ ĐỊNH MỨC của BẢNG KẾ HOẠCH (tab Kế Hoạch → Định Mức Nguyên Vật
+  // Liệu): ô "Số thanh nan cho 1 sản phẩm" nhập dạng PHÂN SỐ '1/6' nghĩa là
+  // 1 thanh nan (thanh thô) làm được 6 sản phẩm ⇒ hệ số = 1 ÷ (1/6) = 6.
+  //   • Sản phẩm nhận diện theo TÊN chứa "bullig" (bỏ dấu).
+  //   • Ưu tiên bản định mức khớp KÍCH THƯỚC thành phẩm đang nhập (VD '304×14×7');
+  //     không khớp mà chỉ có ĐÚNG 1 định mức Bullig thì dùng luôn bản đó.
+  //   • Chưa khai định mức Bullig → hệ số 1 (1 thô = 1 thành phẩm) + cảnh báo.
+  function bulligRateFactorOf(rate) {
+    const qs = [rate.nan1Qty, rate.nan2Qty, rate.nan3Qty]
+      .map(v => Number(v)).filter(v => Number.isFinite(v) && v > 0);
+    if (!qs.length) return 1;
+    const q = Math.min(...qs);                                  // phần nan nhỏ nhất = loại nan chính
+    return Math.max(1, Math.round((1 / q) * 1000) / 1000);       // ≥ 1 thanh thành phẩm / 1 thanh thô
+  }
+  // Bộ số trong 1 chuỗi (tên sản phẩm / kích thước) — dùng để khớp định mức theo cỡ
+  function bulligNumsOf(s) {
+    return (String(s || '').match(/\d+(?:[.,]\d+)?/g) || []).map(x => x.replace(',', '.'));
+  }
+  // { factor, rateName, hasRate, matched } cho kích thước thành phẩm đang chọn
+  function bulligConvertInfo(outSizeKey) {
+    const entries = (state.materialRates || []).filter(r => r && bulligNorm(r.product).includes('bullig'));
+    if (!entries.length) return { factor: 1, rateName: '', hasRate: false, matched: false };
+    const want = bulligNumsOf(outSizeKey);
+    let hit = null;
+    if (want.length === 3) {
+      hit = entries.find(r => { const nums = bulligNumsOf(r.product); return want.every(w => nums.includes(w)); }) || null;
+    }
+    const rate = hit || (entries.length === 1 ? entries[0] : null);
+    if (!rate) return { factor: 1, rateName: '', hasRate: true, matched: false };
+    return { factor: bulligRateFactorOf(rate), rateName: rate.product || '', hasRate: true, matched: true };
+  }
+  // NGƯỜI LÀM lấy từ Bảng bố trí Nhân Sự theo TỪNG CÔNG ĐOẠN NHỎ:
+  //   • Gia công    → phân vị "Gia công Bullig"
+  //   • Chọn thanh  → phân vị "Chọn thanh Bullig"
+  // Khớp mềm tên vị trí (bỏ dấu): phải có CẢ "bullig" và từ khóa công đoạn.
+  // Nếu hôm đó bảng bố trí KHÔNG có vị trí nào kèm "bullig" thì mới nới ra
+  // tên rộng hơn ("Gia công…" / "Chọn thanh…") để vẫn hiện được người làm.
+  function isBulligGcPos(name) {
+    const n = normPosName(name);
+    return n.includes('gia cong') && n.includes('bullig');
+  }
+  function isBulligCtPos(name) {
+    const n = normPosName(name);
+    return n.includes('chon thanh') && n.includes('bullig');
+  }
+  function hrBulligGcAssignmentsOf(dateVal) {
+    const strict = hrAssignmentsAt(dateVal, isBulligGcPos);
+    if (strict.length) return strict;
+    return hrAssignmentsAt(dateVal, n => normPosName(n).includes('gia cong'));
+  }
+  function hrBulligCtAssignmentsOf(dateVal) {
+    const strict = hrAssignmentsAt(dateVal, isBulligCtPos);
+    if (strict.length) return strict;
+    return hrAssignmentsAt(dateVal, n => normPosName(n).includes('chon thanh'));
+  }
+  function hrBulligSnapshot(dateVal, kind) {
+    return workerSnapOf(hrPositionSnapshot(dateVal, kind === 'ct' ? hrBulligCtAssignmentsOf(dateVal) : hrBulligGcAssignmentsOf(dateVal)));
+  }
+
+  // ─── Nguồn GIA CÔNG: LÔ Ở KHO có Dùng Cho = Bullig (đã qua Sấy 2) ──
+  function bulligLotList() {
+    return [...(state.batches || [])]
+      .filter(b => b && b.stage === 'kho' && bulligNorm(b.useFor || '') === 'bullig')
+      .sort((a, b) => {
+        if ((b.khoDate || b.date || '') !== (a.khoDate || a.date || '')) return (b.khoDate || b.date || '').localeCompare(a.khoDate || a.date || '');
+        return (b.createdAt || '').localeCompare(a.createdAt || '');
+      });
+  }
+  function bulligLotOf(id) { return (state.batches || []).find(b => b && b.id === id) || null; }
+  // Số thanh ĐÃ gia công lấy từ 1 lô (trừ chính lượt đang sửa)
+  function bulligLotUsedOf(batchId, excludeId) {
+    const id = String(batchId || '');
+    if (!id) return 0;
+    return (state.xuong2BulligRecords || []).reduce((s, r) => {
+      if (!r || r.kind !== 'gc' || r.id === excludeId) return s;
+      if (Array.isArray(r.sources) && r.sources.length) {
+        return s + r.sources.reduce((a, src) => a + ((src && String(src.batchId) === id) ? (Number(src.qty) || 0) : 0), 0);
+      }
+      return s + (String(r.batchId || '') === id ? (Number(r.quantity) || 0) : 0);
+    }, 0);
+  }
+  function bulligLotRemainingOf(b, excludeId) {
+    if (!b) return 0;
+    return Math.max(0, (Number(b.quantity) || 0) - bulligLotUsedOf(b.id, excludeId));
+  }
+
+  // ─── Nguồn CHỌN THANH: cỡ thành phẩm GIA CÔNG CÒN LẠI ───────────
+  // Tổng ĐÃ gia công theo cỡ (dành cho Chọn thanh)
+  function bulligGcQtyOf(sizeKey, excludeId) {
+    return (state.xuong2BulligRecords || [])
+      .filter(r => r && r.kind === 'gc' && r.id !== excludeId && (r.outSizeKey || '') === sizeKey)
+      .reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+  }
+  // Tổng ĐÃ chọn thanh theo cỡ (đạt + lỗi)
+  function bulligCtQtyOf(sizeKey, excludeId) {
+    return (state.xuong2BulligRecords || [])
+      .filter(r => r && r.kind === 'ct' && r.id !== excludeId && (r.inSizeKey || '') === sizeKey)
+      .reduce((s, r) => s + (Number(r.qtyOk) || 0) + (Number(r.qtyErr) || 0), 0);
+  }
+  // Danh sách cỡ thành phẩm còn lại (nhiều nhất → ít nhất)
+  function bulligCtCandidates() {
+    const map = new Map();
+    (state.xuong2BulligRecords || []).forEach(r => {
+      if (!r || r.kind !== 'gc') return;
+      const k = String(r.outSizeKey || '');
+      if (!k) return;
+      const cur = map.get(k) || { sizeKey: k, dims: Array.isArray(r.outDims) ? r.outDims.map(Number) : [] };
+      map.set(k, cur);
+    });
+    return [...map.values()]
+      .map(x => ({ ...x, remaining: Math.max(0, bulligGcQtyOf(x.sizeKey) - bulligCtQtyOf(x.sizeKey)) }))
+      .filter(x => x.remaining > 0)
+      .sort((a, b) => b.remaining - a.remaining);
+  }
+  // Tồn thanh đang chờ CHỌN thanh (thanh).
+  function bulligCtPending() {
+    return bulligCtCandidates().reduce((s, x) => s + x.remaining, 0);
+  }
+  // Tồn thanh thô lô Bullig ở Kho CHƯA gia công (thanh)
+  function bulligGcPending() {
+    return bulligLotList().reduce((s, b) => s + bulligLotRemainingOf(b), 0);
+  }
+
+  // ─── Gợi ý KÍCH THƯỚC THÀNH PHẨM (từ lịch sử gia công đã nhập) ──
+  function bulligOutSizeSuggestions() {
+    const seen = new Map();
+    [...(state.xuong2BulligRecords || [])].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .forEach(r => {
+        if (!r || r.kind !== 'gc' || !r.outSizeKey) return;
+        if (!seen.has(r.outSizeKey)) seen.set(r.outSizeKey, Array.isArray(r.outDims) ? r.outDims.map(Number) : []);
+      });
+    return [...seen.entries()].map(([sizeKey, dims]) => ({ sizeKey, dims }));
+  }
+
+  // ─── ĐỊNH MỨC CÔNG SUẤT BULLIG (thanh/giờ) THEO THÁNG + CÔNG ĐOẠN ──
+  function loadX2BulligRates() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_BULLIG_RATE);
+    state.x2BulligRates = { gc: {}, ct: {} };
+    if (raw) {
+      try {
+        const obj = JSON.parse(raw);
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+          state.x2BulligRates = {
+            gc: (obj.gc && typeof obj.gc === 'object') ? obj.gc : {},
+            ct: (obj.ct && typeof obj.ct === 'object') ? obj.ct : {}
+          };
+        }
+      } catch (e) {}
+    }
+  }
+
+  function saveX2BulligRates() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X2_BULLIG_RATE, JSON.stringify(state.x2BulligRates || { gc: {}, ct: {} }));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?).', 'error');
+    }
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+
+  function bulligRateOf(dateVal, kind) {
+    const grp = ((state.x2BulligRates || {})[kind === 'ct' ? 'ct' : 'gc']) || {};
+    const v = Number(grp[String(dateVal || '').slice(0, 7)]);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  }
+
+  function handleX2BulligRateSave() {
+    if (!requireEditPermission()) return;
+    const monthEl = document.getElementById('x2-bl-rate-month');
+    const valEl = document.getElementById('x2-bl-rate-value');
+    const kindSel = document.getElementById('x2-bl-rate-kind');
+    const month = String((monthEl && monthEl.value) || '').trim();
+    const v = Number((valEl && valEl.value) || 0);
+    const kind = (kindSel && kindSel.value === 'ct') ? 'ct' : 'gc';
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chưa chọn tháng để lưu định mức!', 'error'); return; }
+    if (!Number.isFinite(v) || v <= 0) { showToast('Định mức công suất phải là số thanh/giờ lớn hơn 0!', 'error'); return; }
+    (state.x2BulligRates = state.x2BulligRates || { gc: {}, ct: {} })[kind] = state.x2BulligRates[kind] || {};
+    state.x2BulligRates[kind][month] = v;
+    saveX2BulligRates();
+    renderX2BulligRateBar();
+    renderX2BulligTable();
+    showToast(`Đã lưu định mức ${bulligKindLabel(kind)} ${fmtThanh(v)} thanh/giờ cho tháng ${month.slice(5)}!`, 'success');
+  }
+
+  function renderX2BulligRateBar() {
+    const selEl = document.getElementById('x2-bl-rate-month');
+    const valInput = document.getElementById('x2-bl-rate-value');
+    const kindSel = document.getElementById('x2-bl-rate-kind');
+    if (!selEl) return;
+    const allRecs = state.xuong2BulligRecords || [];
+    const months = new Set([...Object.keys(state.x2BulligRates.gc || {}), ...Object.keys(state.x2BulligRates.ct || {}), new Date().toISOString().slice(0, 7)]);
+    allRecs.forEach(r => { if (r && r.date) months.add(String(r.date).slice(0, 7)); });
+    const curMonth = selEl.value || new Date().toISOString().slice(0, 7);
+    const list = [...months].filter(Boolean).sort((a, b) => b.localeCompare(a));
+    selEl.innerHTML = list.map(m => `<option value="${escapeHTML(m)}">Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</option>`).join('');
+    selEl.value = months.has(curMonth) ? curMonth : list[0] || '';
+    const curKind = (kindSel && kindSel.value === 'ct') ? 'ct' : 'gc';
+    if (valInput) {
+      const v = Number((state.x2BulligRates[curKind] || {})[selEl.value]);
+      valInput.value = Number.isFinite(v) && v > 0 ? v : '';
+    }
+    const chips = document.getElementById('x2-bl-rate-chips');
+    if (chips) {
+      const keys = Object.keys(state.x2BulligRates.gc || {}).filter(k => Number(state.x2BulligRates.gc[k]) > 0)
+        .map(k => ({ kind: 'gc', k })).concat(
+        Object.keys(state.x2BulligRates.ct || {}).filter(k => Number(state.x2BulligRates.ct[k]) > 0)
+          .map(k => ({ kind: 'ct', k })));
+      keys.sort((a, b) => b.k.localeCompare(a.k));
+      chips.innerHTML = keys.map(x => `<button type="button" class="x2-rate-chip" data-x2-bl-rate="${escapeHTML(x.k)}" data-x2-bl-rate-kind="${x.kind}" title="Bấm để nạp định mức tháng này vào ô nhập để sửa lại">${bulligKindLabel(x.kind)} T${Number(x.k.slice(5))} = ${fmtThanh(state.x2BulligRates[x.kind][x.k])} thanh/h</button>`).join('');
+    }
+    initLucide();
+  }
+
+  // ─── SỐ LIỆU HIỂN THỊ CỦA 1 LƯỢT BULLIG ────────────────────────
+  function bulligDisplay(r) {
+    const gc = r.kind === 'gc';
+    const lots = gc && Array.isArray(r.sources)
+      ? r.sources.map(src => ({ batch: bulligLotOf(src.batchId), qty: Number(src.qty) || 0 })).filter(x => x.batch)
+      : [];
+    const firstLot = lots.length ? lots[0].batch : (gc ? bulligLotOf(r.batchId) : null);
+    // Kích thước thành phẩm của lượt GIA CÔNG (nếu chưa lưu → suy từ lô)
+    let outDims = Array.isArray(r.outDims) ? r.outDims.map(Number) : [];
+    if (gc && !(outDims[0] > 0 && outDims[1] > 0 && outDims[2] > 0) && firstLot) {
+      // Lượt cũ chưa lưu k.thước thành phẩm → suy từ kích thước lô (giữ đúng thứ tự)
+      outDims = Array.isArray(firstLot.dimensions)
+        ? firstLot.dimensions.map(Number)
+        : bulligParseOutDims(String(firstLot.dimensions || ''));
+    }
+    // HỆ SỐ QUY ĐỔI (1 thanh thô = N thanh thành phẩm) — chốt trong lượt lúc lưu
+    // (định mức thay đổi sau vẫn đúng); lượt cũ chưa có → 1 (1 thô = 1 thành phẩm)
+    const factor = Number(r.convertFactor) > 0 ? Number(r.convertFactor) : 1;
+    const inSizeKey = String(r.inSizeKey || '').trim();
+    const outSizeKey = gc ? (r.outSizeKey || dimKeyOf(outDims[0], outDims[1], outDims[2])) : inSizeKey;
+    const inDims = gc ? outDims : (Array.isArray(r.inDims) ? r.inDims.map(Number) : []);
+    const quantity = gc ? (Number(r.quantity) || 0) : 0;                 // SỐ LƯỢNG GIA CÔNG ĐƯỢC (thành phẩm)
+    const qtyIn = gc ? (Number(r.qtyIn) > 0 ? Number(r.qtyIn) : quantity) : 0; // thanh THÔ đã dùng
+    const gcTotalPicked = gc ? (Number(r.gcTotalPicked) || 0) : 0;       // tổng thanh thô đã chọn
+    const maxOut = gc ? Math.floor(gcTotalPicked * factor) : 0;          // gia công được tối đa
+    const qtyOk = gc ? 0 : (Number(r.qtyOk) || 0);
+    const qtyErr = gc ? 0 : (Number(r.qtyErr) || 0);
+    const inQty = gc ? quantity : qtyOk + qtyErr;
+    const unitVol = gc
+      ? (outDims[0] > 0 ? unitVolOf(outDims[0], outDims[1], outDims[2]) : 0)
+      : (r.unitVol != null ? Number(r.unitVol) : (inDims[0] > 0 ? unitVolOf(inDims[0], inDims[1], inDims[2]) : 0));
+    const volume = Math.round((gc ? quantity : qtyOk) * unitVol * 10000) / 10000;
+    // Người làm + giờ: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot
+    const live = gc ? hrBulligGcAssignmentsOf(r.date || '') : hrBulligCtAssignmentsOf(r.date || '');
+    const workerRows = live.length
+      ? live.map(a => ({ name: a.name, time: posTimeStr(a) }))
+      : String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
+          .map((name, i) => ({ name, time: String(r.workTime || '').split(',').map(s => s.trim())[i] || '' }));
+    let workHours = 0, workHoursHC = null, workHoursTC = null;
+    if (live.length) {
+      const sp = sumPosHoursSplit(live, r.date || '');
+      workHours = sp.hc + sp.tc;
+      workHoursHC = sp.hc; workHoursTC = sp.tc;
+    } else if (Number.isFinite(Number(r.workHoursHC)) || Number.isFinite(Number(r.workHoursTC))) {
+      workHoursHC = Number(r.workHoursHC) || 0;
+      workHoursTC = Number(r.workHoursTC) || 0;
+      workHours = workHoursHC + workHoursTC;
+      if (!workHours && Number(r.workHours) > 0) workHours = Number(r.workHours);
+    } else {
+      workHours = snapshotCutHours(r.workTime);
+    }
+    return {
+      id: r.id,
+      kind: r.kind || 'gc',
+      kindLabel: bulligKindLabel(r.kind || 'gc'),
+      date: r.date || '',
+      lots, firstLot,
+      materialType: firstLot ? (firstLot.materialType || firstLot.bambooType || '') : '',
+      supplier: firstLot ? (firstLot.supplier || '') : '',
+      lotCodes: lots.map(x => x.batch.code || '').filter(Boolean).join(', '),
+      outDims, outSizeKey, inSizeKey, inDims,
+      quantity, qtyOk, qtyErr, inQty,
+      qtyIn, convertFactor: factor, maxOut,
+      unitVol, volume,
+      gcTotalPicked,
+      workerRows, workHours, workHoursHC, workHoursTC
+    };
+  }
+
+  // ─── THANH TỒN (form Bullig) ───────────────────────────────────
+  function renderX2BulligStockBar() {
+    const bar = document.getElementById('x2-bl-stock-bar');
+    if (!bar) return;
+    const gcPending = bulligGcPending();
+    const ctPending = bulligCtPending();
+    // Đếm theo số lô CÒN thanh thô (lô đã dùng hết không còn nằm trong danh sách chọn)
+    const liveLots = bulligLotList().filter(b => bulligLotRemainingOf(b) > 0);
+    bar.innerHTML = `
+      <span class="x2-stock-title" title="Tổng số thanh thô còn lại của các lô ở Kho (Dùng Cho = Bullig) chưa được gia công">
+        <i data-lucide="warehouse"></i> Tồn thanh thô chờ Gia công: <strong>${fmtThanh(gcPending)} thanh</strong> (${liveLots.length} lô)
+      </span>
+      <span class="x2-stock-title" title="Tổng số thanh thành phẩm đã Gia công nhưng chưa được Chọn thanh">
+        <i data-lucide="layers"></i> Tồn thành phẩm chờ Chọn thanh: <strong>${fmtThanh(ctPending)} thanh</strong>
+      </span>`;
+    initLucide();
+  }
+
+  // ─── Ô CHỌN LÔ (Gia công) + Ô LOẠI THANH (Chọn thanh) ──────────
+  function fillXuong2BulligOptions() {
+    const sel = document.getElementById('x2-bl-gc-lot');
+    if (sel) {
+      const cur = sel.value;
+      const lots = bulligLotList();
+      let html = lots.map(b => {
+        const rem = bulligLotRemainingOf(b);
+        return `<option value="${escapeHTML(b.id)}">${escapeHTML(b.code || '—')} · ${escapeHTML(b.location || '—')} · ${fmtThanh(b.quantity)} thanh${rem < b.quantity ? ` (còn ${fmtThanh(rem)})` : ''}</option>`;
+      }).join('');
+      if (!html) html = `<option value="" disabled>— Chưa có lô Bullig ở Kho (lô đã qua Sấy 2, Dùng Cho = Bullig) —</option>`;
+      sel.innerHTML = html;
+      if (cur && sel.innerHTML.includes(`value="${escapeHTML(cur)}"`)) sel.value = cur;
+    }
+    const ctSel = document.getElementById('x2-bl-ct-size');
+    if (ctSel) {
+      const cur = ctSel.value;
+      const cands = bulligCtCandidates();
+      let html = cands.map(c => `<option value="${escapeHTML(c.sizeKey)}">${comboLabel({ d: c.dims[0], r: c.dims[1], t: c.dims[2] })} — còn ${fmtThanh(c.remaining)} thanh</option>`).join('');
+      if (!html) html = `<option value="">— Chưa có thành phẩm Gia công (hãy ghi lượt Gia công trước) —</option>`;
+      ctSel.innerHTML = html;
+      if (cur && ctSel.innerHTML.includes(`value="${escapeHTML(cur)}"`)) ctSel.value = cur;
+      else if (cands.length) ctSel.value = cands[0].sizeKey;
+    }
+  }
+
+  // ─── Gợi ý KÍCH THƯỚC THÀNH PHẨM (datalist từ lịch sử) ─────────
+  function fillX2BulligOutSuggestions() {
+    const dl = document.getElementById('x2-bl-out-list');
+    if (!dl) return;
+    dl.innerHTML = bulligOutSizeSuggestions()
+      .map(s => `<option value="${escapeHTML(s.sizeKey)}"></option>`).join('');
+  }
+
+  // ─── GỢI Ý "/ TỐI ĐA" + CHIP "1 THANH THÔ = N THANH GIA CÔNG" ──
+  // Đồng bộ mỗi lần chọn/bỏ chọn lô, đổi kích thước thành phẩm hoặc gõ số lượng.
+  // Số nhập VƯỢT khả năng (hoặc chưa chọn lô nào mà đã nhập) → tô ĐỎ.
+  function syncX2BulligQtyHint(totalTho, conv) {
+    const c = conv || bulligConvertInfo('');
+    const sum = Number(totalTho) || 0;
+    const maxOut = Math.floor(sum * c.factor);
+    const qty = Number((document.getElementById('x2-bl-gc-qty') || {}).value) || 0;
+    const hint = document.getElementById('x2-bl-gc-total-hint');
+    if (hint) {
+      hint.textContent = `/ ${fmtThanh(maxOut)}`;
+      hint.title = sum > 0
+        ? `Gia công được TỐI ĐA ${fmtThanh(maxOut)} thanh = ${fmtThanh(sum)} thanh thô × ${fmtThanh(c.factor)} thanh/thô`
+        : 'Chưa chọn lô nào — bấm "Mở danh sách lô Bullig" để chọn lô thanh thô';
+      hint.classList.toggle('over', qty > maxOut);
+    }
+    const chip = document.getElementById('x2-bl-gc-conv-hint');
+    if (chip) {
+      chip.textContent = `1 thanh thô = ${fmtThanh(c.factor)} thanh gia công`;
+      chip.title = c.rateName
+        ? `Theo ĐỊNH MỨC "${c.rateName}" ở tab Kế Hoạch: 1 thanh thô làm được ${fmtThanh(c.factor)} thanh thành phẩm`
+        : 'Chưa có định mức cho sản phẩm Bullig ở tab Kế Hoạch — tạm tính 1 thanh thô = 1 thanh thành phẩm (khai định mức với số thanh nan dạng "1/6" để đúng hệ số)';
+      chip.classList.toggle('warn', !c.matched);
+    }
+  }
+
+  // ─── Ô TỰ TÍNH của form (đổi theo công đoạn nhỏ) ───────────────
+  function renderX2BulligCalc() {
+    const box = document.getElementById('x2-bl-calc');
+    if (!box) return;
+    const kind = ((document.getElementById('x2-bl-kind') || {}).value) || 'gc';
+    // Tổng THANH THÔ còn lại của các lô đã chọn (dùng cho gợi ý số lượng)
+    const totalTho = bulligPickedTotal();
+    // Kích thước thành phẩm đang nhập + HỆ SỐ QUY ĐỔI theo định mức Bullig
+    const outV = ((document.getElementById('x2-bl-out') || {}).value || '').trim();
+    const outDims = bulligParseOutDims(outV);
+    const outKey = (outDims[0] > 0 && outDims[1] > 0 && outDims[2] > 0) ? dimKeyOf(outDims[0], outDims[1], outDims[2]) : '';
+    const conv = bulligConvertInfo(outKey);
+    const maxOut = Math.floor(totalTho * conv.factor);
+    syncX2BulligQtyHint(totalTho, conv);
+    if (kind === 'ct') {
+      const ok = Number((document.getElementById('x2-bl-ct-ok') || {}).value) || 0;
+      const err = Number((document.getElementById('x2-bl-ct-err') || {}).value) || 0;
+      // THÀNH PHẨM sau Chọn thanh = ĐÚNG kích thước đã chọn ở ô Loại thanh
+      const sizeKey = String((document.getElementById('x2-bl-ct-size') || {}).value || '');
+      box.innerHTML = `
+        <span class="x2-ong-calc-item x2-ong-calc-in" title="Thành phẩm sau Chọn thanh CHÍNH LÀ kích thước đã chọn (không đổi kích thước)"><span class="x2-ong-calc-label">Thành phẩm:</span><strong>${sizeKey ? escapeHTML(sizeKey) : '—'}</strong></span>
+        <span class="x2-ong-calc-item" title="Tổng số thanh chọn = thanh đạt + thanh lỗi"><span class="x2-ong-calc-label">Tổng số lượng chọn:</span><strong>${fmtThanh(ok + err)} thanh</strong></span>
+        <span class="x2-ong-calc-item" title="Tỷ lệ đạt = thanh đạt ÷ tổng số thanh chọn"><span class="x2-ong-calc-label">Tỷ lệ đạt:</span><strong>${ok + err > 0 ? fmtRatio((ok / (ok + err)) * 100) + '%' : '—'}</strong></span>
+        <span class="x2-ong-calc-item x2-ong-calc-after" title="Loại thanh lấy từ thành phẩm Gia công — chọn xong TRỪ vào tồn thành phẩm"><span class="x2-ong-calc-label">Nguồn:</span><strong style="color:#0f766e;">thành phẩm Gia công</strong></span>`;
+      return;
+    }
+    // GIA CÔNG: thô đã chọn → số thanh GIA CÔNG ĐƯỢC (tối đa) → thô cần dùng
+    const qty = Number((document.getElementById('x2-bl-gc-qty') || {}).value) || 0;
+    const thoNeed = conv.factor > 0 ? Math.round((qty / conv.factor) * 1000) / 1000 : qty;
+    box.innerHTML = `
+      <span class="x2-ong-calc-item x2-ong-calc-in" title="Tổng số thanh thô CÒN LẠI của các lô Bullig đã chọn"><span class="x2-ong-calc-label">Thô đã chọn:</span><strong>${fmtThanh(totalTho)} thanh</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-bo" title="Số thanh gia công được TỐI ĐA = thanh thô đã chọn × hệ số quy đổi của định mức Bullig"><span class="x2-ong-calc-label">Gia công được tối đa:</span><strong>${fmtThanh(maxOut)} thanh</strong><em class="x2-ong-calc-eq">(= ${fmtThanh(totalTho)} × ${fmtThanh(conv.factor)})</em></span>
+      ${qty > 0 ? `<span class="x2-ong-calc-item x2-ong-calc-after" title="Thanh thô THỰC DÙNG = số lượng gia công được ÷ hệ số quy đổi — phần này TRỪ vào tồn lô"><span class="x2-ong-calc-label">Thô cần dùng:</span><strong${qty > maxOut ? ' style="color:#dc2626;"' : ''}>${fmtThanh(thoNeed)} thanh</strong></span>` : ''}
+      <span class="x2-ong-calc-item" title="Kích thước thành phẩm (Dài x Rộng x Dày mm)"><span class="x2-ong-calc-label">K.thước thành phẩm:</span><strong>${outV ? escapeHTML(outKey || outV.replace(/x/gi, '×')) : '—'}</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Thanh thô lấy từ lô ở Kho (Dùng Cho = Bullig) — trừ vào tồn lô theo số thô cần dùng"><span class="x2-ong-calc-label">Nguồn:</span><strong style="color:#0f766e;">lô ở Kho</strong></span>`;
+  }
+
+  // ─── DANH SÁCH THẺ LÔ BULLIG (Gia công) — chọn được NHIỀU ──────
+  function bulligPicked() { return state.x2BulligPicked || []; }
+  function bulligPickedTotal() {
+    let total = 0;
+    bulligPicked().forEach(id => { total += bulligLotRemainingOf(bulligLotOf(id), state.x2BulligEditId); });
+    return total;
+  }
+  function bulligClearPicks() { state.x2BulligPicked = []; }
+
+  // Kích thước 1 lô: ưu tiên 3 trường Dài/Rộng/Dày, không có thì dùng mảng dimensions
+  // → luôn hiện "1250 × 80 × 12 mm" (KHÔNG dùng parseDimList vì hàm đó SẮP XẾP LẠI giá trị)
+  function bulligLotDimText(b) {
+    const d = (Number(b.length) > 0 && Number(b.width) > 0 && Number(b.thickness) > 0)
+      ? [b.length, b.width, b.thickness]
+      : (Array.isArray(b.dimensions) && b.dimensions.length === 3 ? b.dimensions : null);
+    if (!d) return '—';
+    return comboLabel({ d: d[0], r: d[1], t: d[2] }) + ' mm';
+  }
+  // Kích thước lô GỌN (không khoảng trắng, không đơn vị): "1250×24×7" —
+  // dùng cho dòng NGUỒN LÔ của bảng lịch sử: 1250×24×7(A1,2.016)
+  function bulligLotSizeText(b) {
+    const d = (Number(b.length) > 0 && Number(b.width) > 0 && Number(b.thickness) > 0)
+      ? [b.length, b.width, b.thickness]
+      : (Array.isArray(b.dimensions) && b.dimensions.length === 3 ? b.dimensions : null);
+    return d ? `${Number(d[0])}×${Number(d[1])}×${Number(d[2])}` : '—';
+  }
+  // Số NGÀY đã ở từng công đoạn của 1 lô: { say1, say2, kho } — cùng cách đếm với
+  // badge đếm ngày của THẺ NGUỒN "Thêm Lô Sấy Mới" (S1 cam · S2 xanh dương · K xanh lá)
+  function bulligLotDaysOf(b) {
+    const out = { say1: 0, say2: 0, kho: 0 };
+    if (!b) return out;
+    const hist = getBatchStageHistory(b);
+    hist.forEach((h, idx) => {
+      if (!h || !(h.stage in out)) return;
+      out[h.stage] += getHistoryEntryDays(hist, idx) || 0;
+    });
+    return out;
+  }
+
+  // Mỗi lô = 1 THẺ theo khuôn THẺ NGUỒN của Than Hóa + Sấy (`.al-card`, 2 DÒNG):
+  //   Dòng 1 = Mã lô · Vị trí · Kích thước · Loại (A/A1/B) · Số thanh CÒN LẠI
+  //   Dòng 2 = chip Dùng cho (Bullig) + badge ĐẾM NGÀY S1/S2/K + luồng NL + NCC
+  // KHÔNG có ô vuông tích: bấm thẻ = CHỌN, bấm nữa = BỎ CHỌN (nổi nền + viền).
+  function renderX2BulligLotList() {
+    const box = document.getElementById('x2-bl-gc-list');
+    if (!box) return;
+    const q = bulligNorm(String((document.getElementById('x2-bl-gc-search') || {}).value || ''));
+    const excludeId = state.x2BulligEditId;
+    const allLots = bulligLotList();
+    // CHỈ hiện lô CÒN thanh thô CHƯA gia công — lô đã DÙNG HẾT thì ẨN HẲN khỏi
+    // danh sách (lô dùng một phần vẫn hiện kèm "còn X/Y thanh" để gia công tiếp).
+    const lots = allLots
+      .filter(b => bulligLotRemainingOf(b, excludeId) > 0)
+      .filter(b => {
+        if (!q) return true;
+        return [b.code, b.location, b.useFor, b.bambooType, b.materialType, b.supplier, b.dimensions, bulligLotDimText(b)]
+          .some(v => bulligNorm(String(v || '')).includes(q));
+      });
+    if (!lots.length) {
+      box.innerHTML = `<div class="al-empty">${allLots.length
+        ? 'Các lô Bullig ở Kho đã dùng hết — chuyển lô mới vào Kho ở thẻ “Than Hóa + Sấy” rồi chọn lại.'
+        : 'Chưa có lô Bullig ở Kho phù hợp.'}</div>`;
+      initLucide(); return;
+    }
+    box.innerHTML = lots.map(b => {
+      const rem = bulligLotRemainingOf(b, excludeId);
+      const on = bulligPicked().includes(b.id);
+      const used = (Number(b.quantity) || 0) - rem;
+      const d = bulligLotDaysOf(b);
+      const dimTxt = bulligLotDimText(b);
+      // Lô đã gia công một phần → hiện "còn X/Y thanh" cho biết phần CÒN LẠI
+      const qtyTxt = used > 0 ? `${fmtThanh(rem)}/${fmtThanh(b.quantity)} thanh (còn)` : `${fmtThanh(rem)} thanh`;
+      const main = `${b.code || '—'} · ${b.location || '—'} · ${dimTxt} · ${b.bambooType || '—'} · ${qtyTxt}`;
+      const chips = [
+        `<span class="al-use-tag use-bullig">Bullig</span>`,
+        `<span class="al-day-badge day-s1" title="Số ngày đã ở Sấy 1">S1-${d.say1} ngày</span>`,
+        `<span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${d.say2} ngày</span>`,
+        `<span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${d.kho} ngày</span>`
+      ];
+      if (b.materialType) chips.push(`<span class="al-day-badge day-luuong" title="Luồng nguyên liệu">${escapeHTML(b.materialType)}</span>`);
+      if (b.supplier) chips.push(`<span class="al-day-badge day-ext" title="Nhà cung cấp">${escapeHTML(b.supplier)}</span>`);
+      const titleTxt = `${b.code || '—'} · ${b.location || '—'} · ${dimTxt} · S1-${d.say1} ngày · S2-${d.say2} ngày · K-${d.kho} ngày`;
+      return `<button type="button" class="al-card${on ? ' picked' : ''}" data-bl-pick="${escapeHTML(b.id)}" aria-pressed="${on ? 'true' : 'false'}" title="${escapeHTML(titleTxt)}">
+        <span class="al-card-body">
+          <span class="al-card-main">${escapeHTML(main)}</span>
+          <span class="al-card-sub">${chips.join(' ')}</span>
+        </span>
+      </button>`;
+    }).join('');
+    initLucide();
+  }
+
+  function bulligTogglePick(id) {
+    const cur = bulligPicked();
+    const i = cur.indexOf(id);
+    if (i >= 0) cur.splice(i, 1); else cur.push(id);
+    state.x2BulligPicked = cur;
+  }
+
+  function onBulligListClick(e) {
+    const card = e.target.closest && e.target.closest('[data-bl-pick]');
+    if (!card) return;
+    bulligTogglePick(card.getAttribute('data-bl-pick'));
+    renderX2BulligLotList();
+    renderX2BulligCalc();
+  }
+
+  // ─── ẨN/HIỆN FORM theo CÔNG ĐOẠN NHỎ ───────────────────────────
+  // ─── RESET FORM BULLIG (về GIA CÔNG, trắng sạch) ───────────────
+  function resetXuong2BulligForm() {
+    state.x2BulligEditId = null;
+    state.x2BulligLotOpen = false;   // đóng danh sách thẻ lô
+    bulligClearPicks();
+    ['x2-bl-gc-qty', 'x2-bl-out', 'x2-bl-ct-ok', 'x2-bl-ct-err'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const d = document.getElementById('x2-bl-date');
+    if (d) d.value = '';
+    const kind = document.getElementById('x2-bl-kind');
+    if (kind) kind.value = 'gc';
+    fillXuong2BulligOptions();
+    fillX2BulligOutSuggestions();
+    renderX2BulligLotList();
+    syncX2BulligKindRows();
+    renderX2BulligCalc();
+    syncX2BulligEditBanner();
+  }
+
+  // Sau khi LƯU GHI MỚI: giữ ngày + công đoạn nhỏ + lựa chọn để nhập tiếp;
+  // ─── LƯU FORM BULLIG (THÊM / SỬA) ──────────────────────────────
+  function handleXuong2BulligSubmit(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!requireEditPermission()) return;
+    const kind = syncX2BulligKindRows();
+    const dateVal = (document.getElementById('x2-bl-date') || {}).value || '';
+    if (!dateVal) { showToast('Ngày không được để trống!', 'error'); return; }
+    const snap = hrBulligSnapshot(dateVal, kind);
+
+    let payload;
+    if (kind === 'ct') {
+      // ── CHỌN THANH ──
+      const sizeKey = ((document.getElementById('x2-bl-ct-size') || {}).value) || '';
+      const cand = bulligCtCandidates().find(c => c.sizeKey === sizeKey);
+      const remaining = cand ? bulligGcQtyOf(sizeKey) - bulligCtQtyOf(sizeKey) : 0;
+      const ok = Number((document.getElementById('x2-bl-ct-ok') || {}).value) || 0;
+      const err = Number((document.getElementById('x2-bl-ct-err') || {}).value) || 0;
+      if (!sizeKey || !cand) { showToast('Hãy chọn Loại thanh (kích thước thành phẩm đã Gia công)!', 'error'); return; }
+      if (!Number.isFinite(ok) || ok < 0 || !Number.isFinite(err) || err < 0) { showToast('Số lượng đạt/lỗi phải là số không âm!', 'error'); return; }
+      if (ok + err <= 0) { showToast('Tổng số lượng chọn (đạt + lỗi) phải lớn hơn 0!', 'error'); return; }
+      if (ok + err > remaining) { showToast(`Vượt số thanh còn lại của cỡ này (còn ${fmtThanh(remaining)} thanh)!`, 'error'); return; }
+      const dims = cand.dims;
+      const unitVol = dims[0] > 0 ? unitVolOf(dims[0], dims[1], dims[2]) : 0;
+      payload = {
+        kind: 'ct',
+        date: dateVal,
+        week: materialWeekLabel(dateVal),
+        inSizeKey: sizeKey,
+        inDims: dims,
+        qtyOk: ok,
+        qtyErr: err,
+        unitVol,
+        worker: snap.worker, workTime: snap.workTime,
+        workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
+      };
+    } else {
+      // ── GIA CÔNG ──
+      // Nhập SỐ LƯỢNG GIA CÔNG ĐƯỢC (thành phẩm). Thanh thô tiêu thụ =
+      // số lượng gia công được ÷ HỆ SỐ QUY ĐỔI của định mức Bullig (tab Kế Hoạch).
+      const picked = bulligPicked();
+      if (!picked.length) { showToast('Hãy chọn ít nhất 1 lô Bullig ở Kho!', 'error'); return; }
+      const outV = String(((document.getElementById('x2-bl-out') || {}).value) || '').trim();
+      const outDims = bulligParseOutDims(outV);
+      if (!(outDims[0] > 0 && outDims[1] > 0 && outDims[2] > 0)) {
+        showToast('Nhập KÍCH THƯỚC THÀNH PHẨM (Dài x Rộng x Dày mm — gợi ý có sẵn khi đã từng nhập)!', 'error');
+        return;
+      }
+      const outSizeKey = dimKeyOf(outDims[0], outDims[1], outDims[2]);
+      const conv = bulligConvertInfo(outSizeKey);
+      const factor = conv.factor;
+      const totalPicked = bulligPickedTotal();                       // tổng THANH THÔ còn lại của các lô đã chọn
+      const maxOut = Math.floor(totalPicked * factor);               // số thanh gia công được tối đa
+      const quantity = Number((document.getElementById('x2-bl-gc-qty') || {}).value) || 0;
+      if (!Number.isFinite(quantity) || quantity <= 0) { showToast('Số lượng gia công được phải là số thanh lớn hơn 0!', 'error'); return; }
+      if (quantity > maxOut) {
+        showToast(`Vượt khả năng: ${fmtThanh(totalPicked)} thanh thô × ${fmtThanh(factor)} = ${fmtThanh(maxOut)} thanh gia công được!`, 'error');
+        return;
+      }
+      // THANH THÔ thực dùng = số lượng gia công được ÷ hệ số quy đổi
+      const qtyIn = Math.round((quantity / factor) * 1000) / 1000;
+      // Chia THÔ vào các lô đã chọn: lô CÒN NHIỀU lấy trước, đến khi đủ.
+      const parts = picked
+        .map(id => ({ id, b: bulligLotOf(id), rem: bulligLotRemainingOf(bulligLotOf(id), state.x2BulligEditId) }))
+        .filter(x => x.b && x.rem > 0)
+        .sort((a, b) => b.rem - a.rem);
+      let left = qtyIn;
+      const sources = [];
+      for (const p of parts) {
+        if (left <= 0.0005) break;
+        const take = Math.min(p.rem, left);
+        sources.push({ batchId: p.id, code: p.b.code || '', qty: Math.round(take * 1000) / 1000 });
+        left -= take;
+      }
+      if (left > 0.0005) { showToast('Tổng số lô đã chọn không đủ thanh thô cần dùng!', 'error'); return; }
+      const unitVol = unitVolOf(outDims[0], outDims[1], outDims[2]);
+      payload = {
+        kind: 'gc',
+        date: dateVal,
+        week: materialWeekLabel(dateVal),
+        batchId: sources[0] ? sources[0].batchId : '',
+        sources,
+        gcTotalPicked: totalPicked,
+        quantity,                       // SỐ LƯỢNG GIA CÔNG ĐƯỢC (thành phẩm)
+        qtyIn,                          // thanh thô thực dùng
+        convertFactor: factor,          // chốt hệ số lúc lưu (định mức đổi sau vẫn đúng)
+        outDims,
+        outSizeKey,
+        unitVol,
+        volume: Math.round(quantity * unitVol * 10000) / 10000,
+        worker: snap.worker, workTime: snap.workTime,
+        workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
+      };
+    }
+
+    if (state.x2BulligEditId) {
+      const rec = (state.xuong2BulligRecords || []).find(r2 => r2.id === state.x2BulligEditId);
+      if (!rec) { showToast('Không tìm thấy lượt Bullig cần sửa!', 'error'); return; }
+      Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
+      saveXuong2Bullig();
+      showToast('Đã cập nhật lượt Bullig!', 'success');
+      resetXuong2BulligForm();
+    } else {
+      (state.xuong2BulligRecords = state.xuong2BulligRecords || []).push({
+        id: 'x2bl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        ...payload,
+        createdAt: new Date().toISOString()
+      });
+      saveXuong2Bullig();
+      showToast(`Đã ghi lượt ${bulligKindLabel(payload.kind)} (Bullig)!`, 'success');
+      keepBulligFormAfterSave();
+    }
+    renderX2BulligCard();
+  }
+
+  // ─── SỬA / XÓA LƯỢT BULLIG ─────────────────────────────────────
+  function editXuong2Bullig(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2BulligRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    state.x2BulligEditId = id;
+    const kindEl = document.getElementById('x2-bl-kind');
+    if (kindEl) kindEl.value = rec.kind === 'ct' ? 'ct' : 'gc';
+    syncX2BulligKindRows();
+    const d = document.getElementById('x2-bl-date');
+    if (d) d.value = rec.date || '';
+    if (rec.kind === 'ct') {
+      fillXuong2BulligOptions();
+      const s = document.getElementById('x2-bl-ct-size');
+      if (s) s.value = rec.inSizeKey || '';
+      const ok = document.getElementById('x2-bl-ct-ok');
+      if (ok) ok.value = Number(rec.qtyOk) || 0;
+      const er = document.getElementById('x2-bl-ct-err');
+      if (er) er.value = Number(rec.qtyErr) || 0;
+    } else {
+      const srcs = Array.isArray(rec.sources) && rec.sources.length ? rec.sources : (rec.batchId ? [{ batchId: rec.batchId }] : []);
+      state.x2BulligPicked = srcs.map(x => String(x.batchId || '')).filter(Boolean);
+      fillXuong2BulligOptions();
+      renderX2BulligLotList();
+      const q = document.getElementById('x2-bl-gc-qty');
+      if (q) q.value = Number(rec.quantity) || 0;
+      const od = Array.isArray(rec.outDims) ? rec.outDims : [];
+      const outEl = document.getElementById('x2-bl-out');
+      if (outEl) outEl.value = (od[0] > 0) ? `${od[0]}x${od[1]}x${od[2]}` : '';
+    }
+    fillX2BulligOutSuggestions();
+    renderX2BulligCalc();
+    syncX2BulligEditBanner();
+  }
+
+  function deleteXuong2Bullig(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2BulligRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    const d = bulligDisplay(rec);
+    const desc = rec.kind === 'ct'
+      ? `${comboLabel({ d: d.inDims[0], r: d.inDims[1], t: d.inDims[2] })} · đạt ${fmtThanh(d.qtyOk)} / lỗi ${fmtThanh(d.qtyErr)} thanh`
+      : `${fmtThanh(d.quantity)}/${fmtThanh(d.gcTotalPicked)} thanh · ${d.outSizeKey}`;
+    if (!confirm(`Xóa lượt ${bulligKindLabel(rec.kind)} ngày ${formatDateDDMMYY(rec.date)} (${desc})?`)) return;
+    trackDeleted('xuong2BulligRecords', id);
+    state.xuong2BulligRecords = (state.xuong2BulligRecords || []).filter(r => r.id !== id);
+    if (state.x2BulligEditId === id) resetXuong2BulligForm();
+    saveXuong2Bullig();
+    renderX2BulligCard();
+    showToast('Đã xóa lượt Bullig!', 'success');
+  }
+
+  // ─── THỐNG KÊ NHANH CỦA VỊ TRÍ BULLIG ──────────────────────────
+  function renderX2BulligStats() {
+    const box = document.getElementById('x2-bl-stats');
+    if (!box) return;
+    const disp = (state.xuong2BulligRecords || []).map(bulligDisplay);
+    const gc = disp.filter(d => d.kind === 'gc');
+    const ct = disp.filter(d => d.kind === 'ct');
+    const gcTho = gc.reduce((s, d) => s + d.qtyIn, 0);        // thanh THÔ đã dùng để gia công
+    const gcOut = gc.reduce((s, d) => s + d.quantity, 0);     // SỐ THÀNH PHẨM gia công được
+    const okQty = ct.reduce((s, d) => s + d.qtyOk, 0);
+    const errQty = ct.reduce((s, d) => s + d.qtyErr, 0);
+    const rate = (okQty + errQty) > 0 ? (okQty / (okQty + errQty)) * 100 : null;
+    box.innerHTML = `
+      <div class="material-stat">
+        <span class="material-stat-value">${gc.length}</span>
+        <span class="material-stat-label">Lượt Gia công</span>
+      </div>
+      <div class="material-stat">
+        <span class="material-stat-value">${fmtThanh(gcTho)}</span>
+        <span class="material-stat-label">Thanh thô đã Gia công</span>
+      </div>
+      <div class="material-stat">
+        <span class="material-stat-value">${fmtThanh(gcOut)}</span>
+        <span class="material-stat-label">Thành phẩm Gia công được</span>
+      </div>
+      <div class="material-stat">
+        <span class="material-stat-value">${ct.length}</span>
+        <span class="material-stat-label">Lượt Chọn thanh</span>
+      </div>
+      <div class="material-stat">
+        <span class="material-stat-value">${fmtThanh(okQty)}</span>
+        <span class="material-stat-label">Thanh Đạt (Chọn thanh)</span>
+      </div>
+      <div class="material-stat">
+        <span class="material-stat-value">${fmtThanh(errQty)}</span>
+        <span class="material-stat-label">Thanh Lỗi</span>
+      </div>
+      <div class="material-stat">
+        <span class="material-stat-value">${rate == null ? '—' : fmtRatio(rate) + '%'}</span>
+        <span class="material-stat-label">Tỷ lệ đạt (Chọn thanh)</span>
+      </div>`;
+  }
+
+  // ─── BẢNG LỊCH SỬ BULLIG — NHÓM THEO NGÀY, THẺ NGÀY CHIA 2 VÙNG ──
+  // 1 thẻ ngày chứa cả 2 công đoạn nhỏ chạy đồng thời:
+  //   • VÙNG 1 "Gia công": nguồn lô · SL x/tổng đã chọn · K.thước thành phẩm · Thể tích
+  //   • VÙNG 2 "Chọn thanh": Loại thanh · SL đạt · SL lỗi · Tổng · Tỷ lệ đạt
+  // Đầu thẻ (chung): Ngày · Người làm 2 phân vị · Giờ HC/TC từng phân vị ·
+  // Công suất + Hiệu suất TỪNG công đoạn (÷ định mức tháng tương ứng).
+  function renderX2BulligTable() {
+    const box = document.getElementById('x2-bl-day-cards');
+    if (!box) return;
+    const list = [...(state.xuong2BulligRecords || [])].sort((a, b) => {
+      if ((b.date || '') !== (a.date || '')) return (b.date || '').localeCompare(a.date || '');
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+    const countEl = document.getElementById('x2-bl-table-count');
+    // TỔNG số thanh THÔ đã sử dụng của toàn bộ lịch sử (hiện ngay ở thanh tiêu đề)
+    const totalTho = list.map(bulligDisplay).filter(d => d.kind === 'gc').reduce((s, d) => s + (Number(d.qtyIn) || 0), 0);
+    if (countEl) countEl.textContent = list.length ? `${list.length} lượt Bullig · thô đã dùng ${fmtThanh(totalTho)} thanh` : '';
+    if (!list.length) {
+      box.innerHTML = `
+        <div class="x2-day-card x2-day-card-empty">
+          <i data-lucide="package"></i>
+          <div>Chưa có lượt Bullig nào.<br>Chọn <strong>Công đoạn</strong> (Gia công / Chọn thanh) ở form trên rồi bấm <strong>Lưu Lượt Bullig</strong>.</div>
+        </div>`;
+      initLucide();
+      return;
+    }
+    const groups = new Map();
+    list.forEach(r => {
+      const key = r.date || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    let html = '';
+    for (const [date, rows] of groups) html += bulligDayCardHtml(date, rows);
+    box.innerHTML = html;
+    initLucide();
+  }
+
+  // Tính công suất + hiệu suất 1 công đoạn nhỏ trong ngày
+  function bulligCapOf(disp, kind) {
+    const rows = disp.filter(d => d.kind === kind);
+    const qty = kind === 'ct'
+      ? rows.reduce((s, d) => s + d.qtyOk + d.qtyErr, 0)
+      : rows.reduce((s, d) => s + d.quantity, 0);
+    const hours = rows.reduce((s, d) => s + (d.workHours || 0), 0);
+    const cap = hours > 0 ? (qty / hours) : null;
+    const rate = bulligRateOf(disp.length ? disp[0].date : '', kind);
+    const eff = (cap != null && rate) ? (cap / rate) * 100 : null;
+    return { qty, hours, cap, rate, eff };
+  }
+
+  // Nhãn Hiệu suất của 1 công đoạn nhỏ (kèm tooltip giải thích cách tính)
+  function bulligEffHtml(capInfo, kindLabel) {
+    const eff = capInfo.eff;
+    const effTxt = eff == null
+      ? '<em style="color:var(--text-muted);">—</em>'
+      : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
+    const effTip = eff == null
+      ? `Chưa đủ dữ liệu (thiếu giờ ${kindLabel} hoặc chưa đặt Định mức công suất ${kindLabel} cho tháng này)`
+      : `Hiệu suất = Công suất thực tế (${fmtThanh(capInfo.cap)} thanh/h) ÷ Định mức ${kindLabel} (${fmtThanh(capInfo.rate)} thanh/h)`;
+    return `<span class="x2-day-eff" title="${escapeHTML(effTip)}">H.suất ${kindLabel}: <strong>${effTxt}</strong></span>`;
+  }
+
+  // 1 DÒNG NHÁNH VÙNG 1: GIA CÔNG — nguồn lô ghi rõ KÍCH THƯỚC + PHÂN LOẠI +
+  // SỐ LƯỢNG thô: "1250×24×7(A1,2.016)" · SL gia công được / tối đa · k.thước TP
+  function bulligGcRowHtml(d) {
+    const srcTxt = d.lots.length
+      ? d.lots.map(x => `${bulligLotSizeText(x.batch)}(${escapeHTML(x.batch.bambooType || '—')},${fmtThanh(x.qty)})`).join(' + ')
+      : '—';
+    const lotCodes = d.lots.map(x => x.batch.code || '—').filter(Boolean).join(' + ');
+    return `
+      <tr class="x2-day-row" data-x2-bl-row="${escapeHTML(d.id)}">
+        <td>${srcTxt}<div class="x2-row-note">Lô ${escapeHTML(lotCodes || '—')}${d.materialType ? ` · ${escapeHTML(d.materialType)}` : ''}${d.supplier ? ` · NCC ${escapeHTML(d.supplier)}` : ''}</div></td>
+        <td class="text-right"><strong>${fmtThanh(d.quantity)}</strong> <small style="color:var(--text-muted);">/ ${fmtThanh(d.maxOut)} thanh</small><div class="x2-row-note">Thô dùng: ${fmtThanh(d.qtyIn)} thanh (1 thô = ${fmtThanh(d.convertFactor)})</div></td>
+        <td><span class="x2-nan-chip">${escapeHTML(d.outSizeKey || '—')}</span></td>
+        <td class="text-right"><strong style="color:#0f766e;">${d.volume.toFixed(4)}</strong> <small style="color:var(--text-muted);">m³</small></td>
+        <td class="text-right">
+          <button class="btn btn-icon btn-outline" title="Sửa" data-x2-bl-edit="${escapeHTML(d.id)}"><i data-lucide="pencil"></i></button>
+          <button class="btn btn-icon btn-danger" title="Xóa" data-x2-bl-delete="${escapeHTML(d.id)}"><i data-lucide="trash-2"></i></button>
+        </td>
+      </tr>`;
+  }
+
+  // 1 DÒNG NHÁNH VÙNG 2: CHỌN THANH (Loại thanh = THÀNH PHẨM sau Chọn thanh ·
+  // đạt · lỗi · tổng · tỷ lệ đạt)
+  function bulligCtRowHtml(d) {
+    const rate = (d.qtyOk + d.qtyErr) > 0 ? (d.qtyOk / (d.qtyOk + d.qtyErr)) * 100 : null;
+    return `
+      <tr class="x2-day-row" data-x2-bl-row="${escapeHTML(d.id)}">
+        <td><span class="x2-nan-chip">${escapeHTML(d.inSizeKey || '—')}</span><div class="x2-row-note">Thành phẩm sau Gia công = đúng kích thước này</div></td>
+        <td class="text-right"><strong style="color:#16a34a;">${fmtThanh(d.qtyOk)}</strong></td>
+        <td class="text-right"><strong style="color:#b45309;">${fmtThanh(d.qtyErr)}</strong></td>
+        <td class="text-right"><strong>${fmtThanh(d.inQty)}</strong> <small style="color:var(--text-muted);">thanh</small></td>
+        <td class="text-right">${rate == null ? '—' : `<strong style="color:${rate >= 90 ? '#16a34a' : '#b45309'};">${fmtRatio(rate)}%</strong>`}</td>
+        <td class="text-right">
+          <button class="btn btn-icon btn-outline" title="Sửa" data-x2-bl-edit="${escapeHTML(d.id)}"><i data-lucide="pencil"></i></button>
+          <button class="btn btn-icon btn-danger" title="Xóa" data-x2-bl-delete="${escapeHTML(d.id)}"><i data-lucide="trash-2"></i></button>
+        </td>
+      </tr>`;
+  }
+
+  // 1 THẺ NGÀY của vị trí Bullig — chia 2 VÙNG công đoạn nhỏ trên CÙNG thẻ
+  function bulligDayCardHtml(date, rows) {
+    const disp = rows.map(bulligDisplay);
+    const gcDisp = disp.filter(d => d.kind === 'gc');
+    const ctDisp = disp.filter(d => d.kind === 'ct');
+    // Người làm + giờ HC/TC: dữ liệu SỐNG từ Bảng bố trí; mất bố trí → snapshot lượt
+    const liveGc = hrBulligGcAssignmentsOf(date);
+    const liveCt = hrBulligCtAssignmentsOf(date);
+    const workerBlock = (live, snapRows, label) => {
+      const workers = live.length
+        ? live.map(a => ({ name: a.name, time: posTimeStr(a) }))
+        : snapRows;
+      if (!workers.length) return '';
+      const main = `${escapeHTML(workers[0].name)}${workers[0].time ? ` (${escapeHTML(workers[0].time)})` : ''}`;
+      const more = workers.length > 1
+        ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
+        : '';
+      return `<span class="x2-day-cutters" title="Người ${label} — tự động từ Bảng bố trí vị trí '${label}' (tab Nhân Sự) đúng ngày">
+        <i data-lucide="users"></i> ${label}: ${main} ${more}</span>`;
+    };
+    const spGc = liveGc.length ? sumPosHoursSplit(liveGc, date) : null;
+    const spCt = liveCt.length ? sumPosHoursSplit(liveCt, date) : null;
+    const hoursTxt = (sp) => {
+      if (!sp) return '<em style="color:var(--text-muted);">—</em>';
+      return `<span class="x2-hours-hc">${fmtRatio(sp.hc)}h HC</span><span class="x2-hours-tc">${fmtRatio(sp.tc)}h TC</span>`;
+    };
+    const hoursTip = 'Thời gian = tổng giờ công phân vị trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)';
+    const gcCap = bulligCapOf(disp, 'gc');
+    const ctCap = bulligCapOf(disp, 'ct');
+    const gcWorkerRows = gcDisp.length ? gcDisp[0].workerRows : [];
+    const ctWorkerRows = ctDisp.length ? ctDisp[0].workerRows : [];
+    const gcRows = gcDisp.map(d => bulligGcRowHtml(d)).join('');
+    const ctRows = ctDisp.map(d => bulligCtRowHtml(d)).join('');
+    // TỔNG của ngày: thành phẩm gia công được + TỔNG SỐ THANH THÔ ĐÃ SỬ DỤNG
+    const gcOutSum = gcDisp.reduce((s, d) => s + (Number(d.quantity) || 0), 0);
+    const gcThoSum = gcDisp.reduce((s, d) => s + (Number(d.qtyIn) || 0), 0);
+    const ctOkSum = ctDisp.reduce((s, d) => s + (Number(d.qtyOk) || 0), 0);
+    const ctErrSum = ctDisp.reduce((s, d) => s + (Number(d.qtyErr) || 0), 0);
+    const ctRate = (ctOkSum + ctErrSum) > 0 ? (ctOkSum / (ctOkSum + ctErrSum)) * 100 : null;
+    const gcFoot = gcDisp.length
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="2">Tổng ngày: <strong>${fmtThanh(gcOutSum)}</strong> thanh gia công được</td><td colspan="3" class="text-right">Tổng số thanh thô đã sử dụng: <strong>${fmtThanh(gcThoSum)}</strong> thanh</td></tr></tfoot>`
+      : '';
+    const ctFoot = ctDisp.length
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="6">Tổng ngày: đạt <strong>${fmtThanh(ctOkSum)}</strong> · lỗi <strong>${fmtThanh(ctErrSum)}</strong> · tổng <strong>${fmtThanh(ctOkSum + ctErrSum)}</strong> thanh${ctRate == null ? '' : ` · Tỷ lệ đạt <strong>${fmtRatio(ctRate)}%</strong>`}</td></tr></tfoot>`
+      : '';
+    const emptyZone = (msg) => `
+      <tr class="x2-day-row"><td colspan="5" style="color:var(--text-muted); font-style:italic; text-align:center; padding:8px;">${msg}</td></tr>`;
+    return `
+      <div class="x2-day-card">
+        <div class="x2-day-head">
+          <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
+          ${workerBlock(liveGc, gcWorkerRows, 'Gia công')}
+          ${workerBlock(liveCt, ctWorkerRows, 'Chọn thanh')}
+          <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ Gia công: ${hoursTxt(spGc)}</span>
+          <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ Chọn thanh: ${hoursTxt(spCt)}</span>
+          <span class="x2-day-cap" title="Công suất Gia công = tổng thanh thô gia công ÷ tổng giờ Gia công">CS Gia công: <strong>${gcCap.cap != null ? `${fmtThanh(gcCap.cap)} thanh/h` : '—'}</strong></span>
+          ${bulligEffHtml(gcCap, 'Gia công')}
+          <span class="x2-day-cap" title="Công suất Chọn thanh = tổng thanh chọn (đạt + lỗi) ÷ tổng giờ Chọn thanh">CS Chọn: <strong>${ctCap.cap != null ? `${fmtThanh(ctCap.cap)} thanh/h` : '—'}</strong></span>
+          ${bulligEffHtml(ctCap, 'Chọn thanh')}
+        </div>
+        <!-- VÙNG 1: GIA CÔNG -->
+        <div class="x2-bl-zone-head x2-bl-zone-gc"><i data-lucide="wrench"></i> Gia công — Chọn thanh thô từ lô Bullig (Kho)</div>
+        <table class="data-table x2-day-table">
+          <thead>
+            <tr>
+              <th>Nguồn lô Kho (Kích thước · Phân loại · Số lượng thô)</th>
+              <th class="text-right">SL gia công được (x/tối đa)</th>
+              <th>K.thước thành phẩm</th>
+              <th class="text-right">Thể tích</th>
+              <th class="text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>${gcRows || emptyZone('Chưa có lượt Gia công nào trong ngày.')}</tbody>
+          ${gcFoot}
+        </table>
+        <!-- VÙNG 2: CHỌN THANH -->
+        <div class="x2-bl-zone-head x2-bl-zone-ct"><i data-lucide="check-square"></i> Chọn thanh — thành phẩm Gia công</div>
+        <table class="data-table x2-day-table">
+          <thead>
+            <tr>
+              <th>Loại thanh = THÀNH PHẨM sau Chọn thanh</th>
+              <th class="text-right">SL Đạt</th>
+              <th class="text-right">SL Lỗi</th>
+              <th class="text-right">Tổng chọn (tự tính)</th>
+              <th class="text-right">Tỷ lệ đạt</th>
+              <th class="text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>${ctRows || emptyZone('Chưa có lượt Chọn thanh nào trong ngày.')}</tbody>
+          ${ctFoot}
+        </table>
+      </div>`;
+  }
+
+  // ─── RENDER BẢNG CHI TIẾT BULLIG ──────────────────────────────
+  function renderX2BulligCard() {
+    fillXuong2BulligOptions();     // ô chọn lô (Gia công) + ô Loại thanh (Chọn thanh)
+    fillX2BulligOutSuggestions();  // gợi ý kích thước thành phẩm từ lịch sử
+    renderX2BulligStockBar();      // thanh tồn: thanh thô chờ Gia công + thành phẩm chờ Chọn
+    renderX2BulligRateBar();       // định mức công suất theo tháng + công đoạn (thanh/h)
+    renderX2BulligStats();
+    renderX2BulligTable();         // thẻ ngày chia 2 vùng Gia công / Chọn thanh
+    renderX2BulligLotList();
+    syncX2BulligKindRows();
+    renderX2BulligCalc();
+    syncX2BulligEditBanner();
+    updateXuong2CardCounts();
+  }
+
+  // Banner cam "đang sửa" của form Bullig
+  function syncX2BulligEditBanner() {
+    const banner = document.getElementById('x2-bl-edit-banner');
+    const text = document.getElementById('x2-bl-edit-text');
+    if (!banner || !text) return;
+    if (state.x2BulligEditId) {
+      const rec = (state.xuong2BulligRecords || []).find(r => r.id === state.x2BulligEditId);
+      text.textContent = rec
+        ? `Đang sửa lượt ${bulligKindLabel(rec.kind)} ngày ${formatDateDDMMYY(rec.date)}.`
+        : 'Đang sửa lượt Bullig.';
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  // Thu gọn / mở rộng BẢNG LỊCH SỬ Bullig (form vẫn hiện để tiếp tục nhập)
+  function toggleX2BulligTable() {
+    const wrap = document.getElementById('x2-bl-table-wrap');
+    if (!wrap) return;
+    wrap.classList.toggle('x2-cut-collapsed');
+    initLucide();
+  }
+
+  // Sau khi LƯU GHI MỚI: giữ ngày + công đoạn nhỏ để nhập tiếp; chỉ XOÁ ô số lượng
+  function keepBulligFormAfterSave() {
+    state.x2BulligEditId = null;
+    ['x2-bl-gc-qty', 'x2-bl-ct-ok', 'x2-bl-ct-err'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    bulligClearPicks();
+    fillXuong2BulligOptions();
+    renderX2BulligLotList();
+    renderX2BulligCalc();
+    syncX2BulligEditBanner();
+  }
+
+  // ─── ẨN/HIỆN FORM theo CÔNG ĐOẠN NHỎ ───────────────────────────
+  // Danh sách THẺ LÔ (Gia công) chỉ mở khi người dùng bấm nút "Mở danh sách lô"
+  // (cờ state.x2BulligLotOpen) — vẽ lại thẻ KHÔNG tự mở, và chuyển sang
+  // "Chọn thanh" thì luôn ẩn.
+  function syncX2BulligKindRows() {
+    const kind = ((document.getElementById('x2-bl-kind') || {}).value) || 'gc';
+    const gc = kind !== 'ct';
+    const lotOpen = !!state.x2BulligLotOpen;
+    const set = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+    // Hàng 1: nút MỞ DANH SÁCH LÔ (đứng chung hàng với Ngày + Công Đoạn)
+    set('x2-bl-gc-btn-group', gc);
+    // Hàng 2: Kích thước thành phẩm + Số lượng (kèm gợi ý "/ tổng đã chọn")
+    set('x2-bl-gc-group', gc);
+    set('x2-bl-gc-list-row', gc && lotOpen);
+    set('x2-bl-gc-search-row', gc && lotOpen);
+    set('x2-bl-ct-size-group', !gc);
+    set('x2-bl-ct-ok-group', !gc);
+    set('x2-bl-ct-err-group', !gc);
+    return kind;
+  }
+
+  // ─── NẠP DỮ LIỆU BULLIG ────────────────────────────────────────
+  function loadXuong2Bullig() {
+    const raw = localStorage.getItem(STORAGE_KEY_XUONG2_BULLIG);
+    if (raw) {
+      try {
+        const arr = JSON.parse(raw);
+        state.xuong2BulligRecords = Array.isArray(arr) ? arr : [];
+      } catch (e) { state.xuong2BulligRecords = []; }
+    } else {
+      state.xuong2BulligRecords = [];
+    }
+  }
+
+  function saveXuong2Bullig() {
+    try {
+      localStorage.setItem(STORAGE_KEY_XUONG2_BULLIG, JSON.stringify(state.xuong2BulligRecords || []));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu sẽ thử ghi qua file/mây.', 'error');
+    }
+    logDataChange(['xuong2BulligRecords']);
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // VỊ TRÍ: BÀO TINH — Xưởng 2 (thẻ launcher tab Công Đoạn)
   // ═══════════════════════════════════════════════════════════
   // Mỗi lượt ghi: NGÀY BÀO · LOẠI BÀO · nguồn thanh ("Chọn thanh") ·
@@ -3996,12 +5652,41 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (openX2Card && openX2Card.id === 'x2-bo-ong-card') renderX2BoOngCard();
     if (openX2Card && openX2Card.id === 'x2-bao-tho-card') renderX2BaoThoCard();
     if (openX2Card && openX2Card.id === 'x2-chon-nan-tho-card') renderX2ChonNanCard();
+    if (openX2Card && openX2Card.id === 'x2-than-hoa-card') renderX2SayStats(); // thống kê Sấy theo ngày
     if (openX2Card && openX2Card.id === 'x2-bao-tinh-card') renderX2BaoTinhCard();
+    if (openX2Card && openX2Card.id === 'x2-bullig-card') renderX2BulligCard();
     if (openX2Card && openX2Card.id === 'x2-ep-van-card') renderX2EpVanCard();
   }
 
 export {
   X2_CARD_DEFS,
+  // ── Than Hóa + Sấy: bảng thống kê theo TỪNG LẦN than hóa + thu gọn bảng Kanban ──
+  isThanHoaPos,
+  hrThanHoaAssignmentsOf,
+  loadX2SayRates,
+  handleX2SayRateSave,
+  renderX2SayRateBar,
+  renderX2SayStats,
+  sayChargeRows,
+  sayGroupLots,
+  sayBuildCharges,
+  sayManualTimesOf,
+  setSayGroupTimes,
+  onSayTimesChange,
+  loadX2SayTimes,
+  sayIncidentOf,
+  setSayIncident,
+  onSayIncidentChange,
+  loadX2SayIncidents,
+  sayRateEntryOf,
+  sayMinutesPerCharge,
+  sayM3PerCharge,
+  batchVolumeOf,
+  batchPassedStage,
+  toggleX2KanbanBoard,
+  applyX2KanbanCollapsed,
+  renderX2KanbanSummary,
+  SAY_RATE_DEFAULT,
   NAN_CLASSES,
   deleteXuong2BaoTho,
   deleteXuong2BoOng,
@@ -4026,6 +5711,25 @@ export {
   handleXuong2ChonNanSubmit,
   handleXuong2BaoTinhSubmit,
   deleteXuong2BaoTinh,
+  deleteXuong2Bullig,
+  editXuong2Bullig,
+  handleXuong2BulligSubmit,
+  handleX2BulligRateSave,
+  loadXuong2Bullig,
+  loadX2BulligRates,
+  renderX2BulligCard,
+  renderX2BulligRateBar,
+  renderX2BulligTable,
+  renderX2BulligCalc,
+  renderX2BulligStockBar,
+  resetXuong2BulligForm,
+  toggleX2BulligTable,
+  syncX2BulligKindRows,
+  onBulligListClick,
+  renderX2BulligLotList,
+  bulligLotSizeText,
+  bulligConvertInfo,
+  bulligDisplay,
   handleXuong2CutSubmit,
   loadX2BaoThoRates,
   loadX2BoOngRates,
@@ -4062,6 +5766,7 @@ export {
   resetXuong2ChonNanForm,
   resetXuong2BaoTinhForm,
   resetXuong2CutForm,
+  saveXuong2Bullig,
   saveXuong2BaoTho,
   saveXuong2BoOng,
   saveXuong2ChonNan,

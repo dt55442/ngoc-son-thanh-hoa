@@ -5,10 +5,11 @@
 //     trượt bằng số thanh THEO KẾ HOẠCH ("Cần").
 //   - Tồn THANH ĐẠT (đầu ra Bào Tinh, dùng cho "Có thể ép"): cộng ĐÃ BÀO TINH theo
 //     tuần chuyển, trừ ĐÃ ÉP thực tế (quá khứ) / KẾ HOẠCH (hiện tại trở đi).
-// Che phủ: getActualPressedByWeek, getBaoTinhConvertedByWeek,
+// Che phủ: getActualPressedByWeek, getBaoTinhConvertedByWeek (NGUỒN MỚI =
+//          THẺ Bào Tinh xuong2BaoTinhRecords — không còn lô stage bao_tinh),
 //          computePlanningWeekData, getCumulativeInventoryByWeek,
 //          computeBaoTinhEfficiencyByWeek (bảng Bào Tinh ↔ Đã Ép),
-//          getBaoTinhConversion với b.baoTinhDate (ngày bào tinh thực tế đè tự động).
+//          đổi ngày ghi lượt trên thẻ → tuần trừ tồn thay đổi (PHẦN D).
 'use strict';
 
 /* ── Stub môi trường trình duyệt (giống tests/smoke.mjs) ──────────────── */
@@ -169,11 +170,16 @@ function check(name, cond) {
   ];
   state.batches = [
     // Tuần quá khứ P: nhập 1000 thanh; tuần hiện tại N: nhập 200 thanh (còn ở Kho)
-    { id: 'b1', code: 'L01', stage: 'kho', length: 1250, width: 18, thickness: 7, quantity: 1000, useFor: 'Ván', bambooType: 'A', week: `Tuần ${P}`, date: `${Y}-03-01` },
-    { id: 'b2', code: 'L02', stage: 'kho', length: 1250, width: 18, thickness: 7, quantity: 200,  useFor: 'Ván', bambooType: 'A', week: `Tuần ${N}`, date: `${Y}-03-01` },
-    // Lô nhập tuần P−1, CHUYỂN BÀO TINH ở tuần P: 1000 thanh rời kho nguyên liệu tại P
-    { id: 'b3', code: 'L03', stage: 'bao_tinh', length: 1250, width: 18, thickness: 7, quantity: 1000, useFor: 'Ván', bambooType: 'A1', week: `Tuần ${P - 1}`, date: datePm1,
-      stageHistory: [{ stage: 'say1', date: datePm1 }, { stage: 'bao_tinh', date: dateP }] }
+    { id: 'b1', code: 'L01', stage: 'kho', length: 1250, width: 18, thickness: 7, quantity: 1000, useFor: 'Ván', bambooType: 'A', week: `Tuần ${P}`, date: dateInWeek(Y, P) },
+    { id: 'b2', code: 'L02', stage: 'kho', length: 1250, width: 18, thickness: 7, quantity: 200,  useFor: 'Ván', bambooType: 'A', week: `Tuần ${N}`, date: dateInWeek(Y, N) },
+    // Lô nhập tuần P−1 (nguồn cho lượt bào tinh ghi ở tuần P)
+    { id: 'b3', code: 'L03', stage: 'kho', length: 1250, width: 18, thickness: 7, quantity: 1000, useFor: 'Ván', bambooType: 'A1', week: `Tuần ${P - 1}`, date: datePm1 }
+  ];
+  // NGUỒN MỚI: lượt bào tinh trên THẺ Bào Tinh (thay lô stage bao_tinh + stageHistory)
+  // — 1000 thanh rời kho nguyên liệu ở tuần P, nguồn = lô b3
+  state.xuong2BaoTinhRecords = [
+    { id: 'x2bt-test-1', kind: 'tinh', date: dateP, week: `Tuần ${P}`, inSizeKey: '1250×18×7', inQty: 1000, qtyOk: 960, qtyErr: 40,
+      sources: [{ batchId: 'b3', code: 'L03', location: '', dims: [1250, 18, 7], qty: 1000 }] }
   ];
   state.planningItems = [
     // Kế hoạch tuần quá khứ P: 200 tấm → Cần 1200 (KHÔNG dùng khi trượt tuần quá khứ)
@@ -188,16 +194,18 @@ function check(name, cond) {
   ];
   state.planningForecast = {}; state.planningStock = {};
 
-  // ── ĐÃ BÀO TINH theo tuần (mốc chuyển rời kho nguyên liệu) ──
+  // ── ĐÃ BÀO TINH theo tuần (THẺ Bào Tinh — nguồn mới, mốc = ngày ghi lượt) ──
   const convW = plan.getBaoTinhConvertedByWeek(Y);
-  check('B: ĐÃ BÀO TINH tuần P = 1000 (mốc bao_tinh trong stageHistory)', !!convW[P] && convW[P][K] === 1000);
+  check('B: ĐÃ BÀO TINH tuần P = 1000 (lượt kind=tinh trên thẻ Bào Tinh, nguồn lô b3)', !!convW[P] && convW[P][K] === 1000);
   check('B: không phát sinh đã bào tinh ở tuần khác', Object.keys(convW).length === 1 && !!convW[P]);
 
   // ── Tồn NGUYÊN LIỆU (ma trận): quá khứ trừ đã bào tinh, hiện tại trở đi trừ kế hoạch ──
   const wd = plan.computePlanningWeekData(Y);
   check('B: TỒN tuần P−1 = 1000 (lô b3 nhập tuần P−1)', wd[P - 1].nan[K].ton === 1000);
-  check('B: TỒN tuần P = 1000 + 1000 (b1 nhập P) = 2000 (tuần P chưa trừ)', wd[P].nan[K].ton === 2000);
-  check('B: TỒN tuần N = 2000 − 1000 (ĐÃ BÀO TINH P) + 200 = 1200 (KHÔNG trừ 300 đã ép)', wd[N].nan[K].ton === 1200);
+  check('B: TỒN tuần P = 1000 (b3 đã bào hết ở tuần P) + 1000 (b1 nhập P) = 1000 cuối tuần',
+    wd[P].nan[K].ton === 1000);
+  check('B: TỒN tuần hiện tại N = TỒN THỰC (b1 1000 + b2 200; b3 đã bào hết) = 1200',
+    wd[N].nan[K].ton === 1200);
   check('B: CẦN tuần quá khứ P = 1200 (chỉ hiển thị, không dùng trượt quá khứ)', wd[P].nan[K].can === 1200);
   check('B: CẦN tuần hiện tại N = 600', wd[N].nan[K].can === 600);
   check('B: TỒN tuần N+1 = 1200 − 600 (KẾ HOẠCH N) = 600', wd[N + 1].nan[K].ton === 600);
@@ -221,32 +229,41 @@ function check(name, cond) {
   check('C: tuần P — còn lại lũy kế 700, hiệu suất 30%', eff.rows[0].remaining === 700 && eff.rows[0].effPct === 30);
   check('C: tuần N — đã ép 50, còn lại lũy kế 650, hiệu suất 35%', eff.rows[1].pressed === 50 && eff.rows[1].remaining === 650 && eff.rows[1].effPct === 35);
   check('C: tổng lũy kế — bào tinh 1000, đã ép 350', eff.totalConv === 1000 && eff.totalPressed === 350);
-  check('C: tồn bào tinh hiện tại quy về năm Y = 1000 (thanh đạt chờ ép)', eff.currentBtStock === 1000);
+  check('C: tồn bào tinh hiện tại quy về năm Y = 1000 (inQty lượt kind=tinh)', eff.currentBtStock === 1000);
   check('C: ước tính thanh lỗi = max(0, 1000 − 350 − 1000) = 0', eff.estDefect === 0);
 
-  /* ── PHẦN D: NGÀY BÀO TINH THỰC TẾ (b.baoTinhDate) đè nhận diện tự động ── */
-  console.log('--- PHẦN D: NGÀY BÀO TINH THỰC TẾ (GHI ĐÈ TỰ ĐỘNG) ---');
+  /* ── PHẦN D: NGÀY GHI TRÊN THẺ BÀO TINH ĐỊNH TUẦN (nguồn mới) ── */
+  console.log('--- PHẦN D: NGÀY GHI LƯỢT BÀO TINH ĐỊNH TUẦN TRỪ TỒN ---');
   const dateN = dateInWeek(Y, N);
-  state.batches[2].baoTinhDate = dateN; // lô b3: ngày bào tinh thật ở tuần N (khác mốc tự động @P)
+  state.xuong2BaoTinhRecords[0].date = dateN; // sửa ngày ghi lượt → tuần N (khác tuần P)
   const convW2 = plan.getBaoTinhConvertedByWeek(Y);
-  check('D: baoTinhDate ghi đè lịch sử → đã bào tinh dời sang tuần N', !!convW2[N] && convW2[N][K] === 1000 && !convW2[P]);
-  delete state.batches[2].baoTinhDate;
+  check('D: đổi ngày ghi lượt → đã bào tinh dời sang tuần N', !!convW2[N] && convW2[N][K] === 1000 && !convW2[P]);
+  state.xuong2BaoTinhRecords[0].date = dateP;
   const convW3 = plan.getBaoTinhConvertedByWeek(Y);
-  check('D: bỏ ghi đè → nhận diện tự động từ stageHistory (tuần P) trở lại', !!convW3[P] && convW3[P][K] === 1000);
+  check('D: đổi lại ngày P → đã bào tinh trở lại tuần P', !!convW3[P] && convW3[P][K] === 1000);
+  // Lượt KHÔNG có nguồn lô (kind khác / mất nguồn) → không đóng góp (khớp quy tắc)
+  state.xuong2BaoTinhRecords.push({ id: 'x2bt-test-2', kind: 'bao_thanh', date: dateP, inSizeKey: '1250×18×7', inQty: 500, qtyOk: 480, sources: [] });
+  const convW4 = plan.getBaoTinhConvertedByWeek(Y);
+  check('D: lượt bao_thanh (không nguồn lô) KHÔNG trừ tồn kế hoạch', !!convW4[P] && convW4[P][K] === 1000);
+  state.xuong2BaoTinhRecords.pop();
 
   /* ── PHẦN E: sổ theo dõi ô TỔNG TỒN (tooltip biểu thức & hộp thoại chi tiết) ── */
   console.log('--- PHẦN E: SỔ THEO DÕI Ô TỔNG TỒN (TRACE) ---');
   const ledK = wd.ledger[K];
   check('E: ledger đủ 52 tuần cho từng ô tồn', Array.isArray(ledK) && ledK.length === 52);
-  check('E: tuần P — nhập 1000, trừ 1000 (đã bào tinh), TỔNG TỒN 2000',
-    ledK[P - 1].import === 1000 && ledK[P - 1].deduct === 1000 && /bào tinh/.test(ledK[P - 1].deductLabel) && ledK[P - 1].ton === 2000);
-  check('E: tuần N — lũy kế đầu tuần 1000, nhập 200, TỔNG TỒN 1200, trừ kế hoạch 600',
-    ledK[N - 1].carryIn === 1000 && ledK[N - 1].import === 200 && ledK[N - 1].ton === 1200 && ledK[N - 1].deduct === 600 && /kế hoạch/.test(ledK[N - 1].deductLabel));
-  const exprN = plan.buildTonExpression(ledK[N - 1], ledK[P - 1]);
-  check('E: biểu thức đủ thành phần (tồn P, đã bào tinh P, nhập N)',
-    typeof exprN === 'string' && exprN.includes(' = ') && exprN.includes(`tồn tuần ${P}`) && exprN.includes(`đã bào tinh (thực tế) tuần ${P}`) && exprN.includes(`+ 200 nhập mới tuần ${N}`));
-  const exprP1 = plan.buildTonExpression(ledK[0], null);
-  check('E: tuần 1 — biểu thức không có thành phần tồn tuần trước', !/tồn tuần/.test(exprP1) && exprP1.includes(`nhập mới tuần 1`));
+  check('E: tuần P — thêm mới 1000 (b1), rời nhóm 1000 (bào tinh b3), TỔNG TỒN 1000',
+    ledK[P - 1].import === 1000 && ledK[P - 1].deduct === 1000 && /bào tinh/.test(ledK[P - 1].deductLabel) && ledK[P - 1].ton === 1000);
+  check('E: tuần N — nhập 200, TỔNG TỒN 1200 = TỒN THỰC, trừ phần kế hoạch còn lại 600',
+    ledK[N - 1].import === 200 && ledK[N - 1].ton === 1200 && ledK[N - 1].deduct === 600 && /kế hoạch/.test(ledK[N - 1].deductLabel));
+  // Quá khứ: biểu thức suy NGƯỢC từ tuần sau; tuần hiện tại: neo vào tồn thực
+  const exprBack = plan.buildTonExpression(ledK[P - 1], null, ledK[P]);
+  check('E: biểu thức tuần quá khứ suy ngược (tồn tuần sau − thêm mới + rời nhóm)',
+    typeof exprBack === 'string' && exprBack.includes('= ') && exprBack.includes(`tồn tuần ${P + 1}`));
+  const exprCur = plan.buildTonExpression(ledK[N - 1], ledK[N - 2], null);
+  check('E: biểu thức tuần hiện tại = tồn THỰC TẾ (Sấy 1 + Sấy 2 + Kho − đã bào)',
+    typeof exprCur === 'string' && /THỰC TẾ/.test(exprCur));
+  const exprP1 = plan.buildTonExpression(ledK[0], null, ledK[1]);
+  check('E: tuần 1 — biểu thức suy ngược không có thành phần tồn tuần trước', !/tồn tuần 0/.test(exprP1));
 
   /* ── PHẦN F: cửa sổ hiển thị biểu đồ ép ván (14 ngày máy tính / 7 ngày điện thoại) ── */
   console.log('--- PHẦN F: CỬA SỔ HIỂN THỊ BIỂU ĐỒ ÉP VÁN ---');

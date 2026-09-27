@@ -5,8 +5,8 @@ import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
-import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, pressPositionPatternFor } from './hr.js';
-import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, toggleRateTableCollapse, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
+import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
+import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
 
@@ -103,13 +103,18 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     return ((d.l * d.w * d.t) / 1000000000) * (parseFloat(qty) || 0);
   }
 
-  // Tồn thanh thô ở công đoạn Bào Tinh theo loại nan (key 'l×w×t')
+  // Tồn thanh ĐÃ BÀO (thẻ Bào Tinh — xuong2BaoTinhRecords) theo kích thước ĐẦU VÀO,
+  // dùng cho gợi ý đầu vào Ép Ván ("tồn BT"). Thay logic cũ đếm lô stage bao_tinh
+  // (cột Kanban đã xóa); tính mọi loại bào (tinh / hạ cấp / bào thanh) — thanh đạt
+  // (qtyOk) của lượt nào thì còn góp gợi ý (không trừ phần đã ép — như bản cũ).
   function getBaoTinhStockByNanKey() {
     const stock = {};
-    state.batches.forEach(b => {
-      if (b.stage !== 'bao_tinh') return;
-      const key = `${b.length}×${b.width}×${b.thickness}`;
-      stock[key] = (stock[key] || 0) + (b.quantity || 0);
+    (Array.isArray(state.xuong2BaoTinhRecords) ? state.xuong2BaoTinhRecords : []).forEach(r => {
+      if (!r) return;
+      const key = String(r.inSizeKey || '').trim();
+      const ok = Number(r.qtyOk) || 0;
+      if (!key || ok <= 0) return;
+      stock[key] = (stock[key] || 0) + ok;
     });
     return stock;
   }
@@ -580,7 +585,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
 
   // ─── BẢNG: BÀO TINH ↔ ĐÃ ÉP — HIỆU SUẤT CHUYỂN ĐỔI THEO TUẦN ──
   // Cân đối đầu ra công đoạn Bào Tinh với lượng thanh đạt dùng ép thực tế:
-  //   Đã bào tinh (tuần) = số thanh chuyển vào Bào Tinh theo lịch sử chuyển công đoạn
+  //   Đã bào tinh (tuần) = số thanh ĐƯA VÀO bào theo THẺ Bào Tinh (nguồn mới —
+  //                        state.xuong2BaoTinhRecords, thay lô stage bao_tinh cũ)
   //   Đã ép (tuần)       = số thanh đạt dùng cho lượt ép thực tế (sticks) trong tuần
   //   Còn lại (lũy kế)   = Σ Đã bào tinh − Σ Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận
   //   Hiệu suất          = Σ Đã ép ÷ Σ Đã bào tinh (lũy kế, %)
@@ -677,29 +683,41 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     return (list || []).reduce((s, r) => s + pressRecordVolumeOf(r), 0);
   }
 
-  // ── GIỜ ÉP HC/TC (tự động từ Bảng bố trí Nhân Sự, vị trí tên chứa "ép") ──
-  // Trả về { workers, hours, hoursHC, hoursTC } — workers ĐI LÀM & được phân vị
-  // Ép đúng ngày (giống cột Công Nhân Ép của bảng); giờ cộng theo từng khung bố trí.
+  // ── GIỜ ÉP HC/TC (tự động từ Bảng bố trí Nhân Sự, vị trí ÉP VÁN thật) ──
+  // Trả về { workers, hours, hoursHC, hoursTC, posRows } — workers ĐI LÀM & được
+  // phân vị Ép đúng ngày (giống chip Người ép của thẻ ngày); giờ cộng theo từng
+  // khung bố trí. CHỈ tính vị trí Ép Ván thật (`isPressEpPos`) — KHÔNG tính vị trí
+  // của các công đoạn Xưởng 2 (Chọn thanh Bullig / Gia công Bullig) vì các công
+  // đoạn đó có thẻ riêng và tự tính giờ riêng.
   function epVanSnapshotOf(date) {
     const workers = hrWorkersForPress(date);
     let hours = 0, hoursHC = 0, hoursTC = 0;
+    const posRows = [];
     (state.hrAssignments || []).forEach(a => {
       if ((a.date || '') !== date) return;
       const posName = hrPosName(a.positionId);
-      if (!posName || !/ép/i.test(String(posName))) return;
+      if (!isPressEpPos(posName)) return;
       const h = hrSplitHoursHCDate(a.department || '', date, a.start, a.end, a.shiftIdx || 0);
       if (!h) return;
       // hrSplitHoursHC trả về PHÚT → chia 60 để ra GIỜ (giống sumPosHoursSplit)
-      hours += ((h.hc || 0) + (h.tc || 0)) / 60;
-      hoursHC += (h.hc || 0) / 60;
-      hoursTC += (h.tc || 0) / 60;
+      const hc = (h.hc || 0) / 60, tc = (h.tc || 0) / 60;
+      hours += hc + tc;
+      hoursHC += hc;
+      hoursTC += tc;
+      posRows.push({ name: String(posName || ''), employee: hrEmpNameOf(a.employeeId), hc, tc });
     });
     return {
       workers,
       hours: Math.round(hours * 100) / 100,
       hoursHC: Math.round(hoursHC * 100) / 100,
-      hoursTC: Math.round(hoursTC * 100) / 100
+      hoursTC: Math.round(hoursTC * 100) / 100,
+      posRows
     };
+  }
+  // Tên nhân viên theo id (dùng cho tooltip nguồn giờ) — '' nếu không tìm thấy
+  function hrEmpNameOf(employeeId) {
+    const e = (state.hrEmployees || []).find(x => x && x.id === employeeId);
+    return e ? String(e.name || '') : '';
   }
 
   // ── ĐỊNH MỨC CÔNG SUẤT ÉP VÁN theo tháng (m³/giờ) ──────────────
@@ -759,16 +777,16 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     } catch (err) { state.x2EpVanRates = {}; }
   }
 
-  // Chip "Người ép" trên đầu thẻ ngày (tự động từ phân vị Ép — tab Nhân Sự)
+  // Chip "Người ép" trên đầu thẻ ngày (tự động từ phân vị ÉP VÁN — tab Nhân Sự)
   function epVanWorkerBadge(list) {
     const ws = (list || []).filter(w => w && w.name);
     if (!ws.length) {
-      return '<span class="x2-day-cutters" title="Chưa có ai được phân vị Ép ngày này ở tab Nhân Sự (Chấm Công & Phân Vị Theo Ngày)"><i data-lucide="users"></i> <em style="color:var(--text-muted);">Chưa phân vị Ép</em></span>';
+      return '<span class="x2-day-cutters" title="Chưa có ai được phân vị Ép Ván ngày này ở tab Nhân Sự (Chấm Công & Phân Vị Theo Ngày)"><i data-lucide="users"></i> <em style="color:var(--text-muted);">Chưa phân vị Ép</em></span>';
     }
     const more = ws.length > 1
       ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(ws.slice(1).map(w => w.name).join(', '))}">+${ws.length - 1} người khác</em>`
       : '';
-    return `<span class="x2-day-cutters" title="Người ép — tự động từ Bảng bố trí vị trí 'Ép' (tab Nhân Sự) đúng ngày"><i data-lucide="users"></i> ${escapeHTML(ws[0].name)} ${more}</span>`;
+    return `<span class="x2-day-cutters" title="Người ép — tự động từ Bảng bố trí vị trí ÉP VÁN (tab Nhân Sự) đúng ngày. KHÔNG lấy người của công đoạn Chọn thanh Bullig / Gia công Bullig."><i data-lucide="users"></i> ${escapeHTML(ws[0].name)} ${more}</span>`;
   }
   // KHUNG 1: BẢNG DỮ LIỆU ÉP VÁN = THẺ NGÀY (như các công đoạn Xưởng 2)
   function renderX2EpVanDayCards() {
@@ -821,8 +839,12 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       const rateBadge = rate
         ? `<span class="x2-day-cap" title="Định mức công suất ép ván của tháng">ĐM: <strong>${fmtThanh(rate)} m³/h</strong></span>`
         : '';
+      // Nguồn giờ: liệt kê ĐÚNG các vị trí Ép Ván đã cộng (không gồm vị trí công đoạn Xưởng 2)
+      const posTip = (snap.posRows || []).length
+        ? ' · Nguồn giờ: ' + snap.posRows.map(p => `${p.name}${p.employee ? ` — ${p.employee}` : ''} ${fmtRatio(p.hc + p.tc)}h`).join(' · ')
+        : '';
       const hourTxt = snap.hours > 0
-        ? `<span class="x2-day-hours" title="Thời gian = tổng giờ công vị trí Ép trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)"><span class="x2-hours-hc">${fmtRatio(snap.hoursHC)}h HC</span><span class="x2-hours-tc">${fmtRatio(snap.hoursTC)}h TC</span></span>`
+        ? `<span class="x2-day-hours" title="${escapeHTML('Thời gian = tổng giờ công vị trí ÉP VÁN trong ngày (tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC). KHÔNG cộng giờ của các công đoạn Xưởng 2 (Chọn thanh Bullig / Gia công Bullig).' + posTip)}"><span class="x2-hours-hc">${fmtRatio(snap.hoursHC)}h HC</span><span class="x2-hours-tc">${fmtRatio(snap.hoursTC)}h TC</span></span>`
         : '';
       const rowsHtml = rows.map(r => {
         const vol1 = pressRecordVolumeOf(r);
@@ -832,6 +854,11 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
           : '';
         const vtDesc = (r.vanTho || []).map(l => `${escapeHTML(l.vtDim)} ×${(l.vtQty || 0).toLocaleString('vi-VN')}`).join(' · ') || '—';
         const stickDesc = (r.sticks || []).map(s => `${escapeHTML(s.nanKey)} ×${(s.sticks || 0).toLocaleString('vi-VN')}`).join(' · ') || '—';
+        // Nút XEM CHI TIẾT CÔNG NHÂN ÉP của chính lượt này — trước đây nằm ở cột
+        // "Công Nhân Ép" của bảng Danh Sách Lượt Ép (bảng đã gỡ) → giữ trên thẻ ngày
+        const workerBtn = hrWorkersForProduct(r.date, r.productName).length
+          ? ` <button class="btn btn-outline btn-icon btn-sm" onclick="app.pressWorkersDetail('${r.id}')" title="Xem chi tiết công nhân ép — đối chiếu chấm công & phân vị"><i data-lucide="users"></i></button>`
+          : '';
         return `<div class="x2-epv-row">
           <div class="x2-epv-row-main">
             <span class="x2-nan-chip" title="Thành phẩm của lượt ép">${escapeHTML(r.productName || '— (chưa ép TP)')}</span>
@@ -840,7 +867,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
             · <span title="Thanh thô (bào tinh) đầu vào">${stickDesc}</span>
             · Keo <strong>${(Number(r.glue) || 0).toFixed(2)}</strong> kg
             · Phụ gia <strong>${(Number(r.additive) || 0).toFixed(2)}</strong> kg
-            · <strong>${fmtThanh(vol1)} m³</strong>${noteBadge}
+            · <strong>${fmtThanh(vol1)} m³</strong>${noteBadge}${workerBtn}
           </div>
           <div class="x2-epv-row-actions" data-perm="press">
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.editPressRecord('${r.id}')" title="Sửa lượt ép"><i data-lucide="edit-3"></i></button>
@@ -849,7 +876,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
         </div>`;
       }).join('');
       html += `
-        <div class="x2-day-card">
+        <div class="x2-day-card" data-date="${escapeHTML(date)}">
           <div class="x2-day-head">
             <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
             ${epVanWorkerBadge(snap.workers)}
@@ -888,7 +915,6 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     renderX2EpVanDayCards();
     const chartFrame = document.getElementById('x2-epv-frame-chart');
     if (chartFrame && !chartFrame.hidden) renderPressChart(); // đang ở khung Biểu Đồ
-    renderPressTable();
     renderBaoTinhEffTable(); // bảng phụ "Bào Tinh ↔ Đã Ép" đã dời vào thẻ Bào Tinh
     // Cập nhật LUÔN chip trên mini card (đổi lượt ép ở bất kỳ màn hình nào cũng đúng)
     const chip = document.getElementById('x2-mini-count-ep-van');
@@ -900,7 +926,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     initLucide();
   }
 
-  // Điền bộ lọc năm cho biểu đồ & bảng lượt ép
+  // Điền bộ lọc năm cho biểu đồ & thẻ ngày ép
   function populatePressYearFilter() {
     const select = document.getElementById('press-year-filter');
     if (!select) return;
@@ -921,21 +947,49 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     return w > 0 ? w : getWeekNumber(getISOWeekString(r.date));
   }
 
-  // Điền bộ lọc tuần (danh sách tuần có lượt ép thuộc năm đang chọn)
-  function populatePressWeekFilter() {
-    const select = document.getElementById('press-week-filter');
-    if (!select) return;
+  // Danh sách tuần có lượt ép thuộc năm đang chọn (tăng dần) — dùng cho ô lọc
+  // Tuần và cho 2 mũi tên ‹ › nhảy nhanh cả tuần
+  function pressWeeksOfYear() {
     let recs = state.pressRecords;
     if (state.pressYearFilter !== 'all') {
       recs = recs.filter(r => String(r.year || getDateYear(r.date)) === String(state.pressYearFilter));
     }
-    const weeks = Array.from(new Set(recs.map(pressRecordWeek).filter(w => w > 0))).sort((a, b) => a - b);
+    return Array.from(new Set(recs.map(pressRecordWeek).filter(w => w > 0))).sort((a, b) => a - b);
+  }
+
+  // Điền bộ lọc tuần (danh sách tuần có lượt ép thuộc năm đang chọn)
+  function populatePressWeekFilter() {
+    const select = document.getElementById('press-week-filter');
+    if (!select) return;
+    const weeks = pressWeeksOfYear();
     // Nếu tuần đang chọn không còn hợp lệ với năm mới thì trả về "Tất cả"
     if (state.pressWeekFilter !== 'all' && !weeks.includes(parseInt(state.pressWeekFilter))) {
       state.pressWeekFilter = 'all';
     }
     select.innerHTML = '<option value="all" ' + (state.pressWeekFilter === 'all' ? 'selected' : '') + '>Tất cả</option>' +
       weeks.map(w => `<option value="${w}" ${String(w) === String(state.pressWeekFilter) ? 'selected' : ''}>Tuần ${w}</option>`).join('');
+  }
+
+  // Mũi tên ‹ › cạnh ô Tuần: nhảy nhanh 1 tuần trong danh sách tuần có lượt ép
+  // (bao vòng). Từ "Tất cả": › → tuần đầu, ‹ → tuần cuối. Tự đồng bộ ô Tuần +
+  // biểu đồ + thẻ ngày (như đổi ô Tuần trực tiếp).
+  function shiftPressWeekFilter(dir) {
+    const weeks = pressWeeksOfYear();
+    if (!weeks.length) return;
+    const cur = state.pressWeekFilter;
+    let next;
+    if (cur === 'all' || !weeks.includes(parseInt(cur))) {
+      next = dir > 0 ? weeks[0] : weeks[weeks.length - 1];
+    } else {
+      const i = weeks.indexOf(parseInt(cur));
+      next = weeks[(i + dir + weeks.length) % weeks.length]; // bao vòng
+    }
+    state.pressWeekFilter = String(next);
+    state.pressChartWinStart = null; // reset cửa sổ vuốt về mặc định
+    const sel = document.getElementById('press-week-filter');
+    if (sel) sel.value = String(next);
+    renderPressChart();
+    renderX2EpVanDayCards(); // khung "Lượt Ép" cũng theo bộ lọc tuần
   }
 
   // Plugin vẽ lên biểu đồ ngày:
@@ -1285,7 +1339,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
         maintainAspectRatio: false,
         // Chừa dải dưới trục X cho dải màu tuần (plugin pressWeekBands)
         layout: { padding: { bottom: 28 } },
-        // Bấm/chạm vào CỘT → highlight các dòng cùng ngày trong bảng lượt ép;
+        // Bấm/chạm vào CỘT → chuyển khung "Lượt Ép" + highlight thẻ ngày cùng ngày;
         // bấm/chạm vào dấu "!" vàng → mở form sửa ghi chú giải trình ngày đó
         onClick: (evt, elements) => {
           if (pressChartPan && pressChartPan.consumeMoved()) return; // vừa vuốt xong → không phải click
@@ -1297,7 +1351,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
           }
           if (!elements || !elements.length) return;
           const date = dates[elements[0].index];
-          if (date) highlightPressTableRowsByDate(date);
+          if (date) highlightPressDayCardByDate(date);
         },
         onHover: (evt, elements) => {
           if (pressChartPan && (pressChartPan.dragging() || pressChartPan.consumeMoved())) { hidePressNotePopover(); return; } // đang/vừa vuốt
@@ -1361,26 +1415,24 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       : 'Hiện nội dung tất cả ghi chú giải trình ngay trên biểu đồ';
   }
 
-  // Bấm/chạm vào CỘT trong biểu đồ "Thể Tích Ván Ép Theo Ngày" → highlight các
-  // dòng cùng ngày trong bảng lượt ép bên dưới và cuộn khung nhìn tới vùng đó.
-  function highlightPressTableRowsByDate(date) {
+  // Bấm/chạm vào CỘT trong biểu đồ "Thể Tích Ván Ép Theo Ngày" → tự chuyển về
+  // khung "Lượt Ép", highlight THẺ NGÀY cùng ngày (khớp data-date) và cuộn tới.
+  // (Bảng "Danh Sách Lượt Ép" đã gỡ — mọi ngày đều có trong thẻ ngày.)
+  function highlightPressDayCardByDate(date) {
     if (!date) return;
-    // Thoát chế độ biểu đồ toàn màn hình (nếu đang bật) để thấy bảng bên dưới
+    // Thoát chế độ biểu đồ toàn màn hình (nếu đang bật) trước khi về khung Lượt Ép
     const canvas = document.getElementById('press-chart');
     const card = canvas && canvas.closest ? canvas.closest('.press-chart-card') : null;
     if (card && card.classList.contains('chart-expanded')) collapseChartCard(card);
-    // Bảng đang thu gọn → mở rộng trước
-    const tableCard = document.getElementById('press-table-card');
-    if (tableCard && tableCard.classList.contains('rate-table-collapsed')) {
-      toggleRateTableCollapse('press-table-card');
-    }
-    const tbody = document.getElementById('press-table-body');
-    if (!tbody || !tbody.querySelectorAll) return;
+    // Đang ở khung Biểu Đồ → chuyển về khung Lượt Ép (nơi chứa thẻ ngày)
+    switchX2EpVanFrame('list');
+    const box = document.getElementById('x2-epv-day-cards');
+    if (!box || !box.querySelectorAll) return;
     let first = null;
-    tbody.querySelectorAll('tr').forEach(tr => {
-      const match = tr.dataset && tr.dataset.date === date;
-      tr.classList.toggle('press-row-highlight', match);
-      if (match && !first) first = tr;
+    box.querySelectorAll('.x2-day-card[data-date]').forEach(el => {
+      const match = el.dataset && el.dataset.date === date;
+      el.classList.toggle('press-row-highlight', match);
+      if (match && !first) first = el;
     });
     if (first && first.scrollIntoView) {
       first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
@@ -1389,84 +1441,6 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       void first.offsetWidth;
       first.classList.add('press-row-flash');
     }
-  }
-
-  // Bảng danh sách lượt ép
-  function renderPressTable() {
-    const tbody = document.getElementById('press-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    const notesByDate = getPressNotesByDate();
-
-    let records = [...state.pressRecords];
-    if (state.pressYearFilter !== 'all') {
-      records = records.filter(r => String(r.year || getDateYear(r.date)) === String(state.pressYearFilter));
-    }
-    if (state.pressWeekFilter !== 'all') {
-      records = records.filter(r => pressRecordWeek(r) === parseInt(state.pressWeekFilter));
-    }
-    records.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-    if (records.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding:30px;color:var(--text-muted);">
-        <i data-lucide="factory" style="width:28px;height:28px;margin-bottom:8px;"></i>
-        <p>Chưa có lượt ép nào. Bấm "Thêm Lượt Ép" để ghi nhận sản lượng ép ván.</p></td></tr>`;
-      initLucide();
-      return;
-    }
-
-    records.forEach(r => {
-      const vanThoList = r.vanTho || [];
-      const sticksList = r.sticks || [];
-      const noteText = notesByDate.get(r.date) || '';
-      const noteBadge = noteText
-        ? ` <span class="press-note-badge" data-note="${escapeHTML(noteText)}" data-date="${escapeHTML(r.date)}" title="Ghi chú giải trình">!</span>`
-        : '';
-      const vtDesc = vanThoList.map(l =>
-        `${escapeHTML(l.vtDim)} ×${(l.vtQty || 0).toLocaleString('vi-VN')}`).join('<br>');
-      const stickDesc = sticksList.map(s =>
-        `${escapeHTML(s.nanKey)} ×${(s.sticks || 0).toLocaleString('vi-VN')}`).join('<br>');
-      const vtQtyTotal = vanThoList.reduce((a, l) => a + (l.vtQty || 0), 0);
-      // Cột "Công Nhân Ép" — LẤY TỰ ĐỘNG theo thành phẩm & phân vị ngày lượt ép
-      // (tab Nhân Sự): TP "Bullig..." → vị trí "Chọn thanh Bullig"; TP thường →
-      // vị trí Ép. Hiện tối đa 3 tên + chip đếm + nút Chi tiết; chưa có dữ liệu
-      // phân vị thì để trống (hiện "—").
-      const autoWorkers = hrWorkersForProduct(r.date, r.productName);
-      const workerShort = autoWorkers.slice(0, 3).map(w => escapeHTML(w.name)).join(', ')
-        + (autoWorkers.length > 3 ? ` <strong style="color:var(--primary);">+${autoWorkers.length - 3}</strong>` : '');
-      const workerCell = autoWorkers.length
-        ? `<span title="${escapeHTML(autoWorkers.map(w => w.name).join(', '))}">${workerShort}</span>` +
-          ` <span class="hr-chip ok" style="margin:1px 2px;">${autoWorkers.length} người</span>` +
-          ` <button class="btn btn-outline btn-icon btn-sm" onclick="app.pressWorkersDetail('${r.id}')" title="Xem chi tiết công nhân ép — đối chiếu chấm công & phân vị"><i data-lucide="users"></i></button>`
-        : `<span class="text-muted" title="Chưa có ai được phân vị Ép ngày này ở tab Nhân Sự (Chấm Công & Phân Vị Theo Ngày)">—</span>`;
-      // Lượt ép CHƯA ép thành phẩm (không có thành phẩm) → hiển thị "—"
-      const productCell = r.productId
-        ? `<span class="rate-product-name">${escapeHTML(r.productName || 'Đã xóa')}</span>`
-        : '<span class="text-muted">— (chưa ép TP)</span>';
-      const fpCell = (r.finishedQty || 0) > 0
-        ? `<strong style="color:var(--primary);">${(r.finishedQty || 0).toLocaleString('vi-VN')}</strong> tấm`
-        : '<span class="text-muted">—</span>';
-      const tr = document.createElement('tr');
-      tr.dataset.date = r.date || ''; // phục vụ highlight từ biểu đồ khi bấm vào cột
-      tr.innerHTML = `
-        <td><strong>${fmtDateDM(r.date)}</strong>${noteBadge}<br><span class="text-muted">T${getWeekNumber(r.week)}</span></td>
-        <td>${productCell}</td>
-        <td>${vtDesc}</td>
-        <td>${stickDesc}</td>
-        <td>${vtQtyTotal.toLocaleString('vi-VN')}</td>
-        <td>${fpCell}</td>
-        <td>${(r.glue || 0).toFixed(2)}</td>
-        <td>${(r.additive || 0).toFixed(2)}</td>
-        <td>${workerCell}</td>
-        <td class="text-right">
-          <div style="display:flex;justify-content:flex-end;gap:4px;" data-perm="press">
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.editPressRecord('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.deletePressRecord('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
-          </div>
-        </td>`;
-      tbody.appendChild(tr);
-    });
-    initLucide();
   }
 
   // ── CÔNG NHÂN ÉP: suy ra TỰ ĐỘNG từ phân vị "Ép" theo ngày (tab Nhân Sự) ──
@@ -1729,6 +1703,34 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     return m ? `${m[1]}x${m[2]}x${m[3]}` : '';
   }
 
+  // ─── KẾT QUẢ "CHỌN THANH" (thẻ Bullig — Xưởng 2) → CỘT "ĐÃ ÉP" ──
+  // Thành phẩm ĐẠT của công đoạn nhỏ Chọn thanh (thành phẩm của Gia công Bullig)
+  // được CỘNG vào cột Đã Ép của bảng "Kế Hoạch vs Đã Ép" (tab Tổng Quan):
+  // khớp KÍCH THƯỚC của lượt Chọn thanh với TÊN sản phẩm Bullig trong Định Mức
+  // (tab Kế Hoạch → Định Mức Nguyên Vật Liệu). Không khớp định mức nào → bỏ qua.
+  function bulligPlanProductId(sizeKey) {
+    const nums = String(sizeKey || '').match(/\d+(?:[.,]\d+)?/g) || [];
+    if (nums.length !== 3) return '';
+    const rates = (state.materialRates || []).filter(r => String(r.product || '').toLowerCase().includes('bullig'));
+    const hit = rates.find(r => {
+      const rn = String(r.product || '').match(/\d+(?:[.,]\d+)?/g) || [];
+      return nums.every(n => rn.includes(n));
+    });
+    return hit ? hit.id : '';
+  }
+  // Danh sách kết quả Chọn thanh đã khớp sản phẩm kế hoạch: { productId, qty, date, sizeKey }
+  function getBulligCtOutputRows() {
+    return (state.xuong2BulligRecords || [])
+      .filter(r => r && r.kind === 'ct' && (Number(r.qtyOk) || 0) > 0)
+      .map(r => ({
+        productId: bulligPlanProductId(r.inSizeKey),
+        qty: Number(r.qtyOk) || 0,
+        date: String(r.date || ''),
+        sizeKey: String(r.inSizeKey || '')
+      }))
+      .filter(x => x.productId);
+  }
+
   function renderPlanVsPressChart() {
     const canvas = document.getElementById('plan-vs-press-chart');
     if (!canvas || !window.Chart) return;
@@ -1763,6 +1765,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     const years = new Set([curYearStr]);
     (state.planningItems || []).forEach(p => { if (p.year) years.add(String(p.year)); });
     (state.pressRecords || []).forEach(r => { years.add(String(r.year || getDateYear(r.date))); });
+    // Năm của các lượt Chọn thanh Bullig (nguồn "Đã Ép" thứ 2) — để bộ lọc Năm chọn được
+    getBulligCtOutputRows().forEach(x => { if (x.date) years.add(String(getDateYear(x.date))); });
     const yearList = [...years].filter(Boolean).sort((a, b) => Number(b) - Number(a));
     if (!['all', ...yearList].includes(String(state.planVsPressYear))) state.planVsPressYear = curYearStr;
     const yearSel = document.getElementById('pv-year-filter');
@@ -1801,6 +1805,14 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       const q = Number(r.finishedQty) || 0;
       pressQty[r.productId] = (pressQty[r.productId] || 0) + q;
       pressVol[r.productId] = (pressVol[r.productId] || 0) + dimVolume(r.fpDim || getProductDimsStr(r.productId), q);
+    });
+
+    // CỘNG KẾT QUẢ "CHỌN THANH" của thẻ Bullig (Xưởng 2) vào ĐÃ ÉP — thành phẩm
+    // đạt của công đoạn Gia công Bullig chính là thành phẩm của sản phẩm Bullig.
+    getBulligCtOutputRows().forEach(x => {
+      if (!yOn(getDateYear(x.date)) || !wkOn(getWeekNumber(getISOWeekString(x.date)))) return;
+      pressQty[x.productId] = (pressQty[x.productId] || 0) + x.qty;
+      pressVol[x.productId] = (pressVol[x.productId] || 0) + dimVolume(x.sizeKey || getProductDimsStr(x.productId), x.qty);
     });
 
     // SỐ LƯỢNG XUẤT (tab QC — Bảng Xuất Hàng): gộp theo mã hàng với cùng
@@ -2355,6 +2367,8 @@ export {
   deletePressRecord,
   fmtDateDM,
   getBaoTinhStockByNanKey,
+  getBulligCtOutputRows,
+  bulligPlanProductId,
   getDateYear,
   getPressProductsForWeek,
   getPressedQtyForPlan,
@@ -2362,7 +2376,7 @@ export {
   handlePressNoteDelete,
   handlePressNoteSubmit,
   hidePressNotePopover,
-  highlightPressTableRowsByDate,
+  highlightPressDayCardByDate,
   loadPressRecords,
   loadPressNotes,
   migratePressRecord,
@@ -2390,7 +2404,6 @@ export {
   renderPlanCapacityChart,
   shiftPlanCapacityWindow,
   renderPressChart,
-  renderPressTable,
   showPressNotePopover,
   setPlanVsPressUnit,
   setPlanVsPressSpan,
@@ -2408,6 +2421,7 @@ export {
   epVanSnapshotOf,
   savePressRecords,
   suggestPressMaterialFields,
+  shiftPressWeekFilter,
   togglePressNotesExpanded,
   todayLocalISO,
   updatePressRemoveButtons

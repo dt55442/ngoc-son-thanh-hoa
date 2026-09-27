@@ -992,8 +992,9 @@ h1, h2, h3, h4, h5 {
 }
 
 @media (min-width: 1200px) {
+  /* 3 cột (Bào Tinh đã xóa) → mỗi cột rộng hơn (đủ chỗ cho giờ làm việc/công suất) */
   .kanban-board {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -1038,7 +1039,6 @@ h1, h2, h3, h4, h5 {
 .column-header.stage-say1 { background-color: var(--stage-say1-bg); border-bottom-color: var(--stage-say1-border); }
 .column-header.stage-say2 { background-color: var(--stage-say2-bg); border-bottom-color: var(--stage-say2-border); }
 .column-header.stage-kho { background-color: var(--stage-kho-bg); border-bottom-color: var(--stage-kho-border); }
-.column-header.stage-bao-tinh { background-color: var(--stage-bao-bg); border-bottom-color: var(--stage-bao-border); }
 
 .header-title {
   display: flex;
@@ -1056,7 +1056,6 @@ h1, h2, h3, h4, h5 {
 .stage-dot.say1 { background-color: var(--stage-say1-color); }
 .stage-dot.say2 { background-color: var(--stage-say2-color); }
 .stage-dot.kho { background-color: var(--stage-kho-color); }
-.stage-dot.bao_tinh { background-color: var(--stage-bao-color); }
 
 .header-title h3 {
   font-size: 1rem;
@@ -1279,22 +1278,6 @@ h1, h2, h3, h4, h5 {
   padding-top: 8px;
   border-top: 1px solid var(--border-color);
   gap: 6px;
-}
-
-.btn-transfer {
-  width: 100%;
-  background-color: var(--primary-light);
-  color: var(--primary);
-  border: 1px solid var(--primary-border);
-  font-weight: 600;
-  font-size: 0.82rem;
-  padding: 8px 12px;
-  min-height: 38px;
-}
-
-.btn-transfer:hover {
-  background-color: var(--primary);
-  color: white;
 }
 
 .card-tools {
@@ -2136,8 +2119,10 @@ body.chart-expanded-open { overflow: hidden; }
   max-height: 100%;
 }
 
-.chart-expanded .press-chart-footer { flex-shrink: 0; }
-.chart-expanded .press-chart-footer { padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); }
+/* Chân biểu đồ đã gỡ — chừa lề an toàn dưới đáy khi toàn màn hình */
+.chart-expanded .press-chart-box {
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+}
 
 /* Ẩn tay kéo/sắp xếp khi đang toàn màn hình */
 .chart-expanded .drag-handle,
@@ -3047,197 +3032,8 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
 
 
 /* ======================================================= */
-/* FORM ĐIỀU CHUYỂN CÔNG ĐOẠN — GIAO DIỆN VIỀN NỔI        */
-/* ======================================================= */
-#modal-transfer .modal-card {
-  max-width: 520px;
-}
-
-#modal-transfer .modal-card > form {
-  padding: 16px 20px 4px;
-}
-
-/* Thẻ thông tin lô — card nổi */
-#modal-transfer .transfer-batch-preview {
-  margin: 0 0 16px 0;
-  padding: 14px 16px;
-  border: 2px solid var(--primary);
-  border-left-width: 6px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(21,128,61,0.10), rgba(21,128,61,0.03));
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
-}
-
-#modal-transfer .batch-preview-title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--primary);
-  letter-spacing: 0.02em;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-#modal-transfer .batch-preview-details {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: var(--text-main);
-}
-
-#modal-transfer .batch-preview-details strong {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-#modal-transfer .highlight-qty {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--primary);
-  background: rgba(21, 128, 61, 0.12);
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-}
-
-/* Dòng luồng công đoạn: Từ → Sang */
-#modal-transfer .stage-selector-group {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
-  margin-bottom: 16px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-subtle);
-  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.08);
-}
-
-#modal-transfer .stage-from,
-#modal-transfer .stage-to {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-#modal-transfer .stage-from { flex: 0 0 auto; }
-#modal-transfer .stage-to   { flex: 1 1 auto; }
-
-#modal-transfer .stage-from .label,
-#modal-transfer .stage-to .label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-#modal-transfer .stage-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: var(--radius-md);
-  background: var(--primary-light);
-  border: 1px solid var(--primary-border);
-  color: var(--primary);
-  font-weight: 800;
-  font-size: 0.85rem;
-  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.10);
-  white-space: nowrap;
-}
-
-#modal-transfer .transfer-arrow-icon {
-  width: 22px;
-  height: 22px;
-  color: var(--primary);
-  flex-shrink: 0;
-  filter: drop-shadow(0 2px 3px rgba(15,23,42,.25));
-}
-
-#modal-transfer .stage-to select {
-  width: 100%;
-  min-height: 40px;
-  padding: 8px 10px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.10);
-  transition: var(--transition-fast);
-}
-
-#modal-transfer .stage-to select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
-}
-
-/* Các trường nhập liệu dạng ô nổi */
-#modal-transfer .form-group {
-  padding: 10px 12px;
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-subtle);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
-  margin-bottom: 12px;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-#modal-transfer .form-group:focus-within {
-  border-color: var(--primary);
-  box-shadow: 0 3px 10px rgba(21, 128, 61, 0.18);
-}
-
-#modal-transfer .form-group label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-
-#modal-transfer .form-group input[type="text"],
-#modal-transfer .form-group textarea {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  min-height: 38px;
-  font-weight: 500;
-}
-
-/* Ghi chú: chuyển toàn bộ lô */
-#modal-transfer .transfer-full-note {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  margin-bottom: 4px;
-  border: 1.5px dashed var(--primary);
-  border-radius: var(--radius-md);
-  background: rgba(21, 128, 61, 0.07);
-  color: var(--primary);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-#modal-transfer .transfer-full-note i {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-/* ======================================================= */
-/* CHỌN NHIỀU LÔ ĐỂ CHUYỂN CÙNG LÚC                        */
-/* (thanh công cụ Kanban nay nằm trong thẻ "Than Hóa + Sấy" */
-/*  — chứa nút Thêm Lô Nan + Chọn nhiều lô)                */
+/* THANH CÔNG CỤ KANBAN (trong thẻ "Than Hóa + Sấy")      */
+/* — nút Thêm Lô Sấy Mới + Chuyển Kho                     */
 /* ======================================================= */
 .kanban-toolbar {
   display: flex;
@@ -3253,159 +3049,7 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
   font-weight: 700;
 }
 
-#btn-multi-transfer.active {
-  background: var(--primary);
-  color: var(--text-inverse, #fff);
-  border-color: var(--primary);
-}
 
-/* Ô đánh dấu trên thẻ — mặc định ẩn */
-.batch-check {
-  display: none;
-  position: absolute;
-  top: -8px;
-  left: -8px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--border-color);
-  background: var(--bg-card);
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
-  z-index: 3;
-}
-
-.batch-check i,
-.batch-check svg {
-  width: 15px !important;
-  height: 15px !important;
-  color: transparent;
-}
-
-/* Chế độ chọn nhiều lô đang bật */
-body.multi-select .batch-check {
-  display: flex;
-}
-
-body.multi-select .bamboo-card {
-  cursor: pointer;
-  border-style: dashed;
-}
-
-body.multi-select .bamboo-card:hover {
-  border-color: var(--primary);
-}
-
-body.multi-select .bamboo-card.selected {
-  border: 2px solid var(--primary);
-  background: rgba(21, 128, 61, 0.05);
-  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
-}
-
-.bamboo-card.selected .batch-check {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-
-.bamboo-card.selected .batch-check i,
-.bamboo-card.selected .batch-check svg {
-  color: #fff;
-}
-
-/* Ẩn nút thao tác trên thẻ khi đang chọn nhiều (tránh bấm nhầm) */
-body.multi-select .card-actions {
-  display: none !important;
-}
-
-/* Thanh hành động nổi dưới màn hình — z-index 10100 > 10000 (pop-up chi tiết
-   vị trí Xưởng 2 .modal-overlay.show) vì nút "Chọn nhiều lô" giờ nằm TRONG
-   pop-up: đang bật chế độ chọn thì thanh này phải nổi TRÊN nền mờ pop-up */
-.multi-transfer-bar {
-  display: none;
-  position: fixed;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  z-index: 10100;
-  width: min(720px, calc(100% - 24px));
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  border: 2px solid var(--primary);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.30);
-}
-
-.multi-transfer-bar.show {
-  display: flex;
-  animation: fadeIn 0.18s ease;
-}
-
-.multi-transfer-bar .mtb-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  flex-wrap: wrap;
-}
-
-.multi-transfer-bar .mtb-info strong {
-  font-size: 1rem;
-  color: var(--primary);
-}
-
-.multi-transfer-bar .mtb-info i,
-.multi-transfer-bar .mtb-info svg {
-  width: 16px;
-  height: 16px;
-  color: var(--primary);
-}
-
-.multi-transfer-bar .mtb-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.multi-transfer-bar select {
-  min-height: 36px;
-  padding: 6px 10px;
-  font-weight: 600;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-}
-
-.multi-transfer-bar select:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-/* Ô nhập Vị Trí & Ghi Chú dùng chung khi chuyển nhiều lô */
-.multi-transfer-bar input[type="text"] {
-  flex: 1 1 150px;
-  min-width: 140px;
-  max-width: 220px;
-  min-height: 36px;
-  padding: 6px 10px;
-  font-weight: 600;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-}
-
-.multi-transfer-bar input[type="text"]:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-/* ======================================================= */
 /* TUẦN HIỆN TẠI — bảng Kế Hoạch Tổng Hợp                  */
 /* ======================================================= */
 .planning-matrix thead th.current-week {
@@ -3458,8 +3102,7 @@ body.multi-select .card-actions {
 
   /* ── Kanban (thanh công cụ nay nằm trong thẻ "Than Hóa + Sấy") ── */
   .kanban-toolbar { padding: 0 0 10px; }
-  .kanban-toolbar .btn-primary,
-  #btn-multi-transfer {
+  .kanban-toolbar .btn-primary {
     flex: 1 1 100%;
     width: 100%;
     justify-content: center;
@@ -3469,31 +3112,11 @@ body.multi-select .card-actions {
   .mobile-stage-tabs { gap: 6px; }
   .stage-tab { padding: 7px 12px; font-size: 0.78rem; }
 
-  /* ── Thanh nổi chọn nhiều lô: nằm TRÊN thanh điều hướng dưới ── */
-  .multi-transfer-bar.show {
-    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
-    width: calc(100% - 16px);
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    max-height: calc(100vh - 140px);
-    overflow-y: auto;
-  }
-  .multi-transfer-bar .mtb-info { justify-content: space-between; }
-  .multi-transfer-bar .mtb-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  .multi-transfer-bar .mtb-actions select { grid-column: 1 / -1; }
-  .multi-transfer-bar select,
-  .multi-transfer-bar input[type="text"] { width: 100%; min-width: 0; max-width: none; min-height: 40px; }
-  .multi-transfer-bar .mtb-actions .btn { min-height: 40px; }
-
   /* ── Modal gọn, nút Lưu luôn nhìn thấy ── */
   .modal-overlay { padding: 8px; }
   .modal-card { max-width: 100% !important; border-radius: var(--radius-md); }
-  #modal-transfer .modal-card > form,
   #planning-item-form,
   #plan-edit-form { padding: 14px !important; }
-  #modal-transfer .form-group { padding: 8px 10px; margin-bottom: 10px; }
-  #modal-transfer .transfer-batch-preview { margin-bottom: 12px; padding: 12px 12px; }
   .modal-footer {
     position: sticky;
     bottom: 0;
@@ -3524,9 +3147,6 @@ body.multi-select .card-actions {
 /* Màn hình rất hẹp (≤380px) */
 @media (max-width: 380px) {
   .logo-text h1 { font-size: 0.85rem; }
-  .multi-transfer-bar .mtb-actions { grid-template-columns: 1fr; }
-  .multi-transfer-bar select,
-  .multi-transfer-bar input[type="text"] { width: 100%; }
 }
 
 /* ======================================================= */
@@ -3717,20 +3337,11 @@ body.multi-select .card-actions {
 .press-chart-box {
   position: relative;
   height: 480px;
-  margin: 14px 16px 0;
+  margin: 14px 16px;
   padding: 8px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 14px;
   box-shadow: 0 3px 10px rgba(23, 90, 145, 0.18);
-}
-
-/* Nút Thêm Lượt Ép đặt dưới biểu đồ */
-.press-chart-footer {
-  display: flex;
-  justify-content: center;
-  margin-top: 12px;
-  padding: 10px 16px 16px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.55);
 }
 
 /* Nút "Hiện Ghi Chú" đang bật (hiển thị nội dung ghi chú trên biểu đồ) */
@@ -3785,22 +3396,19 @@ body.multi-select .card-actions {
   font-weight: 600;
 }
 
-/* Highlight dòng bảng lượt ép khi bấm chọn cột tương ứng trong biểu đồ */
-#press-table-body tr.press-row-highlight td {
-  background: rgba(37, 99, 235, 0.10);
-  transition: background 0.3s;
-}
-
-#press-table-body tr.press-row-highlight td:first-child {
-  box-shadow: inset 3px 0 0 var(--primary, #2563eb);
+/* Highlight THẺ NGÀY khi bấm chọn cột tương ứng trong biểu đồ */
+#x2-epv-day-cards .x2-day-card.press-row-highlight {
+  border-color: var(--primary, #2563eb);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+  transition: box-shadow 0.3s;
 }
 
 @keyframes press-row-flash {
-  0% { background-color: rgba(37, 99, 235, 0.38); }
-  100% { background-color: rgba(37, 99, 235, 0.10); }
+  0% { box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.55); }
+  100% { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35); }
 }
 
-#press-table-body tr.press-row-highlight.press-row-flash td {
+#x2-epv-day-cards .x2-day-card.press-row-highlight.press-row-flash {
   animation: press-row-flash 1.4s ease-out;
 }
 
@@ -5784,6 +5392,137 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
   white-space: nowrap;
 }
 .x2-rate-chip:hover, .x2-rate-chip:focus-visible { border-color: var(--primary); color: var(--primary); }
+.x2-rate-empty { color: var(--text-muted); font-style: italic; }
+
+/* ── THẺ "THAN HÓA + SẤY": THU GỌN BẢNG KANBAN + BẢNG THỐNG KÊ SẤY THEO NGÀY ── */
+/* Thanh thu gọn + dòng TỔNG QUAN số lô từng công đoạn (Sấy 1 · Sấy 2 · Kho) */
+.kanban-collapse-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 16px 10px 16px;
+}
+.kanban-collapse-bar .btn { white-space: nowrap; }
+.kanban-collapse-bar .btn svg { width: 15px; height: 15px; }
+.x2-kanban-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-muted); }
+.x2-kanban-summary:empty { display: none; }
+/* Dòng tổng quan chỉ hiện khi ĐÃ thu gọn bảng lô (lúc đó không thấy cột Kanban nữa) */
+#x2-than-hoa-card:not(.kanban-board-collapsed) .x2-kanban-summary { display: none; }
+.x2-kanban-sum-item b { color: var(--primary); }
+/* ĐÃ THU GỌN: ẩn bảng Kanban + dải tab công đoạn (điện thoại) + gợi ý vuốt;
+   giữ nguyên thanh công cụ (Thêm Lô Sấy Mới / Chuyển Kho) + bảng thống kê sấy */
+#x2-than-hoa-card.kanban-board-collapsed .kanban-board,
+#x2-than-hoa-card.kanban-board-collapsed .mobile-stage-tabs,
+#x2-than-hoa-card.kanban-board-collapsed .stage-swipe-hint { display: none; }
+
+/* Bảng thống kê: mỗi ngày 1 DÒNG ĐẦU (ngày · người làm · tổng ngày) rồi tới
+   TỪNG LẦN THAN HÓA (Lần N · công đoạn · vị trí · lô · m³ · phút · giờ…) */
+.x2-say-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 720px; }
+.x2-say-table thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--bg-subtle);
+  text-align: right;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.x2-say-table thead th:nth-child(-n+3) { text-align: left; }
+.x2-say-table td { padding: 4px 8px; border-top: 1px solid var(--border-color); text-align: right; white-space: nowrap; }
+.x2-say-table td.x2-say-lan,
+.x2-say-table td.x2-say-stage,
+.x2-say-table td.x2-say-loc,
+.x2-say-table td.x2-say-code,
+.x2-say-table td.x2-say-times-cell { text-align: left; }
+.x2-say-table td.x2-say-vol { font-weight: 700; }
+.x2-say-table td.x2-say-min { color: var(--text-muted); }
+.x2-say-table td.x2-say-need { color: #d97706; font-weight: 600; }
+.x2-say-table td.x2-say-code { font-weight: 600; }
+.x2-say-table td.x2-say-loc { color: var(--text-muted); }
+.x2-say-row-say1 td.x2-say-lan { border-left: 3px solid #ea580c; } /* Sấy 1 — cam (khớp chip ngày S1) */
+.x2-say-row-say2 td.x2-say-lan { border-left: 3px solid #2563eb; } /* Sấy 2 — xanh dương (khớp chip ngày S2) */
+/* Nhãn "Lần N" của từng lần than hóa */
+.x2-say-lan-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+/* Ô nhập "Số lần TH" (số lần than hóa THẬT của lô) + nhãn ×N đang dùng */
+.x2-say-times-cell { display: flex; align-items: center; gap: 6px; }
+.x2-say-times-input {
+  width: 58px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  text-align: right;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-main, #292524);
+}
+.x2-say-times-input.manual { border-style: solid; border-color: var(--primary); font-weight: 700; }
+.x2-say-times-auto { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
+/* Dòng đầu NHÓM (ngày + công đoạn): tổng lô/m³ + ô nhập "Số lần TH" của nhóm */
+.x2-say-group-head td { background: rgba(217, 119, 6, 0.08); border-top: 1px solid var(--border-color); }
+.x2-say-group-head .x2-say-lan-badge { background: #fff7ed; border-color: #fed7aa; color: #b45309; }
+.x2-say-group-lbl { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+.x2-say-day-head td { background: var(--bg-subtle); padding: 5px 8px; font-size: 0.76rem; }
+.x2-say-day-date { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--primary); }
+.x2-say-day-date svg { width: 13px; height: 13px; }
+.x2-say-day-workers { margin-left: 10px; color: var(--text-muted); }
+/* Ô nhập GIỜ SỰ CỐ CHO PHÉP + nhãn Hiệu suất của ngày (dòng đầu ngày) */
+.x2-say-day-inc { display: inline-flex; align-items: center; gap: 5px; margin-left: 12px; color: var(--text-muted); font-size: 0.72rem; }
+.x2-say-inc-input {
+  width: 62px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  text-align: right;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-main, #292524);
+}
+.x2-say-inc-unit { color: var(--text-muted); }
+.x2-say-eff-badge {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.x2-say-day-sum { float: right; color: var(--text-muted); }
+.x2-say-eff { font-weight: 700; }
+.x2-say-eff-good { color: #16a34a; } /* đạt / nhanh hơn giờ cần */
+.x2-say-eff-low { color: #ea580c; }  /* chậm hơn giờ cần */
+.x2-say-dash { color: var(--text-muted); }
+.x2-say-empty { text-align: center; color: var(--text-muted); padding: 12px; }
+.x2-say-note {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  border-top: 1px dashed var(--border-color);
+}
+.x2-say-note svg { width: 12px; height: 12px; display: inline; }
+/* Ô nhập trong thanh định mức than hóa (Phút/lần · m³/lần) */
+.x2-rate-field { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); }
+.x2-rate-field input[type="number"] { width: 86px; }
+@media (max-width: 640px) {
+  .kanban-collapse-bar { margin: 0 10px 8px 10px; }
+  .x2-say-table { font-size: 0.72rem; min-width: 640px; }
+  .x2-say-day-sum { float: none; display: block; }
+  .x2-rate-field input[type="number"] { width: 70px; }
+}
 
 /* ── Ô TỰ TÍNH KL ỐNG BỔ (form Bổ Ống): ống đầu vào → ống bổ ── */
 .x2-ong-calc {
@@ -5853,20 +5592,9 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 }
 .x2-qty-pending svg { width: 12px; height: 12px; }
 
-/* ─────────────────────────────────────────────────────────────
-   TẠM ẨN CỘT "4. BÀO TINH" trong bảng Kanban (Than Hóa + Sấy)
-   CỜ XÓA SAU: công đoạn Than Hóa + Sấy chỉ dùng 3 thẻ Sấy 1 / Sấy 2 / Kho.
-   KHÔNG xóa markup/mã công đoạn bao_tinh (planning, press, dashboard,
-   xuất Excel vẫn dùng) — chỉ ẩn cột + chỉnh lưới còn 3 cột cho rộng rãi.
-   Muốn hiện lại: xóa 3 dòng CSS trong khối này và trả tab mobile "Bào tinh".
-   ───────────────────────────────────────────────────────────── */
-.kanban-column[data-stage-col="bao_tinh"],
-.kanban-column[data-x2-hidden="1"] { display: none !important; }
-@media (min-width: 1200px) {
-  /* 3 cột thay vì 4 → mỗi cột rộng hơn ~33% (đủ chỗ cho thông tin giờ làm việc/công suất) */
-  .kanban-board { grid-template-columns: repeat(3, 1fr); }
-}
-/* ─────────────────────────────────────────────────────────── */
+/* ── LƯỚI BẢNG KANBAN (Than Hóa + Sấy): CỘT BÀO TINH ĐÃ XÓA → 3 cột ──
+   Trước đây có cột ẩn "4. Bào Tinh" (khối TẠM ẨN CỘT — đã gỡ); số liệu Bào Tinh
+   lấy từ thẻ Bào Tinh (x2-bao-tinh-card) trong tab Công Đoạn. */
 
 /* ── Ô "Thông Tin Lấy Từ Nguồn" trong modal Thêm Lô Sấy Mới ── */
 .al-source-info {
@@ -5918,6 +5646,23 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
   background: var(--bg-subtle);
 }
 .al-picker-tools { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.al-search {
+  flex: 1 1 220px;
+  min-width: 160px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  font-size: 0.82rem;
+}
+.al-search:focus { outline: none; border-color: var(--primary); }
+/* FORM "Thêm Lô Sấy Mới": 3 ô đầu (Công đoạn · Ngày · Dùng Cho) cùng 1 DÒNG trên desktop;
+   màn hình hẹp vẫn 1 cột. Các ô col-span-full vẫn chiếm hết chiều ngang. */
+@media (min-width: 640px) {
+  #add-lot-form .form-grid { grid-template-columns: repeat(3, 1fr); }
+  #add-lot-form .col-span-full { grid-column: 1 / -1; }
+}
 .al-card-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -5941,17 +5686,45 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
   transition: var(--transition-fast);
 }
 .al-card:hover { border-color: var(--primary); }
+/* Thẻ nguồn KHÔNG còn ô vuông tick — thẻ được chọn nổi bật bằng nền + viền */
 .al-card.picked {
   border-color: var(--primary);
   background: var(--primary-light);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+/* Dòng 2 của thẻ nguồn: chip Dùng cho + badge đếm ngày (tô MÀU NỀN cả mảng) */
+.al-card-sub { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.al-use-tag,
+.al-day-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+/* Chip Dùng cho: Ván = tím nhạt · Bullig = hồng nhạt · khác = xám */
+.al-use-tag { background: #ede9fe; color: #6d28d9; }
+.al-use-tag.use-bullig { background: #fce7f3; color: #be185d; }
+.al-use-tag.use-khac { background: var(--bg-subtle); color: var(--text-muted); }
+/* Badge đếm ngày: S1 = cam · S2 = xanh dương · K = xanh lá · ngoài = nâu · luồng = vàng */
+.al-day-badge.day-s1 { background: #ffedd5; color: #c2410c; }
+.al-day-badge.day-s2 { background: #dbeafe; color: #1d4ed8; }
+.al-day-badge.day-k { background: #dcfce7; color: #15803d; }
+.al-day-badge.day-ext { background: #fde8d7; color: #7c4a12; }
+.al-day-badge.day-luuong { background: #fef9c3; color: #a16207; }
+/* Chế độ đêm (Tre Sáng): nền badge đậm hơn một nhịp cho dễ đọc */
+body[data-theme="night"] .al-use-tag { background: #e4e0f7; }
+body[data-theme="night"] .al-use-tag.use-bullig { background: #f9e0ec; }
+body[data-theme="night"] .al-day-badge.day-s1 { background: #ffe3c4; }
+body[data-theme="night"] .al-day-badge.day-s2 { background: #cfe3fb; }
+body[data-theme="night"] .al-day-badge.day-k { background: #ccf0d8; }
   box-shadow: inset 0 0 0 1px var(--primary-border);
 }
-.al-card-check { display: inline-flex; }
-.al-card-check svg { width: 16px; height: 16px; color: var(--text-muted); }
-.al-card.picked .al-card-check svg { color: var(--primary); }
+.al-card-check { display: none; } /* Ô vuông tick đã bỏ — thẻ chọn nổi bằng nền + viền */
 .al-card-body { display: flex; flex-direction: column; min-width: 0; }
 .al-card-main { font-size: 0.8rem; font-weight: 700; }
-.al-card-sub { font-size: 0.7rem; color: var(--text-muted); }
 .al-empty { font-size: 0.8rem; color: var(--text-muted); font-style: italic; padding: 6px 2px; }
 .al-loc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .al-loc-chip {
@@ -7272,7 +7045,7 @@ body[data-theme="night"][data-fx="low"] .ai-fab-bubble:has(.ai-fab-bubble-thinki
 }
 
 /* Nội dung thẻ nổi trên lớp khung tre — dùng :where() độ đặc hiệu 0
-   để KHÔNG ghi đè position của các con tự đặt absolute (batch-check, v.v.) */
+   để KHÔNG ghi đè position của các con tự đặt absolute */
 :where(.dashboard-card, .planning-card, .bamboo-card) > :where(*) {
   position: relative;
   z-index: 2;
@@ -7359,6 +7132,77 @@ body[data-fx="low"] .bamboo-card::after {
 .x2-btinh-card .al-card-main { font-size: 0.82rem; }
 .x2-btinh-card .al-card-sub { font-size: 0.73rem; }
 .x2-btinh-groups { margin: 2px 0 10px; }
+.x2-btinh-card .al-card-main { font-size: 0.82rem; }
+.x2-btinh-card .al-card-sub { font-size: 0.73rem; }
+
+/* ═══ THẺ BULLIG — Gia công + Chọn thanh (2 công đoạn nhỏ trong 1 thẻ) ═══ */
+/* Danh sách chọn lô (Gia công) dùng CHUNG khuôn THẺ NGUỒN của Than Hóa + Sấy
+   (.al-card + .al-card-body/.al-card-main/.al-card-sub) — bấm thẻ = CHỌN */
+.x2-bl-lot-picker .al-card-list { max-height: 240px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.x2-bl-lot-picker .al-card { align-items: flex-start; }
+.x2-bl-lot-picker .al-card-sub { margin-top: 3px; }
+/* Dòng TỔNG của thẻ ngày Bullig (tfoot): tổng thanh gia công được + TỔNG THANH THÔ ĐÃ DÙNG */
+.x2-bl-day-total td {
+  background: var(--bg-subtle);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-main);
+  border-top: 2px solid var(--border-color);
+}
+/* HÀNG: Kích thước thành phẩm (thu gọn) + Số lượng kèm gợi ý "/ tổng đã chọn" */
+#x2-bl-gc-group { align-items: flex-start; }
+#x2-bl-gc-group .x2-bl-dim-g { flex: 0 0 230px; }
+#x2-bl-gc-group .x2-bl-qty-g { flex: 1 1 220px; max-width: 340px; }
+.x2-bl-qty-wrap { display: flex; align-items: center; gap: 8px; }
+.x2-bl-qty-wrap input { flex: 1 1 auto; min-width: 0; }
+.x2-bl-qty-hint {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.x2-bl-qty-hint.over { color: #dc2626; }
+/* Chip HỆ SỐ QUY ĐỔI cạnh ô Số Lượng Gia Công: "1 thanh thô = N thanh gia công" */
+.x2-bl-conv-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.x2-bl-conv-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #fef9c3;
+  color: #a16207;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.x2-bl-conv-chip.warn { background: #fee2e2; color: #b91c1c; }
+body[data-theme="night"] .x2-bl-conv-chip { background: #fdf3c8; }
+@media (max-width: 640px) {
+  #x2-bl-gc-group .x2-bl-dim-g,
+  #x2-bl-gc-group .x2-bl-qty-g { flex: 1 1 auto; max-width: none; }
+  /* Điện thoại: danh sách lô 1 CỘT cho dễ chạm (như danh sách nguồn Than Hóa) */
+  .x2-bl-lot-picker .al-card-list { grid-template-columns: 1fr; max-height: 44vh; }
+}
+#x2-bullig-card .x2-cut-form-wrap { padding-top: 0; }
+#x2-bullig-card .x2-form-row .form-group { gap: 2px; }
+#x2-bullig-card .x2-form-row .form-group label { font-size: 0.78rem; }
+#x2-bullig-card .x2-form-row .form-group small { margin-top: 2px; }
+/* Tiêu đề 2 VÙNG công đoạn nhỏ trong thẻ ngày */
+.x2-bl-zone-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.x2-bl-zone-head svg { width: 14px; height: 14px; }
+.x2-bl-zone-gc { background: #fef3c7; color: #92400e; }  /* Vàng hổ phách — Gia công */
+.x2-bl-zone-ct { background: #dcfce7; color: #166534; }  /* Xanh lá — Chọn thanh */
+.x2-day-card > .x2-bl-zone-head:first-of-type { margin-top: 6px; }
+
 .x2-btinh-groups-head {
   display: flex;
   align-items: center;
@@ -7468,7 +7312,6 @@ body[data-fx="low"] .bamboo-card::after {
 #x2-epv-day-cards .x2-day-card { margin-bottom: 8px; }
 #x2-epv-day-wrap .x2-cut-table-scroll { max-height: 380px; overflow-y: auto; }
 #x2-epv-day-wrap { margin: 0 0 12px; }
-#press-table-card { margin: 0; }
 
 /* ═════════════════════════════════════════════════════════════
    TỐI ƯU ĐIỆN THOẠI (≤639.98px) — khối CUỐI file nên thắng mọi quy
@@ -7510,7 +7353,7 @@ body:has(.view-panel.active .modal-overlay.show) { overflow: hidden; }
   .form-group input, .form-group select, .form-group textarea,
   .modal-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   .modal-card select, .modal-card textarea,
-  .column-search-input, .multi-transfer-bar input, .multi-transfer-bar select,
+  .column-search-input,
   #ai-question,
   .x2-detail-modal input, .x2-detail-modal select, .x2-detail-modal textarea {
     font-size: 16px;

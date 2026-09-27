@@ -10,7 +10,7 @@ import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
-import { baoThoDisplay, baoTinhDisplay, boOngDisplay, chonNanDisplay, cutDisplay } from './xuong2.js';
+import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay } from './xuong2.js';
 
   // ─── CUSTOM XLSX EXPORT ───────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════
@@ -28,6 +28,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, chonNanDisplay, cutDisplay
     { id: 'baotho',  label: 'Chạy Máy Bào Thô' },
     { id: 'chonnan', label: 'Chọn Nan Thô' },
     { id: 'baotinh', label: 'Bào Tinh' },
+    { id: 'bullig',  label: 'Bullig (Gia công + Chọn thanh)' },
     { id: 'epvan',   label: 'Ép Ván (mở form xuất Ép Ván)' }
   ];
 
@@ -53,7 +54,8 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, chonNanDisplay, cutDisplay
       boong:   () => (state.xuong2BoOngRecords || []).map(r => ({ rec: r, d: boOngDisplay(r), date: r.date || '' })),
       baotho:  () => (state.xuong2BaoThoRecords || []).map(r => ({ rec: r, d: baoThoDisplay(r), date: r.date || '' })),
       chonnan: () => (state.xuong2ChonNanThoRecords || []).map(r => ({ rec: r, d: chonNanDisplay(r), date: r.date || '' })),
-      baotinh: () => (state.xuong2BaoTinhRecords || []).map(r => ({ rec: r, d: baoTinhDisplay(r), date: r.date || '' }))
+      baotinh: () => (state.xuong2BaoTinhRecords || []).map(r => ({ rec: r, d: baoTinhDisplay(r), date: r.date || '' })),
+      bullig:  () => (state.xuong2BulligRecords || []).map(r => ({ rec: r, d: bulligDisplay(r), date: r.date || '' }))
     };
     const fn = map[source];
     return fn ? fn() : [];
@@ -668,6 +670,36 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, chonNanDisplay, cutDisplay
           x2FmtKg(d.volumeOk), x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
       });
       sumNote = `Tổng đạt ${x2FmtKg(ok)} thanh · lỗi ${x2FmtKg(err)} thanh · thể tích đạt ${x2FmtKg(vol)} m³`;
+    } else if (source === 'bullig') {
+      head = ['Stt', 'Ngày', 'Công Đoạn', 'Nguồn (Lô Kho / Cỡ TP)', 'K.Thước Thanh Thô', 'Thô Dùng (thanh)', 'K.Thước Thành Phẩm', 'SL Gia Công Được / Tối Đa', 'SL Đạt', 'SL Lỗi', 'Tổng Chọn', 'Thể Tích (m³)', 'Người Làm', 'Giờ HC', 'Giờ TC'];
+      const list = x2ExportRowsOf('bullig').filter(x => x2InRange(x.date, from, to))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      let outQty = 0, thoQty = 0, ctQty = 0, vol = 0;
+      list.forEach((x, i) => {
+        const d = x.d;
+        const srcTxt = d.kind === 'gc'
+          ? (d.lotCodes || '—')
+          : `Cỡ thành phẩm ${d.inSizeKey || '—'}`;
+        // Kích thước THANH THÔ của các lô nguồn (bỏ trùng) — như cột "Nguồn lô" trên màn hình
+        const thoDim = d.kind === 'gc' && d.lots.length
+          ? [...new Set(d.lots.map(l => bulligLotSizeText(l.batch)))].join(' + ')
+          : '';
+        outQty += d.kind === 'gc' ? (Number(d.quantity) || 0) : 0;
+        thoQty += d.kind === 'gc' ? (Number(d.qtyIn) || 0) : 0;
+        ctQty += d.kind === 'ct' ? d.qtyOk + d.qtyErr : 0;
+        vol += Number(d.volume) || 0;
+        body.push([i + 1, formatDateDDMMYY(d.date), d.kindLabel || '',
+          srcTxt,
+          thoDim,
+          d.kind === 'gc' ? x2FmtKg(d.qtyIn) : '',
+          d.kind === 'gc' ? (d.outSizeKey || x2FmtDim(d.outDims)) : (d.inSizeKey || x2FmtDim(d.inDims)),
+          d.kind === 'gc' ? `${x2FmtKg(d.quantity)} / ${x2FmtKg(d.maxOut)}` : '',
+          d.kind === 'ct' ? x2FmtKg(d.qtyOk) : '',
+          d.kind === 'ct' ? x2FmtKg(d.qtyErr) : '',
+          d.kind === 'ct' ? x2FmtKg(d.inQty) : '',
+          x2FmtKg(d.volume), x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
+      });
+      sumNote = `Gia công được ${x2FmtKg(outQty)} thanh (dùng ${x2FmtKg(thoQty)} thanh thô) · Chọn thanh ${x2FmtKg(ctQty)} thanh · ${x2FmtKg(vol)} m³`;
     }
 
     if (!head.length) return null;

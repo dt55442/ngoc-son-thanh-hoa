@@ -258,21 +258,24 @@ press.recalcPressQuantities();
 check('recalc: không ván thô → giữ SL người dùng tự nhập (77)', String(fpEl.value) === '77');
 
 // ═══════════════════════════════════════════════════════════
-// 9) Bấm cột biểu đồ → highlight dòng cùng ngày trong bảng + cuộn tới
+// 9) Bấm cột biểu đồ → chuyển khung Lượt Ép + highlight THẺ NGÀY + cuộn tới
+//    (bảng "Danh Sách Lượt Ép" đã gỡ — dữ liệu chi tiết nằm trong thẻ ngày)
 // ═══════════════════════════════════════════════════════════
-press.renderPressTable();
-const pressTbody = document.getElementById('press-table-body');
-const pressRows = pressTbody.querySelectorAll('tr');
-check('Highlight: bảng lượt ép gắn data-date cho từng dòng', pressRows.length > 0 && pressRows.every(r => typeof r.dataset.date === 'string' && r.dataset.date));
-const targetDate = pressRows[0].dataset.date; // dòng đầu = ngày mới nhất
-pressRows.forEach(r => { r.__scrollCalls = 0; r.scrollIntoView = function () { this.__scrollCalls++; }; });
-press.highlightPressTableRowsByDate(targetDate);
-const highlighted = pressRows.filter(r => r.classList.contains('press-row-highlight'));
-check('Highlight: chỉ các dòng cùng ngày được đánh dấu', highlighted.length >= 1 && highlighted.every(r => r.dataset.date === targetDate));
-check('Highlight: dòng đầu tiên được cuộn tới (scrollIntoView)', highlighted.some(r => r.__scrollCalls > 0));
-const otherDate = pressRows.map(r => r.dataset.date).find(d => d !== targetDate);
-press.highlightPressTableRowsByDate(otherDate);
-check('Highlight: bấm ngày khác → chuyển highlight sang nhóm dòng đó', pressRows.filter(r => r.classList.contains('press-row-highlight')).length > 0 && pressRows.filter(r => r.classList.contains('press-row-highlight')).every(r => r.dataset.date === otherDate));
+press.renderX2EpVanDayCards();
+const dayBox = document.getElementById('x2-epv-day-cards');
+const dayHTML = String(dayBox.innerHTML || '');
+check('Highlight: thẻ ngày gắn data-date cho từng ngày', /<div class="x2-day-card" data-date="\d{4}-\d{2}-\d{2}"/.test(dayHTML));
+// Giả lập phần tử thẻ ngày (stub DOM không parse HTML) để kiểm logic highlight
+const mkDayCard = (d) => { const c = makeEl(); c.dataset = { date: d }; c.scrollCalls = 0; c.scrollIntoView = function () { this.scrollCalls++; }; return c; };
+const cardNewest = mkDayCard('2026-08-16'); // ngày mới nhất
+const cardOldest = mkDayCard('2026-08-10');
+dayBox.querySelectorAll = (sel) => (sel === '.x2-day-card[data-date]' ? [cardNewest, cardOldest] : []);
+press.highlightPressDayCardByDate('2026-08-16');
+check('Highlight: chỉ thẻ ngày cùng ngày được đánh dấu', cardNewest.classList.contains('press-row-highlight') && !cardOldest.classList.contains('press-row-highlight'));
+check('Highlight: thẻ ngày được cuộn tới (scrollIntoView)', cardNewest.scrollCalls > 0);
+check('Highlight: tự chuyển về khung "Lượt Ép" (khung biểu đồ ẩn)', document.getElementById('x2-epv-frame-list').hidden === false && document.getElementById('x2-epv-frame-chart').hidden === true);
+press.highlightPressDayCardByDate('2026-08-10');
+check('Highlight: bấm ngày khác → chuyển highlight sang thẻ ngày đó', cardOldest.classList.contains('press-row-highlight') && !cardNewest.classList.contains('press-row-highlight'));
 
 // ═══════════════════════════════════════════════════════════
 // 10) Ghi chú giải trình theo ngày (dấu "!" vàng + popover)
@@ -283,10 +286,10 @@ setVal('press-note-date', '2026-08-13');
 setVal('press-note-text', 'Máy ép 1 hỏng bạc trục, chờ thay linh kiện');
 press.handlePressNoteSubmit(evNote);
 check('Ghi chú: lưu được ghi chú cho ngày 13/08', (state.pressNotes || []).some(n => n.date === '2026-08-13' && n.text.includes('hỏng bạc trục')));
-press.renderPressTable();
-const rows13 = document.getElementById('press-table-body').querySelectorAll('tr').filter(r => r.dataset.date === '2026-08-13');
-check('Ghi chú: dòng ngày có ghi chú hiển thị biểu tượng "!" vàng', rows13.length >= 1 && rows13.every(r => r.innerHTML.includes('press-note-badge')));
-check('Ghi chú: badge mang nội dung giải trình', rows13.length >= 1 && rows13[0].innerHTML.includes('Máy ép 1 hỏng bạc trục'));
+press.renderX2EpVanDayCards();
+const dayHTML13 = String(document.getElementById('x2-epv-day-cards').innerHTML || '');
+check('Ghi chú: thẻ ngày 13/08 hiển thị biểu tượng "!" vàng', dayHTML13.includes('<div class="x2-day-card" data-date="2026-08-13"') && dayHTML13.includes('press-note-badge'));
+check('Ghi chú: badge mang nội dung giải trình', dayHTML13.includes('Máy ép 1 hỏng bạc trục'));
 // 1 ngày 1 ghi chú — lưu tiếp cùng ngày → cập nhật thay vì thêm mới
 setVal('press-note-id', '');
 setVal('press-note-date', '2026-08-13');

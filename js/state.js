@@ -50,6 +50,35 @@
   const STORAGE_KEY_XUONG2_BAO_TINH = 'bamboo_tracker_xuong2_bao_tinh_v1';
   // ĐỊNH MỨC CÔNG SUẤT BÀO TINH (thanh/giờ) theo TỪNG THÁNG — { 'YYYY-MM': thanh/h }
   const STORAGE_KEY_X2_BAO_TINH_RATE = 'bamboo_tracker_x2_bao_tinh_rate_v1';
+  // Vị trí "BULLIG" Xưởng 2 (thẻ launcher tab Công Đoạn): 2 công đoạn nhỏ trong 1 thẻ —
+  //   • 'giacong' GIA CÔNG: chọn thanh thô từ LÔ Ở KHO có Dùng Cho = Bullig (đã qua Sấy 2),
+  //     nhập số lượng x / tổng số thanh đã chọn + kích thước thành phẩm (gợi ý từ lịch sử).
+  //   • 'chon' CHỌN THANH: chọn Loại thanh (= kích thước thành phẩm đã gia công)
+  //     → SL đạt + SL lỗi → Tổng tự tính = đạt + lỗi.
+  const STORAGE_KEY_XUONG2_BULLIG = 'bamboo_tracker_xuong2_bullig_v1';
+  // ĐỊNH MỨC CÔNG SUẤT BULLIG (thanh/giờ) THEO TỪNG THÁNG + TỪNG CÔNG ĐOẠN NHỎ —
+  // { gc: { 'YYYY-MM': thanh/h }, ct: { 'YYYY-MM': thanh/h } }
+  const STORAGE_KEY_X2_BULLIG_RATE = 'bamboo_tracker_x2_bullig_rate_v1';
+  // ĐỊNH MỨC THỜI GIAN THAN HÓA (PHÚT/m³) THEO TỪNG THÁNG + TỪNG CÔNG ĐOẠN SẤY
+  // của công đoạn "Than Hóa + Sấy" — { s1: { 'YYYY-MM': phút/m³ }, s2: {...} }.
+  // Điều kiện than hóa khác nhau theo công đoạn sấy: 1 m³ nan đi Sấy 1 phải trải
+  // qua 105 phút than hóa, đi Sấy 2 chỉ 50 phút (nhiều lò than hóa ghép thành 1
+  // lô sấy nên tính theo m³, KHÔNG tính theo lô). Điều kiện có thể thay đổi theo
+  // thời kỳ nên lưu được riêng từng tháng; chưa khai → mặc định s1 = 105 · s2 = 50.
+  // Công suất định mức (m³/giờ) = 60 ÷ phút/m³ — xem js/xuong2.js.
+  const STORAGE_KEY_X2_SAY_RATE = 'bamboo_tracker_x2_say_rate_v1';
+  // SỐ LẦN THAN HÓA THẬT của từng NHÓM (ngày + công đoạn sấy) — người dùng nhập
+  // trên bảng thống kê thẻ "Than Hóa + Sấy": { 'YYYY-MM-DD|say1': 2, ... }.
+  // Chưa nhập thì hệ thống TỰ GỘP các lô trong ngày theo định mức m³/lần
+  // (mặc định 2 m³/lần: ngày tổng 3 m³ → 2 lần = gần 2 m³ + phần còn lại).
+  const STORAGE_KEY_X2_SAY_TIMES = 'bamboo_tracker_x2_say_times_v1';
+  // GIỜ SỰ CỐ CHO PHÉP theo từng NGÀY của công đoạn "Than Hóa + Sấy" —
+  // { 'YYYY-MM-DD': giờ }. Dùng tính Hiệu suất ngày:
+  //   Hiệu suất = Giờ cần ÷ (Giờ thực tế − Giờ sự cố cho phép)
+  const STORAGE_KEY_X2_SAY_INCIDENT = 'bamboo_tracker_x2_say_incident_v1';
+  // Trạng thái THU GỌN bảng Kanban lô nan của thẻ "Than Hóa + Sấy" ('1' = đang
+  // thu gọn: chỉ hiện thanh công cụ + bảng thống kê, ẩn bảng Kanban) — nhớ theo máy.
+  const STORAGE_KEY_X2_KANBAN_COLLAPSED = 'bamboo_tracker_x2_kanban_collapsed_v1';
   // ĐỊNH MỨC CÔNG SUẤT ÉP VÁN (m³/giờ) theo TỪNG THÁNG — { 'YYYY-MM': m³/h }.
   // Thẻ Ép Ván (launcher tab Công Đoạn): KHÔNG đặt định mức → thẻ ngày chỉ hiện
   // công suất m³/ngày; CÓ định mức → hiện thêm m³/h (tổng m³ ÷ giờ phân vị "Ép"
@@ -206,6 +235,26 @@
     x2BaoTinhEditId: null,    // id lượt bào tinh đang sửa trong form (null = ghi mới)
     // Định mức công suất bào tinh theo tháng (thanh/giờ): { 'YYYY-MM': thanh/h }
     x2BaoTinhRates: {},
+    // Nhật ký BULLIG (vị trí Bullig — Xưởng 2): 2 công đoạn nhỏ — 'giacong' (Gia công:
+    // chọn thanh thô từ lô ở Kho Dùng Cho = Bullig, SL x/tổng đã chọn + k.thước thành
+    // phẩm) và 'chon' (Chọn thanh: Loại thanh + SL đạt + SL lỗi).
+    xuong2BulligRecords: [],
+    x2BulligEditId: null,     // id lượt Bullig đang sửa trong form (null = ghi mới)
+    x2BulligPicked: [],       // id các lô Bullig ở Kho đang CHỌN trong form (chọn nhiều)
+    x2BulligLotOpen: false,   // danh sách THẺ LÔ Bullig đang mở trong form (nút Mở danh sách)
+    // Định mức công suất Bullig theo tháng + từng công đoạn nhỏ (thanh/giờ):
+    // { gc: { 'YYYY-MM': thanh/h }, ct: { 'YYYY-MM': thanh/h } }
+    x2BulligRates: { gc: {}, ct: {} },
+    // Định mức THỜI GIAN THAN HÓA (phút cho 1 m³) theo tháng + công đoạn sấy của
+    // thẻ "Than Hóa + Sấy": { s1: { 'YYYY-MM': phút/m³ }, s2: { 'YYYY-MM': phút/m³ } }
+    // — nguồn tính cột "Giờ Cần" + định mức công suất m³/h của bảng thống kê sấy.
+    x2SayRates: { s1: {}, s2: {} },
+    // Số lần than hóa THẬT của từng NHÓM (ngày + công đoạn sấy) — nhập trên bảng
+    // thống kê thẻ Than Hóa + Sấy: { 'YYYY-MM-DD|say1': n, 'YYYY-MM-DD|say2': n }
+    x2SayTimes: {},
+    // Giờ SỰ CỐ CHO PHÉP theo từng ngày (Than Hóa + Sấy): { 'YYYY-MM-DD': giờ } —
+    // nguồn tính Hiệu suất ngày = Giờ cần ÷ (Giờ thực tế − Giờ sự cố cho phép).
+    x2SayIncidents: {},
     // Định mức công suất ÉP VÁN theo tháng (m³/giờ): { 'YYYY-MM': m³/h } —
     // không đặt thì thẻ ngày Ép Ván chỉ hiện công suất m³/ngày.
     x2EpVanRates: {},
@@ -235,13 +284,12 @@
     planCapacityInstance: null,
     planCapYear: 'current',     // 'current' = năm hiện tại | năm cụ thể (VD '2026') — RIÊNG của biểu đồ khả năng đáp ứng
     planCapStartIdx: null,      // vị trí tuần bắt đầu cửa sổ trong khoảng tuần liên tục (mỗi bước ◀/▶ = 1 tuần, cửa sổ tối đa 2 tuần; null = mặc định tuần hiện tại)
-    // Bộ lọc theo từng cột Kanban (multi-select)
+    // Bộ lọc cột Kanban (multi-select) — CỘT BÀO TINH ĐÃ XÓA (số liệu ở thẻ Bào Tinh)
     // Mỗi stage: { dates: [], locations: [], dimensions: [], quantities: [] }
     columnFilters: {
       say1:     { dates: [], locations: [], dimensions: [], quantities: [] },
       say2:     { dates: [], locations: [], dimensions: [], quantities: [] },
-      kho:      { dates: [], locations: [], dimensions: [], quantities: [] },
-      bao_tinh: { dates: [], locations: [], dimensions: [], quantities: [] }
+      kho:      { dates: [], locations: [], dimensions: [], quantities: [] }
     },
     // Lịch sử thao tác để hoàn tác (undo) khi nhập sai
     undoStack: [],
@@ -253,9 +301,6 @@
     // Bản cất tự động (auto backup cục bộ): [{ ts, by, reason, data }] — js/autobackup.js
     // data = chuỗi JSON snapshot toàn bộ dữ liệu (hoặc { gz: '<base64 gzip>' } sau nén nền)
     autoBackups: [],
-    // Chế độ chọn nhiều lô để chuyển công đoạn cùng lúc
-    multiTransferMode: false,
-    multiSelectedIds: [],
     // Lưu trữ file (File System Access API)
     fileStorage: {
       dirHandle: null,
@@ -286,6 +331,12 @@ export {
   STORAGE_KEY_X2_CHON_NAN_RATE,
   STORAGE_KEY_XUONG2_BAO_TINH,
   STORAGE_KEY_X2_BAO_TINH_RATE,
+  STORAGE_KEY_XUONG2_BULLIG,
+  STORAGE_KEY_X2_BULLIG_RATE,
+  STORAGE_KEY_X2_SAY_RATE,
+  STORAGE_KEY_X2_SAY_TIMES,
+  STORAGE_KEY_X2_SAY_INCIDENT,
+  STORAGE_KEY_X2_KANBAN_COLLAPSED,
   STORAGE_KEY_X2_EP_VAN_RATE,
   STORAGE_KEY_X2_LOT_LOCATIONS,
   STORAGE_KEY_SUPPLIERS,

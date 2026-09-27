@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // js/kanban.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { deleteBatch, openTransferModal } from './batch-modals.js';
+import { deleteBatch } from './batch-modals.js';
 import { batchMatchesColumnFilter, getFilteredBatches, renderQuickStats } from './main.js';
 import { STAGES, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getStageDaysClass, getStageDaysLabel, showToast } from './utils.js';
@@ -11,14 +11,12 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     const containers = {
       say1:     document.getElementById('cards-say1'),
       say2:     document.getElementById('cards-say2'),
-      kho:      document.getElementById('cards-kho'),
-      bao_tinh: document.getElementById('cards-bao-tinh')
+      kho:      document.getElementById('cards-kho')
     };
     const metrics = {
       say1:     { count: 0, vol: 0, qty: 0 },
       say2:     { count: 0, vol: 0, qty: 0 },
-      kho:      { count: 0, vol: 0, qty: 0 },
-      bao_tinh: { count: 0, vol: 0, qty: 0 }
+      kho:      { count: 0, vol: 0, qty: 0 }
     };
 
     Object.values(containers).forEach(el => { if (el) el.innerHTML = ''; });
@@ -74,7 +72,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
 
   // ─── TÌM KIẾM GỢI Ý TRONG BỘ LỌC CỘT ────────────────────────
   // Từ khóa tìm kiếm hiện tại của từng cột (chỉ là trạng thái UI, không lưu DB)
-  const columnSearchQueries = { say1: '', say2: '', kho: '', bao_tinh: '' };
+  const columnSearchQueries = { say1: '', say2: '', kho: '' };
 
   // Bảng gập dấu tiếng Việt về chữ gốc (1 ký tự → 1 ký tự để giữ nguyên độ
   // dài chuỗi, từ đó map được vị trí khớp khi tô sáng gợi ý)
@@ -277,12 +275,6 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     const card = document.createElement('div');
     card.className = 'bamboo-card';
     card.setAttribute('data-id', batch.id);
-    if (state.multiTransferMode && state.multiSelectedIds.includes(batch.id)) {
-      card.classList.add('selected');
-    }
-
-    const nextStage = STAGES[batch.stage]?.next;
-    const nextName  = nextStage ? STAGES[nextStage].short : 'Hoàn thành';
 
     // Hiển thị badge ngày cho từng công đoạn đã đi qua (Bào Tinh không đếm ngày)
     const history = getBatchStageHistory(batch);
@@ -299,7 +291,6 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
       .join('');
 
     card.innerHTML = `
-      <div class="batch-check" title="Đánh dấu chọn lô"><i data-lucide="check"></i></div>
       <div class="card-top">
         <div class="batch-code"><i data-lucide="box"></i> ${escapeHTML(batch.code)}</div>
         <span class="week-pill">${escapeHTML(batch.week)} (${formatDateDDMMYY(batch.date)})</span>
@@ -326,9 +317,6 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
       </div>
       ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}
       <div class="card-actions" data-perm="kanban">
-        <button class="btn btn-transfer btn-sm" onclick="app.openTransferModal('${batch.id}')">
-          <i data-lucide="arrow-right-left"></i> Chuyển Công Đoạn ${nextStage ? `(${nextName})` : ''}
-        </button>
         <div class="card-tools">
           <button class="btn btn-outline btn-icon btn-sm" onclick="app.openEditModal('${batch.id}')" title="Sửa thẻ"><i data-lucide="edit-3"></i></button>
           <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteBatch('${batch.id}')" title="Xóa thẻ" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>

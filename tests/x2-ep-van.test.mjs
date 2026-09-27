@@ -153,6 +153,26 @@ const snap = press.epVanSnapshotOf(D);
 check('TỰ ĐỘNG: giờ HC/TC lấy từ Bảng bố trí vị trí "Ép" (không lấy "Bào tinh")',
   snap.hours > 0 && snap.hoursHC > 0 && snap.hoursTC === 0 &&
   snap.workers.length === 1 && snap.workers[0].name === 'Nguyễn Văn Ép');
+check('TỰ ĐỘNG: nguồn giờ của Ép Ván chỉ gồm vị trí "Ép" (posRows) — phục vụ tooltip',
+  Array.isArray(snap.posRows) && snap.posRows.length === 2 && snap.posRows.every(r => r.name === 'Ép' && r.employee === 'Nguyễn Văn Ép'));
+{
+  // Thêm bố trí ở vị trí "Chọn thanh Bullig" cùng ngày → Ép Ván PHẢI bỏ qua (giờ không đổi)
+  state.hrPositions.push({ id: 'p-bull', name: 'Chọn thanh Bullig', department: 'Xưởng 2' });
+  state.hrAssignments.push({ id: 'asg-4', date: D, department: 'Xưởng 2', positionId: 'p-bull', employeeId: 'empKhac', start: '13:00', end: '' });
+  const snapBull = press.epVanSnapshotOf(D);
+  check('TỰ ĐỘNG: ÉP VÁN KHÔNG cộng thời gian của công đoạn Chọn thanh Bullig (giờ giữ nguyên, người ép không đổi)',
+    Math.abs(snapBull.hours - snap.hours) < 0.001 && snapBull.hoursHC === snap.hoursHC &&
+    snapBull.posRows.length === 2 && snapBull.workers.length === 1 &&
+    snapBull.workers[0].name === 'Nguyễn Văn Ép');
+  // Vị trí gộp tên cả 2 công đoạn cũng KHÔNG được tính vào Ép Ván
+  state.hrPositions.push({ id: 'p-mix', name: 'Ép ván + Chọn thanh Bullig', department: 'Xưởng 2' });
+  state.hrAssignments.push({ id: 'asg-5', date: D, department: 'Xưởng 2', positionId: 'p-mix', employeeId: 'empKhac', start: '07:00', end: '11:30' });
+  const snapMix = press.epVanSnapshotOf(D);
+  check('TỰ ĐỘNG: vị trí gộp "Ép ván + Chọn thanh Bullig" cũng bị loại khỏi giờ Ép Ván',
+    Math.abs(snapMix.hours - snap.hours) < 0.001);
+  state.hrAssignments.pop(); state.hrAssignments.pop();
+  state.hrPositions.pop(); state.hrPositions.pop();
+}
 check('M³: thể tích 1 lượt = ván thô tạo ra (2000×600×20 × 50 = 1,2 m³)',
   Math.round(press.pressRecordVolumeOf(state.pressRecords[0]) * 100) / 100 === 1.2);
 const dayHtml = document.getElementById('x2-epv-day-cards').innerHTML;
@@ -214,15 +234,27 @@ check('CẤU TRÚC: thẻ Ép Ván có 2 khung + 2 tab chuyển khung + định 
   idxHtml.includes('id="x2-epv-tab-list"') && idxHtml.includes('id="x2-epv-tab-chart"') &&
   idxHtml.includes('id="x2-epv-day-cards"') && idxHtml.includes('id="x2-epv-rate-month"') &&
   idxHtml.includes('id="x2-epv-rate-value"') && idxHtml.includes('id="btn-x2-epv-rate-save"'));
-check('CẤU TRÚC: biểu đồ + bảng chi tiết + nút Thêm Lượt Ép nằm trong thẻ Ép Ván',
-  idxHtml.includes('id="press-chart"') && idxHtml.includes('id="press-table-body"') &&
+check('CẤU TRÚC: biểu đồ + nút Thêm Lượt Ép nằm trong thẻ Ép Ván · bảng "Danh Sách Lượt Ép" đã gỡ',
+  idxHtml.includes('id="press-chart"') && !idxHtml.includes('id="press-table-body"') &&
+  !idxHtml.includes('press-table-card') && !idxHtml.includes('btn-toggle-press-table') &&
   idxHtml.includes('id="press-year-filter"') && idxHtml.includes('id="btn-add-press-2"') &&
   idxHtml.includes('id="btn-add-press-note-2"'));
+// Footer biểu đồ đã gỡ: bỏ nút "Thêm Lượt Ép"/"Ghi Chú Giải Trình" (đã có khung Lượt Ép),
+// dời "Hiện Ghi Chú" lên thanh tiêu đề, bỏ chú thích "Vuốt trái/phải…"
+check('BIỂU ĐỒ: footer đã gỡ (không còn press-chart-footer · nút btn-add-press/note · chú thích vuốt)',
+  !idxHtml.includes('press-chart-footer') && !idxHtml.includes('id="btn-add-press"') &&
+  !idxHtml.includes('id="btn-add-press-note"') && !idxHtml.includes('Vuốt trái/phải trên biểu đồ'));
+check('BIỂU ĐỒ: "Hiện Ghi Chú" ở THANH TIÊU ĐỀ (trước canvas) + mũi tên ‹ › cạnh ô Tuần',
+  idxHtml.includes('id="btn-toggle-press-notes"') &&
+  idxHtml.indexOf('id="btn-toggle-press-notes"') < idxHtml.indexOf('id="press-chart"') &&
+  idxHtml.includes('id="press-week-prev"') && idxHtml.includes('id="press-week-next"') &&
+  idxHtml.indexOf('id="press-week-prev"') < idxHtml.indexOf('id="press-week-filter"') &&
+  idxHtml.indexOf('id="press-week-filter"') < idxHtml.indexOf('id="press-week-next"'));
 const jsPress = fs.readFileSync(new URL('../js/press.js', import.meta.url), 'utf8');
 const jsMain = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
-check('CẤU TRÚC: press.js KHÔNG còn renderPressView · main.js không gọi hàm này',
-  !/function renderPressView/.test(jsPress) && !/renderPressView/.test(jsMain) &&
-  jsMain.includes('loadX2EpVanRates'));
+check('CẤU TRÚC: press.js KHÔNG còn renderPressView/renderPressTable · main.js không gọi hàm này',
+  !/function renderPressView/.test(jsPress) && !/function renderPressTable/.test(jsPress) &&
+  !/renderPressView/.test(jsMain) && jsMain.includes('loadX2EpVanRates'));
 check('CẤU TRÚC: events.js nối tab chuyển khung + nút thêm lượt + lưu định mức',
   (function () {
     const jsE = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
@@ -245,7 +277,41 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v155', /nha-may-ngoc-son-v155/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v170', /nha-may-ngoc-son-v170/.test(swJs));
+
+// ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
+state.pressRecords.push({
+  id: 'pr-2', date: '2026-09-14', year: 2026, week: '2026-W38',
+  productId: 'prod-1', productName: 'Ván 2000x600x20', fpDim: '2000x600x20',
+  finishedQty: 20, glue: 12, additive: 1,
+  vanTho: [{ vtDim: '2000x600x20', vtQty: 20 }], sticks: [],
+  createdAt: '2026-09-14T02:00:00.000Z'
+});
+state.pressYearFilter = 'all';
+state.pressWeekFilter = 'all';
+press.populatePressWeekFilter();
+press.shiftPressWeekFilter(1);
+check('MŨI TUẦN: từ "Tất cả" bấm › → tuần nhỏ nhất có lượt ép (38)', state.pressWeekFilter === '38');
+press.shiftPressWeekFilter(1);
+check('MŨI TUẦN: › tiếp → tuần kế (39)', state.pressWeekFilter === '39');
+press.shiftPressWeekFilter(1);
+check('MŨI TUẦN: › ở tuần cuối → bao vòng về tuần 38', state.pressWeekFilter === '38');
+press.shiftPressWeekFilter(-1);
+check('MŨI TUẦN: ‹ ở tuần đầu → bao vòng về tuần 39', state.pressWeekFilter === '39');
+check('MŨI TUẦN: ô Tuần tự đồng bộ giá trị mới (select.value = 39)',
+  document.getElementById('press-week-filter').value === '39');
+check('MŨI TUẦN: thẻ ngày chỉ còn tuần đang chọn (21/09 ≠ 14/09)',
+  document.getElementById('x2-epv-day-cards').innerHTML.includes('21/09/26') &&
+  !document.getElementById('x2-epv-day-cards').innerHTML.includes('14/09/26'));
+check('MŨI TUẦN: events.js nối 2 nút ‹ › cạnh ô Tuần',
+  (function () {
+    const jsE = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+    return jsE.includes("safeOn('press-week-prev'") && jsE.includes("safeOn('press-week-next'") &&
+      !jsE.includes("safeOn('btn-add-press'") && !jsE.includes("safeOn('btn-add-press-note'") &&
+      jsE.includes("safeOn('btn-toggle-press-notes'");
+  })());
+state.pressWeekFilter = 'all'; // trả bộ lọc về mặc định cho các section sau
+press.renderX2EpVanDayCards();
 
 // ═══ F. BƯỚC 4/5: NÚT DÙNG CHUNG (LỊCH SỬ theo thẻ + XUẤT EXCEL theo thẻ) ═══
 check('DÙNG CHUNG: thẻ đang mở → vùng dữ liệu + nguồn xuất Excel tương ứng',
@@ -257,9 +323,10 @@ check('DÙNG CHUNG: đóng thẻ → không còn thẻ đang mở (vùng dữ li
   x2.x2OpenCardId() === null && x2.x2OpenCardHistoryDomain() === '' &&
   state.x2OpenCardId === null);
 const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
-check('DÙNG CHUNG: đủ 7 thẻ có vùng dữ liệu + nguồn xuất (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Than Hóa · Bào Tinh · Ép Ván)',
-  Object.keys(mapCn).length === 7 && Object.keys(mapEx).length === 7 &&
+check('DÙNG CHUNG: đủ 8 thẻ có vùng dữ liệu + nguồn xuất (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Than Hóa · Bào Tinh · Bullig · Ép Ván)',
+  Object.keys(mapCn).length === 8 && Object.keys(mapEx).length === 8 &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
+  mapCn['x2-bullig-card'] === 'xuong2BulligRecords' && mapEx['x2-bullig-card'] === 'bullig' &&
   mapCn['x2-than-hoa-card'] === 'batches' && mapEx['x2-than-hoa-card'] === 'batch');
 
 // Lịch sử: modal có bộ lọc VÙNG DỮ LIỆU (nút dùng chung mở đúng vùng của thẻ)

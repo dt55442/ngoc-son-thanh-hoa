@@ -2,7 +2,7 @@
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
-import { alClearPicks, alOnLocationChipClick, alOnSourceListClick, alPickAll, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, clearMultiSelection, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, closeTransferModal, confirmMultiTransfer, exitMultiTransferMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, handleTransferSubmit, openAddLotModal, openBatchFormModal, openTransferKhoModal, selectAllMulti, syncAddLotUI, syncMtbStageDateUI, syncTransferKhoUI, syncTransferStageDateUI, toggleBatchSelection, toggleMultiTransferMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
+import { alOnLocationChipClick, alOnSourceListClick, alPickAll, alSetSourceQuery, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, openAddLotModal, openBatchFormModal, openTransferKhoModal, syncAddLotUI, syncTransferKhoUI, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
@@ -12,9 +12,9 @@ import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderPressTable, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, switchX2EpVanFrame, togglePressNotesExpanded } from './press.js';
+import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { baoTinhAddRow, baoTinhClearPicks, baoTinhPickAll, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Cut, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, editXuong2Cut, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BaoTinhRateSave, handleX2BoOngRateSave, handleX2CapRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoTinhRateBar, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2ChonNanForm, resetXuong2CutForm, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2ChonNanTable, toggleX2CutTable, updateXuong2BaoThoLinked, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, x2BaoTinhTogglePicker, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay } from './xuong2.js';
+import { baoTinhAddRow, baoTinhClearPicks, baoTinhPickAll, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, editXuong2Bullig, editXuong2Cut, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BaoTinhRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoTinhRateBar, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2KanbanBoard, onSayTimesChange, onSayIncidentChange, handleX2SayRateSave, renderX2SayRateBar, updateXuong2BaoThoLinked, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, x2BaoTinhTogglePicker, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay } from './xuong2.js';
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
@@ -87,11 +87,11 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     });
 
     // ─── VUỐT NGANG CHUYỂN CÔNG ĐOẠN TRÊN BẢNG KANBAN (điện thoại) ───
-    // Vuốt sang trái -> công đoạn kế tiếp (Sấy 1 → Sấy 2 → Kho → Bào Tinh)
+    // Vuốt sang trái -> công đoạn kế tiếp (Sấy 1 → Sấy 2 → Kho; cột Bào Tinh ĐÃ XÓA)
     // Vuốt sang phải -> công đoạn trước
     const kanbanBoard = document.querySelector('.kanban-board');
     if (kanbanBoard) {
-      const STAGE_ORDER = ['say1', 'say2', 'kho', 'bao_tinh'];
+      const STAGE_ORDER = ['say1', 'say2', 'kho'];
       let touchStartX = 0, touchStartY = 0, isTracking = false;
       kanbanBoard.addEventListener('touchstart', (e) => {
         if (!e.touches || e.touches.length !== 1) { isTracking = false; return; }
@@ -205,8 +205,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Nguồn: nút "Chọn Lô Nan" mở danh sách THẺ (chọn được NHIỀU nguồn cùng lúc)
     safeOn('al-source-btn', 'click', alToggleSourcePanel);
     safeOn('al-source-list', 'click', alOnSourceListClick);
+    safeOn('al-source-search', 'input', (e) => alSetSourceQuery(e.target.value));
+    // Đổi Dùng Cho → vẽ lại danh sách (thẻ nan Chọn Nan Thô hiện "theo form (….)")
+    safeOn('al-use-for', 'change', () => alSetSourceQuery((document.getElementById('al-source-search') || {}).value || ''));
     safeOn('al-pick-all', 'click', alPickAll);
-    safeOn('al-pick-clear', 'click', alClearPicks);
     // Vị trí: nút chọn → chips LS1..LS15 + nút "Thêm" (khai báo vị trí mới)
     safeOn('al-location-btn', 'click', alToggleLocationPanel);
     safeOn('al-location-chips', 'click', alOnLocationChipClick);
@@ -272,12 +274,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-form', 'click', closeBatchFormModal);
     safeOn('batch-form',      'submit', handleBatchFormSubmit);
 
-    // Transfer Modal
-    safeOn('btn-close-transfer',  'click', closeTransferModal);
-    safeOn('btn-cancel-transfer', 'click', closeTransferModal);
-    safeOn('transfer-form',       'submit', handleTransferSubmit);
     // ── Ngày vào công đoạn thực tế: hiện theo công đoạn được chọn (Sấy 2 / Kho / Bào Tinh) ──
-    safeOn('transfer-target-stage', 'change', () => syncTransferStageDateUI(document.getElementById('transfer-target-stage')?.value));
     safeOn('form-stage',            'change', () => {
       const stage = document.getElementById('form-stage')?.value;
       // Form thêm/sửa thẻ: mỗi công đoạn có ô ngày thực tế riêng của nó
@@ -293,24 +290,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         }
       });
     });
-    safeOn('mtb-target-stage',      'change', () => syncMtbStageDateUI(document.getElementById('mtb-target-stage')?.value));
-
-    // ── Chọn nhiều lô để chuyển cùng lúc ──
-    safeOn('btn-multi-transfer',  'click', toggleMultiTransferMode);
-    safeOn('btn-mtb-cancel',      'click', exitMultiTransferMode);
-    safeOn('btn-mtb-clear',       'click', clearMultiSelection);
-    safeOn('btn-mtb-select-all',  'click', selectAllMulti);
-    safeOn('btn-mtb-confirm',     'click', confirmMultiTransfer);
-    // Bấm vào thẻ lô khi đang ở chế độ chọn nhiều => bật/tắt đánh dấu
-    document.addEventListener('click', (e) => {
-      if (!state.multiTransferMode) return;
-      const card = e.target.closest('.bamboo-card');
-      if (!card) return;
-      if (e.target.closest('.card-actions')) return; // vẫn cho bấm nút trên thẻ nếu hiện
-      const id = card.getAttribute('data-id');
-      if (id) toggleBatchSelection(id);
-    });
-
     // User Manager
     safeOn('btn-open-users-mgr', 'click', openUsersMgrModal);
     safeOn('btn-close-users',    'click', closeUsersMgrModal);
@@ -659,13 +638,11 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       }
     });
 
-    // ── Sản lượng ép ván ──
-    safeOn('btn-add-press', 'click', () => openPressModal());
+    // ── Sản lượng ép ván (modal nhập — mở từ nút "Thêm Lượt Ép" khung Lượt Ép) ──
     safeOn('btn-close-press-modal', 'click', closePressModal);
     safeOn('btn-cancel-press', 'click', closePressModal);
     safeOn('press-record-form', 'submit', handlePressRecordSubmit);
     // ── Ghi chú giải trình (ngày sản lượng không đáp ứng) ──
-    safeOn('btn-add-press-note', 'click', () => openPressNoteModal());
     safeOn('btn-close-press-note', 'click', closePressNoteModal);
     safeOn('btn-cancel-press-note', 'click', closePressNoteModal);
     safeOn('press-note-form', 'submit', handlePressNoteSubmit);
@@ -733,23 +710,24 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         recalcPressQuantities();
       }
     });
-    // Bộ lọc năm của biểu đồ
+    // Bộ lọc năm của biểu đồ & thẻ ngày ép
     safeOn('press-year-filter', 'change', (e) => {
       state.pressYearFilter = e.target.value;
       state.pressChartWinStart = null; // đổi năm → về mặc định (các tuần mới nhất)
       populatePressWeekFilter(); // danh sách tuần phụ thuộc năm đang chọn
       renderPressChart();
-      renderPressTable();
       renderX2EpVanDayCards(); // khung "Lượt Ép" cũng theo bộ lọc năm
     });
-    // Bộ lọc tuần của biểu đồ & bảng lượt ép
+    // Bộ lọc tuần của biểu đồ & thẻ ngày ép
     safeOn('press-week-filter', 'change', (e) => {
       state.pressWeekFilter = e.target.value;
       state.pressChartWinStart = null; // đổi tuần → về mặc định (các tuần mới nhất)
       renderPressChart();
-      renderPressTable();
       renderX2EpVanDayCards(); // khung "Lượt Ép" cũng theo bộ lọc tuần
     });
+    // Mũi tên ‹ › cạnh ô Tuần: nhảy nhanh cả tuần (bao vòng)
+    safeOn('press-week-prev', 'click', () => shiftPressWeekFilter(-1));
+    safeOn('press-week-next', 'click', () => shiftPressWeekFilter(1));
     // ── Bấm vào ô TỔNG TỒN của ma trận kế hoạch → hộp thoại chi tiết tính toán ──
     safeOn('planning-matrix-body', 'click', (e) => {
       const cell = e.target.closest ? e.target.closest('td[data-trace]') : null;
@@ -764,8 +742,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       state.btEffYear = Number(e.target.value) || state.btEffYear;
       renderBaoTinhEffTable();
     });
-    // Thu gọn / mở rộng bảng danh sách lượt ép
-    safeOn('btn-toggle-press-table', 'click', () => toggleRateTableCollapse('press-table-card'));
     // ── THẺ ÉP VÁN (launcher tab Công Đoạn): 2 KHUNG + định mức m³/h ──
     safeOn('x2-epv-tab-list', 'click', () => switchX2EpVanFrame('list'));
     safeOn('x2-epv-tab-chart', 'click', () => switchX2EpVanFrame('chart'));
@@ -1201,21 +1177,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       t.addEventListener('click', () => x2OpenCard(t.getAttribute('data-x2-card')));
     });
     // Đóng pop-up: nút Đóng / bấm nền mờ / phím Esc
-    // (đang bật "Chọn nhiều lô để chuyển" thì tự THOÁT chế độ chọn trước —
-    //  nút này nằm trong pop-up, đóng pop-up mà giữ chế độ chọn sẽ kẹt
-    //  thanh nổi "Đã chọn N lô" trên nền mờ không có nút thoát)
-    const exitMultiIfActive = () => {
-      if (state.multiTransferMode) exitMultiTransferMode();
-      x2CloseOpenCard();
-    };
-    safeOn('btn-close-x2-detail', 'click', exitMultiIfActive);
+    const closeX2Detail = () => { x2CloseOpenCard(); };
+    safeOn('btn-close-x2-detail', 'click', closeX2Detail);
     const x2Overlay = document.getElementById('x2-detail-overlay');
     if (x2Overlay) {
-      x2Overlay.addEventListener('click', (e) => { if (e.target === x2Overlay) exitMultiIfActive(); });
-      x2Overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitMultiIfActive(); });
+      x2Overlay.addEventListener('click', (e) => { if (e.target === x2Overlay) closeX2Detail(); });
+      x2Overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeX2Detail(); });
     }
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.getElementById('x2-detail-overlay')?.classList.contains('show')) exitMultiIfActive();
+      if (e.key === 'Escape' && document.getElementById('x2-detail-overlay')?.classList.contains('show')) closeX2Detail();
     });
     // Đổi kích thước cửa sổ → đặt lại đỉnh pop-up đúng dưới header
     window.addEventListener('resize', () => {
@@ -1273,6 +1243,34 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-toggle-x2cn-table', 'click', toggleX2ChonNanTable);
     safeOn('btn-x2-cn-rate-save', 'click', handleX2ChonNanRateSave);
     safeOn('x2-cn-rate-month', 'change', renderX2ChonNanRateBar);
+    // ── Vị trí BULLIG (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
+    // Form: Ngày + Công đoạn nhỏ (Gia công / Chọn thanh); Gia công → nút mở danh sách
+    // thẻ lô Bullig ở Kho (chọn được nhiều) + SL x/tổng + K.thước thành phẩm (gợi ý);
+    // Chọn thanh → Loại thanh + SL đạt/lỗi (Tổng tự tính). Người làm/giờ TỰ ĐỘNG.
+    safeOn('x2-bl-kind', 'change', () => { syncX2BulligKindRows(); renderX2BulligCalc(); });
+    safeOn('x2-bl-gc-btn', 'click', () => {
+      // Mở/đóng DANH SÁCH THẺ LÔ (cờ UI state.x2BulligLotOpen — vẽ lại thẻ không tự mở)
+      state.x2BulligLotOpen = !state.x2BulligLotOpen;
+      syncX2BulligKindRows();
+      if (state.x2BulligLotOpen) {
+        renderX2BulligLotList();
+        const btn = document.getElementById('x2-bl-gc-btn');
+        if (btn && btn.scrollIntoView) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+    safeOn('x2-bl-gc-search', 'input', renderX2BulligLotList);
+    safeOn('x2-bl-gc-list', 'click', onBulligListClick);
+    ['x2-bl-gc-qty', 'x2-bl-ct-ok', 'x2-bl-ct-err'].forEach(id => {
+      safeOn(id, 'input', renderX2BulligCalc);
+    });
+    safeOn('x2-bl-ct-size', 'change', renderX2BulligCalc);
+    safeOn('x2-bl-out', 'input', renderX2BulligCalc);
+    safeOn('x2-bl-form', 'submit', handleXuong2BulligSubmit);
+    safeOn('btn-cancel-x2-bl', 'click', () => resetXuong2BulligForm());
+    safeOn('btn-toggle-x2bl-table', 'click', toggleX2BulligTable);
+    safeOn('btn-x2-bl-rate-save', 'click', handleX2BulligRateSave);
+    safeOn('x2-bl-rate-month', 'change', renderX2BulligRateBar);
+    safeOn('x2-bl-rate-kind', 'change', renderX2BulligRateBar);
     // ── Vị trí BÀO TINH (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
     // Form: Ngày bào + Loại bào (Bào tinh / Bào tinh hạ cấp / Bào thanh) + Chọn
     // thanh (đổi theo loại bào) + Kích thước sau bào + SL thanh đạt / lỗi.
@@ -1293,6 +1291,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-toggle-x2btinh-table', 'click', toggleX2BaoTinhTable);
     safeOn('btn-x2-btinh-rate-save', 'click', handleX2BaoTinhRateSave);
     safeOn('x2-btinh-rate-month', 'change', renderX2BaoTinhRateBar);
+    // ── Thẻ THAN HÓA + SẤY: định mức 1 lần than hóa + thu gọn bảng Kanban ──
+    // (Số lần than hóa thật của nhóm + giờ sự cố cho phép của ngày: ô nhập trong
+    // bảng thống kê → lưu khi rời ô)
+    safeOn('x2-say-day-rows', 'change', onSayTimesChange);
+    safeOn('x2-say-day-rows', 'change', onSayIncidentChange);
+    safeOn('btn-x2-say-rate-save', 'click', handleX2SayRateSave);
+    safeOn('x2-say-rate-month', 'change', renderX2SayRateBar);
+    safeOn('x2-say-rate-stage', 'change', renderX2SayRateBar);
+    safeOn('btn-toggle-kanban-board', 'click', toggleX2KanbanBoard);
     // Click ủy quyền trong bảng lịch sử cắt/chọn + bổ ống: sửa / xóa lượt
     document.addEventListener('click', (e) => {
       const cutEdit = e.target.closest && e.target.closest('[data-x2-cut-edit]');
@@ -1335,6 +1342,21 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       if (cnEdit) { editXuong2ChonNan(cnEdit.getAttribute('data-x2-cn-edit')); return; }
       const cnDel = e.target.closest && e.target.closest('[data-x2-cn-delete]');
       if (cnDel) { deleteXuong2ChonNan(cnDel.getAttribute('data-x2-cn-delete')); return; }
+      // Chip tháng đã đặt định mức Bullig → nạp tháng + công đoạn + số thanh/h vào ô nhập
+      const blRateChip = e.target.closest && e.target.closest('[data-x2-bl-rate]');
+      if (blRateChip) {
+        const m = blRateChip.getAttribute('data-x2-bl-rate');
+        const kind = blRateChip.getAttribute('data-x2-bl-rate-kind') || 'gc';
+        const selEl = document.getElementById('x2-bl-rate-month');
+        const kindEl = document.getElementById('x2-bl-rate-kind');
+        if (kindEl) kindEl.value = kind;
+        if (selEl && m) { selEl.value = m; renderX2BulligRateBar(); }
+        return;
+      }
+      const blEdit = e.target.closest && e.target.closest('[data-x2-bl-edit]');
+      if (blEdit) { editXuong2Bullig(blEdit.getAttribute('data-x2-bl-edit')); return; }
+      const blDel = e.target.closest && e.target.closest('[data-x2-bl-delete]');
+      if (blDel) { deleteXuong2Bullig(blDel.getAttribute('data-x2-bl-delete')); return; }
       // Chip tháng đã đặt định mức bào tinh → nạp tháng + số thanh/h vào ô nhập
       const btinhRateChip = e.target.closest && e.target.closest('[data-x2-btinh-rate]');
       if (btinhRateChip) {
@@ -1349,6 +1371,17 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         const m = epvRateChip.getAttribute('data-x2-epv-rate');
         const selEl = document.getElementById('x2-epv-rate-month');
         if (selEl && m) { selEl.value = m; renderX2EpVanRateBar(); }
+        return;
+      }
+      // Chip tháng đã đặt THỜI GIAN THAN HÓA → nạp công đoạn + tháng vào ô nhập
+      const sayRateChip = e.target.closest && e.target.closest('[data-x2-say-rate]');
+      if (sayRateChip) {
+        const m = sayRateChip.getAttribute('data-x2-say-rate');
+        const stage = sayRateChip.getAttribute('data-x2-say-rate-stage') || 'say1';
+        const stEl = document.getElementById('x2-say-rate-stage');
+        const selEl = document.getElementById('x2-say-rate-month');
+        if (stEl) stEl.value = stage;
+        if (selEl && m) { selEl.value = m; renderX2SayRateBar(); }
         return;
       }
       const btinhEdit = e.target.closest && e.target.closest('[data-x2-btinh-edit]');

@@ -3,11 +3,11 @@
 // ═══════════════════════════════════════════════════════════
 import { initLucide, requireEditPermission } from './cloud.js';
 import { pushUndo } from './events.js';
-import { getFilteredBatches, renderAll } from './main.js';
+import { renderAll } from './main.js';
 import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getISOWeekString, showToast, validateBatchInput } from './utils.js';
+import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, validateBatchInput } from './utils.js';
 import { getBaoTinhConversion } from './planning.js';
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
@@ -223,6 +223,75 @@ import { getBaoTinhConversion } from './planning.js';
     const size = `${d[0] || '?'}×${d[1] || '?'}×${d[2] || '?'}`;
     return `${size} · ${nanClassLabelOf(rec.cls)} · ${(Number(rec.quantity) || 0).toLocaleString('vi-VN')}`;
   }
+
+  // ── TÌM NHANH trong danh sách THẺ NGUỒN (Thêm Lô Sấy Mới) ────────
+  // Bỏ dấu + thường hóa để gõ "van"/"van 1250" cũng khớp "Ván"
+  function alNorm(s) {
+    return String(s || '').toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+  }
+  // Số NGÀY đã ở từng công đoạn của 1 lô: { say1, say2, kho }
+  function alStageDaysOf(batch) {
+    const out = { say1: 0, say2: 0, kho: 0 };
+    if (!batch) return out;
+    const hist = getBatchStageHistory(batch);
+    hist.forEach((h, idx) => {
+      if (!h || !(h.stage in out)) return;
+      out[h.stage] += getHistoryEntryDays(hist, idx) || 0;
+    });
+    return out;
+  }
+  // 2 DÒNG hiển thị 1 thẻ nguồn:
+  //   Dòng 1 = Vị trí · Kích thước · Loại (A/A1/B) · Số lượng
+  //   Dòng 2 = Dùng cho (Ván/Bullig) · badge đếm ngày S1/S2/K (lô ở Kho) — mỗi badge 1 màu
+  // sub = chuỗi thuần (dùng tìm kiếm) · subHtml = HTML có badge màu
+  function alCardLines(it, stage) {
+    const isLot = stage === 'say2';
+    const dims = isLot
+      ? `${it.length || '?'}×${it.width || '?'}×${it.thickness || '?'}`
+      : (Array.isArray(it.dims) ? `${it.dims[0] || '?'}×${it.dims[1] || '?'}×${it.dims[2] || '?'}` : '?');
+    const cls = isLot ? (it.bambooType || '—') : nanClassLabelOf(it.cls);
+    const qty = isLot ? (Number(it.quantity) || 0) : nanCardRemainingOf(it);
+    const qtyLbl = isLot
+      ? `${qty.toLocaleString('vi-VN')} thanh`
+      : `${qty.toLocaleString('vi-VN')} thanh (còn)`;
+    const main = `${it.location || '—'} · ${dims} · ${cls} · ${qtyLbl}`;
+    // Thẻ nan Chọn Nan Thô không mang sẵn Dùng cho → hiện giá trị đang chọn ở form
+    const useForLbl = it.useFor || (isLot ? '—' : alUseFor());
+    const extra = [];
+    if (isLot) {
+      const d = alStageDaysOf(it);
+      extra.push(
+        `<span class="al-day-badge day-s1" title="Số ngày đã ở Sấy 1">S1-${d.say1} ngày</span>`,
+        `<span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${d.say2} ngày</span>`,
+        `<span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${d.kho} ngày</span>`
+      );
+    } else if (it.external) {
+      extra.push(`<span class="al-day-badge day-ext" title="Nan mua ngoài công đoạn">Ngoài${it.supplier ? ' · ' + escapeHTML(it.supplier) : ''}</span>`);
+    } else if (it.materialType) {
+      extra.push(`<span class="al-day-badge day-luuong" title="Luồng nguyên liệu">${escapeHTML(it.materialType)}</span>`);
+    }
+    const subHtml = `<span class="al-use-tag use-${alNorm(useForLbl).replace(/[^a-z]/g, '') || 'khac'}">${escapeHTML(useForLbl)}</span> ` + extra.join(' ');
+    const sub = `Dùng cho ${useForLbl} · ${extra.map(e => e.replace(/<[^>]*>/g, '')).join(' · ')}`;
+    return { main, sub, subHtml };
+  }
+  // Thẻ nguồn có khớp từ khóa tìm nhanh không (tìm trong mọi thông tin hiển thị)
+  function alSourceMatches(it, stage, query) {
+    const q = alNorm(query).trim();
+    if (!q) return true;
+    const lines = alCardLines(it, stage);
+    return alNorm(`${lines.main} ${lines.sub} ${it.code || ''}`).includes(q);
+  }
+  let alSourceQuery = '';
+  function alSetSourceQuery(v) {
+    alSourceQuery = String(v || '');
+    renderAlSourceList();
+  }
+  function alClearSourceQuery() {
+    alSourceQuery = '';
+    const el = document.getElementById('al-source-search');
+    if (el) el.value = '';
+  }
   // Số thanh ĐÃ dùng của 1 thẻ chọn nan (đã tạo lô sấy từ thẻ đó)
   function nanCardUsedOf(chonNanId, excludeBatchId) {
     return (state.batches || [])
@@ -243,11 +312,6 @@ import { getBaoTinhConversion } from './planning.js';
   function availableKhoLots() {
     return (state.batches || []).filter(b => b && b.stage === 'kho');
   }
-  // Nhãn 1 lô trong danh sách nguồn: "K11 · 260910-01 · 1250×80×12 · A · 5.000 thanh"
-  function batchSourceLabel(b) {
-    const dims = `${b.length || '?'}×${b.width || '?'}×${b.thickness || '?'}`;
-    return `${b.location || '—'} · ${b.code || '—'} · ${dims} · ${b.bambooType || '—'} · ${(Number(b.quantity) || 0).toLocaleString('vi-VN')} thanh`;
-  }
 
   // ─── MODAL "THÊM LÔ SẤY MỚI" — mở/đóng/đổi nguồn/lưu ─────────
   // Nguồn đang chọn (mảng id — CHỌN ĐƯỢC NHIỀU nguồn cùng lúc) + vị trí đang chọn
@@ -255,16 +319,16 @@ import { getBaoTinhConversion } from './planning.js';
   let alLocation = '';
 
   function alStageOf() { return (document.getElementById('al-stage') || {}).value || 'say1'; }
+  function alUseFor() {
+    const v = (document.getElementById('al-use-for') || {}).value;
+    return v === 'Bullig' ? 'Bullig' : 'Ván';
+  }
   function alPickedIds() { return alPicked.slice(); }
   // Danh sách nguồn khả dụng của công đoạn đang chọn
   function alCandidatesOf(stage) {
     return stage === 'say2' ? availableKhoLots() : availableSay1Cards();
   }
   function alAvailableSources() { return alCandidatesOf(alStageOf()); }
-  // Nhãn 1 nguồn trong danh sách chọn nhiều
-  function alSourceLabelOf(it, stage) {
-    return stage === 'say2' ? batchSourceLabel(it) : nanCardLabel(it);
-  }
   // Đóng 2 danh sách mở rộng (nguồn + vị trí)
   function alClosePanels() {
     const src = document.getElementById('al-source-panel');
@@ -296,15 +360,22 @@ import { getBaoTinhConversion } from './planning.js';
         : '— Không có thẻ nan nào chờ sấy (ghi lượt ở thẻ Chọn Nan Thô trước) —'}</div>`;
       return;
     }
-    listEl.innerHTML = items.map(it => {
+    // Ô tìm nhanh (như ô tìm kiếm của cột Sấy 1 / Sấy 2)
+    const visible = alSourceQuery.trim()
+      ? items.filter(it => alSourceMatches(it, stage, alSourceQuery))
+      : items;
+    if (!visible.length) {
+      listEl.innerHTML = `<div class="al-empty">Không có thẻ/lô nào khớp "${escapeHTML(alSourceQuery.trim())}"</div>`;
+      return;
+    }
+    listEl.innerHTML = visible.map(it => {
       const id  = String(it.id);
       const on  = alPicked.includes(id);
-      const sub = stage === 'say2' ? '' : `còn ${nanCardRemainingOf(it).toLocaleString('vi-VN')} thanh`;
-      return `<button type="button" class="al-card${on ? ' picked' : ''}" data-al-pick="${escapeHTML(id)}" aria-pressed="${on ? 'true' : 'false'}">
-        <span class="al-card-check"><i data-lucide="${on ? 'check-square' : 'square'}"></i></span>
+      const lines = alCardLines(it, stage);
+      return `<button type="button" class="al-card${on ? ' picked' : ''}" data-al-pick="${escapeHTML(id)}" aria-pressed="${on ? 'true' : 'false'}" title="${escapeHTML(lines.sub)}">
         <span class="al-card-body">
-          <span class="al-card-main">${escapeHTML(alSourceLabelOf(it, stage))}</span>
-          ${sub ? `<span class="al-card-sub">${escapeHTML(sub)}</span>` : ''}
+          <span class="al-card-main">${escapeHTML(lines.main)}</span>
+          <span class="al-card-sub">${lines.subHtml}</span>
         </span>
       </button>`;
     }).join('');
@@ -491,6 +562,8 @@ import { getBaoTinhConversion } from './planning.js';
     if (dEl) dEl.value = today;
     const stageEl = document.getElementById('al-stage');
     if (stageEl) stageEl.value = 'say1';
+    const useForEl = document.getElementById('al-use-for');
+    if (useForEl) useForEl.value = 'Ván';   // mặc định Ván cho lô mới
     syncAddLotUI();
     modal.classList.add('show');
     initLucide();
@@ -504,6 +577,7 @@ import { getBaoTinhConversion } from './planning.js';
   // Đổi Công đoạn → nạp danh sách NGUỒN tương ứng (bỏ chọn nguồn của công đoạn cũ)
   function syncAddLotUI() {
     alPicked = [];
+    alClearSourceQuery();
     alClosePanels();
     const input = document.getElementById('al-location');
     if (input) input.value = alLocation;
@@ -519,8 +593,8 @@ import { getBaoTinhConversion } from './planning.js';
     const hintEl = document.getElementById('al-source-hint');
     const info = document.getElementById('al-source-info');
     if (hintEl) hintEl.textContent = stage === 'say2'
-      ? 'Chọn 1 hoặc NHIỀU lô đang ở Kho → chuyển sang Sấy 2 (giữ nguyên kích thước/lượng của lô).'
-      : 'Nguồn: công đoạn Chọn Nan Thô — mỗi thẻ là 1 cỡ nan (Dài × Rộng × Dày · Phân loại · Số lượng). Số lượng tạo lô = phần CÒN LẠI của thẻ.';
+      ? 'Chọn 1 hoặc NHIỀU lô đang ở Kho → chuyển sang Sấy 2 (áp dụng Dùng Cho đã chọn cho mọi lô).'
+      : 'Nguồn: công đoạn Chọn Nan Thô — mỗi thẻ là 1 cỡ nan (Vị trí · Dài × Rộng × Dày · Phân loại · Số lượng). Số lượng tạo lô = phần CÒN LẠI của thẻ.';
     if (!info) return;
     const picked = alCandidatesOf(stage).filter(it => alPicked.includes(String(it.id)));
     if (!picked.length) {
@@ -556,12 +630,14 @@ import { getBaoTinhConversion } from './planning.js';
       const lots = alPicked.map(id => (state.batches || []).find(x => x.id === id)).filter(Boolean);
       if (!lots.length) { showToast('Không tìm thấy lô nguồn!', 'error'); return; }
       pushUndo(`Chuyển ${lots.length} lô sang Sấy 2`);
+      const useForVal = alUseFor();
       lots.forEach(b => {
         if (!b.stageHistory || !b.stageHistory.length) b.stageHistory = [{ stage: b.stage, date: b.date }];
         b.stage = 'say2';
         b.say2Date = dateVal;                        // ngày vào Sấy 2 thực tế (badge đếm ngày)
         b.stageHistory.push({ stage: 'say2', date: dateVal });
         b.location = location;
+        b.useFor = useForVal;                        // Dùng cho (Ván / Bullig) chọn ở form
         if (notes) b.notes = notes;
         b.updatedAt = nowISO;
       });
@@ -592,7 +668,7 @@ import { getBaoTinhConversion } from './planning.js';
         length, width, thickness, quantity,
         volume: calculateVolume(length, width, thickness, quantity),
         bambooType: nanClassLabelOf(rec.cls),        // A / A1 / B lấy từ phân loại của thẻ nan
-        useFor: 'Ván',
+        useFor: alUseFor(),                          // Dùng cho (Ván / Bullig) chọn ở form
         location,
         notes,
         sourceChonNanId: rec.id,                     // link thẻ nan (để trừ phần còn lại)
@@ -803,242 +879,6 @@ import { getBaoTinhConversion } from './planning.js';
     showToast(`Đã chuyển ${lots.length} lô ở vị trí ${pos} vào Kho (ngày ${formatDateDDMMYY(dateVal)})!`, 'success');
   }
 
-  // ─── TRANSFER MODAL ───────────────────────────────────────────
-  function openTransferModal(batchId) {
-    if (!requireEditPermission()) return;
-    const batch = state.batches.find(b => b.id === batchId);
-    if (!batch) return;
-    const modal = document.getElementById('modal-transfer');
-
-    document.getElementById('transfer-batch-id').value         = batch.id;
-    document.getElementById('transfer-batch-title').textContent = `LÔ NAN TRE: ${batch.code}`;
-    document.getElementById('transfer-preview-dim').textContent = `${batch.length} × ${batch.width} × ${batch.thickness} mm`;
-    document.getElementById('transfer-preview-qty').textContent = `${batch.quantity.toLocaleString('vi-VN')} thanh`;
-    document.getElementById('transfer-preview-vol').textContent = `${batch.volume.toFixed(4)} m³`;
-    document.getElementById('transfer-from-tag').textContent    = STAGES[batch.stage]?.name || batch.stage;
-
-    const nextStage = STAGES[batch.stage]?.next || 'bao_tinh';
-    document.getElementById('transfer-target-stage').value = nextStage;
-
-    // Điền sẵn vị trí & ghi chú hiện tại (người dùng có thể sửa)
-    const locEl = document.getElementById('transfer-new-location');
-    if (locEl) locEl.value = batch.location || '';
-    const notesEl = document.getElementById('transfer-new-notes');
-    if (notesEl) notesEl.value = batch.notes || '';
-
-    // Ngày vào công đoạn thực tế: mặc định hôm nay, hiện khi đích là Sấy 2 / Kho / Bào Tinh
-    const stDateEl = document.getElementById('transfer-stage-date');
-    if (stDateEl) stDateEl.value = new Date().toISOString().split('T')[0];
-    syncTransferStageDateUI(nextStage);
-
-    modal.classList.add('show');
-    initLucide();
-  }
-
-  function closeTransferModal() {
-    document.getElementById('modal-transfer')?.classList.remove('show');
-  }
-
-  // Hiện/ẩn + đổi nhãn ô "Ngày Vào Công Đoạn (Thực Tế)" theo công đoạn đích
-  // (Sấy 2 / Kho / Bào Tinh có mốc ngày riêng; Sấy 1 = ngày tạo lô nên không cần)
-  function syncTransferStageDateUI(stage) {
-    const group = document.getElementById('transfer-stage-date-group');
-    const label = document.getElementById('transfer-stage-date-label');
-    if (group) group.style.display = (stage && stage !== 'say1') ? '' : 'none';
-    if (label && stage) label.textContent = `Ngày Vào ${STAGES[stage]?.short || 'Công Đoạn'} (Thực Tế)`;
-  }
-
-  // Hiện/ẩn + đổi chú thích ô ngày thực tế dùng chung của thanh chuyển nhiều lô
-  function syncMtbStageDateUI(stage) {
-    const el = document.getElementById('mtb-stage-date');
-    if (!el) return;
-    el.style.display = (stage && stage !== 'say1') ? '' : 'none';
-    el.title = stage
-      ? `Ngày vào ${STAGES[stage]?.short || stage} thực tế — áp dụng cho mọi lô được chuyển. Mặc định hôm nay, sửa lại nếu ngày thực tế khác ngày nhập hệ thống.`
-      : 'Ngày vào công đoạn thực tế';
-  }
-
-  function handleTransferSubmit(e) {
-    e.preventDefault();
-    const batchId     = document.getElementById('transfer-batch-id').value;
-    const targetStage = document.getElementById('transfer-target-stage').value;
-    const batchIdx = state.batches.findIndex(b => b.id === batchId);
-    if (batchIdx === -1) return;
-    const src = state.batches[batchIdx];
-
-    if (src.stage === targetStage) { showToast('Công đoạn đích phải khác công đoạn hiện tại!', 'error'); return; }
-
-    // Đọc Vị Trí Mới & Ghi Chú Mới người dùng nhập trong modal
-    // (modal điền sẵn giá trị hiện tại; xóa trắng = xóa thông tin cũ trên thẻ)
-    const locEl   = document.getElementById('transfer-new-location');
-    const notesEl = document.getElementById('transfer-new-notes');
-    const newLocation = locEl ? locEl.value.trim() : (src.location || '');
-    const newNotes    = notesEl ? notesEl.value.trim() : (src.notes || '');
-
-    const nowISO   = new Date().toISOString();
-    const todayStr = new Date().toISOString().split('T')[0];
-    // Ngày vào công đoạn thực tế (khi đích là Sấy 2 / Kho / Bào Tinh) — có thể sớm
-    // hơn ngày nhập hệ thống; để trống thì lấy hôm nay
-    const stDateEl = document.getElementById('transfer-stage-date');
-    const stageEffectiveDate = (stDateEl && stDateEl.value) ? stDateEl.value : todayStr;
-
-    // Chuyển TOÀN BỘ lô sang công đoạn mới (giữ nguyên kích thước & số lượng)
-    pushUndo(`Chuyển lô ${src.code} sang ${STAGES[targetStage].name}`);
-
-    // Đảm bảo stageHistory tồn tại (giữ nguyên mốc ngày vào công đoạn hiện tại)
-    if (!src.stageHistory || src.stageHistory.length === 0) {
-      src.stageHistory = [{ stage: src.stage, date: src.date }];
-    }
-
-    src.stage     = targetStage;
-    src.location  = newLocation; // GHI ĐÈ vị trí mới lên thông tin cũ
-    src.notes     = newNotes;    // GHI ĐÈ ghi chú mới lên thông tin cũ
-    src.updatedAt = nowISO;
-    src.stageHistory.push({ stage: targetStage, date: stageEffectiveDate });
-    // Ngày vào công đoạn thực tế (ưu tiên khi thống kê & xuất Excel theo công đoạn)
-    if (targetStage === 'bao_tinh')      src.baoTinhDate = stageEffectiveDate;
-    else if (targetStage === 'say2')     src.say2Date    = stageEffectiveDate;
-    else if (targetStage === 'kho')      src.khoDate     = stageEffectiveDate;
-
-    showToast(`Đã chuyển toàn bộ lô ${src.code} (${src.quantity.toLocaleString('vi-VN')} thanh) sang ${STAGES[targetStage].name}`, 'success');
-
-    saveData(); closeTransferModal(); renderAll();
-  }
-
-  // ─── CHUYỂN NHIỀU LÔ CÙNG LÚC (CHỌN BẰNG CHECKBOX) ───────────
-  function toggleMultiTransferMode() {
-    if (!requireEditPermission()) return;
-    if (state.multiTransferMode) { exitMultiTransferMode(); return; }
-    state.multiTransferMode = true;
-    state.multiSelectedIds  = [];
-    document.body.classList.add('multi-select');
-    updateMultiBar();
-    renderAll();
-    showToast('Chế độ chọn nhiều lô: bấm vào các thẻ lô để đánh dấu', 'info');
-  }
-
-  function exitMultiTransferMode() {
-    state.multiTransferMode = false;
-    state.multiSelectedIds  = [];
-    // Xóa ô Vị Trí/Ghi Chú dùng chung để lần sau không áp dụng nhầm giá trị cũ
-    const locEl   = document.getElementById('mtb-new-location');
-    if (locEl) locEl.value = '';
-    const notesEl = document.getElementById('mtb-new-notes');
-    if (notesEl) notesEl.value = '';
-    document.body.classList.remove('multi-select');
-    updateMultiBar();
-    renderAll();
-  }
-
-  function toggleBatchSelection(batchId) {
-    if (!state.multiTransferMode) return;
-    const idx = state.multiSelectedIds.indexOf(batchId);
-    if (idx === -1) state.multiSelectedIds.push(batchId);
-    else state.multiSelectedIds.splice(idx, 1);
-    // Cập nhật giao diện thẻ ngay lập tức (không cần re-render)
-    const card = document.querySelector(`.bamboo-card[data-id="${batchId}"]`);
-    if (card) card.classList.toggle('selected', idx === -1);
-    updateMultiBar();
-  }
-
-  function selectAllMulti() {
-    if (!state.multiTransferMode) return;
-    state.multiSelectedIds = getFilteredBatches().map(b => b.id);
-    document.querySelectorAll('.bamboo-card').forEach(card => {
-      card.classList.toggle('selected', state.multiSelectedIds.includes(card.getAttribute('data-id')));
-    });
-    updateMultiBar();
-  }
-
-  function clearMultiSelection() {
-    state.multiSelectedIds = [];
-    document.querySelectorAll('.bamboo-card.selected').forEach(c => c.classList.remove('selected'));
-    updateMultiBar();
-  }
-
-  function updateMultiBar() {
-    const bar   = document.getElementById('multi-transfer-bar');
-    const count = document.getElementById('mtb-count');
-    const btn   = document.getElementById('btn-multi-transfer');
-    if (!bar || !count || !btn) return;
-    if (state.multiTransferMode) {
-      bar.classList.add('show');
-      count.textContent = state.multiSelectedIds.length.toLocaleString('vi-VN');
-      btn.classList.add('active');
-      btn.innerHTML = '<i data-lucide="x-circle"></i> Thoát chọn lô';
-    } else {
-      bar.classList.remove('show');
-      btn.classList.remove('active');
-      btn.innerHTML = '<i data-lucide="list-checks"></i> Chọn nhiều lô để chuyển';
-    }
-    initLucide();
-  }
-
-  async function confirmMultiTransfer() {
-    if (!state.multiTransferMode) return;
-    if (state.multiSelectedIds.length === 0) { showToast('Chưa đánh dấu lô nào!', 'error'); return; }
-    const targetStage = document.getElementById('mtb-target-stage')?.value;
-    if (!targetStage) { showToast('Vui lòng chọn công đoạn đến!', 'error'); return; }
-
-    // Vị Trí & Ghi Chú dùng chung (nếu nhập) sẽ GHI ĐÈ lên mọi lô được chuyển.
-    // Để trống = giữ nguyên vị trí/ghi chú hiện có của từng lô.
-    const locEl     = document.getElementById('mtb-new-location');
-    const notesEl   = document.getElementById('mtb-new-notes');
-    const newLocation = locEl ? locEl.value.trim() : '';
-    const newNotes    = notesEl ? notesEl.value.trim() : '';
-
-    // Xử lý: bỏ qua các lô đang ở đúng công đoạn đích
-    const toMove = [];
-    let skipped  = 0;
-    state.multiSelectedIds.forEach(id => {
-      const b = state.batches.find(x => x.id === id);
-      if (!b) return;
-      if (b.stage === targetStage) skipped++;
-      else toMove.push(b);
-    });
-
-    if (toMove.length === 0) {
-      showToast(`Không có lô nào cần chuyển (${skipped} lô đã ở ${STAGES[targetStage].name})`, 'info');
-      return;
-    }
-    let confirmMsg = `Chuyển TOÀN BỘ ${toMove.length} lô đã chọn sang ${STAGES[targetStage].name}?`;
-    if (newLocation) confirmMsg += `\n• Vị Trí mới: "${newLocation}" (áp dụng cho mọi lô)`;
-    if (newNotes)    confirmMsg += `\n• Ghi Chú mới: "${newNotes}" (áp dụng cho mọi lô)`;
-    if (!confirm(confirmMsg)) return;
-
-    pushUndo(`Chuyển ${toMove.length} lô sang ${STAGES[targetStage].name}`);
-    const nowISO   = new Date().toISOString();
-    const todayStr = new Date().toISOString().split('T')[0];
-    // Ngày vào công đoạn thực tế dùng chung (khi đích là Sấy 2 / Kho / Bào Tinh) — trống = hôm nay
-    const stDateEl  = document.getElementById('mtb-stage-date');
-    const stageDateVal = (stDateEl && stDateEl.value) ? stDateEl.value : todayStr;
-
-    toMove.forEach(b => {
-      if (!b.stageHistory || b.stageHistory.length === 0) {
-        b.stageHistory = [{ stage: b.stage, date: b.date }];
-      }
-      if (newLocation !== '') b.location = newLocation; // GHI ĐÈ vị trí dùng chung
-      if (newNotes    !== '') b.notes    = newNotes;    // GHI ĐÈ ghi chú dùng chung
-      b.stage     = targetStage;
-      b.updatedAt = nowISO;
-      b.stageHistory.push({ stage: targetStage, date: stageDateVal });
-      // Ngày vào công đoạn thực tế (ưu tiên khi thống kê & xuất Excel theo công đoạn)
-      if (targetStage === 'bao_tinh')      b.baoTinhDate = stageDateVal;
-      else if (targetStage === 'say2')     b.say2Date    = stageDateVal;
-      else if (targetStage === 'kho')      b.khoDate     = stageDateVal;
-    });
-
-    // Xóa ô nhập để lần sau không vô tình áp dụng lại giá trị cũ
-    if (locEl) locEl.value = '';
-    if (notesEl) notesEl.value = '';
-    if (stDateEl) stDateEl.value = new Date().toISOString().split('T')[0];
-
-    saveData();
-    exitMultiTransferMode();
-    showToast(`Đã chuyển ${toMove.length} lô sang ${STAGES[targetStage].name}` +
-      (skipped ? ` (bỏ qua ${skipped} lô trùng công đoạn)` : ''), 'success');
-  }
-
 export {
   alAvailableSources,
   alClearPicks,
@@ -1049,6 +889,7 @@ export {
   alPickAll,
   alPickedIds,
   alSetLocation,
+  alSetSourceQuery,
   alShowNewLocationRow,
   alToggleLocationPanel,
   alTogglePick,
@@ -1056,20 +897,15 @@ export {
   availableKhoLots,
   availableSay1Cards,
   batchesAtPosition,
-  clearMultiSelection,
   closeAddLotModal,
   closeBatchFormModal,
   closeTransferKhoModal,
-  closeTransferModal,
-  confirmMultiTransfer,
   deleteBatch,
-  exitMultiTransferMode,
   handleAddLotSubmit,
   handleAlAddLocation,
   handleAlDeleteLocation,
   handleBatchFormSubmit,
   handleTransferKhoSubmit,
-  handleTransferSubmit,
   khoLocationsInUse,
   khoPositionsAt,
   loadX2LotLocations,
@@ -1077,18 +913,11 @@ export {
   openAddLotModal,
   openBatchFormModal,
   openTransferKhoModal,
-  openTransferModal,
   saveX2LotLocations,
-  selectAllMulti,
   syncAddLotSource,
   syncAddLotUI,
-  syncMtbStageDateUI,
   syncTransferKhoUI,
-  syncTransferStageDateUI,
-  toggleBatchSelection,
-  toggleMultiTransferMode,
   updateCkNewVolume,
   updateCkPosInfo,
-  updateMultiBar,
   x2LotLocations
 };

@@ -12,10 +12,12 @@ import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePressNotesExpanded } from './press.js';
+import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { baoTinhAddRow, baoTinhClearPicks, baoTinhPickAll, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, editXuong2Bullig, editXuong2Cut, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BaoTinhRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoTinhRateBar, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2KanbanBoard, onSayTimesChange, onSayIncidentChange, handleX2SayRateSave, renderX2SayRateBar, updateXuong2BaoThoLinked, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, x2BaoTinhTogglePicker, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay } from './xuong2.js';
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
+// Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
+import { selectCapacityStage, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
@@ -574,6 +576,9 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('pv-span-2', 'click', () => setPlanVsPressSpan(2));
     // Nút Total: bật/tắt tính tổng theo nhóm sản phẩm (Bullig / Ván)
     safeOn('pv-total-toggle', 'click', () => setPlanVsPressTotal(!state.planVsPressTotal));
+    // Nút TÊN BIỂU ĐỒ (#pv-mode-toggle): chuyển 2 biểu đồ của THẺ GỘP —
+    // Kế Hoạch vs Đã Ép ↔ Khả Năng Đáp Ứng Kế Hoạch (biểu đồ + tên + công cụ đổi cùng nhau)
+    safeOn('pv-mode-toggle', 'click', () => togglePlanVsPressMode());
     // Điều hướng theo tuần của biểu đồ
     safeOn('pv-week-filter', 'change', (e) => {
       state.planVsPressWeek = e.target.value === 'all' ? 'all' : Number(e.target.value);
@@ -1116,6 +1121,43 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
 
     // ── LỊCH SỬ SỬA ĐỔI (modal — chỉ Admin mới xem được) ──
     safeOn('btn-history-kanban',    'click', () => openHistoryModal('kanban', x2OpenCardHistoryDomain())); // mở đúng vùng của THẺ đang mở
+    // ── THẺ TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (đầu tab Tổng Quan — js/capacity.js) ──
+    // Nút tên = đổi Xưởng 2 ⇄ Xưởng 1 · ‹ › = nhảy tuần (tự xổ tầng công đoạn) ·
+    // nút Thu gọn · click ủy quyền: dòng tuần → xổ công đoạn, dòng công đoạn →
+    // xổ từng ngày, nút "Mở thẻ" → chuyển sang tab Công Đoạn + mở đúng thẻ.
+    safeOn('capacity-mode-toggle', 'click', toggleCapacityWorkshop);
+    safeOn('capacity-week-prev',   'click', () => shiftCapacityWeek(-1));
+    safeOn('capacity-week-next',   'click', () => shiftCapacityWeek(1));
+    safeOn('btn-toggle-capacity',  'click', toggleCapacityCollapse);
+    const capCard = document.getElementById('capacity-card');
+    if (capCard) {
+      capCard.addEventListener('click', (e) => {
+        const t = e.target;
+        // Nút chuyển CHẾ ĐỘ xem: "Biểu đồ" (trực quan) ⇄ "Bảng dữ liệu" (3 tầng)
+        const viewBtn = t && t.closest ? t.closest('[data-cap-view]') : null;
+        if (viewBtn) { setCapacityView(viewBtn.getAttribute('data-cap-view')); return; }
+        const openBtn = t && t.closest ? t.closest('[data-cap-open-card]') : null;
+        if (openBtn) {
+          switchView('kanban-view'); // thẻ công đoạn nằm ở tab Công Đoạn — chuyển tab rồi mở pop-up
+          x2OpenCard(openBtn.getAttribute('data-cap-open-card'));
+          return;
+        }
+        // Chế độ "Biểu đồ": bấm 1 HÀNG thang xếp hạng hoặc 1 Ô bản đồ nhiệt
+        // → chọn công đoạn (+ tuần) và vẽ biểu đồ 8 tuần của công đoạn đó
+        const heatCell = t && t.closest ? t.closest('[data-cap-heat]') : null;
+        if (heatCell) { selectCapacityStage(heatCell.getAttribute('data-cap-heat'), heatCell.getAttribute('data-cap-heat-week')); return; }
+        const rankRow = t && t.closest ? t.closest('[data-cap-rank]') : null;
+        if (rankRow) { selectCapacityStage(rankRow.getAttribute('data-cap-rank')); return; }
+        // Tiêu đề CỘT tuần trên bản đồ nhiệt → chỉ đổi tuần đang xem
+        const heatCol = t && t.closest ? t.closest('.cap-heat-col[data-cap-heat-week]') : null;
+        if (heatCol) { setCapacityWeek(heatCol.getAttribute('data-cap-heat-week')); return; }
+        const stageRow = t && t.closest ? t.closest('[data-cap-stage-row]') : null;
+        if (stageRow) { toggleCapacityStageDays(stageRow.getAttribute('data-cap-stage-row')); return; }
+        const weekRow = t && t.closest ? t.closest('[data-cap-week-row]') : null;
+        if (weekRow) toggleCapacityWeekOpen(weekRow.getAttribute('data-cap-week-row'));
+      });
+    }
+
     safeOn('btn-history-planning',  'click', () => openHistoryModal('planning'));
     
     safeOn('btn-history-materials', 'click', () => openHistoryModal('materials'));

@@ -457,7 +457,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v170/.test(swJs));
+  /nha-may-ngoc-son-v173/.test(swJs));
 check('CẤU TRÚC (styles.css): pop-up thẻ chi tiết CHỈ GIỮ 1 KHUNG (bỏ khung + padding ngoài của shell)',
   cssHtml.includes('CHỈ GIỮ 1 KHUNG') &&
   /#x2-detail-card, #qc-detail-card, #hr-detail-card \{[\s\S]{0,220}border: none/.test(cssHtml) &&
@@ -746,6 +746,61 @@ check('THU GỌN: bấm lần nữa → mở lại bảng lô + ghi nhớ "0"',
   !hoaCard.classList.contains('kanban-board-collapsed') &&
   document.getElementById('x2-kanban-toggle-label').textContent === 'Thu gọn bảng lô' &&
   localStorage.getItem('bamboo_tracker_x2_kanban_collapsed_v1') === '0');
+
+// ─── M4. CHIA LẦN THEO LƯỢT LƯU (MÃ MẺ sayCharges + MỐC 28/09/2026) ──
+// Từ 28/09/2026: MỖI lượt bấm "Lưu" của "Thêm Lô Sấy Mới" = 1 LẦN than hóa —
+// mã mẻ (sayCharges.<say>) gắn lên TỪNG lô của lượt lưu; KHÔNG tự gộp m³/lần nữa.
+// Lô cũ (ngày < 28/09/2026, không có mã mẻ) vẫn tự gộp theo định mức m³/lần.
+check('MÃ MẺ (Sấy 1): các lô tạo trong CÙNG lượt Lưu nhận cùng sayCharges.say1',
+  !!bNew1 && !!bNew2 && Number(bNew1.sayCharges && bNew1.sayCharges.say1) > 0 &&
+  bNew1.sayCharges.say1 === bNew2.sayCharges.say1);
+check('MÃ MẺ (Sấy 2): lô chuyển Kho → Sấy 2 nhận sayCharges.say2 (cùng 1 lượt Lưu)',
+  Number(b2.sayCharges && b2.sayCharges.say2) > 0 &&
+  b2.sayCharges.say2 === b2b.sayCharges.say2);
+state.x2SayTimes = {};   // bỏ hết nhập tay để thử luật chia lần mới
+// Lô cũ 25/09 (2 m³ + 1 m³, KHÔNG mã mẻ) → vẫn tự gộp theo m³/lần (2 lần: 2 + 1)
+state.batches.push(
+  { id: 'tb-old2', code: '260925-01', stage: 'say1', date: '2026-09-25', location: 'LS5', length: 1250, width: 20, thickness: 10, quantity: 1000, volume: 2, bambooType: 'A', useFor: 'Ván', stageHistory: [{ stage: 'say1', date: '2026-09-25' }] },
+  { id: 'tb-old3', code: '260925-02', stage: 'say1', date: '2026-09-25', location: 'LS5', length: 1250, width: 20, thickness: 10, quantity: 500, volume: 1, bambooType: 'A', useFor: 'Ván', stageHistory: [{ stage: 'say1', date: '2026-09-25' }] }
+);
+const dOld = x2.sayChargeRows().find(r => r.date === '2026-09-25');
+check('MỐC NGÀY (dữ liệu cũ): 25/09 < 28/09/2026 KHÔNG mã mẻ → vẫn tự gộp theo m³/lần (3 m³ = 2 lần: 2 + 1)',
+  !!dOld && dOld.lanCount === 2 &&
+  Math.abs(dOld.charges[0].vol - 2) < 1e-9 && Math.abs(dOld.charges[1].vol - 1) < 1e-9);
+// Ngày MỚI 29/09: lô KHÔNG mã mẻ (3 m³) → mặc định 1 LẦN, KHÔNG tự gộp 2 m³
+state.batches.push({ id: 'tb-nm0', code: '260929-01', stage: 'say1', date: '2026-09-29', location: 'LS6', length: 1250, width: 20, thickness: 10, quantity: 1500, volume: 3, bambooType: 'A', useFor: 'Ván', stageHistory: [{ stage: 'say1', date: '2026-09-29' }] });
+let dNew = x2.sayChargeRows().find(r => r.date === '2026-09-29');
+check('MỐC NGÀY (dữ liệu mới): 29/09 ≥ 28/09/2026 KHÔNG mã mẻ → mặc định 1 LẦN (không tự gộp 2 m³)',
+  !!dNew && dNew.lanCount === 1 && Math.abs(dNew.charges[0].vol - 3) < 1e-9);
+// 2 lượt lưu (mã mẻ 1000 & 2000) + lô không mã → 3 lần, đúng thứ tự & đúng lô từng lượt
+state.batches.push(
+  { id: 'tb-nm1', code: '260929-02', stage: 'say1', date: '2026-09-29', location: 'LS6', length: 1250, width: 20, thickness: 10, quantity: 500, volume: 1, bambooType: 'A', useFor: 'Ván', sayCharges: { say1: 1000 }, stageHistory: [{ stage: 'say1', date: '2026-09-29' }] },
+  { id: 'tb-nm2', code: '260929-03', stage: 'say1', date: '2026-09-29', location: 'LS6', length: 1250, width: 20, thickness: 10, quantity: 500, volume: 0.5, bambooType: 'A1', useFor: 'Ván', sayCharges: { say1: 1000 }, stageHistory: [{ stage: 'say1', date: '2026-09-29' }] },
+  { id: 'tb-nm3', code: '260929-04', stage: 'say1', date: '2026-09-29', location: 'LS7', length: 1250, width: 20, thickness: 10, quantity: 1000, volume: 2, bambooType: 'B', useFor: 'Ván', sayCharges: { say1: 2000 }, stageHistory: [{ stage: 'say1', date: '2026-09-29' }] }
+);
+dNew = x2.sayChargeRows().find(r => r.date === '2026-09-29');
+check('CHIA LẦN THEO LƯỢT LƯU: 2 lượt Lưu + 1 lô không mã = 3 lần — mỗi lần ĐÚNG lô + m³ thật (không chia đều giả)',
+  !!dNew && dNew.lanCount === 3 &&
+  dNew.charges[0].codeText === '260929-02 + 260929-03' && Math.abs(dNew.charges[0].vol - 1.5) < 1e-9 &&
+  dNew.charges[1].codeText === '260929-04' && Math.abs(dNew.charges[1].vol - 2) < 1e-9 &&
+  dNew.charges[2].codeText === '260929-01' && Math.abs(dNew.charges[2].vol - 3) < 1e-9);
+// Điền tay "Số lần TH" vẫn GHI ĐÈ số lần theo lượt lưu
+x2.setSayGroupTimes('2026-09-29', 'say1', 4);
+const dNewM = x2.sayChargeRows().find(r => r.date === '2026-09-29');
+check('GHI ĐÈ: điền tay "Số lần TH" = 4 vẫn thắng số lượt Lưu (6,5 m³ chia đều 4 lần × 1,625 m³)',
+  !!dNewM && dNewM.lanCount === 4 && dNewM.charges.every(c => Math.abs(c.vol - 1.625) < 1e-9));
+x2.setSayGroupTimes('2026-09-29', 'say1', '');
+// RENDER: ẨN ghi chú "Tự gộp theo … m³/lần" + chip nguồn số lần
+x2.renderX2SayStats();
+const statsHtml2 = document.getElementById('x2-say-day-rows').innerHTML;
+check('RENDER: ẨN ghi chú "Tự gộp theo … m³/lần" — thay bằng chip nguồn số lần (Theo lượt Lưu / Dữ liệu cũ)',
+  !statsHtml2.includes('Tự gộp theo') && statsHtml2.includes('x2-say-mode-chip') &&
+  statsHtml2.includes('Theo lượt Lưu') && statsHtml2.includes('Dữ liệu cũ'));
+check('CẤU TRÚC (index.html): ghi chú "Tự gộp theo …" đã gỡ khỏi markup tĩnh + nhãn m³/lần ghi rõ (lô cũ)',
+  !idxHtml.includes('hệ thống <b>tự gộp') && idxHtml.includes('m³/lần (lô cũ)'));
+check('CẤU TRÚC (js): lô gắn MÃ MẺ sayCharges khi bấm Lưu + mốc SAY_NO_AUTO_FROM (28/09/2026)',
+  fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').includes('sayCharges') &&
+  fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8').includes('SAY_NO_AUTO_FROM'));
 
 // CẤU TRÚC: markup + style + nối dữ liệu 4 nơi
 check('CẤU TRÚC (index.html): bảng theo TỪNG LẦN than hóa + định mức phút/lần + m³/lần + nút thu gọn bảng KANBAN',

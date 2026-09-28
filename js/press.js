@@ -7,7 +7,7 @@ import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
-import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
+import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
 
   // =============================================================
@@ -1731,7 +1731,83 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       .filter(x => x.productId);
   }
 
+  // ─── THẺ GỘP 2 BIỂU ĐỒ DASHBOARD: NÚT TÊN BIỂU ĐỒ ─────────────
+  // Thẻ #plan-vs-press-card chứa CẢ HAI biểu đồ (chỉ hiện 1 khung tại 1 thời điểm):
+  //   'plan' = Kế Hoạch vs Đã Ép (Theo Sản Phẩm) → nút tên NỔI lên
+  //   'cap'  = Khả Năng Đáp Ứng Kế Hoạch         → nút tên THỤT vào
+  // Nút chuyển đổi CHÍNH LÀ TÊN biểu đồ (#pv-mode-toggle): chỉ hiện tên của biểu
+  // đồ đang xem; bấm nút là biểu đồ + tên + thanh công cụ đổi CÙNG NHAU.
+  // Chế độ nhớ theo MÁY (thuần giao diện — không đồng bộ mây/backup).
+  function pvChartModeOf(mode) { return mode === 'cap' ? 'cap' : 'plan'; }
+  function loadPvChartMode() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_PV_CHART_MODE);
+      if (raw === 'cap' || raw === 'plan') state.pvChartMode = raw;
+    } catch (e) { /* lưu trữ chưa sẵn sàng — giữ mặc định 'plan' */ }
+    return state.pvChartMode;
+  }
+  function savePvChartMode(mode) {
+    try { localStorage.setItem(STORAGE_KEY_PV_CHART_MODE, pvChartModeOf(mode)); } catch (e) { /* bỏ qua */ }
+  }
+  // Nhãn tiêu đề của từng biểu đồ (nút tên chỉ hiện nhãn của biểu đồ đang xem)
+  const PV_MODE_LABELS = {
+    plan: 'Kế Hoạch vs Đã Ép (Theo Sản Phẩm)',
+    cap: 'Khả Năng Đáp Ứng Kế Hoạch'
+  };
+  // Đồng bộ giao diện thẻ theo state.pvMode — KHÔNG vẽ biểu đồ (render tự gọi lại)
+  function applyPvChartModeDom() {
+    const mode = pvChartModeOf(state.pvChartMode);
+    state.pvChartMode = mode;
+    const card = document.getElementById('plan-vs-press-card');
+    if (card && card.dataset) card.dataset.pvMode = mode; // data-pv-mode → CSS nút nổi/thụt
+    const btn = document.getElementById('pv-mode-toggle');
+    if (btn) {
+      if (btn.setAttribute) btn.setAttribute('aria-pressed', mode === 'plan' ? 'true' : 'false');
+      btn.title = mode === 'plan'
+        ? 'Đang xem: Kế Hoạch vs Đã Ép — bấm để đổi sang Khả Năng Đáp Ứng Kế Hoạch'
+        : 'Đang xem: Khả Năng Đáp Ứng Kế Hoạch — bấm để đổi sang Kế Hoạch vs Đã Ép';
+    }
+    const label = document.getElementById('pv-mode-label');
+    if (label) label.textContent = PV_MODE_LABELS[mode];
+    // Ẩn/hiện từng thanh công cụ + dòng gợi ý màu + khung canvas theo chế độ
+    const tbPlan  = document.getElementById('pv-toolbar-plan');
+    const tbCap   = document.getElementById('pv-toolbar-cap');
+    const hint    = document.getElementById('pv-cap-hint-row');
+    const boxPlan = document.getElementById('pv-chart-box-plan');
+    const boxCap  = document.getElementById('pv-chart-box-cap');
+    if (tbPlan) tbPlan.hidden = mode !== 'plan';
+    if (tbCap) tbCap.hidden = mode !== 'cap';
+    if (hint) hint.hidden = mode !== 'cap';
+    if (boxPlan) boxPlan.hidden = mode !== 'plan';
+    if (boxCap) boxCap.hidden = mode !== 'cap';
+  }
+  // Đặt chế độ hiển thị của thẻ gộp (mode: 'plan' | 'cap') + hiệu ứng đổi biểu đồ
+  function setPvChartMode(mode) {
+    state.pvChartMode = pvChartModeOf(mode);
+    savePvChartMode(state.pvChartMode);
+    applyPvChartModeDom();
+    // Hiệu ứng: khung biểu đồ Kế Hoạch TRỒI lên / khung Khả Năng LÚN xuống;
+    // nút tên nổi/thụt do CSS xử lý qua data-pv-mode trên thẻ.
+    const box = document.getElementById(state.pvChartMode === 'cap' ? 'pv-chart-box-cap' : 'pv-chart-box-plan');
+    if (box && box.classList) {
+      box.classList.remove('pv-rise-in', 'pv-sink-in');
+      void box.offsetWidth; // ép reflow để animation chạy lại từ đầu
+      box.classList.add(state.pvChartMode === 'cap' ? 'pv-sink-in' : 'pv-rise-in');
+    }
+    if (window.lucide) lucide.createIcons();
+    renderPlanVsPressChart();   // mỗi hàm render tự bỏ qua nếu không phải chế độ của mình
+    renderPlanCapacityChart();
+  }
+  // Bấm nút TÊN BIỂU ĐỒ: đảo giữa 2 biểu đồ (biểu đồ + tên + công cụ đổi cùng nhau)
+  function togglePlanVsPressMode() {
+    setPvChartMode(state.pvChartMode === 'cap' ? 'plan' : 'cap');
+  }
+
   function renderPlanVsPressChart() {
+    // Thẻ GỘP 2 biểu đồ: chỉ vẽ khi ĐANG xem biểu đồ này (nút tên NỔI = 'plan');
+    // nhỡ nhãn/nút/toolbar luôn khớp chế độ đã nhớ trước khi vẽ.
+    applyPvChartModeDom();
+    if (state.pvChartMode !== 'plan') return;
     const canvas = document.getElementById('plan-vs-press-chart');
     if (!canvas || !window.Chart) return;
     if (state.planVsPressInstance) { state.planVsPressInstance.destroy(); state.planVsPressInstance = null; }
@@ -2060,6 +2136,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
   }
 
   function renderPlanCapacityChart() {
+    // Thẻ GỘP 2 biểu đồ: chỉ vẽ khi ĐANG xem biểu đồ này (nút tên THỤT = 'cap');
+    // đồng bộ luôn nhãn/nút/toolbar để khớp chế độ đã nhớ.
+    applyPvChartModeDom();
+    if (state.pvChartMode !== 'cap') return;
     const canvas = document.getElementById('plan-capacity-chart');
     if (!canvas || !window.Chart) return;
     if (state.planCapacityInstance) { state.planCapacityInstance.destroy(); state.planCapacityInstance = null; }
@@ -2341,7 +2421,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     if (next === startIdx) return; // đã ở biên — không trượt
     state.planCapStartIdx = next;
     // Hiệu ứng trượt: đánh dấu hướng vào khung biểu đồ rồi vẽ lại
-    const box = document.querySelector('#plan-capacity-card .press-chart-box');
+    // (khung canvas của biểu đồ Khả Năng nằm trong thẻ GỘP — id riêng)
+    const box = document.getElementById('pv-chart-box-cap');
     if (box && box.classList) {
       box.classList.remove('pv-cap-in-left', 'pv-cap-in-right');
       void box.offsetWidth; // ép reflow để animation chạy lại từ đầu
@@ -2403,6 +2484,10 @@ export {
   renderPlanVsPressChart,
   renderPlanCapacityChart,
   shiftPlanCapacityWindow,
+  loadPvChartMode,
+  applyPvChartModeDom,
+  setPvChartMode,
+  togglePlanVsPressMode,
   renderPressChart,
   showPressNotePopover,
   setPlanVsPressUnit,

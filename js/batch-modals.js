@@ -612,7 +612,10 @@ import { getBaoTinhConversion } from './planning.js';
     }).join('');
   }
 
-  // Lưu form "Thêm Lô Sấy Mới" — tạo lô cho TẤT CẢ nguồn đã chọn (chọn nhiều)
+  // Lưu form "Thêm Lô Sấy Mới" — tạo lô cho TẤT CẢ nguồn đã chọn (chọn nhiều).
+  // MỖI LƯỢT bấm "Lưu" = 1 LẦN than hóa: gắn MÃ MẺ (sayCharges.<công đoạn> = mốc
+  // thời gian lưu) lên MỌI lô của lượt lưu — bảng thống kê than hóa chia lần theo
+  // mã mẻ này (xem SAY_NO_AUTO_FROM trong js/xuong2.js).
   function handleAddLotSubmit(e) {
     e.preventDefault();
     if (!requireEditPermission()) return;
@@ -624,6 +627,7 @@ import { getBaoTinhConversion } from './planning.js';
     if (!location) { showToast('Vui lòng chọn Vị Trí!', 'error'); return; }
     if (!alPicked.length) { showToast('Chưa chọn nguồn nào — bấm nút "Chọn Lô Nan" để chọn thẻ/lô nguồn!', 'error'); return; }
     const nowISO = new Date().toISOString();
+    const chargeAt = Date.now();    // MÃ MẺ của lượt lưu này (1 lượt bấm Lưu = 1 lần than hóa)
 
     if (stage === 'say2') {
       // ── Sấy 2: CHUYỂN các lô đang ở Kho sang Sấy 2 (không tạo lô mới) ──
@@ -638,6 +642,8 @@ import { getBaoTinhConversion } from './planning.js';
         b.stageHistory.push({ stage: 'say2', date: dateVal });
         b.location = location;
         b.useFor = useForVal;                        // Dùng cho (Ván / Bullig) chọn ở form
+        // MÃ MẺ Sấy 2: lượt Lưu này = 1 lần than hóa (giữ mã mẻ Sấy 1 cũ nếu có)
+        b.sayCharges = Object.assign({}, b.sayCharges, { say2: chargeAt });
         if (notes) b.notes = notes;
         b.updatedAt = nowISO;
       });
@@ -669,6 +675,7 @@ import { getBaoTinhConversion } from './planning.js';
         volume: calculateVolume(length, width, thickness, quantity),
         bambooType: nanClassLabelOf(rec.cls),        // A / A1 / B lấy từ phân loại của thẻ nan
         useFor: alUseFor(),                          // Dùng cho (Ván / Bullig) chọn ở form
+        sayCharges: { say1: chargeAt },              // MÃ MẺ: lượt Lưu này = 1 lần than hóa
         location,
         notes,
         sourceChonNanId: rec.id,                     // link thẻ nan (để trừ phần còn lại)

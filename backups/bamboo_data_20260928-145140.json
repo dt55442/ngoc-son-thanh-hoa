@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-26T14:24:27.983Z",
+  "savedAt": "2026-09-28T06:51:43.023Z",
   "batches": [
     {
       "id": "batch-1790069123836",
@@ -15822,7 +15822,9 @@
   "x2CapRates": {
     "2026-09": 415
   },
-  "x2BoOngRates": {},
+  "x2BoOngRates": {
+    "2026-09": 1000
+  },
   "x2BaoThoRates": {
     "2026-09": 1000
   },
@@ -15845,6 +15847,8 @@
       }
     }
   },
+  "x2SayTimes": {},
+  "x2SayIncidents": {},
   "xuong2BaoTinhRecords": [
     {
       "id": "x2btinh-1790147400070-0-y7kuj",

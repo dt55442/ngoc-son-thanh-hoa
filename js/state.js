@@ -15,6 +15,13 @@
   const STORAGE_KEY_PLANNING_STOCK = 'bamboo_tracker_planning_stock_v1';
   const STORAGE_KEY_PRESS_RECORDS = 'bamboo_tracker_press_records_v1';
   const STORAGE_KEY_PRESS_NOTES = 'bamboo_tracker_press_notes_v1';
+  // THẺ GỘP 2 BIỂU ĐỒ DASHBOARD ("Kế Hoạch vs Đã Ép" + "Khả Năng Đáp Ứng Kế
+  // Hoạch"): chế độ đang xem — nhớ theo MÁY (thuần UI, không lên mây).
+  const STORAGE_KEY_PV_CHART_MODE = 'bamboo_tracker_pv_chart_mode_v1';
+  // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — tab Tổng Quan):
+  // chỉ nhớ TRẠNG THÁI UI theo máy (xưởng đang xem · tuần chọn · tầng đang mở ·
+  // thu gọn) — KHÔNG đồng bộ mây/backup, giống STORAGE_KEY_PV_CHART_MODE.
+  const STORAGE_KEY_CAPACITY_UI = 'bamboo_tracker_capacity_ui_v1';
   const STORAGE_KEY_MATERIALS = 'bamboo_tracker_material_records_v1';
   // Vị trí công đoạn Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký cắt/chọn.
   // Mỗi lượt cắt/chọn link 1 lượt nhập nguyên liệu đầu vào của Xưởng 2 (tab Nguyên Liệu)
@@ -275,6 +282,7 @@
     materialPlanChartWeek: '',      // tuần đang xem của biểu đồ Kế hoạch vs Thực tế ('2026-W36')
     materialPlanChartInstance: null, // instance Chart.js của biểu đồ kế hoạch vs thực tế
     // Biểu đồ tĩnh Kế Hoạch vs Đã Ép (Dashboard)
+    pvChartMode: 'plan',        // THẺ GỘP 2 BIỂU ĐỒ: 'plan' = Kế Hoạch vs Đã Ép | 'cap' = Khả Năng Đáp Ứng Kế Hoạch
     planVsPressUnit: 'vol',     // 'vol' = m³ (mặc định) | 'qty' = Số lượng — chỉ đổi SỐ hiển thị, chiều cao cột luôn theo m³
     planVsPressYear: 'current', // 'current' = năm hiện tại | 'all' | năm cụ thể (VD '2026')
     planVsPressWeek: 'current', // 'current' = tuần hiện tại | 'all' | số tuần (1..53)
@@ -345,6 +353,8 @@ export {
   STORAGE_KEY_PLANNING_STOCK,
   STORAGE_KEY_PRESS_RECORDS,
   STORAGE_KEY_PRESS_NOTES,
+  STORAGE_KEY_PV_CHART_MODE,
+  STORAGE_KEY_CAPACITY_UI,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_HR_EMPLOYEES,
   STORAGE_KEY_HR_LEAVES,

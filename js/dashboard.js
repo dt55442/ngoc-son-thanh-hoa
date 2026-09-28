@@ -14,12 +14,15 @@ import { computeChartData, getPaletteColors, saveCustomCharts } from './export-x
 import { canEditChartZone, canEditTab, canViewAdvanced, getTabDef } from './permissions.js';
 import { hrPressWorkersNamesOf, hrStripForMatch } from './hr.js';
 import { MATERIAL_LOCATIONS, materialPlanWeekOptions, renderMaterialPlanChart } from './materials.js';
-import { renderPlanVsPressChart, renderPlanCapacityChart } from './press.js';
+import { loadPvChartMode, renderPlanVsPressChart, renderPlanCapacityChart } from './press.js';
 import { STAGES, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   // ─── NHẬP DASHBOARD: LUỒNG + CÁC VÙNG BIỂU ĐỒ ────────────────
   function renderDashboardCharts() {
+    // Thẻ GỘP 2 biểu đồ: nạp chế độ đã nhớ theo máy TRƯỚC khi vẽ
+    // (mỗi hàm render tự bỏ qua nếu không phải chế độ đang xem)
+    loadPvChartMode();
     renderStageFlow();
     renderPlanVsPressChart();
     renderPlanCapacityChart();
@@ -1260,14 +1263,18 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   // Tìm instance Chart.js của thẻ (thẻ tùy chỉnh theo data-chart-id, thẻ Ép Ván dùng pressChartInstance)
   function getCardChartInstance(card) {
-    // Thẻ tĩnh "Kế Hoạch vs Đã Ép": instance riêng — KHÔNG nhầm với
-    // pressChartInstance (biểu đồ Ép Ván ở tab Ép Ván)
-    if (card && card.querySelector && card.querySelector('#plan-vs-press-chart')) {
-      return state.planVsPressInstance || null;
+    // Thẻ TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (capacity-card — js/capacity.js):
+    // biểu đồ công đoạn có canvas riêng #cap-stage-chart + instance riêng.
+    if (card && card.querySelector && card.querySelector('#cap-stage-chart')) {
+      return state.capacityStageInstance || null;
     }
-    // Thẻ tĩnh "Khả Năng Đáp Ứng Kế Hoạch"
-    if (card && card.querySelector && card.querySelector('#plan-capacity-chart')) {
-      return state.planCapacityInstance || null;
+    // Thẻ GỘP 2 biểu đồ Dashboard ("Kế Hoạch vs Đã Ép" + "Khả Năng Đáp Ứng"):
+    // thẻ chứa CẢ HAI canvas nên phải chọn instance theo CHẾ ĐỘ ĐANG XEM
+    // (state.pvChartMode) — KHÔNG được nhận nhầm biểu đồ đang ẩn.
+    if (card && card.querySelector && card.querySelector('#plan-vs-press-chart')) {
+      return state.pvChartMode === 'cap'
+        ? (state.planCapacityInstance || null)
+        : (state.planVsPressInstance || null);
     }
     const id = card.getAttribute('data-chart-id');
     if (id && state.customChartInstances[id]) return state.customChartInstances[id];
@@ -1291,11 +1298,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   }
 
   function updateExpandIcon(card, expanded) {
-    const iconEl = card.querySelector('.btn-expand-chart [data-lucide]');
-    if (iconEl) {
-      iconEl.setAttribute('data-lucide', expanded ? 'minimize' : 'maximize');
-      if (window.lucide) window.lucide.createIcons();
-    }
+    // Thẻ GỘP 2 biểu đồ có 2 nút mở rộng (mỗi toolbar 1 nút) — đổi icon CẢ HAI
+    const iconEls = card.querySelectorAll('.btn-expand-chart [data-lucide]');
+    (iconEls || []).forEach(iconEl => iconEl.setAttribute('data-lucide', expanded ? 'minimize' : 'maximize'));
+    if (iconEls && iconEls.length && window.lucide) window.lucide.createIcons();
   }
 
   // Vào toàn màn hình + khóa xoay ngang trên điện thoại đang cầm dọc.
@@ -1362,7 +1368,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   function toggleChartExpand(btn) {
     if (window.matchMedia && window.matchMedia('(min-width: 921px)').matches &&
         window.matchMedia && window.matchMedia('(pointer: fine)').matches) return;
-    const card = btn && btn.closest ? btn.closest('.custom-chart-card, .press-chart-card') : null;
+    const card = btn && btn.closest ? btn.closest('.custom-chart-card, .press-chart-card, .capacity-card') : null;
     if (!card) return;
     if (card.classList.contains('chart-expanded')) collapseChartCard(card);
     else expandChartCard(card);

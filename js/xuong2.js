@@ -213,10 +213,12 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
   // Mỗi LẦN than hóa là 1 mẻ: đưa nan vào lò than hóa → ra vị trí sấy.
   //   • Sấy 1: mọi lô nan trong lần đó đều qua 105 phút (mặc định)
   //   • Sấy 2: 50 phút (mặc định)
-  //   • 1 lần than hóa chứa bao nhiêu m³ → dùng hệ số 2 m³/lần để QUY ĐỔI cho
-  //     dữ liệu cũ/chưa nhập số lần: lô 3,5 m³ → 2 lần than hóa.
-  // Người dùng nhập số lần THẬT sau này (ô "Số lần TH" trên bảng thống kê hoặc
-  // form Sửa Lô) → số đó được dùng thay cho quy đổi.
+  //   • 1 lần than hóa chứa bao nhiêu m³ → dùng hệ số 2 m³/lần để QUY ĐỔI — CHỈ
+  //     còn áp cho DỮ LIỆU CŨ (lô vào sấy TRƯỚC mốc SAY_NO_AUTO_FROM mà không có
+  //     mã mẻ): lô 3,5 m³ → 2 lần than hóa.
+  // Dữ liệu MỚI (từ 28/09/2026): mỗi lượt bấm "Lưu" của form Thêm Lô Sấy Mới =
+  // 1 lần than hóa (mã mẻ sayCharges gắn lên từng lô — batch-modals.js), hoặc
+  // điền tay số lần ở ô "Số lần TH" của bảng thống kê để ghi đè.
   function isThanHoaPos(name) {
     const n = normPosName(name);
     // Vị trí "Than hóa" là chính; nới thêm "sấy" phòng khi nhà máy khai riêng
@@ -226,7 +228,8 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
   function hrThanHoaAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isThanHoaPos); }
 
   // Mặc định 1 LẦN than hóa: phút mỗi lần (105' cho Sấy 1 · 50' cho Sấy 2) +
-  // hệ số quy đổi m³ mỗi lần (2 m³/lần) — cả 2 chỉnh được theo tháng.
+  // hệ số quy đổi m³ mỗi lần (2 m³/lần — CHỈ dùng cho lô cũ trước mốc
+  // SAY_NO_AUTO_FROM) — cả 2 chỉnh được theo tháng.
   const SAY_RATE_DEFAULT = { s1: { phut: 105, m3: 2 }, s2: { phut: 50, m3: 2 } };
   const sayRateGroup = stage => (stage === 'say2' ? 's2' : 's1');
   const fmtPhut = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
@@ -390,20 +393,30 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     return hist.length ? String(hist[hist.length - 1].date).trim() : '';
   }
   // ─── GOM LẦN THAN HÓA THEO NGÀY + CÔNG ĐOẠN SẤY ───────────────
-  // Định mức m³/lần (mặc định 2 m³) áp cho TỔNG thể tích các lô trong NGÀY của
-  // từng công đoạn sấy: gộp lần lượt theo thứ tự lô cho đến khi thêm lô kế sẽ
-  // VƯỢT m³/lần thì đóng lần đó (phần còn lại = lần cuối) — VD ngày tổng 3 m³
-  // ⇒ 2 lần than hóa (≈2 m³ + phần còn lại). Lô đơn lẻ vượt m³/lần vẫn là
-  // 1 lần riêng (lô 5 m³ = 1 lần 5 m³).
-  // Người dùng nhập SỐ LẦN THAN HÓA THẬT cho nhóm ngày + công đoạn
-  // (state.x2SayTimes['YYYY-MM-DD|say1']) → chia lại ĐÚNG số lần đó.
+  // Nguồn số lần của 1 NHÓM (ngày + công đoạn) — ưu tiên từ trên xuống:
+  //   1) Nhập tay "Số lần TH" (state.x2SayTimes['YYYY-MM-DD|say1']) → chia ĐỀU
+  //      tổng thể tích nhóm thành đúng N lần.
+  //   2) MÃ MẺ trên lô (sayCharges.<say> gắn lúc bấm Lưu — batch-modals.js) →
+  //      mỗi mã = 1 LẦN, xếp theo thời điểm lưu tăng dần; mỗi lần liệt kê ĐÚNG
+  //      các lô của lượt lưu đó (m³ thật, không chia đều giả).
+  //   3) Lô cũ KHÔNG mã mẻ:
+  //      • ngày < SAY_NO_AUTO_FROM → tự gộp theo định mức m³/lần (dữ liệu cũ);
+  //      • ngày ≥ SAY_NO_AUTO_FROM → gộp thành 1 lần (KHÔNG tự chia m³ nữa).
+  // MỐC NGÀY chuyển chế độ: dữ liệu từ ngày này trở đi đếm theo LƯỢT LƯU/điền tay.
+  const SAY_NO_AUTO_FROM = '2026-09-28';
   function sayTimesKey(dateVal, stage) {
     return `${String(dateVal || '').trim()}|${stage === 'say2' ? 'say2' : 'say1'}`;
   }
-  // Số lần THẬT người dùng đã nhập cho nhóm (0 = chưa nhập → tự gộp theo m³/lần)
+  // Số lần THẬT người dùng đã nhập cho nhóm (0 = chưa nhập → theo lượt lưu/mã mẻ)
   function sayManualTimesOf(dateVal, stage) {
     const v = Number((state.x2SayTimes || {})[sayTimesKey(dateVal, stage)]);
     return Number.isFinite(v) && v > 0 ? Math.round(v) : 0;
+  }
+  // MÃ MẺ than hóa gắn trên lô lúc bấm Lưu (sayCharges.say1 / sayCharges.say2)
+  // — 0 = lô cũ không có mã (dữ liệu trước mốc SAY_NO_AUTO_FROM).
+  function sayChargeIdOf(b, stage) {
+    const v = b && b.sayCharges ? Number(b.sayCharges[stage === 'say2' ? 'say2' : 'say1']) : 0;
+    return Number.isFinite(v) && v > 0 ? v : 0;
   }
   // Các lô của 1 nhóm (ngày vào công đoạn + công đoạn) — theo thứ tự trong
   // state.batches (lô mới đứng trước) để việc gộp nhóm ổn định, dễ đối chiếu.
@@ -422,10 +435,8 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
   function sayChargeCodeText(charge) {
     return (charge.lots || []).map(l => `${l.code || '—'}${l.part ? ' (một phần)' : ''}`).join(' + ') || '—';
   }
-  // Dựng danh sách LẦN than hóa của 1 nhóm (ngày + công đoạn)
-  //   • Nhập tay số lần N → chia ĐỀU tổng thể tích nhóm thành N lần (theo thứ tự
-  //     lô, 1 lô có thể nằm ở 2 lần liền kề).
-  //   • Tự động → gộp lần lượt các lô, mỗi lần tối đa m³/lần.
+  // Dựng danh sách LẦN than hóa của 1 nhóm (ngày + công đoạn) — luật ưu tiên xem
+  // đầu khối GOM LẦN phía trên (điền tay > mã mẻ > lô cũ gộp m³/lần hoặc 1 lần).
   function sayBuildCharges(dateVal, stage, perCharge) {
     const lots = sayGroupLots(dateVal, stage);
     if (!lots.length) return [];
@@ -433,6 +444,8 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     const manual = sayManualTimesOf(dateVal, stage);
     const charges = [];
     if (manual > 0) {
+      // 1) ĐIỀN TAY: chia ĐỀU tổng thể tích nhóm thành đúng N lần (theo thứ tự
+      //    lô, 1 lô có thể nằm ở 2 lần liền kề).
       const each = lots.reduce((s, l) => s + l.vol, 0) / manual;
       for (let i = 0; i < manual; i++) charges.push({ lots: [], vol: 0, part: false });
       let ci = 0, remain = each;
@@ -450,6 +463,49 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
       });
       return charges.filter(c => c.vol > 1e-9);
     }
+    // 2) MÃ MẺ: mỗi lượt Lưu = 1 lần — gom lô theo mã, xếp thời điểm lưu tăng dần
+    //    (Lần 1 = lượt lưu đầu tiên của ngày).
+    const byMark = new Map();
+    const oldLots = [];
+    lots.forEach(l => {
+      const mark = sayChargeIdOf(l.batch, stage);
+      if (mark) {
+        if (!byMark.has(mark)) byMark.set(mark, []);
+        byMark.get(mark).push(l);
+      } else {
+        oldLots.push(l);
+      }
+    });
+    [...byMark.keys()].sort((a, b) => a - b).forEach(mark => {
+      charges.push(sayOneChargeFromLots(byMark.get(mark)));
+    });
+    // 3) Lô cũ KHÔNG có mã mẻ
+    if (oldLots.length) {
+      if (String(dateVal || '') >= SAY_NO_AUTO_FROM) {
+        // Dữ liệu mới nhưng lô không có mã (sửa tay/đường khác) → mặc định 1 LẦN
+        charges.push(sayOneChargeFromLots(oldLots));
+      } else {
+        // Dữ liệu cũ: gộp theo định mức m³/lần
+        charges.push(...sayAutoGroupLots(oldLots, cap));
+      }
+    }
+    return charges;
+  }
+  // Gom 1 nhóm lô thành 1 LẦN than hóa (giữ nguyên m³ thật của từng lô)
+  function sayOneChargeFromLots(group) {
+    const c = { lots: [], vol: 0, part: false };
+    group.forEach(l => {
+      c.lots.push({ code: l.code, location: l.location, vol: l.vol, part: false });
+      c.vol += l.vol;
+    });
+    return c;
+  }
+  // TỰ GỘP các lô thành lần theo định mức m³/lần — CHỈ còn dùng cho DỮ LIỆU CŨ
+  // (lô không có mã mẻ và vào sấy trước mốc SAY_NO_AUTO_FROM): gộp lần lượt theo
+  // thứ tự lô cho đến khi thêm lô kế sẽ VƯỢT m³/lần thì đóng lần (phần còn lại =
+  // lần cuối); lô đơn vượt m³/lần vẫn là 1 lần riêng (lô 5 m³ = 1 lần 5 m³).
+  function sayAutoGroupLots(lots, cap) {
+    const charges = [];
     let cur = { lots: [], vol: 0, part: false };
     lots.forEach(l => {
       if (cur.vol > 1e-9 && cur.vol + l.vol > cap + 1e-9) {
@@ -495,13 +551,21 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
             codeText: sayChargeCodeText(c),
             minutes, need: minutes / 60
           }));
+        const manual = sayManualTimesOf(day.date, stage);
+        const hasMark = lotList.some(l => sayChargeIdOf(l.batch, stage) > 0);
+        // Nguồn số lần: manual (điền tay) > saves (mã mẻ gắn lúc Lưu) > single
+        // (ngày mới chưa có lượt lưu → mặc định 1 lần) > auto (dữ liệu cũ gộp m³/lần)
+        const mode = manual > 0 ? 'manual'
+          : hasMark ? 'saves'
+          : (String(day.date || '') >= SAY_NO_AUTO_FROM ? 'single' : 'auto');
         return {
           stage, charges,
           lots: lotList.length,
           vol: charges.reduce((s, c) => s + c.vol, 0),
           count: charges.length,
-          manual: sayManualTimesOf(day.date, stage),
-          per: sayM3PerCharge(day.date, stage)
+          manual,
+          per: sayM3PerCharge(day.date, stage),
+          mode
         };
       });
       const charges = groups.flatMap(g => g.charges);
@@ -573,7 +637,10 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     if (!Number.isFinite(v) || v <= 0) {
       if (state.x2SayTimes[keyStr] == null) return false;
       delete state.x2SayTimes[keyStr];
-      showToast(`Ngày ${formatDateDDMMYY(dateVal)} · ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}: bỏ số lần nhập tay — tự gộp theo ${fmtM3(sayM3PerCharge(dateVal, stage))} m³/lần.`, 'info');
+      const backTxt = String(dateVal || '') >= SAY_NO_AUTO_FROM
+        ? 'theo số lượt đã Lưu (mỗi lượt bấm Lưu = 1 lần than hóa)'
+        : `tự gộp theo ${fmtM3(sayM3PerCharge(dateVal, stage))} m³/lần (dữ liệu cũ)`;
+      showToast(`Ngày ${formatDateDDMMYY(dateVal)} · ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}: bỏ số lần nhập tay — ${backTxt}.`, 'info');
     } else {
       state.x2SayTimes[keyStr] = Math.round(v);
       showToast(`Ngày ${formatDateDDMMYY(dateVal)} · ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}: ${state.x2SayTimes[keyStr]} lần than hóa.`, 'success');
@@ -684,21 +751,29 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <td>${c.hours > 0 ? fmtGio(c.tc) : dash}</td>
       </tr>`;
     };
-    // Dòng NHÓM (ngày + công đoạn): tổng lô/m³ + ô nhập "Số lần TH" THẬT của nhóm
+    // Dòng NHÓM (ngày + công đoạn): tổng lô/m³ + ô nhập "Số lần TH" THẬT của nhóm.
+    // ĐÃ BỎ ghi chú "Tự gộp theo … m³/lần" (gây hiểu nhầm) — quy đổi m³/lần giờ
+    // chỉ còn áp cho dữ liệu cũ; thay bằng CHIP NGUỒN số lần.
     const groupHtml = (day, g) => {
       const label = g.stage === 'say2' ? 'Sấy 2' : 'Sấy 1';
       const auto = g.count;
-      const note = g.manual
+      const modeTxt = g.manual
         ? `Nhập tay ${g.manual} lần`
-        : `Tự gộp theo ${fmtM3(g.per)} m³/lần → ${auto} lần`;
+        : g.mode === 'saves' ? 'Theo lượt Lưu'
+        : g.mode === 'single' ? '1 lần (chưa có lượt lưu)'
+        : 'Dữ liệu cũ';
+      const autoTitle = String(day.date || '') >= SAY_NO_AUTO_FROM
+        ? 'để trống = theo số lượt đã Lưu (mỗi lượt bấm Lưu của "Thêm Lô Sấy Mới" = 1 lần than hóa); điền số lần THẬT vào ô này để ghi đè'
+        : `để trống = tự gộp các lô cũ theo ${fmtM3(g.per)} m³/lần (dữ liệu trước ${formatDateDDMMYY(SAY_NO_AUTO_FROM)})`;
       return `<tr class="x2-say-group-head x2-say-row-${g.stage}">
         <td class="x2-say-lan"><span class="x2-say-lan-badge">${label}</span></td>
         <td class="x2-say-loc">${g.lots} lô</td>
         <td class="x2-say-code">${fmtM3(g.vol)} m³</td>
         <td class="x2-say-times-cell" colspan="3">
           <span class="x2-say-group-lbl">Số lần TH:</span>
-          <input type="number" class="x2-say-times-input${g.manual ? ' manual' : ''}" data-say-times="${escapeHTML(day.date)}" data-say-stage="${g.stage}" min="1" step="1" value="${g.manual || ''}" placeholder="${auto}" title="Số lần than hóa THẬT của ${label} ngày ${escapeHTML(formatDateDDMMYY(day.date))} — để trống = tự gộp các lô theo ${fmtM3(g.per)} m³/lần">
-          <span class="x2-say-times-auto">× ${auto} lần · ${note}</span>
+          <input type="number" class="x2-say-times-input${g.manual ? ' manual' : ''}" data-say-times="${escapeHTML(day.date)}" data-say-stage="${g.stage}" min="1" step="1" value="${g.manual || ''}" placeholder="${auto}" title="Số lần than hóa THẬT của ${label} ngày ${escapeHTML(formatDateDDMMYY(day.date))} — ${autoTitle}">
+          <span class="x2-say-times-auto">× ${auto} lần</span>
+          <span class="x2-say-mode-chip mode-${g.mode}">${modeTxt}</span>
         </td>
         <td colspan="2"></td>
       </tr>`;
@@ -5687,6 +5762,15 @@ export {
   applyX2KanbanCollapsed,
   renderX2KanbanSummary,
   SAY_RATE_DEFAULT,
+  // ── Hàm đọc ĐỊNH MỨC công suất theo tháng của từng công đoạn — dùng chung cho
+  //    Bảng Tổng Hợp Công Suất & Hiệu Suất (js/capacity.js) để định mức chỉ có
+  //    MỘT nguồn chân lý (không đọc lại state.x2*Rates ở nơi khác):
+  capRateOf,
+  boOngRateOf,
+  baoThoRateOf,
+  chonNanRateOf,
+  baoTinhRateOf,
+  bulligRateOf,
   NAN_CLASSES,
   deleteXuong2BaoTho,
   deleteXuong2BoOng,

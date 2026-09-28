@@ -12,6 +12,7 @@ import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, render
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
+import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, renderXuong2Cards, x2CloseOpenCard } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
@@ -140,7 +141,11 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Rời tab → đóng pop-up/modal THUỘC TAB VỪA RỜI (tránh overlay ẩn còn class
     // .show làm mất cuộn ở tab mới — xem closeViewScopedModals)
     if (prevView && prevView !== targetViewId) closeViewScopedModals(document.getElementById(prevView));
-    if (targetViewId === 'dashboard-view') renderDashboardCharts();
+    if (targetViewId === 'dashboard-view') {
+      renderDashboardCharts();
+      // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)
+      renderCapacityCard();
+    }
     // Thẻ "Phân bổ khối lượng theo công đoạn" + khu Vị Trí Xưởng 2 (tab Công Đoạn)
     if (targetViewId === 'kanban-view') {
       // Vẽ ĐỦ khu Kanban khi vừa mở tab (trước đây renderAll luôn vẽ sẵn —
@@ -149,6 +154,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       renderKanbanBoard(getFilteredBatches());
       renderStageFlow();
       renderXuong2Cards();
+      // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)
+      renderX2MiniSparklines();
       filterMobileKanbanColumns();
     }
     if (targetViewId === 'planning-view') renderPlanningView();
@@ -255,11 +262,19 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       renderXuong2Cards(); // đếm trên thẻ launcher Vị Trí Xưởng 2 (tab Công Đoạn)
       filterMobileKanbanColumns();
     }
-    if (state.activeView === 'dashboard-view') renderDashboardCharts();
+    if (state.activeView === 'dashboard-view') {
+      renderDashboardCharts();
+      // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)
+      renderCapacityCard();
+    }
     if (state.activeView === 'planning-view') renderPlanningView();
     if (state.activeView === 'materials-view') renderMaterialView();
     if (state.activeView === 'qc-view') renderQcView();
     if (state.activeView === 'hr-view') renderHrView();
+    if (state.activeView === 'kanban-view') {
+      // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)
+      renderX2MiniSparklines();
+    }
     initLucide();
   }
 

@@ -2059,7 +2059,8 @@ body.chart-expanded-open { overflow: hidden; }
    display:flex + flex-direction:column BẮT BUỘC — nếu không, khung biểu đồ
    không co giãn theo màn hình và canvas giữ kích thước cũ (480px) tràn màn hình. */
 .custom-chart-card.chart-expanded,
-.planning-card.press-chart-card.chart-expanded {
+.planning-card.press-chart-card.chart-expanded,
+.planning-card.capacity-card.chart-expanded {
   position: fixed;
   top: 0;
   left: 0;
@@ -2084,7 +2085,9 @@ body.chart-expanded-open { overflow: hidden; }
 .custom-chart-card:fullscreen,
 .custom-chart-card:-webkit-full-screen,
 .planning-card.press-chart-card:fullscreen,
-.planning-card.press-chart-card:-webkit-full-screen {
+.planning-card.press-chart-card:-webkit-full-screen,
+.planning-card.capacity-card:fullscreen,
+.planning-card.capacity-card:-webkit-full-screen {
   width: 100%;
   height: 100%;
   border-radius: 0;
@@ -3267,6 +3270,115 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
 }
 .pv-unit-btn:not(.active):hover {
   background: rgba(255, 255, 255, 0.28);
+}
+
+/* ─── NÚT TÊN BIỂU ĐỒ — CHUYỂN ĐỔI 2 BIỂU ĐỒ CỦA THẺ GỘP ────────
+   #pv-mode-toggle nằm trong <h4> của thẻ #plan-vs-press-card: chính là TÊN
+   biểu đồ đang xem (chỉ hiện 1 tên tại 1 thời điểm).
+   - data-pv-mode="plan" (Kế Hoạch vs Đã Ép) → nút NỔI lên (khối 3D + vệt sáng)
+   - data-pv-mode="cap"  (Khả Năng Đáp Ứng)  → nút THỤT vào (bóng inset)
+   Màu nút = màu chủ đạo của biểu đồ đang xem: tím→lục (Kế Hoạch vs Đã Ép),
+   chàm→lam (thẻ tuần của Khả Năng Đáp Ứng). Màu CỘT của 2 biểu đồ giữ nguyên. */
+.pv-mode-head { min-width: 0; }
+.pv-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 7px 18px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1.35;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  background-color: #7c3aed;
+  background-image: linear-gradient(130deg, #8b5cf6 0%, #7c3aed 42%, #16a34a 100%);
+  background-size: 190% 190%;
+  animation: pvModeShift 7s ease-in-out infinite;
+  box-shadow: 0 5px 0 rgba(76, 29, 149, 0.55), 0 10px 18px rgba(15, 23, 42, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transform: translateY(-3px);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, background-color 0.25s ease, color 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.pv-mode-btn .pv-mode-ico { flex-shrink: 0; }
+.pv-mode-btn .pv-mode-label { overflow: hidden; text-overflow: ellipsis; }
+/* Vệt sáng quét ngang qua nút — điểm nhấn sinh động */
+.pv-mode-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+  transform: skewX(-18deg);
+  animation: pvModeShine 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+/* Icon ⇄ xoay khi rê chuột — gợi ý bấm vào TÊN để đổi biểu đồ */
+.pv-mode-swap { transition: transform 0.3s ease; }
+.pv-mode-btn:hover { transform: translateY(-5px) scale(1.02); }
+.pv-mode-btn:hover .pv-mode-swap { transform: rotate(180deg); }
+.pv-mode-btn:active { transform: translateY(-1px) scale(0.99); }
+@keyframes pvModeShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes pvModeShine {
+  0%, 55% { left: -60%; }
+  85%, 100% { left: 130%; }
+}
+/* Icon theo biểu đồ đang xem: plan = bar-chart-3 · cap = gauge (lucide thay
+   <i> bằng <svg> giữ nguyên class → CSS vẫn áp đúng sau createIcons) */
+.pv-mode-ico-cap { display: none; }
+#plan-vs-press-card[data-pv-mode="cap"] .pv-mode-ico-cap { display: inline-block; }
+#plan-vs-press-card[data-pv-mode="cap"] .pv-mode-ico-plan { display: none; }
+
+/* Đang xem KHẢ NĂNG ĐÁP ỨNG: nút tên THỤT vào (bóng inset + chữ mờ nhẹ như
+   đã "ấn xuống"); tắt gradient chuyển động để khác biệt rõ với trạng thái nổi */
+#plan-vs-press-card[data-pv-mode="cap"] .pv-mode-btn {
+  background-color: #4338ca;
+  background-image: linear-gradient(130deg, #4338ca 0%, #4f46e5 45%, #0ea5e9 100%);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 4px 9px rgba(2, 6, 23, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: translateY(1px) scale(0.985);
+  color: rgba(255, 255, 255, 0.92);
+  animation: none;
+}
+#plan-vs-press-card[data-pv-mode="cap"] .pv-mode-btn::after { animation: none; opacity: 0.5; }
+#plan-vs-press-card[data-pv-mode="cap"] .pv-mode-btn:hover { transform: translateY(1px) scale(1.01); }
+
+/* Thuộc tính hidden của toolbar/khung/gợi ý phải THẮNG rule display:flex của
+   .pv-toolbar (author CSS đè UA `[hidden]`) — bắt buộc thêm rule tường minh */
+.pv-toolbar[hidden],
+.press-chart-box[hidden],
+.pv-cap-hint-row[hidden] { display: none !important; }
+
+/* Hiệu ứng đổi biểu đồ: khung Kế Hoạch TRỒI lên / khung Khả Năng LÚN xuống */
+.press-chart-box.pv-rise-in { animation: pvChartRise 0.32s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.press-chart-box.pv-sink-in { animation: pvChartSink 0.32s ease-out; }
+@keyframes pvChartRise {
+  from { opacity: 0.25; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1;    transform: translateY(0) scale(1); }
+}
+@keyframes pvChartSink {
+  from { opacity: 0.25; transform: translateY(-14px) scale(1.015); }
+  to   { opacity: 1;    transform: translateY(0) scale(1); }
+}
+/* Chế độ giảm hiệu ứng: giữ màu + trạng thái nổi/thụt, bỏ chuyển động */
+body[data-fx="low"] .pv-mode-btn,
+body[data-fx="low"] .pv-mode-btn::after,
+body[data-fx="low"] .pv-mode-swap { animation: none !important; transition: none !important; }
+@media (max-width: 640px) {
+  .pv-mode-head { width: 100%; }
+  .pv-mode-btn { padding: 6px 13px; font-size: 0.85rem; gap: 6px; }
+  .pv-mode-btn .pv-mode-label { white-space: normal; line-height: 1.3; }
 }
 
 /* ─── Sticker "Đạt x%": dấu đỏ nghiêng kiểu QC PASS (chế độ Total) ─── */
@@ -5467,6 +5579,21 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 }
 .x2-say-times-input.manual { border-style: solid; border-color: var(--primary); font-weight: 700; }
 .x2-say-times-auto { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
+/* Chip NGUỒN số lần (Nhập tay / Theo lượt Lưu / 1 lần chưa có lượt lưu / Dữ liệu cũ)
+   — thay cho ghi chú "Tự gộp theo … m³/lần" đã bỏ (quy đổi m³/lần chỉ còn áp lô cũ) */
+.x2-say-mode-chip {
+  font-size: 0.66rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+.x2-say-mode-chip.mode-manual { background: #fff7ed; border-color: #fed7aa; color: #b45309; }
+.x2-say-mode-chip.mode-saves  { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+.x2-say-mode-chip.mode-single { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.x2-say-mode-chip.mode-auto   { background: #f5f5f4; border-color: #e7e5e4; color: #57534e; }
 /* Dòng đầu NHÓM (ngày + công đoạn): tổng lô/m³ + ô nhập "Số lần TH" của nhóm */
 .x2-say-group-head td { background: rgba(217, 119, 6, 0.08); border-top: 1px solid var(--border-color); }
 .x2-say-group-head .x2-say-lan-badge { background: #fff7ed; border-color: #fed7aa; color: #b45309; }
@@ -7439,6 +7566,361 @@ body:has(.view-panel.active .modal-overlay.show) { overflow: hidden; }
     justify-content: center;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT — thẻ #capacity-card (đầu tab Tổng Quan)
+   js/capacity.js · 3 tầng xổ tại chỗ: TUẦN → CÔNG ĐOẠN → NGÀY
+   Nút TÊN thẻ đổi Xưởng 2 ⇄ Xưởng 1 (mẫu #pv-mode-toggle của Dashboard)
+   ═══════════════════════════════════════════════════════════════ */
+.capacity-card { margin-bottom: 16px; }
+.capacity-card .planning-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.cap-mode-head { margin: 0; display: flex; align-items: center; }
+.cap-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #0f766e, #0369a1);
+  box-shadow: 0 3px 10px rgba(15, 118, 110, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+}
+.cap-mode-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(15, 118, 110, 0.34); }
+.cap-mode-btn .cap-mode-swap { opacity: 0.85; transition: transform 0.25s ease; }
+.cap-mode-btn:hover .cap-mode-swap { transform: rotate(180deg); }
+.capacity-card[data-cap-ws="x1"] .cap-mode-btn {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  box-shadow: 0 3px 10px rgba(180, 83, 9, 0.28);
+}
+.capacity-card[data-cap-ws="x1"] .cap-mode-btn:hover { box-shadow: 0 5px 14px rgba(180, 83, 9, 0.34); }
+/* Icon theo xưởng: Xưởng 2 = nhà máy · Xưởng 1 = tòa nhà xưởng */
+.cap-mode-ico-x1 { display: none; }
+.capacity-card[data-cap-ws="x1"] .cap-mode-ico-x1 { display: inline-block; }
+.capacity-card[data-cap-ws="x1"] .cap-mode-ico-x2 { display: none; }
+.cap-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cap-week-nav { display: inline-flex; align-items: center; gap: 4px; }
+.cap-week-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+.cap-week-btn:hover { border-color: var(--primary); color: var(--primary); }
+.cap-week-btn svg { width: 15px; height: 15px; }
+.cap-week-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  min-width: 175px;
+  text-align: center;
+  white-space: nowrap;
+}
+.cap-body[hidden] { display: none !important; }
+/* Dải chip tổng quan của tuần đang chọn */
+.cap-summary-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.cap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(15, 118, 110, 0.07);
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  color: var(--text-main);
+}
+.cap-chip svg { width: 13px; height: 13px; color: var(--primary); flex-shrink: 0; }
+.cap-chip strong { font-variant-numeric: tabular-nums; }
+.cap-chip-info { background: rgba(15, 118, 110, 0.13); font-weight: 600; }
+.cap-chip-warn { background: rgba(180, 83, 9, 0.10); border-color: rgba(180, 83, 9, 0.32); }
+.cap-chip-warn svg { color: #b45309; }
+/* Bảng tầng 1 (theo tuần) */
+.cap-table { width: 100%; }
+.cap-table th, .cap-table td { vertical-align: middle; }
+.cap-table th { white-space: nowrap; }
+tr.cap-row { cursor: pointer; transition: background 0.12s ease; }
+tr.cap-row:hover { background: rgba(15, 118, 110, 0.06); }
+tr.cap-row-active { background: rgba(15, 118, 110, 0.11); }
+tr.cap-row-open { background: rgba(15, 118, 110, 0.08); }
+.cap-week-sub { display: block; font-size: 0.7rem; color: var(--text-muted); font-weight: 400; }
+.cap-eff { font-weight: 700; font-variant-numeric: tabular-nums; }
+.cap-eff-good { color: #16a34a; }
+.cap-eff-mid { color: #0f766e; }
+.cap-eff-low { color: #b45309; }
+.cap-eff-none { color: var(--text-muted); font-weight: 400; }
+.cap-delta { font-size: 0.76rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cap-delta.up { color: #16a34a; }
+.cap-delta.down { color: #b45309; }
+.cap-delta.flat { color: var(--text-muted); }
+.cap-muted { color: var(--text-muted); font-size: 0.78rem; }
+.cap-stage-name { font-weight: 600; }
+.cap-unit-chip {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  background: rgba(15, 118, 110, 0.10);
+  color: #0f766e;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cap-arrow svg { width: 14px; height: 14px; color: var(--text-muted); }
+/* Khối xổ tầng 2 / tầng 3 (lồng vào td của bảng cha) */
+tr.cap-stage-tr > td, tr.cap-day-tr > td {
+  padding: 0 10px 12px;
+  background: rgba(15, 118, 110, 0.04);
+}
+.cap-sub-wrap {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: auto;
+  background: var(--bg-card);
+}
+.cap-sub-table { width: 100%; font-size: 0.8rem; }
+.cap-sub-table th { font-size: 0.72rem; padding: 7px 10px; white-space: nowrap; }
+.cap-sub-table td { padding: 6px 10px; }
+tr.cap-row-open .cap-stage-name { color: var(--primary); }
+.cap-day-table td:first-child { white-space: nowrap; }
+.cap-day-row svg { width: 12px; height: 12px; color: var(--text-muted); margin-right: 3px; }
+tr.cap-day-empty td, tr.cap-empty-row td { color: var(--text-muted); text-align: center; padding: 14px; }
+.cap-empty { display: flex; gap: 12px; align-items: flex-start; text-align: left; }
+.cap-empty svg { width: 22px; height: 22px; color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+.cap-note {
+  margin: 10px 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.cap-note svg { width: 13px; height: 13px; flex-shrink: 0; margin-top: 1px; }
+/* Sparkline hiệu suất 8 tuần trên MINI CARD launcher Xưởng 2 (SVG thuần,
+   KHÔNG Chart.js — theo mẫu sparkline SVG của mini card "Thống Kê Đi Làm") */
+.cap-spark { display: flex; align-items: center; gap: 6px; margin-top: 4px; width: 100%; min-width: 0; }
+.cap-spark-svg { width: 100%; height: 24px; display: block; min-width: 0; }
+.cap-spark-base { stroke: rgba(100, 116, 139, 0.45); stroke-width: 1; stroke-dasharray: 3 2; }
+.cap-spark-val { font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cap-spark-none { font-size: 0.68rem; color: var(--text-muted); }
+/* Giao diện Đêm "Tre Sáng": giữ đúng tông xanh tre, nền chip đậm hơn chút */
+body[data-theme="night"] .cap-chip { background: rgba(15, 118, 110, 0.14); }
+body[data-theme="night"] .cap-chip-info { background: rgba(15, 118, 110, 0.20); }
+body[data-theme="night"] tr.cap-row:hover,
+body[data-theme="night"] tr.cap-row-active,
+body[data-theme="night"] tr.cap-row-open { background: rgba(46, 125, 50, 0.09); }
+body[data-theme="night"] tr.cap-stage-tr > td,
+body[data-theme="night"] tr.cap-day-tr > td { background: rgba(46, 125, 50, 0.05); }
+/* Máy yếu: tắt chuyển động (giữ nguyên màu) */
+body[data-fx="low"] .cap-mode-btn,
+body[data-fx="low"] .cap-mode-btn .cap-mode-swap,
+body[data-fx="low"] tr.cap-row { transition: none; }
+
+/* ĐIỆN THOẠI: bảng cuộn ngang, chữ gọn, nhãn tuần không chiếm chỗ */
+@media (max-width: 639.98px) {
+  .cap-toolbar { width: 100%; justify-content: space-between; }
+  .cap-week-label { min-width: 0; font-size: 0.76rem; }
+  .cap-week-btn { width: 34px; height: 34px; }
+  .cap-table th, .cap-table td { font-size: 0.76rem; }
+  .cap-sub-table th, .cap-sub-table td { font-size: 0.74rem; padding: 5px 7px; }
+  .cap-summary-strip { gap: 6px; margin-bottom: 10px; }
+  .cap-chip { font-size: 0.72rem; padding: 4px 9px; }
+  .cap-spark-svg { height: 20px; }
+  .cap-unit-chip { margin-left: 4px; }
+  .cap-open-btn { min-width: 40px; min-height: 40px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DẢI TRỰC QUAN của thẻ tổng hợp (chế độ "Biểu đồ" — js/capacity.js):
+   ① Gauge hiệu suất xưởng · ② Thang xếp hạng công đoạn ·
+   ③ Bản đồ nhiệt 8 tuần × công đoạn · ④ Chart.js công đoạn đang chọn
+   ═══════════════════════════════════════════════════════════════ */
+#cap-visual-row[hidden],
+#cap-table-wrap[hidden],
+.cap-stage-chart-panel[hidden] { display: none !important; }
+.cap-visual-row {
+  display: grid;
+  grid-template-columns: 236px 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+.cap-visual-row > .cap-heat,
+.cap-visual-row > .cap-stage-chart-panel { grid-column: 1 / -1; }
+/* ① Đồng hồ gauge */
+.cap-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+.cap-gauge-svg { width: 132px; height: 132px; }
+.cap-gauge-val { font-size: 23px; font-weight: 800; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.cap-gauge-label { font-size: 8.5px; fill: var(--text-muted); text-anchor: middle; font-weight: 600; letter-spacing: 0.2px; }
+.cap-gauge-mark { font-size: 8px; fill: var(--text-muted); text-anchor: middle; font-weight: 600; }
+.cap-gauge-tick { stroke: var(--text-muted); stroke-width: 1.5; }
+.cap-gauge-chips { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.cap-gauge-chips .cap-chip { font-size: 0.72rem; padding: 4px 9px; }
+/* ② Thang xếp hạng công đoạn */
+.cap-rank {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+  padding: 10px 12px;
+}
+.cap-rank-title { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+.cap-rank-title svg { width: 13px; height: 13px; color: var(--primary); flex-shrink: 0; }
+.cap-rank-list { display: flex; flex-direction: column; gap: 3px; }
+.cap-rank-row {
+  display: grid;
+  grid-template-columns: minmax(112px, 168px) 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.76rem;
+  color: var(--text-main);
+  font-family: inherit;
+}
+.cap-rank-row:hover { background: rgba(15, 118, 110, 0.07); }
+.cap-rank-row.cap-rank-active { background: rgba(15, 118, 110, 0.13); }
+.cap-rank-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.cap-rank-bt { font-style: normal; color: #b45309; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+.cap-rank-track { position: relative; height: 10px; border-radius: 999px; background: rgba(100, 116, 139, 0.16); }
+.cap-rank-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; min-width: 2px; }
+.cap-rank-good .cap-rank-bar { background: #16a34a; }
+.cap-rank-mid .cap-rank-bar { background: #d97706; }
+.cap-rank-low .cap-rank-bar { background: #ea580c; }
+.cap-rank-none .cap-rank-bar { background: #94a3b8; opacity: 0.45; }
+.cap-rank-mark { position: absolute; left: 66.67%; top: -2px; bottom: -2px; border-left: 1px dashed rgba(100, 116, 139, 0.7); }
+.cap-rank-val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cap-rank-good .cap-rank-val { color: #16a34a; }
+.cap-rank-mid .cap-rank-val { color: #d97706; }
+.cap-rank-low .cap-rank-val { color: #ea580c; }
+.cap-rank-none .cap-rank-val { color: var(--text-muted); font-weight: 400; }
+/* ③ Bản đồ nhiệt 8 tuần × công đoạn */
+.cap-heat {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+  padding: 10px 12px;
+}
+.cap-heat-title { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+.cap-heat-title svg { width: 13px; height: 13px; color: var(--primary); flex-shrink: 0; }
+.cap-heat-grid {
+  display: grid;
+  grid-template-columns: 118px repeat(8, minmax(40px, 1fr));
+  gap: 3px;
+  overflow-x: auto;
+}
+.cap-heat-corner, .cap-heat-rowname {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 4px;
+}
+.cap-heat-corner { color: var(--text-muted); font-weight: 500; }
+.cap-heat-col {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 2px 0;
+  border-radius: 6px;
+  font-family: inherit;
+}
+.cap-heat-col:hover { color: var(--primary); background: rgba(15, 118, 110, 0.08); }
+.cap-heat-col-active { color: var(--primary); background: rgba(15, 118, 110, 0.14); }
+.cap-heat-cell {
+  border: none;
+  cursor: pointer;
+  min-height: 26px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+  transition: transform 0.1s ease;
+}
+.cap-heat-cell:hover { transform: scale(1.06); }
+.cap-heat-cell.cap-heat-good { background: #16a34a; }
+.cap-heat-cell.cap-heat-mid { background: #d97706; }
+.cap-heat-cell.cap-heat-low { background: #ea580c; }
+.cap-heat-cell.cap-heat-none { background: rgba(100, 116, 139, 0.22); color: var(--text-muted); }
+.cap-heat-cell.cap-heat-active { outline: 2px solid var(--primary); outline-offset: 1px; }
+.cap-heat-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 0.7rem; color: var(--text-muted); }
+.cap-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.cap-legend-item i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+/* ④ Panel biểu đồ công đoạn (Chart.js) */
+.cap-stage-chart-panel {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+  padding: 10px 12px;
+}
+.cap-chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cap-chart-title { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-main); min-width: 0; }
+.cap-chart-title svg { width: 14px; height: 14px; color: var(--primary); flex-shrink: 0; }
+.cap-chart-title strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap-chart-chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cap-chart-chips .cap-chip { font-size: 0.72rem; padding: 4px 9px; }
+.cap-stage-chart-box { position: relative; height: 240px; }
+.cap-chart-fallback { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 0.78rem; text-align: center; padding: 0 12px; }
+.cap-chart-empty-text { color: var(--text-muted); font-size: 0.78rem; }
+/* Chart cũng hiện trong tầng 2 ở chế độ Bảng (khối <tr> riêng) */
+.cap-chart-tr > td { padding: 0 10px 12px; background: rgba(15, 118, 110, 0.04); }
+/* Theme Đêm "Tre Sáng": nền khối đậm hơn chút cho nổi khung */
+body[data-theme="night"] .cap-gauge,
+body[data-theme="night"] .cap-rank,
+body[data-theme="night"] .cap-heat,
+body[data-theme="night"] .cap-stage-chart-panel { background: rgba(255, 255, 255, 0.05); }
+/* Máy yếu: tắt hiệu ứng phóng ô nhiệt */
+body[data-fx="low"] .cap-heat-cell { transition: none; }
+/* ĐIỂN THOẠI: xếp dọc gauge + rank, bản đồ nhiệt cuộn ngang, chart thấp lại */
+@media (max-width: 639.98px) {
+  .cap-visual-row { grid-template-columns: 1fr; }
+  .cap-gauge { flex-direction: row; align-items: center; gap: 12px; justify-content: flex-start; }
+  .cap-gauge-svg { width: 108px; height: 108px; flex-shrink: 0; }
+  .cap-gauge-chips { align-items: flex-start; }
+  .cap-rank-row { grid-template-columns: minmax(96px, 118px) 1fr 44px; font-size: 0.72rem; }
+  .cap-heat-grid { grid-template-columns: 96px repeat(8, minmax(34px, 1fr)); }
+  .cap-heat-cell { min-height: 24px; }
+  .cap-stage-chart-box { height: 210px; }
+}
+
+
+
 
 
 

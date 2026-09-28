@@ -99,6 +99,16 @@ if (!global.URL.revokeObjectURL) global.URL.revokeObjectURL = () => {};
 
 (async () => {
   try {
+    // ── SEED dữ liệu cũ TRƯỚC khi boot ──
+    // 1 lô Kho (phải GIỮ) + 2 lô stage 'bao_tinh' (dữ liệu CŨ — phải bị DỌN lúc
+    // boot bởi purgeLegacyBaoTinhBatches: backup force + tombstone + saveData)
+    const { state } = await import('../js/state.js');
+    global.localStorage.setItem('bamboo_tracker_data_v3', JSON.stringify([
+      { id: 'kho-ok',   code: '260920-01',  stage: 'kho',      quantity: 100, volume: 0.1 },
+      { id: 'bt-old-1', code: '260801-BT1', stage: 'bao_tinh', quantity: 500, volume: 0.5 },
+      { id: 'bt-old-2', code: '260802-BT2', stage: 'bao_tinh', quantity: 700, volume: 0.7 }
+    ]));
+
     await import('../js/main.js');
     // Bắn sự kiện DOMContentLoaded để chạy luồng khởi động thật
     for (const f of docHandlers['DOMContentLoaded'] || []) f({ preventDefault(){} });
@@ -107,6 +117,16 @@ if (!global.URL.revokeObjectURL) global.URL.revokeObjectURL = () => {};
     const nExports = Object.keys(app).length;
     console.log('BOOT OK - exports:', nExports);
     if (nExports < 25) throw new Error('exports quá ít: ' + nExports);
+
+    // ── PURGE DỮ LIỆU BÀO TINH CŨ: lô stage 'bao_tinh' phải biến mất lúc boot ──
+    if (state.batches.some(b => b && b.stage === 'bao_tinh')) throw new Error('vẫn còn lô stage bao_tinh sau boot — purge không chạy?');
+    if (state.batches.length !== 1 || state.batches[0].id !== 'kho-ok') throw new Error('purge xóa sai lô (còn ' + state.batches.length + ' lô)');
+    const tombs = (state.deletedIds && state.deletedIds.batches) || {};
+    if (!tombs['bt-old-1'] || !tombs['bt-old-2']) throw new Error('thiếu tombstone cho lô Bào Tinh đã dọn');
+    const persisted = JSON.parse(global.localStorage.getItem('bamboo_tracker_data_v3') || '[]');
+    if (persisted.length !== 1 || persisted[0].id !== 'kho-ok') throw new Error('localStorage chưa ghi lại dữ liệu đã dọn');
+    if (!(state.autoBackups || []).some(b => /Bào Tinh/.test(b.reason || ''))) throw new Error('không có bản backup force trước khi dọn dữ liệu cũ');
+    console.log('PURGE OK - lô Bào Tinh cũ đã dọn (tombstone + backup force)');
 
     // Gọi thử một số API đại diện các module khác nhau (lỗi riêng lẻ chỉ WARN)
     const tryCall = (label, fn, ...args) => {

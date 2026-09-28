@@ -21,7 +21,7 @@ import { selectCapacityStage, setCapacityView, setCapacityWeek, shiftCapacityWee
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
-import { setTheme, getThemeChoice, toggleThemeQuick, setFxLow, getFxLow, applyThemeForUser } from './theme.js';
+import { getFxLow, setFxLow, applyThemeForUser } from './theme.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -405,31 +405,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Công tắc gợi ý tự động trong modal (lưu localStorage từng máy)
     safeOn('ai-autogreet-toggle', 'change', (e) => aiSetAutoGreet(e.target.checked));
 
-    // ── Bộ chọn giao diện (Sáng / Đêm Kính Sci-Fi) — js/theme.js ──
+    // ── GIAO DIỆN ĐÃ KHÓA CỨNG (một giao diện duy nhất — js/theme.js):
+    // không còn chọn Sáng/Đêm Kính/Auto và đã xóa nút đổi nhanh ở header.
+    // Menu ⋮ chỉ còn công tắc "Giảm Hiệu Ứng" (máy yếu).
     function syncThemeMenuUi() {
-      const pick = getThemeChoice();
-      ['light', 'night', 'auto'].forEach((t) => {
-        const b = document.getElementById('btn-theme-' + t);
-        if (b) b.classList.toggle('theme-active', pick === t);
-      });
       const fx = document.getElementById('btn-fx-low');
       if (fx) fx.classList.toggle('theme-active', getFxLow());
     }
-    const applyThemeAndRender = (choice, label) => {
-      setTheme(choice);
-      syncThemeMenuUi();
-      renderAll(); // vẽ lại biểu đồ với màu trục/lưới theo theme mới
-      showToast(label, 'success');
-    };
-    safeOn('btn-theme-light', 'click', () => applyThemeAndRender('light', 'Đã chuyển giao diện SÁNG (xưởng) ☀️'));
-    safeOn('btn-theme-night', 'click', () => applyThemeAndRender('night', 'Đã chuyển giao diện ĐÊM KÍNH (Sci-Fi) 🌌'));
-    safeOn('btn-theme-auto', 'click', () => applyThemeAndRender('auto', 'Giao diện sẽ TỰ ĐỘNG theo sáng/tối của máy.'));
-    safeOn('btn-theme-toggle', 'click', () => {
-      const now = toggleThemeQuick();
-      syncThemeMenuUi();
-      renderAll();
-      showToast(now === 'night' ? 'Đã bật ĐÊM KÍNH (Sci-Fi) 🌌' : 'Đã về giao diện SÁNG ☀️', 'success');
-    });
     safeOn('btn-fx-low', 'click', () => {
       setFxLow(!getFxLow());
       syncThemeMenuUi();

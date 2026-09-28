@@ -2,12 +2,14 @@
 // js/storage.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { saveUsers } from './auth.js';
+import { captureAutoBackup } from './autobackup.js';
 import { firePushSync, initLucide } from './cloud.js';
 import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
 import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
@@ -31,6 +33,35 @@ import { escapeHTML, showToast } from './utils.js';
       writeDataToFile();
     }
     firePushSync(); // đồng bộ lên mây nếu online
+  }
+
+  // ─── DỌN DỮ LIỆU CŨ: LÔ STAGE 'bao_tinh' (cấu trúc Kanban cũ) ──
+  // Cột Kanban "4. Bào Tinh" đã bị XÓA khỏi bảng "Than Hóa + Sấy" (chỉ còn
+  // Sấy 1 / Sấy 2 / Kho); số liệu bào tinh nay nằm ở THẺ Bào Tinh riêng
+  // (state.xuong2BaoTinhRecords). Lô stage 'bao_tinh' còn sót trong
+  // state.batches (236 lô dữ liệu cũ) từng làm KPI/số liệu tổng lệch và
+  // nhầm lẫn với dữ liệu hiện tại → xóa HẲN. Hàm chạy:
+  //   · LÚC BOOT (main.js — sau mọi load*(), ngay trước initHistory), và
+  //   · SAU KHI NẠP FILE JSON / PHỤC HỒI backup (những đường có thể đưa lô cũ
+  //     quay về máy giữa phiên — handleImportJSON / loadDataFromLocalFile).
+  // Chuỗi an toàn bên trong (chỉ khi CÓ lô cũ; không có thì thoát ngay, không
+  // backup không ghi đè gì):
+  //   1) Chụp 1 bản cất BẮT BUỘC (force) TRƯỚC khi xóa — phục hồi được qua menu ⋮
+  //   2) Ghi tombstone (trackDeleted) — chặn mây/máy khác đẩy ngược lô cũ về
+  //   3) Lọc khỏi state.batches + saveData() (ghi localStorage + đẩy mây lần sau)
+  // Dữ liệu trong file backup cũ (backups/, bamboo_data.json) KHÔNG bị đụng —
+  // nếu nạp lại, lần purge kế tiếp tự dọn lại.
+  function purgeLegacyBaoTinhBatches() {
+    const legacy = (state.batches || []).filter(b => b && b.stage === 'bao_tinh');
+    if (!legacy.length) return 0;
+    try { captureAutoBackup('Trước khi dọn lô Bào Tinh dữ liệu cũ (stage bao_tinh)', true); } catch (e) { /* lỗi chụp không chặn việc dọn */ }
+    trackDeleted('batches', legacy.map(b => b.id)); // dấu vết xóa → chặn hồi sinh từ mây/file
+    state.batches = state.batches.filter(b => !b || b.stage !== 'bao_tinh');
+    saveData();
+    const msg = `Đã dọn ${legacy.length} lô nan Bào Tinh dữ liệu cũ (đã cất bản backup trước khi xóa).`;
+    try { showToast(msg, 'info'); } catch (e) { /* môi trường test không có toast */ }
+    console.info('[DỌN DỮ LIỆU] ' + msg);
+    return legacy.length;
   }
 
   // ─── GỘP BẢN GHI NGUYÊN LIỆU (CHỐNG MẤT ĐƠN GIÁ / ẢNH KHI TẢI LẠI TRANG) ──
@@ -968,6 +999,10 @@ import { escapeHTML, showToast } from './utils.js';
           restoreX2EpVanRates(imported.x2EpVanRates); // Định mức ép ván (m³/h)
         }
 
+        // DỌN DỮ LIỆU CŨ: file dữ liệu cũ có thể chứa lô stage 'bao_tinh' — xóa ngay
+        // (bên trong đã chụp backup force + tombstone + saveData)
+        purgeLegacyBaoTinhBatches();
+
         renderAll();
         closeSaveLocalModal();
         showToast('Đã nạp dữ liệu cục bộ thành công!', 'success');
@@ -1098,7 +1133,11 @@ import { escapeHTML, showToast } from './utils.js';
       try {
         const imported = JSON.parse(evt.target.result);
         if (Array.isArray(imported)) {
-          state.batches = imported; saveData(); renderAll();
+          state.batches = imported;
+          // DỌN DỮ LIỆU CŨ: file JSON cũ có thể chứa lô stage 'bao_tinh' — xóa ngay
+          // (bên trong đã chụp backup force + tombstone + saveData)
+          purgeLegacyBaoTinhBatches();
+          saveData(); renderAll();
           showToast('Khôi phục dữ liệu JSON thành công!', 'success');
         } else { showToast('Tệp JSON không hợp lệ!', 'error'); }
       } catch (err) { showToast('Lỗi khi nạp tệp: ' + err.message, 'error'); }
@@ -1124,6 +1163,7 @@ export {
   mergeMaterialRecords,
   openFileStorageDB,
   openSaveLocalModal,
+  purgeLegacyBaoTinhBatches,
   readDataFromFile,
   readPhotoFile,
   removeDirHandleFromIDB,

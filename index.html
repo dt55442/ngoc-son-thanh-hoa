@@ -111,11 +111,8 @@
           <span class="role-tag" id="current-user-role">ADMIN</span>
         </div>
 
-        <!-- Đổi nhanh giao diện Sáng / Đêm Kính (js/theme.js) — icon đổi theo theme -->
-        <button class="btn btn-outline btn-icon theme-toggle" id="btn-theme-toggle" title="Đổi nhanh giao diện Sáng / Đêm Kính (Sci-Fi)">
-          <i data-lucide="moon" class="ico-to-night"></i>
-          <i data-lucide="sun" class="ico-to-light"></i>
-        </button>
+        <!-- GIAO DIỆN ĐÃ KHÓA CỨNG (một giao diện duy nhất) — nút đổi nhanh
+             Sáng/Đêm Kính ở header đã XÓA (js/theme.js) -->
 
         <div class="more-options-dropdown">
           <button class="btn btn-outline btn-icon" id="btn-more-menu" title="Tùy chọn khác">
@@ -156,15 +153,6 @@
             <input type="file" id="file-import-json" accept=".json" style="display: none;">
             <div class="dropdown-divider"></div>
             <div class="dropdown-label">Giao diện</div>
-            <button class="dropdown-item" id="btn-theme-light" title="Giao diện sáng hiện tại — mặc định cho xưởng, không đổi gì">
-              <i data-lucide="sun" style="color:#d97706;"></i> Sáng (Xưởng)
-            </button>
-            <button class="dropdown-item" id="btn-theme-night" title="Nền tối xanh than + kính + viền cắt góc HUD — chất khoa học viễn tưởng">
-              <i data-lucide="moon-star" style="color:#7c3aed;"></i> Đêm Kính (Sci-Fi)
-            </button>
-            <button class="dropdown-item" id="btn-theme-auto" title="Sáng ban ngày, tối tự chuyển theo hệ điều hành máy">
-              <i data-lucide="sparkles" style="color:#0284c7;"></i> Tự Động Theo Máy
-            </button>
             <button class="dropdown-item" id="btn-fx-low" title="Tắt kính mờ + animation để máy yếu chạy mượt (giữ nguyên màu theme)">
               <i data-lucide="gauge" style="color:#64748b;"></i> Giảm Hiệu Ứng (Máy Yếu)
             </button>
@@ -334,71 +322,12 @@
         </div>
       </div>
 
-      <!-- Quick Stats Bar — chỉ hiển thị ở tab Công Đoạn (Kanban) -->
-      <section class="quick-stats-bar">
-        <div class="quick-stat-group">
-          <span class="stat-group-label"><i data-lucide="layers" style="width:12px;height:12px;"></i> Sấy 1 + Sấy 2 + Kho</span>
-          <div class="quick-stat-item">
-            <span class="stat-label">Thể tích:</span>
-            <span class="stat-value highlight" id="quick-process-vol">0.0000 m³</span>
-          </div>
-          <div class="quick-stat-item">
-            <span class="stat-label">Số thanh:</span>
-            <span class="stat-value" id="quick-process-qty">0 thanh</span>
-          </div>
-          <div class="quick-stat-item">
-            <span class="stat-label">Số lô:</span>
-            <span class="stat-value" id="quick-process-batches">0 lô</span>
-          </div>
-        </div>
-        <div class="quick-stat-divider"></div>
-        <div class="quick-stat-group quick-stat-group-bao">
-          <span class="stat-group-label"><i data-lucide="hammer" style="width:12px;height:12px;"></i> Bào Tinh</span>
-          <div class="quick-stat-item">
-            <span class="stat-label">Thể tích:</span>
-            <span class="stat-value highlight" id="quick-bao-vol">0.0000 m³</span>
-          </div>
-          <div class="quick-stat-item">
-            <span class="stat-label">Số thanh:</span>
-            <span class="stat-value" id="quick-bao-qty">0 thanh</span>
-          </div>
-          <div class="quick-stat-item">
-            <span class="stat-label">Số lô:</span>
-            <span class="stat-value" id="quick-bao-batches">0 lô</span>
-          </div>
-        </div>
-        <div class="quick-stat-divider"></div>
-        <!-- Phân bổ khối lượng theo công đoạn (chuyển từ Dashboard, thu gọn cùng hàng 2 thẻ KPI) -->
-        <div class="quick-stat-group quick-stat-group-flow" title="Phân bổ khối lượng theo công đoạn">
-          <span class="stat-group-label"><i data-lucide="arrow-right-left" style="width:12px;height:12px;"></i> Phân bổ khối lượng theo công đoạn</span>
-          <div class="stage-flow-mini">
-            <div class="flow-mini-row">
-              <span class="flow-mini-name">Sấy 1</span>
-              <div class="flow-mini-track"><div class="step-progress-bar say1" id="flow-bar-say1" style="width:0%"></div></div>
-              <span class="flow-mini-vol" id="flow-vol-say1">0 m³</span>
-              <span class="flow-mini-count" id="flow-count-say1">0 lô - 0 thanh</span>
-            </div>
-            <div class="flow-mini-row">
-              <span class="flow-mini-name">Sấy 2</span>
-              <div class="flow-mini-track"><div class="step-progress-bar say2" id="flow-bar-say2" style="width:0%"></div></div>
-              <span class="flow-mini-vol" id="flow-vol-say2">0 m³</span>
-              <span class="flow-mini-count" id="flow-count-say2">0 lô - 0 thanh</span>
-            </div>
-            <div class="flow-mini-row">
-              <span class="flow-mini-name">Kho</span>
-              <div class="flow-mini-track"><div class="step-progress-bar kho" id="flow-bar-kho" style="width:0%"></div></div>
-              <span class="flow-mini-vol" id="flow-vol-kho">0 m³</span>
-              <span class="flow-mini-count" id="flow-count-kho">0 lô - 0 thanh</span>
-            </div>
-            <div class="flow-mini-row">
-              <span class="flow-mini-name">Bào Tinh</span>
-              <div class="flow-mini-track"><div class="step-progress-bar bao_tinh" id="flow-bar-bao-tinh" style="width:0%"></div></div>
-              <span class="flow-mini-vol" id="flow-vol-bao-tinh">0 m³</span>
-              <span class="flow-mini-count" id="flow-count-bao-tinh">0 lô - 0 thanh</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- ── 3 THẺ KPI DƯỚI CÙNG ĐÃ GỠ BỎ ──
+           Trước đây có "Quick Stats Bar" với 3 thẻ: Sấy 1 + Sấy 2 + Kho · Bào Tinh ·
+           Phân bổ khối lượng theo công đoạn. Số liệu Bào Tinh tính từ lô stage
+           'bao_tinh' (dữ liệu CŨ, 236 lô) — mâu thuẫn với dữ liệu hiện tại (THẺ
+           Bào Tinh riêng, state.xuong2BaoTinhRecords) nên cả 3 thẻ đã bị GỠ,
+           dữ liệu lô cũ bị DỌN HẲN lúc boot (purgeLegacyBaoTinhBatches — js/storage.js). -->
 
       <!-- ======================================================= -->
       <!-- XƯỞNG 2 — CÁC BẢNG CHI TIẾT VỊ TRÍ (ẩn sẵn; nổi lên khi   -->
@@ -1514,7 +1443,8 @@
     <!-- 2. DASHBOARD VIEW (màn hình mặc định) -->
     <section id="dashboard-view" class="view-panel active">
 
-      <!-- Thẻ "Phân bổ khối lượng theo công đoạn" đã CHUYỂN sang tab Công Đoạn (quick-stats-bar) -->
+      <!-- Thẻ "Phân bổ khối lượng theo công đoạn" (1 trong 3 thẻ KPI cũ ở tab Công Đoạn) đã GỠ BỎ —
+           số liệu Bào Tinh cũ trùng/chênh với thẻ Bào Tinh riêng của cấu trúc mới -->
 
       <!-- ======================================================= -->
       <!-- TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (Xưởng 2 / Xưởng 1)        -->
@@ -3747,18 +3677,12 @@
               <option value="say1">1. Sấy 1</option>
               <option value="say2">2. Sấy 2</option>
               <option value="kho">3. Kho Lưu Trữ</option>
-              <option value="bao_tinh">4. Bào Tinh</option>
             </select>
           </div>
 
-          <!-- Ngày vào Bào Tinh thực tế (chỉ hiện khi công đoạn = Bào Tinh) -->
-          <div class="form-group" id="form-baotinh-date-group" style="display:none;">
-            <label for="form-baotinh-date">Ngày Vào Bào Tinh (Thực Tế)</label>
-            <input type="date" id="form-baotinh-date">
-            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
-              Sửa lại nếu ngày bào tinh thật khác ngày ghi nhận trên hệ thống.
-            </div>
-          </div>
+          <!-- OPTION "4. Bào Tinh" + khối "Ngày Vào Bào Tinh" ĐÃ GỠ: cột Kanban Bào Tinh
+               không còn; chọn lại sẽ làm lô biến mất khỏi bảng → dữ liệu cũ stage
+               'bao_tinh' bị dọn hẳn lúc boot (purgeLegacyBaoTinhBatches — js/storage.js). -->
 
           <!-- Ngày vào Sấy 2 thực tế (chỉ hiện khi công đoạn = Sấy 2) -->
           <div class="form-group" id="form-say2-date-group" style="display:none;">
@@ -4311,8 +4235,10 @@
             <option value="say1">1. Sấy 1</option>
             <option value="say2">2. Sấy 2</option>
             <option value="kho">3. Kho Lưu Trữ</option>
-            <option value="bao_tinh">4. Bào Tinh</option>
           </select>
+          <!-- OPTION "4. Bào Tinh" ĐÃ GỠ — lô stage bao_tinh (dữ liệu cũ) bị dọn hẳn lúc boot,
+               không còn gì để lọc/xuất theo công đoạn này (code xuất vẫn hỗ trợ nếu tạm thời
+               có lô cũ từ file backup trước khi purge chạy lại). -->
         </div>
 
         <div class="form-group" style="margin-bottom: 12px;">

@@ -319,7 +319,7 @@ check('CẤU TRÚC (styles.css): khối CSS thẻ tổng hợp + sparkline + mà
   stylesCss.includes('.cap-mode-btn') && stylesCss.includes('.cap-spark-svg') &&
   stylesCss.includes('.cap-eff-good') && stylesCss.includes('.cap-eff-low'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v173', /nha-may-ngoc-son-v173/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v174', /nha-may-ngoc-son-v174/.test(swJs));
 check('SỔ ĐĂNG KÝ: 10 dòng công đoạn Xưởng 2 (Bullig tách Gia công/Chọn thanh) · Xưởng 1 = 0 dòng',
   cap.capStagesOf('x2').length === 10 && cap.capStagesOf('x1').length === 0);
 check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId)',
@@ -400,6 +400,25 @@ check('CẤU TRÚC (dashboard.js): nút mở rộng nhận thẻ tổng hợp + 
 check('CẤU TRÚC (styles.css): CSS widget trực quan + fullscreen thẻ tổng hợp',
   stylesCss.includes('.cap-heat-cell') && stylesCss.includes('.cap-gauge-svg') &&
   stylesCss.includes('.capacity-card:fullscreen'));
+
+// ─── O. NÚT CHẾ ĐỘ TƯƠNG PHẢN · KÉO NGANG NHIỆT · MÀU TAB ĐANG CHỌN ──
+check('NÚT CHẾ ĐỘ: nút chưa chọn = chữ ĐẬM (không còn chữ trắng khó thấy)',
+  stylesCss.includes('.pv-unit-btn {') &&
+  stylesCss.includes('color: var(--text-main); /* chữ ĐẬM — đọc rõ trên nền thẻ sáng/khaki */'));
+check('NÚT CHẾ ĐỘ: nút đang chọn nổi gradient xanh teal + chữ trắng',
+  stylesCss.includes('.pv-unit-btn.active') &&
+  stylesCss.includes('background: linear-gradient(135deg, #0f766e, #0369a1)'));
+check('NHIỆT: cuộn ngang mượt (touch + overscroll contain) + scrollbar mảnh',
+  stylesCss.includes('.cap-heat-grid') && stylesCss.includes('-webkit-overflow-scrolling: touch;   /* cuộn mượt trên iOS */') &&
+  stylesCss.includes('overscroll-behavior-x: contain') && stylesCss.includes('.cap-heat-grid.cap-heat-dragging'));
+check('NHIỆT: kéo ngang bằng chuột/cảm ứng (Pointer Events trong capacity.js)',
+  capJs.includes('capAttachHeatDrag') && capJs.includes('pointerdown') && capJs.includes('scrollLeft = startLeft - dx'));
+check('TAB: bỏ ép màu xanh lá #2e7d32 cho tab đang chọn ở theme hiện tại',
+  !stylesCss.includes('body[data-theme="night"] .nav-btn.active') &&
+  !stylesCss.includes('#2e7d32;\n  text-shadow'));
+check('TAB: tab Nhân Sự có màu đặc trưng riêng (hổ phách) + bỏ accent tab đã xóa',
+  stylesCss.includes('data-target="hr-view"') && stylesCss.includes('--tab-accent: #d97706') &&
+  !stylesCss.includes('data-target="press-view"'));
 
 // ─── Tổng kết ───────────────────────────────────────────────────
 console.log(`\nKết quả: ${pass} PASS / ${fail} FAIL`);

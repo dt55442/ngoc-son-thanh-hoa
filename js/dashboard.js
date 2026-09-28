@@ -23,38 +23,15 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     // Thẻ GỘP 2 biểu đồ: nạp chế độ đã nhớ theo máy TRƯỚC khi vẽ
     // (mỗi hàm render tự bỏ qua nếu không phải chế độ đang xem)
     loadPvChartMode();
-    renderStageFlow();
     renderPlanVsPressChart();
     renderPlanCapacityChart();
     renderMaterialPlanChart();
     renderDashboardZones();
   }
 
-  // ─── LUỒNG CÔNG ĐOẠN (Kanban pipeline) ───────────────────────
-  function renderStageFlow() {
-    const batches = state.batches;
-    const totalVol = batches.reduce((a, b) => a + (b.volume || 0), 0);
-
-    const el = id => document.getElementById(id);
-
-    // Stage Pipeline
-    const stageVols   = { say1: 0, say2: 0, kho: 0, bao_tinh: 0 };
-    const stageCounts = { say1: { b: 0, q: 0 }, say2: { b: 0, q: 0 }, kho: { b: 0, q: 0 }, bao_tinh: { b: 0, q: 0 } };
-    batches.forEach(b => {
-      if (stageVols[b.stage] !== undefined) {
-        stageVols[b.stage] += (b.volume || 0);
-        stageCounts[b.stage].b++;
-        stageCounts[b.stage].q += (b.quantity || 0);
-      }
-    });
-    Object.keys(stageVols).forEach(st => {
-      const vol = stageVols[st], pct = totalVol > 0 ? (vol / totalVol) * 100 : 0;
-      const key = st.replace('_', '-');
-      if (el(`flow-vol-${key}`))   el(`flow-vol-${key}`).textContent   = `${vol.toFixed(3)} m³`;
-      if (el(`flow-bar-${key}`))   el(`flow-bar-${key}`).style.width   = `${Math.max(pct, 4)}%`;
-      if (el(`flow-count-${key}`)) el(`flow-count-${key}`).textContent = `${stageCounts[st].b} lô - ${stageCounts[st].q.toLocaleString('vi-VN')} thanh (${pct.toFixed(1)}%)`;
-    });
-  }
+  // LUỒNG CÔNG ĐOẠN (Kanban pipeline) ĐÃ GỠ — hàng "Phân bổ khối lượng theo công
+  // đoạn" nằm trong 3 thẻ KPI cuối tab Công Đoạn đã bị bỏ (số Bào Tinh tính từ lô
+  // stage 'bao_tinh' dữ liệu cũ, mâu thuẫn với thẻ Bào Tinh của cấu trúc mới).
   // ─── HIỂN THỊ GIÁ TRỊ / TỶ LỆ % TRÊN BIỂU ĐỒ ─────────────────
   function formatChartValue(v) {
     v = Number(v) || 0;
@@ -1402,7 +1379,6 @@ export {
   renderCustomCharts,
   renderDashboardCharts,
   renderDashboardZones,
-  renderStageFlow,
   savedMsSelections,
   setupChartDragAndDrop,
   setupChartResize,

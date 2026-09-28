@@ -8,7 +8,7 @@ import { initTheme } from './theme.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
-import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, renderStageFlow, toggleChartExpand } from './dashboard.js';
+import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, toggleChartExpand } from './dashboard.js';
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
@@ -24,7 +24,7 @@ import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, 
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { state } from './state.js';
-import { autoReconnectDataFolder, loadData, updateFileStorageUI } from './storage.js';
+import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations, initVnDateInputs } from './utils.js';
 
   // ─── INIT ─────────────────────────────────────────────────────
@@ -65,6 +65,12 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2SayIncidents(); // Giờ SỰ CỐ CHO PHÉP theo ngày (tính Hiệu suất ngày than hóa)
     loadQcExports();
     loadHrData();
+    // DỌN DỮ LIỆU CŨ: xóa hẳn lô nan còn sót stage 'bao_tinh' (cột Kanban "4. Bào
+    // Tinh" đã gỡ — số liệu Bào Tinh nay nằm ở thẻ riêng state.xuong2BaoTinhRecords).
+    // Chụp backup force TRƯỚC khi xóa + ghi tombstone chặn mây/máy khác đẩy ngược.
+    // Chạy TRƯỚC initHistory để snapshot nền lịch sử đã sạch (không ghi 1 entry
+    // xóa hàng loạt vào log sửa đổi).
+    purgeLegacyBaoTinhBatches();
     // Lịch sử sửa đổi: nạp + lập snapshot nền SAU CÙNG (sau khi toàn bộ
     // load*() đã xong) — để lần sửa đầu tiên là so sánh được chính xác
     initHistory();
@@ -146,13 +152,11 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)
       renderCapacityCard();
     }
-    // Thẻ "Phân bổ khối lượng theo công đoạn" + khu Vị Trí Xưởng 2 (tab Công Đoạn)
+    // Khu Vị Trí Xưởng 2 + bảng Kanban lô nan (tab Công Đoạn)
     if (targetViewId === 'kanban-view') {
       // Vẽ ĐỦ khu Kanban khi vừa mở tab (trước đây renderAll luôn vẽ sẵn —
       // giờ renderAll chỉ vẽ khi đang đứng ở tab này để bớt công vô ích).
-      renderQuickStats(getFilteredBatches());
       renderKanbanBoard(getFilteredBatches());
-      renderStageFlow();
       renderXuong2Cards();
       // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)
       renderX2MiniSparklines();
@@ -249,7 +253,6 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
 
   function renderAll() {
     const filtered = getFilteredBatches();
-    renderQuickStats(filtered);
     // TỐI ƯU: chỉ vẽ lại khu Kanban khi tab Công Đoạn đang mở. Trước đây MỖI
     // lần lưu/đồng bộ mây đều vẽ lại toàn bộ bảng Kanban (mỗi thẻ 1 khối DOM)
     // dù người dùng đang ở tab khác — gây giật/lag đặc biệt khi online (mỗi
@@ -257,8 +260,6 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // switchView() sẽ tự vẽ đầy đủ khu này.
     if (state.activeView === 'kanban-view') {
       renderKanbanBoard(filtered);
-      // Thẻ "Phân bổ khối lượng theo công đoạn" + giữ đúng cột đang xem trên điện thoại
-      renderStageFlow();
       renderXuong2Cards(); // đếm trên thẻ launcher Vị Trí Xưởng 2 (tab Công Đoạn)
       filterMobileKanbanColumns();
     }
@@ -276,43 +277,6 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       renderX2MiniSparklines();
     }
     initLucide();
-  }
-
-  function renderQuickStats(batches) {
-    // Tổng tất cả các lô (bao gồm cả Bào Tinh)
-    const totalVol = batches.reduce((a, b) => a + (b.volume || 0), 0);
-    const totalQty = batches.reduce((a, b) => a + (b.quantity || 0), 0);
-
-    // Tách riêng Bào Tinh: số lượng/thể tích Bào Tinh được tính RIÊNG,
-    // không cộng vào tổng của các công đoạn Sấy 1 + Sấy 2 + Kho
-    const baoQty = batches
-      .filter(b => b.stage === 'bao_tinh')
-      .reduce((a, b) => a + (b.quantity || 0), 0);
-    const baoVol = batches
-      .filter(b => b.stage === 'bao_tinh')
-      .reduce((a, b) => a + (b.volume || 0), 0);
-    const baoCount = batches.filter(b => b.stage === 'bao_tinh').length;
-
-    // Tổng các công đoạn trước Bào Tinh (Sấy 1 + Sấy 2 + Kho)
-    const processQty = totalQty - baoQty;
-    const processVol = totalVol - baoVol;
-    const processCount = batches.length - baoCount;
-
-    const el = id => document.getElementById(id);
-    // Tổng toàn bộ (giữ nguyên để hiển thị tổng quan)
-    if (el('quick-total-vol'))     el('quick-total-vol').textContent     = `${totalVol.toFixed(4)} m³`;
-    if (el('quick-total-qty'))     el('quick-total-qty').textContent     = `${totalQty.toLocaleString('vi-VN')} thanh`;
-    if (el('quick-total-batches')) el('quick-total-batches').textContent = `${batches.length} lô`;
-
-    // Hiển thị tách riêng: Tổng Sấy 1 + Sấy 2 + Kho (không gồm Bào Tinh)
-    if (el('quick-process-vol'))   el('quick-process-vol').textContent   = `${processVol.toFixed(4)} m³`;
-    if (el('quick-process-qty'))   el('quick-process-qty').textContent   = `${processQty.toLocaleString('vi-VN')} thanh`;
-    if (el('quick-process-batches')) el('quick-process-batches').textContent = `${processCount} lô`;
-
-    // Hiển thị tách riêng: Bào Tinh
-    if (el('quick-bao-vol'))       el('quick-bao-vol').textContent       = `${baoVol.toFixed(4)} m³`;
-    if (el('quick-bao-qty'))       el('quick-bao-qty').textContent       = `${baoQty.toLocaleString('vi-VN')} thanh`;
-    if (el('quick-bao-batches'))   el('quick-bao-batches').textContent   = `${baoCount} lô`;
   }
 
   // ─── PUBLIC API ───────────────────────────────────────────────
@@ -413,7 +377,6 @@ export {
   filterMobileKanbanColumns,
   getFilteredBatches,
   renderAll,
-  renderQuickStats,
   setActiveMobileStage,
   switchView
 };

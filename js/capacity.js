@@ -743,6 +743,52 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       </div>`;
   }
   // Vẽ/hủy biểu đồ công đoạn — gọi SAU khi render DOM (mỗi lần chỉ 1 canvas tồn tại)
+  // ─── KÉO NGANG BẢN ĐỒ NHIỆT (chuột + cảm ứng) ─────────────────
+  // .cap-heat-grid có overflow-x: auto nhưng chuột desktop không kéo được bằng
+  // tay — thêm Pointer Events kéo scrollLeft. Qua ngưỡng 6px mới coi là KÉO
+  // (phân biệt chạm/kéo — như mẫu FAB AI); sau lần kéo có NUỐT click tiếp theo
+  // để không bấm nhầm vào ô nhiệt khi chỉ định kéo.
+  let capHeatDragArmed = false;
+  function capAttachHeatDrag() {
+    const grid = document.getElementById('cap-heat-grid');
+    if (!grid || grid.dataset.capDragBound === '1') return;
+    grid.dataset.capDragBound = '1';
+    let downX = 0, downY = 0, startLeft = 0, dragging = false, moved = false;
+    grid.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      capHeatDragArmed = false; // lần chạm mới không kèm kéo → click vẫn hoạt động
+      downX = e.clientX; downY = e.clientY; startLeft = grid.scrollLeft;
+      dragging = true; moved = false;
+    });
+    grid.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - downX;
+      const dy = e.clientY - downY;
+      if (!moved && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
+        moved = true;
+        grid.classList.add('cap-heat-dragging');
+      }
+      if (moved) {
+        grid.scrollLeft = startLeft - dx;
+        try { e.preventDefault(); } catch (err) { /* bỏ qua */ }
+      }
+    });
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      grid.classList.remove('cap-heat-dragging');
+      if (moved) {
+        // Nuốt click ngay sau lần kéo (không bấm nhầm ô nhiệt / tiêu đề cột)
+        capHeatDragArmed = true;
+        grid.addEventListener('click', (ev) => {
+          if (capHeatDragArmed) { ev.stopPropagation(); ev.preventDefault(); capHeatDragArmed = false; }
+        }, { once: true, capture: true });
+      }
+    };
+    grid.addEventListener('pointerup', endDrag);
+    grid.addEventListener('pointercancel', endDrag);
+    grid.addEventListener('pointerleave', endDrag);
+  }
   function renderCapacityStageChart() {
     const panel = document.getElementById('cap-stage-chart-panel');
     if (!panel) return;
@@ -907,6 +953,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       if (visualRow) {
         visualRow.hidden = false;
         visualRow.innerHTML = capGaugeHtml(sel) + capRankHtml(sel) + capHeatHtml(sel) + capChartPanelHtml(sel);
+        capAttachHeatDrag(); // KÉO NGANG bản đồ nhiệt (chuột + cảm ứng)
       }
       if (tableWrap) tableWrap.hidden = true;
     } else {

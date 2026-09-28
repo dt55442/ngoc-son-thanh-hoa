@@ -457,7 +457,28 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v173/.test(swJs));
+  /nha-may-ngoc-son-v174/.test(swJs));
+const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
+check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
+  !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
+  !idxHtml.includes('quick-process-') && !idxHtml.includes('quick-total-') &&
+  !idxHtml.includes('flow-bar-') && !idxHtml.includes('flow-vol-') &&
+  !idxHtml.includes('flow-count-') && !idxHtml.includes('stage-flow-mini') &&
+  !idxHtml.includes('quick-stat-divider') && !idxHtml.includes('quick-stat-item'));
+check('CẤU TRÚC (index.html): cắt điểm tạo lô Bào Tinh cũ — hết option "4. Bào Tinh" (form + xuất)',
+  !idxHtml.includes('<option value="bao_tinh">4. Bào Tinh</option>') &&
+  !idxHtml.includes('form-baotinh-date-group'));
+check('CẤU TRÚC (styles.css): CSS của 3 thẻ KPI + flow mini + step-progress-bar đã gỡ',
+  !cssHtml.includes('.quick-stats-bar') && !cssHtml.includes('.quick-stat-group') &&
+  !cssHtml.includes('.stat-group-label') && !cssHtml.includes('.quick-stat-item') &&
+  !cssHtml.includes('.stat-label') && !cssHtml.includes('.stat-value') &&
+  !cssHtml.includes('.stage-flow-mini') && !cssHtml.includes('.flow-mini-') &&
+  !cssHtml.includes('.step-progress-bar') && !cssHtml.includes('.quick-stat-divider'));
+check('CẤU TRÚC (js): renderQuickStats/renderStageFlow gỡ sạch + purge lô Bào Tinh cũ nối đủ boot & nạp file',
+  !jsMain.includes('renderQuickStats') && !jsMain.includes('renderStageFlow') &&
+  !jsDash.includes('renderStageFlow') &&
+  jsMain.includes('purgeLegacyBaoTinhBatches') && jsStorage.includes('purgeLegacyBaoTinhBatches') &&
+  jsStorage.includes("trackDeleted('batches'") && jsStorage.includes("stage === 'bao_tinh'"));
 check('CẤU TRÚC (styles.css): pop-up thẻ chi tiết CHỈ GIỮ 1 KHUNG (bỏ khung + padding ngoài của shell)',
   cssHtml.includes('CHỈ GIỮ 1 KHUNG') &&
   /#x2-detail-card, #qc-detail-card, #hr-detail-card \{[\s\S]{0,220}border: none/.test(cssHtml) &&

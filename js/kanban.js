@@ -2,7 +2,7 @@
 // js/kanban.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { deleteBatch } from './batch-modals.js';
-import { batchMatchesColumnFilter, getFilteredBatches, renderQuickStats } from './main.js';
+import { batchMatchesColumnFilter, getFilteredBatches } from './main.js';
 import { STAGES, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getStageDaysClass, getStageDaysLabel, showToast } from './utils.js';
 
@@ -167,7 +167,6 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     colFilter[listKey] = arr;
     updateColumnFilterCounts();
     const visible = getKanbanVisibleBatches();
-    renderQuickStats(visible);
     renderKanbanBoard(visible);
   }
 
@@ -266,7 +265,6 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     resetColumnSearchUI(stage);
     updateColumnFilterCounts();
     const visible = getKanbanVisibleBatches();
-    renderQuickStats(visible);
     renderKanbanBoard(visible);
     showToast('Đã xóa bộ lọc cột!', 'info');
   }

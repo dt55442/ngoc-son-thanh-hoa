@@ -1,8 +1,12 @@
-// tests/theme.test.mjs — Kiểm thử BỘ CHỌN GIAO DIỆN (js/theme.js):
-// 3 lựa chọn light/night/auto (+theo prefers-color-scheme), lưu theo MÁY và
-// theo NGƯỜI DÙNG (bản đồ username → theme — đăng nhập là tự áp), công tắc
-// Giảm hiệu ứng, defaults Chart.js đổi theo theme, lựa chọn sai bị bỏ qua.
+// tests/theme.test.mjs — Kiểm thử GIAO DIỆN KHÓA CỨNG (js/theme.js, 28/09/2026):
+// MỘT giao diện duy nhất (không còn chọn Sáng/Đêm Kính/Auto, đã xóa nút đổi
+// nhanh ở header) — lựa chọn cũ đang lưu (light/auto) TỰ CHUYỂN về giao diện
+// hiện tại; bản đồ theo người dùng: pref khác hiện tại bị bỏ qua; công tắc
+// Giảm hiệu ứng vẫn hoạt động và luôn giữ data-theme; defaults Chart.js cố định
+// theo nền kem sáng; kiểm tra cấu trúc: index.html/theme.js không còn dấu vết
+// bộ chọn giao diện cũ.
 'use strict';
+import fs from 'node:fs';
 
 // ─── Stubs môi trường ──────────────────────────────────────────────
 function makeEl(id) {
@@ -65,68 +69,67 @@ const theme = await import('../js/theme.js');
 const body = document.body;
 const usersMap = () => { try { return JSON.parse(storeBacking.get('bamboo_tracker_ui_theme_users_v1') || '{}'); } catch (e) { return {}; } };
 
-// ─── A. MẶT ĐỊNH: chưa chọn gì + máy sáng ──────────────────────
-check('mặc định: lựa chọn là "auto"', theme.getThemeChoice() === 'auto');
-const r0 = theme.initTheme(); // chưa đăng nhập + matchMedia trả "sáng"
-check('initTheme (máy sáng): body KHÔNG có data-theme', body.getAttribute('data-theme') === null);
-check('initTheme: giải quyết ra "light"', r0 === 'light');
+// ─── A. MẶT ĐỊNH: chưa chọn gì — luôn là giao diện hiện tại ─────
+check('KHÓA CỨNG: lựa chọn mặc định là giao diện hiện tại ("night")', theme.getThemeChoice() === 'night');
+const r0 = theme.initTheme();
+check('initTheme: luôn đặt data-theme="night"', r0 === 'night' && body.getAttribute('data-theme') === 'night');
 check('data-fx mặc định là "normal"', body.getAttribute('data-fx') === 'normal');
+check('Chart.js defaults cố định màu trục theo nền kem sáng', global.Chart.defaults.color === '#3a4535' && global.Chart.defaults.borderColor === 'rgba(90, 110, 70, 0.25)');
 
-// ─── B. CHỌN ĐÊM KÍNH (chưa đăng nhập — chỉ lưu theo máy) ───────
-const r1 = theme.setTheme('night');
-check('setTheme("night"): trả về night', r1 === 'night');
-check('setTheme("night"): body có data-theme="night"', body.getAttribute('data-theme') === 'night');
-check('lưu lựa chọn theo MÁY (localStorage)', storeBacking.get('bamboo_tracker_ui_theme_v1') === 'night');
-check('Chart.js defaults đổi màu trục theo theme đêm', global.Chart.defaults.color === '#3a4535');
+// ─── B. LỰA CHỌN CŨ TRONG MÁY (light/auto) TỰ VỀ GIAO DIỆN HIỆN TẠI ──
+storeBacking.set('bamboo_tracker_ui_theme_v1', 'light');
+check('máy từng chọn "light": getThemeChoice trả giao diện hiện tại', theme.getThemeChoice() === 'night');
+theme.initTheme();
+check('máy từng chọn "light": initTheme vẫn đặt data-theme="night"', body.getAttribute('data-theme') === 'night');
+storeBacking.set('bamboo_tracker_ui_theme_v1', 'auto');
+check('máy từng chọn "auto": getThemeChoice trả giao diện hiện tại', theme.getThemeChoice() === 'night');
+storeBacking.set('bamboo_tracker_ui_theme_v1', 'rainbow');
+check('lựa chọn rác/rainbow: tự về giao diện hiện tại', theme.getThemeChoice() === 'night');
 
-// ─── C. THEO NGƯỜI DÙNG: An thích đêm, Bình thích sáng ─────────
+// ─── C. THEO NGƯỜI DÙNG: pref khác giao diện hiện tại bị BỎ QUA ──
 state.currentUser = { username: 'an', role: 'admin', fullname: 'Nguyễn Văn An' };
-theme.setTheme('night'); // ghi nhớ sở thích của An
+theme.noteUserTheme(); // ghi sở thích của An (chính là giao diện hiện tại)
 check('bản đồ người dùng ghi an→night', usersMap().an === 'night');
 state.currentUser = { username: 'binh', role: 'editor', fullname: 'Trần Bình' };
-theme.setTheme('light'); // Bình chọn sáng (máy đang đêm → đổi lại)
-check('Bình chọn sáng: body về light', body.getAttribute('data-theme') === null);
-check('bản đồ người dùng ghi binh→light (an giữ nguyên đêm)', usersMap().binh === 'light' && usersMap().an === 'night');
-// An đăng nhập lại máy → tự áp Đêm Kính của An
+storeBacking.set('bamboo_tracker_ui_theme_users_v1', JSON.stringify({ an: 'night', binh: 'light' }));
+// An đăng nhập lại máy → vẫn giao diện hiện tại
 state.currentUser = { username: 'an', role: 'admin', fullname: 'Nguyễn Văn An' };
 const appliedAn = theme.applyThemeForUser('an');
-check('An đăng nhập: tự áp lại Đêm Kính', appliedAn === true && body.getAttribute('data-theme') === 'night');
-// Bình đăng nhập lại → về Sáng theo sở thích Bình
+check('An đăng nhập: giao diện hiện tại không đổi', body.getAttribute('data-theme') === 'night');
+// Bình có sở thích cũ "light" → bị BỎ QUA, vẫn giao diện hiện tại
 state.currentUser = { username: 'binh', role: 'editor', fullname: 'Trần Bình' };
 theme.applyThemeForUser('binh');
-check('Bình đăng nhập: tự về Sáng', body.getAttribute('data-theme') === null);
+check('Bình từng chọn "light": pref cũ bị bỏ qua — vẫn giao diện hiện tại', body.getAttribute('data-theme') === 'night');
 // Người chưa từng chọn: giữ nguyên giao diện máy, không lỗi
 const appliedMoi = theme.applyThemeForUser('cu');
 check('người mới chưa có sở thích: giữ giao diện máy (không lỗi)', appliedMoi === false);
-// Mô phỏng boot: initTheme áp sở thích người đang đăng nhập
-state.currentUser = { username: 'an', role: 'admin', fullname: 'Nguyễn Văn An' };
+// Mô phỏng boot: initTheme luôn áp giao diện hiện tại
 theme.initTheme();
-check('boot: initTheme áp sở thích An (đêm)', body.getAttribute('data-theme') === 'night');
+check('boot: initTheme luôn đặt data-theme="night"', body.getAttribute('data-theme') === 'night');
 
-// ─── D. "AUTO" TỰ THEO SÁNG/TỐI CỦA MÁY ────────────────────────
-theme.setTheme('auto');
-check('auto: localStorage lưu "auto"', storeBacking.get('bamboo_tracker_ui_theme_v1') === 'auto');
-darkMode = false; theme.initTheme();
-check('auto + máy sáng: không có data-theme', body.getAttribute('data-theme') === null);
-darkMode = true; theme.initTheme();
-check('auto + máy TỐI (prefers dark): data-theme="night"', body.getAttribute('data-theme') === 'night');
-darkMode = false; theme.initTheme();
-
-// ─── E. GIẢM HIỆU ỨNG (MÁY YẾU) ────────────────────────────────
+// ─── D. GIẢM HIỆU ỨNG (MÁY YẾU) — luôn giữ data-theme ──────────
 theme.setFxLow(true);
 check('giảm hiệu ứng: data-fx="low"', body.getAttribute('data-fx') === 'low');
 check('giảm hiệu ứng: lưu localStorage', storeBacking.get('bamboo_tracker_ui_fx_v1') === 'low');
-check('giảm hiệu ứng: vẫn GIỮ data-theme (chỉ tắt kính/animation)', body.getAttribute('data-theme') === null);
+check('giảm hiệu ứng: vẫn GIỮ data-theme="night" (chỉ tắt kính/animation)', body.getAttribute('data-theme') === 'night');
 theme.setFxLow(false);
 check('bật lại hiệu ứng: data-fx="normal"', body.getAttribute('data-fx') === 'normal');
+check('bật lại hiệu ứng: data-theme vẫn "night"', body.getAttribute('data-theme') === 'night');
 
-// ─── F. LỰA CHỌN SAI / ĐỔI NHANH ───────────────────────────────
-const before = theme.getThemeChoice();
-theme.setTheme('rainbow');
-check('lựa chọn không hợp lệ: bị bỏ qua, giữ lựa chọn cũ', theme.getThemeChoice() === before);
-const afterToggle = theme.toggleThemeQuick();
-check('đổi nhanh: sáng ↔ đêm (night resolved)', afterToggle === 'night' && body.getAttribute('data-theme') === 'night');
-check('đổi nhanh: ghi vào bản đồ người dùng đang đăng nhập', usersMap().an === 'night');
+// ─── E. CẤU TRÚC: KHÔNG CÒN DẤU VẾT BỘ CHỌN GIAO DIỆN CŨ ───────
+const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const themeJs = fs.readFileSync(new URL('../js/theme.js', import.meta.url), 'utf8');
+const eventsJs = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+check('CẤU TRÚC (index.html): menu ⋮ không còn 3 nút chọn giao diện cũ',
+  !idxHtml.includes('btn-theme-light') && !idxHtml.includes('btn-theme-night') && !idxHtml.includes('btn-theme-auto'));
+check('CẤU TRÚC (index.html): header không còn nút đổi nhanh giao diện',
+  !idxHtml.includes('btn-theme-toggle') && !idxHtml.includes('theme-toggle'));
+check('CẤU TRÚC (index.html): vẫn còn nút "Giảm Hiệu Ứng" ở menu', idxHtml.includes('btn-fx-low'));
+check('CẤU TRÚC (theme.js): không còn export setTheme/toggleThemeQuick',
+  !themeJs.includes('export function setTheme') && !themeJs.includes('toggleThemeQuick'));
+check('CẤU TRÚC (events.js): không còn wire nút chọn giao diện cũ',
+  !eventsJs.includes('btn-theme-light') && !eventsJs.includes('toggleThemeQuick') && eventsJs.includes('btn-fx-low'));
+check('CẤU TRÚC (theme.js): sổ đăng ký giao diện chỉ còn một lựa chọn', themeJs.includes("const THEMES = ['night'];"));
 
 console.log('───────────────────────────');
 console.log(`THEME: ${passed} PASS, ${failed} FAIL`);

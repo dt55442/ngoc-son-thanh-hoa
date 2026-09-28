@@ -8,7 +8,6 @@ import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, validateBatchInput } from './utils.js';
-import { getBaoTinhConversion } from './planning.js';
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -40,9 +39,10 @@ import { getBaoTinhConversion } from './planning.js';
       // đoạn hiện tại — cho sửa ngày thật khác với ngày hệ thống ghi nhận việc chuyển
       const stageDateFields = [
         { stage: 'say2',     group: 'form-say2-date-group',    input: 'form-say2-date' },
-        { stage: 'kho',      group: 'form-kho-date-group',     input: 'form-kho-date' },
-        { stage: 'bao_tinh', group: 'form-baotinh-date-group', input: 'form-baotinh-date' }
+        { stage: 'kho', group: 'form-kho-date-group', input: 'form-kho-date' }
       ];
+      // Entry 'bao_tinh' ĐÃ GỠ — công đoạn Bào Tinh không còn trên Kanban; option
+      // "4. Bào Tinh" đã xóa khỏi form nên lô không thể đặt về stage này nữa.
       stageDateFields.forEach(({ stage, group, input }) => {
         const g = document.getElementById(group);
         const i = document.getElementById(input);
@@ -50,13 +50,9 @@ import { getBaoTinhConversion } from './planning.js';
         const show = batch.stage === stage;
         g.style.display = show ? '' : 'none';
         if (!show) { i.value = ''; return; }
-        if (stage === 'bao_tinh') {
-          i.value = batch.baoTinhDate || getBaoTinhConversion(batch).date || '';
-        } else {
-          const overrideKey = stage === 'say2' ? 'say2Date' : 'khoDate';
-          const hist = (batch.stageHistory || []).filter(h => h && h.stage === stage && h.date);
-          i.value = batch[overrideKey] || (hist.length ? hist[hist.length - 1].date : '') || '';
-        }
+        const overrideKey = stage === 'say2' ? 'say2Date' : 'khoDate';
+        const hist = (batch.stageHistory || []).filter(h => h && h.stage === stage && h.date);
+        i.value = batch[overrideKey] || (hist.length ? hist[hist.length - 1].date : '') || '';
       });
       const volDisp = document.getElementById('form-calculated-vol');
       if (volDisp) volDisp.textContent = `${calculateVolume(batch.length, batch.width, batch.thickness, batch.quantity).toFixed(4)} m³`;
@@ -70,11 +66,11 @@ import { getBaoTinhConversion } from './planning.js';
       const volDisp = document.getElementById('form-calculated-vol');
       if (volDisp) volDisp.textContent = '0.0000 m³';
       // Ẩn sạch các ô ngày thực tế (lô mới chưa qua công đoạn nào khác)
-      ['form-say2-date-group', 'form-kho-date-group', 'form-baotinh-date-group'].forEach(id => {
+      ['form-say2-date-group', 'form-kho-date-group'].forEach(id => {
         const g = document.getElementById(id);
         if (g) g.style.display = 'none';
       });
-      ['form-say2-date', 'form-kho-date', 'form-baotinh-date'].forEach(id => {
+      ['form-say2-date', 'form-kho-date'].forEach(id => {
         const i = document.getElementById(id);
         if (i) i.value = '';
       });
@@ -105,7 +101,7 @@ import { getBaoTinhConversion } from './planning.js';
     const dateVal  = document.getElementById('form-date').value;
     // Ngày vào công đoạn THỰC TẾ (chỉ áp dụng cho công đoạn hiện tại của lô) — có thể
     // khác ngày hệ thống ghi nhận; dùng cho thống kê tuần & xuất Excel theo công đoạn
-    const stageDateInputId = { say2: 'form-say2-date', kho: 'form-kho-date', bao_tinh: 'form-baotinh-date' }[stageVal];
+    const stageDateInputId = { say2: 'form-say2-date', kho: 'form-kho-date' }[stageVal];
     const stageDateEl = stageDateInputId ? document.getElementById(stageDateInputId) : null;
     const stageDateVal = (stageDateEl && stageDateEl.value) ? stageDateEl.value : '';
 
@@ -124,10 +120,10 @@ import { getBaoTinhConversion } from './planning.js';
       updatedAt:   nowISO
     };
     // Ghi NGÀY VÀO CÔNG ĐOẠN THỰC TẾ (được ưu tiên hơn mốc tự động trong stageHistory)
+    // — nhánh 'bao_tinh' ĐÃ GỠ (công đoạn Bào Tinh không còn trên Kanban)
     if (stageDateVal) {
-      if (stageVal === 'bao_tinh')      batchData.baoTinhDate = stageDateVal;
-      else if (stageVal === 'say2')     batchData.say2Date    = stageDateVal;
-      else if (stageVal === 'kho')      batchData.khoDate     = stageDateVal;
+      if (stageVal === 'say2') batchData.say2Date = stageDateVal;
+      else if (stageVal === 'kho') batchData.khoDate = stageDateVal;
     }
 
     if (batchId) {

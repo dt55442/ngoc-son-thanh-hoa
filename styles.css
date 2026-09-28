@@ -90,7 +90,8 @@ h1, h2, h3, h4, h5 {
 
 .text-right { text-align: right; }
 .text-center { text-align: center; }
-.highlight { color: var(--primary); font-weight: 700; }
+/* class .highlight (dùng cho số liệu KPI quick-stats-bar) ĐÃ GỠ — chỉ 2 chỗ dùng
+   đều nằm trong 3 thẻ KPI đã bị bỏ khỏi tab Công Đoạn */
 
 /* ---------------------------------------------------- */
 /* BUTTONS & TOUCH CONTROLS (OPTIMIZED FOR MOBILE) */
@@ -276,15 +277,16 @@ h1, h2, h3, h4, h5 {
 .nav-btn[data-target="planning-view"],    .mobile-nav-item[data-target="planning-view"] {
   --tab-accent: #7c3aed; --tab-accent-soft: rgba(124, 58, 237, 0.14);
 }
-.nav-btn[data-target="press-view"],       .mobile-nav-item[data-target="press-view"] {
-  --tab-accent: #ea580c; --tab-accent-soft: rgba(234, 88, 12, 0.14);
-}
 .nav-btn[data-target="materials-view"],   .mobile-nav-item[data-target="materials-view"] {
   --tab-accent: #db2777; --tab-accent-soft: rgba(219, 39, 119, 0.14);
 }
 
 .nav-btn[data-target="qc-view"],          .mobile-nav-item[data-target="qc-view"] {
   --tab-accent: #0d9488; --tab-accent-soft: rgba(13, 148, 136, 0.14);
+}
+
+.nav-btn[data-target="hr-view"],          .mobile-nav-item[data-target="hr-view"] {
+  --tab-accent: #d97706; --tab-accent-soft: rgba(217, 119, 6, 0.14);
 }
 
 .nav-btn {
@@ -549,81 +551,11 @@ h1, h2, h3, h4, h5 {
   max-width: 180px;
 }
 
-/* Quick Stats Bar */
-.quick-stats-bar {
-  background-color: var(--primary-light);
-  border: 1px solid var(--primary-border);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.quick-stat-group {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--primary-border);
-}
-
-.quick-stat-group-bao {
-  background: rgba(255, 247, 237, 0.65);
-  border-color: #fed7aa;
-}
-
-.stat-group-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--primary);
-  margin-bottom: 2px;
-}
-
-.quick-stat-group-bao .stat-group-label {
-  color: #c2410c;
-}
-
-.quick-stat-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.88rem;
-}
-
-.stat-label {
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.stat-value {
-  font-weight: 700;
-  color: var(--text-main);
-  font-family: var(--font-mono);
-}
-
-.quick-stat-divider {
-  width: 1px;
-  height: 18px;
-  background-color: var(--primary-border);
-  display: none;
-}
-
-@media (min-width: 640px) {
-  .quick-stat-divider {
-    display: block;
-  }
-}
+/* ── QUICK STATS BAR (3 thẻ KPI cuối tab Công Đoạn) ĐÃ GỠ ──
+   Trước đây có các class quick-stats-bar · quick-stat-group · quick-stat-item ·
+   stat-label · stat-value · quick-stat-divider — số Bào Tinh tính từ lô stage
+   'bao_tinh' (dữ liệu cũ) mâu thuẫn với thẻ Bào Tinh riêng của cấu trúc mới
+   → gỡ cả 3 thẻ + data. */
 
 /* ---------------------------------------------------- */
 /* VIEW PANELS */
@@ -1338,80 +1270,11 @@ h1, h2, h3, h4, h5 {
   gap: 8px;
 }
 
-/* Thẻ gọn "Phân bổ khối lượng theo công đoạn" — nằm cùng hàng 2 thẻ KPI tab Công Đoạn */
-.quick-stat-group-flow {
-  flex: 1 1 260px;
-  min-width: 230px;
-  max-width: 400px;
-}
-
-.stage-flow-mini {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.flow-mini-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  line-height: 1.25;
-}
-
-.flow-mini-name {
-  flex: 0 0 auto;
-  min-width: 54px;
-  font-weight: 700;
-  color: var(--text-main);
-  white-space: nowrap;
-}
-
-.flow-mini-track {
-  flex: 1 1 auto;
-  height: 6px;
-  min-width: 36px;
-  background-color: #e2e8f0;
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.flow-mini-vol {
-  flex: 0 0 auto;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 0.74rem;
-  color: var(--primary);
-  white-space: nowrap;
-}
-
-.flow-mini-count {
-  flex: 0 0 auto;
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.step-progress-bar {
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width 0.5s ease;
-}
-
-.step-progress-bar.say1 { background-color: var(--stage-say1-color); }
-.step-progress-bar.say2 { background-color: var(--stage-say2-color); }
-.step-progress-bar.kho { background-color: var(--stage-kho-color); }
-.step-progress-bar.bao_tinh { background-color: var(--stage-bao-color); }
-
-/* Điện thoại: nhóm phân bổ chiếm cả hàng, ẩn chi tiết lô/thanh cho gọn */
-@media (max-width: 540px) {
-  .quick-stat-group-flow {
-    flex-basis: 100%;
-    min-width: 0;
-    max-width: none;
-  }
-  .flow-mini-count { display: none; }
-}
+/* ── THẺ GỌN "Phân bổ khối lượng theo công đoạn" ĐÃ GỠ ──
+   Trước đây có các class quick-stat-group-flow · stage-flow-mini · flow-mini-row /
+   flow-mini-name / flow-mini-track / flow-mini-vol / flow-mini-count ·
+   step-progress-bar (cùng nằm trong quick-stats-bar tab Công Đoạn — gỡ cùng lúc
+   với 3 thẻ KPI). */
 
 /* Charts Grid */
 .charts-grid {
@@ -3095,14 +2958,6 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
   }
   .mobile-nav-item { padding: 7px 0; font-size: 0.68rem; min-height: 48px; }
 
-  /* ── Thanh thống kê ── */
-  .quick-stats-bar {
-    padding: 10px;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 10px;
-  }
-
   /* ── Kanban (thanh công cụ nay nằm trong thẻ "Than Hóa + Sấy") ── */
   .kanban-toolbar { padding: 0 0 10px; }
   .kanban-toolbar .btn-primary {
@@ -3248,8 +3103,8 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
 }
 .pv-unit-btn {
@@ -3259,17 +3114,18 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
   border-radius: var(--radius-full);
   font-size: 0.78rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-main); /* chữ ĐẬM — đọc rõ trên nền thẻ sáng/khaki */
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 .pv-unit-btn.active {
-  background: #fff;
-  color: #2187cb;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  background: linear-gradient(135deg, #0f766e, #0369a1); /* TRỔI lên — thấy ngay đang chọn */
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.35);
 }
 .pv-unit-btn:not(.active):hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(15, 118, 110, 0.14);
+  color: #0f766e;
 }
 
 /* ─── NÚT TÊN BIỂU ĐỒ — CHUYỂN ĐỔI 2 BIỂU ĐỒ CỦA THẺ GỘP ────────
@@ -6816,15 +6672,6 @@ body[data-theme="night"] .mobile-bottom-nav {
   background: rgba(249, 246, 232, 0.96);
   border-top: 1px solid rgba(46, 125, 50, 0.35);
 }
-body[data-theme="night"] .nav-btn.active,
-body[data-theme="night"] .mobile-nav-item.active {
-  color: #2e7d32;
-  text-shadow: 0 1px 0 rgba(46, 125, 50, 0.15);
-}
-/* Icon nút đổi nhanh: sáng hiện vầng trăng, đêm hiện mặt trời (đổi về sáng) */
-.theme-toggle .ico-to-light { display: none; }
-body[data-theme="night"] .theme-toggle .ico-to-night { display: none; }
-body[data-theme="night"] .theme-toggle .ico-to-light { display: block; }
 
 /* ── MODAL + DROPDOWN + BADGE HEADER ── */
 body[data-theme="night"] .modal-overlay { background: rgba(60, 72, 48, 0.35); }
@@ -7832,10 +7679,19 @@ body[data-fx="low"] tr.cap-row { transition: none; }
 .cap-heat-title svg { width: 13px; height: 13px; color: var(--primary); flex-shrink: 0; }
 .cap-heat-grid {
   display: grid;
-  grid-template-columns: 118px repeat(8, minmax(40px, 1fr));
+  grid-template-columns: 118px repeat(8, minmax(46px, 1fr));
   gap: 3px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;   /* cuộn mượt trên iOS */
+  overscroll-behavior-x: contain;      /* không cuộn lây sang trang phía sau */
+  cursor: grab;                        /* KÉO NGANG được bằng chuột + cảm ứng */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 119, 6, 0.55) transparent;
 }
+.cap-heat-grid.cap-heat-dragging { cursor: grabbing; user-select: none; }
+.cap-heat-grid::-webkit-scrollbar { height: 7px; }
+.cap-heat-grid::-webkit-scrollbar-thumb { background: rgba(217, 119, 6, 0.55); border-radius: 999px; }
+.cap-heat-grid::-webkit-scrollbar-track { background: rgba(100, 116, 139, 0.12); border-radius: 999px; }
 .cap-heat-corner, .cap-heat-rowname {
   font-size: 0.72rem;
   font-weight: 600;
@@ -7914,7 +7770,7 @@ body[data-fx="low"] .cap-heat-cell { transition: none; }
   .cap-gauge-svg { width: 108px; height: 108px; flex-shrink: 0; }
   .cap-gauge-chips { align-items: flex-start; }
   .cap-rank-row { grid-template-columns: minmax(96px, 118px) 1fr 44px; font-size: 0.72rem; }
-  .cap-heat-grid { grid-template-columns: 96px repeat(8, minmax(34px, 1fr)); }
+  .cap-heat-grid { grid-template-columns: 96px repeat(8, minmax(40px, 1fr)); }
   .cap-heat-cell { min-height: 24px; }
   .cap-stage-chart-box { height: 210px; }
 }

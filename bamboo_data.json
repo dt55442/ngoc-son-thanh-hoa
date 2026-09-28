@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-28T08:39:13.236Z",
+  "savedAt": "2026-09-28T12:22:27.339Z",
   "batches": [
     {
       "id": "batch-1790069123836",
@@ -15826,9 +15826,11 @@
     "2026-09": 1000
   },
   "x2BaoThoRates": {
-    "2026-09": 1000
+    "2026-09": 800
   },
-  "x2ChonNanRates": {},
+  "x2ChonNanRates": {
+    "2026-09": 800
+  },
   "x2BulligRates": {
     "gc": {},
     "ct": {}
@@ -16071,7 +16073,9 @@
       "createdAt": "2026-09-23T07:15:20.287Z"
     }
   ],
-  "x2BaoTinhRates": {},
+  "x2BaoTinhRates": {
+    "2026-09": 660
+  },
   "x2EpVanRates": {
     "2026-09": 0.1
   },

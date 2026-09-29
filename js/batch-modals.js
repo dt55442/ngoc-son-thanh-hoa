@@ -157,12 +157,113 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     const batch = state.batches.find(b => b.id === batchId);
     if (!batch) return;
     if (confirm(`Bạn có chắc chắn muốn xóa lô nan "${batch.code}"?`)) {
-      pushUndo(`Xóa lô ${batch.code}`);
-      trackDeleted('batches', batchId); // dấu vết xóa: chặn máy khác đẩy ngược lô này lên mây
-      state.batches = state.batches.filter(b => b.id !== batchId);
-      saveData(); renderAll();
-      showToast(`Đã xóa lô nan ${batch.code}`, 'info');
+      deleteBatches([batchId]);
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // XÓA LÔ — GỘP 1 LƯỢT (dùng chung cho xóa 1 lô & XÓA NHIỀU LÔ)
+  // ═══════════════════════════════════════════════════════════
+  // Mọi việc gói vào MỘT lượt: 1 undo · 1 tombstone (mảng id) · 1 saveData ·
+  // 1 renderAll · 1 toast. Trước đây xóa N lô là N chuỗi đầy đủ (N lần vẽ lại
+  // toàn bộ Kanban + N lần hẹn đẩy mây) → nguyên nhân chính gây độ trễ cao khi
+  // xóa từng lô liên tục.
+  function deleteBatches(ids) {
+    if (!requireEditPermission()) return 0;
+    const list = (Array.isArray(ids) ? ids : [ids]).map(v => String(v || '')).filter(Boolean);
+    if (!list.length) return 0;
+    const targets = state.batches.filter(b => list.includes(String(b.id)));
+    if (!targets.length) return 0;
+    const names = targets.map(b => b.code || b.id);
+    pushUndo(names.length === 1
+      ? `Xóa lô ${names[0]}`
+      : `Xóa ${names.length} lô: ${names.slice(0, 3).join(', ')}${names.length > 3 ? '…' : ''}`);
+    trackDeleted('batches', list); // dấu vết xóa: chặn máy khác đẩy ngược lô này lên mây
+    const picked = new Set(list);
+    state.batches = state.batches.filter(b => !picked.has(String(b.id)));
+    saveData(); renderAll();
+    showToast(names.length === 1 ? `Đã xóa lô nan ${names[0]}` : `Đã xóa ${names.length} lô nan`, 'info');
+    return names.length;
+  }
+
+  // ─── CHẾ ĐỘ XÓA NHIỀU LÔ (Admin) ────────────────────────────────
+  // Nút "Xóa Nhiều" trên thanh công cụ thẻ Than Hóa + Sấy → bật chế độ TÍCH
+  // CHỌN các thẻ lô (checkbox trên từng thẻ) → bấm "Xóa Đã Chọn" trên thanh nổi.
+  // CHỈ Quản Trị (Admin) được dùng — vai trò khác bấm sẽ bị chặn kèm thông báo.
+  function isAdminUser() {
+    return !!(state.currentUser && state.currentUser.role === 'admin');
+  }
+  // Đồng bộ thanh nổi "Đã chọn N lô": đếm + chặn nút xóa khi chưa chọn gì
+  function syncKanbanPickBar() {
+    if (typeof document === 'undefined' || !document.getElementById) return;
+    const bar = document.getElementById('kb-pick-bar');
+    if (!bar) return;
+    const n = (state.kanbanPicked || []).length;
+    const cnt = document.getElementById('kb-pick-count');
+    if (cnt) cnt.textContent = String(n);
+    const btn = document.getElementById('kb-pick-del');
+    if (btn) btn.disabled = n === 0;
+  }
+  // Bật/tắt chế độ chọn nhiều lô (bấm lần nữa = thoát)
+  function toggleKanbanPickMode() {
+    if (state.kanbanPickMode) { exitKanbanPickMode(); return; }
+    if (!isAdminUser()) { showToast('Xóa nhiều lô chỉ dành cho Quản Trị (Admin).', 'error'); return; }
+    if (!requireEditPermission()) return;
+    state.kanbanPickMode = true;
+    state.kanbanPicked = [];
+    if (typeof document !== 'undefined' && document.body && document.body.classList) {
+      document.body.classList.add('kanban-pick-mode');
+    }
+    syncKanbanPickBar();
+    renderAll(); // vẽ lại Kanban để hiện ô tích chọn trên từng thẻ
+    showToast('Đã bật chế độ xóa nhiều lô — tích chọn các thẻ rồi bấm "Xóa Đã Chọn".', 'info');
+  }
+  // Thoát chế độ chọn (gỡ tích + tắt thanh nổi). reRender=false khi đang chuyển tab
+  function exitKanbanPickMode(reRender = true) {
+    if (!state.kanbanPickMode) return;
+    state.kanbanPickMode = false;
+    state.kanbanPicked = [];
+    if (typeof document !== 'undefined' && document.body && document.body.classList) {
+      document.body.classList.remove('kanban-pick-mode');
+    }
+    syncKanbanPickBar();
+    if (reRender) renderAll();
+  }
+  // Tích / bỏ tích 1 lô (từ ô checkbox trên thẻ — uỷ nhiệm sự kiện change)
+  function onKanbanPickChange(batchId, checked) {
+    const id = String(batchId || '');
+    if (!id) return;
+    const cur = new Set(state.kanbanPicked || []);
+    if (checked) cur.add(id); else cur.delete(id);
+    state.kanbanPicked = [...cur];
+    syncKanbanPickBar();
+  }
+  // CHỌN TẤT CẢ các lô đang HIỆN trên bảng (đã qua bộ lọc cột — lấy theo DOM)
+  function kanbanSelectAll() {
+    if (!state.kanbanPickMode) return;
+    const picked = new Set(state.kanbanPicked || []);
+    if (typeof document !== 'undefined' && document.querySelectorAll) {
+      document.querySelectorAll('.kb-pick-box').forEach(cb => {
+        const id = cb && cb.getAttribute ? cb.getAttribute('data-pick-id') : null;
+        if (!id) return;
+        picked.add(String(id));
+        if ('checked' in cb) cb.checked = true;
+      });
+    }
+    state.kanbanPicked = [...picked];
+    syncKanbanPickBar();
+  }
+  // Xóa CÁC LÔ ĐÃ CHỌN (confirm 1 lần cho cả loạt — hoàn tác được bằng 1 bấm)
+  function deletePickedBatches() {
+    if (!state.kanbanPickMode) return;
+    if (!isAdminUser()) { showToast('Xóa nhiều lô chỉ dành cho Quản Trị (Admin).', 'error'); return; }
+    const ids = (state.kanbanPicked || []).slice();
+    if (!ids.length) { showToast('Chưa chọn lô nào để xóa!', 'info'); return; }
+    if (typeof confirm === 'function' &&
+        !confirm(`Xóa ${ids.length} lô nan đã chọn? (Có thể bấm Hoàn Tác ngay sau khi xóa)`)) return;
+    state.kanbanPicked = [];          // gỡ khỏi danh sách chọn TRƯỚC khi vẽ lại
+    deleteBatches(ids);               // tự saveData + renderAll + toast
+    syncKanbanPickBar();
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -545,7 +646,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     return name;
   }
 
-  function openAddLotModal() {
+  function openAddLotModal(preset) {
     if (!requireEditPermission()) return;
     const modal = document.getElementById('modal-add-lot');
     const form  = document.getElementById('add-lot-form');
@@ -557,10 +658,13 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     const dEl = document.getElementById('al-date');
     if (dEl) dEl.value = today;
     const stageEl = document.getElementById('al-stage');
-    if (stageEl) stageEl.value = 'say1';
+    // preset = { stage, location } (tùy chọn) — dùng khi mở từ BẢNG ĐIỀU KHIỂN
+    // LÒ SẤY (js/kiln.js): công đoạn + vị trí đã điền sẵn; không truyền = như cũ
+    if (stageEl) stageEl.value = (preset && preset.stage === 'say2') ? 'say2' : 'say1';
     const useForEl = document.getElementById('al-use-for');
     if (useForEl) useForEl.value = 'Ván';   // mặc định Ván cho lô mới
     syncAddLotUI();
+    if (preset && preset.location) alSetLocation(String(preset.location).trim());
     modal.classList.add('show');
     initLucide();
   }
@@ -858,14 +962,24 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
 
     // ── CHUYỂN TẤT CẢ LÔ Ở 1 VỊ TRÍ (Sấy 1 / Sấy 2) → Kho ──
     const pos = (document.getElementById('ck-lot') || {}).value || '';
-    const lots = pos ? batchesAtPosition(stage, pos) : [];
-    if (!lots.length) { showToast('Chưa chọn được vị trí nào có lô để chuyển!', 'error'); return; }
     const newLoc = ((document.getElementById('ck-new-loc') || {}).value || '').trim();
+    const moved = quickTransferLotsToKho(stage, pos, dateVal, newLoc, notes);
+    if (moved) closeTransferKhoModal();
+  }
+
+  // Chuyển NHANH TẤT CẢ lô nan ở 1 VỊ TRÍ (1 lò sấy) vào Kho — dùng CHUNG cho
+  // modal "Chuyển Kho" (form trên) và BẢNG ĐIỀU KHIỂN LÒ SẤY (js/kiln.js: icon
+  // kho trên thẻ lò + kéo thả thẻ lò vào ô Kho).
+  // Trả về SỐ LÔ đã chuyển (0 = không chuyển: không có lô / người dùng hủy).
+  function quickTransferLotsToKho(stage, location, dateVal, newLoc = '', notes = '') {
+    const pos = String(location || '').trim();
+    const lots = pos ? batchesAtPosition(stage, pos) : [];
+    if (!lots.length) { showToast('Chưa có lô nan nào ở vị trí này để chuyển vào Kho!', 'error'); return 0; }
     const stageName = (STAGES[stage] && STAGES[stage].name) || stage;
     if (lots.length > 1 && typeof confirm === 'function') {
       const msg = `Chuyển TẤT CẢ ${lots.length} lô ở vị trí "${pos}" (${stageName}) vào Kho?` +
         (newLoc ? `\n• Vị trí mới ở Kho: "${newLoc}"` : '');
-      if (!confirm(msg)) return;
+      if (!confirm(msg)) return 0;
     }
     pushUndo(`Chuyển ${lots.length} lô ở vị trí ${pos} vào Kho`);
     const nowISO = new Date().toISOString();
@@ -878,8 +992,9 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       if (notes) b.notes = notes;
       b.updatedAt = nowISO;
     });
-    saveData(); closeTransferKhoModal(); renderAll();
+    saveData(); renderAll();
     showToast(`Đã chuyển ${lots.length} lô ở vị trí ${pos} vào Kho (ngày ${formatDateDDMMYY(dateVal)})!`, 'success');
+    return lots.length;
   }
 
 export {
@@ -904,11 +1019,19 @@ export {
   closeBatchFormModal,
   closeTransferKhoModal,
   deleteBatch,
+  deleteBatches,
+  deletePickedBatches,
+  exitKanbanPickMode,
+  kanbanSelectAll,
+  onKanbanPickChange,
+  syncKanbanPickBar,
+  toggleKanbanPickMode,
   handleAddLotSubmit,
   handleAlAddLocation,
   handleAlDeleteLocation,
   handleBatchFormSubmit,
   handleTransferKhoSubmit,
+  quickTransferLotsToKho,
   khoLocationsInUse,
   khoPositionsAt,
   loadX2LotLocations,

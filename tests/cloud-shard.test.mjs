@@ -5,6 +5,7 @@
 //   2) Chia mảnh (shard) base64/JSON thành nhiều doc ≤ ~700KB khi cần
 // Dùng trực tiếp các hàm thuần đã export từ js/cloud.js (giống qc.test.mjs).
 'use strict';
+import fs from 'node:fs';
 
 // ─── Stubs môi trường (giống qc.test.mjs) ────────────────────────
 function makeEl(id) {
@@ -227,6 +228,23 @@ check('D5: ghép mảnh JSON trơn → parse nguyên vẹn', JSON.stringify(JSON
     cloud.restoreLocalThumbs(prevRecs, [{ id: 'm9', images: [{ id: 'ph-9' }] }])[0].images[0].thumb === undefined);
   check('N7: ảnh legacy dạng chuỗi dataURL được giữ nguyên khi gỡ (tương thích bản cũ)',
     payload.materialRecords[0].images[1] === 'data:image/jpeg;base64,LEGACY_X');
+}
+
+// ─── O. ĐẨY MÂY THEO CHUỖI VIỆC (idle-debounce) + initLucide GỌN ──
+// Sửa lag khi xóa/lưu liên tục: trước đây debounce 600ms → gần như MỖI lần xóa
+// (confirm() khiến khoảng cách >600ms) là 1 lần đẩy full payload; đồng thời
+// initLucide() thay thế LẠI mọi icon trong trang mỗi lần render.
+{
+  const src = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
+  check('O1: firePushSync dùng IDLE-DEBOUNCE — đợi ngừng việc 5s, chuỗi dài tối đa 30s vẫn đẩy 1 lần',
+    /FB_PUSH_IDLE_MS = 5000/.test(src) && /FB_PUSH_MAX_WAIT_MS = 30000/.test(src) &&
+    /if \(!fbPushFirstAt\) fbPushFirstAt = now/.test(src));
+  check('O2: KHÔNG còn debounce 600ms cũ (mỗi lần xóa/lưu đều kích hoạt 1 lần đẩy full payload)',
+    !/doFirePush\(\), 600/.test(src));
+  check('O3: doFirePush reset chuỗi (fbPushFirstAt = 0) — thay đổi kế tiếp mở chuỗi mới',
+    /fbPushFirstAt = 0;/.test(src));
+  check('O4: initLucide gỡ data-lucide trên <svg> đã vẽ — các lần sau chỉ vẽ icon MỚI (sửa lag render)',
+    /svg\[data-lucide\]/.test(src) && src.includes("s.removeAttribute('data-lucide')"));
 }
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');

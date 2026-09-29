@@ -274,6 +274,16 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     card.className = 'bamboo-card';
     card.setAttribute('data-id', batch.id);
 
+    // Ô TÍCH CHỌN khi bật chế độ "Xóa Nhiều" (Admin) — ẩn bằng CSS khi chưa bật
+    // chế độ; trạng thái checked lấy theo state.kanbanPicked để giữ nguyên sau
+    // mỗi lần vẽ lại bảng (xóa loạt / lọc cột / chuyển tab quay lại).
+    const isPicked = (state.kanbanPicked || []).includes(String(batch.id));
+    const pickHtml = `
+      <label class="kb-pick" title="Tích chọn lô này để xóa cùng loạt">
+        <input type="checkbox" class="kb-pick-box" data-pick-id="${escapeHTML(String(batch.id))}"${isPicked ? ' checked' : ''}>
+        <span>Chọn</span>
+      </label>`;
+
     // Hiển thị badge ngày cho từng công đoạn đã đi qua (Bào Tinh không đếm ngày)
     const history = getBatchStageHistory(batch);
     const daysBadgesHtml = history
@@ -289,6 +299,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
       .join('');
 
     card.innerHTML = `
+      ${pickHtml}
       <div class="card-top">
         <div class="batch-code"><i data-lucide="box"></i> ${escapeHTML(batch.code)}</div>
         <span class="week-pill">${escapeHTML(batch.week)} (${formatDateDDMMYY(batch.date)})</span>

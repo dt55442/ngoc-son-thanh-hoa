@@ -52,6 +52,8 @@ import { escapeHTML, showToast } from './utils.js';
     x2SayIncidents:    { tab: 'kanban',    label: 'Giờ sự cố cho phép theo ngày', get: () => state.x2SayIncidents },
     suppliers:         { tab: 'materials', label: 'Nhà cung cấp',         get: () => state.suppliers },
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
+    qcKilnReadings:    { tab: 'qc',        label: 'Độ ẩm lò sấy (QC nhập)', get: () => state.qcKilnReadings },
+    qcKilnThresholds:  { tab: 'qc',        label: 'Ngưỡng độ ẩm đạt (Sấy)', get: () => state.qcKilnThresholds },
     hrEmployees:       { tab: 'hr',        label: 'Nhân viên',            get: () => state.hrEmployees },
     hrLeaves:          { tab: 'hr',        label: 'Đơn nghỉ phép',        get: () => state.hrLeaves },
     hrRecruitment:     { tab: 'hr',        label: 'Nhu cầu tuyển dụng',   get: () => state.hrRecruitment },

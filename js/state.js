@@ -86,6 +86,10 @@
   // Trạng thái THU GỌN bảng Kanban lô nan của thẻ "Than Hóa + Sấy" ('1' = đang
   // thu gọn: chỉ hiện thanh công cụ + bảng thống kê, ẩn bảng Kanban) — nhớ theo máy.
   const STORAGE_KEY_X2_KANBAN_COLLAPSED = 'bamboo_tracker_x2_kanban_collapsed_v1';
+  // KHUNG đang xem của thẻ "Than Hóa + Sấy": 'ctrl' = BẢNG ĐIỀU KHIỂN LÒ SẤY
+  // (mặc định — 2 hàng lô icon) | 'data' = BẢNG DỮ LIỆU (thống kê than hóa + Kanban).
+  // Thuần UI — nhớ theo máy, KHÔNG đồng bộ mây/backup (giống KANBAN_COLLAPSED).
+  const STORAGE_KEY_X2_SAY_FRAME = 'bamboo_tracker_x2_say_frame_v1';
   // ĐỊNH MỨC CÔNG SUẤT ÉP VÁN (m³/giờ) theo TỪNG THÁNG — { 'YYYY-MM': m³/h }.
   // Thẻ Ép Ván (launcher tab Công Đoạn): KHÔNG đặt định mức → thẻ ngày chỉ hiện
   // công suất m³/ngày; CÓ định mức → hiện thêm m³/h (tổng m³ ÷ giờ phân vị "Ép"
@@ -101,6 +105,13 @@
   // + xuong2CutRecords (10 chuyến gần nhất) — xem js/suppliers.js
   const STORAGE_KEY_SUPPLIERS = 'bamboo_tracker_suppliers_v1';
   const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
+  // ĐỘ ẨM LÒ SẤY (tab QC — QC đo & nhập HÀNG NGÀY cho từng lò sấy LS1..LS15):
+  // [{ id, date 'YYYY-MM-DD', location 'LS3', value (%), note, by, createdAt, updatedAt }]
+  // — nguồn cho cột "Độ ẩm hiện tại" + màu đạt ẩm của BẢNG ĐIỀU KHIỂN LÒ SẤY (js/kiln.js)
+  const STORAGE_KEY_QC_KILN_HUMIDITY = 'bamboo_tracker_qc_kiln_humidity_v1';
+  // NGƯỠNG độ ẩm ĐẠT theo công đoạn sấy (%): { say1: 15, say2: 12 } — đạt khi
+  // độ ẩm ≤ ngưỡng; chỉnh được trong thẻ "Độ Ẩm Lò Sấy" (tab QC)
+  const STORAGE_KEY_QC_KILN_THRESHOLD = 'bamboo_tracker_qc_kiln_threshold_v1';
   // Tab Nhân Sự: nhân viên, đơn nghỉ phép, nhu cầu tuyển dụng
   const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
   const STORAGE_KEY_HR_LEAVES      = 'bamboo_tracker_hr_leaves_v1';
@@ -201,6 +212,9 @@
     hrWorkCalendar: {},  // không có cấu hình cho tháng nào -> mặc định nghỉ Chủ nhật (wd 0)
     hrCalMonth: '',    // tháng đang xem/cài đặt trong modal Lịch Làm Việc ('YYYY-MM')
     qcExports: [],
+    // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) + NGƯỠNG độ ẩm đạt theo công đoạn sấy
+    qcKilnReadings: [],                   // [{ id, date, location, value, note, by, createdAt, updatedAt }]
+    qcKilnThresholds: { say1: 15, say2: 12 }, // đạt khi độ ẩm ≤ ngưỡng của loại sấy
     // Bộ lọc hợp nhất trong thẻ Xuất Hàng (tab QC): năm ('all' = tất cả) +
     // chips tuần (mảng rỗng = tất cả) + từ khóa tìm kiếm theo tên sản phẩm
     qcSumYear: 'all',
@@ -268,6 +282,11 @@
     // Thẻ Xưởng 2 đang mở ở tab Công Đoạn (id thẻ, null = không mở thẻ nào) —
     // dùng cho nút Lịch Sử / Xuất Excel dùng chung + gợi ý của Trợ Lý AI.
     x2OpenCardId: null,
+    // ── CHẾ ĐỘ XÓA NHIỀU LÔ (thẻ Than Hóa + Sấy — CHỈ Admin) ───────
+    // Trạng thái UI TẠM: KHÔNG có STORAGE_KEY riêng, KHÔNG đồng bộ mây/backup
+    // (giống x2BulligPicked) — bật/tắt bằng nút "Xóa Nhiều" trên thanh công cụ.
+    kanbanPickMode: false,   // đang bật chế độ tích chọn nhiều lô để xóa
+    kanbanPicked: [],        // id các lô đang được tích chọn
     // Vị trí sấy khai báo THÊM ngoài LS1..LS15 (nút "Thêm" ở ô Vị Trí của modal
     // Thêm Lô Sấy Mới) — VD ['LS16', 'Lò 01']. Dùng để dựng danh sách vị trí.
     x2LotLocations: [],
@@ -356,6 +375,9 @@ export {
   STORAGE_KEY_PV_CHART_MODE,
   STORAGE_KEY_CAPACITY_UI,
   STORAGE_KEY_QC_EXPORTS,
+  STORAGE_KEY_QC_KILN_HUMIDITY,
+  STORAGE_KEY_QC_KILN_THRESHOLD,
+  STORAGE_KEY_X2_SAY_FRAME,
   STORAGE_KEY_HR_EMPLOYEES,
   STORAGE_KEY_HR_LEAVES,
   STORAGE_KEY_HR_RECRUITMENT,

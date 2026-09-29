@@ -19,6 +19,7 @@ import { restoreRateTableCollapse } from './planning.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { escapeHTML, getISOWeekString, showToast } from './utils.js';
+import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // Bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
 
   // ─── HELPERS ──────────────────────────────────────────────────
   // Lấy số tuần từ chuỗi "Tuần 34" -> 34
@@ -112,6 +113,7 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
     renderQcSummary();
     renderQcTable();
     renderQcSearch(); // dải kết quả lọc theo từ khóa / bộ lọc đang chọn
+    renderKilnHumidityCard(); // bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
     updateQcCardGrid(); // đếm số liệu trên các thẻ launcher
     syncQcMiniActive(); // highlight thẻ đang mở
     initLucide();
@@ -570,7 +572,8 @@ import { escapeHTML, getISOWeekString, showToast } from './utils.js';
       return rows.length ? `${rows.length} dòng · ${qty.toLocaleString('vi-VN')} tấm` : 'Chưa có';
     } },
     'qc-incoming-card': { el: 'qc-mini-count-incoming', count: () => 'Sắp có' },
-    'qc-final-card':    { el: 'qc-mini-count-final',    count: () => 'Sắp có' }
+    'qc-final-card':    { el: 'qc-mini-count-final',    count: () => 'Sắp có' },
+    'qc-humidity-card': { el: 'qc-mini-count-humidity', count: () => kilnHumidityCardCount() }
   };
 
   // Cập nhật số đếm trên các thẻ — gọi từ renderQcView sau khi có dữ liệu.

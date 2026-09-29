@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
@@ -455,6 +455,8 @@ import { showToast } from './utils.js';
       planningForecast: state.planningForecast,
       planningStock: state.planningStock,
       qcExports: state.qcExports || [],
+      qcKilnReadings: state.qcKilnReadings || [],
+      qcKilnThresholds: state.qcKilnThresholds || {},
       pressRecords: state.pressRecords,
       pressNotes: state.pressNotes || [],
       hrEmployees: state.hrEmployees || [],
@@ -555,6 +557,8 @@ import { showToast } from './utils.js';
       pressNotes: obj.pressNotes || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
       qcExports: obj.qcExports || [],
+      qcKilnReadings: obj.qcKilnReadings || [],
+      qcKilnThresholds: obj.qcKilnThresholds || {},
       pressRecords: obj.pressRecords || [],
       hrEmployees: obj.hrEmployees || [], hrLeaves: obj.hrLeaves || [], hrRecruitment: obj.hrRecruitment || [],
       hrPositionNeeds: obj.hrPositionNeeds || [],
@@ -690,6 +694,10 @@ import { showToast } from './utils.js';
     if (remote.materialRates) state.materialRates = m(clean('materialRates', state.materialRates), clean('materialRates', remote.materialRates));
     if (remote.customCharts) state.customCharts = m(clean('customCharts', state.customCharts), clean('customCharts', remote.customCharts));
     if (remote.qcExports) state.qcExports = m(clean('qcExports', state.qcExports || []), clean('qcExports', remote.qcExports));
+    // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) — gộp theo id, mới hơn thắng + tôn trọng tombstone
+    if (remote.qcKilnReadings) state.qcKilnReadings = m(clean('qcKilnReadings', state.qcKilnReadings || []), clean('qcKilnReadings', remote.qcKilnReadings));
+    // NGƯỠNG độ ẩm đạt theo công đoạn sấy ({ say1, say2 }) — mây thắng với key có trên mây
+    if (remote.qcKilnThresholds) state.qcKilnThresholds = Object.assign({}, state.qcKilnThresholds || {}, remote.qcKilnThresholds);
     if (remote.hrEmployees) state.hrEmployees = m(clean('hrEmployees', state.hrEmployees || []), clean('hrEmployees', remote.hrEmployees));
     if (remote.hrLeaves) state.hrLeaves = m(clean('hrLeaves', state.hrLeaves || []), clean('hrLeaves', remote.hrLeaves));
     if (remote.hrPositions) state.hrPositions = m(clean('hrPositions', state.hrPositions || []), clean('hrPositions', remote.hrPositions));
@@ -792,6 +800,8 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_QC_KILN_HUMIDITY, JSON.stringify(state.qcKilnReadings || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_QC_KILN_THRESHOLD, JSON.stringify(state.qcKilnThresholds || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_SUPPLIERS, JSON.stringify(state.suppliers || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_CAP_RATE, JSON.stringify(state.x2CapRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_BO_ONG_RATE, JSON.stringify(state.x2BoOngRates || {})); } catch (e) {}
@@ -884,6 +894,11 @@ import { showToast } from './utils.js';
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
       if (data.planningStock !== undefined) state.planningStock = data.planningStock;
       if (data.qcExports) state.qcExports = clean('qcExports', data.qcExports);
+      // ĐỘ ẨM LÒ SẤY: số đo gộp theo tombstone; ngưỡng nhận nguyên theo mây (tải về = ghi đè)
+      if (data.qcKilnReadings) state.qcKilnReadings = clean('qcKilnReadings', data.qcKilnReadings);
+      if (data.qcKilnThresholds !== undefined && data.qcKilnThresholds && typeof data.qcKilnThresholds === 'object') {
+        state.qcKilnThresholds = data.qcKilnThresholds;
+      }
       if (data.pressRecords) state.pressRecords = clean('pressRecords', data.pressRecords);
       if (data.pressNotes) state.pressNotes = clean('pressNotes', data.pressNotes);
       if (data.hrEmployees) state.hrEmployees = clean('hrEmployees', data.hrEmployees);
@@ -947,7 +962,20 @@ import { showToast } from './utils.js';
     document.addEventListener('visibilitychange', updateSyncBadge);
   }
 
-  // Đẩy dữ liệu hiện tại lên mây (admin/editor/manager; debounce 600ms)
+  // ─── ĐẨY MÂY THEO CHUỖI VIỆC (idle-debounce) ──────────────────
+  // Trước đây debounce 600ms: mỗi lần lưu/xóa (thường cách nhau hơn 600ms vì có
+  // bước confirm()) là 1 lần đẩy FULL payload — serialize ~800KB nhiều lần +
+  // gzip + ghi Firestore + echo nhận/giải nén → chính là nguyên nhân web chậm
+  // khi người dùng làm LIÊN TỤC (xóa từng lô, nhập liên tiếp…).
+  // Nay: chỉ đẩy khi NGƯỜI DÙNG NGỪNG THAO TÁC 5 giây; chuỗi việc kéo dài quá
+  // 30 giây kể từ thay đổi ĐẦU vẫn được đẩy 1 lần (chống để dữ liệu cũ quá lâu).
+  // Vẫn đẩy NGAY khi: ẩn tab / rời trang / online trở lại / vừa đăng nhập
+  // (flushPendingCloudPush giữ nguyên) → không tăng nguy cơ mất dữ liệu.
+  const FB_PUSH_IDLE_MS = 5000;      // đợi "ngừng việc" 5 giây rồi mới đẩy
+  const FB_PUSH_MAX_WAIT_MS = 30000; // chuỗi việc dài quá 30 giây vẫn đẩy 1 lần
+  let fbPushFirstAt = 0;             // thời điểm thay đổi ĐẦU TIÊN của chuỗi đang chờ
+
+  // Đẩy dữ liệu hiện tại lên mây (admin/editor/manager)
   function firePushSync() {
     if (!isFirebaseOnline() || !fbAuthLoaded || !state.currentUser || !canPushToCloud()) {
       // Có thay đổi nhưng điều kiện đẩy chưa đủ -> đánh dấu "bẩn" và cảnh báo ít thôi
@@ -956,8 +984,12 @@ import { showToast } from './utils.js';
       return;
     }
     fbDirty = true;
+    const now = Date.now();
+    if (!fbPushFirstAt) fbPushFirstAt = now;          // mở chuỗi mới
     clearTimeout(fbPushTimer);
-    fbPushTimer = setTimeout(() => doFirePush(), 600);
+    // Hẹn lần đẩy: chờ "ngừng việc" 5s, nhưng KHÔNG hoãn quá 30s kể từ thay đổi đầu
+    const waitMax = FB_PUSH_MAX_WAIT_MS - (now - fbPushFirstAt);
+    fbPushTimer = setTimeout(() => doFirePush(), Math.max(0, Math.min(FB_PUSH_IDLE_MS, waitMax)));
     updateSyncBadge();
   }
 
@@ -991,6 +1023,7 @@ import { showToast } from './utils.js';
       }
       return;
     }
+    fbPushFirstAt = 0; // chuỗi thay đổi này đã được xử lý — thao tác kế tiếp mở chuỗi mới
     if (fbSeedCore && cloudCore(collectCloudSnapshot()) === fbSeedCore) { fbDirty = false; return; } // chưa có thay đổi thực tế
     if (!isFirebaseOnline() || !state.currentUser || !canPushToCloud()) return; // giữ cờ bẩn, chờ lần sau
     fbApplying = true;
@@ -1113,7 +1146,19 @@ import { showToast } from './utils.js';
   }
 
   function initLucide() {
-    if (window.lucide) window.lucide.createIcons();
+    if (!window.lucide) return;
+    window.lucide.createIcons();
+    // TỐI ƯU TỐC ĐỘ (sửa lag khi lưu/xóa lô liên tục): lucide GỮ data-lucide trên
+    // <svg> vừa vẽ, mà createIcons() quét [data-lucide] TOÀN TRANG → MỖI lần gọi
+    // initLucide() là THAY THẾ LẠI mọi icon đã có trong trang (hàng nghìn khi
+    // Kanban nhiều thẻ — và 1 thao tác render gọi initLucide nhiều lần) → nguyên
+    // nhân chính gây giật/chậm. Gỡ attr sau khi vẽ xong → các lần sau CHỈ xử lý
+    // <i data-lucide> MỚI, icon cũ đã vẽ xong thì không đụng lại.
+    if (typeof document !== 'undefined' && document.querySelectorAll) {
+      document.querySelectorAll('svg[data-lucide]').forEach(s => {
+        if (s && s.removeAttribute) s.removeAttribute('data-lucide');
+      });
+    }
   }
 
 export {

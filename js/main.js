@@ -2,7 +2,7 @@
 // js/main.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
-import { deleteBatch, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
+import { deleteBatch, exitKanbanPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
 import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
@@ -20,6 +20,7 @@ import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BulligRa
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
+import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
 import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
@@ -64,6 +65,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2SayTimes(); // Số lần than hóa THẬT theo nhóm (ngày + công đoạn sấy của thẻ Than Hóa + Sấy)
     loadX2SayIncidents(); // Giờ SỰ CỐ CHO PHÉP theo ngày (tính Hiệu suất ngày than hóa)
     loadQcExports();
+    loadKilnData(); // Độ ẩm lò sấy + ngưỡng đạt (QC nhập hàng ngày — js/kiln.js)
     loadHrData();
     // DỌN DỮ LIỆU CŨ: xóa hẳn lô nan còn sót stage 'bao_tinh' (cột Kanban "4. Bào
     // Tinh" đã gỡ — số liệu Bào Tinh nay nằm ở thẻ riêng state.xuong2BaoTinhRecords).
@@ -147,6 +149,11 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Rời tab → đóng pop-up/modal THUỘC TAB VỪA RỜI (tránh overlay ẩn còn class
     // .show làm mất cuộn ở tab mới — xem closeViewScopedModals)
     if (prevView && prevView !== targetViewId) closeViewScopedModals(document.getElementById(prevView));
+    // Rời tab Công Đoạn → thoát luôn chế độ Xóa Nhiều (thanh nổi + ô tích không
+    // treo lơ lửng ở tab khác; không vẽ lại — tab mới tự vẽ nội dung khi mở)
+    if (prevView === 'kanban-view' && targetViewId !== 'kanban-view') {
+      try { exitKanbanPickMode(false); } catch (e) {}
+    }
     if (targetViewId === 'dashboard-view') {
       renderDashboardCharts();
       // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)

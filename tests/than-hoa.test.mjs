@@ -457,7 +457,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v176/.test(swJs));
+  /nha-may-ngoc-son-v181/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -863,5 +863,69 @@ check('CẤU TRÚC (js): GIỜ SỰ CỐ CHO PHÉP theo ngày có key riêng + n
   jsCloud.includes('x2SayIncidents') && jsHistory.includes('x2SayIncidents') &&
   jsMain.includes('loadX2SayIncidents') && jsEvents.includes('onSayIncidentChange'));
 
+// ─── N. XÓA NHIỀU LÔ (ADMIN — chế độ tích chọn trên Kanban) ────────
+console.log('--- N. XÓA NHIỀU LÔ (ADMIN) ---');
+// Cấu trúc: nút "Xóa Nhiều" (admin-only) trong thanh công cụ + thanh nổi "Đã chọn N lô"
+check('CẤU TRÚC (index.html): nút "Xóa Nhiều" (admin-only) trong thanh công cụ + thanh nổi "Đã chọn N lô"',
+  idxHtml.includes('id="btn-multi-delete"') && idxHtml.includes('admin-only-btn') &&
+  idxHtml.includes('id="kb-pick-bar"') && idxHtml.includes('id="kb-pick-count"') &&
+  idxHtml.includes('id="kb-pick-del"') && idxHtml.includes('id="kb-pick-all"') &&
+  idxHtml.includes('id="kb-pick-cancel"'));
+check('CẤU TRÚC (styles.css): ô tích .kb-pick + body.kanban-pick-mode + thanh nổi #kb-pick-bar + ẩn admin-only-btn',
+  cssHtml.includes('.kb-pick') && cssHtml.includes('body.kanban-pick-mode') &&
+  cssHtml.includes('#kb-pick-bar') && cssHtml.includes('.admin-only-btn'));
+check('CẤU TRÚC (js): thẻ lô có ô tích data-pick-id + sự kiện được wire trong events.js',
+  fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('data-pick-id') &&
+  jsEvents.includes('btn-multi-delete') && jsEvents.includes('kb-pick-del') &&
+  jsMain.includes('exitKanbanPickMode'));
+
+// Chuẩn bị dữ liệu: 3 lô (sẽ xóa 2 lô cùng lúc, giữ lại 1)
+state.batches.push(
+  { id: 'bx1', code: '260999-01', stage: 'say1', date: '2026-09-20', week: '2026-W38', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 0.02, bambooType: 'A', useFor: 'Ván', location: 'LS3', stageHistory: [{ stage: 'say1', date: '2026-09-20' }] },
+  { id: 'bx2', code: '260999-02', stage: 'say1', date: '2026-09-20', week: '2026-W38', length: 1250, width: 18, thickness: 7, quantity: 120, volume: 0.02, bambooType: 'A', useFor: 'Ván', location: 'LS4', stageHistory: [{ stage: 'say1', date: '2026-09-20' }] },
+  { id: 'bx3', code: '260999-03', stage: 'kho',  date: '2026-09-21', week: '2026-W38', length: 1250, width: 18, thickness: 7, quantity: 140, volume: 0.02, bambooType: 'B', useFor: 'Bullig', location: 'K1', stageHistory: [{ stage: 'kho', date: '2026-09-21' }] }
+);
+// Vai trò KHÔNG phải Admin → bị chặn, không bật được chế độ
+state.currentUser = { username: 'ed', role: 'editor', editTabs: [], allowAdvanced: true };
+bm.toggleKanbanPickMode();
+check('XÓA NHIỀU — CHẶN QUYỀN: editor không bật được chế độ (state không đổi)',
+  state.kanbanPickMode === false && (state.kanbanPicked || []).length === 0);
+// Admin bật chế độ → body có class kanban-pick-mode
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
+bm.toggleKanbanPickMode();
+check('XÓA NHIỀU — BẬT CHẾ ĐỘ: body.kanban-pick-mode bật (ô tích + thanh nổi hiện theo CSS)',
+  state.kanbanPickMode === true && document.body.classList.contains('kanban-pick-mode'));
+// Tích 2 lô
+bm.onKanbanPickChange('bx1', true);
+bm.onKanbanPickChange('bx2', true);
+check('XÓA NHIỀU — TÍCH CHỌN: 2 lô vào danh sách chọn', (state.kanbanPicked || []).slice().sort().join(',') === 'bx1,bx2');
+const beforeCount = state.batches.length;
+const undoBefore = state.undoStack.length;
+bm.deletePickedBatches();
+check('XÓA NHIỀU — THỰC HIỆN: đúng 2 lô biến mất · lô còn lại nguyên vẹn',
+  state.batches.length === beforeCount - 2 &&
+  !state.batches.some(b => b.id === 'bx1' || b.id === 'bx2') &&
+  state.batches.some(b => b.id === 'bx3'));
+check('XÓA NHIỀU — TOMBSTONE: cả 2 id ghi dấu vết xóa (chặn máy khác đẩy ngược lô)',
+  !!(state.deletedIds.batches && state.deletedIds.batches.bx1 && state.deletedIds.batches.bx2));
+check('XÓA NHIỀU — 1 LƯỢT GỘP: chỉ THÊM ĐÚNG 1 bước undo (không 2 bước như xóa rời từng lô)',
+  state.undoStack.length === undoBefore + 1 &&
+  /Xóa 2 lô/.test((state.undoStack[state.undoStack.length - 1] || {}).label || ''));
+check('XÓA NHIỀU — SAU XÓA: tự gỡ danh sách chọn nhưng VẪN giữ chế độ để xóa tiếp lô khác',
+  state.kanbanPickMode === true && (state.kanbanPicked || []).length === 0);
+// HOÀN TÁC 1 BẦM: khôi phục cả 2 lô + gỡ tombstone của chúng
+const tombBeforeUndo = !!(state.deletedIds.batches && state.deletedIds.batches.bx1);
+const ev = await import('../js/events.js');
+ev.undoLastAction();
+check('XÓA NHIỀU — HOÀN TÁC 1 BẦM: khôi phục ĐỦ 2 lô + gỡ tombstone (không bị chặn hồi sinh)',
+  state.batches.some(b => b.id === 'bx1') && state.batches.some(b => b.id === 'bx2') &&
+  tombBeforeUndo && !(state.deletedIds.batches && state.deletedIds.batches.bx1));
+// Thoát chế độ chọn
+bm.exitKanbanPickMode();
+check('XÓA NHIỀU — THOÁT: tắt chế độ + gỡ class body', state.kanbanPickMode === false && !document.body.classList.contains('kanban-pick-mode'));
+
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
-if (fail > 0) process.exit(1);
+// LUÔN thoát rõ ràng (mẫu cloud-shard/chart-filters): nếu còn timer/promise sót
+// trong event loop (toast, hẹn đẩy mây…) process sẽ KHÔNG tự thoát → npm test
+// có vẻ "treo" dù kết quả đã in xong. Exit tường minh chấm dứt ngay lập tức.
+process.exit(fail ? 1 : 0);

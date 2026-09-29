@@ -28,9 +28,10 @@ import { hrSplitHoursHCDate } from './hr.js';
 import { materialWeekLabel } from './materials.js';
 import { pressVolumeTotalOf, renderBaoTinhEffTable, renderX2EpVanCard } from './press.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, state } from './state.js';
+import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, showToast } from './utils.js';
+import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 
   // Ghi file dữ liệu qua storage.js (import động để tránh vòng phụ thuộc module
   // — giống cách materials.js dùng)
@@ -717,8 +718,10 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
   // ô nhập "Số lần TH" thật của nhóm) → MỖI LẦN THAN HÓA 1 dòng:
   //   Lần N | Vị Trí | Lô | m³ | Phút | Giờ Cần | Giờ HC | Giờ TC | Hiệu Suất
   function renderX2SayStats() {
+    applyX2SayFrame();
     applyX2KanbanCollapsed();
     renderX2SayRateBar();
+    renderKilnBoard(); // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định — luôn vẽ dữ liệu mới nhất)
     const tbody = document.getElementById('x2-say-day-rows');
     const countEl = document.getElementById('x2-say-stats-count');
     if (!tbody) return;
@@ -856,6 +859,42 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     const label = document.getElementById('x2-kanban-toggle-label');
     if (label) label.textContent = next ? 'Mở bảng lô' : 'Thu gọn bảng lô';
     renderX2KanbanSummary();
+    initLucide();
+  }
+
+  // ─── KHUNG THẺ THAN HÓA + SẤY: BẢNG ĐIỀU KHIỂN ↔ BẢNG DỮ LIỆU ──
+  // Bảng điều khiển lò sấy (2 hàng thẻ icon — js/kiln.js) là khung MẶC ĐỊNH;
+  // bấm tab "Bảng Dữ Liệu" mới thấy thống kê than hóa + Kanban lô nan như cũ.
+  // Khung đang xem nhớ theo máy (localStorage — giống thu gọn bảng Kanban).
+  function sayFrameSaved() {
+    try { return localStorage.getItem(STORAGE_KEY_X2_SAY_FRAME) === 'data' ? 'data' : 'ctrl'; }
+    catch (e) { return 'ctrl'; }
+  }
+  // Áp khung đã lưu (gọi mỗi lần vẽ thẻ — ẩn/hiện 2 khung + 2 nút tab)
+  function applyX2SayFrame() {
+    const card = document.getElementById('x2-than-hoa-card');
+    if (!card) return;
+    const frame = sayFrameSaved();
+    card.classList.toggle('x2-say-frame-data', frame === 'data');
+    const ctrl = document.getElementById('x2-say-frame-ctrl');
+    const data = document.getElementById('x2-say-frame-data');
+    if (ctrl) ctrl.hidden = frame !== 'ctrl';
+    if (data) data.hidden = frame !== 'data';
+    const tCtrl = document.getElementById('x2-say-tab-ctrl');
+    const tData = document.getElementById('x2-say-tab-data');
+    if (tCtrl) {
+      tCtrl.classList.toggle('active', frame === 'ctrl');
+      tCtrl.setAttribute('aria-selected', frame === 'ctrl' ? 'true' : 'false');
+    }
+    if (tData) {
+      tData.classList.toggle('active', frame === 'data');
+      tData.setAttribute('aria-selected', frame === 'data' ? 'true' : 'false');
+    }
+  }
+  function switchX2SayFrame(frame) {
+    try { localStorage.setItem(STORAGE_KEY_X2_SAY_FRAME, frame === 'data' ? 'data' : 'ctrl'); } catch (e) {}
+    applyX2SayFrame();
+    if (frame === 'ctrl') renderKilnBoard(); // đang mở khung điều khiển → vẽ lại bảng lò
     initLucide();
   }
 
@@ -5760,6 +5799,8 @@ export {
   batchPassedStage,
   toggleX2KanbanBoard,
   applyX2KanbanCollapsed,
+  applyX2SayFrame,
+  switchX2SayFrame,
   renderX2KanbanSummary,
   SAY_RATE_DEFAULT,
   // ── Hàm đọc ĐỊNH MỨC công suất theo tháng của từng công đoạn — dùng chung cho

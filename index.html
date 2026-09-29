@@ -739,6 +739,14 @@
         <div class="planning-card x2-card-hidden" id="x2-than-hoa-card">
           <div class="planning-card-header">
             <h4><i data-lucide="flame"></i> Than Hóa + Sấy — Xưởng 2</h4>
+            <!-- 2 nút chuyển KHUNG (giống thẻ Ép Ván): Bảng Điều Khiển (mặc định —
+                 2 hàng lò icon, js/kiln.js) ↔ Bảng Dữ Liệu (thống kê + Kanban như cũ) -->
+            <div class="planning-controls x2-say-controls">
+              <div class="x2-epv-tabs" role="tablist" aria-label="Chuyển khung hiển thị">
+                <button type="button" class="btn btn-outline btn-sm x2-epv-tab active" id="x2-say-tab-ctrl" data-say-frame="ctrl" role="tab" aria-selected="true" title="Bảng điều khiển lò sấy: 2 hàng lô icon (vị trí · loại sấy · m³ · ngày sấy · độ ẩm) — kéo thẻ lò vào Kho, chạm lò để Thêm lô"><i data-lucide="layout-grid"></i> Bảng Điều Khiển</button>
+                <button type="button" class="btn btn-outline btn-sm x2-epv-tab" id="x2-say-tab-data" data-say-frame="data" role="tab" aria-selected="false" title="Bảng dữ liệu: thống kê than hóa theo từng lần + bảng Kanban lô nan Sấy 1 · Sấy 2 · Kho"><i data-lucide="table-2"></i> Bảng Dữ Liệu</button>
+              </div>
+            </div>
           </div>
           <!-- Mobile Stage Tabs Selector — điện thoại mặc định xem 1 công đoạn, vuốt ngang để chuyển
                (KHÔNG có tab "Bào tinh" — công đoạn này chỉ dùng 3 thẻ Sấy 1 / Sấy 2 / Kho) -->
@@ -753,7 +761,7 @@
 
           <!-- Bộ lọc Ngày / Vị trí / Kích thước nan nằm trên từng cột Kanban -->
 
-          <!-- Thanh công cụ Kanban: Thêm Lô Sấy Mới + Chuyển Kho -->
+          <!-- Thanh công cụ Kanban: Thêm Lô Sấy Mới + Chuyển Kho + Xóa Nhiều (Admin) -->
           <div class="kanban-toolbar">
             <button class="btn btn-primary" id="btn-add-batch" data-perm="kanban" title="Thêm lô nan mới vào Sấy 1 (nguồn: công đoạn Chọn Nan Thô) hoặc Sấy 2 (nguồn: lô đang ở Kho)">
               <i data-lucide="plus-circle"></i> Thêm Lô Sấy Mới
@@ -761,7 +769,27 @@
             <button class="btn btn-outline" id="btn-transfer-kho" data-perm="kanban" title="Chuyển lô từ Sấy 1 / Sấy 2 vào Kho — hoặc tạo lô mới vào thẳng Kho">
               <i data-lucide="warehouse"></i> Chuyển Kho
             </button>
+            <button class="btn btn-outline admin-only-btn" id="btn-multi-delete" data-perm="kanban" title="Bật chế độ tích chọn NHIỀU lô để xóa cùng lúc (chỉ Quản Trị — Admin)">
+              <i data-lucide="trash-2"></i> <span class="hide-mobile">Xóa Nhiều</span>
+            </button>
           </div>
+
+          <!-- ═══ KHUNG 1 (MẶC ĐỊNH): BẢNG ĐIỀU KHIỂN LÒ SẤY — 2 hàng lô icon ═══
+               Mỗi lò 1 thẻ: vị trí (LS1..) · loại sấy (suy từ lô đang ở lò) · m³ ·
+               ngày đã sấy · độ ẩm. Màu: XANH đang sấy · VÀNG đạt ẩm · XÁM trống.
+               Kéo thẻ lò thả vào ô KHO = chuyển nhanh; chạm lò = menu Thêm lô.
+               Dữ liệu + thao tác nằm trong js/kiln.js (độ ẩm do QC nhập ở tab QC). -->
+          <div class="x2-say-frame" id="x2-say-frame-ctrl">
+            <div class="kiln-kho-drop" id="x2-kiln-kho-drop" title="Kéo thẻ lò vào đây để chuyển nhanh TẤT CẢ lô trong lò vào Kho (điện thoại: bấm icon kho trên thẻ lò)">
+              <i data-lucide="warehouse"></i>
+              <span><b>Kho Lưu Trữ</b> — kéo thẻ lò vào đây để chuyển nhanh vào Kho</span>
+            </div>
+            <div class="kiln-board" id="x2-kiln-board" aria-label="Bảng điều khiển lò sấy — 2 hàng lò"></div>
+            <div class="kiln-legend" id="x2-kiln-legend"></div>
+          </div>
+
+          <!-- ═══ KHUNG 2: BẢNG DỮ LIỆU (thống kê than hóa + Kanban — như cũ) ═══ -->
+          <div class="x2-say-frame" id="x2-say-frame-data" hidden>
 
           <!-- THU GỌN BẢNG KANBAN: bảng lô rất dài → thu gọn lại, khi cần bấm mở ra.
                Khi thu gọn vẫn thấy thanh công cụ trên, dòng TỔNG QUAN số lô từng công
@@ -1025,6 +1053,7 @@
                  KHÔNG còn dùng lô stage bao_tinh cho logic kế hoạch. -->
 
           </div>
+          </div> <!-- /#x2-say-frame-data (khung Bảng Dữ Liệu) -->
         </div>
 
         <!-- VỊ TRÍ: BÀO TINH — ghi lượt bào tinh (thay placeholder cũ)
@@ -2277,6 +2306,12 @@
             <span class="qc-mini-desc">Kiểm tra thành phẩm xuất xưởng</span>
             <span class="qc-mini-count" id="qc-mini-count-final">–</span>
           </button>
+          <button type="button" class="qc-mini-card" data-qc-card="qc-humidity-card" aria-expanded="false" title="Độ Ẩm Lò Sấy — QC đo & nhập độ ẩm từng lò (LS1..LS15) hàng ngày + bảng ngưỡng đạt (màu đạt ẩm hiện ngay trên Bảng Điều Khiển ở tab Công Đoạn)">
+            <span class="qc-mini-ic"><i data-lucide="droplets"></i></span>
+            <span class="qc-mini-title">Độ Ẩm Lò Sấy</span>
+            <span class="qc-mini-desc">QC đo & nhập độ ẩm từng lò hàng ngày</span>
+            <span class="qc-mini-count" id="qc-mini-count-humidity">–</span>
+          </button>
         </div>
       </div>
 
@@ -2387,6 +2422,38 @@
           <strong>Chức năng đang được xây dựng</strong>
           <p>Kiểm tra thành phẩm sau sản xuất trước khi xuất xưởng: kết quả kiểm, tiêu chí đạt / không đạt, ảnh chụp... Thông tin dự án sẽ bổ sung sau.</p>
         </div>
+      <!-- MODULE ĐỘ ẨM LÒ SẤY: QC đo & nhập độ ẩm từng lò (LS1..LS15) HÀNG NGÀY
+           + bảng NGƯỠNG độ ẩm ĐẠT theo công đoạn sấy (Sấy 1 / Sấy 2 — đạt khi
+           độ ẩm ≤ ngưỡng). Số liệu này cho BẢNG ĐIỀU KHIỂN LÒ SẤY (tab Công
+           Đoạn) biết lò nào ĐẠT ẨM (màu vàng) — js/kiln.js. -->
+      <div class="planning-card qc-card-hidden" id="qc-humidity-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="droplets"></i> Độ Ẩm Lò Sấy</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="kiln-th-group" title="Ngưỡng độ ẩm ĐẠT theo công đoạn sấy — đạt khi độ ẩm ≤ ngưỡng">
+              <i data-lucide="target"></i> Ngưỡng đạt:
+              <label>Sấy 1 ≤ <input type="number" id="kiln-th-say1" min="0" max="100" step="0.1"> %</label>
+              <label>Sấy 2 ≤ <input type="number" id="kiln-th-say2" min="0" max="100" step="0.1"> %</label>
+            </span>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-kiln-th-save" data-perm="qc" title="Lưu ngưỡng độ ẩm đạt theo công đoạn sấy">
+              <i data-lucide="save"></i> Lưu Ngưỡng
+            </button>
+          </div>
+        </div>
+
+        <div class="kiln-hum-toolbar">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-kiln-hum-save" data-perm="qc" title="Lưu toàn bộ ô độ ẩm HÔM NAY trên ma trận (2 lần đo × mọi lò — để trống = xóa số đo của lần đó)">
+            <i data-lucide="save"></i> Lưu Hôm Nay
+          </button>
+          <span class="kiln-hum-info" id="kiln-hum-info"></span>
+        </div>
+
+        <!-- MA TRẬN ĐỘ ẨM (tối ưu DI ĐỘNG — kiểm tra trên điện thoại):
+             hàng = lò (cột Lò DÍNH TRÁI khi cuộn ngang) · cột = NGÀY (hôm nay bên
+             TRÁI nhất + highlight, ngày cũ dần sang phải), mỗi ngày 2 ô Lần 1/Lần 2 ·
+             ô hôm nay NHẬP TRỰC TIẾP (bàn phím số) · ô quá khứ BẤM để sửa nhanh ·
+             cuộn ngang xem thêm ngày cũ — nội dung render trong js/kiln.js -->
+        <div class="kiln-hum-matrix-wrap" id="kiln-hum-matrix"></div>
       </div>
 
       </div> <!-- /#qc-details-stack -->
@@ -4925,6 +4992,21 @@
     });
   })();
   </script>
+
+  <!-- ═══ THANH NỔI "XÓA NHIỀU LÔ" (chỉ Admin — bật bằng nút "Xóa Nhiều"
+       trên thanh công cụ thẻ Than Hóa + Sấy; đếm số lô đã tích + 3 nút) ═══ -->
+  <div class="kb-pick-bar" id="kb-pick-bar" role="status" aria-live="polite">
+    <span>Đã chọn <b id="kb-pick-count">0</b> lô</span>
+    <button type="button" class="btn btn-outline btn-sm" id="kb-pick-all" title="Tích chọn tất cả lô đang hiện trên bảng (đã qua bộ lọc cột)">
+      <i data-lucide="check-square"></i> Chọn Tất Cả
+    </button>
+    <button type="button" class="btn btn-outline btn-sm" id="kb-pick-del" style="color:#dc2626; border-color:rgba(220,38,38,0.45);" title="Xóa các lô đã tích chọn (hoàn tác được bằng 1 bấm)">
+      <i data-lucide="trash-2"></i> Xóa Đã Chọn
+    </button>
+    <button type="button" class="btn btn-outline btn-sm" id="kb-pick-cancel" title="Thoát chế độ xóa nhiều lô">
+      <i data-lucide="x"></i> Thoát
+    </button>
+  </div>
 
   <!-- ═══ NÚT NỔI + MODAL: TRỢ LÝ AI (Google Gemini — gói miễn phí) ═══
        Nhắc việc: tự tính từ dữ liệu app (offline, không cần key).

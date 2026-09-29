@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -278,6 +278,41 @@ import { escapeHTML, showToast } from './utils.js';
     if (changed) {
       state.x2ChonNanRates = cur;
       try { localStorage.setItem(STORAGE_KEY_X2_CHON_NAN_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
+  // ─── GỘP ĐỘ ẨM LÒ SẤY (file / backup) — QC nhập hàng ngày ──
+  // Gộp theo id (`kh-<ngày>-<lò>`): bản có updatedAt MỚI HƠN thắng; bản chỉ có
+  // ở 1 phía vẫn giữ lại — không mất số đo của máy nào.
+  function restoreQcKilnReadings(incomingArr) {
+    const incoming = Array.isArray(incomingArr) ? incomingArr.filter(r => r && r.id) : [];
+    if (!incoming.length) return state.qcKilnReadings || [];
+    const stamp = s => String((s && (s.updatedAt || s.createdAt)) || '');
+    const map = new Map((state.qcKilnReadings || []).filter(r => r && r.id).map(r => [r.id, r]));
+    let changed = false;
+    incoming.forEach(r => {
+      const cur = map.get(r.id);
+      if (!cur || stamp(r) >= stamp(cur)) { map.set(r.id, r); changed = true; }
+    });
+    const merged = [...map.values()];
+    if (changed) {
+      state.qcKilnReadings = merged;
+      try { localStorage.setItem(STORAGE_KEY_QC_KILN_HUMIDITY, JSON.stringify(merged)); } catch (err) {}
+    }
+    return merged;
+  }
+  // Khôi phục NGƯỠNG độ ẩm đạt ({ say1, say2 }) — GỘP, không đè số đã đặt trên máy.
+  function restoreQcKilnThresholds(incoming) {
+    const src = (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) ? incoming : {};
+    const cur = (state.qcKilnThresholds && typeof state.qcKilnThresholds === 'object') ? state.qcKilnThresholds : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.qcKilnThresholds = cur;
+      try { localStorage.setItem(STORAGE_KEY_QC_KILN_THRESHOLD, JSON.stringify(cur)); } catch (err) {}
     }
     return cur;
   }
@@ -609,6 +644,12 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2EpVanRates) {
           restoreX2EpVanRates(loaded.x2EpVanRates); // Định mức ép ván (m³/h) — gộp theo tháng
         }
+        if (Array.isArray(loaded.qcKilnReadings)) {
+          restoreQcKilnReadings(loaded.qcKilnReadings); // GỘP — không mất số đo độ ẩm mới hơn file
+        }
+        if (loaded.qcKilnThresholds) {
+          restoreQcKilnThresholds(loaded.qcKilnThresholds); // GỘP — không đè ngưỡng đã đặt
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -892,7 +933,9 @@ import { escapeHTML, showToast } from './utils.js';
       xuong2BaoTinhRecords: state.xuong2BaoTinhRecords || [],
       x2BaoTinhRates: state.x2BaoTinhRates || {},
       x2EpVanRates: state.x2EpVanRates || {},
-      x2LotLocations: state.x2LotLocations || []
+      x2LotLocations: state.x2LotLocations || [],
+      qcKilnReadings: state.qcKilnReadings || [],
+      qcKilnThresholds: state.qcKilnThresholds || {}
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -986,6 +1029,13 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && Array.isArray(imported.x2LotLocations)) {
           restoreX2LotLocations(imported.x2LotLocations); // GỘP — không mất vị trí đã khai báo
+        }
+
+        if (Array.isArray(imported.qcKilnReadings)) {
+          restoreQcKilnReadings(imported.qcKilnReadings); // GỘP — không mất số đo độ ẩm mới hơn backup
+        }
+        if (imported.qcKilnThresholds) {
+          restoreQcKilnThresholds(imported.qcKilnThresholds); // GỘP — không đè ngưỡng đã đặt
         }
 
         if (imported && Array.isArray(imported.xuong2BaoTinhRecords)) {
@@ -1168,6 +1218,8 @@ export {
   readPhotoFile,
   removeDirHandleFromIDB,
   restoreMaterialRecords,
+  restoreQcKilnReadings,
+  restoreQcKilnThresholds,
   restoreX2BaoThoRates,
   restoreX2BoOngRates,
   restoreX2ChonNanRates,

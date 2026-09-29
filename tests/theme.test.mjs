@@ -130,6 +130,12 @@ check('CẤU TRÚC (theme.js): không còn export setTheme/toggleThemeQuick',
 check('CẤU TRÚC (events.js): không còn wire nút chọn giao diện cũ',
   !eventsJs.includes('btn-theme-light') && !eventsJs.includes('toggleThemeQuick') && eventsJs.includes('btn-fx-low'));
 check('CẤU TRÚC (theme.js): sổ đăng ký giao diện chỉ còn một lựa chọn', themeJs.includes("const THEMES = ['night'];"));
+check('CẤU TRÚC (index.html): thẻ <body> mang sẵn data-theme="night" — paint đầu tiên đã đúng giao diện (hết chớp sáng cũ)',
+  idxHtml.includes('<body data-theme="night" data-fx="normal">'));
+check('CẤU TRÚC (index.html): inline script khôi phục data-fx theo máy TRƯỚC paint (đọc bamboo_tracker_ui_fx_v1)',
+  idxHtml.includes('bamboo_tracker_ui_fx_v1') && idxHtml.includes("document.body.setAttribute('data-fx'"));
+check('CẤU TRÚC (index.html): bỏ hẳn class chết "light-theme" (styles.css không còn rule nào dùng)',
+  !idxHtml.includes('light-theme'));
 
 console.log('───────────────────────────');
 console.log(`THEME: ${passed} PASS, ${failed} FAIL`);

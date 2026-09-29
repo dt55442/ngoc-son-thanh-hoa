@@ -1610,7 +1610,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
 
   function hidePressNotePopover() {
     const el = document.getElementById('press-note-popover');
-    if (el) el.style.display = 'none';
+    // Chặn sớm khi popover đang ẩn: listener cuộn (capture) bắn RẤT nhiều lần
+    // trong một lần cuộn — đừng ghi style mỗi lần (ép invalidate style vô ích)
+    if (!el || el.style.display === 'none') { notePopoverSource = null; return; }
+    el.style.display = 'none';
     notePopoverSource = null;
   }
 

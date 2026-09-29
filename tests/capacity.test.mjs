@@ -319,7 +319,7 @@ check('CẤU TRÚC (styles.css): khối CSS thẻ tổng hợp + sparkline + mà
   stylesCss.includes('.cap-mode-btn') && stylesCss.includes('.cap-spark-svg') &&
   stylesCss.includes('.cap-eff-good') && stylesCss.includes('.cap-eff-low'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v174', /nha-may-ngoc-son-v174/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v176', /nha-may-ngoc-son-v176/.test(swJs));
 check('SỔ ĐĂNG KÝ: 10 dòng công đoạn Xưởng 2 (Bullig tách Gia công/Chọn thanh) · Xưởng 1 = 0 dòng',
   cap.capStagesOf('x2').length === 10 && cap.capStagesOf('x1').length === 0);
 check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId)',
@@ -413,6 +413,9 @@ check('NHIỆT: cuộn ngang mượt (touch + overscroll contain) + scrollbar m�
   stylesCss.includes('overscroll-behavior-x: contain') && stylesCss.includes('.cap-heat-grid.cap-heat-dragging'));
 check('NHIỆT: kéo ngang bằng chuột/cảm ứng (Pointer Events trong capacity.js)',
   capJs.includes('capAttachHeatDrag') && capJs.includes('pointerdown') && capJs.includes('scrollLeft = startLeft - dx'));
+check('NHIỆT: lưới nhiệt có id="cap-heat-grid" — hàm kéo ngang tìm ĐÚNG phần tử\n' +
+  '  (trước đây markup thiếu id → getElementById trả null → kéo chuột không bao giờ gắn được)',
+  capJs.includes('id="cap-heat-grid"') && capJs.includes("getElementById('cap-heat-grid')"));
 check('TAB: bỏ ép màu xanh lá #2e7d32 cho tab đang chọn ở theme hiện tại',
   !stylesCss.includes('body[data-theme="night"] .nav-btn.active') &&
   !stylesCss.includes('#2e7d32;\n  text-shadow'));

@@ -209,7 +209,7 @@ import { showToast } from './utils.js';
     return p;
   }
   async function doWriteCloudSnapshot() {
-    const snap = collectCloudSnapshot();
+    const snap = collectCloudPayload(); // ĐẨY bản GỠ ảnh base64 (674KB thumb ở lại máy)
     const docRef = cloudDocRef();
     const raw = JSON.stringify(snap);
     const size = utf8Bytes(raw);
@@ -493,11 +493,63 @@ import { showToast } from './utils.js';
     };
   }
 
-  // Lõi dữ liệu (bỏ meta) để so sánh
+    // ─── GỠ ẢNH BASE64 KHỎI PAYLOAD MÂY ──────────────────────────
+  // Ảnh thumb JPEG base64 nhét trong materialRecords.images chiếm ~674KB/800KB
+  // (84% payload) và là JPEG ĐÃ NÉN nên gzip không thu nhỏ được → MỌI lần đẩy
+  // đều upload ~700KB → đồng bộ chậm. Mây chỉ cần ID ảnh:
+  //   · thumb vẫn nằm trong localStorage máy ghi (hiển thị bình thường trên máy đó)
+  //   · ảnh full vốn đã ở kho IndexedDB (js/photo-store.js) — chưa từng lên mây.
+  // Backup CỤC BỘ + backup mây NGÀY vẫn dùng collectCloudSnapshot() thuần (giữ
+  // ảnh) — chỉ luồng ĐẨY apps/main mới gỡ ảnh.
+  function stripMaterialPhotoPayload(records) {
+    if (!Array.isArray(records)) return records || [];
+    return records.map((r) => {
+      if (!r || !Array.isArray(r.images) || !r.images.length) return r;
+      let changed = false;
+      const images = r.images.map((e) => {
+        if (e && typeof e === 'object' && (e.thumb || e.full)) { changed = true; return { id: e.id || '' }; }
+        return e; // ảnh dạng chuỗi dataURL cũ / entry rỗng: giữ nguyên
+      });
+      return changed ? Object.assign({}, r, { images }) : r;
+    });
+  }
+  // Ghép NGƯỢC thumb từ bản ghi LOCAL trước đó vào bản ghi mới nhận từ mây
+  // (mây không mang base64 → không được làm mất hình đã có trên máy này).
+  // Khớp theo id ảnh; entry mây đã tự mang thumb (bản cũ) thì giữ nguyên.
+  function restoreLocalThumbs(prevRecords, nextRecords) {
+    if (!Array.isArray(nextRecords) || !nextRecords.length) return nextRecords;
+    const prevMap = new Map(); // recordId → Map(imageId → entry có thumb)
+    (Array.isArray(prevRecords) ? prevRecords : []).forEach((r) => {
+      if (r && r.id && Array.isArray(r.images)) {
+        const im = new Map();
+        r.images.forEach((e) => { if (e && typeof e === 'object' && e.id && (e.thumb || e.full)) im.set(e.id, e); });
+        if (im.size) prevMap.set(r.id, im);
+      }
+    });
+    if (!prevMap.size) return nextRecords;
+    return nextRecords.map((r) => {
+      const prev = r && r.id ? prevMap.get(r.id) : null;
+      if (!prev || !Array.isArray(r.images) || !r.images.length) return r;
+      const images = r.images.map((e) =>
+        (e && typeof e === 'object' && e.id && prev.has(e.id) && !(e.thumb || e.full))
+          ? Object.assign({}, prev.get(e.id)) : e);
+      return Object.assign({}, r, { images });
+    });
+  }
+  // Payload ĐẨY MÂY = snapshot thuần GỠ ảnh (materialRecords chỉ còn id ảnh)
+  function collectCloudPayload() {
+    return Object.assign(collectCloudSnapshot(), {
+      materialRecords: stripMaterialPhotoPayload(state.materialRecords || [])
+    });
+  }
+
+  // Lõi dữ liệu (bỏ meta) để so sánh — materialRecords so sánh ở dạng ĐÃ GỠ ảnh
+  // (mây không mang base64 nên bắt buộc bỏ ảnh ở CẢ HAI phía, nếu không mọi echo
+  // từ chính lần đẩy của mình đều bị coi là "dữ liệu khác" → gộp/vẽ lại vô tận)
   function cloudCore(obj) {
     return JSON.stringify({
       batches: obj.batches || [], customCharts: obj.customCharts || [],
-      materialRates: obj.materialRates || [], materialRecords: obj.materialRecords || [],
+      materialRates: obj.materialRates || [], materialRecords: stripMaterialPhotoPayload(obj.materialRecords || []),
       materialPlan: obj.materialPlan || {},
       planningItems: obj.planningItems || [],
       pressNotes: obj.pressNotes || [],
@@ -626,9 +678,12 @@ import { showToast } from './utils.js';
     if (remote.batches) state.batches = m(clean('batches', state.batches), clean('batches', remote.batches));
     if (remote.pressRecords) state.pressRecords = m(clean('pressRecords', state.pressRecords), clean('pressRecords', remote.pressRecords));
     if (remote.materialRecords) {
+      const prevRecs = state.materialRecords; // thumb cục bộ — lấy lại sau khi gộp
       state.materialRecords = clean('materialRecords', state.materialRecords);
       if (onlyAddMissing) state.materialRecords = mergeAddMissing(state.materialRecords, clean('materialRecords', remote.materialRecords));
       else restoreMaterialRecords(clean('materialRecords', remote.materialRecords)); // đã có logic gộp theo dấu thời gian riêng
+      // Mây KHÔNG mang ảnh base64 → ghép lại thumb từ bản ghi local trước đó
+      state.materialRecords = restoreLocalThumbs(prevRecs, state.materialRecords);
     }
     if (remote.planningItems) state.planningItems = m(clean('planningItems', state.planningItems), clean('planningItems', remote.planningItems));
     if (remote.pressNotes) state.pressNotes = m(clean('pressNotes', state.pressNotes || []), clean('pressNotes', remote.pressNotes));
@@ -818,7 +873,12 @@ import { showToast } from './utils.js';
       if (data.materialRates) state.materialRates = clean('materialRates', data.materialRates);
       // GỘP theo dấu thời gian (mới hơn thắng) thay vì ghi đè — tránh mất
       // đơn giá/ảnh của các lần nhập nguyên liệu mới hơn bản trên mây.
-      if (data.materialRecords) restoreMaterialRecords(clean('materialRecords', data.materialRecords));
+      if (data.materialRecords) {
+        const prevRecs = state.materialRecords;
+        restoreMaterialRecords(clean('materialRecords', data.materialRecords));
+        // Ghép lại thumb cục bộ — mây không mang base64 ảnh (đã gỡ khi đẩy)
+        state.materialRecords = restoreLocalThumbs(prevRecs, state.materialRecords);
+      }
       if (data.materialPlan !== undefined) state.materialPlan = stripTombstonedPlanWeeks(data.materialPlan || {}, changedTomb);
       if (data.planningItems) state.planningItems = clean('planningItems', data.planningItems);
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
@@ -935,7 +995,13 @@ import { showToast } from './utils.js';
     if (!isFirebaseOnline() || !state.currentUser || !canPushToCloud()) return; // giữ cờ bẩn, chờ lần sau
     fbApplying = true;
     try {
-      await writeCloudSnapshot();
+      const t0 = Date.now();
+      const res = await writeCloudSnapshot();
+      // Log đo 1 dòng: KB · chế độ (plain/gzip/shard) · thời gian ms — để phân biệt
+      // chậm do MẠNG/host (ms lớn, KB nhỏ) hay do PAYLOAD (KB lớn)
+      console.log('[FB] Đã đẩy: ' + Math.round(((res && res.size) || 0) / 1024) + 'KB'
+        + ' · chế độ ' + ((res && res.mode) || '?')
+        + ' · ' + (Date.now() - t0) + 'ms');
       fbDirty = false;
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
@@ -1069,6 +1135,7 @@ export {
   chunkString,
   cloudCore,
   collectCloudSnapshot,
+  collectCloudPayload,
   doFirePush,
   fbApplying,
   fbAuthLoaded,
@@ -1096,8 +1163,10 @@ export {
   registerServiceWorker,
   requireEditPermission,
   requireTabEditPermission,
+  restoreLocalThumbs,
   resolveFirebaseRole,
   setupFirestoreSync,
+  stripMaterialPhotoPayload,
   uploadLocalDataToCloud,
   utf8Bytes,
   writeCloudSnapshot

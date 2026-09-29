@@ -197,5 +197,37 @@ check('D5: ghép mảnh JSON trơn → parse nguyên vẹn', JSON.stringify(JSON
     loaded3.filter(p => p === null).length === 2 && loaded3.filter(p => typeof p === 'string').length === 0);
 }
 
+// ─── N. GỠ ẢNH BASE64 KHỎI PAYLOAD MÂY (84% payload là thumb JPEG!) ──
+// Lỗi thật: đồng bộ chậm vì materialRecords.images[].thumb (base64 JPEG) chiếm
+// ~674KB/800KB payload — JPEG đã nén nên gzip không thu nhỏ được. Mây chỉ cần
+// ID ảnh; thumb sống trong localStorage máy ghi, ảnh full ở IndexedDB.
+{
+  const { state } = await import('../js/state.js');
+  const thumb = 'data:image/jpeg;base64,' + 'A'.repeat(60000); // ~60KB giả lập 1 ảnh thumb
+  state.materialRecords = [
+    { id: 'm1', date: '2026-09-01', type: 'Tre', weight: 100, images: [{ id: 'ph-1', thumb }, 'data:image/jpeg;base64,LEGACY_X'] },
+    { id: 'm2', date: '2026-09-02', type: 'Nứa', weight: 50, images: [] }
+  ];
+  const snap = cloud.collectCloudSnapshot();      // bản thuần (backup dùng)
+  const payload = cloud.collectCloudPayload();    // bản ĐẨY MÂY
+  check('N1: payload đẩy mây KHÔNG còn base64 ảnh dạng {id, thumb} (ảnh legacy chuỗi được chủ ý giữ)',
+    JSON.stringify(payload.materialRecords).indexOf(thumb) === -1);
+  check('N2: vẫn giữ id ảnh để máy khác nhận diện', payload.materialRecords[0].images[0].id === 'ph-1');
+  check('N3: snapshot thuần (backup cục bộ/mây ngày) VẪN giữ thumb — không mất ảnh khỏi máy',
+    JSON.stringify(snap.materialRecords).indexOf(thumb) !== -1);
+  check('N4: cloudCore(snapshot thuần) === cloudCore(mây đã gỡ ảnh) — so sánh không đua đẩy vô tận',
+    cloud.cloudCore(snap) === cloud.cloudCore(payload));
+  // Ghép NGƯỢC thumb: mây trả bản MỚI HƠN không mang base64 → thumb local phải sống lại
+  const prevRecs = [{ id: 'm1', date: '2026-09-01', type: 'Tre', weight: 100, images: [{ id: 'ph-1', thumb }] }];
+  const remoteNewer = [{ id: 'm1', date: '2026-09-01', type: 'Tre', weight: 120, updatedAt: '2026-09-03T08:00:00.000Z', images: [{ id: 'ph-1' }] }];
+  const back = cloud.restoreLocalThumbs(prevRecs, remoteNewer);
+  check('N5: gộp mây MỚI HƠN không làm mất thumb local (khớp theo id ảnh)',
+    back[0].weight === 120 && back[0].images[0].thumb === thumb);
+  check('N6: bản ghi mây không liên quan local → giữ nguyên (không bịa ảnh)',
+    cloud.restoreLocalThumbs(prevRecs, [{ id: 'm9', images: [{ id: 'ph-9' }] }])[0].images[0].thumb === undefined);
+  check('N7: ảnh legacy dạng chuỗi dataURL được giữ nguyên khi gỡ (tương thích bản cũ)',
+    payload.materialRecords[0].images[1] === 'data:image/jpeg;base64,LEGACY_X');
+}
+
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

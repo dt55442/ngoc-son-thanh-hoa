@@ -673,7 +673,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     return `
       <div class="cap-heat">
         <div class="cap-heat-title"><i data-lucide="grid-3x3"></i> Bản đồ nhiệt hiệu suất — 8 tuần gần nhất (bấm ô để xem biểu đồ công đoạn)</div>
-        <div class="cap-heat-grid">${head}${rows}</div>
+        <div class="cap-heat-grid" id="cap-heat-grid">${head}${rows}</div>
         <div class="cap-heat-legend">
           <span class="cap-legend-item"><i style="background:#94a3b8;"></i> chưa có ĐM / chưa có dữ liệu</span>
           <span class="cap-legend-item"><i style="background:#ea580c;"></i> dưới 70%</span>

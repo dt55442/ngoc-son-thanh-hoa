@@ -3164,7 +3164,10 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
 }
 .pv-mode-btn .pv-mode-ico { flex-shrink: 0; }
 .pv-mode-btn .pv-mode-label { overflow: hidden; text-overflow: ellipsis; }
-/* Vệt sáng quét ngang qua nút — điểm nhấn sinh động */
+/* Vệt sáng quét ngang qua nút — điểm nhấn sinh động.
+  Animate TRANSFORM (compositor) thay vì LEFT (layout mỗi frame):
+   left:-60% đứng yên, vệt sáng trượt bằng translateX — 190% bề ngang cha
+   ÷ 45% bề ngang chính nó = 422.2% (giữ đúng quãng đường cũ -60% → 130%). */
 .pv-mode-btn::after {
   content: '';
   position: absolute;
@@ -3176,6 +3179,7 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
   transform: skewX(-18deg);
   animation: pvModeShine 4.5s ease-in-out infinite;
   pointer-events: none;
+  will-change: transform; /* đẩy vệt sáng sang compositor — đỡ đè frame cuộn */
 }
 /* Icon ⇄ xoay khi rê chuột — gợi ý bấm vào TÊN để đổi biểu đồ */
 .pv-mode-swap { transition: transform 0.3s ease; }
@@ -3187,8 +3191,9 @@ body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
   50% { background-position: 100% 50%; }
 }
 @keyframes pvModeShine {
-  0%, 55% { left: -60%; }
-  85%, 100% { left: 130%; }
+  /* Trượt bằng transform (không phải left) — không gây layout mỗi frame khi cuộn */
+  0%, 55% { transform: skewX(-18deg) translateX(0); }
+  85%, 100% { transform: skewX(-18deg) translateX(422.2%); }
 }
 /* Icon theo biểu đồ đang xem: plan = bar-chart-3 · cap = gauge (lucide thay
    <i> bằng <svg> giữ nguyên class → CSS vẫn áp đúng sau createIcons) */
@@ -6570,15 +6575,16 @@ body[data-theme="night"] {
      đốt tre đều nhau (~85px). Viền nâu đậm + dây rơm như khung tre thật. ── */
   --khung-tre-svg: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20180%20180'%20width='180'%20height='180'%3E%3Cdefs%3E%3ClinearGradient%20id='a'%20x1='0'%20x2='0'%20y1='0'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23c8e6a0'/%3E%3Cstop%20offset='.5'%20stop-color='%239ccc65'/%3E%3Cstop%20offset='1'%20stop-color='%2379a83f'/%3E%3C/linearGradient%3E%3ClinearGradient%20id='b'%20x1='0'%20x2='1'%20y1='0'%20y2='0'%3E%3Cstop%20offset='0'%20stop-color='%23c8e6a0'/%3E%3Cstop%20offset='.5'%20stop-color='%239ccc65'/%3E%3Cstop%20offset='1'%20stop-color='%2379a83f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20x='-8'%20y='12'%20width='196'%20height='16'%20rx='8'%20fill='url(%23a)'%20stroke='%233e5622'%20stroke-width='1.4'/%3E%3Crect%20x='-8'%20y='152'%20width='196'%20height='16'%20rx='8'%20fill='url(%23a)'%20stroke='%233e5622'%20stroke-width='1.4'/%3E%3Crect%20x='12'%20y='-8'%20width='16'%20height='196'%20rx='8'%20fill='url(%23b)'%20stroke='%233e5622'%20stroke-width='1.4'/%3E%3Crect%20x='152'%20y='-8'%20width='16'%20height='196'%20rx='8'%20fill='url(%23b)'%20stroke='%233e5622'%20stroke-width='1.4'/%3E%3Cpath%20d='M85%2012v16M90%2012v16M85%20152v16M90%20152v16M12%2085h16M12%2090h16M152%2085h16M152%2090h16'%20fill='none'%20stroke='%23558b2f'%20stroke-width='1.8'/%3E%3Cg%20fill='none'%20stroke-linecap='round'%3E%3Cpath%20d='M7%207%2033%2033M33%207%207%2033M147%207%20173%2033M173%207%20147%2033M7%20147%2033%20173M33%20147%207%20173M147%20147%20173%20173M173%20147%20147%20173'%20stroke='%236b5432'%20stroke-width='7'/%3E%3Cpath%20d='M7%207%2033%2033M33%207%207%2033M147%207%20173%2033M173%207%20147%2033M7%20147%2033%20173M33%20147%207%20173M147%20147%20173%20173M173%20147%20147%20173'%20stroke='%23e3cf9e'%20stroke-width='4.2'/%3E%3C/g%3E%3Cg%20fill='%23d9c08a'%20stroke='%236b5432'%20stroke-width='1.5'%3E%3Ccircle%20cx='20'%20cy='20'%20r='4'/%3E%3Ccircle%20cx='160'%20cy='20'%20r='4'/%3E%3Ccircle%20cx='20'%20cy='160'%20r='4'/%3E%3Ccircle%20cx='160'%20cy='160'%20r='4'/%3E%3C/g%3E%3C/svg%3E");
 }
-/* Nền "vườn tre": kem ấm + hai vệt xanh rêu rất nhẹ (SÁNG, dễ nhìn) */
+/* Nền "vườn tre": kem ấm + hai vệt xanh rêu rất nhẹ (SÁNG, dễ nhìn).
+   BỎ background-attachment: fixed — nền fixed buộc repaint mỗi frame khi cuộn
+   (nguyên nhân giật lag tab Tổng Quan). Hai vệt gradient dời sang body::before
+   (lớp position:fixed có sẵn bên dưới) → trình duyệt chỉ vẽ MỘT lần, cuộn không đụng.
+   body giữ màu đệm: chỉ lộ ở mép vuốt quá (overscroll) ngoài lớp ::before. */
 body[data-theme="night"] {
-  background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(124, 179, 66, 0.12), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(46, 125, 50, 0.08), transparent 60%),
-    linear-gradient(180deg, #f4f0e2 0%, #ebe6d0 100%);
-  background-attachment: fixed;
+  background: #f4f0e2;
 }
-/* Lưới mờ phủ toàn màn — nằm DƯỚI mọi nội dung (z-index âm) */
+/* Lưới mờ + 2 vệt gradient phủ toàn màn — nằm DƯỚI mọi nội dung (z-index âm).
+   Lớp này đứng yên (fixed) nên cuộn trang KHÔNG làm nó vẽ lại. */
 body[data-theme="night"]::before {
   content: '';
   position: fixed;
@@ -6587,8 +6593,12 @@ body[data-theme="night"]::before {
   pointer-events: none;
   background-image:
     linear-gradient(rgba(90, 110, 70, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(90, 110, 70, 0.07) 1px, transparent 1px);
-  background-size: 48px 48px, 48px 48px;
+    linear-gradient(90deg, rgba(90, 110, 70, 0.07) 1px, transparent 1px),
+    radial-gradient(1200px 600px at 85% -10%, rgba(124, 179, 66, 0.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(46, 125, 50, 0.08), transparent 60%),
+    linear-gradient(180deg, #f4f0e2 0%, #ebe6d0 100%);
+  background-size: 48px 48px, 48px 48px, 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat;
 }
 /* Nội dung chính trong suốt để lộ nền không gian */
 body[data-theme="night"] .view-panel,
@@ -6664,10 +6674,13 @@ body[data-theme="night"] .dropdown-item.danger { color: #b3261e; }
 
 /* ── HEADER + NAV ── */
 body[data-theme="night"] header {
-  background: rgba(249, 246, 232, 0.92);
+  /* Đục hơn (0.92 → 0.97) + BỎ kính mờ (backdrop-filter): mỗi frame cuộn phải
+     làm mờ lại toàn bộ nội dung phía sau header dính (dưới là cả chục canvas
+     biểu đồ + khung tre SVG) — nguyên nhân giật lag hàng đầu khi cuộn tab
+     Tổng Quan. Nền gần đục nên bỏ blur gần như không đổi giao diện. */
+  background: rgba(249, 246, 232, 0.97);
   border-bottom: 1px solid rgba(46, 125, 50, 0.35);
 }
-body[data-theme="night"][data-fx="normal"] header { backdrop-filter: blur(12px) saturate(1.1); }
 body[data-theme="night"] .mobile-bottom-nav {
   background: rgba(249, 246, 232, 0.96);
   border-top: 1px solid rgba(46, 125, 50, 0.35);

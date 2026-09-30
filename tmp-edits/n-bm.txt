@@ -1,0 +1,7 @@
+    const btn = document.getElementById('kb-pick-del');
+    if (btn) btn.disabled = n === 0;
+    // Nhóm nút XÓA NHIỀU ngay trên thanh công cụ (hiện khi đang bật chế độ chọn)
+    const cntInline = document.getElementById('kb-pick-inline-count');
+    if (cntInline) cntInline.textContent = String(n);
+    const btnInline = document.getElementById('kb-pick-inline-del');
+    if (btnInline) btnInline.disabled = n === 0;

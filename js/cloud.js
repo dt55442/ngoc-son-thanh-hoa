@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
@@ -488,6 +488,7 @@ import { showToast } from './utils.js';
       x2BaoTinhRates: state.x2BaoTinhRates || {},
       x2EpVanRates: state.x2EpVanRates || {},
       x2LotLocations: state.x2LotLocations || [],
+      khoNotes: state.khoNotes || [],
       history: state.history || [],
       deletedIds: state.deletedIds || {},
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
@@ -585,6 +586,7 @@ import { showToast } from './utils.js';
       x2BaoTinhRates: obj.x2BaoTinhRates || {},
       x2EpVanRates: obj.x2EpVanRates || {},
       x2LotLocations: obj.x2LotLocations || [],
+      khoNotes: obj.khoNotes || [],
       history: obj.history || [],
       deletedIds: obj.deletedIds || {}
     });
@@ -696,6 +698,9 @@ import { showToast } from './utils.js';
     if (remote.qcExports) state.qcExports = m(clean('qcExports', state.qcExports || []), clean('qcExports', remote.qcExports));
     // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) — gộp theo id, mới hơn thắng + tôn trọng tombstone
     if (remote.qcKilnReadings) state.qcKilnReadings = m(clean('qcKilnReadings', state.qcKilnReadings || []), clean('qcKilnReadings', remote.qcKilnReadings));
+    // PHIẾU KHO (xuất / tiêu hủy / tái chế) — gộp theo id, mới hơn thắng + tôn trọng tombstone
+    // (phiếu do tổ trưởng tạo trên máy này, lãnh đạo duyệt trên máy khác → phải gộp 2 chiều)
+    if (remote.khoNotes) state.khoNotes = m(clean('khoNotes', state.khoNotes || []), clean('khoNotes', remote.khoNotes));
     // NGƯỠNG độ ẩm đạt theo công đoạn sấy ({ say1, say2 }) — mây thắng với key có trên mây
     if (remote.qcKilnThresholds) state.qcKilnThresholds = Object.assign({}, state.qcKilnThresholds || {}, remote.qcKilnThresholds);
     if (remote.hrEmployees) state.hrEmployees = m(clean('hrEmployees', state.hrEmployees || []), clean('hrEmployees', remote.hrEmployees));
@@ -802,6 +807,7 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_KILN_HUMIDITY, JSON.stringify(state.qcKilnReadings || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_KILN_THRESHOLD, JSON.stringify(state.qcKilnThresholds || {})); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_KHO_NOTES, JSON.stringify(state.khoNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_SUPPLIERS, JSON.stringify(state.suppliers || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_CAP_RATE, JSON.stringify(state.x2CapRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_BO_ONG_RATE, JSON.stringify(state.x2BoOngRates || {})); } catch (e) {}
@@ -896,6 +902,8 @@ import { showToast } from './utils.js';
       if (data.qcExports) state.qcExports = clean('qcExports', data.qcExports);
       // ĐỘ ẨM LÒ SẤY: số đo gộp theo tombstone; ngưỡng nhận nguyên theo mây (tải về = ghi đè)
       if (data.qcKilnReadings) state.qcKilnReadings = clean('qcKilnReadings', data.qcKilnReadings);
+      // PHIẾU KHO: nhận theo mây khi tải về (gộp theo tombstone — không hồi sinh phiếu đã xóa)
+      if (data.khoNotes) state.khoNotes = clean('khoNotes', data.khoNotes);
       if (data.qcKilnThresholds !== undefined && data.qcKilnThresholds && typeof data.qcKilnThresholds === 'object') {
         state.qcKilnThresholds = data.qcKilnThresholds;
       }

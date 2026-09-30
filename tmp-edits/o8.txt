@@ -1,0 +1,10 @@
+      const groups = ['say1', 'say2'].filter(st => day.stages.has(st)).map(stage => {
+        const minutes = sayMinutesPerCharge(day.date, stage);
+        const lotList = sayGroupLots(day.date, stage);
+        const charges = sayBuildCharges(day.date, stage, sayM3PerCharge(day.date, stage))
+          .map(c => ({
+            stage, lots: c.lots, vol: c.vol,
+            locationText: sayChargeLocationText(c),
+            codeText: sayChargeCodeText(c),
+            minutes, need: minutes / 60
+          }));

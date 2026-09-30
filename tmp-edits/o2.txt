@@ -1,0 +1,15 @@
+  // Định mức của 1 THÁNG + công đoạn sấy → { phut, m3, custom }
+  // (custom = tháng đó đã được khai định mức riêng hay đang dùng mặc định)
+  function sayRateEntryOf(dateVal, stage) {
+    const key = sayRateGroup(stage);
+    const def = SAY_RATE_DEFAULT[key];
+    const g = ((state.x2SayRates || {})[key]) || {};
+    const v = g[String(dateVal || '').slice(0, 7)];
+    const phut = Number(v && v.phut) > 0 ? Number(v.phut) : def.phut;
+    const m3 = Number(v && v.m3) > 0 ? Number(v.m3) : def.m3;
+    return { phut, m3, custom: !!v };
+  }
+  // Số PHÚT của 1 lần than hóa (Sấy 1 mặc định 105' · Sấy 2 mặc định 50')
+  function sayMinutesPerCharge(dateVal, stage) { return sayRateEntryOf(dateVal, stage).phut; }
+  // Số m³ quy đổi cho 1 lần than hóa (mặc định 2 m³/lần)
+  function sayM3PerCharge(dateVal, stage) { return sayRateEntryOf(dateVal, stage).m3; }

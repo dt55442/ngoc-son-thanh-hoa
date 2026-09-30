@@ -1,0 +1,14 @@
+    // POPUP "Định mức" — bảng theo tháng 4 cột phút/lần (Ván/Bullig) + m³/lần lô cũ
+    safeOn('btn-x2-say-rate', 'click', openX2SayRateModal);
+    safeOn('btn-close-x2-say-rate', 'click', closeX2SayRateModal);
+    safeOn('btn-x2sr-add-month', 'click', handleX2SayRateAddMonth);
+    safeOn('btn-x2sr-m3-save', 'click', handleX2SayRateM3Save);
+    safeOn('x2sr-m3-month', 'change', syncX2SayRateM3Inputs);
+    // Uỷ nhiệm click trong bảng định mức: nút Lưu / Khôi phục của từng HÀNG tháng
+    safeOn('x2-say-rate-rows', 'click', (e) => {
+      const t = e.target;
+      const saveBtn = t.closest ? t.closest('[data-x2sr-save]') : null;
+      if (saveBtn) { handleX2SayRateRowSave(saveBtn.getAttribute('data-x2sr-save')); return; }
+      const resetBtn = t.closest ? t.closest('[data-x2sr-reset]') : null;
+      if (resetBtn) { handleX2SayRateRowReset(resetBtn.getAttribute('data-x2sr-reset')); return; }
+    });

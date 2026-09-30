@@ -1,0 +1,4 @@
+    safeOn('kb-pick-cancel', 'click', () => exitKanbanPickMode());
+    // Nút thực thi XÓA NHIỀU ngay trên thanh công cụ (thanh nổi đáy màn hình vẫn giữ)
+    safeOn('kb-pick-inline-del', 'click', () => deletePickedBatches());
+    safeOn('kb-pick-inline-cancel', 'click', () => exitKanbanPickMode());

@@ -1,0 +1,69 @@
+// Định mức 1 LẦN than hóa theo THÁNG + công đoạn + LOẠI (Ván/Bullig RIÊNG)
+state.x2SayRates = { s1: { '2026-09': { van: { phut: 130 }, bullig: { phut: 150 }, m3: 4 } }, s2: {} };
+check('ĐỊNH MỨC: phút RIÊNG từng loại (S1 Ván 130\' · Bullig 150\') + m³/lần 4 — tháng chưa khai dùng mặc định (S1 105 · S2 50)',
+  x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Ván') === 130 &&
+  x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Bullig') === 150 &&
+  x2.sayM3PerCharge('2026-09-21', 'say1') === 4 &&
+  x2.sayMinutesPerCharge('2026-10-05', 'say1', 'Ván') === 105 &&
+  x2.sayMinutesPerCharge('2026-10-05', 'say2', 'Bullig') === 50);
+check('ĐỊNH MỨC: phút TỪNG LẦN theo LOẠI của lần đó — 21/09 toàn Ván → 130\' · Sấy 2 Bullig (22/09) mặc định 50\'',
+  (() => {
+    const d21x = x2.sayChargeRows().find(r => r.date === '2026-09-21');
+    const d22 = x2.sayChargeRows().find(r => r.date === '2026-09-22');
+    const g2 = d22 && d22.groups.find(g => g.stage === 'say2');
+    return !!d21x && d21x.charges.every(c => c.minutes === 130 && c.useFor === 'van') &&
+      !!g2 && g2.charges[0].useFor === 'bullig' && g2.charges[0].minutes === 50;
+  })());
+check('ĐỊNH MỨC: bản {phut, m3} cũ (máy khác đẩy mây về) → phút DÙNG CHUNG 2 loại — m³/lần lên 4 → 21/09 (3 m³) còn 1 LẦN',
+  (() => {
+    state.x2SayRates = { s1: { '2026-09': { phut: 130, m3: 4 } }, s2: {} };
+    const d = x2.sayChargeRows().find(r => r.date === '2026-09-21');
+    const okRate = x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Ván') === 130 &&
+      x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Bullig') === 130;
+    state.x2SayRates = { s1: { '2026-09': { van: { phut: 130 }, bullig: { phut: 150 }, m3: 4 } }, s2: {} };
+    return !!d && d.lanCount === 1 && Math.abs(d.charges[0].vol - 3) < 1e-9 &&
+      d.charges[0].minutes === 130 && Math.abs(d.charges[0].need - (130 / 60)) < 1e-9 && okRate;
+  })());
+check('ĐỊNH MỨC: đổi m³/lần xuống 1 → ngày 21/09 (3 lô × 1 m³) thành 3 lần (mỗi lần 1 m³)',
+  (() => {
+    state.x2SayRates = { s1: { '2026-09': { van: { phut: 105 }, bullig: { phut: 105 }, m3: 1 } }, s2: {} };
+    const d = x2.sayChargeRows().find(r => r.date === '2026-09-21');
+    state.x2SayRates = { s1: { '2026-09': { van: { phut: 130 }, bullig: { phut: 150 }, m3: 4 } }, s2: {} };
+    return !!d && d.lanCount === 3;
+  })());
+
+// LƯU ĐỊNH MỨC qua POPUP (4 ô phút/lần của 1 hàng tháng; trống = dùng mặc định)
+state.x2SayRates = { s1: {}, s2: {} };
+document.getElementById('x2sr-2026-10-s1-van').value = '45';
+document.getElementById('x2sr-2026-10-s1-bullig').value = '60';
+document.getElementById('x2sr-2026-10-s2-van').value = '';
+document.getElementById('x2sr-2026-10-s2-bullig').value = '';
+x2.handleX2SayRateRowSave('2026-10');
+check('LƯU ĐỊNH MỨC: lưu đúng 4 phút/lần (ô trống = mặc định S2 50/50) vào state + localStorage',
+  state.x2SayRates.s1['2026-10'].van.phut === 45 && state.x2SayRates.s1['2026-10'].bullig.phut === 60 &&
+  state.x2SayRates.s2['2026-10'].van.phut === 50 && state.x2SayRates.s2['2026-10'].bullig.phut === 50 &&
+  String(storeBacking.get('bamboo_tracker_x2_say_rate_v1') || '').includes('"phut":45'));
+document.getElementById('x2sr-2026-11-s1-van').value = '0';
+x2.handleX2SayRateRowSave('2026-11');
+check('LƯU ĐỊNH MỨC: số phút ≤ 0 bị chặn (không ghi vào state — tháng đó vẫn dùng mặc định)',
+  state.x2SayRates.s1['2026-11'] === undefined && x2.sayMinutesPerCharge('2026-11-05', 'say2', 'Bullig') === 50);
+// m³/lần (lô cũ) — số CHUNG theo công đoạn, không phân loại
+document.getElementById('x2sr-m3-month').value = '2026-10';
+document.getElementById('x2sr-m3-s1').value = '3';
+document.getElementById('x2sr-m3-s2').value = '';
+x2.handleX2SayRateM3Save();
+check('LƯU M³/LẦN (lô cũ): Sấy 1 = 3 · Sấy 2 trống = mặc định 2 — không đụng phút đã khai',
+  x2.sayM3PerCharge('2026-10-05', 'say1') === 3 && x2.sayM3PerCharge('2026-10-05', 'say2') === 2 &&
+  state.x2SayRates.s1['2026-10'].van.phut === 45);
+// Khôi phục mặc định 1 tháng
+x2.handleX2SayRateRowReset('2026-10');
+check('KHÔI PHỤC MẶC ĐỊNH: xóa khai báo tháng → quay lại mặc định',
+  state.x2SayRates.s1['2026-10'] === undefined && x2.sayMinutesPerCharge('2026-10-05', 'say1', 'Ván') === 105);
+// Bản CŨ (1 số = phút) vẫn đọc được khi nạp từ localStorage
+storeBacking.set('bamboo_tracker_x2_say_rate_v1', JSON.stringify({ s1: { '2026-09': 120 }, s2: {} }));
+x2.loadX2SayRates();
+check('TƯƠNG THÍCH: định mức bản CŨ (1 số) → phút dùng chung 2 loại + m³/lần mặc định 2',
+  state.x2SayRates.s1['2026-09'].van.phut === 120 && state.x2SayRates.s1['2026-09'].bullig.phut === 120 &&
+  state.x2SayRates.s1['2026-09'].m3 === 2 && x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Bullig') === 120);
+state.x2SayRates = { s1: {}, s2: {} };
+

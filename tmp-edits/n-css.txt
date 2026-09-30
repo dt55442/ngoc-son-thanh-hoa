@@ -1,0 +1,65 @@
+
+/* ═══════════════════════════════════════════════════════════════════
+   ĐỊNH MỨC THỜI GIAN 1 LẦN THAN HÓA — POPUP bảng theo tháng (4 cột phút/lần
+   riêng Ván/Bullig) + dòng m³/lần (lô cũ) + chip tóm tắt trên thẻ Than Hóa + Sấy
+   ═══════════════════════════════════════════════════════════════════ */
+.x2-say-rate-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 14px 8px;
+}
+.x2-say-rate-chip { font-size: 0.8rem; color: var(--text-muted); }
+.x2-say-rate-chip b { font-weight: 800; color: inherit; }
+.x2-say-rate-m3 { font-size: 0.72rem; opacity: 0.75; }
+.x2sr-table-wrap {
+  max-height: 46vh;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+.x2sr-table { width: 100%; font-size: 0.82rem; }
+.x2sr-table th, .x2sr-table td { padding: 6px 8px; white-space: nowrap; }
+.x2sr-cell input.x2sr-input { width: 86px; text-align: right; }
+.x2sr-row-default { opacity: 0.72; }
+.x2sr-def-tag { font-size: 0.7rem; color: var(--text-muted); }
+.x2sr-act { display: flex; gap: 4px; }
+.x2sr-add-month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  font-size: 0.8rem;
+}
+.x2sr-add-month input[type="month"] { padding: 4px 8px; }
+.x2sr-m3-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.8rem;
+}
+.x2sr-m3-line input { width: 76px; text-align: right; }
+.x2sr-m3-title { font-weight: 700; }
+
+/* Thanh nổi XÓA NHIỀU: nổi TRÊN thanh điều hướng điện thoại (nav = z-index 90) */
+#kb-pick-bar { z-index: 95; }
+@media (max-width: 639.98px) {
+  #kb-pick-bar { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Nhóm nút XÓA NHIỀU ngay trên thanh công cụ (hiện khi đang bật chế độ chọn) */
+.kb-pick-inline { display: none; align-items: center; gap: 6px; }
+body.kanban-pick-mode .kb-pick-inline { display: inline-flex; flex-wrap: wrap; }
+.kb-pick-inline-info { font-size: 0.8rem; font-weight: 700; }
+.kb-pick-inline b { color: #dc2626; }
+.kb-pick-inline-del {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+#kb-pick-inline-del:disabled { opacity: 0.45; cursor: not-allowed; }

@@ -5,7 +5,7 @@
 //     Giờ HC/TC · Công suất m³/ngày [· m³/h + Hiệu suất khi có định mức] ·
 //     Thành phẩm) và "Biểu Đồ" (biểu đồ thể tích ván ép theo ngày).
 //   • Định mức công suất ép ván theo tháng (m³/h) + nối storage/cloud/history.
-//   • Bảng "Bào Tinh ↔ Đã Ép" đã DỜI sang thẻ Bào Tinh.
+//   • Bảng "Bào Tinh ↔ Đã Ép" đã GỠ HẲN (30/09/2026 — không dùng đến).
 'use strict';
 import fs from 'node:fs';
 
@@ -216,14 +216,18 @@ check('ĐỊNH MỨC: chặn lưu khi để trống/0',
   })());
 
 
-// ─── D. BẢNG "BÀO TINH ↔ ĐÃ ÉP" ĐÃ DỜI SANG THẺ BÀO TINH ───────
-press.renderBaoTinhEffTable();
-check('BẢNG DỜI: renderBaoTinhEffTable ghi được vào #baotinh-eff-body (thẻ Bào Tinh)',
-  document.getElementById('baotinh-eff-body').innerHTML.length > 0);
+// ─── D. BẢNG "BÀO TINH ↔ ĐÃ ÉP" ĐÃ GỠ HẲN (không dùng đến) ───
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-check('BẢNG DỜI: baotinh-eff-card nằm TRONG thẻ Bào Tinh (giữa x2-bao-tinh-card và x2-ep-van-card)',
-  idxHtml.indexOf('id="x2-bao-tinh-card"') < idxHtml.indexOf('id="baotinh-eff-card"') &&
-  idxHtml.indexOf('id="baotinh-eff-card"') < idxHtml.indexOf('id="x2-ep-van-card"'));
+const pressSrc = fs.readFileSync(new URL('../js/press.js', import.meta.url), 'utf8');
+const eventsSrc = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+const xuong2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
+check('GỠ BẢNG: index.html không còn #baotinh-eff-card · #baotinh-eff-table · #bt-year-filter',
+  !idxHtml.includes('id="baotinh-eff-card"') && !idxHtml.includes('id="baotinh-eff-table"') &&
+  !idxHtml.includes('id="bt-year-filter"') && !idxHtml.includes('Bào Tinh ↔ Đã Ép'));
+check('GỠ BẢNG: press.js không còn hàm/export renderBaoTinhEffTable (hàm dữ liệu compute vẫn giữ)',
+  !pressSrc.includes('renderBaoTinhEffTable') && pressSrc.includes('computeBaoTinhEfficiencyByWeek'));
+check('GỠ BẢNG: events.js + xuong2.js không còn import/gọi renderBaoTinhEffTable',
+  !eventsSrc.includes('renderBaoTinhEffTable') && !xuong2Src.includes('renderBaoTinhEffTable'));
 
 // ─── E. TAB ÉP VÁN ĐÃ XÓA + CẤU TRÚC MỚI ────────────────────────
 check('XÓA TAB: index.html không còn section press-view, nút nav desktop (#nav-press) và nav điện thoại',
@@ -277,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v181', /nha-may-ngoc-son-v181/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v186', /nha-may-ngoc-son-v186/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -323,8 +327,9 @@ check('DÙNG CHUNG: đóng thẻ → không còn thẻ đang mở (vùng dữ li
   x2.x2OpenCardId() === null && x2.x2OpenCardHistoryDomain() === '' &&
   state.x2OpenCardId === null);
 const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
-check('DÙNG CHUNG: đủ 8 thẻ có vùng dữ liệu + nguồn xuất (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Than Hóa · Bào Tinh · Bullig · Ép Ván)',
-  Object.keys(mapCn).length === 8 && Object.keys(mapEx).length === 8 &&
+check('DÙNG CHUNG: đủ 9 thẻ có vùng dữ liệu + nguồn xuất (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Than Hóa · Kho Nan · Bào Tinh · Bullig · Ép Ván)',
+  Object.keys(mapCn).length === 9 && Object.keys(mapEx).length === 9 &&
+  mapCn['x2-kho-card'] === 'khoNotes' && mapEx['x2-kho-card'] === 'kho' &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
   mapCn['x2-bullig-card'] === 'xuong2BulligRecords' && mapEx['x2-bullig-card'] === 'bullig' &&
   mapCn['x2-than-hoa-card'] === 'batches' && mapEx['x2-than-hoa-card'] === 'batch');

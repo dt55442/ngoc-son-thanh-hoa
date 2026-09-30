@@ -2,16 +2,22 @@
 // js/capacity.js — BẢNG TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT
 // (thẻ #capacity-card — ĐẦU tab Tổng Quan, cho lãnh đạo nắm nhanh)
 // ═══════════════════════════════════════════════════════════
-// 3 TẦNG XỔ TẠI CHỖ (inline, không mở pop-up):
-//   TẦNG 1 — TUẦN (cấp Xưởng) : mỗi dòng 1 tuần — số công đoạn có dữ liệu ·
-//             tổng giờ · HIỆU SUẤT XƯỞNG (bình quân gia quyền theo giờ) ·
-//             số công đoạn đạt ≥100% · nút thắt cổ chai (công đoạn thấp nhất).
-//   TẦNG 2 — CÔNG ĐOẠN trong tuần: bấm 1 dòng tuần → xổ bảng công đoạn
-//             (lượt · sản lượng · giờ HC/TC · công suất thực · định mức tuần ·
-//             hiệu suất · so tuần trước) + nút "Mở thẻ công đoạn" để sang tab
-//             Công Đoạn xem/sửa theo ngày.
-//   TẦNG 3 — NGÀY: bấm 1 dòng công đoạn → xổ TỪNG NGÀY của tuần đó
-//             (ngày · lượt · sản lượng · giờ · công suất · hiệu suất).
+// 3 TẦNG XỔ TẠI CHỘ (inline, không mở pop-up) — xem theo TUẦN ISO hoặc THÁNG
+//   (nút "Tuần ⇄ Tháng" + ô chọn tháng ở đầu thẻ, nhớ theo máy — state.capUi.mode):
+//   TẦNG 1 — KỲ (cấp Xưởng): mỗi dòng 1 tuần/tháng — số công đoạn có dữ liệu ·
+//             GIỜ HC · GIỜ TC · tổng giờ · HIỆU SUẤT XƯỞNG (bình quân gia quyền
+//             theo giờ) · số công đoạn đạt ≥100% · nút thắt cổ chai (thấp nhất).
+//   TẦNG 2 — CÔNG ĐOẠN trong kỳ: bấm 1 dòng kỳ → xổ bảng công đoạn
+//             (lượt · sản lượng · giờ HC · giờ TC · tổng giờ · công suất thực ·
+//             định mức kỳ · hiệu suất · so kỳ trước) + nút "Mở thẻ công đoạn"
+//             để sang tab Công Đoạn xem/sửa theo ngày.
+//   TẦNG 3 — NGÀY: bấm 1 dòng công đoạn → xổ TỪNG NGÀY của kỳ đó
+//             (ngày · lượt · sản lượng · giờ HC/TC · công suất · hiệu suất).
+//
+// NÚT "IN BÁO CÁO" (#btn-cap-print): in ra giấy báo cáo CHỈ gồm THÔNG TIN CHUNG
+//   của TẤT CẢ bộ phận (sổ CAP_WORKSHOPS — mỗi xưởng 1 bảng công đoạn + dòng
+//   TỔNG xưởng), KHÔNG in gauge/thang xếp hạng/BẢN ĐỒ NHIỆT/biểu đồ 8 kỳ
+//   (vùng in riêng #cap-print-area + body.cap-printing — xem styles.css).
 //
 // 2 CHẾ ĐỘ XEM (nút chuyển ở đầu thẻ, nhớ theo máy — state.capUi.view):
 //   • "Biểu đồ" (mặc định): GAUGE hiệu suất xưởng + THANG XẾP HẠNG công đoạn +
@@ -91,6 +97,68 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
     const f = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
     return `${f(mon)} – ${f(sun)}`;
+  }
+
+  // ─── THÁNG: khóa 'YYYY-MM' ↔ dịch tháng ↔ nhãn ────────────────
+  function capMonthKeyValid(key) { return /^\d{4}-\d{2}$/.test(String(key || '')); }
+  // Dịch ±1 tháng — dùng Date(vắt năm tự nhiên): 2025-01 −1 = 2024-12
+  function capMonthShift(monthKey, dir) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ''));
+    if (!m) return String(monthKey || '');
+    const d = new Date(Number(m[1]), Number(m[2]) - 1 + dir, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+  // "Tháng 9/2026"
+  function capMonthHeadLabel(monthKey) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ''));
+    if (!m) return String(monthKey || '');
+    return `Tháng ${Number(m[2])}/${m[1]}`;
+  }
+  // Khoảng ngày của tháng: "01/09 – 30/09"
+  function capMonthRangeLabel(monthKey) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ''));
+    if (!m) return '';
+    const last = new Date(Number(m[1]), Number(m[2]), 0).getDate();
+    return `01/${m[2]} – ${String(last).padStart(2, '0')}/${m[2]}`;
+  }
+
+  // ─── KỲ CHUNG (TUẦN ISO | THÁNG): 1 đường code cho cả 2 chế độ xem ──
+  // mode = 'week' (mặc định) | 'month'. Khóa kỳ lưu chung trường state.capUi.week
+  // (tuần = 'YYYY-Wnn' · tháng = 'YYYY-MM') nên mọi state/test cũ vẫn khớp.
+  function capModeOf() { return (state.capUi && state.capUi.mode === 'month') ? 'month' : 'week'; }
+  function capPeriodKeyValid(key, mode) {
+    return (mode || capModeOf()) === 'month' ? capMonthKeyValid(key) : /^\d{4}-W\d{1,2}$/.test(String(key || ''));
+  }
+  function capPeriodKeyOfDate(dateStr, mode) {
+    return (mode || capModeOf()) === 'month' ? String(dateStr || '').slice(0, 7) : capWeekKeyOf(dateStr);
+  }
+  function capCurrentPeriodKey(mode) {
+    return (mode || capModeOf()) === 'month' ? todayISO().slice(0, 7) : capCurrentWeekKey();
+  }
+  function capPeriodShift(key, dir, mode) {
+    return (mode || capModeOf()) === 'month' ? capMonthShift(key, dir) : capWeekShift(key, dir);
+  }
+  // Nhãn CHÍNH của kỳ: "Tuần 39 (2026)" / "Tháng 9/2026"
+  function capPeriodHeadLabel(key, mode) {
+    return (mode || capModeOf()) === 'month' ? capMonthHeadLabel(key) : friendlyMaterialWeek(key);
+  }
+  // Nhãn PHỤ dưới nhãn chính: "2026 · 22/09 – 28/09" / "2026 · 01/09 – 30/09"
+  function capPeriodSubLabel(key, mode) {
+    return (mode || capModeOf()) === 'month'
+      ? `${String(key || '').slice(0, 4)} · ${capMonthRangeLabel(key)}`
+      : `${capWeekYearOf(key)} · ${capWeekRangeLabel(key)}`;
+  }
+  // Nhãn ĐẦY ĐỦ 1 dòng (chip / thanh điều hướng)
+  function capPeriodLabel(key, mode) {
+    return (mode || capModeOf()) === 'month'
+      ? `${capMonthHeadLabel(key)} · ${capMonthRangeLabel(key)}`
+      : `${friendlyMaterialWeek(key)} · ${capWeekRangeLabel(key)}`;
+  }
+  // Nhãn RÚT GỌN cho ô bản đồ nhiệt / trục biểu đồ: "T39" / "T9"
+  function capPeriodShortLabel(key, mode) {
+    return (mode || capModeOf()) === 'month'
+      ? `T${Number(String(key || '').slice(5, 7))}`
+      : `T${capWeekNumOf(key)}`;
   }
 
   // ─── SỔ ĐĂNG KÝ CÔNG ĐOẠN (thêm Xưởng 1 = thêm 1 dòng vào đây) ─
@@ -182,6 +250,14 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
 
   function capStagesOf(ws) { return CAP_STAGES.filter(s => s.ws === ws); }
 
+  // ─── SỔ ĐĂNG KÝ BỘ PHẬN / XƯỞNG ────────────────────────────────
+  // Báo cáo in (#btn-cap-print) chạy qua TẤT CẢ bộ phận trong sổ này —
+  // sau này thêm xưởng mới chỉ cần thêm 1 dòng (công đoạn khai ở CAP_STAGES).
+  const CAP_WORKSHOPS = [
+    { id: 'x2', label: 'Xưởng 2' },
+    { id: 'x1', label: 'Xưởng 1' }
+  ];
+
   // ─── THAN HÓA + SẤY: dòng theo NGÀY của 1 công đoạn sấy ───────
   // Nguồn sayChargeRows() (đã export từ xuong2.js) — mỗi ngày trả groups theo
   // stage + giờ thật của ngày. Giờ/Sự cố CHIA cho công đoạn theo TỈ LỆ GIỜ CẦN
@@ -205,34 +281,41 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       };
     }).filter(Boolean);
   }
-  // Nhãn định mức 1 lần than hóa theo các tháng có mặt: "105'/2,000m³" (phút/lần · m³/lần)
+  // Nhãn định mức 1 lần than hóa theo các tháng có mặt — phút/lần RIÊNG Ván/Bullig:
+  // 2 loại cùng số → "105'/2,000m³" (như cũ); khác số → "V105'·B90'/2,000m³"
   function capSayRateTextOf(dates, stageKey) {
     const months = [...new Set((dates || []).map(d => String(d || '').slice(0, 7)).filter(Boolean))].sort();
     if (!months.length) return '';
     return months.map(m => {
-      const e = sayRateEntryOf(m, stageKey);
-      return `${fmtNum1(e.phut)}'/${fmtM3Cap(e.m3)}m³`;
+      const van = sayRateEntryOf(m, stageKey, 'Ván');
+      const bul = sayRateEntryOf(m, stageKey, 'Bullig');
+      const phutTxt = van.phut === bul.phut
+        ? `${fmtNum1(van.phut)}'`
+        : `V${fmtNum1(van.phut)}'·B${fmtNum1(bul.phut)}'`;
+      return `${phutTxt}/${fmtM3Cap(van.m3)}m³`;
     }).join(' · ');
   }
 
-  // ─── GỘP DỮ LIỆU THEO TUẦN ────────────────────────────────────
-  // 1 lượt quét rows() của mỗi công đoạn → Map tuần → bản ghi (tiết kiệm:
-  // bảng tầng 1 vẽ ~26 tuần chỉ cần 9 lượt quét thay vì 26×9).
-  function capStageRowsByWeek(st) {
+  // ─── GỘP DỮ LIỆU THEO KỲ (TUẦN ISO | THÁNG) ───────────────────
+  // 1 lượt quét rows() của mỗi công đoạn → Map kỳ → bản ghi (tiết kiệm:
+  // bảng tầng 1 vẽ ~26 kỳ chỉ cần 9 lượt quét thay vì 26×9).
+  function capStageRowsByPeriod(st, mode) {
     const map = new Map();
     (st.rows() || []).forEach(r => {
       if (!r || !r.date) return;
-      const wk = capWeekKeyOf(r.date);
-      if (!wk) return;
-      if (!map.has(wk)) map.set(wk, []);
-      map.get(wk).push(r);
+      const pk = capPeriodKeyOfDate(r.date, mode);
+      if (!pk) return;
+      if (!map.has(pk)) map.set(pk, []);
+      map.get(pk).push(r);
     });
     return map;
   }
-  // Dòng TUẦN của 1 công đoạn từ danh sách bản ghi thô của tuần đó.
+  // Bản TUẦN ISO — sparkline mini card + kiểm thử cũ vẫn dùng
+  function capStageRowsByWeek(st) { return capStageRowsByPeriod(st, 'week'); }
+  // Dòng KỲ của 1 công đoạn từ danh sách bản ghi thô của kỳ đó (mode 'week'|'month').
   // Gom theo NGÀY — giờ đếm 1 LẦN/ngày (bản ghi ĐẦU của ngày mang giờ chung
   // của ngày đọc từ Bảng bố trí Nhân Sự / snapshot).
-  function capStageWeekRowFromRecs(st, recs, weekKey) {
+  function capStagePeriodRowFromRecs(st, recs, key, mode) {
     const byDate = new Map();
     (recs || []).forEach(r => {
       if (!r || !r.date) return;
@@ -269,7 +352,8 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     let cap = null, rate = null, eff = null, rateText = '';
     if (st.kind === 'cap') {
       cap = (qty != null && qty > 0 && hours > 0) ? qty / hours : null;
-      rate = capWeekRateOf(st, days);
+      // Định mức: THÁNG → ĐM của chính tháng; TUẦN → bình quân gia quyền (tuần vắt 2 tháng)
+      rate = mode === 'month' ? st.rateOf(String(key).slice(0, 7)) : capWeekRateOf(st, days);
       eff = (cap != null && rate) ? (cap / rate) * 100 : null;
     } else {
       const need = days.reduce((s, d) => s + (d.need || 0), 0);
@@ -278,7 +362,11 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       eff = (need > 0 && hours - incident > 0) ? (need / (hours - incident)) * 100 : null;
       rateText = st.rateTextOf ? st.rateTextOf(days.map(d => d.date)) : '';
     }
-    return { stageId: st.id, weekKey, days, turns, qty, qtyKnown, hours, hc, tc, cap, rate, rateText, eff };
+    return { stageId: st.id, weekKey: key, days, turns, qty, qtyKnown, hours, hc, tc, cap, rate, rateText, eff };
+  }
+  // Bản TUẦN ISO (giữ tên cũ — kiểm thử cũ + chỗ khác gọi vẫn chạy)
+  function capStageWeekRowFromRecs(st, recs, weekKey) {
+    return capStagePeriodRowFromRecs(st, recs, weekKey, 'week');
   }
   // Định mức TUẦN = bình quân gia quyền theo sản lượng giữa các tháng trong tuần
   function capWeekRateOf(st, days) {
@@ -298,49 +386,64 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
   function capEmptyStageRow(st, weekKey) {
     return { stageId: st.id, weekKey, days: [], turns: 0, qty: null, qtyKnown: true, hours: 0, hc: 0, tc: 0, cap: null, rate: null, rateText: '', eff: null };
   }
-  // Dòng tuần của 1 công đoạn (tiện dùng ở test + sparkline)
-  function capStageWeekRow(st, weekKey) {
-    const recs = capStageRowsByWeek(st).get(weekKey);
-    return recs ? capStageWeekRowFromRecs(st, recs, weekKey) : capEmptyStageRow(st, weekKey);
+  // Dòng KỲ của 1 công đoạn (mode 'week' | 'month')
+  function capStagePeriodRow(st, key, mode) {
+    const recs = capStageRowsByPeriod(st, mode).get(key);
+    return recs ? capStagePeriodRowFromRecs(st, recs, key, mode) : capEmptyStageRow(st, key);
   }
-  // Dòng theo NGÀY của 1 công đoạn trong tuần (tầng 3 + test)
+  // Bản TUẦN của 1 công đoạn (tiện dùng ở test + sparkline mini card)
+  function capStageWeekRow(st, weekKey) {
+    return capStagePeriodRow(st, weekKey, 'week');
+  }
+  // Dòng theo NGÀY của 1 công đoạn trong kỳ (tầng 3 + test)
   function capStageDayRows(st, weekKey) {
     return capStageWeekRow(st, weekKey).days;
   }
-  // MẢNH DỮ LIỆU dùng chung cho tầng 1: 1 lượt quét → Map tuần → Map công đoạn
-  function capWeekAggregates(ws) {
+  // MẢNH DỮ LIỆU dùng chung cho tầng 1: 1 lượt quét → Map kỳ → Map công đoạn
+  function capPeriodAggregates(ws, mode) {
     const byWeek = new Map();
     capStagesOf(ws).forEach(st => {
-      capStageRowsByWeek(st).forEach((recs, wk) => {
+      capStageRowsByPeriod(st, mode).forEach((recs, wk) => {
         if (!byWeek.has(wk)) byWeek.set(wk, new Map());
-        byWeek.get(wk).set(st.id, capStageWeekRowFromRecs(st, recs, wk));
+        byWeek.get(wk).set(st.id, capStagePeriodRowFromRecs(st, recs, wk, mode));
       });
     });
     return byWeek;
   }
-  // Danh sách tuần CÓ dữ liệu của xưởng (mới nhất trước)
-  function capWeekRowsFor(ws) {
+  // Bản TUẦN ISO (kiểm thử cũ vẫn dùng)
+  function capWeekAggregates(ws) { return capPeriodAggregates(ws, 'week'); }
+  // Danh sách kỳ CÓ dữ liệu của xưởng (mới nhất trước) — sắp chuỗi đúng cả 2 dạng khóa
+  function capPeriodsFor(ws, mode) {
     const set = new Set();
-    capStagesOf(ws).forEach(st => capStageRowsByWeek(st).forEach((_, wk) => set.add(wk)));
+    capStagesOf(ws).forEach(st => capStageRowsByPeriod(st, mode).forEach((_, wk) => set.add(wk)));
     return [...set].sort().reverse();
   }
-  // Dòng TUẦN cấp XƯỞNG (tầng 1) — từ Map đã quét 1 lần hoặc tự tính
-  function capWorkshopWeekRowFromMap(ws, weekKey, byWeek) {
+  function capWeekRowsFor(ws) { return capPeriodsFor(ws, 'week'); }
+  // Dòng KỲ cấp XƯỞNG (tầng 1) — từ Map đã quét 1 lần hoặc tự tính
+  function capWorkshopPeriodRowFromMap(ws, key, byWeek, mode) {
     const parts = capStagesOf(ws).map(st => {
-      const w = byWeek && byWeek.get(weekKey);
-      const row = (w && w.get(st.id)) || capEmptyStageRow(st, weekKey);
+      const w = byWeek && byWeek.get(key);
+      const row = (w && w.get(st.id)) || capEmptyStageRow(st, key);
       return { st, row };
     });
-    return capWorkshopAggregate(weekKey, parts);
+    return capWorkshopAggregate(key, parts);
+  }
+  // Bản TUẦN ISO (kiểm thử cũ + sparkline vẫn dùng)
+  function capWorkshopWeekRowFromMap(ws, weekKey, byWeek) {
+    return capWorkshopPeriodRowFromMap(ws, weekKey, byWeek, 'week');
   }
   function capWorkshopWeekRow(ws, weekKey) {
     return capWorkshopWeekRowFromMap(ws, weekKey, capWeekAggregates(ws));
   }
   // Hiệu suất XƯỞNG = bình quân gia quyền theo GIỀ giữa các công đoạn có hiệu suất
+  // (giờ HC/TC tổng theo công đoạn có dữ liệu — để tầng 1 + báo cáo in tách riêng)
   function capWorkshopAggregate(weekKey, parts) {
     const withData = parts.filter(p => p.row.turns > 0);
     const withEff = withData.filter(p => p.row.eff != null && p.row.hours > 0);
+    const turns = withData.reduce((s, p) => s + p.row.turns, 0);
     const hours = withData.reduce((s, p) => s + p.row.hours, 0);
+    const hc = withData.reduce((s, p) => s + p.row.hc, 0);
+    const tc = withData.reduce((s, p) => s + p.row.tc, 0);
     let eff = null;
     if (withEff.length) {
       const num = withEff.reduce((s, p) => s + p.row.eff * p.row.hours, 0);
@@ -354,23 +457,27 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       weekKey, parts, withData,
       stagesCount: parts.length,
       dataCount: withData.length,
-      hours, eff,
+      turns, hours, hc, tc, eff,
       passCount, effCount: withEff.length,
       bottleneck
     };
   }
 
   // ─── TRẠNG THÁI UI (nhớ theo MÁY — không lên mây) ─────────────
-  // { ws: 'x2'|'x1', week: 'YYYY-Wnn'|'' (rỗng = tự chọn tuần mới nhất có dữ liệu),
-  //   weekOpen: tuần đang xổ tầng công đoạn, openStage: công đoạn đang xổ tầng ngày,
-  //   collapsed: thu gọn thẻ }
+  // { ws: 'x2'|'x1', mode: 'week'|'month',
+  //   week: khóa KỲ đang xem ('YYYY-Wnn' hoặc 'YYYY-MM'|'' = tự chọn kỳ mới nhất
+  //   có dữ liệu), weekOpen: kỳ đang xổ tầng công đoạn, openStage: công đoạn đang
+  //   xổ tầng ngày, collapsed: thu gọn thẻ, view: 'visual'|'table', chartStage }
   function loadCapacityUi() {
     let ui = null;
     try { ui = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || 'null'); } catch (e) { /* bỏ qua */ }
-    state.capUi = Object.assign({ ws: 'x2', week: '', weekOpen: '', openStage: '', collapsed: false, view: 'visual', chartStage: '' }, (ui && typeof ui === 'object') ? ui : {});
+    state.capUi = Object.assign({ ws: 'x2', mode: 'week', week: '', weekOpen: '', openStage: '', collapsed: false, view: 'visual', chartStage: '' }, (ui && typeof ui === 'object') ? ui : {});
     if (state.capUi.ws !== 'x1' && state.capUi.ws !== 'x2') state.capUi.ws = 'x2';
-    if (state.capUi.week && !/^\d{4}-W\d{1,2}$/.test(String(state.capUi.week))) state.capUi.week = '';
-    if (state.capUi.weekOpen && !/^\d{4}-W\d{1,2}$/.test(String(state.capUi.weekOpen))) state.capUi.weekOpen = '';
+    if (state.capUi.mode !== 'month') state.capUi.mode = 'week';
+    // Khóa kỳ phải khớp CHẾ ĐỘ đang xem (tuần 'YYYY-Wnn' / tháng 'YYYY-MM')
+    const pkRe = state.capUi.mode === 'month' ? /^\d{4}-\d{2}$/ : /^\d{4}-W\d{1,2}$/;
+    if (state.capUi.week && !pkRe.test(String(state.capUi.week))) state.capUi.week = '';
+    if (state.capUi.weekOpen && !pkRe.test(String(state.capUi.weekOpen))) state.capUi.weekOpen = '';
     if (typeof state.capUi.collapsed !== 'boolean') state.capUi.collapsed = false;
     // Chế độ xem chỉ được 'visual' | 'table'; công đoạn của chart phải có trong sổ đăng ký
     if (state.capUi.view !== 'table' && state.capUi.view !== 'visual') state.capUi.view = 'visual';
@@ -379,12 +486,16 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
   function saveCapacityUi() {
     try { localStorage.setItem(STORAGE_KEY_CAPACITY_UI, JSON.stringify(state.capUi || {})); } catch (e) { /* bỏ qua */ }
   }
-  function capSelectedWeek() {
+  // Kỳ đang xem (đã theo chế độ Tuần/Tháng) — rỗng thì tự chọn kỳ mới nhất có dữ liệu
+  function capSelectedPeriod() {
     const ws = (state.capUi && state.capUi.ws) || 'x2';
+    const mode = capModeOf();
     if (state.capUi.week) return state.capUi.week;
-    const weeks = capWeekRowsFor(ws);
-    return weeks.length ? weeks[0] : capCurrentWeekKey();
+    const keys = capPeriodsFor(ws, mode);
+    return keys.length ? keys[0] : capCurrentPeriodKey(mode);
   }
+  // Bản cũ (luôn trả khóa TUẦN theo chế độ hiện có) — kiểm thử cũ vẫn gọi
+  function capSelectedWeek() { return capSelectedPeriod(); }
 
   // ─── HTML PHỤ ─────────────────────────────────────────────────
   function capEffBadgeHtml(eff, tip) {
@@ -395,58 +506,71 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     return `<span class="cap-eff ${cls}" title="${escapeHTML(tip || '')}">${fmtNum1(eff)}%</span>`;
   }
   function capDeltaHtml(cur, prev) {
-    if (cur == null || prev == null) return '<span class="cap-delta flat" title="Tuần trước chưa tính được hiệu suất để so sánh">—</span>';
+    if (cur == null || prev == null) return '<span class="cap-delta flat" title="Kỳ trước chưa tính được hiệu suất để so sánh">—</span>';
     const d = cur - prev;
-    if (Math.abs(d) < 0.05) return '<span class="cap-delta flat" title="Ngang bằng tuần trước">▬ 0</span>';
+    if (Math.abs(d) < 0.05) return '<span class="cap-delta flat" title="Ngang bằng kỳ trước">▬ 0</span>';
     return d > 0
-      ? `<span class="cap-delta up" title="Cao hơn tuần trước ${fmtNum1(d)} điểm %">▲ ${fmtNum1(d)}</span>`
-      : `<span class="cap-delta down" title="Thấp hơn tuần trước ${fmtNum1(-d)} điểm %">▼ ${fmtNum1(-d)}</span>`;
+      ? `<span class="cap-delta up" title="Cao hơn kỳ trước ${fmtNum1(d)} điểm %">▲ ${fmtNum1(d)}</span>`
+      : `<span class="cap-delta down" title="Thấp hơn kỳ trước ${fmtNum1(-d)} điểm %">▼ ${fmtNum1(-d)}</span>`;
   }
+  // Ô GIỜ HC / TC (tách riêng 2 cột — lãnh đạo đọc thẳng số giờ hành chính/tăng ca)
+  function capHcTd(hc) {
+    return `<td class="text-right cap-hc" title="Giờ HÀNH CHÍNH (HC) của kỳ — mỗi ngày mỗi công đoạn chỉ đếm 1 lần">${hc > 0 ? fmtNum1(hc) : '—'}</td>`;
+  }
+  function capTcTd(tc) {
+    return `<td class="text-right cap-tc" title="Giờ TĂNG CA (TC) của kỳ — ngày nghỉ/lễ đi làm tính toàn giờ tăng ca">${tc > 0 ? fmtNum1(tc) : '—'}</td>`;
+  }
+  // TẦNG 1 — dòng KỲ (TUẦN / THÁNG) cấp Xưởng
   function capWeekRowHtml(w) {
-    const sel = w.weekKey === capSelectedWeek() ? ' cap-row-active' : '';
+    const mode = capModeOf();
+    const sel = w.weekKey === capSelectedPeriod() ? ' cap-row-active' : '';
     const open = w.weekKey === (state.capUi.weekOpen || '') ? ' cap-row-open' : '';
     const effTip = w.eff == null
       ? 'Chưa có công đoạn nào tính được hiệu suất (thiếu giờ làm hoặc chưa khai định mức)'
       : 'Hiệu suất xưởng = bình quân gia quyền theo GIỜ của các công đoạn có hiệu suất';
-    const botTip = w.bottleneck ? `Công đoạn thấp nhất tuần này — nên kiểm tra trước: ${w.bottleneck.st.label}` : '';
+    const botTip = w.bottleneck ? `Công đoạn thấp nhất kỳ này — nên kiểm tra trước: ${w.bottleneck.st.label}` : '';
     return `
-      <tr class="cap-row${sel}${open}" data-cap-week-row="${w.weekKey}" title="Bấm để xem TỪNG CÔNG ĐOẠN của tuần này">
-        <td><strong>Tuần ${capWeekNumOf(w.weekKey)}</strong><span class="cap-week-sub">${capWeekYearOf(w.weekKey)} · ${capWeekRangeLabel(w.weekKey)}</span></td>
+      <tr class="cap-row${sel}${open}" data-cap-week-row="${w.weekKey}" title="Bấm để xem TỪNG CÔNG ĐOẠN của kỳ này">
+        <td><strong>${escapeHTML(capPeriodHeadLabel(w.weekKey, mode))}</strong><span class="cap-week-sub">${escapeHTML(capPeriodSubLabel(w.weekKey, mode))}</span></td>
         <td class="text-right">${w.dataCount}/${w.stagesCount}</td>
-        <td class="text-right">${w.hours > 0 ? fmtNum1(w.hours) : '—'}</td>
+        ${capHcTd(w.hc)}
+        ${capTcTd(w.tc)}
+        <td class="text-right cap-hours" title="Tổng giờ làm (HC + TC) của các công đoạn trong kỳ — mỗi ngày chỉ đếm 1 lần">${w.hours > 0 ? fmtNum1(w.hours) : '—'}</td>
         <td class="text-right">${capEffBadgeHtml(w.eff, effTip)}</td>
         <td class="text-right">${w.effCount ? `${w.passCount}/${w.effCount}` : '—'}</td>
         <td title="${escapeHTML(botTip)}">${w.bottleneck ? `${escapeHTML(w.bottleneck.st.label)} (${fmtNum1(w.bottleneck.row.eff)}%)` : '—'}</td>
         <td class="text-right cap-arrow"><i data-lucide="${open ? 'chevron-up' : 'chevron-down'}"></i></td>
       </tr>`;
   }
-  // TẦNG 2 — bảng CÔNG ĐOẠN của tuần đang xổ (lồng vào dòng tuần)
-  // Ở chế độ BẢNG DỮ LIỆU: tầng 2 mở công đoạn nào thì hiện luôn biểu đồ 8 tuần
+  // TẦNG 2 — bảng CÔNG ĐOẠN của kỳ đang xổ (lồng vào dòng kỳ)
+  // Ở chế độ BẢNG DỮ LIỆU: tầng 2 mở công đoạn nào thì hiện luôn biểu đồ 8 kỳ
   // của công đoạn đó (dùng chung canvas #cap-stage-chart với chế độ Biểu đồ).
   function capStageChartTrHtml(w) {
     if ((state.capUi.view || 'visual') !== 'table') return '';
     if (!state.capUi.openStage || !CAP_STAGES.some(s => s.id === state.capUi.openStage)) return '';
-    return `<tr class="cap-day-tr cap-chart-tr"><td colspan="9">${capChartPanelHtml(w)}</td></tr>`;
+    return `<tr class="cap-day-tr cap-chart-tr"><td colspan="11">${capChartPanelHtml(w)}</td></tr>`;
   }
   function capStageBlockHtml(w) {
     if ((state.capUi.weekOpen || '') !== w.weekKey) return '';
     const rowsHtml = w.parts.map(p => capStageRowHtml(p, w.weekKey)).join('');
     const empty = w.dataCount === 0
-      ? `<tr class="cap-day-empty"><td colspan="9">Không có lượt nào trong tuần này — bấm › (Tuần sau) hoặc chọn tuần khác ở bảng trên.</td></tr>`
+      ? `<tr class="cap-day-empty"><td colspan="11">Không có lượt nào trong ${capModeOf() === 'month' ? 'tháng' : 'tuần'} này — bấm › (kỳ kế tiếp) hoặc chọn kỳ khác ở bảng trên.</td></tr>`
       : '';
     return `
-      <tr class="cap-stage-tr"><td colspan="7">
+      <tr class="cap-stage-tr"><td colspan="9">
         <div class="cap-sub-wrap table-responsive">
           <table class="data-table cap-sub-table">
             <thead><tr>
               <th>Công đoạn</th>
               <th class="text-right">Lượt</th>
               <th class="text-right">Sản lượng</th>
-              <th class="text-right">Giờ (HC/TC)</th>
+              <th class="text-right">Giờ HC</th>
+              <th class="text-right">Giờ TC</th>
+              <th class="text-right">Tổng giờ</th>
               <th class="text-right">Công suất thực</th>
-              <th class="text-right">Định mức tuần</th>
+              <th class="text-right">${capModeOf() === 'month' ? 'Định mức tháng' : 'Định mức tuần'}</th>
               <th class="text-right">Hiệu suất</th>
-              <th class="text-right">So tuần trước</th>
+              <th class="text-right">${capModeOf() === 'month' ? 'So tháng trước' : 'So tuần trước'}</th>
               <th class="text-right">Thao tác</th>
             </tr></thead>
             <tbody>${rowsHtml}${empty}${capStageChartTrHtml(w)}</tbody>
@@ -469,7 +593,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       : (r.rateText
         ? `<span title="Định mức 1 lần than hóa theo tháng (phút/lần · m³/lần)">${escapeHTML(r.rateText)}</span>`
         : '—');
-    const hoursTxt = r.hours > 0 ? `${fmtNum1(r.hours)} (${fmtNum1(r.hc)}/${fmtNum1(r.tc)})` : '—';
+    const hoursTxt = r.hours > 0 ? fmtNum1(r.hours) : '—';
     const effTip = st.kind === 'cap'
       ? (r.eff == null
         ? 'Chưa đủ dữ liệu (thiếu giờ làm hoặc chưa khai Định mức công suất của tháng)'
@@ -477,13 +601,15 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       : (r.eff == null
         ? 'Chưa đủ dữ liệu (chưa có lần than hóa hoặc giờ thực tế bằng 0)'
         : 'Hiệu suất = Σ Giờ cần ÷ (Σ Giờ thực − Σ Giờ sự cố) — đúng công thức thẻ Than Hóa + Sấy');
-    const prev = capStageWeekRow(st, capWeekShift(weekKey, -1));
+    const prev = capStagePeriodRow(st, capPeriodShift(weekKey, -1, capModeOf()), capModeOf());
     return `
-      <tr class="cap-row${open}" data-cap-stage-row="${st.id}" title="Bấm để xổ TỪNG NGÀY của công đoạn này trong tuần">
+      <tr class="cap-row${open}" data-cap-stage-row="${st.id}" title="Bấm để xổ TỪNG NGÀY của công đoạn này trong kỳ">
         <td><span class="cap-stage-name">${escapeHTML(st.label)}</span><span class="cap-unit-chip">${escapeHTML(st.unit)}</span></td>
         <td class="text-right">${r.turns || '—'}</td>
         <td class="text-right">${qtyTxt}</td>
-        <td class="text-right">${hoursTxt}</td>
+        ${capHcTd(r.hc)}
+        ${capTcTd(r.tc)}
+        <td class="text-right cap-hours" title="Tổng giờ làm (HC + TC) — mỗi ngày chỉ đếm 1 lần">${hoursTxt}</td>
         <td class="text-right">${capTxt}</td>
         <td class="text-right">${rateTxt}</td>
         <td class="text-right">${capEffBadgeHtml(r.eff, effTip)}</td>
@@ -497,12 +623,12 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     const days = weekRow.days || [];
     const body = days.length
       ? days.map(d => capDayRowHtml(st, d)).join('')
-      : `<tr class="cap-day-empty"><td colspan="7">Không có lượt nào trong tuần này.</td></tr>`;
+      : `<tr class="cap-day-empty"><td colspan="9">Không có lượt nào trong kỳ này.</td></tr>`;
     const head = st.kind === 'cap'
-      ? `<tr><th>Ngày</th><th class="text-right">Lượt</th><th class="text-right">Sản lượng</th><th class="text-right">Giờ (HC/TC)</th><th class="text-right">Công suất</th><th class="text-right">Định mức tháng</th><th class="text-right">Hiệu suất</th></tr>`
-      : `<tr><th>Ngày</th><th class="text-right">Lần TH</th><th class="text-right">Thể tích</th><th class="text-right">Giờ cần</th><th class="text-right">Giờ thực (HC/TC)</th><th class="text-right">Sự cố</th><th class="text-right">Hiệu suất</th></tr>`;
+      ? `<tr><th>Ngày</th><th class="text-right">Lượt</th><th class="text-right">Sản lượng</th><th class="text-right">Giờ HC</th><th class="text-right">Giờ TC</th><th class="text-right">Tổng giờ</th><th class="text-right">Công suất</th><th class="text-right">Định mức tháng</th><th class="text-right">Hiệu suất</th></tr>`
+      : `<tr><th>Ngày</th><th class="text-right">Lần TH</th><th class="text-right">Thể tích</th><th class="text-right">Giờ cần</th><th class="text-right">Giờ HC</th><th class="text-right">Giờ TC</th><th class="text-right">Giờ thực</th><th class="text-right">Sự cố</th><th class="text-right">Hiệu suất</th></tr>`;
     return `
-      <tr class="cap-day-tr"><td colspan="9">
+      <tr class="cap-day-tr"><td colspan="11">
         <div class="cap-sub-wrap table-responsive">
           <table class="data-table cap-sub-table cap-day-table">
             <thead>${head}</thead>
@@ -524,7 +650,9 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
           <td><i data-lucide="calendar-days"></i> ${dateTxt}</td>
           <td class="text-right">${d.turns}</td>
           <td class="text-right">${d.qty == null ? '—' : `${fmtNum2(d.qty)} ${st.unitQty}`}</td>
-          <td class="text-right">${d.hours > 0 ? `${fmtNum1(d.hours)} (${fmtNum1(d.hc)}/${fmtNum1(d.tc)})` : '—'}</td>
+          ${capHcTd(d.hc)}
+          ${capTcTd(d.tc)}
+          <td class="text-right cap-hours">${d.hours > 0 ? fmtNum1(d.hours) : '—'}</td>
           <td class="text-right">${cap != null ? `${fmtNum2(cap)} ${st.unit}` : '—'}</td>
           <td class="text-right">${d.rate != null ? `${fmtNum2(d.rate)} ${st.unit}` : '—'}</td>
           <td class="text-right">${capEffBadgeHtml(eff, effTip)}</td>
@@ -540,23 +668,28 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
         <td class="text-right">${d.turns}</td>
         <td class="text-right">${fmtM3Cap(d.qty)}</td>
         <td class="text-right">${fmtNum2(d.need)}</td>
-        <td class="text-right">${d.hours > 0 ? `${fmtNum2(d.hours)} (${fmtNum1(d.hc)}/${fmtNum1(d.tc)})` : '—'}</td>
+        ${capHcTd(d.hc)}
+        ${capTcTd(d.tc)}
+        <td class="text-right cap-hours" title="Tổng giờ thực (HC + TC)">${d.hours > 0 ? fmtNum2(d.hours) : '—'}</td>
         <td class="text-right">${d.incident > 0 ? fmtNum2(d.incident) : '—'}</td>
         <td class="text-right">${capEffBadgeHtml(eff, effTip)}</td>
       </tr>`;
   }
-  // Dải chip TỔNG QUAN của tuần đang chọn (trên bảng tầng 1)
+  // Dải chip TỔNG QUAN của kỳ đang chọn (trên bảng tầng 1)
   function capStripHtml(w) {
+    const mode = capModeOf();
     const effTip = w.eff == null
       ? 'Chưa có công đoạn nào tính được hiệu suất (thiếu giờ làm hoặc chưa khai định mức)'
       : 'Bình quân gia quyền theo giờ của các công đoạn có hiệu suất';
     return `
-      <span class="cap-chip cap-chip-info" title="Tuần đang xem"><i data-lucide="calendar-range"></i> ${escapeHTML(friendlyMaterialWeek(w.weekKey))} · ${capWeekRangeLabel(w.weekKey)}</span>
-      <span class="cap-chip" title="Số công đoạn đã ghi lượt trong tuần / tổng số công đoạn của xưởng"><i data-lucide="layers"></i> <strong>${w.dataCount}/${w.stagesCount}</strong> CĐ có dữ liệu</span>
-      <span class="cap-chip" title="Tổng giờ làm (HC+TC) của các công đoạn trong tuần — mỗi ngày chỉ đếm 1 lần"><i data-lucide="clock"></i> <strong>${w.hours > 0 ? fmtNum1(w.hours) : '—'}</strong> giờ</span>
+      <span class="cap-chip cap-chip-info" title="Kỳ đang xem"><i data-lucide="calendar-range"></i> ${escapeHTML(capPeriodLabel(w.weekKey, mode))}</span>
+      <span class="cap-chip" title="Số công đoạn đã ghi lượt trong kỳ / tổng số công đoạn của xưởng"><i data-lucide="layers"></i> <strong>${w.dataCount}/${w.stagesCount}</strong> CĐ có dữ liệu</span>
+      <span class="cap-chip" title="Tổng giờ HÀNH CHÍNH (HC) của các công đoạn trong kỳ"><i data-lucide="clock"></i> Giờ HC: <strong>${w.hc > 0 ? fmtNum1(w.hc) : '—'}</strong></span>
+      <span class="cap-chip" title="Tổng giờ TĂNG CA (TC) của các công đoạn trong kỳ — ngày nghỉ/lễ đi làm tính toàn giờ tăng ca"><i data-lucide="clock-4"></i> Giờ TC: <strong>${w.tc > 0 ? fmtNum1(w.tc) : '—'}</strong></span>
+      <span class="cap-chip" title="Tổng giờ làm (HC + TC) của các công đoạn trong kỳ — mỗi ngày chỉ đếm 1 lần"><i data-lucide="alarm-clock"></i> Tổng: <strong>${w.hours > 0 ? fmtNum1(w.hours) : '—'}</strong> giờ</span>
       <span class="cap-chip" title="${escapeHTML(effTip)}">Hiệu suất xưởng: ${capEffBadgeHtml(w.eff, effTip)}</span>
       <span class="cap-chip" title="Số công đoạn đạt ≥100% định mức / số công đoạn tính được hiệu suất"><i data-lucide="circle-check"></i> Đạt: <strong>${w.effCount ? `${w.passCount}/${w.effCount}` : '—'}</strong></span>
-      ${w.bottleneck ? `<span class="cap-chip cap-chip-warn" title="Công đoạn có hiệu suất thấp nhất tuần này — nên kiểm tra trước"><i data-lucide="alert-triangle"></i> Nút thắt: <strong>${escapeHTML(w.bottleneck.st.label)}</strong> ${fmtNum1(w.bottleneck.row.eff)}%</span>` : ''}`;
+      ${w.bottleneck ? `<span class="cap-chip cap-chip-warn" title="Công đoạn có hiệu suất thấp nhất kỳ này — nên kiểm tra trước"><i data-lucide="alert-triangle"></i> Nút thắt: <strong>${escapeHTML(w.bottleneck.st.label)}</strong> ${fmtNum1(w.bottleneck.row.eff)}%</span>` : ''}`;
   }
 
   // ─── DẢI TRỰC QUAN (chế độ "Biểu đồ") ─────────────────────────
@@ -584,8 +717,9 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     if (eff == null) return '#94a3b8';
     return eff >= 100 ? '#16a34a' : eff >= 70 ? '#d97706' : '#ea580c';
   }
-  // ① ĐỒNG HỒ HIỆU SUẤT XƯỞNG (tuần đang chọn)
+  // ① ĐỒNG HỒ HIỆU SUẤT XƯỞNG (kỳ đang chọn)
   function capGaugeHtml(w) {
+    const mode = capModeOf();
     const eff = w.eff;
     const v = eff == null ? 0 : Math.max(0, Math.min(150, eff));
     const color = capEffColorOf(eff);
@@ -596,7 +730,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       ? `<path d="${capGaugeArc(240 * v / 150, CAP_GAUGE_R)}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"></path>`
       : '';
     return `
-      <div class="cap-gauge" title="${escapeHTML('Hiệu suất xưởng ' + friendlyMaterialWeek(w.weekKey) + ' — bình quân gia quyền theo giờ của các công đoạn có hiệu suất')}">
+      <div class="cap-gauge" title="${escapeHTML('Hiệu suất xưởng ' + capPeriodHeadLabel(w.weekKey, mode) + ' — bình quân gia quyền theo giờ của các công đoạn có hiệu suất')}">
         <svg class="cap-gauge-svg" viewBox="0 0 132 132" role="img" aria-label="Đồng hồ hiệu suất xưởng">
           <path d="${capGaugeArc(240, CAP_GAUGE_R)}" fill="none" stroke="rgba(100,116,139,0.18)" stroke-width="10" stroke-linecap="round"></path>
           ${valPath}
@@ -608,16 +742,18 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
         <div class="cap-gauge-chips">
           <span class="cap-chip" title="Số công đoạn đạt ≥100% định mức / số công đoạn tính được hiệu suất"><i data-lucide="circle-check"></i> Đạt: <strong>${w.effCount ? `${w.passCount}/${w.effCount}` : '—'}</strong></span>
           ${w.bottleneck
-            ? `<span class="cap-chip cap-chip-warn" title="Công đoạn có hiệu suất thấp nhất tuần này — nên kiểm tra trước"><i data-lucide="alert-triangle"></i> Nút thắt: <strong>${escapeHTML(w.bottleneck.st.label)}</strong> ${fmtNum1(w.bottleneck.row.eff)}%</span>`
+            ? `<span class="cap-chip cap-chip-warn" title="Công đoạn có hiệu suất thấp nhất kỳ này — nên kiểm tra trước"><i data-lucide="alert-triangle"></i> Nút thắt: <strong>${escapeHTML(w.bottleneck.st.label)}</strong> ${fmtNum1(w.bottleneck.row.eff)}%</span>`
             : `<span class="cap-chip cap-chip-info" title="Chưa có công đoạn nào tính được hiệu suất (thiếu giờ làm hoặc chưa khai định mức)"><i data-lucide="info"></i> Chưa tính được hiệu suất</span>`}
         </div>
       </div>`;
   }
-  // ② THANG XẾP HẠNG CÔNG ĐOẠN (tuần đang chọn) — bấm 1 hàng để xem biểu đồ 8 tuần
+  // ② THANG XẾP HẠNG CÔNG ĐOẠN (kỳ đang chọn) — bấm 1 hàng để xem biểu đồ 8 kỳ
   function capRankTip(st, r) {
-    if (r.turns === 0) return `${st.label}: chưa có lượt nào trong tuần — bấm để xem biểu đồ 8 tuần`;
-    if (r.eff == null) return `${st.label}: có ${r.turns} lượt nhưng chưa khai định mức tháng — bấm để xem biểu đồ 8 tuần`;
-    return `${st.label}: Hiệu suất ${fmtNum1(r.eff)}% = ${fmtNum2(r.cap)} ${st.unit} ÷ ĐM tuần ${fmtNum2(r.rate)} ${st.unit} — bấm để xem biểu đồ 8 tuần`;
+    const chartTxt = capModeOf() === 'month' ? 'biểu đồ 8 tháng' : 'biểu đồ 8 tuần';
+    const dmTxt = capModeOf() === 'month' ? 'ĐM tháng' : 'ĐM tuần';
+    if (r.turns === 0) return `${st.label}: chưa có lượt nào trong kỳ — bấm để xem ${chartTxt}`;
+    if (r.eff == null) return `${st.label}: có ${r.turns} lượt nhưng chưa khai định mức tháng — bấm để xem ${chartTxt}`;
+    return `${st.label}: Hiệu suất ${fmtNum1(r.eff)}% = ${fmtNum2(r.cap)} ${st.unit} ÷ ${dmTxt} ${fmtNum2(r.rate)} ${st.unit} — bấm để xem ${chartTxt}`;
   }
   function capRankHtml(w) {
     const withData = w.parts.filter(p => p.row.turns > 0)
@@ -638,31 +774,34 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     }).join('');
     return `
       <div class="cap-rank">
-        <div class="cap-rank-title"><i data-lucide="list-ordered"></i> Xếp hạng công đoạn — ${escapeHTML(friendlyMaterialWeek(w.weekKey))}</div>
+        <div class="cap-rank-title"><i data-lucide="list-ordered"></i> Xếp hạng công đoạn — ${escapeHTML(capPeriodHeadLabel(w.weekKey, capModeOf()))}</div>
         <div class="cap-rank-list">${rows}</div>
       </div>`;
   }
-  // ③ BẢN ĐỒ NHIỆT: 8 TUẦN × CÔNG ĐOẠN — bấm ô = chọn tuần + công đoạn để vẽ biểu đồ
+  // ③ BẢN ĐỒ NHIỆT: 8 KỲ × CÔNG ĐOẠN — bấm ô = chọn kỳ + công đoạn để vẽ biểu đồ
+  // (chế độ Tuần = 8 tuần ISO · chế độ Tháng = 8 tháng gần nhất)
   function capHeatTip(st, row, wk) {
-    const base = `${st.label} · ${friendlyMaterialWeek(wk)} (${capWeekRangeLabel(wk)})`;
+    const mode = capModeOf();
+    const base = `${st.label} · ${capPeriodHeadLabel(wk, mode)} (${capPeriodSubLabel(wk, mode).replace(/^\d{4} · /, '')})`;
     if (row.eff == null) {
       return row.turns > 0
         ? `${base}: có ${row.turns} lượt nhưng chưa khai định mức tháng — bấm để chọn`
-        : `${base}: chưa có dữ liệu — bấm để chọn tuần này`;
+        : `${base}: chưa có dữ liệu — bấm để chọn kỳ này`;
     }
     return `${base}: Hiệu suất ${fmtNum1(row.eff)}% (${fmtNum2(row.cap)} ${st.unit} ÷ ĐM ${fmtNum2(row.rate)} ${st.unit})`;
   }
   function capHeatHtml(w) {
-    // 8 cột tuần: tuần ĐANG CHỌN là cột phải nhất (viền đậm)
+    const mode = capModeOf();
+    // 8 cột kỳ: kỳ ĐANG CHỌN là cột phải nhất (viền đậm)
     const weeks = [];
     let cur = w.weekKey;
-    for (let i = 0; i < 8; i++) { weeks.unshift(cur); cur = capWeekShift(cur, -1); }
+    for (let i = 0; i < 8; i++) { weeks.unshift(cur); cur = capPeriodShift(cur, -1, mode); }
     const stages = capStagesOf(state.capUi.ws || 'x2');
     const head = `<div class="cap-heat-corner">Công đoạn</div>` + weeks.map(wk =>
-      `<button type="button" class="cap-heat-col${wk === w.weekKey ? ' cap-heat-col-active' : ''}" data-cap-heat-week="${wk}" title="Chỉ đổi tuần đang xem sang ${escapeHTML(friendlyMaterialWeek(wk))}">T${capWeekNumOf(wk)}</button>`).join('');
+      `<button type="button" class="cap-heat-col${wk === w.weekKey ? ' cap-heat-col-active' : ''}" data-cap-heat-week="${wk}" title="Chỉ đổi kỳ đang xem sang ${escapeHTML(capPeriodHeadLabel(wk, mode))}">${escapeHTML(capPeriodShortLabel(wk, mode))}</button>`).join('');
     const rows = stages.map(st => {
       const cells = weeks.map(wk => {
-        const row = capStageWeekRow(st, wk);
+        const row = capStagePeriodRow(st, wk, mode);
         const eff = row.eff;
         const cls = eff == null ? 'cap-heat-none' : eff >= 100 ? 'cap-heat-good' : eff >= 70 ? 'cap-heat-mid' : 'cap-heat-low';
         const active = state.capUi.chartStage === st.id && wk === w.weekKey;
@@ -672,7 +811,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     }).join('');
     return `
       <div class="cap-heat">
-        <div class="cap-heat-title"><i data-lucide="grid-3x3"></i> Bản đồ nhiệt hiệu suất — 8 tuần gần nhất (bấm ô để xem biểu đồ công đoạn)</div>
+        <div class="cap-heat-title"><i data-lucide="grid-3x3"></i> Bản đồ nhiệt hiệu suất — 8 ${mode === 'month' ? 'tháng' : 'tuần'} gần nhất (bấm ô để xem biểu đồ công đoạn)</div>
         <div class="cap-heat-grid" id="cap-heat-grid">${head}${rows}</div>
         <div class="cap-heat-legend">
           <span class="cap-legend-item"><i style="background:#94a3b8;"></i> chưa có ĐM / chưa có dữ liệu</span>
@@ -682,7 +821,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
         </div>
       </div>`;
   }
-  // ④ BIỂU ĐỒ Chart.js CỦA CÔNG ĐOẠN ĐANG CHỌN (8 tuần)
+  // ④ BIỂU ĐỒ Chart.js CỦA CÔNG ĐOẠN ĐANG CHỌN (8 kỳ: tuần/tháng theo chế độ)
   // Plugin nội bộ: vẽ VẠCH ĐỊNH MỨC 100% nét đứt trên trục Hiệu suất (y1)
   const capTargetLinePlugin = {
     id: 'capTargetLine',
@@ -708,32 +847,37 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       ctx.restore();
     }
   };
-  // Chuỗi 8 tuần của 1 công đoạn (neo = tuần đang chọn)
-  function capStageWeekSeries(st, anchorWeekKey, weeks = 8) {
+  // Chuỗi 8 KỲ của 1 công đoạn (neo = kỳ đang chọn; mode 'week'|'month')
+  function capStagePeriodSeries(st, anchorKey, mode, n = 8) {
     const out = [];
-    let cur = anchorWeekKey;
-    for (let i = 0; i < weeks; i++) { out.unshift({ weekKey: cur, row: capStageWeekRow(st, cur) }); cur = capWeekShift(cur, -1); }
+    let cur = anchorKey;
+    for (let i = 0; i < n; i++) { out.unshift({ weekKey: cur, row: capStagePeriodRow(st, cur, mode) }); cur = capPeriodShift(cur, -1, mode); }
     return out;
+  }
+  // Bản TUẦN ISO (kiểm thử cũ vẫn dùng)
+  function capStageWeekSeries(st, anchorWeekKey, weeks = 8) {
+    return capStagePeriodSeries(st, anchorWeekKey, 'week', weeks);
   }
   // Khung panel biểu đồ (chips tiêu đề + canvas) — dùng cho CẢ 2 chế độ:
   // chế độ "Biểu đồ" đặt ở dải trực quan; chế độ "Bảng" đặt trong tầng 2.
   function capChartPanelHtml(w) {
+    const mode = capModeOf();
     const st = CAP_STAGES.find(s => s.id === (state.capUi.chartStage || ''));
     if (!st) return `<div class="cap-stage-chart-panel" id="cap-stage-chart-panel" hidden></div>`;
-    const row = capStageWeekRow(st, w.weekKey);
+    const row = capStagePeriodRow(st, w.weekKey, mode);
     const dmTxt = st.kind === 'cap'
       ? (row.rate != null ? `${fmtNum2(row.rate)} ${st.unit}` : 'chưa khai ĐM')
       : (row.rateText || '—');
     const tip = st.kind === 'cap'
-      ? `Cột = sản lượng tuần (${st.unitQty}) · đường = hiệu suất % (công suất ÷ định mức tuần) · vạch đứt = mốc 100%`
+      ? `Cột = sản lượng ${mode === 'month' ? 'tháng' : 'tuần'} (${st.unitQty}) · đường = hiệu suất % (công suất ÷ định mức ${mode === 'month' ? 'tháng' : 'tuần'}) · vạch đứt = mốc 100%`
       : `Cột = thể tích đưa vào sấy (m³) · đường = hiệu suất % (giờ cần ÷ (giờ thực − sự cố)) · vạch đứt = mốc 100%`;
     return `
       <div class="cap-stage-chart-panel" id="cap-stage-chart-panel">
         <div class="cap-chart-head" id="cap-chart-head">
-          <span class="cap-chart-title" title="${escapeHTML(tip)}"><i data-lucide="line-chart"></i> <strong>${escapeHTML(st.label)}</strong> — 8 tuần gần nhất</span>
+          <span class="cap-chart-title" title="${escapeHTML(tip)}"><i data-lucide="line-chart"></i> <strong>${escapeHTML(st.label)}</strong> — 8 ${mode === 'month' ? 'tháng' : 'tuần'} gần nhất</span>
           <span class="cap-chart-chips">
-            <span class="cap-chip cap-chip-info">${escapeHTML(friendlyMaterialWeek(w.weekKey))} · ${capWeekRangeLabel(w.weekKey)}</span>
-            <span class="cap-chip" title="Định mức của tuần (bình quân theo sản lượng các tháng)">ĐM tuần: <strong>${escapeHTML(dmTxt)}</strong></span>
+            <span class="cap-chip cap-chip-info">${escapeHTML(capPeriodLabel(w.weekKey, mode))}</span>
+            <span class="cap-chip" title="Định mức của ${mode === 'month' ? 'THÁNG đang xem' : 'tuần (bình quân theo sản lượng các tháng)'}">${mode === 'month' ? 'ĐM tháng' : 'ĐM tuần'}: <strong>${escapeHTML(dmTxt)}</strong></span>
             <button type="button" class="btn btn-outline btn-icon btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)"><i data-lucide="maximize"></i></button>
           </span>
         </div>
@@ -812,8 +956,9 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     }
     const canvas = document.getElementById('cap-stage-chart');
     if (!canvas) return;
-    const weeks8 = capStageWeekSeries(st, capSelectedWeek());
-    const labels = weeks8.map(x => `T${capWeekNumOf(x.weekKey)}`);
+    const mode = capModeOf();
+    const weeks8 = capStagePeriodSeries(st, capSelectedPeriod(), mode);
+    const labels = weeks8.map(x => capPeriodShortLabel(x.weekKey, mode));
     const qtyData = weeks8.map(x => (x.row.qty == null ? null : Math.round(x.row.qty * 1000) / 1000));
     const effData = weeks8.map(x => (x.row.eff == null ? null : Math.round(x.row.eff * 100) / 100));
     const fxLow = typeof document !== 'undefined' && document.body && document.body.dataset && document.body.dataset.fx === 'low';
@@ -860,7 +1005,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
               title: (items) => {
                 const i = items && items[0] ? items[0].dataIndex : 0;
                 const wk = weeks8[i] ? weeks8[i].weekKey : '';
-                return `${friendlyMaterialWeek(wk)} · ${capWeekRangeLabel(wk)}`;
+                return capPeriodLabel(wk, mode);
               },
               label: (ctx) => {
                 const r = weeks8[ctx.dataIndex] ? weeks8[ctx.dataIndex].row : null;
@@ -903,9 +1048,20 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     if (labelEl) labelEl.textContent = ws === 'x1' ? 'Xưởng 1' : 'Xưởng 2';
     const modeBtn = document.getElementById('capacity-mode-toggle');
     if (modeBtn) modeBtn.setAttribute('aria-pressed', ws === 'x1' ? 'true' : 'false');
-    const week = capSelectedWeek();
+    const mode = capModeOf();
+    const week = capSelectedPeriod();
     const weekLabel = document.getElementById('capacity-week-label');
-    if (weekLabel) weekLabel.textContent = `${friendlyMaterialWeek(week)} · ${capWeekRangeLabel(week)}`;
+    if (weekLabel) weekLabel.textContent = capPeriodLabel(week, mode);
+    // Đồng bộ nút TUẦN ⇄ THÁNG + ô chọn tháng (chỉ hiện ở chế độ Tháng)
+    const btnModeWeek = document.getElementById('cap-mode-week');
+    const btnModeMonth = document.getElementById('cap-mode-month');
+    if (btnModeWeek) btnModeWeek.classList.toggle('active', mode === 'week');
+    if (btnModeMonth) btnModeMonth.classList.toggle('active', mode === 'month');
+    const monthInput = document.getElementById('cap-month');
+    if (monthInput) {
+      monthInput.hidden = mode !== 'month';
+      if (mode === 'month' && /^\d{4}-\d{2}$/.test(week)) monthInput.value = week;
+    }
     const body = document.getElementById('capacity-body');
     const collapsed = !!state.capUi.collapsed;
     if (body) body.hidden = collapsed;
@@ -930,7 +1086,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       if (strip) {
         strip.innerHTML = `<span class="cap-chip cap-chip-info"><i data-lucide="hard-hat"></i> Xưởng 1 chưa có công đoạn nào có dữ liệu — khi Xưởng 1 có thẻ công đoạn (tab Công Đoạn), bảng tự tổng hợp.</span>`;
       }
-      tbody.innerHTML = `<tr class="cap-empty-row"><td colspan="7">
+      tbody.innerHTML = `<tr class="cap-empty-row"><td colspan="9">
         <div class="cap-empty"><i data-lucide="hard-hat"></i>
           <div><strong>Xưởng 1 — Sắp có.</strong> Chưa có công đoạn nào của Xưởng 1 được ghi số liệu.<br>
           Khi thẻ công đoạn Xưởng 1 ra đời (tab Công Đoạn), chỉ cần thêm 1 dòng vào sổ đăng ký công đoạn
@@ -940,8 +1096,8 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       initLucide();
       return;
     }
-    const byWeek = capWeekAggregates(ws);
-    const sel = capWorkshopWeekRowFromMap(ws, week, byWeek);
+    const byWeek = capPeriodAggregates(ws, mode);
+    const sel = capWorkshopPeriodRowFromMap(ws, week, byWeek, mode);
     if (strip) strip.innerHTML = capStripHtml(sel);
     if (view === 'visual') {
       // Mặc định chọn NÚT THẮT của tuần (không có thì công đoạn đầu có dữ liệu)
@@ -961,12 +1117,12 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       if (visualRow) { visualRow.hidden = true; visualRow.innerHTML = ''; }
       if (tableWrap) tableWrap.hidden = false;
     }
-    // Danh sách tuần tầng 1: các tuần CÓ dữ liệu + tuần đang chọn + tuần hiện tại
-    const keys = new Set(capWeekRowsFor(ws));
+    // Danh sách kỳ tầng 1: các kỳ CÓ dữ liệu + kỳ đang chọn + kỳ hiện tại
+    const keys = new Set(capPeriodsFor(ws, mode));
     keys.add(week);
-    keys.add(capCurrentWeekKey());
+    keys.add(capCurrentPeriodKey(mode));
     const weeks = [...keys].sort().reverse().slice(0, 26)
-      .map(k => capWorkshopWeekRowFromMap(ws, k, byWeek));
+      .map(k => capWorkshopPeriodRowFromMap(ws, k, byWeek, mode));
     tbody.innerHTML = weeks.map(w => capWeekRowHtml(w) + capStageBlockHtml(w)).join('');
     // Vẽ biểu đồ công đoạn SAU CÙNG (canvas phải có sẵn trong DOM trước)
     renderCapacityStageChart();
@@ -987,20 +1143,46 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
   }
   function setCapacityWeek(weekKey) {
     loadCapacityUi();
-    if (!/^\d{4}-W\d{1,2}$/.test(String(weekKey || ''))) return;
+    // Khóa kỳ phải khớp chế độ đang xem (tuần 'YYYY-Wnn' / tháng 'YYYY-MM')
+    if (!capPeriodKeyValid(weekKey, capModeOf())) return;
     state.capUi.week = weekKey;
+    applyCapacityUi();
+  }
+  // Đổi CHẾ ĐỘ kỳ xem: TUẦN ⇄ THÁNG — chọn lại kỳ mới nhất có dữ liệu,
+  // đóng tầng xổ + biểu đồ (như khi đổi xưởng) để tránh khóa lệch dạng cũ
+  function setCapacityMode(m) {
+    loadCapacityUi();
+    const next = m === 'month' ? 'month' : 'week';
+    if (state.capUi.mode === next) { applyCapacityUi(); return; }
+    state.capUi.mode = next;
+    state.capUi.week = '';       // đổi kỳ xem → tự chọn kỳ mới nhất có dữ liệu
+    state.capUi.weekOpen = '';
+    state.capUi.openStage = '';
+    state.capUi.chartStage = ''; // đổi chế độ → đóng biểu đồ (chọn lại khi xem)
+    state.capUi.chartClosed = false;
+    applyCapacityUi();
+  }
+  // Ô chọn THÁNG (type="month" trả 'YYYY-MM') — chỉ có hiệu lực ở chế độ Tháng
+  function setCapacityMonth(monthKey) {
+    loadCapacityUi();
+    if (capModeOf() !== 'month') return;
+    if (!capMonthKeyValid(monthKey)) return;
+    state.capUi.week = monthKey;
+    state.capUi.weekOpen = monthKey;
+    state.capUi.openStage = '';
     applyCapacityUi();
   }
   function shiftCapacityWeek(dir) {
     loadCapacityUi();
-    state.capUi.week = capWeekShift(capSelectedWeek(), dir);
-    state.capUi.weekOpen = state.capUi.week;  // điều hướng tuần → tự xổ tầng công đoạn
+    const mode = capModeOf();
+    state.capUi.week = capPeriodShift(capSelectedPeriod(), dir, mode);
+    state.capUi.weekOpen = state.capUi.week;  // điều hướng kỳ → tự xổ tầng công đoạn
     state.capUi.openStage = '';
     applyCapacityUi();
   }
   function toggleCapacityWeekOpen(weekKey) {
     loadCapacityUi();
-    if (!weekKey) return;
+    if (!weekKey || !capPeriodKeyValid(weekKey, capModeOf())) return;
     if (state.capUi.week !== weekKey) {
       state.capUi.week = weekKey;
       state.capUi.weekOpen = weekKey;
@@ -1038,7 +1220,7 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
   function selectCapacityStage(stageId, weekKey) {
     loadCapacityUi();
     if (!CAP_STAGES.some(s => s.id === stageId)) return;
-    const wkOk = (weekKey && /^\d{4}-W\d{1,2}$/.test(weekKey)) ? weekKey : '';
+    const wkOk = (weekKey && capPeriodKeyValid(weekKey, capModeOf())) ? weekKey : '';
     const sameStage = state.capUi.chartStage === stageId;
     const sameWeek = !wkOk || state.capUi.week === wkOk;
     if (sameStage && sameWeek) {
@@ -1126,8 +1308,107 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     });
   }
 
+  // ─── IN BÁO CÁO (#btn-cap-print) — CHỈ THÔNG TIN CHUNG CỦA TẤT CẢ BỘ PHẬN ──
+  // Báo cáo in: mỗi xưởng 1 bảng công đoạn (giờ HC/TC tách riêng) + dòng TỔNG
+  // xưởng; KHÔNG in gauge/thang xếp hạng/BẢN ĐỒ NHIỆT/biểu đồ 8 kỳ. Vùng in
+  // #cap-print-area + body.cap-printing (@media print — khối cuối styles.css).
+  // KHÔNG cộng sản lượng TỔNG (kg/thanh/m³ khác đơn vị — quy tắc dự án).
+  function capPrintStageRowHtml(st, r) {
+    const qtyTxt = r.qty == null ? '—' : `${fmtNum2(r.qty)} ${st.unitQty}`;
+    const capTxt = r.cap != null ? `${fmtNum2(r.cap)} ${st.unit}` : '—';
+    const dmTxt = st.kind === 'cap'
+      ? (r.rate != null ? `${fmtNum2(r.rate)} ${st.unit}` : 'chưa khai ĐM')
+      : (r.rateText || '—');
+    const effTxt = r.eff == null ? '—' : `${fmtNum1(r.eff)}%`;
+    return `<tr>
+      <td class="txt">${escapeHTML(st.label)}</td>
+      <td class="num">${r.turns || '—'}</td>
+      <td class="num">${escapeHTML(qtyTxt)}</td>
+      <td class="num">${r.hc > 0 ? fmtNum1(r.hc) : '—'}</td>
+      <td class="num">${r.tc > 0 ? fmtNum1(r.tc) : '—'}</td>
+      <td class="num">${r.hours > 0 ? fmtNum1(r.hours) : '—'}</td>
+      <td class="num">${escapeHTML(capTxt)}</td>
+      <td class="num">${escapeHTML(dmTxt)}</td>
+      <td class="num">${escapeHTML(effTxt)}</td>
+    </tr>`;
+  }
+  function capPrintWorkshopBlock(wsId, key, mode) {
+    const meta = CAP_WORKSHOPS.find(x => x.id === wsId) || { id: wsId, label: String(wsId).toUpperCase() };
+    const stages = capStagesOf(wsId);
+    if (!stages.length) {
+      return `<div class="cap-print-ws">
+        <div class="cap-print-ws-title">${escapeHTML(meta.label)}</div>
+        <p class="cap-print-empty">Chưa có công đoạn nào của ${escapeHTML(meta.label)} có dữ liệu.</p>
+      </div>`;
+    }
+    const w = capWorkshopPeriodRowFromMap(wsId, key, capPeriodAggregates(wsId, mode), mode);
+    const rowsHtml = w.parts.map(p => capPrintStageRowHtml(p.st, p.row)).join('');
+    const effTxt = w.eff == null ? '—' : `${fmtNum1(w.eff)}%`;
+    const dmHead = mode === 'month' ? 'Định mức tháng' : 'Định mức tuần';
+    return `<div class="cap-print-ws">
+      <div class="cap-print-ws-title">${escapeHTML(meta.label)} — ${escapeHTML(capPeriodLabel(key, mode))}</div>
+      <table class="cap-print-table">
+        <thead><tr>
+          <th class="txt">Công đoạn</th><th>Lượt</th><th>Sản lượng</th>
+          <th>Giờ HC</th><th>Giờ TC</th><th>Tổng giờ</th>
+          <th>Công suất thực</th><th>${escapeHTML(dmHead)}</th><th>Hiệu suất</th>
+        </tr></thead>
+        <tbody>
+          ${rowsHtml}
+          <tr class="cap-print-total">
+            <td class="txt">TỔNG ${escapeHTML(meta.label)}</td>
+            <td class="num">${w.turns || 0}</td>
+            <td class="num" title="Các công đoạn khác đơn vị (kg/thanh/m³) — KHÔNG cộng gộp">—</td>
+            <td class="num">${fmtNum1(w.hc)}</td>
+            <td class="num">${fmtNum1(w.tc)}</td>
+            <td class="num">${fmtNum1(w.hours)}</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">${escapeHTML(effTxt)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="cap-print-sumline">Hiệu suất ${escapeHTML(meta.label)}: ${escapeHTML(effTxt)} (bình quân gia quyền theo giờ) · Đạt ≥100%: ${w.effCount ? `${w.passCount}/${w.effCount}` : '—'} · Nút thắt: ${w.bottleneck ? `${escapeHTML(w.bottleneck.st.label)} ${fmtNum1(w.bottleneck.row.eff)}%` : '—'}</div>
+    </div>`;
+  }
+  // HTML đầy đủ của báo cáo (dùng cho nút In + kiểm thử)
+  function buildCapacityReportHtml() {
+    loadCapacityUi();
+    const mode = capModeOf();
+    const key = capSelectedPeriod();
+    const now = new Date();
+    const printedAt = `${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+    const who = state.currentUser ? (state.currentUser.displayName || state.currentUser.username || state.currentUser.email || '') : '';
+    const blocks = CAP_WORKSHOPS.map(x => capPrintWorkshopBlock(x.id, key, mode)).join('');
+    return `<div class="cap-print-doc">
+      <div class="cap-print-head">
+        <div class="cap-print-title">NHÀ MÁY NGỌC SƠN THANH HÓA</div>
+        <div class="cap-print-subtitle">BÁO CÁO CÔNG SUẤT &amp; HIỆU SUẤT SẢN XUẤT — THEO ${mode === 'month' ? 'THÁNG' : 'TUẦN'}</div>
+        <div class="cap-print-meta">Kỳ báo cáo: <strong>${escapeHTML(capPeriodLabel(key, mode))}</strong> · In lúc ${escapeHTML(printedAt)}${who ? ` · Người in: ${escapeHTML(who)}` : ''}</div>
+      </div>
+      ${blocks}
+      <div class="cap-print-note">Ghi chú: Công suất thực = sản lượng ÷ giờ làm (giờ lấy tự động từ Bảng bố trí Nhân Sự — ngày nghỉ/lễ đi làm tính toàn giờ tăng ca) · Hiệu suất = công suất thực ÷ định mức kỳ (tuần vắt 2 tháng thì bình quân theo sản lượng) · Riêng Than Hóa + Sấy: hiệu suất = Σ giờ cần ÷ (Σ giờ thực − Σ giờ sự cố) · Báo cáo chỉ gồm thông tin chung của các bộ phận, không kèm bản đồ nhiệt và lịch sử 8 kỳ.</div>
+    </div>`;
+  }
+  // Nút "In báo cáo": đổ HTML vào vùng in → body.cap-printing → window.print()
+  function printCapacityReport() {
+    loadCapacityUi();
+    const area = document.getElementById('cap-print-area');
+    if (!area) return;
+    area.innerHTML = buildCapacityReportHtml();
+    document.body.classList.add('cap-printing');
+    const cleanup = () => {
+      document.body.classList.remove('cap-printing');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    setTimeout(cleanup, 1500); // dự phòng trình duyệt/PWA không bắn sự kiện afterprint
+  }
+
 export {
   CAP_STAGES,
+  CAP_WORKSHOPS,
   CAP_SPARKS,
   // Tuần ISO
   capWeekKeyOf,
@@ -1136,23 +1417,42 @@ export {
   capWeekNumOf,
   capWeekYearOf,
   capWeekRangeLabel,
+  // Kỳ chung (TUẦN | THÁNG)
+  capModeOf,
+  capPeriodKeyValid,
+  capMonthShift,
+  capMonthHeadLabel,
+  capMonthRangeLabel,
+  capPeriodLabel,
+  capPeriodHeadLabel,
+  capPeriodShortLabel,
+  capSelectedPeriod,
   // Sổ đăng ký + tính toán (dùng cho test và mở rộng Xưởng 1)
   capStagesOf,
   capStageDayRows,
   capStageWeekRow,
+  capStagePeriodRow,
   capWeekRowsFor,
+  capPeriodsFor,
   capWorkshopWeekRow,
+  capWorkshopPeriodRowFromMap as capWorkshopPeriodRow,
   // UI
   loadCapacityUi,
   renderCapacityCard,
   renderX2MiniSparklines,
   toggleCapacityWorkshop,
   setCapacityWeek,
+  setCapacityWeek as setCapacityPeriod,
+  setCapacityMode,
+  setCapacityMonth,
   shiftCapacityWeek,
   toggleCapacityWeekOpen,
   toggleCapacityStageDays,
   toggleCapacityCollapse,
   setCapacityView,
   selectCapacityStage,
+  // In báo cáo (thông tin chung của TẤT CẢ bộ phận)
+  buildCapacityReportHtml,
+  printCapacityReport,
   capSparkSeries
 };

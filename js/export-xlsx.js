@@ -8,7 +8,7 @@ import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
-import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast } from './utils.js';
+import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay } from './xuong2.js';
 
@@ -29,6 +29,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, bulligLotSi
     { id: 'chonnan', label: 'Chọn Nan Thô' },
     { id: 'baotinh', label: 'Bào Tinh' },
     { id: 'bullig',  label: 'Bullig (Gia công + Chọn thanh)' },
+    { id: 'kho',     label: 'Kho Nan (Tồn · Nhập / Xuất / Phiếu)' },
     { id: 'epvan',   label: 'Ép Ván (mở form xuất Ép Ván)' }
   ];
 
@@ -700,6 +701,39 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, bulligLotSi
           x2FmtKg(d.volume), x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
       });
       sumNote = `Gia công được ${x2FmtKg(outQty)} thanh (dùng ${x2FmtKg(thoQty)} thanh thô) · Chọn thanh ${x2FmtKg(ctQty)} thanh · ${x2FmtKg(vol)} m³`;
+    } else if (source === 'kho') {
+      // KHO NAN — Sổ nhập/xuất (phiếu ĐÃ DUYỆT = số chính thức) + phiếu xử lý lỗi
+      head = ['Stt', 'Loại Dòng', 'Ngày', 'Lần / Mục Đích', 'Mã Lô', 'K.Thước (mm)', 'Loại', 'Dùng Cho', 'Vị Trí', 'Số Thanh', 'm³', 'Ghi Chú / Nguồn'];
+      const ledger = khoLedgerEvents();
+      const rows = [];
+      ledger.inRows.forEach(r => rows.push({ date: r.date, kind: 'NHẬP', r }));
+      ledger.outRows.forEach(r => rows.push({ date: r.date, kind: 'XUẤT', r }));
+      (state.khoNotes || []).filter(n => n && (n.type === 'tieuhuy' || n.type === 'taiche') && n.status === 'da_duyet')
+        .forEach(n => rows.push({ date: n.date || '', kind: (n.type === 'taiche' ? 'TÁI CHẾ' : 'TIÊU HỦY'), n }));
+      rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      let inQty = 0, outQty = 0;
+      rows.forEach((x, i) => {
+        if (x.kind === 'NHẬP') {
+          const r = x.r; inQty += r.qty;
+          body.push([i + 1, 'NHẬP', formatDateDDMMYY(r.date), `Lần ${r.round}`, r.code || '',
+            `${Number(r.length) || 0}×${Number(r.width) || 0}×${Number(r.thickness) || 0}`, r.bambooType || '', r.useFor || '', r.location || '',
+            x2FmtKg(r.qty), (Number(r.m3) || 0).toFixed(4), '']);
+        } else if (x.kind === 'XUẤT') {
+          const r = x.r; outQty += r.qty;
+          const lotsTxt = r.lotIds.length
+            ? r.lotIds.map(id => { const b = (state.batches || []).find(y => y && y.id === id); return b ? (b.code || id) : id; }).join(', ')
+            : 'Tổng (FIFO)';
+          body.push([i + 1, 'XUẤT', formatDateDDMMYY(r.date), KHO_PURPOSE_LABELS[r.purpose] || r.purpose, lotsTxt, '', '', '', '',
+            x2FmtKg(r.qty), r.m3 ? Number(r.m3).toFixed(3) : '', r.note || '']);
+        } else {
+          const n = x.n; outQty += Number(n.qty) || 0;
+          body.push([i + 1, x.kind, formatDateDDMMYY(n.date), KHO_METHOD_LABELS[n.method] || n.type,
+            '—', n.sizeKey || '—', KHO_SOURCE_LABELS[n.source] || n.source || '', '', '',
+            x2FmtKg(n.qty), '', n.note || '']);
+        }
+      });
+      const s = khoStockSummary();
+      sumNote = `Tồn hiện tại ${x2FmtKg(s.remainingThanh)} thanh (${s.remainingM3.toFixed(2)} m³) · Nhập ${x2FmtKg(s.inTotal)} · Xuất đã duyệt ${x2FmtKg(s.outTotal)} thanh`;
     }
 
     if (!head.length) return null;

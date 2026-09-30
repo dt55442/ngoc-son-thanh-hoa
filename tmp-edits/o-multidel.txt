@@ -1,0 +1,1 @@
+    safeOn('btn-multi-delete', 'click', () => toggleKanbanPickMode());

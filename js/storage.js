@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -451,6 +451,19 @@ import { escapeHTML, showToast } from './utils.js';
 
   // Khôi phục DANH SÁCH VỊ TRÍ SẤY khai báo thêm (mảng chuỗi) từ file/backup.
   // Luôn GỘP (không ghi đè) để không mất vị trí đã khai báo trên máy này.
+  // ─── GỘP PHIẾU KHO (xuất / tiêu hủy / tái chế) từ file / backup / mây ──
+  // Dấu thời gian so sánh bản ghi (ưu tiên updatedAt); bản chỉ có ở một phía giữ lại.
+  function restoreKhoNotes(incomingArr) {
+    const before = JSON.stringify(state.khoNotes || []);
+    const merged = mergeXuong2Records(state.khoNotes, incomingArr);
+    state.khoNotes = merged;
+    try { localStorage.setItem(STORAGE_KEY_KHO_NOTES, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
   function restoreX2LotLocations(incoming) {
     const src = Array.isArray(incoming) ? incoming : [];
     const cur = Array.isArray(state.x2LotLocations) ? state.x2LotLocations : [];
@@ -644,6 +657,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2EpVanRates) {
           restoreX2EpVanRates(loaded.x2EpVanRates); // Định mức ép ván (m³/h) — gộp theo tháng
         }
+        if (Array.isArray(loaded.khoNotes)) {
+          restoreKhoNotes(loaded.khoNotes); // PHIẾU KHO — gộp, không mất phiếu mới hơn file
+        }
         if (Array.isArray(loaded.qcKilnReadings)) {
           restoreQcKilnReadings(loaded.qcKilnReadings); // GỘP — không mất số đo độ ẩm mới hơn file
         }
@@ -756,6 +772,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2EpVanRates) {
           restoreX2EpVanRates(loaded.x2EpVanRates); // Định mức ép ván (m³/h) — gộp theo tháng
         }
+        if (Array.isArray(loaded.khoNotes)) {
+          restoreKhoNotes(loaded.khoNotes); // PHIẾU KHO — gộp, không mất phiếu mới hơn file
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -826,7 +845,8 @@ import { escapeHTML, showToast } from './utils.js';
         xuong2BaoTinhRecords: state.xuong2BaoTinhRecords || [],
         x2BaoTinhRates: state.x2BaoTinhRates || {},
         x2EpVanRates: state.x2EpVanRates || {},
-        x2LotLocations: state.x2LotLocations || []
+        x2LotLocations: state.x2LotLocations || [],
+        khoNotes: state.khoNotes || []
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -1047,6 +1067,9 @@ import { escapeHTML, showToast } from './utils.js';
         }
         if (imported && imported.x2EpVanRates) {
           restoreX2EpVanRates(imported.x2EpVanRates); // Định mức ép ván (m³/h)
+        }
+        if (imported && Array.isArray(imported.khoNotes)) {
+          restoreKhoNotes(imported.khoNotes); // PHIẾU KHO — gộp, không mất phiếu mới hơn backup
         }
 
         // DỌN DỮ LIỆU CŨ: file dữ liệu cũ có thể chứa lô stage 'bao_tinh' — xóa ngay

@@ -6,7 +6,7 @@ import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { getDateYear, getPressedQtyForPlan, pressRecordWeek } from './press.js';
 import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, state } from './state.js';
-import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from './utils.js';
+import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoApprovedXuatNotes, khoFirstInDateOf, khoInCountOf, khoNormPurpose } from './utils.js';
 
   // =============================================================
   // KẾ HOẠCH SẢN XUẤT (PLANNING VIEW)
@@ -468,7 +468,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     const weekData = {}; // week -> { nan: { key: { ton, dk, can } }, glue, additive }
     // Sổ theo dõi từng ô tồn (tra cứu "số này từ đâu ra"): ledger[ucKey][week-1] =
     // { week, carryIn (lũy kế đầu tuần), import (nhập thực tế), dk (dự kiến),
-    //   deduct + deductLabel (trượt: đã bào tinh / cần kế hoạch), ton (hiển thị) }
+    //   deduct + deductLabel (trượt: xuất kho phiếu đã duyệt / cần kế hoạch), ton (hiển thị) }
     // → dùng cho tooltip biểu thức & hộp thoại chi tiết khi bấm vào ô TỔNG TỒN.
     const ledger = {};
     gridCells.forEach(c => { ledger[c.ucKey] = []; });
@@ -532,14 +532,14 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
         }
         weekData[week].nan[key] = { ton: tonVal, dk: dkVal, can: cellNeeds };
         // Tiêu hao chuẩn bị cho tuần sau:
-        //  - Tuần hiện tại: phần KẾ HOẠCH CHƯA thực hiện (phần đã bào đã trừ trong tồn thực)
-        //  - Tuần đã qua: số thanh ĐÃ BÀO TINH rời nhóm trong tuần đó (thực tế)
+        //  - Tuần hiện tại: phần KẾ HOẠCH CHƯA thực hiện (phần đã xuất kho đã trừ trong tồn thực)
+        //  - Tuần đã qua: số thanh ĐÃ XUẤT KHO (phiếu đã duyệt) rời nhóm trong tuần đó
         //  - Tuần tương lai: số thanh THEO KẾ HOẠCH (Cần)
         let deduction, deductLabel;
         if (weekIsCurrent) {
           deduction = Math.max(0, cellNeeds - flowOut); deductLabel = 'cần còn lại (kế hoạch)';
         } else if (useActual) {
-          deduction = flowOut; deductLabel = 'đã bào tinh (thực tế)';
+          deduction = flowOut; deductLabel = 'xuất kho (phiếu đã duyệt)';
         } else {
           deduction = cellNeeds; deductLabel = 'cần (kế hoạch)';
         }
@@ -978,9 +978,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
   // Tồn của MỘT TUẦN = số thanh thực có ở CUỐI tuần đó, suy từ TỒN THỰC hiện tại
   // (Σ quantity − phần đã bào của các lô đang ở Sấy 1 / Sấy 2 / Kho) bằng dòng chảy:
   //   + Lô NHẬP vào nhóm Sấy 1 / Sấy 2 / Kho (ngày vào nhóm)
-  //   − Số thanh RỜI nhóm theo lượt bào tinh (kind 'tinh', ngày ghi lượt)
-  // LƯU Ý: ghi lượt bào tinh KHÔNG giảm `quantity` của lô (lô vẫn nằm ở Kho, phần đã
-  // dùng tính bằng baoTinhLotUsedOf) → PHẢI trừ phần đã bào thì tổng tồn mới đúng.
+  //   − Số thanh RỜI nhóm theo PHIẾU XUẤT KHO ĐÃ DUYỆT (state.khoNotes — thẻ "Kho Nan";
+  //     bỏ qua purpose 'say2' vì lô đi Sấy 2 vẫn nằm trong nhóm)
+  // LƯU Ý (từ 30/09/2026): số CHÍNH THỨC trừ tồn = phiếu xuất ĐÃ DUYỆT do Tổ trưởng
+  // khai + Ban lãnh đạo duyệt; số hệ thống suy ra từ lượt bào tinh CHỈ dùng đối chiếu.
   const NAN_POOL_STAGES = ['say1', 'say2', 'kho'];
 
   // Ngày lô NHẬP (hoặc quay lại) nhóm Sấy 1 / Sấy 2 / Kho — mốc cuối cùng lô vào nhóm;
@@ -1023,20 +1024,43 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast } from '.
     };
     // 1) Lô nhập vào nhóm Sấy 1 / Sấy 2 / Kho
     pool.forEach(b => push(keyOfBatch(b), nanPoolEntryDate(b), Number(b.quantity) || 0));
-    // 2) Thanh rời nhóm theo lượt bào tinh (nguồn lô) — chặn không vượt phần còn lại
+    // 2) Thanh RỜI nhóm theo PHIẾU XUẤT KHO ĐÃ DUYỆT (state.khoNotes — type 'xuat',
+    //    status 'da_duyet' — SỐ CHÍNH THỨC trừ tồn, xem thẻ "Kho Nan" / js/utils.js):
+    //    • purpose 'say2' KHÔNG trừ: lô đi Sấy 2 vẫn nằm trong nhóm Sấy 1/2/Kho;
+    //    • purpose 'baotinh' / 'bullig' / 'khac' trừ theo NGÀY của phiếu;
+    //    • phiếu GẮN LÔ → trừ đúng lô đó; phiếu khai TỔNG → phân bổ FIFO (lô vào
+    //      kho LÂU NHẤT trừ trước — giống khoFifoAllocation của js/utils.js);
+    //    • chặn không vượt sức chứa của lô (số lần nhập kho × quantity) như bản cũ.
+    //    Số hệ thống SUY RA từ lượt bào tinh chỉ là cột ĐỐI CHIẾU — KHÔNG trừ tồn.
     const removals = {}; // batchId -> [{date, qty}]
-    (Array.isArray(state.xuong2BaoTinhRecords) ? state.xuong2BaoTinhRecords : []).forEach(r => {
-      if (!r || r.kind !== 'tinh' || !r.date) return;
-      (Array.isArray(r.sources) ? r.sources : []).forEach(src => {
-        const id = src ? String(src.batchId || '') : '';
-        if (!id || !poolIds.has(id)) return;
-        (removals[id] = removals[id] || []).push({ date: r.date, qty: Number(src.qty) || 0 });
+    const poolQty = {};  // batchId -> sức chứa (số lần nhập kho × quantity)
+    pool.forEach(b => { poolQty[b.id] = khoInCountOf(b) * (Number(b.quantity) || 0); });
+    khoApprovedXuatNotes()
+      .filter(n => khoNormPurpose(n.purpose) !== 'say2')
+      .slice().sort((x, y) => String(x.date || '').localeCompare(String(y.date || '')))
+      .forEach(n => {
+        // a) phần phiếu GẮN LÔ tường minh
+        (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
+          const id = String((l && l.batchId) || '');
+          if (!id || !poolIds.has(id)) return;
+          (removals[id] = removals[id] || []).push({ date: n.date, qty: Number(l.qty) || 0 });
+        });
+        const tagged = (Array.isArray(n.lots) ? n.lots : []).reduce((s, l) => s + (Number(l && l.qty) || 0), 0);
+        // b) phần khai TỔNG → phân bổ FIFO
+        let remain = (Number(n.qty) || 0) - tagged;
+        const fifo = pool.slice().sort((a, b) => khoFirstInDateOf(a).localeCompare(khoFirstInDateOf(b)));
+        for (const b of fifo) {
+          if (remain <= 0) break;
+          const used = (removals[b.id] || []).reduce((s, x) => s + x.qty, 0);
+          const free = Math.max(0, (poolQty[b.id] || 0) - used);
+          const take = Math.min(free, remain);
+          if (take > 0) { (removals[b.id] = removals[b.id] || []).push({ date: n.date, qty: take }); remain -= take; }
+        }
       });
-    });
     pool.forEach(b => {
       const list = (removals[b.id] || []).sort((x, y) => (x.date < y.date ? -1 : (x.date > y.date ? 1 : 0)));
       if (!list.length) return;
-      let remain = Number(b.quantity) || 0;
+      let remain = poolQty[b.id] || 0;
       list.forEach(x => {
         const take = Math.min(x.qty, remain);
         if (take <= 0) return;

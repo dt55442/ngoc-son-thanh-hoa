@@ -1,0 +1,38 @@
+  // Khóa LOẠI của lô/lần: 'bullig' hoặc 'van' — theo ô "Dùng Cho" của lô
+  function sayTypeKeyOf(useFor) {
+    return bulligNorm(useFor || '') === 'bullig' ? 'bullig' : 'van';
+  }
+  // Định mức của 1 THÁNG + công đoạn + LOẠI → { phut, m3, custom }
+  // (custom = tháng đó đã được khai định mức riêng hay đang dùng mặc định)
+  // Đọc được 3 DẠNG dữ liệu (tương thích dữ liệu cũ + máy khác tải mây về):
+  //   • số thuần (bản rất cũ)             → hiểu là PHÚT mỗi lần (dùng chung 2 loại)
+  //   • { phut, m3 }                      → phút dùng chung 2 loại
+  //   • { van:{phut}, bullig:{phut}, m3 } → phút RIÊNG từng loại (dạng MỚI)
+  function sayRateEntryOf(dateVal, stage, useFor) {
+    const key = sayRateGroup(stage);
+    const typeKey = sayTypeKeyOf(useFor);
+    const defPhut = SAY_RATE_DEFAULT[key][typeKey];
+    const defM3 = SAY_RATE_DEFAULT[key].m3;
+    const g = ((state.x2SayRates || {})[key]) || {};
+    const v = g[String(dateVal || '').slice(0, 7)];
+    let phut = defPhut, m3 = defM3;
+    if (typeof v === 'number') {
+      if (v > 0) phut = v;
+    } else if (v && typeof v === 'object') {
+      if (v.van || v.bullig) {
+        // Dạng MỚI: từng loại tự đọc — loại còn thiếu dùng MẶC ĐỊNH của loại đó
+        const tv = (v[typeKey] && typeof v[typeKey] === 'object') ? v[typeKey] : null;
+        if (tv && Number(tv.phut) > 0) phut = Number(tv.phut);
+      } else if (Number(v.phut) > 0) {
+        phut = Number(v.phut);
+      }
+      if (Number(v.m3) > 0) m3 = Number(v.m3);
+    }
+    return { phut, m3, custom: !!v };
+  }
+  // Số PHÚT của 1 lần than hóa THEO LOẠI (Ván / Bullig) của công đoạn + tháng
+  // (không truyền useFor → hiểu là Ván)
+  function sayMinutesPerCharge(dateVal, stage, useFor) { return sayRateEntryOf(dateVal, stage, useFor).phut; }
+  // Số m³ quy đổi cho 1 lần than hóa (mặc định 2 m³/lần — số CHUNG của công đoạn,
+  // không phân loại; chỉ còn dùng để tự gộp LÔ CŨ thành lần)
+  function sayM3PerCharge(dateVal, stage) { return sayRateEntryOf(dateVal, stage, 'Ván').m3; }

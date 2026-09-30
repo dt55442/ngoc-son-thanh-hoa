@@ -1,0 +1,4 @@
+check('XÓA NHIỀU — DỄ THẤY: tự chuyển khung "Bảng Dữ Liệu" + nhóm nút thực thi ngay trên thanh công cụ',
+  idxHtml.includes('id="kb-pick-inline"') && idxHtml.includes('id="kb-pick-inline-del"') &&
+  jsEvents.includes('kb-pick-inline-del') && jsEvents.includes("switchX2SayFrame('data')") &&
+  cssHtml.includes('.kb-pick-inline') && cssHtml.includes('#kb-pick-bar { z-index: 95; }'));

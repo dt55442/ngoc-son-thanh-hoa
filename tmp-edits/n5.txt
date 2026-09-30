@@ -1,0 +1,1 @@
+    }).map(b => ({ batch: b, id: String(b.id || ''), code: b.code || '', location: b.location || '', vol: batchVolumeOf(b), type: sayTypeKeyOf(b.useFor) }));

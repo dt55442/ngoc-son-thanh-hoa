@@ -1,0 +1,192 @@
+  // ── POPUP "ĐỊNH MỨC" — bảng theo THÁNG, 4 cột phút/lần riêng Ván/Bullig ──
+  // (Sấy 1 · Ván / Sấy 1 · Bullig / Sấy 2 · Ván / Sấy 2 · Bullig; ô trống = mặc định)
+  function openX2SayRateModal() {
+    const modal = document.getElementById('modal-x2-say-rate');
+    if (!modal) return;
+    renderX2SayRateModal();
+    modal.classList.add('show');
+    initLucide();
+  }
+  function closeX2SayRateModal() {
+    const modal = document.getElementById('modal-x2-say-rate');
+    if (modal) modal.classList.remove('show');
+  }
+  // Danh sách tháng của bảng: tháng đã khai + tháng có lô vào sấy + 18 tháng gần nhất
+  function sayRateMonthsList() {
+    const months = new Set();
+    ['s1', 's2'].forEach(k => Object.keys((state.x2SayRates || {})[k] || {}).forEach(m => months.add(m)));
+    sayChargeRows().forEach(r => months.add(String(r.date || '').slice(0, 7)));
+    const now = new Date();
+    for (let i = 0; i < 18; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return [...months].filter(m => /^\d{4}-\d{2}$/.test(m)).sort((a, b) => b.localeCompare(a));
+  }
+  // 4 ô nhập của 1 hàng tháng (id: x2sr-<tháng>-<công đoạn>-<loại>)
+  function sayRateRowInputs(month) {
+    const g = id => document.getElementById(`x2sr-${month}-${id}`);
+    return { s1van: g('s1-van'), s1bullig: g('s1-bullig'), s2van: g('s2-van'), s2bullig: g('s2-bullig') };
+  }
+  // Lưu 1 HÀNG (1 tháng): 4 ô phút/lần — trống = dùng mặc định của loại đó
+  function handleX2SayRateRowSave(month) {
+    if (!requireEditPermission()) return;
+    const m = String(month || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Tháng không hợp lệ!', 'error'); return; }
+    const inp = sayRateRowInputs(m);
+    const readPhut = (el, def) => {
+      const raw = String((el && el.value) || '').trim().replace(',', '.');
+      if (raw === '') return def;
+      const v = Number(raw);
+      return (Number.isFinite(v) && v > 0) ? v : 0;
+    };
+    const s1v = readPhut(inp.s1van, SAY_RATE_DEFAULT.s1.van);
+    const s1b = readPhut(inp.s1bullig, SAY_RATE_DEFAULT.s1.bullig);
+    const s2v = readPhut(inp.s2van, SAY_RATE_DEFAULT.s2.van);
+    const s2b = readPhut(inp.s2bullig, SAY_RATE_DEFAULT.s2.bullig);
+    if (s1v <= 0 || s1b <= 0 || s2v <= 0 || s2b <= 0) {
+      showToast('Số PHÚT mỗi lần than hóa phải lớn hơn 0 (hoặc để trống = dùng mặc định)!', 'error');
+      return;
+    }
+    state.x2SayRates = state.x2SayRates || { s1: {}, s2: {} };
+    state.x2SayRates.s1 = state.x2SayRates.s1 || {};
+    state.x2SayRates.s2 = state.x2SayRates.s2 || {};
+    // m³/lần giữ nguyên giá trị đang có của tháng (chỉnh riêng ở dòng "m³/lần (lô cũ)")
+    const m3Of = (old, def) => (old && Number(old.m3) > 0) ? Number(old.m3) : def;
+    state.x2SayRates.s1[m] = { van: { phut: s1v }, bullig: { phut: s1b }, m3: m3Of(state.x2SayRates.s1[m], SAY_RATE_DEFAULT.s1.m3) };
+    state.x2SayRates.s2[m] = { van: { phut: s2v }, bullig: { phut: s2b }, m3: m3Of(state.x2SayRates.s2[m], SAY_RATE_DEFAULT.s2.m3) };
+    saveX2SayRates();
+    renderX2SayRateModal();
+    renderX2SayRateChip();
+    renderX2SayStats();
+    showToast(`Đã lưu định mức tháng ${m.slice(5)}/${m.slice(0, 4)}: S1 V${fmtPhut(s1v)}/B${fmtPhut(s1b)}' · S2 V${fmtPhut(s2v)}/B${fmtPhut(s2b)}'.`, 'success');
+  }
+  // Khôi phục MẶC ĐỊNH cho 1 tháng (xóa khai báo của tháng đó)
+  function handleX2SayRateRowReset(month) {
+    if (!requireEditPermission()) return;
+    const m = String(month || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(m)) return;
+    const has = !!(((state.x2SayRates || {}).s1 || {})[m] || ((state.x2SayRates || {}).s2 || {})[m]);
+    if (!has) return;
+    if (typeof confirm === 'function' && !confirm(`Khôi phục MẶC ĐỊNH định mức tháng ${m.slice(5)}/${m.slice(0, 4)}?`)) return;
+    if (state.x2SayRates.s1) delete state.x2SayRates.s1[m];
+    if (state.x2SayRates.s2) delete state.x2SayRates.s2[m];
+    saveX2SayRates();
+    renderX2SayRateModal();
+    renderX2SayRateChip();
+    renderX2SayStats();
+    showToast(`Đã khôi phục mặc định định mức tháng ${m.slice(5)}/${m.slice(0, 4)}.`, 'info');
+  }
+  // Thêm 1 tháng mới vào bảng (tạo entry với giá trị mặc định để điền)
+  function handleX2SayRateAddMonth() {
+    const el = document.getElementById('x2sr-new-month');
+    const m = String((el && el.value) || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Chưa chọn tháng để thêm!', 'error'); return; }
+    state.x2SayRates = state.x2SayRates || { s1: {}, s2: {} };
+    state.x2SayRates.s1 = state.x2SayRates.s1 || {};
+    state.x2SayRates.s2 = state.x2SayRates.s2 || {};
+    if (!state.x2SayRates.s1[m]) {
+      state.x2SayRates.s1[m] = { van: { phut: SAY_RATE_DEFAULT.s1.van }, bullig: { phut: SAY_RATE_DEFAULT.s1.bullig }, m3: SAY_RATE_DEFAULT.s1.m3 };
+      state.x2SayRates.s2[m] = { van: { phut: SAY_RATE_DEFAULT.s2.van }, bullig: { phut: SAY_RATE_DEFAULT.s2.bullig }, m3: SAY_RATE_DEFAULT.s2.m3 };
+      saveX2SayRates();
+    }
+    renderX2SayRateModal();
+    const first = document.getElementById(`x2sr-${m}-s1-van`);
+    if (first) first.focus();
+  }
+  // Dòng "m³/lần (lô cũ)" — m³ là số CHUNG của công đoạn (không phân loại): chỉ
+  // dùng để tự gộp các LÔ CŨ (trước 28/09/2026, không có mã mẻ) thành lần.
+  function handleX2SayRateM3Save() {
+    if (!requireEditPermission()) return;
+    const monthEl = document.getElementById('x2sr-m3-month');
+    const m = String((monthEl && monthEl.value) || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Chưa chọn tháng cho m³/lần!', 'error'); return; }
+    const readM3 = (el, def) => {
+      const raw = String((el && el.value) || '').trim().replace(',', '.');
+      if (raw === '') return def;
+      const v = Number(raw);
+      return (Number.isFinite(v) && v > 0) ? v : 0;
+    };
+    const m1 = readM3(document.getElementById('x2sr-m3-s1'), SAY_RATE_DEFAULT.s1.m3);
+    const m2 = readM3(document.getElementById('x2sr-m3-s2'), SAY_RATE_DEFAULT.s2.m3);
+    if (m1 <= 0 || m2 <= 0) { showToast('Số m³ mỗi lần phải lớn hơn 0 (hoặc để trống = mặc định)!', 'error'); return; }
+    state.x2SayRates = state.x2SayRates || { s1: {}, s2: {} };
+    state.x2SayRates.s1 = state.x2SayRates.s1 || {};
+    state.x2SayRates.s2 = state.x2SayRates.s2 || {};
+    const setM3 = (grp, m3) => {
+      const def = SAY_RATE_DEFAULT[grp];
+      const cur = state.x2SayRates[grp][m];
+      let base;
+      if (cur && typeof cur === 'object' && (cur.van || cur.bullig)) {
+        base = cur;
+      } else {
+        const phut = (cur && Number(cur.phut) > 0) ? Number(cur.phut) : def.van;
+        base = { van: { phut }, bullig: { phut } };
+      }
+      base.m3 = m3;
+      state.x2SayRates[grp][m] = base;
+    };
+    setM3('s1', m1);
+    setM3('s2', m2);
+    saveX2SayRates();
+    renderX2SayRateModal();
+    renderX2SayRateChip();
+    renderX2SayStats();
+    showToast(`Đã lưu m³/lần (lô cũ) tháng ${m.slice(5)}/${m.slice(0, 4)}: Sấy 1 ${fmtM3(m1)} · Sấy 2 ${fmtM3(m2)}.`, 'success');
+  }
+  // Điền giá trị m³/lần ĐANG DÙNG của tháng đang chọn vào 2 ô (đổi tháng → điền lại)
+  function syncX2SayRateM3Inputs() {
+    const m = String((document.getElementById('x2sr-m3-month') || {}).value || '');
+    if (!/^\d{4}-\d{2}$/.test(m)) return;
+    const s1El = document.getElementById('x2sr-m3-s1');
+    const s2El = document.getElementById('x2sr-m3-s2');
+    if (s1El) s1El.value = sayM3PerCharge(m, 'say1');
+    if (s2El) s2El.value = sayM3PerCharge(m, 'say2');
+  }
+  // Vẽ BẢNG ĐỊNH MỨC trong popup: mỗi THÁNG 1 hàng — 4 ô phút/lần (trống = mặc định)
+  function renderX2SayRateModal() {
+    const tbody = document.getElementById('x2-say-rate-rows');
+    if (!tbody) return;
+    const months = sayRateMonthsList();
+    const cell = (month, grp, typeKey) => {
+      const stage = grp === 's1' ? 'say1' : 'say2';
+      const cur = ((state.x2SayRates || {})[grp] || {})[month];
+      const def = SAY_RATE_DEFAULT[grp][typeKey];
+      const shown = cur ? sayRateEntryOf(month, stage, typeKey === 'bullig' ? 'Bullig' : 'Ván').phut : '';
+      return `<td class="x2sr-cell"><input type="number" min="1" step="any" inputmode="decimal" class="x2sr-input" id="x2sr-${month}-${grp}-${typeKey}" value="${shown}" placeholder="mặc định ${def}" title="Phút/lần cho ${grp === 's1' ? 'Sấy 1' : 'Sấy 2'} · ${typeKey === 'bullig' ? 'Bullig' : 'Ván'} — trống = mặc định ${def}"></td>`;
+    };
+    tbody.innerHTML = months.map(m => {
+      const custom = !!(((state.x2SayRates || {}).s1 || {})[m] || ((state.x2SayRates || {}).s2 || {})[m]);
+      return `<tr${custom ? '' : ' class="x2sr-row-default"'}>
+        <td class="x2sr-month">${escapeHTML(m.slice(5) + '/' + m.slice(0, 4))}${custom ? '' : ' <span class="x2sr-def-tag">(mặc định)</span>'}</td>
+        ${cell(m, 's1', 'van')}
+        ${cell(m, 's1', 'bullig')}
+        ${cell(m, 's2', 'van')}
+        ${cell(m, 's2', 'bullig')}
+        <td class="x2sr-act">
+          <button type="button" class="btn btn-primary btn-sm" data-x2sr-save="${escapeHTML(m)}" title="Lưu 4 ô phút/lần của tháng này"><i data-lucide="save"></i></button>
+          <button type="button" class="btn btn-outline btn-sm" data-x2sr-reset="${escapeHTML(m)}" title="Khôi phục mặc định (xóa khai báo tháng này)"${custom ? '' : ' disabled'}><i data-lucide="rotate-ccw"></i></button>
+        </td>
+      </tr>`;
+    }).join('');
+    const m3Month = document.getElementById('x2sr-m3-month');
+    if (m3Month) {
+      m3Month.innerHTML = months.map(m => `<option value="${escapeHTML(m)}">${escapeHTML(m.slice(5) + '/' + m.slice(0, 4))}</option>`).join('');
+      if (months.length) m3Month.value = months[0];
+      syncX2SayRateM3Inputs();
+    }
+    initLucide();
+  }
+  // Chip tóm tắt định mức trên thẻ (thay thanh nhập cũ) — bấm nút "Định mức" để sửa
+  function renderX2SayRateChip() {
+    const el = document.getElementById('x2-say-rate-chip');
+    if (!el) return;
+    const cur = new Date().toISOString().slice(0, 7);
+    const pairOf = (stage) => {
+      const van = sayRateEntryOf(cur, stage, 'Ván');
+      const bul = sayRateEntryOf(cur, stage, 'Bullig');
+      return van.phut === bul.phut ? `${fmtPhut(van.phut)}'` : `V${fmtPhut(van.phut)}'/B${fmtPhut(bul.phut)}'`;
+    };
+    el.innerHTML = `Sấy 1 <b>${pairOf('say1')}</b> · Sấy 2 <b>${pairOf('say2')}</b> <span class="x2-say-rate-m3">(lô cũ: ${fmtM3(sayRateEntryOf(cur, 'say1', 'Ván').m3)} m³/lần)</span>`;
+  }
+

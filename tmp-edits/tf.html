@@ -1,0 +1,9 @@
+// ─── N0. CHIP "LẦN THAN HÓA" TRÊN THẺ KANBAN (chỉ đọc) ─────────────
+state.batches.push({ id: 'bx-th1', code: '260998-01', stage: 'say1', date: '2026-09-25', week: '2026-W39', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 1, bambooType: 'A', useFor: 'Ván', location: 'LS2', sayCharges: { say1: 1000 }, stageHistory: [{ stage: 'say1', date: '2026-09-25' }] });
+check('CHIP KANBAN: lô có mã mẻ sayCharges → nhãn "Lần 1/1 · Sấy 1"',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx-th1')) === 'Lần 1/1 · Sấy 1');
+check('CHIP KANBAN: lô cũ KHÔNG mã mẻ → không hiện nhãn (chuỗi rỗng)',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx1')) === '');
+check('CHIP KANBAN: main.js đưa hàm vào window.app (x2SayChargeLabel)',
+  jsMain.includes('x2SayChargeLabel') && jsMain.includes('sayBatchChargeLabel'));
+

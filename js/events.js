@@ -12,13 +12,14 @@ import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderBaoTinhEffTable, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded } from './press.js';
+import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { baoTinhAddRow, baoTinhClearPicks, baoTinhPickAll, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, editXuong2Bullig, editXuong2Cut, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BaoTinhRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoTinhRateBar, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2KanbanBoard, onSayTimesChange, onSayIncidentChange, handleX2SayRateSave, renderX2SayRateBar, updateXuong2BaoThoLinked, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, x2BaoTinhTogglePicker, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame } from './xuong2.js';
+import { baoTinhAddRow, baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, editXuong2Bullig, editXuong2Cut, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BaoTinhRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoTinhRateBar, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2KanbanBoard, onSayTimesChange, onSayIncidentChange, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, x2BaoTinhTogglePicker, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame } from './xuong2.js';
+import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoOnPendingClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất
 import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
-import { selectCapacityStage, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
+import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
@@ -194,10 +195,22 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── CHUYỂN KHO (Than Hóa + Sấy): Sấy 1 / Sấy 2 → Kho hoặc thêm mới vào Kho ──
     safeOn('btn-transfer-kho', 'click', () => openTransferKhoModal());
     // ── XÓA NHIỀU LÔ (CHỈ Admin): bật chế độ tích chọn trên thẻ + thanh nổi đếm ──
-    safeOn('btn-multi-delete', 'click', () => toggleKanbanPickMode());
+    safeOn('btn-multi-delete', 'click', () => {
+      toggleKanbanPickMode();
+      // Đang bật chế độ chọn → đảm bảo người dùng THẤY thẻ lô để tích: chuyển về
+      // khung "Bảng Dữ Liệu" + mở lại bảng Kanban nếu đang thu gọn.
+      if (state.kanbanPickMode) {
+        const hoaCard = document.getElementById('x2-than-hoa-card');
+        if (hoaCard && hoaCard.classList && hoaCard.classList.contains('kanban-board-collapsed')) toggleX2KanbanBoard();
+        switchX2SayFrame('data');
+      }
+    });
     safeOn('kb-pick-del',    'click', () => deletePickedBatches());
     safeOn('kb-pick-all',    'click', () => kanbanSelectAll());
     safeOn('kb-pick-cancel', 'click', () => exitKanbanPickMode());
+    // Nút thực thi XÓA NHIỀU ngay trên thanh công cụ (thanh nổi đáy màn hình vẫn giữ)
+    safeOn('kb-pick-inline-del', 'click', () => deletePickedBatches());
+    safeOn('kb-pick-inline-cancel', 'click', () => exitKanbanPickMode());
     // Ô tích chọn trên thẻ lô là NỘI DUNG ĐỘNG (vẽ lại mỗi lần render) → uỷ nhiệm
     // sự kiện change qua document, bắt mọi ô .kb-pick-box ở mọi thời điểm
     document.addEventListener('change', (e) => {
@@ -737,11 +750,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       openMatrixTraceModal(parts[0], parts[1], Number(parts[2]) || 1);
     });
     safeOn('btn-close-matrix-trace', 'click', closeMatrixTraceModal);
-    // Bộ lọc năm của bảng Bào Tinh ↔ Đã Ép (hiệu suất chuyển đổi)
-    safeOn('bt-year-filter', 'change', (e) => {
-      state.btEffYear = Number(e.target.value) || state.btEffYear;
-      renderBaoTinhEffTable();
-    });
     // ── THẺ ÉP VÁN (launcher tab Công Đoạn): 2 KHUNG + định mức m³/h ──
     safeOn('x2-epv-tab-list', 'click', () => switchX2EpVanFrame('list'));
     safeOn('x2-epv-tab-chart', 'click', () => switchX2EpVanFrame('chart'));
@@ -1117,12 +1125,20 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── LỊCH SỬ SỬA ĐỔI (modal — chỉ Admin mới xem được) ──
     safeOn('btn-history-kanban',    'click', () => openHistoryModal('kanban', x2OpenCardHistoryDomain())); // mở đúng vùng của THẺ đang mở
     // ── THẺ TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (đầu tab Tổng Quan — js/capacity.js) ──
-    // Nút tên = đổi Xưởng 2 ⇄ Xưởng 1 · ‹ › = nhảy tuần (tự xổ tầng công đoạn) ·
-    // nút Thu gọn · click ủy quyền: dòng tuần → xổ công đoạn, dòng công đoạn →
-    // xổ từng ngày, nút "Mở thẻ" → chuyển sang tab Công Đoạn + mở đúng thẻ.
+    // Nút tên = đổi Xưởng 2 ⇄ Xưởng 1 · Tuần⇄Tháng + ô chọn tháng = đổi KỲ xem ·
+    // ‹ › = nhảy 1 kỳ (tự xổ tầng công đoạn) · In báo cáo (thông tin chung mọi
+    // bộ phận) · nút Thu gọn · click ủy quyền: dòng kỳ → xổ công đoạn, dòng
+    // công đoạn → xổ từng ngày, nút "Mở thẻ" → sang tab Công Đoạn + mở thẻ.
     safeOn('capacity-mode-toggle', 'click', toggleCapacityWorkshop);
+    safeOn('cap-mode-week',        'click', () => setCapacityMode('week'));
+    safeOn('cap-mode-month',       'click', () => setCapacityMode('month'));
+    safeOn('cap-month',            'change', () => {
+      const inp = document.getElementById('cap-month');
+      if (inp) setCapacityMonth(inp.value);
+    });
     safeOn('capacity-week-prev',   'click', () => shiftCapacityWeek(-1));
     safeOn('capacity-week-next',   'click', () => shiftCapacityWeek(1));
+    safeOn('btn-cap-print',        'click', printCapacityReport);
     safeOn('btn-toggle-capacity',  'click', toggleCapacityCollapse);
     const capCard = document.getElementById('capacity-card');
     if (capCard) {
@@ -1315,6 +1331,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x2-btinh-kind', 'change', updateXuong2BaoTinhLinked);
     // Chọn thanh: nút mở DANH SÁCH THẺ — bấm 1 thẻ = CHỌN, bấm lần nữa = BỎ CHỌN
     safeOn('x2-btinh-picker-btn', 'click', x2BaoTinhTogglePicker);
+    safeOn('x2-btinh-search', 'input', renderX2BaoTinhList);   // ô tìm nhanh lọc thẻ (bỏ dấu)
     safeOn('x2-btinh-list', 'click', onBaoTinhListClick);
     safeOn('x2-btinh-pick-all', 'click', baoTinhPickAll);
     safeOn('x2-btinh-pick-clear', 'click', baoTinhClearPicks);
@@ -1328,14 +1345,57 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-toggle-x2btinh-table', 'click', toggleX2BaoTinhTable);
     safeOn('btn-x2-btinh-rate-save', 'click', handleX2BaoTinhRateSave);
     safeOn('x2-btinh-rate-month', 'change', renderX2BaoTinhRateBar);
+    // ── THẺ KHO NAN (launcher Xưởng 2 — tab Công Đoạn) ──
+    // PHIẾU KHO: gạt Phiếu Xuất ⇄ Xử Lý Lỗi; gắn lô (danh sách thẻ, chọn nhiều,
+    // mỗi lô sửa được số lượng); sổ theo kỳ Ngày/Tuần/Tháng; Ban lãnh đạo duyệt.
+    safeOn('x2-kho-type-xuat', 'click', () => setKhoNoteType('xuat'));
+    safeOn('x2-kho-type-scr', 'click', () => setKhoNoteType('xu_ly'));
+    safeOn('x2-kho-note-form', 'submit', handleKhoNoteSubmit);
+    safeOn('btn-kho-note-reset', 'click', () => resetX2KhoNoteForm(false));
+    safeOn('x2-kho-purpose', 'change', renderX2KhoCalc);
+    safeOn('x2-kho-purpose-note', 'input', renderX2KhoCalc);
+    safeOn('x2-kho-source', 'change', () => { fillX2KhoSizeSuggestions(); renderX2KhoCalc(); });
+    safeOn('x2-kho-method', 'change', renderX2KhoCalc);
+    safeOn('x2-kho-size', 'input', renderX2KhoCalc);
+    safeOn('x2-kho-qty', 'input', renderX2KhoCalc);
+    safeOn('x2-kho-lots-btn', 'click', () => khoToggleLotsPanel());
+    safeOn('x2-kho-lots-search', 'input', (e) => khoSetLotsQuery(e.target.value));
+    safeOn('x2-kho-lots-list', 'click', khoOnLotsPanelClick);
+    safeOn('x2-kho-lots-list', 'input', khoOnLotsQtyInput); // ô số lượng của từng lô đã chọn
+    safeOn('x2-kho-pending-rows', 'click', khoOnPendingClick);
+    safeOn('x2-kho-pick-all', 'click', khoPickAllPending);
+    safeOn('x2-kho-approve-all', 'click', khoApprovePicked);
+    safeOn('x2-kho-wip-bar', 'click', khoOnWipClick);
+    safeOn('btn-toggle-x2kho-table', 'click', toggleX2KhoTable);
+    safeOn('btn-toggle-x2kho-stock', 'click', toggleX2KhoStockTable);
+    safeOn('x2-kho-period-day', 'click', () => setKhoPeriodMode('day'));
+    safeOn('x2-kho-period-tuan', 'click', () => setKhoPeriodMode('tuan'));
+    safeOn('x2-kho-period-thang', 'click', () => setKhoPeriodMode('thang'));
+    safeOn('x2-kho-from', 'change', renderX2KhoLedger);
+    safeOn('x2-kho-to', 'change', renderX2KhoLedger);
+    safeOn('x2-kho-search', 'input', renderX2KhoLedger);
+    safeOn('x2-kho-show-used', 'change', (e) => khoSetShowUsed(e.target.checked));
+    safeOn('x2-kho-backfill-btn', 'click', khoBackfillFromLegacy);
+    safeOn('btn-kho-add-manual', 'click', () => openTransferKhoModal('new')); // Nhập Kho thủ công trên cột Kho
     // ── Thẻ THAN HÓA + SẤY: định mức 1 lần than hóa + thu gọn bảng Kanban ──
     // (Số lần than hóa thật của nhóm + giờ sự cố cho phép của ngày: ô nhập trong
     // bảng thống kê → lưu khi rời ô)
     safeOn('x2-say-day-rows', 'change', onSayTimesChange);
     safeOn('x2-say-day-rows', 'change', onSayIncidentChange);
-    safeOn('btn-x2-say-rate-save', 'click', handleX2SayRateSave);
-    safeOn('x2-say-rate-month', 'change', renderX2SayRateBar);
-    safeOn('x2-say-rate-stage', 'change', renderX2SayRateBar);
+    // POPUP "Định mức" — bảng theo tháng 4 cột phút/lần (Ván/Bullig) + m³/lần lô cũ
+    safeOn('btn-x2-say-rate', 'click', openX2SayRateModal);
+    safeOn('btn-close-x2-say-rate', 'click', closeX2SayRateModal);
+    safeOn('btn-x2sr-add-month', 'click', handleX2SayRateAddMonth);
+    safeOn('btn-x2sr-m3-save', 'click', handleX2SayRateM3Save);
+    safeOn('x2sr-m3-month', 'change', syncX2SayRateM3Inputs);
+    // Uỷ nhiệm click trong bảng định mức: nút Lưu / Khôi phục của từng HÀNG tháng
+    safeOn('x2-say-rate-rows', 'click', (e) => {
+      const t = e.target;
+      const saveBtn = t.closest ? t.closest('[data-x2sr-save]') : null;
+      if (saveBtn) { handleX2SayRateRowSave(saveBtn.getAttribute('data-x2sr-save')); return; }
+      const resetBtn = t.closest ? t.closest('[data-x2sr-reset]') : null;
+      if (resetBtn) { handleX2SayRateRowReset(resetBtn.getAttribute('data-x2sr-reset')); return; }
+    });
     safeOn('btn-toggle-kanban-board', 'click', toggleX2KanbanBoard);
     // ── BẢNG ĐIỀU KHIỂN LÒ SẤY (thẻ Than Hóa + Sấy — js/kiln.js) ──
     // 2 tab chuyển khung: Bảng Điều Khiển (mặc định) ↔ Bảng Dữ Liệu (Kanban cũ)
@@ -1427,17 +1487,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         const m = epvRateChip.getAttribute('data-x2-epv-rate');
         const selEl = document.getElementById('x2-epv-rate-month');
         if (selEl && m) { selEl.value = m; renderX2EpVanRateBar(); }
-        return;
-      }
-      // Chip tháng đã đặt THỜI GIAN THAN HÓA → nạp công đoạn + tháng vào ô nhập
-      const sayRateChip = e.target.closest && e.target.closest('[data-x2-say-rate]');
-      if (sayRateChip) {
-        const m = sayRateChip.getAttribute('data-x2-say-rate');
-        const stage = sayRateChip.getAttribute('data-x2-say-rate-stage') || 'say1';
-        const stEl = document.getElementById('x2-say-rate-stage');
-        const selEl = document.getElementById('x2-say-rate-month');
-        if (stEl) stEl.value = stage;
-        if (selEl && m) { selEl.value = m; renderX2SayRateBar(); }
         return;
       }
       const btinhEdit = e.target.closest && e.target.closest('[data-x2-btinh-edit]');

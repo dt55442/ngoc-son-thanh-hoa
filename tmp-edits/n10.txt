@@ -1,0 +1,1 @@
+        <td class="x2-say-code" title="Mã lô: ${escapeHTML(c.codeText || '—')}">${sayChargeCompText(c)}</td>

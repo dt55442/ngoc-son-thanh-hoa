@@ -1,0 +1,10 @@
+            <button class="btn btn-outline admin-only-btn" id="btn-multi-delete" data-perm="kanban" title="Bật chế độ tích chọn NHIỀU lô để xóa cùng lúc (chỉ Quản Trị — Admin)">
+              <i data-lucide="trash-2"></i> <span class="hide-mobile">Xóa Nhiều</span>
+            </button>
+            <!-- Nút thực thi XÓA NHIỀU ngay trên thanh công cụ (chỉ hiện khi chế độ chọn đang bật) -->
+            <span class="kb-pick-inline" id="kb-pick-inline">
+              <span class="kb-pick-inline-info">Đang chọn <b id="kb-pick-inline-count">0</b> lô</span>
+              <button type="button" class="btn btn-sm kb-pick-inline-del" id="kb-pick-inline-del" data-perm="kanban" title="Xóa các lô đã tích chọn (hoàn tác được bằng 1 bấm)"><i data-lucide="trash-2"></i> Xóa Đã Chọn</button>
+              <button type="button" class="btn btn-outline btn-sm" id="kb-pick-inline-cancel" data-perm="kanban" title="Thoát chế độ xóa nhiều lô"><i data-lucide="x"></i> Thoát</button>
+            </span>
+          </div>

@@ -1,0 +1,4 @@
+            <button class="btn btn-outline admin-only-btn" id="btn-multi-delete" data-perm="kanban" title="Bật chế độ tích chọn NHIỀU lô để xóa cùng lúc (chỉ Quản Trị — Admin)">
+              <i data-lucide="trash-2"></i> <span class="hide-mobile">Xóa Nhiều</span>
+            </button>
+          </div>

@@ -1,0 +1,8 @@
+  // Mặc định 1 LẦN than hóa: PHÚT mỗi lần RIÊNG THEO LOẠI (Ván / Bullig — thời
+  // gian 2 loại KHÁC NHAU; 1 lò có thể chứa cả 2 loại) + hệ số quy đổi m³ mỗi
+  // lần (2 m³/lần — CHỈ dùng để gộp LÔ CŨ trước mốc SAY_NO_AUTO_FROM). Bullig
+  // chưa khai số riêng → tạm bằng Ván tới khi nhập trong POPUP "Định mức".
+  const SAY_RATE_DEFAULT = {
+    s1: { van: 105, bullig: 105, m3: 2 },
+    s2: { van: 50, bullig: 50, m3: 2 }
+  };

@@ -1298,6 +1298,26 @@ h1, h2, h3, h4, h5 {
   overflow-x: auto;
 }
 
+/* ── BẢNG DÀI/RỘNG DÙNG KHUNG CUỘN .table-scroll (tab Nguyên Liệu + Nhân Sự):
+   HTML bọc bảng bằng <div class="table-responsive table-scroll"> → cuộn DỌC
+   trong khung ~60vh với DÒNG TIÊU ĐỀ DÍNH (khai báo dùng chung tại khối
+   ".table-scroll, .hr-table-scroll" ở phần Nhân Sự) và giữ được cuộn NGANG.
+   Bảng nhiều cột khai báo min-width RIÊNG dưới đây để cột KHÔNG bị bóp —
+   màn hình hẹp tự có thanh trượt ngang thay vì nhồi chữ xuống dòng. ── */
+#material-table { min-width: 1040px; }
+#material-plan-table { min-width: 560px; }
+#supplier-table { min-width: 980px; }
+#hr-employees-table { min-width: 1100px; }
+#hr-att-table { min-width: 760px; }
+#hr-positions-table { min-width: 640px; }
+#hr-ci-table { min-width: 820px; }
+#hr-leaves-table { min-width: 900px; }
+#hr-ot-table { min-width: 840px; }
+#hr-leave-stats-table { min-width: 620px; }
+#hr-att-stats-table { min-width: 960px; }
+#hr-recruit-table { min-width: 980px; }
+#hr-posneed-table { min-width: 760px; }
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -4710,13 +4730,19 @@ table.export-preview-table {
 #hr-att-table input[type="text"] { min-width: 120px; }
 #hr-att-table td { vertical-align: middle; }
 
-/* Bảng Nhân Sự cuộn (~10 dòng): Danh sách nhân viên & Chấm công theo ngày —
-   tiêu đề cột dính khi cuộn để luôn biết đang nhìn cột nào */
+/* ── KHUNG CUỘN BẢNG DÙNG CHUNG (.table-scroll · .hr-table-scroll):
+   các bảng dài (Nguyên Liệu 3 bảng + Nhân Sự 10 bảng) tự cuộn DỌC trong khung
+   ~60vh — KHÔNG kéo dài cả trang; dòng tiêu đề DÍNH khi cuộn để luôn biết
+   đang nhìn cột nào. .hr-table-scroll giữ làm TÊN CŨ (bảng Danh sách nhân
+   viên & Chấm công đã dùng từ trước) — 2 class cùng một bộ quy tắc. */
+.table-scroll,
 .hr-table-scroll {
-  max-height: 640px;
-  overflow-y: auto;
+  max-height: 60vh;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
+.table-scroll thead th,
 .hr-table-scroll thead th {
   position: sticky;
   top: 0;
@@ -5709,8 +5735,8 @@ body[data-theme="night"] .al-use-tag.use-bullig { background: #f9e0ec; }
 body[data-theme="night"] .al-day-badge.day-s1 { background: #ffe3c4; }
 body[data-theme="night"] .al-day-badge.day-s2 { background: #cfe3fb; }
 body[data-theme="night"] .al-day-badge.day-k { background: #ccf0d8; }
-  box-shadow: inset 0 0 0 1px var(--primary-border);
-}
+body[data-theme="night"] .al-day-badge.day-ext { background: #fbdcc4; }
+body[data-theme="night"] .al-day-badge.day-luuong { background: #fcefab; }
 .al-card-check { display: none; } /* Ô vuông tick đã bỏ — thẻ chọn nổi bằng nền + viền */
 .al-card-body { display: flex; flex-direction: column; min-width: 0; }
 .al-card-main { font-size: 0.8rem; font-weight: 700; }
@@ -7092,8 +7118,10 @@ body[data-fx="low"] .bamboo-card::after {
 /* ═════════════════════════════════════════════════════════════
    THẺ BÀO TINH — FORM GỌN / TỐI GIẢN
    • Hàng hẹp, nhãn nhỏ; nút "Chọn thanh" mở DANH SÁCH THẺ — bấm cả
-     thẻ để CHỌN / BỎ CHỌN (KHÔNG dùng ô vuông tích), thẻ 2 dòng:
-     dòng 1 = kích thước · loại nan · số lượng, dòng 2 = vị trí.
+     thẻ để CHỌN / BỎ CHỌN (KHÔNG dùng ô vuông tích), thẻ 2 DÒNG CHUẨN
+     như thanh thô của thẻ Bullig: dòng 1 = mã lô · vị trí · k.thước ·
+     loại · số thanh (còn); dòng 2 = chip Dùng cho + badge ngày S1/S2/K
+     + luồng NL + NCC. Có Ô TÌM NHANH (.al-search) lọc bỏ dấu.
    • Bảng tổng hợp theo KÍCH THƯỚC CHUNG: mỗi dòng có KÍCH THƯỚC
      SAU BÀO riêng + ô "SL thanh đạt"; SL thanh lỗi tự tính KHÔNG
      hiện ở form (chỉ ở bảng lịch sử). Ô kích thước HẸP (3–5 chữ số).
@@ -7110,7 +7138,7 @@ body[data-fx="low"] .bamboo-card::after {
 #x2-bao-tinh-card .x2-btinh-pick-g { flex: 1 1 220px; position: relative; }
 #x2-bao-tinh-card .x2-cut-form-wrap { padding-top: 0; }
 .x2-btinh-picker { padding: 8px; }
-.x2-btinh-picker .al-card-list { max-height: 46vh; gap: 6px; }
+.x2-btinh-picker .al-card-list { max-height: 46vh; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .x2-btinh-card {
   min-height: 0;
   padding: 8px 10px;
@@ -7120,8 +7148,6 @@ body[data-fx="low"] .bamboo-card::after {
 .x2-btinh-card .al-card-main { font-size: 0.82rem; }
 .x2-btinh-card .al-card-sub { font-size: 0.73rem; }
 .x2-btinh-groups { margin: 2px 0 10px; }
-.x2-btinh-card .al-card-main { font-size: 0.82rem; }
-.x2-btinh-card .al-card-sub { font-size: 0.73rem; }
 
 /* ═══ THẺ BULLIG — Gia công + Chọn thanh (2 công đoạn nhỏ trong 1 thẻ) ═══ */
 /* Danh sách chọn lô (Gia công) dùng CHUNG khuôn THẺ NGUỒN của Than Hóa + Sấy
@@ -7384,10 +7410,12 @@ body:has(.view-panel.active .modal-overlay.show) { overflow: hidden; }
 
   /* (5) ── Cuộn mượt + chặn cuộn lây sang trang phía sau (đỡ giật) ── */
   .modal-card, .al-picker, .al-card-list, .column-cards-wrapper,
-  .table-responsive, .x2-cut-table-scroll {
+  .table-responsive, .table-scroll, .x2-cut-table-scroll {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
+  /* Bảng cuộn dọc thấp lại trên điện thoại để vẫn thấy nội dung xung quanh thẻ */
+  .table-scroll { max-height: 56vh; }
 
   /* (6) ── Cột Kanban thấp lại: luôn thấy tab công đoạn + nút công cụ ── */
   .kanban-column { max-height: 74vh; }
@@ -8279,4 +8307,233 @@ body.kanban-pick-mode #kb-pick-bar { display: flex; }
 
 
 
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ĐỊNH MỨC THỜI GIAN 1 LẦN THAN HÓA — POPUP bảng theo tháng (4 cột phút/lần
+   riêng Ván/Bullig) + dòng m³/lần (lô cũ) + chip tóm tắt trên thẻ Than Hóa + Sấy
+   ═══════════════════════════════════════════════════════════════════ */
+.x2-say-rate-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 14px 8px;
+}
+.x2-say-rate-chip { font-size: 0.8rem; color: var(--text-muted); }
+.x2-say-rate-chip b { font-weight: 800; color: inherit; }
+.x2-say-rate-legacy { font-size: 0.72rem; opacity: 0.75; }
+.x2sr-table-wrap {
+  max-height: 46vh;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+.x2sr-table { width: 100%; font-size: 0.82rem; }
+.x2sr-table th, .x2sr-table td { padding: 6px 8px; white-space: nowrap; }
+.x2sr-cell input.x2sr-input { width: 86px; text-align: right; }
+.x2sr-row-default { opacity: 0.72; }
+.x2sr-def-tag { font-size: 0.7rem; color: var(--text-muted); }
+.x2sr-act { display: flex; gap: 4px; }
+.x2sr-add-month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  font-size: 0.8rem;
+}
+.x2sr-add-month input[type="month"] { padding: 4px 8px; }
+.x2sr-m3-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.8rem;
+}
+.x2sr-m3-line input { width: 76px; text-align: right; }
+.x2sr-m3-title { font-weight: 700; }
+
+/* Thanh nổi XÓA NHIỀU: nổi TRÊN thanh điều hướng điện thoại (nav = z-index 90) */
+#kb-pick-bar { z-index: 95; }
+@media (max-width: 639.98px) {
+  #kb-pick-bar { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Nhóm nút XÓA NHIỀU ngay trên thanh công cụ (hiện khi đang bật chế độ chọn) */
+.kb-pick-inline { display: none; align-items: center; gap: 6px; }
+body.kanban-pick-mode .kb-pick-inline { display: inline-flex; flex-wrap: wrap; }
+.kb-pick-inline-info { font-size: 0.8rem; font-weight: 700; }
+.kb-pick-inline b { color: #dc2626; }
+.kb-pick-inline-del {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+#kb-pick-inline-del:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   KHO NAN — thẻ launcher + PHIẾU KHO (Tổ trưởng khai → Ban lãnh đạo duyệt)
+   Sổ nhập/xuất theo kỳ · bảng tồn (lô đã xuất hết ẨN mặc định) · khối WIP
+   ═══════════════════════════════════════════════════════════════════ */
+.x2-mini-card[data-x2-card="x2-kho-card"] { --card-accent: #0f766e; --card-accent-bg: #ccfbf1; } /* Xanh tre đậm — Kho Nan */
+.kho-card-remain { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+.kho-card-remain strong { color: var(--text-main); }
+.kho-round-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+.kho-type-seg { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.kho-type-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: transparent; font-weight: 700; cursor: pointer; color: var(--text-main); }
+.kho-type-btn.active { background: #ccfbf1; border-color: #0f766e; color: #0f766e; }
+.kho-warn { color: var(--danger); font-weight: 700; }
+.kho-qty-bad { border-color: var(--danger) !important; color: var(--danger) !important; }
+.kho-pending-chip, .kho-warn-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+.kho-pending-chip { background: #fef3c7; color: #92400e; }
+.kho-warn-chip { background: #fee2e2; color: #b91c1c; }
+.kho-wip-bar { margin: 8px 0 4px; }
+.kho-wip-title { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.kho-wip-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; margin-bottom: 4px; font-size: 0.8rem; text-align: left; color: var(--text-main); }
+.kho-wip-row:hover { border-color: #0f766e; }
+.kho-wip-row.zero { opacity: 0.55; }
+.kho-note-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; }
+.kho-note-row .kho-note-main { flex: 1; min-width: 0; }
+.kho-note-line1 { font-size: 0.82rem; }
+.kho-note-line2 { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.kho-note-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.kho-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; }
+.kho-badge-xuat { background: #dcfce7; color: #15803d; }
+.kho-badge-xu_ly { background: #fee2e2; color: #b91c1c; }
+.kho-note-wait { font-size: 0.72rem; color: var(--text-muted); }
+.kho-pending-wrap { margin-top: 10px; }
+.kho-pending-rows { padding: 8px 2px; }
+.kho-day-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+.kho-sum { font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+.kho-sum-in { color: #15803d; }
+.kho-sum-out { color: #b45309; }
+.kho-sum-end { color: #0f766e; }
+.kho-note-hint { font-size: 0.7rem; color: #92400e; padding: 4px 12px; background: #fffbeb; }
+.kho-zone { padding: 8px 12px 10px; }
+.kho-zone-head { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 4px; }
+.kho-zone-out .kho-zone-head { color: #b45309; }
+.kho-zone-dv .kho-zone-head { color: #64748b; }
+.kho-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.kho-table th, .kho-table td { border-bottom: 1px solid var(--border); padding: 4px 6px; text-align: left; white-space: nowrap; }
+.kho-purpose-chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: #e2e8f0; color: #334155; }
+.kho-purpose-say2 { background: #dbeafe; color: #1d4ed8; }
+.kho-purpose-baotinh { background: #e0f2fe; color: #0369a1; }
+.kho-purpose-bullig { background: #dcfce7; color: #15803d; }
+.kho-purpose-khac { background: #f1f5f9; color: #475569; }
+.kho-period-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 12px 10px; }
+.kho-period-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.kho-period-seg .pv-unit-btn { border-radius: 0; }
+.kho-stock-row { display: block; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; position: relative; }
+.kho-stock-row.used { opacity: 0.6; }
+.kho-stock-line1 { font-size: 0.8rem; margin-bottom: 4px; padding-right: 70px; }
+.kho-stock-line2 { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.72rem; color: var(--text-muted); }
+.kho-stock-row .card-actions { position: absolute; top: 6px; right: 8px; }
+.kho-show-used { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; }
+.kho-col-add { margin-left: 8px; }
+.kho-lot-card { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
+.kho-lot-card:hover { border-color: #0f766e; }
+.kho-lot-card.picked { background: #ccfbf1; border-color: #0f766e; }
+.kho-lot-line1 { font-size: 0.78rem; margin-bottom: 3px; }
+.kho-lot-line2 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--text-muted); }
+.kho-lot-qty-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.72rem; }
+.kho-lot-qty-row input { width: 90px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   THẺ TỔNG HỢP CÔNG SUẤT — CHỌN KỲ (TUẦN ⇄ THÁNG) + GIỜ HC/TC
+   js/capacity.js · nút segmented #cap-mode-week/#cap-mode-month +
+   ô chọn tháng #cap-month + cột Giờ HC/TC tách riêng ở cả 3 tầng
+   ═══════════════════════════════════════════════════════════════ */
+.cap-month-input {
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.cap-month-input[hidden] { display: none !important; }
+body[data-theme="night"] .cap-month-input { color-scheme: dark; }
+/* Ô Giờ TC tô hổ phách nhạt để phân biệt nhanh với giờ HC (chỉ màn hình) */
+.cap-table .cap-tc, .cap-sub-table .cap-tc { color: #b45309; }
+body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-table .cap-tc { color: #d97706; }
+
+/* ── IN BÁO CÁO CÔNG SUẤT & HIỆU SUẤT (#btn-cap-print — thẻ #capacity-card) ──
+   Bản in = THÔNG TIN CHUNG của TẤT CẢ bộ phận (mỗi xưởng 1 bảng công đoạn +
+   dòng TỔNG xưởng); KHÔNG in gauge/thang xếp hạng/BẢN ĐỒ NHIỆT/biểu đồ 8 kỳ/
+   các nút. Khổ A4 NGANG, trắng tinh — js/capacity.js printCapacityReport(). */
+#cap-print-area { display: none; }
+
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  body.cap-printing > *:not(#cap-print-area) { display: none !important; }
+  body.cap-printing #cap-print-area { display: block !important; }
+
+  #cap-print-area { color: #000; background: #fff; font-family: 'Segoe UI', Arial, sans-serif; }
+  .cap-print-title    { font-size: 15pt; font-weight: 800; text-align: center; }
+  .cap-print-subtitle { font-size: 11.5pt; font-weight: 700; text-align: center; margin: 2px 0 6px; }
+  .cap-print-meta     { font-size: 9.5pt; text-align: center; margin-bottom: 10px; }
+  .cap-print-ws { margin-bottom: 12px; }
+  .cap-print-ws-title { font-size: 11pt; font-weight: 700; border-bottom: 1.5px solid #000; padding-bottom: 2px; margin-bottom: 5px; }
+  .cap-print-table { border-collapse: collapse; width: 100%; }
+  .cap-print-table th, .cap-print-table td { border: 1px solid #000; padding: 3px 5px; font-size: 9.5pt; color: #000; }
+  .cap-print-table th { background: #e6f4f1; text-align: center; font-weight: 700; }
+  .cap-print-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .cap-print-table td.txt { text-align: left; }
+  .cap-print-table tr.cap-print-total td { font-weight: 700; background: #f1f5f9; }
+  .cap-print-sumline, .cap-print-empty, .cap-print-note { font-size: 8.5pt; color: #000; margin-top: 4px; }
+  .cap-print-note { border-top: 1px dashed #666; padding-top: 4px; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   FORM NHẬP LIỆU THẺ "THAN HÓA + SẤY" — GỌN VỪA MÀN HÌNH (30/09/2026)
+   Modal "Thêm Lô Sấy Mới" (#add-lot-form) + "Chuyển Kho" (#transfer-kho-form)
+   mở từ thẻ x2-than-hoa-card (khung tre 26px chiếm mép). Yêu cầu: KHÔNG phải
+   cuộn ngang/dọc — modal cao theo màn hình THẬT (dvh) + KHÔNG cuộn ngang;
+   lưới form + khoảng cách gọn lại; 2 khối chọn Nguồn ⇄ Vị trí SONG SONG
+   (#al-pick-pair — điện thoại về 1 cột); danh sách thẻ nguồn / chip vị trí
+   tự cuộn TRONG khung nhỏ (.al-card-list 24vh · chips 18vh) thay vì đẩy modal
+   cao; ô thông tin nguồn xuống dòng được ở mọi ký tự (overflow-wrap) nên
+   không sinh thanh cuộn ngang do chuỗi "1250×18×7 · A1 · 500".
+   ═════════════════════════════════════════════════════════════════════ */
+#modal-add-lot .modal-card,
+#modal-transfer-kho .modal-card {
+  max-height: calc(100vh - 20px);
+  max-height: calc(100dvh - 20px);
+  overflow-x: hidden;   /* tuyệt đối không thanh cuộn ngang */
+}
+#add-lot-form *, #transfer-kho-form * { min-width: 0; }
+#add-lot-form .form-grid,
+#transfer-kho-form .form-grid { padding: 12px; gap: 10px; }
+#transfer-kho-form .form-group { gap: 4px; }
+#transfer-kho-form .dimension-inputs { flex-wrap: wrap; }
+/* Cặp khối CHỌN (Thẻ Nan ⇄ Vị Trí): desktop 2 cột song song, mobile 1 cột */
+.al-pick-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  grid-column: 1 / -1;      /* chiếm trọn 1 hàng của lưới form */
+  align-items: start;       /* mở danh sách dài → cột còn lại không bị dãn */
+}
+@media (min-width: 640px) {
+  #add-lot-form .al-pick-pair { grid-template-columns: 1fr 1fr; }
+}
+/* Danh sách thẻ nguồn + chips vị trí: tự cuộn trong khung nhỏ */
+#modal-add-lot .al-picker { padding: 8px; margin-top: 6px; }
+#modal-add-lot .al-search { min-height: 34px; }
+#modal-add-lot .al-card-list { max-height: 24vh; }
+#modal-add-lot .al-loc-chips { max-height: 18vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* Ô thông tin nguồn: gọn chữ + xuống dòng được mọi chỗ → không tràn ngang */
+#modal-add-lot .al-source-info,
+#modal-transfer-kho .al-source-info { font-size: 0.76rem; overflow-wrap: anywhere; word-break: break-word; }
+#modal-add-lot #al-notes { min-height: 44px; }
+@media (max-width: 639.98px) {
+  #modal-add-lot .al-card-list { max-height: 26vh; }
+  #modal-add-lot .al-loc-chips { max-height: 16vh; }
+}
 

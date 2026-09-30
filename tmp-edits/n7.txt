@@ -1,0 +1,13 @@
+  // Gom 1 nhóm lô thành 1 LẦN than hóa (giữ nguyên m³ thật của từng lô).
+  // LOẠI của lần = loại chiếm THỂ TÍCH NHIỀU HƠN (lô cùng lượt Lưu thường cùng
+  // loại; điền tay "Số lần TH" có thể chia trộn 2 loại trong 1 lần).
+  function sayOneChargeFromLots(group) {
+    const c = { lots: [], vol: 0, part: false, volVan: 0, volBullig: 0, useFor: 'van' };
+    group.forEach(l => {
+      c.lots.push({ id: l.id, code: l.code, location: l.location, vol: l.vol, part: false, type: l.type });
+      c.vol += l.vol;
+      if (l.type === 'bullig') c.volBullig += l.vol; else c.volVan += l.vol;
+    });
+    c.useFor = c.volBullig > c.volVan ? 'bullig' : 'van';
+    return c;
+  }

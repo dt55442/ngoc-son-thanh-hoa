@@ -1,0 +1,15 @@
+  // Nhãn định mức 1 lần than hóa theo các tháng có mặt — phút/lần RIÊNG Ván/Bullig:
+  // 2 loại cùng số → "105'/2,000m³" (như cũ); khác số → "V105'·B90'/2,000m³"
+  function capSayRateTextOf(dates, stageKey) {
+    const months = [...new Set((dates || []).map(d => String(d || '').slice(0, 7)).filter(Boolean))].sort();
+    if (!months.length) return '';
+    return months.map(m => {
+      const van = sayRateEntryOf(m, stageKey, 'Ván');
+      const bul = sayRateEntryOf(m, stageKey, 'Bullig');
+      const phutTxt = van.phut === bul.phut
+        ? `${fmtNum1(van.phut)}'`
+        : `V${fmtNum1(van.phut)}'·B${fmtNum1(bul.phut)}'`;
+      return `${phutTxt}/${fmtM3Cap(van.m3)}m³`;
+    }).join(' · ');
+  }
+

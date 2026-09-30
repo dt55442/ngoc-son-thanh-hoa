@@ -1,0 +1,1 @@
+handleX2SayRateSave, renderX2SayRateBar, updateXuong2BaoThoLinked

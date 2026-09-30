@@ -1,0 +1,1 @@
+    }).map(b => ({ batch: b, code: b.code || '', location: b.location || '', vol: batchVolumeOf(b) }));

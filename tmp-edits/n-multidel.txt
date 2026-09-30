@@ -1,0 +1,10 @@
+    safeOn('btn-multi-delete', 'click', () => {
+      toggleKanbanPickMode();
+      // Đang bật chế độ chọn → đảm bảo người dùng THẤY thẻ lô để tích: chuyển về
+      // khung "Bảng Dữ Liệu" + mở lại bảng Kanban nếu đang thu gọn.
+      if (state.kanbanPickMode) {
+        const hoaCard = document.getElementById('x2-than-hoa-card');
+        if (hoaCard && hoaCard.classList && hoaCard.classList.contains('kanban-board-collapsed')) toggleX2KanbanBoard();
+        switchX2SayFrame('data');
+      }
+    });

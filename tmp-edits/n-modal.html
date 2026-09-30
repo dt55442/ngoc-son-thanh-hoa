@@ -1,0 +1,45 @@
+  <!-- ═══ POPUP: ĐỊNH MỨC THỜI GIAN 1 LẦN THAN HÓA (theo tháng — 4 cột phút/lần
+       Sấy 1·Ván / Sấy 1·Bullig / Sấy 2·Ván / Sấy 2·Bullig; ô trống = dùng mặc định.
+       Dòng cuối: m³/lần CHỈ dùng để tự gộp LÔ CŨ trước 28/09/2026) ═══ -->
+  <div class="modal-overlay" id="modal-x2-say-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="flame"></i> Định Mức Thời Gian 1 Lần Than Hóa</h3>
+        <button class="modal-close-btn" id="btn-close-x2-say-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Phút/lần <b>riêng cho từng loại</b> (1 lò có thể chứa cả Ván lẫn Bullig).
+          Ô <b>trống</b> = dùng mặc định (Sấy 1 · Ván 105′ · Bullig 105′ — Sấy 2 · Ván 50′ · Bullig 50′).
+        </p>
+        <div class="table-responsive x2sr-table-wrap">
+          <table class="data-table x2sr-table">
+            <thead>
+              <tr>
+                <th>Tháng</th>
+                <th>Sấy 1 · Ván</th>
+                <th>Sấy 1 · Bullig</th>
+                <th>Sấy 2 · Ván</th>
+                <th>Sấy 2 · Bullig</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="x2-say-rate-rows"></tbody>
+          </table>
+        </div>
+        <div class="x2sr-add-month">
+          <label for="x2sr-new-month">Thêm tháng:</label>
+          <input type="month" id="x2sr-new-month">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-x2sr-add-month"><i data-lucide="plus"></i> Thêm</button>
+        </div>
+        <div class="x2sr-m3-line">
+          <span class="x2sr-m3-title" title="CHỈ dùng để tự gộp các lô cũ (trước 28/09/2026, không có mã mẻ) thành lần than hóa — lô mới đếm theo lượt bấm Lưu"><i data-lucide="info"></i> m³/lần (lô cũ):</span>
+          <select id="x2sr-m3-month" title="Chọn tháng"></select>
+          <label>Sấy 1 <input type="number" id="x2sr-m3-s1" min="0.01" step="any"></label>
+          <label>Sấy 2 <input type="number" id="x2sr-m3-s2" min="0.01" step="any"></label>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-x2sr-m3-save" data-perm="kanban" title="Lưu m³/lần của tháng đã chọn"><i data-lucide="save"></i> Lưu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+

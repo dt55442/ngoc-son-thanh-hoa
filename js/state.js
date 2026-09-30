@@ -90,6 +90,17 @@
   // (mặc định — 2 hàng lô icon) | 'data' = BẢNG DỮ LIỆU (thống kê than hóa + Kanban).
   // Thuần UI — nhớ theo máy, KHÔNG đồng bộ mây/backup (giống KANBAN_COLLAPSED).
   const STORAGE_KEY_X2_SAY_FRAME = 'bamboo_tracker_x2_say_frame_v1';
+  // ─── KHO NAN (thẻ launcher Xưởng 2 — tab Công Đoạn) ──────────
+  // PHIẾU KHO do TỔ TRƯỞNG tạo (người có quyền nhập Tab Công Đoạn), Ban lãnh đạo
+  // (Admin / Ban Quản Lý) DUYỆT. 3 loại phiếu trong 1 danh sách, phân biệt bằng `type`:
+  //   • 'xuat'     — phiếu XUẤT kho (mục đích: Sấy 2 / Bào Tinh / Bullig / Khác)
+  //   • 'tieuhuy'  — phiếu TIÊU HỦY tồn trung gian (thanh lỗi / nan Loại hẳn)
+  //   • 'taiche'   — phiếu TÁI CHẾ tồn trung gian (bào lại thành nan đạt ...)
+  // CHỈ phiếu 'da_duyet' mới TRỪ TỒN (kho + kế hoạch) — 'cho_duyet' chỉ hiện chip chờ.
+  const STORAGE_KEY_KHO_NOTES = 'bamboo_tracker_kho_notes_v1';
+  // Công tắc "Hiện lô đã xuất hết" của bảng tồn kho + cột Kanban Kho ('1' = hiện) —
+  // mặc định ẨN để tránh hiểu nhầm 1 lô ra/vào kho nhiều lần thành nhiều lô.
+  const STORAGE_KEY_KHO_SHOW_USED = 'bamboo_tracker_kho_show_used_v1';
   // ĐỊNH MỨC CÔNG SUẤT ÉP VÁN (m³/giờ) theo TỪNG THÁNG — { 'YYYY-MM': m³/h }.
   // Thẻ Ép Ván (launcher tab Công Đoạn): KHÔNG đặt định mức → thẻ ngày chỉ hiện
   // công suất m³/ngày; CÓ định mức → hiện thêm m³/h (tổng m³ ÷ giờ phân vị "Ép"
@@ -205,6 +216,17 @@
     hrAttendance: [],  // [{ id, date, employeeId, status 'work'|'absent', positions[], note, createdAt, updatedAt }] — chấm công & phân vị theo ngày (sparse)
     hrAttDate: '',     // ngày đang xem của bảng chấm công ('YYYY-MM-DD')
     hrAttMonth: '',    // tháng đang xem của thống kê đi làm ('YYYY-MM')
+    qcKilnThresholds: { say1: 15, say2: 12 }, // đạt khi độ ẩm ≤ ngưỡng của loại sấy
+    // ─── KHO NAN: phiếu kho (Tổ trưởng khai → Ban lãnh đạo duyệt) ───
+    // [{ id, type 'xuat'|'tieuhuy'|'taiche', date, purpose 'say2'|'baotinh'|'bullig'|'khac',
+    //    source 'baotinh_loi'|'bullig_loi'|'nan_loai_han'|'khac', method 'tai_che'|'tieu_huy',
+    //    sizeKey, qty, m3, lots [{batchId, qty}], note, status 'cho_duyet'|'da_duyet'|'tu_choi',
+    //    createdBy, createdByName, createdAt, approvedBy, approvedByName, approvedAt,
+    //    rejectReason, updatedAt }]
+    // CHỈ phiếu xuất 'da_duyet' trừ tồn kho & tồn kế hoạch (js/utils.js khoFifoAllocation
+    // + js/planning.js getNanStockEvents).
+    khoNotes: [],
+    khoShowUsed: false,        // công tắc "Hiện lô đã xuất hết" (mặc định ẨN)
     hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
     hrOvertimes: [],   // [{ id, employeeId, date, start, end (dự kiến), plannedMin, reason, status, approvedBy, approvedAt, ... }] — đăng ký tăng ca (giờ thực tế tự tính từ hrAssignments)
     // Lịch làm việc theo tháng: { 'YYYY-MM': { weekdaysOff: [0..6], restDays: ['YYYY-MM-DD'...] } }
@@ -378,6 +400,8 @@ export {
   STORAGE_KEY_QC_KILN_HUMIDITY,
   STORAGE_KEY_QC_KILN_THRESHOLD,
   STORAGE_KEY_X2_SAY_FRAME,
+  STORAGE_KEY_KHO_NOTES,
+  STORAGE_KEY_KHO_SHOW_USED,
   STORAGE_KEY_HR_EMPLOYEES,
   STORAGE_KEY_HR_LEAVES,
   STORAGE_KEY_HR_RECRUITMENT,

@@ -1,0 +1,8 @@
+  // Ô "Thành phần" của 1 lần: Ván - X m³ / Bullig - Y m³ (gọn thay danh sách mã
+  // lô — mã lô giữ ở tooltip title của ô để không mất thông tin)
+  function sayChargeCompText(c) {
+    const parts = [];
+    if ((c.volVan || 0) > 1e-9) parts.push(`Ván - ${fmtM3(c.volVan)} m³`);
+    if ((c.volBullig || 0) > 1e-9) parts.push(`Bullig - ${fmtM3(c.volBullig)} m³`);
+    return parts.length ? parts.join('<br>') : `${fmtM3(c.vol)} m³`;
+  }

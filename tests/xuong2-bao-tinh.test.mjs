@@ -1,7 +1,9 @@
 // tests/xuong2-bao-tinh.test.mjs — Kiểm thử VỊ TRÍ "BÀO TINH" (Xưởng 2):
 // form gọn (Ngày Bào · Loại Bào: Bào tinh / Bào tinh hạ cấp / Bào thanh ·
-// NÚT "Chọn thanh" mở DANH SÁCH THẺ — bấm thẻ để chọn/bỏ chọn, thẻ 2 dòng
-// (kích thước · loại nan · số lượng / vị trí), KHÔNG có ô vuông tích),
+// NÚT "Chọn thanh" mở DANH SÁCH THẺ — bấm thẻ để chọn/bỏ chọn, thẻ 2 DÒNG
+// CHUẨN như thanh thô của thẻ Bullig (dòng 1 = mã · vị trí · k.thước · loại ·
+// SL, dòng 2 = chip Dùng cho + badge ngày S1/S2/K + luồng NL + NCC) + ô tìm
+// nhanh, KHÔNG có ô vuông tích),
 // BẢNG TỔNG HỢP THEO KÍCH THƯỚC CHUNG (gộp, không chia phân loại): nhập SL
 // thanh ĐẠT → SL thanh LỖI TỰ TÍNH = thanh vào − thanh đạt,
 // Kích thước sau bào, định mức công suất theo tháng (thanh/h), thẻ ngày,
@@ -163,14 +165,39 @@ check('NÚT CHỌN THANH: bấm mở danh sách thẻ rồi bấm lại thì đ�
   document.getElementById('x2-btinh-picker').hidden === false &&
   x2.x2BaoTinhTogglePicker() === false);
 const listHtml = document.getElementById('x2-btinh-list').innerHTML;
-check('THẺ THANH: 2 dòng — dòng 1 kích thước · loại nan · số lượng, dòng 2 vị trí',
-  listHtml.includes('1250 × 18 × 7') && listHtml.includes('A1') && listHtml.includes('800 thanh') &&
-  listHtml.includes('K11 · 260910-01') && listHtml.includes('al-card-sub'));
+check('THẺ THANH: chuẩn 2 DÒNG như thanh thô Bullig — dòng 1 mã · vị trí · k.thước · loại · SL',
+  listHtml.includes('260910-01 · K11 · 1250 × 18 × 7 mm · A1 · 800 thanh') &&
+  listHtml.includes('al-card-sub'));
+check('THẺ THANH: dòng 2 có chip Dùng cho (Ván) + badge đếm ngày S1/S2/K',
+  listHtml.includes('al-use-tag use-van') && listHtml.includes('>Ván</span>') &&
+  listHtml.includes('al-day-badge day-s1') && listHtml.includes('al-day-badge day-s2') &&
+  listHtml.includes('al-day-badge day-k'));
 check('THẺ THANH: KHÔNG có ô vuông tích (không dùng al-card-check)',
   !listHtml.includes('al-card-check'));
 check('THẺ THANH: chỉ hiện LÔ ĐANG Ở KHO — KHÔNG hiện lô đang ở Sấy 2',
   listHtml.includes('K12') && listHtml.includes('K13') &&
   !listHtml.includes('LS2') && !listHtml.includes('260913-01'));
+document.getElementById('x2-btinh-search').value = 'k12';
+x2.renderX2BaoTinhList();
+check('TÌM NHANH: gõ "k12" → chỉ còn lô ở vị trí K12',
+  document.getElementById('x2-btinh-list').innerHTML.includes('K12') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K11') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K13'));
+document.getElementById('x2-btinh-search').value = '1300';
+x2.renderX2BaoTinhList();
+check('TÌM NHANH: gõ "1300" (kích thước) → chỉ còn lô 1300×20×8',
+  document.getElementById('x2-btinh-list').innerHTML.includes('1300 × 20 × 8 mm') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('1250 × 18 × 7 mm'));
+document.getElementById('x2-btinh-search').value = 'zzzz';
+x2.renderX2BaoTinhList();
+check('TÌM NHANH: không khớp → thông báo "Không tìm thấy thẻ nào khớp"',
+  document.getElementById('x2-btinh-list').innerHTML.includes('Không tìm thấy thẻ nào khớp'));
+document.getElementById('x2-btinh-search').value = '';
+x2.renderX2BaoTinhList();
+check('TÌM NHANH: xoá ô tìm → hiện lại toàn bộ thẻ',
+  document.getElementById('x2-btinh-list').innerHTML.includes('K11') &&
+  document.getElementById('x2-btinh-list').innerHTML.includes('K12') &&
+  document.getElementById('x2-btinh-list').innerHTML.includes('K13'));
 x2.toggleBaoTinhPick('k-1');
 check('BẤM THẺ = CHỌN (thẻ tô chip picked + đếm "1 đã chọn")',
   x2.baoTinhPickedIds().join(',') === 'k-1' &&
@@ -239,7 +266,7 @@ check('LƯU: kích thước SAU BÀO 1240×16×6 + người bào/giờ tự đ�
 check('TỒN LÔ: 2 lô đã bào hết (800→0 · 300→0) nên KHÔNG còn trong danh sách thẻ',
   x2.baoTinhLotRemainingOf(state.batches.find(b => b.id === 'k-1')) === 0 &&
   x2.baoTinhLotRemainingOf(state.batches.find(b => b.id === 'k-3')) === 0 &&
-  !document.getElementById('x2-btinh-list').innerHTML.includes('K11 · 260910-01'));
+  !document.getElementById('x2-btinh-list').innerHTML.includes('260910-01 · K11'));
 x2.toggleBaoTinhPick('k-2');
 document.getElementById('x2-btinh-date').value = '2026-09-21';
 x2.onBaoTinhGroupInput(fakeOkInput('1300×20×8', 450));
@@ -259,9 +286,11 @@ check('ĐỔI LOẠI BÀO: bỏ hết thẻ đã chọn + nút đổi thành "Ch
   x2.baoTinhPickedIds().length === 0 &&
   document.getElementById('x2-btinh-picker-text').textContent === 'Chọn thanh lỗi');
 const defectList = document.getElementById('x2-btinh-list').innerHTML;
-check('THẺ LỖI: gom theo CỠ của mọi lượt (1 thẻ "1240 × 16 × 6 · Thanh lỗi · 150 thanh")',
-  defectList.includes('1240 × 16 × 6') && defectList.includes('Thanh lỗi') &&
-  defectList.includes('150 thanh') && defectList.includes('Bào Tinh (chờ hạ cấp)'));
+check('THẺ LỖI: chuẩn 2 dòng — "Bào Tinh (chờ hạ cấp) · 1240 × 16 × 6 mm · Thanh lỗi · 150 thanh"',
+  defectList.includes('Bào Tinh (chờ hạ cấp) · 1240 × 16 × 6 mm · Thanh lỗi · 150 thanh'));
+check('THẺ LỖI: dòng 2 có chip "Bào tinh hạ cấp" + badge "Lỗi Bào Tinh"',
+  defectList.includes('al-card-sub') && defectList.includes('>Bào tinh hạ cấp</span>') &&
+  defectList.includes('>Lỗi Bào Tinh</span>'));
 document.getElementById('x2-btinh-date').value = '2026-09-21';
 x2.toggleBaoTinhPick('1240×16×6');
 x2.onBaoTinhGroupInput(fakeOkInput('1240×16×6', 90));    // vào 150 → lỗi 60
@@ -380,6 +409,7 @@ x2.toggleX2BaoTinhTable();
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): Ngày Bào · Loại Bào · nút "Chọn thanh" cùng 1 HÀNG (không còn ô nhập tay cũ)',
   idxHtml.includes('id="x2-btinh-picker-btn"') && idxHtml.includes('id="x2-btinh-list"') &&
+  idxHtml.includes('id="x2-btinh-search"') &&
   idxHtml.includes('id="x2-btinh-top-row"') && idxHtml.includes('id="x2-btinh-groups"') &&
   idxHtml.includes('id="x2-btinh-add-row"') &&
   !idxHtml.includes('id="x2-btinh-manual-row"') &&
@@ -394,9 +424,14 @@ check('CẤU TRÚC (styles.css): khối THẺ BÀO TINH FORM GỌN (thẻ 2 dòn
   cssHtml.includes('THẺ BÀO TINH — FORM GỌN') && cssHtml.includes('.x2-btinh-card .al-card-sub') &&
   cssHtml.includes('.x2-btinh-ok {') && cssHtml.includes('.x2-btinh-group-table {') &&
   cssHtml.includes('.x2-btinh-dim') && cssHtml.includes('.x2-btinh-actions {'));
+check('CẤU TRÚC (styles.css): ô tìm nhanh .al-search trong picker + KHÔNG còn khối CSS lơ lửng ({} cân bằng)',
+  cssHtml.includes('.x2-btinh-picker .al-card-list') && cssHtml.includes('.al-search {') &&
+  !cssHtml.includes('inset 0 0 0 1px var(--primary-border);\n}') &&
+  (() => { let d = 0; for (const ch of cssHtml) { if (ch === '{') d++; else if (ch === '}') d--; } return d === 0; })());
 const jsEventsSt = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (events.js): nối nút chọn thẻ + bấm thẻ + bảng tổng hợp (input/xóa hàng) + nút thêm hàng',
-  jsEventsSt.includes("safeOn('x2-btinh-picker-btn'") && jsEventsSt.includes("safeOn('x2-btinh-list'") &&
+  jsEventsSt.includes("safeOn('x2-btinh-picker-btn'") && jsEventsSt.includes("safeOn('x2-btinh-search'") &&
+  jsEventsSt.includes("safeOn('x2-btinh-list'") &&
   jsEventsSt.includes("safeOn('x2-btinh-groups', 'input'") &&
   jsEventsSt.includes("safeOn('x2-btinh-groups', 'click'") &&
   jsEventsSt.includes("safeOn('x2-btinh-add-row'") && jsEventsSt.includes("safeOn('btn-toggle-x2btinh-table'"));
@@ -408,7 +443,7 @@ check('CẤU TRÚC (js): nối storage/cloud/history/main',
   jsStorage.includes('xuong2BaoTinhRecords') && jsCloud.includes('x2BaoTinhRates') &&
   jsHistory.includes('xuong2BaoTinhRecords') && jsMain.includes('loadXuong2BaoTinh'));
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v181', /nha-may-ngoc-son-v181/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v186', /nha-may-ngoc-son-v186/.test(swJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

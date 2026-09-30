@@ -2,6 +2,7 @@
 // Bao phủ: tuần ISO, nhãn vị trí, nén ảnh, lưu form (trọng lượng = đầu vào − đầu ra),
 // chặn dữ liệu không hợp lệ, sửa/xóa, lưu/nạp localStorage, engine biểu đồ nguồn 'materials'.
 'use strict';
+import fs from 'node:fs';
 
 // ─── Stubs môi trường (giống chart-filters.test.mjs) ──────────────
 function makeEl(id) {
@@ -372,6 +373,20 @@ check('Dải hôm nay: hôm nay NGOÀI khung đang xem → không tô gì', fOut
 const fNone = fakeBandChart();
 bandPlugin.beforeDatasetsDraw(fNone, {}, { dayGroups: groupsToday, weekGroups: [] });
 check('Dải hôm nay: thiếu todayIso → không tô gì', fNone._calls.length === 0);
+
+// ─── I. CUỘN BẢNG NGUYÊN LIỆU (.table-scroll: dọc 60vh + tiêu đề dính + trượt ngang) ───
+const matIdxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const matCssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+const matNear = (id) => new RegExp('table-responsive table-scroll"[\\s\\S]{0,80}?id="' + id + '"').test(matIdxHtml);
+check('CUỘN: 3 bảng Nguyên Liệu bọc khung .table-responsive.table-scroll (không còn div inline)',
+  matNear('material-table') && matNear('material-plan-table') && matNear('supplier-table') &&
+  !matIdxHtml.includes('style="overflow-x:auto;"'));
+check('CUỘN (styles.css): .table-scroll = khung cuộn dọc 60vh + dòng tiêu đề DÍNH (sticky thead)',
+  /\.table-scroll,\s*\.hr-table-scroll\s*\{/.test(matCssHtml) && matCssHtml.includes('max-height: 60vh;') &&
+  /\.table-scroll thead th,\s*\.hr-table-scroll thead th\s*\{[\s\S]{0,220}?position: sticky;/.test(matCssHtml));
+check('CUỘN (styles.css): bảng nhiều cột có min-width → trượt ngang khi màn hình hẹp (cột không bóp)',
+  matCssHtml.includes('#material-table { min-width: 1040px') && matCssHtml.includes('#supplier-table { min-width: 980px') &&
+  matCssHtml.includes('#material-plan-table { min-width: 560px'));
 
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed ? 1 : 0);

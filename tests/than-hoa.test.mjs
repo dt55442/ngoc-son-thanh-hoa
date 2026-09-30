@@ -457,7 +457,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v181/.test(swJs));
+  /nha-may-ngoc-son-v186/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -688,44 +688,74 @@ check('GIỜ CẦN: mỗi lần Sấy 1 = 105\' ÷ 60 = 1,75h · Sấy 2 = 50\' 
   !!d21 && d21.charges.every(c => Math.abs(c.need - 1.75) < 1e-9) &&
   Math.abs(dayOf('2026-09-22').groups.find(g => g.stage === 'say2').charges[0].need - (50 / 60)) < 1e-9);
 
-// Định mức 1 LẦN than hóa theo THÁNG + công đoạn (phút/lần + m³/lần)
-state.x2SayRates = { s1: { '2026-09': { phut: 130, m3: 4 } }, s2: { '2026-09': { phut: 60, m3: 4 } } };
-check('ĐỊNH MỨC: đọc đúng phút/lần + m³/lần của tháng (130\' · 4 m³) — tháng chưa khai dùng mặc định (105/2 · 50/2)',
-  x2.sayMinutesPerCharge('2026-09-21', 'say1') === 130 && x2.sayM3PerCharge('2026-09-21', 'say1') === 4 &&
-  x2.sayMinutesPerCharge('2026-10-05', 'say1') === 105 && x2.sayM3PerCharge('2026-10-05', 'say2') === 2);
-check('ĐỊNH MỨC: đổi m³/lần lên 4 → ngày 21/09 (3 m³) chỉ còn 1 LẦN · mỗi lần 130\' = 2,17h',
+// Định mức 1 LẦN than hóa theo THÁNG + công đoạn + LOẠI (Ván/Bullig RIÊNG)
+state.x2SayRates = { s1: { '2026-09': { van: { phut: 130 }, bullig: { phut: 150 }, m3: 4 } }, s2: {} };
+check('ĐỊNH MỨC: phút RIÊNG từng loại (S1 Ván 130\' · Bullig 150\') + m³/lần 4 — tháng chưa khai dùng mặc định (S1 105 · S2 50)',
+  x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Ván') === 130 &&
+  x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Bullig') === 150 &&
+  x2.sayM3PerCharge('2026-09-21', 'say1') === 4 &&
+  x2.sayMinutesPerCharge('2026-10-05', 'say1', 'Ván') === 105 &&
+  x2.sayMinutesPerCharge('2026-10-05', 'say2', 'Bullig') === 50);
+check('ĐỊNH MỨC: phút TỪNG LẦN theo LOẠI của lần đó — 21/09 toàn Ván → 130\' · Sấy 2 Bullig (22/09) mặc định 50\'',
   (() => {
+    const d21x = x2.sayChargeRows().find(r => r.date === '2026-09-21');
+    const d22 = x2.sayChargeRows().find(r => r.date === '2026-09-22');
+    const g2 = d22 && d22.groups.find(g => g.stage === 'say2');
+    return !!d21x && d21x.charges.every(c => c.minutes === 130 && c.useFor === 'van') &&
+      !!g2 && g2.charges[0].useFor === 'bullig' && g2.charges[0].minutes === 50;
+  })());
+check('ĐỊNH MỨC: bản {phut, m3} cũ (máy khác đẩy mây về) → phút DÙNG CHUNG 2 loại — m³/lần lên 4 → 21/09 (3 m³) còn 1 LẦN',
+  (() => {
+    state.x2SayRates = { s1: { '2026-09': { phut: 130, m3: 4 } }, s2: {} };
     const d = x2.sayChargeRows().find(r => r.date === '2026-09-21');
+    const okRate = x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Ván') === 130 &&
+      x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Bullig') === 130;
+    state.x2SayRates = { s1: { '2026-09': { van: { phut: 130 }, bullig: { phut: 150 }, m3: 4 } }, s2: {} };
     return !!d && d.lanCount === 1 && Math.abs(d.charges[0].vol - 3) < 1e-9 &&
-      d.charges[0].minutes === 130 && Math.abs(d.charges[0].need - (130 / 60)) < 1e-9;
+      d.charges[0].minutes === 130 && Math.abs(d.charges[0].need - (130 / 60)) < 1e-9 && okRate;
   })());
 check('ĐỊNH MỨC: đổi m³/lần xuống 1 → ngày 21/09 (3 lô × 1 m³) thành 3 lần (mỗi lần 1 m³)',
   (() => {
-    state.x2SayRates = { s1: { '2026-09': { phut: 105, m3: 1 } }, s2: {} };
+    state.x2SayRates = { s1: { '2026-09': { van: { phut: 105 }, bullig: { phut: 105 }, m3: 1 } }, s2: {} };
     const d = x2.sayChargeRows().find(r => r.date === '2026-09-21');
-    state.x2SayRates = { s1: {}, s2: {} };
+    state.x2SayRates = { s1: { '2026-09': { van: { phut: 130 }, bullig: { phut: 150 }, m3: 4 } }, s2: {} };
     return !!d && d.lanCount === 3;
   })());
 
-// LƯU ĐỊNH MỨC 1 LẦN than hóa (công đoạn + tháng + phút/lần + m³/lần)
-document.getElementById('x2-say-rate-stage').value = 'say2';
-document.getElementById('x2-say-rate-month').value = '2026-10';
-document.getElementById('x2-say-rate-phut').value = '45';
-document.getElementById('x2-say-rate-m3').value = '3';
-x2.handleX2SayRateSave();
-check('LƯU ĐỊNH MỨC: lưu đúng phút/lần + m³/lần theo công đoạn + tháng vào state + localStorage',
-  state.x2SayRates.s2['2026-10'].phut === 45 && state.x2SayRates.s2['2026-10'].m3 === 3 &&
+// LƯU ĐỊNH MỨC qua POPUP (4 ô phút/lần của 1 hàng tháng; trống = dùng mặc định)
+state.x2SayRates = { s1: {}, s2: {} };
+document.getElementById('x2sr-2026-10-s1-van').value = '45';
+document.getElementById('x2sr-2026-10-s1-bullig').value = '60';
+document.getElementById('x2sr-2026-10-s2-van').value = '';
+document.getElementById('x2sr-2026-10-s2-bullig').value = '';
+x2.handleX2SayRateRowSave('2026-10');
+check('LƯU ĐỊNH MỨC: lưu đúng 4 phút/lần (ô trống = mặc định S2 50/50) vào state + localStorage',
+  state.x2SayRates.s1['2026-10'].van.phut === 45 && state.x2SayRates.s1['2026-10'].bullig.phut === 60 &&
+  state.x2SayRates.s2['2026-10'].van.phut === 50 && state.x2SayRates.s2['2026-10'].bullig.phut === 50 &&
   String(storeBacking.get('bamboo_tracker_x2_say_rate_v1') || '').includes('"phut":45'));
-document.getElementById('x2-say-rate-month').value = '2026-11';
-document.getElementById('x2-say-rate-phut').value = '0';
-x2.handleX2SayRateSave();
+document.getElementById('x2sr-2026-11-s1-van').value = '0';
+x2.handleX2SayRateRowSave('2026-11');
 check('LƯU ĐỊNH MỨC: số phút ≤ 0 bị chặn (không ghi vào state — tháng đó vẫn dùng mặc định)',
-  state.x2SayRates.s2['2026-11'] === undefined && x2.sayMinutesPerCharge('2026-11-05', 'say2') === 50);
-// Bản CŨ (1 số = phút/m³) vẫn đọc được → hiểu là PHÚT mỗi lần + m³/lần mặc định 2
+  state.x2SayRates.s1['2026-11'] === undefined && x2.sayMinutesPerCharge('2026-11-05', 'say2', 'Bullig') === 50);
+// m³/lần (lô cũ) — số CHUNG theo công đoạn, không phân loại
+document.getElementById('x2sr-m3-month').value = '2026-10';
+document.getElementById('x2sr-m3-s1').value = '3';
+document.getElementById('x2sr-m3-s2').value = '';
+x2.handleX2SayRateM3Save();
+check('LƯU M³/LẦN (lô cũ): Sấy 1 = 3 · Sấy 2 trống = mặc định 2 — không đụng phút đã khai',
+  x2.sayM3PerCharge('2026-10-05', 'say1') === 3 && x2.sayM3PerCharge('2026-10-05', 'say2') === 2 &&
+  state.x2SayRates.s1['2026-10'].van.phut === 45);
+// Khôi phục mặc định 1 tháng
+x2.handleX2SayRateRowReset('2026-10');
+check('KHÔI PHỤC MẶC ĐỊNH: xóa khai báo tháng → quay lại mặc định',
+  state.x2SayRates.s1['2026-10'] === undefined && x2.sayMinutesPerCharge('2026-10-05', 'say1', 'Ván') === 105);
+// Bản CŨ (1 số = phút) vẫn đọc được khi nạp từ localStorage
 storeBacking.set('bamboo_tracker_x2_say_rate_v1', JSON.stringify({ s1: { '2026-09': 120 }, s2: {} }));
 x2.loadX2SayRates();
-check('TƯƠNG THÍCH: định mức bản CŨ (1 số) → hiểu là phút/lần + m³/lần mặc định 2',
-  state.x2SayRates.s1['2026-09'].phut === 120 && state.x2SayRates.s1['2026-09'].m3 === 2);
+check('TƯƠNG THÍCH: định mức bản CŨ (1 số) → phút dùng chung 2 loại + m³/lần mặc định 2',
+  state.x2SayRates.s1['2026-09'].van.phut === 120 && state.x2SayRates.s1['2026-09'].bullig.phut === 120 &&
+  state.x2SayRates.s1['2026-09'].m3 === 2 && x2.sayMinutesPerCharge('2026-09-21', 'say1', 'Bullig') === 120);
+state.x2SayRates = { s1: {}, s2: {} };
 
 // Vẽ bảng thống kê (DOM stub: chạy không lỗi + nội dung đúng)
 state.x2SayRates = { s1: {}, s2: {} };
@@ -745,6 +775,22 @@ check('RENDER: thanh tiêu đề đếm số ngày + số LẦN than hóa + tổ
   document.getElementById('x2-say-stats-count').textContent.includes('lần than hóa') &&
   document.getElementById('x2-say-stats-count').textContent.includes('ngày') &&
   document.getElementById('x2-say-stats-count').textContent.includes('m³'));
+
+check('RENDER: cột Thành phần mỗi lần = "Ván - 1,000 m³" (mã lô chuyển vào tooltip title)',
+  statsHtml.includes('Ván - 1,000 m³') && statsHtml.includes('title="Mã lô: 260921-01 + 260921-02'));
+check('RENDER: Sấy 2 Bullig 22/09 → "Bullig - 0,400 m³"',
+  statsHtml.includes('Bullig - 0,400 m³'));
+// POPUP ĐỊNH MỨC: bảng 4 cột phút/lần + chip tóm tắt trên thẻ
+x2.renderX2SayRateModal();
+const rateTbl = document.getElementById('x2-say-rate-rows').innerHTML;
+check('POPUP ĐỊNH MỨC: 4 ô phút/lần mỗi hàng (s1-van/s1-bullig/s2-van/s2-bullig) + nút Lưu/Khôi phục',
+  rateTbl.includes('-s1-van') && rateTbl.includes('-s1-bullig') &&
+  rateTbl.includes('-s2-van') && rateTbl.includes('-s2-bullig') &&
+  rateTbl.includes('data-x2sr-save') && rateTbl.includes('data-x2sr-reset'));
+x2.renderX2SayRateChip();
+check('POPUP ĐỊNH MỨC: chip tóm tắt trên thẻ hiện "Sấy 1" + phút',
+  document.getElementById('x2-say-rate-chip').innerHTML.includes('Sấy 1') &&
+  document.getElementById('x2-say-rate-chip').innerHTML.includes("'"));
 
 // THU GỌN / MỞ LẠI bảng Kanban (nhớ theo máy)
 localStorage.removeItem('bamboo_tracker_x2_kanban_collapsed_v1');
@@ -824,11 +870,11 @@ check('CẤU TRÚC (js): lô gắn MÃ MẺ sayCharges khi bấm Lưu + mốc SA
   fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8').includes('SAY_NO_AUTO_FROM'));
 
 // CẤU TRÚC: markup + style + nối dữ liệu 4 nơi
-check('CẤU TRÚC (index.html): bảng theo TỪNG LẦN than hóa + định mức phút/lần + m³/lần + nút thu gọn bảng KANBAN',
+check('CẤU TRÚC (index.html): bảng theo TỪNG LẦN than hóa + NÚT Định mức + POPUP 4 cột phút/lần + m³/lần (lô cũ) + nút thu gọn bảng KANBAN',
   idxHtml.includes('id="x2-say-stats-wrap"') && idxHtml.includes('id="x2-say-day-rows"') &&
-  idxHtml.includes('id="x2-say-rate-bar"') && idxHtml.includes('id="x2-say-rate-stage"') &&
-  idxHtml.includes('id="x2-say-rate-phut"') && idxHtml.includes('id="x2-say-rate-m3"') &&
-  idxHtml.includes('btn-x2-say-rate-save') &&
+  idxHtml.includes('id="btn-x2-say-rate"') && idxHtml.includes('id="modal-x2-say-rate"') &&
+  idxHtml.includes('id="x2-say-rate-rows"') && idxHtml.includes('id="btn-x2sr-add-month"') &&
+  idxHtml.includes('id="btn-x2sr-m3-save"') && idxHtml.includes('m³/lần (lô cũ)') && !idxHtml.includes('id="x2-say-rate-bar"') && idxHtml.includes('<th>Thành phần</th>') &&
   idxHtml.includes('btn-toggle-kanban-board') && idxHtml.includes('Số lần TH') &&
   idxHtml.includes('Giờ HC') && idxHtml.includes('Giờ TC') && idxHtml.includes('Giờ Cần'));
 check('CẤU TRÚC (index.html): BỎ nút thu gọn của bảng thống kê + BỎ ô "Số Lần Than Hóa" theo LÔ trong form Sửa Lô',
@@ -844,7 +890,7 @@ check('CẤU TRÚC (js): định mức than hóa + SỐ LẦN THAN HÓA theo ng�
   jsStorage.includes('x2SayRates') && jsStorage.includes('restoreX2SayTimes') &&
   jsCloud.includes('x2SayTimes') && jsHistory.includes('x2SayTimes') &&
   jsMain.includes('loadX2SayRates') && jsMain.includes('loadX2SayTimes') &&
-  jsEvents.includes('btn-toggle-kanban-board') && jsEvents.includes('btn-x2-say-rate-save') &&
+  jsEvents.includes('btn-toggle-kanban-board') && jsEvents.includes('btn-x2-say-rate') && jsEvents.includes('data-x2sr-save') &&
   jsEvents.includes('onSayTimesChange'));
 check('CẤU TRÚC (styles.css): dòng đầu ngày có ô Sự cố cho phép (x2-say-inc-input) + nhãn Hiệu suất ngày (x2-say-eff-badge)',
   cssHtml.includes('.x2-say-inc-input') && cssHtml.includes('.x2-say-day-inc') &&
@@ -863,6 +909,15 @@ check('CẤU TRÚC (js): GIỜ SỰ CỐ CHO PHÉP theo ngày có key riêng + n
   jsCloud.includes('x2SayIncidents') && jsHistory.includes('x2SayIncidents') &&
   jsMain.includes('loadX2SayIncidents') && jsEvents.includes('onSayIncidentChange'));
 
+// ─── N0. CHIP "LẦN THAN HÓA" TRÊN THẺ KANBAN (chỉ đọc) ─────────────
+state.batches.push({ id: 'bx-th1', code: '260998-01', stage: 'say1', date: '2026-09-26', week: '2026-W39', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 1, bambooType: 'A', useFor: 'Ván', location: 'LS2', sayCharges: { say1: 1000 }, stageHistory: [{ stage: 'say1', date: '2026-09-26' }] }); // ngày RIÊNG (26/09) — 25/09 đã có tb-old2/tb-old3 nên nhãn sẽ là 'Lần 1/3'
+check('CHIP KANBAN: lô có mã mẻ sayCharges → nhãn "Lần 1/1 · Sấy 1"',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx-th1')) === 'Lần 1/1 · Sấy 1');
+check('CHIP KANBAN: lô cũ KHÔNG mã mẻ → không hiện nhãn (chuỗi rỗng)',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx1')) === '');
+check('CHIP KANBAN: main.js đưa hàm vào window.app (x2SayChargeLabel)',
+  jsMain.includes('x2SayChargeLabel') && jsMain.includes('sayBatchChargeLabel'));
+
 // ─── N. XÓA NHIỀU LÔ (ADMIN — chế độ tích chọn trên Kanban) ────────
 console.log('--- N. XÓA NHIỀU LÔ (ADMIN) ---');
 // Cấu trúc: nút "Xóa Nhiều" (admin-only) trong thanh công cụ + thanh nổi "Đã chọn N lô"
@@ -878,6 +933,11 @@ check('CẤU TRÚC (js): thẻ lô có ô tích data-pick-id + sự kiện đư�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('data-pick-id') &&
   jsEvents.includes('btn-multi-delete') && jsEvents.includes('kb-pick-del') &&
   jsMain.includes('exitKanbanPickMode'));
+check('XÓA NHIỀU — DỄ THẤY: tự chuyển khung "Bảng Dữ Liệu" + nhóm nút thực thi ngay trên thanh công cụ',
+  idxHtml.includes('id="kb-pick-inline"') && idxHtml.includes('id="kb-pick-inline-del"') &&
+  jsEvents.includes('kb-pick-inline-del') && jsEvents.includes("switchX2SayFrame('data')") &&
+  cssHtml.includes('.kb-pick-inline') && cssHtml.includes('#kb-pick-bar { z-index: 95; }'));
+
 
 // Chuẩn bị dữ liệu: 3 lô (sẽ xóa 2 lô cùng lúc, giữ lại 1)
 state.batches.push(
@@ -923,6 +983,29 @@ check('XÓA NHIỀU — HOÀN TÁC 1 BẦM: khôi phục ĐỦ 2 lô + gỡ tomb
 // Thoát chế độ chọn
 bm.exitKanbanPickMode();
 check('XÓA NHIỀU — THOÁT: tắt chế độ + gỡ class body', state.kanbanPickMode === false && !document.body.classList.contains('kanban-pick-mode'));
+
+// ─── N. FORM THẺ THAN HÓA + SẤY GỌN VỪA MÀN HÌNH (không cuộn ngang/dọc) ─────
+const jsBatchModals = fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8');
+// Cắt đúng vùng wrapper .al-pick-pair (từ khai báo tới chú thích đóng) để kiểm tra 2 khối chọn
+const alPickPairSlice = (function () {
+  const start = idxHtml.indexOf('class="al-pick-pair"');
+  const end = idxHtml.indexOf('/ .al-pick-pair');
+  return (start !== -1 && end > start) ? idxHtml.slice(start, end) : '';
+})();
+check('FORM GỌN: 2 khối chọn Nguồn ⇄ Vị Trí bọc chung .al-pick-pair (bỏ col-span-full riêng lẻ)',
+  idxHtml.includes('class="al-pick-pair"') &&
+  alPickPairSlice.includes('id="al-source-btn"') && alPickPairSlice.includes('id="al-source-list"') &&
+  alPickPairSlice.includes('id="al-location-btn"') && alPickPairSlice.includes('id="al-location-add"') &&
+  !alPickPairSlice.includes('col-span-full'));
+check('FORM GỌN (styles.css): modal theo dvh + KHÔNG cuộn ngang + danh sách thẻ/chips tự cuộn trong khung nhỏ',
+  cssHtml.includes('#modal-add-lot .modal-card') && cssHtml.includes('#modal-transfer-kho .modal-card') &&
+  cssHtml.includes('overflow-x: hidden;   /* tuyệt đối không thanh cuộn ngang */') &&
+  cssHtml.includes('#modal-add-lot .al-card-list { max-height: 24vh; }') &&
+  cssHtml.includes('#modal-add-lot .al-loc-chips { max-height: 18vh;') &&
+  cssHtml.includes('.al-pick-pair {'));
+check('FORM GỌN (js): mở 1 khối chọn thì TỰ ĐÓNG khối còn lại (form không phình khi mở cả hai)',
+  jsBatchModals.includes("const locPanel = document.getElementById('al-location-panel');") &&
+  jsBatchModals.includes("const srcPanel = document.getElementById('al-source-panel');"));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 // LUÔN thoát rõ ràng (mẫu cloud-shard/chart-filters): nếu còn timer/promise sót

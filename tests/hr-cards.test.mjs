@@ -2,6 +2,7 @@
 // bảng Nhân Sự jako karty (5 na wiersz desktop / 2 telefon) — liczniki
 // na thẻ, otwieranie/schowanie szczegółowego bảng, podświetlenie aktywnej thẻ.
 'use strict';
+import fs from 'node:fs';
 
 // ─── Stubs môi trường (identyczne z hr-attendance.test.mjs) ──────
 function makeEl(id) {
@@ -142,6 +143,17 @@ check('THẼ: thẻ emp đang mở (không ẩn) khi modal hiển thị', !docum
 hr.hrCloseOpenCard();
 check('THẺ: đóng pop-up → overlay tắt (không show)', !_ov.classList.contains('show'));
 check('THẺ: sau khi đóng → thẻ emp lại bị ẩn (hr-card-hidden)', document.getElementById('hr-emp-card').classList.contains('hr-card-hidden'));
+
+// ─── E. CUỘN BẢNG NHÂN SỰ: 10 bảng đều bọc .table-scroll (dọc 60vh + tiêu đề dính) ──
+const hrIdxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const hrCssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+const HR_SCROLL_TABLES = ['hr-employees-table', 'hr-att-table', 'hr-positions-table', 'hr-ci-table',
+  'hr-leaves-table', 'hr-ot-table', 'hr-leave-stats-table', 'hr-att-stats-table', 'hr-recruit-table', 'hr-posneed-table'];
+check('CUỘN: 10 bảng Nhân Sự đều bọc khung .table-responsive.table-scroll',
+  HR_SCROLL_TABLES.every(id => new RegExp('table-responsive table-scroll"[\\s\\S]{0,80}?id="' + id + '"').test(hrIdxHtml)));
+check('CUỘN (styles.css): .table-scroll dùng chung với .hr-table-scroll (max-height 60vh + thead sticky)',
+  /\.table-scroll,\s*\.hr-table-scroll\s*\{/.test(hrCssHtml) && hrCssHtml.includes('max-height: 60vh;') &&
+  /\.table-scroll thead th,\s*\.hr-table-scroll thead th\s*\{[\s\S]{0,220}?position: sticky;/.test(hrCssHtml));
 
 console.log(`\nWYNIK: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

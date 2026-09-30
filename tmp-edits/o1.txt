@@ -1,0 +1,4 @@
+  // Mặc định 1 LẦN than hóa: phút mỗi lần (105' cho Sấy 1 · 50' cho Sấy 2) +
+  // hệ số quy đổi m³ mỗi lần (2 m³/lần — CHỈ dùng cho lô cũ trước mốc
+  // SAY_NO_AUTO_FROM) — cả 2 chỉnh được theo tháng.
+  const SAY_RATE_DEFAULT = { s1: { phut: 105, m3: 2 }, s2: { phut: 50, m3: 2 } };

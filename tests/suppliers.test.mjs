@@ -3,6 +3,7 @@
 // Tỷ lệ đạt (10 chuyến cắt chọn gần nhất) / Số lần nhắc nhở, đánh giá 1–5 sao,
 // CRUD modal (tên tự thêm tiền tố "Nhà"), chuẩn hóa tên dữ liệu cũ, render bảng.
 'use strict';
+import fs from 'node:fs';
 
 // ─── Stubs môi trường (giống xuong2-cut.test.mjs) ────────────────
 function makeEl(id) {
@@ -192,6 +193,12 @@ sup.saveSuppliers();
 sup.loadSuppliers();
 check('NẠP LẠI: localStorage → state đủ 2 nhà cung cấp', state.suppliers.length === 2);
 check('NẠP LẠI: đúng tên đã chuẩn hóa', state.suppliers.some(s => s.name === 'Nhà Hiệu Tam Lư'));
+
+// ─── G. CUỘN BẢNG NHÀ CUNG (khung .table-scroll dùng chung — 30/09/2026) ─────
+const supIdxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+check('CUỘN: bảng Thông Tin Nhà Cung bọc .table-responsive.table-scroll (không còn div inline)',
+  new RegExp('table-responsive table-scroll"[\\s\\S]{0,80}?id="supplier-table"').test(supIdxHtml) &&
+  !supIdxHtml.includes('style="overflow-x:auto;"'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

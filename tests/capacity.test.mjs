@@ -319,7 +319,7 @@ check('CẤU TRÚC (styles.css): khối CSS thẻ tổng hợp + sparkline + mà
   stylesCss.includes('.cap-mode-btn') && stylesCss.includes('.cap-spark-svg') &&
   stylesCss.includes('.cap-eff-good') && stylesCss.includes('.cap-eff-low'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v181', /nha-may-ngoc-son-v181/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v186', /nha-may-ngoc-son-v186/.test(swJs));
 check('SỔ ĐĂNG KÝ: 10 dòng công đoạn Xưởng 2 (Bullig tách Gia công/Chọn thanh) · Xưởng 1 = 0 dòng',
   cap.capStagesOf('x2').length === 10 && cap.capStagesOf('x1').length === 0);
 check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId)',
@@ -422,6 +422,90 @@ check('TAB: bỏ ép màu xanh lá #2e7d32 cho tab đang chọn ở theme hiện
 check('TAB: tab Nhân Sự có màu đặc trưng riêng (hổ phách) + bỏ accent tab đã xóa',
   stylesCss.includes('data-target="hr-view"') && stylesCss.includes('--tab-accent: #d97706') &&
   !stylesCss.includes('data-target="press-view"'));
+
+// ─── P. CHẾ ĐỘ THÁNG + GIỜ HC/TC TÁCH RIÊNG + IN BÁO CÁO (30/09/2026) ──
+// P1. Nhãn + dịch tháng (vắt năm)
+check('THÁNG: dịch ±1 tháng vắt năm đúng (2025-01 −1 = 2024-12 · 2024-12 +1 = 2025-01)',
+  cap.capMonthShift('2025-01', -1) === '2024-12' && cap.capMonthShift('2024-12', 1) === '2025-01');
+check('THÁNG: nhãn đầy đủ = "Tháng 9/2026 · 01/09 – 30/09"',
+  cap.capMonthHeadLabel('2026-09') === 'Tháng 9/2026' &&
+  cap.capMonthRangeLabel('2026-09') === '01/09 – 30/09' &&
+  cap.capPeriodLabel('2026-09', 'month') === 'Tháng 9/2026 · 01/09 – 30/09');
+check('THÁNG: nhãn rút gọn "T9" cho trục biểu đồ/ô bản đồ nhiệt',
+  cap.capPeriodShortLabel('2026-09', 'month') === 'T9' && cap.capPeriodShortLabel(wk, 'week') === `T${cap.capWeekNumOf(wk)}`);
+
+// P2. Gộp theo THÁNG (mode='month') — cùng dữ liệu đã seed ở trên
+const cutStP = cap.CAP_STAGES.find(s => s.id === 'cut');
+const cutMonthRow = cap.capStagePeriodRow(cutStP, '2026-09', 'month');
+check('THÁNG: Cắt Chọn gộp CẢ THÁNG = 3 lượt · 2.300 kg · 9 giờ (giờ vẫn đếm 1 lần/ngày)',
+  cutMonthRow.turns === 3 && cutMonthRow.qty === 2300 && cutMonthRow.hours === 9);
+check('THÁNG: định mức = ĐM của chính tháng (300 kg/h) → hiệu suất ≈ 85,2%',
+  approx(cutMonthRow.rate, 300) && approx(cutMonthRow.eff, (2300 / 9) / 300 * 100, 1e-4));
+check('TUẦN: bản cũ capStageWeekRow giữ nguyên hành vi (không đổi gì)',
+  cap.capStageWeekRow(cutStP, wk).turns === 3 && cap.capStageWeekRow(cutStP, wk).hours === 9);
+
+// P3. Đổi chế độ + chọn tháng + điều hướng kỳ
+cap.setCapacityMode('month');
+check('THÁNG: setCapacityMode("month") → mode = "month" + tự neo kỳ mới nhất CÓ dữ liệu (2026-09)',
+  state.capUi.mode === 'month' && state.capUi.week === '' && cap.capSelectedPeriod() === '2026-09');
+cap.setCapacityMonth('2026-09');
+check('THÁNG: chọn tháng 9/2026 → nhãn thẻ hiện "Tháng 9/2026"',
+  state.capUi.week === '2026-09' &&
+  document.getElementById('capacity-week-label').textContent.includes('Tháng 9/2026'));
+check('THÁNG: ô chọn tháng #cap-month hiện ra + đồng bộ đúng giá trị',
+  document.getElementById('cap-month').hidden === false &&
+  document.getElementById('cap-month').value === '2026-09');
+cap.shiftCapacityWeek(1);
+check('THÁNG: › nhảy sang tháng kế (2026-10) + tầng công đoạn tự xổ',
+  state.capUi.week === cap.capMonthShift('2026-09', 1) && state.capUi.weekOpen === state.capUi.week);
+cap.setCapacityMonth('2026-09'); // tự xổ tầng công đoạn của tháng 9
+cap.toggleCapacityStageDays('cut');
+const capTbodyMonth = document.getElementById('capacity-week-rows');
+check('THÁNG: tầng 2 có cột "Định mức tháng" + "So tháng trước" + Giờ HC/TC tách riêng (cap-hc/cap-tc)',
+  capTbodyMonth.innerHTML.includes('Định mức tháng') && capTbodyMonth.innerHTML.includes('So tháng trước') &&
+  capTbodyMonth.innerHTML.includes('cap-hc') && capTbodyMonth.innerHTML.includes('cap-tc'));
+cap.toggleCapacityStageDays('cut');
+
+// P4. Giờ HC/TC ở chip tổng quan + tổng xưởng
+cap.setCapacityView('visual');
+const stripMonth = document.getElementById('cap-summary-strip');
+check('HC/TC: dải chip có "Giờ HC" · "Giờ TC" · "Tổng" (tách riêng, không gộp "x (a/b)")',
+  stripMonth.innerHTML.includes('Giờ HC') && stripMonth.innerHTML.includes('Giờ TC') &&
+  stripMonth.innerHTML.includes('Tổng'));
+const wSep = cap.capWorkshopWeekRow('x2', wk);
+check('HC/TC: tổng xưởng tuần dữ liệu — HC = 8h (Sấy 4h + Ép 4h) · TC = 0 · tổng giờ 24h',
+  approx(wSep.hc, 8) && wSep.tc === 0 && approx(wSep.hours, 24));
+
+// P5. Báo cáo IN — chỉ thông tin chung của TẤT CẢ bộ phận
+const reportHtml = cap.buildCapacityReportHtml();
+check('IN: báo cáo có tiêu đề NHÀ MÁY + kỳ báo cáo đang xem (Tháng 9/2026)',
+  reportHtml.includes('NHÀ MÁY NGỌC SƠN THANH HÓA') && reportHtml.includes('Tháng 9/2026'));
+check('IN: gồm TẤT CẢ bộ phận trong sổ CAP_WORKSHOPS (Xưởng 2 có bảng + TỔNG, Xưởng 1 ghi chú chưa có dữ liệu)',
+  reportHtml.includes('Xưởng 2') && reportHtml.includes('TỔNG Xưởng 2') &&
+  reportHtml.includes('Xưởng 1') && reportHtml.includes('Chưa có công đoạn nào'));
+check('IN: bảng có cột Giờ HC · Giờ TC · Tổng giờ RIÊNG BIỆT',
+  reportHtml.includes('Giờ HC') && reportHtml.includes('Giờ TC') && reportHtml.includes('Tổng giờ'));
+check('IN: KHÔNG chứa bản đồ nhiệt (data-cap-heat) · biểu đồ 8 kỳ (cap-stage-chart) · gauge (cap-gauge)',
+  !reportHtml.includes('data-cap-heat') && !reportHtml.includes('cap-stage-chart') && !reportHtml.includes('cap-gauge'));
+check('IN: dòng TỔNG xưởng KHÔNG cộng sản lượng khác đơn vị (ô sản lượng là "—")',
+  /TỔNG Xưởng 2[\s\S]*?<td class="num"[^>]*>—<\/td>/.test(reportHtml));
+cap.setCapacityMode('week');
+const reportWeek = cap.buildCapacityReportHtml();
+check('IN: chế độ TUẦN → báo cáo neo đúng tuần đang xem (nhãn "Tuần ...")',
+  reportWeek.includes('THEO TUẦN') && reportWeek.includes('Tuần '));
+
+// P6. CẤU TRÚC mới trong index.html / styles.css / events.js
+const evJs = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+check('CẤU TRÚC (index.html): đủ nút Tuần⇄Tháng + ô chọn tháng + In báo cáo + vùng in riêng',
+  indexHtml.includes('id="cap-mode-week"') && indexHtml.includes('id="cap-mode-month"') &&
+  indexHtml.includes('id="cap-month"') && indexHtml.includes('id="btn-cap-print"') &&
+  indexHtml.includes('id="cap-print-area"'));
+check('CẤU TRÚC (styles.css): CSS ô chọn tháng + khối in body.cap-printing (A4 ngang)',
+  stylesCss.includes('.cap-month-input') && stylesCss.includes('body.cap-printing #cap-print-area') &&
+  stylesCss.includes('@page { size: A4 landscape; margin: 8mm; }'));
+check('CẤU TRÚC (events.js): đã nối Tuần⇄Tháng + ô tháng + In báo cáo',
+  evJs.includes("setCapacityMode('week')") && evJs.includes("setCapacityMode('month')") &&
+  evJs.includes('setCapacityMonth') && evJs.includes("'btn-cap-print'"));
 
 // ─── Tổng kết ───────────────────────────────────────────────────
 console.log(`\nKết quả: ${pass} PASS / ${fail} FAIL`);

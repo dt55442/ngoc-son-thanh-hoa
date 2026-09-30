@@ -1,0 +1,3 @@
+    safeOn('btn-x2-say-rate-save', 'click', handleX2SayRateSave);
+    safeOn('x2-say-rate-month', 'change', renderX2SayRateBar);
+    safeOn('x2-say-rate-stage', 'change', renderX2SayRateBar);

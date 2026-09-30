@@ -1,0 +1,39 @@
+  // Dọn định mức đã lưu: chấp nhận BẢN CŨ (số thuần = phút · { phut, m3 }) lẫn
+  // bản MỚI ({ van:{phut}, bullig:{phut}, m3 }) — bản cũ chuyển thành phút RIÊNG
+  // từng loại (cùng 1 số) + m³ giữ nguyên/mặc định.
+  function loadX2SayRates() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_SAY_RATE);
+    state.x2SayRates = { s1: {}, s2: {} };
+    if (!raw) return;
+    try {
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      ['s1', 's2'].forEach(k => {
+        const g = (obj[k] && typeof obj[k] === 'object') ? obj[k] : {};
+        const def = SAY_RATE_DEFAULT[k];
+        const out = {};
+        Object.keys(g).forEach(month => {
+          if (!/^\d{4}-\d{2}$/.test(month)) return;
+          const v = g[month];
+          if (typeof v === 'number') {
+            const phut = v > 0 ? v : def.van;
+            out[month] = { van: { phut }, bullig: { phut }, m3: def.m3 };
+          } else if (v && typeof v === 'object') {
+            if (v.van || v.bullig) {
+              const van = (v.van && typeof v.van === 'object') ? v.van : {};
+              const bul = (v.bullig && typeof v.bullig === 'object') ? v.bullig : {};
+              out[month] = {
+                van: { phut: Number(van.phut) > 0 ? Number(van.phut) : def.van },
+                bullig: { phut: Number(bul.phut) > 0 ? Number(bul.phut) : def.bullig },
+                m3: Number(v.m3) > 0 ? Number(v.m3) : def.m3
+              };
+            } else {
+              const phut = Number(v.phut) > 0 ? Number(v.phut) : def.van;
+              out[month] = { van: { phut }, bullig: { phut }, m3: Number(v.m3) > 0 ? Number(v.m3) : def.m3 };
+            }
+          }
+        });
+        state.x2SayRates[k] = out;
+      });
+    } catch (e) {}
+  }

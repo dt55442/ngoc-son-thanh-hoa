@@ -1,0 +1,9 @@
+  // Gom 1 nhóm lô thành 1 LẦN than hóa (giữ nguyên m³ thật của từng lô)
+  function sayOneChargeFromLots(group) {
+    const c = { lots: [], vol: 0, part: false };
+    group.forEach(l => {
+      c.lots.push({ code: l.code, location: l.location, vol: l.vol, part: false });
+      c.vol += l.vol;
+    });
+    return c;
+  }

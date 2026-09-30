@@ -1,0 +1,15 @@
+check('RENDER: cột Thành phần mỗi lần = "Ván - 1,000 m³" (mã lô chuyển vào tooltip title)',
+  statsHtml.includes('Ván - 1,000 m³') && statsHtml.includes('title="Mã lô: 260921-01 + 260921-02'));
+check('RENDER: Sấy 2 Bullig 22/09 → "Bullig - 0,400 m³"',
+  statsHtml.includes('Bullig - 0,400 m³'));
+// POPUP ĐỊNH MỨC: bảng 4 cột phút/lần + chip tóm tắt trên thẻ
+x2.renderX2SayRateModal();
+const rateTbl = document.getElementById('x2-say-rate-rows').innerHTML;
+check('POPUP ĐỊNH MỨC: 4 ô phút/lần mỗi hàng (s1-van/s1-bullig/s2-van/s2-bullig) + nút Lưu/Khôi phục',
+  rateTbl.includes('-s1-van') && rateTbl.includes('-s1-bullig') &&
+  rateTbl.includes('-s2-van') && rateTbl.includes('-s2-bullig') &&
+  rateTbl.includes('data-x2sr-save') && rateTbl.includes('data-x2sr-reset'));
+x2.renderX2SayRateChip();
+check('POPUP ĐỊNH MỨC: chip tóm tắt trên thẻ hiện "Sấy 1" + phút',
+  document.getElementById('x2-say-rate-chip').innerHTML.includes('Sấy 1') &&
+  document.getElementById('x2-say-rate-chip').innerHTML.includes("'"));

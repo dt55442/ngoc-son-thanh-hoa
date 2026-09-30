@@ -357,7 +357,290 @@ import { state } from './state.js';
     };
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // KHO NAN — TÍNH TOÁN TỒN KHO + SỔ NHẬP/XUẤT (hàm thuần, chỉ đọc state)
+  // Dùng chung cho: js/kanban.js (cột Kho) · js/xuong2.js (thẻ "Kho Nan") ·
+  // js/planning.js (getNanStockEvents — trừ tồn kế hoạch theo phiếu ĐÃ DUYỆT).
+  // Nguyên tắc:
+  //   • Mỗi entry 'kho' trong stageHistory = 1 lần NHẬP kho (1 lô có thể ra/vào
+  //     kho nhiều lần: lần 1 từ Sấy 1, xuất sang Sấy 2 rồi quay lại kho, ...)
+  //     ⇒ Tồn của lô = (số lần nhập × quantity) − Σ phiếu xuất ĐÃ DUYỆT gắn lô,
+  //     KHÔNG phải quantity − đã dùng (sai khi lô quay lại kho lần 2).
+  //   • Phiếu xuất KHÔNG gắn lô (tổ trưởng khai theo tổng) → tự phân bổ FIFO:
+  //     lô vào kho LÂU NHẤT trừ trước, hết mới sang lô kế tiếp.
+  //   • Phiếu 'cho_duyet' KHÔNG trừ tồn — chỉ hiện chip chờ Ban lãnh đạo duyệt.
+  // ═══════════════════════════════════════════════════════════
+
+  // Nhãn tiếng Việt: mục đích xuất / nguồn xử lý / cách xử lý tồn trung gian
+  const KHO_PURPOSE_LABELS = { say2: 'Sấy 2', baotinh: 'Bào Tinh', bullig: 'Bullig', khac: 'Khác' };
+  const KHO_SOURCE_LABELS  = { baotinh_loi: 'Thanh lỗi Bào Tinh', bullig_loi: 'Thanh lỗi Chọn thanh Bullig', nan_loai_han: 'Nan Loại hẳn (Chọn Nan Thô)', khac: 'Khác' };
+  const KHO_METHOD_LABELS  = { tieu_huy: 'Tiêu hủy', tai_che: 'Tái chế' };
+  // Thứ tự cột tổng hợp theo mục đích xuất
+  const KHO_PURPOSE_ORDER = ['say2', 'baotinh', 'bullig', 'khac'];
+  // Nhóm Sấy 1 / Sấy 2 / Kho (khớp NAN_POOL_STAGES của js/planning.js)
+  const KHO_POOL_STAGES = ['say1', 'say2', 'kho'];
+
+  // Chuẩn hóa mục đích xuất (giá trị lạ → 'khac')
+  function khoNormPurpose(p) { return ['say2', 'baotinh', 'bullig'].includes(p) ? p : 'khac'; }
+
+  // Các entry NHẬP kho của 1 lô — MỖI entry = 1 lần vào kho
+  function khoInEntriesOf(b) {
+    return getBatchStageHistory(b).filter(h => h && h.stage === 'kho' && h.date);
+  }
+  // Số lần NHẬP kho (lô không có entry lịch sử nhưng đang ở kho → coi như 1 lần)
+  function khoInCountOf(b) {
+    if (!b) return 0;
+    const n = khoInEntriesOf(b).length;
+    return n || (b.stage === 'kho' ? 1 : 0);
+  }
+  function khoFirstInDateOf(b) { const e = khoInEntriesOf(b); return (e[0] && e[0].date) || b.khoDate || b.date || ''; }
+  function khoLastInDateOf(b)  { const e = khoInEntriesOf(b); return (e[e.length - 1] && e[e.length - 1].date) || b.khoDate || b.date || ''; }
+  // Số lần lô RA KHỎI kho (mốc 'say2' xuất hiện NGAY SAU mốc 'kho' — quay lại sấy)
+  function khoOutRoundCountOf(b) {
+    let out = 0, inKho = false;
+    getBatchStageHistory(b).forEach(h => {
+      if (!h || !h.stage) return;
+      if (h.stage === 'kho') inKho = true;
+      else if (h.stage === 'say2' && inKho) { out++; inKho = false; }
+    });
+    return out;
+  }
+
+  // Phiếu XUẤT kho ĐÃ DUYỆT — nguồn chính thức trừ tồn
+  function khoApprovedXuatNotes() {
+    return (state.khoNotes || []).filter(n => n && n.type === 'xuat' && n.status === 'da_duyet');
+  }
+  // Phiếu xử lý TỒN TRUNG GIAN ĐÃ DUYỆT (tiêu hủy / tái chế) — lọc theo nguồn nếu cần
+  function khoApprovedScrapNotes(source) {
+    return (state.khoNotes || []).filter(n => n && (n.type === 'tieuhuy' || n.type === 'taiche') &&
+      n.status === 'da_duyet' && (!source || n.source === source));
+  }
+
+  // PHÂN BỔ FIFO số thanh xuất ĐÃ DUYỆT vào các lô đang ở Kho:
+  // trả { byLot: Map(batchId → đã xuất), unallocated: phần chưa gắn được lô (thanh) }
+  function khoFifoAllocation() {
+    const lots = (state.batches || []).filter(b => b && b.stage === 'kho')
+      .sort((a, b) => khoFirstInDateOf(a).localeCompare(khoFirstInDateOf(b)));
+    const byLot = new Map(lots.map(b => [b.id, 0]));
+    const cap = new Map(lots.map(b => [b.id, khoInCountOf(b) * (Number(b.quantity) || 0)]));
+    let unallocated = 0;
+    khoApprovedXuatNotes()
+      .slice().sort((x, y) => String(x.date || '').localeCompare(String(y.date || '')))
+      .forEach(n => {
+        // 1) Phần phiếu GẮN LÒ tường minh → trừ đúng lô đó
+        (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
+          const id = String((l && l.batchId) || '');
+          if (id && byLot.has(id)) byLot.set(id, (byLot.get(id) || 0) + (Number(l.qty) || 0));
+        });
+        const tagged = (Array.isArray(n.lots) ? n.lots : []).reduce((s, l) => s + (Number(l && l.qty) || 0), 0);
+        // 2) Phần khai TỔNG → phân bổ FIFO (lô vào kho lâu nhất trừ trước)
+        let remain = (Number(n.qty) || 0) - tagged;
+        for (const b of lots) {
+          if (remain <= 0) break;
+          const free = Math.max(0, (cap.get(b.id) || 0) - (byLot.get(b.id) || 0));
+          const take = Math.min(free, remain);
+          if (take > 0) { byLot.set(b.id, (byLot.get(b.id) || 0) + take); remain -= take; }
+        }
+        if (remain > 0) unallocated += remain;
+      });
+    return { byLot, unallocated };
+  }
+
+  // Tồn THỰC của 1 lô đang ở Kho (thanh) — lô không ở kho trả 0
+  function khoLotRemainingOf(b, alloc) {
+    if (!b || b.stage !== 'kho') return 0;
+    const a = alloc || khoFifoAllocation();
+    const used = a.byLot.get(b.id) || 0;
+    return Math.max(0, khoInCountOf(b) * (Number(b.quantity) || 0) - used);
+  }
+
+
+  // Số thanh hệ thống SUY RA đã rời kho của 1 lô (chỉ để ĐỐI CHIẾU với phiếu):
+  // bào tinh (sources[].qty) + Bullig gia công (qtyIn) + mỗi lần quay lại Sấy 2 (nguyên lô)
+  function khoDerivedOutOf(batchId) {
+    const id = String(batchId || '');
+    if (!id) return 0;
+    const b = (state.batches || []).find(x => x && x.id === id);
+    if (!b) return 0;
+    let out = 0;
+    (state.xuong2BaoTinhRecords || []).forEach(r => {
+      if (!r || r.kind !== 'tinh') return;
+      if (Array.isArray(r.sources) && r.sources.length) {
+        r.sources.forEach(s => { if (s && String(s.batchId || '') === id) out += Number(s.qty) || 0; });
+      } else if (String(r.batchId || '') === id) {
+        out += (Number(r.qtyOk) || 0) + (Number(r.qtyErr) || 0);
+      }
+    });
+    (state.xuong2BulligRecords || []).forEach(r => {
+      if (!r || r.kind !== 'gc') return;
+      if (String(r.batchId || '') === id) out += (r.qtyIn != null ? (Number(r.qtyIn) || 0) : (Number(r.quantity) || 0));
+    });
+    let inKho = false;
+    getBatchStageHistory(b).forEach(h => {
+      if (!h || !h.stage) return;
+      if (h.stage === 'kho') inKho = true;
+      else if (h.stage === 'say2' && inKho) { out += Number(b.quantity) || 0; inKho = false; }
+    });
+    return out;
+  }
+
+  // Tổng hợp TỒN KHO hiện tại (vật lý) + TỒN NAN TOÀN NHÓM (Sấy 1/2/Kho) + đối chiếu
+  function khoStockSummary() {
+    const lots = (state.batches || []).filter(b => b && b.stage === 'kho');
+    const alloc = khoFifoAllocation();
+    let thanh = 0, m3 = 0, live = 0, usedUp = 0;
+    lots.forEach(b => {
+      const used = alloc.byLot.get(b.id) || 0;
+      const cap = khoInCountOf(b) * (Number(b.quantity) || 0);
+      const rem = Math.max(0, cap - used);
+      if (rem <= 0) { usedUp++; return; }
+      live++;
+      thanh += rem;
+      m3 += calculateVolume(b.length, b.width, b.thickness, rem);
+    });
+    // Tồn THẬT (đối chiếu chéo) = Σ nhập − Σ xuất đã duyệt — dùng làm giới hạn
+    // duyệt phiếu (không cho tồn âm) và phát hiện phiếu vượt sức chứa của các lô.
+    const inTotal = lots.reduce((s, b) => s + khoInCountOf(b) * (Number(b.quantity) || 0), 0);
+    const outTotal = khoApprovedXuatNotes().reduce((s, n) => s + (Number(n.qty) || 0), 0);
+    const pending = (state.khoNotes || []).filter(n => n && n.status === 'cho_duyet');
+    const pendingQty = pending.filter(n => n.type === 'xuat').reduce((s, n) => s + (Number(n.qty) || 0), 0);
+    // Tồn nan TOÀN NHÓM (Sấy 1 + Sấy 2 + Kho) — con số dùng cho KẾ HOẠCH:
+    // phiếu purpose 'say2' KHÔNG trừ (lô vẫn nằm trong nhóm), các purpose khác trừ.
+    const pool = (state.batches || []).filter(b => b && KHO_POOL_STAGES.includes(b.stage));
+    const poolIn = pool.reduce((s, b) => s + (Number(b.quantity) || 0), 0);
+    const poolOut = khoApprovedXuatNotes().filter(n => khoNormPurpose(n.purpose) !== 'say2')
+      .reduce((s, n) => s + (Number(n.qty) || 0), 0);
+    // ĐỐI CHIẾU theo lô: hệ thống suy ra − phiếu đã duyệt. CHỈ đếm phần DƯƠNG
+    // (suy ra nhiều hơn phiếu = còn THIẾU phiếu — cần "Tạo phiếu bù"). Phần âm
+    // là bình thường: nhiều phiếu xuất hợp lệ (bán, điều chuyển…) không có nguồn
+    // suy ra tương ứng nên không phải là "lệch".
+    let mismatch = 0;
+    const mismatchLots = [];
+    pool.forEach(b => {
+      const d = khoDerivedOutOf(b.id) - (alloc.byLot.get(b.id) || 0);
+      if (d >= 1) { mismatch += d; mismatchLots.push({ id: b.id, code: b.code || '', diff: d }); }
+    });
+    return {
+      lots, liveLots: live, usedUpLots: usedUp,
+      remainingThanh: thanh, remainingM3: m3,
+      honestThanh: Math.max(0, inTotal - outTotal),
+      inTotal, outTotal,
+      overAlloc: Math.max(0, alloc.unallocated),
+      poolLots: pool.length, poolThanh: Math.max(0, poolIn - poolOut),
+      pendingCount: pending.length, pendingQty,
+      mismatchThanh: mismatch, mismatchLots
+    };
+  }
+
+  // Bản đồ ẨN/HIỆN lô ở cột Kho Kanban: lô tồn 0 ẨN (mặc định; state.khoShowUsed
+  // = true thì hiện lại) — tránh tưởng "1 lô ra/vào kho nhiều lần" là nhiều lô.
+  function khoVisibilityMap() {
+    const alloc = khoFifoAllocation();
+    const hide = new Set(), remain = new Map();
+    (state.batches || []).forEach(b => {
+      if (!b || b.stage !== 'kho') return;
+      const r = khoLotRemainingOf(b, alloc);
+      remain.set(b.id, r);
+      if (r <= 0 && !state.khoShowUsed) hide.add(b.id);
+    });
+    return { hide, remain };
+  }
+
+  // ─── SỔ NHẬP/XUẤT KHO (mỗi lô có thể nhiều dòng — luôn ghi rõ LẦN) ──
+  // inRows:  [{ date, lotId, code, round, qty, m3, length, width, thickness,
+  //             bambooType, useFor, location }]  — mỗi entry 'kho' = 1 dòng NHẬP
+  // outRows: [{ date, noteId, purpose, purposeNote, qty, m3, lotIds[], note, createdBy }]
+  //          — từ phiếu XUẤT ĐÃ DUYỆT (số chính thức)
+  // derived: [{ date, kind 'baotinh'|'bullig'|'say2', lotId, code, qty }]
+  //          — số hệ thống suy ra (CHỈ để đối chiếu, không trừ tồn)
+  function khoLedgerEvents() {
+    const inRows = [], outRows = [], derived = [];
+    const codeOf = id => { const b = (state.batches || []).find(x => x && x.id === id); return b ? (b.code || '') : ''; };
+    (state.batches || []).forEach(b => {
+      if (!b) return;
+      let round = 0;
+      getBatchStageHistory(b).forEach(h => {
+        if (!h || h.stage !== 'kho' || !h.date) return;
+        round++;
+        const qty = Number(b.quantity) || 0;
+        inRows.push({
+          date: h.date, lotId: b.id, code: b.code || '', round, qty,
+          m3: calculateVolume(b.length, b.width, b.thickness, qty),
+          length: b.length, width: b.width, thickness: b.thickness,
+          bambooType: b.bambooType || '', useFor: b.useFor || '', location: b.location || ''
+        });
+      });
+      // Mỗi lần quay lại Sấy 2 (mốc 'say2' sau mốc 'kho') = 1 dòng suy ra
+      let inKho = false;
+      getBatchStageHistory(b).forEach(h => {
+        if (!h || !h.stage) return;
+        if (h.stage === 'kho') inKho = true;
+        else if (h.stage === 'say2' && h.date && inKho) {
+          derived.push({ date: h.date, kind: 'say2', lotId: b.id, code: b.code || '', qty: Number(b.quantity) || 0 });
+          inKho = false;
+        }
+      });
+    });
+    khoApprovedXuatNotes().forEach(n => {
+      outRows.push({
+        date: n.date || '', noteId: n.id, purpose: khoNormPurpose(n.purpose),
+        purposeNote: n.purposeNote || '', qty: Number(n.qty) || 0, m3: Number(n.m3) || 0,
+        lotIds: (Array.isArray(n.lots) ? n.lots : []).map(l => String((l && l.batchId) || '')).filter(Boolean),
+        note: n.note || '', createdBy: n.createdByName || n.createdBy || ''
+      });
+    });
+    (state.xuong2BaoTinhRecords || []).forEach(r => {
+      if (!r || r.kind !== 'tinh' || !r.date) return;
+      const srcs = (Array.isArray(r.sources) && r.sources.length)
+        ? r.sources
+        : [{ batchId: r.batchId, qty: (Number(r.qtyOk) || 0) + (Number(r.qtyErr) || 0) }];
+      srcs.forEach(s => {
+        const id = String((s && s.batchId) || '');
+        const qty = Number(s && s.qty) || 0;
+        if (id && qty > 0) derived.push({ date: r.date, kind: 'baotinh', lotId: id, code: codeOf(id), qty });
+      });
+    });
+    (state.xuong2BulligRecords || []).forEach(r => {
+      if (!r || r.kind !== 'gc' || !r.date) return;
+      const id = String(r.batchId || '');
+      const qty = r.qtyIn != null ? (Number(r.qtyIn) || 0) : (Number(r.quantity) || 0);
+      if (id && qty > 0) derived.push({ date: r.date, kind: 'bullig', lotId: id, code: codeOf(id), qty });
+    });
+    const byDateDesc = (a, b) => String(b.date || '').localeCompare(String(a.date || ''));
+    inRows.sort(byDateDesc); outRows.sort(byDateDesc); derived.sort(byDateDesc);
+    return { inRows, outRows, derived };
+  }
+
+  // Khóa kỳ sổ: 'day' = theo ngày · 'tuan' = theo tuần ISO · 'thang' = theo tháng
+  function khoPeriodKeyOf(date, mode) {
+    const d = String(date || '');
+    if (!d) return '';
+    if (mode === 'tuan') return getISOWeekString(d);
+    if (mode === 'thang') return d.slice(0, 7);
+    return d;
+  }
+
 export {
+  KHO_METHOD_LABELS,
+  KHO_POOL_STAGES,
+  KHO_PURPOSE_LABELS,
+  KHO_PURPOSE_ORDER,
+  KHO_SOURCE_LABELS,
+  khoApprovedScrapNotes,
+  khoApprovedXuatNotes,
+  khoDerivedOutOf,
+  khoFifoAllocation,
+  khoFirstInDateOf,
+  khoInCountOf,
+  khoInEntriesOf,
+  khoLastInDateOf,
+  khoLedgerEvents,
+  khoLotRemainingOf,
+  khoNormPurpose,
+  khoOutRoundCountOf,
+  khoPeriodKeyOf,
+  khoStockSummary,
+  khoVisibilityMap,
   attachChartPanDrag,
   calculateStageDays,
   calculateVolume,

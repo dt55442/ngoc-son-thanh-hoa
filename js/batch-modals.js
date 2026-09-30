@@ -203,6 +203,11 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     if (cnt) cnt.textContent = String(n);
     const btn = document.getElementById('kb-pick-del');
     if (btn) btn.disabled = n === 0;
+    // Nhóm nút XÓA NHIỀU ngay trên thanh công cụ (hiện khi đang bật chế độ chọn)
+    const cntInline = document.getElementById('kb-pick-inline-count');
+    if (cntInline) cntInline.textContent = String(n);
+    const btnInline = document.getElementById('kb-pick-inline-del');
+    if (btnInline) btnInline.disabled = n === 0;
   }
   // Bật/tắt chế độ chọn nhiều lô (bấm lần nữa = thoát)
   function toggleKanbanPickMode() {
@@ -515,6 +520,10 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     panel.hidden = !panel.hidden;
     if (btn) btn.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
     if (!panel.hidden) {
+      // 2 khối chọn SONG SONG (Nguồn ⇄ Vị Trí): mở khối này thì đóng khối kia
+      // để form luôn gọn — không đẩy modal cao thêm thành phải cuộn dọc
+      const locPanel = document.getElementById('al-location-panel');
+      if (locPanel && !locPanel.hidden) locPanel.hidden = true;
       renderAlSourceList();
       // Điện thoại: modal tự cuộn tới nút để thấy ngay danh sách thẻ vừa mở
       if (btn && typeof btn.scrollIntoView === 'function') {
@@ -578,7 +587,16 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     if (!panel) return false;
     panel.hidden = !panel.hidden;
     if (btn) btn.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
-    if (!panel.hidden) renderAlLocationChips();
+    if (!panel.hidden) {
+      // mở Vị Trí thì đóng khối chọn Nguồn — cùng lúc chỉ 1 danh sách mở (form gọn)
+      const srcPanel = document.getElementById('al-source-panel');
+      if (srcPanel && !srcPanel.hidden) {
+        srcPanel.hidden = true;
+        const srcBtn = document.getElementById('al-source-btn');
+        if (srcBtn) srcBtn.setAttribute('aria-expanded', 'false');
+      }
+      renderAlLocationChips();
+    }
     return !panel.hidden;
   }
   // Bấm chip vị trí (uỷ nhiệm sự kiện click): nút × = XÓA vị trí đã khai báo, chip = CHỌN
@@ -833,7 +851,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       .filter(b => b && b.stage === 'kho' && String(b.location || '').trim())
       .map(b => String(b.location).trim()))].sort((a, b) => a.localeCompare(b, 'vi'));
   }
-  function openTransferKhoModal() {
+  function openTransferKhoModal(preset) {
     if (!requireEditPermission()) return;
     const modal = document.getElementById('modal-transfer-kho');
     const form  = document.getElementById('transfer-kho-form');
@@ -843,7 +861,9 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     const dEl = document.getElementById('ck-date');
     if (dEl) dEl.value = today;
     const sEl = document.getElementById('ck-stage');
-    if (sEl) sEl.value = 'say1';
+    // preset 'new' = mở thẳng chế độ NHẬP KHO THỦ CÔNG (tạo lô mới ở thẳng Kho)
+    // — dùng cho nút "Nhập Kho" trên cột Kho / thẻ Kho Nan
+    if (sEl) sEl.value = (preset === 'new') ? 'new' : 'say1';
     syncTransferKhoUI();
     modal.classList.add('show');
     initLucide();

@@ -181,6 +181,16 @@ function check(name, cond) {
     { id: 'x2bt-test-1', kind: 'tinh', date: dateP, week: `Tuần ${P}`, inSizeKey: '1250×18×7', inQty: 1000, qtyOk: 960, qtyErr: 40,
       sources: [{ batchId: 'b3', code: 'L03', location: '', dims: [1250, 18, 7], qty: 1000 }] }
   ];
+  // PHIẾU XUẤT KHO ĐÃ DUYỆT (từ 30/09/2026: SỐ CHÍNH THỨC trừ tồn kế hoạch) —
+  // 1000 thanh rời kho ở tuần P, bù cho lượt bào tinh nguồn lô b3 (như nút
+  // "Tạo phiếu bù" của thẻ Kho Nan). Lô b3 đã bào hết ⇒ tồn P cuối = 1000 (b1).
+  state.khoNotes = [
+    { id: 'kho-note-test-1', type: 'xuat', status: 'da_duyet', date: dateP,
+      purpose: 'baotinh', qty: 1000, m3: 0,
+      lots: [{ batchId: 'b3', qty: 1000 }], note: 'Phiếu bù kiểm thử (khởi tạo từ dữ liệu cũ)',
+      createdBy: 'admin', createdByName: 'admin', approvedByName: 'admin',
+      createdAt: '2026-09-20T00:00:00.000Z', updatedAt: '2026-09-20T00:00:00.000Z' }
+  ];
   state.planningItems = [
     // Kế hoạch tuần quá khứ P: 200 tấm → Cần 1200 (KHÔNG dùng khi trượt tuần quá khứ)
     { id: 'p0', week: `Tuần ${P}`, year: Y, productId: 'rate-1', qty: 200 },
@@ -251,8 +261,8 @@ function check(name, cond) {
   console.log('--- PHẦN E: SỔ THEO DÕI Ô TỔNG TỒN (TRACE) ---');
   const ledK = wd.ledger[K];
   check('E: ledger đủ 52 tuần cho từng ô tồn', Array.isArray(ledK) && ledK.length === 52);
-  check('E: tuần P — thêm mới 1000 (b1), rời nhóm 1000 (bào tinh b3), TỔNG TỒN 1000',
-    ledK[P - 1].import === 1000 && ledK[P - 1].deduct === 1000 && /bào tinh/.test(ledK[P - 1].deductLabel) && ledK[P - 1].ton === 1000);
+  check('E: tuần P — thêm mới 1000 (b1), rời nhóm 1000 (phiếu xuất kho đã duyệt — nguồn lô b3), TỔNG TỒN 1000',
+    ledK[P - 1].import === 1000 && ledK[P - 1].deduct === 1000 && /xuất kho/.test(ledK[P - 1].deductLabel) && ledK[P - 1].ton === 1000);
   check('E: tuần N — nhập 200, TỔNG TỒN 1200 = TỒN THỰC, trừ phần kế hoạch còn lại 600',
     ledK[N - 1].import === 200 && ledK[N - 1].ton === 1200 && ledK[N - 1].deduct === 600 && /kế hoạch/.test(ledK[N - 1].deductLabel));
   // Quá khứ: biểu thức suy NGƯỢC từ tuần sau; tuần hiện tại: neo vào tồn thực

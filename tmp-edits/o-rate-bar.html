@@ -1,0 +1,20 @@
+          <!-- BẢNG PHỤ: ĐỊNH MỨC THỜI GIAN THAN HÓA (PHÚT/m³) theo tháng + công đoạn sấy.
+               Điều kiện than hóa KHÁC NHAU theo công đoạn: 1 m³ nan vào Sấy 1 phải trải
+               qua 105 phút than hóa, vào Sấy 2 chỉ 50 phút (mặc định — sửa được theo
+               từng tháng); công suất định mức m³/h = 60 ÷ phút/m³. -->
+          <div class="x2-rate-bar" id="x2-say-rate-bar">
+            <span class="x2-rate-title"><i data-lucide="flame"></i> Thời gian than hóa:</span>
+            <select id="x2-say-rate-stage" title="Chọn công đoạn sấy để khai định mức riêng">
+              <option value="say1">Sấy 1 (mặc định 105 phút/m³)</option>
+              <option value="say2">Sấy 2 (mặc định 50 phút/m³)</option>
+            </select>
+            <select id="x2-say-rate-month" title="Chọn tháng"></select>
+            <label class="x2-rate-field" for="x2-say-rate-phut">Phút/lần:
+              <input type="number" id="x2-say-rate-phut" min="1" step="any" placeholder="VD: 105" title="Số PHÚT của 1 lần than hóa (Sấy 1 mặc định 105 · Sấy 2 mặc định 50)">
+            </label>
+            <label class="x2-rate-field" for="x2-say-rate-m3">m³/lần (lô cũ):
+              <input type="number" id="x2-say-rate-m3" min="0.01" step="any" placeholder="VD: 2" title="Định mức m³ cho 1 lần than hóa (mặc định 2) — CHỈ dùng để quy đổi số lần cho LÔ CŨ trước 28/09/2026 (lô mới đếm theo lượt bấm Lưu)">
+            </label>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-say-rate-save" data-perm="kanban" title="Lưu định mức 1 lần than hóa của công đoạn + tháng đã chọn"><i data-lucide="save"></i> Lưu</button>
+            <div class="x2-rate-chips" id="x2-say-rate-chips"></div>
+          </div>

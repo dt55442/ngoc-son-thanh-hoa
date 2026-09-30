@@ -1,0 +1,28 @@
+  // Dọn định mức đã lưu: chấp nhận cả BẢN CŨ (1 số = phút/m³ → hiểu là số PHÚT
+  // mỗi lần) lẫn bản mới ({ phut, m3 }).
+  function loadX2SayRates() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_SAY_RATE);
+    state.x2SayRates = { s1: {}, s2: {} };
+    if (!raw) return;
+    try {
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      ['s1', 's2'].forEach(k => {
+        const g = (obj[k] && typeof obj[k] === 'object') ? obj[k] : {};
+        const out = {};
+        Object.keys(g).forEach(month => {
+          if (!/^\d{4}-\d{2}$/.test(month)) return;
+          const v = g[month];
+          if (typeof v === 'number') {
+            out[month] = { phut: v, m3: SAY_RATE_DEFAULT[k].m3 };
+          } else if (v && typeof v === 'object') {
+            out[month] = {
+              phut: Number(v.phut) > 0 ? Number(v.phut) : SAY_RATE_DEFAULT[k].phut,
+              m3: Number(v.m3) > 0 ? Number(v.m3) : SAY_RATE_DEFAULT[k].m3
+            };
+          }
+        });
+        state.x2SayRates[k] = out;
+      });
+    } catch (e) {}
+  }

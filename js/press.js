@@ -583,14 +583,15 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     showToast('Đã xóa lượt ép', 'info');
   }
 
-  // ─── BẢNG: BÀO TINH ↔ ĐÃ ÉP — HIỆU SUẤT CHUYỂN ĐỔI THEO TUẦN ──
+  // ─── DỮ LIỆU: BÀO TINH ↔ ĐÃ ÉP — HIỆU SUẤT CHUYỂN ĐỔI THEO TUẦN ──
+  // (BẢNG UI ĐÃ GỠ 30/09/2026 — chỉ giữ hàm thuần cho kiểm thử + đối soát)
   // Cân đối đầu ra công đoạn Bào Tinh với lượng thanh đạt dùng ép thực tế:
   //   Đã bào tinh (tuần) = số thanh ĐƯA VÀO bào theo THẺ Bào Tinh (nguồn mới —
   //                        state.xuong2BaoTinhRecords, thay lô stage bao_tinh cũ)
   //   Đã ép (tuần)       = số thanh đạt dùng cho lượt ép thực tế (sticks) trong tuần
   //   Còn lại (lũy kế)   = Σ Đã bào tinh − Σ Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận
   //   Hiệu suất          = Σ Đã ép ÷ Σ Đã bào tinh (lũy kế, %)
-  // Dữ liệu thuần (dùng cho cả render bảng & kiểm thử)
+  // Dữ liệu thuần (bảng hiển thị đã gỡ — giữ cho kiểm thử planning-ton)
   function computeBaoTinhEfficiencyByWeek(yearNum) {
     const year = parseInt(yearNum);
     const convByWeek = getBaoTinhConvertedByWeek(year);
@@ -621,51 +622,6 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     const currentBtStock = stockByYear[year] || 0;
     const estDefect = Math.max(0, cumConv - cumPressed - currentBtStock);
     return { rows, totalConv: cumConv, totalPressed: cumPressed, currentBtStock, estDefect };
-  }
-
-  // Render bảng theo dõi hiệu suất chuyển đổi Bào Tinh + bộ lọc năm (tab Ép Ván)
-  function renderBaoTinhEffTable() {
-    const body = document.getElementById('baotinh-eff-body');
-    const foot = document.getElementById('baotinh-eff-foot');
-    const yearSel = document.getElementById('bt-year-filter');
-    if (!body || !foot || !yearSel) return;
-
-    // Điền năm: năm hiện tại + các năm có lô chuyển bào tinh / lượt ép
-    const years = new Set([new Date().getFullYear()]);
-    Object.keys(getBaoTinhStockByConversionYear()).forEach(y => years.add(Number(y)));
-    state.pressRecords.forEach(r => years.add(Number(r.year || getDateYear(r.date))));
-    const yearList = [...years].filter(y => !isNaN(y)).sort((a, b) => b - a);
-    if (state.btEffYear == null || !yearList.includes(Number(state.btEffYear))) {
-      state.btEffYear = yearList.includes(new Date().getFullYear()) ? new Date().getFullYear() : yearList[0];
-    }
-    yearSel.innerHTML = yearList
-      .map(y => `<option value="${y}"${Number(state.btEffYear) === y ? ' selected' : ''}>Năm ${y}</option>`).join('');
-
-    const data = computeBaoTinhEfficiencyByWeek(state.btEffYear);
-    const fmt = (v) => (Number(v) || 0).toLocaleString('vi-VN');
-    if (!data.rows.length) {
-      body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa có dữ liệu bào tinh / lượt ép trong năm ${state.btEffYear}</td></tr>`;
-      foot.innerHTML = '';
-      initLucide();
-      return;
-    }
-    body.innerHTML = data.rows.map(r => `
-      <tr>
-        <td><strong>Tuần ${r.week}</strong></td>
-        <td>${fmt(r.conv)}</td>
-        <td>${fmt(r.pressed)}</td>
-        <td title="Σ Đã bào tinh − Σ Đã ép = thanh đạt chưa sử dụng + thanh lỗi chưa ghi nhận">${fmt(r.remaining)}</td>
-        <td style="${r.effPct != null && r.effPct < 80 ? 'color:#dc2626; font-weight:600;' : ''}">${r.effPct != null ? r.effPct.toLocaleString('vi-VN') + '%' : '—'}</td>
-      </tr>`).join('');
-    foot.innerHTML = `
-      <tr>
-        <td style="font-weight:700;">TỔNG CỘNG (lũy kế)</td>
-        <td style="font-weight:700;">${fmt(data.totalConv)}</td>
-        <td style="font-weight:700;">${fmt(data.totalPressed)}</td>
-        <td style="font-weight:700;" title="Đã bào tinh − Đã ép. Trong đó: Tồn Bào Tinh hiện tại (đạt chờ ép) = ${fmt(data.currentBtStock)} thanh → ước tính thanh lỗi = ${fmt(data.estDefect)} thanh">${fmt(data.totalConv - data.totalPressed)}</td>
-        <td style="font-weight:700;">${data.totalConv > 0 ? (Math.round(data.totalPressed / data.totalConv * 1000) / 10).toLocaleString('vi-VN') + '%' : '—'}</td>
-      </tr>`;
-    initLucide();
   }
 
   // ─── THẺ ÉP VÁN (launcher tab Công Đoạn) — 2 KHUNG: Lượt Ép / Biểu Đồ ──
@@ -915,7 +871,6 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     renderX2EpVanDayCards();
     const chartFrame = document.getElementById('x2-epv-frame-chart');
     if (chartFrame && !chartFrame.hidden) renderPressChart(); // đang ở khung Biểu Đồ
-    renderBaoTinhEffTable(); // bảng phụ "Bào Tinh ↔ Đã Ép" đã dời vào thẻ Bào Tinh
     // Cập nhật LUÔN chip trên mini card (đổi lượt ép ở bất kỳ màn hình nào cũng đúng)
     const chip = document.getElementById('x2-mini-count-ep-van');
     if (chip) {
@@ -2483,7 +2438,6 @@ export {
   planCapacityPct,
   planCapacityWeeks,
   planCapacityWinSize,
-  renderBaoTinhEffTable,
   renderPlanVsPressChart,
   renderPlanCapacityChart,
   shiftPlanCapacityWindow,

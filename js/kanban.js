@@ -4,7 +4,7 @@
 import { deleteBatch } from './batch-modals.js';
 import { batchMatchesColumnFilter, getFilteredBatches } from './main.js';
 import { STAGES, state } from './state.js';
-import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getStageDaysClass, getStageDaysLabel, showToast } from './utils.js';
+import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getStageDaysClass, getStageDaysLabel, showToast, khoLotRemainingOf, khoOutRoundCountOf, khoStockSummary, khoVisibilityMap } from './utils.js';
 
   // ─── KANBAN BOARD ─────────────────────────────────────────────
   function renderKanbanBoard(batches) {
@@ -21,14 +21,29 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
 
     Object.values(containers).forEach(el => { if (el) el.innerHTML = ''; });
 
+    // KHO NAN: tồn THỰC = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT
+    // (js/utils.js). Lô đã xuất hết (tồn 0) ẨN mặc định — tránh tưởng 1 lô ra/vào
+    // kho nhiều lần là nhiều lô; công tắc "Hiện lô đã xuất hết" ở thẻ Kho Nan.
+    const khoVis = khoVisibilityMap();
+    const khoSum = khoStockSummary();
+
     batches.forEach(batch => {
       const st = batch.stage;
       if (!metrics[st]) return;
       // Áp dụng bộ lọc riêng của cột công đoạn này
       if (!batchMatchesColumnFilter(batch, st)) return;
+      if (st === 'kho' && khoVis.hide.has(batch.id)) return; // lô đã xuất hết → ẨN
       metrics[st].count++;
-      metrics[st].vol += (batch.volume || 0);
-      metrics[st].qty += (batch.quantity || 0);
+      if (st === 'kho') {
+        const rem = khoVis.remain.get(batch.id) || 0;
+        metrics[st].qty += rem;
+        metrics[st].vol += (Number(batch.quantity) || 0)
+          ? (batch.volume || 0) * (rem / (Number(batch.quantity) || 0))
+          : 0;
+      } else {
+        metrics[st].vol += (batch.volume || 0);
+        metrics[st].qty += (batch.quantity || 0);
+      }
       if (containers[st]) containers[st].appendChild(createBambooCardElement(batch));
     });
 
@@ -38,7 +53,17 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
       const el = id => document.getElementById(id);
       if (el(`count-${key}`))  el(`count-${key}`).textContent  = m.count;
       if (el(`vol-${key}`))    el(`vol-${key}`).textContent    = `${m.vol.toFixed(3)} m³`;
-      if (el(`qty-${key}`))    el(`qty-${key}`).textContent    = `${m.qty.toLocaleString('vi-VN')} thanh`;
+      if (el(`qty-${key}`)) {
+        // Cột Kho: hiện TỒN THỰC + số lô đã xuất hết (ẩn/đang hiện theo công tắc)
+        if (st === 'kho' && khoSum) {
+          const hiddenTxt = state.khoShowUsed
+            ? `${khoSum.usedUpLots} lô đã xuất hết (đang hiện)`
+            : `ẩn ${khoSum.usedUpLots} lô đã xuất hết`;
+          el(`qty-${key}`).textContent = `${Math.round(khoSum.remainingThanh).toLocaleString('vi-VN')} thanh (còn) · ${hiddenTxt}`;
+        } else {
+          el(`qty-${key}`).textContent = `${m.qty.toLocaleString('vi-VN')} thanh`;
+        }
+      }
       if (el(`badge-${key}`))  el(`badge-${key}`).textContent  = m.count;
 
       if (m.count === 0 && containers[st]) {
@@ -283,6 +308,11 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <input type="checkbox" class="kb-pick-box" data-pick-id="${escapeHTML(String(batch.id))}"${isPicked ? ' checked' : ''}>
         <span>Chọn</span>
       </label>`;
+    // Chip "LẦN THAN HÓA" (CHỈ ĐỌC) — lần vào công đoạn SẤY gần nhất của lô, lấy
+    // qua window.app.x2SayChargeLabel (logic ở js/xuong2.js); lô cũ không có mã
+    // mẻ hoặc chưa qua sấy → không hiện chip.
+    const thLabel = (typeof window !== 'undefined' && window.app && typeof window.app.x2SayChargeLabel === 'function') ? window.app.x2SayChargeLabel(batch) : '';
+    const thChip = thLabel ? `<span class="tag-badge tag-say-charge" title="Lô thuộc lần than hóa này (mã mẻ gắn lúc bấm Lưu của Thêm Lô Sấy Mới)"><i data-lucide="flame" style="width:10px;height:10px;"></i> ${escapeHTML(thLabel)}</span>` : '';
 
     // Hiển thị badge ngày cho từng công đoạn đã đi qua (Bào Tinh không đếm ngày)
     const history = getBatchStageHistory(batch);
@@ -309,6 +339,9 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <span class="dim-spec">${batch.length} × ${batch.width} × ${batch.thickness} mm</span>
         <span class="card-volume">${(batch.volume || 0).toFixed(4)} m³</span>
       </div>
+      ${batch.stage === 'kho' ? `<div class="kho-card-remain" title="Tồn kho THỰC = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT (js/utils.js)">
+        Tồn kho: <strong>${khoLotRemainingOf(batch).toLocaleString('vi-VN')}</strong> / ${(batch.quantity || 0).toLocaleString('vi-VN')} thanh${khoOutRoundCountOf(batch) ? ` · <span class="kho-round-badge" title="Số lần lô RA khỏi kho (Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${khoOutRoundCountOf(batch)} lần</span>` : ''}
+      </div>` : ''}
       <div class="card-quantities">
         <div class="qty-box">
           <span class="label">Số lượng</span>
@@ -322,6 +355,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
       <div class="card-tags">
         <span class="tag-badge tag-type-${batch.bambooType}">Loại ${escapeHTML(batch.bambooType)}</span>
         <span class="tag-badge tag-use-${batch.useFor}">${escapeHTML(batch.useFor)}</span>
+        ${thChip}
         <span class="tag-badge tag-location"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
       </div>
       ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}

@@ -1,0 +1,4 @@
+  loadX2SayRates,
+  handleX2SayRateSave,
+  renderX2SayRateBar,
+  renderX2SayStats,

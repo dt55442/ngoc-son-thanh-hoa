@@ -1,0 +1,14 @@
+      const groups = ['say1', 'say2'].filter(st => day.stages.has(st)).map(stage => {
+        const lotList = sayGroupLots(day.date, stage);
+        // Phút/giờ cần TÍNH THEO TỪNG LẦN theo LOẠI của lần đó (Ván / Bullig khác nhau)
+        const charges = sayBuildCharges(day.date, stage, sayM3PerCharge(day.date, stage))
+          .map(c => {
+            const minutes = sayMinutesPerCharge(day.date, stage, c.useFor === 'bullig' ? 'Bullig' : 'Ván');
+            return {
+              stage, lots: c.lots, vol: c.vol, useFor: c.useFor,
+              volVan: c.volVan || 0, volBullig: c.volBullig || 0,
+              locationText: sayChargeLocationText(c),
+              codeText: sayChargeCodeText(c),
+              minutes, need: minutes / 60
+            };
+          });

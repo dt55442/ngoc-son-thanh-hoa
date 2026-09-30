@@ -50,6 +50,7 @@ import { escapeHTML, showToast } from './utils.js';
     x2SayRates:        { tab: 'kanban',    label: 'Định mức than hóa (phút/m³)', get: () => state.x2SayRates },
     x2SayTimes:        { tab: 'kanban',    label: 'Số lần than hóa theo ngày', get: () => state.x2SayTimes },
     x2SayIncidents:    { tab: 'kanban',    label: 'Giờ sự cố cho phép theo ngày', get: () => state.x2SayIncidents },
+    khoNotes:          { tab: 'kanban',    label: 'Phiếu kho (xuất / tiêu hủy / tái chế)', get: () => state.khoNotes },
     suppliers:         { tab: 'materials', label: 'Nhà cung cấp',         get: () => state.suppliers },
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
     qcKilnReadings:    { tab: 'qc',        label: 'Độ ẩm lò sấy (QC nhập)', get: () => state.qcKilnReadings },

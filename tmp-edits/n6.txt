@@ -1,0 +1,1 @@
+          charges[ci].lots.push({ id: l.id, code: l.code, location: l.location, vol: take, part, type: l.type });

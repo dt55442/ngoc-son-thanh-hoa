@@ -1,0 +1,17 @@
+  // NHÃN "LẦN THAN HÓA" trên thẻ Kanban (CHỈ ĐỌC — chỉnh số lần vẫn ở ô "Số lần
+  // TH" của dòng nhóm): lần vào công đoạn SẤY GẦN NHẤT của lô, tính theo mã mẻ
+  // sayCharges; lô cũ không mã mẻ hoặc chưa qua sấy → chuỗi rỗng (không hiện chip).
+  function sayBatchChargeLabel(b) {
+    if (!b) return '';
+    const stage = batchPassedStage(b, 'say2') ? 'say2' : (batchPassedStage(b, 'say1') ? 'say1' : '');
+    if (!stage) return '';
+    const dateVal = stage === 'say2' ? say2EntryDateOf(b) : String(b.date || '').trim();
+    if (!dateVal) return '';
+    if (!sayChargeIdOf(b, stage)) return '';
+    const charges = sayBuildCharges(dateVal, stage, sayM3PerCharge(dateVal, stage));
+    const id = String(b.id || '');
+    const idx = charges.findIndex(c => (c.lots || []).some(l => l.id === id));
+    if (idx < 0) return '';
+    return `Lần ${idx + 1}/${charges.length} · ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}`;
+  }
+

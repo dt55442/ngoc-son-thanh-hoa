@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-01T08:59:11.073Z",
+  "savedAt": "2026-10-01T10:31:39.644Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -6630,15 +6630,56 @@
     "2026-09": 0.06
   },
   "x2LotLocations": [],
-  "qcFinalRecords": [],
+  "qcFinalRecords": [
+    {
+      "id": "qcf-1790846565264-d34r5",
+      "date": "2026-09-28",
+      "workshop": "x2",
+      "kind": "van",
+      "inputQty": 122,
+      "qtyOk": 96,
+      "qtyExcept": 24,
+      "qtyReject": 2,
+      "pairKey": "2026-39-40",
+      "productId": "rate-1787619453372",
+      "productName": "Ván 1200x370x22",
+      "workerNames": "Hà Thị Huấn, Hà Thị Thiếu, Phạm Thị Quyên",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 27,
+      "workHoursHC": 27,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T09:22:45.264Z",
+      "updatedAt": "2026-10-01T09:23:23.428Z"
+    },
+    {
+      "id": "qcf-1790846644624-1171g",
+      "date": "2026-09-28",
+      "workshop": "x2",
+      "kind": "van",
+      "inputQty": 188,
+      "qtyOk": 160,
+      "qtyExcept": 24,
+      "qtyReject": 4,
+      "pairKey": "2026-39-40",
+      "productId": "rate-1787125542008",
+      "productName": "Ván 1200x382x12",
+      "workerNames": "Hà Thị Huấn, Hà Thị Thiếu, Phạm Thị Quyên",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 27,
+      "workHoursHC": 27,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T09:24:04.624Z",
+      "updatedAt": "2026-10-01T09:24:04.624Z"
+    }
+  ],
   "qcFinalRates": {
     "2026-10": {
-      "thanh": 2200,
-      "van": 280
+      "thanh": 245,
+      "van": 31.11
     },
     "2026-09": {
-      "thanh": 2200,
-      "van": 280
+      "thanh": 245,
+      "van": 31.11
     }
   },
   "khoNotes": []

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-01T04:41:06.040Z",
+  "savedAt": "2026-10-01T09:01:36.451Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -6479,6 +6479,12 @@
       "name": "Nhà Chiến",
       "code": "8874",
       "createdAt": "2026-09-22T07:49:40.743Z"
+    },
+    {
+      "id": "sup-1790844253842-pmenr",
+      "name": "Nhà Anh",
+      "code": "9514",
+      "createdAt": "2026-10-01T08:44:13.842Z"
     }
   ],
   "x2CapRates": {
@@ -6625,6 +6631,15 @@
   },
   "x2LotLocations": [],
   "qcFinalRecords": [],
-  "qcFinalRates": {},
+  "qcFinalRates": {
+    "2026-10": {
+      "thanh": 2200,
+      "van": 280
+    },
+    "2026-09": {
+      "thanh": 2200,
+      "van": 280
+    }
+  },
   "khoNotes": []
 }

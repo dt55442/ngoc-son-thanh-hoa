@@ -1161,7 +1161,7 @@ import { showToast } from './utils.js';
   function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
           .then(reg => console.log('[PWA] Service Worker đã đăng ký:', reg.scope))
           .catch(err => console.warn('[PWA] Lỗi đăng ký Service Worker:', err));
       });

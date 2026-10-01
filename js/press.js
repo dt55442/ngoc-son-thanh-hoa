@@ -6,7 +6,7 @@ import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
-import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear } from './planning.js';
+import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear, rateDisplayLabel, rateNanUse, rateUnit } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
 
@@ -812,7 +812,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
         const stickDesc = (r.sticks || []).map(s => `${escapeHTML(s.nanKey)} ×${(s.sticks || 0).toLocaleString('vi-VN')}`).join(' · ') || '—';
         // Nút XEM CHI TIẾT CÔNG NHÂN ÉP của chính lượt này — trước đây nằm ở cột
         // "Công Nhân Ép" của bảng Danh Sách Lượt Ép (bảng đã gỡ) → giữ trên thẻ ngày
-        const workerBtn = hrWorkersForProduct(r.date, r.productName).length
+        const workerBtn = hrWorkersForProduct(r.date, r.productName, productIsBullig(r.productId)).length
           ? ` <button class="btn btn-outline btn-icon btn-sm" onclick="app.pressWorkersDetail('${r.id}')" title="Xem chi tiết công nhân ép — đối chiếu chấm công & phân vị"><i data-lucide="users"></i></button>`
           : '';
         return `<div class="x2-epv-row">
@@ -1421,8 +1421,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     // Bullig", TP thường lấy phân vị "Ép" — theo ngày lượt ép ở tab Nhân Sự.
     // Mỗi tên được đối chiếu: hồ sơ Nhân Sự + chấm công + phân vị + đơn nghỉ duyệt.
     const savedNames = String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean);
-    const posPattern = pressPositionPatternFor(r.productName);
-    const names = savedNames.length ? savedNames : hrWorkersForProduct(r.date, r.productName).map(w => w.name);
+    const posPattern = pressPositionPatternFor(r.productName, productIsBullig(r.productId));
+    const names = savedNames.length ? savedNames : hrWorkersForProduct(r.date, r.productName, productIsBullig(r.productId)).map(w => w.name);
     if (titleEl) titleEl.innerHTML = `<i data-lucide="users"></i> Công Nhân Ép — Lượt ${dateLabel} (${names.length} người)`;
 
     if (!names.length) {
@@ -1493,8 +1493,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       return;
     }
     const productName = selectedPressProductName();
-    const workers = hrWorkersForProduct(dateVal, productName);
-    const posLabel = pressWorkersPositionLabel(productName);
+    const productIdSel = document.getElementById('press-product')?.value || '';
+    const workers = hrWorkersForProduct(dateVal, productName, productIsBullig(productIdSel));
+    const posLabel = pressWorkersPositionLabel(productName, productIsBullig(productIdSel));
     if (!workers.length) {
       box.innerHTML = `Chưa có ai được phân vị <strong>${escapeHTML(posLabel)}</strong> ngày <strong>${fmtDateDM(dateVal)}</strong> — công nhân để trống. Cập nhật ở tab Nhân Sự (Chấm Công &amp; Phân Vị Theo Ngày).`;
       box.classList.add('muted');
@@ -1506,8 +1507,18 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
 
   // Nhãn vị trí phân theo thành phẩm (cho thông báo trong form lượt ép):
   // TP "Bullig..." → "Chọn thanh Bullig"; TP thường → "Ép".
-    function pressWorkersPositionLabel(productName) {
-    return /bullig/i.test(String(productName || '')) ? 'Chọn thanh Bullig' : 'Ép';
+  //   isBullig = true khi định mức của TP có "Sử Dụng Nan = Bullig" (tên sản phẩm
+  //   nay chỉ còn kích thước, không còn chữ "Bullig" để nhận diện).
+    function pressWorkersPositionLabel(productName, isBullig) {
+    const bull = isBullig === true || /bullig/i.test(String(productName || ''));
+    return bull ? 'Chọn thanh Bullig' : 'Ép';
+  }
+
+  // Định mức của 1 sản phẩm có "Sử Dụng Nan = Bullig" không (fallback theo tên cũ)
+  function productIsBullig(productId) {
+    const rate = (state.materialRates || []).find(r => r.id === productId);
+    if (!rate) return false;
+    return rateNanUse(rate) === 'Bullig' || /bullig/i.test(String(rate.product || ''));
   }
 
   // Tên thành phẩm đang chọn trong form (theo id select #press-product)
@@ -1669,7 +1680,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
   function bulligPlanProductId(sizeKey) {
     const nums = String(sizeKey || '').match(/\d+(?:[.,]\d+)?/g) || [];
     if (nums.length !== 3) return '';
-    const rates = (state.materialRates || []).filter(r => String(r.product || '').toLowerCase().includes('bullig'));
+    // Nhận diện định mức Bullig theo "Sử Dụng Nan" (dữ liệu mới) HOẶC tên chứa
+    // "bullig" (dữ liệu cũ) — tên sản phẩm nay chỉ còn kích thước.
+    const rates = (state.materialRates || []).filter(r => r && (rateNanUse(r) === 'Bullig' || String(r.product || '').toLowerCase().includes('bullig')));
     const hit = rates.find(r => {
       const rn = String(r.product || '').match(/\d+(?:[.,]\d+)?/g) || [];
       return nums.every(n => rn.includes(n));
@@ -1870,7 +1883,13 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     const ids = [...new Set([...Object.keys(planQty), ...Object.keys(pressQty), ...Object.keys(exportQty)])];
     // Sắp xếp: sản phẩm có tổng số lượng (kế hoạch + ép + xuất) lớn nhất đứng trước
     ids.sort((a, b) => ((planQty[b] || 0) + (pressQty[b] || 0) + (exportQty[b] || 0)) - ((planQty[a] || 0) + (pressQty[a] || 0) + (exportQty[a] || 0)));
-    const labelOf = id => (state.materialRates.find(r => r.id === id) || {}).product || 'Sản phẩm đã xóa';
+    // Nhãn sản phẩm theo ĐỊNH MỨC (tab Kế Hoạch): Bullig → "Bullig <kích thước>"
+    // ở CẢ 2 chế độ; còn lại theo ĐVT — Tấm → "Ván …", Thanh → "Thanh …".
+    const rateOf = id => state.materialRates.find(r => r.id === id);
+    const labelOf = id => {
+      const rate = rateOf(id);
+      return rate ? rateDisplayLabel(rate) : 'Sản phẩm đã xóa';
+    };
 
     // Đơn vị HIỂN THỊ số liệu: 'vol' (m³, mặc định) hoặc 'qty' (Số lượng).
     // Chiều cao cột LUÔN tính theo m³ — bấm nút chuyển chỉ thay số trên
@@ -1878,18 +1897,18 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     // theo m³ sẽ gây hiểu nhầm với số lượng).
     const isVol = state.planVsPressUnit === 'vol';
     const unitVol = id => dimVolume(getProductDimsStr(id), 1);
-    // Chế độ TOTAL: gộp toàn bộ sản phẩm theo NHÓM đọc từ TÊN sản phẩm —
-    // tên chứa "Bullig" → nhóm Bullig, chứa "Ván" → nhóm Ván, còn lại → nhóm
-    // "Khác" (chỉ hiện khi có dữ liệu). Mỗi nhóm vẫn đủ 3 cột Kế Hoạch /
-    // Đã Ép / Số Lượng Xuất; quy tắc hiển thị (đơn vị, màu, nhãn số, tooltip) giữ nguyên.
+    // Chế độ TOTAL: gộp sản phẩm theo SỬ DỤNG NAN + ĐVT của ĐỊNH MỨC (không còn
+    // cắt chữ trong tên) — Bullig → nhóm "Bullig" (luôn giữ tên Bullig như cũ);
+    // còn lại theo ĐVT: Tấm → "Ván", Thanh → "Thanh". Mỗi nhóm vẫn đủ 3 cột
+    // Kế Hoạch / Đã Ép / Số Lượng Xuất; quy tắc hiển thị giữ nguyên.
     const isTotalMode = state.planVsPressTotal === true;
     const groupOfId = id => {
-      const nm = String(labelOf(id)).toLowerCase();
-      if (nm.includes('bullig')) return 'Bullig';
-      if (nm.includes('ván')) return 'Ván';
-      return 'Khác';
+      const rate = rateOf(id);
+      if (!rate) return 'Khác';
+      if (rateNanUse(rate) === 'Bullig') return 'Bullig';
+      return rateUnit(rate) === 'Thanh' ? 'Thanh' : 'Ván';
     };
-    const GROUP_ORDER = { Bullig: 0, 'Ván': 1, 'Khác': 2 };
+    const GROUP_ORDER = { Bullig: 0, 'Ván': 1, 'Thanh': 2, 'Khác': 3 };
     // Dựng từng dòng số liệu theo sản phẩm, rồi (nếu bật Total) gộp theo nhóm
     let pvRows = ids.map(id => ({
       label: labelOf(id),
@@ -2140,7 +2159,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     const winWeeks = weeks.slice(startIdx, startIdx + winSize);
     if (winLabel) winLabel.textContent = `Tuần ${winWeeks[0]} – ${winWeeks[winWeeks.length - 1]}`;
 
-    const labelOf = id => (state.materialRates.find(r => r.id === id) || {}).product || 'Sản phẩm đã xóa';
+    const labelOf = id => {
+      const rate = state.materialRates.find(r => r.id === id);
+      return rate ? rateDisplayLabel(rate) : 'Sản phẩm đã xóa';
+    };
     const fmtQty = v => Math.round(Number(v) || 0).toLocaleString('vi-VN');
     // Tồn khả dụng theo tuần — tính 1 LẦN cho mọi sản phẩm/tuần trong cửa sổ
     // (đồng bộ cột "Tồn" của Bảng Kế Hoạch: gồm cả thanh chưa chuyển Bào Tinh)

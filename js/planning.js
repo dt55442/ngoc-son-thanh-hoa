@@ -20,6 +20,15 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       state.materialRates = [];
       saveMaterialRates();
     }
+    // Chuẩn hoá dữ liệu cũ: tách KÍCH THƯỚC khỏi tên sản phẩm + điền Sử Dụng Nan
+    // (Ván/Bullig) và ĐVT (Tấm/Thanh). Chỉ lưu lại khi thực sự có thay đổi.
+    if (Array.isArray(state.materialRates) && state.materialRates.length) {
+      const norm = state.materialRates.map(normalizeMaterialRate);
+      if (JSON.stringify(norm) !== JSON.stringify(state.materialRates)) {
+        state.materialRates = norm;
+        saveMaterialRates();
+      }
+    }
   }
 
   function saveMaterialRates() {
@@ -349,12 +358,66 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   // Khóa composite: <kach-thuoc>@<mục-đích>, VD: 1250×18×7@Ván.
   // (Không mục đích thì giữ nguyên khóa kích thước để tương thích dữ liệu cũ)
 
-  // Suy mục đích từ tên sản phẩm / định mức
+  // Suy mục đích từ tên sản phẩm / định mức (CHỈ còn dùng làm fallback cho dữ
+  // liệu cũ chưa có ô "Sử Dụng Nan" — dữ liệu mới lấy trực tiếp từ nanUse).
   function getUseForFromName(name) {
     const s = String(name || '').toLowerCase();
     if (s.includes('bullig') || s.includes('bullgi')) return 'Bullig';
     if (s.includes('ván')) return 'Ván';
     return '';
+  }
+
+  // ─── SỬ DỤNG NAN (Ván/Bullig) + ĐVT (Tấm/Thanh) CỦA ĐỊNH MỨC ──────────────
+  // Từ 01/10/2026 "Tên Sản Phẩm" chỉ còn KÍCH THƯỚC (VD 1200x382x12). Việc xác
+  // định sản phẩm dùng nan Ván hay Bullig (điều kiện TRỪ SỐ THANH khi tính kế
+  // hoạch) lấy từ ô "Sử Dụng Nan" thay vì cắt chữ trong tên sản phẩm.
+  const RATE_NAN_USES = ['Ván', 'Bullig'];
+  const RATE_UNITS = ['Tấm', 'Thanh'];
+
+  // Sử Dụng Nan của định mức: ưu tiên trường nanUse, fallback suy từ tên cũ.
+  function rateNanUse(rate) {
+    if (!rate) return '';
+    if (RATE_NAN_USES.includes(rate.nanUse)) return rate.nanUse;
+    return getUseForFromName(rate.product);
+  }
+
+  // ĐVT của định mức: ưu tiên trường unit, fallback Bullig → Thanh, còn lại → Tấm.
+  function rateUnit(rate) {
+    if (!rate) return 'Tấm';
+    if (RATE_UNITS.includes(rate.unit)) return rate.unit;
+    return rateNanUse(rate) === 'Bullig' ? 'Thanh' : 'Tấm';
+  }
+
+  // Tên lõi = tên sản phẩm đã bỏ tiền tố Ván/Bullig/Thanh ở đầu — CHỈ bỏ khi
+  // phần sau BẮT ĐẦU BẰNG KÍCH THƯỚC (số), tránh cắt oan tên thật (VD "Ván ép 9mm").
+  function rateCoreProduct(rate) {
+    const s = String((rate && rate.product) || '').trim();
+    const m = s.match(/^(ván|bullig|bullgi|thanh)\s+(?=\d)/i);
+    return m ? s.slice(m[0].length).trim() : s;
+  }
+
+  // Nhãn hiển thị của sản phẩm định mức (dùng cho biểu đồ Kế Hoạch vs Đã Ép):
+  //   • Bullig → "Bullig <kích thước>" (LUÔN hiện Bullig ở cả 2 chế độ, kể cả Total)
+  //   • còn lại → theo ĐVT: Tấm → "Ván …", Thanh → "Thanh …"
+  function rateDisplayLabel(rate) {
+    if (!rate) return 'Sản phẩm đã xóa';
+    const core = rateCoreProduct(rate) || String(rate.product || '').trim();
+    const prefix = rateNanUse(rate) === 'Bullig' ? 'Bullig' : (rateUnit(rate) === 'Thanh' ? 'Thanh' : 'Ván');
+    if (new RegExp('^\\s*' + prefix + '\\b', 'i').test(core)) return core; // tên đã có tiền tố
+    return core ? `${prefix} ${core}` : prefix;
+  }
+
+  // Chuẩn hoá định mức dữ liệu cũ: tách tiền tố khỏi product + điền nanUse/unit.
+  function normalizeMaterialRate(rate) {
+    if (!rate) return rate;
+    const out = { ...rate };
+    const use = rateNanUse(rate);
+    if (RATE_NAN_USES.includes(use)) out.nanUse = use;
+    if (RATE_UNITS.includes(rate.unit)) out.unit = rate.unit;
+    else out.unit = use === 'Bullig' ? 'Thanh' : 'Tấm';
+    const core = rateCoreProduct(rate);
+    if (core) out.product = core;
+    return out;
   }
 
   function useSuffix(useFor) { return useFor ? '@' + useFor : ''; }
@@ -370,7 +433,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
 
     state.batches.forEach(b => addPurpose(`${b.length}×${b.width}×${b.thickness}`, b.useFor || ''));
     state.materialRates.forEach(rate => {
-      const p = getUseForFromName(rate.product);
+      const p = rateNanUse(rate);
       [rate.nan1, rate.nan2, rate.nan3].forEach(nk => {
         if (!nk) return;
         addPurpose(String(nk).replace(/x/gi, '×'), p);
@@ -1175,7 +1238,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       const weekNum = pressRecordWeek(r);
       if (!weekNum) return;
       const rate = state.materialRates.find(rt => rt.id === r.productId) || null;
-      const useForSpr = rate ? getUseForFromName(rate.product) : '';
+      const useForSpr = rate ? rateNanUse(rate) : '';
       // Định mức chỉ có 1 loại nan → mã riêng cũng quy về kích thước đó
       const rateDims = rate ? [rate.nan1, rate.nan2, rate.nan3].filter(Boolean).map(asDimKey).filter(Boolean) : [];
       const singleRateKey = rateDims.length === 1 ? dimUseKey(rateDims[0], useForSpr) : null;
@@ -1325,7 +1388,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     tbody.innerHTML = '';
 
     if (state.materialRates.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="14" class="text-center" style="padding:30px;color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="16" class="text-center" style="padding:30px;color:var(--text-muted);">
         <i data-lucide="book-open" style="width:28px;height:28px;margin-bottom:8px;"></i>
         <p>Chưa có định mức nào. Hãy thêm định mức nguyên vật liệu cho từng loại sản phẩm.</p></td></tr>`;
       return;
@@ -1339,9 +1402,15 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       const nan1 = rate.nan1 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan1)}</strong><br>${nan1QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
       const nan2 = rate.nan2 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan2)}</strong><br>${nan2QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
       const nan3 = rate.nan3 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan3)}</strong><br>${nan3QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
+      // Sử Dụng Nan (điều kiện trừ số thanh khi tính kế hoạch) + ĐVT hiển thị
+      const useTxt = rateNanUse(rate);
+      const unitTxt = rateUnit(rate);
+      const useCls = useTxt === 'Bullig' ? 'rate-use-bullig' : 'rate-use-van';
 
       tr.innerHTML = `
         <td><span class="rate-product-name">${escapeHTML(rate.product)}</span></td>
+        <td>${useTxt ? `<span class="rate-use-tag ${useCls}">${escapeHTML(useTxt)}</span>` : '—'}</td>
+        <td>${unitTxt ? `<span class="rate-unit-tag">${escapeHTML(unitTxt)}</span>` : '—'}</td>
         <td>${rate.productCode ? escapeHTML(rate.productCode) : '—'}</td>
         <td>${rate.fullName ? escapeHTML(rate.fullName) : '—'}</td>
         <td>${rate.pressType ? escapeHTML(rate.pressType) : '—'}</td>
@@ -1413,7 +1482,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     const nan3Rate = parseFractionValue(rate.nan3Qty);
 
     const needs = {
-      useFor: getUseForFromName(rate.product),
+      useFor: rateNanUse(rate),
       nan1: rate.nan1 ? { key: normalizeKey(rate.nan1), qty: Math.ceil(nan1Rate * qty / efficiency) } : null,
       nan2: rate.nan2 ? { key: normalizeKey(rate.nan2), qty: Math.ceil(nan2Rate * qty / efficiency) } : null,
       nan3: rate.nan3 ? { key: normalizeKey(rate.nan3), qty: Math.ceil(nan3Rate * qty / efficiency) } : null,
@@ -1444,7 +1513,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   function calculateMaxProductionFromInventory(rate, inventory) {
     if (!rate || !inventory) return null;
     const efficiency   = (rate.efficiency || 70) / 100;
-    const useForSpr    = getUseForFromName(rate.product);
+    const useForSpr    = rateNanUse(rate);
     const normalizeKey = (k) => k ? String(k).replace(/x/gi, '×') : null;
 
     const components = [];
@@ -1591,6 +1660,8 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Định Mức: ${escapeHTML(rate.product)}`;
       document.getElementById('mat-rate-id').value = rate.id;
       document.getElementById('mat-rate-product').value = rate.product;
+      document.getElementById('mat-rate-nan-use').value = rateNanUse(rate) || 'Ván';
+      document.getElementById('mat-rate-unit').value = rateUnit(rate);
       document.getElementById('mat-rate-code').value = rate.productCode || '';
       document.getElementById('mat-rate-fullname').value = rate.fullName || '';
       document.getElementById('mat-rate-press-type').value = rate.pressType || '';
@@ -1606,6 +1677,8 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     } else {
       if (titleEl) titleEl.innerHTML = `<i data-lucide="book-open"></i> Thêm Định Mức Mới`;
       document.getElementById('mat-rate-id').value = '';
+      document.getElementById('mat-rate-nan-use').value = 'Ván';
+      document.getElementById('mat-rate-unit').value = 'Tấm';
       document.getElementById('mat-rate-efficiency').value = 70;
     }
 
@@ -1621,6 +1694,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     e.preventDefault();
     const rateId = document.getElementById('mat-rate-id').value;
     const product = document.getElementById('mat-rate-product').value.trim();
+    const nanUseSel = document.getElementById('mat-rate-nan-use');
+    const nanUse = nanUseSel && RATE_NAN_USES.includes(nanUseSel.value) ? nanUseSel.value : 'Ván';
+    const unitSel = document.getElementById('mat-rate-unit');
+    const unit = unitSel && RATE_UNITS.includes(unitSel.value) ? unitSel.value : 'Tấm';
     const productCode = document.getElementById('mat-rate-code').value.trim();
     const fullName = document.getElementById('mat-rate-fullname').value.trim();
     const pressType = document.getElementById('mat-rate-press-type').value.trim();
@@ -1643,7 +1720,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     const rateData = {
       id: rateId || `rate-${Date.now()}`,
       product,
-      // Thông tin bổ sung (không bắt buộc) — Tên sản phẩm vẫn là khóa chính
+      // Sử Dụng Nan (Ván/Bullig) = điều kiện TRỪ SỐ THANH khi tính kế hoạch;
+      // ĐVT (Tấm/Thanh) = đơn vị tính sản phẩm (nhãn biểu đồ Ván/Thanh).
+      nanUse, unit,
+      // Thông tin bổ sung (không bắt buộc) — Tên sản phẩm (kích thước) là khóa chính
       productCode: productCode || null,
       fullName: fullName || null,
       pressType: pressType || null,
@@ -1941,6 +2021,10 @@ export {
   populatePlanningItemYearWeekDefaults,
   populatePlanningProductSelect,
   populatePlanningYearFilter,
+  rateDisplayLabel,
+  rateNanUse,
+  rateUnit,
+  normalizeMaterialRate,
   renderMaterialRatesTable,
   renderPlanningListSection,
   renderPlanningMatrix,

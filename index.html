@@ -1946,6 +1946,8 @@
             <thead>
               <tr>
                 <th>Sản Phẩm</th>
+                <th>Sử Dụng Nan</th>
+                <th>ĐVT</th>
                 <th>Mã SP</th>
                 <th>Tên Đầy Đủ</th>
                 <th>Loại Ép</th>
@@ -1984,15 +1986,31 @@
             <input type="hidden" id="mat-rate-id">
             <div class="form-grid">
               <div class="form-group col-span-full">
-                <label for="mat-rate-product">Tên Sản Phẩm <span class="required">*</span></label>
-                <input type="text" id="mat-rate-product" placeholder="VD: Ván 1200x300x12, Bullig 1200x200x80..." required>
+                <label for="mat-rate-product">Tên Sản Phẩm (Kích Thước) <span class="required">*</span></label>
+                <input type="text" id="mat-rate-product" placeholder="VD: 1200x382x12, 1250x80x12..." required>
                 <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
                   <i data-lucide="info" style="width:12px; height:12px; display:inline;"></i>
-                  Tên sản phẩm (VD: Ván 1200x382x12) là khóa chính — vẫn hiển thị trên các tab liên quan khác.
+                  Tên sản phẩm nay chỉ còn KÍCH THƯỚC (VD: 1200x382x12) — sản phẩm là Ván hay Bullig chọn ở ô "Sử Dụng Nan" bên dưới.
                 </div>
               </div>
 
-              <!-- Thông tin bổ sung: Mã sản phẩm / Tên đầy đủ / Loại ép -->
+              <!-- Sử Dụng Nan (điều kiện tính kế hoạch) + ĐVT (đơn vị tính) -->
+              <div class="form-group">
+                <label for="mat-rate-nan-use">Sử Dụng Nan <span class="required">*</span></label>
+                <select id="mat-rate-nan-use" title="Điều kiện để tính kế hoạch trừ số lượng thanh — thay cho việc cắt chữ trong tên sản phẩm">
+                  <option value="Ván">Ván</option>
+                  <option value="Bullig">Bullig</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="mat-rate-unit">ĐVT</label>
+                <select id="mat-rate-unit" title="Đơn vị tính của sản phẩm — Tấm hiển thị là 'Ván', Thanh hiển thị là 'Thanh' trên biểu đồ">
+                  <option value="Tấm">Tấm</option>
+                  <option value="Thanh">Thanh</option>
+                </select>
+              </div>
+
+              <!-- Thông tin bổ sung: Mã sản phẩm / Loại ép / Tên đầy đủ -->
               <div class="form-group">
                 <label for="mat-rate-code">Mã Sản Phẩm</label>
                 <input type="text" id="mat-rate-code" placeholder="VD: VS38, BL80...">

@@ -3866,8 +3866,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     return (String(s || '').match(/\d+(?:[.,]\d+)?/g) || []).map(x => x.replace(',', '.'));
   }
   // { factor, rateName, hasRate, matched } cho kích thước thành phẩm đang chọn
+  // Nhận diện định mức Bullig theo trường "Sử Dụng Nan" (dữ liệu mới) HOẶC tên
+  // chứa "bullig" (dữ liệu cũ) — tên sản phẩm nay chỉ còn kích thước.
   function bulligConvertInfo(outSizeKey) {
-    const entries = (state.materialRates || []).filter(r => r && bulligNorm(r.product).includes('bullig'));
+    const entries = (state.materialRates || []).filter(r => r && (r.nanUse === 'Bullig' || bulligNorm(r.product).includes('bullig')));
     if (!entries.length) return { factor: 1, rateName: '', hasRate: false, matched: false };
     const want = bulligNumsOf(outSizeKey);
     let hit = null;

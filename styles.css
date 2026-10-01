@@ -3556,6 +3556,24 @@ body[data-fx="low"] .pv-mode-swap { animation: none !important; transition: none
 .planning-card.rate-table-collapsed > *:not(.planning-card-header) { display: none; }
 .planning-card.rate-table-collapsed .rate-toggle-btn span { display: none; }
 .planning-card.rate-table-collapsed .rate-toggle-btn svg { transform: rotate(180deg); transition: transform 0.2s; }
+/* Sử Dụng Nan (Ván/Bullig) + ĐVT (Tấm/Thanh) của bảng định mức */
+.rate-use-tag,
+.rate-unit-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.rate-use-tag.rate-use-van { background: #ede9fe; color: #6d28d9; }
+.rate-use-tag.rate-use-bullig { background: #fce7f3; color: #be185d; }
+.rate-unit-tag { background: var(--bg-subtle); color: var(--text-muted); }
+body[data-theme="night"] .rate-use-tag.rate-use-van { background: #e4e0f7; }
+body[data-theme="night"] .rate-use-tag.rate-use-bullig { background: #f9e0ec; }
+
+
 
 /* ═══ Kế hoạch Nguyên liệu cần nhập (bảng phụ theo tuần — tab Nguyên liệu) ═══ */
 .material-plan-controls {
@@ -8554,13 +8572,15 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   border-radius: 8px; background: var(--bg-subtle); color: var(--text-muted);
   font-size: 0.8rem; white-space: nowrap;
 }
-/* Danh sách thành phẩm = POP-UP NỔI (portal ra `document.body` + position:fixed,
-   neo bằng JS vào đúng mép nút "Thành phẩm Ép Ván" — đủ chỗ thì mở XUỐNG, thiếu
-   chỗ thì mở LÊN). Nhờ nằm ngoài pop-up thẻ nên KHÔNG bị `.qc-detail-content`
-   overflow:auto cắt mất, và KHÔNG đẩy/biến dạng form (node ngoài luồng). */
+/* Danh sách thành phẩm = POP-UP NỔI (portal ra `#qc-detail-overlay` — lớp fixed
+   phủ toàn màn hình — neo bằng JS: position:absolute INLINE theo rect của nút
+   "Thành phẩm Ép Ván", đủ chỗ thì mở XUỐNG, thiếu chỗ thì mở LÊN). Nhờ là con
+   trực tiếp của overlay nên KHÔNG bị `.qc-detail-content` overflow:auto cắt,
+   KHÔNG rơi xuống đáy trang, KHÔNG biến dạng form. Inline position/z-index
+   trong JS (positionQcFinalPicker) thắng MỌI stylesheet — kể cả bản cache cũ. */
 .qcf-picker {
-  position: fixed;
-  z-index: 240;                 /* trên pop-up thẻ chi tiết (200) */
+  position: absolute;
+  z-index: 240;
   margin-top: 0;
   padding: 8px;
   border: 1px solid var(--border-color);

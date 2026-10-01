@@ -405,19 +405,23 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
 
   // ─── DANH SÁCH THÀNH PHẨM ÉP VÁN (cặp 2 tuần của ngày đang chọn) ──
-  // Cơ chế POP-UP NỔI: khi mở, node `#qcf-picker` được KÉO RA `document.body`
-  // (portal) + `position: fixed` neo đúng mép dưới nút "Thành phẩm Ép Ván" —
-  // nhờ vậy KHÔNG bị `.qc-detail-content { overflow:auto }` cắt mất và KHÔNG
-  // đẩy/biến dạng form (node nằm ngoài luồng). Đóng thì đưa node về lại chỗ cũ.
+  // Cơ chế POP-UP NỔI: khi mở, node `#qcf-picker` được KÉO RA làm CON TRỰC TIẾP
+  // của `#qc-detail-overlay` (lớp fixed đã phủ toàn màn hình, z:200) + neo bằng
+  // INLINE `position:absolute` theo rect của nút "Thành phẩm Ép Ván":
+  //   • Inline style THẮNG MỌI stylesheet (kể cả bản CSS cũ do SW cache giữ
+  //     `position:absolute theo body` / `static`) → LUÔN nổi đúng chỗ nút,
+  //     KHÔNG bao giờ rơi xuống đáy trang, KHÔNG biến dạng form.
+  //   • Đóng thì đưa node về lại chỗ cũ trong form.
   function setQcFinalPickerOpen(open) {
     qcFinalPickerOpen = !!open;
     const box = document.getElementById('qcf-picker');
     const btn = document.getElementById('qcf-picker-btn');
     if (!box) return;
     if (qcFinalPickerOpen) {
-      // PORTAL: kéo node ra body để thoát vùng overflow của pop-up thẻ
-      if (box.parentElement !== document.body && document.body.appendChild) {
-        document.body.appendChild(box);
+      // PORTAL: kéo node ra làm con trực tiếp của lớp overlay (nổi trên mọi thứ)
+      const ov = document.getElementById('qc-detail-overlay') || document.body;
+      if (box.parentElement !== ov && ov.appendChild) {
+        ov.appendChild(box);
       }
       box.hidden = false;
       renderQcFinalProductList();
@@ -435,10 +439,10 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
   // Neo danh sách nổi vào đúng vị trí nút (gọi lúc mở + khi cuộn/thay đổi cỡ màn hình):
   //   • Đủ chỗ phía dưới → mở XUỐNG dưới nút · thiếu chỗ → mở LÊN trên nút
-  //   • Kẹp trong viewport (lệch 8px) · rộng = nút, tối thiểu 300px (điện thoại = hết bề ngang − 16px)
-  // QUAN TRỌNG: `position` + `z-index` set bằng INLINE STYLE (thắng MỌI stylesheet —
-  // kể cả bản CSS cũ bị SW cache: `absolute/z-index:30` sẽ nhét box dưới lớp scrim,
-  // `static` sẽ nhét box xuống đáy trang) → dropdown LUÔN nổi lên được.
+  //   • Toạ độ tính THEO RECT CỦA OVERLAY (box là con trực tiếp của overlay) ·
+  //     kẹp trong vùng nhìn (lệch 8px) · rộng = nút, tối thiểu 300px
+  //   • `position:absolute` + `z-index:240` set bằng INLINE STYLE — thắng MỌI
+  //     stylesheet cũ (kể cả bản do SW cache) → không phụ thuộc cache nữa.
   function positionQcFinalPicker() {
     if (!qcFinalPickerOpen) return;
     const box = document.getElementById('qcf-picker');
@@ -446,26 +450,28 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     if (!box || !btn || typeof btn.getBoundingClientRect !== 'function') return;
     const vw = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 1280;
     const vh = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 800;
+    const ov = document.getElementById('qc-detail-overlay');
+    const ovRect = (ov && typeof ov.getBoundingClientRect === 'function')
+      ? ov.getBoundingClientRect()
+      : { left: 0, top: 0, bottom: vh, width: vw, height: vh };
     const rect = btn.getBoundingClientRect();
     const width = Math.max(Math.min(Math.max(rect.width, 300), vw - 16), 240);
-    const left = Math.max(8, Math.min(rect.left, vw - width - 8));
-    const spaceBelow = vh - rect.bottom;
-    const spaceAbove = rect.top;
+    const left = Math.max(8, Math.min(rect.left - ovRect.left, vw - width - 8));
+    const spaceBelow = ovRect.bottom - rect.bottom;
+    const spaceAbove = rect.top - ovRect.top;
     const openUp = spaceBelow < 280 && spaceAbove > spaceBelow;
-    box.style.position = 'fixed';   // INLINE — thắng mọi stylesheet cũ (static/absolute)
-    box.style.zIndex = '240';       // INLINE — trên pop-up thẻ chi tiết (z:200)
-    if (typeof box.style.boxShadow !== 'undefined') {
-      box.style.boxShadow = '0 18px 44px rgba(15, 23, 42, 0.28)';
-    }
+    box.style.position = 'absolute';   // INLINE — thắng mọi stylesheet cũ (static/absolute theo body)
+    box.style.zIndex = '240';          // INLINE — trên khung nội dung trong overlay
+    box.style.overflow = 'auto';
     box.style.left = `${Math.round(left)}px`;
     box.style.width = `${Math.round(width)}px`;
     box.style.maxHeight = `${Math.round(Math.max(openUp ? spaceAbove - 12 : spaceBelow - 12, 180))}px`;
     if (openUp) {
       box.style.top = 'auto';
-      box.style.bottom = `${Math.round(vh - rect.top + 6)}px`;
+      box.style.bottom = `${Math.round(ovRect.bottom - rect.top + 6)}px`;
     } else {
       box.style.bottom = 'auto';
-      box.style.top = `${Math.round(rect.bottom + 6)}px`;
+      box.style.top = `${Math.round(rect.bottom - ovRect.top + 6)}px`;
     }
   }
   function toggleQcFinalPicker() {

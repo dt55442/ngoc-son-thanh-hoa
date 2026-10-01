@@ -5,7 +5,7 @@
 // · người kiểm + giờ HC/TC tự động từ vị trí bộ phận QC tên chứa "kiểm" · định
 // mức theo tháng + Hiệu suất · sửa/xóa + tombstone · render thẻ ngày + mini
 // card · cấu trúc (index.html · qc.js · events.js · state/storage/cloud/history/
-// main · sw.js v189 · styles.css).
+// main · sw.js v190 · styles.css).
 'use strict';
 
 // ─── Stubs môi trường (giống qc.test.mjs) ──────────────────────────
@@ -283,10 +283,10 @@ setVal('qcf-workshop', 'x2'); setVal('qcf-kind', 'van'); setVal('qcf-date', '202
 qcf.syncQcFinalKindFields();
 qcf.setQcFinalPickerOpen(true);
 const pickHtml = document.getElementById('qcf-product-list').innerHTML;
-check('DROPDOWN NỔI: mở → node PORTAL ra document.body (position:fixed neo nút — không đẩy form)',
-  document.getElementById('qcf-picker').parentElement === document.body);
-check('DROPDOWN NỔI: neo bằng INLINE STYLE — position:fixed + z-index:240 (thắng MỌI stylesheet cũ do cache) + top là số',
-  document.getElementById('qcf-picker').style.position === 'fixed' &&
+check('DROPDOWN NỔI: mở → node PORTAL ra `#qc-detail-overlay` (lớp fixed phủ màn hình — không rơi đáy trang)',
+  document.getElementById('qcf-picker').parentElement === document.getElementById('qc-detail-overlay'));
+check('DROPDOWN NỔI: neo bằng INLINE STYLE — position:absolute + z-index:240 (thắng MỌI stylesheet cũ do cache) + top/left/width là số',
+  document.getElementById('qcf-picker').style.position === 'absolute' &&
   document.getElementById('qcf-picker').style.zIndex === '240' &&
   /^\d+px$/.test(document.getElementById('qcf-picker').style.top) &&
   /^\d+px$/.test(document.getElementById('qcf-picker').style.left) &&
@@ -299,8 +299,8 @@ qcf.onQcFinalListClick(pickEvt);
 check('CHỌN THẺ: ô Đầu vào kiểm tự điền số CÒN LẠI (300 — không phải tổng 500)',
   document.getElementById('qcf-input-qty').value === '300');
 qcf.resetQcFinalForm();
-check('DROPDOWN NỔI: đóng → node TRỞ VỀ ô Đầu vào kiểm (không còn trên body)',
-  document.getElementById('qcf-picker').parentElement !== document.body);
+check('DROPDOWN NỔI: đóng → node TRỞ VỀ ô Đầu vào kiểm (không còn trong overlay)',
+  document.getElementById('qcf-picker').parentElement !== document.getElementById('qc-detail-overlay'));
 state.qcFinalRecords = [rec1]; // dọn dữ liệu thêm — trả về 1 lượt để các mục sau đúng
 // ═══ PHẦN 6b ═══
 
@@ -388,24 +388,27 @@ check('CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · histo
   stoJs.includes('restoreQcFinal') && stoJs.includes('qcFinalRecords') &&
   clJs.includes('qcFinalRecords') && clJs.includes('qcFinalRates') &&
   hiJs.includes('qcFinalRecords') && mnJs.includes('loadQcFinal'));
-check('CẤU TRÚC (sw.js): CACHE_NAME v189 + js/qc-final.js vào APP_SHELL',
-  /nha-may-ngoc-son-v189/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
-check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:fixed + dòng lượt kiểm + popup ĐM)',
+check('CẤU TRÚC (sw.js): CACHE_NAME v190 + js/qc-final.js vào APP_SHELL',
+  /nha-may-ngoc-son-v191/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
+check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)',
   cssHtml.includes('.qcf-picker') && cssHtml.includes('.qcf-row-main') && cssHtml.includes('.qcf-ws-chip') &&
   cssHtml.includes('.qcf-kind-chip') && cssHtml.includes('.qcf-product-meta') &&
   cssHtml.includes('.qcf-rate-input') &&
-  /\.qcf-picker\s*\{[^}]*position:\s*fixed/.test(cssHtml) && !/\.qcf-picker\s*\{[^}]*position:\s*(static|absolute)/.test(cssHtml));
-check('CẤU TRÚC (dropdown nổi): portal ra document.body + neo tọa độ (mở xuống/lên) + giữ neo khi cuộn/resize/Esc',
+  /\.qcf-picker\s*\{[^}]*position:\s*absolute/.test(cssHtml) && !/\.qcf-picker\s*\{[^}]*position:\s*(static|fixed)/.test(cssHtml));
+check('CẤU TRÚC (dropdown nổi): portal ra overlay + neo tọa độ (mở xuống/lên) + giữ neo khi cuộn/resize/Esc',
   (() => {
     const qcfJs = fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8');
     const evSrc = fsMod.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
-    return qcfJs.includes('document.body.appendChild(box)') && qcfJs.includes('positionQcFinalPicker') &&
-           qcfJs.includes('openUp') && qcfJs.includes("e.target.closest('#qcf-picker')") &&
+    return qcfJs.includes("getElementById('qc-detail-overlay') || document.body") &&
+           qcfJs.includes('positionQcFinalPicker') && qcfJs.includes('openUp') &&
+           qcfJs.includes("box.style.position = 'absolute'") && qcfJs.includes("box.style.zIndex = '240'") &&
+           qcfJs.includes("e.target.closest('#qcf-picker')") &&
            evSrc.includes('positionQcFinalPicker') &&
            evSrc.includes("window.addEventListener('scroll', positionQcFinalPicker, true)") &&
-           evSrc.includes('window.addEventListener(\'resize\', positionQcFinalPicker)') &&
            evSrc.includes('setQcFinalPickerOpen(false); return;');
   })());
+check('CẤU TRÚC (cloud.js): đăng ký SW với updateViaCache:"none" — sw.js luôn tải mới, hết dính bundle cũ',
+  fsMod.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8').includes("register('./sw.js', { updateViaCache: 'none' })"));
 check('CẤU TRÚC (package.json): tests/qc-final.test.mjs đã vào npm test',
   pkJs.includes('tests/qc-final.test.mjs'));
 

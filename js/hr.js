@@ -1091,12 +1091,14 @@ import { escapeHTML, showToast } from './utils.js';
   // Vị trí ÉP VÁN thật (dùng chung isPressEpPos: loại vị trí công đoạn Xưởng 2 —
   // Bullig / Chọn thanh / Gia công để Ép Ván KHÔNG cộng giờ của các công đoạn đó)
   const PRESS_EP_PATTERN = { test: isPressEpPos, source: 'ép' };
-  function pressPositionPatternFor(productName) {
-    return /bullig/i.test(String(productName || '')) ? BULLIG_POS_MATCHER : PRESS_EP_PATTERN;
+  function pressPositionPatternFor(productName, isBullig) {
+    const bull = isBullig === true || /bullig/i.test(String(productName || ''));
+    return bull ? BULLIG_POS_MATCHER : PRESS_EP_PATTERN;
   }
-  // Danh sách công nhân theo THÀNH PHẨM của lượt ép (tên TP quyết định vị trí)
-  function hrWorkersForProduct(date, productName) {
-    return hrWorkersForPosition(date, pressPositionPatternFor(productName));
+  // Danh sách công nhân theo THÀNH PHẨM của lượt ép (tên TP quyết định vị trí;
+  // isBullig = true khi định mức có "Sử Dụng Nan = Bullig" — tên nay chỉ kích thước)
+  function hrWorkersForProduct(date, productName, isBullig) {
+    return hrWorkersForPosition(date, pressPositionPatternFor(productName, isBullig));
   }
   // Chỉ danh sách TÊN công nhân ép trong ngày (dùng cho Dashboard/Xuất Excel)
   function hrPressWorkersNamesOf(date) {

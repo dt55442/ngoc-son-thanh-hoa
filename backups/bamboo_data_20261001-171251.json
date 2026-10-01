@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-01T02:54:19.430Z",
+  "savedAt": "2026-10-01T09:26:59.105Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -15,20 +15,15 @@
       "volume": 0.4637,
       "bambooType": "A1",
       "useFor": "Bullig",
-      "sayCharges": {
-        "say1": 1790817861407
-      },
       "location": "LS9",
       "notes": "",
-      "sourceChonNanId": "x2cn-1790817698019-uhrt7",
-      "sourceChonNanLabel": "1250×24×8 · A1 · 1.932",
       "stageHistory": [
         {
           "stage": "say1",
           "date": "2026-09-28"
         }
       ],
-      "updatedAt": "2026-10-01T01:24:21.407Z"
+      "updatedAt": "2026-10-01T04:22:37.866Z"
     },
     {
       "id": "batch-1790817861408-1",
@@ -5145,6 +5140,122 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-30T03:01:19.136Z"
+    },
+    {
+      "id": "mat-1790828827916-6767q",
+      "date": "2026-09-30",
+      "week": "2026-W40",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "location": "xuong-2",
+      "inputIndex": 18870,
+      "outputIndex": 6980,
+      "weight": 11890,
+      "unitPrice": 1600,
+      "totalAmount": 19024000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:27:07.916Z"
+    },
+    {
+      "id": "mat-1790829086381-lktty",
+      "date": "2026-09-22",
+      "week": "2026-W39",
+      "type": "Vầu cây",
+      "supplier": "Nhà Thấm",
+      "location": "xuong-1",
+      "inputIndex": 12740,
+      "outputIndex": 6670,
+      "weight": 6070,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:31:26.382Z"
+    },
+    {
+      "id": "mat-1790829126005-hq4hk",
+      "date": "2026-09-23",
+      "week": "2026-W39",
+      "type": "Vầu cây",
+      "supplier": "Nhà Thấm",
+      "location": "xuong-1",
+      "inputIndex": 18220,
+      "outputIndex": 8440,
+      "weight": 9780,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:32:06.006Z",
+      "updatedAt": "2026-10-01T04:41:05.909Z"
+    },
+    {
+      "id": "mat-1790829151479-xn6x9",
+      "date": "2026-09-23",
+      "week": "2026-W39",
+      "type": "Vầu cây",
+      "supplier": "Nhà Thấm",
+      "location": "xuong-1",
+      "inputIndex": 13000,
+      "outputIndex": 6700,
+      "weight": 6300,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:32:31.480Z",
+      "updatedAt": "2026-10-01T04:40:56.651Z"
+    },
+    {
+      "id": "mat-1790829216458-ex66s",
+      "date": "2026-09-23",
+      "week": "2026-W39",
+      "type": "Vầu",
+      "supplier": "Nhà Yêm",
+      "location": "xuong-1",
+      "inputIndex": 8440,
+      "outputIndex": 6730,
+      "weight": 1710,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:33:36.458Z",
+      "updatedAt": "2026-10-01T04:40:40.581Z"
+    },
+    {
+      "id": "mat-1790829257854-bl67u",
+      "date": "2026-09-29",
+      "week": "2026-W40",
+      "type": "Vầu cây",
+      "supplier": "Nhà Thấm",
+      "location": "xuong-1",
+      "inputIndex": 13070,
+      "outputIndex": 6730,
+      "weight": 6340,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:34:17.854Z",
+      "updatedAt": "2026-10-01T04:40:20.969Z"
+    },
+    {
+      "id": "mat-1790829306878-6wmfh",
+      "date": "2026-10-01",
+      "week": "2026-W40",
+      "type": "Vầu",
+      "supplier": "Nhà Anh",
+      "location": "xuong-1",
+      "inputIndex": 13800,
+      "outputIndex": 11060,
+      "weight": 2740,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:35:06.878Z"
     }
   ],
   "xuong2CutRecords": [
@@ -6368,6 +6479,12 @@
       "name": "Nhà Chiến",
       "code": "8874",
       "createdAt": "2026-09-22T07:49:40.743Z"
+    },
+    {
+      "id": "sup-1790844253842-pmenr",
+      "name": "Nhà Anh",
+      "code": "9514",
+      "createdAt": "2026-10-01T08:44:13.842Z"
     }
   ],
   "x2CapRates": {
@@ -6415,7 +6532,8 @@
     }
   },
   "x2SayTimes": {
-    "2026-09-28|say2": 2
+    "2026-09-28|say2": 2,
+    "2026-09-28|say1": 2
   },
   "x2SayIncidents": {
     "2026-09-21": 0.33
@@ -6512,5 +6630,57 @@
     "2026-09": 0.06
   },
   "x2LotLocations": [],
+  "qcFinalRecords": [
+    {
+      "id": "qcf-1790846565264-d34r5",
+      "date": "2026-09-28",
+      "workshop": "x2",
+      "kind": "van",
+      "inputQty": 122,
+      "qtyOk": 96,
+      "qtyExcept": 24,
+      "qtyReject": 2,
+      "pairKey": "2026-39-40",
+      "productId": "rate-1787619453372",
+      "productName": "Ván 1200x370x22",
+      "workerNames": "Hà Thị Huấn, Hà Thị Thiếu, Phạm Thị Quyên",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 27,
+      "workHoursHC": 27,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T09:22:45.264Z",
+      "updatedAt": "2026-10-01T09:23:23.428Z"
+    },
+    {
+      "id": "qcf-1790846644624-1171g",
+      "date": "2026-09-28",
+      "workshop": "x2",
+      "kind": "van",
+      "inputQty": 188,
+      "qtyOk": 160,
+      "qtyExcept": 24,
+      "qtyReject": 4,
+      "pairKey": "2026-39-40",
+      "productId": "rate-1787125542008",
+      "productName": "Ván 1200x382x12",
+      "workerNames": "Hà Thị Huấn, Hà Thị Thiếu, Phạm Thị Quyên",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 27,
+      "workHoursHC": 27,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T09:24:04.624Z",
+      "updatedAt": "2026-10-01T09:24:04.624Z"
+    }
+  ],
+  "qcFinalRates": {
+    "2026-10": {
+      "thanh": 245,
+      "van": 31.11
+    },
+    "2026-09": {
+      "thanh": 245,
+      "van": 31.11
+    }
+  },
   "khoNotes": []
 }

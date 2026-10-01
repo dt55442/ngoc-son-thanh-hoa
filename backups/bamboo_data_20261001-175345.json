@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-01T06:13:42.831Z",
+  "savedAt": "2026-10-01T10:31:39.644Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -6479,6 +6479,12 @@
       "name": "Nhà Chiến",
       "code": "8874",
       "createdAt": "2026-09-22T07:49:40.743Z"
+    },
+    {
+      "id": "sup-1790844253842-pmenr",
+      "name": "Nhà Anh",
+      "code": "9514",
+      "createdAt": "2026-10-01T08:44:13.842Z"
     }
   ],
   "x2CapRates": {
@@ -6626,24 +6632,55 @@
   "x2LotLocations": [],
   "qcFinalRecords": [
     {
-      "id": "qcf-1790835222808-mzhmc",
-      "date": "2026-10-01",
+      "id": "qcf-1790846565264-d34r5",
+      "date": "2026-09-28",
       "workshop": "x2",
+      "kind": "van",
+      "inputQty": 122,
+      "qtyOk": 96,
+      "qtyExcept": 24,
+      "qtyReject": 2,
+      "pairKey": "2026-39-40",
+      "productId": "rate-1787619453372",
+      "productName": "Ván 1200x370x22",
+      "workerNames": "Hà Thị Huấn, Hà Thị Thiếu, Phạm Thị Quyên",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 27,
+      "workHoursHC": 27,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T09:22:45.264Z",
+      "updatedAt": "2026-10-01T09:23:23.428Z"
+    },
+    {
+      "id": "qcf-1790846644624-1171g",
+      "date": "2026-09-28",
+      "workshop": "x2",
+      "kind": "van",
       "inputQty": 188,
-      "qtyOk": 120,
-      "qtyExcept": 40,
-      "qtyReject": 5,
+      "qtyOk": 160,
+      "qtyExcept": 24,
+      "qtyReject": 4,
+      "pairKey": "2026-39-40",
       "productId": "rate-1787125542008",
       "productName": "Ván 1200x382x12",
-      "workerNames": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
+      "workerNames": "Hà Thị Huấn, Hà Thị Thiếu, Phạm Thị Quyên",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 27,
+      "workHoursHC": 27,
       "workHoursTC": 0,
-      "createdAt": "2026-10-01T06:13:42.808Z",
-      "updatedAt": "2026-10-01T06:13:42.808Z"
+      "createdAt": "2026-10-01T09:24:04.624Z",
+      "updatedAt": "2026-10-01T09:24:04.624Z"
     }
   ],
-  "qcFinalRates": {},
+  "qcFinalRates": {
+    "2026-10": {
+      "thanh": 245,
+      "van": 31.11
+    },
+    "2026-09": {
+      "thanh": 245,
+      "van": 31.11
+    }
+  },
   "khoNotes": []
 }

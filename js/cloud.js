@@ -179,6 +179,52 @@ import { showToast } from './utils.js';
   function cloudDocRef() { return fbDb.collection(FB_COLL).doc(FB_DOC); }
   function shardColRef() { return cloudDocRef().collection(FB_SHARDS_COLL); }
 
+  // ─── CHỮ KÝ MIỀN (__dh) — TỐI ƯU TỐC ĐỘ ĐỒNG BỘ ──────────────────────
+  // Mỗi mảng/object dữ liệu (batches, pressRecords, hrAssignments…) = 1 "miền".
+  // Doc mây đính kèm __dh = { <miền>: <băm nội dung> }. Máy nhận so __dh với băm
+  // cục bộ: GIỐNG NHAU → dữ liệu y hệt → THOÁT NGAY (khỏi giải nén + so 835KB +
+  // gộp) — đây là nguyên nhân chính gây lag khi online, nhất là "echo" bản mình
+  // vừa đẩy. KHÁC → chạy đường đầy đủ như trước (tương thích 100%).
+  // Bỏ qua các khóa META (thời gian/người đẩy) vì chúng đổi mỗi lần đẩy.
+  const DELTA_META_KEYS = { updatedBy: 1, updatedAt: 1, __dh: 1, __fmt: 1 };
+  // Băm nhanh 64-bit (2 thanh ghi 32-bit) + độ dài chuỗi → va chạm gần như bằng 0
+  function hashStr(s) {
+    let h1 = 0x811c9dc5, h2 = 0x27d4eb2f;
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+      h2 = Math.imul(h2 + c, 0x85ebca6b) >>> 0;
+      h2 = (h2 ^ (h2 >>> 13)) >>> 0;
+    }
+    return h1.toString(36) + '.' + h2.toString(36) + '.' + s.length.toString(36);
+  }
+  // Bản đồ băm từng miền của một object snapshot (bỏ khóa meta)
+  function domainHashes(obj) {
+    const out = {};
+    if (!obj || typeof obj !== 'object') return out;
+    for (const k of Object.keys(obj)) {
+      if (DELTA_META_KEYS[k]) continue;
+      try { out[k] = hashStr(JSON.stringify(obj[k])); } catch (e) { out[k] = '!'; }
+    }
+    return out;
+  }
+  // 2 bản đồ băm có giống hệt nhau không (cùng tập khóa + cùng giá trị)
+  function sameHashes(a, b) {
+    if (!a || !b) return false;
+    const ka = Object.keys(a);
+    if (ka.length !== Object.keys(b).length) return false;
+    for (let i = 0; i < ka.length; i++) if (a[ka[i]] !== b[ka[i]]) return false;
+    return true;
+  }
+  let fbLocalHashes = null;          // băm miền cục bộ (cache) — null = cần tính lại
+  let fbPushedDomainHashes = null;   // băm của lần ĐẨY gần nhất (nhận diện echo của chính mình)
+  function localHashesNow() {
+    if (fbLocalHashes) return fbLocalHashes;
+    try { fbLocalHashes = domainHashes(collectCloudPayload()); }
+    catch (e) { return {}; }
+    return fbLocalHashes;
+  }
+
   // Dọn mảnh shard cũ không còn mục lục dùng (best-effort, không chặn đẩy dữ liệu).
   // Chỉ xóa mảnh "già" (>5 phút) để không đụng mảnh máy khác VỪA ghi; mảnh mới
   // thừa sẽ được dọn trong các lần đẩy sau.
@@ -213,8 +259,12 @@ import { showToast } from './utils.js';
     const docRef = cloudDocRef();
     const raw = JSON.stringify(snap);
     const size = utf8Bytes(raw);
+    // Chữ ký từng miền — đính kèm mọi định dạng để máy nhận THOÁT NHANH khi giống
+    const dh = domainHashes(snap);
+    const markPushed = () => { fbPushedDomainHashes = dh; fbLocalHashes = dh; };
     if (size <= CLOUD_PLAIN_LIMIT) {
-      await docRef.set(snap);   // nhỏ → giữ nguyên định dạng cũ (mọi phiên bản đọc được)
+      await docRef.set(Object.assign({}, snap, { __dh: dh })); // nhỏ → JSON trơn + chữ ký miền
+      markPushed();
       cleanupStaleShards(0);
       return { mode: 'plain', size };
     }
@@ -222,7 +272,8 @@ import { showToast } from './utils.js';
     if (isGzipSupported()) {
       const b64 = await gzipStringToBase64(raw);
       if (b64.length <= CLOUD_GZIP_LIMIT) {
-        await docRef.set({ __fmt: 'gzip', payload: b64, updatedBy: snap.updatedBy, updatedAt: snap.updatedAt });
+        await docRef.set({ __fmt: 'gzip', payload: b64, __dh: dh, updatedBy: snap.updatedBy, updatedAt: snap.updatedAt });
+        markPushed();
         cleanupStaleShards(0);
         return { mode: 'gzip', size: b64.length };
       }
@@ -236,9 +287,10 @@ import { showToast } from './utils.js';
     await Promise.all(parts.map((part, i) =>
       shardColRef().doc(String(i)).set({ part, idx: i, epoch, ts: Date.now() })));
     await docRef.set({
-      __fmt: fmt, shards: parts.length, epoch,
+      __fmt: fmt, shards: parts.length, epoch, __dh: dh,
       updatedBy: snap.updatedBy, updatedAt: snap.updatedAt
     });
+    markPushed();
     cleanupStaleShards(parts.length, epoch);
     return { mode: fmt, parts: parts.length, size: isGzipShard ? payload.length : size };
   }
@@ -794,6 +846,7 @@ import { showToast } from './utils.js';
     syncHistorySnapshots();
     const after = cloudCore(collectCloudSnapshot());
     if (after !== before) {
+      fbLocalHashes = null; // dữ liệu cục bộ đổi do gộp mây → băm miền cần tính lại
       persistAllLocal();
       renderAll();
       return true;
@@ -853,9 +906,18 @@ import { showToast } from './utils.js';
   }
 
   function handleRemoteSnapshot(snap) {
+    const firstLoad = !fbDidLoadRemote;   // lần nạp ĐẦU vẫn đi đường đầy đủ (thiết lập fbLastRemote)
     fbDidLoadRemote = true;
     fbRemoteDocExists = snap.exists;
     const meta = snap.exists ? (snap.data() || {}) : {};
+    // ─── THOÁT NHANH NHỜ "CHỮ KÝ MIỀN" (__dh) ──────────────────────────
+    // Mây kèm __dh (băm từng mảng). Nếu __dh GIỐNG HỆT băm cục bộ → hai bên
+    // dữ liệu Y HỆT → khỏi giải nén/so 835KB/gộp. Đây chính là cú "cắt lag"
+    // cho echo bản mình vừa đẩy (nguyên nhân chính web chậm khi online).
+    // Không áp dụng cho lần nạp ĐẦU (để thiết lập fbLastRemote/fbRemoteHasData).
+    if (snap.exists && !firstLoad && meta && meta.__dh && sameHashes(meta.__dh, localHashesNow())) {
+      return Promise.resolve();
+    }
     // Dữ liệu mây có thể ở dạng gzip/shard → phải LẮP RÁP BẤT ĐỒNG BỘ trước khi
     // gộp về máy. fbRemoteSeq: nếu mục lục đổi giữa chừng (máy khác vừa đẩy) thì
     // kết quả lắp ráp của bản cũ bị bỏ qua — chỉ áp dụng bản MỚI NHẤT.
@@ -945,6 +1007,7 @@ import { showToast } from './utils.js';
       persistAllLocal();
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+      fbLocalHashes = null; // vừa áp dữ liệu mây → băm miền cần tính lại
       renderAll();
     } finally { fbApplying = false; updateSyncBadge(); }
   }
@@ -1000,6 +1063,7 @@ import { showToast } from './utils.js';
 
   // Đẩy dữ liệu hiện tại lên mây (admin/editor/manager)
   function firePushSync() {
+    fbLocalHashes = null; // có thay đổi cục bộ → băm miền cần tính lại
     if (!isFirebaseOnline() || !fbAuthLoaded || !state.currentUser || !canPushToCloud()) {
       // Có thay đổi nhưng điều kiện đẩy chưa đủ -> đánh dấu "bẩn" và cảnh báo ít thôi
       fbDirty = true;
@@ -1205,6 +1269,7 @@ export {
   collectCloudSnapshot,
   collectCloudPayload,
   doFirePush,
+  domainHashes,
   fbApplying,
   fbAuthLoaded,
   fbDb,
@@ -1222,16 +1287,19 @@ export {
   handleFirebaseAuth,
   handleRemoteSnapshot,
   hasCloudData,
+  hashStr,
   initFirebase,
   initLucide,
   isFirebaseOnline,
   localHasAnyData,
+  localHashesNow,
   mergeRemoteIntoLocal,
   pullCloudToLocal,
   registerServiceWorker,
   requireEditPermission,
   requireTabEditPermission,
   restoreLocalThumbs,
+  sameHashes,
   resolveFirebaseRole,
   setupFirestoreSync,
   stripMaterialPhotoPayload,

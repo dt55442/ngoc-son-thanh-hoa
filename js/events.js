@@ -20,7 +20,8 @@ import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoard
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
 import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
-import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcExportRow } from './qc.js';
+import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
+import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
 import { state } from './state.js';
 import { getFxLow, setFxLow, applyThemeForUser } from './theme.js';
@@ -791,9 +792,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       qcOverlay.addEventListener('click', (e) => { if (e.target === qcOverlay) qcCloseOpenCard(); });
       qcOverlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') qcCloseOpenCard(); });
     }
-    // Esc toàn cục khi pop-up QC đang mở (dù con trỏ/focus đang ở trong bảng)
+    // Esc toàn cục khi pop-up QC đang mở (dù con trỏ/focus đang ở trong bảng).
+    // Ưu tiên đóng dropdown nổi "Đầu vào kiểm" (nếu đang mở) TRƯỚC khi đóng pop-up.
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.getElementById('qc-detail-overlay')?.classList.contains('show')) qcCloseOpenCard();
+      if (e.key !== 'Escape' || !document.getElementById('qc-detail-overlay')?.classList.contains('show')) return;
+      const picker = document.getElementById('qcf-picker');
+      if (picker && !picker.hidden) { setQcFinalPickerOpen(false); return; }
+      qcCloseOpenCard();
     });
     // Đổi kích thước cửa sổ → đặt lại đỉnh pop-up đúng dưới header
     window.addEventListener('resize', () => {
@@ -856,6 +861,32 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-qc-export', 'click', closeQcExportModal);
     safeOn('btn-cancel-qc-export', 'click', closeQcExportModal);
     safeOn('qc-export-form', 'submit', handleQcExportSubmit);
+    // ── THẺ "KIỂM SAU SẢN XUẤT" (qc-final-card — js/qc-final.js) ──
+    // Form: Vị trí · Ngày · Đầu vào kiểm (picker thành phẩm Ép Ván cặp 2 tuần) ·
+    // Đạt · Ngoại lệ · Loại. Đổi Vị trí → ẩn/hiện picker (X1 = "Sắp có");
+    // đổi Ngày → danh sách thành phẩm của cặp 2 tuần mới.
+    safeOn('qcf-form', 'submit', (e) => { handleQcFinalSubmit(e); updateQcCardGrid(); });
+    safeOn('btn-qcf-reset', 'click', resetQcFinalForm);
+    safeOn('qcf-kind', 'change', syncQcFinalKindFields); // đổi Loại kiểm → đơn vị ô số lượng + ẩn/hiện picker
+    safeOn('qcf-workshop', 'change', syncQcFinalWorkshopFields);
+    safeOn('qcf-date', 'change', qcFinalOnDateChange); // đổi ngày → danh sách thành phẩm cặp 2 tuần mới
+    safeOn('qcf-picker-btn', 'click', toggleQcFinalPicker);
+    safeOn('qcf-search', 'input', (e) => setQcFinalSearchQ(e.target.value));
+    safeOn('qcf-product-list', 'click', (e) => { if (onQcFinalListClick(e)) updateQcCardGrid(); });
+    safeOn('qcf-day-cards', 'click', (e) => { if (onQcFinalTableClick(e)) updateQcCardGrid(); });
+    // ── POPUP ĐỊNH MỨC 2 LOẠI (Kiểm Thanh thanh/h · Kiểm Ván tấm/h) ──
+    safeOn('btn-qcf-rate', 'click', openQcFinalRateModal);
+    safeOn('btn-close-qcf-rate', 'click', closeQcFinalRateModal);
+    safeOn('btn-qcf-rate-add-month', 'click', handleQcFinalRateAddMonth);
+    safeOn('qcf-rate-rows', 'click', onQcFinalRateRowClick); // Lưu / Xóa từng hàng tháng
+    // Bấm RA NGOÀI ô "Đầu vào kiểm" → tự đóng danh sách thành phẩm
+    document.addEventListener('click', (e) => { qcFinalMaybeClosePicker(e); });
+    // Dropdown nổi "Đầu vào kiểm" (portal ra body, position:fixed): neo lại đúng
+    // chỗ nút khi CUỘN bất kỳ vùng nào (capture bắt cả cuộn trong .qc-detail-content)
+    // và khi THAY ĐỔI CỠ màn hình.
+    window.addEventListener('scroll', positionQcFinalPicker, true);
+    window.addEventListener('resize', positionQcFinalPicker);
+
     // ── Modal tạo dòng theo tuần: đổi Năm/Tuần → nạp lại danh sách kế hoạch ──
     ['qc-imp-year', 'qc-imp-week'].forEach(fid => {
       safeOn(fid, 'change', () => qcImpLoadPlan(false));

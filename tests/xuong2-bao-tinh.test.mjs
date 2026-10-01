@@ -443,7 +443,7 @@ check('CẤU TRÚC (js): nối storage/cloud/history/main',
   jsStorage.includes('xuong2BaoTinhRecords') && jsCloud.includes('x2BaoTinhRates') &&
   jsHistory.includes('xuong2BaoTinhRecords') && jsMain.includes('loadXuong2BaoTinh'));
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v186', /nha-may-ngoc-son-v186/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v189', /nha-may-ngoc-son-v189/.test(swJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

@@ -8537,3 +8537,87 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   #modal-add-lot .al-loc-chips { max-height: 16vh; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   THẺ "KIỂM SAU SẢN XUẤT" (tab QC — qc-final-card · js/qc-final.js)
+   Form gọn 2 HÀNG · ô nhập bề rộng vừa phải · bảng dữ liệu = THẺ NGÀY dùng
+   chung .x2-day-card/.x2-day-head của các thẻ công đoạn Xưởng 2.
+   ═══════════════════════════════════════════════════════════ */
+#qc-final-card .x2-form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+#qc-final-card .qcf-g-ws   { flex: 0 0 128px; }
+#qc-final-card .qcf-g-date { flex: 0 0 148px; }
+#qc-final-card .qcf-g-in   { flex: 1 1 260px; min-width: 230px; }
+.qcf-in-controls { position: relative; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.qcf-in-controls .al-picker-btn { flex: 1 1 auto; min-width: 0; max-width: 330px; justify-content: flex-start; }
+.qcf-input-qty { flex: 0 0 108px; width: 108px; }
+.qcf-soon {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px;
+  border-radius: 8px; background: var(--bg-subtle); color: var(--text-muted);
+  font-size: 0.8rem; white-space: nowrap;
+}
+/* Danh sách thành phẩm = POP-UP NỔI (portal ra `document.body` + position:fixed,
+   neo bằng JS vào đúng mép nút "Thành phẩm Ép Ván" — đủ chỗ thì mở XUỐNG, thiếu
+   chỗ thì mở LÊN). Nhờ nằm ngoài pop-up thẻ nên KHÔNG bị `.qc-detail-content`
+   overflow:auto cắt mất, và KHÔNG đẩy/biến dạng form (node ngoài luồng). */
+.qcf-picker {
+  position: fixed;
+  z-index: 240;                 /* trên pop-up thẻ chi tiết (200) */
+  margin-top: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.28);
+  max-height: 40vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.qcf-pick-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px 2px; font-size: 0.8rem; color: var(--text-muted); }
+.qcf-product { display: flex; flex-direction: column; align-items: stretch; gap: 3px; width: 100%; text-align: left; }
+.qcf-product.picked { outline: 2px solid var(--primary); background: var(--primary-light); }
+.qcf-product-line1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.qcf-product-name { font-weight: 600; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dòng 2 của thẻ thành phẩm: Tổng · Đã kiểm · CÒN LẠI (kiểm nhiều ngày mới hết) */
+.qcf-product-meta { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qcf-remain { color: #16a34a; }
+.qcf-remain.zero { color: var(--text-muted); }
+.qcf-done {
+  display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+  background: var(--bg-subtle); color: var(--text-muted);
+  font-size: 0.68rem; font-weight: 700; white-space: nowrap;
+}
+#qc-final-card .qcf-g-kind { flex: 0 0 128px; }
+#qc-final-card .qcf-g-num { flex: 0 0 106px; }
+#qc-final-card .qcf-g-num input { width: 100%; }
+#qc-final-card .qcf-g-actions { flex: 1 1 auto; display: flex; justify-content: flex-end; }
+.qcf-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Chip LOẠI KIỂM trên dòng lượt kiểm (Kiểm Thanh / Kiểm Ván) */
+.qcf-kind-chip {
+  display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+  background: #fef3c7; color: #92400e; font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+}
+/* Dòng LƯỢT KIỂM trong thẻ ngày (Vị trí · Thành phẩm · Đầu vào · Đạt · Ngoại lệ · Loại …) */
+.qcf-rows { display: flex; flex-direction: column; }
+.qcf-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-bottom: 1px dashed var(--border); flex-wrap: wrap; }
+.qcf-row:last-child { border-bottom: none; }
+.qcf-row-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.85rem; }
+.qcf-ws-chip {
+  display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+  background: #ede9fe; color: #6d28d9; font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+}
+.qcf-row-actions { display: flex; gap: 4px; }
+/* POPUP ĐỊNH MỨC (2 cột Kiểm Thanh thanh/h · Kiểm Ván tấm/h) */
+.qcf-rate-table .qcf-rate-cell { padding: 4px 6px; }
+.qcf-rate-input { width: 100%; min-width: 90px; text-align: right; }
+.qcf-rate-row-default td { color: var(--text-muted); }
+.qcf-rate-add { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.qcf-rate-add label { font-size: 0.8rem; color: var(--text-muted); }
+/* Điện thoại: các ô xếp dọc gọn · dropdown nổi portal ra body → cao tối đa 46vh */
+@media (max-width: 639.98px) {
+  #qc-final-card .qcf-g-kind, #qc-final-card .qcf-g-ws, #qc-final-card .qcf-g-date { flex: 1 1 46%; }
+  #qc-final-card .qcf-g-in { flex: 1 1 100%; }
+  #qc-final-card .qcf-g-num { flex: 1 1 30%; }
+  .qcf-input-qty { flex: 1 1 100px; width: auto; }
+  .qcf-picker { max-height: 46vh; }
+}
+
+

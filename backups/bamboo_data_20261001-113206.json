@@ -1,7 +1,1142 @@
 {
   "version": "1.0",
-  "savedAt": "2026-09-30T12:52:09.092Z",
+  "savedAt": "2026-10-01T04:31:26.462Z",
   "batches": [
+    {
+      "id": "batch-1790817861408-2",
+      "code": "260928-21",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1932,
+      "volume": 0.4637,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS9",
+      "notes": "",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T04:22:37.866Z"
+    },
+    {
+      "id": "batch-1790817861408-1",
+      "code": "260928-20",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 2016,
+      "volume": 0.4838,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1790817861407
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790817710162-1das7",
+      "sourceChonNanLabel": "1250×24×8 · A1 · 2.016",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:24:21.407Z"
+    },
+    {
+      "id": "batch-1790817861408-0",
+      "code": "260928-19",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 2016,
+      "volume": 0.4838,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1790817861407
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790817725464-5ksav",
+      "sourceChonNanLabel": "1250×24×8 · A1 · 2.016",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:24:21.407Z"
+    },
+    {
+      "id": "batch-1790817824504-3",
+      "code": "260928-18",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2268,
+      "volume": 0.3572,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1790817824502
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790817653978-iqok6",
+      "sourceChonNanLabel": "1250×18×7 · A1 · 2.268",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:23:44.502Z"
+    },
+    {
+      "id": "batch-1790817824504-2",
+      "code": "260928-17",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1400,
+      "volume": 0.315,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1790817824502
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790817633715-c0ypd",
+      "sourceChonNanLabel": "1250×18×10 · A · 1.400",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:23:44.502Z"
+    },
+    {
+      "id": "batch-1790817824503-1",
+      "code": "260928-16",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1680,
+      "volume": 0.3402,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1790817824502
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790817595356-ta909",
+      "sourceChonNanLabel": "1250×18×9 · A · 1.680",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:23:44.502Z"
+    },
+    {
+      "id": "batch-1790817824503-0",
+      "code": "260928-15",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1790817824502
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790817561698-0qesz",
+      "sourceChonNanLabel": "1250×18×7 · B · 2.100",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:23:44.502Z"
+    },
+    {
+      "id": "batch-1790817263022",
+      "code": "260928-14",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1722,
+      "volume": 0.2712,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817240490",
+      "code": "260928-13",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1456,
+      "volume": 0.3604,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817216732",
+      "code": "260928-12",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817193983",
+      "code": "260928-11",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1750,
+      "volume": 0.3938,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817168711",
+      "code": "260928-10",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 7,
+      "quantity": 2016,
+      "volume": 0.3881,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817144865",
+      "code": "260928-09",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 11,
+      "quantity": 1610,
+      "volume": 0.487,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817123016",
+      "code": "260928-08",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 7,
+      "quantity": 1008,
+      "volume": 0.194,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817091297",
+      "code": "260928-07",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 11,
+      "quantity": 182,
+      "volume": 0.0551,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817059696",
+      "code": "260928-06",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 7,
+      "quantity": 1330,
+      "volume": 0.256,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817037205",
+      "code": "260928-05",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 9,
+      "quantity": 364,
+      "volume": 0.0901,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790817001406",
+      "code": "260928-04",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 8,
+      "quantity": 851,
+      "volume": 0.1872,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790816975871",
+      "code": "260928-03",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 11,
+      "quantity": 596,
+      "volume": 0.1803,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790816953777",
+      "code": "260928-02",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 11,
+      "quantity": 1344,
+      "volume": 0.4066,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790816932306",
+      "code": "260928-01",
+      "stage": "say2",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 7,
+      "quantity": 1008,
+      "volume": 0.194,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS6",
+      "notes": "",
+      "khoDate": "2026-09-28",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-28"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:15:50.989Z",
+      "say2Date": "2026-09-28",
+      "sayCharges": {
+        "say2": 1790817350989
+      }
+    },
+    {
+      "id": "batch-1790816862325",
+      "code": "260929-08",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 2016,
+      "volume": 0.4838,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790816818579",
+      "code": "260929-07",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 7,
+      "quantity": 1178,
+      "volume": 0.2268,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790816794392",
+      "code": "260929-06",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1932,
+      "volume": 0.4637,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790816770604",
+      "code": "260929-05",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 840,
+      "volume": 0.2016,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790816746805",
+      "code": "260929-04",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 8,
+      "quantity": 2520,
+      "volume": 0.4536,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790816724838",
+      "code": "260929-03",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 10,
+      "quantity": 810,
+      "volume": 0.243,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790816699608",
+      "code": "260929-02",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 2016,
+      "volume": 0.4838,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790816669044",
+      "code": "260929-01",
+      "stage": "say2",
+      "date": "2026-09-29",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1848,
+      "volume": 0.4435,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS4",
+      "notes": "",
+      "khoDate": "2026-09-29",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-29"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-09-29"
+        }
+      ],
+      "updatedAt": "2026-10-01T01:17:30.667Z",
+      "say2Date": "2026-09-29",
+      "sayCharges": {
+        "say2": 1790817450667
+      }
+    },
+    {
+      "id": "batch-1790773007840",
+      "code": "260930-93",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1052,
+      "volume": 0.213,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:56:47.840Z"
+    },
+    {
+      "id": "batch-1790772989816",
+      "code": "260930-92",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 7,
+      "quantity": 725,
+      "volume": 0.1396,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:56:29.816Z"
+    },
+    {
+      "id": "batch-1790772973925",
+      "code": "260930-91",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 22,
+      "thickness": 8,
+      "quantity": 624,
+      "volume": 0.1373,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:56:13.925Z"
+    },
+    {
+      "id": "batch-1790772956032",
+      "code": "260930-90",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1372,
+      "volume": 0.2778,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:55:56.032Z"
+    },
+    {
+      "id": "batch-1790772934584",
+      "code": "260930-89",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 8,
+      "quantity": 1414,
+      "volume": 0.2545,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:55:34.584Z"
+    },
+    {
+      "id": "batch-1790772914013",
+      "code": "260930-88",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 560,
+      "volume": 0.1386,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:55:14.013Z"
+    },
+    {
+      "id": "batch-1790772895008",
+      "code": "260930-87",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1750,
+      "volume": 0.4331,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:54:55.008Z"
+    },
+    {
+      "id": "batch-1790772879241",
+      "code": "260930-86",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 8,
+      "quantity": 1442,
+      "volume": 0.2596,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:54:39.241Z"
+    },
+    {
+      "id": "batch-1790772825922",
+      "code": "260930-85",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 8,
+      "quantity": 1680,
+      "volume": 0.3024,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:53:45.922Z"
+    },
+    {
+      "id": "batch-1790772785295",
+      "code": "260930-84",
+      "stage": "kho",
+      "date": "2026-09-30",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 656,
+      "volume": 0.1624,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "S2",
+      "notes": "",
+      "khoDate": "2026-09-30",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-09-30"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:53:05.296Z"
+    },
     {
       "id": "batch-1790772720626",
       "code": "260930-83",
@@ -4005,6 +5140,38 @@
       "note": "",
       "images": [],
       "createdAt": "2026-09-30T03:01:19.136Z"
+    },
+    {
+      "id": "mat-1790828827916-6767q",
+      "date": "2026-09-30",
+      "week": "2026-W40",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Hương",
+      "location": "xuong-2",
+      "inputIndex": 18870,
+      "outputIndex": 6980,
+      "weight": 11890,
+      "unitPrice": 1600,
+      "totalAmount": 19024000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:27:07.916Z"
+    },
+    {
+      "id": "mat-1790829086381-lktty",
+      "date": "2026-09-22",
+      "week": "2026-W39",
+      "type": "Vầu cây",
+      "supplier": "Nhà Thấm",
+      "location": "xuong-1",
+      "inputIndex": 12740,
+      "outputIndex": 6670,
+      "weight": 6070,
+      "unitPrice": 0,
+      "totalAmount": 0,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-01T04:31:26.382Z"
     }
   ],
   "xuong2CutRecords": [
@@ -4351,258 +5518,6 @@
   ],
   "xuong2ChonNanThoRecords": [
     {
-      "id": "x2cn-1790066068435-2xgh5",
-      "baothoId": "x2bt-1790066019230-tlbu2",
-      "external": false,
-      "materialId": "mat-1789640914869-w27fh",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Hương",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        7
-      ],
-      "sizeKey": "1250×22×7",
-      "cls": "A",
-      "quantity": 2016,
-      "unitVol": 0.0001925,
-      "volume": 0.3881,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:34:28.435Z"
-    },
-    {
-      "id": "x2cn-1790066088086-8lzc3",
-      "baothoId": "x2bt-1790066019230-tlbu2",
-      "external": false,
-      "materialId": "mat-1789640914869-w27fh",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Hương",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        7
-      ],
-      "sizeKey": "1250×22×7",
-      "cls": "A1",
-      "quantity": 1500,
-      "unitVol": 0.0001925,
-      "volume": 0.2888,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:34:48.086Z"
-    },
-    {
-      "id": "x2cn-1790066107189-ldrnu",
-      "baothoId": "x2bt-1790066019230-tlbu2",
-      "external": false,
-      "materialId": "mat-1789640914869-w27fh",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Hương",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        8
-      ],
-      "sizeKey": "1250×22×8",
-      "cls": "B",
-      "quantity": 200,
-      "unitVol": 0.00022,
-      "volume": 0.044,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:35:07.189Z"
-    },
-    {
-      "id": "x2cn-1790066116815-7zrwp",
-      "baothoId": "x2bt-1790066019230-tlbu2",
-      "external": false,
-      "materialId": "mat-1789640914869-w27fh",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Hương",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        8
-      ],
-      "sizeKey": "1250×22×8",
-      "cls": "A",
-      "quantity": 1500,
-      "unitVol": 0.00022,
-      "volume": 0.33,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:35:16.815Z"
-    },
-    {
-      "id": "x2cn-1790066137505-ticog",
-      "baothoId": "x2bt-1790066019230-tlbu2",
-      "external": false,
-      "materialId": "mat-1789640914869-w27fh",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Hương",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        8
-      ],
-      "sizeKey": "1250×22×8",
-      "cls": "reject",
-      "quantity": 100,
-      "unitVol": 0.00022,
-      "volume": 0.022,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:35:37.505Z"
-    },
-    {
-      "id": "x2cn-1790066718782-7w4gh",
-      "baothoId": "x2bt-1790066685675-fymo4",
-      "external": false,
-      "materialId": "mat-1789640429408-r222v",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        7
-      ],
-      "sizeKey": "1250×22×7",
-      "cls": "A",
-      "quantity": 2000,
-      "unitVol": 0.0001925,
-      "volume": 0.385,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:45:18.782Z"
-    },
-    {
-      "id": "x2cn-1790066729914-ehvro",
-      "baothoId": "x2bt-1790066685675-fymo4",
-      "external": false,
-      "materialId": "mat-1789640429408-r222v",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        7
-      ],
-      "sizeKey": "1250×22×7",
-      "cls": "A1",
-      "quantity": 1500,
-      "unitVol": 0.0001925,
-      "volume": 0.2888,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:45:29.914Z"
-    },
-    {
-      "id": "x2cn-1790066744602-2l9xx",
-      "baothoId": "x2bt-1790066685675-fymo4",
-      "external": false,
-      "materialId": "mat-1789640429408-r222v",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        7
-      ],
-      "sizeKey": "1250×22×7",
-      "cls": "reject",
-      "quantity": 200,
-      "unitVol": 0.0001925,
-      "volume": 0.0385,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:45:44.602Z"
-    },
-    {
-      "id": "x2cn-1790066760858-oz6er",
-      "baothoId": "x2bt-1790066685675-fymo4",
-      "external": false,
-      "materialId": "mat-1789640429408-r222v",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-09-18",
-      "btDate": "2026-09-18",
-      "date": "2026-09-18",
-      "week": "2026-W38",
-      "dims": [
-        1250,
-        22,
-        8
-      ],
-      "sizeKey": "1250×22×8",
-      "cls": "A",
-      "quantity": 542,
-      "unitVol": 0.00022,
-      "volume": 0.1192,
-      "worker": "Hà Thị Luyện A, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-09-22T08:46:00.858Z"
-    },
-    {
       "workHoursHC": 27,
       "sizeKey": "1250×18×7",
       "external": false,
@@ -4881,6 +5796,202 @@
       "week": "2026-W40",
       "supplier": "Nhà Tế",
       "boDate": "2026-09-29"
+    },
+    {
+      "id": "x2cn-1790817561698-0qesz",
+      "baothoId": "",
+      "external": true,
+      "materialId": "",
+      "materialType": "",
+      "supplier": "BỔ SUNG",
+      "boDate": "",
+      "btDate": "",
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "sizeKey": "1250×18×7",
+      "cls": "B",
+      "quantity": 2100,
+      "unitVol": 0.0001575,
+      "volume": 0.3308,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T01:19:21.698Z"
+    },
+    {
+      "id": "x2cn-1790817595356-ta909",
+      "baothoId": "",
+      "external": true,
+      "materialId": "",
+      "materialType": "",
+      "supplier": "BỔ SUNG",
+      "boDate": "",
+      "btDate": "",
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "sizeKey": "1250×18×9",
+      "cls": "A",
+      "quantity": 1680,
+      "unitVol": 0.0002025,
+      "volume": 0.3402,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T01:19:55.356Z"
+    },
+    {
+      "id": "x2cn-1790817633715-c0ypd",
+      "baothoId": "",
+      "external": true,
+      "materialId": "",
+      "materialType": "",
+      "supplier": "BỔ SUNG",
+      "boDate": "",
+      "btDate": "",
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "sizeKey": "1250×18×10",
+      "cls": "A",
+      "quantity": 1400,
+      "unitVol": 0.000225,
+      "volume": 0.315,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T01:20:33.715Z"
+    },
+    {
+      "id": "x2cn-1790817653978-iqok6",
+      "baothoId": "",
+      "external": true,
+      "materialId": "",
+      "materialType": "",
+      "supplier": "BỔ SUNG",
+      "boDate": "",
+      "btDate": "",
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "sizeKey": "1250×18×7",
+      "cls": "A1",
+      "quantity": 2268,
+      "unitVol": 0.0001575,
+      "volume": 0.3572,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T01:20:53.978Z"
+    },
+    {
+      "id": "x2cn-1790817698019-uhrt7",
+      "baothoId": "",
+      "external": true,
+      "materialId": "",
+      "materialType": "",
+      "supplier": "BỔ SUNG",
+      "boDate": "",
+      "btDate": "",
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "sizeKey": "1250×24×8",
+      "cls": "A1",
+      "quantity": 1932,
+      "unitVol": 0.00024,
+      "volume": 0.4637,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T01:21:38.019Z"
+    },
+    {
+      "id": "x2cn-1790817710162-1das7",
+      "baothoId": "",
+      "external": true,
+      "materialId": "",
+      "materialType": "",
+      "supplier": "BỔ SUNG",
+      "boDate": "",
+      "btDate": "",
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "sizeKey": "1250×24×8",
+      "cls": "A1",
+      "quantity": 2016,
+      "unitVol": 0.00024,
+      "volume": 0.4838,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T01:21:50.162Z"
+    },
+    {
+      "id": "x2cn-1790817725464-5ksav",
+      "baothoId": "",
+      "external": true,
+      "materialId": "",
+      "materialType": "",
+      "supplier": "BỔ SUNG",
+      "boDate": "",
+      "btDate": "",
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "sizeKey": "1250×24×8",
+      "cls": "A1",
+      "quantity": 2016,
+      "unitVol": 0.00024,
+      "volume": 0.4838,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-01T01:22:05.464Z"
     }
   ],
   "xuong2BulligRecords": [
@@ -5330,7 +6441,10 @@
       }
     }
   },
-  "x2SayTimes": {},
+  "x2SayTimes": {
+    "2026-09-28|say2": 2,
+    "2026-09-28|say1": 2
+  },
   "x2SayIncidents": {
     "2026-09-21": 0.33
   },

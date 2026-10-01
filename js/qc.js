@@ -20,6 +20,7 @@ import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { escapeHTML, getISOWeekString, showToast } from './utils.js';
 import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // Bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
+import { qcFinalCardCount, renderQcFinalCard, setQcFinalPickerOpen } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm)
 
   // ─── HELPERS ──────────────────────────────────────────────────
   // Lấy số tuần từ chuỗi "Tuần 34" -> 34
@@ -114,6 +115,7 @@ import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // B�
     renderQcTable();
     renderQcSearch(); // dải kết quả lọc theo từ khóa / bộ lọc đang chọn
     renderKilnHumidityCard(); // bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
+    renderQcFinalCard(); // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
     updateQcCardGrid(); // đếm số liệu trên các thẻ launcher
     syncQcMiniActive(); // highlight thẻ đang mở
     initLucide();
@@ -572,7 +574,7 @@ import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // B�
       return rows.length ? `${rows.length} dòng · ${qty.toLocaleString('vi-VN')} tấm` : 'Chưa có';
     } },
     'qc-incoming-card': { el: 'qc-mini-count-incoming', count: () => 'Sắp có' },
-    'qc-final-card':    { el: 'qc-mini-count-final',    count: () => 'Sắp có' },
+    'qc-final-card':    { el: 'qc-mini-count-final',    count: () => qcFinalCardCount() },
     'qc-humidity-card': { el: 'qc-mini-count-humidity', count: () => kilnHumidityCardCount() }
   };
 
@@ -654,6 +656,9 @@ import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // B�
     if (stack) stack.appendChild(card); else document.getElementById('qc-view')?.appendChild(card);
     card.classList.add('qc-card-hidden');
     openQcDetailCard = null;
+    // Dropdown nổi "Đầu vào kiểm" portal ra body — đóng pop-up thẻ thì phải đóng
+    // nốt dropdown (nếu không node position:fixed sẽ còn lơ lửng trên màn hình)
+    try { setQcFinalPickerOpen(false); } catch (e) { /* module chưa nạp — bỏ qua */ }
     if (overlay) { overlay.classList.remove('show'); overlay.setAttribute('aria-hidden', 'true'); }
     syncQcMiniActive();
     initLucide();

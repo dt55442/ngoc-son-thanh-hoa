@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -313,6 +313,41 @@ import { escapeHTML, showToast } from './utils.js';
     if (changed) {
       state.qcKilnThresholds = cur;
       try { localStorage.setItem(STORAGE_KEY_QC_KILN_THRESHOLD, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
+  // ─── GỘP KIỂM SAU SẢN XUẤT (file / backup) — thẻ qc-final-card ──
+  // Gộp theo id: bản có updatedAt MỚI HƠN thắng; bản chỉ có ở 1 phía vẫn giữ
+  // lại — không mất lượt kiểm của máy nào.
+  function restoreQcFinal(incomingArr) {
+    const incoming = Array.isArray(incomingArr) ? incomingArr.filter(r => r && r.id) : [];
+    if (!incoming.length) return state.qcFinalRecords || [];
+    const stamp = s => String((s && (s.updatedAt || s.createdAt)) || '');
+    const map = new Map((state.qcFinalRecords || []).filter(r => r && r.id).map(r => [r.id, r]));
+    let changed = false;
+    incoming.forEach(r => {
+      const cur = map.get(r.id);
+      if (!cur || stamp(r) >= stamp(cur)) { map.set(r.id, r); changed = true; }
+    });
+    const merged = [...map.values()];
+    if (changed) {
+      state.qcFinalRecords = merged;
+      try { localStorage.setItem(STORAGE_KEY_QC_FINAL, JSON.stringify(merged)); } catch (err) {}
+    }
+    return merged;
+  }
+  // Gộp ĐỊNH MỨC kiểm theo tháng ({ 'YYYY-MM': tấm/h }) — không đè số đã đặt
+  function restoreQcFinalRates(incoming) {
+    const src = (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) ? incoming : {};
+    const cur = (state.qcFinalRates && typeof state.qcFinalRates === 'object') ? state.qcFinalRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.qcFinalRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_QC_FINAL_RATE, JSON.stringify(cur)); } catch (err) {}
     }
     return cur;
   }
@@ -666,6 +701,12 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.qcKilnThresholds) {
           restoreQcKilnThresholds(loaded.qcKilnThresholds); // GỘP — không đè ngưỡng đã đặt
         }
+        if (Array.isArray(loaded.qcFinalRecords)) {
+          restoreQcFinal(loaded.qcFinalRecords); // KIỂM SAU SẢN XUẤT — gộp, không mất lượt kiểm mới hơn file
+        }
+        if (loaded.qcFinalRates) {
+          restoreQcFinalRates(loaded.qcFinalRates); // ĐỊNH MỨC kiểm theo tháng — gộp, không đè số đã đặt
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -846,6 +887,8 @@ import { escapeHTML, showToast } from './utils.js';
         x2BaoTinhRates: state.x2BaoTinhRates || {},
         x2EpVanRates: state.x2EpVanRates || {},
         x2LotLocations: state.x2LotLocations || [],
+        qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
+        qcFinalRates: state.qcFinalRates || {},       // Định mức kiểm theo tháng (tấm/h)
         khoNotes: state.khoNotes || []
       };
       await writable.write(JSON.stringify(allData, null, 2));
@@ -955,7 +998,9 @@ import { escapeHTML, showToast } from './utils.js';
       x2EpVanRates: state.x2EpVanRates || {},
       x2LotLocations: state.x2LotLocations || [],
       qcKilnReadings: state.qcKilnReadings || [],
-      qcKilnThresholds: state.qcKilnThresholds || {}
+      qcKilnThresholds: state.qcKilnThresholds || {},
+      qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
+      qcFinalRates: state.qcFinalRates || {}        // Định mức kiểm theo tháng (tấm/h)
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -1056,6 +1101,12 @@ import { escapeHTML, showToast } from './utils.js';
         }
         if (imported.qcKilnThresholds) {
           restoreQcKilnThresholds(imported.qcKilnThresholds); // GỘP — không đè ngưỡng đã đặt
+        }
+        if (Array.isArray(imported.qcFinalRecords)) {
+          restoreQcFinal(imported.qcFinalRecords); // KIỂM SAU SẢN XUẤT — gộp, không mất lượt kiểm mới hơn backup
+        }
+        if (imported.qcFinalRates) {
+          restoreQcFinalRates(imported.qcFinalRates); // ĐỊNH MỨC kiểm theo tháng — gộp, không đè số đã đặt
         }
 
         if (imported && Array.isArray(imported.xuong2BaoTinhRecords)) {
@@ -1243,6 +1294,8 @@ export {
   restoreMaterialRecords,
   restoreQcKilnReadings,
   restoreQcKilnThresholds,
+  restoreQcFinal,
+  restoreQcFinalRates,
   restoreX2BaoThoRates,
   restoreX2BoOngRates,
   restoreX2ChonNanRates,

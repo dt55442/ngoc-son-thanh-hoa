@@ -2457,10 +2457,10 @@
             <span class="qc-mini-desc">Kiểm tra nguyên liệu đầu vào</span>
             <span class="qc-mini-count" id="qc-mini-count-incoming">–</span>
           </button>
-          <button type="button" class="qc-mini-card" data-qc-card="qc-final-card" aria-expanded="false" title="Kiểm Sau Sản Xuất — kiểm tra thành phẩm trước khi xuất xưởng (sắp bổ sung)">
+          <button type="button" class="qc-mini-card" data-qc-card="qc-final-card" aria-expanded="false" title="Kiểm Sau Sản Xuất — QC kiểm thành phẩm SAU Ép Ván trước khi xuất xưởng: Đầu vào kiểm (X2 = tổng thành phẩm Ép Ván của cặp 2 tuần xuất hàng), Đạt / Ngoại lệ / Loại, người kiểm + giờ tự động từ Nhân Sự">
             <span class="qc-mini-ic"><i data-lucide="badge-check"></i></span>
             <span class="qc-mini-title">Kiểm Sau Sản Xuất</span>
-            <span class="qc-mini-desc">Kiểm tra thành phẩm xuất xưởng</span>
+            <span class="qc-mini-desc">Kiểm thành phẩm sau Ép Ván</span>
             <span class="qc-mini-count" id="qc-mini-count-final">–</span>
           </button>
           <button type="button" class="qc-mini-card" data-qc-card="qc-humidity-card" aria-expanded="false" title="Độ Ẩm Lò Sấy — QC đo & nhập độ ẩm từng lò (LS1..LS15) hàng ngày + bảng ngưỡng đạt (màu đạt ẩm hiện ngay trên Bảng Điều Khiển ở tab Công Đoạn)">
@@ -2569,20 +2569,116 @@
         </div>
       </div>
 
-      <!-- MODULE KIỂM SAU SẢN XUẤT — bố cục sẵn, nội dung dự án sẽ bổ sung sau -->
+      <!-- MODULE KIỂM SAU SẢN XUẤT: QC kiểm thành phẩm SAU Ép Ván trước khi xuất
+           xưởng, ghi theo NGÀY + VỊ TRÍ (Xưởng 1 / Xưởng 2). Form gọn: Vị trí ·
+           Ngày · Đầu vào kiểm (X2 = chọn thành phẩm Ép Ván của CẶP 2 TUẦN xuất
+           hàng — tuần lẻ + tuần kế; X1 = "Sắp có") · Số lượng đạt · Ngoại lệ ·
+           Loại (= số lượng bị loại = lỗi). Công thức: Tổng kiểm = Đạt + Ngoại lệ
+           + Loại · Tổng đạt = Đạt + Ngoại lệ · Tỉ lệ lỗi = Loại ÷ Tổng kiểm.
+           Người kiểm + giờ HC/TC TỰ ĐỘNG từ vị trí bộ phận QC có tên chứa "kiểm"
+           (QC Kiểm ván+thanh) — js/qc-final.js. -->
       <div class="planning-card qc-card-hidden" id="qc-final-card">
         <div class="planning-card-header">
           <h4><i data-lucide="badge-check"></i> Kiểm Sau Sản Xuất</h4>
         </div>
-        <div class="qc-placeholder">
-          <span class="qc-placeholder-ic"><i data-lucide="badge-check"></i></span>
-          <strong>Chức năng đang được xây dựng</strong>
-          <p>Kiểm tra thành phẩm sau sản xuất trước khi xuất xưởng: kết quả kiểm, tiêu chí đạt / không đạt, ảnh chụp... Thông tin dự án sẽ bổ sung sau.</p>
+
+        <!-- FORM GỌN: hàng 1 = Kiểm Loại · Vị trí · Ngày · Đầu vào kiểm — hàng 2 =
+             Đạt · Ngoại lệ · Loại + nút Định mức / Lưu / Làm Mới (ô nhập bề rộng
+             vừa phải; đơn vị các ô số lượng đổi theo Kiểm Loại: tấm hoặc thanh) -->
+        <div class="x2-cut-form-wrap qcf-form-wrap">
+          <div class="x2-cut-edit-banner" id="qcf-edit-banner" style="display:none;">
+            <i data-lucide="pencil"></i> <span id="qcf-edit-text"></span>
+          </div>
+          <form id="qcf-form">
+            <div class="x2-form-row qcf-row1">
+              <div class="form-group qcf-g-kind">
+                <label for="qcf-kind">Kiểm Loại <span class="required">*</span></label>
+                <select id="qcf-kind" title="Loại kiểm — quyết định đơn vị số lượng và định mức dùng tính Hiệu suất (Kiểm Thanh = thanh/h · Kiểm Ván = tấm/h)">
+                  <option value="van" title="Kiểm Ván — thành phẩm Ép Ván, đơn vị TẤM">Kiểm Ván</option>
+                  <option value="thanh" title="Kiểm Thanh — nan, đơn vị THANH (nhập tay)">Kiểm Thanh</option>
+                </select>
+              </div>
+              <div class="form-group qcf-g-ws">
+                <label for="qcf-workshop">Vị Trí <span class="required">*</span></label>
+                <select id="qcf-workshop">
+                  <option value="x2" title="Xưởng 2 — kiểm thành phẩm Ép Ván">Xưởng 2</option>
+                  <option value="x1" title="Xưởng 1 — Đầu vào kiểm sắp bổ sung">Xưởng 1</option>
+                </select>
+              </div>
+              <div class="form-group qcf-g-date">
+                <label for="qcf-date">Ngày Kiểm <span class="required">*</span></label>
+                <input type="date" id="qcf-date" required>
+              </div>
+              <div class="form-group qcf-g-in" id="qcf-in-group">
+                <label for="qcf-input-qty">Đầu Vào Kiểm (<span id="qcf-unit-in">tấm</span>) <span class="required">*</span></label>
+                <div class="qcf-in-controls">
+                  <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Bấm để mở danh sách THÀNH PHẨM Ép Ván của CẶP 2 TUẦN xuất hàng chứa ngày kiểm (VD ngày ở tuần 39 hay 40 đều lấy cặp 39–40) — mỗi thẻ hiện Tổng · Đã kiểm · Còn lại; chọn 1 thẻ để tự điền số CÒN LẠI (sửa được)">
+                    <i data-lucide="list-checks"></i>
+                    <span id="qcf-picker-text">Thành phẩm Ép Ván</span>
+                    <span class="al-picked-count" id="qcf-picked-count">Chưa chọn</span>
+                  </button>
+                  <span class="qcf-soon" id="qcf-in-soon" hidden title="Đầu vào kiểm Xưởng 1 sắp bổ sung — hiện nhập tay số lượng"><i data-lucide="clock"></i> Sắp có</span>
+                  <input type="number" id="qcf-input-qty" class="qcf-input-qty" min="0" step="1" inputmode="numeric" placeholder="VD: 1200" title="Đầu vào kiểm = số CÒN LẠI của thành phẩm trong cặp 2 tuần (tự điền khi chọn, sửa được) hoặc số nhập tay (Kiểm Thanh / Xưởng 1)">
+                  <div class="al-picker qcf-picker" id="qcf-picker" hidden>
+                    <div class="al-picker-tools">
+                      <input type="text" id="qcf-search" class="al-search" placeholder="Tìm nhanh thành phẩm…" autocomplete="off">
+                    </div>
+                    <div class="al-card-list" id="qcf-product-list"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="x2-form-row qcf-row2">
+              <div class="form-group qcf-g-num">
+                <label for="qcf-ok">Số Lượng Đạt (<span id="qcf-unit-ok">tấm</span>)</label>
+                <input type="number" id="qcf-ok" min="0" step="1" inputmode="numeric" placeholder="0">
+              </div>
+              <div class="form-group qcf-g-num">
+                <label for="qcf-except">Ngoại Lệ (<span id="qcf-unit-ex">tấm</span>)</label>
+                <input type="number" id="qcf-except" min="0" step="1" inputmode="numeric" placeholder="0" title="Ngoại lệ vẫn tính vào TỔNG ĐẠT (Đạt + Ngoại lệ)">
+              </div>
+              <div class="form-group qcf-g-num">
+                <label for="qcf-reject">Loại (<span id="qcf-unit-re">tấm</span>)</label>
+                <input type="number" id="qcf-reject" min="0" step="1" inputmode="numeric" placeholder="0" title="Loại = số lượng bị LOẠI (lỗi) — dùng tính Tỉ lệ lỗi = Loại ÷ Tổng số lượng kiểm">
+              </div>
+              <div class="form-group qcf-g-actions">
+                <div class="qcf-actions">
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-qcf-rate" data-perm="qc" title="Mở bảng ĐỊNH MỨC kiểm theo tháng — 2 loại: Kiểm Thanh (thanh/h) · Kiểm Ván (tấm/h)">
+                    <i data-lucide="target"></i> Định mức
+                  </button>
+                  <button type="submit" class="btn btn-success btn-sm" id="btn-qcf-save" data-perm="qc" title="Lưu lượt kiểm (Tổng kiểm = Đạt + Ngoại lệ + Loại)">
+                    <i data-lucide="save"></i> Lưu
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-qcf-reset" title="Làm mới form (thoát chế độ sửa)">
+                    <i data-lucide="rotate-ccw"></i> Làm Mới
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
         </div>
+
+        <!-- THỐNG KÊ NHANH: lượt kiểm · đầu vào · tổng kiểm · tổng đạt · loại · tỉ lệ lỗi · công suất -->
+        <div class="material-stats" id="qcf-stats"></div>
+
+        <!-- BẢNG DỮ LIỆU = THẺ NGÀY (đầu thẻ: Ngày · Vị trí · Người kiểm · Giờ
+             HC/TC · Tổng kiểm · Tổng đạt · Tỉ lệ lỗi · Công suất · Hiệu suất) -->
+        <div class="x2-cut-table-wrap" id="qcf-day-wrap">
+          <div class="x2-cut-table-head">
+            <h5><i data-lucide="history"></i> Lịch Sử Kiểm (theo ngày)</h5>
+            <span class="x2-cut-table-count" id="qcf-day-count"></span>
+          </div>
+          <div class="x2-cut-table-scroll">
+            <div class="x2-day-cards" id="qcf-day-cards"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- MODULE ĐỘ ẨM LÒ SẤY: QC đo & nhập độ ẩm từng lò (LS1..LS15) HÀNG NGÀY
            + bảng NGƯỠNG độ ẩm ĐẠT theo công đoạn sấy (Sấy 1 / Sấy 2 — đạt khi
            độ ẩm ≤ ngưỡng). Số liệu này cho BẢNG ĐIỀU KHIỂN LÒ SẤY (tab Công
            Đoạn) biết lò nào ĐẠT ẨM (màu vàng) — js/kiln.js. -->
+
       <div class="planning-card qc-card-hidden" id="qc-humidity-card">
         <div class="planning-card-header">
           <h4><i data-lucide="droplets"></i> Độ Ẩm Lò Sấy</h4>
@@ -5199,6 +5295,44 @@
           <label>Sấy 1 <input type="number" id="x2sr-m3-s1" min="0.01" step="any"></label>
           <label>Sấy 2 <input type="number" id="x2sr-m3-s2" min="0.01" step="any"></label>
           <button type="button" class="btn btn-outline btn-sm" id="btn-x2sr-m3-save" data-perm="kanban" title="Lưu m³/lần của tháng đã chọn"><i data-lucide="save"></i> Lưu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ POPUP: ĐỊNH MỨC KIỂM SAU SẢN XUẤT (theo tháng — 2 cột Kiểm Thanh
+       thanh/h · Kiểm Ván tấm/h; ô trống = chưa đặt → thẻ ngày ẩn Hiệu suất của
+       loại đó. Mở bằng nút "Định mức" trong form nhập của thẻ Kiểm Sau Sản
+       Xuất — js/qc-final.js) ═══ -->
+  <div class="modal-overlay" id="modal-qcf-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Kiểm Sau Sản Xuất</h3>
+        <button class="modal-close-btn" id="btn-close-qcf-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Định mức <b>riêng cho từng loại kiểm</b>: <b>Kiểm Thanh</b> (nan —
+          <b>thanh/giờ</b>) và <b>Kiểm Ván</b> (thành phẩm Ép Ván — <b>tấm/giờ</b>).
+          Ô <b>trống</b> = chưa đặt (Hiệu suất của loại đó sẽ ẩn trên thẻ ngày).
+        </p>
+        <div class="table-responsive">
+          <table class="data-table qcf-rate-table">
+            <thead>
+              <tr>
+                <th>Tháng</th>
+                <th>Kiểm Thanh (thanh/h)</th>
+                <th>Kiểm Ván (tấm/h)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="qcf-rate-rows"></tbody>
+          </table>
+        </div>
+        <div class="qcf-rate-add">
+          <label for="qcf-rate-new-month">Thêm tháng:</label>
+          <input type="month" id="qcf-rate-new-month">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-qcf-rate-add-month"><i data-lucide="plus"></i> Thêm</button>
         </div>
       </div>
     </div>

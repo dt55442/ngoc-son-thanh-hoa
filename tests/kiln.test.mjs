@@ -435,7 +435,7 @@ check('CẤU TRÚC (styles.css): pop NỔI TRÊN CÙNG (hover có z-index:40) + 
   cssHtml.includes('calc((100% - 11 * 8px) / 6 + 8px)') &&
   cssHtml.includes('.kiln-tile.kiln-todo'));
 check('CẤU TRÚC (sw.js): CACHE_NAME v181 + js/kiln.js trong APP_SHELL',
-  /nha-may-ngoc-son-v186/.test(swJs) && swJs.includes("'./js/kiln.js'"));
+  /nha-may-ngoc-son-v189/.test(swJs) && swJs.includes("'./js/kiln.js'"));
 check('CẤU TRÚC (js): key riêng + nối đủ state/storage/cloud/history/main/events',
   jsState.includes('bamboo_tracker_qc_kiln_humidity_v1') && jsState.includes('bamboo_tracker_qc_kiln_threshold_v1') &&
   jsState.includes('bamboo_tracker_x2_say_frame_v1') && jsStorage.includes('restoreQcKilnReadings') &&

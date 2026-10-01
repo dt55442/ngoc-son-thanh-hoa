@@ -123,6 +123,18 @@
   // NGƯỠNG độ ẩm ĐẠT theo công đoạn sấy (%): { say1: 15, say2: 12 } — đạt khi
   // độ ẩm ≤ ngưỡng; chỉnh được trong thẻ "Độ Ẩm Lò Sấy" (tab QC)
   const STORAGE_KEY_QC_KILN_THRESHOLD = 'bamboo_tracker_qc_kiln_threshold_v1';
+  // KIỂM SAU SẢN XUẤT (thẻ qc-final-card — tab QC): QC kiểm thành phẩm SAU Ép Ván
+  // trước khi xuất xưởng. Mỗi lượt kiểm 1 ngày + 1 vị trí (Xưởng 1 / Xưởng 2):
+  // [{ id, date 'YYYY-MM-DD', workshop 'x1'|'x2', productId, productName,
+  //    inputQty (Đầu vào kiểm), qtyOk (Số lượng đạt), qtyExcept (Ngoại lệ),
+  //    qtyReject (Loại = lỗi), note, createdAt, updatedAt }]
+  // Đầu vào kiểm Xưởng 2 = TỔNG thành phẩm Ép Ván của CẶP 2 TUẦN xuất hàng
+  // (tuần lẻ + tuần kế — giống nút "2 tuần" của biểu đồ Kế Hoạch vs Đã Ép);
+  // Xưởng 1 "Sắp có" (nhập tay số lượng).
+  const STORAGE_KEY_QC_FINAL = 'bamboo_tracker_qc_final_v1';
+  // ĐỊNH MỨC KIỂM SAU SẢN XUẤT (tấm/giờ) theo TỪNG THÁNG — { 'YYYY-MM': tấm/h }.
+  // Có định mức → thẻ ngày hiện thêm tấm/h + Hiệu suất (Công suất ÷ định mức).
+  const STORAGE_KEY_QC_FINAL_RATE = 'bamboo_tracker_qc_final_rate_v1';
   // Tab Nhân Sự: nhân viên, đơn nghỉ phép, nhu cầu tuyển dụng
   const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
   const STORAGE_KEY_HR_LEAVES      = 'bamboo_tracker_hr_leaves_v1';
@@ -237,6 +249,9 @@
     // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) + NGƯỠNG độ ẩm đạt theo công đoạn sấy
     qcKilnReadings: [],                   // [{ id, date, location, value, note, by, createdAt, updatedAt }]
     qcKilnThresholds: { say1: 15, say2: 12 }, // đạt khi độ ẩm ≤ ngưỡng của loại sấy
+    // KIỂM SAU SẢN XUẤT (thẻ qc-final-card — tab QC) + định mức kiểm theo tháng
+    qcFinalRecords: [],       // [{ id, date, workshop, productId, productName, inputQty, qtyOk, qtyExcept, qtyReject, note, createdAt, updatedAt }]
+    qcFinalRates: {},         // { 'YYYY-MM': tấm/h }
     // Bộ lọc hợp nhất trong thẻ Xuất Hàng (tab QC): năm ('all' = tất cả) +
     // chips tuần (mảng rỗng = tất cả) + từ khóa tìm kiếm theo tên sản phẩm
     qcSumYear: 'all',
@@ -399,6 +414,8 @@ export {
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_QC_KILN_HUMIDITY,
   STORAGE_KEY_QC_KILN_THRESHOLD,
+  STORAGE_KEY_QC_FINAL,
+  STORAGE_KEY_QC_FINAL_RATE,
   STORAGE_KEY_X2_SAY_FRAME,
   STORAGE_KEY_KHO_NOTES,
   STORAGE_KEY_KHO_SHOW_USED,

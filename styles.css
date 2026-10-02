@@ -8750,3 +8750,47 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
 }
 
 
+
+/* ═══════════════════════════════════════════════════════════════
+   Ô "GIỜ SỰ CỐ CHO PHÉP" TRÊN ĐẦU THẺ NGÀN (7 thẻ Xưởng 2)
+   + DROPDOWN NỔI DÙNG CHUNG (Thẻ Bào Tinh · Thẻ Bullig)
+   ═══════════════════════════════════════════════════════════════ */
+/* Chip ô sự cố nằm cuối .x2-day-head — nhỏ, viền nét đodash, KHÔNG đổi bố cục */
+.x2-day-inc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px dashed #d97706;
+  border-radius: 999px;
+  background: rgba(217, 119, 6, 0.08);
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.x2-day-inc svg { width: 13px; height: 13px; }
+.x2-day-inc small { color: var(--text-muted); font-weight: 600; }
+.x2-day-inc .x2-say-inc-input { width: 52px; border-color: rgba(217, 119, 6, 0.55); }
+.x2-day-inc .x2-say-inc-input:focus { outline: none; border-color: #d97706; box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.18); }
+
+/* Dropdown NỔI Xưởng 2 — neo bằng INLINE style trong js/xuong2.js (positionX2FloatPicker).
+   CSS này chỉ lo giao diện: nền, bo góc, bóng đổ — thắng nhờ inline position. */
+.x2-bl-gc-picker,
+.x2-btinh-picker {
+  background: var(--bg-card);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.28);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 260;
+}
+.x2-bl-gc-picker .al-card-list { max-height: 40vh; }
+.x2-btinh-picker .al-card-list { max-height: 40vh; }
+
+@media (max-width: 639.98px) {
+  .x2-day-inc { font-size: 0.68rem; padding: 2px 6px; }
+  .x2-day-inc .x2-say-inc-input { width: 46px; font-size: 16px; }
+  .x2-bl-gc-picker, .x2-btinh-picker { max-height: 52vh; }
+  .x2-bl-gc-picker .al-card-list, .x2-btinh-picker .al-card-list { max-height: 44vh; grid-template-columns: 1fr; }
+}

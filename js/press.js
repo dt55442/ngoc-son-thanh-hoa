@@ -8,7 +8,7 @@ import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear, rateDisplayLabel, rateNanUse, rateUnit } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
-import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, showToast, uiChartWinSize } from './utils.js';
+import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
 
   // =============================================================
   // SẢN LƯỢNG ÉP VÁN (PRESS VIEW)
@@ -789,11 +789,14 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       const vol = rows.reduce((s, r) => s + pressRecordVolumeOf(r), 0);
       const fpQty = rows.reduce((s, r) => s + (Number(r.finishedQty) || 0), 0);
       const rate = epVanRateOf(date);
-      const perHour = (snap.hours > 0 && vol > 0) ? (vol / snap.hours) : null;
+      // Giờ SỰ CỐ CHO PHÉP được TRỪ khỏi giờ phân vị Ép khi tính m³/h → HIỆU SUẤT
+      const hoursEff = stageEffHours('epvan', date, snap.hours);
+      const incH = stageIncidentOf('epvan', date);
+      const perHour = (hoursEff > 0 && vol > 0) ? (vol / hoursEff) : null;
       const eff = (perHour != null && rate) ? (perHour / rate) * 100 : null;
       const m3hTxt = (rate && perHour != null)
-        ? `<span class="x2-day-cap" title="m³/h = tổng thể tích ép trong ngày ÷ tổng giờ phân vị Ép">m³/h: <strong>${fmtThanh(perHour)}</strong></span>
-           <span class="x2-day-eff" title="Hiệu suất = m³/h thực tế ÷ định mức ép ván tháng ${Number(String(date).slice(5, 7))}">Hiệu suất: <strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong></span>`
+        ? `<span class="x2-day-cap" title="m³/h = tổng thể tích ép trong ngày ÷ giờ Ép hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${incH}h sự cố` : ''})">m³/h: <strong>${fmtThanh(perHour)}</strong></span>
+           <span class="x2-day-eff" title="Hiệu suất = m³/h thực tế (${fmtThanh(perHour)} = ${fmtThanh(vol)} m³ ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${incH}h sự cố]` : ''}) ÷ định mức ép ván tháng ${Number(String(date).slice(5, 7))} (${fmtThanh(rate)} m³/h)">Hiệu suất: <strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong></span>`
         : '';
       const rateBadge = rate
         ? `<span class="x2-day-cap" title="Định mức công suất ép ván của tháng">ĐM: <strong>${fmtThanh(rate)} m³/h</strong></span>`
@@ -842,6 +845,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
             ${hourTxt}
             <span class="x2-day-cap" title="Công suất thực tế = tổng thể tích ép trong ngày (m³)"><i data-lucide="gauge"></i> Công suất: <strong>${fmtThanh(vol)} m³/ngày</strong></span>
             ${m3hTxt}${rateBadge}
+            ${stageIncidentInputHtml('epvan', date)}
             <span class="x2-day-cap" title="Tổng thành phẩm trong ngày">Thành phẩm: <strong>${fpQty.toLocaleString('vi-VN')} tấm</strong></span>
           </div>
           <div class="x2-epv-rows">${rowsHtml}</div>

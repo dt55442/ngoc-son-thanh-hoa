@@ -407,6 +407,7 @@
                    Bảng Lịch Sử Cắt/Chọn + Bảng Công Suất Theo Ngày -->
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-cut-rate" data-perm="kanban" title="Mở bảng ĐỊNH MỨC công suất Cắt theo tháng (kg/h) — nguồn cho cột Hiệu suất"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cut">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Cắt/Chọn</button>
               </div>
@@ -416,14 +417,7 @@
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-cut-stats"></div>
 
-          <!-- THANH ĐỊNH MỨC CÔNG SUẤT CẮT (theo tháng) — nguồn cho cột Hiệu suất -->
-          <div class="x2-rate-bar" id="x2-rate-bar">
-            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất cắt:</span>
-            <select id="x2-rate-month" title="Chọn tháng"></select>
-            <input type="number" id="x2-rate-value" min="0" step="any" placeholder="VD: 3000" title="Công suất định mức của tháng (kg/giờ)">
-            <span class="x2-rate-unit">kg/h</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="kanban" title="Lưu định mức công suất của tháng"><i data-lucide="save"></i> Lưu</button>
-          </div>
+          <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT CẮT ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- THẺ NGÀY CẮT/CHỌN — mỗi ngày 1 THỂ RIÊNG: đầu thẻ = thông tin chung
                (Ngày · Người cắt · Giờ cắt HC/TC · Công suất thực tế · Hiệu suất),
@@ -500,6 +494,7 @@
                    Nhân Sự (vị trí "Bổ Ống" — Xưởng 2, đúng ngày) — KHÔNG có ô
                    nhập tay, chỉ hiện ở đầu thẻ ngày của bảng lịch sử bên dưới -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-ong-rate" data-perm="kanban" title="Mở bảng ĐỊNH MỨC công suất Bổ Ống theo tháng (kg/h) — nguồn cho cột Hiệu suất"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bo-ong">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Bổ Ống</button>
               </div>
@@ -509,16 +504,7 @@
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-ong-stats"></div>
 
-          <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT BỔ ỐNG theo THÁNG (kg/h) — nguồn
-               cho cột Hiệu suất của từng thẻ ngày -->
-          <div class="x2-rate-bar" id="x2-ong-rate-bar">
-            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bổ ống:</span>
-            <select id="x2-ong-rate-month" title="Chọn tháng"></select>
-            <input type="number" id="x2-ong-rate-value" min="0" step="any" placeholder="VD: 2500" title="Công suất định mức của tháng (kg/giờ)">
-            <span class="x2-rate-unit">kg/h</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-ong-rate-save" data-perm="kanban" title="Lưu định mức công suất bổ ống của tháng"><i data-lucide="save"></i> Lưu</button>
-            <div class="x2-rate-chips" id="x2-ong-rate-chips"></div>
-          </div>
+          <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT BỔ ỐNG ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- BẢNG GHI DỮ LIỆU BỔ ỐNG — mỗi ngày 1 THẺ RIÊNG:
                đầu thẻ = NỘI DUNG CHUNG (Ngày · Người bổ · Giờ bổ HC/TC ·
@@ -553,9 +539,14 @@
               <!-- DÒNG 1: lô đã bổ (từ công đoạn Bổ Ống) + ngày chạy máy -->
               <div class="x2-form-row">
                 <div class="form-group" style="flex:2; min-width:320px;">
-                  <label for="x2-bao-tho-lot">Lô Đã Bổ (từ Bổ Ống) <span class="required">*</span></label>
-                  <select id="x2-bao-tho-lot" required></select>
-                  <small style="color:var(--text-muted);">Chọn theo <strong>lô</strong> — nhãn hiện sẵn Loại NL · Nhà cung cấp · ngày bổ · KL ống bổ đạt (gõ vào ô để tìm theo NCC/ngày). Lô đã chạy máy vẫn chọn lại được cho lượt sau.</small>
+                  <label for="x2-bao-tho-lot">Lô Đã Bổ (từ Bổ ống — chọn ĐƯỢC NHIỀU lô) <span class="required">*</span></label>
+                  <select id="x2-bao-tho-lot" multiple size="5" required></select>
+                  <div class="al-hint" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px;">
+                    <span>Chọn nhiều lô cho 1 lượt chạy: giữ <b>Ctrl</b> (⌘ trên Mac) + bấm · điện thoại: bấm từng lô vào danh sách.</span>
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-bt-lot-all" title="Chọn tất cả lô đang có trong danh sách">Chọn tất cả</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-bt-lot-clear" title="Bỏ chọn hết các lô">Bỏ chọn</button>
+                  </div>
+                  <small style="color:var(--text-muted);">Nhãn hiện sẵn Loại NL · Nhà cung cấp · ngày bổ · KL ống bổ đạt · số lượt đã chạy. Chọn nhiều lô → <strong>NCC gộp "NCC A + NCC B"</strong> và <strong>KL ống bổ CỘNG TỔNG</strong> các lô đã chọn.</small>
                 </div>
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-bao-tho-date">Ngày Chạy Máy <span class="required">*</span></label>
@@ -585,6 +576,7 @@
                    (vị trí "Bào thô" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay;
                    SỐ LƯỢNG THANH + THỂ TÍCH QUY ĐỔI tự lấy từ công đoạn Chọn Nan Thô -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-bt-rate" data-perm="kanban" title="Mở bảng ĐỊNH MỨC công suất Bào Thô theo tháng (thanh/h) — nguồn cho cột Hiệu suất"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bao-tho">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Chạy Máy</button>
               </div>
@@ -594,16 +586,7 @@
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-bt-stats"></div>
 
-          <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT BÀO THÔ theo THÁNG (thanh/giờ) —
-               nguồn cho cột Hiệu suất của từng thẻ ngày -->
-          <div class="x2-rate-bar" id="x2-bt-rate-bar">
-            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bào thô:</span>
-            <select id="x2-bt-rate-month" title="Chọn tháng"></select>
-            <input type="number" id="x2-bt-rate-value" min="0" step="any" placeholder="VD: 900" title="Công suất định mức của tháng (thanh/giờ)">
-            <span class="x2-rate-unit">thanh/h</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bt-rate-save" data-perm="kanban" title="Lưu định mức công suất bào thô của tháng"><i data-lucide="save"></i> Lưu</button>
-            <div class="x2-rate-chips" id="x2-bt-rate-chips"></div>
-          </div>
+          <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT BÀO THÔ ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
                đầu thẻ = NỘI DUNG CHUNG (Ngày · Người chạy máy · Thời gian ·
@@ -705,6 +688,7 @@
               <!-- NGƯỜI CHỌN NAN + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự
                    (vị trí "Chọn nan" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-cn-rate" data-perm="kanban" title="Mở bảng ĐỊNH MỨC công suất Chọn Nan theo tháng (thanh/h) — nguồn cho cột Hiệu suất"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cn">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Chọn Nan</button>
               </div>
@@ -713,16 +697,7 @@
 
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-cn-stats"></div>
-          <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT CHỌN NAN theo THÁNG (thanh/giờ) —
-               nguồn cho cột Hiệu suất của từng thẻ ngày -->
-          <div class="x2-rate-bar" id="x2-cn-rate-bar">
-            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất chọn nan:</span>
-            <select id="x2-cn-rate-month" title="Chọn tháng"></select>
-            <input type="number" id="x2-cn-rate-value" min="0" step="any" placeholder="VD: 700" title="Công suất định mức của tháng (thanh/giờ)">
-            <span class="x2-rate-unit">thanh/h</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-cn-rate-save" data-perm="kanban" title="Lưu định mức công suất chọn nan của tháng"><i data-lucide="save"></i> Lưu</button>
-            <div class="x2-rate-chips" id="x2-cn-rate-chips"></div>
-          </div>
+          <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT CHỌN NAN ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
                đầu thẻ = thông tin CHUNG của ngày (Ngày · Người chọn nan · Thời gian ·
@@ -1426,16 +1401,8 @@
               <span class="x2-epv-count" id="x2-epv-day-count"></span>
             </div>
 
-            <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT ÉP VÁN theo THÁNG (m³/giờ) — có đặt
-                 định mức thì thẻ ngày mới hiện thêm m³/h + Hiệu suất -->
-            <div class="x2-rate-bar" id="x2-epv-rate-bar">
-              <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất ép ván:</span>
-              <select id="x2-epv-rate-month" title="Chọn tháng"></select>
-              <input type="number" id="x2-epv-rate-value" min="0" step="any" placeholder="VD: 12" title="Công suất định mức của tháng (m³/giờ)">
-              <span class="x2-rate-unit">m³/h</span>
-              <button type="button" class="btn btn-primary btn-sm" id="btn-x2-epv-rate-save" data-perm="press" title="Lưu định mức công suất ép ván của tháng"><i data-lucide="save"></i> Lưu</button>
-              <div class="x2-rate-chips" id="x2-epv-rate-chips"></div>
-            </div>
+            <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT ÉP VÁN ĐÃ DỜ SANG POPUP (nút nằm TRONG
+                 form nhập lượt ép — #btn-x2-epv-rate) -->
 
             <!-- BẢNG DỮ LIỆU = THẺ NGÀY (đầu thẻ: Ngày · Người ép · Giờ HC/TC ·
                  Công suất m³/ngày [· m³/h · Hiệu suất khi có định mức] · Thành phẩm) -->
@@ -1520,16 +1487,16 @@
                   <small style="color:var(--text-muted);">Bấm thẻ = CHỌN, bấm nữa = BỎ CHỌN. Thanh thô tiêu thụ = Số lượng gia công được ÷ hệ số quy đổi (Định mức Bullig).</small>
                 </div>
               </div>
-              <!-- DANH SÁCH THẺ LÔ (ẩn/hiện theo nút) + ô tìm nhanh -->
-              <div class="x2-form-row" id="x2-bl-gc-search-row" style="display:none;">
-                <div class="form-group" style="flex:1;">
-                  <input type="text" id="x2-bl-gc-search" placeholder="Tìm nhanh theo mã lô / vị trí / kích thước / NCC…" autocomplete="off">
+              <!-- DANH SÁCH THẺ LÔ (Gia công) — 1 KHUNG DUY NHẤT bọc ô tìm nhanh +
+                   danh sách thẻ. Khi mở được PORTAL RA `#x2-detail-overlay` (neo
+                   inline theo rect của nút) → NỔI đè lên nội dung, KHÔNG đẩy form
+                   xuống — cùng cơ chế dropdown nổi của thẻ Kiểm Sau Sản Xuất
+                   (xem x2FloatShow / x2FloatHide trong js/xuong2.js). -->
+              <div class="al-picker x2-bl-lot-picker x2-bl-gc-picker" id="x2-bl-gc-picker" hidden>
+                <div class="al-picker-tools">
+                  <input type="text" id="x2-bl-gc-search" class="al-search" placeholder="Tìm nhanh theo mã lô / vị trí / kích thước / NCC…" autocomplete="off">
                 </div>
-              </div>
-              <div class="x2-form-row" id="x2-bl-gc-list-row" style="display:none;">
-                <div class="form-group x2-bl-lot-picker" style="flex:1;">
-                  <div class="al-card-list" id="x2-bl-gc-list"></div>
-                </div>
+                <div class="al-card-list" id="x2-bl-gc-list"></div>
               </div>
               <!-- DÒNG 2 (GIA CÔNG): Kích Thước Thành Phẩm (thu gọn) + Số Lượng
                    Gia Công kèm GỢI Ý "/ tổng đã chọn" ngay cạnh ô nhập -->
@@ -1578,6 +1545,7 @@
               <!-- NGƯỜI LÀM + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (phân vị
                    "Gia công" / "Chọn thanh" — Xưởng 2, đúng ngày) — KHÔNG nhập tay -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-bl-rate" data-perm="kanban" title="Mở bảng ĐỊNH MỨC công suất Bullig theo tháng + công đoạn nhỏ (thanh/h)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bl">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Bullig</button>
               </div>
@@ -1586,19 +1554,7 @@
 
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-bl-stats"></div>
-          <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT BULLIG theo THÁNG + CÔNG ĐOẠN (thanh/giờ) -->
-          <div class="x2-rate-bar" id="x2-bl-rate-bar">
-            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất Bullig:</span>
-            <select id="x2-bl-rate-kind" title="Chọn công đoạn nhỏ để lưu định mức riêng">
-              <option value="gc">Gia công</option>
-              <option value="ct">Chọn thanh</option>
-            </select>
-            <select id="x2-bl-rate-month" title="Chọn tháng"></select>
-            <input type="number" id="x2-bl-rate-value" min="0" step="any" placeholder="VD: 500" title="Công suất định mức của tháng (thanh/giờ)">
-            <span class="x2-rate-unit">thanh/h</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bl-rate-save" data-perm="kanban" title="Lưu định mức công suất của công đoạn + tháng đã chọn"><i data-lucide="save"></i> Lưu</button>
-            <div class="x2-rate-chips" id="x2-bl-rate-chips"></div>
-          </div>
+          <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT BULLIG ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG chia 2 VÙNG (Gia công + Chọn thanh):
                đầu thẻ = thông tin CHUNG (Ngày · Người làm từng phân vị · Giờ HC/TC ·
@@ -2295,6 +2251,7 @@
             </div>
 
             <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-x2-epv-rate" data-perm="press" title="Mở bảng ĐỊNH MỨC công suất Ép Ván theo tháng (m³/h) — nguồn cho cột Hiệu suất của thẻ ngày"><i data-lucide="target"></i> Định mức</button>
               <button type="button" class="btn btn-outline" id="btn-cancel-press">Hủy Bỏ</button>
               <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lượt Ép</button>
             </div>
@@ -5455,6 +5412,154 @@
 
   <!-- ═══ THANH NỔI "XÓA NHIỀU LÔ" (chỉ Admin — bật bằng nút "Xóa Nhiều"
        trên thanh công cụ thẻ Than Hóa + Sấy; đếm số lô đã tích + 3 nút) ═══ -->
+  <!-- ═══ POPUP "ĐỊNH MỨC" CỦA 6 THẺ CÔNG ĐOẠN XƯỞNG 2 — nút mở nằm TRONG
+       FORM NHẬP của từng thẻ (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Ép Ván · Bullig).
+       MỖI POPUP giữ nguyên id của ô tháng / ô số / nút Lưu / vùng chip như thanh
+       `.x2-rate-bar` cũ → các `renderX2*RateBar()` + test KHÔNG phải đổi. ═══ -->
+  <div class="modal-overlay" id="modal-x2-cut-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Cắt Chọn</h3>
+        <button class="modal-close-btn" id="btn-close-x2-cut-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Công suất định mức của <b>từng tháng</b> (<b>kg/giờ</b>) — nguồn tính <b>Hiệu suất</b>
+          của thẻ ngày Cắt Chọn. Chưa đặt định mức → Hiệu suất hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất cắt:</span>
+          <select id="x2-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-rate-value" min="0" step="any" placeholder="VD: 3000" title="Công suất định mức của tháng (kg/giờ)">
+          <span class="x2-rate-unit">kg/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="kanban" title="Lưu định mức công suất của tháng"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-x2-ong-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Bổ Ống</h3>
+        <button class="modal-close-btn" id="btn-close-x2-ong-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Công suất định mức của <b>từng tháng</b> (<b>kg/giờ</b>) — nguồn tính <b>Hiệu suất</b>
+          của thẻ ngày Bổ Ống. Chưa đặt định mức → Hiệu suất hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-ong-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bổ ống:</span>
+          <select id="x2-ong-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-ong-rate-value" min="0" step="any" placeholder="VD: 2500" title="Công suất định mức của tháng (kg/giờ)">
+          <span class="x2-rate-unit">kg/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-ong-rate-save" data-perm="kanban" title="Lưu định mức công suất bổ ống của tháng"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-ong-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-x2-bt-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Bào Thô</h3>
+        <button class="modal-close-btn" id="btn-close-x2-bt-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Công suất định mức của <b>từng tháng</b> (<b>thanh/giờ</b>) — nguồn tính <b>Hiệu suất</b>
+          của thẻ ngày Chạy Máy Bào Thô. Chưa đặt định mức → Hiệu suất hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-bt-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bào thô:</span>
+          <select id="x2-bt-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-bt-rate-value" min="0" step="any" placeholder="VD: 900" title="Công suất định mức của tháng (thanh/giờ)">
+          <span class="x2-rate-unit">thanh/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bt-rate-save" data-perm="kanban" title="Lưu định mức công suất bào thô của tháng"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-bt-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal-overlay" id="modal-x2-cn-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Chọn Nan</h3>
+        <button class="modal-close-btn" id="btn-close-x2-cn-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Công suất định mức của <b>từng tháng</b> (<b>thanh/giờ</b>) — nguồn tính <b>Hiệu suất</b>
+          của thẻ ngày Chọn Nan Thô. Chưa đặt định mức → Hiệu suất hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-cn-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất chọn nan:</span>
+          <select id="x2-cn-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-cn-rate-value" min="0" step="any" placeholder="VD: 700" title="Công suất định mức của tháng (thanh/giờ)">
+          <span class="x2-rate-unit">thanh/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-cn-rate-save" data-perm="kanban" title="Lưu định mức công suất chọn nan của tháng"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-cn-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-x2-epv-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Ép Ván</h3>
+        <button class="modal-close-btn" id="btn-close-x2-epv-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Công suất định mức của <b>từng tháng</b> (<b>m³/giờ</b>). <b>CÓ đặt định mức</b> thì thẻ ngày
+          Ép Ván mới hiện thêm <b>m³/h</b> + <b>Hiệu suất</b>; chưa đặt thì chỉ hiện m³/ngày.
+        </p>
+        <div class="x2-rate-bar" id="x2-epv-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất ép ván:</span>
+          <select id="x2-epv-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-epv-rate-value" min="0" step="any" placeholder="VD: 12" title="Công suất định mức của tháng (m³/giờ)">
+          <span class="x2-rate-unit">m³/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-epv-rate-save" data-perm="press" title="Lưu định mức công suất ép ván của tháng"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-epv-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-x2-bl-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Bullig</h3>
+        <button class="modal-close-btn" id="btn-close-x2-bl-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Định mức <b>riêng cho từng CÔNG ĐOẠN NHỎ</b> (<b>thanh/giờ</b>): <b>Gia công</b> · <b>Chọn thanh</b>.
+          Chọn công đoạn + tháng rồi bấm Lưu. Chưa đặt → Hiệu suất của công đoạn đó hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-bl-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất Bullig:</span>
+          <select id="x2-bl-rate-kind" title="Chọn công đoạn nhỏ để lưu định mức riêng">
+            <option value="gc">Gia công</option>
+            <option value="ct">Chọn thanh</option>
+          </select>
+          <select id="x2-bl-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-bl-rate-value" min="0" step="any" placeholder="VD: 500" title="Công suất định mức của tháng (thanh/giờ)">
+          <span class="x2-rate-unit">thanh/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bl-rate-save" data-perm="kanban" title="Lưu định mức công suất của công đoạn + tháng đã chọn"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-bl-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <div class="kb-pick-bar" id="kb-pick-bar" role="status" aria-live="polite">
     <span>Đã chọn <b id="kb-pick-count">0</b> lô</span>
     <button type="button" class="btn btn-outline btn-sm" id="kb-pick-all" title="Tích chọn tất cả lô đang hiện trên bảng (đã qua bộ lọc cột)">

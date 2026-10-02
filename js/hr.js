@@ -2762,7 +2762,10 @@ import { escapeHTML, showToast } from './utils.js';
     const dept = state.hrBoardDept || 'Xưởng 2';
     const cfg = hrShiftCfg(dept);
     const data = {
-      id: editId || `asg-${Date.now()}`,
+      // Khóa sinh nhật + suffix ngẫu nhiên: 2 lượt gán trong CÙNG 1 mili-giây
+      // (kéo thẻ liên tiếp / máy nhanh) từng bị TRÙNG id → find(id) lấy nhầm bản
+      // ghi khác → cắt sai giờ lịch sử. suffix làm id luôn DUY NHẤT.
+      id: editId || `asg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       date, department: dept, positionId, shiftIdx,
       employeeId, start, end,
       shiftLabel: cfg.type === 'lamca' ? (cfg.shifts[shiftIdx]?.name || '') : 'Hành chính',

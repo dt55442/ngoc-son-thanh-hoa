@@ -83,6 +83,11 @@
   // { 'YYYY-MM-DD': giờ }. Dùng tính Hiệu suất ngày:
   //   Hiệu suất = Giờ cần ÷ (Giờ thực tế − Giờ sự cố cho phép)
   const STORAGE_KEY_X2_SAY_INCIDENT = 'bamboo_tracker_x2_say_incident_v1';
+  // GIỜ SỰ CỐ CHO PHÉP theo (THẺ CÔNG ĐOẠN, NGÀY) — dùng cho MỌI thẻ Xưởng 2
+  // còn thiếu (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Bào Tinh · Bullig · Ép Ván):
+  //   { '<cardId>|<YYYY-MM-DD>': giờ }  →  Hiệu suất = Công suất ÷ Định mức
+  //   với Công suất = Sản lượng ÷ (Giờ thực − Giờ sự cố cho phép)
+  const STORAGE_KEY_X2_STAGE_INCIDENT = 'bamboo_tracker_x2_stage_incident_v1';
   // Trạng thái THU GỌN bảng Kanban lô nan của thẻ "Than Hóa + Sấy" ('1' = đang
   // thu gọn: chỉ hiện thanh công cụ + bảng thống kê, ẩn bảng Kanban) — nhớ theo máy.
   const STORAGE_KEY_X2_KANBAN_COLLAPSED = 'bamboo_tracker_x2_kanban_collapsed_v1';
@@ -286,6 +291,13 @@
     // link 1 lô đã bổ + loại nan (Dài/Rộng/Dày — mỗi ô có thể nhiều giá trị)
     xuong2BaoThoRecords: [],
     x2BaoThoEditId: null,     // id lượt chạy máy đang sửa trong form (null = ghi mới)
+    // Các lô ĐÃ BỔ đang CHỌN trong form Bào Thô (CHỌN NHIỀU được — 1 lượt chạy
+    // có thể gộp nhiều lô; số liệu cộng tổng, NCC gộp "NCC A + NCC B")
+    x2BaoThoPicked: [],
+    // Giờ SỰ CỐ CHO PHÉP theo (thẻ công đoạn, ngày) — trừ khi tính HIỆU SUẤT:
+    // { '<cardId>|<YYYY-MM-DD>': giờ } · cardId ∈ cut/boong/baotho/chonnan/
+    // baotinh/bullig/epvan (Than Hóa + Sấy đã có key riêng x2SayIncidents)
+    x2StageIncidents: {},
     // Định mức công suất bào thô theo tháng (thanh/giờ): { 'YYYY-MM': thanh/h }
     x2BaoThoRates: {},
     // Nhật ký chọn nan thô (vị trí Chọn Nan Thô — Xưởng 2): mỗi lượt link 1 lô
@@ -417,6 +429,7 @@ export {
   STORAGE_KEY_X2_SAY_RATE,
   STORAGE_KEY_X2_SAY_TIMES,
   STORAGE_KEY_X2_SAY_INCIDENT,
+  STORAGE_KEY_X2_STAGE_INCIDENT,
   STORAGE_KEY_X2_KANBAN_COLLAPSED,
   STORAGE_KEY_X2_EP_VAN_RATE,
   STORAGE_KEY_X2_LOT_LOCATIONS,

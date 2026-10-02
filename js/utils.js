@@ -620,6 +620,36 @@ import { state } from './state.js';
     return d;
   }
 
+  // ─── GIỜ SỰ CỐ CHO PHÉP THEO (THẺ CÔNG ĐOẠN, NGÀY) ─────────────
+  // state.x2StageIncidents = { '<cardId>|<YYYY-MM-DD>': giờ } — người dùng nhập
+  // ở ô "Sự cố cho phép" trên ĐẦU THẺ NGÀN; giờ này được TRỪ khỏi giờ làm
+  // khi tính CÔNG SUẤT → HIỆU SUẤT của 7 thẻ Xưởng 2 (Cắt · Bổ Ống · Bào Thô ·
+  // Chọn Nan · Bào Tinh · Bullig · Ép Ván). Đọc tại đây (utils) để press.js +
+  // xuong2.js dùng chung KHÔNG vòng import; GHI/ load / save nằm trong xuong2.js.
+  function stageIncidentKey(cardId, date) {
+    return `${String(cardId || '').trim()}|${String(date || '').trim()}`;
+  }
+  function stageIncidentOf(cardId, date) {
+    const v = Number((state.x2StageIncidents || {})[stageIncidentKey(cardId, date)]);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+  // Giờ làm VIỆC ĐƯỢC TÍNH = giờ thực − giờ sự cố cho phép (không bao giờ < 0)
+  function stageEffHours(cardId, date, hours) {
+    const h = Number(hours) || 0;
+    return Math.max(0, h - stageIncidentOf(cardId, date));
+  }
+  // Ô NHẬP "Sự cố cho phép" đặt trên ĐẦU THẺ NGÀN của từng thẻ công đoạn.
+  // Uỷ nhiệm `change` trên document (js/events.js) → xuong2.onStageIncidentChange.
+  function stageIncidentInputHtml(cardId, date, label) {
+    const v = stageIncidentOf(cardId, date);
+    const dmy = formatDateDDMMYY(date);
+    return `<span class="x2-day-inc" title="Giờ SỰ CỐ CHO PHÉP của ngày ${dmy} (máy hỏng, thiếu nan, mất điện…) — giờ này được TRỪ khỏi giờ làm khi tính CÔNG SUẤT → HIỆU SUẤT. Để trống = 0.">
+      <i data-lucide="alert-triangle"></i> ${escapeHTML(label || 'Sự cố')}:
+      <input type="number" class="x2-say-inc-input" data-x2-incident="${escapeHTML(cardId)}" data-x2-incident-date="${escapeHTML(date)}" min="0" step="any" value="${v > 0 ? v : ''}" placeholder="0" aria-label="Giờ sự cố cho phép">
+      <small>h</small>
+    </span>`;
+  }
+
 export {
   KHO_METHOD_LABELS,
   KHO_POOL_STAGES,
@@ -658,6 +688,10 @@ export {
   isoToDmy,
   setupFormCalculations,
   showToast,
+  stageEffHours,
+  stageIncidentInputHtml,
+  stageIncidentKey,
+  stageIncidentOf,
   uiChartWinSize,
   validateBatchInput
 };

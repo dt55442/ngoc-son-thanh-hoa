@@ -687,7 +687,7 @@ check('CẤU TRÚC: Ép Ván KHÔNG cộng tồn của lượt "Bào thanh" vào
   fs.readFileSync(new URL('../js/press.js', import.meta.url), 'utf8')
     .includes("if (!r || r.kind === 'bao_thanh') return;"));
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v196/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v197/.test(swJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-02T04:28:13.932Z",
+  "savedAt": "2026-10-02T09:43:47.140Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -5396,6 +5396,48 @@
       "id": "x2cut-1790908018224-4wsl0",
       "supplier": "Nhà Tâm",
       "cutHours": 0
+    },
+    {
+      "id": "x2cut-1790929649474-p1feq",
+      "materialId": "mat-1790646067822-mlovv",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Tế",
+      "code": "",
+      "inputWeight": 13220,
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "klOngLuong": 6012,
+      "klCuiDot": 1659,
+      "klCayLoai": 0,
+      "klNgonOngLoai": 5549,
+      "cutter": "Vi Văn Hem, Hà Thị Luyện B, Hà Thị Nghĩa, Hà Thị Thoan",
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "cutHours": 36,
+      "cutHoursHC": 36,
+      "cutHoursTC": 0,
+      "note": "",
+      "createdAt": "2026-10-02T08:27:29.474Z"
+    },
+    {
+      "id": "x2cut-1790929759552-1ro9r",
+      "materialId": "mat-1790242824736-284rb",
+      "materialType": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "code": "",
+      "inputWeight": 1240,
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "klOngLuong": 1139,
+      "klCuiDot": 0,
+      "klCayLoai": 101,
+      "klNgonOngLoai": 0,
+      "cutter": "Vi Văn Hem, Hà Thị Luyện B, Hà Thị Nghĩa, Hà Thị Thoan",
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "cutHours": 36,
+      "cutHoursHC": 36,
+      "cutHoursTC": 0,
+      "note": "",
+      "createdAt": "2026-10-02T08:29:19.552Z"
     }
   ],
   "xuong2BoOngRecords": [
@@ -6767,28 +6809,23 @@
       "kind": "gc",
       "date": "2026-10-01",
       "week": "2026-W40",
-      "batchId": "batch-1790770861071",
+      "batchId": "batch-1790771299916",
       "sources": [
-        {
-          "batchId": "batch-1790770861071",
-          "code": "260930-33",
-          "qty": 1932
-        },
         {
           "batchId": "batch-1790771299916",
           "code": "260930-46",
           "qty": 1092
         },
         {
-          "batchId": "batch-1790771830483",
-          "code": "260930-62",
-          "qty": 674
+          "batchId": "batch-1790771812397",
+          "code": "260930-61",
+          "qty": 140.667
         }
       ],
-      "gcTotalPicked": 4004,
+      "gcTotalPicked": 1305,
       "quantity": 3698,
-      "qtyIn": 3698,
-      "convertFactor": 1,
+      "qtyIn": 1232.667,
+      "convertFactor": 3,
       "outDims": [
         270,
         10,
@@ -6797,12 +6834,13 @@
       "outSizeKey": "270×10×7",
       "unitVol": 0.0000189,
       "volume": 0.0699,
-      "worker": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
+      "worker": "Hà Thị Chính, Hà Thị Thắng, Lữ Thị Hà, Hà Văn Tới, Lữ Thị Hà",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 45,
+      "workHoursHC": 45,
       "workHoursTC": 0,
-      "createdAt": "2026-10-02T04:20:50.968Z"
+      "createdAt": "2026-10-02T04:20:50.968Z",
+      "updatedAt": "2026-10-02T07:29:34.867Z"
     },
     {
       "id": "x2bl-1790915038826-41aby",
@@ -6996,7 +7034,8 @@
       "2026-10": 600
     },
     "ct": {
-      "2026-09": 1500
+      "2026-09": 1500,
+      "2026-10": 1866
     }
   },
   "x2SayRates": {
@@ -7238,7 +7277,16 @@
     }
   ],
   "x2BaoTinhRates": {
-    "2026-09": 711
+    "2026-09": {
+      "tinh": 711,
+      "ha_cap": 711,
+      "bao_thanh": 711
+    },
+    "2026-10": {
+      "tinh": 711,
+      "ha_cap": 711,
+      "bao_thanh": 711
+    }
   },
   "x2EpVanRates": {
     "2026-09": 0.06

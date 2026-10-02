@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-02T03:29:05.249Z",
+  "savedAt": "2026-10-02T12:55:03.408Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -5396,6 +5396,48 @@
       "id": "x2cut-1790908018224-4wsl0",
       "supplier": "Nhà Tâm",
       "cutHours": 0
+    },
+    {
+      "id": "x2cut-1790929649474-p1feq",
+      "materialId": "mat-1790646067822-mlovv",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Tế",
+      "code": "",
+      "inputWeight": 13220,
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "klOngLuong": 6012,
+      "klCuiDot": 1659,
+      "klCayLoai": 0,
+      "klNgonOngLoai": 5549,
+      "cutter": "Vi Văn Hem, Hà Thị Luyện B, Hà Thị Nghĩa, Hà Thị Thoan",
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "cutHours": 36,
+      "cutHoursHC": 36,
+      "cutHoursTC": 0,
+      "note": "",
+      "createdAt": "2026-10-02T08:27:29.474Z"
+    },
+    {
+      "id": "x2cut-1790929759552-1ro9r",
+      "materialId": "mat-1790242824736-284rb",
+      "materialType": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "code": "",
+      "inputWeight": 1240,
+      "date": "2026-09-28",
+      "week": "2026-W40",
+      "klOngLuong": 1139,
+      "klCuiDot": 0,
+      "klCayLoai": 101,
+      "klNgonOngLoai": 0,
+      "cutter": "Vi Văn Hem, Hà Thị Luyện B, Hà Thị Nghĩa, Hà Thị Thoan",
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "cutHours": 36,
+      "cutHoursHC": 36,
+      "cutHoursTC": 0,
+      "note": "",
+      "createdAt": "2026-10-02T08:29:19.552Z"
     }
   ],
   "xuong2BoOngRecords": [
@@ -6697,7 +6739,274 @@
       "materialType": "Luồng cây xô"
     }
   ],
-  "xuong2BulligRecords": [],
+  "xuong2BulligRecords": [
+    {
+      "id": "x2bl-1790914545096-ndzw1",
+      "kind": "gc",
+      "date": "2026-10-01",
+      "week": "2026-W40",
+      "batchId": "batch-1790772785295",
+      "sources": [
+        {
+          "batchId": "batch-1790772785295",
+          "code": "260930-84",
+          "qty": 350
+        }
+      ],
+      "gcTotalPicked": 656,
+      "quantity": 1400,
+      "qtyIn": 350,
+      "convertFactor": 4,
+      "outDims": [
+        304,
+        14,
+        7
+      ],
+      "outSizeKey": "304×14×7",
+      "unitVol": 0.000029792,
+      "volume": 0.0417,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T04:15:45.096Z"
+    },
+    {
+      "id": "x2bl-1790914617887-boivp",
+      "kind": "gc",
+      "date": "2026-10-01",
+      "week": "2026-W40",
+      "batchId": "batch-1790770689139",
+      "sources": [
+        {
+          "batchId": "batch-1790770689139",
+          "code": "260930-31",
+          "qty": 1076.846
+        }
+      ],
+      "gcTotalPicked": 1932,
+      "quantity": 6460,
+      "qtyIn": 1076.846,
+      "convertFactor": 5.999,
+      "outDims": [
+        304,
+        10,
+        7
+      ],
+      "outSizeKey": "304×10×7",
+      "unitVol": 0.00002128,
+      "volume": 0.1375,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T04:16:57.887Z"
+    },
+    {
+      "id": "x2bl-1790914850968-uh60y",
+      "kind": "gc",
+      "date": "2026-10-01",
+      "week": "2026-W40",
+      "batchId": "batch-1790771299916",
+      "sources": [
+        {
+          "batchId": "batch-1790771299916",
+          "code": "260930-46",
+          "qty": 1092
+        },
+        {
+          "batchId": "batch-1790771812397",
+          "code": "260930-61",
+          "qty": 140.667
+        }
+      ],
+      "gcTotalPicked": 1305,
+      "quantity": 3698,
+      "qtyIn": 1232.667,
+      "convertFactor": 3,
+      "outDims": [
+        270,
+        10,
+        7
+      ],
+      "outSizeKey": "270×10×7",
+      "unitVol": 0.0000189,
+      "volume": 0.0699,
+      "worker": "Hà Thị Chính, Hà Thị Thắng, Lữ Thị Hà, Hà Văn Tới, Lữ Thị Hà",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 45,
+      "workHoursHC": 45,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T04:20:50.968Z",
+      "updatedAt": "2026-10-02T07:29:34.867Z"
+    },
+    {
+      "id": "x2bl-1790915038826-41aby",
+      "kind": "ct",
+      "date": "2026-10-01",
+      "week": "2026-W40",
+      "inSizeKey": "270×10×7",
+      "inDims": [
+        270,
+        10,
+        7
+      ],
+      "qtyOk": 2400,
+      "qtyErr": 0,
+      "unitVol": 0.0000189,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T04:23:58.826Z"
+    },
+    {
+      "id": "x2bl-1790936703518-anez1",
+      "kind": "gc",
+      "date": "2026-09-29",
+      "week": "2026-W40",
+      "batchId": "batch-1790770648215",
+      "sources": [
+        {
+          "batchId": "batch-1790770648215",
+          "code": "260930-29",
+          "qty": 1932
+        },
+        {
+          "batchId": "batch-1790764515143",
+          "code": "260930-25",
+          "qty": 812
+        },
+        {
+          "batchId": "batch-1790761933806",
+          "code": "260930-10",
+          "qty": 169.819
+        }
+      ],
+      "gcTotalPicked": 2954,
+      "quantity": 17480,
+      "qtyIn": 2913.819,
+      "convertFactor": 5.999,
+      "outDims": [
+        304,
+        10,
+        7
+      ],
+      "outSizeKey": "304×10×7",
+      "unitVol": 0.00002128,
+      "volume": 0.372,
+      "worker": "Hà Thị Đàm, Hà Thị Chính, Lữ Thị Hà, Vi Thị Dung B",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T10:25:03.518Z"
+    },
+    {
+      "id": "x2bl-1790936973958-bc778",
+      "kind": "gc",
+      "date": "2026-09-29",
+      "week": "2026-W40",
+      "batchId": "batch-1790770689139",
+      "sources": [
+        {
+          "batchId": "batch-1790770689139",
+          "code": "260930-31",
+          "qty": 855.154
+        },
+        {
+          "batchId": "batch-1790761900122",
+          "code": "260930-09",
+          "qty": 649.846
+        }
+      ],
+      "gcTotalPicked": 1623.335,
+      "quantity": 6020,
+      "qtyIn": 1505,
+      "convertFactor": 4,
+      "outDims": [
+        270,
+        10,
+        7
+      ],
+      "outSizeKey": "270×10×7",
+      "unitVol": 0.0000189,
+      "volume": 0.1138,
+      "worker": "Hà Thị Đàm, Hà Thị Chính, Lữ Thị Hà, Vi Thị Dung B",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T10:29:33.958Z"
+    },
+    {
+      "id": "x2bl-1790937154514-hsgjc",
+      "kind": "gc",
+      "date": "2026-09-29",
+      "week": "2026-W40",
+      "batchId": "batch-1790771734930",
+      "sources": [
+        {
+          "batchId": "batch-1790771734930",
+          "code": "260930-58",
+          "qty": 675
+        }
+      ],
+      "gcTotalPicked": 756,
+      "quantity": 2700,
+      "qtyIn": 675,
+      "convertFactor": 4,
+      "outDims": [
+        304,
+        14,
+        7
+      ],
+      "outSizeKey": "304×14×7",
+      "unitVol": 0.000029792,
+      "volume": 0.0804,
+      "worker": "Hà Thị Đàm, Hà Thị Chính, Lữ Thị Hà, Vi Thị Dung B",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
+      "workHoursHC": 36,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T10:32:34.514Z"
+    },
+    {
+      "id": "x2bl-1790937224616-ecoha",
+      "kind": "gc",
+      "date": "2026-09-30",
+      "week": "2026-W40",
+      "batchId": "batch-1790772720626",
+      "sources": [
+        {
+          "batchId": "batch-1790772720626",
+          "code": "260930-83",
+          "qty": 1246
+        }
+      ],
+      "gcTotalPicked": 1246,
+      "quantity": 4984,
+      "qtyIn": 1246,
+      "convertFactor": 4,
+      "outDims": [
+        304,
+        14,
+        7
+      ],
+      "outSizeKey": "304×14×7",
+      "unitVol": 0.000029792,
+      "volume": 0.1485,
+      "worker": "Lương Thị Dướng, Lữ Thị Hà",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 18,
+      "workHoursHC": 18,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-02T10:33:44.616Z"
+    }
+  ],
   "suppliers": [
     {
       "id": "sup-1789808030672-9fhu0",
@@ -6864,10 +7173,12 @@
   },
   "x2BulligRates": {
     "gc": {
-      "2026-09": 600
+      "2026-09": 600,
+      "2026-10": 600
     },
     "ct": {
-      "2026-09": 1500
+      "2026-09": 1500,
+      "2026-10": 1866
     }
   },
   "x2SayRates": {
@@ -6901,9 +7212,264 @@
   "x2SayIncidents": {
     "2026-09-21": 0.33
   },
-  "xuong2BaoTinhRecords": [],
+  "x2StageIncidents": {},
+  "xuong2BaoTinhRecords": [
+    {
+      "sources": [
+        {
+          "location": "S1",
+          "qty": 1694,
+          "dims": [
+            1250,
+            22,
+            7
+          ],
+          "batchId": "batch-1790761703423",
+          "code": "260930-05"
+        },
+        {
+          "location": "S2",
+          "batchId": "batch-1790772258917",
+          "code": "260930-72",
+          "qty": 1932,
+          "dims": [
+            1250,
+            22,
+            7
+          ]
+        },
+        {
+          "qty": 1932,
+          "location": "S2",
+          "batchId": "batch-1790772182040",
+          "dims": [
+            1250,
+            22,
+            7
+          ],
+          "code": "260930-70"
+        },
+        {
+          "batchId": "batch-1790771076131",
+          "code": "260930-38",
+          "dims": [
+            1250,
+            22,
+            7
+          ],
+          "location": "S1",
+          "qty": 1932
+        }
+      ],
+      "outSizeKey": "1250×20×5",
+      "kind": "tinh",
+      "id": "x2btinh-1790912222561-0-78ipw",
+      "qtyOk": 3050,
+      "defectKey": "",
+      "worker": "",
+      "batchId": "batch-1790761703423",
+      "batchDims": [
+        1250,
+        22,
+        7
+      ],
+      "outDims": [
+        1250,
+        20,
+        5
+      ],
+      "date": "2026-10-01",
+      "batchLocation": "S1",
+      "volumeOk": 0.3813,
+      "inDims": [],
+      "unitVol": 0.000125,
+      "createdAt": "2026-10-02T03:37:02.561Z",
+      "defectDims": [],
+      "workHoursHC": 0,
+      "inQty": 7490,
+      "inSizeKey": "1250×22×7",
+      "qtyErr": 4440,
+      "workTime": "",
+      "workHoursTC": 0,
+      "batchCode": "260930-05",
+      "workHours": 0,
+      "batchQty": 1694,
+      "manualRowId": "",
+      "week": "2026-W40"
+    },
+    {
+      "batchId": "batch-1790772004907",
+      "defectDims": [],
+      "qtyErr": 596,
+      "inQty": 2346,
+      "workHoursHC": 0,
+      "batchQty": 1400,
+      "sources": [
+        {
+          "code": "260930-65",
+          "batchId": "batch-1790772004907",
+          "dims": [
+            1250,
+            22,
+            11
+          ],
+          "location": "S2",
+          "qty": 1400
+        },
+        {
+          "dims": [
+            1250,
+            22,
+            11
+          ],
+          "qty": 336,
+          "code": "260930-60",
+          "location": "S2",
+          "batchId": "batch-1790771791354"
+        },
+        {
+          "location": "S1",
+          "batchId": "batch-1790770941051",
+          "code": "260930-35",
+          "dims": [
+            1250,
+            22,
+            11
+          ],
+          "qty": 610
+        }
+      ],
+      "inSizeKey": "1250×22×11",
+      "workTime": "",
+      "workHoursTC": 0,
+      "week": "2026-W40",
+      "batchCode": "260930-65",
+      "workHours": 0,
+      "unitVol": 0.000225,
+      "id": "x2btinh-1790912222561-1-u3rnr",
+      "manualRowId": "",
+      "outSizeKey": "1250×20×9",
+      "outDims": [
+        1250,
+        20,
+        9
+      ],
+      "worker": "",
+      "qtyOk": 1750,
+      "batchLocation": "S2",
+      "kind": "tinh",
+      "volumeOk": 0.3938,
+      "defectKey": "",
+      "batchDims": [
+        1250,
+        22,
+        11
+      ],
+      "inDims": [],
+      "createdAt": "2026-10-02T03:37:02.561Z",
+      "date": "2026-10-01"
+    },
+    {
+      "outSizeKey": "1250×20×7",
+      "qtyOk": 214,
+      "batchDims": [
+        1250,
+        22,
+        9
+      ],
+      "volumeOk": 0.0375,
+      "date": "2026-10-01",
+      "workHoursHC": 0,
+      "createdAt": "2026-10-02T03:37:02.561Z",
+      "qtyErr": 206,
+      "kind": "tinh",
+      "manualRowId": "",
+      "batchLocation": "S2",
+      "defectDims": [],
+      "defectKey": "",
+      "workHoursTC": 0,
+      "inQty": 420,
+      "workTime": "",
+      "workHours": 0,
+      "sources": [
+        {
+          "batchId": "batch-1790772690097",
+          "location": "S2",
+          "code": "260930-82",
+          "qty": 420,
+          "dims": [
+            1250,
+            22,
+            9
+          ]
+        }
+      ],
+      "batchQty": 420,
+      "batchCode": "260930-82",
+      "week": "2026-W40",
+      "batchId": "batch-1790772690097",
+      "inDims": [],
+      "worker": "",
+      "id": "x2btinh-1790912222561-2-892z2",
+      "outDims": [
+        1250,
+        20,
+        7
+      ],
+      "inSizeKey": "1250×22×9",
+      "unitVol": 0.000175
+    },
+    {
+      "manualRowId": "",
+      "week": "2026-W40",
+      "volumeOk": 0,
+      "unitVol": 0.00010752,
+      "workHoursTC": 0,
+      "inSizeKey": "1200×18×15",
+      "batchDims": [],
+      "workHoursHC": 31.5,
+      "qtyErr": 0,
+      "batchCode": "",
+      "id": "x2btinh-1790932018339-0-wykqn",
+      "sources": [],
+      "defectDims": [],
+      "batchQty": 0,
+      "outDims": [
+        640,
+        14,
+        12
+      ],
+      "inDims": [
+        1200,
+        18,
+        15
+      ],
+      "outSizeKey": "640×14×12",
+      "worker": "Hà Thị Hồng Châu, Hà Thị Thuyến, Lương Thị Huyến, Lương Thị Hằng",
+      "inSource": "press",
+      "qtyOk": 0,
+      "workTime": "07:00 → hết ca, 07:00–11:30, 07:00 → hết ca, 07:00 → hết ca",
+      "defectKey": "",
+      "date": "2026-09-29",
+      "createdAt": "2026-10-02T09:06:58.339Z",
+      "workHours": 31.5,
+      "batchId": "",
+      "batchLocation": "",
+      "inQty": 803,
+      "kind": "bao_thanh"
+    }
+  ],
   "x2BaoTinhRates": {
-    "2026-09": 711
+    "2026-09": {
+      "tinh": 711,
+      "ha_cap": 711,
+      "bao_thanh": 711
+    },
+    "2026-10": {
+      "tinh": 711,
+      "ha_cap": 711,
+      "bao_thanh": 711
+    }
   },
   "x2EpVanRates": {
     "2026-09": 0.06

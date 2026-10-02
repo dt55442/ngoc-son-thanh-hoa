@@ -17,7 +17,7 @@ import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
-import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
+import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
@@ -69,6 +69,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2SayRates(); // Định mức THỜI GIAN THAN HÓA (phút/m³) theo tháng + công đoạn sấy
     loadX2SayTimes(); // Số lần than hóa THẬT theo nhóm (ngày + công đoạn sấy của thẻ Than Hóa + Sấy)
     loadX2SayIncidents(); // Giờ SỰ CỐ CHO PHÉP theo ngày (tính Hiệu suất ngày than hóa)
+    loadX2StageIncidents(); // Giờ SỰ CỐ CHO PHÉP theo (thẻ công đoạn, ngày) — 7 thẻ Xưởng 2
     loadQcExports();
     loadQcFinal();       // KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
     loadQcFinalRates();  // Định mức kiểm sau sản xuất theo tháng (tấm/h)

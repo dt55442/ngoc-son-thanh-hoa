@@ -160,19 +160,19 @@ check('THẺ LÔ: dòng 2 kèm luồng nguyên liệu + nhà cung cấp của l�
   blCards.includes('Luồng cây xô') && blCards.includes('Nhà Tế'));
 
 // ─── B2. NÚT "Mở danh sách lô": đóng/mở theo cờ UI, ẩn khi sang Chọn thanh ──
+// Danh sách lô là DROPDOWN NỔI (portal ra #x2-detail-overlay) → kiểm tra ô `hidden`
 state.x2BulligLotOpen = false;
 x2.syncX2BulligKindRows();
-check('NÚT: mặc định danh sách thẻ lô ĐÓNG (display: none)',
-  document.getElementById('x2-bl-gc-list-row').style.display === 'none');
+check('NÚT: mặc định dropdown danh sách thẻ lô ĐÓNG (hidden = true)',
+  document.getElementById('x2-bl-gc-picker').hidden === true);
 state.x2BulligLotOpen = true;
 x2.syncX2BulligKindRows();
-check('NÚT: bấm Mở → danh sách thẻ lô + ô tìm nhanh hiện ra',
-  document.getElementById('x2-bl-gc-list-row').style.display === '' &&
-  document.getElementById('x2-bl-gc-search-row').style.display === '');
+check('NÚT: bấm Mở → dropdown NỔI hiện ra (hidden = false)',
+  document.getElementById('x2-bl-gc-picker').hidden === false);
 document.getElementById('x2-bl-kind').value = 'ct';
 x2.syncX2BulligKindRows();
-check('NÚT: chuyển sang Chọn thanh → danh sách thẻ lô tự ẩn',
-  document.getElementById('x2-bl-gc-list-row').style.display === 'none');
+check('NÚT: chuyển sang Chọn thanh → dropdown danh sách thẻ lô tự ẩn',
+  document.getElementById('x2-bl-gc-picker').hidden === true);
 document.getElementById('x2-bl-kind').value = 'gc';
 
 // ─── C. LƯU LƯỢT GIA CÔNG (SL 700 / tổng đã chọn 1.400) ─────────
@@ -450,7 +450,7 @@ check('CẤU TRÚC (xuong2.js): ẩn/hiện theo công đoạn dùng hàng MỚI
   jsXuong2.includes("set('x2-bl-gc-btn-group', gc)") &&
   !jsXuong2.includes('x2-bl-gc-group-2') && !htmlSrc.includes('x2-bl-gc-group-2'));
 check('CẤU TRÚC (index.html): danh sách lô nằm trong khối .x2-bl-lot-picker (1 cột trên điện thoại)',
-  htmlSrc.includes('class="form-group x2-bl-lot-picker"'));
+  htmlSrc.includes('x2-bl-lot-picker') && htmlSrc.includes('id="x2-bl-gc-picker"'));
 check('CẤU TRÚC (styles.css): gợi ý số lượng (tô đỏ khi vượt) + thẻ lô theo khuôn .al-card',
   cssSrc.includes('.x2-bl-qty-hint') && cssSrc.includes('.x2-bl-qty-hint.over') &&
   cssSrc.includes('.x2-bl-lot-picker .al-card-list') && !cssSrc.includes('.x2-lot-card'));

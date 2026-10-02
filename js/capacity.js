@@ -50,7 +50,7 @@ import {
   baoThoRateOf, baoTinhRateOf, boOngRateOf, bulligRateOf, capRateOf, chonNanRateOf,
   sayChargeRows, sayRateEntryOf
 } from './xuong2.js';
-import { escapeHTML, formatDateDDMMYY } from './utils.js';
+import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
 
   // ─── ĐỊNH DẠNG SỐ ─────────────────────────────────────────────
   const fmtNum1 = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
@@ -248,6 +248,14 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     }
   ];
 
+  // Khóa GIỜ SỰ CỐ CHO PHÉP (state.x2StageIncidents) của từng công đoạn:
+  // 2 dòng Bullig dùng chung 1 khóa 'bullig' (cùng ngày = cùng ô sự cố trên thẻ).
+  const CAP_INC_KEY = {
+    cut: 'cut', boong: 'boong', baotho: 'baotho', chonnan: 'chonnan',
+    baotinh: 'baotinh', epvan: 'epvan', bullig_gc: 'bullig', bullig_ct: 'bullig'
+  };
+  function capIncKeyOf(st) { return CAP_INC_KEY[st.id] || null; }
+
   function capStagesOf(ws) { return CAP_STAGES.filter(s => s.ws === ws); }
 
   // ─── SỔ ĐĂNG KÝ BỘ PHẬN / XƯỞNG ────────────────────────────────
@@ -339,6 +347,9 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
       if (st.kind === 'time') {
         day.need = list.reduce((s, x) => s + (Number(x.need) || 0), 0);
         day.incident = list.reduce((s, x) => s + (Number(x.incident) || 0), 0);
+      } else {
+        // Giờ SỰ CỐ CHO PHÉP nhập trên đầu thẻ ngày (0 nếu chưa nhập)
+        day.incident = capIncKeyOf(st) ? stageIncidentOf(capIncKeyOf(st), date) : 0;
       }
       days.push(day);
     });
@@ -351,7 +362,10 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
     const tc = days.reduce((s, d) => s + d.tc, 0);
     let cap = null, rate = null, eff = null, rateText = '';
     if (st.kind === 'cap') {
-      cap = (qty != null && qty > 0 && hours > 0) ? qty / hours : null;
+      // Giờ SỰ CỐ CHO PHÉP của từng ngày được TRỪ khỏi giờ làm (nhất quán với thẻ ngày)
+      const incident = days.reduce((s, d) => s + (Number(d.incident) || 0), 0);
+      const hoursEff = Math.max(0, hours - incident);
+      cap = (qty != null && qty > 0 && hoursEff > 0) ? qty / hoursEff : null;
       // Định mức: THÁNG → ĐM của chính tháng; TUẦN → bình quân gia quyền (tuần vắt 2 tháng)
       rate = mode === 'month' ? st.rateOf(String(key).slice(0, 7)) : capWeekRateOf(st, days);
       eff = (cap != null && rate) ? (cap / rate) * 100 : null;
@@ -640,11 +654,13 @@ import { escapeHTML, formatDateDDMMYY } from './utils.js';
   function capDayRowHtml(st, d) {
     const dateTxt = formatDateDDMMYY(d.date);
     if (st.kind === 'cap') {
-      const cap = (d.qty != null && d.qty > 0 && d.hours > 0) ? d.qty / d.hours : null;
+      // Trừ giờ SỰ CỐ CHO PHÉP (nhập trên đầu thẻ ngày) khỏi giờ làm
+      const hoursEff = Math.max(0, (Number(d.hours) || 0) - (Number(d.incident) || 0));
+      const cap = (d.qty != null && d.qty > 0 && hoursEff > 0) ? d.qty / hoursEff : null;
       const eff = (cap != null && d.rate) ? (cap / d.rate) * 100 : null;
       const effTip = eff == null
-        ? 'Chưa đủ dữ liệu (thiếu giờ làm hoặc chưa khai Định mức công suất tháng)'
-        : `Công suất ${fmtNum2(cap)} ${st.unit} ÷ Định mức tháng ${fmtNum2(d.rate)} ${st.unit}`;
+        ? 'Chưa đủ dữ liệu (thiếu giờ làm / giờ sự cố ≥ giờ làm, hoặc chưa khai Định mức công suất tháng)'
+        : `Công suất ${fmtNum2(cap)} ${st.unit} = ${fmtNum2(d.qty)} ÷ ${fmtNum1(hoursEff)} giờ${d.incident > 0 ? ` [đã trừ ${fmtNum2(d.incident)}h sự cố]` : ''} ÷ Định mức tháng ${fmtNum2(d.rate)} ${st.unit}`;
       return `
         <tr class="cap-day-row">
           <td><i data-lucide="calendar-days"></i> ${dateTxt}</td>

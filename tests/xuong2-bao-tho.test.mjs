@@ -224,6 +224,30 @@ check('CÔNG SUẤT: 1.500 thanh ÷ 9 giờ chạy máy = 167 thanh/h (đầu th
   withQtyHtml.includes('167 thanh/h'));
 check('HIỆU SUẤT: 167 thanh/h ÷ định mức 900 thanh/h (tháng 9) = 18,5%',
   withQtyHtml.includes('18,5%'));
+// ─── G2. GIỜ SỰ CỐ CHO PHÉP TRỪ KHI TÍNH CÔNG SUẤT → HIỆU SUẤT ──
+// Ngày 10/09 có 9 giờ chạy máy · 1.500 thanh → 167 thanh/h · ĐM 900 → 18,5%
+// Nhập 3 giờ sự cố → giờ hiệu dụng 6h → công suất 250 thanh/h → HS 27,8%
+check('SỰ CỐ: ô nhập data-x2-incident nằm trên đầu thẻ ngày Bào Thô',
+  withQtyHtml.includes('data-x2-incident="baotho"') &&
+  withQtyHtml.includes('data-x2-incident-date="2026-09-10"'));
+x2.onStageIncidentChange({
+  target: { getAttribute: k => k === 'data-x2-incident' ? 'baotho'
+    : (k === 'data-x2-incident-date' ? '2026-09-10' : null), value: '3' }
+});
+const incHtml = document.getElementById('x2-bt-day-cards').innerHTML;
+check('SỰ CỐ: giờ sự cố 3h → công suất 1.500 ÷ 6h = 250 thanh/h',
+  incHtml.includes('250 thanh/h'));
+check('SỰ CỐ: hiệu suất 250 ÷ 900 = 27,8% (tooltip ghi rõ đã trừ 3,00h sự cố)',
+  incHtml.includes('27,8%') && incHtml.includes('đã trừ 3,00h sự cố'));
+check('SỰ CỐ: giá trị 3 giữ nguyên trong ô nhập (không mất sau khi vẽ lại)',
+  incHtml.includes('data-x2-incident-date="2026-09-10"') && incHtml.includes('value="3"'));
+// Bỏ sự cố → trở lại 167 thanh/h / 18,5%
+x2.onStageIncidentChange({
+  target: { getAttribute: k => k === 'data-x2-incident' ? 'baotho'
+    : (k === 'data-x2-incident-date' ? '2026-09-10' : null), value: '' }
+});
+check('SỰ CỐ: xoá giờ sự cố → công suất quay lại 167 thanh/h',
+  document.getElementById('x2-bt-day-cards').innerHTML.includes('167 thanh/h'));
 check('MINI CARD: "1 lượt · 1.500 thanh"',
   document.getElementById('x2-mini-count-bao-tho').textContent === '1 lượt · 1.500 thanh');
 check('THỐNG KÊ: tổng số thanh 1.500 + thể tích quy đổi 1,8240 m³',
@@ -313,6 +337,104 @@ check('CẤU TRÚC (index.html): bảng ghi dữ liệu (thẻ ngày) + nút thu
   idxHtml.includes('x2-bt-day-cards') && idxHtml.includes('btn-toggle-x2bt-table'));
 check('CẤU TRÚC (index.html): thẻ Bào Thô KHÔNG còn ghi chú "Chức năng đang được bổ sung"',
   !idxHtml.includes('Bảng ghi nhận sản lượng máy bào thô'));
+
+// ─── N. CHỌN NHIỀU LÔ ĐÃ BỔ CHO 1 LƯỢT CHẠY (02/10/2026) ─────────
+// stub không có selectedOptions → giả lập mảng selectedOptions để đọc 2 lô
+selLot.selectedOptions = [{ value: 'lot-1' }, { value: 'lot-2' }];
+check('NHIỀU LÔ: baoThoPickedIds() đọc được CẢ 2 lô đang chọn',
+  JSON.stringify(x2.baoThoPickedIds()) === JSON.stringify(['lot-1', 'lot-2']));
+document.getElementById('x2-bao-tho-dai').value = '1250';
+document.getElementById('x2-bao-tho-rong').value = '80';
+document.getElementById('x2-bao-tho-day').value = '12';
+x2.renderX2BaoThoCalc();
+check('NHIỀU LÔ: ô tự tính ghi "2 lô · 650 kg" (TỔNG KL ống bổ 350 + 300)',
+  document.getElementById('x2-bao-tho-calc').innerHTML.includes('2 lô · 650 kg'));
+const cnt0 = state.xuong2BaoThoRecords.length;
+document.getElementById('x2-bao-tho-date').value = '2026-09-12';
+x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
+check('NHIỀU LÔ: lưu lượt mới có boOngIds = [lot-1, lot-2]',
+  state.xuong2BaoThoRecords.length === cnt0 + 1 &&
+  JSON.stringify(state.xuong2BaoThoRecords[cnt0].boOngIds) === JSON.stringify(['lot-1', 'lot-2']));
+const multi = state.xuong2BaoThoRecords[cnt0];
+check('NHIỀU LÔ: NCC gộp "Nhà Tế + Nhà Trung" (đúng thứ tự chọn)',
+  multi.supplier === 'Nhà Tế + Nhà Trung');
+check('NHIỀU LÔ: KL ống bổ = TỔNG 650 kg · loại NL gộp 2 loại',
+  multi.klOngBo === 650 && multi.materialType === 'Luồng cây xô + Luồng ống');
+check('NHIỀU LÔ: giữ boOngId = lô ĐẦU (tương thích ngược dữ liệu cũ)',
+  multi.boOngId === 'lot-1');
+check('NHIỀU LÔ: chip "đã chạy" hiện ở CẢ 2 lô trong ô chọn (lô 1 lượt / lô 2 lượt)',
+  (selLot.innerHTML.match(/đã chạy 1 lượt/g) || []).length === 1 &&
+  (selLot.innerHTML.match(/đã chạy 2 lượt/g) || []).length === 1);
+const multiHtml = document.getElementById('x2-bt-day-cards').innerHTML;
+check('NHIỀU LÔ: thẻ ngày ghi "2 lô đã bổ · NCC Nhà Tế + Nhà Trung · ống bổ tổng 650 kg"',
+  multiHtml.includes('2 lô đã bổ') && multiHtml.includes('NCC Nhà Tế + Nhà Trung') &&
+  multiHtml.includes('ống bổ tổng 650 kg'));
+// Dọn: xóa lượt nhiều lô + bỏ selectedOptions giả lập
+x2.deleteXuong2BaoTho(multi.id);
+selLot.selectedOptions = undefined;
+selLot.value = '';
+x2.resetXuong2BaoThoForm();
+
+// ─── O. POPUP ĐỊNH MỨC + GIỜ SỰ CỐ + DROPDOWN NỔI (02/10/2026) ───
+const rd = f => fs.readFileSync(new URL(`../js/${f}`, import.meta.url), 'utf8');
+const jsUtils = rd('utils.js');
+const jsX2 = rd('xuong2.js');
+const jsState = rd('state.js');
+const jsStorage = rd('storage.js');
+const jsCloud = rd('cloud.js');
+const jsHistory = rd('history.js');
+const jsMain = rd('main.js');
+const jsCap = rd('capacity.js');
+const jsPress = rd('press.js');
+const cssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+check('POPUP ĐM (index.html): 6 popup định mức + 6 nút "Định mức" TRONG form nhập',
+  ['modal-x2-cut-rate', 'modal-x2-ong-rate', 'modal-x2-bt-rate',
+   'modal-x2-cn-rate', 'modal-x2-epv-rate', 'modal-x2-bl-rate'].every(id => idxHtml.includes(`id="${id}"`)) &&
+  ['btn-x2-cut-rate', 'btn-x2-ong-rate', 'btn-x2-bt-rate',
+   'btn-x2-cn-rate', 'btn-x2-epv-rate', 'btn-x2-bl-rate'].every(id => idxHtml.includes(`id="${id}"`)));
+check('POPUP ĐM: ánh xạ X2_RATE_POPUPS nối đủ 6 nút → 6 popup',
+  Object.keys(x2.X2_RATE_POPUPS).length === 6 &&
+  x2.openX2RatePopup('modal-x2-cut-rate') === true &&
+  document.getElementById('modal-x2-cut-rate').classList.contains('show') &&
+  x2.closeX2RatePopup('modal-x2-cut-rate') === true &&
+  !document.getElementById('modal-x2-cut-rate').classList.contains('show'));
+check('POPUP ĐM: thanh định mức inline ĐÃ DỜ khỏi thân 6 thẻ (nằm trong popup)',
+  !/<div class="planning-card x2-card-hidden" id="x2-cut-card">[\s\S]{0,4000}id="x2-rate-bar"/.test(idxHtml) &&
+  !/<div class="planning-card x2-card-hidden" id="x2-bullig-card">[\s\S]{0,6000}id="x2-bl-rate-bar"/.test(idxHtml));
+
+check('GIỜ SỰ CỐ: helper stageIncidentOf/stageEffHours trong utils.js',
+  ['stageIncidentKey', 'stageIncidentOf', 'stageEffHours', 'stageIncidentInputHtml']
+    .every(fn => jsUtils.includes(`function ${fn}`)));
+check('GIỜ SỰ CỐ: 7 thẻ đều chèn ô nhập data-x2-incident vào đầu thẻ ngày',
+  (jsX2.match(/stageIncidentInputHtml\('/g) || []).length === 6 &&
+  jsPress.includes("stageIncidentInputHtml('epvan'"));
+check('GIỜ SỰ CỐ: state + storage key đã khai báo (bamboo_tracker_x2_stage_incident_v1)',
+  jsState.includes('STORAGE_KEY_X2_STAGE_INCIDENT') &&
+  jsState.includes('bamboo_tracker_x2_stage_incident_v1') &&
+  jsState.includes('x2StageIncidents'));
+check('GIỜ SỰ CỐ: nối đủ 6 chỗ — storage / cloud / history / main',
+  jsStorage.includes('restoreX2StageIncidents') &&
+  jsCloud.includes('x2StageIncidents') &&
+  jsHistory.includes('x2StageIncidents') &&
+  jsMain.includes('loadX2StageIncidents'));
+check('GIỜ SỰ CỐ: bảng Tổng hợp Công suất (capacity.js) cũng TRỪ giờ sự cố',
+  jsCap.includes('stageIncidentOf') && jsCap.includes('capIncKeyOf'));
+check('GIỜ SỰ CỐ: setStageIncident ghi + tự vẽ lại thẻ ngày',
+  typeof x2.setStageIncident === 'function' &&
+  typeof x2.onStageIncidentChange === 'function' &&
+  x2.setStageIncident('baotho', '2026-09-10', '1.5') === true &&
+  JSON.parse(localStorage.getItem('bamboo_tracker_x2_stage_incident_v1') || '{}')['baotho|2026-09-10'] === 1.5 &&
+  x2.setStageIncident('baotho', '2026-09-10', '') === true &&
+  !Object.keys(JSON.parse(localStorage.getItem('bamboo_tracker_x2_stage_incident_v1') || '{}')).length);
+
+check('DROPDOWN NỔI: helper portal (x2FloatShow/Hide/MaybeClose/RepositionAll)',
+  ['x2FloatShow', 'x2FloatHide', 'x2FloatHideAll', 'x2FloatMaybeClose', 'x2FloatRepositionAll',
+   'positionX2FloatPicker'].every(fn => jsX2.includes(`function ${fn}`)));
+check('DROPDOWN NỔI (index.html): khung danh sách lô Bullig gộp 1 ô #x2-bl-gc-picker',
+  idxHtml.includes('id="x2-bl-gc-picker"') &&
+  !idxHtml.includes('id="x2-bl-gc-list-row"'));
+check('DROPDOWN NỔI (styles.css): CSS cho chip ô sự cố + panel nổi',
+  cssHtml.includes('.x2-day-inc') && cssHtml.includes('.x2-bl-gc-picker'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

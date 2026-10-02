@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -441,6 +441,25 @@ import { escapeHTML, showToast } from './utils.js';
     return cur;
   }
 
+  // Khôi phục GIỜ SỰ CỐ CHO PHÉP theo (THẺ CÔNG ĐOẠN, NGÀY)
+  // ({ '<cardId>|<YYYY-MM-DD>': giờ }): GỘP, không đè.
+  function restoreX2StageIncidents(incoming) {
+    const src = (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) ? incoming : {};
+    const cur = (state.x2StageIncidents && typeof state.x2StageIncidents === 'object') ? state.x2StageIncidents : {};
+    let changed = false;
+    Object.keys(src).forEach(k => {
+      const v = Number(src[k]);
+      if (!/^[a-z]+\|\d{4}-\d{2}-\d{2}$/.test(k)) return;
+      if (!Number.isFinite(v) || v <= 0) return;
+      if (cur[k] == null) { cur[k] = v; changed = true; }
+    });
+    if (changed) {
+      state.x2StageIncidents = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_STAGE_INCIDENT, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
   // ─── GỘP NHẬT KÝ BÀO TINH XƯỞNG 2 (file / backup / mây) ──
   function restoreXuong2BaoTinh(incomingArr) {
     const before = JSON.stringify(state.xuong2BaoTinhRecords || []);
@@ -691,6 +710,9 @@ import { escapeHTML, showToast } from './utils.js';
           restoreX2SayTimes(loaded.x2SayTimes); // SỐ LẦN than hóa thật theo ngày + công đoạn — gộp, không đè
         if (loaded.x2SayIncidents) {
           restoreX2SayIncidents(loaded.x2SayIncidents); // GIỜ SỰ CỐ CHO PHÉP theo ngày — gộp, không đè
+        if (loaded.x2StageIncidents) {
+          restoreX2StageIncidents(loaded.x2StageIncidents); // GIỜ SỰ CỐ theo (thẻ công đoạn, ngày) — gộp, không đè
+        }
         }
 
         }
@@ -815,6 +837,9 @@ import { escapeHTML, showToast } from './utils.js';
           restoreX2SayTimes(loaded.x2SayTimes); // SỐ LẦN than hóa thật theo ngày + công đoạn — gộp, không đè
         if (loaded.x2SayIncidents) {
           restoreX2SayIncidents(loaded.x2SayIncidents); // GIỜ SỰ CỐ CHO PHÉP theo ngày — gộp, không đè
+        if (loaded.x2StageIncidents) {
+          restoreX2StageIncidents(loaded.x2StageIncidents); // GIỜ SỰ CỐ theo (thẻ công đoạn, ngày) — gộp, không đè
+        }
         }
 
         }
@@ -905,6 +930,7 @@ import { escapeHTML, showToast } from './utils.js';
         x2SayRates: state.x2SayRates || { s1: {}, s2: {} },
         x2SayTimes: state.x2SayTimes || {},
         x2SayIncidents: state.x2SayIncidents || {},
+      x2StageIncidents: state.x2StageIncidents || {},
 
 
 
@@ -1016,6 +1042,7 @@ import { escapeHTML, showToast } from './utils.js';
       x2SayRates: state.x2SayRates || { s1: {}, s2: {} },
       x2SayTimes: state.x2SayTimes || {},
       x2SayIncidents: state.x2SayIncidents || {},
+        x2StageIncidents: state.x2StageIncidents || {},
 
 
 
@@ -1110,6 +1137,9 @@ import { escapeHTML, showToast } from './utils.js';
           restoreX2SayTimes(imported.x2SayTimes); // SỐ LẦN than hóa thật theo ngày + công đoạn — gộp, không đè
         if (imported && imported.x2SayIncidents) {
           restoreX2SayIncidents(imported.x2SayIncidents); // GIỜ SỰ CỐ CHO PHÉP theo ngày — gộp, không đè
+        if (imported && imported.x2StageIncidents) {
+          restoreX2StageIncidents(imported.x2StageIncidents); // GIỜ SỰ CỐ theo (thẻ công đoạn, ngày) — gộp, không đè
+        }
         }
 
         }
@@ -1339,6 +1369,7 @@ export {
   restoreX2SayRates,
   restoreX2SayTimes,
   restoreX2SayIncidents,
+  restoreX2StageIncidents,
   restoreXuong2BaoTinh,
   restoreX2BaoTinhRates,
   saveData,

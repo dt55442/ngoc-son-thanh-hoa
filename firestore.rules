@@ -19,7 +19,7 @@ service cloud.firestore {
     function userEmail() {
       return (isSignedIn()
               && request.auth.token.email != null)
-             ? request.auth.token.email.toLowerCase()
+             ? request.auth.token.email
              : '';
     }
 

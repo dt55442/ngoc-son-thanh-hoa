@@ -4,6 +4,7 @@
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
 import { alOnLocationChipClick, alOnSourceListClick, alPickAll, alSetSourceQuery, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
+import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, closeX2ExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, handleX2ExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, openX2ExportModal, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
@@ -14,7 +15,7 @@ import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, recalcPressQuantities, refreshPressProductSelect, refreshPressWorkersPreview, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
-import { baoTinhAddRow, baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, editXuong2Bullig, editXuong2Cut, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BaoTinhRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoTinhRateBar, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2KanbanBoard, onSayTimesChange, onSayIncidentChange, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, x2BaoTinhTogglePicker, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame } from './xuong2.js';
+import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutSize, baoTinhInputPool, setBaoThanhInput, setBaoThanhOut, toggleBaoThanhInputPicker, toggleBaoThanhOutPicker, renderBaoThanhInputList, renderX2BaoThanhForm, openX2BaoTinhRateModal, closeX2BaoTinhRateModal, renderX2BaoTinhRateModal, handleX2BaoTinhRateAddMonth, handleX2BaoTinhRateRowSave, handleX2BaoTinhRateRowReset, setX2BaoTinhFilterMode, shiftX2BaoTinhFilter, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, editXuong2Bullig, editXuong2Cut, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2KanbanBoard, onSayTimesChange, onSayIncidentChange, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, x2BaoTinhTogglePicker, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame } from './xuong2.js';
 import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoOnPendingClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất
 import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
@@ -171,6 +172,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         applyRoleToUI(user.role); // phân quyền đã dồn về js/permissions.js
         applyThemeForUser(user.username); // áp giao diện người này đã chọn (nếu có)
         checkAuthAndRender();
+        photoSyncKick(); // vừa có quyền → đẩy nốt ảnh đang chờ ở kênh ảnh
         showToast(`Xin chào ${user.fullname || user.username}!`, 'success');
       } else {
         showToast('Tên đăng nhập hoặc mật khẩu không chính xác!', 'error');
@@ -265,6 +267,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         const p = document.getElementById('al-location-panel');
         if (p) p.hidden = true;
       }
+      // Bào thanh (thẻ Bào Tinh): chạm ra ngoài 2 danh sách nổi → tự đóng
+      if (!t.closest('#x2-btinh-bt-in-picker') && !t.closest('#x2-btinh-bt-in-btn')) {
+        const p = document.getElementById('x2-btinh-bt-in-picker');
+        if (p) p.hidden = true;
+      }
+      if (!t.closest('#x2-btinh-bt-out-picker') && !t.closest('#x2-btinh-bt-out-btn')) {
+        const p = document.getElementById('x2-btinh-bt-out-picker');
+        if (p) p.hidden = true;
+      }
     });
 
     // Undo / Hoàn tác khi nhập sai
@@ -332,6 +343,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Đồng bộ đám mây (Firebase) — thao tác THỦ CÔNG qua 2 nút trong menu ⋮, KHÔNG tự hỏi/nhắc nhở
     safeOn('btn-upload-cloud',      'click', uploadLocalDataToCloud);
     safeOn('btn-pull-cloud',        'click', pullCloudToLocal);
+    // KÊNH ẢNH THUMB — đẩy thủ công ngay các ảnh đang chờ (js/photo-sync.js)
+    safeOn('btn-sync-photos',       'click', photoSyncNow);
 
     // Auto backup — phục hồi bản cất trên máy / trên mây (js/autobackup.js, chỉ Admin)
     safeOn('btn-open-autobackup',     'click', openAutoBackupModal);
@@ -1369,13 +1382,61 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Ô SL thanh ĐẠT trong bảng tổng hợp (tạo động) → cập nhật thanh lỗi tự tính + tổng kết
     safeOn('x2-btinh-groups', 'input', onBaoTinhGroupInput);
     safeOn('x2-btinh-groups', 'click', onBaoTinhGroupClick);
-    safeOn('x2-btinh-add-row', 'click', baoTinhAddRow);
+    // ── BÀO THANH: 4 trường (Chọn thanh đầu vào · Số lượng · Đầu ra · ĐẠT từ QC) ──
+    // ① Danh sách nguồn (thanh BTP Ép Ván + thanh lỗi Bào thanh) — bấm thẻ = chọn
+    safeOn('x2-btinh-bt-in-btn', 'click', toggleBaoThanhInputPicker);
+    safeOn('x2-btinh-bt-in-list', 'click', (e) => {
+      const btn = e && e.target && e.target.closest ? e.target.closest('[data-btinh-bt-in]') : null;
+      if (!btn) return false;
+      const id = btn.getAttribute('data-btinh-bt-in') || '';
+      const item = baoTinhInputPool().find(x => String(x.id) === String(id));
+      if (item && item.remaining <= 0) {   // hết hàng → làm mờ, không chọn được
+        showToast(`Cỡ ${item.sizeKey} đã dùng hết — không còn thanh để bào.`, 'info');
+        return true;
+      }
+      setBaoThanhInput(id);
+      return true;
+    });
+    // ② Số lượng đem bào → cập nhật bảng tóm tắt + ô tổng kết
+    safeOn('x2-btinh-bt-qty', 'input', () => { renderX2BaoTinhGroups(); renderX2BaoTinhCalc(); });
+    // ③ Dropdown nổi CỠ ĐẦU RA + nút "Thêm kích thước"
+    safeOn('x2-btinh-bt-out-btn', 'click', toggleBaoThanhOutPicker);
+    safeOn('x2-btinh-bt-out-list', 'click', (e) => {
+      const btn = e && e.target && e.target.closest ? e.target.closest('[data-btinh-bt-out]') : null;
+      if (!btn) return false;
+      setBaoThanhOut(btn.getAttribute('data-btinh-bt-out'));
+      return true;
+    });
+    safeOn('x2-btinh-bt-out-add', 'click', addBaoThanhOutSize);
+    // Ô tìm nhanh CỦA THANH ĐẦU VÀO Bào thanh (khớp cả SỐ LƯỢNG) + đổi Ngày Bào
+    // → nguồn BTP lọc lại theo CẶP TUẦN của ngày mới
+    safeOn('x2-btinh-bt-in-search', 'input', renderBaoThanhInputList);
+    safeOn('x2-btinh-date', 'change', () => { renderX2BaoThanhForm(); renderX2BaoTinhList(); });
     safeOn('x2-btinh-form', 'submit', handleXuong2BaoTinhSubmit);
     safeOn('btn-cancel-x2-btinh', 'click', () => resetXuong2BaoTinhForm());
-    // Bảng lịch sử bào tinh: thu gọn / mở rộng + lưu Định mức công suất bào tinh
+    // Bảng lịch sử bào tinh: thu gọn / mở rộng
     safeOn('btn-toggle-x2btinh-table', 'click', toggleX2BaoTinhTable);
-    safeOn('btn-x2-btinh-rate-save', 'click', handleX2BaoTinhRateSave);
-    safeOn('x2-btinh-rate-month', 'change', renderX2BaoTinhRateBar);
+    // ── ĐỊNH MỨC 3 CỘT (popup — nút nằm TRONG form nhập) ──
+    safeOn('btn-x2-btinh-rate', 'click', openX2BaoTinhRateModal);
+    safeOn('btn-close-x2-btinh-rate', 'click', closeX2BaoTinhRateModal);
+    safeOn('btn-x2-btinh-rate-add-month', 'click', handleX2BaoTinhRateAddMonth);
+    safeOn('x2-btinh-rate-rows', 'click', (e) => {
+      if (!e || !e.target || typeof e.target.closest !== 'function') return false;
+      const save = e.target.closest('[data-x2-btinh-rate-save]');
+      if (save) { handleX2BaoTinhRateRowSave(save.getAttribute('data-x2-btinh-rate-save')); return true; }
+      const reset = e.target.closest('[data-x2-btinh-rate-reset]');
+      if (reset) { handleX2BaoTinhRateRowReset(reset.getAttribute('data-x2-btinh-rate-reset')); return true; }
+      return false;
+    });
+    // ── BỘ LỌC KỲ (Tuần / Tháng / Năm) — dùng chung ô thống kê + bảng lịch sử ──
+    safeOn('x2-btinh-period-bar', 'click', (e) => {
+      if (!e || !e.target || typeof e.target.closest !== 'function') return false;
+      const dir = e.target.closest('[data-x2-btinh-period-dir]');
+      if (dir) { shiftX2BaoTinhFilter(dir.getAttribute('data-x2-btinh-period-dir')); return true; }
+      const mode = e.target.closest('[data-x2-btinh-period]');
+      if (mode) { setX2BaoTinhFilterMode(mode.getAttribute('data-x2-btinh-period')); return true; }
+      return false;
+    });
     // ── THẺ KHO NAN (launcher Xưởng 2 — tab Công Đoạn) ──
     // PHIẾU KHO: gạt Phiếu Xuất ⇄ Xử Lý Lỗi; gắn lô (danh sách thẻ, chọn nhiều,
     // mỗi lô sửa được số lượng); sổ theo kỳ Ngày/Tuần/Tháng; Ban lãnh đạo duyệt.
@@ -1505,14 +1566,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const blDel = e.target.closest && e.target.closest('[data-x2-bl-delete]');
       if (blDel) { deleteXuong2Bullig(blDel.getAttribute('data-x2-bl-delete')); return; }
       // Chip tháng đã đặt định mức bào tinh → nạp tháng + số thanh/h vào ô nhập
-      const btinhRateChip = e.target.closest && e.target.closest('[data-x2-btinh-rate]');
-      if (btinhRateChip) {
-        const m = btinhRateChip.getAttribute('data-x2-btinh-rate');
-        const selEl = document.getElementById('x2-btinh-rate-month');
-        if (selEl && m) { selEl.value = m; renderX2BaoTinhRateBar(); }
-        return;
-      }
-      // Chip tháng đã đặt ĐỊNH MỨC ÉP VÁN (m³/h) → nạp tháng vào ô nhập
+      // Chip tháng ĐÃ ĐẶT ĐỊNH MỨC ÉP VÁN (m³/h) → nạp tháng vào ô nhập
       const epvRateChip = e.target.closest && e.target.closest('[data-x2-epv-rate]');
       if (epvRateChip) {
         const m = epvRateChip.getAttribute('data-x2-epv-rate');

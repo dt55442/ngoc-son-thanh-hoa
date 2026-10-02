@@ -148,6 +148,9 @@
             <button class="dropdown-item" id="btn-pull-cloud">
               <i data-lucide="cloud-download" style="color:#0284c7;"></i> Tải Dữ Liệu Từ Mây Về Máy
             </button>
+            <button class="dropdown-item" id="btn-sync-photos" title="Đẩy THUMB ảnh nguyên liệu lên mây theo từng doc riêng (nhẹ, đẩy dần) để máy khác xem được ảnh">
+              <i data-lucide="image-plus" style="color:#0f766e;"></i> Đồng Bộ Ảnh Ngay<span id="photo-sync-status"></span>
+            </button>
             <button class="dropdown-item" id="btn-open-autobackup" style="display:none;">
               <i data-lucide="archive" style="color:#7c3aed;"></i> Phục Hồi Tự Động (Bản Cất Trên Máy)
             </button>
@@ -1265,7 +1268,7 @@
                   <select id="x2-btinh-kind">
                     <option value="tinh" title="Bào tinh — lấy thanh từ Kho (đã qua Sấy 2)">Bào tinh</option>
                     <option value="ha_cap" title="Bào tinh hạ cấp — lấy thanh lỗi của công đoạn Bào Tinh (gom theo cỡ)">Bào tinh hạ cấp</option>
-                    <option value="bao_thanh" title="Bào thanh — tự nhập kích thước trước/sau bào + số lượng (thêm được nhiều hàng)">Bào thanh</option>
+                    <option value="bao_thanh" title="Bào thanh — Chọn thanh đầu vào từ Ép Ván (khối 'Ván Thô Tạo Ra', thanh BTP nhận diện bằng THỂ TÍCH &lt; 0,0015 m³) hoặc thanh lỗi của Bào thanh · chọn cỡ Đầu ra; Số lượng ĐẠT LINK từ tab QC (Kiểm thanh)">Bào thanh</option>
                   </select>
                 </div>
                 <div class="form-group x2-btinh-pick-g" id="x2-btinh-picker-row">
@@ -1285,21 +1288,72 @@
                   </div>
                 </div>
               </div>
+              <!-- DÒNG "BÀO THANH" (chỉ hiện khi Loại Bào = Bào thanh): 4 TRƯỜNG
+                   ① Chọn thanh đầu vào = danh sách nguồn TỰ ĐỘNG (Ép Ván khối
+                      "Ván Thô Tạo Ra" nhận diện BẰNG THỂ TÍCH < 0,0015 m³ + thanh
+                      lỗi của Bào thanh) — đếm "còn X/Y thanh", = 0 thì làm mờ
+                   ② Số lượng = số thanh đem bào
+                   ③ Đầu ra = dropdown nổi: 4 cỡ mặc định + nút "Thêm",
+                      LỌC theo Rộng_vào × Dày_vào > Rộng_ra × Dày_ra
+                   ④ Số lượng ĐẠT = LINK LIVE từ tab QC ("Kiểm thanh" — thẻ Kiểm
+                      Sau Sản Xuất), tự suy ra LỖI = đã kiểm − đạt để làm đầu vào lần sau -->
+              <div class="x2-form-row x2-btinh-bt-row" id="x2-btinh-bt-row" style="display:none;">
+                <div class="form-group x2-btinh-bt-in-g" id="x2-btinh-bt-in-group">
+                  <label>Chọn Thanh Đầu Vào <span class="required">*</span></label>
+                  <button type="button" class="btn btn-outline al-picker-btn" id="x2-btinh-bt-in-btn" aria-controls="x2-btinh-bt-in-picker" aria-expanded="false" title="Danh sách thanh đem bào: thanh BÁN THÀNH PHẨM từ Ép Ván (khối 'Ván Thô Tạo Ra', nhận diện bằng THỂ TÍCH &lt; 0,0015 m³) + thanh LỖI của Bào thanh. Thẻ hiện 'còn X/Y thanh' — hết hàng thì làm mờ.">
+                    <i data-lucide="list-checks"></i>
+                    <span id="x2-btinh-bt-in-text">Chọn thanh đầu vào</span>
+                    <span class="al-picked-count" id="x2-btinh-bt-in-count">Chưa chọn</span>
+                  </button>
+                  <div class="al-picker x2-btinh-picker" id="x2-btinh-bt-in-picker" hidden>
+                    <div class="al-picker-tools">
+                      <input type="text" id="x2-btinh-bt-in-search" class="al-search" placeholder="Tìm nhanh: kích thước · nguồn · SỐ LƯỢNG (VD: 1000)" autocomplete="off" title="Ô tìm nhanh của thanh đầu vào Bào thanh — khớp cả SỐ LƯỢNG (bỏ dấu phân cách nghìn: gõ 1000 khớp 1.000)">
+                    </div>
+                    <div class="al-card-list" id="x2-btinh-bt-in-list"></div>
+                  </div>
+                </div>
+                <div class="form-group x2-btinh-bt-qty-g">
+                  <label for="x2-btinh-bt-qty">Số Lượng (thanh) <span class="required">*</span></label>
+                  <input type="number" id="x2-btinh-bt-qty" min="1" step="1" inputmode="numeric" placeholder="VD: 500">
+                  <small id="x2-btinh-bt-qty-hint" style="color:var(--text-muted);">Chọn thanh đầu vào trước</small>
+                </div>
+                <div class="form-group x2-btinh-bt-out-g" id="x2-btinh-bt-out-group">
+                  <label>Đầu Ra <span class="required">*</span></label>
+                  <button type="button" class="btn btn-outline al-picker-btn" id="x2-btinh-bt-out-btn" aria-controls="x2-btinh-bt-out-picker" aria-expanded="false" title="Cỡ thanh SAU khi bào — chỉ hiện cỡ NHỎ HƠN kích thước đầu vào (Rộng × Dày đầu vào > Rộng × Dày đầu ra). Bấm 'Thêm' để khai báo cỡ mới.">
+                    <i data-lucide="ruler"></i>
+                    <span id="x2-btinh-bt-out-text">Chọn kích thước đầu ra</span>
+                  </button>
+                  <div class="al-picker x2-btinh-picker" id="x2-btinh-bt-out-picker" hidden>
+                    <div class="al-picker-head" id="x2-btinh-bt-out-head"></div>
+                    <div class="al-card-list" id="x2-btinh-bt-out-list"></div>
+                    <div class="al-picker-foot">
+                      <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-bt-out-add" data-perm="kanban" title="Khai báo thêm 1 kích thước đầu ra (Dài × Rộng × Dày, mm) — lưu dùng chung cho mọi ngày">
+                        <i data-lucide="plus"></i> Thêm kích thước
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group x2-btinh-bt-ok-g">
+                  <label for="x2-btinh-bt-ok">Số Lượng Đạt (từ QC · Kiểm thanh)</label>
+                  <input type="text" id="x2-btinh-bt-ok" class="x2-btinh-bt-ok" readonly value="—" title="LINK LIVE từ tab QC — Số lượng đạt sẽ link từ tab QC Kiểm thanh thẻ Kiểm sau sản xuất">
+                  <small id="x2-btinh-bt-ok-hint" style="color:var(--text-muted);">Chọn kích thước đầu ra để xem số đạt từ QC</small>
+                </div>
+              </div>
               <!-- DÒNG 2: BẢNG TỔNG HỢP theo KÍCH THƯỚC CHUNG (gộp, không chia phân loại)
                    MỖI DÒNG điền: KÍCH THƯỚC SAU BÀO (Dài × Rộng × Dày) + SL thanh ĐẠT.
                    SL thanh LỖI tự tính (vào − đạt) — KHÔNG hiện ở form, chỉ ở bảng lịch sử.
-                   • Bào thanh: mỗi dòng tự nhập KÍCH THƯỚC TRƯỚC bào + SỐ LƯỢNG,
-                     có nút "Thêm hàng thông tin khác" → nhập nhiều hàng rồi lưu 1 lần. -->
+                   • Bào thanh: 1 lượt = 1 cặp (đầu vào → đầu ra) — bảng CHỈ ĐỌC, số ĐẠT
+                     LINK từ tab QC ("Kiểm thanh"). -->
               <div class="x2-btinh-groups" id="x2-btinh-groups" style="display:none;"></div>
               <div class="x2-btinh-actions" id="x2-btinh-actions" style="display:none;">
-                <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-add-row" data-perm="kanban" title="Thêm 1 hàng thông tin (kích thước trước bào · số lượng · kích thước sau bào · SL thanh đạt) — nhập nhiều hàng rồi lưu 1 lần">
-                  <i data-lucide="plus"></i> Thêm hàng thông tin khác
-                </button>
                 <div class="x2-ong-calc" id="x2-btinh-calc"></div>
               </div>
               <!-- NGƯỜI BÀO + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí
                    chứa "bào tinh" / "bào thanh" — Xưởng 2, đúng ngày) -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:10px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-btinh-rate" data-perm="kanban" title="Mở bảng ĐỊNH MỨC công suất Bào Tinh theo tháng — 3 cột: Bào tinh · Bào tinh hạ cấp · Bào thanh (thanh/giờ)">
+                  <i data-lucide="target"></i> Định mức
+                </button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-btinh">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Bào Tinh</button>
               </div>
@@ -1309,20 +1363,22 @@
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-btinh-stats"></div>
 
-          <!-- BẢNG PHỤ: ĐỊNH MỨC CÔNG SUẤT BÀO TINH theo THÁNG (thanh/giờ) —
-               nguồn cho cột Hiệu suất của từng thẻ ngày -->
-          <div class="x2-rate-bar" id="x2-btinh-rate-bar">
-            <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bào tinh:</span>
-            <select id="x2-btinh-rate-month" title="Chọn tháng"></select>
-            <input type="number" id="x2-btinh-rate-value" min="0" step="any" placeholder="VD: 800" title="Công suất định mức của tháng (thanh/giờ)">
-            <span class="x2-rate-unit">thanh/h</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-x2-btinh-rate-save" data-perm="kanban" title="Lưu định mức công suất bào tinh của tháng"><i data-lucide="save"></i> Lưu</button>
-            <div class="x2-rate-chips" id="x2-btinh-rate-chips"></div>
-          </div>
+          <!-- BẢNG PHỤ ĐÃ DỜ VÀO POPUP "ĐỊNH MỨC" (nút nằm trong form nhập) —
+               bảng 3 cột: Bào tinh · Bào tinh hạ cấp · Bào thanh theo tháng -->
 
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
                đầu thẻ = NỘI DUNG CHUNG (Ngày · Người bào · Giờ HC/TC · Công suất ·
-               Hiệu suất · Tổng đạt/lỗi); trong thẻ = NỘI DUNG RIÊNG từng nhánh -->
+               chip ĐM/Hiệu suất THEO TỪNG LOẠI · Tổng đạt/lỗi); trong thẻ = NỘI DUNG RIÊNG -->
+          <div class="x2-cut-table-wrap" id="x2-btinh-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Bào Tinh</h5>
+              <span class="x2-cut-table-count" id="x2-btinh-table-count"></span>
+              <!-- BỘ LỌC KỲ DÙNG CHUNG cho ô thống kê + bảng lịch sử -->
+              <div class="x2-btinh-period-bar" id="x2-btinh-period-bar"></div>
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2btinh-table" title="Thu gọn / Mở rộng">
+                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+              </button>
+            </div>
           <div class="x2-cut-table-wrap" id="x2-btinh-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bào Tinh</h5>
@@ -2613,7 +2669,7 @@
                 <label for="qcf-kind">Kiểm Loại <span class="required">*</span></label>
                 <select id="qcf-kind" title="Loại kiểm — quyết định đơn vị số lượng và định mức dùng tính Hiệu suất (Kiểm Thanh = thanh/h · Kiểm Ván = tấm/h)">
                   <option value="van" title="Kiểm Ván — thành phẩm Ép Ván, đơn vị TẤM">Kiểm Ván</option>
-                  <option value="thanh" title="Kiểm Thanh — nan, đơn vị THANH (nhập tay)">Kiểm Thanh</option>
+                  <option value="thanh" title="Kiểm Thanh — kiểm thanh ĐẦU RA của công đoạn Bào thanh (đơn vị THANH); chọn CỠ thanh để LINK kết quả về thẻ Bào Tinh">Kiểm Thanh</option>
                 </select>
               </div>
               <div class="form-group qcf-g-ws">
@@ -2630,16 +2686,16 @@
               <div class="form-group qcf-g-in" id="qcf-in-group">
                 <label for="qcf-input-qty">Đầu Vào Kiểm (<span id="qcf-unit-in">tấm</span>) <span class="required">*</span></label>
                 <div class="qcf-in-controls">
-                  <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Bấm để mở danh sách THÀNH PHẨM Ép Ván của CẶP 2 TUẦN xuất hàng chứa ngày kiểm (VD ngày ở tuần 39 hay 40 đều lấy cặp 39–40) — mỗi thẻ hiện Tổng · Đã kiểm · Còn lại; chọn 1 thẻ để tự điền số CÒN LẠI (sửa được)">
+                  <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Kiểm Ván: danh sách THÀNH PHẨM Ép Ván của CẶP 2 TUẦN xuất hàng chứa ngày kiểm (chọn 1 thẻ → tự điền số CÒN LẠI). Kiểm Thanh: danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh còn chờ kiểm (chọn 1 thẻ → tự điền số CÒN LẠI và LINK kết quả về thẻ Bào Tinh).">
                     <i data-lucide="list-checks"></i>
                     <span id="qcf-picker-text">Thành phẩm Ép Ván</span>
                     <span class="al-picked-count" id="qcf-picked-count">Chưa chọn</span>
                   </button>
                   <span class="qcf-soon" id="qcf-in-soon" hidden title="Đầu vào kiểm Xưởng 1 sắp bổ sung — hiện nhập tay số lượng"><i data-lucide="clock"></i> Sắp có</span>
-                  <input type="number" id="qcf-input-qty" class="qcf-input-qty" min="0" step="1" inputmode="numeric" placeholder="VD: 1200" title="Đầu vào kiểm = số CÒN LẠI của thành phẩm trong cặp 2 tuần (tự điền khi chọn, sửa được) hoặc số nhập tay (Kiểm Thanh / Xưởng 1)">
+                  <input type="number" id="qcf-input-qty" class="qcf-input-qty" min="0" step="1" inputmode="numeric" placeholder="VD: 1200" title="Đầu vào kiểm = số CÒN LẠI (tự điền khi chọn thẻ, sửa được) hoặc số nhập tay (Xưởng 1)">
                   <div class="al-picker qcf-picker" id="qcf-picker" hidden>
                     <div class="al-picker-tools">
-                      <input type="text" id="qcf-search" class="al-search" placeholder="Tìm nhanh thành phẩm…" autocomplete="off">
+                      <input type="text" id="qcf-search" class="al-search" placeholder="Tìm nhanh…" autocomplete="off">
                     </div>
                     <div class="al-card-list" id="qcf-product-list"></div>
                   </div>
@@ -5351,6 +5407,47 @@
           <label for="qcf-rate-new-month">Thêm tháng:</label>
           <input type="month" id="qcf-rate-new-month">
           <button type="button" class="btn btn-outline btn-sm" id="btn-qcf-rate-add-month"><i data-lucide="plus"></i> Thêm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ POPUP "ĐỊNH MỨC" CỦA THẺ BÀO TINH — bảng theo THÁNG, 3 CỘT
+       Bào tinh · Bào tinh hạ cấp · Bào thanh (đơn vị đều là thanh/giờ).
+       Mở bằng nút "Định mức" nằm TRONG form nhập của thẻ Bào Tinh.
+       Dữ liệu cũ lưu 1 số thuần/tháng → hiểu là định mức "Bào tinh".
+       Ô trống = chưa đặt (loại đó sẽ không hiện Hiệu suất trên thẻ ngày).
+       — js/xuong2.js) ═══ -->
+  <div class="modal-overlay" id="modal-x2-btinh-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Bào Tinh</h3>
+        <button class="modal-close-btn" id="btn-close-x2-btinh-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Định mức <b>riêng cho từng LOẠI BÀO</b> (đều là <b>thanh/giờ</b>): <b>Bào tinh</b> ·
+          <b>Bào tinh hạ cấp</b> · <b>Bào thanh</b>. Ô <b>trống</b> = chưa đặt
+          (Hiệu suất của loại đó sẽ ẩn trên thẻ ngày).
+        </p>
+        <div class="table-responsive">
+          <table class="data-table qcf-rate-table">
+            <thead>
+              <tr>
+                <th>Tháng</th>
+                <th>Bào tinh (thanh/h)</th>
+                <th>Bào tinh hạ cấp (thanh/h)</th>
+                <th>Bào thanh (thanh/h)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="x2-btinh-rate-rows"></tbody>
+          </table>
+        </div>
+        <div class="qcf-rate-add">
+          <label for="x2-btinh-rate-new-month">Thêm tháng:</label>
+          <input type="month" id="x2-btinh-rate-new-month">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-x2-btinh-rate-add-month"><i data-lucide="plus"></i> Thêm</button>
         </div>
       </div>
     </div>

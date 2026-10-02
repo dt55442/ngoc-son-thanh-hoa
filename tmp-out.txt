@@ -1,0 +1,1150 @@
+
+> nha-may-ngoc-son-thanh-hoa@4.1.0 test
+> node tests/smoke.mjs && node tests/history.test.mjs && node tests/planning-ton.test.mjs && node tests/roles-charts.test.mjs && node tests/chart-filters.test.mjs && node tests/materials.test.mjs && node tests/chart-stems.test.mjs && node tests/export-tabs.test.mjs && node tests/export-stage.test.mjs && node tests/export-hr-qc.test.mjs && node tests/hr-timesheet.test.mjs && node tests/qc.test.mjs && node tests/qc-final.test.mjs && node tests/kiln.test.mjs && node tests/press-form.test.mjs && node tests/tombstone.test.mjs && node tests/hr-cards.test.mjs && node tests/hr-attendance.test.mjs && node tests/hr-posneeds.test.mjs && node tests/hr-board.test.mjs && node tests/hr-overtime.test.mjs && node tests/xuong2-cut.test.mjs && node tests/xuong2-bo-ong.test.mjs && node tests/xuong2-bao-tho.test.mjs && node tests/xuong2-chon-nan-tho.test.mjs && node tests/xuong2-bao-tinh.test.mjs && node tests/xuong2-bullig.test.mjs && node tests/x2-ep-van.test.mjs && node tests/than-hoa.test.mjs && node tests/kho.test.mjs && node tests/suppliers.test.mjs && node tests/cloud-delta.test.mjs && node tests/cloud-shard.test.mjs && node tests/autobackup.test.mjs && node tests/ai.test.mjs && node tests/ai-fab-drag.test.mjs && node tests/ai-question.test.mjs && node tests/ai-autogreet.test.mjs && node tests/theme.test.mjs && node tests/dashboard-pv-merge.test.mjs && node tests/planning-rates.test.mjs && node tests/capacity.test.mjs
+
+[DỌN DỮ LIỆU] Đã dọn 2 lô nan Bào Tinh dữ liệu cũ (đã cất bản backup trước khi xóa).
+[FB] SKIP - chế độ OFFLINE
+BOOT OK - exports: 66
+PURGE OK - lô Bào Tinh cũ đã dọn (tombstone + backup force)
+OK   undoLastAction
+OK   forecastAssumeWeek
+OK   removePressLine
+API CALLS DONE
+PASS HIST-1: lưu mà không có thay đổi -> không ghi log
+PASS HIST-2: thêm lượt ép -> có 1 dòng lịch sử
+PASS HIST-3: đúng người dùng (fullname)
+PASS HIST-4: đúng tab (kanban — lượt ép ván nay thuộc tab Công Đoạn sau khi thẻ Ép Ván dời vào)
+PASS HIST-4b: đúng VÙNG DỮ LIỆU (domain = pressRecords) + nhãn vùng
+PASS HIST-5: đúng thao tác (add)
+PASS HIST-6: chi tiết có nhãn nhận dạng (ngày)
+PASS HIST-7: sửa trường -> ghi log "edit"
+PASS HIST-8: chi tiết có "glue ... 12"
+PASS HIST-9: lưu lại không đổi -> không thêm dòng
+PASS HIST-10: xóa -> ghi log "delete"
+PASS HIST-11: đổi riêng updatedAt -> không ghi log
+PASS HIST-12: giới hạn 300 dòng (không vượt)
+PASS HIST-13: giữ dòng MỚI NHẤT (bỏ dòng cũ)
+PASS HIST-14: đã lưu localStorage
+PASS HIST-15: viewer mở modal -> bị chặn
+PASS HIST-16: admin mở modal -> hiển thị
+PASS HIST-17: danh sách render theo tab đã chọn
+PASS HIST-18: tab QC không có log -> hiện thông báo rỗng
+PASS HIST-18b: mở Lịch Sử theo VÙNG DỮ LIỆU (pressRecords) -> chỉ hiện log của vùng đó
+PASS HIST-18c: đổi vùng sang Bào tinh (không có log) -> danh sách rỗng
+PASS HIST-19: lọc người không tồn tại -> danh sách rỗng
+PASS HIST-20: lọc đúng người -> có dòng lịch sử
+PASS HIST-21: đóng modal
+PASS HIST-22: viewer không xóa được lịch sử
+
+Kết quả: 25 PASS, 0 FAIL
+--- PHẦN A: ÁNH XẠ SỐ THANH ĐÃ ÉP THỰC TẾ THEO TUẦN ---
+  ✓ A: mã X9 (lô cùng loại 1 kích thước) + kích thước thô → 100+300 = 400 @Ván
+  ✓ A: chỉ ánh xạ đúng 1 khóa composite
+  ✓ A: mã ZZ không suy được → bỏ qua
+  ✓ A: mã Y8 (2 kích thước) → bỏ qua, không tạo khóa Bullig
+  ✓ A: không phát sinh số liệu ở tuần khác
+--- PHẦN B: TRƯỢT TỒN THEO CHẾ ĐỘ (quá khứ / hiện tại) ---
+  ✓ B: ĐÃ BÀO TINH tuần P = 1000 (lượt kind=tinh trên thẻ Bào Tinh, nguồn lô b3)
+  ✓ B: không phát sinh đã bào tinh ở tuần khác
+  ✓ B: TỒN tuần P−1 = 1000 (lô b3 nhập tuần P−1)
+  ✓ B: TỒN tuần P = 1000 (b3 đã bào hết ở tuần P) + 1000 (b1 nhập P) = 1000 cuối tuần
+  ✓ B: TỒN tuần hiện tại N = TỒN THỰC (b1 1000 + b2 200; b3 đã bào hết) = 1200
+  ✓ B: CẦN tuần quá khứ P = 1200 (chỉ hiển thị, không dùng trượt quá khứ)
+  ✓ B: CẦN tuần hiện tại N = 600
+  ✓ B: TỒN tuần N+1 = 1200 − 600 (KẾ HOẠCH N) = 600
+  ✓ B: TỒN tuần N+2 giữ 600
+  ✓ B: Thanh đạt đến P = 1000 (đã bào tinh tuần P)
+  ✓ B: Thanh đạt đến N = 1000 − 300 (ĐÃ ÉP P) = 700
+  ✓ B: Thanh đạt đến N+1 = 700 − 600 (KẾ HOẠCH N) = 100
+  ✓ B: Thanh đạt cả năm = 100
+--- PHẦN C: BẢNG HIỆU SUẤT CHUYỂN ĐỔI BÀO TINH ---
+  ✓ C: bảng có 2 tuần có dữ liệu (P rồi N, sắp tăng)
+  ✓ C: tuần P — đã bào tinh 1000, đã ép 300
+  ✓ C: tuần P — còn lại lũy kế 700, hiệu suất 30%
+  ✓ C: tuần N — đã ép 50, còn lại lũy kế 650, hiệu suất 35%
+  ✓ C: tổng lũy kế — bào tinh 1000, đã ép 350
+  ✓ C: tồn bào tinh hiện tại quy về năm Y = 1000 (inQty lượt kind=tinh)
+  ✓ C: ước tính thanh lỗi = max(0, 1000 − 350 − 1000) = 0
+--- PHẦN D: NGÀY GHI LƯỢT BÀO TINH ĐỊNH TUẦN TRỪ TỒN ---
+  ✓ D: đổi ngày ghi lượt → đã bào tinh dời sang tuần N
+  ✓ D: đổi lại ngày P → đã bào tinh trở lại tuần P
+  ✓ D: lượt bao_thanh (không nguồn lô) KHÔNG trừ tồn kế hoạch
+--- PHẦN E: SỔ THEO DÕI Ô TỔNG TỒN (TRACE) ---
+  ✓ E: ledger đủ 52 tuần cho từng ô tồn
+  ✓ E: tuần P — thêm mới 1000 (b1), rời nhóm 1000 (phiếu xuất kho đã duyệt — nguồn lô b3), TỔNG TỒN 1000
+  ✓ E: tuần N — nhập 200, TỔNG TỒN 1200 = TỒN THỰC, trừ phần kế hoạch còn lại 600
+  ✓ E: biểu thức tuần quá khứ suy ngược (tồn tuần sau − thêm mới + rời nhóm)
+  ✓ E: biểu thức tuần hiện tại = tồn THỰC TẾ (Sấy 1 + Sấy 2 + Kho − đã bào)
+  ✓ E: tuần 1 — biểu thức suy ngược không có thành phần tồn tuần trước
+--- PHẦN F: CỬA SỔ HIỂN THỊ BIỂU ĐỒ ÉP VÁN ---
+  ✓ F: môi trường test (stub màn hẹp) → 7 ngày/cửa sổ
+  ✓ F: 20 ngày, cửa sổ 7 → mặc định neo cuối (13..19)
+  ✓ F: start vượt quá → kẹp về total − size
+  ✓ F: start hợp lệ được giữ nguyên
+  ✓ F: start âm → về mặc định neo cuối
+  ✓ F: 2 ngày ≤ cửa sổ → hiện từ đầu, đủ hết dữ liệu
+--- PHẦN G: CỬA SỔ BIỂU ĐỒ NGUYÊN LIỆU (42/21 CỘT) ---
+  ✓ G: stub màn hẹp → cửa sổ 21 cột (1 tuần) trên phạm vi 84 cột
+  ✓ G: start 99 → kẹp về 63 (84 − 21)
+  ✓ G: start hợp lệ giữ nguyên
+  ✓ G: start âm → về đầu tuần
+  ✓ G: phạm vi 21 cột (1 tuần) → hiển thị đủ cả T7, CN
+--- PHẦN H: CỘT LỒNG 3 VỊ TRÍ (KH/TT RIÊNG BIỆT) ---
+  ✓ H: mỗi tuần 21 cột (7 ngày × 3 vị trí)
+  ✓ H: daySlots đánh dấu đúng vị trí (li = i % 3)
+  ✓ H: vị trí 1 chiếm cột 0,3,6 (lẽ ra null ở 1,2 — không gộp 3 vị trí)
+  ✓ H: vị trí 2 chiếm cột 1,4,7
+  ✓ H: cột KH co bằng cột TT (barPercentage 0.72)
+
+Kết quả: 50 pass, 0 fail
+--- PHÂN QUYỀN ---
+PASS Khách: không xem được vùng nâng cao
+PASS Khách: không sửa được tab nào
+PASS Khách: role = null
+PASS Viewer: không xem vùng nâng cao
+PASS Viewer: không sửa kanban
+PASS Editor: xem vùng nâng cao = false
+PASS Editor: được sửa kanban
+PASS Editor: KHÔNG được sửa press
+PASS Editor: được sửa biểu đồ cơ bản nguồn kanban
+PASS Editor: không sửa được biểu đồ vùng nâng cao
+PASS Manager: được xem vùng nâng cao
+PASS Manager: mặc định được sửa các tab (migrate)
+PASS Manager (editTabs press): KHÔNG sửa kanban
+PASS Manager (editTabs press): vẫn xem vùng nâng cao
+PASS Editor cũ (migrate): được sửa kanban
+PASS Editor cũ (migrate): KHÔNG xem nâng cao
+PASS Admin: xem vùng nâng cao
+PASS Admin: sửa mọi tab (kể cả dashboard)
+--- ENGINE BIỂU ĐỒ ---
+PASS Kanban: 2 nhóm A/B
+PASS Kanban: tổng số lượng 300
+PASS Planning: 2 sản phẩm
+PASS Planning: tổng kế hoạch 800
+PASS Planning: đếm 2 mục kế hoạch
+PASS Press: 2 công nhân
+PASS Press: tổng thành phẩm 200 tấm
+PASS Press: tổng keo 2.0 kg
+PASS Press xếp tầng: 2 dataset (Nam, Hùng)
+PASS Migrate: chart cũ có zone=basic
+PASS Migrate: chart cũ có source=kanban
+--- SYNC UI ---
+PASS body class can-edit = true
+PASS body class can-advanced = false
+PASS body data-edit-tabs = "kanban dashboard"
+PASS body data-role = editor
+PASS Manager: body.is-manager
+PASS Manager: body.can-advanced
+
+=== KẾT QUẢ: 35 PASS / 0 FAIL ===
+--- SẢN PHẨM MỒ CÔI (định mức đã xóa) ---
+PASS KH: KHÔNG hiện mã thô rate-1756...
+PASS KH: có nhãn "Sản phẩm cũ (định mức đã xóa)"
+PASS KH: gộp đúng tổng 2 mục mồ côi = 200
+PASS KH: đủ 3 nhóm (2 sản phẩm + mồ côi)
+PASS ÉP: KHÔNG hiện mã thô productId
+PASS ÉP: lượt ép mồ côi về nhóm "Sản phẩm cũ..."
+PASS ÉP: lọc __orphan__ chỉ còn 30 tấm
+PASS KH: lọc __orphan__ tổng kế hoạch = 200
+PASS KH: lọc sản phẩm còn định mức = 500 (loại mồ côi)
+--- CÔNG NHÂN (gộp biến thể viết) ---
+PASS ÉP: chỉ còn 2 công nhân (Nam gộp nam /NAM)
+PASS ÉP: nhãn là biến thể phổ biến "Nam"
+PASS ÉP: tổng của Nam = 120+80+30 = 230
+PASS ÉP: lọc worker "nam" (thường) vẫn khớp cả "Nam"/"NAM" = 230
+--- TUẦN THÂN THIỆN & SẮP XẾP SỐ HỌC ---
+PASS ÉP: nhãn tuần dạng "Tuần 33 (2026)"
+PASS ÉP: KHÔNG còn dạng máy 2026-W33
+PASS KH: Tuần 2 đứng trước Tuần 10 (sắp số học)
+--- DROPDOWN BỘ LỌC CÔNG ĐOẠN (chuẩn hóa cặp [value, label]) ---
+PASS asOptPair: chuỗi đơn → cặp [o, o]
+PASS asOptPair: số đơn → cặp chuỗi "10"
+PASS asOptPair: cặp sẵn giữ nguyên nhãn
+PASS asOptPair: cặp thiếu label → dùng value
+PASS CD: bộ lọc bambooType có tùy chọn
+PASS CD: bambooType không còn nhãn undefined/tách ký tự (label === value)
+PASS CD: bộ lọc useFor có tùy chọn
+PASS CD: useFor không còn nhãn undefined/tách ký tự (label === value)
+PASS CD: bộ lọc location có tùy chọn
+PASS CD: location không còn nhãn undefined/tách ký tự (label === value)
+PASS CD: bộ lọc thickness có tùy chọn
+PASS CD: thickness không còn nhãn undefined/tách ký tự (label === value)
+PASS CD: Độ dày sắp số học 7 < 10 < 11
+PASS KH: bộ lọc Tuần không còn nhãn undefined
+--- PHÂN NHÓM PHỤ "DÀI × RỘNG" (dimRatio) CỦA NGUỒN CÔNG ĐOẠN ---
+PASS CD: stackBy có option dimRatio
+PASS CD: nhãn dimRatio thân thiện (không undefined/rỗng)
+PASS CD: groupBy có dimRatio (tra nhãn phụ đề "Xếp tầng")
+PASS CD: xếp tầng Dài×Rộng có 3 dataset
+PASS CD: nhãn dataset đúng format "1250×18 mm"
+PASS CD: gộp đúng 1250×18 = 100+200 = 300 (bỏ qua độ dày)
+PASS CD: 1250×22 = 300
+PASS CD: 950×15 = 50
+PASS CD: sắp số học 950×15 đứng trước 1250×18
+PASS CD: nhóm chính Dài×Rộng → 3 nhãn, tổng 650
+--- KHẢ NĂNG ĐÁP ỨNG KẾ HOẠCH (theo định mức nan — BOM phụ đã bỏ) ---
+PASS Capacity: sản phẩm không có định mức nan → không tính được (null)
+PASS Capacity: sản phẩm mồ côi → không tính được (null)
+PASS Capacity: thiếu định mức → cap null + lý giải
+PASS Capacity: thiếu định mức → cap null + lý giải
+--- CỬA SỔ TUẦN & % ĐÁP ỨNG (biểu đồ khả năng đáp ứng) ---
+PASS Cap: % đáp ứng = 100 khi đủ
+PASS Cap: % đáp ứng = 42.5 khi thiếu (340/800)
+PASS Cap: % đáp ứng kẹp trần 100 khi vượt kế hoạch
+PASS Cap: cap null hoặc kế hoạch 0 → 0%
+PASS Cap: danh sách tuần có kế hoạch sắp tăng & không trùng
+PASS Cap: cửa sổ 1–2 tuần tùy bề rộng màn hình
+--- BỘ LỌC ĐA CHỌN (chọn 1 hoặc nhiều giá trị) ---
+PASS Engine: isAllFilterVal nhận all/rỗng/mảng rỗng
+PASS Engine: matchFilterVal mảng khớp 1 trong danh sách
+PASS Engine: matchFilterVal chuỗi đơn giữ tương thích bản cũ
+PASS MS saved: chuỗi đơn (bản cũ) → 1 lựa chọn
+PASS MS saved: "all"/undefined/rỗng → [] (Tất Cả)
+PASS MS saved: mảng lọc bỏ phần tử rỗng/MS_ALL
+PASS MS CD: không lọc → 3 nhóm, tổng 3.5
+PASS MS CD: mảng [say1,kho] → 2 nhóm, tổng 3.0
+PASS MS CD: mảng rỗng coi như Tất Cả (tổng 3.5)
+PASS MS CD: chuỗi đơn (bản cũ) vẫn lọc đúng 0.5
+PASS MS CD: đa chọn Loại Nan [A,B] → 150 (bỏ A1)
+PASS MS CD: đa chọn Độ Dày ["7","10"] khớp số → 300
+PASS MS KH: đa chọn tuần 33 + 10 → 500 + 120 = 620
+PASS MS KH: sản phẩm [live2 + mồ côi] → 300+120+80 = 500
+PASS MS KH: [mồ côi + live1] → 500+120+80 = 700
+PASS MS ÉP: ["hùng"] → 50
+PASS MS ÉP: ["nam"] gộp cả "Nam"/"nam "/"NAM" → 290
+PASS MS NL: đa chọn loại NL [nguyên liệu + tinh chế] → 780
+PASS MS NL: đa chọn nhà cung cấp [NCC A] → 400
+PASS MS UI: box có panel checkbox & mục "Tất Cả"
+PASS MS UI: khôi phục mảng đã lưu (say1 & kho được tick)
+PASS MS UI: khôi phục chuỗi đơn đã lưu (độ dày 10 được tick)
+PASS MS UI: tóm tắt đa chọn "Đã chọn 2 mục"
+PASS MS UI: tóm tắt đơn giá trị → nhãn "10"
+PASS MS UI: chỉ "Tất Cả" → "all" (không lọc)
+PASS MS UI: bộ lọc ngày trả chuỗi yyyy-mm-dd
+PASS MS UI: 2 mục được tick → mảng ["say1","kho"]
+PASS MS UI: không tick mục nào → "all" (không lọc)
+PASS MS sync: tick 1 mục → bỏ "Tất Cả"
+PASS MS sync: tóm tắt hiện giá trị mục được tick
+PASS MS sync: tick đủ mọi mục → thu gọn về "Tất Cả"
+PASS MS sync: bỏ "Tất Cả" khi trống → tự tick lại
+PASS MS thẻ: phụ đề liệt kê "Công Đoạn: Sấy 1, Kho"
+PASS MS thẻ: mảng rỗng không hiện trong phụ đề
+
+=== KẾT QUẢ: 84 PASS / 0 FAIL ===
+--- TUẦN ISO & NHÃN VỊ TRÍ ---
+PASS Tuần ISO: 2026-08-10 (T2) → 2026-W33
+PASS Tuần ISO: 2026-01-01 (T5) → 2026-W01
+PASS Tuần ISO: 2024-12-30 (T2) → 2025-W01 (vắt năm)
+PASS Nhãn tuần thân thiện: 2026-W33 → "Tuần 33 (2026)"
+PASS Nhãn vị trí: lo-hoi → Lò hơi
+PASS Nhãn vị trí: xuong-2 → Xưởng 2
+PASS Nhãn vị trí lạ → giữ nguyên giá trị
+PASS Đủ 3 vị trí nhập: Lò hơi, Xưởng 1, Xưởng 2
+--- NÉN ẢNH ---
+PASS Nén ảnh: trả về dataURL JPEG từ canvas
+--- NHẬP FORM (trọng lượng = đầu vào − đầu ra) ---
+PASS Nhập: thêm đúng 1 bản ghi
+PASS Nhập: trọng lượng = 500 − 120 = 380
+PASS Nhập: tự tính tuần ISO 2026-W33
+PASS Nhập: giữ hình ảnh đã tải lên
+PASS Nhập: lưu localStorage
+PASS Nhập: sau submit modal đóng (editId = null)
+PASS Nhập: không có đơn giá → thành tiền = 0
+--- VALIDATION ---
+PASS Chặn: thiếu ngày → không thêm
+PASS Chặn: đầu ra âm → không thêm
+PASS Chặn: vị trí không hợp lệ → không thêm
+PASS Chặn: đơn giá âm → không thêm
+--- SỬA & XÓA ---
+PASS Sửa: trọng lượng cập nhật 600 − 100 = 500
+PASS Sửa: lưu đơn giá 2.000 đ/kg
+PASS Sửa: thành tiền = 500 × 2.000 = 1.000.000 đ
+PASS Sửa: không nhân bản bản ghi
+PASS Xóa: bản ghi bị gỡ sau khi xác nhận
+--- LƯU / NẠP QUA LOCALSTORAGE ---
+PASS Lưu/Nạp: giữ nguyên dữ liệu
+--- ENGINE BIỂU ĐỒ (nguồn materials) ---
+PASS BE: nhóm theo vị trí có nhãn tiếng Việt "Lò hơi"
+PASS BE: Lò hơi = 380 + 90 = 470 kg
+PASS BE: đếm số lần nhập — NCC A = 2 lượt
+PASS BE: thành tiền — Lò hơi = 760.000 + 450.000 = 1.210.000 đ
+PASS BE: nhãn chỉ số thành tiền "Thành Tiền (đ)"
+PASS BE: nhãn tuần thân thiện "Tuần 33 (2026)"
+PASS BE: lọc vị trí Lò hơi → tổng 470
+PASS BE: lọc năm 2026 → tổng 770
+PASS BE: lọc khoảng ngày 11–12/8 → tổng 390
+PASS BE: lọc loại NL "Tre nguyên liệu" → tổng 680
+PASS BE: xếp chồng — 3 dataset theo loại NL
+PASS BE: xếp chồng — Tre @ Lò hơi = 380
+--- CHART BUILDER SCHEMA (nguồn materials) ---
+PASS Builder: nhóm có "Nhà Cung Cấp"
+PASS Builder: chỉ số có "Trọng Lượng" & "Thành Tiền"
+PASS Builder: bộ lọc riêng có "Vị Trí (Dùng Cho)"
+--- BỘ LỌC THỜI GIAN THẺ KPI (Tất Cả / Tuần / Tháng / Năm) ---
+PASS KPI: đủ 4 kỳ (all/week/month/year)
+PASS KPI: Tất Cả → toàn bộ bản ghi theo vị trí
+PASS KPI: Tuần này khớp đếm độc lập theo tuần ISO
+PASS KPI: caption tuần = "Tuần N (YYYY)" của hôm nay
+PASS KPI: Tháng này khớp đếm độc lập theo YYYY-MM
+PASS KPI: caption tháng = "Tháng M/YYYY"
+PASS KPI: Năm này khớp đếm độc lập theo YYYY
+PASS KPI: caption năm = "Năm YYYY"
+PASS KPI: caption Tất Cả "Toàn bộ dữ liệu"
+--- GỘP BẢN GHI NGUYÊN LIỆU (chống mất đơn giá / ảnh khi nạp file cũ) ---
+PASS Gộp: bản máy MỚI HƠN (có updatedAt) giữ nguyên đơn giá + ảnh
+PASS Gộp: bản nguồn ngoài MỚI HƠN thì thắng
+PASS Gộp: bản chỉ có ở máy được giữ lại (không bị xóa)
+PASS Gộp: bản chỉ có trong file/backup cũng được giữ lại
+PASS Gộp: dấu thời gian bằng nhau → giữ bản máy
+PASS Gộp: nguồn ngoài thiếu dấu thời gian → giữ bản máy
+PASS restoreMaterialRecords: gộp thay vì ghi đè — giữ đơn giá/ảnh của bản mới
+PASS restoreMaterialRecords: đã ghi danh sách gộp vào localStorage
+--- ẢNH 2 CẤP (thumb inline + full ngoài bản ghi) ---
+PASS imgThumbSrc: chuỗi dataURL cũ → giữ nguyên
+PASS imgThumbSrc: entry {id, thumb} → trả thumb
+PASS imgThumbSrc: entry {full, thumb} (fallback) → trả thumb
+PASS imgThumbSrc: entry chỉ có full → trả full (không mất ảnh)
+PASS imgThumbSrc: rỗng → chuỗi rỗng
+PASS imgFullSrcSync: entry {id, thumb} → thumb (hiển thị tạm trước khi nạp full)
+PASS imgPhotoId: chuỗi legacy → null
+PASS imgPhotoId: entry {id, thumb} → id
+PASS imgPhotoIds: chỉ lấy id của entry dạng mới
+--- MIGRATE ẢNH LEGACY (không có IndexedDB → không được mất ảnh) ---
+PASS Migrate: kho không khả dụng → ảnh legacy giữ nguyên tuyệt đối
+PASS Migrate: có hàm và không ném lỗi khi gọi lặp lại
+--- XÓA BẢN GHI CÓ ẢNH (dọn kho/file không lỗi trong môi trường tối giản) ---
+PASS Xóa: bản ghi bị gỡ khỏi danh sách
+PASS Xóa: ảnh dạng {id, thumb} không làm Crash hàm xóa
+--- DẢI HIGHLIGHT NGÀY HÔM NAY ---
+PASS Biểu đồ NL: có truyền todayIso cho dải ngày (theo giờ máy)
+PASS Biểu đồ NL: plugin mpAxisBands có hook beforeDatasetsDraw (dải nằm DƯỚI cột)
+PASS Biểu đồ NL: vẫn giữ hook afterDraw (nhãn ngày + dải tuần + chip)
+PASS Dải hôm nay: có TÔ NỀN sau cột (fillRect)
+PASS Dải hôm nay: có CHIP "HÔM NAY"
+PASS Dải hôm nay: nhãn ngày hôm nay vẫn được vẽ
+PASS Dải hôm nay: hôm nay NGOÀI khung đang xem → không tô gì
+PASS Dải hôm nay: thiếu todayIso → không tô gì
+PASS CUỘN: 3 bảng Nguyên Liệu bọc khung .table-responsive.table-scroll (không còn div inline)
+PASS CUỘN (styles.css): .table-scroll = khung cuộn dọc 60vh + dòng tiêu đề DÍNH (sticky thead)
+PASS CUỘN (styles.css): bảng nhiều cột có min-width → trượt ngang khi màn hình hẹp (cột không bóp)
+
+=== KẾT QUẢ: 82 PASS / 0 FAIL ===
+PASS Xưởng 2 → cây tre
+PASS Xưởng 1 → ống nứa
+PASS Lò hơi → khúc gỗ
+PASS vị trí lạ → mặc định cây tre
+PASS nhãn hình dạng đúng tiếng Việt
+PASS khoảng đốt = khoảng vạch chia trục Y
+PASS không có vạch chia → mặc định 28px
+PASS vạch quá thưa (>96px) → thêm đốt phụ 40px
+PASS vạch quá dày (<14px) → giãn 14px
+PASS bỏ qua vạch trùng nhau
+PASS đốt tính từ ĐÁY lên, trùng vạch chia
+PASS cột cao hơn 1 khoảng → có 1 đốt
+PASS cột rất thấp → không đốt
+PASS khoảng cách không hợp lệ → không đốt
+PASS shade: làm tối 50% từ #4caf50
+PASS shade: làm sáng 50% từ #4caf50
+PASS withAlpha: hex → rgba
+PASS màu không phải hex → giữ nguyên
+PASS tre (KH): 3 đốt cho cột 200px với khoảng đốt 50px
+PASS tre (KH): khung RỖNG có miệng ống hở (1 ellipse)
+PASS tre (KH): KHÔNG dùng gradient (chỉ viền rỗng)
+PASS tre: vạch đốt trùng vạch chia (210 / 160 / 110 = cách đáy 50/100/150px)
+PASS tre (KH): có nét gờ đốt nhô ra ngoài thân
+PASS tre (TT): thân ĐẶC có gradient ngang (nổi khối)
+PASS tre (TT): không vẽ miệng ống hở
+PASS tre (TT): vẫn có đốt chia (gờ + vạch sáng)
+PASS nứa: CHỈ 1 đốt (thẳng dài, không mắt chia)
+PASS nứa: đổi khoảng đốt cũng không thêm đốt
+PASS nứa: chỉ 2 nét (viền thân + 1 đốt), không chia mắt
+PASS nứa (KH): khung rỗng có miệng ống hở
+PASS gỗ: KHÔNG có đốt tre
+PASS gỗ: mặt cắt đỉnh (viền + vòng tuổi) = 2 ellipse
+PASS gỗ TRƠN: KHÔNG có nhánh cành (không nét dày ≥5px)
+PASS gỗ trơn: mọi nét nằm gọn trong thân (không chìa ra ngoài)
+PASS gỗ: thân không thẳng tắp (có vân gỗ lượn)
+PASS cột ≤ 1px: không vẽ gì
+PASS plugin: id = stemBars
+PASS plugin: vẽ 2 cột thân cây, BỎ QUA dataset chữ nhật thường
+PASS plugin: dùng màu của dataset (hex → rgba)
+PASS plugin: khoảng đốt lấy từ vạch chia (vạch thưa → 40px)
+PASS plugin: giá trị 0 → không vẽ cột
+PASS plugin: tắt (enabled:false) → không vẽ
+PASS plugin: dataset bị ẩn → không vẽ
+PASS plugin: chưa bật → không vẽ
+PASS STEM_LABELS đủ 3 hình
+
+CHART-STEMS: 45 PASS, 0 FAIL
+PASS KH: mở modal xuất
+PASS KH: select năm có 2 năm dữ liệu
+PASS KH: select tuần gộp trùng "Tuần 2"
+PASS KH: select sản phẩm theo tên định mức
+PASS KH: xuất được 1 file
+PASS KH: tên file KeHoach_SanXuat_*.xlsx
+PASS KH: sheet "Kế Hoạch SX"
+PASS KH: đủ 3 dòng dữ liệu + header + tổng (9 dòng)
+PASS KH: sắp xếp năm tăng dần (2025 trước 2026)
+PASS KH: tuần sắp xếp số học (Tuần 2 trước Tuần 10 trong 2026)
+PASS KH: 3 dòng đầu (tiêu đề/ngày/bộ lọc) gộp tràn cả bảng
+PASS KH: dòng TỔNG CỘNG = 180 tấm
+PASS KH: header đúng thứ tự Stt/Mã SP/Tên SP/Tên Đầy Đủ/SL/Thể Tích/Loại Ép/Ghi Chú
+PASS KH: dòng dữ liệu có Mã SP + Tên đầy đủ + Loại Ép của định mức
+PASS KH: Thể tích trống khi tên SP không có kích thước
+PASS KH: đóng modal sau khi xuất
+PASS KH: lọc năm 2026 còn 2 dòng
+PASS KH: tổng năm 2026 = 150
+PASS KH: dòng bộ lọc ghi rõ "Năm 2026"
+PASS KH: lọc vô hiệu -> không tạo file mới
+PASS KH: lọc vô hiệu -> modal còn mở (để sửa)
+PASS ÉV: mở modal xuất
+PASS ÉV: select năm có 2025 & 2026
+PASS ÉV: select tuần hiển thị thân thiện
+PASS ÉV: select thành phẩm từ snapshot productName
+PASS ÉV: công nhân gộp "Nam"/"nam" thành 1
+PASS ÉV: xuất được file
+PASS ÉV: tên file SanLuong_EpVan_*.xlsx
+PASS ÉV: sheet "Ép Ván"
+PASS ÉV: 3 dòng đầu (tiêu đề/ngày/bộ lọc) gộp tràn cả bảng
+PASS ÉV: đủ 3 dòng dữ liệu + header + tổng (9 dòng)
+PASS ÉV: sắp xếp ngày tăng dần (2025 trước)
+PASS ÉV: tuần thân thiện trên dòng dữ liệu
+PASS ÉV: tóm tắt ván thô "1200x600x9 ×50"
+PASS ÉV: tóm tắt thanh thô "A1: 120 thanh"
+PASS ÉV: có cột Mã SP / Tên Đầy Đủ / Loại Ép
+PASS ÉV: dòng dữ liệu có Mã SP + Loại Ép của định mức
+PASS ÉV: dòng TỔNG CỘNG = 75 tấm
+PASS ÉV: tổng keo/phụ gia cộng đúng
+PASS ÉV: đóng modal sau khi xuất
+PASS ÉV: lọc công nhân còn 2 dòng
+PASS ÉV: tổng SL công nhân nam = 50 tấm
+PASS ÉV: lọc tuần W33 còn 2 dòng
+PASS ÉV: dòng bộ lọc ghi tuần thân thiện
+PASS ÉV: lọc vô hiệu -> không tạo file mới
+PASS ÉV: lọc vô hiệu -> modal còn mở
+PASS KH: closePlanningExportModal đóng modal
+PASS NL: mở modal xuất
+PASS NL: select loại có "Keo UF"
+PASS NL: select NCC có "NCC A"
+PASS NL: xuất được file
+PASS NL: tên file NhatKy_NguyenLieu_*.xlsx
+PASS NL: sheet "Nguyên Liệu"
+PASS NL: đủ 3 dòng dữ liệu + header + tổng (9 dòng)
+PASS NL: sắp xếp mới nhất lên đầu (11/08 trước 10/08)
+PASS NL: nhãn vị trí "Lò hơi" từ key lo-hoi
+PASS NL: tuần thân thiện "Tuần 33 (2026)"
+PASS NL: đơn giá định dạng vi-VN "30.000"
+PASS NL: thành tiền "750.000" (150kg × 5.000)
+PASS NL: số ảnh đếm đúng (dòng có 1 ảnh)
+PASS NL: dòng TỔNG CỘNG = 190 kg
+PASS NL: tổng thành tiền = 1.450.000 đ
+PASS NL: đóng modal sau khi xuất
+PASS NL: lọc Lò hơi còn 1 dòng
+PASS NL: tổng Lò hơi = 150 kg
+PASS NL: lọc NCC A + Tre NL còn 2 dòng (m1 + m3)
+PASS NL: lọc từ 01/08/2026 còn 2 dòng (m1 + m2)
+PASS NL: dòng bộ lọc ghi khoảng ngày
+PASS NL: lọc vô hiệu -> không tạo file mới
+PASS NL: lọc vô hiệu -> modal còn mở
+PASS NL: closeMaterialsExportModal đóng modal
+
+KẾT QUẢ: 71 PASS, 0 FAIL
+PASS CD[all]: xuất không nổ lỗi
+PASS CD[all]: tạo được 1 file
+PASS CD[all]: tên file gọn
+PASS CD[all]: đúng 6 dòng dữ liệu (được 6)
+PASS CD[all]: modal đã đóng sau khi xuất
+PASS CD[all]: tiêu đề ô A1 là "NHẬT KÝ THAN HÓA"
+PASS CD[all]: tên sheet là "Nhật Ký Than Hóa"
+PASS CD[all]: có gộp A3:B3 và A4:B4
+PASS CD[all]: nhãn tại A3/A4, giá trị sang C3/C4
+PASS CD[say1]: xuất không nổ lỗi
+PASS CD[say1]: tạo được 1 file
+PASS CD[say1]: tên file có nhãn Sấy_1
+PASS CD[say1]: đúng 1 dòng dữ liệu (được 1)
+PASS CD[say1]: modal đã đóng sau khi xuất
+PASS CD[say1]: tiêu đề ô A1 là "NHẬT KÝ SẤY 1"
+PASS CD[say1]: tên sheet là "Nhật Ký Sấy 1"
+PASS CD[say1]: có gộp A3:B3 và A4:B4
+PASS CD[say1]: nhãn tại A3/A4, giá trị sang C3/C4
+PASS CD[say2]: xuất không nổ lỗi
+PASS CD[say2]: tạo được 1 file
+PASS CD[say2]: tên file có nhãn Sấy_2
+PASS CD[say2]: đúng 2 dòng dữ liệu (được 2)
+PASS CD[say2]: modal đã đóng sau khi xuất
+PASS CD[say2]: tiêu đề ô A1 là "NHẬT KÝ SẤY 2"
+PASS CD[say2]: tên sheet là "Nhật Ký Sấy 2"
+PASS CD[say2]: có gộp A3:B3 và A4:B4
+PASS CD[say2]: nhãn tại A3/A4, giá trị sang C3/C4
+PASS CD[kho]: xuất không nổ lỗi
+PASS CD[kho]: tạo được 1 file
+PASS CD[kho]: tên file có nhãn Kho
+PASS CD[kho]: đúng 1 dòng dữ liệu (được 1)
+PASS CD[kho]: modal đã đóng sau khi xuất
+PASS CD[kho]: tiêu đề ô A1 là "NHẬT KÝ KHO"
+PASS CD[kho]: tên sheet là "Nhật Ký Kho"
+PASS CD[kho]: có gộp A3:B3 và A4:B4
+PASS CD[kho]: nhãn tại A3/A4, giá trị sang C3/C4
+PASS CD[bao_tinh]: xuất không nổ lỗi
+PASS CD[bao_tinh]: tạo được 1 file
+PASS CD[bao_tinh]: tên file có nhãn Bào_Tinh
+PASS CD[bao_tinh]: đúng 2 dòng dữ liệu (được 2)
+PASS CD[bao_tinh]: modal đã đóng sau khi xuất
+PASS CD[bao_tinh]: tiêu đề ô A1 là "NHẬT KÝ BÀO TINH"
+PASS CD[bao_tinh]: tên sheet là "Nhật Ký Bào Tinh"
+PASS CD[bao_tinh]: có gộp A3:B3 và A4:B4
+PASS CD[bao_tinh]: nhãn tại A3/A4, giá trị sang C3/C4
+PASS Lệch chuẩn: file Sấy 2 vẫn tạo được
+PASS Lệch chuẩn: lô volume dạng chữ xuất đúng "0.0750 m³"
+PASS Lệch chuẩn: file Bào Tinh vẫn tạo được
+PASS Lệch chuẩn: lô thiếu kích thước hiển thị "—" thay vì "undefined"
+PASS Gộp ô: có merge A3:B3 và A4:B4
+PASS Gộp ô: nhãn A3 "Họ và tên..." + giá trị C3 "Nguyễn Văn A"
+PASS Gộp ô: "Bộ phận:" tại F3 + giá trị G3
+PASS Không có lô: không tạo file
+PASS Không có lô: modal còn mở để sửa bộ lọc
+PASS Ngày vào CD: Bào Tinh ưu tiên baoTinhDate
+PASS Ngày vào CD: Bào Tinh không override → mốc cuối stageHistory
+PASS Ngày vào CD: Sấy 2 ưu tiên say2Date
+PASS Ngày vào CD: Sấy 1 = ngày tạo lô
+PASS Định dạng: ISO → dd/mm/yyyy
+PASS Định dạng: dd/mm/yyyy → ISO (nhận 1 chữ số)
+PASS Định dạng: từ chối ngày không hợp lệ (31/02/2026, 13/13/2026, rác)
+PASS Ngày CD: lọc từ 2026-10-01 vẫn thấy lô vào bào tinh 09/10
+PASS Ngày CD: cột Thời gian hiển thị ngày vào bào tinh 09/10/26
+PASS Ngày CD: lọc đến 2026-09-30 thấy lô vào bào tinh 05/09
+PASS Ngày CD: loại lô vào bào tinh 09/10 (ngoài khoảng)
+PASS Ngày CD: Sấy 2 lọc từ 15/09 vẫn thấy lô (ngày thực tế 20/09)
+PASS Ngày CD: cột Thời gian hiển thị 20/09/26 (ngày vào Sấy 2)
+───────────────────────────
+EXPORT-STAGE: 67 PASS, 0 FAIL
+PASS QC: mở modal xuất
+PASS QC: select năm có 2025 & 2026
+PASS QC: select tuần gộp đúng Tuần 33/34
+PASS QC: select thành phẩm có "Ván 1200x382x9" và hàng mẫu
+PASS QC: xuất được 1 file
+PASS QC: tên file QC_XuatHang_*.xlsx
+PASS QC: sheet "QC Xuất Hàng"
+PASS QC: đủ 3 dòng dữ liệu
+PASS QC: tổng số lượng = 22
+PASS QC: dòng có định mức có thể tích > 0
+PASS QC: dòng ngoài kế hoạch thể tích = trống
+PASS QC: lọc năm 2025 còn 1 dòng
+PASS QC: lọc tuần 34 còn 1 dòng (rate-2)
+PASS QC: lọc vô hiệu -> không tạo file
+PASS QC: lọc vô hiệu -> modal còn mở (để sửa)
+PASS HR[NV]: xuất được file NhanSu_NhanVien_*.xlsx
+PASS HR[NV]: sheet "Nhân Viên"
+PASS HR[NV]: đủ 3 nhân viên
+PASS HR[NV]: trạng thái hiển thị tiếng Việt (Tạm nghỉ)
+PASS HR[NV]: lọc bộ phận Xưởng 1 còn 2 người
+PASS HR[NV]: ghi chú bộ phận trên dòng phụ đề
+PASS HR[CC]: xuất được file ChamCongNgay
+PASS HR[CC]: NV01 Đi làm + vị trí Ép ván
+PASS HR[CC]: NV03 Vắng (không phép)
+PASS HR[CC]: NV02 chưa chấm vẫn nằm trong danh sách
+PASS HR[TKĐL]: xuất được file TK_DiLam
+PASS HR[TKĐL]: có dòng NV01 với 1 ngày công
+PASS HR[TKĐL]: có dòng TỔNG CỘNG
+PASS HR[VT]: đủ 2 vị trí
+PASS HR[VT]: vị trí Ép ván có cột số NV kỹ năng
+PASS HR[GM]: 1 bản ghi giờ máy
+PASS HR[GM]: giờ vào/ra + nhãn khớp "Đi làm"
+PASS HR[NP]: đủ 2 đơn
+PASS HR[NP]: đơn duyệt có "Đồng ý" + người duyệt
+PASS HR[NP]: đơn chờ có "Chờ duyệt"
+PASS HR[TKNP]: chỉ NV có đơn ĐÃ DUYỆT (Nguyễn Văn A)
+PASS HR[TKNP]: tổng 1 lần / 3 ngày
+PASS HR[TD]: đủ 2 nhu cầu
+PASS HR[TD]: tổng cần 6 / đã tuyển 4 / thiếu 2
+PASS HR[NSC]: đủ 2 dòng
+PASS HR[NSC]: tổng cần 10 / có 7 / thiếu 3
+PASS HR: lọc vô hiệu -> không tạo file
+PASS HR: lọc vô hiệu -> modal còn mở
+PASS HR: chọn TK Đi Làm -> hiện ô Tháng, ẩn ô Ngày
+PASS HR: chọn Chấm Công Ngày -> hiện ô Ngày, ẩn ô Tháng
+───────────────────────────
+EXPORT-HR-QC: 45 PASS, 0 FAIL
+PASS LỊCH: Chủ nhật 06/09 là ngày nghỉ theo thứ
+PASS LỊCH: 02/09 là ngày nghỉ/lễ riêng
+PASS LỊCH: 03/09 là ngày làm việc
+PASS LỊCH: tháng chưa cài lịch -> CN vẫn nghỉ mặc định
+PASS LỊCH: hrIsRestDay phủ cả nghỉ theo thứ & lễ
+PASS SPLIT: ngày thường 07:00–19:00 -> HC 540, TC 90
+PASS SPLIT: Chủ nhật đi làm -> HC 0, toàn bộ TC 630
+PASS SPLIT: ngày lễ đi làm đủ ngày -> HC 0, TC 540
+PASS OT: giờ tăng ca thực tế ngày CN = 630 phút
+PASS OT: giờ tăng ca thực tế ngày lễ = 540 phút
+PASS LỊCH: grid đủ 30 ngày
+PASS LỊCH: ô 02/09 tô nghỉ/lễ riêng
+PASS LỊCH: bấm ô lễ -> bỏ đánh dấu
+PASS LỊCH: bấm ngày thường -> thành nghỉ/lễ
+PASS LỊCH: nút nghỉ theo thứ hiện đủ 7 thứ
+PASS LỊCH: submit lưu tháng 10 vào state
+PASS LỊCH: submit ghi localStorage (bamboo_tracker_hr_calendar_v1)
+PASS TS: chọn Bảng Chấm Công Tháng -> hiện ô Tháng, ẩn ô Ngày
+PASS TS: dựng được dữ liệu xuất
+PASS TS: tiêu đề "BẢNG CHẤM CÔNG BỘ PHẬN XƯỞNG 2"
+PASS TS: dòng "Tháng 9 năm 2026"
+PASS TS: ĐÃ BỎ dòng "Khối/xưởng" (bộ phận nằm trong tiêu đề)
+PASS TS: tiêu đề GỘP TOÀN BỘ chiều rộng bảng (36 cột)
+PASS TS: tiêu đề bôi đậm + căn giữa
+PASS TS: chú giải gộp 5 ô cuối (32→36)
+PASS TS: header có Họ tên / Chức vụ / Công
+PASS TS: dòng thứ có CN
+PASS TS: cột tổng có "Ngày Công"
+PASS TS: mỗi nhân viên 2 dòng HC/TC
+PASS TS: chức vụ lấy từ hồ sơ (TT)
+PASS TS: HC ngày 03 = 9
+PASS TS: TC ngày 03 = 1.5
+PASS TS: CN 06 đi làm -> HC trống, TC 10.5
+PASS TS: ngày lễ 02 không làm -> "NL"
+PASS TS: ngày lễ 02 đi làm -> HC trống, TC 9
+PASS TS: CN 06 không làm -> HC "-", TC trống
+PASS TS: Ngày Công e1 = 2 (03 + 06)
+PASS TS: Giờ HC e1 = 9
+PASS TS: Giờ TC e1 = 12
+PASS TS: có dòng TỔNG CỘNG
+PASS TS: tổng Giờ TC = 21 (12 + 9)
+PASS TS: fills tô cột Chủ nhật (xanh) & lễ (vàng)
+PASS TS: fills tô vùng dữ liệu cột nghỉ
+PASS TS: định dạng số 1 chữ số lẻ (9.0)
+PASS TS: gộp ô tên 2 dòng
+PASS TS: xuất được file NhanSu_ChamCongThang_2026-09_*
+PASS TS: sheet "Chấm Công Tháng"
+PASS BÙ: bấm ô Chủ nhật -> thành ngày làm bù (xanh lá)
+PASS BÙ: bấm lần nữa -> trả lại nghỉ theo thứ
+PASS BÙ: lưu workDays vào state
+PASS BÙ: Chủ nhật 06/09 làm bù -> là ngày làm việc
+PASS BÙ: Chủ nhật khác (13/09) vẫn nghỉ theo thứ
+PASS BÙ: bảng chấm công — CN 06 làm bù -> HC 9 + TC 1.5 (không còn TC 10.5)
+PASS BÙ: cột làm bù không còn tô màu nghỉ
+PASS BÙ: Chủ nhật 13/09 (không làm bù) vẫn tô màu nghỉ
+PASS TẮT CN: weekdaysOff lưu rỗng
+PASS TẮT CN: Chủ nhật 06/12 thành ngày làm việc
+PASS FORM: mở modal nhân viên -> ô ngày nghỉ ẩn (trạng thái đang làm)
+PASS FORM: chọn "Đã nghỉ việc" -> hiện ô ngày nghỉ việc
+PASS FORM: submit lưu ngày nghỉ việc vào hồ sơ nhân viên
+PASS NGHỈ: người nghỉ 15/9 vẫn có trong bảng tháng 9
+PASS NGHỈ: tên kèm "(nghỉ từ 15/09/26)"
+PASS NGHỈ: HC ngày 14 = 9, TC 1.5
+PASS NGHỈ: ngày 15 (ngày nghỉ cuối) HC 9
+PASS NGHỈ: sau ngày nghỉ (CN 20/9) ô TRỐNG, không phải "-"
+PASS NGHỈ: Ngày Công e3 = 2 (14 + 15)
+PASS NGHỈ: từ tháng sau ẩn khỏi bảng chấm công
+PASS NGHỈ: bảng chấm công ngày 15/9 vẫn có người nghỉ
+PASS NGHỈ: bảng ngày 16/9 (sau ngày nghỉ) không còn
+PASS Cloud: snapshot chứa hrWorkCalendar
+PASS Cloud: cloudCore có khóa hrWorkCalendar
+PASS Cloud: applyFireSnapshot nhận lịch từ mây
+PASS Cloud: dữ liệu mây lưu localStorage
+───────────────────────────
+HR-TIMESHEET: 73 PASS, 0 FAIL
+PASS QC: load khi chưa có dữ liệu -> mảng rỗng
+PASS QC: load từ localStorage + tự điền năm thiếu
+PASS QC: thẻ tổng hợp — chip "Tất cả" + chip tuần có dữ liệu (Tuần 33)
+PASS QC: thẻ tổng hợp — KPI số lượng mặc định (tất cả tuần) = 10
+PASS QC: bảng hiển thị tên hàng tra từ định mức
+PASS QC: cột thể tích quy đổi = thể tích 1 TP × số lượng (10 × 0,004126 m³)
+PASS QC: dòng ngoài danh sách có nhãn "ngoài kế hoạch"
+PASS QC: dòng tổng hiển thị đúng (10 + 5 = 15)
+PASS QC: mở modal thành công
+PASS QC: select năm của modal có năm hiện tại (2026)
+PASS QC: select tuần của modal có đủ 53 tuần
+PASS QC: nạp kế hoạch tuần 33 -> dòng thành phẩm theo kế hoạch (rate-2, KH 100)
+PASS QC: thông tin kế hoạch tuần hiển thị đúng
+PASS QC: thêm TP ngoài kế hoạch -> hiện ô nhập tên (không dùng required trình duyệt)
+PASS QC: ẩn ô nhập tên mới
+PASS QC: submit từ danh sách -> thêm đúng 1 dòng
+PASS QC: dòng mới đủ trường (tên/mã/tuần/năm/SL/ghi chú)
+PASS QC: đóng modal sau khi thêm
+PASS QC: thêm TP ngoài kế hoạch -> hiện dòng "ngoài kế hoạch"
+PASS QC: thêm TP ngoài kế hoạch -> lưu tên + không có mã
+PASS QC: chặn khi chưa điền số lượng nào
+PASS QC: chặn thiếu tuần
+PASS QC: chặn thành phẩm ngoài danh sách thiếu tên
+PASS QC: sửa số lượng trực tiếp
+PASS QC: sửa tuần trực tiếp -> "Tuần 34"
+PASS QC: sửa ghi chú trực tiếp (cắt khoảng trắng)
+PASS QC: sửa dòng được ghi xuống localStorage
+PASS QC: thẻ tổng hợp — chọn Tuần 33 → SL = 10 + 5 = 15
+PASS QC: thẻ tổng hợp — chọn Tuần 33 → thể tích ≈ 0,041 m³
+PASS QC: thẻ tổng hợp — chọn Tuần 33+34 → SL = 77
+PASS QC: thẻ tổng hợp — không chọn tuần nào → tất cả = 77
+PASS QC: thẻ tổng hợp — năm không có trong danh sách → tự về "Tất cả các năm" (KPI = 77)
+PASS QC: xóa dòng khỏi danh sách
+PASS QC: viewer không có quyền sửa tab QC
+PASS QC: input bảng bị khóa với người không đủ quyền
+PASS Biểu đồ: có 3 bộ dữ liệu (Kế Hoạch / Đã Ép / Số Lượng Xuất)
+PASS Biểu đồ: bộ thứ 3 là "Số Lượng Xuất"
+PASS Biểu đồ: mã hàng sắp theo tổng (rate-2 trước rate-1)
+PASS Biểu đồ: SL xuất theo mã (12 tấm rate-2 trước, 30 tấm rate-1 sau)
+PASS Biểu đồ: dòng năm khác / không khớp mã bị loại (999 & 50 không xuất hiện)
+PASS Biểu đồ: cột Kế Hoạch giữ nguyên (rate-2 = 100 tấm)
+PASS Biểu đồ: cột Đã Ép theo thể tích fpDim (40 tấm rate-1)
+PASS Mây: snapshot chứa qcExports
+PASS Mây: cloudCore bao gồm qcExports
+PASS Mây: applyFireSnapshot nhận qcExports từ mây
+PASS THẺ QC: index.html có launcher 3 thẻ (Xuất Hàng / Kiểm Đầu Vào / Kiểm Sau Sản Xuất)
+PASS THẺ QC: đếm thẻ Xuất Hàng = "4 dòng · 25 tấm"
+PASS THẺ QC: đếm thẻ Kiểm Đầu Vào = "Sắp có" (bổ sung sau)
+PASS BẢNG: không lọc → hiện đủ 4 dòng
+PASS BẢNG: cột Tuần chỉ đọc (badge — tuần đã nhập đầu vào không cần sửa)
+PASS THẺ QC: qcOpenCard(xuất hàng) mở pop-up (overlay show)
+PASS THẺ QC: bảng xuất bỏ ẩn khi mở pop-up
+PASS THẺ QC: bấm lại cùng thẻ → đóng pop-up + thẻ ẩn lại
+PASS LỌC: tìm "1200x382x9" → bảng chỉ còn 2 dòng khớp (m1, m3)
+PASS LỌC: dòng tổng tính trên kết quả lọc (10 + 7 = 17)
+PASS LỌC: dải kết quả lọc tổng hợp (2/4 dòng)
+PASS LỌC: năm 2026 + Tuần 33 → bảng chỉ còn 2 dòng tuần 33
+PASS LỌC: KPI số lượng theo bộ lọc = 15
+PASS LỌC: xóa lọc → hiện lại đủ 4 dòng + dải kết quả ẩn
+PASS LỌC: không khớp → bảng báo rỗng + gợi ý "Xóa Lọc"
+
+=== KẾT QUẢ: 60 PASS / 0 FAIL ===
+PASS CẶP TUẦN: ngày ở tuần 39 (23/09) → cặp 39–40
+PASS CẶP TUẦN: ngày ở tuần 40 (29/09) → VẪN cặp 39–40 (không chồng lấn)
+PASS CẶP TUẦN: tuần 41 (07/10) → cặp 41–42 · nhãn "Tuần 41–42"
+PASS CẶP TUẦN: tuần 53 tính riêng (không có tuần 54)
+PASS THÀNH PHẨM 2 TUẦN: ngày 23/09 → gộp Ép Ván cặp 39–40 (sp1 = 500 · sp2 = 200 · loại lượt tuần 38)
+PASS THÀNH PHẨM 2 TUẦN: ngày 07/10 (cặp 41–42) → danh sách rỗng (chưa có lượt ép)
+PASS VỊ TRÍ KIỂM: khớp mềm tên chứa "kiểm" ("QC Kiểm ván+thanh") · loại vị trí Ép ván
+PASS NGƯỜI KIỂM: 23/09 có 2 người bộ phận QC (người chính + giờ, giờ ra trống = hết ca)
+PASS GIỜ KIỂM HC/TC: 07:00–11:30 + 13:00–hết ca = 9h HC · 0h TC (hrSplitHoursHCDate phút → chia 60)
+PASS SNAPSHOT: hrQcFinalSnapshot lưu tên + giờ + HC/TC cùng lượt (phòng khi bố trí bị xóa)
+PASS LOAD: chưa có dữ liệu → mảng rỗng
+PASS LOAD ĐỊNH MỨC: chưa có → object rỗng
+PASS LOAD: nạp từ localStorage
+PASS LƯU: 1 lượt kiểm mới (Xưởng 2 · ngày 23/09 · đầu vào 500)
+PASS LƯU: SNAPSHOT người kiểm + giờ cùng lượt (tự động từ Nhân Sự)
+PASS LƯU: localStorage ghi đúng key bamboo_tracker_qc_final_v1
+PASS CHẶN: thiếu Đầu vào kiểm → không lưu
+PASS CHẶN: Đạt/Ngoại lệ/Loại đều trống → không lưu
+PASS CHẶN: Đạt + Ngoại lệ + Loại (520) > Đầu vào (500) → không lưu
+PASS CÔNG THỨC: Tổng kiểm = Đạt + Ngoại lệ + Loại = 480
+PASS CÔNG THỨC: Tổng đạt = Đạt + Ngoại lệ = 440
+PASS CÔNG THỨC: Tỉ lệ lỗi = Loại ÷ Tổng kiểm ≈ 8,33%
+PASS CÔNG THỨC: Công suất = Tổng kiểm ÷ giờ (480 ÷ 9 ≈ 53,33 tấm/h) · chưa có định mức → Hiệu suất null
+PASS HIỂN THỊ: nhãn vị trí "Xưởng 2"
+PASS POPUP ĐỊNH MỨC: bấm nút mở được (overlay show) + bảng có hàng tháng
+PASS ĐỊNH MỨC 2 LOẠI: lưu tháng 9 = { thanh: 500 thanh/h · van: 600 tấm/h } (state + localStorage)
+PASS CHẶN ĐỊNH MỨC: cả 2 ô trống → không lưu
+PASS ĐỊNH MỨC CŨ (số thuần): qcFinalRateEntryOf hiểu là định mức Kiểm Ván
+PASS ĐỊNH MỨC THEO LOẠI: rec1 (Kiểm Ván) lấy đúng ĐM van — Công suất 53,33 ÷ 600 ≈ 8,89%
+PASS POPUP ĐỊNH MỨC: đóng được (overlay ẩn)
+PASS THẺ NGÀY: đầu thẻ có Ngày 23/09/26 (dd/mm/yy) + vị trí Xưởng 2
+PASS THẺ NGÀY: NGƯỜI KIỂM tự động (Nguyễn Văn A + giờ 07:00–11:30, "+1 người khác")
+PASS THẺ NGÀY: GIỜ HC/TC (9h HC · 0h TC)
+PASS THẺ NGÀY: đủ Tổng kiểm 480 · Tổng đạt 440 · Tỉ lệ lỗi 8,3%
+PASS THẺ NGÀY: chip LOẠI KIỂM + ĐM tấm 600 + CÔNG SUẤT 53,3 + HIỆU SUẤT 8,9% (định mức theo loại)
+PASS THẺ NGÀY: dòng lượt kiểm có nút Sửa/Xóa gắn data-perm="qc"
+PASS THỐNG KÊ: đủ Lượt kiểm · Đầu vào · Tổng kiểm · Tổng đạt · Loại · Tỉ lệ lỗi · Công suất TB
+PASS MINI CARD: đếm "1 lượt · 440 tấm đạt"
+PASS MINI CARD: renderQcView cập nhật đếm thẻ launcher
+PASS TỒN KIỂM: sp1 Tổng 500 · Đã kiểm 200 · CÒN LẠI 300 (cùng cặp 39–40)
+PASS TỒN KIỂM: sp2 chưa kiểm → Còn lại = Tổng (200)
+PASS TỒN KIỂM: lượt kiểm KHÔNG có pairKey (dữ liệu cũ) vẫn tính theo ngày
+PASS DROPDOWN NỔI: mở → node PORTAL ra `#qc-detail-overlay` (lớp fixed phủ màn hình — không rơi đáy trang)
+PASS DROPDOWN NỔI: neo bằng INLINE STYLE — position:absolute + z-index:240 (thắng MỌI stylesheet cũ do cache) + top/left/width là số
+PASS DANH SÁCH THẺ: mỗi thẻ 2 dòng — tên + "Tổng 500 · Đã kiểm 200 · Còn lại 300"
+PASS CHỌN THẺ: ô Đầu vào kiểm tự điền số CÒN LẠI (300 — không phải tổng 500)
+PASS DROPDOWN NỔI: đóng → node TRỞ VỀ ô Đầu vào kiểm (không còn trong overlay)
+PASS KIỂM THANH: đơn vị các ô số lượng đổi thành "thanh" + ẨN picker thành phẩm
+PASS KIỂM VÁN: đơn vị về "tấm" + hiện lại picker (Xưởng 2)
+PASS SỬA: nạp lại đúng lượt vào form + banner "đang sửa" hiện
+PASS SỬA: đạt 380 → 400 (Tổng kiểm 500 · Tổng đạt 460 · vẫn 1 lượt · không tạo lượt mới)
+PASS XÓA: xóa lượt kiểm + ghi tombstone (qcFinalRecords)
+PASS XƯỞNG 1: ẩn nút chọn thành phẩm · hiện chip "Sắp có"
+PASS XƯỞNG 2: hiện lại nút chọn thành phẩm · ẩn chip "Sắp có"
+PASS CẤU TRÚC (index.html): thẻ qc-final-card có form · ô Kiểm Loại · picker thành phẩm · thẻ ngày
+PASS CẤU TRÚC (index.html): nút "Định mức" TRONG form + popup bảng định mức 2 loại (bỏ thanh .x2-rate-bar cũ)
+PASS CẤU TRÚC (index.html): mini card không còn chú thích "sắp bổ sung"
+PASS CẤU TRÚC (qc.js): đếm thẻ qc-final-card dùng qcFinalCardCount + render trong renderQcView
+PASS CẤU TRÚC (events.js): wire form · Loại kiểm · picker · sửa/xóa · popup định mức + đóng picker ngoài
+PASS CẤU TRÚC (js/qc-final.js): tồn kiểm theo cặp tuần (pairKey) + đơn vị theo Loại kiểm
+PASS CẤU TRÚC (state.js): 2 key bamboo_tracker_qc_final_v1 + bamboo_tracker_qc_final_rate_v1
+PASS CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · history (DOMAINS) · main (load boot)
+PASS CẤU TRÚC (sw.js): CACHE_NAME v194 + js/qc-final.js vào APP_SHELL
+PASS CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)
+PASS CẤU TRÚC (dropdown nổi): portal ra overlay + neo tọa độ (mở xuống/lên) + giữ neo khi cuộn/resize/Esc
+PASS CẤU TRÚC (cloud.js): đăng ký SW với updateViaCache:"none" — sw.js luôn tải mới, hết dính bundle cũ
+PASS CẤU TRÚC (package.json): tests/qc-final.test.mjs đã vào npm test
+
+=== qc-final.test.mjs: 67 PASS · 0 FAIL ===
+PASS DANH SÁCH LÒ: mặc định 15 lò LS1..LS15 + vị trí khai báo thêm (không trùng)
+PASS DANH SÁCH LÒ: vị trí khai báo thêm được nối vào (16 lò)
+PASS LOẠI SẤY TỰ ĐỘNG: LS3 có lô Sấy 1 → "say1" (lô ở KHO cùng vị trí KHÔNG tính)
+PASS THỂ TÍCH + SỐ LƯỢNG LÒ: LS3 = 1,5 m³ · 500 thanh (chỉ cộng lô đang sấy)
+PASS NGÀY ĐÃ SẤY: LS3 ≈ 5 ngày · LS4 ≈ 2 ngày (tính theo lần vào công đoạn HIỆN TẠI)
+PASS TRẠNG THÁI XÁM: lò trống (LS5) = idle · thể tích 0
+PASS TRẠNG THÁI XANH: đang sấy chưa đo độ ẩm (LS3) = active
+PASS UPSERT ĐỘ ẨM: lưu số đo hôm nay (id kh-<ngày>-<lò>) + đạt ngưỡng → VÀNG (ready)
+PASS CẬP NHẬT SỐ ĐO: ghi lại cùng ngày/lò → ghi đè (không nhân đôi)
+PASS SỐ ĐO CŨ 4 NGÀY: quá hạn 3 ngày → coi như CHƯA có độ ẩm (humidity null)
+PASS SỐ ĐO TRONG 3 NGÀY: vẫn dùng được (LS4 đo 2 ngày trước ≤ 12% → VÀNG)
+PASS LÒ TRỐNG có số đo → vẫn XÁM (idle), không vàng
+PASS XÓA SỐ ĐO: upsert giá trị rỗng → gỡ bản ghi + tombstone chặn mây
+PASS NGƯỠNG MẶC ĐỊNH: Sấy 1 ≤ 15% · Sấy 2 ≤ 12%
+PASS LƯU NGƯỠNG: Sấy 1 = 13,5% · Sấy 2 = 10% (state + localStorage)
+PASS CHẶN NGƯỠNG SAI: >100% không lưu
+PASS SAVE READINGS: ghi localStorage key riêng
+PASS LOAD KILN DATA: nạp lại readings + ngưỡng từ localStorage
+PASS MÂY: snapshot chứa qcKilnReadings + qcKilnThresholds
+PASS MÂY: cloudCore có 2 khóa mới
+PASS MÂY: applyFireSnapshot nhận số đo từ mây + ngưỡng theo mây
+PASS VẼ BẢNG LÒ: 15 thẻ · 2 hàng · xếp TỪ PHẢI SANG TRÁI (LS12 trái … LS1 phải — đúng sơ đồ xưởng)
+PASS HÀNG 2 NGƯỢC CHIỀU: LS15 bên trái → LS14 → LS13 bên phải (đúng sơ đồ)
+PASS LÒ RỘNG + LỐI ĐI: LS13/14/15 gắn class kiln-wide (x2) + dải "Lối đi" nằm GIỮA 2 hàng
+PASS 3 MÀU TRẠNG THÁI: LS4 vàng (kiln--ready + chip Đạt ẩm) · LS3 xanh (kiln--active) · lò trống xám (kiln--idle)
+PASS THẺ LÒ: mã lò + chip loại sấy (Sấy 1/Sấy 2) + icon Vào Kho + ngày sấy + độ ẩm
+PASS CHÚ GIẢI: đếm trạng thái + ngưỡng đạt (Sấy 1 ≤ 15% · Sấy 2 ≤ 12%)
+PASS DANH SÁCH NAN: thẻ lò có pop .kiln-nan-pop — mỗi lô 1 dòng đúng mẫu "1250x22x7 A SL 1500"
+PASS DANH SÁCH NAN — BỎ THÔNG TIN CŨ: hết title "N lô: …" (không lặp mã lô/m³/ngày đã có trên thẻ)
+PASS DANH SÁCH NAN — LÒ TRỐNG: LS5 KHÔNG có pop danh sách (chỉ lò có lô mới hiện)
+PASS DANH SÁCH NAN — CHẠM MỞ MENU: khối danh sách nằm TRƯỚC nút menu (Thêm lô / Vào Kho vẫn bấm được)
+PASS HÀNG 2 — Ô CHỜ XÂY THÊM: đúng 6 ô kiln-todo (12 cột khớp hàng 1: 6 ô ×1 + 3 lô rộng ×2)
+PASS HÀNG 2 — CĂN PHẢI: ô chờ xây đứng TRƯỚC LS15 (bên trái), LS13 nằm sau cùng (bên phải — dưới LS1+LS2)
+PASS HÀNG 2 — Ô CHỜ XÂY: KHÔNG có data-kiln (đếm lò thật vẫn 15) · không kéo thả được
+PASS HÀNG 2 — CHẠM Ô CHỜ XÂY: không mở menu (không có kiln-open trên bảng)
+PASS KHUNG MẶC ĐỊNH: Bảng Điều Khiển hiện · Bảng Dữ Liệu ẩn · tab Điều Khiển active
+PASS CHUYỂN KHUNG: bấm "Bảng Dữ Liệu" → khung dữ liệu hiện + nhớ theo máy
+PASS QUAY LẠI: bấm "Bảng Điều Khiển" → khung điều khiển hiện + bảng lò vẽ lại
+PASS CHUYỂN KHO NHANH (hàm chung): lô LS6 vào Kho · ngày hôm nay · lịch sử +kho · có undo
+PASS CHUYỂN KHO NHANH: lò LS6 về trạng thái XÁM (không còn lô đang sấy)
+PASS VÀO KHO + ĐỔI VỊ TRÍ: nhập K99 ở prompt → lô LS8 vào Kho đúng vị trí mới
+PASS VÀO KHO — HỦY PROMPT: lô vẫn ở Sấy 1 (không chuyển)
+PASS MENU CHẠM (lò trống): hiện menu + "Thêm Sấy 1" / "Thêm Sấy 2"
+PASS THÊM LÔ TỪ LÒ: mở form Thêm Lô Sấy Mới — vị trí LS5 + công đoạn Sấy 1 điền sẵn
+PASS MENU CHẠM (lò đang sấy): có "Thêm lô" + "Vào Kho"
+PASS KÉO THẢ VÀO KHO: thả thẻ lò LS4 → lô Sấy 2 vào Kho (payload đúng lò)
+PASS ICON VÀO KHO: bấm icon kho trên thẻ lò LS3 → lô Sấy 1 vào Kho
+PASS MINI CARD: chưa nhập hôm nay → "Chưa nhập hôm nay"
+PASS MINI CARD: có số đo hôm nay → "Hôm nay: n/… lò" (gộp 2 lần đo theo LÒ)
+PASS MA TRẬN: 15 hàng lò · 14 ngày (mỗi ngày 2 cột L1/L2) · 30 ô nhập hôm nay (15 lò × 2 lần)
+PASS MA TRẬN — HÔM NAY TRÁI NHẤT: chip "Hôm nay" đứng trước mọi ô ngày cũ, ngày càng cũ càng sang phải
+PASS MA TRẬN — BỎ THEO YÊU CẦU: không còn cột "Đang chứa" / lịch sử riêng / ô chọn ngày
+PASS MA TRẬN — ĐẠT ẨM: số đo ≤ ngưỡng loại sấy tô vàng (km-ok) + số cũ không slot hiểu Lần 1 + giá trị điền sẵn
+PASS MA TRẬN — NGƯỠNG: điền sẵn Sấy 1 = 15% · Sấy 2 = 12%
+PASS LƯU HÔM NAY: L1 nhận "14,5" = 14.5 (giữ id cũ) · L2 tạo id -s2 · ô trống không tạo số
+PASS LƯU HÔM NAY: ghi localStorage + mini card đếm "Hôm nay: 2/… lò" (LS3 cũ + LS1 mới)
+PASS MA TRẬN — SỬA Ô QUÁ KHỨ: prompt nhập 11 → lưu đúng (ngày, lò, Lần 1)
+PASS MA TRẬN — CHẶN SAI: 250 ngoài 0–100 → không lưu
+PASS MA TRẬN — XÓA Ô: để trống → gỡ số đo + tombstone
+PASS CẤU TRÚC (index.html): 2 tab chuyển khung + 2 khung + bảng lò + ô Kho + chú giải
+PASS CẤU TRÚC (index.html): thẻ QC "Độ Ẩm Lò Sấy" — launcher + ngưỡng + MA TRẬN (đã bỏ lịch sử / cột Đang chứa / ô chọn ngày)
+PASS CẤU TRÚC (styles.css): khung ẩn + 3 màu + chip đạt ẩm + menu + lối đi + lò rộng + MA TRẬN (sticky cột Lò · highlight hôm nay · ô nhập số)
+PASS CẤU TRÚC (styles.css): DANH SÁCH NAN trên thẻ lò — pop hover (media hover:hover) + khối tĩnh khi mở menu
+PASS CẤU TRÚC (styles.css): pop NỔI TRÊN CÙNG (hover có z-index:40) + hàng 2 căn phải + lô rộng 2× (calc) + ô chờ xây
+PASS CẤU TRÚC (sw.js): CACHE_NAME v194 + js/kiln.js trong APP_SHELL
+PASS CẤU TRÚC (js): key riêng + nối đủ state/storage/cloud/history/main/events
+
+KẾT QUẢ: 66 pass, 0 fail
+PASS Không TP: lưu được mà không cần chọn thành phẩm
+PASS Không TP: productId rỗng
+PASS Không TP: SL thành phẩm = 0
+PASS Không TP: THỂ TÍCH THÀNH PHẨM = 0
+PASS Không TP: vẫn tính thể tích ván thô tạo ra (96 tấm)
+PASS Có TP + VT tạo ra: lưu được
+PASS Có TP + VT tạo ra: SL tự tính theo thể tích = 2
+PASS Có TP + VT tạo ra: THỂ TÍCH VÁN THÔ > 0
+PASS Có TP + VT tạo ra: THỂ TÍCH THÀNH PHẨM > 0
+PASS Không VT tạo ra: lưu được
+PASS Không VT tạo ra: vanTho rỗng
+PASS Không VT tạo ra: THỂ TÍCH VÁN THÔ = 0
+PASS Không VT tạo ra: SL tự tính theo thể tích = 2 (từ ván thô đã ép trước đó)
+PASS Không VT tạo ra: THỂ TÍCH THÀNH PHẨM > 0
+PASS SL sửa tay: không có ván thô vẫn lưu được lượt ép
+PASS SL sửa tay: finishedQty = 50 (số người dùng nhập)
+PASS Bảo vệ: TP + chỉ có thanh (không phải ván thô) -> không lưu
+PASS Trống cả hai phần -> không lưu
+PASS Chuẩn hóa: "1200x38x16" → "1200×38×16"
+PASS Chuẩn hóa: "1220x2440x9" → "1220×2440×9"
+PASS Gợi ý: có ván thô đã ép "1200×600×9"
+PASS Gợi ý: mô tả "ván thô đã ép" kèm tổng số tấm
+PASS Gợi ý: có loại thanh "A1" (đã dùng ở lượt ép trước)
+PASS recalc: có ván thô → tự tính SL theo thể tích (2)
+PASS recalc: không ván thô → giữ SL người dùng tự nhập (77)
+PASS Highlight: thẻ ngày gắn data-date cho từng ngày
+PASS Highlight: chỉ thẻ ngày cùng ngày được đánh dấu
+PASS Highlight: thẻ ngày được cuộn tới (scrollIntoView)
+PASS Highlight: tự chuyển về khung "Lượt Ép" (khung biểu đồ ẩn)
+PASS Highlight: bấm ngày khác → chuyển highlight sang thẻ ngày đó
+PASS Ghi chú: lưu được ghi chú cho ngày 13/08
+PASS Ghi chú: thẻ ngày 13/08 hiển thị biểu tượng "!" vàng
+PASS Ghi chú: badge mang nội dung giải trình
+PASS Ghi chú: 1 ngày chỉ 1 ghi chú (cập nhật thay vì thêm mới)
+PASS Ghi chú: xóa ghi chú khỏi danh sách
+PASS 2 cột: 4 dataset (3 loại xếp chồng + cột thành phẩm)
+PASS 2 cột: 3 loại dùng stack ép, thành phẩm stack riêng
+PASS 2 cột: trục xếp chồng (stacked: true)
+PASS 2 cột: loại 1 ngày 10/08 = 2 m³
+PASS 2 cột: loại 2 ngày 10/08 = 3 m³
+PASS 2 cột: loại 3 ngày 11/08 = 2 m³ (ván thô đầu vào)
+PASS 2 cột: thành phẩm ngày = 1 và 2 m³
+PASS 2 cột: nhãn 3 loại đã đổi tên (TP ngay / Chỉ BTP / BTP sang TP)
+PASS 2 cột: trục Y hiển thị 1 số thập phân (2 → "2.0", 3.5 → "3.5")
+
+=== KẾT QUẢ: 44 PASS / 0 FAIL ===
+--- A. TOMBSTONE CƠ BẢN ---
+PASS TOMB: trackDeleted ghi dấu vết xóa theo id
+PASS TOMB: dấu vết xóa được lưu localStorage
+PASS TOMB: snapshot mây mang theo deletedIds
+PASS TOMB: cloudCore bao gồm deletedIds (lần xóa là 1 thay đổi thật)
+PASS LỌC: bản ghi cũ hơn lần xóa bị loại khỏi danh sách
+PASS LỌC: bản ghi không có tombstone vẫn giữ
+PASS LỌC: bản ghi MỚI HƠN lần xóa được hồi sinh
+PASS LỌC: tombstone của bản hồi sinh được gỡ (thêm lại có chủ đích)
+PASS LỌC: changed.flag bật lên khi có thay đổi
+--- B. QUYỀN ĐẨY DỮ LIỆU (manager được đẩy) ---
+PASS QUYỀN: role=admin → canPushToCloud=true
+PASS QUYỀN: role=editor → canPushToCloud=true
+PASS QUYỀN: role=manager → canPushToCloud=true
+PASS QUYỀN: role=viewer → canPushToCloud=false
+PASS QUYỀN: chưa đăng nhập → không được đẩy
+--- C. LAN TRUYỀN LẦN XÓA QUA handleRemoteSnapshot ---
+PASS MÁY B: bản p1 đã bị máy A xóa bị GỠ khỏi máy (không còn sống lại)
+PASS MÁY B: tombstone p1 được hợp nhất từ mây
+PASS MÁY B: tombstone p1 được lưu localStorage
+PASS MÁY B: bản mới p3 trên mây được bổ sung
+PASS MÁY B: bản p2 vẫn giữ nguyên
+--- D. applyFireSnapshot TÔN TRỌNG DẤU VẾT XÓA ---
+PASS TẢI MÂY: p1 (đã có tombstone) KHÔNG được nhận về
+PASS TẢI MÂY: p2 vẫn được nhận về
+PASS TẢI MÂY: p1 nhập lại với dấu thời gian MỚI HƠN lần xóa → hồi sinh
+PASS TẢI MÂY: tombstone p1 được gỡ sau hồi sinh
+--- E. materialPlan LỌC TUẦN ĐÃ XÓA ---
+PASS NL-PLAN: tuần đã bị xóa (W36) không được nhận lại
+PASS NL-PLAN: tuần W37 có bản mới hơn lần xóa được hồi sinh
+PASS NL-PLAN: tombstone W37 gỡ, W36 giữ lại làm dấu vết
+PASS NL-PLAN: changed.flag bật lên
+--- F. NẠP TOMBSTONE TỪ localStorage + DỌN CŨ ---
+PASS NẠP: tombstone còn hạn được nạp lại từ localStorage
+PASS NẠP: tombstone quá cũ (>90 ngày) bị dọn sạch
+--- G. UNTRACK: HOÀN TÁC PHỤC HỒI BẢN GHI ---
+PASS UNTRACK: tombstone b1/b2 được ghi
+PASS UNTRACK: gỡ b1 giữ lại b2
+PASS UNTRACK: gỡ b2 -> danh sách tombstone rỗng được dọn hẳn
+════════════════════════════════════════════
+TOMBSTONE: 32 PASS, 0 FAIL
+PASS THẺ: licznik Nhân Viên = 2/3 NV (tylko aktywni)
+PASS THẺ: licznik Chấm Công = data + 1 đi làm + 1 chờ duyệt
+PASS THẺ: licznik Vị Trí = 1 vị trí
+PASS THẺ: licznik Giờ Máy = 1 giờ máy
+PASS THẺ: licznik Xin Nghỉ Phép = 1 chờ duyệt
+PASS THẺ: licznik Thống Kê Nghỉ = 2 ngày nghỉ (duyệt)
+PASS THẺ: licznik Thống Kê Đi Làm = 100% đi làm
+PASS THẺ: licznik Nhân Sự Cần = 1 tuyển · 2 thiếu
+PASS THẺ: na start wszystkie bảngi ukryte (display:none)
+PASS THẺ: hrOpenCard(emp) zwraca true (bảng był ukryty)
+PASS THẺ: bảng Nhân Viên widoczny (bez hr-card-hidden i rate-table-collapsed)
+PASS THẺ: pozostałe bảngi nadal ukryte
+PASS THẺ: hrOpenCard(att) otwiera Chấm Công
+PASS THẺ: widoczny wyłącznie Chấm Công
+PASS THẺ: ponowne hrOpenCard(att) zwraca false (ukryto)
+PASS THẺ: po ukryciu znów wszystkie schowane
+PASS THẺ: syncHrMiniActive + updateHrCardGrid nie rzucają wyjątku
+PASS THẺ: mở thẻ → overlay pop-up bật (classList show)
+PASS THẺ: tiêu đề modal gán (fallback "Chi Tiết Nhân Sự")
+PASS THẼ: thẻ emp đang mở (không ẩn) khi modal hiển thị
+PASS THẺ: đóng pop-up → overlay tắt (không show)
+PASS THẺ: sau khi đóng → thẻ emp lại bị ẩn (hr-card-hidden)
+PASS CUỘN: 10 bảng Nhân Sự đều bọc khung .table-responsive.table-scroll
+PASS CUỘN (styles.css): .table-scroll dùng chung với .hr-table-scroll (max-height 60vh + thead sticky)
+
+WYNIK: 24 pass, 0 fail
+PASS HR-ATT: load khi chưa có dữ liệu -> mảng rỗng
+PASS HR-ATT: load chấm công từ localStorage
+PASS HR-ATT: mở modal vị trí thành công
+PASS HR-ATT: select bộ phận của modal có danh mục + mục rỗng
+PASS HR-ATT: thêm vị trí "Ép ván" thành công
+PASS HR-ATT: chặn vị trí trùng tên
+PASS HR-ATT: có 2 vị trí (Ép ván, Bào tinh)
+PASS HR-ATT: bảng vị trí hiển thị tên + đếm NV kỹ năng
+PASS HR-ATT: ô kỹ năng render checkbox cho từng vị trí
+PASS HR-ATT: kỹ năng đã chọn được tick sẵn (checked)
+PASS HR-ATT: bảng vị trí đếm đúng 1 NV có kỹ năng "Ép ván"
+PASS HR-ATT: chấm Đi làm tạo 1 bản ghi (status work)
+PASS HR-ATT: attStatusOf trả "work"
+PASS HR-ATT: id bản ghi ổn định att-<ngày>-<NV>
+PASS HR-ATT: ghi chú lưu vào bản ghi cùng ngày
+PASS HR-ATT: bấm chip vị trí khi chưa chấm -> tự chấm Đi làm + phân vị
+PASS HR-ATT: bấm chip lần nữa -> bỏ phân vị (vẫn Đi làm)
+PASS HR-ATT: bỏ chấm xóa bản ghi
+PASS HR-ATT: ghi Vắng (không phép)
+PASS HR-ATT: đơn ĐÃ DUYỆT phủ ngày -> trạng thái "leave"
+PASS HR-ATT: ngoài phạm vi đơn -> không phải leave
+PASS HR-ATT: đơn CHỜ DUYỆT không đổi trạng thái chấm công
+PASS HR-ATT: approvedLeaveOn trả đúng đơn
+PASS HR-ATT: bảng chấm công hiển thị "Nghỉ Có Phép ✓" + người duyệt
+PASS HR-ATT: ngày không có đơn -> cột đơn nghỉ để trống
+PASS HR-ATT: chip vị trí bị khóa (disabled) khi nghỉ có phép
+PASS HR-ATT: ngày vắng hiển thị option "absent" chọn sẵn
+PASS HR-ATT: đơn chờ duyệt hiện chip riêng (đúng ngày phủ đơn)
+PASS HR-ATT: thống kê NV A — 1 công, 2 nghỉ phép, 1 vắng, tỷ lệ 25%
+PASS HR-ATT: NV B chưa chấm ngày nào -> counted 0, rate null, vẫn liệt kê
+PASS HR-ATT: NV đã nghỉ việc (C) không nằm trong thống kê
+PASS HR-ATT: NV vào làm ngày 20/06 chỉ tính từ ngày vào (11 ngày chưa chấm)
+PASS HR-ATT: chips thống kê có tỷ lệ đi làm tổng
+PASS HR-ATT: bảng thống kê có cột tỷ lệ 25% cho NV A
+PASS HR-ATT: lọc bộ phận "Xưởng 2" -> chỉ còn NV B (không NV A)
+PASS HR-ATT: bỏ lọc ("all") -> hiện lại cả NV A và NV B
+PASS HR-ATT: anim có 6 khung (tên card + 5 bộ phận)
+PASS HR-ATT: anim đủ 5 bộ phận Xưởng 1/Xưởng 2/QC/Cơ Điện/Văn Phòng
+PASS HR-ATT: anim có sparkline SVG + nhãn hôm nay
+PASS HR-ATT: anim chart có trục Y (gióng ngang + nhãn 0..100)
+PASS HR-ATT: anim chart có vạch trục X + điểm nút
+PASS HR-ATT: anim Xưởng 1 tỷ lệ hôm nay 0% (mẫu số = 2 NV, không ai chấm)
+PASS HR-ATT: anim Xưởng 1 có điểm 100% ngày 05/06 (1/1 NV thuộc mẫu đi làm)
+PASS HR-ATT: xóa NV cũng xóa chấm công của NV đó
+PASS HR-ATT: xóa vị trí gỡ khỏi kỹ năng NV
+PASS HR-ATT: xóa vị trí gỡ khỏi phân vị đã lưu
+PASS Cloud: snapshot chứa hrPositions & hrAttendance
+PASS Cloud: cloudCore có khóa dữ liệu mới
+PASS Cloud: áp snapshot mây (applyFireSnapshot) nhận bản ghi chấm công
+PASS Cloud: dữ liệu mây được lưu localStorage
+PASS CI: tự nhận cột (Mã NV, Ngày, Giờ vào, Giờ ra)
+PASS CI: nạp kiểu (a) — 2 ngày khớp, 1 dòng lạ bỏ qua
+PASS CI: bản ghi giờ máy đúng (07:05–17:30)
+PASS CI: tự nhận cột kiểu từng lần quét
+PASS CI: nạp kiểu (b) — 4 lần quét gộp thành 2 ngày
+PASS CI: gộp lần quét — đầu 07:05 = vào, cuối 17:30 = ra, 3 lần quét
+PASS CI: 1 lần quét duy nhất -> chỉ có giờ vào
+PASS CI: parse giờ "7h05" / "0705" / Date object
+PASS CI: parse datetime ISO "2024-06-05 07:30"
+PASS CI: đối chiếu — máy có giờ, chấm tay chưa chấm
+PASS CI: Áp Dụng 1 dòng -> chấm tay thành Đi làm
+PASS CI: Áp Dụng ghi Vắng sai -> đổi thành Đi làm theo máy
+PASS CI: Áp Dụng Tất Cả -> ngày thiếu được chấm Đi làm
+PASS CI: ngày nghỉ CÓ PHÉP được bảo vệ — máy không đè lên đơn duyệt
+PASS CI: bảng đối chiếu hiển thị Khớp ✓ và Nghỉ có phép
+PASS CI: Xóa Hết chỉ dọn giờ máy, giữ nguyên chấm công tay
+PASS Cloud: snapshot chứa hrCheckins
+PASS Cloud: cloudCore có khóa hrCheckins
+PASS CI-MC: tìm đúng dòng tiêu đề (dòng 4, sau 3 dòng đầu trang)
+PASS CI-MC: nhận Mã NV / Họ Tên / Ngày + 9 cột "Lần 1..9" (bỏ qua STT, Phòng ban, Chức danh)
+PASS CI-MC: nạp 4 ngày (3 NV001 + 1 NV004), 8 lần quét
+PASS CI-MC: 01-08-2026 — vào 06:40, ra 17:39 (cắt từ HH:MM:SS)
+PASS CI-MC: 03-08-2026 3 lần quét (trưa về) — vào 06:52, ra 19:32, đếm 3
+PASS CI-MC: 1 lần quét duy nhất (NV004) -> chỉ có giờ vào 06:50
+PASS CI-MC: bảng đối chiếu hiển thị giờ máy dạng 06:40–17:39
+PASS CI-MC: Áp Dụng Tất Cả theo file máy -> 4 ngày thành Đi làm
+PASS ATT: sắp xếp nhóm bộ phận Văn Phòng -> Cơ Điện -> Xưởng 1 (trong nhóm theo tên A trước D)
+PASS ATT: tìm nhanh "Bùi" -> còn đúng 1 dòng
+PASS ATT: tìm theo mã "NV004" -> đúng Phạm Thị D
+PASS ATT: NV Văn Phòng chỉ thấy "Kế toán" + "Hỗ trợ chung", KHÔNG thấy "Ép ván" (Xưởng 1)
+PASS ATT: NV Xưởng 1 thấy "Ép ván" + "Hỗ trợ chung", KHÔNG thấy "Kế toán"
+PASS ATT: kỹ năng chéo bộ phận (★) vẫn hiển thị trong chips
+PASS ATT: ô kỹ năng lọc theo bộ phận — hiện vị trí chung + đã chọn, ẩn vị trí bộ phận khác
+PASS SKILL: chưa tick kỹ năng -> vẫn "0 NV" dù đã phân vị theo ngày (đúng cơ chế)
+PASS SKILL: có gợi ý "từng phân: 2 NV" + hướng dẫn đồng bộ
+PASS SKILL: Đồng Bộ Kỹ Năng -> cộng kỹ năng vào hồ sơ từ lịch sử phân vị
+PASS SKILL: sau đồng bộ đếm "2 NV" + hiện tên
+PASS SKILL: đồng bộ lần nữa không nhân đôi kỹ năng
+PASS SKILL: xóa NV -> đếm còn "1 NV"
+PASS FILTER: lọc Bộ phận "Xưởng 1" -> đúng 2 dòng (A, D)
+PASS FILTER: lọc Trạng thái "Tạm nghỉ" -> đúng Trần Văn G
+PASS FILTER: tìm "Võ" -> đúng 1 dòng Võ Văn E
+PASS FILTER: renderHrView giữ nguyên lựa chọn "Xưởng 1" (không snap về Tất Cả)
+PASS PRES-W: hrWorkersForPress chỉ lấy người được phân vị Ép (A, D)
+PASS PRES-W: vị trí ÉP VÁN thật — loại vị trí công đoạn Xưởng 2 (Chọn thanh Bullig / Gia công Bullig) và không nhận "Xếp nan"
+PASS PRES-W: hrEmpByName khớp tên bỏ dấu/hoa-thường ("nguyễn văn  a")
+PASS PRES-W: tên không có trong Nhân Sự -> null
+PASS PRES-W: mở modal chi tiết công nhân ép
+PASS PRES-W: dòng khớp hồ sơ hiện Mã NV + "Đi làm ✓" + phân vị Ép
+PASS PRES-W: tên ngoài Nhân Sự cảnh báo "Chưa có hồ sơ"
+PASS PRES-W: chips tổng hợp đếm đúng (1 khớp, 1 phân vị Ép)
+PASS PRES-W: đóng modal
+PASS PRES-W: ngày có đơn nghỉ duyệt -> chip "Nghỉ có phép" cảnh báo
+PASS BULLIG: TP "Ván..." -> hrWorkersForProduct lấy phân vị Ép (A)
+PASS BULLIG: TP "Bullig..." -> chỉ lấy vị trí "Chọn thanh Bullig" (D), bỏ qua vị trí "Bullig" khác (E)
+PASS BULLIG: pressPositionPatternFor — TP thường trả về mẫu /ép/, TP Bullig trả về matcher "Chọn thanh Bullig"
+PASS BULLIG: renderX2EpVanDayCards chạy không lỗi với 2 lượt (Ván + Bullig)
+PASS BULLIG: thẻ ngày hiển thị cả 2 lượt (Ván + Bullig)
+PASS BULLIG: modal lượt Bullig — D "Đi làm ✓" + chip vị trí Chọn thanh Bullig
+PASS BULLIG: modal lượt Bullig — không lẫn A (chỉ phân vị Ép)
+PASS HR-ATT: renderHrView (cả 7 bảng) chạy không lỗi
+───────────────────────────
+HR-ATTENDANCE: 111 PASS, 0 FAIL
+PASS — POS-NEED: tự nạp 2 dòng cho 2 vị trí danh mục
+PASS — POS-NEED: id ổn định posneed-pos-<vị trí id>
+PASS — POS-NEED: Số người hiện có tự đếm (Ép ván=2 bỏ NV nghỉ, Kiểm chất=1)
+PASS — POS-NEED: Số người cần mặc định = 1
+PASS — POS-NEED: render 2 dòng + ô nhập số (value="2")
+PASS — POS-NEED: chip tổng hợp "Cần 2 — hiện có 3"
+PASS — POS-NEED: sửa tay cần=5, hiện có=3
+PASS — POS-NEED: bảng hiển thị giá trị sửa (value="5")
+PASS — POS-NEED: đã lưu localStorage sau sửa tay
+PASS — POS-NEED: lọc Bộ phận QC -> 1 dòng (Kiểm chất)
+PASS — POS-NEED: đồng bộ ghi đè số tay -> Ép ván hiện có = 2
+PASS — POS-NEED: localStorage cập nhật sau đồng bộ
+PASS — POS-NEED: licznik thẻ = "2 vị trí · thiếu 3"
+PASS — POS-NEED: xóa dòng -> còn 1 dòng + tombstone
+PASS — POS-NEED: render sau xóa KHÔNG nạp lại vị trí đã xóa
+PASS — POS-NEED: snapshot mây chứa hrPositionNeeds
+PASS — POS-NEED: cloudCore có khóa hrPositionNeeds
+PASS — POS-NEED: applyFireSnapshot nhận dòng từ mây
+PASS — POS-NEED: dữ liệu mây lưu localStorage
+
+WYNIK: 19 pass, 0 fail
+PASS — BOARD: hrShortName "Hà Văn Chiến" -> "H.V.Chiến"
+PASS — BOARD: fmtHour "07:00" -> "7h00"
+PASS — BOARD: ca mặc định Hành chính 07:00–17:30
+PASS — BOARD: preset Làm ca = 2 ca (ngày/đêm)
+PASS — BOARD: mặc định mở Xưởng 2
+PASS — BOARD: tab bộ phận render đủ 6 bộ phận
+PASS — BOARD: lưới thẻ — 2 cột vị trí (board-col)
+PASS — BOARD: 5 ô trống "?" (cần 3 + 2, chưa gán ai)
+PASS — BOARD: chip tổng hợp "Đã bố trí 0/5"
+PASS — BOARD: nhãn cột "Hành chính" + giờ 7h00–17h30
+PASS — BOARD: chấm tròn trạng thái chưa đủ (warn)
+PASS — BOARD: badge "cần" trên đầu cột
+PASS — BOARD: gán người -> hrAssignments có 1 bản ghi
+PASS — BOARD: bản ghi đúng vị trí + ca + giờ bắt đầu 07:30
+PASS — BOARD: gán người -> tự chấm Đi làm ngày đó
+PASS — BOARD: người gán tự học kỹ năng vị trí
+PASS — BOARD: board render ô XANH avatar + tên rút gọn + giờ
+PASS — BOARD: nút "+" Thêm người cho từng cột vị trí (2 cột -> 2 nút)
+PASS — BOARD: đã bỏ thẻ mini — board luôn hiển thị trực tiếp
+PASS — BOARD: empB làm 2 vị trí trong ngày (2 bản ghi)
+PASS — BOARD: hrAssignTimesOf trả giờ làm sắp theo bắt đầu
+PASS — BOARD: Làm ca -> 2 cột (Ca ngày / Ca đêm)
+PASS — BOARD: bản ghi gán trước (cột 0) vẫn hiển thị sau đổi ca
+PASS — BOARD: kéo đi -> bản ghi cũ VẪN còn tại vị trí cũ (lịch sử)
+PASS — BOARD: giờ cũ tự chấm dứt lúc giờ mới (07:30–12:00)
+PASS — BOARD: bản ghi mới tại vị trí kéo đến (12:00 -> hết ca)
+PASS — BOARD: giờ mới <= giờ cũ -> bản ghi cũ GIỮ NGUYÊN (không xóa)
+PASS — BOARD: bản ghi mới tại vị trí mới (07:00 -> hết ca)
+PASS — BOARD: luồng kéo thật -> modal ở chế độ TẠO MỚI (mode rỗng) + movefrom đúng
+FAIL — BOARD: kéo (luồng thật) -> bản ghi cũ pkh3 GIỮ, chấm dứt 07:00–12:00
+PASS — BOARD: kéo (luồng thật) -> bản ghi MỚI px2 12:00→hết ca (không ghi đè cũ)
+PASS — BOARD: chặn trùng — cùng vị trí, khung giờ giao nhau (10h–11h giao 9h–11h30)
+PASS — BOARD: cùng vị trí, khung giờ KHÁC -> vẫn thêm được
+PASS — BOARD: gợi ý đánh dấu "Đã bố trí" cho người đã có giờ (vẫn chọn được)
+PASS — BOARD: bỏ người khỏi vị trí -> còn 5 bản ghi + tombstone
+PASS — BOARD: snapshot mây chứa hrAssignments + hrShifts
+PASS — BOARD: cloudCore có 2 khóa mới
+PASS — BOARD: applyFireSnapshot nhận gán từ mây
+PASS — BOARD: dữ liệu mây lưu localStorage
+PASS — HC/TC: làm đủ ngày 07:00–17h30 -> HC 9h, TC 0
+PASS — HC/TC: 07:00–18:00 -> HC 9h, TC 0h30 (ví dụ của khách)
+PASS — HC/TC: 07:00–19:00 -> HC 9h, TC 1h30
+PASS — HC/TC: 06:30–18:00 -> HC 9h, TC 1h (sớm 30p + muộn 30p)
+PASS — HC/TC: trong ca (08:00–11:00) -> HC 3h, TC 0
+PASS — HC/TC: vắng mặt cả ngày (12:00–12:30 đúng nghỉ trưa) -> HC 0, TC 0
+PASS — HC/TC: làm ca 07:00–20:30 -> HC 12h, TC 1h30
+PASS — HC/TC: ca đêm 19:00–07:00 (qua đêm) -> HC 12h, TC 0
+FAIL — HC/TC: badge tổng HC 18h (5 lượt gán của empB)
+PASS — HC/TC: không có TC khi làm trong giờ
+FAIL — HC/TC: chip từng lượt gán (Kho TP X2 7h00–12h00 · Kho X2 7h00–9h00 · 12h00)
+PASS — POS: thêm vị trí TRÙNG TÊN nhưng KHÁC bộ phận -> thành công
+PASS — POS: trùng tên + trùng bộ phận -> chặn (không thêm)
+PASS — POS: modal thêm vị trí mặc định Bộ Phận = bộ phận Board đang xem
+PASS — POS: vị trí mới tự có dòng trong "Nhân sự cần tại vị trí"
+PASS — BOARD: điền tay khung khác -> tạo bản ghi mới tại vị trí mới (09h00–12h00)
+PASS — BOARD: điền tay -> giờ kết thúc vị trí cũ TỰ = giờ bắt đầu mới (9h00)
+PASS — BOARD: điền tay GIỮ LỊCH SỬ vị trí cũ (bản ghi vẫn còn, chỉ cắt giờ)
+PASS — BOARD: giờ cũ cụ thể (17h30) cũng tự cắt về giờ bắt đầu mới (15h00)
+PASS — BOARD: giờ mới sớm hơn giờ bắt đầu cũ -> bản cũ GIỮ NGUYÊN (13h00–17h30)
+PASS — BOARD: kéo thẻ dời vị trí -> giờ kết thúc cũ = giờ bắt đầu mới (không đổi hành vi)
+
+WYNIK: 57 pass, 3 fail

@@ -115,6 +115,10 @@
   // trung bình, tỷ lệ đạt, số lần nhắc nhở, đánh giá) TỰ TÍNH từ materialRecords
   // + xuong2CutRecords (10 chuyến gần nhất) — xem js/suppliers.js
   const STORAGE_KEY_SUPPLIERS = 'bamboo_tracker_suppliers_v1';
+  // KÍCH THƯỚC ĐẦU RA của công đoạn 'Bào thanh' (thẻ Bào Tinh — tab Công Đoạn):
+  // danh sách cỡ mặc định 640x14x12 · 640x12x10 · 1200x10x10 · 1200x10x8, người
+  // dùng bấm nút 'Thêm' trong ô Đầu Ra để khai báo thêm — mảng chuỗi 'Dài×Rộng×Dày'
+  const STORAGE_KEY_X2_BAO_THANH_OUT_SIZES = 'bamboo_tracker_x2_bao_thanh_out_sizes_v1';
   const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
   // ĐỘ ẨM LÒ SẤY (tab QC — QC đo & nhập HÀNG NGÀY cho từng lò sấy LS1..LS15):
   // [{ id, date 'YYYY-MM-DD', location 'LS3', value (%), note, by, createdAt, updatedAt }]
@@ -173,6 +177,10 @@
   const STORAGE_KEY_DELETED_IDS = 'bamboo_tracker_deleted_ids_v1';
   // Auto backup cục bộ: ring buffer 10 snapshot gần nhất — xem js/autobackup.js
   const STORAGE_KEY_AUTOBACKUP = 'bamboo_tracker_autobackup_v1';
+  // KÊNH ẢNH THUMB (js/photo-sync.js): hàng đợi đẩy ảnh của MÁY NÀY + dấu "đã đẩy".
+  // Thuần cục bộ theo máy (như hộp thư đi) — KHÔNG đồng bộ mây/backup.
+  const STORAGE_KEY_PHOTO_QUEUE = 'bamboo_tracker_photo_queue_v1';
+  const STORAGE_KEY_PHOTO_UPLOADED = 'bamboo_tracker_photo_uploaded_v1';
 
   const STAGES = {
     say1:     { id: 'say1',     name: '1. Sấy 1',        short: 'Sấy 1',    next: 'say2'     },
@@ -327,9 +335,16 @@
     // Vị trí sấy khai báo THÊM ngoài LS1..LS15 (nút "Thêm" ở ô Vị Trí của modal
     // Thêm Lô Sấy Mới) — VD ['LS16', 'Lò 01']. Dùng để dựng danh sách vị trí.
     x2LotLocations: [],
+    // Cỡ ĐẦU RA của 'Bào thanh' khai báo THÊM ngoài 4 cỡ mặc định
+    // (BÀO_THANH_OUT_DEFAULT trong js/xuong2.js) — VD ['640x16x10']
+    x2BaoThanhOutSizes: [],
     materialKpiPeriod: 'all', // 'all' | 'week' | 'month' | 'year' — bộ lọc thời gian thẻ KPI
     materialEditId: null,     // id bản ghi đang sửa trong modal (null = thêm mới)
     materialFormImages: [],   // ảnh (dataURL) đang có trong form
+    // KÊNH ẢNH THUMB (js/photo-sync.js) — hàng đợi đẩy ảnh + dấu đã đẩy (theo MÁY).
+    // { pending: { id: ts }, deleted: { id: ts } } · photoUploaded: { id: ts }
+    photoQueue: { pending: {}, deleted: {} },
+    photoUploaded: {},
     // Kế hoạch nguyên liệu cần nhập (bảng phụ tab Nguyên liệu)
     // { '2026-W36': { 'lo-hoi': 12, 'xuong-1': 30, 'xuong-2': 25 } }
     // Giá trị nhập = SỐ TRUNG BÌNH MỖI NGÀY trong tuần; tổng tuần = TB/ngày × 7
@@ -381,6 +396,8 @@ export {
   STORAGE_KEY_DATA,
   STORAGE_KEY_DELETED_IDS,
   STORAGE_KEY_AUTOBACKUP,
+  STORAGE_KEY_PHOTO_QUEUE,
+  STORAGE_KEY_PHOTO_UPLOADED,
   STORAGE_KEY_HISTORY,
   STORAGE_KEY_MATERIAL_PLAN,
   STORAGE_KEY_MATERIAL_RATES,
@@ -403,6 +420,7 @@ export {
   STORAGE_KEY_X2_KANBAN_COLLAPSED,
   STORAGE_KEY_X2_EP_VAN_RATE,
   STORAGE_KEY_X2_LOT_LOCATIONS,
+  STORAGE_KEY_X2_BAO_THANH_OUT_SIZES,
   STORAGE_KEY_SUPPLIERS,
   STORAGE_KEY_PLANNING_FORECAST,
   STORAGE_KEY_PLANNING_ITEMS,

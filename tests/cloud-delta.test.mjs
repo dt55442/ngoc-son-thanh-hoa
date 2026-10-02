@@ -189,6 +189,94 @@ function check(name, cond) {
     typeof cloud.hashStr === 'function' && typeof cloud.localHashesNow === 'function');
 }
 
+// ─── E. GIAI ĐOẠN 2: ĐỊNH DẠNG DELTA (MỤC LỤC + DOC TỪNG MIỀN) ─────
+// Firestore giả lập trong bộ nhớ → chạy THẬT writeCloudSnapshot/readFullCloudObject.
+{
+  const store = new Map();
+  let setCount = 0;
+  const makeDoc = (collPath, id) => {
+    const key = collPath + '/' + id;
+    return {
+      _key: key,
+      set(data) { setCount++; store.set(key, JSON.parse(JSON.stringify(data))); return Promise.resolve(); },
+      get() { return Promise.resolve({ exists: store.has(key), data: () => store.get(key) }); },
+      delete() { store.delete(key); return Promise.resolve(); },
+      onSnapshot() { return () => {}; },
+      collection(sub) { return makeColl(collPath + '/' + id + '/' + sub); },
+      where() { return { get: () => Promise.resolve({ forEach(){} }) }; }
+    };
+  };
+  const makeColl = (path) => ({
+    doc: (id) => makeDoc(path, id),
+    where: () => ({ get: () => Promise.resolve({ forEach(){} }) })
+  });
+  const fakeDb = { collection: (name) => makeColl(name) };
+  global.__BAMBOO_FIREBASE_READY__ = true;
+  global.FIREBASE_CONFIG = { ownerEmail: 'dt55442@gmail.com', projectId: 'test-delta' };
+  global.firebase = { apps: [], initializeApp(){}, firestore: () => fakeDb, auth: () => ({ onAuthStateChanged(){}, currentUser: null, signOut(){ return Promise.resolve(); } }) };
+  cloud.initFirebase();
+  check('E0: Firebase (fake) đã bật → chế độ online', cloud.isFirebaseOnline() === true);
+
+  state.pressRecords = [{ id: 'P1', qty: 10, updatedAt: '2030-01-01T00:00:00.000Z' }];
+  state.hrEmployees = [{ id: 'E1', name: 'Nguyễn A', updatedAt: '2030-01-01T00:00:00.000Z' }];
+  state.batches = [];
+  state.materialRecords = [];
+
+  const r1 = await cloud.writeCloudSnapshot();
+  check('E1: lần đẩy đầu → định dạng delta-v1 + ghi ĐỦ mọi miền (>5)', r1.mode === 'delta-v1' && r1.changed > 5);
+  {
+    const m = store.get('apps/main');
+    check('E2: mục lục apps/main có __fmt=delta-v1 + __dh + deletedIds',
+      !!m && m.__fmt === 'delta-v1' && !!m.__dh && ('deletedIds' in m));
+    const d = store.get('apps/main/d/pressRecords');
+    check('E3: có doc riêng miền (apps/main/d/pressRecords) kèm chữ ký h + data',
+      !!d && !!d.h && Array.isArray(d.data) && d.data[0].id === 'P1');
+  }
+
+  const c2 = setCount;
+  const r2 = await cloud.writeCloudSnapshot();
+  check('E4: đẩy lần 2 KHÔNG đổi gì → changed = 0 và KHÔNG ghi gì thêm',
+    r2.mode === 'delta-v1' && r2.changed === 0 && setCount === c2);
+
+  const c3 = setCount;
+  state.pressRecords.push({ id: 'P2', qty: 5, updatedAt: '2030-01-02T00:00:00.000Z' });
+  const r3 = await cloud.writeCloudSnapshot();
+  check('E5: đổi ĐÚNG 1 miền → chỉ ghi 1 doc miền + 1 mục lục (= 2 lượt ghi)',
+    r3.mode === 'delta-v1' && r3.changed === 1 && (setCount - c3) === 2);
+
+  const full = await cloud.readFullCloudObject();
+  check('E6: readFullCloudObject ghép đủ dữ liệu từ mục lục + các doc miền',
+    !!full && full.pressRecords.length === 2 && full.hrEmployees.length === 1 && Array.isArray(full.batches));
+  check('E7: readDomainDoc đọc đúng 1 miền (hrEmployees)', (await cloud.readDomainDoc('hrEmployees')).length === 1);
+  check('E8: readDomainDoc miền không tồn tại → undefined', (await cloud.readDomainDoc('khongTonTai')) === undefined);
+
+  // Miền lớn (>600KB) → ghi dạng gzip trong CÙNG 1 doc miền
+  state.pressRecords = Array.from({ length: 9000 }, (_, i) => ({
+    id: 'BIG' + i, qty: i, note: 'Ghi chú dài cho bản ghi số ' + i + ' — nhà máy Ngọc Sơn Thanh Hóa',
+    updatedAt: '2030-01-03T00:00:00.000Z'
+  }));
+  await cloud.writeCloudSnapshot();
+  {
+    const d = store.get('apps/main/d/pressRecords');
+    check('E9: miền lớn (>600KB) được nén gzip trong 1 doc miền (enc=gzip + payload)',
+      !!d && d.enc === 'gzip' && typeof d.payload === 'string' && !('data' in d));
+    check('E10: đọc lại miền lớn giải nén đúng 9000 bản ghi',
+      (await cloud.readDomainDoc('pressRecords')).length === 9000);
+  }
+
+  // Cấu trúc mã nguồn: có bộ điều phối delta + fallback định dạng cũ
+  const src2 = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
+  check('E11: doWriteCloudSnapshot ưu tiên delta, fallback định dạng cũ khi miền quá lớn',
+    /return await writeDeltaSnapshot\(snap, dh\)/.test(src2) && /domainTooBig/.test(src2) &&
+    /async function writeLegacySnapshot/.test(src2));
+  check('E12: mục lục delta ghi kèm deletedIds (tombstone không cần doc riêng)',
+    /__fmt: 'delta-v1', __dh: dh,\s*\n\s*deletedIds: snap\.deletedIds/.test(src2));
+  check('E13: pullDeltaSnapshot chỉ tải doc miền ĐỔI rồi gộp MỘT PHẦN',
+    /function pullDeltaSnapshot/.test(src2) && /localH\[k\] !== remoteH\[k\]/.test(src2));
+  check('E14: subcollection miền = FB_DOMAIN_COLL, nằm dưới apps/main (rules đã phủ)',
+    cloud.FB_DOMAIN_COLL === 'd' && typeof cloud.domainDocRef === 'function');
+}
+
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
 

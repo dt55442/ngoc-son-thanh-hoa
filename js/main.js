@@ -6,6 +6,7 @@ import { deleteBatch, exitKanbanPickMode, loadX2LotLocations, openBatchFormModal
 import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
+import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần)
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
 import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, toggleChartExpand } from './dashboard.js';
@@ -16,7 +17,7 @@ import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
-import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2SayRates, loadX2SayTimes, sayBatchChargeLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
+import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
@@ -38,6 +39,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadData();
     loadDeletedIds(); // dấu vết xóa (tombstone) cho đồng bộ mây — nạp trước mọi thao tác
     loadAutoBackups(); // bản cất tự động (auto backup cục bộ) — js/autobackup.js
+    loadPhotoQueue(); // hàng đợi KÊNH ẢNH THUMB (hộp thư đi theo máy) — js/photo-sync.js
     loadCustomCharts();
     loadMaterialRates();
     loadPlanningItems();
@@ -59,6 +61,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2ChonNanRates(); // Định mức công suất chọn nan theo tháng (thanh/giờ)
     loadX2BulligRates(); // Định mức công suất Bullig theo tháng + công đoạn (thanh/giờ)
     loadXuong2BaoTinh(); // Nhật ký Bào Tinh Xưởng 2 (loại bào · nguồn thanh · đạt/lỗi)
+    loadX2BaoThanhOutSizes(); // Cỡ ĐẦU RA khai báo thêm của "Bào thanh" (thẻ Bào Tinh)
     loadX2BaoTinhRates(); // Định mức công suất bào tinh theo tháng (thanh/giờ)
     loadX2EpVanRates(); // Định mức công suất ÉP VÁN theo tháng (m³/giờ) — thẻ Ép Ván
     loadX2LotLocations(); // Vị trí sấy khai báo thêm ngoài LS1..LS15 (Than Hóa + Sấy)
@@ -109,7 +112,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Lưới an toàn đồng bộ: đẩy nốt dữ liệu chờ lên mây khi người dùng rời trang,
     // chuyển sang tab khác, hoặc mạng vừa quay lại (tránh mất dữ liệu ép ván mới nhập)
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') flushPendingCloudPush();
+      if (document.visibilityState === 'hidden') { flushPendingCloudPush(); photoSyncKick(); }
     });
     // Xoay màn hình / đổi kích thước: áp dụng lại chế độ xem công đoạn của Kanban
     let kanbanResizeTimer = null;
@@ -117,8 +120,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       clearTimeout(kanbanResizeTimer);
       kanbanResizeTimer = setTimeout(filterMobileKanbanColumns, 150);
     });
-    window.addEventListener('pagehide', flushPendingCloudPush);
-    window.addEventListener('online', flushPendingCloudPush);
+    window.addEventListener('pagehide', () => { flushPendingCloudPush(); photoSyncKick(); });
+    window.addEventListener('online', () => { flushPendingCloudPush(); photoSyncKick(); });
+    // Trạng thái kênh ảnh (số ảnh chờ) hiện cạnh nút "Đồng Bộ Ảnh Ngay" ở menu ⋮
+    updatePhotoSyncUI();
   });
   // ─── VIEW SWITCHING ───────────────────────────────────────────
   // ─── ĐÓNG POP-UP / MODAL THUỘC TAB VỪA RỜI KHI CHUYỂN TAB ──────

@@ -1,20 +1,23 @@
 // ═══════════════════════════════════════════════════════════
-// js/photo-store.js — KHO ẢNH FULL NGOÀI BẢN GHI (IndexedDB)
-// Bản ghi nguyên liệu chỉ giữ thumbnail nhỏ (~vài KB) inline;
-// ảnh full (JPEG Blob) nằm trong IndexedDB store 'material_photos'
-// → localStorage / bamboo_data.json / Firestore không còn phình to
-//   khi số ảnh đính kèm tăng theo năm tháng.
-// Fallback: nếu IndexedDB không khả dụng (trình duyệt cũ / môi trường
-// test), putPhoto trả về null và caller giữ ảnh full inline (hành vi cũ)
+// js/photo-store.js — KHO ẢNH NGOÀI BẢN GHI (IndexedDB)
+// 2 kho:
+//   · 'material_photos' = ảnh FULL (JPEG Blob) — CHỈ nằm trên máy, KHÔNG lên mây
+//   · 'material_thumbs' = ảnh THUMB (~180px, vài KB) — rút ra khỏi bản ghi để
+//     localStorage / bamboo_data.json không phình theo số ảnh; thumb này mới
+//     được đồng bộ lên mây qua KÊNH ẢNH RIÊNG (js/photo-sync.js).
+// Fallback: nếu IndexedDB không khả dụng (trình duyệt cũ / môi trường test),
+// putPhoto/putThumb trả về null và caller giữ ảnh inline (hành vi cũ)
 // → không bao giờ MẤT ảnh, chỉ tốn dung lượng hơn.
 // ═══════════════════════════════════════════════════════════
 
 const PHOTO_DB_NAME = 'bamboo_tracker_photos';
-const PHOTO_DB_VERSION = 1;
+const PHOTO_DB_VERSION = 2;
 const PHOTO_STORE = 'material_photos';
+const PHOTO_THUMB_STORE = 'material_thumbs';
 
 let dbPromise = null;
-const urlCache = new Map(); // photoId -> objectURL (tái dùng khi mở lại lightbox)
+const urlCache = new Map();      // photoId -> objectURL ảnh FULL (tái dùng khi mở lại lightbox)
+const thumbUrlCache = new Map(); // photoId -> objectURL ảnh THUMB (bảng nguyên liệu)
 
 function photosAvailable() {
   return typeof indexedDB !== 'undefined' && !!indexedDB;
@@ -28,11 +31,25 @@ function openPhotoDb() {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE);
+      if (!db.objectStoreNames.contains(PHOTO_THUMB_STORE)) db.createObjectStore(PHOTO_THUMB_STORE);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
   return dbPromise;
+}
+
+// Blob → dataURL (dùng để ĐẨY thumb lên mây; FileReader có trên mọi trình duyệt)
+function blobToDataURL(blob) {
+  if (!blob) return Promise.resolve('');
+  return new Promise((resolve) => {
+    try {
+      const fr = new FileReader();
+      fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : '');
+      fr.onerror = () => resolve('');
+      fr.readAsDataURL(blob);
+    } catch (e) { resolve(''); }
+  });
 }
 
 // dataURL → Blob (nhị phân gọn hơn chuỗi base64 ~25%)
@@ -123,15 +140,115 @@ async function allPhotoIds() {
   } catch (e) { return new Set(); }
 }
 
+// ─── ẢNH THUMB (kho 'material_thumbs') ────────────────────────
+// Thumb được RÚT RA khỏi bản ghi (rec.images[] chỉ còn { id }) nên phải có
+// kho riêng để hiển thị bảng + đẩy lên mây qua kênh ảnh (js/photo-sync.js).
+async function putThumbBlob(blob, fixedId) {
+  if (!blob) return null;
+  const id = fixedId || ('ph-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8));
+  try {
+    const db = await openPhotoDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTO_THUMB_STORE, 'readwrite');
+      tx.objectStore(PHOTO_THUMB_STORE).put(blob, id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('abort'));
+    });
+    if (thumbUrlCache.has(id)) { try { URL.revokeObjectURL(thumbUrlCache.get(id)); } catch (e) {} thumbUrlCache.delete(id); }
+    return id;
+  } catch (e) { return null; }
+}
+
+async function putThumb(dataUrl, fixedId) {
+  return putThumbBlob(dataUrlToBlob(dataUrl), fixedId);
+}
+
+async function getThumbBlob(id) {
+  if (!id || !photosAvailable()) return null;
+  try {
+    const db = await openPhotoDb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTO_THUMB_STORE, 'readonly');
+      const req = tx.objectStore(PHOTO_THUMB_STORE).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) { return null; }
+}
+
+// id → objectURL của THUMB (đã cache) — '' nếu chưa có
+async function getThumbURL(id) {
+  if (!id) return '';
+  if (thumbUrlCache.has(id)) return thumbUrlCache.get(id);
+  const blob = await getThumbBlob(id);
+  if (!blob) return '';
+  try {
+    const url = URL.createObjectURL(blob);
+    thumbUrlCache.set(id, url);
+    return url;
+  } catch (e) { return ''; }
+}
+
+// id → dataURL của THUMB (để đẩy lên mây; '' nếu chưa có)
+async function getThumbDataURL(id) {
+  return blobToDataURL(await getThumbBlob(id));
+}
+
+async function hasThumb(id) {
+  return !!(await getThumbBlob(id));
+}
+
+async function deleteThumb(id) {
+  if (!id) return;
+  if (thumbUrlCache.has(id)) {
+    try { URL.revokeObjectURL(thumbUrlCache.get(id)); } catch (e) { /* bỏ qua */ }
+    thumbUrlCache.delete(id);
+  }
+  if (!photosAvailable()) return;
+  try {
+    const db = await openPhotoDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTO_THUMB_STORE, 'readwrite');
+      tx.objectStore(PHOTO_THUMB_STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) { /* bỏ qua */ }
+}
+
+async function allThumbIds() {
+  try {
+    const db = await openPhotoDb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTO_THUMB_STORE, 'readonly');
+      const req = tx.objectStore(PHOTO_THUMB_STORE).getAllKeys();
+      req.onsuccess = () => resolve(new Set(req.result || []));
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) { return new Set(); }
+}
+
 export {
   PHOTO_DB_NAME,
+  PHOTO_DB_VERSION,
   PHOTO_STORE,
+  PHOTO_THUMB_STORE,
   allPhotoIds,
+  allThumbIds,
+  blobToDataURL,
   dataUrlToBlob,
   deletePhoto,
   deletePhotos,
+  deleteThumb,
   getPhotoURL,
+  getThumbBlob,
+  getThumbDataURL,
+  getThumbURL,
+  hasThumb,
   photosAvailable,
   putPhoto,
-  putPhotoBlob
+  putPhotoBlob,
+  putThumb,
+  putThumbBlob
 };

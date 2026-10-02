@@ -321,6 +321,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
       kind, kindLabel: QC_FINAL_KINDS[kind].label, unit,
       productId: r.productId || '',
       productName: String(r.productName || '').trim(),
+      sizeKey: String(r.sizeKey || ''),
+      sizeDims: Array.isArray(r.sizeDims) ? r.sizeDims.map(Number) : [],
       inputQty, qtyOk, qtyExcept, qtyReject,
       qtyChecked, qtyPass, errPct,
       workers, workerNames: workers.map(w => w.name).filter(Boolean).join(', '),
@@ -334,7 +336,39 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   let qcFinalEditId = null;      // id lượt kiểm đang sửa (null = ghi mới)
   let qcFinalPickerOpen = false; // danh sách thành phẩm Ép Ván đang mở?
   let qcFinalPicked = null;      // thành phẩm đã chọn: { productId, name, qty }
+  let qcFinalPickedSize = null;  // 'Kiểm thanh': CỠ thanh Bào thanh đã chọn: { sizeKey, dims, remain }
   let qcFinalSearchQ = '';       // từ khóa tìm nhanh trong danh sách thành phẩm
+
+  // ─── TỒN KIỂM THEO CỠ THANH (cho "Kiểm thanh" — LINK với thẻ Bào Tinh) ──
+  // TỔNG = Σ số thanh ĐEM BÀO (inQty) của các lượt Bào thanh cùng cỡ đầu ra;
+  // ĐÃ KIỂM = Σ Đầu vào kiểm của các lượt QC "Kiểm thanh" cùng cỡ ⇒ CÒN LẠI.
+  // `excludeId` = lượt QC đang SỬA (trả lại phần của chính nó).
+  function qcFinalThanhSizeStocks(excludeId) {
+    const map = new Map();
+    (state.xuong2BaoTinhRecords || []).forEach(r => {
+      if (!r || r.kind !== 'bao_thanh') return;
+      const key = String(r.outSizeKey || '').trim();
+      if (!key) return;
+      const cur = map.get(key) || {
+        sizeKey: key, dims: Array.isArray(r.outDims) ? r.outDims.map(Number) : [], total: 0, used: 0
+      };
+      cur.total += Number(r.inQty) || 0;
+      map.set(key, cur);
+    });
+    (state.qcFinalRecords || []).forEach(r => {
+      if (!r || r.kind !== 'thanh' || r.id === excludeId) return;
+      const cur = map.get(String(r.sizeKey || '').trim());
+      if (cur) cur.used += Number(r.inputQty) || 0;
+    });
+    return [...map.values()]
+      .map(x => Object.assign(x, { remain: Math.max(0, x.total - x.used) }))
+      .sort((a, b) => b.remain - a.remain || b.total - a.total);
+  }
+  // Nhãn cỡ thanh 'Dài × Rộng × Dày'
+  function qcFinalSizeLabel(dims) {
+    const d = Array.isArray(dims) && dims.length === 3 ? dims : [];
+    return d.length === 3 ? `${Number(d[0])} × ${Number(d[1])} × ${Number(d[2])}` : '—';
+  }
 
   // So khớp tìm nhanh (bỏ dấu — giống ô tìm nhanh của các thẻ công đoạn)
   function qcFinalStripQ(s) {
@@ -358,8 +392,10 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
 
   // ─── ĐỒNG BỘ FORM theo VỊ TRÍ + LOẠI KIỂM ────────────────────
-  // Danh sách thành phẩm Ép Ván CHỈ dùng cho Kiểm Ván ở Xưởng 2:
-  //   • Kiểm Thanh → đầu vào là số THANH nhập tay (ẩn picker)
+  // Danh sách nguồn đầu vào CHỈ dùng cho Xưởng 2:
+  //   • Kiểm Ván   → danh sách THÀNH PHẨM Ép Ván của cặp 2 tuần
+  //   • Kiểm Thanh → danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh
+  //                  (còn chờ kiểm) — LINK kết quả về thẻ Bào Tinh
   //   • Xưởng 1    → "Sắp có" (nhập tay số lượng)
   function syncQcFinalWorkshopFields() {
     const wsSel = document.getElementById('qcf-workshop');
@@ -368,36 +404,61 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');
     const pickerBtn = document.getElementById('qcf-picker-btn');
     const soonChip = document.getElementById('qcf-in-soon');
-    const showPicker = ws === 'x2' && kind === 'van';
+    const showPicker = ws === 'x2';   // cả Kiểm Ván LẪN Kiểm Thanh đều có danh sách nguồn
     if (pickerBtn) pickerBtn.hidden = !showPicker;
     if (soonChip) soonChip.hidden = ws !== 'x1';
     if (!showPicker) {
-      // Bỏ thành phẩm đã chọn + đóng danh sách (nguồn không còn dùng)
+      // Xưởng 1: nhập tay — bỏ lựa chọn + đóng danh sách
       qcFinalPicked = null;
+      qcFinalPickedSize = null;
       setQcFinalPickerOpen(false);
       const text = document.getElementById('qcf-picker-text');
-      if (text) text.textContent = ws === 'x1' ? 'Đầu vào kiểm (nhập tay)' : 'Kiểm thanh — nhập tay số thanh';
+      if (text) text.textContent = 'Đầu vào kiểm (nhập tay)';
       const count = document.getElementById('qcf-picked-count');
-      if (count) count.textContent = ws === 'x1' ? 'Sắp có' : '—';
+      if (count) count.textContent = 'Sắp có';
     } else {
       syncQcFinalPickerText();
     }
   }
-  // Đổi LOẠI KIỂM (Thanh / Ván) → đổi ĐƠN VỊ các ô số lượng + ẩn/hiện picker
+  // Đổi LOẠI KIỂM (Thanh / Ván) → đổi ĐƠN VỊ các ô số lượng + đổi nguồn danh sách
   function syncQcFinalKindFields() {
     const kindSel = document.getElementById('qcf-kind');
-    const unit = qcFinalUnitOf((kindSel && kindSel.value) || 'van');
+    const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');
+    const unit = qcFinalUnitOf(kind);
     ['qcf-unit-in', 'qcf-unit-ok', 'qcf-unit-ex', 'qcf-unit-re'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = unit;
     });
+    // Đổi loại kiểm → nguồn khác hẳn → bỏ lựa chọn cũ (giữ nguyên nếu đang SỬA)
+    if (!qcFinalEditId) {
+      if (kind === 'thanh') qcFinalPicked = null;
+      else qcFinalPickedSize = null;
+      const inputQty = document.getElementById('qcf-input-qty');
+      if (inputQty) inputQty.value = '';
+      qcFinalSearchQ = '';
+      const s = document.getElementById('qcf-search');
+      if (s) s.value = '';
+      setQcFinalPickerOpen(false);
+    }
     syncQcFinalWorkshopFields();
   }
   function syncQcFinalPickerText() {
     const kindSel = document.getElementById('qcf-kind');
-    const unit = qcFinalUnitOf((kindSel && kindSel.value) || 'van');
+    const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');
+    const unit = qcFinalUnitOf(kind);
     const text = document.getElementById('qcf-picker-text');
     const count = document.getElementById('qcf-picked-count');
+    if (kind === 'thanh') {
+      if (text) text.textContent = qcFinalPickedSize
+        ? `Cỡ ${qcFinalSizeLabel(qcFinalPickedSize.dims)}`
+        : 'Cỡ thanh Bào thanh';
+      if (count) {
+        count.textContent = qcFinalPickedSize
+          ? `Còn lại: ${qcFinalFmt(qcFinalPickedSize.remain)} ${unit}`
+          : 'Chưa chọn';
+      }
+      return;
+    }
     if (text) text.textContent = qcFinalPicked ? qcFinalPicked.name : 'Thành phẩm Ép Ván';
     if (count) {
       count.textContent = qcFinalPicked ? `Còn lại: ${qcFinalFmt(qcFinalPicked.qty)} ${unit}` : 'Chưa chọn';
@@ -484,6 +545,9 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   function renderQcFinalProductList() {
     const listEl = document.getElementById('qcf-product-list');
     if (!listEl) return;
+    const kindSel = document.getElementById('qcf-kind');
+    const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');
+    if (kind === 'thanh') { renderQcFinalThanhList(listEl); return; }
     const dateVal = (document.getElementById('qcf-date') || {}).value || qcFinalTodayISO();
     const pairTxt = qcFinalPairLabel(dateVal);
     // Tồn kiểm theo thành phẩm: TỔNG Ép Ván của cặp − ĐÃ KIỂM = CÒN LẠI
@@ -515,9 +579,60 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     }).join('');
     initLucide();
   }
-  // Chọn 1 thành phẩm trong danh sách (ủy quyền click từ events.js) —
-  // tự điền số CÒN LẠI (tổng cặp tuần − đã kiểm các ngày trước)
+  // ─── DANH SÁCH CỠ THANH ĐẦU RA (cho "Kiểm thanh") ─────────────
+  // Nguồn = các cỡ đầu ra của lượt Bào thanh (thẻ Bào Tinh); mỗi thẻ hiện
+  // Tổng (số thanh đem bào của cỡ đó) · Đã kiểm · CÒN LẠI; chọn → tự điền
+  // Đầu vào kiểm = CÒN LẠI và LINK kết quả về đúng lượt Bào thanh cùng cỡ.
+  function renderQcFinalThanhList(listEl) {
+    const rows = qcFinalThanhSizeStocks(qcFinalEditId || '');
+    const q = qcFinalStripQ(qcFinalSearchQ);
+    const hits = q ? rows.filter(r => qcFinalStripQ(`${r.sizeKey} ${qcFinalSizeLabel(r.dims)}`).includes(q)) : rows;
+    const head = `<div class="qcf-pick-head"><i data-lucide="ruler"></i> Cỡ thanh ĐẦU RA của <strong>Bào thanh</strong> (còn chờ kiểm)</div>`;
+    if (!rows.length) {
+      listEl.innerHTML = head + '<div class="al-empty">Chưa có lượt Bào thanh nào ghi cỡ đầu ra. Ghi lượt ở thẻ Bào Tinh (tab Công Đoạn → Loại bào = Bào thanh) trước.</div>';
+      initLucide();
+      return;
+    }
+    if (!hits.length) {
+      listEl.innerHTML = head + `<div class="al-empty">Không có cỡ nào khớp "${escapeHTML(qcFinalSearchQ)}".</div>`;
+      initLucide();
+      return;
+    }
+    listEl.innerHTML = head + hits.map(p => {
+      const done = p.remain <= 0;
+      const on = qcFinalPickedSize && qcFinalPickedSize.sizeKey === p.sizeKey;
+      return `
+      <button type="button" class="al-card qcf-product${on ? ' picked' : ''}${done ? ' qcf-product-done' : ''}" data-qcf-size="${escapeHTML(p.sizeKey)}" title="Chọn cỡ thanh này — tự điền số CÒN LẠI vào ô Đầu vào kiểm; kết quả kiểm sẽ LINK về thẻ Bào Tinh cùng cỡ">
+        <span class="qcf-product-line1">
+          <span class="qcf-product-name">${escapeHTML(qcFinalSizeLabel(p.dims))} mm</span>
+          ${done ? '<span class="qcf-done">Đã kiểm đủ</span>' : ''}
+        </span>
+        <span class="qcf-product-meta">Tổng <strong>${qcFinalFmt(p.total)}</strong> · Đã kiểm ${qcFinalFmt(p.used)} · <b class="qcf-remain${done ? ' zero' : ''}">Còn lại ${qcFinalFmt(p.remain)}</b></span>
+      </button>`;
+    }).join('');
+    initLucide();
+  }
+  // Chọn 1 mục trong danh sách nguồn (ủy quyền click từ events.js):
+  //   • Kiểm Ván   → thành phẩm Ép Ván, tự điền số CÒN LẠI của cặp 2 tuần
+  //   • Kiểm Thanh → CỠ thanh đầu ra của Bào thanh, tự điền số CÒN LẠI (chờ kiểm)
   function onQcFinalListClick(e) {
+    const sizeBtn = e.target && e.target.closest ? e.target.closest('[data-qcf-size]') : null;
+    if (sizeBtn) {
+      const key = sizeBtn.getAttribute('data-qcf-size') || '';
+      const row = qcFinalThanhSizeStocks(qcFinalEditId || '').find(p => p.sizeKey === key);
+      if (!row) return false;
+      qcFinalPickedSize = { sizeKey: row.sizeKey, dims: row.dims, remain: row.remain };
+      qcFinalPicked = null;
+      const inputQty = document.getElementById('qcf-input-qty');
+      if (inputQty) inputQty.value = row.remain ? String(row.remain) : '';
+      syncQcFinalPickerText();
+      setQcFinalPickerOpen(false);
+      renderQcFinalProductList();
+      if (row.remain <= 0) {
+        showToast(`Cỡ ${qcFinalSizeLabel(row.dims)} đã kiểm đủ — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
+      }
+      return true;
+    }
     const btn = e.target && e.target.closest ? e.target.closest('[data-qcf-product]') : null;
     if (!btn) return false;
     const key = btn.getAttribute('data-qcf-product') || '';
@@ -525,6 +640,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     const row = qcFinalProductStocks(dateVal).find(p => (p.productId || p.name) === key);
     if (!row) return false;
     qcFinalPicked = { productId: row.productId, name: row.name, qty: row.remain };
+    qcFinalPickedSize = null;
     const inputQty = document.getElementById('qcf-input-qty');
     if (inputQty) inputQty.value = row.remain ? String(row.remain) : '';
     syncQcFinalPickerText();
@@ -788,7 +904,9 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
           <div class="qcf-row-main">
             <span class="qcf-ws-chip" title="Vị trí kiểm">${escapeHTML(d.workshopLabel)}</span>
             <span class="qcf-kind-chip" title="Loại kiểm — quyết định đơn vị + định mức dùng tính Hiệu suất">${escapeHTML(d.kindLabel)}</span>
-            <span class="x2-nan-chip" title="Thành phẩm được kiểm">${escapeHTML(d.productName || '— (không gắn thành phẩm)')}</span>
+            ${(d.kind === 'thanh' && d.sizeKey)
+              ? `<span class="x2-nan-chip" title="Cỡ thanh đầu ra của Bào thanh được kiểm — kết quả LINK về thẻ Bào Tinh cùng cỡ">Cỡ ${escapeHTML(qcFinalSizeLabel(d.sizeDims))}</span>`
+              : `<span class="x2-nan-chip" title="Thành phẩm được kiểm">${escapeHTML(d.productName || '— (không gắn thành phẩm)')}</span>`}
             <span>Đầu vào <strong>${qcFinalFmt(d.inputQty)}</strong></span>
             <span>Đạt <strong style="color:#16a34a;">${qcFinalFmt(d.qtyOk)}</strong></span>
             <span>Ngoại lệ <strong>${qcFinalFmt(d.qtyExcept)}</strong></span>
@@ -849,6 +967,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   function resetQcFinalForm() {
     qcFinalEditId = null;
     qcFinalPicked = null;
+    qcFinalPickedSize = null;
     qcFinalSearchQ = '';
     const dateEl = document.getElementById('qcf-date');
     if (dateEl) dateEl.value = qcFinalTodayISO();
@@ -888,6 +1007,10 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     }
     const snap = hrQcFinalSnapshot(date);
     const now = new Date().toISOString();
+    // 'Kiểm thanh' → gắn CỠ thanh được kiểm (LINK về thẻ Bào Tinh cùng cỡ)
+    const sizeFields = kind === 'thanh'
+      ? { sizeKey: qcFinalPickedSize ? qcFinalPickedSize.sizeKey : '', sizeDims: qcFinalPickedSize ? qcFinalPickedSize.dims : [] }
+      : { sizeKey: '', sizeDims: [] };
     if (qcFinalEditId) {
       const r = (state.qcFinalRecords || []).find(x => x.id === qcFinalEditId);
       if (!r) { qcFinalEditId = null; }
@@ -897,6 +1020,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
           pairKey: qcFinalPairKeyOf(date),
           productId: qcFinalPicked ? qcFinalPicked.productId : '',
           productName: qcFinalPicked ? qcFinalPicked.name : '',
+          sizeKey: sizeFields.sizeKey, sizeDims: sizeFields.sizeDims,
           workerNames: snap.workerNames, workTime: snap.workTime,
           workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC,
           updatedAt: now
@@ -915,6 +1039,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
       pairKey: qcFinalPairKeyOf(date),
       productId: qcFinalPicked ? qcFinalPicked.productId : '',
       productName: qcFinalPicked ? qcFinalPicked.name : '',
+      sizeKey: sizeFields.sizeKey, sizeDims: sizeFields.sizeDims,
       workerNames: snap.workerNames, workTime: snap.workTime,
       workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC,
       createdAt: now, updatedAt: now
@@ -934,6 +1059,9 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     qcFinalEditId = id;
     qcFinalPicked = r.productId || r.productName
       ? { productId: r.productId || '', name: r.productName || '', qty: Number(r.inputQty) || 0 }
+      : null;
+    qcFinalPickedSize = (qcFinalKindOf(r.kind) === 'thanh' && r.sizeKey)
+      ? { sizeKey: String(r.sizeKey), dims: Array.isArray(r.sizeDims) ? r.sizeDims.map(Number) : [], remain: Number(r.inputQty) || 0 }
       : null;
     const dateEl = document.getElementById('qcf-date');
     if (dateEl) dateEl.value = r.date || '';
@@ -990,7 +1118,11 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   // Đầu vào kiểm (trừ khi đang SỬA 1 lượt — giữ nguyên số đang nạp), rồi vẽ lại
   // danh sách thành phẩm Ép Ván của cặp 2 tuần mới.
   function qcFinalOnDateChange() {
-    if (!qcFinalEditId) {
+    // Kiểm Ván: thành phẩm gắn với cặp tuần → đổi ngày là bỏ chọn.
+    // Kiểm Thanh: cỡ thanh KHÔNG phụ thuộc ngày → giữ nguyên lựa chọn.
+    const kindSel = document.getElementById('qcf-kind');
+    const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');
+    if (!qcFinalEditId && kind !== 'thanh') {
       qcFinalPicked = null;
       const inputQty = document.getElementById('qcf-input-qty');
       if (inputQty) inputQty.value = '';
@@ -1030,6 +1162,9 @@ export {
   qcFinalPairWeeks,
   qcFinalProductStocks,
   qcFinalProducts2Weeks,
+  // ── 'KIỂM THANH': cỡ thanh ĐẦU RA của Bào thanh (LINK về thẻ Bào Tinh) ──
+  qcFinalThanhSizeStocks,
+  qcFinalSizeLabel,
   qcFinalRateEntryOf,
   qcFinalRateOf,
   qcFinalTodayISO,

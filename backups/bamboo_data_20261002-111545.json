@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-02T08:16:32.602Z",
+  "savedAt": "2026-10-02T03:56:31.115Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -6699,127 +6699,36 @@
   ],
   "xuong2BulligRecords": [
     {
-      "id": "x2bl-1790914545096-ndzw1",
-      "kind": "gc",
-      "date": "2026-10-01",
-      "week": "2026-W40",
-      "batchId": "batch-1790772785295",
-      "sources": [
-        {
-          "batchId": "batch-1790772785295",
-          "code": "260930-84",
-          "qty": 350
-        }
-      ],
-      "gcTotalPicked": 656,
-      "quantity": 1400,
-      "qtyIn": 350,
+      "gcTotalPicked": 4914,
       "convertFactor": 4,
+      "outSizeKey": "304×14×7",
+      "workTime": "",
+      "quantity": 1400,
       "outDims": [
         304,
         14,
         7
       ],
-      "outSizeKey": "304×14×7",
+      "kind": "gc",
+      "workHoursHC": 0,
       "unitVol": 0.000029792,
       "volume": 0.0417,
       "worker": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-02T04:15:45.096Z"
-    },
-    {
-      "id": "x2bl-1790914617887-boivp",
-      "kind": "gc",
-      "date": "2026-10-01",
       "week": "2026-W40",
-      "batchId": "batch-1790770689139",
+      "workHours": 0,
       "sources": [
         {
-          "batchId": "batch-1790770689139",
-          "code": "260930-31",
-          "qty": 1076.846
+          "batchId": "batch-1790760673235",
+          "qty": 350,
+          "code": "260930-02"
         }
       ],
-      "gcTotalPicked": 1932,
-      "quantity": 6460,
-      "qtyIn": 1076.846,
-      "convertFactor": 5.999,
-      "outDims": [
-        304,
-        10,
-        7
-      ],
-      "outSizeKey": "304×10×7",
-      "unitVol": 0.00002128,
-      "volume": 0.1375,
-      "worker": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
+      "id": "x2bl-1790913077188-gch60",
+      "batchId": "batch-1790760673235",
+      "qtyIn": 350,
+      "createdAt": "2026-10-02T03:51:17.188Z",
       "workHoursTC": 0,
-      "createdAt": "2026-10-02T04:16:57.887Z"
-    },
-    {
-      "id": "x2bl-1790914850968-uh60y",
-      "kind": "gc",
-      "date": "2026-10-01",
-      "week": "2026-W40",
-      "batchId": "batch-1790771299916",
-      "sources": [
-        {
-          "batchId": "batch-1790771299916",
-          "code": "260930-46",
-          "qty": 1092
-        },
-        {
-          "batchId": "batch-1790771812397",
-          "code": "260930-61",
-          "qty": 140.667
-        }
-      ],
-      "gcTotalPicked": 1305,
-      "quantity": 3698,
-      "qtyIn": 1232.667,
-      "convertFactor": 3,
-      "outDims": [
-        270,
-        10,
-        7
-      ],
-      "outSizeKey": "270×10×7",
-      "unitVol": 0.0000189,
-      "volume": 0.0699,
-      "worker": "Hà Thị Chính, Hà Thị Thắng, Lữ Thị Hà, Hà Văn Tới, Lữ Thị Hà",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 45,
-      "workHoursHC": 45,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-02T04:20:50.968Z",
-      "updatedAt": "2026-10-02T07:29:34.867Z"
-    },
-    {
-      "id": "x2bl-1790915038826-41aby",
-      "kind": "ct",
-      "date": "2026-10-01",
-      "week": "2026-W40",
-      "inSizeKey": "270×10×7",
-      "inDims": [
-        270,
-        10,
-        7
-      ],
-      "qtyOk": 2400,
-      "qtyErr": 0,
-      "unitVol": 0.0000189,
-      "worker": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-02T04:23:58.826Z"
+      "date": "2026-10-01"
     }
   ],
   "suppliers": [
@@ -6988,12 +6897,10 @@
   },
   "x2BulligRates": {
     "gc": {
-      "2026-09": 600,
-      "2026-10": 600
+      "2026-09": 600
     },
     "ct": {
-      "2026-09": 1500,
-      "2026-10": 1866
+      "2026-09": 1500
     }
   },
   "x2SayRates": {

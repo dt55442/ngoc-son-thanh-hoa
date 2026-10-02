@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -517,6 +517,25 @@ import { escapeHTML, showToast } from './utils.js';
     }
     return cur;
   }
+  // CỠ ĐẦU RA của "Bào thanh" khai báo THÊM (thẻ Bào Tinh) — GỘP, không mất cỡ nào
+  function restoreX2BaoThanhOutSizes(incoming) {
+    const src = Array.isArray(incoming) ? incoming : [];
+    const cur = Array.isArray(state.x2BaoThanhOutSizes) ? state.x2BaoThanhOutSizes : [];
+    const seen = new Set(cur.map(v => String(v || '').trim().toLowerCase()));
+    let changed = false;
+    src.forEach(v => {
+      const name = String(v || '').trim();
+      if (!name || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      cur.push(name);
+      changed = true;
+    });
+    if (changed) {
+      state.x2BaoThanhOutSizes = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
 
   // ─── FILE STORAGE (LƯU DỮ LIỆU VÀO FILE CÙNG THƯ MỤC) ─────────
   // Sử dụng File System Access API để đọc/ghi file bamboo_data.json
@@ -683,6 +702,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (Array.isArray(loaded.x2LotLocations)) {
           restoreX2LotLocations(loaded.x2LotLocations); // GỘP — không mất vị trí sấy đã khai báo
         }
+        if (Array.isArray(loaded.x2BaoThanhOutSizes)) {
+          restoreX2BaoThanhOutSizes(loaded.x2BaoThanhOutSizes); // GỘP — không mất cỡ đầu ra Bào thanh
+        }
         if (Array.isArray(loaded.xuong2BaoTinhRecords)) {
           restoreXuong2BaoTinh(loaded.xuong2BaoTinhRecords); // GỘP — không mất lượt bào tinh mới hơn
         }
@@ -804,6 +826,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (Array.isArray(loaded.x2LotLocations)) {
           restoreX2LotLocations(loaded.x2LotLocations); // GỘP — không mất vị trí sấy đã khai báo
         }
+        if (Array.isArray(loaded.x2BaoThanhOutSizes)) {
+          restoreX2BaoThanhOutSizes(loaded.x2BaoThanhOutSizes); // GỘP — không mất cỡ đầu ra Bào thanh
+        }
         if (Array.isArray(loaded.xuong2BaoTinhRecords)) {
           restoreXuong2BaoTinh(loaded.xuong2BaoTinhRecords); // GỘP — không mất lượt bào tinh mới hơn
         }
@@ -887,6 +912,7 @@ import { escapeHTML, showToast } from './utils.js';
         x2BaoTinhRates: state.x2BaoTinhRates || {},
         x2EpVanRates: state.x2EpVanRates || {},
         x2LotLocations: state.x2LotLocations || [],
+        x2BaoThanhOutSizes: state.x2BaoThanhOutSizes || [],   // Cỡ đầu ra Bào thanh (thẻ Bào Tinh)
         qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
         qcFinalRates: state.qcFinalRates || {},       // Định mức kiểm theo tháng (tấm/h)
         khoNotes: state.khoNotes || []
@@ -997,6 +1023,7 @@ import { escapeHTML, showToast } from './utils.js';
       x2BaoTinhRates: state.x2BaoTinhRates || {},
       x2EpVanRates: state.x2EpVanRates || {},
       x2LotLocations: state.x2LotLocations || [],
+      x2BaoThanhOutSizes: state.x2BaoThanhOutSizes || [],   // Cỡ đầu ra Bào thanh (thẻ Bào Tinh)
       qcKilnReadings: state.qcKilnReadings || [],
       qcKilnThresholds: state.qcKilnThresholds || {},
       qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
@@ -1094,6 +1121,9 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && Array.isArray(imported.x2LotLocations)) {
           restoreX2LotLocations(imported.x2LotLocations); // GỘP — không mất vị trí đã khai báo
+        }
+        if (Array.isArray(imported.x2BaoThanhOutSizes)) {
+          restoreX2BaoThanhOutSizes(imported.x2BaoThanhOutSizes); // GỘP — không mất cỡ đầu ra Bào thanh
         }
 
         if (Array.isArray(imported.qcKilnReadings)) {
@@ -1300,6 +1330,7 @@ export {
   restoreX2BoOngRates,
   restoreX2ChonNanRates,
   restoreX2LotLocations,
+  restoreX2BaoThanhOutSizes,
   restoreXuong2BaoTho,
   restoreXuong2BoOng,
   restoreXuong2ChonNan,

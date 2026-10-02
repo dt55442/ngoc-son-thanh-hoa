@@ -7287,6 +7287,110 @@ body[data-theme="night"] .x2-bl-conv-chip { background: #fdf3c8; }
 .x2-btinh-src { color: var(--text-muted); }
 .x2-btinh-err small { color: var(--text-muted); }
 
+/* ─── BÀO THANH: 4 trường (Chọn thanh đầu vào · Số lượng · Đầu ra · ĐẠT từ QC) ───
+   Nguồn đầu vào = Ép Ván (khối "Ván Thô Tạo Ra", thanh BTP theo THỂ TÍCH) +
+   thanh lỗi Bào thanh; Đầu ra = dropdown nổi (4 cỡ mặc định + nút Thêm);
+   Số lượng ĐẠT = LINK LIVE từ tab QC ("Kiểm thanh"). */
+.x2-btinh-bt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+.x2-btinh-bt-row .form-group { min-width: 190px; flex: 1 1 190px; }
+.x2-btinh-bt-row .x2-btinh-bt-qty-g { flex: 0 1 150px; min-width: 140px; }
+.x2-btinh-bt-in-g, .x2-btinh-bt-out-g { position: relative; }
+.x2-btinh-bt-row .al-picker-btn { width: 100%; justify-content: flex-start; gap: 6px; }
+.x2-btinh-bt-row .al-picker-btn .al-picked-count { margin-left: auto; }
+.x2-btinh-bt-ok {
+  width: 100%;
+  min-height: 0;
+  padding: 6px 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: right;
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px dashed rgba(22, 163, 74, 0.5);
+  border-radius: 8px;
+}
+.x2-btinh-bt-row small { display: block; margin-top: 4px; font-size: 0.72rem; line-height: 1.3; }
+/* Danh sách nổi (nguồn đầu vào / cỡ đầu ra) — dùng chung khuôn .al-picker */
+.x2-btinh-bt-row .x2-btinh-picker { min-width: 280px; }
+.al-picker-head {
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.al-picker-foot { padding: 6px; border-top: 1px solid var(--border); text-align: right; }
+/* Thẻ nguồn hết hàng → làm mờ, không bấm được */
+.al-card.disabled,
+.al-card[aria-disabled="true"] {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── BỘ LỌC KỲ: TUẦN / THÁNG / NĂM (Thẻ BÀO TINH) ────────────────
+   Dùng CHUNG cho dải ô "Thống kê nhanh" + bảng "Lịch Sử Bào Tinh":
+   đặt trên thanh tiêu đề bảng —  ‹ [Tuần|Tháng|Năm] ›  ·  Tuần 39 (…)   */
+.x2-btinh-period-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.x2-period-btns {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg, transparent);
+}
+.x2-period-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 6px 11px;
+  min-height: 32px;
+  cursor: pointer;
+}
+.x2-period-btn + .x2-period-btn { border-left: 1px solid var(--border); }
+.x2-period-btn.active {
+  background: var(--primary, #0f766e);
+  color: #fff;
+}
+.x2-period-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+/* Ô thống kê ghi rõ KỲ đang xem (bấm ‹ › hoặc chuyển Tuần/Tháng/Năm) */
+.material-stat-period {
+  border-right: 1px dashed var(--border);
+}
+.material-stat-period .material-stat-value {
+  font-size: 0.92rem;
+  color: var(--primary, #0f766e);
+}
+.material-stat-period .material-stat-label { font-size: 0.68rem; }
+@media (max-width: 639.98px) {
+  .x2-btinh-period-bar { width: 100%; margin-left: 0; justify-content: space-between; }
+  .x2-period-label { font-size: 0.7rem; }
+  .x2-period-btn { min-height: 36px; padding: 6px 9px; }
+}
+
 /* ═════════════════════════════════════════════════════════════
    THẺ ÉP VÁN (launcher tab Công Đoạn) — 2 KHUNG: Lượt Ép / Biểu Đồ
    • Nút chuyển khung nằm trong hàng tiêu đề thẻ; khung không dùng
@@ -7402,6 +7506,11 @@ body:has(.view-panel.active .modal-overlay.show) { overflow: hidden; }
     overscroll-behavior: contain;
   }
   .x2-btinh-group-table th, .x2-btinh-group-table td { padding: 4px 5px; }
+  /* Bào thanh: mỗi trường 1 hàng trên điện thoại; danh sách nổi full ngang */
+  .x2-btinh-bt-row .form-group,
+  .x2-btinh-bt-row .x2-btinh-bt-qty-g { flex: 1 1 100%; min-width: 100%; }
+  .x2-btinh-bt-row .x2-btinh-picker { min-width: 0; width: 100%; left: 0; right: 0; }
+  .x2-btinh-bt-row .al-picker-btn { min-height: 46px; }
   .x2-btinh-actions .btn { min-height: 44px; }
 
   /* (3b) ── THẺ ÉP VÁN: 2 nút chuyển khung đủ to để chạm, khung gọn lại ── */

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-02T08:16:32.602Z",
+  "savedAt": "2026-10-02T06:12:01.333Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -6767,23 +6767,28 @@
       "kind": "gc",
       "date": "2026-10-01",
       "week": "2026-W40",
-      "batchId": "batch-1790771299916",
+      "batchId": "batch-1790770861071",
       "sources": [
+        {
+          "batchId": "batch-1790770861071",
+          "code": "260930-33",
+          "qty": 1932
+        },
         {
           "batchId": "batch-1790771299916",
           "code": "260930-46",
           "qty": 1092
         },
         {
-          "batchId": "batch-1790771812397",
-          "code": "260930-61",
-          "qty": 140.667
+          "batchId": "batch-1790771830483",
+          "code": "260930-62",
+          "qty": 674
         }
       ],
-      "gcTotalPicked": 1305,
+      "gcTotalPicked": 4004,
       "quantity": 3698,
-      "qtyIn": 1232.667,
-      "convertFactor": 3,
+      "qtyIn": 3698,
+      "convertFactor": 1,
       "outDims": [
         270,
         10,
@@ -6792,13 +6797,12 @@
       "outSizeKey": "270×10×7",
       "unitVol": 0.0000189,
       "volume": 0.0699,
-      "worker": "Hà Thị Chính, Hà Thị Thắng, Lữ Thị Hà, Hà Văn Tới, Lữ Thị Hà",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 45,
-      "workHoursHC": 45,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
       "workHoursTC": 0,
-      "createdAt": "2026-10-02T04:20:50.968Z",
-      "updatedAt": "2026-10-02T07:29:34.867Z"
+      "createdAt": "2026-10-02T04:20:50.968Z"
     },
     {
       "id": "x2bl-1790915038826-41aby",
@@ -6992,8 +6996,7 @@
       "2026-10": 600
     },
     "ct": {
-      "2026-09": 1500,
-      "2026-10": 1866
+      "2026-09": 1500
     }
   },
   "x2SayRates": {

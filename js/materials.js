@@ -16,7 +16,8 @@ import { canEditTab } from './permissions.js';
 import { trackDeleted } from './tombstone.js';
 import { renderSuppliers } from './suppliers.js';
 import { logDataChange } from './history.js';
-import { dataUrlToBlob, deletePhotos, getPhotoURL, photosAvailable, putPhoto } from './photo-store.js';
+import { dataUrlToBlob, deletePhotos, deleteThumb, getPhotoURL, getThumbURL, photosAvailable, putPhoto, putThumb } from './photo-store.js';
+import { fetchThumbFromCloud, hydratePhotoThumbs, photoSyncBackfill, photoSyncEnqueue, photoSyncEnqueueDelete } from './photo-sync.js';
 import { STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIALS, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWinSize } from './utils.js';
 
@@ -129,7 +130,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     } else {
       state.materialRecords = [];
     }
-    migrateMaterialImages(); // ảnh legacy (dataURL nguyên bản) → kho ảnh (fire-and-forget)
+    migrateMaterialImages() // ảnh legacy (dataURL nguyên bản) → kho ảnh (fire-and-forget)
+      .then(() => photoSyncBackfill())   // đưa ảnh đang có thumb cục bộ vào hàng đợi kênh ảnh
+      .catch(() => {});
   }
 
   function saveMaterialRecords() {
@@ -1110,8 +1113,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     tbody.innerHTML = arr.map(r => {
       const imgs = r.images || [];
       const firstSrc = imgs.length ? imgThumbSrc(imgs[0]) : '';
-      const thumb = firstSrc
-        ? `<img src="${firstSrc}" alt="Ảnh ${escapeHTML(r.type || '')}" class="material-thumb" data-mat-photo="${r.id}" data-mat-photo-idx="0">`
+      const firstId = imgs.length ? imgPhotoId(imgs[0]) : null;
+      const thumb = (firstSrc || firstId)
+        ? `<img src="${firstSrc}"${firstId ? ` data-photo-id="${firstId}"` : ''}${firstSrc ? ' data-photo-inline="1"' : ''} alt="Ảnh ${escapeHTML(r.type || '')}" class="material-thumb" data-mat-photo="${r.id}" data-mat-photo-idx="0">`
         : `<span class="material-thumb material-thumb-empty"><i data-lucide="image-off"></i></span>`;
       const weight = Number(r.weight) || 0;
       const unitPrice   = Number(r.unitPrice) || 0;
@@ -1135,6 +1139,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         </tr>`;
     }).join('');
     initLucide();
+    hydratePhotoThumbs(tbody); // nạp thumb từ kho/kênh ảnh (máy khác tải theo nhu cầu)
   }
 
   // ─── GỢI Ý LOẠI NGUYÊN LIỆU (datalist ô "Loại Nguyên Liệu" modal nhập) ──
@@ -1321,7 +1326,17 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         const id = await putPhoto(full); // ảnh full → kho IndexedDB (null nếu không khả dụng)
         if (id) {
           backupPhotoToFile(id, full);
-          state.materialFormImages.push({ id, thumb: thumb || full });
+          // THUMB → kho riêng (KHÔNG nhúng vào bản ghi) để bản ghi không phình;
+          // rồi đưa vào HÀNG ĐỢI KÊNH ẢNH để đẩy dần lên mây (chỉ thumb).
+          let thumbSaved = false;
+          try { thumbSaved = !!(await putThumb(thumb || full, id)); } catch (err) { thumbSaved = false; }
+          if (thumbSaved) {
+            state.materialFormImages.push({ id });
+            photoSyncEnqueue(id);
+          } else {
+            // Không lưu được kho thumb → giữ thumb inline (an toàn, không mất ảnh)
+            state.materialFormImages.push({ id, thumb: thumb || full });
+          }
         } else if (thumb && thumb.length < full.length) {
           // Không có kho ảnh (trình duyệt cũ): giữ inline cả thumb + full, không mất ảnh
           state.materialFormImages.push({ full, thumb });
@@ -1364,12 +1379,16 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     const wrap = document.getElementById('material-image-previews');
     if (!wrap) return;
     const imgs = state.materialFormImages || [];
-    wrap.innerHTML = imgs.map((entry, i) => `
+    wrap.innerHTML = imgs.map((entry, i) => {
+      const src = imgThumbSrc(entry);
+      const pid = imgPhotoId(entry);
+      return `
       <div class="material-img-thumb">
-        <img src="${imgThumbSrc(entry)}" alt="Ảnh ${i + 1}">
+        <img src="${src}" ${pid ? `data-photo-id="${pid}"` : ''}${src ? ' data-photo-inline="1"' : ''} alt="Ảnh ${i + 1}">
         <button type="button" class="material-img-remove" data-mat-remove-img="${i}" title="Xóa ảnh">&times;</button>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
+    hydratePhotoThumbs(wrap); // nạp thumb từ kho/kênh ảnh (bất đồng bộ)
   }
 
   // ─── MIGRATE ẢNH LEGACY → KHO ────────────────────────────────
@@ -1384,20 +1403,35 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
       let anyChanged = false;
       for (const rec of state.materialRecords) {
         const imgs = rec.images || [];
-        if (!imgs.length || !imgs.some(en => typeof en === 'string' && en.length > PHOTO_INLINE_LIMIT)) continue;
+        if (!imgs.length) continue;
+        // Có việc khi: ảnh legacy dạng chuỗi lớn, HOẶC entry còn thumb inline
+        const hasWork = imgs.some(en =>
+          (typeof en === 'string' && en.length > PHOTO_INLINE_LIMIT) ||
+          (en && typeof en === 'object' && !!en.thumb));
+        if (!hasWork) continue;
         const next = [];
         let recChanged = false;
         for (const entry of imgs) {
+          // (a) Ảnh legacy dạng chuỗi dataURL lớn → đưa ảnh FULL vào kho + tạo thumb
           if (typeof entry === 'string' && entry.length > PHOTO_INLINE_LIMIT) {
             let thumb = '';
             try { thumb = await makeThumbFromDataURL(entry); } catch (err) { /* bỏ qua */ }
             const id = await putPhoto(entry);
             if (id) {
               backupPhotoToFile(id, entry);
-              next.push({ id, thumb: thumb || entry });
+              const thumbOk = await saveThumbFor(id, thumb || entry);
+              next.push(thumbOk ? { id } : { id, thumb: thumb || entry });
+              if (thumbOk) photoSyncEnqueue(id);
               recChanged = true;
               continue;
             }
+          }
+          // (b) Entry { id, thumb } → RÚT thumb ra kho riêng, bản ghi chỉ còn { id }
+          if (entry && typeof entry === 'object' && entry.id && entry.thumb) {
+            const thumbOk = await saveThumbFor(entry.id, entry.thumb);
+            next.push(thumbOk ? { id: entry.id } : entry);
+            if (thumbOk) { photoSyncEnqueue(entry.id); recChanged = true; }
+            continue;
           }
           next.push(entry);
         }
@@ -1405,6 +1439,12 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
       }
       if (anyChanged) saveMaterialRecords();
     } finally { migrateRunning = false; }
+  }
+
+  // Lưu thumb vào kho riêng (trả true nếu thành công)
+  async function saveThumbFor(photoId, thumbDataUrl) {
+    if (!photoId || !thumbDataUrl) return false;
+    try { return !!(await putThumb(thumbDataUrl, photoId)); } catch (e) { return false; }
   }
 
   function openMaterialPhotoModal(recordId, idx = 0) {
@@ -1429,16 +1469,29 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     const capEl  = document.getElementById('material-photo-caption');
     const prevEl = document.getElementById('material-photo-prev');
     const nextEl = document.getElementById('material-photo-next');
+    let fullMissing = false; // true = máy này không có ảnh full (chỉ hiện thumb)
     if (imgEl) {
-      imgEl.src = imgFullSrcSync(entry); // hiển thị ngay (thumb nếu ảnh full nằm ngoài bản ghi)
+      imgEl.src = imgFullSrcSync(entry); // hiển thị ngay (thumb inline nếu có)
       const photoId = imgPhotoId(entry);
       if (photoId) {
-        const url = await getPhotoURL(photoId); // nạp ảnh full từ kho theo yêu cầu
-        if (url && state.materialLightbox === lb) imgEl.src = url; // bỏ qua nếu đã đóng/đổi ảnh
+        const url = await getPhotoURL(photoId); // ảnh full từ kho (chỉ có ở máy nhập liệu)
+        if (url) {
+          if (state.materialLightbox === lb) imgEl.src = url;
+        } else {
+          // Máy khác không có ảnh full → hiện THUMB (kho/kênh ảnh)
+          let turl = '';
+          try { turl = await getThumbURL(photoId); } catch (e) { turl = ''; }
+          if (!turl) {
+            try { turl = await fetchThumbFromCloud(photoId); } catch (e) { turl = ''; }
+          }
+          if (turl && state.materialLightbox === lb) imgEl.src = turl;
+          fullMissing = true;
+        }
       }
     }
     if (capEl) {
-      capEl.innerHTML = `<strong>${escapeHTML(rec.type || 'Nguyên liệu')}</strong> · ${escapeHTML(materialLocationLabel(rec.location))} · ${formatDateDDMMYY(rec.date)} · ${lb.index + 1}/${imgs.length}`;
+      capEl.innerHTML = `<strong>${escapeHTML(rec.type || 'Nguyên liệu')}</strong> · ${escapeHTML(materialLocationLabel(rec.location))} · ${formatDateDDMMYY(rec.date)} · ${lb.index + 1}/${imgs.length}`
+        + (fullMissing ? ' · <em style="color:var(--text-muted);">ảnh gốc nằm ở máy nhập liệu</em>' : '');
     }
     if (prevEl) prevEl.style.display = imgs.length > 1 ? '' : 'none';
     if (nextEl) nextEl.style.display = imgs.length > 1 ? '' : 'none';
@@ -1500,7 +1553,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         });
         saveMaterialRecords();
         if (removedIds.length) {
-          deletePhotos(removedIds); // dọn kho IndexedDB (fire-and-forget)
+          deletePhotos(removedIds); // dọn kho IndexedDB ảnh full (fire-and-forget)
+          removedIds.forEach(id => { deleteThumb(id); photoSyncEnqueueDelete(id); }); // dọn kho thumb + xóa doc mây
           storageModule().then(m => m && m.deletePhotoFiles(removedIds)).catch(() => {});
         }
         showToast('Đã cập nhật lần nhập nguyên liệu!', 'success');
@@ -1533,7 +1587,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     trackDeleted('materialRecords', recordId); // tombstone: bản ghi đã xóa không bị mây/máy khác hồi sinh
     state.materialRecords = state.materialRecords.filter(r => r.id !== recordId);
     if (photoIds.length) {
-      deletePhotos(photoIds); // dọn kho IndexedDB (fire-and-forget)
+      deletePhotos(photoIds); // dọn kho IndexedDB ảnh full (fire-and-forget)
+      photoIds.forEach(id => { deleteThumb(id); photoSyncEnqueueDelete(id); }); // dọn kho thumb + xóa doc mây
       storageModule().then(m => m && m.deletePhotoFiles(photoIds)).catch(() => {});
     }
     saveMaterialRecords();

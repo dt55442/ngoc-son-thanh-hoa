@@ -304,13 +304,14 @@ check('DROPDOWN NỔI: đóng → node TRỞ VỀ ô Đầu vào kiểm (không 
 state.qcFinalRecords = [rec1]; // dọn dữ liệu thêm — trả về 1 lượt để các mục sau đúng
 // ═══ PHẦN 6b ═══
 
-// ─── H. LOẠI KIỂM (Thanh / Ván): đơn vị + ẩn/hiện picker ──────
+// ─── H. LOẠI KIỂM (Thanh / Ván): đơn vị + nguồn danh sách ──────
 setVal('qcf-kind', 'thanh');
 qcf.syncQcFinalKindFields();
-check('KIỂM THANH: đơn vị các ô số lượng đổi thành "thanh" + ẨN picker thành phẩm',
+check('KIỂM THANH: đơn vị các ô số lượng đổi thành "thanh" + HIỆN danh sách CỠ thanh (Bào thanh)',
   document.getElementById('qcf-unit-in').textContent === 'thanh' &&
   document.getElementById('qcf-unit-ok').textContent === 'thanh' &&
-  document.getElementById('qcf-picker-btn').hidden === true);
+  document.getElementById('qcf-picker-btn').hidden === false &&
+  document.getElementById('qcf-picker-text').textContent === 'Cỡ thanh Bào thanh');
 setVal('qcf-kind', 'van');
 qcf.syncQcFinalKindFields();
 check('KIỂM VÁN: đơn vị về "tấm" + hiện lại picker (Xưởng 2)',
@@ -346,6 +347,56 @@ qcf.syncQcFinalWorkshopFields();
 check('XƯỞNG 2: hiện lại nút chọn thành phẩm · ẩn chip "Sắp có"',
   document.getElementById('qcf-picker-btn').hidden === false &&
   document.getElementById('qcf-in-soon').hidden === true);
+
+// ─── I2. 'KIỂM THANH' — LINK CỠ THANH ĐẦU RA CỦA BÀO THANH ─────
+// Lượt Bào thanh ghi cỡ đầu ra 640×14×12 (đem bào 500 thanh) → QC chọn cỡ này,
+// tự điền Đầu vào kiểm = số CÒN LẠI, lưu `sizeKey` để thẻ Bào Tinh đọc lại.
+state.xuong2BaoTinhRecords = [
+  { id: 'bt1', date: '2026-09-20', kind: 'bao_thanh', inSizeKey: '1200×18×15', inDims: [1200, 18, 15],
+    inQty: 500, inSource: 'press', outSizeKey: '640×14×12', outDims: [640, 14, 12] },
+  { id: 'bt2', date: '2026-09-21', kind: 'bao_thanh', inSizeKey: '1200×18×15', inDims: [1200, 18, 15],
+    inQty: 300, inSource: 'press', outSizeKey: '1200×10×8', outDims: [1200, 10, 8] }
+];
+setVal('qcf-kind', 'thanh'); setVal('qcf-workshop', 'x2');
+qcf.syncQcFinalKindFields();
+const sizeStocks = qcf.qcFinalThanhSizeStocks();
+check('TỒN CỠ THANH: 2 cỡ đầu ra của Bào thanh — 640×14×12 Tổng 500 · Còn 500',
+  sizeStocks.length === 2 &&
+  (sizeStocks.find(x => x.sizeKey === '640×14×12') || {}).total === 500 &&
+  (sizeStocks.find(x => x.sizeKey === '640×14×12') || {}).remain === 500);
+qcf.setQcFinalPickerOpen(true);
+const thanhListHtml = document.getElementById('qcf-product-list').innerHTML;
+check('DANH SÁCH CỠ THANH: thẻ hiện cỡ mm + Tổng/Đã kiểm/Còn lại + nút chọn data-qcf-size',
+  thanhListHtml.includes('640 × 14 × 12 mm') && thanhListHtml.includes('data-qcf-size="640×14×12"') &&
+  thanhListHtml.includes('Tổng <strong>500</strong>') && thanhListHtml.includes('Còn lại 500'));
+qcf.onQcFinalListClick({ target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null } });
+check('CHỌN CỠ THANH: ô Đầu vào kiểm tự điền số CÒN LẠI (500)',
+  document.getElementById('qcf-input-qty').value === '500');
+setVal('qcf-date', '2026-09-22');
+setVal('qcf-input-qty', '500'); setVal('qcf-ok', '470'); setVal('qcf-except', '10'); setVal('qcf-reject', '20');
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+const qcThanh = state.qcFinalRecords[state.qcFinalRecords.length - 1];
+check('LƯU KIỂM THANH: lưu kind=thanh + sizeKey/sizeDims của cỡ được kiểm',
+  qcThanh.kind === 'thanh' && qcThanh.sizeKey === '640×14×12' &&
+  qcThanh.sizeDims.join('×') === '640×14×12' && qcThanh.qtyOk === 470);
+check('TỒN CỠ THANH SAU KIỂM: 640×14×12 đã kiểm 500 → Còn 0 · cỡ kia vẫn 300',
+  (qcf.qcFinalThanhSizeStocks().find(x => x.sizeKey === '640×14×12') || {}).remain === 0 &&
+  (qcf.qcFinalThanhSizeStocks().find(x => x.sizeKey === '1200×10×8') || {}).remain === 300);
+qcf.renderQcFinalTable();
+check('THẺ NGÀY: lượt Kiểm thanh hiện CHIP CỠ thay cho tên thành phẩm',
+  document.getElementById('qcf-day-cards').innerHTML.includes('Cỡ 640 × 14 × 12') &&
+  qcf.qcFinalDisplay(qcThanh).sizeKey === '640×14×12');
+// SỬA lượt kiểm thanh → khôi phục đúng cỡ + xoá sạch dữ liệu thêm
+qcf.editQcFinalRecord(qcThanh.id);
+check('SỬA KIỂM THANH: khôi phục lựa chọn cỡ 640 × 14 × 12', (() => {
+  qcf.setQcFinalPickerOpen(true);
+  const h = document.getElementById('qcf-product-list').innerHTML;
+  qcf.setQcFinalPickerOpen(false);
+  return h.includes('qcf-product picked');
+})());
+qcf.deleteQcFinalRecord(qcThanh.id);
+state.xuong2BaoTinhRecords = [];
+state.qcFinalRecords = [];
 
 // ─── J. CẤU TRÚC (index.html · qc.js · events.js · 4 nơi · sw.js · css) ──
 const idxHtml = fsMod.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -388,8 +439,8 @@ check('CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · histo
   stoJs.includes('restoreQcFinal') && stoJs.includes('qcFinalRecords') &&
   clJs.includes('qcFinalRecords') && clJs.includes('qcFinalRates') &&
   hiJs.includes('qcFinalRecords') && mnJs.includes('loadQcFinal'));
-check('CẤU TRÚC (sw.js): CACHE_NAME v192 + js/qc-final.js vào APP_SHELL',
-  /nha-may-ngoc-son-v192/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
+check('CẤU TRÚC (sw.js): CACHE_NAME v194 + js/qc-final.js vào APP_SHELL',
+  /nha-may-ngoc-son-v196/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
 check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)',
   cssHtml.includes('.qcf-picker') && cssHtml.includes('.qcf-row-main') && cssHtml.includes('.qcf-ws-chip') &&
   cssHtml.includes('.qcf-kind-chip') && cssHtml.includes('.qcf-product-meta') &&

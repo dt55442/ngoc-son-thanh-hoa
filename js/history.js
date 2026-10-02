@@ -46,6 +46,7 @@ import { escapeHTML, showToast } from './utils.js';
     xuong2BulligRecords: { tab: 'kanban', label: 'Bullig Xưởng 2',          get: () => state.xuong2BulligRecords },
     xuong2BaoTinhRecords: { tab: 'kanban', label: 'Bào tinh Xưởng 2',     get: () => state.xuong2BaoTinhRecords },
     x2LotLocations:    { tab: 'kanban',    label: 'Vị trí sấy (khai báo)', get: () => state.x2LotLocations },
+    x2BaoThanhOutSizes:{ tab: 'kanban',    label: 'Cỡ đầu ra Bào thanh (khai báo)', get: () => state.x2BaoThanhOutSizes },
     x2EpVanRates:      { tab: 'kanban',    label: 'Định mức ép ván (m³/h)', get: () => state.x2EpVanRates },
     x2SayRates:        { tab: 'kanban',    label: 'Định mức than hóa (phút/m³)', get: () => state.x2SayRates },
     x2SayTimes:        { tab: 'kanban',    label: 'Số lần than hóa theo ngày', get: () => state.x2SayTimes },

@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
@@ -218,11 +218,72 @@ import { showToast } from './utils.js';
   }
   let fbLocalHashes = null;          // băm miền cục bộ (cache) — null = cần tính lại
   let fbPushedDomainHashes = null;   // băm của lần ĐẨY gần nhất (nhận diện echo của chính mình)
+  let fbRemoteDomainHashes = null;   // băm miền theo MỤC LỤC mây gần nhất (để biết miền nào cần ghi)
   function localHashesNow() {
     if (fbLocalHashes) return fbLocalHashes;
     try { fbLocalHashes = domainHashes(collectCloudPayload()); }
     catch (e) { return {}; }
     return fbLocalHashes;
+  }
+
+  // ─── GIAI ĐOẠN 2: TÁCH DOC THEO TỪNG MIỀN + MỤC LỤC (delta) ──────────
+  // Mây lưu: doc MỤC LỤC `apps/main` = { __fmt:'delta-v1', __dh, deletedIds, ... }
+  // + mỗi miền 1 doc `apps/main/d/<miền>` = { h, data } (hoặc { h, enc:'gzip', payload }).
+  // ĐẨY: chỉ ghi doc của miền ĐỔI. NHẬN: chỉ tải doc miền ĐỔI (máy khác nhanh hơn).
+  // Miền quá lớn cho 1 doc → rơi về định dạng 1-doc cũ (vẫn kèm __dh). Rules
+  // `apps/{doc}/{document=**}` đã phủ sẵn subcollection 'd' — không cần sửa rules.
+  const FB_DOMAIN_COLL = 'd';
+  const CLOUD_DOMAIN_PLAIN_LIMIT = 600 * 1024;  // ≤ 600KB → lưu thẳng { h, data }
+  const CLOUD_DOMAIN_GZIP_LIMIT = 880 * 1024;   // gzip-base64 ≤ 880KB → 1 doc miền
+  let fbRemoteIsDelta = false;      // cloud hiện ở định dạng delta-v1?
+  let fbOversizeDomains = {};       // miền từng quá lớn cho 1 doc (→ dùng định dạng cũ)
+  function DomainTooBigError(k) {
+    const e = new Error('Miền quá lớn cho 1 doc: ' + k);
+    e.domainTooBig = true;
+    return e;
+  }
+  function domainDocRef(k) { return cloudDocRef().collection(FB_DOMAIN_COLL).doc(k); }
+  // Ghi 1 miền lên doc riêng. Ném DomainTooBigError nếu vượt giới hạn 1 doc.
+  async function writeDomainDoc(k, h, val) {
+    const ref = domainDocRef(k);
+    const value = (val === undefined) ? null : val;
+    const raw = JSON.stringify(value);
+    const rawSize = utf8Bytes(raw);
+    if (rawSize <= CLOUD_DOMAIN_PLAIN_LIMIT) {
+      await ref.set({ h, data: value });
+      return { size: rawSize };
+    }
+    if (!isGzipSupported()) { fbOversizeDomains[k] = true; throw DomainTooBigError(k); }
+    const b64 = await gzipStringToBase64(raw);
+    if (b64.length > CLOUD_DOMAIN_GZIP_LIMIT) { fbOversizeDomains[k] = true; throw DomainTooBigError(k); }
+    await ref.set({ h, enc: 'gzip', payload: b64 });
+    return { size: b64.length };
+  }
+  // Đọc 1 miền từ doc riêng (undefined = không có / không đọc được)
+  async function readDomainDoc(k) {
+    const d = await domainDocRef(k).get();
+    if (!d || !d.exists) return undefined;
+    const dd = d.data() || {};
+    if (dd.enc === 'gzip') return JSON.parse(await gunzipBase64ToString(dd.payload || ''));
+    return ('data' in dd) ? dd.data : undefined;
+  }
+  // Đọc TOÀN BỘ dữ liệu mây thành 1 object đầy đủ (nút "Tải Từ Mây Về" + gộp trước khi đẩy)
+  async function readFullCloudObject() {
+    if (!fbDb) return null;
+    const d = await cloudDocRef().get();
+    if (!d.exists) return null;
+    const meta = d.data() || {};
+    if (meta.__fmt === 'delta-v1') {
+      const dh = meta.__dh || {};
+      const out = { deletedIds: meta.deletedIds || {} };
+      const keys = Object.keys(dh).filter(k => k !== 'deletedIds');
+      const vals = await Promise.all(keys.map(k => readDomainDoc(k).catch(() => undefined)));
+      keys.forEach((k, i) => { if (vals[i] !== undefined) out[k] = vals[i]; });
+      if (meta.updatedBy) out.updatedBy = meta.updatedBy;
+      if (meta.updatedAt) out.updatedAt = meta.updatedAt;
+      return out;
+    }
+    return assembleRemoteObject(meta);
   }
 
   // Dọn mảnh shard cũ không còn mục lục dùng (best-effort, không chặn đẩy dữ liệu).
@@ -256,12 +317,52 @@ import { showToast } from './utils.js';
   }
   async function doWriteCloudSnapshot() {
     const snap = collectCloudPayload(); // ĐẨY bản GỠ ảnh base64 (674KB thumb ở lại máy)
+    const dh = domainHashes(snap);
+    // Nếu từng có miền quá lớn cho 1 doc: chỉ thử delta khi miền đó đã nhỏ lại
+    const stillOversize = Object.keys(fbOversizeDomains).some((k) => {
+      if (!fbOversizeDomains[k]) return false;
+      const raw = utf8Bytes(JSON.stringify(snap[k] === undefined ? null : snap[k]));
+      if (raw <= CLOUD_DOMAIN_PLAIN_LIMIT) { delete fbOversizeDomains[k]; return false; }
+      return true;
+    });
+    if (stillOversize) return await writeLegacySnapshot(snap, dh);
+    // Ưu tiên ĐỊNH DẠNG DELTA (giai đoạn 2): chỉ ghi doc của miền ĐỔI
+    try {
+      return await writeDeltaSnapshot(snap, dh);
+    } catch (e) {
+      if (!e || !e.domainTooBig) throw e;
+      return await writeLegacySnapshot(snap, dh); // có miền quá lớn → dùng định dạng cũ
+    }
+  }
+
+  // Ghi MỤC LỤC + doc của các miền ĐỔI. Ném lỗi e.domainTooBig nếu 1 miền vượt giới hạn doc.
+  async function writeDeltaSnapshot(snap, dh) {
+    const remoteH = fbRemoteDomainHashes;
+    const cloudIsDelta = fbRemoteIsDelta === true;
+    const keys = Object.keys(dh).filter(k => k !== 'deletedIds');
+    // Cloud CHƯA ở delta (lần đầu / đang là 1-doc cũ) → phải ghi ĐỦ mọi miền
+    const changed = keys.filter(k => !cloudIsDelta || !remoteH || remoteH[k] !== dh[k]);
+    const results = await Promise.all(changed.map(k => writeDomainDoc(k, dh[k], snap[k])));
+    const size = results.reduce((a, r) => a + ((r && r.size) || 0), 0);
+    // Mục lục: ghi khi mây chưa có mục lục delta, hoặc có bất kỳ miền đổi
+    if (!cloudIsDelta || !remoteH || !sameHashes(remoteH, dh)) {
+      await cloudDocRef().set({
+        __fmt: 'delta-v1', __dh: dh,
+        deletedIds: snap.deletedIds || {},
+        updatedBy: snap.updatedBy, updatedAt: snap.updatedAt
+      });
+    }
+    fbPushedDomainHashes = dh; fbLocalHashes = dh; fbRemoteDomainHashes = dh; fbRemoteIsDelta = true;
+    cleanupStaleShards(0); // dọn mảnh shard cũ của định dạng 1-doc (nếu còn)
+    return { mode: 'delta-v1', changed: changed.length, size };
+  }
+
+  // Định dạng 1-DOC CŨ (JSON trơn / gzip / shard) — giữ làm FALLBACK khi 1 miền quá lớn.
+  async function writeLegacySnapshot(snap, dh) {
     const docRef = cloudDocRef();
     const raw = JSON.stringify(snap);
     const size = utf8Bytes(raw);
-    // Chữ ký từng miền — đính kèm mọi định dạng để máy nhận THOÁT NHANH khi giống
-    const dh = domainHashes(snap);
-    const markPushed = () => { fbPushedDomainHashes = dh; fbLocalHashes = dh; };
+    const markPushed = () => { fbPushedDomainHashes = dh; fbLocalHashes = dh; fbRemoteDomainHashes = dh; fbRemoteIsDelta = false; };
     if (size <= CLOUD_PLAIN_LIMIT) {
       await docRef.set(Object.assign({}, snap, { __dh: dh })); // nhỏ → JSON trơn + chữ ký miền
       markPushed();
@@ -542,6 +643,7 @@ import { showToast } from './utils.js';
       x2BaoTinhRates: state.x2BaoTinhRates || {},
       x2EpVanRates: state.x2EpVanRates || {},
       x2LotLocations: state.x2LotLocations || [],
+      x2BaoThanhOutSizes: state.x2BaoThanhOutSizes || [],   // Cỡ đầu ra Bào thanh (thẻ Bào Tinh)
       khoNotes: state.khoNotes || [],
       history: state.history || [],
       deletedIds: state.deletedIds || {},
@@ -642,6 +744,7 @@ import { showToast } from './utils.js';
       x2BaoTinhRates: obj.x2BaoTinhRates || {},
       x2EpVanRates: obj.x2EpVanRates || {},
       x2LotLocations: obj.x2LotLocations || [],
+      x2BaoThanhOutSizes: obj.x2BaoThanhOutSizes || [],   // Cỡ đầu ra Bào thanh (thẻ Bào Tinh)
       khoNotes: obj.khoNotes || [],
       history: obj.history || [],
       deletedIds: obj.deletedIds || {}
@@ -830,6 +933,18 @@ import { showToast } from './utils.js';
       });
       state.x2LotLocations = cur;
     }
+    // Cỡ ĐẦU RA của Bào thanh khai báo thêm — GỘP 2 chiều, không mất cỡ nào
+    if (Array.isArray(remote.x2BaoThanhOutSizes) && remote.x2BaoThanhOutSizes.length) {
+      const cur = Array.isArray(state.x2BaoThanhOutSizes) ? state.x2BaoThanhOutSizes.slice() : [];
+      const seen = new Set(cur.map(v => String(v || '').trim().toLowerCase()));
+      remote.x2BaoThanhOutSizes.forEach(v => {
+        const name = String(v || '').trim();
+        if (!name || seen.has(name.toLowerCase())) return;
+        seen.add(name.toLowerCase());
+        cur.push(name);
+      });
+      state.x2BaoThanhOutSizes = cur;
+    }
     // Lịch sử sửa đổi: gộp thêm các dòng máy này chưa có (mỗi dòng 1 id riêng)
     if (remote.history) {
       state.history = mergeAddMissing(state.history || [], remote.history || []);
@@ -877,6 +992,7 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_X2_BAO_THO_RATE, JSON.stringify(state.x2BaoThoRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_CHON_NAN_RATE, JSON.stringify(state.x2ChonNanRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_LOT_LOCATIONS, JSON.stringify(state.x2LotLocations || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, JSON.stringify(state.x2BaoThanhOutSizes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_EMPLOYEES, JSON.stringify(state.hrEmployees || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_LEAVES, JSON.stringify(state.hrLeaves || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}
@@ -910,6 +1026,18 @@ import { showToast } from './utils.js';
     fbDidLoadRemote = true;
     fbRemoteDocExists = snap.exists;
     const meta = snap.exists ? (snap.data() || {}) : {};
+    // ─── ĐỊNH DẠNG DELTA (giai đoạn 2): MỤC LỤC apps/main + doc từng miền ──
+    // Chỉ tải doc của miền ĐỔI; __dh giống hệt băm cục bộ → THOÁT NGAY.
+    if (snap.exists && meta && meta.__fmt === 'delta-v1' && meta.__dh) {
+      fbRemoteIsDelta = true;
+      fbRemoteDomainHashes = meta.__dh;
+      fbRemoteHasData = Object.keys(meta.__dh).some(k => k !== 'deletedIds');
+      if (!firstLoad && sameHashes(meta.__dh, localHashesNow())) return Promise.resolve();
+      return pullDeltaSnapshot(meta);
+    }
+    // Định dạng 1-DOC cũ: ghi nhớ chữ ký miền (nếu có) để lần đẩy sau chuyển dần sang delta
+    fbRemoteIsDelta = false;
+    if (snap.exists && meta && meta.__dh) fbRemoteDomainHashes = meta.__dh;
     // ─── THOÁT NHANH NHỜ "CHỮ KÝ MIỀN" (__dh) ──────────────────────────
     // Mây kèm __dh (băm từng mảng). Nếu __dh GIỐNG HỆT băm cục bộ → hai bên
     // dữ liệu Y HỆT → khỏi giải nén/so 835KB/gộp. Đây chính là cú "cắt lag"
@@ -944,6 +1072,36 @@ import { showToast } from './utils.js';
       if (Date.now() - fbReadWarnAt > 30000) {
         fbReadWarnAt = Date.now();
         showToast('Lỗi đọc dữ liệu từ mây: ' + ((e && e.message) || e), 'error');
+      }
+    });
+  }
+
+  // ─── NHẬN MÂY ĐỊNH DẠNG DELTA ─────────────────────────────────────────
+  // Chỉ tải doc của miền ĐỔI (so mục lục __dh với băm cục bộ) rồi gộp MỘT PHẦN
+  // qua đúng hàm gộp cũ (mọi nhánh đều guard `if (remote.X)` nên khóa thiếu = bỏ qua).
+  // deletedIds nằm NGAY trong mục lục → gộp tombstone không cần tải doc nào.
+  function pullDeltaSnapshot(meta) {
+    if (fbApplying) return Promise.resolve();   // đang tự ghi → bản này là của chính mình
+    const seq = ++fbRemoteSeq;
+    return (async () => {
+      const remoteH = (meta && meta.__dh) || {};
+      const localH = localHashesNow();
+      const changed = Object.keys(remoteH).filter(k => k !== 'deletedIds' && localH[k] !== remoteH[k]);
+      const partial = {};
+      if (meta && meta.deletedIds !== undefined) partial.deletedIds = meta.deletedIds;
+      const vals = await Promise.all(changed.map(k => readDomainDoc(k).catch(() => undefined)));
+      if (seq !== fbRemoteSeq) return;          // đã có mục lục mới hơn → bỏ
+      changed.forEach((k, i) => { if (vals[i] !== undefined) partial[k] = vals[i]; });
+      if (fbApplying) return;                   // bỏ qua bản ta vừa ghi
+      // Máy chưa có dữ liệu thật -> nhận thẳng các miền vừa tải (máy mới: tải đủ)
+      if (!localHasAnyData()) { applyFireSnapshot(partial); return; }
+      // Máy đã có dữ liệu -> chỉ TỰ GỘP THÊM phần mây mà máy chưa có (an toàn)
+      if (Object.keys(partial).length) mergeRemoteIntoLocal(partial, true);
+    })().catch((e) => {
+      console.warn('[FB] Lỗi nhận dữ liệu mây (delta)', e);
+      if (Date.now() - fbReadWarnAt > 30000) {
+        fbReadWarnAt = Date.now();
+        showToast('Lỗi nhận dữ liệu mây: ' + ((e && e.message) || e), 'error');
       }
     });
   }
@@ -1181,10 +1339,13 @@ import { showToast } from './utils.js';
       // nhưng dữ liệu mới biến mất"). Tombstone từ mây cũng được gộp trước để
       // bản ghi đã bị máy khác xóa KHÔNG bị đẩy ngược lại lên mây.
       let mergedFromCloud = false;
-      if (fbRemoteDocExists && fbLastRemote &&
-          (fbRemoteHasData || hasDeletedIds(fbLastRemote)) &&
-          cloudCore(fbLastRemote) !== cloudCore(collectCloudSnapshot())) {
-        mergedFromCloud = mergeRemoteIntoLocal(fbLastRemote, true);
+      // Lấy bản mây ĐẦY ĐỦ để gộp trước khi đẩy (fbLastRemote chỉ có ở định dạng cũ;
+      // định dạng delta không giữ bản đầy đủ nên đọc TRỰC TIẾP từ mây).
+      let full = fbLastRemote;
+      if (!full && fbRemoteDocExists) { try { full = await readFullCloudObject(); } catch (e) {} }
+      if (full && (hasCloudData(full) || hasDeletedIds(full)) &&
+          cloudCore(full) !== cloudCore(collectCloudSnapshot())) {
+        mergedFromCloud = mergeRemoteIntoLocal(full, true);
       }
       const w = await writeCloudSnapshot();
       fbDirty = false;
@@ -1195,9 +1356,10 @@ import { showToast } from './utils.js';
       const counts = 'lô: ' + ((state.batches || []).length)
         + ', nguyên liệu: ' + ((state.materialRecords || []).length)
         + ', ép ván: ' + ((state.pressRecords || []).length);
-      const note = w.mode === 'gzip' ? ' — đã nén gzip (' + Math.round(w.size / 1024) + ' KB trên mây)'
-        : (w.mode === 'shard-gzip' ? ' — đã nén + chia ' + w.parts + ' mảnh'
-          : (w.mode === 'shard-plain' ? ' — chia ' + w.parts + ' mảnh' : ''));
+      const note = w.mode === 'delta-v1' ? ' — chỉ đẩy ' + w.changed + ' miền đổi (' + Math.round(w.size / 1024) + ' KB)'
+        : (w.mode === 'gzip' ? ' — đã nén gzip (' + Math.round(w.size / 1024) + ' KB trên mây)'
+          : (w.mode === 'shard-gzip' ? ' — đã nén + chia ' + w.parts + ' mảnh'
+            : (w.mode === 'shard-plain' ? ' — chia ' + w.parts + ' mảnh' : '')));
       showToast('Đã đẩy dữ liệu lên mây thành công! (' + counts + note
         + (mergedFromCloud ? ' — đã gộp thêm bản ghi từ mây' : '') + ')', 'success');
     } catch (e) {
@@ -1210,14 +1372,19 @@ import { showToast } from './utils.js';
 
   // TẢI dữ liệu từ mây về máy (ghi đè máy) - chiều NGƯỢC LẠI với uploadLocalDataToCloud.
   // Dùng khi máy này bị "tua ngược"/thiếu dữ liệu và muốn lấy đúng bản mới nhất trên mây.
-  function pullCloudToLocal() {
-    if (!fbRemoteDocExists || !fbLastRemote || !hasCloudData(fbLastRemote)) {
+  async function pullCloudToLocal() {
+    if (!isFirebaseOnline()) { showToast('Chưa ở chế độ online (cần kết nối mạng + SDK)', 'error'); return; }
+    // Đọc TRỰC TIẾP bản mây mới nhất (hỗ trợ cả định dạng 1-doc cũ lẫn delta nhiều miền)
+    let full = null;
+    try { full = await readFullCloudObject(); }
+    catch (e) { showToast('Lỗi đọc dữ liệu mây: ' + e.message, 'error'); return; }
+    if (!full || !hasCloudData(full)) {
       showToast('Trên mây chưa có dữ liệu để tải về.', 'error');
       return;
     }
     // AUTO BACKUP (lớp 1): chụp dữ liệu máy TRƯỚC khi bị ghi đè theo mây
     captureAutoBackup('Trước khi tải dữ liệu từ mây về máy', true);
-    applyFireSnapshot(fbLastRemote);
+    applyFireSnapshot(full);
     showToast('Đã tải dữ liệu từ mây về máy thành công! (ghi đè dữ liệu máy)', 'success');
   }
 
@@ -1270,6 +1437,8 @@ export {
   collectCloudPayload,
   doFirePush,
   domainHashes,
+  domainDocRef,
+  FB_DOMAIN_COLL,
   fbApplying,
   fbAuthLoaded,
   fbDb,
@@ -1293,8 +1462,12 @@ export {
   isFirebaseOnline,
   localHasAnyData,
   localHashesNow,
+  readDomainDoc,
+  readFullCloudObject,
+  writeDomainDoc,
   mergeRemoteIntoLocal,
   pullCloudToLocal,
+  pullDeltaSnapshot,
   registerServiceWorker,
   requireEditPermission,
   requireTabEditPermission,

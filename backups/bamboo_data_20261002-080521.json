@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-01T10:12:51.337Z",
+  "savedAt": "2026-10-02T00:38:47.440Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -3202,28 +3202,30 @@
       "createdAt": "2026-09-07T10:02:32.492Z"
     },
     {
+      "id": "chart-custom-1786779533883",
+      "title": "Biểu Đồ Thể Tích Mới",
+      "type": "stackedBar",
+      "source": "kanban",
+      "zone": "basic",
+      "groupBy": "thickness",
+      "metric": "volume",
+      "stackBy": "dimRatio",
+      "palette": "vibrant",
       "stage": [
         "say1",
         "say2",
         "kho"
       ],
-      "metric": "volume",
-      "useFor": "all",
-      "type": "stackedBar",
-      "location": "all",
-      "palette": "vibrant",
-      "createdAt": "2026-09-02T13:07:09.407Z",
       "bambooType": "all",
+      "useFor": [
+        "Bullig"
+      ],
+      "location": "all",
+      "thickness": "all",
       "dateFrom": "",
       "dateTo": "",
-      "zone": "basic",
       "width": "half",
-      "source": "kanban",
-      "stackBy": "dimRatio",
-      "id": "chart-custom-1786779533883",
-      "groupBy": "thickness",
-      "thickness": "all",
-      "title": "Biểu Đồ Thể Tích Mới"
+      "createdAt": "2026-10-02T00:38:47.250Z"
     },
     {
       "id": "custom-chart-stage-type",
@@ -6682,5 +6684,534 @@
       "van": 31.11
     }
   },
-  "khoNotes": []
+  "khoNotes": [
+    {
+      "status": "da_duyet",
+      "id": "kho-note-1790865307861-1",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "lots": [
+        {
+          "qty": 1722,
+          "batchId": "batch-1790817263022"
+        }
+      ],
+      "type": "xuat",
+      "purpose": "khac",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "date": "2026-09-28",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "m3": 0.2712,
+      "createdBy": "system",
+      "qty": 1722,
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "approvedBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)"
+    },
+    {
+      "approvedBy": "system",
+      "type": "xuat",
+      "status": "da_duyet",
+      "m3": 0.3604,
+      "lots": [
+        {
+          "qty": 1456,
+          "batchId": "batch-1790817240490"
+        }
+      ],
+      "purpose": "khac",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "createdBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "qty": 1456,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "id": "kho-note-1790865307861-2",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "date": "2026-09-28"
+    },
+    {
+      "lots": [
+        {
+          "qty": 2100,
+          "batchId": "batch-1790817216732"
+        }
+      ],
+      "m3": 0.3308,
+      "status": "da_duyet",
+      "type": "xuat",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "qty": 2100,
+      "approvedBy": "system",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "date": "2026-09-28",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "id": "kho-note-1790865307861-3",
+      "createdBy": "system"
+    },
+    {
+      "status": "da_duyet",
+      "qty": 1750,
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "type": "xuat",
+      "m3": 0.3938,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "lots": [
+        {
+          "qty": 1750,
+          "batchId": "batch-1790817193983"
+        }
+      ],
+      "id": "kho-note-1790865307861-4",
+      "date": "2026-09-28",
+      "purpose": "khac",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdBy": "system",
+      "approvedBy": "system",
+      "updatedAt": "2026-10-01T14:35:07.861Z"
+    },
+    {
+      "m3": 0.3881,
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "status": "da_duyet",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "qty": 2016,
+      "date": "2026-09-28",
+      "purpose": "khac",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "lots": [
+        {
+          "qty": 2016,
+          "batchId": "batch-1790817168711"
+        }
+      ],
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "type": "xuat",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "approvedBy": "system",
+      "id": "kho-note-1790865307861-5"
+    },
+    {
+      "approvedBy": "system",
+      "type": "xuat",
+      "purpose": "khac",
+      "m3": 0.487,
+      "lots": [
+        {
+          "batchId": "batch-1790817144865",
+          "qty": 1610
+        }
+      ],
+      "createdByName": "Hệ thống (khởi tạo)",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "date": "2026-09-28",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "createdBy": "system",
+      "status": "da_duyet",
+      "qty": 1610,
+      "id": "kho-note-1790865307861-6",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "approvedByName": "Hệ thống (khởi tạo)"
+    },
+    {
+      "m3": 0.194,
+      "status": "da_duyet",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "qty": 1008,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "date": "2026-09-28",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "lots": [
+        {
+          "qty": 1008,
+          "batchId": "batch-1790817123016"
+        }
+      ],
+      "type": "xuat",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "id": "kho-note-1790865307861-7",
+      "approvedBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "createdBy": "system"
+    },
+    {
+      "status": "da_duyet",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "m3": 0.0551,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "lots": [
+        {
+          "batchId": "batch-1790817091297",
+          "qty": 182
+        }
+      ],
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "qty": 182,
+      "type": "xuat",
+      "id": "kho-note-1790865307861-8",
+      "date": "2026-09-28",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "approvedBy": "system",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "createdBy": "system",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "purpose": "khac"
+    },
+    {
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "date": "2026-09-28",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdBy": "system",
+      "m3": 0.256,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "qty": 1330,
+      "id": "kho-note-1790865307861-9",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "purpose": "khac",
+      "type": "xuat",
+      "status": "da_duyet",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "lots": [
+        {
+          "qty": 1330,
+          "batchId": "batch-1790817059696"
+        }
+      ],
+      "approvedBy": "system"
+    },
+    {
+      "id": "kho-note-1790865307861-10",
+      "date": "2026-09-28",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "qty": 364,
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "createdBy": "system",
+      "status": "da_duyet",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "m3": 0.0901,
+      "approvedBy": "system",
+      "type": "xuat",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "lots": [
+        {
+          "batchId": "batch-1790817037205",
+          "qty": 364
+        }
+      ]
+    },
+    {
+      "id": "kho-note-1790865307861-11",
+      "date": "2026-09-28",
+      "purpose": "khac",
+      "status": "da_duyet",
+      "approvedBy": "system",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdBy": "system",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "qty": 851,
+      "m3": 0.1872,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "type": "xuat",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "lots": [
+        {
+          "qty": 851,
+          "batchId": "batch-1790817001406"
+        }
+      ]
+    },
+    {
+      "lots": [
+        {
+          "qty": 596,
+          "batchId": "batch-1790816975871"
+        }
+      ],
+      "status": "da_duyet",
+      "id": "kho-note-1790865307861-12",
+      "type": "xuat",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "approvedBy": "system",
+      "purpose": "khac",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "createdBy": "system",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "date": "2026-09-28",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "qty": 596,
+      "m3": 0.1803
+    },
+    {
+      "lots": [
+        {
+          "qty": 1344,
+          "batchId": "batch-1790816953777"
+        }
+      ],
+      "id": "kho-note-1790865307861-13",
+      "approvedBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "type": "xuat",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "qty": 1344,
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "date": "2026-09-28",
+      "status": "da_duyet",
+      "m3": 0.4066,
+      "createdBy": "system",
+      "updatedAt": "2026-10-01T14:35:07.861Z"
+    },
+    {
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "lots": [
+        {
+          "qty": 1008,
+          "batchId": "batch-1790816932306"
+        }
+      ],
+      "createdByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "type": "xuat",
+      "id": "kho-note-1790865307861-14",
+      "createdBy": "system",
+      "date": "2026-09-28",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "m3": 0.194,
+      "status": "da_duyet",
+      "approvedBy": "system",
+      "qty": 1008,
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho"
+    },
+    {
+      "status": "da_duyet",
+      "date": "2026-09-29",
+      "qty": 2016,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "m3": 0.4838,
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "approvedBy": "system",
+      "id": "kho-note-1790865307861-15",
+      "purpose": "khac",
+      "createdBy": "system",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "type": "xuat",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "lots": [
+        {
+          "batchId": "batch-1790816862325",
+          "qty": 2016
+        }
+      ]
+    },
+    {
+      "m3": 0.2268,
+      "createdByName": "Hệ thống (khởi tạo)",
+      "date": "2026-09-29",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "qty": 1178,
+      "approvedBy": "system",
+      "type": "xuat",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "createdBy": "system",
+      "id": "kho-note-1790865307861-16",
+      "lots": [
+        {
+          "qty": 1178,
+          "batchId": "batch-1790816818579"
+        }
+      ],
+      "status": "da_duyet"
+    },
+    {
+      "createdByName": "Hệ thống (khởi tạo)",
+      "date": "2026-09-29",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "qty": 1932,
+      "createdBy": "system",
+      "id": "kho-note-1790865307861-17",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "status": "da_duyet",
+      "purpose": "khac",
+      "m3": 0.4637,
+      "lots": [
+        {
+          "qty": 1932,
+          "batchId": "batch-1790816794392"
+        }
+      ],
+      "approvedBy": "system",
+      "type": "xuat"
+    },
+    {
+      "m3": 0.2016,
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "status": "da_duyet",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "qty": 840,
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "date": "2026-09-29",
+      "createdBy": "system",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "lots": [
+        {
+          "batchId": "batch-1790816770604",
+          "qty": 840
+        }
+      ],
+      "type": "xuat",
+      "approvedBy": "system",
+      "id": "kho-note-1790865307861-18"
+    },
+    {
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "m3": 0.4536,
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "qty": 2520,
+      "lots": [
+        {
+          "batchId": "batch-1790816746805",
+          "qty": 2520
+        }
+      ],
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "type": "xuat",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "createdBy": "system",
+      "date": "2026-09-29",
+      "purpose": "khac",
+      "approvedBy": "system",
+      "id": "kho-note-1790865307861-19",
+      "status": "da_duyet",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho"
+    },
+    {
+      "createdBy": "system",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "type": "xuat",
+      "id": "kho-note-1790865307861-20",
+      "lots": [
+        {
+          "batchId": "batch-1790816724838",
+          "qty": 810
+        }
+      ],
+      "qty": 810,
+      "approvedBy": "system",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "status": "da_duyet",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "purpose": "khac",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "m3": 0.243,
+      "date": "2026-09-29",
+      "createdByName": "Hệ thống (khởi tạo)"
+    },
+    {
+      "date": "2026-09-29",
+      "id": "kho-note-1790865307861-21",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "qty": 2016,
+      "approvedAt": "2026-10-01T14:35:07.861Z",
+      "createdBy": "system",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "purpose": "khac",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "m3": 0.4838,
+      "lots": [
+        {
+          "qty": 2016,
+          "batchId": "batch-1790816699608"
+        }
+      ],
+      "type": "xuat",
+      "status": "da_duyet",
+      "approvedBy": "system"
+    },
+    {
+      "createdAt": "2026-10-01T14:35:07.861Z",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "updatedAt": "2026-10-01T14:35:07.861Z",
+      "type": "xuat",
+      "createdBy": "system",
+      "lots": [
+        {
+          "qty": 1848,
+          "batchId": "batch-1790816669044"
+        }
+      ],
+      "approvedBy": "system",
+      "id": "kho-note-1790865307861-22",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1848,
+      "m3": 0.4435,
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "date": "2026-09-29",
+      "status": "da_duyet",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
+      "purpose": "khac",
+      "approvedAt": "2026-10-01T14:35:07.861Z"
+    }
+  ]
 }

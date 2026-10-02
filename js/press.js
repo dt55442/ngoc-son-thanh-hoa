@@ -105,12 +105,15 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
 
   // Tồn thanh ĐÃ BÀO (thẻ Bào Tinh — xuong2BaoTinhRecords) theo kích thước ĐẦU VÀO,
   // dùng cho gợi ý đầu vào Ép Ván ("tồn BT"). Thay logic cũ đếm lô stage bao_tinh
-  // (cột Kanban đã xóa); tính mọi loại bào (tinh / hạ cấp / bào thanh) — thanh đạt
-  // (qtyOk) của lượt nào thì còn góp gợi ý (không trừ phần đã ép — như bản cũ).
+  // (cột Kanban đã xóa); chỉ tính loại bào tinh / hạ cấp — thanh đạt (qtyOk) của
+  // lượt nào thì còn góp gợi ý.
+  // RIÊNG "Bào thanh" BỊ LOẠI: đầu vào của nó nay là THÀNH PHẨM Ép Ván (thanh BTP
+  // lấy từ khối "Ván Thô Tạo Ra") chứ KHÔNG phải nan chờ ép → nếu cộng vào đây sẽ
+  // gợi ý sai "tồn BT" cho form Ép Ván.
   function getBaoTinhStockByNanKey() {
     const stock = {};
     (Array.isArray(state.xuong2BaoTinhRecords) ? state.xuong2BaoTinhRecords : []).forEach(r => {
-      if (!r) return;
+      if (!r || r.kind === 'bao_thanh') return;
       const key = String(r.inSizeKey || '').trim();
       const ok = Number(r.qtyOk) || 0;
       if (!key || ok <= 0) return;

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-02T08:36:24.014Z",
+  "savedAt": "2026-10-02T08:22:30.296Z",
   "batches": [
     {
       "id": "batch-1790817861408-2",
@@ -5396,48 +5396,6 @@
       "id": "x2cut-1790908018224-4wsl0",
       "supplier": "Nhà Tâm",
       "cutHours": 0
-    },
-    {
-      "id": "x2cut-1790929649474-p1feq",
-      "materialId": "mat-1790646067822-mlovv",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "code": "",
-      "inputWeight": 13220,
-      "date": "2026-09-28",
-      "week": "2026-W40",
-      "klOngLuong": 6012,
-      "klCuiDot": 1659,
-      "klCayLoai": 0,
-      "klNgonOngLoai": 5549,
-      "cutter": "Vi Văn Hem, Hà Thị Luyện B, Hà Thị Nghĩa, Hà Thị Thoan",
-      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cutHours": 36,
-      "cutHoursHC": 36,
-      "cutHoursTC": 0,
-      "note": "",
-      "createdAt": "2026-10-02T08:27:29.474Z"
-    },
-    {
-      "id": "x2cut-1790929759552-1ro9r",
-      "materialId": "mat-1790242824736-284rb",
-      "materialType": "Luồng ống",
-      "supplier": "Nhà Trung",
-      "code": "",
-      "inputWeight": 1240,
-      "date": "2026-09-28",
-      "week": "2026-W40",
-      "klOngLuong": 1139,
-      "klCuiDot": 0,
-      "klCayLoai": 101,
-      "klNgonOngLoai": 0,
-      "cutter": "Vi Văn Hem, Hà Thị Luyện B, Hà Thị Nghĩa, Hà Thị Thoan",
-      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cutHours": 36,
-      "cutHoursHC": 36,
-      "cutHoursTC": 0,
-      "note": "",
-      "createdAt": "2026-10-02T08:29:19.552Z"
     }
   ],
   "xuong2BoOngRecords": [
@@ -7274,45 +7232,6 @@
       ],
       "inSizeKey": "1250×22×9",
       "unitVol": 0.000175
-    },
-    {
-      "id": "x2btinh-1790930127216-0-v8zxh",
-      "date": "2026-10-01",
-      "week": "2026-W40",
-      "kind": "bao_thanh",
-      "sources": [],
-      "batchId": "",
-      "batchCode": "",
-      "batchLocation": "",
-      "batchDims": [],
-      "batchQty": 0,
-      "defectKey": "",
-      "defectDims": [],
-      "inSource": "press",
-      "inDims": [
-        1200,
-        18,
-        15
-      ],
-      "manualRowId": "",
-      "inQty": 1000,
-      "inSizeKey": "1200×18×15",
-      "outDims": [
-        640,
-        14,
-        12
-      ],
-      "outSizeKey": "640×14×12",
-      "unitVol": 0.00010752,
-      "qtyOk": 0,
-      "qtyErr": 0,
-      "volumeOk": 0,
-      "worker": "Vi Thị Chánh, Lữ Thị Quỳnh, Lữ Thị Đều, Lữ Thị Thỏa",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 36,
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-02T08:35:27.217Z"
     }
   ],
   "x2BaoTinhRates": {
@@ -7372,58 +7291,6 @@
       "workHoursTC": 0,
       "createdAt": "2026-10-01T09:24:04.624Z",
       "updatedAt": "2026-10-01T09:24:04.624Z"
-    },
-    {
-      "id": "qcf-1790930148933-mby7n",
-      "date": "2026-10-02",
-      "workshop": "x2",
-      "kind": "thanh",
-      "inputQty": 600,
-      "qtyOk": 500,
-      "qtyExcept": 0,
-      "qtyReject": 100,
-      "pairKey": "2026-39-40",
-      "productId": "",
-      "productName": "",
-      "sizeKey": "640×14×12",
-      "sizeDims": [
-        640,
-        14,
-        12
-      ],
-      "workerNames": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-02T08:35:48.933Z",
-      "updatedAt": "2026-10-02T08:35:48.933Z"
-    },
-    {
-      "id": "qcf-1790930183961-7qp2i",
-      "date": "2026-10-02",
-      "workshop": "x2",
-      "kind": "thanh",
-      "inputQty": 400,
-      "qtyOk": 200,
-      "qtyExcept": 0,
-      "qtyReject": 200,
-      "pairKey": "2026-39-40",
-      "productId": "",
-      "productName": "",
-      "sizeKey": "640×14×12",
-      "sizeDims": [
-        640,
-        14,
-        12
-      ],
-      "workerNames": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-02T08:36:23.961Z",
-      "updatedAt": "2026-10-02T08:36:23.961Z"
     }
   ],
   "qcFinalRates": {

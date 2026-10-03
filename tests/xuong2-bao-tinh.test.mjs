@@ -316,7 +316,7 @@ state.pressRecords = [
     vanTho: [{ vtDim: '1220x2440x9', vtQty: 40, ratio: 1 }, { vtDim: '1200x18x15', vtQty: 1000, ratio: 1 }],
     sticks: [{ nanKey: '1200×24×8', sticks: 5000 }] }
 ];
-document.getElementById('x2-btinh-date').value = '2026-09-21';   // nguồn BTP lọc theo CẶP TUẦN của ngày này
+document.getElementById('x2-btinh-date').value = '2026-09-21';   // Ngày Bào (nguồn KHÔNG còn lọc theo tuần)
 const pressPool = x2.baoTinhInputPool();
 const pressItem = pressPool.find(x => x.id === 'p:1200×18×15') || {};
 check('BÀO THANH — NGUỒN ÉP VÁN: nhận thanh BTP 1200×18×15 (0,000324 m³) · LOẠI ván thô 1220×2440×9 (0,0268 m³)',
@@ -451,21 +451,24 @@ check('CHỜ KIỂM: lượt CHƯA có kết quả QC → ĐẠT 0 (KHÔNG bịa
   x2.baoTinhQtyOkOf({ id: 'x', kind: 'bao_thanh', inQty: 300, outSizeKey: '999×9×9' }) === 0 &&
   x2.baoTinhQtyErrOf({ id: 'x', kind: 'bao_thanh', inQty: 300, outSizeKey: '999×9×9' }) === 0 &&
   x2.baoTinhPendingOf({ id: 'x', kind: 'bao_thanh', inQty: 300, outSizeKey: '999×9×9' }) === 300);
-// ── NGUỒN ĐẦU VÀO BÀO THANH: CHỈ thanh BTP — thanh lỗi chỉ dành cho HẠ CẤP ──
-check('THANH LỖI KHÔNG CÒN Ở BÀO THANH: không có thẻ "d:…" / "Thanh lỗi" trong danh sách nguồn',
-  !x2.baoTinhInputPool().some(x => x.inSource === 'defect') &&
-  !document.getElementById('x2-btinh-bt-in-list').innerHTML.includes('Thanh lỗi'));
-check('THANH LỖI VẪN Ở HẠ CẤP: tồn lỗi cỡ 640×14×12 = 10 thanh (từ lượt A) — Bào thanh KHÔNG trừ nó',
-  ((x2.baoTinhDefectStock().find(x => x.sizeKey === '640×14×12') || {}).remaining === 10));
+// ── NGUỒN ĐẦU VÀO BÀO THANH: thanh BTP Ép Ván + THẺ LỖI của chính Bào thanh ──
+document.getElementById('x2-btinh-kind').value = 'bao_thanh';
+x2.updateXuong2BaoTinhLinked();          // vẽ lại ô chọn đầu vào
+const bthPool = x2.baoTinhInputPool();
+check('THẺ LỖI BÀO THANH Ở Ô CHỌN ĐẦU VÀO: thẻ "d:640×14×12" (lỗi 10 thanh từ lượt A) · inSource "defect" · cls "Thanh lỗi"',
+  bthPool.some(x => x.id === 'd:640×14×12' && x.inSource === 'defect' && x.cls === 'Thanh lỗi' &&
+    x.total === 10 && x.remaining === 10) &&
+  document.getElementById('x2-btinh-bt-in-list').innerHTML.includes('Thanh lỗi Bào thanh'));
+check('CHỈ LỖI CỦA BÀO THANH: lỗi do "Bào tinh" (cỡ 1240×16×6) và do "Hạ cấp" (cỡ 1230×14×5) KHÔNG vào ô chọn',
+  !bthPool.some(x => x.id === 'd:1240×16×6') && !bthPool.some(x => x.id === 'd:1230×14×5'));
 document.getElementById('x2-btinh-kind').value = 'ha_cap';
 x2.updateXuong2BaoTinhLinked();
-check('THANH LỖI VẪN LÀ MẤT HẠNG (đầu ra kém) — KHÔNG giống thẻ nguồn lỗi: kiểm tra trực tiếp stock',
-  ((x2.baoTinhDefectStock().find(x => x.sizeKey === '640×14×12') || {}).remaining === 10) &&
-  x2.baoTinhInputPool().every(x => x.cls !== 'Thanh lỗi'));
+check('SỔ TỒN LỖI DÙNG CHUNG 1 CỠ: thẻ "Thanh lỗi chờ hạ cấp" vẫn thấy 640×14×12 = 10 thanh (chưa lượt nào bào lại)',
+  ((x2.baoTinhDefectStock().find(x => x.sizeKey === '640×14×12') || {}).remaining === 10));
 document.getElementById('x2-btinh-kind').value = 'bao_thanh';
 x2.updateXuong2BaoTinhLinked();
 
-// ── LOẠI BULLIG + LỌC CẶP TUẦN + TÌM THEO SỐ LƯỢNG ──
+// ── LOẠI BULLIG + KHÔNG LỌC THEO TUẦN + KHÔNG PHỤ THUỘC NGÀY BÀO ──
 document.getElementById('x2-btinh-date').value = '2026-09-21';
 state.materialRates = [{ id: 'rate-bullig', product: '1200x18x15', nanUse: 'Bullig', unit: 'Thanh' }];
 state.pressRecords.push({ id: 'pr2', date: '2026-09-24', week: '2026-W39', year: 2026,
@@ -477,26 +480,21 @@ check('LOẠI BULLIG: lượt ép sản phẩm Bullig (700 thanh) KHÔNG vào ng
 state.pressRecords.push({ id: 'pr3', date: '2026-09-10', week: '2026-W37', year: 2026,
   productId: 'rate-x', productName: 'Ván 1220x2440x9',
   vanTho: [{ vtDim: '1200x18x15', vtQty: 500 }] });
-check('LỌC CẶP TUẦN: lượt ép tuần 37 (ngoài cặp 39–40 của ngày 21/09) → KHÔNG cộng vào nguồn',
-  (x2.baoTinhInputPool().find(x => x.id === 'p:1200×18×15') || {}).total === 1000);
-check('CẶP TUẦN: 01/10/2026 = tuần 40 → cặp 39–40 (tuần LẺ = đầu cặp)',
-  x2.baoTinhPairWeeks('2026-10-01').start === 39 && x2.baoTinhPairWeeks('2026-10-01').end === 40 &&
-  x2.baoTinhPairWeeks('2026-09-23').start === 39 && x2.baoTinhPairWeeks('2026-09-23').end === 40 &&
-  x2.baoTinhInPairOf('2026-10-01', x2.baoTinhPairWeeks('2026-10-01')) &&
-  !x2.baoTinhInPairOf('2026-09-10', x2.baoTinhPairWeeks('2026-09-21')));
-check('LỌC CẶP TUẦN: Ngày Bào 01/10/2026 (cặp 39–40) vẫn thấy lượt ép 22/09 — bỏ pr3 thì thấy 1.500',
-  x2.baoTinhInputPool('2026-10-01').some(x => x.id === 'p:1200×18×15') &&
-  (() => { state.pressRecords = state.pressRecords.filter(r => r.id !== 'pr3');   // dọn lượt ngoài cặp
-    const t = (x2.baoTinhInputPool('2026-10-01').find(x => x.id === 'p:1200×18×15') || {}).total;
-    return t === 1000; })());
-check('CHƯA CHỌN NGÀY BÀO: danh sách nguồn TRỐNG + dòng hướng dẫn (không đoán bừa số lượng)', (() => {
+check('KHÔNG LỌC THEO TUẦN: lượt ép tuần 37 (ngoài tuần Ngày Bào 21/09) VẪN vào nguồn — tổng 1.500',
+  (x2.baoTinhInputPool().find(x => x.id === 'p:1200×18×15') || {}).total === 1500);
+check('ĐÃ XÓA HẲN CẶP TUẦN: không còn hàm baoTinhPairWeeks/baoTinhInPairOf + đã có baoThanhDefectPool',
+  typeof x2.baoTinhPairWeeks === 'undefined' && typeof x2.baoTinhInPairOf === 'undefined' &&
+  typeof x2.baoThanhDefectPool === 'function');
+state.pressRecords = state.pressRecords.filter(r => r.id !== 'pr3');   // dọn lượt phụ
+check('KHÔNG PHỤ THUỘC NGÀY BÀO: để trống Ngày Bào danh sách nguồn VẪN đủ (thẻ lỗi + BTP)', (() => {
   document.getElementById('x2-btinh-date').value = '';
   x2.renderX2BaoThanhForm();
   const h = document.getElementById('x2-btinh-bt-in-list').innerHTML;
-  const emptyPool = x2.baoTinhInputPool();
+  const pool = x2.baoTinhInputPool();
   document.getElementById('x2-btinh-date').value = '2026-09-21';
   x2.renderX2BaoThanhForm();
-  return h.includes('Chọn <strong>Ngày Bào</strong>') && emptyPool.length === 0;
+  return h.includes('không lọc theo tuần') &&
+    pool.some(x => x.id === 'p:1200×18×15') && pool.some(x => x.id === 'd:640×14×12');
 })());
 // TÌM THEO SỐ LƯỢNG trong ô tìm nhanh (bỏ dấu phân cách nghìn: '500' khớp '1.000' ở chữ "còn 500/1.000")
 document.getElementById('x2-btinh-date').value = '2026-09-21';
@@ -686,8 +684,75 @@ check('CẤU TRÚC (nối đủ 6 chỗ): storage · cloud · history · main ·
 check('CẤU TRÚC: Ép Ván KHÔNG cộng tồn của lượt "Bào thanh" vào gợi ý đầu vào (đầu vào Bào thanh là thành phẩm Ép Ván)',
   fs.readFileSync(new URL('../js/press.js', import.meta.url), 'utf8')
     .includes("if (!r || r.kind === 'bao_thanh') return;"));
+// ─── M. VÍ DỤ ĐẦU - CUỐI: LỖI ĐẦU RA CỦA "BÀO THANH" QUAY LẠI LÀM ĐẦU VÀO ───
+// (Đầu vào 1200×18×15 · 1.000 thanh → Đầu ra 640×14×12; QC kiểm đạt 800 · lỗi 200
+//  → 200 thanh 640×14×12 phải hiện ở danh sách chọn đầu vào, và bị TRỪ khi bào lại)
+state.xuong2BaoTinhRecords = [];
+state.qcFinalRecords = [];
+state.materialRates = [];
+state.pressRecords = [{ id: 'prM', date: '2026-10-01', week: '2026-W40', year: 2026,
+  productId: '', productName: 'Ván 1220x2440x9',
+  vanTho: [{ vtDim: '1200x18x15', vtQty: 1000, ratio: 1 }] }];
+document.getElementById('x2-btinh-kind').value = 'bao_thanh';
+document.getElementById('x2-btinh-date').value = '2026-10-01';
+x2.updateXuong2BaoTinhLinked();
+x2.setBaoThanhInput('p:1200×18×15');
+document.getElementById('x2-btinh-bt-qty').value = '1000';
+x2.setBaoThanhOut('640×14×12');
+const nM = state.xuong2BaoTinhRecords.length;
+x2.handleXuong2BaoTinhSubmit({ preventDefault(){} });
+const rM = state.xuong2BaoTinhRecords[nM];
+check('VÍ DỤ (lượt 1): vào 1.000 thanh 1200×18×15 → đầu ra 640×14×12 · nguồn Ép Ván',
+  !!rM && rM.kind === 'bao_thanh' && rM.inQty === 1000 && rM.inSource === 'press' &&
+  rM.outSizeKey === '640×14×12');
+state.qcFinalRecords.push({ id: 'qcfM', date: '2026-10-02', workshop: 'x2', kind: 'thanh',
+  sizeKey: '640×14×12', sizeDims: [640, 14, 12], inputQty: 1000,
+  qtyOk: 800, qtyExcept: 0, qtyReject: 200 });
+check('VÍ DỤ (QC): QC kiểm đạt 800 · lỗi 200 → lượt 1 đọc LIVE đúng',
+  x2.baoTinhQtyOkOf(rM) === 800 && x2.baoTinhQtyErrOf(rM) === 200);
+check('VÍ DỤ (nguồn lỗi): tồn lỗi 640×14×12 = 200 thanh VÀ hiện ở ô chọn đầu vào (thẻ "d:640×14×12")',
+  ((x2.baoThanhDefectPool().find(x => x.sizeKey === '640×14×12') || {}).remaining === 200) &&
+  x2.baoTinhInputPool().some(x => x.id === 'd:640×14×12') &&
+  (() => { x2.renderBaoThanhInputList();
+    const h = document.getElementById('x2-btinh-bt-in-list').innerHTML;
+    return h.includes('Thanh lỗi · 640 × 14 × 12 mm · còn 200/200 thanh') &&
+      h.includes('Thanh lỗi Bào thanh'); })());
+document.getElementById('x2-btinh-date').value = '2026-10-01';
+document.getElementById('x2-btinh-kind').value = 'bao_thanh';
+x2.updateXuong2BaoTinhLinked();
+x2.setBaoThanhInput('d:640×14×12');
+check('VÍ DỤ (chọn lỗi): nút đầu vào hiện "640 × 14 × 12 · Thanh lỗi" + còn 200/200 + gợi ý tối đa 200',
+  document.getElementById('x2-btinh-bt-in-text').textContent === '640 × 14 × 12 · Thanh lỗi' &&
+  document.getElementById('x2-btinh-bt-in-count').textContent === 'còn 200/200' &&
+  document.getElementById('x2-btinh-bt-qty-hint').textContent.includes('Tối đa 200 thanh'));
+const nM2 = state.xuong2BaoTinhRecords.length;
+document.getElementById('x2-btinh-bt-qty').value = '500';
+x2.setBaoThanhOut('640×12×10');
+x2.handleXuong2BaoTinhSubmit({ preventDefault(){} });
+check('VÍ DỤ (chặn): SL 500 vượt phần còn lại 200 của nguồn lỗi → KHÔNG lưu',
+  state.xuong2BaoTinhRecords.length === nM2);
+document.getElementById('x2-btinh-bt-qty').value = '200';
+x2.handleXuong2BaoTinhSubmit({ preventDefault(){} });
+const rM2 = state.xuong2BaoTinhRecords[nM2];
+check('VÍ DỤ (lượt 2): vào 200 thanh 640×14×12 từ NGUỒN LỖI (inSource "defect") → đầu ra 640×12×10',
+  !!rM2 && rM2.inSource === 'defect' && rM2.inSizeKey === '640×14×12' &&
+  rM2.inQty === 200 && rM2.outSizeKey === '640×12×10');
+check('VÍ DỤ (trừ tồn): tồn lỗi 640×14×12 về 0 → thẻ "còn 0/200 thanh" + lớp disabled (không chọn được)',
+  ((x2.baoThanhDefectPool().find(x => x.sizeKey === '640×14×12') || {}).remaining === 0) &&
+  (() => { x2.renderBaoThanhInputList();
+    const h = document.getElementById('x2-btinh-bt-in-list').innerHTML;
+    return h.includes('còn 0/200 thanh') && h.includes('disabled'); })());
+check('VÍ DỤ (sửa lượt): khôi phục đúng nguồn lỗi "d:640×14×12" + tồn trả lại 200 khi đang sửa',
+  (() => { x2.editXuong2BaoTinh(rM2.id);
+    const cur = x2.baoTinhBaoThanhInItem();
+    const stock = (x2.baoThanhDefectPool().find(x => x.sizeKey === '640×14×12') || {});
+    x2.resetXuong2BaoTinhForm();
+    return !!cur && cur.id === 'd:640×14×12' && stock.remaining === 200; })());
+check('CẤU TRÚC (js): baoTinhDefectStock nhận (excludeId, totalKinds) + baoThanhDefectPool chỉ đếm kind bao_thanh',
+  /function baoTinhDefectStock\(excludeId, totalKinds\)/.test(jsX2) &&
+  /baoTinhDefectStock\(ex, \['bao_thanh'\]\)/.test(jsX2));
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v197/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v203/.test(swJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

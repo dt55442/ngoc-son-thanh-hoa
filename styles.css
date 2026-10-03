@@ -8683,7 +8683,7 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
 }
 /* Danh sách thành phẩm = POP-UP NỔI (portal ra `#qc-detail-overlay` — lớp fixed
    phủ toàn màn hình — neo bằng JS: position:absolute INLINE theo rect của nút
-   "Thành phẩm Ép Ván", đủ chỗ thì mở XUỐNG, thiếu chỗ thì mở LÊN). Nhờ là con
+   "Ván thô Ép Ván", đủ chỗ thì mở XUỐNG, thiếu chỗ thì mở LÊN). Nhờ là con
    trực tiếp của overlay nên KHÔNG bị `.qc-detail-content` overflow:auto cắt,
    KHÔNG rơi xuống đáy trang, KHÔNG biến dạng form. Inline position/z-index
    trong JS (positionQcFinalPicker) thắng MỌI stylesheet — kể cả bản cache cũ. */
@@ -8701,6 +8701,7 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   -webkit-overflow-scrolling: touch;
 }
 .qcf-pick-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px 2px; font-size: 0.8rem; color: var(--text-muted); }
+.al-card + .qcf-pick-head { margin-top: 8px; } /* nhóm ② Thành phẩm nằm sau nhóm ① Ván thô BTP */
 .qcf-product { display: flex; flex-direction: column; align-items: stretch; gap: 3px; width: 100%; text-align: left; }
 .qcf-product.picked { outline: 2px solid var(--primary); background: var(--primary-light); }
 .qcf-product-line1 { display: flex; align-items: center; gap: 8px; min-width: 0; }

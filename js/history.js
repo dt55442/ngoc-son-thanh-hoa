@@ -40,6 +40,8 @@ import { escapeHTML, showToast } from './utils.js';
     materialRecords:   { tab: 'materials', label: 'Nhật ký nguyên liệu',  get: () => state.materialRecords },
     materialPlan:      { tab: 'materials', label: 'Kế hoạch nguyên liệu', get: () => state.materialPlan },
     xuong2CutRecords:  { tab: 'kanban',    label: 'Cắt chọn Xưởng 2',     get: () => state.xuong2CutRecords },
+    xuong2BoluongRecords:{ tab: 'kanban',  label: 'Bốc luồng Xưởng 2',    get: () => state.xuong2BoluongRecords },
+    x2BoluongRates:    { tab: 'kanban',    label: 'Định mức bốc luồng (kg/h)', get: () => state.x2BoluongRates },
     xuong2BoOngRecords:{ tab: 'kanban',    label: 'Bổ ống Xưởng 2',       get: () => state.xuong2BoOngRecords },
     xuong2BaoThoRecords:{ tab: 'kanban',   label: 'Chạy máy bào thô X2',  get: () => state.xuong2BaoThoRecords },
     xuong2ChonNanThoRecords:{ tab: 'kanban', label: 'Chọn nan thô Xưởng 2', get: () => state.xuong2ChonNanThoRecords },

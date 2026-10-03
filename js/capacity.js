@@ -46,8 +46,8 @@ import { friendlyMaterialWeek, materialWeekLabel } from './materials.js';
 import { epVanRateOf, epVanSnapshotOf, pressRecordVolumeOf } from './press.js';
 import { STORAGE_KEY_CAPACITY_UI, state } from './state.js';
 import {
-  baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, chonNanDisplay, cutDisplay,
-  baoThoRateOf, baoTinhRateOf, boOngRateOf, bulligRateOf, capRateOf, chonNanRateOf,
+  baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, chonNanDisplay, cutDisplay,
+  baoThoRateOf, baoTinhRateOf, boOngRateOf, boluongRateOf, bulligRateOf, capRateOf, chonNanRateOf,
   sayChargeRows, sayRateEntryOf
 } from './xuong2.js';
 import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
@@ -171,6 +171,14 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   // Riêng kind 'time': thêm { need (giờ cần), incident (giờ sự cố CHIA THEO TỈ LỆ giờ cần) }.
   const CAP_STAGES = [
     {
+      id: 'boluong', ws: 'x2', label: 'Bốc Luồng', unit: 'kg/h', unitQty: 'kg', cardId: 'x2-bo-luong-card', kind: 'cap',
+      rows: () => (state.xuong2BoluongRecords || []).map(r => {
+        const d = boluongDisplay(r);
+        return { date: d.date, qty: d.qty, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => boluongRateOf(m)
+    },
+    {
       id: 'cut', ws: 'x2', label: 'Cắt Chọn', unit: 'kg/h', unitQty: 'kg', cardId: 'x2-cut-card', kind: 'cap',
       rows: () => (state.xuong2CutRecords || []).map(r => {
         const d = cutDisplay(r);
@@ -251,6 +259,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   // Khóa GIỜ SỰ CỐ CHO PHÉP (state.x2StageIncidents) của từng công đoạn:
   // 2 dòng Bullig dùng chung 1 khóa 'bullig' (cùng ngày = cùng ô sự cố trên thẻ).
   const CAP_INC_KEY = {
+    boluong: 'boluong',
     cut: 'cut', boong: 'boong', baotho: 'baotho', chonnan: 'chonnan',
     baotinh: 'baotinh', epvan: 'epvan', bullig_gc: 'bullig', bullig_ct: 'bullig'
   };
@@ -1255,6 +1264,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   // sparkline SVG của mini card "Thống Kê Đi Làm" (hr.js). Mỗi nhóm = bình quân
   // gia quyền theo giờ của các công đoạn trong nhóm.
   const CAP_SPARKS = [
+    { elId: 'x2-mini-spark-bo-luong', stageIds: ['boluong'] },
     { elId: 'x2-mini-spark-cut', stageIds: ['cut'] },
     { elId: 'x2-mini-spark-bo-ong', stageIds: ['boong'] },
     { elId: 'x2-mini-spark-bao-tho', stageIds: ['baotho'] },

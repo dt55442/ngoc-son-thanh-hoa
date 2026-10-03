@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -141,6 +141,36 @@ import { escapeHTML, showToast } from './utils.js';
     }
     syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
     return merged;
+  }
+
+  // Khôi phục xuong2BoluongRecords từ nguồn ngoài: luôn GỘP thay vì ghi đè,
+  // rồi lưu lại localStorage + file (nếu đang kết nối).
+  function restoreXuong2Boluong(incomingArr) {
+    const before = JSON.stringify(state.xuong2BoluongRecords || []);
+    const merged = mergeXuong2Records(state.xuong2BoluongRecords, incomingArr);
+    state.xuong2BoluongRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_BOLUONG, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
+
+  // Khôi phục ĐỊNH MỨC CÔNG SUẤT BỐC LUỒNG theo tháng ({ 'YYYY-MM': kg/h }) —
+  // gộp theo khóa tháng (bản máy có sẵn ưu tiên hơn bản trống).
+  function restoreX2BoluongRates(incoming) {
+    const src = (incoming && typeof incoming === 'object') ? incoming : {};
+    const cur = (state.x2BoluongRates && typeof state.x2BoluongRates === 'object') ? state.x2BoluongRates : {};
+    let changed = false;
+    for (const k of Object.keys(src)) {
+      if (!(k in cur) || cur[k] == null) { cur[k] = src[k]; changed = true; }
+    }
+    if (changed) {
+      state.x2BoluongRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_BOLUONG_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
   }
 
   // ─── GỘP BẢNG THÔNG TIN NHÀ CUNG (từ file bamboo_data.json / backup) ──
@@ -681,6 +711,12 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2CapRates) {
           restoreX2CapRates(loaded.x2CapRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (loaded.xuong2BoluongRecords && Array.isArray(loaded.xuong2BoluongRecords)) {
+          restoreXuong2Boluong(loaded.xuong2BoluongRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2BoluongRates) {
+          restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
+        }
         if (loaded.xuong2BoOngRecords && Array.isArray(loaded.xuong2BoOngRecords)) {
           restoreXuong2BoOng(loaded.xuong2BoOngRecords); // GỘP — không ghi đè mất bản mới hơn
         }
@@ -808,6 +844,12 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.x2CapRates) {
           restoreX2CapRates(loaded.x2CapRates); // GỘP theo tháng — không đè số đã đặt
         }
+        if (loaded.xuong2BoluongRecords && Array.isArray(loaded.xuong2BoluongRecords)) {
+          restoreXuong2Boluong(loaded.xuong2BoluongRecords); // GỘP — không ghi đè mất bản mới hơn
+        }
+        if (loaded.x2BoluongRates) {
+          restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
+        }
         if (loaded.xuong2BoOngRecords && Array.isArray(loaded.xuong2BoOngRecords)) {
           restoreXuong2BoOng(loaded.xuong2BoOngRecords); // GỘP — không ghi đè mất bản mới hơn
         }
@@ -917,12 +959,14 @@ import { escapeHTML, showToast } from './utils.js';
         customCharts: state.customCharts,
         materialRecords: state.materialRecords || [],
         xuong2CutRecords: state.xuong2CutRecords || [],
+        xuong2BoluongRecords: state.xuong2BoluongRecords || [],
         xuong2BoOngRecords: state.xuong2BoOngRecords || [],
         xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
         xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
         xuong2BulligRecords: state.xuong2BulligRecords || [],
         suppliers: state.suppliers || [],
         x2CapRates: state.x2CapRates || {},
+        x2BoluongRates: state.x2BoluongRates || {},
         x2BoOngRates: state.x2BoOngRates || {},
         x2BaoThoRates: state.x2BaoThoRates || {},
         x2ChonNanRates: state.x2ChonNanRates || {},
@@ -1029,12 +1073,14 @@ import { escapeHTML, showToast } from './utils.js';
       customCharts: state.customCharts,
       materialRecords: state.materialRecords || [],
       xuong2CutRecords: state.xuong2CutRecords || [],
+      xuong2BoluongRecords: state.xuong2BoluongRecords || [],
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
       xuong2BulligRecords: state.xuong2BulligRecords || [],
       suppliers: state.suppliers || [],
       x2CapRates: state.x2CapRates || {},
+      x2BoluongRates: state.x2BoluongRates || {},
       x2BoOngRates: state.x2BoOngRates || {},
       x2BaoThoRates: state.x2BaoThoRates || {},
       x2ChonNanRates: state.x2ChonNanRates || {},
@@ -1102,6 +1148,15 @@ import { escapeHTML, showToast } from './utils.js';
 
         if (imported && imported.x2CapRates) {
           restoreX2CapRates(imported.x2CapRates); // GỘP theo tháng — không đè số đã đặt
+        }
+
+
+        if (imported && Array.isArray(imported.xuong2BoluongRecords)) {
+          restoreXuong2Boluong(imported.xuong2BoluongRecords); // GỘP — không xóa lượt bốc luồng mới hơn backup
+        }
+
+        if (imported && imported.x2BoluongRates) {
+          restoreX2BoluongRates(imported.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
         }
 
         if (imported && Array.isArray(imported.xuong2BoOngRecords)) {
@@ -1362,6 +1417,8 @@ export {
   restoreX2LotLocations,
   restoreX2BaoThanhOutSizes,
   restoreXuong2BaoTho,
+  restoreXuong2Boluong,
+  restoreX2BoluongRates,
   restoreXuong2BoOng,
   restoreXuong2ChonNan,
   restoreXuong2Bullig,

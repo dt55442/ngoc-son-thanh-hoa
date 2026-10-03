@@ -236,6 +236,55 @@ check('Biểu đồ: dòng năm khác / không khớp mã bị loại (999 & 50 
 check('Biểu đồ: cột Kế Hoạch giữ nguyên (rate-2 = 100 tấm)', approx(chart.data.datasets[0].data[0], 100 * unitVol2));
 check('Biểu đồ: cột Đã Ép theo thể tích fpDim (40 tấm rate-1)', approx(chart.data.datasets[1].data[1], (1220 * 2440 * 9 / 1e9) * 40));
 
+// ─── K2. NGUỒN ĐÃ ÉP CHO SẢN PHẨM ĐVT = THANH (QC KIỂM THANH) ───
+console.log('--- K2. NGUỒN ĐÃ ÉP: QC KIỂM THANH (ĐVT = THANH) ---');
+state.materialRates = [
+  { id: 'rate-1',     product: 'Ván 1200x382x9',  nanUse: 'Ván',    unit: 'Tấm' },
+  { id: 'rate-2',     product: 'Ván 1200x382x12', nanUse: 'Ván',    unit: 'Tấm' },
+  { id: 'rate-thanh', product: '640x14x12',        nanUse: 'Ván',    unit: 'Thanh' },
+  { id: 'rate-bl',    product: '270x10x7',         nanUse: 'Bullig', unit: 'Thanh' }
+];
+state.planningItems = [
+  { year: 2026, week: 'Tuần 33', productId: 'rate-2', qty: 100 },
+  { year: 2026, week: 'Tuần 33', productId: 'rate-1', qty: 50 },
+  { year: 2026, week: 'Tuần 33', productId: 'rate-thanh', qty: 1000 }
+];
+state.pressRecords = [
+  { date: '2026-08-10', week: '2026-W33', productId: 'rate-1', fpDim: '1220x2440x9',  finishedQty: 40, vanTho: [], sticks: [] },
+  { date: '2026-08-11', week: '2026-W33', productId: 'rate-2', fpDim: '1220x2440x12', finishedQty: 25, vanTho: [], sticks: [] }
+];
+state.qcExports = [];
+state.qcFinalRecords = [
+  { id: 'qcf-t1', date: '2026-08-11', workshop: 'x2', kind: 'thanh', sizeKey: '640×14×12', inputQty: 500, qtyOk: 470, qtyExcept: 10, qtyReject: 20 },
+  { id: 'qcf-t2', date: '2026-08-11', workshop: 'x2', kind: 'thanh', sizeKey: '270×10×7', inputQty: 300, qtyOk: 300, qtyExcept: 0, qtyReject: 0 },
+  { id: 'qcf-t3', date: '2026-08-11', workshop: 'x2', kind: 'van', sizeKey: '', productId: 'rate-1', productName: 'Ván 1200x382x9', inputQty: 100, qtyOk: 90, qtyExcept: 0, qtyReject: 10 }
+];
+state.pvChartMode = 'plan';
+state.planVsPressTotal = false;
+state.planVsPressYear = '2026';
+state.planVsPressWeek = 33;
+
+check('QC KIỂM THANH: khớp định mức ĐVT = Thanh theo kích thước',
+  press.qcThanhPlanProductId('640×14×12') === 'rate-thanh');
+check('QC KIỂM THANH: KHÔNG lấy định mức Bullig (nhóm Bullig có nguồn riêng)',
+  press.qcThanhPlanProductId('270×10×7') === '');
+check('QC KIỂM THANH: cỡ không có định mức thì bỏ qua',
+  press.qcThanhPlanProductId('999×99×99') === '');
+const qcThanhRows = press.getQcThanhOutputRows();
+check('QC KIỂM THANH: gom đúng 1 lượt (bỏ lượt Bullig + lượt Kiểm Ván)',
+  qcThanhRows.length === 1 && qcThanhRows[0].productId === 'rate-thanh' &&
+  qcThanhRows[0].qty === 470 && qcThanhRows[0].date === '2026-08-11');
+press.renderPlanVsPressChart();
+const chartQc = state.planVsPressInstance;
+const idxThanh = chartQc.data.labels.indexOf('Thanh 640x14x12');
+check('BIỂU ĐỒ: cột ĐÃ ÉP của sản phẩm ĐVT Thanh = m³ của 470 thanh QC đạt',
+  idxThanh >= 0 && approx(chartQc.data.datasets[1].data[idxThanh], (640 * 14 * 12 / 1e9) * 470));
+check('BIỂU ĐỒ: cột ĐÃ ÉP Ép Ván giữ nguyên (rate-1 = 40 tấm)',
+  approx(chartQc.data.datasets[1].data[chartQc.data.labels.indexOf('Ván 1200x382x9')], (1220 * 2440 * 9 / 1e9) * 40));
+check('BIỂU ĐỒ: nhóm Bullig KHÔNG bị cộng từ QC Kiểm thanh',
+  !chartQc.data.labels.some(l => String(l).includes('270x10x7')));
+state.qcFinalRecords = [];
+
 // ─── L. ĐỒNG BỘ MÂY ───────────────────────────────────────────
 const snap = cloud.collectCloudSnapshot();
 check('Mây: snapshot chứa qcExports', Array.isArray(snap.qcExports) && snap.qcExports.length === state.qcExports.length);

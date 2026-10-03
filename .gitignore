@@ -1,0 +1,6 @@
+# =================================================================
+# .gitignore — thư mục KHÔNG đưa lên GitHub
+#   backups/ = bản cất tự động của Auto Backup (autobackup.js) —
+#   file vẫn nằm trên máy, chỉ ngừng theo dõi để repo không phình to.
+# =================================================================
+backups/

@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v197/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v203/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -327,8 +327,9 @@ check('DÙNG CHUNG: đóng thẻ → không còn thẻ đang mở (vùng dữ li
   x2.x2OpenCardId() === null && x2.x2OpenCardHistoryDomain() === '' &&
   state.x2OpenCardId === null);
 const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
-check('DÙNG CHUNG: đủ 9 thẻ có vùng dữ liệu + nguồn xuất (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Than Hóa · Kho Nan · Bào Tinh · Bullig · Ép Ván)',
-  Object.keys(mapCn).length === 9 && Object.keys(mapEx).length === 9 &&
+check('DÙNG CHUNG: đủ 10 thẻ có vùng dữ liệu + nguồn xuất (Bốc Luồng · Cắt · Bổ Ống · Bào Thô · Chọn Nan · Than Hóa · Kho Nan · Bào Tinh · Bullig · Ép Ván)',
+  Object.keys(mapCn).length === 10 && Object.keys(mapEx).length === 10 &&
+  mapCn['x2-bo-luong-card'] === 'xuong2BoluongRecords' && mapEx['x2-bo-luong-card'] === 'boluong' &&
   mapCn['x2-kho-card'] === 'khoNotes' && mapEx['x2-kho-card'] === 'kho' &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
   mapCn['x2-bullig-card'] === 'xuong2BulligRecords' && mapEx['x2-bullig-card'] === 'bullig' &&
@@ -420,6 +421,99 @@ check('CẤU TRÚC: 2 nút dùng chung nằm TRONG thanh tiêu đề pop-up th�
     return iTitle > iShell && iHeader > iTitle && iHeader < iClose &&
       idxHtml.includes('id="btn-history-x2"') && css.includes('.x2-detail-actions');
   })());
+
+
+// ═══ G. NHÃN DẢI TUẦN KÈM TRUNG BÌNH ÉP VÁN NGÀY (MỘT DÒNG) ═══════
+// MỖI NGÀY BIỂU ĐỒ VẼ 2 CỘT RIÊNG BIỆT:
+//   • CỘT TRÁI (stack 'ep')  = tất cả các loại trong ngày (t1+t2+t3)
+//   • CỘT PHẢI (stack 'fp')  = thành phẩm tương đương (fp)
+// → Trung bình phải tính theo TỪNG CỘT, KHÔNG cộng gộp cả 2 cột.
+//
+// Tuần 39/2026 (21–27/09) có 3 ngày ép:
+//   21/09: trái = 2 (t1), phải = 1 (fp)
+//   22/09: trái = 3 (t2), phải = 0 (fp)
+//   23/09: trái = 2 (t3), phải = 2 (fp)
+// Mẫu số = số ngày CÓ lượt ép = 3
+//   avgProduct (CỘT PHẢI) = (1+0+2) ÷ 3 = 1
+//   avgAll     (CỘT TRÁI) = (2+3+2) ÷ 3 = 7/3 ≈ 2,33
+state.pressRecords = [
+  { id: 'w1', date: '2026-09-21', year: 2026, week: '2026-W39', worker: 'A',
+    sticks: [{ nanKey: '1000×1000×1000', sticks: 100 }],
+    vanTho: [{ vtDim: '1000×1000×1000', vtQty: 2 }],
+    productId: 'prod-1', productName: 'Ván 2000x600x20',
+    fpDim: '1000×1000×1000', finishedQty: 1, glue: 10, additive: 1 },
+  { id: 'w2', date: '2026-09-22', year: 2026, week: '2026-W39', worker: 'B',
+    sticks: [{ nanKey: '1000×1000×1000', sticks: 100 }],
+    vanTho: [{ vtDim: '1000×1000×1000', vtQty: 3 }],
+    productId: '', productName: '' },
+  { id: 'w3', date: '2026-09-23', year: 2026, week: '2026-W39', worker: 'C',
+    sticks: [{ nanKey: '1000×1000×1000', sticks: 2 }],
+    vanTho: [],
+    productId: 'prod-1', productName: 'Ván 2000x600x20',
+    fpDim: '1000×1000×1000', finishedQty: 2, glue: 8, additive: 0.5 }
+];
+state.pressYearFilter = 'all';
+state.pressWeekFilter = 'all';
+state.pressChartWinStart = null;
+press.renderPressChart();
+const epvCfg = state.pressChartInstance.config;
+const wbOpts = epvCfg.options.plugins.pressWeekBands;
+check('TB TUẦN: nhận đủ nhóm tuần + stats (week 39)',
+  Array.isArray(wbOpts.groups) && wbOpts.groups.length === 1 &&
+  wbOpts.groups[0].week === 39 && wbOpts.groups[0].i0 === 0 && wbOpts.groups[0].i1 === 2 &&
+  !!wbOpts.stats);
+check('TB TUẦN: mẫu số = 3 ngày CÓ lượt ép (không chia 7)',
+  wbOpts.stats[39] && wbOpts.stats[39].days === 3);
+check('TB TUẦN: avgProduct = TB ngày CỘT PHẢI "Thành phẩm tương đương" (1+0+2)/3 = 1 m³',
+  wbOpts.stats[39] && Math.abs(wbOpts.stats[39].avgProduct - 1) < 1e-9);
+check('TB TUẦN: avgAll = TB ngày CỘT TRÁI "tất cả các loại" (2+3+2)/3 ≈ 2,33 m³',
+  wbOpts.stats[39] && Math.abs(wbOpts.stats[39].avgAll - 7 / 3) < 1e-9);
+check('TB TUẦN: 2 giá trị KHÔNG bị cộng gộp (sumAll = t1+t2+t3, KHÔNG chứa fp)',
+  wbOpts.stats[39] && Math.abs(wbOpts.stats[39].avgAll - 7 / 3) < 1e-9 &&
+  Math.abs(wbOpts.stats[39].avgAll - wbOpts.stats[39].avgProduct) > 1);
+check('TB TUẦN: dataset vẫn vẽ đúng theo cửa sổ (4 dataset · 3 cột)',
+  epvCfg.data.datasets.length === 4 &&
+  JSON.stringify(epvCfg.data.datasets[3].data) === JSON.stringify([1, 0, 2]) &&
+  JSON.stringify(epvCfg.data.datasets[0].data) === JSON.stringify([2, 0, 0]));
+// Gọi trực tiếp plugin dải tuần với ctx giả — bắt chữ fillText THẬT trên canvas.
+// measureText bám theo ctx.font (0,6 × cỡ chữ/ký tự) để kiểm tra cả nhánh
+// tự GIẢM CỠ CHỮ khi dải hẹp.
+function fakeChart(areaRight) {
+  const drawn = [];
+  return {
+    drawn,
+    height: 220,
+    chartArea: { left: 50, right: areaRight, top: 0, bottom: 200 },
+    scales: { x: { getPixelForValue: v => 100 + v * 100 } },
+    ctx: {
+      font: '600 10px system-ui',
+      save() {}, restore() {}, beginPath() {}, fill() {}, rect() {}, roundRect() {},
+      measureText(t) {
+        const m = /(\d+(?:\.\d+)?)px/.exec(this.font || ''); // lấy CỠ CHỮ trong "600 10px …"
+        const px = m ? parseFloat(m[1]) : 10;
+        return { width: t.length * px * 0.6 };
+      },
+      fillText: t => drawn.push(t)
+    }
+  };
+}
+const weekBandPlugin = epvCfg.plugins.find(p => p && p.id === 'pressWeekBands');
+check('TB TUẦN: plugin dải tuần có trong danh sách plugin của biểu đồ',
+  !!weekBandPlugin && typeof weekBandPlugin.afterDraw === 'function');
+const wide = fakeChart(500);
+weekBandPlugin.afterDraw(wide, {}, wbOpts);
+check('TB TUẦN: nhãn 1 DÒNG "Tuần 39 · TB ngày 1/2,33 m³" (đủ chữ khi dải rộng)',
+  wide.drawn.length === 1 && wide.drawn[0] === 'Tuần 39 · TB ngày 1/2,33 m³');
+check('TB TUẦN: không xuống dòng (chỉ 1 lần fillText, không có ký tự xuống dòng)',
+  wide.drawn.length === 1 && !/[\n\r]/.test(wide.drawn[0]));
+const narrow = fakeChart(120);
+weekBandPlugin.afterDraw(narrow, {}, wbOpts);
+check('TB TUẦN: dải hẹp → tự rút gọn nhưng VẪN giữ 2 số trung bình',
+  narrow.drawn.length === 1 && narrow.drawn[0].includes('/2,33') &&
+  /^T?\d{2}/.test(narrow.drawn[0]) && !/[\n\r]/.test(narrow.drawn[0]));
+check('TB TUẦN: press.js có mã vẽ "TB ngày" + 2 biến trung bình (cấu trúc)',
+  pressSrc.includes('TB ngày') && pressSrc.includes('avgProduct') && pressSrc.includes('avgAll') &&
+  pressSrc.includes('stats: weekStats'));
 
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);

@@ -1,12 +1,19 @@
 // ═══════════════════════════════════════════════════════════
 // js/qc-final.js — THẺ "KIỂM SAU SẢN XUẤT" (tab QC — qc-final-card)
 // ═══════════════════════════════════════════════════════════
-// QC kiểm THÀNH PHẨM sau Ép Ván trước khi xuất xưởng, ghi theo NGÀY + VỊ TRÍ
+// QC kiểm VÁN THÔ / THÀNH PHẨM Ép Ván trước khi xuất xưởng, ghi theo NGÀY + VỊ TRÍ
 // (Xưởng 1 / Xưởng 2). Mỗi lượt kiểm nhập:
-//   • ĐẦU VÀO KIỂM  — Xưởng 2: CHỌN thành phẩm từ danh sách Ép Ván của CẶP
-//     2 TUẦN xuất hàng (tuần lẻ + tuần kế — giống nút "2 tuần" của biểu đồ
-//     "Kế Hoạch vs Đã Ép": kiểm tuần 39 hay tuần 40 đều lấy cặp 39–40) → tự
-//     điền tổng số lượng (sửa được); Xưởng 1: "Sắp có" (nhập tay số lượng).
+//   • ĐẦU VÀO KIỂM — Xưởng 2: CHỌN từ 2 NHÓM nguồn trong CẶP 2 TUẦN xuất hàng
+//     (tuần lẻ + tuần kế — giống nút "2 tuần" của biểu đồ "Kế Hoạch vs Đã Ép":
+//     kiểm tuần 39 hay tuần 40 đều lấy cặp 39–40):
+//       ① VÁN THÔ BTP (bán thành phẩm) — dòng "Ván Thô Tạo Ra" của các lượt ép
+//          CHỈ điền ván thô, KHÔNG điền trường Thành Phẩm của thẻ Ép Ván;
+//       ② THÀNH PHẨM Ép Ván — các lượt ép có chọn Thành Phẩm.
+//     Phân biệt ván/thanh TỰ ĐỘNG theo nhóm: ① ván thô BTP lọc theo THỂ TÍCH
+//     1 thế — < 0,0015 m³ = thanh BTP thì loại (VD 1200×18×15 = 0,000324 m³);
+//     ② thành phẩm Ép Ván lọc theo ĐVT bảng định mức (ĐVT CHỈ phân biệt khi đã
+//     là THÀNH PHẨM — VD 640x14x12 ĐVT Thanh). Chọn thẻ → tự điền số CÒN
+//     LẠI (sửa được); Xưởng 1: "Sắp có" (nhập tay số lượng).
 //   • SỐ LƯỢNG ĐẠT · NGOẠI LỆ · LOẠI (số lượng bị LOẠI = lỗi).
 // Công thức bảng dữ liệu (đã chốt với người dùng):
 //   Tổng số lượng kiểm = Đạt + Ngoại lệ + Loại
@@ -24,6 +31,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { logDataChange } from './history.js';
 import { hrSplitHoursHCDate } from './hr.js';
+import { rateUnit } from './planning.js';
 import { pressRecordWeek } from './press.js';
 import { STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
@@ -155,6 +163,40 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     if (!p.start) return '';
     return `${qcFinalYearOf(dateISO)}-${p.start}${p.end ? `-${p.end}` : ''}`;
   }
+  // ─── PHÂN LOẠI VÁN / THANH THEO ĐVT CỦA BẢNG ĐỊNH MỨC ─────────────────
+  // Tách đúng 3 số từ chuỗi kích thước ('640x14x12' · 'Ván 1220×2440×9' →
+  // [640,14,12]); không đủ 3 số → [] (không dùng để phân loại).
+  function qcFinalDimsNums(str) {
+    const nums = String(str || '').match(/\d+(?:[.,]\d+)?/g) || [];
+    const out = nums.map(s => parseFloat(String(s).replace(',', '.')));
+    return out.length === 3 && out.every(n => !isNaN(n)) ? out : [];
+  }
+  // Định mức có 3 số KHỚP ĐÚNG theo thứ tự với cỡ cần tra (không có → null)
+  function qcFinalRateOfDims(str) {
+    const dims = qcFinalDimsNums(str);
+    if (!dims.length) return null;
+    return (state.materialRates || []).find(r => {
+      const rn = qcFinalDimsNums((r && r.product) || '');
+      return rn.length === 3 && rn.every((n, i) => n === dims[i]);
+    }) || null;
+  }
+  // Định mức này phân loại LÀ THANH (ĐVT = Thanh — Bullig fallback về Thanh)?
+  // Không có định mức khớp → KHÔNG loại (không suy đoán khi chưa khai ĐVT).
+  function qcFinalIsThanhRate(rate) {
+    return !!rate && rateUnit(rate) === 'Thanh';
+  }
+  // Thành phẩm Ép Ván có ĐVT = Thanh không (tra theo id, fallback 3 số trong tên)?
+  function qcFinalNameIsThanh(productId, name) {
+    const byId = (state.materialRates || []).find(r => r && String(r.id) === String(productId || ''));
+    return qcFinalIsThanhRate(byId || qcFinalRateOfDims(name));
+  }
+  // Lượt ép VÁN THÔ BTP (bán thành phẩm): CHỈ điền khối "Ván Thô Tạo Ra",
+  // KHÔNG điền trường Thành Phẩm của thẻ Công đoạn Ép Ván.
+  function qcFinalIsBtpPress(r) {
+    if (!r) return false;
+    if (String(r.productId || '').trim() || String(r.productName || '').trim()) return false;
+    return (Array.isArray(r.vanTho) ? r.vanTho : []).some(l => (parseFloat(l && l.vtQty) || 0) > 0);
+  }
   // Tồn KIỂM theo thành phẩm của cặp 2 tuần: TỔNG Ép Ván − ĐÃ KIỂM (Σ Đầu vào
   // kiểm của các lượt cùng sản phẩm + cùng cặp tuần) = CÒN LẠI.
   // Dữ liệu kiểm cũ KHÔNG có pairKey → suy lại từ ngày kiểm.
@@ -175,7 +217,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
   // Danh sách THÀNH PHẨM Ép Ván của cặp 2 tuần chứa ngày kiểm: gộp finishedQty
   // theo sản phẩm (ưu tiên productId), CHỈ nhận lượt ép cùng NĂM với ngày kiểm
-  // (tránh trùng số tuần khác năm). Sắp theo tổng số lượng giảm dần.
+  // (tránh trùng số tuần khác năm), LOẠI lượt BTP (chưa điền thành phẩm — có
+  // danh sách riêng) và mục ĐVT = Thanh theo định mức. Sắp theo SL giảm dần.
   function qcFinalProducts2Weeks(dateISO) {
     const pair = qcFinalPairWeeks(dateISO);
     if (!pair.start) return [];
@@ -183,17 +226,68 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     const map = new Map();
     (state.pressRecords || []).forEach(r => {
       if (!r) return;
+      if (qcFinalIsBtpPress(r)) return;      // ván thô BTP → nhóm riêng
+      const id = r.productId || '';
+      const rawName = String(r.productName || '').trim();
+      if (!id && !rawName) return;           // KHÔNG điền trường Thành Phẩm → bỏ
+      if (qcFinalNameIsThanh(id, rawName)) return; // ĐVT = Thanh → không phải "Kiểm Ván"
       const w = pressRecordWeek(r);
       if (!w || (w !== pair.start && (pair.end == null || w !== pair.end))) return;
       if (String(r.year || qcFinalYearOf(r.date)) !== year) return;
-      const id = r.productId || '';
-      const name = String(r.productName || '').trim() || 'Thành phẩm chưa đặt tên';
+      const name = rawName || 'Thành phẩm chưa đặt tên';
       const key = id || `name:${name}`;
       const cur = map.get(key) || { productId: id, name, qty: 0 };
       cur.qty += Number(r.finishedQty) || 0;
       map.set(key, cur);
     });
-    return [...map.values()].sort((a, b) => b.qty - a.qty);
+    return [...map.values()].filter(x => x.qty > 0).sort((a, b) => b.qty - a.qty);
+  }
+  // ─── TỒN VÁN THÔ BTP CHO "KIỂM VÁN" (cặp 2 tuần của ngày kiểm) ─────────
+  // Nguồn = dòng "Ván Thô Tạo Ra" của các lượt ép CHỈ điền ván thô, KHÔNG điền
+  // trường Thành Phẩm (bán thành phẩm). Gộp theo cỡ chuẩn hoá 'A×B×C':
+  //   TỔNG = Σ số lượng ván thô · ĐÃ KIỂM = Σ Đầu vào kiểm của các lượt "Kiểm
+  //   ván" cùng cỡ + cùng cặp tuần (dữ liệu cũ không pairKey → suy từ ngày)
+  //   · CÒN LẠI = TỔNG − ĐÃ KIỂM.
+  // `excludeId` = lượt đang SỬA (trả lại phần của chính nó).
+  // Cỡ có THỂ TÍCH 1 thế < QC_FINAL_BTP_PIECE_MAX_VOL bị LOẠI = thanh BTP
+  // (sang "Kiểm Thanh") — tự phân biệt KHÔNG cần định mức.
+  const QC_FINAL_BTP_PIECE_MAX_VOL = 0.0015; // m³ — GIỐNG BAO_THANH_PIECE_MAX_VOL (js/xuong2.js): 1200×18×15 = 0,000324 ⇒ thanh · 1220×2440×9 = 0,0268 ⇒ ván
+  function qcFinalVanBtpStocks(dateISO, excludeId) {
+    const pair = qcFinalPairWeeks(dateISO);
+    if (!pair.start) return [];
+    const year = String(qcFinalYearOf(dateISO));
+    const key = qcFinalPairKeyOf(dateISO);
+    const map = new Map();
+    (state.pressRecords || []).forEach(r => {
+      if (!qcFinalIsBtpPress(r)) return;
+      const w = pressRecordWeek(r);
+      if (!w || (w !== pair.start && (pair.end == null || w !== pair.end))) return;
+      if (String(r.year || qcFinalYearOf(r.date)) !== year) return;
+      (Array.isArray(r.vanTho) ? r.vanTho : []).forEach(l => {
+        const qty = parseFloat(l && l.vtQty) || 0;
+        if (qty <= 0) return;
+        const dims = qcFinalDimsNums(l && l.vtDim);
+        if (!dims.length) return;
+        // Tự phân loại theo THỂ TÍCH 1 thế: < 0,0015 m³ = thanh BTP → bỏ
+        if ((dims[0] * dims[1] * dims[2]) / 1e9 < QC_FINAL_BTP_PIECE_MAX_VOL) return;
+        const sizeKey = dims.join('×');
+        const cur = map.get(sizeKey) ||
+          { sizeKey, dims, name: `Ván thô ${dims.join(' × ')}`, total: 0, used: 0 };
+        cur.total += qty;
+        map.set(sizeKey, cur);
+      });
+    });
+    if (!key) return [...map.values()].map(x => Object.assign(x, { remain: x.total }));
+    (state.qcFinalRecords || []).forEach(rec => {
+      if (!rec || rec.id === excludeId) return;
+      if (qcFinalKindOf(rec.kind) !== 'van') return;
+      if ((rec.pairKey || qcFinalPairKeyOf(rec.date)) !== key) return;
+      const row = map.get(String(rec.sizeKey || '').trim());
+      if (row) row.used += Number(rec.inputQty) || 0;
+    });
+    return [...map.values()]
+      .map(x => Object.assign(x, { remain: Math.max(0, x.total - x.used) }))
+      .sort((a, b) => b.remain - a.remain || b.total - a.total);
   }
   // ═══ PHẦN 3 ═══
 
@@ -459,16 +553,16 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
       }
       return;
     }
-    if (text) text.textContent = qcFinalPicked ? qcFinalPicked.name : 'Thành phẩm Ép Ván';
+    if (text) text.textContent = qcFinalPicked ? qcFinalPicked.name : 'Ván thô Ép Ván';
     if (count) {
       count.textContent = qcFinalPicked ? `Còn lại: ${qcFinalFmt(qcFinalPicked.qty)} ${unit}` : 'Chưa chọn';
     }
   }
 
-  // ─── DANH SÁCH THÀNH PHẨM ÉP VÁN (cặp 2 tuần của ngày đang chọn) ──
+  // ─── DANH SÁCH NGUỒN KIỂM VÁN: VÁN THÔ BTP + THÀNH PHẨM ÉP VÁN (cặp 2 tuần) ──
   // Cơ chế POP-UP NỔI: khi mở, node `#qcf-picker` được KÉO RA làm CON TRỰC TIẾP
   // của `#qc-detail-overlay` (lớp fixed đã phủ toàn màn hình, z:200) + neo bằng
-  // INLINE `position:absolute` theo rect của nút "Thành phẩm Ép Ván":
+  // INLINE `position:absolute` theo rect của nút nguồn đầu vào:
   //   • Inline style THẮNG MỌI stylesheet (kể cả bản CSS cũ do SW cache giữ
   //     `position:absolute theo body` / `static`) → LUÔN nổi đúng chỗ nút,
   //     KHÔNG bao giờ rơi xuống đáy trang, KHÔNG biến dạng form.
@@ -550,33 +644,58 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     if (kind === 'thanh') { renderQcFinalThanhList(listEl); return; }
     const dateVal = (document.getElementById('qcf-date') || {}).value || qcFinalTodayISO();
     const pairTxt = qcFinalPairLabel(dateVal);
-    // Tồn kiểm theo thành phẩm: TỔNG Ép Ván của cặp − ĐÃ KIỂM = CÒN LẠI
-    // (1 cặp có thể kiểm NHIỀU NGÀY mới hết số)
-    const rows = qcFinalProductStocks(dateVal);
+    // 2 NHÓM nguồn của "Kiểm Ván" (cùng cặp 2 tuần — 1 cặp kiểm nhiều ngày mới hết):
+    //   ① VÁN THÔ BTP — tồn theo CỠ ván thô (lượt ép CHỈ điền "Ván Thô Tạo Ra";
+    //      LOẠI cỡ thể tích < 0,0015 m³ = thanh BTP)
+    //   ② THÀNH PHẨM Ép Ván — tồn theo SẢN PHẨM (tổng Ép Ván − ĐÃ KIỂM)
+    const vtRows = qcFinalVanBtpStocks(dateVal, qcFinalEditId || '');
+    const pdRows = qcFinalProductStocks(dateVal);
     const q = qcFinalStripQ(qcFinalSearchQ);
-    const hits = q ? rows.filter(r => qcFinalStripQ(r.name).includes(q)) : rows;
-    const head = `<div class="qcf-pick-head"><i data-lucide="calendar-range"></i> Thành phẩm Ép Ván — <strong>${escapeHTML(pairTxt || '—')}</strong></div>`;
-    if (!rows.length) {
-      listEl.innerHTML = head + `<div class="al-empty">Chưa có lượt Ép Ván nào trong ${escapeHTML(pairTxt || 'cặp tuần này')}. Kiểm tra lại Ngày hoặc ghi lượt ép ở thẻ Ép Ván.</div>`;
+    const vtHits = q ? vtRows.filter(r => qcFinalStripQ(`${r.name} ${r.sizeKey}`).includes(q)) : vtRows;
+    const pdHits = q ? pdRows.filter(r => qcFinalStripQ(r.name).includes(q)) : pdRows;
+    const vtHead = `<div class="qcf-pick-head"><i data-lucide="box"></i> Ván thô BTP — <strong>${escapeHTML(pairTxt || '—')}</strong></div>`;
+    const pdHead = `<div class="qcf-pick-head"><i data-lucide="package"></i> Thành phẩm Ép Ván — <strong>${escapeHTML(pairTxt || '—')}</strong></div>`;
+    if (!vtRows.length && !pdRows.length) {
+      listEl.innerHTML = vtHead + `<div class="al-empty">Chưa có lượt Ép Ván nào trong ${escapeHTML(pairTxt || 'cặp tuần này')} (ván thô BTP = lượt chỉ điền khối "Ván Thô Tạo Ra", không điền Thành Phẩm; thanh BTP thể tích < 0,0015 m³ và mục ĐVT = Thanh được loại). Kiểm tra lại Ngày hoặc ghi lượt ép ở thẻ Ép Ván.</div>`;
       initLucide();
       return;
     }
-    if (!hits.length) {
-      listEl.innerHTML = head + `<div class="al-empty">Không có thành phẩm nào khớp "${escapeHTML(qcFinalSearchQ)}".</div>`;
+    if (!vtHits.length && !pdHits.length) {
+      listEl.innerHTML = vtHead + `<div class="al-empty">Không có mục nào khớp "${escapeHTML(qcFinalSearchQ)}".</div>`;
       initLucide();
       return;
     }
-    listEl.innerHTML = head + hits.map(p => {
-      const done = p.remain <= 0;
-      return `
-      <button type="button" class="al-card qcf-product${qcFinalPicked && qcFinalPicked.productId === p.productId && qcFinalPicked.name === p.name ? ' picked' : ''}" data-qcf-product="${escapeHTML(p.productId || p.name)}" title="Chọn thành phẩm này — tự điền số CÒN LẠI (tổng Ép Ván của cặp tuần trừ phần đã kiểm các ngày trước) vào ô Đầu vào kiểm (sửa được)">
+    let html = '';
+    if (vtRows.length) {
+      html += vtHead + (vtHits.length ? vtHits.map(p => {
+        const done = p.remain <= 0;
+        const on = qcFinalPicked && qcFinalPicked.sizeKey && qcFinalPicked.sizeKey === p.sizeKey;
+        return `
+      <button type="button" class="al-card qcf-product${on ? ' picked' : ''}" data-qcf-vt="${escapeHTML(p.sizeKey)}" title="Chọn ván thô BTP này — tự điền số CÒN LẠI (tổng ván thô của cặp tuần trừ phần đã kiểm các ngày trước) vào ô Đầu vào kiểm (sửa được)">
+        <span class="qcf-product-line1">
+          <span class="qcf-product-name">${escapeHTML(p.name)} mm</span>
+          ${done ? '<span class="qcf-done">Đã kiểm đủ cặp tuần</span>' : ''}
+        </span>
+        <span class="qcf-product-meta">Tổng <strong>${qcFinalFmt(p.total)}</strong> · Đã kiểm ${qcFinalFmt(p.used)} · <b class="qcf-remain${done ? ' zero' : ''}">Còn lại ${qcFinalFmt(p.remain)}</b></span>
+      </button>`;
+      }).join('') : `<div class="al-empty">Không có ván thô BTP nào khớp "${escapeHTML(qcFinalSearchQ)}".</div>`);
+    }
+    if (pdRows.length) {
+      html += pdHead + (pdHits.length ? pdHits.map(p => {
+        const done = p.remain <= 0;
+        const on = qcFinalPicked && !qcFinalPicked.sizeKey &&
+          qcFinalPicked.productId === p.productId && qcFinalPicked.name === p.name;
+        return `
+      <button type="button" class="al-card qcf-product${on ? ' picked' : ''}" data-qcf-product="${escapeHTML(p.productId || p.name)}" title="Chọn thành phẩm này — tự điền số CÒN LẠI (tổng Ép Ván của cặp tuần trừ phần đã kiểm các ngày trước) vào ô Đầu vào kiểm (sửa được)">
         <span class="qcf-product-line1">
           <span class="qcf-product-name">${escapeHTML(p.name)}</span>
           ${done ? '<span class="qcf-done">Đã kiểm đủ cặp tuần</span>' : ''}
         </span>
         <span class="qcf-product-meta">Tổng <strong>${qcFinalFmt(p.total)}</strong> · Đã kiểm ${qcFinalFmt(p.used)} · <b class="qcf-remain${done ? ' zero' : ''}">Còn lại ${qcFinalFmt(p.remain)}</b></span>
       </button>`;
-    }).join('');
+      }).join('') : `<div class="al-empty">Không có thành phẩm nào khớp "${escapeHTML(qcFinalSearchQ)}".</div>`);
+    }
+    listEl.innerHTML = html;
     initLucide();
   }
   // ─── DANH SÁCH CỠ THANH ĐẦU RA (cho "Kiểm thanh") ─────────────
@@ -613,9 +732,28 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     initLucide();
   }
   // Chọn 1 mục trong danh sách nguồn (ủy quyền click từ events.js):
-  //   • Kiểm Ván   → thành phẩm Ép Ván, tự điền số CÒN LẠI của cặp 2 tuần
+  //   • Kiểm Ván ① → VÁN THÔ BTP, tự điền số CÒN LẠI của cặp 2 tuần
+  //   • Kiểm Ván ② → thành phẩm Ép Ván, tự điền số CÒN LẠI của cặp 2 tuần
   //   • Kiểm Thanh → CỠ thanh đầu ra của Bào thanh, tự điền số CÒN LẠI (chờ kiểm)
   function onQcFinalListClick(e) {
+    const vtBtn = e.target && e.target.closest ? e.target.closest('[data-qcf-vt]') : null;
+    if (vtBtn) {
+      const key = vtBtn.getAttribute('data-qcf-vt') || '';
+      const dateVal = (document.getElementById('qcf-date') || {}).value || qcFinalTodayISO();
+      const row = qcFinalVanBtpStocks(dateVal, qcFinalEditId || '').find(p => p.sizeKey === key);
+      if (!row) return false;
+      qcFinalPicked = { productId: '', name: row.name, qty: row.remain, sizeKey: row.sizeKey, dims: row.dims };
+      qcFinalPickedSize = null;
+      const vtQty = document.getElementById('qcf-input-qty');
+      if (vtQty) vtQty.value = row.remain ? String(row.remain) : '';
+      syncQcFinalPickerText();
+      setQcFinalPickerOpen(false);
+      renderQcFinalProductList();
+      if (row.remain <= 0) {
+        showToast(`Ván thô ${qcFinalSizeLabel(row.dims)} mm đã kiểm đủ trong cặp tuần — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
+      }
+      return true;
+    }
     const sizeBtn = e.target && e.target.closest ? e.target.closest('[data-qcf-size]') : null;
     if (sizeBtn) {
       const key = sizeBtn.getAttribute('data-qcf-size') || '';
@@ -1007,10 +1145,11 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     }
     const snap = hrQcFinalSnapshot(date);
     const now = new Date().toISOString();
-    // 'Kiểm thanh' → gắn CỠ thanh được kiểm (LINK về thẻ Bào Tinh cùng cỡ)
+    // 'Kiểm thanh' → gắn CỠ thanh được kiểm (LINK về thẻ Bào Tinh cùng cỡ);
+    // 'Kiểm ván' chọn VÁN THÔ BTP → cũng gắn cỡ (tồn kiểm theo cặp tuần)
     const sizeFields = kind === 'thanh'
       ? { sizeKey: qcFinalPickedSize ? qcFinalPickedSize.sizeKey : '', sizeDims: qcFinalPickedSize ? qcFinalPickedSize.dims : [] }
-      : { sizeKey: '', sizeDims: [] };
+      : { sizeKey: (qcFinalPicked && qcFinalPicked.sizeKey) || '', sizeDims: (qcFinalPicked && qcFinalPicked.dims) || [] };
     if (qcFinalEditId) {
       const r = (state.qcFinalRecords || []).find(x => x.id === qcFinalEditId);
       if (!r) { qcFinalEditId = null; }
@@ -1063,6 +1202,19 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     qcFinalPickedSize = (qcFinalKindOf(r.kind) === 'thanh' && r.sizeKey)
       ? { sizeKey: String(r.sizeKey), dims: Array.isArray(r.sizeDims) ? r.sizeDims.map(Number) : [], remain: Number(r.inputQty) || 0 }
       : null;
+    // 'Kiểm ván' chọn VÁN THÔ BTP → khôi phục luôn cỡ (sizeKey/sizeDims) để
+    // lưu lại vẫn liên kết tồn kiểm theo cặp tuần
+    if (qcFinalKindOf(r.kind) === 'van' && r.sizeKey) {
+      if (!qcFinalPicked) {
+        qcFinalPicked = {
+          productId: r.productId || '',
+          name: String(r.productName || '').trim() || `Ván thô ${qcFinalSizeLabel(r.sizeDims)}`,
+          qty: Number(r.inputQty) || 0
+        };
+      }
+      qcFinalPicked.sizeKey = String(r.sizeKey);
+      qcFinalPicked.dims = Array.isArray(r.sizeDims) ? r.sizeDims.map(Number) : [];
+    }
     const dateEl = document.getElementById('qcf-date');
     if (dateEl) dateEl.value = r.date || '';
     const wsEl = document.getElementById('qcf-workshop');
@@ -1116,7 +1268,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
   // ĐỔI NGÀY KIỂM: thành phẩm đã chọn gắn với cặp tuần CŨ → bỏ chọn + xoá ô
   // Đầu vào kiểm (trừ khi đang SỬA 1 lượt — giữ nguyên số đang nạp), rồi vẽ lại
-  // danh sách thành phẩm Ép Ván của cặp 2 tuần mới.
+  // danh sách nguồn Kiểm Ván (ván thô BTP + thành phẩm) của cặp 2 tuần mới.
   function qcFinalOnDateChange() {
     // Kiểm Ván: thành phẩm gắn với cặp tuần → đổi ngày là bỏ chọn.
     // Kiểm Thanh: cỡ thanh KHÔNG phụ thuộc ngày → giữ nguyên lựa chọn.
@@ -1162,6 +1314,9 @@ export {
   qcFinalPairWeeks,
   qcFinalProductStocks,
   qcFinalProducts2Weeks,
+  // ── 'KIỂM VÁN': ván thô BTP (lượt ép CHỈ điền "Ván Thô Tạo Ra") ──
+  qcFinalVanBtpStocks,
+  qcFinalIsBtpPress,
   // ── 'KIỂM THANH': cỡ thanh ĐẦU RA của Bào thanh (LINK về thẻ Bào Tinh) ──
   qcFinalThanhSizeStocks,
   qcFinalSizeLabel,

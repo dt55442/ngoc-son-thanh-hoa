@@ -252,11 +252,12 @@
           <span class="x2-cards-hint">Bấm thẻ để mở bảng vị trí · nguyên liệu đầu vào lấy từ tab Nguyên Liệu (Xưởng 2) · thẻ Sắp có = chức năng đang được bổ sung</span>
         </div>
         <div class="x2-cards" id="x2-cards-grid">
-          <button type="button" class="x2-mini-card" data-x2-card="x2-bo-luong-card" aria-expanded="false" title="Bốc Luồng — bốc/xếp luồng tre từ chuyến xe vào Xưởng 2 (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bo-luong-card" aria-expanded="false" title="Bốc Luồng — bốc/xếp luồng cây từ chuyến xe vào Xưởng 2 (tự link lô \"Luồng cây...\" ở tab Nguyên Liệu, tự lấy người + giờ vị trí Bốc Luồng từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="forklift"></i></span>
             <span class="x2-mini-title">Bốc Luồng</span>
             <span class="x2-mini-desc">Bốc/xếp luồng tre nhập về Xưởng 2</span>
             <span class="x2-mini-count" id="x2-mini-count-bo-luong">–</span>
+            <span class="cap-spark" id="x2-mini-spark-bo-luong"></span>
           </button>
           <button type="button" class="x2-mini-card" data-x2-card="x2-cut-card" aria-expanded="false" title="Cắt Chọn — chọn luồng từ lô nguyên liệu đầu vào của Xưởng 2 (tự link nhà cung cấp, mã số, khối lượng đầu vào)">
             <span class="x2-mini-ic"><i data-lucide="scissors"></i></span>
@@ -436,14 +437,65 @@
           </div>
         </div>
 
-        <!-- VỊ TRÍ: BỐC LUỒNG — placeholder (chức năng bổ sung sau) -->
+        <!-- VỊ TRÍ: BỐC LUỒNG — bốc luồng "Luồng cây..." từ chuyến xe vào Xưởng 2 -->
         <div class="planning-card x2-card-hidden" id="x2-bo-luong-card">
           <div class="planning-card-header">
             <h4><i data-lucide="forklift"></i> Bốc Luồng — Xưởng 2</h4>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận số chuyến bốc + khối lượng luồng cây/ống nhập về Xưởng 2 (tự link tab Nguyên Liệu) sẽ được cập nhật ngay sau đây.</p>
+
+          <!-- TỒN LUỒNG CÂY CHƯA BỐC — hiện trên cùng (lô "Luồng cây" còn khối lượng) -->
+          <div class="x2-stock-bar" id="x2-blg-stock-bar"></div>
+
+          <!-- FORM: Ngày bốc + Đầu vào (lô "Luồng cây..." CHƯA bốc hết) + Khối lượng thực tế.
+               NGƯỜI BỐC + GIỜ BỐC TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Bốc Luồng"
+               — Xưởng 2, đúng ngày) — không có ô nhập tay, chỉ hiện ở thẻ ngày. -->
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x2-blg-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x2-blg-edit-text"></span>
+            </div>
+            <form id="x2-blg-form">
+              <!-- DÒNG 1: ngày bốc + lô đầu vào + khối lượng thực tế -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x2-blg-date">Ngày Bốc <span class="required">*</span></label>
+                  <input type="date" id="x2-blg-date" required>
+                </div>
+                <div class="form-group" style="flex:2;">
+                  <label for="x2-blg-material">Đầu Vào (lô "Luồng cây...") <span class="required">*</span></label>
+                  <select id="x2-blg-material" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lô "Luồng cây" CÒN khối lượng chưa bốc — bốc hết thì lô tự ẩn (sửa lượt cũ vẫn thấy đúng lô của lượt đó)</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-blg-qty">Khối Lượng Thực Tế (kg) <span class="required">*</span></label>
+                  <input type="number" id="x2-blg-qty" step="any" min="0" placeholder="0" required>
+                </div>
+              </div>
+
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" data-perm="kanban" title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (kg/h) — nguồn cho cột Hiệu suất"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x2-blg">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Bốc Luồng</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Thống kê nhanh -->
+          <div class="material-stats" id="x2-blg-stats"></div>
+
+          <!-- THẺ NGÀY BỐC LUỒNG — mỗi ngày 1 THẺ RIÊNG: đầu thẻ = thông tin chung
+               (Ngày · Người bốc · Giờ bốc HC/TC · Công suất thực tế · Hiệu suất),
+               trong thẻ là bảng các lượt bốc của ngày. -->
+          <div class="x2-cut-table-wrap" id="x2-blg-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Bốc Luồng</h5>
+              <span class="x2-cut-table-count" id="x2-blg-table-count"></span>
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2blg-table" title="Thu gọn / Mở rộng">
+                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+              </button>
+            </div>
+            <div class="x2-cut-table-scroll">
+              <div id="x2-blg-day-cards"></div>
+            </div>
           </div>
         </div>
 
@@ -1243,7 +1295,7 @@
                   <select id="x2-btinh-kind">
                     <option value="tinh" title="Bào tinh — lấy thanh từ Kho (đã qua Sấy 2)">Bào tinh</option>
                     <option value="ha_cap" title="Bào tinh hạ cấp — lấy thanh lỗi của công đoạn Bào Tinh (gom theo cỡ)">Bào tinh hạ cấp</option>
-                    <option value="bao_thanh" title="Bào thanh — Chọn thanh đầu vào từ Ép Ván (khối 'Ván Thô Tạo Ra', thanh BTP nhận diện bằng THỂ TÍCH &lt; 0,0015 m³) hoặc thanh lỗi của Bào thanh · chọn cỡ Đầu ra; Số lượng ĐẠT LINK từ tab QC (Kiểm thanh)">Bào thanh</option>
+                    <option value="bao_thanh" title="Bào thanh — Chọn thanh đầu vào từ Ép Ván (khối 'Ván Thô Tạo Ra', thanh BTP nhận diện bằng THỂ TÍCH &lt; 0,0015 m³) hoặc thanh LỖI của chính Bào thanh (đọc LIVE từ tab QC) · KHÔNG lọc theo tuần · chọn cỡ Đầu ra; Số lượng ĐẠT LINK từ tab QC (Kiểm thanh)">Bào thanh</option>
                   </select>
                 </div>
                 <div class="form-group x2-btinh-pick-g" id="x2-btinh-picker-row">
@@ -1266,7 +1318,8 @@
               <!-- DÒNG "BÀO THANH" (chỉ hiện khi Loại Bào = Bào thanh): 4 TRƯỜNG
                    ① Chọn thanh đầu vào = danh sách nguồn TỰ ĐỘNG (Ép Ván khối
                       "Ván Thô Tạo Ra" nhận diện BẰNG THỂ TÍCH < 0,0015 m³ + thanh
-                      lỗi của Bào thanh) — đếm "còn X/Y thanh", = 0 thì làm mờ
+                      LỖI của chính Bào thanh lấy từ tab QC — KHÔNG lọc theo tuần)
+                      — đếm "còn X/Y thanh", = 0 thì làm mờ
                    ② Số lượng = số thanh đem bào
                    ③ Đầu ra = dropdown nổi: 4 cỡ mặc định + nút "Thêm",
                       LỌC theo Rộng_vào × Dày_vào > Rộng_ra × Dày_ra
@@ -1275,7 +1328,7 @@
               <div class="x2-form-row x2-btinh-bt-row" id="x2-btinh-bt-row" style="display:none;">
                 <div class="form-group x2-btinh-bt-in-g" id="x2-btinh-bt-in-group">
                   <label>Chọn Thanh Đầu Vào <span class="required">*</span></label>
-                  <button type="button" class="btn btn-outline al-picker-btn" id="x2-btinh-bt-in-btn" aria-controls="x2-btinh-bt-in-picker" aria-expanded="false" title="Danh sách thanh đem bào: thanh BÁN THÀNH PHẨM từ Ép Ván (khối 'Ván Thô Tạo Ra', nhận diện bằng THỂ TÍCH &lt; 0,0015 m³) + thanh LỖI của Bào thanh. Thẻ hiện 'còn X/Y thanh' — hết hàng thì làm mờ.">
+                  <button type="button" class="btn btn-outline al-picker-btn" id="x2-btinh-bt-in-btn" aria-controls="x2-btinh-bt-in-picker" aria-expanded="false" title="Danh sách thanh đem bào: thanh BÁN THÀNH PHẨM từ Ép Ván (khối 'Ván Thô Tạo Ra', nhận diện bằng THỂ TÍCH &lt; 0,0015 m³) + thanh LỖI của chính Bào thanh (đọc LIVE từ tab QC). KHÔNG lọc theo tuần. Thẻ hiện 'còn X/Y thanh' — hết hàng thì làm mờ.">
                     <i data-lucide="list-checks"></i>
                     <span id="x2-btinh-bt-in-text">Chọn thanh đầu vào</span>
                     <span class="al-picked-count" id="x2-btinh-bt-in-count">Chưa chọn</span>
@@ -2488,7 +2541,7 @@
             <span class="qc-mini-desc">Kiểm tra nguyên liệu đầu vào</span>
             <span class="qc-mini-count" id="qc-mini-count-incoming">–</span>
           </button>
-          <button type="button" class="qc-mini-card" data-qc-card="qc-final-card" aria-expanded="false" title="Kiểm Sau Sản Xuất — QC kiểm thành phẩm SAU Ép Ván trước khi xuất xưởng: Đầu vào kiểm (X2 = tổng thành phẩm Ép Ván của cặp 2 tuần xuất hàng), Đạt / Ngoại lệ / Loại, người kiểm + giờ tự động từ Nhân Sự">
+          <button type="button" class="qc-mini-card" data-qc-card="qc-final-card" aria-expanded="false" title="Kiểm Sau Sản Xuất — QC kiểm thành phẩm SAU Ép Ván trước khi xuất xưởng: Đầu vào kiểm (X2 = ván thô BTP + thành phẩm Ép Ván của cặp 2 tuần xuất hàng), Đạt / Ngoại lệ / Loại, người kiểm + giờ tự động từ Nhân Sự">
             <span class="qc-mini-ic"><i data-lucide="badge-check"></i></span>
             <span class="qc-mini-title">Kiểm Sau Sản Xuất</span>
             <span class="qc-mini-desc">Kiểm thành phẩm sau Ép Ván</span>
@@ -2602,8 +2655,10 @@
 
       <!-- MODULE KIỂM SAU SẢN XUẤT: QC kiểm thành phẩm SAU Ép Ván trước khi xuất
            xưởng, ghi theo NGÀY + VỊ TRÍ (Xưởng 1 / Xưởng 2). Form gọn: Vị trí ·
-           Ngày · Đầu vào kiểm (X2 = chọn thành phẩm Ép Ván của CẶP 2 TUẦN xuất
-           hàng — tuần lẻ + tuần kế; X1 = "Sắp có") · Số lượng đạt · Ngoại lệ ·
+           Ngày · Đầu vào kiểm (X2 = chọn VÁN THÔ BTP hoặc THÀNH PHẨM Ép Ván
+           của CẶP 2 TUẦN xuất hàng — tuần lẻ + tuần kế; ván thô loại theo thể
+           tích < 0,0015 m³, thành phẩm loại ĐVT = Thanh;
+           X1 = "Sắp có") · Số lượng đạt · Ngoại lệ ·
            Loại (= số lượng bị loại = lỗi). Công thức: Tổng kiểm = Đạt + Ngoại lệ
            + Loại · Tổng đạt = Đạt + Ngoại lệ · Tỉ lệ lỗi = Loại ÷ Tổng kiểm.
            Người kiểm + giờ HC/TC TỰ ĐỘNG từ vị trí bộ phận QC có tên chứa "kiểm"
@@ -2625,7 +2680,7 @@
               <div class="form-group qcf-g-kind">
                 <label for="qcf-kind">Kiểm Loại <span class="required">*</span></label>
                 <select id="qcf-kind" title="Loại kiểm — quyết định đơn vị số lượng và định mức dùng tính Hiệu suất (Kiểm Thanh = thanh/h · Kiểm Ván = tấm/h)">
-                  <option value="van" title="Kiểm Ván — thành phẩm Ép Ván, đơn vị TẤM">Kiểm Ván</option>
+                  <option value="van" title="Kiểm Ván — ván thô BTP (lượt ép chỉ điền khối 'Ván Thô Tạo Ra', KHÔNG điền thành phẩm; LOẠI thanh BTP thể tích < 0,0015 m³) + thành phẩm Ép Ván (LOẠI ĐVT = Thanh), đơn vị TẤM">Kiểm Ván</option>
                   <option value="thanh" title="Kiểm Thanh — kiểm thanh ĐẦU RA của công đoạn Bào thanh (đơn vị THANH); chọn CỠ thanh để LINK kết quả về thẻ Bào Tinh">Kiểm Thanh</option>
                 </select>
               </div>
@@ -2643,9 +2698,9 @@
               <div class="form-group qcf-g-in" id="qcf-in-group">
                 <label for="qcf-input-qty">Đầu Vào Kiểm (<span id="qcf-unit-in">tấm</span>) <span class="required">*</span></label>
                 <div class="qcf-in-controls">
-                  <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Kiểm Ván: danh sách THÀNH PHẨM Ép Ván của CẶP 2 TUẦN xuất hàng chứa ngày kiểm (chọn 1 thẻ → tự điền số CÒN LẠI). Kiểm Thanh: danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh còn chờ kiểm (chọn 1 thẻ → tự điền số CÒN LẠI và LINK kết quả về thẻ Bào Tinh).">
+                  <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Kiểm Ván: 2 nhóm nguồn trong CẶP 2 TUẦN xuất hàng — ① VÁN THÔ BTP (lượt ép chỉ điền khối 'Ván Thô Tạo Ra', KHÔNG điền thành phẩm; tự LOẠI thanh BTP theo THỂ TÍCH < 0,0015 m³, VD 1200×18×15) ② THÀNH PHẨM Ép Ván (LOẠI mục ĐVT = Thanh theo định mức như 640x14x12 — ĐVT chỉ phân biệt khi đã là thành phẩm) (chọn 1 thẻ → tự điền số CÒN LẠI). Kiểm Thanh: danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh còn chờ kiểm (chọn 1 thẻ → tự điền số CÒN LẠI và LINK kết quả về thẻ Bào Tinh).">
                     <i data-lucide="list-checks"></i>
-                    <span id="qcf-picker-text">Thành phẩm Ép Ván</span>
+                    <span id="qcf-picker-text">Ván thô Ép Ván</span>
                     <span class="al-picked-count" id="qcf-picked-count">Chưa chọn</span>
                   </button>
                   <span class="qcf-soon" id="qcf-in-soon" hidden title="Đầu vào kiểm Xưởng 1 sắp bổ sung — hiện nhập tay số lượng"><i data-lucide="clock"></i> Sắp có</span>
@@ -5412,10 +5467,34 @@
 
   <!-- ═══ THANH NỔI "XÓA NHIỀU LÔ" (chỉ Admin — bật bằng nút "Xóa Nhiều"
        trên thanh công cụ thẻ Than Hóa + Sấy; đếm số lô đã tích + 3 nút) ═══ -->
-  <!-- ═══ POPUP "ĐỊNH MỨC" CỦA 6 THẺ CÔNG ĐOẠN XƯỞNG 2 — nút mở nằm TRONG
-       FORM NHẬP của từng thẻ (Cắt · Bổ Ống · Bào Thô · Chọn Nan · Ép Ván · Bullig).
+  <!-- ═══ POPUP "ĐỊNH MỨC" CỦA 7 THẺ CÔNG ĐOẠN XƯỞNG 2 — nút mở nằm TRONG
+       FORM NHẬP của từng thẻ (Bốc Luồng · Cắt · Bổ Ống · Bào Thô · Chọn Nan ·
+       Ép Ván · Bullig).
        MỖI POPUP giữ nguyên id của ô tháng / ô số / nút Lưu / vùng chip như thanh
        `.x2-rate-bar` cũ → các `renderX2*RateBar()` + test KHÔNG phải đổi. ═══ -->
+  <div class="modal-overlay" id="modal-x2-blg-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Bốc Luồng</h3>
+        <button class="modal-close-btn" id="btn-close-x2-blg-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Công suất định mức của <b>từng tháng</b> (<b>kg/giờ</b>) — nguồn tính <b>Hiệu suất</b>
+          của thẻ ngày Bốc Luồng. Chưa đặt định mức → Hiệu suất hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-blg-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bốc luồng:</span>
+          <select id="x2-blg-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-blg-rate-value" min="0" step="any" placeholder="VD: 4000" title="Công suất định mức của tháng (kg/giờ)">
+          <span class="x2-rate-unit">kg/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-blg-rate-save" data-perm="kanban" title="Lưu định mức công suất bốc luồng của tháng"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-blg-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modal-x2-cut-rate">
     <div class="modal-card">
       <div class="modal-header">

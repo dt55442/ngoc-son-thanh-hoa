@@ -1187,11 +1187,18 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
   }
 
   // ── Dải màu tuần trên trục X: các ngày cùng tuần chung 1 dải, xen kẽ màu theo
-  // tuần, tên "Tuần X" căn giữa trong dải (vẽ trong vùng chừa dưới trục X) ──
+  // tuần; NHÃN DUY NHẤT 1 DÒNG: "Tuần 39 · TB ngày 1/2,33 m³"
+  //   • Số TRƯỚC gạch chéo = TB ngày của CỘT PHẢI "Thành phẩm tương đương".
+  //   • Số SAU gạch chéo    = TB ngày của CỘT TRÁI  "tất cả các loại" (t1+t2+t3).
+  //   (Mỗi ngày biểu đồ vẽ 2 cột riêng biệt → tính TB theo từng cột,
+  //    KHÔNG cộng tổng cả 2 cột.)
+  // Số liệu do renderPressChart tính, truyền qua opts.stats. Dải hẹp thì tự rút
+  // gọn (giảm cỡ chữ trước, rồi bỏ chữ) cho vừa chiều rộng — KHÔNG xuống dòng ──
   const pressWeekBandPlugin = {
     id: 'pressWeekBands',
     afterDraw(chart, args, opts) {
       const groups = opts && opts.groups;
+      const stats = (opts && opts.stats) || {};
       const xScale = chart.scales && chart.scales.x;
       const area = chart.chartArea;
       if (!groups || !groups.length || !xScale || !area) return;
@@ -1206,21 +1213,48 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       ];
       const ctx = chart.ctx;
       ctx.save();
+      const FONT_FAM = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+      const SIZES = [10, 9, 8]; // giảm cỡ chữ TRƯỚC khi phải bỏ phần chữ/ số
+      const setFont = px => { ctx.font = `600 ${px}px ${FONT_FAM}`; };
+      const textW = t => (ctx && typeof ctx.measureText === 'function' ? ctx.measureText(t).width : t.length * 5);
       groups.forEach((g, gi) => {
         const c = colors[gi % 2];
         const x0 = Math.max(area.left, xScale.getPixelForValue(g.i0) - half + 1);
         const x1 = Math.min(area.right, xScale.getPixelForValue(g.i1) + half - 1);
         if (x1 - x0 < 2) return;
+        // Số TB ngày của tuần (nếu có). Ưu tiên 1 dòng đầy đủ; dải hẹp thì theo
+        // thứ tự: bỏ "TB ngày … m³" → bỏ cả chữ "Tuần" — LUÔN cố giữ 2 con số.
+        const s = stats && stats[g.week];
+        const has = !!(s && s.days > 0);
+        const tbFull = has ? ` · TB ngày ${fmtThanh(s.avgProduct)}/${fmtThanh(s.avgAll)} m³` : '';
+        const tbShort = has ? ` · ${fmtThanh(s.avgProduct)}/${fmtThanh(s.avgAll)}` : '';
+        const candidates = [
+          `Tuần ${g.week}${tbFull}`,
+          `Tuần ${g.week}${tbShort}`,
+          `T${g.week}${tbShort}`,
+          `Tuần ${g.week}`,
+          `T${g.week}`
+        ];
+        const avail = (x1 - x0) - 8; // chừa 2 bên 4px
+        let picked = null;
+        for (const cand of candidates) {
+          for (const sz of SIZES) {
+            setFont(sz);
+            if (textW(cand) <= avail) { picked = { text: cand, size: sz }; break; }
+          }
+          if (picked) break;
+        }
+        if (!picked) { setFont(10); picked = { text: `T${g.week}`, size: 10 }; }
+        setFont(picked.size);
         ctx.beginPath();
         if (typeof ctx.roundRect === 'function') ctx.roundRect(x0, y0, x1 - x0, H, 5);
         else ctx.rect(x0, y0, x1 - x0, H);
         ctx.fillStyle = c.fill;
         ctx.fill();
         ctx.fillStyle = c.text;
-        ctx.font = '600 11px system-ui, -apple-system, "Segoe UI", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`Tuần ${g.week}`, (x0 + x1) / 2, y0 + H / 2);
+        ctx.fillText(picked.text, (x0 + x1) / 2, y0 + H / 2);
       });
       ctx.restore();
     }
@@ -1239,16 +1273,16 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     const allDates = pressChartFilteredDates();
     const win = pressChartWindow(allDates.length);
     const dates = allDates.slice(win.start, win.start + win.size); // chỉ vẽ cửa sổ hiện tại
-    const inWindow = new Set(dates);
 
     // Gom thể tích theo ngày (TỔNG của các loại ván thô/thành phẩm trong ngày)
     // Phân loại từng lượt ép trong ngày thành 3 loại thể tích ép:
     //   Loại 1 — ép ra CẢ ván thô & thành phẩm (thể tích = ván thô tạo ra)
     //   Loại 2 — chỉ ép ván thô, chưa ép thành phẩm (thể tích = ván thô tạo ra)
     //   Loại 3 — chỉ ép thành phẩm từ ván thô đã ép trước (thể tích = ván thô đầu vào)
+    // Gom cho TOÀN BỘ ngày trong bộ lọc (không giới hạn cửa sổ) để nhãn tuần
+    // "TB ngày" tính trọn tuần, không đổi theo lúc người dùng vuốt/trượt biểu đồ.
     const byDay = {}; // date -> { t1, t2, t3, fp }
     records.forEach(r => {
-      if (!inWindow.has(r.date)) return; // ngày ngoài cửa sổ hiển thị
       if (!byDay[r.date]) byDay[r.date] = { t1: 0, t2: 0, t3: 0, fp: 0 };
       const d = byDay[r.date];
       const vt = (r.vanTho || []).reduce((s, l) => s + dimVolume(l.vtDim, l.vtQty), 0);
@@ -1280,6 +1314,29 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       const last = weekGroups[weekGroups.length - 1];
       if (last && last.week === wk) last.i1 = i;
       else weekGroups.push({ week: wk, i0: i, i1: i });
+    });
+
+    // ── TRUNG BÌNH ÉP VÁN THEO NGÀY CỦA TỪNG TUẦN (nhãn dải tuần) ──
+    //   • Mẫu số = số ngày CÓ lượt ép trong tuần (tuần làm 5 ngày → chia 5).
+    //   • avgProduct = TB ngày của CỘT PHẢI "Thành phẩm tương đương" (= byDay.fp).
+    //   • avgAll     = TB ngày của CỘT TRÁI "tất cả các loại" = t1 + t2 + t3.
+    //     MỖI NGÀY VẼ 2 CỘT (stack ép | stack fp) → tính theo TỪNG CỘT RIÊNG,
+    //     KHÔNG được cộng gộp cả 2 cột (vậy fp chỉ được đếm 1 lần ở avgProduct).
+    // Tính trên TOÀN BỘ ngày trong bộ lọc (không theo cửa sổ vuốt) → số liệu
+    // của một tuần không đổi khi người dùng vuốt biểu đồ sang ngày khác.
+    const weekStats = {}; // week (number) -> { days, avgProduct, avgAll }
+    Object.keys(byDay).forEach(d => {
+      const wk = getWeekNumber(getISOWeekString(d));
+      const s = weekStats[wk] || (weekStats[wk] = { days: 0, sumFp: 0, sumAll: 0 });
+      const v = byDay[d];
+      s.days += 1;
+      s.sumFp += v.fp;              // cột PHẢI — thành phẩm tương đương
+      s.sumAll += v.t1 + v.t2 + v.t3; // cột TRÁI — tất cả các loại (KHÔNG + fp)
+    });
+    Object.keys(weekStats).forEach(wk => {
+      const s = weekStats[wk];
+      s.avgProduct = s.days ? (s.sumFp / s.days) : 0;
+      s.avgAll = s.days ? (s.sumAll / s.days) : 0;
     });
 
     const notesByDate = getPressNotesByDate();
@@ -1334,7 +1391,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
             notesByDate,
             showText: !!state.pressNotesExpanded // nút "Hiện Ghi Chú" đang bật → vẽ nội dung tất cả ghi chú
           },
-          pressWeekBands: { groups: weekGroups }, // dải màu tuần dưới trục X
+          pressWeekBands: { groups: weekGroups, stats: weekStats }, // dải màu tuần dưới trục X (kèm TB ngày)
           legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
           tooltip: {
             callbacks: {
@@ -1709,6 +1766,37 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       .filter(x => x.productId);
   }
 
+  // ─── KẾT QUẢ KIỂM THANH (thẻ Kiểm Sau Sản Xuất — tab QC) → CỘT ĐÃ ÉP ──
+  // Số thanh ĐẠT của các lượt QC Kiểm thanh (kind = thanh) được CỘNG vào cột
+  // ĐÃ ÉP cho các sản phẩm ĐVT = THANH — TRỪ nhóm Bullig (nguồn riêng lấy từ
+  // thẻ Bullig, công đoạn nhỏ Chọn Thanh — xem getBulligCtOutputRows ở trên).
+  // Khớp KÍCH THƯỚC (cỡ thanh) với TÊN sản phẩm Định Mức (tab Kế Hoạch → Định
+  // Mức Nguyên Vật Liệu); không khớp định mức nào → bỏ qua.
+  function qcThanhPlanProductId(sizeKey) {
+    const nums = String(sizeKey || '').match(/\d+(?:[.,]\d+)?/g) || [];
+    if (nums.length !== 3) return '';
+    // CHỈ định mức ĐVT = Thanh và KHÔNG phải Bullig (Bullig đã có nguồn riêng)
+    const rates = (state.materialRates || []).filter(r => r && rateUnit(r) === 'Thanh' && rateNanUse(r) !== 'Bullig');
+    const hit = rates.find(r => {
+      const rn = String(r.product || '').match(/\d+(?:[.,]\d+)?/g) || [];
+      return nums.every(n => rn.includes(n));
+    });
+    return hit ? hit.id : '';
+  }
+  // Danh sách kết quả Kiểm thanh đã khớp sản phẩm kế hoạch:
+  // { productId, qty, date, sizeKey } — qty = Số Lượng Đạt (qtyOk).
+  function getQcThanhOutputRows() {
+    return (state.qcFinalRecords || [])
+      .filter(r => r && r.kind === 'thanh' && (Number(r.qtyOk) || 0) > 0 && String(r.sizeKey || '').trim())
+      .map(r => ({
+        productId: qcThanhPlanProductId(r.sizeKey),
+        qty: Number(r.qtyOk) || 0,
+        date: String(r.date || ''),
+        sizeKey: String(r.sizeKey || '')
+      }))
+      .filter(x => x.productId);
+  }
+
   // ─── THẺ GỘP 2 BIỂU ĐỒ DASHBOARD: NÚT TÊN BIỂU ĐỒ ─────────────
   // Thẻ #plan-vs-press-card chứa CẢ HAI biểu đồ (chỉ hiện 1 khung tại 1 thời điểm):
   //   'plan' = Kế Hoạch vs Đã Ép (Theo Sản Phẩm) → nút tên NỔI lên
@@ -1821,6 +1909,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     (state.pressRecords || []).forEach(r => { years.add(String(r.year || getDateYear(r.date))); });
     // Năm của các lượt Chọn thanh Bullig (nguồn "Đã Ép" thứ 2) — để bộ lọc Năm chọn được
     getBulligCtOutputRows().forEach(x => { if (x.date) years.add(String(getDateYear(x.date))); });
+    // Năm của các lượt QC Kiểm thanh — nguồn ĐÃ ÉP cho sản phẩm ĐVT = Thanh
+    getQcThanhOutputRows().forEach(x => { if (x.date) years.add(String(getDateYear(x.date))); });
     const yearList = [...years].filter(Boolean).sort((a, b) => Number(b) - Number(a));
     if (!['all', ...yearList].includes(String(state.planVsPressYear))) state.planVsPressYear = curYearStr;
     const yearSel = document.getElementById('pv-year-filter');
@@ -1864,6 +1954,15 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     // CỘNG KẾT QUẢ "CHỌN THANH" của thẻ Bullig (Xưởng 2) vào ĐÃ ÉP — thành phẩm
     // đạt của công đoạn Gia công Bullig chính là thành phẩm của sản phẩm Bullig.
     getBulligCtOutputRows().forEach(x => {
+      if (!yOn(getDateYear(x.date)) || !wkOn(getWeekNumber(getISOWeekString(x.date)))) return;
+      pressQty[x.productId] = (pressQty[x.productId] || 0) + x.qty;
+      pressVol[x.productId] = (pressVol[x.productId] || 0) + dimVolume(x.sizeKey || getProductDimsStr(x.productId), x.qty);
+    });
+    // CỘNG KẾT QUẢ KIỂM THANH của thẻ Kiểm Sau Sản Xuất (tab QC) vào ĐÃ ÉP —
+    // Số Lượng Đạt (qtyOk) của các lượt QC Kiểm thanh, cho sản phẩm ĐVT = THANH
+    // (KHÁC Bullig). Số đọc LIVE từ state.qcFinalRecords nên sửa/xóa lượt QC là
+    // biểu đồ tự cập nhật.
+    getQcThanhOutputRows().forEach(x => {
       if (!yOn(getDateYear(x.date)) || !wkOn(getWeekNumber(getISOWeekString(x.date)))) return;
       pressQty[x.productId] = (pressQty[x.productId] || 0) + x.qty;
       pressVol[x.productId] = (pressVol[x.productId] || 0) + dimVolume(x.sizeKey || getProductDimsStr(x.productId), x.qty);
@@ -2437,6 +2536,8 @@ export {
   getBaoTinhStockByNanKey,
   getBulligCtOutputRows,
   bulligPlanProductId,
+  qcThanhPlanProductId,
+  getQcThanhOutputRows,
   getDateYear,
   getPressProductsForWeek,
   getPressedQtyForPlan,

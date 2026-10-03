@@ -30,6 +30,14 @@
   // của công đoạn Cắt Chọn Xưởng 2 (Hiệu suất = Công suất thực tế ÷ Định mức).
   // { 'YYYY-MM': số kg/h } — VD tháng 9 đặt 3000, tháng 10 đặt 3200.
   const STORAGE_KEY_X2_CAP_RATE = 'bamboo_tracker_x2_capacity_rate_v1';
+  // Vị trí "BỐC LUỒNG" Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký bốc luồng —
+  // mỗi lượt link 1 LÔ NGUYÊN LIỆU "Luồng cây..." của tab Nguyên Liệu + khối lượng
+  // thực tế bốc được (kg). Lô bốc HẾT khối lượng sẽ tự ẩn khỏi ô chọn Đầu vào.
+  const STORAGE_KEY_XUONG2_BOLUONG = 'bamboo_tracker_xuong2_boc_luong_v1';
+  // ĐỊNH MỨC CÔNG SUẤT BỐC LUỒNG (kg/giờ) theo TỪNG THÁNG — dùng tính Hiệu suất
+  // của công đoạn Bốc Luồng Xưởng 2 (Hiệu suất = Công suất thực tế ÷ Định mức).
+  // { 'YYYY-MM': số kg/h } — VD tháng 9 đặt 4000, tháng 10 đặt 4200.
+  const STORAGE_KEY_X2_BOLUONG_RATE = 'bamboo_tracker_x2_boc_luong_rate_v1';
   // Vị trí "BỔ ỐNG" Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký bổ ống —
   // mỗi lượt bổ link 1 LÔ ỐNG của công đoạn Cắt Chọn (xuong2CutRecords).
   const STORAGE_KEY_XUONG2_BO_ONG = 'bamboo_tracker_xuong2_bo_ong_v1';
@@ -137,9 +145,11 @@
   // [{ id, date 'YYYY-MM-DD', workshop 'x1'|'x2', productId, productName,
   //    inputQty (Đầu vào kiểm), qtyOk (Số lượng đạt), qtyExcept (Ngoại lệ),
   //    qtyReject (Loại = lỗi), note, createdAt, updatedAt }]
-  // Đầu vào kiểm Xưởng 2 = TỔNG thành phẩm Ép Ván của CẶP 2 TUẦN xuất hàng
-  // (tuần lẻ + tuần kế — giống nút "2 tuần" của biểu đồ Kế Hoạch vs Đã Ép);
-  // Xưởng 1 "Sắp có" (nhập tay số lượng).
+  // Đầu vào kiểm Xưởng 2 = chọn trong 2 NHÓM của CẶP 2 TUẦN xuất hàng (tuần lẻ
+  // + tuần kế — giống nút "2 tuần" của biểu đồ Kế Hoạch vs Đã Ép): ① VÁN THÔ
+  // BTP (lượt ép CHỈ điền "Ván Thô Tạo Ra", không điền thành phẩm) + ② THÀNH
+  // PHẨM Ép Ván — ván thô LOẠI theo thể tích < 0,0015 m³ (= thanh BTP),
+  // thành phẩm LOẠI theo ĐVT = Thanh. Xưởng 1 "Sắp có" (nhập tay).
   const STORAGE_KEY_QC_FINAL = 'bamboo_tracker_qc_final_v1';
   // ĐỊNH MỨC KIỂM SAU SẢN XUẤT (tấm/giờ) theo TỪNG THÁNG — { 'YYYY-MM': tấm/h }.
   // Có định mức → thẻ ngày hiện thêm tấm/h + Hiệu suất (Công suất ÷ định mức).
@@ -282,6 +292,12 @@
     // nhật ký cắt/chọn — mỗi bản ghi link 1 lượt nhập nguyên liệu Xưởng 2
     xuong2CutRecords: [],
     x2CutEditId: null,        // id lượt cắt/chọn đang sửa trong form (null = ghi mới)
+    // Nhật ký BỐC LUỒNG (vị trí Bốc Luồng — Xưởng 2): mỗi lượt link 1 lô nguyên
+    // liệu "Luồng cây..." + khối lượng thực tế bốc được (kg)
+    xuong2BoluongRecords: [],
+    x2BoluongEditId: null,    // id lượt bốc luồng đang sửa trong form (null = ghi mới)
+    // Định mức công suất bốc luồng theo tháng (Bốc Luồng — Xưởng 2): { 'YYYY-MM': kg/h }
+    x2BoluongRates: {},
     // Nhật ký bổ ống (vị trí Bổ Ống — Xưởng 2): mỗi lượt link 1 lô ống của Cắt Chọn
     xuong2BoOngRecords: [],
     x2BoOngEditId: null,      // id lượt bổ ống đang sửa trong form (null = ghi mới)
@@ -295,8 +311,8 @@
     // có thể gộp nhiều lô; số liệu cộng tổng, NCC gộp "NCC A + NCC B")
     x2BaoThoPicked: [],
     // Giờ SỰ CỐ CHO PHÉP theo (thẻ công đoạn, ngày) — trừ khi tính HIỆU SUẤT:
-    // { '<cardId>|<YYYY-MM-DD>': giờ } · cardId ∈ cut/boong/baotho/chonnan/
-    // baotinh/bullig/epvan (Than Hóa + Sấy đã có key riêng x2SayIncidents)
+    // { '<cardId>|<YYYY-MM-DD>': giờ } · cardId ∈ boluong/cut/boong/baotho/
+    // chonnan/baotinh/bullig/epvan (Than Hóa + Sấy đã có key riêng x2SayIncidents)
     x2StageIncidents: {},
     // Định mức công suất bào thô theo tháng (thanh/giờ): { 'YYYY-MM': thanh/h }
     x2BaoThoRates: {},
@@ -415,10 +431,12 @@ export {
   STORAGE_KEY_MATERIAL_RATES,
   STORAGE_KEY_MATERIALS,
   STORAGE_KEY_XUONG2_CUTS,
+  STORAGE_KEY_XUONG2_BOLUONG,
   STORAGE_KEY_XUONG2_BO_ONG,
   STORAGE_KEY_XUONG2_BAO_THO,
   STORAGE_KEY_XUONG2_CHON_NAN,
   STORAGE_KEY_X2_CAP_RATE,
+  STORAGE_KEY_X2_BOLUONG_RATE,
   STORAGE_KEY_X2_BO_ONG_RATE,
   STORAGE_KEY_X2_BAO_THO_RATE,
   STORAGE_KEY_X2_CHON_NAN_RATE,

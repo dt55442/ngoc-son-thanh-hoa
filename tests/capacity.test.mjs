@@ -229,7 +229,7 @@ check('ÉP VÁN: hiệu suất = (0,0864÷4) ÷ 0,03 = 72%', approx(epRow.eff, 7
 const w = cap.capWorkshopWeekRow('x2', wk);
 const expectedWsEff = (cutRowRated.eff * cutRowRated.hours + cnRow.eff * cnRow.hours + sayRow2.eff * sayRow2.hours + epRow.eff * epRow.hours)
   / (cutRowRated.hours + cnRow.hours + sayRow2.hours + epRow.hours);
-check('XƯỞNG: 5 công đoạn có dữ liệu / 10 công đoạn', w.dataCount === 5 && w.stagesCount === 10);
+check('XƯỞNG: 5 công đoạn có dữ liệu / 11 công đoạn', w.dataCount === 5 && w.stagesCount === 11);
 check('XƯỞNG: tổng giờ = 9 + 4 + 3 + 4 + 4 = 24h (mỗi ngày mỗi CĐ đếm 1 lần)', approx(w.hours, 24));
 check('XƯỞNG: 4 công đoạn tính được hiệu suất · 0 công đoạn đạt ≥100%', w.effCount === 4 && w.passCount === 0);
 check('XƯỞNG: hiệu suất xưởng = bình quân gia quyền theo GIỜ', approx(w.eff, expectedWsEff, 1e-6));
@@ -319,9 +319,9 @@ check('CẤU TRÚC (styles.css): khối CSS thẻ tổng hợp + sparkline + mà
   stylesCss.includes('.cap-mode-btn') && stylesCss.includes('.cap-spark-svg') &&
   stylesCss.includes('.cap-eff-good') && stylesCss.includes('.cap-eff-low'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v197/.test(swJs));
-check('SỔ ĐĂNG KÝ: 10 dòng công đoạn Xưởng 2 (Bullig tách Gia công/Chọn thanh) · Xưởng 1 = 0 dòng',
-  cap.capStagesOf('x2').length === 10 && cap.capStagesOf('x1').length === 0);
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v203/.test(swJs));
+check('SỔ ĐĂNG KÝ: 11 dòng công đoạn Xưởng 2 (Bốc Luồng + Bullig tách Gia công/Chọn thanh) · Xưởng 1 = 0 dòng',
+  cap.capStagesOf('x2').length === 11 && cap.capStagesOf('x1').length === 0);
 check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId)',
   cap.CAP_STAGES.every(s => s.cardId && s.unit && s.unitQty && s.ws === 'x2'));
 
@@ -339,9 +339,9 @@ check('GAUGE: có đồng hồ + số % khớp hiệu suất xưởng tính đư
   visualRow.innerHTML.includes(wEffNow.eff.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%'));
 check('GAUGE: chip "Nút thắt" hiện đúng công đoạn Sấy 1',
   visualRow.innerHTML.includes('Nút thắt') && visualRow.innerHTML.includes('Sấy 1'));
-check('RANK: đủ 10 hàng công đoạn (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 10);
+check('RANK: đủ 11 hàng công đoạn (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 11);
 check('RANK: tag "nút thắt" gắn đúng Sấy 1', /Sấy 1[^<]*<em class="cap-rank-bt"/.test(visualRow.innerHTML));
-check('HEAT: đủ 80 ô dữ liệu (8 tuần × 10 công đoạn)', (visualRow.innerHTML.match(/data-cap-heat="/g) || []).length === 80);
+check('HEAT: đủ 88 ô dữ liệu (8 tuần × 11 công đoạn)', (visualRow.innerHTML.match(/data-cap-heat="/g) || []).length === 88);
 check('HEAT: legend đủ 4 mức màu', (visualRow.innerHTML.match(/cap-legend-item/g) || []).length === 4);
 check('CHART: mặc định tự chọn NÚT THẮT (Sấy 1) → panel đúng tiêu đề + canvas (trong dải trực quan)',
   state.capUi.chartStage === 'say1' &&

@@ -213,7 +213,7 @@ check('CẤU TRÚC (dashboard.js): nạp chế độ đã nhớ trước khi v�
 check('CẤU TRÚC (press.js): hiệu ứng trượt cửa sổ tuần Khả Năng dùng khung MỚI (#pv-chart-box-cap)',
   jsPress.includes("document.getElementById('pv-chart-box-cap')"));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v197/.test(swJs));
+  /nha-may-ngoc-son-v203/.test(swJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

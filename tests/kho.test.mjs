@@ -290,8 +290,8 @@ x2.setKhoPeriodMode('day');
 check('BẢNG TỒN: mỗi lô 1 dòng + chip "ra/vào" trên lô quay lại (k2)',
   document.getElementById('x2-kho-stock-rows').innerHTML.includes('260911-01') &&
   document.getElementById('x2-kho-stock-rows').innerHTML.includes('ra/vào'));
-check('DÙNG CHUNG: 9 thẻ X2 đủ vùng dữ liệu + nguồn xuất (thêm Kho Nan)',
-  Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 9 && Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 9 &&
+check('DÙNG CHUNG: 10 thẻ X2 đủ vùng dữ liệu + nguồn xuất (thêm Kho Nan · Bốc Luồng)',
+  Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 10 && Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 10 &&
   x2.X2_CARD_EXPORT_SOURCE['x2-kho-card'] === 'kho');
 
 // ─── G. CẤU TRÚC (index.html · js · sw.js · npm test) ───────────
@@ -324,7 +324,7 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v197/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v203/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

@@ -177,6 +177,7 @@ CSS: khối "BỘ LỌC KỲ: TUẦN / THÁNG / NĂM" (`.x2-btinh-period-bar`/`.
 ## 7. Chạy / kiểm thử / deploy
 - Chạy app: `npm start` (node server.cjs, cổng 8080) hoặc double-click `chay_app.bat`; fallback server.ps1 nếu thiếu Node. Mở file:// chỉ để test nhanh (Service Worker không chạy).
 - Test: `npm test` hoặc từng file `node tests/<tên>.mjs`.
-- Deploy: `day-len-github.bat` (git add -A → commit → push origin main; web tự cập nhật sau ~1 phút).
+- Deploy: `day-len-github.bat` (git add -A → commit → push origin main; web tự cập nhật sau ~1 phút). **Bat đã sửa (03/10/2026) cho thông báo TRUNG THỰC**: dùng `chcp 65001` (tiếng Việt có dấu), đếm `git status --porcelain` — chỉ in *"Không có thay đổi nào mới"* khi THẬT SỰ không có gì; `git add -A` lỗi → in **lỗi thật** + hướng dẫn (nguyên nhân kinh điển: file rác tên `nul`/`con`/`aux` do chạy `> nul` trong Git Bash → git báo *invalid path* → commit bị hỏng. Xóa bằng `rm -f nul`). Nếu có file này thì **mọi lần đẩy đều thất bại âm thầm** (máy khác chạy web cũ → dữ liệu tính năng mới "chỉ cục bộ").
+- **`.gitignore`**: `backups/` KHÔNG đưa lên repo (bản cất tự động chỉ nằm trên máy — `git rm --cached` đã chạy 03/10/2026).
 - Đổi icon: `make-icons.cjs`. `debug-att.html`, `bamboo_data.json` (dữ liệu mẫu), `materials-photos/` (ảnh user) — không xóa bừa.
 

@@ -176,8 +176,30 @@ state.currentUser = { username: 'ed', role: 'editor', editTabs: ['kanban', 'dash
 perms.syncPermissionUI();
 check('body class can-edit = true', document.body.classList.contains('can-edit'));
 check('body class can-advanced = false', !document.body.classList.contains('can-advanced'));
-check('body data-edit-tabs = "kanban dashboard"', document.body.dataset.editTabs === 'kanban dashboard');
+check('body data-edit-tabs = "kanban dashboard x1 x2" (migration user cũ chỉ có kanban → được cấp cả 2 xưởng)', document.body.dataset.editTabs === 'kanban dashboard x1 x2');
 check('body data-role = editor', document.body.dataset.role === 'editor');
+
+// ── TÁCH QUYỀN 2 XƯỞNG (04/10/2026) ──
+check('expandWsTabs: user cũ có kanban → thêm x1 + x2', JSON.stringify(perms.expandWsTabs(['kanban'])) === JSON.stringify(['kanban', 'x1', 'x2']));
+check('expandWsTabs: đã tách quyền (có x1) → KHÔNG tự cấp lại x2', JSON.stringify(perms.expandWsTabs(['x1'])) === JSON.stringify(['x1']));
+check('expandWsTabs: idempotent (chạy 2 lần cùng kết quả)', JSON.stringify(perms.expandWsTabs(perms.expandWsTabs(['kanban', 'planning']))) === JSON.stringify(['kanban', 'planning', 'x1', 'x2']));
+check('expandWsTabs: không có kanban → giữ nguyên', JSON.stringify(perms.expandWsTabs(['qc'])) === JSON.stringify(['qc']));
+
+state.currentUser = { username: 'ed1', role: 'editor', editTabs: ['x1'], allowAdvanced: false };
+check('Chỉ được Xưởng 1: canEditTab(x1) = true', perms.canEditTab('x1'));
+check('Chỉ được Xưởng 1: canEditTab(x2) = false', !perms.canEditTab('x2'));
+check('Chỉ được Xưởng 1: vẫn đứng được tab cha kanban', perms.canEditTab('kanban'));
+check('Chỉ được Xưởng 1: data-edit-tabs chứa x1', perms.getEditableTabs().includes('x1'));
+
+state.currentUser = { username: 'ed2', role: 'editor', editTabs: ['x2'], allowAdvanced: false };
+check('Chỉ được Xưởng 2: canEditTab(x2) = true', perms.canEditTab('x2'));
+check('Chỉ được Xưởng 2: canEditTab(x1) = false', !perms.canEditTab('x1'));
+
+state.currentUser = { username: 'ed3', role: 'editor', editTabs: ['kanban'], allowAdvanced: false };
+check('Dữ liệu cũ chỉ có kanban (chưa normalize): vẫn có đủ 2 xưởng', perms.canEditTab('x1') && perms.canEditTab('x2'));
+
+state.currentUser = { username: 'vw', role: 'viewer', editTabs: [], allowAdvanced: false };
+check('Viewer: không có xưởng nào', !perms.canEditTab('x1') && !perms.canEditTab('x2') && !perms.canEditTab('kanban'));
 
 state.currentUser = { username: 'ql', role: 'manager', editTabs: [], allowAdvanced: true };
 perms.syncPermissionUI();

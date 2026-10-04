@@ -230,12 +230,12 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
   // trống chưa có loại sấy); lò đang sấy → Thêm lô (cùng loại) + Vào Kho nhanh
   function kilnMenuHtml(info) {
     const adds = info.lots.length
-      ? `<button type="button" class="kiln-act kiln-act-add" data-kiln-add="${info.stage}" data-perm="kanban" title="Mở form Thêm Lô Sấy Mới — vị trí ${escapeHTML(info.location)} đã điền sẵn"><i data-lucide="plus-circle"></i> Thêm lô</button>`
-      : `<button type="button" class="kiln-act kiln-act-add" data-kiln-add="say1" data-perm="kanban" title="Thêm lô nan mới vào Sấy 1 tại ${escapeHTML(info.location)}"><i data-lucide="plus-circle"></i> Thêm Sấy 1</button>
-         <button type="button" class="kiln-act kiln-act-add" data-kiln-add="say2" data-perm="kanban" title="Chuyển lô từ Kho sang Sấy 2 tại ${escapeHTML(info.location)}"><i data-lucide="plus-circle"></i> Thêm Sấy 2</button>`;
+      ? `<button type="button" class="kiln-act kiln-act-add" data-kiln-add="${info.stage}" data-perm="x2" title="Mở form Thêm Lô Sấy Mới — vị trí ${escapeHTML(info.location)} đã điền sẵn"><i data-lucide="plus-circle"></i> Thêm lô</button>`
+      : `<button type="button" class="kiln-act kiln-act-add" data-kiln-add="say1" data-perm="x2" title="Thêm lô nan mới vào Sấy 1 tại ${escapeHTML(info.location)}"><i data-lucide="plus-circle"></i> Thêm Sấy 1</button>
+         <button type="button" class="kiln-act kiln-act-add" data-kiln-add="say2" data-perm="x2" title="Chuyển lô từ Kho sang Sấy 2 tại ${escapeHTML(info.location)}"><i data-lucide="plus-circle"></i> Thêm Sấy 2</button>`;
     return `<span class="kiln-menu">
       ${adds}
-      ${info.lots.length ? `<button type="button" class="kiln-act kiln-act-kho" data-kiln-kho="${escapeHTML(info.location)}" data-perm="kanban" title="Chuyển TẤT CẢ lô trong lò vào Kho"><i data-lucide="warehouse"></i> Vào Kho</button>` : ''}
+      ${info.lots.length ? `<button type="button" class="kiln-act kiln-act-kho" data-kiln-kho="${escapeHTML(info.location)}" data-perm="x2" title="Chuyển TẤT CẢ lô trong lò vào Kho"><i data-lucide="warehouse"></i> Vào Kho</button>` : ''}
     </span>`;
   }
   function kilnTileHtml(info) {
@@ -257,7 +257,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
         <span class="kiln-head">
           <b class="kiln-code">${escapeHTML(info.location)}</b>
           ${kilnStageBadge(info.stage)}
-          ${info.lots.length ? `<span class="kiln-kho-btn" data-kiln-kho="${escapeHTML(info.location)}" data-perm="kanban" title="Chuyển nhanh TẤT CẢ lô trong lò vào Kho"><i data-lucide="warehouse"></i></span>` : ''}
+          ${info.lots.length ? `<span class="kiln-kho-btn" data-kiln-kho="${escapeHTML(info.location)}" data-perm="x2" title="Chuyển nhanh TẤT CẢ lô trong lò vào Kho"><i data-lucide="warehouse"></i></span>` : ''}
         </span>
         <span class="kiln-main">${info.lots.length ? `${kilnFmt(info.volume)} m³ · ${info.qty.toLocaleString('vi-VN')} thanh` : 'Đang chờ'}</span>
         <span class="kiln-sub">

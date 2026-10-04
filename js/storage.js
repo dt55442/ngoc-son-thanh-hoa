@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -154,6 +154,45 @@ import { escapeHTML, showToast } from './utils.js';
       writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
     }
     syncHistorySnapshots(); // gộp hàng loạt → đặt lại nền so sánh lịch sử
+    return merged;
+  }
+
+  // ── XƯỞNG 1: khôi phục nhật ký 3 công đoạn (GỘP, không ghi đè) ──
+  function restoreX1Records(key, stateKey, incomingArr) {
+    const before = JSON.stringify(state[stateKey] || []);
+    const merged = mergeXuong2Records(state[stateKey], incomingArr);
+    state[stateKey] = merged;
+    try { localStorage.setItem(key, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile();
+    }
+    syncHistorySnapshots();
+    return merged;
+  }
+  function restoreXuong1CatOng(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_CAT_ONG, 'xuong1CatOngRecords', incomingArr);
+  }
+  function restoreXuong1SaySinh(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_SAY_SINH, 'xuong1SaySinhRecords', incomingArr);
+  }
+  function restoreXuong1Boc(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_BOC, 'xuong1BocRecords', incomingArr);
+  }
+  // Khôi phục ĐỊNH MỨC XƯỞNG 1 ({ catOng|saySinh|boc: { 'YYYY-MM': kg/h } })
+  function restoreX1Rates(incomingObj) {
+    const before = JSON.stringify(state.x1Rates || {});
+    const merged = {};
+    ['catOng', 'saySinh', 'boc'].forEach(k => { merged[k] = {}; });
+    [incomingObj, state.x1Rates].forEach(src => {
+      if (!src || typeof src !== 'object') return;
+      ['catOng', 'saySinh', 'boc'].forEach(k => {
+        if (src[k] && typeof src[k] === 'object') Object.assign(merged[k], src[k]);
+      });
+    });
+    state.x1Rates = merged;
+    try { localStorage.setItem(STORAGE_KEY_X1_RATES, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
     return merged;
   }
 
@@ -714,6 +753,10 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.xuong2BoluongRecords && Array.isArray(loaded.xuong2BoluongRecords)) {
           restoreXuong2Boluong(loaded.xuong2BoluongRecords); // GỘP — không ghi đè mất bản mới hơn
         }
+        if (loaded.xuong1CatOngRecords && Array.isArray(loaded.xuong1CatOngRecords)) restoreXuong1CatOng(loaded.xuong1CatOngRecords);
+        if (loaded.xuong1SaySinhRecords && Array.isArray(loaded.xuong1SaySinhRecords)) restoreXuong1SaySinh(loaded.xuong1SaySinhRecords);
+        if (loaded.xuong1BocRecords && Array.isArray(loaded.xuong1BocRecords)) restoreXuong1Boc(loaded.xuong1BocRecords);
+        if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x2BoluongRates) {
           restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
         }
@@ -847,6 +890,10 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.xuong2BoluongRecords && Array.isArray(loaded.xuong2BoluongRecords)) {
           restoreXuong2Boluong(loaded.xuong2BoluongRecords); // GỘP — không ghi đè mất bản mới hơn
         }
+        if (loaded.xuong1CatOngRecords && Array.isArray(loaded.xuong1CatOngRecords)) restoreXuong1CatOng(loaded.xuong1CatOngRecords);
+        if (loaded.xuong1SaySinhRecords && Array.isArray(loaded.xuong1SaySinhRecords)) restoreXuong1SaySinh(loaded.xuong1SaySinhRecords);
+        if (loaded.xuong1BocRecords && Array.isArray(loaded.xuong1BocRecords)) restoreXuong1Boc(loaded.xuong1BocRecords);
+        if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x2BoluongRates) {
           restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
         }
@@ -960,6 +1007,10 @@ import { escapeHTML, showToast } from './utils.js';
         materialRecords: state.materialRecords || [],
         xuong2CutRecords: state.xuong2CutRecords || [],
         xuong2BoluongRecords: state.xuong2BoluongRecords || [],
+        xuong1CatOngRecords: state.xuong1CatOngRecords || [],
+        xuong1SaySinhRecords: state.xuong1SaySinhRecords || [],
+        xuong1BocRecords: state.xuong1BocRecords || [],
+        x1Rates: state.x1Rates || {},
         xuong2BoOngRecords: state.xuong2BoOngRecords || [],
         xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
         xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
@@ -1074,6 +1125,10 @@ import { escapeHTML, showToast } from './utils.js';
       materialRecords: state.materialRecords || [],
       xuong2CutRecords: state.xuong2CutRecords || [],
       xuong2BoluongRecords: state.xuong2BoluongRecords || [],
+      xuong1CatOngRecords: state.xuong1CatOngRecords || [],
+      xuong1SaySinhRecords: state.xuong1SaySinhRecords || [],
+      xuong1BocRecords: state.xuong1BocRecords || [],
+      x1Rates: state.x1Rates || {},
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
@@ -1154,6 +1209,11 @@ import { escapeHTML, showToast } from './utils.js';
         if (imported && Array.isArray(imported.xuong2BoluongRecords)) {
           restoreXuong2Boluong(imported.xuong2BoluongRecords); // GỘP — không xóa lượt bốc luồng mới hơn backup
         }
+
+        if (imported && Array.isArray(imported.xuong1CatOngRecords)) restoreXuong1CatOng(imported.xuong1CatOngRecords);
+        if (imported && Array.isArray(imported.xuong1SaySinhRecords)) restoreXuong1SaySinh(imported.xuong1SaySinhRecords);
+        if (imported && Array.isArray(imported.xuong1BocRecords)) restoreXuong1Boc(imported.xuong1BocRecords);
+        if (imported && imported.x1Rates) restoreX1Rates(imported.x1Rates);
 
         if (imported && imported.x2BoluongRates) {
           restoreX2BoluongRates(imported.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
@@ -1418,6 +1478,10 @@ export {
   restoreX2BaoThanhOutSizes,
   restoreXuong2BaoTho,
   restoreXuong2Boluong,
+  restoreXuong1CatOng,
+  restoreXuong1SaySinh,
+  restoreXuong1Boc,
+  restoreX1Rates,
   restoreX2BoluongRates,
   restoreXuong2BoOng,
   restoreXuong2ChonNan,

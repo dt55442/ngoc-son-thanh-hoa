@@ -40,6 +40,11 @@ import { escapeHTML, showToast } from './utils.js';
     materialRecords:   { tab: 'materials', label: 'Nhật ký nguyên liệu',  get: () => state.materialRecords },
     materialPlan:      { tab: 'materials', label: 'Kế hoạch nguyên liệu', get: () => state.materialPlan },
     xuong2CutRecords:  { tab: 'kanban',    label: 'Cắt chọn Xưởng 2',     get: () => state.xuong2CutRecords },
+    // ── XƯỞNG 1 — 3 công đoạn đầu (04/10/2026) ──
+    xuong1CatOngRecords:  { tab: 'kanban',  label: 'Cắt Ống Xưởng 1',      get: () => state.xuong1CatOngRecords },
+    xuong1SaySinhRecords: { tab: 'kanban',  label: 'Sấy Sinh Xưởng 1',     get: () => state.xuong1SaySinhRecords },
+    xuong1BocRecords:     { tab: 'kanban',  label: 'Bốc Xưởng 1',          get: () => state.xuong1BocRecords },
+    x1Rates:              { tab: 'kanban',  label: 'Định mức Xưởng 1 (kg/h)', get: () => state.x1Rates },
     xuong2BoluongRecords:{ tab: 'kanban',  label: 'Bốc luồng Xưởng 2',    get: () => state.xuong2BoluongRecords },
     x2BoluongRates:    { tab: 'kanban',    label: 'Định mức bốc luồng (kg/h)', get: () => state.x2BoluongRates },
     xuong2BoOngRecords:{ tab: 'kanban',    label: 'Bổ ống Xưởng 2',       get: () => state.xuong2BoOngRecords },
@@ -74,7 +79,7 @@ import { escapeHTML, showToast } from './utils.js';
   // (thẻ Ép Ván đã dời vào tab Công Đoạn nên KHÔNG còn tab 'press'; các vùng
   //  dữ liệu của Ép Ván — lượt ép, ghi chú, định mức m³/h — đã gom về 'kanban')
   const HISTORY_TABS = [
-    { id: 'kanban', name: 'Công Đoạn (Kanban)' },
+    { id: 'kanban', name: 'Công Đoạn SX' },
     { id: 'planning', name: 'Kế Hoạch Sản Xuất' },
     { id: 'materials', name: 'Nguyên Liệu' },
     { id: 'qc', name: 'QC — Xuất Hàng' },

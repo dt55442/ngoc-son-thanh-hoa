@@ -48,7 +48,9 @@ import { STORAGE_KEY_CAPACITY_UI, state } from './state.js';
 import {
   baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, chonNanDisplay, cutDisplay,
   baoThoRateOf, baoTinhRateOf, boOngRateOf, boluongRateOf, bulligRateOf, capRateOf, chonNanRateOf,
-  sayChargeRows, sayRateEntryOf
+  sayChargeRows, sayRateEntryOf,
+  // XƯỞNG 1 — 3 công đoạn đầu (04/10/2026)
+  x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay
 } from './xuong2.js';
 import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
 
@@ -253,6 +255,33 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         return { date: d.date, qty: (Number(d.qtyOk) || 0) + (Number(d.qtyErr) || 0), qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => bulligRateOf(m, 'ct')
+    },
+    // ─── XƯỞNG 1 — 3 CÔNG ĐOẠN ĐẦU (04/10/2026) ────────────────
+    // ws:'x1' → bảng Tổng hợp + gauge + xếp hạng + nhiệt đồ + báo cáo in
+    // tự nhận diện qua capStagesOf('x1'); cardId → nút "Mở thẻ" nhảy đúng.
+    {
+      id: 'x1catong', ws: 'x1', label: 'Cắt Ống', unit: 'kg/h', unitQty: 'kg', cardId: 'x1-cat-ong-card', kind: 'cap',
+      rows: () => (state.xuong1CatOngRecords || []).map(r => {
+        const d = x1CatOngDisplay(r);
+        return { date: d.date, qty: d.inputWeight, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => Number((((state.x1Rates || {}).catOng) || {})[m]) || 0
+    },
+    {
+      id: 'x1saysinh', ws: 'x1', label: 'Sấy Sinh', unit: 'kg/h', unitQty: 'kg', cardId: 'x1-say-sinh-card', kind: 'cap',
+      rows: () => (state.xuong1SaySinhRecords || []).map(r => {
+        const d = x1SaySinhDisplay(r);
+        return { date: d.date, qty: d.qty, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => Number((((state.x1Rates || {}).saySinh) || {})[m]) || 0
+    },
+    {
+      id: 'x1boc', ws: 'x1', label: 'Bốc', unit: 'kg/h', unitQty: 'kg', cardId: 'x1-boc-card', kind: 'cap',
+      rows: () => (state.xuong1BocRecords || []).map(r => {
+        const d = x1BocDisplay(r);
+        return { date: d.date, qty: d.qty, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => Number((((state.x1Rates || {}).boc) || {})[m]) || 0
     }
   ];
 
@@ -261,7 +290,10 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   const CAP_INC_KEY = {
     boluong: 'boluong',
     cut: 'cut', boong: 'boong', baotho: 'baotho', chonnan: 'chonnan',
-    baotinh: 'baotinh', epvan: 'epvan', bullig_gc: 'bullig', bullig_ct: 'bullig'
+    baotinh: 'baotinh', epvan: 'epvan', bullig_gc: 'bullig', bullig_ct: 'bullig',
+    // XƯỞNG 1 (04/10/2026) — khóa giờ sự cố = đúng id công đoạn (khớp incKey
+    // mà x1RenderDayCards truyền vào → bảng tổng hợp TRỪ giờ sự cố giống thẻ ngày)
+    x1catong: 'x1catong', x1saysinh: 'x1saysinh', x1boc: 'x1boc'
   };
   function capIncKeyOf(st) { return CAP_INC_KEY[st.id] || null; }
 
@@ -1098,24 +1130,30 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     const tbody = document.getElementById('capacity-week-rows');
     if (!tbody) return;
     const stages = capStagesOf(ws);
-    // Chế độ xem: Xưởng CHƯA có công đoạn nào → ép về chế độ Bảng (chỉ thông báo);
-    // ngược lại theo state.capUi.view ('visual' mặc định | 'table')
-    const view = (!stages.length || state.capUi.view === 'table') ? 'table' : 'visual';
+    // Xưởng đã khai CÔNG ĐOẠN nhưng CHƯA có lượt nào ghi số liệu → cũng phải
+    // báo "chưa có số liệu" (không bịa số), chứ không vẽ gauge/rỗng trông như lỗi)
+    const hasData = capPeriodsFor(ws, mode).length > 0;
+    // Chế độ xem: Xưởng chưa có công đoạn / chưa có số liệu → ép về chế độ Bảng
+    // (chỉ thông báo); ngược lại theo state.capUi.view ('visual' mặc định | 'table')
+    const view = (!stages.length || !hasData || state.capUi.view === 'table') ? 'table' : 'visual';
     syncCapacityViewButtons(view);
     const visualRow = document.getElementById('cap-visual-row');
     const tableWrap = document.getElementById('cap-table-wrap');
-    // Xưởng CHƯA có công đoạn nào có dữ liệu (Xưởng 1 hiện tại) → thông báo, KHÔNG bịa số
-    if (!stages.length) {
+    // Xưởng CHƯA có công đoạn nào, hoặc đã khai nhưng CHƯA ghi số liệu → thông báo
+    if (!stages.length || !hasData) {
+      const noStageYet = !stages.length;
       if (visualRow) { visualRow.hidden = true; visualRow.innerHTML = ''; }
       if (tableWrap) tableWrap.hidden = false;
       if (strip) {
-        strip.innerHTML = `<span class="cap-chip cap-chip-info"><i data-lucide="hard-hat"></i> Xưởng 1 chưa có công đoạn nào có dữ liệu — khi Xưởng 1 có thẻ công đoạn (tab Công Đoạn), bảng tự tổng hợp.</span>`;
+        strip.innerHTML = `<span class="cap-chip cap-chip-info"><i data-lucide="hard-hat"></i> ${noStageYet
+          ? 'Xưởng 1 chưa có công đoạn nào có dữ liệu — khi Xưởng 1 có thẻ công đoạn (tab Công Đoạn), bảng tự tổng hợp.'
+          : `Xưởng 1 đã khai ${stages.length} công đoạn — chưa có lượt nào được ghi số liệu (tab Công Đoạn SX → Xưởng 1).`}</span>`;
       }
       tbody.innerHTML = `<tr class="cap-empty-row"><td colspan="9">
         <div class="cap-empty"><i data-lucide="hard-hat"></i>
-          <div><strong>Xưởng 1 — Sắp có.</strong> Chưa có công đoạn nào của Xưởng 1 được ghi số liệu.<br>
-          Khi thẻ công đoạn Xưởng 1 ra đời (tab Công Đoạn), chỉ cần thêm 1 dòng vào sổ đăng ký công đoạn
-          (<em>CAP_STAGES</em> trong js/capacity.js) là bảng này tự có số — không phải sửa gì khác.</div>
+          <div><strong>Xưởng 1 — ${noStageYet ? 'Sắp có.' : 'chưa có số liệu.'}</strong> ${noStageYet
+            ? 'Chưa có công đoạn nào của Xưởng 1 được ghi số liệu.<br>Khi thẻ công đoạn Xưởng 1 ra đời (tab Công Đoạn), chỉ cần thêm 1 dòng vào sổ đăng ký công đoạn (<em>CAP_STAGES</em> trong js/capacity.js) là bảng này tự có số — không phải sửa gì khác.'
+            : `Đã có ${stages.length} công đoạn (${stages.map(s => escapeHTML(s.label)).join(' · ')}) nhưng chưa ghi lượt nào — nhập liệu ở tab <strong>Công Đoạn SX → Xưởng 1</strong> để bảng tổng hợp.`}</div>
         </div>
       </td></tr>`;
       initLucide();
@@ -1272,7 +1310,11 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     { elId: 'x2-mini-spark-than-hoa', stageIds: ['say1', 'say2'] },
     { elId: 'x2-mini-spark-bao-tinh', stageIds: ['baotinh'] },
     { elId: 'x2-mini-spark-ep-van', stageIds: ['epvan'] },
-    { elId: 'x2-mini-spark-bullig', stageIds: ['bullig_gc', 'bullig_ct'] }
+    { elId: 'x2-mini-spark-bullig', stageIds: ['bullig_gc', 'bullig_ct'] },
+    // XƯỞNG 1 — 3 công đoạn đầu (sparkline 8 tuần trên mini card)
+    { elId: 'x2-mini-spark-x1-cat-ong', stageIds: ['x1catong'] },
+    { elId: 'x2-mini-spark-x1-say-sinh', stageIds: ['x1saysinh'] },
+    { elId: 'x2-mini-spark-x1-boc', stageIds: ['x1boc'] }
   ];
   function capSparkGroupWeekEff(stageIds, weekKey) {
     const rows = stageIds
@@ -1361,7 +1403,10 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   function capPrintWorkshopBlock(wsId, key, mode) {
     const meta = CAP_WORKSHOPS.find(x => x.id === wsId) || { id: wsId, label: String(wsId).toUpperCase() };
     const stages = capStagesOf(wsId);
-    if (!stages.length) {
+    // Chưa khai công đoạn HOẶC đã khai nhưng CHƯA ghi lượt nào → ghi chú ngắn
+    // (không in bảng rỗng trông như lỗi)
+    const anyData = stages.length > 0 && capPeriodsFor(wsId, mode).length > 0;
+    if (!anyData) {
       return `<div class="cap-print-ws">
         <div class="cap-print-ws-title">${escapeHTML(meta.label)}</div>
         <p class="cap-print-empty">Chưa có công đoạn nào của ${escapeHTML(meta.label)} có dữ liệu.</p>

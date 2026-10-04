@@ -267,7 +267,7 @@ const AI_TALK_QUOTA_STORAGE = 'bamboo_tracker_ai_talk_quota_v1';
 const AI_NUDGE_SEEN_STORAGE = 'bamboo_tracker_ai_nudge_seen_v1';
 const AI_TAB_LABELS = {
   'dashboard-view': 'Tổng Quan',
-  'kanban-view': 'Công Đoạn (Kanban)',
+  'kanban-view': 'Công Đoạn SX',
   'planning-view': 'Kế Hoạch SX',
   'press-view': 'Ép Ván',
   'materials-view': 'Nguyên Liệu',

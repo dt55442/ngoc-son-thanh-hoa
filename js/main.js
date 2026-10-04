@@ -15,7 +15,7 @@ import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
-import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard } from './xuong2.js';
+import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
 import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
@@ -50,6 +50,12 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadMaterialRecords();
     loadMaterialPlan();
     loadXuong2Cuts(); // vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn)
+    loadStageWs(); // công tắc XƯỞNG 1 / XƯỞNG 2 ở tab Công Đoạn SX (nhớ theo máy)
+    // ── XƯỞNG 1: 3 công đoạn đầu (04/10/2026) + định mức kg/h ──
+    loadXuong1CatOng();
+    loadXuong1SaySinh();
+    loadXuong1Boc();
+    loadX1Rates();
     loadXuong2Boluong(); // Nhật ký Bốc Luồng Xưởng 2 (link lô "Luồng cây..." ở tab Nguyên Liệu)
     loadXuong2BoOng(); // Nhật ký Bổ Ống Xưởng 2 (link lô ống từ Cắt Chọn)
     loadXuong2BaoTho(); // Nhật ký Chạy Máy Bào Thô Xưởng 2 (link lô đã bổ)
@@ -90,6 +96,9 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     restoreRateTableCollapse();
     setupEventListeners();
     setupFormCalculations();
+    // Áp công tắc XƯỞNG 1 / XƯỞNG 2 theo trạng thái ĐÃ NHỚ từ lần trước
+    // (gọi sau setupEventListeners để nút đã tồn tại trong DOM)
+    applyStageWsDom();
     // Mọi ô chọn ngày hiển thị & nhập theo dd/mm/yyyy (văn hóa Việt Nam):
     // khởi tạo cho các ô có sẵn + tự bắt các ô ngày được tạo động sau này
     initVnDateInputs();
@@ -177,6 +186,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       // giờ renderAll chỉ vẽ khi đang đứng ở tab này để bớt công vô ích).
       renderKanbanBoard(getFilteredBatches());
       renderXuong2Cards();
+      // Áp lại công tắc XƯỞNG 1 / XƯỞNG 2 (grid ẩn/hiện + nút đang chọn)
+      applyStageWsDom();
       // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)
       renderX2MiniSparklines();
       filterMobileKanbanColumns();

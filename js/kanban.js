@@ -359,7 +359,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <span class="tag-badge tag-location"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
       </div>
       ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}
-      <div class="card-actions" data-perm="kanban">
+      <div class="card-actions" data-perm="x2">
         <div class="card-tools">
           <button class="btn btn-outline btn-icon btn-sm" onclick="app.openEditModal('${batch.id}')" title="Sửa thẻ"><i data-lucide="edit-3"></i></button>
           <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteBatch('${batch.id}')" title="Xóa thẻ" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>

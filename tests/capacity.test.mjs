@@ -269,10 +269,11 @@ cap.toggleCapacityWorkshop();
 check('XƯỞNG 1: đổi xưởng → nhãn "Xưởng 1" + thẻ gắn class cap-ws-x1',
   document.getElementById('capacity-mode-label').textContent === 'Xưởng 1' &&
   document.getElementById('capacity-card').classList.contains('cap-ws-x1'));
-check('XƯỞNG 1: bảng hiện thông báo "Sắp có" (không bịa số)',
-  document.getElementById('capacity-week-rows').innerHTML.includes('Xưởng 1 — Sắp có'));
-check('XƯỞNG 1: sổ đăng ký chưa có công đoạn X1 · chưa có tuần dữ liệu',
-  cap.capStagesOf('x1').length === 0 && cap.capWeekRowsFor('x1').length === 0);
+check('XƯỞNG 1: bảng hiện thông báo "chưa có số liệu" (đã khai 3 công đoạn, chưa ghi lượt — KHÔNG bịa số)',
+  document.getElementById('capacity-week-rows').innerHTML.includes('Xưởng 1 — chưa có số liệu.') &&
+  document.getElementById('capacity-week-rows').innerHTML.includes('Cắt Ống · Sấy Sinh · Bốc'));
+check('XƯỞNG 1: sổ đăng ký đã có 3 công đoạn X1 · chưa có tuần dữ liệu nào',
+  cap.capStagesOf('x1').length === 3 && cap.capWeekRowsFor('x1').length === 0);
 cap.toggleCapacityWorkshop();
 check('XƯỞNG 2: đổi lại → nhãn "Xưởng 2"', document.getElementById('capacity-mode-label').textContent === 'Xưởng 2');
 cap.toggleCapacityCollapse();
@@ -319,11 +320,13 @@ check('CẤU TRÚC (styles.css): khối CSS thẻ tổng hợp + sparkline + mà
   stylesCss.includes('.cap-mode-btn') && stylesCss.includes('.cap-spark-svg') &&
   stylesCss.includes('.cap-eff-good') && stylesCss.includes('.cap-eff-low'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v208/.test(swJs));
-check('SỔ ĐĂNG KÝ: 11 dòng công đoạn Xưởng 2 (Bốc Luồng + Bullig tách Gia công/Chọn thanh) · Xưởng 1 = 0 dòng',
-  cap.capStagesOf('x2').length === 11 && cap.capStagesOf('x1').length === 0);
-check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId)',
-  cap.CAP_STAGES.every(s => s.cardId && s.unit && s.unitQty && s.ws === 'x2'));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v209/.test(swJs));
+check('SỔ ĐĂNG KÝ: 11 dòng công đoạn Xưởng 2 (Bốc Luồng + Bullig tách Gia công/Chọn thanh) · 3 dòng Xưởng 1',
+  cap.capStagesOf('x2').length === 11 && cap.capStagesOf('x1').length === 3);
+check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId) + xưởng đúng',
+  cap.CAP_STAGES.every(s => s.cardId && s.unit && s.unitQty &&
+    (s.ws === 'x2' || (s.ws === 'x1' && s.cardId.startsWith('x1-')))) &&
+  cap.CAP_STAGES.filter(s => s.ws === 'x1').every(s => s.cardId.startsWith('x1-')));
 
 // ─── N. CHẾ ĐỘ "BIỂU ĐỒ" ⇄ "BẢNG DỮ LIỆU" + 4 WIDGET TRỰC QUAN ──
 state.capUi.chartStage = '';

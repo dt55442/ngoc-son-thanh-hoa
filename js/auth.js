@@ -2,7 +2,7 @@
 // js/auth.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { FB_ROLES_DOC, FB_SETTINGS_COLL, applyRoleToUI, fbDb, initLucide, isFirebaseOnline } from './cloud.js';
-import { ALL_EDITABLE_IDS, ROLES, ROLE_ORDER, normalizeUser } from './permissions.js';
+import { ALL_EDITABLE_IDS, ROLES, ROLE_ORDER, expandWsTabs, getTabDef, normalizeUser } from './permissions.js';
 import { renderAll } from './main.js';
 import { DEFAULT_USERS, STORAGE_KEY_SESSION, STORAGE_KEY_USERS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
@@ -207,12 +207,9 @@ import { escapeHTML, showToast } from './utils.js';
     if (role === 'admin') {
       return `<span class="perm-chip perm-chip-all"><i data-lucide="check-check"></i> Toàn quyền mọi tab</span>`;
     }
-    const tabs = Array.isArray(userLike.editTabs) ? userLike.editTabs : [];
+    const tabs = Array.isArray(userLike.editTabs) ? expandWsTabs(userLike.editTabs) : [];
     const chips = tabs.length
-      ? tabs.map(t => {
-          const names = { kanban: 'Công Đoạn', planning: 'Kế Hoạch', press: 'Ép Ván', dashboard: 'Dashboard', materials: 'Nguyên Liệu' };
-          return `<span class="perm-chip">${escapeHTML(names[t] || t)}</span>`;
-        }).join('')
+      ? tabs.map(t => `<span class="perm-chip">${escapeHTML(getTabDef(t)?.short || t)}</span>`).join('')
       : `<span class="perm-chip perm-chip-none">Không sửa tab nào</span>`;
     const adv = userLike.allowAdvanced
       ? `<span class="perm-chip perm-chip-adv"><i data-lucide="shield"></i> Vùng nâng cao</span>` : '';
@@ -568,7 +565,7 @@ import { escapeHTML, showToast } from './utils.js';
         const grants = (roles.userGrants || {})[email] || {};
         roleBadge.textContent = ROLES[role]?.name || role;
         roleBadge.dataset.role = role;
-        setEditTabsChecks('user-perms-edit-tabs', grants.editTabs || (role === 'admin' ? [...ALL_EDITABLE_IDS] : []));
+        setEditTabsChecks('user-perms-edit-tabs', expandWsTabs(grants.editTabs) || (role === 'admin' ? [...ALL_EDITABLE_IDS] : []));
         advCheck.checked = !!grants.allowAdvanced || role === 'admin' || role === 'manager';
         initLucide();
       });
@@ -578,7 +575,9 @@ import { escapeHTML, showToast } from './utils.js';
       targetInput.value = `id:${user.id}`;
       roleBadge.textContent = ROLES[user.role]?.name || user.role;
       roleBadge.dataset.role = user.role;
-      setEditTabsChecks('user-perms-edit-tabs', user.editTabs || []);
+      // expandWsTabs: user cũ chỉ có 'kanban' → 2 ô Xưởng 1/Xưởng 2 phải TÍCH sẵn
+      // (nếu không admin mở modal rồi lưu là mất quyền oan)
+      setEditTabsChecks('user-perms-edit-tabs', expandWsTabs(user.editTabs) || []);
       advCheck.checked = !!user.allowAdvanced;
     }
     document.getElementById('modal-user-perms')?.classList.add('show');

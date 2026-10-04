@@ -22,6 +22,18 @@
   // chỉ nhớ TRẠNG THÁI UI theo máy (xưởng đang xem · tuần chọn · tầng đang mở ·
   // thu gọn) — KHÔNG đồng bộ mây/backup, giống STORAGE_KEY_PV_CHART_MODE.
   const STORAGE_KEY_CAPACITY_UI = 'bamboo_tracker_capacity_ui_v1';
+  // CÔNG TẮC CHUYỂN XƯỞNG ở tab Công Đoạn SX: 'x1' | 'x2' — xưởng ĐANG XEM.
+  // Thuần UI theo MÁY (như STORAGE_KEY_PV_CHART_MODE) — KHÔNG đồng bộ mây/backup.
+  const STORAGE_KEY_STAGE_WS = 'bamboo_tracker_stage_ws_v1';
+  // ── XƯỞNG 1 — 3 THẺ CÔNG ĐOẠN ĐẦU (04/10/2026) ──────────────
+  // Nhật ký công đoạn Xưởng 1 (ống nứa) — cùng mẫu với nhật ký Xưởng 2
+  // (localStorage + file + mây + tombstone khi xóa).
+  const STORAGE_KEY_XUONG1_CAT_ONG  = 'bamboo_tracker_xuong1_cat_ong_v1';
+  const STORAGE_KEY_XUONG1_SAY_SINH = 'bamboo_tracker_xuong1_say_sinh_v1';
+  const STORAGE_KEY_XUONG1_BOC      = 'bamboo_tracker_xuong1_boc_v1';
+  // Định mức công suất Xưởng 1 theo tháng (kg/h) — { <khối>: { 'YYYY-MM': kg/h } }
+  // Khối: catOng (Cắt Ống) · saySinh (Sấy Sinh) · boc (Bốc)
+  const STORAGE_KEY_X1_RATES = 'bamboo_tracker_x1_rates_v1';
   const STORAGE_KEY_MATERIALS = 'bamboo_tracker_material_records_v1';
   // Vị trí công đoạn Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký cắt/chọn.
   // Mỗi lượt cắt/chọn link 1 lượt nhập nguyên liệu đầu vào của Xưởng 2 (tab Nguyên Liệu)
@@ -215,6 +227,8 @@
     users: [],
     batches: [],
     activeView: 'dashboard-view', // Dashboard là màn hình hiển thị ban đầu
+    // Xưởng đang xem ở tab Công Đoạn SX ('x1' | 'x2') — nút XƯỞNG 1 / XƯỞNG 2
+    stageWs: 'x2',
     activeMobileStage: 'say1', // Điện thoại mặc định xem 1 công đoạn (vuốt ngang / bấm tab để chuyển)
     customCharts: [],
     customChartInstances: {},
@@ -460,6 +474,11 @@ export {
   STORAGE_KEY_PRESS_NOTES,
   STORAGE_KEY_PV_CHART_MODE,
   STORAGE_KEY_CAPACITY_UI,
+  STORAGE_KEY_STAGE_WS,
+  STORAGE_KEY_XUONG1_CAT_ONG,
+  STORAGE_KEY_XUONG1_SAY_SINH,
+  STORAGE_KEY_XUONG1_BOC,
+  STORAGE_KEY_X1_RATES,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_QC_KILN_HUMIDITY,
   STORAGE_KEY_QC_KILN_THRESHOLD,

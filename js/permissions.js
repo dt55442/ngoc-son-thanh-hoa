@@ -24,8 +24,16 @@ export const ROLE_ORDER = ['admin', 'manager', 'editor', 'viewer'];
 // ─── DANH SÁCH TAB CÓ DỮ LIỆU (mở rộng cho tab tương lai) ────
 // Khi thêm tab mới: thêm 1 dòng tại đây — Dashboard, vùng biểu đồ và
 // bảng phân quyền sẽ tự động nhận tab mới.
+//   LƯU Ý (04/10/2026): tab "kanban" là TAB CHA của Công Đoạn SX, gồm 2 XƯỞNG
+//   riêng biệt: x1 (Xưởng 1) + x2 (Xưởng 2) — khai báo phân quyền RIÊNG từng xưởng
+//   (thẻ Xưởng 1 có data-perm="x1", thẻ Xưởng 2 có data-perm="x2").
+//   • `kanban` PHẢI đứng ĐẦU mảng (getTabByView('kanban-view') trả phần tử đầu —
+//     currentTabId() của tab Công Đoạn SX phải là 'kanban');
+//   • x1/x2 có viewId: null → getTabByView KHÔNG khớp, chỉ dùng cho phân quyền.
 export const APP_TABS = [
-  { id: 'kanban',   viewId: 'kanban-view',   name: 'Công Đoạn (Kanban)', short: 'Công Đoạn',  icon: 'layout-grid',    color: '#059669' },
+  { id: 'kanban',   viewId: 'kanban-view',   name: 'Công Đoạn SX',            short: 'Công Đoạn',  icon: 'layout-grid',    color: '#059669' },
+  { id: 'x1',       viewId: null,            name: 'Công Đoạn SX — Xưởng 1',  short: 'Xưởng 1',     icon: 'warehouse',      color: '#b45309' },
+  { id: 'x2',       viewId: null,            name: 'Công Đoạn SX — Xưởng 2',  short: 'Xưởng 2',     icon: 'factory',        color: '#0f766e' },
   { id: 'planning', viewId: 'planning-view', name: 'Kế Hoạch Sản Xuất',  short: 'Kế Hoạch',   icon: 'clipboard-list', color: '#7c3aed' },
   { id: 'press',    viewId: 'press-view',    name: 'Sản Lượng Ép Ván',   short: 'Ép Ván',     icon: 'factory',        color: '#ea580c' },
   { id: 'materials',viewId: 'materials-view',name: 'Nhập Nguyên Liệu',   short: 'Nguyên Liệu',icon: 'package-plus',   color: '#db2777' },
@@ -37,6 +45,18 @@ export const APP_TABS = [
 export const EDITABLE_TAB_IDS = APP_TABS.map(t => t.id);
 export const ALL_EDITABLE_IDS = [...EDITABLE_TAB_IDS, 'dashboard'];
 
+// Hai xưởng của tab Công Đoạn SX — dùng cho migration quyền dữ liệu CŨ
+export const WS_TAB_IDS = ['x1', 'x2'];
+
+// Mở rộng quyền xưởng: user cũ chỉ có 'kanban' mà CHƯA có x1/x2 → cấp cả 2.
+// Idempotent (chạy nhiều lần vẫn cho cùng kết quả) — dùng cho normalizeUser
+// lẫn getEditableTabs (test/thứ 3 set state.currentUser trực tiếp, không qua normalize).
+export function expandWsTabs(tabs) {
+  if (!Array.isArray(tabs) || !tabs.includes('kanban')) return tabs;
+  if (WS_TAB_IDS.some(t => tabs.includes(t))) return tabs;
+  return [...tabs, ...WS_TAB_IDS];
+}
+
 export function getTabDef(tabId) { return APP_TABS.find(t => t.id === tabId) || null; }
 export function getTabByView(viewId) { return APP_TABS.find(t => t.viewId === viewId) || null; }
 
@@ -46,6 +66,11 @@ function currentUser() { return state.currentUser || null; }
 // ─── CHUẨN HÓA USER (migrate dữ liệu cũ) ─────────────────────
 // Đảm bảo mọi user đều có editTabs & allowAdvanced. Với dữ liệu cũ
 // chưa cấu hình: editor/manager được sửa toàn bộ (giữ tương thích), viewer không.
+//
+// MIGRATION QUYỀN XƯỞNG (04/10/2026): trước đây tab Công Đoạn chỉ có 1 quyền
+// 'kanban'; nay tách thành 2 xưởng riêng biệt x1 / x2. Dữ liệu người dùng cũ
+// CHỈ CÓ 'kanban' mà CHƯA có 'x1'/'x2' → được cấp CẢ HAI xưởng (không mất quyền).
+// Sau khi admin tách quyền (editTabs đã chứa x1 hoặc x2) → KHÔNG tự cấp lại.
 export function normalizeUser(u) {
   if (!u) return u;
   const info = roleInfo(u.role);
@@ -54,6 +79,9 @@ export function normalizeUser(u) {
       ? [...ALL_EDITABLE_IDS]
       : [];
   }
+  // MIGRATION quyền xưởng: user cũ chỉ có 'kanban' → cấp thêm cả 2 xưởng
+  // (dùng chung expandWsTabs — idempotent, chạy lại vẫn cho cùng kết quả)
+  u.editTabs = expandWsTabs(u.editTabs);
   if (typeof u.allowAdvanced !== 'boolean') u.allowAdvanced = !!info.canAdvanced;
   return u;
 }
@@ -61,6 +89,13 @@ export function normalizeUser(u) {
 // ─── TRUY VẤN QUYỀN ───────────────────────────────────────────
 export function getUserRole() { return currentUser()?.role || null; }
 export function isAdmin() { return getUserRole() === 'admin'; }
+
+// Quyền sửa của tab CHA 'kanban' (Công Đoạn SX) = có ít nhất MỘT xưởng
+// (x1 hoặc x2) — vì requireEditPermission() kiểm theo currentTabId() = 'kanban'
+// khi người dùng đang đứng ở tab Công Đoạn SX.
+function canEditKanbanTab(tabs) {
+  return tabs.includes('kanban') || WS_TAB_IDS.some(t => tabs.includes(t));
+}
 
 // Vùng Nâng Cao: admin + manager + người được cấp riêng (allowAdvanced)
 export function canViewAdvanced() {
@@ -76,7 +111,9 @@ export function getEditableTabs() {
   if (!u) return [];
   if (roleInfo(u.role).editAll) return [...ALL_EDITABLE_IDS];
   const tabs = Array.isArray(u.editTabs) ? u.editTabs : [];
-  return tabs.filter(t => ALL_EDITABLE_IDS.includes(t));
+  // expandWsTabs: user cũ chỉ có 'kanban' → coi như có CẢ 2 xưởng
+  // (idempotent, không ghi ngược lại u.editTabs)
+  return expandWsTabs(tabs).filter(t => ALL_EDITABLE_IDS.includes(t));
 }
 
 // Nguồn biểu đồ 'materialsPlan' (Kế hoạch vs Thực tế nguyên liệu) thuộc quyền
@@ -88,7 +125,11 @@ export function canEditTab(tabId) {
   if (!u) return false;
   const t = CHART_SOURCE_TAB_ALIAS[tabId] || tabId;
   if (roleInfo(u.role).editAll) return true;
-  return getEditableTabs().includes(t);
+  const tabs = getEditableTabs();
+  // Tab cha 'kanban' = hợp của 2 xưởng (user chỉ được cấp 1 xưởng vẫn sửa
+  // được các thao tác chung của tab; nút riêng từng xưởng lo phần còn lại)
+  if (t === 'kanban') return canEditKanbanTab(tabs);
+  return tabs.includes(t);
 }
 
 // ─── QUYỀN CẬP NHẬT ĐỊNH MỨC ────────────────────────────────────

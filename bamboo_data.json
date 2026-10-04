@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-04T10:40:53.943Z",
+  "savedAt": "2026-10-04T14:04:20.864Z",
   "batches": [
     {
       "id": "batch-1791109871354",
@@ -8072,6 +8072,14 @@
     }
   ],
   "xuong2BoluongRecords": [],
+  "xuong1CatOngRecords": [],
+  "xuong1SaySinhRecords": [],
+  "xuong1BocRecords": [],
+  "x1Rates": {
+    "catOng": {},
+    "saySinh": {},
+    "boc": {}
+  },
   "xuong2BoOngRecords": [
     {
       "id": "x2bo-1790065927075-so6nl",

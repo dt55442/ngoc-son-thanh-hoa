@@ -96,8 +96,8 @@ check('gói sự kiện: mở THẺ ÉP VÁN ở tab Công Đoạn → nhãn "É
   ctxEpv.tabLabel === 'Ép Ván' && ctxEpv.facts.join(' | ').includes('Ép ván 7 ngày qua'));
 state.x2OpenCardId = null;
 const ctxKan = ai.aiTabContextOf('kanban-view');
-check('gói sự kiện: không mở thẻ nào → tab Công Đoạn giữ nhãn "Công Đoạn (Kanban)"',
-  ctxKan.tabLabel === 'Công Đoạn (Kanban)');
+check('gói sự kiện: không mở thẻ nào → tab Công Đoạn giữ nhãn "Công Đoạn SX" (đổi tên 04/10/2026)',
+  ctxKan.tabLabel === 'Công Đoạn SX');
 const ctxQ = ai.aiTabContextOf('qc-view');
 check('gói sự kiện QC: chưa xuất hàng tuần này', ctxQ.facts.join(' | ').includes('0 sản phẩm'));
 const ctxH = ai.aiTabContextOf('hr-view');

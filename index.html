@@ -70,7 +70,7 @@
         </button>
         <button class="nav-btn" data-target="kanban-view" id="nav-kanban">
           <i data-lucide="layout-grid"></i>
-          <span>Công Đoạn (Kanban)</span>
+          <span>Công Đoạn SX</span>
         </button>
         <button class="nav-btn" data-target="planning-view" id="nav-planning">
           <i data-lucide="clipboard-list"></i>
@@ -187,7 +187,7 @@
     </button>
     <button class="mobile-nav-item" data-target="kanban-view">
       <i data-lucide="layout-grid"></i>
-      <span>Công Đoạn</span>
+      <span>Công Đoạn SX</span>
     </button>
     <button class="mobile-nav-item" data-target="planning-view">
       <i data-lucide="clipboard-list"></i>
@@ -221,7 +221,7 @@
             <i data-lucide="layout-grid"></i> Công Đoạn Sản Xuất
           </h3>
           <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Bảng Kanban lô nan nằm trong thẻ "Than Hóa + Sấy" — bấm thẻ để mở (Sấy 1 → Sấy 2 → Kho Lưu Trữ → Bào Tinh).
+            2 xưởng riêng biệt — chuyển bằng nút XƯỞNG 1 / XƯỞNG 2 bên dưới. Bảng Kanban lô nan nằm trong thẻ "Than Hóa + Sấy" (Sấy 1 → Sấy 2 → Kho Lưu Trữ → Bào Tinh).
           </p>
         </div>
         <div style="display:flex; gap:8px;">
@@ -232,6 +232,24 @@
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
           </button>
         </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- CÔNG TẮC CHUYỂN XƯỞNG — tab Công Đoạn SX có 2 XƯỞNG     -->
+      <!-- RIÊNG BIỆT: Xưởng 2 (nan tre — 13 thẻ) & Xưởng 1 (ống   -->
+      <!-- nứa — 8 công đoạn). Bấm 1 trong 2 nút để đổi khối thẻ   -->
+      <!-- đang xem; pop-up thẻ chi tiết dùng CHUNG (1 khung).     -->
+      <!-- Trạng thái nhớ theo MÁY: bamboo_tracker_stage_ws_v1      -->
+      <!-- (thuần UI — không đồng bộ mây/backup, xem js/xuong2.js)  -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <div class="stage-ws-switch" role="tablist" aria-label="Chọn xưởng đang xem">
+        <button type="button" class="stage-ws-btn" id="stage-ws-x2" data-ws="x2" role="tab" aria-selected="true">
+          <i data-lucide="factory"></i> <span>Xưởng 2</span>
+        </button>
+        <button type="button" class="stage-ws-btn" id="stage-ws-x1" data-ws="x1" role="tab" aria-selected="false">
+          <i data-lucide="warehouse"></i> <span>Xưởng 1</span>
+        </button>
+        <span class="stage-ws-hint" id="stage-ws-hint"></span>
       </div>
 
       <!-- ======================================================= -->
@@ -246,6 +264,8 @@
       <!-- Nguồn dữ liệu: lô nguyên liệu ĐẦU VÀO Xưởng 2 ở tab       -->
       <!-- Nguyên Liệu ("Luồng cây xô", "Luồng ống", ...) + Nhân Sự. -->
       <!-- ======================================================= -->
+      <!-- KHU XƯỞNG 2 (ẩn khi chọn Xưởng 1 — xem #ws-x1-block) -->
+      <div id="ws-x2-block" class="ws-cards-block">
       <div class="x2-cards-overview">
         <div class="x2-cards-title">
           <h4><i data-lucide="warehouse"></i> Vị Trí Xưởng 2</h4>
@@ -342,6 +362,88 @@
           </button>
         </div>
       </div>
+      </div><!-- /#ws-x2-block -->
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- KHU VỰC XƯỞNG 1 — 8 CÔNG ĐOẠN THEO ĐÚNG LUỒNG SX:      -->
+      <!--   Cắt Ống → Sấy Sinh → Bốc → Lọc Ống → Cắt Mắt → Bổ →  -->
+      <!--   Phơi Sấy → Lọc Thanh / Bó Xô                           -->
+      <!-- Thẻ có chip "Sắp có" = launcher placeholder (chức năng   -->
+      <!-- đang được bổ sung dần — xem .x2-soon-note).              -->
+      <!-- Nguồn dữ liệu: lô nguyên liệu đầu vào XƯỞNG 1 ở tab      -->
+      <!-- Nguyên Liệu (vị trí "Xưởng 1") + Nhân Sự (bộ phận       -->
+      <!-- Xưởng 1). Pop-up chi tiết DÙNG CHUNG #x2-detail-overlay. -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <div id="ws-x1-block" class="ws-cards-block" hidden>
+      <div class="x2-cards-overview">
+        <div class="x2-cards-title">
+          <h4><i data-lucide="warehouse"></i> Vị Trí Xưởng 1</h4>
+          <span class="x2-cards-hint">Bấm thẻ để mở bảng · nguyên liệu đầu vào lấy từ tab Nguyên Liệu (Xưởng 1) · thẻ Sắp có = chức năng đang được bổ sung</span>
+        </div>
+        <div class="x2-cards" id="x1-cards-grid">
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-cat-ong-card" aria-expanded="false" title="Cắt Ống — cắt ống nứa từ lô nguyên liệu nhập Xưởng 1 (tự link nhà cung cấp, mã số, khối lượng đầu vào; tự lấy người + giờ vị trí Cắt Ống từ tab Nhân Sự)">
+            <span class="x2-mini-ic"><i data-lucide="scissors"></i></span>
+            <span class="x2-mini-title">Cắt Ống</span>
+            <span class="x2-mini-desc">Cắt ống nứa từ lô đầu vào</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-cat-ong">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-cat-ong"></span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-say-sinh-card" aria-expanded="false" title="Sấy Sinh — sấy ống nứa tươi trước khi xử lý (tự link lượt Cắt Ống, tự lấy người + giờ vị trí Sấy Sinh từ tab Nhân Sự)">
+            <span class="x2-mini-ic"><i data-lucide="flame-kindling"></i></span>
+            <span class="x2-mini-title">Sấy Sinh</span>
+            <span class="x2-mini-desc">Sấy ống nứa tươi</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-say-sinh">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-say-sinh"></span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-boc-card" aria-expanded="false" title="Bốc — bốc/dỡ ống nứa sau sấy sinh, chuyển sang khu Lọc Ống (tự link lượt Sấy Sinh, tự lấy người + giờ vị trí Bốc từ tab Nhân Sự)">
+            <span class="x2-mini-ic"><i data-lucide="forklift"></i></span>
+            <span class="x2-mini-title">Bốc</span>
+            <span class="x2-mini-desc">Bốc/dỡ ống nứa sau sấy</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-boc">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-boc"></span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-ong-card" aria-expanded="false" title="Lọc Ống — chọn/lọc ống đạt theo kích thước (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="list-filter"></i></span>
+            <span class="x2-mini-title">Lọc Ống</span>
+            <span class="x2-mini-desc">Lọc ống đạt theo kích thước</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-loc-ong">–</span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-cat-mat-card" aria-expanded="false" title="Cắt Mắt — cắt mắt/đoạn ống theo quy cách (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="crop"></i></span>
+            <span class="x2-mini-title">Cắt Mắt</span>
+            <span class="x2-mini-desc">Cắt mắt/đoạn ống theo quy cách</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-cat-mat">–</span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-bo-card" aria-expanded="false" title="Bổ — bổ ống nứa thành nan/tấm (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="split"></i></span>
+            <span class="x2-mini-title">Bổ</span>
+            <span class="x2-mini-desc">Bổ ống nứa thành nan</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-bo">–</span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-phoi-say-card" aria-expanded="false" title="Phơi Sấy — phơi/sấy nan sau bổ (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="sun"></i></span>
+            <span class="x2-mini-title">Phơi Sấy</span>
+            <span class="x2-mini-desc">Phơi/sấy nan sau bổ</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-phoi-say">–</span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-thanh-card" aria-expanded="false" title="Lọc Thanh / Bó Xô — phân loại thành phẩm và bó xô (chức năng đang bổ sung)">
+            <span class="x2-mini-ic"><i data-lucide="package-check"></i></span>
+            <span class="x2-mini-title">Lọc Thanh / Bó Xô</span>
+            <span class="x2-mini-desc">Phân loại thành phẩm · bó xô</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-loc-thanh">–</span>
+          </button>
+
+        </div>
+      </div>
+      </div><!-- /#ws-x1-block -->
 
       <!-- ── 3 THẺ KPI DƯỚI CÙNG ĐÃ GỠ BỎ ──
            Trước đây có "Quick Stats Bar" với 3 thẻ: Sấy 1 + Sấy 2 + Kho · Bào Tinh ·
@@ -408,7 +510,7 @@
                    Bảng Lịch Sử Cắt/Chọn + Bảng Công Suất Theo Ngày -->
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-cut-rate" data-perm="kanban" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-cut-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cut">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Cắt/Chọn</button>
               </div>
@@ -472,7 +574,7 @@
               </div>
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" data-perm="kanban" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-blg">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Bốc Luồng</button>
               </div>
@@ -546,9 +648,9 @@
                    Nhân Sự (vị trí "Bổ Ống" — Xưởng 2, đúng ngày) — KHÔNG có ô
                    nhập tay, chỉ hiện ở đầu thẻ ngày của bảng lịch sử bên dưới -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-ong-rate" data-perm="kanban" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ Ống theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-ong-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ Ống theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bo-ong">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Bổ Ống</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bổ Ống</button>
               </div>
             </form>
           </div>
@@ -628,9 +730,9 @@
                    (vị trí "Bào thô" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay;
                    SỐ LƯỢNG THANH + THỂ TÍCH QUY ĐỔI tự lấy từ công đoạn Chọn Nan Thô -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-bt-rate" data-perm="kanban" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Thô theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-bt-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Thô theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bao-tho">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Chạy Máy</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Chạy Máy</button>
               </div>
             </form>
           </div>
@@ -740,9 +842,9 @@
               <!-- NGƯỜI CHỌN NAN + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự
                    (vị trí "Chọn nan" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-cn-rate" data-perm="kanban" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Chọn Nan theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-cn-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Chọn Nan theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cn">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Chọn Nan</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Chọn Nan</button>
               </div>
             </form>
           </div>
@@ -800,20 +902,20 @@
 
           <!-- Thanh công cụ Kanban: Thêm Lô Sấy Mới + Chuyển Kho + Xóa Nhiều (Admin) -->
           <div class="kanban-toolbar">
-            <button class="btn btn-primary" id="btn-add-batch" data-perm="kanban" title="Thêm lô nan mới vào Sấy 1 (nguồn: công đoạn Chọn Nan Thô) hoặc Sấy 2 (nguồn: lô đang ở Kho)">
+            <button class="btn btn-primary" id="btn-add-batch" data-perm="x2" title="Thêm lô nan mới vào Sấy 1 (nguồn: công đoạn Chọn Nan Thô) hoặc Sấy 2 (nguồn: lô đang ở Kho)">
               <i data-lucide="plus-circle"></i> Thêm Lô Sấy Mới
             </button>
-            <button class="btn btn-outline" id="btn-transfer-kho" data-perm="kanban" title="Chuyển lô từ Sấy 1 / Sấy 2 vào Kho — hoặc tạo lô mới vào thẳng Kho">
+            <button class="btn btn-outline" id="btn-transfer-kho" data-perm="x2" title="Chuyển lô từ Sấy 1 / Sấy 2 vào Kho — hoặc tạo lô mới vào thẳng Kho">
               <i data-lucide="warehouse"></i> Chuyển Kho
             </button>
-            <button class="btn btn-outline admin-only-btn" id="btn-multi-delete" data-perm="kanban" title="Bật chế độ tích chọn NHIỀU lô để xóa cùng lúc (chỉ Quản Trị — Admin)">
+            <button class="btn btn-outline admin-only-btn" id="btn-multi-delete" data-perm="x2" title="Bật chế độ tích chọn NHIỀU lô để xóa cùng lúc (chỉ Quản Trị — Admin)">
               <i data-lucide="trash-2"></i> <span class="hide-mobile">Xóa Nhiều</span>
             </button>
             <!-- Nút thực thi XÓA NHIỀU ngay trên thanh công cụ (chỉ hiện khi chế độ chọn đang bật) -->
             <span class="kb-pick-inline" id="kb-pick-inline">
               <span class="kb-pick-inline-info">Đang chọn <b id="kb-pick-inline-count">0</b> lô</span>
-              <button type="button" class="btn btn-sm kb-pick-inline-del" id="kb-pick-inline-del" data-perm="kanban" title="Xóa các lô đã tích chọn (hoàn tác được bằng 1 bấm)"><i data-lucide="trash-2"></i> Xóa Đã Chọn</button>
-              <button type="button" class="btn btn-outline btn-sm" id="kb-pick-inline-cancel" data-perm="kanban" title="Thoát chế độ xóa nhiều lô"><i data-lucide="x"></i> Thoát</button>
+              <button type="button" class="btn btn-sm kb-pick-inline-del" id="kb-pick-inline-del" data-perm="x2" title="Xóa các lô đã tích chọn (hoàn tác được bằng 1 bấm)"><i data-lucide="trash-2"></i> Xóa Đã Chọn</button>
+              <button type="button" class="btn btn-outline btn-sm" id="kb-pick-inline-cancel" data-perm="x2" title="Thoát chế độ xóa nhiều lô"><i data-lucide="x"></i> Thoát</button>
             </span>
           </div>
 
@@ -838,7 +940,7 @@
                Khi thu gọn vẫn thấy thanh công cụ trên, dòng TỔNG QUAN số lô từng công
                đoạn và bảng thống kê sấy bên dưới; trạng thái nhớ theo máy. -->
           <div class="kanban-collapse-bar">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-kanban-board" data-perm="kanban" title="Thu gọn / mở lại bảng Kanban lô nan (Sấy 1 · Sấy 2 · Kho)">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-kanban-board" data-perm="x2" title="Thu gọn / mở lại bảng Kanban lô nan (Sấy 1 · Sấy 2 · Kho)">
               <i data-lucide="rows-3"></i> <span id="x2-kanban-toggle-label">Thu gọn bảng lô</span>
             </button>
             <div class="x2-kanban-summary" id="x2-kanban-summary"></div>
@@ -852,7 +954,7 @@
           <div class="x2-say-rate-line" id="x2-say-rate-line">
             <span class="x2-rate-title"><i data-lucide="flame"></i> Thời gian than hóa:</span>
             <span class="x2-say-rate-chip" id="x2-say-rate-chip" title="Đổi số phút ở nút Định mức (theo tháng, riêng Ván/Bullig)"></span>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-x2-say-rate" data-perm="kanban" data-admin-only title="Mở bảng định mức thời gian 1 lần than hóa theo tháng (Ván / Bullig) — CHỈ Quản Trị sửa">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-x2-say-rate" data-perm="x2" data-admin-only title="Mở bảng định mức thời gian 1 lần than hóa theo tháng (Ván / Bullig) — CHỈ Quản Trị sửa">
               <i data-lucide="table-2"></i> Định mức
             </button>
           </div>
@@ -1076,7 +1178,7 @@
                 <div class="column-metrics">
                   <span id="vol-kho">0.000 m³</span> • <span id="qty-kho">0 thanh</span>
                 </div>
-                <button type="button" class="btn btn-outline btn-sm kho-col-add" id="btn-kho-add-manual" data-perm="kanban" title="Nhập kho thủ công: nan mua ngoài / tồn đầu kỳ (tạo lô mới ở thẳng Kho)">
+                <button type="button" class="btn btn-outline btn-sm kho-col-add" id="btn-kho-add-manual" data-perm="x2" title="Nhập kho thủ công: nan mua ngoài / tồn đầu kỳ (tạo lô mới ở thẳng Kho)">
                   <i data-lucide="plus-circle"></i> Nhập Kho
                 </button>
               </div>
@@ -1168,7 +1270,7 @@
                    sửa được số thanh xuất (mặc định = nguyên phần còn lại của lô) -->
               <div class="form-group col-span-full" id="x2-kho-lots-group">
                 <label>Gắn Lô (tuỳ chọn — không chọn = khai theo tổng)</label>
-                <button type="button" class="btn btn-outline" id="x2-kho-lots-btn" data-perm="kanban">
+                <button type="button" class="btn btn-outline" id="x2-kho-lots-btn" data-perm="x2">
                   <i data-lucide="list"></i> <span id="x2-kho-lots-btn-text">Chọn Lô Gắn Phiếu</span>
                   <span class="al-picked-count" id="x2-kho-picked-count"></span>
                 </button>
@@ -1191,7 +1293,7 @@
               </div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
                 <button type="button" class="btn btn-outline" id="btn-kho-note-reset">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Gửi Phiếu (chờ duyệt)</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Gửi Phiếu (chờ duyệt)</button>
               </div>
             </form>
           </div>
@@ -1206,8 +1308,8 @@
             <div class="x2-cut-table-head">
               <h5><i data-lucide="clipboard-check"></i> Phiếu Chờ Ban Lãnh Đạo Duyệt</h5>
               <span class="x2-cut-table-count" id="x2-kho-pending-count"></span>
-              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-pick-all" data-perm="kanban" title="Chọn tất cả / bỏ chọn phiếu"><i data-lucide="check-square"></i> Chọn tất cả</button>
-              <button type="button" class="btn btn-primary btn-sm" id="x2-kho-approve-all" data-perm="kanban" title="Duyệt các phiếu đã tích chọn" style="display:none;"><i data-lucide="check-check"></i> Duyệt Đã Chọn</button>
+              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-pick-all" data-perm="x2" title="Chọn tất cả / bỏ chọn phiếu"><i data-lucide="check-square"></i> Chọn tất cả</button>
+              <button type="button" class="btn btn-primary btn-sm" id="x2-kho-approve-all" data-perm="x2" title="Duyệt các phiếu đã tích chọn" style="display:none;"><i data-lucide="check-check"></i> Duyệt Đã Chọn</button>
             </div>
             <div class="kho-pending-rows" id="x2-kho-pending-rows"></div>
           </div>
@@ -1248,7 +1350,7 @@
               <h5><i data-lucide="boxes"></i> Tồn Kho Theo Lô</h5>
               <span class="x2-cut-table-count" id="x2-kho-stock-count"></span>
               <label class="kho-show-used" title="Hiện cả lô đã xuất hết (tồn 0) — mặc định ẨN để tránh hiểu nhầm"><input type="checkbox" id="x2-kho-show-used"> Hiện lô đã xuất hết</label>
-              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-backfill-btn" data-perm="kanban" title="Sinh phiếu xuất ĐÃ DUYỆT bù cho dữ liệu Bào Tinh / Bullig / quay lại Sấy 2 ghi TRƯỚC khi có sổ kho (chỉ Admin / Ban Quản Lý)"><i data-lucide="wand-2"></i> Tạo phiếu bù</button>
+              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-backfill-btn" data-perm="x2" title="Sinh phiếu xuất ĐÃ DUYỆT bù cho dữ liệu Bào Tinh / Bullig / quay lại Sấy 2 ghi TRƯỚC khi có sổ kho (chỉ Admin / Ban Quản Lý)"><i data-lucide="wand-2"></i> Tạo phiếu bù</button>
               <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2kho-stock" title="Thu gọn / Mở rộng">
                 <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
               </button>
@@ -1355,7 +1457,7 @@
                     <div class="al-picker-head" id="x2-btinh-bt-out-head"></div>
                     <div class="al-card-list" id="x2-btinh-bt-out-list"></div>
                     <div class="al-picker-foot">
-                      <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-bt-out-add" data-perm="kanban" title="Khai báo thêm 1 kích thước đầu ra (Dài × Rộng × Dày, mm) — lưu dùng chung cho mọi ngày">
+                      <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-bt-out-add" data-perm="x2" title="Khai báo thêm 1 kích thước đầu ra (Dài × Rộng × Dày, mm) — lưu dùng chung cho mọi ngày">
                         <i data-lucide="plus"></i> Thêm kích thước
                       </button>
                     </div>
@@ -1379,11 +1481,11 @@
               <!-- NGƯỜI BÀO + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí
                    chứa "bào tinh" / "bào thanh" — Xưởng 2, đúng ngày) -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:10px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-btinh-rate" data-perm="kanban" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Tinh theo tháng — 3 cột: Bào tinh · Bào tinh hạ cấp · Bào thanh (thanh/giờ) — CHỈ Quản Trị sửa">
+                <button type="button" class="btn btn-outline" id="btn-x2-btinh-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Tinh theo tháng — 3 cột: Bào tinh · Bào tinh hạ cấp · Bào thanh (thanh/giờ) — CHỈ Quản Trị sửa">
                   <i data-lucide="target"></i> Định mức
                 </button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-btinh">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Bào Tinh</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bào Tinh</button>
               </div>
             </form>
           </div>
@@ -1598,9 +1700,9 @@
               <!-- NGƯỜI LÀM + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (phân vị
                    "Gia công" / "Chọn thanh" — Xưởng 2, đúng ngày) — KHÔNG nhập tay -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-bl-rate" data-perm="kanban" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bullig theo tháng + công đoạn nhỏ (thanh/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-bl-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bullig theo tháng + công đoạn nhỏ (thanh/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bl">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="kanban"><i data-lucide="check"></i> Lưu Lượt Bullig</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bullig</button>
               </div>
             </form>
           </div>
@@ -1657,6 +1759,160 @@
           <div class="x2-soon-note">
             <i data-lucide="hard-hat"></i>
             <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận công việc hỗ trợ + công đoạn lẻ khác (ai làm, việc gì, trong bao lâu) sẽ được cập nhật ngay sau đây.</p>
+          </div>
+        </div>
+
+        <!-- ═══ XƯỞNG 1 — THẺ 1: CẮT ỐNG ═══ -->
+        <div class="planning-card x2-card-hidden" id="x1-cat-ong-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="scissors"></i> Cắt Ống — Xưởng 1</h4>
+          </div>
+          <div class="x2-stock-bar" id="x1-cat-ong-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-cat-ong-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-cat-ong-edit-text"></span>
+            </div>
+            <form id="x1-cat-ong-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-cat-ong-material">Lô Ống Nứa Đầu Vào (Xưởng 1) <span class="required">*</span></label>
+                  <select id="x1-cat-ong-material" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lô CHƯA cắt — nhập mới ở tab Nguyên Liệu (vị trí Xưởng 1)</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-cat-ong-note">Ghi Chú</label>
+                  <input type="text" id="x1-cat-ong-note" placeholder="VD: ống mỏng, nhắc NCC...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-cat-ong-date">Ngày Cắt <span class="required">*</span></label>
+                  <input type="date" id="x1-cat-ong-date" required>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-cat-ong-kl-dat">KL Ống Đạt (kg)</label>
+                  <input type="number" id="x1-cat-ong-kl-dat" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-cat-ong-kl-loai">KL Loại (kg)</label>
+                  <input type="number" id="x1-cat-ong-kl-loai" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-cat-ong-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-cat-ong-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Ống theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-cat-ong">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Cắt Ống</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-cat-ong-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-cat-ong-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Cắt Ống</h5>
+              <span class="x2-cut-table-count" id="x1-cat-ong-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-cat-ong-day-cards"></div></div>
+          </div>
+        </div>
+
+        <!-- ═══ XƯỞNG 1 — THẺ 2: SẤY SINH ═══ -->
+        <div class="planning-card x2-card-hidden" id="x1-say-sinh-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="flame-kindling"></i> Sấy Sinh — Xưởng 1</h4>
+          </div>
+          <div class="x2-stock-bar" id="x1-say-sinh-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-say-sinh-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-say-sinh-edit-text"></span>
+            </div>
+            <form id="x1-say-sinh-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-say-sinh-source">Lượt Cắt Ống (nguồn) <span class="required">*</span></label>
+                  <select id="x1-say-sinh-source" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Cắt Ống còn CHƯA sấy hết</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-say-sinh-note">Ghi Chú</label>
+                  <input type="text" id="x1-say-sinh-note" placeholder="VD: sấy 8 giờ, độ ẩm đạt...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-say-sinh-date">Ngày Sấy <span class="required">*</span></label>
+                  <input type="date" id="x1-say-sinh-date" required>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-say-sinh-qty">KL Sấy (kg)</label>
+                  <input type="number" id="x1-say-sinh-qty" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-say-sinh-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-say-sinh-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Sấy Sinh theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-say-sinh">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Sấy Sinh</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-say-sinh-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-say-sinh-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Sấy Sinh</h5>
+              <span class="x2-cut-table-count" id="x1-say-sinh-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-say-sinh-day-cards"></div></div>
+          </div>
+        </div>
+
+        <!-- ═══ XƯỞNG 1 — THẺ 3: BỐC ═══ -->
+        <div class="planning-card x2-card-hidden" id="x1-boc-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="forklift"></i> Bốc — Xưởng 1</h4>
+          </div>
+          <div class="x2-stock-bar" id="x1-boc-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-boc-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-boc-edit-text"></span>
+            </div>
+            <form id="x1-boc-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-boc-source">Lượt Sấy Sinh (nguồn) <span class="required">*</span></label>
+                  <select id="x1-boc-source" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Sấy Sinh còn CHƯA bốc hết</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-boc-note">Ghi Chú</label>
+                  <input type="text" id="x1-boc-note" placeholder="VD: bốc 2 xe, chuyển khu Lọc Ống...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-boc-date">Ngày Bốc <span class="required">*</span></label>
+                  <input type="date" id="x1-boc-date" required>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-boc-qty">KL Bốc (kg)</label>
+                  <input type="number" id="x1-boc-qty" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-boc-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-boc-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-boc">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Bốc</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-boc-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-boc-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Bốc</h5>
+              <span class="x2-cut-table-count" id="x1-boc-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-boc-day-cards"></div></div>
           </div>
         </div>
 
@@ -4493,7 +4749,8 @@
             <div class="form-group col-span-full" id="group-new-user-edit-tabs">
               <label>Tab Được Phép Chỉnh Sửa <span style="font-size:0.75rem; color:var(--text-muted);">(áp dụng cho Editor &amp; Ban Quản Lý)</span></label>
               <div class="edit-tabs-checks" id="new-user-edit-tabs">
-                <label class="edit-tab-check"><input type="checkbox" value="kanban" checked> Công Đoạn (Kanban)</label>
+                <label class="edit-tab-check"><input type="checkbox" value="x1" checked> Công Đoạn SX — Xưởng 1</label>
+                <label class="edit-tab-check"><input type="checkbox" value="x2" checked> Công Đoạn SX — Xưởng 2</label>
                 <label class="edit-tab-check"><input type="checkbox" value="planning" checked> Kế Hoạch Sản Xuất</label>
                 <label class="edit-tab-check"><input type="checkbox" value="press" checked> Ép Ván (thẻ trong Công Đoạn)</label>
                 <label class="edit-tab-check"><input type="checkbox" value="materials" checked> Nhập Nguyên Liệu</label>
@@ -4596,7 +4853,8 @@
         <div class="form-group">
           <label>Tab Được Phép Chỉnh Sửa</label>
           <div class="edit-tabs-checks" id="user-perms-edit-tabs">
-            <label class="edit-tab-check"><input type="checkbox" value="kanban"> Công Đoạn (Kanban)</label>
+            <label class="edit-tab-check"><input type="checkbox" value="x1"> Công Đoạn SX — Xưởng 1</label>
+            <label class="edit-tab-check"><input type="checkbox" value="x2"> Công Đoạn SX — Xưởng 2</label>
             <label class="edit-tab-check"><input type="checkbox" value="planning"> Kế Hoạch Sản Xuất</label>
             <label class="edit-tab-check"><input type="checkbox" value="press"> Ép Ván (thẻ trong Công Đoạn)</label>
             <label class="edit-tab-check"><input type="checkbox" value="materials"> Nhập Nguyên Liệu</label>
@@ -5381,7 +5639,7 @@
           <select id="x2sr-m3-month" title="Chọn tháng"></select>
           <label>Sấy 1 <input type="number" id="x2sr-m3-s1" min="0.01" step="any"></label>
           <label>Sấy 2 <input type="number" id="x2sr-m3-s2" min="0.01" step="any"></label>
-          <button type="button" class="btn btn-outline btn-sm" id="btn-x2sr-m3-save" data-perm="kanban" data-admin-only title="Lưu m³/lần của tháng đã chọn (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-x2sr-m3-save" data-perm="x2" data-admin-only title="Lưu m³/lần của tháng đã chọn (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
         </div>
       </div>
     </div>
@@ -5489,7 +5747,7 @@
           <select id="x2-blg-rate-month" title="Chọn tháng"></select>
           <input type="number" id="x2-blg-rate-value" min="0" step="any" placeholder="VD: 4000" title="Công suất định mức của tháng (kg/giờ)">
           <span class="x2-rate-unit">kg/h</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-blg-rate-save" data-perm="kanban" data-admin-only title="Lưu định mức công suất bốc luồng của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-blg-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất bốc luồng của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-blg-rate-chips"></div>
         </div>
       </div>
@@ -5512,8 +5770,40 @@
           <select id="x2-rate-month" title="Chọn tháng"></select>
           <input type="number" id="x2-rate-value" min="0" step="any" placeholder="VD: 3000" title="Công suất định mức của tháng (kg/giờ)">
           <span class="x2-rate-unit">kg/h</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="kanban" data-admin-only title="Lưu định mức công suất của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ POPUP "ĐỊNH MỨC" XƯỞNG 1 — 1 popup dùng chung cho 3 CÔNG ĐOẠN
+       (Cắt Ống · Sấy Sinh · Bốc): chọn CÔNG ĐOẠN + THÁNG, đơn vị kg/h.
+       Nút mở nằm TRONG FORM nhập của từng thẻ (#btn-x1-*-rate). ═══ -->
+  <div class="modal-overlay" id="modal-x1-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Xưởng 1</h3>
+        <button class="modal-close-btn" id="btn-close-x1-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Công suất định mức của <b>từng công đoạn</b> và <b>từng tháng</b> (<b>kg/giờ</b>) —
+          nguồn tính <b>Hiệu suất</b> của thẻ ngày Xưởng 1. Chưa đặt → Hiệu suất hiện "—".
+        </p>
+        <div class="x2-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Công đoạn:</span>
+          <select id="x1-rate-kind" title="Chọn công đoạn Xưởng 1">
+            <option value="catOng">Cắt Ống</option>
+            <option value="saySinh">Sấy Sinh</option>
+            <option value="boc">Bốc</option>
+          </select>
+          <select id="x1-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x1-rate-value" min="0" step="any" placeholder="VD: 800" title="Công suất định mức của tháng (kg/giờ)">
+          <span class="x2-rate-unit">kg/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x1-rate-save" data-perm="x1" data-admin-only title="Lưu định mức của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-x1-rate-reset" data-perm="x1" data-admin-only title="Xóa định mức của tháng đã chọn"><i data-lucide="trash-2"></i> Xóa</button>
+          <div class="x2-rate-chips" id="x1-rate-chips"></div>
         </div>
       </div>
     </div>
@@ -5535,7 +5825,7 @@
           <select id="x2-ong-rate-month" title="Chọn tháng"></select>
           <input type="number" id="x2-ong-rate-value" min="0" step="any" placeholder="VD: 2500" title="Công suất định mức của tháng (kg/giờ)">
           <span class="x2-rate-unit">kg/h</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-ong-rate-save" data-perm="kanban" data-admin-only title="Lưu định mức công suất bổ ống của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-ong-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất bổ ống của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-ong-rate-chips"></div>
         </div>
       </div>
@@ -5558,7 +5848,7 @@
           <select id="x2-bt-rate-month" title="Chọn tháng"></select>
           <input type="number" id="x2-bt-rate-value" min="0" step="any" placeholder="VD: 900" title="Công suất định mức của tháng (thanh/giờ)">
           <span class="x2-rate-unit">thanh/h</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bt-rate-save" data-perm="kanban" data-admin-only title="Lưu định mức công suất bào thô của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bt-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất bào thô của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-bt-rate-chips"></div>
         </div>
       </div>
@@ -5582,7 +5872,7 @@
           <select id="x2-cn-rate-month" title="Chọn tháng"></select>
           <input type="number" id="x2-cn-rate-value" min="0" step="any" placeholder="VD: 700" title="Công suất định mức của tháng (thanh/giờ)">
           <span class="x2-rate-unit">thanh/h</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-cn-rate-save" data-perm="kanban" data-admin-only title="Lưu định mức công suất chọn nan của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-cn-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất chọn nan của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-cn-rate-chips"></div>
         </div>
       </div>
@@ -5632,7 +5922,7 @@
           <select id="x2-bl-rate-month" title="Chọn tháng"></select>
           <input type="number" id="x2-bl-rate-value" min="0" step="any" placeholder="VD: 500" title="Công suất định mức của tháng (thanh/giờ)">
           <span class="x2-rate-unit">thanh/h</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bl-rate-save" data-perm="kanban" data-admin-only title="Lưu định mức công suất của công đoạn + tháng đã chọn (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bl-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất của công đoạn + tháng đã chọn (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-bl-rate-chips"></div>
         </div>
       </div>

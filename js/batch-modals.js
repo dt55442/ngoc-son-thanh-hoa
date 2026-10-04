@@ -4,10 +4,10 @@
 import { initLucide, requireEditPermission } from './cloud.js';
 import { pushUndo } from './events.js';
 import { renderAll } from './main.js';
-import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, state } from './state.js';
+import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_CHON_NAN, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, validateBatchInput } from './utils.js';
+import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, showToast, validateBatchInput } from './utils.js';
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -84,6 +84,53 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     document.getElementById('modal-batch-form')?.classList.remove('show');
   }
 
+  // ─── ③ LÔ NÀY ĐÃ BỊ LẤY THÀNH Ở CÔNG ĐOẠN SAU? ────────────────────
+  // Quét theo ID lô trong các lượt Bào Tinh (kind 'tinh') + Gia công Bullig
+  // (kind 'gc') + PHIẾU XUẤT KHO ĐÃ DUYỆT. Bản cũ chỉ có batchId, bản mới có
+  // sources[].batchId. TỰ CHỨA — không import js/xuong2.js (tránh vòng lặp).
+  function batchHasDownstreamUse(batchId) {
+    const id = String(batchId || '');
+    if (!id) return false;
+    const hitRec = r => {
+      if (!r) return false;
+      if (Array.isArray(r.sources) && r.sources.length)
+        return r.sources.some(s => s && String(s.batchId || '') === id);
+      return String(r.batchId || '') === id;
+    };
+    if ((state.xuong2BaoTinhRecords || []).some(r => r && r.kind === 'tinh' && hitRec(r))) return true;
+    if ((state.xuong2BulligRecords || []).some(r => r && r.kind === 'gc' && hitRec(r))) return true;
+    // Phiếu xuất kho ĐÃ DUYỆT đã gắn lô này (số này đã thật sự trừ tồn kho)
+    try {
+      if ((khoApprovedXuatNotes() || []).some(n =>
+        n && Array.isArray(n.lots) && n.lots.some(l => l && String(l.batchId || '') === id))) return true;
+    } catch (err) { /* sổ kho có lỗi thì bỏ qua — không chặn người dùng sửa lô */ }
+    return false;
+  }
+
+  // ─── ② ĐỒNG BỘ NGƯỢC LOẠI NAN → THẺ CHỌN NAN THÔ ──────────────────
+  // Lô Sấy 1 tạo từ thẻ Chọn Nan Thô (batch.sourceChonNanId) vốn chép sẵn
+  // phân loại lúc tạo (handleAddLotSubmit). Đổi "Loại Nan" ở form sửa → cập
+  // nhật luôn cls trên THẺ NGUỒN (HỎI TRƯỚC vì 2 bên là bản ghi độc lập) +
+  // làm mới nhãn snapshot sourceChonNanLabel.
+  function syncSourceChonNanClass(oldBatch, newBatch) {
+    const recId = oldBatch && oldBatch.sourceChonNanId;
+    if (!recId) return;
+    const newCls = String((newBatch && newBatch.bambooType) || '').trim();
+    const oldCls = String((oldBatch.bambooType) || '').trim();
+    if (!newCls || newCls === oldCls) return;
+    const rec = (state.xuong2ChonNanThoRecords || []).find(r => r && String(r.id) === String(recId));
+    if (!rec) return;
+    if (!confirm(
+      `Lô này tạo từ thẻ Chọn Nan Thô "${nanCardLabel(rec)}".\n\n` +
+      `Cập nhật luôn PHÂN LOẠI trên THẺ NGUỒN thành "${newCls}" không?\n` +
+      'Bấm "Hủy" nếu chỉ muốn đổi Loại ở lô này (thẻ nguồn giữ nguyên).')) return;
+    rec.cls = newCls;
+    try {
+      localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || []));
+    } catch (err) { /* lỗi ghi bộ nhớ máy — không chặn thao tác sửa lô */ }
+    newBatch.sourceChonNanLabel = nanCardLabel(rec);   // làm mới nhãn snapshot
+  }
+
   function handleBatchFormSubmit(e) {
     e.preventDefault();
     // Kiểm tra dữ liệu trước khi lưu - nếu sai sẽ báo lỗi và return, không lưu
@@ -127,11 +174,24 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     }
 
     if (batchId) {
-      pushUndo(`Sửa lô ${batchData.code}`);
       const idx = state.batches.findIndex(b => b.id === batchId);
+      const old = idx !== -1 ? state.batches[idx] : null;
+      // ── ③ CẢNH BÁO: lô ĐÃ bị lấy thanh ở công đoạn sau (Bào Tinh / Gia công
+      // Bullig / phiếu xuất kho ĐÃ DUYỆT) mà đổi kích thước hoặc số lượng → dòng
+      // lịch sử đã ghi vẫn giữ snapshot lúc nhập, KHÔNG tự đổi theo.
+      if (old) {
+        const dimsChanged = Number(old.length) !== length || Number(old.width) !== width
+          || Number(old.thickness) !== thickness || Number(old.quantity) !== quantity;
+        if (dimsChanged && batchHasDownstreamUse(batchId) && !confirm(
+          `LÔ "${batchData.code}" ĐÃ QUA CÔNG ĐOẠN SAU (đã có lượt Bào Tinh / Gia công Bullig lấy thanh, hoặc phiếu xuất kho ĐÃ DUYỆT gắn lô này).\n\n` +
+          'Số DÀI / RỘNG / DÀY / SỐ LƯỢNG bạn vừa đổi chỉ áp cho lô từ nay — dòng lịch sử đã ghi vẫn giữ kích thước & số lượng tại thời điểm nhập (bản chụp), nên CÁC CÔNG ĐOẠN LIÊN QUAN SẼ KHÔNG TỰ ĐỔI THEO.\n\n' +
+          'Vẫn lưu thay đổi?')) {
+          return;   // Hủy → không lưu, không đẩy thêm 1 bước undo thừa
+        }
+      }
+      pushUndo(`Sửa lô ${batchData.code}`);
       if (idx !== -1) {
         // Giữ lịch sử công đoạn cũ nếu có
-        const old = state.batches[idx];
         batchData.stageHistory = (old.stageHistory && old.stageHistory.length > 0)
           ? old.stageHistory
           : [{ stage: old.stage, date: old.date }];
@@ -141,7 +201,14 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
           if (entries.length) entries[entries.length - 1].date = stageDateVal;
           else batchData.stageHistory.push({ stage: stageVal, date: stageDateVal });
         }
-        state.batches[idx] = batchData;
+        // ── ② ĐỒNG BỘ NGƯỢC Loại Nan về thẻ Chọn Nan Thô (hỏi xác nhận) ──
+        syncSourceChonNanClass(old, batchData);
+        // ── ① HỢP NHẤT với bản cũ: giữ nguyên mọi trường liên kết NGOÀI form
+        // (mã mẻ than hóa sayCharges · link sourceChonNanId/sourceChonNanLabel ·
+        // say2Date/khoDate của công đoạn khác …) — trước đây object mới làm
+        // MẤT sạch các trường đó ⇒ chip "Lần than hóa" biến mất và liên kết với
+        // thẻ Chọn Nan Thô bị đứt. ──
+        state.batches[idx] = Object.assign({}, old, batchData);
         showToast('Đã cập nhật thẻ nan tre thành công!', 'success');
       }
     } else {

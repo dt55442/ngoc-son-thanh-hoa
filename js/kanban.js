@@ -312,7 +312,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     // qua window.app.x2SayChargeLabel (logic ở js/xuong2.js); lô cũ không có mã
     // mẻ hoặc chưa qua sấy → không hiện chip.
     const thLabel = (typeof window !== 'undefined' && window.app && typeof window.app.x2SayChargeLabel === 'function') ? window.app.x2SayChargeLabel(batch) : '';
-    const thChip = thLabel ? `<span class="tag-badge tag-say-charge" title="Lô thuộc lần than hóa này (mã mẻ gắn lúc bấm Lưu của Thêm Lô Sấy Mới)"><i data-lucide="flame" style="width:10px;height:10px;"></i> ${escapeHTML(thLabel)}</span>` : '';
+    const thChip = thLabel ? `<span class="tag-badge tag-say-charge" title="Lần than hóa mà lô này đã qua — S1 = Sấy 1, S2 = Sấy 2 · mã mẻ gắn lúc bấm Lưu của form Thêm Lô Sấy Mới"><i data-lucide="flame" style="width:10px;height:10px;"></i> ${escapeHTML(thLabel)}</span>` : '';
 
     // Hiển thị badge ngày cho từng công đoạn đã đi qua (Bào Tinh không đếm ngày)
     const history = getBatchStageHistory(batch);

@@ -482,7 +482,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v206/.test(swJs));
+  /nha-may-ngoc-son-v208/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -935,13 +935,126 @@ check('CẤU TRÚC (js): GIỜ SỰ CỐ CHO PHÉP theo ngày có key riêng + n
   jsMain.includes('loadX2SayIncidents') && jsEvents.includes('onSayIncidentChange'));
 
 // ─── N0. CHIP "LẦN THAN HÓA" TRÊN THẺ KANBAN (chỉ đọc) ─────────────
-state.batches.push({ id: 'bx-th1', code: '260998-01', stage: 'say1', date: '2026-09-26', week: '2026-W39', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 1, bambooType: 'A', useFor: 'Ván', location: 'LS2', sayCharges: { say1: 1000 }, stageHistory: [{ stage: 'say1', date: '2026-09-26' }] }); // ngày RIÊNG (26/09) — 25/09 đã có tb-old2/tb-old3 nên nhãn sẽ là 'Lần 1/3'
+state.batches.push({ id: 'bx-th1', code: '260998-01', stage: 'say1', date: '2026-09-26', week: '2026-W39', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 1, bambooType: 'A', useFor: 'Ván', location: 'LS2', sayCharges: { say1: 1000 }, stageHistory: [{ stage: 'say1', date: '2026-09-26' }] }); // ngày RIÊNG (26/09) — không trùng nhóm nào khác
 check('CHIP KANBAN: lô có mã mẻ sayCharges → nhãn "Lần 1/1 · Sấy 1"',
   x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx-th1')) === 'Lần 1/1 · Sấy 1');
 check('CHIP KANBAN: lô cũ KHÔNG mã mẻ → không hiện nhãn (chuỗi rỗng)',
   x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx1')) === '');
+check('CHIP KANBAN: lô cũ tb-nm0 KHÔNG mã mẻ (có thật) → chuỗi rỗng',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'tb-nm0')) === '');
 check('CHIP KANBAN: main.js đưa hàm vào window.app (x2SayChargeLabel)',
   jsMain.includes('x2SayChargeLabel') && jsMain.includes('sayBatchChargeLabel'));
+// Qua CẢ Sấy 1 và Sấy 2 (có mã mẻ cả 2) → gộp 2 phần trong 1 chip
+state.batches.push({ id: 'bx-th-both', code: '260998-02', stage: 'kho', date: '2026-09-14', khoDate: '2026-09-16', say2Date: '2026-09-15', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 1, bambooType: 'A', useFor: 'Ván', location: 'LS1', sayCharges: { say1: 5000, say2: 6000 }, stageHistory: [{ stage: 'say1', date: '2026-09-14' }, { stage: 'say2', date: '2026-09-15' }, { stage: 'kho', date: '2026-09-16' }] });
+check('CHIP KANBAN: lô qua CẢ Sấy 1 + Sấy 2 → gộp "S1: Lần 1/1 · S2: Lần 1/1"',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx-th-both')) === 'S1: Lần 1/1 · S2: Lần 1/1');
+// Tạo THẲNG vào Sấy 2 (không có Sấy 1 trong lịch sử) → chỉ hiện Sấy 2
+state.batches.push({ id: 'bx-th-s2only', code: '260998-03', stage: 'say2', date: '2026-09-16', say2Date: '2026-09-16', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 1, bambooType: 'A', useFor: 'Ván', location: 'LS3', sayCharges: { say2: 7000 }, stageHistory: [{ stage: 'say2', date: '2026-09-16' }] });
+check('CHIP KANBAN: lô tạo THẲNG vào Sấy 2 → "Lần 1/1 · Sấy 2"',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx-th-s2only')) === 'Lần 1/1 · Sấy 2');
+// Có mã mẻ Sấy 1 nhưng sang Sấy 2 bằng đường KHÔNG có mã → vẫn hiện phần Sấy 1
+state.batches.push({ id: 'bx-th-s1move', code: '260998-04', stage: 'say2', date: '2026-09-17', say2Date: '2026-09-18', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 100, volume: 1, bambooType: 'A', useFor: 'Ván', location: 'LS4', sayCharges: { say1: 8000 }, stageHistory: [{ stage: 'say1', date: '2026-09-17' }, { stage: 'say2', date: '2026-09-18' }] });
+check('CHIP KANBAN: có mã mẻ Sấy 1, sang Sấy 2 không mã → vẫn "Lần 1/1 · Sấy 1"',
+  x2.sayBatchChargeLabel(state.batches.find(b => b.id === 'bx-th-s1move')) === 'Lần 1/1 · Sấy 1');
+check('CẤU TRÚC (styles.css): chip .tag-say-charge có style riêng (nền/viền/màu)',
+  cssHtml.includes('.tag-say-charge'));
+
+// ─── N1. LIÊN KẾT 2 CHIỀU GIỮA THẺ NAN CÁC CÔNG ĐOẠN ───────────────
+console.log('--- N1. LIÊN KẾT SỬA THẺ NAN (giữ link · đồng bộ Loại · cảnh báo kích thước) ---');
+const jsBM = fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8');
+// Điền form Sửa thẻ theo đúng cách openBatchFormModal làm (ngày công đoạn
+// hiện tại được prefill, công đoạn khác để trống).
+function fillBatchForm(b) {
+  document.getElementById('form-batch-id').value    = b.id;
+  document.getElementById('form-code').value        = b.code;
+  document.getElementById('form-stage').value       = b.stage;
+  document.getElementById('form-date').value        = b.date;
+  document.getElementById('form-week').value        = b.week || '2026-W40';
+  document.getElementById('form-length').value      = b.length;
+  document.getElementById('form-width').value       = b.width;
+  document.getElementById('form-thickness').value   = b.thickness;
+  document.getElementById('form-quantity').value    = b.quantity;
+  document.getElementById('form-bamboo-type').value = b.bambooType;
+  document.getElementById('form-use-for').value     = b.useFor;
+  document.getElementById('form-location').value    = b.location;
+  document.getElementById('form-notes').value       = b.notes || '';
+  document.getElementById('form-say2-date').value   = b.stage === 'say2' ? (b.say2Date || '') : '';
+  document.getElementById('form-kho-date').value    = b.stage === 'kho'  ? (b.khoDate  || '') : '';
+}
+// Lô ĐẦY ĐỦ liên kết: mã mẻ than hóa + link thẻ Chọn Nan Thô + mốc Sấy 2/Kho
+state.batches.push({
+  id: 'bx-link1', code: '260997-01', stage: 'kho', date: '2026-09-19',
+  say2Date: '2026-09-19', khoDate: '2026-09-20', week: '2026-W38',
+  length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.5,
+  bambooType: 'A', useFor: 'Ván', location: 'LS7',
+  sayCharges: { say1: 111111, say2: 222222 },
+  sourceChonNanId: 'cn-link-src', sourceChonNanLabel: '1250×18×7 · A · 500',
+  stageHistory: [{ stage: 'say1', date: '2026-09-18' }, { stage: 'say2', date: '2026-09-19' }, { stage: 'kho', date: '2026-09-20' }]
+});
+state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords || [];
+state.xuong2ChonNanThoRecords.push({ id: 'cn-link-src', cls: 'A', dims: [1250, 18, 7], quantity: 500, external: false });
+
+// ① Sửa chỉ GHI CHÚ → PHẢI giữ nguyên mã mẻ + link thẻ nan + mốc ngày công đoạn khác
+fillBatchForm(state.batches.find(b => b.id === 'bx-link1'));
+document.getElementById('form-notes').value = 'sửa ghi chú';
+bm.handleBatchFormSubmit({ preventDefault() {} });
+const L1 = state.batches.find(b => b.id === 'bx-link1');
+check('① SỬA THẺ: giữ nguyên MÃ MẺ sayCharges (chip "Lần than hóa" không biến mất)',
+  !!L1 && !!L1.sayCharges && L1.sayCharges.say1 === 111111 && L1.sayCharges.say2 === 222222);
+check('① SỬA THẺ: giữ nguyên LINK thẻ Chọn Nan Thô (sourceChonNanId + Label)',
+  !!L1 && L1.sourceChonNanId === 'cn-link-src' && L1.sourceChonNanLabel === '1250×18×7 · A · 500');
+check('① SỬA THẺ: giữ nguyên say2Date (CÔNG ĐOẠN KHÁC không mất mốc ngày)',
+  !!L1 && L1.say2Date === '2026-09-19');
+check('① SỬA THẺ: ghi chú đổi thật · stageHistory 3 mốc · vị trí giữ',
+  !!L1 && L1.notes === 'sửa ghi chú' && L1.stageHistory.length === 3 && L1.location === 'LS7');
+
+// ② Đổi LOẠI NAN A → A1 → đồng bộ ngược phân loại lên thẻ Chọn Nan Thô
+fillBatchForm(state.batches.find(b => b.id === 'bx-link1'));
+document.getElementById('form-bamboo-type').value = 'A1';
+bm.handleBatchFormSubmit({ preventDefault() {} });
+const L2 = state.batches.find(b => b.id === 'bx-link1');
+const rec2 = (state.xuong2ChonNanThoRecords || []).find(r => r.id === 'cn-link-src');
+check('② ĐỔI LOẠI: lô đổi sang A1 + VẪN giữ mã mẻ sayCharges',
+  !!L2 && L2.bambooType === 'A1' && !!L2.sayCharges && L2.sayCharges.say1 === 111111);
+check('② ĐỔI LOẠI: PHÂN LOẠI trên THẺ NGUỒN Chọn Nan Thô đổi theo (A → A1)',
+  !!rec2 && rec2.cls === 'A1');
+check('② ĐỔI LOẠI: đã ghi thẻ nguồn xuống bộ nhớ máy',
+  JSON.parse(localStorage.getItem('bamboo_tracker_xuong2_chon_nan_tho_v1') || '[]')
+    .some(r => r.id === 'cn-link-src' && r.cls === 'A1'));
+check('② ĐỔI LOẠI: làm mới nhãn snapshot sourceChonNanLabel (chứa A1)',
+  !!L2 && String(L2.sourceChonNanLabel).includes('A1'));
+
+// ③ Lô ĐÃ bị Bào Tinh lấy thanh → sửa SỐ LƯỢNG phải HỎI; hủy = không lưu
+state.xuong2BaoTinhRecords = state.xuong2BaoTinhRecords || [];
+state.xuong2BaoTinhRecords.push({
+  id: 'bt-link1', kind: 'tinh', date: '2026-09-20', week: '2026-W38',
+  inSizeKey: '1250×18×7', inDims: [1250, 18, 7], inQty: 300,
+  outSizeKey: '1240×17×7', outDims: [1240, 17, 7],
+  qtyOk: 280, qtyErr: 20, volumeOk: 0.5,
+  sources: [{ batchId: 'bx-link1', qty: 300 }]
+});
+fillBatchForm(state.batches.find(b => b.id === 'bx-link1'));
+document.getElementById('form-quantity').value = 9999;
+const undoN1Before = state.undoStack.length;
+global.confirm = () => false;   // người dùng BẤM HỦY
+bm.handleBatchFormSubmit({ preventDefault() {} });
+global.confirm = () => true;    // trả lại mặc định của stub
+const L3 = state.batches.find(b => b.id === 'bx-link1');
+check('③ CẢNH BÁO: lô ĐÃ qua Bào Tinh, sửa số lượng + HỦY → KHÔNG lưu (còn 500)',
+  !!L3 && Number(L3.quantity) === 500);
+check('③ CẢNH BÁO: HỦY không đẩy thêm bước undo thừa',
+  state.undoStack.length === undoN1Before);
+// ĐỒNG Ý → lưu bình thường + vẫn giữ liên kết
+fillBatchForm(state.batches.find(b => b.id === 'bx-link1'));
+document.getElementById('form-quantity').value = 9999;
+bm.handleBatchFormSubmit({ preventDefault() {} });
+const L4 = state.batches.find(b => b.id === 'bx-link1');
+check('③ CẢNH BÁO: ĐỒNG Ý → lưu được 9.999 + VẪN giữ liên kết sayCharges/sourceChonNanId',
+  !!L4 && Number(L4.quantity) === 9999 && L4.sourceChonNanId === 'cn-link-src'
+    && !!L4.sayCharges && L4.sayCharges.say2 === 222222);
+check('③ CẤU TRÚC (js): helper nhận diện công đoạn sau + đồng bộ Loại + hợp nhất bản cũ',
+  jsBM.includes('function batchHasDownstreamUse') && jsBM.includes('khoApprovedXuatNotes') &&
+  jsBM.includes('function syncSourceChonNanClass') && jsBM.includes('Object.assign({}, old, batchData)'));
 
 // ─── N. XÓA NHIỀU LÔ (ADMIN — chế độ tích chọn trên Kanban) ────────
 console.log('--- N. XÓA NHIỀU LÔ (ADMIN) ---');

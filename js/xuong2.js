@@ -723,20 +723,34 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   // NHÃN "LẦN THAN HÓA" trên thẻ Kanban (CHỈ ĐỌC — chỉnh số lần vẫn ở ô "Số lần
-  // TH" của dòng nhóm): lần vào công đoạn SẤY GẦN NHẤT của lô, tính theo mã mẻ
-  // sayCharges; lô cũ không mã mẻ hoặc chưa qua sấy → chuỗi rỗng (không hiện chip).
+  // TH" của dòng nhóm): tính theo mã mẻ sayCharges cho TỪNG công đoạn sấy mà lô
+  // đã qua, dùng chung nguồn số sayBuildCharges với bảng thống kê nên luôn khớp:
+  //   • Chỉ qua 1 công đoạn → "Lần N/M · Sấy 1" (hoặc "… · Sấy 2") — giữ nguyên
+  //     định dạng cũ;
+  //   • Qua CẢ Sấy 1 và Sấy 2 → gộp "S1: Lần a/b · S2: Lần c/d";
+  //   • Lô cũ không mã mẻ / chưa qua sấy nào → chuỗi rỗng (không hiện chip).
+  // Lô có mã mẻ Sấy 1 nhưng sang Sấy 2 bằng đường không có mã vẫn hiện phần
+  // Sấy 1 (hồi trước chỉ xét công đoạn gần nhất nên bị bỏ trống).
   function sayBatchChargeLabel(b) {
     if (!b) return '';
-    const stage = batchPassedStage(b, 'say2') ? 'say2' : (batchPassedStage(b, 'say1') ? 'say1' : '');
-    if (!stage) return '';
-    const dateVal = stage === 'say2' ? say2EntryDateOf(b) : String(b.date || '').trim();
-    if (!dateVal) return '';
-    if (!sayChargeIdOf(b, stage)) return '';
-    const charges = sayBuildCharges(dateVal, stage, sayM3PerCharge(dateVal, stage));
     const id = String(b.id || '');
-    const idx = charges.findIndex(c => (c.lots || []).some(l => l.id === id));
-    if (idx < 0) return '';
-    return `Lần ${idx + 1}/${charges.length} · ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}`;
+    const parts = [];
+    ['say1', 'say2'].forEach(stage => {
+      if (!batchPassedStage(b, stage)) return;   // chưa qua công đoạn này
+      if (!sayChargeIdOf(b, stage)) return;       // không có mã mẻ → bỏ qua
+      const dateVal = stage === 'say2' ? say2EntryDateOf(b) : String(b.date || '').trim();
+      if (!dateVal) return;
+      const charges = sayBuildCharges(dateVal, stage, sayM3PerCharge(dateVal, stage));
+      const idx = charges.findIndex(c => (c.lots || []).some(l => l.id === id));
+      if (idx < 0) return;
+      parts.push({ stage, text: `Lần ${idx + 1}/${charges.length}` });
+    });
+    if (!parts.length) return '';
+    if (parts.length === 1) {
+      const p = parts[0];
+      return `${p.text} · ${p.stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}`;
+    }
+    return parts.map(p => `${p.stage === 'say2' ? 'S2' : 'S1'}: ${p.text}`).join(' · ');
   }
 
   // Bảng thống kê than hóa: mỗi NGÀY 1 dòng đầu → mỗi NHÓM công đoạn 1 dòng

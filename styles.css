@@ -1192,6 +1192,21 @@ h1, h2, h3, h4, h5 {
   gap: 4px;
 }
 
+/* Chip "LẦN THAN HÓA" trên thẻ lô Kanban (CHỈ ĐỌC — sinh từ
+   sayBatchChargeLabel js/xuong2.js). Tông cam hổ phách như lửa/than,
+   khác hẳn chip Loại / Dùng cho / Vị trí cùng hàng. */
+.tag-say-charge {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tag-say-charge svg { width: 10px; height: 10px; }
+
 .card-notes {
   font-size: 0.78rem;
   color: var(--text-muted);

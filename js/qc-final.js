@@ -28,7 +28,7 @@
 // SNAPSHOT cùng lượt phòng khi bố trí bị xóa.
 // Dữ liệu: state.qcFinalRecords + state.qcFinalRates — localStorage + file + mây.
 // ═══════════════════════════════════════════════════════════
-import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
 import { logDataChange } from './history.js';
 import { hrSplitHoursHCDate } from './hr.js';
 import { rateUnit } from './planning.js';
@@ -804,6 +804,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     return [...months].filter(m => /^\d{4}-\d{2}$/.test(m)).sort((a, b) => b.localeCompare(a));
   }
   function openQcFinalRateModal() {
+    if (!requireRatePermission()) return; // CHỈ admin mở bảng định mức
     const modal = document.getElementById('modal-qcf-rate');
     if (!modal) return;
     renderQcFinalRateModal();
@@ -831,8 +832,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
         <td><strong>Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</strong></td>
         ${cell(m, 'thanh')}${cell(m, 'van')}
         <td class="text-right">
-          <button type="button" class="btn btn-outline btn-icon btn-sm" data-qcf-rate-save="${m}" title="Lưu định mức tháng này"><i data-lucide="save"></i></button>
-          <button type="button" class="btn btn-outline btn-icon btn-sm" style="color:var(--danger);" data-qcf-rate-reset="${m}" title="Xóa định mức tháng này"><i data-lucide="trash-2"></i></button>
+          <button type="button" class="btn btn-outline btn-icon btn-sm" data-qcf-rate-save="${m}" data-admin-only title="Lưu định mức tháng này"><i data-lucide="save"></i></button>
+          <button type="button" class="btn btn-outline btn-icon btn-sm" style="color:var(--danger);" data-qcf-rate-reset="${m}" data-admin-only title="Xóa định mức tháng này"><i data-lucide="trash-2"></i></button>
         </td>
       </tr>`;
     }).join('');
@@ -840,7 +841,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
   // Lưu 1 HÀNG (1 tháng): 2 ô Thanh/h · Ván/h — trống = chưa đặt loại đó
   function handleQcFinalRateRowSave(month) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const m = String(month || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Tháng không hợp lệ!', 'error'); return; }
     const readVal = id => {
@@ -862,7 +863,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
   // Xóa định mức của 1 tháng
   function handleQcFinalRateRowReset(month) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const m = String(month || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) return;
     if (!(m in (state.qcFinalRates || {}))) return;
@@ -877,6 +878,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
   }
   // Thêm 1 tháng mới vào bảng (hàng trống để điền — lưu mới ghi vào state)
   function handleQcFinalRateAddMonth() {
+    if (!requireRatePermission()) return; // CHỈ admin thêm tháng định mức
     const el = document.getElementById('qcf-rate-new-month');
     const m = String((el && el.value) || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Chưa chọn tháng để thêm!', 'error'); return; }

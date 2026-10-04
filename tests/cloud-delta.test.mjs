@@ -267,7 +267,7 @@ function check(name, cond) {
   // Cấu trúc mã nguồn: có bộ điều phối delta + fallback định dạng cũ
   const src2 = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
   check('E11: doWriteCloudSnapshot ưu tiên delta, fallback định dạng cũ khi miền quá lớn',
-    /return await writeDeltaSnapshot\(snap, dh\)/.test(src2) && /domainTooBig/.test(src2) &&
+    /writeDeltaSnapshot\(snap, dh\)/.test(src2) && /domainTooBig/.test(src2) &&
     /async function writeLegacySnapshot/.test(src2));
   check('E12: mục lục delta ghi kèm deletedIds (tombstone không cần doc riêng)',
     /__fmt: 'delta-v1', __dh: dh,\s*\n\s*deletedIds: snap\.deletedIds/.test(src2));

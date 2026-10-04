@@ -22,7 +22,7 @@
 // Ống"); định mức công suất bổ ống theo tháng (kg/h) → Hiệu suất.
 // Dữ liệu: state.xuong2BoOngRecords + state.x2BoOngRates.
 // ═══════════════════════════════════════════════════════════
-import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
 import { logDataChange } from './history.js';
 import { canApproveLeave, hrSplitHoursHCDate } from './hr.js';
@@ -349,6 +349,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // ── POPUP "ĐỊNH MỨC" — bảng theo THÁNG, 4 cột phút/lần riêng Ván/Bullig ──
   // (Sấy 1 · Ván / Sấy 1 · Bullig / Sấy 2 · Ván / Sấy 2 · Bullig; ô trống = mặc định)
   function openX2SayRateModal() {
+    if (!requireRatePermission()) return; // CHỈ admin mở bảng định mức
     const modal = document.getElementById('modal-x2-say-rate');
     if (!modal) return;
     renderX2SayRateModal();
@@ -378,7 +379,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
   // Lưu 1 HÀNG (1 tháng): 4 ô phút/lần — trống = dùng mặc định của loại đó
   function handleX2SayRateRowSave(month) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const m = String(month || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Tháng không hợp lệ!', 'error'); return; }
     const inp = sayRateRowInputs(m);
@@ -411,7 +412,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
   // Khôi phục MẶC ĐỊNH cho 1 tháng (xóa khai báo của tháng đó)
   function handleX2SayRateRowReset(month) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const m = String(month || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) return;
     const has = !!(((state.x2SayRates || {}).s1 || {})[m] || ((state.x2SayRates || {}).s2 || {})[m]);
@@ -427,6 +428,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
   // Thêm 1 tháng mới vào bảng (tạo entry với giá trị mặc định để điền)
   function handleX2SayRateAddMonth() {
+    if (!requireRatePermission()) return; // CHỈ admin được thêm tháng định mức
     const el = document.getElementById('x2sr-new-month');
     const m = String((el && el.value) || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Chưa chọn tháng để thêm!', 'error'); return; }
@@ -445,7 +447,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // Dòng "m³/lần (lô cũ)" — m³ là số CHUNG của công đoạn (không phân loại): chỉ
   // dùng để tự gộp các LÔ CŨ (trước 28/09/2026, không có mã mẻ) thành lần.
   function handleX2SayRateM3Save() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2sr-m3-month');
     const m = String((monthEl && monthEl.value) || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Chưa chọn tháng cho m³/lần!', 'error'); return; }
@@ -512,8 +514,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         ${cell(m, 's2', 'van')}
         ${cell(m, 's2', 'bullig')}
         <td class="x2sr-act">
-          <button type="button" class="btn btn-primary btn-sm" data-x2sr-save="${escapeHTML(m)}" title="Lưu 4 ô phút/lần của tháng này"><i data-lucide="save"></i></button>
-          <button type="button" class="btn btn-outline btn-sm" data-x2sr-reset="${escapeHTML(m)}" title="Khôi phục mặc định (xóa khai báo tháng này)"${custom ? '' : ' disabled'}><i data-lucide="rotate-ccw"></i></button>
+          <button type="button" class="btn btn-primary btn-sm" data-x2sr-save="${escapeHTML(m)}" data-admin-only title="Lưu 4 ô phút/lần của tháng này"><i data-lucide="save"></i></button>
+          <button type="button" class="btn btn-outline btn-sm" data-x2sr-reset="${escapeHTML(m)}" data-admin-only title="Khôi phục mặc định (xóa khai báo tháng này)"${custom ? '' : ' disabled'}><i data-lucide="rotate-ccw"></i></button>
         </td>
       </tr>`;
     }).join('');
@@ -1224,7 +1226,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
 
   // Lưu định mức 1 tháng (từ thanh điền nhanh trên bảng)
   function handleX2CapRateSave() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2-rate-month');
     const valEl = document.getElementById('x2-rate-value');
     const month = String((monthEl && monthEl.value) || '').trim();
@@ -2412,7 +2414,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
 
   // Lưu định mức 1 tháng (từ popup "Định mức" trên form nhập)
   function handleX2BoluongRateSave() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2-blg-rate-month');
     const valEl = document.getElementById('x2-blg-rate-value');
     const month = String((monthEl && monthEl.value) || '').trim();
@@ -2545,7 +2547,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
 
   // Lưu định mức 1 tháng (từ thanh định mức trên bảng Bổ Ống)
   function handleX2BoOngRateSave() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2-ong-rate-month');
     const valEl = document.getElementById('x2-ong-rate-value');
     const month = String((monthEl && monthEl.value) || '').trim();
@@ -3203,6 +3205,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'btn-x2-bl-rate': 'modal-x2-bl-rate'
   };
   function openX2RatePopup(popupId) {
+    if (!requireRatePermission()) return false; // CHỈ admin mở bảng định mức
     const m = document.getElementById(popupId);
     if (!m) return false;
     m.classList.add('show');
@@ -3254,7 +3257,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   function handleX2BaoThoRateSave() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2-bt-rate-month');
     const valEl = document.getElementById('x2-bt-rate-value');
     const month = String((monthEl && monthEl.value) || '').trim();
@@ -3906,7 +3909,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   function handleX2ChonNanRateSave() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2-cn-rate-month');
     const valEl = document.getElementById('x2-cn-rate-value');
     const month = String((monthEl && monthEl.value) || '').trim();
@@ -4759,7 +4762,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   function handleX2BulligRateSave() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2-bl-rate-month');
     const valEl = document.getElementById('x2-bl-rate-value');
     const kindSel = document.getElementById('x2-bl-rate-kind');
@@ -6102,6 +6105,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     return [...months].filter(m => /^\d{4}-\d{2}$/.test(m)).sort((a, b) => b.localeCompare(a));
   }
   function openX2BaoTinhRateModal() {
+    if (!requireRatePermission()) return; // CHỈ admin mở bảng định mức
     const m = document.getElementById('modal-x2-btinh-rate');
     if (!m) return;
     renderX2BaoTinhRateModal();
@@ -6131,8 +6135,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         <td><strong>Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</strong></td>
         ${cell(m, 'tinh')}${cell(m, 'ha_cap')}${cell(m, 'bao_thanh')}
         <td class="text-right">
-          <button type="button" class="btn btn-outline btn-icon btn-sm" data-x2-btinh-rate-save="${escapeHTML(m)}" title="Lưu định mức tháng này"><i data-lucide="save"></i></button>
-          <button type="button" class="btn btn-outline btn-icon btn-sm" style="color:var(--danger);" data-x2-btinh-rate-reset="${escapeHTML(m)}" title="Xóa định mức tháng này"><i data-lucide="trash-2"></i></button>
+          <button type="button" class="btn btn-outline btn-icon btn-sm" data-x2-btinh-rate-save="${escapeHTML(m)}" data-admin-only title="Lưu định mức tháng này"><i data-lucide="save"></i></button>
+          <button type="button" class="btn btn-outline btn-icon btn-sm" style="color:var(--danger);" data-x2-btinh-rate-reset="${escapeHTML(m)}" data-admin-only title="Xóa định mức tháng này"><i data-lucide="trash-2"></i></button>
         </td>
       </tr>`;
     }).join('') : '<tr><td colspan="5"><em style="color:var(--text-muted);">Chưa có tháng nào — dùng ô "Thêm tháng" bên dưới.</em></td></tr>';
@@ -6140,7 +6144,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
   // Lưu 1 HÀNG (1 tháng): 3 ô thanh/giờ — trống = chưa đặt LOẠI đó
   function handleX2BaoTinhRateRowSave(month) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const m = String(month || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Tháng không hợp lệ!', 'error'); return; }
     const readVal = id => {
@@ -6163,7 +6167,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     showToast(`Đã lưu định mức 3 loại cho tháng ${Number(m.slice(5))}/${m.slice(0, 4)}!`, 'success');
   }
   function handleX2BaoTinhRateRowReset(month) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const m = String(month || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) return;
     delete (state.x2BaoTinhRates || {})[m];
@@ -6173,7 +6177,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     showToast(`Đã xóa định mức tháng ${Number(m.slice(5))}/${m.slice(0, 4)}`, 'info');
   }
   function handleX2BaoTinhRateAddMonth() {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const inM = document.getElementById('x2-btinh-rate-new-month');
     const m = String((inM && inM.value) || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Chọn tháng cần thêm!', 'error'); return; }

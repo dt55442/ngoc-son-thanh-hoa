@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // js/press.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
@@ -715,6 +715,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     }
   }
   function handleX2EpVanRateSave() {
+    if (!requireRatePermission()) return; // CHỈ admin cập nhật định mức Ép Ván
     const sel = document.getElementById('x2-epv-rate-month');
     const inp = document.getElementById('x2-epv-rate-value');
     if (!sel || !inp) return;

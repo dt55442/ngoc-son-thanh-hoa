@@ -4,7 +4,7 @@
 import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
-import { canEditAnything, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
+import { canEditAnything, canEditRate, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
 import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
@@ -306,6 +306,52 @@ import { showToast } from './utils.js';
     }).catch(() => { fbShardCleanupCount = -1; });
   }
 
+  // ─── TƯỜNG LƯA ĐỊNH MỨC KHI ĐẨY (CHỈ ADMIN GHI ĐỊNH MỨC LÊN MÂY) ─────
+  // Máy khác có thể còn SỐ ĐỊNH MỨC CŨ trong localStorage; nếu cứ đẩy thế nào
+  // thì chúng sẽ đè số của admin. Trước khi ghi, thay các miền định mức trong
+  // payload bằng bản ĐANG CÓ trên mây (đọc trực tiếp) → máy không có quyền
+  // sửa định mức không bao giờ làm đổi miền này.
+  //   · mây đang ở delta → đọc doc từng miền (chỉ miền khác băm cục bộ)
+  //   · mây đang ở 1-doc cũ → lấy fbLastRemote (đã đọc lúc vào trang)
+  //   · mây trống → bỏ hẳn miền định mức (không seed mây bằng số cũ)
+  // Lỗi mạng khi đọc → NÉN RA (lần đẩy sau thử lại) thay vì ghi mục lục sai.
+  // Trả về { snap, hashes } — hashes = băm bản mây của các miền đã thay để
+  // gắn vào mục lục __dh (mục lục phải nói ĐÚNG dữ liệu thật trên mây).
+  async function shieldRateDomainsForPush(snap) {
+    const out = Object.assign({}, snap);
+    const hashes = {};
+    const need = [];
+    for (const k of RATE_DOMAINS) {
+      if (!(k in out)) continue;
+      // mây đã có đúng bản này (theo băm mục lục gần nhất) → không cần đụng
+      if (fbRemoteDomainHashes && fbRemoteDomainHashes[k] === hashStr(JSON.stringify(out[k]))) continue;
+      need.push(k);
+    }
+    if (!need.length) return { snap: out, hashes };
+    if (fbRemoteIsDelta) {
+      // Đọc doc từng miền (undefined = mây chưa có → bỏ khỏi payload)
+      const vals = await Promise.all(need.map(k => readDomainDoc(k)));
+      need.forEach((k, i) => {
+        if (vals[i] !== undefined) {
+          out[k] = vals[i];
+          hashes[k] = hashStr(JSON.stringify(vals[i]));
+        } else delete out[k];
+      });
+      return { snap: out, hashes };
+    }
+    // ĐỊNH DẠNG 1-DOC CŨ
+    if (!fbRemoteDocExists) { need.forEach(k => delete out[k]); return { snap: out, hashes }; } // mây trống
+    const full = fbLastRemote || await readFullCloudObject();
+    if (!full) return { snap: out, hashes }; // chưa đọc được → giữ nguyên, lần đẩy sau làm lại
+    need.forEach((k) => {
+      if (full[k] !== undefined) {
+        out[k] = full[k];
+        hashes[k] = hashStr(JSON.stringify(full[k]));
+      } else delete out[k];
+    });
+    return { snap: out, hashes };
+  }
+
   // ĐẨY dữ liệu lên mây (tự chọn định dạng: trơn / gzip / shard). Trả về { mode, ... }.
   // Khi shard: ghi các MẢNH trước (epoch mới) → mục lục apps/main SAU CÙNG. Nếu
   // ghi dở giữa chừng, mục lục vẫn trỏ dữ liệu cũ nguyên vẹn → không mất dữ liệu mây.
@@ -316,8 +362,21 @@ import { showToast } from './utils.js';
     return p;
   }
   async function doWriteCloudSnapshot() {
-    const snap = collectCloudPayload(); // ĐẨY bản GỠ ảnh base64 (674KB thumb ở lại máy)
+    let snap = collectCloudPayload(); // ĐẨY bản GỠ ảnh base64 (674KB thumb ở lại máy)
+    let shieldedHashes = null;
+    if (!canEditRate()) { // không có quyền sửa định mức → không được ghi miền định mức
+      const r = await shieldRateDomainsForPush(snap);
+      snap = r.snap;
+      if (Object.keys(r.hashes).length) shieldedHashes = r.hashes;
+    }
     const dh = domainHashes(snap);
+    if (shieldedHashes) Object.assign(dh, shieldedHashes); // mục lục nói đúng bản mây đang có
+    const done = (res) => {
+      // Máy bị "che" định mức: băm cục bộ phải tính lại từ dữ liệu THẬT của máy
+      // (miền trong dh là băm MÂY) — nếu không lần so sánh sau sẽ so nhầm.
+      if (shieldedHashes) fbLocalHashes = null;
+      return res;
+    };
     // Nếu từng có miền quá lớn cho 1 doc: chỉ thử delta khi miền đó đã nhỏ lại
     const stillOversize = Object.keys(fbOversizeDomains).some((k) => {
       if (!fbOversizeDomains[k]) return false;
@@ -325,13 +384,13 @@ import { showToast } from './utils.js';
       if (raw <= CLOUD_DOMAIN_PLAIN_LIMIT) { delete fbOversizeDomains[k]; return false; }
       return true;
     });
-    if (stillOversize) return await writeLegacySnapshot(snap, dh);
+    if (stillOversize) return done(await writeLegacySnapshot(snap, dh));
     // Ưu tiên ĐỊNH DẠNG DELTA (giai đoạn 2): chỉ ghi doc của miền ĐỔI
     try {
-      return await writeDeltaSnapshot(snap, dh);
+      return done(await writeDeltaSnapshot(snap, dh));
     } catch (e) {
       if (!e || !e.domainTooBig) throw e;
-      return await writeLegacySnapshot(snap, dh); // có miền quá lớn → dùng định dạng cũ
+      return done(await writeLegacySnapshot(snap, dh)); // có miền quá lớn → dùng định dạng cũ
     }
   }
 
@@ -573,6 +632,15 @@ import { showToast } from './utils.js';
     showToast(`Bạn không có quyền chỉnh sửa ở tab ${getTabDef(tabId)?.short || tabId}.`, 'error');
     return false;
   }
+  // ─── CỔNG QUYỀN ĐỊNH MỨC — CHỈ QUẢN TRỊ (ADMIN) ────────────────────
+  // Khác với requireEditPermission (theo TAB): định mức quyết định Hiệu suất
+  // của mọi máy → chỉ admin mới được cập nhật, dù người dùng có được cấp tab
+  // Công Đoạn / Kế Hoạch / QC. Chính sách nằm ở permissions.canEditRate().
+  function requireRatePermission() {
+    if (canEditRate()) return true;
+    showToast('Chỉ Quản Trị mới được cập nhật định mức.', 'error');
+    return false;
+  }
 
   // Hiển thị app; nếu đã đăng nhập thì cập nhật hồ sơ. Không ép đăng nhập (xem công khai)
   function checkAuthAndRenderFirebase() {
@@ -808,6 +876,68 @@ import { showToast } from './utils.js';
     for (const k of Object.keys(src)) if (!(k in out)) out[k] = src[k];
     return out;
   }
+  // Gộp dict MÂY THẮNG từng khóa (giữ thêm khóa chỉ máy này có) — dùng khi
+  // NHẬN dữ liệu mây cho các miền ĐỊNH MỨC/GIỜ SỰ CỐ. Bản cũ của mergeKeyedDict
+  // "máy thắng" khiến số định mức máy khác không bao giờ được cập nhật.
+  function mergeDictRemoteWins(localObj, remoteObj) {
+    const out = Object.assign({}, (localObj && typeof localObj === 'object') ? localObj : {});
+    const src = (remoteObj && typeof remoteObj === 'object') ? remoteObj : {};
+    for (const k of Object.keys(src)) out[k] = src[k];
+    return out;
+  }
+  // Danh sách MIỀN ĐỊNH MỨC — CHỈ người có quyền sửa định mức mới được GHI
+  // các miền này lên mây (tường lửa: máy khác có số cũ trong localStorage sẽ
+  // không thể đè số của admin — xem shieldRateDomainsForPush).
+  const RATE_DOMAINS = new Set([
+    'materialRates',      // Định Mức Nguyên Vật Liệu (tab Kế Hoạch)
+    'qcFinalRates',       // Định mức Kiểm Sau Sản Xuất (tab QC)
+    'x2CapRates',         // Cắt Chọn (kg/h)
+    'x2BoluongRates',     // Bốc Luồng (kg/h)
+    'x2BoOngRates',       // Bổ Ống (kg/h)
+    'x2BaoThoRates',      // Chạy Máy Bào Thô (thanh/h)
+    'x2ChonNanRates',     // Chọn Nan Thô (thanh/h)
+    'x2BaoTinhRates',     // Bào Tinh / Hạ cấp / Bào thanh (thanh/h)
+    'x2BulligRates',      // Bullig Gia công + Chọn thanh (thanh/h)
+    'x2SayRates',         // Thời gian 1 lần than hóa (phút/m³)
+    'x2EpVanRates'        // Ép Ván (m³/h)
+  ]);
+
+  // ─── CỜ "CÓ THAY ĐỔI CỤC BỘ CHƯA LÊN MÂY" (lưu xuống máy) ───────────
+  // Khi NHẬN mây mà cờ này BẬT → máy đang giữ bản mình VỪA SỬA chưa kịp đẩy
+  // (sửa khi offline, đang chờ debounce) → GIỮ giá trị máy, đừng để mây cuốn
+  // mất. Cờ được LƯU localStorage nên TẢI LẠI TRANG vẫn nhớ. Chỉ đặt khi
+  // người dùng CÓ QUYỀN đẩy — máy chỉ-xem không bao giờ đặt → luôn nhận định
+  // mức mới từ mây (đúng vai trò máy xem).
+  const PENDING_LOCAL_KEY = 'bamboo_tracker_cloud_pending_v1';
+  let fbPendingLocal = null;
+  function pendingLocalChanges() {
+    if (fbPendingLocal === null) {
+      try { fbPendingLocal = localStorage.getItem(PENDING_LOCAL_KEY) === '1'; }
+      catch (e) { fbPendingLocal = false; }
+    }
+    return fbPendingLocal;
+  }
+  function markPendingLocal() {
+    fbPendingLocal = true;
+    try { localStorage.setItem(PENDING_LOCAL_KEY, '1'); } catch (e) { /* bộ nhớ đầy — bỏ qua */ }
+  }
+  function clearPendingLocal() {
+    fbPendingLocal = false;
+    try { localStorage.removeItem(PENDING_LOCAL_KEY); } catch (e) { /* bỏ qua */ }
+  }
+  // Gộp 2 danh sách CHUỖI (vị trí sấy, cỡ đầu ra bào thanh…) — không mất cái
+  // nào của 2 phía, bỏ trùng theo chữ thường.
+  function unionNamedList(localArr, remoteArr) {
+    const out = (Array.isArray(localArr) ? localArr : []).slice();
+    const seen = new Set(out.map(v => String(v || '').trim().toLowerCase()));
+    (Array.isArray(remoteArr) ? remoteArr : []).forEach(v => {
+      const name = String(v || '').trim();
+      if (!name || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      out.push(name);
+    });
+    return out;
+  }
   // Gộp kế hoạch nguyên liệu ({ '2026-W36': { 'lo-hoi': x, ... } }): tuần chỉ có ở
   // một phía -> giữ lại; trùng tuần -> gộp theo TỪNG vị trí (máy thiếu vị trí nào
   // thì nhận vị trí đó từ mây, không ghi đè vị trí máy đã nhập).
@@ -835,10 +965,21 @@ import { showToast } from './utils.js';
     return out;
   }
   // Gộp bản snapshot mây vào state máy. onlyAddMissing=true: chỉ bổ sung bản ghi máy thiếu.
-  // Trả về true nếu có thay đổi (đã tự lưu localStorage + render lại).
-  function mergeRemoteIntoLocal(remote, onlyAddMissing) {
+  // cloudDictWins=true (dùng khi NHẬN mây): các miền ĐỊNH MỨC/giờ sự cố lấy theo
+  // mây — nhưng NẾU máy này đang có thay đổi chưa đẩy (pendingLocalChanges) thì vẫn
+  // giữ máy. Trả về true nếu có thay đổi (đã tự lưu localStorage + render lại).
+  function mergeRemoteIntoLocal(remote, onlyAddMissing, cloudDictWins) {
     if (!remote || typeof remote !== 'object') return false;
     const before = cloudCore(collectCloudSnapshot());
+    // Cách gộp dict theo khóa tháng/năm: mây thắng CHỈ khi mình không có bản
+    // sửa nào chờ đẩy; ngược lại giữ "máy thắng" như cũ (không mất thay đổi).
+    const dictWins = !!cloudDictWins && !pendingLocalChanges();
+    const dict = (localObj, remoteObj) =>
+      (dictWins ? mergeDictRemoteWins(localObj, remoteObj) : mergeKeyedDict(localObj, remoteObj));
+    // Cách gộp MẢNG bản ghi có DẤU THỜI GIAN: khi nhận mây dùng mergeById
+    // (mới hơn thắng) để bản SỬA định mức lan sang máy khác — thay vì chỉ bổ
+    // sung bản thiếu (bản thiếu = bản cũ giữ nguyên số đã đặt).
+    const rateArrMerge = cloudDictWins ? mergeById : (onlyAddMissing ? mergeAddMissing : mergeById);
     // Hợp nhất dấu vết xóa (tombstone) từ mây TRƯỚC TIÊN: lần xóa từ máy khác
     // phải chặn bản ghi cũ — không nhận về máy và gỡ luôn bản cũ còn sót.
     const changedTomb = { flag: false };
@@ -858,7 +999,8 @@ import { showToast } from './utils.js';
     }
     if (remote.planningItems) state.planningItems = m(clean('planningItems', state.planningItems), clean('planningItems', remote.planningItems));
     if (remote.pressNotes) state.pressNotes = m(clean('pressNotes', state.pressNotes || []), clean('pressNotes', remote.pressNotes));
-    if (remote.materialRates) state.materialRates = m(clean('materialRates', state.materialRates), clean('materialRates', remote.materialRates));
+    // ĐỊNH MỨC NGUYÊN VẬT LIỆU (mảng bản ghi — bản sửa được createdAt MỚI):
+    if (remote.materialRates) state.materialRates = rateArrMerge(clean('materialRates', state.materialRates), clean('materialRates', remote.materialRates));
     if (remote.customCharts) state.customCharts = m(clean('customCharts', state.customCharts), clean('customCharts', remote.customCharts));
     if (remote.qcExports) state.qcExports = m(clean('qcExports', state.qcExports || []), clean('qcExports', remote.qcExports));
     // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) — gộp theo id, mới hơn thắng + tôn trọng tombstone
@@ -871,7 +1013,7 @@ import { showToast } from './utils.js';
     // NGƯỠNG độ ẩm đạt theo công đoạn sấy ({ say1, say2 }) — mây thắng với key có trên mây
     if (remote.qcKilnThresholds) state.qcKilnThresholds = Object.assign({}, state.qcKilnThresholds || {}, remote.qcKilnThresholds);
     // ĐỊNH MỨC kiểm sau sản xuất theo tháng ({ 'YYYY-MM': tấm/h }) — gộp theo key tháng
-    if (remote.qcFinalRates) state.qcFinalRates = mergeKeyedDict(state.qcFinalRates || {}, remote.qcFinalRates);
+    if (remote.qcFinalRates) state.qcFinalRates = dict(state.qcFinalRates || {}, remote.qcFinalRates);
     if (remote.hrEmployees) state.hrEmployees = m(clean('hrEmployees', state.hrEmployees || []), clean('hrEmployees', remote.hrEmployees));
     if (remote.hrLeaves) state.hrLeaves = m(clean('hrLeaves', state.hrLeaves || []), clean('hrLeaves', remote.hrLeaves));
     if (remote.hrPositions) state.hrPositions = m(clean('hrPositions', state.hrPositions || []), clean('hrPositions', remote.hrPositions));
@@ -898,41 +1040,44 @@ import { showToast } from './utils.js';
     if (remote.xuong2BulligRecords) state.xuong2BulligRecords = m(clean('xuong2BulligRecords', state.xuong2BulligRecords || []), clean('xuong2BulligRecords', remote.xuong2BulligRecords));
     // Thông Tin Nhà Cung (tab Nguyên Liệu)
     if (remote.suppliers) state.suppliers = m(clean('suppliers', state.suppliers || []), clean('suppliers', remote.suppliers));
+    // ── ĐỊNH MỨC + GIỜ SỰ CỐ + SỐ LẦN THAN HÓA (dict theo tháng/ngày) ──
+    // Dùng dict() — khi NHẬN mây mà máy không có bản sửa chờ đẩy → MÂY THẮNG
+    // (bản cũ "máy thắng" khiến tab Công Đoạn luôn hiển thị số định mức cũ).
     // Định mức công suất cắt theo tháng (dict theo 'YYYY-MM')
-    if (remote.x2CapRates) state.x2CapRates = mergeKeyedDict(state.x2CapRates || {}, remote.x2CapRates);
+    if (remote.x2CapRates) state.x2CapRates = dict(state.x2CapRates || {}, remote.x2CapRates);
     // Định mức công suất bốc luồng theo tháng (dict theo 'YYYY-MM')
-    if (remote.x2BoluongRates) state.x2BoluongRates = mergeKeyedDict(state.x2BoluongRates || {}, remote.x2BoluongRates);
+    if (remote.x2BoluongRates) state.x2BoluongRates = dict(state.x2BoluongRates || {}, remote.x2BoluongRates);
     // Định mức công suất bổ ống theo tháng (dict theo 'YYYY-MM')
-    if (remote.x2BoOngRates) state.x2BoOngRates = mergeKeyedDict(state.x2BoOngRates || {}, remote.x2BoOngRates);
+    if (remote.x2BoOngRates) state.x2BoOngRates = dict(state.x2BoOngRates || {}, remote.x2BoOngRates);
     // Định mức công suất bào thô theo tháng (thanh/giờ)
-    if (remote.x2BaoThoRates) state.x2BaoThoRates = mergeKeyedDict(state.x2BaoThoRates || {}, remote.x2BaoThoRates);
+    if (remote.x2BaoThoRates) state.x2BaoThoRates = dict(state.x2BaoThoRates || {}, remote.x2BaoThoRates);
     // Định mức công suất chọn nan theo tháng (thanh/giờ)
-    if (remote.x2ChonNanRates) state.x2ChonNanRates = mergeKeyedDict(state.x2ChonNanRates || {}, remote.x2ChonNanRates);
+    if (remote.x2ChonNanRates) state.x2ChonNanRates = dict(state.x2ChonNanRates || {}, remote.x2ChonNanRates);
     // Định mức công suất bào tinh theo tháng (thanh/giờ)
-    if (remote.x2BaoTinhRates) state.x2BaoTinhRates = mergeKeyedDict(state.x2BaoTinhRates || {}, remote.x2BaoTinhRates);
+    if (remote.x2BaoTinhRates) state.x2BaoTinhRates = dict(state.x2BaoTinhRates || {}, remote.x2BaoTinhRates);
     if (remote.x2BulligRates) {
       const src = remote.x2BulligRates || {};
       state.x2BulligRates = state.x2BulligRates || { gc: {}, ct: {} };
       ['gc', 'ct'].forEach(k => {
-        if (src[k]) state.x2BulligRates[k] = mergeKeyedDict(state.x2BulligRates[k] || {}, src[k]);
+        if (src[k]) state.x2BulligRates[k] = dict(state.x2BulligRates[k] || {}, src[k]);
       });
     }
     // SỐ LẦN THAN HÓA THẬT theo nhóm (ngày + công đoạn sấy) — dict theo key
-    if (remote.x2SayTimes) state.x2SayTimes = mergeKeyedDict(state.x2SayTimes || {}, remote.x2SayTimes);
+    if (remote.x2SayTimes) state.x2SayTimes = dict(state.x2SayTimes || {}, remote.x2SayTimes);
     // GIỜ SỰ CỐ CHO PHÉP theo ngày (Than Hóa + Sấy) — dict theo 'YYYY-MM-DD'
-    if (remote.x2SayIncidents) state.x2SayIncidents = mergeKeyedDict(state.x2SayIncidents || {}, remote.x2SayIncidents);
+    if (remote.x2SayIncidents) state.x2SayIncidents = dict(state.x2SayIncidents || {}, remote.x2SayIncidents);
     // GIỜ SỰ CỐ CHO PHÉP theo (THẺ CÔNG ĐOẠN, NGÀY) — 7 thẻ Xưởng 2
-    if (remote.x2StageIncidents) state.x2StageIncidents = mergeKeyedDict(state.x2StageIncidents || {}, remote.x2StageIncidents);
+    if (remote.x2StageIncidents) state.x2StageIncidents = dict(state.x2StageIncidents || {}, remote.x2StageIncidents);
     // Định mức THỜI GIAN THAN HÓA theo tháng + công đoạn sấy (phút/m³)
     if (remote.x2SayRates) {
       const src = remote.x2SayRates || {};
       state.x2SayRates = state.x2SayRates || { s1: {}, s2: {} };
       ['s1', 's2'].forEach(k => {
-        if (src[k]) state.x2SayRates[k] = mergeKeyedDict(state.x2SayRates[k] || {}, src[k]);
+        if (src[k]) state.x2SayRates[k] = dict(state.x2SayRates[k] || {}, src[k]);
       });
     }
     // Định mức công suất ÉP VÁN theo tháng (m³/giờ)
-    if (remote.x2EpVanRates) state.x2EpVanRates = mergeKeyedDict(state.x2EpVanRates || {}, remote.x2EpVanRates);
+    if (remote.x2EpVanRates) state.x2EpVanRates = dict(state.x2EpVanRates || {}, remote.x2EpVanRates);
     // Vị trí sấy khai báo THÊM (Than Hóa + Sấy) — GỘP 2 chiều, không mất vị trí nào
     if (Array.isArray(remote.x2LotLocations) && remote.x2LotLocations.length) {
       const cur = Array.isArray(state.x2LotLocations) ? state.x2LotLocations.slice() : [];
@@ -962,11 +1107,14 @@ import { showToast } from './utils.js';
       state.history = mergeAddMissing(state.history || [], remote.history || []);
       if (state.history.length > HISTORY_LIMIT) state.history = state.history.slice(-HISTORY_LIMIT);
     }
-    if (!onlyAddMissing) {
-      if (remote.planningForecast) state.planningForecast = mergeKeyedDict(state.planningForecast, remote.planningForecast);
-      if (remote.planningStock) state.planningStock = mergeKeyedDict(state.planningStock, remote.planningStock);
-      if (remote.materialPlan) state.materialPlan = mergeMaterialPlan(state.materialPlan, remote.materialPlan, getDeletedMap('materialPlan'), changedTomb);
-    }
+    // KẾ HOẠCH: dự báo · tồn kho · kế hoạch nguyên liệu theo tuần.
+    // Trước đây 3 nhánh này nằm trong `if (!onlyAddMissing)` → đường nhận mây
+    // TỰ ĐỘNG không bao giờ cập nhật (tab Kế Hoạch máy khác vẫn số cũ). Nay
+    // gộp ở MỌI đường: dict theo năm dùng dict() (mây thắng khi mình không có
+    // bản sửa chờ đẩy); materialPlan đã có updatedAt từng tuần → mới hơn thắng.
+    if (remote.planningForecast) state.planningForecast = dict(state.planningForecast, remote.planningForecast);
+    if (remote.planningStock) state.planningStock = dict(state.planningStock, remote.planningStock);
+    if (remote.materialPlan) state.materialPlan = mergeMaterialPlan(state.materialPlan, remote.materialPlan, getDeletedMap('materialPlan'), changedTomb);
     if (changedTomb.flag) saveDeletedIds(); // tombstone đổi (hợp nhất/hồi sinh) -> lưu ngay
     // Dữ liệu vừa gộp từ mây (không phải thao tác sửa trên máy này) ->
     // đặt lại nền so sánh lịch sử để lần lưu sau không ghi log ảo
@@ -1081,7 +1229,7 @@ import { showToast } from './utils.js';
       // "Đồng Bộ Dữ Liệu Máy Lên Mây" & "Tải Dữ Liệu Từ Mây Về Máy" trong menu ⋮.
       // Mây chỉ có DẤU VẾT XÓA (danh sách rỗng) cũng phải gộp: để GỠ bản ghi cũ
       // còn sót trên máy theo tombstone — không thì lần đẩy sau sẽ "hồi sinh".
-      if (fbRemoteHasData || hasDeletedIds(remote)) mergeRemoteIntoLocal(remote, true);
+      if (fbRemoteHasData || hasDeletedIds(remote)) mergeRemoteIntoLocal(remote, true, true);
     }).catch((e) => {
       console.warn('[FB] Lỗi đọc/lắp ráp dữ liệu mây', e);
       if (Date.now() - fbReadWarnAt > 30000) {
@@ -1110,8 +1258,9 @@ import { showToast } from './utils.js';
       if (fbApplying) return;                   // bỏ qua bản ta vừa ghi
       // Máy chưa có dữ liệu thật -> nhận thẳng các miền vừa tải (máy mới: tải đủ)
       if (!localHasAnyData()) { applyFireSnapshot(partial); return; }
-      // Máy đã có dữ liệu -> chỉ TỰ GỘP THÊM phần mây mà máy chưa có (an toàn)
-      if (Object.keys(partial).length) mergeRemoteIntoLocal(partial, true);
+      // Máy đã có dữ liệu -> TỰ GỘP theo mây (định mức mây thắng nếu mình
+      // không có bản sửa chờ đẩy — xem mergeRemoteIntoLocal)
+      if (Object.keys(partial).length) mergeRemoteIntoLocal(partial, true, true);
     })().catch((e) => {
       console.warn('[FB] Lỗi nhận dữ liệu mây (delta)', e);
       if (Date.now() - fbReadWarnAt > 30000) {
@@ -1149,8 +1298,9 @@ import { showToast } from './utils.js';
       if (data.qcKilnReadings) state.qcKilnReadings = clean('qcKilnReadings', data.qcKilnReadings);
       // KIỂM SAU SẢN XUẤT: nhận theo mây khi tải về (gộp theo tombstone — không hồi sinh lượt đã xóa)
       if (data.qcFinalRecords) state.qcFinalRecords = clean('qcFinalRecords', data.qcFinalRecords);
-      if (data.qcFinalRates !== undefined && data.qcFinalRates && typeof data.qcFinalRates === 'object') {
-        state.qcFinalRates = data.qcFinalRates;
+      // ĐỊNH MỨC KIỂM SAU SẢN XUẤT: nhận theo mây khi tải về (ghi đè từng tháng)
+      if (data.qcFinalRates && typeof data.qcFinalRates === 'object' && !Array.isArray(data.qcFinalRates)) {
+        state.qcFinalRates = Object.assign({}, state.qcFinalRates || {}, data.qcFinalRates);
       }
       // PHIẾU KHO: nhận theo mây khi tải về (gộp theo tombstone — không hồi sinh phiếu đã xóa)
       if (data.khoNotes) state.khoNotes = clean('khoNotes', data.khoNotes);
@@ -1159,6 +1309,50 @@ import { showToast } from './utils.js';
       }
       if (data.pressRecords) state.pressRecords = clean('pressRecords', data.pressRecords);
       if (data.pressNotes) state.pressNotes = clean('pressNotes', data.pressNotes);
+      // ── NHẬT KÝ XƯỞNG 2 + DANH MỤC NHÀ CUNG (tab Công Đoạn / Nguyên Liệu) ──
+      // TRƯỚC ĐÂY THIẾU TOÀN BỘ NHÓM NÀY → nút "Tải Từ Mây Về Máy" báo thành
+      // công nhưng máy vẫn giữ dữ liệu/định mức CŨ (nguyên nhân chính của lỗi
+      // "máy khác không cập nhật định mức – hiệu suất").
+      if (data.xuong2CutRecords) state.xuong2CutRecords = clean('xuong2CutRecords', data.xuong2CutRecords);
+      if (data.xuong2BoluongRecords) state.xuong2BoluongRecords = clean('xuong2BoluongRecords', data.xuong2BoluongRecords);
+      if (data.xuong2BoOngRecords) state.xuong2BoOngRecords = clean('xuong2BoOngRecords', data.xuong2BoOngRecords);
+      if (data.xuong2BaoThoRecords) state.xuong2BaoThoRecords = clean('xuong2BaoThoRecords', data.xuong2BaoThoRecords);
+      if (data.xuong2ChonNanThoRecords) state.xuong2ChonNanThoRecords = clean('xuong2ChonNanThoRecords', data.xuong2ChonNanThoRecords);
+      if (data.xuong2BulligRecords) state.xuong2BulligRecords = clean('xuong2BulligRecords', data.xuong2BulligRecords);
+      if (data.xuong2BaoTinhRecords) state.xuong2BaoTinhRecords = clean('xuong2BaoTinhRecords', data.xuong2BaoTinhRecords);
+      if (data.suppliers) state.suppliers = clean('suppliers', data.suppliers);
+      // ĐỊNH MỨC THEO THÁNG + GIỜ SỰ CỐ + SỐ LẦN TH (dict phẳng): "tải về" =
+      // mây thắng TỪNG KHÓA tháng/ngày, nhưng GIỮ tháng máy đã đặt mà mây chưa khai.
+      ['x2CapRates', 'x2BoluongRates', 'x2BoOngRates', 'x2BaoThoRates', 'x2ChonNanRates',
+        'x2BaoTinhRates', 'x2EpVanRates', 'x2SayTimes', 'x2SayIncidents', 'x2StageIncidents'
+      ].forEach((key) => {
+        const v = data[key];
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          state[key] = Object.assign({}, state[key] || {}, v);
+        }
+      });
+      // 2 dict LỒNG: x2SayRates { s1, s2 } · x2BulligRates { gc, ct }
+      if (data.x2SayRates && typeof data.x2SayRates === 'object' && !Array.isArray(data.x2SayRates)) {
+        const src = data.x2SayRates;
+        state.x2SayRates = state.x2SayRates || { s1: {}, s2: {} };
+        ['s1', 's2'].forEach((k) => {
+          if (src[k] && typeof src[k] === 'object') state.x2SayRates[k] = Object.assign({}, state.x2SayRates[k] || {}, src[k]);
+        });
+      }
+      if (data.x2BulligRates && typeof data.x2BulligRates === 'object' && !Array.isArray(data.x2BulligRates)) {
+        const src = data.x2BulligRates;
+        state.x2BulligRates = state.x2BulligRates || { gc: {}, ct: {} };
+        ['gc', 'ct'].forEach((k) => {
+          if (src[k] && typeof src[k] === 'object') state.x2BulligRates[k] = Object.assign({}, state.x2BulligRates[k] || {}, src[k]);
+        });
+      }
+      // Vị trí sấy + cỡ đầu ra Bào thanh khai báo thêm — hợp nhất 2 chiều
+      if (Array.isArray(data.x2LotLocations) && data.x2LotLocations.length) {
+        state.x2LotLocations = unionNamedList(state.x2LotLocations, data.x2LotLocations);
+      }
+      if (Array.isArray(data.x2BaoThanhOutSizes) && data.x2BaoThanhOutSizes.length) {
+        state.x2BaoThanhOutSizes = unionNamedList(state.x2BaoThanhOutSizes, data.x2BaoThanhOutSizes);
+      }
       if (data.hrEmployees) state.hrEmployees = clean('hrEmployees', data.hrEmployees);
       if (data.hrLeaves) state.hrLeaves = clean('hrLeaves', data.hrLeaves);
       if (data.hrRecruitment) state.hrRecruitment = clean('hrRecruitment', data.hrRecruitment);
@@ -1181,6 +1375,7 @@ import { showToast } from './utils.js';
       // Máy vừa khớp với mây -> cập nhật mốc "đã đồng bộ" để lần so sánh sau chính xác
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       fbLocalHashes = null; // vừa áp dữ liệu mây → băm miền cần tính lại
+      clearPendingLocal();  // tải về = ghi đè chủ động → coi như đã đồng bộ với mây
       renderAll();
     } finally { fbApplying = false; updateSyncBadge(); }
   }
@@ -1237,6 +1432,10 @@ import { showToast } from './utils.js';
   // Đẩy dữ liệu hiện tại lên mây (admin/editor/manager)
   function firePushSync() {
     fbLocalHashes = null; // có thay đổi cục bộ → băm miền cần tính lại
+    // Đánh dấu "bản sửa CHƯA lên mây" (lưu xuống máy — vẫn nhớ sau khi tải lại
+    // trang). Chỉ đặt khi người dùng CÓ QUYỀN đẩy: máy chỉ-xem không bao giờ
+    // đẩy nên không đặt → luôn nhận định mức mới từ mây.
+    if (state.currentUser && canPushToCloud()) markPendingLocal();
     if (!isFirebaseOnline() || !fbAuthLoaded || !state.currentUser || !canPushToCloud()) {
       // Có thay đổi nhưng điều kiện đẩy chưa đủ -> đánh dấu "bẩn" và cảnh báo ít thôi
       fbDirty = true;
@@ -1284,7 +1483,7 @@ import { showToast } from './utils.js';
       return;
     }
     fbPushFirstAt = 0; // chuỗi thay đổi này đã được xử lý — thao tác kế tiếp mở chuỗi mới
-    if (fbSeedCore && cloudCore(collectCloudSnapshot()) === fbSeedCore) { fbDirty = false; return; } // chưa có thay đổi thực tế
+    if (fbSeedCore && cloudCore(collectCloudSnapshot()) === fbSeedCore) { fbDirty = false; clearPendingLocal(); return; } // chưa có thay đổi thực tế
     if (!isFirebaseOnline() || !state.currentUser || !canPushToCloud()) return; // giữ cờ bẩn, chờ lần sau
     fbApplying = true;
     try {
@@ -1296,6 +1495,7 @@ import { showToast } from './utils.js';
         + ' · chế độ ' + ((res && res.mode) || '?')
         + ' · ' + (Date.now() - t0) + 'ms');
       fbDirty = false;
+      clearPendingLocal(); // đã lên mây → hết cảnh "bản sửa chưa đồng bộ"
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
       captureAutoBackup('Sau khi đồng bộ mây', false);
@@ -1364,6 +1564,7 @@ import { showToast } from './utils.js';
       }
       const w = await writeCloudSnapshot();
       fbDirty = false;
+      clearPendingLocal(); // bản của máy này đã lên mây
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
       captureAutoBackup('Sau khi đồng bộ mây (thủ công)', false);
@@ -1483,11 +1684,17 @@ export {
   mergeRemoteIntoLocal,
   pullCloudToLocal,
   pullDeltaSnapshot,
+  RATE_DOMAINS,
   registerServiceWorker,
   requireEditPermission,
+  requireRatePermission,
   requireTabEditPermission,
   restoreLocalThumbs,
   sameHashes,
+  shieldRateDomainsForPush,
+  pendingLocalChanges,
+  markPendingLocal,
+  clearPendingLocal,
   resolveFirebaseRole,
   setupFirestoreSync,
   stripMaterialPhotoPayload,

@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // js/planning.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { getDateYear, getPressedQtyForPlan, pressRecordWeek } from './press.js';
@@ -1424,9 +1424,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
         <td>${rate.additive} kg</td>
         <td>${rate.efficiency}%</td>
         <td class="text-right">
-          <div style="display:flex;justify-content:flex-end;gap:4px;" data-perm="planning">
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.editMaterialRate('${rate.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
-            <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteMaterialRate('${rate.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+          <div style="display:flex;justify-content:flex-end;gap:4px;" data-perm="planning" data-admin-only>
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.editMaterialRate('${rate.id}')" title="Sửa định mức (CHỈ Quản Trị)"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteMaterialRate('${rate.id}')" title="Xóa định mức (CHỈ Quản Trị)" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>
         </td>`;
       tbody.appendChild(tr);
@@ -1645,7 +1645,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   }
 
   function openMaterialRateModal(rateId = null) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return; // CHỈ admin xem/sửa định mức nguyên vật liệu
     const modal = document.getElementById('modal-material-rate');
     const form = document.getElementById('material-rate-form');
     const titleEl = document.getElementById('material-rate-modal-title');
@@ -1692,6 +1692,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
 
   function handleMaterialRateSubmit(e) {
     e.preventDefault();
+    if (!requireRatePermission()) return; // CHỈ admin lưu định mức nguyên vật liệu
     const rateId = document.getElementById('mat-rate-id').value;
     const product = document.getElementById('mat-rate-product').value.trim();
     const nanUseSel = document.getElementById('mat-rate-nan-use');
@@ -1749,7 +1750,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   }
 
   function deleteMaterialRate(rateId) {
-    if (!requireEditPermission()) return;
+    if (!requireRatePermission()) return;
     const rate = state.materialRates.find(r => r.id === rateId);
     if (!rate) return;
     if (confirm(`Bạn có chắc muốn xóa định mức "${rate.product}"?`)) {

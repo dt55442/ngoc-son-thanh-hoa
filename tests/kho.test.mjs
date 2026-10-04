@@ -324,7 +324,7 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v203/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v204/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

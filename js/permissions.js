@@ -91,6 +91,13 @@ export function canEditTab(tabId) {
   return getEditableTabs().includes(t);
 }
 
+// ─── QUYỀN CẬP NHẬT ĐỊNH MỨC ────────────────────────────────────
+// Chỉ QUẢN TRỊ (admin) mới được sửa ĐỊNH MỨC (công suất Xưởng 2, định mức
+// nguyên vật liệu, định mức kiểm QC…) — người được cấp tab vẫn KHÔNG đủ.
+// Mọi nơi lưu định mức đều đi qua cloud.requireRatePermission() → cổng này,
+// nên muốn đổi chính sách chỉ cần sửa tại đây.
+export function canEditRate() { return isAdmin(); }
+
 // Sửa được biểu đồ ở vùng nào (biểu đồ vùng nâng cao cần cả 2 quyền)
 export function canEditChartZone(zone, source) {
   if (zone === 'advanced' && !canViewAdvanced()) return false;

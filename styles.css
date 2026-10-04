@@ -2914,6 +2914,14 @@ body:not([data-edit-tabs~="hr"])        [data-perm="hr"],
 body:not([data-edit-tabs~="dashboard"]) [data-perm="dashboard"] {
   display: none !important;
 }
+/* ── PHÂN QUYỀN ĐỊNH MỨC: CHỈ QUẢN TRỊ (ADMIN) ──────────────
+   permissions.canEditRate() = role admin. Các nút mở/sửa/lưu ĐỊNH MỨC gắn
+   data-admin-only — khác với data-perm (theo TAB): người được cấp tab Công
+   Đoạn/Kế Hoạch/QC vẫn KHÔNG thấy các nút này. Mọi handler lưu định mức đều
+   bị chặn thêm 1 lần ở js/cloud.js → requireRatePermission(). */
+body:not(.is-admin) [data-admin-only] {
+  display: none !important;
+}
 
 
 

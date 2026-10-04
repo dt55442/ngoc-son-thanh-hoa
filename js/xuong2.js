@@ -23,6 +23,7 @@
 // Dữ liệu: state.xuong2BoOngRecords + state.x2BoOngRates.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
+import { canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
 import { logDataChange } from './history.js';
 import { canApproveLeave, hrSplitHoursHCDate } from './hr.js';
@@ -4340,6 +4341,99 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     showToast('Đã xóa lượt chọn nan thô!', 'success');
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // THÔNG BÁO "ĐÃ CHỌN THAN HÓA" + SỬA NHANH TẠI BẢNG LỊCH SỬ (04/10/2026)
+  // ═══════════════════════════════════════════════════════════
+  // Lô Sấy 1 tạo từ thẻ nan (form "Thêm Lô Sấy Mới" — js/batch-modals.js) giữ
+  // link batch.sourceChonNanId → đếm số thanh ĐÃ than hóa + CÒN LẠI của thẻ.
+  function nanSay1UseOf(recId) {
+    const lots = (state.batches || [])
+      .filter(b => b && b.sourceChonNanId === recId)
+      .map(b => ({
+        id: b.id, code: b.code || '', date: b.date || '',
+        location: b.location || '', quantity: Number(b.quantity) || 0
+      }));
+    const used = lots.reduce((s, l) => s + l.quantity, 0);
+    return { lots, count: lots.length, used };
+  }
+  // Chip trên DÒNG NHÁNH — chỉ hiện khi thẻ nan đã có lô Sấy 1; đọc SỐNG nên
+  // tự đổi khi có lô mới / xóa lô / sửa số lượng ngay tại bảng.
+  function chonNanSay1ChipHtml(d) {
+    const use = nanSay1UseOf(d.id);
+    if (!use.count || use.used <= 0) return '';
+    const total = Number(d.quantity) || 0;
+    const remaining = Math.max(0, total - use.used);
+    const tip = `Thẻ nan này đã chọn than hóa ${use.count} lô Sấy 1: ` + use.lots
+      .map(l => `${l.code || '(chưa có mã)'} · ${formatDateDDMMYY(l.date)} · ${l.location || '—'} · ${fmtThanh(l.quantity)} thanh`)
+      .join('  |  ');
+    const full = remaining <= 0;
+    const label = full
+      ? `Đã than hóa hết · ${fmtThanh(use.used)} thanh`
+      : `Đã chọn than hóa ${fmtThanh(use.used)}/${fmtThanh(total)} thanh · còn ${fmtThanh(remaining)}`;
+    return `<div><span class="x2-nan-say1${full ? ' say1-full' : ''}" title="${escapeHTML(tip)}"><i data-lucide="flame"></i> ${escapeHTML(label)}</span></div>`;
+  }
+  // Ô PHÂN LOẠI trong bảng: chip màu (chỉ xem) hoặc SELECT sửa nhanh (có quyền)
+  function chonNanClsCellHtml(d) {
+    if (!canEditTab('kanban')) {
+      return `<span class="x2-nan-cls x2-nan-cls-${escapeHTML(d.cls)}" title="${escapeHTML(nanClassLabel(d.cls))}">${escapeHTML(nanClassLabel(d.cls))}</span>`;
+    }
+    const opts = NAN_CLASSES.map(c =>
+      `<option value="${escapeHTML(c.id)}"${c.id === d.cls ? ' selected' : ''}>${escapeHTML(c.label)}</option>`).join('');
+    return `<select class="x2-cn-inline-cls x2-nan-cls x2-nan-cls-${escapeHTML(d.cls)}" data-x2-cn-cls="${escapeHTML(d.id)}" title="Sửa nhanh PHÂN LOẠI ngay tại bảng">${opts}</select>`;
+  }
+  // Ô SỐ LƯỢNG trong bảng: chữ đậm (chỉ xem) hoặc ô nhập sửa nhanh (có quyền)
+  function chonNanQtyCellHtml(d) {
+    if (!canEditTab('kanban')) {
+      return `<strong>${fmtThanh(d.quantity)}</strong> <small style="color:var(--text-muted);">thanh</small>`;
+    }
+    return `<span class="x2-cn-inline-qty-wrap"><input type="number" class="x2-cn-inline-qty" data-x2-cn-qty="${escapeHTML(d.id)}" min="1" step="1" inputmode="numeric" value="${Number(d.quantity) || 0}" title="Sửa nhanh SỐ LƯỢNG ngay tại bảng (thanh)"><small style="color:var(--text-muted);">thanh</small></span>`;
+  }
+  // ─── SỬA NHANH TẠI BẢNG — uỷ nhiệm `change` trên #x2-cn-day-cards ──
+  // 2 TRƯỜNG sửa trực tiếp: Phân loại (select) · Số lượng (input). Vẽ lại PHẦN
+  // DỮ LIỆU (bảng + thống kê + tồn + chip mini) và GIỮ NGUYÊN form đang nhập —
+  // KHÔNG gọi renderX2ChonNanCard() (hàm đó reset lựa chọn ô LÔ của form).
+  function onChonNanInlineEdit(e) {
+    const t = e && e.target;
+    if (!t || typeof t.getAttribute !== 'function') return false;
+    const clsId = t.getAttribute('data-x2-cn-cls');
+    const qtyId = t.getAttribute('data-x2-cn-qty');
+    if (!clsId && !qtyId) return false;
+    if (!requireEditPermission()) { renderX2ChonNanTable(); return false; } // không có quyền → đưa ô nhập về số cũ
+    const id = String(clsId || qtyId);
+    const rec = (state.xuong2ChonNanThoRecords || []).find(r => r && r.id === id);
+    if (!rec) return false;
+    if (clsId) {
+      const v = String(t.value == null ? '' : t.value);
+      if (!NAN_CLASSES.some(c => c.id === v) || v === rec.cls) return false;
+      rec.cls = v;
+    } else {
+      const q = Math.floor(Number(t.value));
+      if (!Number.isFinite(q) || q <= 0) {
+        showToast('Số lượng phải là số thanh lớn hơn 0!', 'error');
+        renderX2ChonNanTable();                                  // khôi phục ô nhập về số cũ
+        return false;
+      }
+      if (q === Number(rec.quantity)) return false;
+      const dims = Array.isArray(rec.dims) ? rec.dims : [];
+      const unitVol = (rec.unitVol != null) ? Number(rec.unitVol)
+        : unitVolOf(dims[0], dims[1], dims[2]);
+      rec.quantity = q;
+      rec.volume = Math.round(q * unitVol * 10000) / 10000;   // thể tích lượt = số thanh × thể tích 1 thanh
+    }
+    rec.updatedAt = new Date().toISOString();
+    saveXuong2ChonNan();
+    // Vẽ lại dữ liệu — form nhập phía trên KHÔNG bị đụng tới
+    renderX2ChonNanStats();
+    renderX2ChonNanTable();
+    renderX2ChonNanStockBar();
+    const sel = document.getElementById('x2-cn-baotho');
+    const isNew = !!(sel && sel.value === CN_NEW_LOT_VALUE);
+    renderX2ChonNanSizeOptions(isNew ? null : baoThoLotOf(sel ? sel.value : '')); // làm mới "đã chọn X thanh" — GIỮ lựa chọn
+    renderX2ChonNanCalc();
+    updateXuong2CardCounts();
+    return true;
+  }
+
   function syncX2ChonNanEditBanner() {
     const banner = document.getElementById('x2-cn-edit-banner');
     if (!banner) return;
@@ -4514,7 +4608,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // 1 DÒNG NHÁNH: Loại nan · Phân loại · Số lượng · Thể tích · Tỷ lệ loại (theo cỡ)
   function chonNanRowHtml(d, sizeStat) {
     const rejPct = (sizeStat && sizeStat.qty > 0) ? (sizeStat.rej / sizeStat.qty) * 100 : null;
-    const clsChip = `<span class="x2-nan-cls x2-nan-cls-${escapeHTML(d.cls)}" title="${escapeHTML(nanClassLabel(d.cls))}">${escapeHTML(nanClassLabel(d.cls))}</span>`;
+    const clsCell = chonNanClsCellHtml(d);        // chip (chỉ xem) hoặc ô SELECT sửa nhanh
+    const qtyCell = chonNanQtyCellHtml(d);        // số đậm hoặc ô NHẬP sửa nhanh
+    const say1Cell = chonNanSay1ChipHtml(d);      // chip "ĐÃ CHỌN THAN HÓA" (nếu thẻ đã có lô Sấy 1)
     const extChip = d.external
       ? `<div><span class="x2-nan-ext" title="Loại nan nhập ở NGOÀI công đoạn — KHÔNG cộng vào tổng của Chạy Máy Bào Thô"><i data-lucide="alert-triangle"></i> ngoài công đoạn</span></div>`
       : '';
@@ -4528,8 +4624,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           <span class="x2-nan-chip">${comboLabel({ d: d.dims[0], r: d.dims[1], t: d.dims[2] })}</span>
           <div class="x2-row-note">${noteLine}</div>
         </td>
-        <td>${clsChip}${extChip}</td>
-        <td class="text-right"><strong>${fmtThanh(d.quantity)}</strong> <small style="color:var(--text-muted);">thanh</small></td>
+        <td>${clsCell}${extChip}${say1Cell}</td>
+        <td class="text-right">${qtyCell}</td>
         <td class="text-right"><strong style="color:#0f766e;">${d.volume.toFixed(4)}</strong> <small style="color:var(--text-muted);">m³</small></td>
         <td class="text-right">${rejPct == null ? '—' : `<strong style="color:${rejPct > 10 ? '#b45309' : '#0f766e'};">${fmtRatio(rejPct)}%</strong>`}</td>
         <td class="text-right">
@@ -8697,6 +8793,8 @@ export {
   editXuong2BaoTho,
   editXuong2BoOng,
   editXuong2ChonNan,
+  nanSay1UseOf,
+  onChonNanInlineEdit,
   editXuong2BaoTinh,
   editXuong2Cut,
   fillXuong2BaoThoOptions,

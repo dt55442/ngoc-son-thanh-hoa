@@ -8,6 +8,9 @@
 // 3. Cột "Bào Tinh" đã XÓA HẲN khỏi Kanban (markup + CSS cờ ẩn) — planning đọc
 //    THẺ Bào Tinh (state.xuong2BaoTinhRecords); công đoạn còn Sấy 1/Sấy 2/Kho.
 // 4. Trên điện thoại: chỉ THẺ CHA giữ khung tre, thẻ CON bỏ khung + scale nhỏ.
+// 5. Form "Thêm Lô Sấy Mới": ô tìm THEO SỐ LƯỢNG (RIÊNG, chỉ khớp số lượng,
+//    lọc KẾT HỢP ô tìm nhanh bằng điều kiện VÀ) + danh sách nguồn là DROPDOWN NỔI
+//    trải bề rộng màn hình đang xem, cao tối đa 5 DÒNG THẺ rồi tự cuộn.
 'use strict';
 import fs from 'node:fs';
 
@@ -271,7 +274,29 @@ bm.alSetSourceQuery('zzz');
 check('TÌM NHANH: không khớp → báo "Không có thẻ/lô nào khớp"',
   document.getElementById('al-source-list').innerHTML.includes('Không có thẻ/lô nào khớp'));
 bm.alSetSourceQuery('');
-check('TÌM NHANH: xóa từ khóa → hiện lại đủ nguồn', bm.alPickedIds().length === 0 &&
+
+// ─── TÌM THEO SỐ LƯỢNG (ô RIÊNG — chỉ khớp số lượng, lọc KẾT HỢP 2 ô) ──
+bm.alSetSourceQtyQuery('800');
+check('TÌM SỐ LƯỢNG: gõ "800" → chỉ lô còn 800 thanh (b-kho1)',
+  document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"') &&
+  !document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho2"'));
+bm.alSetSourceQtyQuery('300');
+check('TÌM SỐ LƯỢNG: gõ "300" → chỉ lô 300 thanh (b-kho2)',
+  document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho2"') &&
+  !document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"'));
+bm.alSetSourceQtyQuery('1300');
+check('TÌM SỐ LƯỢNG: gõ "1300" (là KÍCH THƯỚC) → không lô nào — ô này CHỈ khớp số lượng',
+  document.getElementById('al-source-list').innerHTML.includes('Không có thẻ/lô nào khớp'));
+// 2 ô LỌC KẾT HỢP (điều kiện VÀ)
+bm.alSetSourceQuery('K12'); bm.alSetSourceQtyQuery('800');
+check('KẾT HỢP 2 Ô: vị trí K12 + số lượng 800 → không lô nào (K12 chỉ có 300 thanh)',
+  document.getElementById('al-source-list').innerHTML.includes('Không có thẻ/lô nào khớp'));
+bm.alSetSourceQuery('K12'); bm.alSetSourceQtyQuery('300');
+check('KẾT HỢP 2 Ô: vị trí K12 + số lượng 300 → đúng lô b-kho2',
+  document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho2"') &&
+  !document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"'));
+bm.alSetSourceQuery(''); bm.alSetSourceQtyQuery('');
+check('TÌM SỐ LƯỢNG: xóa cả 2 ô → hiện lại đủ 2 lô nguồn',
   document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"') &&
   document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho2"'));
 bm.alTogglePick('b-kho1');
@@ -457,7 +482,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v204/.test(swJs));
+  /nha-may-ngoc-son-v206/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -1000,12 +1025,41 @@ check('FORM GỌN: 2 khối chọn Nguồn ⇄ Vị Trí bọc chung .al-pick-pa
 check('FORM GỌN (styles.css): modal theo dvh + KHÔNG cuộn ngang + danh sách thẻ/chips tự cuộn trong khung nhỏ',
   cssHtml.includes('#modal-add-lot .modal-card') && cssHtml.includes('#modal-transfer-kho .modal-card') &&
   cssHtml.includes('overflow-x: hidden;   /* tuyệt đối không thanh cuộn ngang */') &&
-  cssHtml.includes('#modal-add-lot .al-card-list { max-height: 24vh; }') &&
+  cssHtml.includes('#modal-add-lot .al-card-list { max-height: calc(5 * 64px + 4 * 6px); }') &&
   cssHtml.includes('#modal-add-lot .al-loc-chips { max-height: 18vh;') &&
   cssHtml.includes('.al-pick-pair {'));
 check('FORM GỌN (js): mở 1 khối chọn thì TỰ ĐÓNG khối còn lại (form không phình khi mở cả hai)',
   jsBatchModals.includes("const locPanel = document.getElementById('al-location-panel');") &&
   jsBatchModals.includes("const srcPanel = document.getElementById('al-source-panel');"));
+// ─── O. Ô TÌM THEO SỐ LƯỢNG + DROPDOWN NỔI (04/10/2026) ─────────────
+// Cắt đúng khối CSS dropdown nổi để kiểm tra từng thuộc tính
+const alFloatCss = (function () {
+  const i = cssHtml.indexOf('#modal-add-lot #al-source-panel {');
+  const j = i >= 0 ? cssHtml.indexOf('}', i) : -1;
+  return j > i ? cssHtml.slice(i, j) : '';
+})();
+check('TÌM SỐ LƯỢNG (index.html): ô RIÊNG #al-source-qty-search đặt NGAY SAU ô tìm nhanh',
+  idxHtml.includes('id="al-source-qty-search"') &&
+  idxHtml.indexOf('id="al-source-qty-search"') > idxHtml.indexOf('id="al-source-search"'));
+check('TÌM SỐ LƯỢNG (js): chỉ so SỐ LƯỢNG + lọc KẾT HỢP 2 ô (VÀ) + xóa cả 2 khi đổi công đoạn',
+  jsBatchModals.includes('function alSourceQtyMatches') &&
+  jsBatchModals.includes('function alSetSourceQtyQuery') &&
+  jsBatchModals.includes('alSourceQtyMatches(it, stage, alSourceQtyQuery)') &&
+  jsBatchModals.includes('alSourceQuery.trim(), alSourceQtyQuery.trim()') &&
+  jsBatchModals.includes("alSourceQtyQuery = '';"));
+check('DROPDOWN NỔI (js): đo cao 5 dòng thẻ + neo theo nút chọn (hết chỗ mở ngược lên)',
+  jsBatchModals.includes('function alApplySourceListRowCap') &&
+  jsBatchModals.includes('function alPositionSourcePanel') &&
+  jsBatchModals.includes('AL_DROP_MAX_ROWS = 5') &&
+  jsBatchModals.includes('alPositionSourcePanel();'));
+check('DROPDOWN NỔI (events.js): wire ô tìm số lượng + neo lại khi cuộn / đổi cỡ màn hình',
+  jsEvents.includes("safeOn('al-source-qty-search', 'input'") &&
+  jsEvents.includes("window.addEventListener('scroll', () => alPositionSourcePanel(), true)") &&
+  jsEvents.includes("window.addEventListener('resize', () => alPositionSourcePanel())"));
+check('DROPDOWN NỔI (styles.css): panel position fixed trải 2 mép màn hình + z-index trên khối modal',
+  alFloatCss.includes('position: fixed;') &&
+  alFloatCss.includes('left: 8px;') && alFloatCss.includes('right: 8px;') &&
+  alFloatCss.includes('z-index: 10001;') && alFloatCss.includes('overflow-y: auto;'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 // LUÔN thoát rõ ràng (mẫu cloud-shard/chart-filters): nếu còn timer/promise sót

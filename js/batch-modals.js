@@ -391,8 +391,43 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
   }
   function alClearSourceQuery() {
     alSourceQuery = '';
+    alSourceQtyQuery = '';
     const el = document.getElementById('al-source-search');
     if (el) el.value = '';
+    const qtyEl = document.getElementById('al-source-qty-search');
+    if (qtyEl) qtyEl.value = '';
+  }
+  // ── Ô TÌM THEO SỐ LƯỢNG (04/10/2026) ──────────────────────────
+  // Tách RIÊNG khỏi ô tìm nhanh; 2 ô lọc KẾT HỢP (điều kiện VÀ): thẻ chỉ
+  // hiện ra khi khớp CẢ HAI. Ô này CHỈ so SỐ LƯỢNG — không so vị trí/mã/kích thước/loại.
+  let alSourceQtyQuery = '';
+  // Chuẩn hóa chuỗi SỐ: bỏ dấu phân cách nghìn (gõ 1000 khớp 1.000) + khoảng trắng
+  function alQtyNorm(s) {
+    return String(s == null ? '' : s).split('.').join('').split(' ').join('');
+  }
+  // Các SỐ LƯỢNG của 1 thẻ nguồn (CHỈ số lượng):
+  //   • Sấy 2 (lô ở Kho) = số in trên thẻ (quantity)
+  //   • Sấy 1 (thẻ Chọn Nan Thô) = phần CÒN LẠI in trên thẻ + số lượng gốc của thẻ
+  function alSourceQtyValues(it, stage) {
+    const vals = [];
+    if (stage === 'say2') {
+      vals.push(Number(it && it.quantity) || 0);
+    } else {
+      vals.push(nanCardRemainingOf(it));
+      vals.push(Number(it && it.quantity) || 0);
+    }
+    return vals.filter((v, i, arr) => v > 0 && arr.indexOf(v) === i);
+  }
+  // Thẻ nguồn có khớp ô tìm theo SỐ LƯỢNG không — CHỈ so số lượng, dạng CHỨA;
+  // chuỗi rỗng / không có chữ số → không lọc (hiện mọi thẻ)
+  function alSourceQtyMatches(it, stage, qtyQuery) {
+    const q = alQtyNorm(qtyQuery).split('').filter(ch => ch >= '0' && ch <= '9').join('');
+    if (!q) return true;
+    return alSourceQtyValues(it, stage).some(v => String(v).includes(q));
+  }
+  function alSetSourceQtyQuery(v) {
+    alSourceQtyQuery = String(v || '');
+    renderAlSourceList();
   }
   // Số thanh ĐÃ dùng của 1 thẻ chọn nan (đã tạo lô sấy từ thẻ đó)
   function nanCardUsedOf(chonNanId, excludeBatchId) {
@@ -460,14 +495,18 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       listEl.innerHTML = `<div class="al-empty">${stage === 'say2'
         ? '— Không có lô nào ở Kho (chuyển lô vào Kho trước) —'
         : '— Không có thẻ nan nào chờ sấy (ghi lượt ở thẻ Chọn Nan Thô trước) —'}</div>`;
+      alPositionSourcePanel();
       return;
     }
-    // Ô tìm nhanh (như ô tìm kiếm của cột Sấy 1 / Sấy 2)
-    const visible = alSourceQuery.trim()
-      ? items.filter(it => alSourceMatches(it, stage, alSourceQuery))
-      : items;
+    // 2 Ô TÌM KẾT HỢP (điều kiện VÀ): ô tìm nhanh (vị trí/mã/kích thước/loại/…) 
+    // + ô tìm THEO SỐ LƯỢNG — thẻ phải khớp CẢ HAI mới được hiển thị
+    const visible = items.filter(it =>
+      alSourceMatches(it, stage, alSourceQuery) &&
+      alSourceQtyMatches(it, stage, alSourceQtyQuery));
     if (!visible.length) {
-      listEl.innerHTML = `<div class="al-empty">Không có thẻ/lô nào khớp "${escapeHTML(alSourceQuery.trim())}"</div>`;
+      const keys = [alSourceQuery.trim(), alSourceQtyQuery.trim()].filter(Boolean).join(' · ');
+      listEl.innerHTML = `<div class="al-empty">Không có thẻ/lô nào khớp "${escapeHTML(keys)}"</div>`;
+      alPositionSourcePanel();
       return;
     }
     listEl.innerHTML = visible.map(it => {
@@ -482,6 +521,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       </button>`;
     }).join('');
     initLucide();
+    alPositionSourcePanel();
   }
 
   // Chọn / bỏ chọn 1 nguồn
@@ -525,6 +565,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       const locPanel = document.getElementById('al-location-panel');
       if (locPanel && !locPanel.hidden) locPanel.hidden = true;
       renderAlSourceList();
+      alPositionSourcePanel();
       // Điện thoại: modal tự cuộn tới nút để thấy ngay danh sách thẻ vừa mở
       if (btn && typeof btn.scrollIntoView === 'function') {
         try { btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* bỏ qua */ }
@@ -533,6 +574,50 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     return !panel.hidden;
   }
 
+  // ─── DROPDOWN NỔI CỦA DANH SÁCH NGUỒN (04/10/2026) ─────────────
+  // Danh sách nguồn KHÔNG nằm trong luồng form: thả nổi TOÀN BỀ RỘNG
+  // MÀN HÌNH ĐANG XEM (CSS #al-source-panel position:fixed left/right 8px),
+  // cao tối đa 5 DÒNG THẺ (đo thật — quá thì danh sách tự cuộn), mở DƯỚI
+  // nút chọn; hết chỗ phía dưới thì mở NGƯỢC LÊN (kẹp trong khung nhìn).
+  const AL_DROP_MAX_ROWS = 5;   // tối đa 5 dòng thẻ
+  const AL_DROP_ROW_GAP  = 6;   // khe hở giữa các dòng (.al-card-list gap)
+  const AL_DROP_PAD      = 8;   // lề an toàn quanh mép màn hình
+  // Đo 1 dòng thẻ → max-height = 5 dòng + 4 khe (danh sách tự cuộn khi quá)
+  function alApplySourceListRowCap(listEl) {
+    if (!listEl || !listEl.style) return;
+    let rowH = 0;
+    try {
+      const cards = (typeof listEl.querySelectorAll === 'function') ? listEl.querySelectorAll('.al-card') : [];
+      Array.prototype.forEach.call(cards || [], (c) => {
+        const h = Number(c && c.offsetHeight) || 0;
+        if (h > rowH) rowH = h;
+      });
+    } catch (e) { /* môi trường test Node không có layout → giữ max-height của CSS */ }
+    listEl.style.maxHeight = rowH
+      ? (AL_DROP_MAX_ROWS * rowH + (AL_DROP_MAX_ROWS - 1) * AL_DROP_ROW_GAP) + 'px'
+      : '';
+  }
+  // Neo dropdown nổi (gọi sau MỖI lần vẽ danh sách + khi cuộn / đổi cỡ màn hình)
+  function alPositionSourcePanel() {
+    const panel = document.getElementById('al-source-panel');
+    if (!panel || panel.hidden || !panel.style) return false;
+    alApplySourceListRowCap(document.getElementById('al-source-list'));
+    const btn = document.getElementById('al-source-btn');
+    const doc = document.documentElement;
+    const vw = Number(doc && doc.clientWidth) || 0;
+    const vh = Number(doc && doc.clientHeight) || 0;
+    if (!vw || !vh || !btn || typeof btn.getBoundingClientRect !== 'function') return false;
+    const r = btn.getBoundingClientRect();
+    if (!r || typeof r.bottom !== 'number') return false;
+    const h = Number(panel.offsetHeight) || 0;
+    let top = r.bottom + 6;                       // mở ngay DƯỚI nút chọn
+    if (h && top + h > vh - AL_DROP_PAD) {        // hết chỗ dưới → mở ngược lên
+      const up = r.top - 6 - h;
+      top = up >= AL_DROP_PAD ? up : Math.max(AL_DROP_PAD, vh - AL_DROP_PAD - h);
+    }
+    panel.style.top = Math.round(top) + 'px';
+    return true;
+  }
   // ─── VỊ TRÍ: nút chọn → chips LS1..LS15 + nút "Thêm" ──
   function renderAlLocationBtn() {
     const btn = document.getElementById('al-location-btn');
@@ -1026,8 +1111,10 @@ export {
   alOnSourceListClick,
   alPickAll,
   alPickedIds,
+  alPositionSourcePanel,
   alSetLocation,
   alSetSourceQuery,
+  alSetSourceQtyQuery,
   alShowNewLocationRow,
   alToggleLocationPanel,
   alTogglePick,

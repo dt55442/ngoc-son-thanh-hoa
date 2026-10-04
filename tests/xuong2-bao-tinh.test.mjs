@@ -752,7 +752,7 @@ check('CẤU TRÚC (js): baoTinhDefectStock nhận (excludeId, totalKinds) + bao
   /function baoTinhDefectStock\(excludeId, totalKinds\)/.test(jsX2) &&
   /baoTinhDefectStock\(ex, \['bao_thanh'\]\)/.test(jsX2));
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v204/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v206/.test(swJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

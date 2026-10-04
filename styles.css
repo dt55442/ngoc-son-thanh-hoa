@@ -5841,6 +5841,72 @@ body[data-theme="night"] .al-day-badge.day-luuong { background: #fcefab; }
   white-space: nowrap;
 }
 .x2-nan-ext svg { width: 11px; height: 11px; }
+/* ── CHIP "ĐÃ CHỌN THAN HÓA" (04/10/2026) — thẻ nan đã có lô Sấy 1 tạo từ nó
+   (đọc batch.sourceChonNanId — nanSay1UseOf trong js/xuong2.js) ── */
+.x2-nan-say1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+  padding: 0 7px;
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.10);
+  color: #6d28d9;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.x2-nan-say1 svg { width: 11px; height: 11px; }
+/* Thẻ nan đã than hóa HẾT phần còn lại → nền xanh lá nổi bật */
+.x2-nan-say1.say1-full {
+  border-color: rgba(22, 163, 74, 0.45);
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+/* ── Ô SỬA NHANH TRONG BẢNG LỊCH SỬ CHỌN NAN THÔ (Phân loại · Số lượng) ──
+   Chỉ render khi người dùng có QUYỀN TAB CÔNG ĐOẠN (canEditTab) — viền nét
+   đứt để phân biệt với ô nhập của form; thay chip/số tĩnh cũ ── */
+.x2-cn-inline-cls {
+  max-width: 150px;
+  min-height: 30px;
+  padding: 2px 6px;
+  border: 1px dashed var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.x2-cn-inline-qty-wrap { display: inline-flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.x2-cn-inline-qty {
+  width: 92px;
+  min-height: 30px;
+  padding: 2px 6px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-weight: 700;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.x2-cn-inline-qty::-webkit-outer-spin-button,
+.x2-cn-inline-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.x2-cn-inline-qty:focus, .x2-cn-inline-cls:focus { outline: none; border-color: var(--primary); border-style: solid; }
+@media (max-width: 639.98px) {
+  /* Ô sửa nhanh trên điện thoại: vùng chạm to + 16px (iOS KHÔNG tự phóng to trang) */
+  .x2-cn-inline-cls, .x2-cn-inline-qty {
+    font-size: 16px;
+    min-height: 40px;
+    padding: 4px 6px;
+  }
+  .x2-cn-inline-cls { max-width: 100%; }
+  .x2-cn-inline-qty { width: 110px; }
+}
 /* Thông tin tổng hợp ở ĐẦU THẺ NGÀY (tổng thanh · tổng thể tích · tỷ lệ loại) */
 .x2-day-sum {
   display: inline-flex;
@@ -8661,14 +8727,40 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
 /* Danh sách thẻ nguồn + chips vị trí: tự cuộn trong khung nhỏ */
 #modal-add-lot .al-picker { padding: 8px; margin-top: 6px; }
 #modal-add-lot .al-search { min-height: 34px; }
-#modal-add-lot .al-card-list { max-height: 24vh; }
+/* ── DROPDOWN NỔI CỦA DANH SÁCH NGUỒN (04/10/2026) ────────────────
+   Danh sách THẺ NGUỒN thả nổi TOÀN BỘ BỀ RỘNG MÀN HÌNH ĐANG XEM
+   (left/right 8px theo viewport — modal-overlay là khung nhìn cố định),
+   z-index trên khung modal, nền đặc + bóng đổ; JS đặt tọa độ ĐỈNH
+   (mở dưới nút chọn, hết chỗ thì mở ngược lên) và đo cao 5 dòng thẻ
+   cho danh sách (#al-source-list). Nằm NGOÀI luồng form nên KHÔNG đẩy
+   form xuống và modal không phải cuộn khi mở dropdown. */
+#modal-add-lot #al-source-panel {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  z-index: 10001;
+  margin-top: 0;
+  padding: 10px;
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  -webkit-overflow-scrolling: touch;
+}
+/* Ô TÌM THEO SỐ LƯỢNG: thu hẹp để chung 1 dòng với ô tìm nhanh trên dropdown rộng */
+#modal-add-lot .al-search-qty { flex: 1 1 180px; max-width: 260px; }
+/* Dropdown nguồn NỔI: danh sách cao tối đa 5 DÒNG THẺ (5×64px + 4 khe 6px) —
+   JS đo lại chính xác từng thẻ khi mở, quá thì tự cuộn */
+#modal-add-lot .al-card-list { max-height: calc(5 * 64px + 4 * 6px); }
 #modal-add-lot .al-loc-chips { max-height: 18vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 /* Ô thông tin nguồn: gọn chữ + xuống dòng được mọi chỗ → không tràn ngang */
 #modal-add-lot .al-source-info,
 #modal-transfer-kho .al-source-info { font-size: 0.76rem; overflow-wrap: anywhere; word-break: break-word; }
 #modal-add-lot #al-notes { min-height: 44px; }
 @media (max-width: 639.98px) {
-  #modal-add-lot .al-card-list { max-height: 26vh; }
   #modal-add-lot .al-loc-chips { max-height: 16vh; }
 }
 

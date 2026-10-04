@@ -5,6 +5,8 @@
 // (đầu thẻ: Ngày · Người chọn nan · Thời gian · Công suất · Hiệu suất · Tổng số
 // thanh · Tổng thể tích · Tỷ lệ loại — trong thẻ: Loại nan · Phân loại · Số lượng
 // · Thể tích · Tỷ lệ loại), lưu/sửa/xóa và LIÊN KẾT số lượng sang CHẠY MÁY BÀO THÔ.
+// + mục N (04/10/2026): chip "ĐÃ CHỌN THAN HÓA" (batch.sourceChonNanId) + SỬA NHANH
+//   2 Ô NGAY TẠI BẢNG (Phân loại · Số lượng) — chỉ người có quyền tab Công Đoạn.
 'use strict';
 import fs from 'node:fs';
 
@@ -408,6 +410,94 @@ state.xuong2ChonNanThoRecords = [];
 x2.renderX2BaoThoCard();
 check('LIÊN KẾT: xóa hết lượt chọn nan → thẻ Bào Thô quay lại "Chờ Chọn Nan Thô"',
   document.getElementById('x2-bt-day-cards').innerHTML.includes('Chờ Chọn Nan Thô'));
+
+// ─── N. THÔNG BÁO "ĐÃ CHỌN THAN HÓA" + SỬA NHANH 2 Ô TẠI BẢNG (04/10/2026) ──
+// (Section M đã xóa hết lượt chọn nan → tự seed lại 2 thẻ nan + 2 lô gắn sourceChonNanId)
+const cnSayA = { id: 'x2cn-th-a', baothoId: 'bt-1', date: '2026-09-18', dims: [1250, 80, 12],
+  sizeKey: '1250×80×12', cls: 'A', quantity: 1000, unitVol: 0.0012, volume: 1.2,
+  createdAt: '2026-09-18T02:00:00.000Z' };
+const cnSayB = { id: 'x2cn-th-b', baothoId: 'bt-1', date: '2026-09-18', dims: [1300, 90, 12],
+  sizeKey: '1300×90×12', cls: 'B', quantity: 300, unitVol: 0.001404, volume: 0.4212,
+  createdAt: '2026-09-18T03:00:00.000Z' };
+state.xuong2ChonNanThoRecords = [cnSayA, cnSayB];
+state.batches = [
+  { id: 'b-th-1', code: '260919-01', stage: 'say1', date: '2026-09-19', location: 'LS5',
+    quantity: 500, sourceChonNanId: 'x2cn-th-a' },
+  { id: 'b-th-2', code: '260920-01', stage: 'say2', date: '2026-09-20', location: 'LS9',
+    quantity: 300, sourceChonNanId: 'x2cn-th-a' }
+];
+x2.renderX2ChonNanTable();
+const thHtml = () => document.getElementById('x2-cn-day-cards').innerHTML;
+const cnRec = id => state.xuong2ChonNanThoRecords.find(r => r.id === id);
+
+check('THAN HÓA: nanSay1UseOf đếm đúng 2 lô · 800 thanh đã dùng',
+  (() => { const u = x2.nanSay1UseOf('x2cn-th-a'); return u.count === 2 && u.used === 800; })());
+check('THAN HÓA: dòng đã có lô → chip "ĐÃ CHỌN THAN HÓA 800/1.000 thanh · còn 200"',
+  thHtml().includes('x2-nan-say1') && thHtml().includes('Đã chọn than hóa 800/1.000 thanh · còn 200'));
+check('THAN HÓA: tooltip liệt kê mã lô + ngày + vị trí',
+  thHtml().includes('260919-01') && thHtml().includes('19/09/26') && thHtml().includes('LS5'));
+check('THAN HÓA: CHỈ dòng đã có lô mới hiện chip (dòng 300 thanh không chip)',
+  (thHtml().match(/class="x2-nan-say1/g) || []).length === 1);
+check('SỬA NHANH (có quyền): bảng có 2 SELECT phân loại + 2 ô NHẬP số lượng',
+  (thHtml().match(/data-x2-cn-cls=/g) || []).length === 2 &&
+  (thHtml().match(/data-x2-cn-qty=/g) || []).length === 2);
+
+check('SỬA NHANH PHÂN LOẠI: đổi được B → A1 ngay tại bảng',
+  x2.onChonNanInlineEdit({ target: { getAttribute: k => (k === 'data-x2-cn-cls' ? 'x2cn-th-b' : null), value: 'A1' } }) === true &&
+  cnRec('x2cn-th-b').cls === 'A1');
+check('SỬA NHANH PHÂN LOẠI: giá trị không hợp lệ → từ chối (giữ A1)',
+  x2.onChonNanInlineEdit({ target: { getAttribute: k => (k === 'data-x2-cn-cls' ? 'x2cn-th-b' : null), value: 'Z' } }) === false &&
+  cnRec('x2cn-th-b').cls === 'A1');
+
+check('SỬA NHANH SỐ LƯỢNG: 1000 → 700 được LƯU IM LẶNG (không chặn dù đã than hóa 800)',
+  x2.onChonNanInlineEdit({ target: { getAttribute: k => (k === 'data-x2-cn-qty' ? 'x2cn-th-a' : null), value: '700' } }) === true &&
+  cnRec('x2cn-th-a').quantity === 700);
+check('SỬA NHANH SỐ LƯỢNG: tính lại thể tích 700 × 0,0012 = 0,8400 m³ + updatedAt + ghi máy',
+  Math.abs(cnRec('x2cn-th-a').volume - 0.84) < 1e-9 &&
+  !!cnRec('x2cn-th-a').updatedAt &&
+  JSON.parse(localStorage.getItem('bamboo_tracker_xuong2_chon_nan_tho_v1') || '[]')
+    .some(r => r.id === 'x2cn-th-a' && r.quantity === 700));
+check('THAN HÓA: sau khi sửa số lượng → chip "ĐÃ THAN HÓA HẾT · 800 thanh" (còn lại kẹp 0)',
+  thHtml().includes('Đã than hóa hết · 800 thanh') && thHtml().includes('say1-full'));
+
+check('SỬA NHANH SỐ LƯỢNG: nhập 0 → BỊ TỪ CHỐI, record giữ nguyên 700',
+  x2.onChonNanInlineEdit({ target: { getAttribute: k => (k === 'data-x2-cn-qty' ? 'x2cn-th-a' : null), value: '0' } }) === false &&
+  cnRec('x2cn-th-a').quantity === 700);
+check('SỬA NHANH: event không phải ô sửa nhanh → bỏ qua (false)',
+  x2.onChonNanInlineEdit({ target: { getAttribute: () => null } }) === false &&
+  x2.onChonNanInlineEdit({}) === false);
+
+const userAdmin = state.currentUser;
+state.currentUser = { username: 'view', role: 'viewer', editTabs: [], allowAdvanced: false };
+x2.renderX2ChonNanTable();
+check('QUYỀN (viewer): bảng chỉ có chip/số TĨNH — KHÔNG có ô sửa nhanh',
+  !thHtml().includes('data-x2-cn-qty=') && !thHtml().includes('data-x2-cn-cls=') &&
+  thHtml().includes('x2-nan-cls'));
+check('QUYỀN (viewer): sửa nhanh BỊ TỪ CHỐI (số lượng giữ 700)',
+  x2.onChonNanInlineEdit({ target: { getAttribute: k => (k === 'data-x2-cn-qty' ? 'x2cn-th-a' : null), value: '111' } }) === false &&
+  cnRec('x2cn-th-a').quantity === 700);
+state.currentUser = userAdmin;
+x2.renderX2ChonNanTable();
+check('QUYỀN (admin): bảng trở lại 2 ô sửa nhanh mỗi dòng',
+  (thHtml().match(/data-x2-cn-qty=/g) || []).length === 2 &&
+  (thHtml().match(/data-x2-cn-cls=/g) || []).length === 2);
+
+const jsX2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
+const jsEvSrc = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+const cssX2Src = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+check('CẤU TRÚC (js/xuong2.js): helper + 2 ô inline + handler + import canEditTab + export',
+  jsX2Src.includes('function nanSay1UseOf') && jsX2Src.includes('function chonNanSay1ChipHtml') &&
+  jsX2Src.includes('function chonNanClsCellHtml') && jsX2Src.includes('function chonNanQtyCellHtml') &&
+  jsX2Src.includes('function onChonNanInlineEdit') &&
+  jsX2Src.includes("from './permissions.js'") &&
+  jsX2Src.includes('  nanSay1UseOf,') && jsX2Src.includes('  onChonNanInlineEdit,'));
+check('CẤU TRÚC (js/events.js): uỷ nhiệm change trên #x2-cn-day-cards + import hàm mới',
+  jsEvSrc.includes("safeOn('x2-cn-day-cards', 'change', onChonNanInlineEdit)") &&
+  jsEvSrc.includes('onChonNanInlineEdit, nanSay1UseOf,'));
+check('CẤU TRÚC (styles.css): chip x2-nan-say1 (+ say1-full) + 2 ô inline + bản mobile 16px',
+  cssX2Src.includes('.x2-nan-say1 {') && cssX2Src.includes('.x2-nan-say1.say1-full {') &&
+  cssX2Src.includes('.x2-cn-inline-cls {') && cssX2Src.includes('.x2-cn-inline-qty {') &&
+  cssX2Src.includes('font-size: 16px;'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

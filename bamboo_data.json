@@ -1,7 +1,63 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-04T03:17:06.576Z",
+  "savedAt": "2026-10-04T05:39:53.575Z",
   "batches": [
+    {
+      "id": "batch-1791085297454-1",
+      "code": "260928-23",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1568,
+      "volume": 0.3528,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791085297453
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790763576298-2ptds",
+      "sourceChonNanLabel": "1250×18×10 · A · 1.568",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-04T03:41:37.453Z"
+    },
+    {
+      "id": "batch-1791085297453-0",
+      "code": "260928-22",
+      "stage": "say1",
+      "date": "2026-09-28",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791085297453
+      },
+      "location": "LS9",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1790763473931-44v43",
+      "sourceChonNanLabel": "1250×18×7 · A · 2.100",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-09-28"
+        }
+      ],
+      "updatedAt": "2026-10-04T03:41:37.453Z"
+    },
     {
       "id": "batch-1790995698820-1",
       "code": "261002-02",
@@ -6164,7 +6220,7 @@
         18,
         7
       ],
-      "quantity": 1680,
+      "quantity": 2100,
       "workHours": 27,
       "btDate": "2026-09-29",
       "unitVol": 0.0001575,
@@ -6176,7 +6232,8 @@
       "week": "2026-W40",
       "worker": "Vi Thị Nghị, Hà Thị Khoái, Vi Thị Dung A",
       "boDate": "2026-09-29",
-      "volume": 0.2646
+      "volume": 0.3308,
+      "updatedAt": "2026-10-04T03:39:18.748Z"
     },
     {
       "week": "2026-W40",
@@ -6321,7 +6378,7 @@
     {
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "unitVol": 0.000225,
-      "volume": 0.3276,
+      "volume": 0.3528,
       "cls": "A",
       "workHoursTC": 0,
       "workHoursHC": 27,
@@ -6329,7 +6386,7 @@
       "worker": "Vi Thị Nghị, Hà Thị Khoái, Vi Thị Dung A",
       "boDate": "2026-09-29",
       "materialType": "Luồng cây xô",
-      "quantity": 1456,
+      "quantity": 1568,
       "id": "x2cn-1790763576298-2ptds",
       "sizeKey": "1250×18×10",
       "dims": [
@@ -6344,7 +6401,8 @@
       "workHours": 27,
       "materialId": "mat-1790646107854-hdzwj",
       "week": "2026-W40",
-      "supplier": "Nhà Tế"
+      "supplier": "Nhà Tế",
+      "updatedAt": "2026-10-04T03:38:10.328Z"
     },
     {
       "materialType": "Luồng cây xô",
@@ -8263,7 +8321,7 @@
   },
   "x2SayTimes": {
     "2026-09-28|say2": 2,
-    "2026-09-28|say1": 2
+    "2026-09-28|say1": 3
   },
   "x2SayIncidents": {
     "2026-09-21": 0.33

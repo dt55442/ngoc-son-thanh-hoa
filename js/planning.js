@@ -249,94 +249,361 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     return (nanType.length * nanType.width * nanType.thickness) / 1000000000;
   }
 
-  // Render danh sách kế hoạch sản phẩm (gom nhóm theo tuần, hiển thị dạng thẻ/cột trực quan)
+  // ═════════════════════════════════════════════════════════════════
+  // SỔ LỊCH SỬ BẢN GHI KẾ HOẠCH (bảng gọn — 1 DÒNG/TUẦN, gom nhóm theo THÁNG)
+  // Trước đây là lưới thẻ (.planning-week-grid): ~6 cột → 52 tuần xuống dòng
+  // 12 lần, mỗi thẻ cao 3–5 dòng ⇒ vùng cuộn rất dài. Nay 52 tuần = 52 dòng
+  // mảnh (~30px), thanh lọc QUÝ / THÁNG + tìm nhanh, dòng tiêu đề THÁNG DÍNH
+  // khi cuộn; bấm vào dòng để bung chi tiết (loại nan, "Có thể ép", xóa).
+  // ──────────────────────────────────────────────────────────────────
+  // Bộ lọc + danh sách tuần đang bung là TRẠNG THÁI GIAO DIỆN THEO MÁY
+  // (thuần UI — như RATE_COLLAPSE_KEY): KHÔNG đưa vào state.js,
+  // KHÔNG đồng bộ mây/backup.
+  const PLAN_HIST_UI_KEY = 'bamboo_tracker_plan_hist_ui_v1';
+  let planHistUi = { q: 'all', month: 'all', search: '', hideDone: false, open: {} };
+  let planHistUiLoaded = false;
+  // Bộ nhớ tạm của lần render gần nhất: renderPlanHistBody() vẽ lại CHỈ thân
+  // bảng → gõ ở ô tìm không dựng lại thanh công cụ nên KHÔNG mất focus.
+  let planHistData = { yearNum: 0, weekGroups: {}, sortedWeeks: [], weekTotals: {}, tonPre: null };
+  let planHistSearchTimer = 0;
+
+  function loadPlanHistUi() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(PLAN_HIST_UI_KEY));
+      if (raw && typeof raw === 'object') {
+        if (typeof raw.q === 'string') planHistUi.q = raw.q;
+        if (typeof raw.month === 'string') planHistUi.month = raw.month;
+        if (typeof raw.search === 'string') planHistUi.search = raw.search;
+        planHistUi.hideDone = !!raw.hideDone;
+        planHistUi.open = (raw.open && typeof raw.open === 'object') ? raw.open : {};
+      }
+    } catch (e) { /* localStorage lỗi → giữ mặc định */ }
+    planHistUiLoaded = true;
+  }
+
+  function savePlanHistUi() {
+    try { localStorage.setItem(PLAN_HIST_UI_KEY, JSON.stringify(planHistUi)); } catch (e) { /* bỏ qua */ }
+  }
+
+  // Khoảng ngày của 1 tuần ISO (Thứ 2 → Chủ nhật) — tái dùng isoWeekEndISO có sẵn
+  function planWeekRangeISO(yearNum, weekNum) {
+    const end = isoWeekEndISO(yearNum, weekNum);
+    return { start: isoShiftDays(end, -6), end };
+  }
+
+  // 'YYYY-MM-DD' → 'dd/mm'
+  function planDateShort(iso) {
+    const p = String(iso || '').split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}` : '';
+  }
+
+  // Tháng chứa tuần ISO = tháng của THỨ NĂM (ngày giữa tuần) → tuần nằm đè
+  // 2 tháng vẫn vào đúng 1 nhóm, không tách đôi.
+  function planWeekMonthOf(yearNum, weekNum) {
+    const thu = isoShiftDays(isoWeekEndISO(yearNum, weekNum), -3);
+    return parseInt(String(thu).slice(5, 7)) || 0;
+  }
+
+  // Tiếng Việt → không dấu + BỎ DẤU PHÂN CÁCH NGHÌN ('1.000' → '1000')
+  function planHistNorm(s) {
+    return String(s || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/gi, 'd')
+      .toLowerCase()
+      .replace(/(\d)\.(\d)/g, '$1$2');
+  }
+
+  // Quý của tuần ISO: T1–T13 | T14–T26 | T27–T39 | T40–T53
+  function planHistQuarterOf(weekNum) {
+    const w = Number(weekNum) || 0;
+    if (w <= 13) return 'q1';
+    if (w <= 26) return 'q2';
+    if (w <= 39) return 'q3';
+    return 'q4';
+  }
+
+  // Tuần có vượt qua bộ lọc hiện tại không
+  function planHistWeekHit(weekNum, weekItems, yearNum) {
+    const ui = planHistUi;
+    if (ui.q !== 'all' && planHistQuarterOf(weekNum) !== ui.q) return false;
+    if (ui.month !== 'all' && String(planWeekMonthOf(yearNum, weekNum)) !== String(ui.month)) return false;
+    if (ui.hideDone) {
+      const plan = weekItems.reduce((s, i) => s + (i.qty || 0), 0);
+      const done = weekItems.reduce((s, i) => s + getPressedQtyForPlan(yearNum, weekNum, i.productId), 0);
+      if (plan > 0 && done >= plan) return false; // tuần đã ép đủ → ẩn
+    }
+    const q = planHistNorm(ui.search);
+    if (q) {
+      const hit = weekItems.some(it => {
+        const rate = state.materialRates.find(r => r.id === it.productId);
+        return planHistNorm(`${it.week || ''} ${rate ? rate.product : ''} ${rate ? getRateNanSummary(rate) : ''}`)
+          .indexOf(q) >= 0;
+      });
+      if (!hit) return false;
+    }
+    return true;
+  }
+  // ── Thanh công cụ: lọc QUÝ · THÁNG · tìm nhanh · ẩn tuần đã đạt ──
+  function planHistToolbarHtml(yearNum) {
+    const qBtn = (id, lbl) => `<button type="button" class="ph-seg-btn${planHistUi.q === id ? ' active' : ''}" data-plan-hist-q="${id}">${lbl}</button>`;
+    const monthOpts = ['<option value="all">Tất cả tháng</option>'].concat(
+      Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}"${String(planHistUi.month) === String(i + 1) ? ' selected' : ''}>Tháng ${i + 1}/${yearNum}</option>`)
+    ).join('');
+    return `
+      <div class="plan-hist-bar">
+        <div class="ph-seg" role="group" aria-label="Lọc theo quý">
+          ${qBtn('all', 'Cả năm')}${qBtn('q1', 'Q1')}${qBtn('q2', 'Q2')}${qBtn('q3', 'Q3')}${qBtn('q4', 'Q4')}
+        </div>
+        <select id="plan-hist-month" class="ph-select" aria-label="Lọc theo tháng">${monthOpts}</select>
+        <label class="ph-search">
+          <i data-lucide="search" class="ph-search-ic"></i>
+          <input type="search" id="plan-hist-search" placeholder="Tìm sản phẩm / loại nan…" value="${escapeHTML(planHistUi.search)}" autocomplete="off">
+        </label>
+        <label class="ph-hide-done" for="plan-hist-hide-done">
+          <input type="checkbox" id="plan-hist-hide-done"${planHistUi.hideDone ? ' checked' : ''}>
+          <span>Chỉ tuần chưa đạt</span>
+        </label>
+        <span class="ph-count" id="plan-hist-count"></span>
+      </div>`;
+  }
+
+  // ── Thân bảng: nhóm THEO THÁNG (dòng tiêu đề dính) + 1 dòng/tuần ──
+  function renderPlanHistBody() {
+    const body = document.getElementById('plan-hist-body');
+    if (!body) return;
+    const { yearNum, weekGroups, sortedWeeks, weekTotals } = planHistData;
+    if (!yearNum) return;
+
+    const shown = sortedWeeks.filter(w => planHistWeekHit(w, weekGroups[w] || [], yearNum));
+    const countEl = document.getElementById('plan-hist-count');
+    if (countEl) countEl.textContent = `${shown.length}/${sortedWeeks.length} tuần`;
+
+    if (shown.length === 0) {
+      body.innerHTML = `<tr><td colspan="7" class="plan-hist-empty">
+        <i data-lucide="search-x"></i><p>Không có tuần nào khớp bộ lọc hiện tại.</p></td></tr>`;
+      initLucide();
+      return;
+    }
+
+    // Gom các tuần hiển thị theo THÁNG (vẫn theo thứ tự tuần tăng dần)
+    const groups = [];
+    shown.forEach(w => {
+      const m = planWeekMonthOf(yearNum, w);
+      let g = groups[groups.length - 1];
+      if (!g || g.month !== m) { g = { month: m, weeks: [], total: 0 }; groups.push(g); }
+      g.weeks.push(w);
+      g.total += weekTotals[w] || 0;
+    });
+
+    const rows = [];
+    groups.forEach(g => {
+      rows.push(`<tr class="plan-hist-month"><th colspan="7">
+        <span class="ph-month-dot"></span>Tháng ${g.month}/${yearNum}
+        <em>· ${g.weeks.length} tuần · ${g.total.toLocaleString('vi-VN')} tấm</em></th></tr>`);
+      g.weeks.forEach(weekNum => rows.push(planHistRowHtml(weekNum)));
+    });
+
+    body.innerHTML = rows.join('');
+    initLucide();
+  }
+
+  // HTML của 1 DÒNG TUẦN (kèm dòng chi tiết nếu đang bung)
+  function planHistRowHtml(weekNum) {
+    const { yearNum, weekGroups, weekTotals, tonPre } = planHistData;
+    const weekItems = weekGroups[weekNum] || [];
+    const range = planWeekRangeISO(yearNum, weekNum);
+    const open = !!planHistUi.open[String(weekNum)];
+
+    // Chip sản phẩm: <tên> × <số tấm> — chi tiết đầy đủ ở tooltip + dòng bung
+    const chips = weekItems.map(it => {
+      const rate = state.materialRates.find(r => r.id === it.productId);
+      const nm = rate ? rate.product : 'Sản phẩm đã xóa';
+      const tip = `${nm}${rate && getRateNanSummary(rate) ? ' · ' + getRateNanSummary(rate) : ''}`;
+      return `<span class="ph-chip" title="${escapeHTML(tip)}"><b>${escapeHTML(nm)}</b> ×${(it.qty || 0).toLocaleString('vi-VN')}</span>`;
+    }).join('');
+
+    const plan = weekTotals[weekNum] || 0;
+    const done = weekItems.reduce((s, i) => s + getPressedQtyForPlan(yearNum, weekNum, i.productId), 0);
+    const pct = plan > 0 ? Math.min(100, Math.round(done / plan * 100)) : 0;
+    // "Có thể ép" = LỚN NHẤT trong các sản phẩm của tuần (tonPre tính 1 lần/năm)
+    let maxProd = 0;
+    weekItems.forEach(it => {
+      const mp = getMaxProductionForProduct(yearNum, it.productId, weekNum, tonPre);
+      if (mp && mp.maxProduction > maxProd) maxProd = mp.maxProduction;
+    });
+
+    let html = `
+      <tr class="plan-hist-row${open ? ' is-open' : ''}" data-plan-hist-week="${weekNum}">
+        <td class="ph-week">
+          <span class="planning-week-badge" data-plan-hist-toggle="${weekNum}" title="Bấm để ${open ? 'thu gọn' : 'xem chi tiết'}">
+            <i data-lucide="${open ? 'chevron-down' : 'chevron-right'}"></i> Tuần ${weekNum}
+          </span>
+        </td>
+        <td class="ph-range">${planDateShort(range.start)} – ${planDateShort(range.end)}</td>
+        <td class="ph-items">${chips}</td>
+        <td class="ph-num"><strong>${plan.toLocaleString('vi-VN')}</strong></td>
+        <td class="ph-prog">
+          <span class="ph-prog-track" title="Đã ép ${done.toLocaleString('vi-VN')}/${plan.toLocaleString('vi-VN')} tấm (${pct}%)"><i class="ph-prog-fill${pct >= 100 ? ' done' : ''}" style="width:${pct}%"></i></span>
+          <span class="ph-prog-txt${pct >= 100 ? ' done' : ''}">${done.toLocaleString('vi-VN')}/${plan.toLocaleString('vi-VN')} · ${pct}%</span>
+        </td>
+        <td class="ph-num">${maxProd.toLocaleString('vi-VN')}</td>
+        <td class="ph-act" data-perm="planning">
+          <button class="plan-week-btn" onclick="app.duplicatePlanningGroup(${weekNum}, ${yearNum})" title="Nhân bản kế hoạch tuần này"><i data-lucide="copy"></i></button>
+          <button class="plan-week-btn" onclick="app.editPlanningGroup(${weekNum}, ${yearNum})" title="Sửa tuần và số lượng ván"><i data-lucide="pencil"></i></button>
+          <button class="plan-week-btn" data-plan-hist-toggle="${weekNum}" title="${open ? 'Thu gọn' : 'Mở chi tiết'}"><i data-lucide="${open ? 'chevron-up' : 'chevron-down'}"></i></button>
+        </td>
+      </tr>`;
+
+    // ── Dòng chi tiết (bung ra khi bấm) — giữ nguyên thông tin cũ ──
+    if (open) {
+      html += `<tr class="plan-hist-detail"><td colspan="7"><div class="planning-week-items">
+        ${weekItems.map(item => planHistDetailItemHtml(item, weekNum, tonPre)).join('')}
+      </div></td></tr>`;
+    }
+    return html;
+  }
+
+  // 1 dòng chi tiết sản phẩm trong tuần (loại nan · đã ép/KH · Có thể ép · xóa)
+  function planHistDetailItemHtml(item, weekNum, tonPre) {
+    const rate = state.materialRates.find(r => r.id === item.productId);
+    const name = rate ? rate.product : 'Sản phẩm đã xóa';
+    const nanInfo = rate ? getRateNanSummary(rate) : '';
+    const pressedQty = getPressedQtyForPlan(planHistData.yearNum, weekNum, item.productId);
+    const doneCls = pressedQty >= (item.qty || 0) ? 'done' : '';
+    const mp = getMaxProductionForProduct(planHistData.yearNum, item.productId, weekNum, tonPre);
+    const capHtml = mp ? `<span class="plan-item-capacity" title="Sản lượng tối đa từ TỒN THANH KHẢ DỤNG đến tuần ${weekNum} (đồng bộ cột Tồn của Bảng Kế Hoạch). Bottleneck: ${escapeHTML(mp.bottleneck.nanKey)} ×${mp.bottleneck.rate} — còn ${mp.bottleneck.available.toLocaleString('vi-VN')} thanh"><i data-lucide="layers" style="width:10px;height:10px;"></i> Có thể ép: <strong>${mp.maxProduction.toLocaleString('vi-VN')}</strong></span>` : '';
+    return `<div class="planning-week-item">
+      <div class="planning-week-item-info">
+        <span class="planning-week-item-name">${escapeHTML(name)}</span>
+        ${nanInfo ? `<span class="planning-week-item-nan">${escapeHTML(nanInfo)}</span>` : ''}
+        <span class="plan-item-progress ${doneCls}" title="Đã ép / Kế hoạch"><i data-lucide="factory" style="width:10px;height:10px;"></i> ${pressedQty.toLocaleString('vi-VN')}/${(item.qty || 0).toLocaleString('vi-VN')}</span>
+        ${capHtml}
+      </div>
+      <div class="planning-week-item-qty"><strong>${(item.qty || 0).toLocaleString('vi-VN')}</strong> tấm</div>
+      <button class="plan-item-delete" data-perm="planning" onclick="app.deletePlanningItem('${item.id}')" title="Xóa kế hoạch"><i data-lucide="x"></i></button>
+    </div>`;
+  }
+  // ── Xử lý thanh công cụ (uỷ nhiệm trên #planning-list-section ở events.js) ──
+  // Tìm kiếm: debounce 160ms → chỉ vẽ lại THÂN bảng (không dựng lại ô tìm
+  // nên giữ nguyên focus + con trỏ khi gõ).
+  function planHistOnSearch(e) {
+    clearTimeout(planHistSearchTimer);
+    const v = e && e.target ? String(e.target.value) : '';
+    planHistSearchTimer = setTimeout(() => {
+      planHistUi.search = v;
+      savePlanHistUi();
+      renderPlanHistBody();
+    }, 160);
+  }
+
+  function planHistOnQuarter(q) {
+    if (!['all', 'q1', 'q2', 'q3', 'q4'].includes(q)) return;
+    planHistUi.q = q;
+    savePlanHistUi();
+    // Đổi nút active trên thanh → vẽ lại cả khối (ô tìm không mất focus vì
+    // người dùng đang bấm nút, không phải đang gõ)
+    renderPlanningListSection(planHistData.yearNum);
+  }
+
+  function planHistOnMonth(v) {
+    planHistUi.month = (v === 'all') ? 'all' : String(v);
+    savePlanHistUi();
+    renderPlanHistBody();
+  }
+
+  function planHistOnHideDone(checked) {
+    planHistUi.hideDone = !!checked;
+    savePlanHistUi();
+    renderPlanHistBody();
+  }
+
+  function planHistToggleWeek(weekKey) {
+    const k = String(weekKey);
+    if (!k || k === 'null' || k === 'undefined') return;
+    if (planHistUi.open[k]) delete planHistUi.open[k];
+    else planHistUi.open[k] = 1;
+    savePlanHistUi();
+    renderPlanHistBody();
+  }
+
+  // Bấm vào dòng / nhãn Tuần / nút ⌄ → bung hoặc thu dòng chi tiết
+  function planHistOnRowClick(e) {
+    const t = e && e.target;
+    if (!t || !t.closest) return;
+    const tog = t.closest('[data-plan-hist-toggle]');
+    if (tog) { planHistToggleWeek(tog.getAttribute('data-plan-hist-toggle')); return; }
+    // Nút ✎ ⧉ đã có onclick riêng → không bắt
+    if (t.closest('button')) return;
+    const row = t.closest('tr.plan-hist-row');
+    if (row) planHistToggleWeek(row.getAttribute('data-plan-hist-week'));
+  }
+
+  // ═══ RENDER SỔ LỊCH SỬ BẢN GHI KẾ HOẠCH — BẢNG GỌN 1 DÒNG/TUẦN ═══
   function renderPlanningListSection(year) {
     const container = document.getElementById('planning-list-section');
     if (!container) return;
+    if (!planHistUiLoaded) loadPlanHistUi();
     const yearNum = parseInt(year);
     const items = state.planningItems.filter(p => {
       const py = p.year || getYearFromWeek(p.week);
       return py === yearNum;
     });
     if (items.length === 0) {
-      container.innerHTML = `<h5><i data-lucide="list"></i> Kế Hoạch Sản Xuất Năm ${year}: Chưa có</h5>`;
+      planHistData = { yearNum: 0, weekGroups: {}, sortedWeeks: [], weekTotals: {}, tonPre: null };
+      container.innerHTML = `<h5><i data-lucide="list"></i> Lịch Sử Bản Ghi Kế Hoạch Sản Xuất — Năm ${year}: Chưa có</h5>`;
       initLucide();
       return;
     }
 
-    // Gom nhóm theo tuần
+    // Gom nhóm theo tuần + sắp xếp tăng dần + tổng số tấm mỗi tuần
     const weekGroups = {};
     items.forEach(item => {
       const weekNum = getWeekNumber(item.week);
       if (!weekGroups[weekNum]) weekGroups[weekNum] = [];
       weekGroups[weekNum].push(item);
     });
-
-    // Sắp xếp tuần tăng dần
     const sortedWeeks = Object.keys(weekGroups).map(Number).sort((a, b) => a - b);
-
-    // Tính tổng số tấm cho mỗi tuần
     const weekTotals = {};
     sortedWeeks.forEach(w => {
       weekTotals[w] = weekGroups[w].reduce((sum, item) => sum + (item.qty || 0), 0);
     });
-
-    // Tổng toàn năm
     const totalQty = items.reduce((sum, item) => sum + (item.qty || 0), 0);
 
     // Tồn khả dụng theo tuần — tính 1 LẦN cho mọi sản phẩm (đồng bộ cột "Tồn"
     // của Bảng Kế Hoạch: gồm cả thanh chưa chuyển Bào Tinh đang nằm ở Sấy/Kho)
     const tonPre = getPlanningTonByWeek(yearNum);
+    planHistData = { yearNum, weekGroups, sortedWeeks, weekTotals, tonPre };
 
     container.innerHTML = `
       <div class="planning-list-header">
-        <h5><i data-lucide="list"></i> Kế Hoạch Sản Xuất Năm ${year}</h5>
-        <span class="planning-list-total"><i data-lucide="layers" style="width:12px;height:12px;"></i> Tổng: <strong>${totalQty.toLocaleString('vi-VN')} tấm</strong> (${items.length} kế hoạch)</span>
+        <h5><i data-lucide="list"></i> Lịch Sử Bản Ghi Kế Hoạch Sản Xuất — Năm ${year}</h5>
+        <span class="planning-list-total"><i data-lucide="layers" style="width:12px;height:12px;"></i> Tổng: <strong>${totalQty.toLocaleString('vi-VN')} tấm</strong> (${items.length} kế hoạch · ${sortedWeeks.length} tuần)</span>
       </div>
-      <div class="planning-week-grid">
-        ${sortedWeeks.map(weekNum => {
-          const weekItems = weekGroups[weekNum];
-          const weekTotal = weekTotals[weekNum];
-          return `
-            <div class="planning-week-card">
-              <div class="planning-week-card-header">
-                <span class="planning-week-badge"><i data-lucide="calendar" style="width:12px;height:12px;"></i> Tuần ${weekNum}</span>
-                <span class="planning-week-card-actions" data-perm="planning">
-                  <button class="plan-week-btn" onclick="app.duplicatePlanningGroup(${weekNum}, ${yearNum})" title="Nhân bản thẻ kế hoạch"><i data-lucide="copy"></i></button>
-                  <button class="plan-week-btn" onclick="app.editPlanningGroup(${weekNum}, ${yearNum})" title="Sửa tuần & số lượng ván"><i data-lucide="pencil"></i></button>
-                  <span class="planning-week-total">${weekTotal.toLocaleString('vi-VN')} tấm</span>
-                </span>
-              </div>
-              <div class="planning-week-items">
-                ${weekItems.map(item => {
-                  const rate = state.materialRates.find(r => r.id === item.productId);
-                  const name = rate ? rate.product : 'Sản phẩm đã xóa';
-                  const nanInfo = rate ? getRateNanSummary(rate) : '';
-                  const pressedQty = getPressedQtyForPlan(yearNum, weekNum, item.productId);
-                  const doneCls = pressedQty >= (item.qty || 0) ? 'done' : '';
-                  // Sản lượng tối đa có thể ép từ TỒN THANH KHẢ DỤNG đến tuần kế hoạch (đồng bộ cột "Tồn" bảng Kế Hoạch)
-                  const maxProd = getMaxProductionForProduct(yearNum, item.productId, weekNum, tonPre);
-                  const maxProdHtml = maxProd ? `<span class="plan-item-capacity" title="Sản lượng tối đa từ TỒN THANH KHẢ DỤNG đến tuần ${weekNum} (đồng bộ cột Tồn của Bảng Kế Hoạch: Σ Nhập thực tế + Σ Dự kiến − Σ Đã bào tinh các tuần đã qua − Σ Cần các tuần từ hiện tại). Bottleneck: ${escapeHTML(maxProd.bottleneck.nanKey)} ×${maxProd.bottleneck.rate} — còn ${maxProd.bottleneck.available.toLocaleString('vi-VN')} thanh"><i data-lucide="layers" style="width:10px;height:10px;"></i> Có thể ép: <strong>${maxProd.maxProduction.toLocaleString('vi-VN')}</strong></span>` : '';
-                  return `
-                    <div class="planning-week-item">
-                      <div class="planning-week-item-info">
-                        <span class="planning-week-item-name">${escapeHTML(name)}</span>
-                        ${nanInfo ? `<span class="planning-week-item-nan">${nanInfo}</span>` : ''}
-                        <span class="plan-item-progress ${doneCls}" title="Đã ép / Kế hoạch"><i data-lucide="factory" style="width:10px;height:10px;"></i> ${pressedQty.toLocaleString('vi-VN')}/${(item.qty || 0).toLocaleString('vi-VN')}</span>
-                        ${maxProdHtml}
-                      </div>
-                      <div class="planning-week-item-qty">
-                        <strong>${item.qty.toLocaleString('vi-VN')}</strong> tấm
-                      </div>
-                      <button class="plan-item-delete" data-perm="planning" onclick="app.deletePlanningItem('${item.id}')" title="Xóa kế hoạch"><i data-lucide="x"></i></button>
-                    </div>`;
-                }).join('')}
-              </div>
-            </div>`;
-        }).join('')}
+      ${planHistToolbarHtml(yearNum)}
+      <div class="plan-hist-wrap table-scroll">
+        <table class="plan-hist-table">
+          <thead>
+            <tr>
+              <th class="ph-c-week">Tuần</th>
+              <th class="ph-c-range">Khoảng Ngày</th>
+              <th>Sản Phẩm &amp; Số Lượng</th>
+              <th class="ph-c-num">Tổng (tấm)</th>
+              <th class="ph-c-prog">Đã Ép / Kế Hoạch</th>
+              <th class="ph-c-num">Có Thể Ép</th>
+              <th class="text-right ph-c-act">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="plan-hist-body"></tbody>
+        </table>
       </div>`;
+    renderPlanHistBody();
     initLucide();
   }
+
+
+
+
+
 
   // Tạo chuỗi tóm tắt loại nan cho một định mức (VD: "1200×20×12 ×16, 1200×20×8 ×8")
   function getRateNanSummary(rate) {
@@ -946,27 +1213,35 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   }
 
   // Định dạng hiển thị số thanh (giữ nguyên phân số nếu nhập phân số)
+  // SỬA LỖI: bản cũ làm tròn 6 số rồi so khớp CỨNG với khóa phân số →
+  // 1/6 = 0.16666666666666666 làm tròn thành 0.166667 ≠ khóa → hiện "0.1667"
+  // (tương tự 1/3, 2/3, 5/6). Nay so khớp CÓ DUNG SAI 1e-6 → luôn ra "1/6".
   function formatNanQty(value) {
-    if (!value) return '0';
+    if (value === undefined || value === null || value === '') return '0';
+    // Chuỗi phân số '1/6' (dữ liệu cũ / nhập tay) → tự chuyển, tránh parseFloat('1/6') = 1
+    if (typeof value === 'string' && /^\s*\d+\s*\/\s*\d+\s*$/.test(value)) {
+      const [n, d] = value.split('/').map(x => parseFloat(x));
+      if (d) value = n / d;
+    }
     const num = parseFloat(value);
     if (isNaN(num)) return String(value);
     // Nếu là số nguyên
     if (Number.isInteger(num)) return String(num);
-    // Nếu là phân số đơn giản (1/6, 1/4, 1/3, 1/2...)
-    const commonFractions = {
-      0.125: '1/8',
-      0.16666666666666666: '1/6',
-      0.2: '1/5',
-      0.25: '1/4',
-      0.3333333333333333: '1/3',
-      0.5: '1/2',
-      0.6666666666666666: '2/3',
-      0.75: '3/4',
-      0.8333333333333334: '5/6'
-    };
-    // Làm tròn để so khớp
-    const rounded = Math.round(num * 1000000) / 1000000;
-    if (commonFractions[rounded] !== undefined) return commonFractions[rounded];
+    // Phân số đơn giản (1/8 1/6 1/5 1/4 1/3 1/2 2/3 3/4 5/6) — so khớp CÓ DUNG SAI
+    const commonFractions = [
+      [0.125, '1/8'],
+      [1 / 6, '1/6'],
+      [0.2, '1/5'],
+      [0.25, '1/4'],
+      [1 / 3, '1/3'],
+      [0.5, '1/2'],
+      [2 / 3, '2/3'],
+      [0.75, '3/4'],
+      [5 / 6, '5/6']
+    ];
+    for (const [val, txt] of commonFractions) {
+      if (Math.abs(num - val) < 1e-6) return txt;
+    }
     // Số thập phân khác
     return String(Math.round(num * 10000) / 10000);
   }
@@ -1388,7 +1663,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     tbody.innerHTML = '';
 
     if (state.materialRates.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="16" class="text-center" style="padding:30px;color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="13" class="text-center" style="padding:30px;color:var(--text-muted);">
         <i data-lucide="book-open" style="width:28px;height:28px;margin-bottom:8px;"></i>
         <p>Chưa có định mức nào. Hãy thêm định mức nguyên vật liệu cho từng loại sản phẩm.</p></td></tr>`;
       return;
@@ -1396,12 +1671,11 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
 
     state.materialRates.forEach(rate => {
       const tr = document.createElement('tr');
-      const nan1QtyDisplay = formatNanQty(rate.nan1Qty);
-      const nan2QtyDisplay = formatNanQty(rate.nan2Qty);
-      const nan3QtyDisplay = formatNanQty(rate.nan3Qty);
-      const nan1 = rate.nan1 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan1)}</strong><br>${nan1QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
-      const nan2 = rate.nan2 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan2)}</strong><br>${nan2QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
-      const nan3 = rate.nan3 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan3)}</strong><br>${nan3QtyDisplay} thanh</div>` : '<span class="text-muted">-</span>';
+      // Số lượng nan IN Ở DÒNG NHỎ trong ô "Loại Nan N" — KHÔNG còn cột "Số Lượng"
+      // riêng nữa (bảng rút từ 16 → 13 cột, hết phình ngang).
+      const nan1 = rate.nan1 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan1)}</strong><span class="rate-nan-qty">× ${formatNanQty(rate.nan1Qty)}</span></div>` : '<span class="text-muted">-</span>';
+      const nan2 = rate.nan2 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan2)}</strong><span class="rate-nan-qty">× ${formatNanQty(rate.nan2Qty)}</span></div>` : '<span class="text-muted">-</span>';
+      const nan3 = rate.nan3 ? `<div class="rate-nan-info"><strong>${escapeHTML(rate.nan3)}</strong><span class="rate-nan-qty">× ${formatNanQty(rate.nan3Qty)}</span></div>` : '<span class="text-muted">-</span>';
       // Sử Dụng Nan (điều kiện trừ số thanh khi tính kế hoạch) + ĐVT hiển thị
       const useTxt = rateNanUse(rate);
       const unitTxt = rateUnit(rate);
@@ -1415,11 +1689,8 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
         <td>${rate.fullName ? escapeHTML(rate.fullName) : '—'}</td>
         <td>${rate.pressType ? escapeHTML(rate.pressType) : '—'}</td>
         <td>${nan1}</td>
-        <td>${nan1QtyDisplay || '-'}</td>
         <td>${nan2}</td>
-        <td>${nan2QtyDisplay || '-'}</td>
         <td>${nan3}</td>
-        <td>${nan3QtyDisplay || '-'}</td>
         <td>${rate.glue} kg</td>
         <td>${rate.additive} kg</td>
         <td>${rate.efficiency}%</td>
@@ -2017,6 +2288,16 @@ export {
   openPlanningEditModal,
   openPlanningItemModal,
   parseFractionValue,
+  planHistOnHideDone,
+  planHistOnMonth,
+  planHistOnQuarter,
+  planHistOnRowClick,
+  planHistOnSearch,
+  planHistQuarterOf,
+  planHistToggleWeek,
+  planHistWeekHit,
+  planWeekMonthOf,
+  planWeekRangeISO,
   populateNanSelects,
   populatePlanningEditYearWeek,
   populatePlanningItemYearWeekDefaults,
@@ -2027,6 +2308,7 @@ export {
   rateUnit,
   normalizeMaterialRate,
   renderMaterialRatesTable,
+  renderPlanHistBody,
   renderPlanningListSection,
   renderPlanningMatrix,
   renderPlanningView,

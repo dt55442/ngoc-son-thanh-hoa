@@ -1,9 +1,9 @@
 // tests/chart-stems.test.mjs — Kiểm thử HÌNH DẠNG CỘT "THÂN CÂY" (js/chart-stems.js)
 // Dùng cho biểu đồ Kế Hoạch vs Thực Tế Nguyên Liệu:
-//   • ánh xạ vị trí → hình (Xưởng 2 = cây tre · Xưởng 1 = ống nứa · Lò hơi = khúc gỗ)
+//   • ánh xạ vị trí → hình (Xưởng 2 = cây tre · Xưởng 1 = Vầu/nứa · Lò hơi = khúc gỗ)
 //   • khoảng cách ĐỐT lấy từ vạch chia trục Y + vị trí các vạch đốt tính từ đáy
 //   • tiện ích màu shade/withAlpha
-//   • vẽ từng hình: KH = khung rỗng (có miệng ống/mặt cắt) · TT = đặc; nứa đúng 1 đốt;
+//   • vẽ từng hình: KH = khung rỗng (có miệng ống/mặt cắt) · TT = đặc; Vầu/nứa đúng 1 đốt;
 //     gỗ TRƠN (không cành); cột quá thấp thì không vẽ
 //   • plugin stemBars: chỉ vẽ dataset có stemShape, bỏ giá trị 0/âm, tôn trọng enabled:false
 'use strict';
@@ -56,7 +56,7 @@ check('Lò hơi → khúc gỗ', stemShapeForLocation('lo-hoi') === 'log');
 check('vị trí lạ → mặc định cây tre', stemShapeForLocation('khong-co') === 'bamboo');
 check('nhãn hình dạng đúng tiếng Việt',
   stemLabelForLocation('xuong-2') === 'cây tre'
-  && stemLabelForLocation('xuong-1') === 'ống nứa'
+  && stemLabelForLocation('xuong-1') === 'Vầu/nứa'
   && stemLabelForLocation('lo-hoi') === 'khúc gỗ');
 
 // ─── 2. KHOẢNG CÁCH ĐỐT theo vạch chia trục Y ────────────────────

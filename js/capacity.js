@@ -49,8 +49,9 @@ import {
   baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, chonNanDisplay, cutDisplay,
   baoThoRateOf, baoTinhRateOf, boOngRateOf, boluongRateOf, bulligRateOf, capRateOf, chonNanRateOf,
   sayChargeRows, sayRateEntryOf,
-  // XƯỞNG 1 — 3 công đoạn đầu (04/10/2026)
-  x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay
+  // XƯỞNG 1 — 8 công đoạn (04–05/10/2026)
+  x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay,
+  x1ChainSpecByKey, x1ChainDisplay
 } from './xuong2.js';
 import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
 
@@ -282,7 +283,33 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         return { date: d.date, qty: d.qty, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => Number((((state.x1Rates || {}).boc) || {})[m]) || 0
-    }
+    },
+    // ─── XƯỞNG 1 — 5 CÔNG ĐOẠN ĐUÔI (05/10/2026) ────────────────
+    // Cùng khung SPEC của js/xuong2.js: tồn = phần nguồn chưa bị xài,
+    // qtyIn = khối lượng đem xử lý trong lượt.
+    // ⚠ CHỈ GỌI hàm của xuong2.js BÊN TRONG closure (rows/rateOf) —
+    //   gọi ở đây sẽ vỡ TDZ khi 2 module có vòng import.
+    ...[
+      { id: 'x1locong',   spec: 'locOng',    label: 'Lọc Ống',          cardId: 'x1-loc-ong-card' },
+      { id: 'x1catmat',   spec: 'catMat',    label: 'Cắt Mắt',          cardId: 'x1-cat-mat-card' },
+      { id: 'x1bo',       spec: 'bo',        label: 'Bổ',               cardId: 'x1-bo-card' },
+      { id: 'x1phoisay',  spec: 'phoiSay',   label: 'Phơi Sấy',         cardId: 'x1-phoi-say-card' },
+      { id: 'x1locthanh', spec: 'locThanh',  label: 'Lọc Thanh/Bó Xô',  cardId: 'x1-loc-thanh-card' }
+    ].map(c => ({
+      id: c.id, ws: 'x1', label: c.label, unit: 'kg/h', unitQty: 'kg',
+      cardId: c.cardId, kind: 'cap',
+      rows: () => {
+        const sp = x1ChainSpecByKey(c.spec);
+        return (state[sp.stateKey] || []).map(r => {
+          const d = x1ChainDisplay(sp, r);
+          return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        });
+      },
+      rateOf: m => {
+        const sp = x1ChainSpecByKey(c.spec);
+        return Number((((state.x1Rates || {})[sp.rateKind]) || {})[m]) || 0;
+      }
+    }))
   ];
 
   // Khóa GIỜ SỰ CỐ CHO PHÉP (state.x2StageIncidents) của từng công đoạn:
@@ -291,9 +318,11 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     boluong: 'boluong',
     cut: 'cut', boong: 'boong', baotho: 'baotho', chonnan: 'chonnan',
     baotinh: 'baotinh', epvan: 'epvan', bullig_gc: 'bullig', bullig_ct: 'bullig',
-    // XƯỞNG 1 (04/10/2026) — khóa giờ sự cố = đúng id công đoạn (khớp incKey
+    // XƯỞNG 1 (04–05/10/2026) — khóa giờ sự cố = đúng id công đoạn (khớp incKey
     // mà x1RenderDayCards truyền vào → bảng tổng hợp TRỪ giờ sự cố giống thẻ ngày)
-    x1catong: 'x1catong', x1saysinh: 'x1saysinh', x1boc: 'x1boc'
+    x1catong: 'x1catong', x1saysinh: 'x1saysinh', x1boc: 'x1boc',
+    x1locong: 'x1locong', x1catmat: 'x1catmat', x1bo: 'x1bo',
+    x1phoisay: 'x1phoisay', x1locthanh: 'x1locthanh'
   };
   function capIncKeyOf(st) { return CAP_INC_KEY[st.id] || null; }
 
@@ -1311,10 +1340,15 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     { elId: 'x2-mini-spark-bao-tinh', stageIds: ['baotinh'] },
     { elId: 'x2-mini-spark-ep-van', stageIds: ['epvan'] },
     { elId: 'x2-mini-spark-bullig', stageIds: ['bullig_gc', 'bullig_ct'] },
-    // XƯỞNG 1 — 3 công đoạn đầu (sparkline 8 tuần trên mini card)
+    // XƯỞNG 1 — 8 công đoạn (sparkline 8 tuần trên mini card)
     { elId: 'x2-mini-spark-x1-cat-ong', stageIds: ['x1catong'] },
     { elId: 'x2-mini-spark-x1-say-sinh', stageIds: ['x1saysinh'] },
-    { elId: 'x2-mini-spark-x1-boc', stageIds: ['x1boc'] }
+    { elId: 'x2-mini-spark-x1-boc', stageIds: ['x1boc'] },
+    { elId: 'x2-mini-spark-x1-loc-ong', stageIds: ['x1locong'] },
+    { elId: 'x2-mini-spark-x1-cat-mat', stageIds: ['x1catmat'] },
+    { elId: 'x2-mini-spark-x1-bo', stageIds: ['x1bo'] },
+    { elId: 'x2-mini-spark-x1-phoi-say', stageIds: ['x1phoisay'] },
+    { elId: 'x2-mini-spark-x1-loc-thanh', stageIds: ['x1locthanh'] }
   ];
   function capSparkGroupWeekEff(stageIds, weekKey) {
     const rows = stageIds

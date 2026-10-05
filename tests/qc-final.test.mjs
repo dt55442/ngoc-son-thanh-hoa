@@ -94,15 +94,18 @@ state.pressRecords = [
 ];
 state.hrPositions = [
   { id: 'pqcf', name: 'QC Kiểm ván+thanh', department: 'QC', note: '' },
+  { id: 'pqcoth', name: 'Kiểm chất',        department: 'QC', note: '' }, // vị trí QC KHÁC — KHÔNG được tính giờ
   { id: 'pep',  name: 'Ép ván',            department: 'Xưởng 2', note: '' }
 ];
 state.hrEmployees = [
   { id: 'e1', code: 'NV01', name: 'Nguyễn Văn A', department: 'QC', status: 'active', skills: [] },
-  { id: 'e2', code: 'NV02', name: 'Trần Thị B',   department: 'QC', status: 'active', skills: [] }
+  { id: 'e2', code: 'NV02', name: 'Trần Thị B',   department: 'QC', status: 'active', skills: [] },
+  { id: 'e3', code: 'NV03', name: 'Lê Văn C',     department: 'QC', status: 'active', skills: [] }
 ];
 state.hrAssignments = [
   { id: 'asg1', date: '2026-09-23', department: 'QC', positionId: 'pqcf', employeeId: 'e1', start: '07:00', end: '11:30', shiftIdx: 0 },
-  { id: 'asg2', date: '2026-09-23', department: 'QC', positionId: 'pqcf', employeeId: 'e2', start: '13:00', end: '',      shiftIdx: 0 }
+  { id: 'asg2', date: '2026-09-23', department: 'QC', positionId: 'pqcf', employeeId: 'e2', start: '13:00', end: '',      shiftIdx: 0 },
+  { id: 'asg3', date: '2026-09-23', department: 'QC', positionId: 'pqcoth', employeeId: 'e3', start: '07:00', end: '16:00', shiftIdx: 0 }
 ];
 // ═══ PHẦN 3 ═══
 
@@ -126,19 +129,34 @@ check('THÀNH PHẨM 2 TUẦN: ngày 07/10 (cặp 41–42) → danh sách rỗng
   qcf.qcFinalProducts2Weeks('2026-10-07').length === 0);
 
 // ─── B. NGƯỜI KIỂM + GIỜ TỰ ĐỘNG TỪ NHÂN SỰ ──────────────────
-check('VỊ TRÍ KIỂM: khớp mềm tên chứa "kiểm" ("QC Kiểm ván+thanh") · loại vị trí Ép ván',
-  qcf.isQcFinalPos('QC Kiểm ván+thanh') === true && qcf.isQcFinalPos('Kiểm chất') === true &&
-  qcf.isQcFinalPos('Ép ván') === false && qcf.isQcFinalPos('Cắt chọn') === false);
+check('VỊ TRÍ KIỂM: CHỈ khớp tên chứa "kiểm" + ("ván"|"thanh") — loại "Kiểm chất"/"Ép ván"',
+  qcf.isQcFinalPos('QC Kiểm ván+thanh') === true && qcf.isQcFinalPos('Kiểm ván') === true &&
+  qcf.isQcFinalPos('Kiểm thanh') === true && qcf.isQcFinalPos('kiểm ván+thanh') === true &&
+  qcf.isQcFinalPos('Kiểm chất') === false && qcf.isQcFinalPos('Kiểm lò sấy') === false &&
+  qcf.isQcFinalPos('Kiểm đầu vào') === false && qcf.isQcFinalPos('Ép ván') === false &&
+  qcf.isQcFinalPos('Cắt chọn') === false);
 check('NGƯỜI KIỂM: 23/09 có 2 người bộ phận QC (người chính + giờ, giờ ra trống = hết ca)',
   (() => {
     const rows = qcf.hrQcFinalAssignmentsOf('2026-09-23');
     return rows.length === 2 && rows[0].name === 'Nguyễn Văn A' && rows[0].time === '07:00–11:30' &&
            rows[1].name === 'Trần Thị B' && rows[1].time === '13:00 → hết ca';
   })());
-check('GIỜ KIỂM HC/TC: 07:00–11:30 + 13:00–hết ca = 9h HC · 0h TC (hrSplitHoursHCDate phút → chia 60)',
+check('NGƯỜI KIỂM: LỌC VỊ TRÍ — bố trí "Kiểm chất" cùng bộ phận QC cùng ngày KHÔNG bị lấy',
+  (() => {
+    const rows = qcf.hrQcFinalAssignmentsOf('2026-09-23');
+    return rows.length === 2 && rows.every(r => r.positionName === 'QC Kiểm ván+thanh') &&
+           !rows.some(r => r.name === 'Lê Văn C');
+  })());
+check('GIỜ KIỂM HC/TC: 07:00–11:30 + 13:00–hết ca = 9h HC · 0h TC (KHÔNG cộng giờ vị trí QC khác)',
   (() => {
     const sp = qcf.sumQcFinalHoursSplit(qcf.hrQcFinalAssignmentsOf('2026-09-23'), '2026-09-23');
+    // Bố trí "Kiểm chất" 07:00–16:00 (9h) nếu bị lọt vào sẽ làm giờ ≠ 9h
     return approx(sp.hc, 9) && approx(sp.tc, 0);
+  })());
+check('GIỜ NGÀY: qcFinalDayHoursOf chỉ đếm vị trí Kiểm ván+thanh (9h, không phải 18h)',
+  (() => {
+    const h = qcf.qcFinalDayHoursOf('2026-09-23', []);
+    return approx(h.hours, 9) && approx(h.hc, 9) && approx(h.tc, 0);
   })());
 check('SNAPSHOT: hrQcFinalSnapshot lưu tên + giờ + HC/TC cùng lượt (phòng khi bố trí bị xóa)',
   (() => {
@@ -522,7 +540,7 @@ check('CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · histo
   clJs.includes('qcFinalRecords') && clJs.includes('qcFinalRates') &&
   hiJs.includes('qcFinalRecords') && mnJs.includes('loadQcFinal'));
 check('CẤU TRÚC (sw.js): CACHE_NAME v194 + js/qc-final.js vào APP_SHELL',
-  /nha-may-ngoc-son-v209/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
+  /nha-may-ngoc-son-v212/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
 check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)',
   cssHtml.includes('.qcf-picker') && cssHtml.includes('.qcf-row-main') && cssHtml.includes('.qcf-ws-chip') &&
   cssHtml.includes('.qcf-kind-chip') && cssHtml.includes('.qcf-product-meta') &&

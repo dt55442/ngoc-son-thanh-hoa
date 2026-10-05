@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v209/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v212/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -327,13 +327,23 @@ check('DÙNG CHUNG: đóng thẻ → không còn thẻ đang mở (vùng dữ li
   x2.x2OpenCardId() === null && x2.x2OpenCardHistoryDomain() === '' &&
   state.x2OpenCardId === null);
 const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
-check('DÙNG CHUNG: đủ 10 thẻ có vùng dữ liệu + nguồn xuất (Bốc Luồng · Cắt · Bổ Ống · Bào Thô · Chọn Nan · Than Hóa · Kho Nan · Bào Tinh · Bullig · Ép Ván)',
-  Object.keys(mapCn).length === 10 && Object.keys(mapEx).length === 10 &&
+// GIAI ĐOẠN 2 (05/10/2026): 8 thẻ Xưởng 1 ĐÃ thêm vào bản đồ VÙNG DỮ LIỆU
+// (nút "Lịch Sử" của thẻ X1 tự lọc đúng vùng). Nguồn XUẤT EXCEL vẫn 10 thẻ
+// Xưởng 2 (chưa có form xuất riêng cho X1 → nút Xuất về fallback 'batch').
+check('DÙNG CHUNG: bản đồ VÙNG DỮ LIỆU = 10 thẻ X2 + 8 thẻ X1 (18)',
+  Object.keys(mapCn).length === 18 && Object.keys(mapEx).length === 10 &&
   mapCn['x2-bo-luong-card'] === 'xuong2BoluongRecords' && mapEx['x2-bo-luong-card'] === 'boluong' &&
   mapCn['x2-kho-card'] === 'khoNotes' && mapEx['x2-kho-card'] === 'kho' &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
   mapCn['x2-bullig-card'] === 'xuong2BulligRecords' && mapEx['x2-bullig-card'] === 'bullig' &&
   mapCn['x2-than-hoa-card'] === 'batches' && mapEx['x2-than-hoa-card'] === 'batch');
+check('DÙNG CHUNG: 8 thẻ Xưởng 1 đều có vùng dữ liệu (X2 → Lịch Sử đúng vùng)',
+  ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card',
+   'x1-loc-ong-card', 'x1-cat-mat-card', 'x1-bo-card',
+   'x1-phoi-say-card', 'x1-loc-thanh-card']
+    .every(id => !!mapCn[id]) &&
+  mapCn['x1-loc-ong-card'] === 'xuong1LocOngRecords' &&
+  mapCn['x1-loc-thanh-card'] === 'xuong1LocThanhRecords');
 
 // Lịch sử: modal có bộ lọc VÙNG DỮ LIỆU (nút dùng chung mở đúng vùng của thẻ)
 const history = await import('../js/history.js');

@@ -15,7 +15,7 @@ import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
-import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates } from './xuong2.js';
+import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
 import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
@@ -56,6 +56,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadXuong1SaySinh();
     loadXuong1Boc();
     loadX1Rates();
+    loadX1ChainAll(); // 5 công đoạn đuôi Xưởng 1 (Lọc Ống → … → Lọc Thanh/Bó Xô)
     loadXuong2Boluong(); // Nhật ký Bốc Luồng Xưởng 2 (link lô "Luồng cây..." ở tab Nguyên Liệu)
     loadXuong2BoOng(); // Nhật ký Bổ Ống Xưởng 2 (link lô ống từ Cắt Chọn)
     loadXuong2BaoTho(); // Nhật ký Chạy Máy Bào Thô Xưởng 2 (link lô đã bổ)

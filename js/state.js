@@ -26,13 +26,21 @@
   // Thuần UI theo MÁY (như STORAGE_KEY_PV_CHART_MODE) — KHÔNG đồng bộ mây/backup.
   const STORAGE_KEY_STAGE_WS = 'bamboo_tracker_stage_ws_v1';
   // ── XƯỞNG 1 — 3 THẺ CÔNG ĐOẠN ĐẦU (04/10/2026) ──────────────
-  // Nhật ký công đoạn Xưởng 1 (ống nứa) — cùng mẫu với nhật ký Xưởng 2
+  // Nhật ký công đoạn Xưởng 1 (Vầu/nứa) — cùng mẫu với nhật ký Xưởng 2
   // (localStorage + file + mây + tombstone khi xóa).
   const STORAGE_KEY_XUONG1_CAT_ONG  = 'bamboo_tracker_xuong1_cat_ong_v1';
   const STORAGE_KEY_XUONG1_SAY_SINH = 'bamboo_tracker_xuong1_say_sinh_v1';
   const STORAGE_KEY_XUONG1_BOC      = 'bamboo_tracker_xuong1_boc_v1';
+  // 5 công đoạn ĐUÔI của chuỗi Xưởng 1 (Giai đoạn 2 — 05/10/2026):
+  //   Lọc Ống ← Bốc · Cắt Mắt ← Lọc Ống · Bổ ← Cắt Mắt ·
+  //   Phơi Sấy ← Bổ · Lọc Thanh/Bó Xô ← Phơi Sấy
+  const STORAGE_KEY_XUONG1_LOC_ONG    = 'bamboo_tracker_xuong1_loc_ong_v1';
+  const STORAGE_KEY_XUONG1_CAT_MAT    = 'bamboo_tracker_xuong1_cat_mat_v1';
+  const STORAGE_KEY_XUONG1_BO         = 'bamboo_tracker_xuong1_bo_v1';
+  const STORAGE_KEY_XUONG1_PHOI_SAY   = 'bamboo_tracker_xuong1_phoi_say_v1';
+  const STORAGE_KEY_XUONG1_LOC_THANH  = 'bamboo_tracker_xuong1_loc_thanh_v1';
   // Định mức công suất Xưởng 1 theo tháng (kg/h) — { <khối>: { 'YYYY-MM': kg/h } }
-  // Khối: catOng (Cắt Ống) · saySinh (Sấy Sinh) · boc (Bốc)
+  // Khối = 8 công đoạn X1: catOng · saySinh · boc · locOng · catMat · bo · phoiSay · locThanh
   const STORAGE_KEY_X1_RATES = 'bamboo_tracker_x1_rates_v1';
   const STORAGE_KEY_MATERIALS = 'bamboo_tracker_material_records_v1';
   // Vị trí công đoạn Xưởng 2 (thẻ launcher ở tab Công Đoạn): nhật ký cắt/chọn.
@@ -366,6 +374,21 @@
     // Định mức công suất ÉP VÁN theo tháng (m³/giờ): { 'YYYY-MM': m³/h } —
     // không đặt thì thẻ ngày Ép Ván chỉ hiện công suất m³/ngày.
     x2EpVanRates: {},
+    // ═══ XƯỞNG 1 — 8 CÔNG ĐOẠN (04–05/10/2026) ═══════════════
+    // Chuỗi: Cắt Ống → Sấy Sinh → Bốc → Lọc Ống → Cắt Mắt → Bổ →
+    //        Phơi Sấy → Lọc Thanh/Bó Xô
+    // Mỗi mảng 1 công đoạn; id lượt đang sửa = <khối>EditId (null = ghi mới).
+    xuong1CatOngRecords: [],    x1CatOngEditId: null,     // Cắt Ống ← lô NL X1
+    xuong1SaySinhRecords: [],   x1SaySinhEditId: null,    // Sấy Sinh ← Cắt Ống
+    xuong1BocRecords: [],       x1BocEditId: null,        // Bốc ← Sấy Sinh
+    xuong1LocOngRecords: [],    x1LocOngEditId: null,     // Lọc Ống ← Bốc
+    xuong1CatMatRecords: [],    x1CatMatEditId: null,     // Cắt Mắt ← Lọc Ống
+    xuong1BoRecords: [],        x1BoEditId: null,         // Bổ ← Cắt Mắt
+    xuong1PhoiSayRecords: [],   x1PhoiSayEditId: null,    // Phơi Sấy ← Bổ
+    xuong1LocThanhRecords: [],  x1LocThanhEditId: null,   // Lọc Thanh/Bó Xô ← Phơi Sấy
+    // Định mức công suất Xưởng 1 theo tháng — { <8 khối>: { 'YYYY-MM': kg/h } }
+    // Khối: catOng · saySinh · boc · locOng · catMat · bo · phoiSay · locThanh
+    x1Rates: { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
     // Thẻ Xưởng 2 đang mở ở tab Công Đoạn (id thẻ, null = không mở thẻ nào) —
     // dùng cho nút Lịch Sử / Xuất Excel dùng chung + gợi ý của Trợ Lý AI.
     x2OpenCardId: null,
@@ -478,6 +501,11 @@ export {
   STORAGE_KEY_XUONG1_CAT_ONG,
   STORAGE_KEY_XUONG1_SAY_SINH,
   STORAGE_KEY_XUONG1_BOC,
+  STORAGE_KEY_XUONG1_LOC_ONG,
+  STORAGE_KEY_XUONG1_CAT_MAT,
+  STORAGE_KEY_XUONG1_BO,
+  STORAGE_KEY_XUONG1_PHOI_SAY,
+  STORAGE_KEY_XUONG1_LOC_THANH,
   STORAGE_KEY_X1_RATES,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_QC_KILN_HUMIDITY,

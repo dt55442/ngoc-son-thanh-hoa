@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -178,14 +178,29 @@ import { escapeHTML, showToast } from './utils.js';
   function restoreXuong1Boc(incomingArr) {
     return restoreX1Records(STORAGE_KEY_XUONG1_BOC, 'xuong1BocRecords', incomingArr);
   }
+  function restoreXuong1LocOng(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_LOC_ONG, 'xuong1LocOngRecords', incomingArr);
+  }
+  function restoreXuong1CatMat(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_CAT_MAT, 'xuong1CatMatRecords', incomingArr);
+  }
+  function restoreXuong1Bo(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_BO, 'xuong1BoRecords', incomingArr);
+  }
+  function restoreXuong1PhoiSay(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_PHOI_SAY, 'xuong1PhoiSayRecords', incomingArr);
+  }
+  function restoreXuong1LocThanh(incomingArr) {
+    return restoreX1Records(STORAGE_KEY_XUONG1_LOC_THANH, 'xuong1LocThanhRecords', incomingArr);
+  }
   // Khôi phục ĐỊNH MỨC XƯỞNG 1 ({ catOng|saySinh|boc: { 'YYYY-MM': kg/h } })
   function restoreX1Rates(incomingObj) {
     const before = JSON.stringify(state.x1Rates || {});
     const merged = {};
-    ['catOng', 'saySinh', 'boc'].forEach(k => { merged[k] = {}; });
+    ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'phoiSay', 'locThanh'].forEach(k => { merged[k] = {}; });
     [incomingObj, state.x1Rates].forEach(src => {
       if (!src || typeof src !== 'object') return;
-      ['catOng', 'saySinh', 'boc'].forEach(k => {
+      ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'phoiSay', 'locThanh'].forEach(k => {
         if (src[k] && typeof src[k] === 'object') Object.assign(merged[k], src[k]);
       });
     });
@@ -756,6 +771,11 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.xuong1CatOngRecords && Array.isArray(loaded.xuong1CatOngRecords)) restoreXuong1CatOng(loaded.xuong1CatOngRecords);
         if (loaded.xuong1SaySinhRecords && Array.isArray(loaded.xuong1SaySinhRecords)) restoreXuong1SaySinh(loaded.xuong1SaySinhRecords);
         if (loaded.xuong1BocRecords && Array.isArray(loaded.xuong1BocRecords)) restoreXuong1Boc(loaded.xuong1BocRecords);
+        if (loaded.xuong1LocOngRecords && Array.isArray(loaded.xuong1LocOngRecords)) restoreXuong1LocOng(loaded.xuong1LocOngRecords);
+        if (loaded.xuong1CatMatRecords && Array.isArray(loaded.xuong1CatMatRecords)) restoreXuong1CatMat(loaded.xuong1CatMatRecords);
+        if (loaded.xuong1BoRecords && Array.isArray(loaded.xuong1BoRecords)) restoreXuong1Bo(loaded.xuong1BoRecords);
+        if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
+        if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x2BoluongRates) {
           restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
@@ -893,6 +913,11 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.xuong1CatOngRecords && Array.isArray(loaded.xuong1CatOngRecords)) restoreXuong1CatOng(loaded.xuong1CatOngRecords);
         if (loaded.xuong1SaySinhRecords && Array.isArray(loaded.xuong1SaySinhRecords)) restoreXuong1SaySinh(loaded.xuong1SaySinhRecords);
         if (loaded.xuong1BocRecords && Array.isArray(loaded.xuong1BocRecords)) restoreXuong1Boc(loaded.xuong1BocRecords);
+        if (loaded.xuong1LocOngRecords && Array.isArray(loaded.xuong1LocOngRecords)) restoreXuong1LocOng(loaded.xuong1LocOngRecords);
+        if (loaded.xuong1CatMatRecords && Array.isArray(loaded.xuong1CatMatRecords)) restoreXuong1CatMat(loaded.xuong1CatMatRecords);
+        if (loaded.xuong1BoRecords && Array.isArray(loaded.xuong1BoRecords)) restoreXuong1Bo(loaded.xuong1BoRecords);
+        if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
+        if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x2BoluongRates) {
           restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
@@ -1010,6 +1035,11 @@ import { escapeHTML, showToast } from './utils.js';
         xuong1CatOngRecords: state.xuong1CatOngRecords || [],
         xuong1SaySinhRecords: state.xuong1SaySinhRecords || [],
         xuong1BocRecords: state.xuong1BocRecords || [],
+        xuong1LocOngRecords: state.xuong1LocOngRecords || [],
+        xuong1CatMatRecords: state.xuong1CatMatRecords || [],
+        xuong1BoRecords: state.xuong1BoRecords || [],
+        xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
+        xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
         x1Rates: state.x1Rates || {},
         xuong2BoOngRecords: state.xuong2BoOngRecords || [],
         xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
@@ -1128,6 +1158,11 @@ import { escapeHTML, showToast } from './utils.js';
       xuong1CatOngRecords: state.xuong1CatOngRecords || [],
       xuong1SaySinhRecords: state.xuong1SaySinhRecords || [],
       xuong1BocRecords: state.xuong1BocRecords || [],
+      xuong1LocOngRecords: state.xuong1LocOngRecords || [],
+      xuong1CatMatRecords: state.xuong1CatMatRecords || [],
+      xuong1BoRecords: state.xuong1BoRecords || [],
+      xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
+      xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
       x1Rates: state.x1Rates || {},
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
@@ -1213,6 +1248,11 @@ import { escapeHTML, showToast } from './utils.js';
         if (imported && Array.isArray(imported.xuong1CatOngRecords)) restoreXuong1CatOng(imported.xuong1CatOngRecords);
         if (imported && Array.isArray(imported.xuong1SaySinhRecords)) restoreXuong1SaySinh(imported.xuong1SaySinhRecords);
         if (imported && Array.isArray(imported.xuong1BocRecords)) restoreXuong1Boc(imported.xuong1BocRecords);
+        if (imported && Array.isArray(imported.xuong1LocOngRecords)) restoreXuong1LocOng(imported.xuong1LocOngRecords);
+        if (imported && Array.isArray(imported.xuong1CatMatRecords)) restoreXuong1CatMat(imported.xuong1CatMatRecords);
+        if (imported && Array.isArray(imported.xuong1BoRecords)) restoreXuong1Bo(imported.xuong1BoRecords);
+        if (imported && Array.isArray(imported.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(imported.xuong1PhoiSayRecords);
+        if (imported && Array.isArray(imported.xuong1LocThanhRecords)) restoreXuong1LocThanh(imported.xuong1LocThanhRecords);
         if (imported && imported.x1Rates) restoreX1Rates(imported.x1Rates);
 
         if (imported && imported.x2BoluongRates) {
@@ -1481,6 +1521,11 @@ export {
   restoreXuong1CatOng,
   restoreXuong1SaySinh,
   restoreXuong1Boc,
+  restoreXuong1LocOng,
+  restoreXuong1CatMat,
+  restoreXuong1Bo,
+  restoreXuong1PhoiSay,
+  restoreXuong1LocThanh,
   restoreX1Rates,
   restoreX2BoluongRates,
   restoreXuong2BoOng,

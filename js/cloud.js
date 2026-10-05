@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditRate, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
@@ -698,7 +698,12 @@ import { showToast } from './utils.js';
       xuong1CatOngRecords: state.xuong1CatOngRecords || [],
       xuong1SaySinhRecords: state.xuong1SaySinhRecords || [],
       xuong1BocRecords: state.xuong1BocRecords || [],
-      x1Rates: state.x1Rates || { catOng: {}, saySinh: {}, boc: {} },
+      xuong1LocOngRecords: state.xuong1LocOngRecords || [],
+      xuong1CatMatRecords: state.xuong1CatMatRecords || [],
+      xuong1BoRecords: state.xuong1BoRecords || [],
+      xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
+      xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
+      x1Rates: state.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
@@ -806,7 +811,12 @@ import { showToast } from './utils.js';
       xuong1CatOngRecords: obj.xuong1CatOngRecords || [],
       xuong1SaySinhRecords: obj.xuong1SaySinhRecords || [],
       xuong1BocRecords: obj.xuong1BocRecords || [],
-      x1Rates: obj.x1Rates || { catOng: {}, saySinh: {}, boc: {} },
+      xuong1LocOngRecords: obj.xuong1LocOngRecords || [],
+      xuong1CatMatRecords: obj.xuong1CatMatRecords || [],
+      xuong1BoRecords: obj.xuong1BoRecords || [],
+      xuong1PhoiSayRecords: obj.xuong1PhoiSayRecords || [],
+      xuong1LocThanhRecords: obj.xuong1LocThanhRecords || [],
+      x1Rates: obj.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
       xuong2BoOngRecords: obj.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: obj.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: obj.xuong2ChonNanThoRecords || [],
@@ -1042,6 +1052,11 @@ import { showToast } from './utils.js';
     if (remote.xuong1CatOngRecords) state.xuong1CatOngRecords = m(clean('xuong1CatOngRecords', state.xuong1CatOngRecords || []), clean('xuong1CatOngRecords', remote.xuong1CatOngRecords));
     if (remote.xuong1SaySinhRecords) state.xuong1SaySinhRecords = m(clean('xuong1SaySinhRecords', state.xuong1SaySinhRecords || []), clean('xuong1SaySinhRecords', remote.xuong1SaySinhRecords));
     if (remote.xuong1BocRecords) state.xuong1BocRecords = m(clean('xuong1BocRecords', state.xuong1BocRecords || []), clean('xuong1BocRecords', remote.xuong1BocRecords));
+    if (remote.xuong1LocOngRecords) state.xuong1LocOngRecords = m(clean('xuong1LocOngRecords', state.xuong1LocOngRecords || []), clean('xuong1LocOngRecords', remote.xuong1LocOngRecords));
+    if (remote.xuong1CatMatRecords) state.xuong1CatMatRecords = m(clean('xuong1CatMatRecords', state.xuong1CatMatRecords || []), clean('xuong1CatMatRecords', remote.xuong1CatMatRecords));
+    if (remote.xuong1BoRecords) state.xuong1BoRecords = m(clean('xuong1BoRecords', state.xuong1BoRecords || []), clean('xuong1BoRecords', remote.xuong1BoRecords));
+    if (remote.xuong1PhoiSayRecords) state.xuong1PhoiSayRecords = m(clean('xuong1PhoiSayRecords', state.xuong1PhoiSayRecords || []), clean('xuong1PhoiSayRecords', remote.xuong1PhoiSayRecords));
+    if (remote.xuong1LocThanhRecords) state.xuong1LocThanhRecords = m(clean('xuong1LocThanhRecords', state.xuong1LocThanhRecords || []), clean('xuong1LocThanhRecords', remote.xuong1LocThanhRecords));
     // Vị trí công đoạn Xưởng 2 — nhật ký bổ ống (thẻ launcher tab Công Đoạn)
     if (remote.xuong2BoOngRecords) state.xuong2BoOngRecords = m(clean('xuong2BoOngRecords', state.xuong2BoOngRecords || []), clean('xuong2BoOngRecords', remote.xuong2BoOngRecords));
     // Vị trí công đoạn Xưởng 2 — nhật ký chạy máy bào thô
@@ -1092,8 +1107,8 @@ import { showToast } from './utils.js';
     // Định mức XƯỞNG 1 (dict LỒNG: catOng · saySinh · boc) — mây thắng từng tháng
     if (remote.x1Rates) {
       const src = remote.x1Rates || {};
-      state.x1Rates = state.x1Rates || { catOng: {}, saySinh: {}, boc: {} };
-      ['catOng', 'saySinh', 'boc'].forEach(k => {
+      state.x1Rates = state.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} };
+      ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'phoiSay', 'locThanh'].forEach(k => {
         if (src[k]) state.x1Rates[k] = dict(state.x1Rates[k] || {}, src[k]);
       });
     }
@@ -1191,7 +1206,12 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_XUONG1_CAT_ONG, JSON.stringify(state.xuong1CatOngRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG1_SAY_SINH, JSON.stringify(state.xuong1SaySinhRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG1_BOC, JSON.stringify(state.xuong1BocRecords || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_X1_RATES, JSON.stringify(state.x1Rates || { catOng: {}, saySinh: {}, boc: {} })); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG1_LOC_ONG, JSON.stringify(state.xuong1LocOngRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG1_CAT_MAT, JSON.stringify(state.xuong1CatMatRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG1_BO, JSON.stringify(state.xuong1BoRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG1_PHOI_SAY, JSON.stringify(state.xuong1PhoiSayRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_XUONG1_LOC_THANH, JSON.stringify(state.xuong1LocThanhRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X1_RATES, JSON.stringify(state.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} })); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BO_ONG, JSON.stringify(state.xuong2BoOngRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_THO, JSON.stringify(state.xuong2BaoThoRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || [])); } catch (e) {}
@@ -1344,6 +1364,11 @@ import { showToast } from './utils.js';
       if (data.xuong1CatOngRecords) state.xuong1CatOngRecords = clean('xuong1CatOngRecords', data.xuong1CatOngRecords);
       if (data.xuong1SaySinhRecords) state.xuong1SaySinhRecords = clean('xuong1SaySinhRecords', data.xuong1SaySinhRecords);
       if (data.xuong1BocRecords) state.xuong1BocRecords = clean('xuong1BocRecords', data.xuong1BocRecords);
+      if (data.xuong1LocOngRecords) state.xuong1LocOngRecords = clean('xuong1LocOngRecords', data.xuong1LocOngRecords);
+      if (data.xuong1CatMatRecords) state.xuong1CatMatRecords = clean('xuong1CatMatRecords', data.xuong1CatMatRecords);
+      if (data.xuong1BoRecords) state.xuong1BoRecords = clean('xuong1BoRecords', data.xuong1BoRecords);
+      if (data.xuong1PhoiSayRecords) state.xuong1PhoiSayRecords = clean('xuong1PhoiSayRecords', data.xuong1PhoiSayRecords);
+      if (data.xuong1LocThanhRecords) state.xuong1LocThanhRecords = clean('xuong1LocThanhRecords', data.xuong1LocThanhRecords);
       if (data.xuong2BoOngRecords) state.xuong2BoOngRecords = clean('xuong2BoOngRecords', data.xuong2BoOngRecords);
       if (data.xuong2BaoThoRecords) state.xuong2BaoThoRecords = clean('xuong2BaoThoRecords', data.xuong2BaoThoRecords);
       if (data.xuong2ChonNanThoRecords) state.xuong2ChonNanThoRecords = clean('xuong2ChonNanThoRecords', data.xuong2ChonNanThoRecords);
@@ -1371,8 +1396,8 @@ import { showToast } from './utils.js';
       // Định mức XƯỞNG 1 (dict LỒNG 3 khối) — "Tải Mây Về" = mây thắng từng tháng
       if (data.x1Rates && typeof data.x1Rates === 'object' && !Array.isArray(data.x1Rates)) {
         const src = data.x1Rates;
-        state.x1Rates = state.x1Rates || { catOng: {}, saySinh: {}, boc: {} };
-        ['catOng', 'saySinh', 'boc'].forEach((k) => {
+        state.x1Rates = state.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} };
+        ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'phoiSay', 'locThanh'].forEach((k) => {
           if (src[k] && typeof src[k] === 'object') state.x1Rates[k] = Object.assign({}, state.x1Rates[k] || {}, src[k]);
         });
       }

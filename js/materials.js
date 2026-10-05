@@ -446,7 +446,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
   // (từ bảng kế hoạch phía trên); cột đặc bên trong = thực tế đã nhập trong
   // ngày (tổng trọng lượng nhật ký theo vị trí).
   // Bảng màu 3 vị trí — theo ĐÚNG hình dạng cột mới (js/chart-stems.js):
-  // gỗ NÂU (Lò hơi) · nứa VÀNG XÁM (Xưởng 1) · tre XANH (Xưởng 2).
+  // gỗ NÂU (Lò hơi) · Vầu/nứa VÀNG XÁM (Xưởng 1) · tre XANH (Xưởng 2).
   // Không còn xanh dương đứng cạnh xanh lá (quy tắc màu biểu đồ của dự án).
   const MP_LOC_COLORS = { 'lo-hoi': '#8b5e34', 'xuong-1': '#b3a271', 'xuong-2': '#4caf50' };
   const MP_DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -875,7 +875,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     // Cột hiển thị dạng THÂN CÂY: dataset chẵn = KẾ HOẠCH (vẽ KHUNG RỖNG),
     // dataset lẻ = THỰC TẾ (vẽ ĐẶC theo giá trị ⇒ lấp đầy theo tỷ lệ).
     // Tắt cột chữ nhật mặc định của Chart.js (nền trong suốt, viền 0) rồi để
-    // plugin stemBars vẽ hình cây tre / ống nứa / khúc gỗ.
+    // plugin stemBars vẽ hình cây tre / Vầu/nứa / khúc gỗ.
     const viewDatasets = datasets.map((ds, di) => {
       const locKey = (MATERIAL_LOCATIONS[Math.floor(di / 2)] || {}).key;
       return {
@@ -932,7 +932,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         plugins: {
           mpAxisBands: { dayGroups, weekGroups, todayIso: mpTodayIso() }, // todayIso → dải highlight NGÀY HÔM NAY
           mpYTitle: { text: 'Tấn' },
-          stemBars: { enabled: true }, // cột = cây tre · ống nứa · khúc gỗ (js/chart-stems.js)
+          stemBars: { enabled: true }, // cột = cây tre · Vầu/nứa · khúc gỗ (js/chart-stems.js)
           // Tắt plugin số tự động (bambooDataLabels) — số THỰC TẾ & đường gióng
           // KẾ HOẠCH do mpLabelsGuidePlugin vẽ riêng (KH không vẽ số)
           bambooDataLabels: false,

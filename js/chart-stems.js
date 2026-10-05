@@ -14,13 +14,13 @@
 
 // ─── HÌNH DẠNG ───────────────────────────────────────────────
 export const STEM_BAMBOO = 'bamboo'; // cây tre
-export const STEM_NUA = 'nua';       // ống nứa
+export const STEM_NUA = 'nua';       // Vầu/nứa
 export const STEM_LOG = 'log';       // khúc gỗ
 
 // Vị trí nhập nguyên liệu → hình dạng (khớp MATERIAL_LOCATIONS ở materials.js)
 export const STEM_BY_LOCATION = { 'lo-hoi': STEM_LOG, 'xuong-1': STEM_NUA, 'xuong-2': STEM_BAMBOO };
 // Tên hình dạng để hiện ở chú thích (legend) cho người dùng hiểu màu nào là cây gì
-export const STEM_LABELS = { log: 'khúc gỗ', nua: 'ống nứa', bamboo: 'cây tre' };
+export const STEM_LABELS = { log: 'khúc gỗ', nua: 'Vầu/nứa', bamboo: 'cây tre' };
 
 export function stemShapeForLocation(locKey) {
   return STEM_BY_LOCATION[locKey] || STEM_BAMBOO;
@@ -173,7 +173,7 @@ export function drawNua(ctx, box, o) {
     ctx.fillStyle = withAlpha(o.color, 0.28); ctx.fill();
     ctx.strokeStyle = shade(o.color, -0.12); ctx.lineWidth = 1; ctx.stroke();
   }
-  // Ống nứa KHÔNG có mắt chia: chỉ 1 đốt ở sát đầu ống
+  // Vầu/nứa KHÔNG có mắt chia: chỉ 1 đốt ở sát đầu ống
   const y = Math.min(b.base - 2, b.top + 3);
   ctx.beginPath();
   ctx.moveTo(left - 1, y); ctx.lineTo(left + b.width + 1, y);

@@ -237,7 +237,7 @@
       <!-- ══════════════════════════════════════════════════════ -->
       <!-- CÔNG TẮC CHUYỂN XƯỞNG — tab Công Đoạn SX có 2 XƯỞNG     -->
       <!-- RIÊNG BIỆT: Xưởng 2 (nan tre — 13 thẻ) & Xưởng 1 (ống   -->
-      <!-- nứa — 8 công đoạn). Bấm 1 trong 2 nút để đổi khối thẻ   -->
+      <!-- Vầu/nứa — 8 công đoạn). Bấm 1 trong 2 nút để đổi khối thẻ   -->
       <!-- đang xem; pop-up thẻ chi tiết dùng CHUNG (1 khung).     -->
       <!-- Trạng thái nhớ theo MÁY: bamboo_tracker_stage_ws_v1      -->
       <!-- (thuần UI — không đồng bộ mây/backup, xem js/xuong2.js)  -->
@@ -382,63 +382,68 @@
         </div>
         <div class="x2-cards" id="x1-cards-grid">
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-cat-ong-card" aria-expanded="false" title="Cắt Ống — cắt ống nứa từ lô nguyên liệu nhập Xưởng 1 (tự link nhà cung cấp, mã số, khối lượng đầu vào; tự lấy người + giờ vị trí Cắt Ống từ tab Nhân Sự)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-cat-ong-card" aria-expanded="false" title="Cắt Ống — cắt Vầu/nứa từ lô nguyên liệu nhập Xưởng 1 (tự link nhà cung cấp, mã số, khối lượng đầu vào; tự lấy người + giờ vị trí Cắt Ống từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="scissors"></i></span>
             <span class="x2-mini-title">Cắt Ống</span>
-            <span class="x2-mini-desc">Cắt ống nứa từ lô đầu vào</span>
+            <span class="x2-mini-desc">Cắt Vầu/nứa từ lô đầu vào</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-cat-ong">–</span>
             <span class="cap-spark" id="x2-mini-spark-x1-cat-ong"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-say-sinh-card" aria-expanded="false" title="Sấy Sinh — sấy ống nứa tươi trước khi xử lý (tự link lượt Cắt Ống, tự lấy người + giờ vị trí Sấy Sinh từ tab Nhân Sự)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-say-sinh-card" aria-expanded="false" title="Sấy Sinh — sấy Vầu/nứa tươi trước khi xử lý (tự link lượt Cắt Ống, tự lấy người + giờ vị trí Sấy Sinh từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="flame-kindling"></i></span>
             <span class="x2-mini-title">Sấy Sinh</span>
-            <span class="x2-mini-desc">Sấy ống nứa tươi</span>
+            <span class="x2-mini-desc">Sấy Vầu/nứa tươi</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-say-sinh">–</span>
             <span class="cap-spark" id="x2-mini-spark-x1-say-sinh"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-boc-card" aria-expanded="false" title="Bốc — bốc/dỡ ống nứa sau sấy sinh, chuyển sang khu Lọc Ống (tự link lượt Sấy Sinh, tự lấy người + giờ vị trí Bốc từ tab Nhân Sự)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-boc-card" aria-expanded="false" title="Bốc — bốc/dỡ Vầu/nứa sau sấy sinh, chuyển sang khu Lọc Ống (tự link lượt Sấy Sinh, tự lấy người + giờ vị trí Bốc từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="forklift"></i></span>
             <span class="x2-mini-title">Bốc</span>
-            <span class="x2-mini-desc">Bốc/dỡ ống nứa sau sấy</span>
+            <span class="x2-mini-desc">Bốc/dỡ Vầu/nứa sau sấy</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-boc">–</span>
             <span class="cap-spark" id="x2-mini-spark-x1-boc"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-ong-card" aria-expanded="false" title="Lọc Ống — chọn/lọc ống đạt theo kích thước (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-ong-card" aria-expanded="false" title="Lọc Ống — chọn/lọc ống đạt sau công đoạn Bốc (tự link lượt Bốc, tự lấy người + giờ vị trí Lọc Ống từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="list-filter"></i></span>
             <span class="x2-mini-title">Lọc Ống</span>
             <span class="x2-mini-desc">Lọc ống đạt theo kích thước</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-loc-ong">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-loc-ong"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-cat-mat-card" aria-expanded="false" title="Cắt Mắt — cắt mắt/đoạn ống theo quy cách (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-cat-mat-card" aria-expanded="false" title="Cắt Mắt — cắt mắt/đoạn ống theo quy cách sau Lọc Ống (tự link lượt Lọc Ống, tự lấy người + giờ vị trí Cắt Mắt từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="crop"></i></span>
             <span class="x2-mini-title">Cắt Mắt</span>
             <span class="x2-mini-desc">Cắt mắt/đoạn ống theo quy cách</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-cat-mat">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-cat-mat"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-bo-card" aria-expanded="false" title="Bổ — bổ ống nứa thành nan/tấm (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-bo-card" aria-expanded="false" title="Bổ — bổ Vầu/nứa thành nan/tấm sau Cắt Mắt (tự link lượt Cắt Mắt, tự lấy người + giờ vị trí Bổ từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="split"></i></span>
             <span class="x2-mini-title">Bổ</span>
-            <span class="x2-mini-desc">Bổ ống nứa thành nan</span>
+            <span class="x2-mini-desc">Bổ Vầu/nứa thành nan</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-bo">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-bo"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-phoi-say-card" aria-expanded="false" title="Phơi Sấy — phơi/sấy nan sau bổ (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-phoi-say-card" aria-expanded="false" title="Phơi Sấy — phơi/sấy nan sau khi bổ (tự link lượt Bổ, tự lấy người + giờ vị trí Phơi Sấy từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="sun"></i></span>
             <span class="x2-mini-title">Phơi Sấy</span>
             <span class="x2-mini-desc">Phơi/sấy nan sau bổ</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-phoi-say">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-phoi-say"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-thanh-card" aria-expanded="false" title="Lọc Thanh / Bó Xô — phân loại thành phẩm và bó xô (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-thanh-card" aria-expanded="false" title="Lọc Thanh / Bó Xô — phân loại thành phẩm và bó xô (tự link lượt Phơi Sấy, tự lấy người + giờ vị trí Lọc Thanh từ tab Nhân Sự)">
             <span class="x2-mini-ic"><i data-lucide="package-check"></i></span>
             <span class="x2-mini-title">Lọc Thanh / Bó Xô</span>
             <span class="x2-mini-desc">Phân loại thành phẩm · bó xô</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-loc-thanh">–</span>
+            <span class="cap-spark" id="x2-mini-spark-x1-loc-thanh"></span>
           </button>
 
         </div>
@@ -1775,7 +1780,7 @@
             <form id="x1-cat-ong-form">
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1.5;">
-                  <label for="x1-cat-ong-material">Lô Ống Nứa Đầu Vào (Xưởng 1) <span class="required">*</span></label>
+                  <label for="x1-cat-ong-material">Lô Vầu/Nứa Đầu Vào (Xưởng 1) <span class="required">*</span></label>
                   <select id="x1-cat-ong-material" required></select>
                   <small style="color:var(--text-muted);">Chỉ hiện lô CHƯA cắt — nhập mới ở tab Nguyên Liệu (vị trí Xưởng 1)</small>
                 </div>
@@ -1913,6 +1918,291 @@
               <span class="x2-cut-table-count" id="x1-boc-table-count"></span>
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-boc-day-cards"></div></div>
+          </div>
+        </div>
+
+        <div class="planning-card x2-card-hidden" id="x1-loc-ong-card">
+          <div class="planning-card-header"><h4><i data-lucide="list-filter"></i> Lọc Ống — Xưởng 1</h4></div>
+          <div class="x2-stock-bar" id="x1-loc-ong-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-loc-ong-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-loc-ong-edit-text"></span>
+            </div>
+            <form id="x1-loc-ong-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-loc-ong-src">Lượt Bốc (nguồn) <span class="required">*</span></label>
+                  <select id="x1-loc-ong-src" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Bốc còn CHƯA lọc hết</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-ong-note">Ghi Chú</label>
+                  <input type="text" id="x1-loc-ong-note" placeholder="VD: lọc bỏ ống cong, gãy...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-loc-ong-date">Ngày Lọc <span class="required">*</span></label>
+                  <input type="date" id="x1-loc-ong-date" required>
+                </div>
+                                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-ong-in">KL Ống Đem Lọc (kg)</label>
+                  <input type="number" id="x1-loc-ong-in" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-ong-ok">KL Ống Đạt (kg)</label>
+                  <input type="number" id="x1-loc-ong-ok" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-ong-loai">KL Loại (kg)</label>
+                  <input type="number" id="x1-loc-ong-loai" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-loc-ong-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-loc-ong-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Ống theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-loc-ong">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Lọc Ống</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-loc-ong-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-loc-ong-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Lọc Ống</h5>
+              <span class="x2-cut-table-count" id="x1-loc-ong-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-loc-ong-day-cards"></div></div>
+          </div>
+        </div>
+
+        <div class="planning-card x2-card-hidden" id="x1-cat-mat-card">
+          <div class="planning-card-header"><h4><i data-lucide="crop"></i> Cắt Mắt — Xưởng 1</h4></div>
+          <div class="x2-stock-bar" id="x1-cat-mat-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-cat-mat-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-cat-mat-edit-text"></span>
+            </div>
+            <form id="x1-cat-mat-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-cat-mat-src">Lượt Lọc Ống (nguồn) <span class="required">*</span></label>
+                  <select id="x1-cat-mat-src" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Lọc Ống còn CHƯA cắt mắt hết</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-cat-mat-note">Ghi Chú</label>
+                  <input type="text" id="x1-cat-mat-note" placeholder="VD: cắt theo quy cách 1.000mm...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-cat-mat-date">Ngày Cắt <span class="required">*</span></label>
+                  <input type="date" id="x1-cat-mat-date" required>
+                </div>
+                                <div class="form-group" style="flex:1;">
+                  <label for="x1-cat-mat-in">KL Đem Cắt (kg)</label>
+                  <input type="number" id="x1-cat-mat-in" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-cat-mat-ok">KL Đạt (kg)</label>
+                  <input type="number" id="x1-cat-mat-ok" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-cat-mat-loai">KL Mắt / Ống Loại (kg)</label>
+                  <input type="number" id="x1-cat-mat-loai" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-cat-mat-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-cat-mat-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Mắt theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-cat-mat">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Cắt Mắt</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-cat-mat-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-cat-mat-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Cắt Mắt</h5>
+              <span class="x2-cut-table-count" id="x1-cat-mat-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-cat-mat-day-cards"></div></div>
+          </div>
+        </div>
+
+        <div class="planning-card x2-card-hidden" id="x1-bo-card">
+          <div class="planning-card-header"><h4><i data-lucide="split"></i> Bổ — Xưởng 1</h4></div>
+          <div class="x2-stock-bar" id="x1-bo-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-bo-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-bo-edit-text"></span>
+            </div>
+            <form id="x1-bo-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-bo-src">Lượt Cắt Mắt (nguồn) <span class="required">*</span></label>
+                  <select id="x1-bo-src" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Cắt Mắt còn CHƯA bổ hết</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-bo-note">Ghi Chú</label>
+                  <input type="text" id="x1-bo-note" placeholder="VD: bổ nan 18mm, bỏ phần mắt dày...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-bo-date">Ngày Bổ <span class="required">*</span></label>
+                  <input type="date" id="x1-bo-date" required>
+                </div>
+                                <div class="form-group" style="flex:1;">
+                  <label for="x1-bo-in">KL Đem Bổ (kg)</label>
+                  <input type="number" id="x1-bo-in" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-bo-ok">KL Bổ Đạt (kg)</label>
+                  <input type="number" id="x1-bo-ok" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-bo-loai">KL Loại (kg)</label>
+                  <input type="number" id="x1-bo-loai" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-bo-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-bo-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-bo">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Bổ</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-bo-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-bo-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Bổ</h5>
+              <span class="x2-cut-table-count" id="x1-bo-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-bo-day-cards"></div></div>
+          </div>
+        </div>
+
+        <div class="planning-card x2-card-hidden" id="x1-phoi-say-card">
+          <div class="planning-card-header"><h4><i data-lucide="sun"></i> Phơi Sấy — Xưởng 1</h4></div>
+          <div class="x2-stock-bar" id="x1-phoi-say-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-phoi-say-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-phoi-say-edit-text"></span>
+            </div>
+            <form id="x1-phoi-say-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-phoi-say-src">Lượt Bổ (nguồn) <span class="required">*</span></label>
+                  <select id="x1-phoi-say-src" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Bổ còn CHƯA phơi hết</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-phoi-say-note">Ghi Chú</label>
+                  <input type="text" id="x1-phoi-say-note" placeholder="VD: phơi 3 nắng, độ ẩm dưới 15%...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-phoi-say-date">Ngày Phơi <span class="required">*</span></label>
+                  <input type="date" id="x1-phoi-say-date" required>
+                </div>
+                                <div class="form-group" style="flex:1;">
+                  <label for="x1-phoi-say-in">KL Đem Phơi (kg)</label>
+                  <input type="number" id="x1-phoi-say-in" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-phoi-say-ok">KL Phơi Đạt (kg)</label>
+                  <input type="number" id="x1-phoi-say-ok" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-phoi-say-loai">KL Ẩm / Mốc Loại (kg)</label>
+                  <input type="number" id="x1-phoi-say-loai" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-phoi-say-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-phoi-say-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Phơi Sấy theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-phoi-say">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Phơi Sấy</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-phoi-say-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-phoi-say-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Phơi Sấy</h5>
+              <span class="x2-cut-table-count" id="x1-phoi-say-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-phoi-say-day-cards"></div></div>
+          </div>
+        </div>
+
+        <div class="planning-card x2-card-hidden" id="x1-loc-thanh-card">
+          <div class="planning-card-header"><h4><i data-lucide="package-check"></i> Lọc Thanh / Bó Xô — Xưởng 1</h4></div>
+          <div class="x2-stock-bar" id="x1-loc-thanh-stock-bar"></div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x1-loc-thanh-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x1-loc-thanh-edit-text"></span>
+            </div>
+            <form id="x1-loc-thanh-form">
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1.5;">
+                  <label for="x1-loc-thanh-src">Lượt Phơi Sấy (nguồn) <span class="required">*</span></label>
+                  <select id="x1-loc-thanh-src" required></select>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Phơi Sấy còn CHƯA lọc/bó hết</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-thanh-note">Ghi Chú</label>
+                  <input type="text" id="x1-loc-thanh-note" placeholder="VD: bó 20 thanh/bó, loại thanh cong...">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x1-loc-thanh-date">Ngày Lọc <span class="required">*</span></label>
+                  <input type="date" id="x1-loc-thanh-date" required>
+                </div>
+                                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-thanh-in">KL Đem Lọc / Bó (kg)</label>
+                  <input type="number" id="x1-loc-thanh-in" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-thanh-ok">KL Thành Phẩm (kg)</label>
+                  <input type="number" id="x1-loc-thanh-ok" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-thanh-loai">KL Loại (kg)</label>
+                  <input type="number" id="x1-loc-thanh-loai" step="any" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="x2-cut-calc" id="x1-loc-thanh-calc"></div>
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x1-loc-thanh-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Thanh / Bó Xô theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x1-loc-thanh">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Lọc Thanh</button>
+              </div>
+            </form>
+          </div>
+          <div class="material-stats" id="x1-loc-thanh-stats"></div>
+          <div class="x2-cut-table-wrap" id="x1-loc-thanh-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Lọc Thanh / Bó Xô</h5>
+              <span class="x2-cut-table-count" id="x1-loc-thanh-table-count"></span>
+            </div>
+            <div class="x2-cut-table-scroll"><div id="x1-loc-thanh-day-cards"></div></div>
           </div>
         </div>
 
@@ -2262,7 +2552,7 @@
             <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
           </button>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive table-scroll">
           <table class="data-table planning-table" id="material-rate-table">
             <thead>
               <tr>
@@ -2273,11 +2563,8 @@
                 <th>Tên Đầy Đủ</th>
                 <th>Loại Ép</th>
                 <th>Loại Nan 1</th>
-                <th>Số Lượng</th>
                 <th>Loại Nan 2</th>
-                <th>Số Lượng</th>
                 <th>Loại Nan 3</th>
-                <th>Số Lượng</th>
                 <th>Keo (kg)</th>
                 <th>Phụ Gia (kg)</th>
                 <th>Hiệu Suất (%)</th>
@@ -2917,8 +3204,8 @@
            X1 = "Sắp có") · Số lượng đạt · Ngoại lệ ·
            Loại (= số lượng bị loại = lỗi). Công thức: Tổng kiểm = Đạt + Ngoại lệ
            + Loại · Tổng đạt = Đạt + Ngoại lệ · Tỉ lệ lỗi = Loại ÷ Tổng kiểm.
-           Người kiểm + giờ HC/TC TỰ ĐỘNG từ vị trí bộ phận QC có tên chứa "kiểm"
-           (QC Kiểm ván+thanh) — js/qc-final.js. -->
+           Người kiểm + giờ HC/TC TỰ ĐỘNG — CHỈ vị trí Kiểm Ván/kiểm Thanh
+           của bộ phận QC ("QC Kiểm ván+thanh") — js/qc-final.js. -->
       <div class="planning-card qc-card-hidden" id="qc-final-card">
         <div class="planning-card-header">
           <h4><i data-lucide="badge-check"></i> Kiểm Sau Sản Xuất</h4>
@@ -5797,6 +6084,11 @@
             <option value="catOng">Cắt Ống</option>
             <option value="saySinh">Sấy Sinh</option>
             <option value="boc">Bốc</option>
+            <option value="locOng">Lọc Ống</option>
+            <option value="catMat">Cắt Mắt</option>
+            <option value="bo">Bổ</option>
+            <option value="phoiSay">Phơi Sấy</option>
+            <option value="locThanh">Lọc Thanh/Bó Xô</option>
           </select>
           <select id="x1-rate-month" title="Chọn tháng"></select>
           <input type="number" id="x1-rate-value" min="0" step="any" placeholder="VD: 800" title="Công suất định mức của tháng (kg/giờ)">

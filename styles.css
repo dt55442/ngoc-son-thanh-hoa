@@ -2374,22 +2374,20 @@ body.chart-expanded-open { overflow: hidden; }
   color: var(--danger);
 }
 
-/* ═══ Danh sách "Kế Hoạch Sản Xuất Năm …": khung cuộn dọc gọn gàng ═══ */
-/* Thẻ tuần tăng dần theo thời gian — giới hạn chiều cao khung, cuộn trong khung thay
-   vì kéo dài cả trang; tiêu đề năm + tổng ghim trên khi cuộn. */
+/* ═══ Danh sách "Lịch sử bản ghi Kế Hoạch Sản Xuất Năm …": KHUNG CUỘN GỌN ═══
+   Tiêu đề + thanh công cụ (lọc Quý/Tháng/tìm) LUÔN đứng yên, CHỈ bảng tự
+   cuộn dọc trong khung .plan-hist-wrap (thead + dòng tháng dính) → 52 tuần
+   không kéo dài trang nữa. */
 .planning-list-section {
-  max-height: min(70vh, 640px);
-  overflow-y: auto;
-  overflow-x: auto;
+  max-height: none;
+  overflow: visible;
 }
 .planning-list-section .planning-list-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--bg-card);
-  /* Phủ kín 2 mép ngang + vùng đệm trên; đệm đáy nền đục để thẻ tuần trượt qua không lộ */
-  margin: -12px -18px 0;
-  padding: 12px 18px 10px;
+  position: static;
+  z-index: auto;
+  background: transparent;
+  margin: 0;
+  padding: 0;
 }
 
 /* Danh sách kế hoạch sản phẩm dưới bảng matrix */
@@ -2498,54 +2496,280 @@ body.chart-expanded-open { overflow: hidden; }
   color: var(--primary);
 }
 
-.planning-week-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.planning-week-card {
-  background: var(--bg-card);
+/* ═══ SỔ LỊCH SỬ BẢN GHI KẾ HOẠCH — BẢNG GỌN 1 DÒNG/TUẦN ═══
+   Thay cho lưới thẻ cũ (.planning-week-grid ~6 cột → 52 tuần xuống dòng
+   12 lần, mỗi thẻ cao 3–5 dòng). Nay 52 tuần = 52 dòng mảnh + dòng tiêu
+   đề THÁNG dính khi cuộn + thanh lọc QUÝ/THÁNG/tìm nhanh. */
+.plan-hist-wrap {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s ease;
+  overflow: auto;
+  background: var(--bg-card);
 }
 
-.planning-week-card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-.planning-week-card-header {
+/* Thanh công cụ: lọc QUÝ · THÁNG · tìm nhanh · ẩn tuần đã đạt */
+.plan-hist-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--primary-light);
-  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0 10px;
 }
 
-.planning-week-badge {
+.ph-seg {
+  display: inline-flex;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 2px;
+  gap: 2px;
+}
+.ph-seg-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.ph-seg-btn:hover { color: var(--primary); }
+.ph-seg-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+}
+
+.ph-select {
+  font-size: 0.76rem;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+  max-width: 170px;
+}
+
+.ph-search {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  flex: 1 1 190px;
+  min-width: 160px;
+  max-width: 300px;
+}
+.ph-search-ic {
+  position: absolute;
+  left: 9px;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.ph-search input {
+  width: 100%;
   font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--primary);
+  padding: 6px 10px 6px 28px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+.ph-search input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
 }
 
-.planning-week-total {
+.ph-hide-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.ph-hide-done input { cursor: pointer; accent-color: var(--primary); }
+
+.ph-count {
+  margin-left: auto;
   font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* ── BẢNG SỔ ── */
+.plan-hist-table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.plan-hist-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--border-color);
+  text-align: left;
+}
+.plan-hist-table .ph-c-num { text-align: right; }
+.plan-hist-table .ph-c-act { text-align: right; }
+
+/* Dòng tiêu đề THÁNG — dính ngay dưới hàng cột khi cuộn dọc */
+.plan-hist-month th {
+  position: sticky;
+  top: 31px;
+  z-index: 3;
+  background: var(--primary-light);
+  border-bottom: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.plan-hist-month th em {
+  font-style: normal;
   font-weight: 600;
   color: var(--text-muted);
 }
+.ph-month-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-right: 6px;
+  vertical-align: 1px;
+}
 
-.planning-week-card-actions {
+/* 1 dòng/tuần — cao ~32px, không xuống dòng */
+.plan-hist-row { cursor: pointer; }
+.plan-hist-row > td {
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+  background: var(--bg-card);
+}
+.plan-hist-row:hover > td { background: var(--bg-subtle); }
+.plan-hist-row.is-open > td { background: var(--primary-light); }
+
+.ph-week { width: 1%; white-space: nowrap; }
+.plan-hist-row .planning-week-badge {
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  border: 1px solid transparent;
 }
+.plan-hist-row.is-open .planning-week-badge { background: var(--bg-card); border-color: var(--primary); }
+.plan-hist-row .planning-week-badge:hover { border-color: var(--primary); }
+.plan-hist-row .planning-week-badge svg { width: 12px; height: 12px; }
+
+.ph-range {
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+/* Chip sản phẩm: <tên> × <số tấm> — gọn 1 dòng, chi tiết đầy đủ ở tooltip */
+.ph-items { min-width: 220px; }
+.ph-chip {
+  display: inline-block;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  margin: 1px 4px 1px 0;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+.ph-chip b { color: var(--text-main); font-weight: 700; }
+
+.ph-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ph-num strong { color: var(--primary); font-size: 0.82rem; }
+
+/* Thanh tiến độ Đã ép / Kế hoạch */
+.ph-prog { width: 150px; white-space: nowrap; }
+.ph-prog-track {
+  display: block;
+  width: 84px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(217, 119, 6, 0.18);
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+.ph-prog-fill {
+  display: block;
+  height: 100%;
+  background: #d97706;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+.ph-prog-fill.done { background: var(--primary); }
+.ph-prog-txt { font-size: 0.68rem; color: #b45309; font-variant-numeric: tabular-nums; }
+.ph-prog-txt.done { color: var(--primary); font-weight: 700; }
+
+.ph-act { width: 1%; white-space: nowrap; text-align: right; }
+.ph-act .plan-week-btn + .plan-week-btn { margin-left: 3px; }
+
+/* Dòng chi tiết bung ra (loại nan · đã ép/KH · Có thể ép · xóa từng kế hoạch) */
+.plan-hist-detail > td {
+  padding: 0;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-color);
+}
+.plan-hist-detail .planning-week-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 6px;
+  padding: 10px;
+}
+
+.plan-hist-empty {
+  padding: 26px 12px !important;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.plan-hist-empty svg { width: 22px; height: 22px; margin-bottom: 4px; }
+.plan-hist-empty p { margin: 0; }
+/* __PLAN_HIST_CSS_B__ */
 
 .plan-week-btn {
   background: none;
@@ -2815,32 +3039,30 @@ body.chart-expanded-open { overflow: hidden; }
     min-width: 750px;
   }
 
-  /* Responsive cho kế hoạch gom nhóm theo tuần: thẻ tuần xếp 1 HÀNG NGANG,
-     vuốt ngang xem thêm — không xuống dòng (hết cảnh "2 cột rồi nhảy dòng") */
-  .planning-week-grid {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 6px; /* chừa chỗ cho thanh cuộn ngang, không đè bóng thẻ */
-    scroll-snap-type: x proximity;
+  /* SỔ LỊCH SỬ KẾ HOẠCH trên điện thoại: cuộn NGANG bảng (cột Tuần dính trái),
+     thanh lọc xếp 2 dòng — không còn cảnh "6 cột rồi nhảy dòng" */
+  .plan-hist-bar { gap: 6px; }
+  .ph-search { flex: 1 1 100%; max-width: none; order: 3; }
+  .ph-hide-done { order: 4; }
+  .ph-count { order: 5; margin-left: 0; }
+  .plan-hist-table { min-width: 660px; }
+  .plan-hist-table .ph-c-week,
+  .plan-hist-row > td.ph-week {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    box-shadow: 1px 0 0 var(--border-color);
   }
-  .planning-week-card {
-    flex: 0 0 auto;
-    width: min(78vw, 300px); /* gần full màn + "méo" thẻ kế bên → biết là vuốt được */
-    scroll-snap-align: start;
-  }
-
-  .planning-week-card-header {
-    padding: 6px 10px;
-  }
+  .plan-hist-table thead .ph-c-week { z-index: 5; }
+  .ph-range { display: none; }          /* cột khoảng ngày — ẩn để bớt rộng */
+  .ph-prog { width: 110px; }
+  .ph-prog-track { width: 60px; }
+  .ph-items { min-width: 150px; }
+  .ph-chip { max-width: 180px; font-size: 0.66rem; }
+  .plan-hist-detail .planning-week-items { grid-template-columns: 1fr; padding: 8px; }
 
   .planning-week-badge {
     font-size: 0.72rem;
-  }
-
-  .planning-week-total {
-    font-size: 0.68rem;
   }
 
   .planning-week-item {
@@ -3601,6 +3823,33 @@ body[data-fx="low"] .pv-mode-swap { animation: none !important; transition: none
 .rate-unit-tag { background: var(--bg-subtle); color: var(--text-muted); }
 body[data-theme="night"] .rate-use-tag.rate-use-van { background: #e4e0f7; }
 body[data-theme="night"] .rate-use-tag.rate-use-bullig { background: #f9e0ec; }
+
+/* Ô "Loại Nan N" của bảng định mức: kích thước + SỐ LƯỢNG ở dòng nhỏ DƯỚI —
+   nhờ vậy bảng bỏ hẳn 3 cột "Số Lượng" (16 → 13 cột), không còn phình ngang. */
+.rate-nan-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 118px;
+  line-height: 1.25;
+}
+.rate-nan-info strong {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+.rate-nan-qty {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Bảng định mức: cột đã giảm 3 cột "Số Lượng" → không cần 900px nữa */
+#material-rate-table { min-width: 780px; }
+#material-rate-table th, #material-rate-table td { vertical-align: top; }
+#material-rate-table .rate-product-name { font-weight: 700; white-space: nowrap; }
 
 
 
@@ -5190,7 +5439,7 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 /* Khối thẻ ẩn theo công tắc — dùng attribute[hidden] của HTML */
 .ws-cards-block[hidden] { display: none !important; }
 
-/* Màu accent 8 THẺ XƯỞNG 1 (ống nứa — tông hổ phách / vàng nâu) */
+/* Màu accent 8 THẺ XƯỞNG 1 (Vầu/nứa — tông hổ phách / vàng nâu) */
 .x2-mini-card[data-x2-card="x1-cat-ong-card"]   { --card-accent: #b45309; --card-accent-bg: #fef3c7; }
 .x2-mini-card[data-x2-card="x1-say-sinh-card"]  { --card-accent: #c2410c; --card-accent-bg: #ffedd5; }
 .x2-mini-card[data-x2-card="x1-boc-card"]       { --card-accent: #a16207; --card-accent-bg: #fef9c3; }

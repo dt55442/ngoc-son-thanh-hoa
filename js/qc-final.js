@@ -20,7 +20,8 @@
 //   Tổng đạt           = Đạt + Ngoại lệ
 //   Tỉ lệ lỗi          = Loại ÷ Tổng số lượng kiểm
 //   Công suất (tấm/h)  = Tổng số lượng kiểm ÷ giờ kiểm (từ Bảng bố trí Nhân Sự,
-//                        vị trí bộ phận QC có tên chứa "kiểm" — "QC Kiểm ván+thanh")
+//                        CHỈ vị trí Kiểm Ván/kiểm Thanh của bộ phận QC —
+//                        "QC Kiểm ván+thanh")
 //   Hiệu suất          = Công suất ÷ Định mức kiểm của tháng (tấm/h) — có định
 //                        mức mới hiện (chức năng làm trước, số điền sau).
 // Bảng dữ liệu = THẺ NGÀY (giống các thẻ công đoạn Xưởng 2): đầu thẻ chung +
@@ -74,19 +75,26 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, ' ').trim();
   }
-  // Vị trí KIỂM của QC: tên chứa "kiểm" ("QC Kiểm ván+thanh", "Kiểm chất"...)
+  // Vị trí KIỂM VÁN/THANH của QC: tên (bỏ dấu) chứa "kiểm" VÀ chứa "ván" HOẶC
+  // "thanh" — thẻ CHỈ lấy giờ của vị trí "QC Kiểm ván+thanh", LOẠI các vị trí
+  // kiểm khác của cùng bộ phận ("Kiểm chất", "Kiểm lò sấy", "Kiểm đầu vào"...)
+  // để giờ kiểm + Công suất/Hiệu suất không bị đội lên do cộng giờ cả bộ phận.
   function isQcFinalPos(name) {
-    return qcFinalNormName(name).includes('kiem');
+    const n = qcFinalNormName(name);
+    if (!n.includes('kiem')) return false;
+    return n.includes('van') || n.includes('thanh');
   }
   // ═══ PHẦN 1 ═══
 
   // ─── NGƯỜI KIỂM + GIỜ KIỂM — TỰ ĐỘNG từ tab Nhân Sự ──────────
-  // Nguồn: Bảng bố trí vị trí theo ngày (hrAssignments) tại vị trí có tên chứa
-  // "kiem". Trả về MẢNG (1 ngày có thể nhiều người/ca):
-  // [{ employeeId, name, positionName, shiftIdx, start, end }]
+  // Nguồn: Bảng bố trí vị trí theo ngày (hrAssignments) tại vị trí KIỂM VÁN/
+  // KIỂM THANH (isQcFinalPos — "QC Kiểm ván+thanh"). Trả về MẢNG (1 ngày có thể
+  // nhiều người/ca): [{ employeeId, name, positionName, shiftIdx, start, end }]
   // Ưu tiên bộ phận QC; ngày đó không có bố trí QC nào khớp thì nới ra mọi bộ
   // phận có vị trí tên chứa cả "kiem" lẫn "qc" (VD "QC Kiểm ván+thanh" khai
   // nhầm bộ phận khác vẫn ra người kiểm).
+  // ⚠ CHỈ tính giờ vị trí Kiểm ván/kiểm thanh — các vị trí QC khác cùng ngày
+  // (Kiểm chất, Kiểm lò sấy...) KHÔNG tham gia tổng giờ của thẻ này.
   function hrQcFinalAssignmentsOf(dateVal) {
     if (!dateVal) return [];
     const posNameOf = id => {
@@ -953,7 +961,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     const main = workers[0];
     const tip = workers.map(w => `${w.name}${w.time ? ` — ${w.time}` : ''}`).join(' · ');
     const more = workers.length > 1 ? ` <b title="${escapeHTML(tip)}">+${workers.length - 1} người khác</b>` : '';
-    return `<span class="x2-day-cap" title="${escapeHTML('Người kiểm tự động từ Bảng bố trí Nhân Sự — vị trí bộ phận QC có tên chứa "kiểm" (QC Kiểm ván+thanh). ' + tip)}"><i data-lucide="users"></i> Người kiểm: <strong>${escapeHTML(main.name)}</strong>${main.time ? ` <small>${escapeHTML(main.time)}</small>` : ''}${more}</span>`;
+    return `<span class="x2-day-cap" title="${escapeHTML('Người kiểm tự động từ Bảng bố trí Nhân Sự — CHỈ vị trí Kiểm Ván/kiểm Thanh của bộ phận QC ("QC Kiểm ván+thanh"); các vị trí QC khác không tính. ' + tip)}"><i data-lucide="users"></i> Người kiểm: <strong>${escapeHTML(main.name)}</strong>${main.time ? ` <small>${escapeHTML(main.time)}</small>` : ''}${more}</span>`;
   }
   // ═══ PHẦN 8 ═══
 
@@ -1034,7 +1042,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     const wsSet = [...new Set(disp.map(d => d.workshopLabel))];
     const wsTxt = wsSet.length === 1 ? wsSet[0] : wsSet.join(' + ');
     const hourTxt = dHours > 0
-      ? `<span class="x2-day-hours" title="Thời gian = tổng giờ công vị trí KIỂM của bộ phận QC trong ngày (tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)"><span class="x2-hours-hc">${qcFinalFmt(dHC, 1)}h HC</span><span class="x2-hours-tc">${qcFinalFmt(dTC, 1)}h TC</span></span>`
+      ? `<span class="x2-day-hours" title="Thời gian = tổng giờ công CHỈ vị trí Kiểm Ván/kiểm Thanh của bộ phận QC trong ngày (tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC) — các vị trí QC khác không tính"><span class="x2-hours-hc">${qcFinalFmt(dHC, 1)}h HC</span><span class="x2-hours-tc">${qcFinalFmt(dTC, 1)}h TC</span></span>`
       : '';
     const rowsHtml = rows.map(r => {
       const d = qcFinalDisplay(r);

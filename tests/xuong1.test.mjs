@@ -27,6 +27,7 @@ function makeEl(id) {
     closest: () => null, matches: () => false,
     getContext: () => ({ measureText: () => ({ width: 10 }), createLinearGradient: () => ({ addColorStop(){} }), createRadialGradient: () => ({ addColorStop(){} }), drawImage(){} }),
     getBoundingClientRect: () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600 }),
+    scrollIntoView(){}, scrollTo(){}, blur(){}, scroll(){},
     reset(){}
   };
   return el;
@@ -97,8 +98,8 @@ state.activeView = 'kanban-view';
 
 // ─── Dữ liệu mẫu: nguyên liệu XƯỞNG 1 + bộ phận "Xưởng 1" ──────────
 state.materialRecords = [
-  { id: 'x1m-a', type: 'Ống nứa tươi', supplier: 'Tế',   location: 'xuong-1', code: 'NNA01', weight: 1000, date: '2026-09-10', createdAt: '2026-09-10T02:00:00.000Z' },
-  { id: 'x1m-b', type: 'Ống nứa khô',  supplier: 'Trung', location: 'xuong-1', code: 'NNB02', weight: 800,  date: '2026-09-11', createdAt: '2026-09-11T02:00:00.000Z' },
+  { id: 'x1m-a', type: 'Vầu/nứa tươi', supplier: 'Tế',   location: 'xuong-1', code: 'NNA01', weight: 1000, date: '2026-09-10', createdAt: '2026-09-10T02:00:00.000Z' },
+  { id: 'x1m-b', type: 'Vầu/nứa khô',  supplier: 'Trung', location: 'xuong-1', code: 'NNB02', weight: 800,  date: '2026-09-11', createdAt: '2026-09-11T02:00:00.000Z' },
   { id: 'x2m-c', type: 'Luồng cây xô', supplier: 'Khác',  location: 'xuong-2', weight: 500,  date: '2026-09-12', createdAt: '2026-09-12T02:00:00.000Z' }
 ];
 state.xuong1CatOngRecords = [];
@@ -219,16 +220,16 @@ check('B15: checkbox phân quyền 2 modal đã tách Xưởng 1 / Xưởng 2',
   !idxHtml.includes('value="kanban" checked> Công Đoạn (Kanban)'));
 
 
-// ─── C. 8 THẺ CÔNG ĐOẠN XƯỞNG 1 (3 có chức năng + 5 "Sắp có") ────
+// ─── C. 8 THẺ CÔNG ĐOẠN XƯỞNG 1 (GIAI ĐOẠN 2 — TẤT CẢ CÓ CHỨC NĂNG) ──
 console.log('--- C. 8 THẺ XƯỞNG 1 ---');
 const X1_CARDS = ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card', 'x1-loc-ong-card',
                   'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card'];
+const X1_PFX = ['x1-cat-ong', 'x1-say-sinh', 'x1-boc', 'x1-loc-ong',
+                'x1-cat-mat', 'x1-bo', 'x1-phoi-say', 'x1-loc-thanh'];
 check('C1: X2_CARD_DEFS đăng ký đủ 8 thẻ Xưởng 1 (mọi thẻ ws:"x1")',
   X1_CARDS.every(id => x1.X2_CARD_DEFS[id] && x1.X2_CARD_DEFS[id].ws === 'x1'));
-check('C2: 3 thẻ đầu CÓ chức năng (không gắn cờ soon) · 5 thẻ còn lại "Sắp có"',
-  ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card'].every(id => !x1.X2_CARD_DEFS[id].soon) &&
-  ['x1-loc-ong-card', 'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card']
-    .every(id => x1.X2_CARD_DEFS[id].soon === true));
+check('C2: CẢ 8 thẻ Xưởng 1 ĐÃ có chức năng — không còn cờ soon nào',
+  X1_CARDS.every(id => !x1.X2_CARD_DEFS[id].soon));
 check('C3: index.html có đủ 8 thẻ launcher Xưởng 1 trong khối #ws-x1-block',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="ws-x1-block"'), idxHtml.indexOf('/#ws-x1-block'));
     return X1_CARDS.every(id => blk.includes(`data-x2-card="${id}"`)); })());
@@ -236,16 +237,22 @@ check('C4: thứ tự 8 thẻ theo đúng LUỒNG SX (Cắt Ống → … → L�
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="ws-x1-block"'), idxHtml.indexOf('/#ws-x1-block'));
     const pos = X1_CARDS.map(id => blk.indexOf(`data-x2-card="${id}"`));
     return pos.every((p, i) => p > 0 && (i === 0 || p > pos[i - 1])); })());
-check('C5: 3 thẻ chi tiết Xưởng 1 nằm trong #x2-details-stack (dùng chung pop-up)',
-  /id="x2-details-stack"[\s\S]*id="x1-cat-ong-card"[\s\S]*id="x1-say-sinh-card"[\s\S]*id="x1-boc-card"[\s\S]*\/#x2-details-stack/.test(idxHtml));
+check('C5: cả 8 thẻ chi tiết Xưởng 1 nằm trong #x2-details-stack (dùng chung pop-up)',
+  (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x2-details-stack"'), idxHtml.indexOf('/#x2-details-stack'));
+    return X1_PFX.every(p => blk.includes(`id="${p}-card"`)); })());
 check('C6: mọi thẻ chi tiết X1 có form + thanh tồn + thống kê + khung thẻ ngày',
-  ['x1-cat-ong', 'x1-say-sinh', 'x1-boc'].every(p =>
+  X1_PFX.every(p =>
     idxHtml.includes(`id="${p}-form"`) && idxHtml.includes(`id="${p}-stock-bar"`) &&
     idxHtml.includes(`id="${p}-stats"`) && idxHtml.includes(`id="${p}-day-cards"`)));
-check('C7: chip đếm trên launcher X1 có ô riêng (#x2-mini-count-x1-*)',
-  ['x1-cat-ong', 'x1-say-sinh', 'x1-boc'].every(p => idxHtml.includes(`id="x2-mini-count-${p}"`)));
-check('C8: x2CardCountText trả "Sắp có" cho 5 thẻ soon của X1',
-  x1.x1CardCountText('x1-loc-ong-card') === '–' /* hàm X1 trả –, nhánh soon lo phần này */);
+check('C7: chip đếm + sparkline trên launcher X1 có ô riêng (#x2-mini-count/spark-x1-*)',
+  X1_PFX.every(p => idxHtml.includes(`id="x2-mini-count-${p}"`) &&
+                    idxHtml.includes(`id="x2-mini-spark-${p}"`)));
+check('C8: x2CardCountText trả TỒN (không còn "Sắp có") cho 5 thẻ đuôi',
+  ['x1-loc-ong-card', 'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card']
+    .every(id => x1.x1CardCountText(id) === 'Hết tồn'));
+check('C9: X1_CHAIN_SPECS mô tả đủ 5 công đoạn đuôi theo đúng thứ tự chuỗi',
+  x1.X1_CHAIN_SPECS.map(s => s.key).join(',') === 'locOng,catMat,bo,phoiSay,locThanh' &&
+  x1.X1_CHAIN_SPECS.every(s => s.storeKey && s.stateKey && s.rateKind && s.cardId));
 
 // ─── D. CHUỖI LIÊN KẾT: lô NL X1 → CẮT ỐNG → SẤY SINH → BỐC ─────
 console.log('--- D. CHUỖI LIÊN KẾT 3 CÔNG ĐOẠN ---');
@@ -403,13 +410,144 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME v209', /nha-may-ngoc-son-v209/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v212/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
   idxHtml.includes('2 xưởng riêng biệt — chuyển bằng nút XƯỞNG 1 / XƯỞNG 2'));
 check('G4: CSS điện thoại cho công tắc (2 nút chia đều + lưới X1 2 cột)',
   stylesCss.includes('#x1-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }'));
+
+// ─── H. CHUỖI 5 CÔNG ĐOẠN ĐUÔI (05/10/2026 — GIAI ĐOẠN 2) ──────────
+// Bốc → Lọc Ống → Cắt Mắt → Bổ → Phơi Sấy → Lọc Thanh/Bó Xô
+console.log('--- H. CHUỖI 5 CÔNG ĐOẠN ĐUÔI ---');
+const spLO = x1.x1ChainSpecByKey('locOng'), spCM = x1.x1ChainSpecByKey('catMat');
+const spBO = x1.x1ChainSpecByKey('bo'),     spPS = x1.x1ChainSpecByKey('phoiSay');
+const spLT = x1.x1ChainSpecByKey('locThanh');
+const ALL5 = [spLO, spCM, spBO, spPS, spLT];
+ALL5.forEach(s => { state[s.stateKey] = []; state[s.editKey] = null; });
+// Nguồn gốc = 1 lượt BỐC 1000kg (xây độc lập cho mục H)
+state.xuong1BocRecords = [{
+  id: 'boc-h', date: '2026-09-12', qty: 1000,
+  materialType: 'Vầu/nứa tươi', supplier: 'Tế',
+  srcType: 'Vầu/nứa tươi', srcSupplier: 'Tế', saySinhId: 'ss-x'
+}];
+const bocH = state.xuong1BocRecords[0];
+function hFill(spec, srcId, d, qi, qok, ql) {
+  x1.fillX1ChainOptions(spec); // đổ danh sách nguồn — như khi mở thẻ ở app thật
+  const g = p => document.getElementById('x1-' + spec.prefix + '-' + p);
+  g('src').value = srcId; g('date').value = d;
+  g('in').value = String(qi); g('ok').value = String(qok); g('loai').value = String(ql);
+  x1.handleX1ChainSubmit(spec, { preventDefault(){} });
+}
+check('H1: SPEC dùng chung — nguồn BỐC output = qty · 4 thẻ sau output = qtyOk',
+  spLO.srcOutputOf(bocH) === 1000 &&
+  spCM.srcOutputOf({ qtyOk: 500 }) === 500 && spBO.srcOutputOf({ qtyOk: 500 }) === 500 &&
+  spPS.srcOutputOf({ qtyOk: 500 }) === 500 && spLT.srcOutputOf({ qtyOk: 500 }) === 500 &&
+  ALL5.every(s => !!s.storeKey && s.storeKey.startsWith('bamboo_tracker_xuong1_')));
+check('H2: tồn nguồn Bốc = 1000kg (chưa lượt Lọc Ống nào)', x1.x1ChainRemainingOf(spLO, bocH, null) === 1000);
+check('H3: ô chọn Lọc Ống liệt kê lượt Bốc + tự điền ngày + qtyIn = phần còn lại',
+  (() => { x1.fillX1ChainOptions(spLO);
+    const sel = document.getElementById('x1-loc-ong-src');
+    const okHtml = sel.innerHTML.includes('boc-h') && sel.innerHTML.includes('còn 1.000 kg');
+    sel.value = 'boc-h';                    // người dùng chọn (browser tự chọn option đầu)
+    x1.x1ChainSyncLinked(spLO, true);       // đúng handler 'change' của events.js
+    return okHtml &&
+      document.getElementById('x1-loc-ong-date').value === '2026-09-12' &&
+      document.getElementById('x1-loc-ong-in').value === '1000'; })());
+
+// ── CHẶN 2 lớp ──
+hFill(spLO, 'boc-h', '2026-09-13', 1200, 1100, 100); // qtyIn VƯỢT tồn
+check('H4: CHẶN qtyIn vượt phần còn lại của nguồn (1200 > 1000)', state.xuong1LocOngRecords.length === 0);
+hFill(spLO, 'boc-h', '2026-09-13', 800, 700, 200);    // đạt + loại > đem xử lý
+check('H5: CHẶN Đạt + Loại vượt Đem xử lý (900 > 800)', state.xuong1LocOngRecords.length === 0);
+hFill(spLO, 'boc-h', '2026-09-13', 800, 750, 50);
+check('H6: ghi lượt Lọc Ống 800kg (750 đạt + 50 loại) → tồn Bốc còn 200kg',
+  state.xuong1LocOngRecords.length === 1 && x1.x1ChainRemainingOf(spLO, bocH, null) === 200);
+const lo = state.xuong1LocOngRecords[0];
+check('H7: snapshot nguồn theo BỐC (type + NCC + ngày) chép vào lượt Lọc Ống',
+  lo.srcType === 'Vầu/nứa tươi' && lo.srcSupplier === 'Tế' && lo.srcDate === '2026-09-12');
+
+// ── Vòng tiếp: Lọc Ống → Cắt Mắt → Bổ → Phơi Sấy → Lọc Thanh ──
+check('H8: Cắt Mắt nhận tồn từ phần ĐẠT của Lọc Ống (750kg)',
+  x1.x1ChainRemainingOf(spCM, lo, null) === 750);
+hFill(spCM, lo.id, '2026-09-14', 750, 700, 50);
+const cm = state.xuong1CatMatRecords[0];
+check('H9: ghi lượt Cắt Mắt 750kg → Lọc Ống hết hàng (TỰ ẨN khỏi ô chọn)',
+  !!cm && x1.x1ChainRemainingOf(spCM, lo, null) === 0 &&
+  (() => { x1.fillX1ChainOptions(spCM);
+    return !document.getElementById('x1-cat-mat-src').innerHTML.includes(lo.id); })());
+hFill(spBO, cm.id, '2026-09-15', 700, 660, 40);
+const bo = state.xuong1BoRecords[0];
+check('H10: ghi lượt Bổ 700kg → tồn Cắt Mắt = 0', !!bo && x1.x1ChainRemainingOf(spBO, cm, null) === 0);
+hFill(spPS, bo.id, '2026-09-16', 660, 640, 20);
+const ps = state.xuong1PhoiSayRecords[0];
+check('H11: ghi lượt Phơi Sấy 660kg → tồn Bổ = 0', !!ps && x1.x1ChainRemainingOf(spPS, bo, null) === 0);
+hFill(spLT, ps.id, '2026-09-17', 640, 620, 20);
+const lt = state.xuong1LocThanhRecords[0];
+check('H12: ghi lượt Lọc Thanh 640kg → tồn Phơi Sấy = 0',
+  !!lt && x1.x1ChainRemainingOf(spLT, ps, null) === 0 && x1.x1ChainPending(spLT).length === 0);
+check('H13: chip đếm 5 thẻ đuôi trả SỐ LIỆU thật (không còn "Sắp có"/"–")',
+  ALL5.every(s => !['Sắp có', '–'].includes(x1.x1CardCountText(s.cardId))) &&
+  ['catMat', 'bo', 'phoiSay', 'locThanh']
+    .every(k => x1.x1CardCountText(x1.x1ChainSpecByKey(k).cardId) === 'Hết tồn') &&
+  /^Tồn /.test(x1.x1CardCountText(spLO.cardId)));
+
+// ── SỬA trả lại phần của lượt đang sửa (excludeId) ──
+x1.editX1Chain(spLO, lo.id); // vào mode sửa
+document.getElementById('x1-loc-ong-in').value = '400';
+document.getElementById('x1-loc-ong-ok').value = '380';
+document.getElementById('x1-loc-ong-loai').value = '20';
+x1.handleX1ChainSubmit(spLO, { preventDefault(){} });
+check('H14: sửa lượt Lọc Ống 800 → 400 kg trả lại 400kg cho nguồn Bốc',
+  state.xuong1LocOngRecords.length === 1 &&
+  state.xuong1LocOngRecords[0].qtyIn === 400 &&
+  x1.x1ChainRemainingOf(spLO, bocH, null) === 600);
+check('H15: sửa KHÔNG sinh bản ghi trùng (vẫn đúng 1 lượt)',
+  state.xuong1LocOngRecords.length === 1 && state.x1LocOngEditId === null);
+
+// ── XÓA có tombstone ──
+const delId = lt.id;
+globalThis.confirm = () => true;
+x1.deleteX1Chain(spLT, delId);
+check('H16: xóa lượt Lọc Thanh → mảng trống + tồn Phơi Sấy trả lại 640kg',
+  state.xuong1LocThanhRecords.length === 0 && x1.x1ChainRemainingOf(spPS, ps, null) === 640);
+
+// ── RENDER thẻ ngày + thanh tồn của 1 thẻ đuôi ──
+x1.renderX1ChainCard(spLO);
+check('H17: render thẻ Lọc Ống → thanh tồn + thống kê + thẻ ngày có dữ liệu',
+  document.getElementById('x1-loc-ong-stock-bar').innerHTML.length > 0 &&
+  document.getElementById('x1-loc-ong-stats').innerHTML.includes('Lượt lọc ống') &&
+  document.getElementById('x1-loc-ong-day-cards').innerHTML.includes('Vầu/nứa tươi'));
+
+check('H18: 5 form có đủ nguồn · ô tính · nút định mức data-admin-only',
+  ALL5.every(s => {
+    const p = s.prefix;
+    return idxHtml.includes(`id="x1-${p}-form"`) && idxHtml.includes(`id="x1-${p}-calc"`) &&
+      new RegExp(`id="btn-x1-${p}-rate"[^>]*data-admin-only`).test(idxHtml);
+  }));
+check('H19: events.js nối đủ 5 form (submit · cancel · src change · ô tính · định mức · ủy quyền)',
+  eventsSrc.includes('X1_CHAIN_SPECS.forEach(sp => {') &&
+  eventsSrc.includes("safeOn(base + '-form', 'submit'") &&
+  eventsSrc.includes("safeOn(base + '-src', 'change'") &&
+  eventsSrc.includes("['in', 'ok', 'loai'].forEach") &&
+  eventsSrc.includes("safeOn('btn-' + base + '-rate', 'click'") &&
+  eventsSrc.includes("closest('[data-x1-edit]')") &&
+  eventsSrc.includes("closest('[data-x1-delete]')"));
+check('H20: storage · cloud · history · main · capacity nối đủ 5 mảng + 8 khóa định mức',
+  ['restoreXuong1LocOng', 'restoreXuong1CatMat', 'restoreXuong1Bo', 'restoreXuong1PhoiSay', 'restoreXuong1LocThanh']
+    .every(n => storageSrc.includes('function ' + n)) &&
+  ['xuong1LocOngRecords', 'xuong1CatMatRecords', 'xuong1BoRecords',
+   'xuong1PhoiSayRecords', 'xuong1LocThanhRecords']
+    .every(k => cloudSrc.includes(k + ': state.' + k) && historySrc.includes(k + ':')) &&
+  mainSrc.includes('loadX1ChainAll()') &&
+  capSrc.includes("id: 'x1locong'") && capSrc.includes("id: 'x1locthanh'") &&
+  capSrc.includes("x1locthanh: 'x1locthanh'") &&
+  capSrc.includes("'x2-mini-spark-x1-phoi-say'"));
+check('H21: popup định mức X1 có đủ 8 lựa chọn công đoạn',
+  ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'phoiSay', 'locThanh']
+    .every(k => new RegExp(`<option value="${k}">`).test(idxHtml)) &&
+  x1.x1RateOf('2026-09-10', 'locOng') === 0);
 
 console.log(`\n=== KẾT QUẢ XUONG1: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

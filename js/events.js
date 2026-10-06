@@ -1490,7 +1490,9 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Dropdown NỔI: neo lại khi CUỘN bất kỳ vùng nào / đổi cỡ màn hình
     window.addEventListener('scroll', () => x2FloatRepositionAll(), true);
     window.addEventListener('resize', () => x2FloatRepositionAll());
-    safeOn('x2-btinh-search', 'input', renderX2BaoTinhList);   // ô tìm nhanh lọc thẻ (bỏ dấu)
+    safeOn('x2-btinh-search', 'input', renderX2BaoTinhList);   // ô tìm nhanh lọc thẻ (CHỮ — bỏ dấu)
+    // Ô TÌM THEO SỐ LƯỢNG (tách riêng): CHỈ khớp số lượng — lọc KẾT HỢP với ô tìm nhanh (VÀ)
+    safeOn('x2-btinh-qty-search', 'input', renderX2BaoTinhList);
     safeOn('x2-btinh-list', 'click', onBaoTinhListClick);
     safeOn('x2-btinh-pick-all', 'click', baoTinhPickAll);
     safeOn('x2-btinh-pick-clear', 'click', baoTinhClearPicks);
@@ -1524,9 +1526,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       return true;
     });
     safeOn('x2-btinh-bt-out-add', 'click', addBaoThanhOutSize);
-    // Ô tìm nhanh CỦA THANH ĐẦU VÀO Bào thanh (khớp cả SỐ LƯỢNG) + đổi Ngày Bào
-    // → nguồn BTP lọc lại theo CẶP TUẦN của ngày mới
+    // 2 Ô tìm CỦA THANH ĐẦU VÀO Bào thanh (ô chữ ∧ ô SỐ LƯỢNG — kết hợp VÀ) + đổi Ngày Bào
+    // → nguồn đầu vào lọc lại (KHÔNG lọc theo tuần)
     safeOn('x2-btinh-bt-in-search', 'input', renderBaoThanhInputList);
+    safeOn('x2-btinh-bt-in-qty-search', 'input', renderBaoThanhInputList);
     safeOn('x2-btinh-date', 'change', () => { renderX2BaoThanhForm(); renderX2BaoTinhList(); });
     safeOn('x2-btinh-form', 'submit', handleXuong2BaoTinhSubmit);
     safeOn('btn-cancel-x2-btinh', 'click', () => resetXuong2BaoTinhForm());

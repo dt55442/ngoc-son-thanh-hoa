@@ -17,7 +17,7 @@ import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
-import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
+import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, baoTinhUsedLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
@@ -154,6 +154,69 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     viewEl.querySelectorAll('.modal-overlay.show').forEach(o => o.classList.remove('show'));
   }
 
+  // ─── CỜ "KANBAN CẦN VẼ LẠI" + NỘI DUNG TRANG TRÍ HOÃN 1 FRAME ───────
+  // Chuyển tab Công Đoạn SX trước đây LUÔN phá + dựng lại toàn bộ bảng Kanban
+  // (hàng trăm thẻ lô) dù dữ liệu KHÔNG đổi → giật/mỏi máy, đặc biệt điện
+  // thoại. Mọi đường ghi dữ liệu đều đi qua renderAll() (quy tắc dự án) nên
+  // renderAll ĐẶT cờ; renderKanbanBoard (js/kanban.js) gọi markKanbanPainted()
+  // NGAY SAU khi vẽ xong.
+  let kanbanDirty = true;      // true = dữ liệu đổi mà bảng chưa vẽ lại
+  let kanbanPaintedSig = '';   // chữ ký dữ liệu của lần vẽ gần nhất
+  let dashboardDirty = true;   // true = dữ liệu đổi mà trang trí tab Tổng Quan chưa vẽ
+  function kanbanBoardSignature() {
+    // LƯỚI AN TOÀN: chữ ký NHẸ — nếu có chỗ sửa state mà quên gọi renderAll
+    // thì vẫn phát hiện để vẽ lại (không bao giờ hiển thị bảng Kanban cũ).
+    const cols = state.columnFilters || {};
+    return [
+      (state.batches || []).length,
+      (state.kanbanPicked || []).join(','),
+      state.khoShowUsed ? 1 : 0,
+      state.stageWs || '',
+      JSON.stringify(cols)
+    ].join('|');
+  }
+  function kanbanNeedsPaint() {
+    return kanbanDirty || kanbanPaintedSig !== kanbanBoardSignature();
+  }
+  // Gọi từ js/kanban.js sau mỗi lần renderKanbanBoard xong
+  function markKanbanPainted() {
+    kanbanDirty = false;
+    kanbanPaintedSig = kanbanBoardSignature();
+  }
+  // ─── TRANG TRÍ HOÃN 1 FRAME SAU KHI TAB ĐÃ HIỆN ─────────────────────
+  // Biểu đồ Dashboard + Bảng Tổng hợp Công suất + sparkline mini card chỉ để
+  // TRANG TRÍ — dựng đồng bộ giữ main-thread nên tab "đứng hình" vài trăm ms.
+  // Nền tab đã bật class .active xong → hoãn phần trang trí sang frame kế để
+  // trình duyệt VẼ TAB TRƯỚC. Gọi render trực tiếp (test, nút bấm trong trang)
+  // VẪN đồng bộ như cũ.
+  // CỜ theo TỪNG TAB: true = dữ liệu ĐỔI từ lần vẽ trang trí gần nhất → lần
+  // sau MỚI vẽ lại (qua lại giữa các tab mà dữ liệu không đổi = 0 công sức).
+  // Cờ được GIỮ NGUYÊN nếu khung hoãn bị hủy giữa chừng (người dùng chuyển
+  // tab khác trước khi khung chạy) → lần tới quay lại tab vẫn vẽ đủ.
+  let decorKanban = false;    // sparkline tab Công Đoạn (cùng cờ với bảng Kanban)
+  let decorDashboard = false; // biểu đồ + Bảng Tổng hợp tab Tổng Quan
+  let decorRafId = 0;
+  function scheduleViewDecor(targetViewId, needed) {
+    if (targetViewId === 'kanban-view' && needed) decorKanban = true;
+    if (targetViewId === 'dashboard-view' && needed) decorDashboard = true;
+    if (decorRafId) return; // đã có khung chờ — khung đó tự xem tab đang đứng
+    const raf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : cb => setTimeout(cb, 0);
+    decorRafId = raf(() => {
+      decorRafId = 0;
+      const v = state.activeView; // tab ĐANG đứng lúc khung chạy
+      if (v === 'kanban-view' && decorKanban) {
+        decorKanban = false;
+        try { renderX2MiniSparklines(); } catch (e) { /* không phá tab */ }
+        return;
+      }
+      if (v === 'dashboard-view' && decorDashboard) {
+        decorDashboard = false;
+        try { renderDashboardCharts(); } catch (e) { /* không phá tab */ }
+        try { renderCapacityCard(); } catch (e) { /* không phá tab */ }
+      }
+    });
+  }
+
   function switchView(targetViewId) {
     const prevView = state.activeView;
     state.activeView = targetViewId;
@@ -177,20 +240,26 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       try { exitKanbanPickMode(false); } catch (e) {}
     }
     if (targetViewId === 'dashboard-view') {
-      renderDashboardCharts();
-      // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)
-      renderCapacityCard();
+      // Biểu đồ + Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan):
+      // hoãn 1 frame (xem scheduleViewDecor) — tab hiện ra trước, trang trí lấp
+      // frame kế; dữ liệu CHƯA đổi từ lần vẽ trước → bỏ qua luôn (0 công sức)
+      scheduleViewDecor(targetViewId, dashboardDirty);
     }
     // Khu Vị Trí Xưởng 2 + bảng Kanban lô nan (tab Công Đoạn)
     if (targetViewId === 'kanban-view') {
-      // Vẽ ĐỦ khu Kanban khi vừa mở tab (trước đây renderAll luôn vẽ sẵn —
-      // giờ renderAll chỉ vẽ khi đang đứng ở tab này để bớt công vô ích).
-      renderKanbanBoard(getFilteredBatches());
-      renderXuong2Cards();
+      // CHỈ vẽ lại khu Kanban khi dữ liệu ĐỔI (renderAll đặt cờ) hoặc chữ ký
+      // đổi — qua lại giữa các tab không còn phá/dựng lại hàng trăm thẻ lô
+      // mỗi lần (nguyên nhân gây giật khi chuyển tab Công Đoạn SX).
+      const needPaint = kanbanNeedsPaint();
+      if (needPaint) {
+        renderKanbanBoard(getFilteredBatches());
+        renderXuong2Cards(); // đếm trên mini card launcher (cùng cờ dirty)
+      }
       // Áp lại công tắc XƯỞNG 1 / XƯỞNG 2 (grid ẩn/hiện + nút đang chọn)
       applyStageWsDom();
-      // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)
-      renderX2MiniSparklines();
+      // Sparkline hiệu suất 8 tuần trên mini card = trang trí → hoãn 1 frame,
+      // dùng CHUNG cờ với bảng (dữ liệu không đổi thì bỏ qua)
+      scheduleViewDecor(targetViewId, needPaint);
       filterMobileKanbanColumns();
     }
     if (targetViewId === 'planning-view') renderPlanningView();
@@ -200,6 +269,11 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // "Nan Bot" chào + nhắc nhanh theo tab vừa mở (tầng offline hiện ngay,
     // tầng AI lầy hơn sẽ tự thay câu khi có key + mạng + còn quota)
     try { aiAutoGreet(targetViewId); } catch (e) { /* lỗi gợi ý tự động — bỏ qua */ }
+    // Vẽ icon lucide của tab vừa mở: svg CŨ đã bị gỡ data-lucide nên lần này
+    // chỉ xử lý <i data-lucide> MỚI (rẻ). Trước đây switchView KHÔNG gọi —
+    // icon trên thẻ lô chỉ được vẽ nhờ aiAutoGreet (ngẫu nhiên) nên CÓ THỂ MẤT
+    // khi Nan Bot đã chào trong ngày hoặc công tắc tự chào đang tắt.
+    initLucide();
   }
 
   function filterMobileKanbanColumns() {
@@ -283,6 +357,12 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
   }
 
   function renderAll() {
+    // Mọi đường ghi dữ liệu đều đi qua đây → báo bảng Kanban CẦN VẼ LẠI khi
+    // người dùng mở tab Công Đoạn (xem kanbanNeedsPaint — khỏi phá/dựng lại
+    // hàng trăm thẻ lô mỗi lần qua lại giữa các tab) + báo trang trí tab Tổng
+    // Quan (biểu đồ + Bảng Tổng hợp) cũng cần vẽ lại (xem scheduleViewDecor)
+    kanbanDirty = true;
+    dashboardDirty = true;
     const filtered = getFilteredBatches();
     // TỐI ƯU: chỉ vẽ lại khu Kanban khi tab Công Đoạn đang mở. Trước đây MỖI
     // lần lưu/đồng bộ mây đều vẽ lại toàn bộ bảng Kanban (mỗi thẻ 1 khối DOM)
@@ -298,6 +378,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       renderDashboardCharts();
       // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)
       renderCapacityCard();
+      dashboardDirty = false; // vừa vẽ xong tại chỗ → không phải vẽ lại khi quay lại tab
     }
     if (state.activeView === 'planning-view') renderPlanningView();
     if (state.activeView === 'materials-view') renderMaterialView();
@@ -323,6 +404,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     toggleChartExpand,
     deleteBatch,
     x2SayChargeLabel: sayBatchChargeLabel,
+    x2BaoTinhUsedLabel: baoTinhUsedLabel,
     deleteUser,
     // Bộ lọc theo cột Kanban
     toggleColumnFilter,
@@ -408,6 +490,7 @@ export {
   batchMatchesColumnFilter,
   filterMobileKanbanColumns,
   getFilteredBatches,
+  markKanbanPainted,
   renderAll,
   setActiveMobileStage,
   switchView

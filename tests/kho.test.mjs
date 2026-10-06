@@ -105,8 +105,8 @@ check('TỒN: số lần NHẬP kho — k1=1 · k2=2 (ra/vào 1 lần) · k3=1',
   utils.khoInCountOf(state.batches[2]) === 1);
 check('TỒN: số lần RA KHỎI kho — k2=1 (say2 sau kho) · k1=0',
   utils.khoOutRoundCountOf(state.batches[1]) === 1 && utils.khoOutRoundCountOf(state.batches[0]) === 0);
-check('TỒN: không phiếu → tồn kho 2.200 (k2 nhập 2 lần × 400) · toàn nhóm 2.300 · không lô hết',
-  utils.khoStockSummary().remainingThanh === 2200 && utils.khoStockSummary().poolThanh === 2300 &&
+check('TỒN: không phiếu → tồn kho 2.200 (k2 nhập 2 lần × 400) · toàn nhóm 2.700 (500 đang sấy + 2.200 tồn kho) · không lô hết',
+  utils.khoStockSummary().remainingThanh === 2200 && utils.khoStockSummary().poolThanh === 2700 &&
   utils.khoStockSummary().usedUpLots === 0 && utils.khoStockSummary().liveLots === 3);
 check('TỒN: bản đồ ẩn/hiện — không lô nào bị ẩn, tồn từng lô đúng',
   utils.khoVisibilityMap().hide.size === 0 && utils.khoVisibilityMap().remain.get('k1') === 600);
@@ -131,8 +131,8 @@ check('PHIẾU: Admin duyệt → ĐÃ DUYỆT + tồn giảm còn 1.900 + ngư�
 check('FIFO: 300 trừ lô VÀO KHO LÂU NHẤT trước (k1) — k1 còn 300, k2/k3 nguyên',
   utils.khoLotRemainingOf(state.batches[0]) === 300 &&
   utils.khoLotRemainingOf(state.batches[1]) === 800 && utils.khoLotRemainingOf(state.batches[2]) === 800);
-check('KẾ HOẠCH: tồn nan TOÀN NHÓM = 2.300 − 300 = 2.000 (trừ phiếu Bào Tinh)',
-  utils.khoStockSummary().poolThanh === 2000);
+check('KẾ HOẠCH: tồn nan TOÀN NHÓM (công thức mới) = 500 (đang sấy) + 1.900 (tồn kho sau phiếu) = 2.400',
+  utils.khoStockSummary().poolThanh === 2400);
 
 // PHIẾU purpose 'say2' — trừ TỒN KHO nhưng KHÔNG trừ tồn nan toàn nhóm
 document.getElementById('x2-kho-date').value = '2026-09-15';
@@ -142,7 +142,7 @@ document.getElementById('x2-kho-note').value = 'Quay lại sấy';
 x2.handleKhoNoteSubmit({ preventDefault(){} });
 const noteSay2 = state.khoNotes[1];
 x2.khoApproveNote(noteSay2.id);
-check('SẤY 2: duyệt phiếu "Sấy 2" → tồn Kho giảm (1.500) NHƯNG tồn nan toàn nhóm GIỮ 2.000',
+check('SẤY 2: duyệt phiếu "Sấy 2" → tồn Kho giảm còn 1.500 · toàn nhóm 2.400 → 2.000 (phiếu trừ theo tồn kho từng lô)',
   utils.khoStockSummary().remainingThanh === 1500 && utils.khoStockSummary().poolThanh === 2000);
 
 // CHẶN XUẤT VỚI TỒN (lúc gửi)
@@ -314,6 +314,36 @@ const jsXlsx = fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url),
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const cssCss = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+// ─── F2. TRÌNH BÀY LẠI THANH TỒN (A) + KHUNG VÙNG .x2-zone (B/C) ────
+check('TỒN TOÀN NHÓM (công thức mới): = số lô đang sấy + tồn kho → KHÔNG BAO GIỜ về 0 vô nghĩa', (() => {
+  const s = utils.khoStockSummary();
+  return s.poolThanh === s.poolSayThanh + s.remainingThanh && s.poolSayThanh === 500 && s.poolThanh > s.remainingThanh;
+})());
+check('THANH TỒN: 3 ô KPI — "Tồn Kho:" · "Đang sấy:" · "Tổng trong nhà máy:" (giải thích chỉ ở tooltip)', (() => {
+  const h = document.getElementById('x2-kho-stock-bar').innerHTML;
+  return h.includes('Tồn Kho:') && h.includes('Đang sấy:') && h.includes('Tổng trong nhà máy:') &&
+    h.includes('kho-kpi') && h.includes('title="') &&
+    h.includes('Tồn nan toàn nhóm') === false && h.includes('Đối chiếu lệch') === false;
+})());
+check('THỐNG KÊ Kho: thêm ô "Đang sấy" + "Tổng trong nhà máy" · nhãn "Thiếu phiếu kho" thay "Đối chiếu lệch"', (() => {
+  const st = document.getElementById('x2-kho-stats').innerHTML;
+  return st.includes('Đang sấy (S1+S2)') && st.includes('Tổng trong nhà máy') &&
+    st.includes('Thiếu phiếu kho') && st.includes('title="') && st.includes('Đối chiếu lệch') === false;
+})());
+check('VÙNG: Thẻ Kho Nan có ĐÚNG 5 khung .x2-zone + 5 header đánh số (mô tả nằm trong title)', (() => {
+  const slice = idxHtml.slice(idxHtml.indexOf('id="x2-kho-card"'), idxHtml.indexOf('id="x2-bao-tinh-card"'));
+  return (slice.match(/class="x2-zone"/g) || []).length === 5 &&
+    (slice.match(/class="x2-zone-head"/g) || []).length === 5 && slice.includes('title="');
+})());
+check('VÙNG: thẻ Bào Tinh được bọc 3 khung (Nhập Liệu · Thống Kê · Lịch Sử)', (() => {
+  const slice = idxHtml.slice(idxHtml.indexOf('id="x2-bao-tinh-card"'), idxHtml.indexOf('id="x2-ep-van-card"'));
+  return (slice.match(/class="x2-zone"/g) || []).length === 3;
+})());
+check('VÙNG: head thanh trong khung tab (Than Hóa · Ép Ván) + CSS .x2-zone/.kho-kpi + backfill tách purpose say2', (() => {
+  const jsXuong2 = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
+  return idxHtml.includes('x2-zone-bar') && cssCss.includes('.x2-zone {') && cssCss.includes('.kho-kpi {') &&
+    jsXuong2.includes('khoS2ExitQtyOf') && jsXuong2.includes('purpose: p.purpose');
+})());
 check('CẤU TRÚC (index.html): mini card + thẻ Kho Nan đủ khối (tồn · WIP · phiếu · sổ · tồn)',
   idxHtml.includes('data-x2-card="x2-kho-card"') && idxHtml.includes('id="x2-kho-card"') &&
   idxHtml.includes('id="x2-kho-stock-bar"') && idxHtml.includes('id="x2-kho-wip-bar"') &&
@@ -331,7 +361,7 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v212/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v216/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

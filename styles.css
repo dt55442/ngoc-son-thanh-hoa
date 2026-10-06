@@ -1207,6 +1207,14 @@ h1, h2, h3, h4, h5 {
 }
 .tag-say-charge svg { width: 10px; height: 10px; }
 
+/* B2 — Chip "ĐÃ BÀO X/Y THANH" trên thẻ lô (Kanban + Thẻ Kho) — tông tím, đối chiếu
+   với ô "Chọn Thanh" của thẻ Bào Tinh (lô đã bào hết KHÔNG hiện ở đó) */
+.tag-badge.tag-baotinh-used {
+  background-color: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #c4b5fd;
+}
+
 .card-notes {
   font-size: 0.78rem;
   color: var(--text-muted);
@@ -6031,6 +6039,9 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
   font-size: 0.82rem;
 }
 .al-search:focus { outline: none; border-color: var(--primary); }
+
+/* Ô TÌM THEO SỐ LƯỢNG (tách riêng — form "Thêm Lô Sấy Mới" + thẻ Bào Tinh): hẹp hơn ô chữ, chung 1 dòng */
+.al-search-qty { flex: 1 1 170px; max-width: 240px; }
 /* FORM "Thêm Lô Sấy Mới": 3 ô đầu (Công đoạn · Ngày · Dùng Cho) cùng 1 DÒNG trên desktop;
    màn hình hẹp vẫn 1 cột. Các ô col-span-full vẫn chiếm hết chiều ngang. */
 @media (min-width: 640px) {
@@ -6100,6 +6111,10 @@ body[data-theme="night"] .al-day-badge.day-luuong { background: #fcefab; }
 .al-card-body { display: flex; flex-direction: column; min-width: 0; }
 .al-card-main { font-size: 0.8rem; font-weight: 700; }
 .al-empty { font-size: 0.8rem; color: var(--text-muted); font-style: italic; padding: 6px 2px; }
+
+/* B1 — Dòng GIẢI THÍCH khi tìm không thấy vì thẻ đã bị ẨN (đã dùng hết) — thẻ Bào Tinh */
+.al-warn-usedup { margin-top: 6px; padding: 6px 8px; border: 1px dashed #d97706; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: 0.78rem; line-height: 1.45; }
+.al-warn-line + .al-warn-line { margin-top: 3px; }
 .al-loc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .al-loc-chip {
   padding: 4px 10px;
@@ -9238,4 +9253,46 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   .stage-ws-hint { flex: 1 1 100%; margin-left: 0; text-align: center; font-size: 0.7rem; }
   /* Lưới Xưởng 1 (8 thẻ) về 2 cột cho vừa màn nhỏ (khớp .x2-cards của Xưởng 2) */
   #x1-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ═══ KHUNG VÙNG CHỨC NĂNG (.x2-zone) — PHÂN BIỆT CÁC VÙNG TRONG THẺ ═══
+   Quy tắc: head chỉ gồm SỐ THỨ TỰ + TÊN NGẮN — mọi câu giải thích nằm trong
+   title (tooltip) để KHÔNG tốn không gian hiển thị. Màu theo số:
+   1 teal · 2 hổ phách · 3 tím · 4 cam · 5 xanh dương. */
+.x2-zone { margin: 2px 0 12px; padding: 8px 10px 10px; border: 1px solid rgba(15, 118, 110, 0.28); border-radius: 12px; background: rgba(15, 118, 110, 0.045); }
+.x2-zone-head { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px dashed rgba(15, 118, 110, 0.4); font-size: 0.8rem; font-weight: 800; color: #0f766e; cursor: help; }
+.x2-zone-head svg { width: 14px; height: 14px; }
+.x2-zone-no { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #0f766e; color: #fff; font-size: 0.68rem; font-weight: 800; flex: 0 0 auto; }
+/* Thanh head ĐỘC LẬP — dùng trong khung ẩn/hiện theo TAB (không bọc thêm div → head ẩn theo khung) */
+.x2-zone-bar { margin: 8px 0; padding: 6px 10px; border: 1px solid rgba(15, 118, 110, 0.3); border-left: 4px solid #0f766e; border-radius: 8px; background: rgba(15, 118, 110, 0.07); color: #0f766e; }
+/* Màu nhấn theo SỐ VÙNG */
+.x2-zone[data-zone="2"] { border-color: rgba(217, 119, 6, 0.32); background: rgba(217, 119, 6, 0.05); }
+.x2-zone[data-zone="2"] .x2-zone-head { color: #b45309; border-bottom-color: rgba(217, 119, 6, 0.45); }
+.x2-zone[data-zone="2"] .x2-zone-no { background: #d97706; }
+.x2-zone-bar[data-zone="2"] { border-color: rgba(217, 119, 6, 0.4); border-left-color: #d97706; background: rgba(217, 119, 6, 0.08); color: #b45309; }
+.x2-zone-bar[data-zone="2"] .x2-zone-no { background: #d97706; }
+.x2-zone[data-zone="3"] { border-color: rgba(124, 58, 237, 0.3); background: rgba(124, 58, 237, 0.045); }
+.x2-zone[data-zone="3"] .x2-zone-head { color: #6d28d9; border-bottom-color: rgba(124, 58, 237, 0.4); }
+.x2-zone[data-zone="3"] .x2-zone-no { background: #7c3aed; }
+.x2-zone[data-zone="4"] { border-color: rgba(234, 88, 12, 0.3); background: rgba(234, 88, 12, 0.045); }
+.x2-zone[data-zone="4"] .x2-zone-head { color: #c2410c; border-bottom-color: rgba(234, 88, 12, 0.4); }
+.x2-zone[data-zone="4"] .x2-zone-no { background: #ea580c; }
+.x2-zone[data-zone="5"] { border-color: rgba(37, 99, 235, 0.28); background: rgba(37, 99, 235, 0.045); }
+.x2-zone[data-zone="5"] .x2-zone-head { color: #1d4ed8; border-bottom-color: rgba(37, 99, 235, 0.4); }
+.x2-zone[data-zone="5"] .x2-zone-no { background: #2563eb; }
+/* ═══ 3 Ô KPI THANH TỒN THẺ KHO NAN ═══ (giải thích chỉ ở title) */
+#x2-kho-stock-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kho-kpi { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid; border-radius: 10px; background: #fff; font-size: 0.78rem; cursor: help; }
+.kho-kpi-label { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+.kho-kpi-label svg { width: 14px; height: 14px; }
+.kho-kpi strong { font-size: 0.92rem; }
+.kho-kpi-kho { border-color: rgba(15, 118, 110, 0.45); background: #f0fdfa; }
+.kho-kpi-kho .kho-kpi-label { color: #0f766e; }
+.kho-kpi-say { border-color: rgba(217, 119, 6, 0.45); background: #fffbeb; }
+.kho-kpi-say .kho-kpi-label { color: #b45309; }
+.kho-kpi-total { border-color: rgba(124, 58, 237, 0.4); background: #f5f3ff; }
+.kho-kpi-total .kho-kpi-label { color: #6d28d9; }
+@media (max-width: 639.98px) {
+  .kho-kpi { font-size: 0.74rem; padding: 5px 9px; }
+  .x2-zone { padding: 7px 8px 9px; }
 }

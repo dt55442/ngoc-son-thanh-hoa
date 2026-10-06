@@ -2,7 +2,7 @@
 // js/kanban.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { deleteBatch } from './batch-modals.js';
-import { batchMatchesColumnFilter, getFilteredBatches } from './main.js';
+import { batchMatchesColumnFilter, getFilteredBatches, markKanbanPainted } from './main.js';
 import { STAGES, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getStageDaysClass, getStageDaysLabel, showToast, khoLotRemainingOf, khoOutRoundCountOf, khoStockSummary, khoVisibilityMap } from './utils.js';
 
@@ -74,6 +74,9 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     // Cập nhật danh sách lựa chọn trong dropdown của từng cột
     renderColumnFilterOptions(batches);
     updateColumnFilterCounts();
+    // Báo main.js: bảng đã vẽ xong → tắt cờ "cần vẽ lại" (switchView chỉ phá
+    // + dựng lại hàng trăm thẻ lô khi THẬT SỰ có dữ liệu đổi — xem kanbanNeedsPaint)
+    markKanbanPainted();
   }
 
   // ─── BỘ LỌC TỪNG CỘT KANBAN ─────────────────────────────────
@@ -313,6 +316,11 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     // mẻ hoặc chưa qua sấy → không hiện chip.
     const thLabel = (typeof window !== 'undefined' && window.app && typeof window.app.x2SayChargeLabel === 'function') ? window.app.x2SayChargeLabel(batch) : '';
     const thChip = thLabel ? `<span class="tag-badge tag-say-charge" title="Lần than hóa mà lô này đã qua — S1 = Sấy 1, S2 = Sấy 2 · mã mẻ gắn lúc bấm Lưu của form Thêm Lô Sấy Mới"><i data-lucide="flame" style="width:10px;height:10px;"></i> ${escapeHTML(thLabel)}</span>` : '';
+        // Chip "ĐÃ BÀO X/Y THANH" (CHỈ ĐỌC) — số thanh lô đã ghi ở các lượt Bào Tinh;
+        // lô ĐÃ BÀO HẾT sẽ KHÔNG hiện ở ô "Chọn Thanh" của thẻ Bào Tinh → chip giúp đối chiếu.
+        // Lấy qua window.app.x2BaoTinhUsedLabel (logic js/xuong2.js) — tránh vòng import.
+        const btLabel = (typeof window !== 'undefined' && window.app && typeof window.app.x2BaoTinhUsedLabel === 'function') ? window.app.x2BaoTinhUsedLabel(batch) : '';
+        const btChip = btLabel ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — xem thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLabel)}</span>` : '';
 
     // Hiển thị badge ngày cho từng công đoạn đã đi qua (Bào Tinh không đếm ngày)
     const history = getBatchStageHistory(batch);
@@ -356,6 +364,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <span class="tag-badge tag-type-${batch.bambooType}">Loại ${escapeHTML(batch.bambooType)}</span>
         <span class="tag-badge tag-use-${batch.useFor}">${escapeHTML(batch.useFor)}</span>
         ${thChip}
+        ${btChip}
         <span class="tag-badge tag-location"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
       </div>
       ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}

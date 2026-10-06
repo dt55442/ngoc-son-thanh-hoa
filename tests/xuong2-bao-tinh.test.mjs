@@ -201,6 +201,40 @@ check('TÌM NHANH: xoá ô tìm → hiện lại toàn bộ thẻ',
   document.getElementById('x2-btinh-list').innerHTML.includes('K11') &&
   document.getElementById('x2-btinh-list').innerHTML.includes('K12') &&
   document.getElementById('x2-btinh-list').innerHTML.includes('K13'));
+// ─── 2 Ô TÌM KẾT HỢP: ô chữ + ô RIÊNG SỐ LƯỢNG (điều kiện VÀ) ──────
+document.getElementById('x2-btinh-qty-search').value = '800';
+x2.renderX2BaoTinhList();
+check('Ô SỐ LƯỢNG (riêng): gõ "800" → chỉ lô còn 800 thanh (K11)',
+  document.getElementById('x2-btinh-list').innerHTML.includes('K11') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K12') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K13'));
+document.getElementById('x2-btinh-qty-search').value = '';
+document.getElementById('x2-btinh-search').value = '500';
+x2.renderX2BaoTinhList();
+check('Ô CHỮ tách riêng: gõ "500" (là SỐ LƯỢNG của lô K12) ở ô tìm nhanh → không thẻ nào',
+  document.getElementById('x2-btinh-list').innerHTML.includes('Không tìm thấy thẻ nào khớp'));
+document.getElementById('x2-btinh-search').value = '';
+document.getElementById('x2-btinh-qty-search').value = '500';
+x2.renderX2BaoTinhList();
+check('Ô SỐ LƯỢNG: gõ "500" → đúng lô K12 (số lượng 500 thanh) — bằng chứng SỐ đã tách sang ô riêng',
+  document.getElementById('x2-btinh-list').innerHTML.includes('K12') &&
+  document.getElementById('x2-btinh-list').innerHTML.includes('1300 × 20 × 8 mm') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K11') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K13'));
+document.getElementById('x2-btinh-search').value = 'K13';
+document.getElementById('x2-btinh-qty-search').value = '300';
+x2.renderX2BaoTinhList();
+check('KẾT HỢP 2 Ô (VÀ): chữ "K13" + số "300" → đúng lô K13',
+  document.getElementById('x2-btinh-list').innerHTML.includes('K13') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K11') &&
+  !document.getElementById('x2-btinh-list').innerHTML.includes('K12'));
+document.getElementById('x2-btinh-qty-search').value = '800';
+x2.renderX2BaoTinhList();
+check('KẾT HỢP 2 Ô (VÀ): chữ "K13" + số "800" → không thẻ (K13 chỉ có 300 thanh)',
+  document.getElementById('x2-btinh-list').innerHTML.includes('Không tìm thấy thẻ nào khớp'));
+document.getElementById('x2-btinh-search').value = '';
+document.getElementById('x2-btinh-qty-search').value = '';
+x2.renderX2BaoTinhList();
 x2.toggleBaoTinhPick('k-1');
 check('BẤM THẺ = CHỌN (thẻ tô chip picked + đếm "1 đã chọn")',
   x2.baoTinhPickedIds().join(',') === 'k-1' &&
@@ -496,18 +530,39 @@ check('KHÔNG PHỤ THUỘC NGÀY BÀO: để trống Ngày Bào danh sách ngu�
   return h.includes('không lọc theo tuần') &&
     pool.some(x => x.id === 'p:1200×18×15') && pool.some(x => x.id === 'd:640×14×12');
 })());
-// TÌM THEO SỐ LƯỢNG trong ô tìm nhanh (bỏ dấu phân cách nghìn: '500' khớp '1.000' ở chữ "còn 500/1.000")
+// ─── 2 Ô TÌM KẾT HỢP: ô CHỮ (kích thước/nguồn/loại) + ô RIÊNG SỐ LƯỢNG (điều kiện VÀ) ──
 document.getElementById('x2-btinh-date').value = '2026-09-21';
-document.getElementById('x2-btinh-bt-in-search').value = '500';
+document.getElementById('x2-btinh-bt-in-qty-search').value = '500';
 x2.renderBaoThanhInputList();
-check('TÌM THEO SỐ LƯỢNG: gõ "500" khớp thẻ "còn 500/1.000 thanh"', (() => {
+check('TÌM SỐ LƯỢNG (ô RIÊNG): gõ "500" khớp thẻ "còn 500/1.000 thanh"', (() => {
   const ok = document.getElementById('x2-btinh-bt-in-list').innerHTML.includes('còn 500/1.000 thanh');
-  document.getElementById('x2-btinh-bt-in-search').value = '99999';
+  document.getElementById('x2-btinh-bt-in-qty-search').value = '99999';
+  x2.renderBaoThanhInputList();
+  const none = document.getElementById('x2-btinh-bt-in-list').innerHTML.includes('Không tìm thấy');
+  document.getElementById('x2-btinh-bt-in-qty-search').value = '';
+  x2.renderBaoThanhInputList();
+  return ok && none;
+})());
+check('Ô CHỮ tách riêng: gõ "500" (là SỐ LƯỢNG) ở ô tìm nhanh → không thẻ nào khớp', (() => {
+  document.getElementById('x2-btinh-bt-in-search').value = '500';
   x2.renderBaoThanhInputList();
   const none = document.getElementById('x2-btinh-bt-in-list').innerHTML.includes('Không tìm thấy');
   document.getElementById('x2-btinh-bt-in-search').value = '';
   x2.renderBaoThanhInputList();
-  return ok && none;
+  return none;
+})());
+check('KẾT HỢP 2 Ô (VÀ): chữ "1200" + số "500" → đúng thẻ BTP; chữ "640" + số "500" → không thẻ', (() => {
+  document.getElementById('x2-btinh-bt-in-search').value = '1200';
+  document.getElementById('x2-btinh-bt-in-qty-search').value = '500';
+  x2.renderBaoThanhInputList();
+  const hit = document.getElementById('x2-btinh-bt-in-list').innerHTML.includes('còn 500/1.000 thanh');
+  document.getElementById('x2-btinh-bt-in-search').value = '640';
+  x2.renderBaoThanhInputList();
+  const miss = document.getElementById('x2-btinh-bt-in-list').innerHTML.includes('Không tìm thấy');
+  document.getElementById('x2-btinh-bt-in-search').value = '';
+  document.getElementById('x2-btinh-bt-in-qty-search').value = '';
+  x2.renderBaoThanhInputList();
+  return hit && miss;
 })());
 check('TÌM NHANH CHUNG: chuẩn hóa bỏ dấu phân cách nghìn (gõ 1000 khớp 1.000)',
   x2.baoTinhSearchNorm('1.000') === '1000' && x2.baoTinhSearchNorm('1.000/1.000').includes('1000'));
@@ -600,6 +655,58 @@ x2.toggleX2BaoTinhTable();
 check('BẢNG: nút thu gọn hoạt động (wrap có class x2-cut-collapsed)',
   document.getElementById('x2-btinh-table-wrap').classList.contains('x2-cut-collapsed'));
 x2.toggleX2BaoTinhTable();
+
+// ─── M2. "ĐÃ DÙNG HẾT": thẻ bị ẨN + dòng GIẢI THÍCH khi tìm + CHIP "ĐÃ BÀO" (B1+B2) ───
+// Lô 700 thanh ĐÃ bị lượt Bào Tinh rút hết → ẩn; lô 400 thanh CHƯA bào → vẫn hiện
+state.batches.push({ id: 'k-usedup', code: '261001-09', stage: 'kho', date: '2026-10-01', khoDate: '2026-10-01', week: 'Tuần 40', length: 1250, width: 22, thickness: 7, quantity: 700, volume: 0.14, bambooType: 'A1', useFor: 'Ván', location: 'K19', stageHistory: [{ stage: 'kho', date: '2026-10-01' }] });
+state.batches.push({ id: 'k-fresh', code: '261001-10', stage: 'kho', date: '2026-10-01', khoDate: '2026-10-01', week: 'Tuần 40', length: 1250, width: 22, thickness: 7, quantity: 400, volume: 0.085, bambooType: 'A1', useFor: 'Ván', location: 'K20', stageHistory: [{ stage: 'kho', date: '2026-10-01' }] });
+state.xuong2BaoTinhRecords.push({ id: 'bt-usedup', date: '2026-10-04', week: '2026-W40', kind: 'tinh',
+  sources: [{ batchId: 'k-usedup', code: '261001-09', qty: 700 }],
+  batchId: 'k-usedup', batchCode: '261001-09', inQty: 700, inSizeKey: '1250×22×7',
+  outSizeKey: '1250×20×5', outDims: [1250, 20, 5], qtyOk: 660, qtyErr: 40 });
+x2.baoTinhClearPicks();
+document.getElementById('x2-btinh-kind').value = 'tinh';
+document.getElementById('x2-btinh-search').value = '';
+document.getElementById('x2-btinh-qty-search').value = '';
+x2.updateXuong2BaoTinhLinked();
+x2.renderX2BaoTinhList();
+check('DÙNG HẾT: lô đã bào 700/700 KHÔNG có thẻ chọn (data-btinh-pick) · lô chưa bào vẫn hiện',
+  document.getElementById('x2-btinh-list').innerHTML.includes('data-btinh-pick="k-fresh"') &&
+  document.getElementById('x2-btinh-list').innerHTML.includes('data-btinh-pick="k-usedup"') === false);
+check('DÙNG HẾT: baoTinhUsedUpItems trả thẻ đã ẩn (k-usedup · qty 0 · total 700)',
+  x2.baoTinhUsedUpItems().some(it => it.id === 'k-usedup' && it.qty === 0 && it.total === 700));
+document.getElementById('x2-btinh-qty-search').value = '700';
+x2.renderX2BaoTinhList();
+check('DÙNG HẾT: ô SỐ "700" → "Không tìm thấy" + dòng GIẢI THÍCH (mã · 0/700 · lượt 04/10/2026)', (() => {
+  const h = document.getElementById('x2-btinh-list').innerHTML;
+  return h.includes('Không tìm thấy thẻ nào khớp') && h.includes('al-warn') &&
+    h.includes('261001-09') && h.includes('0/700') && h.includes('04/10/2026');
+})());
+document.getElementById('x2-btinh-qty-search').value = '';
+document.getElementById('x2-btinh-search').value = '261001-09';
+x2.renderX2BaoTinhList();
+check('DÙNG HẾT: ô CHỮ gõ mã lô cũng hiện dòng GIẢI THÍCH', (() => {
+  const h = document.getElementById('x2-btinh-list').innerHTML;
+  return h.includes('al-warn') && h.includes('0/700');
+})());
+document.getElementById('x2-btinh-search').value = 'zzzz';
+x2.renderX2BaoTinhList();
+check('DÙNG HẾT: từ khóa lạ → "Không tìm thấy" NHƯNG không dòng giải thích', (() => {
+  const h = document.getElementById('x2-btinh-list').innerHTML;
+  return h.includes('Không tìm thấy') && h.includes('al-warn') === false;
+})());
+document.getElementById('x2-btinh-search').value = '';
+x2.renderX2BaoTinhList();
+check('DÙNG HẾT: xoá ô chữ → lô chưa bào hiện lại + không còn dòng giải thích', (() => {
+  const h = document.getElementById('x2-btinh-list').innerHTML;
+  return h.includes('data-btinh-pick="k-fresh"') && h.includes('al-warn') === false;
+})());
+check('CHIP "ĐÃ BÀO": nhãn "Đã bào 700/700 thanh" · không truyền lô → chuỗi rỗng',
+  x2.baoTinhUsedLabel(state.batches.find(b => b.id === 'k-usedup')) === 'Đã bào 700/700 thanh' &&
+  x2.baoTinhUsedLabel(null) === '');
+// Dọn dữ liệu test — không ảnh hưởng các mục sau
+state.xuong2BaoTinhRecords = state.xuong2BaoTinhRecords.filter(r => r.id !== 'bt-usedup');
+state.batches = state.batches.filter(b => b.id !== 'k-usedup' && b.id !== 'k-fresh');
 
 // ─── H. CẤU TRÚC + NỐI ĐỒNG BỘ ──────────────────────────────────
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -751,8 +858,40 @@ check('VÍ DỤ (sửa lượt): khôi phục đúng nguồn lỗi "d:640×14×1
 check('CẤU TRÚC (js): baoTinhDefectStock nhận (excludeId, totalKinds) + baoThanhDefectPool chỉ đếm kind bao_thanh',
   /function baoTinhDefectStock\(excludeId, totalKinds\)/.test(jsX2) &&
   /baoTinhDefectStock\(ex, \['bao_thanh'\]\)/.test(jsX2));
+// ─── CẤU TRÚC B1/B2: dòng giải thích "đã dùng hết" + chip "ĐÃ BÀO X/Y THANH" ───
+const jsKanban = fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8');
+check('B1 (js): xuong2 có baoTinhCandidateRaw + baoTinhUsedUpItems + baoTinhUsedUpHintHtml + baoTinhLastTurnDateOf',
+  jsX2.includes('function baoTinhCandidateRaw') && jsX2.includes('function baoTinhUsedUpItems') &&
+  jsX2.includes('function baoTinhUsedUpHintHtml') && jsX2.includes('function baoTinhLastTurnDateOf'));
+check('B1 (css + render): khối .al-warn + renderX2BaoTinhList nối warn (cả nhánh "Tất cả đã dùng hết")',
+  cssHtml.includes('.al-warn-usedup {') && cssHtml.includes('.al-warn-line') &&
+  jsX2.includes('baoTinhUsedUpHintHtml(true)') && jsX2.includes('+ warn'));
+check('B2 (js): main.js đưa x2BaoTinhUsedLabel vào window.app + kanban.js gắn chip tag-baotinh-used',
+  jsMain.includes('x2BaoTinhUsedLabel: baoTinhUsedLabel') && jsKanban.includes('x2BaoTinhUsedLabel') &&
+  jsKanban.includes('tag-baotinh-used') && jsKanban.includes('const btChip ='));
+check('B2 (css + xuong2): chip .tag-baotinh-used + thẻ lô Kho dùng baoTinhUsedLabel + đã export',
+  cssHtml.includes('.tag-badge.tag-baotinh-used') && jsX2.includes('baoTinhUsedLabel(b)') &&
+  jsX2.includes('baoTinhUsedLabel,') && jsX2.includes('baoTinhUsedUpItems,'));
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v212/.test(swJs));
+// ─── CẤU TRÚC MỚI: khung lịch sử không lặp + 2 ô tìm KẾT HỢP ──────
+check('CẤU TRÚC (index.html): khung "Lịch Sử Bào Tinh" KHÔNG còn LẶP — 1 khung · 1 tiêu đề · 1 nút thu gọn',
+  (idxHtml.match(/id="x2-btinh-table-wrap"/g) || []).length === 1 &&
+  (idxHtml.match(/id="btn-toggle-x2btinh-table"/g) || []).length === 1 &&
+  (idxHtml.match(/id="x2-btinh-table-count"/g) || []).length === 1 &&
+  (idxHtml.match(/id="x2-btinh-day-cards"/g) || []).length === 1);
+check('CẤU TRÚC (index.html): số <div> cân bằng </div> (thẻ card đóng đúng, không lồng nhầm)',
+  (idxHtml.match(/<div/g) || []).length === (idxHtml.match(/<\/div>/g) || []).length);
+check('CẤU TRÚC (index.html): 2 ô tìm (ô chữ + ô SỐ LƯỢNG) ở cả 2 danh sách thẻ Bào Tinh',
+  idxHtml.includes('id="x2-btinh-qty-search"') && idxHtml.includes('id="x2-btinh-bt-in-qty-search"') &&
+  idxHtml.indexOf('id="x2-btinh-qty-search"') > idxHtml.indexOf('id="x2-btinh-search"') &&
+  idxHtml.indexOf('id="x2-btinh-bt-in-qty-search"') > idxHtml.indexOf('id="x2-btinh-bt-in-search"'));
+check('CẤU TRÚC (events.js + xuong2.js): nối 2 ô số lượng + hàm lọc số lượng & khớp 2 ô',
+  jsEventsSt.includes("safeOn('x2-btinh-qty-search', 'input', renderX2BaoTinhList)") &&
+  jsEventsSt.includes("safeOn('x2-btinh-bt-in-qty-search', 'input', renderBaoThanhInputList)") &&
+  jsX2.includes('function baoTinhQtyQuery') && jsX2.includes('function baoTinhListMatch') &&
+  jsX2.includes('baoTinhQtyMatchVals([it.remaining, it.total], qQty)') && jsX2.includes('plainTxt'));
+check('CẤU TRÚC (styles.css): ô tìm số lượng .al-search-qty dùng chung', cssHtml.includes('.al-search-qty {'));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v216/.test(swJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

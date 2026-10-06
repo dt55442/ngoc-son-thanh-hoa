@@ -377,7 +377,25 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   // ─── GỘP DỮ LIỆU THEO KỲ (TUẦN ISO | THÁNG) ───────────────────
   // 1 lượt quét rows() của mỗi công đoạn → Map kỳ → bản ghi (tiết kiệm:
   // bảng tầng 1 vẽ ~26 kỳ chỉ cần 9 lượt quét thay vì 26×9).
+  // ─── CACHE PHIÊN RENDER (tối ưu tốc độ chuyển tab — 10/2026) ─────────
+  // st.rows() quét TOÀN BỘ nhật ký công đoạn. Bản đồ nhiệt (8 kỳ × ~11 công
+  // đoạn) + cửa sổ 8 kỳ + tầng 2/3 từng gọi nó HÀNG CHỤC LẦN mỗi lần render
+  // (đo thật: bảng Tổng hợp ~130ms, sparkline mini card ~155ms — treo cả
+  // GIÂY khi dữ liệu ×10). Cache này CHỈ SỐNG TRONG 1 LỜI GỌI hàm render
+  // (JS đơn luồng — dữ liệu KHÔNG đổi giữa chừng) nên KHÔNG BAO GIỜ trả số
+  // cũ: capRenderPass(fn) = bật cache → chạy fn → tắt (kể cả khi fn lỗi).
+  // Gọi LẺ capStageRowsByPeriod/capStagePeriodRow (test, hàm tương tác) →
+  // không bật pass → vẫn quét trực tiếp như cũ (không đổi hành vi).
+  let capPass = null;
+  function capRenderPass(fn) {
+    const prev = capPass;
+    capPass = new Map();
+    try { return fn(); }
+    finally { capPass = prev; }
+  }
   function capStageRowsByPeriod(st, mode) {
+    const ck = capPass ? 'r:' + st.id + '|' + mode : '';
+    if (capPass && capPass.has(ck)) return capPass.get(ck);
     const map = new Map();
     (st.rows() || []).forEach(r => {
       if (!r || !r.date) return;
@@ -386,6 +404,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       if (!map.has(pk)) map.set(pk, []);
       map.get(pk).push(r);
     });
+    if (capPass) capPass.set(ck, map);
     return map;
   }
   // Bản TUẦN ISO — sparkline mini card + kiểm thử cũ vẫn dùng
@@ -472,8 +491,14 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   }
   // Dòng KỲ của 1 công đoạn (mode 'week' | 'month')
   function capStagePeriodRow(st, key, mode) {
+    // Trong Phiên Render: nhớ luôn dòng của kỳ (bản đồ nhiệt 88 ô + cửa sổ 8 kỳ
+    // trước đây tính lại dòng này hàng chục lần trên cùng dữ liệu)
+    const ck = capPass ? 'w:' + st.id + '|' + mode + '|' + key : '';
+    if (capPass && capPass.has(ck)) return capPass.get(ck);
     const recs = capStageRowsByPeriod(st, mode).get(key);
-    return recs ? capStagePeriodRowFromRecs(st, recs, key, mode) : capEmptyStageRow(st, key);
+    const row = recs ? capStagePeriodRowFromRecs(st, recs, key, mode) : capEmptyStageRow(st, key);
+    if (capPass) capPass.set(ck, row);
+    return row;
   }
   // Bản TUẦN của 1 công đoạn (tiện dùng ở test + sparkline mini card)
   function capStageWeekRow(st, weekKey) {
@@ -1123,7 +1148,8 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     if (btnTable) btnTable.classList.toggle('active', view === 'table');
   }
 
-  function renderCapacityCard() {
+  function renderCapacityCard() { capRenderPass(renderCapacityCardBody); }
+  function renderCapacityCardBody() {
     const card = document.getElementById('capacity-card');
     if (!card) return;
     loadCapacityUi();
@@ -1361,25 +1387,44 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     const den = rows.reduce((s, r) => s + r.hours, 0);
     return den > 0 ? num / den : null;
   }
-  // Chuỗi 8 tuần: neo = tuần MỚI NHẤT có dữ liệu của nhóm (hoặc tuần hiện tại), lùi dần
+  // Chuỗi 8 tuần: neo = tuần MỚI NHẤT có dữ liệu của nhóm (hoặc tuần hiện tại), lùi dần.
+  // TỐI ƯU 10/10/2026 (chuyển tab Công Đoạn SX bị chậm): mỗi công đoạn chỉ quét
+  // MỘT LẦN + dựng dòng theo kỳ MỘT LẦN cho cả 8 tuần. Trước đây:
+  //   • capWeekRowsFor('x2') quét TOÀN BỘ 11 công đoạn Xưởng 2 chỉ để tìm mốc tuần;
+  //   • mỗi tuần lại capSparkGroupWeekEff → capStageWeekRow → quét lại toàn bộ;
+  // → ~358 lượt quét/lần vẽ 17 sparkline (đo thật 155ms với dữ liệu mẫu,
+  //   ~5 GIÂY khi dữ liệu ×10). Số liệu VẪNG NGUYÊN — cùng công thức bình
+  //   quân gia quyền theo giờ (xem capSparkGroupWeekEff giữ nguyên cho test).
   function capSparkSeries(stageIds, weeks = 8) {
-    let anchor = capCurrentWeekKey();
-    const stageMap = new Map(stageIds.map(id => {
-      const st = CAP_STAGES.find(s => s.id === id);
-      return [id, st ? capStageRowsByWeek(st) : null];
-    }));
-    capWeekRowsFor('x2').some(wk => {
-      const has = stageIds.some(id => {
-        const m = stageMap.get(id);
-        return m && m.has(wk);
+    const byPeriods = stageIds
+      .map(id => CAP_STAGES.find(s => s.id === id))
+      .filter(Boolean)
+      .map(st => ({ st, byPeriod: capStageRowsByWeek(st) }));
+    // Dòng của từng (công đoạn, kỳ) — tính 1 lần cho mọi kỳ có dữ liệu của nhóm
+    const rowsByKey = new Map(); // weekKey → Map(stageId → row)
+    byPeriods.forEach(({ st, byPeriod }) => {
+      byPeriod.forEach((recs, wk) => {
+        if (!rowsByKey.has(wk)) rowsByKey.set(wk, new Map());
+        rowsByKey.get(wk).set(st.id, capStagePeriodRowFromRecs(st, recs, wk, 'week'));
       });
-      if (has) { anchor = wk; return true; }
-      return false;
     });
+    // Mốc neo = tuần MỚI NHẤT mà nhóm có dữ liệu — chuỗi 'YYYY-Wnn' sắp xếp
+    // tăng dần đúng thứ tự thời gian, không cần quét cả Xưởng 2 nữa
+    const newest = [...rowsByKey.keys()].sort().pop();
+    const anchor = newest || capCurrentWeekKey();
+    const effOf = (wk) => {
+      const m = rowsByKey.get(wk);
+      if (!m) return null;
+      let num = 0, den = 0;
+      m.forEach(r => {
+        if (r.turns > 0 && r.eff != null && r.hours > 0) { num += r.eff * r.hours; den += r.hours; }
+      });
+      return den > 0 ? num / den : null;
+    };
     const out = [];
     let cur = anchor;
     for (let i = 0; i < weeks; i++) {
-      out.push({ weekKey: cur, eff: capSparkGroupWeekEff(stageIds, cur) });
+      out.push({ weekKey: cur, eff: effOf(cur) });
       cur = capWeekShift(cur, -1);
     }
     return out.reverse();
@@ -1402,7 +1447,8 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       </svg>
       <span class="cap-spark-val" style="color:${color};" title="${escapeHTML(tip)}">${fmtNum1(last.eff)}%</span>`;
   }
-  function renderX2MiniSparklines() {
+  function renderX2MiniSparklines() { capRenderPass(renderX2MiniSparklinesBody); }
+  function renderX2MiniSparklinesBody() {
     CAP_SPARKS.forEach(g => {
       const el = document.getElementById(g.elId);
       if (!el) return;

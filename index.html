@@ -474,6 +474,8 @@
 
           <!-- FORM: chọn lô nguyên liệu đầu vào Xưởng 2
                (bố cục thu gọn 2 dòng: NL + Ghi chú cùng dòng · Ngày + các ô khối lượng cùng dòng) -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-cut-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-cut-edit-text"></span>
@@ -521,15 +523,21 @@
               </div>
             </form>
           </div>
+          </div>
 
           <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
           <div class="material-stats" id="x2-cut-stats"></div>
+          </div>
 
           <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT CẮT ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- THẺ NGÀY CẮT/CHỌN — mỗi ngày 1 THỂ RIÊNG: đầu thẻ = thông tin chung
                (Ngày · Người cắt · Giờ cắt HC/TC · Công suất thực tế · Hiệu suất),
                trong thẻ là bảng các lô của ngày. Thu gọn được, cuộn khi dài. -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x2-cut-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Cắt/Chọn</h5>
@@ -541,6 +549,7 @@
             <div class="x2-cut-table-scroll">
               <div id="x2-day-cards"></div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -556,6 +565,8 @@
           <!-- FORM: Ngày bốc + Đầu vào (lô "Luồng cây..." CHƯA bốc hết) + Khối lượng thực tế.
                NGƯỜI BỐC + GIỜ BỐC TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Bốc Luồng"
                — Xưởng 2, đúng ngày) — không có ô nhập tay, chỉ hiện ở thẻ ngày. -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-blg-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-blg-edit-text"></span>
@@ -585,13 +596,19 @@
               </div>
             </form>
           </div>
+          </div>
 
           <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
           <div class="material-stats" id="x2-blg-stats"></div>
+          </div>
 
           <!-- THẺ NGÀY BỐC LUỒNG — mỗi ngày 1 THẺ RIÊNG: đầu thẻ = thông tin chung
                (Ngày · Người bốc · Giờ bốc HC/TC · Công suất thực tế · Hiệu suất),
                trong thẻ là bảng các lượt bốc của ngày. -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x2-blg-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bốc Luồng</h5>
@@ -603,6 +620,7 @@
             <div class="x2-cut-table-scroll">
               <div id="x2-blg-day-cards"></div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -617,6 +635,8 @@
 
           <!-- FORM: chọn lô ống (từ Cắt Chọn) + ngày bổ + KL ống loại
                (KL ống bổ TỰ TÍNH = KL ống đầu vào − KL ống loại) -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-bo-ong-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-bo-ong-edit-text"></span>
@@ -659,9 +679,13 @@
               </div>
             </form>
           </div>
+          </div>
 
           <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
           <div class="material-stats" id="x2-ong-stats"></div>
+          </div>
 
           <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT BỔ ỐNG ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
@@ -669,6 +693,8 @@
                đầu thẻ = NỘI DUNG CHUNG (Ngày · Người bổ · Giờ bổ HC/TC ·
                Công suất thực tế · Hiệu suất); trong thẻ = NỘI DUNG RIÊNG từng
                nhánh (Lô ống · KL ống đầu vào · KL ống bổ · KL ống loại · Tỷ lệ đạt) -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x2-ong-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bổ Ống</h5>
@@ -681,6 +707,7 @@
               <div id="x2-ong-day-cards"></div>
             </div>
           </div>
+          </div>
         </div>
 
         <!-- VỊ TRÍ: CHẠY MÁY BÀO THÔ — ghi lượt chạy máy cho LÔ ĐÃ BỔ (từ Bổ Ống) -->
@@ -690,6 +717,8 @@
           </div>
 
           <!-- FORM: chọn lô đã bổ + ngày chạy máy + loại nan (Dài/Rộng/Dày) -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-bao-tho-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-bao-tho-edit-text"></span>
@@ -741,9 +770,13 @@
               </div>
             </form>
           </div>
+          </div>
 
           <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
           <div class="material-stats" id="x2-bt-stats"></div>
+          </div>
 
           <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT BÀO THÔ ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
@@ -751,6 +784,8 @@
                đầu thẻ = NỘI DUNG CHUNG (Ngày · Người chạy máy · Thời gian ·
                Công suất · Hiệu suất); trong thẻ = NỘI DUNG RIÊNG từng nhánh
                (Loại nan · Số lượng · Thể tích quy đổi) -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x2-bt-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Chạy Máy Bào Thô</h5>
@@ -762,6 +797,7 @@
             <div class="x2-cut-table-scroll">
               <div id="x2-bt-day-cards"></div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -775,6 +811,8 @@
           <div class="x2-stock-bar" id="x2-cn-stock-bar"></div>
 
           <!-- FORM: chọn lô (theo ngày bào thô) + ngày chọn + loại nan + phân loại + số lượng -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-cn-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-cn-edit-text"></span>
@@ -853,15 +891,21 @@
               </div>
             </form>
           </div>
+          </div>
 
           <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
           <div class="material-stats" id="x2-cn-stats"></div>
+          </div>
           <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT CHỌN NAN ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
                đầu thẻ = thông tin CHUNG của ngày (Ngày · Người chọn nan · Thời gian ·
                Công suất · Hiệu suất · Tổng số thanh · Tổng thể tích · Tỷ lệ loại);
                trong thẻ = từng nhánh (Loại nan · Phân loại · Số lượng · Thể tích · Tỷ lệ loại) -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x2-cn-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Chọn Nan Thô</h5>
@@ -873,6 +917,7 @@
             <div class="x2-cut-table-scroll">
               <div id="x2-cn-day-cards"></div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -930,6 +975,7 @@
                Kéo thẻ lò thả vào ô KHO = chuyển nhanh; chạm lò = menu Thêm lô.
                Dữ liệu + thao tác nằm trong js/kiln.js (độ ẩm do QC nhập ở tab QC). -->
           <div class="x2-say-frame" id="x2-say-frame-ctrl">
+            <div class="x2-zone-head x2-zone-bar" data-zone="1" title="2 hàng lô icon lò (vị trí · loại sấy · m³ · ngày sấy · độ ẩm) — kéo thẻ lò vào Kho, chạm lò để thêm lô; chi tiết ở nút thanh tab."><span class="x2-zone-no">1</span><i data-lucide="layout-grid"></i> Bảng Điều Khiển Lò Sấy</div>
             <div class="kiln-kho-drop" id="x2-kiln-kho-drop" title="Kéo thẻ lò vào đây để chuyển nhanh TẤT CẢ lô trong lò vào Kho (điện thoại: bấm icon kho trên thẻ lò)">
               <i data-lucide="warehouse"></i>
               <span><b>Kho Lưu Trữ</b> — kéo thẻ lò vào đây để chuyển nhanh vào Kho</span>
@@ -940,6 +986,7 @@
 
           <!-- ═══ KHUNG 2: BẢNG DỮ LIỆU (thống kê than hóa + Kanban — như cũ) ═══ -->
           <div class="x2-say-frame" id="x2-say-frame-data" hidden>
+            <div class="x2-zone-head x2-zone-bar" data-zone="2" title="Thống kê than hóa theo từng lần + bảng Kanban lô nan Sấy 1 · Sấy 2 · Kho."><span class="x2-zone-no">2</span><i data-lucide="table-2"></i> Thống Kê &amp; Lô Nan</div>
 
           <!-- THU GỌN BẢNG KANBAN: bảng lô rất dài → thu gọn lại, khi cần bấm mở ra.
                Khi thu gọn vẫn thấy thanh công cụ trên, dòng TỔNG QUAN số lô từng công
@@ -1213,13 +1260,18 @@
             <h4><i data-lucide="warehouse"></i> Kho Nan — Xưởng 2</h4>
           </div>
 
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Số nan THỰC đang nằm trong kho (đã trừ phiếu ĐÃ DUYỆT) + tồn trung gian (WIP) của các công đoạn — rê chuột vào từng số để xem công thức."><span class="x2-zone-no">1</span><i data-lucide="warehouse"></i> Tồn Kho Hiện Tại</div>
           <!-- TỒN KHO (vật lý) + TỒN NAN TOÀN NHÓM (Sấy 1/2/Kho — số của Kế Hoạch)
                + chip vàng "phiếu chờ duyệt" + chip cảnh báo đối chiếu lệch -->
           <div class="x2-stock-bar" id="x2-kho-stock-bar"></div>
 
           <!-- TỒN TRUNG GIAN (WIP) — nằm ở TỪNG CÔNG ĐOẠN, bấm dòng = mở thẻ đó -->
           <div class="kho-wip-bar" id="x2-kho-wip-bar"></div>
+          </div>
 
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Tạo phiếu xuất kho / xử lý lỗi (tiêu hủy · tái chế) — CHỈ phiếu được Ban lãnh đạo DUYỆT mới trừ tồn."><span class="x2-zone-no">2</span><i data-lucide="pencil"></i> Lập Phiếu Kho</div>
           <!-- FORM PHIẾU KHO: gạt Phiếu Xuất ⇄ Xử Lý Lỗi (tiêu hủy / tái chế) -->
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-kho-edit-banner" style="display:none;">
@@ -1302,8 +1354,11 @@
               </div>
             </form>
           </div>
+          </div>
 
 
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Thống kê nhanh + phiếu chờ Ban lãnh đạo duyệt (phiếu chờ CHƯA trừ tồn)."><span class="x2-zone-no">3</span><i data-lucide="clipboard-check"></i> Thống Kê & Phiếu Chờ</div>
           <!-- Thống kê nhanh -->
           <div class="material-stats" id="x2-kho-stats"></div>
 
@@ -1318,7 +1373,10 @@
             </div>
             <div class="kho-pending-rows" id="x2-kho-pending-rows"></div>
           </div>
+          </div>
 
+          <div class="x2-zone" data-zone="4">
+            <div class="x2-zone-head" title="Nhập — Xuất — Tồn cuối kỳ theo Ngày / Tuần / Tháng — đối chiếu dòng nan vào ra của kho."><span class="x2-zone-no">4</span><i data-lucide="history"></i> Sổ Nhập / Xuất Theo Kỳ</div>
           <!-- SỔ NHẬP / XUẤT THEO KỲ — công tắc Ngày / Tuần / Tháng + khoảng ngày + tìm
                nhanh; mỗi kỳ 1 THẺ: đầu thẻ = Nhập / Xuất / Tồn cuối kỳ; trong thẻ = bảng
                NHẬP (mỗi entry 'kho' 1 dòng, ghi Lần N) + bảng XUẤT (phiếu đã duyệt) +
@@ -1345,7 +1403,10 @@
               <div id="x2-kho-day-cards"></div>
             </div>
           </div>
+          </div>
 
+          <div class="x2-zone" data-zone="5">
+            <div class="x2-zone-head" title="Tồn từng lô (lô xuất hết bị ẩn) — bấm lô để gắn phiếu; nút 'Tạo phiếu bù' sinh phiếu cho dữ liệu cũ (chỉ Admin / Ban Quản Lý)."><span class="x2-zone-no">5</span><i data-lucide="boxes"></i> Tồn Theo Từng Lô</div>
           <!-- BẢNG TỒN KHO THEO LÔ — mỗi lô 1 DÒNG (kể cả lô ra/vào kho nhiều lần, có
                chip "ra/vào N lần"); lô ĐÃ XUẤT HẾT ẨN mặc định (công tắc bên dưới để hiện
                lại); nút "Tạo phiếu bù" sinh phiếu xuất ĐÃ DUYỆT cho dữ liệu cũ (chạy 2 lần
@@ -1363,6 +1424,7 @@
             <div class="x2-cut-table-scroll">
               <div id="x2-kho-stock-rows"></div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -1382,6 +1444,8 @@
           <div class="x2-stock-bar" id="x2-btinh-stock-bar"></div>
 
           <!-- FORM: ngày bào + loại bào + chọn thanh (đổi theo loại bào) + kết quả -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-btinh-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-btinh-edit-text"></span>
@@ -1415,6 +1479,7 @@
                   <div class="al-picker x2-btinh-picker" id="x2-btinh-picker" hidden>
                     <div class="al-picker-tools">
                       <input type="text" id="x2-btinh-search" class="al-search" placeholder="Tìm nhanh: mã lô, vị trí, kích thước, loại (A/A1/B), Ván/Bullig…" autocomplete="off">
+                      <input type="text" id="x2-btinh-qty-search" class="al-search al-search-qty" inputmode="numeric" placeholder="Tìm theo SỐ LƯỢNG (VD: 1000)" autocomplete="off" title="Ô tìm THEO SỐ LƯỢNG — CHỈ khớp số lượng (còn/tổng thanh; gõ 1000 khớp 1.000); lọc KẾT HỢP với ô tìm nhanh (điều kiện VÀ)">
                       <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-pick-all">Chọn tất cả</button>
                       <button type="button" class="btn btn-outline btn-sm" id="x2-btinh-pick-clear">Bỏ chọn</button>
                     </div>
@@ -1442,7 +1507,8 @@
                   </button>
                   <div class="al-picker x2-btinh-picker" id="x2-btinh-bt-in-picker" hidden>
                     <div class="al-picker-tools">
-                      <input type="text" id="x2-btinh-bt-in-search" class="al-search" placeholder="Tìm nhanh: kích thước · nguồn · SỐ LƯỢNG (VD: 1000)" autocomplete="off" title="Ô tìm nhanh của thanh đầu vào Bào thanh — khớp cả SỐ LƯỢNG (bỏ dấu phân cách nghìn: gõ 1000 khớp 1.000)">
+                      <input type="text" id="x2-btinh-bt-in-search" class="al-search" placeholder="Tìm nhanh: kích thước · nguồn · loại (A/A1/B)…" autocomplete="off" title="Ô tìm nhanh CHỮ của thanh đầu vào Bào thanh — khớp kích thước · nguồn · loại (KHÔNG còn khớp số lượng — số lượng dùng ô kế bên)">
+                      <input type="text" id="x2-btinh-bt-in-qty-search" class="al-search al-search-qty" inputmode="numeric" placeholder="Tìm theo SỐ LƯỢNG (VD: 1000)" autocomplete="off" title="Ô tìm THEO SỐ LƯỢNG — CHỈ khớp số lượng (còn X/Y thanh); lọc KẾT HỢP với ô tìm nhanh (điều kiện VÀ)">
                     </div>
                     <div class="al-card-list" id="x2-btinh-bt-in-list"></div>
                   </div>
@@ -1494,9 +1560,13 @@
               </div>
             </form>
           </div>
+          </div>
 
           <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
           <div class="material-stats" id="x2-btinh-stats"></div>
+          </div>
 
           <!-- BẢNG PHỤ ĐÃ DỜ VÀO POPUP "ĐỊNH MỨC" (nút nằm trong form nhập) —
                bảng 3 cột: Bào tinh · Bào tinh hạ cấp · Bào thanh theo tháng -->
@@ -1504,6 +1574,8 @@
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
                đầu thẻ = NỘI DUNG CHUNG (Ngày · Người bào · Giờ HC/TC · Công suất ·
                chip ĐM/Hiệu suất THEO TỪNG LOẠI · Tổng đạt/lỗi); trong thẻ = NỘI DUNG RIÊNG -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x2-btinh-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bào Tinh</h5>
@@ -1514,17 +1586,10 @@
                 <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
               </button>
             </div>
-          <div class="x2-cut-table-wrap" id="x2-btinh-table-wrap">
-            <div class="x2-cut-table-head">
-              <h5><i data-lucide="history"></i> Lịch Sử Bào Tinh</h5>
-              <span class="x2-cut-table-count" id="x2-btinh-table-count"></span>
-              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2btinh-table" title="Thu gọn / Mở rộng">
-                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
-              </button>
-            </div>
             <div class="x2-cut-table-scroll">
               <div id="x2-btinh-day-cards"></div>
             </div>
+          </div>
           </div>
 
 
@@ -1551,6 +1616,7 @@
 
           <!-- ═══ KHUNG 1 (mặc định): LƯỢT ÉP — thẻ NGÀY như các công đoạn Xưởng 2 ═══ -->
           <div class="x2-epv-frame" id="x2-epv-frame-list">
+            <div class="x2-zone-head x2-zone-bar" data-zone="1" title="Thẻ ngày lượt ép: người ép · giờ HC/TC · công suất · thành phẩm — nút Thu gọn để giấu bảng."><span class="x2-zone-no">1</span><i data-lucide="list"></i> Lượt Ép Theo Ngày</div>
             <div class="x2-epv-actions">
               <button class="btn btn-primary" id="btn-add-press-2" data-perm="press" title="Mở form nhập lượt ép ván (ván thô · thanh · keo · phụ gia · thành phẩm)">
                 <i data-lucide="plus-circle"></i> Thêm Lượt Ép
@@ -1579,6 +1645,7 @@
 
           <!-- ═══ KHUNG 2: BIỂU ĐỒ (mặc định ẩn — bấm tab "Biểu Đồ") ═══ -->
           <div class="x2-epv-frame" id="x2-epv-frame-chart" hidden>
+            <div class="x2-zone-head x2-zone-bar" data-zone="2" title="Biểu đồ thể tích ván ép theo ngày (nhóm theo tuần) — bấm cột để nhảy về thẻ ngày tương ứng."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Biểu Đồ Thể Tích Ép</div>
             <div class="planning-card press-chart-card x2-epv-chart-card">
               <div class="planning-card-header">
                 <h4><i data-lucide="bar-chart-3"></i> Thể Tích Ván Ép Theo Ngày (Nhóm Theo Tuần)</h4>
@@ -1621,6 +1688,8 @@
           <div class="x2-stock-bar" id="x2-bl-stock-bar"></div>
 
           <!-- FORM: Ngày + Công đoạn (Gia công / Chọn thanh) + các ô đổi theo công đoạn -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x2-bl-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-bl-edit-text"></span>
@@ -1711,14 +1780,20 @@
               </div>
             </form>
           </div>
+          </div>
 
           <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
           <div class="material-stats" id="x2-bl-stats"></div>
+          </div>
           <!-- BẢNG ĐỊNH MỨC CÔNG SUẤT BULLIG ĐÃ DỜ SANG POPUP (nút nằm TRONG form nhập) -->
 
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG chia 2 VÙNG (Gia công + Chọn thanh):
                đầu thẻ = thông tin CHUNG (Ngày · Người làm từng phân vị · Giờ HC/TC ·
                Công suất + Hiệu suất TỪNG công đoạn); trong thẻ = 2 bảng riêng từng vùng -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x2-bl-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bullig (Gia công + Chọn thanh)</h5>
@@ -1730,6 +1805,7 @@
             <div class="x2-cut-table-scroll">
               <div id="x2-bl-day-cards"></div>
             </div>
+          </div>
           </div>
         </div>
 

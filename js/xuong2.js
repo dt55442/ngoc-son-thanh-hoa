@@ -6529,8 +6529,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   const btinhOkDraft = new Map();       // sizeKey → SL thanh ĐẠT đã nhập (giữ khi vẽ lại)
   function baoTinhPickedIds() { return btinhPicked.slice(); }
   function baoTinhOkDrafts() { return btinhOkDraft; }
-  // Danh sách thẻ nguồn theo Loại bào (kèm số thanh còn lại + phần của lượt đang sửa)
-  function baoTinhCandidates() {
+  // Danh sách thẻ nguồn theo Loại bào — BẢN THÔ (kèm số thanh còn lại + phần của lượt
+  // đang sửa), CHƯA lọc số lượng → gồm cả thẻ đã DÙNG HẾT (qty = 0)
+  function baoTinhCandidateRaw() {
     const kind = baoTinhKindOf();
     const editing = state.x2BaoTinhEditId ? baoTinhRecOf(state.x2BaoTinhEditId) : null;
     if (kind === 'tinh') {
@@ -6554,7 +6555,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           useFor: b.useFor || '', materialType: b.materialType || '', supplier: b.supplier || '',
           days: bulligLotDaysOf(b)
         };
-      }).filter(c => c.qty > 0 || btinhPicked.includes(String(c.id)));
+      });
     }
     if (kind === 'ha_cap') {
       return baoTinhDefectStock().map(x => {
@@ -6566,9 +6567,56 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           // Thẻ THÀNH LỖI không phải lô — vẫn đủ trường cho khuôn 2 dòng chuẩn
           isLot: false, total: 0, useFor: '', materialType: '', supplier: '', days: null
         };
-      }).filter(c => c.qty > 0 || btinhPicked.includes(String(c.id)));
+      });
     }
     return [];
+  }
+  // Danh sách thẻ nguồn theo Loại bào — CHỈ thẻ CÒN HÀNG (qty > 0): thẻ đã dùng hết
+  // bị ẨN khỏi danh sách (hành vi cũ giữ nguyên) → xem baoTinhUsedUpItems() để giải thích
+  function baoTinhCandidates() {
+    return baoTinhCandidateRaw().filter(c => c.qty > 0 || btinhPicked.includes(String(c.id)));
+  }
+  // Thẻ nguồn đã DÙNG HẾT (qty <= 0, chưa chọn) — bị ẩn; dùng cho dòng GIẢI THÍCH
+  // khi người dùng tìm mà không thấy ở ô "Chọn Thanh" (B1 — 06/10/2026)
+  function baoTinhUsedUpItems() {
+    return baoTinhCandidateRaw().filter(c => c.qty <= 0 && !btinhPicked.includes(String(c.id)));
+  }
+  // Ngày (dd/mm/yyyy) của lượt Bào Tinh MỚI NHẤT đã rút thanh từ lô — cho dòng giải thích
+  function baoTinhLastTurnDateOf(batchId) {
+    const id = String(batchId || '');
+    if (!id) return '';
+    let last = '';
+    (state.xuong2BaoTinhRecords || []).forEach(r => {
+      if (!r || r.kind !== 'tinh') return;
+      let hit = false;
+      if (Array.isArray(r.sources) && r.sources.length) hit = r.sources.some(s => s && String(s.batchId) === id);
+      else hit = String(r.batchId || '') === id;
+      if (hit && String(r.date || '') > last) last = String(r.date || '');
+    });
+    // Hiện ĐỦ dd/mm/yyyy (quy tắc 3) — khác chip ngắn dd/mm/yy của thẻ Kanban
+    return last ? `${last.slice(8, 10)}/${last.slice(5, 7)}/${last.slice(0, 4)}` : '';
+  }
+  // Block .al-warn-usedup giải thích các thẻ bị ẨN vì đã dùng hết — CHỈ khi có ít nhất 1 ô tìm
+  // không rỗng (trừ khi always = true: danh sách trống vì TẤT CẢ đã dùng hết)
+  function baoTinhUsedUpHintHtml(always) {
+    const qTxt = baoTinhSearchQuery();
+    const qQty = baoTinhQtyQuery();
+    if (!always && !qTxt && !qQty) return '';
+    const all = baoTinhUsedUpItems();
+    const hits = (qTxt || qQty) ? all.filter(baoTinhListMatch) : all;
+    if (!hits.length) return '';
+    const lines = hits.map(it => {
+      const when = it.isLot ? baoTinhLastTurnDateOf(it.id) : '';
+      return `<div class="al-warn-line">⚠ <strong>ĐÃ DÙNG HẾT — ẩn khỏi danh sách</strong>: ${escapeHTML(baoTinhCardOf(it).main)}${when ? ` — lượt Bào Tinh ${when}` : ''}</div>`;
+    });
+    return `<div class="al-warn-usedup">${lines.join('')}</div>`;
+  }
+  // Nhãn CHIP "ĐÃ BÀO X/Y THANH" cho thẻ lô (Kanban + Thẻ Kho) — rỗng nếu chưa bào (B2)
+  function baoTinhUsedLabel(batch) {
+    if (!batch) return '';
+    const used = baoTinhLotUsedOf(batch.id);
+    if (used <= 0) return '';
+    return `Đã bào ${fmtThanh(used)}/${fmtThanh(Number(batch.quantity) || 0)} thanh`;
   }
   // GỘP theo KÍCH THƯỚC CHUNG (KHÔNG chia phân loại) — kèm kích thước SAU BÀO của TỪNG dòng
   // [{ key, manual, dims, sizeKey, inQty, sources }]  (outDims đọc qua baoTinhOutDimsOf(key))
@@ -6618,7 +6666,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const qtyTxt = (it.total > 0 && it.qty < it.total)
         ? `${fmtThanh(it.qty)}/${fmtThanh(it.total)} thanh (còn)`
         : `${fmtThanh(it.qty)} thanh`;
-      const main = `${it.code || '—'} · ${it.location || '—'} · ${size} · ${it.cls || '—'} · ${qtyTxt}`;
+      // DÒNG 1 TÁCH phần số lượng sang Ô RIÊNG — chữ giữ: mã · vị trí · kích thước · loại
+      const mainNoQty = `${it.code || '—'} · ${it.location || '—'} · ${size} · ${it.cls || '—'}`;
+      const main = `${mainNoQty} · ${qtyTxt}`;
       const d = it.days || { say1: 0, say2: 0, kho: 0 };
       const useLbl = String(it.useFor || '').trim() || '—';
       const chips = [
@@ -6630,29 +6680,64 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       if (it.materialType) chips.push(`<span class="al-day-badge day-luuong" title="Luồng nguyên liệu">${escapeHTML(it.materialType)}</span>`);
       if (it.supplier) chips.push(`<span class="al-day-badge day-ext" title="Nhà cung cấp">${escapeHTML(it.supplier)}</span>`);
       const sub = chips.join(' ');
+      const chipsTxt = chips.map(c => c.replace(/<[^>]*>/g, ' ')).join(' ');
       return {
         main, sub,
         titleTxt: `${main} · S1-${d.say1} ngày · S2-${d.say2} ngày · K-${d.kho} ngày`,
-        plain: `${main} ${chips.map(c => c.replace(/<[^>]*>/g, ' ')).join(' ')}`
+        plain: `${main} ${chipsTxt}`,
+        plainTxt: `${mainNoQty} ${chipsTxt}`   // CHỮ (không số lượng) — ô tìm nhanh
       };
     }
     // Thẻ THANH LỖI (Bào tinh hạ cấp) — không có lô/ngày, vẫn đúng khuôn 2 dòng
-    const main = `${it.location || '—'} · ${size} · ${it.cls || '—'} · ${fmtThanh(it.qty)} thanh`;
+    const mainNoQty = `${it.location || '—'} · ${size} · ${it.cls || '—'}`;
+    const main = `${mainNoQty} · ${fmtThanh(it.qty)} thanh`;
     const sub = `<span class="al-use-tag use-khac">Bào tinh hạ cấp</span> `
       + `<span class="al-day-badge day-luuong" title="Thanh lỗi của công đoạn Bào Tinh chờ hạ cấp">Lỗi Bào Tinh</span>`;
-    return { main, sub, titleTxt: main, plain: `${main} Bào tinh hạ cấp Lỗi Bào Tinh` };
+    return {
+      main, sub, titleTxt: main,
+      plain: `${main} Bào tinh hạ cấp Lỗi Bào Tinh`,
+      plainTxt: `${mainNoQty} Bào tinh hạ cấp Lỗi Bào Tinh`   // CHỮ — ô tìm nhanh
+    };
   }
-  // Ô TÌM NHANH: đọc + chuẩn hóa từ khóa (bỏ dấu, 'đ'→'d' + BỎ DẤU PHÂN CÁCH
-  // NGHÌN → gõ "1000" khớp "1.000" — hỗ trợ tìm theo SỐ LƯỢNG) — KHÔNG dùng alNorm
+  // ── 2 Ô TÌM KẾT HỢP (điều kiện VÀ) — tách riêng ô SỐ LƯỢNG như form "Thêm Lô Sấy Mới":
+  //    ô ① = CHỮ (mã lô · vị trí · kích thước · loại · Dùng cho · NL · NCC)
+  //    ô ② = CHỈ số lượng (còn lại / tổng) — thẻ chỉ hiện khi khớp CẢ HAI ──
+  // Ô ①: đọc + chuẩn hóa từ khóa (bỏ dấu, 'đ'→'d' + BỎ DẤU PHÂN CÁCH
+  // NGHÌN → gõ "1000" khớp "1.000") — KHÔNG dùng alNorm
   function baoTinhSearchQuery() {
     return baoTinhSearchNorm(String((document.getElementById('x2-btinh-search') || {}).value || '')).trim();
   }
-  // Danh sách thẻ ĐANG HIỂN THỊ (đã lọc theo ô tìm nhanh) — dùng cho render + "Chọn tất cả"
-  function baoTinhVisibleItems() {
+  // Ô ②: từ khóa TÌM THEO SỐ LƯỢNG (đọc trực tiếp ô #x2-btinh-qty-search)
+  function baoTinhQtyQuery() {
+    return String((document.getElementById('x2-btinh-qty-search') || {}).value || '').trim();
+  }
+  // Chuẩn chuỗi số: bỏ MỌI ký tự không phải chữ số → gõ "1.000" khớp 1000
+  function baoTinhQtyDigits(s) {
+    return String(s == null ? '' : s).replace(/\D/g, '');
+  }
+  // So SỐ LƯỢNG (mảng giá trị cho trước) với từ khóa số — dạng CHỨA;
+  // từ khóa rỗng / không có chữ số → không lọc (hiện mọi thẻ)
+  function baoTinhQtyMatchVals(vals, qtyQuery) {
+    const q = baoTinhQtyDigits(qtyQuery);
+    if (!q) return true;
+    return (vals || []).some(v => Number(v) > 0 && String(Math.round(Number(v))).includes(q));
+  }
+  // Thẻ nguồn có khớp CẢ 2 ô không (ô chữ ∧ ô số lượng)
+  function baoTinhListMatch(it) {
     const q = baoTinhSearchQuery();
-    const items = baoTinhCandidates();
-    if (!q) return items;
-    return items.filter(it => baoTinhSearchNorm(`${baoTinhCardOf(it).plain} ${it.code || ''} ${it.id}`).includes(q));
+    if (q && !baoTinhSearchNorm(`${baoTinhCardOf(it).plainTxt} ${it.code || ''} ${it.id}`).includes(q)) return false;
+    return baoTinhQtyMatchVals([it.qty, it.total], baoTinhQtyQuery());
+  }
+  // Từ khóa hiển thị khi không có thẻ nào khớp (gộp 2 ô, giữ nguyên ký tự người gõ)
+  function baoTinhQueryKeys() {
+    return [
+      String((document.getElementById('x2-btinh-search') || {}).value || '').trim(),
+      baoTinhQtyQuery()
+    ].filter(Boolean).join(' · ');
+  }
+  // Danh sách thẻ ĐANG HIỂN THỊ (lọc KẾT HỢP 2 ô) — dùng cho render + "Chọn tất cả"
+  function baoTinhVisibleItems() {
+    return baoTinhCandidates().filter(baoTinhListMatch);
   }
   // Vẽ danh sách THẺ theo CHUẨN 2 DÒNG như thanh thô của thẻ Bullig (KHÔNG ô vuông tích —
   // bấm cả thẻ để CHỌN/BỎ CHỌN; có Ô TÌM NHANH lọc mã · vị trí · kích thước · loại · Dùng cho · NL · NCC)
@@ -6671,18 +6756,23 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       countEl.classList.toggle('has-pick', btinhPicked.length > 0);
     }
     if (!listEl) return;
-    const q = baoTinhSearchQuery();
     const items = baoTinhCandidates();
     if (!items.length) {
-      listEl.innerHTML = `<div class="al-empty">${kind === 'ha_cap'
-        ? '— Chưa có thanh lỗi nào chờ hạ cấp (ghi lượt Bào tinh có SL thanh lỗi trước) —'
-        : '— Kho chưa có thanh nào (chuyển lô vào Kho ở thẻ Than Hóa + Sấy trước) —'}</div>`;
+      // Không còn thẻ NÀO — phân biệt "chưa có" vs "ĐÃ DÙNG HẾT" cho người dùng rõ
+      const usedUpAll = baoTinhUsedUpItems();
+      listEl.innerHTML = usedUpAll.length
+        ? `<div class="al-empty">— Tất cả thẻ nguồn đã DÙNG HẾT (đã ghi hết ở các lượt Bào Tinh) —</div>` + baoTinhUsedUpHintHtml(true)
+        : `<div class="al-empty">${kind === 'ha_cap'
+          ? '— Chưa có thanh lỗi nào chờ hạ cấp (ghi lượt Bào tinh có SL thanh lỗi trước) —'
+          : '— Kho chưa có thanh nào (chuyển lô vào Kho ở thẻ Than Hóa + Sấy trước) —'}</div>`;
       return;
     }
-    const rows = items.map(it => ({ it, card: baoTinhCardOf(it) }))
-      .filter(r => !q || baoTinhSearchNorm(`${r.card.plain} ${r.it.code || ''} ${r.it.id}`).includes(q));
+    // Lọc KẾT HỢP 2 ô: chữ (mã · vị trí · kích thước · loại · …) ∧ số lượng
+    const rows = items.filter(baoTinhListMatch).map(it => ({ it, card: baoTinhCardOf(it) }));
+    // Dòng GIẢI THÍCH (block .al-warn-usedup): thẻ KHỚP tìm kiếm nhưng bị ẨN vì đã dùng hết (nếu có)
+    const warn = baoTinhUsedUpHintHtml();
     if (!rows.length) {
-      listEl.innerHTML = `<div class="al-empty">— Không tìm thấy thẻ nào khớp "${escapeHTML(String((document.getElementById('x2-btinh-search') || {}).value || '').trim())}" —</div>`;
+      listEl.innerHTML = `<div class="al-empty">— Không tìm thấy thẻ nào khớp "${escapeHTML(baoTinhQueryKeys())}" —</div>` + warn;
       return;
     }
     listEl.innerHTML = rows.map(({ it, card }) => {
@@ -6693,7 +6783,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           <span class="al-card-sub">${card.sub}</span>
         </span>
       </button>`;
-    }).join('');
+    }).join('') + warn;
     initLucide();
   }
   // Bấm 1 thẻ → CHỌN; bấm lần nữa → BỎ CHỌN (rồi vẽ lại bảng tổng hợp + ô tổng kết)
@@ -7159,8 +7249,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
   // Danh sách THẺ nguồn đầu vào Bào thanh — 2 NHÓM: thanh BTP Ép Ván + thanh LỖI
   // do chính Bào thanh tạo ra (đọc LIVE từ tab QC): 2 dòng: kích thước · nguồn ·
-  // "còn X/Y thanh" / chip nguồn + số tổng. KHÔNG lọc theo tuần — chỉ lọc Ô TÌM NHANH
-  // (khớp cả SỐ LƯỢNG).
+  // "còn X/Y thanh" / chip nguồn + số tổng. KHÔNG lọc theo tuần — lọc 2 Ô KẾT HỢP
+  // (ô chữ = kích thước/nguồn/loại · ô RIÊNG = CHỈ số lượng — điều kiện VÀ).
   function renderBaoThanhInputList() {
     const listEl = document.getElementById('x2-btinh-bt-in-list');
     if (!listEl) return;
@@ -7172,14 +7262,19 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       initLucide();
       return;
     }
-    const q = baoTinhSearchNorm(String((document.getElementById('x2-btinh-bt-in-search') || {}).value || '')).trim();
-    const hits = q
-      ? all.filter(it => baoTinhSearchNorm(
-          `${it.cls} ${it.location} ${comboLabel({ d: it.dims[0], r: it.dims[1], t: it.dims[2] })} ${it.sizeKey} `
-          + `còn ${fmtThanh(it.remaining)}/${fmtThanh(it.total)} thanh ${fmtThanh(it.remaining)} ${fmtThanh(it.total)}`).includes(q))
-      : all;
+    const qTxt = baoTinhSearchNorm(String((document.getElementById('x2-btinh-bt-in-search') || {}).value || '')).trim();
+    const qQty = String((document.getElementById('x2-btinh-bt-in-qty-search') || {}).value || '').trim();
+    // 2 ô LỌC KẾT HỢP (điều kiện VÀ): chữ (kích thước · nguồn · loại) ∧ số lượng (còn X/Y)
+    const hits = all.filter(it =>
+      (!qTxt || baoTinhSearchNorm(
+        `${it.cls} ${it.location} ${comboLabel({ d: it.dims[0], r: it.dims[1], t: it.dims[2] })} ${it.sizeKey}`).includes(qTxt))
+      && baoTinhQtyMatchVals([it.remaining, it.total], qQty));
     if (!hits.length) {
-      listEl.innerHTML = head + `<div class="al-empty">— Không tìm thấy thanh BTP nào khớp "${escapeHTML(String((document.getElementById('x2-btinh-bt-in-search') || {}).value || ''))}" —</div>`;
+      const keys = [
+        String((document.getElementById('x2-btinh-bt-in-search') || {}).value || '').trim(),
+        String((document.getElementById('x2-btinh-bt-in-qty-search') || {}).value || '').trim()
+      ].filter(Boolean).join(' · ');
+      listEl.innerHTML = head + `<div class="al-empty">— Không tìm thấy thanh nào khớp "${escapeHTML(keys)}" —</div>`;
       initLucide();
       return;
     }
@@ -8094,11 +8189,12 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const picked = khoNotePicked[b.id] != null;
     const useCls = String(b.useFor || '').toLowerCase().includes('bullig') ? 'use-bullig' : 'use-van';
     const outRounds = khoOutRoundCountOf(b);
+    const btLbl = baoTinhUsedLabel(b);   // chip "ĐÃ BÀO X/Y THANH" — đối chiếu ô Chọn Thanh của thẻ Bào Tinh
     return `<div class="kho-lot-card${picked ? ' picked' : ''}" data-kho-lot="${escapeHTML(b.id)}">
       <div class="kho-lot-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${Number(b.length) || 0}×${Number(b.width) || 0}×${Number(b.thickness) || 0} mm · ${escapeHTML(b.bambooType || '—')} · còn <strong>${fmtThanh(rem)}</strong> thanh</div>
       <div class="kho-lot-line2"><span class="al-use-tag ${useCls}">${escapeHTML(b.useFor || 'Ván')}</span>
         <span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${outRounds} lần</span>
-        <span class="kho-in-date">vào kho ${formatDateDDMMYY(khoLastInDateOf(b))}</span></div>
+        <span class="kho-in-date">vào kho ${formatDateDDMMYY(khoLastInDateOf(b))}</span>${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
       ${picked ? `<div class="kho-lot-qty-row"><label>Số thanh xuất từ lô này:</label><input type="number" min="1" max="${rem}" step="1" value="${khoPickedQtyOf(b.id)}" data-kho-lot-qty="${escapeHTML(b.id)}"></div>` : ''}
     </div>`;
   }
@@ -8187,19 +8283,21 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   // ─── RENDER CÁC KHỐI CỦA THẺ KHO NAN ─────────────────────────
-  // Thanh tồn trên cùng: Tồn Kho vật lý + Tồn nan toàn nhóm + chip chờ duyệt/lệch
+  // Thanh tồn trên cùng: 3 Ô KPI (Tồn Kho · Đang sấy · Tổng trong nhà máy) + chip chờ duyệt / thiếu phiếu
   function renderX2KhoStockBar() {
     const bar = document.getElementById('x2-kho-stock-bar');
     if (!bar) return;
     const s = khoStockSummary();
     const fmt = v => Math.round(v).toLocaleString('vi-VN');
+    // 3 Ô KPI — nhãn NGẮN; mọi câu giải thích chỉ nằm trong title (tooltip)
     const parts = [
-      `<span class="x2-stock-title" title="Tồn Kho THỰC = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT. Lô đã xuất hết được ẨN (công tắc ở bảng Tồn)."><i data-lucide="warehouse"></i> Tồn Kho: <strong>${fmt(s.remainingThanh)} thanh</strong> · ${s.remainingM3.toFixed(2)} m³ · ${s.liveLots} lô còn hàng</span>`,
-      `<span class="x2-stock-title" title="Tồn nan TOÀN NHÓM = Sấy 1 + Sấy 2 + Kho − phiếu xuất đã duyệt (KHÔNG trừ phiếu 'Sấy 2' vì lô vẫn nằm trong nhóm) — con số dùng cho bảng Kế Hoạch."><i data-lucide="layers"></i> Tồn nan toàn nhóm (gồm Sấy 1/2): <strong>${fmt(s.poolThanh)} thanh</strong></span>`
+      `<span class="kho-kpi kho-kpi-kho" title="Tồn Kho THỰC = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT. Lô đã xuất hết được ẨN (công tắc ở bảng Tồn Theo Lô)."><span class="kho-kpi-label"><i data-lucide="warehouse"></i> Tồn Kho:</span> <strong>${fmt(s.remainingThanh)} thanh</strong> · ${s.remainingM3.toFixed(2)} m³ · ${s.liveLots} lô</span>`,
+      `<span class="kho-kpi kho-kpi-say" title="Nan ĐANG SẤY (Sấy 1 + Sấy 2 — chưa vào kho). Số này KHÔNG trừ phiếu kho."><span class="kho-kpi-label"><i data-lucide="flame"></i> Đang sấy:</span> <strong>${fmt(s.poolSayThanh)} thanh</strong> · S1 ${fmt(s.poolSay1Thanh)} + S2 ${fmt(s.poolSay2Thanh)}</span>`,
+      `<span class="kho-kpi kho-kpi-total" title="TỔNG nan trong nhà máy = Tồn Kho + nan đang sấy — con số dùng cho bảng Kế Hoạch."><span class="kho-kpi-label"><i data-lucide="layers"></i> Tổng trong nhà máy:</span> <strong>${fmt(s.poolThanh)} thanh</strong></span>`
     ];
     if (s.pendingCount) parts.push(`<span class="kho-pending-chip" title="Phiếu chờ Ban lãnh đạo duyệt — CHƯA trừ tồn"><i data-lucide="clock"></i> ${s.pendingCount} phiếu chờ duyệt (${fmt(s.pendingQty)} thanh)</span>`);
     if (s.overAlloc > 0) parts.push(`<span class="kho-warn-chip" title="Phiếu đã duyệt vượt sức chứa của các lô đang ở Kho — hãy gắn lô hoặc nhập kho bổ sung">⚠ Vượt ${fmt(s.overAlloc)} thanh chưa gắn lô</span>`);
-    if (Math.abs(s.mismatchThanh) >= 1) parts.push(`<span class="kho-warn-chip" title="Chênh giữa phiếu đã duyệt và số hệ thống suy ra từ Bào Tinh / Bullig / quay lại Sấy 2 — dùng nút 'Tạo phiếu bù' để xử lý dữ liệu cũ">Đối chiếu lệch ${s.mismatchThanh > 0 ? '+' : ''}${fmt(s.mismatchThanh)} thanh</span>`);
+    if (s.mismatchThanh >= 1) parts.push(`<span class="kho-warn-chip" title="Hệ thống ghi đã dùng (Bào Tinh / Bullig / quay lại Sấy 2) nhiều hơn số phiếu kho ĐÃ DUYỆT — tức là còn THIẾU phiếu. Bấm nút 'Tạo phiếu bù' ở bảng Tồn Theo Lô để sinh phiếu bù (chỉ Admin / Ban Quản Lý).">⚠ Thiếu phiếu kho ${fmt(s.mismatchThanh)} thanh</span>`);
     bar.innerHTML = parts.join('');
   }
   // Khối TỒN TRUNG GIAN (WIP): mỗi dòng bấm = mở thẳng thẻ công đoạn tương ứng
@@ -8232,13 +8330,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     KHO_PURPOSE_ORDER.forEach(p => { byPurpose[p] = 0; });
     khoApprovedXuatNotes().forEach(n => { byPurpose[khoNormPurpose(n.purpose)] += Number(n.qty) || 0; });
     box.innerHTML = `
-      <div class="material-stat"><span class="material-stat-label">Tồn kho (thanh)</span><span class="material-stat-value">${fmt(s.remainingThanh)}</span></div>
-      <div class="material-stat"><span class="material-stat-label">Tồn kho (m³)</span><span class="material-stat-value">${s.remainingM3.toFixed(2)}</span></div>
-      <div class="material-stat"><span class="material-stat-label">Lô còn hàng</span><span class="material-stat-value">${s.liveLots}</span></div>
-      <div class="material-stat"><span class="material-stat-label">Lô đã xuất hết (ẩn)</span><span class="material-stat-value">${s.usedUpLots}</span></div>
-      <div class="material-stat"><span class="material-stat-label">Phiếu chờ duyệt</span><span class="material-stat-value">${s.pendingCount} · ${fmt(s.pendingQty)} thanh</span></div>
-      <div class="material-stat"><span class="material-stat-label">Đối chiếu lệch</span><span class="material-stat-value">${Math.abs(s.mismatchThanh) >= 1 ? (s.mismatchThanh > 0 ? '+' : '') + fmt(s.mismatchThanh) : 'Khớp'}</span></div>
-      <div class="material-stat"><span class="material-stat-label">Xuất đã duyệt (S2 · BT · BL · Khác)</span><span class="material-stat-value">${KHO_PURPOSE_ORDER.map(p => fmt(byPurpose[p])).join(' · ')} thanh</span></div>`;
+      <div class="material-stat" title="Tồn trong kho = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT"><span class="material-stat-label">Tồn kho (thanh)</span><span class="material-stat-value">${fmt(s.remainingThanh)}</span></div>
+      <div class="material-stat" title="Tồn trong kho quy đổi theo mét khối"><span class="material-stat-label">Tồn kho (m³)</span><span class="material-stat-value">${s.remainingM3.toFixed(2)}</span></div>
+      <div class="material-stat" title="Số lô còn hàng trong kho (lô xuất hết bị ẩn)"><span class="material-stat-label">Lô còn hàng</span><span class="material-stat-value">${s.liveLots}</span></div>
+      <div class="material-stat" title="Lô đã xuất hết — đang bị ẩn ở bảng Tồn Theo Lô"><span class="material-stat-label">Lô đã xuất hết (ẩn)</span><span class="material-stat-value">${s.usedUpLots}</span></div>
+      <div class="material-stat" title="Nan ĐANG SẤY (Sấy 1 + Sấy 2) — chưa vào kho, không trừ phiếu kho"><span class="material-stat-label">Đang sấy (S1+S2)</span><span class="material-stat-value">${fmt(s.poolSayThanh)}</span></div>
+      <div class="material-stat" title="TỔNG nan trong nhà máy = Tồn Kho + nan đang sấy — số dùng cho bảng Kế Hoạch"><span class="material-stat-label">Tổng trong nhà máy</span><span class="material-stat-value">${fmt(s.poolThanh)}</span></div>
+      <div class="material-stat" title="Phiếu chờ Ban lãnh đạo duyệt — CHƯA trừ tồn"><span class="material-stat-label">Phiếu chờ duyệt</span><span class="material-stat-value">${s.pendingCount} · ${fmt(s.pendingQty)} thanh</span></div>
+      <div class="material-stat" title="Hệ thống ghi đã dùng nhiều hơn phiếu kho ĐÃ DUYỆT — bấm 'Tạo phiếu bù' ở bảng Tồn Theo Lô"><span class="material-stat-label">Thiếu phiếu kho</span><span class="material-stat-value">${s.mismatchThanh >= 1 ? fmt(s.mismatchThanh) + ' thanh' : 'Khớp'}</span></div>
+      <div class="material-stat" title="Tổng phiếu xuất ĐÃ DUYỆT theo mục đích (Sấy 2 · Bào Tinh · Bullig · Khác)"><span class="material-stat-label">Xuất đã duyệt (S2 · BT · BL · Khác)</span><span class="material-stat-value">${KHO_PURPOSE_ORDER.map(p => fmt(byPurpose[p])).join(' · ')} thanh</span></div>`;
   }
 
   // ─── BẢNG PHIẾU CHỜ DUYỆT (Ban lãnh đạo duyệt) ───────────────
@@ -8752,6 +8852,20 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // KHÔNG có phiếu ⇒ tồn sẽ bị "phồng". Hàm này sinh phiếu ĐÃ DUYỆT (kèm ghi
   // chú "Khởi tạo từ dữ liệu cũ") — CHẠY 2 LẦN KHÔNG SINH TRÙNG (so phần lô
   // đã có phiếu). Chỉ Admin / Ban Quản Lý.
+  // Số thanh của lô đã QUA KHO → SẤY 2 (mỗi vòng ra/vào = 1 lần × số lượng).
+  // Dùng khi tạo phiếu bù: phần này phải ghi purpose 'say2' — nan VẪN nằm trong
+  // nhóm Sấy 1/2/Kho nên KHÔNG trừ "Tổng nan trong nhà máy" / tồn Kế Hoạch,
+  // chỉ trừ Tồn Kho. (Bản cũ gộp vào 'khac' → tổng toàn nhóm bị trừ oan.)
+  function khoS2ExitQtyOf(b) {
+    if (b == null) return 0;
+    let qty = 0, inKho = false;
+    getBatchStageHistory(b).forEach(h => {
+      if (h == null || !h.stage) return;
+      if (h.stage === 'kho') inKho = true;
+      else if (h.stage === 'say2' && inKho) { qty += Number(b.quantity) || 0; inKho = false; }
+    });
+    return qty;
+  }
   function khoBackfillFromLegacy() {
     if (!requireEditPermission()) return;
     if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý tạo được phiếu bù dữ liệu cũ.', 'error'); return; }
@@ -8782,18 +8896,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       if (need <= 0) return;
       const b = (state.batches || []).find(x => x && x.id === id);
       if (!b) return;
-      created.push({
-        id: `kho-note-${Date.now()}-${created.length + 1}`,
+      // TÁCH phần "quay lại Sấy 2" (nan VẪN nằm trong nhóm Sấy 1/2/Kho) ra purpose
+      // 'say2' — purpose này KHÔNG trừ "Tổng nan trong nhà máy" / tồn Kế Hoạch,
+      // CHỈ trừ Tồn Kho. (Bản cũ gộp vào 'khac' → tổng toàn nhóm bị trừ oan.)
+      const s2Exit = khoS2ExitQtyOf(b);
+      let s2Have = 0;
+      (state.khoNotes || []).forEach(n => {
+        if (n == null || n.status !== 'da_duyet' || n.type !== 'xuat' || khoNormPurpose(n.purpose) !== 'say2') return;
+        (Array.isArray(n.lots) ? n.lots : []).forEach(l => { if (l && String(l.batchId) === id) s2Have += Number(l.qty) || 0; });
+      });
+      const s2Part = Math.max(0, Math.min(need, s2Exit - s2Have));
+      [
+        { purpose: 'khac', qty: need - s2Part, note: 'Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig trước khi có sổ kho' },
+        { purpose: 'say2', qty: s2Part, note: 'Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)' }
+      ].filter(p => p.qty > 0).forEach(p => created.push({
+        id: `kho-note-${Date.now()}-${created.length + 1}`, 
         type: 'xuat', date: khoLastInDateOf(b) || b.date || '',
-        purpose: 'khac', purposeNote: 'Khởi tạo từ dữ liệu cũ',
-        qty: need, m3: calculateVolume(b.length, b.width, b.thickness, need),
-        lots: [{ batchId: id, qty: need }],
-        note: 'Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho',
+        purpose: p.purpose, purposeNote: 'Khởi tạo từ dữ liệu cũ',
+        qty: p.qty, m3: calculateVolume(b.length, b.width, b.thickness, p.qty),
+        lots: [{ batchId: id, qty: p.qty }],
+        note: p.note,
         status: 'da_duyet',
         createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)', createdAt: now,
         approvedBy: 'system', approvedByName: 'Hệ thống (khởi tạo)', approvedAt: now,
         updatedAt: now
-      });
+      }));
     });
     if (!created.length) { showToast('Không có dữ liệu cũ nào cần tạo phiếu bù — sổ kho đã khớp!', 'success'); return; }
     const total = created.reduce((s, n) => s + n.qty, 0);
@@ -10576,6 +10703,8 @@ export {
   toggleX2ChonNanTable,
   toggleX2BaoTinhTable,
   baoTinhLotRemainingOf,
+  baoTinhUsedLabel,
+    baoTinhUsedUpItems,
   baoTinhDefectStock,
   toggleX2CutTable,
   updateXuong2BaoThoLinked,

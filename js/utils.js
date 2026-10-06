@@ -504,12 +504,16 @@ import { state } from './state.js';
     const outTotal = khoApprovedXuatNotes().reduce((s, n) => s + (Number(n.qty) || 0), 0);
     const pending = (state.khoNotes || []).filter(n => n && n.status === 'cho_duyet');
     const pendingQty = pending.filter(n => n.type === 'xuat').reduce((s, n) => s + (Number(n.qty) || 0), 0);
-    // Tồn nan TOÀN NHÓM (Sấy 1 + Sấy 2 + Kho) — con số dùng cho KẾ HOẠCH:
-    // phiếu purpose 'say2' KHÔNG trừ (lô vẫn nằm trong nhóm), các purpose khác trừ.
+    // Tồn nan TOÀN NHÓM ("Tổng nan trong nhà máy") — con số dùng cho KẾ HOẠCH:
+    // = số lô ĐANG SẤY (S1+S2, số nguyên bản) + Tồn Kho theo TỪNG LÔ (đã trừ phiếu
+    // FIFO) — CÙNG sổ với thanh Tồn Kho nên LUÔN ≥ Tồn Kho, không thể về 0 vô nghĩa.
+    // Công thức cũ (Σ số lượng lô 1 lần − Σ toàn bộ phiếu bù) cho số ÂM rồi bị kẹp
+    // về 0 khi 189 phiếu bù mục đích 'khac' (273.436 thanh — gồm cả phần quay lại
+    // Sấy 2 vẫn nằm trong nhóm) vượt tổng số lượng lô (260.839) — 06/10/2026.
     const pool = (state.batches || []).filter(b => b && KHO_POOL_STAGES.includes(b.stage));
-    const poolIn = pool.reduce((s, b) => s + (Number(b.quantity) || 0), 0);
-    const poolOut = khoApprovedXuatNotes().filter(n => khoNormPurpose(n.purpose) !== 'say2')
-      .reduce((s, n) => s + (Number(n.qty) || 0), 0);
+    const poolSay1Thanh = pool.filter(b => b.stage === 'say1').reduce((s, b) => s + (Number(b.quantity) || 0), 0);
+    const poolSay2Thanh = pool.filter(b => b.stage === 'say2').reduce((s, b) => s + (Number(b.quantity) || 0), 0);
+    const poolSayThanh = poolSay1Thanh + poolSay2Thanh;
     // ĐỐI CHIẾU theo lô: hệ thống suy ra − phiếu đã duyệt. CHỈ đếm phần DƯƠNG
     // (suy ra nhiều hơn phiếu = còn THIẾU phiếu — cần "Tạo phiếu bù"). Phần âm
     // là bình thường: nhiều phiếu xuất hợp lệ (bán, điều chuyển…) không có nguồn
@@ -526,7 +530,8 @@ import { state } from './state.js';
       honestThanh: Math.max(0, inTotal - outTotal),
       inTotal, outTotal,
       overAlloc: Math.max(0, alloc.unallocated),
-      poolLots: pool.length, poolThanh: Math.max(0, poolIn - poolOut),
+      poolLots: pool.length, poolSay1Thanh, poolSay2Thanh, poolSayThanh,
+      poolThanh: poolSayThanh + thanh,
       pendingCount: pending.length, pendingQty,
       mismatchThanh: mismatch, mismatchLots
     };

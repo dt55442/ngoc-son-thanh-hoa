@@ -1,7 +1,55 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-07T08:02:09.785Z",
+  "savedAt": "2026-10-07T08:03:04.036Z",
   "batches": [
+    {
+      "id": "batch-1791360183613",
+      "code": "261006-13",
+      "stage": "kho",
+      "date": "2026-10-06",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 22,
+      "thickness": 10,
+      "quantity": 630,
+      "volume": 0.1733,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-06",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-06"
+        }
+      ],
+      "updatedAt": "2026-10-07T08:03:03.613Z"
+    },
+    {
+      "id": "batch-1791360159498",
+      "code": "261006-12",
+      "stage": "kho",
+      "date": "2026-10-06",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 22,
+      "thickness": 9,
+      "quantity": 1209,
+      "volume": 0.2992,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-06",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-06"
+        }
+      ],
+      "updatedAt": "2026-10-07T08:02:39.498Z"
+    },
     {
       "id": "batch-1791360129357",
       "code": "261006-11",

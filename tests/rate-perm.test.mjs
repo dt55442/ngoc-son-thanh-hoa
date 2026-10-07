@@ -305,5 +305,37 @@ check('E12: nhận mây (full + delta) bật "mây thắng"; gộp trước khi 
   (cloudSrc.match(/mergeRemoteIntoLocal\([^)]*, true, true\)/g) || []).length === 2 &&
   /mergeRemoteIntoLocal\(full, true\)/.test(cloudSrc));
 
+// E13–E15 (07/10/2026): nút "Tải Từ Mây Về Máy" phải GHI ĐÈ toàn bộ 3 dict dữ liệu
+// Than Hóa — khóa máy có mà mây ĐÃ XÓA phải bị gỡ, nếu không 2 máy mãi khác số liệu.
+console.log('--- F. TẢI MÂY VỀ: GHI ĐÈ DỮ LIỆU THAN HÓA + VẪN GỘP ĐỊNH MỨC ---');
+cloud.clearPendingLocal();
+state.x2SayTimes = { 'khoa-chi-may-nay|say1': 5, '2026-09-10|say1': 1 };
+state.x2SayIncidents = { '2026-09-99': 9, '2026-09-10': 1 };
+state.x2StageIncidents = { 'cut|2026-09-99': 9, 'cut|2026-09-10': 1 };
+state.x2CapRates = { '2026-11': 777 };   // tháng máy đặt, mây chưa khai → phải GIỮ
+cloud.applyFireSnapshot({
+  deletedIds: {},
+  x2SayTimes: { '2026-09-10|say1': 2 },
+  x2SayIncidents: { '2026-09-10': 4 },
+  x2StageIncidents: { 'cut|2026-09-10': 1.5 },
+  x2CapRates: { '2026-11': 999, '2026-12': 500 }
+});
+check('F1: Số lần TH — khóa chỉ máy có (mây đã xóa) bị GỠ sau khi tải về',
+  state.x2SayTimes['khoa-chi-may-nay|say1'] === undefined &&
+  state.x2SayTimes['2026-09-10|say1'] === 2);
+check('F2: Giờ sự cố ngày + theo công đoạn — cũng ghi đè toàn bộ (khóa cũ bị gỡ)',
+  state.x2SayIncidents['2026-09-99'] === undefined && state.x2SayIncidents['2026-09-10'] === 4 &&
+  state.x2StageIncidents['cut|2026-09-99'] === undefined && state.x2StageIncidents['cut|2026-09-10'] === 1.5);
+check('F3: ĐỊNH MỨC vẫn gộp — mây thắng từng tháng, tháng máy mây chưa khai vẫn giữ',
+  state.x2CapRates['2026-11'] === 999 && state.x2CapRates['2026-12'] === 500);
+check('F4: đã ghi xuống localStorage (3 dict Than Hóa theo bản mây)',
+  JSON.parse(storeBacking.get('bamboo_tracker_x2_say_times_v1') || '{}')['2026-09-10|say1'] === 2 &&
+  !('khoa-chi-may-nay|say1' in JSON.parse(storeBacking.get('bamboo_tracker_x2_say_times_v1') || '{}')));
+// F5: đồng bộ TỰ ĐỘNG (mergeRemoteIntoLocal) vẫn GỘP cho 3 dict — không cuốn bản chờ đẩy
+state.x2SayTimes = { 'ban-dang-cho-day': 1 };
+cloud.mergeRemoteIntoLocal({ x2SayTimes: { '2026-09-10|say1': 7 } }, true, true);
+check('F5: đồng bộ tự động vẫn GỘP (giữ khóa máy đang chờ đẩy, nhận thêm khóa mây)',
+  state.x2SayTimes['ban-dang-cho-day'] === 1 && state.x2SayTimes['2026-09-10|say1'] === 7);
+
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

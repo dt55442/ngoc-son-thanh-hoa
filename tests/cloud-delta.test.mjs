@@ -275,6 +275,50 @@ function check(name, cond) {
     /function pullDeltaSnapshot/.test(src2) && /localH\[k\] !== remoteH\[k\]/.test(src2));
   check('E14: subcollection miền = FB_DOMAIN_COLL, nằm dưới apps/main (rules đã phủ)',
     cloud.FB_DOMAIN_COLL === 'd' && typeof cloud.domainDocRef === 'function');
+
+  // ─── F. SỬA LỖI "ĐẨY THÀNH CÔNG MÀY KHÁC VẪN KHÁC SỐ LIỆU" (07/10/2026) ──
+  // F1/F2: đọc mây thiếu doc miền → PHẢI ném lỗi (không im lặng) + tự chữa lành.
+  {
+    store.delete('apps/main/d/hrEmployees');
+    let err = null;
+    try { await cloud.readFullCloudObject(); } catch (e) { err = e; }
+    check('F1: đọc mây THIẾU doc miền → ném lỗi danh sách miền (không nuốt im lặng)',
+      !!err && (err.missingDomains || []).includes('hrEmployees') && /thiếu 1 miền/.test(err.message));
+    const rF = await cloud.writeCloudSnapshot();
+    check('F2: chữ ký đã LOẠI miền thiếu → lần đẩy ghi LẠI doc bị mất (tự chữa lành)',
+      rF.mode === 'delta-v1' && rF.changed >= 1 && store.has('apps/main/d/hrEmployees'));
+  }
+
+  // F3/F4: cache chữ ký CŨ (listener bị sót) KHÔNG được làm lần đẩy bỏ qua miền
+  // máy khác vừa đổi — đọc mục lục (nút Đẩy/Tải đều làm) phải làm mới chữ ký.
+  {
+    const idx = store.get('apps/main');
+    idx.__dh = Object.assign({}, idx.__dh, { pressRecords: 'ky-luc-cua-may-B' });
+    store.set('apps/main/d/pressRecords', { h: 'ky-luc-cua-may-B', data: [{ id: 'B-vua-day', qty: 1 }] });
+    const rCtl = await cloud.writeCloudSnapshot();
+    const docCtl = store.get('apps/main/d/pressRecords');
+    check('F3 (điều khiển): KHÔNG đọc mục lục → cache cũ làm bỏ qua miền máy B vừa đổi',
+      rCtl.changed === 0 && !!docCtl.data && docCtl.data[0].id === 'B-vua-day');
+    await cloud.readFullCloudObject(); // nút Đẩy/Tải gọi hàm này → làm mới chữ ký
+    const rFix = await cloud.writeCloudSnapshot();
+    const docFix = store.get('apps/main/d/pressRecords');
+    check('F4a: đọc mục lục làm mới chữ ký → lần đẩy GHI LẠI miền máy B vừa đổi',
+      rFix.changed >= 1 && !(docFix.data && docFix.data[0] && docFix.data[0].id === 'B-vua-day'));
+    check('F4b: mục lục sau đẩy KHÔNG còn chữ ký cũ của máy B',
+      store.get('apps/main').__dh.pressRecords !== 'ky-luc-cua-may-B');
+  }
+
+  // F5: cấu trúc mã nguồn — 4 điểm sửa trong luồng đẩy/nhận
+  const srcF = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
+  check('F5: nút Đẩy đọc mây TRỰC TIẾP + bắt lỗi (vừa gộp vừa làm mới chữ ký)',
+    /try \{ full = await readFullCloudObject\(\); \} catch/.test(srcF));
+  check('F6: toast đẩy ghi rõ số miền định mức bị tường lửa bỏ qua',
+    /shieldNote/.test(srcF) && /miền định mức/.test(srcF));
+  check('F7: applyFireSnapshot GHI ĐÈ 3 dict dữ liệu Than Hóa (số lần TH · giờ sự cố)',
+    /\['x2SayTimes', 'x2SayIncidents', 'x2StageIncidents'\]/.test(srcF) &&
+    /state\[key\] = Object\.assign\(\{\}, v\)/.test(srcF));
+  check('F8: nhận mây delta báo console khi không đọc được miền (không nuốt)',
+    /không đọc được .* miền/.test(srcF));
 }
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');

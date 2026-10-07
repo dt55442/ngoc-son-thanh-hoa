@@ -272,19 +272,49 @@ import { showToast } from './utils.js';
   async function readFullCloudObject() {
     if (!fbDb) return null;
     const d = await cloudDocRef().get();
-    if (!d.exists) return null;
+    if (!d.exists) { fbRemoteDocExists = false; return null; }
+    fbRemoteDocExists = true;
     const meta = d.data() || {};
     if (meta.__fmt === 'delta-v1') {
       const dh = meta.__dh || {};
       const out = { deletedIds: meta.deletedIds || {} };
       const keys = Object.keys(dh).filter(k => k !== 'deletedIds');
       const vals = await Promise.all(keys.map(k => readDomainDoc(k).catch(() => undefined)));
-      keys.forEach((k, i) => { if (vals[i] !== undefined) out[k] = vals[i]; });
+      // LỖI ĐÃ SỬA (07/10/2026): TRƯỚC ĐÂY miền nào đọc lỗi/tồn tại trong mục lục
+      // mà doc bị mất đều bị BỎ QUA IM LẶNG → nút "Tải Từ Mây Về Máy" vẫn báo
+      // "thành công" nhưng máy giữ dữ liệu CŨ (nguyên nhân "tải về vẫn khác số liệu").
+      // Nay thu thập miền thiếu và NÉN LỖI lên người dùng (nút tải về bắt lỗi →
+      // toast rõ ràng thay vì khen thành công).
+      const missing = [];
+      keys.forEach((k, i) => {
+        if (vals[i] !== undefined) out[k] = vals[i];
+        else missing.push(k);
+      });
+      // Làm mới CHỮ KÝ MIỀN từ mục lục VỪA ĐỌC — TRƯỚC khi ném lỗi, và LOẠI các
+      // miền thiếu khỏi cache: lần đẩy sau thấy remoteH[k] khác → TỰ GHI LẠI doc
+      // miền bị mất (tự chữa lành). Cache cũ chỉ do listener cập nhật; nếu listener
+      // bị sót (mạng chập chờn / vừa reconnect) lần đẩy so nhầm → BỎ GHI doc miền
+      // → mục lục nói "đã đúng" trong khi doc mây thật vẫn cũ → máy khác tải về
+      // vẫn khác số liệu.
+      fbRemoteIsDelta = true;
+      fbRemoteDomainHashes = missing.length
+        ? Object.assign({}, dh, missing.reduce((o, k) => { o[k] = null; return o; }, {}))
+        : dh;
+      if (missing.length) {
+        const e = new Error('đọc thiếu ' + missing.length + ' miền dữ liệu trên mây ('
+          + missing.slice(0, 5).join(', ') + (missing.length > 5 ? '…' : '') + ') — bấm thử lại');
+        e.missingDomains = missing;
+        throw e;
+      }
       if (meta.updatedBy) out.updatedBy = meta.updatedBy;
       if (meta.updatedAt) out.updatedAt = meta.updatedAt;
       return out;
     }
-    return assembleRemoteObject(meta);
+    const full = await assembleRemoteObject(meta);
+    // Định dạng 1-doc cũ: cũng làm mới chữ ký từ meta vừa đọc (meta có __dh)
+    fbRemoteIsDelta = false;
+    fbRemoteDomainHashes = meta.__dh || null;
+    return full;
   }
 
   // Dọn mảnh shard cũ không còn mục lục dùng (best-effort, không chặn đẩy dữ liệu).
@@ -328,7 +358,7 @@ import { showToast } from './utils.js';
       if (fbRemoteDomainHashes && fbRemoteDomainHashes[k] === hashStr(JSON.stringify(out[k]))) continue;
       need.push(k);
     }
-    if (!need.length) return { snap: out, hashes };
+    if (!need.length) return { snap: out, hashes, shielded: 0 };
     if (fbRemoteIsDelta) {
       // Đọc doc từng miền (undefined = mây chưa có → bỏ khỏi payload)
       const vals = await Promise.all(need.map(k => readDomainDoc(k)));
@@ -338,19 +368,22 @@ import { showToast } from './utils.js';
           hashes[k] = hashStr(JSON.stringify(vals[i]));
         } else delete out[k];
       });
-      return { snap: out, hashes };
+      return { snap: out, hashes, shielded: need.length };
     }
     // ĐỊNH DẠNG 1-DOC CŨ
-    if (!fbRemoteDocExists) { need.forEach(k => delete out[k]); return { snap: out, hashes }; } // mây trống
+    if (!fbRemoteDocExists) { need.forEach(k => delete out[k]); return { snap: out, hashes, shielded: need.length }; } // mây trống
+    // Lỗi đọc → ÉN LÊN làm lần đẩy thất bại có thông báo (không nuốt im lặng):
+    // tuyệt đối không ghi mục lục sai — đọc thiếu miền thì readFullCloudObject
+    // cũng đã tự ném lỗi trước đó.
     const full = fbLastRemote || await readFullCloudObject();
-    if (!full) return { snap: out, hashes }; // chưa đọc được → giữ nguyên, lần đẩy sau làm lại
+    if (!full) { need.forEach(k => delete out[k]); return { snap: out, hashes, shielded: need.length }; } // chưa đọc được → bỏ miền định mức khỏi lần đẩy này
     need.forEach((k) => {
       if (full[k] !== undefined) {
         out[k] = full[k];
         hashes[k] = hashStr(JSON.stringify(full[k]));
       } else delete out[k];
     });
-    return { snap: out, hashes };
+    return { snap: out, hashes, shielded: need.length };
   }
 
   // ĐẨY dữ liệu lên mây (tự chọn định dạng: trơn / gzip / shard). Trả về { mode, ... }.
@@ -365,9 +398,11 @@ import { showToast } from './utils.js';
   async function doWriteCloudSnapshot() {
     let snap = collectCloudPayload(); // ĐẨY bản GỠ ảnh base64 (674KB thumb ở lại máy)
     let shieldedHashes = null;
+    let shieldedCount = 0;
     if (!canEditRate()) { // không có quyền sửa định mức → không được ghi miền định mức
       const r = await shieldRateDomainsForPush(snap);
       snap = r.snap;
+      shieldedCount = r.shielded || 0;
       if (Object.keys(r.hashes).length) shieldedHashes = r.hashes;
     }
     const dh = domainHashes(snap);
@@ -376,6 +411,7 @@ import { showToast } from './utils.js';
       // Máy bị "che" định mức: băm cục bộ phải tính lại từ dữ liệu THẬT của máy
       // (miền trong dh là băm MÂY) — nếu không lần so sánh sau sẽ so nhầm.
       if (shieldedHashes) fbLocalHashes = null;
+      if (res && shieldedCount) res.shielded = shieldedCount; // báo số miền bị bỏ qua cho toast
       return res;
     };
     // Nếu từng có miền quá lớn cho 1 doc: chỉ thử delta khi miền đó đã nhỏ lại
@@ -1300,6 +1336,13 @@ import { showToast } from './utils.js';
       if (meta && meta.deletedIds !== undefined) partial.deletedIds = meta.deletedIds;
       const vals = await Promise.all(changed.map(k => readDomainDoc(k).catch(() => undefined)));
       if (seq !== fbRemoteSeq) return;          // đã có mục lục mới hơn → bỏ
+      // Không nuốt im lặng: miền nào đọc lỗi/tồn tại trong mục lục mà doc mất
+      // thì báo console (07/10/2026) — lần đồng bộ sau sẽ thử lại do băm chưa khớp.
+      const missed = changed.filter((k, i) => vals[i] === undefined);
+      if (missed.length) {
+        console.warn('[FB] Nhận mây delta: không đọc được ' + missed.length + ' miền ('
+          + missed.join(', ') + ') — bỏ qua lần này, sẽ thử lại ở lần đồng bộ sau');
+      }
       changed.forEach((k, i) => { if (vals[i] !== undefined) partial[k] = vals[i]; });
       if (fbApplying) return;                   // bỏ qua bản ta vừa ghi
       // Máy chưa có dữ liệu thật -> nhận thẳng các miền vừa tải (máy mới: tải đủ)
@@ -1376,15 +1419,26 @@ import { showToast } from './utils.js';
       if (data.xuong2BulligRecords) state.xuong2BulligRecords = clean('xuong2BulligRecords', data.xuong2BulligRecords);
       if (data.xuong2BaoTinhRecords) state.xuong2BaoTinhRecords = clean('xuong2BaoTinhRecords', data.xuong2BaoTinhRecords);
       if (data.suppliers) state.suppliers = clean('suppliers', data.suppliers);
-      // ĐỊNH MỨC THEO THÁNG + GIỜ SỰ CỐ + SỐ LẦN TH (dict phẳng): "tải về" =
-      // mây thắng TỪNG KHÓA tháng/ngày, nhưng GIỮ tháng máy đã đặt mà mây chưa khai.
+      // ĐỊNH MỨC THEO THÁNG (dict phẳng): "tải về" = mây thắng TỪNG KHÓA tháng,
+      // nhưng GIỮ tháng máy đã đặt mà mây chưa khai.
       ['x2CapRates', 'x2BoluongRates', 'x2BoOngRates', 'x2BaoThoRates', 'x2ChonNanRates',
-        'x2BaoTinhRates', 'x2EpVanRates', 'x2SayTimes', 'x2SayIncidents', 'x2StageIncidents'
+        'x2BaoTinhRates', 'x2EpVanRates'
       ].forEach((key) => {
         const v = data[key];
         if (v && typeof v === 'object' && !Array.isArray(v)) {
           state[key] = Object.assign({}, state[key] || {}, v);
         }
+      });
+      // 3 KHÓA DỮ LIỆU THẺ THAN HÓA (số lần TH · giờ sự cố theo ngày/công đoạn):
+      // NÚT THỦ CÔNG "Tải Từ Mây Về Máy" = CHẾ ĐỘ GHI ĐỀ → ghi ĐÈ TOÀN BỘ theo
+      // mây. Trước đây gộp kiểu Object.assign (giữ khóa máy có mà mây đã xóa) →
+      // người dùng xóa số ở máy A, máy B tải về vẫn giữ số cũ → 2 máy MÃI KHÁC
+      // số liệu (lỗi đã báo 07/10/2026). Khóa máy có mà mây không có sẽ bị gỡ —
+      // đúng nghĩa "ghi đè dữ liệu máy". (Đồng bộ TỰ ĐỘNG ở mergeRemoteIntoLocal
+      // vẫn gộp như cũ để không cuốn mất bản sửa đang chờ đẩy.)
+      ['x2SayTimes', 'x2SayIncidents', 'x2StageIncidents'].forEach((key) => {
+        const v = data[key];
+        if (v && typeof v === 'object' && !Array.isArray(v)) state[key] = Object.assign({}, v);
       });
       // 2 dict LỒNG: x2SayRates { s1, s2 } · x2BulligRates { gc, ct }
       if (data.x2SayRates && typeof data.x2SayRates === 'object' && !Array.isArray(data.x2SayRates)) {
@@ -1621,10 +1675,14 @@ import { showToast } from './utils.js';
       // nhưng dữ liệu mới biến mất"). Tombstone từ mây cũng được gộp trước để
       // bản ghi đã bị máy khác xóa KHÔNG bị đẩy ngược lại lên mây.
       let mergedFromCloud = false;
-      // Lấy bản mây ĐẦY ĐỦ để gộp trước khi đẩy (fbLastRemote chỉ có ở định dạng cũ;
-      // định dạng delta không giữ bản đầy đủ nên đọc TRỰC TIẾP từ mây).
-      let full = fbLastRemote;
-      if (!full && fbRemoteDocExists) { try { full = await readFullCloudObject(); } catch (e) {} }
+      // Đọc TRỰC TIẾP bản mây MỚI NHẤT (fbLastRemote chỉ có ở định dạng cũ và có
+      // thể ĐÃ CŨ nếu listener bị sót) — vừa để gộp khéo trước khi đẩy, vừa LÀM
+      // MỚI chữ ký miền (fbRemoteDomainHashes) cho lần ghi delta: không thì lần
+      // đẩy so nhầm cache cũ → BỎ GHI doc miền máy khác vừa đổi → máy khác tải
+      // về vẫn khác số liệu (lỗi đã báo 07/10/2026).
+      let full = null;
+      try { full = await readFullCloudObject(); } catch (e) { full = null; } // đọc lỗi → chữ ký vẫn đã làm mới, lần đẩy sau tự chữa
+      if (!full) full = fbLastRemote;
       if (full && (hasCloudData(full) || hasDeletedIds(full)) &&
           cloudCore(full) !== cloudCore(collectCloudSnapshot())) {
         mergedFromCloud = mergeRemoteIntoLocal(full, true);
@@ -1644,7 +1702,11 @@ import { showToast } from './utils.js';
         : (w.mode === 'gzip' ? ' — đã nén gzip (' + Math.round(w.size / 1024) + ' KB trên mây)'
           : (w.mode === 'shard-gzip' ? ' — đã nén + chia ' + w.parts + ' mảnh'
             : (w.mode === 'shard-plain' ? ' — chia ' + w.parts + ' mảnh' : '')));
-      showToast('Đã đẩy dữ liệu lên mây thành công! (' + counts + note
+      // BẢO TRỌNG (07/10/2026): nói rõ khi định mức bị TƯỜNG LƯA bỏ qua — trước đây
+      // toast vẫn "thành công" khiến người dùng tưởng định mức đã lên mây.
+      const shieldNote = w.shielded ? ' · đã bỏ qua ' + w.shielded
+        + ' miền định mức (chỉ Quản Trị được cập nhật định mức)' : '';
+      showToast('Đã đẩy dữ liệu lên mây thành công! (' + counts + note + shieldNote
         + (mergedFromCloud ? ' — đã gộp thêm bản ghi từ mây' : '') + ')', 'success');
     } catch (e) {
       console.warn('[FB] Lỗi đẩy dữ liệu lên mây', e);

@@ -9398,7 +9398,7 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
    đẩy/tải mây · backup.
    2 PHA (SPRITE 18 FRAME — icons/loading/tre-sprite.png · 6 cột × 3 dòng · 640×360):
            ① ĐANG CHẶT (treChop, lặp): frame 1–13 — nông dân đứng → giơ rìu →
-              vung (lưỡi lam) → BỔ TRÚNG (mảnh gỗ văng) → lá bay; 80ms/frame;
+              vung (lưỡi lam) → BỔ TRÚNG (mảnh gỗ văng) → lá bay; 200ms/frame (2.6s/vòng);
            ② TẢI XONG → .is-fall (treFall, chạy 1 lần — 700ms = TRE_TIMING.fall):
               frame 14–18 — tre GÃY đổ sang PHẢI (NGƯỢC phía người đứng chặt
               bên trái) → bụi mù → gốc cây + bột trắng, giữ frame cuối; sau
@@ -9410,7 +9410,10 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   position: fixed; inset: 0; z-index: 10050; /* trên modal (10000) — dưới boot-guard (99999) */
   display: flex; align-items: center; justify-content: center;
   padding: 16px;
-  background: radial-gradient(120% 90% at 50% 10%, #1e3a26 0%, #14231a 55%, #0e1a12 100%);
+  /* NỀN MỜ + BLUR: nội dung Dashboard hiện lờ mờ phía sau (nhất là lúc chơi game) */
+  background: radial-gradient(120% 90% at 50% 10%, rgb(30 58 38 / .87) 0%, rgb(20 35 26 / .9) 55%, rgb(14 26 18 / .93) 100%);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
   opacity: 1; visibility: visible;
   transition: opacity .45s ease, visibility 0s linear 0s;
 }
@@ -9436,7 +9439,7 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   aspect-ratio: 640 / 360;       /* đúng tỉ lệ frame 16:9 */
   display: block;
   background: url("icons/loading/tre-sprite.png") 0 0 / 600% 300% no-repeat;
-  animation: treChop 1.04s steps(1) infinite;
+  animation: treChop 2.6s steps(1) infinite;
 }
 @keyframes treChop {
   0%      { background-position:   0%   0%; }  /* f1  — nông dân đứng */
@@ -9457,6 +9460,78 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
 .tre-loading-text {
   font-weight: 700; font-size: .95rem; color: #14532d; text-align: center;
 }
+/* ── THANH TIẾN ĐỘ 0→100% (#tre-progress) — 1 nguồn sự thật do js/loading.js ghi:
+   auto = ticker theo TRE_TIMING.load (~5s) · game = +5%/nhát bấm. ── */
+.tre-progress {
+  position: relative;
+  width: min(78vw, 340px);
+  height: 16px;
+  margin-top: 6px;
+  border: 2px solid #0f766e;
+  border-radius: 999px;
+  background: #e7e2cc;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgb(15 118 110 / .18);
+}
+.tre-progress-fill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #16a34a 0%, #d97706 78%, #ea580c 100%);
+  transition: width .18s linear;
+}
+.tre-progress-pct {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .68rem; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #14532d;
+  text-shadow: 0 1px 0 rgb(255 255 255 / .7);
+}
+/* ── CHẾ ĐỘ GAME (boot — mỗi lần mở trang): 20 nhát × 5% = 100% → cây gãy ── */
+.tre-hit-btn {
+  margin-top: 6px;
+  padding: 10px 24px;
+  min-height: 46px;
+  font-size: 1rem; font-weight: 800;
+  color: #fffdf6;
+  background: linear-gradient(180deg, #16a34a, #15803d);
+  border: 2px solid #14532d;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #14532d, 0 10px 22px rgb(20 83 45 / .35);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tre-hit-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #14532d; }
+.tre-hit-btn[hidden] { display: none !important; } /* attribute hidden của UA phải thắng */
+/* ── CHẾ ĐỘ GAME: IDLE ĐỨNG YÊN — KHÔNG lặp (không còn chặt khi không bấm).
+   Mỗi nhát bấm "Chém!" → class .is-hitting chạy ĐÚNG 1 vòng chặt
+   treHitOnce 600ms (10 pha × 60ms: giơ rìu → vung → BỔ TRÚNG → mảnh vỡ →
+   lá bay → về frame 1) rồi TỰ GỠ (animationend trong js/loading.js);
+   bấm lại giữa chừng → remove + reflow + add = chạy lại từ đầu. ── */
+.tre-loading.is-game .tre-scene { animation: none; cursor: pointer; }
+.tre-loading.is-game.is-hitting .tre-scene { animation: treHitOnce .6s steps(1) 1; }
+@keyframes treHitOnce {
+  0%   { background-position:  60%   0%; }  /* f4  — cầm rìu */
+  10%  { background-position:  80%   0%; }  /* f5  — rìu giơ ngang */
+  20%  { background-position: 100%   0%; }  /* f6  — rìu sau đầu */
+  30%  { background-position:   0%  50%; }  /* f7  — giơ cao */
+  40%  { background-position:  20%  50%; }  /* f8  */
+  50%  { background-position:  40%  50%; }  /* f9  — vung xuống */
+  60%  { background-position:  60%  50%; }  /* f10 — BỔ TRÚNG */
+  70%  { background-position:  80%  50%; }  /* f11 — chém nghiêng */
+  80%  { background-position: 100%  50%; }  /* f12 — mảnh vỡ văng */
+  90%  { background-position:   0% 100%; }  /* f13 — lá + mảnh bay */
+  100% { background-position:   0%   0%; }  /* f1  — về tư thế đứng */
+}
+.tre-loading-card.tre-hit-punch { animation: treHitPunch .16s ease; } /* rung nhẹ mỗi nhát */
+@keyframes treHitPunch {
+  0%   { transform: translateX(0) scale(1); }
+  30%  { transform: translateX(-3px) scale(.985); }
+  60%  { transform: translateX(3px) scale(1.012); }
+  100% { transform: translateX(0) scale(1); }
+}
 /* ── PHA 2 — TẢI XONG → TRE GÃY (class .is-fall — chỉ chạy 1 lần, thắng pha 1) ──
    frame 14–18 ở HÀNG CUỐI sprite: tre bắt đầu nghiêng → gãy mạnh (bụi mù) →
    thân đổ hẳn → gốc + bột trắng. steps(1) + 700ms = TRE_TIMING.fall (js/loading.js);
@@ -9476,10 +9551,14 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
    TẮT vòng lặp CHẶT (cảnh đứng yên ở frame 1 — không chớp liên tục), VẪN GIỮ
    pha GÃY rút ngắn 0.35s (chạy 1 lần) → vẫn thấy tre đổ khi tải xong. ── */
 body[data-fx="low"] .tre-scene { animation: none; }
+body[data-fx="low"] .tre-loading.is-game.is-hitting .tre-scene { animation: none; } /* nhát bấm cũng tắt */
 body[data-fx="low"] .tre-loading.is-fall .tre-scene { animation: treFall 350ms steps(1) forwards; }
+body[data-fx="low"] .tre-loading-card.tre-hit-punch { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .tre-scene { animation: none; }
+  .tre-loading.is-game.is-hitting .tre-scene { animation: none; } /* nhát bấm cũng tắt */
   .tre-loading.is-fall .tre-scene { animation: treFall 350ms steps(1) forwards; }
+  .tre-loading-card.tre-hit-punch { animation: none; }
 }
 /* In ẩn loading (nếu dính vào lúc in) */
 @media print { .tre-loading { display: none !important; } }
@@ -9487,5 +9566,6 @@ body[data-fx="low"] .tre-loading.is-fall .tre-scene { animation: treFall 350ms s
   .tre-loading-card { padding: 14px 14px 10px; }
   .tre-scene { width: 88vw; }
   .tre-loading-text { font-size: .85rem; }
+  .tre-hit-btn { width: 100%; font-size: 1.05rem; }
 }
 

@@ -23,10 +23,13 @@ const MAP_BAM  = [1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,14,16,18];
 const MAP_FX   = [1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18];
 
 // ─── BỐ TRÍ TRÊN KHUNG 640×360 (tx,ty = anchor · th = chiều cao mục tiêu) ───
+//   tx chọn theo 3 ràng buộc (xem báo cáo cơ học khi chạy): ① đầu rìu ô 9
+//   (tiếp xúc) = gốc tre + ~8px → RÌU CHẠM THÂN; ② mép phải frame đổ
+//   (tx + ~261) ≤ 640 → KHÔNG tràn khung; ③ mép trái nông dân ≥ ~60.
 const LAY = {
-  char: { tx: 180, ty: GROUND_Y, th: 205 },   // nông dân — bên trái
-  bam:  { tx: 470, ty: GROUND_Y, th: 300 },   // tre — bên phải
-  fx:   { tx: 430, ty: 330,      th: 340 },   // hiệu ứng — phủ vùng chặt
+  char: { tx: 227, ty: GROUND_Y, th: 205 },   // nông dân — bên trái
+  bam:  { tx: 350, ty: GROUND_Y, th: 300 },   // tre — giữa phải (gốc = điểm chặt)
+  fx:   { tx: 358, ty: 296,      th: 340 },   // hiệu ứng — tâm bbox tại điểm chặt
 };
 
 // ─── ĐỌC PNG (RGB/RGBA 8-bit, không interlace) ───
@@ -255,6 +258,26 @@ function bboxOf(img, rc) {
   return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
+// ─── DÒNG CUỐI CÒN NỘI DUNG (α>40, ≥3 px) — mốc neo ĐÁY từng ô ───
+//   trả { y, x0, x1, runs } toạ độ tuyệt đối trong sheet · runs = các dải
+//   liên tục (gap ≤4 px) — dải [0] với nông dân = BÀN CHÂN TRÁI, với tre = GỐC.
+function bottomRowOf(img, rc) {
+  for (let y = rc.y + rc.h - 1; y >= rc.y; y--) {
+    const xs = [];
+    for (let x = rc.x; x < rc.x + rc.w; x++) if (img.data[(y * img.w + x) * 4 + 3] > 40) xs.push(x);
+    if (xs.length >= 3) {
+      const runs = [[xs[0], xs[0]]];
+      for (let i = 1; i < xs.length; i++) {
+        const last = runs[runs.length - 1];
+        if (xs[i] - last[1] <= 4) last[1] = xs[i];
+        else runs.push([xs[i], xs[i]]);
+      }
+      return { y, x0: xs[0], x1: xs[xs.length - 1], runs };
+    }
+  }
+  return null;
+}
+
 // ─── VẼ Ô LÊN FRAME (bilinear premultiplied + alpha-over, co giãn s) ───
 function drawCell(dst, src, rc, dx, dy, s) {
   const dw = Math.round(rc.w * s), dh = Math.round(rc.h * s);
@@ -377,21 +400,142 @@ for (const [key, file, cols, rows, spreadMax, loPad, hiPad, rampK, margin] of SH
   sheets[key] = { img, cols, rows };
 }
 
-// ─── SCALE + ANCHOR lấy từ Ô THAM CHIẾU (ô 1) của từng lớp ───
+// ─── SCALE lấy từ Ô THAM CHIẾU (ô 1) — mọi ô cùng 1 hệ số (kích thước nhất quán) ───
 const refs = {};
 for (const key of ['char', 'bam']) {
   const s = sheets[key], rc = cellRect(s.img, s.cols, s.rows, 1), bb = bboxOf(s.img, rc);
   if (!bb) throw new Error(key + ': ô tham chiếu rỗng');
-  refs[key] = {
-    scale: LAY[key].th / bb.h,
-    ax: (bb.x - rc.x) + bb.w / 2,   // anchor giữa-ngang nội dung (toạ độ trong ô)
-    ay: (bb.y - rc.y) + bb.h,       // anchor đáy nội dung
-    rc,
-  };
+  refs[key] = { scale: LAY[key].th / bb.h, rc };
   console.log(key, 'ô1 bbox', JSON.stringify(bb), 'scale', refs[key].scale.toFixed(3));
+}
+// ─── ANCHOR TỪNG Ô (sửa lỗi neo cứng theo ô 1: ox/oy tính 1 lần cho 18 frame
+//   → nội dung ô khác lệch khung rồi NHẢY từng frame) ───
+//   char: neo GIỮA DẢI CHÂN = dải liên tục đầu tiên (từ trái) của dòng cuối
+//         → mọi tư thế đều đặt bàn chân xuống GROUND_Y; rìu vung sang phải
+//         không kéo thân lệch (dải chân luôn ở bên trái rìu).
+//   bam : neo TẠI GỐC = x0 dòng cuối + nửa rộng gốc ô 1 → frame GÃY gốc đứng
+//         YÊN tại chỗ (không còn trôi theo bbox cả thân khi thân nghiêng).
+//   fx  : neo TÂM bbox nội dung đúng ĐIỂM VA CHẠM cố định (LAY.fx.tx/ty).
+// Mép trái BÀN CHÂN TRÁI + nửa rộng chân tham chiếu (ô 1) — điểm neo ngang
+// ổn định cho mọi tư thế (kể cả khi 2 chân gộp thành 1 dải liên tục).
+const charBase1 = bottomRowOf(sheets.char.img, cellRect(sheets.char.img, sheets.char.cols, sheets.char.rows, 1));
+const CHAR_FOOT_HALF = charBase1 ? (charBase1.runs[0][1] - charBase1.runs[0][0] + 1) / 2 : 10;
+function anchorChar(s, idx) {
+  const rc = cellRect(s.img, s.cols, s.rows, idx);
+  const br = bottomRowOf(s.img, rc);
+  if (br) return { rc, ax: (br.x0 - rc.x) + CHAR_FOOT_HALF, ay: br.y - rc.y + 1 };
+  const bb = bboxOf(s.img, rc) || { x: rc.x, y: rc.y, w: rc.w, h: rc.h };
+  return { rc, ax: (bb.x - rc.x) + bb.w / 2, ay: (bb.y - rc.y) + bb.h };
+}
+// QUẢ GỐC: đáy tre có ĐƯỢT MỎNG 3–7px nhô xuống (neo theo nó sẽ trúng ngẫu
+// nhiên đầu rễ → cây giật ngang) → neo ngang theo dòng RỘNG ≥ BAM_WIDE
+// (quả gốc/đầu gốc ~30–63px); neo dọc vẫn theo dòng cuối THẬT để đáy chạm
+// mặt đất.
+const BAM_WIDE = 24;
+function wideBottomRow(s, rc) {
+  for (let y = rc.y + rc.h - 1; y >= rc.y; y--) {
+    let x0 = -1, x1 = -1;
+    for (let x = rc.x; x < rc.x + rc.w; x++) if (s.img.data[(y * s.img.w + x) * 4 + 3] > 40) { if (x0 < 0) x0 = x; x1 = x; }
+    if (x1 >= x0 && x1 - x0 + 1 >= BAM_WIDE) return { y, x0, x1 };
+  }
+  return null;
+}
+function anchorBam(s, idx) {
+  const rc = cellRect(s.img, s.cols, s.rows, idx);
+  const br = bottomRowOf(s.img, rc);
+  const w = wideBottomRow(s, rc);
+  const ay = br ? br.y - rc.y + 1 : rc.h;
+  if (w) return { rc, ax: (w.x0 + w.x1) / 2 - rc.x, ay };
+  if (br) return { rc, ax: (br.x0 + br.x1) / 2 - rc.x, ay };
+  const bb = bboxOf(s.img, rc) || { x: rc.x, y: rc.y, w: rc.w, h: rc.h };
+  return { rc, ax: (bb.x - rc.x) + bb.w / 2, ay: (bb.y - rc.y) + bb.h };
+}
+function anchorFx(s, idx) {
+  const rc = cellRect(s.img, s.cols, s.rows, idx);
+  const bb = bboxOf(s.img, rc);
+  if (bb) return { rc, ax: (bb.x - rc.x) + bb.w / 2, ay: (bb.y - rc.y) + bb.h / 2 };
+  return { rc, ax: rc.w / 2, ay: rc.h / 2 };
+}
+// Y neo theo nhóm hiệu ứng — chỉnh TỪNG ô để bbox vẽ luôn nằm trong 640×360:
+// slash ngay ĐIỂM CHẶT · lá giữ nhịp rơi · bụi bám MẶT ĐẤT · f18 hơi bay.
+function fxYOf(idx) {
+  if (idx === 9) return LAY.fx.ty;                  // vệt lam nhỏ — ngay điểm chặt
+  if (idx === 10 || idx === 11) return LAY.fx.ty - 55; // cung lớn — tránh tràn đáy
+  if (idx === 12) return LAY.fx.ty - 54;            // lá cao — tránh tràn đáy
+  if (idx >= 13 && idx <= 15) return LAY.fx.ty - 46;   // lá rơi (giữ nhịp rơi)
+  if (idx === 16 || idx === 17) return LAY.fx.ty - 88; // bụi — bám mặt đất
+  return LAY.fx.ty - 60;                            // f18 — hơi bay
 }
 const fxRc1 = cellRect(sheets.fx.img, 6, 3, 1);
 const fxScale = LAY.fx.th / fxRc1.h;
+
+// ─── BÁO CÁO CƠ HỌC — chỉnh LAY cho tới khi: đầu rìu ô 9/10 chạm gốc tre ·
+//   mép phải frame đổ ≤ 640 · bàn chân/tất cả ô cùng một đường chân ───
+function bbRel(s, idx) {
+  const rc = cellRect(s.img, s.cols, s.rows, idx), bb = bboxOf(s.img, rc);
+  return bb ? { x1: bb.x + bb.w - 1 - rc.x, y1: bb.y + bb.h - 1 - rc.y } : { x1: rc.w, y1: rc.h };
+}
+console.log('  — neo từng ô (in-cell) —');
+for (const idx of [1, 5, 9, 10, 13]) {
+  const a = anchorChar(sheets.char, idx), bb = bbRel(sheets.char, idx);
+  const br = bottomRowOf(sheets.char.img, a.rc);
+  const tip = LAY.char.tx + (bb.x1 - a.ax) * refs.char.scale;
+  console.log(`   char ô${idx}: ax=${a.ax.toFixed(0)} ay=${a.ay} · dòng cuối x${br ? br.x0 - a.rc.x : '?'}..${br ? br.x1 - a.rc.x : '?'} dải[${br ? br.runs.map(r => (r[0] - a.rc.x) + '..' + (r[1] - a.rc.x)).join(' ') : ''}] · mép phải → x=${tip.toFixed(0)}`);
+}
+for (const idx of [1, 6, 14, 16, 18]) {
+  const a = anchorBam(sheets.bam, idx), bb = bbRel(sheets.bam, idx);
+  const right = LAY.bam.tx + (bb.x1 - a.ax) * refs.bam.scale;
+  console.log(`   bam ô${idx}: ax=${a.ax.toFixed(0)} ay=${a.ay} · mép phải → x=${right.toFixed(0)} / ${FW}`);
+}
+const tip9 = LAY.char.tx + (bbRel(sheets.char, 9).x1 - anchorChar(sheets.char, 9).ax) * refs.char.scale;
+console.log('   Δ đầu rìu ô9 → gốc tre =', Math.round(LAY.bam.tx - tip9), 'px (≤ ~10 = chạm); tx char', LAY.char.tx, '· tx bam', LAY.bam.tx);
+// Tổng hợp tính ổn định neo (thay cho soi mắt khi không mở được preview):
+{
+  // ① char: ax/ay 18 ô dùng được — spread nhỏ = không nhảy frame
+  let axMin = 1e9, axMax = -1e9, ayMin = 1e9, ayMax = -1e9;
+  for (let i = 1; i <= 18; i++) {
+    const a = anchorChar(sheets.char, i);
+    if (a.ax < axMin) axMin = a.ax; if (a.ax > axMax) axMax = a.ax;
+    if (a.ay < ayMin) ayMin = a.ay; if (a.ay > ayMax) ayMax = a.ay;
+  }
+  console.log(`   char 18 ô: ax ${axMin.toFixed(0)}..${axMax.toFixed(0)} (spread ${(axMax - axMin).toFixed(0)}px) · ay ${ayMin}..${ayMax} (spread ${ayMax - ayMin}px) → quy về GROUND ±${((ayMax - ayMin) * refs.char.scale).toFixed(1)}px`);
+  // ② bam: dòng cuối các ô trong MAP — dải quá mỏng = neo trúng nhiễu
+  const used = [...new Set(MAP_BAM)];
+  const bad = [];
+  for (const i of used) {
+    const rc = cellRect(sheets.bam.img, sheets.bam.cols, sheets.bam.rows, i);
+    const br = bottomRowOf(sheets.bam.img, rc);
+    const w = wideBottomRow(sheets.bam, rc);
+    if (!w) bad.push(`ô${i}:không có dòng ≥${BAM_WIDE}px`);
+    console.log(`   bam ô${i}: dòng cuối x${br ? br.x0 - rc.x : '?'}..${br ? br.x1 - rc.x : '?'} · quả gốc ${w ? `x${w.x0 - rc.x}..${w.x1 - rc.x}` : '⚠ THIẾU'} ax=${anchorBam(sheets.bam, i).ax.toFixed(0)}`);
+  }
+  if (bad.length) console.log('   ⚠ neo GỐC không có dòng rộng:', bad.join(' '));
+  // ②b profile 12 dòng cuối (chọn quy ước neo GỐC cho tre cho đúng)
+  for (const i of [1, 6, 14, 16, 18]) {
+    const rc = cellRect(sheets.bam.img, sheets.bam.cols, sheets.bam.rows, i);
+    const prof = [];
+    for (let y = rc.y + rc.h - 1, n = 0; y >= rc.y && n < 12; y--) {
+      let x0 = -1, x1 = -1;
+      for (let x = rc.x; x < rc.x + rc.w; x++) if (sheets.bam.img.data[(y * sheets.bam.img.w + x) * 4 + 3] > 40) { if (x0 < 0) x0 = x; x1 = x; }
+      if (x1 >= 0 && x1 - x0 + 1 >= 3) { prof.push(`${rc.y + rc.h - 1 - y}:x${x0 - rc.x}..${x1 - rc.x}(${x1 - x0 + 1})`); n++; }
+    }
+    console.log(`   bam ô${i} profile (dy:x0..x1(w))_BOTTOM_UP:`, prof.join(' '));
+  }
+  // ②c char ax từng ô — tìm ô lệch (spread ax lớn = nhảy ngang)
+  const axs = [];
+  for (let i = 1; i <= 18; i++) axs.push(`${i}:${anchorChar(sheets.char, i).ax.toFixed(0)}`);
+  console.log('   char ax từng ô:', axs.join(' '));
+  // ③ fx: bbox vẽ ra có nằm trong khung 640×360 không (các ô có nội dung)
+  for (const i of [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]) {
+    const a = anchorFx(sheets.fx, i);
+    const bb = bboxOf(sheets.fx.img, a.rc);
+    if (!bb) continue;
+    const L = LAY.fx.tx + (bb.x - a.rc.x - a.ax) * fxScale, R = LAY.fx.tx + (bb.x + bb.w - a.rc.x - a.ax) * fxScale;
+    const T = fxYOf(i) + (bb.y - a.rc.y - a.ay) * fxScale, B = fxYOf(i) + (bb.y + bb.h - a.rc.y - a.ay) * fxScale;
+    const ok = L >= -6 && R <= FW + 6 && T >= -6 && B <= FH + 6;
+    console.log(`   fx ô${i}: khung vẽ L${L.toFixed(0)} R${R.toFixed(0)} T${T.toFixed(0)} B${B.toFixed(0)} ${ok ? '✓' : '⚠ TRÀN'}`);
+  }
+}
 
 // ═══ GHÉP 18 FRAME → SPRITE 6 cột × 3 dòng ═══
 const SW = COLS * FW, SH = ROWS * FH;
@@ -399,30 +543,30 @@ const strip = Buffer.alloc(SW * SH * 4);
 for (let f = 0; f < 18; f++) {
   const frame = Buffer.alloc(FW * FH * 4);
   const dst = { data: frame };
-  // mặt đất + bóng đổ
-  fillEllipse(dst, 180, 324, 66, 9, 0, 0, 0, 46);
-  fillEllipse(dst, 470, 324, 58, 8, 0, 0, 0, 42);
+  // mặt đất + bóng đổ (neo theo vị trí thật của nông dân/tre)
+  fillEllipse(dst, Math.round(LAY.char.tx), 324, 66, 9, 0, 0, 0, 46);
+  fillEllipse(dst, Math.round(LAY.bam.tx), 324, 58, 8, 0, 0, 0, 42);
   fillLine(dst, 40, 600, GROUND_Y + 4, 2, 139, 107, 69, 105);
-  // lớp TRE (dưới cùng) — anchor độc lập tọa độ tuyệt đối của ô
+  // lớp TRE (dưới cùng) — anchor GỐC từng ô
   {
-    const s = sheets.bam, i = MAP_BAM[f], rc = cellRect(s.img, s.cols, s.rows, i), R = refs.bam;
-    const ox = LAY.bam.tx - R.ax * R.scale;
-    const oy = LAY.bam.ty - R.ay * R.scale;
-    drawCell(dst, s.img, rc, ox, oy, R.scale);
+    const s = sheets.bam, i = MAP_BAM[f], R = refs.bam, a = anchorBam(s, i);
+    const ox = LAY.bam.tx - a.ax * R.scale;
+    const oy = LAY.bam.ty - a.ay * R.scale;
+    drawCell(dst, s.img, a.rc, ox, oy, R.scale);
   }
-  // lớp NÔNG DÂN
+  // lớp NÔNG DÂN — anchor BÀN CHÂN từng ô
   {
-    const s = sheets.char, i = MAP_CHAR[f], rc = cellRect(s.img, s.cols, s.rows, i), R = refs.char;
-    const ox = LAY.char.tx - R.ax * R.scale;
-    const oy = LAY.char.ty - R.ay * R.scale;
-    drawCell(dst, s.img, rc, ox, oy, R.scale);
+    const s = sheets.char, i = MAP_CHAR[f], R = refs.char, a = anchorChar(s, i);
+    const ox = LAY.char.tx - a.ax * R.scale;
+    const oy = LAY.char.ty - a.ay * R.scale;
+    drawCell(dst, s.img, a.rc, ox, oy, R.scale);
   }
-  // lớp HIỆU ỨNG (trên cùng — anchor giữa-đáy ô)
+  // lớp HIỆU ỨNG (trên cùng — neo TÂM bbox tại điểm va chạm, Y theo nhóm)
   {
-    const s = sheets.fx, i = MAP_FX[f], rc = cellRect(s.img, 6, 3, i);
-    const ox = LAY.fx.tx - (rc.w / 2) * fxScale;
-    const oy = LAY.fx.ty - rc.h * fxScale;
-    drawCell(dst, s.img, rc, ox, oy, fxScale);
+    const s = sheets.fx, i = MAP_FX[f], a = anchorFx(s, i);
+    const ox = LAY.fx.tx - a.ax * fxScale;
+    const oy = fxYOf(i) - a.ay * fxScale;
+    drawCell(dst, s.img, a.rc, ox, oy, fxScale);
   }
   // dán vào sprite (hàng-trái→phải, đủ 6 cột/ràng)
   const col = f % COLS, row = Math.floor(f / COLS);
@@ -434,7 +578,7 @@ console.log('Đã ghi', OUT, SW + '×' + SH, '(' + (fs.statSync(OUT).size / 1024
 
 // ─── ẢNH PREVIEW 4 FRAME (1 · 10 · 14 · 18) ×50% để soi bằng mắt ───
 fs.mkdirSync('tmp-edits', { recursive: true });
-const pvFrames = [0, 5, 9, 14, 17], pvW = FW / 2, pvH = FH / 2;
+const pvFrames = [0, 5, 9, 14, 17], pvW = FW / 4, pvH = FH / 4;
 const pv = Buffer.alloc(pvFrames.length * pvW * pvH * 4);
 pvFrames.forEach((f, k) => {
   const col = f % COLS, row = Math.floor(f / COLS);
@@ -447,6 +591,24 @@ pvFrames.forEach((f, k) => {
 });
 fs.writeFileSync('tmp-edits/preview4.png', encodePng(pvFrames.length * pvW, pvH, pv));
 console.log('Đã ghi tmp-edits/preview4.png (frame 1 · 10 · 14 · 18)');
+
+// ─── CONTACT SHEET 18 FRAME ×25% — soi neo: rìu có chạm thân · gốc cố định ───
+{
+  const s = 0.25, w = Math.round(FW * s), h = Math.round(FH * s);
+  const cs = Buffer.alloc(w * 6 * h * 3 * 4);
+  for (let f = 0; f < 18; f++) {
+    const col = f % COLS, row = Math.floor(f / COLS);
+    const cx = (f % 6) * w, cy = Math.floor(f / 6) * h;
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const sx = col * FW + Math.floor(x / s), sy = row * FH + Math.floor(y / s);
+        const so = (sy * SW + sx) * 4, o = ((cy + y) * w * 6 + cx + x) * 4;
+        cs[o] = strip[so]; cs[o + 1] = strip[so + 1]; cs[o + 2] = strip[so + 2]; cs[o + 3] = strip[so + 3];
+      }
+  }
+  fs.writeFileSync('tmp-edits/contact.png', encodePng(w * 6, h * 3, cs));
+  console.log('Đã ghi tmp-edits/contact.png (18 frame ×25%)');
+}
 
 
 

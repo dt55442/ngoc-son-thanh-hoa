@@ -1,12 +1,11 @@
 // tests/loading.test.mjs — Kiểm thử ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js)
-// Bao phủ: cấu trúc overlay trong index.html (div .tre-scene = SPRITE 18 FRAME
-// icons/loading/tre-sprite.png — 6×3 · 640×360, <div> cân bằng, KHÔNG còn SVG),
-// CSS 2 pha (treChop frame 1–13 lặp → treFall frame 14–18 gãy đổ sang PHẢI,
-// tôn trọng Giảm Hiệu ỨNG), wiring đủ 5 nhóm chỗ chờ (boot · AI · Excel · mây ·
-// backup), sw.js v220 + loading.js + sprite vào APP_SHELL, và HÀNH VI refcount
-// với stub DOM
-// (2 show + 1 hide → vẫn hiện; tải xong → is-fall + "Xong rồi!" → is-gone;
-// lỗi → không is-fall; mở TAB LẦN ĐẦU → chờ đủ TRE_TIMING.firstTab mới gãy).
+// Bao phủ: cấu trúc overlay (div .tre-scene SPRITE 18 FRAME + THANH TIẾN
+// ĐỘ #tre-progress + nút CHÉM #tre-hit-btn, <div> cân bằng, không còn SVG),
+// CSS (treChop 2.6s · game đứng yên + treHitOnce 600ms/.is-hitting · treFall
+// 700ms · nền blur · treHitPunch · Giảm Hiệu ỨNG), wiring 5 nhóm chỗ chờ
+// (boot · AI · Excel · mây · backup), sw.js v222 +
+// loading.js + sprite vào APP_SHELL, HÀNH VI refcount 2 pha (stub DOM) và
+// CHẾ ĐỘ GAME (boot = mini game 20 nhát ×5% → 100% mới gãy; lỗi → không gãy).
 'use strict';
 import fs from 'node:fs';
 
@@ -39,10 +38,17 @@ check('A3: số <div> cân bằng </div> (không làm vỡ test cấu trúc khá
   (idx.match(/<div/g) || []).length === (idx.match(/<\/div>/g) || []).length);
 check('A4: có ô nhãn tiếng Việt chờ tải + id tre-loading-text',
   idx.includes('id="tre-loading-text"') && idx.includes('Đang tải dữ liệu nhà máy'));
-check('A5: CSS có 2 pha — treChop (frame 1–13, duyệt đủ 3 hàng sprite) + treFall + nền 600% 300%',
+check('A5: CSS có 2 pha — treChop CHẬM 2.6s (frame 1–13, 3 hàng sprite) + treFall + nền 600% 300%',
   ['@keyframes treChop', '@keyframes treFall'].every(k => css.includes(k)) &&
   css.includes('600% 300%') && css.includes('steps(1)') &&
+  css.includes('treChop 2.6s') &&
   /@keyframes treChop[\s\S]{0,1400}?92\.31%/.test(css));
+check('A5b: THANH TIẾN ĐỘ + NÚT CHÉM + NỀN BLUR (mờ Dashboard phía sau) đủ trong HTML/CSS',
+  ['id="tre-progress"', 'id="tre-progress-fill"', 'id="tre-progress-pct"', 'id="tre-hit-btn"', 'id="tre-loading-card"']
+    .every(x => idx.includes(x)) &&
+  css.includes('.tre-progress-fill') && css.includes('tre-hit-btn[hidden]') &&
+  css.includes('@keyframes treHitPunch') && css.includes('backdrop-filter') &&
+  css.includes('is-game'));
 const fallBlock = (css.match(/@keyframes treFall \{[\s\S]*?\n\}/) || [''])[0];
 check('A6: GÃY = frame 14–18 (hàng cuối Y=100%) · 700ms steps(1) forwards giữ frame 18 (tre nằm bên PHẢI)',
   css.includes('animation: treFall 700ms steps(1) forwards') &&
@@ -54,6 +60,15 @@ check('A8: tôn trọng Giảm Hiệu ỨNG (data-fx="low") + prefers-reduced-mo
   css.includes('prefers-reduced-motion: reduce') &&
   /body\[data-fx="low"\] \.tre-loading\.is-fall \.tre-scene\s*\{[^}]*treFall 350ms/.test(css) &&
   /prefers-reduced-motion: reduce\)[\s\S]{0,220}?\{[^}]*animation: treFall 350ms/.test(css));
+check('A8b: CHẾ ĐỘ GAME đứng yên khi idle (animation:none) + mỗi bấm chạy ĐÚNG 1 nhát treHitOnce 600ms qua .is-hitting',
+  css.includes('.tre-loading.is-game .tre-scene { animation: none; cursor: pointer; }') &&
+  css.includes('.tre-loading.is-game.is-hitting .tre-scene { animation: treHitOnce .6s steps(1) 1; }') &&
+  /@keyframes treHitOnce \{[\s\S]{0,900}?100%/.test(css) &&
+  ldJs.includes("classList.add('is-hitting')") &&
+  ldJs.includes("animationName === 'treHitOnce'"));
+check('A8c: Giảm Hiệu ỨNG TẮT cả nhát bấm (.is-hitting → animation:none) ở CẢ 2 nhánh data-fx + prefers-reduced-motion',
+  css.includes('body[data-fx="low"] .tre-loading.is-game.is-hitting .tre-scene { animation: none; }') &&
+  css.includes('  .tre-loading.is-game.is-hitting .tre-scene { animation: none; }'));
 check('A9: KHÔNG dùng class .modal-overlay (không làm khoá cuộn trang nhầm — quy tắc 21)',
   !/class="modal-overlay[^"]*"[^>]*id="tre-loading-overlay"/.test(idx) &&
   !/id="tre-loading-overlay"[^>]*class="modal-overlay/.test(idx));
@@ -62,8 +77,9 @@ check('A9: KHÔNG dùng class .modal-overlay (không làm khoá cuộn trang nh�
 console.log('--- B. WIRING 5 NHÓM CHỖ CHỜ ---');
 check('B1: js/loading.js — không import module nào (không vòng import) + refcount show/hide',
   !/^\s*import\s/m.test(ldJs) && ldJs.includes('function showTreLoading') && ldJs.includes('function hideTreLoading'));
-check('B2: boot (main.js) — showTreLoading đầu DOMContentLoaded + finally hideTreLoading(bootOk)',
-  /showTreLoading\('Đang nạp dữ liệu nhà máy…'\)/.test(mnJs) && /finally\s*\{\s*hideTreLoading\(bootOk\)/.test(mnJs));
+check('B2: boot (main.js) — showTreLoading CHẾ ĐỘ GAME đầu DOMContentLoaded + finally hideTreLoading(bootOk)',
+  /showTreLoading\('Đang nạp dữ liệu nhà máy…',\s*\{\s*mode:\s*'game'\s*\}\)/.test(mnJs) &&
+  /finally\s*\{\s*hideTreLoading\(bootOk\)/.test(mnJs));
 check('B3: AI (ai.js) — hiện khi chờ Gemini + finally hideTreLoading(aiOk)',
   /showTreLoading\('Đang chờ AI trả lời…'\)/.test(aiJs) && /hideTreLoading\(aiOk\)/.test(aiJs));
 check('B4: Xuất Excel (export-xlsx.js) — bọc exportDataToXlsx + finally hideTreLoading(treOk)',
@@ -85,11 +101,14 @@ check('B9: bộ nhớ tab ĐÃ MỞ (treVisitedViews) bắt đầu với dashboa
    'Đang tải tab Nguyên Liệu', 'Đang tải tab QC', 'Đang tải tab Nhân Sự'].every(s => mnJs.includes(s)));
 check('B10: loading.js — có TRE_TIMING.firstTab riêng + hideTreLoading nhận opts.minShow (tab cũ không đổi hành vi)',
   /firstTab:\s*\d+/.test(ldJs) && /opts && typeof opts\.minShow === 'number'/.test(ldJs));
+check('B11: main.js — preloadCoreViews() chạy sau boot khi bootOk (tải sẵn Kanban dưới overlay)',
+  mnJs.includes('function preloadCoreViews') &&
+  /if \(bootOk\)[\s\S]{0,240}preloadCoreViews/.test(mnJs));
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v220 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v220/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v222 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v222/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════
@@ -110,7 +129,7 @@ global.document = {
   getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); }
 };
 const ld = await import('../js/loading.js');
-ld.TRE_TIMING.minShow = 0;   // test nhanh — không cần chờ thời gian tối thiểu
+ld.TRE_TIMING.load = 0;      // test nhanh — cửa sổ auto = 0 → gãy ngay
 ld.TRE_TIMING.fall = 60;
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const ov = document.getElementById('tre-loading-overlay');
@@ -137,7 +156,7 @@ check('D7: hide(false) = LỖI → KHÔNG is-fall (tre không gãy) nhưng vẫn
   !ov.classList.contains('is-fall') && ov.classList.contains('is-gone'));
 
 // ── D2. opts.minShow (mở tab lần đầu) — chờ ĐỦ firstTab rồi mới gãy ──
-ld.TRE_TIMING.minShow = 0;
+ld.TRE_TIMING.load = 0;
 ld.TRE_TIMING.firstTab = 150;
 ld.showTreLoading('Chuyển tab lần đầu');
 const tFirst = Date.now();
@@ -148,12 +167,51 @@ check('D8: lần đầu tab — render xong tức thì nhưng CHƯA gãy khi ch�
 await sleep(120);
 check('D9: qua mốc firstTab → tre GÃY (animation chạy trọn dù tab đã render xong)',
   ov.classList.contains('is-fall'));
-// Không truyền opts → dùng TRE_TIMING.minShow (0) → gãy NGAY, KHÔNG chờ firstTab
+// Không truyền opts → dùng TRE_TIMING.load (0) → gãy NGAY, KHÔNG chờ firstTab
 ld.showTreLoading('Chờ thường');
 ld.hideTreLoading(true); // không opts
 await sleep(40);
-check('D10: không truyền opts → gãy NGAY theo minShow (0), KHÔNG chờ firstTab=150 — các chỗ chờ cũ giữ nguyên',
+check('D10: không truyền opts → gãy NGAY theo TRE_TIMING.load (0), KHÔNG chờ firstTab=150 — các chỗ chờ auto giữ nguyên',
   ov.classList.contains('is-fall') && !ov.classList.contains('is-gone'));
+
+
+// ═══ E. CHẾ ĐỘ GAME (BOOT — mỗi lần mở trang) ═════════════════════
+console.log('--- E. CHẾ ĐỘ GAME (mini game chặn Dashboard) ---');
+ld.TRE_TIMING.load = 0;
+ld.TRE_TIMING.fall = 60;
+ld.TRE_TIMING.hitStep = 5;
+const btnHit = document.getElementById('tre-hit-btn');
+const pctEl = document.getElementById('tre-progress-pct');
+ld.showTreLoading('Đang nạp dữ liệu nhà máy…', { mode: 'game' });
+ld.hideTreLoading(true);
+await sleep(20);
+check('E1: game — boot xong KHÔNG tự gãy: vào is-game + nút Chém hiện, chưa is-fall/is-gone',
+  ov.classList.contains('is-game') && !ov.classList.contains('is-fall') &&
+  !ov.classList.contains('is-gone') && btnHit.hidden === false);
+check('E2: tiến độ reset 0% + hint ghi "0%" và "còn 20 nhát"',
+  pctEl.textContent === '0%' && txt.textContent.includes('0%') &&
+  txt.textContent.includes('còn 20 nhát'));
+for (let i = 0; i < 4; i++) ld.hitTreLoading();
+check('E3: 4 nhát × 5% → 20% (còn 16 nhát), vẫn is-game',
+  pctEl.textContent === '20%' && ov.classList.contains('is-game'));
+check('E3b: mỗi nhát gắn .is-hitting (kích hoạt treHitOnce 1 nhát — IDLE đứng yên, không lặp)',
+  ov.classList.contains('is-hitting'));
+for (let i = 0; i < 16; i++) ld.hitTreLoading();
+check('E4: đủ 100% → is-fall NGAY + nhãn "Xong rồi!" + nút ẩn + hết is-game',
+  ov.classList.contains('is-fall') && txt.textContent === 'Xong rồi!' &&
+  btnHit.hidden === true && !ov.classList.contains('is-game'));
+check('E4b: đủ 100% → gỡ .is-hitting (không để nhát chặt đè pha gãy treFall)',
+  !ov.classList.contains('is-hitting'));
+await sleep(120); // fall = 60ms
+check('E5: tre nằm hẳn → is-gone (Dashboard hiện ra)', ov.classList.contains('is-gone'));
+check('E6: hit khi KHÔNG còn game → bỏ qua an toàn (trả % cũ, overlay giữ nguyên)',
+  ld.hitTreLoading() === 100 && ov.classList.contains('is-gone'));
+ld.showTreLoading('Boot lỗi', { mode: 'game' });
+ld.hideTreLoading(false);
+await sleep(20);
+check('E7: game + LỖI → KHÔNG is-game / KHÔNG is-fall, chỉ is-gone (không nói dối)',
+  !ov.classList.contains('is-game') && !ov.classList.contains('is-fall') &&
+  ov.classList.contains('is-gone'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

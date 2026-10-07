@@ -52,17 +52,27 @@
   <!-- ═══ ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js) ═══
        Hiện NGAY từ lúc mở trang (markup ở ĐẦU <body>) — che khoảng trắng khi
        app khởi động; mọi chỗ CHỜ PHẢN HỒI (AI · xuất Excel · mây · backup)
-       cũng dùng chung overlay này. Khi nội dung TẢI XONG → cây tre GÃY NGUYÊN
-       CÀY đổ sang PHẢI (ngược phía người chặt — người đứng bên trái) rồi overlay
-       mờ dần; LỖI → tre KHÔNG gãy. Nền lỗi watchdog (boot-guard, z-index 99999)
-       vẫn nổi TRÊN overlay này. -->
+       cũng dùng chung overlay này. NỀN MỜ + BLUR → nội dung Dashboard hiện
+       lờ mờ phía sau. 2 CHẾ ĐỘ TIẾN ĐỘ (thanh #tre-progress 0→100%):
+       · BOOT = MINI GAME: bấm "Chém!" 5%/nhát (20 nhát) đủ 100% cây MỚI GÃY
+         → MỚI thấy được Dashboard; · các chỗ chờ khác = auto, trôi ~5s rồi
+         gãy. LỖI → tre KHÔNG gãy, overlay mờ dần. Nền watchdog (boot-guard,
+         z-index 99999) vẫn nổi TRÊN overlay này. -->
   <div class="tre-loading" id="tre-loading-overlay" role="status" aria-live="polite">
-    <div class="tre-loading-card">
+    <div class="tre-loading-card" id="tre-loading-card">
       <!-- CẢNH = SPRITE 18 FRAME 640×360 (icons/loading/tre-sprite.png, 6 cột × 3 dòng)
            — do make-loading-sprite.cjs ghép từ 3 sheet AI (nông dân · tre · hiệu ứng).
-           CSS styles.css chạy 2 pha: treChop (frame 1–13, lặp) → treFall (14–18, .is-fall). -->
+           CSS styles.css chạy 2 pha: treChop (frame 1–13, lặp 2.6s — CHỈ auto;
+           game đứng yên frame 1, mỗi bấm chặt 1 nhát treHitOnce 600ms) → treFall (14–18, .is-fall). -->
       <div class="tre-scene" aria-hidden="true"></div>
       <div class="tre-loading-text" id="tre-loading-text">Đang tải dữ liệu nhà máy…</div>
+      <!-- THANH TIẾN ĐỘ 0→100% — auto: trôi theo TRE_TIMING.load (~5s); game: +5%/nhát bấm -->
+      <div class="tre-progress" id="tre-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="tre-progress-fill" id="tre-progress-fill"></div>
+        <span class="tre-progress-pct" id="tre-progress-pct">0%</span>
+      </div>
+      <!-- NÚT CHƠI (chỉ hiện ở chế độ game — boot): 20 nhát × 5% = 100% → cây gãy -->
+      <button type="button" class="tre-hit-btn" id="tre-hit-btn" hidden>🪓 Chém! (+5%)</button>
     </div>
   </div>
 

@@ -31,12 +31,33 @@ import { state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations, initVnDateInputs } from './utils.js';
 
+  // ── TẢI SẴN NỘI DUNG DƯỚI OVERLAY (cửa chờ ~5s / lúc chơi game) ─────
+  // Vẽ sẵn bảng Kanban + mini card Xưởng 2 + sparkline trong lúc overlay còn
+  // mở (nguồn lag chính — xem quy tắc 41) → mở tab Công Đoạn đầu tiên là
+  // tức thì, không lag. KHÔNG pre-render tab có Chart.js (canvas ẩn = kích
+  // thước 0 → biểu đồ vỡ); các tab khác render đồng bộ dưới overlay ngay lúc
+  // switchView lần đầu + cửa sổ 5s đủ cho decor hoãn 1 frame chạy xong.
+  let trePreloaded = false;
+  function preloadCoreViews() {
+    if (trePreloaded) return;
+    trePreloaded = true;
+    try {
+      if (state.activeView !== 'kanban-view' && kanbanNeedsPaint()) {
+        renderKanbanBoard(getFilteredBatches());
+        renderXuong2Cards();
+        renderX2MiniSparklines();
+      }
+    } catch (e) { /* preload lỗi — không phá boot */ }
+  }
+
   // ─── INIT ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     // LOADING "NÔNG DÂN CHẶT TRE": hiện ngay lúc mở app — che khoảng trắng
-    // khi nạp dữ liệu; khi boot xong → cây tre GÃY (hideTreLoading(true)).
-    // Lỗi giữa chừng → bootOk vẫn false → tre KHÔNG gãy, overlay mờ dần.
-    showTreLoading('Đang nạp dữ liệu nhà máy…');
+    // khi nạp dữ liệu. CHẾ ĐỘ GAME (mỗi lần mở trang): boot xong CŨNG CHƯA
+    // gãy — bấm "Chém!" đủ 100% (20 nhát × 5%) cây mới đổ → MỚI thấy
+    // Dashboard (nền blur). Lỗi giữa chừng → bootOk false → tre KHÔNG gãy,
+    // overlay mờ dần (không ép chơi khi app đang lỗi).
+    showTreLoading('Đang nạp dữ liệu nhà máy…', { mode: 'game' });
     let bootOk = false;
     try {
     initLucide();
@@ -144,9 +165,14 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     window.addEventListener('online', () => { flushPendingCloudPush(); photoSyncKick(); });
     // Trạng thái kênh ảnh (số ảnh chờ) hiện cạnh nút "Đồng Bộ Ảnh Ngay" ở menu ⋮
     updatePhotoSyncUI();
-      bootOk = true; // boot chạy trọn vẹn → tre GÃY (nội dung đã tải xong)
+      bootOk = true; // boot trọn vẹn → game chờ bấm / auto gãy sau cửa sổ
     } finally {
       hideTreLoading(bootOk);
+      // TẢI SẴN bảng Kanban TRONG LÚC overlay còn mở → tab đầu không lag
+      if (bootOk) {
+        const t = setTimeout(preloadCoreViews, 150);
+        if (t && typeof t.unref === 'function') t.unref(); // Node test không bị giữ
+      }
     }
   });
   // ─── VIEW SWITCHING ───────────────────────────────────────────
@@ -248,7 +274,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
   function switchView(targetViewId) {
     // Lần đầu mở tab NÀY (bấm lại tab đang đứng = không tính là mở lại)
     const firstVisit = targetViewId !== state.activeView && !treVisitedViews.has(targetViewId);
-    if (firstVisit) showTreLoading(VIEW_LOADING_LABELS[targetViewId] || 'Đang tải dữ liệu nhà máy…');
+    if (firstVisit) showTreLoading(VIEW_LOADING_LABELS[targetViewId] || 'Đang tải dữ liệu nhà máy…', { dur: TRE_TIMING.firstTab });
     let tabOk = true; // render tab trọn vẹn → tre gãy; lỗi → tre đứng im rồi overlay mờ
     try {
       switchViewCore(targetViewId);

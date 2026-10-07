@@ -2,6 +2,7 @@
 // js/export-xlsx.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide } from './cloud.js';
+import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc xuất file
 import { renderCustomCharts } from './dashboard.js';
 import { logDataChange } from './history.js';
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
@@ -251,6 +252,11 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
   // '0.0'} — SheetJS bản free GHI ĐƯỢC định dạng số nhưng BỎ QUA màu nền (màu
   // chỉ hiện ở màn Xem Trước); khai báo vẫn giữ để dùng khi nâng cấp thư viện.
   function exportDataToXlsx(d) {
+    // LOADING "nông dân chặt tre": xuất chạy sync (có thể giây lát với bảng lớn)
+    // → thấy cảnh đang chặt, xong file tải về → tre GÃY; lỗi → tre đứng im.
+    showTreLoading('Đang xuất file Excel…');
+    let treOk = false;
+    try {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(d.aoa);
     if (d.merges && d.merges.length) ws['!merges'] = d.merges;
@@ -289,6 +295,8 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     }
     XLSX.utils.book_append_sheet(wb, ws, d.sheetName);
     XLSX.writeFile(wb, d.filename);
+    treOk = true;
+    } finally { hideTreLoading(treOk); }
   }
 
   // ─── 1) KẾ HOẠCH SẢN XUẤT ─────────────────────────────────────

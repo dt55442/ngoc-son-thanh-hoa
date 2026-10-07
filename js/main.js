@@ -5,6 +5,7 @@ import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditMod
 import { deleteBatch, exitKanbanPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
 import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
+import { TRE_TIMING, hideTreLoading, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot + mở tab lần đầu
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
 import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần)
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
@@ -32,6 +33,12 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
 
   // ─── INIT ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
+    // LOADING "NÔNG DÂN CHẶT TRE": hiện ngay lúc mở app — che khoảng trắng
+    // khi nạp dữ liệu; khi boot xong → cây tre GÃY (hideTreLoading(true)).
+    // Lỗi giữa chừng → bootOk vẫn false → tre KHÔNG gãy, overlay mờ dần.
+    showTreLoading('Đang nạp dữ liệu nhà máy…');
+    let bootOk = false;
+    try {
     initLucide();
     loadUsers();
     loadSession();
@@ -137,6 +144,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     window.addEventListener('online', () => { flushPendingCloudPush(); photoSyncKick(); });
     // Trạng thái kênh ảnh (số ảnh chờ) hiện cạnh nút "Đồng Bộ Ảnh Ngay" ở menu ⋮
     updatePhotoSyncUI();
+      bootOk = true; // boot chạy trọn vẹn → tre GÃY (nội dung đã tải xong)
+    } finally {
+      hideTreLoading(bootOk);
+    }
   });
   // ─── VIEW SWITCHING ───────────────────────────────────────────
   // ─── ĐÓNG POP-UP / MODAL THUỘC TAB VỪA RỜI KHI CHUYỂN TAB ──────
@@ -217,7 +228,44 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     });
   }
 
+  // ─── MỞ TAB LẦN ĐẦU TRONG PHIÊN → CHẠY HẾT ANIMATION LOADING ────────
+  // Mỗi tab chỉ 1 lần đầu tiên được mở trong phiên: overlay "nông dân chặt
+  // tre" phải chạy TRỌN cảnh (chặt → tre GÃY → mờ) dù nội dung tab render
+  // xong tức thì (minShow = TRE_TIMING.firstTab). Từ lần 2 trở đi: chuyển
+  // tab như cũ, KHÔNG hiện overlay. Các chỗ chờ khác (boot · AI · Excel ·
+  // mây · backup) giữ nguyên logic cũ. Tab Tổng Quan coi như ĐÃ mở từ boot
+  // (boot đã chạy trọn animation ngay khi vào trang).
+  const treVisitedViews = new Set(['dashboard-view']);
+  const VIEW_LOADING_LABELS = {
+    'dashboard-view': 'Đang tải tab Tổng Quan…',
+    'kanban-view': 'Đang tải tab Công Đoạn SX…',
+    'planning-view': 'Đang tải tab Kế Hoạch…',
+    'materials-view': 'Đang tải tab Nguyên Liệu…',
+    'qc-view': 'Đang tải tab QC…',
+    'hr-view': 'Đang tải tab Nhân Sự…'
+  };
+
   function switchView(targetViewId) {
+    // Lần đầu mở tab NÀY (bấm lại tab đang đứng = không tính là mở lại)
+    const firstVisit = targetViewId !== state.activeView && !treVisitedViews.has(targetViewId);
+    if (firstVisit) showTreLoading(VIEW_LOADING_LABELS[targetViewId] || 'Đang tải dữ liệu nhà máy…');
+    let tabOk = true; // render tab trọn vẹn → tre gãy; lỗi → tre đứng im rồi overlay mờ
+    try {
+      switchViewCore(targetViewId);
+    } catch (e) {
+      tabOk = false;
+      throw e; // giữ nguyên hành vi lỗi của switchView cũ (ném ra cho nơi gọi)
+    } finally {
+      if (firstVisit) {
+        treVisitedViews.add(targetViewId); // đã mở rồi → lần sau không loading nữa
+        // Chờ đủ TRE_TIMING.firstTab cảnh "đang chặt" rồi mới gãy — dù render
+        // tab chạy xong trong vài ms, người dùng vẫn thấy trọn animation
+        hideTreLoading(tabOk, { minShow: TRE_TIMING.firstTab });
+      }
+    }
+  }
+
+  function switchViewCore(targetViewId) {
     const prevView = state.activeView;
     state.activeView = targetViewId;
     // Chỉ bật trượt tuần khi CHUYỂN TỪ TAB KHÁC sang tab Kế hoạch

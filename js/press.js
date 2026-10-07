@@ -160,23 +160,27 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
   // Xây HTML cho một dòng ĐẦU VÀO (thanh thô từ Bào Tinh HOẶC ván thô đã ép
   // trước đó) — ô loại là ô nhập tự do kèm danh sách gợi ý (datalist):
   // gõ kí tự sẽ lọc danh sách và cho chọn nhanh loại đã có.
+  // Dưới mỗi dòng: dòng gợi ý KÍCH THƯỚc SAU BÀO TINH + SL đạt tồn từ Bào Tinh
+  // (VD chọn 1250x22x7 -> hiện 1250x20x5 + 1.000 thanh).
   function buildPressStickHTML(idx, stick = {}) {
     return `
       <div class="press-line-row" data-stick-idx="${idx}">
         <div class="press-line-head">
           <span class="press-line-no"><i data-lucide="layers" style="width:11px;height:11px;"></i> Đầu vào #${idx + 1}</span>
-          <button type="button" class="press-line-remove" onclick="app.removePressStick(this)" title="Bỏ loại này"><i data-lucide="x"></i></button>
+          <button type="button" class="press-line-remove" onclick="app.removePressStick(this)" title="Bo loai nay"><i data-lucide="x"></i></button>
         </div>
         <div class="press-line-grid">
           <label class="pl-field"><span>Loại thanh / ván thô</span>
-            <input type="text" class="ps-nan" list="press-input-type-list" placeholder="VD: 1200×38×16, A1 hoặc 1220×2440×9" value="${escapeHTML(stick.nanKey || '')}">
+            <input type="text" class="ps-nan" list="press-input-type-list" placeholder="VD: 1200x38x16, A1 hoac 1220x2440x9" value="${escapeHTML(stick.nanKey || '')}">
           </label>
           <label class="pl-field"><span>Số lượng</span>
             <input type="number" class="ps-sticks" min="0" step="1" inputmode="numeric" placeholder="VD: 4800" value="${stick.sticks || ''}">
           </label>
         </div>
+        <div class="ps-bt-hint">${pressBaoTinhHintOf(stick.nanKey || '')}</div>
       </div>`;
   }
+
 
   // Xây HTML cho một dòng VÁN THÔ tạo ra (kích thước + số lượng + tỷ lệ)
   function buildPressLineHTML(idx, line = {}) {
@@ -338,6 +342,38 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     return parseDimString(norm) ? norm : raw;
   }
 
+  // GỢI Ý KÍCH THƯỚC SAU BÀO TINH + TỒN ĐẠT dưới mỗi dòng ĐẦU VÀO:
+  // chọn thanh thô 1250x22x7 → hiện dòng 1250x20x5 (Kích thước sau bào tinh)
+  // + số lượng đạt tồn từ Bào Tinh. Số liệu đọc từ state.xuong2BaoTinhRecords
+  // theo inSizeKey (cùng nguồn với getBaoTinhStockByNanKey).
+  function pressBaoTinhHintOf(rawKey) {
+    const key = normalizeStickKey(rawKey);
+    if (!key || !parseDimString(key)) return '';
+    const recs = (Array.isArray(state.xuong2BaoTinhRecords) ? state.xuong2BaoTinhRecords : [])
+      .filter(r => r && r.kind !== 'bao_thanh' && normalizeStickKey(r.inSizeKey) === key);
+    if (!recs.length) return '';
+    const byOut = new Map();
+    recs.forEach(r => {
+      const out = normalizeStickKey(r.outSizeKey) || '?';
+      byOut.set(out, (byOut.get(out) || 0) + (Number(r.qtyOk) || 0));
+    });
+    const fmtN = n => Number(n || 0).toLocaleString('vi-VN');
+    return [...byOut.entries()].map(([out, qty]) =>
+      '<div class="ps-bt-hint-line">' + escapeHTML(out) + ' (Kích thước sau bào tinh) · <strong>' + fmtN(qty) + '</strong> thanh (SL đạt tồn từ Bào Tinh)</div>'
+    ).join('');
+  }
+
+  // Vẽ lại dòng gợi ý dưới mọi ô loại đầu vào (gọi sau khi thêm dòng / mở modal sửa).
+  function refreshPressStickHints() {
+    const rows = document.querySelectorAll ? document.querySelectorAll('#press-sticks .press-line-row') : [];
+    (rows || []).forEach(row => {
+      const inp = row.querySelector ? row.querySelector('.ps-nan') : null;
+      const box = row.querySelector ? row.querySelector('.ps-bt-hint') : null;
+      if (inp && box) box.innerHTML = pressBaoTinhHintOf(inp.value);
+    });
+  }
+
+
   // Điền danh sách gợi ý cho ô "Loại" của dòng đầu vào (gõ kí tự để lọc):
   // các loại thanh (Bào Tinh / định mức, kèm tồn BT) + các VÁN THÔ ĐÃ ÉP
   // TRƯỚC ĐÓ (tổng hợp từ các lượt ép, kèm tổng số tấm đã ép).
@@ -379,27 +415,14 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     return computeFinishedQtyFromLines(lines, fpDimStr);
   }
 
-  // Cập nhật số lượng thành phẩm + gợi ý keo/phụ gia khi nhập dòng thành phần:
-  // - Có ván thô (tạo ra, hoặc ván thô đã ép ở phần đầu vào) → tự tính SL
-  // - Không có ván thô → KHÔNG đụng vào ô SL (người dùng tự nhập)
-  // - Người dùng đã sửa tay SL (data-manual) → giữ nguyên số đã nhập
+  // Đồng bộ form khi nhập dòng thành phần: KHÔNG còn tự quy đổi số lượng
+  // thành phẩm (người dùng nhập tay ô Số Lượng TP) — chỉ gợi ý keo/phụ gia
+  // theo định mức × số đã nhập + vẽ lại tick xanh các cụm.
   function recalcPressQuantities() {
-    const qtyInput = document.getElementById('press-fp-qty');
-    if (!qtyInput) return;
-    const productId = document.getElementById('press-product')?.value || '';
-    const manual = (qtyInput.value || '').trim() !== '' && qtyInput.getAttribute('data-manual') === '1';
-    if (productId) {
-      const fpDim = computeFpDimFromProduct(productId);
-      const lines = collectPressLines();
-      const hasActiveVT = lines.some(l => (parseFloat(l.vtQty) || 0) > 0);
-      const finishedQty = hasActiveVT
-        ? computeFinishedQtyFromLines(lines, fpDim)
-        : computeFinishedQtyFromInputs(collectPressSticks(), fpDim);
-      if (finishedQty > 0) { if (!manual) qtyInput.value = finishedQty; }
-      else if (!manual) qtyInput.value = '';
-    }
     suggestPressMaterialFields(false);
+    refreshPressSecChecks();
   }
+
 
   // Gợi ý keo/phụ gia theo định mức x số lượng thành phẩm
   // (Kích thước thành phẩm lấy trực tiếp từ tên sản phẩm, không cần nhập.
@@ -420,6 +443,84 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       if (force || !manual) inp.value = ((perUnit || 0) * qty).toFixed(2);
     });
   }
+  // Tên keo / phụ gia đã dùng ở các lượt ép trước (datalist gợi ý khi gõ)
+  function pressChemNameOptions(field) {
+    const seen = [];
+    (state.pressRecords || []).forEach(r => {
+      const v = (r && r[field] ? String(r[field]) : '').trim();
+      if (v && !seen.includes(v)) seen.push(v);
+    });
+    return seen;
+  }
+  function populatePressChemNameLists() {
+    const g = document.getElementById('press-glue-name-list');
+    if (g) g.innerHTML = pressChemNameOptions('glueName').map(v => '<option value="' + escapeHTML(v) + '"></option>').join('');
+    const a = document.getElementById('press-additive-name-list');
+    if (a) a.innerHTML = pressChemNameOptions('additiveName').map(v => '<option value="' + escapeHTML(v) + '"></option>').join('');
+  }
+  // Tên keo / phụ gia của lượt ép gần nhất (tự điền cho lần nhập sau)
+  function pressLastChemNames() {
+    const recs = [...(state.pressRecords || [])].sort((a, b) => String(b.createdAt || b.date || '').localeCompare(String(a.createdAt || a.date || '')));
+    const last = recs.find(r => (r && r.glueName) || (r && r.additiveName)) || {};
+    return { glueName: (last.glueName || '').trim(), additiveName: (last.additiveName || '').trim() };
+  }
+
+  // FORM 5 CỤM NÚT MỞ PANEL: mở 1 panel, thu gọn các panel còn lại
+  function pressToggleSec(name) {
+    const panels = document.querySelectorAll ? [...document.querySelectorAll('[data-press-panel]')] : [];
+    panels.forEach(p => {
+      const key = p.getAttribute ? p.getAttribute('data-press-panel') : '';
+      if (p.hidden !== undefined) p.hidden = (key !== name) ? true : p.hidden;
+    });
+    const target = document.querySelector ? document.querySelector('[data-press-panel="' + name + '"]') : null;
+    if (target && target.hidden !== undefined) target.hidden = !target.hidden;
+    const btns = document.querySelectorAll ? [...document.querySelectorAll('[data-press-sec]')] : [];
+    btns.forEach(b => {
+      const key = b.getAttribute ? b.getAttribute('data-press-sec') : '';
+      if (!key || !b.setAttribute) return;
+      const panel = document.querySelector ? document.querySelector('[data-press-panel="' + key + '"]') : null;
+      b.setAttribute('aria-expanded', String(!!panel && panel.hidden === false));
+    });
+    if (typeof initLucide === 'function') initLucide();
+  }
+  // Thu gọn TẤT CẢ panel (gọi khi mở modal)
+  function pressCollapseAllSecs() {
+    const panels = document.querySelectorAll ? [...document.querySelectorAll('[data-press-panel]')] : [];
+    panels.forEach(p => { if (p.hidden !== undefined) p.hidden = true; });
+    const btns = document.querySelectorAll ? [...document.querySelectorAll('[data-press-sec]')] : [];
+    btns.forEach(b => { if (b.setAttribute) b.setAttribute('aria-expanded', 'false'); });
+  }
+  // Điều kiện tick xanh từng cụm: date = có ngày · input = có dòng đầu vào hợp lệ ·
+  // output = có ván thô SL>0 hoặc TP+SL>0 · tech = đủ 4 ô · chem = có tên hoặc SL keo/phụ gia
+  function pressSecFilled(name) {
+    const val = id => (document.getElementById(id)?.value || '').trim();
+    if (name === 'date') return !!val('press-date');
+    if (name === 'input') return collectPressSticks().some(s => s.nanKey && s.sticks > 0);
+    if (name === 'output') {
+      const vtOk = collectPressLines().some(l => parseDimString(l.vtDim) && l.vtQty > 0);
+      const fpOk = !!val('press-product') && (parseFloat(val('press-fp-qty')) || 0) > 0;
+      return vtOk || fpOk;
+    }
+    if (name === 'tech') return ['press-force-h', 'press-force-v', 'press-temp', 'press-time'].every(id => (parseFloat(val(id)) || 0) > 0);
+    if (name === 'chem') return !!val('press-glue-name') || !!val('press-additive-name') || (parseFloat(val('press-glue')) || 0) > 0 || (parseFloat(val('press-additive')) || 0) > 0;
+    return false;
+  }
+  // Vẽ tick xanh + dòng tóm tắt các cụm (gọi sau mỗi lần nhập / mở modal)
+  function refreshPressSecChecks() {
+    const names = ['date', 'input', 'output', 'tech', 'chem'];
+    let done = 0;
+    names.forEach(nm => {
+      const okFill = pressSecFilled(nm);
+      if (okFill) done++;
+      const tick = document.querySelector ? document.querySelector('[data-press-check="' + nm + '"]') : null;
+      if (tick && tick.hidden !== undefined) tick.hidden = !okFill;
+    });
+    const sum = document.getElementById('press-sec-sum');
+    if (sum) sum.textContent = done === names.length
+      ? 'Đã đủ thông tin 5/5 cụm — kiểm tra lại rồi bấm Lưu Lượt Ép.'
+      : 'Đã nhập ' + done + '/5 cụm — bấm từng nút để nhập tiếp (tick xanh = cụm đã đủ).';
+  }
+
 
   // Ngày hôm nay theo định dạng YYYY-MM-DD (giờ địa phương)
   function todayLocalISO() {
@@ -427,7 +528,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
   }
 
-  // Mở modal thêm/sửa lượt ép ván
+  // Mở modal thêm/sửa lượt ép ván (form 5 cụm nút mở panel — gọn màn hình)
   function openPressModal(recordId = null) {
     if (!requireEditPermission()) return;
     const modal = document.getElementById('modal-press-record');
@@ -448,6 +549,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     // Gợi ý loại đầu vào (thanh thô + VÁN THÔ ĐÃ ÉP TRƯỚC ĐÓ) — công nhân ép
     // giờ lấy TỰ ĐỘNG theo phân vị (preview ở ô "Công Nhân Ép")
     populatePressInputTypeList();
+    populatePressChemNameLists();
 
     const titleEl = document.getElementById('press-modal-title');
     if (recordId) {
@@ -463,9 +565,22 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       document.getElementById('press-fp-qty').value = rec.finishedQty || '';
       document.getElementById('press-glue').value = rec.glue ?? '';
       document.getElementById('press-additive').value = rec.additive ?? '';
+      const gn = document.getElementById('press-glue-name');
+      if (gn && rec.glueName) gn.value = rec.glueName;
+      const an = document.getElementById('press-additive-name');
+      if (an && rec.additiveName) an.value = rec.additiveName;
+      const fh = document.getElementById('press-force-h');
+      if (fh && rec.forceH != null) fh.value = rec.forceH;
+      const fv = document.getElementById('press-force-v');
+      if (fv && rec.forceV != null) fv.value = rec.forceV;
+      const tp = document.getElementById('press-temp');
+      if (tp && rec.tempC != null) tp.value = rec.tempC;
+      const tm = document.getElementById('press-time');
+      if (tm && rec.pressMin != null) tm.value = rec.pressMin;
       ['press-glue', 'press-additive'].forEach(id => {
         document.getElementById(id)?.setAttribute('data-manual', '1');
       });
+      refreshPressStickHints();
     } else {
       if (titleEl) titleEl.innerHTML = '<i data-lucide="factory"></i> Thêm Lượt Ép Ván';
       document.getElementById('press-date').value = todayLocalISO();
@@ -474,21 +589,29 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       addPressStick();
       addPressLine();
       refreshPressProductSelect();
+      // Tên keo / phụ gia tự điền từ lần nhập gần nhất (đổi thì gõ lại)
+      const last = pressLastChemNames();
+      if (last.glueName) document.getElementById('press-glue-name').value = last.glueName;
+      if (last.additiveName) document.getElementById('press-additive-name').value = last.additiveName;
     }
+    pressCollapseAllSecs();
     suggestPressMaterialFields(false);
     refreshPressWorkersPreview();
+    refreshPressSecChecks();
 
     modal.classList.add('show');
     initLucide();
   }
 
+
   function closePressModal() {
     document.getElementById('modal-press-record')?.classList.remove('show');
   }
 
-  // Lưu lượt ép ván (thêm mới hoặc cập nhật) — 1 form nhập liệu duy nhất:
-  // - Không nhập "Ván Thô Tạo Ra" → thể tích ván thô = 0
-  // - Không chọn Thành Phẩm       → thể tích thành phẩm = 0
+  // L\u01b0u l\u01b0\u1ee3t \u00e9p v\u00e1n (th\u00eam m\u1edbi ho\u1eb7c c\u1eadp nh\u1eadt) \u2014 1 form nh\u1eadp li\u1ec7u duy nh\u1ea5t:
+  // - Kh\u00f4ng nh\u1eadp "V\u00e1n Th\u00f4 T\u1ea1o Ra" \u2192 th\u1ec3 t\u00edch v\u00e1n th\u00f4 = 0
+  // - Kh\u00f4ng ch\u1ecdn Th\u00e0nh Ph\u1ea9m       \u2192 th\u1ec3 t\u00edch th\u00e0nh ph\u1ea9m = 0
+  // - SL th\u00e0nh ph\u1ea9m NH\u1eacP TAY (\u0111\u00e3 b\u1ecf t\u1ef1 quy \u0111\u1ed5i theo th\u1ec3 t\u00edch)
   function handlePressRecordSubmit(e) {
     e.preventDefault();
     const recordId = document.getElementById('press-id').value;
@@ -496,52 +619,51 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     const productId = document.getElementById('press-product').value || '';
     const glue = parseFloat(document.getElementById('press-glue').value) || 0;
     const additive = parseFloat(document.getElementById('press-additive').value) || 0;
+    const glueName = (document.getElementById('press-glue-name')?.value || '').trim();
+    const additiveName = (document.getElementById('press-additive-name')?.value || '').trim();
+    const forceH = parseFloat(document.getElementById('press-force-h')?.value);
+    const forceV = parseFloat(document.getElementById('press-force-v')?.value);
+    const tempC = parseFloat(document.getElementById('press-temp')?.value);
+    const pressMin = parseFloat(document.getElementById('press-time')?.value);
     const sticks = collectPressSticks().filter(s => s.nanKey || s.sticks > 0);
     const lines = collectPressLines().filter(l => l.vtDim || l.vtQty > 0);
 
-    if (!dateVal) { showToast('Vui lòng chọn ngày ép!', 'error'); return; }
-    // Công nhân ép KHÔNG còn nhập tay — suy ra tự động từ phân vị "Ép" theo
-    // ngày ép (tab Nhân Sự); chưa có dữ liệu thì lượt ép để trống công nhân.
-    if (sticks.length === 0) { showToast('Cần ít nhất 1 dòng đầu vào (chọn loại thanh thô/ván thô + số lượng)!', 'error'); return; }
+    if (!dateVal) { showToast('Vui l\u00f2ng ch\u1ecdn ng\u00e0y \u00e9p!', 'error'); return; }
+    // C\u00f4ng nh\u00e2n \u00e9p KH\u00d4NG c\u00f2n nh\u1eadp tay \u2014 suy ra t\u1ef1 \u0111\u1ed9ng t\u1eeb ph\u00e2n v\u1ecb "\u00c9p" theo
+    // ng\u00e0y \u00e9p (tab Nh\u00e2n S\u1ef1); ch\u01b0a c\u00f3 d\u1eef li\u1ec7u th\u00ec l\u01b0\u1ee3t \u00e9p \u0111\u1ec3 tr\u1ed1ng c\u00f4ng nh\u00e2n.
+    if (sticks.length === 0) { showToast('C\u1ea7n \u00edt nh\u1ea5t 1 d\u00f2ng \u0111\u1ea7u v\u00e0o (ch\u1ecdn lo\u1ea1i thanh th\u00f4/v\u00e1n th\u00f4 + s\u1ed1 l\u01b0\u1ee3ng)!', 'error'); return; }
     for (let i = 0; i < sticks.length; i++) {
       const s = sticks[i];
-      if (!s.nanKey) { showToast(`Dòng đầu vào #${i + 1}: chưa chọn loại!`, 'error'); return; }
-      if (s.sticks <= 0) { showToast(`Dòng đầu vào #${i + 1}: số lượng phải lớn hơn 0!`, 'error'); return; }
+      if (!s.nanKey) { showToast('D\u00f2ng \u0111\u1ea7u v\u00e0o #' + (i + 1) + ': ch\u01b0a ch\u1ecdn lo\u1ea1i!', 'error'); return; }
+      if (s.sticks <= 0) { showToast('D\u00f2ng \u0111\u1ea7u v\u00e0o #' + (i + 1) + ': s\u1ed1 l\u01b0\u1ee3ng ph\u1ea3i l\u1edbn h\u01a1n 0!', 'error'); return; }
     }
     if (lines.length === 0 && !productId) {
-      showToast('Cần nhập Ván Thô Tạo Ra hoặc chọn Thành Phẩm (một trong hai — phần không nhập sẽ có thể tích 0)!', 'error'); return;
+      showToast('C\u1ea7n nh\u1eadp V\u00e1n Th\u00f4 T\u1ea1o Ra ho\u1eb7c ch\u1ecdn Th\u00e0nh Ph\u1ea9m (m\u1ed9t trong hai \u2014 ph\u1ea7n kh\u00f4ng nh\u1eadp s\u1ebd c\u00f3 th\u1ec3 t\u00edch 0)!', 'error'); return;
     }
     if (lines.length > 0) {
-      // Ván thô ép ở các thời điểm khác nhau: mỗi lượt chỉ được nhập số lượng cho ĐÚNG 1 loại
+      // V\u00e1n th\u00f4 \u00e9p \u1edf c\u00e1c th\u1edd\u00ed \u0111i\u1ec3m kh\u00e1c nhau: m\u1ed7i l\u01b0\u1ee3t ch\u1ec9 \u0111\u01b0\u1ee3c nh\u1eadp s\u1ed1 l\u01b0\u1ee3ng cho \u0110\u00daNG 1 lo\u1ea1i
       const activeLines = lines.filter(l => l.vtQty > 0);
-      if (activeLines.length > 1) { showToast('Mỗi lượt ép chỉ được nhập số lượng cho 1 loại ván thô — các loại còn lại phải để số lượng 0 (ván thô ép ở các thời điểm khác nhau)!', 'error'); return; }
+      if (activeLines.length > 1) { showToast('M\u1ed7i l\u01b0\u1ee3t \u00e9p ch\u1ec9 \u0111\u01b0\u1ee3c nh\u1eadp s\u1ed1 l\u01b0\u1ee3ng cho 1 lo\u1ea1i v\u00e1n th\u00f4 \u2014 c\u00e1c lo\u1ea1i c\u00f2n l\u1ea1i ph\u1ea3i \u0111\u1ec3 s\u1ed1 l\u01b0\u1ee3ng 0 (v\u00e1n th\u00f4 \u00e9p \u1edf c\u00e1c th\u1edd\u00ed \u0111i\u1ec3m kh\u00e1c nhau)!', 'error'); return; }
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i];
-        if (!parseDimString(l.vtDim)) { showToast(`Dòng ván thô #${i + 1}: kích thước ván thô không hợp lệ (VD: 1220×2440×9)!`, 'error'); return; }
-        if (l.ratio <= 0) { showToast(`Dòng ván thô #${i + 1}: tỷ lệ phải lớn hơn 0!`, 'error'); return; }
+        if (!parseDimString(l.vtDim)) { showToast('D\u00f2ng v\u00e1n th\u00f4 #' + (i + 1) + ': k\u00edch th\u01b0\u1edbc v\u00e1n th\u00f4 kh\u00f4ng h\u1ee3p l\u1ec7 (VD: 1220x2440x9)!', 'error'); return; }
+        if (l.ratio <= 0) { showToast('D\u00f2ng v\u00e1n th\u00f4 #' + (i + 1) + ': t\u1ef7 l\u1ec7 ph\u1ea3i l\u1edbn h\u01a1n 0!', 'error'); return; }
       }
     }
 
-    // ── Thành Phẩm (tuỳ chọn — không chọn thì thể tích thành phẩm = 0) ──
+    // \u2500\u2500 Th\u00e0nh Ph\u1ea9m (tu\u1ef3 ch\u1ecdn \u2014 kh\u00f4ng ch\u1ecdn th\u00ec th\u1ec3 t\u00edch th\u00e0nh ph\u1ea9m = 0) \u2500\u2500
     let fpDim = '';
     let finishedQty = 0;
     if (productId) {
-      fpDim = computeFpDimFromProduct(productId); // suy ra từ tên sản phẩm (VD: Ván 1200×382×12)
-      if (!parseDimString(fpDim)) { showToast('Tên sản phẩm trong định mức phải chứa kích thước (VD: Ván 1200x382x12) để tính thể tích!', 'error'); return; }
-      // SL thành phẩm: lấy số đang có trong ô (tự tính từ ván thô, hoặc người dùng tự nhập)
+      fpDim = computeFpDimFromProduct(productId); // suy ra t\u1eeb t\u00ean s\u1ea3n ph\u1ea9m (VD: V\u00e1n 1200x382x12)
+      if (!parseDimString(fpDim)) { showToast('T\u00ean s\u1ea3n ph\u1ea9m trong \u0111\u1ecbnh m\u1ee9c ph\u1ea3i ch\u1ee9a k\u00edch th\u01b0\u1edbc (VD: V\u00e1n 1200x382x12) \u0111\u1ec3 t\u00ednh th\u1ec3 t\u00edch!', 'error'); return; }
+      // SL th\u00e0nh ph\u1ea9m: NG\u01af\u1edcI D\u00d9NG NH\u1eacP TAY \u00f4 S\u1ed1 L\u01b0\u1ee3ng TP (\u0111\u00e3 b\u1ecf t\u1ef1 quy \u0111\u1ed5i theo th\u1ec3 t\u00edch)
       finishedQty = parseFloat(document.getElementById('press-fp-qty').value) || 0;
-      if (finishedQty <= 0) {
-        // Chưa có số → thử tự tính từ ván thô (tạo ra, hoặc ván thô đã ép ở đầu vào)
-        const hasActiveVT = lines.some(l => l.vtQty > 0);
-        finishedQty = hasActiveVT
-          ? computeFinishedQtyFromLines(lines, fpDim)
-          : computeFinishedQtyFromInputs(sticks, fpDim);
-      }
-      if (finishedQty <= 0) { showToast('Số lượng thành phẩm = 0 — nhập ván thô hoặc tự nhập Số Lượng Thành Phẩm!', 'error'); return; }
+      if (finishedQty <= 0) { showToast('Ch\u01b0a nh\u1eadp S\u1ed1 L\u01b0\u1ee3ng Th\u00e0nh Ph\u1ea9m \u2014 vui l\u00f2ng nh\u1eadp tay s\u1ed1 t\u1ea5m!', 'error'); return; }
     }
 
     const recordData = {
-      id: recordId || `press-${Date.now()}`,
+      id: recordId || 'press-' + Date.now(),
       date: dateVal,
       week: getISOWeekString(dateVal),
       year: getDateYear(dateVal),
@@ -552,6 +674,11 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       fpDim,
       finishedQty,
       glue, additive,
+      glueName, additiveName,
+      forceH: Number.isFinite(forceH) ? forceH : 0,
+      forceV: Number.isFinite(forceV) ? forceV : 0,
+      tempC: Number.isFinite(tempC) ? tempC : 0,
+      pressMin: Number.isFinite(pressMin) ? pressMin : 0,
       updatedAt: new Date().toISOString()
     };
 
@@ -569,9 +696,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     savePressRecords();
     closePressModal();
     renderX2EpVanCard();
-    renderPlanningView(); // cập nhật số "Đã ép" trên thẻ kế hoạch
-    showToast(recordId ? 'Đã cập nhật lượt ép!' : 'Đã ghi nhận lượt ép ván!', 'success');
+    renderPlanningView(); // c\u1eadp nh\u1eadt s\u1ed1 "\u0110\u00e3 \u00e9p" tr\u00ean th\u1ebb k\u1ebf ho\u1ea1ch
+    showToast(recordId ? '\u0110\u00e3 c\u1eadp nh\u1eadt l\u01b0\u1ee3t \u00e9p!' : '\u0110\u00e3 ghi nh\u1eadn l\u01b0\u1ee3t \u00e9p v\u00e1n!', 'success');
   }
+
 
   function deletePressRecord(recordId) {
     if (!requireEditPermission()) return;
@@ -828,10 +956,12 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
             <strong style="color:var(--primary);">${(r.finishedQty || 0).toLocaleString('vi-VN')}</strong> tấm
             · <span title="Ván thô tạo ra">${vtDesc}</span>
             · <span title="Thanh thô (bào tinh) đầu vào">${stickDesc}</span>
-            · Keo <strong>${(Number(r.glue) || 0).toFixed(2)}</strong> kg
-            · Phụ gia <strong>${(Number(r.additive) || 0).toFixed(2)}</strong> kg
+            · <span title="Thông số kỹ thuật: lực ép ngang · lực ép đứng (Kg/cm²) · nhiệt độ (°C) · thời gian (phút/lượt)">${pressTechTextOf(r)}</span>
+            · Keo${r.glueName ? ' ' + escapeHTML(r.glueName) : ''} <strong>${(Number(r.glue) || 0).toFixed(2)}</strong> kg
+            · Phụ gia${r.additiveName ? ' ' + escapeHTML(r.additiveName) : ''} <strong>${(Number(r.additive) || 0).toFixed(2)}</strong> kg
             · <strong>${fmtThanh(vol1)} m³</strong>${noteBadge}${workerBtn}
           </div>
+
           <div class="x2-epv-row-actions" data-perm="press">
             <button class="btn btn-outline btn-icon btn-sm" onclick="app.editPressRecord('${r.id}')" title="Sửa lượt ép"><i data-lucide="edit-3"></i></button>
             <button class="btn btn-outline btn-icon btn-sm" style="color:var(--danger);" onclick="app.deletePressRecord('${r.id}')" title="Xóa lượt ép"><i data-lucide="trash-2"></i></button>
@@ -869,6 +999,18 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
     if (tabList) tabList.classList.toggle('active', !isChart);
     if (tabChart) tabChart.classList.toggle('active', isChart);
     if (isChart) renderPressChart(); // vẽ khi khung đã hiển thị (canvas phải visible)
+  }
+
+  // Text thông số kỹ thuật của 1 lượt ép (hiện trên thẻ ngày): lực ép ngang ·
+  // lực ép đứng (Kg/cm²) · nhiệt độ (°C) · thời gian (phút/lượt) — thiếu thì '—'.
+  function pressTechTextOf(r) {
+    const rr = r || {};
+    const parts = [];
+    if (Number(rr.forceH) > 0) parts.push(`Ép ngang ${rr.forceH} Kg/cm²`);
+    if (Number(rr.forceV) > 0) parts.push(`Ép đứng ${rr.forceV} Kg/cm²`);
+    if (Number(rr.tempC) > 0) parts.push(`${rr.tempC}°C`);
+    if (Number(rr.pressMin) > 0) parts.push(`${rr.pressMin} phút/lượt`);
+    return parts.length ? parts.join(' · ') : '—';
   }
 
   // Render toàn bộ THẺ ÉP VÁN (gọi khi mở pop-up + khi dữ liệu đổi)
@@ -2535,6 +2677,17 @@ export {
   deletePressRecord,
   fmtDateDM,
   getBaoTinhStockByNanKey,
+  populatePressChemNameLists,
+  pressBaoTinhHintOf,
+  pressChemNameOptions,
+  pressCollapseAllSecs,
+  pressLastChemNames,
+  pressSecFilled,
+  pressTechTextOf,
+  pressToggleSec,
+  refreshPressSecChecks,
+  refreshPressStickHints,
+
   getBulligCtOutputRows,
   bulligPlanProductId,
   qcThanhPlanProductId,

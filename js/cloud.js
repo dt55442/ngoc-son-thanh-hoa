@@ -8,6 +8,7 @@ import { canEditAnything, canEditRate, canEditTab, currentTabId, getEditableTabs
 import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
+import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
 import { showToast } from './utils.js';
 
@@ -1609,6 +1610,10 @@ import { showToast } from './utils.js';
     }
     if (fbApplying) return;
     fbApplying = true;
+    // LOADING "nông dân chặt tre" — CHỈ 2 NÚT THỦ CÔNG (đẩy/tải); auto push
+    // nền giữ nguyên (badge sync đã báo, không che màn hình người dùng).
+    showTreLoading('Đang đẩy dữ liệu lên mây…');
+    let treOk = false;
     try {
       // GỘP KHÉO trước khi đẩy: bổ sung các bản ghi đang có trên mây mà máy này
       // CHƯA có -> nút "Đồng Bộ Dữ Liệu Máy Lên Mây" không còn nguy cơ xóa mất
@@ -1625,6 +1630,7 @@ import { showToast } from './utils.js';
         mergedFromCloud = mergeRemoteIntoLocal(full, true);
       }
       const w = await writeCloudSnapshot();
+      treOk = true; // đẩy xong → tre GÃY
       fbDirty = false;
       clearPendingLocal(); // bản của máy này đã lên mây
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
@@ -1645,7 +1651,7 @@ import { showToast } from './utils.js';
       showToast('Lỗi khi đẩy dữ liệu lên mây: ' + e.message
         + (isPermDeniedErr(e) ? '. ' + fbOwnerHint() : ''), 'error');
       if (isPermDeniedErr(e)) deepPermissionDiagnosis();
-    } finally { fbApplying = false; }
+    } finally { fbApplying = false; hideTreLoading(treOk); }
   }
 
   // TẢI dữ liệu từ mây về máy (ghi đè máy) - chiều NGƯỢC LẠI với uploadLocalDataToCloud.
@@ -1660,10 +1666,16 @@ import { showToast } from './utils.js';
       showToast('Trên mây chưa có dữ liệu để tải về.', 'error');
       return;
     }
-    // AUTO BACKUP (lớp 1): chụp dữ liệu máy TRƯỚC khi bị ghi đè theo mây
-    captureAutoBackup('Trước khi tải dữ liệu từ mây về máy', true);
-    applyFireSnapshot(full);
-    showToast('Đã tải dữ liệu từ mây về máy thành công! (ghi đè dữ liệu máy)', 'success');
+    // LOADING "nông dân chặt tre" — tải mây về máy xong → tre GÃY
+    showTreLoading('Đang tải dữ liệu từ mây về máy…');
+    let treOk = false;
+    try {
+      // AUTO BACKUP (lớp 1): chụp dữ liệu máy TRƯỚC khi bị ghi đè theo mây
+      captureAutoBackup('Trước khi tải dữ liệu từ mây về máy', true);
+      applyFireSnapshot(full);
+      treOk = true;
+      showToast('Đã tải dữ liệu từ mây về máy thành công! (ghi đè dữ liệu máy)', 'success');
+    } finally { hideTreLoading(treOk); }
   }
 
   // Đăng ký Service Worker - cho phép ứng dụng hoạt động ngoại tuyến hoàn toàn

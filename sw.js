@@ -4,12 +4,13 @@
  * Chiến lược: Cache First - cập nhật nền (stale-while-revalidate)
  */
 
-const CACHE_NAME = 'nha-may-ngoc-son-v216';
+const CACHE_NAME = 'nha-may-ngoc-son-v220';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './js/main.js',
+  './js/loading.js',
   './js/state.js',
   './js/storage.js',
   './js/auth.js',
@@ -50,7 +51,8 @@ const APP_SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-192.png',
-  './icons/icon-maskable-512.png'
+  './icons/icon-maskable-512.png',
+  './icons/loading/tre-sprite.png'
 ];
 
 // Tự động thêm tất cả font woff2 vào APP_SHELL

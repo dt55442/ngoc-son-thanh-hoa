@@ -149,11 +149,12 @@ fillForm({
   sticks: [stickRow('A1', '4800')],
   lines: [lineRow('1200x600x9', '12', '')]
 });
+setVal('press-fp-qty', '2'); // NHẬP TAY ô Số Lượng Thành Phẩm (đã bỏ tự quy đổi)
 const before2 = state.pressRecords.length;
 press.handlePressRecordSubmit(ev);
-check('Có TP + VT tạo ra: lưu được', state.pressRecords.length === before2 + 1);
+check('Có TP + VT tạo ra: lưu được (SL nhập tay)', state.pressRecords.length === before2 + 1);
 const r2 = lastRecord();
-check('Có TP + VT tạo ra: SL tự tính theo thể tích = 2', r2.finishedQty === 2);
+check('Có TP + VT tạo ra: SL = 2 (nhập tay — KHÔNG còn tự quy đổi)', r2.finishedQty === 2);
 check('Có TP + VT tạo ra: THỂ TÍCH VÁN THÔ > 0', volVT(r2) > 0);
 check('Có TP + VT tạo ra: THỂ TÍCH THÀNH PHẨM > 0', volFP(r2) > 0);
 
@@ -166,13 +167,14 @@ fillForm({
   sticks: [stickRow('1200x600x9', '12')],           // ván thô đã ép trước đó
   lines: [lineRow('', '', '')]                       // không nhập VT tạo ra
 });
+setVal('press-fp-qty', '2'); // NHẬP TAY (trước đây hệ thống tự tính từ ván thô đầu vào)
 const before3 = state.pressRecords.length;
 press.handlePressRecordSubmit(ev);
 check('Không VT tạo ra: lưu được', state.pressRecords.length === before3 + 1);
 const r3 = lastRecord();
 check('Không VT tạo ra: vanTho rỗng', (r3.vanTho || []).length === 0);
 check('Không VT tạo ra: THỂ TÍCH VÁN THÔ = 0', volVT(r3) === 0);
-check('Không VT tạo ra: SL tự tính theo thể tích = 2 (từ ván thô đã ép trước đó)', r3.finishedQty === 2);
+check('Không VT tạo ra: SL = 2 (nhập tay — trước đây tự tính từ ván thô đầu vào)', r3.finishedQty === 2);
 check('Không VT tạo ra: THỂ TÍCH THÀNH PHẨM > 0', volFP(r3) > 0);
 
 // ═══════════════════════════════════════════════════════════
@@ -236,20 +238,20 @@ check('Gợi ý: mô tả "ván thô đã ép" kèm tổng số tấm', dlHTML.i
 check('Gợi ý: có loại thanh "A1" (đã dùng ở lượt ép trước)', dlHTML.includes('A1') && dlHTML.includes('thanh · đã dùng ở lượt ép trước'));
 
 // ═══════════════════════════════════════════════════════════
-// 8) recalc: tự tính khi có ván thô — giữ nguyên số tự nhập khi không có
+// 8) recalc: ĐÃ BỎ tự quy đổi SL thành phẩm — chỉ giữ số người dùng nhập
 // ═══════════════════════════════════════════════════════════
 const fpEl = document.getElementById('press-fp-qty');
 let fpManualFlag = null;
 fpEl.setAttribute = (k, v) => { if (k === 'data-manual') fpManualFlag = v; };
 fpEl.getAttribute = (k) => (k === 'data-manual' ? fpManualFlag : null);
 
-// Có ván thô tạo ra → tự tính SL theo thể tích (ghi đè ô trống)
+// Có ván thô tạo ra → KHÔNG còn tự ghi số vào ô SL (nhập tay)
 setVal('press-product', 'rate-2');
 setStickRows([stickRow('A1', '100')]);
 setLineRows([lineRow('1200x600x9', '12', '')]);
 fpEl.value = ''; fpManualFlag = null;
 press.recalcPressQuantities();
-check('recalc: có ván thô → tự tính SL theo thể tích (2)', String(fpEl.value) === '2');
+check('recalc: ĐÃ BỎ tự quy đổi — ô SL vẫn trống dù có ván thô', String(fpEl.value) === '');
 
 // Không có ván thô + người dùng đã tự nhập → giữ nguyên số đã nhập
 setLineRows([]);

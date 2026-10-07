@@ -23,6 +23,7 @@
 // thời gian thắng, tôn trọng tombstone) — KHÔNG ghi đè mù quáng.
 // ═══════════════════════════════════════════════════════════
 import { canPushToCloud, collectCloudSnapshot, gzipStringToBase64, gunzipBase64ToString, initLucide, isFirebaseOnline, mergeRemoteIntoLocal, utf8Bytes } from './cloud.js';
+import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — phục hồi/danh sách backup
 import { STORAGE_KEY_AUTOBACKUP, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -232,11 +233,17 @@ import { escapeHTML, showToast } from './utils.js';
     let snap = null;
     try { snap = JSON.parse(raw); } catch (e) { snap = null; }
     if (!snap) { showToast('Bản cất hỏng — không đọc được dữ liệu.', 'error'); return; }
-    captureAutoBackup('Trước khi phục hồi bản cất', true); // chụp hiện tại trước khi đụng dữ liệu
-    const changed = mergeRemoteIntoLocal(snap, false);
-    showToast(changed
-      ? 'Đã phục hồi bản cất (' + fmtTs(entry.ts) + ') — gộp khéo, bản ghi mới hơn được giữ lại.'
-      : 'Bản cất không có dữ liệu mới hơn so với hiện tại — không thay đổi gì.', 'success');
+    // LOADING "nông dân chặt tre" — giải nén + gộp dữ liệu xong → tre GÃY
+    showTreLoading('Đang phục hồi bản cất trên máy…');
+    let treOk = false;
+    try {
+      captureAutoBackup('Trước khi phục hồi bản cất', true); // chụp hiện tại trước khi đụng dữ liệu
+      const changed = mergeRemoteIntoLocal(snap, false);
+      treOk = true;
+      showToast(changed
+        ? 'Đã phục hồi bản cất (' + fmtTs(entry.ts) + ') — gộp khéo, bản ghi mới hơn được giữ lại.'
+        : 'Bản cất không có dữ liệu mới hơn so với hiện tại — không thay đổi gì.', 'success');
+    } finally { hideTreLoading(treOk); }
   }
 
   // Xóa 1 bản cất cục bộ (dọn dẹp thủ công)
@@ -363,6 +370,9 @@ import { escapeHTML, showToast } from './utils.js';
     const db = (window.firebase && window.firebase.firestore) ? window.firebase.firestore() : null;
     if (!isFirebaseOnline() || !db) { showToast('Chưa online — không đọc được backup mây.', 'error'); return; }
     showToast('Đang tải backup mây ' + id + ' ...', 'info');
+    // LOADING "nông dân chặt tre" — tải + gộp backup mây xong → tre GÃY
+    showTreLoading('Đang tải backup từ mây…');
+    let treOk = false;
     try {
       const snap = await cloudBackupCol(db).doc(id).get();
       if (!snap.exists) { showToast('Không tìm thấy backup ' + id + ' trên mây.', 'error'); return; }
@@ -373,13 +383,14 @@ import { escapeHTML, showToast } from './utils.js';
       const remote = JSON.parse(raw);
       captureAutoBackup('Trước khi phục hồi backup mây ' + id, true);
       const changed = mergeRemoteIntoLocal(remote, false);
+      treOk = true;
       showToast(changed
         ? 'Đã phục hồi backup mây ' + id + ' — gộp khéo, bản ghi mới hơn được giữ lại.'
         : 'Backup mây không có dữ liệu mới hơn hiện tại.', 'success');
     } catch (e) {
       console.warn('[AUTOBACKUP] Lỗi phục hồi backup mây', e);
       showToast('Lỗi phục hồi backup mây: ' + ((e && e.message) || e), 'error');
-    }
+    } finally { hideTreLoading(treOk); }
   }
 
   // ─── ĐỊNH DẠNG THỜI GIAN / DUNG LƯỢNG ────────────────────────
@@ -437,8 +448,12 @@ import { escapeHTML, showToast } from './utils.js';
     const box = document.getElementById('cloudbackup-list');
     if (!box) return;
     box.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:20px 0;">Đang tải danh sách backup trên mây...</div>';
+    // LOADING "nông dân chặt tre" — tải danh sách backup mây → tre GÃY khi có dữ liệu
+    showTreLoading('Đang tải danh sách backup trên mây…');
+    let treOk = false;
     try {
       const list = await listCloudBackups();
+      treOk = true; // đã có dữ liệu (kể cả danh sách rỗng) = TẢI XONG
       if (!list.length) {
         box.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:20px 0;">Chưa có backup nào trên mây.<br>Backup tự được cất 1 lần/ngày, sau lần đẩy dữ liệu lên mây ĐẦU TIÊN trong ngày (nội dung không đổi so với bản gần nhất sẽ được bỏ qua để tiết kiệm).</div>';
         return;
@@ -457,5 +472,5 @@ import { escapeHTML, showToast } from './utils.js';
       initLucide();
     } catch (e) {
       box.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:0.85rem;padding:20px 0;">Lỗi tải backup mây: ' + escapeHTML(String((e && e.message) || e)) + '</div>';
-    }
+    } finally { hideTreLoading(treOk); }
   }

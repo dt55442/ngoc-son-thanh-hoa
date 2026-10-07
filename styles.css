@@ -9296,3 +9296,196 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   .kho-kpi { font-size: 0.74rem; padding: 5px 9px; }
   .x2-zone { padding: 7px 8px 9px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   THẺ ÉP VÁN — NÚT HEADER (icon +/bút/định mức) + FORM 5 CỤM NÚT
+   MỞ PANEL (Ngày · Đầu vào · Đầu ra · Thông số KT · Hóa chất) +
+   DÒNG GỢI Ý KÍCH THƯỚC SAU BÀO TINH dưới ô đầu vào (06/10/2026)
+   ═══════════════════════════════════════════════════════════════════ */
+.x2-epv-head-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.x2-epv-head-btns .btn-icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.x2-epv-head-btns .btn-icon svg { width: 16px; height: 16px; }
+/* Biểu tượng "cái bút" của nút Ghi Chú — góc phải có TAM GIÁC CHÚ Ý nhỏ */
+#btn-add-press-note-2 .x2-epv-note-warn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 13px;
+  height: 13px;
+  padding: 1px;
+  color: #d97706;
+  background: var(--bg-card, #fff);
+  border-radius: 50%;
+}
+/* Thanh 5 nút cụm trong modal nhập lượt ép */
+.press-sec-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+.press-sec-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.press-sec-btn svg { width: 14px; height: 14px; }
+.press-sec-check {
+  display: inline-flex;
+  align-items: center;
+  color: #16a34a;
+}
+.press-sec-check svg { width: 14px; height: 14px; }
+.press-sec-check[hidden] { display: none !important; }
+.press-sec-sum {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+/* Panel nội dung từng cụm (1 lần chỉ mở 1 panel) */
+.press-sec-panel {
+  border: 1px dashed rgba(15, 118, 110, 0.35);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: rgba(15, 118, 110, 0.04);
+}
+.press-sec-panel[hidden] { display: none !important; }
+.press-sec-collapse { margin-top: 10px; }
+/* Dòng gợi ý "kích thước sau bào tinh + SL đạt tồn" dưới ô đầu vào */
+.ps-bt-hint {
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #0f766e;
+  margin-top: 2px;
+}
+.ps-bt-hint-line strong { color: #16a34a; }
+/* Thành phẩm + Số lượng thành phẩm cùng 1 dòng */
+.press-fp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+@media (max-width: 480px) {
+  .press-fp-row { grid-template-columns: 1fr; }
+  .press-sec-btn { min-height: 42px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ═══ ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js) ═══════
+   Overlay toàn màn hình #tre-loading-overlay (markup ở ĐẦU <body> — hiện
+   NGAY khi mở trang, che khoảng trắng lúc app khởi động). Mọi chỗ CHỜ PHẢN
+   HỒI gọi showTreLoading()/hideTreLoading(): khởi động · AI · xuất Excel ·
+   đẩy/tải mây · backup.
+   2 PHA (SPRITE 18 FRAME — icons/loading/tre-sprite.png · 6 cột × 3 dòng · 640×360):
+           ① ĐANG CHẶT (treChop, lặp): frame 1–13 — nông dân đứng → giơ rìu →
+              vung (lưỡi lam) → BỔ TRÚNG (mảnh gỗ văng) → lá bay; 80ms/frame;
+           ② TẢI XONG → .is-fall (treFall, chạy 1 lần — 700ms = TRE_TIMING.fall):
+              frame 14–18 — tre GÃY đổ sang PHẢI (NGƯỢC phía người đứng chặt
+              bên trái) → bụi mù → gốc cây + bột trắng, giữ frame cuối; sau
+              TRE_TIMING.fall → .is-gone mờ dần. LỖI (ok=false) → chỉ .is-gone,
+              tre KHÔNG gãy. 700ms trong CSS phải ĐỒNG BỘ TRE_TIMING.fall
+              trong js/loading.js (test D5 đang fallback đúng mốc này). */
+/* ═══════════════════════════════════════════════════════════════ */
+.tre-loading {
+  position: fixed; inset: 0; z-index: 10050; /* trên modal (10000) — dưới boot-guard (99999) */
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  background: radial-gradient(120% 90% at 50% 10%, #1e3a26 0%, #14231a 55%, #0e1a12 100%);
+  opacity: 1; visibility: visible;
+  transition: opacity .45s ease, visibility 0s linear 0s;
+}
+.tre-loading.is-gone {
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .45s ease, visibility 0s linear .45s;
+}
+.tre-loading-card {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 18px 26px 14px; border-radius: 20px;
+  background: linear-gradient(180deg, #fffdf6, #f5f1df);
+  border: 2px solid #0f766e;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+  max-width: min(92vw, 430px);
+}
+/* ── SPRITE 18 FRAME — PHA 1: ĐANG CHẶT (icons/loading/tre-sprite.png) ──
+   Ảnh 6 cột × 3 dòng · mỗi frame 640×360 (16:9) — background-size 600% 300%.
+   VỊ TRÍ nền theo % của (kích thước ảnh − kích thước ô): cột c → X = c×20%,
+   hàng r → Y = r×50%. steps(1) = nhảy frame, KHÔNG trượt mượt.
+   frame 1–13: đứng → giơ rìu → vung (lưỡi lam) → bổ trúng (mảnh gỗ) → lá bay. */
+.tre-scene {
+  width: min(86vw, 370px);
+  aspect-ratio: 640 / 360;       /* đúng tỉ lệ frame 16:9 */
+  display: block;
+  background: url("icons/loading/tre-sprite.png") 0 0 / 600% 300% no-repeat;
+  animation: treChop 1.04s steps(1) infinite;
+}
+@keyframes treChop {
+  0%      { background-position:   0%   0%; }  /* f1  — nông dân đứng */
+  7.69%   { background-position:  20%   0%; }  /* f2  — chớp mắt */
+  15.38%  { background-position:  40%   0%; }  /* f3  */
+  23.08%  { background-position:  60%   0%; }  /* f4  — cầm rìu */
+  30.77%  { background-position:  80%   0%; }  /* f5  — rìu giơ ngang */
+  38.46%  { background-position: 100%   0%; }  /* f6  — rìu sau đầu */
+  46.15%  { background-position:   0%  50%; }  /* f7  — giơ cao */
+  53.85%  { background-position:  20%  50%; }  /* f8  */
+  61.54%  { background-position:  40%  50%; }  /* f9  — vung xuống (vệt lưỡi lam) */
+  69.23%  { background-position:  60%  50%; }  /* f10 — BỔ TRÚNG: chém lớn + mảnh gỗ */
+  76.92%  { background-position:  80%  50%; }  /* f11 — chém nghiêng */
+  84.62%  { background-position: 100%  50%; }  /* f12 — mảnh vỡ văng */
+  92.31%  { background-position:   0% 100%; }  /* f13 — lá + mảnh bay (sắp gãy) */
+  100%    { background-position:   0%   0%; }  /* quay về f1 — lặp */
+}
+.tre-loading-text {
+  font-weight: 700; font-size: .95rem; color: #14532d; text-align: center;
+}
+/* ── PHA 2 — TẢI XONG → TRE GÃY (class .is-fall — chỉ chạy 1 lần, thắng pha 1) ──
+   frame 14–18 ở HÀNG CUỐI sprite: tre bắt đầu nghiêng → gãy mạnh (bụi mù) →
+   thân đổ hẳn → gốc + bột trắng. steps(1) + 700ms = TRE_TIMING.fall (js/loading.js);
+   forwards giữ frame 18 (tre nằm yên) cho tới khi overlay .is-gone mờ dần. */
+.tre-loading.is-fall .tre-scene {
+  animation: treFall 700ms steps(1) forwards;
+}
+@keyframes treFall {
+  0%   { background-position:  20% 100%; }  /* f14 — tre nghiêng + mảnh vỡ */
+  25%  { background-position:  40% 100%; }  /* f15 — gãy dần */
+  50%  { background-position:  60% 100%; }  /* f16 — BỤI MÙ · thân đổ mạnh */
+  75%  { background-position:  80% 100%; }  /* f17 — đổ hẳn, bụi bay */
+  100% { background-position: 100% 100%; }  /* f18 — gốc + bột trắng (giữ yên) */
+}
+
+/* ── Giảm hiệu ứng (công tắc "Giảm Hiệu ỨNG" + prefers-reduced-motion):
+   TẮT vòng lặp CHẶT (cảnh đứng yên ở frame 1 — không chớp liên tục), VẪN GIỮ
+   pha GÃY rút ngắn 0.35s (chạy 1 lần) → vẫn thấy tre đổ khi tải xong. ── */
+body[data-fx="low"] .tre-scene { animation: none; }
+body[data-fx="low"] .tre-loading.is-fall .tre-scene { animation: treFall 350ms steps(1) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .tre-scene { animation: none; }
+  .tre-loading.is-fall .tre-scene { animation: treFall 350ms steps(1) forwards; }
+}
+/* In ẩn loading (nếu dính vào lúc in) */
+@media print { .tre-loading { display: none !important; } }
+@media (max-width: 480px) {
+  .tre-loading-card { padding: 14px 14px 10px; }
+  .tre-scene { width: 88vw; }
+  .tre-loading-text { font-size: .85rem; }
+}
+

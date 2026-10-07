@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v216/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v220/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -525,6 +525,85 @@ check('TB TUẦN: press.js có mã vẽ "TB ngày" + 2 biến trung bình (cấu
   pressSrc.includes('TB ngày') && pressSrc.includes('avgProduct') && pressSrc.includes('avgAll') &&
   pressSrc.includes('stats: weekStats'));
 
+
+// ═══ G. FORM 5 CỤM NÚT MỞ PANEL + HEADER ICON + TRƯỜNG MỚI (06/10/2026) ═══
+const countId = (id) => (idxHtml.match(new RegExp('id="' + id + '"', 'g')) || []).length;
+check('HEADER: 3 nút icon chuyển lên (gộp tên) — mỗi id chỉ xuất hiện ĐÚNG 1 lần (không trùng)',
+  idxHtml.includes('class="x2-epv-head-btns"') &&
+  countId('btn-add-press-2') === 1 && countId('btn-add-press-note-2') === 1 &&
+  countId('btn-x2-epv-rate') === 1 &&
+  idxHtml.includes('x2-epv-note-warn') &&
+  !idxHtml.includes('btn-x2-epv-rate-head'));
+check('HEADER: nút định mức giữ data-admin-only + data-perm="press" (quy tắc 34)',
+  /id="btn-x2-epv-rate"[^>]*data-admin-only/.test(idxHtml) &&
+  /id="btn-x2-epv-rate"[^>]*data-perm="press"/.test(idxHtml));
+check('FORM: 5 nút cụm (Ngày · Đầu vào · Đầu ra · Thông số KT · Hóa chất) + 5 panel + 5 tick xanh',
+  ['date', 'input', 'output', 'tech', 'chem'].every(k =>
+    idxHtml.includes('data-press-sec="' + k + '"') &&
+    idxHtml.includes('data-press-panel="' + k + '"') &&
+    idxHtml.includes('data-press-check="' + k + '"')));
+check('FORM: ô mới Thông số KT (lực ép ngang/đứng · nhiệt độ · thời gian) + Hóa chất (tên keo/phụ gia)',
+  ['press-force-h', 'press-force-v', 'press-temp', 'press-time', 'press-glue-name', 'press-additive-name'].every(id =>
+    idxHtml.includes('id="' + id + '"')));
+check('FORM: Thành phẩm + Số Lượng TP CÙNG DÒNG (.press-fp-row) · SL nhập tay (không còn "Tự động tính từ ván thô")',
+  idxHtml.includes('press-fp-row') && !idxHtml.includes('Tự động tính từ ván thô'));
+check('FORM: chú thích dài đã chuyển sang title (không còn nhãn "(1 đến 3 loại — gõ kí tự để thấy gợi ý)")',
+  !idxHtml.includes('(1 đến 3 loại — gõ kí tự để thấy gợi ý)</span>') &&
+  idxHtml.includes('title="Thanh thô từ Bào Tinh hoặc ván thô đã ép trước đó (1 đến 3 loại — gõ kí tự để thấy gợi ý)"'));
+check('PRESS.JS: có hàm gợi ý sau Bào Tinh +5 cụm panel + text thông số (đã export)',
+  pressSrc.includes('function pressBaoTinhHintOf') &&
+  pressSrc.includes('function pressToggleSec') &&
+  pressSrc.includes('function pressSecFilled') &&
+  pressSrc.includes('function pressTechTextOf') &&
+  /pressTechTextOf,/.test(pressSrc));
+check('EVENTS.JS: nối nút cụm + đồng bộ tick + gợi ý Bào Tinh (ủy quyền trong modal)',
+  eventsSrc.includes('pressToggleSec') && eventsSrc.includes('refreshPressSecChecks') &&
+  eventsSrc.includes('refreshPressStickHints'));
+check('STYLES.CSS: khối header icon + tick xanh + gợi ý Bào Tinh + SL cùng dòng',
+  cssHtml.includes('.x2-epv-head-btns') && cssHtml.includes('.press-sec-check') &&
+  cssHtml.includes('.ps-bt-hint') && cssHtml.includes('.press-fp-row') &&
+  cssHtml.includes('.press-sec-panel'));
+
+// ── Gợi ý KÍCH THƯỚC SAU BÀO TINH dưới ô đầu vào ──
+state.xuong2BaoTinhRecords = [
+  { id: 'bt-hint-1', kind: 'tinh', date: '2026-09-20', inSizeKey: '1250×22×7', outSizeKey: '1250×20×5', qtyOk: 1000, qtyErr: 50 }
+];
+const btHint = press.pressBaoTinhHintOf('1250x22x7');
+check('GỢI Ý: chọn 1250x22x7 → hiện "1250×20×5 (Kích thước sau bào tinh) · 1.000 thanh (SL đạt tồn)"',
+  btHint.includes('1250×20×5') && btHint.includes('Kích thước sau bào tinh') &&
+  btHint.includes('1.000') && btHint.includes('SL đạt tồn từ Bào Tinh'));
+check('GỢI Ý: đầu vào không phải kích thước (A1) → không hiện gì', press.pressBaoTinhHintOf('A1') === '');
+check('GỢI Ý: kích thước chưa có lượt Bào Tinh → không hiện gì', press.pressBaoTinhHintOf('999x99x9') === '');
+
+// ── Thông số kỹ thuật + tên hóa chất hiển thị trên THẺ NGÀY ──
+state.pressRecords = [{
+  id: 'pr-tech', date: D, year: 2026, week: '2026-W39',
+  productId: 'prod-1', productName: 'Ván 2000x600x20', fpDim: '2000x600x20',
+  finishedQty: 10, glue: 5, additive: 1,
+  glueName: 'Keo UF', additiveName: 'Bột mì',
+  forceH: 18, forceV: 22, tempC: 120, pressMin: 25,
+  vanTho: [{ vtDim: '2000x600x20', vtQty: 10 }], sticks: [],
+  createdAt: '2026-09-21T02:00:00.000Z'
+}];
+state.pressYearFilter = 'all';
+state.pressWeekFilter = 'all';
+press.renderX2EpVanDayCards();
+const techHtml = String(document.getElementById('x2-epv-day-cards').innerHTML || '');
+check('THẺ NGÀY: hiện Thông số KT (Ép ngang 18 · Ép đứng 22 · 120°C · 25 phút/lượt)',
+  techHtml.includes('Ép ngang 18 Kg/cm²') && techHtml.includes('Ép đứng 22 Kg/cm²') &&
+  techHtml.includes('120°C') && techHtml.includes('25 phút/lượt'));
+check('THẺ NGÀY: hiện TÊN keo + TÊN phụ gia cạnh số kg', techHtml.includes('Keo UF') && techHtml.includes('Bột mì'));
+check('THẺ NGÀY: giờ HC/TC hiển thị lại đầy đủ (không còn stub)', techHtml.includes('h HC') && techHtml.includes('h TC'));
+
+// ── Tick xanh từng cụm + dòng tổng hợp ──
+document.getElementById('press-date').value = '2026-09-21';
+check('TICK: cụm "Ngày" đã điền → pressSecFilled("date") = true', press.pressSecFilled('date') === true);
+check('TICK: cụm "Thông số KT" chưa điền 4 ô → false', press.pressSecFilled('tech') === false);
+press.refreshPressSecChecks();
+check('TICK: dòng tổng hợp ghi "Đã nhập 1/5 cụm"',
+  String(document.getElementById('press-sec-sum').textContent).includes('1/5'));
+check('PANEL: pressToggleSec chạy không lỗi trên stub DOM',
+  (() => { try { press.pressToggleSec('tech'); return true; } catch (e) { return false; } })());
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

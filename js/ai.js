@@ -15,6 +15,7 @@ import { STAGES, state } from './state.js';
 import { escapeHTML, getBatchStageEntryDate, getISOWeekString, showToast } from './utils.js';
 import { attStatusOf } from './hr.js';
 import { initLucide } from './cloud.js';
+import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc chờ Gemini
 
 const AI_KEY_STORAGE = 'bamboo_tracker_ai_key_v1';
 const AI_MODEL_STORAGE = 'bamboo_tracker_ai_model_v1';      // lựa chọn người dùng: 'auto' | tên model cụ thể
@@ -622,23 +623,28 @@ async function runAiAnalysis() {
   const out = document.getElementById('ai-output');
   if (!navigator.onLine) { showToast('Mất mạng — Phân tích AI cần internet (phần "Nhắc Việc" vẫn dùng được offline).', 'error'); return; }
   if (!aiKeyOf()) { syncAiKeyRow(); showToast('Chưa có API key Gemini — dán key miễn phí từ aistudio.google.com rồi bấm "Lưu Key".', 'error'); return; }
+  // Hiện loading "nông dân chặt tre" — khi Gemini trả lời về → tre GÃY
+  showTreLoading('Đang chờ AI trả lời…');
   if (out) out.innerHTML = '<span class="ai-thinking"><i></i><i></i><i></i> Đang suy nghĩ…</span>';
   const btn = document.getElementById('btn-ai-run');
   if (btn) btn.disabled = true;
   // Câu hỏi tự do của người dùng (ô #ai-question) — để trống = phân tích tổng quát
   const qEl = document.getElementById('ai-question');
   const question = String((qEl && qEl.value) || '').trim();
+  let aiOk = false; // false = lỗi → tre KHÔNG gãy, overlay mờ luôn
   try {
     aiLastResult = await callGemini(buildAiPrompt(question));
     if (out) out.innerHTML = (question
       ? `<div class="ai-q-echo">❓ <b>${escapeHTML(question.slice(0, 200))}</b></div>`
       : '') + aiTextToHtml(aiLastResult);
+    aiOk = true;
     showToast(`Đã nhận trả lời từ Gemini${aiLastUsedModel ? ` (model ${aiLastUsedModel})` : ''}${question ? ' — theo yêu cầu bạn gõ' : ''}.`, 'success');
   } catch (err) {
     aiLastResult = '';
     if (out) out.innerHTML = `<span class="ai-error">Lỗi: ${escapeHTML((err && err.message) || String(err))}</span>`;
     showToast('Gọi AI thất bại: ' + ((err && err.message) || err), 'error');
   } finally {
+    hideTreLoading(aiOk); // nội dung OK → tre gãy; lỗi → tre đứng im rồi overlay mờ
     if (btn) btn.disabled = false;
     syncAiKeyRow(); // cập nhật nhãn model đã dùng
     initLucide();

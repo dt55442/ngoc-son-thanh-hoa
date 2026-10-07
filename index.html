@@ -49,6 +49,23 @@
     } catch (e) { /* bỏ qua — môi trường hạn chế */ }
   </script>
 
+  <!-- ═══ ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js) ═══
+       Hiện NGAY từ lúc mở trang (markup ở ĐẦU <body>) — che khoảng trắng khi
+       app khởi động; mọi chỗ CHỜ PHẢN HỒI (AI · xuất Excel · mây · backup)
+       cũng dùng chung overlay này. Khi nội dung TẢI XONG → cây tre GÃY NGUYÊN
+       CÀY đổ sang PHẢI (ngược phía người chặt — người đứng bên trái) rồi overlay
+       mờ dần; LỖI → tre KHÔNG gãy. Nền lỗi watchdog (boot-guard, z-index 99999)
+       vẫn nổi TRÊN overlay này. -->
+  <div class="tre-loading" id="tre-loading-overlay" role="status" aria-live="polite">
+    <div class="tre-loading-card">
+      <!-- CẢNH = SPRITE 18 FRAME 640×360 (icons/loading/tre-sprite.png, 6 cột × 3 dòng)
+           — do make-loading-sprite.cjs ghép từ 3 sheet AI (nông dân · tre · hiệu ứng).
+           CSS styles.css chạy 2 pha: treChop (frame 1–13, lặp) → treFall (14–18, .is-fall). -->
+      <div class="tre-scene" aria-hidden="true"></div>
+      <div class="tre-loading-text" id="tre-loading-text">Đang tải dữ liệu nhà máy…</div>
+    </div>
+  </div>
+
   <!-- Header Application Bar -->
   <header class="app-header">
     <div class="header-container">
@@ -1611,6 +1628,11 @@
                 <button type="button" class="btn btn-outline btn-sm x2-epv-tab active" id="x2-epv-tab-list" data-epv-frame="list" role="tab" aria-selected="true" title="Xem danh sách lượt ép theo thẻ NGÀY (công suất thực tế · người ép · giờ HC/TC)"><i data-lucide="list"></i> Lượt Ép</button>
                 <button type="button" class="btn btn-outline btn-sm x2-epv-tab" id="x2-epv-tab-chart" data-epv-frame="chart" role="tab" aria-selected="false" title="Xem biểu đồ thể tích ván ép theo ngày (nhóm theo tuần)"><i data-lucide="bar-chart-3"></i> Biểu Đồ</button>
               </div>
+              <div class="x2-epv-head-btns" role="group" aria-label="Thao tác nhanh thẻ Ép Ván">
+                <button type="button" class="btn btn-primary btn-icon btn-sm" id="btn-add-press-2" data-perm="press" title="Thêm Lượt Ép — mở form nhập lượt ép ván (ván thô · thanh · keo · phụ gia · thành phẩm)"><i data-lucide="plus"></i></button>
+                <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-add-press-note-2" data-perm="press" title="Ghi Chú Giải Trình — tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt"><i data-lucide="pencil"></i><i data-lucide="alert-triangle" class="x2-epv-note-warn"></i></button>
+                <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-x2-epv-rate" data-perm="press" data-admin-only title="Định mức — mở bảng ĐỊNH MỨC công suất Ép Ván theo tháng (m³/h), nguồn cho cột Hiệu suất của thẻ ngày — CHỈ Quản Trị sửa"><i data-lucide="target"></i></button>
+              </div>
             </div>
           </div>
 
@@ -1618,12 +1640,6 @@
           <div class="x2-epv-frame" id="x2-epv-frame-list">
             <div class="x2-zone-head x2-zone-bar" data-zone="1" title="Thẻ ngày lượt ép: người ép · giờ HC/TC · công suất · thành phẩm — nút Thu gọn để giấu bảng."><span class="x2-zone-no">1</span><i data-lucide="list"></i> Lượt Ép Theo Ngày</div>
             <div class="x2-epv-actions">
-              <button class="btn btn-primary" id="btn-add-press-2" data-perm="press" title="Mở form nhập lượt ép ván (ván thô · thanh · keo · phụ gia · thành phẩm)">
-                <i data-lucide="plus-circle"></i> Thêm Lượt Ép
-              </button>
-              <button class="btn btn-outline" id="btn-add-press-note-2" data-perm="press" title="Tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt">
-                <i data-lucide="alert-triangle"></i> Ghi Chú Giải Trình
-              </button>
               <span class="x2-epv-count" id="x2-epv-day-count"></span>
             </div>
 
@@ -2861,69 +2877,120 @@
           </div>
           <form id="press-record-form" style="padding:20px;">
             <input type="hidden" id="press-id" value="">
-            <div class="form-grid">
-              <!-- Ngày ép (tuần tự động hiển thị cạnh nhãn — bỏ ô tuần thừa) -->
-              <div class="form-group">
-                <label for="press-date">Ngày Ép <span class="required">*</span> <span class="press-week-hint" id="press-week-hint"></span></label>
-                <input type="date" id="press-date" required>
-              </div>
+            <!-- FORM NHẬP LƯỢT ÉP DẠNG 5 CỤM NÚT MỞ PANEL (gọn màn hình): bấm nút mở panel nhập,
+                 nhập xong bấm "Thu gọn" — tick xanh hiện khi cụm đã đủ thông tin. Tooltip giải thích từng ô. -->
+            <div class="press-sec-bar" role="group" aria-label="Các cụm thông tin lượt ép">
+              <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="date" aria-expanded="false" title="Ngày ép — tuần tự động theo ngày"><i data-lucide="calendar"></i> Ngày <span class="press-sec-check" data-press-check="date" hidden><i data-lucide="check-circle-2"></i></span></button>
+              <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="input" aria-expanded="false" title="Đầu vào: thanh thô từ Bào Tinh hoặc ván thô đã ép trước đó (1 đến 3 loại — gõ kí tự để thấy gợi ý)"><i data-lucide="layers"></i> Đầu vào <span class="press-sec-check" data-press-check="input" hidden><i data-lucide="check-circle-2"></i></span></button>
+              <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="output" aria-expanded="false" title="Đầu ra: vùng Ván Thô Tạo Ra (không bắt buộc — 1 đến 3 loại) và Thành Phẩm theo kế hoạch cùng tuần"><i data-lucide="package"></i> Đầu ra <span class="press-sec-check" data-press-check="output" hidden><i data-lucide="check-circle-2"></i></span></button>
+              <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="tech" aria-expanded="false" title="Thông số kỹ thuật: lực ép ngang · lực ép đứng (Kg/cm²) · nhiệt độ (°C) · thời gian ép (phút/lượt)"><i data-lucide="gauge"></i> Thông số KT <span class="press-sec-check" data-press-check="tech" hidden><i data-lucide="check-circle-2"></i></span></button>
+              <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="chem" aria-expanded="false" title="Hóa chất: tên + số lượng keo · phụ gia (tên tự nhớ cho lần sau)"><i data-lucide="flask-conical"></i> Hóa chất <span class="press-sec-check" data-press-check="chem" hidden><i data-lucide="check-circle-2"></i></span></button>
             </div>
+            <div class="press-sec-sum" id="press-sec-sum">Bấm từng nút để nhập — tick xanh hiện khi cụm đã đủ thông tin.</div>
 
             <!-- Gợi ý loại đầu vào: thanh thô (Bào Tinh) + ván thô đã ép trước đó -->
             <datalist id="press-input-type-list"></datalist>
 
-            <!-- Đầu vào: thanh thô từ Bào Tinh hoặc ván thô đã ép trước đó (1..3 loại) -->
-            <div class="form-group col-span-full">
-              <label>Sử Dụng Thanh Thô / Ván Thô Đã Ép (Đầu Vào) <span style="font-size:0.75rem; color:var(--text-muted);">(1 đến 3 loại — gõ kí tự để thấy gợi ý)</span></label>
-              <div id="press-sticks"></div>
-              <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-stick" style="margin-top:6px;">
-                <i data-lucide="plus"></i> Thêm Loại Thanh Thô / Ván Thô
-              </button>
-            </div>
+            <!-- CỤM 1: NGÀY -->
+            <section class="press-sec-panel" data-press-panel="date" hidden>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="press-date">Ngày Ép <span class="required">*</span> <span class="press-week-hint" id="press-week-hint"></span></label>
+                  <input type="date" id="press-date" required title="Ngày ép — tuần tự động theo ngày đã chọn">
+                </div>
+                <div class="form-group" title="Công nhân ép tự động từ phân vị Ép theo Ngày Ép (tab Nhân Sự)">
+                  <label>Công Nhân Ép</label>
+                  <div id="press-workers-auto" class="press-workers-auto muted">Chọn <strong>Ngày Ép</strong> để xem danh sách công nhân tự động.</div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm press-sec-collapse" data-press-sec="date"><i data-lucide="chevron-up"></i> Thu gọn</button>
+            </section>
 
-            <!-- Ván thô tạo ra (1..3 loại) — không nhập thì thể tích ván thô = 0 -->
-            <div class="form-group col-span-full">
-              <label>Ván Thô Tạo Ra <span style="font-size:0.75rem; color:var(--text-muted);">(không bắt buộc — 1 đến 3 loại, chỉ nhập số lượng cho 1 loại)</span></label>
-              <div id="press-lines"></div>
-              <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-line" style="margin-top:6px;">
-                <i data-lucide="plus"></i> Thêm Loại Ván Thô
-              </button>
-            </div>
+            <!-- CỤM 2: ĐẦU VÀO -->
+            <section class="press-sec-panel" data-press-panel="input" hidden>
+              <div class="form-group col-span-full" title="Thanh thô từ Bào Tinh hoặc ván thô đã ép trước đó (1 đến 3 loại — gõ kí tự để thấy gợi ý)">
+                <label>Sử Dụng Thanh Thô / Ván Thô Đã Ép (Đầu Vào)</label>
+                <div id="press-sticks"></div>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-stick" style="margin-top:6px;" title="Thêm 1 loại đầu vào (tối đa 3 loại)">
+                  <i data-lucide="plus"></i> Thêm Loại Thanh Thô / Ván Thô
+                </button>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm press-sec-collapse" data-press-sec="input"><i data-lucide="chevron-up"></i> Thu gọn</button>
+            </section>
 
-            <!-- Thành phẩm & vật tư -->
-            <div class="form-grid">
-              <!-- Thành phẩm — không chọn thì thể tích thành phẩm = 0 -->
-              <div class="form-grid col-span-full">
-                <div class="form-group col-span-full">
-                  <label for="press-product">Thành Phẩm (Theo Kế Hoạch Cùng Tuần) <span style="font-size:0.75rem; color:var(--text-muted);">(không bắt buộc)</span></label>
+            <!-- CỤM 3: ĐẦU RA (ván thô tạo ra + thành phẩm cùng dòng) -->
+            <section class="press-sec-panel" data-press-panel="output" hidden>
+              <div class="form-group col-span-full" title="Ván thô tạo ra (không bắt buộc — 1 đến 3 loại, chỉ nhập số lượng cho 1 loại)">
+                <label>Ván Thô Tạo Ra</label>
+                <div id="press-lines"></div>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-line" style="margin-top:6px;" title="Thêm 1 loại ván thô (tối đa 3 loại)">
+                  <i data-lucide="plus"></i> Thêm Loại Ván Thô
+                </button>
+              </div>
+              <div class="form-grid press-fp-row">
+                <div class="form-group" title="Thành phẩm theo kế hoạch cùng tuần — không chọn thì thể tích thành phẩm = 0">
+                  <label for="press-product">Thành Phẩm (Kế Hoạch Cùng Tuần)</label>
                   <select id="press-product">
                     <option value="">-- Chọn ngày để xem sản phẩm --</option>
                   </select>
                 </div>
-                <div class="form-group">
-                  <label for="press-fp-qty">Số Lượng Thành Phẩm (tấm) <span style="font-size:0.75rem; color:var(--text-muted);">(có thể sửa tay)</span></label>
-                  <input type="number" id="press-fp-qty" min="0" step="1" placeholder="Tự động tính từ ván thô — hoặc nhập tay">
-                  <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
-                    Tự động tính khi có ván thô (quy đổi theo thể tích); không nhập ván thô thì tự nhập số lượng.
-                  </div>
+                <div class="form-group" title="Số lượng thành phẩm — nhập tay (không còn tự quy đổi)">
+                  <label for="press-fp-qty">Số Lượng TP (tấm)</label>
+                  <input type="number" id="press-fp-qty" min="0" step="1" placeholder="Nhập tay">
                 </div>
               </div>
-              <div class="form-group">
-                <label for="press-glue">Số Lượng Keo (kg)</label>
-                <input type="number" id="press-glue" min="0" step="0.01" placeholder="Gợi ý theo định mức">
+              <button type="button" class="btn btn-outline btn-sm press-sec-collapse" data-press-sec="output"><i data-lucide="chevron-up"></i> Thu gọn</button>
+            </section>
+
+            <!-- CỤM 4: THÔNG SỐ KỸ THUẬT -->
+            <section class="press-sec-panel" data-press-panel="tech" hidden>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="press-force-h">Lực Ép Ngang (Kg/cm²)</label>
+                  <input type="number" id="press-force-h" min="0" step="any" placeholder="VD: 18" title="Lực ép ngang của máy ép (Kg/cm²)">
+                </div>
+                <div class="form-group">
+                  <label for="press-force-v">Lực Ép Đứng (Kg/cm²)</label>
+                  <input type="number" id="press-force-v" min="0" step="any" placeholder="VD: 22" title="Lực ép đứng của máy ép (Kg/cm²)">
+                </div>
+                <div class="form-group">
+                  <label for="press-temp">Nhiệt Độ (°C)</label>
+                  <input type="number" id="press-temp" min="0" step="any" placeholder="VD: 120" title="Nhiệt độ ép (độ C)">
+                </div>
+                <div class="form-group">
+                  <label for="press-time">Thời Gian Ép (phút/lượt)</label>
+                  <input type="number" id="press-time" min="0" step="any" placeholder="VD: 25" title="Thời gian ép của 1 lượt (phút)">
+                </div>
               </div>
-              <div class="form-group">
-                <label for="press-additive">Số Lượng Phụ Gia (kg)</label>
-                <input type="number" id="press-additive" min="0" step="0.01" placeholder="Gợi ý theo định mức">
+              <button type="button" class="btn btn-outline btn-sm press-sec-collapse" data-press-sec="tech"><i data-lucide="chevron-up"></i> Thu gọn</button>
+            </section>
+
+            <!-- CỤM 5: HÓA CHẤT -->
+            <section class="press-sec-panel" data-press-panel="chem" hidden>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="press-glue-name">Tên Keo</label>
+                  <input type="text" id="press-glue-name" list="press-glue-name-list" placeholder="VD: Keo UF" title="Tên keo — tự nhớ tên đã điền cho các lần sau, cần đổi thì gõ lại">
+                  <datalist id="press-glue-name-list"></datalist>
+                </div>
+                <div class="form-group">
+                  <label for="press-glue">Số Lượng Keo (kg)</label>
+                  <input type="number" id="press-glue" min="0" step="0.01" placeholder="Gợi ý theo định mức" title="Số lượng keo (kg) — gợi ý theo định mức × số lượng thành phẩm, sửa tay được">
+                </div>
+                <div class="form-group">
+                  <label for="press-additive-name">Tên Phụ Gia</label>
+                  <input type="text" id="press-additive-name" list="press-additive-name-list" placeholder="VD: Bột mì" title="Tên phụ gia — tự nhớ tên đã điền cho các lần sau, cần đổi thì gõ lại">
+                  <datalist id="press-additive-name-list"></datalist>
+                </div>
+                <div class="form-group">
+                  <label for="press-additive">Số Lượng Phụ Gia (kg)</label>
+                  <input type="number" id="press-additive" min="0" step="0.01" placeholder="Gợi ý theo định mức" title="Số lượng phụ gia (kg) — gợi ý theo định mức × số lượng thành phẩm, sửa tay được">
+                </div>
               </div>
-              <div class="form-group col-span-full">
-                <label>Công Nhân Ép <span style="font-size:0.72rem; color:var(--text-muted); font-weight:400;">(tự động từ phân vị Ép theo Ngày Ép — tab Nhân Sự)</span></label>
-                <div id="press-workers-auto" class="press-workers-auto muted">Chọn <strong>Ngày Ép</strong> để xem danh sách công nhân tự động.</div>
-              </div>
-            </div>
+              <button type="button" class="btn btn-outline btn-sm press-sec-collapse" data-press-sec="chem"><i data-lucide="chevron-up"></i> Thu gọn</button>
+            </section>
 
             <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-              <button type="button" class="btn btn-outline" id="btn-x2-epv-rate" data-perm="press" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Ép Ván theo tháng (m³/h) — nguồn cho cột Hiệu suất của thẻ ngày — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
               <button type="button" class="btn btn-outline" id="btn-cancel-press">Hủy Bỏ</button>
               <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lượt Ép</button>
             </div>

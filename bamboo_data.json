@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-07T09:03:39.468Z",
+  "savedAt": "2026-10-08T06:54:37.996Z",
   "batches": [
     {
       "id": "batch-1791362463716",
@@ -9646,6 +9646,38 @@
       "note": "",
       "images": [],
       "createdAt": "2026-10-07T02:37:25.162Z"
+    },
+    {
+      "id": "mat-1791427063274-mduab",
+      "date": "2026-10-07",
+      "week": "2026-W41",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Khánh Huế",
+      "location": "xuong-2",
+      "inputIndex": 18120,
+      "outputIndex": 8170,
+      "weight": 9950,
+      "unitPrice": 1600,
+      "totalAmount": 15920000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-08T02:37:43.274Z"
+    },
+    {
+      "id": "mat-1791427090384-hkl7f",
+      "date": "2026-10-07",
+      "week": "2026-W41",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Tế",
+      "location": "xuong-2",
+      "inputIndex": 21300,
+      "outputIndex": 8450,
+      "weight": 12850,
+      "unitPrice": 1600,
+      "totalAmount": 20560000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-08T02:38:10.384Z"
     }
   ],
   "xuong2CutRecords": [
@@ -10081,6 +10113,69 @@
       "week": "2026-W41",
       "klCuiDot": 1390,
       "cutHoursTC": 0
+    },
+    {
+      "cutHours": 36,
+      "code": "",
+      "createdAt": "2026-10-08T06:22:39.091Z",
+      "inputWeight": 11020,
+      "materialType": "Luồng cây xô",
+      "klCayLoai": 0,
+      "supplier": "Nhà Khoa Tam Lư",
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "note": "",
+      "cutHoursHC": 36,
+      "week": "2026-W41",
+      "cutHoursTC": 0,
+      "id": "x2cut-1791440559091-ym3ps",
+      "klCuiDot": 1560,
+      "klOngLuong": 3799,
+      "date": "2026-10-07",
+      "materialId": "mat-1791018753639-gtmep",
+      "klNgonOngLoai": 5661,
+      "cutter": "Mạc Văn Hòa, Vi Thị Nghị, Lục Văn Tuấn, Ngân Thi Thích"
+    },
+    {
+      "klCayLoai": 0,
+      "cutHoursTC": 0,
+      "supplier": "Nhà Hà Sơn Thủy",
+      "materialType": "Luồng cây xô",
+      "cutHoursHC": 36,
+      "cutHours": 36,
+      "inputWeight": 11880,
+      "code": "",
+      "createdAt": "2026-10-08T06:23:45.450Z",
+      "materialId": "mat-1791256908400-3oczy",
+      "klOngLuong": 3858,
+      "id": "x2cut-1791440625450-9k6g4",
+      "date": "2026-10-07",
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "note": "",
+      "cutter": "Mạc Văn Hòa, Vi Thị Nghị, Lục Văn Tuấn, Ngân Thi Thích",
+      "week": "2026-W41",
+      "klNgonOngLoai": 6299,
+      "klCuiDot": 1723
+    },
+    {
+      "cutter": "Mạc Văn Hòa, Vi Thị Nghị, Lục Văn Tuấn, Ngân Thi Thích",
+      "klCayLoai": 0,
+      "cutHours": 36,
+      "cutHoursTC": 0,
+      "code": "",
+      "cutHoursHC": 36,
+      "klNgonOngLoai": 0,
+      "createdAt": "2026-10-08T06:24:07.401Z",
+      "materialId": "mat-1791340593477-uwp49",
+      "supplier": "Nhà Tâm",
+      "klOngLuong": 2516,
+      "inputWeight": 2530,
+      "week": "2026-W41",
+      "klCuiDot": 14,
+      "note": "",
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "id": "x2cut-1791440647401-1t1n1",
+      "date": "2026-10-07",
+      "materialType": "Luồng ống"
     }
   ],
   "xuong2BoluongRecords": [
@@ -10137,20 +10232,37 @@
     },
     {
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "inputWeight": 12050,
-      "week": "2026-W41",
-      "createdAt": "2026-10-07T03:44:43.049Z",
-      "materialType": "Luồng cây xô",
       "workHours": 27,
-      "worker": "Vi Văn Tôn, Hà Văn Ước, Vi Văn Nhêu",
-      "qty": 12050,
-      "code": "",
-      "date": "2026-10-07",
-      "id": "x2blg-1791344683049-ns2kg",
-      "materialId": "mat-1791256868151-cwl2m",
-      "workHoursTC": 0,
+      "materialId": "mat-1791018753639-gtmep",
+      "createdAt": "2026-10-08T01:34:42.924Z",
+      "id": "x2blg-1791423282924-2t6bp",
+      "inputWeight": 11020,
+      "week": "2026-W41",
+      "qty": 11020,
       "workHoursHC": 27,
-      "supplier": "Nhà Tế"
+      "workHoursTC": 0,
+      "materialType": "Luồng cây xô",
+      "date": "2026-10-07",
+      "worker": "Vi Văn Tôn, Hà Văn Ước, Vi Văn Nhêu",
+      "code": "",
+      "supplier": "Nhà Khoa Tam Lư"
+    },
+    {
+      "supplier": "Nhà Tế",
+      "materialType": "Luồng cây xô",
+      "qty": 11930,
+      "worker": "Vi Văn Tôn, Hà Văn Ước, Vi Văn Nhêu",
+      "workHoursHC": 27,
+      "week": "2026-W41",
+      "workHoursTC": 0,
+      "date": "2026-10-07",
+      "materialId": "mat-1791256938257-590sn",
+      "workHours": 27,
+      "inputWeight": 11930,
+      "createdAt": "2026-10-08T01:35:37.257Z",
+      "id": "x2blg-1791423337257-1mj0n",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "code": ""
     }
   ],
   "xuong1CatOngRecords": [],
@@ -10571,6 +10683,66 @@
       "createdAt": "2026-10-07T03:54:01.688Z",
       "workTime": "",
       "worker": ""
+    },
+    {
+      "workHours": 9,
+      "inputOng": 2516,
+      "supplier": "Nhà Tâm",
+      "klOngLoai": 16,
+      "materialType": "Luồng ống",
+      "week": "2026-W41",
+      "workHoursTC": 0,
+      "cutDate": "2026-10-07",
+      "cutId": "x2cut-1791440647401-1t1n1",
+      "materialId": "mat-1791340593477-uwp49",
+      "date": "2026-10-07",
+      "createdAt": "2026-10-08T06:24:57.109Z",
+      "lotOng": 2516,
+      "workHoursHC": 9,
+      "workTime": "07:00 → hết ca",
+      "id": "x2bo-1791440697109-z0sm7",
+      "klOngBo": 2500,
+      "worker": "Vi Văn Thiệu"
+    },
+    {
+      "workTime": "07:00 → hết ca",
+      "materialType": "Luồng cây xô",
+      "id": "x2bo-1791440709308-v4616",
+      "createdAt": "2026-10-08T06:25:09.308Z",
+      "lotOng": 3858,
+      "cutId": "x2cut-1791440625450-9k6g4",
+      "workHoursHC": 9,
+      "klOngLoai": 125,
+      "klOngBo": 3733,
+      "workHours": 9,
+      "inputOng": 3858,
+      "materialId": "mat-1791256908400-3oczy",
+      "date": "2026-10-07",
+      "supplier": "Nhà Hà Sơn Thủy",
+      "week": "2026-W41",
+      "worker": "Vi Văn Thiệu",
+      "workHoursTC": 0,
+      "cutDate": "2026-10-07"
+    },
+    {
+      "id": "x2bo-1791440716017-mano0",
+      "workHoursHC": 9,
+      "klOngBo": 3719,
+      "klOngLoai": 80,
+      "workTime": "07:00 → hết ca",
+      "workHours": 9,
+      "date": "2026-10-07",
+      "week": "2026-W41",
+      "cutId": "x2cut-1791440559091-ym3ps",
+      "worker": "Vi Văn Thiệu",
+      "createdAt": "2026-10-08T06:25:16.017Z",
+      "inputOng": 3799,
+      "supplier": "Nhà Khoa Tam Lư",
+      "cutDate": "2026-10-07",
+      "workHoursTC": 0,
+      "lotOng": 3799,
+      "materialType": "Luồng cây xô",
+      "materialId": "mat-1791018753639-gtmep"
     }
   ],
   "xuong2BaoThoRecords": [
@@ -10983,6 +11155,119 @@
       "cutDate": "2026-10-05",
       "week": "2026-W41",
       "boOngId": "x2bo-1791272738864-be9xg"
+    },
+    {
+      "date": "2026-10-07",
+      "workHoursHC": 36,
+      "week": "2026-W41",
+      "boOngId": "x2bo-1791440716017-mano0",
+      "workHours": 36,
+      "daiText": "1250",
+      "cutDate": "2026-10-07",
+      "materialId": "mat-1791018753639-gtmep",
+      "rongs": [
+        18,
+        24
+      ],
+      "boDate": "2026-10-07",
+      "materialType": "Luồng cây xô",
+      "dais": [
+        1250
+      ],
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "rongText": "18,24",
+      "boOngIds": [
+        "x2bo-1791440716017-mano0"
+      ],
+      "createdAt": "2026-10-08T06:29:35.624Z",
+      "thicks": [
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "klOngBo": 3719,
+      "dayText": "7,8,9,10,11",
+      "supplier": "Nhà Khoa Tam Lư",
+      "workHoursTC": 0,
+      "worker": "Vi Văn Hem, Hà Văn Hùng A, Hà Văn Quân, Phạm Trung Kiên",
+      "id": "x2bt-1791440975624-z70iz"
+    },
+    {
+      "boDate": "2026-10-07",
+      "dayText": "7,8,9,10,11",
+      "workHours": 36,
+      "klOngBo": 3733,
+      "workHoursTC": 0,
+      "rongs": [
+        18,
+        24
+      ],
+      "materialType": "Luồng cây xô",
+      "id": "x2bt-1791441013829-26mge",
+      "createdAt": "2026-10-08T06:30:13.829Z",
+      "week": "2026-W41",
+      "worker": "Vi Văn Hem, Hà Văn Hùng A, Hà Văn Quân, Phạm Trung Kiên",
+      "supplier": "Nhà Hà Sơn Thủy",
+      "date": "2026-10-07",
+      "workHoursHC": 36,
+      "boOngId": "x2bo-1791440709308-v4616",
+      "thicks": [
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "cutDate": "2026-10-07",
+      "daiText": "1250",
+      "materialId": "mat-1791256908400-3oczy",
+      "dais": [
+        1250
+      ],
+      "boOngIds": [
+        "x2bo-1791440709308-v4616"
+      ],
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "rongText": "18,24"
+    },
+    {
+      "dayText": ",8,9,10,11",
+      "thicks": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "workHoursHC": 36,
+      "rongs": [
+        18,
+        24
+      ],
+      "workHours": 36,
+      "klOngBo": 2500,
+      "worker": "Vi Văn Hem, Hà Văn Hùng A, Hà Văn Quân, Phạm Trung Kiên",
+      "date": "2026-10-07",
+      "materialType": "Luồng ống",
+      "week": "2026-W41",
+      "supplier": "Nhà Tâm",
+      "materialId": "mat-1791340593477-uwp49",
+      "boDate": "2026-10-07",
+      "id": "x2bt-1791441036184-kd3vj",
+      "workHoursTC": 0,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "createdAt": "2026-10-08T06:30:36.184Z",
+      "rongText": "18,24",
+      "dais": [
+        1250
+      ],
+      "boOngId": "x2bo-1791440697109-z0sm7",
+      "boOngIds": [
+        "x2bo-1791440697109-z0sm7"
+      ],
+      "cutDate": "2026-10-07",
+      "daiText": "1250"
     }
   ],
   "xuong2ChonNanThoRecords": [
@@ -15867,6 +16152,566 @@
         11
       ],
       "date": "2026-10-06"
+    },
+    {
+      "workHours": 72,
+      "boDate": "2026-10-07",
+      "btDate": "2026-10-07",
+      "volume": 0.0851,
+      "workHoursTC": 0,
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "week": "2026-W41",
+      "date": "2026-10-07",
+      "quantity": 420,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "cls": "A",
+      "id": "x2cn-1791441102159-h483g",
+      "createdAt": "2026-10-08T06:31:42.159Z",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "materialId": "mat-1791340593477-uwp49",
+      "supplier": "Nhà Tâm",
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "external": false,
+      "unitVol": 0.0002025,
+      "workHoursHC": 72,
+      "materialType": "Luồng ống",
+      "sizeKey": "1250×18×9"
+    },
+    {
+      "date": "2026-10-07",
+      "week": "2026-W41",
+      "volume": 0.1152,
+      "sizeKey": "1250×18×9",
+      "btDate": "2026-10-07",
+      "workHoursTC": 0,
+      "createdAt": "2026-10-08T06:31:51.319Z",
+      "materialId": "mat-1791340593477-uwp49",
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "boDate": "2026-10-07",
+      "unitVol": 0.0002025,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "materialType": "Luồng ống",
+      "quantity": 569,
+      "cls": "A1",
+      "workHoursHC": 72,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "external": false,
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "id": "x2cn-1791441111319-fpkzf",
+      "workHours": 72
+    },
+    {
+      "workHours": 72,
+      "cls": "B",
+      "boDate": "2026-10-07",
+      "btDate": "2026-10-07",
+      "volume": 0.0142,
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "week": "2026-W41",
+      "date": "2026-10-07",
+      "workHoursTC": 0,
+      "quantity": 70,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "materialType": "Luồng ống",
+      "workHoursHC": 72,
+      "createdAt": "2026-10-08T06:32:01.158Z",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "id": "x2cn-1791441121158-d31zl",
+      "supplier": "Nhà Tâm",
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "materialId": "mat-1791340593477-uwp49",
+      "external": false,
+      "unitVol": 0.0002025,
+      "sizeKey": "1250×18×9"
+    },
+    {
+      "sizeKey": "1250×18×10",
+      "id": "x2cn-1791441138123-jjrfp",
+      "materialId": "mat-1791340593477-uwp49",
+      "external": false,
+      "unitVol": 0.000225,
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "cls": "A",
+      "boDate": "2026-10-07",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "btDate": "2026-10-07",
+      "createdAt": "2026-10-08T06:32:18.123Z",
+      "quantity": 560,
+      "volume": 0.126,
+      "workHoursTC": 0,
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "workHoursHC": 72,
+      "materialType": "Luồng ống",
+      "workHours": 72,
+      "week": "2026-W41",
+      "date": "2026-10-07",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn"
+    },
+    {
+      "sizeKey": "1250×18×10",
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "unitVol": 0.000225,
+      "workHours": 72,
+      "workHoursTC": 0,
+      "boDate": "2026-10-07",
+      "week": "2026-W41",
+      "btDate": "2026-10-07",
+      "date": "2026-10-07",
+      "volume": 0.0788,
+      "materialType": "Luồng ống",
+      "createdAt": "2026-10-08T06:32:28.243Z",
+      "materialId": "mat-1791340593477-uwp49",
+      "id": "x2cn-1791441148243-rfrg0",
+      "external": false,
+      "workHoursHC": 72,
+      "supplier": "Nhà Tâm",
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "cls": "A1",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "quantity": 350,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn"
+    },
+    {
+      "materialId": "mat-1791340593477-uwp49",
+      "createdAt": "2026-10-08T06:32:37.133Z",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "id": "x2cn-1791441157133-bfgtc",
+      "workHoursTC": 0,
+      "materialType": "Luồng ống",
+      "quantity": 210,
+      "workHoursHC": 72,
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "boDate": "2026-10-07",
+      "workHours": 72,
+      "btDate": "2026-10-07",
+      "volume": 0.0473,
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "external": false,
+      "unitVol": 0.000225,
+      "date": "2026-10-07",
+      "cls": "B",
+      "sizeKey": "1250×18×10",
+      "week": "2026-W41"
+    },
+    {
+      "unitVol": 0.000225,
+      "btDate": "2026-10-07",
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "id": "x2cn-1791441164044-08e5h",
+      "volume": 0.0023,
+      "sizeKey": "1250×18×10",
+      "materialId": "mat-1791340593477-uwp49",
+      "boDate": "2026-10-07",
+      "createdAt": "2026-10-08T06:32:44.045Z",
+      "cls": "reject",
+      "materialType": "Luồng ống",
+      "week": "2026-W41",
+      "workHoursHC": 72,
+      "date": "2026-10-07",
+      "workHoursTC": 0,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "external": false,
+      "quantity": 10,
+      "workHours": 72,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca"
+    },
+    {
+      "workHoursHC": 72,
+      "materialId": "mat-1791340593477-uwp49",
+      "createdAt": "2026-10-08T06:33:02.413Z",
+      "dims": [
+        1250,
+        18,
+        11
+      ],
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "week": "2026-W41",
+      "date": "2026-10-07",
+      "quantity": 560,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "boDate": "2026-10-07",
+      "id": "x2cn-1791441182413-oyp2d",
+      "workHours": 72,
+      "materialType": "Luồng ống",
+      "btDate": "2026-10-07",
+      "volume": 0.1386,
+      "supplier": "Nhà Tâm",
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "unitVol": 0.0002475,
+      "external": false,
+      "cls": "A",
+      "workHoursTC": 0,
+      "sizeKey": "1250×18×11"
+    },
+    {
+      "btDate": "2026-10-07",
+      "dims": [
+        1250,
+        18,
+        11
+      ],
+      "id": "x2cn-1791441193972-l308v",
+      "volume": 0.0866,
+      "quantity": 350,
+      "boDate": "2026-10-07",
+      "workHours": 72,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "cls": "A1",
+      "week": "2026-W41",
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "date": "2026-10-07",
+      "workHoursTC": 0,
+      "external": false,
+      "createdAt": "2026-10-08T06:33:13.972Z",
+      "unitVol": 0.0002475,
+      "materialId": "mat-1791340593477-uwp49",
+      "workHoursHC": 72,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "sizeKey": "1250×18×11",
+      "materialType": "Luồng ống"
+    },
+    {
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "workHoursTC": 0,
+      "materialType": "Luồng ống",
+      "id": "x2cn-1791441201836-8qp7w",
+      "createdAt": "2026-10-08T06:33:21.836Z",
+      "unitVol": 0.0002475,
+      "sizeKey": "1250×18×11",
+      "quantity": 140,
+      "volume": 0.0347,
+      "workHours": 72,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "btDate": "2026-10-07",
+      "boDate": "2026-10-07",
+      "week": "2026-W41",
+      "date": "2026-10-07",
+      "supplier": "Nhà Tâm",
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "cls": "B",
+      "external": false,
+      "dims": [
+        1250,
+        18,
+        11
+      ],
+      "workHoursHC": 72,
+      "materialId": "mat-1791340593477-uwp49"
+    },
+    {
+      "workHoursTC": 0,
+      "materialId": "mat-1791340593477-uwp49",
+      "sizeKey": "1250×18×11",
+      "dims": [
+        1250,
+        18,
+        11
+      ],
+      "cls": "reject",
+      "unitVol": 0.0002475,
+      "workHours": 72,
+      "date": "2026-10-07",
+      "week": "2026-W41",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "external": false,
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "materialType": "Luồng ống",
+      "boDate": "2026-10-07",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "btDate": "2026-10-07",
+      "quantity": 5,
+      "volume": 0.0012,
+      "workHoursHC": 72,
+      "id": "x2cn-1791441209982-s6fgf",
+      "createdAt": "2026-10-08T06:33:29.982Z"
+    },
+    {
+      "workHours": 72,
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "id": "x2cn-1791441227812-mzhte",
+      "materialType": "Luồng ống",
+      "workHoursHC": 72,
+      "sizeKey": "1250×24×8",
+      "week": "2026-W41",
+      "unitVol": 0.00024,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "date": "2026-10-07",
+      "external": false,
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "materialId": "mat-1791340593477-uwp49",
+      "workHoursTC": 0,
+      "createdAt": "2026-10-08T06:33:47.812Z",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "boDate": "2026-10-07",
+      "quantity": 420,
+      "cls": "A",
+      "btDate": "2026-10-07",
+      "volume": 0.1008
+    },
+    {
+      "unitVol": 0.00024,
+      "volume": 0.0672,
+      "btDate": "2026-10-07",
+      "week": "2026-W41",
+      "boDate": "2026-10-07",
+      "sizeKey": "1250×24×8",
+      "date": "2026-10-07",
+      "cls": "A1",
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "createdAt": "2026-10-08T06:33:57.542Z",
+      "workHoursTC": 0,
+      "workHoursHC": 72,
+      "id": "x2cn-1791441237542-sh4e3",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "materialId": "mat-1791340593477-uwp49",
+      "quantity": 280,
+      "materialType": "Luồng ống",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 72,
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "external": false
+    },
+    {
+      "workHoursHC": 72,
+      "id": "x2cn-1791441248928-5bz3l",
+      "week": "2026-W41",
+      "materialId": "mat-1791340593477-uwp49",
+      "date": "2026-10-07",
+      "volume": 0.0168,
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "btDate": "2026-10-07",
+      "boDate": "2026-10-07",
+      "materialType": "Luồng ống",
+      "createdAt": "2026-10-08T06:34:08.928Z",
+      "sizeKey": "1250×24×8",
+      "external": false,
+      "unitVol": 0.00024,
+      "baothoId": "x2bt-1791441036184-kd3vj",
+      "supplier": "Nhà Tâm",
+      "cls": "reject",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "workHours": 72,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "quantity": 70,
+      "workHoursTC": 0
+    },
+    {
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 72,
+      "quantity": 1092,
+      "materialId": "mat-1791256908400-3oczy",
+      "external": false,
+      "workHoursHC": 72,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "supplier": "Nhà Hà Sơn Thủy",
+      "baothoId": "x2bt-1791441013829-26mge",
+      "workHoursTC": 0,
+      "materialType": "Luồng cây xô",
+      "sizeKey": "1250×18×7",
+      "createdAt": "2026-10-08T06:35:13.851Z",
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "cls": "A",
+      "unitVol": 0.0001575,
+      "date": "2026-10-07",
+      "id": "x2cn-1791441313851-dodaq",
+      "week": "2026-W41",
+      "boDate": "2026-10-07",
+      "btDate": "2026-10-07",
+      "volume": 0.172
+    },
+    {
+      "sizeKey": "1250×18×7",
+      "materialId": "mat-1791256908400-3oczy",
+      "unitVol": 0.0001575,
+      "workHoursHC": 72,
+      "volume": 0.2646,
+      "btDate": "2026-10-07",
+      "workHours": 72,
+      "boDate": "2026-10-07",
+      "id": "x2cn-1791441517819-wavji",
+      "cls": "A1",
+      "date": "2026-10-07",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHoursTC": 0,
+      "week": "2026-W41",
+      "quantity": 1680,
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "materialType": "Luồng cây xô",
+      "createdAt": "2026-10-08T06:38:37.819Z",
+      "external": false,
+      "supplier": "Nhà Hà Sơn Thủy",
+      "baothoId": "x2bt-1791441013829-26mge"
+    },
+    {
+      "materialType": "Luồng cây xô",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "quantity": 672,
+      "materialId": "mat-1791256908400-3oczy",
+      "external": false,
+      "sizeKey": "1250×18×7",
+      "id": "x2cn-1791441645146-n8poy",
+      "baothoId": "x2bt-1791441013829-26mge",
+      "supplier": "Nhà Hà Sơn Thủy",
+      "workHours": 72,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "unitVol": 0.0001575,
+      "workHoursTC": 0,
+      "workHoursHC": 72,
+      "date": "2026-10-07",
+      "week": "2026-W41",
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "boDate": "2026-10-07",
+      "createdAt": "2026-10-08T06:40:45.146Z",
+      "cls": "B",
+      "volume": 0.1058,
+      "btDate": "2026-10-07"
+    },
+    {
+      "id": "x2cn-1791441666435-u952m",
+      "sizeKey": "1250×18×7",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "quantity": 10,
+      "unitVol": 0.0001575,
+      "boDate": "2026-10-07",
+      "cls": "reject",
+      "external": false,
+      "materialType": "Luồng cây xô",
+      "workHoursHC": 72,
+      "materialId": "mat-1791256908400-3oczy",
+      "createdAt": "2026-10-08T06:41:06.435Z",
+      "volume": 0.0016,
+      "baothoId": "x2bt-1791441013829-26mge",
+      "supplier": "Nhà Hà Sơn Thủy",
+      "btDate": "2026-10-07",
+      "workHoursTC": 0,
+      "week": "2026-W41",
+      "date": "2026-10-07",
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "workHours": 72,
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn"
+    },
+    {
+      "external": false,
+      "workHoursTC": 0,
+      "baothoId": "x2bt-1791441013829-26mge",
+      "supplier": "Nhà Hà Sơn Thủy",
+      "createdAt": "2026-10-08T06:41:36.871Z",
+      "volume": 0.1134,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "btDate": "2026-10-07",
+      "quantity": 560,
+      "boDate": "2026-10-07",
+      "week": "2026-W41",
+      "cls": "A",
+      "date": "2026-10-07",
+      "workHours": 72,
+      "id": "x2cn-1791441696871-3fnqi",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "sizeKey": "1250×18×9",
+      "materialId": "mat-1791256908400-3oczy",
+      "materialType": "Luồng cây xô",
+      "unitVol": 0.0002025,
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "workHoursHC": 72
+    },
+    {
+      "baothoId": "x2bt-1791441013829-26mge",
+      "supplier": "Nhà Hà Sơn Thủy",
+      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
+      "external": false,
+      "id": "x2cn-1791441718126-usasw",
+      "createdAt": "2026-10-08T06:41:58.127Z",
+      "quantity": 280,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "materialType": "Luồng cây xô",
+      "cls": "A1",
+      "workHoursTC": 0,
+      "workHours": 72,
+      "volume": 0.0567,
+      "workHoursHC": 72,
+      "materialId": "mat-1791256908400-3oczy",
+      "btDate": "2026-10-07",
+      "boDate": "2026-10-07",
+      "week": "2026-W41",
+      "date": "2026-10-07",
+      "unitVol": 0.0002025,
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "sizeKey": "1250×18×9"
     }
   ],
   "xuong2BulligRecords": [
@@ -16628,139 +17473,6 @@
   "x2StageIncidents": {},
   "xuong2BaoTinhRecords": [
     {
-      "sources": [
-        {
-          "location": "S1",
-          "qty": 1694,
-          "dims": [
-            1250,
-            22,
-            7
-          ],
-          "batchId": "batch-1790761703423",
-          "code": "260930-05"
-        },
-        {
-          "location": "S2",
-          "batchId": "batch-1790772258917",
-          "code": "260930-72",
-          "qty": 1932,
-          "dims": [
-            1250,
-            22,
-            7
-          ]
-        },
-        {
-          "qty": 1932,
-          "location": "S2",
-          "batchId": "batch-1790772182040",
-          "dims": [
-            1250,
-            22,
-            7
-          ],
-          "code": "260930-70"
-        },
-        {
-          "batchId": "batch-1790771076131",
-          "code": "260930-38",
-          "dims": [
-            1250,
-            22,
-            7
-          ],
-          "location": "S1",
-          "qty": 1932
-        }
-      ],
-      "outSizeKey": "1250×20×5",
-      "kind": "tinh",
-      "id": "x2btinh-1790912222561-0-78ipw",
-      "qtyOk": 3050,
-      "defectKey": "",
-      "worker": "",
-      "batchId": "batch-1790761703423",
-      "batchDims": [
-        1250,
-        22,
-        7
-      ],
-      "outDims": [
-        1250,
-        20,
-        5
-      ],
-      "date": "2026-10-01",
-      "batchLocation": "S1",
-      "volumeOk": 0.3813,
-      "inDims": [],
-      "unitVol": 0.000125,
-      "createdAt": "2026-10-02T03:37:02.561Z",
-      "defectDims": [],
-      "workHoursHC": 0,
-      "inQty": 7490,
-      "inSizeKey": "1250×22×7",
-      "qtyErr": 4440,
-      "workTime": "",
-      "workHoursTC": 0,
-      "batchCode": "260930-05",
-      "workHours": 0,
-      "batchQty": 1694,
-      "manualRowId": "",
-      "week": "2026-W40"
-    },
-    {
-      "outSizeKey": "1250×20×7",
-      "qtyOk": 214,
-      "batchDims": [
-        1250,
-        22,
-        9
-      ],
-      "volumeOk": 0.0375,
-      "date": "2026-10-01",
-      "workHoursHC": 0,
-      "createdAt": "2026-10-02T03:37:02.561Z",
-      "qtyErr": 206,
-      "kind": "tinh",
-      "manualRowId": "",
-      "batchLocation": "S2",
-      "defectDims": [],
-      "defectKey": "",
-      "workHoursTC": 0,
-      "inQty": 420,
-      "workTime": "",
-      "workHours": 0,
-      "sources": [
-        {
-          "batchId": "batch-1790772690097",
-          "location": "S2",
-          "code": "260930-82",
-          "qty": 420,
-          "dims": [
-            1250,
-            22,
-            9
-          ]
-        }
-      ],
-      "batchQty": 420,
-      "batchCode": "260930-82",
-      "week": "2026-W40",
-      "batchId": "batch-1790772690097",
-      "inDims": [],
-      "worker": "",
-      "id": "x2btinh-1790912222561-2-892z2",
-      "outDims": [
-        1250,
-        20,
-        7
-      ],
-      "inSizeKey": "1250×22×9",
-      "unitVol": 0.000175
-    },
-    {
       "manualRowId": "",
       "week": "2026-W40",
       "volumeOk": 0,
@@ -16839,91 +17551,6 @@
       "createdAt": "2026-10-03T01:34:13.237Z"
     },
     {
-      "id": "x2btinh-1791251232731-0-lnwrm",
-      "date": "2026-10-02",
-      "week": "2026-W40",
-      "kind": "tinh",
-      "sources": [
-        {
-          "batchId": "batch-1791270627206",
-          "code": "261001-01",
-          "location": "S2",
-          "dims": [
-            1250,
-            22,
-            7
-          ],
-          "qty": 1932
-        },
-        {
-          "batchId": "batch-1790817168711",
-          "code": "260928-10",
-          "location": "LS6",
-          "dims": [
-            1250,
-            22,
-            7
-          ],
-          "qty": 2016
-        },
-        {
-          "batchId": "batch-1790817123016",
-          "code": "260928-08",
-          "location": "LS6",
-          "dims": [
-            1250,
-            22,
-            7
-          ],
-          "qty": 1008
-        },
-        {
-          "batchId": "batch-1790817059696",
-          "code": "260928-06",
-          "location": "LS6",
-          "dims": [
-            1250,
-            22,
-            7
-          ],
-          "qty": 1330
-        }
-      ],
-      "batchId": "batch-1791270627206",
-      "batchCode": "261001-01",
-      "batchLocation": "S2",
-      "batchDims": [
-        1250,
-        22,
-        7
-      ],
-      "batchQty": 1932,
-      "defectKey": "",
-      "defectDims": [],
-      "inSource": "",
-      "inDims": [],
-      "manualRowId": "",
-      "inQty": 6286,
-      "inSizeKey": "1250×22×7",
-      "outDims": [
-        1250,
-        20,
-        5
-      ],
-      "outSizeKey": "1250×20×5",
-      "unitVol": 0.000125,
-      "qtyOk": 1719,
-      "qtyErr": 4567,
-      "volumeOk": 0.2149,
-      "worker": "Hà Thị Đàm, Vi Thị Chánh, Hà Thị Thuyến, Lương Thị Mừng, Lữ Thị Thỏa",
-      "workTime": "07:00–11:30, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 13:30 → hết ca",
-      "workHours": 35.5,
-      "workHoursHC": 35.5,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-06T01:47:12.731Z",
-      "updatedAt": "2026-10-06T07:11:04.494Z"
-    },
-    {
       "batchCode": "261002-40",
       "inSizeKey": "1250×24×10",
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
@@ -16984,327 +17611,6 @@
       "date": "2026-10-05",
       "qtyOk": 1700,
       "inDims": []
-    },
-    {
-      "id": "x2btinh-1791270829077-0-haee3",
-      "date": "2026-10-02",
-      "week": "2026-W40",
-      "kind": "tinh",
-      "sources": [
-        {
-          "batchId": "batch-1790772040255",
-          "code": "260930-67",
-          "location": "S2",
-          "dims": [
-            1250,
-            22,
-            11
-          ],
-          "qty": 1610
-        },
-        {
-          "batchId": "batch-1790772004907",
-          "code": "260930-65",
-          "location": "S2",
-          "dims": [
-            1250,
-            22,
-            11
-          ],
-          "qty": 1400
-        },
-        {
-          "batchId": "batch-1790771953511",
-          "code": "260930-63",
-          "location": "S2",
-          "dims": [
-            1250,
-            22,
-            11
-          ],
-          "qty": 1750
-        },
-        {
-          "batchId": "batch-1790817144865",
-          "code": "260928-09",
-          "location": "LS6",
-          "dims": [
-            1250,
-            22,
-            11
-          ],
-          "qty": 1610
-        },
-        {
-          "batchId": "batch-1790817091297",
-          "code": "260928-07",
-          "location": "LS6",
-          "dims": [
-            1250,
-            22,
-            11
-          ],
-          "qty": 182
-        }
-      ],
-      "batchId": "batch-1790772040255",
-      "batchCode": "260930-67",
-      "batchLocation": "S2",
-      "batchDims": [
-        1250,
-        22,
-        11
-      ],
-      "batchQty": 1610,
-      "defectKey": "",
-      "defectDims": [],
-      "inSource": "",
-      "inDims": [],
-      "manualRowId": "",
-      "inQty": 6552,
-      "inSizeKey": "1250×22×11",
-      "outDims": [
-        1250,
-        20,
-        9
-      ],
-      "outSizeKey": "1250×20×9",
-      "unitVol": 0.000225,
-      "qtyOk": 2450,
-      "qtyErr": 4102,
-      "volumeOk": 0.5513,
-      "worker": "Hà Thị Đàm, Vi Thị Chánh, Hà Thị Thuyến, Lương Thị Mừng, Lữ Thị Thỏa",
-      "workTime": "07:00–11:30, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 13:30 → hết ca",
-      "workHours": 35.5,
-      "workHoursHC": 35.5,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-06T07:13:49.077Z",
-      "updatedAt": "2026-10-06T07:20:41.609Z"
-    },
-    {
-      "id": "x2btinh-1791362208094-0-e9rvg",
-      "date": "2026-10-03",
-      "week": "2026-W40",
-      "kind": "tinh",
-      "sources": [
-        {
-          "batchId": "batch-1791107300471",
-          "code": "261002-41",
-          "location": "LS6",
-          "dims": [
-            1250,
-            22,
-            9
-          ],
-          "qty": 1680
-        },
-        {
-          "batchId": "batch-1790817037205",
-          "code": "260928-05",
-          "location": "LS6",
-          "dims": [
-            1250,
-            22,
-            9
-          ],
-          "qty": 364
-        }
-      ],
-      "batchId": "batch-1791107300471",
-      "batchCode": "261002-41",
-      "batchLocation": "LS6",
-      "batchDims": [
-        1250,
-        22,
-        9
-      ],
-      "batchQty": 1680,
-      "defectKey": "",
-      "defectDims": [],
-      "inSource": "",
-      "inDims": [],
-      "manualRowId": "",
-      "inQty": 2044,
-      "inSizeKey": "1250×22×9",
-      "outDims": [
-        1250,
-        20,
-        7
-      ],
-      "outSizeKey": "1250×20×7",
-      "unitVol": 0.000175,
-      "qtyOk": 1200,
-      "qtyErr": 844,
-      "volumeOk": 0.21,
-      "worker": "Hà Thị Đàm, Phạm Thị Hoan, Vi Thị Chánh, Lữ Thị Quỳnh, Hà Thị Thuyến, Lương Thị Hằng",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 54,
-      "workHoursHC": 54,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-07T08:36:48.095Z"
-    },
-    {
-      "id": "x2btinh-1791362807622-0-oqr9t",
-      "date": "2026-10-03",
-      "week": "2026-W40",
-      "kind": "tinh",
-      "sources": [
-        {
-          "batchId": "batch-1791362463716",
-          "code": "261003-19",
-          "location": "S2",
-          "dims": [
-            1250,
-            18,
-            7
-          ],
-          "qty": 2100
-        },
-        {
-          "batchId": "batch-1791362449036",
-          "code": "261003-18",
-          "location": "S2",
-          "dims": [
-            1250,
-            18,
-            7
-          ],
-          "qty": 2100
-        },
-        {
-          "batchId": "batch-1790817216732",
-          "code": "260928-12",
-          "location": "LS6",
-          "dims": [
-            1250,
-            18,
-            7
-          ],
-          "qty": 2100
-        }
-      ],
-      "batchId": "batch-1791362463716",
-      "batchCode": "261003-19",
-      "batchLocation": "S2",
-      "batchDims": [
-        1250,
-        18,
-        7
-      ],
-      "batchQty": 2100,
-      "defectKey": "",
-      "defectDims": [],
-      "inSource": "",
-      "inDims": [],
-      "manualRowId": "",
-      "inQty": 6300,
-      "inSizeKey": "1250×18×7",
-      "outDims": [
-        1250,
-        18,
-        5
-      ],
-      "outSizeKey": "1250×18×5",
-      "unitVol": 0.0001125,
-      "qtyOk": 3000,
-      "qtyErr": 3300,
-      "volumeOk": 0.3375,
-      "worker": "Hà Thị Đàm, Phạm Thị Hoan, Vi Thị Chánh, Lữ Thị Quỳnh, Hà Thị Thuyến, Lương Thị Hằng",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 54,
-      "workHoursHC": 54,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-07T08:46:47.623Z"
-    },
-    {
-      "id": "x2btinh-1791363687112-0-td0j5",
-      "date": "2026-10-03",
-      "week": "2026-W40",
-      "kind": "tinh",
-      "sources": [
-        {
-          "batchId": "batch-1790817240490",
-          "code": "260928-13",
-          "location": "LS6",
-          "dims": [
-            1250,
-            18,
-            11
-          ],
-          "qty": 1456
-        }
-      ],
-      "batchId": "batch-1790817240490",
-      "batchCode": "260928-13",
-      "batchLocation": "LS6",
-      "batchDims": [
-        1250,
-        18,
-        11
-      ],
-      "batchQty": 1456,
-      "defectKey": "",
-      "defectDims": [],
-      "inSource": "",
-      "inDims": [],
-      "manualRowId": "",
-      "inQty": 1456,
-      "inSizeKey": "1250×18×11",
-      "outDims": [
-        1250,
-        18,
-        9
-      ],
-      "outSizeKey": "1250×18×9",
-      "unitVol": 0.0002025,
-      "qtyOk": 600,
-      "qtyErr": 856,
-      "volumeOk": 0.1215,
-      "worker": "Hà Thị Đàm, Phạm Thị Hoan, Vi Thị Chánh, Lữ Thị Quỳnh, Hà Thị Thuyến, Lương Thị Hằng",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 54,
-      "workHoursHC": 54,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-07T09:01:27.112Z"
-    },
-    {
-      "id": "x2btinh-1791363819386-0-fx72x",
-      "date": "2026-10-03",
-      "week": "2026-W40",
-      "kind": "ha_cap",
-      "sources": [],
-      "batchId": "",
-      "batchCode": "",
-      "batchLocation": "",
-      "batchDims": [],
-      "batchQty": 0,
-      "defectKey": "1250×20×9",
-      "defectDims": [
-        1250,
-        20,
-        9
-      ],
-      "inSource": "",
-      "inDims": [],
-      "manualRowId": "",
-      "inQty": 4102,
-      "inSizeKey": "1250×20×9",
-      "outDims": [
-        1250,
-        20,
-        7
-      ],
-      "outSizeKey": "1250×20×7",
-      "unitVol": 0.000175,
-      "qtyOk": 800,
-      "qtyErr": 3302,
-      "volumeOk": 0.14,
-      "worker": "Hà Thị Đàm, Phạm Thị Hoan, Vi Thị Chánh, Lữ Thị Quỳnh, Hà Thị Thuyến, Lương Thị Hằng",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 54,
-      "workHoursHC": 54,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-07T09:03:39.386Z"
     }
   ],
   "x2BaoTinhRates": {
@@ -17365,8 +17671,8 @@
   ],
   "qcFinalRates": {
     "2026-10": {
-      "thanh": 245,
-      "van": 31.11
+      "van": 31.11,
+      "thanh": 245
     },
     "2026-09": {
       "van": 31.11,
@@ -23061,6 +23367,1446 @@
       "approvedByName": "Hệ thống (khởi tạo)",
       "approvedAt": "2026-10-06T07:19:56.055Z",
       "updatedAt": "2026-10-06T07:19:56.055Z"
+    },
+    {
+      "id": "kho-note-1791427708338-1",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 630,
+      "m3": 0.1733,
+      "lots": [
+        {
+          "batchId": "batch-1791360183613",
+          "qty": 630
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-2",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1209,
+      "m3": 0.2992,
+      "lots": [
+        {
+          "batchId": "batch-1791360159498",
+          "qty": 1209
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-3",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 672,
+      "m3": 0.1294,
+      "lots": [
+        {
+          "batchId": "batch-1791360129357",
+          "qty": 672
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-4",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 921,
+      "m3": 0.2279,
+      "lots": [
+        {
+          "batchId": "batch-1791360107819",
+          "qty": 921
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-5",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 505,
+      "m3": 0.1389,
+      "lots": [
+        {
+          "batchId": "batch-1791360067566",
+          "qty": 505
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-6",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1750,
+      "m3": 0.4813,
+      "lots": [
+        {
+          "batchId": "batch-1791360042442",
+          "qty": 1750
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-7",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1750,
+      "m3": 0.5294,
+      "lots": [
+        {
+          "batchId": "batch-1791360026218",
+          "qty": 1750
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-8",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 441,
+      "m3": 0.1334,
+      "lots": [
+        {
+          "batchId": "batch-1791358247276",
+          "qty": 441
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-9",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1260,
+      "m3": 0.3465,
+      "lots": [
+        {
+          "batchId": "batch-1791358228367",
+          "qty": 1260
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-10",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1742,
+      "m3": 0.4791,
+      "lots": [
+        {
+          "batchId": "batch-1791358196480",
+          "qty": 1742
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-11",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 499,
+      "m3": 0.0786,
+      "lots": [
+        {
+          "batchId": "batch-1791358175544",
+          "qty": 499
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-12",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 906,
+      "m3": 0.2242,
+      "lots": [
+        {
+          "batchId": "batch-1791358155298",
+          "qty": 906
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-13",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1750,
+      "m3": 0.5294,
+      "lots": [
+        {
+          "batchId": "batch-1791358127351",
+          "qty": 1750
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-14",
+      "type": "xuat",
+      "date": "2026-10-05",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2268,
+      "m3": 0.3572,
+      "lots": [
+        {
+          "batchId": "batch-1791248894826",
+          "qty": 2268
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-15",
+      "type": "xuat",
+      "date": "2026-10-05",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1456,
+      "m3": 0.3604,
+      "lots": [
+        {
+          "batchId": "batch-1791248873428",
+          "qty": 1456
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-16",
+      "type": "xuat",
+      "date": "2026-10-05",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1002,
+      "m3": 0.1929,
+      "lots": [
+        {
+          "batchId": "batch-1791248783774",
+          "qty": 1002
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-17",
+      "type": "xuat",
+      "date": "2026-10-05",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 910,
+      "m3": 0.2753,
+      "lots": [
+        {
+          "batchId": "batch-1791248755763",
+          "qty": 910
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-18",
+      "type": "xuat",
+      "date": "2026-10-05",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2016,
+      "m3": 0.3881,
+      "lots": [
+        {
+          "batchId": "batch-1791248730420",
+          "qty": 2016
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-19",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2100,
+      "m3": 0.3308,
+      "lots": [
+        {
+          "batchId": "batch-1791103565002-3",
+          "qty": 2100
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-20",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2100,
+      "m3": 0.3308,
+      "lots": [
+        {
+          "batchId": "batch-1791103565002-2",
+          "qty": 2100
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708339-21",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2100,
+      "m3": 0.3308,
+      "lots": [
+        {
+          "batchId": "batch-1791103565002-1",
+          "qty": 2100
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-22",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1820,
+      "m3": 0.4095,
+      "lots": [
+        {
+          "batchId": "batch-1791103565002-0",
+          "qty": 1820
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-23",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1750,
+      "m3": 0.4331,
+      "lots": [
+        {
+          "batchId": "batch-1791103539180-3",
+          "qty": 1750
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-24",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1820,
+      "m3": 0.3686,
+      "lots": [
+        {
+          "batchId": "batch-1791103539180-2",
+          "qty": 1820
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-25",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2268,
+      "m3": 0.3572,
+      "lots": [
+        {
+          "batchId": "batch-1791103539180-1",
+          "qty": 2268
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-26",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1610,
+      "m3": 0.3623,
+      "lots": [
+        {
+          "batchId": "batch-1791103539180-0",
+          "qty": 1610
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-27",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1932,
+      "m3": 0.4637,
+      "lots": [
+        {
+          "batchId": "batch-1791102494920-2",
+          "qty": 1932
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-28",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1498,
+      "m3": 0.3371,
+      "lots": [
+        {
+          "batchId": "batch-1791102494920-1",
+          "qty": 1498
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-29",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1036,
+      "m3": 0.2486,
+      "lots": [
+        {
+          "batchId": "batch-1791102494920-0",
+          "qty": 1036
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-30",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1232,
+      "m3": 0.3049,
+      "lots": [
+        {
+          "batchId": "batch-1791101374155-3",
+          "qty": 1232
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-31",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1582,
+      "m3": 0.2492,
+      "lots": [
+        {
+          "batchId": "batch-1791101374155-2",
+          "qty": 1582
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-32",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1820,
+      "m3": 0.3686,
+      "lots": [
+        {
+          "batchId": "batch-1791101374154-1",
+          "qty": 1820
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-33",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1890,
+      "m3": 0.4253,
+      "lots": [
+        {
+          "batchId": "batch-1791101374154-0",
+          "qty": 1890
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-34",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2268,
+      "m3": 0.3572,
+      "lots": [
+        {
+          "batchId": "batch-1791100722264-1",
+          "qty": 2268
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-35",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1260,
+      "m3": 0.3119,
+      "lots": [
+        {
+          "batchId": "batch-1791100671791-3",
+          "qty": 1260
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-36",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1680,
+      "m3": 0.3402,
+      "lots": [
+        {
+          "batchId": "batch-1791100671791-2",
+          "qty": 1680
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-37",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1890,
+      "m3": 0.4536,
+      "lots": [
+        {
+          "batchId": "batch-1791100671791-1",
+          "qty": 1890
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-38",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2100,
+      "m3": 0.3308,
+      "lots": [
+        {
+          "batchId": "batch-1791099278434-3",
+          "qty": 2100
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-39",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2100,
+      "m3": 0.3308,
+      "lots": [
+        {
+          "batchId": "batch-1791099278434-2",
+          "qty": 2100
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-40",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1750,
+      "m3": 0.2756,
+      "lots": [
+        {
+          "batchId": "batch-1791099278434-1",
+          "qty": 1750
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-41",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1750,
+      "m3": 0.3544,
+      "lots": [
+        {
+          "batchId": "batch-1791099278434-0",
+          "qty": 1750
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-42",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2016,
+      "m3": 0.3175,
+      "lots": [
+        {
+          "batchId": "batch-1791099203535-3",
+          "qty": 2016
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-43",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2184,
+      "m3": 0.344,
+      "lots": [
+        {
+          "batchId": "batch-1791099203535-2",
+          "qty": 2184
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-44",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2268,
+      "m3": 0.3572,
+      "lots": [
+        {
+          "batchId": "batch-1791099203535-1",
+          "qty": 2268
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-45",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1890,
+      "m3": 0.3827,
+      "lots": [
+        {
+          "batchId": "batch-1791099203535-0",
+          "qty": 1890
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-46",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1568,
+      "m3": 0.3528,
+      "lots": [
+        {
+          "batchId": "batch-1791085297454-1",
+          "qty": 1568
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-47",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2100,
+      "m3": 0.3308,
+      "lots": [
+        {
+          "batchId": "batch-1791085297453-0",
+          "qty": 2100
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-48",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1932,
+      "m3": 0.4637,
+      "lots": [
+        {
+          "batchId": "batch-1790817861408-2",
+          "qty": 1932
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708340-49",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2016,
+      "m3": 0.4838,
+      "lots": [
+        {
+          "batchId": "batch-1790817861408-0",
+          "qty": 2016
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-50",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2268,
+      "m3": 0.3572,
+      "lots": [
+        {
+          "batchId": "batch-1790817824504-3",
+          "qty": 2268
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-51",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1400,
+      "m3": 0.315,
+      "lots": [
+        {
+          "batchId": "batch-1790817824504-2",
+          "qty": 1400
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-52",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1680,
+      "m3": 0.3402,
+      "lots": [
+        {
+          "batchId": "batch-1790817824503-1",
+          "qty": 1680
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-53",
+      "type": "xuat",
+      "date": "2026-10-06",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2100,
+      "m3": 0.3308,
+      "lots": [
+        {
+          "batchId": "batch-1790817824503-0",
+          "qty": 2100
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-54",
+      "type": "xuat",
+      "date": "2026-10-01",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1406,
+      "m3": 0.3374,
+      "lots": [
+        {
+          "batchId": "batch-1790816794392",
+          "qty": 1406
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-55",
+      "type": "xuat",
+      "date": "2026-09-30",
+      "purpose": "khac",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2485,
+      "m3": 0.5032,
+      "lots": [
+        {
+          "batchId": "batch-1790771541517",
+          "qty": 2485
+        }
+      ],
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig trước khi có sổ kho",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-56",
+      "type": "xuat",
+      "date": "2026-09-30",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1932,
+      "m3": 0.4637,
+      "lots": [
+        {
+          "batchId": "batch-1790770861071",
+          "qty": 1932
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-57",
+      "type": "xuat",
+      "date": "2026-09-30",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 714,
+      "m3": 0.216,
+      "lots": [
+        {
+          "batchId": "batch-1790770747169",
+          "qty": 714
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-58",
+      "type": "xuat",
+      "date": "2026-09-30",
+      "purpose": "khac",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 2582,
+      "m3": 0.6197,
+      "lots": [
+        {
+          "batchId": "batch-1790770689139",
+          "qty": 2582
+        }
+      ],
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig trước khi có sổ kho",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-59",
+      "type": "xuat",
+      "date": "2026-09-30",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1932,
+      "m3": 0.4637,
+      "lots": [
+        {
+          "batchId": "batch-1790770689139",
+          "qty": 1932
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
+    },
+    {
+      "id": "kho-note-1791427708341-60",
+      "type": "xuat",
+      "date": "2026-09-30",
+      "purpose": "say2",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "qty": 1050,
+      "m3": 0.2888,
+      "lots": [
+        {
+          "batchId": "batch-1790764379815",
+          "qty": 1050
+        }
+      ],
+      "note": "Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)",
+      "status": "da_duyet",
+      "createdBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "createdAt": "2026-10-08T02:48:28.338Z",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (khởi tạo)",
+      "approvedAt": "2026-10-08T02:48:28.338Z",
+      "updatedAt": "2026-10-08T02:48:28.338Z"
     }
   ]
 }

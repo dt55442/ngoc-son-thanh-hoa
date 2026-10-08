@@ -3,7 +3,7 @@
 // ĐỘ #tre-progress + nút CHÉM #tre-hit-btn, <div> cân bằng, không còn SVG),
 // CSS (treChop 2.6s · game đứng yên + treHitOnce 600ms/.is-hitting · treFall
 // 700ms · nền blur · treHitPunch · Giảm Hiệu ỨNG), wiring 5 nhóm chỗ chờ
-// (boot · AI · Excel · mây · backup), sw.js v223 +
+// (boot · AI · Excel · mây · backup), sw.js v225 +
 // loading.js + sprite vào APP_SHELL, HÀNH VI refcount 2 pha (stub DOM) và
 // CHẾ ĐỘ GAME (boot = mini game 20 nhát ×5% → 100% mới gãy; lỗi → không gãy).
 'use strict';
@@ -107,8 +107,8 @@ check('B11: main.js — preloadCoreViews() chạy sau boot khi bootOk (tải s�
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v223 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v223/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v225 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v225/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════

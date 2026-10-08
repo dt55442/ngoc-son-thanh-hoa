@@ -5185,22 +5185,38 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         <span class="x2-ong-calc-item x2-ong-calc-after" title="Loại thanh lấy từ thành phẩm Gia công — chọn xong TRỪ vào tồn thành phẩm"><span class="x2-ong-calc-label">Nguồn:</span><strong style="color:#0f766e;">thành phẩm Gia công</strong></span>`;
       return;
     }
-    // GIA CÔNG: thô đã chọn → số thanh GIA CÔNG ĐƯỢC (tối đa) → thô cần dùng
-    const qty = Number((document.getElementById('x2-bl-gc-qty') || {}).value) || 0;
-    const thoNeed = conv.factor > 0 ? Math.round((qty / conv.factor) * 1000) / 1000 : qty;
+    // GIA CÔNG (nguồn = phiếu xuất): tổng hợp từ BẢNG theo kích thước
+    const gcs = bulligGcGroups();
+    const tIn = gcs.reduce((s, g) => s + g.inQty, 0);
+    let tQty = 0, tTho = 0, tErr = 0;
+    gcs.forEach(g => {
+      const qty = blNumDraft(blQtyDraft, g.key);
+      const err = blNumDraft(blErrDraft, g.key);
+      const f = blConvOf(g.key).factor;
+      tQty += qty;
+      tTho += f > 0 ? Math.round((qty / f) * 1000) / 1000 : qty;
+      tErr += err;
+    });
+    const tTon = Math.max(0, Math.round((tIn - tTho - tErr) * 1000) / 1000);
     box.innerHTML = `
-      <span class="x2-ong-calc-item x2-ong-calc-in" title="Tổng số thanh thô CÒN LẠI của các lô Bullig đã chọn"><span class="x2-ong-calc-label">Thô đã chọn:</span><strong>${fmtThanh(totalTho)} thanh</strong></span>
-      <span class="x2-ong-calc-item x2-ong-calc-bo" title="Số thanh gia công được TỐI ĐA = thanh thô đã chọn × hệ số quy đổi của định mức Bullig"><span class="x2-ong-calc-label">Gia công được tối đa:</span><strong>${fmtThanh(maxOut)} thanh</strong><em class="x2-ong-calc-eq">(= ${fmtThanh(totalTho)} × ${fmtThanh(conv.factor)})</em></span>
-      ${qty > 0 ? `<span class="x2-ong-calc-item x2-ong-calc-after" title="Thanh thô THỰC DÙNG = số lượng gia công được ÷ hệ số quy đổi — phần này TRỪ vào tồn lô"><span class="x2-ong-calc-label">Thô cần dùng:</span><strong${qty > maxOut ? ' style="color:#dc2626;"' : ''}>${fmtThanh(thoNeed)} thanh</strong></span>` : ''}
-      <span class="x2-ong-calc-item" title="Kích thước thành phẩm (Dài x Rộng x Dày mm)"><span class="x2-ong-calc-label">K.thước thành phẩm:</span><strong>${outV ? escapeHTML(outKey || outV.replace(/x/gi, '×')) : '—'}</strong></span>
-      <span class="x2-ong-calc-item x2-ong-calc-after" title="Thanh thô lấy từ lô ở Kho (Dùng Cho = Bullig) — trừ vào tồn lô theo số thô cần dùng"><span class="x2-ong-calc-label">Nguồn:</span><strong style="color:#0f766e;">lô ở Kho</strong></span>`;
+      <span class="x2-ong-calc-item x2-ong-calc-in" title="Tổng thanh thô CÒN LẠI của các phiếu xuất đã chọn (theo kích thước trong phiếu)"><span class="x2-ong-calc-label">Thô vào:</span><strong>${fmtThanh(tIn)} thanh</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-bo" title="Tổng số thanh THÀNH PHẨM gia công được (nhập trong bảng tổng hợp)"><span class="x2-ong-calc-label">Gia công:</span><strong>${fmtThanh(tQty)} thanh</strong></span>
+      <span class="x2-ong-calc-item" title="Tổng thanh thô TƯƠNG ĐƯỢNG đã dùng = Σ (SL gia công ÷ hệ số định mức)"><span class="x2-ong-calc-label">Thô tương đương:</span><strong>${fmtThanh(tTho)} thanh</strong></span>
+      <span class="x2-ong-calc-item" title="Tổng thanh THÔ LỖI nhập tay trong bảng tổng hợp"><span class="x2-ong-calc-label">Lỗi:</span><strong>${fmtThanh(tErr)} thanh</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Tồn = vào − thô tương đương − lỗi — phần phiếu CHƯA dùng, làm tiếp ngày sau"><span class="x2-ong-calc-label">Tồn:</span><strong>${fmtThanh(tTon)} thanh</strong></span>
+      <span class="x2-ong-calc-item" title="Kích thước thành phẩm nhập trong bảng tổng hợp (1 dòng/cỡ)"><span class="x2-ong-calc-label">K.thước TP:</span><strong>${blOutDraft.size ? [...blOutDraft.values()].filter(Boolean).join(' · ') : '—'}</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Số thanh lấy từ PHIẾU XUẤT KHO mục đích Bullig (mục đích = Bullig)"><span class="x2-ong-calc-label">Nguồn:</span><strong style="color:#0f766e;">phiếu xuất Bullig</strong></span>`;
   }
 
-  // ─── DANH SÁCH THẺ LÔ BULLIG (Gia công) — chọn được NHIỀU ──────
+  // ─── DANH SÁCH THẺ PHIẾU XUẤT (Gia công) — chọn được NHIỀU ─────
   function bulligPicked() { return state.x2BulligPicked || []; }
+  // Tổng THANH THÔ còn lại của các PHIẾU đã chọn (nguồn mới = phiếu xuất mục Bullig)
   function bulligPickedTotal() {
     let total = 0;
-    bulligPicked().forEach(id => { total += bulligLotRemainingOf(bulligLotOf(id), state.x2BulligEditId); });
+    bulligPicked().forEach(id => {
+      const p = (khoNoteInputPool('bullig', state.x2BulligEditId) || []).find(x => x.id === String(id));
+      if (p && !p.pending) total += p.remaining;
+    });
     return total;
   }
   function bulligClearPicks() { state.x2BulligPicked = []; }
@@ -5235,50 +5251,41 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     return out;
   }
 
-  // Mỗi lô = 1 THẺ theo khuôn THẺ NGUỒN của Than Hóa + Sấy (`.al-card`, 2 DÒNG):
-  //   Dòng 1 = Mã lô · Vị trí · Kích thước · Loại (A/A1/B) · Số thanh CÒN LẠI
-  //   Dòng 2 = chip Dùng cho (Bullig) + badge ĐẾM NGÀY S1/S2/K + luồng NL + NCC
-  // KHÔNG có ô vuông tích: bấm thẻ = CHỌN, bấm nữa = BỎ CHỌN (nổi nền + viền).
+  // Mỗi PHIẾU XUẤT = 1 THẺ theo khuôn THẺ NGUỒN (`.al-card`, 2 DÒNG):
+  //   Dòng 1 = "Xuất Bullig · dd/mm/yyyy · còn X/Y thanh"
+  //   Dòng 2 = chip Bullig + chip "Chờ duyệt" (phiếu chưa duyệt — KHÔNG chọn được)
+  //   title  = tooltip liệt kê kích thước & số lượng: "1250x18x7 SL:1500 · …"
   function renderX2BulligLotList() {
     const box = document.getElementById('x2-bl-gc-list');
     if (!box) return;
     const q = bulligNorm(String((document.getElementById('x2-bl-gc-search') || {}).value || ''));
-    const excludeId = state.x2BulligEditId;
-    const allLots = bulligLotList();
-    // CHỈ hiện lô CÒN thanh thô CHƯA gia công — lô đã DÙNG HẾT thì ẨN HẲN khỏi
-    // danh sách (lô dùng một phần vẫn hiện kèm "còn X/Y thanh" để gia công tiếp).
-    const lots = allLots
-      .filter(b => bulligLotRemainingOf(b, excludeId) > 0)
-      .filter(b => {
-        if (!q) return true;
-        return [b.code, b.location, b.useFor, b.bambooType, b.materialType, b.supplier, b.dimensions, bulligLotDimText(b)]
-          .some(v => bulligNorm(String(v || '')).includes(q));
-      });
-    if (!lots.length) {
-      box.innerHTML = `<div class="al-empty">${allLots.length
-        ? 'Các lô Bullig ở Kho đã dùng hết — chuyển lô mới vào Kho ở thẻ “Than Hóa + Sấy” rồi chọn lại.'
-        : 'Chưa có lô Bullig ở Kho phù hợp.'}</div>`;
+    const pool = khoNoteInputPool('bullig', state.x2BulligEditId);
+    const list = pool.filter(p => {
+      if (!q) return true;
+      const tip = khoNoteSizeTooltip(p.sizes);
+      return bulligNorm(`${formatDateDDMMYY(p.date)} ${tip} ${((p.note && p.note.purposeNote) || '')}`).includes(q);
+    });
+    if (!list.length) {
+      box.innerHTML = `<div class="al-empty">${pool.length
+        ? '— Không có phiếu xuất nào khớp —'
+        : '— Chưa có PHIẾU XUẤT KHO mục đích "Bullig" nào (tạo phiếu ở thẻ Kho Nan) —'}</div>`;
       initLucide(); return;
     }
-    box.innerHTML = lots.map(b => {
-      const rem = bulligLotRemainingOf(b, excludeId);
-      const on = bulligPicked().includes(b.id);
-      const used = (Number(b.quantity) || 0) - rem;
-      const d = bulligLotDaysOf(b);
-      const dimTxt = bulligLotDimText(b);
-      // Lô đã gia công một phần → hiện "còn X/Y thanh" cho biết phần CÒN LẠI
-      const qtyTxt = used > 0 ? `${fmtThanh(rem)}/${fmtThanh(b.quantity)} thanh (còn)` : `${fmtThanh(rem)} thanh`;
-      const main = `${b.code || '—'} · ${b.location || '—'} · ${dimTxt} · ${b.bambooType || '—'} · ${qtyTxt}`;
+    box.innerHTML = list.map(p => {
+      const dateTxt = p.date ? formatDateDDMMYY(p.date) : '—';
+      const qtyTxt = (p.total > 0 && p.remaining < p.total)
+        ? `${fmtThanh(p.remaining)}/${fmtThanh(p.total)} thanh (còn)`
+        : `${fmtThanh(p.remaining)} thanh`;
+      const on = bulligPicked().includes(p.id);
+      const main = `Xuất Bullig · ${dateTxt} · ${qtyTxt}`;
       const chips = [
         `<span class="al-use-tag use-bullig">Bullig</span>`,
-        `<span class="al-day-badge day-s1" title="Số ngày đã ở Sấy 1">S1-${d.say1} ngày</span>`,
-        `<span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${d.say2} ngày</span>`,
-        `<span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${d.kho} ngày</span>`
+        p.pending
+          ? `<span class="al-day-badge day-pending" title="Phiếu chưa được Ban lãnh đạo duyệt — CHỌN ĐƯỢC SAU KHI DUYỆT">Chờ duyệt</span>`
+          : `<span class="al-day-badge day-k" title="Số kích thước thanh thô trong phiếu">${p.sizes.length} kích thước</span>`
       ];
-      if (b.materialType) chips.push(`<span class="al-day-badge day-luuong" title="Luồng nguyên liệu">${escapeHTML(b.materialType)}</span>`);
-      if (b.supplier) chips.push(`<span class="al-day-badge day-ext" title="Nhà cung cấp">${escapeHTML(b.supplier)}</span>`);
-      const titleTxt = `${b.code || '—'} · ${b.location || '—'} · ${dimTxt} · S1-${d.say1} ngày · S2-${d.say2} ngày · K-${d.kho} ngày`;
-      return `<button type="button" class="al-card${on ? ' picked' : ''}" data-bl-pick="${escapeHTML(b.id)}" aria-pressed="${on ? 'true' : 'false'}" title="${escapeHTML(titleTxt)}">
+      const titleTxt = `Ngày xuất ${dateTxt} — ${khoNoteSizeTooltip(p.sizes)}`;
+      return `<button type="button" class="al-card${on ? ' picked' : ''}${p.pending ? ' al-card-pending' : ''}" data-bl-pick="${escapeHTML(p.id)}" aria-pressed="${on ? 'true' : 'false'}"${p.pending ? ' aria-disabled="true"' : ''} title="${escapeHTML(titleTxt)}">
         <span class="al-card-body">
           <span class="al-card-main">${escapeHTML(main)}</span>
           <span class="al-card-sub">${chips.join(' ')}</span>
@@ -5289,9 +5296,16 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   function bulligTogglePick(id) {
+    const key = String(id || '');
+    // Phiếu CHỜ DUYỆT → hiện nhưng CHỌN KHÔNG ĐƯỢC
+    const p = (khoNoteInputPool('bullig', state.x2BulligEditId) || []).find(x => x.id === key);
+    if (p && p.pending) {
+      showToast('Phiếu này CHỜ DUYỆT — chọn được sau khi Ban lãnh đạo duyệt phiếu kho.', 'error');
+      return;
+    }
     const cur = bulligPicked();
-    const i = cur.indexOf(id);
-    if (i >= 0) cur.splice(i, 1); else cur.push(id);
+    const i = cur.indexOf(key);
+    if (i >= 0) cur.splice(i, 1); else cur.push(key);
     state.x2BulligPicked = cur;
   }
 
@@ -5300,15 +5314,139 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!card) return;
     bulligTogglePick(card.getAttribute('data-bl-pick'));
     renderX2BulligLotList();
+    renderX2BulligGroups();     // bảng tổng hợp theo kích thước của các phiếu đã chọn
     renderX2BulligCalc();
+  }
+
+  // ─── BẢNG TỔNG HỢP GIA CÔNG theo KÍCH THƯỚC (nguồn = PHIẾU XUẤT) ──
+  // Nháp theo kích thước: KT thành phẩm (text) · SL gia công được · SL thanh lỗi.
+  // SL thô tương đương TỰ TÍNH = SL gia công ÷ hệ số định mức Bullig;
+  // Tồn = vào − thô tương đương − lỗi (phần phiếu CHƯA dùng).
+  const blOutDraft = new Map();    // sizeKey → text "1250x80x12"
+  const blQtyDraft = new Map();    // sizeKey → SL gia công được (thành phẩm)
+  const blErrDraft = new Map();    // sizeKey → SL thanh THÔ lỗi
+  // Nhóm các kích thước CÒN LẠI của các phiếu Gia công đã chọn (gộp cùng cỡ)
+  function bulligGcGroups() {
+    const map = new Map();
+    const exId = state.x2BulligEditId;
+    bulligPicked().forEach(id => {
+      const p = (khoNoteInputPool('bullig', exId) || []).find(x => x.id === String(id));
+      if (!p || p.pending) return;
+      p.sizes.forEach(s => {
+        if (!(Number(s.remaining) > 0)) return;
+        const cur = map.get(s.sizeKey) || { key: s.sizeKey, dims: s.dims, inQty: 0, noteIds: [] };
+        cur.inQty += Number(s.remaining) || 0;
+        if (!cur.noteIds.includes(p.id)) cur.noteIds.push(p.id);
+        map.set(s.sizeKey, cur);
+      });
+    });
+    return [...map.values()].sort((a, b) => b.inQty - a.inQty);
+  }
+  function blNumDraft(map, key) { return Math.max(0, Math.round(Number(map.get(key)) || 0)); }
+  // Hệ số quy đổi cho 1 dòng (theo kích thước thành phẩm đang nhập)
+  function blConvOf(key) {
+    const raw = String(blOutDraft.get(key) || '').trim();
+    const d = raw ? raw.split(/[x×*,;\s]+/).map(s => Number(String(s).trim())).filter(v => Number.isFinite(v) && v > 0) : [];
+    const outKey = d.length >= 3 ? dimKeyOf(d[0], d[1], d[2]) : '';
+    return bulligConvertInfo(outKey);
+  }
+  // Vẽ bảng tổng hợp (ẩn khi chưa chọn phiếu / đang ở Chọn thanh)
+  function renderX2BulligGroups() {
+    const box = document.getElementById('x2-bl-groups');
+    if (!box) return;
+    const kind = ((document.getElementById('x2-bl-kind') || {}).value) || 'gc';
+    if (kind !== 'gc') { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const groups = bulligGcGroups();
+    if (!groups.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = '';
+    const rows = groups.map(g => {
+      const raw = String(blOutDraft.get(g.key) || '');
+      const qty = blNumDraft(blQtyDraft, g.key);
+      const err = blNumDraft(blErrDraft, g.key);
+      const conv = blConvOf(g.key);
+      const tho = conv.factor > 0 ? Math.round((qty / conv.factor) * 1000) / 1000 : qty;
+      const ton = Math.max(0, Math.round((g.inQty - tho - err) * 1000) / 1000);
+      const inCell = `<span class="x2-nan-chip">${comboLabel({ d: g.dims[0], r: g.dims[1], t: g.dims[2] })}</span>${g.noteIds.length > 1 ? ` <small class="x2-btinh-src">${g.noteIds.length} phiếu</small>` : ''}`;
+      return `<tr data-bl-row="${escapeHTML(g.key)}">
+        <td class="x2-btinh-in-cell">${inCell}</td>
+        <td class="text-right x2-btinh-qty-cell"><strong>${fmtThanh(g.inQty)}</strong></td>
+        <td class="x2-btinh-out-cell"><input type="text" class="x2-btinh-out-text" data-bl-out="${escapeHTML(g.key)}" list="x2-bl-out-list" placeholder="VD: 1250x80x12" autocomplete="off" value="${escapeHTML(raw)}"></td>
+        <td class="x2-btinh-ok-cell"><input type="number" class="x2-btinh-ok" data-bl-qty="${escapeHTML(g.key)}" min="0" step="1" placeholder="0" value="${qty ? qty : ''}"></td>
+        <td class="text-right x2-btinh-ton-cell"><strong class="x2-bl-tho">${fmtThanh(tho)}</strong></td>
+        <td class="x2-btinh-ok-cell"><input type="number" class="x2-btinh-ok" data-bl-err="${escapeHTML(g.key)}" min="0" step="1" placeholder="0" value="${err ? err : ''}"></td>
+        <td class="text-right x2-btinh-ton-cell"><strong class="x2-btinh-ton">${fmtThanh(ton)}</strong></td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div class="x2-btinh-groups-head">
+        <i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước thanh thô trong phiếu xuất</strong> — nhập <strong>K.thước thành phẩm</strong> + <strong>SL gia công</strong> · <strong>Thô tương đương</strong> tự tính theo định mức · <strong>Tồn = vào − thô tương đương − lỗi</strong>
+      </div>
+      <div class="x2-btinh-group-scroll">
+        <table class="data-table x2-btinh-group-table">
+          <thead><tr>
+            <th title="Kích thước thanh thô TRƯỚC khi gia công (trong phiếu xuất)">K.thước vào</th>
+            <th class="text-right" title="Tổng thanh thô của kích thước này còn lại trong phiếu">SL vào</th>
+            <th title="Kích thước THÀNH PHẨM làm ra (nhập 1 dòng, VD 1250x80x12)">K.thước thành phẩm</th>
+            <th title="Số thanh THÀNH PHẨM gia công được">SL gia công</th>
+            <th class="text-right" title="Số thanh thô TƯƠNG ĐƯỢNG = SL gia công ÷ hệ số định mức Bullig (tự tính)">Thô tương đương</th>
+            <th title="Số thanh THÔ bị lỗi trong lúc gia công">SL lỗi</th>
+            <th class="text-right" title="Tồn = vào − thô tương đương − lỗi — phần phiếu CHƯA dùng">Tồn</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    initLucide();
+  }
+  // Nhập liệu bảng tổng hợp Gia công (uỷ nhiệm 'input' trên #x2-bl-groups)
+  function onBulligGroupInput(e) {
+    const t = e && e.target;
+    if (!t || typeof t.getAttribute !== 'function') return;
+    const raw = t.value;
+    const v = Number(raw);
+    const bad = (raw === '' || raw == null || !Number.isFinite(v));
+    const outKey = t.getAttribute('data-bl-out');
+    if (outKey) { blOutDraft.set(outKey, String(raw || '').trim()); updateBulligGroupNumbers(); return; }
+    const qtyKey = t.getAttribute('data-bl-qty');
+    if (qtyKey) {
+      if (bad) blQtyDraft.delete(qtyKey); else blQtyDraft.set(qtyKey, Math.max(0, Math.floor(v)));
+      updateBulligGroupNumbers(); return;
+    }
+    const errKey = t.getAttribute('data-bl-err');
+    if (errKey) {
+      if (bad) blErrDraft.delete(errKey); else blErrDraft.set(errKey, Math.max(0, Math.floor(v)));
+      updateBulligGroupNumbers(); return;
+    }
+  }
+  // Cập nhật cột Thô tương đương + Tồn của TỪNG dòng (KHÔNG vẽ lại bảng → giữ con trỏ)
+  function updateBulligGroupNumbers() {
+    const box = document.getElementById('x2-bl-groups');
+    if (!box || typeof box.querySelectorAll !== 'function') return;
+    const rows = box.querySelectorAll('tr[data-bl-row]');
+    if (!rows || !rows.length) return;
+    bulligGcGroups().forEach((g, i) => {
+      const row = rows[i];
+      if (!row || typeof row.querySelector !== 'function') return;
+      const qty = blNumDraft(blQtyDraft, g.key);
+      const err = blNumDraft(blErrDraft, g.key);
+      const conv = blConvOf(g.key);
+      const tho = conv.factor > 0 ? Math.round((qty / conv.factor) * 1000) / 1000 : qty;
+      const ton = Math.max(0, Math.round((g.inQty - tho - err) * 1000) / 1000);
+      const thoEl = row.querySelector('.x2-bl-tho');
+      const tonEl = row.querySelector('.x2-btinh-ton');
+      if (thoEl) thoEl.textContent = fmtThanh(tho);
+      if (tonEl) tonEl.textContent = fmtThanh(ton);
+    });
   }
 
   // ─── ẨN/HIỆN FORM theo CÔNG ĐOẠN NHỎ ───────────────────────────
   // ─── RESET FORM BULLIG (về GIA CÔNG, trắng sạch) ───────────────
   function resetXuong2BulligForm() {
     state.x2BulligEditId = null;
-    state.x2BulligLotOpen = false;   // đóng danh sách thẻ lô
+    state.x2BulligLotOpen = false;   // đóng danh sách phiếu
     bulligClearPicks();
+    blOutDraft.clear();
+    blQtyDraft.clear();
+    blErrDraft.clear();
     ['x2-bl-gc-qty', 'x2-bl-out', 'x2-bl-ct-ok', 'x2-bl-ct-err'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -5321,6 +5459,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     fillX2BulligOutSuggestions();
     renderX2BulligLotList();
     syncX2BulligKindRows();
+    renderX2BulligGroups();
     renderX2BulligCalc();
     syncX2BulligEditBanner();
   }
@@ -5362,62 +5501,91 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
       };
     } else {
-      // ── GIA CÔNG ──
-      // Nhập SỐ LƯỢNG GIA CÔNG ĐƯỢC (thành phẩm). Thanh thô tiêu thụ =
-      // số lượng gia công được ÷ HỆ SỐ QUY ĐỔI của định mức Bullig (tab Kế Hoạch).
-      const picked = bulligPicked();
-      if (!picked.length) { showToast('Hãy chọn ít nhất 1 lô Bullig ở Kho!', 'error'); return; }
-      const outV = String(((document.getElementById('x2-bl-out') || {}).value) || '').trim();
-      const outDims = bulligParseOutDims(outV);
-      if (!(outDims[0] > 0 && outDims[1] > 0 && outDims[2] > 0)) {
-        showToast('Nhập KÍCH THƯỚC THÀNH PHẨM (Dài x Rộng x Dày mm — gợi ý có sẵn khi đã từng nhập)!', 'error');
+      // ── GIA CÔNG (nguồn = PHIẾU XUẤT mục Bullig — bảng tổng hợp theo kích thước) ──
+      // Mỗi dòng = 1 kích thước: KT thành phẩm · SL gia công · SL thô tương đương
+      // (÷ hệ số định mức) · SL thanh lỗi → phân bổ FIFO từ các phiếu đã chọn.
+      const groups = bulligGcGroups();
+      if (!bulligPicked().length) { showToast('Hãy chọn ít nhất 1 PHIẾU XUẤT mục đích "Bullig"!', 'error'); return; }
+      if (!groups.length) { showToast('Chưa có kích thước nào trong các phiếu đã chọn!', 'error'); return; }
+      const recs = [];
+      let skipped = 0;
+      for (const g of groups) {
+        const raw = String(blOutDraft.get(g.key) || '').trim();
+        const outDims = raw ? raw.split(/[x×*,;\s]+/).map(s => Number(String(s).trim())).filter(v => Number.isFinite(v) && v > 0).slice(0, 3) : [];
+        const quantity = blNumDraft(blQtyDraft, g.key);
+        const errTho = blNumDraft(blErrDraft, g.key);
+        if (quantity <= 0 && errTho <= 0) { skipped++; continue; }
+        if (quantity <= 0) {
+          showToast(`Kích thước ${g.key}: nhập SỐ LƯỢNG GIA CÔNG ĐƯỢC (lớn hơn 0) — nhập rồi bấm Lưu!`, 'error');
+          return;
+        }
+        if (outDims.length < 3 || !(outDims[0] > 0 && outDims[1] > 0 && outDims[2] > 0)) {
+          showToast(`Kích thước ${g.key}: nhập KÍCH THƯỚC THÀNH PHẨM (VD 1250x80x12) cho dòng này!`, 'error');
+          return;
+        }
+        const outSizeKey = dimKeyOf(outDims[0], outDims[1], outDims[2]);
+        const conv = bulligConvertInfo(outSizeKey);
+        const factor = conv.factor;
+        const qtyIn = factor > 0 ? Math.round((quantity / factor) * 1000) / 1000 : quantity;
+        const need = Math.round((qtyIn + errTho) * 1000) / 1000;
+        if (need > g.inQty) {
+          showToast(`Kích thước ${g.key}: thô tương đương (${fmtThanh(qtyIn)}) + lỗi (${fmtThanh(errTho)}) vượt SL vào (${fmtThanh(g.inQty)}) — kiểm tra lại!`, 'error');
+          return;
+        }
+        // Phân bổ FIFO từ các PHIẾU đã chọn (phiếu cũ trước)
+        const alloc = khoNoteAllocate(g.noteIds, g.key, need, state.x2BulligEditId);
+        if (!alloc.ok) {
+          showToast(`Kích thước ${g.key}: các phiếu đã chọn không đủ ${fmtThanh(need)} thanh thô (còn ${fmtThanh(alloc.left)})!`, 'error');
+          return;
+        }
+        const unitVol = unitVolOf(outDims[0], outDims[1], outDims[2]);
+        recs.push({
+          kind: 'gc',
+          date: dateVal,
+          week: materialWeekLabel(dateVal),
+          batchId: alloc.lots[0] ? alloc.lots[0].batchId : '',
+          sources: alloc.lots.map(l => ({ batchId: l.batchId, code: l.code || '', qty: l.qty })),
+          noteUses: alloc.uses,
+          gcTotalPicked: g.inQty,
+          quantity,                       // SỐ LƯỢNG GIA CÔNG ĐƯỢC (thành phẩm)
+          qtyIn,                          // thanh thô thực dùng
+          qtyErr: errTho,                 // thanh thô LỖI (cộng vào rút phiếu)
+          convertFactor: factor,          // chốt hệ số lúc lưu (định mức đổi sau vẫn đúng)
+          inSizeKey: g.key,               // kích thước THÔ nguồn (trong phiếu)
+          inDims: g.dims,
+          outDims,
+          outSizeKey,
+          unitVol,
+          volume: Math.round(quantity * unitVol * 10000) / 10000,
+          worker: snap.worker, workTime: snap.workTime,
+          workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
+        });
+      }
+      if (!recs.length) {
+        showToast('Chưa nhập số liệu cho dòng nào — nhập K.thước thành phẩm + SL gia công rồi bấm Lưu!', 'error');
         return;
       }
-      const outSizeKey = dimKeyOf(outDims[0], outDims[1], outDims[2]);
-      const conv = bulligConvertInfo(outSizeKey);
-      const factor = conv.factor;
-      const totalPicked = bulligPickedTotal();                       // tổng THANH THÔ còn lại của các lô đã chọn
-      const maxOut = Math.floor(totalPicked * factor);               // số thanh gia công được tối đa
-      const quantity = Number((document.getElementById('x2-bl-gc-qty') || {}).value) || 0;
-      if (!Number.isFinite(quantity) || quantity <= 0) { showToast('Số lượng gia công được phải là số thanh lớn hơn 0!', 'error'); return; }
-      if (quantity > maxOut) {
-        showToast(`Vượt khả năng: ${fmtThanh(totalPicked)} thanh thô × ${fmtThanh(factor)} = ${fmtThanh(maxOut)} thanh gia công được!`, 'error');
-        return;
+      if (state.x2BulligEditId) {
+        const rec = (state.xuong2BulligRecords || []).find(r2 => r2.id === state.x2BulligEditId);
+        if (!rec) { showToast('Không tìm thấy lượt Bullig cần sửa!', 'error'); return; }
+        Object.assign(rec, recs[0], { updatedAt: new Date().toISOString() });
+        saveXuong2Bullig();
+        showToast('Đã cập nhật lượt Gia công!', 'success');
+        resetXuong2BulligForm();
+      } else {
+        (state.xuong2BulligRecords = state.xuong2BulligRecords || []);
+        recs.forEach((rc, i) => {
+          state.xuong2BulligRecords.push(Object.assign({
+            id: 'x2bl-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 7),
+            createdAt: new Date().toISOString()
+          }, rc));
+        });
+        saveXuong2Bullig();
+        showToast(`Đã ghi ${recs.length} lượt Gia công (Bullig)` + (skipped ? ` · bỏ qua ${skipped} dòng chưa nhập số liệu` : '') + '!', 'success');
+        keepBulligFormAfterSave();
       }
-      // THANH THÔ thực dùng = số lượng gia công được ÷ hệ số quy đổi
-      const qtyIn = Math.round((quantity / factor) * 1000) / 1000;
-      // Chia THÔ vào các lô đã chọn: lô CÒN NHIỀU lấy trước, đến khi đủ.
-      const parts = picked
-        .map(id => ({ id, b: bulligLotOf(id), rem: bulligLotRemainingOf(bulligLotOf(id), state.x2BulligEditId) }))
-        .filter(x => x.b && x.rem > 0)
-        .sort((a, b) => b.rem - a.rem);
-      let left = qtyIn;
-      const sources = [];
-      for (const p of parts) {
-        if (left <= 0.0005) break;
-        const take = Math.min(p.rem, left);
-        sources.push({ batchId: p.id, code: p.b.code || '', qty: Math.round(take * 1000) / 1000 });
-        left -= take;
-      }
-      if (left > 0.0005) { showToast('Tổng số lô đã chọn không đủ thanh thô cần dùng!', 'error'); return; }
-      const unitVol = unitVolOf(outDims[0], outDims[1], outDims[2]);
-      payload = {
-        kind: 'gc',
-        date: dateVal,
-        week: materialWeekLabel(dateVal),
-        batchId: sources[0] ? sources[0].batchId : '',
-        sources,
-        gcTotalPicked: totalPicked,
-        quantity,                       // SỐ LƯỢNG GIA CÔNG ĐƯỢC (thành phẩm)
-        qtyIn,                          // thanh thô thực dùng
-        convertFactor: factor,          // chốt hệ số lúc lưu (định mức đổi sau vẫn đúng)
-        outDims,
-        outSizeKey,
-        unitVol,
-        volume: Math.round(quantity * unitVol * 10000) / 10000,
-        worker: snap.worker, workTime: snap.workTime,
-        workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
-      };
+      renderX2BulligCard();
+      return;
     }
 
     if (state.x2BulligEditId) {
@@ -5460,15 +5628,33 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const er = document.getElementById('x2-bl-ct-err');
       if (er) er.value = Number(rec.qtyErr) || 0;
     } else {
-      const srcs = Array.isArray(rec.sources) && rec.sources.length ? rec.sources : (rec.batchId ? [{ batchId: rec.batchId }] : []);
-      state.x2BulligPicked = srcs.map(x => String(x.batchId || '')).filter(Boolean);
+      blOutDraft.clear();
+      blQtyDraft.clear();
+      blErrDraft.clear();
+      // Nguồn PHIẾU XUẤT: chọn lại đúng phiếu đã dùng (noteUses) hoặc dữ liệu cũ (lô)
+      if (Array.isArray(rec.noteUses) && rec.noteUses.length) {
+        const noteIds = [...new Set(rec.noteUses.map(u => String(u.noteId)))];
+        state.x2BulligPicked = noteIds;
+      } else {
+        const srcs = Array.isArray(rec.sources) && rec.sources.length ? rec.sources : (rec.batchId ? [{ batchId: rec.batchId }] : []);
+        state.x2BulligPicked = srcs.map(x => String(x.batchId || '')).filter(Boolean);
+      }
+      // Khôi phục BẢNG TỔNG HỢP theo dòng: kích thước THÔ nguồn (key) → TP · SL · lỗi
+      const od0 = Array.isArray(rec.outDims) ? rec.outDims : [];
+      const inKey = String(rec.inSizeKey ||
+        (rec.inDims && rec.inDims.length === 3 ? dimKeyOf(rec.inDims[0], rec.inDims[1], rec.inDims[2]) : '') || '');
+      if (inKey) {
+        blOutDraft.set(inKey, (od0[0] > 0) ? `${od0[0]}x${od0[1]}x${od0[2]}` : '');
+        blQtyDraft.set(inKey, Math.round(Number(rec.quantity) || 0));
+        if (Number(rec.qtyErr)) blErrDraft.set(inKey, Math.round(Number(rec.qtyErr)));
+      }
       fillXuong2BulligOptions();
       renderX2BulligLotList();
+      renderX2BulligGroups();
       const q = document.getElementById('x2-bl-gc-qty');
       if (q) q.value = Number(rec.quantity) || 0;
-      const od = Array.isArray(rec.outDims) ? rec.outDims : [];
       const outEl = document.getElementById('x2-bl-out');
-      if (outEl) outEl.value = (od[0] > 0) ? `${od[0]}x${od[1]}x${od[2]}` : '';
+      if (outEl) outEl.value = (od0[0] > 0) ? `${od0[0]}x${od0[1]}x${od0[2]}` : '';
     }
     fillX2BulligOutSuggestions();
     renderX2BulligCalc();
@@ -5774,7 +5960,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     initLucide();
   }
 
-  // Sau khi LƯU GHI MỚI: giữ ngày + công đoạn nhỏ để nhập tiếp; chỉ XOÁ ô số lượng
+  // Sau khi LƯU GHI MỚI: giữ ngày + công đoạn nhỏ để nhập tiếp; XOÁ bảng tổng hợp cũ
   function keepBulligFormAfterSave() {
     state.x2BulligEditId = null;
     ['x2-bl-gc-qty', 'x2-bl-ct-ok', 'x2-bl-ct-err'].forEach(id => {
@@ -5782,8 +5968,12 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       if (el) el.value = '';
     });
     bulligClearPicks();
+    blOutDraft.clear();
+    blQtyDraft.clear();
+    blErrDraft.clear();
     fillXuong2BulligOptions();
     renderX2BulligLotList();
+    renderX2BulligGroups();
     renderX2BulligCalc();
     syncX2BulligEditBanner();
   }
@@ -5797,13 +5987,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const gc = kind !== 'ct';
     const lotOpen = !!state.x2BulligLotOpen;
     const set = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
-    // Hàng 1: nút MỞ DANH SÁCH LÔ (đứng chung hàng với Ngày + Công Đoạn)
+    // Hàng 1: nút MỞ DANH SÁCH PHIẾU (đứng chung hàng với Ngày + Công Đoạn)
     set('x2-bl-gc-btn-group', gc);
-    // Hàng 2: Kích thước thành phẩm + Số lượng (kèm gợi ý "/ tổng đã chọn")
-    set('x2-bl-gc-group', gc);
+    // Hàng 2 (CŨ): K.thước thành phẩm + Số lượng — ĐÃ THAY bằng BẢNG TỔNG HỢP theo
+    // kích thước trong phiếu xuất (#x2-bl-groups) → ẩn hẳn hàng cũ.
+    set('x2-bl-gc-group', false);
     set('x2-bl-ct-size-group', !gc);
     set('x2-bl-ct-ok-group', !gc);
     set('x2-bl-ct-err-group', !gc);
+    renderX2BulligGroups();
     // KHUNG DANH SÁCH LÔ = dropdown NỔI (portal ra overlay — không đẩy form xuống)
     const pick = document.getElementById('x2-bl-gc-picker');
     const wantOpen = gc && lotOpen;
@@ -6137,6 +6329,11 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // khác = thanh đạt + thanh lỗi.
   function baoTinhQtyInOf(rec) {
     if (rec && rec.kind === 'bao_thanh') return Number(rec.inQty) || 0;
+    // Nguồn phiếu xuất: số RÚT = Đạt + Lỗi + Tóp + Khác (Tóp/Khác là 0 với lượt cũ)
+    if (rec && rec.kind === 'tinh' && (Number(rec.qtyTop) || Number(rec.qtyOther))) {
+      return (Number(rec.qtyOk) || 0) + (Number(rec.qtyErr) || 0) +
+        (Number(rec.qtyTop) || 0) + (Number(rec.qtyOther) || 0);
+    }
     return (Number(rec && rec.qtyOk) || 0) + (Number(rec && rec.qtyErr) || 0);
   }
 
@@ -6474,6 +6671,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       defectDims: Array.isArray(r.defectDims) && r.defectDims.length === 3 ? r.defectDims.map(Number) : [],
       outDims, outSizeKey, unitVol,
       qtyOk, qtyErr, qtyIn, checked, pending,
+      // TÓP / KHÁC — chỉ nguồn phiếu xuất (cột mới ở bảng tổng hợp + thẻ ngày)
+      qtyTop: Number(r.qtyTop) || 0,
+      qtyOther: Number(r.qtyOther) || 0,
+      otherNote: String(r.otherNote || ''),
       volumeOk: Math.round(qtyOk * unitVol * 10000) / 10000,
       cap,
       workerRows,
@@ -6484,6 +6685,18 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function baoTinhSourceText(r, d) {
     if (!d) d = baoTinhDisplay(r);
     if (d.kind === 'tinh') {
+      // ── NGUỒN PHIẾU XUẤT KHO (mới): in ngày phiếu + kích thước trong phiếu ──
+      const uses = Array.isArray(r.noteUses) ? r.noteUses.filter(u => u && u.noteId) : [];
+      if (uses.length) {
+        const noteIds = [...new Set(uses.map(u => String(u.noteId)))];
+        const notes = noteIds.map(id => khoNoteOf(id)).filter(Boolean);
+        const noteTxt = notes.map(n => formatDateDDMMYY(n.date)).join(', ');
+        const sizes = [...new Set(uses.map(u => String(u.sizeKey || '')))].filter(Boolean);
+        const locs = [...new Set((Array.isArray(r.sources) ? r.sources : []).map(s => String(s.location || '')))].filter(Boolean);
+        return `Phiếu xuất${notes.length > 1 ? 's' : ''} Bào Tinh ${noteTxt}`
+          + (sizes.length ? ` · ${sizes.join(', ')}` : '')
+          + (locs.length ? ` · ${locs.join(', ')}` : '');
+      }
       const srcs = Array.isArray(r.sources) && r.sources.length ? r.sources : null;
       const dims = d.batchDims.length === 3 ? d.batchDims.map(Number).join(' × ') : '';
       if (srcs && srcs.length > 1) {
@@ -6517,16 +6730,32 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   const btinhOutDraft = new Map();       // key → { d, r, t }
   function baoTinhOutDrafts() { return btinhOutDraft; }
   // KÍCH THƯỚC SAU BÀO của 1 dòng (theo key) → [d, r, t]
+  // Nguồn phiếu xuất nhập THÔ 1 dòng ("1250x20x5") → ưu tiên btinhOutRaw;
+  // nhánh HẠ CẤP vẫn nhập 3 ô riêng (btinhOutDraft { d, r, t }).
   function baoTinhOutDimsOf(key) {
-    const o = btinhOutDraft.get(String(key)) || {};
+    const k = String(key);
+    const raw = String(btinhOutRaw.get(k) || '').trim();
+    if (raw) {
+      const p = raw.split(/[x×*,;\s]+/).map(s => Number(String(s).trim())).filter(v => Number.isFinite(v) && v > 0);
+      if (p.length >= 3) return [p[0], p[1], p[2]];
+      if (p.length) return [p[0], p[1] || 0, p[2] || 0];
+      return [0, 0, 0];
+    }
+    const o = btinhOutDraft.get(k) || {};
     return [Number(o.d) || 0, Number(o.r) || 0, Number(o.t) || 0];
   }
   // ─── CHỌN THANH: nút mở DANH SÁCH THẺ — bấm 1 thẻ = CHỌN, bấm lần nữa = BỎ CHỌN ──
   // (không dùng ô vuông tích; thẻ 2 DÒNG CHUẨN như phần chọn thanh thô của thẻ Bullig:
   //  dòng 1 = mã lô · vị trí · k.thước · loại · số thanh (còn) — dòng 2 = chip Dùng cho
   //  + badge đếm ngày S1/S2/K + luồng NL + NCC; kèm Ô TÌM NHANH lọc bỏ dấu)
-  let btinhPicked = [];                 // id các thẻ đang chọn (lô ở Kho / cỡ thanh lỗi)
+  let btinhPicked = [];                 // id các phiếu / thẻ đang chọn
   const btinhOkDraft = new Map();       // sizeKey → SL thanh ĐẠT đã nhập (giữ khi vẽ lại)
+  // Bản nháp RIÊNG cho nguồn PHIẾU XUẤT (kind 'tinh'): Lỗi · Tóp · Khác · nội dung Khác
+  const btinhErrDraft = new Map();
+  const btinhTopDraft = new Map();
+  const btinhOtherDraft = new Map();
+  const btinhOtherNoteDraft = new Map();  // sizeKey → ghi chú "Khác"
+  const btinhOutRaw = new Map();          // sizeKey → KT sau bào NHẬP 1 DÒNG (VD "1250x20x5")
   function baoTinhPickedIds() { return btinhPicked.slice(); }
   function baoTinhOkDrafts() { return btinhOkDraft; }
   // Danh sách thẻ nguồn theo Loại bào — BẢN THÔ (kèm số thanh còn lại + phần của lượt
@@ -6535,27 +6764,20 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const kind = baoTinhKindOf();
     const editing = state.x2BaoTinhEditId ? baoTinhRecOf(state.x2BaoTinhEditId) : null;
     if (kind === 'tinh') {
-      return baoTinhLotList().map(b => {
-        let selfQty = 0;
-        if (editing && editing.kind === 'tinh') {
-          if (Array.isArray(editing.sources) && editing.sources.length) {
-            selfQty = editing.sources
-              .filter(x => String(x.batchId) === String(b.id))
-              .reduce((s, x) => s + (Number(x.qty) || 0), 0);
-          } else if (String(editing.batchId) === String(b.id)) {
-            selfQty = baoTinhQtyInOf(editing);
-          }
-        }
-        return {
-          id: b.id, dims: [Number(b.length) || 0, Number(b.width) || 0, Number(b.thickness) || 0],
-          cls: b.bambooType || '—', qty: baoTinhLotRemainingOf(b) + selfQty,
-          location: b.location || '—', code: b.code || '',
-          // ── Thông tin cho THẺ 2 DÒNG CHUẨN (giống phần chọn thanh thô của thẻ Bullig) ──
-          isLot: true, total: Number(b.quantity) || 0,
-          useFor: b.useFor || '', materialType: b.materialType || '', supplier: b.supplier || '',
-          days: bulligLotDaysOf(b)
-        };
-      });
+      // ── NGUỒN = PHIẾU XUẤT KHO mục đích "Bào Tinh" (làm nhiều ngày mới hết) ──
+      const exId = editing && editing.kind === 'tinh' ? editing.id : null;
+      // includeUsed = true → bản THÔ giữ cả phiếu đã rút hết (baoTinhCandidates lọc qty>0,
+      // baoTinhUsedUpItems trả lại cho dòng GIẢI THÍCH "ĐÃ DÙNG HẾT")
+      return khoNoteInputPool('baotinh', exId, true).map(p => ({
+        id: p.id, isNote: true, pending: p.pending, note: p.note,
+        dims: (p.sizes[0] && p.sizes[0].dims) || [0, 0, 0],   // 1 size đại diện (group tách theo từng size)
+        cls: p.pending ? 'Chờ duyệt' : '—',
+        qty: p.remaining, total: p.total,
+        location: p.note && p.note.purposeNote ? String(p.note.purposeNote) : 'Kho',
+        code: '',
+        useFor: 'Bào Tinh', materialType: '', supplier: '',
+        noteSizes: p.sizes, noteDate: p.date, days: null
+      }));
     }
     if (kind === 'ha_cap') {
       return baoTinhDefectStock().map(x => {
@@ -6641,6 +6863,18 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     }
     const map = new Map();
     baoTinhCandidates().filter(c => btinhPicked.includes(String(c.id))).forEach(c => {
+      // ── THẺ PHIẾU XUẤT: 1 phiếu nhiều kích thước → tách mỗi kích thước 1 dòng ──
+      if (c.isNote) {
+        (c.noteSizes || []).forEach(s => {
+          if (!(Number(s.remaining) > 0)) return;
+          const cur = map.get(s.sizeKey) || { key: s.sizeKey, manual: false, dims: s.dims, sizeKey: s.sizeKey, inQty: 0, sources: [], noteIds: [] };
+          cur.inQty += Number(s.remaining) || 0;
+          if (!cur.noteIds.includes(String(c.id))) cur.noteIds.push(String(c.id));
+          cur.sources.push(c);
+          map.set(s.sizeKey, cur);
+        });
+        return;
+      }
       const key = dimKeyOf(c.dims[0], c.dims[1], c.dims[2]);
       const cur = map.get(key) || { key, manual: false, dims: c.dims, sizeKey: key, inQty: 0, sources: [] };
       cur.inQty += Number(c.qty) || 0;
@@ -6661,6 +6895,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // plain = chuỗi BỎ THẺ HTML để so khớp Ô TÌM NHANH (chuẩn hóa qua bulligNorm).
   function baoTinhCardOf(it) {
     const size = `${comboLabel({ d: it.dims[0], r: it.dims[1], t: it.dims[2] })} mm`;
+    // ── THẺ PHIẾU XUẤT KHO (nguồn mới của Bào tinh) — dòng 1 = tóm tắt ngày
+    // xuất + tồn phiếu; di chuột hiện tooltip liệt kê kích thước & số lượng ──
+    if (it.isNote) {
+      const dateTxt = it.noteDate ? formatDateDDMMYY(it.noteDate) : '—';
+      const qtyTxt = (it.total > 0 && it.qty < it.total)
+        ? `${fmtThanh(it.qty)}/${fmtThanh(it.total)} thanh (còn)`
+        : `${fmtThanh(it.qty)} thanh`;
+      const mainNoQty = `Xuất Bào Tinh · ${dateTxt}`;
+      const main = `${mainNoQty} · ${qtyTxt}`;
+      const tip = khoNoteSizeTooltip(it.noteSizes);
+      const chips = [
+        `<span class="al-use-tag use-van">Bào Tinh</span>`,
+        it.pending
+          ? `<span class="al-day-badge day-pending" title="Phiếu chưa được Ban lãnh đạo duyệt — CHỌN ĐƯỢC SAU KHI DUYỆT">Chờ duyệt</span>`
+          : `<span class="al-day-badge day-k" title="Số kích thước nan khác nhau trong phiếu">${it.noteSizes.length} kích thước</span>`
+      ];
+      const sub = chips.join(' ');
+      return {
+        main, sub,
+        titleTxt: tip ? `Ngày xuất ${dateTxt} — ${tip}` : main,
+        plain: `${main} Bào Tinh phiếu xuất`,
+        plainTxt: `${mainNoQty} Bào Tinh phiếu xuất`,   // CHỮ — ô tìm nhanh
+        pending: !!it.pending
+      };
+    }
     if (it.isLot) {
       // Lô đã bào một phần → hiện "còn X/Y thanh" (cùng cách thẻ thanh thô Bullig)
       const qtyTxt = (it.total > 0 && it.qty < it.total)
@@ -6777,7 +7036,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     }
     listEl.innerHTML = rows.map(({ it, card }) => {
       const on = btinhPicked.includes(String(it.id));
-      return `<button type="button" class="al-card x2-btinh-card${on ? ' picked' : ''}" data-btinh-pick="${escapeHTML(String(it.id))}" aria-pressed="${on ? 'true' : 'false'}" title="${escapeHTML(card.titleTxt)}">
+      const pend = !!card.pending;
+      return `<button type="button" class="al-card x2-btinh-card${on ? ' picked' : ''}${pend ? ' al-card-pending' : ''}" data-btinh-pick="${escapeHTML(String(it.id))}" aria-pressed="${on ? 'true' : 'false'}"${pend ? ' aria-disabled="true"' : ''} title="${escapeHTML(card.titleTxt)}">
         <span class="al-card-body">
           <span class="al-card-main">${escapeHTML(card.main)}</span>
           <span class="al-card-sub">${card.sub}</span>
@@ -6790,6 +7050,12 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function toggleBaoTinhPick(id) {
     const key = String(id || '');
     if (!key) return btinhPicked.slice();
+    // Phiếu CHỜ DUYỆT → hiện nhưng CHỌN KHÔNG ĐƯỢC (chờ Ban lãnh đạo duyệt)
+    const cand = baoTinhCandidates().find(c => String(c.id) === key);
+    if (cand && cand.pending) {
+      showToast('Phiếu này CHỜ DUYỆT — chọn được sau khi Ban lãnh đạo duyệt phiếu kho.', 'error');
+      return btinhPicked.slice();
+    }
     btinhPicked = btinhPicked.includes(key) ? btinhPicked.filter(x => x !== key) : [...btinhPicked, key];
     renderX2BaoTinhList();
     renderX2BaoTinhGroups();
@@ -6797,8 +7063,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     return btinhPicked.slice();
   }
   function baoTinhPickAll() {
-    // "Chọn tất cả" = các thẻ ĐANG HIỂN THỊ (đã lọc theo ô tìm nhanh)
-    btinhPicked = baoTinhVisibleItems().map(c => String(c.id));
+    // "Chọn tất cả" = các thẻ ĐANG HIỂN THỊ (đã lọc theo ô tìm nhanh) — BỎ phiếu chờ duyệt
+    const visible = baoTinhVisibleItems().filter(c => !c.pending);
+    btinhPicked = btinhPicked.filter(id => visible.some(c => String(c.id) === String(id)))
+      .concat(visible.map(c => String(c.id)).filter(id => !btinhPicked.includes(id)));
     renderX2BaoTinhList();
     renderX2BaoTinhGroups();
     renderX2BaoTinhCalc();
@@ -6977,6 +7245,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       renderX2BaoTinhCalc();
       return;
     }
+    // ── NGUỒN PHIẾU XUẤT: KT sau bào nhập 1 DÒNG · SL Lỗi / Tóp / Khác / ghi chú Khác ──
+    const rawKey = t.getAttribute('data-btinh-out-raw');
+    if (rawKey) {
+      btinhOutRaw.set(rawKey, String(raw || '').trim());
+      renderX2BaoTinhNumbers();
+      renderX2BaoTinhCalc();
+      return;
+    }
+    const numKey =
+      t.getAttribute('data-btinh-err') || t.getAttribute('data-btinh-top') ||
+      t.getAttribute('data-btinh-other');
+    if (numKey) {
+      const map = t.getAttribute('data-btinh-err') ? btinhErrDraft
+        : t.getAttribute('data-btinh-top') ? btinhTopDraft : btinhOtherDraft;
+      if (bad) map.delete(numKey); else map.set(numKey, Math.max(0, Math.floor(v)));
+      renderX2BaoTinhNumbers();
+      renderX2BaoTinhCalc();
+      return;
+    }
+    const noteKey = t.getAttribute('data-btinh-other-note');
+    if (noteKey) {
+      const s = String(raw || '').trim();
+      if (s) btinhOtherNoteDraft.set(noteKey, s); else btinhOtherNoteDraft.delete(noteKey);
+      return;
+    }
     // 'bao_thanh' không còn ô nhập tay (nguồn chọn từ danh sách + SL đạt LINK từ QC)
   }
   // Bấm nút xóa HÀNG nhập tay — ĐÃ BỎ (Bào thanh không còn hàng nhập tay)
@@ -7000,6 +7293,11 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       btinhPicked = [];
       btinhOkDraft.clear();
       btinhOutDraft.clear();
+      btinhErrDraft.clear();
+      btinhTopDraft.clear();
+      btinhOtherDraft.clear();
+      btinhOtherNoteDraft.clear();
+      btinhOutRaw.clear();
       btinhBtIn = '';
       btinhBtOut = '';
       const q = document.getElementById('x2-btinh-bt-qty');
@@ -7096,11 +7394,37 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const v = (o[part] == null || o[part] === '') ? '' : String(o[part]);
       return `<input type="number" class="x2-btinh-dim" data-btinh-out="${escapeHTML(g.key)}" data-out-part="${part}" min="0" step="any" placeholder="${ph}" value="${escapeHTML(v)}">`;
     };
+    // Ô nháp: SL LỖI · TÓP · KHÁC (số) + NỘI DUNG "Khác" — chỉ nguồn PHIẾU XUẤT
+    const numCell = (attr, map, key, ph) => {
+      const v = map.get(key);
+      return `<input type="number" class="x2-btinh-ok" data-${attr}="${escapeHTML(key)}" min="0" step="1" placeholder="${ph}" value="${(v == null) ? '' : escapeHTML(String(v))}">`;
+    };
+    const numDraft = (map, key) => Math.max(0, Math.round(Number(map.get(key)) || 0));
     const rows = groups.map(g => {
       const ok = btinhOkDraft.get(g.key);
       const okTxt = (ok == null) ? '' : String(ok);
-      const inCell = `<span class="x2-nan-chip">${comboLabel({ d: g.dims[0], r: g.dims[1], t: g.dims[2] })}</span>${g.sources.length > 1 ? ` <small class="x2-btinh-src">${g.sources.length} thẻ</small>` : ''}`;
+      const inCell = `<span class="x2-nan-chip">${comboLabel({ d: g.dims[0], r: g.dims[1], t: g.dims[2] })}</span>${g.sources.length > 1 ? ` <small class="x2-btinh-src">${g.sources.length} phiếu</small>` : ''}`;
       const qtyCell = `<strong>${fmtThanh(g.inQty)}</strong>`;
+      // ── NGUỒN PHIẾU XUẤT: KT sau bào nhập 1 DÒNG TEXT · thêm Lỗi / Tóp / Khác + Tồn ──
+      if (kind === 'tinh') {
+        const raw = btinhOutRaw.get(g.key) || '';
+        const errN = numDraft(btinhErrDraft, g.key);
+        const topN = numDraft(btinhTopDraft, g.key);
+        const othN = numDraft(btinhOtherDraft, g.key);
+        const othNote = btinhOtherNoteDraft.get(g.key) || '';
+        const ton = Math.max(0, g.inQty - (Math.max(0, Math.round(Number(ok) || 0)) + errN + topN + othN));
+        return `<tr data-btinh-row="${escapeHTML(g.key)}">
+          <td class="x2-btinh-in-cell">${inCell}</td>
+          <td class="text-right x2-btinh-qty-cell">${qtyCell}</td>
+          <td class="x2-btinh-out-cell"><input type="text" class="x2-btinh-out-text" data-btinh-out-raw="${escapeHTML(g.key)}" placeholder="VD: 1250x20x5" autocomplete="off" value="${escapeHTML(raw)}"></td>
+          <td class="x2-btinh-ok-cell">${numCell('btinh-ok', btinhOkDraft, g.key, '0')}</td>
+          <td class="x2-btinh-ok-cell">${numCell('btinh-err', btinhErrDraft, g.key, '0')}</td>
+          <td class="x2-btinh-ok-cell">${numCell('btinh-top', btinhTopDraft, g.key, '0')}</td>
+          <td class="x2-btinh-ok-cell">${numCell('btinh-other', btinhOtherDraft, g.key, '0')} <input type="text" class="x2-btinh-other-note" data-btinh-other-note="${escapeHTML(g.key)}" placeholder="nội dung khác…" autocomplete="off" value="${escapeHTML(othNote)}"></td>
+          <td class="text-right x2-btinh-ton-cell"><strong class="x2-btinh-ton">${fmtThanh(ton)}</strong></td>
+        </tr>`;
+      }
+      // ── HẠ CẤP: giữ nguyên 3 ô kích thước + SL đạt (lỗi = vào − đạt, tự tính) ──
       return `<tr data-btinh-row="${escapeHTML(g.key)}">
         <td class="x2-btinh-in-cell">${inCell}</td>
         <td class="text-right x2-btinh-qty-cell">${qtyCell}</td>
@@ -7111,27 +7435,57 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     }).join('');
     const tIn = groups.reduce((s, g) => s + g.inQty, 0);
     const tOk = groups.reduce((s, g) => s + Math.min(Math.max(0, Math.round(Number(btinhOkDraft.get(g.key)) || 0)), g.inQty), 0);
+    // Tổng Lỗi / Tóp / Khác / Tồn — chỉ nhánh NGUỒN PHIẾU (kind 'tinh')
+    const dOf = (m, g) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
+    const tErr = kind === 'tinh' ? groups.reduce((s, g) => s + dOf(btinhErrDraft, g), 0) : 0;
+    const tTop = kind === 'tinh' ? groups.reduce((s, g) => s + dOf(btinhTopDraft, g), 0) : 0;
+    const tOth = kind === 'tinh' ? groups.reduce((s, g) => s + dOf(btinhOtherDraft, g), 0) : 0;
+    const tTon = kind === 'tinh' ? groups.reduce((s, g) => s + Math.max(0, g.inQty - (dOf(btinhOkDraft, g) + dOf(btinhErrDraft, g) + dOf(btinhTopDraft, g) + dOf(btinhOtherDraft, g))), 0) : 0;
     box.innerHTML = `
       <div class="x2-btinh-groups-head">
-        <i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước chung</strong> (không chia phân loại) — mỗi dòng điền <strong>kích thước sau bào</strong> + <strong>SL thanh đạt</strong>
+        ${(kind === 'tinh')
+          ? `<i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước trong phiếu xuất</strong> — nhập <strong>KT sau bào</strong> 1 dòng (VD 1250x20x5) · Đạt · Lỗi · Tóp · Khác. <strong>Tồn = tổng − Đạt − Lỗi − Tóp − Khác</strong> (phần chưa làm vẫn ở trong phiếu, làm tiếp ngày sau)`
+          : `<i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước chung</strong> (không chia phân loại) — mỗi dòng điền <strong>kích thước sau bào</strong> + <strong>SL thanh đạt</strong>`}
       </div>
       <div class="x2-btinh-group-scroll">
         <table class="data-table x2-btinh-group-table">
-          <thead><tr>
-            <th title="Kích thước thanh TRƯỚC khi bào (kích thước chung của các thẻ đã chọn)">K.thước vào</th>
-            <th class="text-right" title="Tổng số thanh lấy từ các thẻ của kích thước này">SL vào</th>
-            <th title="Kích thước SAU khi bào (Dài × Rộng × Dày, mm)">K.thước sau bào</th>
-            <th title="Số thanh ĐẠT của dòng này — SL thanh LỖI tự tính = thanh vào − thanh đạt (hiện ở bảng lịch sử)">SL đạt</th>
-            <th></th>
-          </tr></thead>
+          ${(kind === 'tinh')
+            ? `<thead><tr>
+                <th title="Kích thước thanh TRƯỚC khi bào (trong phiếu xuất)">K.thước vào</th>
+                <th class="text-right" title="Tổng số thanh của kích thước này còn lại trong phiếu">SL vào</th>
+                <th title="Kích thước SAU khi bào — nhập 1 dòng, VD 1250x20x5">KT sau bào</th>
+                <th title="Số thanh ĐẠT của dòng này">SL đạt</th>
+                <th title="Số thanh LỖI nhập tay">SL lỗi</th>
+                <th title="Số thanh TÓP (hao hụt)">Tóp</th>
+                <th title="Số thanh KHÁC + ghi rõ nội dung loại khác">Khác</th>
+                <th class="text-right" title="Tồn = tổng − Đạt − Lỗi − Tóp − Khác — phần CHƯA LÀM còn ở trong phiếu">Tồn</th>
+              </tr></thead>`
+            : `<thead><tr>
+                <th title="Kích thước thanh TRƯỚC khi bào (kích thước chung của các thẻ đã chọn)">K.thước vào</th>
+                <th class="text-right" title="Tổng số thanh lấy từ các thẻ của kích thước này">SL vào</th>
+                <th title="Kích thước SAU khi bào (Dài × Rộng × Dày, mm)">K.thước sau bào</th>
+                <th title="Số thanh ĐẠT của dòng này — SL thanh LỖI tự tính = thanh vào − thanh đạt (hiện ở bảng lịch sử)">SL đạt</th>
+                <th></th>
+              </tr></thead>`}
           <tbody>${rows}</tbody>
-          <tfoot><tr>
-            <td><strong>Tổng</strong></td>
-            <td class="text-right"><strong>${fmtThanh(tIn)}</strong></td>
-            <td></td>
-            <td><strong>${fmtThanh(tOk)}</strong></td>
-            <td></td>
-          </tr></tfoot>
+          ${(kind === 'tinh')
+            ? `<tfoot><tr>
+                <td><strong>Tổng</strong></td>
+                <td class="text-right"><strong>${fmtThanh(tIn)}</strong></td>
+                <td></td>
+                <td><strong>${fmtThanh(tOk)}</strong></td>
+                <td><strong>${fmtThanh(tErr)}</strong></td>
+                <td><strong>${fmtThanh(tTop)}</strong></td>
+                <td><strong>${fmtThanh(tOth)}</strong></td>
+                <td class="text-right"><strong>${fmtThanh(tTon)}</strong></td>
+              </tr></tfoot>`
+            : `<tfoot><tr>
+                <td><strong>Tổng</strong></td>
+                <td class="text-right"><strong>${fmtThanh(tIn)}</strong></td>
+                <td></td>
+                <td><strong>${fmtThanh(tOk)}</strong></td>
+                <td></td>
+              </tr></tfoot>`}
         </table>
       </div>`;
     initLucide();
@@ -7147,6 +7501,28 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const tOk = groups.reduce((s, g) => s + Math.min(Math.max(0, Math.round(Number(btinhOkDraft.get(g.key)) || 0)), g.inQty), 0);
     tds[1].innerHTML = `<strong>${fmtThanh(tIn)}</strong>`;
     tds[3].innerHTML = `<strong>${fmtThanh(tOk)}</strong>`;
+    // Nguồn phiếu xuất: còn 4 ô Tổng nữa — Lỗi · Tóp · Khác · Tồn (8 cột)
+    if (tds.length >= 8 && baoTinhKindOf() === 'tinh') {
+      const dOf = (m, g) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
+      const tErr = groups.reduce((s, g) => s + dOf(btinhErrDraft, g), 0);
+      const tTop = groups.reduce((s, g) => s + dOf(btinhTopDraft, g), 0);
+      const tOth = groups.reduce((s, g) => s + dOf(btinhOtherDraft, g), 0);
+      const tTon = groups.reduce((s, g) => s + Math.max(0, g.inQty - (dOf(btinhOkDraft, g) + dOf(btinhErrDraft, g) + dOf(btinhTopDraft, g) + dOf(btinhOtherDraft, g))), 0);
+      tds[4].innerHTML = `<strong>${fmtThanh(tErr)}</strong>`;
+      tds[5].innerHTML = `<strong>${fmtThanh(tTop)}</strong>`;
+      tds[6].innerHTML = `<strong>${fmtThanh(tOth)}</strong>`;
+      tds[7].innerHTML = `<strong>${fmtThanh(tTon)}</strong>`;
+      // Cập nhật TỒN từng dòng (không vẽ lại bảng → giữ con trỏ ô nhập)
+      groups.forEach(g => {
+        const esc = (typeof CSS !== 'undefined' && CSS && typeof CSS.escape === 'function') ? CSS.escape(g.key) : String(g.key).replace(/"/g, '\\"');
+        const row = (typeof box.querySelector === 'function') ? box.querySelector(`tr[data-btinh-row="${esc}"]`) : null;
+        const tonEl = row && typeof row.querySelector === 'function' ? row.querySelector('.x2-btinh-ton') : null;
+        if (tonEl) {
+          const v = Math.max(0, g.inQty - (dOf(btinhOkDraft, g) + dOf(btinhErrDraft, g) + dOf(btinhTopDraft, g) + dOf(btinhOtherDraft, g)));
+          tonEl.textContent = fmtThanh(v);
+        }
+      });
+    }
   }
 
   // Ô TỔNG KẾT (tự tính): tổng thanh vào · tổng đạt · tỷ lệ đạt · thể tích đạt (tính theo TỪNG dòng
@@ -7179,10 +7555,22 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       ? '<strong style="color:#b45309;">bào thanh (đầu vào Ép Ván / thanh lỗi · đạt LINK từ QC)</strong>'
       : kind === 'ha_cap'
         ? '<strong style="color:#b45309;">thanh lỗi (hạ cấp)</strong>'
-        : '<strong style="color:#0f766e;">lô ở Kho (qua Sấy 2)</strong>';
+        : '<strong style="color:#0f766e;">PHIẾU XUẤT KHO mục đích Bào Tinh (qua Sấy 2)</strong>';
+    // Nguồn phiếu: còn Lỗi · Tóp · Khác · TỒN (phần chưa làm — vẫn ở trong phiếu)
+    const nOf = (m, g) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
+    const isNoteRows = (kind === 'tinh');
+    const tErr2 = isNoteRows ? groups.reduce((s, g) => s + nOf(btinhErrDraft, g), 0) : 0;
+    const tTop2 = isNoteRows ? groups.reduce((s, g) => s + nOf(btinhTopDraft, g), 0) : 0;
+    const tOth2 = isNoteRows ? groups.reduce((s, g) => s + nOf(btinhOtherDraft, g), 0) : 0;
+    const tTon2 = isNoteRows ? groups.reduce((s, g) => s + Math.max(0, g.inQty - (nOf(btinhOkDraft, g) + nOf(btinhErrDraft, g) + nOf(btinhTopDraft, g) + nOf(btinhOtherDraft, g))), 0) : 0;
     box.innerHTML = `
-      <span class="x2-ong-calc-item x2-ong-calc-in" title="Tổng số thanh của các thẻ đã chọn (cộng cả các hàng tự nhập)"><span class="x2-ong-calc-label">Tổng vào:</span><strong>${fmtThanh(tIn)} thanh</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-in" title="Tổng số thanh của các phiếu đã chọn (cộng cả các hàng tự nhập)"><span class="x2-ong-calc-label">Tổng vào:</span><strong>${fmtThanh(tIn)} thanh</strong></span>
       <span class="x2-ong-calc-item x2-ong-calc-bo" title="Tổng SL thanh ĐẠT đã nhập trong bảng tổng hợp"><span class="x2-ong-calc-label">Đạt:</span><strong>${fmtThanh(tOk)} thanh</strong></span>
+      ${isNoteRows ? `
+      <span class="x2-ong-calc-item" title="SL thanh LỖI nhập tay của dòng"><span class="x2-ong-calc-label">Lỗi:</span><strong>${fmtThanh(tErr2)} thanh</strong></span>
+      <span class="x2-ong-calc-item" title="SL thanh TÓP (hao hụt) — vào tồn trung gian chờ xử lý"><span class="x2-ong-calc-label">Tóp:</span><strong>${fmtThanh(tTop2)} thanh</strong></span>
+      <span class="x2-ong-calc-item" title="SL thanh KHÁC — vào tồn trung gian chờ xử lý"><span class="x2-ong-calc-label">Khác:</span><strong>${fmtThanh(tOth2)} thanh</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Tồn = tổng − Đạt − Lỗi − Tóp − Khác — phần CHƯA LÀM vẫn ở trong phiếu, làm tiếp ngày sau"><span class="x2-ong-calc-label">Tồn:</span><strong>${fmtThanh(tTon2)} thanh</strong></span>` : ''}
       <span class="x2-ong-calc-item" title="Tỷ lệ đạt = tổng thanh đạt ÷ tổng thanh vào (SL thanh lỗi tự tính chỉ hiện ở bảng lịch sử)"><span class="x2-ong-calc-label">Tỷ lệ đạt:</span><strong>${okPct == null ? '—' : `${fmtRatio(okPct)}%`}</strong></span>
       <span class="x2-ong-calc-item" title="Thể tích thanh ĐẠT: cộng theo TỪNG dòng, mỗi dòng dùng kích thước SAU BÀO của nó"><span class="x2-ong-calc-label">Thể tích đạt:</span><strong>${volAny ? `${(Math.round(volOk * 10000) / 10000).toFixed(4)} m³` : '—'}</strong></span>
       <span class="x2-ong-calc-item" title="Nguồn thanh của lượt bào này"><span class="x2-ong-calc-label">Nguồn:</span>${kindTxt}</span>`;
@@ -7382,6 +7770,11 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     btinhPicked = [];
     btinhOkDraft.clear();
     btinhOutDraft.clear();
+    btinhErrDraft.clear();
+    btinhTopDraft.clear();
+    btinhOtherDraft.clear();
+    btinhOtherNoteDraft.clear();
+    btinhOutRaw.clear();
     btinhBtIn = '';
     btinhBtOut = '';
     const d = document.getElementById('x2-btinh-date');
@@ -7449,6 +7842,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const groups = baoTinhGroups();
     const plans = [];
     let skipped = 0;
+    const exId = state.x2BaoTinhEditId || null;   // lượt đang sửa → kho NoteSizeRows cộng lại phần cũ
     if (kind === 'bao_thanh') {
       // 1 LƯỢT = 1 cặp (đầu vào → đầu ra). qtyOk/qtyErr KHÔNG lưu cứng —
       // đọc LIVE từ tab QC ("Kiểm thanh") qua getBaoTinhQcAlloc().
@@ -7456,8 +7850,46 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     } else {
       if (!groups.length) { showToast('Chưa có số liệu để lưu — kiểm tra kích thước/số lượng thanh!', 'error'); return; }
       for (const g of groups) {
-        const okRaw = Math.round(Math.max(0, Number(btinhOkDraft.get(g.key)) || 0));
         const out = baoTinhOutDimsOf(g.key);
+        // ── NGUỒN PHIẾU XUẤT (kind 'tinh'): Đạt · Lỗi · Tóp · Khác NHẬP TAY ──
+        // Số RÚT khỏi phiếu = Đạt + Lỗi + Tóp + Khác · Tồn = vào − số rút (ở lại phiếu)
+        if (kind === 'tinh') {
+          const n = (m) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
+          const okRaw = n(btinhOkDraft), errRaw = n(btinhErrDraft), topRaw = n(btinhTopDraft), othRaw = n(btinhOtherDraft);
+          const taken = okRaw + errRaw + topRaw + othRaw;
+          if (taken <= 0 && !(out[0] > 0)) { skipped++; continue; }
+          if (!g.sizeKey || g.inQty <= 0) {
+            showToast('Có dòng chưa nhập đủ KÍCH THƯỚC TRƯỚC BÀO hoặc SỐ LƯỢNG — kiểm tra bảng tổng hợp!', 'error');
+            return;
+          }
+          if (taken <= 0) {
+            showToast(`Kích thước ${g.sizeKey}: chưa nhập số liệu (Đạt/Lỗi/Tóp/Khác) — nhập rồi bấm Lưu!`, 'error');
+            return;
+          }
+          if (taken > g.inQty) {
+            showToast(`Kích thước ${g.sizeKey}: tổng Đạt+Lỗi+Tóp+Khác (${fmtThanh(taken)}) vượt SL vào (${fmtThanh(g.inQty)}) — kiểm tra lại!`, 'error');
+            return;
+          }
+          if (!(out[0] > 0 && out[1] > 0 && out[2] > 0)) {
+            showToast(`Kích thước ${g.sizeKey}: nhập KÍCH THƯỚC SAU BÀO (VD 1250x20x5) cho dòng này!`, 'error');
+            return;
+          }
+          // Phân bổ FIFO số rút vào các PHIẾU đã chọn (phiếu cũ trước, trong phiếu theo lô)
+          const alloc = khoNoteAllocate(g.noteIds || [], g.sizeKey, taken, exId);
+          if (!alloc.ok) {
+            showToast(`Kích thước ${g.sizeKey}: các phiếu đã chọn không đủ ${fmtThanh(taken)} thanh (còn ${fmtThanh(alloc.left)}) — chọn thêm phiếu hoặc giảm số liệu!`, 'error');
+            return;
+          }
+          plans.push({
+            g, outDims: out, qtyOk: okRaw, qtyErr: errRaw,
+            qtyTop: topRaw, qtyOther: othRaw,
+            otherNote: btinhOtherNoteDraft.get(g.key) || '',
+            taken, alloc
+          });
+          continue;
+        }
+        // ── HẠ CẤP: lỗi = vào − đạt (tự tính như cũ) ──
+        const okRaw = Math.round(Math.max(0, Number(btinhOkDraft.get(g.key)) || 0));
         if (okRaw <= 0 && !(out[0] > 0 || out[1] > 0 || out[2] > 0)) { skipped++; continue; }
         if (!g.sizeKey || g.inQty <= 0) {
           showToast('Có dòng chưa nhập đủ KÍCH THƯỚC TRƯỚC BÀO hoặc SỐ LƯỢNG — kiểm tra bảng tổng hợp!', 'error');
@@ -7495,20 +7927,26 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const unitVol = unitVolOf(outDims[0], outDims[1], outDims[2]);
       const outSizeKey = dimKeyOf(outDims[0], outDims[1], outDims[2]);
       const isBt = (kind === 'bao_thanh');
-      // Nguồn của dòng: thẻ lô ở Kho → danh sách lô (sources); thẻ lỗi → defectKey;
-      // bào thanh → cỡ chọn từ danh sách nguồn (Ép Ván / thanh lỗi), inSource nhớ nguồn.
-      const lots = (g.sources || []).filter(s => kind === 'tinh');
-      const first = lots[0] || null;
+      const isNote = (kind === 'tinh' && plan.alloc);   // nguồn = PHIẾU XUẤT KHO
+      // ── NGUỒN PHIẾU XUẤT: sources = lô được phân bổ FIFO trong phiếu (link
+      //    planning/đối chiếu) · noteUses = số rút theo (phiếu, lô) ──
+      const allocLots = isNote ? plan.alloc.lots : [];
+      const first = isNote ? (allocLots[0] || null) : ((g.sources || []).filter(s => kind === 'tinh')[0] || null);
       const defect = kind === 'ha_cap' ? baoTinhDefectStockOf(g.sizeKey) : null;
+      const taken = isNote ? (plan.taken || 0) : 0;
       return {
         date: dateVal,
         week: materialWeekLabel(dateVal),
         kind,
         // Nguồn (kèm snapshot phòng khi lô/cỡ bị xóa)
-        sources: lots.map(s => ({
-          batchId: s.id, code: s.code || '', location: s.location || '', dims: s.dims, qty: Number(s.qty) || 0
-        })),
-        batchId: first ? first.id : '',
+        sources: isNote
+          ? allocLots.map(l => ({ batchId: l.batchId, code: l.code || '', location: l.location || '', dims: l.dims, qty: l.qty }))
+          : (g.sources || []).filter(s => kind === 'tinh').map(s => ({
+              batchId: s.id, code: s.code || '', location: s.location || '', dims: s.dims, qty: Number(s.qty) || 0
+            })),
+        // SỐ RÚT khỏi phiếu xuất theo từng (phiếu, lô, kích thước) — tồn phiếu tính từ đây
+        noteUses: isNote ? plan.alloc.uses : [],
+        batchId: first ? first.batchId || first.id : '',
         batchCode: first ? (first.code || '') : '',
         batchLocation: first ? (first.location || '') : '',
         batchDims: first ? first.dims : [],
@@ -7520,14 +7958,19 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         inSource: isBt ? ((btInItem && btInItem.inSource) || 'press') : '',
         inDims: isBt ? (btInItem ? btInItem.dims : []) : [],
         manualRowId: '',
-        inQty: isBt ? baoTinhBaoThanhQtyIn() : g.inQty,   // số thanh đưa vào của dòng
+        // Số thanh RÚT khỏi nguồn của dòng (phiếu: Đạt+Lỗi+Tóp+Khác; hạ cấp: tổng vào)
+        inQty: isBt ? baoTinhBaoThanhQtyIn() : (isNote ? taken : g.inQty),
         inSizeKey: isBt ? (btInItem ? btInItem.sizeKey : '') : g.sizeKey,
         // Kết quả — 'bao_thanh' để 0 (ĐẠT/LỖI đọc LIVE từ tab QC "Kiểm thanh")
         outDims,
         outSizeKey,
         unitVol,
         qtyOk: isBt ? 0 : plan.qtyOk,
-        qtyErr: isBt ? 0 : plan.qtyErr,   // TỰ TÍNH = thanh vào − thanh đạt (loại tinh/ha_cap)
+        qtyErr: isBt ? 0 : plan.qtyErr,   // phiếu: NHẬP TAY · hạ cấp: vào − đạt (tự tính)
+        // TÓP / KHÁC + ghi chú loại khác — chỉ nguồn phiếu xuất (tồn trung gian chờ xử lý)
+        qtyTop: isNote ? (plan.qtyTop || 0) : 0,
+        qtyOther: isNote ? (plan.qtyOther || 0) : 0,
+        otherNote: isNote ? (plan.otherNote || '') : '',
         volumeOk: isBt ? 0 : Math.round(plan.qtyOk * unitVol * 10000) / 10000,
         worker: snap.worker, workTime: snap.workTime,
         workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
@@ -7569,16 +8012,29 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     btinhPicked = [];
     btinhOkDraft.clear();
     btinhOutDraft.clear();
+    btinhErrDraft.clear();
+    btinhTopDraft.clear();
+    btinhOtherDraft.clear();
+    btinhOtherNoteDraft.clear();
+    btinhOutRaw.clear();
     btinhBtIn = '';
     btinhBtOut = '';
     const k = document.getElementById('x2-btinh-kind');
     if (k) k.value = rec.kind || 'tinh';
     const d = document.getElementById('x2-btinh-date');
     if (d) d.value = rec.date || '';
-    // Nguồn: chọn lại ĐÚNG thẻ của lượt này (lô ở Kho / cỡ thanh lỗi)
+    // Nguồn: chọn lại ĐÚNG thẻ của lượt này (PHIẾU XUẤT / cỡ thanh lỗi)
     if (rec.kind === 'tinh') {
-      const srcs = Array.isArray(rec.sources) && rec.sources.length ? rec.sources : (rec.batchId ? [{ batchId: rec.batchId }] : []);
-      btinhPicked = srcs.map(s => String(s.batchId)).filter(Boolean);
+      if (Array.isArray(rec.noteUses) && rec.noteUses.length) {
+        // Phiếu mới: chọn lại các PHIẾU mà lượt này đã rút số liệu
+        const noteIds = [...new Set(rec.noteUses.map(u => String(u.noteId)))];
+        btinhPicked = noteIds.filter(id2 => baoTinhCandidates().some(c => String(c.id) === id2));
+        if (!btinhPicked.length) btinhPicked = noteIds;   // phiếu đã hết tồn → vẫn chọn để sửa
+      } else {
+        // Dữ liệu cũ: nguồn = lô ở Kho
+        const srcs = Array.isArray(rec.sources) && rec.sources.length ? rec.sources : (rec.batchId ? [{ batchId: rec.batchId }] : []);
+        btinhPicked = srcs.map(s => String(s.batchId)).filter(Boolean);
+      }
     } else if (rec.kind === 'ha_cap') {
       btinhPicked = rec.defectKey ? [String(rec.defectKey)] : [];
     } else if (rec.kind === 'bao_thanh') {
@@ -7603,7 +8059,17 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (rowKey && rec.kind !== 'bao_thanh') {
       btinhOkDraft.set(rowKey, Math.round(Number(rec.qtyOk) || 0));
       const outDims = Array.isArray(rec.outDims) ? rec.outDims : [];
-      btinhOutDraft.set(rowKey, { d: outDims[0] || '', r: outDims[1] || '', t: outDims[2] || '' });
+      if (rec.kind === 'tinh') {
+        // Nguồn phiếu: KT sau bào nhập 1 DÒNG + Lỗi / Tóp / Khác / ghi chú Khác
+        btinhOutRaw.set(rowKey, outDims.length === 3 && outDims[0] > 0
+          ? `${outDims[0]}x${outDims[1]}x${outDims[2]}` : '');
+        if (Number(rec.qtyErr)) btinhErrDraft.set(rowKey, Math.round(Number(rec.qtyErr)));
+        if (Number(rec.qtyTop)) btinhTopDraft.set(rowKey, Math.round(Number(rec.qtyTop)));
+        if (Number(rec.qtyOther)) btinhOtherDraft.set(rowKey, Math.round(Number(rec.qtyOther)));
+        if (rec.otherNote) btinhOtherNoteDraft.set(rowKey, String(rec.otherNote));
+      } else {
+        btinhOutDraft.set(rowKey, { d: outDims[0] || '', r: outDims[1] || '', t: outDims[2] || '' });
+      }
     }
     syncX2BaoTinhKindRows(true);
     renderX2BaoTinhList();
@@ -7960,11 +8426,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function baoTinhRowHtml(r, d) {
     const kindChip = `<span class="x2-nan-chip" title="Loại bào của lượt này">${escapeHTML(d.kindLabel)}</span>`;
     const errPct = d.qtyIn > 0 ? (d.qtyErr / d.qtyIn) * 100 : null;
+    // Nguồn phiếu xuất: có Tóp/Khác → thêm chú thích dưới dòng nguồn
+    const topOther = (d.qtyTop || d.qtyOther)
+      ? ` · Tóp ${fmtThanh(d.qtyTop)} · Khác ${fmtThanh(d.qtyOther)}${d.otherNote ? ` (${escapeHTML(d.otherNote)})` : ''}`
+      : '';
     return `
       <tr class="x2-day-row" data-x2-btinh-row="${escapeHTML(r.id)}">
         <td>
           ${kindChip}
-          <div class="x2-row-note">${escapeHTML(baoTinhSourceText(r, d))}${(d.kind === 'tinh' && d.batchRemaining != null && (!Array.isArray(r.sources) || r.sources.length <= 1)) ? ` · còn ${fmtThanh(d.batchRemaining)} thanh` : ''}${(d.kind === 'bao_thanh' && d.pending > 0) ? ` · CHỜ QC KIỂM ${fmtThanh(d.pending)} thanh` : ''}</div>
+          <div class="x2-row-note">${escapeHTML(baoTinhSourceText(r, d))}${(d.kind === 'tinh' && d.batchRemaining != null && (!Array.isArray(r.sources) || r.sources.length <= 1)) ? ` · còn ${fmtThanh(d.batchRemaining)} thanh` : ''}${(d.kind === 'bao_thanh' && d.pending > 0) ? ` · CHỜ QC KIỂM ${fmtThanh(d.pending)} thanh` : ''}${topOther}</div>
         </td>
         <td><span class="x2-nan-chip">${comboLabel({ d: d.outDims[0], r: d.outDims[1], t: d.outDims[2] })}</span></td>
         <td class="text-right"><strong>${fmtThanh(d.qtyIn)}</strong> <small style="color:var(--text-muted);">thanh</small></td>
@@ -8017,7 +8487,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   let khoNoteType = 'xuat';
   let khoNoteEditId = null;        // id phiếu đang sửa (null = ghi mới)
   let khoLotsOpen = false;         // danh sách thẻ lô (gắn lô cho phiếu xuất) đang mở?
-  let khoLotsQuery = '';           // tìm nhanh trong danh sách thẻ lô
+  let khoLotsQuery = '';           // tìm nhanh trong danh sách thẻ lô (CHỮ: mã/vị trí/k.thước)
+  let khoLotsQtyQuery = '';        // tìm THEO SỐ LƯỢNG còn lại của lô (lọc KẾT HỢP điều kiện VÀ)
   let khoLedgerQuery = '';         // tìm nhanh trong sổ (mã lô / kích thước / vị trí)
   let khoStockQuery = '';          // tìm nhanh trong bảng TỒN
   let khoPeriodMode = 'day';       // 'day' | 'tuan' | 'thang' — nhóm sổ theo kỳ
@@ -8110,12 +8581,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function khoNoteTypeOf() { return khoNoteType === 'xu_ly' ? 'xu_ly' : 'xuat'; }
   // Tồn khả dụng để DUYỆT phiếu xuất (Σ nhập kho − Σ xuất đã duyệt) — không cho âm
   function khoAvailableForApproval() { return khoStockSummary().honestThanh; }
+  // ── CHẶN XUẤT THEO TỒN TỪNG LÔ (06/10/2026) ──────────────────────
+  // Trước đây chặn theo TỔNG kho (honestThanh) → khi sổ bị lệch (phiếu bù cũ ghi
+  // nhiều hơn sức chứa → "Tổng trong nhà máy" nhỏ hơn số đã ghi) thì honestThanh = 0
+  // và KHÔNG TẠO ĐƯỢC PHIẾU NÀO dù lô vẫn còn hàng thật.
+  // Nay chặn theo PHẦN CÒN LẠI CỦA TỪNG LÔ đang gắn phiếu — đúng với dữ liệu thật;
+  // cảnh báo lệch SỔ chỉ là cảnh báo (hiện ở ô tự tính), không khóa thao tác mới.
+  // Trả [{ id, code, qty, cap }] = các lô gắn phiếu xuất quá phần còn lại của nó.
+  function khoLotsOverflow(lots) {
+    const bad = [];
+    (lots || []).forEach(l => {
+      const b = (state.batches || []).find(x => x && x.id === String((l && l.batchId) || ''));
+      if (!b) return;
+      const cap = khoLotRemainingOf(b);     // phiếu SỬA LUÔN là chờ duyệt → chưa trừ FIFO → cap đúng
+      const qty = Number(l.qty) || 0;
+      if (qty > cap) bad.push({ id: b.id, code: b.code || b.id, qty, cap });
+    });
+    return bad;
+  }
   // Tồn lỗi khả dụng của 1 nguồn xử lý (theo kích thước) — null = không chặn theo cỡ
   function khoScrapRemainingOf(source, sizeKey) {
     const k = String(sizeKey || '');
     if (source === 'baotinh_loi') return (baoTinhDefectStockOf(k) || {}).remaining || 0;
     if (source === 'bullig_loi') return (bulligDefectStock().find(x => x.sizeKey === k) || {}).remaining || 0;
     if (source === 'nan_loai_han') return (nanRejectStock().find(x => x.sizeKey === k) || {}).remaining || 0;
+    if (source === 'top_other') return baoTinhTopOtherStock().remaining;   // Tóp/Khác Bào Tinh — không theo cỡ
     return null;
   }
   // Danh sách LÔ đang ở Kho CÒN HÀNG (chọn gắn lô cho phiếu xuất) — mới nhất lên đầu
@@ -8139,8 +8629,144 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     return lots.reduce((s, l) => {
       const b = (state.batches || []).find(x => x && x.id === l.batchId);
       if (!b) return s;
-      return s + calculateVolume(b.length, b.width, b.thickness, Number(l.qty) || 0);
+      return s + calculateVolume(khoLotLenOf(b), khoLotWidOf(b), khoLotThkOf(b), Number(l.qty) || 0);
     }, 0);
+  }
+  // Kích thước lô: 3 trường riêng, không có thì dùng mảng dimensions (dữ liệu cũ)
+  function khoLotLenOf(b) { return Number(b && b.length) > 0 ? Number(b.length) : (b && Array.isArray(b.dimensions) ? Number(b.dimensions[0]) || 0 : 0); }
+  function khoLotWidOf(b) { return Number(b && b.width) > 0 ? Number(b.width) : (b && Array.isArray(b.dimensions) ? Number(b.dimensions[1]) || 0 : 0); }
+  function khoLotThkOf(b) { return Number(b && b.thickness) > 0 ? Number(b.thickness) : (b && Array.isArray(b.dimensions) ? Number(b.dimensions[2]) || 0 : 0); }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PHIẾU XUẤT KHO LÀM ĐẦU VÀO CÔNG ĐOẠN (Bào Tinh · Bullig)
+  // ═══════════════════════════════════════════════════════════════════
+  // Thanh đã qua Sấy 2 có thể XUẤT 1 phiếu nhưng làm NHIỀU NGÀY mới hết —
+  // nên nguồn đầu vào của Bào Tinh / Gia công Bullig = PHIẾU XUẤT (mục đích
+  // 'baotinh' / 'bullig'), làm tới khi hết tồn phiếu mới thôi.
+  //   • Phiếu ĐÃ DUYỆT còn tồn → CHỌN ĐƯỢC.
+  //   • Phiếu CHỜ DUYỆT → vẫn hiện nhưng mờ + chip "Chờ duyệt", KHÔNG chọn được.
+  //   • Số đã dùng = Σ noteUses của các lượt Bào Tinh ('tinh') + Bullig ('gc');
+  //     mỗi lượt lưu noteUses: [{ noteId, batchId, sizeKey, qty }] → tồn phiếu
+  //     tính đúng theo TỪNG KÍCH THƯỚC và vẫn link được lô (planning/đối chiếu).
+  function khoNoteOf(id) {
+    return (state.khoNotes || []).find(n => n && String(n.id) === String(id)) || null;
+  }
+  // Số thanh của 1 phiếu đã bị các lượt công đoạn dùng (loại trừ lượt đang sửa)
+  function khoNoteUsedOf(noteId, excludeId) {
+    let used = 0;
+    const scan = (recs) => (recs || []).forEach(r => {
+      if (!r || String(r.id) === String(excludeId)) return;
+      (Array.isArray(r.noteUses) ? r.noteUses : []).forEach(u => {
+        if (u && String(u.noteId) === String(noteId)) used += Number(u.qty) || 0;
+      });
+    });
+    scan(state.xuong2BaoTinhRecords);
+    scan(state.xuong2BulligRecords);
+    return used;
+  }
+  // Số thanh của 1 lô trong 1 phiếu đã bị dùng — cho phân bổ sources
+  function khoNoteBatchUsedOf(noteId, batchId, excludeId) {
+    let used = 0;
+    const scan = (recs) => (recs || []).forEach(r => {
+      if (!r || String(r.id) === String(excludeId)) return;
+      (Array.isArray(r.noteUses) ? r.noteUses : []).forEach(u => {
+        if (u && String(u.noteId) === String(noteId) && String(u.batchId) === String(batchId)) used += Number(u.qty) || 0;
+      });
+    });
+    scan(state.xuong2BaoTinhRecords);
+    scan(state.xuong2BulligRecords);
+    return used;
+  }
+  // Tồn THEO KÍCH THƯỚC của 1 phiếu: [{ sizeKey, dims, total, used, remaining }]
+  function khoNoteSizeRows(note, excludeId) {
+    const map = new Map();
+    if (!note) return [];
+    (Array.isArray(note.lots) ? note.lots : []).forEach(l => {
+      const b = (state.batches || []).find(x => x && x.id === String((l && l.batchId) || ''));
+      if (!b) return;
+      // Kích thước lô: 3 trường riêng, không có thì dùng mảng dimensions (dữ liệu cũ)
+      const dims = (Number(b.length) > 0 && Number(b.width) > 0 && Number(b.thickness) > 0)
+        ? [Number(b.length), Number(b.width), Number(b.thickness)]
+        : (Array.isArray(b.dimensions) && b.dimensions.length === 3
+          ? b.dimensions.map(Number) : [0, 0, 0]);
+      const key = dimKeyOf(dims[0], dims[1], dims[2]);
+      const cur = map.get(key) || { sizeKey: key, dims, total: 0, used: 0 };
+      cur.total += Number(l.qty) || 0;
+      map.set(key, cur);
+    });
+    const scan = (recs) => (recs || []).forEach(r => {
+      if (!r) return;
+      const isEdit = String(r.id) === String(excludeId);
+      (Array.isArray(r.noteUses) ? r.noteUses : []).forEach(u => {
+        if (!u || String(u.noteId) !== String(note.id)) return;
+        const row = map.get(String(u.sizeKey || ''));
+        if (row) row.used += (isEdit ? -(Number(u.qty) || 0) : (Number(u.qty) || 0));
+      });
+    });
+    scan(state.xuong2BaoTinhRecords);
+    scan(state.xuong2BulligRecords);
+    return [...map.values()].map(r => Object.assign(r, { remaining: Math.max(0, r.total - r.used) }));
+  }
+  // DANH SÁCH PHIẾU LÀM ĐẦU VÀO — purpose: 'baotinh' | 'bullig'.
+  // Trả [{ id, note, pending, total, used, remaining, sizes, date }]:
+  //   pending = phiếu CHỜ DUYỆT (hiện mờ, chưa chọn được) · còn lại = phần CHƯA làm.
+  // includeUsed = true → GIỮ phiếu đã rút hết (remaining = 0) cho dòng GIẢI THÍCH
+  //   "ĐÃ DÙNG HẾT" của Bào Tinh; mặc định vẫn ẨN như cũ.
+  function khoNoteInputPool(purpose, excludeId, includeUsed) {
+    const out = [];
+    (state.khoNotes || []).forEach(n => {
+      if (!n || n.type !== 'xuat' || khoNormPurpose(n.purpose) !== purpose) return;
+      const total = Number(n.qty) || 0;
+      const used = khoNoteUsedOf(n.id, excludeId);
+      const remaining = Math.max(0, total - used);
+      const pending = n.status !== 'da_duyet';
+      if (!includeUsed && !pending && remaining <= 0) return;   // đã làm hết → ẨN
+      out.push({
+        id: String(n.id), note: n, pending, total, used, remaining,
+        date: n.date || '',
+        sizes: khoNoteSizeRows(n, excludeId).filter(s => s.remaining > 0 || pending || includeUsed)
+      });
+    });
+    return out.sort((a, b) => String(a.date).localeCompare(String(b.date))); // cũ trước (FIFO)
+  }
+  // Tooltip nhanh liệt kê kích thước + số lượng của phiếu: "1250x18x7 SL:1500 · …"
+  function khoNoteSizeTooltip(sizes) {
+    return (sizes || []).map(s =>
+      `${Number(s.dims[0])}x${Number(s.dims[1])}x${Number(s.dims[2])} SL:${Math.round(s.remaining)}`).join(' · ');
+  }
+  // PHÂN BỔ qty thanh (sizeKey) từ các phiếu đã chọn →
+  //   { ok, uses: [{noteId,batchId,sizeKey,qty}], lots: [{batchId,code,location,dims,qty}], left }
+  // FIFO: phiếu CŨ trước · trong phiếu, lô theo thứ tự gắn; thiếu → ok=false.
+  function khoNoteAllocate(noteIds, sizeKey, qty, excludeId) {
+    let left = Math.round(Number(qty) || 0);
+    const uses = [], lots = [];
+    const picks = (noteIds || []).map(id => khoNoteOf(id)).filter(Boolean)
+      .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+    for (const n of picks) {
+      if (left <= 0) break;
+      const row = khoNoteSizeRows(n, excludeId).find(r => r.sizeKey === sizeKey);
+      if (!row || row.remaining <= 0) continue;
+      const take = Math.min(row.remaining, left);
+      if (take <= 0) continue;
+      let sub = take;
+      for (const l of (Array.isArray(n.lots) ? n.lots : [])) {
+        if (sub <= 0) break;
+        const b = (state.batches || []).find(x => x && x.id === String((l && l.batchId) || ''));
+        if (!b) continue;
+        const d = (Number(b.length) > 0 && Number(b.width) > 0 && Number(b.thickness) > 0)
+          ? [Number(b.length), Number(b.width), Number(b.thickness)]
+          : (Array.isArray(b.dimensions) && b.dimensions.length === 3 ? b.dimensions.map(Number) : [0, 0, 0]);
+        if (dimKeyOf(d[0], d[1], d[2]) !== sizeKey) continue;
+        const lotRem = Math.max(0, (Number(l.qty) || 0) - khoNoteBatchUsedOf(n.id, b.id, excludeId));
+        const takeLot = Math.min(lotRem, sub);
+        if (takeLot <= 0) continue;
+        uses.push({ noteId: String(n.id), batchId: String(b.id), sizeKey, qty: takeLot });
+        lots.push({ batchId: String(b.id), code: b.code || '', location: b.location || '', dims: d, qty: takeLot });
+        sub -= takeLot;
+      }
+      left -= take;
+    }
+    return { ok: left <= 0, uses, lots, left: Math.max(0, left) };
   }
 
   // Ẩn/hiện các ô theo LOẠI PHIẾU: xuất (mục đích + gắn lô) vs xử lý lỗi (nguồn + cỡ)
@@ -8152,6 +8778,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     setDisp('x2-kho-source-group', type === 'xu_ly');
     setDisp('x2-kho-method-group', type === 'xu_ly');
     setDisp('x2-kho-size-group', type === 'xu_ly');
+    // Ô SỐ LƯỢNG: CHỈ phiếu XỬ LÝ LỖI mới nhập tay — phiếu XUẤT tự cộng từ thẻ lô
+    setDisp('x2-kho-qty-group', type === 'xu_ly');
     // banner cam "đang sửa phiếu" (mẫu banner sửa của thẻ Cắt Chọn)
     const banner = document.getElementById('x2-kho-edit-banner');
     const text = document.getElementById('x2-kho-edit-text');
@@ -8191,7 +8819,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const outRounds = khoOutRoundCountOf(b);
     const btLbl = baoTinhUsedLabel(b);   // chip "ĐÃ BÀO X/Y THANH" — đối chiếu ô Chọn Thanh của thẻ Bào Tinh
     return `<div class="kho-lot-card${picked ? ' picked' : ''}" data-kho-lot="${escapeHTML(b.id)}">
-      <div class="kho-lot-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${Number(b.length) || 0}×${Number(b.width) || 0}×${Number(b.thickness) || 0} mm · ${escapeHTML(b.bambooType || '—')} · còn <strong>${fmtThanh(rem)}</strong> thanh</div>
+      <div class="kho-lot-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${khoLotLenOf(b)}×${khoLotWidOf(b)}×${khoLotThkOf(b)} mm · ${escapeHTML(b.bambooType || '—')} · còn <strong>${fmtThanh(rem)}</strong> thanh</div>
       <div class="kho-lot-line2"><span class="al-use-tag ${useCls}">${escapeHTML(b.useFor || 'Ván')}</span>
         <span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${outRounds} lần</span>
         <span class="kho-in-date">vào kho ${formatDateDDMMYY(khoLastInDateOf(b))}</span>${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
@@ -8202,9 +8830,19 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const list = document.getElementById('x2-kho-lots-list');
     if (!list) return;
     const q = khoLotsQuery.trim().toLowerCase();
+    const qQty = khoLotsQtyQuery.trim();
     let items = khoLotPickerList();
     if (q) items = items.filter(b => `${b.code || ''} ${b.location || ''} ${b.length}x${b.width}x${b.thickness} ${b.bambooType || ''} ${b.useFor || ''}`.toLowerCase().includes(q));
-    if (!items.length) { list.innerHTML = '<div class="al-empty">— Không có lô nào còn hàng ở Kho —</div>'; }
+    // Ô ② — TÌM THEO SỐ LƯỢNG: chỉ so SỐ (bỏ dấu phân cách nghìn) — điều kiện VÀ với ô chữ
+    if (qQty) {
+      const digits = qQty.replace(/\D/g, '');
+      if (digits) items = items.filter(b => String(Math.round(khoLotRemainingOf(b))).includes(digits));
+    }
+    if (!items.length) {
+      list.innerHTML = (q || qQty)
+        ? `<div class="al-empty">— Không có lô nào khớp "${escapeHTML([q, qQty].filter(Boolean).join(' · '))}" —</div>`
+        : '<div class="al-empty">— Không có lô nào còn hàng ở Kho —</div>';
+    }
     else list.innerHTML = items.map(khoLotCardHtml).join('');
     // chip đếm "N đã chọn" trên nút mở danh sách (mẫu ô đếm của Thêm Lô Sấy Mới)
     const countEl = document.getElementById('x2-kho-picked-count');
@@ -8215,6 +8853,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     }
   }
   function khoSetLotsQuery(v) { khoLotsQuery = String(v || ''); renderX2KhoLotsList(); }
+  function khoSetLotsQtyQuery(v) { khoLotsQtyQuery = String(v || ''); renderX2KhoLotsList(); }
 
   // Bấm thẻ = CHỌN / BỎ CHỌN (không ô vuông tích — như thẻ nguồn Thêm Lô Sấy Mới)
   function khoOnLotsPanelClick(e) {
@@ -8226,20 +8865,28 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function khoOnLotsQtyInput(e) {
     const input = e.target && e.target.closest ? e.target.closest('[data-kho-lot-qty]') : null;
     if (!input) return;
-    const id = input.getAttribute('data-kho-lot-qty');
+    khoSetLotQty(input.getAttribute('data-kho-lot-qty'), input.value, input);
+  }
+  // Đặt số thanh xuất của 1 thẻ lô (dùng cho ô nhập trong thẻ + test) — kẹp 0..còn lại
+  function khoSetLotQty(id, qty, inputEl) {
     const b = (state.batches || []).find(x => x && x.id === id);
     const max = b ? khoLotRemainingOf(b) : 0;
-    let v = Math.floor(Number(input.value) || 0);
-    if (v > max) { v = max; input.value = max; }
+    let v = Math.floor(Number(qty) || 0);
+    const el = inputEl || null;
+    if (v > max) { v = max; if (el && el != null) el.value = max; }
     if (v <= 0) { delete khoNotePicked[id]; renderX2KhoLotsList(); }
     else khoNotePicked[id] = v;
     renderX2KhoCalc();
+    return v;
   }
   // Gợi ý kích thước TỒN LỖI theo nguồn đang chọn (datalist)
   function fillX2KhoSizeSuggestions() {
     const dl = document.getElementById('x2-kho-size-list');
-    if (!dl) return;
     const src = (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi';
+    // Nguồn "Tóp / Khác Bào Tinh" KHÔNG theo cỡ → ẩn ô kích thước
+    const grp = document.getElementById('x2-kho-size-group');
+    if (grp) grp.style.display = (src === 'top_other' || src === 'khac') ? 'none' : '';
+    if (!dl) return;
     let rows = [];
     if (src === 'baotinh_loi') rows = baoTinhDefectStock();
     else if (src === 'bullig_loi') rows = bulligDefectStock();
@@ -8254,19 +8901,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const qtyEl = document.getElementById('x2-kho-qty');
     const qty = Math.floor(Number((qtyEl || {}).value) || 0);
     if (type === 'xuat') {
+      // PHIẾU XUẤT: không còn ô số lượng — tổng LUÔN = Σ thanh của các thẻ lô đã gắn
       const picked = khoPickedTotal();
       let text = '';
       if (picked > 0) {
-        const m3 = khoNoteM3Of(Object.keys(khoNotePicked).map(id => ({ batchId: id, qty: khoPickedQtyOf(id) })));
-        text = `Đã chọn ${Object.keys(khoNotePicked).length} lô · <strong>${fmtThanh(picked)}</strong> thanh · ${m3.toFixed(3)} m³`;
-      } else if (qty > 0) {
-        text = `<strong>${fmtThanh(qty)}</strong> thanh (chưa gắn lô — tự phân bổ FIFO khi duyệt)`;
-        if (!khoNoteEditId && qty > khoAvailableForApproval()) text += ` · <span class="kho-warn">VƯỢT tồn khả dụng ${fmtThanh(khoAvailableForApproval())} thanh</span>`;
+        const pickedLots = Object.keys(khoNotePicked).map(id => ({ batchId: id, qty: khoPickedQtyOf(id) }));
+        const m3 = khoNoteM3Of(pickedLots);
+        text = `Tổng phiếu (tự cộng từ ${Object.keys(khoNotePicked).length} thẻ lô): <strong>${fmtThanh(picked)}</strong> thanh · ${m3.toFixed(3)} m³`;
+        // ① Chặn theo TỒN TỪNG LÔ đang gắn (dữ liệu thật) → đỏ, bấm Lưu sẽ bị từ chối
+        const bad = khoLotsOverflow(pickedLots);
+        if (bad.length) {
+          const b0 = bad[0];
+          text += ` · <span class="kho-warn" title="Mỗi lô không được xuất quá phần CÒN LẠI của chính nó — bấm Lưu sẽ bị từ chối">VƯỢT tồn lô ${escapeHTML(b0.code)} (còn ${fmtThanh(b0.cap)} thanh)</span>`;
+        }
+        // ② Lệch SỔ (phiếu bù cũ ghi hơn sức chứa) → CHỈ cảnh báo vàng, KHÔNG chặn
+        else {
+          const sum = khoStockSummary();
+          if (sum.mismatchThanh >= 1 || sum.honestThanh < picked) {
+            text += ` · <span class="kho-warn" style="color:#b45309;" title="Sổ kho đang lệch (phiếu bù cũ ghi nhiều hơn sức chứa, xem chip ⚠ ở thanh tồn) — chỉ là CẢNH BÁO, vẫn tạo được phiếu nếu các lô đã chọn còn tồn">⚠ Sổ kho lệch — không chặn phiếu gắn lô còn tồn</span>`;
+          }
+        }
       } else {
-        text = 'Chưa nhập số lượng (chọn lô hoặc nhập tổng)';
+        text = 'Chưa chọn thẻ lô — bấm \"Chọn Lô Gắn Phiếu\" (tổng phiếu tự cộng từ số thanh các thẻ)';
       }
       el.innerHTML = text;
-      if (qtyEl) qtyEl.classList.toggle('kho-qty-bad', picked === 0 && !khoNoteEditId && qty > khoAvailableForApproval());
+      if (qtyEl) qtyEl.classList.remove('kho-qty-bad');
     } else {
       const src = (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi';
       const sizeKey = ((document.getElementById('x2-kho-size') || {}).value || '').trim();
@@ -8280,6 +8939,19 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       el.innerHTML = text;
       if (qtyEl && avail != null) qtyEl.classList.toggle('kho-qty-bad', qty > avail);
     }
+  }
+
+  // ─── TỒN TRUNG GIAN MỚI: TÓP / KHÁC của BÀO TINH ────────────────
+  // Số thanh ghi vào cột Tóp / Khác ở các lượt Bào Tinh (nguồn phiếu xuất) —
+  // CHƯA tính phiếu xử lý (tiêu hủy/tái chế gắn cờ topOther) trừ ra.
+  function baoTinhTopOtherStock() {
+    let total = 0, used = 0;
+    (state.xuong2BaoTinhRecords || []).forEach(r => {
+      if (!r || (r.kind !== 'tinh' && r.kind !== 'ha_cap')) return;
+      total += (Number(r.qtyTop) || 0) + (Number(r.qtyOther) || 0);
+    });
+    khoApprovedScrapNotes('top_other').forEach(n => { used += Number(n.qty) || 0; });
+    return { total, used, remaining: Math.max(0, total - used) };
   }
 
   // ─── RENDER CÁC KHỐI CỦA THẺ KHO NAN ─────────────────────────
@@ -8311,6 +8983,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const gcPending = bulligGcPending();
     const rows = [
       { label: 'Thanh lỗi Bào Tinh (chờ hạ cấp)', qty: bt, card: 'x2-bao-tinh-card' },
+      { label: 'Tóp / Khác Bào Tinh (chờ xử lý)', qty: baoTinhTopOtherStock().remaining, card: 'x2-kho-card' },
       { label: 'Thành phẩm Bullig (chờ Chọn thanh)', qty: blCt, card: 'x2-bullig-card' },
       { label: 'Thanh lỗi Chọn thanh Bullig (chờ xử lý)', qty: blErr, card: 'x2-bullig-card' },
       { label: 'Nan Loại hẳn — Chọn Nan Thô (chờ xử lý)', qty: rej, card: 'x2-chon-nan-tho-card' },
@@ -8659,29 +9332,36 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const isEdit = !!khoNoteEditId;
     const type = khoNoteTypeOf();
     const dateVal = ((document.getElementById('x2-kho-date') || {}).value || '').trim();
-    const qty = Math.floor(Number((document.getElementById('x2-kho-qty') || {}).value) || 0);
     const note = ((document.getElementById('x2-kho-note') || {}).value || '').trim();
     if (!dateVal) { showToast('Chọn NGÀY phiếu!', 'error'); return; }
-    if (qty <= 0) { showToast('Nhập số lượng thanh!', 'error'); return; }
     const now = new Date().toISOString();
     let data;
     if (type === 'xuat') {
+      // ── PHIẾU XUẤT: KHÔNG có ô số lượng — tổng = Σ số thanh của các thẻ lô đã gắn ──
       const purpose = khoNormPurpose((document.getElementById('x2-kho-purpose') || {}).value);
       const purposeNote = ((document.getElementById('x2-kho-purpose-note') || {}).value || '').trim();
       const lots = Object.keys(khoNotePicked).map(id => ({ batchId: id, qty: khoPickedQtyOf(id) }));
-      const tagged = lots.reduce((s, l) => s + l.qty, 0);
-      if (isEdit && qty < tagged) { showToast('Số lượng phiếu NHỎ HƠN tổng phần gắn lô — hãy tăng số lượng!', 'error'); return; }
-      // CHẶN XUẤT VỚI TỔN — chỉ kiểm khi GHI MỚI (phiếu đang sửa chưa được tính vào tồn)
-      if (!isEdit && qty > khoAvailableForApproval()) {
-        showToast(`Vượt tồn kho khả dụng (${Math.round(khoAvailableForApproval()).toLocaleString('vi-VN')} thanh)!`, 'error');
+      const qty = lots.reduce((s, l) => s + l.qty, 0);
+      if (!lots.length || qty <= 0) { showToast('Chọn ít nhất 1 THẺ LÔ để gắn phiếu — tổng phiếu tự cộng từ số thanh của các thẻ!', 'error'); return; }
+      // ── CHẶN THEO TỒN TỪNG LÔ (không dùng tổng kho — sổ có thể lệch do phiếu bù cũ) ──
+      // Mỗi lô không được xuất quá phần CÒN LẠI của chính nó; chạy CẢ khi sửa phiếu
+      // (phiếu đang sửa chưa duyệt → chưa từng trừ FIFO → tồn lô vẫn là số đúng).
+      const badLots = khoLotsOverflow(lots);
+      if (badLots.length) {
+        const b0 = badLots[0];
+        showToast(`Lô ${b0.code} chỉ còn ${Math.round(b0.cap).toLocaleString('vi-VN')} thanh — phiếu ghi ${Math.round(b0.qty).toLocaleString('vi-VN')} thanh!`, 'error');
         return;
       }
-      data = { type: 'xuat', purpose, purposeNote, qty, m3: khoNoteM3Of(lots), lots: tagged > 0 ? lots : [] };
+      data = { type: 'xuat', purpose, purposeNote, qty, m3: khoNoteM3Of(lots), lots };
     } else {
+      // ── PHIẾU XỬ LÝ LỖI: vẫn nhập tay ô Số Lượng (riêng phiếu này) ──
+      const qty = Math.floor(Number((document.getElementById('x2-kho-qty') || {}).value) || 0);
+      if (qty <= 0) { showToast('Nhập số lượng thanh!', 'error'); return; }
       const source = (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi';
       const method = (document.getElementById('x2-kho-method') || {}).value || 'tieu_huy';
-      const sizeKey = ((document.getElementById('x2-kho-size') || {}).value || '').trim();
-      if (source !== 'khac' && !sizeKey) { showToast('Chọn / nhập KÍCH THƯỚC của tồn lỗi cần xử lý!', 'error'); return; }
+      let sizeKey = ((document.getElementById('x2-kho-size') || {}).value || '').trim();
+      if (source !== 'khac' && source !== 'top_other' && !sizeKey) { showToast('Chọn / nhập KÍCH THƯỚC của tồn lỗi cần xử lý!', 'error'); return; }
+      if (source === 'top_other') sizeKey = '';   // Tóp/Khác Bào Tinh — không theo cỡ
       const avail = khoScrapRemainingOf(source, sizeKey);
       if (avail != null) {
         const old = isEdit ? (state.khoNotes || []).find(x => x && x.id === khoNoteEditId) : null;
@@ -8732,6 +9412,27 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     showToast('Đã xóa phiếu kho!', 'success');
   }
 
+  // ── KIỂM TỒN TRƯỚC KHI DUYỆT 1 PHIẾU XUẤT — trả thông báo lỗi (null = OK) ──
+  // Phiếu GẮN LÔ → kiểm theo TỒN TỪNG LÔ (sổ tổng có thể lệch do phiếu bù cũ).
+  // Phiếu KHÔNG gắn lô (phiếu bù dữ liệu cũ) → giữ nguyên kiểm theo tổng kho.
+  function khoApproveCheckError(n) {
+    if (!n || n.type !== 'xuat') return null;
+    const lots = Array.isArray(n.lots) ? n.lots : [];
+    if (lots.length) {
+      const bad = khoLotsOverflow(lots);
+      if (bad.length) {
+        const b0 = bad[0];
+        return `Lô ${b0.code} chỉ còn ${Math.round(b0.cap).toLocaleString('vi-VN')} thanh — phiếu ghi ${Math.round(b0.qty).toLocaleString('vi-VN')} thanh. Hãy sửa phiếu trước khi duyệt!`;
+      }
+      return null;
+    }
+    const otherOut = khoApprovedXuatNotes().reduce((s, x) => s + (Number(x.qty) || 0), 0);
+    const inTotal = (state.batches || []).filter(b => b && b.stage === 'kho')
+      .reduce((s, b) => s + khoInCountOf(b) * (Number(b.quantity) || 0), 0);
+    return ((Number(n.qty) || 0) > Math.max(0, inTotal - otherOut))
+      ? 'Phiếu vượt tồn kho hiện tại — hãy sửa số lượng trước khi duyệt!'
+      : null;
+  }
   // DUYỆT / TỪ CHỐI — chỉ Ban lãnh đạo (Admin / Ban Quản Lý, cổng canApproveLeave)
   function khoApproveNote(id) {
     if (!requireEditPermission()) return;
@@ -8740,13 +9441,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!n || n.status !== 'cho_duyet') return;
     if (n.type === 'xuat') {
       // KIỂM LẠI tồn LÚC DUYỆT (tồn có thể đã đổi do phiếu khác được duyệt trước)
-      const otherOut = khoApprovedXuatNotes().reduce((s, x) => s + (Number(x.qty) || 0), 0);
-      const inTotal = (state.batches || []).filter(b => b && b.stage === 'kho')
-        .reduce((s, b) => s + khoInCountOf(b) * (Number(b.quantity) || 0), 0);
-      if ((Number(n.qty) || 0) > Math.max(0, inTotal - otherOut)) {
-        showToast('Phiếu vượt tồn kho hiện tại — hãy sửa số lượng trước khi duyệt!', 'error');
-        return;
-      }
+      const err = khoApproveCheckError(n);
+      if (err) { showToast(err, 'error'); return; }
     } else {
       const avail = khoScrapRemainingOf(n.source, n.sizeKey);
       if (avail != null && (Number(n.qty) || 0) > avail) {
@@ -8797,10 +9493,12 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!ids.length) { showToast('Chưa chọn phiếu nào để duyệt!', 'error'); return; }
     pushUndo('Duyệt nhiều phiếu kho');
     const now = new Date().toISOString();
-    let ok = 0;
+    let ok = 0, skipped = 0;
     ids.forEach(id => {
       const n = (state.khoNotes || []).find(x => x && x.id === id);
       if (!n || n.status !== 'cho_duyet') return;
+      // Phiếu xuất: kiểm tồn LÚC DUYỆT (đã duyệt 1 phiếu thì tồn lô đã giảm → phiếu sau kiểm tiếp)
+      if (n.type === 'xuat' && khoApproveCheckError(n)) { skipped++; return; }
       n.status = 'da_duyet';
       n.approvedBy = khoUserKey(); n.approvedByName = khoUserName(); n.approvedAt = now; n.updatedAt = now;
       ok++;
@@ -8808,7 +9506,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     khoPickIds.clear();
     saveKhoNotes();
     renderAll();
-    showToast(`Đã duyệt ${ok} phiếu kho!`, 'success');
+    showToast(skipped
+      ? `Đã duyệt ${ok} phiếu kho — ${skipped} phiếu vượt tồn đã bị BỎ QUA (sửa số lượng rồi duyệt lại)!`
+      : `Đã duyệt ${ok} phiếu kho!`, skipped ? 'error' : 'success');
   }
   // Bấm vào 1 dòng phiếu chờ duyệt (uỷ nhiệm sự kiện — wire trong js/events.js)
   function khoOnPendingClick(e) {
@@ -8829,11 +9529,13 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const btn = e.target && e.target.closest ? e.target.closest('[data-kho-open-card]') : null;
     if (btn) x2OpenCard(btn.getAttribute('data-kho-open-card'));
   }
-  // Nút thu gọn bảng sổ / bảng tồn (mẫu nút thu gọn của các thẻ khác)
+  // Nút thu gọn bảng sổ / bảng tồn — dùng class `x2-cut-collapsed` (CHUẨN của khối
+  // `.x2-cut-table-wrap`, có CSS `.x2-cut-collapsed .x2-cut-table-scroll {display:none}`).
+  // Trước đây dùng `rate-table-collapsed` (CSS chỉ áp cho .planning-card) → bấm không ăn.
   function toggleX2KhoTable() {
     khoLedgerOpen = !khoLedgerOpen;
     const wrap = document.getElementById('x2-kho-table-wrap');
-    if (wrap) wrap.classList.toggle('rate-table-collapsed', !khoLedgerOpen);
+    if (wrap) wrap.classList.toggle('x2-cut-collapsed', !khoLedgerOpen);
     const btn = document.getElementById('btn-toggle-x2kho-table');
     if (btn) btn.innerHTML = `<i data-lucide="${khoLedgerOpen ? 'chevron-up' : 'chevron-down'}"></i> <span>${khoLedgerOpen ? 'Thu gọn' : 'Mở rộng'}</span>`;
     initLucide();
@@ -8841,7 +9543,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function toggleX2KhoStockTable() {
     khoStockOpen = !khoStockOpen;
     const wrap = document.getElementById('x2-kho-stock-wrap');
-    if (wrap) wrap.classList.toggle('rate-table-collapsed', !khoStockOpen);
+    if (wrap) wrap.classList.toggle('x2-cut-collapsed', !khoStockOpen);   // class CHUẨN của khối .x2-cut-table-wrap
     const btn = document.getElementById('btn-toggle-x2kho-stock');
     if (btn) btn.innerHTML = `<i data-lucide="${khoStockOpen ? 'chevron-up' : 'chevron-down'}"></i> <span>${khoStockOpen ? 'Thu gọn' : 'Mở rộng'}</span>`;
     initLucide();
@@ -10478,6 +11180,16 @@ export {
   khoOnLotsPanelClick,
   khoOnLotsQtyInput,
   khoSetLotsQuery,
+  khoSetLotsQtyQuery,
+  khoPickLot,
+  khoSetLotQty,
+  khoNoteOf,
+  khoNoteUsedOf,
+  khoNoteSizeRows,
+  khoNoteInputPool,
+  khoNoteAllocate,
+  khoNoteSizeTooltip,
+  baoTinhTopOtherStock,
   khoOnPendingClick,
   khoOnWipClick,
   handleKhoNoteSubmit,
@@ -10495,6 +11207,8 @@ export {
   nanRejectStock,
   khoLotPickerList,
   khoAvailableForApproval,
+  khoLotsOverflow,
+  khoApproveCheckError,
   // ── Than Hóa + Sấy: bảng thống kê theo TỪNG LẦN than hóa + thu gọn bảng Kanban ──
   isThanHoaPos,
   hrThanHoaAssignmentsOf,
@@ -10594,6 +11308,8 @@ export {
   toggleX2BulligTable,
   syncX2BulligKindRows,
   onBulligListClick,
+  onBulligGroupInput,
+  renderX2BulligGroups,
   renderX2BulligLotList,
   bulligLotSizeText,
   bulligConvertInfo,

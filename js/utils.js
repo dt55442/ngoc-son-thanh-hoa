@@ -373,7 +373,7 @@ import { state } from './state.js';
 
   // Nhãn tiếng Việt: mục đích xuất / nguồn xử lý / cách xử lý tồn trung gian
   const KHO_PURPOSE_LABELS = { say2: 'Sấy 2', baotinh: 'Bào Tinh', bullig: 'Bullig', khac: 'Khác' };
-  const KHO_SOURCE_LABELS  = { baotinh_loi: 'Thanh lỗi Bào Tinh', bullig_loi: 'Thanh lỗi Chọn thanh Bullig', nan_loai_han: 'Nan Loại hẳn (Chọn Nan Thô)', khac: 'Khác' };
+  const KHO_SOURCE_LABELS  = { baotinh_loi: 'Thanh lỗi Bào Tinh', bullig_loi: 'Thanh lỗi Chọn thanh Bullig', nan_loai_han: 'Nan Loại hẳn (Chọn Nan Thô)', top_other: 'Tóp / Khác Bào Tinh', khac: 'Khác' };
   const KHO_METHOD_LABELS  = { tieu_huy: 'Tiêu hủy', tai_che: 'Tái chế' };
   // Thứ tự cột tổng hợp theo mục đích xuất
   const KHO_PURPOSE_ORDER = ['say2', 'baotinh', 'bullig', 'khac'];

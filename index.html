@@ -1329,6 +1329,7 @@
                     <option value="baotinh_loi">Thanh lỗi Bào Tinh</option>
                     <option value="bullig_loi">Thanh lỗi Chọn thanh Bullig</option>
                     <option value="nan_loai_han">Nan Loại hẳn (Chọn Nan Thô)</option>
+                    <option value="top_other">Tóp / Khác Bào Tinh</option>
                     <option value="khac">Khác (không theo cỡ)</option>
                   </select>
                 </div>
@@ -1344,22 +1345,29 @@
                   <input type="text" id="x2-kho-size" list="x2-kho-size-list" placeholder="VD 1240×16×6" autocomplete="off">
                   <datalist id="x2-kho-size-list"></datalist>
                 </div>
-                <div class="form-group" style="flex:0 0 150px;">
+                <!-- Ô SỐ LƯỢNG RIÊNG CỦA PHIẾU XỬ LÝ LỖI (tiêu hủy / tái chế).
+                     PHIẾU XUẤT KHÔNG CÒN Ô NÀY — tổng tự cộng từ các thẻ lô đã gắn
+                     (xem handleKhoNoteSubmit: qty = khoPickedTotal()). -->
+                <div class="form-group" id="x2-kho-qty-group" style="flex:0 0 150px;">
                   <label for="x2-kho-qty">Số Lượng (thanh) <span class="required">*</span></label>
                   <input type="number" id="x2-kho-qty" min="1" step="1" placeholder="0">
                 </div>
               </div>
 
-              <!-- GẮN LÔ (chỉ phiếu XUẤT): danh sách thẻ lô — CHỌN ĐƯỢC NHIỀU, mỗi lô
-                   sửa được số thanh xuất (mặc định = nguyên phần còn lại của lô) -->
+              <!-- GẮN LÔ (bắt buộc với phiếu XUẤT): danh sách thẻ lô — CHỌN ĐƯỢC NHIỀU,
+                   mỗi lô tự lấy nguyên phần còn lại (KHÔNG nhập tay số lượng từng lô);
+                   2 Ô TÌM KẾT HỢP điều kiện VÀ: ① chữ (mã/vị trí/k.thước) ② SỐ LƯỢNG -->
               <div class="form-group col-span-full" id="x2-kho-lots-group">
-                <label>Gắn Lô (tuỳ chọn — không chọn = khai theo tổng)</label>
+                <label>Gắn Lô <span class="required">*</span> — tổng phiếu tự cộng từ các thẻ lô</label>
                 <button type="button" class="btn btn-outline" id="x2-kho-lots-btn" data-perm="x2">
                   <i data-lucide="list"></i> <span id="x2-kho-lots-btn-text">Chọn Lô Gắn Phiếu</span>
                   <span class="al-picked-count" id="x2-kho-picked-count"></span>
                 </button>
                 <div class="al-picker" id="x2-kho-lots-panel" hidden>
-                  <input type="text" class="al-search" id="x2-kho-lots-search" placeholder="Tìm nhanh: mã lô, vị trí, kích thước…" autocomplete="off">
+                  <div class="al-picker-tools">
+                    <input type="text" class="al-search" id="x2-kho-lots-search" placeholder="Tìm nhanh: mã lô, vị trí, kích thước…" autocomplete="off">
+                    <input type="text" class="al-search al-search-qty" id="x2-kho-lots-qty-search" placeholder="Tìm theo SỐ LƯỢNG (VD: 1000)" autocomplete="off" title="Chỉ so SỐ LƯỢNG còn lại của lô — gõ \"1000\" khớp 1.000. Lọc KẾT HỢP với ô tìm nhanh (điều kiện VÀ).">
+                  </div>
                   <div class="al-card-list" id="x2-kho-lots-list"></div>
                 </div>
               </div>
@@ -1774,6 +1782,10 @@
                   <small style="color:var(--text-muted);">Nhập số <strong>THÀNH PHẨM làm ra</strong> — hệ thống tự tính thanh thô cần dùng và trừ vào tồn lô.</small>
                 </div>
               </div>
+              <!-- BẢNG TỔNG HỢP GIA CÔNG theo KÍCH THƯỚC trong phiếu xuất (nguồn mới):
+                   KT thành phẩm · SL gia công được · SL thô tương đương (tự tính) ·
+                   SL thanh lỗi · Tồn = vào − thô tương đương − lỗi -->
+              <div class="x2-btinh-groups x2-bl-groups" id="x2-bl-groups" style="display:none;"></div>
               <!-- DÒNG (CHỌN THANH): Loại thanh + SL đạt + SL lỗi -->
               <div class="x2-form-row" id="x2-bl-ct-size-group" style="display:none;">
                 <div class="form-group" style="flex:2; min-width:240px;">

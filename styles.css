@@ -7708,6 +7708,37 @@ body[data-theme="night"] .x2-bl-conv-chip { background: #fdf3c8; }
 }
 .x2-btinh-src { color: var(--text-muted); }
 .x2-btinh-err small { color: var(--text-muted); }
+/* ─── NGUỒN PHIẾU XUẤT: KT sau bào nhập 1 DÒNG · ghi chú "Khác" · cột Tồn ─── */
+.x2-btinh-out-text {
+  width: 120px;
+  min-height: 0;
+  padding: 4px 6px;
+  font-size: 0.82rem;
+  font-family: var(--font-mono, monospace);
+}
+.x2-btinh-other-note {
+  width: 96px;
+  min-height: 0;
+  padding: 3px 6px;
+  font-size: 0.78rem;
+}
+.x2-btinh-ton {
+  color: var(--primary, #0f766e);
+  font-variant-numeric: tabular-nums;
+}
+.x2-btinh-ton-cell { white-space: nowrap; }
+/* Bảng tổng hợp GIA CÔNG (Bullig) — dùng chung khuôn bảng Bào Tinh */
+.x2-bl-groups { margin-top: 8px; }
+.x2-bl-tho { font-variant-numeric: tabular-nums; }
+/* ─── Thẻ phiếu CHỜ DUYỆT: mờ + viền đứt (cả Bào Tinh lẫn Bullig) ─── */
+.al-card-pending { opacity: 0.62; border-style: dashed; }
+.al-card-pending .al-card-main { color: var(--text-muted); }
+/* Chip badge "Chờ duyệt" — nền vàng hổ phách như badge ngày */
+.al-day-badge.day-pending {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+  border: 1px dashed rgba(217, 119, 6, 0.5);
+}
 
 /* ─── BÀO THANH: 4 trường (Chọn thanh đầu vào · Số lượng · Đầu ra · ĐẠT từ QC) ───
    Nguồn đầu vào = Ép Ván (khối "Ván Thô Tạo Ra", thanh BTP theo THỂ TÍCH) +

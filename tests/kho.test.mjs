@@ -112,11 +112,21 @@ check('TỒN: bản đồ ẩn/hiện — không lô nào bị ẩn, tồn từn
   utils.khoVisibilityMap().hide.size === 0 && utils.khoVisibilityMap().remain.get('k1') === 600);
 
 // ─── B. PHIẾU XUẤT: chờ duyệt KHÔNG trừ tồn → duyệt mới trừ (FIFO) ──
-document.getElementById('x2-kho-date').value = '2026-09-15';
-document.getElementById('x2-kho-purpose').value = 'baotinh';
-document.getElementById('x2-kho-qty').value = '300';
-document.getElementById('x2-kho-note').value = 'Xuất bào tinh tuần 38';
-x2.handleKhoNoteSubmit({ preventDefault(){} });
+// PHIẾU XUẤT KHÔNG CÒN Ô SỐ LƯỢNG: tổng = Σ thanh của các THẺ LÔ đã gắn.
+// Helper: reset form → set ngày/mục đích → gắn thẻ lô (kèm số nếu muốn).
+function makeExportNote(date, purpose, noteText, lotPicks) {
+  x2.setKhoNoteType('xuat');
+  x2.resetX2KhoNoteForm(true);
+  document.getElementById('x2-kho-date').value = date;
+  document.getElementById('x2-kho-purpose').value = purpose;
+  document.getElementById('x2-kho-note').value = noteText || '';
+  (lotPicks || []).forEach(([id, qty]) => {
+    x2.khoPickLot(id);                       // chọn = nguyên phần còn lại của lô
+    if (qty != null) x2.khoSetLotQty(id, qty);  // chỉnh xuống 1 phần (VD 300/600)
+  });
+  x2.handleKhoNoteSubmit({ preventDefault(){} });
+}
+makeExportNote('2026-09-15', 'baotinh', 'Xuất bào tinh tuần 38', [['k1', 300]]);
 const note1 = state.khoNotes[0];
 check('PHIẾU: gửi phiếu xuất 300 → trạng thái CHỜ DUYỆT + ghi người tạo',
   !!note1 && note1.status === 'cho_duyet' && note1.type === 'xuat' && note1.purpose === 'baotinh' &&
@@ -135,11 +145,7 @@ check('KẾ HOẠCH: tồn nan TOÀN NHÓM (công thức mới) = 500 (đang s�
   utils.khoStockSummary().poolThanh === 2400);
 
 // PHIẾU purpose 'say2' — trừ TỒN KHO nhưng KHÔNG trừ tồn nan toàn nhóm
-document.getElementById('x2-kho-date').value = '2026-09-15';
-document.getElementById('x2-kho-purpose').value = 'say2';
-document.getElementById('x2-kho-qty').value = '400';
-document.getElementById('x2-kho-note').value = 'Quay lại sấy';
-x2.handleKhoNoteSubmit({ preventDefault(){} });
+makeExportNote('2026-09-15', 'say2', 'Quay lại sấy', [['k2', 400]]);
 const noteSay2 = state.khoNotes[1];
 x2.khoApproveNote(noteSay2.id);
 check('SẤY 2: duyệt phiếu "Sấy 2" → tồn Kho giảm còn 1.500 · toàn nhóm 2.400 → 2.000 (phiếu trừ theo tồn kho từng lô)',
@@ -147,16 +153,16 @@ check('SẤY 2: duyệt phiếu "Sấy 2" → tồn Kho giảm còn 1.500 · to�
 
 // CHẶN XUẤT VỚI TỒN (lúc gửi)
 const notesBefore = state.khoNotes.length;
+x2.setKhoNoteType('xuat');
+x2.resetX2KhoNoteForm(true);
 document.getElementById('x2-kho-date').value = '2026-09-15';
 document.getElementById('x2-kho-purpose').value = 'baotinh';
-document.getElementById('x2-kho-qty').value = '5000';
 x2.handleKhoNoteSubmit({ preventDefault(){} });
-check('CHẶN: phiếu vượt tồn khả dụng → KHÔNG tạo phiếu (vẫn ' + notesBefore + ' phiếu)',
+check('CHẶN: phiếu xuất chưa gắn thẻ lô → KHÔNG tạo phiếu (vẫn ' + notesBefore + ' phiếu)',
   state.khoNotes.length === notesBefore);
 
-// Lô DÙNG HẾT → ẨN mặc định + công tắc hiện lại
-document.getElementById('x2-kho-qty').value = '300';
-x2.handleKhoNoteSubmit({ preventDefault(){} });
+// Lô DÙNG HẾT → ẨN mặc định + công tắc hiện lại (xuất nốt phần còn lại của k1)
+makeExportNote('2026-09-15', 'baotinh', '', [['k1']]);
 x2.khoApproveNote(state.khoNotes[state.khoNotes.length - 1].id);
 check('LÔ HẾT: xuất nốt 300 của k1 → k1 tồn 0, đếm "lô đã xuất hết" = 1',
   utils.khoLotRemainingOf(state.batches[0]) === 0 && utils.khoStockSummary().usedUpLots === 1);
@@ -169,10 +175,7 @@ x2.khoSetShowUsed(false);
 
 // QUYỀN DUYỆT: editor (Tổ trưởng — có quyền nhập Công Đoạn) KHÔNG duyệt được
 state.currentUser = { username: 'editor1', role: 'editor', editTabs: ['kanban'], allowAdvanced: false };
-document.getElementById('x2-kho-date').value = '2026-09-16';
-document.getElementById('x2-kho-purpose').value = 'bullig';
-document.getElementById('x2-kho-qty').value = '100';
-x2.handleKhoNoteSubmit({ preventDefault(){} });
+makeExportNote('2026-09-16', 'bullig', '', [['k2', 100]]);
 const noteEditor = state.khoNotes[state.khoNotes.length - 1];
 x2.khoApproveNote(noteEditor.id);
 check('QUYỀN: editor gửi phiếu được nhưng KHÔNG duyệt được (vẫn chờ duyệt)',
@@ -301,6 +304,80 @@ check('DÙNG CHUNG: 10 thẻ X2 đủ vùng dữ liệu + nguồn xuất (thêm 
   X2_IDS.every(id => !!x2.X2_CARD_HISTORY_DOMAIN[id] && !!x2.X2_CARD_EXPORT_SOURCE[id]) &&
   x2.X2_CARD_EXPORT_SOURCE['x2-kho-card'] === 'kho');
 
+// ─── F3. SỬA LỖI 06/10/2026: chặn theo TỪNG LÔ · SỔ LỆCH KHÔNG KHÓA · NÚT THU GỌN ──
+// (a) SỔ LỆCH (honestThanh = 0 do phiếu bù cũ gắn lô ĐÃ RỜI kho) NHƯNG lô ở Kho vẫn
+//     còn tồn → PHẢI tạo được phiếu (trước đây chặn tổng kho → không phiếu nào tạo được)
+{
+  state.batches.push({ id: 'k-ghost-out', code: 'GHOST-01', stage: 'say1', date: '2026-09-01',
+    length: 1250, width: 18, thickness: 7, quantity: 99999, location: 'S1G',
+    stageHistory: [{ stage: 'say1', date: '2026-09-01' }] });
+  state.khoNotes.push({ id: 'note-ghost', type: 'xuat', purpose: 'baotinh', status: 'da_duyet',
+    date: '2026-09-01', qty: 99999, lots: [{ batchId: 'k-ghost-out', qty: 99999 }] });
+  const lotK2 = state.batches.find(b => b.id === 'k2');
+  const remK2 = utils.khoLotRemainingOf(lotK2);
+  check('SỔ LỆCH: honestThanh = 0 (phiếu bù gắn lô đã rời kho) NHƯNG lô Kho vẫn còn tồn',
+    utils.khoStockSummary().honestThanh === 0 && remK2 > 0);
+  x2.setKhoNoteType('xuat');
+  x2.resetX2KhoNoteForm(true);
+  document.getElementById('x2-kho-date').value = '2026-09-25';
+  document.getElementById('x2-kho-purpose').value = 'baotinh';
+  x2.khoPickLot('k2');
+  const nBefore = state.khoNotes.length;
+  x2.handleKhoNoteSubmit({ preventDefault(){} });
+  check('SỔ LỆCH: vẫn TẠO ĐƯỢC phiếu gắn lô còn tồn (không còn chặn "Vượt tồn khả dụng 0 thanh")',
+    state.khoNotes.length === nBefore + 1);
+  // dọn dữ liệu giả
+  state.khoNotes = state.khoNotes.filter(n => n && n.id !== 'note-ghost');
+  state.batches = state.batches.filter(b => b && b.id !== 'k-ghost-out');
+  x2.resetX2KhoNoteForm(true);
+}
+// (b) CHẶN THEO TỪNG LÔ: phiếu gắn lô VƯỢT phần còn lại của CHÍNH lô đó → bị từ chối
+{
+  x2.setKhoNoteType('xuat');
+  x2.resetX2KhoNoteForm(true);
+  document.getElementById('x2-kho-date').value = '2026-09-26';
+  document.getElementById('x2-kho-purpose').value = 'baotinh';
+  x2.khoPickLot('k3');                                  // qty = toàn bộ tồn k3 tại thời điểm chọn
+  // Giả lập: tồn lô k3 giảm SAU KHI ĐÃ CHỌN (phiếu khác được duyệt trước)
+  const capK3 = utils.khoLotRemainingOf(state.batches.find(b => b.id === 'k3'));
+  state.khoNotes.push({ id: 'note-shrink', type: 'xuat', purpose: 'baotinh', status: 'da_duyet',
+    date: '2026-09-20', qty: capK3, lots: [{ batchId: 'k3', qty: capK3 }] });
+  const nBefore = state.khoNotes.length;
+  x2.handleKhoNoteSubmit({ preventDefault(){} });
+  check('CHẶN THEO LÔ: phiếu ghi vượt tồn CÒN LẠI của lô k3 → KHÔNG tạo phiếu',
+    state.khoNotes.length === nBefore);
+  check('CHẶN THEO LÔ: khoLotsOverflow trả đúng lô + lý do (k3, qty > cap)',
+    (() => {
+      const bad = x2.khoLotsOverflow([{ batchId: 'k3', qty: capK3 }]);
+      return bad.length === 1 && bad[0].id === 'k3' && bad[0].cap === 0;
+    })());
+  check('CHẶN THEO LÔ: phiếu đã duyệt gắn lô vượt tồn → khoApproveCheckError trả lỗi (không duyệt được)',
+    typeof x2.khoApproveCheckError(state.khoNotes.find(n => n.id === 'note-shrink')) === 'string');
+  check('CHẶN THEO LÔ: phiếu gắn lô còn tồn → khoApproveCheckError trả null (duyệt được)',
+    x2.khoApproveCheckError(state.khoNotes.find(n => n.type === 'xuat' && n.lots && n.lots.length &&
+      n.id !== 'note-shrink' && x2.khoLotsOverflow(n.lots).length === 0)) === null);
+  // dọn: trả tồn k3 về như cũ
+  state.khoNotes = state.khoNotes.filter(n => n && n.id !== 'note-shrink');
+  x2.resetX2KhoNoteForm(true);
+}
+// (c) NÚT THU GỌN: phải gắn class x2-cut-collapsed (CHUẨN của .x2-cut-table-wrap) —
+//     trước đây gắn rate-table-collapsed (CSS chỉ áp .planning-card) → bấm không ăn
+{
+  x2.toggleX2KhoTable();
+  const collapsed = document.getElementById('x2-kho-table-wrap').classList.contains('x2-cut-collapsed');
+  x2.toggleX2KhoTable();
+  const expanded = !document.getElementById('x2-kho-table-wrap').classList.contains('x2-cut-collapsed');
+  check('NÚT THU GỌN SỔ: bấm → wrap #x2-kho-table-wrap gắn class x2-cut-collapsed (ẩn bảng) → bấm lại mở', collapsed && expanded);
+  x2.toggleX2KhoStockTable();
+  const st1 = document.getElementById('x2-kho-stock-wrap').classList.contains('x2-cut-collapsed');
+  x2.toggleX2KhoStockTable();
+  const st2 = !document.getElementById('x2-kho-stock-wrap').classList.contains('x2-cut-collapsed');
+  check('NÚT THU GỌN TỒN: bấm → wrap #x2-kho-stock-wrap gắn class x2-cut-collapsed → bấm lại mở', st1 && st2);
+  check('NÚT THU GỌN: không còn dính class rate-table-collapsed (nguyên nhân cũ)',
+    !fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8')
+      .includes("toggle('rate-table-collapsed'"));
+}
+
 // ─── G. CẤU TRÚC (index.html · js · sw.js · npm test) ───────────
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const jsState = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
@@ -361,7 +438,7 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v223/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v225/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

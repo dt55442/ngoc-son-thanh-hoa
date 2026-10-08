@@ -174,6 +174,7 @@
   // ĐỊNH MỨC KIỂM SAU SẢN XUẤT (tấm/giờ) theo TỪNG THÁNG — { 'YYYY-MM': tấm/h }.
   // Có định mức → thẻ ngày hiện thêm tấm/h + Hiệu suất (Công suất ÷ định mức).
   const STORAGE_KEY_QC_FINAL_RATE = 'bamboo_tracker_qc_final_rate_v1';
+  const STORAGE_KEY_QC_PRESS = 'bamboo_tracker_qc_press_v1';
   // Tab Nhân Sự: nhân viên, đơn nghỉ phép, nhu cầu tuyển dụng
   const STORAGE_KEY_HR_EMPLOYEES  = 'bamboo_tracker_hr_employees_v1';
   const STORAGE_KEY_HR_LEAVES      = 'bamboo_tracker_hr_leaves_v1';
@@ -297,6 +298,7 @@
     // KIỂM SAU SẢN XUẤT (thẻ qc-final-card — tab QC) + định mức kiểm theo tháng
     qcFinalRecords: [],       // [{ id, date, workshop, productId, productName, inputQty, qtyOk, qtyExcept, qtyReject, note, createdAt, updatedAt }]
     qcFinalRates: {},         // { 'YYYY-MM': tấm/h }
+    qcPressLogs: [],          // Nhật ký theo dõi ép ván (tab QC): [{ id, pressId, verdict 'pass'|'fail', checkedBy, checkedAt, updatedAt }]
     // Bộ lọc hợp nhất trong thẻ Xuất Hàng (tab QC): năm ('all' = tất cả) +
     // chips tuần (mảng rỗng = tất cả) + từ khóa tìm kiếm theo tên sản phẩm
     qcSumYear: 'all',
@@ -512,6 +514,7 @@ export {
   STORAGE_KEY_QC_KILN_THRESHOLD,
   STORAGE_KEY_QC_FINAL,
   STORAGE_KEY_QC_FINAL_RATE,
+  STORAGE_KEY_QC_PRESS,
   STORAGE_KEY_X2_SAY_FRAME,
   STORAGE_KEY_KHO_NOTES,
   STORAGE_KEY_KHO_SHOW_USED,

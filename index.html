@@ -3261,6 +3261,12 @@
             <span class="qc-mini-desc">QC đo & nhập độ ẩm từng lò hàng ngày</span>
             <span class="qc-mini-count" id="qc-mini-count-humidity">–</span>
           </button>
+          <button type="button" class="qc-mini-card" data-qc-card="qc-press-card" aria-expanded="false" title="Nhật Ký Theo Dõi Ép Ván — QC theo dõi từng lượt ép từ thẻ Ép Ván (Công Đoạn SX · Xưởng 2): Tên ván/thanh (ưu tiên ô Ván thô) · Số lượng · Lực ép ngang/đứng · Nhiệt độ · Thời gian ép · Keo & phụ gia (gam) · Tỷ lệ pha trộn · Độ phủ — chấm PASS / Fail (mỗi lượt 1 kết quả)">
+            <span class="qc-mini-ic"><i data-lucide="gauge"></i></span>
+            <span class="qc-mini-title">Nhật Ký Ép Ván</span>
+            <span class="qc-mini-desc">QC theo dõi từng lượt ép</span>
+            <span class="qc-mini-count" id="qc-mini-count-press">–</span>
+          </button>
         </div>
       </div>
 
@@ -3501,6 +3507,48 @@
              ô hôm nay NHẬP TRỰC TIẾP (bàn phím số) · ô quá khứ BẤM để sửa nhanh ·
              cuộn ngang xem thêm ngày cũ — nội dung render trong js/kiln.js -->
         <div class="kiln-hum-matrix-wrap" id="kiln-hum-matrix"></div>
+      </div>
+
+      <!-- MODULE NHẬT KÝ THEO DÕI ÉP VÁN: QC theo dõi TỪNG LƯỢT ÉP của thẻ Ép Ván
+           (tab Công Đoạn SX — Xưởng 2). Số liệu ĐỌC SỐNG từ pressRecords — sửa ở
+           Ép Ván là bảng này tự đổi theo; QC chỉ chấm ✅ PASS / ❌ Fail (1 lượt 1
+           kết quả — js/qc-press.js). Tên ván/thanh ƯU TIÊN ô Ván thô, thiếu mới lấy
+           ô Thành phẩm; keo/phụ gia đổi sang GAM; độ phủ = (keo + phụ gia) ÷ SL ván. -->
+      <div class="planning-card qc-card-hidden" id="qc-press-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="gauge"></i> Nhật Ký Theo Dõi Ép Ván</h4>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="qc-search-bar" style="flex:1 1 220px; min-width:180px;">
+              <i data-lucide="search"></i>
+              <input type="text" id="qcp-search" placeholder="Tìm tên ván/thanh, keo, phụ gia..." autocomplete="off">
+            </div>
+            <select id="qcp-filter" class="form-select" style="width:auto; min-width:140px;" title="Lọc theo kết quả QC kiểm của từng lượt ép">
+              <option value="all">Tất cả lượt ép</option>
+              <option value="pass">Đã chấm PASS</option>
+              <option value="fail">Đã chấm Fail</option>
+              <option value="unchecked">Chưa kiểm</option>
+            </select>
+          </div>
+        </div>
+        <p style="margin:0; padding:10px 16px 0 16px; font-size:0.78rem; color:var(--text-muted);">
+          Số liệu lấy trực tiếp từ thẻ <strong>Ép Ván</strong> (Công Đoạn SX · Xưởng 2) — sửa lượt ép là bảng tự cập nhật.
+          Tên ván/thanh ưu tiên ô <strong>Ván Thô</strong>, không có mới lấy ô Thành Phẩm. Keo/phụ gia quy đổi sang <strong>gam</strong>.
+          QC bấm <strong>✅</strong> (PASS) hoặc <strong>❌</strong> (Fail) — mỗi lượt ép 1 kết quả, bấm lại là ghi đè.
+        </p>
+
+        <!-- THỐNG KÊ NHANH: lượt ép · đã kiểm · PASS · Fail · chưa kiểm -->
+        <div class="material-stats" id="qcp-stats"></div>
+
+        <!-- BẢNG DỮ LIỆU = THẺ NGÀY (đầu thẻ: Ngày · số lượt · PASS/Fail trong ngày) -->
+        <div class="x2-cut-table-wrap" id="qcp-day-wrap">
+          <div class="x2-cut-table-head">
+            <h5><i data-lucide="history"></i> Nhật Ký Ép (theo ngày)</h5>
+            <span class="x2-cut-table-count" id="qcp-day-count"></span>
+          </div>
+          <div class="x2-cut-table-scroll">
+            <div class="x2-day-cards" id="qcp-day-cards"></div>
+          </div>
+        </div>
       </div>
 
       </div> <!-- /#qc-details-stack -->

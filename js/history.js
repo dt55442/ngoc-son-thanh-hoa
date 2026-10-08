@@ -69,6 +69,7 @@ import { escapeHTML, showToast } from './utils.js';
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
     qcFinalRecords:    { tab: 'qc',        label: 'Kiểm sau sản xuất',    get: () => state.qcFinalRecords },
     qcFinalRates:      { tab: 'qc',        label: 'Định mức kiểm sau SX', get: () => state.qcFinalRates },
+    qcPressLogs:       { tab: 'qc',        label: 'Nhật ký ép ván (QC kiểm)', get: () => state.qcPressLogs },
     qcKilnReadings:    { tab: 'qc',        label: 'Độ ẩm lò sấy (QC nhập)', get: () => state.qcKilnReadings },
     qcKilnThresholds:  { tab: 'qc',        label: 'Ngưỡng độ ẩm đạt (Sấy)', get: () => state.qcKilnThresholds },
     hrEmployees:       { tab: 'hr',        label: 'Nhân viên',            get: () => state.hrEmployees },

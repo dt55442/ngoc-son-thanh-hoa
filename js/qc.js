@@ -21,6 +21,7 @@ import { STORAGE_KEY_QC_EXPORTS, state } from './state.js';
 import { escapeHTML, getISOWeekString, showToast } from './utils.js';
 import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // Bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
 import { qcFinalCardCount, renderQcFinalCard, setQcFinalPickerOpen } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm)
+import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail từng lượt ép)
 
   // ─── HELPERS ──────────────────────────────────────────────────
   // Lấy số tuần từ chuỗi "Tuần 34" -> 34
@@ -116,6 +117,7 @@ import { qcFinalCardCount, renderQcFinalCard, setQcFinalPickerOpen } from './qc-
     renderQcSearch(); // dải kết quả lọc theo từ khóa / bộ lọc đang chọn
     renderKilnHumidityCard(); // bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
     renderQcFinalCard(); // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
+    renderQcPressCard(); // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail — js/qc-press.js)
     updateQcCardGrid(); // đếm số liệu trên các thẻ launcher
     syncQcMiniActive(); // highlight thẻ đang mở
     initLucide();
@@ -575,7 +577,8 @@ import { qcFinalCardCount, renderQcFinalCard, setQcFinalPickerOpen } from './qc-
     } },
     'qc-incoming-card': { el: 'qc-mini-count-incoming', count: () => 'Sắp có' },
     'qc-final-card':    { el: 'qc-mini-count-final',    count: () => qcFinalCardCount() },
-    'qc-humidity-card': { el: 'qc-mini-count-humidity', count: () => kilnHumidityCardCount() }
+    'qc-humidity-card': { el: 'qc-mini-count-humidity', count: () => kilnHumidityCardCount() },
+    'qc-press-card':    { el: 'qc-mini-count-press',    count: () => qcPressCardCount() }
   };
 
   // Cập nhật số đếm trên các thẻ — gọi từ renderQcView sau khi có dữ liệu.

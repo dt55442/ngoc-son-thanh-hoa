@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -435,6 +435,26 @@ import { escapeHTML, showToast } from './utils.js';
     }
     return cur;
   }
+  // ─── GỘP NHẬT KÝ THEO DÕI ÉP VÁN (file / backup) — thẻ qc-press-card ──
+  // Gộp theo id: bản có updatedAt MỚI HƠN thắng; bản chỉ có ở 1 phía vẫn giữ
+  // lại — không mất verdict PASS/Fail của máy nào.
+  function restoreQcPressLogs(incomingArr) {
+    const incoming = Array.isArray(incomingArr) ? incomingArr.filter(r => r && r.id) : [];
+    if (!incoming.length) return state.qcPressLogs || [];
+    const stamp = s => String((s && (s.updatedAt || s.createdAt)) || '');
+    const map = new Map((state.qcPressLogs || []).filter(r => r && r.id).map(r => [r.id, r]));
+    let changed = false;
+    incoming.forEach(r => {
+      const cur = map.get(r.id);
+      if (!cur || stamp(r) >= stamp(cur)) { map.set(r.id, r); changed = true; }
+    });
+    const merged = [...map.values()];
+    if (changed) {
+      state.qcPressLogs = merged;
+      try { localStorage.setItem(STORAGE_KEY_QC_PRESS, JSON.stringify(merged)); } catch (err) {}
+    }
+    return merged;
+  }
 
   // ─── GỘP NHẬT KÝ BULLIG XƯỞNG 2 (file / backup / mây) ──
   function restoreXuong2Bullig(incomingArr) {
@@ -850,6 +870,9 @@ import { escapeHTML, showToast } from './utils.js';
         if (loaded.qcFinalRates) {
           restoreQcFinalRates(loaded.qcFinalRates); // ĐỊNH MỨC kiểm theo tháng — gộp, không đè số đã đặt
         }
+        if (Array.isArray(loaded.qcPressLogs)) {
+          restoreQcPressLogs(loaded.qcPressLogs); // NHẬT KÝ ÉP VÁN — gộp, không mất verdict PASS/Fail mới hơn file
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -1066,6 +1089,7 @@ import { escapeHTML, showToast } from './utils.js';
         x2BaoThanhOutSizes: state.x2BaoThanhOutSizes || [],   // Cỡ đầu ra Bào thanh (thẻ Bào Tinh)
         qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
         qcFinalRates: state.qcFinalRates || {},       // Định mức kiểm theo tháng (tấm/h)
+        qcPressLogs: state.qcPressLogs || [],         // NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — verdict PASS/Fail)
         khoNotes: state.khoNotes || []
       };
       await writable.write(JSON.stringify(allData, null, 2));
@@ -1190,7 +1214,8 @@ import { escapeHTML, showToast } from './utils.js';
       qcKilnReadings: state.qcKilnReadings || [],
       qcKilnThresholds: state.qcKilnThresholds || {},
       qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
-      qcFinalRates: state.qcFinalRates || {}        // Định mức kiểm theo tháng (tấm/h)
+      qcFinalRates: state.qcFinalRates || {},       // Định mức kiểm theo tháng (tấm/h)
+      qcPressLogs: state.qcPressLogs || []          // NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — verdict PASS/Fail)
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -1322,6 +1347,9 @@ import { escapeHTML, showToast } from './utils.js';
         }
         if (imported.qcFinalRates) {
           restoreQcFinalRates(imported.qcFinalRates); // ĐỊNH MỨC kiểm theo tháng — gộp, không đè số đã đặt
+        }
+        if (Array.isArray(imported.qcPressLogs)) {
+          restoreQcPressLogs(imported.qcPressLogs); // NHẬT KÝ ÉP VÁN — gộp, không mất verdict PASS/Fail mới hơn backup
         }
 
         if (imported && Array.isArray(imported.xuong2BaoTinhRecords)) {
@@ -1511,6 +1539,7 @@ export {
   restoreQcKilnThresholds,
   restoreQcFinal,
   restoreQcFinalRates,
+  restoreQcPressLogs,
   restoreX2BaoThoRates,
   restoreX2BoOngRates,
   restoreX2ChonNanRates,

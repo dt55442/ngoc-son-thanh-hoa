@@ -4685,6 +4685,81 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 .qc-mini-card[data-qc-card="qc-incoming-card"] { --card-accent: #0284c7; --card-accent-bg: #e0f2fe; } /* Xanh dương — Kiểm Đầu Vào */
 .qc-mini-card[data-qc-card="qc-final-card"]    { --card-accent: #7c3aed; --card-accent-bg: #ede9fe; } /* Tím        — Kiểm Sau Sản Xuất */
 .qc-mini-card[data-qc-card="qc-humidity-card"] { --card-accent: #d97706; --card-accent-bg: #fef3c7; } /* Hổ phách  — Độ Ẩm Lò Sấy */
+.qc-mini-card[data-qc-card="qc-press-card"]    { --card-accent: #db2777; --card-accent-bg: #fce7f3; } /* Hồng      — Nhật Ký Theo Dõi Ép Ván */
+
+/* ── THẺ "NHẬT KÝ THEO DÕI ÉP VÁN" (qc-press-card — tab QC) ──────
+   Ô QC kiểm: 2 nút chọn (tích ✅ xanh / X ❌ đỏ) + NHÃN kết quả:
+   PASS = nhãn NGHIÊNG kiểu dấu QC (xanh) · Fail = nhãn đỏ · chưa chấm = xám. */
+.qcp-check-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.qcp-check-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card, #fff);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.qcp-check-btn svg { width: 16px; height: 16px; }
+.qcp-check-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.qcp-check-pass { color: #16a34a; border-color: #86efac; }
+.qcp-check-fail { color: #dc2626; border-color: #fca5a5; }
+.qcp-check-pass.active { background: #16a34a; border-color: #16a34a; color: #fff; }
+.qcp-check-fail.active { background: #dc2626; border-color: #dc2626; color: #fff; }
+.qcp-stamp {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+}
+.qcp-stamp-pass {                      /* PASS NGHIÊNG — kiểu dấu QC */
+  color: #16a34a;
+  border-color: #16a34a;
+  background: #dcfce7;
+  font-style: italic;
+  transform: rotate(-8deg);
+}
+.qcp-stamp-fail {
+  color: #dc2626;
+  border-color: #dc2626;
+  background: #fee2e2;
+  transform: rotate(-6deg);
+}
+.qcp-stamp-none {
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  background: var(--bg-subtle, #f1f5f9);
+  font-weight: 600;
+}
+/* Chip nguồn tên: "Ván thô" (ưu tiên) · "TP" (lấy ở ô Thành phẩm) */
+.qcp-src-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  background: var(--bg-subtle, #f1f5f9);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.qcp-src-fp { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+@media (max-width: 639.98px) {
+  .qcp-check-btn { width: 38px; height: 38px; } /* nút chạm to hơn trên điện thoại */
+}
 
 .qc-mini-card {
   display: flex;

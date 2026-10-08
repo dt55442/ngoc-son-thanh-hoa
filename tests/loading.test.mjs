@@ -108,7 +108,7 @@ check('B11: main.js — preloadCoreViews() chạy sau boot khi bootOk (tải s�
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
 check('C1: CACHE_NAME v225 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v225/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+  /nha-may-ngoc-son-v226/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════

@@ -387,13 +387,15 @@ const jsMain = rd('main.js');
 const jsCap = rd('capacity.js');
 const jsPress = rd('press.js');
 const cssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-check('POPUP ĐM (index.html): 7 popup định mức + 7 nút "Định mức" TRONG form nhập',
+check('POPUP ĐM (index.html): 9 popup định mức + 9 nút "Định mức" TRONG form nhập',
   ['modal-x2-blg-rate', 'modal-x2-cut-rate', 'modal-x2-ong-rate', 'modal-x2-bt-rate',
-   'modal-x2-cn-rate', 'modal-x2-epv-rate', 'modal-x2-bl-rate'].every(id => idxHtml.includes(`id="${id}"`)) &&
+   'modal-x2-cn-rate', 'modal-x2-epv-rate', 'modal-x2-bl-rate', 'modal-x2-cv-rate',
+   'modal-x2-bv-rate'].every(id => idxHtml.includes(`id="${id}"`)) &&
   ['btn-x2-blg-rate', 'btn-x2-cut-rate', 'btn-x2-ong-rate', 'btn-x2-bt-rate',
-   'btn-x2-cn-rate', 'btn-x2-epv-rate', 'btn-x2-bl-rate'].every(id => idxHtml.includes(`id="${id}"`)));
-check('POPUP ĐM: ánh xạ X2_RATE_POPUPS nối đủ 7 nút → 7 popup',
-  Object.keys(x2.X2_RATE_POPUPS).length === 7 &&
+   'btn-x2-cn-rate', 'btn-x2-epv-rate', 'btn-x2-bl-rate', 'btn-x2-cv-rate',
+   'btn-x2-bv-rate'].every(id => idxHtml.includes(`id="${id}"`)));
+check('POPUP ĐM: ánh xạ X2_RATE_POPUPS nối đủ 9 nút → 9 popup',
+  Object.keys(x2.X2_RATE_POPUPS).length === 9 &&
   x2.openX2RatePopup('modal-x2-cut-rate') === true &&
   document.getElementById('modal-x2-cut-rate').classList.contains('show') &&
   x2.closeX2RatePopup('modal-x2-cut-rate') === true &&
@@ -405,8 +407,8 @@ check('POPUP ĐM: thanh định mức inline ĐÃ DỜ khỏi thân 6 thẻ (n�
 check('GIỜ SỰ CỐ: helper stageIncidentOf/stageEffHours trong utils.js',
   ['stageIncidentKey', 'stageIncidentOf', 'stageEffHours', 'stageIncidentInputHtml']
     .every(fn => jsUtils.includes(`function ${fn}`)));
-check('GIỜ SỰ CỐ: 8 thẻ đều chèn ô nhập data-x2-incident vào đầu thẻ ngày',
-  (jsX2.match(/stageIncidentInputHtml\('/g) || []).length === 7 &&
+check('GIỜ SỰ CỐ: 10 thẻ đều chèn ô nhập data-x2-incident vào đầu thẻ ngày (9 chỗ trong xuong2.js)',
+  (jsX2.match(/stageIncidentInputHtml\('/g) || []).length === 9 &&
   jsPress.includes("stageIncidentInputHtml('epvan'"));
 check('GIỜ SỰ CỐ: state + storage key đã khai báo (bamboo_tracker_x2_stage_incident_v1)',
   jsState.includes('STORAGE_KEY_X2_STAGE_INCIDENT') &&

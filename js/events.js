@@ -16,7 +16,15 @@ import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, 
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, pressToggleSec, recalcPressQuantities, refreshPressProductSelect, refreshPressSecChecks, refreshPressStickHints, refreshPressWorkersPreview, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutSize, baoTinhInputPool, setBaoThanhInput, setBaoThanhOut, toggleBaoThanhInputPicker, toggleBaoThanhOutPicker, renderBaoThanhInputList, renderX2BaoThanhForm, openX2BaoTinhRateModal, closeX2BaoTinhRateModal, renderX2BaoTinhRateModal, handleX2BaoTinhRateAddMonth, handleX2BaoTinhRateRowSave, handleX2BaoTinhRateRowReset, setX2BaoTinhFilterMode, shiftX2BaoTinhFilter, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2Boluong, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, onChonNanInlineEdit, nanSay1UseOf, editXuong2Bullig, editXuong2Cut, editXuong2Boluong, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2BoluongRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, handleXuong2BoluongSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, onBulligGroupInput, renderX2BulligGroups, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BoluongRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, resetXuong2BoluongForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2BoluongTable, toggleX2KanbanBoard, onSayTimesChange, onSayIncidentChange, onStageIncidentChange, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, baoThoLotSelectAll, baoThoLotSelectNone, X2_RATE_POPUPS, openX2RatePopup, closeX2RatePopup, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, updateXuong2BoluongLinked, x2BaoTinhTogglePicker, x2FloatHideAll, x2FloatMaybeClose, x2FloatRepositionAll, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame, setStageWs, toggleStageWs, handleX1CatOngSubmit, handleX1SaySinhSubmit, handleX1BocSubmit, editX1CatOng, editX1SaySinh, editX1Boc, deleteX1CatOng, deleteX1SaySinh, deleteX1Boc, resetX1CatOngForm, resetX1SaySinhForm, resetX1BocForm, x1CatOngSyncLinked, x1SaySinhSyncLinked, x1BocSyncLinked, x1CatOngCalc, x1SaySinhCalc, x1BocCalc, openX1RatePopup, closeX1RatePopup, renderX1RatePopup, handleX1RateSave, handleX1RateReset,
-  X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc } from './xuong2.js';
+  X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
+  // ── THẺ CẮT VÁN (Cắt ván + Xẻ thanh — tồn theo kỳ 1/2 tuần) ──
+  handleXuong2CatVanSubmit, editXuong2CatVan, deleteXuong2CatVan, resetXuong2CatVanForm,
+  renderX2CatVanSource, renderX2CatVanCalc, renderX2CatVanRateBar, handleX2CatVanRateSave,
+  setX2CatVanSpan, syncX2CatVanKindRows, syncX2CatVanSpanDom, toggleX2CatVanTable,
+  // ── THẺ BÀO VÁN (Bào + Chà thùng — tồn theo kỳ 1/2 tuần) ──
+  handleXuong2BaoVanSubmit, editXuong2BaoVan, deleteXuong2BaoVan, resetXuong2BaoVanForm,
+  renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
+  setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
 import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất
 import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
@@ -1525,6 +1533,69 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-x2-bl-rate-save', 'click', handleX2BulligRateSave);
     safeOn('x2-bl-rate-month', 'change', renderX2BulligRateBar);
     safeOn('x2-bl-rate-kind', 'change', renderX2BulligRateBar);
+    // ── Vị trí CẮT VÁN (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
+    // Form: Ngày + Công đoạn nhỏ (Cắt ván / Xẻ thanh) + Kỳ tồn (1/2 tuần);
+    // Đầu vào = ván ở Ép Ván trong kỳ (trừ phần đã cắt/xẻ). Xẻ thanh thêm
+    // 2 ô: Kích thước Đầu ra + Số thanh ra. Người làm TỰ ĐỘNG từ Nhân Sự.
+    safeOn('x2-cv-kind', 'change', () => { syncX2CatVanKindRows(); renderX2CatVanCalc(); });
+    // Uỷ nhiệm cho 2 nút Kỳ "1 tuần / 2 tuần" (#x2-cv-span-btns — data-x2-cv-span)
+    safeOn('x2-cv-span-btns', 'click', (e) => {
+      const b = e && e.target && e.target.closest ? e.target.closest('[data-x2-cv-span]') : null;
+      if (!b) return false;
+      setX2CatVanSpan(Number(b.getAttribute('data-x2-cv-span')));
+      return true;
+    });
+    // Đổi Ngày → nguồn theo kỳ mới (kỳ tính từ ngày) + cập nhật nhãn kỳ
+    safeOn('x2-cv-date', 'change', () => {
+      syncX2CatVanSpanDom();
+      renderX2CatVanSource();
+      renderX2CatVanStockBar();
+      renderX2CatVanCalc();
+    });
+    safeOn('x2-cv-source', 'change', renderX2CatVanCalc);
+    ['x2-cv-qty', 'x2-cv-out', 'x2-cv-out-qty'].forEach(id => {
+      safeOn(id, 'input', renderX2CatVanCalc);
+    });
+    // Nút "Thêm" cho TƯƠNG LAI (công đoạn nhỏ thứ 3 chưa triển khai)
+    safeOn('btn-x2-cv-add', 'click', () => {
+      showToast('Công đoạn nhỏ mới sẽ được bổ sung sau — đây là nút dành cho TƯƠNG LAI.', 'info');
+    });
+    safeOn('x2-cv-form', 'submit', handleXuong2CatVanSubmit);
+    safeOn('btn-cancel-x2-cv', 'click', () => resetXuong2CatVanForm());
+    safeOn('btn-toggle-x2cv-table', 'click', toggleX2CatVanTable);
+    safeOn('btn-x2-cv-rate-save', 'click', handleX2CatVanRateSave);
+    safeOn('x2-cv-rate-month', 'change', renderX2CatVanRateBar);
+    safeOn('x2-cv-rate-kind', 'change', renderX2CatVanRateBar);
+    // ── Vị trí BÀO VÁN (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
+    // Form CHỈ có Đầu vào + Số lượng (như Cắt ván — không ô Đầu ra);
+    // 2 công đoạn nhỏ: Bào / Chà thùng · kỳ 1/2 tuần · tồn sổ RIÊNG.
+    safeOn('x2-bv-kind', 'change', renderX2BaoVanCalc);
+    // Uỷ nhiệm cho 2 nút Kỳ "1 tuần / 2 tuần" (#x2-bv-span-btns — data-x2-bv-span)
+    safeOn('x2-bv-span-btns', 'click', (e) => {
+      const b = e && e.target && e.target.closest ? e.target.closest('[data-x2-bv-span]') : null;
+      if (!b) return false;
+      setX2BaoVanSpan(Number(b.getAttribute('data-x2-bv-span')));
+      return true;
+    });
+    // Đổi Ngày → nguồn theo kỳ mới (kỳ tính từ ngày) + cập nhật nhãn kỳ
+    safeOn('x2-bv-date', 'change', () => {
+      syncX2BaoVanSpanDom();
+      renderX2BaoVanSource();
+      renderX2BaoVanStockBar();
+      renderX2BaoVanCalc();
+    });
+    safeOn('x2-bv-source', 'change', renderX2BaoVanCalc);
+    safeOn('x2-bv-qty', 'input', renderX2BaoVanCalc);
+    // Nút "Thêm" cho TƯƠNG LAI (công đoạn nhỏ thứ 3 chưa triển khai)
+    safeOn('btn-x2-bv-add', 'click', () => {
+      showToast('Công đoạn nhỏ mới sẽ được bổ sung sau — đây là nút dành cho TƯƠNG LAI.', 'info');
+    });
+    safeOn('x2-bv-form', 'submit', handleXuong2BaoVanSubmit);
+    safeOn('btn-cancel-x2-bv', 'click', () => resetXuong2BaoVanForm());
+    safeOn('btn-toggle-x2bv-table', 'click', toggleX2BaoVanTable);
+    safeOn('btn-x2-bv-rate-save', 'click', handleX2BaoVanRateSave);
+    safeOn('x2-bv-rate-month', 'change', renderX2BaoVanRateBar);
+    safeOn('x2-bv-rate-kind', 'change', renderX2BaoVanRateBar);
     // ── Vị trí BÀO TINH (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
     // Form: Ngày bào + Loại bào (Bào tinh / Bào tinh hạ cấp / Bào thanh) + Chọn
     // thanh (đổi theo loại bào) + Kích thước sau bào + SL thanh đạt / lỗi.
@@ -1770,6 +1841,16 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       if (blEdit) { editXuong2Bullig(blEdit.getAttribute('data-x2-bl-edit')); return; }
       const blDel = e.target.closest && e.target.closest('[data-x2-bl-delete]');
       if (blDel) { deleteXuong2Bullig(blDel.getAttribute('data-x2-bl-delete')); return; }
+      // Sửa / Xóa lượt CẮT VÁN (uỷ nhiệm trong thẻ ngày)
+      const cvEdit = e.target.closest && e.target.closest('[data-x2-cv-edit]');
+      if (cvEdit) { editXuong2CatVan(cvEdit.getAttribute('data-x2-cv-edit')); return; }
+      const cvDel = e.target.closest && e.target.closest('[data-x2-cv-delete]');
+      if (cvDel) { deleteXuong2CatVan(cvDel.getAttribute('data-x2-cv-delete')); return; }
+      // Sửa / Xóa lượt BÀO VÁN (uỷ nhiệm trong thẻ ngày)
+      const bvEdit = e.target.closest && e.target.closest('[data-x2-bv-edit]');
+      if (bvEdit) { editXuong2BaoVan(bvEdit.getAttribute('data-x2-bv-edit')); return; }
+      const bvDel = e.target.closest && e.target.closest('[data-x2-bv-delete]');
+      if (bvDel) { deleteXuong2BaoVan(bvDel.getAttribute('data-x2-bv-delete')); return; }
       // Chip tháng đã đặt định mức bào tinh → nạp tháng + số thanh/h vào ô nhập
       // Chip tháng ĐÃ ĐẶT ĐỊNH MỨC ÉP VÁN (m³/h) → nạp tháng vào ô nhập
       const epvRateChip = e.target.closest && e.target.closest('[data-x2-epv-rate]');

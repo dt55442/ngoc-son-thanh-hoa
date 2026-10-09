@@ -18,7 +18,7 @@ import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
 import { loadSuppliers } from './suppliers.js';
-import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, baoTinhUsedLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan } from './xuong2.js';
+import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, baoTinhUsedLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan, loadXuong2CatVan, loadX2CatVanRates, loadX2CatVanSpan, loadXuong2BaoVan, loadX2BaoVanRates, loadX2BaoVanSpan } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
@@ -92,6 +92,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadXuong2BaoTho(); // Nhật ký Chạy Máy Bào Thô Xưởng 2 (link lô đã bổ)
     loadXuong2ChonNan(); // Nhật ký Chọn Nan Thô Xưởng 2 (link lô đã bào thô)
     loadXuong2Bullig(); // Nhật ký Bullig Xưởng 2 (Gia công + Chọn thanh)
+    loadXuong2CatVan(); // Nhật ký Cắt Ván Xưởng 2 (Cắt ván + Xẻ thanh — tồn theo kỳ)
+    loadX2CatVanSpan(); // Kỳ tồn form Cắt Ván (1 tuần / 2 tuần — thuần UI theo máy)
+    loadXuong2BaoVan(); // Nhật ký Bào Ván Xưởng 2 (Bào + Chà thùng — tồn theo kỳ)
+    loadX2BaoVanSpan(); // Kỳ tồn form Bào Ván (1 tuần / 2 tuần — thuần UI theo máy)
     loadSuppliers(); // Bảng Thông Tin Nhà Cung (tab Nguyên Liệu)
     loadX2CapRates(); // Định mức công suất cắt theo tháng (tab Công Đoạn)
     loadX2BoluongRates(); // Định mức công suất bốc luồng theo tháng (kg/h)
@@ -99,6 +103,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2BaoThoRates(); // Định mức công suất bào thô theo tháng (thanh/giờ)
     loadX2ChonNanRates(); // Định mức công suất chọn nan theo tháng (thanh/giờ)
     loadX2BulligRates(); // Định mức công suất Bullig theo tháng + công đoạn (thanh/giờ)
+    loadX2CatVanRates(); // Định mức công suất Cắt Ván theo tháng + công đoạn (tấm/h · thanh/h)
+    loadX2BaoVanRates(); // Định mức công suất Bào Ván theo tháng + công đoạn (CẢ 2 tấm/h)
     loadXuong2BaoTinh(); // Nhật ký Bào Tinh Xưởng 2 (loại bào · nguồn thanh · đạt/lỗi)
     loadX2BaoThanhOutSizes(); // Cỡ ĐẦU RA khai báo thêm của "Bào thanh" (thẻ Bào Tinh)
     loadX2BaoTinhRates(); // Định mức công suất bào tinh theo tháng (thanh/giờ)

@@ -294,13 +294,15 @@ check('BẢNG TỒN: mỗi lô 1 dòng + chip "ra/vào" trên lô quay lại (k2
   document.getElementById('x2-kho-stock-rows').innerHTML.includes('260911-01') &&
   document.getElementById('x2-kho-stock-rows').innerHTML.includes('ra/vào'));
 // GIAI ĐOẠN 2 (05/10/2026): bản đồ VÙNG DỮ LIỆU thêm 8 thẻ XƯỞNG 1 → 18;
-// bản đồ NGUỒN XUẤT EXCEL vẫn 10 thẻ Xưởng 2 (X1 chưa có form xuất riêng).
+// THẺ CẮT VÁN (09/10/2026) → 19 · THẺ BÀO VÁN (09/10/2026) → 20.
+// Nguồn XUẤT EXCEL 10 → 12 thẻ Xưởng 2
+// (X1 chưa có form xuất riêng → nút Xuất về fallback 'batch').
 const X2_IDS = ['x2-bo-luong-card', 'x2-cut-card', 'x2-bo-ong-card', 'x2-bao-tho-card',
   'x2-chon-nan-tho-card', 'x2-than-hoa-card', 'x2-kho-card', 'x2-bao-tinh-card',
-  'x2-bullig-card', 'x2-ep-van-card'];
-check('DÙNG CHUNG: 10 thẻ X2 đủ vùng dữ liệu + nguồn xuất (thêm Kho Nan · Bốc Luồng)',
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 10 &&
-  Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 18 &&
+  'x2-bullig-card', 'x2-cat-van-card', 'x2-bao-van-card', 'x2-ep-van-card'];
+check('DÙNG CHUNG: 12 thẻ X2 đủ vùng dữ liệu + nguồn xuất (thêm Bào Ván)',
+  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 12 &&
+  Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 20 &&
   X2_IDS.every(id => !!x2.X2_CARD_HISTORY_DOMAIN[id] && !!x2.X2_CARD_EXPORT_SOURCE[id]) &&
   x2.X2_CARD_EXPORT_SOURCE['x2-kho-card'] === 'kho');
 
@@ -438,7 +440,7 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v229/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v231/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

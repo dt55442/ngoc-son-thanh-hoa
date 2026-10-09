@@ -189,13 +189,14 @@ const cssSrc = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8'
 check('C1: CSS có rule ẩn nút với người KHÔNG phải admin',
   /body:not\(\.is-admin\)\s*\[data-admin-only\]/.test(cssSrc));
 const RATE_BTN_IDS = ['btn-x2-cut-rate', 'btn-x2-blg-rate', 'btn-x2-ong-rate', 'btn-x2-bt-rate',
-  'btn-x2-cn-rate', 'btn-x2-say-rate', 'btn-x2-btinh-rate', 'btn-x2-bl-rate',
-  'btn-x2-epv-rate', 'btn-qcf-rate', 'btn-add-material-rate'];
-check('C2: cả 11 nút "Định mức" trong index.html đều gắn data-admin-only',
+  'btn-x2-cn-rate', 'btn-x2-say-rate', 'btn-x2-btinh-rate', 'btn-x2-bl-rate', 'btn-x2-cv-rate',
+  'btn-x2-bv-rate', 'btn-x2-epv-rate', 'btn-qcf-rate', 'btn-add-material-rate'];
+check('C2: cả 13 nút "Định mức" trong index.html đều gắn data-admin-only',
   RATE_BTN_IDS.every(id => new RegExp(`id="${id}"[^>]*data-admin-only`).test(idxHtml)));
 check('C3: các nút LƯU trong popup định mức cũng gắn data-admin-only',
   ['btn-x2-rate-save', 'btn-x2-blg-rate-save', 'btn-x2-ong-rate-save', 'btn-x2-bt-rate-save',
-    'btn-x2-cn-rate-save', 'btn-x2-epv-rate-save', 'btn-x2-bl-rate-save',
+    'btn-x2-cn-rate-save', 'btn-x2-epv-rate-save', 'btn-x2-bl-rate-save', 'btn-x2-cv-rate-save',
+    'btn-x2-bv-rate-save',
     'btn-qcf-rate-add-month', 'btn-x2-btinh-rate-add-month', 'btn-x2sr-add-month'
   ].every(id => new RegExp(`id="${id}"[^>]*data-admin-only`).test(idxHtml)));
 const x2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
@@ -209,10 +210,11 @@ check('C4: nút render động trong JS cũng gắn data-admin-only',
 // ─── D. TƯỜNG LƯA MÂY + CỔNG QUYỀN ───────────────────────────────
 console.log('--- D. TƯỜNG LƯA ĐỊNH MỨC TRÊN MÂY ---');
 const cloudSrc = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
-check('D1: RATE_DOMAINS = 12 miền định mức (materialRates + QC + 9 định mức Xưởng 2 + Xưởng 1)',
-  cloud.RATE_DOMAINS.size === 12 && cloud.RATE_DOMAINS.has('materialRates') &&
+check('D1: RATE_DOMAINS = 14 miền định mức (materialRates + QC + 11 định mức Xưởng 2 + Xưởng 1)',
+  cloud.RATE_DOMAINS.size === 14 && cloud.RATE_DOMAINS.has('materialRates') &&
   cloud.RATE_DOMAINS.has('qcFinalRates') && cloud.RATE_DOMAINS.has('x2CapRates') &&
   cloud.RATE_DOMAINS.has('x2EpVanRates') && cloud.RATE_DOMAINS.has('x2BulligRates') &&
+  cloud.RATE_DOMAINS.has('x2CatVanRates') && cloud.RATE_DOMAINS.has('x2BaoVanRates') &&
   cloud.RATE_DOMAINS.has('x1Rates') &&
   !cloud.RATE_DOMAINS.has('x2StageIncidents') && !cloud.RATE_DOMAINS.has('x2SayTimes'));
 check('D2: máy KHÔNG có quyền sửa định mức → che miền định mức trước khi đẩy',

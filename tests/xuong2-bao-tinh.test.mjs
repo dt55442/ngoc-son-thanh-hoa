@@ -972,7 +972,7 @@ check('CẤU TRÚC (events.js + xuong2.js): nối 2 ô số lượng + hàm lọ
   jsX2.includes('function baoTinhQtyQuery') && jsX2.includes('function baoTinhListMatch') &&
   jsX2.includes('baoTinhQtyMatchVals([it.remaining, it.total], qQty)') && jsX2.includes('plainTxt'));
 check('CẤU TRÚC (styles.css): ô tìm số lượng .al-search-qty dùng chung', cssHtml.includes('.al-search-qty {'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v229/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v231/.test(swJs));
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
 

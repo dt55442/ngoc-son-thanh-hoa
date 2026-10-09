@@ -372,17 +372,19 @@
             <span class="x2-mini-count" id="x2-mini-count-bullig">–</span>
             <span class="cap-spark" id="x2-mini-spark-bullig"></span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-cat-van-card" aria-expanded="false" title="Cắt Ván — cắt ván theo quy cách (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-cat-van-card" aria-expanded="false" title="Cắt Ván — 2 công đoạn nhỏ: Cắt ván (đầu vào = ván ở Ép Ván → số tấm cắt) + Xẻ thanh (đầu vào = ván Ép Ván → kích thước thanh → số thanh) — TỒN ĐẦU VÀO TRỪ THEO KỲ 1 TUẦN / 2 TUẦN (cặp lẻ–chẵn)">
             <span class="x2-mini-ic"><i data-lucide="crop"></i></span>
             <span class="x2-mini-title">Cắt Ván</span>
-            <span class="x2-mini-desc">Cắt ván theo quy cách</span>
+            <span class="x2-mini-desc">Cắt ván + Xẻ thanh</span>
             <span class="x2-mini-count" id="x2-mini-count-cat-van">–</span>
+            <span class="cap-spark" id="x2-mini-spark-cat-van"></span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-van-card" aria-expanded="false" title="Bào Ván — bào bề mặt ván (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-van-card" aria-expanded="false" title="Bào Ván — 2 công đoạn nhỏ: Bào (đầu vào = ván ở Ép Ván → số tấm bào) + Chà thùng (đầu vào = ván Ép Ván → số tấm chà) — form CHỈ Đầu vào + Số lượng, TỒN TRỪ THEO KỲ 1 TUẦN / 2 TUẦN (cặp lẻ–chẵn)">
             <span class="x2-mini-ic"><i data-lucide="wind"></i></span>
             <span class="x2-mini-title">Bào Ván</span>
-            <span class="x2-mini-desc">Bào bề mặt ván sau cắt</span>
+            <span class="x2-mini-desc">Bào + Chà thùng</span>
             <span class="x2-mini-count" id="x2-mini-count-bao-van">–</span>
+            <span class="cap-spark" id="x2-mini-spark-bao-van"></span>
           </button>
           <button type="button" class="x2-mini-card" data-x2-card="x2-ho-tro-card" aria-expanded="false" title="Hỗ Trợ + Công Đoạn Lẻ — công việc hỗ trợ và công đoạn lẻ khác (chức năng đang bổ sung)">
             <span class="x2-mini-ic"><i data-lucide="life-buoy"></i></span>
@@ -1851,25 +1853,217 @@
         </div>
 
 
-        <!-- VỊ TRÍ: CẮT VÁN — placeholder (chức năng bổ sung sau) -->
+        <!-- ═══ THẺ: CẮT VÁN — 2 CÔNG ĐOẠN NHỎ (Cắt ván · Xẻ thanh) + nút Thêm (tương lai) ═══
+             Nguồn ĐẦU VÀO = ván ở Ép Ván (ván thô + thành phẩm) trong KỲ đang chọn;
+             TỒN TRỪ THEO KỲ: nút 1 tuần / 2 tuần (cặp lẻ–chẵn, VD 41–42). -->
         <div class="planning-card x2-card-hidden" id="x2-cat-van-card">
           <div class="planning-card-header">
             <h4><i data-lucide="crop"></i> Cắt Ván — Xưởng 2</h4>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận cắt ván (khớp vị trí Cắt Ván ở tab Nhân Sự — tự lấy người + giờ làm) sẽ được cập nhật ngay sau đây.</p>
+
+          <!-- THANH TỒN: ván thô + thành phẩm theo KỲ (1/2 tuần) -->
+          <div class="x2-stock-bar" id="x2-cv-stock-bar"></div>
+
+          <!-- FORM: Ngày + Công đoạn (Cắt ván / Xẻ thanh) + Kỳ tồn + nút Thêm (tương lai) -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x2-cv-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x2-cv-edit-text"></span>
+            </div>
+            <form id="x2-cv-form">
+              <!-- HÀNG 1: Ngày + Công đoạn + Kỳ tồn (1/2 tuần) + nút THÊM (tương lai) -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x2-cv-date">Ngày <span class="required">*</span></label>
+                  <input type="date" id="x2-cv-date" required>
+                </div>
+                <div class="form-group" style="flex:1.4; min-width:210px;">
+                  <label for="x2-cv-kind">Công Đoạn <span class="required">*</span></label>
+                  <select id="x2-cv-kind">
+                    <option value="cat">Cắt ván (ván Ép Ván → số tấm cắt)</option>
+                    <option value="xe">Xẻ thanh (ván Ép Ván → kích thước thanh)</option>
+                  </select>
+                  <small style="color:var(--text-muted);"><strong>Cắt ván</strong>: nhập Số lượng cắt (tấm) · <strong>Xẻ thanh</strong>: thêm Kích thước Đầu ra + Số lượng thanh ra.</small>
+                </div>
+                <div class="form-group" style="flex:0 0 auto; min-width:160px;">
+                  <label title="Kỳ TỒN đầu vào — 1 tuần = tuần của Ngày Cắt · 2 tuần = cặp tuần lẻ–chẵn (VD 41–42)">Kỳ Tồn</label>
+                  <div class="x2-cv-span-btns" id="x2-cv-span-btns">
+                    <button type="button" class="x2-cv-span-btn active" data-x2-cv-span="1" aria-pressed="true">1 tuần</button>
+                    <button type="button" class="x2-cv-span-btn" data-x2-cv-span="2" aria-pressed="false">2 tuần</button>
+                  </div>
+                  <small style="color:var(--text-muted);"><strong id="x2-cv-period-label">—</strong></small>
+                </div>
+                <div class="form-group" style="flex:0 0 auto;">
+                  <label>&nbsp;</label>
+                  <button type="button" class="btn btn-outline" id="btn-x2-cv-add" title="Công đoạn nhỏ mới sẽ được bổ sung sau — nút dành cho TƯƠNG LAI"><i data-lucide="plus"></i> Thêm</button>
+                </div>
+              </div>
+              <!-- HÀNG 2: ĐẦU VÀO (ván ở Ép Ván theo kỳ) + SỐ LƯỢNG VÁN VÀO -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:2; min-width:270px;">
+                  <label for="x2-cv-source">Đầu Vào — Ván ở Ép Ván (trong kỳ) <span class="required">*</span></label>
+                  <select id="x2-cv-source" required></select>
+                  <small style="color:var(--text-muted);">2 nhóm RIÊNG: <strong>Ván thô</strong> + <strong>Thành phẩm</strong> của lượt ép trong kỳ — ĐÃ trừ phần đã cắt/xẻ, hết hàng tự ẩn.</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-cv-qty">Số Lượng Ván Vào (tấm) <span class="required">*</span></label>
+                  <input type="number" id="x2-cv-qty" min="0" step="1" placeholder="VD: 12">
+                  <small style="color:var(--text-muted);">Cắt ván: = số tấm cắt · Xẻ thanh: số tấm đem xẻ (KHÔNG vượt tồn kỳ).</small>
+                </div>
+              </div>
+              <!-- HÀNG 3 (CHỈ XẺ THANH): ĐẦU RA = kích thước thanh + SỐ LƯỢNG THANH RA -->
+              <div class="x2-form-row" id="x2-cv-out-group" style="display:none;">
+                <div class="form-group" style="flex:1.4; min-width:230px;">
+                  <label for="x2-cv-out">Đầu Ra — Kích Thước Thanh (Dài x Rộng x Dày mm) <span class="required">*</span></label>
+                  <input type="text" id="x2-cv-out" list="x2-cv-out-list" placeholder="VD: 1200x18x15" autocomplete="off">
+                  <datalist id="x2-cv-out-list"></datalist>
+                  <small style="color:var(--text-muted);">Gợi ý sẵn từ lịch sử Xẻ thanh — vẫn sửa lại được.</small>
+                </div>
+                <div class="form-group" id="x2-cv-out-qty-group" style="flex:1; display:none;">
+                  <label for="x2-cv-out-qty">Số Lượng Thanh Ra <span class="required">*</span></label>
+                  <input type="number" id="x2-cv-out-qty" min="0" step="1" placeholder="VD: 120">
+                  <small style="color:var(--text-muted);">Số THANH thành phẩm xẻ được — tính Công suất Xẻ (thanh/h).</small>
+                </div>
+              </div>
+              <!-- Ô TỰ TÍNH -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label>Tự Tính</label>
+                  <div class="x2-ong-calc" id="x2-cv-calc"></div>
+                </div>
+              </div>
+              <!-- NGƯỜI CẮT / NGƯỜI XẺ + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự -->
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-cv-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Ván theo tháng + công đoạn (Cắt ván = tấm/h · Xẻ thanh = thanh/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x2-cv">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Cắt Ván</button>
+              </div>
+            </form>
+          </div>
+          </div>
+
+          <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+          <div class="material-stats" id="x2-cv-stats"></div>
+          </div>
+
+          <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG chia 2 VÙNG (Cắt ván + Xẻ thanh) -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
+          <div class="x2-cut-table-wrap" id="x2-cv-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Cắt Ván (Cắt ván + Xẻ thanh)</h5>
+              <span class="x2-cut-table-count" id="x2-cv-table-count"></span>
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2cv-table" title="Thu gọn / Mở rộng">
+                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+              </button>
+            </div>
+            <div class="x2-cut-table-scroll">
+              <div id="x2-cv-day-cards"></div>
+            </div>
+          </div>
           </div>
         </div>
 
-        <!-- VỊ TRÍ: BÀO VÁN — placeholder (chức năng bổ sung sau) -->
+        <!-- ═══ THẺ: BÀO VÁN — 2 CÔNG ĐOẠN NHỎ (Bào · Chà thùng) + nút Thêm (tương lai) ═══
+             Form CHỈ có ĐẦU VÀO + SỐ LƯỢNG (như Cắt ván — KHÔNG có ô Đầu ra);
+             Nguồn = ván Ép Ván trong KỲ; TỒN TRỪ THEO KỲ (1/2 tuần — sổ RIÊNG). -->
         <div class="planning-card x2-card-hidden" id="x2-bao-van-card">
           <div class="planning-card-header">
             <h4><i data-lucide="wind"></i> Bào Ván — Xưởng 2</h4>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận bào ván (khối lượng vào/ra, tỷ lệ đạt) sẽ được cập nhật ngay sau đây.</p>
+
+          <!-- THANH TỒN: ván thô + thành phẩm theo KỲ (1/2 tuần) — sổ riêng -->
+          <div class="x2-stock-bar" id="x2-bv-stock-bar"></div>
+
+          <!-- FORM: Ngày + Công đoạn (Bào / Chà thùng) + Kỳ tồn + nút Thêm (tương lai) -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
+          <div class="x2-cut-form-wrap">
+            <div class="x2-cut-edit-banner" id="x2-bv-edit-banner" style="display:none;">
+              <i data-lucide="pencil"></i> <span id="x2-bv-edit-text"></span>
+            </div>
+            <form id="x2-bv-form">
+              <!-- HÀNG 1: Ngày + Công đoạn + Kỳ tồn (1/2 tuần) + nút THÊM (tương lai) -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:0 0 155px;">
+                  <label for="x2-bv-date">Ngày <span class="required">*</span></label>
+                  <input type="date" id="x2-bv-date" required>
+                </div>
+                <div class="form-group" style="flex:1.4; min-width:210px;">
+                  <label for="x2-bv-kind">Công Đoạn <span class="required">*</span></label>
+                  <select id="x2-bv-kind">
+                    <option value="bao">Bào (ván Ép Ván → số tấm bào)</option>
+                    <option value="cha">Chà thùng (ván Ép Ván → số tấm chà)</option>
+                  </select>
+                  <small style="color:var(--text-muted);"><strong>Cả 2 công đoạn CHỈ cần Đầu vào + Số lượng</strong> — số lượng xử lý = số tấm ván vào (đơn vị tấm).</small>
+                </div>
+                <div class="form-group" style="flex:0 0 auto; min-width:160px;">
+                  <label title="Kỳ TỒN đầu vào — 1 tuần = tuần của Ngày · 2 tuần = cặp tuần lẻ–chẵn (VD 41–42)">Kỳ Tồn</label>
+                  <div class="x2-cv-span-btns" id="x2-bv-span-btns">
+                    <button type="button" class="x2-cv-span-btn active" data-x2-bv-span="1" aria-pressed="true">1 tuần</button>
+                    <button type="button" class="x2-cv-span-btn" data-x2-bv-span="2" aria-pressed="false">2 tuần</button>
+                  </div>
+                  <small style="color:var(--text-muted);"><strong id="x2-bv-period-label">—</strong></small>
+                </div>
+                <div class="form-group" style="flex:0 0 auto;">
+                  <label>&nbsp;</label>
+                  <button type="button" class="btn btn-outline" id="btn-x2-bv-add" title="Công đoạn nhỏ mới sẽ được bổ sung sau — nút dành cho TƯƠNG LAI"><i data-lucide="plus"></i> Thêm</button>
+                </div>
+              </div>
+              <!-- HÀNG 2: ĐẦU VÀO (ván ở Ép Ván theo kỳ) + SỐ LƯỢNG (tấm) -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:2; min-width:270px;">
+                  <label for="x2-bv-source">Đầu Vào — Ván ở Ép Ván (trong kỳ) <span class="required">*</span></label>
+                  <select id="x2-bv-source" required></select>
+                  <small style="color:var(--text-muted);">2 nhóm RIÊNG: <strong>Ván thô</strong> + <strong>Thành phẩm</strong> của lượt ép trong kỳ — ĐÃ trừ phần đã bào/chà (sổ riêng của thẻ này), hết hàng tự ẩn.</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x2-bv-qty">Số Lượng Ván Vào (tấm) <span class="required">*</span></label>
+                  <input type="number" id="x2-bv-qty" min="0" step="1" placeholder="VD: 24">
+                  <small style="color:var(--text-muted);">= số tấm Bào / Chà trong lượt này (KHÔNG vượt tồn kỳ).</small>
+                </div>
+              </div>
+              <!-- Ô TỰ TÍNH -->
+              <div class="x2-form-row">
+                <div class="form-group" style="flex:1;">
+                  <label>Tự Tính</label>
+                  <div class="x2-ong-calc" id="x2-bv-calc"></div>
+                </div>
+              </div>
+              <!-- NGƯỜI BÀO / NGƯỜI CHÀ + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự -->
+              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                <button type="button" class="btn btn-outline" id="btn-x2-bv-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Ván theo tháng + công đoạn (CẢ 2 = tấm/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-x2-bv">Làm Mới Form</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bào Ván</button>
+              </div>
+            </form>
+          </div>
+          </div>
+
+          <!-- Thống kê nhanh -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+          <div class="material-stats" id="x2-bv-stats"></div>
+          </div>
+
+          <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG chia 2 VÙNG (Bào · Chà thùng) -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
+          <div class="x2-cut-table-wrap" id="x2-bv-table-wrap">
+            <div class="x2-cut-table-head">
+              <h5><i data-lucide="history"></i> Lịch Sử Bào Ván (Bào + Chà thùng)</h5>
+              <span class="x2-cut-table-count" id="x2-bv-table-count"></span>
+              <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2bv-table" title="Thu gọn / Mở rộng">
+                <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+              </button>
+            </div>
+            <div class="x2-cut-table-scroll">
+              <div id="x2-bv-day-cards"></div>
+            </div>
+          </div>
           </div>
         </div>
 
@@ -6478,6 +6672,64 @@
           <span class="x2-rate-unit">thanh/h</span>
           <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bl-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất của công đoạn + tháng đã chọn (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-bl-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ĐỊNH MỨC CÔNG SUẤT CẮT VÁN — RIÊNG TỪNG CÔNG ĐOẠN NHỎ ═══
+       Cắt ván = tấm/h · Xẻ thanh = thanh/h (nút nằm TRONG form nhập). -->
+  <div class="modal-overlay" id="modal-x2-cv-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Cắt Ván</h3>
+        <button class="modal-close-btn" id="btn-close-x2-cv-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Định mức <b>riêng cho từng CÔNG ĐOẠN NHỎ</b>: <b>Cắt ván = tấm/giờ</b> · <b>Xẻ thanh = thanh/giờ</b>.
+          Chọn công đoạn + tháng rồi bấm Lưu. Chưa đặt → Hiệu suất của công đoạn đó hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-cv-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất Cắt Ván:</span>
+          <select id="x2-cv-rate-kind" title="Chọn công đoạn nhỏ để lưu định mức riêng">
+            <option value="cat">Cắt ván (tấm/h)</option>
+            <option value="xe">Xẻ thanh (thanh/h)</option>
+          </select>
+          <select id="x2-cv-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-cv-rate-value" min="0" step="any" placeholder="VD: 60" title="Công suất định mức của tháng">
+          <span class="x2-rate-unit" id="x2-cv-rate-unit">tấm/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-cv-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất của công đoạn + tháng đã chọn (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-cv-rate-chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ĐỊNH MỨC CÔNG SUẤT BÀO VÁN — RIÊNG TỪNG CÔNG ĐOẠN NHỎ ═══
+       BÀO VÁN — RIÊNG TỪNG CÔNG ĐOẠN NHỎ (Bào · Chà thùng — CẢ 2 tấm/h) — nút nằm TRONG form nhập. -->
+  <div class="modal-overlay" id="modal-x2-bv-rate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Định Mức Công Suất Bào Ván</h3>
+        <button class="modal-close-btn" id="btn-close-x2-bv-rate" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Định mức <b>riêng cho từng CÔNG ĐOẠN NHỎ</b> — <b>CẢ 2 = tấm/giờ</b>: <b>Bào</b> · <b>Chà thùng</b>.
+          Chọn công đoạn + tháng rồi bấm Lưu. Chưa đặt → Hiệu suất của công đoạn đó hiện "—".
+        </p>
+        <div class="x2-rate-bar" id="x2-bv-rate-bar">
+          <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất Bào Ván:</span>
+          <select id="x2-bv-rate-kind" title="Chọn công đoạn nhỏ để lưu định mức riêng">
+            <option value="bao">Bào (tấm/h)</option>
+            <option value="cha">Chà thùng (tấm/h)</option>
+          </select>
+          <select id="x2-bv-rate-month" title="Chọn tháng"></select>
+          <input type="number" id="x2-bv-rate-value" min="0" step="any" placeholder="VD: 120" title="Công suất định mức của tháng (tấm/giờ)">
+          <span class="x2-rate-unit" id="x2-bv-rate-unit">tấm/h</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-x2-bv-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất của công đoạn + tháng đã chọn (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
+          <div class="x2-rate-chips" id="x2-bv-rate-chips"></div>
         </div>
       </div>
     </div>

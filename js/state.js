@@ -94,6 +94,30 @@
   // ĐỊNH MỨC CÔNG SUẤT BULLIG (thanh/giờ) THEO TỪNG THÁNG + TỪNG CÔNG ĐOẠN NHỎ —
   // { gc: { 'YYYY-MM': thanh/h }, ct: { 'YYYY-MM': thanh/h } }
   const STORAGE_KEY_X2_BULLIG_RATE = 'bamboo_tracker_x2_bullig_rate_v1';
+  // Vị trí "CẮT VÁN" Xưởng 2 (thẻ launcher tab Công Đoạn): 2 công đoạn nhỏ trong 1 thẻ —
+  //   • 'cat' CẮT VÁN: đầu vào = VÁN ở Ép Ván (Ván thô + Thành phẩm) → số lượng cắt (tấm).
+  //   • 'xe' XẺ THANH: đầu vào = VÁN ở Ép Ván → đầu ra = kích thước thanh → số thanh.
+  // TỒN ĐẦU VÀO TRỪ THEO KỲ (1 tuần / 2 tuần — cặp lẻ/chẵn): mỗi lượt lưu kèm
+  // periodKey ('2026-W41' hoặc '2026-W41-42') → chỉ trừ ván của ĐÚNG kỳ đó.
+  const STORAGE_KEY_XUONG2_CAT_VAN = 'bamboo_tracker_xuong2_cat_van_v1';
+  // ĐỊNH MỨC CÔNG SUẤT CẮT VÁN theo THÁNG + TỪNG CÔNG ĐOẠN NHỎ:
+  //   { cat: { 'YYYY-MM': tấm/h }, xe: { 'YYYY-MM': thanh/h } }
+  const STORAGE_KEY_X2_CAT_VAN_RATE = 'bamboo_tracker_x2_cat_van_rate_v1';
+  // KỲ TỒN ĐANG CHỌN của form Cắt Ván (1 tuần / 2 tuần) — thuần UI theo MÁY
+  // (không đồng bộ mây/backup), nhớ lại để lần mở sau vẫn giữ kỳ đã chọn.
+  const STORAGE_KEY_X2_CAT_VAN_SPAN = 'bamboo_tracker_x2_cat_van_span_v1';
+  // Vị trí "BÀO VÁN" Xưởng 2 (thẻ launcher tab Công Đoạn): 2 công đoạn nhỏ trong 1 thẻ —
+  //   • 'bao' BÀO: đầu vào = VÁN ở Ép Ván (Ván thô + Thành phẩm) → số lượng bào (tấm).
+  //   • 'cha' CHÀ THÙNG: đầu vào = VÁN ở Ép Ván → số lượng chà (tấm).
+  // Form CHỈ có Đầu vào + Số lượng (như Cắt ván — không có ô Đầu ra).
+  // TỒN ĐẦU VÀO TRỪ THEO KỲ (1 tuần / 2 tuần — sổ RIÊNG của thẻ Bào Ván,
+  // KHÔNG trừ chéo với thẻ Cắt Ván): lượt lưu kèm periodKey.
+  const STORAGE_KEY_XUONG2_BAO_VAN = 'bamboo_tracker_xuong2_bao_van_v1';
+  // ĐỊNH MỨC CÔNG SUẤT BÀO VÁN theo THÁNG + TỪNG CÔNG ĐOẠN NHỎ — CẢ 2 tấm/h:
+  //   { bao: { 'YYYY-MM': tấm/h }, cha: { 'YYYY-MM': tấm/h } }
+  const STORAGE_KEY_X2_BAO_VAN_RATE = 'bamboo_tracker_x2_bao_van_rate_v1';
+  // KỲ TỒN ĐANG CHỌN của form Bào Ván (1 tuần / 2 tuần) — thuần UI theo MÁY
+  const STORAGE_KEY_X2_BAO_VAN_SPAN = 'bamboo_tracker_x2_bao_van_span_v1';
   // ĐỊNH MỨC THỜI GIAN THAN HÓA (PHÚT/m³) THEO TỪNG THÁNG + TỪNG CÔNG ĐOẠN SẤY
   // của công đoạn "Than Hóa + Sấy" — { s1: { 'YYYY-MM': phút/m³ }, s2: {...} }.
   // Điều kiện than hóa khác nhau theo công đoạn sấy: 1 m³ nan đi Sấy 1 phải trải
@@ -363,6 +387,27 @@
     // Định mức công suất Bullig theo tháng + từng công đoạn nhỏ (thanh/giờ):
     // { gc: { 'YYYY-MM': thanh/h }, ct: { 'YYYY-MM': thanh/h } }
     x2BulligRates: { gc: {}, ct: {} },
+    // Nhật ký CẮT VÁN (vị trí Cắt Ván — Xưởng 2): 2 công đoạn nhỏ —
+    //   'cat' CẮT VÁN (ván Ép Ván → số lượng cắt, tấm) ·
+    //   'xe' XẺ THANH (ván Ép Ván → kích thước đầu ra → số thanh).
+    // Tồn đầu vào TRỪ THEO KỲ (span 1/2 tuần — periodKey).
+    xuong2CatVanRecords: [],
+    x2CatVanEditId: null,      // id lượt Cắt Ván đang sửa trong form (null = ghi mới)
+    // Kỳ tồn của form Cắt Ván: 1 = tuần hiện tại · 2 = cặp tuần lẻ–chẵn (VD 41–42)
+    x2CatVanSpan: 1,
+    // Định mức công suất Cắt Ván theo tháng + từng công đoạn nhỏ:
+    // { cat: { 'YYYY-MM': tấm/h }, xe: { 'YYYY-MM': thanh/h } }
+    x2CatVanRates: { cat: {}, xe: {} },
+    // Nhật ký BÀO VÁN (vị trí Bào Ván — Xưởng 2): 2 công đoạn nhỏ CHỈ CÓ
+    // Đầu vào + Số lượng (form như Cắt ván, không ô Đầu ra):
+    //   'bao' BÀO (tấm) · 'cha' CHÀ THÙNG (tấm) — tồn đầu vào theo kỳ, sổ RIÊNG.
+    xuong2BaoVanRecords: [],
+    x2BaoVanEditId: null,      // id lượt Bào Ván đang sửa trong form (null = ghi mới)
+    // Kỳ tồn của form Bào Ván: 1 = tuần hiện tại · 2 = cặp tuần lẻ–chẵn (VD 41–42)
+    x2BaoVanSpan: 1,
+    // Định mức công suất Bào Ván theo tháng + từng công đoạn nhỏ (CẢ 2 tấm/h):
+    // { bao: { 'YYYY-MM': tấm/h }, cha: { 'YYYY-MM': tấm/h } }
+    x2BaoVanRates: { bao: {}, cha: {} },
     // Định mức THỜI GIAN THAN HÓA (phút cho 1 m³) theo tháng + công đoạn sấy của
     // thẻ "Than Hóa + Sấy": { s1: { 'YYYY-MM': phút/m³ }, s2: { 'YYYY-MM': phút/m³ } }
     // — nguồn tính cột "Giờ Cần" + định mức công suất m³/h của bảng thống kê sấy.
@@ -483,6 +528,12 @@ export {
   STORAGE_KEY_X2_BAO_TINH_RATE,
   STORAGE_KEY_XUONG2_BULLIG,
   STORAGE_KEY_X2_BULLIG_RATE,
+  STORAGE_KEY_XUONG2_CAT_VAN,
+  STORAGE_KEY_X2_CAT_VAN_RATE,
+  STORAGE_KEY_X2_CAT_VAN_SPAN,
+  STORAGE_KEY_XUONG2_BAO_VAN,
+  STORAGE_KEY_X2_BAO_VAN_RATE,
+  STORAGE_KEY_X2_BAO_VAN_SPAN,
   STORAGE_KEY_X2_SAY_RATE,
   STORAGE_KEY_X2_SAY_TIMES,
   STORAGE_KEY_X2_SAY_INCIDENT,

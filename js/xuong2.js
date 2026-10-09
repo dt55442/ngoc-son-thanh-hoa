@@ -32,7 +32,7 @@ import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
 import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoPeriodKeyOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
@@ -65,8 +65,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'x2-bao-tinh-card':     { el: 'x2-mini-count-bao-tinh' },                 // Bào Tinh (ĐÃ CÓ chức năng)
     'x2-ep-van-card':       { el: 'x2-mini-count-ep-van' },                    // Ép Ván (ĐÃ CÓ chức năng — 2 khung: Lượt Ép / Biểu Đồ)
     'x2-bullig-card':       { el: 'x2-mini-count-bullig' },                   // Bullig (ĐÃ CÓ chức năng — Gia công + Chọn thanh)
-    'x2-cat-van-card':      { el: 'x2-mini-count-cat-van',      soon: true }, // Cắt Ván
-    'x2-bao-van-card':      { el: 'x2-mini-count-bao-van',      soon: true }, // Bào Ván
+    'x2-cat-van-card':      { el: 'x2-mini-count-cat-van' },                    // Cắt Ván (ĐÃ CÓ chức năng — Cắt ván + Xẻ thanh)
+    'x2-bao-van-card':      { el: 'x2-mini-count-bao-van' },                    // Bào Ván (ĐÃ CÓ chức năng — Bào + Chà thùng)
     'x2-ho-tro-card':       { el: 'x2-mini-count-ho-tro',       soon: true }, // Hỗ Trợ + Công Đoạn Lẻ
 
     // ─── XƯỞNG 1 — 8 CÔNG ĐOẠN (04/10/2026) ────────────────────
@@ -100,6 +100,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'x2-kho-card': 'khoNotes',
     'x2-bao-tinh-card': 'xuong2BaoTinhRecords',
     'x2-bullig-card': 'xuong2BulligRecords',
+    'x2-cat-van-card': 'xuong2CatVanRecords',
+    'x2-bao-van-card': 'xuong2BaoVanRecords',
     'x2-ep-van-card': 'pressRecords',
     // XƯỞNG 1 — 8 công đoạn (05/10/2026)
     'x1-cat-ong-card': 'xuong1CatOngRecords',
@@ -121,6 +123,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'x2-kho-card': 'kho',
     'x2-bao-tinh-card': 'baotinh',
     'x2-bullig-card': 'bullig',
+    'x2-cat-van-card': 'catvan',
+    'x2-bao-van-card': 'baovan',
     'x2-ep-van-card': 'epvan'
   };
   // Thẻ đang mở (null = không thẻ nào) — Lịch Sử/Xuất Excel dùng chung + gợi ý AI
@@ -1540,6 +1544,20 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const ok = list.filter(r => r.kind === 'ct').reduce((s, r) => s + (Number(r.qtyOk) || 0), 0);
       return `${list.length} lượt · ${fmtThanh(ok)} thanh`;
     }
+    // Thẻ "Cắt Ván": số lượt + số TẤM VÁN đã cắt/xẻ trong nhật ký
+    if (cardId === 'x2-cat-van-card') {
+      const list = state.xuong2CatVanRecords || [];
+      if (!list.length) return 'Chưa ghi';
+      const tam = list.reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
+      return `${list.length} lượt · ${fmtThanh(tam)} tấm`;
+    }
+    // Thẻ "Bào Ván": số lượt + số TẤM VÁN đã bào/chà trong nhật ký
+    if (cardId === 'x2-bao-van-card') {
+      const list = state.xuong2BaoVanRecords || [];
+      if (!list.length) return 'Chưa ghi';
+      const tam = list.reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
+      return `${list.length} lượt · ${fmtThanh(tam)} tấm`;
+    }
     // ── XƯỞNG 1: 8 công đoạn (chip = TỒN CHỜ XỬ LÝ) ──
     if (cardId.startsWith('x1-')) {
       const t = x1CardCountText(cardId);
@@ -1679,6 +1697,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (cardId === 'x2-kho-card') renderX2KhoCard(); // Kho Nan: tồn · phiếu kho · sổ nhập/xuất
     if (cardId === 'x2-bao-tinh-card') renderX2BaoTinhCard();
     if (cardId === 'x2-bullig-card') renderX2BulligCard();
+    if (cardId === 'x2-cat-van-card') renderX2CatVanCard();
+    if (cardId === 'x2-bao-van-card') renderX2BaoVanCard();
     if (cardId === 'x2-ep-van-card') renderX2EpVanCard();
     // ── XƯỞNG 1 (8 công đoạn — tất cả đã có chức năng) ──
     renderX1CardOf(cardId);
@@ -3311,7 +3331,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'btn-x2-bt-rate': 'modal-x2-bt-rate',
     'btn-x2-cn-rate': 'modal-x2-cn-rate',
     'btn-x2-epv-rate': 'modal-x2-epv-rate',
-    'btn-x2-bl-rate': 'modal-x2-bl-rate'
+    'btn-x2-bl-rate': 'modal-x2-bl-rate',
+    'btn-x2-cv-rate': 'modal-x2-cv-rate',
+    'btn-x2-bv-rate': 'modal-x2-bv-rate'
   };
   function openX2RatePopup(popupId) {
     if (!requireRatePermission()) return false; // CHỈ admin mở bảng định mức
@@ -6033,6 +6055,1388 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   // ═══════════════════════════════════════════════════════════
+  // VỊ TRÍ: CẮT VÁN — Xưởng 2 (thẻ launcher tab Công Đoạn)
+  // ═══════════════════════════════════════════════════════════
+  // 2 công đoạn nhỏ chạy trong 1 thẻ + nút "Thêm" dành cho TƯƠNG LAI:
+  //   • 'cat' CẮT VÁN — Đầu vào = VÁN ở Ép Ván (2 nhóm RIÊNG: "Ván Thô Tạo
+  //     Ra" + "Thành Phẩm" của lượt ép) → Số lượng cắt (tấm).
+  //   • 'xe'  XẺ THANH — Đầu vào = VÁN ở Ép Ván → Đầu ra = kích thước thanh
+  //     (nhập tay) → SL ván vào (tấm) + SL thanh ra (thanh).
+  // TỒN ĐẦU VÀO TRỪ THEO KỲ — nút "1 tuần / 2 tuần":
+  //   • 1 tuần = ván ép trong ĐÚNG tuần của Ngày Cắt;
+  //   • 2 tuần = CẶP tuần lẻ–chẵn (41–42 — cùng quy tắc cặp của Ép Ván/QC);
+  //   • mỗi lượt lưu kèm periodKey → chỉ trừ ván của ĐÚNG kỳ (sửa lượt được
+  //     trả lại phần của nó nhờ excludeId trong catVanInputPool).
+  //   • NGƯỜI CẮT / NGƯỜI XẺ + GIỜ HC/TC tự động từ Bảng bố trí Nhân Sự.
+  //   • ĐỊNH MỨC theo THÁNG + CÔNG ĐOẠN: Cắt ván = tấm/h · Xẻ thanh = thanh/h
+  //     → 2 DÒNG riêng trong Bảng Tổng Hợp Công Suất.
+  // Dữ liệu: state.xuong2CatVanRecords (localStorage + file + mây, tombstone).
+  const CAT_VAN_KINDS = [
+    { id: 'cat', label: 'Cắt ván' },
+    { id: 'xe', label: 'Xẻ thanh' }
+  ];
+  function catVanKindLabel(id) { const k = CAT_VAN_KINDS.find(x => x.id === id); return k ? k.label : (id || '—'); }
+  // Đơn vị SẢN LƯỢNG của từng công đoạn nhỏ (Cắt = tấm · Xẻ = thanh)
+  const catVanUnitOf = kind => (kind === 'xe' ? 'thanh' : 'tấm');
+  const catVanRateUnitOf = kind => (kind === 'xe' ? 'thanh/h' : 'tấm/h');
+  // Nhóm ĐẦU VÀO từ Ép Ván — 2 sổ RIÊNG, KHÔNG trừ chéo dù trùng kích thước
+  const CAT_VAN_GROUPS = {
+    vantho: 'Ván thô (Ép Ván)',
+    thanhpham: 'Thành phẩm (Ép Ván)'
+  };
+
+  // ─── KỲ TỒN: 1 TUẦN / 2 TUẦN (CẶP TUẦN LẺ–CHẴN) ─────────────
+  function catVanSpanOf() { return Number(state.x2CatVanSpan) === 2 ? 2 : 1; }
+  function loadX2CatVanSpan() {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY_X2_CAT_VAN_SPAN);
+      state.x2CatVanSpan = (v === '2') ? 2 : 1;
+    } catch (e) { state.x2CatVanSpan = 1; }
+  }
+  function saveX2CatVanSpan() { try { localStorage.setItem(STORAGE_KEY_X2_CAT_VAN_SPAN, String(catVanSpanOf())); } catch (e) {} }
+  // Số tuần ISO của 1 ngày ('Tuần 41' → 41) — cùng nguồn getISOWeekString với Ép Ván
+  function catVanWeekNumOf(dateISO) {
+    if (!dateISO) return 0;
+    const m = String(getISOWeekString(dateISO)).match(/(\d+)/);
+    return m ? Number(m[1]) : 0;
+  }
+  // Kỳ của NGÀY theo chế độ: 1 tuần = [w] · 2 tuần = cặp lẻ–chẵn (tuần CHẶN
+  // lùi về tuần lẻ trước; tuần 53 không có 54 → tính riêng).
+  function catVanPeriodOf(dateISO, span) {
+    const wk = catVanWeekNumOf(dateISO);
+    const year = Number(String(dateISO || '').slice(0, 4)) || new Date().getFullYear();
+    if (!wk) return { year, start: 0, end: null };
+    if ((span || catVanSpanOf()) === 2) {
+      const start = wk % 2 === 1 ? wk : wk - 1;
+      return { year, start, end: start >= 53 ? null : start + 1 };
+    }
+    return { year, start: wk, end: null };
+  }
+  // Khóa kỳ của lượt ('2026-W41' · cặp '2026-W41-42') — lưu CÙNG lượt để
+  // TRỪ TỒN đúng kỳ (sửa/lọc không cộng nhầm sang kỳ khác).
+  function catVanPeriodKeyOf(dateISO, span) {
+    const p = catVanPeriodOf(dateISO, span);
+    if (!p.start) return '';
+    const w2 = p.end != null ? `-${String(p.end).padStart(2, '0')}` : '';
+    return `${p.year}-W${String(p.start).padStart(2, '0')}${w2}`;
+  }
+  function catVanPeriodLabel(dateISO, span) {
+    const p = catVanPeriodOf(dateISO, span);
+    if (!p.start) return '—';
+    return p.end ? `Tuần ${p.start}–${p.end}` : `Tuần ${p.start}`;
+  }
+  // Lượt Ép Ván thuộc kỳ của ngày (tuần ISO + CÙNG NĂM — tránh lẫn tuần năm khác)
+  function catVanPressInPeriod(r, p) {
+    if (!r || !p || !p.start) return false;
+    const w = pressRecordWeek(r);
+    if (!w || (w !== p.start && (p.end == null || w !== p.end))) return false;
+    const y = Number(r.year || String(r.date || '').slice(0, 4));
+    return !(y && p.year && y !== p.year);
+  }
+  function catVanPressOfPeriod(dateISO, span) {
+    const p = catVanPeriodOf(dateISO, span);
+    return (state.pressRecords || []).filter(r => catVanPressInPeriod(r, p));
+  }
+  // Tuần của 1 periodKey ĐÃ LƯU: '2026-W41' → [41] · '2026-W41-42' → [41,42]
+  function catVanPeriodWeeksOfKey(pkey) {
+    const m = String(pkey || '').match(/^(\d{4})-W(\d{1,2})(?:-(\d{1,2}))?$/);
+    if (!m) return { year: 0, weeks: [] };
+    const weeks = [Number(m[2])];
+    if (m[3]) weeks.push(Number(m[3]));
+    return { year: Number(m[1]), weeks };
+  }
+  // ─── POOL ĐẦU VÀO: VÁN CỦA KỲ − PHẦN ĐÃ CẮT/XẺ TRONG CÙNG KỲ ──
+  // key = '<nhóm>|<kích thước>' — ván thô & thành phẩm KHÔNG trừ chéo.
+  // DÙNG CHUNG cho 2 thẻ: Cắt Ván (`catVanInputPool` — sổ catVanRecords) và
+  // Bào Ván (`baoVanInputPool` — sổ baoVanRecords RIÊNG, không trừ chéo 2 thẻ).
+  function pressVanPoolOf(dateISO, span, recList, excludeId) {
+    const pkey = catVanPeriodKeyOf(dateISO, span);
+    const ex = excludeId || '';
+    const map = new Map();
+    const add = (group, dimStr, qty, pressId) => {
+      const dims = bulligParseOutDims(dimStr); // GIỮ ĐÚNG THỨ TỰ Dài→Rộng→Dày
+      if (!(dims[0] > 0 && dims[1] > 0 && dims[2] > 0) || !(qty > 0)) return;
+      const sizeKey = dimKeyOf(dims[0], dims[1], dims[2]);
+      const key = `${group}|${sizeKey}`;
+      let it = map.get(key);
+      if (!it) {
+        it = { key, group, groupLabel: CAT_VAN_GROUPS[group] || group, sizeKey, dims, total: 0, pressIds: [] };
+        map.set(key, it);
+      }
+      it.total += qty;
+      if (pressId && it.pressIds.indexOf(pressId) < 0) it.pressIds.push(pressId);
+    };
+    catVanPressOfPeriod(dateISO, span).forEach(r => {
+      (Array.isArray(r.vanTho) ? r.vanTho : []).forEach(l => add('vantho', l && l.vtDim, Number(l && l.vtQty) || 0, r.id));
+      const fp = Number(r.finishedQty) || 0;
+      if (fp > 0) add('thanhpham', String(r.fpDim || '').trim() || String(r.productName || '').trim(), fp, r.id);
+    });
+    // ĐÃ DÙNG = Σ SL ván vào của lượt CẮT VÁN TRÙNG NĂM + KỲ CHỒNG NHAU
+    // (trừ lượt ĐANG SỬA → phần của nó được trả lại khi sửa).
+    // Chồng nhau: lượt lưu ở CẶP 41–42 vẫn trừ khi xem 1 tuần 41 (và ngược
+    // lại) → KHÔNG thể cắt trùng 1 tấm khi đổi chế độ 1/2 tuần.
+    const cur = catVanPeriodOf(dateISO, span);
+    const curWeeks = cur.start ? [cur.start].concat(cur.end != null ? [cur.end] : []) : [];
+    const usedMap = new Map();
+    (recList || []).forEach(r => {
+      if (!r || r.id === ex) return;
+      const pk = catVanPeriodWeeksOfKey(r.periodKey);
+      if (!pk.weeks.length || !curWeeks.length) return;
+      if (pk.year !== cur.year) return;
+      if (!pk.weeks.some(w => curWeeks.indexOf(w) >= 0)) return;
+      const k = `${r.inGroup || 'vantho'}|${r.inSizeKey || ''}`;
+      usedMap.set(k, (usedMap.get(k) || 0) + (Number(r.qtyIn) || 0));
+    });
+    return [...map.values()].map(it => {
+      const used = usedMap.get(it.key) || 0;
+      return Object.assign(it, { used, remaining: Math.max(0, it.total - used) });
+    }).sort((a, b) => (b.remaining - a.remaining) || (b.total - a.total));
+  }
+  // Pool của THẺ CẮT VÁN (kỳ đang chọn trên máy + sổ catVanRecords)
+  function catVanInputPool(dateISO) {
+    return pressVanPoolOf(dateISO, catVanSpanOf(), state.xuong2CatVanRecords || [], state.x2CatVanEditId || '');
+  }
+  // Pool của THẺ BÀO VÁN (kỳ riêng + sổ baoVanRecords RIÊNG — KHÔNG trừ chéo 2 thẻ)
+  function baoVanInputPool(dateISO) {
+    return pressVanPoolOf(dateISO, baoVanSpanOf(), state.xuong2BaoVanRecords || [], state.x2BaoVanEditId || '');
+  }
+
+  // Ô ĐẦU VÀO: 2 optgroup (Ván thô / Thành phẩm) — chỉ hiện phần CÒN LẠI > 0;
+  // lượt ĐANG SỬA vẫn thấy đúng nguồn của nó (kể cả đã hết).
+  function renderX2CatVanSource() {
+    const sel = document.getElementById('x2-cv-source');
+    if (!sel) return;
+    const dateVal = (document.getElementById('x2-cv-date') || {}).value || '';
+    const items = catVanInputPool(dateVal);
+    const editing = state.x2CatVanEditId
+      ? (state.xuong2CatVanRecords || []).find(r => r.id === state.x2CatVanEditId) : null;
+    const editKey = editing ? `${editing.inGroup || 'vantho'}|${editing.inSizeKey || ''}` : '';
+    const visible = items.filter(it => it.remaining > 0 || (editKey && it.key === editKey));
+    if (!visible.length) {
+      sel.innerHTML = `<option value="">— Không còn ván trong ${escapeHTML(catVanPeriodLabel(dateVal))} —</option>`;
+      return;
+    }
+    const prev = sel.value;
+    const grp = (g, list) => !list.length ? '' :
+      `<optgroup label="${escapeHTML(CAT_VAN_GROUPS[g] || g)}">${list.map(it =>
+        `<option value="${escapeHTML(it.key)}">${escapeHTML(it.sizeKey)} — còn ${fmtThanh(it.remaining)} / ${fmtThanh(it.total)} tấm${it.remaining > 0 ? '' : ' (đang sửa)'}</option>`).join('')}</optgroup>`;
+    sel.innerHTML = grp('vantho', visible.filter(it => it.group === 'vantho')) +
+                    grp('thanhpham', visible.filter(it => it.group === 'thanhpham'));
+    if (visible.some(it => it.key === prev)) sel.value = prev;
+  }
+  function catVanSelectedItem() {
+    const key = String((document.getElementById('x2-cv-source') || {}).value || '');
+    if (!key) return null;
+    const dateVal = (document.getElementById('x2-cv-date') || {}).value || '';
+    return catVanInputPool(dateVal).find(it => it.key === key) || null;
+  }
+  // ─── NGƯỜI CẮT / NGƯỜI XẺ + GIỜ HC/TC (Bảng bố trí — Xưởng 2) ──
+  // Khớp tên vị trí MỀM (bỏ dấu): "Cắt Ván" → cat van · "Xẻ Thanh" → xe thanh.
+  function isCatVanPos(name) { return normPosName(name).includes('cat van'); }
+  function isXeThanhPos(name) { return normPosName(name).includes('xe thanh'); }
+  function hrCatVanAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isCatVanPos); }
+  function hrXeThanhAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isXeThanhPos); }
+  function hrCatVanSnapshot(dateVal, kind) {
+    const list = kind === 'xe' ? hrXeThanhAssignmentsOf(dateVal) : hrCatVanAssignmentsOf(dateVal);
+    return workerSnapOf(hrPositionSnapshot(dateVal, list));
+  }
+
+  // ─── ĐỊNH MỨC CÔNG SUẤT (Cắt = tấm/h · Xẻ = thanh/h) THEO THÁNG ──
+  function loadX2CatVanRates() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_CAT_VAN_RATE);
+    state.x2CatVanRates = { cat: {}, xe: {} };
+    if (raw) {
+      try {
+        const obj = JSON.parse(raw);
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+          state.x2CatVanRates = {
+            cat: (obj.cat && typeof obj.cat === 'object') ? obj.cat : {},
+            xe: (obj.xe && typeof obj.xe === 'object') ? obj.xe : {}
+          };
+        }
+      } catch (e) {}
+    }
+  }
+  function saveX2CatVanRates() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X2_CAT_VAN_RATE, JSON.stringify(state.x2CatVanRates || { cat: {}, xe: {} }));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?).', 'error');
+    }
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+  function catVanRateOf(dateVal, kind) {
+    const grp = ((state.x2CatVanRates || {})[kind === 'xe' ? 'xe' : 'cat']) || {};
+    const v = Number(grp[String(dateVal || '').slice(0, 7)]);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  }
+  function handleX2CatVanRateSave() {
+    if (!requireRatePermission()) return;
+    const monthEl = document.getElementById('x2-cv-rate-month');
+    const valEl = document.getElementById('x2-cv-rate-value');
+    const kindSel = document.getElementById('x2-cv-rate-kind');
+    const month = String((monthEl && monthEl.value) || '').trim();
+    const v = Number((valEl && valEl.value) || 0);
+    const kind = (kindSel && kindSel.value === 'xe') ? 'xe' : 'cat';
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chưa chọn tháng để lưu định mức!', 'error'); return; }
+    if (!Number.isFinite(v) || v <= 0) { showToast(`Định mức công suất phải là số ${catVanRateUnitOf(kind)} lớn hơn 0!`, 'error'); return; }
+    (state.x2CatVanRates = state.x2CatVanRates || { cat: {}, xe: {} })[kind] = state.x2CatVanRates[kind] || {};
+    state.x2CatVanRates[kind][month] = v;
+    saveX2CatVanRates();
+    renderX2CatVanRateBar();
+    renderX2CatVanTable();
+    showToast(`Đã lưu định mức ${catVanKindLabel(kind)} ${fmtThanh(v)} ${catVanRateUnitOf(kind)} cho tháng ${month.slice(5)}!`, 'success');
+  }
+  function renderX2CatVanRateBar() {
+    const selEl = document.getElementById('x2-cv-rate-month');
+    const valInput = document.getElementById('x2-cv-rate-value');
+    const kindSel = document.getElementById('x2-cv-rate-kind');
+    if (!selEl) return;
+    const months = new Set([
+      ...Object.keys((state.x2CatVanRates || {}).cat || {}),
+      ...Object.keys((state.x2CatVanRates || {}).xe || {}),
+      new Date().toISOString().slice(0, 7)
+    ]);
+    (state.xuong2CatVanRecords || []).forEach(r => { if (r && r.date) months.add(String(r.date).slice(0, 7)); });
+    const curMonth = selEl.value || new Date().toISOString().slice(0, 7);
+    const list = [...months].filter(Boolean).sort((a, b) => b.localeCompare(a));
+    selEl.innerHTML = list.map(m => `<option value="${escapeHTML(m)}">Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</option>`).join('');
+    selEl.value = months.has(curMonth) ? curMonth : (list[0] || '');
+    const curKind = (kindSel && kindSel.value === 'xe') ? 'xe' : 'cat';
+    const unit = document.getElementById('x2-cv-rate-unit');
+    if (unit) unit.textContent = catVanRateUnitOf(curKind);
+    if (valInput) {
+      const v = Number(((state.x2CatVanRates || {})[curKind] || {})[selEl.value]);
+      valInput.value = Number.isFinite(v) && v > 0 ? v : '';
+    }
+    const chips = document.getElementById('x2-cv-rate-chips');
+    if (chips) {
+      const keys = Object.keys((state.x2CatVanRates || {}).cat || {}).filter(k => Number(state.x2CatVanRates.cat[k]) > 0)
+        .map(k => ({ kind: 'cat', k })).concat(
+        Object.keys((state.x2CatVanRates || {}).xe || {}).filter(k => Number(state.x2CatVanRates.xe[k]) > 0)
+          .map(k => ({ kind: 'xe', k })));
+      keys.sort((a, b) => b.k.localeCompare(a.k));
+      chips.innerHTML = keys.map(x => `<button type="button" class="x2-rate-chip" data-x2-cv-rate="${escapeHTML(x.k)}" data-x2-cv-rate-kind="${x.kind}" title="Bấm để nạp định mức tháng này vào ô nhập để sửa lại">${catVanKindLabel(x.kind)} T${Number(x.k.slice(5))} = ${fmtThanh(state.x2CatVanRates[x.kind][x.k])} ${catVanRateUnitOf(x.kind)}</button>`).join('');
+    }
+    initLucide();
+  }
+
+  // ─── SỐ LIỆU HIỂN THỊ CỦA 1 LƯỢT CẮT VÁN ─────────────────────
+  function catVanDisplay(r) {
+    const kind = r.kind === 'xe' ? 'xe' : 'cat';
+    const inDims = Array.isArray(r.inDims) ? r.inDims.map(Number) : [];
+    const inSizeKey = String(r.inSizeKey ||
+      (inDims.length === 3 ? dimKeyOf(inDims[0], inDims[1], inDims[2]) : ''));
+    const outDims = Array.isArray(r.outDims) ? r.outDims.map(Number) : [];
+    const outSizeKey = String(r.outSizeKey ||
+      (outDims.length === 3 && outDims[0] > 0 ? dimKeyOf(outDims[0], outDims[1], outDims[2]) : ''));
+    const qtyIn = Number(r.qtyIn) || 0;        // tấm ván ĐEM ĐI (cắt/xẻ)
+    const quantity = Number(r.quantity) || 0;  // cat = tấm cắt · xe = THANH RA
+    const unitVol = (r.unitVol != null) ? Number(r.unitVol)
+      : (kind === 'xe' && outDims[0] > 0 ? unitVolOf(outDims[0], outDims[1], outDims[2])
+        : (inDims[0] > 0 ? unitVolOf(inDims[0], inDims[1], inDims[2]) : 0));
+    const volume = Math.round((kind === 'xe' ? quantity : qtyIn) * unitVol * 10000) / 10000;
+    // Người làm + giờ: SỐNG từ Bảng bố trí theo ngày; mất bố trí → snapshot lượt
+    const live = kind === 'xe' ? hrXeThanhAssignmentsOf(r.date || '') : hrCatVanAssignmentsOf(r.date || '');
+    const workerRows = live.length
+      ? live.map(a => ({ name: a.name, time: posTimeStr(a) }))
+      : String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
+          .map((name, i) => ({ name, time: String(r.workTime || '').split(',').map(s => s.trim())[i] || '' }));
+    let workHours = 0, workHoursHC = null, workHoursTC = null;
+    if (live.length) {
+      const sp = sumPosHoursSplit(live, r.date || '');
+      workHours = sp.hc + sp.tc; workHoursHC = sp.hc; workHoursTC = sp.tc;
+    } else if (Number.isFinite(Number(r.workHoursHC)) || Number.isFinite(Number(r.workHoursTC))) {
+      workHoursHC = Number(r.workHoursHC) || 0;
+      workHoursTC = Number(r.workHoursTC) || 0;
+      workHours = workHoursHC + workHoursTC;
+      if (!workHours && Number(r.workHours) > 0) workHours = Number(r.workHours);
+    } else {
+      workHours = snapshotCutHours(r.workTime);
+    }
+    const span = Number(r.span) === 2 ? 2 : 1;
+    return {
+      id: r.id, kind, kindLabel: catVanKindLabel(kind),
+      date: r.date || '', week: r.week || '',
+      span, periodKey: r.periodKey || '',
+      periodLabel: catVanPeriodLabel(r.date, span),
+      group: r.inGroup || 'vantho',
+      groupLabel: CAT_VAN_GROUPS[r.inGroup || 'vantho'] || r.inGroup || '',
+      inSizeKey, inDims, outSizeKey, outDims,
+      qtyIn, quantity, unitVol, volume,
+      pressIds: Array.isArray(r.pressIds) ? r.pressIds : [],
+      workerRows, workHours, workHoursHC, workHoursTC
+    };
+  }
+  // ─── Ô TỰ TÍNH ───────────────────────────────────────────────
+  function renderX2CatVanCalc() {
+    const box = document.getElementById('x2-cv-calc');
+    if (!box) return;
+    const kind = ((document.getElementById('x2-cv-kind') || {}).value) === 'xe' ? 'xe' : 'cat';
+    const dateVal = (document.getElementById('x2-cv-date') || {}).value || '';
+    const span = catVanSpanOf();
+    const item = catVanSelectedItem();
+    const qtyIn = Math.floor(Number((document.getElementById('x2-cv-qty') || {}).value) || 0);
+    const outDims = bulligParseOutDims(String((document.getElementById('x2-cv-out') || {}).value || ''));
+    const outQty = Math.floor(Number((document.getElementById('x2-cv-out-qty') || {}).value) || 0);
+    const inVol = item && item.dims[0] > 0 ? unitVolOf(item.dims[0], item.dims[1], item.dims[2]) : 0;
+    box.innerHTML = `
+      <span class="x2-ong-calc-item x2-ong-calc-in" title="Kỳ TỒN đang xem — đổi bằng nút 1 tuần / 2 tuần"><span class="x2-ong-calc-label">Kỳ:</span><strong>${escapeHTML(catVanPeriodLabel(dateVal, span))}</strong></span>
+      <span class="x2-ong-calc-item" title="Tồn ván của kỳ SAU khi đã trừ phần đã cắt/xẻ"><span class="x2-ong-calc-label">Tồn đầu vào:</span><strong>${item ? `${fmtThanh(item.remaining)} / ${fmtThanh(item.total)} tấm` : '—'}</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-bo" title="Số tấm ván đem cắt / xẻ"><span class="x2-ong-calc-label">Ván vào:</span><strong>${fmtThanh(qtyIn)} tấm</strong></span>
+      <span class="x2-ong-calc-item" title="Thể tích ván vào (m³) = số tấm × thể tích 1 tấm"><span class="x2-ong-calc-label">Thể tích:</span><strong>${(qtyIn * inVol).toFixed(4)} m³</strong></span>
+      ${kind === 'xe'
+        ? `<span class="x2-ong-calc-item x2-ong-calc-after" title="Số thanh THÀNH PHẨM sau khi xẻ (nhập tay)"><span class="x2-ong-calc-label">Thanh ra:</span><strong>${fmtThanh(outQty)} thanh${outDims[0] > 0 ? ` · ${escapeHTML(dimKeyOf(outDims[0], outDims[1], outDims[2]))}` : ''}</strong></span>`
+        : `<span class="x2-ong-calc-item x2-ong-calc-after" title="Cắt ván: số tấm cắt = số tấm ván vào"><span class="x2-ong-calc-label">Cắt được:</span><strong>${fmtThanh(qtyIn)} tấm</strong></span>`}`;
+  }
+
+  // ─── THANH TỒN (form Cắt Ván) — theo KỲ đang xem ──────────────
+  function renderX2CatVanStockBar() {
+    const bar = document.getElementById('x2-cv-stock-bar');
+    if (!bar) return;
+    const dateVal = (document.getElementById('x2-cv-date') || {}).value || '';
+    const items = catVanInputPool(dateVal);
+    const vt = items.filter(it => it.group === 'vantho');
+    const fp = items.filter(it => it.group === 'thanhpham');
+    const rem = list => list.reduce((s, it) => s + it.remaining, 0);
+    const tot = list => list.reduce((s, it) => s + it.total, 0);
+    bar.innerHTML = `
+      <span class="x2-stock-title" title="Tồn ván THÔ (khối 'Ván Thô Tạo Ra' của lượt Ép Ván) trong kỳ — ĐÃ trừ phần đã cắt/xẻ"><i data-lucide="layers"></i> Ván thô: <strong>${fmtThanh(rem(vt))} tấm</strong> <small>(${fmtThanh(tot(vt))} tấm ép)</small></span>
+      <span class="x2-stock-title" title="Tồn THÀNH PHẨM Ép Ván trong kỳ — ĐÃ trừ phần đã cắt/xẻ"><i data-lucide="package"></i> Thành phẩm: <strong>${fmtThanh(rem(fp))} tấm</strong> <small>(${fmtThanh(tot(fp))} tấm ép)</small></span>
+      <span class="x2-stock-title" title="Kỳ TỒN — 1 tuần = tuần của Ngày Cắt · 2 tuần = cặp tuần lẻ–chẵn (VD 41–42)"><i data-lucide="calendar-range"></i> Kỳ: <strong>${escapeHTML(catVanPeriodLabel(dateVal))}</strong></span>`;
+    initLucide();
+  }
+
+  // ─── ẨN/HIỆN FORM theo CÔNG ĐOẠN NHỎ ───────────────────────
+  // Xẻ thanh thêm 2 ô: Kích thước Đầu ra + SL thanh ra
+  function syncX2CatVanKindRows() {
+    const kind = ((document.getElementById('x2-cv-kind') || {}).value) === 'xe' ? 'xe' : 'cat';
+    const xe = kind === 'xe';
+    const set = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+    set('x2-cv-out-group', xe);
+    set('x2-cv-out-qty-group', xe);
+    return kind;
+  }
+  // ─── NÚT KỲ "1 TUẦN / 2 TUẦN" ───────────────────────────────
+  function syncX2CatVanSpanDom() {
+    const v = catVanSpanOf();
+    document.querySelectorAll('[data-x2-cv-span]').forEach(b => {
+      const on = Number(b.getAttribute('data-x2-cv-span')) === v;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    const lab = document.getElementById('x2-cv-period-label');
+    const dateVal = (document.getElementById('x2-cv-date') || {}).value || '';
+    if (lab) lab.textContent = catVanPeriodLabel(dateVal, v);
+  }
+  // Đổi kỳ TỒN của form (silent = khi nạp lượt đang sửa — không toast)
+  function setX2CatVanSpan(span, silent) {
+    const v = Number(span) === 2 ? 2 : 1;
+    const changed = catVanSpanOf() !== v;
+    state.x2CatVanSpan = v;
+    saveX2CatVanSpan();
+    syncX2CatVanSpanDom();
+    if (silent) return;
+    renderX2CatVanSource();   // nguồn theo kỳ mới — giữ lựa chọn nếu vẫn còn hàng
+    renderX2CatVanStockBar();
+    renderX2CatVanCalc();
+    if (changed) {
+      const dateVal = (document.getElementById('x2-cv-date') || {}).value || '';
+      showToast(`Đang xem tồn ${catVanPeriodLabel(dateVal, v)}.`, 'info');
+    }
+  }
+
+  // ─── THỐNG KÊ NHANH ──────────────────────────────────────────
+  function renderX2CatVanStats() {
+    const box = document.getElementById('x2-cv-stats');
+    if (!box) return;
+    const disp = (state.xuong2CatVanRecords || []).map(catVanDisplay);
+    const cat = disp.filter(d => d.kind === 'cat');
+    const xe = disp.filter(d => d.kind === 'xe');
+    const cutTam = cat.reduce((s, d) => s + d.qtyIn, 0);
+    const xeTam = xe.reduce((s, d) => s + d.qtyIn, 0);
+    const thanh = xe.reduce((s, d) => s + d.quantity, 0);
+    const vol = disp.reduce((s, d) => s + (Number(d.volume) || 0), 0);
+    box.innerHTML = `
+      <div class="material-stat"><span class="material-stat-value">${cat.length}</span><span class="material-stat-label">Lượt Cắt ván</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtThanh(cutTam)}</span><span class="material-stat-label">Tấm đã cắt</span></div>
+      <div class="material-stat"><span class="material-stat-value">${xe.length}</span><span class="material-stat-label">Lượt Xẻ thanh</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtThanh(xeTam)}</span><span class="material-stat-label">Tấm đã xẻ</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtThanh(thanh)}</span><span class="material-stat-label">Thanh xẻ ra</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtM3(vol)}</span><span class="material-stat-label">Thể tích ván vào (m³)</span></div>`;
+  }
+  // ─── LƯU FORM (THÊM / SỬA) ───────────────────────────────────
+  function handleXuong2CatVanSubmit(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!requireEditPermission()) return;
+    const kind = syncX2CatVanKindRows();
+    const dateVal = (document.getElementById('x2-cv-date') || {}).value || '';
+    if (!dateVal) { showToast('Ngày không được để trống!', 'error'); return; }
+    const item = catVanSelectedItem();
+    if (!item) { showToast('Hãy chọn ĐẦU VÀO là ván ở Ép Ván (trong kỳ đang chọn)!', 'error'); return; }
+    // pool đã LOẠI trừ phần của lượt đang sửa → remaining = phần được phép ghi
+    const remaining = item.remaining;
+    const qtyIn = Math.floor(Number((document.getElementById('x2-cv-qty') || {}).value) || 0);
+    if (qtyIn <= 0) { showToast('Số lượng ván vào phải lớn hơn 0!', 'error'); return; }
+    if (qtyIn > remaining) { showToast(`Vượt tồn ván của kỳ (còn ${fmtThanh(remaining)} tấm)!`, 'error'); return; }
+    const span = catVanSpanOf();
+    const snap = hrCatVanSnapshot(dateVal, kind);
+    const payload = {
+      kind, date: dateVal, week: materialWeekLabel(dateVal),
+      span, periodKey: catVanPeriodKeyOf(dateVal, span),
+      inGroup: item.group, inSizeKey: item.sizeKey, inDims: item.dims,
+      qtyIn, pressIds: item.pressIds || [],
+      worker: snap.worker, workTime: snap.workTime,
+      workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
+    };
+    if (kind === 'cat') {
+      payload.quantity = qtyIn;   // số TẤM cắt = số tấm ván vào
+      payload.outSizeKey = ''; payload.outDims = [];
+      payload.unitVol = item.dims[0] > 0 ? unitVolOf(item.dims[0], item.dims[1], item.dims[2]) : 0;
+    } else {
+      const outV = String((document.getElementById('x2-cv-out') || {}).value || '').trim();
+      const outDims = bulligParseOutDims(outV);
+      if (!(outDims[0] > 0 && outDims[1] > 0 && outDims[2] > 0)) {
+        showToast('Nhập KÍCH THƯỚC ĐẦU RA (Dài×Rộng×Dày mm), VD 1200x18x15!', 'error'); return;
+      }
+      const outQty = Math.floor(Number((document.getElementById('x2-cv-out-qty') || {}).value) || 0);
+      if (outQty <= 0) { showToast('Số lượng THANH RA phải lớn hơn 0!', 'error'); return; }
+      payload.quantity = outQty;
+      payload.outSizeKey = dimKeyOf(outDims[0], outDims[1], outDims[2]);
+      payload.outDims = outDims;
+      payload.unitVol = unitVolOf(outDims[0], outDims[1], outDims[2]);
+    }
+    if (state.x2CatVanEditId) {
+      const rec = (state.xuong2CatVanRecords || []).find(r2 => r2.id === state.x2CatVanEditId);
+      if (!rec) { showToast('Không tìm thấy lượt Cắt Ván cần sửa!', 'error'); return; }
+      Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
+      saveXuong2CatVan();
+      showToast(`Đã cập nhật lượt ${catVanKindLabel(kind)}!`, 'success');
+      resetXuong2CatVanForm();
+    } else {
+      payload.id = `x2cv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      payload.createdAt = new Date().toISOString();
+      state.xuong2CatVanRecords = [...(state.xuong2CatVanRecords || []), payload];
+      saveXuong2CatVan();
+      showToast(`Đã ghi lượt ${catVanKindLabel(kind)} (Cắt Ván)!`, 'success');
+      keepCatVanFormAfterSave();
+    }
+    renderX2CatVanCard();
+  }
+
+  // Sau khi LƯU GHI MỚI: giữ ngày + công đoạn + kỳ để nhập tiếp; XOÁ số lượng
+  function keepCatVanFormAfterSave() {
+    state.x2CatVanEditId = null;
+    ['x2-cv-qty', 'x2-cv-out', 'x2-cv-out-qty'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    renderX2CatVanSource();
+    renderX2CatVanStockBar();
+    renderX2CatVanCalc();
+    syncX2CatVanEditBanner();
+  }
+
+  function resetXuong2CatVanForm() {
+    state.x2CatVanEditId = null;
+    ['x2-cv-qty', 'x2-cv-out', 'x2-cv-out-qty'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const d = document.getElementById('x2-cv-date');
+    if (d) d.value = '';
+    const kind = document.getElementById('x2-cv-kind');
+    if (kind) kind.value = 'cat';
+    renderX2CatVanCard();
+  }
+  // ─── SỬA / XÓA LƯỢT CẮT VÁN ─────────────────────────────────
+  function editXuong2CatVan(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2CatVanRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    state.x2CatVanEditId = id;
+    const d = document.getElementById('x2-cv-date');
+    if (d) d.value = rec.date || '';
+    // Nạp lại KỲ đã lưu của lượt (TRƯỚC — để nguồn dựng đúng kỳ rồi mới chọn)
+    setX2CatVanSpan(Number(rec.span) === 2 ? 2 : 1, true);
+    const kindEl = document.getElementById('x2-cv-kind');
+    if (kindEl) kindEl.value = rec.kind === 'xe' ? 'xe' : 'cat';
+    renderX2CatVanSource();
+    const src = document.getElementById('x2-cv-source');
+    if (src) src.value = `${rec.inGroup || 'vantho'}|${rec.inSizeKey || ''}`;
+    const q = document.getElementById('x2-cv-qty');
+    if (q) q.value = Number(rec.qtyIn) || 0;
+    const o = document.getElementById('x2-cv-out');
+    if (o) { const od = rec.outDims || []; o.value = (od[0] > 0) ? `${od[0]}x${od[1]}x${od[2]}` : ''; }
+    const oq = document.getElementById('x2-cv-out-qty');
+    if (oq) oq.value = rec.kind === 'xe' ? (Number(rec.quantity) || 0) : '';
+    syncX2CatVanKindRows();
+    renderX2CatVanStockBar();
+    renderX2CatVanCalc();
+    syncX2CatVanEditBanner();
+  }
+
+  function deleteXuong2CatVan(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2CatVanRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    const d = catVanDisplay(rec);
+    const desc = d.kind === 'xe'
+      ? `${fmtThanh(d.qtyIn)} tấm → ${fmtThanh(d.quantity)} thanh ${d.outSizeKey || ''}`
+      : `${fmtThanh(d.quantity)} tấm ${d.inSizeKey || ''}`;
+    if (!confirm(`Xóa lượt ${catVanKindLabel(rec.kind)} ngày ${formatDateDDMMYY(rec.date)} (${desc})?`)) return;
+    trackDeleted('xuong2CatVanRecords', id);
+    state.xuong2CatVanRecords = (state.xuong2CatVanRecords || []).filter(r => r.id !== id);
+    if (state.x2CatVanEditId === id) state.x2CatVanEditId = null;
+    saveXuong2CatVan();
+    renderX2CatVanCard();
+    showToast('Đã xóa lượt Cắt Ván!', 'success');
+  }
+
+  // Banner cam "đang sửa" của form Cắt Ván
+  function syncX2CatVanEditBanner() {
+    const banner = document.getElementById('x2-cv-edit-banner');
+    const text = document.getElementById('x2-cv-edit-text');
+    if (!banner || !text) return;
+    if (state.x2CatVanEditId) {
+      const rec = (state.xuong2CatVanRecords || []).find(r => r.id === state.x2CatVanEditId);
+      text.textContent = rec
+        ? `Đang sửa lượt ${catVanKindLabel(rec.kind)} ngày ${formatDateDDMMYY(rec.date)}.`
+        : 'Đang sửa lượt Cắt Ván.';
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  // Thu gọn / mở rộng BẢNG LỊCH SỬ Cắt Ván
+  function toggleX2CatVanTable() {
+    const wrap = document.getElementById('x2-cv-table-wrap');
+    if (!wrap) return;
+    wrap.classList.toggle('x2-cut-collapsed');
+    initLucide();
+  }
+  // ─── TÍNH CÔNG SUẤT + HIỆU SUẤT 1 CÔNG ĐOẠN NHỎ TRONG NGÀY ──
+  function catVanCapOf(disp, kind) {
+    const rows = disp.filter(d => d.kind === kind);
+    const qty = kind === 'xe'
+      ? rows.reduce((s, d) => s + d.quantity, 0)
+      : rows.reduce((s, d) => s + d.qtyIn, 0);
+    const hours = rows.reduce((s, d) => s + (d.workHours || 0), 0);
+    const date = disp.length ? disp[0].date : '';
+    // Giờ SỰ CỐ CHO PHÉP (khóa chung 'catvan') → công suất = SL ÷ giờ hiệu dụng
+    const hoursEff = stageEffHours('catvan', date, hours);
+    const incH = stageIncidentOf('catvan', date);
+    const cap = hoursEff > 0 ? (qty / hoursEff) : null;
+    const rate = catVanRateOf(date, kind);
+    const eff = (cap != null && rate) ? (cap / rate) * 100 : null;
+    return { qty, hours, hoursEff, incH, cap, rate, eff, unit: catVanUnitOf(kind), rateUnit: catVanRateUnitOf(kind) };
+  }
+  function catVanEffHtml(info, kind) {
+    const eff = info.eff;
+    const effTxt = eff == null
+      ? '<em style="color:var(--text-muted);">—</em>'
+      : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
+    const label = catVanKindLabel(kind);
+    const effTip = eff == null
+      ? `Chưa đủ dữ liệu (thiếu giờ ${label.toLowerCase()} / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức ${label} cho tháng này)`
+      : `Hiệu suất = Công suất thực tế (${fmtThanh(info.cap)} ${info.rateUnit} = ${fmtThanh(info.qty)} ${info.unit} ÷ ${fmtRatio(info.hoursEff)} giờ${info.incH > 0 ? ` [đã trừ ${fmtGio(info.incH)}h sự cố]` : ''}) ÷ Định mức ${label} (${fmtThanh(info.rate)} ${info.rateUnit})`;
+    return `<span class="x2-day-eff" title="${escapeHTML(effTip)}">H.suất ${label}: <strong>${effTxt}</strong></span>`;
+  }
+
+  // 1 DÒNG NHÁNH VÙNG 1: CẮT VÁN
+  function catVanCatRowHtml(d) {
+    return `
+      <tr class="x2-day-row" data-x2-cv-row="${escapeHTML(d.id)}">
+        <td>${escapeHTML(d.groupLabel || '—')}<span class="x2-nan-chip" style="margin-left:6px;">${escapeHTML(d.inSizeKey || '—')}</span><div class="x2-row-note">Kỳ ${escapeHTML(d.periodLabel)} · ${d.pressIds.length || 0} lượt ép</div></td>
+        <td class="text-right"><strong style="color:#be123c;">${fmtThanh(d.qtyIn)}</strong> <small style="color:var(--text-muted);">tấm</small></td>
+        <td class="text-right"><strong style="color:#0f766e;">${d.volume.toFixed(4)}</strong> <small style="color:var(--text-muted);">m³</small></td>
+        <td class="text-right">
+          <button class="btn btn-icon btn-outline" title="Sửa" data-x2-cv-edit="${escapeHTML(d.id)}"><i data-lucide="pencil"></i></button>
+          <button class="btn btn-icon btn-danger" title="Xóa" data-x2-cv-delete="${escapeHTML(d.id)}"><i data-lucide="trash-2"></i></button>
+        </td>
+      </tr>`;
+  }
+  // 1 DÒNG NHÁNH VÙNG 2: XẺ THANH
+  function catVanXeRowHtml(d) {
+    return `
+      <tr class="x2-day-row" data-x2-cv-row="${escapeHTML(d.id)}">
+        <td>${escapeHTML(d.groupLabel || '—')}<span class="x2-nan-chip" style="margin-left:6px;">${escapeHTML(d.inSizeKey || '—')}</span><div class="x2-row-note">Kỳ ${escapeHTML(d.periodLabel)}</div></td>
+        <td><span class="x2-nan-chip">${escapeHTML(d.outSizeKey || '—')}</span></td>
+        <td class="text-right"><strong>${fmtThanh(d.qtyIn)}</strong> <small style="color:var(--text-muted);">tấm</small></td>
+        <td class="text-right"><strong style="color:#be123c;">${fmtThanh(d.quantity)}</strong> <small style="color:var(--text-muted);">thanh</small></td>
+        <td class="text-right">
+          <button class="btn btn-icon btn-outline" title="Sửa" data-x2-cv-edit="${escapeHTML(d.id)}"><i data-lucide="pencil"></i></button>
+          <button class="btn btn-icon btn-danger" title="Xóa" data-x2-cv-delete="${escapeHTML(d.id)}"><i data-lucide="trash-2"></i></button>
+        </td>
+      </tr>`;
+  }
+  // 1 THẺ NGÀY — chia 2 VÙNG công đoạn nhỏ (Cắt ván + Xẻ thanh)
+  function catVanDayCardHtml(date, rows) {
+    const disp = rows.map(catVanDisplay);
+    const catDisp = disp.filter(d => d.kind === 'cat');
+    const xeDisp = disp.filter(d => d.kind === 'xe');
+    const liveCat = hrCatVanAssignmentsOf(date);
+    const liveXe = hrXeThanhAssignmentsOf(date);
+    const workerBlock = (live, snapRows, label) => {
+      const workers = live.length ? live.map(a => ({ name: a.name, time: posTimeStr(a) })) : snapRows;
+      if (!workers.length) return '';
+      const main = `${escapeHTML(workers[0].name)}${workers[0].time ? ` (${escapeHTML(workers[0].time)})` : ''}`;
+      const more = workers.length > 1
+        ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
+        : '';
+      return `<span class="x2-day-cutters" title="Người ${label} — tự động từ Bảng bố trí vị trí '${label}' (tab Nhân Sự) đúng ngày"><i data-lucide="users"></i> ${label}: ${main} ${more}</span>`;
+    };
+    const spCat = liveCat.length ? sumPosHoursSplit(liveCat, date) : null;
+    const spXe = liveXe.length ? sumPosHoursSplit(liveXe, date) : null;
+    const hoursTxt = (sp) => !sp
+      ? '<em style="color:var(--text-muted);">—</em>'
+      : `<span class="x2-hours-hc">${fmtRatio(sp.hc)}h HC</span><span class="x2-hours-tc">${fmtRatio(sp.tc)}h TC</span>`;
+    const hoursTip = 'Thời gian = tổng giờ công phân vị trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)';
+    const catCap = catVanCapOf(disp, 'cat');
+    const xeCap = catVanCapOf(disp, 'xe');
+    const catRows = catDisp.map(catVanCatRowHtml).join('');
+    const xeRows = xeDisp.map(catVanXeRowHtml).join('');
+    const catTam = catDisp.reduce((s, d) => s + d.qtyIn, 0);
+    const xeTam = xeDisp.reduce((s, d) => s + d.qtyIn, 0);
+    const thanhRa = xeDisp.reduce((s, d) => s + d.quantity, 0);
+    const catFoot = catDisp.length
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="2">Tổng ngày: <strong>${fmtThanh(catTam)}</strong> tấm ván đã cắt</td><td colspan="2" class="text-right">Thể tích: <strong>${catDisp.reduce((s, d) => s + (Number(d.volume) || 0), 0).toFixed(4)}</strong> m³</td></tr></tfoot>`
+      : '';
+    const xeFoot = xeDisp.length
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="5">Tổng ngày: ván vào <strong>${fmtThanh(xeTam)}</strong> tấm · xẻ ra <strong>${fmtThanh(thanhRa)}</strong> thanh</td></tr></tfoot>`
+      : '';
+    const emptyZone = (msg) => `<tr class="x2-day-row"><td colspan="5" style="color:var(--text-muted); font-style:italic; text-align:center; padding:8px;">${msg}</td></tr>`;
+    const periodChip = disp.length
+      ? `<span class="x2-day-period" title="Kỳ tồn của các lượt trong ngày"><i data-lucide="calendar-range"></i> ${escapeHTML(disp[0].periodLabel)}</span>` : '';
+    return `
+      <div class="x2-day-card">
+        <div class="x2-day-head">
+          <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
+          ${workerBlock(liveCat, catDisp.length ? catDisp[0].workerRows : [], 'Cắt Ván')}
+          ${workerBlock(liveXe, xeDisp.length ? xeDisp[0].workerRows : [], 'Xẻ Thanh')}
+          <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ cắt: ${hoursTxt(spCat)}</span>
+          <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ xẻ: ${hoursTxt(spXe)}</span>
+          <span class="x2-day-cap" title="Công suất Cắt ván = tổng tấm ván cắt ÷ tổng giờ cắt">CS Cắt: <strong>${catCap.cap != null ? `${fmtThanh(catCap.cap)} tấm/h` : '—'}</strong></span>
+          ${catVanEffHtml(catCap, 'cat')}
+          <span class="x2-day-cap" title="Công suất Xẻ thanh = tổng THANH xẻ ra ÷ tổng giờ xẻ">CS Xẻ: <strong>${xeCap.cap != null ? `${fmtThanh(xeCap.cap)} thanh/h` : '—'}</strong></span>
+          ${catVanEffHtml(xeCap, 'xe')}
+          ${periodChip}
+          ${stageIncidentInputHtml('catvan', date)}
+        </div>
+        <!-- VÙNG 1: CẮT VÁN -->
+        <div class="x2-bl-zone-head x2-bl-zone-gc"><i data-lucide="crop"></i> Cắt ván — đầu vào từ Ép Ván (ván thô / thành phẩm)</div>
+        <table class="data-table x2-day-table">
+          <thead>
+            <tr>
+              <th>Đầu Vào (nhóm · kích thước)</th>
+              <th class="text-right">SL cắt (tấm)</th>
+              <th class="text-right">Thể tích</th>
+              <th class="text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>${catRows || emptyZone('Chưa có lượt Cắt ván nào trong ngày.')}</tbody>
+          ${catFoot}
+        </table>
+        <!-- VÙNG 2: XẺ THANH -->
+        <div class="x2-bl-zone-head x2-bl-zone-ct"><i data-lucide="scissors"></i> Xẻ thanh — ván Ép Ván → kích thước thanh</div>
+        <table class="data-table x2-day-table">
+          <thead>
+            <tr>
+              <th>Đầu Vào (nhóm · kích thước)</th>
+              <th>Đầu Ra (k.thước thanh)</th>
+              <th class="text-right">Ván vào (tấm)</th>
+              <th class="text-right">Thanh ra</th>
+              <th class="text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>${xeRows || emptyZone('Chưa có lượt Xẻ thanh nào trong ngày.')}</tbody>
+          ${xeFoot}
+        </table>
+      </div>`;
+  }
+  // ─── BẢNG LỊCH SỬ — NHÓM THEO NGÀY, THẺ NGÀY CHIA 2 VÙNG ───
+  function renderX2CatVanTable() {
+    const box = document.getElementById('x2-cv-day-cards');
+    if (!box) return;
+    const list = [...(state.xuong2CatVanRecords || [])].sort((a, b) => {
+      if ((b.date || '') !== (a.date || '')) return (b.date || '').localeCompare(a.date || '');
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+    const countEl = document.getElementById('x2-cv-table-count');
+    const totalTam = list.reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
+    if (countEl) countEl.textContent = list.length ? `${list.length} lượt Cắt Ván · ${fmtThanh(totalTam)} tấm ván` : '';
+    if (!list.length) {
+      box.innerHTML = `
+        <div class="x2-day-card x2-day-card-empty">
+          <i data-lucide="crop"></i>
+          <div>Chưa có lượt Cắt Ván nào.<br>Chọn <strong>Công đoạn</strong> (Cắt ván / Xẻ thanh) ở form trên rồi bấm <strong>Lưu Lượt Cắt Ván</strong>.</div>
+        </div>`;
+      initLucide();
+      return;
+    }
+    const groups = new Map();
+    list.forEach(r => {
+      const key = r.date || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    let html = '';
+    for (const [date, rows] of groups) html += catVanDayCardHtml(date, rows);
+    box.innerHTML = html;
+    initLucide();
+  }
+
+  // ─── RENDER THẺ CẮT VÁN ──────────────────────────────────────
+  function renderX2CatVanCard() {
+    const dt = document.getElementById('x2-cv-date');
+    if (dt && !dt.value) dt.value = new Date().toISOString().slice(0, 10);
+    // Gợi ý kích thước ĐẦU RA (Xẻ thanh) từ lịch sử đã nhập
+    const dl = document.getElementById('x2-cv-out-list');
+    if (dl) {
+      const seen = [];
+      (state.xuong2CatVanRecords || []).forEach(r => {
+        if (r && r.kind === 'xe' && r.outSizeKey && seen.indexOf(r.outSizeKey) < 0) seen.push(r.outSizeKey);
+      });
+      dl.innerHTML = seen.map(k => `<option value="${escapeHTML(String(k).replace(/×/g, 'x'))}"></option>`).join('');
+    }
+    syncX2CatVanSpanDom();
+    renderX2CatVanSource();
+    renderX2CatVanStockBar();
+    renderX2CatVanRateBar();
+    renderX2CatVanStats();
+    renderX2CatVanTable();
+    syncX2CatVanKindRows();
+    renderX2CatVanCalc();
+    syncX2CatVanEditBanner();
+    updateXuong2CardCounts();
+  }
+
+  // ─── NẠP / LƯU DỮ LIỆU CẮT VÁN ──────────────────────────────
+  function loadXuong2CatVan() {
+    const raw = localStorage.getItem(STORAGE_KEY_XUONG2_CAT_VAN);
+    if (raw) {
+      try {
+        const arr = JSON.parse(raw);
+        state.xuong2CatVanRecords = Array.isArray(arr) ? arr : [];
+      } catch (e) { state.xuong2CatVanRecords = []; }
+    } else {
+      state.xuong2CatVanRecords = [];
+    }
+  }
+  function saveXuong2CatVan() {
+    try {
+      localStorage.setItem(STORAGE_KEY_XUONG2_CAT_VAN, JSON.stringify(state.xuong2CatVanRecords || []));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu sẽ thử ghi qua file/mây.', 'error');
+    }
+    logDataChange(['xuong2CatVanRecords']);
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // VỊ TRÍ: BÀO VÁN — Xưởng 2 (thẻ launcher tab Công Đoạn)
+  // ═══════════════════════════════════════════════════════════
+  // 2 công đoạn nhỏ trong 1 thẻ + nút "Thêm" cho TƯƠNG LAI — form CHỈ CÓ
+  // ĐẦU VÀO + SỐ LƯỢNG (như thẻ Cắt ván, KHÔNG có ô Đầu ra):
+  //   • 'bao' BÀO       — Đầu vào = VÁN ở Ép Ván (2 nhóm RIÊNG: ván thô +
+  //     thành phẩm) → Số lượng bào (tấm).
+  //   • 'cha' CHÀ THÙNG — Đầu vào = VÁN ở Ép Ván → Số lượng chà (tấm).
+  // TỒN ĐẦU VÀO TRỪ THEO KỲ — nút "1 tuần / 2 tuần" (cặp lẻ–chẵn VD 41–42):
+  //   • pool DÙNG CHUNG `pressVanPoolOf` nhưng SỔ RIÊNG `baoVanRecords` →
+  //     KHÔNG trừ chéo với thẻ Cắt Ván (mỗi thẻ tự trừ phần mình);
+  //   • kỳ chồng nhau vẫn trừ → đổi 1↔2 tuần không cắt/bào trùng.
+  //   • NGƯỜI BÀO / NGƯỜI CHÀ + GIỜ HC/TC tự động từ Bảng bố trí Nhân Sự.
+  //   • ĐỊNH MỨC theo THÁNG + CÔNG ĐOẠN: CẢ 2 = tấm/h → 2 DÒNG trong
+  //     Bảng Tổng Hợp Công Suất.
+  // Dữ liệu: state.xuong2BaoVanRecords (localStorage + file + mây, tombstone).
+  const BAO_VAN_KINDS = [
+    { id: 'bao', label: 'Bào' },
+    { id: 'cha', label: 'Chà thùng' }
+  ];
+  function baoVanKindLabel(id) { const k = BAO_VAN_KINDS.find(x => x.id === id); return k ? k.label : (id || '—'); }
+  // CẢ 2 công đoạn nhỏ đều tính bằng TẤM (form chỉ có Đầu vào + Số lượng)
+  const baoVanUnitOf = () => 'tấm';
+  const baoVanRateUnitOf = () => 'tấm/h';
+
+  // ─── KỲ TỒN RIÊNG CỦA THẺ BÀO VÁN: 1 TUẦN / 2 TUẦN ────────────────
+  function baoVanSpanOf() { return Number(state.x2BaoVanSpan) === 2 ? 2 : 1; }
+  function loadX2BaoVanSpan() {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY_X2_BAO_VAN_SPAN);
+      state.x2BaoVanSpan = (v === '2') ? 2 : 1;
+    } catch (e) { state.x2BaoVanSpan = 1; }
+  }
+  function saveX2BaoVanSpan() { try { localStorage.setItem(STORAGE_KEY_X2_BAO_VAN_SPAN, String(baoVanSpanOf())); } catch (e) {} }
+  // ─── Ô ĐẦU VÀO (2 optgroup Ván thô / Thành phẩm — chỉ phần CÒN LẠI) ──
+  function renderX2BaoVanSource() {
+    const sel = document.getElementById('x2-bv-source');
+    if (!sel) return;
+    const dateVal = (document.getElementById('x2-bv-date') || {}).value || '';
+    const items = baoVanInputPool(dateVal);
+    const editing = state.x2BaoVanEditId
+      ? (state.xuong2BaoVanRecords || []).find(r => r.id === state.x2BaoVanEditId) : null;
+    const editKey = editing ? `${editing.inGroup || 'vantho'}|${editing.inSizeKey || ''}` : '';
+    const visible = items.filter(it => it.remaining > 0 || (editKey && it.key === editKey));
+    if (!visible.length) {
+      sel.innerHTML = `<option value="">— Không còn ván trong ${escapeHTML(catVanPeriodLabel(dateVal, baoVanSpanOf()))} —</option>`;
+      return;
+    }
+    const prev = sel.value;
+    const grp = (g, list) => !list.length ? '' :
+      `<optgroup label="${escapeHTML(CAT_VAN_GROUPS[g] || g)}">${list.map(it =>
+        `<option value="${escapeHTML(it.key)}">${escapeHTML(it.sizeKey)} — còn ${fmtThanh(it.remaining)} / ${fmtThanh(it.total)} tấm${it.remaining > 0 ? '' : ' (đang sửa)'}</option>`).join('')}</optgroup>`;
+    sel.innerHTML = grp('vantho', visible.filter(it => it.group === 'vantho')) +
+                    grp('thanhpham', visible.filter(it => it.group === 'thanhpham'));
+    if (visible.some(it => it.key === prev)) sel.value = prev;
+  }
+  function baoVanSelectedItem() {
+    const key = String((document.getElementById('x2-bv-source') || {}).value || '');
+    if (!key) return null;
+    const dateVal = (document.getElementById('x2-bv-date') || {}).value || '';
+    return baoVanInputPool(dateVal).find(it => it.key === key) || null;
+  }
+
+  // ─── NGƯỜI BÀO / NGƯỜI CHÀ THÙNG + GIỜ HC/TC (Bảng bố trí — X2) ─────
+  // Khớp MỀM: "Bào Ván" → bao van (KHÔNG nhầm "Bào tinh"/"Bào thanh"/"Bào thô");
+  // "Chà Thùng" → cha thung.
+  function isBaoVanPos(name) { return normPosName(name).includes('bao van'); }
+  function isChaThungPos(name) { return normPosName(name).includes('cha thung'); }
+  function hrBaoVanAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isBaoVanPos); }
+  function hrChaThungAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isChaThungPos); }
+  function hrBaoVanSnapshot(dateVal, kind) {
+    const list = kind === 'cha' ? hrChaThungAssignmentsOf(dateVal) : hrBaoVanAssignmentsOf(dateVal);
+    return workerSnapOf(hrPositionSnapshot(dateVal, list));
+  }
+  // ─── ĐỊNH MỨC CÔNG SUẤT (CẢ 2 = tấm/h) THEO THÁNG + CÔNG ĐOẠN ──────
+  function loadX2BaoVanRates() {
+    const raw = localStorage.getItem(STORAGE_KEY_X2_BAO_VAN_RATE);
+    state.x2BaoVanRates = { bao: {}, cha: {} };
+    if (raw) {
+      try {
+        const obj = JSON.parse(raw);
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+          state.x2BaoVanRates = {
+            bao: (obj.bao && typeof obj.bao === 'object') ? obj.bao : {},
+            cha: (obj.cha && typeof obj.cha === 'object') ? obj.cha : {}
+          };
+        }
+      } catch (e) {}
+    }
+  }
+  function saveX2BaoVanRates() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X2_BAO_VAN_RATE, JSON.stringify(state.x2BaoVanRates || { bao: {}, cha: {} }));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?).', 'error');
+    }
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+  function baoVanRateOf(dateVal, kind) {
+    const grp = ((state.x2BaoVanRates || {})[kind === 'cha' ? 'cha' : 'bao']) || {};
+    const v = Number(grp[String(dateVal || '').slice(0, 7)]);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  }
+  function handleX2BaoVanRateSave() {
+    if (!requireRatePermission()) return;
+    const monthEl = document.getElementById('x2-bv-rate-month');
+    const valEl = document.getElementById('x2-bv-rate-value');
+    const kindSel = document.getElementById('x2-bv-rate-kind');
+    const month = String((monthEl && monthEl.value) || '').trim();
+    const v = Number((valEl && valEl.value) || 0);
+    const kind = (kindSel && kindSel.value === 'cha') ? 'cha' : 'bao';
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chưa chọn tháng để lưu định mức!', 'error'); return; }
+    if (!Number.isFinite(v) || v <= 0) { showToast('Định mức công suất phải là số tấm/giờ lớn hơn 0!', 'error'); return; }
+    (state.x2BaoVanRates = state.x2BaoVanRates || { bao: {}, cha: {} })[kind] = state.x2BaoVanRates[kind] || {};
+    state.x2BaoVanRates[kind][month] = v;
+    saveX2BaoVanRates();
+    renderX2BaoVanRateBar();
+    renderX2BaoVanTable();
+    showToast(`Đã lưu định mức ${baoVanKindLabel(kind)} ${fmtThanh(v)} tấm/h cho tháng ${month.slice(5)}!`, 'success');
+  }
+  function renderX2BaoVanRateBar() {
+    const selEl = document.getElementById('x2-bv-rate-month');
+    const valInput = document.getElementById('x2-bv-rate-value');
+    const kindSel = document.getElementById('x2-bv-rate-kind');
+    if (!selEl) return;
+    const months = new Set([
+      ...Object.keys((state.x2BaoVanRates || {}).bao || {}),
+      ...Object.keys((state.x2BaoVanRates || {}).cha || {}),
+      new Date().toISOString().slice(0, 7)
+    ]);
+    (state.xuong2BaoVanRecords || []).forEach(r => { if (r && r.date) months.add(String(r.date).slice(0, 7)); });
+    const curMonth = selEl.value || new Date().toISOString().slice(0, 7);
+    const list = [...months].filter(Boolean).sort((a, b) => b.localeCompare(a));
+    selEl.innerHTML = list.map(m => `<option value="${escapeHTML(m)}">Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</option>`).join('');
+    selEl.value = months.has(curMonth) ? curMonth : (list[0] || '');
+    const curKind = (kindSel && kindSel.value === 'cha') ? 'cha' : 'bao';
+    if (valInput) {
+      const v = Number(((state.x2BaoVanRates || {})[curKind] || {})[selEl.value]);
+      valInput.value = Number.isFinite(v) && v > 0 ? v : '';
+    }
+    const chips = document.getElementById('x2-bv-rate-chips');
+    if (chips) {
+      const keys = Object.keys((state.x2BaoVanRates || {}).bao || {}).filter(k => Number(state.x2BaoVanRates.bao[k]) > 0)
+        .map(k => ({ kind: 'bao', k })).concat(
+        Object.keys((state.x2BaoVanRates || {}).cha || {}).filter(k => Number(state.x2BaoVanRates.cha[k]) > 0)
+          .map(k => ({ kind: 'cha', k })));
+      keys.sort((a, b) => b.k.localeCompare(a.k));
+      chips.innerHTML = keys.map(x => `<button type="button" class="x2-rate-chip" data-x2-bv-rate="${escapeHTML(x.k)}" data-x2-bv-rate-kind="${x.kind}" title="Bấm để nạp định mức tháng này vào ô nhập để sửa lại">${baoVanKindLabel(x.kind)} T${Number(x.k.slice(5))} = ${fmtThanh(state.x2BaoVanRates[x.kind][x.k])} tấm/h</button>`).join('');
+    }
+    initLucide();
+  }
+
+  // ─── SỐ LIỆU HIỂN THỊ CỦA 1 LƯỢT BÀO VÁN ──────────────────────────
+  function baoVanDisplay(r) {
+    const kind = r.kind === 'cha' ? 'cha' : 'bao';
+    const inDims = Array.isArray(r.inDims) ? r.inDims.map(Number) : [];
+    const inSizeKey = String(r.inSizeKey ||
+      (inDims.length === 3 ? dimKeyOf(inDims[0], inDims[1], inDims[2]) : ''));
+    const qtyIn = Number(r.qtyIn) || 0;      // tấm ván ĐEM ĐI (bào / chà)
+    const quantity = Number(r.quantity) || 0; // = qtyIn (CẢ 2 công đoạn đều tấm)
+    const unitVol = (r.unitVol != null) ? Number(r.unitVol)
+      : (inDims[0] > 0 ? unitVolOf(inDims[0], inDims[1], inDims[2]) : 0);
+    const volume = Math.round(qtyIn * unitVol * 10000) / 10000;
+    // Người làm + giờ: SỐNG từ Bảng bố trí theo ngày; mất bố trí → snapshot lượt
+    const live = kind === 'cha' ? hrChaThungAssignmentsOf(r.date || '') : hrBaoVanAssignmentsOf(r.date || '');
+    const workerRows = live.length
+      ? live.map(a => ({ name: a.name, time: posTimeStr(a) }))
+      : String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
+          .map((name, i) => ({ name, time: String(r.workTime || '').split(',').map(s => s.trim())[i] || '' }));
+    let workHours = 0, workHoursHC = null, workHoursTC = null;
+    if (live.length) {
+      const sp = sumPosHoursSplit(live, r.date || '');
+      workHours = sp.hc + sp.tc; workHoursHC = sp.hc; workHoursTC = sp.tc;
+    } else if (Number.isFinite(Number(r.workHoursHC)) || Number.isFinite(Number(r.workHoursTC))) {
+      workHoursHC = Number(r.workHoursHC) || 0;
+      workHoursTC = Number(r.workHoursTC) || 0;
+      workHours = workHoursHC + workHoursTC;
+      if (!workHours && Number(r.workHours) > 0) workHours = Number(r.workHours);
+    } else {
+      workHours = snapshotCutHours(r.workTime);
+    }
+    const span = Number(r.span) === 2 ? 2 : 1;
+    return {
+      id: r.id, kind, kindLabel: baoVanKindLabel(kind),
+      date: r.date || '', week: r.week || '',
+      span, periodKey: r.periodKey || '',
+      periodLabel: catVanPeriodLabel(r.date, span),
+      group: r.inGroup || 'vantho',
+      groupLabel: CAT_VAN_GROUPS[r.inGroup || 'vantho'] || r.inGroup || '',
+      inSizeKey, inDims,
+      qtyIn, quantity, unitVol, volume,
+      pressIds: Array.isArray(r.pressIds) ? r.pressIds : [],
+      workerRows, workHours, workHoursHC, workHoursTC
+    };
+  }
+  // ─── Ô TỰ TÍNH (chỉ Kỳ · Tồn · Ván vào · Thể tích — không có Đầu ra) ──
+  function renderX2BaoVanCalc() {
+    const box = document.getElementById('x2-bv-calc');
+    if (!box) return;
+    const kind = ((document.getElementById('x2-bv-kind') || {}).value) === 'cha' ? 'cha' : 'bao';
+    const dateVal = (document.getElementById('x2-bv-date') || {}).value || '';
+    const item = baoVanSelectedItem();
+    const qtyIn = Math.floor(Number((document.getElementById('x2-bv-qty') || {}).value) || 0);
+    const inVol = item && item.dims[0] > 0 ? unitVolOf(item.dims[0], item.dims[1], item.dims[2]) : 0;
+    box.innerHTML = `
+      <span class="x2-ong-calc-item x2-ong-calc-in" title="Kỳ TỒN đang xem — đổi bằng nút 1 tuần / 2 tuần"><span class="x2-ong-calc-label">Kỳ:</span><strong>${escapeHTML(catVanPeriodLabel(dateVal, baoVanSpanOf()))}</strong></span>
+      <span class="x2-ong-calc-item" title="Tồn ván của kỳ SAU khi đã trừ phần đã bào/chà"><span class="x2-ong-calc-label">Tồn đầu vào:</span><strong>${item ? `${fmtThanh(item.remaining)} / ${fmtThanh(item.total)} tấm` : '—'}</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-bo" title="Số tấm ván đem bào / chà"><span class="x2-ong-calc-label">Ván vào:</span><strong>${fmtThanh(qtyIn)} tấm</strong></span>
+      <span class="x2-ong-calc-item" title="Thể tích ván vào (m³) = số tấm × thể tích 1 tấm"><span class="x2-ong-calc-label">Thể tích:</span><strong>${(qtyIn * inVol).toFixed(4)} m³</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Cả Bào và Chà thùng đều tính bằng TẤM — số lượng xử lý = số tấm ván vào"><span class="x2-ong-calc-label">${baoVanKindLabel(kind)} được:</span><strong>${fmtThanh(qtyIn)} tấm</strong></span>`;
+  }
+
+  // ─── THANH TỒN (form Bào Ván) — theo KỲ đang xem ───────────────────
+  function renderX2BaoVanStockBar() {
+    const bar = document.getElementById('x2-bv-stock-bar');
+    if (!bar) return;
+    const dateVal = (document.getElementById('x2-bv-date') || {}).value || '';
+    const items = baoVanInputPool(dateVal);
+    const vt = items.filter(it => it.group === 'vantho');
+    const fp = items.filter(it => it.group === 'thanhpham');
+    const rem = list => list.reduce((s, it) => s + it.remaining, 0);
+    const tot = list => list.reduce((s, it) => s + it.total, 0);
+    bar.innerHTML = `
+      <span class="x2-stock-title" title="Tồn ván THÔ trong kỳ — ĐÃ trừ phần đã BÀO/CHÀ (sổ riêng của thẻ Bào Ván)"><i data-lucide="layers"></i> Ván thô: <strong>${fmtThanh(rem(vt))} tấm</strong> <small>(${fmtThanh(tot(vt))} tấm ép)</small></span>
+      <span class="x2-stock-title" title="Tồn THÀNH PHẨM Ép Ván trong kỳ — ĐÃ trừ phần đã BÀO/CHÀ (sổ riêng)"><i data-lucide="package"></i> Thành phẩm: <strong>${fmtThanh(rem(fp))} tấm</strong> <small>(${fmtThanh(tot(fp))} tấm ép)</small></span>
+      <span class="x2-stock-title" title="Kỳ TỒN — 1 tuần = tuần của Ngày · 2 tuần = cặp tuần lẻ–chẵn (VD 41–42)"><i data-lucide="calendar-range"></i> Kỳ: <strong>${escapeHTML(catVanPeriodLabel(dateVal, baoVanSpanOf()))}</strong></span>`;
+    initLucide();
+  }
+
+  // ─── NÚT KỲ "1 TUẦN / 2 TUẦN" (RIÊNG thẻ Bào Ván) ─────────────────
+  function syncX2BaoVanSpanDom() {
+    const v = baoVanSpanOf();
+    document.querySelectorAll('[data-x2-bv-span]').forEach(b => {
+      const on = Number(b.getAttribute('data-x2-bv-span')) === v;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    const lab = document.getElementById('x2-bv-period-label');
+    const dateVal = (document.getElementById('x2-bv-date') || {}).value || '';
+    if (lab) lab.textContent = catVanPeriodLabel(dateVal, v);
+  }
+  function setX2BaoVanSpan(span, silent) {
+    const v = Number(span) === 2 ? 2 : 1;
+    const changed = baoVanSpanOf() !== v;
+    state.x2BaoVanSpan = v;
+    saveX2BaoVanSpan();
+    syncX2BaoVanSpanDom();
+    if (silent) return;
+    renderX2BaoVanSource();
+    renderX2BaoVanStockBar();
+    renderX2BaoVanCalc();
+    if (changed) {
+      const dateVal = (document.getElementById('x2-bv-date') || {}).value || '';
+      showToast(`Đang xem tồn ${catVanPeriodLabel(dateVal, v)}.`, 'info');
+    }
+  }
+
+  // ─── THỐNG KÊ NHANH ────────────────────────────────────────────────
+  function renderX2BaoVanStats() {
+    const box = document.getElementById('x2-bv-stats');
+    if (!box) return;
+    const disp = (state.xuong2BaoVanRecords || []).map(baoVanDisplay);
+    const bao = disp.filter(d => d.kind === 'bao');
+    const cha = disp.filter(d => d.kind === 'cha');
+    const baoTam = bao.reduce((s, d) => s + d.qtyIn, 0);
+    const chaTam = cha.reduce((s, d) => s + d.qtyIn, 0);
+    const vol = disp.reduce((s, d) => s + (Number(d.volume) || 0), 0);
+    box.innerHTML = `
+      <div class="material-stat"><span class="material-stat-value">${bao.length}</span><span class="material-stat-label">Lượt Bào</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtThanh(baoTam)}</span><span class="material-stat-label">Tấm đã bào</span></div>
+      <div class="material-stat"><span class="material-stat-value">${cha.length}</span><span class="material-stat-label">Lượt Chà thùng</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtThanh(chaTam)}</span><span class="material-stat-label">Tấm đã chà</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtThanh(baoTam + chaTam)}</span><span class="material-stat-label">Tổng tấm xử lý</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtM3(vol)}</span><span class="material-stat-label">Thể tích ván vào (m³)</span></div>`;
+  }
+  // ─── LƯU FORM (THÊM / SỬA) — form CHỈ có Đầu vào + Số lượng ─────────
+  function handleXuong2BaoVanSubmit(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!requireEditPermission()) return;
+    const kind = ((document.getElementById('x2-bv-kind') || {}).value) === 'cha' ? 'cha' : 'bao';
+    const dateVal = (document.getElementById('x2-bv-date') || {}).value || '';
+    if (!dateVal) { showToast('Ngày không được để trống!', 'error'); return; }
+    const item = baoVanSelectedItem();
+    if (!item) { showToast('Hãy chọn ĐẦU VÀO là ván ở Ép Ván (trong kỳ đang chọn)!', 'error'); return; }
+    // pool đã LOẠI trừ phần của lượt đang sửa → remaining = phần được phép ghi
+    const remaining = item.remaining;
+    const qtyIn = Math.floor(Number((document.getElementById('x2-bv-qty') || {}).value) || 0);
+    if (qtyIn <= 0) { showToast('Số lượng ván vào phải lớn hơn 0!', 'error'); return; }
+    if (qtyIn > remaining) { showToast(`Vượt tồn ván của kỳ (còn ${fmtThanh(remaining)} tấm)!`, 'error'); return; }
+    const span = baoVanSpanOf();
+    const snap = hrBaoVanSnapshot(dateVal, kind);
+    const payload = {
+      kind, date: dateVal, week: materialWeekLabel(dateVal),
+      span, periodKey: catVanPeriodKeyOf(dateVal, span),
+      inGroup: item.group, inSizeKey: item.sizeKey, inDims: item.dims,
+      qtyIn, quantity: qtyIn,           // CẢ 2 công đoạn = số tấm xử lý
+      unitVol: item.dims[0] > 0 ? unitVolOf(item.dims[0], item.dims[1], item.dims[2]) : 0,
+      pressIds: item.pressIds || [],
+      worker: snap.worker, workTime: snap.workTime,
+      workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
+    };
+    if (state.x2BaoVanEditId) {
+      const rec = (state.xuong2BaoVanRecords || []).find(r2 => r2.id === state.x2BaoVanEditId);
+      if (!rec) { showToast('Không tìm thấy lượt Bào Ván cần sửa!', 'error'); return; }
+      Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
+      saveXuong2BaoVan();
+      showToast(`Đã cập nhật lượt ${baoVanKindLabel(kind)}!`, 'success');
+      resetXuong2BaoVanForm();
+    } else {
+      payload.id = `x2bv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      payload.createdAt = new Date().toISOString();
+      state.xuong2BaoVanRecords = [...(state.xuong2BaoVanRecords || []), payload];
+      saveXuong2BaoVan();
+      showToast(`Đã ghi lượt ${baoVanKindLabel(kind)} (Bào Ván)!`, 'success');
+      keepBaoVanFormAfterSave();
+    }
+    renderX2BaoVanCard();
+  }
+
+  // Sau khi LƯU GHI MỚI: giữ ngày + công đoạn + kỳ để nhập tiếp; XOÁ số lượng
+  function keepBaoVanFormAfterSave() {
+    state.x2BaoVanEditId = null;
+    const q = document.getElementById('x2-bv-qty');
+    if (q) q.value = '';
+    renderX2BaoVanSource();
+    renderX2BaoVanStockBar();
+    renderX2BaoVanCalc();
+    syncX2BaoVanEditBanner();
+  }
+
+  function resetXuong2BaoVanForm() {
+    state.x2BaoVanEditId = null;
+    const q = document.getElementById('x2-bv-qty');
+    if (q) q.value = '';
+    const d = document.getElementById('x2-bv-date');
+    if (d) d.value = '';
+    const kind = document.getElementById('x2-bv-kind');
+    if (kind) kind.value = 'bao';
+    renderX2BaoVanCard();
+  }
+  // ─── SỬA / XÓA LƯỢT BÀO VÁN ───────────────────────────────────────
+  function editXuong2BaoVan(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2BaoVanRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    state.x2BaoVanEditId = id;
+    const d = document.getElementById('x2-bv-date');
+    if (d) d.value = rec.date || '';
+    // Nạp lại KỲ đã lưu của lượt (TRƯỚC — để nguồn dựng đúng kỳ rồi mới chọn)
+    setX2BaoVanSpan(Number(rec.span) === 2 ? 2 : 1, true);
+    const kindEl = document.getElementById('x2-bv-kind');
+    if (kindEl) kindEl.value = rec.kind === 'cha' ? 'cha' : 'bao';
+    renderX2BaoVanSource();
+    const src = document.getElementById('x2-bv-source');
+    if (src) src.value = `${rec.inGroup || 'vantho'}|${rec.inSizeKey || ''}`;
+    const q = document.getElementById('x2-bv-qty');
+    if (q) q.value = Number(rec.qtyIn) || 0;
+    renderX2BaoVanStockBar();
+    renderX2BaoVanCalc();
+    syncX2BaoVanEditBanner();
+  }
+
+  function deleteXuong2BaoVan(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2BaoVanRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    const d = baoVanDisplay(rec);
+    const desc = `${fmtThanh(d.qtyIn)} tấm ${d.inSizeKey || ''}`;
+    if (!confirm(`Xóa lượt ${baoVanKindLabel(rec.kind)} ngày ${formatDateDDMMYY(rec.date)} (${desc})?`)) return;
+    trackDeleted('xuong2BaoVanRecords', id);
+    state.xuong2BaoVanRecords = (state.xuong2BaoVanRecords || []).filter(r => r.id !== id);
+    if (state.x2BaoVanEditId === id) state.x2BaoVanEditId = null;
+    saveXuong2BaoVan();
+    renderX2BaoVanCard();
+    showToast('Đã xóa lượt Bào Ván!', 'success');
+  }
+
+  // Banner cam "đang sửa" của form Bào Ván
+  function syncX2BaoVanEditBanner() {
+    const banner = document.getElementById('x2-bv-edit-banner');
+    const text = document.getElementById('x2-bv-edit-text');
+    if (!banner || !text) return;
+    if (state.x2BaoVanEditId) {
+      const rec = (state.xuong2BaoVanRecords || []).find(r => r.id === state.x2BaoVanEditId);
+      text.textContent = rec
+        ? `Đang sửa lượt ${baoVanKindLabel(rec.kind)} ngày ${formatDateDDMMYY(rec.date)}.`
+        : 'Đang sửa lượt Bào Ván.';
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  // Thu gọn / mở rộng BẢNG LỊCH SỬ Bào Ván
+  function toggleX2BaoVanTable() {
+    const wrap = document.getElementById('x2-bv-table-wrap');
+    if (!wrap) return;
+    wrap.classList.toggle('x2-cut-collapsed');
+    initLucide();
+  }
+  // ─── TÍNH CÔNG SUẤT + HIỆU SUẤT 1 CÔNG ĐOẠN NHỎ TRONG NGÀY ────────
+  function baoVanCapOf(disp, kind) {
+    const rows = disp.filter(d => d.kind === kind);
+    const qty = rows.reduce((s, d) => s + d.qtyIn, 0);   // CẢ 2 = số tấm
+    const hours = rows.reduce((s, d) => s + (d.workHours || 0), 0);
+    const date = disp.length ? disp[0].date : '';
+    // Giờ SỰ CỐ CHO PHÉP (khóa chung 'baovan') → công suất = tấm ÷ giờ hiệu dụng
+    const hoursEff = stageEffHours('baovan', date, hours);
+    const incH = stageIncidentOf('baovan', date);
+    const cap = hoursEff > 0 ? (qty / hoursEff) : null;
+    const rate = baoVanRateOf(date, kind);
+    const eff = (cap != null && rate) ? (cap / rate) * 100 : null;
+    return { qty, hours, hoursEff, incH, cap, rate, eff, unit: 'tấm', rateUnit: 'tấm/h' };
+  }
+  function baoVanEffHtml(info, kind) {
+    const eff = info.eff;
+    const effTxt = eff == null
+      ? '<em style="color:var(--text-muted);">—</em>'
+      : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
+    const label = baoVanKindLabel(kind);
+    const effTip = eff == null
+      ? `Chưa đủ dữ liệu (thiếu giờ ${label.toLowerCase()} / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức ${label} cho tháng này)`
+      : `Hiệu suất = Công suất thực tế (${fmtThanh(info.cap)} tấm/h = ${fmtThanh(info.qty)} tấm ÷ ${fmtRatio(info.hoursEff)} giờ${info.incH > 0 ? ` [đã trừ ${fmtGio(info.incH)}h sự cố]` : ''}) ÷ Định mức ${label} (${fmtThanh(info.rate)} tấm/h)`;
+    return `<span class="x2-day-eff" title="${escapeHTML(effTip)}">H.suất ${label}: <strong>${effTxt}</strong></span>`;
+  }
+
+  // 1 DÒNG NHÁNH — giống nhau cho cả Bào lẫn Chà thùng (chỉ Đầu vào + Số lượng)
+  function baoVanRowHtml(d) {
+    return `
+      <tr class="x2-day-row" data-x2-bv-row="${escapeHTML(d.id)}">
+        <td>${escapeHTML(d.groupLabel || '—')}<span class="x2-nan-chip" style="margin-left:6px;">${escapeHTML(d.inSizeKey || '—')}</span><div class="x2-row-note">Kỳ ${escapeHTML(d.periodLabel)} · ${d.pressIds.length || 0} lượt ép</div></td>
+        <td class="text-right"><strong style="color:#475569;">${fmtThanh(d.qtyIn)}</strong> <small style="color:var(--text-muted);">tấm</small></td>
+        <td class="text-right"><strong style="color:#0f766e;">${d.volume.toFixed(4)}</strong> <small style="color:var(--text-muted);">m³</small></td>
+        <td class="text-right">
+          <button class="btn btn-icon btn-outline" title="Sửa" data-x2-bv-edit="${escapeHTML(d.id)}"><i data-lucide="pencil"></i></button>
+          <button class="btn btn-icon btn-danger" title="Xóa" data-x2-bv-delete="${escapeHTML(d.id)}"><i data-lucide="trash-2"></i></button>
+        </td>
+      </tr>`;
+  }
+  // 1 THẺ NGÀY — chia 2 VÙNG (Bào · Chà thùng) — mỗi vùng cột: Đầu vào · SL · Thể tích
+  function baoVanDayCardHtml(date, rows) {
+    const disp = rows.map(baoVanDisplay);
+    const baoDisp = disp.filter(d => d.kind === 'bao');
+    const chaDisp = disp.filter(d => d.kind === 'cha');
+    const liveBao = hrBaoVanAssignmentsOf(date);
+    const liveCha = hrChaThungAssignmentsOf(date);
+    const workerBlock = (live, snapRows, label) => {
+      const workers = live.length ? live.map(a => ({ name: a.name, time: posTimeStr(a) })) : snapRows;
+      if (!workers.length) return '';
+      const main = `${escapeHTML(workers[0].name)}${workers[0].time ? ` (${escapeHTML(workers[0].time)})` : ''}`;
+      const more = workers.length > 1
+        ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
+        : '';
+      return `<span class="x2-day-cutters" title="Người ${label} — tự động từ Bảng bố trí vị trí '${label}' (tab Nhân Sự) đúng ngày"><i data-lucide="users"></i> ${label}: ${main} ${more}</span>`;
+    };
+    const spBao = liveBao.length ? sumPosHoursSplit(liveBao, date) : null;
+    const spCha = liveCha.length ? sumPosHoursSplit(liveCha, date) : null;
+    const hoursTxt = (sp) => !sp
+      ? '<em style="color:var(--text-muted);">—</em>'
+      : `<span class="x2-hours-hc">${fmtRatio(sp.hc)}h HC</span><span class="x2-hours-tc">${fmtRatio(sp.tc)}h TC</span>`;
+    const hoursTip = 'Thời gian = tổng giờ công phân vị trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)';
+    const baoCap = baoVanCapOf(disp, 'bao');
+    const chaCap = baoVanCapOf(disp, 'cha');
+    const baoRows = baoDisp.map(baoVanRowHtml).join('');
+    const chaRows = chaDisp.map(baoVanRowHtml).join('');
+    const baoTam = baoDisp.reduce((s, d) => s + d.qtyIn, 0);
+    const chaTam = chaDisp.reduce((s, d) => s + d.qtyIn, 0);
+    const baoFoot = baoDisp.length
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="2">Tổng ngày: <strong>${fmtThanh(baoTam)}</strong> tấm đã bào</td><td colspan="2" class="text-right">Thể tích: <strong>${baoDisp.reduce((s, d) => s + (Number(d.volume) || 0), 0).toFixed(4)}</strong> m³</td></tr></tfoot>`
+      : '';
+    const chaFoot = chaDisp.length
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="2">Tổng ngày: <strong>${fmtThanh(chaTam)}</strong> tấm đã chà thùng</td><td colspan="2" class="text-right">Thể tích: <strong>${chaDisp.reduce((s, d) => s + (Number(d.volume) || 0), 0).toFixed(4)}</strong> m³</td></tr></tfoot>`
+      : '';
+    const emptyZone = (msg) => `<tr class="x2-day-row"><td colspan="4" style="color:var(--text-muted); font-style:italic; text-align:center; padding:8px;">${msg}</td></tr>`;
+    const periodChip = disp.length
+      ? `<span class="x2-day-period" title="Kỳ tồn của các lượt trong ngày"><i data-lucide="calendar-range"></i> ${escapeHTML(disp[0].periodLabel)}</span>` : '';
+    return `
+      <div class="x2-day-card">
+        <div class="x2-day-head">
+          <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
+          ${workerBlock(liveBao, baoDisp.length ? baoDisp[0].workerRows : [], 'Bào Ván')}
+          ${workerBlock(liveCha, chaDisp.length ? chaDisp[0].workerRows : [], 'Chà Thùng')}
+          <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ bào: ${hoursTxt(spBao)}</span>
+          <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ chà: ${hoursTxt(spCha)}</span>
+          <span class="x2-day-cap" title="Công suất Bào = tổng tấm ván bào ÷ tổng giờ bào">CS Bào: <strong>${baoCap.cap != null ? `${fmtThanh(baoCap.cap)} tấm/h` : '—'}</strong></span>
+          ${baoVanEffHtml(baoCap, 'bao')}
+          <span class="x2-day-cap" title="Công suất Chà thùng = tổng tấm ván chà ÷ tổng giờ chà">CS Chà: <strong>${chaCap.cap != null ? `${fmtThanh(chaCap.cap)} tấm/h` : '—'}</strong></span>
+          ${baoVanEffHtml(chaCap, 'cha')}
+          ${periodChip}
+          ${stageIncidentInputHtml('baovan', date)}
+        </div>
+        <!-- VÙNG 1: BÀO -->
+        <div class="x2-bl-zone-head x2-bl-zone-gc"><i data-lucide="wind"></i> Bào — đầu vào từ Ép Ván (ván thô / thành phẩm)</div>
+        <table class="data-table x2-day-table">
+          <thead>
+            <tr>
+              <th>Đầu Vào (nhóm · kích thước)</th>
+              <th class="text-right">SL bào (tấm)</th>
+              <th class="text-right">Thể tích</th>
+              <th class="text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>${baoRows || emptyZone('Chưa có lượt Bào nào trong ngày.')}</tbody>
+          ${baoFoot}
+        </table>
+        <!-- VÙNG 2: CHÀ THÙNG -->
+        <div class="x2-bl-zone-head x2-bl-zone-ct"><i data-lucide="box"></i> Chà thùng — đầu vào từ Ép Ván (ván thô / thành phẩm)</div>
+        <table class="data-table x2-day-table">
+          <thead>
+            <tr>
+              <th>Đầu Vào (nhóm · kích thước)</th>
+              <th class="text-right">SL chà (tấm)</th>
+              <th class="text-right">Thể tích</th>
+              <th class="text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>${chaRows || emptyZone('Chưa có lượt Chà thùng nào trong ngày.')}</tbody>
+          ${chaFoot}
+        </table>
+      </div>`;
+  }
+  // ─── BẢNG LỊCH SỬ — NHÓM THEO NGÀY, THẺ NGÀY CHIA 2 VÙNG ─────────
+  function renderX2BaoVanTable() {
+    const box = document.getElementById('x2-bv-day-cards');
+    if (!box) return;
+    const list = [...(state.xuong2BaoVanRecords || [])].sort((a, b) => {
+      if ((b.date || '') !== (a.date || '')) return (b.date || '').localeCompare(a.date || '');
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+    const countEl = document.getElementById('x2-bv-table-count');
+    const totalTam = list.reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
+    if (countEl) countEl.textContent = list.length ? `${list.length} lượt Bào Ván · ${fmtThanh(totalTam)} tấm ván` : '';
+    if (!list.length) {
+      box.innerHTML = `
+        <div class="x2-day-card x2-day-card-empty">
+          <i data-lucide="wind"></i>
+          <div>Chưa có lượt Bào Ván nào.<br>Chọn <strong>Công đoạn</strong> (Bào / Chà thùng) ở form trên rồi bấm <strong>Lưu Lượt Bào Ván</strong>.</div>
+        </div>`;
+      initLucide();
+      return;
+    }
+    const groups = new Map();
+    list.forEach(r => {
+      const key = r.date || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    let html = '';
+    for (const [date, rows] of groups) html += baoVanDayCardHtml(date, rows);
+    box.innerHTML = html;
+    initLucide();
+  }
+
+  // ─── RENDER THẺ BÀO VÁN ────────────────────────────────────────────
+  function renderX2BaoVanCard() {
+    const dt = document.getElementById('x2-bv-date');
+    if (dt && !dt.value) dt.value = new Date().toISOString().slice(0, 10);
+    syncX2BaoVanSpanDom();
+    renderX2BaoVanSource();
+    renderX2BaoVanStockBar();
+    renderX2BaoVanRateBar();
+    renderX2BaoVanStats();
+    renderX2BaoVanTable();
+    renderX2BaoVanCalc();
+    syncX2BaoVanEditBanner();
+    updateXuong2CardCounts();
+  }
+
+  // ─── NẠP / LƯU DỮ LIỆU BÀO VÁN ────────────────────────────────────
+  function loadXuong2BaoVan() {
+    const raw = localStorage.getItem(STORAGE_KEY_XUONG2_BAO_VAN);
+    if (raw) {
+      try {
+        const arr = JSON.parse(raw);
+        state.xuong2BaoVanRecords = Array.isArray(arr) ? arr : [];
+      } catch (e) { state.xuong2BaoVanRecords = []; }
+    } else {
+      state.xuong2BaoVanRecords = [];
+    }
+  }
+  function saveXuong2BaoVan() {
+    try {
+      localStorage.setItem(STORAGE_KEY_XUONG2_BAO_VAN, JSON.stringify(state.xuong2BaoVanRecords || []));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu sẽ thử ghi qua file/mây.', 'error');
+    }
+    logDataChange(['xuong2BaoVanRecords']);
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // VỊ TRÍ: BÀO TINH — Xưởng 2 (thẻ launcher tab Công Đoạn)
   // ═══════════════════════════════════════════════════════════
   // Mỗi lượt ghi: NGÀY BÀO · LOẠI BÀO · nguồn thanh ("Chọn thanh") ·
@@ -8461,6 +9865,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (openX2Card && openX2Card.id === 'x2-kho-card') renderX2KhoCard(); // Kho Nan — tự làm mới theo dữ liệu
     if (openX2Card && openX2Card.id === 'x2-bao-tinh-card') renderX2BaoTinhCard();
     if (openX2Card && openX2Card.id === 'x2-bullig-card') renderX2BulligCard();
+    if (openX2Card && openX2Card.id === 'x2-cat-van-card') renderX2CatVanCard();
+    if (openX2Card && openX2Card.id === 'x2-bao-van-card') renderX2BaoVanCard();
     if (openX2Card && openX2Card.id === 'x2-ep-van-card') renderX2EpVanCard();
     // Xưởng 1 — cả 8 công đoạn đều có chức năng
     if (openX2Card) renderX1CardOf(openX2Card.id);
@@ -11314,6 +12720,56 @@ export {
   bulligLotSizeText,
   bulligConvertInfo,
   bulligDisplay,
+  // ── THẺ CẮT VÁN (Cắt ván + Xẻ thanh — tồn theo kỳ 1/2 tuần) ──
+  handleXuong2CatVanSubmit,
+  editXuong2CatVan,
+  deleteXuong2CatVan,
+  resetXuong2CatVanForm,
+  renderX2CatVanCard,
+  renderX2CatVanTable,
+  renderX2CatVanStats,
+  renderX2CatVanStockBar,
+  renderX2CatVanSource,
+  renderX2CatVanCalc,
+  renderX2CatVanRateBar,
+  handleX2CatVanRateSave,
+  loadXuong2CatVan,
+  loadX2CatVanRates,
+  loadX2CatVanSpan,
+  setX2CatVanSpan,
+  syncX2CatVanKindRows,
+  syncX2CatVanSpanDom,
+  toggleX2CatVanTable,
+  catVanDisplay,
+  catVanRateOf,
+  catVanInputPool,
+  catVanPeriodOf,
+  catVanPeriodKeyOf,
+  catVanPeriodLabel,
+  catVanKindLabel,
+  // ── THẺ BÀO VÁN (Bào + Chà thùng — tồn theo kỳ 1/2 tuần, form Đầu vào + Số lượng) ──
+  handleXuong2BaoVanSubmit,
+  editXuong2BaoVan,
+  deleteXuong2BaoVan,
+  resetXuong2BaoVanForm,
+  renderX2BaoVanCard,
+  renderX2BaoVanTable,
+  renderX2BaoVanStats,
+  renderX2BaoVanStockBar,
+  renderX2BaoVanSource,
+  renderX2BaoVanCalc,
+  renderX2BaoVanRateBar,
+  handleX2BaoVanRateSave,
+  loadXuong2BaoVan,
+  loadX2BaoVanRates,
+  loadX2BaoVanSpan,
+  setX2BaoVanSpan,
+  syncX2BaoVanSpanDom,
+  toggleX2BaoVanTable,
+  baoVanDisplay,
+  baoVanRateOf,
+  baoVanInputPool,
+  baoVanKindLabel,
   handleXuong2CutSubmit,
   loadX2BaoThoRates,
   loadX2BoOngRates,

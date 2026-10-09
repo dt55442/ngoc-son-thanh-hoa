@@ -540,7 +540,7 @@ check('CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · histo
   clJs.includes('qcFinalRecords') && clJs.includes('qcFinalRates') &&
   hiJs.includes('qcFinalRecords') && mnJs.includes('loadQcFinal'));
 check('CẤU TRÚC (sw.js): CACHE_NAME v194 + js/qc-final.js vào APP_SHELL',
-  /nha-may-ngoc-son-v229/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
+  /nha-may-ngoc-son-v231/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
 check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)',
   cssHtml.includes('.qcf-picker') && cssHtml.includes('.qcf-row-main') && cssHtml.includes('.qcf-ws-chip') &&
   cssHtml.includes('.qcf-kind-chip') && cssHtml.includes('.qcf-product-meta') &&

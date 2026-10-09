@@ -48,6 +48,8 @@ import { STORAGE_KEY_CAPACITY_UI, state } from './state.js';
 import {
   baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, chonNanDisplay, cutDisplay,
   baoThoRateOf, baoTinhRateOf, boOngRateOf, boluongRateOf, bulligRateOf, capRateOf, chonNanRateOf,
+  catVanDisplay, catVanRateOf,
+  baoVanDisplay, baoVanRateOf,
   sayChargeRows, sayRateEntryOf,
   // XƯỞNG 1 — 8 công đoạn (04–05/10/2026)
   x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay,
@@ -257,6 +259,42 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       }),
       rateOf: m => bulligRateOf(m, 'ct')
     },
+    // ─── THẺ CẮT VÁN — 2 DÒNG CÔNG ĐOẠN NHỎ (09/10/2026) ────────
+    // Cắt ván = tấm/h · Xẻ thanh = thanh/h (sản lượng khác ĐVT → KHÔNG gộp 1 dòng)
+    {
+      id: 'catvan_cat', ws: 'x2', label: 'Cắt Ván — Cắt ván', unit: 'tấm/h', unitQty: 'tấm', cardId: 'x2-cat-van-card', kind: 'cap',
+      rows: () => (state.xuong2CatVanRecords || []).filter(r => (r.kind || 'cat') === 'cat').map(r => {
+        const d = catVanDisplay(r);
+        return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => catVanRateOf(m, 'cat')
+    },
+    {
+      id: 'catvan_xe', ws: 'x2', label: 'Cắt Ván — Xẻ thanh', unit: 'thanh/h', unitQty: 'thanh', cardId: 'x2-cat-van-card', kind: 'cap',
+      rows: () => (state.xuong2CatVanRecords || []).filter(r => r.kind === 'xe').map(r => {
+        const d = catVanDisplay(r);
+        return { date: d.date, qty: d.quantity, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => catVanRateOf(m, 'xe')
+    },
+    // ─── THẺ BÀO VÁN — 2 DÒNG CÔNG ĐOẠN NHỎ (09/10/2026) ────────────
+    // CẢ 2 = tấm/h (Bào · Chà thùng) — sản lượng = số tấm ván vào
+    {
+      id: 'baovan_bao', ws: 'x2', label: 'Bào Ván — Bào', unit: 'tấm/h', unitQty: 'tấm', cardId: 'x2-bao-van-card', kind: 'cap',
+      rows: () => (state.xuong2BaoVanRecords || []).filter(r => (r.kind || 'bao') === 'bao').map(r => {
+        const d = baoVanDisplay(r);
+        return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => baoVanRateOf(m, 'bao')
+    },
+    {
+      id: 'baovan_cha', ws: 'x2', label: 'Bào Ván — Chà thùng', unit: 'tấm/h', unitQty: 'tấm', cardId: 'x2-bao-van-card', kind: 'cap',
+      rows: () => (state.xuong2BaoVanRecords || []).filter(r => r.kind === 'cha').map(r => {
+        const d = baoVanDisplay(r);
+        return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+      }),
+      rateOf: m => baoVanRateOf(m, 'cha')
+    },
     // ─── XƯỞNG 1 — 3 CÔNG ĐOẠN ĐẦU (04/10/2026) ────────────────
     // ws:'x1' → bảng Tổng hợp + gauge + xếp hạng + nhiệt đồ + báo cáo in
     // tự nhận diện qua capStagesOf('x1'); cardId → nút "Mở thẻ" nhảy đúng.
@@ -318,6 +356,10 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     boluong: 'boluong',
     cut: 'cut', boong: 'boong', baotho: 'baotho', chonnan: 'chonnan',
     baotinh: 'baotinh', epvan: 'epvan', bullig_gc: 'bullig', bullig_ct: 'bullig',
+    // Thẻ CẮT VÁN — 2 công đoạn nhỏ dùng CHUNG 1 ô sự cố (cùng ngày = cùng ô)
+    catvan_cat: 'catvan', catvan_xe: 'catvan',
+    // Thẻ BÀO VÁN — 2 công đoạn nhỏ dùng CHUNG 1 ô sự cố
+    baovan_bao: 'baovan', baovan_cha: 'baovan',
     // XƯỞNG 1 (04–05/10/2026) — khóa giờ sự cố = đúng id công đoạn (khớp incKey
     // mà x1RenderDayCards truyền vào → bảng tổng hợp TRỪ giờ sự cố giống thẻ ngày)
     x1catong: 'x1catong', x1saysinh: 'x1saysinh', x1boc: 'x1boc',
@@ -1366,6 +1408,8 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     { elId: 'x2-mini-spark-bao-tinh', stageIds: ['baotinh'] },
     { elId: 'x2-mini-spark-ep-van', stageIds: ['epvan'] },
     { elId: 'x2-mini-spark-bullig', stageIds: ['bullig_gc', 'bullig_ct'] },
+    { elId: 'x2-mini-spark-cat-van', stageIds: ['catvan_cat', 'catvan_xe'] },
+    { elId: 'x2-mini-spark-bao-van', stageIds: ['baovan_bao', 'baovan_cha'] },
     // XƯỞNG 1 — 8 công đoạn (sparkline 8 tuần trên mini card)
     { elId: 'x2-mini-spark-x1-cat-ong', stageIds: ['x1catong'] },
     { elId: 'x2-mini-spark-x1-say-sinh', stageIds: ['x1saysinh'] },

@@ -9794,3 +9794,46 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   .btn-dash-help { width: 32px; height: 32px; font-size: 0.95rem; }
 }
 
+/* ═══ THẺ "CẮT VÁN" (tab Công Đoạn SX — Xưởng 2) ═══
+   Nút KỲ "1 tuần / 2 tuần" (trừ tồn đầu vào theo kỳ) + chip kỳ trên thẻ ngày. */
+.x2-cv-span-btns {
+  display: inline-flex;
+  gap: 4px;
+  border: 1px solid rgba(15, 118, 110, 0.35);
+  border-radius: 8px;
+  padding: 3px;
+  background: rgba(15, 118, 110, 0.06);
+}
+.x2-cv-span-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #5b6b6a);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  min-height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.x2-cv-span-btn.active {
+  background: #0f766e;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+/* Chip KỲ trên đầu thẻ ngày (Tuần 41 / Tuần 41–42) */
+.x2-day-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.12);
+  border: 1px dashed rgba(15, 118, 110, 0.4);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.x2-day-period svg { width: 13px; height: 13px; }
+@media (max-width: 639.98px) {
+  .x2-cv-span-btn { min-height: 40px; padding: 8px 14px; font-size: 0.8rem; }
+}

@@ -6,7 +6,7 @@ import { alOnLocationChipClick, alOnSourceListClick, alPickAll, alPositionSource
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
-import { closeChartBuilderModal, handleChartBuilderSubmit, openChartBuilderModal, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
+import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, closeX2ExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, handleX2ExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, openX2ExportModal, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
 import { closeHistoryModal, openHistoryModal, setHistoryDomainFilter, setHistoryTabFilter, setHistoryUserFilter, clearHistory } from './history.js';
 import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey, aiSetModel, runAiAnalysis, initAiFabDrag, aiFabDragConsumed, aiQuickAsk, aiHideBubble, aiSetAutoGreet } from './ai.js';
@@ -526,6 +526,27 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('file-load-local', 'change', (e) => {
       captureAutoBackup('Trước khi nạp file cục bộ (.json)', true);
       loadDataFromLocalFile(e);
+    });
+
+    // ── TRỢ GIÚP DASHBOARD (nút "?" — giải thích nhanh theo vùng/đối tượng) ──
+    // Ghi chú trên thẻ biểu đồ tab Tổng Quan đã ẨN (CSS "TRỢ GIÚP DASHBOARD") →
+    // xem qua tooltip (title) hoặc modal này. Nút "?" trên TỪNG thẻ biểu đồ
+    // tùy chỉnh dùng onclick app.openDashHelp('chart', id) — không qua safeOn.
+    safeOn('btn-help-capacity',      'click', () => openDashHelp('capacity'));
+    // Nội dung đổi theo biểu đồ đang xem (Kế Hoạch vs Đã Ép / Khả Năng Đáp Ứng)
+    safeOn('btn-help-pv',            'click', () => openDashHelp(state.pvChartMode === 'cap' ? 'pv-cap' : 'pv-plan'));
+    safeOn('btn-help-material',      'click', () => openDashHelp('material'));
+    safeOn('btn-help-zone-basic',    'click', () => openDashHelp('zone-basic'));
+    safeOn('btn-help-zone-advanced', 'click', () => openDashHelp('zone-advanced'));
+    safeOn('btn-close-dash-help',    'click', closeDashHelp);
+    safeOn('btn-dash-help-ok',       'click', closeDashHelp);
+    // Bấm nền mờ / phím Esc → đóng modal trợ giúp
+    const dashHelpOv = document.getElementById('modal-dash-help');
+    if (dashHelpOv) dashHelpOv.addEventListener('click', (e) => { if (e.target === dashHelpOv) closeDashHelp(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const m = document.getElementById('modal-dash-help');
+      if (m && m.classList.contains('show')) closeDashHelp();
     });
 
     // Custom Chart Builder Listeners

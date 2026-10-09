@@ -54,15 +54,16 @@
        app khởi động; mọi chỗ CHỜ PHẢN HỒI (AI · xuất Excel · mây · backup)
        cũng dùng chung overlay này. NỀN MỜ + BLUR → nội dung Dashboard hiện
        lờ mờ phía sau. 2 CHẾ ĐỘ TIẾN ĐỘ (thanh #tre-progress 0→100%):
-       · BOOT = MINI GAME: bấm "Chém!" 5%/nhát (20 nhát) đủ 100% cây MỚI GÃY
-         → MỚI thấy được Dashboard; · các chỗ chờ khác = auto, trôi ~5s rồi
+       · BOOT = MINI GAME "NGHI THỨC CẦP LUỒNG": bấm "Chặt!" 5%/nhát (20 nhát)
+         đủ 100% cây MỚI GÃY → MỚI thấy được Dashboard, hoặc bấm "Bỏ qua" để
+         vào thẳng; · các chỗ chờ khác = auto, trôi ~5s rồi
          gãy. LỖI → tre KHÔNG gãy, overlay mờ dần. Nền watchdog (boot-guard,
          z-index 99999) vẫn nổi TRÊN overlay này. -->
   <div class="tre-loading" id="tre-loading-overlay" role="status" aria-live="polite">
     <div class="tre-loading-card" id="tre-loading-card">
       <!-- CẢNH = SPRITE 18 FRAME 640×360 (icons/loading/tre-sprite.png, 6 cột × 3 dòng)
            — do make-loading-sprite.cjs ghép từ 3 sheet AI (nông dân · tre · hiệu ứng).
-           CSS styles.css chạy 2 pha: treChop (frame 1–13, lặp 2.6s — CHỈ auto;
+           CSS styles.css chạy 2 pha: treChop (frame 1–13, lặp 0.83s ≈ 6 vòng/5s — CHỈ auto;
            game đứng yên frame 1, mỗi bấm chặt 1 nhát treHitOnce 600ms) → treFall (14–18, .is-fall). -->
       <div class="tre-scene" aria-hidden="true"></div>
       <div class="tre-loading-text" id="tre-loading-text">Đang tải dữ liệu nhà máy…</div>
@@ -71,8 +72,10 @@
         <div class="tre-progress-fill" id="tre-progress-fill"></div>
         <span class="tre-progress-pct" id="tre-progress-pct">0%</span>
       </div>
-      <!-- NÚT CHƠI (chỉ hiện ở chế độ game — boot): 20 nhát × 5% = 100% → cây gãy -->
-      <button type="button" class="tre-hit-btn" id="tre-hit-btn" hidden>🪓 Chém! (+5%)</button>
+      <!-- NÚT CHƠI (chỉ hiện ở chế độ game — boot): 20 nhát × 5% = 100% → cây gãy;
+           nút "Bỏ qua" = lối tắt vào thẳng Dashboard (skipTreLoading — js/loading.js) -->
+      <button type="button" class="tre-hit-btn" id="tre-hit-btn" hidden>🪓 Chặt! (+5%)</button>
+      <button type="button" class="tre-skip-btn" id="tre-skip-btn" hidden>⏭ Bỏ qua — vào thẳng</button>
     </div>
   </div>
 
@@ -2373,6 +2376,11 @@
               <span class="cap-mode-label" id="capacity-mode-label">Xưởng 2</span>
               <i data-lucide="repeat-2" class="cap-mode-ico cap-mode-swap" title="Đổi xưởng"></i>
             </button>
+            <!-- Nút "?" TRỢ GIÚP — đoạn p.cap-note cách đọc bảng đã ẨN (khối CSS
+                 TRỢ GIÚP DASHBOARD ở cuối styles.css); hover nút hiện tooltip,
+                 bấm mở modal giải thích nhanh #modal-dash-help (js/dashboard.js) -->
+            <button type="button" class="btn-dash-help" id="btn-help-capacity"
+                    title="Cách đọc bảng: Giờ HC · Giờ TC · Công suất = sản lượng ÷ giờ · Hiệu suất = công suất ÷ định mức · 3 tầng Tuần → Công Đoạn → Ngày (bấm dòng để xổ). Rê chuột vào tiêu đề từng cột cũng thấy giải thích.">?</button>
           </h4>
           <div class="cap-toolbar">
             <div class="pv-unit-toggle cap-view-toggle" role="group" aria-label="Chuyển chế độ xem: Biểu đồ ⇄ Bảng dữ liệu">
@@ -2410,7 +2418,9 @@
                hạng công đoạn · bản đồ nhiệt 8 tuần × công đoạn · biểu đồ Chart.js
                của công đoạn đang chọn. Chế độ "Bảng dữ liệu" ẩn dải này. -->
           <div class="cap-visual-row" id="cap-visual-row"></div>
-          <div class="table-responsive cap-scroll" id="cap-table-wrap">
+          <!-- title = tooltip thay đoạn p.cap-note (đã ẨN) — rê chuột vào bảng hiện cách đọc -->
+          <div class="table-responsive cap-scroll" id="cap-table-wrap"
+               title="Giờ làm tách riêng Giờ HC (hành chính) và Giờ TC (tăng ca — tự động từ Bảng bố trí Nhân Sự) · Công suất = sản lượng ÷ giờ làm · Hiệu suất = công suất thực ÷ định mức tháng (tuần vắt 2 tháng thì bình quân theo sản lượng) · Chọn Tuần/Tháng ở đầu thẻ để đổi kỳ xem · Bấm 1 dòng kỳ để xem từng công đoạn, bấm tiếp công đoạn để xổ từng ngày.">
             <table class="data-table cap-table">
               <thead>
                 <tr>
@@ -2450,6 +2460,10 @@
               <span class="pv-mode-label" id="pv-mode-label">Kế Hoạch vs Đã Ép (Theo Sản Phẩm)</span>
               <i data-lucide="repeat-2" class="pv-mode-ico pv-mode-swap" title="Đổi biểu đồ"></i>
             </button>
+            <!-- Nút "?" TRỢ GIÚP — nội dung đổi theo biểu đồ đang xem (data-pv-mode):
+                 'plan' → Kế Hoạch vs Đã Ép · 'cap' → Khả Năng Đáp Ứng (events.js) -->
+            <button type="button" class="btn-dash-help" id="btn-help-pv"
+                    title="Giải thích nhanh biểu đồ đang xem (Kế Hoạch vs Đã Ép / Khả Năng Đáp Ứng): ý nghĩa màu cột, đơn vị, cách đọc.">?</button>
           </h4>
           <!-- Thanh công cụ của Kế Hoạch vs Đã Ép -->
           <div class="pv-toolbar" id="pv-toolbar-plan">
@@ -2494,13 +2508,16 @@
           </div>
         </div>
         <div class="pv-cap-hint-row" id="pv-cap-hint-row" hidden><span class="pv-cap-hint">Xanh: đủ 100% • vàng: thiếu — rê/chạm cột để xem nguyên nhân</span></div>
-        <!-- Khung 1: Kế Hoạch vs Đã Ép -->
-        <div class="press-chart-box" id="pv-chart-box-plan">
+        <!-- Khung 1: Kế Hoạch vs Đã Ép — title = tooltip thay ghi chú đứng yên -->
+        <div class="press-chart-box" id="pv-chart-box-plan"
+             title="Tím = Kế hoạch · Xanh lá = Đã Ép (Xuất hàng) — rê chuột vào cột để xem số liệu chi tiết. Đổi đơn vị m³ / Số lượng · 1–2 tuần · Total ở thanh công cụ phía trên.">
           <span class="pv-total-stamp" id="pv-total-stamp" aria-hidden="true"></span>
           <canvas id="plan-vs-press-chart"></canvas>
         </div>
-        <!-- Khung 2: Khả Năng Đáp Ứng Kế Hoạch -->
-        <div class="press-chart-box" id="pv-chart-box-cap" hidden>
+        <!-- Khung 2: Khả Năng Đáp Ứng Kế Hoạch — title giữ nguyên nội dung dòng
+             gợi ý #pv-cap-hint-row (nay ẨN bằng CSS, chỉ còn thấy khi hover) -->
+        <div class="press-chart-box" id="pv-chart-box-cap" hidden
+             title="Xanh: đủ 100% • vàng: thiếu — rê/chạm cột để xem nguyên nhân.">
           <canvas id="plan-capacity-chart"></canvas>
         </div>
       </div>
@@ -2512,7 +2529,11 @@
       <!-- ======================================================= -->
       <div class="planning-card press-chart-card pv-card" id="material-plan-chart-card">
         <div class="planning-card-header">
-          <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)</h4>
+          <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)
+            <!-- Nút "?" TRỢ GIÚP — giải thích cột rỗng/đặc, hình thân cây, dải hôm nay -->
+            <button type="button" class="btn-dash-help" id="btn-help-material"
+                    title="Giải thích nhanh: cột rỗng = kế hoạch · cột đặc = thực tế, hình thân cây theo vị trí, dải nền cam = hôm nay.">?</button>
+          </h4>
           <div class="pv-toolbar">
             <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
               <button type="button" class="pv-week-btn" id="mpc-week-prev" title="Tuần trước"><i data-lucide="chevron-left"></i></button>
@@ -2525,7 +2546,9 @@
             </button>
           </div>
         </div>
-        <div class="press-chart-box">
+        <!-- title = tooltip giải thích thay ghi chú — rê vào khung biểu đồ hiện cách đọc -->
+        <div class="press-chart-box"
+             title="Vỏ cột (khung rỗng) = Kế hoạch trung bình/ngày · cột đặc = Thực tế nhập trong ngày. Hình thân cây theo vị trí: tre = Xưởng 2 · ống nứa (vầu/nứa) = Xưởng 1 · khúc gỗ trơn = Lò hơi. Dải nền cam nhạt = hôm nay. Rê chuột vào cột để xem số liệu.">
           <canvas id="material-plan-chart"></canvas>
         </div>
       </div>
@@ -2543,6 +2566,9 @@
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
+            <!-- Nút "?" TRỢ GIÚP vùng — mô tả vùng (p trong .dash-zone-title) đã ẨN; hover nút hiện mô tả, bấm mở modal -->
+            <button type="button" class="btn-dash-help" id="btn-help-zone-basic"
+                    title="Tổng hợp biểu đồ từ tất cả các tab (Công Đoạn, Kế Hoạch, Ép Ván, Nguyên Liệu) — mọi người đều xem được. Bấm để xem giải thích nhanh cách dùng vùng.">?</button>
             <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-dashboard" title="Lịch sử thay đổi biểu đồ Dashboard (chỉ Admin)">
               <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
             </button>
@@ -2570,6 +2596,9 @@
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
+            <!-- Nút "?" TRỢ GIÚP vùng Nâng Cao — mô tả vùng đã ẨN; hover hiện mô tả, bấm mở modal -->
+            <button type="button" class="btn-dash-help" id="btn-help-zone-advanced"
+                    title="Chỉ dành cho Admin &amp; Ban Quản Lý — chứa các chỉ số nội bộ, định mức, năng suất nhân viên... Bấm để xem giải thích nhanh.">?</button>
             <button class="btn btn-primary btn-sm" id="btn-add-chart-advanced" style="display:none;">
               <i data-lucide="plus-circle"></i> + Tạo Biểu Đồ Nâng Cao
             </button>
@@ -6099,6 +6128,26 @@
     });
   })();
   </script>
+
+  <!-- ═══ TRỢ GIÚP DASHBOARD — GIẢI THÍCH NHANH THEO VÙNG/ĐỐI TƯỢNG (nút "?")
+       Các ghi chú giải thích trên THẺ BIỂU ĐỒ tab Tổng Quan đã bị ẨN bằng CSS
+       (khối "TRỢ GIÚP DASHBOARD" cuối styles.css): p.cap-note · dòng #pv-cap-hint-row
+       · mô tả vùng (.dash-zone-title p) · phụ đề thẻ biểu đồ (.custom-card-subtitle).
+       Nội dung chuyển sang 2 lớp: TOOLOLTIP (title) khi rê chuột + MODAL này khi
+       bấm nút "?" cạnh tiêu đề thẻ/vùng. Mở bởi openDashHelp(key, id) —
+       js/dashboard.js · wiring js/events.js · nút "?" thẻ biểu đồ = app.openDashHelp ═══ -->
+  <div class="modal-overlay" id="modal-dash-help">
+    <div class="modal-card dash-help-card">
+      <div class="modal-header">
+        <h3><i data-lucide="info"></i> <span id="dash-help-title">Trợ Giúp Dashboard</span></h3>
+        <button class="modal-close-btn" id="btn-close-dash-help" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body dash-help-body" id="dash-help-body"><!-- Nội dung dựng động bởi js/dashboard.js --></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-dash-help-ok">Đã Hiểu</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══ POPUP: ĐỊNH MỨC THỜI GIAN 1 LẦN THAN HÓA (theo tháng — 4 cột phút/lần
        Sấy 1·Ván / Sấy 1·Bullig / Sấy 2·Ván / Sấy 2·Bullig; ô trống = dùng mặc định.

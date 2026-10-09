@@ -147,9 +147,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     return zone === 'advanced' ? `<span class="chart-zone-chip" title="Biểu đồ vùng nâng cao"><i data-lucide="shield"></i>NÂNG CAO</span>` : '';
   }
 
-  // HTML của 1 thẻ biểu đồ (card). showTools: hiện nút sửa/xóa theo quyền.
-  function renderChartCard(chartDef, showTools) {
-    const canvasId = `custom-canvas-${chartDef.id}`;
+  // ── PHỤ ĐỀ CỦA THẺ BIỂU ĐỒ (nhóm · chỉ số · xếp tầng · bộ lọc đang bật) ──
+  // TÁCH thành hàm riêng vì dùng ở 2 nơi: render thẻ (phụ đề nay ĐÃ ẨN — chỉ còn
+  // hiện qua tooltip title khi rê chuột + modal "?" openDashHelp('chart', id))
+  // và modal trợ giúp. Logic giữ NGUYÊN như cũ.
+  function chartSubtitleOf(chartDef) {
     const schema = BUILDER_SCHEMA[chartDef.source || 'kanban'];
     const groupLabel = (schema.groupBy.find(g => g[0] === chartDef.groupBy) || [, chartDef.groupBy])[1];
     const metricLabel = (schema.metric.find(g => g[0] === chartDef.metric) || [, chartDef.metric])[1];
@@ -182,6 +184,13 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     if (activeFilters.length) {
       subtitle += ` • Lọc: ${activeFilters.slice(0, 3).join(' • ')}${activeFilters.length > 3 ? ` (+${activeFilters.length - 3})` : ''}`;
     }
+    return subtitle;
+  }
+
+  // HTML của 1 thẻ biểu đồ (card). showTools: hiện nút sửa/xóa theo quyền.
+  function renderChartCard(chartDef, showTools) {
+    const canvasId = `custom-canvas-${chartDef.id}`;
+    const subtitle = chartSubtitleOf(chartDef);
     const tools = showTools ? `
       <button class="btn btn-outline btn-icon" onclick="app.openEditChartModal('${chartDef.id}')" title="Chỉnh sửa biểu đồ">
         <i data-lucide="edit-3"></i>
@@ -189,6 +198,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       <button class="btn btn-outline btn-icon btn-delete-chart" onclick="app.deleteCustomChart('${chartDef.id}')" title="Xóa biểu đồ">
         <i data-lucide="trash-2"></i>
       </button>` : '';
+    // Nút "?" TRỢ GIÚP — mở modal giải thích nhanh THEO THẺ này (nhóm · chỉ số
+    // · bộ lọc đang bật — lấy động từ chartDef). Ghi chú phụ đề đã ẨN bằng CSS.
+    const helpBtn = `
+      <button class="btn-dash-help" onclick="app.openDashHelp('chart', '${chartDef.id}')" title="Giải thích nhanh biểu đồ này: nhóm · chỉ số · bộ lọc đang bật">?</button>`;
     // Nút mở rộng toàn màn hình: LUÔN hiển thị (kể cả người chỉ xem) — quan trọng trên điện thoại
     const expandBtn = `
       <button class="btn btn-outline btn-icon btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
@@ -203,7 +216,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           <i data-lucide="maximize-2"></i>
         </div>
         <div class="custom-card-header">
-          <div>
+          <!-- title = tooltip chứa phụ đề (vừa ẩn) — rê chuột vào vùng tiêu đề hiện đủ -->
+          <div title="${escapeHTML(subtitle)}">
             <div class="custom-card-chips">${sourceChipHtml(chartDef.source)}${zoneChipHtml(chartDef.zone)}</div>
             <h4 class="custom-card-title">
               <i data-lucide="${TYPE_ICONS[chartDef.type] || 'bar-chart-3'}"></i>
@@ -211,7 +225,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
             </h4>
             <p class="custom-card-subtitle">${escapeHTML(subtitle)}</p>
           </div>
-          <div class="custom-chart-tools">${expandBtn}${tools}</div>
+          <div class="custom-chart-tools">${helpBtn}${expandBtn}${tools}</div>
         </div>
         <div class="custom-chart-canvas-box">
           <canvas id="${canvasId}"></canvas>
@@ -1362,16 +1376,232 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     }
   });
 
+  // ═══ TRỢ GIÚP DASHBOARD — GIẢI THÍCH NHANH THEO VÙNG/ĐỐI TƯỢNG ═══
+  // Ghi chú giải thích trên THẺ BIỂU ĐỒ tab Tổng Quan đã bị ẨN khỏi mặt thẻ
+  // (khối CSS "TRỢ GIÚP DASHBOARD" cuối styles.css — p.cap-note · dòng
+  // #pv-cap-hint-row · .dash-zone-title p · .custom-card-subtitle). Người dùng
+  // xem qua 2 lớp: ① TOOLOLTIP (title) khi rê chuột vào vùng/biểu đồ/tiêu đề cột
+  // tương ứng ② MODAL #modal-dash-help khi bấm nút "?" cạnh tiêu đề thẻ/vùng.
+  // Mở: openDashHelp(key) với key ∈ DASH_HELP, hoặc 'chart' + id biểu đồ tùy chỉnh.
+  const DASH_HELP = {
+    capacity: {
+      title: 'Cách Đọc: Tổng Hợp Công Suất & Hiệu Suất',
+      body: `
+        <div class="dash-help-sec">
+          <h5>Chọn kỳ xem</h5>
+          <ul>
+            <li>Nút <b>Tuần / Tháng</b> ở đầu thẻ đổi kỳ tổng hợp; <b>‹ ›</b> nhảy nhanh kỳ trước/sau; chế độ Tháng có ô chọn tháng riêng.</li>
+            <li>Chế độ <b>Biểu đồ</b> = đồng hồ hiệu suất · thang xếp hạng · bản đồ nhiệt 8 kỳ · biểu đồ công đoạn. Chế độ <b>Bảng dữ liệu</b> = bảng 3 tầng.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>3 tầng xổ tại chỗ</h5>
+          <ul>
+            <li><b>Bấm 1 dòng KỲ</b> → hiện từng CÔNG ĐOẠN của kỳ đó.</li>
+            <li><b>Bấm tiếp công đoạn</b> → xổ từng NGÀY (kèm ô nhập giờ sự cố).</li>
+            <li>Tầng công đoạn có nút <b>Mở thẻ</b> → nhảy sang tab Công Đoạn SX để sửa số liệu.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Ý nghĩa cột số liệu</h5>
+          <ul>
+            <li><b>Giờ HC / Giờ TC</b>: tách từ Bảng bố trí Nhân Sự — mỗi ngày mỗi công đoạn chỉ đếm 1 lần; ngày nghỉ/lễ đi làm tính toàn TC.</li>
+            <li><b>Công suất thực</b> = sản lượng ÷ giờ hiệu dụng (giờ − giờ sự cố).</li>
+            <li><b>Hiệu suất</b> = công suất thực ÷ định mức (tuần vắt 2 tháng = bình quân gia quyền theo sản lượng). ≥100% tô xanh, dưới 100% tô cam.</li>
+            <li><b>Đạt ≥100%</b> = số công đoạn đạt định mức / số công đoạn tính được hiệu suất.</li>
+            <li><b>Nút thắt cổ chai</b> = công đoạn hiệu suất thấp nhất kỳ — nên kiểm tra, xử lý trước.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Mẹo</h5>
+          <ul>
+            <li>Rê chuột vào <b>tiêu đề từng cột bảng</b> hiện giải thích của cột đó.</li>
+            <li>Nút <b>In báo cáo</b> in thông tin chung của TẤT CẢ bộ phận (không kèm bản đồ nhiệt/biểu đồ 8 kỳ).</li>
+          </ul>
+        </div>`
+    },
+    'pv-plan': {
+      title: 'Cách Đọc: Kế Hoạch vs Đã Ép (Theo Sản Phẩm)',
+      body: `
+        <div class="dash-help-sec">
+          <h5>Ý nghĩa màu cột</h5>
+          <ul>
+            <li><b style="color:#7c3aed">■ Tím — Kế hoạch</b> theo tuần của tab Kế Hoạch.</li>
+            <li><b style="color:#16a34a">■ Xanh lá — Đã Ép</b> (xuất hàng): lượt Ép Ván + công đoạn Chọn thanh của thẻ Bullig.</li>
+            <li><b style="color:#ea580c">■ Cam — Số Lượng Xuất</b> (chỉ ở chế độ <b>Total</b>).</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Thanh công cụ</h5>
+          <ul>
+            <li><b>m³ / Số lượng</b>: đổi đơn vị nhãn — chiều cao cột vẫn theo m³.</li>
+            <li><b>1 tuần / 2 tuần</b>: 2 tuần = CẶP tuần không chồng lắn (tuần lẻ + kế: 33–34, 35–36…).</li>
+            <li><b>Total</b>: gộp theo nhóm Bullig · Ván · Khác — kèm sticker <b>"Đạt x%"</b> = Xuất hàng ÷ Kế hoạch.</li>
+            <li>Ô tuần / năm + <b>‹ ›</b> để đổi kỳ; <b>rê chuột vào cột</b> hiện số liệu chi tiết.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Tương tác</h5>
+          <ul>
+            <li>Bấm <b>tên biểu đồ</b> (nút lớn ở tiêu đề) để chuyển sang biểu đồ <b>Khả Năng Đáp Ứng</b>.</li>
+            <li>Nút ⤢ xem toàn màn hình (điện thoại / máy tính bảng).</li>
+          </ul>
+        </div>`
+    },
+    'pv-cap': {
+      title: 'Cách Đọc: Khả Năng Đáp Ứng Kế Hoạch',
+      body: `
+        <div class="dash-help-sec">
+          <h5>Ý nghĩa màu cột</h5>
+          <ul>
+            <li><b style="color:#16a34a">Xanh</b>: tồn có thể đáp ứng ≥100% kế hoạch tuần.</li>
+            <li><b style="color:#d97706">Vàng</b>: thiếu — <b>rê/chạm vào cột</b> để xem nguyên nhân (tooltip liệt kê lý do).</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Cách tính</h5>
+          <ul>
+            <li>Tồn khả dụng = tồn nan toàn nhóm (Sấy 1 + Sấy 2 + Kho) đã đồng bộ cột TỒN của Bảng Kế Hoạch — gồm thanh chưa chuyển Bào Tinh.</li>
+            <li>Cột % = tồn đáp ứng được ÷ kế hoạch tuần; bằng hoặc vượt = chốt được kế hoạch tuần đó.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Điều hướng</h5>
+          <ul>
+            <li>Cửa sổ hiển thị <b>8 tuần</b>; <b>‹ ›</b> lùi/tiến cả cửa sổ; chọn năm ở thanh công cụ.</li>
+            <li>Bấm <b>tên biểu đồ</b> để quay lại <b>Kế Hoạch vs Đã Ép</b>.</li>
+          </ul>
+        </div>`
+    },
+    material: {
+      title: 'Cách Đọc: Kế Hoạch vs Thực Tế Nguyên Liệu',
+      body: `
+        <div class="dash-help-sec">
+          <h5>Ý nghĩa cột</h5>
+          <ul>
+            <li><b>Vỏ cột (khung rỗng)</b> = Kế hoạch trung bình/ngày từ bảng Kế Hoạch Nguyên Liệu.</li>
+            <li><b>Cột đặc</b> = Thực tế nhập trong ngày (lấp theo tỷ lệ đạt kế hoạch).</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Hình thân cây theo vị trí</h5>
+          <ul>
+            <li><b>Cây tre</b> (đốt chia theo vạch trục Y) = Xưởng 2 · <b>Ống nứa (vầu/nứa)</b> = Xưởng 1 · <b>Khúc gỗ trơn</b> = Lò hơi.</li>
+            <li><b>Dải nền cam nhạt + vạch nét đứt</b> = hôm nay (nếu hôm nay ngoài khung đang xem thì không vẽ).</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Thao tác</h5>
+          <ul>
+            <li>Rê chuột vào cột hiện kế hoạch / thực tế / tỷ lệ của ngày đó.</li>
+            <li>Vuốt ngang biểu đồ hoặc dùng <b>‹ ›</b> để xem thêm ngày; đổi tuần ở ô chọn tuần.</li>
+          </ul>
+        </div>`
+    },
+    'zone-basic': {
+      title: 'Vùng Cơ Bản — Biểu Đồ Chung',
+      body: `
+        <div class="dash-help-sec">
+          <h5>Là gì?</h5>
+          <ul>
+            <li>Gom mọi biểu đồ từ tất cả các tab (Công Đoạn, Kế Hoạch, Ép Ván, Nguyên Liệu) — <b>mọi người đều xem được</b>.</li>
+            <li>Chip màu trên mỗi thẻ = NGUỒN dữ liệu (tab gốc); biểu đồ vùng Nâng Cao có thêm chip NÂNG CAO.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Thao tác nhanh</h5>
+          <ul>
+            <li><b>?</b> trên từng biểu đồ = giải thích nhanh biểu đồ đó (nhóm · chỉ số · bộ lọc đang bật).</li>
+            <li>Kéo thanh trên tiêu đề thẻ để ĐỔI VỊ TRÍ · ⤢ xem toàn màn hình · ✎ sửa / 🗑 xóa (theo quyền).</li>
+            <li><b>+ Tạo Biểu Đồ</b> = dựng biểu đồ mới từ dữ liệu các tab (nguồn · nhóm · chỉ số · bộ lọc).</li>
+          </ul>
+        </div>`
+    },
+    'zone-advanced': {
+      title: 'Vùng Nâng Cao — Phân Tích Chuyên Sâu',
+      body: `
+        <div class="dash-help-sec">
+          <h5>Quyền truy cập</h5>
+          <ul>
+            <li>Chỉ <b>Admin</b> và <b>Ban Quản Lý</b> (hoặc người được cấp quyền riêng) thấy nội dung.</li>
+            <li>Chưa đủ quyền → khối khóa hướng dẫn Đăng Nhập / Yêu Cầu Quyền.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Nội dung</h5>
+          <ul>
+            <li>Chứa chỉ số nội bộ, định mức, năng suất nhân viên… — nhạy cảm hơn vùng Cơ Bản.</li>
+            <li>Dùng thẻ biểu đồ như vùng Cơ Bản (kéo sắp xếp · ⤢ mở rộng · ? giải thích).</li>
+          </ul>
+        </div>`
+    }
+  };
+
+  // Nội dung trợ giúp cho 1 THẺ BIỂU ĐỒ TÙY CHỈNH (key 'chart' + id) — dựng động
+  // từ chính chartDef nên luôn khớp bộ lọc ĐANG BẬT hiện trên thẻ đó.
+  function chartHelpHtml(chartDef) {
+    const tab = getTabDef(chartDef.source || 'kanban');
+    return `
+      <div class="dash-help-sec">
+        <h5>Thông Tin Biểu Đồ</h5>
+        <ul>
+          <li>Nguồn: <b>${escapeHTML(tab && tab.name ? tab.name : String(chartDef.source || 'kanban'))}</b> · Vùng: <b>${chartDef.zone === 'advanced' ? 'Nâng Cao' : 'Cơ Bản'}</b>${chartDef.width === 'full' ? ' · Khổ rộng' : ''}</li>
+          <li>${escapeHTML(chartSubtitleOf(chartDef))}</li>
+        </ul>
+      </div>
+      <div class="dash-help-sec">
+        <h5>Đọc & Thao Tác</h5>
+        <ul>
+          <li>Di chuột vào cột / miếng biểu đồ hiện số liệu + tỷ lệ %.</li>
+          <li>Phụ đề thẻ (đã ẩn) = dòng trên — liệt kê nhóm · chỉ số · bộ lọc đang bật.</li>
+          <li>Kéo thanh tiêu đề để đổi vị trí thẻ · ⤢ toàn màn hình (điện thoại) · ✎ sửa / 🗑 xóa theo quyền.</li>
+        </ul>
+      </div>`;
+  }
+
+  // Mở modal trợ giúp: key ∈ DASH_HELP, hoặc 'chart' + chartId (biểu đồ tùy chỉnh)
+  function openDashHelp(key, chartId) {
+    const modal = document.getElementById('modal-dash-help');
+    if (!modal) return;
+    let title = 'Trợ Giúp Dashboard';
+    let html = '';
+    if (key === 'chart') {
+      const def = (state.customCharts || []).find(c => c.id === chartId);
+      if (!def) return;
+      title = def.title || 'Biểu Đồ';
+      html = chartHelpHtml(def);
+    } else {
+      const entry = DASH_HELP[key];
+      if (!entry) return;
+      title = entry.title;
+      html = entry.body;
+    }
+    const tEl = document.getElementById('dash-help-title');
+    const bEl = document.getElementById('dash-help-body');
+    if (tEl) tEl.textContent = title;
+    if (bEl) bEl.innerHTML = html;
+    modal.classList.add('show');
+    try { initLucide(); } catch (e) { /* icon chưa sẵn sàng — nội dung vẫn thấy */ }
+  }
+  function closeDashHelp() {
+    const modal = document.getElementById('modal-dash-help');
+    if (modal) modal.classList.remove('show');
+  }
+
 export {
   MS_ALL,
   asOptPair,
   BUILDER_SCHEMA,
+  DASH_HELP,
+  chartSubtitleOf,
   closeChartBuilderModal,
+  closeDashHelp,
   collectBuilderFilterVals,
   deleteCustomChart,
   formatChartValue,
   handleChartBuilderSubmit,
   openChartBuilderModal,
+  openDashHelp,
   populateBuilderOptions,
   registerChartDataLabelsPlugin,
   renderBuilderFilters,

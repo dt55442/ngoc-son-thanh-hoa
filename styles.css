@@ -2404,6 +2404,19 @@ body.chart-expanded-open { overflow: hidden; }
   display: none;
 }
 
+/* Nhãn tiêu đề 2 lớp: BẢN ĐẦY hiển thị mặc định, BẢN RÚT GỌN (.hl-short/.hp-short)
+   ẨN ở desktop. Bản cũ thiếu quy tắc này → cả 2 lớp cùng hiện, chữ dính chùm
+   ("TỔNG TỒNTỒN", "VÁNV", "CÂNCN"...). Bản đảo nằm trong @media bên dưới. */
+.planning-matrix .hl-short,
+.planning-matrix .hp-short {
+  display: none;
+}
+
+.planning-matrix .hl-full,
+.planning-matrix .hp-full {
+  display: inline;
+}
+
 /* ── ĐIỆN THOẠI: ma trận kế hoạch co từng tuần vừa màn hình, hết kéo ngang ── */
 @media (max-width: 768px) {
   .planning-matrix {
@@ -9504,7 +9517,8 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
    đẩy/tải mây · backup.
    2 PHA (SPRITE 18 FRAME — icons/loading/tre-sprite.png · 6 cột × 3 dòng · 640×360):
            ① ĐANG CHẶT (treChop, lặp): frame 1–13 — nông dân đứng → giơ rìu →
-              vung (lưỡi lam) → BỔ TRÚNG (mảnh gỗ văng) → lá bay; 200ms/frame (2.6s/vòng);
+              vung (lưỡi lam) → BỔ TRÚNG (mảnh gỗ văng) → lá bay; ~64ms/frame
+              (0.83s/vòng — 6 vòng trong cửa sổ tải ~5s);
            ② TẢI XONG → .is-fall (treFall, chạy 1 lần — 700ms = TRE_TIMING.fall):
               frame 14–18 — tre GÃY đổ sang PHẢI (NGƯỢC phía người đứng chặt
               bên trái) → bụi mù → gốc cây + bột trắng, giữ frame cuối; sau
@@ -9545,7 +9559,7 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   aspect-ratio: 640 / 360;       /* đúng tỉ lệ frame 16:9 */
   display: block;
   background: url("icons/loading/tre-sprite.png") 0 0 / 600% 300% no-repeat;
-  animation: treChop 2.6s steps(1) infinite;
+  animation: treChop 0.83s steps(1) infinite;
 }
 @keyframes treChop {
   0%      { background-position:   0%   0%; }  /* f1  — nông dân đứng */
@@ -9557,8 +9571,8 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   46.15%  { background-position:   0%  50%; }  /* f7  — giơ cao */
   53.85%  { background-position:  20%  50%; }  /* f8  */
   61.54%  { background-position:  40%  50%; }  /* f9  — vung xuống (vệt lưỡi lam) */
-  69.23%  { background-position:  60%  50%; }  /* f10 — BỔ TRÚNG: chém lớn + mảnh gỗ */
-  76.92%  { background-position:  80%  50%; }  /* f11 — chém nghiêng */
+  69.23%  { background-position:  60%  50%; }  /* f10 — BỔ TRÚNG: chặt lớn + mảnh gỗ */
+  76.92%  { background-position:  80%  50%; }  /* f11 — chặt nghiêng */
   84.62%  { background-position: 100%  50%; }  /* f12 — mảnh vỡ văng */
   92.31%  { background-position:   0% 100%; }  /* f13 — lá + mảnh bay (sắp gãy) */
   100%    { background-position:   0%   0%; }  /* quay về f1 — lặp */
@@ -9611,8 +9625,25 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
 }
 .tre-hit-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #14532d; }
 .tre-hit-btn[hidden] { display: none !important; } /* attribute hidden của UA phải thắng */
+/* ── NÚT "BỎ QUÁ" — lối tắt vào thẳng Dashboard khi đang chơi nghi thức
+   (chỉ hiện cùng nút chặt ở chế độ game — skipTreLoading trong js/loading.js) ── */
+.tre-skip-btn {
+  margin-top: 4px;
+  padding: 6px 16px;
+  min-height: 34px;
+  font-size: .82rem; font-weight: 600;
+  color: #0f766e;
+  background: transparent;
+  border: 1.5px dashed #0f766e;
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tre-skip-btn:hover { background: rgba(15, 118, 110, .10); }
+.tre-skip-btn:active { transform: translateY(1px); }
+.tre-skip-btn[hidden] { display: none !important; } /* attribute hidden của UA phải thắng */
 /* ── CHẾ ĐỘ GAME: IDLE ĐỨNG YÊN — KHÔNG lặp (không còn chặt khi không bấm).
-   Mỗi nhát bấm "Chém!" → class .is-hitting chạy ĐÚNG 1 vòng chặt
+   Mỗi nhát bấm "Chặt!" → class .is-hitting chạy ĐÚNG 1 vòng chặt
    treHitOnce 600ms (10 pha × 60ms: giơ rìu → vung → BỔ TRÚNG → mảnh vỡ →
    lá bay → về frame 1) rồi TỰ GỠ (animationend trong js/loading.js);
    bấm lại giữa chừng → remove + reflow + add = chạy lại từ đầu. ── */
@@ -9626,7 +9657,7 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   40%  { background-position:  20%  50%; }  /* f8  */
   50%  { background-position:  40%  50%; }  /* f9  — vung xuống */
   60%  { background-position:  60%  50%; }  /* f10 — BỔ TRÚNG */
-  70%  { background-position:  80%  50%; }  /* f11 — chém nghiêng */
+  70%  { background-position:  80%  50%; }  /* f11 — chặt nghiêng */
   80%  { background-position: 100%  50%; }  /* f12 — mảnh vỡ văng */
   90%  { background-position:   0% 100%; }  /* f13 — lá + mảnh bay */
   100% { background-position:   0%   0%; }  /* f1  — về tư thế đứng */
@@ -9673,5 +9704,93 @@ body[data-fx="low"] .tre-loading-card.tre-hit-punch { animation: none; }
   .tre-scene { width: 88vw; }
   .tre-loading-text { font-size: .85rem; }
   .tre-hit-btn { width: 100%; font-size: 1.05rem; }
+  .tre-skip-btn { width: 100%; font-size: .9rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRỢ GIÚP DASHBOARD — ẨN GHI CHÚ GIẢI THÍCH + NÚT "?" + MODAL
+   (09/10/2026) Yêu cầu: biểu đồ tab Tổng Quan KHÔNG còn ghi chú đứng
+   yên trên mặt thẻ — chỉ hiện dạng TOOLTIP khi di chuột + nút help (?)
+   bấm vào để xem giải thích nhanh theo vùng/đối tượng.
+   ─ GHI CHÚ BỊ ẨN (phần tử GIỮ NGUYÊN trong HTML — test cấu trúc và
+     logic cũ vẫn chạy; nội dung đã chuyển sang title + #modal-dash-help):
+     · p.cap-note            — cách đọc bảng Tổng Hợp Công Suất
+     · #pv-cap-hint-row      — gợi ý màu cột Khả Năng Đáp Ứng
+     · .dash-zone-title p    — mô tả Vùng Cơ Bản / Vùng Nâng Cao
+     · .custom-card-subtitle — phụ đề thẻ biểu đồ tùy chỉnh
+   ─ TOOLTIP (title) đã gắn sẵn trên: khung biểu đồ · bảng công suất ·
+     nút "?" từng thẻ/vùng · header thẻ biểu đồ (phụ đề) — hover là thấy.
+   ─ MODAL #modal-dash-help dựng nội dung bởi openDashHelp() — js/dashboard.js
+   ═══════════════════════════════════════════════════════════════ */
+.cap-note,
+#pv-cap-hint-row,
+.dash-zone-title p,
+.custom-chart-card .custom-card-subtitle {
+  display: none !important;
+}
+
+/* ── NÚT "?" — tròn viền cùng tông thẻ, hover tô đặc; tôn trọng data-fx ── */
+.btn-dash-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+  border: 1.5px solid var(--primary, #16a34a);
+  border-radius: 50%;
+  background: var(--bg-card, #fffdf6);
+  color: var(--primary, #16a34a);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.btn-dash-help:hover {
+  background: var(--primary, #16a34a);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+  transform: translateY(-1px);
+}
+.btn-dash-help:focus-visible {
+  outline: 2px solid var(--primary, #16a34a);
+  outline-offset: 2px;
+}
+body[data-fx="low"] .btn-dash-help { transition: none; }
+body[data-fx="low"] .btn-dash-help:hover { transform: none; }
+/* .cap-mode-head trước đây không khai gap — chừa chỗ cho nút "?" bên cạnh */
+.cap-mode-head { gap: 8px; }
+
+/* ── MODAL TRỢ GIÚP #modal-dash-help — 640px, nội dung theo khối .dash-help-sec ── */
+.dash-help-card {
+  max-width: 640px;
+  width: calc(100% - 24px);
+}
+#dash-help-body {
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+.dash-help-sec { margin-bottom: 12px; }
+.dash-help-sec:last-child { margin-bottom: 0; }
+.dash-help-sec h5 {
+  margin: 0 0 4px;
+  padding-bottom: 4px;
+  font-size: 0.8rem;
+  color: var(--primary, #16a34a);
+  border-bottom: 1px dashed var(--border-color, rgba(46, 125, 50, 0.30));
+}
+.dash-help-sec ul { margin: 4px 0 0; padding-left: 18px; }
+.dash-help-sec li { margin: 3px 0; }
+.dash-help-sec li::marker { color: var(--primary, #16a34a); }
+
+/* ── ĐIỆN THOẠI: chữ nhỏ hơn, nút "?" đủ vùng chạm ── */
+@media (max-width: 639.98px) {
+  #dash-help-body { font-size: 0.78rem; }
+  .dash-help-sec h5 { font-size: 0.76rem; }
+  .btn-dash-help { width: 32px; height: 32px; font-size: 0.95rem; }
 }
 

@@ -249,7 +249,7 @@
     planningYearFilter: 'all',
     pressNotes: [], // Ghi chú giải trình theo ngày (sản lượng không đáp ứng): [{ id, date, text, createdAt, updatedAt }]
     pressNotesExpanded: false, // Đang hiển thị nội dung TẤT CẢ ghi chú trên biểu đồ ép ván (nút "Hiện Ghi Chú")
-    planningPendingScroll: true, // chỉ trượt tới tuần hiện tại khi mới mở tab / reset trang
+    planningPendingScroll: true, // đặt NGAY vị trí tuần hiện tại khi mới mở tab / reset trang (không trượt)
     planningForecast: {}, // { year: { week: { nanKey: qty } } }
     planningStock: {}, // { year: { week: { glue: qty, additive: qty } } }
     // Sản lượng ép ván

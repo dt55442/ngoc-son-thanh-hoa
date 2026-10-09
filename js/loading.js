@@ -4,16 +4,18 @@
 // Overlay toàn màn hình (#tre-loading-overlay — markup ĐẦU <body>, hiện NGAY
 // khi mở trang). Mọi chỗ CHỜ PHẢN HỒI gọi showTreLoading(...): boot · AI ·
 // xuất Excel · đẩy/tải mây (2 nút thủ công) · backup · MỞ TAB LẦN ĐẦU.
-// Cảnh 2 pha (styles.css): treChop frame 1–13 (200ms/frame ≈ 2.6s/vòng —
-// CHỈ chế độ auto chạy lặp; game IDLE đứng yên frame 1) — mỗi nhát bấm game
+// Cảnh 2 pha (styles.css): treChop frame 1–13 (~64ms/frame ≈ 0.83s/vòng —
+// 6 vòng trong cửa sổ tải ~5s; CHỈ chế độ auto chạy lặp; game IDLE đứng yên
+// frame 1) — mỗi nhát bấm game
 // chạy đúng 1 vòng treHitOnce 600ms qua class .is-hitting → .is-fall
 // treFall 700ms (frame 14–18 — cây GÃY) → .is-gone mờ dần.
 // 2 CHẾ ĐỘ TIẾN ĐỘ (thanh #tre-progress 0→100% — 1 nguồn sự thật do đây ghi):
 //   · auto (mặc định): ticker theo TRE_TIMING.load (~5s) — task xong + tròn
 //     load mới gãy; task chậm hơn thì gãy ngay khi xong. Trong lúc chờ
 //     main.js.preloadCoreViews() vẽ sẵn bảng Kanban → mở tab không lag.
-//   · game (CHỈ BOOT — mỗi lần mở trang): bấm "Chém!" 5%/nhát (20 nhát) —
-//     đủ 100% cây MỚI gãy, MỚI thấy Dashboard (nền blur thấy nội dung mờ).
+//   · game "NGHI THỨC CẦP LUỒNG" (CHỈ BOOT — mỗi lần mở trang): bấm "Chặt!"
+//     5%/nhát (20 nhát) đủ 100% cây MỚI gãy, MỚI thấy Dashboard (nền blur);
+//     vội thì bấm NÚT "Bỏ qua" (skipTreLoading) — gãy ngay, không cần đủ nhát.
 // Refcount: nhiều tác vụ chờ → chỉ kết thúc khi TẤT CẢ xong. LỖI (ok=false)
 // → tre KHÔNG gãy. Timer unref() trong Node → test headless không bị giữ.
 // Boot-guard (99999) luôn nổi TRÊN overlay (10050).
@@ -24,6 +26,7 @@ const TRE_PROGRESS_ID = 'tre-progress';
 const TRE_FILL_ID = 'tre-progress-fill';
 const TRE_PCT_ID = 'tre-progress-pct';
 const TRE_BTN_ID = 'tre-hit-btn';
+const TRE_SKIP_ID = 'tre-skip-btn';   // nút "Bỏ qua" — vào thẳng khi đang game
 const TRE_CARD_ID = 'tre-loading-card';
 // Thời gian (ms) — export object mutable để test headless thu nhỏ cho nhanh:
 //   load     = cửa sổ auto MẶC ĐỊNH (~5s — đủ thấy cảnh + preload chạy)
@@ -91,7 +94,7 @@ function treFall(el) {
 function treHint() {
   const txt = treEl(TRE_TEXT_ID);
   if (txt) {
-    txt.textContent = 'Bấm "Chém!" để chặt cây — ' + Math.round(trePct) +
+    txt.textContent = 'Nghi thức cầu luồng — ' + Math.round(trePct) +
       '% (còn ' + Math.ceil((100 - trePct) / Math.max(1, TRE_TIMING.hitStep)) + ' nhát)';
   }
 }
@@ -103,7 +106,9 @@ function treEnterGame(el) {
   el.classList.remove('is-fall', 'is-gone');
   el.classList.add('is-game');
   const btn = treEl(TRE_BTN_ID);
-  if (btn) btn.hidden = false;   // hiện nút "Chém! (+5%)"
+  if (btn) btn.hidden = false;   // hiện nút "Chặt! (+5%)"
+  const skip = treEl(TRE_SKIP_ID);
+  if (skip) skip.hidden = false; // hiện nút "Bỏ qua" (lối tắt vào thẳng)
   treHint();
   treBindHits(el);
 }
@@ -128,8 +133,26 @@ function hitTreLoading() {
     treGame = false;
     const btn = treEl(TRE_BTN_ID);
     if (btn) btn.hidden = true;
+    const skip = treEl(TRE_SKIP_ID);
+    if (skip) skip.hidden = true;
     if (ov) { ov.classList.remove('is-game', 'is-hitting'); treFall(ov); }
   }
+  return trePct;
+}
+// ⏭ BỎ QUA NGHI THỨC — vào thẳng Dashboard không cần bấm đủ 20 nhát.
+// Chỉ có tác dụng khi ĐANG ở game (boot đã xong, dữ liệu đã nạp); tái dùng
+// đúng đường GÃY chuẩn (treFall → "Xong rồi!" → is-gone) — không nhánh riêng
+// để khỏi lệch hành vi với nhánh đủ 100%.
+function skipTreLoading() {
+  if (!treGame) return trePct;    // không ở game → bỏ qua an toàn
+  treGame = false;
+  treSetProgress(100);
+  const btn = treEl(TRE_BTN_ID);
+  if (btn) btn.hidden = true;
+  const skip = treEl(TRE_SKIP_ID);
+  if (skip) skip.hidden = true;
+  const ov = treEl(TRE_OVERLAY_ID);
+  if (ov) { ov.classList.remove('is-game', 'is-hitting'); treFall(ov); }
   return trePct;
 }
 // Gắn click + phím Space/Enter 1 lần duy nhất (guard cho stub DOM khi test)
@@ -139,6 +162,11 @@ function treBindHits(el) {
   try {
     if (el && typeof el.addEventListener === 'function') {
       el.addEventListener('click', () => { if (treGame) hitTreLoading(); });
+      // Nút "Bỏ qua" — bấm là treFall ngay (skipTreLoading tự chặn ngoài game)
+      const skip = treEl(TRE_SKIP_ID);
+      if (skip && typeof skip.addEventListener === 'function') {
+        skip.addEventListener('click', () => { skipTreLoading(); });
+      }
       // xong 1 nhát treHitOnce → tự gỡ .is-hitting (cảnh về frame 1 đứng yên)
       el.addEventListener('animationend', (e) => {
         if (e && e.animationName === 'treHitOnce' && el.classList)
@@ -171,6 +199,8 @@ function showTreLoading(label, opts) {
   el.classList.remove('is-fall', 'is-gone', 'is-game', 'is-hitting'); // mở lại từ đầu
   const btn = treEl(TRE_BTN_ID);
   if (btn) btn.hidden = true;
+  const skip = treEl(TRE_SKIP_ID);
+  if (skip) skip.hidden = true;
   treShownAt = Date.now();
   treDur = (opts && typeof opts.dur === 'number') ? opts.dur : TRE_TIMING.load;
   if (treMode === 'game') { treStopTick(); treSetProgress(0); }
@@ -203,4 +233,4 @@ function hideTreLoading(ok, opts) {
   }, wait);
 }
 
-export { TRE_OVERLAY_ID, TRE_TEXT_ID, TRE_TIMING, hideTreLoading, showTreLoading, hitTreLoading };
+export { TRE_OVERLAY_ID, TRE_TEXT_ID, TRE_TIMING, hideTreLoading, showTreLoading, hitTreLoading, skipTreLoading };

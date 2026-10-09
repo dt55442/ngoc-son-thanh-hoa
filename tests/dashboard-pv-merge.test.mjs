@@ -213,7 +213,64 @@ check('CẤU TRÚC (dashboard.js): nạp chế độ đã nhớ trước khi v�
 check('CẤU TRÚC (press.js): hiệu ứng trượt cửa sổ tuần Khả Năng dùng khung MỚI (#pv-chart-box-cap)',
   jsPress.includes("document.getElementById('pv-chart-box-cap')"));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v226/.test(swJs));
+  /nha-may-ngoc-son-v229/.test(swJs));
+
+// ─── 8. TRỢ GIÚP DASHBOARD: ẩn ghi chú + tooltip + nút "?" + modal ───
+console.log('--- 8. TRỢ GIÚP DASHBOARD ---');
+const jsMain = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+check('CẤU TRÚC (index.html): 5 nút "?" theo vùng + modal dùng chung #modal-dash-help',
+  ['btn-help-capacity', 'btn-help-pv', 'btn-help-material', 'btn-help-zone-basic', 'btn-help-zone-advanced']
+    .every(id => idxHtml.includes(`id="${id}"`)) &&
+  idxHtml.includes('id="modal-dash-help"') && idxHtml.includes('id="dash-help-body"') &&
+  idxHtml.includes('id="dash-help-title"') && idxHtml.includes('id="btn-close-dash-help"') &&
+  idxHtml.includes('id="btn-dash-help-ok"'));
+check('CẤU TRÚC (index.html): ghi chú cũ VẪN CÒN trong HTML (ẩn bằng CSS) + tooltip title thay thế',
+  idxHtml.includes('class="cap-note"') && idxHtml.includes('id="pv-cap-hint-row"') &&
+  /id="pv-chart-box-plan"\s+title="/.test(idxHtml) &&
+  /id="pv-chart-box-cap" hidden\s+title="/.test(idxHtml) &&
+  /id="cap-table-wrap"\s+title="/.test(idxHtml) &&
+  idxHtml.includes('Vỏ cột (khung rỗng)'));
+check('CẤU TRÚC (styles.css): khối TRỢ GIÚP DASHBOARD — ẩn 4 ghi chú + kiểu nút "?" + modal',
+  cssHtml.includes('TRỢ GIÚP DASHBOARD') && cssHtml.includes('#pv-cap-hint-row,') &&
+  cssHtml.includes('.custom-chart-card .custom-card-subtitle') &&
+  cssHtml.includes('.btn-dash-help') && cssHtml.includes('.dash-help-sec') &&
+  cssHtml.includes('.dash-help-card'));
+check('CẤU TRÚC (dashboard.js): DASH_HELP 6 mục + open/closeDashHelp + chartSubtitleOf + nút ? trên thẻ biểu đồ',
+  jsDash.includes('const DASH_HELP = {') && jsDash.includes("'pv-cap':") &&
+  jsDash.includes('function openDashHelp(') && jsDash.includes('function closeDashHelp(') &&
+  jsDash.includes('function chartSubtitleOf(') &&
+  jsDash.includes("app.openDashHelp('chart', '${chartDef.id}')") &&
+  jsDash.includes('title="${escapeHTML(subtitle)}"'));
+check('CẤU TRÚC (events.js): wire 5 nút ? + đóng bằng nút ✕ / Đã Hiểu / nền mờ / Esc',
+  ['btn-help-capacity', 'btn-help-pv', 'btn-help-material', 'btn-help-zone-basic', 'btn-help-zone-advanced', 'btn-close-dash-help', 'btn-dash-help-ok']
+    .every(id => jsEvents.includes(`safeOn('${id}'`)) &&
+  jsEvents.includes('if (e.target === dashHelpOv) closeDashHelp();') &&
+  jsEvents.includes("if (e.key !== 'Escape') return;"));
+check('CẤU TRÚC (main.js): window.app.openDashHelp cho onclick của thẻ biểu đồ tùy chỉnh',
+  jsMain.includes('openDashHelp,') && jsMain.includes('import { deleteCustomChart, openChartBuilderModal, openDashHelp,'));
+
+const dashMod = await import('../js/dashboard.js');
+check('HÀNH VI: openDashHelp("capacity") mở modal + đổ tiêu đề/nội dung, closeDashHelp() đóng lại', (() => {
+  dashMod.openDashHelp('capacity');
+  const on = document.getElementById('modal-dash-help').classList.contains('show') &&
+    document.getElementById('dash-help-title').textContent.includes('Công Suất') &&
+    document.getElementById('dash-help-body').innerHTML.includes('Công suất thực');
+  dashMod.closeDashHelp();
+  return on && !document.getElementById('modal-dash-help').classList.contains('show');
+})());
+check('HÀNH VI: openDashHelp("pv-cap") chứa nội dung màu xanh/vàng của Khả Năng Đáp Ứng', (() => {
+  dashMod.openDashHelp('pv-cap');
+  const ok = document.getElementById('dash-help-body').innerHTML.includes('Vàng') &&
+    document.getElementById('dash-help-body').innerHTML.includes('nguyên nhân');
+  dashMod.closeDashHelp();
+  return ok;
+})());
+check('HÀNH VI: key lạ / thẻ biểu đồ không tồn tại → KHÔNG mở modal (không crash)', (() => {
+  dashMod.openDashHelp('chart', 'id-khong-ton-tai');
+  const a = !document.getElementById('modal-dash-help').classList.contains('show');
+  dashMod.openDashHelp('khu-vuc-an');
+  return a && !document.getElementById('modal-dash-help').classList.contains('show');
+})());
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

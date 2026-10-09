@@ -1,11 +1,13 @@
 // tests/loading.test.mjs — Kiểm thử ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js)
 // Bao phủ: cấu trúc overlay (div .tre-scene SPRITE 18 FRAME + THANH TIẾN
-// ĐỘ #tre-progress + nút CHÉM #tre-hit-btn, <div> cân bằng, không còn SVG),
-// CSS (treChop 2.6s · game đứng yên + treHitOnce 600ms/.is-hitting · treFall
+// ĐỘ #tre-progress + nút CHẶT #tre-hit-btn + NÚT BỎ QUA #tre-skip-btn,
+// <div> cân bằng, không còn SVG),
+// CSS (treChop 0.83s ≈ 6 vòng/5s · game đứng yên + treHitOnce 600ms/.is-hitting · treFall
 // 700ms · nền blur · treHitPunch · Giảm Hiệu ỨNG), wiring 5 nhóm chỗ chờ
-// (boot · AI · Excel · mây · backup), sw.js v225 +
+// (boot · AI · Excel · mây · backup), sw.js +
 // loading.js + sprite vào APP_SHELL, HÀNH VI refcount 2 pha (stub DOM) và
-// CHẾ ĐỘ GAME (boot = mini game 20 nhát ×5% → 100% mới gãy; lỗi → không gãy).
+// CHẾ ĐỘ GAME "NGHI THỨC CẦP LUỒNG" (boot = mini game 20 nhát ×5% → 100%
+// mới gãy, hoặc nút "Bỏ qua" vào thẳng; lỗi → không gãy).
 'use strict';
 import fs from 'node:fs';
 
@@ -38,15 +40,16 @@ check('A3: số <div> cân bằng </div> (không làm vỡ test cấu trúc khá
   (idx.match(/<div/g) || []).length === (idx.match(/<\/div>/g) || []).length);
 check('A4: có ô nhãn tiếng Việt chờ tải + id tre-loading-text',
   idx.includes('id="tre-loading-text"') && idx.includes('Đang tải dữ liệu nhà máy'));
-check('A5: CSS có 2 pha — treChop CHẬM 2.6s (frame 1–13, 3 hàng sprite) + treFall + nền 600% 300%',
+check('A5: CSS có 2 pha — treChop NHANH 0.83s ≈ 6 vòng/5s (frame 1–13, 3 hàng sprite) + treFall + nền 600% 300%',
   ['@keyframes treChop', '@keyframes treFall'].every(k => css.includes(k)) &&
   css.includes('600% 300%') && css.includes('steps(1)') &&
-  css.includes('treChop 2.6s') &&
+  css.includes('treChop 0.83s') &&
   /@keyframes treChop[\s\S]{0,1400}?92\.31%/.test(css));
-check('A5b: THANH TIẾN ĐỘ + NÚT CHÉM + NỀN BLUR (mờ Dashboard phía sau) đủ trong HTML/CSS',
-  ['id="tre-progress"', 'id="tre-progress-fill"', 'id="tre-progress-pct"', 'id="tre-hit-btn"', 'id="tre-loading-card"']
+check('A5b: THANH TIẾN ĐỘ + NÚT CHẶT + NÚT BỎ QUA + NỀN BLUR (mờ Dashboard phía sau) đủ trong HTML/CSS',
+  ['id="tre-progress"', 'id="tre-progress-fill"', 'id="tre-progress-pct"', 'id="tre-hit-btn"', 'id="tre-skip-btn"', 'id="tre-loading-card"']
     .every(x => idx.includes(x)) &&
   css.includes('.tre-progress-fill') && css.includes('tre-hit-btn[hidden]') &&
+  css.includes('.tre-skip-btn[hidden]') && css.includes('skipTreLoading') &&
   css.includes('@keyframes treHitPunch') && css.includes('backdrop-filter') &&
   css.includes('is-game'));
 const fallBlock = (css.match(/@keyframes treFall \{[\s\S]*?\n\}/) || [''])[0];
@@ -107,8 +110,8 @@ check('B11: main.js — preloadCoreViews() chạy sau boot khi bootOk (tải s�
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v225 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v226/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v229 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v229/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════
@@ -185,7 +188,7 @@ const pctEl = document.getElementById('tre-progress-pct');
 ld.showTreLoading('Đang nạp dữ liệu nhà máy…', { mode: 'game' });
 ld.hideTreLoading(true);
 await sleep(20);
-check('E1: game — boot xong KHÔNG tự gãy: vào is-game + nút Chém hiện, chưa is-fall/is-gone',
+check('E1: game — boot xong KHÔNG tự gãy: vào is-game + nút Chặt + nút Bỏ qua hiện, chưa is-fall/is-gone',
   ov.classList.contains('is-game') && !ov.classList.contains('is-fall') &&
   !ov.classList.contains('is-gone') && btnHit.hidden === false);
 check('E2: tiến độ reset 0% + hint ghi "0%" và "còn 20 nhát"',
@@ -212,6 +215,33 @@ await sleep(20);
 check('E7: game + LỖI → KHÔNG is-game / KHÔNG is-fall, chỉ is-gone (không nói dối)',
   !ov.classList.contains('is-game') && !ov.classList.contains('is-fall') &&
   ov.classList.contains('is-gone'));
+
+// ═══ F. NÚT "BỎ QUÁ" — vào thẳng Dashboard không cần đủ 20 nhát ═════
+console.log('--- F. NÚT BỎ QUÁ (skipTreLoading) ---');
+ld.TRE_TIMING.load = 0;
+ld.TRE_TIMING.fall = 60;
+const btnSkip = document.getElementById('tre-skip-btn');
+ld.showTreLoading('Boot lần nữa', { mode: 'game' });
+ld.hideTreLoading(true);
+await sleep(20);
+check('F1: game — nút "Bỏ qua" hiện CÙNG nút chặt + hint đổi thành "Nghi thức cầu luồng"',
+  ov.classList.contains('is-game') && btnSkip.hidden === false && btnHit.hidden === false &&
+  txt.textContent.includes('Nghi thức cầu luồng'));
+ld.showTreLoading('Đang chuyển cảnh', { mode: 'game' });
+check('F2: showTreLoading → ẩn CẢ 2 nút (reset trước khi vào cảnh mới, không sót nút cũ)',
+  btnSkip.hidden === true && btnHit.hidden === true);
+ld.hideTreLoading(true);
+await sleep(20);
+check('F3: vào game lần nữa → cả 2 nút hiện lại', ov.classList.contains('is-game') && btnSkip.hidden === false);
+ld.skipTreLoading();
+check('F4: bấm Bỏ qua → is-fall NGAY + gỡ is-game + ẩn CẢ 2 nút + nhãn "Xong rồi!" (tiến độ 100%)',
+  ov.classList.contains('is-fall') && !ov.classList.contains('is-game') &&
+  btnSkip.hidden === true && btnHit.hidden === true && txt.textContent === 'Xong rồi!');
+await sleep(120); // fall = 60ms
+check('F5: tre nằm hẳn → is-gone (Dashboard hiện ra — không cần bấm đủ 20 nhát)',
+  ov.classList.contains('is-gone'));
+check('F6: skipTreLoading khi KHÔNG còn game → bỏ qua an toàn (trả % cũ, overlay giữ nguyên)',
+  ld.skipTreLoading() === 100 && ov.classList.contains('is-gone'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

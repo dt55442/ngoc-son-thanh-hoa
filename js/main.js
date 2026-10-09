@@ -10,7 +10,7 @@ import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker,
 import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần)
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
-import { deleteCustomChart, openChartBuilderModal, renderDashboardCharts, toggleChartExpand } from './dashboard.js';
+import { deleteCustomChart, openChartBuilderModal, openDashHelp, renderDashboardCharts, toggleChartExpand } from './dashboard.js';
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
@@ -54,9 +54,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
   // ─── INIT ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     // LOADING "NÔNG DÂN CHẶT TRE": hiện ngay lúc mở app — che khoảng trắng
-    // khi nạp dữ liệu. CHẾ ĐỘ GAME (mỗi lần mở trang): boot xong CŨNG CHƯA
-    // gãy — bấm "Chém!" đủ 100% (20 nhát × 5%) cây mới đổ → MỚI thấy
-    // Dashboard (nền blur). Lỗi giữa chừng → bootOk false → tre KHÔNG gãy,
+    // khi nạp dữ liệu. CHẾ ĐỘ GAME "NGHI THỨC CẦP LUỒNG" (mỗi lần mở trang):
+    // boot xong CŨNG CHƯA gãy — bấm "Chặt!" đủ 100% (20 nhát × 5%) cây mới
+    // đổ → MỚI thấy Dashboard (nền blur), hoặc bấm "Bỏ qua" vào thẳng.
+    // Lỗi giữa chừng → bootOk false → tre KHÔNG gãy,
     // overlay mờ dần (không ép chơi khi app đang lỗi).
     showTreLoading('Đang nạp dữ liệu nhà máy…', { mode: 'game' });
     let bootOk = false;
@@ -296,8 +297,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
   function switchViewCore(targetViewId) {
     const prevView = state.activeView;
     state.activeView = targetViewId;
-    // Chỉ bật trượt tuần khi CHUYỂN TỪ TAB KHÁC sang tab Kế hoạch
-    // (bấm lại tab đang đứng thì không coi là chuyển tab)
+    // Chỉ đặt lại vị trí về TUẦN HIỆN TẠI khi CHUYỂN TỪ TAB KHÁC sang tab Kế hoạch
+    // (bấm lại tab đang đứng thì không coi là chuyển tab) — đặt TỨC THỜI, không trượt
     if (targetViewId === 'planning-view' && prevView !== targetViewId) {
       state.planningPendingScroll = true;
     }
@@ -474,6 +475,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     openCustomExportModal,
     openChartBuilderModal: (chartId, preset) => openChartBuilderModal(chartId, preset),
     openEditChartModal: id => openChartBuilderModal(id),
+    // Trợ giúp Dashboard — giải thích nhanh theo vùng/đối tượng (nút "?" trên thẻ)
+    openDashHelp,
     openUserPermsModal: id => openUserPermsModal(id),
     deleteCustomChart,
     // Mở rộng biểu đồ toàn màn hình / xoay ngang (nút ⤢ trên thẻ biểu đồ)

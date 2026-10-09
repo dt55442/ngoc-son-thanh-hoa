@@ -1164,18 +1164,24 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     // Danh sách kế hoạch sản phẩm theo năm
     renderPlanningListSection(yearNum);
 
-    // Chỉ trượt ngang tới TUẦN HIỆN TẠI khi vừa mở tab / reset trang.
+    // Chỉ ĐẶT VỊ TRÍ NGAY VỀ TUẦN HIỆN TẠI khi vừa mở tab / reset trang —
+    // GỌI TRỰC TIẾP, không requestAnimationFrame + không smooth → không còn
+    // hiệu ứng trượt mỗi lần bật sang tab (hiển thị sẵn tuần hiện tại).
     // Khi chỉnh sửa trong tab (nhập Dự kiến, tồn keo/phụ gia, Giả định/Xóa tuần,
-    // đổi năm...) sẽ KHÔNG tự động trượt để giữ nguyên vị trí cuộn của người dùng.
+    // đổi năm...) sẽ KHÔNG tự động đặt lại để giữ nguyên vị trí cuộn của người dùng.
     if (state.planningPendingScroll) {
       state.planningPendingScroll = false;
-      requestAnimationFrame(() => scrollMatrixToCurrentWeek());
+      scrollMatrixToCurrentWeek();
     }
 
     initLucide();
   }
 
-  // Cuộn ngang bảng Kế Hoạch Tổng Hợp tới cột TUẦN HIỆN TẠI
+  // ĐẶT bảng Kế Hoạch Tổng Hợp vào TUẦN HIỆN TẠI — TỨC THỜI (không trượt):
+  // mở tab là thấy sẵn cột tuần hiện tại, không còn hoạt ảnh cuộn mượt.
+  // TRỪ thêm bề rộng cột "Loại Nan" DÍNH TRÁI (position:sticky left:0 — đo ĐỘNG:
+  // 120px desktop / 88px điện thoại) vì trước đây chỉ trừ 24px nên 2 ô TỒN
+  // Ván/Bullig đầu tuần nằm TRONG vùng cột dính → bị che số.
   function scrollMatrixToCurrentWeek() {
     try {
       const weekNum = Math.min(Math.max(getCurrentISOWeeks(), 1), 52);
@@ -1186,11 +1192,16 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       if (!container) return;
       const thRect = th.getBoundingClientRect();
       const cRect  = container.getBoundingClientRect();
-      // Đặt đầu tuần hiện tại cách mép trái vùng nhìn thấy một khoảng nhỏ
-      const targetLeft = container.scrollLeft + (thRect.left - cRect.left) - 24;
-      if (Math.abs(targetLeft - container.scrollLeft) < 4) return; // đã ở đúng vị trí
-      container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
-    } catch (e) { console.warn('[Matrix] Lỗi cuộn tới tuần hiện tại', e); }
+      // Cột tên nan dính mép trái luôn phủ lên số tuần đang nhìn → chừa đúng bề rộng đó
+      const sticky = container.querySelector('th.mat-week-col');
+      const stickyW = sticky ? sticky.getBoundingClientRect().width : 120;
+      // Vị trí thật của đầu tuần trong bảng (không phụ thuộc scrollLeft hiện tại)
+      const thOffset = container.scrollLeft + (thRect.left - cRect.left);
+      // Đặt đầu tuần ngay SAU cột dính + khe 8px → số TỒN nhìn thấy trọn
+      const left = Math.max(0, thOffset - stickyW - 8);
+      if (Math.abs(left - container.scrollLeft) < 1) return; // đã ở đúng vị trí
+      container.scrollLeft = left; // gán trực tiếp = không bao giờ có hoạt ảnh trượt
+    } catch (e) { console.warn('[Matrix] Lỗi đặt tuần hiện tại', e); }
   }
 
   // Chuyển đổi giá trị nhập vào thành số thập phân

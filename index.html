@@ -386,7 +386,7 @@
             <span class="x2-mini-count" id="x2-mini-count-bao-van">–</span>
             <span class="cap-spark" id="x2-mini-spark-bao-van"></span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-ho-tro-card" aria-expanded="false" title="Hỗ Trợ + Công Đoạn Lẻ — công việc hỗ trợ và công đoạn lẻ khác (chức năng đang bổ sung)">
+          <button type="button" class="x2-mini-card" data-x2-card="x2-ho-tro-card" aria-expanded="false" title="Hỗ Trợ + Công Đoạn Lẻ — công việc hỗ trợ / công đoạn lẻ phát sinh: Nội dung công việc + Người thực hiện (chọn từ Bảng bố trí theo ngày ở tab Nhân Sự) + Mô tả; giờ làm từng công việc tự tính theo khung giờ bố trí (việc phát sinh nên KHÔNG có công suất / hiệu suất)">
             <span class="x2-mini-ic"><i data-lucide="life-buoy"></i></span>
             <span class="x2-mini-title">Hỗ Trợ + Công Đoạn Lẻ</span>
             <span class="x2-mini-desc">Công việc hỗ trợ, công đoạn lẻ khác</span>
@@ -2067,14 +2067,79 @@
           </div>
         </div>
 
-        <!-- VỊ TRÍ: HỖ TRỢ + CÔNG ĐOẠN LẺ — placeholder (chức năng bổ sung sau) -->
+        <!-- VỊ TRÍ: HỖ TRỢ + CÔNG ĐOẠN LẺ — 2 VÙNG: ① NHẬP LIỆU · ② LỊCH SỬ.
+             Công việc PHÁT SINH nên KHÔNG có thanh tồn / thống kê / định mức:
+             Người thực hiện CHỌN TỪNG NGƯỜI trong Bảng bố trí vị trí theo ngày
+             (tab Nhân Sự) — 1 việc được chọn nhiều người; GIỜ LÀM của công việc
+             tự tính từ khung giờ bố trí của đúng những người được chọn. -->
         <div class="planning-card x2-card-hidden" id="x2-ho-tro-card">
           <div class="planning-card-header">
             <h4><i data-lucide="life-buoy"></i> Hỗ Trợ + Công Đoạn Lẻ — Xưởng 2</h4>
           </div>
-          <div class="x2-soon-note">
-            <i data-lucide="hard-hat"></i>
-            <p><strong>Chức năng đang được bổ sung.</strong> Bảng ghi nhận công việc hỗ trợ + công đoạn lẻ khác (ai làm, việc gì, trong bao lâu) sẽ được cập nhật ngay sau đây.</p>
+
+          <!-- VÙNG 1: NHẬP LIỆU — Ngày · Nội dung công việc · Người thực hiện · Mô tả.
+               Người thực hiện CHỈ lấy người đang bố trí vị trí "Hỗ Trợ + Công Đoạn Lẻ"
+               (Xưởng 2) trong Bảng bố trí theo ngày ở tab Nhân Sự. -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu — điền thông tin rồi bấm Lưu; người thực hiện lấy từ Bảng bố trí theo ngày ở tab Nhân Sự."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
+            <div class="x2-cut-form-wrap">
+              <div class="x2-cut-edit-banner" id="x2-ht-edit-banner" style="display:none;">
+                <i data-lucide="pencil"></i> <span id="x2-ht-edit-text"></span>
+              </div>
+              <form id="x2-ht-form">
+                <!-- DÒNG 1: ngày + nội dung công việc (điền tay) -->
+                <div class="x2-form-row">
+                  <div class="form-group" style="flex:0 0 155px;">
+                    <label for="x2-ht-date">Ngày <span class="required">*</span></label>
+                    <input type="date" id="x2-ht-date" required>
+                  </div>
+                  <div class="form-group" style="flex:2;">
+                    <label for="x2-ht-work">Nội Dung Công Việc <span class="required">*</span></label>
+                    <input type="text" id="x2-ht-work" maxlength="200" placeholder="VD: Dọn dẹp khuôn · Sửa ống nước · Kiểm tra PCCC…" required>
+                  </div>
+                </div>
+
+                <!-- DÒNG 2: người thực hiện (chọn nhiều từ bố trí theo ngày) + mô tả -->
+                <div class="x2-form-row">
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-ht-workers">Người Thực Hiện <span class="required">*</span></label>
+                    <select id="x2-ht-workers" multiple size="5" style="width:100%;"></select>
+                    <small style="color:var(--text-muted);">Chỉ hiện người đang bố trí vị trí <b>"Hỗ Trợ + Công Đoạn Lẻ"</b> (Xưởng 2) trong Bảng bố trí của NGÀY đang chọn (tab Nhân Sự) — bấm giữ <b>Ctrl</b> (Cmd trên Mac) để chọn nhiều người</small>
+                    <div class="x2-ht-worker-tools">
+                      <button type="button" class="btn btn-outline btn-sm" id="btn-x2-ht-pick-all" title="Chọn hết mọi người trong Bảng bố trí của ngày">Chọn tất cả</button>
+                      <button type="button" class="btn btn-outline btn-sm" id="btn-x2-ht-pick-none" title="Bỏ hết lựa chọn">Bỏ chọn</button>
+                      <span class="x2-ht-calc" id="x2-ht-calc"></span>
+                    </div>
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-ht-desc">Mô Tả</label>
+                    <textarea id="x2-ht-desc" rows="3" maxlength="500" placeholder="Mô tả chi tiết công việc (không bắt buộc)"></textarea>
+                  </div>
+                </div>
+
+                <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                  <button type="button" class="btn btn-outline" id="btn-cancel-x2-ht">Làm Mới Form</button>
+                  <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Công Việc</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- VÙNG 2: BẢNG LỊCH SỬ — thẻ ngày (nhãn ngày kiểu Bổ Ống, KHÔNG công suất/hiệu suất) -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ; bấm nút Thu gọn để giấu."><span class="x2-zone-no">2</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
+            <div class="x2-cut-table-wrap" id="x2-ht-table-wrap">
+              <div class="x2-cut-table-head">
+                <h5><i data-lucide="history"></i> Lịch Sử Hỗ Trợ + Công Đoạn Lẻ</h5>
+                <span class="x2-cut-table-count" id="x2-ht-table-count"></span>
+                <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2ht-table" title="Thu gọn / Mở rộng">
+                  <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+                </button>
+              </div>
+              <div class="x2-cut-table-scroll">
+                <div id="x2-ht-day-cards"></div>
+              </div>
+            </div>
           </div>
         </div>
 

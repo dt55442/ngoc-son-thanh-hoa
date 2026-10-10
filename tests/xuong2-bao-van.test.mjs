@@ -318,7 +318,7 @@ check('NỐI (main): load 3 khoá lúc boot',
 check('NỐI (export-xlsx): nguồn xuất "baovan" + cột 2 công đoạn',
   jsExport.includes("id: 'baovan'") && jsExport.includes("source === 'baovan'"));
 check('CẤU TRÚC (styles + sw): dùng lại khối nút kỳ + CACHE_NAME v231',
-  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v231/.test(swJs));
+  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v233/.test(swJs));
 
 // ─── K. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
 {

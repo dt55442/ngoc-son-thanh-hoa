@@ -11,7 +11,7 @@ import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
-import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay } from './xuong2.js';
+import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay } from './xuong2.js';
 
   // ─── CUSTOM XLSX EXPORT ───────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════
@@ -33,6 +33,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     { id: 'bullig',  label: 'Bullig (Gia công + Chọn thanh)' },
     { id: 'catvan',  label: 'Cắt Ván (Cắt ván + Xẻ thanh)' },
     { id: 'baovan',  label: 'Bào Ván (Bào + Chà thùng)' },
+    { id: 'hotro',   label: 'Hỗ Trợ + Công Đoạn Lẻ' },
     { id: 'kho',     label: 'Kho Nan (Tồn · Nhập / Xuất / Phiếu)' },
     { id: 'epvan',   label: 'Ép Ván (mở form xuất Ép Ván)' }
   ];
@@ -63,7 +64,8 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       baotinh: () => (state.xuong2BaoTinhRecords || []).map(r => ({ rec: r, d: baoTinhDisplay(r), date: r.date || '' })),
       bullig:  () => (state.xuong2BulligRecords || []).map(r => ({ rec: r, d: bulligDisplay(r), date: r.date || '' })),
       catvan:  () => (state.xuong2CatVanRecords || []).map(r => ({ rec: r, d: catVanDisplay(r), date: r.date || '' })),
-      baovan:  () => (state.xuong2BaoVanRecords || []).map(r => ({ rec: r, d: baoVanDisplay(r), date: r.date || '' }))
+      baovan:  () => (state.xuong2BaoVanRecords || []).map(r => ({ rec: r, d: baoVanDisplay(r), date: r.date || '' })),
+      hotro:   () => (state.xuong2HoTroRecords || []).map(r => ({ rec: r, d: hoTroDisplay(r), date: r.date || '' }))
     };
     const fn = map[source];
     return fn ? fn() : [];
@@ -762,6 +764,20 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
           x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
       });
       sumNote = `Bào ${x2FmtKg(baoTam)} tấm · Chà thùng ${x2FmtKg(chaTam)} tấm`;
+    } else if (source === 'hotro') {
+      // HỖ TRỢ + CÔNG ĐOẠN LẺ — công việc phát sinh: Ngày · Nội dung · Người ·
+      // Mô tả · giờ làm từng công việc (không có công suất/hiệu suất)
+      head = ['Stt', 'Ngày', 'Nội Dung Công Việc', 'Người Thực Hiện', 'Mô Tả', 'Giờ HC (h)', 'Giờ TC (h)'];
+      const list = x2ExportRowsOf('hotro').filter(x => x2InRange(x.date, from, to))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      let nViec = 0;
+      list.forEach((x, i) => {
+        const d = x.d; nViec += 1;
+        const people = d.workerRows.filter(w => w.name).map(w => w.name).join(', ');
+        body.push([i + 1, formatDateDDMMYY(d.date), d.workName || '', people, d.desc || '',
+          d.workHoursHC != null ? x2FmtSo(d.workHoursHC) : '', d.workHoursTC != null ? x2FmtSo(d.workHoursTC) : '']);
+      });
+      sumNote = `Tổng ${nViec} công việc hỗ trợ / công đoạn lẻ`;
     } else if (source === 'kho') {
       // KHO NAN — Sổ nhập/xuất (phiếu ĐÃ DUYỆT = số chính thức) + phiếu xử lý lỗi
       head = ['Stt', 'Loại Dòng', 'Ngày', 'Lần / Mục Đích', 'Mã Lô', 'K.Thước (mm)', 'Loại', 'Dùng Cho', 'Vị Trí', 'Số Thanh', 'm³', 'Ghi Chú / Nguồn'];

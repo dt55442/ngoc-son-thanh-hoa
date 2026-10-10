@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -534,6 +534,20 @@ import { escapeHTML, showToast } from './utils.js';
     return merged;
   }
 
+  // ─── GỘP NHẬT KÝ HỖ TRỢ + CÔNG ĐOẠN LẺ (file / backup / mây) ──
+  function restoreXuong2HoTro(incomingArr) {
+    const before = JSON.stringify(state.xuong2HoTroRecords || []);
+    const merged = mergeXuong2Records(state.xuong2HoTroRecords, incomingArr);
+    state.xuong2HoTroRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_XUONG2_HO_TRO, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
+      writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
+    }
+    syncHistorySnapshots();
+    return merged;
+  }
+
+
   // Khôi phục ĐỊNH MỨC CÔNG SUẤT BÀO VÁN (CẢ 2 tấm/h) — GỘP, không đè.
   function restoreX2BaoVanRates(incoming) {
     const src = (incoming && typeof incoming === 'object') ? incoming : {};
@@ -896,6 +910,7 @@ import { escapeHTML, showToast } from './utils.js';
         }
         if (loaded.xuong2BaoVanRecords && Array.isArray(loaded.xuong2BaoVanRecords)) {
           restoreXuong2BaoVan(loaded.xuong2BaoVanRecords); // GỘP — không mất lượt Bào Ván mới hơn
+          restoreXuong2HoTro(loaded.xuong2HoTroRecords); // GỘP — không mất công việc hỗ trợ mới hơn
         }
         if (loaded.x2BaoVanRates) {
           restoreX2BaoVanRates(loaded.x2BaoVanRates); // GỘP theo tháng + công đoạn (cả 2 tấm/h)
@@ -1053,6 +1068,7 @@ import { escapeHTML, showToast } from './utils.js';
         }
         if (loaded.xuong2BaoVanRecords && Array.isArray(loaded.xuong2BaoVanRecords)) {
           restoreXuong2BaoVan(loaded.xuong2BaoVanRecords); // GỘP — không mất lượt Bào Ván mới hơn
+          restoreXuong2HoTro(loaded.xuong2HoTroRecords); // GỘP — không mất công việc hỗ trợ mới hơn
         }
         if (loaded.x2BaoVanRates) {
           restoreX2BaoVanRates(loaded.x2BaoVanRates); // GỘP theo tháng + công đoạn (cả 2 tấm/h)
@@ -1159,6 +1175,7 @@ import { escapeHTML, showToast } from './utils.js';
         xuong2BulligRecords: state.xuong2BulligRecords || [],
         xuong2CatVanRecords: state.xuong2CatVanRecords || [],
         xuong2BaoVanRecords: state.xuong2BaoVanRecords || [],
+        xuong2HoTroRecords: state.xuong2HoTroRecords || [],
         suppliers: state.suppliers || [],
         x2CapRates: state.x2CapRates || {},
         x2BoluongRates: state.x2BoluongRates || {},
@@ -1287,6 +1304,7 @@ import { escapeHTML, showToast } from './utils.js';
       xuong2BulligRecords: state.xuong2BulligRecords || [],
       xuong2CatVanRecords: state.xuong2CatVanRecords || [],
         xuong2BaoVanRecords: state.xuong2BaoVanRecords || [],
+        xuong2HoTroRecords: state.xuong2HoTroRecords || [],
       suppliers: state.suppliers || [],
       x2CapRates: state.x2CapRates || {},
       x2BoluongRates: state.x2BoluongRates || {},
@@ -1416,6 +1434,7 @@ import { escapeHTML, showToast } from './utils.js';
         }
         if (imported && Array.isArray(imported.xuong2BaoVanRecords)) {
           restoreXuong2BaoVan(imported.xuong2BaoVanRecords); // GỘP — không xóa lượt Bào Ván mới hơn backup
+          restoreXuong2HoTro(imported.xuong2HoTroRecords); // GỘP — không xóa công việc hỗ trợ mới hơn backup
         }
         if (imported && imported.x2BaoVanRates) {
           restoreX2BaoVanRates(imported.x2BaoVanRates); // GỘP theo tháng + công đoạn
@@ -1673,6 +1692,7 @@ export {
   restoreXuong2CatVan,
   restoreX2CatVanRates,
   restoreXuong2BaoVan,
+  restoreXuong2HoTro,
   restoreX2BaoVanRates,
   restoreX2SayRates,
   restoreX2SayTimes,

@@ -118,6 +118,14 @@
   const STORAGE_KEY_X2_BAO_VAN_RATE = 'bamboo_tracker_x2_bao_van_rate_v1';
   // KỲ TỒN ĐANG CHỌN của form Bào Ván (1 tuần / 2 tuần) — thuần UI theo MÁY
   const STORAGE_KEY_X2_BAO_VAN_SPAN = 'bamboo_tracker_x2_bao_van_span_v1';
+  // Vị trí "HỖ TRỢ + CÔNG ĐOẠN LẺ" Xưởng 2 (thẻ launcher tab Công Đoạn): nhật ký
+  // công việc hỗ trợ / công đoạn lẻ phát sinh — mỗi lượt ghi NGÀY + NỘI DUNG CÔNG
+  // VIỆC (điền tay) + NGƯỜI THỰC HIỆN (chọn TỪNG NGƯỜI trong Bảng bố trí vị trí
+  // theo ngày ở tab Nhân Sự — 1 việc chọn được NHIỀU người) + MÔ TẢ (điền tay).
+  // GIỜ LÀM CỦA TỪNG CÔNG VIỆC tự tính từ khung giờ bố trí của đúng những người
+  // được chọn (tách HC/TC theo cửa sổ ca). Do là công việc PHÁT SINH, thẻ KHÔNG
+  // có định mức → KHÔNG công suất / hiệu suất.
+  const STORAGE_KEY_XUONG2_HO_TRO = 'bamboo_tracker_xuong2_ho_tro_v1';
   // ĐỊNH MỨC THỜI GIAN THAN HÓA (PHÚT/m³) THEO TỪNG THÁNG + TỪNG CÔNG ĐOẠN SẤY
   // của công đoạn "Than Hóa + Sấy" — { s1: { 'YYYY-MM': phút/m³ }, s2: {...} }.
   // Điều kiện than hóa khác nhau theo công đoạn sấy: 1 m³ nan đi Sấy 1 phải trải
@@ -408,6 +416,12 @@
     // Định mức công suất Bào Ván theo tháng + từng công đoạn nhỏ (CẢ 2 tấm/h):
     // { bao: { 'YYYY-MM': tấm/h }, cha: { 'YYYY-MM': tấm/h } }
     x2BaoVanRates: { bao: {}, cha: {} },
+    // Nhật ký HỖ TRỢ + CÔNG ĐOẠN LẺ (Xưởng 2 — công việc phát sinh):
+    // [{ id, date, week, workName, workerIds [employeeId], worker, workTime,
+    //    workHours, workHoursHC, workHoursTC, desc, createdAt, updatedAt }]
+    // Người + giờ LƯU SNAPSHOT lúc ghi (mất bố trí Nhân Sự vẫn hiện đủ).
+    xuong2HoTroRecords: [],
+    x2HoTroEditId: null,       // id lượt Hỗ trợ đang sửa trong form (null = ghi mới)
     // Định mức THỜI GIAN THAN HÓA (phút cho 1 m³) theo tháng + công đoạn sấy của
     // thẻ "Than Hóa + Sấy": { s1: { 'YYYY-MM': phút/m³ }, s2: { 'YYYY-MM': phút/m³ } }
     // — nguồn tính cột "Giờ Cần" + định mức công suất m³/h của bảng thống kê sấy.
@@ -534,6 +548,7 @@ export {
   STORAGE_KEY_XUONG2_BAO_VAN,
   STORAGE_KEY_X2_BAO_VAN_RATE,
   STORAGE_KEY_X2_BAO_VAN_SPAN,
+  STORAGE_KEY_XUONG2_HO_TRO,
   STORAGE_KEY_X2_SAY_RATE,
   STORAGE_KEY_X2_SAY_TIMES,
   STORAGE_KEY_X2_SAY_INCIDENT,

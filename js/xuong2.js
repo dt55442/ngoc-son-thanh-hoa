@@ -32,7 +32,7 @@ import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
 import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoPeriodKeyOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
@@ -67,7 +67,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'x2-bullig-card':       { el: 'x2-mini-count-bullig' },                   // Bullig (ĐÃ CÓ chức năng — Gia công + Chọn thanh)
     'x2-cat-van-card':      { el: 'x2-mini-count-cat-van' },                    // Cắt Ván (ĐÃ CÓ chức năng — Cắt ván + Xẻ thanh)
     'x2-bao-van-card':      { el: 'x2-mini-count-bao-van' },                    // Bào Ván (ĐÃ CÓ chức năng — Bào + Chà thùng)
-    'x2-ho-tro-card':       { el: 'x2-mini-count-ho-tro',       soon: true }, // Hỗ Trợ + Công Đoạn Lẻ
+    'x2-ho-tro-card':       { el: 'x2-mini-count-ho-tro' },                    // Hỗ Trợ + Công Đoạn Lẻ (CÓ chức năng — 2 vùng: nhập liệu + lịch sử)
 
     // ─── XƯỞNG 1 — 8 CÔNG ĐOẠN (04/10/2026) ────────────────────
     // Thứ tự theo LUỒNG SX: Cắt Ống → Sấy Sinh → Bốc → Lọc Ống →
@@ -102,6 +102,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'x2-bullig-card': 'xuong2BulligRecords',
     'x2-cat-van-card': 'xuong2CatVanRecords',
     'x2-bao-van-card': 'xuong2BaoVanRecords',
+    'x2-ho-tro-card':  'xuong2HoTroRecords',
     'x2-ep-van-card': 'pressRecords',
     // XƯỞNG 1 — 8 công đoạn (05/10/2026)
     'x1-cat-ong-card': 'xuong1CatOngRecords',
@@ -125,6 +126,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'x2-bullig-card': 'bullig',
     'x2-cat-van-card': 'catvan',
     'x2-bao-van-card': 'baovan',
+    'x2-ho-tro-card':  'hotro',
     'x2-ep-van-card': 'epvan'
   };
   // Thẻ đang mở (null = không thẻ nào) — Lịch Sử/Xuất Excel dùng chung + gợi ý AI
@@ -1558,6 +1560,12 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const tam = list.reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
       return `${list.length} lượt · ${fmtThanh(tam)} tấm`;
     }
+    // Thẻ "Hỗ Trợ + Công Đoạn Lẻ": số CÔNG VIỆC hỗ trợ đã ghi (việc phát sinh —
+    // không có số lượng sản lượng, không công suất/hiệu suất)
+    if (cardId === 'x2-ho-tro-card') {
+      const n = (state.xuong2HoTroRecords || []).length;
+      return n ? `${n} việc` : 'Chưa ghi';
+    }
     // ── XƯỞNG 1: 8 công đoạn (chip = TỒN CHỜ XỬ LÝ) ──
     if (cardId.startsWith('x1-')) {
       const t = x1CardCountText(cardId);
@@ -1699,6 +1707,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (cardId === 'x2-bullig-card') renderX2BulligCard();
     if (cardId === 'x2-cat-van-card') renderX2CatVanCard();
     if (cardId === 'x2-bao-van-card') renderX2BaoVanCard();
+    if (cardId === 'x2-ho-tro-card') renderXuong2HoTroCard();
     if (cardId === 'x2-ep-van-card') renderX2EpVanCard();
     // ── XƯỞNG 1 (8 công đoạn — tất cả đã có chức năng) ──
     renderX1CardOf(cardId);
@@ -7437,6 +7446,477 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   // ═══════════════════════════════════════════════════════════
+  // VỊ TRÍ: HỖ TRỢ + CÔNG ĐOẠN LẺ — Xưởng 2 (thẻ launcher tab Công Đoạn)
+  // ═══════════════════════════════════════════════════════════
+  // Ghi nhận công việc HỖ TRỢ / CÔNG ĐOẠN LẺ PHÁT SINH — không link lô,
+  // không định mức → KHÔNG công suất / HIỆU SUẤT (khác mọi thẻ công đoạn).
+  // Thẻ CHỈ CÓ 2 VÙNG: ① Nhập liệu · ② Bảng lịch sử theo ngày.
+  //   • form: Ngày · Nội dung công việc (điền tay) · Người thực hiện
+  //     (CHỌN TỪNG NGƯỜI trong Bảng bố trí vị trí "Hỗ Trợ + Công Đoạn Lẻ"
+  //      của Xưởng 2 theo ngày ở tab Nhân Sự; 1 việc chọn được NHIỀU người)
+  //     · Mô tả (điền tay)
+  //   • GIỜ LÀM của từng công việc = tổng khung giờ của ĐÚNG những người được
+  //     chọn trong ngày (tách HC/TC theo cửa sổ ca từng bộ phận; ngày nghỉ
+  //     đi làm → toàn TC) — LƯU SNAPSHOT lúc ghi (mất bố trí vẫn hiện đủ),
+  //     đọc SỐNG lại từ Bảng bố trí khi còn (sửa bố trí → bảng tự đổi).
+  // Dữ liệu: state.xuong2HoTroRecords (localStorage + file + mây, tombstone).
+
+  // Khóa 1 LƯỢT BỐ TRÍ — theo id; bản cũ thiếu id → khóa phụ theo
+  // (người + vị trí + ngày + giờ vào) để vẫn chọn lại được.
+  function hoTroAsgKey(a) {
+    return String(a.id || `${a.employeeId || ''}|${a.positionId || ''}|${a.date || ''}|${a.start || ''}`);
+  }
+  // Vị trí "HỖ TRỢ + CÔNG ĐOẠN LẺ" — khớp MỀM tên (bỏ dấu, hoa/thường):
+  // chứa "ho tro" → khớp "Hỗ Trợ", "Hỗ Trợ + Công Đoạn Lẻ"…
+  // (KHÔNG liệt kê mọi vị trí — người dùng bố trí đúng người vào vị trí này
+  //  ở tab Nhân Sự thì mới hiện trong ô chọn Người Thực Hiện).
+  function isHoTroPos(name) {
+    return normPosName(name).includes('ho tro');
+  }
+  // Các lượt BỐ TRÍ VỊ TRÍ "Hỗ Trợ + Công Đoạn Lẻ" của 1 ngày (bộ phận Xưởng 2).
+  // 1 người bố trí 2 vị trí cùng tên trong ngày → 2 dòng riêng (giờ tính đúng
+  // khung giờ từng vị trí).
+  function hoTroRowsOf(dateVal) {
+    if (!dateVal) return [];
+    const posNameOf = id => {
+      const p = (state.hrPositions || []).find(x => x.id === id);
+      return String((p && p.name) || '').trim();
+    };
+    const emplOf = id => (state.hrEmployees || []).find(x => x.id === id) || null;
+    return (state.hrAssignments || [])
+      .filter(a => a.date === dateVal &&
+                   String(a.department || '').trim() === 'Xưởng 2' &&
+                   isHoTroPos(posNameOf(a.positionId)))
+      .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')))
+      .map(a => {
+        const e = emplOf(a.employeeId);
+        return {
+          asgId: hoTroAsgKey(a),
+          employeeId: a.employeeId || '',
+          positionId: a.positionId || '',
+          name: String((e && e.name) || a.employeeId || '').trim(),
+          positionName: posNameOf(a.positionId),
+          department: String(a.department || '').trim(),
+          shiftIdx: Number(a.shiftIdx) || 0,
+          start: String(a.start || '').trim(),
+          end: String(a.end || '').trim(),
+          date: dateVal
+        };
+      });
+  }
+  // Giờ HC/TC (đơn vị GIỜ) của danh sách lượt bố trí — dùng ĐÚNG bộ phận của
+  // từng lượt (khác sumPosHoursSplit vốn cứng 'Xưởng 2'); giờ ra TRỐNG = hết ca.
+  function hoTroSumHours(rows, dateVal) {
+    let hc = 0, tc = 0;
+    (rows || []).forEach(a => {
+      if (!a.start) return;
+      const r = hrSplitHoursHCDate(a.department || 'Xưởng 2', dateVal, a.start, a.end, a.shiftIdx || 0);
+      hc += r.hc || 0; tc += r.tc || 0;
+    });
+    return { hc: hc / 60, tc: tc / 60 };
+  }
+  // Snapshot NGƯỜI + GIỜ + khung giờ từng lượt lúc lưu (phòng khi bố trí bị xóa)
+  function hoTroSnapshotOf(dateVal, rows) {
+    const sp = hoTroSumHours(rows, dateVal);
+    return {
+      worker: rows.map(r => r.name).filter(Boolean).join(', '),
+      workTime: rows.map(posTimeStr).filter(Boolean).join(', '),
+      workHours: sp.hc + sp.tc,
+      workHoursHC: sp.hc,
+      workHoursTC: sp.tc,
+      asgSnap: rows.map(r => ({
+        asgId: r.asgId, name: r.name, positionName: r.positionName,
+        department: r.department, start: r.start, end: r.end, shiftIdx: r.shiftIdx
+      }))
+    };
+  }
+  // LƯỢT BỐ TRÍ của 1 bản ghi: sống ưu tiên (đổi giờ bố trí → bảng tự đổi),
+  // thiếu (đã xóa) → snapshot khung giờ lưu lúc ghi.
+  function hoTroEntriesOf(r) {
+    const date = r.date || '';
+    const live = new Map(hoTroRowsOf(date).map(a => [a.asgId, a]));
+    const ids = Array.isArray(r.asgIds) ? r.asgIds : [];
+    const snapById = new Map((Array.isArray(r.asgSnap) ? r.asgSnap : []).map(s => [String(s.asgId || ''), s]));
+    const out = [];
+    ids.forEach(id => {
+      const a = live.get(id);
+      if (a) { out.push(a); return; }
+      const s = snapById.get(String(id));
+      if (s) out.push({ ...s, shiftIdx: Number(s.shiftIdx) || 0 });
+    });
+    return out;
+  }
+
+  // ─── SỐ LIỆU HIỂN THỊ 1 LƯỢT CÔNG VIỆC HỖ TRỢ ──────────────────
+  // Người + giờ: SỐNG từ Bảng bố trí (sửa bố trí → bảng tự đổi); lượt bố trí
+  // đã bị xóa → SNAPSHOT đã lưu lúc ghi (mất bố trí vẫn hiện đủ người + giờ).
+  function hoTroDisplay(r) {
+    const date = r.date || '';
+    const entries = hoTroEntriesOf(r);
+    let workerRows = [], hc = null, tc = null;
+    if (entries.length) {
+      const sp = hoTroSumHours(entries, date);
+      hc = sp.hc; tc = sp.tc;
+      // Gộp cùng TÊN (1 người 2 vị trí) → 1 dòng người, khung giờ nối " + "
+      const byName = new Map();
+      entries.forEach(a => {
+        if (!a.name) return;
+        const t = posTimeStr(a);
+        if (!byName.has(a.name)) byName.set(a.name, t);
+        else if (t) {
+          const cur = byName.get(a.name);
+          byName.set(a.name, cur ? `${cur} + ${t}` : t);
+        }
+      });
+      workerRows = [...byName].map(([name, time]) => ({ name, time }));
+    } else {
+      // Bản ghi cũ thiếu id bố trí → tối giản từ snapshot tên + giờ tổng
+      workerRows = String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
+        .map((name, i) => ({ name, time: String(r.workTime || '').split(',').map(s => s.trim())[i] || '' }));
+      if (r.workHoursHC != null && Number.isFinite(Number(r.workHoursHC))) hc = Number(r.workHoursHC);
+      if (r.workHoursTC != null && Number.isFinite(Number(r.workHoursTC))) tc = Number(r.workHoursTC);
+      if (hc == null && tc == null && Number(r.workHours) > 0) { hc = Number(r.workHours); tc = 0; }
+    }
+    return {
+      date,
+      workName: r.workName || '',
+      desc: r.desc || '',
+      workerRows,
+      workHoursHC: hc,
+      workHoursTC: tc,
+      workHours: (hc != null && tc != null) ? hc + tc : (Number(r.workHours) || 0)
+    };
+  }
+
+  // Giờ + người của CẢ NGÀY (nhãn đầu thẻ): gộp theo LƯỢT BỐ TRÍ — 1 người
+  // làm 2 việc cùng ngày chỉ tính 1 lần (không cộng trùng giờ).
+  function hoTroDayAgg(date, recs) {
+    const byId = new Map();
+    let legacyHc = 0, legacyTc = 0;
+    const legacyNames = [];
+    (recs || []).forEach(r => {
+      const entries = hoTroEntriesOf(r);
+      if (!entries.length) {
+        legacyHc += Number(r.workHoursHC) || 0;
+        legacyTc += Number(r.workHoursTC) || 0;
+        String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
+          .forEach(n => { if (!legacyNames.includes(n)) legacyNames.push(n); });
+        return;
+      }
+      entries.forEach(a => { if (!byId.has(a.asgId)) byId.set(a.asgId, a); });
+    });
+    const rows = [...byId.values()];
+    const sp = hoTroSumHours(rows, date);
+    const byName = new Map();
+    rows.forEach(a => {
+      if (!a.name) return;
+      const t = posTimeStr(a);
+      if (!byName.has(a.name)) byName.set(a.name, t);
+      else if (t) {
+        const cur = byName.get(a.name);
+        byName.set(a.name, cur ? `${cur} + ${t}` : t);
+      }
+    });
+    legacyNames.forEach(n => { if (!byName.has(n)) byName.set(n, ''); });
+    return {
+      hc: sp.hc + legacyHc,
+      tc: sp.tc + legacyTc,
+      workerRows: [...byName].map(([name, time]) => ({ name, time }))
+    };
+  }
+
+  // ─── Ô "NGƯỜI THỰC HIỆN" ──────────────────────────────────────
+  // 1 option = 1 LƯỢT BỐ TRÍ của Ngày đang chọn (tên · vị trí · bộ phận ·
+  // khung giờ). keepIds = giữ lựa chọn (đang SỬA / render lại); KHÔNG truyền
+  // tham số = giữ nguyên lựa chọn ĐANG CÓ trên form.
+  function fillXuong2HoTroWorkers(keepIds) {
+    const sel = document.getElementById('x2-ht-workers');
+    if (!sel) return;
+    const keep = new Set(keepIds !== undefined ? keepIds : hoTroSelectedIds());
+    const dateEl = document.getElementById('x2-ht-date');
+    const dateVal = (dateEl && dateEl.value) || '';
+    const rows = hoTroRowsOf(dateVal);
+    if (!rows.length) {
+      sel.innerHTML = `<option value="" disabled>${dateVal ? 'Ngày này chưa có ai ở vị trí "Hỗ Trợ + Công Đoạn Lẻ" (vào tab Nhân Sự để bố trí)' : 'Hãy chọn Ngày'}</option>`;
+      updateXuong2HoTroCalc();
+      return;
+    }
+    sel.innerHTML = rows.map(a => {
+      const tip = `${a.name || '—'} — ${a.positionName || 'chưa rõ vị trí'}${a.department ? ` (${a.department})` : ''} · ${posTimeStr(a)}`;
+      return `<option value="${escapeHTML(a.asgId)}" ${keep.has(a.asgId) ? 'selected' : ''}>${escapeHTML(tip)}</option>`;
+    }).join('');
+    updateXuong2HoTroCalc();
+  }
+  // Các id lượt bố trí ĐANG ĐƯỢC CHỌN trên form
+  function hoTroSelectedIds() {
+    const sel = document.getElementById('x2-ht-workers');
+    if (!sel) return [];
+    return Array.from((sel && sel.options) || [])
+      .filter(o => o && o.selected && o.value)
+      .map(o => String(o.value));
+  }
+  function hoTroPickAll() {
+    const sel = document.getElementById('x2-ht-workers');
+    if (!sel) return;
+    Array.from(sel.options || []).forEach(o => { if (!o.disabled) o.selected = true; });
+    updateXuong2HoTroCalc();
+  }
+  function hoTroPickNone() {
+    const sel = document.getElementById('x2-ht-workers');
+    if (!sel) return;
+    Array.from(sel.options || []).forEach(o => { o.selected = false; });
+    updateXuong2HoTroCalc();
+  }
+  // Ô tự tính dưới danh sách: N người được chọn + tổng giờ HC/TC của họ
+  function updateXuong2HoTroCalc() {
+    const box = document.getElementById('x2-ht-calc');
+    if (!box) return;
+    const dateEl = document.getElementById('x2-ht-date');
+    const dateVal = (dateEl && dateEl.value) || '';
+    const ids = new Set(hoTroSelectedIds());
+    if (!ids.size) {
+      box.innerHTML = '<em style="color:var(--text-muted);">Chưa chọn người thực hiện</em>';
+      return;
+    }
+    const rows = hoTroRowsOf(dateVal).filter(a => ids.has(a.asgId));
+    const sp = hoTroSumHours(rows, dateVal);
+    const names = [];
+    rows.forEach(a => { if (a.name && !names.includes(a.name)) names.push(a.name); });
+    box.innerHTML = `<i data-lucide="clock"></i> <strong>${names.length} người</strong> · giờ làm: <b>${fmtGio(sp.hc)}h HC</b> · <b>${fmtGio(sp.tc)}h TC</b><br><small style="color:var(--text-muted);">${escapeHTML(names.join(', '))}</small>`;
+    initLucide();
+  }
+
+  // Form về trạng thái "ghi mới" (sau Lưu / nút Làm Mới Form)
+  function resetXuong2HoTroForm() {
+    state.x2HoTroEditId = null;
+    const w = document.getElementById('x2-ht-work');
+    if (w) w.value = '';
+    const d = document.getElementById('x2-ht-desc');
+    if (d) d.value = '';
+    const dt = document.getElementById('x2-ht-date');
+    if (dt) dt.value = todayISO();
+    fillXuong2HoTroWorkers([]); // đồng thời xoá lựa chọn người cũ
+    syncX2HoTroEditBanner();
+  }
+
+  function syncX2HoTroEditBanner() {
+    const banner = document.getElementById('x2-ht-edit-banner');
+    if (!banner) return;
+    const txt = document.getElementById('x2-ht-edit-text');
+    if (state.x2HoTroEditId) {
+      const rec = (state.xuong2HoTroRecords || []).find(r => r.id === state.x2HoTroEditId);
+      txt.textContent = rec
+        ? `Đang sửa công việc "${rec.workName || ''}" ngày ${formatDateDDMMYY(rec.date)} — bấm "Lưu Công Việc" hoặc "Làm Mới Form" để thoát.`
+        : 'Đang sửa công việc hỗ trợ.';
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  // ─── LƯU FORM (THÊM / SỬA) ─────────────────────────────────────
+  function handleXuong2HoTroSubmit(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!requireEditPermission()) return;
+    const dateVal = (document.getElementById('x2-ht-date') || {}).value || '';
+    if (!dateVal) { showToast('Ngày không được để trống!', 'error'); return; }
+    const workName = String((document.getElementById('x2-ht-work') || {}).value || '').trim();
+    if (!workName) { showToast('Hãy nhập Nội Dung Công Việc!', 'error'); return; }
+    const asgIds = hoTroSelectedIds();
+    if (!asgIds.length) { showToast('Hãy chọn ít nhất 1 Người Thực Hiện từ Bảng bố trí!', 'error'); return; }
+    const desc = String((document.getElementById('x2-ht-desc') || {}).value || '').trim();
+    // Snapshot NGƯỜI + GIỜ của đúng những lượt bố trí được chọn
+    const idSet = new Set(asgIds);
+    const rows = hoTroRowsOf(dateVal).filter(a => idSet.has(a.asgId));
+    const snap = hoTroSnapshotOf(dateVal, rows);
+    const payload = {
+      date: dateVal,
+      week: materialWeekLabel(dateVal),
+      workName, desc, asgIds,
+      worker: snap.worker, workTime: snap.workTime, asgSnap: snap.asgSnap,
+      workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
+    };
+
+    if (state.x2HoTroEditId) {
+      const rec = (state.xuong2HoTroRecords || []).find(r => r.id === state.x2HoTroEditId);
+      if (!rec) { showToast('Không tìm thấy công việc cần sửa!', 'error'); return; }
+      Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
+      saveXuong2HoTro();
+      showToast('Đã cập nhật công việc!', 'success');
+    } else {
+      (state.xuong2HoTroRecords = state.xuong2HoTroRecords || []).push({
+        id: 'x2ht-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        ...payload,
+        createdAt: new Date().toISOString()
+      });
+      saveXuong2HoTro();
+      showToast('Đã ghi công việc hỗ trợ!', 'success');
+    }
+
+    resetXuong2HoTroForm();
+    renderXuong2HoTroCard();
+  }
+
+  // ─── SỬA / XÓA CÔNG VIỆC (bảng lịch sử) ────────────────────────
+  function editXuong2HoTro(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2HoTroRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    state.x2HoTroEditId = id;
+    const dt = document.getElementById('x2-ht-date');
+    if (dt) dt.value = rec.date || '';
+    const w = document.getElementById('x2-ht-work');
+    if (w) w.value = rec.workName || '';
+    const d = document.getElementById('x2-ht-desc');
+    if (d) d.value = rec.desc || '';
+    fillXuong2HoTroWorkers(rec.asgIds || []); // nạp người của ĐÚNG ngày + chọn lại
+    syncX2HoTroEditBanner();
+  }
+
+  function deleteXuong2HoTro(id) {
+    if (!requireEditPermission()) return;
+    const rec = (state.xuong2HoTroRecords || []).find(r => r.id === id);
+    if (!rec) return;
+    if (!confirm(`Xóa công việc "${rec.workName || ''}" ngày ${formatDateDDMMYY(rec.date)}?`)) return;
+    trackDeleted('xuong2HoTroRecords', id); // tombstone: không bị mây/máy khác hồi sinh
+    state.xuong2HoTroRecords = (state.xuong2HoTroRecords || []).filter(r => r.id !== id);
+    if (state.x2HoTroEditId === id) resetXuong2HoTroForm();
+    saveXuong2HoTro();
+    renderXuong2HoTroCard();
+    showToast('Đã xóa công việc!', 'success');
+  }
+
+  // ─── BẢNG LỊCH SỬ — THẺ NGÀY ──────────────────────────────────
+  // NHÃN ĐẦU THẺ kiểu Bổ ỐNG: Ngày · Người thực hiện · Giờ HC/TC · số việc —
+  // KHÔNG Công suất / HIỆU SUẤT (công việc phát sinh, không có định mức).
+  // Dòng công việc: Ngày | Nội dung | Người | Mô tả | Giờ HC | Giờ TC | tác.
+  function renderXuong2HoTroTable() {
+    const box = document.getElementById('x2-ht-day-cards');
+    if (!box) return;
+    const list = [...(state.xuong2HoTroRecords || [])].sort((a, b) => {
+      if ((b.date || '') !== (a.date || '')) return (b.date || '').localeCompare(a.date || '');
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+    const countEl = document.getElementById('x2-ht-table-count');
+    if (countEl) countEl.textContent = list.length ? `${list.length} công việc` : '';
+    if (!list.length) {
+      box.innerHTML = `
+        <div class="x2-day-card x2-day-card-empty">
+          <i data-lucide="life-buoy"></i>
+          <div>Chưa có công việc hỗ trợ / công đoạn lẻ nào.<br>Điền <strong>Ngày · Nội dung công việc · Người thực hiện</strong> ở form trên rồi bấm <strong>Lưu Công Việc</strong>.</div>
+        </div>`;
+      initLucide();
+      return;
+    }
+    // Gộp theo ngày (mới nhất lên đầu — Map giữ đúng thứ tự nhóm)
+    const groups = new Map();
+    list.forEach(r => {
+      const key = r.date || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    let html = '';
+    for (const [date, recs] of groups) {
+      const agg = hoTroDayAgg(date, recs);
+      const rowsHtml = recs.map(r => {
+        const d = hoTroDisplay(r);
+        const people = d.workerRows.filter(x => x.name).map(x => x.name);
+        const hcTxt = d.workHoursHC != null ? fmtGio(d.workHoursHC) : '—';
+        const tcTxt = d.workHoursTC != null ? fmtGio(d.workHoursTC) : '—';
+        return `
+        <tr class="x2-day-row" data-x2-ht-row="${escapeHTML(r.id)}">
+          <td>${formatDateDDMMYY(d.date)}</td>
+          <td><strong>${escapeHTML(d.workName || '—')}</strong></td>
+          <td title="${escapeHTML(people.join(', '))}">${escapeHTML(people.join(', ') || '—')}</td>
+          <td>${d.desc ? escapeHTML(d.desc) : '<em style="color:var(--text-muted);">—</em>'}</td>
+          <td class="text-right" title="Giờ hành chính của công việc này (từ Bảng bố trí Nhân Sự)">${hcTxt}</td>
+          <td class="text-right" title="Giờ tăng ca của công việc này (từ Bảng bố trí Nhân Sự)">${tcTxt}</td>
+          <td class="text-right">
+            <button class="btn btn-icon btn-outline" title="Sửa" data-perm="x2" data-x2-ht-edit="${escapeHTML(r.id)}"><i data-lucide="pencil"></i></button>
+            <button class="btn btn-icon btn-danger" title="Xóa" data-perm="x2" data-x2-ht-delete="${escapeHTML(r.id)}"><i data-lucide="trash-2"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+      // ── ĐẦU THẺ NGÀY — thông tin CHUNG (giống Bổ ỐNG, BỎ công suất/hiệu suất)
+      const workers = agg.workerRows.filter(x => x.name);
+      const workersMain = workers.length
+        ? `${escapeHTML(workers[0].name)}${workers[0].time ? ` (${escapeHTML(workers[0].time)})` : ''}`
+        : '<em style="color:var(--text-muted);">chưa có người thực hiện</em>';
+      const workersMore = workers.length > 1
+        ? `<em class="x2-day-cutters-more" title="Người khác trong ngày: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
+        : '';
+      html += `
+        <div class="x2-day-card">
+          <div class="x2-day-head">
+            <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
+            <span class="x2-day-cutters" title="Người thực hiện — từ Bảng bố trí vị trí 'Hỗ Trợ + Công Đoạn Lẻ' (Xưởng 2, tab Nhân Sự) đúng ngày"><i data-lucide="users"></i> ${workersMain} ${workersMore}</span>
+            <span class="x2-day-hours" title="Giờ làm = tổng khung giờ của những người thực hiện trong ngày (không cộng trùng), tách giờ hành chính (HC) / tăng ca (TC)">Giờ làm: <span class="x2-hours-hc">${fmtRatio(agg.hc)}h HC</span><span class="x2-hours-tc">${fmtRatio(agg.tc)}h TC</span></span>
+            <span class="x2-day-hours" title="Số công việc hỗ trợ đã ghi trong ngày — công việc phát sinh nên KHÔNG tính công suất / hiệu suất"><i data-lucide="list-checks"></i> ${recs.length} công việc</span>
+          </div>
+          <table class="data-table x2-day-table">
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th>Nội Dung Công Việc</th>
+                <th>Người Thực Hiện</th>
+                <th>Mô Tả</th>
+                <th class="text-right">Giờ HC (h)</th>
+                <th class="text-right">Giờ TC (h)</th>
+                <th class="text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>`;
+    }
+    box.innerHTML = html;
+    initLucide();
+  }
+
+  // Thu gọn / mở rộng BẢNG LỊCH SỬ (form vẫn hiện để tiếp tục nhập)
+  function toggleX2HoTroTable() {
+    const wrap = document.getElementById('x2-ht-table-wrap');
+    if (!wrap) return;
+    wrap.classList.toggle('x2-cut-collapsed');
+    initLucide();
+  }
+
+  // RENDER TOÀN BỘ THẺ CHI TIẾT HỖ TRỢ (gọi khi mở thẻ + sau khi lưu/xóa)
+  function renderXuong2HoTroCard() {
+    const dt = document.getElementById('x2-ht-date');
+    if (dt && !dt.value) dt.value = todayISO();
+    fillXuong2HoTroWorkers();   // giữ lựa chọn người đang có trên form
+    renderXuong2HoTroTable();
+    syncX2HoTroEditBanner();
+    updateXuong2CardCounts();
+  }
+
+  // ─── NẠP / LƯU DỮ LIỆU HỖ TRỢ ──────────────────────────────────
+  function loadXuong2HoTro() {
+    const raw = localStorage.getItem(STORAGE_KEY_XUONG2_HO_TRO);
+    if (raw) {
+      try {
+        const arr = JSON.parse(raw);
+        state.xuong2HoTroRecords = Array.isArray(arr) ? arr : [];
+      } catch (e) { state.xuong2HoTroRecords = []; }
+    } else {
+      state.xuong2HoTroRecords = [];
+    }
+  }
+  function saveXuong2HoTro() {
+    try {
+      localStorage.setItem(STORAGE_KEY_XUONG2_HO_TRO, JSON.stringify(state.xuong2HoTroRecords || []));
+    } catch (err) {
+      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu sẽ thử ghi qua file/mây.', 'error');
+    }
+    logDataChange(['xuong2HoTroRecords']);
+    if (state.fileStorage.connected) {
+      storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    }
+    firePushSync();
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // VỊ TRÍ: BÀO TINH — Xưởng 2 (thẻ launcher tab Công Đoạn)
   // ═══════════════════════════════════════════════════════════
   // Mỗi lượt ghi: NGÀY BÀO · LOẠI BÀO · nguồn thanh ("Chọn thanh") ·
@@ -9867,6 +10347,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (openX2Card && openX2Card.id === 'x2-bullig-card') renderX2BulligCard();
     if (openX2Card && openX2Card.id === 'x2-cat-van-card') renderX2CatVanCard();
     if (openX2Card && openX2Card.id === 'x2-bao-van-card') renderX2BaoVanCard();
+    if (openX2Card && openX2Card.id === 'x2-ho-tro-card') renderXuong2HoTroCard();
     if (openX2Card && openX2Card.id === 'x2-ep-van-card') renderX2EpVanCard();
     // Xưởng 1 — cả 8 công đoạn đều có chức năng
     if (openX2Card) renderX1CardOf(openX2Card.id);
@@ -12770,6 +13251,21 @@ export {
   baoVanRateOf,
   baoVanInputPool,
   baoVanKindLabel,
+  // ── THẺ HỖ TRỢ + CÔNG ĐOẠN LẺ (2 vùng: nhập liệu · lịch sử — việc phát sinh, không công suất/hiệu suất) ──
+  handleXuong2HoTroSubmit,
+  editXuong2HoTro,
+  deleteXuong2HoTro,
+  resetXuong2HoTroForm,
+  renderXuong2HoTroCard,
+  renderXuong2HoTroTable,
+  fillXuong2HoTroWorkers,
+  hoTroPickAll,
+  hoTroPickNone,
+  updateXuong2HoTroCalc,
+  toggleX2HoTroTable,
+  loadXuong2HoTro,
+  hoTroDisplay,
+  isHoTroPos,
   handleXuong2CutSubmit,
   loadX2BaoThoRates,
   loadX2BoOngRates,

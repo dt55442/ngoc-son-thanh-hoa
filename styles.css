@@ -9837,3 +9837,43 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 @media (max-width: 639.98px) {
   .x2-cv-span-btn { min-height: 40px; padding: 8px 14px; font-size: 0.8rem; }
 }
+
+/* ── THẺ "HỖ TRỢ + CÔNG ĐOẠN LẺ" (Xưởng 2) — hàng chọn NGƯỜI TỪ BỐ TRÍ ──
+   2 vùng: ① nhập liệu · ② bảng lịch sử — công việc PHÁT SINH nên không có
+   thanh tồn / thống kê / định mức (không công suất, hiệu suất). */
+.x2-ht-worker-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.x2-ht-worker-tools .btn { min-height: 34px; }
+#x2-ht-workers {
+  min-height: 132px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main, #fff);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+#x2-ht-workers option { padding: 3px 6px; }
+#x2-ht-workers option:checked {
+  background: rgba(162, 28, 175, 0.16); /* tông fuchsia của thẻ */
+  color: var(--text-main);
+  font-weight: 600;
+}
+.x2-ht-calc {
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+.x2-ht-calc b { color: #a21caf; font-variant-numeric: tabular-nums; }
+.x2-ht-calc small { display: inline-block; margin-top: 2px; }
+@media (max-width: 639.98px) {
+  /* Chạm dễ hơn + ô nhập 16px (không zoom iOS) */
+  #x2-ht-workers { min-height: 150px; font-size: 16px; }
+  .x2-ht-worker-tools .btn { min-height: 44px; }
+}
+

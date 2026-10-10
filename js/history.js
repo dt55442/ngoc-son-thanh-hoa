@@ -59,6 +59,8 @@ import { escapeHTML, showToast } from './utils.js';
     xuong2CatVanRecords: { tab: 'kanban', label: 'Cắt Ván Xưởng 2',          get: () => state.xuong2CatVanRecords },
     x2CatVanRates:       { tab: 'kanban', label: 'Định mức cắt ván (tấm/h · thanh/h)', get: () => state.x2CatVanRates },
     xuong2BaoVanRecords: { tab: 'kanban', label: 'Bào Ván Xưởng 2',           get: () => state.xuong2BaoVanRecords },
+    xuong2HoTroRecords: { tab: 'kanban', label: 'Hỗ trợ + công đoạn lẻ X2',  get: () => state.xuong2HoTroRecords },
+
     x2BaoVanRates:       { tab: 'kanban', label: 'Định mức bào ván (tấm/h)',  get: () => state.x2BaoVanRates },
     xuong2BaoTinhRecords: { tab: 'kanban', label: 'Bào tinh Xưởng 2',     get: () => state.xuong2BaoTinhRecords },
     x2LotLocations:    { tab: 'kanban',    label: 'Vị trí sấy (khai báo)', get: () => state.x2LotLocations },

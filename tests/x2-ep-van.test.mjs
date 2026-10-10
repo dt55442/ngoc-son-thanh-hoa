@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v231/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v233/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -328,16 +328,18 @@ check('DÙNG CHUNG: đóng thẻ → không còn thẻ đang mở (vùng dữ li
   state.x2OpenCardId === null);
 const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
 // GIAI ĐOẠN 2 (05/10/2026): 8 thẻ Xưởng 1 ĐÃ thêm vào bản đồ VÙNG DỮ LIỆU
-// (nút "Lịch Sử" của thẻ X1 tự lọc đúng vùng) + Cắt Ván · Bào Ván (09/10/2026).
-// Nguồn XUẤT EXCEL = 12 thẻ Xưởng 2 (X1 chưa có form xuất riêng → fallback 'batch').
-check('DÙNG CHUNG: bản đồ VÙNG DỮ LIỆU = 12 thẻ X2 + 8 thẻ X1 (20)',
-  Object.keys(mapCn).length === 20 && Object.keys(mapEx).length === 12 &&
+// (nút "Lịch Sử" của thẻ X1 tự lọc đúng vùng) + Cắt Ván · Bào Ván (09/10/2026)
+// + Hỗ Trợ + Công Đoạn Lẻ (10/10/2026).
+// Nguồn XUẤT EXCEL = 13 thẻ Xưởng 2 (X1 chưa có form xuất riêng → fallback 'batch').
+check('DÙNG CHUNG: bản đồ VÙNG DỮ LIỆU = 13 thẻ X2 + 8 thẻ X1 (21)',
+  Object.keys(mapCn).length === 21 && Object.keys(mapEx).length === 13 &&
   mapCn['x2-bo-luong-card'] === 'xuong2BoluongRecords' && mapEx['x2-bo-luong-card'] === 'boluong' &&
   mapCn['x2-kho-card'] === 'khoNotes' && mapEx['x2-kho-card'] === 'kho' &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
   mapCn['x2-bullig-card'] === 'xuong2BulligRecords' && mapEx['x2-bullig-card'] === 'bullig' &&
   mapCn['x2-cat-van-card'] === 'xuong2CatVanRecords' && mapEx['x2-cat-van-card'] === 'catvan' &&
   mapCn['x2-bao-van-card'] === 'xuong2BaoVanRecords' && mapEx['x2-bao-van-card'] === 'baovan' &&
+  mapCn['x2-ho-tro-card'] === 'xuong2HoTroRecords' && mapEx['x2-ho-tro-card'] === 'hotro' &&
   mapCn['x2-than-hoa-card'] === 'batches' && mapEx['x2-than-hoa-card'] === 'batch');
 check('DÙNG CHUNG: 8 thẻ Xưởng 1 đều có vùng dữ liệu (X2 → Lịch Sử đúng vùng)',
   ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card',

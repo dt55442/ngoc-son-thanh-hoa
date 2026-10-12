@@ -2149,6 +2149,8 @@
             <h4><i data-lucide="scissors"></i> Cắt Ống — Xưởng 1</h4>
           </div>
           <div class="x2-stock-bar" id="x1-cat-ong-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-cat-ong-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-cat-ong-edit-text"></span>
@@ -2158,7 +2160,7 @@
                 <div class="form-group" style="flex:1.5;">
                   <label for="x1-cat-ong-material">Lô Vầu/Nứa Đầu Vào (Xưởng 1) <span class="required">*</span></label>
                   <select id="x1-cat-ong-material" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lô CHƯA cắt — nhập mới ở tab Nguyên Liệu (vị trí Xưởng 1)</small>
+                  <small style="color:var(--text-muted);">CHỈ hiện lô CÓ CHỮ "CÂY" (Vầu cây, Nứa cây, Luồng cây...) CHƯA cắt — nhập mới ở tab Nguyên Liệu · Xưởng 1</small>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-cat-ong-note">Ghi Chú</label>
@@ -2187,13 +2189,20 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-cat-ong-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-cat-ong-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-cat-ong-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Cắt Ống</h5>
               <span class="x2-cut-table-count" id="x1-cat-ong-table-count"></span>
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-cat-ong-day-cards"></div></div>
+          </div>
           </div>
         </div>
 
@@ -2203,6 +2212,8 @@
             <h4><i data-lucide="flame-kindling"></i> Sấy Sinh — Xưởng 1</h4>
           </div>
           <div class="x2-stock-bar" id="x1-say-sinh-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-say-sinh-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-say-sinh-edit-text"></span>
@@ -2210,9 +2221,9 @@
             <form id="x1-say-sinh-form">
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1.5;">
-                  <label for="x1-say-sinh-source">Lượt Cắt Ống (nguồn) <span class="required">*</span></label>
+                  <label for="x1-say-sinh-source">Nguồn Vào (nguồn) <span class="required">*</span></label>
                   <select id="x1-say-sinh-source" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lượt Cắt Ống còn CHƯA sấy hết</small>
+                  <small style="color:var(--text-muted);">2 nguồn: lượt Cắt Ống (Vầu "cây" đã cắt) + lô Vầu/Nứa Xưởng 1 KHÔNG chữ "cây" sấy THẲNG (bỏ qua Cắt Ống)</small>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-say-sinh-note">Ghi Chú</label>
@@ -2237,13 +2248,20 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-say-sinh-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-say-sinh-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-say-sinh-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Sấy Sinh</h5>
               <span class="x2-cut-table-count" id="x1-say-sinh-table-count"></span>
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-say-sinh-day-cards"></div></div>
+          </div>
           </div>
         </div>
 
@@ -2253,6 +2271,8 @@
             <h4><i data-lucide="forklift"></i> Bốc — Xưởng 1</h4>
           </div>
           <div class="x2-stock-bar" id="x1-boc-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-boc-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-boc-edit-text"></span>
@@ -2287,7 +2307,13 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-boc-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-boc-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-boc-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bốc</h5>
@@ -2295,11 +2321,14 @@
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-boc-day-cards"></div></div>
           </div>
+          </div>
         </div>
 
         <div class="planning-card x2-card-hidden" id="x1-loc-ong-card">
           <div class="planning-card-header"><h4><i data-lucide="list-filter"></i> Lọc Ống — Xưởng 1</h4></div>
           <div class="x2-stock-bar" id="x1-loc-ong-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-loc-ong-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-loc-ong-edit-text"></span>
@@ -2344,7 +2373,13 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-loc-ong-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-loc-ong-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-loc-ong-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Lọc Ống</h5>
@@ -2352,11 +2387,14 @@
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-loc-ong-day-cards"></div></div>
           </div>
+          </div>
         </div>
 
         <div class="planning-card x2-card-hidden" id="x1-cat-mat-card">
           <div class="planning-card-header"><h4><i data-lucide="crop"></i> Cắt Mắt — Xưởng 1</h4></div>
           <div class="x2-stock-bar" id="x1-cat-mat-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-cat-mat-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-cat-mat-edit-text"></span>
@@ -2366,7 +2404,7 @@
                 <div class="form-group" style="flex:1.5;">
                   <label for="x1-cat-mat-src">Lượt Lọc Ống (nguồn) <span class="required">*</span></label>
                   <select id="x1-cat-mat-src" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lượt Lọc Ống còn CHƯA cắt mắt hết</small>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Lọc Ống CHƯA qua Cắt Ống còn CHƯA cắt mắt — lô ĐÃ qua Cắt Ống hiện ở thẻ Bổ (bỏ qua Cắt Mắt)</small>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-cat-mat-note">Ghi Chú</label>
@@ -2401,7 +2439,13 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-cat-mat-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-cat-mat-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-cat-mat-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Cắt Mắt</h5>
@@ -2409,11 +2453,14 @@
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-cat-mat-day-cards"></div></div>
           </div>
+          </div>
         </div>
 
         <div class="planning-card x2-card-hidden" id="x1-bo-card">
           <div class="planning-card-header"><h4><i data-lucide="split"></i> Bổ — Xưởng 1</h4></div>
           <div class="x2-stock-bar" id="x1-bo-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-bo-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-bo-edit-text"></span>
@@ -2421,9 +2468,9 @@
             <form id="x1-bo-form">
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1.5;">
-                  <label for="x1-bo-src">Lượt Cắt Mắt (nguồn) <span class="required">*</span></label>
+                  <label for="x1-bo-src">Nguồn (nguồn) <span class="required">*</span></label>
                   <select id="x1-bo-src" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lượt Cắt Mắt còn CHƯA bổ hết</small>
+                  <small style="color:var(--text-muted);">2 nguồn: lượt Cắt Mắt còn CHƯA bổ + lượt LỌC ỐNG của lô ĐÃ qua Cắt Ống (bỏ qua Cắt Mắt)</small>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-bo-note">Ghi Chú</label>
@@ -2458,7 +2505,13 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-bo-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-bo-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-bo-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bổ</h5>
@@ -2466,11 +2519,14 @@
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-bo-day-cards"></div></div>
           </div>
+          </div>
         </div>
 
         <div class="planning-card x2-card-hidden" id="x1-phoi-say-card">
           <div class="planning-card-header"><h4><i data-lucide="sun"></i> Phơi Sấy — Xưởng 1</h4></div>
           <div class="x2-stock-bar" id="x1-phoi-say-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-phoi-say-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-phoi-say-edit-text"></span>
@@ -2515,7 +2571,13 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-phoi-say-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-phoi-say-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-phoi-say-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Phơi Sấy</h5>
@@ -2523,11 +2585,14 @@
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-phoi-say-day-cards"></div></div>
           </div>
+          </div>
         </div>
 
         <div class="planning-card x2-card-hidden" id="x1-loc-thanh-card">
           <div class="planning-card-header"><h4><i data-lucide="package-check"></i> Lọc Thanh / Bó Xô — Xưởng 1</h4></div>
           <div class="x2-stock-bar" id="x1-loc-thanh-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
             <div class="x2-cut-edit-banner" id="x1-loc-thanh-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x1-loc-thanh-edit-text"></span>
@@ -2572,13 +2637,20 @@
               </div>
             </form>
           </div>
-          <div class="material-stats" id="x1-loc-thanh-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê nhanh của công đoạn — rê chuột vào từng ô xem ý nghĩa và cách tính."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê</div>
+            <div class="material-stats" id="x1-loc-thanh-stats"></div>
+          </div>
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
           <div class="x2-cut-table-wrap" id="x1-loc-thanh-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Lọc Thanh / Bó Xô</h5>
               <span class="x2-cut-table-count" id="x1-loc-thanh-table-count"></span>
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-loc-thanh-day-cards"></div></div>
+          </div>
           </div>
         </div>
 
@@ -3922,23 +3994,27 @@
           </div>
         </div>
         <div class="hr-cards" id="hr-cards-grid">
+          <!-- CỤM 1: HỒ SƠ — nhân viên + danh mục vị trí/kỹ năng -->
+          <div class="hr-cards-cluster">Hồ sơ</div>
           <button type="button" class="hr-mini-card" data-hr-card="hr-emp-card" aria-expanded="false" title="Danh sách nhân viên — thêm / sửa / xóa">
             <span class="hr-mini-ic"><i data-lucide="users"></i></span>
             <span class="hr-mini-title">Nhân Viên</span>
             <span class="hr-mini-desc">Danh sách nhân viên</span>
             <span class="hr-mini-count" id="hr-mini-count-emp">–</span>
           </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-att-card" aria-expanded="false" title="Chấm công & phân vị — đi làm / vắng / nghỉ có phép theo ngày">
-            <span class="hr-mini-ic"><i data-lucide="clipboard-list"></i></span>
-            <span class="hr-mini-title">Chấm Công</span>
-            <span class="hr-mini-desc">Phân vị theo ngày</span>
-            <span class="hr-mini-count" id="hr-mini-count-att">–</span>
-          </button>
           <button type="button" class="hr-mini-card" data-hr-card="hr-pos-card" aria-expanded="false" title="Vị trí làm việc &amp; kỹ năng — danh mục vị trí">
             <span class="hr-mini-ic"><i data-lucide="git-branch"></i></span>
             <span class="hr-mini-title">Vị Trí &amp; Kỹ Năng</span>
             <span class="hr-mini-desc">Vị trí làm việc</span>
             <span class="hr-mini-count" id="hr-mini-count-pos">–</span>
+          </button>
+          <!-- CỤM 2: NGÀY CÔNG — chấm công, giờ máy, tăng ca, nghỉ phép -->
+          <div class="hr-cards-cluster">Ngày công</div>
+          <button type="button" class="hr-mini-card" data-hr-card="hr-att-card" aria-expanded="false" title="Chấm công & phân vị — đi làm / vắng / nghỉ có phép theo ngày">
+            <span class="hr-mini-ic"><i data-lucide="clipboard-list"></i></span>
+            <span class="hr-mini-title">Chấm Công</span>
+            <span class="hr-mini-desc">Phân vị theo ngày</span>
+            <span class="hr-mini-count" id="hr-mini-count-att">–</span>
           </button>
           <button type="button" class="hr-mini-card" data-hr-card="hr-ci-card" aria-expanded="false" title="Giờ máy chấm công — nạp Excel + đối chiếu với chấm công tay">
             <span class="hr-mini-ic"><i data-lucide="clock"></i></span>
@@ -3958,21 +4034,22 @@
             <span class="hr-mini-desc">Đăng ký + duyệt</span>
             <span class="hr-mini-count" id="hr-mini-count-ot">–</span>
           </button>
+          <!-- CỤM 3: THỐNG KÊ — nghỉ phép TOP + đi làm theo bộ phận/cá nhân -->
+          <div class="hr-cards-cluster">Thống kê</div>
           <button type="button" class="hr-mini-card" data-hr-card="hr-stats-card" aria-expanded="false" title="Thống kê nghỉ phép — TOP nhân viên theo số ngày nghỉ">
             <span class="hr-mini-ic"><i data-lucide="bar-chart-3"></i></span>
             <span class="hr-mini-title">Thống Kê Nghỉ</span>
             <span class="hr-mini-desc">TOP theo ngày nghỉ</span>
             <span class="hr-mini-count" id="hr-mini-count-stats">–</span>
           </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-att-stats-card" aria-expanded="false" title="Thống kê đi làm theo tháng">
+          <button type="button" class="hr-mini-card" data-hr-card="hr-att-stats-card" aria-expanded="false" title="Thống kê đi làm theo tháng — thẻ tóm tắt từng bộ phận, bấm vào để xem chi tiết cá nhân">
             <span class="hr-mini-ic"><i data-lucide="calendar-check-2"></i></span>
             <span class="hr-mini-title">Thống Kê Đi Làm</span>
             <span class="hr-mini-desc">Tỷ lệ đi làm theo tháng</span>
             <span class="hr-mini-count" id="hr-mini-count-att-stats">–</span>
-            <!-- Hiệu ứng động luân chuyển: tên card → tỷ lệ đi làm từng bộ phận
-                 (mini chart đường từ đầu tháng + tỷ lệ hôm nay). Render trong hr.js -->
-            <span class="hr-mini-anim" id="hr-mini-anim-att-stats"></span>
           </button>
+          <!-- CỤM 4: TUYỂN DỤNG — nhu cầu + vị trí còn thiếu -->
+          <div class="hr-cards-cluster">Tuyển dụng</div>
           <button type="button" class="hr-mini-card" data-hr-card="hr-recruit-card" aria-expanded="false" title="Nhân sự cần — nhu cầu tuyển dụng">
             <span class="hr-mini-ic"><i data-lucide="user-search"></i></span>
             <span class="hr-mini-title">Nhân Sự Cần</span>
@@ -4016,7 +4093,7 @@
             <button class="btn btn-outline btn-sm" id="btn-board-next" title="Ngày sau"><i data-lucide="chevron-right"></i></button>
             <button class="btn btn-outline btn-sm" id="btn-board-today" title="Về hôm nay">Hôm Nay</button>
           </div>
-          <span class="hr-count">Ô "?" = trống · ô xanh = đã có người · bấm ô hoặc "+" để thêm · kéo chip để chuyển vị trí (giữ lịch sử giờ tại vị trí cũ)</span>
+          <span class="hr-count">Ô "?" = trống · ô xanh = đã có người · bấm ô hoặc "+" để thêm · kéo chip để chuyển vị trí (giữ lịch sử giờ tại vị trí cũ) · <b>giữ chuột + rê ngang</b> để cuộn bảng khi nhiều vị trí</span>
           <span class="hr-count" id="hr-board-count"></span>
         </div>
         <div id="hr-board-dept-tabs" class="hr-board-tabs"></div>
@@ -4330,6 +4407,8 @@
           <span class="hr-count">Tỷ lệ đi làm = ngày công / (công + nghỉ phép + vắng) — tháng hiện tại tính tới hôm nay. Tỷ Lệ Bộ Phận tính gộp toàn bộ NV cùng bộ phận (không phụ thuộc bộ lọc).</span>
         </div>
         <div id="hr-att-stats-chips" class="hr-stat-chips"></div>
+        <!-- TẦNG 1: thẻ tóm tắt từng bộ phận — bấm thẻ = lọc bảng cá nhân tầng 2 -->
+        <div id="hr-att-stats-depts" class="hr-att-depts"></div>
         <div class="table-responsive table-scroll">
           <table class="data-table" id="hr-att-stats-table">
             <thead>

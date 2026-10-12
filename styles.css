@@ -1515,7 +1515,16 @@ h1, h2, h3, h4, h5 {
 .hr-board-tab.on { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25); }
 
 /* Lưới các cột vị trí — cuộn ngang khi nhiều vị trí */
-.board-grid { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; align-items: flex-start; }
+.board-grid {
+  display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; align-items: flex-start;
+  /* KÉO CHUỘT GIỮ + KÉO NGANG (10/10/2026): giữ chuột trên nền board rồi rê
+     trái/phải để cuộn — không cần thanh cuộn. Chạm điện thoại giữ native scroll. */
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-x pan-y;
+}
+.board-grid.is-drag-scrolling { cursor: grabbing; }
 .board-col {
   flex: 0 0 208px; min-width: 208px; display: flex; flex-direction: column;
   background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;
@@ -5181,6 +5190,20 @@ table.export-preview-table {
   margin-top: 10px;
 }
 
+/* Nhãn cụm launcher (Hồ sơ · Ngày công · Thống kê · Tuyển dụng) — chiếm trọn hàng */
+.hr-cards-cluster {
+  grid-column: 1 / -1;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  padding: 2px 0 0;
+  border-top: 1px dashed var(--border-color);
+  margin-top: 4px;
+}
+.hr-cards-cluster:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+
 @media (max-width: 1024px) {
   .hr-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -6558,150 +6581,78 @@ body[data-theme="night"] .hr-detail-content > .planning-card {
   border-bottom: 1px solid var(--border-color);
 }
 
-/* ═══ HIỆU ỨNG ĐỘNG MINI CARD "THỐNG KÊ ĐI LÀM" — PHONG CÁCH TICKER ═══
-   Luân chuyển 6 khung (tên card → Xưởng 1 → Xưởng 2 → QC → Cơ Điện → Văn Phòng),
-   mỗi khung 3s. Panel tối như bảng điện chứng khoán: đường giá + vùng tô
-   gradient + điểm cuối nhấp nháy + số % font mono đổi màu theo mức. */
+/* ═══ THẺ BỘ PHẬN — BẢNG THỐNG KÊ ĐI LÀM (TẦNG 1) ═══
+   Gỡ bỏ hoàn toàn mini-chart động luân chuyển cũ (.hr-mini-anim / .hr-anim-*) —
+   thay bằng lưới thẻ tóm tắt TỪNG BỘ PHẬN; bấm thẻ = lọc bảng cá nhân. */
 .hr-mini-card { position: relative; overflow: hidden; }
-#hr-mini-count-att-stats { display: none; }   /* ẩn dòng đếm cũ, thay bằng animation */
 
-.hr-mini-anim {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;      /* không chặn bấm thẻ để mở bảng */
-  z-index: 2;
-  border-radius: inherit;
+.hr-att-depts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 4px 0 12px;
 }
-.hr-anim-frame {
-  position: absolute;
-  inset: 0;
+.hr-att-dept {
   display: flex;
   flex-direction: column;
-  align-items: stretch;      /* chart co giãn full chiều ngang */
-  padding: 4px 6px;
-  gap: 2px;
-  opacity: 0;
-  visibility: hidden;
-  text-align: center;
-  /* Nền panel tối kiểu widget tài chính — nổi trên thẻ sáng */
-  background: linear-gradient(160deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.86));
-  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.25), 0 2px 10px rgba(15, 23, 42, 0.35);
-  border-radius: inherit;
-}
-.hr-anim-frame.hr-anim-show {
-  opacity: 1;
-  visibility: visible;
-  animation: hr-anim-cycle 18s ease-in-out infinite;
-  animation-fill-mode: backwards;  /* trong lúc chờ delay: đứng ở 0% (mờ) — không lộ khung sớm */
-}
-@keyframes hr-anim-cycle {
-  0%, 16.6%   { opacity: 0; }     /* 0–3s: fade in */
-  8.3%, 15%   { opacity: 1; }     /* 1.5–2.7s: giữ */
-  23.3%, 100% { opacity: 0; }     /* 3s: fade out rồi chờ tới lượt */
-}
-.hr-anim-dept {
-  font-size: 0.58rem;
-  font-weight: 700;
-  color: #94a3b8;                       /* slate nhạt trên nền tối */
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  line-height: 1.1;
-}
-.hr-anim-name {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: #f1f5f9;
-  line-height: 1.1;
-}
-.hr-anim-chart {
-  display: block;
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.45));
-}
-.hr-anim-wrap {
-  position: relative;
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.hr-anim-chart polyline {
-  fill: none;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.hr-anim-grid {
-  stroke: rgba(148, 163, 184, 0.16);       /* đường gióng ngang mờ */
-  stroke-width: 0.5;
-}
-.hr-anim-ylabel {
-  position: absolute;
-  left: -2px;
-  transform: translateY(50%);
-  font-size: 0.5rem;
-  line-height: 1;
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-  color: #64748b;
-}
-.hr-anim-xtick {
-  stroke: rgba(148, 163, 184, 0.35);       /* vạch chia trục X (tượng trưng) */
-  stroke-width: 0.6;
-}
-.hr-anim-node {
-  stroke: rgba(15, 23, 42, 0.9);           /* viền tối cho điểm nút nổi trên line */
-  stroke-width: 0.6;
-}
-.hr-anim-chart .hr-anim-area { stroke: none; }
-.hr-anim-chart .hr-anim-dot {
-  stroke-width: 1.2;
-  animation: hr-anim-pulse 1.6s ease-in-out infinite;   /* điểm giá live nhấp nháy */
-}
-@keyframes hr-anim-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-.hr-anim-foot {
-  display: flex;
-  align-items: baseline;
   gap: 4px;
-  line-height: 1;
+  align-items: stretch;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
-.hr-anim-today {
-  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
-  font-size: 0.82rem;
+.hr-att-dept:hover, .hr-att-dept:focus-visible {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.hr-att-dept.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+.hr-att-dept-name {
+  font-size: 0.74rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;   /* số không nhảy chữ — kiểu bảng điện */
-  color: #34d399;
-  line-height: 1;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
-.hr-anim-today.flat { color: #fbbf24; } /* 70–85%: vàng — trung bình */
-.hr-anim-today.down { color: #f87171; } /* <90%: đỏ — cần chú ý */
-.hr-anim-delta {
-  font-size: 0.62rem;
-  font-weight: 700;
-  line-height: 1;
-  color: #64748b;
+.hr-att-dept-rate {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
-.hr-anim-delta.up   { color: #34d399; }  /* ▲ so với hôm trước */
-.hr-anim-delta.down { color: #f87171; }  /* ▼ so với hôm trước */
-/* Tạm dừng luân chuyển khi rê chuột — xem kỹ 1 bộ phận */
-.hr-mini-card:hover .hr-anim-frame.hr-anim-show,
-.hr-mini-card:focus-visible .hr-anim-frame.hr-anim-show {
-  animation-play-state: paused;
+.hr-att-dept.tone-good .hr-att-dept-rate { color: #16a34a; }  /* ≥90% */
+.hr-att-dept.tone-mid  .hr-att-dept-rate { color: #d97706; }  /* 70–90% */
+.hr-att-dept.tone-low  .hr-att-dept-rate { color: #dc2626; }  /* <70% */
+.hr-att-dept.tone-na   .hr-att-dept-rate { color: var(--text-muted); }
+.hr-att-dept-bar {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  overflow: hidden;
 }
-.hr-mini-card:hover .hr-anim-dot,
-.hr-mini-card:focus-visible .hr-anim-dot {
-  animation-play-state: paused;
+.hr-att-dept-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
 }
-/* Tôn trọng tùy chọn giảm chuyển động của người dùng */
-@media (prefers-reduced-motion: reduce) {
-  .hr-anim-frame { animation: none !important; }
-  .hr-anim-frame.hr-anim-show { opacity: 1; }
-  .hr-anim-chart .hr-anim-dot { animation: none !important; }
+.hr-att-dept.tone-good .hr-att-dept-bar > span { background: #16a34a; }
+.hr-att-dept.tone-mid  .hr-att-dept-bar > span { background: #d97706; }
+.hr-att-dept.tone-low  .hr-att-dept-bar > span { background: #dc2626; }
+.hr-att-dept-meta {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ═══════════════════════════════════════════════════════════════ */

@@ -1,7 +1,1052 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-10T10:01:15.659Z",
+  "savedAt": "2026-10-12T11:41:08.628Z",
   "batches": [
+    {
+      "id": "batch-1791779025021-5",
+      "code": "261008-06",
+      "stage": "say1",
+      "date": "2026-10-08",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 504,
+      "volume": 0.0794,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791779025017
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791442916716-fanta",
+      "sourceChonNanLabel": "1250×18×7 · B · 504",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:23:45.017Z"
+    },
+    {
+      "id": "batch-1791779025021-4",
+      "code": "261008-05",
+      "stage": "say1",
+      "date": "2026-10-08",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 672,
+      "volume": 0.1058,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791779025017
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791519377780-ihqqe",
+      "sourceChonNanLabel": "1250×18×7 · B · 672",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:23:45.017Z"
+    },
+    {
+      "id": "batch-1791779025021-3",
+      "code": "261008-04",
+      "stage": "say1",
+      "date": "2026-10-08",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2268,
+      "volume": 0.3572,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791779025017
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791442876763-5no2z",
+      "sourceChonNanLabel": "1250×18×7 · A1 · 2.268",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:23:45.017Z"
+    },
+    {
+      "id": "batch-1791779025021-2",
+      "code": "261008-03",
+      "stage": "say1",
+      "date": "2026-10-08",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1092,
+      "volume": 0.172,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791779025017
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791441313851-dodaq",
+      "sourceChonNanLabel": "1250×18×7 · A · 1.092",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:23:45.017Z"
+    },
+    {
+      "id": "batch-1791779025021-1",
+      "code": "261008-02",
+      "stage": "say1",
+      "date": "2026-10-08",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 924,
+      "volume": 0.1455,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791779025017
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791519749348-2q893",
+      "sourceChonNanLabel": "1250×18×7 · A · 924",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:23:45.017Z"
+    },
+    {
+      "id": "batch-1791779025020-0",
+      "code": "261008-01",
+      "stage": "say1",
+      "date": "2026-10-08",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2184,
+      "volume": 0.344,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791779025017
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791519844422-g3gmz",
+      "sourceChonNanLabel": "1250×18×7 · A1 · 2.184",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:23:45.017Z"
+    },
+    {
+      "id": "batch-1791778780964-9",
+      "code": "261007-16",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 280,
+      "volume": 0.063,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791442661973-9qxzk",
+      "sourceChonNanLabel": "1250×18×10 · A · 280",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780964-8",
+      "code": "261007-15",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 280,
+      "volume": 0.063,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791444648644-nckwd",
+      "sourceChonNanLabel": "1250×18×10 · A · 280",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780963-7",
+      "code": "261007-14",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 560,
+      "volume": 0.126,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791441138123-jjrfp",
+      "sourceChonNanLabel": "1250×18×10 · A · 560",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780963-6",
+      "code": "261007-13",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 252,
+      "volume": 0.0397,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791617970375-ly30s",
+      "sourceChonNanLabel": "1250×18×7 · B · 252",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780963-5",
+      "code": "261007-12",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1680,
+      "volume": 0.2646,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172462910-e3klt",
+      "sourceChonNanLabel": "1250×18×7 · A1 · 1.680",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780963-4",
+      "code": "261007-11",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 560,
+      "volume": 0.1134,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791441696871-3fnqi",
+      "sourceChonNanLabel": "1250×18×9 · A · 560",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780963-3",
+      "code": "261007-10",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 420,
+      "volume": 0.0851,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791441102159-h483g",
+      "sourceChonNanLabel": "1250×18×9 · A · 420",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780963-2",
+      "code": "261007-09",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 280,
+      "volume": 0.0567,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791442988135-z7iej",
+      "sourceChonNanLabel": "1250×18×9 · A1 · 280",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780963-1",
+      "code": "261007-08",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 280,
+      "volume": 0.0567,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791361005664-nrdm1",
+      "sourceChonNanLabel": "1250×18×9 · A1 · 280",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778780962-0",
+      "code": "261007-07",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 560,
+      "volume": 0.1134,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778780959
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791442968982-yhyxv",
+      "sourceChonNanLabel": "1250×18×9 · A · 560",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:19:40.959Z"
+    },
+    {
+      "id": "batch-1791778489567-5",
+      "code": "261007-06",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 210,
+      "volume": 0.0504,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778489564
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791618865848-v9wfl",
+      "sourceChonNanLabel": "1250×24×8 · A · 210",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:14:49.564Z"
+    },
+    {
+      "id": "batch-1791778489567-4",
+      "code": "261007-05",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1470,
+      "volume": 0.3528,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778489564
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791526749474-tcaap",
+      "sourceChonNanLabel": "1250×24×8 · A1 · 1.470",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:14:49.564Z"
+    },
+    {
+      "id": "batch-1791778489567-3",
+      "code": "261007-04",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1764,
+      "volume": 0.2778,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778489564
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791442853858-rrtor",
+      "sourceChonNanLabel": "1250×18×7 · A · 1.764",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:14:49.564Z"
+    },
+    {
+      "id": "batch-1791778489567-2",
+      "code": "261007-03",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2268,
+      "volume": 0.3572,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778489564
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791171936878-e40et",
+      "sourceChonNanLabel": "1250×18×7 · A1 · 2.268",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:14:49.564Z"
+    },
+    {
+      "id": "batch-1791778489567-1",
+      "code": "261007-02",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 560,
+      "volume": 0.1344,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778489564
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791361171201-6i8st",
+      "sourceChonNanLabel": "1250×24×8 · A · 560",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:14:49.564Z"
+    },
+    {
+      "id": "batch-1791778489567-0",
+      "code": "261007-01",
+      "stage": "say1",
+      "date": "2026-10-07",
+      "week": "Tuần 41",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1120,
+      "volume": 0.2688,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791778489564
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791444866111-7og4n",
+      "sourceChonNanLabel": "1250×24×8 · A1 · 1.120",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-07"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:14:49.564Z"
+    },
+    {
+      "id": "batch-1791777010276-7",
+      "code": "261003-37",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1442,
+      "volume": 0.3461,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172699390-0n8wk",
+      "sourceChonNanLabel": "1250×24×8 · A · 1.442",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791777010275-6",
+      "code": "261003-36",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 840,
+      "volume": 0.1701,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791519985189-grnqz",
+      "sourceChonNanLabel": "1250×18×9 · A · 840",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791777010275-5",
+      "code": "261003-35",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 350,
+      "volume": 0.0709,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791171999103-01o6x",
+      "sourceChonNanLabel": "1250×18×9 · B · 350",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791777010275-4",
+      "code": "261003-34",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 196,
+      "volume": 0.0397,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172596352-cv5cv",
+      "sourceChonNanLabel": "1250×18×9 · B · 196",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791777010275-3",
+      "code": "261003-33",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1176,
+      "volume": 0.2822,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791018412229-uwtd1",
+      "sourceChonNanLabel": "1250×24×8 · A · 1.176",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791777010275-2",
+      "code": "261003-32",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 420,
+      "volume": 0.1008,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791441227812-mzhte",
+      "sourceChonNanLabel": "1250×24×8 · A · 420",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791777010275-1",
+      "code": "261003-31",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1512,
+      "volume": 0.3629,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172092510-ls0o9",
+      "sourceChonNanLabel": "1250×24×8 · A · 1.512",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791777010275-0",
+      "code": "261003-30",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 420,
+      "volume": 0.1008,
+      "bambooType": "A",
+      "useFor": "Bullig",
+      "sayCharges": {
+        "say1": 1791777010271
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172096113-90uqe",
+      "sourceChonNanLabel": "1250×24×8 · A · 420",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791776440839-4",
+      "code": "261003-29",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 140,
+      "volume": 0.0315,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791776440836
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172028094-yglqy",
+      "sourceChonNanLabel": "1250×18×10 · B · 140",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791776440839-3",
+      "code": "261003-28",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 266,
+      "volume": 0.0658,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791776440836
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791346347189-pl94f",
+      "sourceChonNanLabel": "1250×18×11 · B · 266",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791776440839-2",
+      "code": "261003-27",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 98,
+      "volume": 0.0243,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791776440836
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172058391-ovb2u",
+      "sourceChonNanLabel": "1250×18×11 · B · 98",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791776440839-1",
+      "code": "261003-26",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1120,
+      "volume": 0.1764,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791776440836
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172450174-e8jdv",
+      "sourceChonNanLabel": "1250×18×7 · A · 1.120",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
+    {
+      "id": "batch-1791776440838-0",
+      "code": "261003-25",
+      "stage": "kho",
+      "date": "2026-10-03",
+      "week": "Tuần 40",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1428,
+      "volume": 0.2249,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1791776440836
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "x2cn-1791172465520-3ak1b",
+      "sourceChonNanLabel": "1250×18×7 · A1 · 1.428",
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
+        }
+      ],
+      "updatedAt": "2026-10-12T04:00:56.800Z",
+      "khoDate": "2026-10-08"
+    },
     {
       "id": "batch-1791446480386-11",
       "code": "261006-47",
@@ -1317,7 +2362,7 @@
     {
       "id": "batch-1791360183613",
       "code": "261006-13",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1329,7 +2374,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1338,9 +2383,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T08:04:50.967Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791360290967
@@ -1349,7 +2398,7 @@
     {
       "id": "batch-1791360159498",
       "code": "261006-12",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1361,7 +2410,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1370,9 +2419,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T08:04:50.967Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791360290967
@@ -1381,7 +2434,7 @@
     {
       "id": "batch-1791360129357",
       "code": "261006-11",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1393,7 +2446,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1402,9 +2455,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T08:04:50.967Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791360290967
@@ -1413,7 +2470,7 @@
     {
       "id": "batch-1791360107819",
       "code": "261006-10",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1425,7 +2482,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1434,9 +2491,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T08:04:50.967Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791360290967
@@ -1445,7 +2506,7 @@
     {
       "id": "batch-1791360067566",
       "code": "261006-09",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1457,7 +2518,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1466,9 +2527,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T08:04:50.967Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791360290967
@@ -1477,7 +2542,7 @@
     {
       "id": "batch-1791360042442",
       "code": "261006-08",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1489,7 +2554,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1498,9 +2563,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T08:04:50.967Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791360290967
@@ -1509,7 +2578,7 @@
     {
       "id": "batch-1791360026218",
       "code": "261006-07",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1521,7 +2590,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1530,9 +2599,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T08:04:50.967Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791360290967
@@ -1541,7 +2614,7 @@
     {
       "id": "batch-1791358247276",
       "code": "261006-06",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1553,7 +2626,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1562,9 +2635,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:31:44.882Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358304882
@@ -1573,7 +2650,7 @@
     {
       "id": "batch-1791358228367",
       "code": "261006-05",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1585,7 +2662,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1594,9 +2671,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:31:44.882Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358304882
@@ -1605,7 +2686,7 @@
     {
       "id": "batch-1791358196480",
       "code": "261006-04",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1617,7 +2698,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1626,9 +2707,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:31:44.882Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358304882
@@ -1637,7 +2722,7 @@
     {
       "id": "batch-1791358175544",
       "code": "261006-03",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1649,7 +2734,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1658,9 +2743,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:31:44.882Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358304882
@@ -1669,7 +2758,7 @@
     {
       "id": "batch-1791358155298",
       "code": "261006-02",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1681,7 +2770,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1690,9 +2779,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:31:44.882Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358304882
@@ -1701,7 +2794,7 @@
     {
       "id": "batch-1791358127351",
       "code": "261006-01",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-06",
       "week": "Tuần 41",
       "length": 1250,
@@ -1713,7 +2806,7 @@
       "useFor": "Ván",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-10-06",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -1722,9 +2815,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:31:44.882Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358304882
@@ -1733,7 +2830,7 @@
     {
       "id": "batch-1791357296454-0",
       "code": "261005-21",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1754,14 +2851,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:14:56.453Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-7",
       "code": "261005-20",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1782,14 +2884,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:38:45.778Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-6",
       "code": "261005-19",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1810,14 +2917,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:27:46.476Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-5",
       "code": "261005-18",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1838,14 +2950,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:27:46.476Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-4",
       "code": "261005-17",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1866,14 +2983,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:27:46.476Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-3",
       "code": "261005-16",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1894,14 +3016,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:27:46.476Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-2",
       "code": "261005-15",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1922,14 +3049,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:27:46.476Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-1",
       "code": "261005-14",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1950,14 +3082,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:27:46.476Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791354466477-0",
       "code": "261005-13",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -1978,14 +3115,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T06:27:46.476Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791345048803-6",
       "code": "261005-12",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2006,14 +3148,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T03:50:48.802Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791345048803-5",
       "code": "261005-11",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2034,14 +3181,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T03:50:48.802Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791345048803-4",
       "code": "261005-10",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2062,14 +3214,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T03:50:48.802Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791345048803-3",
       "code": "261005-09",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2090,14 +3247,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T03:50:48.802Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791345048803-2",
       "code": "261005-08",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2118,14 +3280,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T03:50:48.802Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791345048803-1",
       "code": "261005-07",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2146,14 +3313,19 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T03:50:48.802Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791345048803-0",
       "code": "261005-06",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2174,9 +3346,14 @@
         {
           "stage": "say1",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T03:50:48.802Z"
+      "updatedAt": "2026-10-12T08:37:40.068Z",
+      "khoDate": "2026-10-09"
     },
     {
       "id": "batch-1791270627206",
@@ -2205,7 +3382,7 @@
     {
       "id": "batch-1791248894826",
       "code": "261005-05",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2217,7 +3394,7 @@
       "useFor": "Bullig",
       "location": "LS14",
       "notes": "",
-      "khoDate": "2026-10-05",
+      "khoDate": "2026-10-09",
       "stageHistory": [
         {
           "stage": "kho",
@@ -2226,9 +3403,13 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:09:16.127Z",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
       "say2Date": "2026-10-05",
       "sayCharges": {
         "say2": 1791248956127
@@ -2237,7 +3418,7 @@
     {
       "id": "batch-1791248873428",
       "code": "261005-04",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2249,7 +3430,7 @@
       "useFor": "Bullig",
       "location": "LS14",
       "notes": "",
-      "khoDate": "2026-10-05",
+      "khoDate": "2026-10-09",
       "stageHistory": [
         {
           "stage": "kho",
@@ -2258,9 +3439,13 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:09:16.127Z",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
       "say2Date": "2026-10-05",
       "sayCharges": {
         "say2": 1791248956127
@@ -2269,7 +3454,7 @@
     {
       "id": "batch-1791248783774",
       "code": "261005-03",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2281,7 +3466,7 @@
       "useFor": "Bullig",
       "location": "LS14",
       "notes": "",
-      "khoDate": "2026-10-05",
+      "khoDate": "2026-10-09",
       "stageHistory": [
         {
           "stage": "kho",
@@ -2290,9 +3475,13 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:09:16.127Z",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
       "say2Date": "2026-10-05",
       "sayCharges": {
         "say2": 1791248956127
@@ -2301,7 +3490,7 @@
     {
       "id": "batch-1791248755763",
       "code": "261005-02",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2313,7 +3502,7 @@
       "useFor": "Bullig",
       "location": "LS14",
       "notes": "",
-      "khoDate": "2026-10-05",
+      "khoDate": "2026-10-09",
       "stageHistory": [
         {
           "stage": "kho",
@@ -2322,9 +3511,13 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:09:16.127Z",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
       "say2Date": "2026-10-05",
       "sayCharges": {
         "say2": 1791248956127
@@ -2333,7 +3526,7 @@
     {
       "id": "batch-1791248730420",
       "code": "261005-01",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-05",
       "week": "Tuần 41",
       "length": 1250,
@@ -2345,7 +3538,7 @@
       "useFor": "Bullig",
       "location": "LS14",
       "notes": "",
-      "khoDate": "2026-10-05",
+      "khoDate": "2026-10-09",
       "stageHistory": [
         {
           "stage": "kho",
@@ -2354,9 +3547,13 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:09:16.127Z",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
       "say2Date": "2026-10-05",
       "sayCharges": {
         "say2": 1791248956127
@@ -3301,7 +4498,7 @@
     {
       "id": "batch-1791104554068-5",
       "code": "261003-16",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3322,14 +4519,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T09:02:34.067Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104554068-4",
       "code": "261003-15",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3350,14 +4552,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T09:02:34.067Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104554068-3",
       "code": "261003-14",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3378,14 +4585,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T09:02:34.067Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104554068-2",
       "code": "261003-13",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3406,14 +4618,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T09:02:34.067Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104554068-1",
       "code": "261003-12",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3434,14 +4651,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T09:02:34.067Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104554067-0",
       "code": "261003-11",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3462,14 +4684,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T09:02:34.067Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-9",
       "code": "261003-10",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3490,14 +4717,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-8",
       "code": "261003-09",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3518,14 +4750,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-7",
       "code": "261003-08",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3546,14 +4783,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-6",
       "code": "261003-07",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3574,14 +4816,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-5",
       "code": "261003-06",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3602,14 +4849,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-4",
       "code": "261003-05",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3630,14 +4882,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-3",
       "code": "261003-04",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3658,14 +4915,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-2",
       "code": "261003-03",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3686,14 +4948,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-1",
       "code": "261003-02",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3714,14 +4981,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791104271107-0",
       "code": "261003-01",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-03",
       "week": "Tuần 40",
       "length": 1250,
@@ -3742,14 +5014,19 @@
         {
           "stage": "say1",
           "date": "2026-10-03"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-07"
         }
       ],
-      "updatedAt": "2026-10-04T08:57:51.106Z"
+      "updatedAt": "2026-10-12T04:07:49.572Z",
+      "khoDate": "2026-10-07"
     },
     {
       "id": "batch-1791103565002-3",
       "code": "261002-19",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -3779,16 +5056,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:03.770Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791103565002-2",
       "code": "261002-18",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -3818,16 +5099,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:52.009Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791103565002-1",
       "code": "261002-17",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -3857,16 +5142,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:03.770Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791103565002-0",
       "code": "261002-16",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -3896,16 +5185,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:52.009Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791103539180-3",
       "code": "261002-15",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -3935,16 +5228,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:03.770Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791103539180-2",
       "code": "261002-14",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -3974,16 +5271,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:03.770Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791103539180-1",
       "code": "261002-13",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4013,16 +5314,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:52.009Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791103539180-0",
       "code": "261002-12",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4052,16 +5357,20 @@
         {
           "stage": "say2",
           "date": "2026-10-07"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-07T07:48:52.009Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:11:54.621Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-07"
     },
     {
       "id": "batch-1791102494920-2",
       "code": "261002-11",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4091,16 +5400,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:44:45.551Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791102494920-1",
       "code": "261002-10",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4130,16 +5443,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:44:45.551Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791102494920-0",
       "code": "261002-09",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4169,16 +5486,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:36:49.574Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791101374155-3",
       "code": "260929-18",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4208,16 +5529,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:59:43.599Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791101374155-2",
       "code": "260929-17",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4247,16 +5572,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:59:43.599Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791101374154-1",
       "code": "260929-16",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4286,16 +5615,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:59:43.599Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791101374154-0",
       "code": "260929-15",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4325,16 +5658,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:55:59.562Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791100722264-1",
       "code": "260929-14",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4364,10 +5701,14 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:59:43.599Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
@@ -4406,7 +5747,7 @@
     {
       "id": "batch-1791100671791-3",
       "code": "260929-12",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4436,16 +5777,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:02:26.043Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791100671791-2",
       "code": "260929-11",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4475,16 +5820,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:02:26.043Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791100671791-1",
       "code": "260929-10",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-29",
       "week": "Tuần 40",
       "length": 1250,
@@ -4514,10 +5863,14 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:02:26.043Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
@@ -4556,7 +5909,7 @@
     {
       "id": "batch-1791099278434-3",
       "code": "261002-08",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4586,16 +5939,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:24:16.786Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791099278434-2",
       "code": "261002-07",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4625,16 +5982,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:24:16.786Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791099278434-1",
       "code": "261002-06",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4664,16 +6025,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:55:59.562Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791099278434-0",
       "code": "261002-05",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4703,16 +6068,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:24:16.786Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791099203535-3",
       "code": "261002-04",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4742,16 +6111,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:25:59.403Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791099203535-2",
       "code": "261002-03",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4781,16 +6154,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:25:59.403Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791099203535-1",
       "code": "261002-02",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4820,16 +6197,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:25:59.403Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791099203535-0",
       "code": "261002-01",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-10-02",
       "week": "Tuần 40",
       "length": 1250,
@@ -4859,16 +6240,20 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:25:59.403Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06"
     },
     {
       "id": "batch-1791085297454-1",
       "code": "260928-23",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -4898,16 +6283,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:54:18.694Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1791085297453-0",
       "code": "260928-22",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -4937,16 +6326,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:54:18.694Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1790817861408-2",
       "code": "260928-21",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -4970,10 +6363,14 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:44:45.551Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
+      "khoDate": "2026-10-08",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791359085551
@@ -5015,7 +6412,7 @@
     {
       "id": "batch-1790817861408-0",
       "code": "260928-19",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -5045,16 +6442,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T01:02:26.043Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1790817824504-3",
       "code": "260928-18",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -5084,16 +6485,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:54:18.694Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1790817824504-2",
       "code": "260928-17",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -5123,16 +6528,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:55:59.562Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1790817824503-1",
       "code": "260928-16",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -5162,16 +6571,20 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:55:59.562Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
       "id": "batch-1790817824503-0",
       "code": "260928-15",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-28",
       "week": "Tuần 40",
       "length": 1250,
@@ -5201,10 +6614,14 @@
         {
           "stage": "say2",
           "date": "2026-10-05"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-09"
         }
       ],
-      "updatedAt": "2026-10-06T00:54:18.694Z",
-      "khoDate": "2026-10-06",
+      "updatedAt": "2026-10-12T03:28:53.875Z",
+      "khoDate": "2026-10-09",
       "say2Date": "2026-10-05"
     },
     {
@@ -7450,7 +8867,7 @@
     {
       "id": "batch-1790770861071",
       "code": "260930-33",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-30",
       "week": "Tuần 40",
       "length": 1250,
@@ -7462,7 +8879,7 @@
       "useFor": "Bullig",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-09-30",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -7471,9 +8888,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:36:49.574Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358609574
@@ -7482,7 +8903,7 @@
     {
       "id": "batch-1790770747169",
       "code": "260930-32",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-30",
       "week": "Tuần 40",
       "length": 1250,
@@ -7494,7 +8915,7 @@
       "useFor": "Bullig",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-09-30",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -7503,9 +8924,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:36:49.574Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358609574
@@ -7514,7 +8939,7 @@
     {
       "id": "batch-1790770689139",
       "code": "260930-31",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-30",
       "week": "Tuần 40",
       "length": 1250,
@@ -7526,7 +8951,7 @@
       "useFor": "Bullig",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-09-30",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -7535,9 +8960,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:44:45.551Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791359085551
@@ -7846,7 +9275,7 @@
     {
       "id": "batch-1790764379815",
       "code": "260930-21",
-      "stage": "say2",
+      "stage": "kho",
       "date": "2026-09-30",
       "week": "Tuần 40",
       "length": 1250,
@@ -7858,7 +9287,7 @@
       "useFor": "Bullig",
       "location": "LS13",
       "notes": "",
-      "khoDate": "2026-09-30",
+      "khoDate": "2026-10-08",
       "stageHistory": [
         {
           "stage": "kho",
@@ -7867,9 +9296,13 @@
         {
           "stage": "say2",
           "date": "2026-10-06"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-08"
         }
       ],
-      "updatedAt": "2026-10-07T07:36:49.574Z",
+      "updatedAt": "2026-10-12T04:06:44.738Z",
       "say2Date": "2026-10-06",
       "sayCharges": {
         "say2": 1791358609574
@@ -10966,6 +12399,118 @@
       "note": "",
       "images": [],
       "createdAt": "2026-10-10T07:01:52.877Z"
+    },
+    {
+      "id": "mat-1791774849373-th7uw",
+      "date": "2026-10-09",
+      "week": "2026-W41",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Quy",
+      "location": "xuong-2",
+      "inputIndex": 17510,
+      "outputIndex": 6670,
+      "weight": 10840,
+      "unitPrice": 1600,
+      "totalAmount": 17344000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-12T03:14:09.373Z"
+    },
+    {
+      "id": "mat-1791774941278-2vtp8",
+      "date": "2026-10-11",
+      "week": "2026-W41",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Lâm Sơn Điện",
+      "location": "xuong-2",
+      "inputIndex": 16710,
+      "outputIndex": 8530,
+      "weight": 8180,
+      "unitPrice": 1600,
+      "totalAmount": 13088000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-12T03:15:41.278Z"
+    },
+    {
+      "id": "mat-1791774976679-20n1n",
+      "date": "2026-10-11",
+      "week": "2026-W41",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Chiến",
+      "location": "xuong-2",
+      "inputIndex": 6460,
+      "outputIndex": 2630,
+      "weight": 3830,
+      "unitPrice": 1600,
+      "totalAmount": 6128000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-12T03:16:16.679Z"
+    },
+    {
+      "id": "mat-1791775010956-yfmdm",
+      "date": "2026-10-12",
+      "week": "2026-W42",
+      "type": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "location": "xuong-2",
+      "inputIndex": 3610,
+      "outputIndex": 2280,
+      "weight": 1330,
+      "unitPrice": 1800,
+      "totalAmount": 2394000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-12T03:16:50.956Z"
+    },
+    {
+      "id": "mat-1791775069420-exq94",
+      "date": "2026-10-12",
+      "week": "2026-W42",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Khoa Dự Sơn Điện",
+      "location": "xuong-2",
+      "inputIndex": 20510,
+      "outputIndex": 7830,
+      "weight": 12680,
+      "unitPrice": 1600,
+      "totalAmount": 20288000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-12T03:17:49.420Z"
+    },
+    {
+      "id": "mat-1791775179391-41s35",
+      "date": "2026-10-12",
+      "week": "2026-W42",
+      "type": "Luồng ống",
+      "supplier": "Nhà Thành",
+      "location": "xuong-2",
+      "inputIndex": 11930,
+      "outputIndex": 6030,
+      "weight": 5900,
+      "unitPrice": 1800,
+      "totalAmount": 10620000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-12T03:19:39.391Z"
+    },
+    {
+      "id": "mat-1791775254043-r94h7",
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "type": "Luồng ống",
+      "supplier": "Nhà Trung",
+      "location": "xuong-2",
+      "inputIndex": 4450,
+      "outputIndex": 2270,
+      "weight": 2180,
+      "unitPrice": 1800,
+      "totalAmount": 3924000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-12T03:20:54.043Z"
     }
   ],
   "xuong2CutRecords": [
@@ -11556,6 +13101,48 @@
       "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "inputWeight": 12850,
       "klCayLoai": 0
+    },
+    {
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca",
+      "code": "",
+      "inputWeight": 3830,
+      "cutHours": 18,
+      "createdAt": "2026-10-12T04:19:23.940Z",
+      "id": "x2cut-1791778763940-w74su",
+      "materialId": "mat-1791774976679-20n1n",
+      "cutter": "Vi Văn Thiệu, Vi Thị Nghị",
+      "date": "2026-10-10",
+      "klCuiDot": 580,
+      "week": "2026-W41",
+      "supplier": "Nhà Chiến",
+      "cutHoursTC": 0,
+      "note": "",
+      "klNgonOngLoai": 1503,
+      "materialType": "Luồng cây xô",
+      "klCayLoai": 0,
+      "cutHoursHC": 18,
+      "klOngLuong": 1747
+    },
+    {
+      "cutHours": 18,
+      "date": "2026-10-10",
+      "materialType": "Luồng cây xô",
+      "week": "2026-W41",
+      "createdAt": "2026-10-12T04:21:09.443Z",
+      "klNgonOngLoai": 6279,
+      "klCuiDot": 2170,
+      "code": "",
+      "supplier": "Nhà Tế",
+      "id": "x2cut-1791778869443-xskhf",
+      "cutHoursHC": 18,
+      "klOngLuong": 5861,
+      "klCayLoai": 0,
+      "inputWeight": 14310,
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca",
+      "cutHoursTC": 0,
+      "cutter": "Vi Văn Thiệu, Vi Thị Nghị",
+      "materialId": "mat-1791536244328-me9t5",
+      "note": ""
     }
   ],
   "xuong2BoluongRecords": [
@@ -11694,6 +13281,40 @@
       "code": "",
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "workHoursTC": 0
+    },
+    {
+      "id": "x2blg-1791778655405-0u896",
+      "qty": 3830,
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "code": "",
+      "workHoursHC": 27,
+      "materialType": "Luồng cây xô",
+      "createdAt": "2026-10-12T04:17:35.405Z",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "worker": "Hà Văn Hùng A, Hà Văn Ước, Vi Văn Nhêu",
+      "supplier": "Nhà Chiến",
+      "workHours": 27,
+      "materialId": "mat-1791774976679-20n1n",
+      "inputWeight": 3830,
+      "workHoursTC": 0
+    },
+    {
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "code": "",
+      "workHours": 27,
+      "materialType": "Luồng cây xô",
+      "workHoursHC": 27,
+      "materialId": "mat-1791536244328-me9t5",
+      "week": "2026-W42",
+      "date": "2026-10-12",
+      "qty": 1430,
+      "id": "x2blg-1791778666716-gszml",
+      "workHoursTC": 0,
+      "worker": "Vi Văn Hem, Vi Văn Nhêu, Vi Văn Hiêng",
+      "inputWeight": 14310,
+      "supplier": "Nhà Tế",
+      "createdAt": "2026-10-12T04:17:46.716Z"
     }
   ],
   "xuong1CatOngRecords": [],
@@ -11881,19 +13502,20 @@
       "cutDate": "2026-09-23",
       "createdAt": "2026-10-02T02:30:13.588Z",
       "cutId": "x2cut-1790242909144-oxmp6",
-      "klOngBo": 6012,
-      "lotOng": 6012,
+      "klOngBo": 6018,
+      "lotOng": 6018,
       "date": "2026-09-23",
       "week": "2026-W39",
       "workHoursTC": 0,
       "klOngLoai": 0,
       "workHours": 4.5,
-      "inputOng": 6012,
+      "inputOng": 6018,
       "materialId": "mat-1790214905717-v5upg",
       "materialType": "Luồng cây xô",
       "supplier": "Nhà Tế",
       "id": "x2bo-1790908213588-hzgkv",
-      "workTime": "13:00 → hết ca"
+      "workTime": "13:00 → hết ca",
+      "updatedAt": "2026-10-12T03:26:05.542Z"
     },
     {
       "date": "2026-10-02",
@@ -12274,6 +13896,46 @@
       "klOngLoai": 19,
       "workTime": "07:00 → hết ca",
       "materialId": "mat-1791427063274-mduab"
+    },
+    {
+      "workTime": "07:00 → hết ca",
+      "klOngBo": 5801,
+      "workHoursTC": 0,
+      "createdAt": "2026-10-12T04:21:29.485Z",
+      "cutDate": "2026-10-10",
+      "inputOng": 5861,
+      "materialId": "mat-1791536244328-me9t5",
+      "workHoursHC": 9,
+      "lotOng": 5861,
+      "id": "x2bo-1791778889485-pq69q",
+      "workHours": 9,
+      "klOngLoai": 60,
+      "worker": "Lục Văn Tuấn",
+      "supplier": "Nhà Tế",
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "cutId": "x2cut-1791778869443-xskhf",
+      "materialType": "Luồng cây xô"
+    },
+    {
+      "workHoursHC": 9,
+      "materialType": "Luồng cây xô",
+      "klOngBo": 1707,
+      "supplier": "Nhà Chiến",
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "cutDate": "2026-10-10",
+      "id": "x2bo-1791778895863-y4h6m",
+      "cutId": "x2cut-1791778763940-w74su",
+      "klOngLoai": 40,
+      "workHours": 9,
+      "materialId": "mat-1791774976679-20n1n",
+      "inputOng": 1747,
+      "createdAt": "2026-10-12T04:21:35.863Z",
+      "lotOng": 1747,
+      "workHoursTC": 0,
+      "workTime": "07:00 → hết ca",
+      "worker": "Lục Văn Tuấn"
     }
   ],
   "xuong2BaoThoRecords": [
@@ -12498,18 +14160,18 @@
     },
     {
       "id": "x2bt-1791277962050-jdzaj",
-      "boOngId": "x2bo-1791272762998-jo8tb",
+      "boOngId": "x2bo-1791272738864-be9xg",
       "boOngIds": [
-        "x2bo-1791272762998-jo8tb",
-        "x2bo-1791272753790-khdzk",
-        "x2bo-1791272738864-be9xg"
+        "x2bo-1791272738864-be9xg",
+        "x2bo-1791171769716-mvons",
+        "x2bo-1791018032029-nm2bc"
       ],
-      "materialId": "mat-1791270963754-l3t1q",
+      "materialId": "mat-1790645886439-smcht",
       "materialType": "Luồng ống + Luồng cây xô",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "boDate": "2026-10-05",
-      "cutDate": "2026-10-05",
-      "klOngBo": 11648,
+      "supplier": "Nhà Thành + Nhà Hương + Nhà Khánh Huế",
+      "boDate": "2026-10-02",
+      "cutDate": "2026-10-02",
+      "klOngBo": 14646,
       "date": "2026-10-05",
       "week": "2026-W41",
       "daiText": "1250",
@@ -12535,45 +14197,7 @@
       "workHoursHC": 36,
       "workHoursTC": 0,
       "createdAt": "2026-10-06T09:12:42.050Z",
-      "updatedAt": "2026-10-06T09:13:01.373Z"
-    },
-    {
-      "supplier": "Nhà Thành",
-      "workHoursTC": 0,
-      "daiText": "1250",
-      "workHoursHC": 36,
-      "thicks": [
-        7,
-        8,
-        9,
-        10,
-        11
-      ],
-      "dayText": "7,8,9,10,11",
-      "workHours": 36,
-      "dais": [
-        1250
-      ],
-      "createdAt": "2026-10-07T03:47:36.859Z",
-      "id": "x2bt-1791344856859-gx6rb",
-      "materialId": "mat-1790645886439-smcht",
-      "materialType": "Luồng ống",
-      "boDate": "2026-10-05",
-      "date": "2026-10-05",
-      "boOngId": "x2bo-1791272738864-be9xg",
-      "boOngIds": [
-        "x2bo-1791272738864-be9xg"
-      ],
-      "week": "2026-W41",
-      "cutDate": "2026-10-05",
-      "rongs": [
-        18,
-        24
-      ],
-      "worker": "Vi Văn Hem, Hà Văn Ước, Vi Văn Nhêu, Vi Văn Tôn",
-      "klOngBo": 5800,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "rongText": "18,24"
+      "updatedAt": "2026-10-12T08:00:36.347Z"
     },
     {
       "cutDate": "2026-10-06",
@@ -12955,6 +14579,45 @@
       "id": "x2bt-1791617674956-vfdz2",
       "date": "2026-10-09",
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca"
+    },
+    {
+      "daiText": "1250",
+      "boOngIds": [
+        "x2bo-1791778895863-y4h6m",
+        "x2bo-1791778889485-pq69q"
+      ],
+      "klOngBo": 7508,
+      "materialId": "mat-1791774976679-20n1n",
+      "workHours": 40.5,
+      "boOngId": "x2bo-1791778895863-y4h6m",
+      "workHoursTC": 0,
+      "materialType": "Luồng cây xô",
+      "cutDate": "2026-10-10",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "rongText": "18,24",
+      "worker": "Vi Văn Tôn, Mạc Văn Hòa, Vi Văn Hem, Vi Văn Hiêng, Phạm Thị Hoan, Phạm Trung Kiên",
+      "workTime": "07:00 → hết ca, 07:00–11:30, 07:00 → hết ca, 07:00 → hết ca, 13:00 → hết ca, 13:00 → hết ca",
+      "dais": [
+        1250
+      ],
+      "boDate": "2026-10-10",
+      "thicks": [
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "dayText": "7,8,9,10,11",
+      "workHoursHC": 40.5,
+      "createdAt": "2026-10-12T04:21:58.243Z",
+      "id": "x2bt-1791778918243-yvp20",
+      "rongs": [
+        18,
+        24
+      ],
+      "week": "2026-W41",
+      "date": "2026-10-10"
     }
   ],
   "xuong2ChonNanThoRecords": [
@@ -20619,7 +22282,7 @@
     {
       "workHoursTC": 0,
       "id": "x2cn-1791617746008-r1j9e",
-      "volume": 0.2189,
+      "volume": 0.172,
       "cls": "A",
       "unitVol": 0.0001575,
       "week": "2026-W41",
@@ -20637,12 +22300,13 @@
       "createdAt": "2026-10-10T07:35:46.008Z",
       "external": false,
       "workHoursHC": 72,
-      "quantity": 1390,
+      "quantity": 1092,
       "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
       "materialId": "mat-1791427063274-mduab",
       "boDate": "2026-10-09",
       "materialType": "Luồng cây xô + Luồng ống",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
+      "updatedAt": "2026-10-12T07:37:12.899Z"
     },
     {
       "sizeKey": "1250×18×7",
@@ -21798,7 +23462,7 @@
       "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
       "external": false,
       "cls": "A",
-      "quantity": 30,
+      "quantity": 350,
       "boDate": "2026-10-09",
       "workHoursTC": 0,
       "id": "x2cn-1791618863623-ft19l",
@@ -21808,7 +23472,7 @@
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "materialId": "mat-1791427063274-mduab",
       "unitVol": 0.00024,
-      "volume": 0.0072,
+      "volume": 0.084,
       "workHours": 72,
       "date": "2026-10-09",
       "btDate": "2026-10-09",
@@ -21818,7 +23482,8 @@
         24,
         8
       ],
-      "sizeKey": "1250×24×8"
+      "sizeKey": "1250×24×8",
+      "updatedAt": "2026-10-12T07:28:44.537Z"
     },
     {
       "baothoId": "x2bt-1791617674956-vfdz2",
@@ -22017,32 +23682,734 @@
       "workHoursTC": 0
     },
     {
+      "quantity": 630,
+      "external": false,
+      "materialType": "Luồng cây xô + Luồng ống",
+      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
+      "createdAt": "2026-10-10T07:55:22.648Z",
+      "btDate": "2026-10-09",
+      "cls": "B",
+      "materialId": "mat-1791427063274-mduab",
       "volume": 0.1512,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "unitVol": 0.00024,
+      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
+      "workHoursHC": 72,
+      "baothoId": "x2bt-1791617674956-vfdz2",
+      "sizeKey": "1250×24×8",
       "dims": [
         1250,
         24,
         8
       ],
-      "createdAt": "2026-10-10T07:55:15.975Z",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "date": "2026-10-09",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "btDate": "2026-10-09",
-      "workHoursHC": 72,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "week": "2026-W41",
-      "id": "x2cn-1791618915975-b3hf8",
-      "cls": "B",
-      "external": false,
-      "materialId": "mat-1791427063274-mduab",
-      "unitVol": 0.00024,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "quantity": 630,
-      "boDate": "2026-10-09",
       "workHours": 72,
-      "sizeKey": "1250×24×8",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
+      "workHoursTC": 0,
+      "week": "2026-W41",
+      "id": "x2cn-1791618922648-xgvx5",
+      "boDate": "2026-10-09",
+      "date": "2026-10-09",
+      "updatedAt": "2026-10-12T07:30:09.747Z"
+    },
+    {
+      "external": false,
+      "cls": "A",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "workHoursHC": 57,
+      "quantity": 2268,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "createdAt": "2026-10-12T04:22:46.548Z",
+      "id": "x2cn-1791778966548-labc9",
+      "boDate": "2026-10-10",
+      "sizeKey": "1250×18×7",
+      "workHoursTC": 0,
+      "btDate": "2026-10-10",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workHours": 57,
+      "volume": 0.3572,
+      "materialType": "Luồng cây xô",
+      "unitVol": 0.0001575,
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "materialId": "mat-1791774976679-20n1n",
+      "week": "2026-W41",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "date": "2026-10-10"
+    },
+    {
+      "date": "2026-10-10",
+      "materialType": "Luồng cây xô",
+      "week": "2026-W41",
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "quantity": 1890,
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "workHoursHC": 57,
+      "createdAt": "2026-10-12T04:22:50.945Z",
+      "unitVol": 0.0001575,
+      "materialId": "mat-1791774976679-20n1n",
+      "cls": "A",
+      "volume": 0.2977,
+      "btDate": "2026-10-10",
+      "boDate": "2026-10-10",
+      "workHoursTC": 0,
+      "workHours": 57,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "id": "x2cn-1791778970945-4q59w",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "sizeKey": "1250×18×7",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00"
+    },
+    {
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "materialId": "mat-1791774976679-20n1n",
+      "cls": "A",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "createdAt": "2026-10-12T04:22:53.424Z",
+      "materialType": "Luồng cây xô",
+      "unitVol": 0.0001575,
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "workHoursHC": 57,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "btDate": "2026-10-10",
+      "volume": 0.0772,
+      "sizeKey": "1250×18×7",
+      "quantity": 490,
+      "boDate": "2026-10-10",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "id": "x2cn-1791778973424-nd8qh",
+      "workHours": 57,
       "workHoursTC": 0
+    },
+    {
+      "unitVol": 0.0001575,
+      "workHoursHC": 57,
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "quantity": 2268,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "materialType": "Luồng cây xô",
+      "external": false,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "boDate": "2026-10-10",
+      "workHours": 57,
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "id": "x2cn-1791778982207-jpm3r",
+      "volume": 0.3572,
+      "btDate": "2026-10-10",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "workHoursTC": 0,
+      "createdAt": "2026-10-12T04:23:02.207Z",
+      "sizeKey": "1250×18×7",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "materialId": "mat-1791774976679-20n1n",
+      "cls": "A1"
+    },
+    {
+      "createdAt": "2026-10-12T04:23:06.831Z",
+      "volume": 0.344,
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workHoursTC": 0,
+      "btDate": "2026-10-10",
+      "materialId": "mat-1791774976679-20n1n",
+      "cls": "A1",
+      "sizeKey": "1250×18×7",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "id": "x2cn-1791778986831-etkxi",
+      "workHoursHC": 57,
+      "quantity": 2184,
+      "unitVol": 0.0001575,
+      "week": "2026-W41",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "date": "2026-10-10",
+      "boDate": "2026-10-10",
+      "materialType": "Luồng cây xô",
+      "workHours": 57,
+      "dims": [
+        1250,
+        18,
+        7
+      ]
+    },
+    {
+      "createdAt": "2026-10-12T04:23:09.680Z",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "volume": 0.2381,
+      "btDate": "2026-10-10",
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "workHoursHC": 57,
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "id": "x2cn-1791778989680-dhsib",
+      "sizeKey": "1250×18×7",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "materialId": "mat-1791774976679-20n1n",
+      "quantity": 1512,
+      "unitVol": 0.0001575,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "boDate": "2026-10-10",
+      "cls": "A1",
+      "workHoursTC": 0,
+      "workHours": 57,
+      "materialType": "Luồng cây xô"
+    },
+    {
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "volume": 0.2117,
+      "external": false,
+      "btDate": "2026-10-10",
+      "workHoursTC": 0,
+      "quantity": 1344,
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "materialId": "mat-1791774976679-20n1n",
+      "cls": "B",
+      "workHours": 57,
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "sizeKey": "1250×18×7",
+      "workHoursHC": 57,
+      "createdAt": "2026-10-12T04:23:18.073Z",
+      "id": "x2cn-1791778998073-byy95",
+      "materialType": "Luồng cây xô",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "unitVol": 0.0001575,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "boDate": "2026-10-10",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00"
+    },
+    {
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "materialId": "mat-1791774976679-20n1n",
+      "sizeKey": "1250×18×7",
+      "materialType": "Luồng cây xô",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "createdAt": "2026-10-12T04:23:22.577Z",
+      "boDate": "2026-10-10",
+      "workHoursTC": 0,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "id": "x2cn-1791779002577-9uacw",
+      "date": "2026-10-10",
+      "volume": 0.1058,
+      "week": "2026-W41",
+      "unitVol": 0.0001575,
+      "btDate": "2026-10-10",
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "workHours": 57,
+      "workHoursHC": 57,
+      "cls": "B",
+      "quantity": 672,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "external": false
+    },
+    {
+      "cls": "reject",
+      "quantity": 100,
+      "unitVol": 0.0001575,
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "workHoursTC": 0,
+      "id": "x2cn-1791779009008-pntw0",
+      "createdAt": "2026-10-12T04:23:29.008Z",
+      "btDate": "2026-10-10",
+      "volume": 0.0158,
+      "workHoursHC": 57,
+      "sizeKey": "1250×18×7",
+      "dims": [
+        1250,
+        18,
+        7
+      ],
+      "boDate": "2026-10-10",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "materialType": "Luồng cây xô",
+      "workHours": 57,
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "materialId": "mat-1791774976679-20n1n"
+    },
+    {
+      "volume": 0.2977,
+      "btDate": "2026-10-10",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "external": false,
+      "cls": "A",
+      "workHoursHC": 57,
+      "id": "x2cn-1791779035647-joymg",
+      "workHours": 57,
+      "sizeKey": "1250×18×9",
+      "quantity": 1470,
+      "createdAt": "2026-10-12T04:23:55.647Z",
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "materialType": "Luồng cây xô",
+      "unitVol": 0.0002025,
+      "materialId": "mat-1791774976679-20n1n",
+      "workHoursTC": 0,
+      "boDate": "2026-10-10",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A"
+    },
+    {
+      "createdAt": "2026-10-12T04:24:03.658Z",
+      "workHoursTC": 0,
+      "sizeKey": "1250×18×9",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "volume": 0.1928,
+      "external": false,
+      "btDate": "2026-10-10",
+      "quantity": 952,
+      "cls": "A1",
+      "materialType": "Luồng cây xô",
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "workHoursHC": 57,
+      "boDate": "2026-10-10",
+      "id": "x2cn-1791779043658-29txs",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "materialId": "mat-1791774976679-20n1n",
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "workHours": 57,
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "unitVol": 0.0002025
+    },
+    {
+      "sizeKey": "1250×18×9",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "boDate": "2026-10-10",
+      "workHoursTC": 0,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "cls": "B",
+      "workHours": 57,
+      "quantity": 490,
+      "createdAt": "2026-10-12T04:24:10.336Z",
+      "id": "x2cn-1791779050336-jtwcs",
+      "workHoursHC": 57,
+      "unitVol": 0.0002025,
+      "external": false,
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "materialId": "mat-1791774976679-20n1n",
+      "volume": 0.0992,
+      "btDate": "2026-10-10",
+      "dims": [
+        1250,
+        18,
+        9
+      ]
+    },
+    {
+      "quantity": 20,
+      "boDate": "2026-10-10",
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "unitVol": 0.0002025,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "id": "x2cn-1791779055583-pf9jl",
+      "external": false,
+      "createdAt": "2026-10-12T04:24:15.583Z",
+      "materialId": "mat-1791774976679-20n1n",
+      "workHoursHC": 57,
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "sizeKey": "1250×18×9",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workHours": 57,
+      "dims": [
+        1250,
+        18,
+        9
+      ],
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "volume": 0.0041,
+      "btDate": "2026-10-10",
+      "workHoursTC": 0,
+      "cls": "reject"
+    },
+    {
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "createdAt": "2026-10-12T04:24:28.495Z",
+      "materialType": "Luồng cây xô",
+      "boDate": "2026-10-10",
+      "materialId": "mat-1791774976679-20n1n",
+      "id": "x2cn-1791779068495-0lv4b",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workHoursTC": 0,
+      "cls": "A",
+      "sizeKey": "1250×18×10",
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "workHoursHC": 57,
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "quantity": 504,
+      "unitVol": 0.000225,
+      "btDate": "2026-10-10",
+      "workHours": 57,
+      "volume": 0.1134
+    },
+    {
+      "sizeKey": "1250×18×10",
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "cls": "A",
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "createdAt": "2026-10-12T04:24:31.280Z",
+      "quantity": 532,
+      "btDate": "2026-10-10",
+      "volume": 0.1197,
+      "workHoursHC": 57,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "external": false,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "id": "x2cn-1791779071280-3vz3j",
+      "materialType": "Luồng cây xô",
+      "materialId": "mat-1791774976679-20n1n",
+      "boDate": "2026-10-10",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "unitVol": 0.000225,
+      "workHours": 57,
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workHoursTC": 0
+    },
+    {
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "workHours": 57,
+      "boDate": "2026-10-10",
+      "cls": "A1",
+      "workHoursTC": 0,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "sizeKey": "1250×18×10",
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "quantity": 910,
+      "workHoursHC": 57,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "materialId": "mat-1791774976679-20n1n",
+      "createdAt": "2026-10-12T04:24:38.111Z",
+      "materialType": "Luồng cây xô",
+      "id": "x2cn-1791779078111-zhr3f",
+      "unitVol": 0.000225,
+      "btDate": "2026-10-10",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "volume": 0.2047
+    },
+    {
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "id": "x2cn-1791779080415-bpz64",
+      "cls": "A1",
+      "unitVol": 0.000225,
+      "btDate": "2026-10-10",
+      "volume": 0.126,
+      "workHoursHC": 57,
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "createdAt": "2026-10-12T04:24:40.415Z",
+      "workHours": 57,
+      "materialType": "Luồng cây xô",
+      "sizeKey": "1250×18×10",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "boDate": "2026-10-10",
+      "quantity": 560,
+      "materialId": "mat-1791774976679-20n1n",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "workHoursTC": 0,
+      "external": false
+    },
+    {
+      "quantity": 280,
+      "boDate": "2026-10-10",
+      "date": "2026-10-10",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "week": "2026-W41",
+      "dims": [
+        1250,
+        18,
+        10
+      ],
+      "unitVol": 0.000225,
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "materialType": "Luồng cây xô",
+      "workHoursTC": 0,
+      "materialId": "mat-1791774976679-20n1n",
+      "cls": "B",
+      "workHours": 57,
+      "id": "x2cn-1791779095664-0aoi0",
+      "createdAt": "2026-10-12T04:24:55.664Z",
+      "sizeKey": "1250×18×10",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "volume": 0.063,
+      "btDate": "2026-10-10",
+      "workHoursHC": 57
+    },
+    {
+      "workHours": 57,
+      "cls": "A",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "boDate": "2026-10-10",
+      "materialId": "mat-1791774976679-20n1n",
+      "workHoursHC": 57,
+      "unitVol": 0.0002475,
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "materialType": "Luồng cây xô",
+      "dims": [
+        1250,
+        18,
+        11
+      ],
+      "btDate": "2026-10-10",
+      "workHoursTC": 0,
+      "volume": 0.1732,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "sizeKey": "1250×18×11",
+      "external": false,
+      "createdAt": "2026-10-12T04:25:06.063Z",
+      "quantity": 700,
+      "date": "2026-10-10",
+      "week": "2026-W41",
+      "id": "x2cn-1791779106063-sc7oz"
+    },
+    {
+      "materialId": "mat-1791774976679-20n1n",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "boDate": "2026-10-10",
+      "workHours": 57,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workHoursTC": 0,
+      "sizeKey": "1250×18×11",
+      "id": "x2cn-1791779112751-toz6m",
+      "dims": [
+        1250,
+        18,
+        11
+      ],
+      "week": "2026-W41",
+      "createdAt": "2026-10-12T04:25:12.751Z",
+      "cls": "A1",
+      "date": "2026-10-10",
+      "btDate": "2026-10-10",
+      "volume": 0.1906,
+      "external": false,
+      "unitVol": 0.0002475,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "materialType": "Luồng cây xô",
+      "workHoursHC": 57,
+      "quantity": 770
+    },
+    {
+      "week": "2026-W41",
+      "materialType": "Luồng cây xô",
+      "quantity": 280,
+      "workHoursTC": 0,
+      "date": "2026-10-10",
+      "boDate": "2026-10-10",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "external": false,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "dims": [
+        1250,
+        18,
+        11
+      ],
+      "unitVol": 0.0002475,
+      "cls": "B",
+      "workHours": 57,
+      "id": "x2cn-1791779122478-jouhe",
+      "sizeKey": "1250×18×11",
+      "createdAt": "2026-10-12T04:25:22.478Z",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "workHoursHC": 57,
+      "materialId": "mat-1791774976679-20n1n",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "volume": 0.0693,
+      "btDate": "2026-10-10"
+    },
+    {
+      "cls": "A",
+      "workHoursTC": 0,
+      "sizeKey": "1250×24×8",
+      "btDate": "2026-10-10",
+      "volume": 0.1296,
+      "id": "x2cn-1791779141614-okg1j",
+      "materialType": "Luồng cây xô",
+      "quantity": 540,
+      "external": false,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "createdAt": "2026-10-12T04:25:41.614Z",
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "unitVol": 0.00024,
+      "workHours": 57,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "workHoursHC": 57,
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "boDate": "2026-10-10",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "materialId": "mat-1791774976679-20n1n"
+    },
+    {
+      "materialId": "mat-1791774976679-20n1n",
+      "workHoursTC": 0,
+      "id": "x2cn-1791779143904-tqzgc",
+      "unitVol": 0.00024,
+      "createdAt": "2026-10-12T04:25:43.904Z",
+      "btDate": "2026-10-10",
+      "volume": 0.3192,
+      "quantity": 1330,
+      "materialType": "Luồng cây xô",
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "external": false,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "sizeKey": "1250×24×8",
+      "workHoursHC": 57,
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "cls": "A",
+      "boDate": "2026-10-10",
+      "workHours": 57,
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "date": "2026-10-10",
+      "week": "2026-W41"
+    },
+    {
+      "btDate": "2026-10-10",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "volume": 0.168,
+      "workHoursTC": 0,
+      "id": "x2cn-1791779151226-j36g4",
+      "cls": "A1",
+      "workHours": 57,
+      "sizeKey": "1250×24×8",
+      "materialType": "Luồng cây xô",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "week": "2026-W41",
+      "date": "2026-10-10",
+      "materialId": "mat-1791774976679-20n1n",
+      "unitVol": 0.00024,
+      "quantity": 700,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "workHoursHC": 57,
+      "external": false,
+      "createdAt": "2026-10-12T04:25:51.226Z",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "boDate": "2026-10-10"
+    },
+    {
+      "cls": "B",
+      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
+      "workHoursHC": 57,
+      "supplier": "Nhà Chiến + Nhà Tế",
+      "workHours": 57,
+      "sizeKey": "1250×24×8",
+      "baothoId": "x2bt-1791778918243-yvp20",
+      "date": "2026-10-10",
+      "btDate": "2026-10-10",
+      "dims": [
+        1250,
+        24,
+        8
+      ],
+      "createdAt": "2026-10-12T07:13:26.050Z",
+      "materialType": "Luồng cây xô",
+      "quantity": 602,
+      "workHoursTC": 0,
+      "boDate": "2026-10-10",
+      "unitVol": 0.00024,
+      "external": false,
+      "volume": 0.1445,
+      "week": "2026-W41",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
+      "id": "x2cn-1791789206050-cilq1",
+      "materialId": "mat-1791774976679-20n1n",
+      "updatedAt": "2026-10-12T07:22:59.065Z"
     }
   ],
   "xuong2BulligRecords": [
@@ -22602,10 +24969,106 @@
       "qtyIn": 162,
       "unitVol": 0.007344,
       "workHoursHC": 9
+    },
+    {
+      "date": "2026-10-09",
+      "workHoursTC": 0,
+      "outSizeKey": "",
+      "pressIds": [
+        "press-1791431010941",
+        "press-1791431145448",
+        "press-1791431358920"
+      ],
+      "kind": "cat",
+      "id": "x2cv-1791799202961-hsy2",
+      "outDims": [],
+      "inGroup": "vantho",
+      "quantity": 100,
+      "unitVol": 0.00765,
+      "workHours": 9,
+      "workHoursHC": 9,
+      "week": "2026-W41",
+      "worker": "Hà Văn Tới",
+      "span": 2,
+      "inDims": [
+        1250,
+        340,
+        18
+      ],
+      "workTime": "07:00 → hết ca",
+      "inSizeKey": "1250×340×18",
+      "periodKey": "2026-W41-42",
+      "qtyIn": 100,
+      "createdAt": "2026-10-12T10:00:02.961Z"
     }
   ],
   "xuong2BaoVanRecords": [],
-  "xuong2HoTroRecords": [],
+  "xuong2HoTroRecords": [
+    {
+      "asgIds": [
+        "asg-1791770475109-knu0m",
+        "asg-1791770481181-rdsk8"
+      ],
+      "workHours": 18,
+      "asgSnap": [
+        {
+          "shiftIdx": 0,
+          "asgId": "asg-1791770475109-knu0m",
+          "end": "",
+          "start": "07:00",
+          "positionName": "Hỗ trợ/ Công đoạn lẻ",
+          "department": "Xưởng 2",
+          "name": "Vi Thị Gấm"
+        },
+        {
+          "asgId": "asg-1791770481181-rdsk8",
+          "department": "Xưởng 2",
+          "name": "Hà Thị Chính",
+          "positionName": "Hỗ trợ/ Công đoạn lẻ",
+          "shiftIdx": 0,
+          "start": "07:00",
+          "end": ""
+        }
+      ],
+      "workHoursTC": 0,
+      "desc": "??? thanh",
+      "date": "2026-10-12",
+      "createdAt": "2026-10-12T09:55:12.714Z",
+      "worker": "Vi Thị Gấm, Hà Thị Chính",
+      "workName": "Chạy thanh vát đầu",
+      "workHoursHC": 18,
+      "id": "x2ht-1791798912714-4tr1z",
+      "week": "2026-W42",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca"
+    },
+    {
+      "desc": "",
+      "workHoursTC": 0,
+      "date": "2026-10-10",
+      "workTime": "07:00 → hết ca",
+      "workName": "Dọn kho",
+      "id": "x2ht-1791798991606-5ognv",
+      "asgSnap": [
+        {
+          "shiftIdx": 0,
+          "end": "",
+          "department": "Xưởng 2",
+          "positionName": "Hỗ trợ/ Công đoạn lẻ",
+          "start": "07:00",
+          "name": "Vi Thị Gấm",
+          "asgId": "asg-1791614868000-way2q"
+        }
+      ],
+      "createdAt": "2026-10-12T09:56:31.606Z",
+      "workHoursHC": 9,
+      "asgIds": [
+        "asg-1791614868000-way2q"
+      ],
+      "workHours": 9,
+      "worker": "Vi Thị Gấm",
+      "week": "2026-W41"
+    }
+  ],
   "suppliers": [
     {
       "id": "sup-1789808030672-9fhu0",
@@ -23653,9 +26116,9 @@
   "x2BaoTinhRates": {
     "2026-09": 660,
     "2026-10": {
+      "bao_thanh": 711,
       "ha_cap": 711,
-      "tinh": 711,
-      "bao_thanh": 711
+      "tinh": 711
     }
   },
   "x2EpVanRates": {
@@ -23704,6 +26167,54 @@
       "workHoursTC": 0,
       "createdAt": "2026-10-01T09:24:04.624Z",
       "updatedAt": "2026-10-01T09:24:04.624Z"
+    },
+    {
+      "productId": "",
+      "workHours": 0,
+      "qtyReject": 0,
+      "workerNames": "",
+      "workshop": "x2",
+      "inputQty": 725,
+      "workTime": "",
+      "qtyExcept": 0,
+      "workHoursTC": 0,
+      "kind": "van",
+      "id": "qcf-1791798073352-qlbss",
+      "updatedAt": "2026-10-12T09:41:13.352Z",
+      "productName": "Ván thô 1200 × 340 × 18",
+      "date": "2026-10-09",
+      "sizeKey": "1200×340×18",
+      "sizeDims": [
+        1200,
+        340,
+        18
+      ],
+      "pairKey": "2026-41-42",
+      "qtyOk": 289,
+      "workHoursHC": 0,
+      "createdAt": "2026-10-12T09:41:13.352Z"
+    },
+    {
+      "qtyOk": 104,
+      "sizeDims": [],
+      "qtyReject": 2,
+      "productId": "rate-1787619453372",
+      "date": "2026-10-08",
+      "workHours": 0,
+      "workHoursTC": 0,
+      "workerNames": "",
+      "qtyExcept": 180,
+      "workHoursHC": 0,
+      "pairKey": "2026-41-42",
+      "sizeKey": "",
+      "updatedAt": "2026-10-12T09:42:25.582Z",
+      "workshop": "x2",
+      "inputQty": 400,
+      "kind": "van",
+      "workTime": "",
+      "createdAt": "2026-10-12T09:42:25.582Z",
+      "productName": "1200x370x22",
+      "id": "qcf-1791798145582-ay2ee"
     }
   ],
   "qcFinalRates": {
@@ -23712,8 +26223,8 @@
       "van": 31.11
     },
     "2026-09": {
-      "van": 31.11,
-      "thanh": 245
+      "thanh": 245,
+      "van": 31.11
     }
   },
   "qcPressLogs": [

@@ -339,6 +339,19 @@ document.getElementById('board-assign-end').value = '';
 hr.handleBoardAssignSubmit(ev);
 check('BOARD: kéo thẻ dời vị trí -> giờ kết thúc cũ = giờ bắt đầu mới (không đổi hành vi)', aT5.end === '15:00' && aT5.positionId === 'pkh2');
 
+// ─── J. KÉO CHUỘT GIỮ + KÉO NGANG BẢNG BỐ TRÍ (10/10/2026) ─────────
+// Cơ chế pointer (giữ + rê) trên NỀN board để cuộn ngang khi nhiều vị trí —
+// không đụng kéo-thả chip (.slot draggable) hay bấm nút/ô trong board.
+const boardFs = (await import('node:fs')).default;
+const boardIdx = boardFs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const boardCss = boardFs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+const boardEv  = boardFs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+check('PAN: events.js có handler pointerdown/pointermove trên #hr-board', /getElementById\('hr-board'\)[\s\S]{0,1200}?pointerdown/.test(boardEv) && /getElementById\('hr-board'\)[\s\S]{0,2400}?pointermove/.test(boardEv));
+check('PAN: bỏ qua khi bắt đầu trên .slot / button (không phá kéo-thả + bấm)', boardEv.includes("closest('.slot, button, input, select, a')"));
+check('PAN: ngưỡng 6px phân biệt bấm thường với kéo', boardEv.includes('Math.abs(dx) < 6'));
+check('PAN: styles.css có cursor grab + is-drag-scrolling grabbing trên .board-grid', boardCss.includes('cursor: grab') && boardCss.includes('.board-grid.is-drag-scrolling { cursor: grabbing; }'));
+check('PAN: index.html có hướng dẫn "giữ chuột + rê ngang"', boardIdx.includes('giữ chuột + rê ngang'));
+
 console.log(`\nWYNIK: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
 

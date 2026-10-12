@@ -97,9 +97,14 @@ state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvan
 state.activeView = 'kanban-view';
 
 // ─── Dữ liệu mẫu: nguyên liệu XƯỞNG 1 + bộ phận "Xưởng 1" ──────────
+// ⚠ 12/10/2026: Cắt Ống CHỈ nhận lô có CHỮ "CÂY" → x1m-a/b/e có chữ cây,
+//   x1m-d (Xưởng 1 NHƯNG không chữ cây) PHẢI bị loại khỏi ô chọn;
+//   x1m-e viết HOA "CÂY" để kiểm tra khớp KHÔNG phân biệt hoa/thường.
 state.materialRecords = [
-  { id: 'x1m-a', type: 'Vầu/nứa tươi', supplier: 'Tế',   location: 'xuong-1', code: 'NNA01', weight: 1000, date: '2026-09-10', createdAt: '2026-09-10T02:00:00.000Z' },
-  { id: 'x1m-b', type: 'Vầu/nứa khô',  supplier: 'Trung', location: 'xuong-1', code: 'NNB02', weight: 800,  date: '2026-09-11', createdAt: '2026-09-11T02:00:00.000Z' },
+  { id: 'x1m-a', type: 'Vầu cây tươi',     supplier: 'Tế',   location: 'xuong-1', code: 'NNA01', weight: 1000, date: '2026-09-10', createdAt: '2026-09-10T02:00:00.000Z' },
+  { id: 'x1m-b', type: 'Nứa cây khô',      supplier: 'Trung', location: 'xuong-1', code: 'NNB02', weight: 800,  date: '2026-09-11', createdAt: '2026-09-11T02:00:00.000Z' },
+  { id: 'x1m-d', type: 'Vầu/nứa mua sẵn',  supplier: 'Dung', location: 'xuong-1', code: 'NND04', weight: 600,  date: '2026-09-13', createdAt: '2026-09-13T02:00:00.000Z' },
+  { id: 'x1m-e', type: 'Nứa CÂY Tươi',     supplier: 'Lý',   location: 'xuong-1', code: 'NNE05', weight: 400,  date: '2026-09-14', createdAt: '2026-09-14T02:00:00.000Z' },
   { id: 'x2m-c', type: 'Luồng cây xô', supplier: 'Khác',  location: 'xuong-2', weight: 500,  date: '2026-09-12', createdAt: '2026-09-12T02:00:00.000Z' }
 ];
 state.xuong1CatOngRecords = [];
@@ -410,7 +415,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v233/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v236/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -548,6 +553,130 @@ check('H21: popup định mức X1 có đủ 8 lựa chọn công đoạn',
   ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'phoiSay', 'locThanh']
     .every(k => new RegExp(`<option value="${k}">`).test(idxHtml)) &&
   x1.x1RateOf('2026-09-10', 'locOng') === 0);
+
+// ─── I. YÊU CẦU 12/10/2026: LỌC LÔ "CÂY" · BỎ QUA CẮT MẮT · VÙNG XƯỞNG 1 ──
+console.log('--- I. LỌC CÂY + BỎ QUA CẮT MẮT + VÙNG THẺ X1 ---');
+check('I1: nguồn Cắt Ống CHỈ nhận lô có chữ "cây" (lô X1 không chữ cây + lô X2 bị loại)',
+  (() => { x1.fillX1CatOngOptions();
+    const h = document.getElementById('x1-cat-ong-material').innerHTML;
+    // x1m-a đã cắt (ẩn — D3), còn x1m-b/e chờ cắt; x1m-d (không chữ cây) + x2m-c (X2) loại
+    return h.includes('x1m-b') && h.includes('x1m-e') && !h.includes('x1m-d') && !h.includes('x2m-c'); })());
+check('I1b: x1IsCayLot khớp mềm — "Vầu CÂY"/"nua cay" nhận, "Vầu/nứa mua sẵn" loại',
+  x1.x1IsCayLot({ type: 'Vầu CÂY tươi' }) && x1.x1IsCayLot({ type: 'nua cay kho' }) &&
+  x1.x1IsCayLot({ type: 'Luồng cây xô' }) && !x1.x1IsCayLot({ type: 'Vầu/nứa mua sẵn' }) &&
+  !x1.x1IsCayLot({ type: '' }) && !x1.x1IsCayLot(null));
+
+// ── Lô Lọc Ống sinh ra từ chuỗi ĐẦU TIÊN là Cắt Ống → BỎ QUA Cắt Mắt ──
+// (dùng lại lượt sấy ss + lượt cắt ống co của mục D — chuỗi link nguyên vẹn)
+state.xuong1BocRecords.push({
+  id: 'boc-via', date: '2026-09-20', qty: 500, saySinhId: ss.id,
+  materialType: 'Vầu cây tươi', supplier: 'Tế', srcType: 'Vầu cây tươi', srcSupplier: 'Tế'
+});
+state.xuong1LocOngRecords.push({
+  id: 'lo-via', bocId: 'boc-via', date: '2026-09-21', qtyIn: 500, qtyOk: 480, qtyLoai: 20,
+  srcType: 'Vầu cây tươi', srcSupplier: 'Tế', srcDate: '2026-09-10'
+});
+const loVia = state.xuong1LocOngRecords.find(r => r.id === 'lo-via');
+check('I2: x1LocOngViaCutOng truy được chuỗi Lọc Ống → Bốc → Sấy Sinh → Cắt Ống',
+  x1.x1LocOngViaCutOng(loVia) === true && x1.x1LocOngViaCutOng({ id: 'x', bocId: 'không-có' }) === false &&
+  x1.x1LocOngViaCutOng(null) === false);
+check('I3: lô ĐÃ qua Cắt Ống ẨN khỏi ô chọn CẮT MẮT (kể cả khi còn tồn)',
+  x1.x1ChainRemainingOf(spCM, loVia, null) === 480 &&
+  (() => { x1.fillX1ChainOptions(spCM);
+    return !document.getElementById('x1-cat-mat-src').innerHTML.includes('lo-via'); })());
+// Lượt CẮT MẮT CŨ (trước khi đổi quy tắc) đã ăn 100kg của chính lô này → Bổ phải trừ
+state.xuong1CatMatRecords.push({
+  id: 'cm-legacy', locOngId: 'lo-via', date: '2026-09-19', qtyIn: 100, qtyOk: 95, qtyLoai: 5,
+  srcType: 'Vầu cây tươi', srcSupplier: 'Tế'
+});
+check('I4: chống ăn trùng — tồn Bổ nhận thẳng TRỪ phần lô đã qua Cắt Mắt (480 − 100 = 380)',
+  x1.x1ChainRemainingOf(spBO, loVia, null) === 380 &&
+  x1.x1ChainRemainingOf(spCM, loVia, null) === 380);
+check('I5: ô chọn Bổ có nhóm "Từ Lọc Ống — bỏ qua Cắt Mắt" (còn 380 kg)',
+  (() => { x1.fillX1ChainOptions(spBO);
+    const h = document.getElementById('x1-bo-src').innerHTML;
+    return h.includes('optgroup') && h.includes('bỏ qua Cắt Mắt') &&
+           h.includes('lo-via') && h.includes('còn 380 kg'); })());
+hFill(spBO, loVia.id, '2026-09-22', 380, 370, 10);
+const boVia = state.xuong1BoRecords.find(r => r.locOngId === 'lo-via');
+check('I6: lượt Bổ nhận thẳng ghi locOngId (KHÔNG catMatId) + tồn lô về 0 + tự ẩn',
+  !!boVia && !boVia.catMatId && x1.x1ChainRemainingOf(spBO, loVia, null) === 0 &&
+  (() => { x1.fillX1ChainOptions(spBO);
+    return !document.getElementById('x1-bo-src').innerHTML.includes('lo-via'); })());
+check('I7: chip "Hết tồn" thẻ Cắt Mắt (lô qua Cắt Ống không vào nữa) + Cắt Mắt vẫn giữ lượt cũ',
+  x1.x1CardCountText('x1-cat-mat-card') === 'Hết tồn' &&
+  (() => { x1.fillX1ChainOptions(spCM);
+    return !document.getElementById('x1-cat-mat-src').innerHTML.includes('lo-via'); })() &&
+  /^Tồn /.test(x1.x1CardCountText('x1-bo-card')));
+check('I8: bảng lịch sử Bổ hiện rõ đường "Lọc Ống — bỏ qua Cắt Mắt" cho lượt nhận thẳng',
+  (() => { x1.renderX1ChainCard(spBO);
+    return document.getElementById('x1-bo-day-cards').innerHTML.includes('bỏ qua Cắt Mắt'); })());
+
+// ── CẤU TRÚC: 8 thẻ Xưởng 1 bọc đủ 3 vùng như Xưởng 2 ──
+check('I9: 8 thẻ Xưởng 1 đều có 3 vùng .x2-zone (Nhập Liệu · Thống Kê · Lịch Sử) = 24 vùng',
+  (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x1-cat-ong-card"'), idxHtml.indexOf('/#x2-details-stack'));
+    return (blk.match(/class="x2-zone"/g) || []).length === 24 &&
+      ['1', '2', '3'].every(z => (blk.match(new RegExp(`data-zone="${z}"`, 'g')) || []).length === 8); })());
+check('I10: nhãn form phản ánh quy tắc mới (CHỈ lô chữ "CÂY" · bỏ qua Cắt Mắt)',
+  idxHtml.includes('CHỈ hiện lô CÓ CHỮ "CÂY"') &&
+  idxHtml.includes('lô ĐÃ qua Cắt Ống hiện ở thẻ Bổ (bỏ qua Cắt Mắt)') &&
+  idxHtml.includes('lượt LỌC ỐNG của lô ĐÃ qua Cắt Ống (bỏ qua Cắt Mắt)'));
+check('I11: SPEC thẻ Bổ khai 2 nguồn + SPEC Cắt Mắt có bộ lọc srcVisible',
+  spBO.altSrcField === 'locOngId' && spBO.altSrcName === 'Lọc Ống' &&
+  typeof spCM.srcVisible === 'function' && typeof spBO.altSrcVisible === 'function');
+
+// ─── J. SẤY SINH 2 NGUỒN — LÔ VẦU/NỨA KHÔNG CHỮ "CÂY" SẤY THẲNG ────────
+// (12/10/2026: nguồn ① lượt Cắt Ống (Vầu cây) · nguồn ② lô NL Xưởng 1
+//  KHÔNG chữ "cây" — sấy THẲNG, bỏ qua Cắt Ống)
+console.log('--- J. SẤY SINH 2 NGUỒN ---');
+const mDirect = (state.materialRecords || []).find(m => m.id === 'x1m-d');
+check('J1: ô chọn Sấy Sinh có 2 nhóm — Cắt Ống + "Nhập thẳng … bỏ qua Cắt Ống" (chỉ lô không chữ cây)',
+  (() => { x1.fillX1SaySinhOptions();
+    const h = document.getElementById('x1-say-sinh-source').innerHTML;
+    return h.includes('optgroup') && h.includes('Từ Cắt Ống') &&
+           h.includes('Nhập thẳng Vầu/Nứa — bỏ qua Cắt Ống') &&
+           h.includes('x1m-d') && h.includes('còn 600 kg') &&
+           !h.includes('x1m-b') && !h.includes('x1m-e') && !h.includes('x2m-c'); })());
+check('J2: helper tồn nguồn thẳng (600kg) + x1SaySinhFindSrc phân loại đúng nhánh',
+  x1.x1SaySinhDirectRemainingOf(mDirect, null) === 600 &&
+  (() => { const f = x1.x1SaySinhFindSrc('x1m-d'); return f && f.kind === 'material'; })() &&
+  (() => { const f = x1.x1SaySinhFindSrc(co.id); return f && f.kind === 'catOng'; })() &&
+  x1.x1SaySinhFindSrc('không-tồn-tại') === null);
+
+// Ghi lượt sấy THẲNG — chặn trước
+document.getElementById('x1-say-sinh-source').value = 'x1m-d';
+document.getElementById('x1-say-sinh-date').value = '2026-09-25';
+document.getElementById('x1-say-sinh-qty').value = '700'; // VƯỢT 600
+x1.handleX1SaySinhSubmit({ preventDefault(){} });
+check('J3: CHẶN KL sấy thẳng vượt phần còn lại của lô (700 > 600) — vẫn 1 lượt cũ',
+  state.xuong1SaySinhRecords.length === 1);
+document.getElementById('x1-say-sinh-qty').value = '200';
+x1.handleX1SaySinhSubmit({ preventDefault(){} });
+const ssDirect = state.xuong1SaySinhRecords.find(r => r.materialId === 'x1m-d');
+check('J4: ghi lượt sấy thẳng 200kg — ghi materialId (catOngId rỗng) + tồn lô về 400kg',
+  !!ssDirect && !ssDirect.catOngId && x1.x1SaySinhDirectRemainingOf(mDirect, null) === 400);
+
+check('J5: thanh tồn + chip Sấy Sinh CỘNG cả 2 nhánh (350 Cắt Ống + 400 thẳng = 750kg)',
+  (() => { x1.renderX1SaySinhCard();
+    return document.getElementById('x1-say-sinh-stock-bar').innerHTML.includes('750'); })() &&
+  x1.x1CardCountText('x1-say-sinh-card') === 'Tồn 750 kg');
+
+check('J6: sửa lượt sấy thẳng khôi phục ô nguồn x1m-d + excludeId trả phần lượt (600)',
+  (() => { x1.editX1SaySinh(ssDirect.id);
+    const ok = document.getElementById('x1-say-sinh-source').value === 'x1m-d';
+    const rest = x1.x1SaySinhDirectRemainingOf(mDirect, ssDirect.id);
+    x1.resetX1SaySinhForm();
+    return ok && rest === 600; })());
+
+check('J7: bảng lịch sử lượt sấy thẳng hiện dòng chú "Nhập thẳng — bỏ qua Cắt Ống"',
+  (() => { x1.renderX1SaySinhCard();
+    const h = document.getElementById('x1-say-sinh-day-cards').innerHTML;
+    return h.includes('bỏ qua Cắt Ống') && h.includes('200'); })());
+check('J8: nhãn form diễn giải 2 nguồn + capacity.js vẫn đọc x1SaySinhDisplay + thẻ Bốc nhận nguồn sấy thẳng',
+  idxHtml.includes('lô Vầu/Nứa Xưởng 1 KHÔNG chữ "cây" sấy THẲNG') &&
+  capSrc.includes('x1SaySinhDisplay') &&
+  (() => { x1.fillX1BocOptions();
+    return document.getElementById('x1-boc-source').innerHTML.includes('x1ss-'); })());
 
 console.log(`\n=== KẾT QUẢ XUONG1: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

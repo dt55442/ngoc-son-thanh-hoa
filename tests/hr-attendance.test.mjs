@@ -3,6 +3,7 @@
 // (hrPositions), kỹ năng nhân viên (hrEmployees.skills), thống kê đi làm
 // theo tháng, gắn/xóa dữ liệu khi xóa NV & vị trí, đồng bộ mây.
 'use strict';
+import fs from 'node:fs';
 
 // ─── Stubs môi trường (giống qc.test.mjs) ────────────────────────
 function makeEl(id) {
@@ -193,20 +194,33 @@ hr.renderHrAttendanceStats();
 const bodyAll = document.getElementById('hr-att-stats-body').innerHTML;
 check('HR-ATT: bỏ lọc ("all") -> hiện lại cả NV A và NV B', bodyAll.includes('Nguyễn Văn A') && bodyAll.includes('Trần Thị B'));
 
-// Hiệu ứng động mini card Thống Kê Đi Làm (6 khung: tên + 5 bộ phận)
+// ─── TẦNG 1: THẺ TÓM TẮT TỪNG BỘ PHẬN (thay mini-chart động đã gỡ) ───
+// Mini chart luân chuyển (.hr-mini-anim / hr-anim-*) ĐÃ XÓA — launcher chỉ còn
+// dòng đếm; bảng chi tiết có lưới thẻ bộ phận, bấm thẻ = lọc bảng cá nhân.
 hr.renderHrView();
-const animHTML = document.getElementById('hr-mini-anim-att-stats').innerHTML;
-check('HR-ATT: anim có 6 khung (tên card + 5 bộ phận)', (animHTML.match(/hr-anim-frame/g) || []).length === 6);
-check('HR-ATT: anim đủ 5 bộ phận Xưởng 1/Xưởng 2/QC/Cơ Điện/Văn Phòng', ['Xưởng 1', 'Xưởng 2', 'QC', 'Cơ Điện', 'Văn Phòng'].every(d => animHTML.includes(d)));
-check('HR-ATT: anim có sparkline SVG + nhãn hôm nay', animHTML.includes('<svg class="hr-anim-chart"') && animHTML.includes('hr-anim-today'));
-// Trục Y 0..100 + vạch chia + điểm nút trên line
-check('HR-ATT: anim chart có trục Y (gióng ngang + nhãn 0..100)', animHTML.includes('hr-anim-grid') && animHTML.includes('hr-anim-ylabel') && animHTML.includes('>100<'));
-check('HR-ATT: anim chart có vạch trục X + điểm nút', animHTML.includes('hr-anim-xtick') && animHTML.includes('hr-anim-node'));
-// Công thức %: mẫu số = TỔNG số NV bộ phận ĐÃ VÀO LÀM ngày đó (Xưởng 1: A + D từ 20/06).
-// Ngày 05/06 chỉ A thuộc mẫu (D chưa vào) và A đi làm -> 100%;
-// ngày cuối tháng 30/06 cả A+D thuộc mẫu (2 NV) mà không ai được chấm -> 0% (đỏ).
-check('HR-ATT: anim Xưởng 1 tỷ lệ hôm nay 0% (mẫu số = 2 NV, không ai chấm)', /Xưởng 1[\s\S]{0,20000}?hr-anim-today[^>]*>0%/.test(animHTML));
-check('HR-ATT: anim Xưởng 1 có điểm 100% ngày 05/06 (1/1 NV thuộc mẫu đi làm)', /Xưởng 1[\s\S]{0,20000}?>100[\s\S]{0,20000}?hr-anim-today/.test(animHTML));
+const hrIdxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const hrCssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+const deptsHTML = document.getElementById('hr-att-stats-depts').innerHTML;
+check('HR-ATT: lưới thẻ bộ phận render thẻ cho Xưởng 1 + Xưởng 2', deptsHTML.includes('data-attstats-dept="Xưởng 1"') && deptsHTML.includes('data-attstats-dept="Xưởng 2"'));
+check('HR-ATT: thẻ bộ phận in % (Xưởng 1 = 25%) + bar + dòng công/nghỉ/vắng', /data-attstats-dept="Xưởng 1"[\s\S]{0,400}25%/.test(deptsHTML) && deptsHTML.includes('hr-att-dept-bar') && deptsHTML.includes('1 công · 2 nghỉ · 1 vắng'));
+check('HR-ATT: GỠ anim — không còn span hr-mini-anim-att-stats trong index.html', !hrIdxHtml.includes('hr-mini-anim-att-stats'));
+check('HR-ATT: GỠ anim — không còn CSS hr-anim-cycle', !hrCssHtml.includes('hr-anim-cycle'));
+check('HR-ATT: GỠ anim — dòng đếm mini card không còn bị ẩn display:none', !/hr-mini-count-att-stats\s*\{\s*display:\s*none/.test(hrCssHtml));
+// Bấm thẻ bộ phận = lọc bảng cá nhân (mô phỏng handler trong events.js)
+document.getElementById('hr-attstats-filter-dept').value = 'Xưởng 1';
+hr.renderHrAttendanceStats();
+const deptsHTML2 = document.getElementById('hr-att-stats-depts').innerHTML;
+check('HR-ATT: thẻ bộ phận đang lọc có class active', /data-attstats-dept="Xưởng 1"[^>]*class="hr-att-dept[^"]*active/.test(deptsHTML2) || /class="hr-att-dept[^"]*active[^>]*data-attstats-dept="Xưởng 1"/.test(deptsHTML2));
+check('HR-ATT: lọc Xưởng 1 -> bảng chỉ còn NV A + D (không B)', document.getElementById('hr-att-stats-body').innerHTML.includes('Nguyễn Văn A') && !document.getElementById('hr-att-stats-body').innerHTML.includes('Trần Thị B'));
+document.getElementById('hr-attstats-filter-dept').value = 'all';
+hr.renderHrAttendanceStats();
+
+// ─── LOẠI NGHỈ MỚI: "Nghỉ CHỜ VIỆC" ─────────────────────────────
+check('HR-ATT: LEAVE_TYPES có "Nghỉ chờ việc"', hr.LEAVE_TYPES.includes('Nghỉ chờ việc'));
+state.hrLeaves.push({ id: 'leave-wait', employeeId: 'empD', type: 'Nghỉ chờ việc', from: '2024-06-21', to: '2024-06-21', days: 1, reason: 'Chờ chuyển vị trí', status: 'approved', approvedBy: 'Admin', createdAt: '2024-06-01T00:00:00Z' });
+check('HR-ATT: đơn "Nghỉ chờ việc" đã duyệt -> trạng thái chấm công "leave"', hr.attStatusOf('empD', '2024-06-21') === 'leave');
+check('HR-ATT: "Nghỉ chờ việc" được tính vào thống kê như nghỉ phép (NV D leave 1)', (hr.computeAttendanceStats('2024-06').find(s => s.emp.id === 'empD') || {}).leave === 1);
+state.hrLeaves = state.hrLeaves.filter(l => l.id !== 'leave-wait'); // dọn
 
 // ─── G. XÓA NHÂN VIÊN / VỊ TRÍ DỌN DẸP ────────────────────────
 hr.toggleAttendancePosition('empB', '2024-06-15', p2);

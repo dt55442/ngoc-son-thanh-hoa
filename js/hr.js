@@ -25,7 +25,7 @@ import { escapeHTML, showToast } from './utils.js';
   // nhóm bộ phận trên bảng chấm công (Văn Phòng -> Cơ Điện -> QC -> Xưởng 1 -> Xưởng 2)
   const HR_DEPARTMENTS = ['Văn Phòng', 'Cơ Điện', 'QC', 'Xưởng 1', 'Xưởng 2', 'Lò Hơi'];
   const EMP_STATUS  = { active: 'Đang làm việc', pause: 'Tạm nghỉ', quit: 'Đã nghỉ việc' };
-  const LEAVE_TYPES  = ['Nghỉ phép', 'Nghỉ không lương', 'Ốm', 'Việc gia đình', 'Khác'];
+  const LEAVE_TYPES  = ['Nghỉ phép', 'Nghỉ chờ việc', 'Nghỉ không lương', 'Ốm', 'Việc gia đình', 'Khác'];
   const LEAVE_STATUS = { pending: 'Chờ duyệt', approved: 'Đồng ý', rejected: 'Không đồng ý' };
   const RECRUIT_STATUS = { open: 'Đang tuyển', done: 'Đã đủ người' };
   // Chấm công thủ công: đi làm / vắng. Riêng "Nghỉ có phép" KHÔNG lưu trùng —
@@ -1676,6 +1676,36 @@ import { escapeHTML, showToast } from './utils.js';
     }
 
     const tbody = document.getElementById('hr-att-stats-body');
+
+    // ── TẦNG 1: THẺ TÓM TẮT TỪNG BỘ PHẬN (bấm thẻ = lọc bảng cá nhân tầng 2;
+    //    bấm lại đúng thẻ đang lọc = về "Tất Cả") ──
+    // Số liệu gộp TOÀN BỘ NV từng bộ phận (không phụ thuộc bộ lọc dưới).
+    const deptsBox = document.getElementById('hr-att-stats-depts');
+    if (deptsBox) {
+      const totals = new Map(); // dept -> { work, leave, absent }
+      allStats.forEach(s => {
+        const d = s.emp.department || '—';
+        if (!totals.has(d)) totals.set(d, { work: 0, leave: 0, absent: 0 });
+        const g = totals.get(d);
+        g.work += s.work; g.leave += s.leave; g.absent += s.absent;
+      });
+      // Thứ tự chuẩn theo HR_DEPARTMENTS, bộ phận ngoài danh mục (nếu có) xếp sau
+      const order = HR_DEPARTMENTS.concat([...totals.keys()].filter(d => !HR_DEPARTMENTS.includes(d)));
+      deptsBox.innerHTML = order.filter(d => totals.has(d)).map(d => {
+        const g = totals.get(d);
+        const counted = g.work + g.leave + g.absent;
+        const rate = counted ? Math.round(g.work * 1000 / counted) / 10 : null;
+        const tone = rate === null ? 'na' : (rate >= 90 ? 'good' : (rate >= 70 ? 'mid' : 'low'));
+        const active = deptFilter === d;
+        return `<button type="button" class="hr-att-dept tone-${tone}${active ? ' active' : ''}" data-attstats-dept="${escapeHTML(d)}"` +
+          ` title="Bấm để lọc bảng cá nhân theo bộ phận ${escapeHTML(d)}${active ? ' (bấm lại = Tất Cả)' : ''}">` +
+          `<span class="hr-att-dept-name">${escapeHTML(d)}</span>` +
+          `<span class="hr-att-dept-rate">${rate === null ? '—' : rate + '%'}</span>` +
+          `<span class="hr-att-dept-bar"><span style="width:${rate === null ? 0 : Math.min(100, rate)}%"></span></span>` +
+          `<span class="hr-att-dept-meta">${g.work} công · ${g.leave} nghỉ · ${g.absent} vắng</span>` +
+        `</button>`;
+      }).join('');
+    }
     if (!tbody) return;
     if (!stats.length) {
       tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding:22px;color:var(--text-muted);">${allStats.length ? 'Không có nhân viên nào khớp bộ lọc bộ phận trong tháng này.' : 'Chưa có dữ liệu chấm công trong tháng này.'}</td></tr>`;
@@ -3273,99 +3303,6 @@ import { escapeHTML, showToast } from './utils.js';
         if (el) el.textContent = String(HR_CARD_DEFS[cardId].count());
       } catch (e) { /* nie blokuj rendera tab Nhân Sự */ }
     });
-    try { renderHrAttMiniAnim(); } catch (e) { /* hiệu ứng động không chặn render */ }
-  }
-
-  // ─── HIỆU ỨNG ĐỘNG MINI CARD "THỐNG KÊ ĐI LÀM" ───────────────────
-  // 6 khung luân chuyển (CSS animation, JS chỉ render nội dung 1 lần):
-  //   khung 0: tên card; khung 1-5: Xưởng 1 → Xưởng 2 → QC → Cơ Điện → Văn Phòng
-  //   với mini chart đường (tỷ lệ đi làm từng ngày từ đầu tháng) + tỷ lệ hôm nay.
-  function hrAttMiniAnimSeries(dept, dates) {
-    const emps = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active' && (e.department || '') === dept);
-    return dates.map(d => {
-      let work = 0, total = 0;
-      emps.forEach(e => {
-        if (e.joinDate && d < e.joinDate) return; // bỏ ngày trước khi vào làm
-        total++;                                  // mẫu số = TỔNG số NV bộ phận (không phải số ngày đã chấm)
-        if (attStatusOf(e.id, d) === 'work') work++;
-      });
-      return total ? Math.round(work * 100 / total) : null;
-    });
-  }
-
-  // Mini chart phong cách ticker: trục Y 0..100 (gióng ngang mỗi 10), trục X
-  // vạch tượng trưng, điểm nút trên line, <90% -> đỏ. SVG co giãn LẤP ĐẦY thẻ
-  // (preserveAspectRatio="none"); nhãn trục Y là HTML định vị % (chữ không méo).
-  function hrAttMiniSparkline(series) {
-    const W = 110, H = 52, padL = 8, padR = 4, padT = 4, padB = 7;
-    const idx = series.map((v, i) => [i, v]).filter(([, v]) => v !== null);
-    if (!idx.length) return null;
-    const x = i => padL + i * (W - padL - padR) / Math.max(series.length - 1, 1);
-    const y = v => H - padB - (v / 100) * (H - padT - padB);
-    // Đường gióng ngang mỗi 10% (nhãn do HTML lo — ngoài SVG)
-    let grid = '';
-    for (let v = 0; v <= 100; v += 10) {
-      const yy = y(v).toFixed(1);
-      grid += `<line class="hr-anim-grid" x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}"/>`;
-    }
-    // Trục X: vạch tượng trưng tại mỗi điểm dữ liệu (không điền ngày)
-    let ticks = '';
-    idx.forEach(([i]) => {
-      ticks += `<line class="hr-anim-xtick" x1="${x(i).toFixed(1)}" y1="${H - padB}" x2="${x(i).toFixed(1)}" y2="${H - padB + 2.2}"/>`;
-    });
-    const pts = idx.map(([i, v]) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
-    const last = idx[idx.length - 1];
-    const lx = x(last[0]).toFixed(1), ly = y(last[1]).toFixed(1);
-    const tone = last[1] >= 90 ? 'up' : 'down';           // <90% -> đỏ
-    const color = tone === 'up' ? '#34d399' : '#f87171';
-    const area = `M${pts[0]} L${pts.join(' L')} L${lx},${H - padB} L${x(idx[0][0]).toFixed(1)},${H - padB} Z`;
-    const nodes = idx.map(([i, v]) => `<circle class="hr-anim-node" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="1.5" fill="${color}"/>`).join('');
-    const svg = `<svg class="hr-anim-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">` +
-      grid + ticks +
-      `<path class="hr-anim-area" d="${area}" fill="${color}" opacity="0.12"/>` +
-      `<polyline points="${pts.join(' ')}" stroke="${color}" vector-effect="non-scaling-stroke"/>` +
-      nodes +
-      `<circle class="hr-anim-dot" cx="${lx}" cy="${ly}" r="2.2" fill="${color}" stroke="${color}" vector-effect="non-scaling-stroke"/>` +
-      `</svg>`;
-    // Nhãn trục Y (0..100 mỗi 10) — HTML định vị % theo cùng thang toạ độ
-    const ylabels = [];
-    for (let v = 0; v <= 100; v += 10) {
-      const bottomPct = ((padB + (v / 100) * (H - padT - padB)) / H * 100).toFixed(2);
-      ylabels.push(`<span class="hr-anim-ylabel" style="bottom:${bottomPct}%">${v}</span>`);
-    }
-    return { svg, ylabels: ylabels.join(''), today: last[1], tone };
-  }
-
-  function renderHrAttMiniAnim() {
-    const box = document.getElementById('hr-mini-anim-att-stats');
-    if (!box) return;
-    if (!/^\d{4}-\d{2}$/.test(state.hrAttMonth || '')) state.hrAttMonth = hrTodayISO().slice(0, 7);
-    const today = hrTodayISO();
-    const monthStart = `${state.hrAttMonth}-01`;
-    const lastDay = monthStart > today ? monthStart : today; // tháng khác → cả tháng; tháng hiện tại → tới hôm nay
-    const dates = [];
-    for (let d = monthStart; d <= lastDay && d <= `${state.hrAttMonth}-31`; d = hrShiftDateISO(d, 1)) dates.push(d);
-    const depts = ['Xưởng 1', 'Xưởng 2', 'QC', 'Cơ Điện', 'Văn Phòng'];
-    const frames = [`<span class="hr-anim-frame hr-anim-show" style="animation-delay:0s"><span class="hr-anim-name">Thống Kê Đi Làm</span><span class="hr-anim-dept">${state.hrAttMonth}</span></span>`];
-    depts.forEach((dept, i) => {
-      const series = hrAttMiniAnimSeries(dept, dates);
-      const chart = hrAttMiniSparkline(series);
-      const svg = chart ? chart.svg : '';
-      const todayRate = chart ? chart.today : null;
-      const toneCls = chart ? chart.tone : 'down';
-      // So sánh với ngày trước (mũi tên tăng/giảm như bảng điện chứng khoán)
-      const prevRate = series.length > 1 ? series[series.length - 2] : null;
-      const delta = (todayRate !== null && prevRate !== null) ? todayRate - prevRate : null;
-      const deltaTxt = delta === null ? '' : (delta > 0 ? '▲' : delta < 0 ? '▼' : '▬');
-      const deltaCls = delta === null ? '' : (delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat');
-      frames.push(`<span class="hr-anim-frame hr-anim-show" style="animation-delay:${(i + 1) * 3}s">` +
-        `<span class="hr-anim-dept">${escapeHTML(dept)}</span>` +
-        `<span class="hr-anim-wrap">${svg}${chart ? chart.ylabels : ''}</span>` +
-        `<span class="hr-anim-foot"><span class="hr-anim-today ${toneCls}">${todayRate === null ? '—' : todayRate + '%'}</span>` +
-        (deltaTxt ? `<span class="hr-anim-delta ${deltaCls}">${deltaTxt}</span>` : '') +
-        `</span></span>`);
-    });
-    box.innerHTML = frames.join('');
   }
 
   // Zsynchronizuj podświetlenie thẻ ze stanem bảng — otwarta = widoczna
@@ -3444,6 +3381,7 @@ import { escapeHTML, showToast } from './utils.js';
 
 export {
   HR_DEPARTMENTS,
+  LEAVE_TYPES,
   ATT_STATUS,
   approvedLeaveOn,
   attStatusOf,

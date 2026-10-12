@@ -11531,7 +11531,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   //  X2_CARD_DEFS + thêm SPEC vào X1_CHAIN_SPECS).
   //
   // Nguồn nguyên liệu ĐẦU VÀO = tab Nguyên Liệu, vị trí "Xưởng 1"
-  // (state.materialRecords location === 'xuong-1' — Vầu/nứa).
+  // (state.materialRecords location === 'xuong-1').
+  // ⚠ YÊU CẦU 12/10/2026: CHỈ nhận lô có CHỮ "CÂY" trong tên loại
+  //   (Vầu cây, Nứa cây, Luồng cây...) — xem x1IsCayLot / x1MaterialInputs.
   // Người + giờ HC/TC = Bảng bố trí Nhân Sự, bộ phận "Xưởng 1".
   // Định mức công suất theo tháng = state.x1Rates { <khối>: { 'YYYY-MM': kg/h } }
   //   → Hiệu suất = Công suất thực tế (KL ÷ giờ hiệu dụng) ÷ Định mức.
@@ -11542,10 +11544,18 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   //   Bốc      ← lượt Sấy Sinh  (tiêu thụ phần đã sấy chưa bốc)
   // Tồn của công đoạn trước = phần CHƯA bị công đoạn sau tiêu thụ →
   // xong hết tự ẨN khỏi ô chọn; đang sửa 1 lượt thì phần của nó được trả lại.
-  // ─── NGUỒN LIỆU XƯỞNG 1 ─────────────────────────────────────
+  // ─── NGUỒN LIỆU XƯỞNG 1 — CHỈ LẤY LÔ CÓ CHỮ "CÂY" ──────────
+  // Yêu cầu 12/10/2026: đầu vào Cắt Ống chỉ nhận lô nguyên liệu có TỪ
+  // "cây" trong tên loại (Vầu cây, Nứa cây, Luồng cây, VẦU CÂY...) —
+  // khớp MỀM: bỏ dấu + không phân biệt hoa/thường ("Vầu/CÂY" vẫn nhận).
+  // Lô Xưởng 1 KHÔNG có chữ "cây" (VD "Vầu/nứa mua sẵn") KHÔNG hiện
+  // ở ô chọn Cắt Ống (kể cả thanh tồn + chip đếm trên thẻ launcher).
+  function x1IsCayLot(r) {
+    return normPosName(r && r.type).includes('cay');
+  }
   function x1MaterialInputs() {
     return [...(state.materialRecords || [])]
-      .filter(r => String(r.location || '') === 'xuong-1')
+      .filter(r => String(r.location || '') === 'xuong-1' && x1IsCayLot(r))
       .sort((a, b) => {
         if ((b.date || '') !== (a.date || '')) return String(b.date || '').localeCompare(String(a.date || ''));
         return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
@@ -11806,7 +11816,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const mats = x1MaterialInputs().filter(r => !used.has(r.id) || (editing && r.id === editing.materialId));
     sel.innerHTML = mats.length
       ? mats.map(r => `<option value="${escapeHTML(r.id)}">${escapeHTML(r.type || 'Vầu/nứa')} · NCC ${escapeHTML(r.supplier || '—')} · ${formatDateDDMMYY(r.date)} · ${fmtKg(materialInputWeightOf(r))} kg</option>`).join('')
-      : `<option value="">— Hết lô Vầu/nứa chờ cắt (nhập thêm ở tab Nguyên Liệu · Xưởng 1) —</option>`;
+      : `<option value="">— Hết lô có chữ "cây" (Vầu cây, Nứa cây...) chờ cắt — nhập thêm ở tab Nguyên Liệu · Xưởng 1 —</option>`;
     x1CatOngSyncLinked(true);
   }
   // Đổi lô (hoặc đang sửa): điền sẵn KL Ống Đạt = toàn bộ KL đầu vào
@@ -11965,7 +11975,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const pending = x1CatOngPendingInputs();
     const totalW = pending.reduce((s, r) => s + materialInputWeightOf(r), 0);
     bar.innerHTML = pending.length
-      ? `<span class="x2-stock-title" title="Tổng khối lượng lô Vầu/nứa nhập Xưởng 1 CHƯA được cắt (chi tiết từng lô ở ô chọn trong form)"><i data-lucide="boxes"></i> Tồn chờ cắt: <strong>${pending.length} lô · ${fmtKg(totalW)} kg</strong></span>`
+      ? `<span class="x2-stock-title" title="Tổng khối lượng lô nguyên liệu CÓ CHỮ CÂY (Vầu cây, Nứa cây...) nhập Xưởng 1 CHƯA được cắt — chi tiết từng lô ở ô chọn trong form"><i data-lucide="boxes"></i> Tồn chờ cắt: <strong>${pending.length} lô · ${fmtKg(totalW)} kg</strong></span>`
       : `<span class="x2-stock-title" title="Tất cả lô Vầu/nứa Xưởng 1 đã được cắt"><i data-lucide="check-circle-2"></i> Tồn chờ cắt: <strong>Hết tồn</strong></span>`;
     initLucide();
   }
@@ -12019,10 +12029,14 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     });
   }
   // ═════════════════════════════════════════════════════════════
-  // THẺ 2 — SẤY SINH (x1-say-sinh-card) · nguồn = lượt CẮT ỐNG
+  // THẺ 2 — SẤY SINH (x1-say-sinh-card) · 2 NGUỒN (12/10/2026)
   // ═════════════════════════════════════════════════════════════
-  // Mỗi lượt = 1 lượt Cắt Ống + KL sấy (kg). Lượt Cắt Ống chỉ còn
-  // PHẦN CHƯA SẤY mới hiện ở ô chọn (còn 0 → tự ẩn).
+  // Nguồn ①: lượt CẮT ỐNG (Vầu "cây" đã cắt) — chỉ còn PHẦN CHƯA SẤY
+  //           mới hiện ở ô chọn (còn 0 → tự ẩn).
+  // Nguồn ②: lô NGUYÊN LIỆU Xưởng 1 KHÔNG chữ "cây" (Vầu/Nứa) sấy
+  //           THẲNG — bỏ qua Cắt Ống; tồn = KL đầu vào − Σ sấy thẳng.
+  // 2 nguồn = 2 TẬP LÔ RIÊT BIỆT (Cắt Ống chỉ ăn lô chữ "cây") →
+  // không phát sinh chống ăn trùng 2 đường.
   function x1SaySinhSourceOptions() {
     const editing = state.x1SaySinhEditId
       ? (state.xuong1SaySinhRecords || []).find(r => r.id === state.x1SaySinhEditId) : null;
@@ -12039,6 +12053,45 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       .filter(r => r.saySinhId === rec.id && r.id !== excludeId)
       .reduce((s, r) => s + (Number(r.qty) || 0), 0);
     return Math.max(0, (Number(rec.qty) || 0) - used);
+  }
+  // ── NGUỒN ②: LÔ NL XƯỞNG 1 KHÔNG CHỮ "CÂY" — SẤY THẲNG ────────
+  // (chính là phần CON LẠI của nguyên liệu Xưởng 1 chưa qua Cắt Ống;
+  //  lô chữ "cây" KHÔNG nằm đây — chúng đi qua Cắt Ống ở nguồn ①)
+  function x1SaySinhDirectInputs() {
+    return [...(state.materialRecords || [])]
+      .filter(r => String(r.location || '') === 'xuong-1' && !x1IsCayLot(r))
+      .sort((a, b) => {
+        if ((b.date || '') !== (a.date || '')) return String(b.date || '').localeCompare(String(a.date || ''));
+        return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+      });
+  }
+  // Đã sấy thẳng bao nhiêu từ lô NL này (excludeId = lượt ĐANG SỬA)
+  function x1SaySinhDirectUsedOf(materialId, excludeId) {
+    if (!materialId) return 0;
+    return (state.xuong1SaySinhRecords || [])
+      .filter(r => r.materialId === materialId && r.id !== excludeId)
+      .reduce((s, r) => s + (Number(r.qty) || 0), 0);
+  }
+  function x1SaySinhDirectRemainingOf(mat, excludeId) {
+    if (!mat) return 0;
+    return Math.max(0, materialInputWeightOf(mat) - x1SaySinhDirectUsedOf(mat.id, excludeId));
+  }
+  // Tìm nguồn Sấy Sinh theo id trong CẢ 2 nhánh (id 2 danh sách khác
+  // tiền tố: 'x1co-…' lượt Cắt Ống · id lô NL như 'x1m-…' → không lẫn)
+  function x1SaySinhFindSrc(id) {
+    if (!id) return null;
+    const c = (state.xuong1CatOngRecords || []).find(x => x.id === id);
+    if (c) return { src: c, kind: 'catOng' };
+    const m = (state.materialRecords || []).find(x => x.id === id);
+    if (m) return { src: m, kind: 'material' };
+    return null;
+  }
+  // "Còn chưa sấy" của 1 nguồn — tính theo ĐÚNG nhánh
+  function x1SaySinhRestOf(found, excludeId) {
+    if (!found) return 0;
+    return found.kind === 'catOng'
+      ? x1CatOngRemainingOf(found.src, excludeId)
+      : x1SaySinhDirectRemainingOf(found.src, excludeId);
   }
 
   function loadXuong1SaySinh() {
@@ -12057,17 +12110,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   function x1SaySinhDisplay(r) {
-    const src = (state.xuong1CatOngRecords || []).find(c => c.id === r.catOngId) || null;
-    const sd = src ? x1CatOngDisplay(src) : null;
+    // Nguồn theo ĐÚNG nhánh của lượt (lượt cũ chỉ có catOngId)
+    const found = x1SaySinhFindSrc(r.materialId || r.catOngId || '');
+    const kind = found ? found.kind : null;
+    let srcType = '', srcSupplier = '', srcDate = '', srcRest = 0, viaDirect = false;
+    if (kind === 'catOng') {
+      const sd = x1CatOngDisplay(found.src);
+      srcType = sd.materialType; srcSupplier = sd.supplier; srcDate = found.src.date || '';
+      srcRest = x1CatOngRemainingOf(found.src, null);
+    } else if (kind === 'material') {
+      const m = found.src;
+      srcType = m.type || ''; srcSupplier = m.supplier || ''; srcDate = m.date || '';
+      srcRest = x1SaySinhDirectRemainingOf(m, null);
+      viaDirect = true;
+    } else {
+      // Mất link nguồn → snapshot lúc lưu (lượt sấy thẳng có cờ theo materialId)
+      srcType = r.srcType || ''; srcSupplier = r.srcSupplier || ''; srcDate = r.srcDate || '';
+      viaDirect = !!r.materialId;
+    }
     const live = x1SaySinhAssignmentsOf(r.date || '');
     const hours = live.length ? sumPosHoursSplitX1(live, r.date || '') : null;
     return {
       date: r.date || '',
-      // Nguồn hiển thị: loại ống · NCC · ngày cắt (mất link → theo snapshot)
-      srcType: sd ? sd.materialType : (r.srcType || ''),
-      srcSupplier: sd ? sd.supplier : (r.srcSupplier || ''),
-      srcDate: src ? src.date : (r.srcDate || ''),
-      srcRest: src ? x1CatOngRemainingOf(src, null) : 0,
+      // Đường đi: "Nhập thẳng — bỏ qua Cắt Ống" cho nguồn ②, ngược lại nguồn ①
+      srcType, srcSupplier, srcDate, srcRest, viaDirect,
+      srcRoute: viaDirect ? 'Nhập thẳng — bỏ qua Cắt Ống' : 'Lượt Cắt Ống',
       qty: Number(r.qty) || 0,
       note: r.note || '',
       workerRows: x1WorkerRows(r, live),
@@ -12080,20 +12147,38 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function fillX1SaySinhOptions() {
     const sel = document.getElementById('x1-say-sinh-source');
     if (!sel) return;
-    const list = x1SaySinhSourceOptions();
-    sel.innerHTML = list.length
-      ? list.map(c => {
-          const d = x1CatOngDisplay(c);
-          const rest = x1CatOngRemainingOf(c, state.x1SaySinhEditId || null);
-          return `<option value="${escapeHTML(c.id)}">${escapeHTML(d.materialType || 'Vầu/nứa')} · NCC ${escapeHTML(d.supplier || '—')} · cắt ${formatDateDDMMYY(c.date)} · còn ${fmtKg(rest)} kg</option>`;
-        }).join('')
-      : `<option value="">— Hết lượt Cắt Ống chờ sấy —</option>`;
+    const editId = state.x1SaySinhEditId || null;
+    const editing = editId ? (state.xuong1SaySinhRecords || []).find(r => r.id === editId) : null;
+    // Nhóm ①: lượt Cắt Ống còn chưa sấy (đang sửa → vẫn thấy nguồn của lượt đó)
+    const g1 = x1SaySinhSourceOptions();
+    // Nhóm ②: lô NL Xưởng 1 KHÔNG chữ "cây" — sấy thẳng (bỏ qua Cắt Ống)
+    const g2 = x1SaySinhDirectInputs().filter(m =>
+      x1SaySinhDirectRemainingOf(m, editId) > 0 || (editing && editing.materialId === m.id));
+    const opt1 = c => {
+      const d = x1CatOngDisplay(c);
+      const rest = x1CatOngRemainingOf(c, editId);
+      return `<option value="${escapeHTML(c.id)}">${escapeHTML(d.materialType || 'Vầu/nứa')} · NCC ${escapeHTML(d.supplier || '—')} · cắt ${formatDateDDMMYY(c.date)} · còn ${fmtKg(rest)} kg</option>`;
+    };
+    const opt2 = m => {
+      const rest = x1SaySinhDirectRemainingOf(m, editId);
+      return `<option value="${escapeHTML(m.id)}">${escapeHTML(m.type || 'Vầu/Nứa')} · NCC ${escapeHTML(m.supplier || '—')} · nhập ${formatDateDDMMYY(m.date)} · còn ${fmtKg(rest)} kg</option>`;
+    };
+    if (!g1.length && !g2.length) {
+      sel.innerHTML = '<option value="">— Hết nguồn chờ sấy (lượt Cắt Ống + lô Vầu/Nứa nhập thẳng) —</option>';
+    } else {
+      // 2 <optgroup> phân biệt rõ 2 đường — mẫu thẻ Bổ (quy tắc 50)
+      sel.innerHTML =
+        (g1.length ? '<optgroup label="Từ Cắt Ống (Vầu cây — đã cắt)">' + g1.map(opt1).join('') + '</optgroup>' : '')
+        + (g2.length ? '<optgroup label="Nhập thẳng Vầu/Nứa — bỏ qua Cắt Ống">' + g2.map(opt2).join('') + '</optgroup>' : '');
+      if (!sel.value) { const first = g1[0] || g2[0]; if (first) sel.value = first.id; }
+    }
     x1SaySinhSyncLinked(true);
   }
   function x1SaySinhSyncLinked(autoFill) {
     const sel = document.getElementById('x1-say-sinh-source');
-    const src = (state.xuong1CatOngRecords || []).find(c => c.id === (sel ? sel.value : '')) || null;
-    const rest = src ? x1CatOngRemainingOf(src, state.x1SaySinhEditId || null) : 0;
+    const found = x1SaySinhFindSrc(sel ? sel.value : '');
+    const rest = x1SaySinhRestOf(found, state.x1SaySinhEditId || null);
+    const src = found ? found.src : null;
     const dateEl = document.getElementById('x1-say-sinh-date');
     if (autoFill && dateEl && !dateEl.value && src && src.date) dateEl.value = src.date;
     const qtyEl = document.getElementById('x1-say-sinh-qty');
@@ -12104,8 +12189,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const box = document.getElementById('x1-say-sinh-calc');
     if (!box) return;
     const sel = document.getElementById('x1-say-sinh-source');
-    const src = (state.xuong1CatOngRecords || []).find(c => c.id === (sel ? sel.value : '')) || null;
-    const rest = src ? x1CatOngRemainingOf(src, state.x1SaySinhEditId || null) : 0;
+    const found = x1SaySinhFindSrc(sel ? sel.value : '');
+    const rest = x1SaySinhRestOf(found, state.x1SaySinhEditId || null);
     const qty = Number((document.getElementById('x1-say-sinh-qty') || {}).value) || 0;
     const over = qty > rest + 1e-9;
     box.innerHTML = `
@@ -12117,24 +12202,30 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     e.preventDefault();
     if (!requireEditPermission()) return;
     const sel = document.getElementById('x1-say-sinh-source');
-    const catOngId = sel ? sel.value : '';
-    const src = (state.xuong1CatOngRecords || []).find(c => c.id === catOngId) || null;
-    if (!src) { showToast('Chưa chọn lượt Cắt Ống làm nguồn!', 'error'); return; }
+    const srcId = sel ? sel.value : '';
+    const found = x1SaySinhFindSrc(srcId);
+    if (!found) { showToast('Chưa chọn nguồn sấy (lượt Cắt Ống hoặc lô Vầu/Nứa nhập thẳng)!', 'error'); return; }
+    const isMat = found.kind === 'material';
+    const src = found.src;
     const dateEl = document.getElementById('x1-say-sinh-date');
     const dateVal = (dateEl && dateEl.value) || '';
     if (!dateVal) { showToast('Ngày sấy sinh không được để trống!', 'error'); return; }
     const qty = Number((document.getElementById('x1-say-sinh-qty') || {}).value) || 0;
     if (qty <= 0) { showToast('KL sấy phải lớn hơn 0!', 'error'); return; }
-    const rest = x1CatOngRemainingOf(src, state.x1SaySinhEditId || null);
+    const rest = x1SaySinhRestOf(found, state.x1SaySinhEditId || null);
     if (qty > rest + 1e-9) {
       showToast(`KL sấy (${fmtKg(qty)} kg) vượt phần còn chưa sấy (${fmtKg(rest)} kg) — kiểm tra lại!`, 'error'); return;
     }
-    const sd = x1CatOngDisplay(src);
+    const sd = isMat
+      ? { materialType: src.type || '', supplier: src.supplier || '' }
+      : x1CatOngDisplay(src);
     const note = (((document.getElementById('x1-say-sinh-note') || {}).value) || '').trim();
     const snap = x1Snapshot(dateVal, x1SaySinhAssignmentsOf(dateVal));
     const payload = {
-      catOngId,
-      srcType: sd.materialType, srcSupplier: sd.supplier, srcDate: src.date,
+      // Ghi vào ĐÚNG trường link của nhánh đang chọn — nhánh kia để rỗng
+      catOngId: isMat ? '' : srcId,
+      materialId: isMat ? srcId : '',
+      srcType: sd.materialType, srcSupplier: sd.supplier, srcDate: src.date || '',
       date: dateVal, qty,
       worker: snap.names, workTime: snap.timeStr,
       workHours: snap.hours, workHoursHC: snap.hc, workHoursTC: snap.tc,
@@ -12166,7 +12257,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     state.x1SaySinhEditId = id;
     fillX1SaySinhOptions();
     const sel = document.getElementById('x1-say-sinh-source');
-    if (sel) sel.value = rec.catOngId || '';
+    // Khôi phục đúng ô nguồn: lượt cũ = catOngId · lượt sấy thẳng = materialId
+    if (sel) sel.value = rec.catOngId || rec.materialId || '';
     const d = document.getElementById('x1-say-sinh-date');
     if (d) d.value = rec.date || '';
     const q = document.getElementById('x1-say-sinh-qty');
@@ -12212,9 +12304,11 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const bar = document.getElementById('x1-say-sinh-stock-bar');
     if (!bar) return;
     const pend = (state.xuong1CatOngRecords || []).filter(c => x1CatOngRemainingOf(c, null) > 0);
-    const totalW = pend.reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0);
-    bar.innerHTML = pend.length
-      ? `<span class="x2-stock-title" title="Tổng phần ống ĐẠT của các lượt Cắt Ống CHƯA sấy hết"><i data-lucide="boxes"></i> Tồn chờ sấy: <strong>${pend.length} lượt · ${fmtKg(totalW)} kg</strong></span>`
+    const pend2 = x1SaySinhDirectInputs().filter(m => x1SaySinhDirectRemainingOf(m, null) > 0);
+    const totalW = pend.reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0)
+      + pend2.reduce((s, m) => s + x1SaySinhDirectRemainingOf(m, null), 0);
+    bar.innerHTML = (pend.length || pend2.length)
+      ? `<span class="x2-stock-title" title="Tổng phần CHƯA sấy: ống đạt của lượt Cắt Ống (Vầu cây) + KL lô Vầu/Nứa Xưởng 1 KHÔNG chữ cây sấy thẳng"><i data-lucide="boxes"></i> Tồn chờ sấy: <strong>${pend.length + pend2.length} nguồn · ${fmtKg(totalW)} kg</strong></span>`
       : `<span class="x2-stock-title"><i data-lucide="check-circle-2"></i> Tồn chờ sấy: <strong>Hết tồn</strong></span>`;
     initLucide();
   }
@@ -12223,7 +12317,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!box) return;
     const disp = (state.xuong1SaySinhRecords || []).map(x1SaySinhDisplay);
     const total = disp.reduce((s, d) => s + d.qty, 0);
-    const pend = (state.xuong1CatOngRecords || []).reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0);
+    const pend = (state.xuong1CatOngRecords || []).reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0)
+      + x1SaySinhDirectInputs().reduce((s, m) => s + x1SaySinhDirectRemainingOf(m, null), 0);
     box.innerHTML = `
       <div class="material-stat"><span class="material-stat-value">${disp.length}</span><span class="material-stat-label">Lượt sấy sinh</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(total)}</span><span class="material-stat-label">Tổng KL sấy (kg)</span></div>
@@ -12240,13 +12335,13 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       rateKind: 'saySinh',
       headName: 'Người sấy',
       emptyIcon: 'flame-kindling',
-      emptyText: 'Chưa có lượt sấy sinh nào.<br>Chọn <strong>lượt Cắt Ống</strong> ở form trên rồi bấm <strong>Lưu Lượt Sấy Sinh</strong>.',
-      thead: `<th>Nguồn (lượt Cắt Ống)</th><th>Nhà cung cấp</th><th>Ngày cắt</th>
+      emptyText: 'Chưa có lượt sấy sinh nào.<br>Chọn <strong>lượt Cắt Ống</strong> hoặc <strong>lô Vầu/Nứa nhập thẳng</strong> ở form trên rồi bấm <strong>Lưu Lượt Sấy Sinh</strong>.',
+      thead: `<th>Nguồn (Cắt Ống / Nhập thẳng)</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
               <th class="text-right">KL sấy</th><th class="text-right">Còn chưa sấy</th>
               <th>Ghi chú</th><th class="text-right">Thao tác</th>`,
       rowHtml: (r, d) => `
         <tr class="x2-day-row">
-          <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong></td>
+          <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong>${d.viaDirect ? `<div class="x2-row-note">${escapeHTML(d.srcRoute)}</div>` : ''}</td>
           <td>${escapeHTML(d.srcSupplier || '—')}</td>
           <td>${d.srcDate ? formatDateDDMMYY(d.srcDate) : '—'}</td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.qty)}</strong></td>
@@ -12299,8 +12394,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const hours = live.length ? sumPosHoursSplitX1(live, r.date || '') : null;
     return {
       date: r.date || '',
-      srcType: cdisp ? cdisp.materialType : (r.srcType || ''),
-      srcSupplier: cdisp ? cdisp.supplier : (r.srcSupplier || ''),
+      // Nguồn: lượt Cắt Ống (sống) → không có thì snapshot của Sấy Sinh
+      // (lượt sấy THẲNG không có catOngId → dùng srcType snapshot của nó)
+      srcType: cdisp ? cdisp.materialType : (src ? (src.srcType || '') : (r.srcType || '')),
+      srcSupplier: cdisp ? cdisp.supplier : (src ? (src.srcSupplier || '') : (r.srcSupplier || '')),
       srcSayDate: src ? src.date : (r.srcSayDate || ''),
       srcRest: src ? x1SaySinhRemainingOf(src, null) : 0,
       qty: Number(r.qty) || 0,
@@ -12321,7 +12418,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           const ss = (state.xuong1CatOngRecords || []).find(c => c.id === s.catOngId);
           const cd = ss ? x1CatOngDisplay(ss) : null;
           const rest = x1SaySinhRemainingOf(s, state.x1BocEditId || null);
-          return `<option value="${escapeHTML(s.id)}">${escapeHTML(cd ? cd.materialType : 'Vầu/nứa')} · sấy ${formatDateDDMMYY(s.date)} · còn ${fmtKg(rest)} kg</option>`;
+          // Lượt sấy THẲNG không có catOngId → dùng snapshot srcType của lượt sấy
+          return `<option value="${escapeHTML(s.id)}">${escapeHTML(cd ? cd.materialType : (s.srcType || 'Vầu/nứa'))} · sấy ${formatDateDDMMYY(s.date)} · còn ${fmtKg(rest)} kg</option>`;
         }).join('')
       : `<option value="">— Hết lượt Sấy Sinh chờ bốc —</option>`;
     x1BocSyncLinked(true);
@@ -12371,7 +12469,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const snap = x1Snapshot(dateVal, x1BocAssignmentsOf(dateVal));
     const payload = {
       saySinhId,
-      srcType: cd ? cd.materialType : '', srcSupplier: cd ? cd.supplier : '', srcSayDate: src.date,
+      // Ưu tiên lượt Cắt Ống (sống); sấy thẳng → snapshot của lượt Sấy Sinh
+      srcType: cd ? cd.materialType : (src.srcType || ''),
+      srcSupplier: cd ? cd.supplier : (src.srcSupplier || ''),
+      srcSayDate: src.date,
       date: dateVal, qty,
       worker: snap.names, workTime: snap.timeStr,
       workHours: snap.hours, workHoursHC: snap.hc, workHoursTC: snap.tc,
@@ -12509,6 +12610,36 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   //   qtyIn  = khối lượng ĐEM XỬ LÝ trong lượt này (≤ phần CÒN LẠI của nguồn)
   //   qtyOk  = sản lượng ĐẠT sau công đoạn · qtyLoai = phần LOẠI
   //   qtyOk + qtyLoai ≤ qtyIn
+  // ─── YÊU CẦU 12/10/2026 — LÔ ĐÃ QUA CẮT ỐNG BỎ QUA CẮT MẮT ────
+  // Dòng chuẩn: Cắt Ống → Sấy Sinh → Bốc → Lọc Ống.
+  // Lượt Lọc Ống sinh ra từ dòng này (= lô ĐÃ QUA CẮT ỐNG) sẽ KHÔNG hiện
+  // ở ô chọn CẮT MẮT, mà hiện THẲM ở ô chọn BỔ (optgroup "Từ Lọc Ống —
+  // bỏ qua Cắt Mắt"). Lượt Lọc Ống không truy được về Cắt Ống (dữ liệu
+  // cũ / đứt link) vẫn đi đường cũ: Lọc Ống → Cắt Mắt → Bổ.
+  function x1LocOngViaCutOng(lo) {
+    if (!lo) return false;
+    const boc = (state.xuong1BocRecords || []).find(r => r.id === lo.bocId);
+    if (!boc) return false;
+    const ss = (state.xuong1SaySinhRecords || []).find(r => r.id === boc.saySinhId);
+    if (!ss) return false;
+    return (state.xuong1CatOngRecords || []).some(r => r.id === ss.catOngId);
+  }
+  // Số kg 1 lô Lọc Ống đã bị 2 đường tiêu thụ (chống ăn trùng khi Bổ nhận
+  // thẳng từ Lọc Ống): đường Cắt Mắt (lượt cũ trước khi đổi quy tắc)…
+  function x1CatMatUsedOf(locOngId, excludeId) {
+    if (!locOngId) return 0;
+    return (state.xuong1CatMatRecords || [])
+      .filter(r => r.locOngId === locOngId && r.id !== excludeId)
+      .reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
+  }
+  // …và đường Bổ thẳng (lượt mới — bỏ qua Cắt Mắt).
+  function x1BoDirectUsedOf(locOngId, excludeId) {
+    if (!locOngId) return 0;
+    return (state.xuong1BoRecords || [])
+      .filter(r => r.locOngId === locOngId && r.id !== excludeId)
+      .reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
+  }
+
   // TỒN của nguồn = sản lượng nguồn − Σ qtyIn các lượt liên kết
   // (đang SỬA 1 lượt → excludeId trả lại phần của chính nó; hết → tự ẩn).
   const X1_CHAIN_SPECS = [
@@ -12540,7 +12671,13 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       srcOutputOf: r => Number(r.qtyOk) || 0,
       posMatch: n => normPosName(n).includes('cat mat'),
       emptyIcon: 'crop',
-      srcHint: 'Chỉ hiện lượt Lọc Ống còn CHƯA cắt mắt hết'
+      // ⚠ 12/10/2026: lô Lọc Ống đã QUA CẮT ỐNG bị ẨN khỏi ô chọn này
+      //   (hiện thẳng ở thẻ Bổ) — chống ăn trùng: phần đã Bổ thẳng cũng
+      //   bị trừ khỏi "còn lại" (lifetime edit dữ liệu cũ).
+      srcVisible: s => !x1LocOngViaCutOng(s),
+      remainingExtraOf: (src) => x1BoDirectUsedOf(src.id, null),
+      srcEmptyNote: '— Lượt Lọc Ống đã QUA CẮT ỐNG hiện ở thẻ BỔ (bỏ qua Cắt Mắt) —',
+      srcHint: 'Chỉ hiện lượt Lọc Ống CHƯA qua Cắt Ống còn CHƯA cắt mắt — lô qua Cắt Ống → thẻ Bổ'
     },
     {
       key: 'bo', prefix: 'bo', cardId: 'x1-bo-card',
@@ -12555,7 +12692,16 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       srcOutputOf: r => Number(r.qtyOk) || 0,
       posMatch: n => { const s = normPosName(n); return s === 'bo' || s.startsWith('bo '); },
       emptyIcon: 'split',
-      srcHint: 'Chỉ hiện lượt Cắt Mắt còn CHƯA bổ hết'
+      // ── 2 NGUỒN (12/10/2026): Cắt Mắt (đường cũ) + LỌC ỐNG THẲNG ──
+      // Lô đã qua Cắt Ống → bỏ qua Cắt Mắt: Bổ nhận thẳng từ lượt Lọc Ống.
+      altSrcField: 'locOngId',
+      altSrcRecords: () => state.xuong1LocOngRecords || [],
+      altSrcName: 'Lọc Ống',
+      altSrcVisible: s => x1LocOngViaCutOng(s),
+      // Chống ăn trùng: lô Lọc Ống nhận thẳng bị trừ phần đã qua Cắt Mắt (lượt cũ)
+      remainingExtraOf: (src) =>
+        ((state.xuong1LocOngRecords || []).some(r => r.id === src.id) ? x1CatMatUsedOf(src.id, null) : 0),
+      srcHint: 'Chỉ hiện lượt Cắt Mắt còn CHƯA bổ hết + lượt Lọc Ống của lô ĐÃ qua Cắt Ống (bỏ qua Cắt Mắt)'
     },
     {
       key: 'phoiSay', prefix: 'phoi-say', cardId: 'x1-phoi-say-card',
@@ -12607,18 +12753,54 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   const x1SrcSupplierOf = r => (r && (r.supplier || r.srcSupplier)) || '';
 
   // Phần CÒN LẠI của 1 nguồn (excludeId = lượt ĐANG SỬA → phần đó được trả lại)
+  // ── NHÓM NGUỒN (spec có 2 nhánh → dùng cho THẺ BỔ) ──────────────
+  // linked: lượt ĐANG SỬA vẫn thấy đúng nguồn của nó (kể cả nguồn đã bị ẩn
+  // do đổi quy tắc 12/10/2026 — không thì mất link khi sửa).
+  function x1ChainSrcGroups(spec, editId) {
+    const linked = s => !!(editId && (state[spec.stateKey] || [])
+      .some(r => r.id === editId && (r[spec.srcField] === s.id || (spec.altSrcField && r[spec.altSrcField] === s.id))));
+    const base = (spec.srcRecords() || []).filter(s =>
+      (spec.srcVisible ? spec.srcVisible(s) : true) && x1ChainRemainingOf(spec, s, editId) > 0 || linked(s));
+    const alt = spec.altSrcRecords
+      ? (spec.altSrcRecords() || []).filter(s =>
+          (spec.altSrcVisible ? spec.altSrcVisible(s) : true) && x1ChainRemainingOf(spec, s, editId) > 0 || linked(s))
+      : [];
+    return { base, alt };
+  }
+  // Trường link của 1 lượt: bản cũ thẻ Bổ có catMatId, bản mới nhận thẳng
+  // từ Lọc Ống có locOngId (2 trường KHÔNG cùng trỏ 1 nguồn).
+  function x1ChainSrcFieldOf(spec, rec) {
+    if (spec.altSrcField && rec && rec[spec.altSrcField]) return spec.altSrcField;
+    return spec.srcField;
+  }
+  // Tìm nguồn theo id trong CẢ 2 nhánh (Bổ: Cắt Mắt lẫn Lọc Ống)
+  function x1ChainFindSrc(spec, srcId) {
+    if (!srcId) return null;
+    const base = (spec.srcRecords() || []).find(s => s.id === srcId);
+    if (base) return base;
+    if (spec.altSrcRecords) return (spec.altSrcRecords() || []).find(s => s.id === srcId) || null;
+    return null;
+  }
+  // true nếu id nguồn là 1 lượt LỌC ỐNG (nhánh phụ của thẻ Bổ)
+  function x1ChainIsAltSrc(spec, src) {
+    return !!(spec.altSrcRecords && src && (spec.altSrcRecords() || []).some(r => r.id === src.id));
+  }
   function x1ChainUsedOf(spec, srcId, excludeId) {
     if (!srcId) return 0;
     return (state[spec.stateKey] || [])
-      .filter(r => r[spec.srcField] === srcId && r.id !== excludeId)
+      .filter(r => (r[spec.srcField] === srcId || (spec.altSrcField && r[spec.altSrcField] === srcId)) && r.id !== excludeId)
       .reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
   }
   function x1ChainRemainingOf(spec, src, excludeId) {
     if (!src) return 0;
-    return Math.max(0, (spec.srcOutputOf(src) || 0) - x1ChainUsedOf(spec, src.id, excludeId));
+    // extra = phần đã bị ĐƯỜNG KHÁC tiêu thụ (VD lô Lọc Ống vừa bị Cắt Mắt
+    // (lượt cũ) vừa bị Bổ thẳng — cộng cả 2 để không ăn trùng).
+    const extra = spec.remainingExtraOf ? (spec.remainingExtraOf(src, excludeId) || 0) : 0;
+    return Math.max(0, (spec.srcOutputOf(src) || 0) - x1ChainUsedOf(spec, src.id, excludeId) - extra);
   }
   function x1ChainPending(spec) {
-    return (spec.srcRecords() || []).filter(r => x1ChainRemainingOf(spec, r, null) > 0);
+    const g = x1ChainSrcGroups(spec, null);
+    return [...g.base, ...g.alt];
   }
   // ─── NẠP / LƯU ──────────────────────────────────────────────────
   function loadX1Chain(spec) {
@@ -12640,7 +12822,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
 
   // ─── SỐ LIỆU HIỂN THỊ (link SỐNG tới nguồn) ────────────────────
   function x1ChainDisplay(spec, r) {
-    const src = (spec.srcRecords() || []).find(s => s.id === r[spec.srcField]) || null;
+    const field = x1ChainSrcFieldOf(spec, r);
+    const src = x1ChainFindSrc(spec, r[field]);
+    const viaAlt = spec.altSrcField && field === spec.altSrcField;
     const live = hrX1AssignmentsAt(r.date || '', spec.posMatch);
     const hours = live.length ? sumPosHoursSplitX1(live, r.date || '') : null;
     return {
@@ -12649,6 +12833,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       srcType: src ? x1SrcTypeOf(src) : (r.srcType || ''),
       srcSupplier: src ? x1SrcSupplierOf(src) : (r.srcSupplier || ''),
       srcDate: src ? (src.date || '') : (r.srcDate || ''),
+      // Đường đi của nguồn (thẻ Bổ: "Lọc Ống — bỏ qua Cắt Mắt")
+      srcRoute: viaAlt ? `${spec.altSrcName} — bỏ qua ${spec.srcName}` : spec.srcName,
       srcRest: src ? x1ChainRemainingOf(spec, src, null) : 0,
       qtyIn: Number(r.qtyIn) || 0,
       qtyOk: Number(r.qtyOk) || 0,
@@ -12667,24 +12853,38 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const sel = document.getElementById(x1Id(spec, 'src'));
     if (!sel) return;
     const editId = state[spec.editKey] || null;
-    const list = (spec.srcRecords() || []).filter(s =>
-      x1ChainRemainingOf(spec, s, editId) > 0 ||
-      (editId && (state[spec.stateKey] || []).some(r => r.id === editId && r[spec.srcField] === s.id)));
-    sel.innerHTML = list.length
-      ? list.map(s => {
-          const rest = x1ChainRemainingOf(spec, s, editId);
-          const nm = x1SrcTypeOf(s) || 'Vầu/nứa';
-          return `<option value="${escapeHTML(s.id)}">${escapeHTML(nm)} · ${escapeHTML(spec.srcName)} ${formatDateDDMMYY(s.date)} · còn ${fmtKg(rest)} kg</option>`;
-        }).join('')
-      : `<option value="">— Hết lượt ${escapeHTML(spec.srcName)} chờ ${escapeHTML(spec.title.toLowerCase())} —</option>`;
-    // Trình duyệt TỰ chọn option đầu sau khi gán innerHTML — ghi rõ ra đây để
-    // đúng hành vi ở cả DOM stub (test Node) lẫn khi người dùng chọn bằng tay.
-    if (list.length && !sel.value) sel.value = list[0].id;
+    const g = x1ChainSrcGroups(spec, editId);
+    const optOf = (s, isAlt) => {
+      const rest = x1ChainRemainingOf(spec, s, editId);
+      const nm = x1SrcTypeOf(s) || 'Vầu/nứa';
+      const route = isAlt ? `${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName;
+      return `<option value="${escapeHTML(s.id)}">${escapeHTML(nm)} · ${escapeHTML(route)} ${formatDateDDMMYY(s.date)} · còn ${fmtKg(rest)} kg</option>`;
+    };
+    const total = g.base.length + g.alt.length;
+    if (!total) {
+      sel.innerHTML = spec.srcEmptyNote
+        ? `<option value="">${escapeHTML(spec.srcEmptyNote)}</option>`
+        : `<option value="">— Hết lượt ${escapeHTML(spec.srcName)} chờ ${escapeHTML(spec.title.toLowerCase())} —</option>`;
+    } else {
+      // Thẻ Bổ có 2 nhánh → chia <optgroup>; các thẻ khác giữ danh sách phẳng (như cũ)
+      sel.innerHTML =
+        (g.base.length
+          ? (spec.altSrcField ? `<optgroup label="Từ ${escapeHTML(spec.srcName)}">` : '')
+            + g.base.map(s => optOf(s, false)).join('')
+            + (spec.altSrcField ? '</optgroup>' : '')
+          : '')
+        + (g.alt.length
+            ? `<optgroup label="Từ ${escapeHTML(spec.altSrcName)} — bỏ qua ${escapeHTML(spec.srcName)}">` + g.alt.map(s => optOf(s, true)).join('') + '</optgroup>'
+            : '');
+      // Trình duyệt TỰ chọn option đầu sau khi gán innerHTML — ghi rõ ra đây để
+      // đúng hành vi ở cả DOM stub (test Node) lẫn khi người dùng chọn bằng tay.
+      if (!sel.value) { const first = g.base[0] || g.alt[0]; if (first) sel.value = first.id; }
+    }
     x1ChainSyncLinked(spec, true);
   }
   function x1ChainSyncLinked(spec, autoFill) {
     const sel = document.getElementById(x1Id(spec, 'src'));
-    const src = (spec.srcRecords() || []).find(s => s.id === (sel ? sel.value : '')) || null;
+    const src = x1ChainFindSrc(spec, sel ? sel.value : '');
     const rest = src ? x1ChainRemainingOf(spec, src, state[spec.editKey] || null) : 0;
     const dateEl = document.getElementById(x1Id(spec, 'date'));
     if (autoFill && dateEl && !dateEl.value && src && src.date) dateEl.value = src.date;
@@ -12700,7 +12900,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const qtyOk  = val(x1Id(spec, 'ok'));
     const qtyLoai = val(x1Id(spec, 'loai'));
     const sel = document.getElementById(x1Id(spec, 'src'));
-    const src = (spec.srcRecords() || []).find(s => s.id === (sel ? sel.value : '')) || null;
+    const src = x1ChainFindSrc(spec, sel ? sel.value : '');
     const rest = src ? x1ChainRemainingOf(spec, src, state[spec.editKey] || null) : 0;
     const bad = qtyIn > rest + 1e-9 || qtyOk + qtyLoai > qtyIn + 1e-9;
     const ratio = qtyIn > 0 ? (qtyOk / qtyIn) * 100 : null;
@@ -12715,7 +12915,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!requireEditPermission()) return;
     const sel = document.getElementById(x1Id(spec, 'src'));
     const srcId = sel ? sel.value : '';
-    const src = (spec.srcRecords() || []).find(s => s.id === srcId) || null;
+    const src = x1ChainFindSrc(spec, srcId);
+    const viaAlt = x1ChainIsAltSrc(spec, src);
     if (!src) { showToast(`Chưa chọn nguồn (${spec.srcName})!`, 'error'); return; }
     const dateEl = document.getElementById(x1Id(spec, 'date'));
     const dateVal = (dateEl && dateEl.value) || '';
@@ -12737,13 +12938,20 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const note = ((document.getElementById(x1Id(spec, 'note')) || {}).value || '').trim();
     const snap = x1Snapshot(dateVal, hrX1AssignmentsAt(dateVal, spec.posMatch));
     const payload = {
-      [spec.srcField]: srcId,
       date: dateVal, qtyIn, qtyOk, qtyLoai,
       srcType: x1SrcTypeOf(src), srcSupplier: x1SrcSupplierOf(src), srcDate: src.date || '',
       worker: snap.names, workTime: snap.timeStr,
       workHours: snap.hours, workHoursHC: snap.hc, workHoursTC: snap.tc,
       note
     };
+    // Thẻ Bổ có 2 nhánh: ghi vào ĐÚNG trường (locOngId khi nhận thẳng từ
+    // Lọc Ống, catMatId khi qua Cắt Mắt) — trường kia để rỗng không lẫn.
+    if (spec.altSrcField) {
+      payload[spec.srcField] = viaAlt ? '' : srcId;
+      payload[spec.altSrcField] = viaAlt ? srcId : '';
+    } else {
+      payload[spec.srcField] = srcId;
+    }
     const list = state[spec.stateKey] || (state[spec.stateKey] = []);
     if (editId) {
       const rec = list.find(r => r.id === editId);
@@ -12771,7 +12979,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     state[spec.editKey] = id;
     fillX1ChainOptions(spec);
     const sel = document.getElementById(x1Id(spec, 'src'));
-    if (sel) sel.value = rec[spec.srcField] || '';
+    if (sel) sel.value = rec[x1ChainSrcFieldOf(spec, rec)] || '';
     const d = document.getElementById(x1Id(spec, 'date'));
     if (d) d.value = rec.date || '';
     [['in', 'qtyIn'], ['ok', 'qtyOk'], ['loai', 'qtyLoai']].forEach(([part, fld]) => {
@@ -12790,9 +12998,12 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const rec = (state[spec.stateKey] || []).find(r => r.id === id);
     if (!rec) return;
     // Cảnh báo nếu công đoạn TIẾP THEO đang link lượt này (mất link nguồn)
-    const next = X1_CHAIN_SPECS.find(s => s.srcRecords() && s.srcField && s.srcRecords().length &&
-      (state[s.stateKey] || []).some(r => r[s.srcField] === id));
-    const warn = next ? `\nLưu ý: có lượt ${next.title} đang link lượt này (số liệu vẫn giữ, nhưng mất link nguồn).` : '';
+    // — kiểm tra CẢ 2 trường link (thẻ Bổ nhận cả Cắt Mắt lẫn Lọc Ống thẳng)
+    const nextTitles = X1_CHAIN_SPECS
+      .filter(s => [s.srcField, s.altSrcField].filter(Boolean)
+        .some(f => (state[s.stateKey] || []).some(r => r[f] === id)))
+      .map(s => s.title);
+    const warn = nextTitles.length ? `\nLưu ý: có lượt ${nextTitles.join(', ')} đang link lượt này (số liệu vẫn giữ, nhưng mất link nguồn).` : '';
     if (!confirm(`Xóa lượt ${spec.title} ngày ${formatDateDDMMYY(rec.date)}?${warn}`)) return;
     trackDeleted(spec.stateKey, id);
     state[spec.stateKey] = (state[spec.stateKey] || []).filter(r => r.id !== id);
@@ -12822,8 +13033,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!bar) return;
     const pend = x1ChainPending(spec);
     const total = pend.reduce((s, x) => s + x1ChainRemainingOf(spec, x, null), 0);
+    // Thẻ Bổ có 2 nguồn → nhãn gộp cả 2 cho đúng (Cắt Mắt / Lọc Ống)
+    const srcLabel = spec.altSrcName ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName;
     bar.innerHTML = pend.length
-      ? `<span class="x2-stock-title" title="Tổng phần đã làm ở ${escapeHTML(spec.srcName)} CHƯA làm ${escapeHTML(spec.title.toLowerCase())}"><i data-lucide="boxes"></i> Tồn chờ ${escapeHTML(spec.title.toLowerCase())}: <strong>${pend.length} lượt · ${fmtKg(total)} kg</strong></span>`
+      ? `<span class="x2-stock-title" title="Tổng phần đã làm ở ${escapeHTML(srcLabel)} CHƯA làm ${escapeHTML(spec.title.toLowerCase())}"><i data-lucide="boxes"></i> Tồn chờ ${escapeHTML(spec.title.toLowerCase())}: <strong>${pend.length} lượt · ${fmtKg(total)} kg</strong></span>`
       : `<span class="x2-stock-title"><i data-lucide="check-circle-2"></i> Tồn chờ ${escapeHTML(spec.title.toLowerCase())}: <strong>Hết tồn</strong></span>`;
     initLucide();
   }
@@ -12853,14 +13066,14 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       rateKind: spec.rateKind,
       headName: spec.headName,
       emptyIcon: spec.emptyIcon,
-      emptyText: `Chưa có lượt ${escapeHTML(spec.title.toLowerCase())} nào.<br>Chọn <strong>${escapeHTML(spec.srcName)}</strong> ở form trên rồi bấm <strong>Lưu Lượt ${escapeHTML(spec.title)}</strong>.`,
-      thead: `<th>Nguồn (${escapeHTML(spec.srcName)})</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
+      emptyText: `Chưa có lượt ${escapeHTML(spec.title.toLowerCase())} nào.<br>Chọn <strong>${escapeHTML(spec.altSrcName ? `${spec.srcName} hoặc ${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName)}</strong> ở form trên rồi bấm <strong>Lưu Lượt ${escapeHTML(spec.title)}</strong>.`,
+      thead: `<th>Nguồn (${escapeHTML(spec.altSrcName ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName)})</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
               <th class="text-right">${escapeHTML(spec.inLabel)}</th><th class="text-right">${escapeHTML(spec.okLabel)}</th>
               <th class="text-right">${escapeHTML(spec.loaiLabel)}</th><th class="text-right">Tỷ lệ đạt</th>
               <th>Ghi chú</th><th class="text-right">Thao tác</th>`,
       rowHtml: (r, d) => `
         <tr class="x2-day-row">
-          <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong></td>
+          <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong>${spec.altSrcField ? `<div class="x2-row-note">${escapeHTML(d.srcRoute || spec.srcName)}</div>` : ''}</td>
           <td>${escapeHTML(d.srcSupplier || '—')}</td>
           <td>${d.srcDate ? formatDateDDMMYY(d.srcDate) : '—'}</td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.qtyIn)}</strong></td>
@@ -12886,8 +13099,11 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     }
     if (cardId === 'x1-say-sinh-card') {
       const pend = (state.xuong1CatOngRecords || []).filter(c => x1CatOngRemainingOf(c, null) > 0);
-      if (!pend.length) return 'Hết tồn';
-      return `Tồn ${fmtKg(pend.reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0))} kg`;
+      const pend2 = x1SaySinhDirectInputs().filter(m => x1SaySinhDirectRemainingOf(m, null) > 0);
+      if (!pend.length && !pend2.length) return 'Hết tồn';
+      const total = pend.reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0)
+        + pend2.reduce((s, m) => s + x1SaySinhDirectRemainingOf(m, null), 0);
+      return `Tồn ${fmtKg(total)} kg`;
     }
     if (cardId === 'x1-boc-card') {
       const pend = x1BocPending();
@@ -13017,6 +13233,14 @@ export {
   x1CatOngRemainingOf,
   x1SaySinhRemainingOf,
   x1CardCountText,
+  // ── YÊU CẦU 12/10/2026: lọc lô "cây" + bỏ qua Cắt Mắt ──
+  x1IsCayLot,
+  x1LocOngViaCutOng,
+  x1MaterialInputs,
+  // ── SẤY SINH 2 NGUỒN (12/10/2026) — lô NL không chữ "cây" sấy thẳng ──
+  x1SaySinhDirectInputs,
+  x1SaySinhDirectRemainingOf,
+  x1SaySinhFindSrc,
   // Hiển thị 1 lượt (dùng cho BẢNG TỔNG HỢP CÔNG SUẤT — js/capacity.js)
   x1CatOngDisplay,
   x1SaySinhDisplay,

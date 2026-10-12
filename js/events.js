@@ -1193,6 +1193,60 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Bộ lọc bộ phận bảng thống kê đi làm (ID RIÊNG — hr-att-filter-dept là bộ lọc của card Chấm Công) — chỉ thu hẹp bảng
     safeOn('hr-attstats-filter-dept', 'change', renderHrAttendanceStats);
     safeOn('btn-toggle-hr-att-stats', 'click', () => { toggleRateTableCollapse('hr-att-stats-card'); syncHrMiniActive(); });
+    // Thẻ bộ phận (TẦNG 1) trong bảng Thống Kê Đi Làm — bấm = lọc bảng cá nhân (tầng 2);
+    // bấm lại đúng thẻ đang lọc = về "Tất Cả"
+    const attStatsDepts = document.getElementById('hr-att-stats-depts');
+    if (attStatsDepts) {
+      attStatsDepts.addEventListener('click', (e) => {
+        const card = e.target && e.target.closest ? e.target.closest('[data-attstats-dept]') : null;
+        if (!card) return;
+        const sel = document.getElementById('hr-attstats-filter-dept');
+        const dept = card.getAttribute('data-attstats-dept');
+        if (sel) sel.value = (sel.value === dept) ? 'all' : dept;
+        renderHrAttendanceStats();
+      });
+    }
+    // ── KÉO CHUỘT GIỮ + KÉO NGANG BẢNG BỐ TRÍ (10/10/2026) ──
+    // Giữ chuột trên NỀN board rồi rê trái/phải để cuộn ngang khi nhiều vị trí.
+    // KHÔNG bắt đầu kéo khi chuột nằm trên ô người (.slot — đang draggable để
+    // chuyển vị trí) hay nút/input/select/link — không phá kéo-thả + bấm hiện có.
+    (() => {
+      const board = document.getElementById('hr-board');
+      if (!board || board.dataset.dragScrollWired === '1') return;
+      board.dataset.dragScrollWired = '1';
+      let startX = 0, startLeft = 0, dragging = false, moved = false;
+      board.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'touch') return; // cảm ứng: native scroll đã có
+        if (e.button !== 0) return;            // chỉ chuột trái
+        const t = e.target;
+        if (t && t.closest && t.closest('.slot, button, input, select, a')) return;
+        dragging = true; moved = false;
+        startX = e.clientX;
+        startLeft = board.scrollLeft;
+        try { if (board.setPointerCapture && e.pointerId !== undefined) board.setPointerCapture(e.pointerId); } catch (err) { /* optional */ }
+      });
+      board.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        if (!moved && Math.abs(dx) < 6) return; // ngưỡng 6px — không lẫn thao tác bấm
+        moved = true;
+        board.classList.add('is-drag-scrolling');
+        board.scrollLeft = startLeft - dx;
+        e.preventDefault();
+      });
+      const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        board.classList.remove('is-drag-scrolling');
+      };
+      board.addEventListener('pointerup', endDrag);
+      board.addEventListener('pointercancel', endDrag);
+      board.addEventListener('pointerleave', endDrag);
+      // Sau khi kéo, chặn click tiếp theo (đang ở pha capture) khỏi gây bấm nhầm
+      board.addEventListener('click', (e) => {
+        if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+      }, true);
+    })();
     // ── Vị trí làm việc & kỹ năng ──
     safeOn('btn-add-position', 'click', () => openPositionModal());
     safeOn('btn-sync-skills', 'click', syncSkillsFromAssignments);

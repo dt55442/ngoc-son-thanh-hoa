@@ -797,10 +797,13 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
             x2FmtKg(r.qty), (Number(r.m3) || 0).toFixed(4), '']);
         } else if (x.kind === 'XUẤT') {
           const r = x.r; outQty += r.qty;
-          const lotsTxt = r.lotIds.length
-            ? r.lotIds.map(id => { const b = (state.batches || []).find(y => y && y.id === id); return b ? (b.code || id) : id; }).join(', ')
-            : 'Tổng (FIFO)';
-          body.push([i + 1, 'XUẤT', formatDateDDMMYY(r.date), KHO_PURPOSE_LABELS[r.purpose] || r.purpose, lotsTxt, '', '', '', '',
+          const lotsTxt = (Array.isArray(r.lots) && r.lots.length ? r.lots : r.lotIds.map(id => ({ batchId: id, qty: 0, loc: '' })))
+            .map(l => { const b = (state.batches || []).find(y => y && y.id === l.batchId); return `${b ? (b.code || l.batchId) : l.batchId}${l.qty > 0 ? ` (${x2FmtKg(l.qty)})` : ''}`; }).join(' + ') || 'Tổng (FIFO)';
+          const locTxt = (Array.isArray(r.lots) && r.lots.length ? r.lots : []).map(l => {
+            const b = (state.batches || []).find(y => y && y.id === l.batchId);
+            return String(l.loc || (b && b.location) || '');
+          }).filter((v, i, arr) => v && arr.indexOf(v) === i).join(' · ');
+          body.push([i + 1, 'XUẤT', formatDateDDMMYY(r.date), KHO_PURPOSE_LABELS[r.purpose] || r.purpose, lotsTxt, '', '', '', locTxt,
             x2FmtKg(r.qty), r.m3 ? Number(r.m3).toFixed(3) : '', r.note || '']);
         } else {
           const n = x.n; outQty += Number(n.qty) || 0;

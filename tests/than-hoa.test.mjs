@@ -154,11 +154,19 @@ check('VỊ TRÍ: danh sách mặc định LS1..LS15 + ô nhập vị trí mới
   bm.alLocations().length === 15 && bm.alLocations()[0] === 'LS1' && bm.alLocations()[14] === 'LS15' &&
   document.getElementById('al-location-chips').innerHTML.includes('data-al-loc="LS1"') &&
   document.getElementById('al-location-new-row').hidden === true);
-check('VỊ TRÍ: bấm chip = chọn vị trí (ghi vào ô ẩn + đóng danh sách + tô chip)',
-  bm.alToggleLocationPanel() === true && bm.alSetLocation('LS3') === 'LS3' &&
-  document.getElementById('al-location').value === 'LS3' &&
-  document.getElementById('al-location-panel').hidden === true &&
-  document.getElementById('al-location-chips').innerHTML.includes('al-loc-chip picked'));
+check('VỊ TRÍ: panel inline MỞ trực tiếp (không cần bấm nút) + chip đã chọn được tô', (() => {
+  const panel = document.getElementById('al-location-panel');
+  // Môi trường stub: classList bắt đầu rỗng (không đọc được attribute class từ HTML)
+  // → thêm class inline để giả lập đúng HTML thật (class="al-picker al-loc-inline")
+  // + tự mở panel (openAddLotModal đã chạy lúc stub chưa có class → bị ẩn trước).
+  panel.classList.add('al-loc-inline');
+  panel.hidden = false;
+  bm.alSetLocation('LS3');
+  return panel.classList.contains('al-loc-inline') &&
+    panel.hidden === false &&
+    document.getElementById('al-location').value === 'LS3' &&
+    document.getElementById('al-location-chips').innerHTML.includes('al-loc-chip picked');
+})());
 document.getElementById('al-location-new').value = 'LS16';
 bm.handleAlAddLocation();
 check('VỊ TRÍ: nút "Thêm" khai báo vị trí mới (LS16) — lưu state + localStorage + tự chọn',
@@ -299,6 +307,36 @@ bm.alSetSourceQuery(''); bm.alSetSourceQtyQuery('');
 check('TÌM SỐ LƯỢNG: xóa cả 2 ô → hiện lại đủ 2 lô nguồn',
   document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"') &&
   document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho2"'));
+// THỐNG NHẤT VỚI THẺ KHO: Sấy 2 lọc + tìm theo TỒN CÒN (không theo số gốc).
+// Lô gốc 800 nhưng đã xuất 600 (còn 200) → gõ "800" KHÔNG thấy, gõ "200" mới thấy.
+state.khoNotes.push({
+  id: 'kho-note-say2-800', type: 'xuat', purpose: 'baotinh', date: '2026-09-18',
+  qty: 600, lots: [{ batchId: 'b-kho1', qty: 600 }], status: 'da_duyet',
+  createdBy: 'admin', createdByName: 'admin', createdAt: '2026-09-18T02:00:00.000Z'
+});
+bm.syncAddLotUI();
+check('TỒN CÒN (Sấy 2): thẻ lô b-kho1 in "còn 200/800 thanh" (không in số gốc 800)',
+  document.getElementById('al-source-list').innerHTML.includes('còn 200/800 thanh'));
+bm.alSetSourceQtyQuery('800');
+check('TỒN CÒN (Sấy 2): gõ số GỐC "800" → KHÔNG thấy lô đã xuất 1 phần (b-kho1)',
+  !document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"'));
+bm.alSetSourceQtyQuery('200');
+check('TỒN CÒN (Sấy 2): gõ số TỒN "200" → thấy đúng lô còn 200 (b-kho1)',
+  document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"'));
+bm.alSetSourceQuery(''); bm.alSetSourceQtyQuery('');
+// Lô xuất HẾT (còn 0) → ẨN khỏi cả Sấy 2 lẫn Kho (không còn lệch 2 so 1).
+state.khoNotes.push({
+  id: 'kho-note-say2-200', type: 'xuat', purpose: 'baotinh', date: '2026-09-18',
+  qty: 200, lots: [{ batchId: 'b-kho1', qty: 200 }], status: 'da_duyet',
+  createdBy: 'admin', createdByName: 'admin', createdAt: '2026-09-18T03:00:00.000Z'
+});
+bm.syncAddLotUI();
+check('TỒN CÒN (Sấy 2): lô xuất hết (còn 0) → ẨN khỏi nguồn Sấy 2 + rỗng báo "còn hàng"',
+  !document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho1"') &&
+  document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-kho2"') &&
+  bm.availableKhoLots().every(b => b.id !== 'b-kho1'));
+state.khoNotes = state.khoNotes.filter(n => n.id !== 'kho-note-say2-800' && n.id !== 'kho-note-say2-200');
+bm.syncAddLotUI();
 bm.alTogglePick('b-kho1');
 bm.alTogglePick('b-kho2');
 check('SẤY 2: chọn nhiều lô → hiện chi tiết TỪNG lô nguồn (mã lô · kích thước · loại · lượng)',
@@ -482,7 +520,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v236/.test(swJs));
+  /nha-may-ngoc-son-v247/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -1124,17 +1162,19 @@ check('XÓA NHIỀU — THOÁT: tắt chế độ + gỡ class body', state.kanb
 
 // ─── N. FORM THẺ THAN HÓA + SẤY GỌN VỪA MÀN HÌNH (không cuộn ngang/dọc) ─────
 const jsBatchModals = fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8');
-// Cắt đúng vùng wrapper .al-pick-pair (từ khai báo tới chú thích đóng) để kiểm tra 2 khối chọn
-const alPickPairSlice = (function () {
-  const start = idxHtml.indexOf('class="al-pick-pair"');
-  const end = idxHtml.indexOf('/ .al-pick-pair');
+// Cắt form Thêm Lô để kiểm tra cấu trúc 4 KHỐI (15/10/2026 — thay .al-pick-pair)
+const addLotSlice = (function () {
+  const start = idxHtml.indexOf('id="add-lot-form"');
+  const end = idxHtml.indexOf('id="modal-transfer-kho"');
   return (start !== -1 && end > start) ? idxHtml.slice(start, end) : '';
 })();
-check('FORM GỌN: 2 khối chọn Nguồn ⇄ Vị Trí bọc chung .al-pick-pair (bỏ col-span-full riêng lẻ)',
-  idxHtml.includes('class="al-pick-pair"') &&
-  alPickPairSlice.includes('id="al-source-btn"') && alPickPairSlice.includes('id="al-source-list"') &&
-  alPickPairSlice.includes('id="al-location-btn"') && alPickPairSlice.includes('id="al-location-add"') &&
-  !alPickPairSlice.includes('col-span-full'));
+check('FORM GỌN: form Thêm Lô = 4 KHỐI (ck-sec) + đủ nút nguồn/vị trí (thay .al-pick-pair cũ)',
+  (addLotSlice.match(/class="ck-sec/g) || []).length >= 4 &&
+  addLotSlice.includes('data-ck-sec="1"') && addLotSlice.includes('data-ck-sec="2"') &&
+  addLotSlice.includes('data-ck-sec="3"') && addLotSlice.includes('data-ck-sec="4"') &&
+  addLotSlice.includes('id="al-source-btn"') && addLotSlice.includes('id="al-source-list"') &&
+  addLotSlice.includes('id="al-location-btn"') && addLotSlice.includes('id="al-location-add"') &&
+  !addLotSlice.includes('class="al-pick-pair"'));
 check('FORM GỌN (styles.css): modal theo dvh + KHÔNG cuộn ngang + danh sách thẻ/chips tự cuộn trong khung nhỏ',
   cssHtml.includes('#modal-add-lot .modal-card') && cssHtml.includes('#modal-transfer-kho .modal-card') &&
   cssHtml.includes('overflow-x: hidden;   /* tuyệt đối không thanh cuộn ngang */') &&
@@ -1173,6 +1213,273 @@ check('DROPDOWN NỔI (styles.css): panel position fixed trải 2 mép màn hìn
   alFloatCss.includes('position: fixed;') &&
   alFloatCss.includes('left: 8px;') && alFloatCss.includes('right: 8px;') &&
   alFloatCss.includes('z-index: 10001;') && alFloatCss.includes('overflow-y: auto;'));
+
+// ─── P. CHUYỂN KHO — 4 KHỐI TRỰC QUAN · THẺ NAN 2 CỘT CHECK · CỜ TÓP (14/10/2026) ───
+const jsKanban = fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8');
+const ckModalSlice = (function () {
+  const i = idxHtml.indexOf('id="modal-transfer-kho"');
+  const j = idxHtml.indexOf('MODAL 3: LOGIN');
+  return (i !== -1 && j > i) ? idxHtml.slice(i, j) : '';
+})();
+check('P1 (index): 4 KHỐI TRỰC QUAN (data-ck-sec 1-4) — KHÔNG còn thanh stepper/mũi tên ①→②→③',
+  (ckModalSlice.match(/class="ck-sec/g) || []).length >= 4 &&
+  ckModalSlice.includes('data-ck-sec="1"') && ckModalSlice.includes('data-ck-sec="2"') &&
+  ckModalSlice.includes('data-ck-sec="3"') && ckModalSlice.includes('data-ck-sec="4"') &&
+  !ckModalSlice.includes('id="ck-stepper"') && !ckModalSlice.includes('ck-step-arrow'));
+check('P2 (index): khối ① = 3 NÚT CHỌN CÔNG ĐOẠN trực tiếp (data-ck-stage-btn) — KHÔNG còn dropdown công đoạn',
+  ckModalSlice.includes('id="ck-stage-seg"') &&
+  (ckModalSlice.match(/data-ck-stage-btn=/g) || []).length === 3 &&
+  ckModalSlice.includes('class="ck-hidden-select"') &&
+  !ckModalSlice.includes('ck-stage-btn"') && !ckModalSlice.includes('id="ck-stage-menu"') &&
+  !ckModalSlice.includes('id="ck-lot-btn"') && !ckModalSlice.includes('id="ck-lot-menu"'));
+check('P3 (index): khối ② = CHIP VỊ TRÍ (#ck-loc-chips) + danh sách thẻ 2 CỘT CHECK + nút Tất cả Kho/Tóp/Bỏ chọn',
+  ckModalSlice.includes('id="ck-loc-chips"') && ckModalSlice.includes('id="ck-lot-panel"') &&
+  ckModalSlice.includes('id="ck-lot-list"') && ckModalSlice.includes('Tóp xử lý lại') &&
+  ckModalSlice.includes('data-ck-all="kho"') && ckModalSlice.includes('data-ck-all="top"') &&
+  ckModalSlice.includes('data-ck-all="none"'));
+check('P4 (index): khối ④ nhãn "Không bắt buộc" + dòng GHI CHÚ NHỎ dưới 4 khối + modal KHÔNG khung bao (.ck-flat)',
+  ckModalSlice.includes('ck-opt') && ckModalSlice.includes('Không bắt buộc') &&
+  ckModalSlice.includes('class="ck-note-row') && ckModalSlice.includes('id="ck-notes"') &&
+  ckModalSlice.includes('ck-flat'));
+check('P5 (index): chú thích dài ĐÃ ẨN — chỉ TOOLTIP (title) + khối đầu mang tooltip',
+  !ckModalSlice.includes('class="al-hint"') && !ckModalSlice.includes('<div style="font-size:0.72rem') &&
+  ckModalSlice.includes('title="Ngày vào Kho') && ckModalSlice.includes('title="Để trống = giữ nguyên vị trí cũ') &&
+  ckModalSlice.includes('class="ck-sec-head"'));
+check('P6 (styles): CSS 4 khối + seg + chip + [hidden] chặn "không đóng được" + chip Tóp — HẾT CSS stepper/menu cũ',
+  cssHtml.includes('.ck-sec {') && cssHtml.includes('.ck-seg-btn') && cssHtml.includes('.ck-loc-chip') &&
+  cssHtml.includes('[hidden] { display: none !important; }') && cssHtml.includes('.tag-top-rework') &&
+  !cssHtml.includes('.ck-stepper') && !cssHtml.includes('.ck-menu {'));
+check('P7 (events): wire seg công đoạn + chip vị trí + panel thẻ nan — KHÔNG còn wire stepper/menu cũ',
+  jsEvents.includes("safeOn('ck-stage-seg', 'click'") && jsEvents.includes("safeOn('ck-loc-chips', 'click'") &&
+  jsEvents.includes("safeOn('ck-lot-panel', 'click', ckOnLotPanelClick)") &&
+  !jsEvents.includes('ck-stepper') && !jsEvents.includes('ckCloseCkMenus'));
+
+// ── HÀNH VI: mở modal → chọn công đoạn → chọn vị trí → panel thẻ nan 2 cột check ──
+// Thêm 2 lô Sấy 1 cùng vị trí LS77 (vị trí riêng của section này) + 1 lô LS8 cho "bỏ chọn"
+state.batches.push(
+  { id: 'b-ckp1', code: '261013-01', stage: 'say1', date: '2026-10-10', week: '2026-W41', length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.0788, bambooType: 'A1', useFor: 'Ván', location: 'LS77', stageHistory: [{ stage: 'say1', date: '2026-10-10' }] },
+  { id: 'b-ckp2', code: '261013-02', stage: 'say1', date: '2026-10-10', week: '2026-W41', length: 1300, width: 20, thickness: 8, quantity: 300, volume: 0.0624, bambooType: 'B', useFor: 'Bullig', location: 'LS77', stageHistory: [{ stage: 'say1', date: '2026-10-10' }] },
+  { id: 'b-ckp3', code: '261013-03', stage: 'say1', date: '2026-10-11', week: '2026-W41', length: 1250, width: 18, thickness: 7, quantity: 200, volume: 0.0315, bambooType: 'A', useFor: 'Ván', location: 'LS8', stageHistory: [{ stage: 'say1', date: '2026-10-11' }] }
+);
+bm.openTransferKhoModal();
+check('P8: mở modal — khối ① đánh dấu nút "Sấy 1" đang chọn + khối ② hiện chip vị trí LS77',
+  document.getElementById('ck-stage').value === 'say1' &&
+  document.getElementById('ck-loc-chips').innerHTML.includes('data-ck-loc="LS77"'));
+bm.ckOnLocChipClick('LS77');
+const ckPanelEl = document.getElementById('ck-lot-panel');
+const ckListEl = document.getElementById('ck-lot-list');
+check('P9: bấm chip vị trí → DANH SÁCH THẺ NAN hiện ngay trong khối ② (2 lô LS77, 2 dòng chuẩn)',
+  ckPanelEl.hidden === false && ckListEl.innerHTML.includes('data-ck-row="b-ckp1"') &&
+  ckListEl.innerHTML.includes('data-ck-row="b-ckp2"') &&
+  ckListEl.innerHTML.includes('1250×18×7') && ckListEl.innerHTML.includes('500 thanh'));
+check('P10: mỗi thẻ nan có 2 CỘT CHECK loại trừ — cột Chuyển Kho (mặc định tick) + cột Tóp xử lý lại',
+  (ckListEl.innerHTML.match(/data-ck-kind="kho"/g) || []).length === 2 &&
+  (ckListEl.innerHTML.match(/data-ck-kind="top"/g) || []).length === 2 &&
+  (ckListEl.innerHTML.match(/data-ck-kind="kho" checked/g) || []).length === 2);
+check('P11: dòng tóm tắt panel + chip vị trí đang chọn (is-on) + tóm tắt "Lựa Chọn Của Bạn"',
+  document.getElementById('ck-lot-panel-sum').innerHTML.includes('<strong>2</strong> lô chuyển Kho') &&
+  document.getElementById('ck-loc-chips').innerHTML.includes('ck-loc-chip is-on') &&
+  document.getElementById('ck-pos-info').innerHTML.includes('LS77'));
+
+// Tick "Tóp" lô b-ckp2 → 2 cột LOẠI TRỪ nhau + tóm tắt 2 nhóm
+bm.ckSetPick('b-ckp2', 'top');
+check('P12: tick Tóp → ckPickStats đúng 2 nhóm (1 lô Kho · 1 lô Tóp · 300 thanh Tóp)',
+  bm.ckPickOf('b-ckp1') === 'kho' && bm.ckPickOf('b-ckp2') === 'top' &&
+  (() => { const s = bm.ckPickStats(); return s.khoN === 1 && s.topN === 1 && s.topQty === 300; })() &&
+  document.getElementById('ck-pos-info').innerHTML.includes('Tóp xử lý lại') &&
+  document.getElementById('ck-pos-info').innerHTML.includes('300 thanh'));
+bm.ckBulkPick('top');
+check('P13: nút "Tất cả Tóp" → mọi lô ở vị trí LS77 chuyển sang nhóm Tóp (2 lô)',
+  bm.ckPickOf('b-ckp1') === 'top' && bm.ckPickOf('b-ckp2') === 'top');
+bm.ckSetPick('b-ckp1', 'none');
+check('P14: bỏ tick hẳn 1 lô (none) → lô đó KHÔNG được chuyển, nhóm còn lại giữ nguyên',
+  bm.ckPickOf('b-ckp1') === 'none' && bm.ckPickOf('b-ckp2') === 'top');
+// Bấm lại chip vị trí LS77 → về mặc định tick "Chuyển Kho" (mọi lô)
+bm.ckOnLocChipClick('LS77');
+check('P15: bấm lại chip vị trí → reset về mặc định Chuyển Kho (panel hiện đủ 2 lô)',
+  bm.ckPickOf('b-ckp1') === 'kho' && bm.ckPickOf('b-ckp2') === 'kho' &&
+  document.getElementById('ck-lot-panel').hidden === false);
+
+// Tick lại như cũ cho phần LƯU: b-ckp2 = Tóp · b-ckp1 = bỏ chọn
+bm.ckSetPick('b-ckp2', 'top');
+bm.ckSetPick('b-ckp1', 'none');
+// LƯU: b-ckp2 (Tóp) vào Kho + cờ topRework · b-ckp1 (none) vẫn ở Sấy 1
+document.getElementById('ck-date').value = '2026-10-13';
+document.getElementById('ck-new-loc').value = 'K30';
+bm.handleTransferKhoSubmit({ preventDefault(){} });
+const ckp1 = state.batches.find(b => b.id === 'b-ckp1');
+const ckp2 = state.batches.find(b => b.id === 'b-ckp2');
+check('P16: lô tick TÓP vào Kho + cờ topRework=true · lô BỎ CHỌN vẫn ở Sấy 1',
+  ckp2.stage === 'kho' && ckp2.topRework === true && ckp2.location === 'K30' &&
+  ckp1.stage === 'say1' && !ckp1.topRework);
+// Chip "Tóp xử lý lại" trên THẺ LÔ Kanban cột Kho
+const kanban = await import('../js/kanban.js');
+const topCard = kanban.createBambooCardElement(ckp2).innerHTML;
+const norCard = kanban.createBambooCardElement(ckp1).innerHTML;
+check('P16: thẻ lô cột Kho có chip "Tóp xử lý lại" (topRework) — lô thường KHÔNG có chip',
+  topCard.includes('tag-top-rework') && topCard.includes('Tóp xử lý lại') &&
+  !norCard.includes('tag-top-rework'));
+// Chuyển nốt lô LS8 bình thường (chỉ set select ẩn — không tick gì) → mặc định Chuyển Kho
+bm.openTransferKhoModal();
+document.getElementById('ck-lot').value = 'LS8';
+document.getElementById('ck-date').value = '2026-10-13';
+bm.handleTransferKhoSubmit({ preventDefault(){} });
+const ckp3 = state.batches.find(b => b.id === 'b-ckp3');
+check('P17: không tick gì → mặc định Chuyển Kho (hành vi cũ giữ nguyên) — lô vào Kho, topRework=false',
+  ckp3.stage === 'kho' && ckp3.topRework === false);
+// Lô Tóp RỜI Kho sang Sấy 2 → cờ tự xóa
+state.batches.push(
+  { id: 'b-k1', code: '261014-01', stage: 'kho', date: '2026-10-01', week: '2026-W40', length: 1250, width: 18, thickness: 7, quantity: 400, volume: 0.063, bambooType: 'A', useFor: 'Ván', location: 'K40', topRework: true, stageHistory: [{ stage: 'kho', date: '2026-10-01' }] }
+);
+bm.openAddLotModal();
+document.getElementById('al-stage').value = 'say2';
+bm.syncAddLotUI();
+bm.alTogglePick('b-k1');
+document.getElementById('al-date').value = '2026-10-14';
+bm.alSetLocation('LS9');
+bm.handleAddLotSubmit({ preventDefault(){} });
+check('P18: lô Tóp rời Kho sang Sấy 2 → cờ topRework tự xóa (hết trạng thái chờ xử lý)',
+  state.batches.find(b => b.id === 'b-k1').stage === 'say2' &&
+  !state.batches.find(b => b.id === 'b-k1').topRework);
+
+// ─── P19–P22. THU GÓM danh sách thẻ nan sau khi chọn (yêu cầu 15/10/2026) ───
+check('P19 (index): nút #ck-lot-toggle + vùng #ck-lot-panel-body bọc cột+danh sách (tóm tắt ở NGOÀI → vẫn hiện khi thu gọn)',
+  ckModalSlice.includes('id="ck-lot-toggle"') && ckModalSlice.includes('id="ck-lot-panel-body"') &&
+  ckModalSlice.indexOf('id="ck-lot-panel-body"') < ckModalSlice.indexOf('id="ck-lot-list"') &&
+  ckModalSlice.indexOf('id="ck-lot-panel-sum"') > ckModalSlice.indexOf('id="ck-lot-panel-body"'));
+check('P20 (js+styles+events): hàm ckToggleLotList/ckSyncLotToggle + CSS nút thu gọn + wire',
+  jsBatchModals.includes('function ckToggleLotList') && jsBatchModals.includes('function ckSyncLotToggle') &&
+  cssHtml.includes('.ck-collapse-btn') && jsEvents.includes("safeOn('ck-lot-toggle', 'click'"));
+// Hành vi: mở modal → chọn vị trí LS77 (còn 1 lô b-ckp1) → thu gọn → hiện lại
+bm.openTransferKhoModal();
+bm.ckOnLocChipClick('LS77');
+const ckBody = document.getElementById('ck-lot-panel-body');
+const ckTgl = document.getElementById('ck-lot-toggle');
+check('P21: bấm "Thu gọn" → ẩn cột check + danh sách NHƯNG tóm tắt + nút Tất cả vẫn hiện (form gọn)',
+  ckBody.hidden === false && ckTgl.textContent.includes('Thu gọn') &&
+  bm.ckToggleLotList() === false && ckBody.hidden === true &&
+  document.getElementById('ck-lot-panel-sum').innerHTML.length > 0 &&
+  ckTgl.textContent.includes('Hiện lại') && ckTgl.textContent.includes('Kho'));
+check('P22: bấm "Hiện lại" → danh sách mở · chọn lại vị trí → TỰ MỞ lại (không kẹt thu gọn)',
+  (function () {
+    if (bm.ckToggleLotList() !== true || ckBody.hidden) return false;   // hiện lại OK
+    bm.ckToggleLotList();                                               // thu gọn lại
+    const wasHidden = ckBody.hidden === true;
+    bm.ckOnLocChipClick('LS77');                                        // chọn lại chip vị trí
+    return wasHidden && ckBody.hidden === false && ckTgl.textContent.includes('Thu gọn');
+  })());
+
+// ─── Q. FORM THÊM LÔ — Ô TÍCH THAN HÓA LẠI + Ô CHỌN LẦN THAN HÓA (15/10/2026) ───
+check('Q1 (index): ô TÍCH THAN HÓA LẠI + ô nhập số lượng + ô LẦN THAN HÓA trong form Thêm Lô',
+  addLotSlice.includes('id="al-rework"') && addLotSlice.includes('id="al-rework-qty"') &&
+  addLotSlice.includes('id="al-charge"') && addLotSlice.includes('Than Hóa Lại') &&
+  addLotSlice.includes('Lần Than Hóa'));
+check('Q2 (js+events+css): hàm rework/charge + wire 3 ô + CSS ô tích danh sách is-top',
+  jsBatchModals.includes('function alSetRework') && jsBatchModals.includes('function renderAlChargeOptions') &&
+  jsBatchModals.includes('function alChargeMarkOf') && jsBatchModals.includes('function alTopRemainingOf') &&
+  jsEvents.includes("safeOn('al-rework', 'change'") && jsEvents.includes("safeOn('al-rework-qty', 'input'") &&
+  cssHtml.includes('.al-rework-check') && cssHtml.includes('#al-source-list.is-top'));
+
+// Seed: 1 lô TÓP + 1 lô thường ở Kho (tồn = số lượng, chưa phiếu xuất)
+state.batches.push(
+  { id: 'b-top1', code: '261015-01', stage: 'kho', date: '2026-10-10', week: '2026-W41', length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.0788, bambooType: 'A1', useFor: 'Ván', location: 'K50', topRework: true, stageHistory: [{ stage: 'kho', date: '2026-10-10' }] },
+  { id: 'b-norm1', code: '261015-02', stage: 'kho', date: '2026-10-11', week: '2026-W41', length: 1250, width: 18, thickness: 7, quantity: 400, volume: 0.063, bambooType: 'A', useFor: 'Ván', location: 'K51', stageHistory: [{ stage: 'kho', date: '2026-10-11' }] }
+);
+bm.openAddLotModal();
+bm.alSetRework(true);
+check('Q3: bật Tích THAN HÓA LẠI → nguồn = CHỈ lô Tóp kèm Tồn/Tổng (lô thường KHÔNG lọt) + ô số lượng hiện',
+  document.getElementById('al-rework').checked === true &&
+  document.getElementById('al-source-btn-text').textContent === 'Chọn Lô Tóp Ở Kho' &&
+  document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-top1"') &&
+  document.getElementById('al-source-list').innerHTML.includes('Tồn 500 / 500 thanh') &&
+  document.getElementById('al-source-list').innerHTML.includes('♻️ Tóp') &&
+  !document.getElementById('al-source-list').innerHTML.includes('data-al-pick="b-norm1"') &&
+  document.getElementById('al-rework-qty-group').hidden === false);
+bm.alTogglePick('b-top1');
+check('Q4: chọn lô Tóp → info hiện Tồn + ô số lượng điền sẵn = tồn (500)',
+  document.getElementById('al-source-info').innerHTML.includes('Tồn 500') &&
+  document.getElementById('al-rework-qty').value === '500');
+document.getElementById('al-rework-qty').value = '9999';
+bm.alOnReworkQtyInput();
+check('Q5: nhập VƯỢT tồn → tự chặn về tối đa 500',
+  document.getElementById('al-rework-qty').value === '500');
+// Nhập 1 PHẦN (300) → THAN HÓA LẠI → SẤY 1: tạo lô mới + nguồn topUsed tăng
+document.getElementById('al-rework-qty').value = '300';
+bm.alOnReworkQtyInput();
+document.getElementById('al-stage').value = 'say1';
+document.getElementById('al-date').value = '2026-10-15';
+bm.alSetLocation('LS88');
+bm.handleAddLotSubmit({ preventDefault(){} });
+const rwLot = state.batches.find(b => b && b.rework && b.sourceTopBatchId === 'b-top1');
+const srcTop = state.batches.find(b => b.id === 'b-top1');
+check('Q6: THAN HÓA LẠI → Sấy 1: lô MỚI 300 thanh gắn link nguồn · nguồn topUsed=300 · tồn Tóp giảm còn 200',
+  !!rwLot && rwLot.stage === 'say1' && rwLot.quantity === 300 && rwLot.location === 'LS88' &&
+  srcTop.stage === 'kho' && srcTop.topRework === true && (Number(srcTop.topUsed) || 0) === 300 &&
+  bm.alTopRemainingOf(srcTop) === 200);
+
+// ── THAN HÓA LẠI 1 PHẦN → SẤY 2: TÁCH lô (nguồn ở lại Kho) ──
+state.batches.push(
+  { id: 'b-top2', code: '261015-03', stage: 'kho', date: '2026-10-12', week: '2026-W41', length: 1300, width: 20, thickness: 8, quantity: 500, volume: 0.104, bambooType: 'B', useFor: 'Bullig', location: 'K52', topRework: true, stageHistory: [{ stage: 'kho', date: '2026-10-12' }] }
+);
+bm.openAddLotModal();
+document.getElementById('al-stage').value = 'say2';
+bm.alSetRework(true);
+document.getElementById('al-date').value = '2026-10-18';
+bm.alTogglePick('b-top2');
+document.getElementById('al-rework-qty').value = '100';
+bm.alOnReworkQtyInput();
+bm.alSetLocation('LS91');
+bm.handleAddLotSubmit({ preventDefault(){} });
+const splitLot = state.batches.find(b => b && b.rework && b.sourceTopBatchId === 'b-top2');
+const src2 = state.batches.find(b => b.id === 'b-top2');
+check('Q7: THAN HÓA LẠI 1 PHẦN → Sấy 2: TÁCH lô mới 100 thanh · nguồn ở lại Kho (topUsed=100, tồn còn 400)',
+  !!splitLot && splitLot.stage === 'say2' && splitLot.quantity === 100 &&
+  src2.stage === 'kho' && src2.topRework === true && (Number(src2.topUsed) || 0) === 100 &&
+  bm.alTopRemainingOf(src2) === 400);
+
+// ── THAN HÓA LẠI HẾT PHẦN CÒN LẠI → CHUYỂN NGUYÊN lô + hết cờ Tóp ──
+bm.openAddLotModal();
+document.getElementById('al-stage').value = 'say2';
+bm.alSetRework(true);
+document.getElementById('al-date').value = '2026-10-19';
+bm.alTogglePick('b-top2');                       // số lượng mặc định = tồn còn 400
+bm.alSetLocation('LS92');
+bm.handleAddLotSubmit({ preventDefault(){} });
+check('Q8: nhập HẾT phần còn lại → CHUYỂN NGUYÊN lô sang Sấy 2 + xóa cờ Tóp/topUsed',
+  src2.stage === 'say2' && src2.say2Date === '2026-10-19' &&
+  !src2.topRework && src2.topUsed === undefined && src2.location === 'LS92');
+
+// ── Ô CHỌN LẦN THAN HÓA: gộp lô mới vào LẦN ĐÃ CÓ (Sấy 2) ──
+// + 1 lô CÙNG NGÀY nhưng CHƯA có mã mẻ → hiện option MỜ "gộp tay (không chọn)"
+state.batches.push(
+  { id: 'b-mark2', code: '261016-01', stage: 'say2', date: '2026-10-13', week: '2026-W41', length: 1250, width: 18, thickness: 7, quantity: 600, volume: 0.0945, bambooType: 'A', useFor: 'Ván', location: 'LS93', say2Date: '2026-10-20', sayCharges: { say2: 1792000000002 }, stageHistory: [{ stage: 'kho', date: '2026-10-12' }, { stage: 'say2', date: '2026-10-20' }] },
+  { id: 'b-nomark2', code: '261016-02', stage: 'say2', date: '2026-10-13', week: '2026-W41', length: 1250, width: 18, thickness: 7, quantity: 200, volume: 0.0315, bambooType: 'A', useFor: 'Ván', location: 'LS93', say2Date: '2026-10-20', stageHistory: [{ stage: 'kho', date: '2026-10-12' }, { stage: 'say2', date: '2026-10-20' }] }
+);
+bm.openAddLotModal();
+bm.alSetRework(false);          // tắt Than Hóa Lại (stub form.reset không tự tắt)
+document.getElementById('al-stage').value = 'say2';
+document.getElementById('al-date').value = '2026-10-20';
+bm.syncAddLotUI();
+const chargeSel = document.getElementById('al-charge');
+check('Q9: ô LẦN THAN HÓA liệt kê lần CÓ MÃ MẺ chọn được · mặc định "Lần mới" · option MỜ cho lần gộp tay',
+  chargeSel.innerHTML.includes('value="1792000000002"') && chargeSel.innerHTML.includes('theo lượt lưu') &&
+  chargeSel.innerHTML.includes('disabled') && chargeSel.value === '');
+chargeSel.value = '1792000000002';
+check('Q10: alChargeMarkOf đọc mã mẻ đang chọn', bm.alChargeMarkOf() === 1792000000002);
+// Lưu lô thường từ Kho với lần đã chọn → sayCharges.say2 = MÃ CŨ (gộp vào lần đó)
+bm.alTogglePick('b-norm1');
+bm.alSetLocation('LS94');
+bm.handleAddLotSubmit({ preventDefault(){} });
+const norm1 = state.batches.find(b => b.id === 'b-norm1');
+check('Q11: lô chuyển Sấy 2 GỘP vào lần đã chọn (sayCharges.say2 = mã cũ — không sinh lần mới)',
+  norm1.stage === 'say2' && norm1.sayCharges && Number(norm1.sayCharges.say2) === 1792000000002);
+// Chưa chọn lần (mặc định) → vẫn sinh mã MỚI (Date.now) như cũ
+bm.openAddLotModal();
+document.getElementById('al-stage').value = 'say2';
+document.getElementById('al-date').value = '2026-10-21';
+bm.syncAddLotUI();
+check('Q12: không chọn lần → ô về "Lần mới (tự sinh)" (alChargeMarkOf = 0 → mã Date.now khi lưu)',
+  document.getElementById('al-charge').value === '' && bm.alChargeMarkOf() === 0);
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 // LUÔN thoát rõ ràng (mẫu cloud-shard/chart-filters): nếu còn timer/promise sót

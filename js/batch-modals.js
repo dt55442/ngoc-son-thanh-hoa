@@ -7,7 +7,8 @@ import { renderAll } from './main.js';
 import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_CHON_NAN, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, showToast, validateBatchInput } from './utils.js';
+import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
+import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (gộp lô vào lần đã có — chỉ đọc)
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -420,9 +421,16 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       ? `${it.length || '?'}×${it.width || '?'}×${it.thickness || '?'}`
       : (Array.isArray(it.dims) ? `${it.dims[0] || '?'}×${it.dims[1] || '?'}×${it.dims[2] || '?'}` : '?');
     const cls = isLot ? (it.bambooType || '—') : nanClassLabelOf(it.cls);
-    const qty = isLot ? (Number(it.quantity) || 0) : nanCardRemainingOf(it);
+    // Sấy 2 (lô ở Kho): in TỒN CÒN THỰC — cùng sổ với thẻ Kho. Lô nguyên
+    // (còn = gốc) giữ chữ cũ "X thanh" cho gọn; lô đã xuất 1 phần in rõ
+    // "còn X/Y thanh" để không nhầm với số gốc.
+    const lotRem = isLot ? (Math.round(khoLotRemainingOf(it)) || 0) : 0;
+    const lotTotal = isLot ? (Number(it.quantity) || 0) : 0;
+    const qty = isLot ? lotRem : nanCardRemainingOf(it);
     const qtyLbl = isLot
-      ? `${qty.toLocaleString('vi-VN')} thanh`
+      ? (lotRem === lotTotal
+        ? `${lotTotal.toLocaleString('vi-VN')} thanh`
+        : `còn ${lotRem.toLocaleString('vi-VN')}/${lotTotal.toLocaleString('vi-VN')} thanh`)
       : `${qty.toLocaleString('vi-VN')} thanh (còn)`;
     const main = `${it.location || '—'} · ${dims} · ${cls} · ${qtyLbl}`;
     // Thẻ nan Chọn Nan Thô không mang sẵn Dùng cho → hiện giá trị đang chọn ở form
@@ -473,12 +481,14 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     return String(s == null ? '' : s).split('.').join('').split(' ').join('');
   }
   // Các SỐ LƯỢNG của 1 thẻ nguồn (CHỈ số lượng):
-  //   • Sấy 2 (lô ở Kho) = số in trên thẻ (quantity)
+  //   • Sấy 2 (lô ở Kho) = TỒN CÒN THỰC (số in trên thẻ) — cùng sổ với thẻ Kho
+  //     (khoLotRemainingOf: số lần nhập × số lượng − phiếu xuất ĐÃ DUYỆT).
+  //     Lô đã xuất hết (tồn 0) không có số nào → ô tìm số tự ẩn.
   //   • Sấy 1 (thẻ Chọn Nan Thô) = phần CÒN LẠI in trên thẻ + số lượng gốc của thẻ
   function alSourceQtyValues(it, stage) {
     const vals = [];
     if (stage === 'say2') {
-      vals.push(Number(it && it.quantity) || 0);
+      vals.push(Math.round(khoLotRemainingOf(it)) || 0);
     } else {
       vals.push(nanCardRemainingOf(it));
       vals.push(Number(it && it.quantity) || 0);
@@ -512,9 +522,11 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       .filter(r => r && r.cls !== 'reject' && nanCardRemainingOf(r) > 0)
       .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   }
-  // Lô KHO khả dụng cho Sấy 2
+  // Lô KHO khả dụng cho Sấy 2 — cùng sổ với thẻ Kho: CHỈ lô CÒN HÀNG
+  // (khoLotRemainingOf > 0). Lô đã xuất hết không hiện ở cả 2 nơi nên gõ cùng
+  // 1 số tồn không còn lệch 2 so 1.
   function availableKhoLots() {
-    return (state.batches || []).filter(b => b && b.stage === 'kho');
+    return (state.batches || []).filter(b => b && b.stage === 'kho' && khoLotRemainingOf(b) > 0);
   }
 
   // ─── MODAL "THÊM LÔ SẤY MỚI" — mở/đóng/đổi nguồn/lưu ─────────
@@ -533,12 +545,106 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     return stage === 'say2' ? availableKhoLots() : availableSay1Cards();
   }
   function alAvailableSources() { return alCandidatesOf(alStageOf()); }
+
+  // ═══ THAN HÓA LẠI (15/10/2026) — nguồn = lô TÓP đang ở Kho ═══
+  // Ô tích #al-rework: danh sách nguồn chuyển sang lô TÓP (cờ topRework của form
+  // Chuyển Kho) kèm Tồn/Tổng; nhập SỐ LƯỢNG lấy ra đốt lại (1 lần = 1 lô Tóp).
+  // Tồn TÓP = tồn thực theo phiếu kho − phần topUsed ĐÃ ĐỐT LẠI (đọc sống).
+  const alTopQty = {};   // id lô Tóp → số thanh đốt lại đang nhập
+  function alReworkOn() { return !!(document.getElementById('al-rework') || {}).checked; }
+  // Lô TÓP = lô ở Kho mang cờ topRework
+  function alTopLots() { return (state.batches || []).filter(b => b && b.stage === 'kho' && b.topRework); }
+  // Tồn còn lại của lô Tóp (tối đa số thanh được lấy ra đốt lại)
+  function alTopRemainingOf(b) {
+    if (!b) return 0;
+    const used = Number(b.topUsed) || 0;
+    return Math.max(0, Math.floor((Number(khoLotRemainingOf(b)) || 0) - used));
+  }
+  // Số lượng đốt lại hợp lệ đang nhập cho 1 lô (mặc định = tồn; CHẶN vượt tồn)
+  function alReworkQtyOf(id) {
+    const b = (state.batches || []).find(x => String(x.id || '') === String(id));
+    if (!b) return 0;
+    const cap = alTopRemainingOf(b);
+    const v = Math.floor(Number(alTopQty[String(id)]));
+    return v > 0 ? Math.min(v, cap) : cap;
+  }
+  // Lô TÓP duy nhất đang chọn (Than Hóa Lại = mỗi lần chỉ chọn 1 lô)
+  function alTopPicked() {
+    const id = alPicked[0];
+    if (id == null || id === '') return null;
+    return (state.batches || []).find(x => String(x.id || '') === String(id)) || null;
+  }
+  // Đồng bộ ô NHẬP SỐ LƯỢNG ĐỐT LẠI (ẩn khi chưa bật/tích chọn; placeholder = tồn)
+  function alSyncReworkQtyField() {
+    const g = document.getElementById('al-rework-qty-group');
+    const inp = document.getElementById('al-rework-qty');
+    if (!g) return false;
+    const on = alReworkOn();
+    g.hidden = !on;
+    if (!on || !inp) { if (inp) inp.value = ''; return false; }
+    const b = alTopPicked();
+    if (!b) { inp.value = ''; inp.max = '1'; inp.placeholder = 'Chọn 1 lô Tóp trước'; return false; }
+    const cap = alTopRemainingOf(b);
+    inp.max = String(Math.max(1, cap));
+    inp.placeholder = `Tối đa ${cap.toLocaleString('vi-VN')} thanh (tồn lô)`;
+    if (document.activeElement !== inp) inp.value = String(alReworkQtyOf(b.id) || '');
+    return true;
+  }
+  // Ô NHẬP SỐ LƯỢNG đốt lại — clamp về tồn lô khi nhập vượt
+  function alOnReworkQtyInput() {
+    const inp = document.getElementById('al-rework-qty');
+    const b = alTopPicked();
+    if (!inp || !b) return 0;
+    const cap = alTopRemainingOf(b);
+    let v = Math.floor(Number(String(inp.value == null ? '' : inp.value).replace(/[^\d]/g, '')) || 0);
+    if (v > cap) { v = cap; inp.value = String(v); }   // chặn vượt tồn (tự điều về tối đa)
+    if (v > 0) alTopQty[String(b.id)] = v; else delete alTopQty[String(b.id)];
+    syncAddLotSource();
+    return v;
+  }
+  // Bật/tắt ô TÍCH THAN HÓA LẠI → đổi nguồn + hiện ô nhập số lượng
+  function alSetRework(on) {
+    const cb = document.getElementById('al-rework');
+    if (cb) cb.checked = !!on;
+    syncAddLotUI();   // reset chọn + vẽ lại danh sách theo chế độ mới
+    return !!on;
+  }
+  // Danh sách nguồn ở chế độ THAN HÓA LẠI: lô TÓP + Tồn/Tổng (1 cột, dễ bấm)
+  function renderAlTopList(listEl) {
+    listEl.classList.add('is-top');
+    const stage = alStageOf();
+    const items = alTopLots().filter(it =>
+      alSourceMatches(it, stage, alSourceQuery) &&
+      alSourceQtyMatches(it, stage, alSourceQtyQuery));
+    if (!items.length) {
+      listEl.innerHTML = '<div class="al-empty">— Không có lô TÓP nào đang ở Kho — (chuyển lô Tóp vào Kho ở form Chuyển Kho trước)</div>';
+      return;
+    }
+    listEl.innerHTML = items.map(it => {
+      const id = String(it.id);
+      const on = alPicked.includes(id);
+      const cap = alTopRemainingOf(it);
+      const lines = alCardLines(it, 'say2');
+      const main = `${it.location || '—'} · ${it.length}×${it.width}×${it.thickness} · ${it.bambooType || '—'} · Tồn ${cap.toLocaleString('vi-VN')} / ${(Number(it.quantity) || 0).toLocaleString('vi-VN')} thanh`;
+      return `<button type="button" class="al-card${on ? ' picked' : ''}" data-al-pick="${escapeHTML(id)}" aria-pressed="${on ? 'true' : 'false'}" title="Lô TÓP ở Kho — Tồn ${cap.toLocaleString('vi-VN')} thanh. Bấm để chọn đốt lại">
+        <span class="al-card-body">
+          <span class="al-card-main">${escapeHTML(main)}</span>
+          <span class="al-card-sub"><span class="al-use-tag use-khac" title="Lô TÓP — chờ xử lý lại">♻️ Tóp</span> ${lines.subHtml}</span>
+        </span>
+      </button>`;
+    }).join('');
+  }
   // Đóng 2 danh sách mở rộng (nguồn + vị trí)
   function alClosePanels() {
     const src = document.getElementById('al-source-panel');
     if (src) src.hidden = true;
     const loc = document.getElementById('al-location-panel');
-    if (loc) loc.hidden = true;
+    // Panel inline (thêm class .al-loc-inline) — KHÔNG ẩn, thậm chí TỰ MỞ lại
+    // (chips hiện trực tiếp trên form — không cần bấm nút Chọn Vị Trí).
+    if (loc) {
+      if (loc.classList.contains('al-loc-inline')) loc.hidden = false;
+      else loc.hidden = true;
+    }
     const row = document.getElementById('al-location-new-row');
     if (row) row.hidden = true;
   }
@@ -550,17 +656,21 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     const textEl  = document.getElementById('al-source-btn-text');
     const countEl = document.getElementById('al-picked-count');
     const hidden  = document.getElementById('al-source');
-    if (textEl) textEl.textContent = stage === 'say2' ? 'Chọn Lô Ở Kho' : 'Chọn Lô Nan';
+    if (textEl) textEl.textContent = alReworkOn() ? 'Chọn Lô Tóp Ở Kho'
+      : (stage === 'say2' ? 'Chọn Lô Ở Kho' : 'Chọn Lô Nan');
     if (hidden) hidden.value = alPicked.join(',');
     if (countEl) {
       countEl.textContent = alPicked.length ? `${alPicked.length} đã chọn` : 'Chưa chọn';
       countEl.classList.toggle('has-pick', alPicked.length > 0);
     }
     if (!listEl) return;
+    // ── CHẾ ĐỘ THAN HÓA LẠI: nguồn = lô TÓP ở Kho (Tồn/Tổng) ──
+    if (alReworkOn()) { renderAlTopList(listEl); initLucide(); alPositionSourcePanel(); return; }
+    listEl.classList.remove('is-top');
     const items = alCandidatesOf(stage);
     if (!items.length) {
       listEl.innerHTML = `<div class="al-empty">${stage === 'say2'
-        ? '— Không có lô nào ở Kho (chuyển lô vào Kho trước) —'
+        ? '— Không có lô nào còn hàng ở Kho (lô đã xuất hết không hiện ở đây — kiểm tra thẻ Kho Nan) —'
         : '— Không có thẻ nan nào chờ sấy (ghi lượt ở thẻ Chọn Nan Thô trước) —'}</div>`;
       alPositionSourcePanel();
       return;
@@ -595,6 +705,13 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
   function alTogglePick(id) {
     const key = String(id || '');
     if (!key) return alPicked.slice();
+    if (alReworkOn()) {
+      // THAN HÓA LẠI: mỗi lần chỉ chọn 1 lô Tóp — bấm thẻ đang chọn = bỏ chọn
+      alPicked = alPicked.includes(key) ? [] : [key];
+      renderAlSourceList();
+      syncAddLotSource();
+      return alPicked.slice();
+    }
     alPicked = alPicked.includes(key) ? alPicked.filter(x => x !== key) : [...alPicked, key];
     renderAlSourceList();
     syncAddLotSource();
@@ -602,6 +719,14 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
   }
   // Chọn TẤT CẢ nguồn khả dụng / bỏ chọn hết
   function alPickAll() {
+    if (alReworkOn()) {
+      // THAN HÓA LẠI: chỉ chọn được 1 lô → lấy lô Tóp đầu tiên
+      const tops = alTopLots();
+      alPicked = tops.length ? [String(tops[0].id)] : [];
+      renderAlSourceList();
+      syncAddLotSource();
+      return alPicked.slice();
+    }
     alPicked = alCandidatesOf(alStageOf()).map(it => String(it.id));
     renderAlSourceList();
     syncAddLotSource();
@@ -719,7 +844,10 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     return (state.batches || []).filter(b => b && String(b.location || '').trim().toLowerCase() === key).length;
   }
   function alLocations() { return x2LotLocations(); }
-  // Chọn 1 vị trí (từ chip) → ghi vào ô ẩn + đổi nhãn nút rồi đóng danh sách
+  // Chọn 1 vị trí (từ chip) → ghi vào ô ẩn + đổi nhãn nút.
+  // CHỈ đóng panel khi nó đang ở chế độ dropdown (hidden từ đầu).
+  // Panel inline (hiện trực tiếp, thêm class .al-loc-inline) KHÔNG đóng —
+  // form Thêm Lô Sấy Mới mới gọn 1 tầng chip.
   function alSetLocation(name) {
     alLocation = String(name || '').trim();
     const input = document.getElementById('al-location');
@@ -727,7 +855,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     renderAlLocationBtn();
     renderAlLocationChips();
     const panel = document.getElementById('al-location-panel');
-    if (panel) panel.hidden = true;
+    if (panel && !panel.classList.contains('al-loc-inline')) panel.hidden = true;
     return alLocation;
   }
   function alCurrentLocation() {
@@ -849,12 +977,52 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     alPicked = [];
     alClearSourceQuery();
     alClosePanels();
+    // Reset trạng thái THAN HÓA LẠI (ô nhập số lượng theo lại chọn mới)
+    Object.keys(alTopQty).forEach(k => { delete alTopQty[k]; });
     const input = document.getElementById('al-location');
     if (input) input.value = alLocation;
     renderAlLocationBtn();
     renderAlLocationChips();
     renderAlSourceList();
+    renderAlChargeOptions();      // Ô LẦN THAN HÓA theo đúng (Ngày + Công đoạn)
     syncAddLotSource();
+  }
+
+  // ── Ô CHỌN LẦN THAN HÓA (15/10/2026) — gộp lô vào LẦN ĐÃ CÓ ──
+  // Chỉ CHỌN ĐƯỢC các lần có MÃ MẺ (từ lượt Lưu) của đúng (Ngày + Công đoạn);
+  // lần điền tay/gộp cũ hiện MỜ + disabled (ghép bằng ô "Số lần TH" ở bảng thống kê).
+  function renderAlChargeOptions() {
+    const sel = document.getElementById('al-charge');
+    if (!sel) return false;
+    const stage = alStageOf();
+    const dateVal = (document.getElementById('al-date') || {}).value || '';
+    const prev = sel.value;
+    let html = '<option value="">✨ Lần mới (tự sinh)</option>';
+    if (dateVal) {
+      let charges = [];
+      try { charges = sayBuildCharges(dateVal, stage) || []; } catch (err) { charges = []; }
+      const stageKey = stage === 'say2' ? 'say2' : 'say1';
+      charges.forEach((c, i) => {
+        const vol = (Number(c.vol) || 0).toFixed(3);
+        const marks = (c.lots || []).map(l => {
+          const b = (state.batches || []).find(x => String(x.id || '') === String(l.id));
+          return b && b.sayCharges ? (Number(b.sayCharges[stageKey]) || 0) : 0;
+        });
+        const mark = marks.length && marks.every(m => m > 0 && m === marks[0]) ? marks[0] : 0;
+        if (mark) html += `<option value="${mark}">Lần ${i + 1} · ${vol} m³ · theo lượt lưu</option>`;
+        else html += `<option value="" disabled>Lần ${i + 1} · ${vol} m³ · gộp tay (không chọn)</option>`;
+      });
+    }
+    sel.innerHTML = html;
+    // Giữ lựa chọn cũ CHỈ khi lần đó vẫn còn trong danh sách; không có → về "Lần mới"
+    if (prev && html.includes(`value="${prev}"`)) sel.value = prev;
+    else sel.value = '';
+    return true;
+  }
+  // Mã mẻ của lần đang chọn ở ô #al-charge (0 = "Lần mới (tự sinh)")
+  function alChargeMarkOf() {
+    const v = Number(String((document.getElementById('al-charge') || {}).value || '').trim());
+    return Number.isFinite(v) && v > 0 ? v : 0;
   }
 
   // Chi tiết NGUỒN đang chọn (chọn nhiều → liệt kê từng nguồn) + số lượng sẽ tạo lô
@@ -862,10 +1030,30 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     const stage = alStageOf();
     const hintEl = document.getElementById('al-source-hint');
     const info = document.getElementById('al-source-info');
-    if (hintEl) hintEl.textContent = stage === 'say2'
-      ? 'Chọn 1 hoặc NHIỀU lô đang ở Kho → chuyển sang Sấy 2 (áp dụng Dùng Cho đã chọn cho mọi lô).'
-      : 'Nguồn: công đoạn Chọn Nan Thô — mỗi thẻ là 1 cỡ nan (Vị trí · Dài × Rộng × Dày · Phân loại · Số lượng). Số lượng tạo lô = phần CÒN LẠI của thẻ.';
+    if (hintEl) hintEl.textContent = alReworkOn()
+      ? 'Chế độ THAN HÓA LẠI — chọn 1 lô Tóp ở Kho, nhập số lượng lấy ra đốt lại (tối đa tồn lô).'
+      : (stage === 'say2'
+        ? 'Chọn 1 hoặc NHIỀU lô đang ở Kho → chuyển sang Sấy 2 (áp dụng Dùng Cho đã chọn cho mọi lô).'
+        : 'Nguồn: công đoạn Chọn Nan Thô — mỗi thẻ là 1 cỡ nan (Vị trí · Dài × Rộng × Dày · Phân loại · Số lượng). Số lượng tạo lô = phần CÒN LẠI của thẻ.');
     if (!info) return;
+    // ── CHẾ ĐỘ THAN HÓA LẠI: hiện lô Tóp + Tồn + số lượng đốt lại ──
+    if (alReworkOn()) {
+      const b = alTopPicked();
+      if (!b) {
+        info.innerHTML = '<span class="al-warn">Chưa chọn lô Tóp — bấm 1 thẻ lô Tóp trong danh sách (mỗi lần đốt lại chọn 1 lô).</span>';
+        alSyncReworkQtyField();
+        return;
+      }
+      const cap = alTopRemainingOf(b);
+      const take = alReworkQtyOf(b.id);
+      const dateVal = (document.getElementById('al-date') || {}).value || '';
+      info.innerHTML = `<span><span class="al-k">Lô Tóp:</span><strong>${escapeHTML(b.code || '—')}</strong>
+        <span class="al-k">· ${escapeHTML(b.location || '—')} · ${b.length} × ${b.width} × ${b.thickness} mm · ${escapeHTML(b.bambooType || '—')} · Tồn ${cap.toLocaleString('vi-VN')} / ${(Number(b.quantity) || 0).toLocaleString('vi-VN')} thanh</span></span>
+        <span><span class="al-k">Đốt lại:</span><strong>${take.toLocaleString('vi-VN')} thanh</strong>
+        <span class="al-k">→ ${stage === 'say2' ? 'Sấy 2' : 'Sấy 1'} · ${escapeHTML(dateVal)}</span></span>`;
+      alSyncReworkQtyField();
+      return;
+    }
     const picked = alCandidatesOf(stage).filter(it => alPicked.includes(String(it.id)));
     if (!picked.length) {
       info.innerHTML = '<span class="al-warn">Chưa chọn nguồn nào — bấm nút "Chọn Lô Nan" để chọn thẻ/lô nguồn (chọn được NHIỀU nguồn cùng lúc).</span>';
@@ -897,7 +1085,117 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     if (!location) { showToast('Vui lòng chọn Vị Trí!', 'error'); return; }
     if (!alPicked.length) { showToast('Chưa chọn nguồn nào — bấm nút "Chọn Lô Nan" để chọn thẻ/lô nguồn!', 'error'); return; }
     const nowISO = new Date().toISOString();
-    const chargeAt = Date.now();    // MÃ MẺ của lượt lưu này (1 lượt bấm Lưu = 1 lần than hóa)
+    // MÃ MẺ: nếu chọn 1 LẦN THAN HÓA ĐÃ CÓ ở ô #al-charge → tái dùng mã mẻ đó
+    // (lô mới gộp vào lần cũ trên bảng thống kê + chip Kanban); không chọn = lượt
+    // lưu mới (1 lượt bấm Lưu = 1 lần than hóa — như cũ).
+    const chargeAt = alChargeMarkOf() || Date.now();
+
+    // ── THAN HÓA LẠI → SẤY 1: nguồn = lô TÓP ở Kho, tạo lô MỚI ──
+    if (stage === 'say1' && alReworkOn()) {
+      const src = alTopPicked();
+      if (!src || src.stage !== 'kho' || !src.topRework) {
+        showToast('Chưa chọn lô TÓP ở Kho để than hóa lại!', 'error'); return;
+      }
+      const rem = alTopRemainingOf(src);
+      const take = alReworkQtyOf(src.id);
+      if (!(take > 0) || take > rem) {
+        showToast(`Số lượng đốt lại phải từ 1 đến ${rem.toLocaleString('vi-VN')} thanh (tồn lô Tóp)!`, 'error');
+        return;
+      }
+      pushUndo('Thêm lô sấy (than hóa lại)');
+      const L = Number(src.length) || 0, W = Number(src.width) || 0, T = Number(src.thickness) || 0;
+      const rwData = {
+        id: `batch-${Date.now()}-rw`,
+        code: generateBatchCodeYYMMDD(dateVal),
+        stage: 'say1',
+        date: dateVal,                               // ngày vào Sấy 1 (badge đếm ngày)
+        week: getISOWeekString(dateVal),
+        length: L, width: W, thickness: T,
+        quantity: take,
+        volume: calculateVolume(L, W, T, take),
+        bambooType: src.bambooType || '—',
+        useFor: alUseFor(),
+        sayCharges: { say1: chargeAt },               // MÃ MẺ: lần mới hoặc lần đã chọn
+        location, notes,
+        rework: true,                                // lô sinh từ THAN HÓA LẠI
+        sourceTopBatchId: String(src.id),            // link lô Tóp nguồn (tồn giảm đọc sống)
+        stageHistory: [{ stage: 'say1', date: dateVal }],
+        updatedAt: nowISO
+      };
+      state.batches.unshift(rwData);
+      src.topUsed = (Number(src.topUsed) || 0) + take; // tồn Tóp nguồn giảm (không lưu cứng)
+      src.updatedAt = nowISO;
+      alPicked = [];
+      saveData(); closeAddLotModal(); renderAll();
+      showToast(`Đã than hóa lại ${take.toLocaleString('vi-VN')} thanh → Sấy 1 (nguồn: lô Tóp ${src.code || '—'} — còn ${(rem - take).toLocaleString('vi-VN')} thanh)!`, 'success');
+      return;
+    }
+
+    // ── THAN HÓA LẠI → SẤY 2: hết phần còn lại = CHUYỂN NGUYÊN lô · 1 phần = TÁCH ──
+    if (stage === 'say2' && alReworkOn()) {
+      const src = alTopPicked();
+      if (!src || src.stage !== 'kho' || !src.topRework) {
+        showToast('Chưa chọn lô TÓP ở Kho để than hóa lại!', 'error'); return;
+      }
+      const rem = alTopRemainingOf(src);
+      const take = alReworkQtyOf(src.id);
+      if (!(take > 0) || take > rem) {
+        showToast(`Số lượng đốt lại phải từ 1 đến ${rem.toLocaleString('vi-VN')} thanh (tồn lô Tóp)!`, 'error');
+        return;
+      }
+      const useForVal = alUseFor();
+      if (take >= rem) {
+        // Nhập hết phần còn lại → chuyển NGUYÊN lô sang Sấy 2 + hết cờ Tóp
+        pushUndo('Than hóa lại lô Tóp → Sấy 2');
+        if (!src.stageHistory || !src.stageHistory.length) src.stageHistory = [{ stage: src.stage, date: src.date }];
+        src.stage = 'say2';
+        src.say2Date = dateVal;                       // ngày vào Sấy 2 (badge đếm ngày)
+        src.stageHistory.push({ stage: 'say2', date: dateVal });
+        src.location = location;
+        src.useFor = useForVal;
+        if (notes) src.notes = notes;
+        src.sayCharges = Object.assign({}, src.sayCharges, { say2: chargeAt });
+        delete src.topRework;                         // hết cờ Tóp — đã rời Kho
+        delete src.topUsed;
+        src.updatedAt = nowISO;
+        alPicked = [];
+        saveData(); closeAddLotModal(); renderAll();
+        showToast(`Lô Tóp ${src.code || '—'} (${rem.toLocaleString('vi-VN')} thanh) → Sấy 2 — đã hết cờ Tóp!`, 'success');
+        return;
+      }
+      // Nhập 1 PHẦN → tách: nguồn ở lại Kho (tăng topUsed) + lô mới mang phần lấy đi
+      pushUndo('Than hóa lại 1 phần lô Tóp → Sấy 2');
+      const L = Number(src.length) || 0, W = Number(src.width) || 0, T = Number(src.thickness) || 0;
+      const clone = {
+        id: `batch-${Date.now()}-rw`,
+        code: generateBatchCodeYYMMDD(dateVal),
+        stage: 'say2',
+        date: src.date,                               // giữ ngày gốc của nguồn
+        say2Date: dateVal,
+        week: getISOWeekString(dateVal),
+        length: L, width: W, thickness: T,
+        quantity: take,
+        volume: calculateVolume(L, W, T, take),
+        bambooType: src.bambooType || '—',
+        useFor: useForVal,
+        sayCharges: Object.assign({}, src.sayCharges, { say2: chargeAt }),
+        location, notes,
+        rework: true,
+        sourceTopBatchId: String(src.id),
+        stageHistory: [
+          { stage: 'kho', date: src.khoDate || src.date },
+          { stage: 'say2', date: dateVal }
+        ],
+        createdAt: nowISO, updatedAt: nowISO
+      };
+      state.batches.unshift(clone);
+      src.topUsed = (Number(src.topUsed) || 0) + take;
+      src.updatedAt = nowISO;
+      alPicked = [];
+      saveData(); closeAddLotModal(); renderAll();
+      showToast(`Đã tách ${take.toLocaleString('vi-VN')} thanh Tóp → Sấy 2 (nguồn ${src.code || '—'} còn ${(rem - take).toLocaleString('vi-VN')} thanh ở Kho)!`, 'success');
+      return;
+    }
 
     if (stage === 'say2') {
       // ── Sấy 2: CHUYỂN các lô đang ở Kho sang Sấy 2 (không tạo lô mới) ──
@@ -912,6 +1210,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
         b.stageHistory.push({ stage: 'say2', date: dateVal });
         b.location = location;
         b.useFor = useForVal;                        // Dùng cho (Ván / Bullig) chọn ở form
+        delete b.topRework;                          // lô RỜI Kho → hết cờ TÓP xử lý lại
         // MÃ MẺ Sấy 2: lượt Lưu này = 1 lần than hóa (giữ mã mẻ Sấy 1 cũ nếu có)
         b.sayCharges = Object.assign({}, b.sayCharges, { say2: chargeAt });
         if (notes) b.notes = notes;
@@ -1016,13 +1315,215 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     // preset 'new' = mở thẳng chế độ NHẬP KHO THỦ CÔNG (tạo lô mới ở thẳng Kho)
     // — dùng cho nút "Nhập Kho" trên cột Kho / thẻ Kho Nan
     if (sEl) sEl.value = (preset === 'new') ? 'new' : 'say1';
-    syncTransferKhoUI();
+    ckPicks = {};                    // mỗi lần mở: mặc định tất cả lô = Chuyển Kho
+    syncTransferKhoUI();             // nạp khối ①②③④ (trong đó có render 4 khối)
     modal.classList.add('show');
     initLucide();
   }
 
   function closeTransferKhoModal() {
     document.getElementById('modal-transfer-kho')?.classList.remove('show');
+  }
+
+  // ═══ UI 4 KHỐI TRỰC QUAN (14/10/2026): KHÔNG STEPPER · KHÔNG DROPDOWN NỔI ═══
+  // Form hiện thẳng 4 khối: ① Công đoạn (3 nút chọn) · ② Vị trí & Thẻ nan (chip
+  // vị trí + danh sách thẻ 2 cột check — TRONG LUỒNG, không nổi) · ③ Ngày ·
+  // ④ Vị trí mới ở Kho (không bắt buộc) + dòng ghi chú nhỏ.
+  // ckPicks = { <batchId>: 'kho' | 'top' | 'none' } — tick trên thẻ nan;
+  // lô CHƯA tick = mặc định 'kho' (chưa mở dropdown vẫn chuyển hết như cũ);
+  // 'top' = TÓP XỬ LÝ LẠI: lô VẪN vào Kho + gắn cờ batch.topRework = true;
+  // 'none' = bỏ qua lô này.
+  let ckPicks = {};
+
+  const CK_STAGE_LABELS = {
+    say1: '1. Sấy 1 → Kho',
+    say2: '2. Sấy 2 → Kho',
+    new:  '➕ Nhập kho thủ công'
+  };
+
+  // Nhóm lựa chọn của 1 lô: 'kho' (mặc định) | 'top' | 'none'
+  function ckPickOf(id) {
+    const v = ckPicks[String(id)];
+    return (v === 'top' || v === 'none') ? v : 'kho';
+  }
+  // Đặt / đổi / bỏ tick 1 lô — 2 cột LOẠI TRỪ nhau (tick cột này thì cột kia tự bỏ)
+  function ckSetPick(id, kind) {
+    ckPicks[String(id)] = (kind === 'top' || kind === 'none') ? kind : 'kho';
+    renderCkLotPanel();
+    updateCkPosInfo();
+    return ckPickOf(id);
+  }
+  // Tick hàng loạt theo nút "Tất cả Kho / Tất cả Tóp / Bỏ chọn" — trả về SỐ LÔ đổi tick
+  function ckBulkPick(kind) {
+    const stage = (document.getElementById('ck-stage') || {}).value || 'say1';
+    const pos = (document.getElementById('ck-lot') || {}).value || '';
+    const lots = pos ? batchesAtPosition(stage, pos) : [];
+    lots.forEach(b => { ckPicks[b.id] = (kind === 'top' || kind === 'none') ? kind : 'kho'; });
+    renderCkLotPanel();
+    updateCkPosInfo();
+    return lots.length;
+  }
+  // Thống kê 2 nhóm của vị trí đang chọn
+  function ckPickStats() {
+    const stage = (document.getElementById('ck-stage') || {}).value || 'say1';
+    const pos = (document.getElementById('ck-lot') || {}).value || '';
+    const lots = pos ? batchesAtPosition(stage, pos) : [];
+    const out = { khoN: 0, khoQty: 0, topN: 0, topQty: 0, noneN: 0, noneQty: 0, total: lots.length, vol: 0 };
+    lots.forEach(b => {
+      const k = ckPickOf(b.id);
+      const q = Number(b.quantity) || 0;
+      out.vol += Number(b.volume) || 0;
+      if (k === 'top') { out.topN++; out.topQty += q; }
+      else if (k === 'none') { out.noneN++; out.noneQty += q; }
+      else { out.khoN++; out.khoQty += q; }
+    });
+    return out;
+  }
+
+  // ── KHỐI ①: 3 NÚT CHỌN CÔNG ĐOẠN (hiệu chỉnh active theo select ẩn) ──
+  function renderCkStageSeg() {
+    const seg = document.getElementById('ck-stage-seg');
+    if (!seg || typeof seg.querySelectorAll !== 'function') return;
+    const cur = (document.getElementById('ck-stage') || {}).value || 'say1';
+    const btns = seg.querySelectorAll('[data-ck-stage-btn]');
+    for (let i = 0; i < btns.length; i++) {
+      const on = btns[i].getAttribute('data-ck-stage-btn') === cur;
+      btns[i].classList.toggle('is-on', !!on);
+      btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+  // Bấm 1 trong 3 nút khối ① → cập nhật select ẩn + đồng bộ toàn form
+  function ckOnStageSegPick(v) {
+    const sel = document.getElementById('ck-stage');
+    if (!sel) return false;
+    if (sel.value === v) return false;         // bấm lại đúng nút đang chọn → không làm gì
+    sel.value = v;
+    ckPicks = {};                              // đổi công đoạn → danh sách vị trí đổi → bỏ tick cũ
+    syncTransferKhoUI();
+    return true;
+  }
+
+  // ── KHỐI ②: CHIP VỊ TRÍ (bấm trực tiếp — chỉ hiện vị trí đang có lô) ──
+  function renderCkLocChips() {
+    const box = document.getElementById('ck-loc-chips');
+    if (!box) return;
+    const stage = (document.getElementById('ck-stage') || {}).value || 'say1';
+    const cur = (document.getElementById('ck-lot') || {}).value || '';
+    const groups = stage === 'new' ? [] : khoPositionsAt(stage);
+    if (!groups.length) {
+      box.innerHTML = '<span class="ck-loc-empty">— Chưa có vị trí nào có lô ở công đoạn này —</span>';
+      return;
+    }
+    box.innerHTML = groups.map(g =>
+      `<button type="button" class="ck-loc-chip${g.location === cur ? ' is-on' : ''}" data-ck-loc="${escapeHTML(g.location)}" title="Chọn vị trí ${escapeHTML(g.location)} — ${g.count} lô · ${g.qty.toLocaleString('vi-VN')} thanh">
+        <strong>${escapeHTML(g.location)}</strong><small>${g.count} lô · ${g.qty.toLocaleString('vi-VN')}</small>
+      </button>`
+    ).join('');
+  }
+  // Bấm chip vị trí → cập nhật select ẩn + hiện danh sách thẻ nan (2 cột check)
+  function ckOnLocChipClick(loc) {
+    const sel = document.getElementById('ck-lot');
+    if (!sel) return false;
+    sel.value = loc;
+    ckPicks = {};                              // vị trí mới → về mặc định: tất cả Chuyển Kho
+    renderCkLocChips();
+    updateCkPosInfo();
+    renderCkLotPanel(true);                    // hiện danh sách thẻ nan ngay dưới khối ②
+    return true;
+  }
+
+  // ── DROPDOWN NỔI: DANH SÁCH THẺ NAN + 2 CỘT CHECK (Chuyển Kho / Tóp xử lý lại) ──
+  function renderCkLotPanel(openPanel) {
+    const panel = document.getElementById('ck-lot-panel');
+    const list = document.getElementById('ck-lot-list');
+    const title = document.getElementById('ck-lot-panel-title');
+    if (!panel || !list) return false;
+    const stage = (document.getElementById('ck-stage') || {}).value || 'say1';
+    const pos = (document.getElementById('ck-lot') || {}).value || '';
+    // Chỉ nhánh Sấy 1 / Sấy 2 mới có thẻ nan (mode 'new' = nhập tay → ẩn panel)
+    if (stage === 'new' || !pos) { panel.hidden = true; return false; }
+    const lots = batchesAtPosition(stage, pos);
+    if (title) title.textContent = `Thẻ nan tại ${pos} — ${lots.length} lô`;
+    if (!lots.length) {
+      list.innerHTML = '<div class="ck-menu-empty">— Vị trí này không còn lô nào —</div>';
+    } else {
+      list.innerHTML = lots.map(b => {
+        const pick = ckPickOf(b.id);
+        const lines = alCardLines(b, 'say2');   // lô → 2 dòng chuẩn (Vị trí · KT · Loại · SL / chip Dùng cho + badge ngày)
+        return `<div class="ck-row${pick === 'top' ? ' pick-top' : pick === 'none' ? ' pick-none' : ' pick-kho'}" data-ck-row="${escapeHTML(String(b.id))}">
+          <button type="button" class="al-card ck-row-card" data-ck-pick-card="${escapeHTML(String(b.id))}" title="Bấm để xoay vòng: Chuyển Kho → Tóp xử lý lại → Bỏ chọn">
+            <span class="al-card-body">
+              <span class="al-card-main">${escapeHTML(lines.main)}</span>
+              <span class="al-card-sub">${lines.subHtml}</span>
+            </span>
+          </button>
+          <label class="ck-check" title="LÔ NÀY VÀO KHO bình thường">
+            <input type="checkbox" data-ck-check="${escapeHTML(String(b.id))}" data-ck-kind="kho"${pick === 'kho' ? ' checked' : ''}>
+          </label>
+          <label class="ck-check ck-check-top" title="LÔ NÀY VÀO KHO + gắn cờ TÓP — chờ xử lý lại">
+            <input type="checkbox" data-ck-check="${escapeHTML(String(b.id))}" data-ck-kind="top"${pick === 'top' ? ' checked' : ''}>
+          </label>
+        </div>`;
+      }).join('');
+    }
+    const body = document.getElementById('ck-lot-panel-body');
+    if (typeof openPanel === 'boolean') {
+      panel.hidden = !openPanel;
+      if (openPanel && body) body.hidden = false;   // chọn vị trí mới → danh sách MỞ lại
+    }
+    const sum = document.getElementById('ck-lot-panel-sum');
+    if (sum) {
+      const s = ckPickStats();
+      sum.innerHTML = `<strong>${s.khoN}</strong> lô chuyển Kho · <strong>${s.topN}</strong> lô Tóp xử lý lại` +
+        (s.noneN ? ` · <span class="ck-sum-none">${s.noneN} lô bỏ chọn</span>` : '');
+    }
+    ckSyncLotToggle();
+    initLucide();
+    return true;
+  }
+  // ── THU GÓM / HIỆN LẠI danh sách thẻ nan ở khối ② (sau khi chọn xong cho gọn) ──
+  // Ẩn vùng cột check + danh sách; TIÊU ĐỀ · nút Tất cả… · DÒNG TÓM TẮT vẫn hiện
+  function ckToggleLotList() {
+    const body = document.getElementById('ck-lot-panel-body');
+    if (!body) return false;
+    body.hidden = !body.hidden;
+    ckSyncLotToggle();
+    return !body.hidden;
+  }
+  // Nhãn nút thu gọn theo trạng thái + số liệu đã chọn
+  function ckSyncLotToggle() {
+    const btn = document.getElementById('ck-lot-toggle');
+    const body = document.getElementById('ck-lot-panel-body');
+    if (!btn) return;
+    const open = body ? !body.hidden : true;
+    if (open) {
+      btn.textContent = 'Thu gọn ▲';
+    } else {
+      const s = ckPickStats();
+      btn.textContent = `Hiện lại · ${s.total} lô (${s.khoN} Kho / ${s.topN} Tóp) ▼`;
+    }
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  // Bấm vào dropdown thẻ nan: tick 2 cột LOẠI TRỪ nhau · bấm thẻ = xoay vòng · nút "Tất cả…" · đóng
+  function ckOnLotPanelClick(e) {
+    const t = e && e.target;
+    if (!t || typeof t.closest !== 'function') return;
+    const allBtn = t.closest('[data-ck-all]');
+    if (allBtn) { ckBulkPick(allBtn.getAttribute('data-ck-all')); return; }
+    const box = t.closest('input[data-ck-check]');
+    if (box) {
+      const id = box.getAttribute('data-ck-check');
+      const kind = box.getAttribute('data-ck-kind');
+      if (box.checked) ckSetPick(id, kind);                                // tick cột này → cột kia tự bỏ
+      else ckSetPick(id, ckPickOf(id) === kind ? 'none' : ckPickOf(id));   // bỏ tick đang bật → không chuyển lô này
+      return;
+    }
+    const card = t.closest('[data-ck-pick-card]');                         // bấm thẻ = xoay vòng
+    if (card) {
+      const id = card.getAttribute('data-ck-pick-card');
+      const cur = ckPickOf(id);
+      ckSetPick(id, cur === 'kho' ? 'top' : cur === 'top' ? 'none' : 'kho');
+    }
   }
 
   // Đổi Công đoạn → nạp danh sách VỊ TRÍ đang có lô + gợi ý vị trí Kho; hoặc hiện form THÊM MỚI
@@ -1037,15 +1538,24 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
     ['ck-new-group', 'ck-new-qty-group', 'ck-new-dims-group', 'ck-new-type-group',
      'ck-new-use-group', 'ck-new-vol-group'].forEach(id => setDisp(id, isNew));
 
+    // Khối ①: đánh dấu nút công đoạn đang chọn · Khối ②: chip vị trí
+    renderCkStageSeg();
+    renderCkLocChips();
+
     if (!isNew) {
-      // Danh sách VỊ TRÍ đang có lô ở công đoạn đã chọn (chọn 1 vị trí = chuyển CẢ vị trí)
+      // Danh sách VỊ TRÍ đang có lô ở công đoạn đã chọn (select ẩn — người dùng
+      // chọn qua CHIP #ck-loc-chips trong khối ②)
       const groups = khoPositionsAt(stage);
       const lotEl = document.getElementById('ck-lot');
       if (lotEl) {
+        // Giữ lựa chọn nếu vị trí vẫn còn lô; nếu không → về rỗng (chưa chọn)
+        const prev = lotEl.value;
         lotEl.innerHTML = groups.length
           ? groups.map(g => `<option value="${escapeHTML(g.location)}">${escapeHTML(g.location)} — ${g.count} lô · ${g.qty.toLocaleString('vi-VN')} thanh</option>`).join('')
           : `<option value="">— Không có vị trí nào có lô ở ${(STAGES[stage] && STAGES[stage].name) || stage} —</option>`;
+        if (prev && groups.some(g => g.location === prev)) lotEl.value = prev;
       }
+      renderCkLocChips();            // chip vẽ lại sau khi nạp options (chip active đúng)
       // Gợi ý vị trí Kho đang có cho ô NHẬP TAY "Vị trí mới ở Kho"
       const dl = document.getElementById('ck-new-loc-list');
       if (dl) {
@@ -1053,12 +1563,18 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
           .map(l => `<option value="${escapeHTML(l)}"></option>`).join('');
       }
       updateCkPosInfo();
+      // Mở form / đổi công đoạn → vùng thẻ nan MỞ lại (không kẹt trạng thái thu gọn cũ)
+      const ckBody = document.getElementById('ck-lot-panel-body');
+      if (ckBody) ckBody.hidden = false;
+      renderCkLotPanel();            // danh sách thẻ nan trong khối ② (ẩn nếu chưa chọn vị trí)
     } else {
       updateCkNewVolume();
+      const panel = document.getElementById('ck-lot-panel');
+      if (panel) panel.hidden = true;
     }
   }
 
-  // Tóm tắt vị trí đang chọn: bao nhiêu lô · tổng số lượng · tổng thể tích
+  // Tóm tắt lựa chọn: 2 NHÓM (Chuyển Kho / Tóp xử lý lại) + số bỏ chọn + tổng
   function updateCkPosInfo() {
     const el = document.getElementById('ck-pos-info');
     if (!el) return;
@@ -1069,13 +1585,14 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       el.innerHTML = '<span class="al-warn">Chưa có vị trí/lô khả dụng để chuyển.</span>';
       return;
     }
-    const qty = lots.reduce((s, b) => s + (Number(b.quantity) || 0), 0);
-    const vol = lots.reduce((s, b) => s + (Number(b.volume) || 0), 0);
+    const s = ckPickStats();
+    const groups = [];
+    if (s.khoN) groups.push(`<span class="ck-info-kho"><span class="al-k">Chuyển Kho:</span> <strong>${s.khoN} lô · ${s.khoQty.toLocaleString('vi-VN')} thanh</strong></span>`);
+    if (s.topN) groups.push(`<span class="ck-info-top"><span class="al-k">Tóp xử lý lại:</span> <strong>${s.topN} lô · ${s.topQty.toLocaleString('vi-VN')} thanh</strong></span>`);
+    if (s.noneN) groups.push(`<span class="ck-info-none"><span class="al-k">Bỏ chọn:</span> <strong>${s.noneN} lô · ${s.noneQty.toLocaleString('vi-VN')} thanh</strong></span>`);
     el.innerHTML = `<span><span class="al-k">Vị trí:</span><strong>${escapeHTML(pos)}</strong></span>
-      <span><span class="al-k">Số lô sẽ chuyển:</span><strong>${lots.length} lô</strong></span>
-      <span><span class="al-k">Tổng số lượng:</span><strong>${qty.toLocaleString('vi-VN')} thanh</strong></span>
-      <span><span class="al-k">Tổng thể tích:</span><strong>${vol.toFixed(4)} m³</strong></span>
-      <span class="al-k">Tất cả lô nan trong vị trí này CÙNG chuyển vào Kho.</span>`;
+      ${groups.join('')}
+      <span><span class="al-k">Tổng vị trí:</span><strong>${lots.length} lô · ${s.khoQty + s.topQty + s.noneQty > 0 ? (s.khoQty + s.topQty + s.noneQty).toLocaleString('vi-VN') : 0} thanh · ${s.vol.toFixed(4)} m³</strong></span>`;
   }
 
   // Thể tích quy đổi của lô THÊM MỚI vào Kho
@@ -1132,11 +1649,47 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD,
       return;
     }
 
-    // ── CHUYỂN TẤT CẢ LÔ Ở 1 VỊ TRÍ (Sấy 1 / Sấy 2) → Kho ──
+    // ── CHUYỂN TỪNG THẺ ĐÃ TICK (Sấy 1 / Sấy 2) → Kho ──
+    // 2 nhóm theo dropdown thẻ nan: 'kho' = vào Kho bình thường · 'top' = TÓP XỬ LÝ
+    // LẠI (VẪN vào Kho + gắn cờ batch.topRework = true — chốt với người dùng) ·
+    // 'none' = bỏ qua lô này. Lô CHƯA tick = mặc định 'kho' (ckPickOf) nên người
+    // dùng không mở dropdown vẫn chuyển hết cả vị trí như hành vi cũ.
     const pos = (document.getElementById('ck-lot') || {}).value || '';
     const newLoc = ((document.getElementById('ck-new-loc') || {}).value || '').trim();
-    const moved = quickTransferLotsToKho(stage, pos, dateVal, newLoc, notes);
-    if (moved) closeTransferKhoModal();
+    const lots = pos ? batchesAtPosition(stage, pos) : [];
+    if (!lots.length) { showToast('Chưa có lô nan nào ở vị trí này để chuyển vào Kho!', 'error'); return; }
+    const selKho = lots.filter(b => ckPickOf(b.id) === 'kho');
+    const selTop = lots.filter(b => ckPickOf(b.id) === 'top');
+    const moved = selKho.length + selTop.length;
+    if (!moved) {
+      showToast('Chưa chọn lô nào — tick ít nhất 1 thẻ nan (Chuyển Kho hoặc Tóp xử lý lại)!', 'error');
+      return;
+    }
+    if (moved > 1 && typeof confirm === 'function') {
+      const stageName = (STAGES[stage] && STAGES[stage].name) || stage;
+      const msg = `Chuyển ${moved} lô ở vị trí "${pos}" (${stageName}) vào Kho?` +
+        `\n• Chuyển Kho: ${selKho.length} lô` +
+        (selTop.length ? `\n• Tóp xử lý lại: ${selTop.length} lô (vào Kho, mang cờ chờ xử lý)` : '') +
+        (newLoc ? `\n• Vị trí mới ở Kho: "${newLoc}"` : '');
+      if (!confirm(msg)) return;
+    }
+    pushUndo(`Chuyển ${moved} lô ở vị trí ${pos} vào Kho`);
+    const nowISO = new Date().toISOString();
+    lots.forEach(b => {
+      if (ckPickOf(b.id) === 'none') return;      // bỏ chọn → lô ở lại công đoạn cũ
+      if (!b.stageHistory || !b.stageHistory.length) b.stageHistory = [{ stage: b.stage, date: b.date }];
+      b.stage = 'kho';
+      b.khoDate = dateVal;                        // ngày vào kho thực tế
+      b.stageHistory.push({ stage: 'kho', date: dateVal });
+      if (newLoc) b.location = newLoc;            // để trống = giữ nguyên vị trí cũ
+      if (notes) b.notes = notes;
+      b.topRework = (ckPickOf(b.id) === 'top');   // cờ TÓP — lô vẫn vào Kho, chờ xử lý lại
+      b.updatedAt = nowISO;
+    });
+    saveData(); renderAll(); closeTransferKhoModal();
+    showToast(`Đã chuyển ${moved} lô ở vị trí ${pos} vào Kho` +
+      (selTop.length ? ` (trong đó ${selTop.length} lô Tóp xử lý lại)` : '') +
+      ` — ngày ${formatDateDDMMYY(dateVal)}!`, 'success');
   }
 
   // Chuyển NHANH TẤT CẢ lô nan ở 1 VỊ TRÍ (1 lò sấy) vào Kho — dùng CHUNG cho
@@ -1176,7 +1729,17 @@ export {
   alLocations,
   alOnLocationChipClick,
   alOnSourceListClick,
+  alOnReworkQtyInput,
   alPickAll,
+  alChargeMarkOf,
+  alReworkOn,
+  alReworkQtyOf,
+  alSetRework,
+  alSyncReworkQtyField,
+  alTopLots,
+  alTopRemainingOf,
+  renderAlChargeOptions,
+  renderAlTopList,
   alPickedIds,
   alPositionSourcePanel,
   alSetLocation,
@@ -1192,6 +1755,17 @@ export {
   closeAddLotModal,
   closeBatchFormModal,
   closeTransferKhoModal,
+  ckBulkPick,
+  ckOnLocChipClick,
+  ckOnLotPanelClick,
+  ckOnStageSegPick,
+  ckPickOf,
+  ckPickStats,
+  ckSetPick,
+  renderCkLocChips,
+  renderCkLotPanel,
+  renderCkStageSeg,
+  ckToggleLotList,
   deleteBatch,
   deleteBatches,
   deletePickedBatches,

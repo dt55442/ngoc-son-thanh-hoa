@@ -316,11 +316,18 @@ check('CẤU TRÚC (index.html): thẻ tổng hợp đủ nút (đổi xưởng 
 check('CẤU TRÚC (index.html): thẻ tổng hợp đặt TRƯỚC thẻ biểu đồ gộp #plan-vs-press-card (lãnh đạo thấy đầu tiên)',
   indexHtml.indexOf('id="capacity-card"') >= 0 &&
   indexHtml.indexOf('id="capacity-card"') < indexHtml.indexOf('id="plan-vs-press-card"'));
+check('CẤU TRÚC (index.html): chữ nút toolbar bọc .cap-btn-text để gọn trên điện thoại (desktop vẫn hiện)',
+  indexHtml.includes('class="cap-btn-text">Biểu đồ') && indexHtml.includes('class="cap-btn-text">Bảng dữ liệu') &&
+  indexHtml.includes('class="cap-btn-text">In báo cáo') && indexHtml.includes('id="cap-toggle-label"') &&
+  indexHtml.includes('id="cap-view-visual"') && indexHtml.includes('id="btn-cap-print"'));
 check('CẤU TRÚC (styles.css): khối CSS thẻ tổng hợp + sparkline + màu ngưỡng',
   stylesCss.includes('.cap-mode-btn') && stylesCss.includes('.cap-spark-svg') &&
   stylesCss.includes('.cap-eff-good') && stylesCss.includes('.cap-eff-low'));
+check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/Bảng + In/Thu gọn, giữ chữ Tuần/Tháng',
+  stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
+  stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v236/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v247/.test(swJs));
 check('SỔ ĐĂNG KÝ: 15 dòng công đoạn Xưởng 2 (Bullig · Cắt Ván · Bào Ván đều tách 2) · 8 dòng Xưởng 1',
   cap.capStagesOf('x2').length === 15 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===

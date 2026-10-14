@@ -302,7 +302,8 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       id: 'x1catong', ws: 'x1', label: 'Cắt Ống', unit: 'kg/h', unitQty: 'kg', cardId: 'x1-cat-ong-card', kind: 'cap',
       rows: () => (state.xuong1CatOngRecords || []).map(r => {
         const d = x1CatOngDisplay(r);
-        return { date: d.date, qty: d.inputWeight, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        // KL CẮT ĐƯỢC CỦA LƯỢT (turnKg) — cắt nhiều lần không đếm trùng đầu vào
+        return { date: d.date, qty: d.turnKg, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => Number((((state.x1Rates || {}).catOng) || {})[m]) || 0
     },

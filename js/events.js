@@ -2,7 +2,7 @@
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
-import { alOnLocationChipClick, alOnSourceListClick, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
+import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
@@ -25,7 +25,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   handleXuong2BaoVanSubmit, editXuong2BaoVan, deleteXuong2BaoVan, resetXuong2BaoVanForm,
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
   setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
-import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất
+import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất
 import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
@@ -235,6 +235,20 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-transfer-kho', 'click', closeTransferKhoModal);
     safeOn('transfer-kho-form', 'submit', handleTransferKhoSubmit);
     safeOn('ck-stage', 'change', syncTransferKhoUI);
+    // ── FORM CHUYỂN KHO (14/10/2026): 4 KHỐI TRỰC QUAN — BẤM CHỌN NGAY, KHÔNG DROPDOWN ──
+    // Khối ①: 3 nút chọn công đoạn (Sấy 1 / Sấy 2 / Nhập thủ công)
+    safeOn('ck-stage-seg', 'click', (e) => {
+      const b = e.target && e.target.closest ? e.target.closest('[data-ck-stage-btn]') : null;
+      if (b) ckOnStageSegPick(b.getAttribute('data-ck-stage-btn'));
+    });
+    // Khối ②: chip vị trí (bấm = chọn ngay → hiện danh sách thẻ nan 2 cột check)
+    safeOn('ck-loc-chips', 'click', (e) => {
+      const chip = e.target && e.target.closest ? e.target.closest('[data-ck-loc]') : null;
+      if (chip) ckOnLocChipClick(chip.getAttribute('data-ck-loc'));
+    });
+    safeOn('ck-lot-panel', 'click', ckOnLotPanelClick);
+    // Thu gọn / hiện lại danh sách thẻ nan (sau khi tick xong ở khối ② — form gọn hơn)
+    safeOn('ck-lot-toggle', 'click', () => ckToggleLotList());
     ['ck-new-length', 'ck-new-width', 'ck-new-thickness', 'ck-new-qty'].forEach(id => {
       safeOn(id, 'input', updateCkNewVolume);
     });
@@ -243,6 +257,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-add-lot', 'click', closeAddLotModal);
     safeOn('add-lot-form', 'submit', handleAddLotSubmit);
     safeOn('al-stage', 'change', syncAddLotUI);
+    // ── THAN HÓA LẠI (15/10/2026): ô tích + ô nhập số lượng + ô LẦN THAN HÓA ──
+    safeOn('al-rework', 'change', (e) => alSetRework(!!(e && e.target && e.target.checked)));
+    safeOn('al-rework-qty', 'input', () => alOnReworkQtyInput());
+    safeOn('al-date', 'change', () => renderAlChargeOptions());
     // Nguồn: nút "Chọn Lô Nan" mở danh sách THẺ (chọn được NHIỀU nguồn cùng lúc)
     safeOn('al-source-btn', 'click', alToggleSourcePanel);
     safeOn('al-source-list', 'click', alOnSourceListClick);
@@ -280,7 +298,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       }
       if (!t.closest('#al-location-panel') && !t.closest('#al-location-btn')) {
         const p = document.getElementById('al-location-panel');
-        if (p) p.hidden = true;
+        // Panel inline (thêm class .al-loc-inline) — không đóng khi click ngoài
+        if (p && !p.classList.contains('al-loc-inline')) p.hidden = true;
       }
       // Dropdown NỔI của Xưởng 2 (Bào Tinh 3 danh sách · Bullig danh sách lô):
       // chạm ra ngoài → ĐÓNG + trả node về lại chỗ cũ trong form
@@ -1484,7 +1503,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-x1-boc', 'click', () => resetX1BocForm());
     safeOn('x1-boc-source', 'change', () => x1BocSyncLinked(true));
     // Ô tự tính (đổi số → vẽ lại, KHÔNG tự điền đè số người dùng đang gõ)
-    ['x1-cat-ong-kl-dat', 'x1-cat-ong-kl-loai'].forEach(id => safeOn(id, 'input', x1CatOngCalc));
+    // 4 ô KL Cắt Ống (13/10/2026: thêm KL Mắt + KL Ngọn) + checkbox "Đã cắt xong"
+    ['x1-cat-ong-kl-dat', 'x1-cat-ong-kl-loai', 'x1-cat-ong-kl-mat', 'x1-cat-ong-kl-ngon']
+      .forEach(id => safeOn(id, 'input', x1CatOngCalc));
+    safeOn('x1-cat-ong-done', 'change', x1CatOngCalc);
     safeOn('x1-say-sinh-qty', 'input', x1SaySinhCalc);
     safeOn('x1-boc-qty', 'input', x1BocCalc);
     // ── POPUP ĐỊNH MỨC XƯỞNG 1 (1 popup cho 3 công đoạn) ──
@@ -1770,6 +1792,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x2-kho-search', 'input', renderX2KhoLedger);
     safeOn('x2-kho-show-used', 'change', (e) => khoSetShowUsed(e.target.checked));
     safeOn('x2-kho-backfill-btn', 'click', khoBackfillFromLegacy);
+    safeOn('x2-kho-day-cards', 'click', khoOnLedgerClick); // Mở lại / Xóa dòng XUẤT đã duyệt (chỉ admin)
     safeOn('btn-kho-add-manual', 'click', () => openTransferKhoModal('new')); // Nhập Kho thủ công trên cột Kho
     // ── Thẻ THAN HÓA + SẤY: định mức 1 lần than hóa + thu gọn bảng Kanban ──
     // (Số lần than hóa thật của nhóm + giờ sự cố cho phép của ngày: ô nhập trong

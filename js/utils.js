@@ -554,8 +554,9 @@ import { state } from './state.js';
   // ─── SỔ NHẬP/XUẤT KHO (mỗi lô có thể nhiều dòng — luôn ghi rõ LẦN) ──
   // inRows:  [{ date, lotId, code, round, qty, m3, length, width, thickness,
   //             bambooType, useFor, location }]  — mỗi entry 'kho' = 1 dòng NHẬP
-  // outRows: [{ date, noteId, purpose, purposeNote, qty, m3, lotIds[], note, createdBy }]
-  //          — từ phiếu XUẤT ĐÃ DUYỆT (số chính thức)
+  // outRows: [{ date, noteId, purpose, purposeNote, qty, m3, lotIds[], lots[] ({ batchId, qty, loc }), note, createdBy }]
+  //          — từ phiếu XUẤT ĐÃ DUYỆT (số chính thức); lots[].loc = vị trí lúc
+  //          xuất (snapshot, phiếu mới) hoặc vị trí hiện tại của lô (phiếu cũ).
   // derived: [{ date, kind 'baotinh'|'bullig'|'say2', lotId, code, qty }]
   //          — số hệ thống suy ra (CHỈ để đối chiếu, không trừ tồn)
   function khoLedgerEvents() {
@@ -587,10 +588,19 @@ import { state } from './state.js';
       });
     });
     khoApprovedXuatNotes().forEach(n => {
+      const lots = (Array.isArray(n.lots) ? n.lots : []).map(l => {
+        const id = String((l && l.batchId) || '');
+        const b = (state.batches || []).find(x => x && x.id === id);
+        return {
+          batchId: id,
+          qty: Number((l && l.qty) || 0),
+          loc: String((l && l.loc) || (b && b.location) || '')
+        };
+      });
       outRows.push({
         date: n.date || '', noteId: n.id, purpose: khoNormPurpose(n.purpose),
         purposeNote: n.purposeNote || '', qty: Number(n.qty) || 0, m3: Number(n.m3) || 0,
-        lotIds: (Array.isArray(n.lots) ? n.lots : []).map(l => String((l && l.batchId) || '')).filter(Boolean),
+        lotIds: lots.map(l => l.batchId).filter(Boolean), lots,
         note: n.note || '', createdBy: n.createdByName || n.createdBy || ''
       });
     });

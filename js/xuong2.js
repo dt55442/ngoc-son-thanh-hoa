@@ -10495,9 +10495,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (source === 'top_other') return baoTinhTopOtherStock().remaining;   // Tóp/Khác Bào Tinh — không theo cỡ
     return null;
   }
-  // Danh sách LÔ đang ở Kho CÒN HÀNG (chọn gắn lô cho phiếu xuất) — mới nhất lên đầu
+  // Danh sách LÔ đang ở Kho CÒN HÀNG (chọn gắn lô cho phiếu xuất) — mới nhất lên đầu.
+  // Khi đang SỬA phiếu (khoNoteEditId): cộng thêm các lô đang gắn trong phiếu
+  // (kể cả tồn 0) để luôn THÊM/BỚT được lô — hết sửa thì về lọc cũ.
   function khoLotPickerList() {
-    return (state.batches || []).filter(b => b && b.stage === 'kho' && khoLotRemainingOf(b) > 0)
+    const editingIds = khoNoteEditId
+      ? new Set(((state.khoNotes || []).find(n => n && n.id === khoNoteEditId) || { lots: [] }).lots.map(l => String((l && l.batchId) || '')).filter(Boolean))
+      : null;
+    return (state.batches || [])
+      .filter(b => b && b.stage === 'kho' && (khoLotRemainingOf(b) > 0 || (editingIds && editingIds.has(String(b.id)))))
       .sort((a, b) => khoFirstInDateOf(b).localeCompare(khoFirstInDateOf(a)));
   }
   function khoPickLot(id) {
@@ -10698,6 +10704,20 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (btnText) btnText.textContent = khoLotsOpen ? 'Đóng danh sách lô' : 'Chọn Lô Gắn Phiếu';
     if (khoLotsOpen) renderX2KhoLotsList();
   }
+  // Số NGÀY đã ở từng công đoạn của 1 lô Kho (Sấy 1 · Sấy 2 · Kho) — cùng cách
+  // tính với thẻ nguồn Than Hóa + Sấy (alStageDaysOf trong js/batch-modals.js).
+  // Sao chép logic tại đây để tránh vòng lặp import (batch-modals không được
+  // nhập ngược từ xuong2).
+  function khoStageDaysOf(batch) {
+    const out = { say1: 0, say2: 0, kho: 0 };
+    if (!batch) return out;
+    const hist = getBatchStageHistory(batch);
+    (hist || []).forEach((h, idx) => {
+      if (!h || !(h.stage in out)) return;
+      out[h.stage] += getHistoryEntryDays(hist, idx) || 0;
+    });
+    return out;
+  }
   // Thẻ lô trong danh sách gắn phiếu (2 dòng như thẻ nguồn "Thêm Lô Sấy Mới")
   function khoLotCardHtml(b) {
     const rem = khoLotRemainingOf(b);
@@ -10705,11 +10725,14 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const useCls = String(b.useFor || '').toLowerCase().includes('bullig') ? 'use-bullig' : 'use-van';
     const outRounds = khoOutRoundCountOf(b);
     const btLbl = baoTinhUsedLabel(b);   // chip "ĐÃ BÀO X/Y THANH" — đối chiếu ô Chọn Thanh của thẻ Bào Tinh
+    const stageDays = khoStageDaysOf(b); // badge đếm ngày S1/S2/K — cùng mẫu thẻ Than Hóa + Sấy
     return `<div class="kho-lot-card${picked ? ' picked' : ''}" data-kho-lot="${escapeHTML(b.id)}">
       <div class="kho-lot-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${khoLotLenOf(b)}×${khoLotWidOf(b)}×${khoLotThkOf(b)} mm · ${escapeHTML(b.bambooType || '—')} · còn <strong>${fmtThanh(rem)}</strong> thanh</div>
       <div class="kho-lot-line2"><span class="al-use-tag ${useCls}">${escapeHTML(b.useFor || 'Ván')}</span>
-        <span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${outRounds} lần</span>
-        <span class="kho-in-date">vào kho ${formatDateDDMMYY(khoLastInDateOf(b))}</span>${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
+        <span class="al-day-badge day-s1" title="Số ngày đã ở Sấy 1">S1-${stageDays.say1} ngày</span>
+        <span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${stageDays.say2} ngày</span>
+        <span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${stageDays.kho} ngày</span>
+        <span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${outRounds} lần</span>${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
       ${picked ? `<div class="kho-lot-qty-row"><label>Số thanh xuất từ lô này:</label><input type="number" min="1" max="${rem}" step="1" value="${khoPickedQtyOf(b.id)}" data-kho-lot-qty="${escapeHTML(b.id)}"></div>` : ''}
     </div>`;
   }
@@ -10975,13 +10998,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       <td>${fmtThanh(r.qty)}</td><td>${(Number(r.m3) || 0).toFixed(4)}</td></tr>`;
   }
   function khoOutRowHtml(r, showDate) {
-    const lotsTxt = r.lotIds.length
-      ? r.lotIds.map(id => { const b = (state.batches || []).find(x => x && x.id === id); return b ? (b.code || id) : id; }).join(', ')
+    const lots = Array.isArray(r.lots) && r.lots.length
+      ? r.lots
+      : (r.lotIds || []).map(id => ({ batchId: id, qty: 0, loc: '' }));
+    const lotsTxt = lots.length
+      ? lots.map(l => {
+        const b = (state.batches || []).find(x => x && x.id === l.batchId);
+        const code = b ? (b.code || l.batchId) : l.batchId;
+        const qtyTxt = l.qty > 0 ? ` (${fmtThanh(l.qty)})` : '';
+        return `${code}${qtyTxt}`;
+      }).join(' + ')
       : 'Tổng (FIFO)';
+    const locTxt = lots.length
+      ? lots.map(l => {
+        const b = (state.batches || []).find(x => x && x.id === l.batchId);
+        return String(l.loc || (b && b.location) || '—');
+      }).filter((v, i, arr) => v && arr.indexOf(v) === i).join(' · ') || '—'
+      : '—';
+    const locTitle = 'Vị trí lô lúc xuất (phiếu mới lưu snapshot; phiếu cũ hiện vị trí hiện tại)';
+    // MỞ LẠI / XÓA dòng xuất đã duyệt — chỉ admin (data-admin-only), kiểu A:
+    // Mở lại → phiếu về chờ duyệt (tồn hồi ngay) → sửa thêm/bớt lô → duyệt lại.
+    const adminBtns = `<span data-admin-only><button type="button" class="btn btn-outline btn-sm" data-kho-reopen="${escapeHTML(r.noteId || '')}" title="Mở lại phiếu đã duyệt về CHỜ DUYỆT để sửa thêm/bớt lô (chỉ Quản Trị / Ban Quản Lý)"><i data-lucide="rotate-ccw"></i> Mở lại</button> <button type="button" class="btn btn-outline btn-icon btn-sm" data-kho-ledger-del="${escapeHTML(r.noteId || '')}" title="Xóa phiếu đã duyệt (tồn lô tự hồi — chỉ Quản Trị / Ban Quản Lý)" style="color:var(--danger);"><i data-lucide="trash-2"></i></button></span>`;
     return `<tr>
       ${showDate ? `<td>${formatDateDDMMYY(r.date)}</td>` : ''}
       <td><span class="kho-purpose-chip kho-purpose-${r.purpose}">${KHO_PURPOSE_LABELS[r.purpose] || r.purpose}</span>${r.purposeNote ? ` ${escapeHTML(r.purposeNote)}` : ''}</td>
-      <td>${escapeHTML(lotsTxt)}</td><td>${fmtThanh(r.qty)}</td><td>${r.m3 ? Number(r.m3).toFixed(3) : '—'}</td><td>${escapeHTML(r.note || '')}</td></tr>`;
+      <td>${escapeHTML(lotsTxt)}</td><td title="${escapeHTML(locTitle)}">${escapeHTML(locTxt)}</td><td>${fmtThanh(r.qty)}</td><td>${r.m3 ? Number(r.m3).toFixed(3) : '—'}</td><td>${escapeHTML(r.note || '')}</td><td data-perm="x2">${adminBtns}</td></tr>`;
   }
   function khoDerivedRowHtml(r, showDate) {
     const kindLabel = { baotinh: 'Bào Tinh', bullig: 'Bullig (gia công)', say2: 'Quay lại Sấy 2' }[r.kind] || r.kind;
@@ -11004,8 +11045,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         <table class="kho-table"><thead><tr>${showDate ? '<th>Ngày</th>' : ''}<th>Lần</th><th>Mã lô</th><th>K.thước</th><th>Loại</th><th>Dùng cho</th><th>Vị trí</th><th>Thanh</th><th>m³</th></tr></thead>
         <tbody>${inRowsHtml || '<tr><td colspan="9">— Không có lô nhập trong kỳ này —</td></tr>'}</tbody></table></div>
       <div class="kho-zone kho-zone-out"><div class="kho-zone-head">XUẤT KHO (phiếu ĐÃ DUYỆT)</div>
-        <table class="kho-table"><thead><tr>${showDate ? '<th>Ngày</th>' : ''}<th>Mục đích</th><th>Lô gắn</th><th>Thanh</th><th>m³</th><th>Ghi chú</th></tr></thead>
-        <tbody>${outRowsHtml || '<tr><td colspan="6">— Không có phiếu xuất đã duyệt trong kỳ này —</td></tr>'}</tbody></table></div>
+        <table class="kho-table"><thead><tr>${showDate ? '<th>Ngày</th>' : ''}<th>Mục đích</th><th>Lô gắn</th><th>Vị trí</th><th>Thanh</th><th>m³</th><th>Ghi chú</th><th data-perm="x2"><span data-admin-only>Thao tác</span></th></tr></thead>
+        <tbody>${outRowsHtml || '<tr><td colspan="8">— Không có phiếu xuất đã duyệt trong kỳ này —</td></tr>'}</tbody></table></div>
       ${dvRowsHtml ? `<div class="kho-zone kho-zone-dv"><div class="kho-zone-head">ĐỐI CHIẾU — hệ thống suy ra (không trừ tồn)</div>
         <table class="kho-table"><thead><tr>${showDate ? '<th>Ngày</th>' : ''}<th>Nguồn</th><th>Mã lô</th><th>Thanh</th></tr></thead><tbody>${dvRowsHtml}</tbody></table></div>` : ''}
     </div>`;
@@ -11041,7 +11082,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const g = groupOf(r.date);
       if (!g) return;
       g.dates.add(r.date);
-      if (rowMatch(`${KHO_PURPOSE_LABELS[r.purpose] || ''} ${r.note} ${r.createdBy}`)) g.outRows.push(r);
+      const locTxt = (Array.isArray(r.lots) ? r.lots : []).map(l => String(l.loc || '')).join(' ');
+      if (rowMatch(`${KHO_PURPOSE_LABELS[r.purpose] || ''} ${r.note} ${r.createdBy} ${locTxt}`)) g.outRows.push(r);
     });
     derived.forEach(r => {
       if (!inRange(r.date)) return;
@@ -11227,7 +11269,13 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       // ── PHIẾU XUẤT: KHÔNG có ô số lượng — tổng = Σ số thanh của các thẻ lô đã gắn ──
       const purpose = khoNormPurpose((document.getElementById('x2-kho-purpose') || {}).value);
       const purposeNote = ((document.getElementById('x2-kho-purpose-note') || {}).value || '').trim();
-      const lots = Object.keys(khoNotePicked).map(id => ({ batchId: id, qty: khoPickedQtyOf(id) }));
+      // Snapshot VỊ TRÍ từng lô lúc tạo/sửa (l.spec loc) để sổ xuất kiểm chứng
+      // được lô đang nằm đâu — dữ liệu cũ không có lịch sử vị trí nên fallback
+      // vị trí hiện tại khi vẽ sổ (js/utils.js khoLedgerEvents).
+      const lots = Object.keys(khoNotePicked).map(id => {
+        const b = (state.batches || []).find(x => x && x.id === id);
+        return { batchId: id, qty: khoPickedQtyOf(id), loc: (b && b.location) || '' };
+      });
       const qty = lots.reduce((s, l) => s + l.qty, 0);
       if (!lots.length || qty <= 0) { showToast('Chọn ít nhất 1 THẺ LÔ để gắn phiếu — tổng phiếu tự cộng từ số thanh của các thẻ!', 'error'); return; }
       // ── CHẶN THEO TỒN TỪNG LÔ (không dùng tổng kho — sổ có thể lệch do phiếu bù cũ) ──
@@ -11276,6 +11324,27 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     resetX2KhoNoteForm(true); // giữ ngày + loại phiếu để nhập phiếu kế tiếp
     renderAll();
     showToast(isEdit ? 'Đã cập nhật phiếu kho!' : 'Đã gửi phiếu kho — chờ Ban lãnh đạo duyệt!', 'success');
+  }
+  // MỞ LẠI phiếu đã duyệt về CHỜ DUYỆT (kiểu A — chỉ Admin/Ban Quản Lý):
+  // tồn lô TỰ HỒI ngay (phiếu chờ không trừ FIFO) → sửa thêm/bớt lô ở form → duyệt lại.
+  function khoReopenNote(id) {
+    if (!requireEditPermission()) return;
+    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý mở lại được phiếu kho!', 'error'); return; }
+    const n = (state.khoNotes || []).find(x => x && x.id === id);
+    if (!n) return;
+    if (n.status !== 'da_duyet') { showToast('Chỉ mở lại được phiếu ĐÃ DUYỆT!', 'error'); return; }
+    const label = n.type === 'xuat'
+      ? `phiếu xuất ${KHO_PURPOSE_LABELS[khoNormPurpose(n.purpose)] || ''} ngày ${formatDateDDMMYY(n.date)} (${fmtThanh(n.qty)} thanh)`
+      : `phiếu xử lý ${KHO_SOURCE_LABELS[n.source] || ''} ngày ${formatDateDDMMYY(n.date)}`;
+    if (!confirm(`Mở lại ${label} về CHỜ DUYỆT để sửa thêm/bớt lô? (Tồn kho sẽ HỒI lại, duyệt lại mới trừ.)`)) return;
+    pushUndo('Mở lại phiếu kho đã duyệt');
+    const now = new Date().toISOString();
+    n.status = 'cho_duyet';
+    n.reopenedBy = khoUserKey(); n.reopenedByName = khoUserName(); n.reopenedAt = now; n.updatedAt = now;
+    saveKhoNotes();
+    khoEditNote(id); // nạp phiếu vào form để sửa thêm/bớt lô ngay
+    renderAll();
+    showToast('Đã mở lại phiếu về CHỜ DUYỆT — tồn kho đã hồi, sửa xong hãy duyệt lại!', 'success');
   }
   // XÓA PHIẾU (phiếu đã duyệt chỉ Admin/Ban Quản Lý được xóa — vì đã trừ tồn)
   function khoDeleteNote(id) {
@@ -11397,6 +11466,17 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       ? `Đã duyệt ${ok} phiếu kho — ${skipped} phiếu vượt tồn đã bị BỎ QUA (sửa số lượng rồi duyệt lại)!`
       : `Đã duyệt ${ok} phiếu kho!`, skipped ? 'error' : 'success');
   }
+  // Bấm vào 1 dòng XUẤT trong sổ (uỷ nhiệm — wire nút sổ ở js/events.js):
+  // Mở lại (kiểu A) + Xóa dòng đã duyệt — cả 2 chỉ Admin/Ban Quản Lý.
+  function khoOnLedgerClick(e) {
+    const t = e && e.target;
+    if (!t || !t.closest) return false;
+    const reopen = t.closest('[data-kho-reopen]');
+    if (reopen) { khoReopenNote(reopen.getAttribute('data-kho-reopen')); return true; }
+    const del = t.closest('[data-kho-ledger-del]');
+    if (del) { khoDeleteNote(del.getAttribute('data-kho-ledger-del')); return true; }
+    return false;
+  }
   // Bấm vào 1 dòng phiếu chờ duyệt (uỷ nhiệm sự kiện — wire trong js/events.js)
   function khoOnPendingClick(e) {
     const t = e.target;
@@ -11458,58 +11538,56 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function khoBackfillFromLegacy() {
     if (!requireEditPermission()) return;
     if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý tạo được phiếu bù dữ liệu cũ.', 'error'); return; }
-    // Σ hệ thống suy ra theo từng lô (đang ở nhóm Sấy 1/2/Kho)
-    const derived = new Map();
-    (state.batches || []).forEach(b => {
-      if (!b) return;
-      const d = khoDerivedOutOf(b.id);
-      if (d > 0) derived.set(b.id, d);
-    });
-    // Phần ĐÃ có phiếu = PHÂN BỔ HIỆN TẠI (gắn lô tường minh + phần FIFO đã trừ vào
-    // từng lô) — so với phần suy ra để CHỈ sinh phiếu cho phần còn THIẾU, chạy 2
-    // lần không sinh trùng.
-    const alloc = khoFifoAllocation();
-    const have = new Map();
-    alloc.byLot.forEach((qty, id) => have.set(id, qty));
+    // PHIẾU BÙ THEO NGÀY THẬT (từng sự kiện suy ra — không gộp tổng theo lô):
+    //   • kind 'say2' → purpose 'say2', ngày = mốc Sấy 2 ngay sau Kho trong stageHistory.
+    //   • kind 'baotinh' → purpose 'khac' (giữ quy ước: chỉ say2 không trừ tổng nhóm),
+    //     ngày = r.date của lượt Bào Tinh; 'bullig' tương tự với lượt Gia công.
+    //   • Chỉ gộp khi CÙNG lô + CÙNG ngày + CÙNG purpose; khác ngày thì tách phiếu.
+    const events = khoLedgerEvents().derived.filter(d => d && d.lotId && d.date && (Number(d.qty) || 0) > 0);
+    if (!events.length) { showToast('Không có dữ liệu cũ nào cần tạo phiếu bù — sổ kho đã khớp!', 'success'); return; }
+    // Khóa sự kiện đã CÓ phiếu đã duyệt: "lotId|date|purpose" (+ số lượng đã bù).
+    const haveEvent = new Map();
     (state.khoNotes || []).forEach(n => {
-      if (!n || !Array.isArray(n.lots)) return;
-      n.lots.forEach(l => {
+      if (!n || n.status !== 'da_duyet' || n.type !== 'xuat') return;
+      const p = khoNormPurpose(n.purpose);
+      (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
         const id = String((l && l.batchId) || '');
-        if (id && !have.has(id)) have.set(id, 0); // lô đã rời kho — phiếu cũ vẫn tính
+        if (!id) return;
+        const key = `${id}|${String(n.date || '')}|${p}`;
+        haveEvent.set(key, (haveEvent.get(key) || 0) + (Number(l.qty) || 0));
       });
+    });
+    // Gộp sự kiện CÙNG lô + CÙNG ngày + CÙNG purpose thành 1 dòng bù.
+    const groups = new Map();
+    events.forEach(d => {
+      const purpose = d.kind === 'say2' ? 'say2' : 'khac';
+      const key = `${String(d.lotId)}|${String(d.date)}|${purpose}`;
+      const cur = groups.get(key) || { lotId: String(d.lotId), date: String(d.date), purpose, qty: 0 };
+      cur.qty += Number(d.qty) || 0;
+      groups.set(key, cur);
     });
     const now = new Date().toISOString();
     const created = [];
-    derived.forEach((qty, id) => {
-      const need = Math.round(qty) - Math.round(have.get(id) || 0);
+    groups.forEach((g, key) => {
+      const need = Math.round(g.qty) - Math.round(haveEvent.get(key) || 0);
       if (need <= 0) return;
-      const b = (state.batches || []).find(x => x && x.id === id);
+      const b = (state.batches || []).find(x => x && x.id === g.lotId);
       if (!b) return;
-      // TÁCH phần "quay lại Sấy 2" (nan VẪN nằm trong nhóm Sấy 1/2/Kho) ra purpose
-      // 'say2' — purpose này KHÔNG trừ "Tổng nan trong nhà máy" / tồn Kế Hoạch,
-      // CHỈ trừ Tồn Kho. (Bản cũ gộp vào 'khac' → tổng toàn nhóm bị trừ oan.)
-      const s2Exit = khoS2ExitQtyOf(b);
-      let s2Have = 0;
-      (state.khoNotes || []).forEach(n => {
-        if (n == null || n.status !== 'da_duyet' || n.type !== 'xuat' || khoNormPurpose(n.purpose) !== 'say2') return;
-        (Array.isArray(n.lots) ? n.lots : []).forEach(l => { if (l && String(l.batchId) === id) s2Have += Number(l.qty) || 0; });
-      });
-      const s2Part = Math.max(0, Math.min(need, s2Exit - s2Have));
-      [
-        { purpose: 'khac', qty: need - s2Part, note: 'Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig trước khi có sổ kho' },
-        { purpose: 'say2', qty: s2Part, note: 'Phiếu bù tự sinh: nan QUAY LẠI SẤY 2 (vẫn nằm trong nhóm Sấy/Kho)' }
-      ].filter(p => p.qty > 0).forEach(p => created.push({
-        id: `kho-note-${Date.now()}-${created.length + 1}`, 
-        type: 'xuat', date: khoLastInDateOf(b) || b.date || '',
-        purpose: p.purpose, purposeNote: 'Khởi tạo từ dữ liệu cũ',
-        qty: p.qty, m3: calculateVolume(b.length, b.width, b.thickness, p.qty),
-        lots: [{ batchId: id, qty: p.qty }],
-        note: p.note,
+      const note = g.purpose === 'say2'
+        ? 'Phiếu bù tự sinh (NGÀY THẬT): nan QUAY LẠI SẤY 2 ngày này (vẫn nằm trong nhóm Sấy/Kho)'
+        : 'Phiếu bù tự sinh (NGÀY THẬT) từ nhật ký Bào Tinh / Bullig ngày này trước khi có sổ kho';
+      created.push({
+        id: `kho-note-${Date.now()}-${created.length + 1}`,
+        type: 'xuat', date: g.date,
+        purpose: g.purpose, purposeNote: 'Khởi tạo từ dữ liệu cũ',
+        qty: need, m3: calculateVolume(b.length, b.width, b.thickness, need),
+        lots: [{ batchId: g.lotId, qty: need, loc: b.location || '' }],
+        note,
         status: 'da_duyet',
         createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)', createdAt: now,
         approvedBy: 'system', approvedByName: 'Hệ thống (khởi tạo)', approvedAt: now,
         updatedAt: now
-      }));
+      });
     });
     if (!created.length) { showToast('Không có dữ liệu cũ nào cần tạo phiếu bù — sổ kho đã khớp!', 'success'); return; }
     const total = created.reduce((s, n) => s + n.qty, 0);
@@ -11748,15 +11826,68 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // ═════════════════════════════════════════════════════════════
   // THẺ 1 — CẮT ỐNG (x1-cat-ong-card) · nguồn = lô NL Xưởng 1
   // ═════════════════════════════════════════════════════════════
-  // Mỗi lượt = 1 lô Vầu/nứa nhập Xưởng 1 → nhập KL Ống Đạt + KL Loại;
-  // KL còn lại TỰ TÍNH = KL đầu vào − đạt − loại (âm = báo lỗi).
-  // Lô đã cắt TỰ ẨN khỏi ô chọn (đang sửa lượt cũ vẫn thấy đúng lô đó).
-  function x1CatOngMaterialIds() {
-    return new Set((state.xuong1CatOngRecords || []).map(r => r.materialId));
+  // 13/10/2026 — CẮT NHIỀU LẦN + 4 KHỐI LƯỢNG + CHỐT HAO HỤT:
+  // • 1 lô đầu vào có thể cắt NHIỀU lần (mỗi lần 1 lượt lưu).
+  //   4 ô KL: Ống Đạt · Loại · MẮT · NGỌN (mỗi ô tối đa 5 chữ số).
+  // • Tồn lô = KL đầu vào − Σ 4 KL của MỌI lượt cắt (cộng dồn;
+  //   khi tính cho lượt ĐANG SỬA thì loại trừ phần của nó).
+  //   Tồn > 0 → lô vẫn hiện ở ô chọn để cắt tiếp.
+  // • TICK "ĐÃ CẮT XONG" = XÁC NHẬN chốt: hao hụt = KL đầu vào − Σ 4 KL
+  //   được chốt và lô bị KHÓA khỏi ô chọn (vẫn sửa/xóa từ bảng).
+  //   Cờ `lotDone` (+ `doneAt`) nằm TRÊN TỪNG LƯỢT của lô → xóa 1 lượt
+  //   vẫn giữ cờ trên các lượt khác; xóa hết lượt → lô về "chưa cắt".
+  //   Sửa số liệu → hao hụt TÍNH LẠI ngay (sống, không lưu cứng).
+  // Người + giờ HC/TC = Bảng bố trí Nhân Sự, bộ phận "Xưởng 1".
+  // Định mức công suất theo tháng = state.x1Rates { <khối>: { 'YYYY-MM': kg/h } }
+  //   → Hiệu suất = Công suất thực tế (KL ÷ giờ hiệu dụng) ÷ Định mức.
+  //
+  // CHUỖI LIÊN KẾT (giống mẫu X2: Bổ Ống ← Cắt Chọn):
+  //   Cắt Ống  ← lô NL Xưởng 1
+  //   Sấy Sinh ← lượt Cắt Ống   (tiêu thụ phần ống ĐẠT chưa sấy)
+  //   Bốc      ← lượt Sấy Sinh  (tiêu thụ phần đã sấy chưa bốc)
+  // Tồn của công đoạn trước = phần CHƯA bị công đoạn sau tiêu thụ →
+  // xong hết tự ẨN khỏi ô chọn; đang sửa 1 lượt thì phần của nó được trả lại.
+  // (nguồn lô = x1IsCayLot/x1MaterialInputs — khai báo phía trên, CHỈ lô chữ "CÂY")
+  // ─── CẮT NHIỀU LẦN: TỒN LÔ CỘNG DỒN + CỜ "ĐÃ CẮT XONG" ──────
+  // (13/10/2026) — 4 KL của MỌI lượt cắt cùng lô được CỘNG DỒN;
+  // cờ chốt sống TRÊN record (`lotDone`) nên đi theo storage/mây/history
+  // sẵn có, không cần khóa state mới.
+  // Tổng 4 KL đã cắt của 1 lô — excludeId = lượt ĐANG SỬA (trả lại phần nó)
+  function x1CatOngLotUsedOf(materialId, excludeId) {
+    return (state.xuong1CatOngRecords || [])
+      .filter(r => r.materialId === materialId && r.id !== excludeId)
+      .reduce((s, r) => s + (Number(r.klDat) || 0) + (Number(r.klLoai) || 0) +
+        (Number(r.klMat) || 0) + (Number(r.klNgon) || 0), 0);
   }
+  // Phần CHƯA CẮT của lô (không âm)
+  function x1CatOngLotRemainingOf(mat, excludeId) {
+    if (!mat) return 0;
+    return Math.max(0, materialInputWeightOf(mat) - x1CatOngLotUsedOf(mat.id, excludeId));
+  }
+  // Lô đã được xác nhận "ĐÃ CẮT XONG"? (cờ trên bất kỳ lượt nào của lô)
+  function x1CatOngLotDoneOf(materialId) {
+    return (state.xuong1CatOngRecords || []).some(r => r.materialId === materialId && r.lotDone);
+  }
+  // Số lượt cắt đã ghi của 1 lô
+  function x1CatOngLotTurnsOf(materialId) {
+    return (state.xuong1CatOngRecords || []).filter(r => r.materialId === materialId).length;
+  }
+  // Gắn/gỡ cờ "ĐÃ CẮT XONG" trên MỌI lượt của lô (chốt = gắn hết · mở = gỡ hết)
+  function x1CatOngMarkLotDone(materialId, done) {
+    const nowIso = new Date().toISOString();
+    (state.xuong1CatOngRecords || []).forEach(r => {
+      if (r.materialId !== materialId) return;
+      if (done) {
+        if (!r.lotDone) { r.lotDone = true; r.doneAt = nowIso; }
+      } else {
+        delete r.lotDone; delete r.doneAt;
+      }
+    });
+  }
+  // LÔ CHỜ CẮT = lô chữ "cây" CHƯA chốt xong VÀ còn phần chưa cắt
   function x1CatOngPendingInputs() {
-    const used = x1CatOngMaterialIds();
-    return x1MaterialInputs().filter(r => !used.has(r.id));
+    return x1MaterialInputs().filter(m =>
+      !x1CatOngLotDoneOf(m.id) && x1CatOngLotRemainingOf(m, null) > 0);
   }
   // Lượt Cắt Ống còn CHƯA được Sấy Sinh tiêu thụ hết → vẫn hiện ở ô chọn
   function x1CatOngRemainingOf(rec, excludeId) {
@@ -11788,17 +11919,30 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const inputWeight = mat ? materialInputWeightOf(mat) : (Number(r.inputWeight) || 0);
     const klDat  = Number(r.klDat) || 0;
     const klLoai = Number(r.klLoai) || 0;
+    const klMat  = Number(r.klMat) || 0;   // KL Mắt (kg) — 13/10/2026
+    const klNgon = Number(r.klNgon) || 0;  // KL Ngọn (kg) — 13/10/2026
+    const turnKg = klDat + klLoai + klMat + klNgon; // KL cắt được của LƯỢT này
     const live = x1CatOngAssignmentsOf(r.date || '');
     const hours = live.length ? sumPosHoursSplitX1(live, r.date || '') : null;
     const workHours = hours ? hours.hc + hours.tc : (Number(r.workHours) || 0);
+    // Số liệu CẤP LÔ (cộng dồn mọi lượt) — dùng cho cột "Còn lại" + cờ chốt
+    const lotUsed = x1CatOngLotUsedOf(r.materialId, null);
+    const lotRemaining = Math.max(0, inputWeight - lotUsed);
+    const lotDone = x1CatOngLotDoneOf(r.materialId);
     return {
       date: r.date || '',
       materialType: mat ? (mat.type || '') : (r.materialType || ''),
       supplier: mat ? (mat.supplier || '') : (r.supplier || ''),
       supplierCode: mat ? supplierCodeOf(mat.supplier) : supplierCodeOf(r.supplier || ''),
-      inputWeight, klDat, klLoai,
-      remain: inputWeight - klDat - klLoai,
+      inputWeight, klDat, klLoai, klMat, klNgon, turnKg,
+      remain: inputWeight - klDat - klLoai,   // còn lại của LƯỢT này (giữ ý nghĩa cũ)
       ratio: inputWeight > 0 ? (klDat / inputWeight) * 100 : null,
+      // Cấp lô: phần CHƯA cắt · số lượt · đã chốt? · hao hụt (chỉ có nghĩa khi chốt)
+      lotRemaining, lotUsed,
+      lotTurns: x1CatOngLotTurnsOf(r.materialId),
+      lotDone,
+      loss: lotDone ? lotRemaining : null,
+      doneAt: r.doneAt || '',
       note: r.note || '',
       workerRows: x1WorkerRows(r, live),
       workHours,
@@ -11812,22 +11956,38 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!sel) return;
     const editing = state.x1CatOngEditId
       ? (state.xuong1CatOngRecords || []).find(r => r.id === state.x1CatOngEditId) : null;
-    const used = x1CatOngMaterialIds();
-    const mats = x1MaterialInputs().filter(r => !used.has(r.id) || (editing && r.id === editing.materialId));
+    // CẮT NHIỀU LẦN: lô vẫn hiện khi CHƯA chốt xong VÀ còn phần chưa cắt
+    const mats = x1MaterialInputs().filter(m =>
+      (!x1CatOngLotDoneOf(m.id) && x1CatOngLotRemainingOf(m, null) > 0) ||
+      (editing && m.id === editing.materialId));
     sel.innerHTML = mats.length
-      ? mats.map(r => `<option value="${escapeHTML(r.id)}">${escapeHTML(r.type || 'Vầu/nứa')} · NCC ${escapeHTML(r.supplier || '—')} · ${formatDateDDMMYY(r.date)} · ${fmtKg(materialInputWeightOf(r))} kg</option>`).join('')
+      ? mats.map(m => {
+          const w = materialInputWeightOf(m);
+          const rest = x1CatOngLotRemainingOf(m, null);
+          const turns = x1CatOngLotTurnsOf(m.id);
+          const done = x1CatOngLotDoneOf(m.id);
+          // Nhãn ghi rõ còn bao nhiêu + số lượt (lô cắt nhiều lần)
+          const cutTxt = turns
+            ? (done
+                ? ` · ✓ đã chốt xong (hao hụt ${fmtKg(w - x1CatOngLotUsedOf(m.id, null))} kg)`
+                : ` · đã cắt ${turns} lần · còn ${fmtKg(rest)} / ${fmtKg(w)} kg`)
+            : ` · ${fmtKg(w)} kg`;
+          return `<option value="${escapeHTML(m.id)}"${turns ? ' class="co-has-cut"' : ''}>${escapeHTML(m.type || 'Vầu/nứa')} · NCC ${escapeHTML(m.supplier || '—')} · ${formatDateDDMMYY(m.date)}${cutTxt}</option>`;
+        }).join('')
       : `<option value="">— Hết lô có chữ "cây" (Vầu cây, Nứa cây...) chờ cắt — nhập thêm ở tab Nguyên Liệu · Xưởng 1 —</option>`;
     x1CatOngSyncLinked(true);
   }
-  // Đổi lô (hoặc đang sửa): điền sẵn KL Ống Đạt = toàn bộ KL đầu vào
+  // Đổi lô (hoặc đang sửa): điền sẵn KL Ống Đạt = phần CHƯA CẮT của lô
+  // (cắt nhiều lần → chỉ điền phần còn lại, không điền cả đầu vào)
   function x1CatOngSyncLinked(autoFill) {
     const sel = document.getElementById('x1-cat-ong-material');
     const mat = (state.materialRecords || []).find(m => m.id === (sel ? sel.value : '')) || null;
-    const w = mat ? materialInputWeightOf(mat) : 0;
+    const rest = mat ? x1CatOngLotRemainingOf(mat, null) : 0;
     const datEl = document.getElementById('x1-cat-ong-kl-dat');
-    if (autoFill && datEl && !datEl.value) datEl.value = w > 0 ? String(Math.round(w)) : '';
+    if (autoFill && datEl && !datEl.value) datEl.value = rest > 0 ? String(Math.round(rest)) : '';
     x1CatOngCalc();
   }
+  // Ô tự tính: 4 KL + tồn lô cộng dồn + hao hụt (nếu chốt)
   function x1CatOngCalc() {
     const box = document.getElementById('x1-cat-ong-calc');
     if (!box) return;
@@ -11836,14 +11996,39 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const inputWeight = mat ? materialInputWeightOf(mat) : 0;
     const val = id => Number((document.getElementById(id) || {}).value) || 0;
     const dat = val('x1-cat-ong-kl-dat'), loai = val('x1-cat-ong-kl-loai');
-    const rest = inputWeight - dat - loai;
-    const ratio = inputWeight > 0 ? (dat / inputWeight) * 100 : null;
+    const matKg = val('x1-cat-ong-kl-mat'), ngon = val('x1-cat-ong-kl-ngon');
+    // Đã cắt TRƯỚC lần này (loại trừ nếu đang sửa 1 lượt cũ)
+    const editing = state.x1CatOngEditId
+      ? (state.xuong1CatOngRecords || []).find(r => r.id === state.x1CatOngEditId) : null;
+    const usedBefore = mat ? x1CatOngLotUsedOf(mat.id, editing ? editing.id : null) : 0;
+    const turnKg = dat + loai + matKg + ngon;
+    const rest = inputWeight - usedBefore - turnKg;          // phần CHƯA cắt sau lần này
+    const ratio = inputWeight > 0 ? ((usedBefore + dat) / inputWeight) * 100 : null; // QĐ lũy kế
+    const lossIfDone = Math.max(0, rest);                    // hao hụt nếu chốt ngay lúc này
+    const turns = mat ? x1CatOngLotTurnsOf(mat.id) : 0;
     box.innerHTML = `
       <span>Đầu vào: <strong>${fmtKg(inputWeight)} kg</strong></span>
+      ${usedBefore > 0 ? `<span>Đã cắt trước: <strong>${fmtKg(usedBefore)} kg</strong> (${turns} lượt)</span>` : ''}
+      <span>Lần này: <strong>${fmtKg(turnKg)} kg</strong></span>
       <span>Còn lại: <strong style="color:${rest < 0 ? '#dc2626' : 'inherit'};">${fmtKg(rest)} kg</strong></span>
+      <span>Hao hụt (nếu chốt): <strong style="color:#b45309;">${fmtKg(lossIfDone)} kg</strong></span>
       <span>Tỷ lệ QĐ: <strong style="color:#0f766e;">${ratio == null ? '—' : fmtRatio(ratio) + '%'}</strong></span>`;
+    // Dòng gợi ý cạnh checkbox "Đã cắt xong"
+    const hint = document.getElementById('x1-cat-ong-done-hint');
+    if (hint) {
+      const doneEl = document.getElementById('x1-cat-ong-done');
+      const willDone = !!(doneEl && doneEl.checked);
+      hint.textContent = !mat ? ''
+        : willDone
+          ? `Sẽ CHỐT lô — hao hụt ${fmtKg(lossIfDone)} kg, lô khóa khỏi ô chọn.`
+          : (rest > 0 ? `Còn ${fmtKg(rest)} kg chưa cắt — tick "Đã cắt xong" để chốt.` : 'Lô đã đủ — tick "Đã cắt xong" để chốt hao hụt.');
+      hint.classList.toggle('is-done', willDone);
+    }
   }
-  // ─── LƯU LƯỢT CẮT ỐNG ────────────────────────────────────────
+  // ─── LƯU LƯỢT CẮT ỐNG (4 KL · cắt nhiều lần · tick "Đã cắt xong") ──
+  // Giới hạn: mỗi ô ≤ 99.999 kg (5 chữ số) · Σ 4 KL MỌI lượt ≤ KL đầu vào.
+  // Tick "Đã cắt xong" → confirm hiện hao hụt (= đầu vào − Σ cộng dồn) →
+  // gắn cờ lotDone trên MỌI lượt của lô → lô khóa khỏi ô chọn.
   function handleX1CatOngSubmit(e) {
     e.preventDefault();
     if (!requireEditPermission()) return;
@@ -11856,10 +12041,62 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!dateVal) { showToast('Ngày cắt ống không được để trống!', 'error'); return; }
     const val = id => Number((document.getElementById(id) || {}).value) || 0;
     const klDat = val('x1-cat-ong-kl-dat'), klLoai = val('x1-cat-ong-kl-loai');
-    if (klDat < 0 || klLoai < 0) { showToast('Các khối lượng phải là số không âm!', 'error'); return; }
+    const klMat = val('x1-cat-ong-kl-mat'), klNgon = val('x1-cat-ong-kl-ngon');
+    if (klDat < 0 || klLoai < 0 || klMat < 0 || klNgon < 0) {
+      showToast('Các khối lượng phải là số không âm!', 'error'); return;
+    }
+    // Ô nhập TỐI ĐA 5 CHỮ SỐ (99.999 kg) — chặn cả khi dán/paste số to
+    const X1_CO_MAX = 99999;
+    if ([klDat, klLoai, klMat, klNgon].some(v => v > X1_CO_MAX)) {
+      showToast(`Mỗi ô khối lượng chỉ tối đa ${X1_CO_MAX.toLocaleString('vi-VN')} kg (5 chữ số) — kiểm tra lại!`, 'error'); return;
+    }
     const inputWeight = materialInputWeightOf(mat);
-    if (klDat + klLoai > inputWeight + 1e-9) {
-      showToast('KL Ống Đạt + KL Loại đã vượt KL đầu vào — kiểm tra lại!', 'error'); return;
+    // Đã cắt TRƯỚC lần này (đang sửa 1 lượt → loại trừ phần của nó)
+    const editing = state.x1CatOngEditId
+      ? (state.xuong1CatOngRecords || []).find(r => r.id === state.x1CatOngEditId) : null;
+    const usedBefore = x1CatOngLotUsedOf(materialId, editing ? editing.id : null);
+    const turnKg = klDat + klLoai + klMat + klNgon;
+    if (usedBefore + turnKg > inputWeight + 1e-9) {
+      showToast(`Đã cắt trước ${fmtKg(usedBefore)} + lần này ${fmtKg(turnKg)} = ${fmtKg(usedBefore + turnKg)} kg VƯỢT KL đầu vào ${fmtKg(inputWeight)} kg — kiểm tra lại!`, 'error'); return;
+    }
+    // Sửa lượt cũ: KHÔNG cho hạ KL Ống Đạt xuống dưới phần Sấy Sinh ĐÃ LẤY
+    if (editing) {
+      const ssUsed = (state.xuong1SaySinhRecords || [])
+        .filter(r => r.catOngId === editing.id)
+        .reduce((s, r) => s + (Number(r.qty) || 0), 0);
+      if (klDat + 1e-9 < ssUsed) {
+        showToast(`KL Ống Đạt (${fmtKg(klDat)} kg) nhỏ hơn phần Sấy Sinh ĐÃ LẤY (${fmtKg(ssUsed)} kg) — không chỉnh xuống được!`, 'error'); return;
+      }
+    }
+    // XÁC NHẬN "ĐÃ CẮT XONG" — hiện hao hụt TRƯỚC khi ghi
+    const doneEl = document.getElementById('x1-cat-ong-done');
+    const wantDone = !!(doneEl && doneEl.checked);
+    const wasDone = x1CatOngLotDoneOf(materialId);
+    const lossAfter = Math.max(0, inputWeight - (usedBefore + turnKg));
+    if (wantDone && !wasDone) {
+      if (!confirm(`XÁC NHẬN CHỐT LÔ "${mat.type || 'Vầu/nứa'}"?\n\nĐầu vào: ${fmtKg(inputWeight)} kg\nĐã cắt cộng dồn (sau lượt này): ${fmtKg(usedBefore + turnKg)} kg\nHAO HỤT = ${fmtKg(lossAfter)} kg\n\nLô sẽ bị KHÓA khỏi ô chọn (vẫn sửa/xóa được từ bảng lịch sử).`)) {
+        showToast('Đã hủy chốt — lượt CHƯA được lưu.', 'info'); return;
+      }
+    } else if (!wantDone && wasDone) {
+      if (!confirm('Lô này ĐÃ CHỐT xong.\n\nBấm OK để MỞ LẠI lô (cho phép cắt tiếp) — hoặc Hủy để giữ nguyên trạng thái.')) {
+        showToast('Đã hủy — giữ nguyên trạng thái đã chốt.', 'info'); return;
+      }
+    }
+    // LƯỢT MỚI mà 4 ô KL đều 0 → không tạo record rỗng:
+    //   • tick "Đã cắt xong" → CHỈ chốt lô (người dùng xác nhận lô đã cắt hết
+    //     ở các lượt trước, không ghi thêm lượt)
+    //   • không tick → báo lỗi (chưa có gì để lưu)
+    if (!state.x1CatOngEditId && turnKg === 0) {
+      if (wantDone) {
+        x1CatOngMarkLotDone(materialId, true);
+        saveXuong1CatOng();
+        showToast(`✓ Đã CHỐT lô — hao hụt ${fmtKg(lossAfter)} kg.`, 'success');
+        resetX1CatOngForm();
+        renderX1CatOngCard();
+      } else {
+        showToast('Nhập khối lượng lần cắt (hoặc tick "Đã cắt xong" để chốt lô)!', 'error');
+      }
+      return;
     }
     const note = (((document.getElementById('x1-cat-ong-note') || {}).value) || '').trim();
     const snap = x1Snapshot(dateVal, x1CatOngAssignmentsOf(dateVal)); // người + giờ Xưởng 1
@@ -11871,7 +12108,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       inputWeight,
       date: dateVal,
       week: materialWeekLabel(dateVal),
-      klDat, klLoai,
+      klDat, klLoai, klMat, klNgon,
       worker: snap.names, workTime: snap.timeStr,
       workHours: snap.hours, workHoursHC: snap.hc, workHoursTC: snap.tc,
       note
@@ -11891,6 +12128,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       saveXuong1CatOng();
       showToast('Đã ghi lượt cắt ống!', 'success');
     }
+    // Gắn/gỡ cờ "ĐÃ CẮT XONG" trên MỌI lượt của lô (sau khi đã lưu record)
+    x1CatOngMarkLotDone(materialId, wantDone);
+    if (wantDone) {
+      saveXuong1CatOng(); // persist cờ + doneAt
+      showToast(`✓ Đã CHỐT lô — hao hụt ${fmtKg(lossAfter)} kg.`, 'success');
+    } else if (wasDone) {
+      saveXuong1CatOng();
+      showToast('Đã MỞ LẠI lô — có thể cắt tiếp.', 'info');
+    }
     resetX1CatOngForm();
     renderX1CatOngCard();
   }
@@ -11909,6 +12155,14 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (dat) dat.value = (rec.klDat ?? '') === '' ? '' : String(rec.klDat);
     const loai = document.getElementById('x1-cat-ong-kl-loai');
     if (loai) loai.value = (rec.klLoai ?? '') === '' ? '' : String(rec.klLoai);
+    // Khôi phục 2 ô mới (13/10/2026) — lượt cũ thiếu trường → hiểu bằng 0/trống
+    const matEl = document.getElementById('x1-cat-ong-kl-mat');
+    if (matEl) matEl.value = (rec.klMat ?? '') === '' ? '' : String(rec.klMat);
+    const ngonEl = document.getElementById('x1-cat-ong-kl-ngon');
+    if (ngonEl) ngonEl.value = (rec.klNgon ?? '') === '' ? '' : String(rec.klNgon);
+    // Tick "Đã cắt xong" = trạng thái CHỐT CỦA LÔ (không phải của riêng lượt này)
+    const doneEl = document.getElementById('x1-cat-ong-done');
+    if (doneEl) doneEl.checked = x1CatOngLotDoneOf(rec.materialId);
     const note = document.getElementById('x1-cat-ong-note');
     if (note) note.value = rec.note || '';
     x1CatOngSyncLinked(false);
@@ -11934,6 +12188,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function resetX1CatOngForm() {
     const f = document.getElementById('x1-cat-ong-form');
     if (f) f.reset();
+    // Stub/test không chạy reset() thật → tự clear checkbox "Đã cắt xong"
+    const doneEl = document.getElementById('x1-cat-ong-done');
+    if (doneEl) doneEl.checked = false;
     state.x1CatOngEditId = null;
     fillX1CatOngOptions();
     x1CatOngSyncLinked(true);
@@ -11968,15 +12225,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     updateXuong2CardCounts();
   }
 
-  // Thanh TỒN: lô Vầu/nứa Xưởng 1 CHƯA cắt
+  // Thanh TỒN: lô Vầu/nứa Xưởng 1 CHƯA cắt xong (cộng dồn phần CHƯA cắt)
   function renderX1CatOngStockBar() {
     const bar = document.getElementById('x1-cat-ong-stock-bar');
     if (!bar) return;
     const pending = x1CatOngPendingInputs();
-    const totalW = pending.reduce((s, r) => s + materialInputWeightOf(r), 0);
+    const totalW = pending.reduce((s, r) => s + x1CatOngLotRemainingOf(r, null), 0);
     bar.innerHTML = pending.length
-      ? `<span class="x2-stock-title" title="Tổng khối lượng lô nguyên liệu CÓ CHỮ CÂY (Vầu cây, Nứa cây...) nhập Xưởng 1 CHƯA được cắt — chi tiết từng lô ở ô chọn trong form"><i data-lucide="boxes"></i> Tồn chờ cắt: <strong>${pending.length} lô · ${fmtKg(totalW)} kg</strong></span>`
-      : `<span class="x2-stock-title" title="Tất cả lô Vầu/nứa Xưởng 1 đã được cắt"><i data-lucide="check-circle-2"></i> Tồn chờ cắt: <strong>Hết tồn</strong></span>`;
+      ? `<span class="x2-stock-title" title="Tổng phần CHƯA CẮT của các lô chữ CÂY (Vầu cây, Nứa cây...) nhập Xưởng 1 — lô cắt nhiều lần được cộng dồn; tick 'Đã cắt xong' để chốt hao hụt + khóa lô"><i data-lucide="boxes"></i> Tồn chờ cắt: <strong>${pending.length} lô · ${fmtKg(totalW)} kg</strong></span>`
+      : `<span class="x2-stock-title" title="Tất cả lô Vầu/nứa Xưởng 1 đã được cắt xong (đã chốt hao hụt)"><i data-lucide="check-circle-2"></i> Tồn chờ cắt: <strong>Hết tồn</strong></span>`;
     initLucide();
   }
 
@@ -11984,14 +12241,34 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const box = document.getElementById('x1-cat-ong-stats');
     if (!box) return;
     const disp = (state.xuong1CatOngRecords || []).map(x1CatOngDisplay);
-    const totalIn   = disp.reduce((s, d) => s + d.inputWeight, 0);
+    // Tổng KL đầu vào = cộng dồn ĐỘC NHẤT theo lô (tránh đếm trùng nhiều lượt)
+    const inByMat = {};
+    (state.xuong1CatOngRecords || []).forEach(r => {
+      const m = (state.materialRecords || []).find(x => x.id === r.materialId);
+      inByMat[r.materialId] = m ? materialInputWeightOf(m) : (Number(r.inputWeight) || 0);
+    });
+    const totalIn = Object.values(inByMat).reduce((s, w) => s + w, 0);
     const totalDat  = disp.reduce((s, d) => s + d.klDat, 0);
     const totalLoai = disp.reduce((s, d) => s + Math.max(0, d.klLoai), 0);
+    const totalMat  = disp.reduce((s, d) => s + d.klMat, 0);   // KL Mắt
+    const totalNgon = disp.reduce((s, d) => s + d.klNgon, 0);  // KL Ngọn
+    // Số lô đã CHỐT xong + tổng hao hụt đã chốt
+    const doneMats = new Set((state.xuong1CatOngRecords || [])
+      .filter(r => r.lotDone).map(r => r.materialId));
+    const totalLoss = [...doneMats].reduce((s, mid) => {
+      const m = (state.materialRecords || []).find(x => x.id === mid);
+      if (!m) return s;
+      return s + Math.max(0, materialInputWeightOf(m) - x1CatOngLotUsedOf(mid, null));
+    }, 0);
     box.innerHTML = `
       <div class="material-stat"><span class="material-stat-value">${disp.length}</span><span class="material-stat-label">Lượt cắt ống</span></div>
       <div class="material-stat"><span class="material-stat-value">${Math.round(totalIn).toLocaleString('vi-VN')}</span><span class="material-stat-label">Tổng KL đầu vào (kg)</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(totalDat)}</span><span class="material-stat-label">Tổng KL ống đạt (kg)</span></div>
-      <div class="material-stat"><span class="material-stat-value">${fmtKg(totalLoai)}</span><span class="material-stat-label">Tổng KL loại (kg)</span></div>`;
+      <div class="material-stat"><span class="material-stat-value">${fmtKg(totalLoai)}</span><span class="material-stat-label">Tổng KL loại (kg)</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtKg(totalMat)}</span><span class="material-stat-label">Tổng KL mắt (kg)</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtKg(totalNgon)}</span><span class="material-stat-label">Tổng KL ngọn (kg)</span></div>
+      <div class="material-stat"><span class="material-stat-value">${doneMats.size}</span><span class="material-stat-label">Lô đã chốt xong</span></div>
+      <div class="material-stat"><span class="material-stat-value" style="color:#b45309;">${fmtKg(totalLoss)}</span><span class="material-stat-label">Tổng hao hụt (đã chốt)</span></div>`;
   }
 
   // Thẻ ngày — dùng chung x1RenderDayCards
@@ -12001,7 +12278,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       countId: 'x1-cat-ong-table-count',
       records: state.xuong1CatOngRecords || [],
       disp: x1CatOngDisplay,
-      qtyOf: r => Number(r.inputWeight) || 0,   // công suất tính theo KL ĐẦU VÀO
+      // Công suất tính theo KL CẮT ĐƯỢC CỦA LƯỢT (turnKg) — cắt nhiều lần
+      // không bị đếm trùng đầu vào; lượt đã CHỐT thì tính phần hao hụt riêng.
+      qtyOf: r => (Number(r.klDat) || 0) + (Number(r.klLoai) || 0) + (Number(r.klMat) || 0) + (Number(r.klNgon) || 0),
       incKey: 'x1catong',
       rateKind: 'catOng',
       headName: 'Người cắt',
@@ -12009,7 +12288,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       emptyText: 'Chưa có lượt cắt ống nào.<br>Chọn <strong>lô Vầu/nứa nhập Xưởng 1</strong> ở form trên rồi bấm <strong>Lưu Lượt Cắt Ống</strong>.',
       thead: `<th>Loại nguyên liệu</th><th>Nhà cung cấp</th>
               <th class="text-right">KL đầu vào</th><th class="text-right">KL ống đạt</th>
-              <th class="text-right">KL loại</th><th class="text-right">Còn lại</th>
+              <th class="text-right">KL loại</th><th class="text-right">KL mắt</th>
+              <th class="text-right">KL ngọn</th><th class="text-right">Còn lại (lô)</th>
               <th class="text-right">Tỷ lệ QĐ</th><th>Ghi chú</th><th class="text-right">Thao tác</th>`,
       rowHtml: (r, d) => `
         <tr class="x2-day-row">
@@ -12018,7 +12298,11 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.inputWeight)}</strong></td>
           <td class="text-right">${fmtKg(d.klDat)}</td>
           <td class="text-right"><strong style="color:#b45309;">${fmtKg(d.klLoai)}</strong></td>
-          <td class="text-right">${fmtKg(d.remain)}</td>
+          <td class="text-right">${fmtKg(d.klMat)}</td>
+          <td class="text-right">${fmtKg(d.klNgon)}</td>
+          <td class="text-right">${d.lotDone
+            ? `<span class="x1-co-done-tag" title="Lô đã CHỐT ${d.doneAt ? formatDateDDMMYY(d.doneAt.slice(0, 10)) : ''} — hao hụt ${fmtKg(d.loss)} kg">✓ chốt · hao hụt ${fmtKg(d.loss)}</span>`
+            : fmtKg(d.lotRemaining)}</td>
           <td class="text-right"><strong style="color:#0f766e;">${d.ratio == null ? '—' : fmtRatio(d.ratio) + '%'}</strong></td>
           <td>${d.note ? `<div class="x2-row-note">${escapeHTML(d.note)}</div>` : '<span style="color:var(--text-muted);">—</span>'}</td>
           <td class="text-right">
@@ -13095,7 +13379,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (cardId === 'x1-cat-ong-card') {
       const pend = x1CatOngPendingInputs();
       if (!pend.length) return 'Hết tồn';
-      return `Tồn ${fmtKg(pend.reduce((s, r) => s + materialInputWeightOf(r), 0))} kg`;
+      // Cộng dồn phần CHƯA CẮT của từng lô (cắt nhiều lần)
+      return `Tồn ${fmtKg(pend.reduce((s, r) => s + x1CatOngLotRemainingOf(r, null), 0))} kg`;
     }
     if (cardId === 'x1-say-sinh-card') {
       const pend = (state.xuong1CatOngRecords || []).filter(c => x1CatOngRemainingOf(c, null) > 0);
@@ -13231,6 +13516,12 @@ export {
   x1SaySinhCalc,
   x1BocCalc,
   x1CatOngRemainingOf,
+  // ── CẮT NHIỀU LẦN + CHỐT HAO HỤT (13/10/2026) — helper cộng dồn/cờ ──
+  x1CatOngLotUsedOf,
+  x1CatOngLotRemainingOf,
+  x1CatOngLotDoneOf,
+  x1CatOngLotTurnsOf,
+  x1CatOngMarkLotDone,
   x1SaySinhRemainingOf,
   x1CardCountText,
   // ── YÊU CẦU 12/10/2026: lọc lô "cây" + bỏ qua Cắt Mắt ──
@@ -13302,7 +13593,9 @@ export {
   khoNoteSizeTooltip,
   baoTinhTopOtherStock,
   khoOnPendingClick,
+  khoOnLedgerClick,
   khoOnWipClick,
+  khoReopenNote,
   handleKhoNoteSubmit,
   resetX2KhoNoteForm,
   khoEditNote,
@@ -13317,6 +13610,7 @@ export {
   bulligDefectStock,
   nanRejectStock,
   khoLotPickerList,
+  khoStageDaysOf,
   khoAvailableForApproval,
   khoLotsOverflow,
   khoApproveCheckError,

@@ -8241,8 +8241,18 @@ body[data-fx="low"] tr.cap-row { transition: none; }
 
 /* ĐIỆN THOẠI: bảng cuộn ngang, chữ gọn, nhãn tuần không chiếm chỗ */
 @media (max-width: 639.98px) {
-  .cap-toolbar { width: 100%; justify-content: space-between; }
-  .cap-week-label { min-width: 0; font-size: 0.76rem; }
+  .cap-toolbar { width: 100%; justify-content: space-between; gap: 6px; }
+  /* Gọn toolbar: icon-only cho cụm Biểu đồ/Bảng + In/Thu gọn — giữ chữ Tuần/Tháng
+     vì 2 icon lịch dễ nhầm; chữ ẩn bằng CSS nên desktop + đọc màn hình vẫn đủ */
+  .cap-view-toggle .pv-unit-btn { padding: 4px 10px; min-height: 34px; }
+  .cap-view-toggle .pv-unit-btn svg { width: 16px; height: 16px; }
+  .cap-view-toggle .cap-btn-text { display: none; }
+  .cap-period-toggle .pv-unit-btn { padding: 4px 10px; font-size: 0.72rem; min-height: 34px; }
+  .cap-period-toggle .pv-unit-btn svg { width: 14px; height: 14px; }
+  #btn-cap-print, #btn-toggle-capacity { padding: 4px 10px; min-height: 34px; }
+  #btn-cap-print .cap-btn-text, #btn-toggle-capacity .cap-btn-text { display: none; }
+  #btn-cap-print svg, #btn-toggle-capacity svg { width: 16px; height: 16px; }
+  .cap-week-label { min-width: 0; font-size: 0.74rem; flex: 1; overflow: hidden; text-overflow: ellipsis; }
   .cap-week-btn { width: 34px; height: 34px; }
   .cap-table th, .cap-table td { font-size: 0.76rem; }
   .cap-sub-table th, .cap-sub-table td { font-size: 0.74rem; padding: 5px 7px; }
@@ -9828,3 +9838,414 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   .x2-ht-worker-tools .btn { min-height: 44px; }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   THẺ CẮT ỐNG XƯỞNG 1 — 4 Ô KHỐI LƯỢNG HẸP + HÀNG "ĐÃ CẮT XONG"
+   (13/10/2026): ô nhập TỐI ĐA 5 CHỮ SỐ (99.999 kg) nên chỉ cần ô
+   vừa phải ~104px — form gọn, không tràn lan; 1 lô cắt NHIỀU lần
+   được → hàng checkbox "Đã cắt xong" chốt hao hụt + khóa lô.
+   ══════════════════════════════════════════════════════════════════ */
+#x1-cat-ong-card .x1-co-kg {
+  flex: 0 0 104px;         /* cố định bề rộng — 4 ô + Ngày vừa 1 hàng */
+  min-width: 0;            /* cho phép co nếu khung hẹp (điện thoại) */
+}
+#x1-cat-ong-card .x1-co-kg input[type="number"] {
+  width: 100%;
+  max-width: 104px;
+  text-align: right;                 /* số thẳng cột — dễ cộng nhẩm */
+  font-variant-numeric: tabular-nums;
+}
+#x1-cat-ong-card .x1-co-kg label {
+  font-size: 0.74rem;                /* nhãn gọn — không chiếm 2 dòng */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Hàng xác nhận ĐÃ CẮT XONG (checkbox + gợi ý hao hụt live) */
+.x1-co-done-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 2px;
+  padding: 7px 10px;
+  border: 1px dashed rgba(217, 119, 6, 0.5);
+  border-radius: 8px;
+  background: rgba(217, 119, 6, 0.06);
+}
+.x1-co-done-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #b45309;                    /* tông hổ phách — nổi hơn ô thường */
+  cursor: pointer;
+  user-select: none;
+}
+.x1-co-done-label input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #b45309;
+  cursor: pointer;
+}
+.x1-co-done-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.x1-co-done-hint.is-done { color: #b45309; font-weight: 700; }
+/* Chip "✓ ĐÃ CẮT XONG · hao hụt X kg" trên thẻ/bảng lịch sử */
+.x1-co-done-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.14);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  white-space: nowrap;
+}
+/* Ô chọn lô: nhãn ghi rõ còn bao nhiêu (cắt nhiều lần) */
+#x1-cat-ong-material option.co-has-cut {
+  color: #b45309;
+  font-weight: 700;
+}
+@media (max-width: 639.98px) {
+  /* Điện thoại: 4 ô KL xếp 2×2, vẫn giữ ô vừa phải */
+  #x1-cat-ong-card .x1-co-kg { flex: 1 1 calc(50% - 6px); }
+  #x1-cat-ong-card .x1-co-kg input[type="number"] { max-width: 100%; font-size: 16px; }
+  .x1-co-done-label { font-size: 0.8rem; }
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   FORM "CHUYỂN KHO" — UI 14/10/2026: 4 KHỐI TRỰC QUAN (không stepper,
+   không dropdown nổi) · 2 CỘT CHECK Chuyển Kho / Tóp xử lý lại ·
+   CHỈ TOOLTIP cho chú thích · modal KHÔNG khung bao (.ck-flat).
+   ═══════════════════════════════════════════════════════════════════ */
+/* Chốt chặn: mọi phần tử [hidden] PHẢI ẩn thật — không để display:flex/block
+   của CSS đè mất thuộc tính hidden của trình duyệt (gây "không đóng được") */
+[hidden] { display: none !important; }
+/* Modal Chuyển Kho: bỏ khung bao trang trí — phẳng, hiện đại, dễ đọc */
+#modal-transfer-kho .modal-card.ck-flat {
+  border: none;
+  border-image: none;
+}
+/* ── KHỐI ①②③④: thẻ trực quan, số thứ tự to, nhãn Bắt buộc/Không bắt buộc ── */
+.ck-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+.ck-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: help;                    /* di chuột/chạm giữ = hiện tooltip giải thích */
+  flex-wrap: wrap;
+}
+.ck-sec-num {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.ck-sec-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+/* Nhãn "Bắt buộc" (đỏ) / "Không bắt buộc" (xám) */
+.ck-req,
+.ck-opt {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.ck-req { background: #fee2e2; color: #b91c1c; }
+.ck-opt { background: var(--bg-subtle); color: var(--text-muted); }
+.ck-help { width: 15px; height: 15px; color: var(--text-muted); flex: 0 0 auto; }
+/* Select ẩn — logic/test vẫn giữ id + .value; giao diện là nút/chip bên dưới */
+.ck-hidden-select { display: none !important; }
+/* ── KHỐI ①: 3 NÚT CHỌN CÔNG ĐOẠN (to, bấm là chọn ngay) ── */
+.ck-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ck-seg-btn {
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.ck-seg-btn:hover { border-color: var(--primary); }
+.ck-seg-btn.is-on {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+/* ── KHỐI ②: CHIP VỊ TRÍ (bấm trực tiếp — to, đủ ngón tay) ── */
+.ck-loc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ck-loc-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-height: 48px;
+  padding: 6px 14px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.ck-loc-chip strong { font-size: 1rem; font-weight: 800; }
+.ck-loc-chip small { font-size: 0.7rem; color: var(--text-muted); }
+.ck-loc-chip:hover { border-color: var(--primary); }
+.ck-loc-chip.is-on {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.ck-loc-chip.is-on small { color: var(--primary); }
+.ck-loc-empty {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+/* ── DÒNG GHI CHÚ NHỎ DƯỚI 4 KHỐI ── */
+.ck-note-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ck-note-label {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: help;
+}
+.ck-note-row textarea {
+  flex: 1 1 auto;
+  min-height: 38px;
+  resize: vertical;
+}
+/* Danh sách thẻ nan trong khối ② + 2 CỘT CHECK (THU GÓM được) */
+.ck-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+/* Nút THU GÓM / HIỆN LẠI — nhỏ, đủ bấm, dài khi gộp số liệu */
+.ck-collapse-btn {
+  white-space: normal;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-align: left;
+}
+.ck-panel {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--primary-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+.ck-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  font-size: 0.84rem;
+}
+.ck-panel-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.ck-panel-tools .btn { min-height: 34px; font-size: 0.74rem; }
+/* Tiêu đề 3 cột: Thẻ nan | Chuyển Kho | Tóp xử lý lại */
+.ck-cols,
+.ck-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px 74px;
+  gap: 6px;
+  align-items: center;
+}
+.ck-cols {
+  padding: 0 2px 4px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  text-align: center;
+}
+.ck-cols span:first-child { text-align: left; }
+.ck-list { display: grid; grid-template-columns: 1fr; gap: 5px; }
+.ck-row {
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+.ck-row-card { margin: 0; min-width: 0; }
+/* 2 ô tick lớn đủ ngón tay — chọn nhóm Chuyển Kho / Tóp xử lý lại */
+.ck-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  cursor: pointer;
+}
+.ck-check input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: #16a34a;         /* Chuyển Kho = xanh lá */
+  cursor: pointer;
+}
+.ck-check-top input[type="checkbox"] { accent-color: #d97706; }  /* Tóp = hổ phách */
+/* Viền/nền theo nhóm đang tick — nhìn là biết lô vào nhóm nào */
+.ck-row.pick-kho { border-color: rgba(22, 163, 74, 0.35); background: rgba(22, 163, 74, 0.05); }
+.ck-row.pick-top { border-color: rgba(217, 119, 6, 0.45); background: rgba(217, 119, 6, 0.07); }
+.ck-row.pick-none { opacity: 0.55; }
+.ck-panel-foot {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.ck-sum-none { color: #b45309; font-weight: 700; }
+/* Dòng tóm tắt "Lựa Chọn Của Bạn" — tô màu theo nhóm */
+.ck-info-kho strong { color: #15803d; }
+.ck-info-top strong { color: #b45309; }
+.ck-info-none strong { color: var(--text-muted); }
+/* Chip "TÓP XỬ LÝ LẠI" trên thẻ lô nan cột Kho (kanban.js — batch.topRework) */
+.tag-top-rework {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px dashed #f59e0b;
+}
+/* ── MOBILE: nút/ô tick đủ chạm 46px · cột check hẹp hơn · 3 nút khối① nhỏ lại ── */
+@media (max-width: 639.98px) {
+  .ck-sec { padding: 10px; }
+  .ck-seg { grid-template-columns: 1fr; gap: 6px; }
+  .ck-seg-btn { min-height: 52px; font-size: 0.88rem; }
+  .ck-loc-chip { min-height: 46px; padding: 5px 12px; }
+  .ck-cols,
+  .ck-row { grid-template-columns: minmax(0, 1fr) 58px 58px; }
+  .ck-cols { font-size: 0.6rem; }
+  .ck-panel-tools .btn { min-height: 40px; font-size: 0.72rem; padding: 4px 8px; }
+
+  .ck-note-row { flex-wrap: wrap; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FORM "THÊM LÔ SẤY MỚI" — 4 KHỐI GỌN (15/10/2026) + Ô TÍCH THAN HÓA LẠI
+   + Ô CHỌN LẦN THAN HÓA (dùng chung class .ck-sec với form Chuyển Kho).
+   ═══════════════════════════════════════════════════════════════════ */
+/* Ô TÍCH "THAN HÓA LẠI" — to, nổi bật (nguồn đổi sang lô TÓP ở Kho) */
+.al-rework-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 14px;
+  border: 2px dashed #f59e0b;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transition-fast);
+}
+.al-rework-check input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: #d97706;
+  cursor: pointer;
+}
+.al-rework-check:has(input:checked) {
+  border-style: solid;
+  background: #fef3c7;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18);
+}
+/* Ô Nhập số lượng đốt lại — chỉ hiện khi tích (ẩn/bật bằng [hidden]) */
+.al-rework-only { max-width: 320px; }
+/* ── HÀNG ② NGUỒN VÀO: nút chọn + checkbox + ô đốt lại cùng 1 hàng (15/10/2026) ── */
+.al-src-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.al-src-row .al-picker-btn { flex: 1 1 auto; }
+.al-src-row .al-rework-only { flex: 0 0 180px; }
+.al-src-row .al-rework-only input[type="number"] { width: 100%; }
+/* ── KHỐI ① CÔNG ĐOẠN: gộp 4 ô vào 1 hàng trên desktop (Công Đoạn · Ngày · Dùng Cho · Lần Than Hóa) ── */
+.al-meta-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.al-meta-row > .col-span-full { grid-column: 1 / -1; }
+@media (max-width: 999.98px) {
+  .al-meta-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 639.98px) {
+  .al-meta-row { grid-template-columns: 1fr; }
+  .al-rework-check { width: 100%; justify-content: center; }
+  .al-src-row .al-rework-only { flex: 1 1 100%; }
+}
+/* Danh sách nguồn CHẾ ĐỘ THAN HÓA LẠI: 1 cột (thẻ to + tồn/tổng dễ đọc) */
+#al-source-list.is-top { grid-template-columns: 1fr; }
+/* ── PANEL VỊ TRÍ INLINE — hiện trực tiếp dưới tiêu đề khối ③ (không phải dropdown nổi) ── */
+.al-loc-inline {
+  position: static;
+  display: block;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin-top: 6px;
+}
+.al-loc-inline .al-loc-chips { margin-bottom: 6px; }

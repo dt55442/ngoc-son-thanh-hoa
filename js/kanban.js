@@ -321,6 +321,10 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         // Lấy qua window.app.x2BaoTinhUsedLabel (logic js/xuong2.js) — tránh vòng import.
         const btLabel = (typeof window !== 'undefined' && window.app && typeof window.app.x2BaoTinhUsedLabel === 'function') ? window.app.x2BaoTinhUsedLabel(batch) : '';
         const btChip = btLabel ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — xem thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLabel)}</span>` : '';
+        // Chip "TÓP XỬ LÝ LẠI" — lô vào Kho dạng Tóp qua form Chuyển Kho (2 cột check):
+        // VẪN nằm ở cột Kho nhưng mang cờ batch.topRework chờ xử lý tiếp.
+        const topChip = (batch.stage === 'kho' && batch.topRework)
+          ? `<span class="tag-badge tag-top-rework" title="Lô vào Kho dạng TÓP — cần xử lý lại trước khi dùng (chọn ở form Chuyển Kho)"><i data-lucide="alert-triangle" style="width:10px;height:10px;"></i> Tóp xử lý lại</span>` : '';
 
     // Hiển thị badge ngày cho từng công đoạn đã đi qua (Bào Tinh không đếm ngày)
     const history = getBatchStageHistory(batch);
@@ -365,6 +369,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <span class="tag-badge tag-use-${batch.useFor}">${escapeHTML(batch.useFor)}</span>
         ${thChip}
         ${btChip}
+        ${topChip}
         <span class="tag-badge tag-location"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
       </div>
       ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}

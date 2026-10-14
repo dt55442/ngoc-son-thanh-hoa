@@ -237,20 +237,38 @@ x2.khoApproveNote(state.khoNotes[state.khoNotes.length - 1].id);
 check('LỖI BÀO TINH: tồn lỗi 20 − tái chế 5 = 15 (baoTinhDefectStock trừ phiếu đã duyệt)',
   x2.baoTinhDefectStock().find(x => x.sizeKey === '1230×14×5').remaining === 15);
 
-// ─── D. ĐỐI CHIẾU + PHIẾU BÙ DỮ LIỆU CŨ ────────────────────────
+// ─── D. ĐỐI CHIẾU + PHIẾU BÙ DỮ LIỆU CŨ (THEO NGÀY THẬT) ─────
 check('ĐỐI CHIẾU: hệ thống suy ra k3 = 500 (lượt bào tinh) — phiếu gắn k3 chưa có → lệch +500',
   utils.khoDerivedOutOf('k3') === 500 && utils.khoStockSummary().mismatchThanh > 400);
 const notesBeforeBackfill = state.khoNotes.length;
 x2.khoBackfillFromLegacy(); // confirm() stub trả true
-const backfill = state.khoNotes[state.khoNotes.length - 1];
-check('PHIẾU BÙ: sinh phiếu ĐÃ DUYỆT gắn đúng lô k3 (500 thanh, ghi chú khởi tạo)',
-  backfill.status === 'da_duyet' && backfill.lots[0].batchId === 'k3' && backfill.lots[0].qty === 500 &&
-  state.khoNotes.length === notesBeforeBackfill + 1);
+// Phiếu bù mới sinh theo TỪNG SỰ KIỆN (k3 Bào Tinh 16/09 + k2 quay Sấy 2 13/09) → +2 phiếu.
+const backfill = state.khoNotes.find(n => n && n.status === 'da_duyet' && n.type === 'xuat' &&
+  String(n.purposeNote || '').includes('Khởi tạo từ dữ liệu cũ') &&
+  (n.lots || []).some(l => String(l.batchId) === 'k3'));
+check('PHIẾU BÙ (NGÀY THẬT): sinh phiếu ĐÃ DUYỆT gắn đúng lô k3 (500 thanh, ngày = ngày lượt Bào Tinh)', (() => {
+  const btDate = (state.xuong2BaoTinhRecords || []).find(r => r && r.kind === 'tinh' &&
+    (r.sources || []).some(s => String(s.batchId) === 'k3'))?.date || '';
+  return !!backfill && backfill.status === 'da_duyet' && backfill.lots[0].batchId === 'k3' && backfill.lots[0].qty === 500 &&
+    backfill.date === btDate && backfill.note.includes('NGÀY THẬT') &&
+    state.khoNotes.length === notesBeforeBackfill + 2;
+})());
+check('PHIẾU BÙ: snapshot vị trí lô lúc bù (lots[0].loc = K13) để kiểm chứng',
+  !!backfill && backfill.lots[0].loc === 'K13');
 x2.khoBackfillFromLegacy(); // chạy lần 2 → KHÔNG sinh trùng
 check('PHIẾU BÙ: chạy lần 2 KHÔNG sinh trùng (số phiếu giữ nguyên)',
-  state.khoNotes.length === notesBeforeBackfill + 1);
+  state.khoNotes.length === notesBeforeBackfill + 2);
 check('ĐỐI CHIẾU: sau phiếu bù → lệch ≈ 0 (chỉ còn sai số làm tròn)',
   Math.abs(utils.khoStockSummary().mismatchThanh) < 2);
+// Phiếu bù purpose say2 mang NGÀY THẬT quay lại Sấy 2 (k2: 2026-09-13),
+// KHÔNG phải ngày nhập kho lần cuối (2026-09-14).
+check('PHIẾU BÙ SAY2 (NGÀY THẬT): k2 quay Sấy 2 ngày 13/09 → phiếu say2 ngày 13/09 (không phải 14/09)', (() => {
+  const say2Notes = state.khoNotes.filter(n => n && n.status === 'da_duyet' && n.type === 'xuat' &&
+    String((n.purposeNote || '')).includes('Khởi tạo từ dữ liệu cũ') && n.purpose === 'say2' &&
+    (n.lots || []).some(l => String(l.batchId) === 'k2'));
+  return say2Notes.length === 1 && say2Notes[0].date === '2026-09-13' &&
+    say2Notes[0].note.includes('NGÀY THẬT') && say2Notes[0].lots[0].loc === 'K12';
+})());
 
 // ─── E. SỔ NHẬP/XUẤT + PLANNING (trừ tồn theo phiếu ĐÃ DUYỆT) ──
 const ledger = utils.khoLedgerEvents();
@@ -279,10 +297,18 @@ check('THẺ: khối WIP có dòng "Thanh lỗi Bào Tinh" + dòng "Thanh lỗi 
   document.getElementById('x2-kho-wip-bar').innerHTML.includes('Thanh lỗi Chọn thanh Bullig'));
 check('THẺ: mini card đếm "Tồn … thanh" (số tồn thực sau các phiếu)',
   /^Tồn [\d.,]+ thanh$/.test(document.getElementById('x2-mini-count-kho').textContent));
-check('SỔ: thẻ ngày có bảng NHẬP (Lần) + bảng XUẤT + dòng chú thích "ra/vào kho NHIỀU LẦN"',
-  document.getElementById('x2-kho-day-cards').innerHTML.includes('NHẬP KHO') &&
-  document.getElementById('x2-kho-day-cards').innerHTML.includes('XUẤT KHO') &&
-  document.getElementById('x2-kho-day-cards').innerHTML.includes('ra/vào kho NHIỀU LẦN'));
+check('SỔ: thẻ ngày có bảng NHẬP (Lần) + bảng XUẤT + dòng chú thích "ra/vào kho NHIỀU LẦN"', (() => {
+  const h = document.getElementById('x2-kho-day-cards').innerHTML;
+  return h.includes('NHẬP KHO') && h.includes('XUẤT KHO') && h.includes('ra/vào kho NHIỀU LẦN');
+})());
+check('SỔ XUẤT: có cột Vị trí + nút Mở lại/Xóa cho admin (kiểu A) + dòng ghi rõ số từng lô', (() => {
+  const h = document.getElementById('x2-kho-day-cards').innerHTML;
+  return h.includes('<th>Vị trí</th>') && h.includes('data-kho-reopen=') && h.includes('data-kho-ledger-del=') &&
+    h.includes('Mở lại') && h.includes('data-admin-only');
+})());
+// Ghi nhận id phiếu bù k3 để kiểm MỞ LẠI ở cuối tệp (tránh đổi tồn giữa chừng
+// làm lệch các kiểm thử BẢNG TỒN / SỔ LỆCH ở dưới).
+const khoReopenBackfillId = backfill && backfill.id;
 x2.setKhoPeriodMode('tuan');
 check('SỔ: gạt TUẦN → tiêu đề kỳ dạng "Tuần N / NNNN"',
   document.getElementById('x2-kho-day-cards').innerHTML.includes('Tuần'));
@@ -290,9 +316,42 @@ x2.setKhoPeriodMode('thang');
 check('SỔ: gạt THÁNG → tiêu đề kỳ dạng "Tháng MM/YYYY"',
   document.getElementById('x2-kho-day-cards').innerHTML.includes('Tháng'));
 x2.setKhoPeriodMode('day');
+x2.khoSetShowUsed(true); // phiếu bù mới trừ hết k2 → bật công tắc để vẫn thấy dòng k2
 check('BẢNG TỒN: mỗi lô 1 dòng + chip "ra/vào" trên lô quay lại (k2)',
   document.getElementById('x2-kho-stock-rows').innerHTML.includes('260911-01') &&
-  document.getElementById('x2-kho-stock-rows').innerHTML.includes('ra/vào'));
+  document.getElementById('x2-kho-stock-rows').innerHTML.includes('ra/vào 1 lần'));
+x2.khoSetShowUsed(false);
+// THẺ LÔ GẮN PHIẾU: cùng mẫu thẻ nguồn Than Hóa + Sấy (mã · tồn · badge S1/S2/K, bỏ ngày vào kho)
+x2.renderX2KhoLotsList();
+check('THẺ LÔ: dòng 1 có mã lô + tồn (còn X thanh) · dòng 2 có chip Dùng cho + badge S1/S2/K (mẫu Than Hóa + Sấy)', (() => {
+  const h = document.getElementById('x2-kho-lots-list').innerHTML;
+  return h.includes('kho-lot-card') && h.includes('kho-lot-line1') && h.includes('kho-lot-line2') &&
+    /26091\d-01/.test(h) && h.includes('còn') && h.includes('thanh') &&
+    h.includes('al-use-tag') && h.includes('al-day-badge day-s1') &&
+    h.includes('al-day-badge day-s2') && h.includes('al-day-badge day-k') &&
+    /S1-\d+ ngày/.test(h) && /S2-\d+ ngày/.test(h) && /K-\d+ ngày/.test(h);
+})());
+check('THẺ LÔ: BỎ dòng "vào kho dd/mm/yy" (giữ mã + tồn + chip ra/vào kho)', (() => {
+  const h = document.getElementById('x2-kho-lots-list').innerHTML;
+  return h.includes('kho-round-badge') && h.includes('ra/vào kho') &&
+    h.includes('kho-in-date') === false && /vào kho \d{1,2}\/\d{1,2}\/\d{2}/.test(h) === false;
+})());
+check('THẺ LÔ: KHÔNG lặp badge ngày — mỗi thẻ chỉ 1 badge S1 + 1 badge S2 + 1 badge K (ở dòng 2)', (() => {
+  const h = document.getElementById('x2-kho-lots-list').innerHTML;
+  const cards = h.split('kho-lot-card').slice(1);
+  if (!cards.length) return false;
+  return cards.every(c =>
+    (c.match(/al-day-badge day-s1/g) || []).length === 1 &&
+    (c.match(/al-day-badge day-s2/g) || []).length === 1 &&
+    (c.match(/al-day-badge day-k/g) || []).length === 1 &&
+    c.indexOf('kho-lot-line1') < c.indexOf('al-day-badge day-s1'));
+})());
+check('THẺ LÔ: helper khoStageDaysOf tính đúng ngày S1/S2/K theo lịch sử công đoạn', (() => {
+  const d1 = x2.khoStageDaysOf(state.batches[0]);
+  const d2 = x2.khoStageDaysOf(state.batches[1]);
+  return d1 && d2 && typeof d1.say1 === 'number' && typeof d1.say2 === 'number' && typeof d1.kho === 'number' &&
+    typeof d2.say1 === 'number' && typeof d2.say2 === 'number' && typeof d2.kho === 'number';
+})());
 // GIAI ĐOẠN 2 (05/10/2026): bản đồ VÙNG DỮ LIỆU thêm 8 thẻ XƯỞNG 1 → 18;
 // THẺ CẮT VÁN (09/10/2026) → 19 · THẺ BÀO VÁN (09/10/2026) → 20.
 // THẺ HỖ TRỢ + CÔNG ĐOẠN LẺ (10/10/2026) → 21.
@@ -318,15 +377,15 @@ check('DÙNG CHUNG: 13 thẻ X2 đủ vùng dữ liệu + nguồn xuất (thêm 
     stageHistory: [{ stage: 'say1', date: '2026-09-01' }] });
   state.khoNotes.push({ id: 'note-ghost', type: 'xuat', purpose: 'baotinh', status: 'da_duyet',
     date: '2026-09-01', qty: 99999, lots: [{ batchId: 'k-ghost-out', qty: 99999 }] });
-  const lotK2 = state.batches.find(b => b.id === 'k2');
-  const remK2 = utils.khoLotRemainingOf(lotK2);
+  const lotK3 = state.batches.find(b => b.id === 'k3');
+  const remK3 = utils.khoLotRemainingOf(lotK3);
   check('SỔ LỆCH: honestThanh = 0 (phiếu bù gắn lô đã rời kho) NHƯNG lô Kho vẫn còn tồn',
-    utils.khoStockSummary().honestThanh === 0 && remK2 > 0);
+    utils.khoStockSummary().honestThanh === 0 && remK3 > 0);
   x2.setKhoNoteType('xuat');
   x2.resetX2KhoNoteForm(true);
   document.getElementById('x2-kho-date').value = '2026-09-25';
   document.getElementById('x2-kho-purpose').value = 'baotinh';
-  x2.khoPickLot('k2');
+  x2.khoPickLot('k3');
   const nBefore = state.khoNotes.length;
   x2.handleKhoNoteSubmit({ preventDefault(){} });
   check('SỔ LỆCH: vẫn TẠO ĐƯỢC phiếu gắn lô còn tồn (không còn chặn "Vượt tồn khả dụng 0 thanh")',
@@ -421,10 +480,11 @@ check('VÙNG: thẻ Bào Tinh được bọc 3 khung (Nhập Liệu · Thống K
   const slice = idxHtml.slice(idxHtml.indexOf('id="x2-bao-tinh-card"'), idxHtml.indexOf('id="x2-ep-van-card"'));
   return (slice.match(/class="x2-zone"/g) || []).length === 3;
 })());
-check('VÙNG: head thanh trong khung tab (Than Hóa · Ép Ván) + CSS .x2-zone/.kho-kpi + backfill tách purpose say2', (() => {
+check('VÙNG: head thanh trong khung tab (Than Hóa · Ép Ván) + CSS .x2-zone/.kho-kpi + phiếu bù theo NGÀY THẬT', (() => {
   const jsXuong2 = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
   return idxHtml.includes('x2-zone-bar') && cssCss.includes('.x2-zone {') && cssCss.includes('.kho-kpi {') &&
-    jsXuong2.includes('khoS2ExitQtyOf') && jsXuong2.includes('purpose: p.purpose');
+    jsXuong2.includes('khoLedgerEvents().derived') && jsXuong2.includes('NGÀY THẬT') &&
+    jsXuong2.includes('khoReopenNote') && jsXuong2.includes('data-kho-reopen');
 })());
 check('CẤU TRÚC (index.html): mini card + thẻ Kho Nan đủ khối (tồn · WIP · phiếu · sổ · tồn)',
   idxHtml.includes('data-x2-card="x2-kho-card"') && idxHtml.includes('id="x2-kho-card"') &&
@@ -443,11 +503,41 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v236/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v247/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',
   pkg.scripts.test.includes('tests/kho.test.mjs'));
+
+// ─── H. MỞ LẠI PHIẾU ĐÃ DUYỆT (kiểu A — lô RIÊNG để không lệch tồn chung) ──
+check('MỞ LẠI (kiểu A): tạo phiếu riêng 200 thanh → duyệt → mở lại → tồn hồi đúng 200', (() => {
+  state.batches.push({ id: 'k-reopen', code: '260927-99', stage: 'kho', date: '2026-09-27', week: '2026-W39',
+    length: 1250, width: 18, thickness: 7, quantity: 200, volume: 0.0315, bambooType: 'A', useFor: 'Ván',
+    location: 'K99', stageHistory: [{ stage: 'kho', date: '2026-09-27' }] });
+  const lot = () => state.batches.find(b => b && b.id === 'k-reopen');
+  x2.setKhoNoteType('xuat');
+  x2.resetX2KhoNoteForm(true);
+  document.getElementById('x2-kho-date').value = '2026-09-27';
+  document.getElementById('x2-kho-purpose').value = 'baotinh';
+  x2.khoPickLot('k-reopen');
+  x2.handleKhoNoteSubmit({ preventDefault(){} });
+  const nid = (state.khoNotes[state.khoNotes.length - 1] || {}).id;
+  x2.khoApproveNote(nid);
+  if (utils.khoLotRemainingOf(lot()) !== 0) return false;
+  x2.khoReopenNote(nid);
+  const n = state.khoNotes.find(x => x && x.id === nid);
+  return n && n.status === 'cho_duyet' && utils.khoLotRemainingOf(lot()) === 200;
+})());
+check('MỞ LẠI: ô chọn lô khi sửa vẫn thấy lô trong phiếu (kể cả tồn 0) để thêm/bớt', (() => {
+  x2.renderX2KhoLotsList();
+  return document.getElementById('x2-kho-lots-list').innerHTML.includes('260927-99');
+})());
+check('MỞ LẠI: duyệt lại phiếu riêng → tồn trừ đúng 200 (kiểu A đủ vòng)', (() => {
+  const nid = (state.khoNotes.find(n => n && (n.lots || []).some(l => String(l.batchId) === 'k-reopen')) || {}).id;
+  x2.khoApproveNote(nid);
+  const n = state.khoNotes.find(x => x && x.id === nid);
+  return n && n.status === 'da_duyet' && utils.khoLotRemainingOf(state.batches.find(b => b.id === 'k-reopen')) === 0;
+})());
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

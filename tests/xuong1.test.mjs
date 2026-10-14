@@ -415,7 +415,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v236/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v247/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -677,6 +677,96 @@ check('J8: nhãn form diễn giải 2 nguồn + capacity.js vẫn đọc x1SaySi
   capSrc.includes('x1SaySinhDisplay') &&
   (() => { x1.fillX1BocOptions();
     return document.getElementById('x1-boc-source').innerHTML.includes('x1ss-'); })());
+
+// ─── K. CẮT NHIỀU LẦN + KL MẮT/NGỌN + CHỐT HAO HỤT (13/10/2026) ────
+// 1 lô NL X1 có thể cắt NHIỀU lần; 4 ô KL (Đạt/Loại/Mắt/Ngọn) cộng dồn
+// không được vượt KL đầu vào; tick "Đã cắt xong" → chốt hao hụt + khóa lô.
+console.log('--- K. CẮT NHIỀU LẦN + HAO HỤT ---');
+check('K1: form Cắt Ống có 4 ô KL (dat/loai/mat/ngon) + checkbox "Đã cắt xong" + max=99999',
+  ['x1-cat-ong-kl-dat', 'x1-cat-ong-kl-loai', 'x1-cat-ong-kl-mat', 'x1-cat-ong-kl-ngon']
+    .every(id => idxHtml.includes(`id="${id}"`)) &&
+  idxHtml.includes('id="x1-cat-ong-done"') && /max="99999"/.test(idxHtml) &&
+  idxHtml.includes('Đã cắt xong lô này'));
+check('K2: CSS 4 ô hẹp (.x1-co-kg) + hàng chốt (.x1-co-done-row) + chip (.x1-co-done-tag)',
+  stylesCss.includes('.x1-co-kg') && stylesCss.includes('.x1-co-done-row') &&
+  stylesCss.includes('.x1-co-done-tag'));
+check('K3: events.js nối 4 ô input + checkbox change vào x1CatOngCalc',
+  eventsSrc.includes("'x1-cat-ong-kl-mat'") && eventsSrc.includes("'x1-cat-ong-kl-ngon'") &&
+  eventsSrc.includes("'x1-cat-ong-done', 'change'"));
+state.materialRecords.push(
+  { id: 'x1m-f', type: 'Vầu cây cắt nhiều lần', supplier: 'Tế', location: 'xuong-1', code: 'NNF06', weight: 800, date: '2026-09-15', createdAt: '2026-09-15T02:00:00.000Z' });
+function kCut(matId, d, dat, loai, matKg, ngon, done) {
+  document.getElementById('x1-cat-ong-material').value = matId;
+  document.getElementById('x1-cat-ong-date').value = d;
+  document.getElementById('x1-cat-ong-kl-dat').value = String(dat);
+  document.getElementById('x1-cat-ong-kl-loai').value = String(loai);
+  document.getElementById('x1-cat-ong-kl-mat').value = String(matKg);
+  document.getElementById('x1-cat-ong-kl-ngon').value = String(ngon);
+  document.getElementById('x1-cat-ong-done').checked = !!done;
+  x1.handleX1CatOngSubmit({ preventDefault(){} });
+}
+kCut('x1m-f', '2026-09-15', 300, 50, 20, 10, false);
+const kfRecs = () => (state.xuong1CatOngRecords || []).filter(r => r.materialId === 'x1m-f');
+const matF = (state.materialRecords || []).find(m => m.id === 'x1m-f');
+check('K4: cắt lượt 1 (300+50+20+10=380) — lô x1m-f VẪN hiện ở ô chọn (còn 420) vì CHƯA chốt xong',
+  kfRecs().length === 1 && kfRecs()[0].klMat === 20 && kfRecs()[0].klNgon === 10 &&
+  x1.x1CatOngLotUsedOf('x1m-f', null) === 380 &&
+  x1.x1CatOngLotRemainingOf(matF, null) === 420 &&
+  x1.x1CatOngLotTurnsOf('x1m-f') === 1 &&
+  (() => { x1.fillX1CatOngOptions();
+    return document.getElementById('x1-cat-ong-material').innerHTML.includes('x1m-f'); })());
+kCut('x1m-f', '2026-09-16', 300, 100, 20, 20, false);
+check('K5: CHẶN lượt 2 vượt phần còn lại (380 + 440 = 820 > 800) — vẫn 1 lượt',
+  kfRecs().length === 1);
+kCut('x1m-f', '2026-09-16', 200, 50, 30, 20, false);
+check('K6: cắt lượt 2 (300) — cộng dồn 680, còn 120, 2 lượt, lô vẫn hiện ở ô chọn',
+  kfRecs().length === 2 && x1.x1CatOngLotUsedOf('x1m-f', null) === 680 &&
+  x1.x1CatOngLotRemainingOf(matF, null) === 120 && x1.x1CatOngLotTurnsOf('x1m-f') === 2 &&
+  (() => { x1.fillX1CatOngOptions();
+    return document.getElementById('x1-cat-ong-material').innerHTML.includes('x1m-f'); })());
+kCut('x1m-f', '2026-09-17', 100000, 0, 0, 0, false);
+check('K7: CHẶN ô KL vượt 5 chữ số (100000 > 99999) — vẫn 2 lượt', kfRecs().length === 2);
+kCut('x1m-f', '2026-09-17', 0, 0, 0, 0, true);
+check('K8: tick "Đã cắt xong" — cờ lotDone trên CẢ 2 lượt + hao hụt 120 + lô ẨN khỏi ô chọn',
+  kfRecs().length === 2 && kfRecs().every(r => r.lotDone === true) &&
+  x1.x1CatOngLotDoneOf('x1m-f') === true &&
+  (() => { x1.fillX1CatOngOptions();
+    return !document.getElementById('x1-cat-ong-material').innerHTML.includes('x1m-f'); })());
+check('K9: display trả lotDone=true + loss=120 (hao hụt = đầu vào − cộng dồn)',
+  (() => { const d = x1.x1CatOngDisplay(kfRecs()[1]);
+    return d.lotDone === true && d.loss === 120 && d.lotRemaining === 120 && d.turnKg === 300; })());
+x1.editX1CatOng(kfRecs()[0].id);
+document.getElementById('x1-cat-ong-kl-dat').value = '350';
+document.getElementById('x1-cat-ong-done').checked = true;
+x1.handleX1CatOngSubmit({ preventDefault(){} });
+check('K10: sửa lượt 1 (đạt 300→350) khi lô đã chốt — hao hụt TÍNH LẠI 120→70 + vẫn giữ cờ',
+  x1.x1CatOngLotUsedOf('x1m-f', null) === 730 &&
+  x1.x1CatOngLotRemainingOf(matF, null) === 70 &&
+  x1.x1CatOngLotDoneOf('x1m-f') === true &&
+  (() => { const d = x1.x1CatOngDisplay(kfRecs()[0]);
+    return d.loss === 70 && d.lotDone === true; })());
+x1.editX1CatOng(kfRecs()[1].id);
+document.getElementById('x1-cat-ong-done').checked = false;
+x1.handleX1CatOngSubmit({ preventDefault(){} });
+check('K11: bỏ tick "Đã cắt xong" — cờ gỡ hết + lô hiện lại ở ô chọn (còn 70)',
+  kfRecs().every(r => !r.lotDone) && x1.x1CatOngLotDoneOf('x1m-f') === false &&
+  x1.x1CatOngLotRemainingOf(matF, null) === 70 &&
+  (() => { x1.fillX1CatOngOptions();
+    return document.getElementById('x1-cat-ong-material').innerHTML.includes('x1m-f'); })());
+check('K12: chip launcher Cắt Ống = TỔNG phần CHƯA cắt của MỌI lô chờ (x1m-f góp 70, không phải 800)',
+  (() => {
+    const pend = x1.x1MaterialInputs().filter(m =>
+      !x1.x1CatOngLotDoneOf(m.id) && x1.x1CatOngLotRemainingOf(m, null) > 0);
+    const total = pend.reduce((s, m) => s + x1.x1CatOngLotRemainingOf(m, null), 0);
+    const chip = x1.x1CardCountText('x1-cat-ong-card');
+    return chip === `Tồn ${total.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg` && total > 0;
+  })());
+check('K13: lượt CŨ thiếu klMat/klNgon → display hiểu bằng 0 (không vỡ bảng/capacity)',
+  (() => { const old = { materialId: 'x1m-f', klDat: 100, klLoai: 10 };
+    const d = x1.x1CatOngDisplay(old);
+    return d.klMat === 0 && d.klNgon === 0 && d.turnKg === 110; })());
+check('K14: capacity.js đọc turnKg (KL cắt được/lượt) — cắt nhiều lần không đếm trùng',
+  capSrc.includes('qty: d.turnKg') && capSrc.includes('d.turnKg'));
 
 console.log(`\n=== KẾT QUẢ XUONG1: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

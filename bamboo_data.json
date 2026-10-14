@@ -1,7 +1,135 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-14T08:54:43.656Z",
+  "savedAt": "2026-10-14T10:13:27.088Z",
   "batches": [
+    {
+      "id": "batch-1791969520491",
+      "code": "261013-09",
+      "stage": "say2",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2268,
+      "volume": 0.3572,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-13",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-13"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-14T09:21:28.102Z",
+      "say2Date": "2026-10-13",
+      "sayCharges": {
+        "say2": 1791969688102
+      }
+    },
+    {
+      "id": "batch-1791969478560",
+      "code": "261013-08",
+      "stage": "say2",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 2100,
+      "volume": 0.4253,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-13",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-13"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-14T09:21:28.102Z",
+      "say2Date": "2026-10-13",
+      "sayCharges": {
+        "say2": 1791969688102
+      }
+    },
+    {
+      "id": "batch-1791969105415",
+      "code": "261013-07",
+      "stage": "say2",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1526,
+      "volume": 0.309,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-13",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-13"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-14T09:21:28.102Z",
+      "say2Date": "2026-10-13",
+      "sayCharges": {
+        "say2": 1791969688102
+      }
+    },
+    {
+      "id": "batch-1791969049921",
+      "code": "261013-06",
+      "stage": "say2",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1680,
+      "volume": 0.4032,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-13",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-13"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-14T09:21:28.102Z",
+      "say2Date": "2026-10-13",
+      "sayCharges": {
+        "say2": 1791969688102
+      }
+    },
     {
       "id": "batch-1791965641685-3",
       "code": "261012-08",

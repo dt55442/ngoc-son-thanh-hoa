@@ -600,6 +600,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     if (v > cap) { v = cap; inp.value = String(v); }   // chặn vượt tồn (tự điều về tối đa)
     if (v > 0) alTopQty[String(b.id)] = v; else delete alTopQty[String(b.id)];
     syncAddLotSource();
+    alRefreshSummary();
     return v;
   }
   // Bật/tắt ô TÍCH THAN HÓA LẠI → đổi nguồn + hiện ô nhập số lượng
@@ -634,6 +635,95 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
       </button>`;
     }).join('');
   }
+  // ─── BOTTOM-SHEET CỦA FORM "THÊM LÔ SẤY MỚI" (15/10/2026) ─────
+  // Màn chính chỉ có dòng TÓM TẮT; bấm dòng ②/③ → mở TẤM TRƯỢT từ dưới lên
+  //   .al-sheet  → khung phủ (scrim + card trượt)
+  //   .al-sheet-card → tấm trắng chứa ô nhập
+  // Đóng bằng nút "Xong" (data-al-sheet-close) hoặc chạm NỀN MỜ (.al-sheet-scrim).
+  // Danh sách dài (thẻ nguồn) nằm TRONG tấm trượt ⇒ KHÔNG đẩy/che khối khác.
+  const AL_SHEETS = { src: 'al-sheet-src', loc: 'al-sheet-loc' };
+  function alOpenSheet(name) {
+    const id = AL_SHEETS[String(name || '')];
+    if (!id) return false;
+    // Đóng các tấm còn lại (mỗi lúc chỉ 1 tấm mở — không chồng nhau)
+    Object.keys(AL_SHEETS).forEach(k => {
+      const el = document.getElementById(AL_SHEETS[k]);
+      if (el) el.hidden = (k !== name);
+    });
+    const sheet = document.getElementById(id);
+    if (!sheet) return false;
+    sheet.hidden = false;
+    // Dòng tóm tắt tương ứng: đánh dấu đang mở
+    document.querySelectorAll('#add-lot-form .al-sum-row').forEach(b => {
+      const on = b.getAttribute('data-al-sheet') === String(name);
+      b.classList.toggle('is-open', on);
+      b.setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+    if (name === 'src') {
+      renderAlSourceList();
+      // Mở tấm nguồn → hiện luôn danh sách (bỏ 1 bước bấm)
+      const panel = document.getElementById('al-source-panel');
+      if (panel) panel.hidden = false;
+      alPositionSourcePanel();
+    }
+    if (name === 'loc') {
+      // Mở tấm Vị trí → LUÔN hiện panel chips (alToggleSourcePanel có thể đã ẩn nó)
+      const locPanel = document.getElementById('al-location-panel');
+      if (locPanel) locPanel.hidden = false;
+      renderAlLocationChips();
+      renderAlLocationBtn();
+    }
+    initLucide();
+    return true;
+  }
+  function alCloseSheet() {
+    Object.keys(AL_SHEETS).forEach(k => {
+      const el = document.getElementById(AL_SHEETS[k]);
+      if (el) el.hidden = true;
+    });
+    // Đóng luôn dropdown nguồn nổi (nếu đang mở) để lần sau mở lại sạch
+    const panel = document.getElementById('al-source-panel');
+    if (panel) panel.hidden = true;
+    document.querySelectorAll('#add-lot-form .al-sum-row').forEach(b => {
+      b.classList.remove('is-open');
+      b.setAttribute('aria-expanded', 'false');
+    });
+    return true;
+  }
+  function alOnSheetClick(e) {
+    const t = e && e.target;
+    if (!t || typeof t.closest !== 'function') return false;
+    // Bấm nền mờ / nút Xong → đóng tấm
+    if (t.closest('[data-al-sheet-close]')) { alCloseSheet(); return true; }
+    // Bấm 1 dòng tóm tắt → mở tấm tương ứng
+    const row = t.closest('[data-al-sheet]');
+    if (row) { alOpenSheet(row.getAttribute('data-al-sheet')); return true; }
+    return false;
+  }
+  // Cập nhật 2 DÒNG TÓM TẮT + CHÂN FORM DÍNH (số nguồn/thanh + vị trí)
+  function alRefreshSummary() {
+    const srcEl = document.getElementById('al-sum-src');
+    const locEl = document.getElementById('al-sum-loc');
+    const footEl = document.getElementById('al-foot-sum');
+    const n = alPicked.length;
+    let qty = 0;
+    if (n) {
+      const picked = alCandidatesOf(alStageOf()).filter(it => alPicked.includes(String(it.id)));
+      qty = picked.reduce((s, it) => {
+        const q = (alStageOf() === 'say2') ? (Math.round(khoLotRemainingOf(it)) || 0) : nanCardRemainingOf(it);
+        return s + q;
+      }, 0);
+    }
+    const srcTxt = n
+      ? `${n} nguồn · ${qty.toLocaleString('vi-VN')} thanh`
+      : (alReworkOn() ? 'Chế độ Than Hóa Lại — chưa chọn lô Tóp' : 'Chưa chọn nguồn');
+    const locTxt = alLocation || 'Chưa chọn vị trí';
+    if (srcEl) srcEl.textContent = srcTxt;
+    if (locEl) locEl.textContent = locTxt;
+    if (footEl) footEl.textContent = `${srcTxt} · ${locTxt}`;
+    return true;
+  }
+
   // Đóng 2 danh sách mở rộng (nguồn + vị trí)
   function alClosePanels() {
     const src = document.getElementById('al-source-panel');
@@ -710,11 +800,13 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
       alPicked = alPicked.includes(key) ? [] : [key];
       renderAlSourceList();
       syncAddLotSource();
+      alRefreshSummary();
       return alPicked.slice();
     }
     alPicked = alPicked.includes(key) ? alPicked.filter(x => x !== key) : [...alPicked, key];
     renderAlSourceList();
     syncAddLotSource();
+    alRefreshSummary();
     return alPicked.slice();
   }
   // Chọn TẤT CẢ nguồn khả dụng / bỏ chọn hết
@@ -793,6 +885,12 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
   function alPositionSourcePanel() {
     const panel = document.getElementById('al-source-panel');
     if (!panel || panel.hidden || !panel.style) return false;
+    // BOTTOM-SHEET: panel nằm TRONG tấm trượt → hiển thị INLINE (CSS ghi đè),
+    // không cần neo toạ độ theo nút; danh sách cuộn trong .al-sheet-body.
+    if (typeof panel.closest === 'function' && panel.closest('.al-sheet')) {
+      alApplySourceListRowCap(document.getElementById('al-source-list'));
+      return true;
+    }
     alApplySourceListRowCap(document.getElementById('al-source-list'));
     const btn = document.getElementById('al-source-btn');
     const doc = document.documentElement;
@@ -856,6 +954,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     renderAlLocationChips();
     const panel = document.getElementById('al-location-panel');
     if (panel && !panel.classList.contains('al-loc-inline')) panel.hidden = true;
+    alRefreshSummary();   // dòng tóm tắt ③ + chân form dính
     return alLocation;
   }
   function alCurrentLocation() {
@@ -969,6 +1068,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
 
   function closeAddLotModal() {
     document.getElementById('modal-add-lot')?.classList.remove('show');
+    alCloseSheet();     // đóng tấm trượt (nếu đang mở) — lần sau mở form lại sạch
     alClosePanels();
   }
 
@@ -986,6 +1086,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     renderAlSourceList();
     renderAlChargeOptions();      // Ô LẦN THAN HÓA theo đúng (Ngày + Công đoạn)
     syncAddLotSource();
+    alRefreshSummary();           // 2 dòng tóm tắt + chân form dính
   }
 
   // ── Ô CHỌN LẦN THAN HÓA (15/10/2026) — gộp lô vào LẦN ĐÃ CÓ ──
@@ -1746,6 +1847,10 @@ export {
   alSetSourceQuery,
   alSetSourceQtyQuery,
   alShowNewLocationRow,
+  alOpenSheet,
+  alCloseSheet,
+  alOnSheetClick,
+  alRefreshSummary,
   alToggleLocationPanel,
   alTogglePick,
   alToggleSourcePanel,

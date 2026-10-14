@@ -2,7 +2,7 @@
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
-import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
+import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
@@ -278,6 +278,9 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('al-location-chips', 'click', alOnLocationChipClick);
     safeOn('al-location-add', 'click', alShowNewLocationRow);
     safeOn('al-location-new-save', 'click', handleAlAddLocation);
+    // BOTTOM-SHEET form Thêm Lô Sấy Mới: bấm dòng tóm tắt ②/③ = mở tấm trượt;
+    // bấm "Xong"/nền mờ = đóng (uỷ nhiệm 1 listener trên form — mọi phần tử đều khớp).
+    safeOn('add-lot-form', 'click', alOnSheetClick);
     // Enter trong ô nhập vị trí mới = LƯU vị trí (không submit cả form)
     safeOn('al-location-new', 'keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); handleAlAddLocation(); }

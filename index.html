@@ -5347,10 +5347,13 @@
         <h3 id="add-lot-title"><i data-lucide="plus-circle"></i> Thêm Lô Sấy Mới</h3>
         <button class="modal-close-btn" id="btn-close-add-lot"><i data-lucide="x"></i></button>
       </div>
-      <!-- FORM 4 KHỐI GỌN (15/10/2026 — xếp lại cho vừa 1 màn hình):
-           ① Công Đoạn 1 HÀNG (Công Đoạn · Ngày · Dùng Cho · Lần Than Hóa)
-           ② Nguồn Vào (nút chọn + checkbox + số lượng ĐỐT LẠI + ô thông tin nguồn)
-           ③ Vị Trí Sấy (chip LS1..LS15 cuộn 2 hàng) ④ Ghi Chú 1 dòng + nút Hủy/Lưu ở chân -->
+      <!-- FORM THÊM LÔ SẤY MỚI — PHONG CÁCH BOTTOM-SHEET (15/10/2026):
+           • MÀN CHÍNH gọn: khối ① Công Đoạn (1 hàng) + 2 DÒNG TÓM TẮT bấm được
+             (② Nguồn Vào · ③ Vị Trí Sấy) + khối ④ Ghi Chú. KHÔNG có danh sách dài
+             trên form ⇒ không bao giờ đẩy/che khối khác.
+           • Bấm dòng ②/③ → TẤM TRƯỢT TỪ DƯỚI LÊN (.al-sheet) chứa đầy đủ ô nhập;
+             có nút "Xong" + chạm nền mờ để đóng.
+           • CHÂN FORM DÍNH: tóm tắt (N nguồn · X thanh · vị trí) + 2 nút Hủy/Lưu. -->
       <form id="add-lot-form">
         <div class="form-grid">
           <!-- KHỐI ① — CÔNG ĐOẠN: gộp 4 ô vào 1 HÀNG (desktop) — gọn hơn 4 tầng dọc cũ -->
@@ -5390,79 +5393,29 @@
             </div>
           </div>
 
-          <!-- KHỐI ② — NGUỒN VÀO (bắt buộc) — checkbox THAN HÓA LẠI đổi nguồn -->
-          <div class="ck-sec col-span-full" data-ck-sec="2" id="al-src-group">
-            <div class="ck-sec-head" title="Bấm nút Chọn Lô Nan để mở danh sách thẻ nguồn. Sấy 1 = thẻ Chọn Nan Thô · Sấy 2 = lô ở Kho · tích Than Hóa Lại = lô Tóp ở Kho. Số lượng lô sẽ tạo = phần CÒN LẠI của từng nguồn (không nhập tay).">
-              <span class="ck-sec-num">2</span>
-              <span class="ck-sec-title">Nguồn Vào</span>
-              <span class="ck-req">Bắt buộc</span>
-              <i data-lucide="circle-help" class="ck-help" aria-hidden="true"></i>
-            </div>
-            <input type="hidden" id="al-source">
-            <!-- HÀNG 1: nút chọn nguồn + checkbox THAN HÓA LẠI (cùng hàng, không 2 tầng) -->
-            <div class="al-src-row">
-              <button type="button" class="btn btn-outline al-picker-btn" id="al-source-btn" aria-controls="al-source-panel" aria-expanded="false">
-                <i data-lucide="list-checks"></i>
-                <span id="al-source-btn-text">Chọn Lô Nan</span>
-                <span class="al-picked-count" id="al-picked-count">Chưa chọn</span>
-              </button>
-              <!-- Ô TÍCH THAN HÓA LẠI — bật = nguồn đổi sang lô TÓP đang ở Kho -->
-              <label class="al-rework-check" for="al-rework"
-                title="Đốt lại lô Tóp đang ởKho (lô vào Kho dạng Tóp xử lý lại từ form Chuyển Kho). Tích = nguồn chỉ gồm các lô Tóp kèm tồn/tổng, nhập số lượng lấy ra đốt lại.">
-                <input type="checkbox" id="al-rework"> <span>♻️ Than Hóa Lại</span>
-              </label>
-              <!-- Ô NHẬP SỐ LƯỢNG — CHỈ hiện khi tích Than Hóa Lại (lấy 1 phần lô Tóp) -->
-              <div class="form-group al-rework-only" id="al-rework-qty-group" hidden>
-                <input type="number" id="al-rework-qty" min="1" step="1" inputmode="numeric" placeholder="Số đốt lại (tồn còn lại)"
-                  title="Số thanh TÓP lấy ra để đốt lại — mặc định = tồn còn lại của lô, chặn vượt tồn.">
-              </div>
-            </div>
-            <div class="al-picker" id="al-source-panel" hidden>
-              <div class="al-picker-tools">
-                <input type="text" id="al-source-search" class="al-search" placeholder="Tìm nhanh: vị trí, mã lô, kích thước, loại (A/A1/B), Ván/Bullig…" autocomplete="off">
-                <input type="text" id="al-source-qty-search" class="al-search al-search-qty" inputmode="numeric" placeholder="Tìm theo SỐ LƯỢNG (VD: 1000)" autocomplete="off" title="Ô tìm THEO SỐ LƯỢNG — CHỈ khớp số lượng; lọc KẾT HỢP với ô tìm nhanh (điều kiện VÀ)">
-                <button type="button" class="btn btn-outline btn-sm" id="al-pick-all"><i data-lucide="check-check"></i> Chọn tất cả</button>
-              </div>
-              <div class="al-card-list" id="al-source-list"></div>
-            </div>
-            <div class="al-hint hidden" id="al-source-hint"></div>
-            <!-- THÔNG TIN LẤY TỪ NGUỒN — gọn 1 dòng, hiện dưới danh sách nguồn -->
-            <div class="form-group col-span-full" id="al-info-group">
-              <label title="Số liệu lấy tự động từ nguồn đã chọn (kích thước, loại, số lượng, tồn còn lại).">Thông Tin Lấy Từ Nguồn</label>
-              <div class="al-source-info" id="al-source-info"></div>
-            </div>
-          </div>
+          <!-- KHỐI ② — DÒNG TÓM TẮT "Nguồn Vào" — BẤM = MỞ TẤM TRƯỢT CHỌN NGUỒN -->
+          <button type="button" class="ck-sec al-sum-row col-span-full" data-ck-sec="2" id="al-src-group"
+            data-al-sheet="src" aria-haspopup="dialog"
+            title="Bấm để mở danh sách thẻ/lô nguồn (chọn được NHIỀU) — tấm trượt từ dưới lên.">
+            <span class="al-sum-num">2</span>
+            <span class="al-sum-main">
+              <span class="al-sum-title">Nguồn Vào <span class="ck-req">Bắt buộc</span></span>
+              <span class="al-sum-value" id="al-sum-src">Chưa chọn nguồn</span>
+            </span>
+            <i data-lucide="chevron-right" class="al-sum-chev" aria-hidden="true"></i>
+          </button>
 
-          <!-- KHỐI ③ — VỊ TRÍ SẤY (bắt buộc) — chips LS1..LS15 cuộn ngang, không cần bấm mở panel -->
-          <div class="ck-sec col-span-full" data-ck-sec="3" id="al-loc-group">
-            <div class="ck-sec-head" title="Vị trí lò/kệ đặt lô — bấm trực tiếp chip LS1..LS15 để chọn; nút Thêm khai báo vị trí khác; bấm × trên chip để xóa vị trí đã khai báo.">
-              <span class="ck-sec-num">3</span>
-              <span class="ck-sec-title">Vị Trí Sấy</span>
-              <span class="ck-req">Bắt buộc</span>
-              <i data-lucide="circle-help" class="ck-help" aria-hidden="true"></i>
-            </div>
-            <input type="hidden" id="al-location">
-            <!-- KHUNG CHIPS VỊ TRÍ — giờ HIỆN TRỰC TIẾP dưới tiêu đề khối (không cần
-                 bấm nút Chọn Vị Trí như trước — form gọn 1 tầng). Giữ #al-location-panel
-                 + #al-location-chips + #al-location-btn cho JS wire sẵn (events.js). -->
-            <div class="al-picker al-loc-inline" id="al-location-panel">
-              <div class="al-loc-chips" id="al-location-chips"></div>
-              <div class="al-loc-hint hidden" id="al-location-hint">
-                <i data-lucide="info"></i> Bấm <strong>×</strong> trên chip để xóa vị trí đã khai báo
-                (LS1..LS15 là vị trí mặc định, không xóa được).
-              </div>
-              <button type="button" class="btn btn-outline btn-sm" id="al-location-add" title="Khai báo vị trí mới bên cạnh LS1..LS15"><i data-lucide="plus"></i> Thêm vị trí</button>
-              <div class="al-loc-add-row" id="al-location-new-row" hidden>
-                <input type="text" id="al-location-new" placeholder="VD: LS16, Lò 01" autocomplete="off">
-                <button type="button" class="btn btn-primary btn-sm" id="al-location-new-save"><i data-lucide="check"></i> Lưu</button>
-              </div>
-            </div>
-            <!-- NÚT CHỌN VỊ TRÍ ẨN GIẤU — giữ id #al-location-btn cho events.js wire sẵn;
-                 không bấm được trên UI (chips là chính) nhưng vẫn dispatch được nếu cần. -->
-            <button type="button" class="btn btn-outline al-picker-btn" id="al-location-btn" aria-controls="al-location-panel" aria-expanded="false" hidden>
-              <i data-lucide="map-pin"></i> Chọn Vị Trí
-            </button>
-          </div>
+          <!-- KHỐI ③ — DÒNG TÓM TẮT "Vị Trí Sấy" — BẤM = MỞ TẤM TRƯỢT CHỌN VỊ TRÍ -->
+          <button type="button" class="ck-sec al-sum-row col-span-full" data-ck-sec="3" id="al-loc-group"
+            data-al-sheet="loc" aria-haspopup="dialog"
+            title="Bấm để mở dãy chip vị trí LS1..LS15 — tấm trượt từ dưới lên.">
+            <span class="al-sum-num">3</span>
+            <span class="al-sum-main">
+              <span class="al-sum-title">Vị Trí Sấy <span class="ck-req">Bắt buộc</span></span>
+              <span class="al-sum-value" id="al-sum-loc">Chưa chọn vị trí</span>
+            </span>
+            <i data-lucide="chevron-right" class="al-sum-chev" aria-hidden="true"></i>
+          </button>
 
           <!-- KHỐI ④ — GHI CHÚ (không bắt buộc) — nhập 1 dòng, không chiếm khối riêng full-width -->
           <div class="ck-sec col-span-full" data-ck-sec="4" id="al-notes-group">
@@ -5475,7 +5428,85 @@
             <textarea id="al-notes" rows="1" placeholder="Không bắt buộc..."></textarea>
           </div>
         </div>
-        <div class="modal-footer">
+
+        <!-- ═══ TẤM TRƯỢT ② — CHỌN NGUỒN VÀO (trượt từ dưới lên) ═══ -->
+        <div class="al-sheet" id="al-sheet-src" hidden>
+          <div class="al-sheet-scrim" data-al-sheet-close></div>
+          <div class="al-sheet-card" role="dialog" aria-modal="true" aria-label="Chọn nguồn vào">
+            <div class="al-sheet-head">
+              <span class="al-sheet-title"><span class="ck-sec-num">2</span> Nguồn Vào</span>
+              <button type="button" class="btn btn-primary btn-sm" id="al-sheet-src-done" data-al-sheet-close>Xong</button>
+            </div>
+            <div class="al-sheet-body">
+              <input type="hidden" id="al-source">
+              <div class="al-src-row">
+                <button type="button" class="btn btn-outline al-picker-btn" id="al-source-btn" aria-controls="al-source-panel" aria-expanded="false">
+                  <i data-lucide="list-checks"></i>
+                  <span id="al-source-btn-text">Chọn Lô Nan</span>
+                  <span class="al-picked-count" id="al-picked-count">Chưa chọn</span>
+                </button>
+                <!-- Ô TÍCH THAN HÓA LẠI — bật = nguồn đổi sang lô TÓP đang ở Kho -->
+                <label class="al-rework-check" for="al-rework"
+                  title="Đốt lại lô Tóp đang ở Kho (lô vào Kho dạng Tóp xử lý lại từ form Chuyển Kho). Tích = nguồn chỉ gồm các lô Tóp kèm tồn/tổng, nhập số lượng lấy ra đốt lại.">
+                  <input type="checkbox" id="al-rework"> <span>♻️ Than Hóa Lại</span>
+                </label>
+                <!-- Ô NHẬP SỐ LƯỢNG — CHỈ hiện khi tích Than Hóa Lại (lấy 1 phần lô Tóp) -->
+                <div class="form-group al-rework-only" id="al-rework-qty-group" hidden>
+                  <input type="number" id="al-rework-qty" min="1" step="1" inputmode="numeric" placeholder="Số đốt lại (tồn còn lại)"
+                    title="Số thanh TÓP lấy ra để đốt lại — mặc định = tồn còn lại của lô, chặn vượt tồn.">
+                </div>
+              </div>
+              <div class="al-picker" id="al-source-panel" hidden>
+                <div class="al-picker-tools">
+                  <input type="text" id="al-source-search" class="al-search" placeholder="Tìm nhanh: vị trí, mã lô, kích thước, loại (A/A1/B), Ván/Bullig…" autocomplete="off">
+                  <input type="text" id="al-source-qty-search" class="al-search al-search-qty" inputmode="numeric" placeholder="Tìm theo SỐ LƯỢNG (VD: 1000)" autocomplete="off" title="Ô tìm THEO SỐ LƯỢNG — CHỈ khớp số lượng; lọc KẾT HỢP với ô tìm nhanh (điều kiện VÀ)">
+                  <button type="button" class="btn btn-outline btn-sm" id="al-pick-all"><i data-lucide="check-check"></i> Chọn tất cả</button>
+                </div>
+                <div class="al-card-list" id="al-source-list"></div>
+              </div>
+              <div class="al-hint hidden" id="al-source-hint"></div>
+              <!-- THÔNG TIN LẤY TỪ NGUỒN -->
+              <div class="form-group col-span-full" id="al-info-group">
+                <label title="Số liệu lấy tự động từ nguồn đã chọn (kích thước, loại, số lượng, tồn còn lại).">Thông Tin Lấy Từ Nguồn</label>
+                <div class="al-source-info" id="al-source-info"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ TẤM TRƯỢT ③ — CHỌN VỊ TRÍ SẤY (trượt từ dưới lên) ═══ -->
+        <div class="al-sheet" id="al-sheet-loc" hidden>
+          <div class="al-sheet-scrim" data-al-sheet-close></div>
+          <div class="al-sheet-card" role="dialog" aria-modal="true" aria-label="Chọn vị trí sấy">
+            <div class="al-sheet-head">
+              <span class="al-sheet-title"><span class="ck-sec-num">3</span> Vị Trí Sấy</span>
+              <button type="button" class="btn btn-primary btn-sm" id="al-sheet-loc-done" data-al-sheet-close>Xong</button>
+            </div>
+            <div class="al-sheet-body">
+              <input type="hidden" id="al-location">
+              <div class="al-picker al-loc-inline" id="al-location-panel">
+                <div class="al-loc-chips" id="al-location-chips"></div>
+                <div class="al-loc-hint hidden" id="al-location-hint">
+                  <i data-lucide="info"></i> Bấm <strong>×</strong> trên chip để xóa vị trí đã khai báo
+                  (LS1..LS15 là vị trí mặc định, không xóa được).
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" id="al-location-add" title="Khai báo vị trí mới bên cạnh LS1..LS15"><i data-lucide="plus"></i> Thêm vị trí</button>
+                <div class="al-loc-add-row" id="al-location-new-row" hidden>
+                  <input type="text" id="al-location-new" placeholder="VD: LS16, Lò 01" autocomplete="off">
+                  <button type="button" class="btn btn-primary btn-sm" id="al-location-new-save"><i data-lucide="check"></i> Lưu</button>
+                </div>
+              </div>
+              <!-- NÚT CHỌN VỊ TRÍ — giữ id #al-location-btn cho events.js wire sẵn -->
+              <button type="button" class="btn btn-outline al-picker-btn" id="al-location-btn" aria-controls="al-location-panel" aria-expanded="false" hidden>
+                <i data-lucide="map-pin"></i> Chọn Vị Trí
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ CHÂN FORM DÍNH — TÓM TẮT + HỦY/LƯU ═══ -->
+        <div class="modal-footer al-sticky-foot">
+          <span class="al-foot-sum" id="al-foot-sum">Chưa chọn nguồn · chưa chọn vị trí</span>
           <button type="button" class="btn btn-outline" id="btn-cancel-add-lot">Hủy Bỏ</button>
           <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lô Sấy</button>
         </div>
@@ -5564,7 +5595,7 @@
             <div class="al-source-info" id="ck-pos-info"></div>
           </div>
 
-          <!-- KHỐI ③ — NGÀY VÀO KHO (bắt buộc) -->
+          <!-- KHỐI ③ — NGÀY VÀO KHO (bắt buộc) — ô ck-date giữ nguyên ở đây cho cả 2 nhánh -->
           <div class="ck-sec" data-ck-sec="3" id="ck-date-group">
             <div class="ck-sec-head" title="Ngày vào Kho — dùng cho badge đếm ngày của cột Kho.">
               <span class="ck-sec-num">3</span>
@@ -5588,54 +5619,67 @@
             <datalist id="ck-new-loc-list"></datalist>
           </div>
 
-          <!-- THÊM MỚI LÔ VÀO KHO (hiển thị khi chọn "Nhập kho thủ công") -->
-          <div class="form-group ck-block" data-ck-block="2" id="ck-new-group" style="display:none;">
-            <label for="ck-new-loc-new" title="Vị trí kệ/kho sẽ xếp lô mới này.">Vị Trí (Kệ/Kho) <span class="required">*</span></label>
-            <input type="text" id="ck-new-loc-new" placeholder="K11, Kệ 2">
-          </div>
-          <div class="form-group" id="ck-new-qty-group" style="display:none;">
-            <label for="ck-new-qty" title="Số thanh nan của lô mới.">Số Lượng (Thanh) <span class="required">*</span></label>
-            <input type="number" id="ck-new-qty" min="1" step="1" placeholder="5000">
-          </div>
-          <div class="form-group col-span-2" id="ck-new-dims-group" style="display:none;">
-            <label title="Kích thước nan tính bằng milimet: Dài × Rộng × Dày.">Kích Thước Nan (mm): Dài × Rộng × Dày <span class="required">*</span></label>
-            <div class="dimension-inputs">
-              <div>
-                <span class="dim-label">Dài (mm)</span>
-                <input type="number" id="ck-new-length" step="1" min="1" placeholder="Dài">
-              </div>
-              <span class="dim-separator">×</span>
-              <div>
-                <span class="dim-label">Rộng (mm)</span>
-                <input type="number" id="ck-new-width" step="0.1" min="0.1" placeholder="Rộng">
-              </div>
-              <span class="dim-separator">×</span>
-              <div>
-                <span class="dim-label">Dày (mm)</span>
-                <input type="number" id="ck-new-thickness" step="0.1" min="0.1" placeholder="Dày">
-              </div>
+          <!-- KHỐI ②b — NHẬP LÔ MỚI (hiển thị khi chọn "Nhập kho thủ công") — GỌN 3 HÀNG
+               Hàng 1: Vị Trí (Kệ/Kho) · Số Lượng · Loại Nan
+               Hàng 2: Dài · Rộng · Dày · Dùng Cho
+               Hàng 3: Thể tích quy đổi (chip gọn) -->
+          <div class="ck-sec ck-new-grid-wrap col-span-full" data-ck-sec="2b" id="ck-new-group" style="display:none;">
+            <div class="ck-sec-head" title="Nhập tay nan mua ngoài hoặc tồn đầu kỳ vào thẳng Kho — ngày/vị trí/số lượng/kích thước do người dùng khai.">
+              <span class="ck-sec-num">2b</span>
+              <span class="ck-sec-title">Nhập Lô Mới</span>
+              <span class="ck-req">Bắt buộc</span>
+              <i data-lucide="circle-help" class="ck-help" aria-hidden="true"></i>
             </div>
-          </div>
-          <div class="form-group" id="ck-new-type-group" style="display:none;">
-            <label for="ck-new-type" title="Phân loại nan: A · A1 — Ít bọng cật · B — Nhiều bọng cật.">Loại Nan <span class="required">*</span></label>
-            <select id="ck-new-type">
-              <option value="A">Loại A</option>
-              <option value="A1">Loại A1</option>
-              <option value="B">Loại B</option>
-            </select>
-          </div>
-          <div class="form-group" id="ck-new-use-group" style="display:none;">
-            <label for="ck-new-use" title="Lô này sẽ dùng cho chế biến Ván hay Bullig.">Dùng Cho <span class="required">*</span></label>
-            <select id="ck-new-use">
-              <option value="Ván">Ván</option>
-              <option value="Bullig">Bullig</option>
-            </select>
-          </div>
-          <div class="form-group col-span-full" id="ck-new-vol-group" style="display:none;">
-            <label title="Thể tích = (Dài × Rộng × Dày / 1.000.000.000) × Số Lượng — tự tính.">Thể Tích Quy Đổi</label>
-            <div class="volume-preview-box">
-              <span class="vol-num" id="ck-new-vol">0.0000 m³</span>
-              <span class="vol-formula" title="(Dài × Rộng × Dày / 1.000.000.000) × Số Lượng">(Dài × Rộng × Dày / 1.000.000.000) × Số Lượng</span>
+            <div class="ck-new-grid">
+              <!-- HÀNG 1 — 3 ô (Ngày Vào Kho vẫn ở khối ③ riêng — không lặp id ck-date) -->
+              <div class="form-group">
+                <label for="ck-new-loc-new" title="Vị trí kệ/kho sẽ xếp lô mới này.">Vị Trí (Kệ/Kho) <span class="required">*</span></label>
+                <input type="text" id="ck-new-loc-new" placeholder="K11, Kệ 2" autocomplete="off">
+              </div>
+              <div class="form-group" id="ck-new-qty-group">
+                <label for="ck-new-qty" title="Số thanh nan của lô mới.">Số Lượng (Thanh) <span class="required">*</span></label>
+                <input type="number" id="ck-new-qty" min="1" step="1" inputmode="numeric" placeholder="5000">
+              </div>
+              <div class="form-group" id="ck-new-type-group">
+                <label for="ck-new-type" title="Phân loại nan: A · A1 — Ít bọng cật · B — Nhiều bọng cật.">Loại Nan <span class="required">*</span></label>
+                <select id="ck-new-type">
+                  <option value="A">Loại A</option>
+                  <option value="A1">Loại A1</option>
+                  <option value="B">Loại B</option>
+                </select>
+              </div>
+              <!-- HÀNG 2 — Dài · Rộng · Dày · Dùng Cho -->
+              <div class="form-group ck-new-dims" id="ck-new-dims-group">
+                <label title="Kích thước nan tính bằng milimet: Dài × Rộng × Dày.">Kích Thước (mm) <span class="required">*</span></label>
+                <div class="dimension-inputs">
+                  <div>
+                    <input type="number" id="ck-new-length" step="1" min="1" inputmode="numeric" placeholder="Dài">
+                  </div>
+                  <span class="dim-separator">×</span>
+                  <div>
+                    <input type="number" id="ck-new-width" step="0.1" min="0.1" inputmode="decimal" placeholder="Rộng">
+                  </div>
+                  <span class="dim-separator">×</span>
+                  <div>
+                    <input type="number" id="ck-new-thickness" step="0.1" min="0.1" inputmode="decimal" placeholder="Dày">
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" id="ck-new-use-group">
+                <label for="ck-new-use" title="Lô này sẽ dùng cho chế biến Ván hay Bullig.">Dùng Cho <span class="required">*</span></label>
+                <select id="ck-new-use">
+                  <option value="Ván">Ván</option>
+                  <option value="Bullig">Bullig</option>
+                </select>
+              </div>
+              <!-- HÀNG 3 — thể tích chip gọn 1 dòng (tự tính) -->
+              <div class="form-group ck-new-vol" id="ck-new-vol-group">
+                <label title="Thể tích = (Dài × Rộng × Dày / 1.000.000.000) × Số Lượng — tự tính.">Thể Tích Quy Đổi <span class="ck-opt">tự tính</span></label>
+                <div class="volume-preview-box">
+                  <span class="vol-num" id="ck-new-vol">0.0000 m³</span>
+                  <span class="vol-formula" title="(Dài × Rộng × Dày / 1.000.000.000) × Số Lượng">(tự tính)</span>
+                </div>
+              </div>
             </div>
           </div>
           <!-- DÒNG GHI CHÚ NHỎ RIÊNG DƯỚI 4 KHỐI (không bắt buộc — tooltip khi di chuột vào nhãn) -->

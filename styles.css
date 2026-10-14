@@ -9120,6 +9120,120 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
 }
 
 /* ═════════════════════════════════════════════════════════════════════
+   FORM THÊM LÔ SẤY MỚI — PHONG CÁCH BOTTOM-SHEET (15/10/2026)
+   Màn chính chỉ có DÒNG TÓM TẮT; bấm dòng ②/③ → TẤM TRƯỢT từ dưới lên.
+   Danh sách dài (thẻ nguồn) nằm TRONG tấm ⇒ không đẩy/che khối khác.
+   ═════════════════════════════════════════════════════════════════════ */
+/* ── DÒNG TÓM TẮT (bấm được) ── */
+#add-lot-form .al-sum-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+#add-lot-form .al-sum-row:hover { border-color: var(--primary); }
+#add-lot-form .al-sum-row.is-open { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.16); }
+#add-lot-form .al-sum-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#add-lot-form .al-sum-title { font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+#add-lot-form .al-sum-value {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#add-lot-form .al-sum-chev { flex: 0 0 auto; width: 18px; height: 18px; color: var(--text-muted); }
+
+/* ── TẤM TRƯỢT (bottom-sheet) ── */
+#add-lot-form .al-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;                 /* TRÊN modal-overlay (10000) + dropdown nguồn (10001) */
+  display: flex;
+  align-items: flex-end;          /* card dính ĐÁY khung nhìn */
+}
+#add-lot-form .al-sheet[hidden] { display: none; }
+#add-lot-form .al-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  animation: alSheetFade 0.18s ease-out;
+}
+#add-lot-form .al-sheet-card {
+  position: relative;
+  width: 100%;
+  max-height: 84dvh;
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  box-shadow: 0 -10px 34px rgba(0, 0, 0, 0.32);
+  animation: alSheetUp 0.22s ease-out;
+  overflow: hidden;
+}
+#add-lot-form .al-sheet-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+#add-lot-form .al-sheet-title { flex: 1; min-width: 0; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; }
+#add-lot-form .al-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 12px;
+}
+@keyframes alSheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes alSheetFade { from { opacity: 0; } to { opacity: 1; } }
+body[data-fx="low"] #add-lot-form .al-sheet-card,
+body[data-fx="low"] #add-lot-form .al-sheet-scrim { animation: none; }
+
+/* ── CHÂN FORM DÍNH (tóm tắt + Hủy/Lưu) ── */
+#add-lot-form .al-sticky-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+}
+#add-lot-form .al-foot-sum {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 640px) {
+  #add-lot-form .al-sheet-card { max-width: 640px; margin: 0 auto; border-radius: 18px 18px 0 0; }
+}
+@media (max-width: 639.98px) {
+  #add-lot-form .al-sheet-card { max-height: 88dvh; }
+  #add-lot-form .al-sticky-foot .btn { flex: 1 1 0; justify-content: center; }
+}
+
+/* ── BỎ border/padding của .ck-sec khi dùng làm DÒNG TÓM TẮT (nút) ── */
+#add-lot-form button.al-sum-row { padding: 12px; }
+
+/* ═════════════════════════════════════════════════════════════════════
    FORM NHẬP LIỆU THẺ "THAN HÓA + SẤY" — GỌN VỪA MÀN HÌNH (30/09/2026)
    Modal "Thêm Lô Sấy Mới" (#add-lot-form) + "Chuyển Kho" (#transfer-kho-form)
    mở từ thẻ x2-than-hoa-card (khung tre 26px chiếm mép). Yêu cầu: KHÔNG phải
@@ -9177,6 +9291,23 @@ body[data-theme="night"] .cap-table .cap-tc, body[data-theme="night"] .cap-sub-t
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   -webkit-overflow-scrolling: touch;
+}
+/* BOTTOM-SHEET (15/10/2026): khi danh sách nguồn nằm TRONG tấm trượt thì
+   hiển thị INLINE (không thả nổi) — tấm đã là lớp trên cùng, cuộn trong tấm,
+   KHÔNG đẩy/che khối nào. Ghi đè cục bộ để giữ nguyên khối CSS nổi ở trên
+   cho trường hợp panel nằm ngoài tấm (tương thích ngược). */
+#add-lot-form .al-sheet #al-source-panel {
+  position: static;
+  left: auto;
+  right: auto;
+  z-index: auto;
+  margin-top: 10px;
+  padding: 8px;
+  max-height: none;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 /* Ô TÌM THEO SỐ LƯỢNG: thu hẹp để chung 1 dòng với ô tìm nhanh trên dropdown rộng */
 #modal-add-lot .al-search-qty { flex: 1 1 180px; max-width: 260px; }
@@ -10249,3 +10380,28 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   margin-top: 6px;
 }
 .al-loc-inline .al-loc-chips { margin-bottom: 6px; }
+/* ── FORM CHUYỂN KHO — KHỐI ②b NHẬP LÔ MỚI (15/10/2026) — gộp 3 HÀNG ──
+   Hàng 1: Vị Trí · Số Lượng · Loại Nan (3 cột desktop)
+   Hàng 2: Dài · Rộng · Dày · Dùng Cho (4 cột — Dài/Rộng/Dày gộp 1 ô .ck-new-dims)
+   Hàng 3: Thể tích quy đổi (chip gọn) */
+.ck-new-grid-wrap { padding-top: 10px; }
+.ck-new-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.ck-new-grid > .ck-new-dims { grid-column: span 3; }   /* ô kích thước chiếm 3/4 hàng 2 */
+.ck-new-grid > .ck-new-vol  { grid-column: 1 / -1; }   /* thể tích full-width ở hàng 3 */
+.ck-new-grid .dimension-inputs input { min-height: 40px; }
+/* Ô nhập kích thước gọn: bỏ nhãn phụ từng ô (đã có nhãn chung "Kích Thước (mm)") */
+.ck-new-grid .dim-label { display: none; }
+/* Chip thể tích quy đổi — gọn 1 dòng, không cần hộp dashed to */
+.ck-new-grid .volume-preview-box { display: flex; align-items: baseline; gap: 8px; padding: 6px 10px; }
+@media (max-width: 999.98px) {
+  .ck-new-grid { grid-template-columns: repeat(2, 1fr); }
+  .ck-new-grid > .ck-new-dims { grid-column: span 2; }
+}
+@media (max-width: 639.98px) {
+  .ck-new-grid { grid-template-columns: 1fr; }
+  .ck-new-grid > .ck-new-dims { grid-column: span 1; }
+}

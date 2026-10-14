@@ -520,7 +520,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v247/.test(swJs));
+  /nha-may-ngoc-son-v249/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -1184,6 +1184,70 @@ check('FORM GỌN (styles.css): modal theo dvh + KHÔNG cuộn ngang + danh sác
 check('FORM GỌN (js): mở 1 khối chọn thì TỰ ĐÓNG khối còn lại (form không phình khi mở cả hai)',
   jsBatchModals.includes("const locPanel = document.getElementById('al-location-panel');") &&
   jsBatchModals.includes("const srcPanel = document.getElementById('al-source-panel');"));
+// ─── N2. BOTTOM-SHEET — DÒNG TÓM TẮT + TẤM TRƯỢT + CHÂN DÍNH (15/10/2026) ───
+check('BOTTOM-SHEET (index): 2 DÒNG TÓM TẮT bấm được (data-al-sheet src/loc) thay khối dài trên form',
+  addLotSlice.includes('id="al-sum-src"') && addLotSlice.includes('id="al-sum-loc"') &&
+  addLotSlice.includes('data-al-sheet="src"') && addLotSlice.includes('data-al-sheet="loc"') &&
+  addLotSlice.includes('class="ck-sec al-sum-row'));
+check('BOTTOM-SHEET (index): 2 TẤM TRƯỢT + nền mờ + nút Xong + CHÂN DÍNH tóm tắt',
+  addLotSlice.includes('id="al-sheet-src"') && addLotSlice.includes('id="al-sheet-loc"') &&
+  addLotSlice.includes('class="al-sheet-scrim"') && addLotSlice.includes('data-al-sheet-close') &&
+  addLotSlice.includes('id="al-sheet-src-done"') && addLotSlice.includes('id="al-sheet-loc-done"') &&
+  addLotSlice.includes('id="al-foot-sum"') && addLotSlice.includes('al-sticky-foot') &&
+  // ô nhập THẬT nằm TRONG tấm trượt (sau id tấm) — không còn trên form chính
+  addLotSlice.indexOf('id="al-sum-src"') < addLotSlice.indexOf('id="al-sheet-src"') &&
+  addLotSlice.indexOf('id="al-sheet-src"') < addLotSlice.indexOf('id="al-source-list"') &&
+  addLotSlice.indexOf('id="al-sheet-loc"') < addLotSlice.indexOf('id="al-location-chips"'));
+check('BOTTOM-SHEET (js): hàm alOpenSheet/alCloseSheet/alOnSheetClick/alRefreshSummary + gọi cập nhật tóm tắt',
+  jsBatchModals.includes('function alOpenSheet') && jsBatchModals.includes('function alCloseSheet') &&
+  jsBatchModals.includes('function alOnSheetClick') && jsBatchModals.includes('function alRefreshSummary') &&
+  jsBatchModals.includes('AL_SHEETS = { src:') &&
+  jsBatchModals.includes('alRefreshSummary();') &&
+  jsBatchModals.includes("const panel = document.getElementById('al-source-panel');") &&
+  jsBatchModals.includes("panel.closest('.al-sheet')"));
+check('BOTTOM-SHEET (events): ủy nhiệm 1 listener trên #add-lot-form + import alOnSheetClick',
+  jsEvents.includes("safeOn('add-lot-form', 'click', alOnSheetClick)") &&
+  jsEvents.includes('alOnSheetClick'));
+check('BOTTOM-SHEET (styles.css): tấm trượt fixed z-index TRÊN modal + animation + chân dính + panel nguồn INLINE trong tấm',
+  cssHtml.includes('#add-lot-form .al-sheet {') && cssHtml.includes('z-index: 10020;') &&
+  cssHtml.includes('@keyframes alSheetUp') && cssHtml.includes('#add-lot-form .al-sticky-foot {') &&
+  cssHtml.includes('position: sticky;') && cssHtml.includes('#add-lot-form .al-sum-row {') &&
+  cssHtml.includes('#add-lot-form .al-sheet #al-source-panel {') && cssHtml.includes('position: static;'));
+// HÀNH VI: mở/đóng tấm + tóm tắt cập nhật theo lựa chọn
+bm.openAddLotModal();
+check('BOTTOM-SHEET (hành vi): mở tấm Nguồn → #al-sheet-src hiện, tấm Vị trí ẩn',
+  bm.alOpenSheet('src') === true &&
+  document.getElementById('al-sheet-src').hidden === false &&
+  document.getElementById('al-sheet-loc').hidden === true);
+check('BOTTOM-SHEET (hành vi): đổi sang tấm Vị trí → tự đóng tấm trước (không chồng nhau)',
+  bm.alOpenSheet('loc') === true &&
+  document.getElementById('al-sheet-src').hidden === true &&
+  document.getElementById('al-sheet-loc').hidden === false);
+check('BOTTOM-SHEET (hành vi): bấm dòng tóm tắt (ủy nhiệm) → mở đúng tấm',
+  bm.alOnSheetClick({ target: { closest: (q) => (q === '[data-al-sheet]' ? { getAttribute: () => 'src' } : null) } }) === true &&
+  document.getElementById('al-sheet-src').hidden === false);
+check('BOTTOM-SHEET (hành vi): bấm nút "Xong"/nền mờ → ĐÓNG CẢ HAI tấm + dropdown nguồn',
+  bm.alOnSheetClick({ target: { closest: (q) => (q === '[data-al-sheet-close]' ? {} : null) } }) === true &&
+  document.getElementById('al-sheet-src').hidden === true &&
+  document.getElementById('al-sheet-loc').hidden === true &&
+  document.getElementById('al-source-panel').hidden === true);
+check('BOTTOM-SHEET (hành vi): tóm tắt cập nhật theo nguồn + vị trí đã chọn',
+  (function () {
+    bm.alTogglePick('cn-1');
+    bm.alRefreshSummary();
+    const okSrc = document.getElementById('al-sum-src').textContent.includes('1 nguồn');
+    bm.alSetLocation('LS5');
+    const okLoc = document.getElementById('al-sum-loc').textContent === 'LS5';
+    const okFoot = document.getElementById('al-foot-sum').textContent.includes('LS5');
+    bm.alTogglePick('cn-1');   // trả về trạng thái chưa chọn
+    return okSrc && okLoc && okFoot;
+  })());
+check('BOTTOM-SHEET (hành vi): đóng modal Thêm Lô → tấm trượt cũng đóng (lần sau mở lại sạch)',
+  (function () {
+    bm.alOpenSheet('src');
+    bm.closeAddLotModal();
+    return document.getElementById('al-sheet-src').hidden === true;
+  })());
 // ─── O. Ô TÌM THEO SỐ LƯỢNG + DROPDOWN NỔI (04/10/2026) ─────────────
 // Cắt đúng khối CSS dropdown nổi để kiểm tra từng thuộc tính
 const alFloatCss = (function () {

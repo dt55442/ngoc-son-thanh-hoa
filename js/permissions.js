@@ -139,11 +139,8 @@ export function canEditTab(tabId) {
 // nên muốn đổi chính sách chỉ cần sửa tại đây.
 export function canEditRate() { return isAdmin(); }
 
-// Sửa được biểu đồ ở vùng nào (biểu đồ vùng nâng cao cần cả 2 quyền)
-export function canEditChartZone(zone, source) {
-  if (zone === 'advanced' && !canViewAdvanced()) return false;
-  return canEditTab(source || 'dashboard');
-}
+// Sửa được biểu đồ hay không = quyền SỬA TAB NGUỒN của biểu đồ đó.
+// (Khái niệm "vùng nâng cao" của biểu đồ đã bị XÓA — xem js/dashboard.js)
 
 // Sửa được ít nhất một thứ gì đó (dùng cho nút Undo, module chung...)
 export function canEditAnything() {

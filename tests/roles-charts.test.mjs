@@ -121,8 +121,9 @@ state.currentUser = { username: 'ed', role: 'editor', editTabs: ['kanban'], allo
 check('Editor: xem vùng nâng cao = false', perms.canViewAdvanced() === false);
 check('Editor: được sửa kanban', perms.canEditTab('kanban') === true);
 check('Editor: KHÔNG được sửa press', perms.canEditTab('press') === false);
-check('Editor: được sửa biểu đồ cơ bản nguồn kanban', perms.canEditChartZone('basic', 'kanban') === true);
-check('Editor: không sửa được biểu đồ vùng nâng cao', perms.canEditChartZone('advanced', 'kanban') === false);
+// Vùng Nâng Cao của BIỂU ĐỒ đã bị XÓA HẲN (15/10/2026) — không còn hàm phân quyền vùng
+check('ĐÃ XÓA: hàm canEditChartZone không còn (biểu đồ chỉ còn vùng Cơ Bản)', perms.canEditChartZone === undefined);
+check('Editor: quyền sửa biểu đồ = quyền sửa tab nguồn của biểu đồ', perms.canEditTab('kanban') === true);
 
 state.currentUser = { username: 'ql', role: 'manager', editTabs: undefined, allowAdvanced: undefined };
 perms.normalizeUser(state.currentUser);

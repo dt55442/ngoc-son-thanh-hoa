@@ -1884,13 +1884,6 @@ h1, h2, h3, h4, h5 {
   box-shadow: 0 2px 6px rgba(23, 90, 145, 0.35);
 }
 
-/* Chip vùng nâng cao: giữ nền trắng mờ để không lấn át chip nguồn */
-.custom-chart-card .custom-card-header .chart-zone-chip {
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.45);
-}
-
 .custom-chart-tools {
   display: flex;
   align-items: center;
@@ -4023,20 +4016,6 @@ tr.mat-plan-current td { background: var(--primary-light); }
   border: 1px solid color-mix(in srgb, var(--chip-color, var(--primary)) 25%, transparent);
 }
 .chart-source-chip svg { width: 11px; height: 11px; }
-.chart-zone-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  background: #fff7ed;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
-}
-.chart-zone-chip svg { width: 11px; height: 11px; }
 
 /* ─── Quyền chi tiết: chips & checkbox tab ─── */
 .perm-chip {
@@ -10404,4 +10383,160 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 @media (max-width: 639.98px) {
   .ck-new-grid { grid-template-columns: 1fr; }
   .ck-new-grid > .ck-new-dims { grid-column: span 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THẺ TRUY XUẤT ĐẦU VÀO → ĐẦU RA (Vùng Nâng Cao — js/trace.js)
+   Thẻ #trace-card: dải chỉ số · bảng chuỗi giá trị 7 chặng ·
+   bảng truy xuất theo mã ván. Mọi chú thích dài nằm ở tooltip.
+   ═══════════════════════════════════════════════════════════ */
+.trace-card { margin-bottom: 18px; }
+
+/* ─── Thanh công cụ: ô chọn mã ván + nút kỳ + ‹ › ─── */
+.trace-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.trace-product-select {
+  min-width: 210px; max-width: 300px;
+  padding: 6px 10px; font-size: 0.82rem;
+  background: var(--bg-input, var(--bg-card)); color: var(--text-main, inherit);
+  border: 1px solid var(--border-color); border-radius: var(--radius-md, 8px);
+}
+.trace-mode-seg {
+  display: inline-flex; overflow: hidden;
+  border: 1px solid var(--border-color); border-radius: 999px;
+}
+.trace-mode-btn {
+  padding: 5px 14px; font-size: 0.78rem; font-weight: 600;
+  background: transparent; color: var(--text-muted);
+  border: none; cursor: pointer; transition: background .15s, color .15s;
+}
+.trace-mode-btn + .trace-mode-btn { border-left: 1px solid var(--border-color); }
+.trace-mode-btn.is-on { background: var(--primary, #0f766e); color: #fff; }
+.trace-mode-btn:hover:not(.is-on) { background: rgba(15, 118, 110, 0.08); }
+.trace-period-nav {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px; border: 1px solid var(--border-color); border-radius: 999px;
+}
+.trace-nav-btn {
+  width: 26px; height: 26px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.05rem; font-weight: 700; cursor: pointer;
+  background: transparent; color: var(--primary, #0f766e);
+  border: none; border-radius: 50%;
+}
+.trace-nav-btn:hover { background: rgba(15, 118, 110, 0.12); }
+.trace-period-label {
+  min-width: 132px; text-align: center;
+  font-size: 0.8rem; font-weight: 600; color: var(--text-main, inherit);
+}
+
+/* ─── Dải chỉ số tổng quan ─── */
+.trace-kpi-row {
+  display: grid; gap: 10px; margin: 12px 0 4px 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.trace-kpi {
+  padding: 10px 12px;
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary, #0f766e);
+  border-radius: var(--radius-md, 8px);
+}
+.trace-kpi-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .02em; }
+.trace-kpi-value { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-main, inherit); }
+.trace-kpi-unit { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-left: 4px; }
+.trace-kpi-head { border-left-color: #7c3aed; background: linear-gradient(180deg, rgba(124, 58, 237, 0.07), transparent); }
+.trace-kpi-pick { border-left-color: #ea580c; }
+.trace-kpi-muted { border-left-color: var(--text-muted); }
+
+/* ─── Khung từng phần ─── */
+.trace-section { margin-top: 14px; }
+.trace-section-head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.82rem; font-weight: 700; color: var(--text-main, inherit);
+  margin-bottom: 6px;
+}
+.trace-sec-num { color: var(--primary, #0f766e); }
+.trace-help {
+  font-size: 0.78rem; color: var(--text-muted);
+  cursor: help; user-select: none;
+}
+
+/* ─── Bảng ─── */
+.trace-table-wrap { max-height: 60vh; }
+.trace-table { min-width: 720px; }
+.trace-prod-table { min-width: 900px; }
+.trace-table th, .trace-table td { font-size: 0.8rem; vertical-align: middle; }
+.trace-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.trace-step-no { width: 34px; text-align: center; color: var(--text-muted); }
+.trace-step-unit { width: 54px; text-align: center; color: var(--text-muted); }
+.trace-step-name { font-weight: 600; }
+.trace-step-note { font-weight: 400; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.trace-out { color: #16a34a; font-weight: 600; }
+.trace-loss { color: #dc2626; }
+.trace-head-num { color: #7c3aed; font-weight: 700; }
+.trace-prod-name { font-weight: 600; min-width: 190px; }
+.trace-total-row td { font-weight: 700; background: rgba(15, 118, 110, 0.07); }
+
+/* Chip Sử Dụng Nan (Ván / Bullig) */
+.trace-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  font-size: 0.66rem; font-weight: 700; border-radius: 999px; vertical-align: 1px;
+}
+.trace-tag-van { background: rgba(124, 58, 237, 0.14); color: #7c3aed; }
+.trace-tag-bullig { background: rgba(219, 39, 119, 0.14); color: #db2777; }
+
+/* ─── BANNER "ĐANG XÂY DỰNG" (đầu thẻ Truy Xuất) ─── */
+.trace-wip-banner {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 0 0 10px 0; padding: 8px 12px;
+  font-size: 0.8rem; font-weight: 600; line-height: 1.5;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px dashed #f59e0b;
+  border-radius: var(--radius-md, 8px);
+  text-align: center;
+}
+.trace-wip-banner svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+/* ─── Nút mở/ẩn CHI TIẾT TỪNG CÔNG ĐOẠN (mặc định ẨN) ─── */
+.trace-detail-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-bottom: 8px; padding: 6px 14px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  color: var(--primary, #0f766e);
+  background: transparent;
+  border: 1px dashed var(--border-color); border-radius: 999px;
+  transition: background .15s;
+}
+.trace-detail-toggle:hover { background: rgba(15, 118, 110, 0.08); }
+.trace-detail-toggle svg { width: 14px; height: 14px; }
+.trace-detail { padding-top: 4px; }
+/* Bắt buộc: author CSS không được đè thuộc tính hidden của UA */
+.trace-detail[hidden] { display: none !important; }
+
+/* Dòng "Chưa gắn mã" (lượt không khớp định mức nào) — làm mờ, in nghiêng */
+.trace-unlinked-row td { font-style: italic; opacity: .82; }
+.trace-unlinked-row .trace-prod-name { font-weight: 500; }
+
+/* ─── Trạng thái rỗng ─── */
+.trace-empty {
+  padding: 22px 14px; text-align: center;
+  color: var(--text-muted); font-size: 0.82rem;
+  border: 1px dashed var(--border-color); border-radius: var(--radius-md, 8px);
+}
+.trace-empty svg { width: 26px; height: 26px; opacity: .5; }
+
+/* ─── Điện thoại ─── */
+@media (max-width: 639.98px) {
+  .trace-toolbar { gap: 8px; }
+  .trace-product-select { flex: 1 1 100%; max-width: none; min-height: 42px; font-size: 16px; }
+  .trace-mode-btn { min-height: 38px; padding: 5px 12px; }
+  .trace-nav-btn { width: 34px; height: 34px; }
+  .trace-wip-banner { font-size: 0.75rem; padding: 7px 9px; }
+  .trace-kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .trace-kpi-value { font-size: 1rem; }
+  .trace-detail-toggle { width: 100%; justify-content: center; min-height: 42px; }
+  .trace-table-wrap { max-height: 56vh; }
+  .trace-table, .trace-prod-table { min-width: 640px; }
 }

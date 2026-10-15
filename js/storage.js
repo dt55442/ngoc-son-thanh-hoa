@@ -11,6 +11,10 @@ import { allPhotoIds, putPhotoBlob } from './photo-store.js';
 import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
+// 3 miền TRƯỚC ĐÂY THIẾU trong file bamboo_data.json (thẻ Truy Xuất Đầu Vào →
+// Đầu Ra + tab Kế Hoạch cần): định mức nguyên vật liệu · sản lượng ép ván ·
+// bản ghi kế hoạch. Nay ghi kèm để nạp lại file không mất số.
+import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRESS_RECORDS } from './state.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
   function loadData() {
@@ -105,6 +109,42 @@ import { escapeHTML, showToast } from './utils.js';
     syncHistorySnapshots(); // gộp hàng loạt (không phải thao tác sửa) → đặt lại nền so sánh
     return merged;
   }
+  // ─── GỘP 3 MIỀN TAB KẾ HOẠCH / ÉP VÁN (từ file bamboo_data.json / backup) ──
+  // TRƯỚC ĐÂY 3 miền này KHÔNG được ghi vào file (writeDataToFile thiếu) nên
+  // nạp lại file là MẤT định mức nguyên vật liệu + sản lượng ép ván → thẻ
+  // Truy Xuất Đầu Vào → Đầu Ra không tính được. Nay ghi + nạp đủ, GỘP theo
+  // id (bản nào có dấu thời gian mới hơn thì thắng — không đè bản đang dùng).
+  function restoreMaterialRates(incomingArr) {
+    const before = JSON.stringify(state.materialRates || []);
+    const merged = mergeXuong2Records(state.materialRates, incomingArr);
+    state.materialRates = merged;
+    try { localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+
+  function restorePlanningItems(incomingArr) {
+    const before = JSON.stringify(state.planningItems || []);
+    const merged = mergeXuong2Records(state.planningItems, incomingArr);
+    state.planningItems = merged;
+    try { localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+
+  function restorePressRecords(incomingArr) {
+    const before = JSON.stringify(state.pressRecords || []);
+    const merged = mergeXuong2Records(state.pressRecords, incomingArr);
+    state.pressRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+
+
 
   // ─── GỘP NHẬT KÝ CẮT/CHỌN XƯỞNG 2 (từ file bamboo_data.json / backup) ──
   // Dấu thời gian so sánh bản ghi (ưu tiên updatedAt); bản chỉ có ở một phía giữ lại.
@@ -1158,6 +1198,10 @@ import { escapeHTML, showToast } from './utils.js';
         users: state.users,
         customCharts: state.customCharts,
         materialRecords: state.materialRecords || [],
+        // 3 miền tab Kế Hoạch / Ép Ván — cần cho thẻ Truy Xuất Đầu Vào → Đầu Ra
+        materialRates: state.materialRates || [],
+        planningItems: state.planningItems || [],
+        pressRecords: state.pressRecords || [],
         xuong2CutRecords: state.xuong2CutRecords || [],
         xuong2BoluongRecords: state.xuong2BoluongRecords || [],
         xuong1CatOngRecords: state.xuong1CatOngRecords || [],
@@ -1363,6 +1407,11 @@ import { escapeHTML, showToast } from './utils.js';
           state.customCharts = imported.customCharts;
           saveCustomCharts();
         }
+
+        // ── 3 MIỀN TAB KẾ HOẠCH / ÉP VÁN (trước đây file thiếu nên bị mất) ──
+        if (imported && Array.isArray(imported.materialRates)) restoreMaterialRates(imported.materialRates);
+        if (imported && Array.isArray(imported.planningItems)) restorePlanningItems(imported.planningItems);
+        if (imported && Array.isArray(imported.pressRecords)) restorePressRecords(imported.pressRecords);
 
         if (imported && Array.isArray(imported.materialRecords)) {
           restoreMaterialRecords(imported.materialRecords); // GỘP — không xóa các lần nhập mới hơn backup

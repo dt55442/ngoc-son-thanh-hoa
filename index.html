@@ -2946,15 +2946,63 @@
             <!-- Nút "?" TRỢ GIÚP vùng Nâng Cao — mô tả vùng đã ẨN; hover hiện mô tả, bấm mở modal -->
             <button type="button" class="btn-dash-help" id="btn-help-zone-advanced"
                     title="Chỉ dành cho Admin &amp; Ban Quản Lý — chứa các chỉ số nội bộ, định mức, năng suất nhân viên... Bấm để xem giải thích nhanh.">?</button>
-            <button class="btn btn-primary btn-sm" id="btn-add-chart-advanced" style="display:none;">
-              <i data-lucide="plus-circle"></i> + Tạo Biểu Đồ Nâng Cao
-            </button>
           </div>
         </div>
-        <!-- DYNAMIC ADVANCED CHARTS GRID -->
-        <div id="advanced-charts-grid" class="charts-grid" style="grid-template-columns: repeat(2, 1fr);">
-          <!-- Rendered dynamically by JavaScript -->
+        <!-- ======================================================= -->
+        <!-- TRUY XUẤT ĐẦU VÀO → ĐẦU RA (js/trace.js)                -->
+        <!-- test: tests/trace.test.mjs · chỉ ĐỌC, không state mới    -->
+        <!-- ======================================================= -->
+        <div class="planning-card trace-card advanced-only" id="trace-card">
+          <!-- BANNER CẢNH BÁO: tính năng mới còn đang xây dựng -->
+          <div class="trace-wip-banner" role="status">
+            <i data-lucide="alert-triangle"></i>
+            Chức năng đang trong quá trình xây dựng — kết quả có thể chưa đúng, hãy chờ admin sửa chữa.
+          </div>
+          <div class="planning-card-header">
+            <h4><i data-lucide="git-merge"></i> Truy Xuất Đầu Vào → Đầu Ra
+              <!-- Nút "?" TRỢ GIÚP: toàn bộ giải thích/công thức CHỈ nằm ở đây (tooltip) -->
+              <button type="button" class="btn-dash-help" id="trace-help-btn"
+                      title="Công thức: Thể tích 1 đơn vị = Dài × Rộng × Dày ÷ 1.000.000.000 (mm → m³) · Kg tươi / 1 m³ = Σ kg luồng tươi ÷ Σ m³ sản phẩm · Kg tươi của mã = Σ kg tươi kỳ × (thanh nan của mã ÷ Σ thanh nan các mã). Thanh nan của mã: ván = thanh nan vào lượt ép (lượt ép thành phẩm ghi tấm ván thô → quy ra thanh nan theo cỡ ván thô) · Bullig = thanh thô đã gia công · thanh = thanh đưa vào Kiểm thanh (tab QC). Lượt nan MUA NGOÀI (ngoài công đoạn) KHÔNG tính vào chuỗi.">?</button>
+            </h4>
+            <div class="trace-toolbar">
+              <select id="trace-product" class="trace-product-select"
+                      title="Chọn 1 mã ván để xem riêng — để trống là tổng hợp mọi mã có ép trong kỳ"></select>
+              <div class="trace-mode-seg" role="group" aria-label="Chọn kỳ xem">
+                <button type="button" class="trace-mode-btn" data-trace-mode="week" aria-pressed="false">Tuần</button>
+                <button type="button" class="trace-mode-btn is-on" data-trace-mode="month" aria-pressed="true">Tháng</button>
+                <button type="button" class="trace-mode-btn" data-trace-mode="year" aria-pressed="false">Năm</button>
+              </div>
+              <div class="trace-period-nav">
+                <button type="button" class="trace-nav-btn" id="trace-prev" title="Kỳ trước">‹</button>
+                <span class="trace-period-label" id="trace-period-label">—</span>
+                <button type="button" class="trace-nav-btn" id="trace-next" title="Kỳ sau">›</button>
+              </div>
+            </div>
+          </div>
+          <div id="trace-kpis" class="trace-kpi-row"></div>
+          <div class="trace-section">
+            <div class="trace-section-head">
+              <span class="trace-sec-num">①</span> Tổng quan toàn xưởng &amp; chi tiết công đoạn
+              <span class="trace-help" title="Số liệu ĐO TRỰC TIẾP từ các thẻ công đoạn trong kỳ: nguyên liệu nhập → cắt chọn → bổ ống → bào thô → chọn nan → bào tinh → ép ván. Ô 'Hao hụt' và 'Tỷ lệ hao' chỉ tính trong cùng một đơn vị (kg hoặc thanh). Bấm nút bên dưới khi cần đào sâu từng chặng.">ⓘ</span>
+            </div>
+            <button type="button" class="trace-detail-toggle" id="trace-detail-toggle"
+                    aria-expanded="false" aria-controls="trace-detail"
+                    title="Chi tiết đầu vào/ra từng công đoạn được ẨN mặc định cho gọn — bấm để mở.">
+              <i data-lucide="chevron-down"></i> Chi tiết từng công đoạn
+            </button>
+            <div class="trace-detail" id="trace-detail" hidden>
+              <div id="trace-chain"></div>
+            </div>
+          </div>
+          <div class="trace-section">
+            <div class="trace-section-head">
+              <span class="trace-sec-num">②</span> Truy xuất theo từng mã ván / thanh / Bullig (ước tính phân bổ)
+              <span class="trace-help" title="Số kg ở đầu chuỗi là số CHUNG chưa gắn mã, nên phần theo từng mã là ƯỚC TÍNH: phân bổ kg đầu vào theo SỐ THANH ĐO THẬT mỗi mã tiêu thụ trong kỳ. VÁN: lượt ép ra ván thô ghi thanh nan (khối Đầu vào), lượt ép thành phẩm ghi TẤM VÁN THÔ đầu vào → tự quy ra thanh nan theo cỡ ván thô, nên kg tươi gắn đúng về mã thành phẩm. BULLIG: thanh thô đã gia công (thẻ Bullig). THANH: số thanh đưa vào Kiểm thanh (tab QC). Mã chưa có số đo → dùng thanh định mức. Ván thô chưa vào thành phẩm gom vào dòng 'Chưa gắn mã'.">ⓘ</span>
+            </div>
+            <div id="trace-products"></div>
+          </div>
         </div>
+
         <!-- KHÓA: hiển thị khi không đủ quyền -->
         <div class="zone-lock-card" id="advanced-zone-lock">
           <div class="zone-lock-icon"><i data-lucide="lock"></i></div>
@@ -6447,15 +6495,6 @@
               <option value="press">Ép Ván (Sản Lượng Ép Ván)</option>
               <option value="materials">Nhập Nguyên Liệu</option>
               <option value="materialsPlan">Kế Hoạch vs Thực Tế Nguyên Liệu</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-zone" style="font-weight:600;">
-              <i data-lucide="shield"></i> Vùng Hiển Thị
-            </label>
-            <select id="builder-zone">
-              <option value="basic">Cơ Bản (mọi người)</option>
-              <option value="advanced">Nâng Cao (Admin/BQL)</option>
             </select>
           </div>
           <div class="form-group" style="margin-bottom:0;">

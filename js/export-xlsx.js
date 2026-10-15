@@ -5,6 +5,8 @@ import { firePushSync, initLucide } from './cloud.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc xuất file
 import { renderCustomCharts } from './dashboard.js';
 import { logDataChange } from './history.js';
+import { trackDeleted } from './tombstone.js'; // Dọn biểu đồ vùng Nâng Cao cũ (zone='advanced')
+import { captureAutoBackup } from './autobackup.js'; // Chụp backup TRƯỚC khi dọn số phụ
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
@@ -1816,11 +1818,23 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     migrateChartDefs();
   }
 
-  // Đảm bảo mọi biểu đồ đều có zone (basic/advanced) & source (tab nguồn)
+  // Đảm bảo mọi biểu đồ đều có nguồn (tab nguồn) & KHUÔN vùng — zone CHỈ còn 'basic'
   function migrateChartDefs() {
     let changed = false;
+    // ── DỌN SỐ PHỤ (15/10/2026): vùng Nâng Cao của biểu đồ ĐÃ XÓA HẲN ──
+    // Bản ghi zone='advanced' cũ không còn chỗ hiển thị → xóa hẳn, KHÔNG giữ
+    // làm mồ côi. Chụp backup TRƯỚC khi xóa + ghi tombstone (mây không hồi sinh).
+    const legacyAdv = (state.customCharts || []).filter(c => c && c.zone === 'advanced');
+    if (legacyAdv.length) {
+      try { captureAutoBackup(`Trước khi dọn ${legacyAdv.length} biểu đồ vùng Nâng Cao (vùng đã xóa)`, true); }
+      catch (e) { /* lỗi chụp không chặn việc dọn */ }
+      try { trackDeleted('customCharts', legacyAdv.map(c => c.id)); } catch (e) { /* thiếu state tombstone */ }
+      state.customCharts = (state.customCharts || []).filter(c => c && c.zone !== 'advanced');
+      changed = true;
+      console.info(`[DỌN DỮ LIỆU] Đã xóa ${legacyAdv.length} biểu đồ vùng Nâng Cao (đã cất backup trước khi xóa).`);
+    }
     state.customCharts.forEach(c => {
-      if (c.zone !== 'basic' && c.zone !== 'advanced') { c.zone = 'basic'; changed = true; }
+      if (c.zone !== 'basic') { c.zone = 'basic'; changed = true; }
       if (!['kanban', 'planning', 'press', 'materials'].includes(c.source)) { c.source = 'kanban'; changed = true; }
       if (c.width !== 'half' && c.width !== 'full') { c.width = 'half'; changed = true; }
     });

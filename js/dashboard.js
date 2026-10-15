@@ -11,11 +11,12 @@
 import { initLucide, requireEditPermission, requireTabEditPermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { computeChartData, getPaletteColors, saveCustomCharts } from './export-xlsx.js';
-import { canEditChartZone, canEditTab, canViewAdvanced, getTabDef } from './permissions.js';
+import { canEditTab, canViewAdvanced, getTabDef } from './permissions.js';
 import { hrPressWorkersNamesOf, hrStripForMatch } from './hr.js';
 import { MATERIAL_LOCATIONS, materialPlanWeekOptions, renderMaterialPlanChart } from './materials.js';
 import { loadPvChartMode, renderPlanVsPressChart, renderPlanCapacityChart } from './press.js';
 import { STAGES, state } from './state.js';
+import { renderTraceCard } from './trace.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   // ─── NHẬP DASHBOARD: LUỒNG + CÁC VÙNG BIỂU ĐỒ ────────────────
@@ -27,6 +28,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     renderPlanCapacityChart();
     renderMaterialPlanChart();
     renderDashboardZones();
+    // Thẻ TRUY XUẤT ĐẦU VÀO → ĐẦU RA nằm trong Vùng Nâng Cao — chỉ vẽ khi
+    // người dùng có quyền xem vùng đó (tránh tính toán vô ích cho viewer).
+    if (canViewAdvanced()) renderTraceCard();
   }
 
   // LUỒNG CÔNG ĐOẠN (Kanban pipeline) ĐÃ GỠ — hàng "Phân bổ khối lượng theo công
@@ -142,11 +146,6 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     return `<span class="chart-source-chip" style="--chip-color:${tab.color};"><i data-lucide="${tab.icon}"></i>${escapeHTML(tab.short)}</span>`;
   }
 
-  // Nhãn vùng (chỉ gắn cho vùng nâng cao)
-  function zoneChipHtml(zone) {
-    return zone === 'advanced' ? `<span class="chart-zone-chip" title="Biểu đồ vùng nâng cao"><i data-lucide="shield"></i>NÂNG CAO</span>` : '';
-  }
-
   // ── PHỤ ĐỀ CỦA THẺ BIỂU ĐỒ (nhóm · chỉ số · xếp tầng · bộ lọc đang bật) ──
   // TÁCH thành hàm riêng vì dùng ở 2 nơi: render thẻ (phụ đề nay ĐÃ ẨN — chỉ còn
   // hiện qua tooltip title khi rê chuột + modal "?" openDashHelp('chart', id))
@@ -218,7 +217,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         <div class="custom-card-header">
           <!-- title = tooltip chứa phụ đề (vừa ẩn) — rê chuột vào vùng tiêu đề hiện đủ -->
           <div title="${escapeHTML(subtitle)}">
-            <div class="custom-card-chips">${sourceChipHtml(chartDef.source)}${zoneChipHtml(chartDef.zone)}</div>
+            <div class="custom-card-chips">${sourceChipHtml(chartDef.source)}</div>
             <h4 class="custom-card-title">
               <i data-lucide="${TYPE_ICONS[chartDef.type] || 'bar-chart-3'}"></i>
               ${escapeHTML(chartDef.title)}
@@ -312,46 +311,36 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         ${showBtn ? `<button class="btn btn-primary btn-sm" onclick="${onclickExpr}"><i data-lucide="plus-circle"></i> Tạo Biểu Đồ Mới</button>` : ''}
       </div>`;
   }
-  // ─── VÙNG BIỂU ĐỒ TRONG DASHBOARD (cơ bản + nâng cao) ────────
+  // ─── VÙNG BIỂU ĐỒ TRONG DASHBOARD (chỉ còn vùng Cơ Bản) ────────
+  // VÙNG NÂNG CAO KHÔNG CÒN tính năng biểu đồ (chỉ còn thẻ Truy Xuất
+  // Đầu Vào → Đầu Ra) — nút "Tạo Biểu Đồ Nâng Cao", khung lưới + option
+  // "Nâng Cao" trong builder đều ĐÃ XÓA HẲN (15/10/2026).
   function renderDashboardZones() {
     const batches = state.batches;
     destroyCustomChartInstances();
 
-    // Vùng Cơ Bản: biểu đồ zone='basic' — mọi người xem được
+    // Vùng Cơ Bản: mọi người xem được (tất cả biểu đồ đều là zone='basic')
     const basicGrid = document.getElementById('custom-charts-grid');
     if (basicGrid) {
       const basicCharts = state.customCharts.filter(c => c.zone !== 'advanced');
       basicGrid.innerHTML = basicCharts.length
-        ? basicCharts.map(c => renderChartCard(c, canEditChartZone(c.zone, c.source))).join('')
+        ? basicCharts.map(c => renderChartCard(c, canEditTab(c.source || 'dashboard'))).join('')
         : emptyZoneHtml('Chưa có biểu đồ ở Vùng Cơ Bản', "app.openChartBuilderModal(null, {zone:'basic'})", canEditTab('dashboard'));
       basicCharts.forEach(c => mountChart(c, batches));
     }
 
-    // Vùng Nâng Cao: chỉ Admin & Ban Quản Lý / người được cấp quyền
-    const advancedGrid = document.getElementById('advanced-charts-grid');
+    // Khóa Vùng Nâng Cao: ẩn khi người dùng không đủ quyền xem (thẻ Truy Xuất
+    // trong vùng này có class advanced-only → CSS tự ẩn theo body.can-advanced)
     const lockCard = document.getElementById('advanced-zone-lock');
-    const addAdvancedBtn = document.getElementById('btn-add-chart-advanced');
     const privileged = canViewAdvanced();
     if (lockCard) lockCard.style.display = privileged ? 'none' : '';
-    if (advancedGrid) advancedGrid.style.display = privileged ? '' : 'none';
-    if (addAdvancedBtn) addAdvancedBtn.style.display = (privileged && canEditTab('dashboard')) ? '' : 'none';
 
-    if (advancedGrid && privileged) {
-      const advCharts = state.customCharts.filter(c => c.zone === 'advanced');
-      advancedGrid.innerHTML = advCharts.length
-        ? advCharts.map(c => renderChartCard(c, canEditTab(c.source || 'dashboard'))).join('')
-        : emptyZoneHtml('Chưa có biểu đồ ở Vùng Nâng Cao', "app.openChartBuilderModal(null, {zone:'advanced'})", canEditTab('dashboard'));
-      advCharts.forEach(c => mountChart(c, batches));
+    // Kích hoạt kéo-thả & resize cho grid của Vùng Cơ Bản
+    const grid = document.getElementById('custom-charts-grid');
+    if (grid) {
+      setupChartDragAndDrop(grid);
+      setupChartResize(grid);
     }
-
-    // Kích hoạt kéo-thả & resize cho các grid của Dashboard
-    ['custom-charts-grid', 'advanced-charts-grid'].forEach(gid => {
-      const grid = document.getElementById(gid);
-      if (grid) {
-        setupChartDragAndDrop(grid);
-        setupChartResize(grid);
-      }
-    });
     initLucide();
   }
 
@@ -1063,21 +1052,15 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const titleEl = document.getElementById('chart-builder-modal-title');
     if (!modal || !form) return;
 
-    // Xác định context khi tạo mới
+    // Xác định context khi tạo mới — CHỈ CÒN vùng Cơ Bản (vùng nâng cao đã xóa)
     let defSource = (preset && preset.source) || 'kanban';
-    let defZone = (preset && preset.zone) || 'basic';
 
     if (chartId) {
       const chartDef = state.customCharts.find(c => c.id === chartId);
       if (!chartDef) return;
       // Quyền: phải sửa được đúng tab nguồn của biểu đồ
       if (!requireTabEditPermission(chartDef.source || 'kanban')) return;
-      if (chartDef.zone === 'advanced' && !canViewAdvanced()) {
-        showToast('Chỉ Admin / Ban Quản Lý mới sửa được biểu đồ vùng nâng cao!', 'error');
-        return;
-      }
       defSource = chartDef.source || 'kanban';
-      defZone = chartDef.zone || 'basic';
 
       if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Chỉnh Sửa Biểu Đồ: ${escapeHTML(chartDef.title)}`;
       document.getElementById('builder-chart-id').value = chartDef.id;
@@ -1096,16 +1079,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       if (palSelNew) palSelNew.value = PAL_CYCLE[(state.customCharts.length || 0) % PAL_CYCLE.length];
     }
 
-    // Nguồn dữ liệu & Vùng & Độ rộng
+    // Nguồn dữ liệu & Độ rộng (khối "Vùng Hiển Thị" ĐÃ XÓA — chỉ còn vùng Cơ Bản)
     const sourceSel = document.getElementById('builder-source');
     if (sourceSel) sourceSel.value = defSource;
     populateBuilderOptions(defSource, chartId ? (state.customCharts.find(c => c.id === chartId) || null) : null);
-    const zoneSel = document.getElementById('builder-zone');
-    if (zoneSel) zoneSel.value = canViewAdvanced() ? defZone : 'basic';
-    // Người không có quyền xem nâng cao không được chọn zone advanced
-    if (zoneSel) Array.from(zoneSel.options).forEach(o => {
-      if (o.value === 'advanced') o.disabled = !canViewAdvanced();
-    });
     if (chartId) {
       // Chọn lại group/metric/stack theo định nghĩa gốc (sau khi populate)
       const chartDef = state.customCharts.find(c => c.id === chartId);
@@ -1192,9 +1169,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const chartId = document.getElementById('builder-chart-id').value;
 
     const source = document.getElementById('builder-source')?.value || 'kanban';
-    let zone = document.getElementById('builder-zone')?.value || 'basic';
-    // Chốt phân quyền: không có quyền xem nâng cao => ép về vùng cơ bản
-    if (zone === 'advanced' && !canViewAdvanced()) zone = 'basic';
+    const zone = 'basic'; // Vùng Nâng Cao của biểu đồ ĐÃ XÓA — mọi biểu đồ đều thuộc vùng Cơ Bản
     // Phải có quyền sửa đúng tab nguồn
     if (!requireTabEditPermission(source)) return;
 
@@ -1234,10 +1209,6 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const chart = state.customCharts.find(c => c.id === chartId);
     if (!chart) return;
     if (!requireTabEditPermission(chart.source || 'kanban')) return;
-    if (chart.zone === 'advanced' && !canViewAdvanced()) {
-      showToast('Chỉ Admin / Ban Quản Lý mới xóa được biểu đồ vùng nâng cao!', 'error');
-      return;
-    }
     if (confirm(`Bạn có chắc muốn xóa biểu đồ "${chart.title}"?`)) {
       trackDeleted('customCharts', chartId);
       state.customCharts = state.customCharts.filter(c => c.id !== chartId);
@@ -1545,7 +1516,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       <div class="dash-help-sec">
         <h5>Thông Tin Biểu Đồ</h5>
         <ul>
-          <li>Nguồn: <b>${escapeHTML(tab && tab.name ? tab.name : String(chartDef.source || 'kanban'))}</b> · Vùng: <b>${chartDef.zone === 'advanced' ? 'Nâng Cao' : 'Cơ Bản'}</b>${chartDef.width === 'full' ? ' · Khổ rộng' : ''}</li>
+          <li>Nguồn: <b>${escapeHTML(tab && tab.name ? tab.name : String(chartDef.source || 'kanban'))}</b>${chartDef.width === 'full' ? ' · Khổ rộng' : ''}</li>
           <li>${escapeHTML(chartSubtitleOf(chartDef))}</li>
         </ul>
       </div>

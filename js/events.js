@@ -30,6 +30,8 @@ import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoard
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
 import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
+// Thẻ TRUY XUẤT ĐẦU VÀO → ĐẦU RA (Vùng Nâng Cao — js/trace.js)
+import { setTraceMode, setTraceProduct, shiftTracePeriod, toggleTraceDetail } from './trace.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
 import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
@@ -581,7 +583,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
 
     // Custom Chart Builder Listeners
     safeOn('btn-open-chart-builder',   'click', () => openChartBuilderModal(null, { zone: 'basic' }));
-    safeOn('btn-add-chart-advanced',   'click', () => openChartBuilderModal(null, { zone: 'advanced' }));
     safeOn('btn-close-chart-builder',  'click', closeChartBuilderModal);
     safeOn('btn-cancel-chart-builder', 'click', closeChartBuilderModal);
     safeOn('chart-builder-form',       'submit', handleChartBuilderSubmit);
@@ -1319,6 +1320,22 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
 
     // ── LỊCH SỬ SỬA ĐỔI (modal — chỉ Admin mới xem được) ──
     safeOn('btn-history-kanban',    'click', () => openHistoryModal('kanban', x2OpenCardHistoryDomain())); // mở đúng vùng của THẺ đang mở
+    // ── THẺ TRUY XUẤT ĐẦU VÀO → ĐẦU RA (Vùng Nâng Cao — js/trace.js) ──
+    // Nút chế độ kỳ (Tuần/Tháng/Năm) · ‹ › nhảy kỳ · ô chọn mã ván.
+    safeOn('trace-prev',    'click', () => shiftTracePeriod(-1));
+    safeOn('trace-next',    'click', () => shiftTracePeriod(1));
+    safeOn('trace-detail-toggle', 'click', toggleTraceDetail); // ẩn/hiện chi tiết từng công đoạn
+    safeOn('trace-product', 'change', () => {
+      const sel = document.getElementById('trace-product');
+      if (sel) setTraceProduct(sel.value);
+    });
+    const traceCard = document.getElementById('trace-card');
+    if (traceCard) {
+      traceCard.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('[data-trace-mode]') : null;
+        if (btn) setTraceMode(btn.getAttribute('data-trace-mode'));
+      });
+    }
     // ── THẺ TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (đầu tab Tổng Quan — js/capacity.js) ──
     // Nút tên = đổi Xưởng 2 ⇄ Xưởng 1 · Tuần⇄Tháng + ô chọn tháng = đổi KỲ xem ·
     // ‹ › = nhảy 1 kỳ (tự xổ tầng công đoạn) · In báo cáo (thông tin chung mọi

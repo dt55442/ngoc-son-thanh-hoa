@@ -34,7 +34,7 @@ import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftGroupRows, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoPeriodKeyOf, khoStockSummary } from './utils.js';
+import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoPeriodKeyOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 
   // Ghi file dữ liệu qua storage.js (import động để tránh vòng phụ thuộc module
@@ -628,6 +628,18 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const v = b && b.sayCharges ? Number(b.sayCharges[stage === 'say2' ? 'say2' : 'say1']) : 0;
     return Number.isFinite(v) && v > 0 ? v : 0;
   }
+  // CA của lô ở 1 công đoạn sấy (Giai đoạn 2) — null = chưa ghi ca / lô cũ
+  function sayShiftOf(b, stage) {
+    const v = (b && b.sayShift) ? b.sayShift[stage === 'say2' ? 'say2' : 'say1'] : null;
+    if (v == null || v === '' || !Number.isFinite(Number(v))) return null;
+    return Number(v);
+  }
+  // Map ca của lô { say1, say2 } — ghi đè đúng công đoạn (giữ ca công đoạn kia)
+  function sayShiftMapOf(base, stage, shiftIdx) {
+    const out = Object.assign({}, base || {});
+    out[stage === 'say2' ? 'say2' : 'say1'] = (shiftIdx == null ? null : Number(shiftIdx));
+    return out;
+  }
   // Các lô của 1 nhóm (ngày vào công đoạn + công đoạn) — theo thứ tự trong
   // state.batches (lô mới đứng trước) để việc gộp nhóm ổn định, dễ đối chiếu.
   function sayGroupLots(dateVal, stage) {
@@ -811,12 +823,20 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         const charges = sayBuildCharges(day.date, stage, sayM3PerCharge(day.date, stage))
           .map(c => {
             const minutes = sayMinutesPerCharge(day.date, stage, c.useFor === 'bullig' ? 'Bullig' : 'Ván');
+            // GIAI ĐOẠN 2: CA của lần = ca ghi trên các lô của lần (mã mẻ nên đồng nhất);
+            // lần trộn ca / chia tay / lô cũ không có ca → null (nhóm "chưa rõ ca").
+            const shiftSet = [...new Set(c.lots.map(l => {
+              const b = (state.batches || []).find(x => x.id === l.id);
+              return sayShiftOf(b, stage);
+            }).map(v => (v == null ? '' : String(v))))];
+            const shiftIdx = (shiftSet.length === 1 && shiftSet[0] !== '') ? Number(shiftSet[0]) : null;
             return {
               stage, lots: c.lots, vol: c.vol, useFor: c.useFor,
               volVan: c.volVan || 0, volBullig: c.volBullig || 0,
               locationText: sayChargeLocationText(c),
               codeText: sayChargeCodeText(c),
-              minutes, need: minutes / 60
+              minutes, need: minutes / 60,
+              shiftIdx
             };
           });
         const manual = sayManualTimesOf(day.date, stage);
@@ -1094,6 +1114,63 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         <td>${c.hours > 0 ? fmtGio(c.tc) : dash}</td>
       </tr>`;
     };
+    // DÒNG PHỤ "THEO CA" — TÁCH RIÊNG 2 CA (Giai đoạn 2): chỉ hiện khi các lần
+    // than hóa của nhóm CÓ ghi ca. m³ + phút là SỐ THẬT của các lần thuộc ca;
+    // GIỜ là giờ THẬT của ca (Bảng bố trí); Công suất = m³ ÷ giờ ca;
+    // Hiệu suất = Giờ cần ÷ (Giờ ca − sự cố chia theo tỉ lệ phút của ca).
+    const shiftRowHtml = (day, g) => {
+      const charges = g.charges || [];
+      if (!charges.some(c => c.shiftIdx != null)) return '';
+      const dayMinutes = charges.reduce((s, c) => s + (c.minutes || 0), 0);
+      const byShift = new Map();
+      charges.forEach(c => {
+        const k = (c.shiftIdx == null) ? '' : String(c.shiftIdx);
+        if (!byShift.has(k)) byShift.set(k, []);
+        byShift.get(k).push(c);
+      });
+      const meta = shiftMetaOf('Xưởng 2');
+      const keys = [...byShift.keys()].sort((a, b) => (a === '' ? 99 : Number(a)) - (b === '' ? 99 : Number(b)));
+      return keys.map(k => {
+        const list = byShift.get(k);
+        const vol = list.reduce((s, c) => s + (c.vol || 0), 0);
+        const minutes = list.reduce((s, c) => s + (c.minutes || 0), 0);
+        const need = minutes / 60;
+        const base = `<td class="x2-say-vol">${fmtM3(vol)}</td><td class="x2-say-min">${fmtPhut(minutes)}'</td><td class="x2-say-need">${fmtGio(need)} h</td>`;
+        if (k === '') {
+          return `<tr class="x2-say-shift-row x2-say-shift-none x2-say-row-${g.stage}">
+            <td class="x2-say-lan"><span class="x2-day-shift-chip x2-day-shift-none">Chưa rõ ca</span></td>
+            <td class="x2-say-loc" colspan="2">${list.length} lần</td>
+            ${base}
+            <td colspan="2" class="x2-say-shift-note" title="Các lần này KHÔNG ghi ca (lô cũ hoặc chia tay) — xem bảng lỗi phía trên/hoặc ghi ca khi lưu lô để tách được">chưa tách được giờ theo ca</td>
+          </tr>`;
+        }
+        const sidx = Number(k);
+        const live = posAssignmentsOf(day.date, isThanHoaPos, sidx);
+        const sp = live.length ? sumPosHoursSplit(live, day.date) : { hc: 0, tc: 0 };
+        const hours = sp.hc + sp.tc;
+        const share = dayMinutes > 0 ? (minutes / dayMinutes) : 0;
+        const incH = (Number(day.incident) || 0) * share;
+        const effBase = hours - incH;
+        const cap = hours > 0 ? (vol / hours) : null;
+        const eff = (need > 0 && effBase > 0) ? (need / effBase) : null;
+        const m = meta[sidx] || {};
+        const name = escapeHTML(m.name || ('Ca ' + (sidx + 1)));
+        const rang = (m.start || m.end) ? ` (${m.start || ''}–${m.end || ''})` : '';
+        const people = [...new Set(live.map(a => a.name).filter(Boolean))].join(', ');
+        const effTxt = eff == null ? '—' : `${fmtNum(eff * 100, 0)}%`;
+        const effCls = eff == null ? '' : (eff >= 1 ? ' x2-say-eff-good' : ' x2-say-eff-low');
+        return `<tr class="x2-say-shift-row x2-say-row-${g.stage}" data-shift-idx="${sidx}">
+          <td class="x2-say-lan"><span class="x2-day-shift-chip" data-shift-idx="${sidx}" title="Lần than hóa thuộc ${name}${rang} — giờ + công suất + hiệu suất tính RIÊNG theo ca này">${name}${rang}</span></td>
+          <td class="x2-say-loc" colspan="2" title="Người bố trí vị trí 'Than hóa' của ca này: ${escapeHTML(people || '—')}">${list.length} lần · ${people ? escapeHTML(people.split(',')[0]) + (live.length > 1 ? ` +${live.length - 1}` : '') : 'chưa bố trí'}</td>
+          ${base}
+          <td title="Giờ HC/TC của ca này (từ Bảng bố trí Nhân Sự)">${hours > 0 ? fmtGio(sp.hc) + 'h / ' + fmtGio(sp.tc) + 'h' : dash}</td>
+          <td class="x2-say-shift-perf">
+            <span title="Công suất CỦA CA = ${fmtM3(vol)} m³ ÷ ${hours > 0 ? fmtGio(hours) + 'h' : '0h'} của ca">CS ${cap == null ? '—' : fmtM3(cap) + ' m³/h'}</span>
+            <span class="x2-say-eff-badge${effCls}" title="Hiệu suất CỦA CA = Giờ cần ${fmtGio(need)}h ÷ (Giờ ca ${fmtGio(hours)}h${incH > 0 ? ` − sự cố ${fmtGio(incH)}h` : ''})">HS ${effTxt}</span>
+          </td>
+        </tr>`;
+      }).join('');
+    };
     // Dòng NHÓM (ngày + công đoạn): tổng lô/m³ + ô nhập "Số lần TH" THẬT của nhóm.
     // ĐÃ BỎ ghi chú "Tự gộp theo … m³/lần" (gây hiểu nhầm) — quy đổi m³/lần giờ
     // chỉ còn áp cho dữ liệu cũ; thay bằng CHIP NGUỒN số lần.
@@ -1137,7 +1214,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         <span class="x2-say-eff-badge${effCls}" title="${needTxt}${r.incident > 0 ? ' · Sự cố ' + fmtGio(r.incident) + 'h' : ''} → Hiệu suất = Giờ cần ÷ (Giờ thực tế − Sự cố)">Hiệu suất ${effTxt}</span>
         <span class="x2-say-day-sum">${r.lanCount} lần · ${fmtM3(r.vol)} m³ · Cần ${fmtGio(r.need)}h · HC ${r.hasAssign ? fmtGio(r.hc) + 'h' : '—'} · TC ${r.hasAssign ? fmtGio(r.tc) + 'h' : '—'}</span>
       </td></tr>`;
-      const body = r.groups.map(g => groupHtml(r, g) + (g.charges.length ? g.charges.map(rowHtml).join('') : '')).join('');
+      const body = r.groups.map(g => groupHtml(r, g) + (g.charges.length ? shiftRowHtml(r, g) + g.charges.map(rowHtml).join('') : '')).join('');
       return head + body;
     }).join('');
     initLucide();
@@ -1346,17 +1423,132 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // xóa về sau) — dùng chung mọi vị trí công đoạn:
   //   names = "Tên A, Tên B" · timeStr = "07:00–12:00, 13:00–17:00" ·
   //   hours = tổng giờ · hc/tc = giờ tách theo HC/TC
-  function hrPositionSnapshot(dateVal, list) {
-    const split = sumPosHoursSplit(list, dateVal);
+  function hrPositionSnapshot(dateVal, list, shiftIdx) {
+    const rows = (shiftIdx == null) ? list : (list || []).filter(a => (Number(a.shiftIdx) || 0) === Number(shiftIdx));
+    const split = sumPosHoursSplit(rows, dateVal);
     return {
-      names: list.map(a => a.name).filter(Boolean).join(', '),
-      timeStr: list.map(posTimeStr).filter(s => s).join(', '),
+      names: rows.map(a => a.name).filter(Boolean).join(', '),
+      timeStr: rows.map(posTimeStr).filter(s => s).join(', '),
       hours: split.hc + split.tc,
       hc: split.hc,
       tc: split.tc
     };
   }
-  // ─── TÁCH THEO CA (2 CA) — DỮ LIỆU CHO KHỐI "Theo ca" CỦA THẺ NGÀY ──
+  // ═══ GIAI ĐOẠN 2: NHẬP SẢN LƯỢNG RIÊNG THEO CA (Bổ Ống · Bào Thô · Chọn Nan) ══
+  // Ô "CA" chỉ có ý nghĩa khi bộ phận đặt chế độ "Làm ca" (≥2 ca).
+  function x2ShiftFieldReady(dept) {
+    const cfg = hrShiftCfg(dept || 'Xưởng 2');
+    return !!cfg && cfg.type === 'lamca' && Array.isArray(cfg.shifts) && cfg.shifts.length > 1;
+  }
+  // Đồng bộ Ô CA của form nhập: ẩn khi bộ phận để "Hành chính"; khi "Làm ca" thì
+  // nạp danh sách ca + TỰ CHỌN ca nếu ngày đó vị trí chỉ có ĐÚNG 1 ca bố trí.
+  function syncX2ShiftField(selId, dept, dateVal, matchPos) {
+    const el = document.getElementById(selId);
+    if (!el) return;
+    const wrap = document.getElementById(selId + '-wrap');
+    const d = dept || 'Xưởng 2';
+    const on = x2ShiftFieldReady(d);
+    if (wrap) wrap.style.display = on ? '' : 'none';
+    if (!on) { el.value = ''; el.innerHTML = ''; return; }
+    const cur = String(el.value == null ? '' : el.value);
+    el.innerHTML = shiftOptionsHtml(shiftMetaOf(d), cur, '— Cả ngày / chưa rõ ca —');
+    const suggest = (dateVal && matchPos)
+      ? shiftSuggestOf(posAssignmentsOf(dateVal, matchPos, null))
+      : null;
+    el.value = (cur === '' && suggest != null) ? String(suggest) : cur;
+  }
+  // Giá trị Ô CA của form: '' → null = "Cả ngày / chưa rõ ca"
+  function x2ShiftValueOf(selId) {
+    const el = document.getElementById(selId);
+    if (!el) return null;
+    const v = String(el.value == null ? '' : el.value).trim();
+    if (v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  // Nhắc nhẹ khi lưu lượt KHÔNG ghi ca (không chặn — quyết định 16/10/2026)
+  function x2ShiftEmptyToast(selId, dept) {
+    if (!x2ShiftFieldReady(dept) || x2ShiftValueOf(selId) != null) return;
+    showToast('Lượt này CHƯA ghi ca → nằm ở nhóm "Cả ngày / chưa rõ ca". Chọn ô Ca để so sánh được ca nào làm tốt hơn.', 'info');
+  }
+  // ─── Ô "CA" CỦA FORM THÊM LÔ SẤY MỚI (Than Hóa + Sấy) ────────────
+  // Dùng bộ phận Xưởng 2 + vị trí "Than hóa" để gợi ý ca theo bảng bố trí.
+  function syncAlShiftField() {
+    const dateVal = (document.getElementById('al-date') || {}).value || '';
+    syncX2ShiftField('al-shift', 'Xưởng 2', dateVal, isThanHoaPos);
+  }
+  // Ca của lần than hóa đang nhập ở form (null = chưa rõ ca — vẫn lưu được)
+  function alShiftIdxValue() {
+    const el = document.getElementById('al-shift');
+    const wrap = document.getElementById('al-shift-wrap');
+    if (!el || (wrap && wrap.style && wrap.style.display === 'none')) return null;
+    return x2ShiftValueOf('al-shift');
+  }
+  // Chip tên CA trên đầu thẻ ngày (null = nhóm Cả ngày / chưa rõ ca)
+  function x2ShiftChipHtml(shiftIdx, dept) {
+    const d = dept || 'Xưởng 2';
+    if (shiftIdx == null) {
+      return '<span class="x2-day-shift-chip x2-day-shift-none" title="Thẻ này gồm các lượt KHÔNG ghi ca → giờ/công suất tính theo CẢ NGÀY. Chọn ô Ca khi ghi lượt để so sánh ca nào làm tốt hơn."><i data-lucide="help-circle"></i> Cả ngày / chưa rõ ca</span>';
+    }
+    const m = shiftMetaOf(d)[shiftIdx] || {};
+    const t = (m.start || m.end) ? ` (${m.start || ''}–${m.end || ''})` : '';
+    return `<span class="x2-day-shift-chip" data-shift-idx="${shiftIdx}" title="Ca của các lượt trong thẻ này — NGƯỜI + GIỜ + CÔNG SUẤT chỉ tính ca này (số liệu so sánh được giữa 2 ca)"><i data-lucide="clock"></i> ${escapeHTML(m.name || ('Ca ' + (shiftIdx + 1)))}${escapeHTML(t)}</span>`;
+  }
+  // Chip SO SÁNH hiệu suất với CA CÒN LẠI cùng ngày (chỉ khi cả 2 ca có hiệu suất)
+  function x2ShiftCmpChipHtml(cmp, dept) {
+    if (!cmp || cmp.delta == null) return '';
+    const d = dept || 'Xưởng 2';
+    const ref = shiftMetaOf(d)[cmp.ref] || {};
+    const refName = ref.name || ('Ca ' + (cmp.ref + 1));
+    const pct = fmtRatio(Math.abs(cmp.delta));
+    const tip = cmp.better
+      ? `Hiệu suất ca này CAO HƠN ca "${refName}" ${pct} điểm % (cùng ngày, cùng công đoạn)`
+      : `Hiệu suất ca này THẤP HƠN ca "${refName}" ${pct} điểm % (cùng ngày, cùng công đoạn)`;
+    return `<span class="x2-shift-cmp ${cmp.better ? 'better' : 'worse'}" title="${escapeHTML(tip)}">So ca kia: <strong>${cmp.better ? '▲' : '▼'} ${pct}%</strong></span>`;
+  }
+  // GOM BẢN GHI THEO (NGÀY, CA) — mỗi ca 1 THẺ NGÀY riêng + bảng so sánh 2 ca.
+  // disp(r) = hàm hiển thị của thẻ · qtyOf(r, d) = sản lượng của lượt
+  // o = { rateOf(date), incKey, dept }
+  function x2DayShiftGroups(records, disp, qtyOf, o) {
+    const opts = o || {};
+    const map = new Map();
+    (records || []).forEach(r => {
+      const s = (r.shiftIdx == null || r.shiftIdx === '') ? '' : String(Number(r.shiftIdx));
+      const k = `${String(r.date || '')}|${s}`;
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(r);
+    });
+    const groups = [...map.entries()].map(([k, rows]) => {
+      const parts = k.split('|');
+      const dsp = rows.map(disp);
+      return {
+        key: k,
+        date: parts[0],
+        shiftIdx: parts[1] === '' ? null : Number(parts[1]),
+        rows, dsp,
+        first: dsp[0],
+        hours: Number(dsp[0] && dsp[0].workHours) || 0,
+        totalQty: rows.reduce((s, r, i) => s + (Number(qtyOf(r, dsp[i])) || 0), 0)
+      };
+    }).sort((a, b) => {
+      if (String(a.date) !== String(b.date)) return String(b.date).localeCompare(String(a.date));
+      return (a.shiftIdx == null ? 99 : a.shiftIdx) - (b.shiftIdx == null ? 99 : b.shiftIdx);
+    });
+    const perfByDate = new Map();
+    groups.forEach(g => {
+      if (!perfByDate.has(g.date)) perfByDate.set(g.date, []);
+      perfByDate.get(g.date).push({ shiftIdx: g.shiftIdx, hours: g.hours, qty: g.totalQty });
+    });
+    const cmpByDate = new Map();
+    perfByDate.forEach((totals, date) => {
+      cmpByDate.set(date, shiftCompareMap(totals, {
+        rate: opts.rateOf ? opts.rateOf(date) : null,
+        incHours: opts.incKey ? stageIncidentOf(opts.incKey, date) : 0
+      }));
+    });
+    return { groups, cmpByDate };
+  }
+
   // Chỉ có ý nghĩa khi bộ phận được đặt chế độ "Làm ca" ở Cài Đặt Ca (tab Nhân
   // Sự) → 1 ngày có 2 cột ca. Mọi thẻ ngày (Xưởng 2 / Xưởng 1 / Ép Ván / QC)
   // đọc chung bộ hàm này để số liệu KHÔNG lệch giữa các thẻ.
@@ -1431,17 +1623,25 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   function hrBoluongSnapshot(dateVal) {
     return workerSnapOf(hrPositionSnapshot(dateVal, hrBoluongAssignmentsOf(dateVal)));
   }
+  // Các lượt bố trí của 1 vị trí trong ngày — LỌC THEO CA khi lượt ghi ca
+  // (r.shiftIdx == null → lấy CẢ NGÀY như hành vi cũ).
+  function posAssignmentsOf(dateVal, matchPos, shiftIdx) {
+    const list = hrAssignmentsAt(dateVal, matchPos);
+    if (shiftIdx == null) return list;
+    const s = Number(shiftIdx);
+    return list.filter(a => (Number(a.shiftIdx) || 0) === s);
+  }
   // Snapshot của lượt BỔ ỐNG (người bổ + thời gian bổ + số giờ tách HC/TC)
-  function hrBoOngSnapshot(dateVal) {
-    return workerSnapOf(hrPositionSnapshot(dateVal, hrBoOngAssignmentsOf(dateVal)));
+  function hrBoOngSnapshot(dateVal, shiftIdx) {
+    return workerSnapOf(hrPositionSnapshot(dateVal, hrBoOngAssignmentsOf(dateVal), shiftIdx));
   }
   // Snapshot của lượt CHẠY MÁY BÀO THÔ (người chạy máy + thời gian + giờ HC/TC)
-  function hrBaoThoSnapshot(dateVal) {
-    return workerSnapOf(hrPositionSnapshot(dateVal, hrBaoThoAssignmentsOf(dateVal)));
+  function hrBaoThoSnapshot(dateVal, shiftIdx) {
+    return workerSnapOf(hrPositionSnapshot(dateVal, hrBaoThoAssignmentsOf(dateVal), shiftIdx));
   }
   // Snapshot của lượt CHỌN NAN THÔ (người chọn nan + thời gian + giờ HC/TC)
-  function hrChonNanSnapshot(dateVal) {
-    return workerSnapOf(hrPositionSnapshot(dateVal, hrChonNanAssignmentsOf(dateVal)));
+  function hrChonNanSnapshot(dateVal, shiftIdx) {
+    return workerSnapOf(hrPositionSnapshot(dateVal, hrChonNanAssignmentsOf(dateVal), shiftIdx));
   }
   // Đổi tên trường chung (names/timeStr/hours/hc/tc) → tên dùng trong nhật ký vị trí
   function workerSnapOf(s) {
@@ -2832,8 +3032,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const klOngBo = Math.max(0, inputOng - klOngLoai);
     // Phần ống CÒN LẠI của lô SAU lượt này (vẫn hiện trong ô chọn để bổ tiếp)
     const lotRest = Math.max(0, lotOng - boOngUsedOf(r.cutId));
-    // Người bổ + giờ bổ: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot
-    const live = hrBoOngAssignmentsOf(r.date || '');
+    // Người bổ + giờ bổ: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot.
+    // GIAI ĐOẠN 2: lượt ghi CA → CHỈ lấy người + giờ của ca đó (so sánh được 2 ca).
+    const shiftIdx = (r.shiftIdx == null || r.shiftIdx === '') ? null : Number(r.shiftIdx);
+    const live = posAssignmentsOf(r.date || '', isBoOngPos, shiftIdx);
     const workerRows = live.length
       ? live.map(a => ({ name: a.name, time: posTimeStr(a) }))
       : String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -2856,6 +3058,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     }
     return {
       date: r.date || '',
+      shiftIdx,                    // ca của lượt (null = cả ngày / chưa rõ ca)
       materialType: cutD ? cutD.materialType : (r.materialType || ''),
       supplier: cutD ? cutD.supplier : (r.supplier || ''),
       cutDate: cut ? (cut.date || '') : (r.cutDate || ''),
@@ -2923,6 +3126,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!html) html = `<option value="">— Hết lô ống chờ bổ (mọi lô Cắt Chọn đã bổ hết) —</option>`;
     sel.innerHTML = html;
     updateXuong2BoOngLinked(true);
+    // Ô CA (Giai đoạn 2): hiện khi bộ phận để "Làm ca" + gợi ý ca theo bố trí ngày
+    syncX2ShiftField('x2-bo-ong-shift', 'Xưởng 2', (document.getElementById('x2-bo-ong-date') || {}).value || '', isBoOngPos);
   }
 
   // Ô chọn lô ống đổi (hoặc đang sửa): mặc định Ngày bổ theo ngày cắt/chọn và
@@ -2978,6 +3183,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     });
     const d = document.getElementById('x2-bo-ong-date');
     if (d) d.value = '';
+    const sh = document.getElementById('x2-bo-ong-shift');
+    if (sh) sh.value = '';          // về ghi mới → để ô Ca tự gợi ý lại theo ngày
     fillXuong2BoOngOptions(); // gồm cả updateXuong2BoOngLinked (điền sẵn phần còn lại)
     syncX2BoOngEditBanner();
   }
@@ -3012,8 +3219,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       return;
     }
     // NGƯỜI BỔ + THỜI GIAN BỔ: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Bổ Ống" —
-    // Xưởng 2, đúng ngày bổ) — không điền tay; lưu snapshot phòng khi bố trí bị xóa
-    const snap = hrBoOngSnapshot(dateVal);
+    // Xưởng 2, đúng ngày bổ) — không điền tay; lưu snapshot phòng khi bố trí bị xóa.
+    // GIAI ĐOẠN 2: nếu lượt ghi CA thì snapshot CHỈ lấy người + giờ của ca đó.
+    const shiftIdx = x2ShiftValueOf('x2-bo-ong-shift');
+    const snap = hrBoOngSnapshot(dateVal, shiftIdx);
 
     // TỰ ĐỘNG LINK: snapshot loại NL / NCC / ngày cắt / KL ống của cả lô
     const cutD = cutDisplay(cut);
@@ -3029,6 +3238,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       klOngBo,
       date: dateVal,
       week: materialWeekLabel(dateVal),
+      shiftIdx,                    // GIAI ĐOẠN 2: ca của lượt (null = cả ngày/chưa rõ ca)
       worker: snap.worker, workTime: snap.workTime,
       workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
     };
@@ -3047,6 +3257,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       });
       saveXuong2BoOng();
       showToast('Đã ghi lượt bổ ống!', 'success');
+      x2ShiftEmptyToast('x2-bo-ong-shift');   // nhắc nhẹ nếu chưa ghi ca (không chặn)
     }
 
     resetXuong2BoOngForm();
@@ -3065,6 +3276,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     updateXuong2BoOngLinked();
     const d = document.getElementById('x2-bo-ong-date');
     if (d) d.value = rec.date || '';
+    // Ô CA của lượt (Giai đoạn 2): nạp lại đúng ca đã ghi
+    syncX2ShiftField('x2-bo-ong-shift', 'Xưởng 2', rec.date || '', isBoOngPos);
+    const shEl = document.getElementById('x2-bo-ong-shift');
+    if (shEl) shEl.value = (rec.shiftIdx == null) ? '' : String(rec.shiftIdx);
     const boEl = document.getElementById('x2-bo-ong-bo');
     if (boEl) boEl.value = (rec.inputOng ?? '') === '' ? '' : String(rec.inputOng);
     const loai = document.getElementById('x2-bo-ong-loai');
@@ -3175,20 +3390,17 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       initLucide();
       return;
     }
-    // Gộp theo NGÀY (đã sort mới nhất lên đầu — Map giữ đúng thứ tự nhóm)
-    const groups = new Map();
-    list.forEach(r => {
-      const key = r.date || '';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(r);
-    });
+    // GIAI ĐOẠN 2: gom theo (NGÀY, CA) — mỗi ca 1 THẺ NGÀY riêng + bảng so sánh 2 ca
+    const { groups, cmpByDate } = x2DayShiftGroups(list, boOngDisplay, (r, d) => d.inputOng, { rateOf: boOngRateOf, incKey: 'boong' });
     let html = '';
-    for (const [date, rows] of groups) {
-      const first = boOngDisplay(rows[0]); // thông tin CHUNG của ngày (người bổ/giờ)
-      let totalIn = 0;
-      const rowsHtml = rows.map(r => {
-        const d = boOngDisplay(r);
-        totalIn += d.inputOng;
+    for (const g of groups) {
+      const date = g.date;
+      const shiftIdx = g.shiftIdx;
+      const rows = g.rows;
+      const first = g.first;                    // thông tin CHUNG của (ngày, ca)
+      const totalIn = g.totalQty;               // KL ống đem bổ của CA này
+      const rowsHtml = rows.map((r, i) => {
+        const d = g.dsp[i];
         const ratioTxt = d.ratio == null ? '—' : `${fmtRatio(d.ratio)}%`;
         return `
         <tr class="x2-day-row" data-x2-ong-row="${escapeHTML(r.id)}">
@@ -3227,21 +3439,24 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         ? `${escapeHTML(workers[0].name)}${workers[0].time ? ` (${escapeHTML(workers[0].time)})` : ''}`
         : '<em style="color:var(--text-muted);">Chưa có bố trí vị trí Bổ Ống</em>';
       const workersMore = workers.length > 1
-        ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
+        ? `<em class="x2-day-cutters-more" title="Người khác cùng ca: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
         : '';
+      const cmp = (shiftIdx != null) ? ((cmpByDate.get(date) || new Map()).get(shiftIdx) || null) : null;
       html += `
-        <div class="x2-day-card">
+        <div class="x2-day-card" data-shift="${shiftIdx == null ? '' : shiftIdx}">
           <div class="x2-day-head">
             <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
-            <span class="x2-day-cutters" title="Người bổ — tự động từ Bảng bố trí vị trí 'Bổ Ống' (tab Nhân Sự) đúng ngày">
+            ${x2ShiftChipHtml(shiftIdx, 'Xưởng 2')}
+            ${x2ShiftCmpChipHtml(cmp && cmp.cmp, 'Xưởng 2')}
+            <span class="x2-day-cutters" title="Người bổ — tự động từ Bảng bố trí vị trí 'Bổ Ống' (tab Nhân Sự) đúng ca">
               <i data-lucide="users"></i> ${workersMain} ${workersMore}
             </span>
-            <span class="x2-day-hours" title="Số giờ bổ = tổng giờ công vị trí Bổ Ống trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ bổ: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế = Tổng KL ống đầu vào (${fmtKg(totalIn)} kg) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
+            <span class="x2-day-hours" title="Số giờ bổ ${shiftIdx == null ? 'trong ngày' : 'CỦA CA NÀY'} (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ bổ: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
+            <span class="x2-day-cap" title="Công suất thực tế ${shiftIdx == null ? '= Tổng KL ống đầu vào' : 'CỦA CA NÀY'} (${fmtKg(totalIn)} kg) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('boong', date)}
           </div>
-          ${x2ShiftBlockOf(date, isBoOngPos, 'Bổ ống', { qty: totalIn, unit: 'kg/h', rate, incH })}
+          ${shiftIdx == null ? x2ShiftBlockOf(date, isBoOngPos, 'Bổ ống', { qty: totalIn, unit: 'kg/h', rate, incH }) : ''}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -3357,10 +3572,18 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // "nhập ở NGOÀI công đoạn" (external = true → không cộng sang Bào Thô).
   // Gồm CẢ nan bị "Loại hẳn" vì máy vẫn phải chạy ra số thanh đó (tỷ lệ loại
   // phản ánh chất lượng). Trả null = CHƯA CÓ SỐ LIỆU (thẻ hiện "Chờ Chọn Nan Thô").
-  function chonNanQtyOf(rec) {
+  function chonNanQtyOf(rec, shiftIdx) {
     const src = state.xuong2ChonNanThoRecords;
     if (!Array.isArray(src) || !src.length) return null;
-    const hit = src.filter(x => !x.external && x.baothoId === rec.id);
+    // GIAI ĐOẠN 2: lọc theo CA khi thẻ Bào Thô ghi ca —
+    //   • thẻ ghi ca X  → chỉ cộng lượt chọn nan của ca X
+    //   • thẻ không ghi ca → cộng MỌI lượt không ghi ca
+    const wantShift = (shiftIdx == null) ? null : Number(shiftIdx);
+    const hit = src.filter(x => {
+      if (x.external || x.baothoId !== rec.id) return false;
+      const xs = (x.shiftIdx == null || x.shiftIdx === '') ? null : Number(x.shiftIdx);
+      return xs === wantShift;
+    });
     if (!hit.length) return null;
     let qty = 0, volume = 0;
     const byClass = { A: 0, A1: 0, B: 0, reject: 0 };
@@ -3375,9 +3598,18 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
   // Số lượng thanh tự động của 1 lượt chạy máy: { qty|null, volume|null, records, source }
   function baoThoQtyOf(rec) {
-    const official = chonNanQtyOf(rec);
-    if (official) return official;
-    return { qty: null, volume: null, records: 0, source: 'none' };
+    // GIAI ĐOẠN 2: lượt Bào Thô ghi CA → CHỈ cộng số thanh của lượt Chọn Nan
+    // CÙNG CA (lượt chọn nan không ghi ca chỉ tính khi lượt bào thô cũng không ghi ca)
+    const shiftIdx = (rec && (rec.shiftIdx == null || rec.shiftIdx === '')) ? null : Number(rec.shiftIdx);
+    const official = chonNanQtyOf(rec, shiftIdx);
+    // Số thanh chọn nan của CÙNG lô nhưng KHÁC ca → KHÔNG cộng vào ca này (cảnh báo)
+    const otherQty = (state.xuong2ChonNanThoRecords || []).reduce((s, x) => {
+      if (!x || x.external || x.baothoId !== rec.id) return s;
+      const xs = (x.shiftIdx == null || x.shiftIdx === '') ? null : Number(x.shiftIdx);
+      return xs === shiftIdx ? s : s + (Number(x.quantity) || 0);
+    }, 0);
+    if (official) return Object.assign({}, official, { otherQty });
+    return { qty: null, volume: null, records: 0, source: 'none', otherQty };
   }
   // THỂ TÍCH QUY ĐỔI (m³) của 1 lượt chạy máy:
   //   • Có số liệu Chọn Nan Thô → TỔNG thể tích chính xác của các lượt chọn nan
@@ -3546,8 +3778,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const klOngBo = lotDs.reduce((s, d) => s + (Number(d.klOngBo) || 0), 0);
     const combos = baoThoCombos(r);
     const q = baoThoQtyOf(r);
-    // Người chạy máy + giờ chạy: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot
-    const live = hrBaoThoAssignmentsOf(r.date || '');
+    // Người chạy máy + giờ chạy: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot.
+    // GIAI ĐOẠN 2: lượt ghi CA → CHỈ lấy người + giờ của ca đó.
+    const shiftIdx = (r.shiftIdx == null || r.shiftIdx === '') ? null : Number(r.shiftIdx);
+    const live = posAssignmentsOf(r.date || '', isBaoThoPos, shiftIdx);
     const workerRows = live.length
       ? live.map(a => ({ name: a.name, time: posTimeStr(a) }))
       : String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -3588,6 +3822,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       qty: q.qty, qtySource: q.source, qtyRecords: q.records,
       volume: baoThoVolumeOf(r),
       cap,
+      shiftIdx,                    // ca của lượt (null = cả ngày / chưa rõ ca)
       workerRows,
       workHours,
       workHoursHC,
@@ -3671,6 +3906,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     sel.innerHTML = html;
     state.x2BaoThoPicked = [...keep];
     updateXuong2BaoThoLinked();
+    // Ô CA (Giai đoạn 2): hiện khi bộ phận để "Làm ca" + gợi ý ca theo bố trí ngày
+    syncX2ShiftField('x2-bao-tho-shift', 'Xưởng 2', (document.getElementById('x2-bao-tho-date') || {}).value || '', isBaoThoPos);
   }
 
   // Đổi lô đã bổ: điền sẵn NGÀY theo NGÀY BỔ SỚM NHẤT trong các lô đang chọn
@@ -3721,6 +3958,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     });
     const d = document.getElementById('x2-bao-tho-date');
     if (d) d.value = '';
+    const sh = document.getElementById('x2-bao-tho-shift');
+    if (sh) sh.value = '';          // về ghi mới → để ô Ca tự gợi ý lại theo ngày
     const sel = document.getElementById('x2-bao-tho-lot');
     if (sel) {
       if (sel.options) for (const o of sel.options) o.selected = false;
@@ -3729,7 +3968,6 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     fillXuong2BaoThoOptions();
     syncX2BaoThoEditBanner();
   }
-
   // ─── LƯU FORM CHẠY MÁY BÀO THÔ (THÊM / SỬA) ──────────────────
   function handleXuong2BaoThoSubmit(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
@@ -3755,7 +3993,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       return;
     }
     // NGƯỜI CHẠY MÁY + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Bào thô")
-    const snap = hrBaoThoSnapshot(dateVal);
+    // GIAI ĐOẠN 2: nếu lượt ghi CA → snapshot CHỈ lấy người + giờ của ca đó.
+    const shiftIdx = x2ShiftValueOf('x2-bao-tho-shift');
+    const snap = hrBaoThoSnapshot(dateVal, shiftIdx);
     // Gộp THÔNG TIN CÁC LÔ: NCC "Nhà A + Nhà B" · loại NL gộp · KL ống bổ = TỔNG
     const lotDs = lots.map(boOngDisplay);
     const joinUniq = arr => [...new Set(arr.map(s => String(s || '').trim()).filter(Boolean))].join(' + ');
@@ -3772,6 +4012,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       klOngBo: lotDs.reduce((s, d) => s + (Number(d.klOngBo) || 0), 0), // TỔNG KL ống bổ
       date: dateVal,
       week: materialWeekLabel(dateVal),
+      shiftIdx,                    // GIAI ĐOẠN 2: ca của lượt (null = cả ngày/chưa rõ ca)
       daiText:  String((document.getElementById('x2-bao-tho-dai')  || {}).value || '').trim(),
       rongText: String((document.getElementById('x2-bao-tho-rong') || {}).value || '').trim(),
       dayText:  String((document.getElementById('x2-bao-tho-day')  || {}).value || '').trim(),
@@ -3794,6 +4035,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       });
       saveXuong2BaoTho();
       showToast('Đã ghi lượt chạy máy bào thô!', 'success');
+      x2ShiftEmptyToast('x2-bao-tho-shift');   // nhắc nhẹ nếu chưa ghi ca (không chặn)
     }
     resetXuong2BaoThoForm();
     renderX2BaoThoCard();
@@ -3811,6 +4053,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     setBaoThoPicked(baoThoLotIdsOf(rec));
     const d = document.getElementById('x2-bao-tho-date');
     if (d) d.value = rec.date || '';
+    // Ô CA của lượt (Giai đoạn 2): nạp lại đúng ca đã ghi
+    syncX2ShiftField('x2-bao-tho-shift', 'Xưởng 2', rec.date || '', isBaoThoPos);
+    const shEl = document.getElementById('x2-bao-tho-shift');
+    if (shEl) shEl.value = (rec.shiftIdx == null) ? '' : String(rec.shiftIdx);
     const fields = { 'x2-bao-tho-dai': rec.daiText, 'x2-bao-tho-rong': rec.rongText, 'x2-bao-tho-day': rec.dayText };
     Object.keys(fields).forEach(fid => {
       const el = document.getElementById(fid);
@@ -3918,19 +4164,17 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       initLucide();
       return;
     }
-    // Gộp theo NGÀY (đã sort mới nhất lên đầu — Map giữ đúng thứ tự nhóm)
-    const groups = new Map();
-    list.forEach(r => {
-      const key = r.date || '';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(r);
-    });
+    // GIAI ĐOẠN 2: gom theo (NGÀY, CA) — mỗi ca 1 THẺ NGÀY riêng + bảng so sánh 2 ca
+    const { groups, cmpByDate } = x2DayShiftGroups(list, baoThoDisplay, (r, d) => d.qty, { rateOf: baoThoRateOf, incKey: 'baotho' });
     let html = '';
-    for (const [date, rows] of groups) {
-      const first = baoThoDisplay(rows[0]); // thông tin CHUNG của ngày (người chạy máy/giờ)
+    for (const g of groups) {
+      const date = g.date;
+      const shiftIdx = g.shiftIdx;
+      const rows = g.rows;
+      const first = g.first;                    // thông tin CHUNG của (ngày, ca)
       let totalQty = 0, allQtyKnown = true;
-      const rowsHtml = rows.map(r => {
-        const d = baoThoDisplay(r);
+      const rowsHtml = rows.map((r, i) => {
+        const d = g.dsp[i];
         if (d.qty == null) allQtyKnown = false; else totalQty += d.qty;
         return baoThoRowHtml(r, d);
       }).join('');
@@ -3954,21 +4198,30 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         ? `${escapeHTML(workers[0].name)}${workers[0].time ? ` (${escapeHTML(workers[0].time)})` : ''}`
         : '<em style="color:var(--text-muted);">Chưa có bố trí vị trí Bào Thô</em>';
       const workersMore = workers.length > 1
-        ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
+        ? `<em class="x2-day-cutters-more" title="Người khác cùng ca: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
         : '';
+      // Cảnh báo TRUNG THỰC: còn thanh chọn nan của cùng lô nhưng KHÁC ca (không cộng vào ca này)
+      const crossQty = rows.reduce((s, r) => s + (Number(baoThoQtyOf(r).otherQty) || 0), 0);
+      const crossChip = crossQty > 0
+        ? `<span class="x2-shift-cross" title="Lô của lượt này còn ${fmtThanh(crossQty)} thanh chọn nan ở CA KHÁC (hoặc chưa ghi ca) — KHÔNG cộng vào ca này. Để ô Ca của lượt Bào Thô trống (Cả ngày) nếu muốn cộng chung."><i data-lucide="alert-triangle"></i> ${fmtThanh(crossQty)} thanh chọn nan ở ca khác</span>`
+        : '';
+      const cmp = (shiftIdx != null) ? ((cmpByDate.get(date) || new Map()).get(shiftIdx) || null) : null;
       html += `
-        <div class="x2-day-card">
+        <div class="x2-day-card" data-shift="${shiftIdx == null ? '' : shiftIdx}">
           <div class="x2-day-head">
             <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
-            <span class="x2-day-cutters" title="Người chạy máy — tự động từ Bảng bố trí vị trí 'Bào thô' (tab Nhân Sự) đúng ngày">
+            ${x2ShiftChipHtml(shiftIdx, 'Xưởng 2')}
+            ${x2ShiftCmpChipHtml(cmp && cmp.cmp, 'Xưởng 2')}
+            ${crossChip}
+            <span class="x2-day-cutters" title="Người chạy máy — tự động từ Bảng bố trí vị trí 'Bào thô' (tab Nhân Sự) đúng ca">
               <i data-lucide="users"></i> ${workersMain} ${workersMore}
             </span>
-            <span class="x2-day-hours" title="Thời gian = tổng giờ công vị trí Bào Thô trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất = Tổng số thanh ${allQtyKnown ? `(${fmtThanh(totalQty)} thanh)` : '(chờ Chọn Nan Thô)'} ÷ giờ chạy máy hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
+            <span class="x2-day-hours" title="Thời gian ${shiftIdx == null ? 'trong ngày' : 'CỦA CA NÀY'} (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
+            <span class="x2-day-cap" title="Công suất ${shiftIdx == null ? '' : 'CỦA CA NÀY '}= Tổng số thanh ${allQtyKnown ? `(${fmtThanh(totalQty)} thanh)` : '(chờ Chọn Nan Thô)'} ÷ giờ chạy máy hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('baotho', date)}
           </div>
-          ${x2ShiftBlockOf(date, isBaoThoPos, 'Bào thô', { qty: (allQtyKnown ? totalQty : null), unit: 'thanh/h', rate, incH })}
+          ${shiftIdx == null ? x2ShiftBlockOf(date, isBaoThoPos, 'Bào thô', { qty: (allQtyKnown ? totalQty : null), unit: 'thanh/h', rate, incH }) : ''}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -4296,8 +4549,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       : parseDimList(String(r.sizeKey || '').replace(/×/g, ','));
     const unitVol = (r.unitVol != null) ? Number(r.unitVol) : unitVolOf(dims[0], dims[1], dims[2]);
     const quantity = Number(r.quantity) || 0;
-    // Người chọn nan + giờ chọn: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot
-    const live = hrChonNanAssignmentsOf(r.date || '');
+    // Người chọn nan + giờ chọn: SỐNG từ Bảng bố trí Nhân Sự theo ngày; mất bố trí → snapshot.
+    // GIAI ĐOẠN 2: lượt ghi CA → CHỈ lấy người + giờ của ca đó.
+    const shiftIdx = (r.shiftIdx == null || r.shiftIdx === '') ? null : Number(r.shiftIdx);
+    const live = posAssignmentsOf(r.date || '', isChonNanPos, shiftIdx);
     const workerRows = live.length
       ? live.map(a => ({ name: a.name, time: posTimeStr(a) }))
       : String(r.worker || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -4329,6 +4584,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       sizeKey: r.sizeKey || dimKeyOf(dims[0], dims[1], dims[2]),
       cls: r.cls || 'A',
       quantity,
+      shiftIdx,                    // ca của lượt (null = cả ngày / chưa rõ ca)
       // Thể tích của lượt = số thanh × thể tích 1 thanh (làm tròn 4 số khi hiển thị)
       volume: Math.round(quantity * unitVol * 10000) / 10000,
       workerRows,
@@ -4378,6 +4634,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     sel.innerHTML = html;
     fillX2ChonNanNccSuggestions();
     updateXuong2ChonNanLinked();
+    // Ô CA (Giai đoạn 2): hiện khi bộ phận để "Làm ca" + gợi ý ca theo bố trí ngày
+    syncX2ShiftField('x2-cn-shift', 'Xưởng 2', (document.getElementById('x2-cn-date') || {}).value || '', isChonNanPos);
   }
 
   // Gợi ý Nhà cung cấp cho ô nhập tay (nan mua ngoài): lấy từ danh mục Nhà cung
@@ -4497,6 +4755,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (cls) cls.value = 'A';
     const d = document.getElementById('x2-cn-date');
     if (d) d.value = '';
+    const sh = document.getElementById('x2-cn-shift');
+    if (sh) sh.value = '';          // về ghi mới → để ô Ca tự gợi ý lại theo ngày
     const sizeSel = document.getElementById('x2-cn-size');
     if (sizeSel) sizeSel.value = '';
     fillXuong2ChonNanOptions();          // nạp lại lô + chế độ lô/NCC + cỡ nan của lô đầu
@@ -4562,7 +4822,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (!Number.isFinite(quantity) || quantity <= 0) { showToast('Số lượng phải là số thanh lớn hơn 0!', 'error'); return; }
 
     // NGƯỜI CHỌN NAN + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Chọn nan")
-    const snap = hrChonNanSnapshot(dateVal);
+    // GIAI ĐOẠN 2: nếu lượt ghi CA → snapshot CHỈ lấy người + giờ của ca đó; số thanh
+    // của ca sẽ được cộng sang ĐÚNG ca của thẻ Bào Thô.
+    const shiftIdx = x2ShiftValueOf('x2-cn-shift');
+    const snap = hrChonNanSnapshot(dateVal, shiftIdx);
     const btD = bt ? baoThoDisplay(bt) : null;
     const unitVol = unitVolOf(d, r, t);
     const payload = {
@@ -4575,6 +4838,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       btDate: bt ? (bt.date || '') : '',
       date: dateVal,
       week: materialWeekLabel(dateVal),
+      shiftIdx,                    // GIAI ĐOẠN 2: ca của lượt (null = cả ngày/chưa rõ ca)
       dims: [d, r, t],
       sizeKey: size.sizeKey || dimKeyOf(d, r, t),
       cls,
@@ -4612,6 +4876,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       }
       saveXuong2ChonNan();
       keepChonNanFormAfterSave();        // GIỮ lô/ngày/loại nan/phân loại để nhập tiếp
+      x2ShiftEmptyToast('x2-cn-shift');  // nhắc nhẹ nếu chưa ghi ca (không chặn)
     }
     renderX2ChonNanCard();
   }
@@ -4628,6 +4893,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (sel) sel.value = rec.external ? CN_NEW_LOT_VALUE : (rec.baothoId || '');
     const d = document.getElementById('x2-cn-date');
     if (d) d.value = rec.date || '';      // NGÀY TRƯỚC khi nạp danh sách cỡ (nhãn theo ngày)
+    // Ô CA của lượt (Giai đoạn 2): nạp lại đúng ca đã ghi
+    syncX2ShiftField('x2-cn-shift', 'Xưởng 2', rec.date || '', isChonNanPos);
+    const shEl = document.getElementById('x2-cn-shift');
+    if (shEl) shEl.value = (rec.shiftIdx == null) ? '' : String(rec.shiftIdx);
     renderX2ChonNanSizeOptions(rec.external ? null : baoThoLotOf(rec.baothoId));
     const sizeSel = document.getElementById('x2-cn-size');
     if (sizeSel && !rec.external) sizeSel.value = rec.sizeKey || '';
@@ -4837,22 +5106,21 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       initLucide();
       return;
     }
-    // Gộp theo NGÀY (đã sort mới nhất lên đầu — Map giữ đúng thứ tự nhóm)
-    const groups = new Map();
-    list.forEach(r => {
-      const key = r.date || '';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(r);
-    });
+    // GIAI ĐOẠN 2: gom theo (NGÀY, CA) — mỗi ca 1 THẺ NGÀY riêng + bảng so sánh 2 ca
+    const { groups, cmpByDate } = x2DayShiftGroups(list, chonNanDisplay, (r, d) => (r.external ? 0 : d.quantity), { rateOf: chonNanRateOf, incKey: 'chonnan' });
     let html = '';
-    for (const [date, rows] of groups) html += chonNanDayCardHtml(date, rows);
+    for (const g of groups) {
+      const cmp = (g.shiftIdx != null) ? ((cmpByDate.get(g.date) || new Map()).get(g.shiftIdx) || null) : null;
+      html += chonNanDayCardHtml(g.date, g.rows, g.shiftIdx, cmp && cmp.cmp);
+    }
     box.innerHTML = html;
     initLucide();
   }
 
   // 1 THẺ NGÀY của công đoạn Chọn Nan Thô (đầu thẻ chung + bảng nhánh)
-  function chonNanDayCardHtml(date, rows) {
-    const first = chonNanDisplay(rows[0]); // thông tin CHUNG của ngày (người chọn/giờ)
+  function chonNanDayCardHtml(date, rows, shiftIdx, cmp) {
+    if (shiftIdx === undefined) shiftIdx = null;
+    const first = chonNanDisplay(rows[0]); // thông tin CHUNG của (ngày, ca)
     const disp = rows.map(chonNanDisplay);
     // Tổng của ngày (CHỈ tính phần cộng sang Bào Thô — bỏ lượt nhập ngoài công đoạn)
     const main = disp.filter(d => !d.external);
@@ -4892,21 +5160,23 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(workers.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${workers.length - 1} người khác</em>`
       : '';
     return `
-      <div class="x2-day-card">
+      <div class="x2-day-card" data-shift="${shiftIdx == null ? '' : shiftIdx}">
         <div class="x2-day-head">
           <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
-          <span class="x2-day-cutters" title="Người chọn nan — tự động từ Bảng bố trí vị trí 'Chọn Nan Thô' (tab Nhân Sự) đúng ngày">
+          ${x2ShiftChipHtml(shiftIdx, 'Xưởng 2')}
+          ${x2ShiftCmpChipHtml(cmp, 'Xưởng 2')}
+          <span class="x2-day-cutters" title="Người chọn nan — tự động từ Bảng bố trí vị trí 'Chọn Nan Thô' (tab Nhân Sự) đúng ca">
             <i data-lucide="users"></i> ${workersMain} ${workersMore}
           </span>
-          <span class="x2-day-hours" title="Thời gian = tổng giờ công vị trí Chọn Nan Thô trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-          <span class="x2-day-cap" title="Công suất thực tế = Tổng số thanh (${fmtThanh(totalQty)} thanh) ÷ giờ chọn nan hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
+          <span class="x2-day-hours" title="Thời gian ${shiftIdx == null ? 'trong ngày' : 'CỦA CA NÀY'} (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
+          <span class="x2-day-cap" title="Công suất thực tế ${shiftIdx == null ? '' : 'CỦA CA NÀY '}= Tổng số thanh (${fmtThanh(totalQty)} thanh) ÷ giờ chọn nan hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
           <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
           ${stageIncidentInputHtml('chonnan', date)}
           <span class="x2-day-sum" title="Tổng số thanh nan thô đã chọn trong ngày (KHÔNG gồm các lượt nhập ở ngoài công đoạn)"><i data-lucide="hash"></i> Tổng thanh: <strong>${fmtThanh(totalQty)}</strong></span>
           <span class="x2-day-sum" title="Tổng thể tích quy đổi của số thanh đã chọn trong ngày"><i data-lucide="box"></i> Tổng thể tích: <strong>${totalVol.toFixed(4)} m³</strong></span>
-          <span class="x2-day-sum" title="Tỷ lệ loại = số thanh 'Loại hẳn' ÷ tổng số thanh đã chọn trong ngày"><i data-lucide="alert-triangle"></i> Tỷ lệ loại: <strong>${rejPct == null ? '—' : `${fmtRatio(rejPct)}%`}</strong></span>
+          <span class="x2-day-sum" title="Tỷ lệ loại = số thanh 'Loại hẳn' ÷ tổng số thanh đã chọn trong ${shiftIdx == null ? 'ngày' : 'CA này'}"><i data-lucide="alert-triangle"></i> Tỷ lệ loại: <strong>${rejPct == null ? '—' : `${fmtRatio(rejPct)}%`}</strong></span>
         </div>
-        ${x2ShiftBlockOf(date, isChonNanPos, 'Chọn nan', { qty: totalQty, unit: 'thanh/h', rate, incH })}
+        ${shiftIdx == null ? x2ShiftBlockOf(date, isChonNanPos, 'Chọn nan', { qty: totalQty, unit: 'thanh/h', rate, incH }) : ''}
         <table class="data-table x2-day-table">
           <thead>
             <tr>
@@ -13890,6 +14160,23 @@ export {
   sayM3PerCharge,
   sayTypeKeyOf,
   sayBatchChargeLabel,
+  sayShiftOf,
+  sayShiftMapOf,
+  syncAlShiftField,
+  alShiftIdxValue,
+  // ── GIAI ĐOẠN 2: nhập sản lượng RIÊNG theo ca (Bổ Ống · Bào Thô · Chọn Nan) ──
+  syncX2ShiftField,
+  x2ShiftValueOf,
+  x2ShiftFieldReady,
+  x2ShiftChipHtml,
+  x2ShiftCmpChipHtml,
+  x2DayShiftGroups,
+  chonNanQtyOf,
+  baoThoQtyOf,
+  isCutSelectPos,
+  isBoOngPos,
+  isBaoThoPos,
+  isChonNanPos,
   batchVolumeOf,
   batchPassedStage,
   toggleX2KanbanBoard,

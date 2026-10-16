@@ -8,7 +8,7 @@ import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_CHON_NAN, stat
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
-import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (gộp lô vào lần đã có — chỉ đọc)
+import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA (gộp lô vào lần đã có — chỉ đọc)
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -1149,6 +1149,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     renderAlLocationChips();
     renderAlSourceList();
     renderAlChargeOptions();      // Ô LẦN THAN HÓA theo đúng (Ngày + Công đoạn)
+    syncAlShiftField();           // Ô CA (Giai đoạn 2): hiện khi Xưởng 2 để "Làm ca" + gợi ý ca
     syncAddLotSource();
     alRefreshSummary();           // 2 dòng tóm tắt + chân form dính
   }
@@ -1182,6 +1183,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     // Giữ lựa chọn cũ CHỈ khi lần đó vẫn còn trong danh sách; không có → về "Lần mới"
     if (prev && html.includes(`value="${prev}"`)) sel.value = prev;
     else sel.value = '';
+    syncAlShiftField();           // Ô CA: gợi ý ca theo ngày + công đoạn đang chọn
     return true;
   }
   // Mã mẻ của lần đang chọn ở ô #al-charge (0 = "Lần mới (tự sinh)")
@@ -1268,6 +1270,8 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     // (lô mới gộp vào lần cũ trên bảng thống kê + chip Kanban); không chọn = lượt
     // lưu mới (1 lượt bấm Lưu = 1 lần than hóa — như cũ).
     const chargeAt = alChargeMarkOf() || Date.now();
+    // Ô CA (Giai đoạn 2): ca của LẦN than hóa này — null = chưa rõ ca (vẫn lưu được)
+    const shiftIdx = alShiftIdxValue();
 
     // ── THAN HÓA LẠI → SẤY 1: nguồn = lô TÓP ở Kho, tạo lô MỚI ──
     if (stage === 'say1' && alReworkOn()) {
@@ -1295,6 +1299,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
         bambooType: src.bambooType || '—',
         useFor: alUseFor(),
         sayCharges: { say1: chargeAt },               // MÃ MẺ: lần mới hoặc lần đã chọn
+        sayShift: sayShiftMapOf(null, 'say1', shiftIdx), // CA của lần (Giai đoạn 2)
         location, notes,
         rework: true,                                // lô sinh từ THAN HÓA LẠI
         sourceTopBatchId: String(src.id),            // link lô Tóp nguồn (tồn giảm đọc sống)
@@ -1334,6 +1339,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
         src.useFor = useForVal;
         if (notes) src.notes = notes;
         src.sayCharges = Object.assign({}, src.sayCharges, { say2: chargeAt });
+        src.sayShift = sayShiftMapOf(src.sayShift, 'say2', shiftIdx);   // CA của lần (Giai đoạn 2)
         delete src.topRework;                         // hết cờ Tóp — đã rời Kho
         delete src.topUsed;
         src.updatedAt = nowISO;
@@ -1358,6 +1364,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
         bambooType: src.bambooType || '—',
         useFor: useForVal,
         sayCharges: Object.assign({}, src.sayCharges, { say2: chargeAt }),
+        sayShift: sayShiftMapOf(src.sayShift, 'say2', shiftIdx),  // CA của lần (Giai đoạn 2)
         location, notes,
         rework: true,
         sourceTopBatchId: String(src.id),
@@ -1392,6 +1399,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
         delete b.topRework;                          // lô RỜI Kho → hết cờ TÓP xử lý lại
         // MÃ MẺ Sấy 2: lượt Lưu này = 1 lần than hóa (giữ mã mẻ Sấy 1 cũ nếu có)
         b.sayCharges = Object.assign({}, b.sayCharges, { say2: chargeAt });
+        b.sayShift = sayShiftMapOf(b.sayShift, 'say2', shiftIdx);   // CA của lần (Giai đoạn 2)
         if (notes) b.notes = notes;
         b.updatedAt = nowISO;
       });
@@ -1424,6 +1432,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
         bambooType: nanClassLabelOf(rec.cls),        // A / A1 / B lấy từ phân loại của thẻ nan
         useFor: alUseFor(),                          // Dùng cho (Ván / Bullig) chọn ở form
         sayCharges: { say1: chargeAt },              // MÃ MẺ: lượt Lưu này = 1 lần than hóa
+        sayShift: sayShiftMapOf(null, 'say1', shiftIdx), // CA của lần (Giai đoạn 2)
         location,
         notes,
         sourceChonNanId: rec.id,                     // link thẻ nan (để trừ phần còn lại)

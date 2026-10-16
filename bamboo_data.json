@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-16T10:21:17.546Z",
+  "savedAt": "2026-10-16T12:43:37.204Z",
   "batches": [
     {
       "id": "batch-1792049223417",
@@ -2178,7 +2178,7 @@
     {
       "id": "batch-1791941061715-2",
       "code": "261009-03",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -2199,14 +2199,19 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:24:21.712Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791941061714-1",
       "code": "261009-02",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -2227,14 +2232,19 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:24:21.712Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791941061714-0",
       "code": "261009-01",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -2255,14 +2265,19 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:24:21.712Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791940568399-2",
       "code": "261008-23",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2283,14 +2298,19 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:16:08.396Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791940568399-1",
       "code": "261008-22",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2311,14 +2331,19 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:16:08.396Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791940568399-0",
       "code": "261008-21",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2339,14 +2364,19 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:16:08.396Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791940532779-3",
       "code": "261008-20",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2367,14 +2397,19 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:15:32.776Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791940532779-2",
       "code": "261008-19",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2395,14 +2430,19 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:15:32.776Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791940532779-1",
       "code": "261008-18",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2423,14 +2463,19 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:15:32.776Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791940532779-0",
       "code": "261008-17",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2451,9 +2496,14 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T01:15:32.776Z"
+      "updatedAt": "2026-10-16T12:28:34.833Z",
+      "khoDate": "2026-10-16"
     },
     {
       "id": "batch-1791779025021-5",
@@ -14475,6 +14525,38 @@
       "note": "",
       "images": [],
       "createdAt": "2026-10-16T01:51:34.424Z"
+    },
+    {
+      "id": "mat-1792154579920-fkmno",
+      "date": "2026-10-16",
+      "week": "2026-W42",
+      "type": "Luồng cây xô",
+      "supplier": "Nhà Phong",
+      "location": "xuong-2",
+      "inputIndex": 16570,
+      "outputIndex": 6690,
+      "weight": 9880,
+      "unitPrice": 1600,
+      "totalAmount": 15808000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-16T12:42:59.920Z"
+    },
+    {
+      "id": "mat-1792154617099-r201q",
+      "date": "2026-10-16",
+      "week": "2026-W42",
+      "type": "Luồng ống",
+      "supplier": "Nhà Thành",
+      "location": "xuong-2",
+      "inputIndex": 12190,
+      "outputIndex": 5880,
+      "weight": 6310,
+      "unitPrice": 1600,
+      "totalAmount": 10096000,
+      "note": "",
+      "images": [],
+      "createdAt": "2026-10-16T12:43:37.099Z"
     }
   ],
   "materialRates": [
@@ -23066,35 +23148,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "unitVol": 0.000225,
-      "volume": 0.3528,
-      "cls": "A",
-      "workHoursTC": 0,
-      "workHoursHC": 27,
-      "external": false,
-      "worker": "Vi Thị Nghị, Hà Thị Khoái, Vi Thị Dung A",
-      "boDate": "2026-09-29",
-      "materialType": "Luồng cây xô",
-      "quantity": 1568,
-      "id": "x2cn-1790763576298-2ptds",
-      "sizeKey": "1250×18×10",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "createdAt": "2026-09-30T10:19:36.298Z",
-      "btDate": "2026-09-29",
-      "date": "2026-09-29",
-      "baothoId": "x2bt-1790763437899-pi9nx",
-      "workHours": 27,
-      "materialId": "mat-1790646107854-hdzwj",
-      "week": "2026-W40",
-      "supplier": "Nhà Tế",
-      "updatedAt": "2026-10-04T03:38:10.328Z"
-    },
-    {
       "materialType": "Luồng cây xô",
       "cls": "A",
       "volume": 0.6653,
@@ -23323,34 +23376,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "id": "x2cn-1790817725464-5ksav",
-      "baothoId": "",
-      "external": true,
-      "materialId": "",
-      "materialType": "",
-      "supplier": "BỔ SUNG",
-      "boDate": "",
-      "btDate": "",
-      "date": "2026-09-28",
-      "week": "2026-W40",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "sizeKey": "1250×24×8",
-      "cls": "A1",
-      "quantity": 2016,
-      "unitVol": 0.00024,
-      "volume": 0.4838,
-      "worker": "",
-      "workTime": "",
-      "workHours": 0,
-      "workHoursHC": 0,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-01T01:22:05.464Z"
-    },
-    {
       "supplier": "Nhà Thắng",
       "week": "2026-W40",
       "unitVol": 0.0001575,
@@ -23409,64 +23434,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "date": "2026-10-01",
-      "quantity": 2100,
-      "boDate": "2026-10-01",
-      "materialId": "mat-1790737279136-wi1i0",
-      "cls": "A1",
-      "workHours": 0,
-      "materialType": "Luồng cây xô",
-      "worker": "",
-      "baothoId": "x2bt-1790908272915-sc3a0",
-      "btDate": "2026-10-01",
-      "supplier": "Nhà Thắng",
-      "sizeKey": "1250×18×7",
-      "week": "2026-W40",
-      "workHoursHC": 0,
-      "id": "x2cn-1790910883648-7qa27",
-      "external": false,
-      "unitVol": 0.0001575,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "workHoursTC": 0,
-      "workTime": "",
-      "createdAt": "2026-10-02T03:14:43.648Z",
-      "volume": 0.3308,
-      "updatedAt": "2026-10-04T08:37:03.050Z"
-    },
-    {
-      "workHoursHC": 0,
-      "id": "x2cn-1790910889534-r6scq",
-      "supplier": "Nhà Thắng",
-      "workHoursTC": 0,
-      "baothoId": "x2bt-1790908272915-sc3a0",
-      "workHours": 0,
-      "workTime": "",
-      "cls": "A1",
-      "materialType": "Luồng cây xô",
-      "materialId": "mat-1790737279136-wi1i0",
-      "external": false,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "week": "2026-W40",
-      "boDate": "2026-10-01",
-      "volume": 0.2756,
-      "unitVol": 0.0001575,
-      "quantity": 1750,
-      "date": "2026-10-01",
-      "sizeKey": "1250×18×7",
-      "createdAt": "2026-10-02T03:14:49.535Z",
-      "worker": "",
-      "btDate": "2026-10-01",
-      "updatedAt": "2026-10-04T07:27:51.342Z"
-    },
-    {
       "materialType": "Luồng cây xô",
       "quantity": 2100,
       "id": "x2cn-1790910915717-nvb0k",
@@ -23523,35 +23490,6 @@
       "volume": 0.7513,
       "supplier": "Nhà Thắng",
       "updatedAt": "2026-10-16T08:32:53.864Z"
-    },
-    {
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "week": "2026-W40",
-      "materialId": "mat-1790737279136-wi1i0",
-      "id": "x2cn-1790910979314-vn20u",
-      "workHoursTC": 0,
-      "boDate": "2026-10-01",
-      "materialType": "Luồng cây xô",
-      "quantity": 1820,
-      "workHoursHC": 0,
-      "workHours": 0,
-      "external": false,
-      "cls": "A",
-      "sizeKey": "1250×18×9",
-      "workTime": "",
-      "volume": 0.3686,
-      "btDate": "2026-10-01",
-      "baothoId": "x2bt-1790908272915-sc3a0",
-      "worker": "",
-      "createdAt": "2026-10-02T03:16:19.314Z",
-      "date": "2026-10-01",
-      "supplier": "Nhà Thắng",
-      "unitVol": 0.0002025,
-      "updatedAt": "2026-10-04T08:37:39.301Z"
     },
     {
       "external": false,
@@ -23639,35 +23577,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "quantity": 280,
-      "workHoursTC": 0,
-      "materialType": "Luồng cây xô",
-      "id": "x2cn-1790911038150-2daou",
-      "workHoursHC": 0,
-      "worker": "",
-      "createdAt": "2026-10-02T03:17:18.150Z",
-      "btDate": "2026-10-01",
-      "volume": 0.0693,
-      "materialId": "mat-1790737279136-wi1i0",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "week": "2026-W40",
-      "baothoId": "x2bt-1790908272915-sc3a0",
-      "workHours": 0,
-      "sizeKey": "1250×18×11",
-      "date": "2026-10-01",
-      "boDate": "2026-10-01",
-      "supplier": "Nhà Thắng",
-      "unitVol": 0.0002475,
-      "cls": "A",
-      "external": false,
-      "workTime": "",
-      "updatedAt": "2026-10-04T08:53:21.314Z"
-    },
-    {
       "sizeKey": "1250×24×8",
       "dims": [
         1250,
@@ -23695,35 +23604,6 @@
       "workTime": "",
       "worker": "",
       "updatedAt": "2026-10-16T08:32:53.864Z"
-    },
-    {
-      "date": "2026-10-01",
-      "boDate": "2026-10-01",
-      "sizeKey": "1250×24×8",
-      "quantity": 1036,
-      "unitVol": 0.00024,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-02T03:17:57.235Z",
-      "workHoursHC": 0,
-      "materialType": "Luồng cây xô",
-      "worker": "",
-      "btDate": "2026-10-01",
-      "external": false,
-      "cls": "A1",
-      "workTime": "",
-      "baothoId": "x2bt-1790908272915-sc3a0",
-      "week": "2026-W40",
-      "workHours": 0,
-      "materialId": "mat-1790737279136-wi1i0",
-      "id": "x2cn-1790911077235-3depk",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "supplier": "Nhà Thắng",
-      "volume": 0.2486,
-      "updatedAt": "2026-10-04T07:37:07.891Z"
     },
     {
       "materialId": "mat-1790737279136-wi1i0",
@@ -23781,35 +23661,6 @@
         18,
         10
       ]
-    },
-    {
-      "id": "x2cn-1790911152969-gdmdb",
-      "sizeKey": "1250×18×10",
-      "workHoursHC": 0,
-      "createdAt": "2026-10-02T03:19:12.969Z",
-      "volume": 0.4095,
-      "workHoursTC": 0,
-      "materialId": "mat-1790737279136-wi1i0",
-      "cls": "A",
-      "materialType": "Luồng cây xô",
-      "quantity": 1820,
-      "unitVol": 0.000225,
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "worker": "",
-      "week": "2026-W40",
-      "btDate": "2026-10-01",
-      "external": false,
-      "workTime": "",
-      "date": "2026-10-01",
-      "workHours": 0,
-      "baothoId": "x2bt-1790908272915-sc3a0",
-      "supplier": "Nhà Thắng",
-      "boDate": "2026-10-01",
-      "updatedAt": "2026-10-04T08:18:43.104Z"
     },
     {
       "quantity": 1176,
@@ -23955,35 +23806,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "id": "x2cn-1791018532275-3hear",
-      "week": "2026-W40",
-      "cls": "A",
-      "volume": 0.3572,
-      "supplier": "Nhà Khánh Huế",
-      "workHoursTC": 0,
-      "workHoursHC": 45,
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "quantity": 2268,
-      "unitVol": 0.0001575,
-      "workHours": 45,
-      "createdAt": "2026-10-03T09:08:52.275Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "external": false,
-      "materialType": "Luồng cây xô",
-      "materialId": "mat-1790992482347-cl892",
-      "baothoId": "x2bt-1791018347046-ua3m8",
-      "boDate": "2026-10-02",
-      "btDate": "2026-10-02",
-      "date": "2026-10-02",
-      "sizeKey": "1250×18×7",
-      "updatedAt": "2026-10-04T07:50:43.952Z"
-    },
-    {
       "date": "2026-10-02",
       "supplier": "Nhà Khánh Huế",
       "workHours": 45,
@@ -24013,35 +23835,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "date": "2026-10-02",
-      "volume": 0.1588,
-      "supplier": "Nhà Khánh Huế",
-      "materialId": "mat-1790992482347-cl892",
-      "quantity": 1008,
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "materialType": "Luồng cây xô",
-      "unitVol": 0.0001575,
-      "workHoursHC": 45,
-      "btDate": "2026-10-02",
-      "boDate": "2026-10-02",
-      "workHoursTC": 0,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "id": "x2cn-1791018549169-wge97",
-      "workHours": 45,
-      "sizeKey": "1250×18×7",
-      "createdAt": "2026-10-03T09:09:09.169Z",
-      "external": false,
-      "baothoId": "x2bt-1791018347046-ua3m8",
-      "week": "2026-W40",
-      "cls": "B",
-      "updatedAt": "2026-10-04T08:55:25.777Z"
-    },
-    {
       "materialId": "mat-1790992482347-cl892",
       "id": "x2cn-1791018620030-7yavg",
       "workHoursHC": 45,
@@ -24069,64 +23862,6 @@
       "materialType": "Luồng cây xô",
       "unitVol": 0.0002025,
       "updatedAt": "2026-10-16T08:32:53.864Z"
-    },
-    {
-      "cls": "A",
-      "week": "2026-W40",
-      "unitVol": 0.0002025,
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "quantity": 518,
-      "volume": 0.1049,
-      "materialType": "Luồng cây xô",
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "supplier": "Nhà Khánh Huế",
-      "materialId": "mat-1790992482347-cl892",
-      "external": false,
-      "baothoId": "x2bt-1791018347046-ua3m8",
-      "id": "x2cn-1791018631278-0yq3c",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "sizeKey": "1250×18×9",
-      "btDate": "2026-10-02",
-      "boDate": "2026-10-02",
-      "createdAt": "2026-10-03T09:10:31.278Z",
-      "date": "2026-10-02",
-      "workHoursTC": 0,
-      "workHoursHC": 45,
-      "workHours": 45,
-      "updatedAt": "2026-10-04T08:54:32.863Z"
-    },
-    {
-      "id": "x2cn-1791018641094-fqbiz",
-      "date": "2026-10-02",
-      "unitVol": 0.0002025,
-      "btDate": "2026-10-02",
-      "boDate": "2026-10-02",
-      "external": false,
-      "baothoId": "x2bt-1791018347046-ua3m8",
-      "materialId": "mat-1790992482347-cl892",
-      "workHoursTC": 0,
-      "workHoursHC": 45,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 252,
-      "supplier": "Nhà Khánh Huế",
-      "sizeKey": "1250×18×9",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "cls": "A",
-      "volume": 0.051,
-      "week": "2026-W40",
-      "materialType": "Luồng cây xô",
-      "createdAt": "2026-10-03T09:10:41.094Z",
-      "workHours": 45,
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "updatedAt": "2026-10-04T08:55:01.933Z"
     },
     {
       "workHours": 45,
@@ -24184,35 +23919,6 @@
       "btDate": "2026-10-02",
       "boDate": "2026-10-02",
       "updatedAt": "2026-10-16T08:32:53.864Z"
-    },
-    {
-      "baothoId": "x2bt-1791018347046-ua3m8",
-      "external": false,
-      "sizeKey": "1250×18×10",
-      "cls": "A",
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialId": "mat-1790992482347-cl892",
-      "volume": 0.1575,
-      "week": "2026-W40",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "id": "x2cn-1791018682348-soe7n",
-      "unitVol": 0.000225,
-      "boDate": "2026-10-02",
-      "btDate": "2026-10-02",
-      "date": "2026-10-02",
-      "materialType": "Luồng cây xô",
-      "workHoursTC": 0,
-      "quantity": 700,
-      "workHoursHC": 45,
-      "createdAt": "2026-10-03T09:11:22.348Z",
-      "workHours": 45,
-      "supplier": "Nhà Khánh Huế",
-      "updatedAt": "2026-10-04T08:52:30.614Z"
     },
     {
       "sizeKey": "1250×18×10",
@@ -24273,35 +23979,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "cls": "A",
-      "week": "2026-W40",
-      "boDate": "2026-10-02",
-      "btDate": "2026-10-02",
-      "id": "x2cn-1791018760949-rlc1s",
-      "workHoursTC": 0,
-      "materialId": "mat-1790992482347-cl892",
-      "workHoursHC": 45,
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "materialType": "Luồng cây xô",
-      "unitVol": 0.0002475,
-      "supplier": "Nhà Khánh Huế",
-      "quantity": 350,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "volume": 0.0866,
-      "external": false,
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "baothoId": "x2bt-1791018347046-ua3m8",
-      "sizeKey": "1250×18×11",
-      "workHours": 45,
-      "date": "2026-10-02",
-      "createdAt": "2026-10-03T09:12:40.949Z",
-      "updatedAt": "2026-10-04T08:52:47.355Z"
-    },
-    {
       "id": "x2cn-1791098986202-93lhq",
       "baothoId": "x2bt-1791018308974-sl12i",
       "external": false,
@@ -24359,63 +24036,6 @@
       "updatedAt": "2026-10-04T09:40:16.126Z"
     },
     {
-      "id": "x2cn-1791099925505-75ko8",
-      "baothoId": "x2bt-1790763437899-pi9nx",
-      "external": false,
-      "materialId": "mat-1790646107854-hdzwj",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-09-29",
-      "btDate": "2026-09-29",
-      "date": "2026-09-29",
-      "week": "2026-W40",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "sizeKey": "1250×24×8",
-      "cls": "A1",
-      "quantity": 1890,
-      "unitVol": 0.00024,
-      "volume": 0.4536,
-      "worker": "Vi Thị Nghị, Hà Thị Khoái, Vi Thị Dung A",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 27,
-      "workHoursHC": 27,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-04T07:45:25.505Z",
-      "updatedAt": "2026-10-04T07:47:29.372Z"
-    },
-    {
-      "id": "x2cn-1791100995427-hjytq",
-      "baothoId": "x2bt-1790763437899-pi9nx",
-      "external": false,
-      "materialId": "mat-1790646107854-hdzwj",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-09-29",
-      "btDate": "2026-09-29",
-      "date": "2026-09-29",
-      "week": "2026-W40",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "sizeKey": "1250×18×9",
-      "cls": "A",
-      "quantity": 1820,
-      "unitVol": 0.0002025,
-      "volume": 0.3686,
-      "worker": "Vi Thị Nghị, Hà Thị Khoái, Vi Thị Dung A",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 27,
-      "workHoursHC": 27,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-04T08:03:15.427Z"
-    },
-    {
       "id": "x2cn-1791101030856-mhib9",
       "baothoId": "x2bt-1791018347046-ua3m8",
       "external": false,
@@ -24444,62 +24064,6 @@
       "createdAt": "2026-10-04T08:03:50.856Z"
     },
     {
-      "id": "x2cn-1791101068535-e9thv",
-      "baothoId": "x2bt-1790763437899-pi9nx",
-      "external": false,
-      "materialId": "mat-1790646107854-hdzwj",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-09-29",
-      "btDate": "2026-09-29",
-      "date": "2026-09-29",
-      "week": "2026-W40",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "sizeKey": "1250×18×11",
-      "cls": "A",
-      "quantity": 1232,
-      "unitVol": 0.0002475,
-      "volume": 0.3049,
-      "worker": "Vi Thị Nghị, Hà Thị Khoái, Vi Thị Dung A",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 27,
-      "workHoursHC": 27,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-04T08:04:28.535Z"
-    },
-    {
-      "id": "x2cn-1791103861794-lv82n",
-      "baothoId": "x2bt-1791018308974-sl12i",
-      "external": false,
-      "materialId": "mat-1790992512313-9yz39",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-10-02",
-      "btDate": "2026-10-01",
-      "date": "2026-10-02",
-      "week": "2026-W40",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "sizeKey": "1250×18×7",
-      "cls": "A1",
-      "quantity": 2268,
-      "unitVol": 0.0001575,
-      "volume": 0.3572,
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 45,
-      "workHoursHC": 45,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-04T08:51:01.794Z"
-    },
-    {
       "id": "x2cn-1791104499216-nmy03",
       "baothoId": "x2bt-1790908253836-zmx4b",
       "external": false,
@@ -24526,34 +24090,6 @@
       "workHoursHC": 45,
       "workHoursTC": 0,
       "createdAt": "2026-10-04T09:01:39.216Z"
-    },
-    {
-      "id": "x2cn-1791104505273-tfers",
-      "baothoId": "x2bt-1791018347046-ua3m8",
-      "external": false,
-      "materialId": "mat-1790992482347-cl892",
-      "materialType": "Luồng cây xô",
-      "supplier": "Nhà Khánh Huế",
-      "boDate": "2026-10-02",
-      "btDate": "2026-10-02",
-      "date": "2026-10-02",
-      "week": "2026-W40",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "sizeKey": "1250×18×7",
-      "cls": "A1",
-      "quantity": 504,
-      "unitVol": 0.0001575,
-      "volume": 0.0794,
-      "worker": "Hà Thị Thoan, Hà Thị Khoái, Lương Thị Dướng, Hà Thị Luyện A, Hà Thị Nhẫn",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 45,
-      "workHoursHC": 45,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-04T09:01:45.273Z"
     },
     {
       "id": "x2cn-1791104519755-22soq",
@@ -24639,34 +24175,6 @@
       "workHoursTC": 0,
       "sizeKey": "1250×18×7",
       "updatedAt": "2026-10-16T08:32:53.864Z"
-    },
-    {
-      "external": false,
-      "worker": "Hà Thị Khoái, Hà Thị Luyện A, Lương Thị Dướng, Vi Thị Nghị, Hà Thị Quyên B",
-      "btDate": "2026-10-03",
-      "unitVol": 0.0001575,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "id": "x2cn-1791171941535-3z5aw",
-      "baothoId": "x2bt-1791171903566-wiu0k",
-      "supplier": "Nhà Hương",
-      "boDate": "2026-10-03",
-      "workHoursHC": 45,
-      "date": "2026-10-03",
-      "materialType": "Luồng cây xô",
-      "materialId": "mat-1790828827916-6767q",
-      "sizeKey": "1250×18×7",
-      "createdAt": "2026-10-05T03:45:41.535Z",
-      "workHoursTC": 0,
-      "workHours": 45,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "volume": 0.3308,
-      "cls": "A1",
-      "quantity": 2100,
-      "week": "2026-W40"
     },
     {
       "workHoursTC": 0,
@@ -24894,34 +24402,6 @@
       "updatedAt": "2026-10-16T08:32:53.864Z"
     },
     {
-      "workHoursTC": 0,
-      "btDate": "2026-10-03",
-      "week": "2026-W40",
-      "worker": "Hà Thị Khoái, Hà Thị Luyện A, Lương Thị Dướng, Vi Thị Nghị, Hà Thị Quyên B",
-      "external": false,
-      "materialType": "Luồng cây xô",
-      "sizeKey": "1250×24×8",
-      "baothoId": "x2bt-1791171903566-wiu0k",
-      "supplier": "Nhà Hương",
-      "boDate": "2026-10-03",
-      "date": "2026-10-03",
-      "unitVol": 0.00024,
-      "cls": "A",
-      "materialId": "mat-1790828827916-6767q",
-      "workHoursHC": 45,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "workHours": 45,
-      "quantity": 420,
-      "volume": 0.1008,
-      "createdAt": "2026-10-05T03:48:16.113Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "id": "x2cn-1791172096113-90uqe"
-    },
-    {
       "workHours": 45,
       "worker": "Hà Thị Khoái, Hà Thị Luyện A, Lương Thị Dướng, Vi Thị Nghị, Hà Thị Quyên B",
       "sizeKey": "1250×24×8",
@@ -25005,34 +24485,6 @@
       "week": "2026-W40",
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "workHoursHC": 45,
-      "week": "2026-W40",
-      "workHours": 45,
-      "boDate": "2026-10-02",
-      "cls": "A1",
-      "worker": "Hà Thị Khoái, Hà Thị Luyện A, Lương Thị Dướng, Vi Thị Nghị, Hà Thị Quyên B",
-      "quantity": 1428,
-      "materialId": "mat-1790992512313-9yz39",
-      "btDate": "2026-10-03",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "date": "2026-10-03",
-      "sizeKey": "1250×18×7",
-      "createdAt": "2026-10-05T03:54:25.520Z",
-      "materialType": "Luồng cây xô",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "external": false,
-      "volume": 0.2249,
-      "workHoursTC": 0,
-      "unitVol": 0.0001575,
-      "id": "x2cn-1791172465520-3ak1b",
-      "supplier": "Nhà Tế",
-      "baothoId": "x2bt-1791172164987-5cr3n"
     },
     {
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
@@ -25232,34 +24684,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "id": "x2cn-1791172704176-52r89",
-      "week": "2026-W40",
-      "workHours": 45,
-      "sizeKey": "1250×24×8",
-      "cls": "A",
-      "createdAt": "2026-10-05T03:58:24.176Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 420,
-      "workHoursTC": 0,
-      "date": "2026-10-03",
-      "volume": 0.1008,
-      "external": false,
-      "worker": "Hà Thị Khoái, Hà Thị Luyện A, Lương Thị Dướng, Vi Thị Nghị, Hà Thị Quyên B",
-      "materialType": "Luồng cây xô",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "btDate": "2026-10-03",
-      "materialId": "mat-1790992512313-9yz39",
-      "workHoursHC": 45,
-      "unitVol": 0.00024,
-      "baothoId": "x2bt-1791172164987-5cr3n",
-      "supplier": "Nhà Tế",
-      "boDate": "2026-10-02"
-    },
-    {
       "createdAt": "2026-10-05T03:58:32.647Z",
       "workHoursHC": 45,
       "cls": "reject",
@@ -25317,62 +24741,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHoursHC": 54,
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "quantity": 1512,
-      "cls": "A",
-      "date": "2026-10-05",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "unitVol": 0.0001575,
-      "btDate": "2026-10-05",
-      "workHours": 54,
-      "external": false,
-      "week": "2026-W41",
-      "boDate": "2026-10-05",
-      "id": "x2cn-1791280394087-fpbuc",
-      "volume": 0.2381,
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "materialType": "Luồng ống + Luồng cây xô",
-      "createdAt": "2026-10-06T09:53:14.087Z",
-      "materialId": "mat-1791270963754-l3t1q",
-      "sizeKey": "1250×18×7",
-      "workHoursTC": 0
-    },
-    {
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 252,
-      "btDate": "2026-10-05",
-      "workHoursHC": 54,
-      "unitVol": 0.0001575,
-      "workHours": 54,
-      "external": false,
-      "materialId": "mat-1791270963754-l3t1q",
-      "id": "x2cn-1791280396312-8fgdi",
-      "boDate": "2026-10-05",
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "workHoursTC": 0,
-      "createdAt": "2026-10-06T09:53:16.312Z",
-      "volume": 0.0397,
-      "date": "2026-10-05",
-      "cls": "A",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "materialType": "Luồng ống + Luồng cây xô",
-      "sizeKey": "1250×18×7",
-      "week": "2026-W41"
-    },
-    {
       "workHoursTC": 0,
       "quantity": 3780,
       "unitVol": 0.0001575,
@@ -25402,62 +24770,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "id": "x2cn-1791280410683-bm19b",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 1344,
-      "btDate": "2026-10-05",
-      "cls": "A1",
-      "date": "2026-10-05",
-      "createdAt": "2026-10-06T09:53:30.683Z",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "workHoursTC": 0,
-      "external": false,
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "unitVol": 0.0001575,
-      "materialType": "Luồng ống + Luồng cây xô",
-      "week": "2026-W41",
-      "workHoursHC": 54,
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "boDate": "2026-10-05",
-      "sizeKey": "1250×18×7",
-      "volume": 0.2117,
-      "materialId": "mat-1791270963754-l3t1q",
-      "workHours": 54
-    },
-    {
-      "materialId": "mat-1791270963754-l3t1q",
-      "workHours": 54,
-      "workHoursTC": 0,
-      "cls": "A1",
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "id": "x2cn-1791280412599-coj9h",
-      "unitVol": 0.0001575,
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "btDate": "2026-10-05",
-      "volume": 0.0529,
-      "boDate": "2026-10-05",
-      "week": "2026-W41",
-      "external": false,
-      "materialType": "Luồng ống + Luồng cây xô",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHoursHC": 54,
-      "createdAt": "2026-10-06T09:53:32.599Z",
-      "sizeKey": "1250×18×7",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "quantity": 336,
-      "date": "2026-10-05"
-    },
-    {
       "date": "2026-10-05",
       "sizeKey": "1250×18×7",
       "dims": [
@@ -25485,34 +24797,6 @@
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "createdAt": "2026-10-06T09:53:43.127Z",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "cls": "B",
-      "btDate": "2026-10-05",
-      "createdAt": "2026-10-06T09:53:45.894Z",
-      "week": "2026-W41",
-      "materialType": "Luồng ống + Luồng cây xô",
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "workHoursHC": 54,
-      "sizeKey": "1250×18×7",
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "date": "2026-10-05",
-      "id": "x2cn-1791280425894-venvw",
-      "materialId": "mat-1791270963754-l3t1q",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 504,
-      "workHoursTC": 0,
-      "workHours": 54,
-      "volume": 0.0794,
-      "external": false,
-      "unitVol": 0.0001575,
-      "boDate": "2026-10-05"
     },
     {
       "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
@@ -25572,35 +24856,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "materialType": "Luồng ống + Luồng cây xô",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "date": "2026-10-05",
-      "id": "x2cn-1791280484903-fyrp8",
-      "workHours": 54,
-      "week": "2026-W41",
-      "sizeKey": "1250×18×9",
-      "boDate": "2026-10-05",
-      "workHoursTC": 0,
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "volume": 0.1417,
-      "workHoursHC": 54,
-      "btDate": "2026-10-05",
-      "createdAt": "2026-10-06T09:54:44.903Z",
-      "external": false,
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 700,
-      "materialId": "mat-1791270963754-l3t1q",
-      "cls": "A",
-      "unitVol": 0.0002025,
-      "updatedAt": "2026-10-07T06:32:29.846Z"
-    },
-    {
       "id": "x2cn-1791280504360-kb9ss",
       "date": "2026-10-05",
       "dims": [
@@ -25628,34 +24883,6 @@
       "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
       "materialId": "mat-1791270963754-l3t1q",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "unitVol": 0.0002025,
-      "workHours": 54,
-      "date": "2026-10-05",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "workHoursHC": 54,
-      "week": "2026-W41",
-      "btDate": "2026-10-05",
-      "cls": "B",
-      "id": "x2cn-1791280509688-wkk00",
-      "boDate": "2026-10-05",
-      "quantity": 350,
-      "volume": 0.0709,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialId": "mat-1791270963754-l3t1q",
-      "sizeKey": "1250×18×9",
-      "workHoursTC": 0,
-      "createdAt": "2026-10-06T09:55:09.688Z",
-      "materialType": "Luồng ống + Luồng cây xô",
-      "external": false
     },
     {
       "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
@@ -25713,34 +24940,6 @@
       "createdAt": "2026-10-06T09:57:44.584Z",
       "btDate": "2026-10-05",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "workHoursTC": 0,
-      "materialType": "Luồng ống + Luồng cây xô",
-      "workHours": 54,
-      "week": "2026-W41",
-      "external": false,
-      "volume": 0.0945,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "date": "2026-10-05",
-      "materialId": "mat-1791270963754-l3t1q",
-      "boDate": "2026-10-05",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "unitVol": 0.000225,
-      "quantity": 420,
-      "id": "x2cn-1791280667878-36fwz",
-      "btDate": "2026-10-05",
-      "createdAt": "2026-10-06T09:57:47.878Z",
-      "sizeKey": "1250×18×10",
-      "cls": "A",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "workHoursHC": 54
     },
     {
       "workHoursHC": 54,
@@ -25854,34 +25053,6 @@
       ],
       "cls": "A",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "workHoursHC": 54,
-      "worker": "Hà Thị Khoái, Hà Thị Nhẫn, Hà Thị Quyên B, Hà Thị Luyện A, Vi Thị Nghị, Hà Thị Dậu",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cls": "A",
-      "quantity": 336,
-      "btDate": "2026-10-05",
-      "unitVol": 0.00024,
-      "createdAt": "2026-10-06T09:58:59.176Z",
-      "external": false,
-      "workHours": 54,
-      "id": "x2cn-1791280739176-am6io",
-      "boDate": "2026-10-05",
-      "supplier": "Nhà Trung + Nhà Khánh Huế + Nhà Thành",
-      "baothoId": "x2bt-1791277962050-jdzaj",
-      "materialType": "Luồng ống + Luồng cây xô",
-      "volume": 0.0806,
-      "date": "2026-10-05",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "materialId": "mat-1791270963754-l3t1q",
-      "workHoursTC": 0,
-      "week": "2026-W41",
-      "sizeKey": "1250×24×8"
     },
     {
       "sizeKey": "1250×24×8",
@@ -26725,34 +25896,6 @@
       "external": false
     },
     {
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "workHoursHC": 72,
-      "materialId": "mat-1790645886439-smcht",
-      "date": "2026-10-06",
-      "btDate": "2026-10-06",
-      "sizeKey": "1250×18×9",
-      "id": "x2cn-1791360854209-bj9le",
-      "week": "2026-W41",
-      "volume": 0.1531,
-      "unitVol": 0.0002025,
-      "createdAt": "2026-10-07T08:14:14.209Z",
-      "boDate": "2026-10-05",
-      "external": false,
-      "baothoId": "x2bt-1791345383731-xdwks",
-      "supplier": "Nhà Thành",
-      "materialType": "Luồng ống",
-      "cls": "A",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 72,
-      "workHoursTC": 0,
-      "worker": "Hà Thị Luyện A, Hà Thị Khoái, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Thoan, Hà Thị Nương, Lê Thị Mừng, Vi Văn Nhêu",
-      "quantity": 756
-    },
-    {
       "cls": "A",
       "volume": 0.2117,
       "sizeKey": "1250×18×7",
@@ -26780,34 +25923,6 @@
       "workHours": 72,
       "id": "x2cn-1791360872882-9uule",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "workHoursHC": 72,
-      "materialId": "mat-1791256868151-cwl2m",
-      "createdAt": "2026-10-07T08:14:47.122Z",
-      "date": "2026-10-06",
-      "id": "x2cn-1791360887122-18zzd",
-      "week": "2026-W41",
-      "worker": "Hà Thị Luyện A, Hà Thị Khoái, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Thoan, Hà Thị Nương, Lê Thị Mừng, Vi Văn Nhêu",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 588,
-      "materialType": "Luồng cây xô",
-      "external": false,
-      "sizeKey": "1250×18×7",
-      "boDate": "2026-10-06",
-      "baothoId": "x2bt-1791345313290-6dr21",
-      "supplier": "Nhà Tế",
-      "btDate": "2026-10-06",
-      "unitVol": 0.0001575,
-      "cls": "A",
-      "workHours": 72,
-      "volume": 0.0926,
-      "workHoursTC": 0
     },
     {
       "external": false,
@@ -26865,34 +25980,6 @@
         7
       ],
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "volume": 0.1191,
-      "unitVol": 0.0001575,
-      "external": false,
-      "boDate": "2026-10-06",
-      "workHoursTC": 0,
-      "cls": "B",
-      "quantity": 756,
-      "createdAt": "2026-10-07T08:15:53.266Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialId": "mat-1791256868151-cwl2m",
-      "workHours": 72,
-      "materialType": "Luồng cây xô",
-      "sizeKey": "1250×18×7",
-      "worker": "Hà Thị Luyện A, Hà Thị Khoái, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Thoan, Hà Thị Nương, Lê Thị Mừng, Vi Văn Nhêu",
-      "week": "2026-W41",
-      "id": "x2cn-1791360953266-9hl11",
-      "supplier": "Nhà Tế",
-      "baothoId": "x2bt-1791345313290-6dr21",
-      "workHoursHC": 72,
-      "btDate": "2026-10-06",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "date": "2026-10-06"
     },
     {
       "materialType": "Luồng cây xô",
@@ -27201,34 +26288,6 @@
       "supplier": "Nhà Tế",
       "baothoId": "x2bt-1791345313290-6dr21",
       "unitVol": 0.0002475
-    },
-    {
-      "materialId": "mat-1791256868151-cwl2m",
-      "quantity": 210,
-      "sizeKey": "1250×18×11",
-      "createdAt": "2026-10-07T08:19:01.756Z",
-      "week": "2026-W41",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "btDate": "2026-10-06",
-      "external": false,
-      "date": "2026-10-06",
-      "id": "x2cn-1791361141756-3upf2",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "workHoursTC": 0,
-      "worker": "Hà Thị Luyện A, Hà Thị Khoái, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Thoan, Hà Thị Nương, Lê Thị Mừng, Vi Văn Nhêu",
-      "workHoursHC": 72,
-      "supplier": "Nhà Tế",
-      "baothoId": "x2bt-1791345313290-6dr21",
-      "unitVol": 0.0002475,
-      "materialType": "Luồng cây xô",
-      "volume": 0.052,
-      "cls": "B",
-      "workHours": 72,
-      "boDate": "2026-10-06"
     },
     {
       "workHours": 72,
@@ -27963,35 +27022,6 @@
       "workHoursTC": 0,
       "volume": 0.4797,
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "date": "2026-10-07",
-      "cls": "A1",
-      "materialType": "Luồng cây xô",
-      "boDate": "2026-10-07",
-      "btDate": "2026-10-07",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHoursTC": 0,
-      "unitVol": 0.0002475,
-      "workHoursHC": 72,
-      "baothoId": "x2bt-1791441013829-26mge",
-      "external": false,
-      "supplier": "Nhà Hà Sơn Thủy",
-      "worker": "Hà Thị Nương, Lê Thị Mừng, Hà Thị Luyện A, Hà Thị Thoan, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Quyên B, Hà Thị Chắn",
-      "workHours": 72,
-      "materialId": "mat-1791256908400-3oczy",
-      "createdAt": "2026-10-08T07:00:00.379Z",
-      "volume": 0.4104,
-      "quantity": 1658,
-      "sizeKey": "1250×18×11",
-      "week": "2026-W41",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "id": "x2cn-1791442800379-6d0tv",
-      "updatedAt": "2026-10-14T02:28:23.521Z"
     },
     {
       "supplier": "Nhà Khoa Tam Lư",
@@ -28923,34 +27953,6 @@
       "baothoId": "x2bt-1791519297455-5jxt9"
     },
     {
-      "workHoursTC": 0,
-      "materialType": "Luồng cây xô",
-      "workHours": 63,
-      "baothoId": "x2bt-1791519297455-5jxt9",
-      "id": "x2cn-1791519820228-35s7u",
-      "cls": "A",
-      "external": false,
-      "volume": 0.0794,
-      "workHoursHC": 63,
-      "week": "2026-W41",
-      "materialId": "mat-1791256938257-590sn",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn, Ngân Thi Thích, Hà Thị Chắn",
-      "boDate": "2026-10-08",
-      "date": "2026-10-08",
-      "createdAt": "2026-10-09T04:23:40.228Z",
-      "supplier": "Nhà Tế",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "unitVol": 0.0001575,
-      "quantity": 504,
-      "btDate": "2026-10-08",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "sizeKey": "1250×18×7"
-    },
-    {
       "dims": [
         1250,
         18,
@@ -28978,62 +27980,6 @@
       "unitVol": 0.0001575,
       "supplier": "Nhà Tế",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "materialType": "Luồng cây xô",
-      "unitVol": 0.0001575,
-      "materialId": "mat-1791256938257-590sn",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn, Ngân Thi Thích, Hà Thị Chắn",
-      "week": "2026-W41",
-      "volume": 0.3572,
-      "baothoId": "x2bt-1791519297455-5jxt9",
-      "workHours": 63,
-      "external": false,
-      "sizeKey": "1250×18×7",
-      "id": "x2cn-1791519866149-388nr",
-      "date": "2026-10-08",
-      "cls": "A1",
-      "boDate": "2026-10-08",
-      "workHoursHC": 63,
-      "supplier": "Nhà Tế",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "workHoursTC": 0,
-      "quantity": 2268,
-      "createdAt": "2026-10-09T04:24:26.149Z",
-      "btDate": "2026-10-08"
-    },
-    {
-      "supplier": "Nhà Tế",
-      "materialType": "Luồng cây xô",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "unitVol": 0.0001575,
-      "materialId": "mat-1791256938257-590sn",
-      "btDate": "2026-10-08",
-      "quantity": 1512,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "sizeKey": "1250×18×7",
-      "createdAt": "2026-10-09T04:24:40.500Z",
-      "date": "2026-10-08",
-      "boDate": "2026-10-08",
-      "id": "x2cn-1791519880500-f7xm3",
-      "workHoursTC": 0,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn, Ngân Thi Thích, Hà Thị Chắn",
-      "week": "2026-W41",
-      "external": false,
-      "baothoId": "x2bt-1791519297455-5jxt9",
-      "volume": 0.2381,
-      "cls": "A1",
-      "workHoursHC": 63,
-      "workHours": 63
     },
     {
       "materialType": "Luồng cây xô",
@@ -29434,64 +28380,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "quantity": 1260,
-      "workHours": 63,
-      "boDate": "2026-10-08",
-      "supplier": "Nhà Tế",
-      "materialType": "Luồng cây xô",
-      "workHoursTC": 0,
-      "week": "2026-W41",
-      "workHoursHC": 63,
-      "btDate": "2026-10-08",
-      "baothoId": "x2bt-1791519297455-5jxt9",
-      "id": "x2cn-1791526761138-7nxyo",
-      "createdAt": "2026-10-09T06:19:21.138Z",
-      "external": false,
-      "date": "2026-10-08",
-      "cls": "B",
-      "sizeKey": "1250×24×8",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn, Ngân Thi Thích, Hà Thị Chắn",
-      "volume": 0.3024,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "unitVol": 0.00024,
-      "materialId": "mat-1791256938257-590sn",
-      "updatedAt": "2026-10-14T01:04:12.330Z"
-    },
-    {
-      "date": "2026-10-08",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn, Ngân Thi Thích, Hà Thị Chắn",
-      "unitVol": 0.00024,
-      "volume": 0.3696,
-      "createdAt": "2026-10-09T06:19:31.010Z",
-      "supplier": "Nhà Tế",
-      "sizeKey": "1250×24×8",
-      "id": "x2cn-1791526771010-bfk78",
-      "quantity": 1540,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "materialType": "Luồng cây xô",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cls": "A1",
-      "workHours": 63,
-      "workHoursHC": 63,
-      "btDate": "2026-10-08",
-      "external": false,
-      "materialId": "mat-1791256938257-590sn",
-      "boDate": "2026-10-08",
-      "workHoursTC": 0,
-      "baothoId": "x2bt-1791519297455-5jxt9",
-      "week": "2026-W41",
-      "updatedAt": "2026-10-14T01:05:15.258Z"
-    },
-    {
       "materialType": "Luồng cây xô + Luồng ống",
       "workHoursTC": 0,
       "btDate": "2026-10-09",
@@ -29519,34 +28407,6 @@
       "week": "2026-W41",
       "cls": "A",
       "updatedAt": "2026-10-14T02:26:50.540Z"
-    },
-    {
-      "btDate": "2026-10-09",
-      "sizeKey": "1250×18×7",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "materialId": "mat-1791427063274-mduab",
-      "id": "x2cn-1791617934360-xczz2",
-      "unitVol": 0.0001575,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHoursTC": 0,
-      "volume": 0.0879,
-      "workHours": 72,
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "week": "2026-W41",
-      "boDate": "2026-10-09",
-      "quantity": 558,
-      "external": false,
-      "createdAt": "2026-10-10T07:38:54.360Z",
-      "workHoursHC": 72,
-      "cls": "A1",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "date": "2026-10-09",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng"
     },
     {
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
@@ -29578,91 +28438,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "boDate": "2026-10-09",
-      "sizeKey": "1250×18×7",
-      "workHoursTC": 0,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "createdAt": "2026-10-10T07:39:05.367Z",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "date": "2026-10-09",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "unitVol": 0.0001575,
-      "id": "x2cn-1791617945367-ja5cj",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "week": "2026-W41",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "workHoursHC": 72,
-      "btDate": "2026-10-09",
-      "materialId": "mat-1791427063274-mduab",
-      "cls": "A1",
-      "volume": 0.1058,
-      "workHours": 72,
-      "quantity": 672,
-      "external": false
-    },
-    {
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "boDate": "2026-10-09",
-      "sizeKey": "1250×18×7",
-      "id": "x2cn-1791617952519-gxgdy",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "cls": "A1",
-      "workHoursTC": 0,
-      "date": "2026-10-09",
-      "workHours": 72,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "unitVol": 0.0001575,
-      "materialId": "mat-1791427063274-mduab",
-      "quantity": 2184,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "week": "2026-W41",
-      "external": false,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "btDate": "2026-10-09",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "workHoursHC": 72,
-      "volume": 0.344,
-      "createdAt": "2026-10-10T07:39:12.519Z",
-      "updatedAt": "2026-10-14T02:56:07.311Z"
-    },
-    {
-      "workHours": 72,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "workHoursTC": 0,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "boDate": "2026-10-09",
-      "materialId": "mat-1791427063274-mduab",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "quantity": 336,
-      "id": "x2cn-1791617963607-krqx3",
-      "workHoursHC": 72,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "cls": "B",
-      "volume": 0.0529,
-      "external": false,
-      "date": "2026-10-09",
-      "sizeKey": "1250×18×7",
-      "createdAt": "2026-10-10T07:39:23.607Z",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "week": "2026-W41",
-      "unitVol": 0.0001575,
-      "btDate": "2026-10-09"
-    },
-    {
       "materialId": "mat-1791427063274-mduab",
       "baothoId": "x2bt-1791617674956-vfdz2",
       "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
@@ -29690,62 +28465,6 @@
       "createdAt": "2026-10-10T07:39:27.383Z",
       "btDate": "2026-10-09",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "materialId": "mat-1791427063274-mduab",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "workHours": 72,
-      "workHoursTC": 0,
-      "unitVol": 0.0001575,
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "id": "x2cn-1791617970375-ly30s",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "boDate": "2026-10-09",
-      "sizeKey": "1250×18×7",
-      "external": false,
-      "week": "2026-W41",
-      "quantity": 252,
-      "workHoursHC": 72,
-      "volume": 0.0397,
-      "date": "2026-10-09",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "btDate": "2026-10-09",
-      "createdAt": "2026-10-10T07:39:30.375Z",
-      "cls": "B",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế"
-    },
-    {
-      "workHoursTC": 0,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "volume": 0.0926,
-      "external": false,
-      "date": "2026-10-09",
-      "quantity": 588,
-      "cls": "B",
-      "createdAt": "2026-10-10T07:39:33.818Z",
-      "materialId": "mat-1791427063274-mduab",
-      "id": "x2cn-1791617973818-89zss",
-      "btDate": "2026-10-09",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "week": "2026-W41",
-      "workHours": 72,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workHoursHC": 72,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "unitVol": 0.0001575,
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "boDate": "2026-10-09",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "sizeKey": "1250×18×7"
     },
     {
       "materialType": "Luồng cây xô + Luồng ống",
@@ -29833,35 +28552,6 @@
       "week": "2026-W41"
     },
     {
-      "btDate": "2026-10-09",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "workHours": 72,
-      "id": "x2cn-1791618418454-u0c76",
-      "volume": 0.3827,
-      "quantity": 1890,
-      "workHoursHC": 72,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "external": false,
-      "week": "2026-W41",
-      "sizeKey": "1250×18×9",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "boDate": "2026-10-09",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "materialId": "mat-1791427063274-mduab",
-      "cls": "A1",
-      "unitVol": 0.0002025,
-      "createdAt": "2026-10-10T07:46:58.454Z",
-      "date": "2026-10-09",
-      "workHoursTC": 0,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "updatedAt": "2026-10-14T02:02:47.142Z"
-    },
-    {
       "volume": 0.0992,
       "dims": [
         1250,
@@ -29891,34 +28581,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "quantity": 280,
-      "cls": "B",
-      "sizeKey": "1250×18×9",
-      "week": "2026-W41",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "external": false,
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "boDate": "2026-10-09",
-      "unitVol": 0.0002025,
-      "date": "2026-10-09",
-      "workHoursTC": 0,
-      "createdAt": "2026-10-10T07:47:26.984Z",
-      "id": "x2cn-1791618446984-cginq",
-      "volume": 0.0567,
-      "materialId": "mat-1791427063274-mduab",
-      "workHours": 72,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "btDate": "2026-10-09",
-      "workHoursHC": 72,
-      "baothoId": "x2bt-1791617674956-vfdz2"
-    },
-    {
       "baothoId": "x2bt-1791617674956-vfdz2",
       "week": "2026-W41",
       "createdAt": "2026-10-10T07:47:50.104Z",
@@ -29945,34 +28607,6 @@
       "external": false,
       "sizeKey": "1250×18×9",
       "quantity": 20
-    },
-    {
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "workHoursHC": 72,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "materialId": "mat-1791427063274-mduab",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "quantity": 120,
-      "createdAt": "2026-10-10T07:48:08.263Z",
-      "boDate": "2026-10-09",
-      "id": "x2cn-1791618488263-4vs0g",
-      "external": false,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "volume": 0.027,
-      "workHours": 72,
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "sizeKey": "1250×18×10",
-      "cls": "A",
-      "week": "2026-W41",
-      "workHoursTC": 0,
-      "btDate": "2026-10-09",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "unitVol": 0.000225,
-      "date": "2026-10-09"
     },
     {
       "materialId": "mat-1791427063274-mduab",
@@ -30031,34 +28665,6 @@
       "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
       "quantity": 630,
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "date": "2026-10-09",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "workHoursTC": 0,
-      "materialId": "mat-1791427063274-mduab",
-      "boDate": "2026-10-09",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "workHours": 72,
-      "id": "x2cn-1791618631897-39dzu",
-      "week": "2026-W41",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cls": "A1",
-      "createdAt": "2026-10-10T07:50:31.897Z",
-      "volume": 0.1103,
-      "external": false,
-      "unitVol": 0.000225,
-      "workHoursHC": 72,
-      "quantity": 490,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "btDate": "2026-10-09",
-      "sizeKey": "1250×18×10",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế"
     },
     {
       "btDate": "2026-10-09",
@@ -30147,35 +28753,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "boDate": "2026-10-09",
-      "workHours": 72,
-      "unitVol": 0.0002475,
-      "date": "2026-10-09",
-      "id": "x2cn-1791618772103-yq2fa",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "week": "2026-W41",
-      "sizeKey": "1250×18×11",
-      "external": false,
-      "cls": "A",
-      "workHoursTC": 0,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "quantity": 700,
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "btDate": "2026-10-09",
-      "materialId": "mat-1791427063274-mduab",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "createdAt": "2026-10-10T07:52:52.103Z",
-      "workHoursHC": 72,
-      "volume": 0.1732,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "updatedAt": "2026-10-14T03:04:03.272Z"
-    },
-    {
       "btDate": "2026-10-09",
       "sizeKey": "1250×18×11",
       "quantity": 378,
@@ -30203,90 +28780,6 @@
       "baothoId": "x2bt-1791617674956-vfdz2",
       "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "week": "2026-W41",
-      "volume": 0.052,
-      "createdAt": "2026-10-10T07:53:10.059Z",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "workHoursHC": 72,
-      "btDate": "2026-10-09",
-      "date": "2026-10-09",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "materialType": "Luồng cây xô + Luồng ống",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "id": "x2cn-1791618790059-dyl61",
-      "sizeKey": "1250×18×11",
-      "workHoursTC": 0,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "materialId": "mat-1791427063274-mduab",
-      "quantity": 210,
-      "boDate": "2026-10-09",
-      "cls": "A1",
-      "workHours": 72,
-      "unitVol": 0.0002475,
-      "external": false
-    },
-    {
-      "workHoursHC": 72,
-      "unitVol": 0.0002475,
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "date": "2026-10-09",
-      "boDate": "2026-10-09",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cls": "B",
-      "week": "2026-W41",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "sizeKey": "1250×18×11",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "createdAt": "2026-10-10T07:53:19.623Z",
-      "workHoursTC": 0,
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "btDate": "2026-10-09",
-      "id": "x2cn-1791618799623-ov3nl",
-      "workHours": 72,
-      "external": false,
-      "volume": 0.0173,
-      "materialId": "mat-1791427063274-mduab",
-      "quantity": 70
-    },
-    {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "id": "x2cn-1791618804216-rcvv1",
-      "volume": 0.0173,
-      "workHoursHC": 72,
-      "date": "2026-10-09",
-      "createdAt": "2026-10-10T07:53:24.216Z",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "sizeKey": "1250×18×11",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "week": "2026-W41",
-      "btDate": "2026-10-09",
-      "unitVol": 0.0002475,
-      "materialId": "mat-1791427063274-mduab",
-      "workHoursTC": 0,
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "boDate": "2026-10-09",
-      "quantity": 70,
-      "workHours": 72,
-      "cls": "B",
-      "external": false
     },
     {
       "baothoId": "x2bt-1791617674956-vfdz2",
@@ -30375,63 +28868,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "boDate": "2026-10-09",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "createdAt": "2026-10-10T07:54:25.848Z",
-      "workHoursTC": 0,
-      "materialId": "mat-1791427063274-mduab",
-      "week": "2026-W41",
-      "id": "x2cn-1791618865848-v9wfl",
-      "unitVol": 0.00024,
-      "btDate": "2026-10-09",
-      "workHours": 72,
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "external": false,
-      "sizeKey": "1250×24×8",
-      "date": "2026-10-09",
-      "cls": "A",
-      "workHoursHC": 72,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "quantity": 210,
-      "volume": 0.0504
-    },
-    {
-      "materialId": "mat-1791427063274-mduab",
-      "unitVol": 0.00024,
-      "cls": "A",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "btDate": "2026-10-09",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "date": "2026-10-09",
-      "workHoursHC": 72,
-      "volume": 0.2688,
-      "external": false,
-      "sizeKey": "1250×24×8",
-      "createdAt": "2026-10-10T07:54:29.705Z",
-      "week": "2026-W41",
-      "quantity": 1120,
-      "boDate": "2026-10-09",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "id": "x2cn-1791618869705-v9cgp",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workHours": 72,
-      "workHoursTC": 0,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "updatedAt": "2026-10-14T02:02:21.195Z"
-    },
-    {
       "createdAt": "2026-10-10T07:54:39.622Z",
       "workHoursHC": 72,
       "volume": 0.3696,
@@ -30459,34 +28895,6 @@
       "sizeKey": "1250×24×8",
       "boDate": "2026-10-09",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "week": "2026-W41",
-      "workHoursTC": 0,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "btDate": "2026-10-09",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "date": "2026-10-09",
-      "materialId": "mat-1791427063274-mduab",
-      "createdAt": "2026-10-10T07:54:47.831Z",
-      "volume": 0.1512,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "workHoursHC": 72,
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "sizeKey": "1250×24×8",
-      "workHours": 72,
-      "id": "x2cn-1791618887831-jo5p9",
-      "boDate": "2026-10-09",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "cls": "A1",
-      "quantity": 630,
-      "unitVol": 0.00024,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "external": false
     },
     {
       "materialId": "mat-1791427063274-mduab",
@@ -30547,62 +28955,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "date": "2026-10-10",
-      "materialType": "Luồng cây xô",
-      "week": "2026-W41",
-      "external": false,
-      "supplier": "Nhà Chiến + Nhà Tế",
-      "quantity": 1890,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "workHoursHC": 57,
-      "createdAt": "2026-10-12T04:22:50.945Z",
-      "unitVol": 0.0001575,
-      "materialId": "mat-1791774976679-20n1n",
-      "cls": "A",
-      "volume": 0.2977,
-      "btDate": "2026-10-10",
-      "boDate": "2026-10-10",
-      "workHoursTC": 0,
-      "workHours": 57,
-      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
-      "id": "x2cn-1791778970945-4q59w",
-      "baothoId": "x2bt-1791778918243-yvp20",
-      "sizeKey": "1250×18×7",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00"
-    },
-    {
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "materialId": "mat-1791774976679-20n1n",
-      "cls": "A",
-      "baothoId": "x2bt-1791778918243-yvp20",
-      "createdAt": "2026-10-12T04:22:53.424Z",
-      "materialType": "Luồng cây xô",
-      "unitVol": 0.0001575,
-      "date": "2026-10-10",
-      "week": "2026-W41",
-      "workHoursHC": 57,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
-      "btDate": "2026-10-10",
-      "volume": 0.0772,
-      "sizeKey": "1250×18×7",
-      "quantity": 490,
-      "boDate": "2026-10-10",
-      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
-      "external": false,
-      "supplier": "Nhà Chiến + Nhà Tế",
-      "id": "x2cn-1791778973424-nd8qh",
-      "workHours": 57,
-      "workHoursTC": 0
-    },
-    {
       "unitVol": 0.0001575,
       "workHoursHC": 57,
       "week": "2026-W41",
@@ -30630,62 +28982,6 @@
       "materialId": "mat-1791774976679-20n1n",
       "cls": "A1",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "createdAt": "2026-10-12T04:23:06.831Z",
-      "volume": 0.344,
-      "baothoId": "x2bt-1791778918243-yvp20",
-      "workHoursTC": 0,
-      "btDate": "2026-10-10",
-      "materialId": "mat-1791774976679-20n1n",
-      "cls": "A1",
-      "sizeKey": "1250×18×7",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
-      "external": false,
-      "supplier": "Nhà Chiến + Nhà Tế",
-      "id": "x2cn-1791778986831-etkxi",
-      "workHoursHC": 57,
-      "quantity": 2184,
-      "unitVol": 0.0001575,
-      "week": "2026-W41",
-      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
-      "date": "2026-10-10",
-      "boDate": "2026-10-10",
-      "materialType": "Luồng cây xô",
-      "workHours": 57,
-      "dims": [
-        1250,
-        18,
-        7
-      ]
-    },
-    {
-      "createdAt": "2026-10-12T04:23:09.680Z",
-      "baothoId": "x2bt-1791778918243-yvp20",
-      "volume": 0.2381,
-      "btDate": "2026-10-10",
-      "date": "2026-10-10",
-      "week": "2026-W41",
-      "workHoursHC": 57,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "id": "x2cn-1791778989680-dhsib",
-      "sizeKey": "1250×18×7",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
-      "external": false,
-      "supplier": "Nhà Chiến + Nhà Tế",
-      "materialId": "mat-1791774976679-20n1n",
-      "quantity": 1512,
-      "unitVol": 0.0001575,
-      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
-      "boDate": "2026-10-10",
-      "cls": "A1",
-      "workHoursTC": 0,
-      "workHours": 57,
-      "materialType": "Luồng cây xô"
     },
     {
       "supplier": "Nhà Chiến + Nhà Tế",
@@ -30915,34 +29211,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
-      "id": "x2cn-1791779080415-bpz64",
-      "cls": "A1",
-      "unitVol": 0.000225,
-      "btDate": "2026-10-10",
-      "volume": 0.126,
-      "workHoursHC": 57,
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "baothoId": "x2bt-1791778918243-yvp20",
-      "week": "2026-W41",
-      "date": "2026-10-10",
-      "createdAt": "2026-10-12T04:24:40.415Z",
-      "workHours": 57,
-      "materialType": "Luồng cây xô",
-      "sizeKey": "1250×18×10",
-      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
-      "boDate": "2026-10-10",
-      "quantity": 560,
-      "materialId": "mat-1791774976679-20n1n",
-      "supplier": "Nhà Chiến + Nhà Tế",
-      "workHoursTC": 0,
-      "external": false
-    },
-    {
       "quantity": 280,
       "boDate": "2026-10-10",
       "date": "2026-10-10",
@@ -31112,35 +29380,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "cls": "B",
-      "worker": "Lê Thị Mừng, Hà Thị Khoái, Hà Thị Nhẫn, Lương Thị Dướng, Ngân Thi Thích, Hà Thị Nghĩa, Hà Thị Luyện A",
-      "workHoursHC": 57,
-      "supplier": "Nhà Chiến + Nhà Tế",
-      "workHours": 57,
-      "sizeKey": "1250×24×8",
-      "baothoId": "x2bt-1791778918243-yvp20",
-      "date": "2026-10-10",
-      "btDate": "2026-10-10",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "createdAt": "2026-10-12T07:13:26.050Z",
-      "materialType": "Luồng cây xô",
-      "quantity": 602,
-      "workHoursTC": 0,
-      "boDate": "2026-10-10",
-      "unitVol": 0.00024,
-      "external": false,
-      "volume": 0.1445,
-      "week": "2026-W41",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00–10:00",
-      "id": "x2cn-1791789206050-cilq1",
-      "materialId": "mat-1791774976679-20n1n",
-      "updatedAt": "2026-10-12T07:22:59.065Z"
-    },
-    {
       "baothoId": "x2bt-1791876371518-azu8b",
       "external": false,
       "materialId": "mat-1791536171043-rp1gc",
@@ -31197,63 +29436,6 @@
       "workHoursTC": 0,
       "week": "2026-W42",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "unitVol": 0.0001575,
-      "createdAt": "2026-10-13T07:27:59.416Z",
-      "cls": "A1",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "materialId": "mat-1791536171043-rp1gc",
-      "workHoursTC": 0,
-      "workHours": 54,
-      "external": false,
-      "id": "x2cn-1791876479416-pwhet",
-      "week": "2026-W42",
-      "btDate": "2026-10-12",
-      "date": "2026-10-12",
-      "volume": 0.2822,
-      "boDate": "2026-10-12",
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "quantity": 1792,
-      "sizeKey": "1250×18×7",
-      "workHoursHC": 54,
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "updatedAt": "2026-10-14T08:06:36.018Z"
-    },
-    {
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "volume": 0.1121,
-      "sizeKey": "1250×18×7",
-      "btDate": "2026-10-12",
-      "quantity": 712,
-      "materialId": "mat-1791536171043-rp1gc",
-      "workHoursTC": 0,
-      "workHoursHC": 54,
-      "id": "x2cn-1791876484055-ugxw2",
-      "boDate": "2026-10-12",
-      "external": false,
-      "createdAt": "2026-10-13T07:28:04.055Z",
-      "date": "2026-10-12",
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "cls": "A1",
-      "unitVol": 0.0001575,
-      "week": "2026-W42",
-      "workHours": 54
     },
     {
       "materialType": "Luồng cây xô + Luồng ống",
@@ -31342,34 +29524,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "volume": 0.0851,
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "sizeKey": "1250×18×9",
-      "btDate": "2026-10-12",
-      "workHoursTC": 0,
-      "external": false,
-      "cls": "A",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "boDate": "2026-10-12",
-      "date": "2026-10-12",
-      "quantity": 420,
-      "id": "x2cn-1791876535913-wveds",
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "createdAt": "2026-10-13T07:28:55.913Z",
-      "workHoursHC": 54,
-      "week": "2026-W42",
-      "workHours": 54,
-      "unitVol": 0.0002025,
-      "materialId": "mat-1791536171043-rp1gc"
-    },
-    {
       "week": "2026-W42",
       "unitVol": 0.0002025,
       "id": "x2cn-1791876547224-823li",
@@ -31397,34 +29551,6 @@
       "materialType": "Luồng cây xô + Luồng ống",
       "quantity": 1344,
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "cls": "A1",
-      "createdAt": "2026-10-13T07:29:11.984Z",
-      "btDate": "2026-10-12",
-      "volume": 0.034,
-      "workHours": 54,
-      "id": "x2cn-1791876551984-z0v95",
-      "week": "2026-W42",
-      "date": "2026-10-12",
-      "external": false,
-      "sizeKey": "1250×18×9",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "workHoursHC": 54,
-      "materialId": "mat-1791536171043-rp1gc",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "unitVol": 0.0002025,
-      "workHoursTC": 0,
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "boDate": "2026-10-12",
-      "quantity": 168,
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "materialType": "Luồng cây xô + Luồng ống"
     },
     {
       "volume": 0.0822,
@@ -31456,34 +29582,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "unitVol": 0.0002025,
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "id": "x2cn-1791876570199-sy2we",
-      "workHoursTC": 0,
-      "quantity": 70,
-      "materialId": "mat-1791536171043-rp1gc",
-      "btDate": "2026-10-12",
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "volume": 0.0142,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "boDate": "2026-10-12",
-      "cls": "B",
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "external": false,
-      "createdAt": "2026-10-13T07:29:30.199Z",
-      "week": "2026-W42",
-      "sizeKey": "1250×18×9",
-      "workHoursHC": 54,
-      "workHours": 54,
-      "date": "2026-10-12"
-    },
-    {
       "workHours": 54,
       "workHoursHC": 54,
       "quantity": 15,
@@ -31510,34 +29608,6 @@
       "unitVol": 0.0002025,
       "btDate": "2026-10-12",
       "volume": 0.003
-    },
-    {
-      "unitVol": 0.000225,
-      "workHoursTC": 0,
-      "quantity": 504,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "materialId": "mat-1791536171043-rp1gc",
-      "cls": "A",
-      "week": "2026-W42",
-      "volume": 0.1134,
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "date": "2026-10-12",
-      "btDate": "2026-10-12",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "boDate": "2026-10-12",
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "workHours": 54,
-      "createdAt": "2026-10-13T07:29:53.254Z",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "id": "x2cn-1791876593254-i0axm",
-      "external": false,
-      "workHoursHC": 54,
-      "sizeKey": "1250×18×10"
     },
     {
       "id": "x2cn-1791876604552-q54ad",
@@ -31598,34 +29668,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "volume": 0.0756,
-      "id": "x2cn-1791876616442-k5d1d",
-      "btDate": "2026-10-12",
-      "external": false,
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "workHoursTC": 0,
-      "materialId": "mat-1791536171043-rp1gc",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "cls": "A1",
-      "unitVol": 0.000225,
-      "workHours": 54,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "workHoursHC": 54,
-      "date": "2026-10-12",
-      "sizeKey": "1250×18×10",
-      "createdAt": "2026-10-13T07:30:16.442Z",
-      "week": "2026-W42",
-      "quantity": 336,
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "boDate": "2026-10-12"
-    },
-    {
       "external": false,
       "baothoId": "x2bt-1791876371518-azu8b",
       "workHoursHC": 54,
@@ -31653,34 +29695,6 @@
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "workHoursTC": 0,
-      "external": false,
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "materialId": "mat-1791536171043-rp1gc",
-      "boDate": "2026-10-12",
-      "workHours": 54,
-      "sizeKey": "1250×18×10",
-      "createdAt": "2026-10-13T07:30:27.821Z",
-      "id": "x2cn-1791876627821-o4pzy",
-      "volume": 0.0567,
-      "date": "2026-10-12",
-      "btDate": "2026-10-12",
-      "quantity": 252,
-      "week": "2026-W42",
-      "unitVol": 0.000225,
-      "workHoursHC": 54,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cls": "B",
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành"
     },
     {
       "quantity": 12,
@@ -31769,34 +29783,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "boDate": "2026-10-12",
-      "workHoursHC": 54,
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "date": "2026-10-12",
-      "sizeKey": "1250×18×11",
-      "id": "x2cn-1791876669946-x04zm",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "week": "2026-W42",
-      "external": false,
-      "createdAt": "2026-10-13T07:31:09.946Z",
-      "unitVol": 0.0002475,
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "materialId": "mat-1791536171043-rp1gc",
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "workHours": 54,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cls": "A1",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "btDate": "2026-10-12",
-      "workHoursTC": 0,
-      "quantity": 56,
-      "volume": 0.0139
-    },
-    {
       "dims": [
         1250,
         18,
@@ -31824,34 +29810,6 @@
       "external": false,
       "date": "2026-10-12",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "createdAt": "2026-10-13T07:31:25.054Z",
-      "id": "x2cn-1791876685054-73put",
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "cls": "B",
-      "workHours": 54,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "sizeKey": "1250×18×11",
-      "volume": 0.0693,
-      "workHoursTC": 0,
-      "quantity": 280,
-      "btDate": "2026-10-12",
-      "boDate": "2026-10-12",
-      "unitVol": 0.0002475,
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "workHoursHC": 54,
-      "week": "2026-W42",
-      "materialId": "mat-1791536171043-rp1gc",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "date": "2026-10-12",
-      "external": false
     },
     {
       "id": "x2cn-1791876694504-v7e3y",
@@ -31940,34 +29898,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "external": false,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "sizeKey": "1250×24×8",
-      "volume": 0.1008,
-      "week": "2026-W42",
-      "id": "x2cn-1791876834392-gmihz",
-      "supplier": "Nhà Khanh + Nhà Trung + Nhà Thành",
-      "cls": "B",
-      "quantity": 420,
-      "worker": "Hà Thị Khoái, Hà Thị Quyên B, Hà Thị Nhẫn, Vi Thị Buôn, Lê Thị Mừng, Hà Thị Dậu",
-      "materialId": "mat-1791536171043-rp1gc",
-      "workHoursTC": 0,
-      "workHoursHC": 54,
-      "createdAt": "2026-10-13T07:33:54.392Z",
-      "workHours": 54,
-      "btDate": "2026-10-12",
-      "unitVol": 0.00024,
-      "boDate": "2026-10-12",
-      "baothoId": "x2bt-1791876371518-azu8b",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "date": "2026-10-12",
-      "materialType": "Luồng cây xô + Luồng ống"
-    },
-    {
       "workHours": 54,
       "materialType": "Luồng cây xô + Luồng ống",
       "btDate": "2026-10-12",
@@ -32054,118 +29984,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "createdAt": "2026-10-15T16:57:28.320Z",
-      "unitVol": 0.0001575,
-      "sizeKey": "1250×18×7",
-      "external": false,
-      "workHoursTC": 0,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "volume": 0.0662,
-      "materialId": "mat-1791775069420-exq94",
-      "boDate": "2026-10-13",
-      "btDate": "2026-10-13",
-      "workHours": 54,
-      "week": "2026-W42",
-      "workHoursHC": 54,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "date": "2026-10-13",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "id": "x2cn-1792083448320-23cc4",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "cls": "A",
-      "quantity": 420
-    },
-    {
-      "boDate": "2026-10-13",
-      "volume": 0.0529,
-      "external": false,
-      "cls": "A",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "createdAt": "2026-10-15T16:57:30.336Z",
-      "workHoursTC": 0,
-      "id": "x2cn-1792083450336-8w9zw",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "date": "2026-10-13",
-      "workHoursHC": 54,
-      "sizeKey": "1250×18×7",
-      "unitVol": 0.0001575,
-      "materialId": "mat-1791775069420-exq94",
-      "workHours": 54,
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "quantity": 336,
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "materialType": "Luồng cây xô + Luồng ống",
-      "week": "2026-W42",
-      "btDate": "2026-10-13"
-    },
-    {
-      "date": "2026-10-13",
-      "id": "x2cn-1792083453649-6v9fx",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "createdAt": "2026-10-15T16:57:33.649Z",
-      "external": false,
-      "sizeKey": "1250×18×7",
-      "btDate": "2026-10-13",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "week": "2026-W42",
-      "workHoursTC": 0,
-      "unitVol": 0.0001575,
-      "volume": 0.1985,
-      "quantity": 1260,
-      "workHoursHC": 54,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "boDate": "2026-10-13",
-      "workHours": 54,
-      "materialId": "mat-1791775069420-exq94",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "cls": "A"
-    },
-    {
-      "volume": 0.0662,
-      "id": "x2cn-1792083456416-jc5e9",
-      "sizeKey": "1250×18×7",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "date": "2026-10-13",
-      "workHours": 54,
-      "boDate": "2026-10-13",
-      "quantity": 420,
-      "unitVol": 0.0001575,
-      "workHoursHC": 54,
-      "cls": "A",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "week": "2026-W42",
-      "createdAt": "2026-10-15T16:57:36.416Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "workHoursTC": 0,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "btDate": "2026-10-13",
-      "external": false,
-      "materialId": "mat-1791775069420-exq94"
-    },
-    {
       "date": "2026-10-13",
       "external": false,
       "btDate": "2026-10-13",
@@ -32193,62 +30011,6 @@
       "materialId": "mat-1791775069420-exq94",
       "sizeKey": "1250×18×7",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "workHours": 54,
-      "week": "2026-W42",
-      "sizeKey": "1250×18×7",
-      "quantity": 560,
-      "btDate": "2026-10-13",
-      "date": "2026-10-13",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "workHoursHC": 54,
-      "unitVol": 0.0001575,
-      "external": false,
-      "id": "x2cn-1792083469700-m2lz2",
-      "workHoursTC": 0,
-      "volume": 0.0882,
-      "boDate": "2026-10-13",
-      "createdAt": "2026-10-15T16:57:49.700Z",
-      "cls": "A1",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialId": "mat-1791775069420-exq94"
-    },
-    {
-      "quantity": 1428,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "createdAt": "2026-10-15T16:57:52.542Z",
-      "id": "x2cn-1792083472542-9hf12",
-      "workHoursHC": 54,
-      "btDate": "2026-10-13",
-      "materialId": "mat-1791775069420-exq94",
-      "boDate": "2026-10-13",
-      "workHoursTC": 0,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workHours": 54,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "volume": 0.2249,
-      "week": "2026-W42",
-      "date": "2026-10-13",
-      "external": false,
-      "sizeKey": "1250×18×7",
-      "cls": "A1",
-      "unitVol": 0.0001575
     },
     {
       "date": "2026-10-13",
@@ -32280,62 +30042,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHours": 54,
-      "volume": 0.0221,
-      "materialId": "mat-1791775069420-exq94",
-      "workHoursTC": 0,
-      "boDate": "2026-10-13",
-      "external": false,
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "btDate": "2026-10-13",
-      "unitVol": 0.0001575,
-      "week": "2026-W42",
-      "createdAt": "2026-10-15T16:58:03.119Z",
-      "id": "x2cn-1792083483119-2idos",
-      "sizeKey": "1250×18×7",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "workHoursHC": 54,
-      "quantity": 140,
-      "cls": "B",
-      "date": "2026-10-13",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng"
-    },
-    {
-      "unitVol": 0.0001575,
-      "week": "2026-W42",
-      "dims": [
-        1250,
-        18,
-        7
-      ],
-      "btDate": "2026-10-13",
-      "workHoursHC": 54,
-      "sizeKey": "1250×18×7",
-      "cls": "B",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "createdAt": "2026-10-15T16:58:05.023Z",
-      "date": "2026-10-13",
-      "quantity": 320,
-      "id": "x2cn-1792083485023-tcjnm",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "external": false,
-      "workHours": 54,
-      "workHoursTC": 0,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "boDate": "2026-10-13",
-      "materialId": "mat-1791775069420-exq94",
-      "volume": 0.0504
-    },
-    {
       "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
       "baothoId": "x2bt-1792083392073-2dyg2",
       "dims": [
@@ -32363,90 +30069,6 @@
       "createdAt": "2026-10-15T16:58:39.807Z",
       "external": false,
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "cls": "A",
-      "sizeKey": "1250×18×9",
-      "workHoursHC": 54,
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "materialId": "mat-1791775069420-exq94",
-      "quantity": 804,
-      "date": "2026-10-13",
-      "unitVol": 0.0002025,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "week": "2026-W42",
-      "createdAt": "2026-10-15T16:58:43.906Z",
-      "btDate": "2026-10-13",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "id": "x2cn-1792083523906-jeusv",
-      "volume": 0.1628,
-      "boDate": "2026-10-13",
-      "workHours": 54,
-      "external": false,
-      "workHoursTC": 0
-    },
-    {
-      "createdAt": "2026-10-15T16:58:46.911Z",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "week": "2026-W42",
-      "cls": "A",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHoursHC": 54,
-      "external": false,
-      "volume": 0.051,
-      "date": "2026-10-13",
-      "boDate": "2026-10-13",
-      "btDate": "2026-10-13",
-      "workHours": 54,
-      "quantity": 252,
-      "materialId": "mat-1791775069420-exq94",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "workHoursTC": 0,
-      "id": "x2cn-1792083526911-210nk",
-      "unitVol": 0.0002025,
-      "sizeKey": "1250×18×9",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng"
-    },
-    {
-      "unitVol": 0.0002025,
-      "workHoursTC": 0,
-      "workHours": 54,
-      "btDate": "2026-10-13",
-      "sizeKey": "1250×18×9",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "quantity": 350,
-      "createdAt": "2026-10-15T16:58:49.504Z",
-      "materialId": "mat-1791775069420-exq94",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "week": "2026-W42",
-      "cls": "A",
-      "external": false,
-      "id": "x2cn-1792083529504-nlrsn",
-      "boDate": "2026-10-13",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "date": "2026-10-13",
-      "workHoursHC": 54,
-      "volume": 0.0709
     },
     {
       "boDate": "2026-10-13",
@@ -32478,62 +30100,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "btDate": "2026-10-13",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "week": "2026-W42",
-      "date": "2026-10-13",
-      "id": "x2cn-1792083621314-rb1n1",
-      "quantity": 210,
-      "unitVol": 0.0002025,
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "sizeKey": "1250×18×9",
-      "workHours": 54,
-      "cls": "A1",
-      "materialId": "mat-1791775069420-exq94",
-      "workHoursTC": 0,
-      "workHoursHC": 54,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "external": false,
-      "volume": 0.0425,
-      "boDate": "2026-10-13",
-      "createdAt": "2026-10-15T17:00:21.314Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca"
-    },
-    {
-      "unitVol": 0.0002025,
-      "workHoursHC": 54,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "id": "x2cn-1792083624833-fqab8",
-      "btDate": "2026-10-13",
-      "sizeKey": "1250×18×9",
-      "date": "2026-10-13",
-      "week": "2026-W42",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "external": false,
-      "workHours": 54,
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "cls": "A1",
-      "materialId": "mat-1791775069420-exq94",
-      "quantity": 350,
-      "boDate": "2026-10-13",
-      "createdAt": "2026-10-15T17:00:24.833Z",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workHoursTC": 0,
-      "volume": 0.0709
-    },
-    {
       "createdAt": "2026-10-15T17:00:43.567Z",
       "btDate": "2026-10-13",
       "external": false,
@@ -32561,34 +30127,6 @@
       "volume": 0.1406,
       "quantity": 694,
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "quantity": 260,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "createdAt": "2026-10-15T17:00:47.137Z",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "sizeKey": "1250×18×9",
-      "unitVol": 0.0002025,
-      "workHoursHC": 54,
-      "btDate": "2026-10-13",
-      "date": "2026-10-13",
-      "boDate": "2026-10-13",
-      "materialId": "mat-1791775069420-exq94",
-      "workHoursTC": 0,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "workHours": 54,
-      "volume": 0.0527,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "external": false,
-      "id": "x2cn-1792083647137-vxdvx",
-      "cls": "B",
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "week": "2026-W42"
     },
     {
       "btDate": "2026-10-13",
@@ -32648,90 +30186,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "external": false,
-      "week": "2026-W42",
-      "id": "x2cn-1792084480962-3vl81",
-      "volume": 0.0504,
-      "unitVol": 0.000225,
-      "workHoursHC": 54,
-      "sizeKey": "1250×18×10",
-      "date": "2026-10-13",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "createdAt": "2026-10-15T17:14:40.962Z",
-      "boDate": "2026-10-13",
-      "btDate": "2026-10-13",
-      "workHoursTC": 0,
-      "cls": "A",
-      "materialId": "mat-1791775069420-exq94",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "quantity": 224,
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "workHours": 54,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng"
-    },
-    {
-      "week": "2026-W42",
-      "workHours": 54,
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "boDate": "2026-10-13",
-      "cls": "A",
-      "id": "x2cn-1792084484398-y5zin",
-      "volume": 0.1386,
-      "quantity": 616,
-      "sizeKey": "1250×18×10",
-      "unitVol": 0.000225,
-      "workHoursHC": 54,
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "date": "2026-10-13",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "external": false,
-      "workHoursTC": 0,
-      "createdAt": "2026-10-15T17:14:44.398Z",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "materialId": "mat-1791775069420-exq94",
-      "btDate": "2026-10-13",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca"
-    },
-    {
-      "id": "x2cn-1792084488959-5ts93",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "btDate": "2026-10-13",
-      "cls": "A",
-      "unitVol": 0.000225,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "external": false,
-      "workHoursHC": 54,
-      "materialId": "mat-1791775069420-exq94",
-      "createdAt": "2026-10-15T17:14:48.959Z",
-      "sizeKey": "1250×18×10",
-      "date": "2026-10-13",
-      "quantity": 280,
-      "workHoursTC": 0,
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "boDate": "2026-10-13",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "volume": 0.063,
-      "week": "2026-W42",
-      "workHours": 54
-    },
-    {
       "workHoursTC": 0,
       "date": "2026-10-13",
       "id": "x2cn-1792084589743-ezgtl",
@@ -32761,62 +30215,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "workHours": 54,
-      "btDate": "2026-10-13",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "week": "2026-W42",
-      "materialId": "mat-1791775069420-exq94",
-      "date": "2026-10-13",
-      "quantity": 112,
-      "unitVol": 0.000225,
-      "workHoursTC": 0,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "sizeKey": "1250×18×10",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "external": false,
-      "createdAt": "2026-10-15T17:16:31.519Z",
-      "workHoursHC": 54,
-      "id": "x2cn-1792084591519-qtkhg",
-      "volume": 0.0252,
-      "cls": "A1",
-      "boDate": "2026-10-13",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca"
-    },
-    {
-      "id": "x2cn-1792084593952-fvhbu",
-      "quantity": 392,
-      "workHoursTC": 0,
-      "workHours": 54,
-      "btDate": "2026-10-13",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "materialId": "mat-1791775069420-exq94",
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "week": "2026-W42",
-      "createdAt": "2026-10-15T17:16:33.952Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "cls": "A1",
-      "unitVol": 0.000225,
-      "date": "2026-10-13",
-      "boDate": "2026-10-13",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "external": false,
-      "workHoursHC": 54,
-      "sizeKey": "1250×18×10",
-      "volume": 0.0882
-    },
-    {
       "quantity": 600,
       "cls": "B",
       "id": "x2cn-1792084602625-1g87v",
@@ -32844,34 +30242,6 @@
       "createdAt": "2026-10-15T17:16:42.625Z",
       "btDate": "2026-10-13",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "materialType": "Luồng cây xô + Luồng ống",
-      "boDate": "2026-10-13",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "quantity": 210,
-      "createdAt": "2026-10-15T17:16:44.594Z",
-      "volume": 0.0473,
-      "week": "2026-W42",
-      "workHoursTC": 0,
-      "dims": [
-        1250,
-        18,
-        10
-      ],
-      "date": "2026-10-13",
-      "materialId": "mat-1791775069420-exq94",
-      "cls": "B",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "sizeKey": "1250×18×10",
-      "unitVol": 0.000225,
-      "workHours": 54,
-      "workHoursHC": 54,
-      "btDate": "2026-10-13",
-      "external": false,
-      "id": "x2cn-1792084604594-ugrsx"
     },
     {
       "dims": [
@@ -32931,34 +30301,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "boDate": "2026-10-13",
-      "workHours": 54,
-      "workHoursHC": 54,
-      "volume": 0.1906,
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "id": "x2cn-1792084634334-bur4x",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "quantity": 770,
-      "date": "2026-10-13",
-      "createdAt": "2026-10-15T17:17:14.334Z",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "sizeKey": "1250×18×11",
-      "unitVol": 0.0002475,
-      "external": false,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "workHoursTC": 0,
-      "materialId": "mat-1791775069420-exq94",
-      "cls": "A",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "btDate": "2026-10-13",
-      "week": "2026-W42"
-    },
-    {
       "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
       "materialId": "mat-1791775069420-exq94",
       "workHours": 54,
@@ -32989,62 +30331,6 @@
     },
     {
       "btDate": "2026-10-13",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "week": "2026-W42",
-      "workHoursTC": 0,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "unitVol": 0.0002475,
-      "sizeKey": "1250×18×11",
-      "external": false,
-      "workHours": 54,
-      "id": "x2cn-1792084652478-vu0fv",
-      "materialId": "mat-1791775069420-exq94",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "date": "2026-10-13",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "createdAt": "2026-10-15T17:17:32.478Z",
-      "cls": "A1",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "volume": 0.0416,
-      "workHoursHC": 54,
-      "quantity": 168,
-      "boDate": "2026-10-13"
-    },
-    {
-      "unitVol": 0.0002475,
-      "date": "2026-10-13",
-      "workHoursTC": 0,
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "sizeKey": "1250×18×11",
-      "boDate": "2026-10-13",
-      "createdAt": "2026-10-15T17:17:35.710Z",
-      "volume": 0.104,
-      "materialId": "mat-1791775069420-exq94",
-      "week": "2026-W42",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "external": false,
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "quantity": 420,
-      "btDate": "2026-10-13",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "id": "x2cn-1792084655710-19gsf",
-      "workHoursHC": 54,
-      "workHours": 54,
-      "cls": "A1"
-    },
-    {
-      "btDate": "2026-10-13",
       "unitVol": 0.0002475,
       "workHours": 54,
       "sizeKey": "1250×18×11",
@@ -33071,34 +30357,6 @@
       "quantity": 840,
       "date": "2026-10-13",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "createdAt": "2026-10-15T17:23:58.052Z",
-      "volume": 0.052,
-      "boDate": "2026-10-13",
-      "materialId": "mat-1791775069420-exq94",
-      "external": false,
-      "workHoursHC": 54,
-      "cls": "B",
-      "sizeKey": "1250×18×11",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "workHours": 54,
-      "workHoursTC": 0,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "quantity": 210,
-      "week": "2026-W42",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "unitVol": 0.0002475,
-      "date": "2026-10-13",
-      "btDate": "2026-10-13",
-      "id": "x2cn-1792085038052-meku4"
     },
     {
       "workHours": 54,
@@ -33158,34 +30416,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "external": false,
-      "workHoursHC": 54,
-      "workHours": 54,
-      "volume": 0.2184,
-      "materialId": "mat-1791775069420-exq94",
-      "boDate": "2026-10-13",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "btDate": "2026-10-13",
-      "date": "2026-10-13",
-      "createdAt": "2026-10-15T17:25:19.581Z",
-      "cls": "A",
-      "unitVol": 0.00024,
-      "week": "2026-W42",
-      "workHoursTC": 0,
-      "quantity": 910,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "sizeKey": "1250×24×8",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "id": "x2cn-1792085119581-8y3fp"
-    },
-    {
       "materialType": "Luồng cây xô + Luồng ống",
       "workHours": 54,
       "workHoursTC": 0,
@@ -33213,62 +30443,6 @@
       "workHoursHC": 54,
       "date": "2026-10-13",
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "workHoursTC": 0,
-      "id": "x2cn-1792085133535-pmz4g",
-      "external": false,
-      "btDate": "2026-10-13",
-      "cls": "A1",
-      "createdAt": "2026-10-15T17:25:33.535Z",
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "date": "2026-10-13",
-      "boDate": "2026-10-13",
-      "unitVol": 0.00024,
-      "workHours": 54,
-      "quantity": 560,
-      "volume": 0.1344,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "week": "2026-W42",
-      "materialId": "mat-1791775069420-exq94",
-      "sizeKey": "1250×24×8",
-      "workHoursHC": 54
-    },
-    {
-      "workHoursTC": 0,
-      "btDate": "2026-10-13",
-      "quantity": 1428,
-      "worker": "Vi Thị Buôn, Hà Thị Dậu, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Khoái, Lê Thị Mừng",
-      "id": "x2cn-1792085141568-r0har",
-      "workHours": 54,
-      "baothoId": "x2bt-1792083392073-2dyg2",
-      "supplier": "Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành",
-      "date": "2026-10-13",
-      "materialId": "mat-1791775069420-exq94",
-      "external": false,
-      "boDate": "2026-10-13",
-      "createdAt": "2026-10-15T17:25:41.568Z",
-      "unitVol": 0.00024,
-      "materialType": "Luồng cây xô + Luồng ống",
-      "volume": 0.3427,
-      "workHoursHC": 54,
-      "cls": "A1",
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "week": "2026-W42",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "sizeKey": "1250×24×8"
     },
     {
       "week": "2026-W42",
@@ -33301,11 +30475,11 @@
     },
     {
       "boDate": "2026-10-13",
-      "workHoursHC": 54,
+      "workHoursHC": 60,
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "volume": 0.0086,
       "external": false,
-      "workHours": 54,
+      "workHours": 60,
       "quantity": 36,
       "cls": "reject",
       "dims": [
@@ -33325,7 +30499,9 @@
       "btDate": "2026-10-13",
       "unitVol": 0.00024,
       "date": "2026-10-13",
-      "materialType": "Luồng cây xô + Luồng ống"
+      "materialType": "Luồng cây xô + Luồng ống",
+      "shiftIdx": 0,
+      "updatedAt": "2026-10-16T12:11:00.850Z"
     },
     {
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",

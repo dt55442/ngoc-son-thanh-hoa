@@ -284,9 +284,9 @@ check('LƯU: lượt 2 lưu đúng lô lot-2 + Dày có 2 giá trị (2 tổ h�
   state.xuong2BaoThoRecords.length === 2 &&
   state.xuong2BaoThoRecords[1].boOngId === 'lot-2' &&
   state.xuong2BaoThoRecords[1].thicks.length === 2);
-check('BẢNG: "2 lượt chạy máy" + 2 THẺ NGÀY riêng (nhóm theo ngày)',
+check('BẢNG: "2 lượt chạy máy" + 2 THẺ NGÀY riêng (nhóm theo NGÀY + CA)',
   document.getElementById('x2-bt-table-count').textContent === '2 lượt chạy máy' &&
-  (document.getElementById('x2-bt-day-cards').innerHTML.match(/class="x2-day-card">/g) || []).length === 2);
+  (document.getElementById('x2-bt-day-cards').innerHTML.match(/class="x2-day-card"/g) || []).length === 2);
 
 
 // ─── J. SỬA LƯỢT CHẠY MÁY ──────────────────────────────────────

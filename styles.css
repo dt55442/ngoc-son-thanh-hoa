@@ -10744,6 +10744,63 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   cursor: help;
 }
 .x2-shift-note svg { width: 12px; height: 12px; flex-shrink: 0; margin-top: 1px; }
+
+/* ═══ GIAI ĐOẠN 2: NHẬP SẢN LƯỢNG RIÊNG THEO CA ═══════════════════════
+   Ô "Ca" của form nhập + chip CA / chip SO SÁNH 2 CA trên đầu thẻ ngày. */
+.x2-shift-field label { display: inline-flex; align-items: center; gap: 4px; }
+.x2-shift-field-hint {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(15, 118, 110, 0.15); color: #0f766e;
+  font-size: 0.6rem; font-weight: 800; cursor: help;
+}
+.x2-shift-field select { font-weight: 600; }
+/* Chip TÊN CA trên đầu thẻ ngày */
+.x2-day-shift-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: 999px;
+  background: #0f766e; color: #fff;
+  font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+}
+.x2-day-shift-chip[data-shift-idx="1"] { background: #d97706; }   /* Ca đêm / ca 2 */
+.x2-day-shift-chip svg { width: 12px; height: 12px; }
+.x2-day-shift-chip.x2-day-shift-none {
+  background: rgba(100, 116, 139, 0.16); color: #475569;
+  border: 1px dashed rgba(100, 116, 139, 0.5);
+}
+/* Chip SO SÁNH hiệu suất với ca còn lại cùng ngày */
+.x2-shift-cmp {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 6px;
+  font-size: 0.7rem; font-weight: 700; white-space: nowrap; cursor: help;
+}
+.x2-shift-cmp.better { background: rgba(22, 163, 74, 0.14); color: #15803d; }
+.x2-shift-cmp.worse  { background: rgba(217, 119, 6, 0.16); color: #b45309; }
+/* Cảnh báo thanh chọn nan ở CA KHÁC (thẻ Bào Thô) */
+.x2-shift-cross {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: 999px;
+  background: rgba(220, 38, 38, 0.12); color: #b91c1c;
+  border: 1px dashed rgba(220, 38, 38, 0.45);
+  font-size: 0.7rem; font-weight: 700; cursor: help;
+}
+.x2-shift-cross svg { width: 12px; height: 12px; }
+/* Dòng phụ "THEO CA" trong bảng thống kê Than Hóa + Sấy */
+.x2-say-shift-row { background: rgba(15, 118, 110, 0.06); }
+.x2-say-shift-row > td { border-top: 1px dashed rgba(15, 118, 110, 0.45); font-size: 0.74rem; }
+.x2-say-shift-row.x2-say-shift-none { background: rgba(100, 116, 139, 0.08); }
+.x2-say-shift-row.x2-say-shift-none > td { border-top-style: dotted; border-top-color: rgba(100, 116, 139, 0.5); }
+.x2-say-shift-note { font-size: 0.7rem; color: var(--text-muted); font-style: italic; }
+.x2-say-shift-perf { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; white-space: nowrap; }
+.x2-say-shift-perf > span { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 639.98px) {
+  .x2-say-shift-row > td { font-size: 0.7rem; }
+  .x2-say-shift-perf { gap: 2px 6px; }
+}
+@media (max-width: 639.98px) {
+  .x2-shift-field { flex: 1 1 100% !important; }
+  .x2-day-shift-chip, .x2-shift-cmp, .x2-shift-cross { font-size: 0.68rem; }
+}
 /* Điện thoại: mỗi ca 1 khối dễ đọc, chữ đủ lớn */
 @media (max-width: 639.98px) {
   .x2-shift-rows { margin: 0 8px 10px; padding: 8px; }

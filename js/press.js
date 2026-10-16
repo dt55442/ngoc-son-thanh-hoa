@@ -982,7 +982,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
             <strong style="color:var(--primary);">${(r.finishedQty || 0).toLocaleString('vi-VN')}</strong> tấm
             · <span title="Ván thô tạo ra">${vtDesc}</span>
             · <span title="Thanh thô (bào tinh) đầu vào">${stickDesc}</span>
-            · <span title="Thông số kỹ thuật: lực ép ngang · lực ép đứng (Kg/cm²) · nhiệt độ (°C) · thời gian (phút/lượt)">${pressTechTextOf(r)}</span>
+            · <span title="Thông số kỹ thuật: lực ép ngang · lực ép đứng (MPa) · nhiệt độ (°C) · thời gian (phút/lượt)">${pressTechTextOf(r)}</span>
             · Keo${r.glueName ? ' ' + escapeHTML(r.glueName) : ''} <strong>${(Number(r.glue) || 0).toFixed(2)}</strong> kg
             · Phụ gia${r.additiveName ? ' ' + escapeHTML(r.additiveName) : ''} <strong>${(Number(r.additive) || 0).toFixed(2)}</strong> kg
             · <strong>${fmtThanh(vol1)} m³</strong>${noteBadge}${workerBtn}
@@ -1032,12 +1032,12 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
   }
 
   // Text thông số kỹ thuật của 1 lượt ép (hiện trên thẻ ngày): lực ép ngang ·
-  // lực ép đứng (Kg/cm²) · nhiệt độ (°C) · thời gian (phút/lượt) — thiếu thì '—'.
+  // lực ép đứng (MPa) · nhiệt độ (°C) · thời gian (phút/lượt) — thiếu thì '—'.
   function pressTechTextOf(r) {
     const rr = r || {};
     const parts = [];
-    if (Number(rr.forceH) > 0) parts.push(`Ép ngang ${rr.forceH} Kg/cm²`);
-    if (Number(rr.forceV) > 0) parts.push(`Ép đứng ${rr.forceV} Kg/cm²`);
+    if (Number(rr.forceH) > 0) parts.push(`Ép ngang ${rr.forceH} MPa`);
+    if (Number(rr.forceV) > 0) parts.push(`Ép đứng ${rr.forceV} MPa`);
     if (Number(rr.tempC) > 0) parts.push(`${rr.tempC}°C`);
     if (Number(rr.pressMin) > 0) parts.push(`${rr.pressMin} phút/lượt`);
     return parts.length ? parts.join(' · ') : '—';

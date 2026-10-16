@@ -792,6 +792,63 @@ import { state } from './state.js';
     </div>`;
   }
 
+  // Options cho Ô "CA" của các form nhập (chỉ dùng khi bộ phận đang ở chế độ
+  // "Làm ca"). meta = shiftMetaOf(dept) = { 0: {name,start,end}, 1: {...} }.
+  // Mục rỗng = "Cả ngày / chưa rõ ca" — Giai đoạn 2 cho phép lưu lượt không ghi
+  // ca (không cản sản xuất) và gom riêng để minh bạch, KHÔNG tự gán bừa.
+  function shiftOptionsHtml(meta, selected, emptyLabel) {
+    const sel = (selected == null || selected === '') ? '' : String(Number(selected));
+    const opts = [`<option value=""${sel === '' ? ' selected' : ''}>${escapeHTML(emptyLabel || '— Chọn ca —')}</option>`];
+    Object.keys(meta || {}).sort((a, b) => Number(a) - Number(b)).forEach(k => {
+      const m = meta[k] || {};
+      const label = `${m.name || ('Ca ' + (Number(k) + 1))}${(m.start || m.end) ? ` (${m.start || ''}–${m.end || ''})` : ''}`;
+      opts.push(`<option value="${escapeHTML(k)}"${sel === String(k) ? ' selected' : ''}>${escapeHTML(label)}</option>`);
+    });
+    return opts.join('');
+  }
+
+  // GỢI Ý CA cho 1 lượt: nếu ngày đó vị trí chỉ có ĐÚNG 1 ca được bố trí thì
+  // chọn sẵn ca đó; có ≥2 ca → null (để người dùng tự chọn).
+  // rows: [{ shiftIdx }] — các lượt bố trí của vị trí trong ngày.
+  function shiftSuggestOf(rows) {
+    const set = new Set((rows || []).map(r => Number(r.shiftIdx) || 0));
+    return set.size === 1 ? [...set][0] : null;
+  }
+
+  // BẢNG HIỆU SUẤT THEO CA của 1 công đoạn trong CÙNG 1 ngày (dùng cho chip so
+  // sánh ca nào làm tốt hơn) — sản lượng mỗi ca là SỐ NHẬP RIÊNG của ca đó.
+  // totals: [{ shiftIdx, hours, qty }] · opts: { rate, incHours (giờ sự cố ngày) }
+  // Trả Map: shiftIdx → { hoursEff, cap, eff, cmp: { delta, better, ref } | null }
+  function shiftCompareMap(totals, opts) {
+    const o = opts || {};
+    const inc = Number(o.incHours) || 0;
+    const rate = (Number(o.rate) > 0) ? Number(o.rate) : null;
+    const list = (totals || [])
+      .filter(t => t && t.shiftIdx != null && Number(t.shiftIdx) >= 0 && Number(t.hours) > 0)
+      .map(t => ({ shiftIdx: Number(t.shiftIdx), hours: Number(t.hours) || 0, qty: (t.qty == null ? null : Number(t.qty)) }));
+    const totalHours = list.reduce((s, t) => s + t.hours, 0);
+    const withEff = list.map(t => {
+      const share = totalHours > 0 ? (t.hours / totalHours) : 0;
+      const hoursEff = Math.max(0, t.hours - inc * share);
+      const cap = (t.qty != null && hoursEff > 0) ? (t.qty / hoursEff) : null;
+      const eff = (cap != null && rate) ? (cap / rate) * 100 : null;
+      return { shiftIdx: t.shiftIdx, hours: t.hours, qty: t.qty, hoursEff, cap, eff };
+    });
+    const map = new Map();
+    withEff.forEach(t => {
+      if (t.eff == null) { map.set(t.shiftIdx, { hoursEff: t.hoursEff, cap: t.cap, eff: null, cmp: null }); return; }
+      const others = withEff.filter(x => x.shiftIdx !== t.shiftIdx && x.eff != null);
+      let cmp = null;
+      if (others.length) {
+        const best = others.reduce((m, x) => (x.eff > m.eff ? x : m), others[0]);
+        const delta = t.eff - best.eff;
+        cmp = { delta, better: delta > 0, ref: best.shiftIdx };
+      }
+      map.set(t.shiftIdx, { hoursEff: t.hoursEff, cap: t.cap, eff: t.eff, cmp });
+    });
+    return map;
+  }
+
 export {
   KHO_METHOD_LABELS,
   KHO_POOL_STAGES,
@@ -831,9 +888,12 @@ export {
   setupFormCalculations,
   showToast,
   shiftBreakdownHtml,
+  shiftCompareMap,
   shiftFmtNum,
   shiftGroupRows,
+  shiftOptionsHtml,
   shiftSectionRows,
+  shiftSuggestOf,
   stageEffHours,
   stageIncidentInputHtml,
   stageIncidentKey,

@@ -302,15 +302,125 @@ check('I1: styles.css có khối .x2-shift-rows / -chip / -note / -best',
   cssSrc.includes('.x2-shift-note {') && cssSrc.includes('.x2-shift-best {'));
 check('I2: utils.js export 4 helper tách ca',
   ['shiftGroupRows', 'shiftFmtNum', 'shiftSectionRows', 'shiftBreakdownHtml'].every(n => uSrc.includes(`  ${n},`)));
-check('I3: 7 thẻ ngày 1 công đoạn + 3 thẻ 2 công đoạn + Xưởng 1 đều có khối ca',
-  (x2Src.match(/\$\{x2ShiftBlockOf\(/g) || []).length === 7 &&
+check('I3: 4 thẻ ngày 1 công đoạn + 3 thẻ ĐÃ TÁCH CA (Bổ Ống/Bào Thô/Chọn Nan) + 3 thẻ 2 công đoạn + Xưởng 1',
+  (x2Src.match(/\$\{x2ShiftBlockOf\(/g) || []).length === 4 &&
+  (x2Src.match(/shiftIdx == null \? x2ShiftBlockOf\(/g) || []).length === 3 &&
   (x2Src.match(/\$\{x2ShiftBlockMulti\(/g) || []).length === 3 &&
   x2Src.includes('cfg.shiftMatchPos ? shiftGroupsForX1(') &&
   (x2Src.match(/shiftMatchPos/g) || []).length >= 5);
 check('I4: press.js + qc-final.js dùng CHUNG helper (không copy HTML/CSS)',
   pSrc.includes('shiftBreakdownHtml') && pSrc.includes('epVanShiftGroups') &&
   qSrc.includes('shiftBreakdownHtml') && qSrc.includes('qcShiftGroups'));
-check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v259'));
+check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v261'));
+
+// ═══ J. GIAI ĐOẠN 2 — NHẬP SẢN LƯỢNG RIÊNG THEO CA ═══════════════════════
+// (Bổ Ống · Chạy Máy Bào Thô · Chọn Nan Thô · Than Hóa + Sấy)
+
+// ── J1. CHỌN NAN NGOÀI CÔNG ĐOẠN + Ô CA → giờ/người chỉ của ca đó ────────
+state.hrPositions.push({ id: 'pcn2', name: 'Chọn Nan Thô', department: 'Xưởng 2' });
+state.hrPositions.push({ id: 'pth', name: 'Than hóa', department: 'Xưởng 2' });
+state.hrAssignments = [
+  { id: 'c1', date: DAY, department: 'Xưởng 2', positionId: 'pcn2', shiftIdx: 0, employeeId: 'eA', start: '07:00', end: '19:00' },
+  { id: 'c2', date: DAY, department: 'Xưởng 2', positionId: 'pcn2', shiftIdx: 1, employeeId: 'eB', start: '19:00', end: '01:00' }
+];
+state.xuong2ChonNanThoRecords = [];
+state.x2ChonNanEditId = null;
+document.getElementById('x2-cn-baotho').value = '__new__';   // Thêm loại mới (nan mua ngoài — không cần chuỗi)
+document.getElementById('x2-cn-ncc').value = 'NCC Ngoài';
+document.getElementById('x2-cn-dai').value = '900';
+document.getElementById('x2-cn-rong').value = '70';
+document.getElementById('x2-cn-day').value = '10';
+document.getElementById('x2-cn-class').value = 'A';
+document.getElementById('x2-cn-qty').value = '500';
+document.getElementById('x2-cn-date').value = DAY;
+x2.syncX2ShiftField('x2-cn-shift', 'Xưởng 2', DAY, null);   // nạp options trước khi chọn
+document.getElementById('x2-cn-shift').value = '1';          // CA ĐÊM
+x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
+const cnShiftRec = (state.xuong2ChonNanThoRecords || []).find(r => r.date === DAY && r.shiftIdx === 1);
+check('J1: lưu lượt Chọn Nan có ghi CA → bản ghi lưu shiftIdx = 1', !!cnShiftRec && cnShiftRec.shiftIdx === 1);
+check('J2: SNAPSHOT giờ của lượt = CHỈ ca đêm (6h HC · 0h TC, không cộng ca ngày)',
+  cnShiftRec && Math.abs(Number(cnShiftRec.workHoursHC) - 6) < 1e-9 && Math.abs(Number(cnShiftRec.workHoursTC)) < 1e-9);
+check('J3: SNAPSHOT người của lượt = CHỈ người ca đêm', cnShiftRec && cnShiftRec.worker === 'Trần Thị B');
+
+// ── J4. THẺ NGÀY TÁCH THEO (NGÀY, CA) + CHIP SO SÁNH ─────────────────────
+state.x2ChonNanRates = { '2026-10': 500 };
+state.xuong2ChonNanThoRecords = [
+  { id: 'cn-s0', date: DAY, quantity: 2000, cls: 'A', sizeKey: '1250×18×7', dims: [1250, 18, 7], external: false, materialType: 'Luồng cây', supplier: 'Nhà Tế', shiftIdx: 0, unitVol: 0.000157, createdAt: '2026-10-05T02:00:00.000Z' },
+  { id: 'cn-s1', date: DAY, quantity: 900, cls: 'A', sizeKey: '1250×18×7', dims: [1250, 18, 7], external: false, materialType: 'Luồng cây', supplier: 'Nhà Tế', shiftIdx: 1, unitVol: 0.000157, createdAt: '2026-10-05T03:00:00.000Z' },
+  { id: 'cn-s2', date: DAY, quantity: 400, cls: 'B', sizeKey: '1250×24×8', dims: [1250, 24, 8], external: false, materialType: 'Luồng cây', supplier: 'Nhà Tế', unitVol: 0.00024, createdAt: '2026-10-05T04:00:00.000Z' }
+];
+x2.renderX2ChonNanTable();
+const cnCards = els.get('x2-cn-day-cards').innerHTML;
+check('J4: thẻ ngày Chọn Nan tách 2 ca cùng ngày (2 thẻ, có chip ca)',
+  (cnCards.match(/data-shift="0"/g) || []).length === 1 && (cnCards.match(/data-shift="1"/g) || []).length === 1 &&
+  cnCards.includes('Ca ngày') && cnCards.includes('Ca đêm'));
+check('J5: thẻ CẢ NGÀY / CHƯA RÕ CA riêng cho lượt không ghi ca',
+  cnCards.includes('Cả ngày / chưa rõ ca') && (cnCards.match(/data-shift=""/g) || []).length === 1);
+check('J6: công suất 2 ca KHÁC NHAU theo SỐ THẬT (ca ngày 2.000÷12h=167 · ca đêm 900÷6h=150 thanh/h)',
+  (cnCards.match(/167 thanh\/h/g) || []).length >= 1 && (cnCards.match(/150 thanh\/h/g) || []).length >= 1);
+check('J7: có chip SO SÁNH hiệu suất với ca kia (▲/▼)',
+  cnCards.includes('x2-shift-cmp') && (cnCards.includes('▲') || cnCards.includes('▼')));
+check('J8: thẻ "chưa rõ ca" vẫn giữ khối ƯỚC TÍNH Giai đoạn 1 + ghi chú trung thực',
+  cnCards.includes('chưa so được ca nào làm tốt hơn'));
+
+// ── J9. LIÊN KẾT CHỌN NAN → BÀO THÔ LỌC THEO CA ───────────────────────────
+const btFake = { id: 'bt-x', date: DAY, shiftIdx: 0, daiText: '1250', rongText: '18', dayText: '7', dais: [1250], rongs: [18], thicks: [7] };
+state.xuong2ChonNanThoRecords = [
+  { id: 'k0', baothoId: 'bt-x', date: DAY, quantity: 100, cls: 'A', sizeKey: '1250×18×7', dims: [1250, 18, 7], external: false, shiftIdx: 0, unitVol: 0.000157, volume: 0.0157 },
+  { id: 'k1', baothoId: 'bt-x', date: DAY, quantity: 250, cls: 'A', sizeKey: '1250×18×7', dims: [1250, 18, 7], external: false, shiftIdx: 1, unitVol: 0.000157, volume: 0.0393 },
+  { id: 'k2', baothoId: 'bt-x', date: DAY, quantity: 50, cls: 'A', sizeKey: '1250×18×7', dims: [1250, 18, 7], external: false, unitVol: 0.000157, volume: 0.0079 }
+];
+const qShift0 = x2.baoThoQtyOf(btFake);
+check('J9: Bào Thô ca 1 → chỉ cộng 100 thanh của lượt CÙNG ca (không cộng 250 của ca kia, 50 chưa rõ ca)',
+  qShift0.qty === 100 && qShift0.otherQty === 300);
+const qNoShift = x2.baoThoQtyOf({ id: 'bt-x', date: DAY, shiftIdx: null, dais: [1250], rongs: [18], thicks: [7] });
+check('J10: Bào Thô KHÔNG ghi ca → chỉ cộng 50 thanh không ghi ca + cảnh báo 350 thanh ở ca khác',
+  qNoShift.qty === 50 && qNoShift.otherQty === 350);
+
+// ── J11. THAN HÓA: CA CỦA LÔ (sayShift) + DÒNG PHỤ "THEO CA" ─────────────
+check('J11: sayShiftMapOf giữ ca công đoạn kia + ghi đè đúng công đoạn đang lưu',
+  JSON.stringify(x2.sayShiftMapOf({ say1: 1 }, 'say2', 0)) === JSON.stringify({ say1: 1, say2: 0 }) &&
+  x2.sayShiftMapOf(null, 'say1', 1).say1 === 1);
+state.batches = [
+  { id: 'B1', code: 'L1', stage: 'say1', date: DAY, length: 1250, width: 18, thickness: 7, quantity: 1000, volume: 0.157, useFor: 'Ván', location: 'LS1', sayCharges: { say1: 111 }, sayShift: { say1: 0 }, createdAt: '2026-10-05T02:00:00.000Z' },
+  { id: 'B2', code: 'L2', stage: 'say1', date: DAY, length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.0785, useFor: 'Ván', location: 'LS1', sayCharges: { say1: 222 }, sayShift: { say1: 1 }, createdAt: '2026-10-05T03:00:00.000Z' }
+];
+state.hrAssignments = [
+  { id: 't1', date: DAY, department: 'Xưởng 2', positionId: 'pth', shiftIdx: 0, employeeId: 'eC', start: '07:00', end: '19:00' },
+  { id: 't2', date: DAY, department: 'Xưởng 2', positionId: 'pth', shiftIdx: 1, employeeId: 'eD', start: '19:00', end: '01:00' }
+];
+state.x2SayRates = { s1: {}, s2: {} };
+state.x2SayTimes = {};
+state.x2SayIncidents = {};
+const sayRows = x2.sayChargeRows();
+const sayDay = sayRows.find(r => r.date === DAY);
+check('J12: mỗi LẦN than hóa mang CA của lô (ca 1 và ca 2 khác nhau)',
+  !!sayDay && sayDay.charges.length === 2 &&
+  sayDay.charges.some(c => c.shiftIdx === 0) && sayDay.charges.some(c => c.shiftIdx === 1));
+x2.renderX2SayStats();
+const sayHtml = els.get('x2-say-day-rows').innerHTML;
+check('J13: bảng thống kê Than Hóa có DÒNG PHỤ theo ca (m³ + giờ thật + công suất/hiệu suất của ca)',
+  sayHtml.includes('x2-say-shift-row') && (sayHtml.match(/data-shift-idx="0"/g) || []).length >= 1 &&
+  (sayHtml.match(/data-shift-idx="1"/g) || []).length >= 1);
+check('J14: m³ tách đúng theo ca (ca 1 = 0,157 m³ · ca 2 = 0,0785 m³ — SỐ THẬT của lô)',
+  sayHtml.includes('0,157') && sayHtml.includes('0,0785'));
+check('J15: dòng ca ghi người của đúng ca đó (ca 1 = Lê Văn C · ca 2 = Phạm Thị D)',
+  sayHtml.includes('Lê Văn C') && sayHtml.includes('Phạm Thị D'));
+check('J16: ô nhập "Số lần TH" của NHÓM vẫn chỉ 1 ô/ngày (không nhân đôi theo ca)',
+  (sayHtml.match(/data-say-times="2026-10-05"/g) || []).length === 1);
+
+// ── J17. CẤU TRÚC GIAI ĐOẠN 2 ────────────────────────────────────────────
+const idxSrc = fs.readFileSync('index.html', 'utf8');
+const bmSrc = fs.readFileSync('js/batch-modals.js', 'utf8');
+check('J17: index.html có 3 ô Ca (Bổ Ống · Bào Thô · Chọn Nan) + ô Ca của Thêm Lô Sấy Mới',
+  idxSrc.includes('id="x2-bo-ong-shift"') && idxSrc.includes('id="x2-bao-tho-shift"') &&
+  idxSrc.includes('id="x2-cn-shift"') && idxSrc.includes('id="al-shift"'));
+check('J18: batch-modals ghi CA (sayShift) ở CẢ 4 nhánh lưu lô (3 gán khi tạo + 2 gán tại chỗ)',
+  (bmSrc.match(/sayShift: sayShiftMapOf\(/g) || []).length === 3 &&
+  (bmSrc.match(/sayShift = sayShiftMapOf\(/g) || []).length === 2);
+check('J19: CSS có chip ca / chip so sánh / cảnh báo lệch ca / dòng ca Than Hóa',
+  cssSrc.includes('.x2-day-shift-chip') && cssSrc.includes('.x2-shift-cmp') &&
+  cssSrc.includes('.x2-shift-cross') && cssSrc.includes('.x2-say-shift-row'));
 
 console.log(`\n=== TÁCH DỮ LIỆU THEO CA: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

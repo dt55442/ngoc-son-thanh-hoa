@@ -688,6 +688,10 @@
                   <label for="x2-bo-ong-date">Ngày Bổ <span class="required">*</span></label>
                   <input type="date" id="x2-bo-ong-date" required>
                 </div>
+                <div class="form-group x2-shift-field" id="x2-bo-ong-shift-wrap" style="flex:0 0 190px; display:none;">
+                  <label for="x2-bo-ong-shift">Ca <span class="x2-shift-field-hint" title="Ô này CHỈ hiện khi bộ phận Xưởng 2 đặt chế độ 'Làm ca' ở tab Nhân Sự. Chọn ca để giờ + công suất + hiệu suất của lượt tính riêng theo ca đó (so sánh được ca nào làm tốt hơn). Để trống = Cả ngày / chưa rõ ca.">(?)</span></label>
+                  <select id="x2-bo-ong-shift"></select>
+                </div>
                 <div class="form-group" style="flex:0 0 165px;">
                   <label for="x2-bo-ong-bo">KL Ống Bổ (kg)</label>
                   <input type="number" id="x2-bo-ong-bo" step="any" min="0" placeholder="0" title="Số lượng ống của lô ĐEM BỔ trong lượt này — tự điền sẵn phần CÒN LẠI của lô; ngày đó chỉ bổ 1 phần thì sửa lại số nhỏ hơn (phần dư vẫn ở trong danh sách chọn lô)">
@@ -771,6 +775,10 @@
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-bao-tho-date">Ngày Chạy Máy <span class="required">*</span></label>
                   <input type="date" id="x2-bao-tho-date" required>
+                </div>
+                <div class="form-group x2-shift-field" id="x2-bao-tho-shift-wrap" style="flex:0 0 190px; display:none;">
+                  <label for="x2-bao-tho-shift">Ca <span class="x2-shift-field-hint" title="Ô này CHỈ hiện khi bộ phận Xưởng 2 đặt chế độ 'Làm ca' ở tab Nhân Sự. Chọn ca để giờ + công suất + hiệu suất của lượt tính riêng theo ca đó (so sánh được ca nào làm tốt hơn). Để trống = Cả ngày / chưa rõ ca.">(?)</span></label>
+                  <select id="x2-bao-tho-shift"></select>
                 </div>
               </div>
               <!-- DÒNG 2: LOẠI NAN theo 3 thông tin — mỗi ô có thể nhiều giá trị, ngăn cách dấu phẩy -->
@@ -860,6 +868,10 @@
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-cn-date">Ngày Chọn <span class="required">*</span></label>
                   <input type="date" id="x2-cn-date" required>
+                </div>
+                <div class="form-group x2-shift-field" id="x2-cn-shift-wrap" style="flex:0 0 190px; display:none;">
+                  <label for="x2-cn-shift">Ca <span class="x2-shift-field-hint" title="Ô này CHỈ hiện khi bộ phận Xưởng 2 đặt chế độ 'Làm ca' ở tab Nhân Sự. Chọn ca để giờ + công suất + hiệu suất của lượt tính riêng theo ca đó; số thanh của ca được cộng sang đúng ca của thẻ Bào Thô. Để trống = Cả ngày / chưa rõ ca.">(?)</span></label>
+                  <select id="x2-cn-shift"></select>
                 </div>
               </div>
               <!-- DÒNG 2: loại nan (kích thước của lô đã bào thô) + phân loại + số lượng
@@ -3334,7 +3346,7 @@
               <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="date" aria-expanded="false" title="Ngày ép — tuần tự động theo ngày"><i data-lucide="calendar"></i> Ngày <span class="press-sec-check" data-press-check="date" hidden><i data-lucide="check-circle-2"></i></span></button>
               <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="input" aria-expanded="false" title="Đầu vào: thanh thô từ Bào Tinh hoặc ván thô đã ép trước đó (1 đến 3 loại — gõ kí tự để thấy gợi ý)"><i data-lucide="layers"></i> Đầu vào <span class="press-sec-check" data-press-check="input" hidden><i data-lucide="check-circle-2"></i></span></button>
               <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="output" aria-expanded="false" title="Đầu ra: vùng Ván Thô Tạo Ra (không bắt buộc — 1 đến 3 loại) và Thành Phẩm theo kế hoạch cùng tuần"><i data-lucide="package"></i> Đầu ra <span class="press-sec-check" data-press-check="output" hidden><i data-lucide="check-circle-2"></i></span></button>
-              <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="tech" aria-expanded="false" title="Thông số kỹ thuật: lực ép ngang · lực ép đứng (Kg/cm²) · nhiệt độ (°C) · thời gian ép (phút/lượt)"><i data-lucide="gauge"></i> Thông số KT <span class="press-sec-check" data-press-check="tech" hidden><i data-lucide="check-circle-2"></i></span></button>
+              <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="tech" aria-expanded="false" title="Thông số kỹ thuật: lực ép ngang · lực ép đứng (MPa) · nhiệt độ (°C) · thời gian ép (phút/lượt)"><i data-lucide="gauge"></i> Thông số KT <span class="press-sec-check" data-press-check="tech" hidden><i data-lucide="check-circle-2"></i></span></button>
               <button type="button" class="btn btn-outline btn-sm press-sec-btn" data-press-sec="chem" aria-expanded="false" title="Hóa chất: tên + số lượng keo · phụ gia (tên tự nhớ cho lần sau)"><i data-lucide="flask-conical"></i> Hóa chất <span class="press-sec-check" data-press-check="chem" hidden><i data-lucide="check-circle-2"></i></span></button>
             </div>
             <div class="press-sec-sum" id="press-sec-sum">Bấm từng nút để nhập — tick xanh hiện khi cụm đã đủ thông tin.</div>
@@ -3397,12 +3409,12 @@
             <section class="press-sec-panel" data-press-panel="tech" hidden>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="press-force-h">Lực Ép Ngang (Kg/cm²)</label>
-                  <input type="number" id="press-force-h" min="0" step="any" placeholder="VD: 18" title="Lực ép ngang của máy ép (Kg/cm²)">
+                  <label for="press-force-h">Lực Ép Ngang (MPa)</label>
+                  <input type="number" id="press-force-h" min="0" step="any" placeholder="VD: 18" title="Lực ép ngang của máy ép (MPa)">
                 </div>
                 <div class="form-group">
-                  <label for="press-force-v">Lực Ép Đứng (Kg/cm²)</label>
-                  <input type="number" id="press-force-v" min="0" step="any" placeholder="VD: 22" title="Lực ép đứng của máy ép (Kg/cm²)">
+                  <label for="press-force-v">Lực Ép Đứng (MPa)</label>
+                  <input type="number" id="press-force-v" min="0" step="any" placeholder="VD: 22" title="Lực ép đứng của máy ép (MPa)">
                 </div>
                 <div class="form-group">
                   <label for="press-temp">Nhiệt Độ (°C)</label>
@@ -5435,6 +5447,11 @@
                   <option value="Ván">Ván</option>
                   <option value="Bullig">Bullig</option>
                 </select>
+              </div>
+              <!-- Ô CHỌN CA (Giai đoạn 2) — chỉ hiện khi Xưởng 2 để chế độ "Làm ca" -->
+              <div class="form-group x2-shift-field" id="al-shift-wrap" style="display:none;">
+                <label for="al-shift" title="Ca của lần than hóa này — chỉ hiện khi bộ phận Xưởng 2 đặt chế độ 'Làm ca' ở tab Nhân Sự. Giờ + công suất + hiệu suất của lần sẽ tính RIÊNG theo ca này (bảng thống kê tách 2 ca). Để trống = chưa rõ ca.">Ca <span class="ck-opt">Tùy chọn</span> <span class="x2-shift-field-hint">(?)</span></label>
+                <select id="al-shift"></select>
               </div>
               <!-- Ô CHỌN LẦN THAN HÓA — gộp lô này vào LẦN ĐÃ CÓ trên bảng thống kê -->
               <div class="form-group" id="al-charge-group">

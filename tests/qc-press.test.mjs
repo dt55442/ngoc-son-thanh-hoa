@@ -180,8 +180,8 @@ check('THẺ NGÀY: gom theo ngày + đếm PASS/Fail trong ngày',
   dayHtml.includes('x2-day-card') && dayHtml.includes('PASS: <strong>1</strong>') && dayHtml.includes('Fail: <strong>1</strong>'));
 check('BẢNG: hiện tỷ lệ "100g - 12g" + cột Độ phủ "g/tấm"',
   dayHtml.includes('100g - 12g') && dayHtml.includes('g/tấm'));
-check('BẢNG: đủ tiêu đề (Lực ép ngang/đứng · Nhiệt độ · Thời gian ép · QC kiểm)',
-  dayHtml.includes('Lực ép ngang') && dayHtml.includes('Lực ép đứng') && dayHtml.includes('Nhiệt độ') &&
+check('BẢNG: đủ tiêu đề (Lực ép ngang/đứng đơn vị MPa · Nhiệt độ · Thời gian ép · QC kiểm)',
+  dayHtml.includes('Lực ép ngang (MPa)') && dayHtml.includes('Lực ép đứng (MPa)') && dayHtml.includes('Nhiệt độ') &&
   dayHtml.includes('Thời gian ép') && dayHtml.includes('QC kiểm'));
 check('NHÃN: PASS nghiêng (.qcp-stamp-pass) trên dòng đã chấm',
   dayHtml.includes('qcp-stamp-pass') && dayHtml.includes('>PASS</span>'));
@@ -245,7 +245,7 @@ check('history.js: miền qcPressLogs thuộc tab qc',
   hiJs.includes('qcPressLogs:') && hiJs.includes("label: 'Nhật ký ép ván (QC kiểm)'"));
 check('main.js: loadQcPressLogs lúc boot', mnJs.includes('loadQcPressLogs'));
 check('sw.js: CACHE_NAME v226 + js/qc-press.js vào APP_SHELL',
-  /nha-may-ngoc-son-v259/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
+  /nha-may-ngoc-son-v261/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
 check('styles.css: launcher hồng + stamp PASS NGHIÊNG (font-style: italic) + nút ✅/❌',
   cssHtml.includes('qc-press-card') && cssHtml.includes('.qcp-stamp-pass') &&
   cssHtml.includes('font-style: italic') && cssHtml.includes('.qcp-check-pass') &&

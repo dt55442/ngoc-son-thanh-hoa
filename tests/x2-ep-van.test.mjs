@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v259/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v261/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -546,9 +546,16 @@ check('FORM: 5 nút cụm (Ngày · Đầu vào · Đầu ra · Thông số KT �
     idxHtml.includes('data-press-sec="' + k + '"') &&
     idxHtml.includes('data-press-panel="' + k + '"') &&
     idxHtml.includes('data-press-check="' + k + '"')));
-check('FORM: ô mới Thông số KT (lực ép ngang/đứng · nhiệt độ · thời gian) + Hóa chất (tên keo/phụ gia)',
+check('FORM: ô mới Thông số KT (lực ép ngang/đứng đơn vị MPa · nhiệt độ · thời gian) + Hóa chất (tên keo/phụ gia)',
   ['press-force-h', 'press-force-v', 'press-temp', 'press-time', 'press-glue-name', 'press-additive-name'].every(id =>
     idxHtml.includes('id="' + id + '"')));
+const qcPressSrc = fs.readFileSync(new URL('../js/qc-press.js', import.meta.url), 'utf8');
+check('ĐƠN VỊ MPa (16/10/2026): form nhập + thẻ ngày + bảng QC đều theo MPa — KHÔNG còn "Kg/cm²"',
+  idxHtml.includes('Lực Ép Ngang (MPa)') && idxHtml.includes('Lực Ép Đứng (MPa)') &&
+  !idxHtml.includes('Kg/cm²') && !pressSrc.includes('Kg/cm²') && !qcPressSrc.includes('Kg/cm²'));
+check('ĐƠN VỊ MPa: giữ NGUYÊN số liệu (không quy đổi 0,098) — 18 vẫn là 18',
+  idxHtml.includes('placeholder="VD: 18"') && idxHtml.includes('placeholder="VD: 22"') &&
+  !pressSrc.includes('0.0980665') && !pressSrc.includes('forceUnit'));
 check('FORM: Thành phẩm + Số Lượng TP CÙNG DÒNG (.press-fp-row) · SL nhập tay (không còn "Tự động tính từ ván thô")',
   idxHtml.includes('press-fp-row') && !idxHtml.includes('Tự động tính từ ván thô'));
 check('FORM: chú thích dài đã chuyển sang title (không còn nhãn "(1 đến 3 loại — gõ kí tự để thấy gợi ý)")',
@@ -593,8 +600,8 @@ state.pressYearFilter = 'all';
 state.pressWeekFilter = 'all';
 press.renderX2EpVanDayCards();
 const techHtml = String(document.getElementById('x2-epv-day-cards').innerHTML || '');
-check('THẺ NGÀY: hiện Thông số KT (Ép ngang 18 · Ép đứng 22 · 120°C · 25 phút/lượt)',
-  techHtml.includes('Ép ngang 18 Kg/cm²') && techHtml.includes('Ép đứng 22 Kg/cm²') &&
+check('THẺ NGÀY: hiện Thông số KT theo MPa (Ép ngang 18 · Ép đứng 22 · 120°C · 25 phút/lượt)',
+  techHtml.includes('Ép ngang 18 MPa') && techHtml.includes('Ép đứng 22 MPa') &&
   techHtml.includes('120°C') && techHtml.includes('25 phút/lượt'));
 check('THẺ NGÀY: hiện TÊN keo + TÊN phụ gia cạnh số kg', techHtml.includes('Keo UF') && techHtml.includes('Bột mì'));
 check('THẺ NGÀY: giờ HC/TC hiển thị lại đầy đủ (không còn stub)', techHtml.includes('h HC') && techHtml.includes('h TC'));

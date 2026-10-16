@@ -264,8 +264,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           <thead><tr>
             <th>Tên ván/thanh</th>
             <th style="text-align:right;">Số lượng</th>
-            <th style="text-align:right;">Lực ép ngang (Kg/cm²)</th>
-            <th style="text-align:right;">Lực ép đứng (Kg/cm²)</th>
+            <th style="text-align:right;">Lực ép ngang (MPa)</th>
+            <th style="text-align:right;">Lực ép đứng (MPa)</th>
             <th style="text-align:right;">Nhiệt độ (°C)</th>
             <th style="text-align:right;">Thời gian ép (phút/lượt)</th>
             <th>Tên keo</th>

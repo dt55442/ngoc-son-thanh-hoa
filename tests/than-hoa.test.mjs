@@ -125,12 +125,13 @@ check('FORM: mặc định Sấy 1 + ngày hôm nay + 2 danh sách (nguồn/vị
   document.getElementById('al-source-panel').hidden === true &&
   document.getElementById('al-location-panel').hidden === true);
 const srcList = document.getElementById('al-source-list');
-check('FORM: danh sách nguồn = thẻ KHÔNG ô tick, 2 DÒNG (Vị trí·KT·Loại·SL + chip Dùng cho + badge ngày màu)',
+check('FORM: thẻ nguồn Sấy 1 = 2 DÒNG — Dòng 1 k.thước · loại · NGÀY CHỌN NAN; Dòng 2 chip TỒN màu + chip Dùng cho',
   srcList.innerHTML.includes('data-al-pick="cn-1"') &&
   !srcList.innerHTML.includes('al-card-check') &&
-  srcList.innerHTML.includes('— · 1250×18×7 · A1 · 500 thanh (còn)') &&
+  srcList.innerHTML.includes('1250×18×7 · A1 · Chọn nan 16/09/26') &&
+  srcList.innerHTML.includes('al-stock-chip') &&
+  srcList.innerHTML.includes('còn 500/500 thanh') &&
   srcList.innerHTML.includes('al-use-tag') &&
-  srcList.innerHTML.includes('Dùng cho theo form') === false &&
   /class="al-use-tag use-van">Ván</.test(srcList.innerHTML));
 check('FORM: có ô chọn "Dùng Cho" (Ván/Bullig), mặc định Ván',
   !!document.getElementById('al-use-for') &&
@@ -143,10 +144,13 @@ check('FORM: bấm 1 thẻ = chọn 1 nguồn (tick xanh) + đếm số nguồn 
   bm.alTogglePick('cn-1').length === 1 &&
   document.getElementById('al-picked-count').textContent === '1 đã chọn' &&
   document.getElementById('al-source-list').innerHTML.includes('al-card picked'));
-check('FORM: ô "Thông Tin Lấy Từ Nguồn" hiện chi tiết nguồn đã chọn (cỡ nan · phân loại · số lượng sẽ tạo)',
-  document.getElementById('al-source-info').innerHTML.includes('1250 × 18 × 7 mm') &&
-  document.getElementById('al-source-info').innerHTML.includes('A1') &&
-  document.getElementById('al-source-info').innerHTML.includes('tạo lô 500 thanh'));
+check('FORM: "Thông Tin Lấy Từ Nguồn" — mỗi thẻ 1 DÒNG có NGÀY CHỌN NAN + Tồn + Ô NHẬP SỐ LƯỢNG tạo lô (mặc định = tồn)',
+  (() => {
+    const h = document.getElementById('al-source-info').innerHTML;
+    return h.includes('1250 × 18 × 7 mm') && h.includes('A1') &&
+      h.includes('Chọn nan 16/09/26') && h.includes('Tồn 500/500') &&
+      h.includes('data-al-qty="cn-1"') && h.includes('value="500"');
+  })());
 check('FORM: "Chọn tất cả" chọn hết nguồn khả dụng · "Bỏ chọn" xoá hết',
   bm.alPickAll().length === 2 && bm.alClearPicks().length === 0 &&
   document.getElementById('al-picked-count').textContent === 'Chưa chọn');
@@ -242,6 +246,61 @@ check('SẤY 1: Dùng Cho lấy từ form (mặc định Ván)', bNew1.useFor ==
 check('SẤY 1: dùng hết 2 thẻ nan → không còn nguồn khả dụng + form đóng lại',
   bm.availableSay1Cards().length === 0 &&
   !document.getElementById('modal-add-lot').classList.contains('show'));
+
+// ─── B2. SẤY 1 — NHẬP SỐ LƯỢNG RIÊNG: 1 THẺ CHIA THÀNH NHIỀU LÔ (16/10/2026) ──
+state.xuong2ChonNanThoRecords.push(
+  { id: 'cn-3', baothoId: 'bt-1', date: '2026-09-18', dims: [1250, 24, 8], sizeKey: '1250×24×8', cls: 'A', quantity: 5000, unitVol: 0.00024, volume: 1.2, createdAt: '2026-09-18T04:00:00.000Z' }
+);
+bm.openAddLotModal();
+bm.alSetLocation('LS16');            // mở form reset vị trí → chọn lại vị trí để Lưu được
+bm.alTogglePick('cn-3');
+check('NHẬP SỐ LƯỢNG: ô nhập của thẻ 5.000 thanh có max = tồn 5.000 + giá trị mặc định = 5.000',
+  (() => {
+    const h = document.getElementById('al-source-info').innerHTML;
+    return h.includes('data-al-qty="cn-3"') && h.includes('max="5000"') && h.includes('value="5000"') &&
+      h.includes('Tồn 5.000/5.000');
+  })());
+// Nhập 2.000 → tóm tắt theo SỐ ĐANG NHẬP (không phải tồn) + clamp khi vượt
+bm.alOnCardQtyInput({ target: { value: '2000', getAttribute: (k) => (k === 'data-al-qty' ? 'cn-3' : null) } });
+check('NHẬP SỐ LƯỢNG: nhập 2.000 → tóm tắt nguồn = "1 nguồn · 2.000 thanh" (theo số đang nhập)',
+  document.getElementById('al-sum-src').textContent === '1 nguồn · 2.000 thanh' &&
+  bm.alCardQtyOf('cn-3') === 2000);
+check('CHẶN VƯỢT TỒN: nhập 9.999 (vượt tồn 5.000) → tự điều về 5.000',
+  (() => {
+    const inp = { value: '9999', getAttribute: (k) => (k === 'data-al-qty' ? 'cn-3' : null) };
+    const v = bm.alOnCardQtyInput({ target: inp });
+    return v === 5000 && inp.value === '5000' && bm.alCardQtyOf('cn-3') === 5000;
+  })());
+// Chốt lại 2.000 rồi LƯU → lô 2.000, thẻ còn 3.000 (chia 1 thẻ thành nhiều lô)
+bm.alOnCardQtyInput({ target: { value: '2000', getAttribute: (k) => (k === 'data-al-qty' ? 'cn-3' : null) } });
+document.getElementById('al-date').value = '2026-09-18';
+bm.handleAddLotSubmit({ preventDefault(){} });
+const bPart1 = state.batches.find(b => b.sourceChonNanId === 'cn-3');
+check('CHIA LÔ (1/2): lô Sấy 1 tạo ra = 2.000 thanh (KHÔNG lấy nguyên 5.000) + link thẻ nan nguồn',
+  !!bPart1 && bPart1.quantity === 2000 && bPart1.stage === 'say1' && bPart1.length === 1250 && bPart1.width === 24);
+check('CHIA LÔ (1/2): thẻ nan còn 3.000/5.000 → vẫn hiện trong danh sách nguồn',
+  bm.nanCardRemainingOf(state.xuong2ChonNanThoRecords.find(r => r.id === 'cn-3')) === 3000 &&
+  bm.availableSay1Cards().some(r => r.id === 'cn-3'));
+// Lượt 2: chọn lại thẻ đó → mặc định = phần CÒN LẠI 3.000 → lưu hết
+bm.openAddLotModal();
+bm.alSetLocation('LS16');
+bm.alTogglePick('cn-3');
+check('CHIA LÔ (2/2): mở lại form — ô nhập mặc định = phần CÒN LẠI 3.000 (không phải tổng 5.000)',
+  (() => {
+    const h = document.getElementById('al-source-info').innerHTML;
+    return h.includes('Tồn 3.000/5.000') && h.includes('value="3000"') && h.includes('(đã dùng 2.000)');
+  })());
+document.getElementById('al-date').value = '2026-09-18';
+bm.handleAddLotSubmit({ preventDefault(){} });
+check('CHIA LÔ (2/2): lưu tiếp 3.000 → thẻ hết (0/5.000) + không còn nguồn khả dụng',
+  bm.nanCardRemainingOf(state.xuong2ChonNanThoRecords.find(r => r.id === 'cn-3')) === 0 &&
+  bm.availableSay1Cards().length === 0);
+check('CHIA LÔ: 2 lô cùng thẻ nan nguồn — mã lô khác nhau, tổng = 5.000 thanh',
+  state.batches.filter(b => b.sourceChonNanId === 'cn-3').length === 2 &&
+  state.batches.filter(b => b.sourceChonNanId === 'cn-3').reduce((s, b) => s + b.quantity, 0) === 5000);
+// Dọn dữ liệu test B2 — trả trạng thái về như trước (các khối sau đếm vị trí theo số lô)
+state.batches = state.batches.filter(b => b.sourceChonNanId !== 'cn-3');
+state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords.filter(r => r.id !== 'cn-3');
 
 // ─── C. "THÊM LÔ SẤY MỚI" — SẤY 2 (chuyển lô từ Kho) ──────────
 bm.openAddLotModal();
@@ -520,7 +579,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v252/.test(swJs));
+  /nha-may-ngoc-son-v259/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&

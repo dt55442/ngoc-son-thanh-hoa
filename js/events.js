@@ -2,7 +2,7 @@
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
-import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
+import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
 import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
@@ -31,7 +31,7 @@ import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupp
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
 import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
 // Thẻ TRUY XUẤT ĐẦU VÀO → ĐẦU RA (Vùng Nâng Cao — js/trace.js)
-import { setTraceMode, setTraceProduct, shiftTracePeriod, toggleTraceDetail } from './trace.js';
+import { closeTraceSizePanel, positionTraceSizePanel, setTraceMode, setTraceProduct, setTraceSizeQuery, shiftTracePeriod, toggleTraceDetail, toggleTraceSizePanel, traceSizePanelOpen, TRACE_SIZE_BTN_ID, TRACE_SIZE_PANEL_ID } from './trace.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
 import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
@@ -266,6 +266,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Nguồn: nút "Chọn Lô Nan" mở danh sách THẺ (chọn được NHIỀU nguồn cùng lúc)
     safeOn('al-source-btn', 'click', alToggleSourcePanel);
     safeOn('al-source-list', 'click', alOnSourceListClick);
+    safeOn('al-source-info', 'input', alOnCardQtyInput);   // ô nhập SỐ LƯỢNG của từng thẻ nan (Sấy 1)
     safeOn('al-source-search', 'input', (e) => alSetSourceQuery(e.target.value));
     // Ô TÌM THEO SỐ LƯỢNG (tách riêng): CHỈ khớp số lượng — lọc KẾT HỢP với ô tìm nhanh
     safeOn('al-source-qty-search', 'input', (e) => alSetSourceQtyQuery(e.target.value));
@@ -1332,10 +1333,34 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     const traceCard = document.getElementById('trace-card');
     if (traceCard) {
       traceCard.addEventListener('click', (e) => {
-        const btn = e.target && e.target.closest ? e.target.closest('[data-trace-mode]') : null;
+        const t = e.target;
+        // Ô KPI "Kg tươi / 1 thanh nan" → mở/đóng PANEL NỔI theo cỡ thanh
+        if (t && t.closest && t.closest('#' + TRACE_SIZE_BTN_ID)) { toggleTraceSizePanel(); return; }
+        if (t && t.closest && t.closest('#trace-size-close')) { closeTraceSizePanel(); return; }
+        const btn = t && t.closest ? t.closest('[data-trace-mode]') : null;
         if (btn) setTraceMode(btn.getAttribute('data-trace-mode'));
       });
+      // Ô tìm nhanh trong panel (uỷ nhiệm input — panel vẽ lại mỗi lần đổi kỳ)
+      traceCard.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t && t.id === 'trace-size-search') setTraceSizeQuery(t.value);
+      });
     }
+    // PANEL NỔI: bấm RA NGOÀI thì tự đóng; cuộn bất kỳ vùng nào / đổi cỡ màn
+    // hình thì NEO LẠI theo nút (giống dropdown nổi của thẻ Xưởng 2).
+    document.addEventListener('click', (e) => {
+      if (!traceSizePanelOpen()) return;
+      const t = e.target;
+      if (t && t.closest && (t.closest('#' + TRACE_SIZE_PANEL_ID) || t.closest('#' + TRACE_SIZE_BTN_ID))) return;
+      closeTraceSizePanel();
+    });
+    window.addEventListener('scroll', positionTraceSizePanel, true);
+    window.addEventListener('resize', positionTraceSizePanel);
+    // Esc: đóng panel nổi theo cỡ thanh trước (nhẹ nhất, đang trên cùng)
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !traceSizePanelOpen()) return;
+      closeTraceSizePanel();
+    });
     // ── THẺ TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (đầu tab Tổng Quan — js/capacity.js) ──
     // Nút tên = đổi Xưởng 2 ⇄ Xưởng 1 · Tuần⇄Tháng + ô chọn tháng = đổi KỲ xem ·
     // ‹ › = nhảy 1 kỳ (tự xổ tầng công đoạn) · In báo cáo (thông tin chung mọi

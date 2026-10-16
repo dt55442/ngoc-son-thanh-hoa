@@ -233,7 +233,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         const d = baoTinhDisplay(r);
         return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
-      rateOf: m => baoTinhRateOf(m, 'tinh')   // bảng tổng hợp trộn 3 loại → dùng ĐM "Bào tinh"
+      rateOf: m => baoTinhRateOf(m)   // định mức ĐÃ GỘP 1 chỉ số Bào tinh (dùng chung cả 3 nhánh)
     },
     {
       id: 'epvan', ws: 'x2', label: 'Ép Ván', unit: 'm³/h', unitQty: 'm³', cardId: 'x2-ep-van-card', kind: 'cap',

@@ -208,6 +208,10 @@ check('D5: traceInPeriod tôn trọng kỳ đang chọn',
 
 // ═══ E. TRUY XUẤT THEO TỪNG MÃ VÁN (ƯỚC TÍNH PHÂN BỔ) ═══════════
 setPeriod('month', '2026-10');
+// HỆ SỐ CHUỖI của kỳ mẫu: kg tươi cho 1 thanh nan
+//   = (kg ống bổ đạt ÷ thanh bào thô) ÷ tỷ lệ ống/tươi
+//   = (5.155 ÷ 2.600) ÷ (5.559 ÷ 12.100)
+const KPT = (5155 / 2600) / (5559 / 12100);
 const prodAll = trace.traceProductRows();
 check('E1: 1 mã ván có ép trong kỳ', prodAll.rows.length === 1 && prodAll.rows[0].productId === 'rate-van');
 check('E2: nhãn mã ván = "Ván 1200x382x12"', prodAll.rows[0].label === 'Ván 1200x382x12');
@@ -215,15 +219,22 @@ check('E3: ĐVT = Tấm · Dùng nan = Ván · Hiệu suất 70%',
   prodAll.rows[0].unit === 'Tấm' && prodAll.rows[0].nanUse === 'Ván' && near(prodAll.rows[0].effPct, 70, 0.001));
 check('E4: sản lượng 200 tấm · 1,10016 m³', near(prodAll.rows[0].outQty, 200, 0.5) && near(prodAll.rows[0].m3, 1.10016, 0.0001));
 check('E5: chiếm 100% thể tích kỳ (chỉ 1 mã)', near(prodAll.rows[0].sharePct, 100, 0.01));
-check('E6: kg tươi phân bổ = 17.100 kg', near(prodAll.rows[0].tuoiKg, 17100, 0.5));
-check('E7: Kg tươi / 1 m³ = 17.100 ÷ 1,10016 ≈ 15.543',
-  near(prodAll.rows[0].kgPerM3, 17100 / 1.10016, 0.5));
-check('E8: Kg tươi / 1 tấm = 17.100 ÷ 200 = 85,5', near(prodAll.rows[0].kgPerUnit, 85.5, 0.01));
+check('E5b: hệ số kg tươi/1 thanh = hệ số cửa sổ tham chiếu (T10/2026) · kỳ này cũng đủ dữ liệu',
+  near(prodAll.kgPerThanh, KPT, 0.0001) && prodAll.useRef === true &&
+  near(prodAll.ownKgPerThanh, KPT, 0.0001) && prodAll.periodComplete === true);
+check('E6: kg tươi phân bổ = thanh ĐM (200 × 40 ÷ 0,7) × hệ số chuỗi',
+  near(prodAll.rows[0].tuoiKg, 200 * (40 / 0.7) * KPT, 0.5));
+check('E7: Kg tươi / 1 m³ = (thanh ĐM × KPT) ÷ 1,10016',
+  near(prodAll.rows[0].kgPerM3, (200 * (40 / 0.7) * KPT) / 1.10016, 0.5));
+check('E8: Kg tươi / 1 tấm = (thanh ĐM × KPT) ÷ 200 = 40 ÷ 0,7 × KPT',
+  near(prodAll.rows[0].kgPerUnit, (40 / 0.7) * KPT, 0.02));
 check('E9: Thanh ĐM / tấm = 40 ÷ 0,7 = 57,14', near(prodAll.rows[0].nanPerUnit, 40 / 0.7, 0.001));
 check('E10: thể tích 1 tấm = 0,0055008 m³', near(prodAll.rows[0].unitVol, 0.0055008, 0.0000001));
-check('E11: cột "nếu đúng ĐM nan" = (thanh/m³) ÷ (thanh/kg tươi kỳ)',
-  near(prodAll.rows[0].kgPerM3LyThuyet, (1 / 0.0055008) * (40 / 0.7) / (2600 / 17100), 1));
-check('E12: tổng kỳ = 1,10016 m³ · 17.100 kg', near(prodAll.totalM3, 1.10016, 0.0001) && near(prodAll.totalTuoi, 17100, 0.5));
+check('E11: cột "nếu đúng ĐM nan" = (thanh/m³ theo ĐM) × hệ số chuỗi',
+  near(prodAll.rows[0].kgPerM3LyThuyet, (1 / 0.0055008) * (40 / 0.7) * KPT, 1));
+check('E12: tổng kỳ = 1,10016 m³ · kg tươi chia = thanh ĐM × hệ số chuỗi',
+  near(prodAll.totalM3, 1.10016, 0.0001) && near(prodAll.totalTuoi, 200 * (40 / 0.7) * KPT, 1) &&
+  near(prodAll.tuoiNhap, 17100, 0.5));
 
 // Phân bổ 2 mã: mã B chiếm 3/4 thể tích → nhận 3/4 kg tươi
 state.materialRates.push({ id: 'rate-van-b', product: '1200x600x12', nanUse: 'Ván', unit: 'Tấm',
@@ -234,14 +245,16 @@ const prod2 = trace.traceProductRows();
 const mA = prod2.rows.find(r => r.productId === 'rate-van');
 const mB = prod2.rows.find(r => r.productId === 'rate-van-b');
 check('E13: 2 mã trong kỳ · sắp theo thể tích giảm dần', prod2.rows.length === 2 && prod2.rows[0].productId === 'rate-van');
+const W2 = 200 * (40 / 0.7) + 100 * (20 / 0.7);   // tổng thanh ĐM 2 mã (A 80% · B 20%)
 check('E14: phân bổ theo THANH ĐỊNH MỨC — mã A (11.428,6 thanh ĐM) nhận 80% kg tươi, mã B (2.857,1) nhận 20%',
   near(mA.sharePct, 80, 0.05) && near(mB.sharePct, 20, 0.05) &&
-  near(mA.tuoiKg, 17100 * 0.8, 0.5) && near(mB.tuoiKg, 17100 * 0.2, 0.5));
+  near(mA.tuoiKg, W2 * KPT * 0.8, 0.5) && near(mB.tuoiKg, W2 * KPT * 0.2, 0.5));
 check('E15: Kg tươi / 1 m³ KHÁC NHAU giữa 2 mã (A nặng định mức nan hơn → cao hơn)',
-  near(mA.kgPerM3, (17100 * 0.8) / 1.10016, 0.5) &&
-  near(mB.kgPerM3, (17100 * 0.2) / 0.864, 0.5) &&
+  near(mA.kgPerM3, (W2 * KPT * 0.8) / 1.10016, 0.5) &&
+  near(mB.kgPerM3, (W2 * KPT * 0.2) / 0.864, 0.5) &&
   mA.kgPerM3 > mB.kgPerM3);
-check('E16: tổng 2 mã vẫn = 17.100 kg tươi (không thất lạc)', near(mA.tuoiKg + mB.tuoiKg, 17100, 1));
+check('E16: tổng 2 mã = tổng thanh ĐM × hệ số chuỗi (không thất lạc)',
+  near(mA.tuoiKg + mB.tuoiKg, W2 * KPT, 1));
 setPeriod('month', '2026-10', 'rate-van-b');
 const prodOne = trace.traceProductRows();
 check('E17: chọn 1 mã → bảng chỉ còn đúng mã đó', prodOne.rows.length === 1 && prodOne.rows[0].productId === 'rate-van-b');
@@ -287,7 +300,7 @@ const rTha = p3.rows.find(r => r.productId === 'rate-thanh');
 check('E19: gom đủ 3 mã từ 3 nguồn khác nhau (ép ván · Bullig · kiểm thanh)',
   p3.rows.length === 3 && !!rVan && !!rBul && !!rTha && !p3.rows.some(r => r.unlinked));
 check('E20: VÁN — thanh dùng = sticks của lượt ép (9.384 + 1.000 = 10.384)',
-  near(rVan.thanhReal, 10384, 0.5) && rVan.basis === 'thanh thật' && rVan.sources === 'ép ván');
+  near(rVan.thanhReal, 10384, 0.5) && rVan.basis.startsWith('thanh thật') && rVan.sources === 'ép ván');
 check('E21: BULLIG — thanh thô đã gia công 6.000 · sản lượng 30.000 · 36 m³',
   near(rBul.thanhReal, 6000, 0.5) && near(rBul.outQty, 30000, 0.5) && near(rBul.m3, 36, 0.001) &&
   rBul.sources === 'gia công Bullig');
@@ -297,12 +310,12 @@ check('E23: phân bổ theo thanh đo thật — 10.384 / 6.000 / 2.000 trên t�
   near(rVan.sharePct, (10384 / 18384) * 100, 0.02) && near(rBul.sharePct, (6000 / 18384) * 100, 0.02) &&
   near(rTha.sharePct, (2000 / 18384) * 100, 0.02));
 check('E24: Kg tươi / 1 m³ KHÁC NHAU giữa 3 mã (không đánh đồng)',
-  near(rVan.kgPerM3, (17100 * 10384 / 18384) / 1.10016, 0.5) &&
-  near(rBul.kgPerM3, (17100 * 6000 / 18384) / 36, 0.5) &&
-  near(rTha.kgPerM3, (17100 * 2000 / 18384) / 0.204288, 0.5) &&
+  near(rVan.kgPerM3, (10384 * KPT) / 1.10016, 0.5) &&
+  near(rBul.kgPerM3, (6000 * KPT) / 36, 0.5) &&
+  near(rTha.kgPerM3, (2000 * KPT) / 0.204288, 0.5) &&
   rVan.kgPerM3 !== rBul.kgPerM3 && rBul.kgPerM3 !== rTha.kgPerM3);
-check('E25: tổng kg tươi phân bổ 3 mã = đúng 17.100 kg',
-  near(rVan.tuoiKg + rBul.tuoiKg + rTha.tuoiKg, 17100, 1));
+check('E25: tổng kg tươi phân bổ 3 mã = tổng thanh (18.384) × hệ số chuỗi',
+  near(rVan.tuoiKg + rBul.tuoiKg + rTha.tuoiKg, 18384 * KPT, 1));
 
 // ── CHUỖI 2 BƯỚC ÉP VÁN: tạo VÁN THÔ (từ thanh nan) → ÉP THÀNH PHẨM (từ ván thô)
 // Thực tế dữ liệu: lượt tạo ván thô KHÔNG gắn mã (chưa biết thành phẩm), còn lượt
@@ -334,16 +347,16 @@ const rUn = p5.rows.find(r => r.unlinked);
 check('E29: ván thô dở dang → dòng "Chưa gắn mã" ở CUỐI bảng, thanh = phần nan chưa gắn mã',
   !!rUn && p5.rows[p5.rows.length - 1].unlinked === true &&
   rUn.label.includes('Chưa gắn mã') && near(rUn.thanhReal, 3000, 0.5));
-check('E30: dòng "Chưa gắn mã" VẪN được chia kg tươi + tổng không đổi 17.100 kg',
-  rUn.tuoiKg > 0 && near(p5.rows.reduce((s, r) => s + r.tuoiKg, 0), 17100, 1));
+check('E30: dòng "Chưa gắn mã" VẪN được chia kg tươi + tổng = tổng thanh (10.384+5.000+6.000+2.000+3.000) × hệ số',
+  rUn.tuoiKg > 0 && near(p5.rows.reduce((s, r) => s + r.tuoiKg, 0), 26384 * KPT, 1));
 
 // Mã KHÔNG có số đo thật → dùng thanh định mức (fallback)
 state.pressRecords = state.pressRecords.filter(r => r.id === 'p1');
 state.pressRecords[0].sticks = [];
 const p6 = trace.traceProductRows();
 const rVanNo = p6.rows.find(r => r.productId === 'rate-van');
-check('E31: mã không có sticks → basis chuyển sang "thanh định mức"',
-  rVanNo.thanhReal === 0 && rVanNo.basis === 'thanh định mức' && near(rVanNo.thanhTheory, 200 * (40 / 0.7), 0.5));
+check('E31: mã không có sticks → basis chuyển sang "thanh định mức × KL ống/1 thanh"',
+  rVanNo.thanhReal === 0 && rVanNo.basis.startsWith('thanh định mức') && near(rVanNo.thanhTheory, 200 * (40 / 0.7), 0.5));
 
 // Khôi phục về 1 mã để kiểm mục F (giao diện)
 state.pressRecords = [
@@ -368,7 +381,13 @@ const prodHtml = els.get('trace-products').innerHTML;
 check('F1: dải KPI có chỉ số CHÍNH "Luồng tươi / 1 m³"', kpiHtml.includes('Luồng tươi / 1 m³'));
 check('F2: KPI có "Luồng tươi nhập" + "Sản phẩm ra" + "Sản lượng quy đổi"',
   kpiHtml.includes('Luồng tươi nhập') && kpiHtml.includes('Sản phẩm ra') && kpiHtml.includes('Sản lượng quy đổi'));
-check('F3: KPI hiện số kg tươi/1 m³ ≈ 15.543', kpiHtml.includes('15.543') || kpiHtml.includes('15.542'));
+// Hệ số chuỗi của kỳ F (định mức 200 × 40 ÷ 0,7 = 11.428,57 thanh; kg = thanh × KPT)
+const KPI_KGM3_F = (200 * (40 / 0.7) * KPT) / 1.10016;
+check('F3: KPI hiện số kg tươi/1 m³ theo hệ số chuỗi (' + Math.round(KPI_KGM3_F) + ')',
+  kpiHtml.includes(KPI_KGM3_F.toLocaleString('vi-VN', { maximumFractionDigits: 0 })) ||
+  kpiHtml.includes((KPI_KGM3_F - 1).toLocaleString('vi-VN', { maximumFractionDigits: 0 })));
+check('F3b: KPI có ô "Kg tươi / 1 thanh nan" (kiểm tra độ hợp lý)',
+  kpiHtml.includes('Kg tươi / 1 thanh nan'));
 check('F4: bảng chuỗi có đủ 7 chặng',
   chainHtml.includes('Luồng tươi nhập') && chainHtml.includes('Cắt chọn → Ống luồng') &&
   chainHtml.includes('Bổ ống → Ống bổ đạt') && chainHtml.includes('Chạy máy bào thô') &&
@@ -464,7 +483,7 @@ check('H8: dashboard.js gọi renderTraceCard trong renderDashboardCharts (chỉ
   dashSrc.includes("from './trace.js'") && dashSrc.includes('if (canViewAdvanced()) renderTraceCard();'));
 
 check('H9: sw.js có ./js/trace.js trong APP_SHELL', swJs.includes("'./js/trace.js'"));
-check('H10: sw.js đã tăng cache lên v252', /nha-may-ngoc-son-v252/.test(swJs));
+check('H10: sw.js đã tăng cache lên v252', /nha-may-ngoc-son-v259/.test(swJs));
 
 check('H11: styles.css có khối THẺ TRUY XUẤT (.trace-card/.trace-kpi/.trace-table)',
   cssSrc.includes('THẺ TRUY XUẤT ĐẦU VÀO → ĐẦU RA') &&
@@ -499,7 +518,7 @@ check('H19: trace.js lấy ĐÚNG nguồn đo thật từng loại (chuỗi 2 b�
   traceSrc.includes('nanPerVtPiece') && traceSrc.includes('TRACE_NAN_PIECE_MAX_VOL') &&
   traceSrc.includes('bulligDisplay') && traceSrc.includes('bulligPlanProductId') &&
   traceSrc.includes('qcThanhPlanProductId') && traceSrc.includes('TRACE_UNLINKED_ID') &&
-  traceSrc.includes("basis: 'thanh thật'"));
+  traceSrc.includes("basis: 'thanh thật × KL ống/1 thanh'"));
 
 // ═══ I. 4 YÊU CẦU BỔ SUNG (15/10/2026) ══════════════════════════
 // I1. BỎ CỘT "HIỆU SUẤT" — chỉ giữ hiệu suất tính ngầm ở cột "nếu đúng ĐM nan"
@@ -546,6 +565,237 @@ check('I14: biểu đồ vùng nâng cao cũ ĐÃ DỌN hẳn (backup trước k
   expSrc.includes("captureAutoBackup(`Trước khi dọn") && expSrc.includes("trackDeleted('customCharts'") &&
   expSrc.includes("c.zone !== 'advanced'"));
 
+// ═══ J. HIỆU CHUẨN KỲ THIẾU + CHUẨN HÓA CỠ + CẢNH BÁO (15/10/2026) ══
+// J1. CHUẨN HÓA CỠ — mọi ký tự phân cách (x / × / * / dấu cách) về cùng một khóa
+check('J1: chuẩn hóa cỡ — "1200x340x18" / " 1200 * 340 * 18 " đều về "1200×340×18"',
+  trace.traceNormSize('1200x340x18') === '1200×340×18' &&
+  trace.traceNormSize(' 1200 * 340 * 18 ') === '1200×340×18' &&
+  trace.traceNormSize('1200×340×18') === '1200×340×18');
+check('J2: chuỗi không phải kích thước → giữ nguyên (đã cắt khoảng trắng)',
+  trace.traceNormSize('  lô K10  ') === 'lô K10');
+
+// J2. CỬA SỔ THAM CHIẾU = các THÁNG ĐẦY ĐỦ (tháng 9 thiếu cắt/bổ/bào thô → loại)
+const refW = trace.traceReferenceWindow();
+check('J3: cửa sổ tham chiếu = đúng tháng đầy đủ 2026-10 · nhãn "T10/2026"',
+  refW.complete === true && refW.months.length === 1 && refW.months[0] === '2026-10' && refW.label === 'T10/2026');
+check('J4: hệ số tham chiếu = hệ số chuỗi của tháng đầy đủ', near(refW.kgPerThanh, KPT, 0.0001));
+
+// J3. KỲ THIẾU DỮ LIỆU ĐẦU VÀO → MƯỢN hệ số + GẮN CỜ (thay vì ra 0 / số ảo)
+state.materialRates = [
+  { id: 'rate-van', product: '1200x382x12', nanUse: 'Ván', unit: 'Tấm',
+    nan1: '1250×18×7', nan1Qty: 40, nan2: '', nan2Qty: 0, nan3: '', nan3Qty: 0, glue: 0, additive: 0, efficiency: 70 }
+];
+state.xuong2BulligRecords = []; state.qcFinalRecords = [];
+state.pressRecords = [
+  { id: 'p-dec', date: '2026-12-05', week: 'Tuần 49', year: 2026, productId: 'rate-van', finishedQty: 100,
+    vanTho: [{ vtDim: '1200x382x12', vtQty: 100 }],
+    sticks: [{ nanKey: '1250×18×7', sticks: 5000 }] }
+];
+setPeriod('month', '2026-12', '');
+const pDec = trace.traceProductRows();
+check('J5: kỳ 2026-12 KHÔNG có cắt/bổ/bào thô → MƯỢN hệ số tham chiếu (useRef)',
+  pDec.useRef === true && near(pDec.kgPerThanh, KPT, 0.0001) && pDec.refLabel === 'T10/2026');
+check('J6: kg tươi kỳ thiếu vẫn tính được = thanh thật × hệ số tham chiếu (5.000 × KPT)',
+  near(pDec.rows[0].tuoiKg, 5000 * KPT, 0.5) && pDec.rows[0].basis.includes('hệ số tham chiếu T10/2026') &&
+  pDec.periodComplete === false);
+trace.renderTraceCard();
+check('J7: (B2) chip div ĐÃ GỠ — nội dung "kỳ thiếu đầu vào" chuyển vào tooltip ô KPI',
+  !els.get('trace-kpis').innerHTML.includes('trace-ref-chip') &&
+  els.get('trace-kpis').innerHTML.includes('KỲ THIẾU ĐẦU VÀO') &&
+  els.get('trace-kpis').innerHTML.includes('CỬA SỔ THAM CHIẾU T10/2026') &&
+  els.get('trace-kpis').innerHTML.includes('trace-size-btn'));
+
+// J4. VÁN THÔ GHI SAI CỠ → CẢNH BÁO CỨNG (trước đây im lặng bỏ qua)
+state.pressRecords.push({ id: 'p-bad', date: '2026-12-06', week: 'Tuần 49', year: 2026,
+  productId: 'rate-van', finishedQty: 5, vanTho: [], sticks: [{ nanKey: '1200×999×18', sticks: 10 }] });
+const pBad = trace.traceProductRows();
+check('J8: tấm ván thô ghi cỡ KHÔNG khớp → ĐẾM VÀO CẢNH BÁO (không im lặng bỏ qua)',
+  pBad.unmatchedTotal === 10 && pBad.rows.find(r => r.productId === 'rate-van').unmatchedPieces === 10);
+trace.renderTraceCard();
+const prodHtmlBad = els.get('trace-products').innerHTML;
+check('J9: bảng hiện DẢI CẢNH BÁO đỏ + chip "⚠ cỡ lệch" trên dòng mã',
+  prodHtmlBad.includes('trace-warn') && prodHtmlBad.includes('KHÔNG khớp lượt tạo ván thô nào') &&
+  prodHtmlBad.includes('trace-tag-warn') && prodHtmlBad.includes('⚠ cỡ lệch'));
+
+// J5. NAN MUA NGOÀI — đếm riêng, KHÔNG cộng vào chuỗi, có ô quy đổi tương đương
+state.pressRecords = state.pressRecords.filter(r => r.id === 'p-dec');
+// GIỮ NGUYÊN các lượt chọn nan cũ (cn-1..3 thuộc tháng 10) — chỉ THÊM 1 lượt
+// nan MUA NGOÀI ở tháng 12 (nếu thay cả mảng sẽ làm tháng 10 mất dữ liệu bào thô
+// → cửa sổ tham chiếu rỗng, ảnh hưởng các kiểm thử sau).
+state.xuong2ChonNanThoRecords = (state.xuong2ChonNanThoRecords || []).concat([
+  { id: 'cn-ext', baothoId: '', date: '2026-12-05', dims: [1250, 18, 7], unitVol: 0.0001575,
+    quantity: 800, cls: 'A', external: true }
+]);
+const cDec = trace.traceChainData();
+check('J10: nan MUA NGOÀI đếm riêng (800 thanh) và KHÔNG lẫn vào thanh nội bộ chuỗi',
+  near(cDec.chonNanExtThanh, 800, 0.5) && cDec.chonNanThanh === 0);
+trace.renderTraceCard();
+check('J11: KPI có ô "Nan mua ngoài (ngoài chuỗi)" kèm quy đổi tương đương kg tươi',
+  els.get('trace-kpis').innerHTML.includes('Nan mua ngoài (ngoài chuỗi)') &&
+  els.get('trace-kpis').innerHTML.includes('theo hệ số chuỗi'));
+
+// J6. ĐỘ HỢP LÝ VẬT LÝ — kg tươi/1 thanh nan không còn con số vô lý (0,02 kg)
+check('J12: kg tươi / 1 thanh nan nằm trong khoảng hợp lý 0,1–5 kg',
+  pDec.kgPerThanh > 0.1 && pDec.kgPerThanh < 5);
+
+// ═══ K. KHỐI LƯỢNG BÌNH QUÂN THEO TỪNG CỠ THANH (15/10/2026) ════
+// Chuỗi mẫu: 1 lô cắt (10.000 kg vào → 5.000 kg ống luồng) → 1 lượt bổ
+// (5.000 kg ống đem bổ, 200 kg ống loại ⇒ 4.800 kg ống bổ đạt) → 1 lượt bào thô
+// → 2 cỡ chọn nan: 1.000 thanh 1250×18×7 (0,0001575 m³) + 1.000 thanh 1250×24×8
+// (0,00024 m³) ⇒ kg của nhóm chia theo TỈ TRỌNG THỂ TÍCH.
+state.materialRates = [
+  { id: 'rate-van', product: '1200x382x12', nanUse: 'Ván', unit: 'Tấm',
+    nan1: '1250×18×7', nan1Qty: 40, nan2: '', nan2Qty: 0, nan3: '', nan3Qty: 0, glue: 0, additive: 0, efficiency: 70 }
+];
+state.materialRecords = [
+  { id: 'mat-k', date: '2026-10-05', location: 'xuong-2', type: 'Luồng cây xô', supplier: 'Nhà Tế', weight: 10000 }
+];
+state.xuong2CutRecords = [
+  { id: 'cut-k', materialId: 'mat-k', date: '2026-10-05', inputWeight: 10000, klOngLuong: 5000, klCuiDot: 0, klCayLoai: 0 }
+];
+state.xuong2BoOngRecords = [
+  { id: 'bo-k', cutId: 'cut-k', date: '2026-10-05', inputOng: 5000, klOngLoai: 200, klOngBo: 4800 }
+];
+state.xuong2BaoThoRecords = [
+  { id: 'bt-k', boOngId: 'bo-k', date: '2026-10-05', daiText: '1250', rongText: '18', dayText: '7' }
+];
+state.xuong2ChonNanThoRecords = [
+  { id: 'cn-k1', baothoId: 'bt-k', date: '2026-10-05', dims: [1250, 18, 7], unitVol: 0.0001575, quantity: 1000, cls: 'A', external: false },
+  { id: 'cn-k2', baothoId: 'bt-k', date: '2026-10-05', dims: [1250, 24, 8], unitVol: 0.00024, quantity: 1000, cls: 'A', external: false },
+  { id: 'cn-k3', baothoId: 'bt-k', date: '2026-10-05', dims: [1250, 18, 7], unitVol: 0.0001575, quantity: 300, cls: 'reject', external: false },
+  { id: 'cn-k4', baothoId: '', date: '2026-10-05', dims: [1250, 18, 7], unitVol: 0.0001575, quantity: 500, cls: 'A', external: true }
+];
+state.pressRecords = [];
+state.xuong2BulligRecords = [];
+state.qcFinalRecords = [];
+setPeriod('month', '2026-10', '');
+
+// Tỉ trọng thể tích: 1250×18×7 = 0,1575 · 1250×24×8 = 0,24 (m³ cho 1.000 thanh)
+const VOL_A = 0.1575, VOL_B = 0.24, VOL_SUM = VOL_A + VOL_B;
+// (B1 — 15/10/2026) KL tươi = KL ống LUỒNG (5.000 kg) ÷ tỷ lệ ống/tươi 50% = 10.000
+// — SUY RA TỪ ỐNG (trước đây tính từ kg ống BỔ ĐẠT 4.800 → 9.600, lệch pha với cột ống).
+const KG_LUONG_GROUP = 5000;          // kg ống luồng của lô cắt — CƠ SỞ
+const KG_TUOI_GROUP = KG_LUONG_GROUP / 0.5;   // kg tươi suy ra = ống ÷ tỷ lệ ống/tươi
+
+const sizeData = trace.traceOngSizeRows();
+const szA = sizeData.rows.find(r => r.sizeKey === '1250×18×7');
+const szB = sizeData.rows.find(r => r.sizeKey === '1250×24×8');
+check('K1: gom đúng 2 cỡ (bỏ "Loại hẳn" và nan mua ngoài) · tổng thanh = 2.000',
+  sizeData.rows.length === 2 && !!szA && !!szB && near(sizeData.totalThanh, 2000, 0.5) &&
+  near(sizeData.knownThanh, 2000, 0.5));
+check('K2: MỖI CỠ MỘT KHỐI LƯỢNG RIÊNG — cỡ dày hơn (1250×24×8) nặng hơn',
+  szB.kgPerThanhTuoi > szA.kgPerThanhTuoi && szB.kgPerThanhLuong > szA.kgPerThanhLuong);
+check('K3: KL tươi/thanh đúng theo tỉ trọng thể tích (nhóm ' + KG_TUOI_GROUP + ' kg tươi)',
+  near(szA.kgPerThanhTuoi, (KG_TUOI_GROUP * (VOL_A / VOL_SUM)) / 1000, 0.001) &&
+  near(szB.kgPerThanhTuoi, (KG_TUOI_GROUP * (VOL_B / VOL_SUM)) / 1000, 0.001));
+check('K4: KL luồng tương đương/thanh quy về CẮT CHỌN (nhóm ' + KG_LUONG_GROUP + ' kg ống luồng)',
+  near(szA.kgPerThanhLuong, (KG_LUONG_GROUP * (VOL_A / VOL_SUM)) / 1000, 0.001) &&
+  near(szB.kgPerThanhLuong, (KG_LUONG_GROUP * (VOL_B / VOL_SUM)) / 1000, 0.001));
+check('K5: tỷ lệ giữa 2 dòng = KL ống luồng ÷ KL tươi của nhóm (5.000 ÷ 10.000 — tươi SUY TỪ ống)',
+  near(szA.kgPerThanhLuong / szA.kgPerThanhTuoi, KG_LUONG_GROUP / KG_TUOI_GROUP, 0.001));
+check('K6: "Loại hẳn" và nan MUA NGOÀI đếm riêng, KHÔNG vào bảng cỡ',
+  near(sizeData.rejectThanh, 300, 0.5) && near(sizeData.externalThanh, 500, 0.5) &&
+  !sizeData.rows.some(r => String(r.sizeKey).includes('reject')));
+check('K7: bình quân chung = tổng kg ÷ tổng thanh của các cỡ ĐO ĐƯỢC',
+  near(sizeData.kgPerThanhTuoi, KG_TUOI_GROUP / 2000, 0.001) &&
+  near(sizeData.kgPerThanhLuong, KG_LUONG_GROUP / 2000, 0.001));
+
+// MẤT LINK: lượt chọn nan có baothoId không tồn tại → dòng "Không rõ", KHÔNG vào bình quân
+state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords.concat([
+  { id: 'cn-k5', baothoId: 'bt-khong-ton-tai', date: '2026-10-05', dims: [1250, 18, 7], unitVol: 0.0001575, quantity: 400, cls: 'A', external: false }
+]);
+const sizeData2 = trace.traceOngSizeRows();
+const szUnk = sizeData2.rows.find(r => r.isUnknown);
+check('K8: mất link → dòng "Không rõ (mất link)" giữ số thanh, kg để trống',
+  !!szUnk && near(szUnk.thanh, 400, 0.5) && szUnk.kgPerThanhTuoi === null &&
+  sizeData2.rows[sizeData2.rows.length - 1].isUnknown === true);
+check('K9: dòng "Không rõ" KHÔNG tính vào mẫu số bình quân (số không bị hụt)',
+  near(sizeData2.knownThanh, 2000, 0.5) && near(sizeData2.totalThanh, 2400, 0.5) &&
+  near(sizeData2.kgPerThanhTuoi, KG_TUOI_GROUP / 2000, 0.001));
+state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords.filter(r => r.id !== 'cn-k5');
+
+// GIAO DIỆN: panel nổi mở từ ô KPI
+// (stub: getElementById mới tạo phần tử → phải gọi qua document, không dùng els.get)
+const panelEl = () => document.getElementById(trace.TRACE_SIZE_PANEL_ID);
+panelEl().hidden = true;   // mô phỏng thuộc tính `hidden` sẵn có trong index.html
+trace.renderTraceCard();
+check('K10: ô KPI "Kg tươi / 1 thanh nan" là NÚT mở panel (aria + nhãn "chi tiết theo cỡ")',
+  els.get('trace-kpis').innerHTML.includes('id="' + trace.TRACE_SIZE_BTN_ID + '"') &&
+  els.get('trace-kpis').innerHTML.includes('chi tiết theo cỡ') &&
+  els.get('trace-kpis').innerHTML.includes('aria-controls="' + trace.TRACE_SIZE_PANEL_ID + '"'));
+check('K11: panel ĐÓNG mặc định', panelEl().hidden === true &&
+  trace.traceSizePanelOpen() === false);
+trace.toggleTraceSizePanel();
+const panelHtml = panelEl().innerHTML;
+check('K12: bấm nút → panel MỞ, có bảng + 3 cột KL theo thứ tự chuỗi (ống cơ sở · tươi · thực tế) + nút đóng',
+  panelEl().hidden === false && trace.traceSizePanelOpen() === true &&
+  panelHtml.includes('trace-size-table') && panelHtml.includes('KL ống luồng / thanh (cơ sở)') &&
+  panelHtml.includes('KL tươi quy đổi / thanh') && panelHtml.includes('KL thanh thực tế ≈') &&
+  panelHtml.includes('trace-size-close'));
+check('K13: panel có đủ 2 cỡ + dòng TỔNG + ghi chú tỉ trọng thể tích',
+  panelHtml.includes('1250×18×7') && panelHtml.includes('1250×24×8') &&
+  panelHtml.includes('TỔNG 2 cỡ') && panelHtml.includes('tỉ trọng thể tích'));
+trace.setTraceSizeQuery('1250×24');
+check('K14: tìm nhanh theo cỡ → chỉ còn cỡ khớp (lọc trên BẢNG, không tính placeholder)',
+  panelEl().innerHTML.includes('>1250×24×8<') && !panelEl().innerHTML.includes('>1250×18×7<'));
+trace.setTraceSizeQuery('');
+check('K15: xoá ô tìm → hiện lại đủ cỡ',
+  panelEl().innerHTML.includes('>1250×18×7<'));
+trace.toggleTraceSizePanel();
+check('K16: bấm lần nữa → panel ĐÓNG', panelEl().hidden === true &&
+  trace.traceSizePanelOpen() === false);
+
+// CẤU TRÚC: panel ngoài luồng trang (neo inline) + wiring events + CSS
+const evSrc2 = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+const cssSrc2 = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+check('K17: index.html có khung #trace-size-panel ẩn mặc định (ngoài luồng trang)',
+  idxHtml.includes('id="' + trace.TRACE_SIZE_PANEL_ID + '"') &&
+  /id="trace-size-panel"\s+hidden/.test(idxHtml));
+check('K18: trace.js neo panel bằng INLINE position/z-index (không phụ thuộc stylesheet)',
+  traceSrc.includes("panel.style.position = 'absolute'") && traceSrc.includes("panel.style.zIndex = '260'") &&
+  traceSrc.includes('function positionTraceSizePanel') && traceSrc.includes('openUp'));
+check('K19: events.js wire nút KPI + nút đóng + ô tìm + bấm ngoài/Esc + neo lại khi cuộn',
+  evSrc2.includes('toggleTraceSizePanel') && evSrc2.includes('closeTraceSizePanel') &&
+  evSrc2.includes('setTraceSizeQuery') && evSrc2.includes('positionTraceSizePanel, true') &&
+  evSrc2.includes("window.addEventListener('resize', positionTraceSizePanel)"));
+check('K20: styles.css có .trace-size-panel + .trace-kpi-btn + .trace-card position:relative',
+  cssSrc2.includes('.trace-size-panel') && cssSrc2.includes('.trace-kpi-btn') &&
+  /\.trace-card \{[^}]*position: relative/.test(cssSrc2));
+
+// ═══ L. BỔ SUNG 15/10/2026 — CƠ SỞ "KL ỐNG LUỒNG" + CỘT THỰC TẾ ĐỐI CHIẾU ═══
+// (B1) Bảng cỡ thanh: ① ống luồng (CƠ SỞ) · ② tươi = ① ÷ tỷ lệ · ③ thực tế ≈ thể tích×1000
+//      → thứ tự vật lý đúng: ③ < ① < ② (1250×18×7: 0,158 < 1,98 < 3,96 theo dữ liệu mẫu K)
+// (B2) Chip "hệ số tham chiếu" ĐÃ GỠ khỏi dải KPI — nội dung nằm trong tooltip ô KPI.
+{
+  const L = trace.traceOngSizeRows();
+  const lA = L.rows.find(r => r.sizeKey === '1250×18×7');
+  const lB = L.rows.find(r => r.sizeKey === '1250×24×8');
+  check('L1: THỨ TỰ VẬT LÝ ĐÚNG — thực tế (③) < ống luồng (①) < tươi quy đổi (②), MỌI cỡ',
+    !!lA && !!lB &&
+    lA.kgRealTheoLyThuyet < lA.kgPerThanhLuong && lA.kgPerThanhLuong < lA.kgPerThanhTuoi &&
+    lB.kgRealTheoLyThuyet < lB.kgPerThanhLuong && lB.kgPerThanhLuong < lB.kgPerThanhTuoi);
+  check('L2: KL tươi = KL ống luồng ÷ tỷ lệ ống/tươi (50%) — SUY RA TỪ ỐNG, không tính độc lập',
+    near(lA.kgPerThanhTuoi, lA.kgPerThanhLuong / 0.5, 0.0001) &&
+    near(lB.kgPerThanhTuoi, lB.kgPerThanhLuong / 0.5, 0.0001) &&
+    near(L.totalKgTuoi, L.totalKgLuong / 0.5, 0.5));
+  check('L3: cột KL THANH THỰC TẾ ≈ = thể tích 1 thanh × 1.000 (tre tươi ~1 kg/L)',
+    near(lA.kgRealTheoLyThuyet, 0.1575, 0.0001) && near(lB.kgRealTheoLyThuyet, 0.24, 0.0001));
+  // Dữ liệu mẫu K: ống 1,98 kg/thanh vs lý thuyết 0,158 → lệch 92% > 60% → chip "⚠ lệch"
+  trace.renderTraceCard();
+  document.getElementById(trace.TRACE_SIZE_PANEL_ID).hidden = true;
+  trace.toggleTraceSizePanel();   // mở lại để vẽ HTML mới
+  const lPanel = document.getElementById(trace.TRACE_SIZE_PANEL_ID).innerHTML;
+  check('L4: panel hiện chip "⚠ lệch" khi KL lý thuyết lệch KL ống luồng quá ±60% + tooltip giải thích',
+    lPanel.includes('trace-size-warn') && lPanel.includes('lệch KL ống luồng') &&
+    lPanel.includes('KL ống luồng / thanh (cơ sở)'));
+  trace.toggleTraceSizePanel();   // đóng lại
+}
+check('L5: styles.css ĐÃ XÓA .trace-ref-chip và THÊM .trace-size-warn',
+  !cssSrc2.includes('.trace-ref-chip {') && cssSrc2.includes('.trace-size-warn'));
+check('L6: trace.js KHÔNG còn sinh div chip (chỉ tooltip) — không còn chuỗi trace-ref-chip trong mã',
+  !traceSrc.includes('trace-ref-chip'));
+
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
+
 

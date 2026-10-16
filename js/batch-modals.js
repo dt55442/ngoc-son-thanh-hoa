@@ -412,8 +412,12 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     return out;
   }
   // 2 DÒNG hiển thị 1 thẻ nguồn:
-  //   Dòng 1 = Vị trí · Kích thước · Loại (A/A1/B) · Số lượng
-  //   Dòng 2 = Dùng cho (Ván/Bullig) · badge đếm ngày S1/S2/K (lô ở Kho) — mỗi badge 1 màu
+  //   • Sấy 1 (thẻ nan Chọn Nan Thô) — 16/10/2026:
+  //       Dòng 1 = Kích thước · Phân loại · NGÀY CHỌN NAN (biết thẻ của ngày nào)
+  //       Dòng 2 = chip TỒN màu "còn X/Y thanh" + chip "đã dùng Z" (nếu đã tạo lô) +
+  //                chip Dùng cho + badge nguồn (luồng NL / Ngoài · NCC)
+  //   • Sấy 2 (lô ở Kho): Dòng 1 = Vị trí · Kích thước · Loại · Số lượng;
+  //       Dòng 2 = Dùng cho · badge đếm ngày S1/S2/K — mỗi badge 1 màu
   // sub = chuỗi thuần (dùng tìm kiếm) · subHtml = HTML có badge màu
   function alCardLines(it, stage) {
     const isLot = stage === 'say2';
@@ -426,13 +430,20 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     // "còn X/Y thanh" để không nhầm với số gốc.
     const lotRem = isLot ? (Math.round(khoLotRemainingOf(it)) || 0) : 0;
     const lotTotal = isLot ? (Number(it.quantity) || 0) : 0;
-    const qty = isLot ? lotRem : nanCardRemainingOf(it);
+    // Sấy 1 (thẻ nan): TỔNG của thẻ (số nhập ở Chọn Nan Thô) · ĐÃ DÙNG (đã tạo lô
+    // Sấy 1) · CÒN LẠI (tối đa lấy cho lô mới — có thể lấy 1 PHẦN để chia nhiều lô)
+    const nanTotal = isLot ? 0 : (Number(it.quantity) || 0);
+    const nanUsed = isLot ? 0 : nanCardUsedOf(it.id);
+    const nanRem = isLot ? 0 : Math.max(0, nanTotal - nanUsed);
     const qtyLbl = isLot
       ? (lotRem === lotTotal
         ? `${lotTotal.toLocaleString('vi-VN')} thanh`
         : `còn ${lotRem.toLocaleString('vi-VN')}/${lotTotal.toLocaleString('vi-VN')} thanh`)
-      : `${qty.toLocaleString('vi-VN')} thanh (còn)`;
-    const main = `${it.location || '—'} · ${dims} · ${cls} · ${qtyLbl}`;
+      : `còn ${nanRem.toLocaleString('vi-VN')}/${nanTotal.toLocaleString('vi-VN')} thanh`;
+    const nanDate = isLot ? '' : formatDateDDMMYY(it.date);
+    const main = isLot
+      ? `${it.location || '—'} · ${dims} · ${cls} · ${qtyLbl}`
+      : `${dims} · ${cls} · Chọn nan ${nanDate}`;
     // Thẻ nan Chọn Nan Thô không mang sẵn Dùng cho → hiện giá trị đang chọn ở form
     const useForLbl = it.useFor || (isLot ? '—' : alUseFor());
     const extra = [];
@@ -443,13 +454,21 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
         `<span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${d.say2} ngày</span>`,
         `<span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${d.kho} ngày</span>`
       );
-    } else if (it.external) {
-      extra.push(`<span class="al-day-badge day-ext" title="Nan mua ngoài công đoạn">Ngoài${it.supplier ? ' · ' + escapeHTML(it.supplier) : ''}</span>`);
-    } else if (it.materialType) {
-      extra.push(`<span class="al-day-badge day-luuong" title="Luồng nguyên liệu">${escapeHTML(it.materialType)}</span>`);
+    } else {
+      // Chip TỒN (màu) + chip ĐÃ DÙNG (chỉ hiện khi đã tạo lô Sấy 1 từ thẻ này)
+      extra.push(`<span class="al-stock-chip" title="Tồn còn lại / Tổng của thẻ nan (Tổng = số nhập ở thẻ Chọn Nan Thô)">còn ${nanRem.toLocaleString('vi-VN')}/${nanTotal.toLocaleString('vi-VN')} thanh</span>`);
+      if (nanUsed > 0) {
+        extra.push(`<span class="al-used-chip" title="Đã tạo lô Sấy 1 từ thẻ nan này">đã dùng ${nanUsed.toLocaleString('vi-VN')}</span>`);
+      }
+      if (it.external) {
+        extra.push(`<span class="al-day-badge day-ext" title="Nan mua ngoài công đoạn">Ngoài${it.supplier ? ' · ' + escapeHTML(it.supplier) : ''}</span>`);
+      } else if (it.materialType) {
+        extra.push(`<span class="al-day-badge day-luuong" title="Luồng nguyên liệu">${escapeHTML(it.materialType)}</span>`);
+      }
     }
     const subHtml = `<span class="al-use-tag use-${alNorm(useForLbl).replace(/[^a-z]/g, '') || 'khac'}">${escapeHTML(useForLbl)}</span> ` + extra.join(' ');
-    const sub = `Dùng cho ${useForLbl} · ${extra.map(e => e.replace(/<[^>]*>/g, '')).join(' · ')}`;
+    const sub = (isLot ? '' : `Chọn nan ${nanDate} · `) +
+      `Dùng cho ${useForLbl} · ${extra.map(e => e.replace(/<[^>]*>/g, '')).join(' · ')}`;
     return { main, sub, subHtml };
   }
   // Thẻ nguồn có khớp từ khóa tìm nhanh không (tìm trong mọi thông tin hiển thị)
@@ -533,6 +552,43 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
   // Nguồn đang chọn (mảng id — CHỌN ĐƯỢC NHIỀU nguồn cùng lúc) + vị trí đang chọn
   let alPicked = [];
   let alLocation = '';
+  // ─── SỐ LƯỢNG TẠO LÔ đang nhập cho TỪNG THẺ NAN (Sấy 1) — 16/10/2026 ──
+  // id thẻ nan → số thanh sẽ tạo lô. Mặc định = phần CÒN LẠI của thẻ; 1 lô sấy có
+  // thể lấy 1 PHẦN (chia 1 thẻ thành nhiều lô — VD tổng 5.000 thanh chia 3 lô).
+  const alCardQty = {};
+  // Số lượng hợp lệ đang nhập cho 1 thẻ nan (mặc định = tồn; CHẶN vượt tồn)
+  function alCardQtyOf(id) {
+    const rec = (state.xuong2ChonNanThoRecords || []).find(x => String(x.id || '') === String(id));
+    if (!rec) return 0;
+    const cap = nanCardRemainingOf(rec);
+    const v = Math.floor(Number(alCardQty[String(id)]));
+    return v > 0 ? Math.min(v, cap) : cap;
+  }
+  // Ô NHẬP SỐ LƯỢNG của 1 thẻ nan trong "Thông Tin Lấy Từ Nguồn" (uỷ nhiệm input)
+  // — clamp về phần còn lại; KHÔNG vẽ lại khối info (giữ con trỏ ô nhập), chỉ cập
+  // nhật thể tích của dòng + 2 dòng tóm tắt/chân form.
+  function alOnCardQtyInput(e) {
+    const t = e && e.target;
+    const id = (t && typeof t.getAttribute === 'function') ? t.getAttribute('data-al-qty') : '';
+    if (!id) return 0;
+    const rec = (state.xuong2ChonNanThoRecords || []).find(x => String(x.id || '') === String(id));
+    if (!rec) return 0;
+    const cap = nanCardRemainingOf(rec);
+    let v = Math.floor(Number(String(t.value == null ? '' : t.value).replace(/[^\d]/g, '')) || 0);
+    if (v > cap) { v = cap; t.value = String(v); }     // chặn vượt tồn (tự điều về tối đa)
+    if (v > 0) alCardQty[String(id)] = v; else delete alCardQty[String(id)];
+    // Cập nhật THỂ TÍCH của đúng dòng đó (không vẽ lại khối → không mất con trỏ)
+    if (typeof t.closest === 'function') {
+      const row = t.closest('[data-al-qty-row]');
+      const volEl = row && typeof row.querySelector === 'function' ? row.querySelector('[data-al-vol]') : null;
+      if (volEl) {
+        const dims = Array.isArray(rec.dims) ? rec.dims : [];
+        volEl.textContent = calculateVolume(dims[0] || 0, dims[1] || 0, dims[2] || 0, v).toFixed(4);
+      }
+    }
+    alRefreshSummary();
+    return v;
+  }
 
   function alStageOf() { return (document.getElementById('al-stage') || {}).value || 'say1'; }
   function alUseFor() {
@@ -710,7 +766,11 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     if (n) {
       const picked = alCandidatesOf(alStageOf()).filter(it => alPicked.includes(String(it.id)));
       qty = picked.reduce((s, it) => {
-        const q = (alStageOf() === 'say2') ? (Math.round(khoLotRemainingOf(it)) || 0) : nanCardRemainingOf(it);
+        // Sấy 2: tồn thực của lô ở Kho · Sấy 1: SỐ LƯỢNG đang nhập cho từng thẻ nan
+        // (mặc định = phần còn lại, có thể nhập nhỏ hơn để chia nhiều lô)
+        const q = (alStageOf() === 'say2')
+          ? (Math.round(khoLotRemainingOf(it)) || 0)
+          : alCardQtyOf(it.id);
         return s + q;
       }, 0);
     }
@@ -804,6 +864,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
       return alPicked.slice();
     }
     alPicked = alPicked.includes(key) ? alPicked.filter(x => x !== key) : [...alPicked, key];
+    if (!alPicked.includes(key)) delete alCardQty[key];   // bỏ chọn → quên số lượng đã nhập của thẻ
     renderAlSourceList();
     syncAddLotSource();
     alRefreshSummary();
@@ -826,6 +887,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
   }
   function alClearPicks() {
     alPicked = [];
+    Object.keys(alCardQty).forEach(k => { delete alCardQty[k]; });   // quên số lượng đã nhập
     renderAlSourceList();
     syncAddLotSource();
     return [];
@@ -1079,6 +1141,8 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     alClosePanels();
     // Reset trạng thái THAN HÓA LẠI (ô nhập số lượng theo lại chọn mới)
     Object.keys(alTopQty).forEach(k => { delete alTopQty[k]; });
+    // Reset SỐ LƯỢNG đã nhập cho từng thẻ nan (Sấy 1) — mặc định lại = phần còn lại
+    Object.keys(alCardQty).forEach(k => { delete alCardQty[k]; });
     const input = document.getElementById('al-location');
     if (input) input.value = alLocation;
     renderAlLocationBtn();
@@ -1135,7 +1199,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
       ? 'Chế độ THAN HÓA LẠI — chọn 1 lô Tóp ở Kho, nhập số lượng lấy ra đốt lại (tối đa tồn lô).'
       : (stage === 'say2'
         ? 'Chọn 1 hoặc NHIỀU lô đang ở Kho → chuyển sang Sấy 2 (áp dụng Dùng Cho đã chọn cho mọi lô).'
-        : 'Nguồn: công đoạn Chọn Nan Thô — mỗi thẻ là 1 cỡ nan (Vị trí · Dài × Rộng × Dày · Phân loại · Số lượng). Số lượng tạo lô = phần CÒN LẠI của thẻ.');
+        : 'Nguồn: công đoạn Chọn Nan Thô — mỗi thẻ là 1 cỡ nan của 1 ngày chọn (Kích thước · Phân loại · Ngày chọn · Tồn/Tổng). Chọn thẻ rồi NHẬP SỐ LƯỢNG tạo lô (mặc định = phần còn lại — nhập nhỏ hơn để chia thành nhiều lô sấy).');
     if (!info) return;
     // ── CHẾ ĐỘ THAN HÓA LẠI: hiện lô Tóp + Tồn + số lượng đốt lại ──
     if (alReworkOn()) {
@@ -1165,9 +1229,23 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
         return `<span><span class="al-k">Lô:</span><strong>${escapeHTML(it.code || '—')}</strong>
           <span class="al-k">· ${escapeHTML(it.location || '—')} · ${it.length} × ${it.width} × ${it.thickness} mm · ${escapeHTML(it.bambooType || '—')} · ${(Number(it.quantity) || 0).toLocaleString('vi-VN')} thanh · ${(Number(it.volume) || 0).toFixed(4)} m³</span></span>`;
       }
+      // SẤY 1 — mỗi thẻ nan 1 DÒNG có Ô NHẬP SỐ LƯỢNG TẠO LÔ (mặc định = tồn còn
+      // lại; nhập nhỏ hơn để chia 1 thẻ thành nhiều lô sấy — 16/10/2026)
       const d = Array.isArray(it.dims) ? it.dims : [];
-      return `<span><span class="al-k">Thẻ:</span><strong>${d[0] || '?'} × ${d[1] || '?'} × ${d[2] || '?'} mm</strong>
-        <span class="al-k">· ${escapeHTML(nanClassLabelOf(it.cls))} · tạo lô ${nanCardRemainingOf(it).toLocaleString('vi-VN')} thanh · ${it.external ? 'nan nhập ngoài công đoạn' : 'từ lô bào thô'}</span></span>`;
+      const total = Number(it.quantity) || 0;
+      const used = nanCardUsedOf(it.id);
+      const cap = nanCardRemainingOf(it);
+      const qty = alCardQtyOf(it.id);
+      const vol = calculateVolume(d[0] || 0, d[1] || 0, d[2] || 0, qty);
+      return `<span class="al-qty-row" data-al-qty-row="${escapeHTML(it.id)}">
+        <span class="al-qty-head"><span class="al-k">Thẻ:</span><strong>${d[0] || '?'} × ${d[1] || '?'} × ${d[2] || '?'} mm</strong>
+        <span class="al-k">· ${escapeHTML(nanClassLabelOf(it.cls))} · Chọn nan ${formatDateDDMMYY(it.date)} · Tồn ${cap.toLocaleString('vi-VN')}/${total.toLocaleString('vi-VN')}${used > 0 ? ` (đã dùng ${used.toLocaleString('vi-VN')})` : ''}${it.external ? ' · nan nhập ngoài công đoạn' : ' · từ lô bào thô'}</span></span>
+        <span class="al-qty-line"><span class="al-k">Tạo lô:</span>
+        <input type="number" class="al-qty-input" data-al-qty="${escapeHTML(it.id)}" min="1" max="${Math.max(1, cap)}" step="1" inputmode="numeric"
+          value="${qty > 0 ? qty : ''}" placeholder="Tối đa ${cap.toLocaleString('vi-VN')}"
+          title="Số thanh tạo lô Sấy 1 — mặc định = phần CÒN LẠI của thẻ (${cap.toLocaleString('vi-VN')} thanh); nhập nhỏ hơn để chia thành nhiều lô sấy.">
+        <span class="al-k">thanh · <span data-al-vol>${vol.toFixed(4)}</span> m³</span></span>
+      </span>`;
     }).join('');
   }
 
@@ -1331,7 +1409,7 @@ import { sayBuildCharges } from './xuong2.js'; // Ô chọn LẦN THAN HÓA (g�
     const created = [];
     let skipped = 0, totalQty = 0;
     recs.forEach(rec => {
-      const quantity = nanCardRemainingOf(rec);   // lấy NGUYÊN phần còn lại của thẻ nan
+      const quantity = alCardQtyOf(rec.id);   // SỐ LƯỢNG đang nhập (mặc định = phần còn lại; có thể lấy 1 phần)
       const dims = Array.isArray(rec.dims) ? rec.dims : [];
       const length = Number(dims[0]) || 0, width = Number(dims[1]) || 0, thickness = Number(dims[2]) || 0;
       if (quantity <= 0 || !(length > 0 && width > 0 && thickness > 0)) { skipped++; return; }
@@ -1854,6 +1932,8 @@ export {
   alToggleLocationPanel,
   alTogglePick,
   alToggleSourcePanel,
+  alCardQtyOf,
+  alOnCardQtyInput,
   availableKhoLots,
   availableSay1Cards,
   batchesAtPosition,

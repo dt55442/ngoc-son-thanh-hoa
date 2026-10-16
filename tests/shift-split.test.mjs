@@ -1,0 +1,316 @@
+// tests/shift-split.test.mjs — TÁCH DỮ LIỆU THEO CA (2 CA) CHO CÁC THẺ CÔNG ĐOẠN
+// ─────────────────────────────────────────────────────────────────────────────
+// Bối cảnh: tab Nhân Sự có nút "Ca Làm Việc" — bộ phận để chế độ "Làm ca" thì
+// Bảng bố trí tách 2 cột ca (Ca ngày / Ca đêm) và mỗi lượt bố trí lưu shiftIdx.
+// Trước đây các thẻ Xưởng 2 gộp NGƯỜI + GIỜ của cả 2 ca thành 1 con số/ngày →
+// không biết ca nào làm bao nhiêu.
+// GIAI ĐOẠN 1 (bài này): thẻ ngày tách riêng từng ca —
+//   • NGƯỜI + GIỜ HC/TC của mỗi ca = SỐ THẬT (từ Bảng bố trí, tách theo cửa sổ ca)
+//   • SẢN LƯỢNG mỗi ca = ƯỚC TÍNH (phân bổ theo tỉ lệ giờ làm) vì form nhập 1 số
+//     cho cả ngày ⇒ công suất/hiệu suất từng ca LUÔN bằng nhau (toán học) nên
+//     KHÔNG hiện để tránh kết luận sai + có ghi chú nhắc người dùng.
+//   • Chỉ khi sản lượng được nhập RIÊNG từng ca (bước sau) mới hiện C.suất/H.suất
+//     và gắn ★ cho ca hiệu suất cao hơn (cờ perShiftQty).
+'use strict';
+import fs from 'node:fs';
+
+// ─── Stubs môi trường (giống xuong2-ho-tro.test.mjs) ────────────────────
+function makeEl(id) {
+  const el = {
+    id: id || '', value: '', checked: false, disabled: false, hidden: false,
+    open: true, textContent: '', innerHTML: '', style: {}, dataset: {}, _h: {},
+    offsetWidth: 800, offsetHeight: 500,
+    classList: { _s: new Set(), add(c){ this._s.add(c); }, remove(c){ this._s.delete(c); }, toggle(c, f){ if (f === undefined) f = !this._s.has(c); if (f) this._s.add(c); else this._s.delete(c); return f; }, contains(c){ return this._s.has(c); } },
+    addEventListener(t, f) { (el._h[t] = el._h[t] || []).push(f); },
+    appendChild(c) { return c; }, removeChild(c) { return c; },
+    remove(){}, setAttribute(){}, removeAttribute(){}, getAttribute: () => null,
+    querySelector: () => makeEl(), querySelectorAll: () => [],
+    closest: () => null, matches: () => false,
+    getContext: () => ({ measureText: () => ({ width: 10 }), createLinearGradient: () => ({ addColorStop(){} }), createRadialGradient: () => ({ addColorStop(){} }), drawImage(){} }),
+    getBoundingClientRect: () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600 }),
+    reset(){}, focus(){}, click(){}, animate(){ return { cancel(){} }; }
+  };
+  return el;
+}
+const els = new Map();
+global.document = {
+  body: makeEl('body'), head: makeEl('head'), documentElement: makeEl('html'),
+  activeElement: null, readyState: 'complete', visibilityState: 'visible',
+  getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
+  createElement: () => makeEl(), createTextNode: (t) => ({ textContent: t }),
+  querySelector: () => makeEl(), querySelectorAll: () => [],
+  addEventListener(){}, removeEventListener(){}, escapeCSS: (s) => s
+};
+global.location = { href: 'http://localhost:8080/', origin: 'http://localhost:8080', pathname: '/', search: '', hash: '', reload(){} };
+global.history = { replaceState(){}, pushState(){}, back(){}, state: null };
+Object.defineProperty(global, "navigator", { value: { onLine: true, userAgent: 'node-test', language: 'vi' }, configurable: true });
+global.matchMedia = () => ({ matches: false, media: '', addListener(){}, removeListener(){}, addEventListener(){} });
+const storeBacking = new Map();
+global.localStorage = {
+  getItem: (k) => (storeBacking.has(k) ? storeBacking.get(k) : null),
+  setItem: (k, v) => { storeBacking.set(k, String(v)); },
+  removeItem: (k) => { storeBacking.delete(k); },
+  clear: () => storeBacking.clear(),
+  key: (i) => [...storeBacking.keys()][i] ?? null,
+  get length() { return storeBacking.size; }
+};
+global.addEventListener = () => {}; global.removeEventListener = () => {}; global.dispatchEvent = () => true;
+global.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
+global.cancelAnimationFrame = clearTimeout;
+global.window = global; global.self = global;
+global.alert = () => {}; global.confirm = () => true; global.prompt = () => '';
+global.lucide = { createIcons(){} };
+global.Chart = class {
+  constructor(ctx, cfg) { this.ctx = ctx; this.config = cfg; this.data = (cfg && cfg.data) || { labels: [], datasets: [] }; }
+  update(){} resize(){} destroy(){} render(){} reset(){} getDatasetMeta(){ return { data: [] }; }
+};
+Chart.register = () => {};
+if (!global.URL.createObjectURL) global.URL.createObjectURL = () => 'blob:stub';
+if (!global.URL.revokeObjectURL) global.URL.revokeObjectURL = () => {};
+global.XLSX = {
+  utils: { book_new: () => ({ SheetNames: [] }), aoa_to_sheet: () => ({}), json_to_sheet: () => ({}), book_append_sheet(){}, encode_cell: () => 'A1', decode_range: () => ({ s: { r: 0, c: 0 }, e: { r: 0, c: 0 } }) },
+  writeFile(){}, write: () => new ArrayBuffer(8)
+};
+global.fetch = async () => ({ ok: false, status: 0, statusText: 'offline-stub', json: async () => ({}), text: async () => '' });
+global.Image = class { set src(_) {} addEventListener(){} };
+global.ResizeObserver = class { observe(){} unobserve(){} disconnect(){} };
+
+let pass = 0, fail = 0;
+function check(label, cond) {
+  if (cond) { pass++; console.log('PASS ' + label); }
+  else { fail++; console.log('FAIL ' + label); }
+}
+
+const { state } = await import('../js/state.js');
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
+state.activeView = 'kanban-view';
+const utils = await import('../js/utils.js');
+
+// ─── Bộ ca "Làm ca" 2 ca dùng chung cho mọi bộ phận trong bài test ──────
+const LAMCA = () => ({
+  type: 'lamca',
+  shifts: [
+    { name: 'Ca ngày', start: '07:00', end: '19:00' },
+    { name: 'Ca đêm', start: '19:00', end: '07:00' }
+  ]
+});
+state.hrShifts = [
+  { id: 'Xưởng 2', ...LAMCA() },
+  { id: 'Xưởng 1', ...LAMCA() },
+  { id: 'QC', ...LAMCA() }
+];
+state.hrWorkCalendar = {};   // không cài gì → 2026-10-05 (Thứ 2) là ngày làm việc
+state.hrEmployees = [
+  { id: 'eA', name: 'Nguyễn Văn A' },
+  { id: 'eB', name: 'Trần Thị B' },
+  { id: 'eC', name: 'Lê Văn C' },
+  { id: 'eD', name: 'Phạm Thị D' }
+];
+state.hrPositions = [];
+state.hrAssignments = [];
+const DAY = '2026-10-05';
+
+// ═══ A. GỘP THEO CA (utils.shiftGroupRows) ══════════════════════════════
+const gA = utils.shiftGroupRows([
+  { shiftIdx: 0, name: 'Nguyễn Văn A', hc: 12, tc: 0 },
+  { shiftIdx: 1, name: 'Trần Thị B', hc: 6, tc: 2 },
+  { shiftIdx: 0, name: 'Nguyễn Văn A', hc: 0, tc: 1 }   // cùng người, cùng ca → tên KHÔNG lặp
+]);
+check('A1: gộp theo chỉ số ca — 2 nhóm, sắp theo ca', gA.length === 2 && gA[0].shiftIdx === 0 && gA[1].shiftIdx === 1);
+check('A2: cộng giờ HC/TC theo ca + tên không trùng', gA[0].hc === 12 && gA[0].tc === 1 && gA[0].hours === 13 && gA[0].names.join(',') === 'Nguyễn Văn A');
+check('A3: ca 2 = 6h HC + 2h TC = 8h', gA[1].hours === 8 && gA[1].names.length === 1);
+check('A4: ngày 1 ca → chỉ 1 nhóm (khối ca tự ẩn ở tầng HTML)',
+  utils.shiftGroupRows([{ shiftIdx: 0, name: 'A', hc: 9, tc: 0 }]).length === 1);
+
+// ═══ B. CHIA SẢN LƯỢNG / CÔNG SUẤT / HIỆU SUẤT THEO CA ══════════════════
+const secB = utils.shiftSectionRows({
+  groups: utils.shiftGroupRows([
+    { shiftIdx: 0, name: 'A', hc: 12, tc: 0 },
+    { shiftIdx: 1, name: 'B', hc: 6, tc: 0 }
+  ]),
+  qty: 18000, unit: 'kg/h', rate: 1000, incHours: 0
+});
+check('B1: chia sản lượng theo TỈ LỆ GIỜ LÀM (12/18 → 12.000 · 6/18 → 6.000)',
+  secB[0].qty === 12000 && secB[1].qty === 6000);
+check('B2: công suất mỗi ca = sản lượng ca ÷ giờ ca (1.000 kg/h cả 2 ca)',
+  secB[0].cap === 1000 && secB[1].cap === 1000);
+check('B3: phân bổ theo giờ ⇒ hiệu suất 2 ca BẰNG NHAU (đúng bản chất ƯỚC TÍNH)',
+  secB[0].eff === 100 && secB[1].eff === 100);
+check('B4: công đoạn chỉ 1 ca → null (không dựng khối)',
+  utils.shiftSectionRows({ groups: utils.shiftGroupRows([{ shiftIdx: 0, name: 'A', hc: 9, tc: 0 }]) }) === null);
+const secB2 = utils.shiftSectionRows({
+  groups: utils.shiftGroupRows([
+    { shiftIdx: 0, name: 'A', hc: 12, tc: 0, qty: 15000 },   // sản lượng nhập RIÊNG từng ca (bước sau)
+    { shiftIdx: 1, name: 'B', hc: 6, tc: 0, qty: 3000 }
+  ]),
+  qty: 18000, unit: 'kg/h', rate: 1000, incHours: 0
+});
+check('B5: có sản lượng RIÊNG theo ca → dùng số của ca (1.250 vs 500 kg/h)',
+  secB2[0].cap === 1250 && secB2[1].cap === 500 && secB2[0].eff === 125 && secB2[1].eff === 50);
+
+// ═══ C. KHỐI HTML "THEO CA" ═════════════════════════════════════════════
+const META = { 0: { name: 'Ca ngày', start: '07:00', end: '19:00' }, 1: { name: 'Ca đêm', start: '19:00', end: '07:00' } };
+const secCOf = (o) => ({
+  label: 'Cắt chọn', unit: 'kg/h', rate: 1000, incHours: 0, qty: 18000,
+  groups: utils.shiftGroupRows([
+    { shiftIdx: 0, name: 'A (test)', hc: 12, tc: 0 },
+    { shiftIdx: 1, name: 'B (test)', hc: 6, tc: 0 }
+  ]),
+  ...(o || {})
+});
+const htmlC = utils.shiftBreakdownHtml({ date: DAY, incHours: 0, shiftMeta: META, sections: [secCOf()] });
+check('C1: có khối .x2-shift-rows + đúng 2 dòng ca',
+  htmlC.includes('class="x2-shift-rows"') && (htmlC.match(/class="x2-shift-row"/g) || []).length === 2);
+check('C2: tên ca + khung giờ lấy từ Cài Đặt Ca', htmlC.includes('Ca ngày') && htmlC.includes('Ca đêm') && htmlC.includes('07:00–19:00'));
+check('C3: NGƯỜI + GIỜ là số THẬT của từng ca',
+  htmlC.includes('A (test)') && htmlC.includes('B (test)') && htmlC.includes('12,0h HC') && htmlC.includes('6,0h HC'));
+check('C4: sản lượng mỗi ca ghi rõ là ƯỚC TÍNH (SL ~)', (htmlC.match(/SL ~/g) || []).length === 2);
+check('C5: KHÔNG hiện C.suất/H.suất từng ca khi sản lượng còn ghi chung',
+  !htmlC.includes('C.suất') && !htmlC.includes('H.suất'));
+check('C6: có ghi chú TRUNG THỰC — chưa so được ca nào làm tốt hơn',
+  htmlC.includes('chưa so được ca nào làm tốt hơn'));
+const htmlPerf = utils.shiftBreakdownHtml({
+  date: DAY, incHours: 0, shiftMeta: META, perShiftQty: true,
+  sections: [secCOf({
+    groups: utils.shiftGroupRows([
+      { shiftIdx: 0, name: 'A (test)', hc: 12, tc: 0, qty: 15000 },
+      { shiftIdx: 1, name: 'B (test)', hc: 6, tc: 0, qty: 3000 }
+    ])
+  })]
+});
+check('C7: perShiftQty → hiện C.suất + H.suất + ★ cho ca cao hơn',
+  htmlPerf.includes('C.suất') && htmlPerf.includes('H.suất') && htmlPerf.includes('x2-shift-best') && !htmlPerf.includes('chưa so được'));
+check('C8: ngày 1 ca → chuỗi rỗng (giao diện cũ giữ nguyên)',
+  utils.shiftBreakdownHtml({ date: DAY, shiftMeta: META, sections: [{ groups: utils.shiftGroupRows([{ shiftIdx: 0, name: 'A', hc: 9, tc: 0 }]) }] }) === '');
+check('C9: 2 ca HÒA hiệu suất → KHÔNG gắn ★ (tránh kết luận sai)',
+  (() => { const h = utils.shiftBreakdownHtml({ date: DAY, shiftMeta: META, perShiftQty: true, sections: [secCOf()] }); return h.includes('H.suất') && !h.includes('x2-shift-best'); })());
+
+// ═══ D. THẺ XƯỞNG 2 (Chọn Nan Thô) — RENDER THẬT ═══════════════════════
+const x2 = await import('../js/xuong2.js');
+state.hrPositions.push({ id: 'pcn', name: 'Chọn Nan Thô', department: 'Xưởng 2' });
+const asgCN = (id, shiftIdx, employeeId, start, end) =>
+  ({ id, date: DAY, department: 'Xưởng 2', positionId: 'pcn', shiftIdx, employeeId, start, end });
+state.hrAssignments = [asgCN('s1', 0, 'eA', '07:00', '19:00'), asgCN('s2', 1, 'eB', '19:00', '01:00')];
+state.x2ChonNanRates = { '2026-10': 500 };
+state.xuong2ChonNanThoRecords = [{
+  id: 'cn1', date: DAY, quantity: 1000, cls: 'A', sizeKey: '1250×18×7', dims: [1250, 18, 7],
+  external: false, materialType: 'Luồng cây xô', supplier: 'Nhà Tế', unitVol: 0.000157,
+  createdAt: '2026-10-05T02:00:00.000Z'
+}];
+x2.renderX2ChonNanTable();
+const cnHtml = els.get('x2-cn-day-cards').innerHTML;
+check('D1: thẻ ngày Chọn Nan có khối THEO CA', cnHtml.includes('class="x2-shift-rows"'));
+check('D2: đúng 2 dòng ca + tên 2 ca',
+  (cnHtml.match(/class="x2-shift-row"/g) || []).length === 2 && cnHtml.includes('Ca ngày') && cnHtml.includes('Ca đêm'));
+check('D3: NGƯỜI mỗi ca đúng (A = ca ngày · B = ca đêm)',
+  cnHtml.includes('Nguyễn Văn A') && cnHtml.includes('Trần Thị B'));
+check('D4: GIỜ từng ca = số thật (ca ngày 12h HC · ca đêm 6h HC)',
+  cnHtml.includes('12,0h HC') && cnHtml.includes('6,0h HC'));
+check('D5: sản lượng ƯỚC TÍNH + ghi chú chưa so được ca nào tốt hơn',
+  (cnHtml.match(/SL ~/g) || []).length === 2 && cnHtml.includes('chưa so được ca nào làm tốt hơn'));
+state.hrAssignments = [asgCN('s1', 0, 'eA', '07:00', '19:00')];
+x2.renderX2ChonNanTable();
+check('D6: ngày chỉ 1 ca → KHÔNG hiện khối theo ca (giao diện cũ)',
+  !els.get('x2-cn-day-cards').innerHTML.includes('x2-shift-rows'));
+state.hrAssignments = [];
+x2.renderX2ChonNanTable();
+check('D7: xóa hết bố trí → không hiện khối (KHÔNG bịa số)',
+  !els.get('x2-cn-day-cards').innerHTML.includes('x2-shift-rows'));
+
+// ═══ E. THẺ HỖ TRỢ — KHỐI CA KHÔNG CÓ CÔNG SUẤT/HIỆU SUẤT ══════════════
+state.hrPositions.push({ id: 'pht', name: 'Hỗ trợ/ Công đoạn lẻ', department: 'Xưởng 2' });
+const asgHT = (id, shiftIdx, employeeId, start, end) =>
+  ({ id, date: DAY, department: 'Xưởng 2', positionId: 'pht', shiftIdx, employeeId, start, end });
+state.hrAssignments = [asgHT('h1', 0, 'eA', '07:00', '19:00'), asgHT('h2', 1, 'eB', '19:00', '01:00')];
+state.xuong2HoTroRecords = [{
+  id: 'ht1', date: DAY, workName: 'Dọn xưởng', asgIds: ['h1', 'h2'], worker: '', workTime: '',
+  createdAt: '2026-10-05T02:00:00.000Z'
+}];
+x2.renderXuong2HoTroTable();
+const htHtml = els.get('x2-ht-day-cards').innerHTML;
+check('E1: thẻ Hỗ Trợ có khối theo ca', htHtml.includes('class="x2-shift-rows"'));
+check('E2: KHÔNG có C.suất/H.suất (công việc phát sinh)', !htHtml.includes('C.suất') && !htHtml.includes('H.suất'));
+check('E3: KHÔNG hiện sản lượng ước tính (không có sản lượng)',
+  !htHtml.includes('SL ~') && htHtml.includes('Nguyễn Văn A') && htHtml.includes('Trần Thị B'));
+
+// ═══ F. XƯỞNG 1 (Cắt Ống) — GIỜ THEO BỘ PHẬN "Xưởng 1" ════════════════
+state.hrPositions.push({ id: 'px1co', name: 'Cắt Ống', department: 'Xưởng 1' });
+state.hrAssignments = [
+  { id: 'xa', date: DAY, department: 'Xưởng 1', positionId: 'px1co', shiftIdx: 0, employeeId: 'eC', start: '07:00', end: '19:00' },
+  { id: 'xb', date: DAY, department: 'Xưởng 1', positionId: 'px1co', shiftIdx: 1, employeeId: 'eD', start: '19:00', end: '01:00' }
+];
+state.materialRecords = [{ id: 'x1m1', location: 'xuong-1', type: 'Vầu cây tươi', weight: 1000, date: DAY, supplier: 'Nhà Tế' }];
+state.xuong1CatOngRecords = [{
+  id: 'x1co1', materialId: 'x1m1', date: DAY, klDat: 600, klLoai: 100, klMat: 50, klNgon: 50,
+  createdAt: '2026-10-05T02:00:00.000Z'
+}];
+state.x1Rates = { catOng: { '2026-10': 500 } };
+x2.renderX1CatOngCard();
+const x1Html = els.get('x1-cat-ong-day-cards').innerHTML;
+check('F1: thẻ ngày Xưởng 1 có khối theo ca', x1Html.includes('class="x2-shift-rows"'));
+check('F2: người + giờ từng ca theo bộ phận Xưởng 1 (12h · 6h HC)',
+  x1Html.includes('Lê Văn C') && x1Html.includes('Phạm Thị D') && x1Html.includes('12,0h HC') && x1Html.includes('6,0h HC'));
+
+// ═══ G. ÉP VÁN (thẻ trong tab Công Đoạn SX) ═════════════════════════════
+const press = await import('../js/press.js');
+state.hrPositions.push({ id: 'pep', name: 'Ép ván', department: 'Xưởng 2' });
+state.hrAssignments = [
+  { id: 'p1', date: DAY, department: 'Xưởng 2', positionId: 'pep', shiftIdx: 0, employeeId: 'eC', start: '07:00', end: '19:00' },
+  { id: 'p2', date: DAY, department: 'Xưởng 2', positionId: 'pep', shiftIdx: 1, employeeId: 'eD', start: '19:00', end: '01:00' }
+];
+state.pressRecords = [{
+  id: 'pr1', date: DAY, year: '2026', productName: 'Ván 1200x382x12', finishedQty: 40,
+  sticks: [], vanTho: [{ vtDim: '1200x600x9', vtQty: 2 }]
+}];
+state.pressNotes = [];
+state.pressYearFilter = 'all';
+state.pressWeekFilter = 'all';
+state.x2EpVanRates = { '2026-10': 1 };
+press.renderX2EpVanDayCards();
+const pvHtml = els.get('x2-epv-day-cards').innerHTML;
+check('G1: thẻ ngày Ép Ván có khối theo ca (m³/h)', pvHtml.includes('class="x2-shift-rows"') && pvHtml.includes('Ép ván'));
+check('G2: người + giờ từng ca của Ép Ván',
+  pvHtml.includes('12,0h HC') && pvHtml.includes('6,0h HC') && pvHtml.includes('Lê Văn C') && pvHtml.includes('Phạm Thị D'));
+
+// ═══ H. QC — KIỂM SAU SẢN XUẤT ══════════════════════════════════════════
+const qcf = await import('../js/qc-final.js');
+state.hrPositions.push({ id: 'pqc', name: 'QC Kiểm ván+thanh', department: 'QC' });
+state.hrAssignments = [
+  { id: 'qa', date: DAY, department: 'QC', positionId: 'pqc', shiftIdx: 0, employeeId: 'eC', start: '07:00', end: '19:00' },
+  { id: 'qb', date: DAY, department: 'QC', positionId: 'pqc', shiftIdx: 1, employeeId: 'eD', start: '19:00', end: '01:00' }
+];
+state.qcFinalRecords = [{
+  id: 'qcf1', date: DAY, workshop: 'x2', kind: 'van', inputQty: 100, qtyOk: 90, qtyExcept: 5,
+  qtyReject: 5, productName: 'Ván 1200x382x12'
+}];
+state.qcFinalRates = { '2026-10': { van: 20, thanh: 100 } };
+qcf.renderQcFinalTable();
+const qcfHtml = els.get('qcf-day-cards').innerHTML;
+check('H1: thẻ ngày QC có khối theo ca', qcfHtml.includes('class="x2-shift-rows"'));
+check('H2: người + giờ từng ca của QC (12h · 6h HC)',
+  qcfHtml.includes('12,0h HC') && qcfHtml.includes('6,0h HC') && qcfHtml.includes('Lê Văn C'));
+
+// ═══ I. CẤU TRÚC (styles / sw / js) ═════════════════════════════════════
+const cssSrc = fs.readFileSync('styles.css', 'utf8');
+const swSrc = fs.readFileSync('sw.js', 'utf8');
+const uSrc = fs.readFileSync('js/utils.js', 'utf8');
+const x2Src = fs.readFileSync('js/xuong2.js', 'utf8');
+const pSrc = fs.readFileSync('js/press.js', 'utf8');
+const qSrc = fs.readFileSync('js/qc-final.js', 'utf8');
+check('I1: styles.css có khối .x2-shift-rows / -chip / -note / -best',
+  cssSrc.includes('.x2-shift-rows {') && cssSrc.includes('.x2-shift-chip {') &&
+  cssSrc.includes('.x2-shift-note {') && cssSrc.includes('.x2-shift-best {'));
+check('I2: utils.js export 4 helper tách ca',
+  ['shiftGroupRows', 'shiftFmtNum', 'shiftSectionRows', 'shiftBreakdownHtml'].every(n => uSrc.includes(`  ${n},`)));
+check('I3: 7 thẻ ngày 1 công đoạn + 3 thẻ 2 công đoạn + Xưởng 1 đều có khối ca',
+  (x2Src.match(/\$\{x2ShiftBlockOf\(/g) || []).length === 7 &&
+  (x2Src.match(/\$\{x2ShiftBlockMulti\(/g) || []).length === 3 &&
+  x2Src.includes('cfg.shiftMatchPos ? shiftGroupsForX1(') &&
+  (x2Src.match(/shiftMatchPos/g) || []).length >= 5);
+check('I4: press.js + qc-final.js dùng CHUNG helper (không copy HTML/CSS)',
+  pSrc.includes('shiftBreakdownHtml') && pSrc.includes('epVanShiftGroups') &&
+  qSrc.includes('shiftBreakdownHtml') && qSrc.includes('qcShiftGroups'));
+check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v259'));
+
+console.log(`\n=== TÁCH DỮ LIỆU THEO CA: ${pass} PASS / ${fail} FAIL ===`);
+process.exit(fail ? 1 : 0);

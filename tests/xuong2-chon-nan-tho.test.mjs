@@ -499,6 +499,78 @@ check('CẤU TRÚC (styles.css): chip x2-nan-say1 (+ say1-full) + 2 ô inline + 
   cssX2Src.includes('.x2-cn-inline-cls {') && cssX2Src.includes('.x2-cn-inline-qty {') &&
   cssX2Src.includes('font-size: 16px;'));
 
+// ─── O. MỖI TỔ HỢP 1 DÒNG: CỘNG TỔNG DÒNG TRÙNG + XÓA DÒNG THỪA (16/10/2026) ──
+// Số nhập form = TỔNG của tổ hợp (lô · ngày · kích thước · phân loại). Lưu trùng →
+// GỘP về 1 dòng (ghi đè = tổng mới); nạp dữ liệu CŨ trùng → gộp (TỔNG = cộng dòng cũ).
+state.xuong2ChonNanThoRecords = [
+  { id: 'o-cn-1', baothoId: 'bt-1', date: '2026-09-18', dims: [1250, 80, 12], sizeKey: '1250×80×12', cls: 'A', quantity: 1000, unitVol: 0.0012, volume: 1.2, external: false, createdAt: '2026-09-18T02:00:00.000Z' },
+  { id: 'o-cn-2', baothoId: 'bt-1', date: '2026-09-18', dims: [1300, 90, 12], sizeKey: '1300×90×12', cls: 'B', quantity: 300, unitVol: 0.001404, volume: 0.4212, external: false, createdAt: '2026-09-18T03:00:00.000Z' },
+  { id: 'o-cn-3', baothoId: 'bt-1', date: '2026-09-19', dims: [1250, 80, 12], sizeKey: '1250×80×12', cls: 'A', quantity: 500, unitVol: 0.0012, volume: 0.6, external: false, createdAt: '2026-09-19T02:00:00.000Z' }
+];
+state.batches = [
+  { id: 'o-b-1', code: '260919-01', stage: 'say1', date: '2026-09-19', location: 'LS5', quantity: 400, sourceChonNanId: 'o-cn-1' }
+];
+state.x2ChonNanEditId = null;
+selBt.value = 'bt-1';
+document.getElementById('x2-cn-date').value = '2026-09-18';
+x2.updateXuong2ChonNanLinked();
+check('KHÓA GỘP: cùng lô · ngày · k.thước · phân loại → cùng khóa; khác ngày / khác NCC (nan ngoài) → khác khóa',
+  x2.chonNanRowKeyOf({ baothoId: 'bt-1', date: '2026-09-18', sizeKey: '1250×80×12', cls: 'A' }) ===
+  x2.chonNanRowKeyOf({ baothoId: 'bt-1', date: '2026-09-18', sizeKey: '1250×80×12', cls: 'A', external: false }) &&
+  x2.chonNanRowKeyOf({ baothoId: 'bt-1', date: '2026-09-19', sizeKey: '1250×80×12', cls: 'A' }) !==
+  x2.chonNanRowKeyOf({ baothoId: 'bt-1', date: '2026-09-18', sizeKey: '1250×80×12', cls: 'A' }) &&
+  x2.chonNanRowKeyOf({ external: true, supplier: 'NCC A', date: '2026-09-18', sizeKey: '900×70×10', cls: 'B' }) !==
+  x2.chonNanRowKeyOf({ external: true, supplier: 'NCC B', date: '2026-09-18', sizeKey: '900×70×10', cls: 'B' }));
+// Lưu LẠI tổ hợp đã có → KHÔNG tạo dòng mới, số nhập = TỔNG mới (ghi đè)
+document.getElementById('x2-cn-date').value = '2026-09-18';
+selSize.value = '1250×80×12';
+document.getElementById('x2-cn-class').value = 'A';
+document.getElementById('x2-cn-qty').value = '1500';
+x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
+check('GỘP 1 DÒNG: lưu trùng tổ hợp → vẫn 3 dòng (KHÔNG thêm dòng thứ 4)',
+  state.xuong2ChonNanThoRecords.length === 3);
+check('SỐ NHẬP = TỔNG: o-cn-1 ghi 1.000 → 1.500 (ghi đè, KHÔNG cộng dồn thành 2.500)',
+  (state.xuong2ChonNanThoRecords.find(r => r.id === 'o-cn-1') || {}).quantity === 1500);
+check('GỘP: lô Sấy 1 vẫn trỏ o-cn-1 (không mất liên kết sourceChonNanId)',
+  (state.batches.find(b => b.id === 'o-b-1') || {}).sourceChonNanId === 'o-cn-1');
+// MIGRATE: dữ liệu CŨ nhiều dòng cùng tổ hợp → gộp khi NẠP (TỔNG = cộng dòng cũ)
+localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify([
+  { id: 'o-dup-1', baothoId: 'bt-2', date: '2026-09-20', dims: [1300, 90, 12], sizeKey: '1300×90×12', cls: 'A', quantity: 400, unitVol: 0.001404, volume: 0.5616, external: false, createdAt: '2026-09-20T01:00:00.000Z' },
+  { id: 'o-dup-2', baothoId: 'bt-2', date: '2026-09-20', dims: [1300, 90, 12], sizeKey: '1300×90×12', cls: 'A', quantity: 600, unitVol: 0.001404, volume: 0.8424, external: false, createdAt: '2026-09-20T02:00:00.000Z' },
+  { id: 'o-cn-9', baothoId: 'bt-2', date: '2026-09-21', dims: [1300, 90, 12], sizeKey: '1300×90×12', cls: 'A', quantity: 111, unitVol: 0.001404, volume: 0.155844, external: false, createdAt: '2026-09-21T01:00:00.000Z' }
+]));
+state.batches = [
+  { id: 'o-b-a', code: '260921-01', stage: 'say1', date: '2026-09-21', location: 'LS1', quantity: 150, sourceChonNanId: 'o-dup-1' },
+  { id: 'o-b-b', code: '260922-01', stage: 'say1', date: '2026-09-22', location: 'LS2', quantity: 200, sourceChonNanId: 'o-dup-2' }
+];
+x2.loadXuong2ChonNan();
+check('MIGRATE (nạp): 2 dòng trùng (cùng lô bt-2 · ngày 20/09 · 1300×90×12 · A) → gộp còn 1 dòng',
+  state.xuong2ChonNanThoRecords.filter(r => r.baothoId === 'bt-2' && r.date === '2026-09-20').length === 1);
+const oSurv = state.xuong2ChonNanThoRecords.find(r => r.baothoId === 'bt-2' && r.date === '2026-09-20');
+check('MIGRATE: TỔNG = 400 + 600 = 1.000 (đúng số hệ thống CŨ vẫn cộng) · dòng khác ngày (111 thanh) KHÔNG bị gộp',
+  !!oSurv && oSurv.quantity === 1000 &&
+  state.xuong2ChonNanThoRecords.some(r => r.id === 'o-cn-9' && r.quantity === 111));
+check('MIGRATE: dòng sống = o-dup-1 (ưu tiên dòng CÓ lô Sấy 1 trỏ vào)',
+  !!oSurv && oSurv.id === 'o-dup-1');
+check('MIGRATE: lô Sấy 1 trỏ o-dup-2 được TRỎ LẠI o-dup-1 + tombstone dòng bị gộp (o-dup-2)',
+  (state.batches.find(b => b.id === 'o-b-b') || {}).sourceChonNanId === 'o-dup-1' &&
+  (state.batches.find(b => b.id === 'o-b-a') || {}).sourceChonNanId === 'o-dup-1' &&
+  !!(state.deletedIds && state.deletedIds.xuong2ChonNanThoRecords &&
+     state.deletedIds.xuong2ChonNanThoRecords['o-dup-2']));
+check('MIGRATE: đã lưu lại localStorage (danh sách gộp = 2 dòng)',
+  JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_CHON_NAN) || '[]').length === 2);
+
+// ─── O2. CẤU TRÚC cho chức năng 1 tổ hợp 1 dòng (gộp dòng trùng) ──
+check('CẤU TRÚC (js/xuong2.js): key/merge/dedupe + export (KHÔNG còn ô tồn theo lô/ngày)',
+  jsX2Src.includes('function chonNanRowKeyOf') && jsX2Src.includes('function chonNanMergeInto') &&
+  jsX2Src.includes('function dedupeChonNanRecords') &&
+  jsX2Src.includes('  chonNanMergeInto,') && jsX2Src.includes('  dedupeChonNanRecords,') &&
+  !jsX2Src.includes('renderX2ChonNanLotStatus') && !jsX2Src.includes('x2-cn-lot-status'));
+check('CẤU TRÚC (index.html): KHÔNG còn khối ô tồn theo lô/ngày trong form chọn nan',
+  !idxHtml.includes('x2-cn-lot-status-group') && !idxHtml.includes('x2-cn-lot-status'));
+check('CẤU TRÚC (styles.css): KHÔNG còn khối CSS .x2-cn-lot-*',
+  !cssX2Src.includes('.x2-cn-lot-status {') && !cssX2Src.includes('.x2-cn-lot-row {'));
+
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
 

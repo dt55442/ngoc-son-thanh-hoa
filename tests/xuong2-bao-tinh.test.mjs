@@ -5,9 +5,9 @@
 // SL, dòng 2 = chip Dùng cho + badge ngày S1/S2/K + luồng NL + NCC) + ô tìm
 // nhanh, KHÔNG có ô vuông tích),
 // BẢNG TỔNG HỢP THEO KÍCH THƯỚC CHUNG (gộp, không chia phân loại): nhập SL
-// thanh ĐẠT → SL thanh LỖI TỰ TÍNH = thanh vào − thanh đạt,
-// Kích thước sau bào, định mức công suất theo tháng (thanh/h), thẻ ngày,
-// lưu/sửa/xóa + tombstone và đồng bộ (localStorage/file/mây).
+// thanh ĐẠT + SL thanh LỖI (hạ cấp CHẠY 1 PHẦN — phần Còn lại giữ ở tồn),
+// Kích thước sau bào, định mức công suất theo tháng GỘP 1 chỉ số Bào tinh (thanh/h),
+// thẻ ngày (hiệu suất CHUNG cả 3 nhánh), lưu/sửa/xóa + tombstone, đồng bộ.
 'use strict';
 import fs from 'node:fs';
 
@@ -379,11 +379,12 @@ check('THẺ LỖI: dòng 2 có chip "Bào tinh hạ cấp" + badge "Lỗi Bào 
   defectList.includes('>Lỗi Bào Tinh</span>'));
 document.getElementById('x2-btinh-date').value = '2026-09-21';
 x2.toggleBaoTinhPick('1240×16×6');
-x2.onBaoTinhGroupInput(fakeOkInput('1240×16×6', 90));    // vào 110 → lỗi 20
+x2.onBaoTinhGroupInput(fakeOkInput('1240×16×6', 90));    // ĐẠT 90
+x2.onBaoTinhGroupInput(fakeErrInput('1240×16×6', 20));   // LỖI 20 (nhập tay) → đem chạy 110 = hết cỡ
 fillOut('1240×16×6', 1230, 14, 5);
 x2.handleXuong2BaoTinhSubmit({ preventDefault(){} });
 const r3 = state.xuong2BaoTinhRecords[2];
-check('LƯU HẠ CẤP: kind = ha_cap · nguồn cỡ lỗi 1240×16×6 · vào 110 · đạt 90 · lỗi TỰ TÍNH 20',
+check('LƯU HẠ CẤP: kind = ha_cap · nguồn cỡ lỗi 1240×16×6 · đem chạy 110 = đạt 90 + lỗi 20 NHẬP TAY',
   !!r3 && r3.kind === 'ha_cap' && r3.defectKey === '1240×16×6' && r3.inQty === 110 &&
   r3.qtyOk === 90 && r3.qtyErr === 20 && r3.outDims[0] === 1230 && r3.outDims[2] === 5);
 check('TỒN LỖI: cỡ 1240×16×6 đã hạ cấp hết (còn 0) · cỡ mới 1230×14×5 có 20 thanh lỗi',
@@ -643,38 +644,37 @@ check('THẺ NGÀY: nhánh hạ cấp ghi "Thanh lỗi của Bào Tinh · cỡ 1
 check('THẺ NGÀY: tổng vào 2.210 · đạt 2.030 · lỗi 140 · công suất 2.210 ÷ 9 = 246 thanh/h',
   dayHtml.includes('2.210 thanh') && dayHtml.includes('2.030 thanh') &&
   dayHtml.includes('140 thanh') && dayHtml.includes('246 thanh/h'));
-// ── ĐỊNH MỨC 3 CỘT (popup trong form nhập) ──
+// ── ĐỊNH MỨC 1 CỘT — GỘP cả 3 nhánh về 1 chỉ số (popup trong form nhập) ──
 x2.openX2BaoTinhRateModal();
-check('POPUP ĐỊNH MỨC: mở được (overlay show) + bảng có hàng tháng 2026-09 với 3 ô nhập',
-  document.getElementById('modal-x2-btinh-rate').classList.contains('show') &&
-  document.getElementById('x2-btinh-rate-rows').innerHTML.includes('Tháng 9/2026') &&
-  !!document.getElementById('x2-btinh-rate-2026-09-tinh') &&
-  !!document.getElementById('x2-btinh-rate-2026-09-ha_cap') &&
-  !!document.getElementById('x2-btinh-rate-2026-09-bao_thanh'));
-document.getElementById('x2-btinh-rate-2026-09-tinh').value = '600';
-document.getElementById('x2-btinh-rate-2026-09-ha_cap').value = '300';
-document.getElementById('x2-btinh-rate-2026-09-bao_thanh').value = '100';
+check('POPUP ĐỊNH MỨC: mở được + hàng tháng 2026-09 với 1 ô nhập CHUNG (không còn ô theo loại)', (() => {
+  const h = document.getElementById('x2-btinh-rate-rows').innerHTML;
+  return document.getElementById('modal-x2-btinh-rate').classList.contains('show') &&
+    h.includes('Tháng 9/2026') && h.includes('id="x2-btinh-rate-2026-09"') &&
+    !h.includes('x2-btinh-rate-2026-09-tinh') && !h.includes('x2-btinh-rate-2026-09-ha_cap') &&
+    !h.includes('x2-btinh-rate-2026-09-bao_thanh');
+})());
+document.getElementById('x2-btinh-rate-2026-09').value = '600';
 x2.handleX2BaoTinhRateRowSave('2026-09');
-check('ĐỊNH MỨC 3 CỘT: lưu tháng 9 = { tinh 600 · ha_cap 300 · bao_thanh 100 } (state + localStorage)',
-  state.x2BaoTinhRates['2026-09'].tinh === 600 &&
-  state.x2BaoTinhRates['2026-09'].ha_cap === 300 &&
-  state.x2BaoTinhRates['2026-09'].bao_thanh === 100 &&
-  JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BAO_TINH_RATE) || '{}')['2026-09'].bao_thanh === 100);
-check('ĐỊNH MỨC: đọc được bản CŨ (số thuần) = định mức "Bào tinh"', (() => {
+check('ĐỊNH MỨC 1 CỘT: lưu tháng 9 = 600 (SỐ thuần — state + localStorage)',
+  state.x2BaoTinhRates['2026-09'] === 600 &&
+  JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BAO_TINH_RATE) || '{}')['2026-09'] === 600);
+check('ĐỊNH MỨC: bản CŨ số thuần vẫn đọc được + baoTinhRateNorm gộp object 3 trường → 1 số', (() => {
   state.x2BaoTinhRates['2026-08'] = 500;
-  const e = x2.baoTinhRateEntryOf('2026-08');
-  const ok = e.tinh === 500 && e.ha_cap === 0 && e.bao_thanh === 0 && x2.baoTinhRateOf('2026-08-05') === 500;
+  const ok = x2.baoTinhRateEntryOf('2026-08') === 500 && x2.baoTinhRateOf('2026-08-05') === 500 &&
+    x2.baoTinhRateNorm({ tinh: 700, ha_cap: 300, bao_thanh: 100 }) === 700 &&
+    x2.baoTinhRateNorm({ ha_cap: 0, bao_thanh: 500 }) === 500;
   delete state.x2BaoTinhRates['2026-08'];
   return ok;
 })());
-check('THẺ NGÀY: chip HIỆU SUẤT THEO TỪNG LOẠI — Bào tinh 29,6% (1600÷9÷600) · Hạ cấp 5,6% · Bào thanh 55,6%', (() => {
+check('THẺ NGÀY: 1 chip HIỆU SUẤT CHUNG — 40,9% (2.210÷9÷600) · ĐM 600 thanh/h (không còn 3 hiệu suất riêng)', (() => {
   const h = document.getElementById('x2-btinh-day-cards').innerHTML;
-  return h.includes('29,6%') && h.includes('5,6%') && h.includes('55,6%');
+  return h.includes('Hiệu suất: <strong') && h.includes('40,9%') && h.includes('ĐM 600 thanh/h') &&
+    !h.includes('ĐM 300 thanh/h') && !h.includes('ĐM 100 thanh/h');
 })());
-check('THẺ NGÀY: mỗi chip ghi ĐM của loại đó (600 · 300 · 100 thanh/h) + vẫn có Công suất tổng 250 thanh/h', (() => {
+check('THẺ NGÀY: dòng chi tiết sản lượng TỪNG NHÁNH (chỉ theo dõi) "Nhánh: Bào tinh 1.600 · Hạ cấp 110 · Bào thanh 500"', (() => {
   const h = document.getElementById('x2-btinh-day-cards').innerHTML;
-  return h.includes('ĐM 600 thanh/h') && h.includes('ĐM 300 thanh/h') && h.includes('ĐM 100 thanh/h') &&
-    h.includes('246 thanh/h');
+  return h.includes('x2-day-kind-detail') && h.includes('Nhánh:') &&
+    h.includes('Bào tinh 1.600') && h.includes('Bào tinh hạ cấp 110') && h.includes('Bào thanh 500');
 })());
 x2.closeX2BaoTinhRateModal();
 check('POPUP ĐỊNH MỨC: đóng được (overlay bỏ class show)',
@@ -766,6 +766,64 @@ check('CHIP "ĐÃ BÀO": nhãn "Đã bào 700/700 thanh" · không truyền lô 
 state.xuong2BaoTinhRecords = state.xuong2BaoTinhRecords.filter(r => r.id !== 'bt-usedup');
 state.batches = state.batches.filter(b => b.id !== 'k-usedup' && b.id !== 'k-fresh');
 
+// ─── F2. HẠ CẤP CHẠY 1 PHẦN + MIGRATE ĐỊNH MỨC CŨ (16/10/2026) ──
+// Nguồn lỗi mới 40 thanh (lượt tinh 26/09) → hạ cấp CHỈ 25 thanh (đạt 10 + lỗi 15),
+// phần Còn lại 15 PHẢI giữ ở tồn (lỗi cũ: luôn ôm trọn cả cỡ vì thiếu ô lỗi).
+state.xuong2BaoTinhRecords.push({ id: 'bt-partial-src', date: '2026-09-26', week: '2026-W39', kind: 'tinh',
+  noteUses: [], sources: [], inQty: 100, inSizeKey: '1400×24×8',
+  outSizeKey: '1400×22×6', outDims: [1400, 22, 6], qtyOk: 60, qtyErr: 40 });
+document.getElementById('x2-btinh-kind').value = 'ha_cap';
+document.getElementById('x2-btinh-date').value = '2026-09-26';
+x2.updateXuong2BaoTinhLinked();
+x2.toggleBaoTinhPick('1400×22×6');
+x2.onBaoTinhGroupInput(fakeOkInput('1400×22×6', 10));
+x2.onBaoTinhGroupInput(fakeErrInput('1400×22×6', 15));   // đem chạy 25/40
+fillOut('1400×22×6', 1400, 20, 5);
+check('BẢNG HẠ CẤP: dòng có ô SL lỗi (data-btinh-err) + cột "Còn lại" = 15 (40 − 25)', (() => {
+  x2.renderX2BaoTinhGroups();
+  const h = document.getElementById('x2-btinh-groups').innerHTML;
+  return h.includes('data-btinh-err="1400×22×6"') && h.includes('Còn lại') &&
+    h.includes('class="x2-btinh-ton">15<') && h.includes('SL lỗi');
+})());
+check('TỔNG KẾT hiện Lỗi 15 + Còn lại 15 (không còn bắt buộc chạy hết cỡ)', (() => {
+  x2.renderX2BaoTinhCalc();
+  const h = document.getElementById('x2-btinh-calc').innerHTML;
+  return h.includes('Lỗi:') && h.includes('Còn lại:');
+})());
+x2.handleXuong2BaoTinhSubmit({ preventDefault(){} });
+const rp = state.xuong2BaoTinhRecords.find(r => r.id !== 'bt-partial-src' && r.kind === 'ha_cap' && r.date === '2026-09-26');
+check('CHẠY 1 PHẦN: lượt lưu inQty = 25 (Đạt 10 + Lỗi 15) — KHÔNG ôm trọn 40 thanh',
+  !!rp && rp.inQty === 25 && rp.qtyOk === 10 && rp.qtyErr === 15 && rp.defectKey === '1400×22×6');
+check('TỒN LỖI sau chạy 1 phần: cỡ 1400×22×6 còn 15 (40−25) · cỡ mới 1400×20×5 có 15 lỗi',
+  ((x2.baoTinhDefectStock().find(x => x.sizeKey === '1400×22×6') || {}).remaining === 15) &&
+  ((x2.baoTinhDefectStock().find(x => x.sizeKey === '1400×20×5') || {}).remaining === 15));
+check('CHẶN: Đạt + Lỗi (20) vượt tồn lỗi còn lại (15) → KHÔNG lưu', (() => {
+  x2.resetXuong2BaoTinhForm();                       // form về mặc định 'tinh'
+  document.getElementById('x2-btinh-kind').value = 'ha_cap';
+  document.getElementById('x2-btinh-date').value = '2026-09-26';
+  x2.updateXuong2BaoTinhLinked();
+  x2.toggleBaoTinhPick('1400×22×6');                 // còn 15 thanh
+  x2.onBaoTinhGroupInput(fakeOkInput('1400×22×6', 10));
+  x2.onBaoTinhGroupInput(fakeErrInput('1400×22×6', 10));
+  fillOut('1400×22×6', 1400, 20, 5);
+  const n = state.xuong2BaoTinhRecords.length;
+  x2.handleXuong2BaoTinhSubmit({ preventDefault(){} });
+  return state.xuong2BaoTinhRecords.length === n;
+})());
+check('MIGRATE ĐỊNH MỨC CŨ: object 3 trường → 1 số (ưu tiên tinh · không tinh thì max) + ghi lại localStorage', (() => {
+  const cur = JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BAO_TINH_RATE) || '{}');
+  localStorage.setItem(STORAGE_KEY_X2_BAO_TINH_RATE, JSON.stringify(Object.assign({}, cur,
+    { '2026-12': { tinh: 700, ha_cap: 300, bao_thanh: 100 }, '2027-01': { ha_cap: 0, bao_thanh: 500 } })));
+  x2.loadX2BaoTinhRates();
+  const st = state.x2BaoTinhRates;
+  const ls = JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BAO_TINH_RATE) || '{}');
+  return st['2026-12'] === 700 && st['2027-01'] === 500 && ls['2026-12'] === 700 &&
+    ls['2027-01'] === 500 && st['2026-09'] === 600;
+})());
+// dọn dữ liệu F2
+state.xuong2BaoTinhRecords = state.xuong2BaoTinhRecords.filter(r => r.id !== 'bt-partial-src' && r.date !== '2026-09-26');
+x2.resetXuong2BaoTinhForm();
+
 // ─── H. CẤU TRÚC + NỐI ĐỒNG BỘ ──────────────────────────────────
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): Ngày Bào · Loại Bào · nút "Chọn thanh" cùng 1 HÀNG + DÒNG "Bào thanh" 4 trường (đã bỏ ô nhập tay cũ)',
@@ -781,7 +839,7 @@ check('CẤU TRÚC (index.html): Ngày Bào · Loại Bào · nút "Chọn thanh
   !idxHtml.includes('id="x2-btinh-in-dai"') && !idxHtml.includes('id="x2-btinh-out-dai"') &&
   !idxHtml.includes('id="x2-btinh-qty-ok"') && !idxHtml.includes('id="x2-btinh-qty-err"') &&
   !idxHtml.includes('id="x2-btinh-lot"') && !idxHtml.includes('id="x2-btinh-defect"'));
-check('CẤU TRÚC (index.html): Ngày Bào · Loại Bào · bộ lọc kỳ · nút Định mức + popup 3 cột (bỏ thanh rate-bar cũ)',
+check('CẤU TRÚC (index.html): Ngày Bào · Loại Bào · bộ lọc kỳ · nút Định mức + popup 1 cột (bỏ thanh rate-bar cũ)',
   idxHtml.includes('id="x2-btinh-date"') && idxHtml.includes('id="x2-btinh-kind"') &&
   idxHtml.includes('id="x2-btinh-day-cards"') &&
   idxHtml.includes('id="x2-btinh-period-bar"') &&
@@ -790,15 +848,17 @@ check('CẤU TRÚC (index.html): Ngày Bào · Loại Bào · bộ lọc kỳ ·
   idxHtml.includes('id="x2-btinh-rate-new-month"') && idxHtml.includes('id="x2-btinh-bt-in-search"') &&
   !idxHtml.includes('id="x2-btinh-rate-bar"') && !idxHtml.includes('id="x2-btinh-rate-month"') &&
   !idxHtml.includes('id="x2-btinh-rate-chips"'));
-check('CẤU TRÚC (index.html): popup Định mức có ĐỦ 3 CỘT — Bào tinh · Bào tinh hạ cấp · Bào thanh',
+check('CẤU TRÚC (index.html): popup Định mức GỘP 1 CỘT "Bào tinh (thanh/h)" — KHÔNG còn 2 cột riêng',
   /<th>Bào tinh \(thanh\/h\)<\/th>/.test(idxHtml) &&
-  /<th>Bào tinh hạ cấp \(thanh\/h\)<\/th>/.test(idxHtml) &&
-  /<th>Bào thanh \(thanh\/h\)<\/th>/.test(idxHtml));
+  !/<th>Bào tinh hạ cấp \(thanh\/h\)<\/th>/.test(idxHtml) &&
+  !/<th>Bào thanh \(thanh\/h\)<\/th>/.test(idxHtml) &&
+  fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8').includes('x2-day-kind-detail'));
 const cssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-check('CẤU TRÚC (styles.css): khối THẺ BÀO TINH FORM GỌN (thẻ 2 dòng · bảng tổng hợp · ô k.thước hẹp)',
+check('CẤU TRÚC (styles.css): khối THẺ BÀO TINH FORM GỌN (thẻ 2 dòng · bảng tổng hợp · ô k.thước hẹp · dòng chi tiết nhánh)',
   cssHtml.includes('THẺ BÀO TINH — FORM GỌN') && cssHtml.includes('.x2-btinh-card .al-card-sub') &&
   cssHtml.includes('.x2-btinh-ok {') && cssHtml.includes('.x2-btinh-group-table {') &&
-  cssHtml.includes('.x2-btinh-dim') && cssHtml.includes('.x2-btinh-actions {'));
+  cssHtml.includes('.x2-btinh-dim') && cssHtml.includes('.x2-btinh-actions {') &&
+  cssHtml.includes('.x2-day-kind-detail {'));
 check('CẤU TRÚC (styles.css): ô tìm nhanh .al-search trong picker + KHÔNG còn khối CSS lơ lửng ({} cân bằng)',
   cssHtml.includes('.x2-btinh-picker .al-card-list') && cssHtml.includes('.al-search {') &&
   !cssHtml.includes('inset 0 0 0 1px var(--primary-border);\n}') &&
@@ -972,7 +1032,7 @@ check('CẤU TRÚC (events.js + xuong2.js): nối 2 ô số lượng + hàm lọ
   jsX2.includes('function baoTinhQtyQuery') && jsX2.includes('function baoTinhListMatch') &&
   jsX2.includes('baoTinhQtyMatchVals([it.remaining, it.total], qQty)') && jsX2.includes('plainTxt'));
 check('CẤU TRÚC (styles.css): ô tìm số lượng .al-search-qty dùng chung', cssHtml.includes('.al-search-qty {'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v252/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v198', /nha-may-ngoc-son-v259/.test(swJs));
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
 

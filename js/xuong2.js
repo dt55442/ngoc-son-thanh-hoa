@@ -26,7 +26,7 @@ import { firePushSync, initLucide, requireEditPermission, requireRatePermission 
 import { canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
 import { logDataChange } from './history.js';
-import { canApproveLeave, hrSplitHoursHCDate } from './hr.js';
+import { canApproveLeave, hrShiftCfg, hrSplitHoursHCDate } from './hr.js';
 import { renderAll } from './main.js'; // vẽ lại toàn bộ (Kanban cột Kho ẩn lô hết) — dùng lúc chạy
 import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
@@ -34,7 +34,7 @@ import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoPeriodKeyOf, khoStockSummary } from './utils.js';
+import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftGroupRows, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoPeriodKeyOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 
   // Ghi file dữ liệu qua storage.js (import động để tránh vòng phụ thuộc module
@@ -1356,6 +1356,66 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       tc: split.tc
     };
   }
+  // ─── TÁCH THEO CA (2 CA) — DỮ LIỆU CHO KHỐI "Theo ca" CỦA THẺ NGÀY ──
+  // Chỉ có ý nghĩa khi bộ phận được đặt chế độ "Làm ca" ở Cài Đặt Ca (tab Nhân
+  // Sự) → 1 ngày có 2 cột ca. Mọi thẻ ngày (Xưởng 2 / Xưởng 1 / Ép Ván / QC)
+  // đọc chung bộ hàm này để số liệu KHÔNG lệch giữa các thẻ.
+  // Tên + khung giờ từng ca lấy từ chính Cài Đặt Ca của bộ phận.
+  function shiftMetaOf(dept) {
+    const cfg = hrShiftCfg(dept || 'Xưởng 2');
+    const meta = {};
+    ((cfg && cfg.shifts) || []).forEach((s, i) => {
+      meta[i] = {
+        name: String((s && s.name) || ('Ca ' + (i + 1))),
+        start: String((s && s.start) || ''),
+        end: String((s && s.end) || '')
+      };
+    });
+    return meta;
+  }
+  // Các lượt bố trí của 1 vị trí trong ngày → NHÓM THEO CA (giờ thật, HC/TC
+  // tách đúng cửa sổ ca của bộ phận). Mất bố trí thì khối ca không hiện —
+  // người/giờ vẫn còn ở snapshot của khối đầu thẻ như cũ.
+  function shiftGroupsFor(dateVal, matchPos, dept) {
+    const d = dept || 'Xưởng 2';
+    const rows = hrAssignmentsAt(dateVal, matchPos).filter(a => a.start).map(a => {
+      const r = hrSplitHoursHCDate(d, dateVal, a.start, a.end, a.shiftIdx || 0);
+      return { shiftIdx: a.shiftIdx || 0, name: a.name, hc: (r.hc || 0) / 60, tc: (r.tc || 0) / 60 };
+    });
+    return shiftGroupRows(rows);
+  }
+  // Khối "Theo ca" của thẻ MỘT công đoạn
+  // o = { qty, unit, rate, incH, dept }
+  function x2ShiftBlockOf(dateVal, matchPos, label, o) {
+    const opts = o || {};
+    const dept = opts.dept || 'Xưởng 2';
+    const incH = Number(opts.incH) || 0;
+    return shiftBreakdownHtml({
+      date: dateVal,
+      incHours: incH,
+      shiftMeta: shiftMetaOf(dept),
+      sections: [{
+        label,
+        groups: shiftGroupsFor(dateVal, matchPos, dept),
+        qty: opts.qty, unit: opts.unit || '', rate: opts.rate, incHours: incH
+      }]
+    });
+  }
+  // Khối "Theo ca" của thẻ NHIỀU công đoạn (Bullig · Cắt Ván · Bào Ván)
+  // Mỗi section có thể tự truyền incHours (sự cố tính riêng theo từng phân vị).
+  function x2ShiftBlockMulti(dateVal, sections, incH, dept) {
+    const inc = Number(incH) || 0;
+    return shiftBreakdownHtml({
+      date: dateVal,
+      incHours: inc,
+      shiftMeta: shiftMetaOf(dept || 'Xưởng 2'),
+      sections: (sections || []).map(s => ({
+        ...s,
+        incHours: (s && s.incHours != null) ? s.incHours : inc
+      }))
+    });
+  }
+
   // Snapshot của lượt CẮT/CHỌN (tên trường cũ — giữ nguyên để không phá dữ liệu cũ)
   function hrCutSnapshot(dateVal) {
     const s = hrPositionSnapshot(dateVal, hrCutAssignmentsOf(dateVal));
@@ -2048,6 +2108,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('cut', date)}
           </div>
+          ${x2ShiftBlockOf(date, isCutSelectPos, 'Cắt chọn', { qty: totalIn, unit: 'kg/h', rate, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -2476,6 +2537,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('boluong', date)}
           </div>
+          ${x2ShiftBlockOf(date, isBocLuongPos, 'Bốc luồng', { qty: totalQty, unit: 'kg/h', rate, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -3179,6 +3241,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('boong', date)}
           </div>
+          ${x2ShiftBlockOf(date, isBoOngPos, 'Bổ ống', { qty: totalIn, unit: 'kg/h', rate, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -3905,6 +3968,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('baotho', date)}
           </div>
+          ${x2ShiftBlockOf(date, isBaoThoPos, 'Bào thô', { qty: (allQtyKnown ? totalQty : null), unit: 'thanh/h', rate, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -4016,6 +4080,106 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       .filter(x => x.baothoId === baothoId && x.id !== excludeId).length;
   }
 
+  // ─── MỖI TỔ HỢP 1 DÒNG · SỐ NHẬP = TỔNG (16/10/2026) ────────────
+  // Người chọn nan nhập SỐ TỔNG cho 1 tổ hợp (kích thước + phân loại) trong ĐÚNG
+  // lô bào thô + ngày chọn. Trước đây mỗi lần bấm Lưu là THÊM 1 dòng mới nên cùng
+  // tổ hợp có 2-3 dòng → khó theo dõi "còn bao nhiêu":
+  //   • Khóa gộp = lô (nan mua ngoài → NCC) · ngày · kích thước · phân loại;
+  //   • Lưu mới mà đã có dòng trùng → GỘP về 1 dòng (số nhập = TỔNG mới, không cộng dồn);
+  //   • Nạp dữ liệu CŨ có dòng trùng → gộp lại (TỔNG = cộng các dòng cũ — đúng số
+  //     hệ thống trước đây vẫn hiển thị) + trỏ lô Sấy 1 về dòng sống.
+  function chonNanRowKeyOf(r) {
+    if (!r) return '';
+    return [
+      r.external ? 'ext' : (r.baothoId || ''),
+      r.date || '',
+      r.sizeKey || '',
+      r.cls || '',
+      r.external ? (r.supplier || '') : ''
+    ].join('|');
+  }
+  // Gộp các dòng TRÙNG (1 tổ hợp = 1 dòng) — trả về dòng sống nếu có gộp, null nếu không.
+  //   • keepId khác rỗng (đang SỬA): giữ chính dòng keepId, gán payload, xóa dòng trùng khác.
+  //   • keepId rỗng (GHI MỚI): đã có dòng trùng → chọn dòng sống (ưu tiên dòng đang có
+  //     lô Sấy 1 trỏ vào), gán payload (số nhập = TỔNG), xóa dòng trùng còn lại.
+  // Lô Sấy 1 trỏ vào dòng sắp xóa được TRỎ VỀ dòng sống (không mất liên kết).
+  function chonNanMergeInto(payload, keepId) {
+    const list = state.xuong2ChonNanThoRecords || [];
+    if (!payload || !list.length) return null;
+    const key = chonNanRowKeyOf(payload);
+    if (!key) return null;
+    const dups = list.filter(r => r && chonNanRowKeyOf(r) === key && r.id !== keepId);
+    if (!dups.length) return null;
+    let survivor;
+    if (keepId) {
+      survivor = list.find(r => r && r.id === keepId) || null;
+      if (!survivor) return null;
+    } else {
+      survivor = dups.find(r => (state.batches || [])
+        .some(b => b && String(b.sourceChonNanId || '') === String(r.id))) || dups[0];
+    }
+    const removed = keepId ? dups : dups.filter(r => r.id !== survivor.id);
+    Object.assign(survivor, payload, { updatedAt: new Date().toISOString() });
+    const removedIds = removed.map(r => String(r.id));
+    let batchTouched = false;
+    (state.batches || []).forEach(b => {
+      if (b && removedIds.includes(String(b.sourceChonNanId || ''))) {
+        b.sourceChonNanId = survivor.id;
+        batchTouched = true;
+      }
+    });
+    if (removedIds.length) {
+      state.xuong2ChonNanThoRecords = list.filter(r => r && !removedIds.includes(String(r.id)));
+      removedIds.forEach(id => trackDeleted('xuong2ChonNanThoRecords', id));
+      if (batchTouched) storageModule().then(m => m && m.saveData()).catch(() => {});
+    }
+    return survivor;
+  }
+  // MIGRATE khi NẠP: gộp dòng trùng của dữ liệu CŨ — TỔNG = cộng các dòng cũ
+  // (trước đây hệ thống vẫn CỘNG các dòng này khi hiện số liệu → giữ nguyên đúng
+  // số đã hiển thị). Có đổi mới lưu lại.
+  function dedupeChonNanRecords() {
+    const list = state.xuong2ChonNanThoRecords || [];
+    if (list.length < 2) return false;
+    const groups = new Map();
+    list.forEach(r => {
+      if (!r) return;
+      const k = chonNanRowKeyOf(r);
+      if (!k) return;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(r);
+    });
+    const hasBatch = id => (state.batches || [])
+      .some(b => b && String(b.sourceChonNanId || '') === String(id));
+    const removedIds = [];
+    const repoint = new Map();
+    groups.forEach(rows => {
+      if (rows.length < 2) return;
+      const survivor = rows.find(r => hasBatch(r.id)) || rows[0];
+      let qty = 0, vol = 0;
+      rows.forEach(r => { qty += (Number(r.quantity) || 0); vol += (Number(r.volume) || 0); });
+      survivor.quantity = qty;
+      survivor.volume = Math.round(vol * 10000) / 10000;
+      survivor.updatedAt = new Date().toISOString();
+      rows.forEach(r => {
+        if (r.id === survivor.id) return;
+        removedIds.push(String(r.id));
+        repoint.set(String(r.id), survivor.id);
+      });
+    });
+    if (!removedIds.length) return false;
+    state.xuong2ChonNanThoRecords = list.filter(r => r && !removedIds.includes(String(r.id)));
+    removedIds.forEach(id => trackDeleted('xuong2ChonNanThoRecords', id));
+    let batchTouched = false;
+    (state.batches || []).forEach(b => {
+      if (!b) return;
+      const to = repoint.get(String(b.sourceChonNanId || ''));
+      if (to) { b.sourceChonNanId = to; batchTouched = true; }
+    });
+    if (batchTouched) storageModule().then(m => m && m.saveData()).catch(() => {});
+    saveXuong2ChonNan();
+    return true;
+  }
   // ─── ĐỊNH MỨC CÔNG SUẤT CHỌN NAN THÔ (thanh/giờ) THEO TỪNG THÁNG ──
   function loadX2ChonNanRates() {
     const raw = localStorage.getItem(STORAGE_KEY_X2_CHON_NAN_RATE);
@@ -4103,6 +4267,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     } else {
       state.xuong2ChonNanThoRecords = [];
     }
+    // Gộp dòng trùng của dữ liệu CŨ — 1 tổ hợp (lô · ngày · kích thước · phân loại)
+    // = 1 DÒNG (16/10/2026); nếu TRƯỚC ĐÓ nhiều dòng thì TỔNG = cộng các dòng cũ
+    dedupeChonNanRecords();
   }
 
   function saveXuong2ChonNan() {
@@ -4422,17 +4589,28 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const rec = (state.xuong2ChonNanThoRecords || []).find(r2 => r2.id === state.x2ChonNanEditId);
       if (!rec) { showToast('Không tìm thấy lượt chọn nan cần sửa!', 'error'); return; }
       Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
+      // Sửa sang tổ hợp ĐANG CÓ dòng khác (cùng lô · ngày · kích thước · phân loại)
+      // → gộp về dòng đang sửa (số nhập = TỔNG), xóa dòng trùng (kèm trỏ lô Sấy 1)
+      chonNanMergeInto(payload, rec.id);
       saveXuong2ChonNan();
       showToast('Đã cập nhật lượt chọn nan thô!', 'success');
       resetXuong2ChonNanForm();          // sửa xong → về form ghi mới (trắng)
     } else {
-      (state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords || []).push({
-        id: 'x2cn-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-        ...payload,
-        createdAt: new Date().toISOString()
-      });
+      const list = (state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords || []);
+      // MỖI TỔ HỢP CHỈ 1 DÒNG — số nhập = TỔNG: đã có dòng trùng (kể cả dữ liệu cũ
+      // nhiều dòng cùng kích thước · phân loại) → cập nhật dòng đó, KHÔNG cộng dồn.
+      const merged = chonNanMergeInto(payload, null);
+      if (merged) {
+        showToast(`Đã cập nhật TỔNG ${fmtThanh(quantity)} thanh cho ${size.sizeKey} · ${nanClassLabel(cls)} (ngày ${formatDateDDMMYY(dateVal)})!`, 'success');
+      } else {
+        list.push({
+          id: 'x2cn-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+          ...payload,
+          createdAt: new Date().toISOString()
+        });
+        showToast('Đã ghi lượt chọn nan thô!', 'success');
+      }
       saveXuong2ChonNan();
-      showToast('Đã ghi lượt chọn nan thô!', 'success');
       keepChonNanFormAfterSave();        // GIỮ lô/ngày/loại nan/phân loại để nhập tiếp
     }
     renderX2ChonNanCard();
@@ -4448,14 +4626,14 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const sel = document.getElementById('x2-cn-baotho');
     // Lượt nan MUA NGOÀI (external) không gắn lô bào thô → chọn lại "Thêm loại mới"
     if (sel) sel.value = rec.external ? CN_NEW_LOT_VALUE : (rec.baothoId || '');
+    const d = document.getElementById('x2-cn-date');
+    if (d) d.value = rec.date || '';      // NGÀY TRƯỚC khi nạp danh sách cỡ (nhãn theo ngày)
     renderX2ChonNanSizeOptions(rec.external ? null : baoThoLotOf(rec.baothoId));
     const sizeSel = document.getElementById('x2-cn-size');
     if (sizeSel && !rec.external) sizeSel.value = rec.sizeKey || '';
     const nccEl = document.getElementById('x2-cn-ncc');
     if (nccEl) nccEl.value = rec.external ? (rec.supplier || '') : '';
     syncX2ChonNanExternalFields();
-    const d = document.getElementById('x2-cn-date');
-    if (d) d.value = rec.date || '';
     const dims = Array.isArray(rec.dims) ? rec.dims : [];
     const setVal = (fid, v) => { const el = document.getElementById(fid); if (el) el.value = (v == null || v === '') ? '' : String(v); };
     setVal('x2-cn-dai', dims[0]); setVal('x2-cn-rong', dims[1]); setVal('x2-cn-day', dims[2]);
@@ -4728,6 +4906,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           <span class="x2-day-sum" title="Tổng thể tích quy đổi của số thanh đã chọn trong ngày"><i data-lucide="box"></i> Tổng thể tích: <strong>${totalVol.toFixed(4)} m³</strong></span>
           <span class="x2-day-sum" title="Tỷ lệ loại = số thanh 'Loại hẳn' ÷ tổng số thanh đã chọn trong ngày"><i data-lucide="alert-triangle"></i> Tỷ lệ loại: <strong>${rejPct == null ? '—' : `${fmtRatio(rejPct)}%`}</strong></span>
         </div>
+        ${x2ShiftBlockOf(date, isChonNanPos, 'Chọn nan', { qty: totalQty, unit: 'thanh/h', rate, incH })}
         <table class="data-table x2-day-table">
           <thead>
             <tr>
@@ -5918,6 +6097,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           ${bulligEffHtml(ctCap, 'Chọn thanh')}
           ${stageIncidentInputHtml('bullig', date)}
         </div>
+        ${x2ShiftBlockMulti(date, [
+          { label: 'Gia công', groups: shiftGroupsFor(date, isBulligGcPos), qty: gcOutSum, unit: 'thanh/h', rate: bulligRateOf(date, 'gc'), incHours: gcCap.incH },
+          { label: 'Chọn thanh', groups: shiftGroupsFor(date, isBulligCtPos), qty: (ctOkSum + ctErrSum), unit: 'thanh/h', rate: bulligRateOf(date, 'ct'), incHours: ctCap.incH }
+        ], 0)}
         <!-- VÙNG 1: GIA CÔNG -->
         <div class="x2-bl-zone-head x2-bl-zone-gc"><i data-lucide="wrench"></i> Gia công — Chọn thanh thô từ lô Bullig (Kho)</div>
         <table class="data-table x2-day-table">
@@ -6736,6 +6919,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           ${periodChip}
           ${stageIncidentInputHtml('catvan', date)}
         </div>
+        ${x2ShiftBlockMulti(date, [
+          { label: 'Cắt ván', groups: shiftGroupsFor(date, isCatVanPos), qty: catTam, unit: 'tấm/h', rate: catVanRateOf(date, 'cat'), incHours: catCap.incH },
+          { label: 'Xẻ thanh', groups: shiftGroupsFor(date, isXeThanhPos), qty: thanhRa, unit: 'thanh/h', rate: catVanRateOf(date, 'xe'), incHours: xeCap.incH }
+        ], 0)}
         <!-- VÙNG 1: CẮT VÁN -->
         <div class="x2-bl-zone-head x2-bl-zone-gc"><i data-lucide="crop"></i> Cắt ván — đầu vào từ Ép Ván (ván thô / thành phẩm)</div>
         <table class="data-table x2-day-table">
@@ -7343,6 +7530,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           ${periodChip}
           ${stageIncidentInputHtml('baovan', date)}
         </div>
+        ${x2ShiftBlockMulti(date, [
+          { label: 'Bào ván', groups: shiftGroupsFor(date, isBaoVanPos), qty: baoTam, unit: 'tấm/h', rate: baoVanRateOf(date, 'bao'), incHours: baoCap.incH },
+          { label: 'Chà thùng', groups: shiftGroupsFor(date, isChaThungPos), qty: chaTam, unit: 'tấm/h', rate: baoVanRateOf(date, 'cha'), incHours: chaCap.incH }
+        ], 0)}
         <!-- VÙNG 1: BÀO -->
         <div class="x2-bl-zone-head x2-bl-zone-gc"><i data-lucide="wind"></i> Bào — đầu vào từ Ép Ván (ván thô / thành phẩm)</div>
         <table class="data-table x2-day-table">
@@ -7853,6 +8044,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
             <span class="x2-day-hours" title="Giờ làm = tổng khung giờ của những người thực hiện trong ngày (không cộng trùng), tách giờ hành chính (HC) / tăng ca (TC)">Giờ làm: <span class="x2-hours-hc">${fmtRatio(agg.hc)}h HC</span><span class="x2-hours-tc">${fmtRatio(agg.tc)}h TC</span></span>
             <span class="x2-day-hours" title="Số công việc hỗ trợ đã ghi trong ngày — công việc phát sinh nên KHÔNG tính công suất / hiệu suất"><i data-lucide="list-checks"></i> ${recs.length} công việc</span>
           </div>
+          ${x2ShiftBlockOf(date, isHoTroPos, 'Hỗ trợ', { qty: null, unit: '', rate: null, incH: 0 })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -8341,6 +8533,16 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     } else {
       state.x2BaoTinhRates = {};
     }
+    // MIGRATE dữ liệu CŨ (object 3 trường) về 1 SỐ thuần — gộp định mức 3 cột → 1 chỉ số
+    let changed = false;
+    const dictRates = state.x2BaoTinhRates || {};
+    Object.keys(dictRates).forEach(k => {
+      const norm = baoTinhRateNorm(dictRates[k]);
+      if (norm !== dictRates[k]) { dictRates[k] = norm; changed = true; }
+    });
+    if (changed) {
+      try { localStorage.setItem(STORAGE_KEY_X2_BAO_TINH_RATE, JSON.stringify(dictRates)); } catch (e) { /* giữ nguyên bản cũ */ }
+    }
   }
 
   function saveX2BaoTinhRates() {
@@ -8355,31 +8557,30 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     firePushSync();
   }
 
-  // ─── ĐỊNH MỨC 3 CỘT: Bào tinh · Bào tinh hạ cấp · Bào thanh (thanh/giờ) ──
-  // state.x2BaoTinhRates[tháng] = { tinh, ha_cap, bao_thanh }.
-  // Dữ liệu CŨ lưu số thuần { 'YYYY-MM': 800 } → hiểu là định mức "Bào tinh".
-  const BAO_TINH_RATE_KINDS = ['tinh', 'ha_cap', 'bao_thanh'];
-  function baoTinhRateLabel(kind) {
-    return kind === 'ha_cap' ? 'Bào tinh hạ cấp'
-      : (kind === 'bao_thanh' ? 'Bào thanh' : 'Bào tinh');
-  }
-  // Đọc 1 tháng → { tinh, ha_cap, bao_thanh } (bản cũ: số thuần = Bào tinh)
-  function baoTinhRateEntryOf(monthKey) {
-    const raw = (state.x2BaoTinhRates || {})[String(monthKey || '')];
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      return {
-        tinh: Number(raw.tinh) || 0,
-        ha_cap: Number(raw.ha_cap) || 0,
-        bao_thanh: Number(raw.bao_thanh) || 0
-      };
+  // ─── ĐỊNH MỨC 1 CHỈ SỐ: "Bào tinh" (thanh/giờ) THEO TỪNG THÁNG ──
+  // state.x2BaoTinhRates[tháng] = <SỐ thuần> — GỘP cả 3 nhánh (tinh · hạ cấp ·
+  // Bào thanh) về 1 chỉ số: giờ người làm KHÔNG tách theo nhánh nên tách 3 định mức
+  // sẽ khiến mọi nhánh chia chung 1 mẫu số giờ → hiệu suất sai từng nhánh.
+  // Dữ liệu CŨ { tinh, ha_cap, bao_thanh } → baoTinhRateNorm() gộp về 1 số
+  // (ưu tiên tinh; tinh = 0 thì lấy số lớn nhất) — migrate lúc loadX2BaoTinhRates.
+  function baoTinhRateNorm(raw) {
+    if (raw == null) return 0;
+    if (typeof raw === 'object' && !Array.isArray(raw)) {
+      const t = Number(raw.tinh) || 0;
+      if (t > 0) return t;
+      return Math.max(Number(raw.ha_cap) || 0, Number(raw.bao_thanh) || 0);
     }
-    return { tinh: Number(raw) || 0, ha_cap: 0, bao_thanh: 0 };
+    return Number(raw) || 0;
   }
-  // Định mức của LOẠI bào tại tháng chứa dateVal (thanh/giờ) — null nếu chưa đặt.
-  // kind mặc định 'tinh' (bảng Tổng hợp công suất trộn 3 loại dùng ĐM Bào tinh).
-  function baoTinhRateOf(dateVal, kind) {
-    const k = BAO_TINH_RATE_KINDS.includes(String(kind || '')) ? String(kind) : 'tinh';
-    const v = Number(baoTinhRateEntryOf(String(dateVal || '').slice(0, 7))[k]);
+  function baoTinhRateLabel() { return 'Bào tinh'; }   // chỉ còn 1 chỉ số chung
+  // Đọc 1 tháng → SỐ định mức chung (thanh/giờ); bản cũ là object → đã gộp
+  function baoTinhRateEntryOf(monthKey) {
+    return baoTinhRateNorm((state.x2BaoTinhRates || {})[String(monthKey || '')]);
+  }
+  // Định mức BÀO TINH tại tháng chứa dateVal (thanh/giờ) — null nếu chưa đặt.
+  // (Tham số kind BỎ QUA — định mức đã gộp 1 chỉ số chung cho cả 3 nhánh.)
+  function baoTinhRateOf(dateVal) {
+    const v = baoTinhRateEntryOf(String(dateVal || '').slice(0, 7));
     return Number.isFinite(v) && v > 0 ? v : null;
   }
   // Danh sách tháng hiện trong popup ĐỊNH MỨC (mới nhất lên đầu)
@@ -8404,52 +8605,45 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (inM) inM.value = '';
   }
 
-  // Bảng popup: THÁNG | Bào tinh | Bào tinh hạ cấp | Bào thanh | Lưu · Xóa
+  // Bảng popup: THÁNG | Bào tinh (thanh/h — CHUNG cả 3 nhánh) | Lưu · Xóa
   function renderX2BaoTinhRateModal() {
     const tbody = document.getElementById('x2-btinh-rate-rows');
     if (!tbody) return;
-    const cell = (m, kind) => {
-      const v = Number(baoTinhRateEntryOf(m)[kind]) || 0;
-      return `<td class="qcf-rate-cell"><input type="number" min="0" step="any" inputmode="decimal" class="qcf-rate-input" id="x2-btinh-rate-${m}-${kind}" value="${v > 0 ? v : ''}" placeholder="—" title="Định mức ${baoTinhRateLabel(kind)} của tháng (thanh/giờ) — trống = chưa đặt"></td>`;
-    };
     const rows = baoTinhRateMonthsList();
     tbody.innerHTML = rows.length ? rows.map(m => {
-      const e = baoTinhRateEntryOf(m);
-      const custom = e.tinh > 0 || e.ha_cap > 0 || e.bao_thanh > 0;
+      const v = baoTinhRateEntryOf(m);
+      const custom = v > 0;
       return `<tr${custom ? '' : ' class="qcf-rate-row-default"'}>
         <td><strong>Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</strong></td>
-        ${cell(m, 'tinh')}${cell(m, 'ha_cap')}${cell(m, 'bao_thanh')}
+        <td class="qcf-rate-cell"><input type="number" min="0" step="any" inputmode="decimal" class="qcf-rate-input" id="x2-btinh-rate-${m}" value="${v > 0 ? v : ''}" placeholder="—" title="Định mức BÀO TINH CHUNG của tháng (thanh/giờ) — dùng cho CẢ Bào tinh · Hạ cấp · Bào thanh; trống = chưa đặt"></td>
         <td class="text-right">
           <button type="button" class="btn btn-outline btn-icon btn-sm" data-x2-btinh-rate-save="${escapeHTML(m)}" data-admin-only title="Lưu định mức tháng này"><i data-lucide="save"></i></button>
           <button type="button" class="btn btn-outline btn-icon btn-sm" style="color:var(--danger);" data-x2-btinh-rate-reset="${escapeHTML(m)}" data-admin-only title="Xóa định mức tháng này"><i data-lucide="trash-2"></i></button>
         </td>
       </tr>`;
-    }).join('') : '<tr><td colspan="5"><em style="color:var(--text-muted);">Chưa có tháng nào — dùng ô "Thêm tháng" bên dưới.</em></td></tr>';
+    }).join('') : '<tr><td colspan="3"><em style="color:var(--text-muted);">Chưa có tháng nào — dùng ô "Thêm tháng" bên dưới.</em></td></tr>';
     initLucide();
   }
-  // Lưu 1 HÀNG (1 tháng): 3 ô thanh/giờ — trống = chưa đặt LOẠI đó
+  // Lưu 1 HÀNG (1 tháng): 1 ô thanh/giờ (CHUNG cả 3 nhánh) — trống = chưa đặt
   function handleX2BaoTinhRateRowSave(month) {
     if (!requireRatePermission()) return;
     const m = String(month || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Tháng không hợp lệ!', 'error'); return; }
-    const readVal = id => {
-      const raw = String((document.getElementById(id) || {}).value || '').trim().replace(',', '.');
-      if (raw === '') return 0;
-      const v = Number(raw);
-      return (Number.isFinite(v) && v > 0) ? v : -1;   // -1 = số sai
-    };
-    const tinh = readVal(`x2-btinh-rate-${m}-tinh`);
-    const haCap = readVal(`x2-btinh-rate-${m}-ha_cap`);
-    const baoThanh = readVal(`x2-btinh-rate-${m}-bao_thanh`);
-    if (tinh < 0 || haCap < 0 || baoThanh < 0) {
-      showToast('Định mức phải là số lớn hơn 0 (hoặc để trống = chưa đặt)!', 'error');
-      return;
+    const raw = String((document.getElementById(`x2-btinh-rate-${m}`) || {}).value || '').trim().replace(',', '.');
+    let v = 0;
+    if (raw !== '') {
+      const n = Number(raw);
+      if (!(Number.isFinite(n) && n > 0)) {
+        showToast('Định mức phải là số lớn hơn 0 (hoặc để trống = chưa đặt)!', 'error');
+        return;
+      }
+      v = n;
     }
-    (state.x2BaoTinhRates = state.x2BaoTinhRates || {})[m] = { tinh, ha_cap: haCap, bao_thanh: baoThanh };
+    (state.x2BaoTinhRates = state.x2BaoTinhRates || {})[m] = v;
     saveX2BaoTinhRates();
     renderX2BaoTinhRateModal();
-    renderX2BaoTinhTable();   // chip Hiệu suất từng loại trên thẻ ngày tự cập nhật
-    showToast(`Đã lưu định mức 3 loại cho tháng ${Number(m.slice(5))}/${m.slice(0, 4)}!`, 'success');
+    renderX2BaoTinhTable();   // chip Hiệu suất CHUNG trên thẻ ngày tự cập nhật
+    showToast(`Đã lưu định mức Bào tinh ${v > 0 ? `${fmtThanh(v)} thanh/h` : '(chưa đặt)'} cho tháng ${Number(m.slice(5))}/${m.slice(0, 4)}!`, 'success');
   }
   function handleX2BaoTinhRateRowReset(month) {
     if (!requireRatePermission()) return;
@@ -8467,7 +8661,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const m = String((inM && inM.value) || '').trim();
     if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Chọn tháng cần thêm!', 'error'); return; }
     (state.x2BaoTinhRates = state.x2BaoTinhRates || {})[m] =
-      baoTinhRateMonthsList().includes(m) ? baoTinhRateEntryOf(m) : { tinh: 0, ha_cap: 0, bao_thanh: 0 };
+      baoTinhRateMonthsList().includes(m) ? baoTinhRateEntryOf(m) : 0;
     saveX2BaoTinhRates();
     renderX2BaoTinhRateModal();
     if (inM) inM.value = '';
@@ -9255,7 +9449,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   // BẢNG TỔNG HỢP: Kích thước vào · Số lượng vào · KÍCH THƯỚC SAU BÀO (mỗi dòng) · SL thanh ĐẠT
-  // KHÔNG hiện SL thanh lỗi ở form (lỗi = vào − đạt, chỉ hiện ở bảng lịch sử)
+  // Nhánh HẠ CẤP thêm cột SL LỖI nhập tay + CÒN LẠI (chạy 1 phần — phần CHƯA chạy giữ ở tồn)
   function renderX2BaoTinhGroups() {
     const box = document.getElementById('x2-btinh-groups');
     const actions = document.getElementById('x2-btinh-actions');
@@ -9308,28 +9502,34 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           <td class="text-right x2-btinh-ton-cell"><strong class="x2-btinh-ton">${fmtThanh(ton)}</strong></td>
         </tr>`;
       }
-      // ── HẠ CẤP: giữ nguyên 3 ô kích thước + SL đạt (lỗi = vào − đạt, tự tính) ──
+      // ── HẠ CẤP: 3 ô kích thước + SL đạt + SL LỖI nhập tay — ĐẠT + LỖI = số ĐEM
+      // CHẠY đợt này, phần CÒN LẠI vẫn giữ ở tồn lỗi (chạy đợt sau).
+      // (Lỗi cũ: thiếu ô lỗi nên vào − đạt = lỗi → luôn ôm trọn cả cỡ) ──
+      const errHc = numDraft(btinhErrDraft, g.key);
+      const takeHc = Math.max(0, Math.round(Number(ok) || 0)) + errHc;
+      const remainHc = Math.max(0, g.inQty - takeHc);
       return `<tr data-btinh-row="${escapeHTML(g.key)}">
         <td class="x2-btinh-in-cell">${inCell}</td>
         <td class="text-right x2-btinh-qty-cell">${qtyCell}</td>
         <td class="x2-btinh-out-cell"><span class="x2-btinh-dims">${dimCellOut(g, 'd', 'Dài')}<span class="x2-dim-x">×</span>${dimCellOut(g, 'r', 'Rộng')}<span class="x2-dim-x">×</span>${dimCellOut(g, 't', 'Dày')}</span></td>
         <td class="x2-btinh-ok-cell"><input type="number" class="x2-btinh-ok" data-btinh-ok="${escapeHTML(g.key)}" min="0" step="1" placeholder="0" value="${escapeHTML(okTxt)}"></td>
-        <td class="text-right"></td>
+        <td class="x2-btinh-ok-cell">${numCell('btinh-err', btinhErrDraft, g.key, '0')}</td>
+        <td class="text-right x2-btinh-ton-cell"><strong class="x2-btinh-ton">${fmtThanh(remainHc)}</strong></td>
       </tr>`;
     }).join('');
     const tIn = groups.reduce((s, g) => s + g.inQty, 0);
     const tOk = groups.reduce((s, g) => s + Math.min(Math.max(0, Math.round(Number(btinhOkDraft.get(g.key)) || 0)), g.inQty), 0);
-    // Tổng Lỗi / Tóp / Khác / Tồn — chỉ nhánh NGUỒN PHIẾU (kind 'tinh')
+    // Tổng Lỗi / Tồn — cả nguồn PHIẾU (tinh) lẫn HẠ CẤP (Tóp/Khác = 0, chỉ Đạt + Lỗi được rút)
     const dOf = (m, g) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
-    const tErr = kind === 'tinh' ? groups.reduce((s, g) => s + dOf(btinhErrDraft, g), 0) : 0;
+    const tErr = groups.reduce((s, g) => s + dOf(btinhErrDraft, g), 0);
     const tTop = kind === 'tinh' ? groups.reduce((s, g) => s + dOf(btinhTopDraft, g), 0) : 0;
     const tOth = kind === 'tinh' ? groups.reduce((s, g) => s + dOf(btinhOtherDraft, g), 0) : 0;
-    const tTon = kind === 'tinh' ? groups.reduce((s, g) => s + Math.max(0, g.inQty - (dOf(btinhOkDraft, g) + dOf(btinhErrDraft, g) + dOf(btinhTopDraft, g) + dOf(btinhOtherDraft, g))), 0) : 0;
+    const tTon = groups.reduce((s, g) => s + Math.max(0, g.inQty - (dOf(btinhOkDraft, g) + dOf(btinhErrDraft, g) + dOf(btinhTopDraft, g) + dOf(btinhOtherDraft, g))), 0);
     box.innerHTML = `
       <div class="x2-btinh-groups-head">
         ${(kind === 'tinh')
           ? `<i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước trong phiếu xuất</strong> — nhập <strong>KT sau bào</strong> 1 dòng (VD 1250x20x5) · Đạt · Lỗi · Tóp · Khác. <strong>Tồn = tổng − Đạt − Lỗi − Tóp − Khác</strong> (phần chưa làm vẫn ở trong phiếu, làm tiếp ngày sau)`
-          : `<i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước chung</strong> (không chia phân loại) — mỗi dòng điền <strong>kích thước sau bào</strong> + <strong>SL thanh đạt</strong>`}
+          : `<i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước chung</strong> — mỗi dòng điền <strong>kích thước sau bào</strong> + <strong>SL đạt</strong> + <strong>SL lỗi</strong>. <strong>Số đem chạy = Đạt + Lỗi</strong>, phần <strong>Còn lại</strong> vẫn giữ ở tồn lỗi (chạy đợt sau)`}
       </div>
       <div class="x2-btinh-group-scroll">
         <table class="data-table x2-btinh-group-table">
@@ -9346,10 +9546,11 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
               </tr></thead>`
             : `<thead><tr>
                 <th title="Kích thước thanh TRƯỚC khi bào (kích thước chung của các thẻ đã chọn)">K.thước vào</th>
-                <th class="text-right" title="Tổng số thanh lấy từ các thẻ của kích thước này">SL vào</th>
+                <th class="text-right" title="Tổng số thanh LỖI còn lại của kích thước này">SL vào</th>
                 <th title="Kích thước SAU khi bào (Dài × Rộng × Dày, mm)">K.thước sau bào</th>
-                <th title="Số thanh ĐẠT của dòng này — SL thanh LỖI tự tính = thanh vào − thanh đạt (hiện ở bảng lịch sử)">SL đạt</th>
-                <th></th>
+                <th title="Số thanh ĐẠT của phần ĐÃ CHẠY đợt này">SL đạt</th>
+                <th title="Số thanh LỖI của phần ĐÃ CHẠY đợt này (nhập tay)">SL lỗi</th>
+                <th class="text-right" title="Còn lại = SL vào − Đạt − Lỗi — phần CHƯA chạy vẫn ở tồn lỗi, chạy đợt sau">Còn lại</th>
               </tr></thead>`}
           <tbody>${rows}</tbody>
           ${(kind === 'tinh')
@@ -9368,7 +9569,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
                 <td class="text-right"><strong>${fmtThanh(tIn)}</strong></td>
                 <td></td>
                 <td><strong>${fmtThanh(tOk)}</strong></td>
-                <td></td>
+                <td><strong>${fmtThanh(tErr)}</strong></td>
+                <td class="text-right"><strong>${fmtThanh(tTon)}</strong></td>
               </tr></tfoot>`}
         </table>
       </div>`;
@@ -9385,9 +9587,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const tOk = groups.reduce((s, g) => s + Math.min(Math.max(0, Math.round(Number(btinhOkDraft.get(g.key)) || 0)), g.inQty), 0);
     tds[1].innerHTML = `<strong>${fmtThanh(tIn)}</strong>`;
     tds[3].innerHTML = `<strong>${fmtThanh(tOk)}</strong>`;
-    // Nguồn phiếu xuất: còn 4 ô Tổng nữa — Lỗi · Tóp · Khác · Tồn (8 cột)
-    if (tds.length >= 8 && baoTinhKindOf() === 'tinh') {
-      const dOf = (m, g) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
+    const dOf = (m, g) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
+    const kindNow = baoTinhKindOf();
+    // Nguồn phiếu xuất: 8 cột (Lỗi · Tóp · Khác · Tồn) — HẠ CẤP: 6 cột (Lỗi · Còn lại)
+    if (tds.length >= 8 && kindNow === 'tinh') {
       const tErr = groups.reduce((s, g) => s + dOf(btinhErrDraft, g), 0);
       const tTop = groups.reduce((s, g) => s + dOf(btinhTopDraft, g), 0);
       const tOth = groups.reduce((s, g) => s + dOf(btinhOtherDraft, g), 0);
@@ -9396,7 +9599,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       tds[5].innerHTML = `<strong>${fmtThanh(tTop)}</strong>`;
       tds[6].innerHTML = `<strong>${fmtThanh(tOth)}</strong>`;
       tds[7].innerHTML = `<strong>${fmtThanh(tTon)}</strong>`;
-      // Cập nhật TỒN từng dòng (không vẽ lại bảng → giữ con trỏ ô nhập)
+    } else if (tds.length >= 6 && kindNow === 'ha_cap') {
+      // Nhánh HẠ CẤP (6 cột): 2 ô Tổng cuối = Lỗi · Còn lại của lần chạy 1 phần
+      const tErrHc = groups.reduce((s, g) => s + dOf(btinhErrDraft, g), 0);
+      const tTonHc = groups.reduce((s, g) => s + Math.max(0, g.inQty - (dOf(btinhOkDraft, g) + dOf(btinhErrDraft, g))), 0);
+      tds[4].innerHTML = `<strong>${fmtThanh(tErrHc)}</strong>`;
+      tds[5].innerHTML = `<strong>${fmtThanh(tTonHc)}</strong>`;
+    }
+    if (kindNow === 'tinh' || kindNow === 'ha_cap') {
+      // Cập nhật CÒN LẠI từng dòng (không vẽ lại bảng → giữ con trỏ ô nhập)
       groups.forEach(g => {
         const esc = (typeof CSS !== 'undefined' && CSS && typeof CSS.escape === 'function') ? CSS.escape(g.key) : String(g.key).replace(/"/g, '\\"');
         const row = (typeof box.querySelector === 'function') ? box.querySelector(`tr[data-btinh-row="${esc}"]`) : null;
@@ -9411,7 +9622,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
 
   // Ô TỔNG KẾT (tự tính): tổng thanh vào · tổng đạt · tỷ lệ đạt · thể tích đạt (tính theo TỪNG dòng
   // với kích thước SAU BÀO riêng) · nguồn.
-  // LƯU Ý: SL thanh LỖI (= vào − đạt) KHÔNG hiện ở form nhập, chỉ hiện ở bảng lịch sử.
+  // Nguồn phiếu + HẠ CẤP: hiện thêm Lỗi · Còn lại (phần CHƯA chạy vẫn ở tồn).
   function renderX2BaoTinhCalc() {
     const box = document.getElementById('x2-btinh-calc');
     if (!box) return;
@@ -9440,21 +9651,24 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       : kind === 'ha_cap'
         ? '<strong style="color:#b45309;">thanh lỗi (hạ cấp)</strong>'
         : '<strong style="color:#0f766e;">PHIẾU XUẤT KHO mục đích Bào Tinh (qua Sấy 2)</strong>';
-    // Nguồn phiếu: còn Lỗi · Tóp · Khác · TỒN (phần chưa làm — vẫn ở trong phiếu)
+    // Nguồn phiếu + HẠ CẤP: còn Lỗi · (Tóp · Khác chỉ nguồn phiếu) · CÒN LẠI (phần CHƯA chạy)
     const nOf = (m, g) => Math.max(0, Math.round(Number(m.get(g.key)) || 0));
     const isNoteRows = (kind === 'tinh');
-    const tErr2 = isNoteRows ? groups.reduce((s, g) => s + nOf(btinhErrDraft, g), 0) : 0;
+    const hasErrRows = (kind !== 'bao_thanh');    // tinh lẫn ha_cap đều nhập được Lỗi
+    const tErr2 = hasErrRows ? groups.reduce((s, g) => s + nOf(btinhErrDraft, g), 0) : 0;
     const tTop2 = isNoteRows ? groups.reduce((s, g) => s + nOf(btinhTopDraft, g), 0) : 0;
     const tOth2 = isNoteRows ? groups.reduce((s, g) => s + nOf(btinhOtherDraft, g), 0) : 0;
-    const tTon2 = isNoteRows ? groups.reduce((s, g) => s + Math.max(0, g.inQty - (nOf(btinhOkDraft, g) + nOf(btinhErrDraft, g) + nOf(btinhTopDraft, g) + nOf(btinhOtherDraft, g))), 0) : 0;
+    const tTon2 = hasErrRows ? groups.reduce((s, g) => s + Math.max(0, g.inQty - (nOf(btinhOkDraft, g) + nOf(btinhErrDraft, g) + nOf(btinhTopDraft, g) + nOf(btinhOtherDraft, g))), 0) : 0;
     box.innerHTML = `
       <span class="x2-ong-calc-item x2-ong-calc-in" title="Tổng số thanh của các phiếu đã chọn (cộng cả các hàng tự nhập)"><span class="x2-ong-calc-label">Tổng vào:</span><strong>${fmtThanh(tIn)} thanh</strong></span>
       <span class="x2-ong-calc-item x2-ong-calc-bo" title="Tổng SL thanh ĐẠT đã nhập trong bảng tổng hợp"><span class="x2-ong-calc-label">Đạt:</span><strong>${fmtThanh(tOk)} thanh</strong></span>
+      ${hasErrRows ? `
+      <span class="x2-ong-calc-item" title="SL thanh LỖI nhập tay của dòng"><span class="x2-ong-calc-label">Lỗi:</span><strong>${fmtThanh(tErr2)} thanh</strong></span>` : ''}
       ${isNoteRows ? `
-      <span class="x2-ong-calc-item" title="SL thanh LỖI nhập tay của dòng"><span class="x2-ong-calc-label">Lỗi:</span><strong>${fmtThanh(tErr2)} thanh</strong></span>
       <span class="x2-ong-calc-item" title="SL thanh TÓP (hao hụt) — vào tồn trung gian chờ xử lý"><span class="x2-ong-calc-label">Tóp:</span><strong>${fmtThanh(tTop2)} thanh</strong></span>
-      <span class="x2-ong-calc-item" title="SL thanh KHÁC — vào tồn trung gian chờ xử lý"><span class="x2-ong-calc-label">Khác:</span><strong>${fmtThanh(tOth2)} thanh</strong></span>
-      <span class="x2-ong-calc-item x2-ong-calc-after" title="Tồn = tổng − Đạt − Lỗi − Tóp − Khác — phần CHƯA LÀM vẫn ở trong phiếu, làm tiếp ngày sau"><span class="x2-ong-calc-label">Tồn:</span><strong>${fmtThanh(tTon2)} thanh</strong></span>` : ''}
+      <span class="x2-ong-calc-item" title="SL thanh KHÁC — vào tồn trung gian chờ xử lý"><span class="x2-ong-calc-label">Khác:</span><strong>${fmtThanh(tOth2)} thanh</strong></span>` : ''}
+      ${hasErrRows ? `
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Còn lại = SL vào − Đạt − Lỗi − Tóp − Khác — phần CHƯA CHẠY vẫn ở tồn (phiếu hoặc cỡ lỗi), chạy đợt sau"><span class="x2-ong-calc-label">Còn lại:</span><strong>${fmtThanh(tTon2)} thanh</strong></span>` : ''}
       <span class="x2-ong-calc-item" title="Tỷ lệ đạt = tổng thanh đạt ÷ tổng thanh vào (SL thanh lỗi tự tính chỉ hiện ở bảng lịch sử)"><span class="x2-ong-calc-label">Tỷ lệ đạt:</span><strong>${okPct == null ? '—' : `${fmtRatio(okPct)}%`}</strong></span>
       <span class="x2-ong-calc-item" title="Thể tích thanh ĐẠT: cộng theo TỪNG dòng, mỗi dòng dùng kích thước SAU BÀO của nó"><span class="x2-ong-calc-label">Thể tích đạt:</span><strong>${volAny ? `${(Math.round(volOk * 10000) / 10000).toFixed(4)} m³` : '—'}</strong></span>
       <span class="x2-ong-calc-item" title="Nguồn thanh của lượt bào này"><span class="x2-ong-calc-label">Nguồn:</span>${kindTxt}</span>`;
@@ -9772,26 +9986,29 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
           });
           continue;
         }
-        // ── HẠ CẤP: lỗi = vào − đạt (tự tính như cũ) ──
+        // ── HẠ CẤP: ĐẠT + LỖI nhập tay = số ĐEM CHẠY đợt này; phần còn lại giữ ở tồn
+        // (CHẠY 1 PHẦN — trước đây thiếu ô lỗi nên luôn ôm trọn cả cỡ) ──
         const okRaw = Math.round(Math.max(0, Number(btinhOkDraft.get(g.key)) || 0));
-        if (okRaw <= 0 && !(out[0] > 0 || out[1] > 0 || out[2] > 0)) { skipped++; continue; }
+        const errRaw = Math.round(Math.max(0, Number(btinhErrDraft.get(g.key)) || 0));
+        const takeHc = okRaw + errRaw;
+        if (takeHc <= 0 && !(out[0] > 0 || out[1] > 0 || out[2] > 0)) { skipped++; continue; }
         if (!g.sizeKey || g.inQty <= 0) {
           showToast('Có dòng chưa nhập đủ KÍCH THƯỚC TRƯỚC BÀO hoặc SỐ LƯỢNG — kiểm tra bảng tổng hợp!', 'error');
           return;
         }
-        if (okRaw <= 0) {
-          showToast(`Kích thước ${g.sizeKey}: chưa nhập SL thanh ĐẠT — nhập rồi bấm Lưu!`, 'error');
+        if (takeHc <= 0) {
+          showToast(`Kích thước ${g.sizeKey}: nhập SL thanh ĐẠT + SL thanh LỖI của đợt này (chưa chạy hết thì để phần CÒN LẠI lại) rồi bấm Lưu!`, 'error');
           return;
         }
-        if (okRaw > g.inQty) {
-          showToast(`Kích thước ${g.sizeKey}: SL thanh đạt (${fmtThanh(okRaw)}) vượt thanh vào (${fmtThanh(g.inQty)}) — kiểm tra lại!`, 'error');
+        if (takeHc > g.inQty) {
+          showToast(`Kích thước ${g.sizeKey}: Đạt + Lỗi (${fmtThanh(takeHc)}) vượt tồn lỗi còn lại (${fmtThanh(g.inQty)}) — kiểm tra lại!`, 'error');
           return;
         }
         if (!(out[0] > 0 && out[1] > 0 && out[2] > 0)) {
           showToast(`Kích thước ${g.sizeKey}: nhập đủ KÍCH THƯỚC SAU BÀO (Dài × Rộng × Dày) cho dòng này!`, 'error');
           return;
         }
-        plans.push({ g, outDims: out, qtyOk: okRaw, qtyErr: Math.max(0, g.inQty - okRaw) });
+        plans.push({ g, outDims: out, qtyOk: okRaw, qtyErr: errRaw, taken: takeHc });
       }
       if (!plans.length) {
         showToast('Chưa nhập số liệu cho dòng nào — nhập KÍCH THƯỚC SAU BÀO + SL thanh ĐẠT rồi bấm Lưu!', 'error');
@@ -9817,7 +10034,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const allocLots = isNote ? plan.alloc.lots : [];
       const first = isNote ? (allocLots[0] || null) : ((g.sources || []).filter(s => kind === 'tinh')[0] || null);
       const defect = kind === 'ha_cap' ? baoTinhDefectStockOf(g.sizeKey) : null;
-      const taken = isNote ? (plan.taken || 0) : 0;
+      const taken = plan.taken || 0;   // tinh = Đạt+Lỗi+Tóp+Khác · ha_cap = Đạt+Lỗi (số đem chạy)
       return {
         date: dateVal,
         week: materialWeekLabel(dateVal),
@@ -9842,15 +10059,15 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         inSource: isBt ? ((btInItem && btInItem.inSource) || 'press') : '',
         inDims: isBt ? (btInItem ? btInItem.dims : []) : [],
         manualRowId: '',
-        // Số thanh RÚT khỏi nguồn của dòng (phiếu: Đạt+Lỗi+Tóp+Khác; hạ cấp: tổng vào)
-        inQty: isBt ? baoTinhBaoThanhQtyIn() : (isNote ? taken : g.inQty),
+        // Số thanh RÚT khỏi nguồn của dòng (phiếu: Đạt+Lỗi+Tóp+Khác; hạ cấp: Đạt+Lỗi = số đem chạy)
+        inQty: isBt ? baoTinhBaoThanhQtyIn() : ((isNote || kind === 'ha_cap') ? taken : g.inQty),
         inSizeKey: isBt ? (btInItem ? btInItem.sizeKey : '') : g.sizeKey,
         // Kết quả — 'bao_thanh' để 0 (ĐẠT/LỖI đọc LIVE từ tab QC "Kiểm thanh")
         outDims,
         outSizeKey,
         unitVol,
         qtyOk: isBt ? 0 : plan.qtyOk,
-        qtyErr: isBt ? 0 : plan.qtyErr,   // phiếu: NHẬP TAY · hạ cấp: vào − đạt (tự tính)
+        qtyErr: isBt ? 0 : plan.qtyErr,   // phiếu: NHẬP TAY · hạ cấp: NHẬP TAY (đợt chạy 1 phần)
         // TÓP / KHÁC + ghi chú loại khác — chỉ nguồn phiếu xuất (tồn trung gian chờ xử lý)
         qtyTop: isNote ? (plan.qtyTop || 0) : 0,
         qtyOther: isNote ? (plan.qtyOther || 0) : 0,
@@ -9953,6 +10170,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         if (rec.otherNote) btinhOtherNoteDraft.set(rowKey, String(rec.otherNote));
       } else {
         btinhOutDraft.set(rowKey, { d: outDims[0] || '', r: outDims[1] || '', t: outDims[2] || '' });
+        // HẠ CẤP: khôi phục SL LỖI đã lưu (đợt chạy 1 phần) → cột "Còn lại" đúng khi sửa
+        if (Number(rec.qtyErr)) btinhErrDraft.set(rowKey, Math.round(Number(rec.qtyErr)));
       }
     }
     syncX2BaoTinhKindRows(true);
@@ -10243,20 +10462,23 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       const hoursEff = stageEffHours('baotinh', date, hours);
       const incH = stageIncidentOf('baotinh', date);
       const cap = hoursEff > 0 ? (tIn / hoursEff) : null;
-      // CHIP ĐỊNH MỨC · CÔNG SUẤT · HIỆU SUẤT THEO TỪNG LOẠI BÀO có trong ngày
-      // (mỗi loại có 1 ĐM riêng trong popup "Định mức" 3 cột của thẻ)
+      // CHIP ĐỊNH MỨC · HIỆU SUẤT CHUNG CỦA CẢ NGÀY — định mức ĐÃ GỘP về 1 chỉ số
+      // "Bào tinh" (giờ người làm KHÔNG tách theo nhánh → tách 3 hiệu suất là 3 nhánh
+      // cùng chia 1 mẫu số giờ, gây hiểu lầm) + DÒNG CHI TIẾT sản lượng từng nhánh.
       const kindOrder = [];
       rows.forEach(r => { const k = r.kind || 'tinh'; if (!kindOrder.includes(k)) kindOrder.push(k); });
-      const kindChips = kindOrder.map(k => {
+      const rateK = baoTinhRateOf(date);
+      const effK = (cap != null && rateK) ? (cap / rateK) * 100 : null;
+      const effTxt = effK == null ? '—' : `${fmtRatio(effK)}%`;
+      const effColor = effK == null ? 'inherit' : (effK >= 100 ? '#16a34a' : effK >= 70 ? '#0f766e' : '#b45309');
+      const kindChip = `<span class="x2-day-cap" title="Hiệu suất CHUNG cả 3 nhánh (Bào tinh · Hạ cấp · Bào thanh): công suất ${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'} (${fmtThanh(tIn)} thanh ÷ ${fmtRatio(hoursEff)} giờ hiệu dụng${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}) ÷ định mức Bào tinh${rateK ? ` ${fmtThanh(rateK)} thanh/h` : ' (chưa đặt)'} — giờ làm KHÔNG tách theo nhánh nên tính CHUNG 1 hiệu suất">Hiệu suất: <strong style="color:${effColor};">${effTxt}</strong>${rateK ? ` · ĐM ${fmtThanh(rateK)} thanh/h` : ' (chưa đặt Định mức)'}</span>`;
+      const kindParts = kindOrder.map(k => {
         const qtyK = rows.reduce((s, r) => s + (((r.kind || 'tinh') === k) ? baoTinhQtyInOf(r) : 0), 0);
-        const rateK = baoTinhRateOf(date, k);
-        const capK = hoursEff > 0 ? qtyK / hoursEff : null;
-        const effK = (capK != null && rateK) ? (capK / rateK) * 100 : null;
-        const ratePart = rateK ? ` · ĐM ${fmtThanh(rateK)} thanh/h` : ' (chưa đặt Định mức)';
-        const effPart = effK == null ? ''
-          : ` · Hiệu suất <strong style="color:${effK >= 100 ? '#16a34a' : effK >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(effK)}%</strong>`;
-        return `<span class="x2-day-cap" title="Loại ${baoTinhRateLabel(k)}: ${fmtThanh(qtyK)} thanh ÷ ${fmtRatio(hoursEff)} giờ bào${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}${rateK ? ` · Định mức ${fmtThanh(rateK)} thanh/h` : ''}">${escapeHTML(baoTinhRateLabel(k))}: <strong>${capK != null ? `${fmtThanh(capK)} thanh/h` : '—'}</strong>${ratePart}${effPart}</span>`;
-      }).join('');
+        return `${baoTinhKindLabel(k)} ${fmtThanh(qtyK)}`;
+      }).join(' · ');
+      const kindDetail = kindOrder.length > 1
+        ? `<span class="x2-day-kind-detail" title="Sản lượng TỪNG nhánh trong ngày — chỉ theo dõi; hiệu suất tính CHUNG (cùng 1 giờ làm của ngày)">Nhánh: ${escapeHTML(kindParts)}</span>`
+        : '';
       const hcTxt = first.workHoursHC != null ? fmtRatio(first.workHoursHC) : '—';
       const tcTxt = first.workHoursTC != null ? fmtRatio(first.workHoursTC) : '—';
       const errPct = tIn > 0 ? (tErr / tIn) * 100 : null;
@@ -10281,11 +10503,12 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
             <span class="x2-day-hours" title="Thời gian = tổng giờ công vị trí Bào tinh trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
             <span class="x2-day-cap" title="Công suất thực tế = Tổng thanh đưa vào (${fmtThanh(tIn)} thanh) ÷ giờ bào hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
             ${stageIncidentInputHtml('baotinh', date)}
-            ${kindChips}
+            ${kindChip}${kindDetail}
             <span class="x2-day-cap" title="Tổng thanh ĐẠT trong ngày">Đạt: <strong>${fmtThanh(tOk)} thanh</strong></span>
             <span class="x2-day-eff" title="Tổng thanh LỖI trong ngày${errPct == null ? '' : ` (tỷ lệ ${fmtRatio(errPct)}%)`}">Lỗi: <strong style="color:${errPct != null && errPct > 10 ? '#b45309' : '#0f766e'};">${fmtThanh(tErr)} thanh</strong></span>
             ${pendChip}
           </div>
+          ${x2ShiftBlockOf(date, isBaoTinhPos, 'Bào tinh', { qty: tIn, unit: 'thanh/h', rate: rateK, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -11677,6 +11900,14 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     });
     return { hc: hc / 60, tc: tc / 60 };
   }
+  // Nhóm bố trí Xưởng 1 theo CA (cho khối "Theo ca" của 8 thẻ ngày Xưởng 1)
+  function shiftGroupsForX1(dateVal, matchPos) {
+    const rows = hrX1AssignmentsAt(dateVal, matchPos).filter(a => a.start).map(a => {
+      const r = hrSplitHoursHCDate('Xưởng 1', dateVal, a.start, a.end, a.shiftIdx || 0);
+      return { shiftIdx: a.shiftIdx || 0, name: a.name, hc: (r.hc || 0) / 60, tc: (r.tc || 0) / 60 };
+    });
+    return shiftGroupRows(rows);
+  }
   // Khớp tên vị trí Xưởng 1 (bỏ dấu, không phân biệt hoa/thường)
   function isX1CatOngPos(name)  { return normPosName(name).includes('cat ong'); }
   function isX1SaySinhPos(name) { return normPosName(name).includes('say sinh'); }
@@ -11814,6 +12045,14 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml(cfg.incKey, date)}
           </div>
+          ${shiftBreakdownHtml({
+            date, incHours: incH, shiftMeta: shiftMetaOf('Xưởng 1'),
+            sections: [{
+              label: cfg.headName,
+              groups: cfg.shiftMatchPos ? shiftGroupsForX1(date, cfg.shiftMatchPos) : [],
+              qty: totalQty, unit: 'kg/h', rate, incHours: incH
+            }]
+          })}
           <table class="data-table x2-day-table">
             <thead><tr>${cfg.thead}</tr></thead>
             <tbody>${rowsHtml}</tbody>
@@ -12283,6 +12522,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       qtyOf: r => (Number(r.klDat) || 0) + (Number(r.klLoai) || 0) + (Number(r.klMat) || 0) + (Number(r.klNgon) || 0),
       incKey: 'x1catong',
       rateKind: 'catOng',
+      shiftMatchPos: isX1CatOngPos,
       headName: 'Người cắt',
       emptyIcon: 'scissors',
       emptyText: 'Chưa có lượt cắt ống nào.<br>Chọn <strong>lô Vầu/nứa nhập Xưởng 1</strong> ở form trên rồi bấm <strong>Lưu Lượt Cắt Ống</strong>.',
@@ -12617,6 +12857,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       qtyOf: r => Number(r.qty) || 0,
       incKey: 'x1saysinh',
       rateKind: 'saySinh',
+      shiftMatchPos: isX1SaySinhPos,
       headName: 'Người sấy',
       emptyIcon: 'flame-kindling',
       emptyText: 'Chưa có lượt sấy sinh nào.<br>Chọn <strong>lượt Cắt Ống</strong> hoặc <strong>lô Vầu/Nứa nhập thẳng</strong> ở form trên rồi bấm <strong>Lưu Lượt Sấy Sinh</strong>.',
@@ -12858,6 +13099,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       qtyOf: r => Number(r.qty) || 0,
       incKey: 'x1boc',
       rateKind: 'boc',
+      shiftMatchPos: isX1BocPos,
       headName: 'Người bốc',
       emptyIcon: 'forklift',
       emptyText: 'Chưa có lượt bốc nào.<br>Chọn <strong>lượt Sấy Sinh</strong> ở form trên rồi bấm <strong>Lưu Lượt Bốc</strong>.',
@@ -13348,6 +13590,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       qtyOf: r => Number(r.qtyIn) || 0,
       incKey: spec.incKey,
       rateKind: spec.rateKind,
+      shiftMatchPos: spec.posMatch,
       headName: spec.headName,
       emptyIcon: spec.emptyIcon,
       emptyText: `Chưa có lượt ${escapeHTML(spec.title.toLowerCase())} nào.<br>Chọn <strong>${escapeHTML(spec.altSrcName ? `${spec.srcName} hoặc ${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName)}</strong> ở form trên rồi bấm <strong>Lưu Lượt ${escapeHTML(spec.title)}</strong>.`,
@@ -13690,6 +13933,7 @@ export {
   openX2BaoTinhRateModal,
   closeX2BaoTinhRateModal,
   renderX2BaoTinhRateModal,
+  baoTinhRateNorm,
   baoTinhRateEntryOf,
   baoTinhRateLabel,
   baoTinhRateMonthsList,
@@ -13804,6 +14048,9 @@ export {
   renderX2BoOngStockBar,
   renderX2BoOngTable,
   renderX2ChonNanCalc,
+  chonNanRowKeyOf,
+  chonNanMergeInto,
+  dedupeChonNanRecords,
   renderX2BaoTinhCalc,
   renderX2BaoTinhCard,
   renderX2BaoTinhFilterBar,

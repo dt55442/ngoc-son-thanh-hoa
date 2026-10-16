@@ -246,7 +246,7 @@ cloud.applyFireSnapshot({
   x2EpVanRates: { '2026-09': 0.06 },
   x2BoluongRates: { '2026-09': 900 }, x2BoOngRates: { '2026-09': 1512 },
   x2BaoThoRates: { '2026-09': 800 }, x2ChonNanRates: { '2026-09': 800 },
-  x2BaoTinhRates: { '2026-09': { tinh: 711, ha_cap: 600, bao_thanh: 650 } },
+  x2BaoTinhRates: { '2026-09': 711 },
   x2SayRates: { s1: { '2026-09': { van: { phut: 130 } } }, s2: {} },
   x2BulligRates: { gc: { '2026-09': 100 }, ct: { '2026-09': 200 } },
   x2SayTimes: { '2026-09-10|say1': 2 }, x2SayIncidents: { '2026-09-10': 1 },
@@ -259,7 +259,7 @@ check('E1: "Tải Mây Về Máy" cập nhật ĐỊNH MỨC (mây thắng theo 
   state.x2CapRates['2026-09'] === 3600 && state.x2CapRates['2026-10'] === 500 &&
   state.x2EpVanRates['2026-09'] === 0.06 && state.x2BoluongRates['2026-09'] === 900 &&
   state.x2BoOngRates['2026-09'] === 1512 && state.x2BaoThoRates['2026-09'] === 800 &&
-  state.x2ChonNanRates['2026-09'] === 800 && state.x2BaoTinhRates['2026-09'].tinh === 711 &&
+  state.x2ChonNanRates['2026-09'] === 800 && state.x2BaoTinhRates['2026-09'] === 711 &&
   state.x2SayRates.s1['2026-09'].van.phut === 130 && state.x2BulligRates.gc['2026-09'] === 100 &&
   state.x2BulligRates.ct['2026-09'] === 200);
 check('E2: "Tải Mây Về Máy" cập nhật GIỜ SỰ CỐ + SỐ LẦN TH',

@@ -1581,8 +1581,9 @@
                 </div>
               </div>
               <!-- DÒNG 2: BẢNG TỔNG HỢP theo KÍCH THƯỚC CHUNG (gộp, không chia phân loại)
-                   MỖI DÒNG điền: KÍCH THƯỚC SAU BÀO (Dài × Rộng × Dày) + SL thanh ĐẠT.
-                   SL thanh LỖI tự tính (vào − đạt) — KHÔNG hiện ở form, chỉ ở bảng lịch sử.
+                   • Bào tinh / HẠ CẤP: mỗi dòng điền KÍCH THƯỚC SAU BÀO + SL ĐẠT + SL LỖI
+                     (hạ cấp chạy 1 phần được: Số đem chạy = Đạt + Lỗi, phần Còn lại giữ
+                     ở tồn; nguồn phiếu: Tồn = vào − Đạt − Lỗi − Tóp − Khác).
                    • Bào thanh: 1 lượt = 1 cặp (đầu vào → đầu ra) — bảng CHỈ ĐỌC, số ĐẠT
                      LINK từ tab QC ("Kiểm thanh"). -->
               <div class="x2-btinh-groups" id="x2-btinh-groups" style="display:none;"></div>
@@ -1592,7 +1593,7 @@
               <!-- NGƯỜI BÀO + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí
                    chứa "bào tinh" / "bào thanh" — Xưởng 2, đúng ngày) -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:10px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-btinh-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Tinh theo tháng — 3 cột: Bào tinh · Bào tinh hạ cấp · Bào thanh (thanh/giờ) — CHỈ Quản Trị sửa">
+                <button type="button" class="btn btn-outline" id="btn-x2-btinh-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Tinh theo tháng — 1 chỉ số CHUNG (thanh/giờ) dùng cho CẢ Bào tinh · Hạ cấp · Bào thanh — CHỈ Quản Trị sửa">
                   <i data-lucide="target"></i> Định mức
                 </button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-btinh">Làm Mới Form</button>
@@ -1609,7 +1610,7 @@
           </div>
 
           <!-- BẢNG PHỤ ĐÃ DỜ VÀO POPUP "ĐỊNH MỨC" (nút nằm trong form nhập) —
-               bảng 3 cột: Bào tinh · Bào tinh hạ cấp · Bào thanh theo tháng -->
+               bảng 1 cột "Bào tinh" (thanh/giờ) theo tháng — ĐÃ GỘP 3 nhánh -->
 
           <!-- BẢNG GHI DỮ LIỆU — mỗi ngày 1 THẺ RIÊNG:
                đầu thẻ = NỘI DUNG CHUNG (Ngày · Người bào · Giờ HC/TC · Công suất ·
@@ -2962,7 +2963,7 @@
             <h4><i data-lucide="git-merge"></i> Truy Xuất Đầu Vào → Đầu Ra
               <!-- Nút "?" TRỢ GIÚP: toàn bộ giải thích/công thức CHỈ nằm ở đây (tooltip) -->
               <button type="button" class="btn-dash-help" id="trace-help-btn"
-                      title="Công thức: Thể tích 1 đơn vị = Dài × Rộng × Dày ÷ 1.000.000.000 (mm → m³) · Kg tươi / 1 m³ = Σ kg luồng tươi ÷ Σ m³ sản phẩm · Kg tươi của mã = Σ kg tươi kỳ × (thanh nan của mã ÷ Σ thanh nan các mã). Thanh nan của mã: ván = thanh nan vào lượt ép (lượt ép thành phẩm ghi tấm ván thô → quy ra thanh nan theo cỡ ván thô) · Bullig = thanh thô đã gia công · thanh = thanh đưa vào Kiểm thanh (tab QC). Lượt nan MUA NGOÀI (ngoài công đoạn) KHÔNG tính vào chuỗi.">?</button>
+                      title="Công thức: Thể tích 1 đơn vị = Dài × Rộng × Dày ÷ 1.000.000.000 (mm → m³) · Kg tươi / 1 thanh nan = (kg ống bổ đạt ÷ thanh bào thô) ÷ tỷ lệ ống/tươi — lấy theo CHÍNH CHUỖI của kỳ, KHÔNG lấy kg tươi nhập kỳ (vì phần chưa qua cắt còn tồn, sẽ làm số vống lên nhiều lần). Kg tươi / 1 m³ = Σ(thanh nan của mã × kg tươi/1 thanh) ÷ Σ m³ sản phẩm · Kg tươi của mã = thanh nan của mã × kg tươi/1 thanh. KỲ THIẾU DỮ LIỆU ĐẦU VÀO (tháng 8–9/2026 chưa nhập luồng tươi): mượn hệ số kg tươi/1 thanh của CỬA SỔ THAM CHIẾU (các tháng đầy đủ) — có chip ⚠ báo rõ. Thanh nan của mã: ván = thanh nan vào lượt ép (lượt ép thành phẩm ghi tấm ván thô → quy ra thanh nan theo cỡ ván thô, tự chuẩn hóa ký tự phân cách x/×/*) · Bullig = thanh thô đã gia công · thanh = thanh đưa vào Kiểm thanh (tab QC). Lượt nan MUA NGOÀI (ngoài công đoạn) KHÔNG tính vào chuỗi — có ô riêng quy đổi tương đương. Tấm ván thô ghi SAI CỠ sẽ hiện cảnh báo đỏ và bị loại khỏi phép chia (không im lặng bỏ qua).">?</button>
             </h4>
             <div class="trace-toolbar">
               <select id="trace-product" class="trace-product-select"
@@ -2980,6 +2981,10 @@
             </div>
           </div>
           <div id="trace-kpis" class="trace-kpi-row"></div>
+          <!-- PANEL NỔI: KHỐI LƯỢNG BÌNH QUÂN THEO TỪNG CỠ THANH — mở từ ô KPI
+               "Kg tươi / 1 thanh nan"; neo inline absolute theo nút nên KHÔNG
+               nằm trong luồng trang (điện thoại không bị kéo dài / vỡ khung). -->
+          <div class="trace-size-panel" id="trace-size-panel" hidden></div>
           <div class="trace-section">
             <div class="trace-section-head">
               <span class="trace-sec-num">①</span> Tổng quan toàn xưởng &amp; chi tiết công đoạn
@@ -2997,7 +3002,7 @@
           <div class="trace-section">
             <div class="trace-section-head">
               <span class="trace-sec-num">②</span> Truy xuất theo từng mã ván / thanh / Bullig (ước tính phân bổ)
-              <span class="trace-help" title="Số kg ở đầu chuỗi là số CHUNG chưa gắn mã, nên phần theo từng mã là ƯỚC TÍNH: phân bổ kg đầu vào theo SỐ THANH ĐO THẬT mỗi mã tiêu thụ trong kỳ. VÁN: lượt ép ra ván thô ghi thanh nan (khối Đầu vào), lượt ép thành phẩm ghi TẤM VÁN THÔ đầu vào → tự quy ra thanh nan theo cỡ ván thô, nên kg tươi gắn đúng về mã thành phẩm. BULLIG: thanh thô đã gia công (thẻ Bullig). THANH: số thanh đưa vào Kiểm thanh (tab QC). Mã chưa có số đo → dùng thanh định mức. Ván thô chưa vào thành phẩm gom vào dòng 'Chưa gắn mã'.">ⓘ</span>
+              <span class="trace-help" title="Số kg ở đầu chuỗi là số CHUNG chưa gắn mã, nên phần theo từng mã là ƯỚC TÍNH: kg tươi của mã = SỐ THANH NAN ĐO THẬT của mã × HỆ SỐ KG TƯƠI/1 THANH (lấy từ cửa sổ tham chiếu = các tháng đầy đủ, để mọi kỳ so sánh được với nhau — hệ số riêng từng kỳ dao động rất mạnh do vật tư dở dang qua kỳ). Nguồn số thanh: VÁN = thanh nan ở khối Đầu vào của lượt Ép Ván (lượt ép thành phẩm ghi TẤM VÁN THÔ đầu vào → tự quy ra thanh nan theo cỡ ván thô; cỡ được CHUẨN HÓA nên x/×/* đều khớp) · BULLIG = thanh thô đã gia công (thẻ Bullig) · THANH = thanh đưa vào Kiểm thanh (tab QC). Mã chưa có số đo → dùng thanh định mức. Tấm ván thô ghi SAI CỠ → hiện cảnh báo đỏ, không truy được gốc nan. Nan MUA NGOÀI không thuộc chuỗi, có ô đếm riêng.">ⓘ</span>
             </div>
             <div id="trace-products"></div>
           </div>
@@ -6786,11 +6791,12 @@
     </div>
   </div>
 
-  <!-- ═══ POPUP "ĐỊNH MỨC" CỦA THẺ BÀO TINH — bảng theo THÁNG, 3 CỘT
-       Bào tinh · Bào tinh hạ cấp · Bào thanh (đơn vị đều là thanh/giờ).
+  <!-- ═══ POPUP "ĐỊNH MỨC" CỦA THẺ BÀO TINH — bảng theo THÁNG, 1 CỘT
+       "Bào tinh" (thanh/giờ) — ĐÃ GỘP cả 3 nhánh (Bào tinh · Hạ cấp · Bào thanh)
+       về 1 chỉ số vì giờ người làm KHÔNG tách theo nhánh (xem js/xuong2.js).
        Mở bằng nút "Định mức" nằm TRONG form nhập của thẻ Bào Tinh.
-       Dữ liệu cũ lưu 1 số thuần/tháng → hiểu là định mức "Bào tinh".
-       Ô trống = chưa đặt (loại đó sẽ không hiện Hiệu suất trên thẻ ngày).
+       Dữ liệu cũ lưu object 3 trường/tháng → migrate về 1 số lúc nạp.
+       Ô trống = chưa đặt (Hiệu suất ẩn trên thẻ ngày).
        — js/xuong2.js) ═══ -->
   <div class="modal-overlay" id="modal-x2-btinh-rate">
     <div class="modal-card">
@@ -6800,9 +6806,10 @@
       </div>
       <div class="modal-body" style="padding:14px 18px 18px;">
         <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
-          Định mức <b>riêng cho từng LOẠI BÀO</b> (đều là <b>thanh/giờ</b>): <b>Bào tinh</b> ·
-          <b>Bào tinh hạ cấp</b> · <b>Bào thanh</b>. Ô <b>trống</b> = chưa đặt
-          (Hiệu suất của loại đó sẽ ẩn trên thẻ ngày).
+          Định mức <b>1 chỉ số chung Bào tinh</b> (<b>thanh/giờ</b>) dùng cho
+          <b>CẢ 3 nhánh</b>: Bào tinh · Bào tinh hạ cấp · Bào thanh — vì giờ người
+          làm KHÔNG tách theo nhánh nên tách 3 định mức sẽ làm mỗi nhánh chia chung
+          1 mẫu số giờ → hiệu suất sai. Ô <b>trống</b> = chưa đặt (Hiệu suất ẩn).
         </p>
         <div class="table-responsive">
           <table class="data-table qcf-rate-table">
@@ -6810,8 +6817,6 @@
               <tr>
                 <th>Tháng</th>
                 <th>Bào tinh (thanh/h)</th>
-                <th>Bào tinh hạ cấp (thanh/h)</th>
-                <th>Bào thanh (thanh/h)</th>
                 <th></th>
               </tr>
             </thead>

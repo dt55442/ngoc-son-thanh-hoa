@@ -665,6 +665,133 @@ import { state } from './state.js';
     </span>`;
   }
 
+  // ─── TÁCH DỮ LIỆU THEO CA LÀM VIỆC (2 CA) ────────────────────────
+  // Khi bộ phận (Xưởng 2 / Xưởng 1 / QC) được đặt chế độ "Làm ca" ở Bảng bố
+  // trí Nhân Sự thì 1 ngày có thể có 2 ca cùng làm 1 công đoạn. Gộp chung 1
+  // con số cho cả ngày thì KHÔNG đánh giá được ca nào làm tốt hơn → tách mỗi
+  // ca 1 dòng (Người · Giờ HC/TC · Công suất · Hiệu suất).
+  // ⚠ NGƯỜI + GIỜ là số THẬT (Bảng bố trí Nhân Sự; HC/TC tách theo cửa sổ ca);
+  //    SẢN LƯỢNG mỗi ca là ƯỚC TÍNH — form nhập 1 số lượng cho CẢ NGÀY nên phần
+  //    của từng ca được phân bổ theo TỈ LỆ GIỜ LÀM của ca đó (ghi rõ trên UI).
+  // Đặt ở utils.js (cùng chỗ stageIncidentOf) để xuong2.js + press.js +
+  // qc-final.js dùng chung mà KHÔNG vòng import (hr.js import utils.js).
+  // rows: [{ shiftIdx, name, hc, tc }] — hc/tc là GIỜ (đã tách HC/TC theo ca)
+  function shiftGroupRows(rows) {
+    const map = new Map();
+    (rows || []).forEach(r => {
+      const k = Number(r.shiftIdx) || 0;
+      if (!map.has(k)) map.set(k, { shiftIdx: k, names: [], hc: 0, tc: 0, hours: 0, qty: null });
+      const g = map.get(k);
+      const nm = String(r.name || '').trim();
+      if (nm && !g.names.includes(nm)) g.names.push(nm);
+      g.hc += Number(r.hc) || 0;
+      g.tc += Number(r.tc) || 0;
+      // Sản lượng nhập RIÊNG cho ca (bước sau) — cộng dồn nếu có
+      if (r.qty != null && Number.isFinite(Number(r.qty))) {
+        g.qty = (g.qty == null ? 0 : g.qty) + Number(r.qty);
+      }
+    });
+    const out = [...map.values()];
+    out.forEach(g => { g.hours = g.hc + g.tc; });
+    return out.sort((a, b) => a.shiftIdx - b.shiftIdx);
+  }
+
+  // Định dạng số kiểu Việt Nam cho khối ca (VD 1.234,5)
+  function shiftFmtNum(v, d) {
+    return (Number(v) || 0).toLocaleString('vi-VN', {
+      minimumFractionDigits: d == null ? 0 : d,
+      maximumFractionDigits: d == null ? 2 : d
+    });
+  }
+
+  // 1 CÔNG ĐOẠN trong khối ca — trả null khi công đoạn đó KHÔNG có ≥2 ca bố trí.
+  //   sec = { label, groups, qty, unit ('kg/h'|'thanh/h'|'m³/h'|'tấm/h'),
+  //           rate (định mức tháng CÙNG đơn vị), incHours (giờ sự cố cho phép) }
+  function shiftSectionRows(sec) {
+    const groups = (sec && sec.groups) || [];
+    if (groups.length < 2) return null;
+    const totalHours = groups.reduce((s, g) => s + (g.hours || 0), 0);
+    const totalQty = (sec.qty == null || !Number.isFinite(Number(sec.qty))) ? null : Number(sec.qty);
+    const inc = Number(sec.incHours) || 0;
+    const rate = (Number(sec.rate) > 0) ? Number(sec.rate) : null;
+    return groups.map(g => {
+      const share = totalHours > 0 ? (g.hours / totalHours) : 0;
+      // Sản lượng nhập RIÊNG cho ca (bước sau) → dùng số THẬT của ca;
+      // chưa có → ƯỚC TÍNH phân bổ theo tỉ lệ giờ làm của ca.
+      const ownQty = (g.qty == null) ? null : Number(g.qty);
+      const qty = ownQty != null ? ownQty : (totalQty == null ? null : totalQty * share);
+      const incH = inc * share;
+      const hoursEff = Math.max(0, g.hours - incH);
+      const cap = (qty != null && hoursEff > 0) ? (qty / hoursEff) : null;
+      const eff = (cap != null && rate) ? (cap / rate) * 100 : null;
+      return { shiftIdx: g.shiftIdx, names: g.names, hc: g.hc, tc: g.tc, hours: g.hours, qty, hoursEff, incH, cap, eff };
+    });
+  }
+
+  // KHỐI "THEO CA" của 1 THẺ NGÀY — trả '' khi không công đoạn nào có ≥2 ca
+  // (ngày 1 ca / hành chính → giao diện giữ NGUYÊN như trước).
+  // opts = { date, incHours, shiftMeta: { 0: {name,start,end}, 1: {…} }, sections,
+  //          perShiftQty } — perShiftQty = true CHỈ khi sản lượng được nhập RIÊNG
+  // từng ca (bước sau): lúc đó mới hiện Công suất/Hiệu suất từng ca.
+  // ⚠ Khi sản lượng còn ghi CHUNG cho cả ngày (hiện tại) thì công suất mỗi ca
+  // theo cách phân bổ tỉ lệ giờ LUÔN bằng nhau ⇒ không so được ca nào tốt hơn,
+  // nên KHÔNG hiện hiệu suất từng ca để tránh kết luận sai.
+  function shiftBreakdownHtml(opts) {
+    const o = opts || {};
+    const meta = o.shiftMeta || {};
+    const showPerf = o.perShiftQty === true;
+    const secs = (o.sections || [])
+      .map(s => ({ label: (s && s.label) || '', unit: (s && s.unit) || '', rows: shiftSectionRows(s) }))
+      .filter(s => s.rows && s.rows.length > 1);
+    if (!secs.length) return '';
+    const metaOf = i => meta[i] || meta[String(i)] || null;
+    const labelOf = i => { const m = metaOf(i); return (m && m.name) ? m.name : `Ca ${i + 1}`; };
+    const timeOf = i => { const m = metaOf(i); return (m && (m.start || m.end)) ? `${m.start || ''}–${m.end || ''}` : ''; };
+    const secHtml = secs.map(sec => {
+      // Ca có hiệu suất cao nhất — CHỈ khi so được (sản lượng nhập riêng từng ca)
+      let best = null;
+      if (showPerf) {
+        const effs = sec.rows.map(r => r.eff).filter(v => v != null);
+        if (effs.length > 1) {
+          const maxEff = Math.max.apply(null, effs);
+          const top = sec.rows.filter(r => r.eff != null && Math.abs(r.eff - maxEff) < 1e-9).length;
+          best = top === 1 ? maxEff : null;   // hòa nhau → KHÔNG gắn ★
+        }
+      }
+      const rowsHtml = sec.rows.map(r => {
+        const ppl = r.names.length ? r.names.join(', ') : '—';
+        const unitQty = sec.unit ? sec.unit.replace('/h', '') : '';
+        const star = (best != null && r.eff != null && Math.abs(r.eff - best) < 1e-9)
+          ? '<span class="x2-shift-best" title="Ca có hiệu suất cao nhất trong ngày">★</span>' : '';
+        const qtyTxt = r.qty == null ? ''
+          : `<span class="x2-shift-qty" title="Sản lượng của ca này là ƯỚC TÍNH — phân bổ theo tỉ lệ giờ làm của ca (form nhập 1 số lượng cho cả ngày)">SL ~<strong>${shiftFmtNum(r.qty, 0)}</strong>${unitQty ? ` ${escapeHTML(unitQty)}` : ''}</span>`;
+        const shareTxt = `<span class="x2-shift-share" title="Tỉ lệ giờ làm của ca này trên tổng giờ của cả ngày">${shiftFmtNum(r.hours, 1)}h/ngày</span>`;
+        const capTxt = (showPerf && r.cap != null)
+          ? `<span class="x2-shift-cap" title="Công suất của ca = sản lượng nhập RIÊNG của ca ÷ giờ hiệu dụng của ca${r.incH > 0 ? ` (đã trừ ${shiftFmtNum(r.incH, 2)}h sự cố)` : ''}">C.suất: <strong>${shiftFmtNum(r.cap)}${sec.unit ? ' ' + escapeHTML(sec.unit) : ''}</strong></span>`
+          : '';
+        const effTxt = (showPerf && r.eff != null)
+          ? `<span class="x2-shift-eff" title="Hiệu suất của ca = công suất ca ÷ định mức tháng">H.suất: <strong style="color:${r.eff >= 100 ? '#16a34a' : r.eff >= 70 ? '#0f766e' : '#b45309'};">${shiftFmtNum(r.eff, 1)}%</strong></span>`
+          : '';
+        const t = timeOf(r.shiftIdx);
+        return `<div class="x2-shift-row" data-shift-idx="${r.shiftIdx}">
+          <span class="x2-shift-chip">${escapeHTML(labelOf(r.shiftIdx))}${t ? ` <em>${escapeHTML(t)}</em>` : ''}</span>
+          <span class="x2-shift-ppl" title="Người làm ca này (từ Bảng bố trí Nhân Sự): ${escapeHTML(ppl)}"><i data-lucide="users"></i> ${escapeHTML(ppl)}</span>
+          <span class="x2-shift-hours"><span class="x2-hours-hc">${shiftFmtNum(r.hc, 1)}h HC</span><span class="x2-hours-tc">${shiftFmtNum(r.tc, 1)}h TC</span></span>
+          ${shareTxt}${qtyTxt}${capTxt}${effTxt}${star}
+        </div>`;
+      }).join('');
+      const head = (secs.length > 1 && sec.label) ? `<div class="x2-shift-sec-head">${escapeHTML(sec.label)}</div>` : '';
+      return `<div class="x2-shift-sec">${head}${rowsHtml}</div>`;
+    }).join('');
+    const noteHtml = showPerf ? ''
+      : `<div class="x2-shift-note" title="Cách phân bổ hiện tại chia sản lượng của ngày theo TỈ LỆ GIỜ LÀM nên công suất tính ra của 2 ca luôn bằng nhau — không dùng để kết luận ca nào làm tốt hơn."><i data-lucide="info"></i> Sản lượng đang ghi CHUNG cho cả ngày nên số mỗi ca là ước tính; <strong>chưa so được ca nào làm tốt hơn</strong> — cần ghi sản lượng RIÊNG từng ca.</div>`;
+    return `<div class="x2-shift-rows" title="Ngày ${formatDateDDMMYY(o.date)} có 2 ca bố trí ở công đoạn này → tách riêng từng ca. NGƯỜI và GIỜ là số THẬT từ Bảng bố trí Nhân Sự; SẢN LƯỢNG mỗi ca là ƯỚC TÍNH (phân bổ theo tỉ lệ giờ làm).">
+      <div class="x2-shift-title"><i data-lucide="clock"></i> Theo ca — tách riêng từng ca <em>(người + giờ là số thật)</em></div>
+      ${secHtml}
+      ${noteHtml}
+    </div>`;
+  }
+
 export {
   KHO_METHOD_LABELS,
   KHO_POOL_STAGES,
@@ -703,6 +830,10 @@ export {
   isoToDmy,
   setupFormCalculations,
   showToast,
+  shiftBreakdownHtml,
+  shiftFmtNum,
+  shiftGroupRows,
+  shiftSectionRows,
   stageEffHours,
   stageIncidentInputHtml,
   stageIncidentKey,

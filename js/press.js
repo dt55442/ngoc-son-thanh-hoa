@@ -5,10 +5,10 @@ import { firePushSync, initLucide, requireEditPermission, requireRatePermission 
 import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
-import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
+import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrShiftCfg, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear, rateDisplayLabel, rateNanUse, rateUnit } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
-import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
+import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shiftGroupRows, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
 
   // =============================================================
   // SẢN LƯỢNG ÉP VÁN (PRESS VIEW)
@@ -801,6 +801,32 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
       posRows
     };
   }
+  // ── TÁCH THEO CA (khi bộ phận Xưởng 2 đặt chế độ "Làm ca" ở tab Nhân Sự) ──
+  // Tên + khung giờ ca lấy từ Cài Đặt Ca của bộ phận "Xưởng 2" (nơi có vị trí Ép Ván).
+  function epVanShiftMeta() {
+    const cfg = hrShiftCfg('Xưởng 2');
+    const meta = {};
+    ((cfg && cfg.shifts) || []).forEach((s, i) => {
+      meta[i] = {
+        name: String((s && s.name) || ('Ca ' + (i + 1))),
+        start: String((s && s.start) || ''),
+        end: String((s && s.end) || '')
+      };
+    });
+    return meta;
+  }
+  // Các lượt bố trí vị trí ÉP VÁN thật trong ngày → NHÓM THEO CA (giờ HC/TC
+  // tách đúng cửa sổ ca). Mất bố trí thì khối ca không hiện (không bịa số).
+  function epVanShiftGroups(date) {
+    const rows = (state.hrAssignments || [])
+      .filter(a => (a.date || '') === date && a.start && isPressEpPos(hrPosName(a.positionId)))
+      .map(a => {
+        const h = hrSplitHoursHCDate(a.department || 'Xưởng 2', date, a.start, a.end, a.shiftIdx || 0);
+        return { shiftIdx: a.shiftIdx || 0, name: hrEmpNameOf(a.employeeId), hc: (h.hc || 0) / 60, tc: (h.tc || 0) / 60 };
+      });
+    return shiftGroupRows(rows);
+  }
+
   // Tên nhân viên theo id (dùng cho tooltip nguồn giờ) — '' nếu không tìm thấy
   function hrEmpNameOf(employeeId) {
     const e = (state.hrEmployees || []).find(x => x && x.id === employeeId);
@@ -977,6 +1003,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, sho
             <span class="x2-day-cap" title="Công suất thực tế = tổng thể tích ép trong ngày (m³)"><i data-lucide="gauge"></i> Công suất: <strong>${fmtThanh(vol)} m³/ngày</strong></span>
             ${m3hTxt}${rateBadge}
             ${stageIncidentInputHtml('epvan', date)}
+            ${shiftBreakdownHtml({
+              date, incHours: incH, shiftMeta: epVanShiftMeta(),
+              sections: [{ label: 'Ép ván', groups: epVanShiftGroups(date), qty: vol, unit: 'm³/h', rate, incHours: incH }]
+            })}
             <span class="x2-day-cap" title="Tổng thành phẩm trong ngày">Thành phẩm: <strong>${fpQty.toLocaleString('vi-VN')} tấm</strong></span>
           </div>
           <div class="x2-epv-rows">${rowsHtml}</div>

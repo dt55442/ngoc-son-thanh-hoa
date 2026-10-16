@@ -31,12 +31,12 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
 import { logDataChange } from './history.js';
-import { hrSplitHoursHCDate } from './hr.js';
+import { hrShiftCfg, hrSplitHoursHCDate } from './hr.js';
 import { rateUnit } from './planning.js';
 import { pressRecordWeek } from './press.js';
 import { STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './utils.js';
+import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shiftGroupRows, showToast } from './utils.js';
 
   // ─── HẰNG SỐ ─────────────────────────────────────────────────
   const QC_FINAL_WORKSHOPS = {
@@ -134,6 +134,30 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     return { hc: hc / 60, tc: tc / 60 }; // giờ
   }
   const qcFinalTimeStr = a => (a.end ? `${a.start}–${a.end}` : `${a.start} → hết ca`);
+  // ── TÁCH THEO CA (khi bộ phận QC đặt chế độ "Làm ca" ở tab Nhân Sự) ──
+  // Tên + khung giờ ca lấy từ Cài Đặt Ca của ĐÚNG bộ phận có bố trí vị trí kiểm.
+  function qcShiftMeta(dateVal) {
+    const list = hrQcFinalAssignmentsOf(dateVal);
+    const dept = (list[0] && list[0].department) || 'QC';
+    const cfg = hrShiftCfg(dept);
+    const meta = {};
+    ((cfg && cfg.shifts) || []).forEach((s, i) => {
+      meta[i] = {
+        name: String((s && s.name) || ('Ca ' + (i + 1))),
+        start: String((s && s.start) || ''),
+        end: String((s && s.end) || '')
+      };
+    });
+    return meta;
+  }
+  // Các lượt bố trí vị trí KIỂM VÁN/KIỂM THANH trong ngày → NHÓM THEO CA
+  function qcShiftGroups(dateVal) {
+    const rows = hrQcFinalAssignmentsOf(dateVal).filter(a => a.start).map(a => {
+      const r = hrSplitHoursHCDate(a.department || 'QC', dateVal, a.start, a.end, a.shiftIdx || 0);
+      return { shiftIdx: a.shiftIdx || 0, name: a.name, hc: (r.hc || 0) / 60, tc: (r.tc || 0) / 60 };
+    });
+    return shiftGroupRows(rows);
+  }
   // Snapshot NGƯỜI KIỂM + GIỜ lúc lưu lượt (phòng khi bố trí Nhân Sự bị xóa)
   function hrQcFinalSnapshot(dateVal) {
     const list = hrQcFinalAssignmentsOf(dateVal);
@@ -1041,6 +1065,18 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
     // Vị trí của ngày: 1 vị trí → chip riêng; 2 vị trí → "Xưởng 1 + Xưởng 2"
     const wsSet = [...new Set(disp.map(d => d.workshopLabel))];
     const wsTxt = wsSet.length === 1 ? wsSet[0] : wsSet.join(' + ');
+    // Khối "Theo ca" — chỉ hiện khi vị trí kiểm của ngày có ≥2 ca bố trí
+    // (1 khối nhỏ cho MỖI loại kiểm có trong ngày: Kiểm Ván / Kiểm Thanh)
+    const shiftBlock = shiftBreakdownHtml({
+      date, incHours: 0, shiftMeta: qcShiftMeta(date),
+      sections: kindsPresent.map(k => ({
+        label: QC_FINAL_KINDS[k].label,
+        groups: qcShiftGroups(date),
+        qty: disp.filter(d => d.kind === k).reduce((s, d) => s + d.qtyChecked, 0),
+        unit: `${qcFinalUnitOf(k)}/h`,
+        rate: qcFinalRateOf(date, k)
+      }))
+    });
     const hourTxt = dHours > 0
       ? `<span class="x2-day-hours" title="Thời gian = tổng giờ công CHỈ vị trí Kiểm Ván/kiểm Thanh của bộ phận QC trong ngày (tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC) — các vị trí QC khác không tính"><span class="x2-hours-hc">${qcFinalFmt(dHC, 1)}h HC</span><span class="x2-hours-tc">${qcFinalFmt(dTC, 1)}h TC</span></span>`
       : '';
@@ -1082,6 +1118,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, showToast } from './uti
           <span class="x2-day-cap" title="Tỉ lệ lỗi = Loại ÷ Tổng số lượng kiểm (cả ngày)">Tỉ lệ lỗi: <strong style="color:${dErrPct != null && dErrPct > 10 ? '#b45309' : '#0f766e'};">${dErrPct == null ? '—' : `${qcFinalFmt(dErrPct, 1)}%`}</strong></span>
           ${kindChips}
         </div>
+        ${shiftBlock}
         <div class="qcf-rows">${rowsHtml}</div>
       </div>`;
   }

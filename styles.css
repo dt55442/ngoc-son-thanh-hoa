@@ -6083,6 +6083,63 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 .al-source-info strong { color: var(--primary); }
 .al-source-info .al-warn { color: #b45309; font-weight: 700; }
 
+/* ─── CHIP TỒN + Ô NHẬP SỐ LƯỢNG TẠO LÔ của từng thẻ nan (Sấy 1 — 16/10/2026) ───
+   Mỗi thẻ nan đã chọn = 1 DÒNG: đầu dòng (thẻ · phân loại · NGÀY CHỌN NAN · tồn)
+   + dòng nhập SỐ LƯỢNG tạo lô (mặc định = tồn, chặn vượt — nhập nhỏ hơn để chia
+   1 thẻ thành nhiều lô sấy). Chip tồn màu hổ phách, chip "đã dùng" màu xám. */
+.al-stock-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+}
+.al-used-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #e5e7eb;
+  color: #6b7280;
+}
+.al-qty-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #fff;
+}
+.al-qty-head { display: block; }
+.al-qty-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.al-qty-input {
+  width: 110px;
+  min-height: 30px;
+  padding: 3px 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: right;
+  border: 1px solid var(--primary-border);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 639.98px) {
+  .al-qty-input { font-size: 16px; min-height: 40px; width: 130px; }
+}
+
 /* ── Ô CHỌN NHIỀU NGUỒN (nút "Chọn Lô Nan") + Ô CHỌN VỊ TRÍ (LS1..LS15) ──
    Chọn được NHIỀU thẻ nguồn cùng lúc: mỗi thẻ là 1 nút tick (data-al-pick). */
 .al-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
@@ -10390,7 +10447,7 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
    Thẻ #trace-card: dải chỉ số · bảng chuỗi giá trị 7 chặng ·
    bảng truy xuất theo mã ván. Mọi chú thích dài nằm ở tooltip.
    ═══════════════════════════════════════════════════════════ */
-.trace-card { margin-bottom: 18px; }
+.trace-card { margin-bottom: 18px; position: relative; }
 
 /* ─── Thanh công cụ: ô chọn mã ván + nút kỳ + ‹ › ─── */
 .trace-toolbar {
@@ -10448,6 +10505,63 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 .trace-kpi-head { border-left-color: #7c3aed; background: linear-gradient(180deg, rgba(124, 58, 237, 0.07), transparent); }
 .trace-kpi-pick { border-left-color: #ea580c; }
 .trace-kpi-muted { border-left-color: var(--text-muted); }
+
+/* ─── Ô KPI BẤM ĐƯỢC (mở panel khối lượng theo cỡ thanh) ─── */
+.trace-kpi-btn {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  font: inherit; color: inherit;
+  transition: box-shadow .15s, transform .15s;
+}
+.trace-kpi-btn:hover { box-shadow: 0 3px 10px rgba(234, 88, 12, 0.18); }
+.trace-kpi-btn[aria-expanded="true"] { box-shadow: inset 0 0 0 2px rgba(234, 88, 12, 0.35); }
+.trace-kpi-more {
+  display: inline-block; margin-left: 4px; padding: 0 6px;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: .01em;
+  color: #ea580c; background: rgba(234, 88, 12, 0.12);
+  border-radius: 999px; text-transform: none;
+}
+
+/* ─── PANEL NỔI: KHỐI LƯỢNG BÌNH QUÂN THEO TỪNG CỠ THANH ───
+   Toạ độ + z-index đặt INLINE trong JS (positionTraceSizePanel) nên KHÔNG phụ
+   thuộc stylesheet (kể cả bản do SW cache); ở đây chỉ lo phần trang trí. */
+.trace-size-panel {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
+  padding: 10px;
+}
+.trace-size-panel[hidden] { display: none !important; }
+.trace-size-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 0.82rem; font-weight: 700; margin-bottom: 8px;
+}
+.trace-size-head svg { width: 14px; height: 14px; vertical-align: -2px; }
+.trace-size-close {
+  border: none; background: transparent; cursor: pointer;
+  font-size: 0.9rem; line-height: 1; padding: 4px 8px; border-radius: 6px;
+  color: var(--text-muted);
+}
+.trace-size-close:hover { background: rgba(15, 23, 42, 0.08); }
+.trace-size-tools { margin-bottom: 8px; }
+.trace-size-search {
+  width: 100%; padding: 7px 10px; font-size: 0.82rem;
+  background: var(--bg-input, var(--bg-card)); color: var(--text-main, inherit);
+  border: 1px solid var(--border-color); border-radius: var(--radius-md, 8px);
+}
+.trace-size-scroll { max-height: 42vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+.trace-size-table { min-width: 480px; }
+.trace-size-table th, .trace-size-table td { font-size: 0.78rem; }
+.trace-size-key { font-weight: 600; white-space: nowrap; }
+.trace-size-note {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin-top: 8px; padding: 7px 9px;
+  font-size: 0.72rem; line-height: 1.5; color: var(--text-muted);
+  background: rgba(15, 118, 110, 0.05);
+  border-left: 3px solid rgba(15, 118, 110, 0.35);
+  border-radius: var(--radius-md, 8px);
+}
+.trace-size-note svg { width: 13px; height: 13px; flex: 0 0 auto; margin-top: 2px; }
 
 /* ─── Khung từng phần ─── */
 .trace-section { margin-top: 14px; }
@@ -10519,6 +10633,28 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 .trace-unlinked-row td { font-style: italic; opacity: .82; }
 .trace-unlinked-row .trace-prod-name { font-weight: 500; }
 
+/* ─── Chip "⚠ lệch" trong bảng cỡ thanh (KL lý thuyết lệch KL ống luồng >±60%) ───
+   (15/10/2026 — B1: chip "hệ số tham chiếu" .trace-ref-chip ĐÃ GỠ, nội dung
+    chuyển vào tooltip ô KPI "Kg tươi / 1 thanh nan") */
+.trace-size-warn {
+  display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px;
+  font-size: 0.66rem; font-weight: 700;
+  color: #991b1b; background: #fee2e2;
+  border: 1px solid #fca5a5; border-radius: 999px;
+  cursor: help; white-space: nowrap;
+}
+
+/* ─── Cảnh báo cứng: tấm ván thô ghi cỡ không khớp (không truy được gốc nan) ─── */
+.trace-warn {
+  display: flex; align-items: flex-start; gap: 7px;
+  margin: 0 0 8px 0; padding: 8px 11px;
+  font-size: 0.78rem; font-weight: 600; line-height: 1.5;
+  color: #991b1b; background: #fee2e2;
+  border: 1px solid #fca5a5; border-radius: var(--radius-md, 8px);
+}
+.trace-warn svg { width: 15px; height: 15px; flex: 0 0 auto; margin-top: 1px; }
+.trace-tag-warn { background: rgba(220, 38, 38, 0.14); color: #dc2626; cursor: help; }
+
 /* ─── Trạng thái rỗng ─── */
 .trace-empty {
   padding: 22px 14px; text-align: center;
@@ -10539,4 +10675,79 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   .trace-detail-toggle { width: 100%; justify-content: center; min-height: 42px; }
   .trace-table-wrap { max-height: 56vh; }
   .trace-table, .trace-prod-table { min-width: 640px; }
+}
+
+/* ─── THẺ NGÀY BÀO TINH — DÒNG CHI TIẾT SẢN LƯỢNG TỪNG NHÁNH
+       (HIỆU SUẤT tính CHUNG 1 chỉ số Bào tinh — giờ làm không tách theo nhánh,
+       dòng này CHỈ để theo dõi sản lượng từng nhánh) ─── */
+.x2-day-kind-detail {
+  flex-basis: 100%;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ═══ KHỐI "THEO CA" CỦA THẺ NGÀY — TÁCH 2 CA ĐỂ SO SÁNH ─═══════════
+   Chỉ hiện khi ngày đó có ≥2 CA bố trí ở công đoạn (bộ phận đặt chế độ
+   "Làm ca" ở tab Nhân Sự). NGƯỜI + GIỜ là số thật; SẢN LƯỢNG mỗi ca là
+   ƯỚC TÍNH phân bổ theo tỉ lệ giờ làm (đã ghi rõ trên giao diện). */
+.x2-shift-rows {
+  margin: 0 12px 10px;
+  padding: 8px 10px;
+  border: 1px dashed rgba(15, 118, 110, 0.45);
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.045);
+  flex-basis: 100%;        /* an toàn khi nằm trong hàng flex của .x2-day-head */
+}
+.x2-shift-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 800;
+  color: #0f766e; letter-spacing: 0.01em;
+  margin-bottom: 6px;
+}
+.x2-shift-title svg { width: 13px; height: 13px; }
+.x2-shift-title em { font-weight: 500; font-style: italic; color: var(--text-muted); }
+.x2-shift-sec + .x2-shift-sec { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-color); }
+.x2-shift-sec-head {
+  font-size: 0.68rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 4px;
+}
+.x2-shift-row {
+  display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap;
+  padding: 4px 0;
+  font-size: 0.74rem; color: var(--text-muted);
+}
+.x2-shift-row + .x2-shift-row { border-top: 1px dotted var(--border-color); }
+.x2-shift-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 999px;
+  background: #0f766e; color: #fff;
+  font-weight: 700; font-size: 0.7rem; white-space: nowrap;
+}
+.x2-shift-row[data-shift-idx="1"] .x2-shift-chip { background: #d97706; } /* Ca đêm / ca 2 */
+.x2-shift-chip em { font-style: normal; font-weight: 500; opacity: 0.9; }
+.x2-shift-ppl { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--text-color, inherit); }
+.x2-shift-ppl svg { width: 12px; height: 12px; opacity: 0.7; flex-shrink: 0; }
+.x2-shift-hours { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.x2-shift-qty em, .x2-shift-qty strong { color: var(--primary); }
+.x2-shift-cap strong { color: #0f766e; }
+.x2-shift-eff strong { font-size: 0.8rem; }
+.x2-shift-best {
+  font-size: 0.85rem; color: #d97706; cursor: help;
+  font-weight: 800;
+}
+.x2-shift-share { white-space: nowrap; }
+.x2-shift-note {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin-top: 6px; padding-top: 6px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.68rem; line-height: 1.45; color: var(--text-muted);
+  cursor: help;
+}
+.x2-shift-note svg { width: 12px; height: 12px; flex-shrink: 0; margin-top: 1px; }
+/* Điện thoại: mỗi ca 1 khối dễ đọc, chữ đủ lớn */
+@media (max-width: 639.98px) {
+  .x2-shift-rows { margin: 0 8px 10px; padding: 8px; }
+  .x2-shift-row { gap: 4px 8px; }
+  .x2-shift-ppl { flex: 1 1 100%; font-size: 0.72rem; }
+  .x2-shift-qty, .x2-shift-cap, .x2-shift-eff { font-size: 0.72rem; }
 }

@@ -2263,15 +2263,31 @@ import { escapeHTML, showToast } from './utils.js';
       { name: 'Sáng',  start: '07:00', end: '11:30' },
       { name: 'Chiều', start: '13:00', end: '17:30' }
     ] },
+    // brk = số GIỜ NGHỈ của ca (CHỈ chế độ Làm ca) — TRỪ VÀO CUỐI CA:
+    // giờ làm việc hiệu dụng = [giờ vào → giờ ra − brk]; giờ nghỉ KHÔNG tính
+    // vào HC lẫn TC (xem hrSplitHoursHC). Sửa được trong Cài Đặt Ca.
     lamca: { type: 'lamca', shifts: [
-      { name: 'Ca ngày', start: '07:00', end: '19:00' },
-      { name: 'Ca đêm',  start: '19:00', end: '07:00' }
+      { name: 'Ca ngày', start: '07:00', end: '19:00', brk: 1.5 },
+      { name: 'Ca đêm',  start: '19:00', end: '07:00', brk: 1 }
     ] }
   };
 
   // Cấu hình ca của 1 bộ phận (mặc định Hành chính cho mọi bộ phận)
   function hrShiftCfg(dept) {
     return (state.hrShifts || []).find(s => s.id === dept) || { id: dept, type: 'hanhchinh', shifts: BOARD_SHIFT_PRESETS.hanhchinh.shifts };
+  }
+  // Số GIỜ NGHỈ của 1 ca (chỉ chế độ Làm ca; Hành chính = 0 vì nghỉ trưa nằm
+  // giữa 2 buổi, đã tự loại). Cấu hình CŨ chưa khai `brk` → mặc định ca 1 =
+  // 1h30 (bằng nghỉ trưa hành chính 11:30–13:00), các ca sau = 1h.
+  function hrShiftBrkH(cfg, shiftIdx) {
+    if (!cfg || cfg.type !== 'lamca') return 0;
+    const idx = Number(shiftIdx) || 0;
+    const sh = cfg.shifts[idx] || cfg.shifts[0];
+    if (!sh) return 0;
+    const raw = sh.brk;
+    if (raw === '' || raw == null) return idx === 0 ? 1.5 : 1;
+    const v = Number(raw);
+    return (Number.isFinite(v) && v > 0) ? v : 0;
   }
   // Tên rút gọn "Hà Văn Chiến" → "H.V.Chiến" (chữ cuối nguyên vẹn, các chữ đầu lấy nguyên âm đầu)
   function hrShortName(name) {
@@ -2291,14 +2307,24 @@ import { escapeHTML, showToast } from './utils.js';
     for (let h = 5; h <= 23; h++) { out.push(`${String(h).padStart(2, '0')}:00`, `${String(h).padStart(2, '0')}:30`); }
     return out;
   }
-  // Khoảng giờ làm của 1 cột (shift) trong ngày: hành chính gộp Sáng+Chiều
+  // Khoảng giờ làm của 1 cột (shift) trong ngày: hành chính gộp Sáng+Chiều.
+  //  • Ca đêm (giờ ra <= giờ vào) tự hiểu là VẮT QUA NỬA ĐÊM → endMin = end + 1440
+  //  • startMin/endMin = mốc phút ĐÃ CHUẨN HOÁ (nguồn duy nhất để tính giờ —
+  //    xem hrSplitHoursHC + handleBoardAssignSubmit)
+  //  • brkH = số giờ NGHỈ của ca (0 với Hành chính) — trừ vào CUỐI CA
   function hrShiftRange(cfg, shiftIdx) {
-    if (!cfg.shifts.length) return { start: '07:00', end: '17:30' };
+    const toM = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+    if (!cfg.shifts.length) return { start: '07:00', end: '17:30', label: 'Hành chính', brkH: 0, startMin: 420, endMin: 1050 };
     if (cfg.type === 'hanhchinh') {
-      return { start: cfg.shifts[0].start, end: cfg.shifts[cfg.shifts.length - 1].end, label: 'Hành chính' };
+      const last = cfg.shifts[cfg.shifts.length - 1];
+      return { start: cfg.shifts[0].start, end: last.end, label: 'Hành chính', brkH: 0, startMin: toM(cfg.shifts[0].start), endMin: toM(last.end) };
     }
-    const s = cfg.shifts[shiftIdx] || cfg.shifts[0];
-    return { start: s.start, end: s.end, label: s.name };
+    const idx = Number(shiftIdx) || 0;
+    const s = cfg.shifts[idx] || cfg.shifts[0];
+    const startMin = toM(s.start);
+    let endMin = toM(s.end);
+    if (!endMin || endMin <= startMin) endMin += 1440;   // ca đêm vắt qua nửa đêm
+    return { start: s.start, end: s.end, label: s.name, brkH: hrShiftBrkH(cfg, idx), startMin, endMin };
   }
   // Các bản ghi gán người của 1 ngày (tùy chọn lọc vị trí)
   function hrAssignmentsOf(date, positionId) {
@@ -2327,22 +2353,27 @@ import { escapeHTML, showToast } from './utils.js';
   //    KHÔNG tính vào HC lẫn TC → làm đủ ngày = 9h HC.
   //  • TC  = chỉ tính phần NGOÀI giờ ca chuẩn (trước giờ vào / sau giờ ra,
   //    VD làm đến 18h00 → 9h HC + 0h30 TC). Làm ca: ngoài khung ca đã chọn.
-  //  • Ca đêm có end < start tự động tính sang ngày hôm sau.
-  // Trả về phút: { hc, tc } (nghỉ trưa không nằm trong cả hai).
+  //  • CA ĐÊM (giờ ra <= giờ vào) tự động tính sang ngày hôm sau.
+  //  • GIỜ RA TRỐNG = làm đến HẾT CA (kể cả ca đêm) — KHÔNG còn đoán 8h.
+  //  • NGHỈ (chế độ Làm ca — ô "Nghỉ (giờ)" ở Cài Đặt Ca) TRỪ VÀO CUỐI CA:
+  //    giờ làm hiệu dụng = [vào → ra − nghỉ]; phần nghỉ KHÔNG vào HC lẫn TC.
+  //    VD Ca ngày 07:00–19:00 nghỉ 1h30 → làm đủ ca = 10h30 HC · 0 TC;
+  //       Ca đêm 19:00–07:00 nghỉ 1h → làm đủ ca = 11h HC · 0 TC.
+  // Trả về phút: { hc, tc } (giờ nghỉ không nằm trong cả hai).
   function hrSplitHoursHC(dept, start, end, shiftIdx) {
     const cfg = hrShiftCfg(dept);
     const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
     let s = toMin(start);
     let e = toMin(end);
-    if (!e || e === s) { const r = hrShiftRange(cfg, shiftIdx); e = e || toMin(r.end); if (e <= s) e = s + 480; }
-    if (e <= s) e += 1440; // làm qua nửa đêm
+    // Khung ca của cột ca đang dùng — mốc phút ĐÃ CHUẨN HOÁ (ca đêm vắt đêm)
+    const range = hrShiftRange(cfg, shiftIdx);
+    const rStart = range.startMin, rEnd = range.endMin;
+    if (!e || e === s) e = rEnd;  // giờ ra TRỐNG = HẾT CA (đúng cho cả ca đêm)
+    if (e <= s) e += 1440;        // làm qua nửa đêm
     // Các cửa sổ giờ HC (hành chính: từng buổi, đã loại nghỉ trưa)
     const hcWindows = [];
     if (cfg.type === 'lamca') {
-      const sh = cfg.shifts[shiftIdx] || cfg.shifts[0];
-      let ws = toMin(sh.start), we = toMin(sh.end);
-      if (we <= ws) we += 1440;
-      hcWindows.push([ws, we]);
+      hcWindows.push([rStart, rEnd]);
     } else {
       cfg.shifts.forEach(sh => hcWindows.push([toMin(sh.start), toMin(sh.end)]));
     }
@@ -2354,9 +2385,23 @@ import { escapeHTML, showToast } from './utils.js';
         if (b > a) hc += b - a;
       });
     });
-    // Nghỉ trưa (khoảng hở GIỮA các buổi) — không tính vào HC lẫn TC
+    // ─── PHẦN NGHỈ (không tính vào HC lẫn TC) ───
+    //  • Hành chính: khoảng hở GIỮA các buổi (nghỉ trưa 11:30–13:00)
+    //  • Làm ca: số giờ nghỉ khai ở Cài Đặt Ca, TRỪ VÀO CUỐI CA → [ra − nghỉ, ra]
     let gap = 0;
-    if (cfg.type !== 'lamca') {
+    if (cfg.type === 'lamca') {
+      const brk = Math.max(0, Number(range.brkH) || 0) * 60;
+      if (brk > 0) {
+        const gs = Math.max(rStart, rEnd - brk), ge = rEnd;
+        [0, 1440].forEach(off => {
+          const a = Math.max(s, gs + off), b = Math.min(e, ge + off);
+          if (b > a) gap += b - a;
+        });
+      }
+      // Nghỉ nằm GIỮA cửa sổ ca → phải TRỪ khỏi HC (khác nghỉ trưa hành chính
+      // nằm NGOÀI các buổi nên HC không bị trừ)
+      hc = Math.max(0, hc - gap);
+    } else {
       for (let i = 0; i < hcWindows.length - 1; i++) {
         const gs = hcWindows[i][1], ge = hcWindows[i + 1][0];
         [0, 1440].forEach(off => {
@@ -2365,7 +2410,7 @@ import { escapeHTML, showToast } from './utils.js';
         });
       }
     }
-    // TC = phần còn lại của giờ làm ngoài HC và ngoài nghỉ trưa
+    // TC = phần còn lại của giờ làm ngoài HC và ngoài nghỉ
     //     (= làm trước giờ vào / sau giờ ra của ca chuẩn)
     return { hc, tc: Math.max(0, (e - s) - hc - gap) };
   }
@@ -2646,7 +2691,7 @@ import { escapeHTML, showToast } from './utils.js';
         slots.push(`<button type="button" class="slot add" title="Thêm nhân viên cho vị trí này"
           onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '')"><i data-lucide="plus"></i><span>Thêm người</span></button>`);
         return `<div class="board-shift">
-          <div class="board-shift-name">${escapeHTML(colCount > 1 ? (cfg.shifts[si]?.name || ('Ca ' + (si + 1))) : 'Hành chính')}<span>${fmtHour(range.start)}–${fmtHour(range.end)}</span></div>
+          <div class="board-shift-name">${escapeHTML(colCount > 1 ? (cfg.shifts[si]?.name || ('Ca ' + (si + 1))) : 'Hành chính')}<span>${fmtHour(range.start)}–${fmtHour(range.end)}${range.brkH ? ' · nghỉ ' + fmtHm(range.brkH * 60) : ''}</span></div>
           <div class="board-slots">${slots.join('')}</div>
         </div>`;
       }).join('');
@@ -2821,14 +2866,14 @@ import { escapeHTML, showToast } from './utils.js';
     const toMinT = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
     const newStart = toMinT(start);
     let newEnd = toMinT(end);
-    if (!newEnd || newEnd <= newStart) { const r = hrShiftRange(cfg, shiftIdx); newEnd = newEnd ? newEnd + 1440 : toMinT(r.end); if (newEnd <= newStart) newEnd = newStart + 480; }
+    if (!newEnd || newEnd <= newStart) { const r = hrShiftRange(cfg, shiftIdx); newEnd = newEnd ? newEnd + 1440 : r.endMin; if (newEnd <= newStart) newEnd += 1440; }
     const conflict = (state.hrAssignments || []).find(a =>
       a.id !== editId && a.id !== moveFromId && a.date === date &&
       a.employeeId === employeeId && a.positionId === positionId && (a.shiftIdx || 0) === shiftIdx &&
       (() => {
         const as = toMinT(a.start);
         let ae = toMinT(a.end);
-        if (!ae || ae <= as) { ae = ae ? ae + 1440 : toMinT(hrShiftRange(cfg, a.shiftIdx || 0).end); if (ae <= as) ae = as + 480; }
+        if (!ae || ae <= as) { ae = ae ? ae + 1440 : hrShiftRange(cfg, a.shiftIdx || 0).endMin; if (ae <= as) ae += 1440; }
         return as < newEnd && newStart < ae;
       })());
     if (conflict) {
@@ -2855,7 +2900,7 @@ import { escapeHTML, showToast } from './utils.js';
       if (a.department !== dept || (a.shiftIdx || 0) !== shiftIdx) return;
       const as = toMinT(a.start);
       let ae = toMinT(a.end);
-      if (!ae || ae <= as) { ae = toMinT(hrShiftRange(cfg, a.shiftIdx || 0).end); if (ae <= as) ae += 1440; if (ae <= as) ae = as + 480; }
+      if (!ae || ae <= as) { ae = hrShiftRange(cfg, a.shiftIdx || 0).endMin; if (ae <= as) ae += 1440; }
       if (newStart > as && ae > newStart) {
         a.end = start;
         a.updatedAt = new Date().toISOString();
@@ -2932,6 +2977,7 @@ import { escapeHTML, showToast } from './utils.js';
     initLucide();
   }
   // Vẽ các dòng thời gian ca: hành chính = Sáng/Chiều; làm ca = Ca ngày/Ca đêm
+  // Bảng cấu hình ca: Tên ca · Bắt đầu · Kết thúc · Nghỉ (giờ — chỉ Làm ca)
   function renderShiftRows(cfg) {
     const type = cfg.type || 'hanhchinh';
     const preset = BOARD_SHIFT_PRESETS[type];
@@ -2939,21 +2985,33 @@ import { escapeHTML, showToast } from './utils.js';
     document.querySelectorAll('input[name="shift-type"]').forEach(r => { r.checked = r.value === type; });
     const box = document.getElementById('shift-rows');
     if (!box) return;
-    box.innerHTML = shifts.map((s, i) => `
-      <div style="display:grid; grid-template-columns:110px 1fr 1fr; gap:8px; align-items:center; margin-bottom:6px;">
+    const isCa = type === 'lamca';
+    box.innerHTML = `<div class="shift-row-head">
+        <span>Tên ca</span><span>Bắt đầu</span><span>Kết thúc</span><span>Nghỉ (giờ)</span>
+      </div>` +
+      shifts.map((s, i) => {
+        const brk = hrShiftBrkH({ type, shifts }, i);
+        return `
+      <div class="shift-row">
         <input type="text" data-shift-i="${i}" data-shift-f="name" value="${escapeHTML(s.name || '')}" placeholder="Tên ca">
         <input type="time" data-shift-i="${i}" data-shift-f="start" value="${escapeHTML(s.start || '')}" step="1800">
         <input type="time" data-shift-i="${i}" data-shift-f="end" value="${escapeHTML(s.end || '')}" step="1800">
-      </div>`).join('') +
-      `<div style="font-size:0.72rem;color:var(--text-muted);">Hành chính: các ca gộp thành 1 cột/ngày · Làm ca: mỗi ca là 1 cột riêng.</div>`;
+        ${isCa
+          ? `<input type="number" data-shift-i="${i}" data-shift-f="brk" value="${brk}" min="0" max="6" step="0.5"
+               title="Số giờ NGHỈ của ca — trừ vào CUỐI CA, KHÔNG tính vào HC lẫn TC (VD 1.5 = 1h30)">`
+          : `<span class="shift-row-na" title="Nghỉ trưa nằm giữa 2 buổi — hệ thống tự loại khỏi HC/TC">— nghỉ trưa —</span>`}
+      </div>`;
+      }).join('') +
+      `<div style="font-size:0.72rem;color:var(--text-muted);">Hành chính: các ca gộp thành 1 cột/ngày · Làm ca: mỗi ca là 1 cột riêng — ô <b>Nghỉ (giờ)</b> chỉ dùng ở <b>Làm ca</b> và bị trừ vào <b>CUỐI CA</b> (VD Ca ngày 07:00–19:00 nghỉ 1h30 → làm đủ ca = 10h30 HC; để trống = mặc định ca 1 nghỉ 1h30, ca sau nghỉ 1h).</div>`;
   }
   // Đổi loại ca trong modal → nạp lại giờ mặc định của loại đó (chưa lưu)
   function setShiftTypePreset(type) {
     if (!BOARD_SHIFT_PRESETS[type]) return;
     const dept = state.hrBoardDept || 'Xưởng 2';
     const cfg = hrShiftCfg(dept);
+    const preset = BOARD_SHIFT_PRESETS[type];
     const cur = { ...cfg, type };
-    cur.shifts = (cfg.type === type) ? (cfg.shifts || preset.shifts) : BOARD_SHIFT_PRESETS[type].shifts;
+    cur.shifts = (cfg.type === type) ? (cfg.shifts || preset.shifts) : preset.shifts;
     renderShiftRows(cur);
   }
   function closeShiftModal() {
@@ -2968,10 +3026,18 @@ import { escapeHTML, showToast } from './utils.js';
     const rows = {};
     document.querySelectorAll('#shift-rows [data-shift-i]').forEach(inp => {
       const i = inp.getAttribute('data-shift-i');
-      rows[i] = rows[i] || { name: '', start: '', end: '' };
+      rows[i] = rows[i] || { name: '', start: '', end: '', brk: '' };
       rows[i][inp.getAttribute('data-shift-f')] = inp.value.trim();
     });
-    const shifts = Object.keys(rows).sort((a, b) => a - b).map(i => rows[i]).filter(s => s.start && s.end);
+    // NGHỈ (giờ) của ca — chỉ Làm ca; để trống = mặc định (ca 1 = 1h30, ca sau = 1h);
+    // Hành chính luôn 0 (nghỉ trưa tự loại giữa 2 buổi)
+    const shifts = Object.keys(rows).sort((a, b) => a - b).map(i => rows[i]).filter(s => s.start && s.end)
+      .map((s, i) => {
+        const raw = String(s.brk == null ? '' : s.brk).replace(',', '.');
+        let brk = Number(raw);
+        if (raw === '' || !Number.isFinite(brk) || brk < 0) brk = (type === 'lamca') ? (i === 0 ? 1.5 : 1) : 0;
+        return { name: s.name, start: s.start, end: s.end, brk: Math.min(brk, 6) };
+      });
     if (!shifts.length) { showToast('Cần ít nhất 1 ca có giờ bắt đầu và giờ kết thúc!', 'error'); return; }
     const idx = (state.hrShifts || []).findIndex(s => s.id === dept);
     const cfg = { id: dept, type, shifts, updatedAt: new Date().toISOString() };
@@ -3481,6 +3547,9 @@ export {
   handleShiftSubmit,
   setShiftTypePreset,
   hrShiftCfg,
+  hrShiftRange,
+  hrShiftBrkH,
+  renderShiftRows,
   hrAssignTimesOf,
   hrSplitHoursHC,
   hrCalCfgOf,

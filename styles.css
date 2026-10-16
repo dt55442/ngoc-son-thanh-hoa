@@ -10808,3 +10808,29 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   .x2-shift-ppl { flex: 1 1 100%; font-size: 0.72rem; }
   .x2-shift-qty, .x2-shift-cap, .x2-shift-eff { font-size: 0.72rem; }
 }
+
+/* ─── BẢNG CÀI ĐẶT CA (tab Nhân Sự): Tên ca · Bắt đầu · Kết thúc · NGHỈ (giờ) ───
+   Ô "Nghỉ (giờ)" chỉ dùng ở chế độ LÀM CA — giờ nghỉ bị TRỪ VÀO CUỐI CA và
+   KHÔNG tính vào HC lẫn TC (xem hrSplitHoursHC trong js/hr.js). */
+.shift-row-head, .shift-row {
+  display: grid;
+  grid-template-columns: 1fr 88px 88px 92px;
+  gap: 8px;
+  align-items: center;
+}
+.shift-row-head {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+.shift-row { margin-bottom: 6px; }
+.shift-row-na { font-size: 0.7rem; color: var(--text-muted); text-align: center; }
+.shift-row input[data-shift-f="brk"] { text-align: center; }
+/* Điện thoại: bỏ hàng tiêu đề, tên ca chiếm 1 dòng, 3 ô giờ/nghỉ chia đều */
+@media (max-width: 639.98px) {
+  .shift-row-head { display: none; }
+  .shift-row { grid-template-columns: 1fr 1fr 1fr; }
+  .shift-row input[data-shift-f="name"] { grid-column: 1 / -1; }
+}

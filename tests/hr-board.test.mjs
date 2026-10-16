@@ -251,13 +251,17 @@ check('HC/TC: vắng mặt cả ngày (12:00–12:30 đúng nghỉ trưa) -> HC 
   return r.hc === 0 && r.tc === 0;
 })());
 state.hrShifts = [{ id: 'Xưởng 2', type: 'lamca', shifts: [{ name: 'Ca ngày', start: '07:00', end: '19:00' }, { name: 'Ca đêm', start: '19:00', end: '07:00' }] }];
-check('HC/TC: làm ca 07:00–20:30 -> HC 12h, TC 1h30', (() => {
+check('HC/TC: làm ca 07:00–20:30 -> HC 10h30 (12h − 1h30 nghỉ mặc định), TC 1h30', (() => {
   const r = hr.hrSplitHoursHC('Xưởng 2', '07:00', '20:30', 0);
-  return r.hc === 720 && r.tc === 90;
+  return r.hc === 630 && r.tc === 90;
 })());
-check('HC/TC: ca đêm 19:00–07:00 (qua đêm) -> HC 12h, TC 0', (() => {
+check('HC/TC: ca đêm 19:00–07:00 (qua đêm) -> HC 11h (12h − 1h nghỉ mặc định), TC 0', (() => {
   const r = hr.hrSplitHoursHC('Xưởng 2', '19:00', '07:00', 1);
-  return r.hc === 720 && r.tc === 0;
+  return r.hc === 660 && r.tc === 0;
+})());
+check('HC/TC: ca đêm để TRỐNG giờ ra = HẾT CA -> HC 11h (KHÔNG còn đoán 8h)', (() => {
+  const r = hr.hrSplitHoursHC('Xưởng 2', '19:00', '', 1);
+  return r.hc === 660 && r.tc === 0;
 })());
 state.hrShifts = [];
 

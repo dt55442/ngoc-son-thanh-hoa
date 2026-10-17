@@ -247,6 +247,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
   // gõ kí tự sẽ lọc danh sách và cho chọn nhanh loại đã có.
   // Dưới mỗi dòng: dòng gợi ý KÍCH THƯỚc SAU BÀO TINH + SL đạt tồn từ Bào Tinh
   // (VD chọn 1250x22x7 -> hiện 1250x20x5 + 1.000 thanh).
+  // Ô SỐ LƯỢNG: 1 cỡ → 1 ô như cũ; ghi NHIỀU cỡ (tách ';' ',') → danh sách
+  // .ps-qty-list gồm N ô số lượng RIÊNG từng cỡ (dựng bởi syncPressStickQtyInputs).
   function buildPressStickHTML(idx, stick = {}) {
     return `
       <div class="press-line-row" data-stick-idx="${idx}">
@@ -256,11 +258,13 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
         </div>
         <div class="press-line-grid">
           <label class="pl-field"><span>Loại thanh / ván thô</span>
-            <input type="text" class="ps-nan" list="press-input-type-list" placeholder="VD: 1200x38x16, A1 hoac 1220x2440x9" value="${escapeHTML(stick.nanKey || '')}">
+            <input type="text" class="ps-nan" list="press-input-type-list" placeholder="VD: 1250x18x7 hoặc 1250x24x8 ; 1250x24x10" title="Gõ để lọc loại đã có. Ghi NHIỀU CỠ cách nhau dấu ; (VD 1250x24x8 ; 1250x24x10) → hiện ô số lượng riêng từng cỡ." value="${escapeHTML(stick.nanKey || '')}">
           </label>
-          <label class="pl-field"><span>Số lượng</span>
+          <div class="pl-field ps-qty-field">
+            <span class="ps-qty-label">Số lượng</span>
             <input type="number" class="ps-sticks" min="0" step="1" inputmode="numeric" placeholder="VD: 4800" value="${stick.sticks || ''}">
-          </label>
+            <div class="ps-qty-list" hidden></div>
+          </div>
         </div>
         <div class="ps-bt-hint">${pressStickInfoHtml(stick.nanKey || '', stick.sticks || 0)}</div>
       </div>`;
@@ -286,15 +290,17 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
       </div>`;
   }
 
-  // Thêm một loại thanh thô vào modal (tối đa 3)
+  // Thêm một dòng đầu vào (tối đa 6 — đủ khi 1 dòng tách ra nhiều cỡ)
   function addPressStick(stick = {}) {
     const container = document.getElementById('press-sticks');
     if (!container) return;
-    if (container.querySelectorAll('.press-line-row').length >= 3) {
-      showToast('Tối đa 3 loại thanh thô cho mỗi lượt ép!', 'error');
+    if (container.querySelectorAll('.press-line-row').length >= 6) {
+      showToast('Tối đa 6 dòng đầu vào cho mỗi lượt ép!', 'error');
       return;
     }
     container.insertAdjacentHTML('beforeend', buildPressStickHTML(container.querySelectorAll('.press-line-row').length, stick));
+    const row = container.lastElementChild;
+    if (row) syncPressStickQtyInputs(row); // dữ liệu cũ nhiều cỡ → tách ô số lượng từng cỡ
     updatePressRemoveButtons();
     initLucide();
   }
@@ -361,12 +367,23 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     return lines;
   }
 
-  // Đọc dữ liệu các dòng ĐẦU VÀO từ modal (thanh thô hoặc ván thô đã ép trước đó)
+  // Đọc dữ liệu các dòng ĐẦU VÀO từ modal (thanh thô hoặc ván thô đã ép trước đó).
+  // Ô NHIỀU CỠ (có N ô số lượng riêng) → tách thành N phần tử `sticks` (mỗi cỡ 1
+  // dòng, số lượng riêng) để Trace/Excel và lần Sửa sau đọc đúng từng cỡ.
   function collectPressSticks() {
     const arr = [];
     document.querySelectorAll('#press-sticks .press-line-row').forEach(row => {
+      const raw = normalizeStickKey(row.querySelector('.ps-nan')?.value);
+      const segs = parseDimListLoose(row.querySelector('.ps-nan')?.value);
+      const sizes = (segs.length >= 2 && row.querySelectorAll) ? readPressSizeQtys(row) : [];
+      if (sizes.length >= 2) {
+        const picked = sizes.filter(s => s && s.dim && s.qty > 0);
+        if (picked.length) picked.forEach(s => arr.push({ nanKey: s.dim, sticks: s.qty }));
+        else arr.push({ nanKey: raw, sticks: 0 }); // để validate báo "số lượng phải lớn hơn 0"
+        return;
+      }
       arr.push({
-        nanKey: normalizeStickKey(row.querySelector('.ps-nan')?.value),
+        nanKey: raw,
         sticks: parseFloat(row.querySelector('.ps-sticks')?.value) || 0
       });
     });
@@ -442,13 +459,15 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     ).join('');
   }
 
-  // Khối thông tin 3 dòng dưới mỗi dòng ĐẦU VÀO (17/10/2026):
-  //   dòng 1 = cỡ thanh thô đã ghi + thể tích 1 thanh
+  // Khối thông tin dưới mỗi dòng ĐẦU VÀO:
+  //   dòng 1 = cỡ thanh thô đã ghi (+ thể tích 1 thanh khi chỉ 1 cỡ)
   //   dòng 2 = cỡ SAU BÀO TINH tương ứng + tồn BT (chưa có → cảnh báo)
-  //   dòng 3 = thể tích ĐẦU VÀO của dòng (tính theo thanh đã bào tinh)
+  //   dòng 3 = thể tích ĐẦU VÀO:
+  //     • qty là MẢNG {dim, qty} (ô nhiều cỡ, SL riêng từng cỡ) → mỗi cỡ 1 dòng
+  //       "1250×24×8 × 1.000 = 0,24 m³" + TỔNG = Σ các cỡ
+  //     • qty là SỐ (dữ liệu cũ 1 ô nhiều cỡ) → chia đều các cỡ, ghi rõ "ước tính"
   function pressStickInfoHtml(key, qty) {
     const raw = String(key || '').trim();
-    const q = Number(qty) || 0;
     if (!raw) {
       return '<div class="ps-bt-line ps-bt-empty">Chọn loại thanh thô / ván thô để xem cỡ sau bào tinh và thể tích đầu vào.</div>';
     }
@@ -457,7 +476,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
       return `<div class="ps-bt-line ps-bt-warn">Mã "${escapeHTML(raw)}" không phải kích thước (D×R×D) — không tính được thể tích.</div>`;
     }
     const isBoard = segs.every(s => s.unitVol >= 0.0015); // ≥ 0,0015 m³/thanh = tấm ván thô
-    const line1 = `<div class="ps-bt-line ps-bt-raw"><span class="ps-bt-k">${isBoard ? 'Ván thô' : 'Thanh thô'}</span> <strong>${segs.map(s => escapeHTML(s.dim)).join(' + ')}</strong> <em>· 1 thanh = ${fmtVol(segs.reduce((s, x) => s + x.unitVol, 0) / segs.length, 6)} m³</em></div>`;
+    const rawLabel = segs.map(s => escapeHTML(s.dim)).join(' + ');
+    const unitTxt = segs.length === 1 ? ` <em>· 1 thanh = ${fmtVol(segs[0].unitVol, 6)} m³</em>` : '';
+    const line1 = `<div class="ps-bt-line ps-bt-raw"><span class="ps-bt-k">${isBoard ? 'Ván thô' : 'Thanh thô'}</span> <strong>${rawLabel}</strong>${unitTxt}</div>`;
     // Cỡ sau bào tinh: gộp mọi cỡ của mọi đoạn trong ô
     const outs = [];
     segs.forEach(seg => pressBaoTinhOutOfStick(seg.dim).forEach(o => {
@@ -468,11 +489,106 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     const line2 = outs.length
       ? `<div class="ps-bt-line ps-bt-out"><span class="ps-bt-k">Sau bào tinh</span> ${outs.map(o => `<strong>${escapeHTML(o.outKey)}</strong> <em>· tồn BT ${o.qtyOk.toLocaleString('vi-VN')} thanh</em>`).join(' · ')}</div>`
       : '<div class="ps-bt-line ps-bt-warn">Chưa có lượt Bào tinh cho cỡ này — tạm tính theo kích thước đã ghi.</div>';
+
+    // (A) Ô NHIỀU CỠ có số lượng RIÊNG từng cỡ → cộng thể tích từng cỡ
+    const list = Array.isArray(qty) ? qty.filter(it => it && it.dim) : null;
+    if (list && list.length >= 2) {
+      let total = 0;
+      const rows = list.map(it => {
+        const q = Number(it.qty) || 0;
+        if (q <= 0) return '';
+        const outs1 = pressBaoTinhOutOfStick(it.dim);
+        const vol = pressStickUnitVolOf(it.dim) * q;
+        total += vol;
+        const outTxt = outs1.length ? ` <em>(sau bào tinh ${escapeHTML(outs1[0].outKey)})</em>` : '';
+        return `<div class="ps-bt-line ps-bt-size"><strong>${escapeHTML(it.dim)}</strong> × ${q.toLocaleString('vi-VN')} = <strong>${fmtVol(vol, 4)} m³</strong>${outTxt}</div>`;
+      }).join('');
+      const totalLine = total > 0
+        ? `<div class="ps-bt-line ps-bt-vol">Tổng thể tích đầu vào ≈ <strong>${fmtVol(total, 4)} m³</strong></div>`
+        : '';
+      return line1 + line2 + rows + totalLine;
+    }
+
+    // (B) 1 cỡ, hoặc dữ liệu cũ chỉ có TỔNG số lượng → chia đều (ước tính)
+    const q = Number(qty) || 0;
     const vol = pressStickUnitVolOf(raw) * q;
-    const line3 = (q > 0 && vol > 0)
-      ? `<div class="ps-bt-line ps-bt-vol">Thể tích đầu vào ≈ <strong>${fmtVol(vol, 4)} m³</strong>${outs.length ? ' <em>(tính theo thanh đã bào tinh)</em>' : ''}</div>`
-      : '';
+    let line3 = '';
+    if (q > 0 && vol > 0) {
+      const est = segs.length >= 2
+        ? ` <em class="ps-bt-est">≈ ước tính — chia đều ${segs.length} cỡ (dữ liệu cũ; nhập lại số từng cỡ để chính xác)</em>`
+        : (outs.length ? ' <em>(tính theo thanh đã bào tinh)</em>' : '');
+      line3 = `<div class="ps-bt-line ps-bt-vol">Thể tích đầu vào ≈ <strong>${fmtVol(vol, 4)} m³</strong>${est}</div>`;
+    }
     return line1 + line2 + line3;
+  }
+
+  // Thể tích đầu vào của 1 dòng: qty là MẢNG {dim, qty} (SL riêng từng cỡ) hoặc SỐ
+  function pressStickVolOf(key, qty) {
+    if (Array.isArray(qty)) {
+      return qty.reduce((s, it) => s + (it && it.dim ? pressStickUnitVolOf(it.dim) * (Number(it.qty) || 0) : 0), 0);
+    }
+    return pressStickUnitVolOf(key) * (Number(qty) || 0);
+  }
+
+  // Đọc N ô số lượng riêng từng cỡ của 1 dòng đầu vào
+  function readPressSizeQtys(row) {
+    if (!row || !row.querySelectorAll) return [];
+    return [...row.querySelectorAll('.ps-size-qty')].map(i => ({
+      dim: i.getAttribute('data-size'),
+      qty: parseFloat(i.value) || 0
+    }));
+  }
+
+  // Đồng bộ ô SỐ LƯỢNG theo danh sách cỡ đang ghi:
+  //   1 cỡ  → ô Số lượng chung (như cũ)
+  //   ≥2 cỡ → N ô số lượng RIÊNG từng cỡ (mặc định chia đều tổng cũ nếu có)
+  // Chỉ dựng lại khi DANH SÁCH CỠ ĐỔI (giữ giá trị đã nhập, không mất focus).
+  function syncPressStickQtyInputs(row) {
+    if (!row || !row.querySelector) return;
+    const inp = row.querySelector('.ps-nan');
+    const listEl = row.querySelector('.ps-qty-list');
+    const totalInp = row.querySelector('.ps-sticks');
+    const labelEl = row.querySelector('.ps-qty-label');
+    if (!listEl || !totalInp) return;
+    const segs = parseDimListLoose(inp ? inp.value : '');
+    const sig = segs.map(s => s.dim).join('|');
+    if (row.dataset && row.dataset.sizeSig === sig) return;
+    const prev = {};
+    const prevList = [];
+    (row.querySelectorAll ? [...row.querySelectorAll('.ps-size-qty')] : []).forEach(i => {
+      const q = parseFloat(i.value) || 0;
+      prev[i.getAttribute('data-size')] = q;
+      prevList.push(q);
+    });
+    const legacyTotal = parseFloat(totalInp.value) || 0;
+    if (row.dataset) row.dataset.sizeSig = sig;
+    if (segs.length < 2) {
+      listEl.hidden = true;
+      listEl.innerHTML = '';
+      totalInp.hidden = false;
+      if (labelEl) labelEl.textContent = 'Số lượng';
+      const prevSum = Object.keys(prev).reduce((s, k) => s + (prev[k] || 0), 0);
+      if (prevSum > 0) totalInp.value = String(prevSum); // nhiều cỡ → 1 cỡ: cộng dồn
+      return;
+    }
+    const base = Math.floor(legacyTotal / segs.length);
+    const rem = legacyTotal - base * segs.length;
+    const estNote = legacyTotal > 0 && Object.keys(prev).length === 0;
+    listEl.innerHTML = segs.map((s, i) => {
+      const has = Object.prototype.hasOwnProperty.call(prev, s.dim);
+      // giữ số đã nhập: ưu tiên khớp theo cỡ, không khớp thì theo ĐÚNG VỊ TRÍ
+      // (người dùng sửa ký tự cỡ nhưng số lượng vẫn giữ), cuối cùng mới chia đều
+      const v = has ? prev[s.dim]
+        : (prevList.length === segs.length ? prevList[i]
+          : (legacyTotal > 0 ? base + (i < rem ? 1 : 0) : ''));
+      return `<label class="ps-size-qty-row"><span class="ps-size-label">${escapeHTML(s.dim)}</span>`
+        + `<input type="number" class="ps-size-qty" data-size="${escapeHTML(s.dim)}" min="0" step="1" inputmode="numeric" placeholder="SL thanh" value="${v === '' ? '' : v}"></label>`;
+    }).join('') + (estNote
+      ? '<div class="ps-qty-note">Chia đều tổng cũ — sửa lại số từng cỡ nếu thực tế khác nhau.</div>'
+      : '');
+    listEl.hidden = false;
+    totalInp.hidden = true;
+    if (labelEl) labelEl.textContent = 'Số lượng (từng cỡ)';
   }
 
   // Vẽ lại thông tin dưới mọi ô đầu vào + tổng thể tích đầu vào của lượt
@@ -482,11 +598,13 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     let total = 0;
     (rows || []).forEach(row => {
       const inp = row.querySelector ? row.querySelector('.ps-nan') : null;
-      const qtyInp = row.querySelector ? row.querySelector('.ps-sticks') : null;
+      syncPressStickQtyInputs(row);
+      const segs = parseDimListLoose(inp ? inp.value : '');
+      const list = segs.length >= 2 ? readPressSizeQtys(row) : null;
+      const qty = (list && list.length >= 2) ? list : (parseFloat(row.querySelector('.ps-sticks')?.value) || 0);
       const box = row.querySelector ? row.querySelector('.ps-bt-hint') : null;
-      const qty = qtyInp ? (parseFloat(qtyInp.value) || 0) : 0;
       if (box) box.innerHTML = pressStickInfoHtml(inp ? inp.value : '', qty);
-      total += pressStickUnitVolOf(inp ? inp.value : '') * qty;
+      total += pressStickVolOf(inp ? inp.value : '', qty);
     });
     const totalEl = document.getElementById('press-input-vol-total');
     if (totalEl) {
@@ -721,6 +839,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     suggestPressMaterialFields(false);
     refreshPressWorkersPreview();
     refreshPressSecChecks();
+    refreshPressStickHints(); // dựng ô số lượng từng cỡ + tổng thể tích đầu vào
 
     modal.classList.add('show');
     initLucide();
@@ -2831,6 +2950,101 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     renderPlanCapacityChart();
   }
 
+  // ═══ TRỢ GIÚP THẺ ÉP VÁN (nút "?" + modal #modal-epv-help) ═══════════════
+  // Nội dung hướng dẫn/công thức CHỈ nằm ở đây (không rải chữ trên thẻ) —
+  // mở bằng nút "?" ở header thẻ hoặc nút "Hướng Dẫn" trong form nhập lượt ép.
+  const EPV_HELP = `
+    <div class="dash-help-sec">
+      <h5>① Cách điền 1 lượt ép (5 cụm)</h5>
+      <ul>
+        <li><b>Ngày Ép</b>: chọn ngày → tuần tự tính; <b>Người ép + Giờ HC/TC</b> tự lấy từ Bảng bố trí Nhân Sự (vị trí Ép Ván).</li>
+        <li><b>Đầu vào</b>: gõ để lọc "Loại thanh / ván thô". Dưới dòng hiện: cỡ thanh thô · cỡ <b>SAU BÀO TINH</b> + tồn BT · thể tích đầu vào.</li>
+        <li>Ghi <b>NHIỀU CỠ</b> trong 1 ô: cách nhau <b>;</b> (VD <code>1250×24×8 ; 1250×24×10</code>) → ô Số lượng tách thành <b>N ô riêng từng cỡ</b>; tổng thể tích = <b>cộng thể tích từng cỡ</b>.</li>
+        <li><b>Đầu ra</b>: nhập <b>Ván Thô Tạo Ra</b> (kích thước + số lượng) và/hoặc chọn <b>Thành phẩm</b> theo kế hoạch cùng tuần + nhập <b>Số lượng TP (tấm)</b> — bắt buộc có ít nhất 1 trong 2.</li>
+        <li><b>Thông số KT</b>: lực ép ngang/đứng theo <b>MPa</b> (đúng số đồng hồ máy) · nhiệt độ °C · thời gian phút/lượt.</li>
+        <li><b>Hóa chất</b>: tên keo / phụ gia + số kg — tự gợi ý theo định mức × số lượng TP; sửa tay thì giữ số đã sửa.</li>
+      </ul>
+    </div>
+
+    <div class="dash-help-sec">
+      <h5>② Cách tính thể tích (m³)</h5>
+      <div class="epv-help-formula">Thể tích = Dài × Rộng × Dày ÷ 1.000.000.000 × Số lượng <span>(mm → m³)</span></div>
+      <ul>
+        <li>Mỗi lượt lấy theo thứ tự: <b>① Ván thô tạo ra</b> → <b>② Thành phẩm</b> (khi không khai ván thô) → <b>③ Đầu vào</b> (chỉ khi lượt không khai đầu ra nào).</li>
+        <li>Chip cạnh số m³ trên thẻ ngày cho biết đang tính theo nguồn nào:
+          <span class="epv-help-chip">m³ ván thô</span>
+          <span class="epv-help-chip is-tp">m³ thành phẩm</span>
+          <span class="epv-help-chip is-in">m³ đầu vào (bào tinh)</span>
+        </li>
+        <li>Thể tích đầu vào dùng kích thước <b>SAU BÀO TINH</b> (mỏng hơn thanh thô 25–35%), <b>không</b> dùng thanh thô.</li>
+      </ul>
+      <table class="epv-help-ex">
+        <thead><tr><th>Ví dụ</th><th>Cách tính</th><th>Kết quả</th></tr></thead>
+        <tbody>
+          <tr><td>30 tấm <b>1200×382×12</b></td><td>0,0055008 m³/tấm × 30</td><td><b>0,165 → 0,17 m³</b></td></tr>
+          <tr><td>1.000 thanh <b>1250×24×8</b></td><td>0,00024 × 1.000</td><td>0,24 m³</td></tr>
+          <tr><td>2.000 thanh <b>1250×24×10</b></td><td>0,00030 × 2.000</td><td>0,60 m³</td></tr>
+          <tr><td><b>Tổng 2 cỡ trên</b></td><td>0,24 + 0,60</td><td><b>0,84 m³</b></td></tr>
+          <tr><td>Có Bào tinh <b>1250×24×10 → 1250×22×8</b></td><td>0,24 + (0,00022 × 2.000)</td><td><b>0,68 m³</b></td></tr>
+        </tbody>
+      </table>
+      <p class="epv-help-note">KHÔNG cộng số lượng các cỡ rồi chia đều — nhập số lượng riêng từng cỡ để tổng đúng. Dữ liệu cũ chỉ có tổng sẽ hiện "≈ ước tính" và có thể mở Sửa để nhập lại từng cỡ.</p>
+    </div>
+
+    <div class="dash-help-sec">
+      <h5>③ Công suất &amp; Hiệu suất</h5>
+      <ul>
+        <li><b>Công suất m³/ngày</b> = tổng m³ các lượt trong ngày.</li>
+        <li><b>Giờ Ép</b> = giờ HC + TC tự động từ Bảng bố trí vị trí <b>Ép Ván</b> (không lấy vị trí Bullig / Chọn thanh); giờ ra trống = làm đến hết ca; nghỉ của ca trừ vào cuối ca.</li>
+        <li><b>m³/h</b> = m³ ÷ (giờ Ép − giờ sự cố). <b>Hiệu suất</b> = m³/h ÷ <b>định mức tháng</b> (m³/h) × 100%.</li>
+        <li>≥100% tô xanh · ≥70% teal · &lt;70% cam. Chưa đặt định mức tháng → ẩn Hiệu suất (không phải lỗi).</li>
+      </ul>
+      <table class="epv-help-ex">
+        <thead><tr><th>Ví dụ</th><th>Cách tính</th><th>Kết quả</th></tr></thead>
+        <tbody>
+          <tr><td>2,4 m³ · 8h HC · ĐM 0,25 m³/h</td><td>(2,4 ÷ 8) ÷ 0,25 × 100</td><td><b>120%</b></td></tr>
+          <tr><td>2,4 m³ · 8h − 1h sự cố · ĐM 0,3</td><td>(2,4 ÷ 7) ÷ 0,3 × 100</td><td><b>114,3%</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dash-help-sec">
+      <h5>④ Cách đọc biểu đồ</h5>
+      <ul>
+        <li>Mỗi ngày 2 cột: <b>cột trái</b> xếp chồng 3 loại (Có thể chuyển TP ngay · Chỉ BTP · BTP sang TP = thể tích thành phẩm), <b>cột phải</b> = Thành phẩm tương đương.</li>
+        <li>Nhãn tuần <b>"TB ngày a/b m³"</b> = trung bình cột phải / cột trái trên số ngày CÓ lượt ép (không chia 7).</li>
+        <li>Bấm cột → nhảy về thẻ ngày đó; <b>‹ ›</b> nhảy tuần; nút "Hiện Ghi Chú" hiện ghi chú giải trình; nút ⤢ phóng to.</li>
+      </ul>
+    </div>
+
+    <div class="dash-help-sec">
+      <h5>⑤ Lỗi thường gặp</h5>
+      <ul>
+        <li>Chỉ khai Ván thô mà quên Thành phẩm → vẫn có m³ nhưng <b>không cộng "Đã ép"</b> bên tab Kế Hoạch.</li>
+        <li>Ghi mã không phải kích thước (VD <code>A1</code>) → không tính được thể tích đầu vào.</li>
+        <li>Số lượng TP = 0 → form chặn lưu; chọn sai cỡ thanh thô → dòng "Sau bào tinh" trống + cảnh báo.</li>
+        <li>Định mức tháng chỉ Quản Trị sửa (nút Định mức trong form nhập lượt ép).</li>
+      </ul>
+    </div>`;
+
+  function buildEpvHelpHtml() {
+    return EPV_HELP;
+  }
+
+  // Mở/đóng modal trợ giúp thẻ Ép Ván (đè lên form nhập nếu đang mở)
+  function openEpvHelp() {
+    const modal = document.getElementById('modal-epv-help');
+    if (!modal) return;
+    const body = document.getElementById('epv-help-body');
+    if (body) body.innerHTML = buildEpvHelpHtml();
+    modal.classList.add('show');
+    try { initLucide(); } catch (e) { /* icon chưa sẵn sàng — nội dung vẫn thấy */ }
+  }
+  function closeEpvHelp() {
+    const modal = document.getElementById('modal-epv-help');
+    if (modal) modal.classList.remove('show');
+  }
+
 export {
   addPressLine,
   addPressStick,
@@ -2884,6 +3098,13 @@ export {
   pressInputVolumeOf,
   pressRecordVolumeBasisOf,
   pressStickInfoHtml,
+  pressStickVolOf,
+  readPressSizeQtys,
+  syncPressStickQtyInputs,
+  EPV_HELP,
+  buildEpvHelpHtml,
+  openEpvHelp,
+  closeEpvHelp,
   populatePressInputTypeList,
   populatePressWeekFilter,
   populatePressYearFilter,

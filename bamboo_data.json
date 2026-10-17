@@ -1,7 +1,3370 @@
 {
   "version": "1.0",
-  "savedAt": "2026-10-17T02:42:03.801Z",
+  "savedAt": "2026-10-17T10:59:12.860Z",
   "batches": [
+    {
+      "id": "batch-1792234751821-0-0",
+      "code": "261014-28",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1470,
+      "volume": 0.3528,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234680827
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A1 · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791361185777-h3h0d",
+          "qty": 1190,
+          "date": "2026-10-06",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1792166991897-r23bg",
+          "qty": 280,
+          "date": "2026-10-15",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:59:11.817Z"
+    },
+    {
+      "id": "batch-1792234680832-2-0",
+      "code": "261014-27",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1330,
+      "volume": 0.3192,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234680827
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792088301186-sasrd",
+          "qty": 344,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        },
+        {
+          "chonNanId": "x2cn-1792166969434-0pttk",
+          "qty": 986,
+          "date": "2026-10-15",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:58:00.827Z"
+    },
+    {
+      "id": "batch-1792234680832-1-0",
+      "code": "261014-26",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1820,
+      "volume": 0.3686,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234680827
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×9 · A · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792088189621-y4eyp",
+          "qty": 160,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        },
+        {
+          "chonNanId": "x2cn-1792166722346-6xj25",
+          "qty": 1660,
+          "date": "2026-10-15",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:58:00.827Z"
+    },
+    {
+      "id": "batch-1792234680832-0-0",
+      "code": "261014-25",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234680827
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · Lô 1/1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792088119937-0lpev",
+          "qty": 2100,
+          "date": "2026-10-14",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:58:00.827Z"
+    },
+    {
+      "id": "batch-1792234016899-3-0",
+      "code": "261014-24",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234016893
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A · Lô 1/1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792166612442-ssosu",
+          "qty": 2100,
+          "date": "2026-10-15",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:46:56.893Z"
+    },
+    {
+      "id": "batch-1792234016898-2-0",
+      "code": "261014-23",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1204,
+      "volume": 0.298,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234016893
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×11 · B · Lô 1/1 · 5 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791519632804-twcja",
+          "qty": 140,
+          "date": "2026-10-08",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô · Nhà Quy"
+        },
+        {
+          "chonNanId": "x2cn-1791618810599-xuwfu",
+          "qty": 140,
+          "date": "2026-10-09",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791779122478-jouhe",
+          "qty": 280,
+          "date": "2026-10-10",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791876677064-zmiyn",
+          "qty": 350,
+          "date": "2026-10-12",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792084968365-51slr",
+          "qty": 294,
+          "date": "2026-10-13",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:46:56.893Z"
+    },
+    {
+      "id": "batch-1792234016898-1-0",
+      "code": "261014-22",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1540,
+      "volume": 0.3465,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234016893
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×10 · A · Lô 1/1 · 3 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791618509592-wy1t8",
+          "qty": 120,
+          "date": "2026-10-09",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1792084477103-d8jbv",
+          "qty": 672,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792088231218-ybz7c",
+          "qty": 748,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:46:56.893Z"
+    },
+    {
+      "id": "batch-1792234016898-0-0",
+      "code": "261014-21",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792234016893
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS12",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · Lô 1/1 · 3 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791778982207-jpm3r",
+          "qty": 670,
+          "date": "2026-10-10",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791876476599-tnldi",
+          "qty": 1244,
+          "date": "2026-10-12",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792088119937-0lpev",
+          "qty": 186,
+          "date": "2026-10-14",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:46:56.893Z"
+    },
+    {
+      "id": "batch-1792233195165",
+      "code": "261015-30",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 406,
+      "volume": 0.0914,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:37:58.662Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792233359031
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792233162881",
+      "code": "261015-29",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1354,
+      "volume": 0.325,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:35:59.031Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792233359031
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792233115078",
+      "code": "261015-27",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1420,
+      "volume": 0.2875,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:35:59.031Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792233359031
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792233096581",
+      "code": "261015-26",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1820,
+      "volume": 0.4095,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:35:59.031Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792233359031
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792232850723",
+      "code": "261015-25",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 170,
+      "volume": 0.0421,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:29:02.162Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792232942162
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792232826793",
+      "code": "261015-24",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 700,
+      "volume": 0.1575,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:29:02.162Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792232942162
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792232793061",
+      "code": "261015-23",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1540,
+      "volume": 0.3696,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:29:02.162Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792232942162
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792232774029",
+      "code": "261015-22",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1540,
+      "volume": 0.3696,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:29:02.162Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792232942162
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792232750168",
+      "code": "261015-21",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 933,
+      "volume": 0.1889,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:29:02.162Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792232942162
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792232322558-3-0",
+      "code": "261015-20",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1750,
+      "volume": 0.4331,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792232322554
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS6",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×11 · A · Lô 1/1 · 3 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791618759399-jnzql",
+          "qty": 700,
+          "date": "2026-10-09",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1792088266881-29kvy",
+          "qty": 770,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        },
+        {
+          "chonNanId": "x2cn-1792166877449-a3y1e",
+          "qty": 280,
+          "date": "2026-10-15",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:18:42.554Z"
+    },
+    {
+      "id": "batch-1792232322558-2-0",
+      "code": "261015-19",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1932,
+      "volume": 0.4637,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792232322554
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS6",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A1 · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792088309173-0356p",
+          "qty": 504,
+          "date": "2026-10-14",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        },
+        {
+          "chonNanId": "x2cn-1792166991897-r23bg",
+          "qty": 1428,
+          "date": "2026-10-15",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:18:42.554Z"
+    },
+    {
+      "id": "batch-1792232322558-1-0",
+      "code": "261015-18",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792232322554
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS6",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · B · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792088135905-6j7pq",
+          "qty": 1258,
+          "date": "2026-10-14",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        },
+        {
+          "chonNanId": "x2cn-1792166678106-3hti1",
+          "qty": 842,
+          "date": "2026-10-15",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:18:42.554Z"
+    },
+    {
+      "id": "batch-1792232322558-0-0",
+      "code": "261015-17",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792232322554
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS6",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791617938569-j6jet",
+          "qty": 1174,
+          "date": "2026-10-09",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791778982207-jpm3r",
+          "qty": 926,
+          "date": "2026-10-10",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:18:42.554Z"
+    },
+    {
+      "id": "batch-1792231899383-1-0",
+      "code": "261015-16",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231752866
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS6",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A · Lô 1/1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792166612442-ssosu",
+          "qty": 2100,
+          "date": "2026-10-15",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:11:39.379Z"
+    },
+    {
+      "id": "batch-1792231899383-0-0",
+      "code": "261015-15",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1750,
+      "volume": 0.3544,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231752866
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS6",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×9 · A · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792083519807-buycl",
+          "qty": 650,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792088189621-y4eyp",
+          "qty": 1100,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:11:39.379Z"
+    },
+    {
+      "id": "batch-1792231752870-0-1",
+      "code": "261015-14",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231752866
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · Lô 2/2 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791617938569-j6jet",
+          "qty": 2100,
+          "date": "2026-10-09",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:09:12.866Z"
+    },
+    {
+      "id": "batch-1792231752870-0-0",
+      "code": "261015-13",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1820,
+      "volume": 0.2867,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231752866
+      },
+      "sayShift": {
+        "say1": 1
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · Lô 1/2 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791519844422-g3gmz",
+          "qty": 1680,
+          "date": "2026-10-08",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791617938569-j6jet",
+          "qty": 140,
+          "date": "2026-10-09",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:09:12.866Z"
+    },
+    {
+      "id": "batch-1792231548949",
+      "code": "261017-01",
+      "stage": "say2",
+      "date": "2026-10-17",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1540,
+      "volume": 0.3696,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-17",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-17"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:06:54.669Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792231614669
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792231520602",
+      "code": "261015-12",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1330,
+      "volume": 0.3192,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:06:54.669Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792231614669
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792231462820",
+      "code": "261015-11",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 925,
+      "volume": 0.1873,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS14",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:06:54.669Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792231614669
+      },
+      "sayShift": {
+        "say2": 1
+      }
+    },
+    {
+      "id": "batch-1792231254239-3-0",
+      "code": "261015-10",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231254235
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A · Lô 1/1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792166612442-ssosu",
+          "qty": 2100,
+          "date": "2026-10-15",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:00:54.235Z"
+    },
+    {
+      "id": "batch-1792231254239-2-0",
+      "code": "261015-09",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1540,
+      "volume": 0.3696,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231254235
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A · Lô 1/1 · 3 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791618855350-bja8f",
+          "qty": 280,
+          "date": "2026-10-09",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791779141614-okg1j",
+          "qty": 540,
+          "date": "2026-10-10",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1792088301186-sasrd",
+          "qty": 720,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:00:54.235Z"
+    },
+    {
+      "id": "batch-1792231254239-1-0",
+      "code": "261015-08",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1456,
+      "volume": 0.3276,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231254235
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×10 · A1 · Lô 1/1 · 5 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791519565846-5wthg",
+          "qty": 70,
+          "date": "2026-10-08",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô · Nhà Quy"
+        },
+        {
+          "chonNanId": "x2cn-1791520085653-b9pwz",
+          "qty": 140,
+          "date": "2026-10-08",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô · Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791618628103-4eoxt",
+          "qty": 630,
+          "date": "2026-10-09",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791779078111-zhr3f",
+          "qty": 70,
+          "date": "2026-10-10",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791876612822-yosg3",
+          "qty": 546,
+          "date": "2026-10-12",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:00:54.235Z"
+    },
+    {
+      "id": "batch-1792231254239-0-0",
+      "code": "261015-07",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792231254235
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · B · Lô 1/1 · 3 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791519910148-s869d",
+          "qty": 756,
+          "date": "2026-10-08",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791617967383-yefin",
+          "qty": 1176,
+          "date": "2026-10-09",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1792088135905-6j7pq",
+          "qty": 168,
+          "date": "2026-10-14",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T10:00:54.235Z"
+    },
+    {
+      "id": "batch-1792230905911-3-0",
+      "code": "261015-06",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792230905907
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A · Lô 1/1 · 4 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791519749348-2q893",
+          "qty": 504,
+          "date": "2026-10-08",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1791778966548-labc9",
+          "qty": 196,
+          "date": "2026-10-10",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1792088104898-9usq4",
+          "qty": 960,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        },
+        {
+          "chonNanId": "x2cn-1792166612442-ssosu",
+          "qty": 440,
+          "date": "2026-10-15",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Quy + Nhà Chiến + Nhà Khánh Huế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:55:05.907Z"
+    },
+    {
+      "id": "batch-1792230905911-2-0",
+      "code": "261015-05",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1848,
+      "volume": 0.4435,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792230905907
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A1 · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791618879622-ubyhq",
+          "qty": 1540,
+          "date": "2026-10-09",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        },
+        {
+          "chonNanId": "x2cn-1792088309173-0356p",
+          "qty": 308,
+          "date": "2026-10-14",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:55:05.907Z"
+    },
+    {
+      "id": "batch-1792230905911-1-0",
+      "code": "261015-04",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1680,
+      "volume": 0.4032,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792230905907
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A · Lô 1/1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791519672261-fdo4l",
+          "qty": 630,
+          "date": "2026-10-08",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Quy"
+        },
+        {
+          "chonNanId": "x2cn-1791618855350-bja8f",
+          "qty": 1050,
+          "date": "2026-10-09",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khánh Huế + Nhà Thành + Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:55:05.907Z"
+    },
+    {
+      "id": "batch-1792230905911-0-0",
+      "code": "261015-03",
+      "stage": "say1",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792230905907
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS3",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · Lô 1/1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791519844422-g3gmz",
+          "qty": 2100,
+          "date": "2026-10-08",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:55:05.907Z"
+    },
+    {
+      "id": "batch-1792230398043",
+      "code": "261015-02",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1268,
+      "volume": 0.1997,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS9",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:49:08.485Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792230548485
+      },
+      "sayShift": {
+        "say2": 0
+      }
+    },
+    {
+      "id": "batch-1792230355592",
+      "code": "261015-01",
+      "stage": "say2",
+      "date": "2026-10-15",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1638,
+      "volume": 0.4054,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS9",
+      "notes": "",
+      "khoDate": "2026-10-15",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:47:22.219Z",
+      "say2Date": "2026-10-15",
+      "sayCharges": {
+        "say2": 1792230442220
+      },
+      "sayShift": {
+        "say2": 0
+      }
+    },
+    {
+      "id": "batch-1792226647307-0",
+      "code": "261014-20",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792226534250
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792083466512-v4r4w",
+          "qty": 378,
+          "date": "2026-10-13",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792088119937-0lpev",
+          "qty": 1722,
+          "date": "2026-10-14",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:44:07.304Z"
+    },
+    {
+      "id": "batch-1792226534252-4",
+      "code": "261014-19",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1428,
+      "volume": 0.3427,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792226534250
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792085130637-ujpds",
+          "qty": 938,
+          "date": "2026-10-13",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792088309173-0356p",
+          "qty": 490,
+          "date": "2026-10-14",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:42:14.250Z"
+    },
+    {
+      "id": "batch-1792226534252-3",
+      "code": "261014-18",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1540,
+      "volume": 0.3696,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792226534250
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792085117181-suz6i",
+          "qty": 1540,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:42:14.250Z"
+    },
+    {
+      "id": "batch-1792226534252-2",
+      "code": "261014-17",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792226534250
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · B · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792083479998-kkwyo",
+          "qty": 670,
+          "date": "2026-10-13",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792088135905-6j7pq",
+          "qty": 1430,
+          "date": "2026-10-14",
+          "cls": "B",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:42:14.250Z"
+    },
+    {
+      "id": "batch-1792226534252-1",
+      "code": "261014-16",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792226534250
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792083466512-v4r4w",
+          "qty": 2100,
+          "date": "2026-10-13",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:42:14.250Z"
+    },
+    {
+      "id": "batch-1792226534252-0",
+      "code": "261014-15",
+      "stage": "say1",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792226534250
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS2",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792083445138-x15f7",
+          "qty": 792,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792088104898-9usq4",
+          "qty": 1308,
+          "date": "2026-10-14",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Khanh + Nhà Lâm Sơn Điện"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-14"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:42:14.250Z"
+    },
+    {
+      "id": "batch-1792225560774",
+      "code": "261014-14",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 22,
+      "thickness": 11,
+      "quantity": 1050,
+      "volume": 0.3176,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225960094
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225540794",
+      "code": "261014-13",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1470,
+      "volume": 0.3638,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225960094
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225509451",
+      "code": "261014-12",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1358,
+      "volume": 0.3259,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225960094
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225482509",
+      "code": "261014-11",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1512,
+      "volume": 0.3629,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225901088
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225454279",
+      "code": "261014-10",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1932,
+      "volume": 0.4637,
+      "bambooType": "A1",
+      "useFor": "Bullig",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225901088
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225429370",
+      "code": "261014-09",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 1946,
+      "volume": 0.3941,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225901088
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225403314",
+      "code": "261014-08",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1184,
+      "volume": 0.2664,
+      "bambooType": "B",
+      "useFor": "Bullig",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225901088
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225363043",
+      "code": "261014-07",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2016,
+      "volume": 0.3175,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225789705
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225337101",
+      "code": "261014-06",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1400,
+      "volume": 0.336,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225789705
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225311909",
+      "code": "261014-05",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2184,
+      "volume": 0.344,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225678057
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225281823",
+      "code": "261014-04",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1008,
+      "volume": 0.2495,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225789705
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225249072",
+      "code": "261014-03",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2184,
+      "volume": 0.344,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225789705
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225212136",
+      "code": "261014-02",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2184,
+      "volume": 0.344,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225678057
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792225099608",
+      "code": "261014-01",
+      "stage": "kho",
+      "date": "2026-10-14",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2016,
+      "volume": 0.3175,
+      "bambooType": "B",
+      "useFor": "Ván",
+      "location": "LS13",
+      "notes": "",
+      "khoDate": "2026-10-16",
+      "stageHistory": [
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        }
+      ],
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "say2Date": "2026-10-14",
+      "sayCharges": {
+        "say2": 1792225678057
+      },
+      "sayShift": {
+        "say2": 0
+      },
+      "topRework": false
+    },
+    {
+      "id": "batch-1792224762556-2",
+      "code": "261013-20",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1400,
+      "volume": 0.3465,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224762553
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×11 · A · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792084628252-swbcd",
+          "qty": 1400,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:12:42.553Z"
+    },
+    {
+      "id": "batch-1792224762556-1",
+      "code": "261013-19",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 2100,
+      "volume": 0.4253,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224762553
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×9 · A · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791876530920-x9mjo",
+          "qty": 588,
+          "date": "2026-10-12",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792083519807-buycl",
+          "qty": 1512,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:12:42.553Z"
+    },
+    {
+      "id": "batch-1792224762556-0",
+      "code": "261013-18",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 1260,
+      "volume": 0.1985,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224762553
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791876476599-tnldi",
+          "qty": 1260,
+          "date": "2026-10-12",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:12:42.553Z"
+    },
+    {
+      "id": "batch-1792224636742-3",
+      "code": "261013-17",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 11,
+      "quantity": 1372,
+      "volume": 0.3396,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224636739
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×11 · A1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791876666123-23oan",
+          "qty": 560,
+          "date": "2026-10-12",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792084649357-63zol",
+          "qty": 812,
+          "date": "2026-10-13",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            11
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:10:36.739Z"
+    },
+    {
+      "id": "batch-1792224636742-2",
+      "code": "261013-16",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1400,
+      "volume": 0.315,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224636739
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×10 · A1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791779078111-zhr3f",
+          "qty": 1400,
+          "date": "2026-10-10",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:10:36.739Z"
+    },
+    {
+      "id": "batch-1792224636742-1",
+      "code": "261013-15",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2100,
+      "volume": 0.3308,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224636739
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791778982207-jpm3r",
+          "qty": 2100,
+          "date": "2026-10-10",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:10:36.739Z"
+    },
+    {
+      "id": "batch-1792224636742-0",
+      "code": "261013-14",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2184,
+      "volume": 0.344,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224636739
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791778966548-labc9",
+          "qty": 2184,
+          "date": "2026-10-10",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô · Nhà Chiến + Nhà Tế"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:10:36.739Z"
+    },
+    {
+      "id": "batch-1792224330962-3",
+      "code": "261013-13",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 24,
+      "thickness": 8,
+      "quantity": 1540,
+      "volume": 0.3696,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224330959
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×24×8 · A1 · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792085130637-ujpds",
+          "qty": 1540,
+          "date": "2026-10-13",
+          "cls": "A1",
+          "dims": [
+            1250,
+            24,
+            8
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:05:30.959Z"
+    },
+    {
+      "id": "batch-1792224330962-2",
+      "code": "261013-12",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 10,
+      "quantity": 1512,
+      "volume": 0.3402,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224330959
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×10 · A · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791876604552-q54ad",
+          "qty": 504,
+          "date": "2026-10-12",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792084477103-d8jbv",
+          "qty": 1008,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            10
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:05:30.959Z"
+    },
+    {
+      "id": "batch-1792224330961-1",
+      "code": "261013-11",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 9,
+      "quantity": 2100,
+      "volume": 0.4253,
+      "bambooType": "A1",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224330959
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×9 · A1 · 2 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1791876547224-823li",
+          "qty": 1344,
+          "date": "2026-10-12",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khanh + Nhà Trung + Nhà Thành"
+        },
+        {
+          "chonNanId": "x2cn-1792083617327-psbsw",
+          "qty": 756,
+          "date": "2026-10-13",
+          "cls": "A1",
+          "dims": [
+            1250,
+            18,
+            9
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:05:30.959Z"
+    },
+    {
+      "id": "batch-1792224330961-0",
+      "code": "261013-10",
+      "stage": "say1",
+      "date": "2026-10-13",
+      "week": "Tuần 42",
+      "length": 1250,
+      "width": 18,
+      "thickness": 7,
+      "quantity": 2184,
+      "volume": 0.344,
+      "bambooType": "A",
+      "useFor": "Ván",
+      "sayCharges": {
+        "say1": 1792224330959
+      },
+      "sayShift": {
+        "say1": 0
+      },
+      "location": "LS4",
+      "notes": "",
+      "sourceChonNanId": "",
+      "sourceChonNanLabel": "Nhóm 1250×18×7 · A · 1 thẻ",
+      "sources": [
+        {
+          "chonNanId": "x2cn-1792083445138-x15f7",
+          "qty": 2184,
+          "date": "2026-10-13",
+          "cls": "A",
+          "dims": [
+            1250,
+            18,
+            7
+          ],
+          "label": "Luồng cây xô + Luồng ống · Nhà Khoa Dự Sơn Điện + Nhà Quy + Nhà Thành"
+        }
+      ],
+      "stageHistory": [
+        {
+          "stage": "say1",
+          "date": "2026-10-13"
+        }
+      ],
+      "updatedAt": "2026-10-17T08:05:30.959Z"
+    },
     {
       "id": "batch-1792049223417",
       "code": "261009-26",
@@ -1042,7 +4405,7 @@
     {
       "id": "batch-1791947644395-3",
       "code": "261010-20",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1063,14 +4426,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:14:04.391Z"
+      "updatedAt": "2026-10-17T08:35:02.083Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791947644394-2",
       "code": "261010-19",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1091,14 +4460,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:14:04.391Z"
+      "updatedAt": "2026-10-17T08:35:02.083Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791947644394-1",
       "code": "261010-18",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1119,14 +4494,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:14:04.391Z"
+      "updatedAt": "2026-10-17T08:35:02.083Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791947644394-0",
       "code": "261010-17",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1147,14 +4528,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:14:04.391Z"
+      "updatedAt": "2026-10-17T08:35:02.083Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791947187677-4",
       "code": "261010-16",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1165,9 +4552,10 @@
       "bambooType": "B",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791947187674
+        "say1": 1791947187674,
+        "say2": 1792231104708
       },
-      "location": "LS10",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791617967383-yefin",
       "sourceChonNanLabel": "1250×18×7 · B · 2.184",
@@ -1175,14 +4563,27 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:06:27.674Z"
+      "updatedAt": "2026-10-17T09:58:24.708Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791947187677-3",
       "code": "261010-15",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1193,9 +4594,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791947187674
+        "say1": 1791947187674,
+        "say2": 1792231104708
       },
-      "location": "LS10",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791779112751-toz6m",
       "sourceChonNanLabel": "1250×18×11 · A1 · 770",
@@ -1203,14 +4605,27 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:06:27.674Z"
+      "updatedAt": "2026-10-17T09:58:24.708Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791947187677-2",
       "code": "261010-14",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1231,14 +4646,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T03:06:27.674Z"
+      "updatedAt": "2026-10-17T09:42:29.225Z",
+      "khoDate": "2026-10-16",
+      "topRework": false
     },
     {
       "id": "batch-1791947187677-1",
       "code": "261010-13",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1259,14 +4680,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T03:06:27.674Z"
+      "updatedAt": "2026-10-17T09:42:29.225Z",
+      "khoDate": "2026-10-16",
+      "topRework": false
     },
     {
       "id": "batch-1791947187676-0",
       "code": "261010-12",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1277,9 +4704,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791947187674
+        "say1": 1791947187674,
+        "say2": 1792231104708
       },
-      "location": "LS10",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791778973424-nd8qh",
       "sourceChonNanLabel": "1250×18×7 · A · 490",
@@ -1287,14 +4715,27 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:06:27.674Z"
+      "updatedAt": "2026-10-17T09:58:24.708Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791946918178-3",
       "code": "261010-11",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1315,14 +4756,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T03:01:58.175Z"
+      "updatedAt": "2026-10-17T09:42:29.225Z",
+      "khoDate": "2026-10-16",
+      "topRework": false
     },
     {
       "id": "batch-1791946918178-2",
       "code": "261010-10",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1343,14 +4790,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T03:01:58.175Z"
+      "updatedAt": "2026-10-17T09:42:29.225Z",
+      "khoDate": "2026-10-16",
+      "topRework": false
     },
     {
       "id": "batch-1791946918178-1",
       "code": "261010-09",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1361,9 +4814,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791946918175
+        "say1": 1791946918175,
+        "say2": 1792231614669
       },
-      "location": "LS10",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791778970945-4q59w",
       "sourceChonNanLabel": "1250×18×7 · A · 1.890",
@@ -1371,14 +4825,27 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:01:58.175Z"
+      "updatedAt": "2026-10-17T10:06:54.669Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 1
+      }
     },
     {
       "id": "batch-1791946918177-0",
       "code": "261010-08",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1389,9 +4856,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791946918175
+        "say1": 1791946918175,
+        "say2": 1792231104708
       },
-      "location": "LS10",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791617952519-gxgdy",
       "sourceChonNanLabel": "1250×18×7 · A1 · 2.184",
@@ -1399,14 +4867,27 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:01:58.175Z"
+      "updatedAt": "2026-10-17T09:58:24.708Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791946821908-3",
       "code": "261010-07",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1427,14 +4908,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:00:21.904Z"
+      "updatedAt": "2026-10-17T08:36:39.093Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791946821907-2",
       "code": "261010-06",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1455,14 +4942,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:00:21.904Z"
+      "updatedAt": "2026-10-17T08:36:39.093Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791946821907-1",
       "code": "261010-05",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1483,14 +4976,20 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:00:21.904Z"
+      "updatedAt": "2026-10-17T08:36:39.093Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791946821907-0",
       "code": "261010-04",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-10",
       "week": "Tuần 41",
       "length": 1250,
@@ -1511,9 +5010,15 @@
         {
           "stage": "say1",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:00:21.904Z"
+      "updatedAt": "2026-10-17T08:36:39.093Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791945538855",
@@ -1629,7 +5134,7 @@
     {
       "id": "batch-1791944990393-4",
       "code": "261009-21",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1650,14 +5155,20 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
-      "updatedAt": "2026-10-14T02:29:50.389Z"
+      "updatedAt": "2026-10-17T08:34:16.799Z",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791944990393-3",
       "code": "261009-20",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1678,14 +5189,20 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
-      "updatedAt": "2026-10-14T02:29:50.389Z"
+      "updatedAt": "2026-10-17T08:34:16.799Z",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791944990393-2",
       "code": "261009-19",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1706,14 +5223,20 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
-      "updatedAt": "2026-10-14T02:29:50.389Z"
+      "updatedAt": "2026-10-17T08:34:16.799Z",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791944990393-1",
       "code": "261009-18",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1724,9 +5247,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791944990389
+        "say1": 1791944990389,
+        "say2": 1792230548485
       },
-      "location": "LS5",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791618759399-jnzql",
       "sourceChonNanLabel": "1250×18×11 · A · 1.176",
@@ -1734,14 +5258,27 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:29:50.389Z"
+      "updatedAt": "2026-10-17T09:49:08.485Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791944990392-0",
       "code": "261009-17",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1752,9 +5289,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791944990389
+        "say1": 1791944990389,
+        "say2": 1792230442220
       },
-      "location": "LS5",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791617733799-hgatt",
       "sourceChonNanLabel": "1250×18×7 · A · 1.400",
@@ -1762,14 +5300,27 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:29:50.389Z"
+      "updatedAt": "2026-10-17T09:47:22.219Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791944527254-4",
       "code": "261009-16",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1790,14 +5341,20 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
-      "updatedAt": "2026-10-14T02:22:07.251Z"
+      "updatedAt": "2026-10-17T08:34:16.799Z",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791944527254-3",
       "code": "261009-15",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1808,9 +5365,10 @@
       "bambooType": "B",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791944527251
+        "say1": 1791944527251,
+        "say2": 1792230658465
       },
-      "location": "LS5",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791441666435-u952m",
       "sourceChonNanLabel": "1250×18×7 · B · 2.352",
@@ -1818,14 +5376,27 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:22:07.251Z"
+      "updatedAt": "2026-10-17T09:52:24.621Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791944527254-2",
       "code": "261009-14",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1836,9 +5407,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791944527251
+        "say1": 1791944527251,
+        "say2": 1792230658465
       },
-      "location": "LS5",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791519679013-aetvj",
       "sourceChonNanLabel": "1250×24×8 · A1 · 1.540",
@@ -1846,14 +5418,27 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:22:07.251Z"
+      "updatedAt": "2026-10-17T09:52:24.621Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791944527254-1",
       "code": "261009-13",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1864,9 +5449,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791944527251
+        "say1": 1791944527251,
+        "say2": 1792230548485
       },
-      "location": "LS5",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791618855350-bja8f",
       "sourceChonNanLabel": "1250×24×8 · A · 1.540",
@@ -1874,14 +5460,27 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:22:07.251Z"
+      "updatedAt": "2026-10-17T09:49:08.485Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791944527254-0",
       "code": "261009-12",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1892,9 +5491,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791944527251
+        "say1": 1791944527251,
+        "say2": 1792230442220
       },
-      "location": "LS5",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791617938569-j6jet",
       "sourceChonNanLabel": "1250×18×7 · A1 · 2.268",
@@ -1902,14 +5502,27 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:22:07.251Z"
+      "updatedAt": "2026-10-17T09:47:22.219Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791943481166-2",
       "code": "261009-11",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1930,14 +5543,20 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:04:41.162Z"
+      "updatedAt": "2026-10-17T08:36:39.093Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791943481166-1",
       "code": "261009-10",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1958,14 +5577,20 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:04:41.162Z"
+      "updatedAt": "2026-10-17T08:36:39.093Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791943481166-0",
       "code": "261009-09",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -1986,9 +5611,15 @@
         {
           "stage": "say1",
           "date": "2026-10-09"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T02:04:41.162Z"
+      "updatedAt": "2026-10-17T08:36:39.093Z",
+      "khoDate": "2026-10-15",
+      "topRework": false
     },
     {
       "id": "batch-1791941717646",
@@ -2178,7 +5809,7 @@
     {
       "id": "batch-1791941061715-2",
       "code": "261009-03",
-      "stage": "kho",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -2189,9 +5820,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791941061712
+        "say1": 1791941061712,
+        "say2": 1792233359031
       },
-      "location": "LS3",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791519555621-fdnne",
       "sourceChonNanLabel": "1250×18×10 · A · 1.456",
@@ -2203,15 +5835,23 @@
         {
           "stage": "kho",
           "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-16T12:28:34.833Z",
-      "khoDate": "2026-10-16"
+      "updatedAt": "2026-10-17T10:35:59.031Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 1
+      }
     },
     {
       "id": "batch-1791941061714-1",
       "code": "261009-02",
-      "stage": "kho",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -2222,9 +5862,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791941061712
+        "say1": 1791941061712,
+        "say2": 1792230658465
       },
-      "location": "LS3",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791171941535-3z5aw",
       "sourceChonNanLabel": "1250×18×7 · A1 · 2.100",
@@ -2236,15 +5877,23 @@
         {
           "stage": "kho",
           "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-16T12:28:34.833Z",
-      "khoDate": "2026-10-16"
+      "updatedAt": "2026-10-17T09:50:58.464Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791941061714-0",
       "code": "261009-01",
-      "stage": "kho",
+      "stage": "say2",
       "date": "2026-10-09",
       "week": "Tuần 41",
       "length": 1250,
@@ -2255,9 +5904,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791941061712
+        "say1": 1791941061712,
+        "say2": 1792230658465
       },
-      "location": "LS3",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791519435445-5wiq6",
       "sourceChonNanLabel": "1250×18×9 · A · 1.820",
@@ -2269,10 +5919,18 @@
         {
           "stage": "kho",
           "date": "2026-10-16"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-16T12:28:34.833Z",
-      "khoDate": "2026-10-16"
+      "updatedAt": "2026-10-17T09:50:58.464Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791940568399-2",
@@ -2508,7 +6166,7 @@
     {
       "id": "batch-1791779025021-5",
       "code": "261008-06",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2529,14 +6187,20 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
-      "updatedAt": "2026-10-12T04:23:45.017Z"
+      "updatedAt": "2026-10-17T08:37:55.947Z",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791779025021-4",
       "code": "261008-05",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2547,9 +6211,10 @@
       "bambooType": "B",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791779025017
+        "say1": 1791779025017,
+        "say2": 1792231104708
       },
-      "location": "LS2",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791519377780-ihqqe",
       "sourceChonNanLabel": "1250×18×7 · B · 672",
@@ -2557,14 +6222,27 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-12T04:23:45.017Z"
+      "updatedAt": "2026-10-17T09:58:24.708Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791779025021-3",
       "code": "261008-04",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2575,9 +6253,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791779025017
+        "say1": 1791779025017,
+        "say2": 1792230442220
       },
-      "location": "LS2",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791442876763-5no2z",
       "sourceChonNanLabel": "1250×18×7 · A1 · 2.268",
@@ -2585,14 +6264,27 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-12T04:23:45.017Z"
+      "updatedAt": "2026-10-17T09:47:22.219Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791779025021-2",
       "code": "261008-03",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2613,14 +6305,20 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
-      "updatedAt": "2026-10-12T04:23:45.017Z"
+      "updatedAt": "2026-10-17T08:37:55.947Z",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791779025021-1",
       "code": "261008-02",
-      "stage": "say1",
+      "stage": "kho",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2641,14 +6339,20 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
-      "updatedAt": "2026-10-12T04:23:45.017Z"
+      "updatedAt": "2026-10-17T08:37:55.947Z",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791779025020-0",
       "code": "261008-01",
-      "stage": "say1",
+      "stage": "say2",
       "date": "2026-10-08",
       "week": "Tuần 41",
       "length": 1250,
@@ -2659,9 +6363,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791779025017
+        "say1": 1791779025017,
+        "say2": 1792230548485
       },
-      "location": "LS2",
+      "location": "LS9",
       "notes": "",
       "sourceChonNanId": "x2cn-1791519844422-g3gmz",
       "sourceChonNanLabel": "1250×18×7 · A1 · 2.184",
@@ -2669,9 +6374,22 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-12T04:23:45.017Z"
+      "updatedAt": "2026-10-17T09:49:08.485Z",
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "id": "batch-1791778780964-9",
@@ -2744,7 +6462,7 @@
     {
       "id": "batch-1791778780963-7",
       "code": "261007-14",
-      "stage": "kho",
+      "stage": "say2",
       "date": "2026-10-07",
       "week": "Tuần 41",
       "length": 1250,
@@ -2755,9 +6473,10 @@
       "bambooType": "A",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791778780959
+        "say1": 1791778780959,
+        "say2": 1792231614669
       },
-      "location": "LS4",
+      "location": "LS14",
       "notes": "",
       "sourceChonNanId": "x2cn-1791441138123-jjrfp",
       "sourceChonNanLabel": "1250×18×10 · A · 560",
@@ -2769,11 +6488,18 @@
         {
           "stage": "kho",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
-      "updatedAt": "2026-10-14T03:00:50.744Z",
+      "updatedAt": "2026-10-17T10:06:54.669Z",
       "khoDate": "2026-10-10",
-      "topRework": false
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 1
+      }
     },
     {
       "id": "batch-1791778780963-6",
@@ -3139,9 +6865,10 @@
       "bambooType": "A1",
       "useFor": "Ván",
       "sayCharges": {
-        "say1": 1791778489564
+        "say1": 1791778489564,
+        "say2": 1792225678057
       },
-      "location": "LS4",
+      "location": "LS13",
       "notes": "",
       "sourceChonNanId": "x2cn-1791171936878-e40et",
       "sourceChonNanLabel": "1250×18×7 · A1 · 2.268",
@@ -3153,10 +6880,22 @@
         {
           "stage": "kho",
           "date": "2026-10-10"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-16"
         }
       ],
-      "updatedAt": "2026-10-14T03:00:50.744Z",
-      "khoDate": "2026-10-10",
+      "updatedAt": "2026-10-17T09:42:57.569Z",
+      "khoDate": "2026-10-16",
+      "say2Date": "2026-10-14",
+      "sayShift": {
+        "say2": 0
+      },
       "topRework": false
     },
     {
@@ -13120,25 +16859,31 @@
       "sayCharges": {
         "say1": 1791779364810
       },
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "code": "261008-16",
       "useFor": "Ván",
       "volume": 0.0672,
       "id": "batch-1791779364814-9",
       "sourceChonNanLabel": "1250×24×8 · A1 · 280",
       "week": "Tuần 41",
-      "stage": "say1",
+      "stage": "kho",
       "stageHistory": [
         {
           "date": "2026-10-08",
           "stage": "say1"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "width": 24,
       "bambooType": "A1",
       "length": 1250,
       "thickness": 8,
-      "date": "2026-10-08"
+      "date": "2026-10-08",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "width": 18,
@@ -13150,27 +16895,33 @@
       "code": "261008-15",
       "quantity": 350,
       "length": 1250,
-      "stage": "say1",
+      "stage": "kho",
       "location": "LS2",
       "id": "batch-1791779364814-8",
       "week": "Tuần 41",
       "bambooType": "A",
       "sourceChonNanLabel": "1250×18×11 · A · 350",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "stageHistory": [
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "notes": "",
       "date": "2026-10-08",
       "volume": 0.0866,
-      "useFor": "Ván"
+      "useFor": "Ván",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "week": "Tuần 41",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "sayCharges": {
         "say1": 1791779364810
       },
@@ -13181,11 +16932,15 @@
         {
           "date": "2026-10-08",
           "stage": "say1"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "sourceChonNanId": "x2cn-1791442751318-inye5",
       "id": "batch-1791779364814-7",
-      "stage": "say1",
+      "stage": "kho",
       "bambooType": "A",
       "thickness": 11,
       "location": "LS2",
@@ -13194,7 +16949,9 @@
       "width": 18,
       "quantity": 350,
       "code": "261008-14",
-      "sourceChonNanLabel": "1250×18×11 · A · 350"
+      "sourceChonNanLabel": "1250×18×11 · A · 350",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "id": "batch-1791779364814-6",
@@ -13208,25 +16965,32 @@
         {
           "date": "2026-10-08",
           "stage": "say1"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "date": "2026-10-08",
       "quantity": 560,
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "useFor": "Ván",
       "volume": 0.1386,
       "location": "LS2",
       "sourceChonNanId": "x2cn-1791441182413-oyp2d",
-      "stage": "say1",
+      "stage": "kho",
       "sayCharges": {
         "say1": 1791779364810
       },
       "width": 18,
-      "code": "261008-13"
+      "code": "261008-13",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "sayCharges": {
-        "say1": 1791779364810
+        "say1": 1791779364810,
+        "say2": 1792231104708
       },
       "notes": "",
       "date": "2026-10-08",
@@ -13235,22 +16999,35 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
+        },
+        {
+          "stage": "say2",
+          "date": "2026-10-15"
         }
       ],
       "length": 1250,
       "quantity": 700,
-      "location": "LS2",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "location": "LS14",
+      "updatedAt": "2026-10-17T09:58:24.708Z",
       "week": "Tuần 41",
       "bambooType": "A",
-      "stage": "say1",
+      "stage": "say2",
       "code": "261008-12",
       "sourceChonNanId": "x2cn-1791779106063-sc7oz",
       "useFor": "Ván",
       "volume": 0.1732,
       "id": "batch-1791779364814-5",
       "thickness": 11,
-      "width": 18
+      "width": 18,
+      "khoDate": "2026-10-14",
+      "say2Date": "2026-10-15",
+      "sayShift": {
+        "say2": 0
+      }
     },
     {
       "width": 18,
@@ -13262,7 +17039,7 @@
       "thickness": 11,
       "code": "261008-11",
       "length": 1250,
-      "stage": "say1",
+      "stage": "kho",
       "quantity": 280,
       "bambooType": "A1",
       "sourceChonNanLabel": "1250×18×11 · A1 · 280",
@@ -13271,18 +17048,24 @@
         {
           "date": "2026-10-08",
           "stage": "say1"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "location": "LS2",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "notes": "",
       "useFor": "Ván",
       "volume": 0.0693,
-      "date": "2026-10-08"
+      "date": "2026-10-08",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "notes": "",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "length": 1250,
       "sourceChonNanLabel": "1250×18×11 · A1 · 350",
       "date": "2026-10-08",
@@ -13296,7 +17079,7 @@
       "code": "261008-10",
       "id": "batch-1791779364813-3",
       "thickness": 11,
-      "stage": "say1",
+      "stage": "kho",
       "quantity": 350,
       "location": "LS2",
       "width": 18,
@@ -13305,8 +17088,14 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
-      ]
+      ],
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "sayCharges": {
@@ -13314,7 +17103,7 @@
       },
       "code": "261008-09",
       "thickness": 8,
-      "stage": "say1",
+      "stage": "kho",
       "quantity": 770,
       "sourceChonNanLabel": "1250×24×8 · A · 770",
       "id": "batch-1791779364813-2",
@@ -13324,17 +17113,23 @@
         {
           "stage": "say1",
           "date": "2026-10-08"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "length": 1250,
       "width": 24,
       "bambooType": "A",
       "notes": "",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "date": "2026-10-08",
       "volume": 0.1848,
       "useFor": "Ván",
-      "week": "Tuần 41"
+      "week": "Tuần 41",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
       "code": "261008-08",
@@ -13344,6 +17139,10 @@
         {
           "date": "2026-10-08",
           "stage": "say1"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "bambooType": "B",
@@ -13353,7 +17152,7 @@
       "notes": "",
       "sourceChonNanLabel": "1250×24×8 · B · 420",
       "location": "LS2",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "width": 24,
       "sayCharges": {
         "say1": 1791779364810
@@ -13361,13 +17160,15 @@
       "volume": 0.1008,
       "useFor": "Ván",
       "date": "2026-10-08",
-      "stage": "say1",
-      "week": "Tuần 41"
+      "stage": "kho",
+      "week": "Tuần 41",
+      "khoDate": "2026-10-14",
+      "topRework": false
     },
     {
-      "stage": "say1",
+      "stage": "kho",
       "location": "LS2",
-      "updatedAt": "2026-10-12T04:29:24.810Z",
+      "updatedAt": "2026-10-17T08:37:55.947Z",
       "length": 1250,
       "sourceChonNanId": "x2cn-1791778986831-etkxi",
       "quantity": 2184,
@@ -13381,6 +17182,10 @@
         {
           "date": "2026-10-08",
           "stage": "say1"
+        },
+        {
+          "stage": "kho",
+          "date": "2026-10-14"
         }
       ],
       "date": "2026-10-08",
@@ -13390,7 +17195,9 @@
       "notes": "",
       "bambooType": "A1",
       "sourceChonNanLabel": "1250×18×7 · A1 · 2.184",
-      "week": "Tuần 41"
+      "week": "Tuần 41",
+      "khoDate": "2026-10-14",
+      "topRework": false
     }
   ],
   "users": [
@@ -21195,27 +25002,6 @@
       "createdAt": "2026-10-15T17:56:24.450Z"
     },
     {
-      "klCayLoai": 0,
-      "cutTime": "",
-      "inputWeight": 8180,
-      "cutHours": 0,
-      "materialId": "mat-1791774941278-2vtp8",
-      "id": "x2cut-1792087045632-yyk3e",
-      "cutHoursHC": 0,
-      "cutHoursTC": 0,
-      "klOngLuong": 4723,
-      "date": "2026-10-15",
-      "supplier": "Nhà Lâm Sơn Điện",
-      "materialType": "Luồng cây xô",
-      "cutter": "",
-      "note": "",
-      "code": "",
-      "klNgonOngLoai": 1753,
-      "klCuiDot": 1704,
-      "createdAt": "2026-10-15T17:57:25.632Z",
-      "week": "2026-W42"
-    },
-    {
       "materialType": "Luồng cây xô",
       "materialId": "mat-1792031717809-ki7ez",
       "code": "",
@@ -21714,7 +25500,25 @@
       "doneAt": "2026-10-13T04:19:22.812Z"
     }
   ],
-  "xuong1SaySinhRecords": [],
+  "xuong1SaySinhRecords": [
+    {
+      "id": "x1ss-1792227215270-rxm7x",
+      "catOngId": "",
+      "materialId": "mat-1791876665101-ymox9",
+      "srcType": "Vầu",
+      "srcSupplier": "Nhà Khanh",
+      "srcDate": "2026-10-13",
+      "date": "2026-10-10",
+      "qty": 2250,
+      "worker": "",
+      "workTime": "",
+      "workHours": 0,
+      "workHoursHC": 0,
+      "workHoursTC": 0,
+      "note": "",
+      "createdAt": "2026-10-17T08:53:35.270Z"
+    }
+  ],
   "xuong1BocRecords": [],
   "xuong1LocOngRecords": [],
   "xuong1CatMatRecords": [],
@@ -26780,34 +30584,6 @@
       "unitVol": 0.0002475
     },
     {
-      "workHours": 72,
-      "materialType": "Luồng cây xô",
-      "materialId": "mat-1791256868151-cwl2m",
-      "workHoursHC": 72,
-      "btDate": "2026-10-06",
-      "unitVol": 0.0002475,
-      "worker": "Hà Thị Luyện A, Hà Thị Khoái, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Thoan, Hà Thị Nương, Lê Thị Mừng, Vi Văn Nhêu",
-      "supplier": "Nhà Tế",
-      "baothoId": "x2bt-1791345313290-6dr21",
-      "cls": "reject",
-      "external": false,
-      "week": "2026-W41",
-      "volume": 0.0037,
-      "workHoursTC": 0,
-      "sizeKey": "1250×18×11",
-      "boDate": "2026-10-06",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "createdAt": "2026-10-07T08:19:12.306Z",
-      "dims": [
-        1250,
-        18,
-        11
-      ],
-      "quantity": 15,
-      "date": "2026-10-06",
-      "id": "x2cn-1791361152306-ko6kg"
-    },
-    {
       "dims": [
         1250,
         24,
@@ -28841,35 +32617,6 @@
       "updatedAt": "2026-10-16T08:32:53.865Z"
     },
     {
-      "workHoursTC": 0,
-      "volume": 0.7224,
-      "dims": [
-        1250,
-        24,
-        8
-      ],
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Hà Thị Thoan, Lương Thị Dướng, Hà Thị Nhẫn, Ngân Thi Thích, Hà Thị Chắn",
-      "external": false,
-      "workHours": 63,
-      "workHoursHC": 63,
-      "baothoId": "x2bt-1791519297455-5jxt9",
-      "id": "x2cn-1791526749474-tcaap",
-      "date": "2026-10-08",
-      "btDate": "2026-10-08",
-      "sizeKey": "1250×24×8",
-      "week": "2026-W41",
-      "quantity": 3010,
-      "unitVol": 0.00024,
-      "cls": "A1",
-      "createdAt": "2026-10-09T06:19:09.474Z",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "boDate": "2026-10-08",
-      "supplier": "Nhà Tế",
-      "materialType": "Luồng cây xô",
-      "materialId": "mat-1791256938257-590sn",
-      "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
       "materialType": "Luồng cây xô + Luồng ống",
       "workHoursTC": 0,
       "btDate": "2026-10-09",
@@ -29012,34 +32759,6 @@
       "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
       "workHours": 72,
       "updatedAt": "2026-10-16T08:32:53.865Z"
-    },
-    {
-      "cls": "A",
-      "workHoursTC": 0,
-      "worker": "Hà Thị Luyện A, Hà Thị Quyên B, Ngân Thi Thích, Hà Thị Nhẫn, Lương Thị Dướng, Hà Thị Chắn, Hà Thị Nghĩa, Lê Thị Mừng",
-      "materialId": "mat-1791427063274-mduab",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "boDate": "2026-10-09",
-      "materialType": "Luồng cây xô + Luồng ống",
-      "baothoId": "x2bt-1791617674956-vfdz2",
-      "workHours": 72,
-      "volume": 0.1276,
-      "quantity": 630,
-      "workHoursHC": 72,
-      "dims": [
-        1250,
-        18,
-        9
-      ],
-      "sizeKey": "1250×18×9",
-      "external": false,
-      "date": "2026-10-09",
-      "id": "x2cn-1791618405640-postk",
-      "createdAt": "2026-10-10T07:46:45.640Z",
-      "supplier": "Nhà Khánh Huế + Nhà Thành + Nhà Tế",
-      "btDate": "2026-10-09",
-      "unitVol": 0.0002025,
-      "week": "2026-W41"
     },
     {
       "volume": 0.0992,
@@ -30965,11 +34684,11 @@
     },
     {
       "boDate": "2026-10-13",
-      "workHoursHC": 60,
+      "workHoursHC": 54,
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "volume": 0.0086,
       "external": false,
-      "workHours": 60,
+      "workHours": 54,
       "quantity": 36,
       "cls": "reject",
       "dims": [
@@ -30990,8 +34709,8 @@
       "unitVol": 0.00024,
       "date": "2026-10-13",
       "materialType": "Luồng cây xô + Luồng ống",
-      "shiftIdx": 0,
-      "updatedAt": "2026-10-16T12:11:00.850Z"
+      "shiftIdx": null,
+      "updatedAt": "2026-10-17T04:02:00.212Z"
     },
     {
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",

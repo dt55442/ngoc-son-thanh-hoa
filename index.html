@@ -178,6 +178,13 @@
             <button class="dropdown-item" id="btn-pull-cloud">
               <i data-lucide="cloud-download" style="color:#0284c7;"></i> Tải Dữ Liệu Từ Mây Về Máy
             </button>
+            <button class="dropdown-item" id="btn-sync-now" title="Kiểm tra mây NGAY (tự động kiểm tra mỗi 2 phút và khi quay lại tab)">
+              <i data-lucide="refresh-cw" style="color:#0f766e;"></i> Đồng Bộ Ngay
+            </button>
+            <button class="dropdown-item" id="btn-sync-conflicts" data-admin-only
+              title="Các bản ghi vừa bị máy này sửa vừa bị máy khác sửa — xem và chọn giữ bản nào">
+              <i data-lucide="git-merge" style="color:#b45309;"></i> Xung Đột Đồng Bộ <span id="sync-conflict-count"></span>
+            </button>
             <button class="dropdown-item" id="btn-sync-photos" title="Đẩy THUMB ảnh nguyên liệu lên mây theo từng doc riêng (nhẹ, đẩy dần) để máy khác xem được ảnh">
               <i data-lucide="image-plus" style="color:#0f766e;"></i> Đồng Bộ Ảnh Ngay<span id="photo-sync-status"></span>
             </button>
@@ -1668,6 +1675,7 @@
                 <button type="button" class="btn btn-primary btn-icon btn-sm" id="btn-add-press-2" data-perm="press" title="Thêm Lượt Ép — mở form nhập lượt ép ván (ván thô · thanh · keo · phụ gia · thành phẩm)"><i data-lucide="plus"></i></button>
                 <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-add-press-note-2" data-perm="press" title="Ghi Chú Giải Trình — tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt"><i data-lucide="pencil"></i><i data-lucide="alert-triangle" class="x2-epv-note-warn"></i></button>
                 <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-x2-epv-rate" data-perm="press" data-admin-only title="Định mức — mở bảng ĐỊNH MỨC công suất Ép Ván theo tháng (m³/h), nguồn cho cột Hiệu suất của thẻ ngày — CHỈ Quản Trị sửa"><i data-lucide="target"></i></button>
+                <button type="button" class="btn-dash-help" id="btn-epv-help" aria-haspopup="dialog" title="Hướng dẫn điền thông tin & cách tính thể tích, công suất, hiệu suất (kèm ví dụ minh hoạ)">?</button>
               </div>
             </div>
           </div>
@@ -3375,7 +3383,7 @@
                 <label>Sử Dụng Thanh Thô / Ván Thô Đã Ép (Đầu Vào)</label>
                 <div id="press-sticks"></div>
                 <div id="press-input-vol-total" class="press-input-vol-total" title="Tổng thể tích NGUYÊN LIỆU ĐẦU VÀO của lượt ép — tính theo THANH ĐÃ BÀO TINH (kích thước sau Bào tinh), KHÔNG phải thanh thô."></div>
-                <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-stick" style="margin-top:6px;" title="Thêm 1 loại đầu vào (tối đa 3 loại)">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-add-press-stick" style="margin-top:6px;" title="Thêm 1 dòng đầu vào (tối đa 6 dòng). Mẹo: 1 dòng có thể ghi NHIỀU CỠ cách nhau dấu ; — hệ thống tách ô số lượng riêng từng cỡ">
                   <i data-lucide="plus"></i> Thêm Loại Thanh Thô / Ván Thô
                 </button>
               </div>
@@ -3455,6 +3463,7 @@
             </section>
 
             <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
+              <button type="button" class="btn btn-outline" id="btn-press-help" title="Hướng dẫn điền form & cách tính thể tích, công suất, hiệu suất"><i data-lucide="help-circle"></i> Hướng Dẫn</button>
               <button type="button" class="btn btn-outline" id="btn-cancel-press">Hủy Bỏ</button>
               <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lượt Ép</button>
             </div>
@@ -5510,6 +5519,17 @@
             </div>
             <div class="al-sheet-body">
               <input type="hidden" id="al-source">
+              <!-- CÁCH NHẬP NGUỒN (17/10/2026): THẺ NGUỒN (cách cũ) ⇄ BẢNG NHẬP NHANH -->
+              <div class="al-entry-mode" id="al-entry-mode" role="group" aria-label="Cách nhập nguồn">
+                <button type="button" class="al-entry-btn" data-al-entry="cards" aria-pressed="false"
+                  title="Chọn từng thẻ nguồn (cách cũ) — phù hợp khi chỉ lấy vài thẻ hoặc cần chọn thẻ đặc biệt.">
+                  <i data-lucide="layout-grid"></i> Thẻ nguồn
+                </button>
+                <button type="button" class="al-entry-btn" data-al-entry="grid" aria-pressed="false"
+                  title="Nhập nhanh theo phiếu giấy: gộp theo Cỡ + Phân loại, nhập SL LÔ MỚI 1 lần/nhóm — hệ thống tự TRỪ các thẻ nguồn CŨ NHẤT trước (KHÔNG tách thành nhiều lô); bấm ▸ xem chi tiết.">
+                  <i data-lucide="table-2"></i> Bảng nhập nhanh
+                </button>
+              </div>
               <div class="al-src-row">
                 <button type="button" class="btn btn-outline al-picker-btn" id="al-source-btn" aria-controls="al-source-panel" aria-expanded="false">
                   <i data-lucide="list-checks"></i>
@@ -5527,6 +5547,54 @@
                     title="Số thanh TÓP lấy ra để đốt lại — mặc định = tồn còn lại của lô, chặn vượt tồn.">
                 </div>
               </div>
+
+              <!-- BẢNG NHẬP NHANH THEO PHIẾU (chỉ Sấy 1) — NHÓM theo Cỡ + Phân loại.
+                   SL LÔ MỚI nhập 1 lần/nhóm → TỰ TRỪ THẺ CŨ NHẤT trước; bấm ▸ xem
+                   chia cho thẻ/ngày nào; ⚠ cảnh báo thẻ quá 3 ngày; ô trống = KHÔNG lấy. -->
+              <div class="al-grid-wrap" id="al-grid-wrap" hidden>
+                <div class="al-grid-tools">
+                  <div class="al-grid-dates" id="al-grid-dates" title="Vuốt ngang để xem thêm ngày — bấm để CHỌN/BỎ, chọn được NHIỀU ngày (VD hôm qua còn tồn + hôm nay)"></div>
+                  <div class="al-grid-dates-sum" id="al-grid-dates-sum"></div>
+                  <input type="text" id="al-grid-search" class="al-search" placeholder="Tìm cỡ / loại / NCC…" autocomplete="off">
+                  <select id="al-grid-sort" class="al-grid-sort" title="Chỉ đổi THỨ TỰ HIỂN THỊ nhóm — không ảnh hưởng cách chia.">
+                    <option value="size">Cỡ lớn trước</option>
+                    <option value="sizeAsc">Cỡ nhỏ trước</option>
+                    <option value="class">Theo phân loại</option>
+                  </select>
+                  <button type="button" class="al-grid-help-btn" id="al-grid-help-btn" aria-expanded="false" title="Hướng dẫn tính tồn &amp; cách chia">?</button>
+                </div>
+                <div class="al-grid-help" id="al-grid-help" hidden>
+                  <div class="al-grid-help-head">
+                    <strong>Hướng dẫn nhanh</strong>
+                    <button type="button" class="al-grid-help-close" id="al-grid-help-close" aria-label="Đóng hướng dẫn">×</button>
+                  </div>
+                  <ul>
+                    <li>Mỗi nhóm gộp theo <b>Cỡ + Phân loại</b> của các ngày đang chọn; bấm <b>+</b> để thêm dòng lô trong cùng nhóm.</li>
+                    <li><b>Tồn báo cáo</b> = tổng số Chọn Nan Thô đã báo cáo (gồm cả thẻ đã dùng hết). <b>Đã dùng</b> = đã tạo lô Sấy 1. <b>Còn lại</b> = Tồn báo cáo − Đã dùng.</li>
+                    <li>Nhập <b>SL lô mới</b> = số lượng lô mới sẽ tạo; hệ thống tự TRỪ các thẻ nguồn <b>CŨ NHẤT trước</b> trong các ngày đang chọn. Bấm <b>▸</b> để xem chia cho thẻ/ngày nào.</li>
+                    <li>Bấm <b>+</b> trên một dòng để thêm <b>lô mới</b> cùng Cỡ + Phân loại; mỗi dòng là <b>một lô riêng</b>, dùng chung Vị trí + Lần thanh hóa của form.</li>
+                    <li>Ô trống = không lấy; vượt Còn lại sẽ tự điều về tối đa.</li>
+                    <li>Thẻ quá <b>3 ngày</b> kể từ ngày chọn nan sẽ có cảnh báo ⚠.</li>
+                  </ul>
+                </div>
+                <div class="al-grid-foot" id="al-grid-foot" title="Tổng SL LÔ MỚI theo nhóm (gồm nhóm đang bị ẩn bởi ô tìm kiếm). Ô SL để trống = KHÔNG lấy.">Chưa nhập số lượng</div>
+                <div class="al-grid-scroll">
+                  <table class="al-grid-table">
+                    <thead>
+                      <tr>
+                        <th>Cỡ (mm)</th>
+                        <th>Phân loại</th>
+                        <th title="Tổng số lượng Chọn Nan Thô đã báo cáo của CỠ + PHÂN LOẠI này trong các ngày đang chọn — gồm cả thẻ đã dùng hết">Tồn báo cáo</th>
+                        <th title="Tổng số đã tạo lô Sấy 1 từ các thẻ trong nhóm">Đã dùng</th>
+                        <th title="Tồn báo cáo − Đã dùng = phần còn có thể lấy">Còn lại</th>
+                        <th title="Mỗi dòng = 1 LÔ MỚI; bấm + để thêm lô cùng Cỡ + Phân loại — hệ thống tự TRỪ các thẻ nguồn CŨ NHẤT trước; bấm ▸ xem chi tiết">SL lô mới</th>
+                      </tr>
+                    </thead>
+                    <tbody id="al-grid-body"></tbody>
+                  </table>
+                </div>
+              </div>
+
               <div class="al-picker" id="al-source-panel" hidden>
                 <div class="al-picker-tools">
                   <input type="text" id="al-source-search" class="al-search" placeholder="Tìm nhanh: vị trí, mã lô, kích thước, loại (A/A1/B), Ván/Bullig…" autocomplete="off">
@@ -6726,6 +6794,21 @@
     </div>
   </div>
 
+  <!-- ═══ TRỢ GIÚP THẺ ÉP VÁN (nút "?" ở header thẻ + nút "Hướng Dẫn" trong form
+       nhập lượt ép) — nội dung dựng động bởi js/press.js (EPV_HELP) ═══ -->
+  <div class="modal-overlay" id="modal-epv-help">
+    <div class="modal-card dash-help-card epv-help-card">
+      <div class="modal-header">
+        <h3><i data-lucide="info"></i> Thẻ Ép Ván — Hướng Dẫn &amp; Cách Tính</h3>
+        <button class="modal-close-btn" id="btn-close-epv-help" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body dash-help-body" id="epv-help-body"><!-- Nội dung dựng động bởi js/press.js --></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-epv-help-ok">Đã Hiểu</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ POPUP: ĐỊNH MỨC THỜI GIAN 1 LẦN THAN HÓA (theo tháng — 4 cột phút/lần
        Sấy 1·Ván / Sấy 1·Bullig / Sấy 2·Ván / Sấy 2·Bullig; ô trống = dùng mặc định.
        Dòng cuối: m³/lần CHỈ dùng để tự gộp LÔ CŨ trước 28/09/2026) ═══ -->
@@ -7209,6 +7292,31 @@
         <button type="button" class="btn btn-outline btn-sm" id="btn-ai-key-toggle" title="Xóa key đã lưu để nhập key khác"><i data-lucide="key-round"></i> Đổi Key</button>
         <button type="button" class="btn btn-outline btn-sm" id="btn-ai-copy" title="Chép kết quả AI"><i data-lucide="copy"></i> Chép</button>
         <button type="button" class="btn btn-success" id="btn-ai-run" title="Gửi số liệu + yêu cầu của bạn cho Gemini (cần internet + API key — Ctrl+Enter trong ô hỏi cũng chạy)"><i data-lucide="sparkles"></i> Phân Tích Bằng AI</button>
+      </div>
+    </div>
+  </div>
+  <!-- ═══ MODAL: XUNG ĐỘT ĐỒNG BỘ (chỉ Admin — js/cloud.js) ═══
+       Xuất hiện khi CÙNG một bản ghi vừa bị máy này sửa vừa bị máy khác sửa.
+       Không bao giờ tự xóa dữ liệu: Admin xem 2 bản rồi chọn giữ bản nào. -->
+  <div class="modal-overlay" id="modal-sync-conflicts">
+    <div class="modal-card sync-conflict-card">
+      <div class="modal-header">
+        <h3><i data-lucide="git-merge"></i> Xung Đột Đồng Bộ <span id="sync-conflict-count-head"></span></h3>
+        <button class="modal-close" id="btn-close-sync-conflicts" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="sync-conflict-intro">
+          Mỗi dòng là một bản ghi bị sửa ở <strong>cả máy này và máy khác</strong> trong lúc chưa kịp đồng bộ.
+          Hệ thống đã giữ an toàn cả hai bản — chọn <em>Giữ bản máy</em> (đẩy bản này lên mây),
+          <em>Lấy bản mây</em> (nhận bản máy kia) hoặc <em>Đã kiểm tra</em> (chỉ ghi nhận, giữ nguyên bản đang dùng).
+        </p>
+        <div id="sync-conflict-body" class="sync-conflict-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btn-sync-conflicts-clear" title="Xóa sổ xung đột trên MÁY NÀY (không thay đổi dữ liệu)">
+          <i data-lucide="eraser"></i> Xóa Sổ Xung Đột
+        </button>
+        <button class="btn btn-primary" id="btn-sync-conflict-ok"><i data-lucide="check"></i> Đóng</button>
       </div>
     </div>
   </div>

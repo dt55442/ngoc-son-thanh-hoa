@@ -311,7 +311,7 @@ check('I3: 4 thẻ ngày 1 công đoạn + 3 thẻ ĐÃ TÁCH CA (Bổ Ống/Bà
 check('I4: press.js + qc-final.js dùng CHUNG helper (không copy HTML/CSS)',
   pSrc.includes('shiftBreakdownHtml') && pSrc.includes('epVanShiftGroups') &&
   qSrc.includes('shiftBreakdownHtml') && qSrc.includes('qcShiftGroups'));
-check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v263'));
+check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v270'));
 
 // ═══ J. GIAI ĐOẠN 2 — NHẬP SẢN LƯỢNG RIÊNG THEO CA ═══════════════════════
 // (Bổ Ống · Chạy Máy Bào Thô · Chọn Nan Thô · Than Hóa + Sấy)
@@ -415,8 +415,8 @@ const bmSrc = fs.readFileSync('js/batch-modals.js', 'utf8');
 check('J17: index.html có 3 ô Ca (Bổ Ống · Bào Thô · Chọn Nan) + ô Ca của Thêm Lô Sấy Mới',
   idxSrc.includes('id="x2-bo-ong-shift"') && idxSrc.includes('id="x2-bao-tho-shift"') &&
   idxSrc.includes('id="x2-cn-shift"') && idxSrc.includes('id="al-shift"'));
-check('J18: batch-modals ghi CA (sayShift) ở CẢ 4 nhánh lưu lô (3 gán khi tạo + 2 gán tại chỗ)',
-  (bmSrc.match(/sayShift: sayShiftMapOf\(/g) || []).length === 3 &&
+check('J18: batch-modals ghi CA (sayShift) ở CẢ 5 nhánh lưu lô (4 gán khi tạo + 2 gán tại chỗ)',
+  (bmSrc.match(/sayShift: sayShiftMapOf\(/g) || []).length === 4 &&
   (bmSrc.match(/sayShift = sayShiftMapOf\(/g) || []).length === 2);
 check('J19: CSS có chip ca / chip so sánh / cảnh báo lệch ca / dòng ca Than Hóa',
   cssSrc.includes('.x2-day-shift-chip') && cssSrc.includes('.x2-shift-cmp') &&

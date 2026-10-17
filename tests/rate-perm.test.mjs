@@ -302,9 +302,10 @@ cloud.mergeRemoteIntoLocal({ planningForecast: { 2026: { a: 2 }, 2027: { b: 9 } 
 check('E11: DỰ BÁO kế hoạch nhận từ mây (đã gỡ nhánh chặn cũ)',
   state.planningForecast['2026'].a === 2 && state.planningForecast['2027'].b === 9);
 
-// E12: cấu trúc nguồn — 2 chỗ NHẬN mây bật "mây thắng", chỗ gộp trước khi đẩy KHÔNG bật
-check('E12: nhận mây (full + delta) bật "mây thắng"; gộp trước khi đẩy KHÔNG bật',
-  (cloudSrc.match(/mergeRemoteIntoLocal\([^)]*, true, true\)/g) || []).length === 2 &&
+// E12: cấu trúc nguồn — 2 chỗ NHẬN mây bật "mây thắng + nhận bản mới hơn + bảo vệ
+// bản ghi đang sửa"; chỗ gộp trước khi đẩy vẫn add-only (không bật).
+check('E12: nhận mây (full + delta) bật "mây thắng + mergeNewer + protectDirty"',
+  (cloudSrc.match(/mergeRemoteIntoLocal\([^)]*false, true, \{ protectDirty: true, mergeNewer: true \}\)/g) || []).length === 2 &&
   /mergeRemoteIntoLocal\(full, true\)/.test(cloudSrc));
 
 // E13–E15 (07/10/2026): nút "Tải Từ Mây Về Máy" phải GHI ĐÈ toàn bộ 3 dict dữ liệu

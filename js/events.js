@@ -2,8 +2,8 @@
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
-import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
-import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud } from './cloud.js';
+import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
+import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
@@ -13,7 +13,7 @@ import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, planHistOnHideDone, planHistOnMonth, planHistOnQuarter, planHistOnRowClick, planHistOnSearch, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
-import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, pressToggleSec, recalcPressQuantities, refreshPressProductSelect, refreshPressSecChecks, refreshPressStickHints, refreshPressWorkersPreview, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded } from './press.js';
+import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, pressToggleSec, recalcPressQuantities, refreshPressProductSelect, refreshPressSecChecks, refreshPressStickHints, refreshPressWorkersPreview, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded, openEpvHelp, closeEpvHelp } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialView, shiftMaterialPlanChartWeek, updateMaterialWeight } from './materials.js';
 import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutSize, baoTinhInputPool, setBaoThanhInput, setBaoThanhOut, toggleBaoThanhInputPicker, toggleBaoThanhOutPicker, renderBaoThanhInputList, renderX2BaoThanhForm, openX2BaoTinhRateModal, closeX2BaoTinhRateModal, renderX2BaoTinhRateModal, handleX2BaoTinhRateAddMonth, handleX2BaoTinhRateRowSave, handleX2BaoTinhRateRowReset, setX2BaoTinhFilterMode, shiftX2BaoTinhFilter, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2Boluong, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, onChonNanInlineEdit, nanSay1UseOf, editXuong2Bullig, editXuong2Cut, editXuong2Boluong, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2BoluongRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, handleXuong2BoluongSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, onBulligGroupInput, renderX2BulligGroups, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BoluongRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, resetXuong2BoluongForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2BoluongTable, toggleX2HoTroTable, toggleX2KanbanBoard, handleXuong2HoTroSubmit, editXuong2HoTro, deleteXuong2HoTro, resetXuong2HoTroForm, fillXuong2HoTroWorkers, hoTroPickAll, hoTroPickNone, updateXuong2HoTroCalc, onSayTimesChange, onSayIncidentChange, onStageIncidentChange, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, baoThoLotSelectAll, baoThoLotSelectNone, X2_RATE_POPUPS, openX2RatePopup, closeX2RatePopup, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, updateXuong2BoluongLinked, x2BaoTinhTogglePicker, x2FloatHideAll, x2FloatMaybeClose, x2FloatRepositionAll, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame, setStageWs, toggleStageWs, handleX1CatOngSubmit, handleX1SaySinhSubmit, handleX1BocSubmit, editX1CatOng, editX1SaySinh, editX1Boc, deleteX1CatOng, deleteX1SaySinh, deleteX1Boc, resetX1CatOngForm, resetX1SaySinhForm, resetX1BocForm, x1CatOngSyncLinked, x1SaySinhSyncLinked, x1BocSyncLinked, x1CatOngCalc, x1SaySinhCalc, x1BocCalc, openX1RatePopup, closeX1RatePopup, renderX1RatePopup, handleX1RateSave, handleX1RateReset,
   X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
@@ -263,7 +263,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── THAN HÓA LẠI (15/10/2026): ô tích + ô nhập số lượng + ô LẦN THAN HÓA ──
     safeOn('al-rework', 'change', (e) => alSetRework(!!(e && e.target && e.target.checked)));
     safeOn('al-rework-qty', 'input', () => alOnReworkQtyInput());
-    safeOn('al-date', 'change', () => renderAlChargeOptions());
+    safeOn('al-date', 'change', () => { renderAlChargeOptions(); renderAlGrid(); });
     // Nguồn: nút "Chọn Lô Nan" mở danh sách THẺ (chọn được NHIỀU nguồn cùng lúc)
     safeOn('al-source-btn', 'click', alToggleSourcePanel);
     safeOn('al-source-list', 'click', alOnSourceListClick);
@@ -274,6 +274,19 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Đổi Dùng Cho → vẽ lại danh sách (thẻ nan Chọn Nan Thô hiện "theo form (….)")
     safeOn('al-use-for', 'change', () => alSetSourceQuery((document.getElementById('al-source-search') || {}).value || ''));
     safeOn('al-pick-all', 'click', alPickAll);
+    // ── CÁCH NHẬP NGUỒN (17/10/2026): công tắc THẺ ⇄ BẢNG NHẬP NHANH THEO PHIẾU ──
+    // Bảng gộp NHÓM theo Cỡ + Phân loại; SL lấy nhập 1 lần/nhóm → tự chia thẻ
+    // CŨ NHẤT trước (xem ▸ chi tiết chia); ô trống = KHÔNG lấy.
+    safeOn('al-entry-mode', 'click', alOnEntryModeClick);
+    safeOn('al-grid-body', 'input', alOnGridQtyInput);
+    safeOn('al-grid-body', 'click', alOnGridClick);
+    safeOn('al-grid-body', 'keydown', alOnGridKeydown);
+    safeOn('al-grid-dates', 'click', alOnGridDateClick);
+    safeOn('al-grid-search', 'input', (e) => alSetGridSearch(e.target.value));
+    safeOn('al-grid-search', 'keydown', alOnGridKeydown);   // Enter ở ô tìm KHÔNG submit form
+    safeOn('al-grid-sort', 'change', (e) => alSetGridSort(e.target.value));
+    safeOn('al-grid-help-btn', 'click', alGridToggleHelp);
+    safeOn('al-grid-help-close', 'click', alGridCloseHelp);
     // DROPDOWN NỔI danh sách nguồn: neo lại khi CUỘN bất kỳ vùng nào / đổi cỡ màn hình
     window.addEventListener('scroll', () => alPositionSourcePanel(), true);
     window.addEventListener('resize', () => alPositionSourcePanel());
@@ -378,6 +391,41 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Đồng bộ đám mây (Firebase) — thao tác THỦ CÔNG qua 2 nút trong menu ⋮, KHÔNG tự hỏi/nhắc nhở
     safeOn('btn-upload-cloud',      'click', uploadLocalDataToCloud);
     safeOn('btn-pull-cloud',        'click', pullCloudToLocal);
+    // ĐỒNG BỘ NGAY + SỔ XUNG ĐỘT (17/10/2026 — js/cloud.js)
+    safeOn('btn-sync-now', 'click', async () => {
+      const ok = await syncNow({ force: true });
+      showToast(ok ? 'Đã kiểm tra dữ liệu mới trên mây — máy đang dùng bản mới nhất.'
+        : 'Chưa kiểm tra được mây (cần mạng). Dữ liệu máy vẫn được giữ nguyên.', ok ? 'success' : 'info');
+    });
+    safeOn('btn-sync-conflicts',     'click', openSyncConflicts);
+    safeOn('btn-close-sync-conflicts', 'click', closeSyncConflicts);
+    safeOn('btn-sync-conflict-ok',   'click', closeSyncConflicts);
+    safeOn('btn-sync-conflicts-clear', 'click', () => {
+      clearAllSyncConflicts();
+      renderSyncConflicts();
+      showToast('Đã xóa sổ xung đột trên máy này (dữ liệu không thay đổi).', 'info');
+    });
+    // Chọn cách xử lý từng xung đột: giữ bản máy · lấy bản mây · đã kiểm tra
+    const syncConflictBody = document.getElementById('sync-conflict-body');
+    if (syncConflictBody && !syncConflictBody.dataset.wired) {
+      syncConflictBody.dataset.wired = '1';
+      syncConflictBody.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('[data-sync-conflict]') : null;
+        if (!btn) return;
+        applySyncConflictChoice(btn.getAttribute('data-sync-id'), btn.getAttribute('data-sync-conflict'));
+      });
+    }
+    // Đóng sổ xung đột: bấm nền mờ hoặc Esc (không ảnh hưởng modal khác)
+    const syncConflictModal = document.getElementById('modal-sync-conflicts');
+    if (syncConflictModal && !syncConflictModal.dataset.wired) {
+      syncConflictModal.dataset.wired = '1';
+      syncConflictModal.addEventListener('click', (e) => { if (e.target === syncConflictModal) closeSyncConflicts(); });
+      syncConflictModal.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSyncConflicts(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (syncConflictModal.classList.contains('show')) closeSyncConflicts();
+      });
+    }
     // KÊNH ẢNH THUMB — đẩy thủ công ngay các ảnh đang chờ (js/photo-sync.js)
     safeOn('btn-sync-photos',       'click', photoSyncNow);
 
@@ -848,6 +896,19 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-add-press-note-2', 'click', () => openPressNoteModal());   // ghi chú giải trình (khung 1)
     safeOn('btn-x2-epv-rate-save', 'click', handleX2EpVanRateSave);
     safeOn('x2-epv-rate-month', 'change', renderX2EpVanRateBar);
+    // ── TRỢ GIÚP THẺ ÉP VÁN: nút "?" ở header thẻ + "Hướng Dẫn" trong form nhập ──
+    safeOn('btn-epv-help', 'click', openEpvHelp);
+    safeOn('btn-press-help', 'click', openEpvHelp);
+    safeOn('btn-close-epv-help', 'click', closeEpvHelp);
+    safeOn('btn-epv-help-ok', 'click', closeEpvHelp);
+    const epvHelpOv = document.getElementById('modal-epv-help');
+    if (epvHelpOv) epvHelpOv.addEventListener('click', (e) => { if (e.target === epvHelpOv) closeEpvHelp(); });
+    // Esc: đóng help TRƯỚC (form nhập lượt ép bên dưới vẫn giữ nguyên dữ liệu)
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const m = document.getElementById('modal-epv-help');
+      if (m && m.classList.contains('show')) closeEpvHelp();
+    });
     // ── FORM 5 CỤM NÚT MỞ PANEL (modal nhập lượt ép): bấm nút cụm / "Thu gọn" →
     // mở panel tương ứng (1 lần chỉ 1 panel) — ủy quyền trên document vì nút trong modal
     document.addEventListener('click', (e) => {
@@ -860,8 +921,16 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // dưới ô đầu vào đang sửa + tick xanh các cụm đã đủ thông tin
     const pressSecSync = (e) => {
       if (!e || !e.target || !e.target.closest || !e.target.closest('#modal-press-record')) return;
-      // Gõ loại đầu vào HOẶC số lượng → vẽ lại cỡ sau bào tinh + thể tích đầu vào
-      if (e.target.classList && (e.target.classList.contains('ps-nan') || e.target.classList.contains('ps-sticks'))) refreshPressStickHints();
+      // Gõ loại đầu vào / số lượng chung / SỐ LƯỢNG TỪNG CỠ → tính lại thể tích
+      const cl = e.target.classList;
+      if (cl && (cl.contains('ps-nan') || cl.contains('ps-sticks') || cl.contains('ps-size-qty'))) {
+        if (cl.contains('ps-size-qty')) {
+          // người dùng đã sửa số riêng → bỏ ghi chú "chia đều tổng cũ"
+          const note = e.target.closest('.press-line-row')?.querySelector('.ps-qty-note');
+          if (note && note.remove) note.remove();
+        }
+        refreshPressStickHints();
+      }
       refreshPressSecChecks();
     };
     document.addEventListener('input', pressSecSync);

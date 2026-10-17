@@ -178,7 +178,7 @@ function check(name, cond) {
   check('D2: định dạng GZIP có __dh', /__fmt: 'gzip', payload: b64, __dh: dh/.test(src));
   check('D3: định dạng SHARD (mục lục) có __dh', /__fmt: fmt, shards: parts\.length, epoch, __dh: dh/.test(src));
   check('D4: cổng THOÁT NHANH trong handleRemoteSnapshot (so __dh với băm cục bộ)',
-    /sameHashes\(meta\.__dh, localHashesNow\(\)\)/.test(src));
+    /sameHashes\(meta\.__dh, localHashesNow\(true\)\)/.test(src));
   check('D5: thoát nhanh KHÔNG áp dụng cho lần nạp đầu', /const firstLoad = !fbDidLoadRemote/.test(src));
   check('D6: firePushSync vô hiệu cache băm cục bộ khi có thay đổi',
     /fbLocalHashes = null; \/\/ có thay đổi cục bộ/.test(src));

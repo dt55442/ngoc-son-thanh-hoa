@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v263/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v270/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -672,8 +672,85 @@ const unitMulti = press.pressStickUnitVolOf(multiKey);
 check('R6: ô nhiều cỡ → thể tích 1 thanh = bình quân các cỡ (0,0002475 m³)',
   Math.abs(unitMulti - 0.0002475) < 1e-12 &&
   press.parseDimListLoose(multiKey).length === 2);
-check('R6b: tổng thể tích đầu vào ô nhiều cỡ = 2.052 × 0,0002475 = 0,50787 m³ (không đếm trùng)',
+check('R6b: tổng thể tích đầu vào ô nhiều cỡ = 2.052 × 0,0002475 = 0,50787 m³ (không đếm trùng)', 
   Math.abs(press.pressInputVolumeOf({ sticks: [{ nanKey: multiKey, sticks: 2052 }] }) - 0.50787) < 1e-9);
+
+// (A) DỮ LIỆU MỚI: mỗi cỡ 1 ô SỐ LƯỢNG RIÊNG → tổng = Σ thể tích từng cỡ
+const twoSizes = [
+  { dim: '1250×24×8', qty: 1000 },
+  { dim: '1250×24×10', qty: 2000 }
+];
+check('R6c: SL riêng từng cỡ → 1.000×0,00024 + 2.000×0,00030 = 0,84 m³',
+  Math.abs(press.pressStickVolOf('', twoSizes) - 0.84) < 1e-9);
+check('R6d: bản ghi 2 dòng sticks (1.000 + 2.000) → thể tích đầu vào 0,84 m³',
+  Math.abs(press.pressInputVolumeOf({ sticks: [
+    { nanKey: '1250×24×8', sticks: 1000 },
+    { nanKey: '1250×24×10', sticks: 2000 }
+  ] }) - 0.84) < 1e-9);
+
+// ── Mô phỏng DOM: tách ô số lượng theo từng cỡ + giữ số đã nhập ──
+function fakeStickRow(key, total) {
+  const sizes = [];
+  const list = {
+    hidden: true,
+    _html: '',
+    get innerHTML() { return this._html; },
+    set innerHTML(v) {
+      this._html = v;
+      sizes.length = 0;
+      const re = /data-size="([^"]+)"[^>]*value="([^"]*)"/g;
+      let m;
+      while ((m = re.exec(v))) {
+        const dim = m[1];
+        sizes.push({ value: m[2], getAttribute: () => dim });
+      }
+    }
+  };
+  const nanInp = { value: key };
+  const totalInp = { value: String(total || ''), hidden: false };
+  const label = { textContent: '' };
+  const row = {
+    dataset: {}, _sizes: sizes, _list: list, _total: totalInp, _label: label, _nan: nanInp,
+    querySelector(sel) {
+      if (sel === '.ps-nan') return nanInp;
+      if (sel === '.ps-sticks') return totalInp;
+      if (sel === '.ps-qty-list') return list;
+      if (sel === '.ps-qty-label') return label;
+      return null;
+    },
+    querySelectorAll(sel) { return sel === '.ps-size-qty' ? sizes : []; }
+  };
+  return row;
+}
+const fk = fakeStickRow('1250×24×8 ; 1250×24×10', 3000);
+press.syncPressStickQtyInputs(fk);
+check('R19: ô nhiều cỡ → tách N ô SL riêng, chia đều tổng cũ 3.000 (1.500/1.500) + ghi chú',
+  fk._sizes.length === 2 && fk._sizes[0].value === '1500' && fk._sizes[1].value === '1500' &&
+  fk._total.hidden === true && fk._label.textContent.includes('từng cỡ') &&
+  fk._list.innerHTML.includes('Chia đều tổng cũ'));
+fk._sizes[0].value = '1000';
+fk._sizes[1].value = '2000';
+check('R20: sửa số từng cỡ → thể tích = 1.000×0,00024 + 2.000×0,00030 = 0,84 m³',
+  Math.abs(press.pressStickVolOf('', press.readPressSizeQtys(fk)) - 0.84) < 1e-9);
+fk._nan.value = '1250×24×8';
+press.syncPressStickQtyInputs(fk);
+check('R21: quay về 1 cỡ → cộng dồn số đã nhập vào ô Số lượng chung (3.000) + ẩn danh sách',
+  fk._sizes.length === 0 && fk._total.hidden === false && fk._total.value === '3000' &&
+  fk._label.textContent === 'Số lượng');
+check('R6e: có lượt Bào tinh 1250×24×10 → 1250×22×8 thì tổng = 0,24 + 0,44 = 0,68 m³',
+  (() => {
+    state.xuong2BaoTinhRecords.push({ id: 'r-bt4', kind: 'tinh', date: '2026-09-20', inSizeKey: '1250×24×10', outSizeKey: '1250×22×8', qtyOk: 1700 });
+    return Math.abs(press.pressStickVolOf('', twoSizes) - 0.68) < 1e-9;
+  })());
+const infoSizes = press.pressStickInfoHtml('1250×24×8 ; 1250×24×10', twoSizes);
+check('R6f: form in từng cỡ "× 1.000 = 0,24 m³" · "× 2.000 = 0,44 m³" + tổng 0,68 m³',
+  infoSizes.includes('1250×24×8') && infoSizes.includes('1.000') && infoSizes.includes('0,24 m³') &&
+  infoSizes.includes('1250×24×10') && infoSizes.includes('2.000') && infoSizes.includes('0,44 m³') &&
+  infoSizes.includes('Tổng thể tích đầu vào') && infoSizes.includes('0,68 m³'));
+check('R6g: dữ liệu CŨ (chỉ có tổng SL) → ghi rõ "≈ ước tính — chia đều N cỡ"',
+  press.pressStickInfoHtml(multiKey, 2052).includes('ước tính') &&
+  press.pressStickInfoHtml(multiKey, 2052).includes('chia đều 2 cỡ'));
+
 
 
 // Khối 3 dòng dưới mỗi dòng ĐẦU VÀO trong form
@@ -716,13 +793,58 @@ check('R11: biểu đồ "BTP sang TP" = 2 m³ (thể tích thành phẩm, KHÔN
 // Cấu trúc form / sự kiện / CSS / cache
 check('R12: form có ô tổng thể tích đầu vào (#press-input-vol-total · tính theo thanh đã bào tinh)',
   idxHtml.includes('id="press-input-vol-total"') && idxHtml.includes('THANH ĐÃ BÀO TINH'));
-check('R13: events.js tính lại thể tích khi gõ SỐ LƯỢNG (.ps-sticks)',
-  eventsSrc.includes("classList.contains('ps-sticks')"));
+check('R13: events.js tính lại thể tích khi gõ SỐ LƯỢNG (.ps-sticks) và SỐ LƯỢNG TỪNG CỠ (.ps-size-qty)',
+  eventsSrc.includes("cl.contains('ps-sticks')") && eventsSrc.includes("cl.contains('ps-size-qty')"));
 check('R14: CSS có khối 3 dòng đầu vào + tổng thể tích + chip cơ sở tính',
   cssHtml.includes('.ps-bt-line') && cssHtml.includes('.press-input-vol-total') &&
   cssHtml.includes('.press-vol-basis'));
-check('R15: sw.js đã tăng cache (v263) để PWA không dùng bản cũ',
-  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v263'));
+check('R15: sw.js đã tăng cache (v265) để PWA không dùng bản cũ',
+  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v270'));
+check('R16: ô nhiều cỡ có khung .ps-qty-list + N ô .ps-size-qty (hàm đồng bộ riêng)',
+  pressSrc.includes('ps-qty-list') && pressSrc.includes('ps-size-qty') &&
+  pressSrc.includes('function syncPressStickQtyInputs') && pressSrc.includes('function readPressSizeQtys'));
+check('R17: lưu tách mỗi cỡ 1 dòng sticks (collectPressSticks) + nâng tối đa 6 dòng đầu vào',
+  /readPressSizeQtys\(row\)/.test(pressSrc) && pressSrc.includes('Tối đa 6 dòng đầu vào'));
+check('R18: CSS ô số lượng từng cỡ + ghi chú "chia đều tổng cũ"',
+  cssHtml.includes('.ps-qty-list') && cssHtml.includes('.ps-size-qty') &&
+  cssHtml.includes('.ps-qty-note'));
+
+// ═══ S. NÚT "?" TRỢ GIÚP — HƯỚNG DẪN ĐIỀN + CÁCH TÍNH (17/10/2026) ═══════
+check('S1: header thẻ Ép Ván có nút "?" (aria-haspopup=dialog)',
+  idxHtml.includes('id="btn-epv-help"') && idxHtml.includes('aria-haspopup="dialog"'));
+check('S2: form nhập lượt ép có nút "Hướng Dẫn" (#btn-press-help)',
+  idxHtml.includes('id="btn-press-help"') && idxHtml.includes('Hướng Dẫn'));
+check('S3: modal #modal-epv-help đủ khung + nút đóng + "Đã Hiểu"',
+  idxHtml.includes('id="modal-epv-help"') && idxHtml.includes('id="epv-help-body"') &&
+  idxHtml.includes('id="btn-close-epv-help"') && idxHtml.includes('id="btn-epv-help-ok"'));
+check('S4: press.js có EPV_HELP + 3 hàm trợ giúp (đã export)',
+  typeof press.EPV_HELP === 'string' && press.EPV_HELP.length > 500 &&
+  typeof press.buildEpvHelpHtml === 'function' &&
+  typeof press.openEpvHelp === 'function' && typeof press.closeEpvHelp === 'function');
+check('S5: nội dung đủ 5 khối + ví dụ số THẬT (0,84 · 0,68 · 120% · 114,3%)',
+  press.EPV_HELP.includes('Cách điền 1 lượt ép') && press.EPV_HELP.includes('Cách tính thể tích') &&
+  press.EPV_HELP.includes('Công suất') && press.EPV_HELP.includes('Cách đọc biểu đồ') &&
+  press.EPV_HELP.includes('Lỗi thường gặp') &&
+  press.EPV_HELP.includes('0,84 m³') && press.EPV_HELP.includes('0,68 m³') &&
+  press.EPV_HELP.includes('120%') && press.EPV_HELP.includes('114,3%') &&
+  press.EPV_HELP.includes('KHÔNG cộng số lượng các cỡ rồi chia đều'));
+check('S6: mở modal → đổ nội dung + .show; đóng → gỡ .show',
+  (() => {
+    press.openEpvHelp();
+    const modal = document.getElementById('modal-epv-help');
+    const okOpen = modal.classList.contains('show') &&
+      String(document.getElementById('epv-help-body').innerHTML).includes('Cách tính thể tích');
+    press.closeEpvHelp();
+    return okOpen && !modal.classList.contains('show');
+  })());
+check('S7: events.js nối 2 nút mở + 2 nút đóng + Esc + bấm nền mờ',
+  eventsSrc.includes("safeOn('btn-epv-help'") && eventsSrc.includes("safeOn('btn-press-help'") &&
+  eventsSrc.includes("safeOn('btn-close-epv-help'") && eventsSrc.includes("safeOn('btn-epv-help-ok'") &&
+  eventsSrc.includes("closeEpvHelp"));
+check('S8: CSS modal trợ giúp (.epv-help-card · bảng ví dụ · chip · ghi chú)',
+  cssHtml.includes('.epv-help-card') && cssHtml.includes('#epv-help-body') &&
+  cssHtml.includes('.epv-help-ex') && cssHtml.includes('.epv-help-chip') &&
+  cssHtml.includes('.epv-help-note'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

@@ -615,7 +615,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
         qty += Number(r.quantity) || 0;
         body.push([i + 1, formatDateDDMMYY(x.date), r.code || '', x2StageLabel(r.stage), r.location || '',
           Number(r.length) || 0, Number(r.width) || 0, Number(r.thickness) || 0, Number(r.quantity) || 0,
-          r.bambooType || '', r.useFor || '', r.sourceChonNanId ? 'Có' : '', r.note || '']);
+          r.bambooType || '', r.useFor || '', (r.sourceChonNanId || (Array.isArray(r.sources) && r.sources.length)) ? 'Có' : '', r.note || '']);
       });
       sumNote = `Tổng ${x2FmtKg(qty)} thanh`;
     } else if (source === 'boluong') {

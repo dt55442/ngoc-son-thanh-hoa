@@ -4368,18 +4368,31 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       survivor = list.find(r => r && r.id === keepId) || null;
       if (!survivor) return null;
     } else {
-      survivor = dups.find(r => (state.batches || [])
-        .some(b => b && String(b.sourceChonNanId || '') === String(r.id))) || dups[0];
+      survivor = dups.find(r => (state.batches || []).some(b => b && (
+        String(b.sourceChonNanId || '') === String(r.id) ||
+        (Array.isArray(b.sources) && b.sources.some(s => s && String(s.chonNanId || '') === String(r.id)))
+      ))) || dups[0];
     }
     const removed = keepId ? dups : dups.filter(r => r.id !== survivor.id);
     Object.assign(survivor, payload, { updatedAt: new Date().toISOString() });
     const removedIds = removed.map(r => String(r.id));
     let batchTouched = false;
     (state.batches || []).forEach(b => {
-      if (b && removedIds.includes(String(b.sourceChonNanId || ''))) {
+      if (!b) return;
+      let touched = false;
+      if (removedIds.includes(String(b.sourceChonNanId || ''))) {
         b.sourceChonNanId = survivor.id;
-        batchTouched = true;
+        touched = true;
       }
+      if (Array.isArray(b.sources)) {
+        b.sources.forEach(src => {
+          if (src && removedIds.includes(String(src.chonNanId || ''))) {
+            src.chonNanId = survivor.id;
+            touched = true;
+          }
+        });
+      }
+      if (touched) batchTouched = true;
     });
     if (removedIds.length) {
       state.xuong2ChonNanThoRecords = list.filter(r => r && !removedIds.includes(String(r.id)));
@@ -4403,7 +4416,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       groups.get(k).push(r);
     });
     const hasBatch = id => (state.batches || [])
-      .some(b => b && String(b.sourceChonNanId || '') === String(id));
+      .some(b => b && (
+        String(b.sourceChonNanId || '') === String(id) ||
+        (Array.isArray(b.sources) && b.sources.some(s => s && String(s.chonNanId || '') === String(id)))
+      ));
     const removedIds = [];
     const repoint = new Map();
     groups.forEach(rows => {
@@ -4426,8 +4442,16 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     let batchTouched = false;
     (state.batches || []).forEach(b => {
       if (!b) return;
+      let touched = false;
       const to = repoint.get(String(b.sourceChonNanId || ''));
-      if (to) { b.sourceChonNanId = to; batchTouched = true; }
+      if (to) { b.sourceChonNanId = to; touched = true; }
+      if (Array.isArray(b.sources)) {
+        b.sources.forEach(src => {
+          const to2 = src && repoint.get(String(src.chonNanId || ''));
+          if (to2) { src.chonNanId = to2; touched = true; }
+        });
+      }
+      if (touched) batchTouched = true;
     });
     if (batchTouched) storageModule().then(m => m && m.saveData()).catch(() => {});
     saveXuong2ChonNan();
@@ -4933,12 +4957,28 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   // Lô Sấy 1 tạo từ thẻ nan (form "Thêm Lô Sấy Mới" — js/batch-modals.js) giữ
   // link batch.sourceChonNanId → đếm số thanh ĐÃ than hóa + CÒN LẠI của thẻ.
   function nanSay1UseOf(recId) {
-    const lots = (state.batches || [])
-      .filter(b => b && b.sourceChonNanId === recId)
-      .map(b => ({
-        id: b.id, code: b.code || '', date: b.date || '',
-        location: b.location || '', quantity: Number(b.quantity) || 0
-      }));
+    const key = String(recId);
+    const lots = [];
+    (state.batches || []).forEach(b => {
+      if (!b) return;
+      // LÔ GỘP (chế độ Bảng): chỉ tính PHẦN lấy từ thẻ này trong b.sources[],
+      // không lấy cả quantity của lô (lô có thể gộp nhiều thẻ).
+      if (Array.isArray(b.sources) && b.sources.length) {
+        const src = b.sources.find(s => s && String(s.chonNanId || '') === key);
+        const qty = Number(src && src.qty) || 0;
+        if (qty > 0) lots.push({
+          id: b.id, code: b.code || '', date: b.date || '',
+          location: b.location || '', quantity: qty, fromSources: true
+        });
+        return;
+      }
+      if (String(b.sourceChonNanId || '') === key) {
+        lots.push({
+          id: b.id, code: b.code || '', date: b.date || '',
+          location: b.location || '', quantity: Number(b.quantity) || 0, fromSources: false
+        });
+      }
+    });
     const used = lots.reduce((s, l) => s + l.quantity, 0);
     return { lots, count: lots.length, used };
   }
@@ -4950,7 +4990,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const total = Number(d.quantity) || 0;
     const remaining = Math.max(0, total - use.used);
     const tip = `Thẻ nan này đã chọn than hóa ${use.count} lô Sấy 1: ` + use.lots
-      .map(l => `${l.code || '(chưa có mã)'} · ${formatDateDDMMYY(l.date)} · ${l.location || '—'} · ${fmtThanh(l.quantity)} thanh`)
+      .map(l => `${l.code || '(chưa có mã)'} · ${formatDateDDMMYY(l.date)} · ${l.location || '—'} · lấy ${fmtThanh(l.quantity)} thanh`)
       .join('  |  ');
     const full = remaining <= 0;
     const label = full
@@ -10360,7 +10400,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         state.xuong2BaoTinhRecords.push({
           id: 'x2btinh-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 7),
           ...recOfGroup(plan),
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          // updatedAt: mốc để đồng bộ 2 chiều biết bản nào MỚI HƠN (thiếu mốc thì
+          // máy khác sửa xong cũng không thể thắng — xem js/cloud.js recCompare)
+          updatedAt: new Date().toISOString()
         });
       });
       saveXuong2BaoTinh();

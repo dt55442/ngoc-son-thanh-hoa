@@ -114,22 +114,59 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
   // nhật luôn cls trên THẺ NGUỒN (HỎI TRƯỚC vì 2 bên là bản ghi độc lập) +
   // làm mới nhãn snapshot sourceChonNanLabel.
   function syncSourceChonNanClass(oldBatch, newBatch) {
-    const recId = oldBatch && oldBatch.sourceChonNanId;
-    if (!recId) return;
+    // Lô gộp (chế độ Bảng) có NHIỀU thẻ nguồn trong sources[] — đổi Loại Nan
+    // phải hỏi và cập nhật cho TẤT CẢ thẻ nguồn, không chỉ 1 thẻ.
+    const ids = [];
+    if (oldBatch && oldBatch.sourceChonNanId) ids.push(String(oldBatch.sourceChonNanId));
+    if (oldBatch && Array.isArray(oldBatch.sources)) {
+      oldBatch.sources.forEach(src => { if (src && src.chonNanId) ids.push(String(src.chonNanId)); });
+    }
+    const recIds = [...new Set(ids)];
+    if (!recIds.length) return;
     const newCls = String((newBatch && newBatch.bambooType) || '').trim();
-    const oldCls = String((oldBatch.bambooType) || '').trim();
+    const oldCls = String((oldBatch && oldBatch.bambooType) || '').trim();
     if (!newCls || newCls === oldCls) return;
-    const rec = (state.xuong2ChonNanThoRecords || []).find(r => r && String(r.id) === String(recId));
-    if (!rec) return;
+    const recs = recIds.map(id => (state.xuong2ChonNanThoRecords || [])
+      .find(r => r && String(r.id) === String(id))).filter(Boolean);
+    if (!recs.length) return;
+    const who = recs.length === 1
+      ? `thẻ Chọn Nan Thô "${nanCardLabel(recs[0])}"`
+      : `${recs.length} thẻ Chọn Nan Thô nguồn`;
     if (!confirm(
-      `Lô này tạo từ thẻ Chọn Nan Thô "${nanCardLabel(rec)}".\n\n` +
-      `Cập nhật luôn PHÂN LOẠI trên THẺ NGUỒN thành "${newCls}" không?\n` +
+      `Lô này tạo từ ${who}.\n\n` +
+      `Cập nhật luôn PHÂN LOẠI trên ${recs.length === 1 ? 'THẺ NGUỒN' : 'CÁC THẺ NGUỒN'} thành "${newCls}" không?\n` +
       'Bấm "Hủy" nếu chỉ muốn đổi Loại ở lô này (thẻ nguồn giữ nguyên).')) return;
-    rec.cls = newCls;
+    recs.forEach(rec => { rec.cls = newCls; });
     try {
       localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || []));
     } catch (err) { /* lỗi ghi bộ nhớ máy — không chặn thao tác sửa lô */ }
-    newBatch.sourceChonNanLabel = nanCardLabel(rec);   // làm mới nhãn snapshot
+    // Làm mới nhãn snapshot + phân loại trong sources[] (nếu là lô gộp)
+    newBatch.sourceChonNanLabel = recs.length === 1
+      ? nanCardLabel(recs[0])
+      : `Nhóm ${recs.length} thẻ Chọn Nan Thô`;
+    if (Array.isArray(newBatch.sources)) {
+      newBatch.sources.forEach(src => { if (src) src.cls = newCls; });
+    }
+  }
+
+  // Lô GỘP (chế độ Bảng): sửa Số lượng → chia lại sources[] theo TỶ LỆ để
+  // tổng phần lấy từ các thẻ nguồn LUÔN khớp số lượng lô mới (không để tồn sai).
+  function scaleBatchSourcesToQty(sources, newQty) {
+    const list = (Array.isArray(sources) ? sources : [])
+      .filter(s => s && Number(s.qty) > 0);
+    const target = Math.max(0, Math.floor(Number(newQty) || 0));
+    if (!list.length || target <= 0) return list;
+    const sum = list.reduce((a, x) => a + (Number(x.qty) || 0), 0);
+    if (!(sum > 0)) return list;
+    let left = target;
+    const out = [];
+    list.forEach((s, i) => {
+      const q = (i === list.length - 1)
+        ? left
+        : Math.min(left, Math.round((Number(s.qty) || 0) * target / sum));
+      if (q > 0) { out.push(Object.assign({}, s, { qty: q })); left -= q; }
+    });
+    return out;
   }
 
   function handleBatchFormSubmit(e) {
@@ -204,6 +241,20 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
         }
         // ── ② ĐỒNG BỘ NGƯỢC Loại Nan về thẻ Chọn Nan Thô (hỏi xác nhận) ──
         syncSourceChonNanClass(old, batchData);
+        // ── ②b LÔ GỘP: giữ sources[] và cập nhật kích thước/phân loại; nếu đổi
+        // Số lượng thì chia lại tỷ lệ để tổng nguồn khớp số lượng mới. ──
+        if (old && Array.isArray(old.sources) && old.sources.length) {
+          const scaled = Number(old.quantity) !== quantity
+            ? scaleBatchSourcesToQty(old.sources, quantity)
+            : old.sources;
+          batchData.sources = scaled.map(src => Object.assign({}, src, {
+            dims: [length, width, thickness],
+            cls: batchData.bambooType
+          }));
+          batchData.sourceChonNanId = '';   // lô gộp nhiều nguồn → dùng sources[]
+          batchData.sourceChonNanLabel = 'Nhóm ' + length + '×' + width + '×' + thickness +
+            ' · ' + batchData.bambooType + ' · ' + batchData.sources.length + ' thẻ';
+        }
         // ── ① HỢP NHẤT với bản cũ: giữ nguyên mọi trường liên kết NGOÀI form
         // (mã mẻ than hóa sayCharges · link sourceChonNanId/sourceChonNanLabel ·
         // say2Date/khoDate của công đoạn khác …) — trước đây object mới làm
@@ -398,7 +449,8 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
   // Bỏ dấu + thường hóa để gõ "van"/"van 1250" cũng khớp "Ván"
   function alNorm(s) {
     return String(s || '').toLowerCase().normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+      .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd')
+      .replace(/×/g, 'x');   // gõ "1250x18x7" khớp "1250×18×7"
   }
   // Số NGÀY đã ở từng công đoạn của 1 lô: { say1, say2, kho }
   function alStageDaysOf(batch) {
@@ -527,9 +579,17 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
   }
   // Số thanh ĐÃ dùng của 1 thẻ chọn nan (đã tạo lô sấy từ thẻ đó)
   function nanCardUsedOf(chonNanId, excludeBatchId) {
-    return (state.batches || [])
-      .filter(b => b && b.sourceChonNanId === chonNanId && b.id !== excludeBatchId)
-      .reduce((s, b) => s + (Number(b.quantity) || 0), 0);
+    const key = String(chonNanId);
+    return (state.batches || []).reduce((sum, b) => {
+      if (!b || b.id === excludeBatchId) return sum;
+      // LÔ GỘP (chế độ Bảng): nguồn nằm trong b.sources[] — cộng ĐÚNG phần đã lấy
+      // từ thẻ này. Lô cũ (1 thẻ) vẫn dùng sourceChonNanId + quantity.
+      if (Array.isArray(b.sources) && b.sources.length) {
+        return sum + b.sources.reduce((s, src) => s +
+          (String((src && src.chonNanId) || '') === key ? (Number(src.qty) || 0) : 0), 0);
+      }
+      return sum + (String(b.sourceChonNanId || '') === key ? (Number(b.quantity) || 0) : 0);
+    }, 0);
   }
   // Số thanh CÒN LẠI của 1 thẻ chọn nan (chưa tạo lô sấy)
   function nanCardRemainingOf(rec) {
@@ -562,7 +622,11 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
     if (!rec) return 0;
     const cap = nanCardRemainingOf(rec);
     const v = Math.floor(Number(alCardQty[String(id)]));
-    return v > 0 ? Math.min(v, cap) : cap;
+    if (v > 0) return Math.min(v, cap);
+    // Chế độ BẢNG: thẻ KHÔNG có trong alCardQty = chưa lấy (0) — không mặc định
+    // lấy hết như chế độ Thẻ (bấm thẻ = mặc định phần còn lại).
+    if (alEntryModeOf() === 'grid') return 0;
+    return cap;
   }
   // Ô NHẬP SỐ LƯỢNG của 1 thẻ nan trong "Thông Tin Lấy Từ Nguồn" (uỷ nhiệm input)
   // — clamp về phần còn lại; KHÔNG vẽ lại khối info (giữ con trỏ ô nhập), chỉ cập
@@ -601,6 +665,808 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
     return stage === 'say2' ? availableKhoLots() : availableSay1Cards();
   }
   function alAvailableSources() { return alCandidatesOf(alStageOf()); }
+
+  // ═══ CÁCH NHẬP NGUỒN: THẺ NGUỒN ⇄ BẢNG NHẬP NHANH (17/10/2026) ═══
+  // • Bảng nhập nhanh CHỈ dùng cho Sấy 1. Sấy 2 chuyển NGUYÊN lô; Thanh Hóa Lại
+  //   chỉ đốt 1 lô Tóp → hai trường hợp đó giữ nguyên danh sách thẻ.
+  // • ĐỔI QUY TẮC 17/10/2026 (người dùng chủ động chọn): gộp dòng theo
+  //   CỠ + PHÂN LOẠI của các ngày đang chọn; SL lấy nhập 1 lần cho cả nhóm và
+  //   hệ thống TỰ CHIA theo thẻ CŨ NHẤT trước (date asc → createdAt asc).
+  //   ⚠ Cách này có thể che báo cáo khống → luôn hiện nút ▸ xem chia cho thẻ/
+  //   ngày nào + cảnh báo thẻ quá AL_GRID_STALE_DAYS ngày.
+  // • Cột Ngày chọn nan / Thể tích / nguồn vật tư ẨN; ngày + nguồn chỉ hiện
+  //   trong khối ▸ (hoặc tooltip) khi người dùng cần kiểm tra.
+  // • Ô TRỐNG = KHÔNG LẤY.
+  const AL_ENTRY_MODE_KEY = 'bamboo_tracker_al_entry_mode_v1';
+  const AL_GRID_STALE_DAYS = 3;
+  let alEntryMode = 'grid';
+  let alEntryModeLoaded = false;
+  // Danh sách NGÀY CHỌN NAN đang bật — chọn được NHIỀU ngày (VD 14/10 còn tồn +
+  // 15/10 hôm nay). Rỗng = hiện tất cả ngày.
+  let alGridDates = [];
+  let alGridSearchQ = '';
+  let alGridSortMode = 'size';       // size | sizeAsc | class
+  let alGridGroupQty = {};           // groupKey → tổng SL lấy của nhóm (cộng các dòng)
+  let alGridGroupLines = {};         // groupKey → [SL lô 1, SL lô 2, …] — mỗi dòng = 1 lô mới
+  let alGridExpand = new Set();      // các nhóm đang mở khối ▸ chi tiết chia
+  function alGridDateKeyOf(it) {
+    return String((it && it.date) || '').trim() || '—';
+  }
+  function alGridDateOn(date) {
+    const d = String(date || '').trim() || '—';
+    return alGridDates.includes(d);
+  }
+  function alGridToggleDate(date) {
+    const d = String(date || '').trim() || '—';
+    alGridDates = alGridDates.includes(d) ? alGridDates.filter(x => x !== d) : [...alGridDates, d];
+    return alGridDates.slice();
+  }
+  function alGridClearDates() { alGridDates = []; return alGridDates.slice(); }
+  // ── GỘP NHÓM THEO CỠ + PHÂN LOẠI (17/10/2026) ──────────────────
+  function alGridClassOrder(cls) { return ({ A: 0, A1: 1, B: 2 })[cls] ?? 9; }
+  function alGridGroupKeyOf(it) {
+    const d = alGridDimsOf(it);
+    // Dùng ĐÚNG 3 số đo làm khóa (không dùng sizeKey) để 2 bản ghi cùng cỡ nhưng
+    // sizeKey gõ khác kiểu (x / ×) vẫn gộp chung 1 nhóm.
+    return `${d[0]}×${d[1]}×${d[2]}|${String((it && it.cls) || 'A')}`;
+  }
+  // Toàn bộ nhóm của CÁC NGÀY ĐANG CHỌN (KHÔNG phụ thuộc ô tìm kiếm) — dùng cho
+  // cả vẽ bảng lẫn chia số lượng, để nhóm đang bị lọc vẫn giữ đúng số đã nhập.
+  // Cắt phần nguồn (đã chia FEFO cho cả nhóm) thành từng LÔ theo các dòng.
+  // Thẻ CŨ NHẤT được cấp liên tiếp: lô 1 lấy trước, lô 2 lấy tiếp phần còn lại…
+  function alGridSliceSources(split, lineQtys) {
+    const cards = (split || []).filter(c => c && Number(c.alloc) > 0);
+    const lines = (lineQtys || []).map(q => Math.max(0, Math.floor(Number(q) || 0)));
+    let ci = 0, usedInCard = 0;
+    return lines.map(qty => {
+      let left = qty;
+      const sources = [];
+      while (left > 0 && ci < cards.length) {
+        const card = cards[ci];
+        const cap = Number(card.alloc) || 0;
+        const avail = Math.max(0, cap - usedInCard);
+        if (avail <= 0) { ci++; usedInCard = 0; continue; }
+        const take = Math.min(avail, left);
+        if (take > 0) {
+          sources.push(Object.assign({}, card, { alloc: take }));
+          left -= take;
+          usedInCard += take;
+        }
+        if (usedInCard >= cap) { ci++; usedInCard = 0; }
+      }
+      return { qty, sources };
+    });
+  }
+
+  function alGridAllGroupList() {
+    const map = new Map();
+    (state.xuong2ChonNanThoRecords || []).forEach(it => {
+      if (!it || it.cls === 'reject') return;
+      const date = alGridDateKeyOf(it);
+      if (alGridDates.length && !alGridDates.includes(date)) return;
+      const dims = alGridDimsOf(it);
+      if (!(dims[0] > 0 && dims[1] > 0 && dims[2] > 0)) return;
+      const key = alGridGroupKeyOf(it);
+      if (!map.has(key)) {
+        map.set(key, {
+          key, dims,
+          dimsText: `${dims[0]}×${dims[1]}×${dims[2]}`,
+          clsRaw: String(it.cls || 'A'),
+          cls: nanClassLabelOf(it.cls),
+          cards: []
+        });
+      }
+      const g = map.get(key);
+      const id = String(it.id);
+      const total = Number(it.quantity) || 0;
+      const used = nanCardUsedOf(id);
+      const remaining = Math.max(0, total - used);
+      let alloc = 0;
+      if (Object.prototype.hasOwnProperty.call(alCardQty, id)) alloc = Math.floor(Number(alCardQty[id])) || 0;
+      else if (alPicked.includes(id)) alloc = remaining;   // chọn từ chế độ Thẻ
+      alloc = Math.max(0, Math.min(alloc, remaining));
+      g.cards.push({
+        it, id, date,
+        dateText: alGridDateText(it.date),
+        total, used, remaining, alloc,
+        createdAt: String(it.createdAt || ''),
+        srcText: [it.materialType, it.supplier].filter(Boolean).join(' · ') || '—'
+      });
+    });
+    const groups = [...map.values()].map(g => {
+      g.cards.sort((a, b) => String(a.date).localeCompare(String(b.date)) ||
+        String(a.createdAt).localeCompare(String(b.createdAt)) || String(a.id).localeCompare(String(b.id)));
+      g.total = g.cards.reduce((s, c) => s + c.total, 0);
+      g.used = g.cards.reduce((s, c) => s + c.used, 0);
+      g.remaining = g.cards.reduce((s, c) => s + c.remaining, 0);
+      g.liveCards = g.cards.filter(c => c.remaining > 0).length;
+      g.split = g.cards.filter(c => c.alloc > 0);
+      g.qty = g.split.reduce((s, c) => s + c.alloc, 0);
+      g.vol = g.split.reduce((s, c) => s + calculateVolume(g.dims[0], g.dims[1], g.dims[2], c.alloc), 0);
+      g.stale = g.split.map(c => ({ date: c.date, days: alGridStaleOf(c) })).filter(x => x.days != null);
+      g.dates = [...new Set(g.cards.map(c => c.date))];
+      // Số dòng đang nhập của nhóm: ưu tiên alGridGroupLines; nếu chưa có thì
+      // coi cả nhóm là 1 dòng (tương thích chế độ Thẻ / dữ liệu cũ).
+      let lineQtys = Array.isArray(alGridGroupLines[g.key]) && alGridGroupLines[g.key].length
+        ? alGridGroupLines[g.key].map(q => Math.max(0, Math.floor(Number(q) || 0)))
+        : (g.qty > 0 ? [g.qty] : []);
+      const lineSum = lineQtys.reduce((s, q) => s + q, 0);
+      if (lineSum !== g.qty) lineQtys = g.qty > 0 ? [g.qty] : [];
+      g.lines = alGridSliceSources(g.split, lineQtys);
+      g.lotCount = g.lines.filter(l => l.qty > 0).length;
+      g.lineCount = g.lines.length;
+      return g;
+    });
+    return groups;
+  }
+  // Chia 1 nhóm theo thẻ CŨ NHẤT trước (date asc → createdAt asc → id)
+  function alGridAllocCards(group, qty) {
+    let left = Math.max(0, Math.floor(Number(qty) || 0));
+    const alloc = {};
+    (group.cards || []).forEach(c => {
+      if (left <= 0) return;
+      const take = Math.min(c.remaining, left);
+      if (take > 0) { alloc[c.id] = take; left -= take; }
+    });
+    return { alloc, allocated: Math.max(0, Math.floor(Number(qty) || 0)) - left };
+  }
+  // Số ngày kể từ NGÀY CHỌN NAN đến NGÀY thanh hóa đang chọn (cảnh báo thẻ cũ)
+  function alGridTodayDate() {
+    const v = String((document.getElementById('al-date') || {}).value || '').trim();
+    return v || new Date().toISOString().split('T')[0];
+  }
+  function alGridDaysOld(dateStr) {
+    const a = String(dateStr || '').slice(0, 10);
+    const b = String(alGridTodayDate()).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(b)) return null;
+    const da = Date.parse(a + 'T00:00:00');
+    const db = Date.parse(b + 'T00:00:00');
+    if (!Number.isFinite(da) || !Number.isFinite(db)) return null;
+    return Math.floor((db - da) / 86400000);
+  }
+  function alGridStaleOf(card) {
+    const d = alGridDaysOld(card && card.date);
+    return (d != null && d > AL_GRID_STALE_DAYS) ? d : null;
+  }
+
+  function loadAlEntryMode() {
+    if (alEntryModeLoaded) return alEntryMode;
+    alEntryModeLoaded = true;
+    try {
+      const v = localStorage.getItem(AL_ENTRY_MODE_KEY);
+      if (v === 'grid' || v === 'cards') alEntryMode = v;
+    } catch (err) { /* trình duyệt chặn localStorage → dùng mặc định */ }
+    return alEntryMode;
+  }
+  function saveAlEntryMode() {
+    try { localStorage.setItem(AL_ENTRY_MODE_KEY, alEntryMode); } catch (err) { /* bỏ qua */ }
+  }
+  // Chế độ đang áp dụng thực tế (bảng chỉ cho Sấy 1, không áp Thanh Hóa Lại/Sấy 2)
+  function alEntryModeOf() {
+    if (alReworkOn()) return 'cards';
+    if (alStageOf() !== 'say1') return 'cards';
+    loadAlEntryMode();
+    return alEntryMode === 'grid' ? 'grid' : 'cards';
+  }
+  // (Chuyển thẻ → bảng: dùng alGridDeriveGroupQtyFromPicks — gộp số theo nhóm,
+  //  KHÔNG tự chia lại để giữ đúng thẻ người dùng đã chọn tay.)
+  function setAlEntryMode(mode) {
+    alEntryMode = (mode === 'cards') ? 'cards' : 'grid';
+    alEntryModeLoaded = true;
+    saveAlEntryMode();
+    if (alEntryMode === 'grid') alGridDeriveGroupQtyFromPicks();
+    syncAlEntryModeUi();
+    // Chuyển về THẺ: vẽ lại danh sách thẻ để hiện đúng các thẻ đang chọn / số
+    // lượng vừa gõ ở bảng (danh sách đã vẽ trước đó nên có thể đã cũ)
+    if (alEntryMode === 'cards' && alEntryModeOf() === 'cards') {
+      renderAlSourceList();
+      syncAddLotSource();
+      alRefreshSummary();
+    }
+    return alEntryMode;
+  }
+  // Đồng bộ giao diện theo chế độ: bật/tắt bảng + nút, ẩn nút/danh sách thẻ khi ở bảng
+  function syncAlEntryModeUi() {
+    const mode = alEntryModeOf();
+    const form = document.getElementById('add-lot-form');
+    if (form && form.classList) form.classList.toggle('al-mode-grid', mode === 'grid');
+    const wrap = document.getElementById('al-grid-wrap');
+    if (wrap) wrap.hidden = (mode !== 'grid');
+    const gridBtn = (typeof document.querySelector === 'function')
+      ? document.querySelector('#al-entry-mode [data-al-entry="grid"]') : null;
+    if (gridBtn) gridBtn.disabled = (alStageOf() !== 'say1') || alReworkOn();
+    if (typeof document.querySelectorAll === 'function') {
+      document.querySelectorAll('#al-entry-mode [data-al-entry]').forEach(btn => {
+        const on = btn.getAttribute('data-al-entry') === mode;
+        if (btn.classList) btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    if (mode === 'grid') renderAlGrid();
+    return mode;
+  }
+  function alOnEntryModeClick(e) {
+    const t = e && e.target;
+    const btn = (t && typeof t.closest === 'function') ? t.closest('[data-al-entry]') : null;
+    if (!btn) return false;
+    const mode = btn.getAttribute('data-al-entry');
+    if (mode === 'grid' && ((alStageOf() !== 'say1') || alReworkOn())) {
+      showToast('Bảng nhập nhanh chỉ dùng cho Sấy 1 (Sấy 2 chuyển nguyên lô; Thanh Hóa Lại chỉ đốt 1 lô Tóp).', 'info');
+      return false;
+    }
+    setAlEntryMode(mode);
+    return true;
+  }
+  // Gom thẻ nguồn theo NGÀY CHỌN NAN → chip lọc nhanh (người nhập biết đang xử lý
+  // lô nan của ngày nào; hệ thống KHÔNG tự chọn giúp)
+  function alGridDateBuckets() {
+    const map = new Map();
+    alCandidatesOf('say1').forEach(it => {
+      const date = String(it.date || '').trim() || '—';
+      const cur = map.get(date) || { date, count: 0, thanh: 0 };
+      cur.count += 1;
+      cur.thanh += nanCardRemainingOf(it);
+      map.set(date, cur);
+    });
+    return [...map.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  }
+  function alGridDimsOf(it) {
+    const d = (it && Array.isArray(it.dims)) ? it.dims : [];
+    return [Number(d[0]) || 0, Number(d[1]) || 0, Number(d[2]) || 0];
+  }
+  function alGridDateText(date) {
+    const d = String(date || '').trim();
+    if (!d || d === '—') return 'Không rõ ngày';
+    return formatDateDDMMYY(d) || d;
+  }
+  // Các DÒNG của bảng = NHÓM theo Cỡ + Phân loại (17/10/2026).
+  // Nhóm đã dùng hết (Còn lại = 0) ẩn khỏi bảng; nhóm còn tồn cộng cả thẻ đã
+  // dùng hết vào Tồn báo cáo/Đã dùng để số liệu đầy đủ.
+  function alGridDimsCmp(a, b) {
+    return (b.dims[0] - a.dims[0]) || (b.dims[1] - a.dims[1]) || (b.dims[2] - a.dims[2]);
+  }
+  function alGridRows() {
+    const q = alNorm(alGridSearchQ).trim();
+    let groups = alGridAllGroupList();
+    if (q) groups = groups.filter(g => g.cards.some(c => alSourceMatches(c.it, 'say1', q)));
+    groups = groups.filter(g => g.remaining > 0);
+    groups.sort((a, b) => {
+      if (alGridSortMode === 'sizeAsc') {
+        return (-alGridDimsCmp(a, b)) || (alGridClassOrder(a.clsRaw) - alGridClassOrder(b.clsRaw));
+      }
+      if (alGridSortMode === 'class') {
+        return (alGridClassOrder(a.clsRaw) - alGridClassOrder(b.clsRaw)) || alGridDimsCmp(a, b);
+      }
+      return alGridDimsCmp(a, b) || (alGridClassOrder(a.clsRaw) - alGridClassOrder(b.clsRaw));
+    });
+    return groups;
+  }
+  // Tổng SL LÔ MỚI (theo NHÓM) — đọc từ alCardQty/alPicked để khớp lúc Lưu.
+  function alRefreshGridFoot() {
+    const foot = document.getElementById('al-grid-foot');
+    const groups = alGridAllGroupList().filter(g => g.qty > 0);
+    const lots = groups.reduce((n, g) => n + (g.lines || []).filter(l => l && l.qty > 0).length, 0);
+    const qty = groups.reduce((s, g) => s + g.qty, 0);
+    const vol = groups.reduce((s, g) => s + g.vol, 0);
+    if (foot) {
+      foot.textContent = groups.length
+        ? `SL lô mới: ${lots} lô · ${groups.length} nhóm · ${qty.toLocaleString('vi-VN')} thanh · ${vol.toFixed(4)} m³`
+        : 'Chưa nhập số lượng — gõ vào ô SL lô mới (ô trống = KHÔNG lấy)';
+    }
+    const countEl = document.getElementById('al-picked-count');
+    if (countEl) {
+      countEl.textContent = groups.length ? `${lots} lô · ${groups.length} nhóm` : 'Chưa chọn';
+      countEl.classList.toggle('has-pick', groups.length > 0);
+    }
+    return { count: groups.length, lots, qty, vol };
+  }
+  // Khối ▸ chi tiết chia: ngày + nguồn + tồn/đã dùng/còn/lấy của TỪNG thẻ.
+  // Chỉ hiện khi người dùng bấm ▸ — mặc định ẩn để bảng gọn trên điện thoại.
+  function alGridSplitHtml(g) {
+    if (!g) return '';
+    const items = (g.cards || []).map(c => {
+      const stale = alGridStaleOf(c);
+      const took = c.alloc > 0;
+      return `<div class="al-grid-split-item${took ? ' is-take' : ''}${stale != null ? ' is-stale' : ''}">
+        <span class="al-grid-split-date">${escapeHTML(c.dateText)}${stale != null ? ` · <b>⚠ ${stale} ngày</b>` : ''}</span>
+        <span class="al-grid-split-src">${escapeHTML(c.srcText)}</span>
+        <span class="al-grid-split-nums">Tồn ${c.total.toLocaleString('vi-VN')} · Đã dùng ${c.used.toLocaleString('vi-VN')} · Còn ${c.remaining.toLocaleString('vi-VN')} · <b>Lấy ${c.alloc.toLocaleString('vi-VN')}</b></span>
+      </div>`;
+    }).join('');
+    const lineItems = (g.lines || []).map((l, i) => ({ l, i }))
+      .filter(x => x.l && x.l.qty > 0)
+      .map(({ l, i }) => {
+        const srcTxt = (l.sources || []).map(c => `${c.dateText}: ${(Number(c.alloc) || 0).toLocaleString('vi-VN')}`).join(' + ') || '—';
+        return `<div class="al-grid-split-line"><b>Lô ${i + 1}</b> · ${l.qty.toLocaleString('vi-VN')} thanh → ${escapeHTML(srcTxt)}</div>`;
+      }).join('');
+    return `<div class="al-grid-split-lines">${lineItems}</div><div class="al-grid-split-list">${items || '<div class="al-grid-split-empty">— Không có thẻ —</div>'}</div>`;
+  }
+  function renderAlGrid() {
+    if (alEntryModeOf() !== 'grid') return false;
+    const rows = alGridRows();
+    const datesEl = document.getElementById('al-grid-dates');
+    const sumEl = document.getElementById('al-grid-dates-sum');
+    if (sumEl) {
+      sumEl.textContent = (alGridDates.length
+        ? `Đang chọn ${alGridDates.length} ngày: ${alGridDates.map(d => alGridDateText(d)).join(' + ')}`
+        : 'Tất cả ngày') + ` · ${rows.length} nhóm`;
+    }
+    if (datesEl) {
+      const buckets = alGridDateBuckets();
+      const allOn = alGridDates.length === 0;
+      const all = `<button type="button" class="al-grid-date${allOn ? ' active' : ''}" data-al-grid-date="" aria-pressed="${allOn ? 'true' : 'false'}" title="Bỏ chọn mọi ngày — hiện tất cả thẻ còn tồn">Tất cả ngày</button>`;
+      // Giữ vị trí CUỘN NGANG của dải chip (điện thoại) sau khi vẽ lại
+      const prevScroll = Number(datesEl.scrollLeft) || 0;
+      datesEl.innerHTML = all + buckets.map(b => {
+        const on = alGridDateOn(b.date);
+        return `<button type="button" class="al-grid-date${on ? ' active' : ''}" data-al-grid-date="${escapeHTML(b.date)}" aria-pressed="${on ? 'true' : 'false'}" title="Bấm để ${on ? 'BỎ CHỌN' : 'CHỌN'} ngày ${escapeHTML(alGridDateText(b.date))} — chọn được NHIỀU ngày, mỗi ngày ${b.count} thẻ · còn ${b.thanh.toLocaleString('vi-VN')} thanh">${on ? '✓ ' : ''}${escapeHTML(alGridDateText(b.date))} · ${b.count} thẻ</button>`;
+      }).join('');
+      if (prevScroll) datesEl.scrollLeft = prevScroll;
+    }
+    const body = document.getElementById('al-grid-body');
+    if (!body) return false;
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6" class="al-grid-empty">— Không có nhóm nào còn tồn khớp bộ lọc (kiểm tra ngày / ô tìm) —</td></tr>';
+      alRefreshGridFoot();
+      return true;
+    }
+    body.innerHTML = rows.map(g => {
+      const key = escapeHTML(g.key);
+      const staleTxt = g.stale.length
+        ? `<span class="al-grid-warn" title="Thẻ được chia tự động đã quá ${AL_GRID_STALE_DAYS} ngày: ${g.stale.map(s => `${escapeHTML(alGridDateText(s.date))} (${s.days} ngày)`).join(' · ')}">⚠ ${g.stale.length} thẻ cũ</span>`
+        : '';
+      const splitTxt = g.split.length
+        ? g.split.map(c => `${c.dateText}: ${c.alloc.toLocaleString('vi-VN')}`).join(' + ')
+        : 'chưa nhập';
+      const lines = (Array.isArray(g.lines) && g.lines.length) ? g.lines : [{ qty: 0, sources: [] }];
+      const linesHtml = lines.map((ln, li) => {
+        const last = li === lines.length - 1;
+        const lineSplitTxt = (ln.sources && ln.sources.length)
+          ? ln.sources.map(c => `${c.dateText}: ${c.alloc.toLocaleString('vi-VN')}`).join(' + ')
+          : 'chưa chia';
+        const lineTitle = `Lô ${li + 1}/${lines.length} của nhóm ${g.dimsText} · ${g.cls}. Chia thẻ CŨ NHẤT trước: ${lineSplitTxt}. Ô trống = không tạo lô.`;
+        return `<div class="al-grid-line" data-al-grid-line="${key}" data-al-grid-line-idx="${li}">
+          <input type="number" class="al-grid-qty" data-al-grid-line-qty="${key}" data-line-idx="${li}" min="0" max="${g.remaining}" step="1" inputmode="numeric"
+            value="${ln.qty > 0 ? ln.qty : ''}" placeholder="${li === 0 ? `Tối đa ${g.remaining.toLocaleString('vi-VN')}` : 'SL lô mới'}"
+            title="${escapeHTML(lineTitle)}">
+          <span class="al-grid-mini">
+            <button type="button" class="al-grid-btn" tabindex="-1" data-al-grid-line-all="${key}" data-line-idx="${li}" title="Lấy hết phần còn lại cho lô này">Hết</button>
+            <button type="button" class="al-grid-btn" tabindex="-1" data-al-grid-line-clear="${key}" data-line-idx="${li}" title="Xóa lô này">Xóa</button>
+            <button type="button" class="al-grid-btn al-grid-add-btn" tabindex="0" data-al-grid-add-line="${key}" data-line-idx="${li}" title="Thêm lô mới cùng cỡ + phân loại">+</button>
+            ${last ? `<button type="button" class="al-grid-btn al-grid-expand-btn" tabindex="-1" data-al-grid-expand="${key}" title="Xem chia theo từng lô/thẻ (cũ nhất trước)">▸</button>` : ''}
+          </span>
+        </div>`;
+      }).join('');
+      const lotChip = g.lineCount > 1
+        ? `<span class="al-grid-lots" title="Nhóm đang có ${g.lineCount} dòng lô — bấm + để thêm lô mới">${g.lineCount} lô</span>`
+        : '';
+      return `<tr data-al-grid-group="${key}" class="${g.qty > 0 ? 'picked' : ''}">
+      <td data-col="size" data-label="Cỡ (mm)"><strong>${escapeHTML(g.dimsText)}</strong>${lotChip}${staleTxt}</td>
+      <td data-col="cls" data-label="Phân loại"><span class="al-grid-cls">${escapeHTML(g.cls)}</span></td>
+      <td data-col="total" data-label="Tồn báo cáo">${g.total.toLocaleString('vi-VN')}</td>
+      <td data-col="used" data-label="Đã dùng">${g.used.toLocaleString('vi-VN')}</td>
+      <td data-col="remain" data-label="Còn lại"><strong>${g.remaining.toLocaleString('vi-VN')}</strong></td>
+      <td data-col="qty" data-label="SL lô mới">
+        <div class="al-grid-lines">${linesHtml}</div>
+      </td>
+    </tr>${alGridExpand.has(g.key) ? `<tr class="al-grid-split-row" data-al-grid-split-row="${key}"><td colspan="6">${alGridSplitHtml(g)}</td></tr>` : ''}`;
+    }).join('');
+    alRefreshGridFoot();
+    return true;
+  }
+  // Cập nhật chip cảnh báo ⚠ thẻ cũ NGAY khi gõ SL (không cần vẽ lại bảng)
+  function alGridUpdateRowWarn(row, group) {
+    if (!row || typeof row.querySelector !== 'function' || !group) return;
+    const sizeCell = row.querySelector('[data-col="size"]');
+    if (!sizeCell) return;
+    let warn = (typeof sizeCell.querySelector === 'function') ? sizeCell.querySelector('.al-grid-warn') : null;
+    if (!group.stale.length) {
+      if (warn && typeof warn.remove === 'function') warn.remove();
+      return;
+    }
+    const title = `Thẻ được chia tự động đã quá ${AL_GRID_STALE_DAYS} ngày: ${group.stale.map(s => `${alGridDateText(s.date)} (${s.days} ngày)`).join(' · ')}`;
+    if (!warn) {
+      warn = (typeof document.createElement === 'function') ? document.createElement('span') : null;
+      if (!warn) return;
+      warn.className = 'al-grid-warn';
+      if (typeof sizeCell.appendChild === 'function') sizeCell.appendChild(warn);
+    }
+    warn.textContent = `⚠ ${group.stale.length} thẻ cũ`;
+    if (typeof warn.setAttribute === 'function') warn.setAttribute('title', title);
+  }
+  // Áp toàn bộ dòng của 1 nhóm: chuẩn hoá số, chia lại thẻ FEFO cho TỔNG nhóm,
+  // cập nhật alCardQty/alPicked + dòng cảnh báo/khối ▸ (không vẽ lại cả bảng).
+  function alGridApplyGroupLines(groupKey, inputEl) {
+    const key = String(groupKey || '');
+    const group = alGridAllGroupList().find(g => g.key === key);
+    if (!group) {
+      delete alGridGroupLines[key];
+      delete alGridGroupQty[key];
+      return 0;
+    }
+    let lines = Array.isArray(alGridGroupLines[key]) && alGridGroupLines[key].length
+      ? alGridGroupLines[key].map(q => Math.max(0, Math.floor(Number(q) || 0)))
+      : [0];
+    let left = group.remaining;
+    lines = lines.map(q => {
+      const v = Math.min(q, left);
+      left -= v;
+      return v;
+    });
+    alGridGroupLines[key] = lines;
+    const total = lines.reduce((s, q) => s + q, 0);
+    const ids = new Set(group.cards.map(c => c.id));
+    alPicked = alPicked.filter(id => !ids.has(id));
+    ids.forEach(id => { delete alCardQty[id]; });
+    if (total > 0) {
+      const { alloc } = alGridAllocCards(group, total);
+      Object.keys(alloc).forEach(id => {
+        const take = alloc[id];
+        if (!(take > 0)) return;
+        alCardQty[id] = take;
+        if (!alPicked.includes(id)) alPicked.push(id);
+      });
+      alGridGroupQty[key] = total;
+    } else {
+      delete alGridGroupQty[key];
+    }
+    const row = (inputEl && typeof inputEl.closest === 'function')
+      ? inputEl.closest('[data-al-grid-group]') : null;
+    if (row && row.classList) row.classList.toggle('picked', total > 0);
+    const after = alGridAllGroupList().find(g => g.key === key);
+    if (after) alGridUpdateRowWarn(row, after);
+    if (row && alGridExpand.has(key) && row.nextElementSibling &&
+        typeof row.nextElementSibling.getAttribute === 'function' &&
+        row.nextElementSibling.getAttribute('data-al-grid-split-row') === key) {
+      row.nextElementSibling.innerHTML = `<td colspan="6">${alGridSplitHtml(after)}</td>`;
+    }
+    alRefreshGridFoot();
+    alRefreshSummary();
+    return total;
+  }
+  // Đặt SL cho NHÓM = 1 dòng (giữ tương thích chế độ Thẻ / test cũ)
+  function alGridSetGroupQty(groupKey, value, inputEl) {
+    const key = String(groupKey || '');
+    const group = alGridAllGroupList().find(g => g.key === key);
+    if (!group) return 0;
+    let want = Math.floor(Number(String(value == null ? '' : value).replace(/[^\d]/g, '')) || 0);
+    if (want > group.remaining) {
+      want = group.remaining;
+      if (inputEl && inputEl.value !== undefined) inputEl.value = String(want);
+      showToast(`Nhóm ${group.dimsText} · ${group.cls} chỉ còn ${group.remaining.toLocaleString('vi-VN')} thanh — đã điều về tối đa!`, 'info');
+    }
+    alGridGroupLines[key] = [want];
+    alGridApplyGroupLines(key, inputEl);
+    return want;
+  }
+  function alGridLineIdxOf(el) {
+    const v = (el && typeof el.getAttribute === 'function') ? el.getAttribute('data-line-idx') : '';
+    const i = parseInt(v, 10);
+    return Number.isFinite(i) && i >= 0 ? i : null;
+  }
+  function alGridEnsureLines(group) {
+    if (!group) return [];
+    if (!Array.isArray(alGridGroupLines[group.key]) || !alGridGroupLines[group.key].length) {
+      alGridGroupLines[group.key] = [group.qty > 0 ? group.qty : 0];
+    }
+    return alGridGroupLines[group.key].slice();
+  }
+  // Thêm 1 DÒNG LÔ MỚI (mặc định SL 0) ngay sau dòng afterIdx
+  function alGridAddGroupLine(groupKey, afterIdx) {
+    const key = String(groupKey || '');
+    const group = alGridAllGroupList().find(g => g.key === key);
+    if (!group) return -1;
+    const lines = alGridEnsureLines(group);
+    const at = (afterIdx == null || !Number.isFinite(Number(afterIdx)))
+      ? lines.length - 1
+      : Math.max(-1, Math.min(Number(afterIdx), lines.length - 1));
+    lines.splice(at + 1, 0, 0);
+    alGridGroupLines[key] = lines;
+    alGridApplyGroupLines(key);
+    renderAlGrid();
+    alGridFocusLine(key, at + 1);
+    return at + 1;
+  }
+  function alGridSetLineQty(groupKey, idx, value, inputEl) {
+    const key = String(groupKey || '');
+    const group = alGridAllGroupList().find(g => g.key === key);
+    if (!group) return 0;
+    const lines = alGridEnsureLines(group);
+    const i = Number(idx);
+    if (!Number.isInteger(i) || i < 0 || i >= lines.length) return 0;
+    let want = Math.floor(Number(String(value == null ? '' : value).replace(/[^\d]/g, '')) || 0);
+    const other = lines.reduce((s, q, j) => s + (j === i ? 0 : q), 0);
+    const cap = Math.max(0, group.remaining - other);
+    if (want > cap) {
+      want = cap;
+      if (inputEl && inputEl.value !== undefined) inputEl.value = String(want);
+      showToast(`Lô ${i + 1} của nhóm ${group.dimsText} · ${group.cls} chỉ còn tối đa ${cap.toLocaleString('vi-VN')} thanh — đã điều về tối đa!`, 'info');
+    }
+    lines[i] = want;
+    alGridGroupLines[key] = lines;
+    alGridApplyGroupLines(key, inputEl);
+    return want;
+  }
+  function alGridFillLine(groupKey, idx) {
+    const key = String(groupKey || '');
+    const group = alGridAllGroupList().find(g => g.key === key);
+    if (!group) return 0;
+    const lines = alGridEnsureLines(group);
+    const i = Number(idx);
+    if (!Number.isInteger(i) || i < 0 || i >= lines.length) return 0;
+    const other = lines.reduce((s, q, j) => s + (j === i ? 0 : q), 0);
+    const cap = Math.max(0, group.remaining - other);
+    lines[i] = cap;
+    alGridGroupLines[key] = lines;
+    alGridApplyGroupLines(key);
+    renderAlGrid();
+    alGridFocusLine(key, i);
+    return cap;
+  }
+  function alGridRemoveGroupLine(groupKey, idx) {
+    const key = String(groupKey || '');
+    const group = alGridAllGroupList().find(g => g.key === key);
+    if (!group) return false;
+    const lines = alGridEnsureLines(group);
+    const i = Number(idx);
+    if (!Number.isInteger(i) || i < 0 || i >= lines.length) return false;
+    if (lines.length <= 1) lines[0] = 0;
+    else lines.splice(i, 1);
+    alGridGroupLines[key] = lines;
+    alGridApplyGroupLines(key);
+    renderAlGrid();
+    return true;
+  }
+  function alGridFocusLine(groupKey, idx) {
+    if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return;
+    const key = String(groupKey);
+    const inputs = document.querySelectorAll('#al-grid-body input[data-al-grid-line-qty]');
+    for (let i = 0; i < inputs.length; i++) {
+      const el = inputs[i];
+      if (!el || typeof el.getAttribute !== 'function') continue;
+      if (String(el.getAttribute('data-al-grid-line-qty')) === key &&
+          Number(el.getAttribute('data-line-idx')) === Number(idx)) {
+        if (typeof el.focus === 'function') el.focus();
+        if (typeof el.select === 'function') el.select();
+        return;
+      }
+    }
+  }
+
+  // Chuyển từ chế độ THẺ sang BẢNG: cộng số đang có theo nhóm, KHÔNG tự chia lại
+  // (giữ đúng các thẻ người dùng đã chọn tay); lần sửa nhóm kế tiếp mới chia FEFO.
+  function alGridDeriveGroupQtyFromPicks() {
+    alGridGroupQty = {};
+    alGridGroupLines = {};
+    // Thẻ chọn tay chưa có alCardQty → điền mặc định = phần còn lại
+    alPicked.forEach(id => {
+      const key = String(id);
+      const rec = (state.xuong2ChonNanThoRecords || []).find(x => String(x.id || '') === key);
+      if (!rec) return;
+      // Nếu đang lọc ngày mà thẻ chọn tay thuộc ngày khác → BỔ SUNG ngày đó vào
+      // bộ lọc để thẻ hiện trong bảng (không để thẻ bị ẩn mà vẫn được Lưu).
+      if (alGridDates.length) {
+        const d = alGridDateKeyOf(rec);
+        if (d && !alGridDates.includes(d)) alGridDates.push(d);
+      }
+      if (Object.prototype.hasOwnProperty.call(alCardQty, key)) return;
+      const cap = nanCardRemainingOf(rec);
+      if (cap > 0) alCardQty[key] = cap;
+    });
+    const groups = alGridAllGroupList();
+    groups.forEach(g => {
+      const q = g.cards.reduce((s, c) => {
+        const v = Math.max(0, Math.min(Number(alCardQty[c.id]) || 0, c.remaining));
+        return s + v;
+      }, 0);
+      if (q > 0) { alGridGroupQty[g.key] = q; alGridGroupLines[g.key] = [q]; }
+    });
+    return alGridGroupQty;
+  }
+  function alOnGridQtyInput(e) {
+    const t = e && e.target;
+    if (!t || typeof t.getAttribute !== 'function') return 0;
+    const lineKey = t.getAttribute('data-al-grid-line-qty');
+    if (lineKey) {
+      const idx = alGridLineIdxOf(t);
+      if (idx == null) return 0;
+      return alGridSetLineQty(lineKey, idx, t.value, t);
+    }
+    const key = t.getAttribute('data-al-grid-group-qty');
+    if (!key) return 0;
+    return alGridSetGroupQty(key, t.value, t);
+  }
+  function alOnGridClick(e) {
+    const t = e && e.target;
+    if (!t || typeof t.closest !== 'function') return false;
+    // Thêm 1 DÒNG LÔ MỚI ngay dưới dòng vừa bấm
+    const addLine = t.closest('[data-al-grid-add-line]');
+    if (addLine) {
+      alGridAddGroupLine(addLine.getAttribute('data-al-grid-add-line'), alGridLineIdxOf(addLine));
+      return true;
+    }
+    // Hết / Xóa theo TỪNG LÔ
+    const lineAll = t.closest('[data-al-grid-line-all]');
+    if (lineAll) {
+      alGridFillLine(lineAll.getAttribute('data-al-grid-line-all'), alGridLineIdxOf(lineAll));
+      return true;
+    }
+    const lineClear = t.closest('[data-al-grid-line-clear]');
+    if (lineClear) {
+      alGridRemoveGroupLine(lineClear.getAttribute('data-al-grid-line-clear'), alGridLineIdxOf(lineClear));
+      return true;
+    }
+    const allBtn = t.closest('[data-al-grid-group-all]');
+    if (allBtn) {
+      const key = allBtn.getAttribute('data-al-grid-group-all');
+      const group = alGridAllGroupList().find(g => g.key === key);
+      if (group) alGridSetGroupQty(key, group.remaining);
+      renderAlGrid();
+      return true;
+    }
+    const clearBtn = t.closest('[data-al-grid-group-clear]');
+    if (clearBtn) {
+      alGridSetGroupQty(clearBtn.getAttribute('data-al-grid-group-clear'), 0);
+      renderAlGrid();
+      return true;
+    }
+    const exp = t.closest('[data-al-grid-expand]');
+    if (exp) {
+      const key = exp.getAttribute('data-al-grid-expand');
+      if (alGridExpand.has(key)) alGridExpand.delete(key); else alGridExpand.add(key);
+      renderAlGrid();
+      return true;
+    }
+    return false;
+  }
+  // Đổi ngày/bỏ ngày → chia lại toàn bộ DÒNG LÔ từ alGridGroupLines (FEFO) và điều số
+  // vượt tồn về tối đa; giữ nguyên số dòng của từng nhóm. Không đụng ô tìm kiếm (nhóm bị ẩn vẫn giữ số).
+  function alGridRebuildAllocations() {
+    const groups = alGridAllGroupList();
+    const byKey = new Map(groups.map(g => [g.key, g]));
+    const nextPicked = [];
+    const nextQty = {};
+    const nextLines = {};
+    let clamped = 0;
+    const keys = new Set([...Object.keys(alGridGroupLines), ...Object.keys(alGridGroupQty)]);
+    keys.forEach(key => {
+      const group = byKey.get(key);
+      if (!group) { clamped++; return; }
+      let lines = Array.isArray(alGridGroupLines[key]) && alGridGroupLines[key].length
+        ? alGridGroupLines[key].map(q => Math.max(0, Math.floor(Number(q) || 0)))
+        : [Math.max(0, Math.floor(Number(alGridGroupQty[key]) || 0))];
+      const before = lines.reduce((s, q) => s + q, 0);
+      let left = group.remaining;
+      lines = lines.map(q => {
+        const v = Math.min(q, left);
+        left -= v;
+        return v;
+      });
+      const total = lines.reduce((s, q) => s + q, 0);
+      if (total < before) clamped++;
+      if (total <= 0) return;
+      nextLines[key] = lines;
+      const { alloc } = alGridAllocCards(group, total);
+      Object.keys(alloc).forEach(id => {
+        const take = alloc[id];
+        if (!(take > 0)) return;
+        nextQty[id] = take;
+        if (!nextPicked.includes(id)) nextPicked.push(id);
+      });
+    });
+    alGridGroupLines = nextLines;
+    alGridGroupQty = {};
+    Object.keys(nextLines).forEach(key => {
+      const total = nextLines[key].reduce((s, q) => s + q, 0);
+      if (total > 0) alGridGroupQty[key] = total;
+    });
+    alPicked = nextPicked;
+    Object.keys(alCardQty).forEach(k => { delete alCardQty[k]; });
+    Object.keys(nextQty).forEach(id => { alCardQty[id] = nextQty[id]; });
+    if (clamped) showToast('Đã điều số lượng một số lô theo tồn của các ngày đang chọn.', 'info');
+    alRefreshSummary();
+    return clamped;
+  }
+  function alGridToggleHelp() {
+    const box = document.getElementById('al-grid-help');
+    if (!box) return false;
+    box.hidden = !box.hidden;
+    const btn = document.getElementById('al-grid-help-btn');
+    if (btn) btn.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
+    return !box.hidden;
+  }
+  function alGridCloseHelp() {
+    const box = document.getElementById('al-grid-help');
+    if (box) box.hidden = true;
+    const btn = document.getElementById('al-grid-help-btn');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    return false;
+  }
+  function alOnGridDateClick(e) {
+    const t = e && e.target;
+    const btn = (t && typeof t.closest === 'function') ? t.closest('[data-al-grid-date]') : null;
+    if (!btn) return false;
+    const val = String(btn.getAttribute('data-al-grid-date') || '').trim();
+    // '' = "Tất cả ngày" → bỏ chọn hết; ngược lại BẬT/TẮT đúng ngày đó
+    // (chọn được NHIỀU ngày: 14/10 còn tồn + 15/10 hôm nay).
+    if (!val) alGridClearDates(); else alGridToggleDate(val);
+    alGridRebuildAllocations();   // đổi ngày → chia lại nhóm theo ngày mới
+    renderAlGrid();
+    return true;
+  }
+  function alSetGridSearch(v) {
+    alGridSearchQ = String(v == null ? '' : v);
+    renderAlGrid();
+    return alGridSearchQ;
+  }
+  function alSetGridSort(v) {
+    alGridSortMode = (v === 'sizeAsc' || v === 'class') ? v : 'size';
+    renderAlGrid();
+    return alGridSortMode;
+  }
+  // Xóa bộ lọc riêng của bảng (đổi công đoạn / mở form mới)
+  function alResetGridFilters() {
+    alGridDates = [];
+    alGridSearchQ = '';
+    alGridSortMode = 'size';
+    alGridGroupQty = {};
+    alGridGroupLines = {};
+    alGridExpand.clear();
+    const s = document.getElementById('al-grid-search');
+    if (s) s.value = '';
+    const so = document.getElementById('al-grid-sort');
+    if (so) so.value = 'size';
+    alGridCloseHelp();
+  }
+  // Enter trong ô SL = XUỐNG Ô KẾ TIẾP (KHÔNG submit form tạo lô sớm);
+  // Enter ở ô tìm = không submit. Tab tự nhiên đã nhảy sang ô SL dòng sau
+  // (nút Hết/Xóa có tabindex="-1" nên không chặn đường Tab).
+  function alOnGridKeydown(e) {
+    const t = e && e.target;
+    if (!t || e.key !== 'Enter') return false;
+    // Nút Hết/Xóa/▸: để Enter kích hoạt nút như bình thường (không chặn)
+    if (String(t.tagName || '').toUpperCase() === 'BUTTON') return false;
+    // Enter trong ô của TỪNG LÔ → xuống ô lô kế tiếp (cùng nhóm hoặc nhóm sau)
+    const lineKey = (typeof t.getAttribute === 'function') ? t.getAttribute('data-al-grid-line-qty') : '';
+    if (lineKey) {
+      if (e.preventDefault) e.preventDefault();
+      if (typeof document.querySelectorAll !== 'function') return true;
+      const inputs = document.querySelectorAll('#al-grid-body input[data-al-grid-line-qty]');
+      let pos = -1;
+      for (let i = 0; i < inputs.length; i++) { if (inputs[i] === t) { pos = i; break; } }
+      const next = pos >= 0 ? inputs[pos + 1] : null;
+      if (next && typeof next.focus === 'function') {
+        next.focus();
+        if (typeof next.select === 'function') next.select();
+      } else if (typeof t.blur === 'function') {
+        t.blur();
+      }
+      return true;
+    }
+    const key = (typeof t.getAttribute === 'function') ? t.getAttribute('data-al-grid-group-qty') : '';
+    if (!key) {
+      // Ô tìm kiếm / ô khác trong bảng: chặn submit ngoài ý muốn
+      if (e.preventDefault) e.preventDefault();
+      return true;
+    }
+    if (e.preventDefault) e.preventDefault();
+    const rows = alGridRows();
+    const idx = rows.findIndex(r => r.key === String(key));
+    const next = idx >= 0 ? rows[idx + 1] : null;
+    if (next && typeof document.querySelector === 'function') {
+      const el = document.querySelector(`[data-al-grid-group-qty="${next.key}"]`);
+      if (el && typeof el.focus === 'function') {
+        el.focus();
+        if (typeof el.select === 'function') el.select();
+      }
+    } else if (typeof t.blur === 'function') {
+      t.blur();
+    }
+    return true;
+  }
+  function alGridQueryOf() {
+    return { dates: alGridDates.slice(), date: alGridDates[0] || '', q: alGridSearchQ, sort: alGridSortMode };
+  }
 
   // ═══ THAN HÓA LẠI (15/10/2026) — nguồn = lô TÓP đang ở Kho ═══
   // Ô tích #al-rework: danh sách nguồn chuyển sang lô TÓP (cờ topRework của form
@@ -721,6 +1587,7 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
       const panel = document.getElementById('al-source-panel');
       if (panel) panel.hidden = false;
       alPositionSourcePanel();
+      syncAlEntryModeUi();   // bảng nhập nhanh: vẽ lại theo dữ liệu mới nhất
     }
     if (name === 'loc') {
       // Mở tấm Vị trí → LUÔN hiện panel chips (alToggleSourcePanel có thể đã ẩn nó)
@@ -775,7 +1642,7 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
       }, 0);
     }
     const srcTxt = n
-      ? `${n} nguồn · ${qty.toLocaleString('vi-VN')} thanh`
+      ? `${n} ${alEntryModeOf() === 'grid' ? 'thẻ' : 'nguồn'} · ${qty.toLocaleString('vi-VN')} thanh`
       : (alReworkOn() ? 'Chế độ Than Hóa Lại — chưa chọn lô Tóp' : 'Chưa chọn nguồn');
     const locTxt = alLocation || 'Chưa chọn vị trí';
     if (srcEl) srcEl.textContent = srcTxt;
@@ -866,6 +1733,7 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
     alPicked = alPicked.includes(key) ? alPicked.filter(x => x !== key) : [...alPicked, key];
     if (!alPicked.includes(key)) delete alCardQty[key];   // bỏ chọn → quên số lượng đã nhập của thẻ
     renderAlSourceList();
+    if (alEntryModeOf() === 'grid') renderAlGrid();
     syncAddLotSource();
     alRefreshSummary();
     return alPicked.slice();
@@ -881,14 +1749,19 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
       return alPicked.slice();
     }
     alPicked = alCandidatesOf(alStageOf()).map(it => String(it.id));
+    if (alEntryModeOf() === 'grid') alGridDeriveGroupQtyFromPicks();
     renderAlSourceList();
+    if (alEntryModeOf() === 'grid') renderAlGrid();
     syncAddLotSource();
     return alPicked.slice();
   }
   function alClearPicks() {
     alPicked = [];
+    alGridGroupQty = {};
+    alGridGroupLines = {};
     Object.keys(alCardQty).forEach(k => { delete alCardQty[k]; });   // quên số lượng đã nhập
     renderAlSourceList();
+    if (alEntryModeOf() === 'grid') renderAlGrid();
     syncAddLotSource();
     return [];
   }
@@ -1138,6 +2011,7 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
   function syncAddLotUI() {
     alPicked = [];
     alClearSourceQuery();
+    alResetGridFilters();          // bộ lọc riêng của BẢNG NHẬP NHANH (ngày/tìm)
     alClosePanels();
     // Reset trạng thái THAN HÓA LẠI (ô nhập số lượng theo lại chọn mới)
     Object.keys(alTopQty).forEach(k => { delete alTopQty[k]; });
@@ -1152,6 +2026,7 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
     syncAlShiftField();           // Ô CA (Giai đoạn 2): hiện khi Xưởng 2 để "Làm ca" + gợi ý ca
     syncAddLotSource();
     alRefreshSummary();           // 2 dòng tóm tắt + chân form dính
+    syncAlEntryModeUi();          // CÁCH NHẬP (thẻ ⇄ bảng): bảng chỉ bật cho Sấy 1
   }
 
   // ── Ô CHỌN LẦN THAN HÓA (15/10/2026) — gộp lô vào LẦN ĐÃ CÓ ──
@@ -1409,7 +2284,85 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
       return;
     }
 
-    // ── Sấy 1: TẠO LÔ MỚI cho TỪNG THẺ NAN đã chọn (số lượng = phần CÒN LẠI) ──
+    // ── Sấy 1: TẠO LÔ MỚI ─────────────────────────────────────────────
+    // • CHẾ ĐỘ BẢNG: MỖI DÒNG (Cỡ + Phân loại) = 1 LÔ, quantity = ĐÚNG SL của dòng.
+    //   Các thẻ nguồn chỉ được TRỪ TỒN qua batch.sources[] (FEFO), cắt liên tiếp
+    //   cho từng lô — KHÔNG tách/gộp lô theo từng thẻ.
+    // • CHẾ ĐỘ THẺ: giữ nguyên 1 thẻ nan = 1 lô.
+    if (alEntryModeOf() === 'grid') {
+      const groups = alGridAllGroupList().filter(g => g && g.qty > 0 && Array.isArray(g.split) && g.split.length);
+      if (!groups.length) { showToast('Chưa nhập số lượng cho nhóm nào!', 'error'); return; }
+      if (!state.batches) state.batches = [];
+      const created = [];
+      let skipped = 0, totalQty = 0;
+      const plannedLots = groups.reduce((n, g) => {
+        const ls = (Array.isArray(g.lines) && g.lines.length)
+          ? g.lines.filter(l => l && l.qty > 0)
+          : (g.qty > 0 ? [{ qty: g.qty, sources: g.split }] : []);
+        return n + ls.length;
+      }, 0);
+      pushUndo(plannedLots > 1
+        ? `Tạo ${plannedLots} lô Sấy 1 (${groups.length} nhóm)`
+        : `Tạo lô Sấy 1 ${groups[0].dimsText} · ${groups[0].cls}`);
+      groups.forEach((g, gi) => {
+        const dims = Array.isArray(g.dims) ? g.dims : [];
+        const length = Number(dims[0]) || 0, width = Number(dims[1]) || 0, thickness = Number(dims[2]) || 0;
+        if (!(length > 0 && width > 0 && thickness > 0)) { skipped++; return; }
+        // MỖI DÒNG = 1 LÔ MỚI; nguồn của dòng đã được cắt FEFO liên tiếp.
+        const lines = (Array.isArray(g.lines) && g.lines.length)
+          ? g.lines
+          : (g.qty > 0 ? [{ qty: g.qty, sources: g.split }] : []);
+        if (!lines.some(l => l && l.qty > 0)) { skipped++; return; }
+        lines.forEach((line, li) => {
+          if (!line || !(line.qty > 0)) return;
+          const sources = (line.sources || []).map(c => ({
+            chonNanId: String(c.id),
+            qty: Math.max(0, Math.min(Math.floor(Number(c.alloc) || 0), Number(c.total) || 0)),
+            date: c.date || '',
+            cls: g.clsRaw,
+            dims: [length, width, thickness],
+            label: c.srcText || ''
+          })).filter(src => src.qty > 0);
+          const srcSum = sources.reduce((s, x) => s + x.qty, 0);
+          if (!(srcSum > 0)) return;
+          const batchData = {
+            id: `batch-${Date.now()}-${gi}-${li}`,
+            code: generateBatchCodeYYMMDD(dateVal),
+            stage: 'say1',
+            date: dateVal,                               // ngày vào Sấy 1 (badge đếm ngày)
+            week: getISOWeekString(dateVal),
+            length, width, thickness, quantity: srcSum,
+            volume: calculateVolume(length, width, thickness, srcSum),
+            bambooType: g.cls,                           // A / A1 / B của NHÓM
+            useFor: alUseFor(),                          // Dùng cho (Ván / Bullig) chọn ở form
+            sayCharges: { say1: chargeAt },              // MÃ MẺ: lượt Lưu này = 1 lần than hóa
+            sayShift: sayShiftMapOf(null, 'say1', shiftIdx), // CA của lần (Giai đoạn 2)
+            location,
+            notes,
+            sourceChonNanId: '',                         // lô gộp nhiều nguồn → dùng sources[]
+            sourceChonNanLabel: `Nhóm ${g.dimsText} · ${g.cls} · Lô ${li + 1}/${lines.length} · ${sources.length} thẻ`,
+            sources,                                     // [{ chonNanId, qty, date, cls, dims, label }]
+            stageHistory: [{ stage: 'say1', date: dateVal }],
+            updatedAt: nowISO
+          };
+          state.batches.unshift(batchData);
+          created.push(batchData);
+          totalQty += srcSum;
+        });
+      });
+      if (!created.length) {
+        showToast('Không tạo được lô nào — kiểm tra số lượng và tồn nguồn!', 'error');
+        return;
+      }
+      alPicked = [];
+      alGridGroupQty = {};
+      alGridGroupLines = {};
+      saveData(); closeAddLotModal(); renderAll();
+      showToast(`Đã tạo ${created.length} lô ở Sấy 1 — vị trí ${location} (${totalQty.toLocaleString('vi-VN')} thanh)` +
+        (skipped ? ` · bỏ qua ${skipped} nhóm không hợp lệ` : '') + '!', 'success');
+      return;
+    }
+    // ── CHẾ ĐỘ THẺ: 1 thẻ nan = 1 lô (giữ nguyên) ──────────────────────
     const recs = alPicked.map(id => (state.xuong2ChonNanThoRecords || []).find(x => x.id === id)).filter(Boolean);
     if (!recs.length) { showToast('Không tìm thấy thẻ nan nguồn!', 'error'); return; }
     if (!state.batches) state.batches = [];
@@ -1943,6 +2896,38 @@ export {
   alToggleSourcePanel,
   alCardQtyOf,
   alOnCardQtyInput,
+  alEntryModeOf,
+  setAlEntryMode,
+  syncAlEntryModeUi,
+  alOnEntryModeClick,
+  alGridDateBuckets,
+  alGridAllGroupList,
+  alGridRows,
+  alGridSplitHtml,
+  renderAlGrid,
+  alRefreshGridFoot,
+  alGridSetGroupQty,
+  alGridAddGroupLine,
+  alGridSetLineQty,
+  alGridFillLine,
+  alGridRemoveGroupLine,
+  alGridApplyGroupLines,
+  alGridSliceSources,
+  alGridDeriveGroupQtyFromPicks,
+  alGridRebuildAllocations,
+  alGridToggleHelp,
+  alGridCloseHelp,
+  alGridStaleOf,
+  alGridDaysOld,
+  alOnGridQtyInput,
+  alOnGridClick,
+  alOnGridDateClick,
+  alOnGridKeydown,
+  alSetGridSearch,
+  alSetGridSort,
+  alResetGridFilters,
+  alGridQueryOf,
+  alGridDateText,
   availableKhoLots,
   availableSay1Cards,
   batchesAtPosition,

@@ -105,6 +105,10 @@ state.batches = [
 ];
 
 const bm = await import('../js/batch-modals.js');
+// Bộ kiểm thử này kiểm tra LUỒNG THẺ NGUỒN (cách cũ). Chế độ BẢNG NHẬP NHANH
+// có file riêng tests/than-hoa-grid.test.mjs → ép chế độ Thẻ để giữ nguyên
+// toàn bộ hành vi đã chốt trước đây.
+bm.setAlEntryMode('cards');
 const x2 = await import('../js/xuong2.js');      // thẻ launcher Xưởng 2 (pop-up)
 const mainMod = await import('../js/main.js');    // switchView (đóng modal thuộc tab vừa rời)
 
@@ -579,7 +583,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v263/.test(swJs));
+  /nha-may-ngoc-son-v270/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&

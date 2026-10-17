@@ -37,3 +37,18 @@ description: Đồng bộ offline-first Firebase, tombstone, chữ ký miền, d
 - Mây 1 bản/ngày giữ 14 ngày.
 - Copy `bamboo_data.json` cũ sang `backups/`.
 - Phục hồi luôn gộp khéo qua `mergeRemoteIntoLocal`.
+
+## 6. Đồng bộ 2 chiều AN TOÀN (quy tắc 65 — 17/10/2026)
+- **Nhận mây = `mergeById`** (`recCompare`: updatedAt → rev → băm nội dung) — KHÔNG dùng
+  `mergeAddMissing` cho đường nhận (bản SỬA của máy khác phải lan sang).
+- **Sổ đồng bộ cục bộ** `bamboo_tracker_sync_state_v1` (`SYNC_STATE_KEY`): `base` = băm
+  từng bản ghi lúc đồng bộ xong → `dirtyDomains()` biết bản ghi nào CHƯA lên mây (kể cả
+  bản ghi thiếu `updatedAt`); dict dirty theo TỪNG khóa tháng.
+- **Bản ghi dirty không bị mây ghi đè** (`stripDirtyFromRemote`) + ghi sổ xung đột
+  (`syncConflicts()`, modal `#modal-sync-conflicts`, nút menu ⋮ chỉ Admin).
+- **Đẩy = `runTransaction`** (`pushDirtyViaTransaction` → `mergeDirtyIntoRemote`): chỉ gộp
+  bản ghi dirty vào bản mây HIỆN TẠI, mục lục tăng `rev`. Fallback `writeDeltaSnapshot`
+  khi môi trường không có transaction / miền quá lớn.
+- **Nhịp**: `syncNow()` khi quay lại tab / focus / online / mỗi 2 phút + nút "Đồng Bộ Ngay".
+  Snapshot đến trong lúc đang ghi → `fbPendingPull` → pull lại sau. Miền đọc lỗi → retry 2s/5s/15s.
+- **Test**: `tests/sync-conflict.test.mjs`. Cache `sw.js` hiện **v270**.

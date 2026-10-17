@@ -40,6 +40,24 @@ import { showToast } from './utils.js';
   let fbSyncWarnAt = 0;            // thời điểm lần cuối cảnh báo không đồng bộ được (chống spam)
   let fbListenWarnAt = 0;          // thời điểm lần cuối cảnh báo lỗi lắng nghe mây (chống spam)
 
+  // ─── TRẠNG THÁI ĐỒNG BỘ CỤC BỘ THEO MÁY (17/10/2026) ───────────────
+  // Lưu: mốc đã đồng bộ (rev), ảnh chụp "đã đồng bộ" từng bản ghi (base) để biết
+  // bản ghi nào CHƯA lên mây (dirty), và sổ XUNG ĐỘT để Admin xem.
+  // THUẦN CỤC BỘ: KHÔNG đẩy mây, KHÔNG vào auto backup, KHÔNG vào history
+  // (giống tiền lệ bamboo_tracker_pv_chart_mode_v1 / bamboo_tracker_capacity_ui_v1).
+  const SYNC_STATE_KEY = 'bamboo_tracker_sync_state_v1';
+  const SYNC_DEVICE_KEY = 'bamboo_tracker_device_id_v1';
+  const SYNC_CONFLICT_LIMIT = 100;     // giữ tối đa 100 dòng xung đột gần nhất
+  const SYNC_PERIODIC_MS = 120000;     // tự kiểm tra mây mỗi 2 phút (chỉ đọc mục lục)
+  const SYNC_MIN_GAP_MS = 15000;       // không gọi syncNow dày hơn 15 giây/lần
+  let fbSyncState = null;   // { lastRev, lastSyncedAt, base: {miền: {id: băm}}, conflicts: [] }
+  let fbPendingPull = false; // có snapshot mây đến trong lúc đang ghi → phải pull lại sau
+  let fbSyncTimer = null;    // interval kiểm tra mây định kỳ
+  let fbSyncWired = false;   // đã gắn listener focus/visibility/online chưa
+  let fbLastSyncTryAt = 0;   // lần cuối gọi syncNow (chống gọi dồn)
+  let fbLastSyncOkAt = 0;    // lần cuối đồng bộ THÀNH CÔNG (hiện trên badge)
+  let fbSyncing = false;     // đang chạy syncNow
+
   // ─── Chẩn đoán lỗi quyền (permission-denied) ───────────────────
   function isPermDeniedErr(e) {
     const code = String((e && e.code) || '');
@@ -220,8 +238,8 @@ import { showToast } from './utils.js';
   let fbLocalHashes = null;          // băm miền cục bộ (cache) — null = cần tính lại
   let fbPushedDomainHashes = null;   // băm của lần ĐẨY gần nhất (nhận diện echo của chính mình)
   let fbRemoteDomainHashes = null;   // băm miền theo MỤC LỤC mây gần nhất (để biết miền nào cần ghi)
-  function localHashesNow() {
-    if (fbLocalHashes) return fbLocalHashes;
+  function localHashesNow(force) {
+    if (fbLocalHashes && !force) return fbLocalHashes;
     try { fbLocalHashes = domainHashes(collectCloudPayload()); }
     catch (e) { return {}; }
     return fbLocalHashes;
@@ -308,6 +326,7 @@ import { showToast } from './utils.js';
       }
       if (meta.updatedBy) out.updatedBy = meta.updatedBy;
       if (meta.updatedAt) out.updatedAt = meta.updatedAt;
+      if (typeof meta.rev === 'number') out.rev = meta.rev;
       return out;
     }
     const full = await assembleRemoteObject(meta);
@@ -422,7 +441,17 @@ import { showToast } from './utils.js';
       return true;
     });
     if (stillOversize) return done(await writeLegacySnapshot(snap, dh));
-    // Ưu tiên ĐỊNH DẠNG DELTA (giai đoạn 2): chỉ ghi doc của miền ĐỔI
+    // ƯU TIÊN 1 (17/10/2026): GHI BẰNG TRANSACTION — chỉ gộp bản ghi ĐÃ ĐỔI vào
+    // bản mây HIỆN TẠI, tăng `rev`. Đây là lớp chống "dữ liệu cũ đè dữ liệu đúng":
+    // máy đang cũ mà lưu một thay đổi KHÔNG còn ghi đè cả miền bằng ảnh chụp cũ.
+    try {
+      const txRes = await pushDirtyViaTransaction(snap, dh);
+      if (txRes) return done(txRes);
+    } catch (e) {
+      if (e && e.domainTooBig) return done(await writeLegacySnapshot(snap, dh));
+      console.warn('[FB] Ghi transaction lỗi → dùng đường ghi cũ (vẫn chỉ ghi miền đổi)', e);
+    }
+    // ƯU TIÊN 2: ĐỊNH DẠNG DELTA (giai đoạn 2) — chỉ ghi doc của miền ĐỔI
     try {
       return done(await writeDeltaSnapshot(snap, dh));
     } catch (e) {
@@ -442,18 +471,154 @@ import { showToast } from './utils.js';
     const size = results.reduce((a, r) => a + ((r && r.size) || 0), 0);
     // Mục lục: ghi khi mây chưa có mục lục delta, hoặc có bất kỳ miền đổi
     if (!cloudIsDelta || !remoteH || !sameHashes(remoteH, dh)) {
+      // `rev` tăng đơn điệu = mốc để máy khác biết "mình có cũ không"
+      let prevRev = 0;
+      try {
+        const cur = await cloudDocRef().get();
+        if (cur && cur.exists) prevRev = Number((cur.data() || {}).rev) || 0;
+      } catch (e) { prevRev = 0; }
       await cloudDocRef().set({
         __fmt: 'delta-v1', __dh: dh,
         deletedIds: snap.deletedIds || {},
+        rev: prevRev + 1,
         updatedBy: snap.updatedBy, updatedAt: snap.updatedAt
       });
+      fbRemoteDocExists = true;
+      fbRemoteHasData = true;
     }
     fbPushedDomainHashes = dh; fbLocalHashes = dh; fbRemoteDomainHashes = dh; fbRemoteIsDelta = true;
     cleanupStaleShards(0); // dọn mảnh shard cũ của định dạng 1-doc (nếu còn)
     return { mode: 'delta-v1', changed: changed.length, size };
   }
 
-  // Định dạng 1-DOC CŨ (JSON trơn / gzip / shard) — giữ làm FALLBACK khi 1 miền quá lớn.
+  // ─── GỘP BẢN GHI DIRTY VÀO BẢN MÂY HIỆN TẠI (không đè cả miền) ───────
+  // Chỉ những bản ghi máy này ĐÃ ĐỔI mới được ghi vào mảng mây; bản ghi khác
+  // trên mây GIỮ NGUYÊN → máy đang cũ cũng KHÔNG thể xóa mất dữ liệu máy khác.
+  // Xung đột thật (mây cũng đổi kể từ base của máy) → ghi vào sổ xung đột.
+  function mergeDirtyIntoRemote(domain, remoteArr, localArr, d) {
+    const local = Array.isArray(localArr) ? localArr : [];
+    const ids = new Set(((d && d.ids) || []));
+    const base = (loadSyncState().base || {})[domain] || {};
+    const localById = new Map();
+    local.forEach((r) => { if (r && r.id && ids.has(r.id)) localById.set(r.id, r); });
+    const out = [];
+    const used = new Set();
+    (Array.isArray(remoteArr) ? remoteArr : []).forEach((r) => {
+      if (!r || !r.id) { out.push(r); return; }
+      const loc = localById.get(r.id);
+      if (!loc) { out.push(r); return; }           // bản mây không đụng tới
+      used.add(r.id);
+      const baseHash = base[r.id];
+      const remoteChanged = baseHash !== undefined && recHashOf(r) !== baseHash;
+      if (remoteChanged) recordSyncConflict(domain, r.id, loc, r);
+      // Mây mới hơn (hoặc bằng) → nhường mây; máy mới hơn → giữ máy
+      out.push(recCompare(loc, r) > 0 ? loc : r);
+    });
+    localById.forEach((loc, id) => { if (!used.has(id)) out.push(loc); });
+    const changedTomb = { flag: false };
+    const cleaned = applyTombstonesToRecordList(domain, out, changedTomb);
+    if (changedTomb.flag) saveDeletedIds();
+    return cleaned;
+  }
+  // Ghi 1 doc miền TRONG transaction (nén gzip nếu lớn — giống writeDomainDoc)
+  async function writeDomainDocTx(tx, k, h, val) {
+    const value = (val === undefined) ? null : val;
+    const raw = JSON.stringify(value);
+    const size = utf8Bytes(raw);
+    if (size <= CLOUD_DOMAIN_PLAIN_LIMIT) {
+      tx.set(domainDocRef(k), { h, data: value });
+      return { size };
+    }
+    if (!isGzipSupported()) { fbOversizeDomains[k] = true; throw DomainTooBigError(k); }
+    const b64 = await gzipStringToBase64(raw);
+    if (b64.length > CLOUD_DOMAIN_GZIP_LIMIT) { fbOversizeDomains[k] = true; throw DomainTooBigError(k); }
+    tx.set(domainDocRef(k), { h, enc: 'gzip', payload: b64 });
+    return { size: b64.length };
+  }
+  // ĐẨY BẰNG TRANSACTION: đọc mục lục + doc miền → gộp bản ghi dirty → ghi lại
+  // + tăng `rev`. Trả null nếu môi trường không có runTransaction (test cũ).
+  async function pushDirtyViaTransaction(snap, dh) {
+    if (!fbDb || typeof fbDb.runTransaction !== 'function') return null;
+    const dirty = dirtyDomains();
+    // Chỉ tin base khi mây ĐÃ có doc: nếu mây trống thì phải đẩy ĐỦ (lần đầu).
+    const hasBase = hasSyncBase() && fbRemoteDocExists;
+    const remoteH = fbRemoteDomainHashes;
+    const cloudIsDelta = fbRemoteIsDelta === true;
+    const keys = Object.keys(dh).filter(k => k !== 'deletedIds');
+    // TƯỜNG LỬA ĐỊNH MỨC: người không có quyền sửa định mức KHÔNG được ghi các
+    // miền định mức kể cả qua transaction (giữ nguyên cơ chế shieldRateDomainsForPush).
+    const canRate = canEditRate();
+    const rateFilter = (k) => canRate || !RATE_DOMAINS.has(k);
+    // Chưa có base (lần đầu sau cập nhật) → luật cũ: ghi miền có băm khác mây.
+    const changed = (hasBase
+      ? keys.filter(k => !!dirty[k])
+      : keys.filter(k => !cloudIsDelta || !remoteH || remoteH[k] !== dh[k])).filter(rateFilter);
+    const deletedChanged = !remoteH || remoteH.deletedIds !== dh.deletedIds;
+    if (!changed.length && !deletedChanged && cloudIsDelta) {
+      return { mode: 'delta-v1', changed: 0, size: 0, rev: Number(loadSyncState().lastRev) || 0 };
+    }
+    const res = await fbDb.runTransaction(async (tx) => {
+      const idxRef = cloudDocRef();
+      const idxSnap = await tx.get(idxRef);
+      const idx = (idxSnap && idxSnap.exists) ? (idxSnap.data() || {}) : {};
+      // ĐỌC HẾT trước khi GHI (yêu cầu của Firestore transaction)
+      const domSnaps = await Promise.all(changed.map(k => tx.get(domainDocRef(k))));
+      const remoteVals = [];
+      for (const ds of domSnaps) {
+        if (!ds || !ds.exists) { remoteVals.push(undefined); continue; }
+        const dd = ds.data() || {};
+        if (dd.enc === 'gzip') {
+          try { remoteVals.push(JSON.parse(await gunzipBase64ToString(dd.payload || ''))); }
+          catch (e) { remoteVals.push(undefined); }
+        } else remoteVals.push(('data' in dd) ? dd.data : undefined);
+      }
+      const newH = Object.assign({}, idx.__dh || {}, { deletedIds: dh.deletedIds });
+      const writes = [];
+      for (let i = 0; i < changed.length; i++) {
+        const k = changed[i];
+        const d = dirty[k];
+        const remoteVal = remoteVals[i];
+        let merged;
+        if (Array.isArray(snap[k])) {
+          merged = hasBase
+            ? mergeDirtyIntoRemote(k, remoteVal, snap[k], d)
+            // Chưa có base (đẩy đầu/mây trống): HỢP 2 phía (không xóa bản ghi mây)
+            : mergeById(Array.isArray(remoteVal) ? remoteVal : [], snap[k]);
+          merged = applyTombstonesToRecordList(k, merged, { flag: false });
+        } else if (snap[k] && typeof snap[k] === 'object') {
+          const kk2 = (d && d.kind === 'dict') ? d.keys : Object.keys(snap[k]);
+          const pickLocal = {};
+          kk2.forEach((kk) => { pickLocal[kk] = snap[k][kk]; });
+          merged = Object.assign({}, (remoteVal && typeof remoteVal === 'object') ? remoteVal : {}, pickLocal);
+        } else merged = snap[k];
+        const h = hashStr(JSON.stringify(merged === undefined ? null : merged));
+        newH[k] = h;
+        writes.push({ k, merged, h });
+      }
+      let size = 0;
+      for (const w of writes) {
+        const r = await writeDomainDocTx(tx, w.k, w.h, w.merged);
+        size += (r && r.size) || 0;
+      }
+      const rev = (Number(idx.rev) || 0) + 1;
+      tx.set(idxRef, {
+        __fmt: 'delta-v1', __dh: newH,
+        deletedIds: dh.deletedIds || {},
+        rev,
+        updatedBy: snap.updatedBy, updatedAt: snap.updatedAt
+      });
+      return { mode: 'delta-v1', changed: changed.length, size, rev, newH };
+    });
+    if (res && res.newH) {
+      fbRemoteDomainHashes = res.newH;
+      fbPushedDomainHashes = res.newH;
+      fbLocalHashes = null;
+      fbRemoteIsDelta = true;
+      fbRemoteDocExists = true;
+      fbRemoteHasData = true;
+    }
+    return res;
+  }
   async function writeLegacySnapshot(snap, dh) {
     const docRef = cloudDocRef();
     const raw = JSON.stringify(snap);
@@ -547,9 +712,12 @@ import { showToast } from './utils.js';
     try { fbDb = window.firebase.firestore(); } catch (e) { console.warn('[FB] Lỗi Firestore', e); return; }
     fbEnabled = true;
     console.log('[FB] Đồng bộ online đã khởi động');
+    loadSyncState(); // sổ đồng bộ cục bộ (base/dirty/xung đột) — thuần máy
     try { if (fbSeedCore === null) fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
     // XEM CÔNG KHAI: lắng nghe dữ liệu ngay cả khi CHƯA đăng nhập
     setupFirestoreSync();
+    // Tự kiểm tra mây khi quay lại tab / có mạng / định kỳ 2 phút (17/10/2026)
+    scheduleSyncWatch();
     wireSyncBadgeListeners();
     updateSyncBadge();
     applyRoleToUI(state.currentUser ? state.currentUser.role : null);
@@ -897,8 +1065,199 @@ import { showToast } from './utils.js';
   function recStamp(r) {
     return String((r && (r.updatedAt || r.createdAt)) || '');
   }
+  // Băm NỘI DUNG 1 bản ghi — biết "đã đổi hay chưa" KỂ CẢ khi bản ghi thiếu
+  // updatedAt (nhiều module cũ chỉ ghi createdAt → sửa xong mốc thời gian vẫn y
+  // nguyên, nếu chỉ so mốc sẽ KHÔNG BAO GIỜ phát hiện được bản sửa).
+  function recHashOf(r) {
+    try { return hashStr(JSON.stringify(r)); } catch (e) { return '!'; }
+  }
+  // So sánh 2 bản ghi: >0 = a MỚI HƠN b.
+  // Thứ tự: updatedAt/createdAt → rev (nếu có) → băm nội dung. Băm nội dung cho
+  // kết quả GIỐNG NHAU trên mọi máy nên 2 máy luôn hội tụ về CÙNG một bản ghi
+  // (trước đây hòa mốc thì "máy nào giữ máy nấy" → dữ liệu 2 máy mãi khác nhau).
+  function recCompare(a, b) {
+    const sa = recStamp(a), sb = recStamp(b);
+    if (sa !== sb) return sa > sb ? 1 : -1;
+    const ra = Number((a && a.rev) || 0), rb = Number((b && b.rev) || 0);
+    if (ra !== rb) return ra > rb ? 1 : -1;
+    const ha = recHashOf(a), hb = recHashOf(b);
+    if (ha === hb) return 0;
+    return ha > hb ? 1 : -1;
+  }
+  // ─── SỔ ĐỒNG BỘ CỤC BỘ: base (đã đồng bộ) · dirty (chưa đẩy) · xung đột ──
+  // base[miền][id] = băm bản ghi tại lần đồng bộ gần nhất. Bản ghi hiện tại có
+  // băm KHÁC base ⇒ máy này có thay đổi CHƯA lên mây (dirty) ⇒ lúc nhận mây phải
+  // GIỮ bản máy + ghi xung đột, lúc đẩy chỉ gửi đúng bản ghi đó.
+  function loadSyncState() {
+    if (fbSyncState) return fbSyncState;
+    let o = null;
+    try { o = JSON.parse(localStorage.getItem(SYNC_STATE_KEY) || 'null'); } catch (e) { o = null; }
+    if (!o || typeof o !== 'object') o = {};
+    if (!o.base || typeof o.base !== 'object') o.base = {};
+    if (!Array.isArray(o.conflicts)) o.conflicts = [];
+    if (typeof o.lastRev !== 'number') o.lastRev = -1;
+    if (typeof o.lastSyncedAt !== 'string') o.lastSyncedAt = '';
+    fbSyncState = o;
+    return fbSyncState;
+  }
+  function saveSyncState() {
+    if (!fbSyncState) return;
+    try { localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(fbSyncState)); } catch (e) { /* bộ nhớ đầy — bỏ qua */ }
+  }
+  // Mã máy (chỉ để chẩn đoán — KHÔNG bắt buộc trên bản ghi)
+  function deviceId() {
+    let d = '';
+    try { d = localStorage.getItem(SYNC_DEVICE_KEY) || ''; } catch (e) { d = ''; }
+    if (!d) {
+      d = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+      try { localStorage.setItem(SYNC_DEVICE_KEY, d); } catch (e) { /* bỏ qua */ }
+    }
+    return d;
+  }
+  // Chưa có ảnh chụp base (lần đầu sau khi cập nhật) → dùng luật cũ (so băm từng
+  // miền với mục lục mây) để không đẩy thừa toàn bộ dữ liệu.
+  function hasSyncBase() {
+    const st = loadSyncState();
+    return !!(st.base && Object.keys(st.base).length);
+  }
+  function jsonPreview(v) {
+    let s = '';
+    try { s = JSON.stringify(v); } catch (e) { s = ''; }
+    return s.length > 4000 ? s.slice(0, 4000) + '…' : s;
+  }
+  // Ghi 1 dòng XUNG ĐỘT (cùng bản ghi/1 miền thì GHI ĐÈ dòng cũ chưa xử lý)
+  function recordSyncConflict(domain, recId, localRec, remoteRec) {
+    const st = loadSyncState();
+    const key = String(domain) + '|' + String(recId);
+    const list = Array.isArray(st.conflicts) ? st.conflicts.slice() : [];
+    const idx = list.findIndex(c => c && c.key === key && !c.resolved);
+    const row = {
+      id: 'sc-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+      key, domain, recId,
+      at: new Date().toISOString(),
+      localStamp: recStamp(localRec), remoteStamp: recStamp(remoteRec),
+      localPreview: jsonPreview(localRec), remotePreview: jsonPreview(remoteRec),
+      resolved: false
+    };
+    if (idx >= 0) list[idx] = row; else list.push(row);
+    st.conflicts = list.slice(-SYNC_CONFLICT_LIMIT);
+    saveSyncState();
+  }
+  function syncConflicts() {
+    const st = loadSyncState();
+    return (st.conflicts || []).filter(c => c && !c.resolved);
+  }
+  function syncConflictCount() {
+    return syncConflicts().length;
+  }
+  function clearSyncConflict(id) {
+    const st = loadSyncState();
+    st.conflicts = (st.conflicts || []).map(c => (c && c.id === id) ? Object.assign({}, c, { resolved: true }) : c);
+    saveSyncState();
+    return st.conflicts.filter(c => c && !c.resolved).length;
+  }
+  function clearAllSyncConflicts() {
+    const st = loadSyncState();
+    st.conflicts = [];
+    saveSyncState();
+    return 0;
+  }
+  // Chụp ảnh "đã đồng bộ" từ 1 object dữ liệu (mặc định = dữ liệu máy hiện tại).
+  // keepDirtyOf = bản đồ dirty CHỤP TRƯỚC khi gộp mây: các bản ghi đó giữ nguyên
+  // mục base CŨ để vẫn được coi là "chưa đẩy" (không bị đánh dấu nhầm là đã đồng bộ).
+  function captureSyncBase(obj, keepDirtyOf) {
+    const st = loadSyncState();
+    const snap = obj || collectCloudPayload();
+    const oldBase = st.base || {};
+    const keep = keepDirtyOf || {};
+    const base = {};
+    for (const k of Object.keys(snap)) {
+      if (DELTA_META_KEYS[k]) continue;
+      const v = snap[k];
+      if (Array.isArray(v)) {
+        const m = {};
+        v.forEach((r) => { if (r && r.id) m[r.id] = recHashOf(r); });
+        const kd = keep[k];
+        if (kd && kd.kind === 'array' && Array.isArray(kd.ids)) {
+          kd.ids.forEach((id) => {
+            if (!(id in m)) return;
+            const old = (oldBase[k] || {})[id];
+            if (old === undefined) delete m[id]; else m[id] = old;
+          });
+        }
+        base[k] = m;
+      } else if (v && typeof v === 'object') {
+        const m = {};
+        Object.keys(v).forEach((kk) => { m[kk] = hashStr(JSON.stringify(v[kk])); });
+        const kd = keep[k];
+        if (kd && kd.kind === 'dict' && Array.isArray(kd.keys)) {
+          kd.keys.forEach((kk) => {
+            if (!(kk in m)) return;
+            const old = (oldBase[k] || {})[kk];
+            if (old === undefined) delete m[kk]; else m[kk] = old;
+          });
+        }
+        base[k] = m;
+      }
+    }
+    st.base = base;
+    saveSyncState();
+    return base;
+  }
+  // Miền/bản ghi máy này ĐÃ ĐỔI nhưng CHƯA lên mây
+  function dirtyDomains() {
+    const st = loadSyncState();
+    const base = st.base || {};
+    const snap = collectCloudPayload();
+    const out = {};
+    if (!Object.keys(base).length) return out;   // chưa có base → luật cũ (so băm với mây)
+    for (const k of Object.keys(snap)) {
+      if (DELTA_META_KEYS[k]) continue;
+      const v = snap[k];
+      const b = base[k] || null;
+      if (Array.isArray(v)) {
+        const ids = [];
+        v.forEach((r) => { if (r && r.id && (!b || b[r.id] !== recHashOf(r))) ids.push(r.id); });
+        if (ids.length) out[k] = { kind: 'array', ids };
+      } else if (v && typeof v === 'object') {
+        const keys = Object.keys(v).filter((kk) => !b || b[kk] !== hashStr(JSON.stringify(v[kk])));
+        if (keys.length) out[k] = { kind: 'dict', keys };
+      }
+    }
+    return out;
+  }
+  // BỎ khỏi bản mây những bản ghi máy đang DIRTY (giữ bản máy) + ghi sổ xung đột.
+  // Nhờ vậy hàm gộp cũ (mergeById/mergeAddMissing) KHÔNG thể ghi đè bản sửa chưa đẩy.
+  function stripDirtyFromRemote(remote, dirtyMap) {
+    if (!remote || typeof remote !== 'object' || !dirtyMap) return remote;
+    let touched = false;
+    const out = Object.assign({}, remote);
+    for (const k of Object.keys(dirtyMap)) {
+      if (!(k in out) || out[k] === undefined || out[k] === null) continue;
+      const d = dirtyMap[k];
+      if (!d) continue;
+      if (d.kind === 'array' && Array.isArray(out[k])) {
+        const keep = new Set(d.ids);
+        const kept = out[k].filter(r => r && r.id && keep.has(r.id));
+        if (!kept.length) continue;
+        const localArr = Array.isArray(state[k]) ? state[k] : [];
+        kept.forEach((r) => {
+          const cur = localArr.find(x => x && x.id === r.id);
+          if (cur && recHashOf(cur) !== recHashOf(r)) recordSyncConflict(k, r.id, cur, r);
+        });
+        out[k] = out[k].filter(r => !r || !r.id || !keep.has(r.id));
+        touched = true;
+      } else if (d.kind === 'dict' && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k])) {
+        const o = Object.assign({}, out[k]);
+        let hit = false;
+        d.keys.forEach((kk) => { if (kk in o) { delete o[kk]; hit = true; } });
+        if (hit) { out[k] = o; touched = true; }
+      }
+    }
+    return touched ? out : remote;
+  }
   // Gộp 2 danh sách theo id: bản ghi chỉ có ở một phía vẫn được giữ lại;
-  // trùng id -> bản có dấu thời gian MỚI HƠN thắng (bằng/thiếu -> giữ bản máy đang có).
+  // trùng id -> bản MỚI HƠN thắng (recCompare: mốc thời gian → rev → băm nội dung).
   function mergeById(localArr, incomingArr) {
     const local = Array.isArray(localArr) ? localArr : [];
     const incoming = Array.isArray(incomingArr) ? incomingArr : [];
@@ -918,12 +1277,12 @@ import { showToast } from './utils.js';
         continue;
       }
       const cur = map.get(r.id);
-      if (!cur || recStamp(r) >= recStamp(cur)) map.set(r.id, r);
+      if (!cur || recCompare(r, cur) > 0) map.set(r.id, r);
     }
     for (const r of local) {
       if (!r || !r.id) continue;
       const cur = map.get(r.id);
-      if (!cur || recStamp(r) >= recStamp(cur)) map.set(r.id, r);
+      if (!cur || recCompare(r, cur) > 0) map.set(r.id, r);
     }
     return [...incomingNoId, ...map.values()];
   }
@@ -1034,27 +1393,40 @@ import { showToast } from './utils.js';
     }
     return out;
   }
-  // Gộp bản snapshot mây vào state máy. onlyAddMissing=true: chỉ bổ sung bản ghi máy thiếu.
-  // cloudDictWins=true (dùng khi NHẬN mây): các miền ĐỊNH MỨC/giờ sự cố lấy theo
-  // mây — nhưng NẾU máy này đang có thay đổi chưa đẩy (pendingLocalChanges) thì vẫn
-  // giữ máy. Trả về true nếu có thay đổi (đã tự lưu localStorage + render lại).
-  function mergeRemoteIntoLocal(remote, onlyAddMissing, cloudDictWins) {
+  // Gộp bản snapshot mây vào state máy.
+  //   onlyAddMissing=true: chỉ bổ sung bản ghi máy thiếu (dùng khi GỘP TRƯỚC KHI ĐẨY
+  //     nếu không muốn nhận bản sửa của mây — nay mặc định dùng mergeById).
+  //   cloudDictWins=true (dùng khi NHẬN mây): miền ĐỊNH MỨC/giờ sự cố lấy theo mây.
+  //   opts.protectDirty=true (đường NHẬN TỰ ĐỘNG): bản ghi máy đang có thay đổi CHƯA
+  //     ĐẨY được GIỮ NGUYÊN + ghi sổ xung đột; mọi bản ghi khác nhận bản MỚI HƠN.
+  //   opts.mergeNewer=true: mảng dùng mergeById (bản SỬA từ máy khác lan sang) thay
+  //     vì chỉ bổ sung bản thiếu.
+  // Trả về true nếu có thay đổi (đã tự lưu localStorage + render lại).
+  function mergeRemoteIntoLocal(remote, onlyAddMissing, cloudDictWins, opts) {
     if (!remote || typeof remote !== 'object') return false;
     const before = cloudCore(collectCloudSnapshot());
-    // Cách gộp dict theo khóa tháng/năm: mây thắng CHỈ khi mình không có bản
-    // sửa nào chờ đẩy; ngược lại giữ "máy thắng" như cũ (không mất thay đổi).
-    const dictWins = !!cloudDictWins && !pendingLocalChanges();
+    const protectDirty = !!(opts && opts.protectDirty);
+    const mergeNewer = !!(opts && opts.mergeNewer);
+    // Chụp dirty TRƯỚC khi gộp (để sau khi gộp vẫn biết bản ghi nào CHƯA đẩy)
+    let dirtyMap = null;
+    if (protectDirty) {
+      try { dirtyMap = dirtyDomains(); } catch (e) { dirtyMap = null; }
+      if (dirtyMap) remote = stripDirtyFromRemote(remote, dirtyMap);
+    }
+    // Cách gộp dict theo khóa tháng/năm: mây thắng. Khi có sổ dirty theo TỪNG KHÓA
+    // thì không cần chặn toàn bộ nữa (khóa máy đang sửa đã bị bỏ khỏi bản mây).
+    const dictWins = !!cloudDictWins && (dirtyMap ? true : !pendingLocalChanges());
     const dict = (localObj, remoteObj) =>
       (dictWins ? mergeDictRemoteWins(localObj, remoteObj) : mergeKeyedDict(localObj, remoteObj));
     // Cách gộp MẢNG bản ghi có DẤU THỜI GIAN: khi nhận mây dùng mergeById
-    // (mới hơn thắng) để bản SỬA định mức lan sang máy khác — thay vì chỉ bổ
-    // sung bản thiếu (bản thiếu = bản cũ giữ nguyên số đã đặt).
-    const rateArrMerge = cloudDictWins ? mergeById : (onlyAddMissing ? mergeAddMissing : mergeById);
+    // (mới hơn thắng) để bản SỬA lan sang máy khác — thay vì chỉ bổ sung bản thiếu.
+    const arrWins = !!(cloudDictWins || mergeNewer);
+    const rateArrMerge = arrWins ? mergeById : (onlyAddMissing ? mergeAddMissing : mergeById);
     // Hợp nhất dấu vết xóa (tombstone) từ mây TRƯỚC TIÊN: lần xóa từ máy khác
     // phải chặn bản ghi cũ — không nhận về máy và gỡ luôn bản cũ còn sót.
     const changedTomb = { flag: false };
     mergeTombstones(remote.deletedIds, changedTomb);
-    const m = onlyAddMissing ? mergeAddMissing : mergeById;
+    const m = (mergeNewer || cloudDictWins) ? mergeById : (onlyAddMissing ? mergeAddMissing : mergeById);
     // Lọc tombstone cả HAI phía: danh sách mây gửi về & danh sách đang có trên máy
     const clean = (colKey, arr) => applyTombstonesToRecordList(colKey, arr, changedTomb);
     if (remote.batches) state.batches = m(clean('batches', state.batches), clean('batches', remote.batches));
@@ -1062,7 +1434,8 @@ import { showToast } from './utils.js';
     if (remote.materialRecords) {
       const prevRecs = state.materialRecords; // thumb cục bộ — lấy lại sau khi gộp
       state.materialRecords = clean('materialRecords', state.materialRecords);
-      if (onlyAddMissing) state.materialRecords = mergeAddMissing(state.materialRecords, clean('materialRecords', remote.materialRecords));
+      if (arrWins) state.materialRecords = mergeById(state.materialRecords, clean('materialRecords', remote.materialRecords));
+      else if (onlyAddMissing) state.materialRecords = mergeAddMissing(state.materialRecords, clean('materialRecords', remote.materialRecords));
       else restoreMaterialRecords(clean('materialRecords', remote.materialRecords)); // đã có logic gộp theo dấu thời gian riêng
       // Mây KHÔNG mang ảnh base64 → ghép lại thumb từ bản ghi local trước đó
       state.materialRecords = restoreLocalThumbs(prevRecs, state.materialRecords);
@@ -1226,6 +1599,11 @@ import { showToast } from './utils.js';
     // Dữ liệu vừa gộp từ mây (không phải thao tác sửa trên máy này) ->
     // đặt lại nền so sánh lịch sử để lần lưu sau không ghi log ảo
     syncHistorySnapshots();
+    // CẬP NHẬT SỔ ĐỒNG BỘ: bản ghi vừa khớp mây = "đã đồng bộ"; các bản ghi máy
+    // đang DIRTY giữ nguyên mục base CŨ để vẫn được đẩy ở lần sau (không mất).
+    if (protectDirty || mergeNewer) {
+      try { captureSyncBase(null, dirtyMap || {}); } catch (e) { /* bỏ qua */ }
+    }
     const after = cloudCore(collectCloudSnapshot());
     if (after !== before) {
       fbLocalHashes = null; // dữ liệu cục bộ đổi do gộp mây → băm miền cần tính lại
@@ -1311,13 +1689,22 @@ import { showToast } from './utils.js';
     fbDidLoadRemote = true;
     fbRemoteDocExists = snap.exists;
     const meta = snap.exists ? (snap.data() || {}) : {};
+    // Đang TỰ GHI (đẩy/tải) → KHÔNG bỏ nhịp này: đánh dấu để pull lại NGAY sau khi
+    // ghi xong. Trước đây `return` luôn → nếu máy khác vừa sửa đúng lúc này thì
+    // nhịp đó MẤT, phải tải lại trang mới thấy dữ liệu mới.
+    if (fbApplying) { fbPendingPull = true; return Promise.resolve(); }
     // ─── ĐỊNH DẠNG DELTA (giai đoạn 2): MỤC LỤC apps/main + doc từng miền ──
     // Chỉ tải doc của miền ĐỔI; __dh giống hệt băm cục bộ → THOÁT NGAY.
     if (snap.exists && meta && meta.__fmt === 'delta-v1' && meta.__dh) {
       fbRemoteIsDelta = true;
       fbRemoteDomainHashes = meta.__dh;
       fbRemoteHasData = Object.keys(meta.__dh).some(k => k !== 'deletedIds');
-      if (!firstLoad && sameHashes(meta.__dh, localHashesNow())) return Promise.resolve();
+      // Băm phải tính LẠI (force): cache có thể cũ nếu có đường ghi quên vô hiệu hóa
+      // → trước đây máy tưởng "đã giống mây" nên KHÔNG tải, mãi hiển thị dữ liệu cũ.
+      if (!firstLoad && sameHashes(meta.__dh, localHashesNow(true))) {
+        markSynced(meta);
+        return Promise.resolve();
+      }
       return pullDeltaSnapshot(meta);
     }
     // Định dạng 1-DOC cũ: ghi nhớ chữ ký miền (nếu có) để lần đẩy sau chuyển dần sang delta
@@ -1328,7 +1715,8 @@ import { showToast } from './utils.js';
     // dữ liệu Y HỆT → khỏi giải nén/so 835KB/gộp. Đây chính là cú "cắt lag"
     // cho echo bản mình vừa đẩy (nguyên nhân chính web chậm khi online).
     // Không áp dụng cho lần nạp ĐẦU (để thiết lập fbLastRemote/fbRemoteHasData).
-    if (snap.exists && !firstLoad && meta && meta.__dh && sameHashes(meta.__dh, localHashesNow())) {
+    if (snap.exists && !firstLoad && meta && meta.__dh && sameHashes(meta.__dh, localHashesNow(true))) {
+      markSynced(meta);
       return Promise.resolve();
     }
     // Dữ liệu mây có thể ở dạng gzip/shard → phải LẮP RÁP BẤT ĐỒNG BỘ trước khi
@@ -1340,18 +1728,19 @@ import { showToast } from './utils.js';
       if (seq !== fbRemoteSeq) return;      // đã có bản mây mới hơn → bỏ qua
       fbLastRemote = remote;
       fbRemoteHasData = hasCloudData(remote);
-      if (fbApplying) return;               // bỏ qua bản ta vừa ghi
+      if (fbApplying) { fbPendingPull = true; return; }   // đang ghi → pull lại sau
       if (!snap.exists) return;             // mây chưa có dữ liệu -> KHÔNG hỏi, dùng nút thủ công khi cần
-      if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) return; // giống nhau
+      if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) { markSynced(meta); return; } // giống nhau
       // Máy này chưa có dữ liệu thật -> nhận theo mây luôn, KHÔNG hỏi (tránh ghi đè mất dữ liệu)
-      if (!localHasAnyData()) { applyFireSnapshot(remote); return; }
-      // Dữ liệu mây KHÁC máy -> KHÔNG HỎI nữa (tránh bấm nhầm gây ghi đè):
-      // chỉ TỰ GỘP THÊM các bản ghi trên mây mà máy này chưa có (an toàn, không
-      // mất dữ liệu). Muốn ghi đè theo mây / đẩy máy lên mây thì dùng 2 nút
-      // "Đồng Bộ Dữ Liệu Máy Lên Mây" & "Tải Dữ Liệu Từ Mây Về Máy" trong menu ⋮.
-      // Mây chỉ có DẤU VẾT XÓA (danh sách rỗng) cũng phải gộp: để GỠ bản ghi cũ
-      // còn sót trên máy theo tombstone — không thì lần đẩy sau sẽ "hồi sinh".
-      if (fbRemoteHasData || hasDeletedIds(remote)) mergeRemoteIntoLocal(remote, true, true);
+      if (!localHasAnyData()) { applyFireSnapshot(remote); markSynced(meta); return; }
+      // Dữ liệu mây KHÁC máy -> KHÔNG HỎI (tránh bấm nhầm gây ghi đè): nhận bản
+      // MỚI HƠN cho từng bản ghi; bản ghi máy đang có sửa CHƯA ĐẨY thì giữ bản máy
+      // + ghi sổ xung đột (xem mergeRemoteIntoLocal / stripDirtyFromRemote).
+      if (fbRemoteHasData || hasDeletedIds(remote)) {
+        mergeRemoteIntoLocal(remote, false, true, { protectDirty: true, mergeNewer: true });
+      }
+      if (!hasSyncBase()) { try { captureSyncBase(null, {}); } catch (e) { /* bỏ qua */ } }
+      markSynced(meta);
     }).catch((e) => {
       console.warn('[FB] Lỗi đọc/lắp ráp dữ liệu mây', e);
       if (Date.now() - fbReadWarnAt > 30000) {
@@ -1361,42 +1750,228 @@ import { showToast } from './utils.js';
     });
   }
 
-  // ─── NHẬN MÂY ĐỊNH DẠNG DELTA ─────────────────────────────────────────
-  // Chỉ tải doc của miền ĐỔI (so mục lục __dh với băm cục bộ) rồi gộp MỘT PHẦN
-  // qua đúng hàm gộp cũ (mọi nhánh đều guard `if (remote.X)` nên khóa thiếu = bỏ qua).
-  // deletedIds nằm NGAY trong mục lục → gộp tombstone không cần tải doc nào.
-  function pullDeltaSnapshot(meta) {
-    if (fbApplying) return Promise.resolve();   // đang tự ghi → bản này là của chính mình
+  // ─── SỔ XUNG ĐỘT: giao diện cho Admin xem & chọn ────────────────────
+  const SYNC_DOMAIN_LABELS = {
+    batches: 'Lô nan (Than Hóa + Sấy)',
+    pressRecords: 'Lượt Ép Ván',
+    pressNotes: 'Ghi chú giải trình Ép Ván',
+    materialRecords: 'Nhập Nguyên Liệu',
+    materialRates: 'Định Mức Nguyên Vật Liệu',
+    planningItems: 'Kế Hoạch Sản Xuất',
+    qcExports: 'Xuất Hàng QC',
+    qcFinalRecords: 'Kiểm Sau Sản Xuất',
+    qcPressLogs: 'Nhật Ký Ép Ván (QC)',
+    qcKilnReadings: 'Độ Ẩm Lò Sấy',
+    khoNotes: 'Phiếu Kho',
+    suppliers: 'Nhà Cung Cấp',
+    hrEmployees: 'Nhân Viên',
+    hrAssignments: 'Bố Trí Nhân Sự',
+    hrAttendance: 'Chấm Công',
+    xuong2CutRecords: 'Cắt Chọn (X2)',
+    xuong2BoluongRecords: 'Bốc Luồng (X2)',
+    xuong2BoOngRecords: 'Bổ Ống (X2)',
+    xuong2BaoThoRecords: 'Bào Thô (X2)',
+    xuong2ChonNanThoRecords: 'Chọn Nan Thô (X2)',
+    xuong2BaoTinhRecords: 'Bào Tinh (X2)',
+    xuong2BulligRecords: 'Bullig (X2)',
+    xuong2CatVanRecords: 'Cắt Ván (X2)',
+    xuong2BaoVanRecords: 'Bào Ván (X2)',
+    xuong2HoTroRecords: 'Hỗ Trợ (X2)'
+  };
+  function syncDomainLabel(k) { return SYNC_DOMAIN_LABELS[k] || k; }
+  function renderSyncConflicts() {
+    const body = document.getElementById('sync-conflict-body');
+    if (!body) return;
+    const list = syncConflicts();
+    const countEl = document.getElementById('sync-conflict-count');
+    if (countEl) countEl.textContent = list.length ? ('(' + list.length + ')') : '';
+    const headEl = document.getElementById('sync-conflict-count-head');
+    if (headEl) headEl.textContent = list.length ? ('(' + list.length + ')') : '';
+    // Nút trong menu ⋮ chỉ hiện khi CÓ xung đột (với Admin — CSS data-admin-only lo phần quyền)
+    const menuBtn = document.getElementById('btn-sync-conflicts');
+    if (menuBtn) menuBtn.style.display = list.length ? '' : 'none';
+    if (!list.length) {
+      body.innerHTML = '<p class="sync-conflict-empty">Không có xung đột nào. '
+        + 'Bản sửa trên máy này và trên mây đang khớp nhau.</p>';
+      return;
+    }
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    body.innerHTML = list.slice().reverse().map((c) => {
+      const when = c.at ? new Date(c.at).toLocaleString('vi-VN') : '';
+      return '<div class="sync-conflict-row">'
+        + '<div class="sync-conflict-head"><strong>' + esc(syncDomainLabel(c.domain)) + '</strong>'
+        + ' · <code>' + esc(c.recId) + '</code>'
+        + '<span class="sync-conflict-time">' + esc(when) + '</span></div>'
+        + '<div class="sync-conflict-cols">'
+        + '<div><div class="sync-conflict-tag">Bản trên MÁY</div><pre class="sync-conflict-json">' + esc(c.localPreview) + '</pre></div>'
+        + '<div><div class="sync-conflict-tag">Bản trên MÂY</div><pre class="sync-conflict-json">' + esc(c.remotePreview) + '</pre></div>'
+        + '</div>'
+        + '<div class="sync-conflict-acts">'
+        + '<button class="btn btn-outline sync-conflict-btn" data-sync-conflict="local" data-sync-id="' + esc(c.id) + '">Giữ bản máy</button>'
+        + '<button class="btn btn-outline sync-conflict-btn" data-sync-conflict="cloud" data-sync-id="' + esc(c.id) + '">Lấy bản mây</button>'
+        + '<button class="btn btn-outline sync-conflict-btn" data-sync-conflict="ack" data-sync-id="' + esc(c.id) + '">Đã kiểm tra</button>'
+        + '</div></div>';
+    }).join('');
+  }
+  function openSyncConflicts() {
+    renderSyncConflicts();
+    document.getElementById('modal-sync-conflicts')?.classList.add('show');
+    try { initLucide(); } catch (e) {}
+  }
+  function closeSyncConflicts() {
+    document.getElementById('modal-sync-conflicts')?.classList.remove('show');
+  }
+  // Chọn cách xử lý 1 xung đột: máy thắng (đẩy lại) · mây thắng (nhận bản mây) · đã kiểm tra
+  function applySyncConflictChoice(id, choice) {
+    const st = loadSyncState();
+    const row = (st.conflicts || []).find(c => c && c.id === id && !c.resolved);
+    if (!row) return false;
+    const listKey = row.domain;
+    const arr = Array.isArray(state[listKey]) ? state[listKey] : null;
+    let applied = false;
+    if (arr) {
+      const idx = arr.findIndex(r => r && r.id === row.recId);
+      if (choice === 'cloud') {
+        try {
+          const rec = JSON.parse(row.remotePreview || 'null');
+          if (rec && typeof rec === 'object') {
+            if (idx >= 0) arr[idx] = rec; else arr.push(rec);
+            applied = true;
+          }
+        } catch (e) { applied = false; }
+      } else if (choice === 'local') {
+        if (idx >= 0) {
+          arr[idx] = Object.assign({}, arr[idx], {
+            updatedAt: new Date().toISOString(),
+            rev: (Number(arr[idx].rev) || 0) + 1
+          });
+          applied = true;
+        }
+      } else { applied = true; }   // 'ack' = chỉ ghi nhận đã xem
+    }
+    clearSyncConflict(id);
+    if (applied) {
+      persistAllLocal();
+      renderAll();
+      if (choice !== 'ack') firePushSync();
+    }
+    renderSyncConflicts();
+    return applied;
+  }
+  const SYNC_RETRY_WAITS = [2000, 5000, 15000];   // đọc lỗi miền → thử lại (tổng 3 lần)
+  function pullDeltaSnapshot(meta, attempt) {
+    if (fbApplying) { fbPendingPull = true; return Promise.resolve(); }  // đang ghi → pull lại sau
     const seq = ++fbRemoteSeq;
+    const tryNo = Number(attempt) || 0;
     return (async () => {
       const remoteH = (meta && meta.__dh) || {};
-      const localH = localHashesNow();
+      const localH = localHashesNow(true);   // LUÔN tính lại — cache cũ từng làm sót cập nhật
       const changed = Object.keys(remoteH).filter(k => k !== 'deletedIds' && localH[k] !== remoteH[k]);
       const partial = {};
       if (meta && meta.deletedIds !== undefined) partial.deletedIds = meta.deletedIds;
       const vals = await Promise.all(changed.map(k => readDomainDoc(k).catch(() => undefined)));
       if (seq !== fbRemoteSeq) return;          // đã có mục lục mới hơn → bỏ
       // Không nuốt im lặng: miền nào đọc lỗi/tồn tại trong mục lục mà doc mất
-      // thì báo console (07/10/2026) — lần đồng bộ sau sẽ thử lại do băm chưa khớp.
+      // thì báo + TỰ THỬ LẠI (2s → 5s → 15s). Trước đây chỉ chờ "lần đồng bộ sau"
+      // mà lần sau chỉ xảy ra khi có người ghi lên mây → máy kẹt dữ liệu cũ.
       const missed = changed.filter((k, i) => vals[i] === undefined);
       if (missed.length) {
         console.warn('[FB] Nhận mây delta: không đọc được ' + missed.length + ' miền ('
-          + missed.join(', ') + ') — bỏ qua lần này, sẽ thử lại ở lần đồng bộ sau');
+          + missed.join(', ') + ') — sẽ thử lại');
+        if (tryNo < SYNC_RETRY_WAITS.length) {
+          const wait = SYNC_RETRY_WAITS[tryNo];
+          setTimeout(() => { try { if (!fbApplying) pullDeltaSnapshot(meta, tryNo + 1); } catch (e) {} }, wait);
+        }
       }
       changed.forEach((k, i) => { if (vals[i] !== undefined) partial[k] = vals[i]; });
-      if (fbApplying) return;                   // bỏ qua bản ta vừa ghi
+      if (fbApplying) { fbPendingPull = true; return; }   // đang ghi → pull lại sau
       // Máy chưa có dữ liệu thật -> nhận thẳng các miền vừa tải (máy mới: tải đủ)
-      if (!localHasAnyData()) { applyFireSnapshot(partial); return; }
-      // Máy đã có dữ liệu -> TỰ GỘP theo mây (định mức mây thắng nếu mình
-      // không có bản sửa chờ đẩy — xem mergeRemoteIntoLocal)
-      if (Object.keys(partial).length) mergeRemoteIntoLocal(partial, true, true);
+      if (!localHasAnyData()) {
+        applyFireSnapshot(partial);
+        if (!hasSyncBase()) { try { captureSyncBase(null, {}); } catch (e) {} }
+        markSynced(meta);
+        return;
+      }
+      // Máy đã có dữ liệu -> TỰ GỘP theo mây: bản MỚI HƠN thắng; bản ghi máy đang
+      // có sửa CHƯA ĐẨY thì giữ bản máy + ghi sổ xung đột (xem mergeRemoteIntoLocal)
+      if (Object.keys(partial).length) {
+        mergeRemoteIntoLocal(partial, false, true, { protectDirty: true, mergeNewer: true });
+      }
+      // Khởi tạo sổ đồng bộ nếu chưa có (miền không đổi ⇒ local == mây ⇒ base = local)
+      if (!hasSyncBase()) { try { captureSyncBase(null, {}); } catch (e) { /* bỏ qua */ } }
+      markSynced(meta);
     })().catch((e) => {
       console.warn('[FB] Lỗi nhận dữ liệu mây (delta)', e);
       if (Date.now() - fbReadWarnAt > 30000) {
         fbReadWarnAt = Date.now();
         showToast('Lỗi nhận dữ liệu mây: ' + ((e && e.message) || e), 'error');
       }
+      if (tryNo < SYNC_RETRY_WAITS.length) {
+        setTimeout(() => { try { if (!fbApplying) pullDeltaSnapshot(meta, tryNo + 1); } catch (err) {} }, SYNC_RETRY_WAITS[tryNo]);
+      }
     });
+  }
+
+  // ─── ĐỒNG BỘ NGAY: đọc mục lục mây 1 lần rồi xử lý như snapshot ──────
+  // Dùng cho: quay lại tab, có mạng lại, định kỳ 2 phút, nút "Đồng Bộ Ngay".
+  // Rẻ khi không có gì mới: 1 lượt đọc doc mục lục rồi thoát.
+  async function syncNow(opts) {
+    if (!isFirebaseOnline() || !fbDb) return false;
+    if (fbApplying || fbSyncing) { fbPendingPull = true; return false; }
+    const force = !!(opts && opts.force);
+    const now = Date.now();
+    if (!force && now - fbLastSyncTryAt < SYNC_MIN_GAP_MS) return false;
+    fbLastSyncTryAt = now;
+    fbSyncing = true;
+    updateSyncBadge();
+    try {
+      const snap = await cloudDocRef().get();
+      const meta = snap && snap.exists ? (snap.data() || {}) : {};
+      await handleRemoteSnapshot({ exists: !!(snap && snap.exists), data: () => meta });
+      if (snap && snap.exists) markSynced(meta);
+      return true;
+    } catch (e) {
+      console.warn('[FB] syncNow lỗi', e);
+      if (Date.now() - fbReadWarnAt > 30000) {
+        fbReadWarnAt = Date.now();
+        showToast('Không kiểm tra được dữ liệu mới trên mây: ' + ((e && e.message) || e), 'error');
+      }
+      return false;
+    } finally { fbSyncing = false; updateSyncBadge(); }
+  }
+  // Đánh dấu vừa đồng bộ xong (rev mục lục + thời điểm) → badge hiện giờ
+  function markSynced(meta) {
+    const st = loadSyncState();
+    if (meta && typeof meta.rev === 'number') st.lastRev = meta.rev;
+    st.lastSyncedAt = new Date().toISOString();
+    saveSyncState();
+    fbLastSyncOkAt = Date.now();
+    updateSyncBadge();
+  }
+  // Có snapshot mây đến TRONG LÚC đang ghi → pull lại ngay sau khi ghi xong.
+  // Trước đây nhịp đó bị bỏ ⇒ máy khác vừa sửa đúng lúc này thì phải tải lại trang.
+  function resumePendingPull() {
+    if (!fbPendingPull) return;
+    fbPendingPull = false;
+    setTimeout(() => { try { syncNow({ force: true }); } catch (e) { /* bỏ qua */ } }, 300);
+  }
+  // Tự kiểm tra mây: quay lại tab · có mạng · focus · định kỳ 2 phút
+  function scheduleSyncWatch() {
+    if (fbSyncWired) return;
+    fbSyncWired = true;
+    const kick = () => { try { syncNow(); } catch (e) { /* không phá app */ } };
+    try { window.addEventListener('focus', kick); } catch (e) {}
+    try { window.addEventListener('online', kick); } catch (e) {}
+    try {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') kick();
+      });
+    } catch (e) {}
+    if (typeof setInterval === 'function') {
+      const t = setInterval(kick, SYNC_PERIODIC_MS);
+      if (t && typeof t.unref === 'function') t.unref(); // Node test không bị giữ sống
+      fbSyncTimer = t;
+    }
   }
 
   function applyFireSnapshot(data) {
@@ -1552,8 +2127,10 @@ import { showToast } from './utils.js';
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
       fbLocalHashes = null; // vừa áp dữ liệu mây → băm miền cần tính lại
       clearPendingLocal();  // tải về = ghi đè chủ động → coi như đã đồng bộ với mây
+      // Tải về = máy đã bằng mây → đặt lại sổ đồng bộ (dirty rỗng)
+      try { loadSyncState(); captureSyncBase(null, {}); if (data && typeof data.rev === 'number') fbSyncState.lastRev = data.rev; markSynced(data); } catch (e) {}
       renderAll();
-    } finally { fbApplying = false; updateSyncBadge(); }
+    } finally { fbApplying = false; updateSyncBadge(); resumePendingPull(); }
   }
 
   // Có quyền ghi dữ liệu lên mây không? (Quản Trị / Người Chỉnh Sửa / Ban Quản Lý)
@@ -1573,16 +2150,28 @@ import { showToast } from './utils.js';
     if (!el) return;
     const txt = document.getElementById('sync-status-text');
     let cls = 'ok', label = 'Đã đồng bộ';
+    const hhmmss = (ts) => {
+      const d = new Date(ts);
+      const p = (n) => String(n).padStart(2, '0');
+      return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    };
     if (!window.__BAMBOO_FIREBASE_READY__ || !fbEnabled) { cls = 'off'; label = 'Máy cục bộ (offline)'; }
     else if (!navigator.onLine) { cls = 'err'; label = 'Mất mạng — chờ đồng bộ lại'; }
     else if (!fbAuthLoaded) { cls = 'wait'; label = 'Đang kết nối mây…'; }
     else if (!state.currentUser) { cls = 'off'; label = 'Chưa đăng nhập — chỉ xem'; }
     else if (!canPushToCloud()) { cls = 'off'; label = 'Chỉ xem — không đẩy mây'; }
     else if (fbApplying) { cls = 'wait'; label = 'Đang nhận dữ liệu mây…'; }
+    else if (fbSyncing) { cls = 'wait'; label = 'Đang kiểm tra dữ liệu mới…'; }
     else if (fbDirty) { cls = 'wait'; label = 'Đang chờ đẩy lên mây…'; }
+    else if (fbLastSyncOkAt) { label = 'Đã đồng bộ ' + hhmmss(fbLastSyncOkAt); }
     el.className = 'sync-status-badge ' + cls;
     if (txt) txt.textContent = label;
-    el.title = 'Trạng thái đồng bộ dữ liệu mây (tự động 2 chiều)';
+    const conflictN = fbSyncState ? (fbSyncState.conflicts || []).filter(c => c && !c.resolved).length : 0;
+    const conflictBtn = document.getElementById('btn-sync-conflicts');
+    if (conflictBtn) conflictBtn.style.display = conflictN ? '' : 'none';
+    el.title = 'Trạng thái đồng bộ dữ liệu mây (tự động 2 chiều)'
+      + (fbSyncState && fbSyncState.lastSyncedAt ? '\nLần đồng bộ gần nhất: ' + new Date(fbSyncState.lastSyncedAt).toLocaleString('vi-VN') : '')
+      + (conflictN ? '\n⚠ Có ' + conflictN + ' bản ghi xung đột — mở menu ⋮ → Xung Đột Đồng Bộ' : '');
   }
   function wireSyncBadgeListeners() {
     if (fbBadgeWired) return;
@@ -1673,6 +2262,8 @@ import { showToast } from './utils.js';
       fbDirty = false;
       clearPendingLocal(); // đã lên mây → hết cảnh "bản sửa chưa đồng bộ"
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+      // Đẩy xong = các bản ghi dirty đã nằm trên mây → đặt lại sổ đồng bộ (dirty rỗng)
+      try { captureSyncBase(null, {}); markSynced({ rev: (res && typeof res.rev === 'number') ? res.rev : undefined }); } catch (e) {}
       // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
       captureAutoBackup('Sau khi đồng bộ mây', false);
       maybeWriteCloudBackup();
@@ -1680,7 +2271,12 @@ import { showToast } from './utils.js';
       console.warn('[FB] Lỗi đẩy dữ liệu', e);
       showToast('Không đồng bộ lên mây: ' + e.message, 'error');
       if (isPermDeniedErr(e)) deepPermissionDiagnosis();
-    } finally { fbApplying = false; updateSyncBadge(); }
+    } finally {
+      fbApplying = false;
+      updateSyncBadge();
+      // Có snapshot mây đến trong lúc đang ghi → pull lại NGAY (không bỏ mất nhịp)
+      resumePendingPull();
+    }
   }
 
   // Dữ liệu có "thật" trên mây: materialRecords (tab Nguyên Liệu) cũng là dữ liệu thực —
@@ -1772,7 +2368,7 @@ import { showToast } from './utils.js';
       showToast('Lỗi khi đẩy dữ liệu lên mây: ' + e.message
         + (isPermDeniedErr(e) ? '. ' + fbOwnerHint() : ''), 'error');
       if (isPermDeniedErr(e)) deepPermissionDiagnosis();
-    } finally { fbApplying = false; hideTreLoading(treOk); }
+    } finally { fbApplying = false; hideTreLoading(treOk); resumePendingPull(); }
   }
 
   // TẢI dữ liệu từ mây về máy (ghi đè máy) - chiều NGƯỢC LẠI với uploadLocalDataToCloud.
@@ -1838,14 +2434,21 @@ export {
   FB_SHARDS_COLL,
   applyFireSnapshot,
   applyRoleToUI,
+  applySyncConflictChoice,
   assembleRemoteObject,
   canEditNow,
   canPushToCloud,
+  captureSyncBase,
   checkAuthAndRenderFirebase,
   chunkString,
+  clearAllSyncConflicts,
+  clearSyncConflict,
+  closeSyncConflicts,
   cloudCore,
   collectCloudSnapshot,
   collectCloudPayload,
+  deviceId,
+  dirtyDomains,
   doFirePush,
   domainHashes,
   domainDocRef,
@@ -1868,13 +2471,29 @@ export {
   handleRemoteSnapshot,
   hasCloudData,
   hashStr,
+  hasSyncBase,
   initFirebase,
   initLucide,
   isFirebaseOnline,
+  loadSyncState,
   localHasAnyData,
   localHashesNow,
+  markSynced,
+  mergeDirtyIntoRemote,
+  openSyncConflicts,
+  pushDirtyViaTransaction,
   readDomainDoc,
   readFullCloudObject,
+  recCompare,
+  recHashOf,
+  recStamp,
+  renderSyncConflicts,
+  scheduleSyncWatch,
+  syncConflictCount,
+  syncConflicts,
+  syncDomainLabel,
+  syncNow,
+  SYNC_STATE_KEY,
   writeDomainDoc,
   mergeRemoteIntoLocal,
   pullCloudToLocal,

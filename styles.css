@@ -9623,8 +9623,40 @@ body[data-fx="low"] #add-lot-form .al-sheet-scrim { animation: none; }
   line-height: 1.5;
   color: #0f766e;
   margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 .ps-bt-hint-line strong { color: #16a34a; }
+/* Thông tin ĐẦU VÀO 3 dòng: thanh thô → sau bào tinh → thể tích đầu vào */
+.ps-bt-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+.ps-bt-k { font-weight: 700; }
+.ps-bt-line em { font-style: normal; opacity: 0.85; }
+.ps-bt-out strong { color: #16a34a; }
+.ps-bt-vol,
+.ps-bt-vol strong,
+.ps-bt-warn { color: #b45309; }
+.ps-bt-empty { opacity: 0.8; }
+/* Tổng thể tích đầu vào của lượt (tính theo thanh đã bào tinh) */
+.press-input-vol-total { margin-top: 6px; font-size: 0.78rem; color: #b45309; }
+.press-input-vol-total:empty { display: none; }
+.press-input-vol-total strong { color: #b45309; }
+.press-input-vol-total em { font-style: normal; opacity: 0.85; }
+/* Chip CƠ SỞ TÍNH m³ trên thẻ ngày Ép Ván */
+.press-vol-basis {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  vertical-align: middle;
+  border: 1px solid rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+}
+.press-vol-thanhPham { border-color: rgba(124, 58, 237, 0.35); background: rgba(124, 58, 237, 0.08); color: #7c3aed; }
+.press-vol-dauVao { border-color: rgba(180, 83, 9, 0.35); background: rgba(180, 83, 9, 0.08); color: #b45309; }
 /* Thành phẩm + Số lượng thành phẩm cùng 1 dòng */
 .press-fp-row {
   display: grid;

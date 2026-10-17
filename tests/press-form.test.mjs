@@ -317,9 +317,10 @@ state.pressRecords = [
   { id: 'c2', date: '2026-08-10', week: '2026-W33', year: 2026, worker: 'B',
     sticks: [{ nanKey: 'A1', sticks: 100 }],
     vanTho: [{ vtDim: '1000×1000×1000', vtQty: 3 }] },
-  // Loại 3 — chỉ ép thành phẩm (2 m³) từ ván thô đã ép trước (đầu vào 2 m³)
+  // Loại 3 — chỉ ép thành phẩm (2 m³); đầu vào ghi 3 m³ để chứng minh cột
+  // "BTP sang TP" lấy thể tích THÀNH PHẨM, không lấy thể tích đầu vào (17/10/2026)
   { id: 'c3', date: '2026-08-11', week: '2026-W33', year: 2026, worker: 'C',
-    sticks: [{ nanKey: '2000×1000×1000', sticks: 1 }],
+    sticks: [{ nanKey: '1000×1000×1000', sticks: 3 }],
     vanTho: [], productId: 'rate-1', fpDim: '1000×1000×1000', finishedQty: 2 }
 ];
 press.renderPressChart();
@@ -330,7 +331,7 @@ check('2 cột: 3 loại dùng stack ép, thành phẩm stack riêng', ds[0].sta
 check('2 cột: trục xếp chồng (stacked: true)', chartCfg.options.scales.x.stacked === true && chartCfg.options.scales.y.stacked === true);
 check('2 cột: loại 1 ngày 10/08 = 2 m³', JSON.stringify(ds[0].data) === JSON.stringify([2, 0]));
 check('2 cột: loại 2 ngày 10/08 = 3 m³', JSON.stringify(ds[1].data) === JSON.stringify([3, 0]));
-check('2 cột: loại 3 ngày 11/08 = 2 m³ (ván thô đầu vào)', JSON.stringify(ds[2].data) === JSON.stringify([0, 2]));
+check('2 cột: loại 3 ngày 11/08 = 2 m³ (thể tích THÀNH PHẨM, không phải đầu vào 3 m³)', JSON.stringify(ds[2].data) === JSON.stringify([0, 2]));
 check('2 cột: thành phẩm ngày = 1 và 2 m³', JSON.stringify(ds[3].data) === JSON.stringify([1, 2]));
 check('2 cột: nhãn 3 loại đã đổi tên (TP ngay / Chỉ BTP / BTP sang TP)', ds[0].label === 'Có thể chuyển TP ngay' && ds[1].label === 'Chỉ BTP' && ds[2].label === 'BTP sang TP');
 check('2 cột: trục Y hiển thị 1 số thập phân (2 → "2.0", 3.5 → "3.5")', chartCfg.options.scales.y.ticks.callback(2) === '2.0' && chartCfg.options.scales.y.ticks.callback(3.5) === '3.5');

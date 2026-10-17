@@ -860,7 +860,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // dưới ô đầu vào đang sửa + tick xanh các cụm đã đủ thông tin
     const pressSecSync = (e) => {
       if (!e || !e.target || !e.target.closest || !e.target.closest('#modal-press-record')) return;
-      if (e.target.classList && e.target.classList.contains('ps-nan')) refreshPressStickHints();
+      // Gõ loại đầu vào HOẶC số lượng → vẽ lại cỡ sau bào tinh + thể tích đầu vào
+      if (e.target.classList && (e.target.classList.contains('ps-nan') || e.target.classList.contains('ps-sticks'))) refreshPressStickHints();
       refreshPressSecChecks();
     };
     document.addEventListener('input', pressSecSync);

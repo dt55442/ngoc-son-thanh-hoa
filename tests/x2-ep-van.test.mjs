@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v262/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v263/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -616,5 +616,114 @@ check('TICK: dòng tổng hợp ghi "Đã nhập 1/5 cụm"',
 check('PANEL: pressToggleSec chạy không lỗi trên stub DOM',
   (() => { try { press.pressToggleSec('tech'); return true; } catch (e) { return false; } })());
 
+// ═══ R. M³ CỦA LƯỢT ÉP — ƯU TIÊN ĐẦU RA + ĐẦU VÀO THEO THANH ĐÃ BÀO TINH
+//    (17/10/2026) ═══════════════════════════════════════════════════════
+// Quy ước mới: ① Ván thô tạo ra → ② Thành phẩm (khi không khai ván thô) →
+// ③ thể tích ĐẦU VÀO tính theo THANH ĐÃ BÀO TINH (chỉ khi lượt không khai đầu
+// ra nào). Ô đầu vào ghi nhiều cỡ → tổng thể tích các cỡ (chia đều số lượng).
+state.xuong2BaoTinhRecords = [
+  { id: 'r-bt1', kind: 'tinh', date: '2026-09-18', inSizeKey: '1250×18×7', outSizeKey: '1250×18×5', qtyOk: 3000 },
+  { id: 'r-bt2', kind: 'tinh', date: '2026-09-19', inSizeKey: '1250×18×7', outSizeKey: '1250×16×5', qtyOk: 1000 },
+  // Bào thanh KHÔNG được dùng làm nguồn quy đổi cho đầu vào Ép Ván
+  { id: 'r-bt3', kind: 'bao_thanh', date: '2026-09-19', inSizeKey: '1250×18×7', outSizeKey: '1250×999×999', qtyOk: 9999 }
+];
+
+const rVt = {
+  id: 'r-vt', vanTho: [{ vtDim: '1200×382×12', vtQty: 30 }],
+  fpDim: '1200×382×12', finishedQty: 30, sticks: [{ nanKey: '1250×18×7', sticks: 1080 }]
+};
+check('R1: CÓ Ván thô → m³ = ván thô (0,165) · cơ sở tính = vanTho',
+  Math.abs(press.pressRecordVolumeOf(rVt) - 0.165024) < 1e-9 &&
+  press.pressRecordVolumeBasisOf(rVt) === 'vanTho');
+
+const rTp = {
+  id: 'r-tp', vanTho: [], fpDim: '1200×382×12', finishedQty: 30,
+  sticks: [{ nanKey: '1250×18×7', sticks: 1080 }]
+};
+check('R2: KHÔNG khai Ván thô → m³ = THÀNH PHẨM 0,165 (KHÔNG lấy thanh thô 0,2592) · cơ sở = thanhPham',
+  Math.abs(press.pressRecordVolumeOf(rTp) - 0.165024) < 1e-9 &&
+  press.pressRecordVolumeBasisOf(rTp) === 'thanhPham');
+
+const rBoard = {
+  id: 'r-board', vanTho: [], fpDim: '1200×340×33', finishedQty: 203,
+  sticks: [{ nanKey: '1200×340×18', sticks: 406 }]
+};
+check('R3: chỉ Thành phẩm + đầu vào là VÁN THÔ → vẫn lấy thể tích thành phẩm',
+  Math.abs(press.pressRecordVolumeOf(rBoard) - (1200 * 340 * 33 / 1e9) * 203) < 1e-9 &&
+  press.pressRecordVolumeBasisOf(rBoard) === 'thanhPham');
+
+// 1250×18×7 → 1250×18×5 (3.000) + 1250×16×5 (1.000):
+// bình quân gia quyền = (0,0001125×3000 + 0,0001×1000) ÷ 4000 = 0,000109375 m³
+const unitBt = press.pressStickUnitVolOf('1250×18×7');
+check('R4: thể tích 1 thanh lấy theo SAU BÀO TINH (0,000109375 m³ — không phải thanh thô 0,0001575)',
+  Math.abs(unitBt - 0.000109375) < 1e-12 &&
+  Math.abs(unitBt - 0.0001575) > 1e-9);
+
+const rIn = { id: 'r-in', vanTho: [], fpDim: '', finishedQty: 0, sticks: [{ nanKey: '1250×18×7', sticks: 1080 }] };
+check('R5: KHÔNG có đầu ra → m³ = ĐẦU VÀO theo thanh đã bào tinh (1080 × 0,000109375 = 0,118125)',
+  Math.abs(press.pressRecordVolumeOf(rIn) - 0.118125) < 1e-9 &&
+  press.pressRecordVolumeBasisOf(rIn) === 'dauVao');
+check('R5b: lượt "Bào thanh" bị LOẠI khỏi nguồn quy đổi (nếu lọt vào, thể tích đã khác)',
+  press.pressBaoTinhOutOfStick('1250×18×7').every(o => o.outKey !== '1250×999×999'));
+
+// Ô đầu vào ghi NHIỀU cỡ (dữ liệu thật) → thể tích = tổng thể tích các cỡ
+const multiKey = '1250 x 22 x 10 ; 1250 x 22 x 8';
+const unitMulti = press.pressStickUnitVolOf(multiKey);
+check('R6: ô nhiều cỡ → thể tích 1 thanh = bình quân các cỡ (0,0002475 m³)',
+  Math.abs(unitMulti - 0.0002475) < 1e-12 &&
+  press.parseDimListLoose(multiKey).length === 2);
+check('R6b: tổng thể tích đầu vào ô nhiều cỡ = 2.052 × 0,0002475 = 0,50787 m³ (không đếm trùng)',
+  Math.abs(press.pressInputVolumeOf({ sticks: [{ nanKey: multiKey, sticks: 2052 }] }) - 0.50787) < 1e-9);
+
+
+// Khối 3 dòng dưới mỗi dòng ĐẦU VÀO trong form
+const infoBt = press.pressStickInfoHtml('1250×18×7', 1080);
+check('R7: form hiện dòng 1 thanh thô + dòng 2 sau bào tinh (tồn BT) + dòng 3 thể tích đầu vào',
+  infoBt.includes('Thanh thô') && infoBt.includes('1250×18×7') &&
+  infoBt.includes('Sau bào tinh') && infoBt.includes('1250×18×5') &&
+  infoBt.includes('tồn BT 3.000') && infoBt.includes('Thể tích đầu vào') &&
+  infoBt.includes('0,1181'));
+const infoNoBt = press.pressStickInfoHtml('999×99×9', 10);
+check('R8: cỡ chưa có lượt Bào tinh → cảnh báo tạm tính theo kích thước đã ghi',
+  infoNoBt.includes('Chưa có lượt Bào tinh') && infoNoBt.includes('tạm tính theo kích thước đã ghi'));
+check('R9: mã không phải kích thước (A1) → không tính thể tích',
+  press.pressStickInfoHtml('A1', 5).includes('không phải kích thước'));
+
+// Thẻ ngày: chip CƠ SỞ TÍNH + số m³ của từng lượt
+state.pressRecords = [rTp, rIn];
+state.pressYearFilter = 'all';
+state.pressWeekFilter = 'all';
+state.pressChartWinStart = null;
+state.pressNotes = [];
+press.renderX2EpVanDayCards();
+const rDayHtml = String(document.getElementById('x2-epv-day-cards').innerHTML || '');
+check('R10: thẻ ngày in số m³ thành phẩm 0,17 + chip "m³ thành phẩm"',
+  rDayHtml.includes('0,17 m³') && rDayHtml.includes('press-vol-basis') && rDayHtml.includes('m³ thành phẩm'));
+check('R10b: lượt không có đầu ra → chip "m³ đầu vào (bào tinh)" + số 0,12 m³',
+  rDayHtml.includes('m³ đầu vào (bào tinh)') && rDayHtml.includes('0,12 m³'));
+
+// Biểu đồ: nhánh "BTP sang TP" dùng thể tích THÀNH PHẨM (không phải đầu vào)
+state.pressRecords = [{
+  id: 'r-chart', date: '2026-09-23', year: 2026, week: '2026-W39',
+  productId: '', productName: '', fpDim: '1000×1000×1000', finishedQty: 2,
+  vanTho: [], sticks: [{ nanKey: '1000×1000×1000', sticks: 3 }]
+}];
+press.renderPressChart();
+const rDs = state.pressChartInstance.config.data.datasets;
+check('R11: biểu đồ "BTP sang TP" = 2 m³ (thể tích thành phẩm, KHÔNG phải đầu vào 3 m³)',
+  JSON.stringify(rDs[2].data) === JSON.stringify([2]));
+
+// Cấu trúc form / sự kiện / CSS / cache
+check('R12: form có ô tổng thể tích đầu vào (#press-input-vol-total · tính theo thanh đã bào tinh)',
+  idxHtml.includes('id="press-input-vol-total"') && idxHtml.includes('THANH ĐÃ BÀO TINH'));
+check('R13: events.js tính lại thể tích khi gõ SỐ LƯỢNG (.ps-sticks)',
+  eventsSrc.includes("classList.contains('ps-sticks')"));
+check('R14: CSS có khối 3 dòng đầu vào + tổng thể tích + chip cơ sở tính',
+  cssHtml.includes('.ps-bt-line') && cssHtml.includes('.press-input-vol-total') &&
+  cssHtml.includes('.press-vol-basis'));
+check('R15: sw.js đã tăng cache (v263) để PWA không dùng bản cũ',
+  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v263'));
+
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
+

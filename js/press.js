@@ -79,6 +79,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
   // Định dạng ngày hiển thị DD/MM
   // Định dạng số gọn (thanh / m³) — dùng cho thẻ ngày Ép Ván + chip định mức
   const fmtThanh = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  // Định dạng thể tích nhỏ (m³) — 1 thanh chỉ ~0,00018 m³ nên cần nhiều chữ số
+  const fmtVol = (v, d = 4) => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: d });
   // Định dạng tỷ lệ / số giờ (1 chữ số thập phân) — giờ HC/TC + hiệu suất %
   const fmtRatio = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
   function fmtDateDM(dateStr) {
@@ -101,6 +103,89 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     const d = parseDimString(dimStr);
     if (!d) return 0;
     return ((d.l * d.w * d.t) / 1000000000) * (parseFloat(qty) || 0);
+  }
+
+  // ─── THỂ TÍCH ĐẦU VÀO ÉP VÁN — TÍNH THEO THANH ĐÃ BÀO TINH (17/10/2026) ──
+  // Thanh thực sự đi vào máy ép là thanh ĐÃ QUA BÀO TINH (mỏng/ngắn hơn thanh
+  // thô 25–35%), nên thể tích đầu vào phải lấy theo kích thước SAU bào tinh
+  // (state.xuong2BaoTinhRecords: inSizeKey = thanh thô → outSizeKey = sau bào
+  // tinh, qtyOk = số thanh đạt). Ô đầu vào ghi NHIỀU cỡ (VD
+  // "1250 x 22 x 10 ; 1250 x 22 x 8") thì thể tích = TỔNG thể tích các cỡ —
+  // chia đều số lượng cho các cỡ vì mỗi dòng chỉ có 1 ô Số lượng.
+
+  // Tách ô ghi nhiều cỡ (';' ',' '+') → [{ dim, unitVol }] (bỏ cụm không hợp lệ)
+  function parseDimListLoose(str) {
+    const raw = String(str || '').trim();
+    if (!raw) return [];
+    const seen = new Set();
+    const out = [];
+    raw.split(/[;,]/).forEach(part => {
+      const norm = part.trim().toLowerCase().replace(/[x*]/g, '×').replace(/\s+/g, '');
+      if (!norm) return;
+      const nums = norm.split('×').map(s => parseFloat(s));
+      if (nums.length !== 3 || nums.some(n => isNaN(n) || n <= 0)) return;
+      const key = nums.join('×');
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ dim: key, unitVol: (nums[0] * nums[1] * nums[2]) / 1000000000 });
+    });
+    return out;
+  }
+
+  // Các cỡ SAU BÀO TINH tương ứng 1 cỡ thanh thô (gộp theo outSizeKey, nhiều
+  // nhất trước). BỎ "Bào thanh" (đầu vào của nó là thành phẩm Ép Ván, không
+  // phải nan chờ ép) — giống quy ước của getBaoTinhStockByNanKey.
+  function pressBaoTinhOutOfStick(key) {
+    const wanted = normalizeStickKey(key);
+    if (!wanted || !parseDimString(wanted)) return [];
+    const byOut = new Map();
+    (Array.isArray(state.xuong2BaoTinhRecords) ? state.xuong2BaoTinhRecords : []).forEach(r => {
+      if (!r || r.kind === 'bao_thanh') return;
+      if (normalizeStickKey(r.inSizeKey) !== wanted) return;
+      const outKey = normalizeStickKey(r.outSizeKey);
+      const ok = Number(r.qtyOk) || 0;
+      if (!parseDimString(outKey) || ok <= 0) return;
+      const cur = byOut.get(outKey) || { outKey, qtyOk: 0 };
+      cur.qtyOk += ok;
+      byOut.set(outKey, cur);
+    });
+    return [...byOut.values()]
+      .map(o => Object.assign({}, o, { unitVol: dimVolume(o.outKey, 1) }))
+      .filter(o => o.unitVol > 0)
+      .sort((a, b) => b.qtyOk - a.qtyOk);
+  }
+
+  // Thể tích 1 thanh của ô đầu vào: cỡ thô → bình quân GIA QUYỀN theo qtyOk
+  // của các cỡ sau bào tinh; không có lượt Bào tinh → dùng chính cỡ đã ghi
+  // (ván thô đã ép trước, mã A1, dữ liệu cũ). Ô nhiều cỡ → bình quân các cỡ.
+  function pressStickUnitVolOf(key) {
+    const segs = parseDimListLoose(key);
+    if (!segs.length) return 0;
+    let sum = 0;
+    segs.forEach(seg => {
+      const outs = pressBaoTinhOutOfStick(seg.dim);
+      if (!outs.length) { sum += seg.unitVol; return; }
+      const totQty = outs.reduce((s, o) => s + o.qtyOk, 0);
+      const wVol = outs.reduce((s, o) => s + o.unitVol * o.qtyOk, 0);
+      sum += totQty > 0 ? (wVol / totQty) : seg.unitVol;
+    });
+    return sum / segs.length;
+  }
+
+  // Tổng thể tích ĐẦU VÀO của 1 lượt ép (theo thanh đã bào tinh)
+  function pressInputVolumeOf(r) {
+    if (!r) return 0;
+    return (r.sticks || []).reduce((s, x) =>
+      s + pressStickUnitVolOf(x && x.nanKey) * (Number(x && x.sticks) || 0), 0);
+  }
+
+  // Cơ sở tính m³ của lượt: vanTho | thanhPham | dauVao | none (để in chip)
+  function pressRecordVolumeBasisOf(r) {
+    if (!r) return 'none';
+    const vt = (r.vanTho || []).reduce((s, l) => s + dimVolume(l.vtDim, l.vtQty), 0);
+    if (vt > 0) return 'vanTho';
+    if (dimVolume(r.fpDim, r.finishedQty) > 0) return 'thanhPham';
+    return pressInputVolumeOf(r) > 0 ? 'dauVao' : 'none';
   }
 
   // Tồn thanh ĐÃ BÀO (thẻ Bào Tinh — xuong2BaoTinhRecords) theo kích thước ĐẦU VÀO,
@@ -177,7 +262,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
             <input type="number" class="ps-sticks" min="0" step="1" inputmode="numeric" placeholder="VD: 4800" value="${stick.sticks || ''}">
           </label>
         </div>
-        <div class="ps-bt-hint">${pressBaoTinhHintOf(stick.nanKey || '')}</div>
+        <div class="ps-bt-hint">${pressStickInfoHtml(stick.nanKey || '', stick.sticks || 0)}</div>
       </div>`;
   }
 
@@ -349,28 +434,66 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
   function pressBaoTinhHintOf(rawKey) {
     const key = normalizeStickKey(rawKey);
     if (!key || !parseDimString(key)) return '';
-    const recs = (Array.isArray(state.xuong2BaoTinhRecords) ? state.xuong2BaoTinhRecords : [])
-      .filter(r => r && r.kind !== 'bao_thanh' && normalizeStickKey(r.inSizeKey) === key);
-    if (!recs.length) return '';
-    const byOut = new Map();
-    recs.forEach(r => {
-      const out = normalizeStickKey(r.outSizeKey) || '?';
-      byOut.set(out, (byOut.get(out) || 0) + (Number(r.qtyOk) || 0));
-    });
+    const outs = pressBaoTinhOutOfStick(key);
+    if (!outs.length) return '';
     const fmtN = n => Number(n || 0).toLocaleString('vi-VN');
-    return [...byOut.entries()].map(([out, qty]) =>
-      '<div class="ps-bt-hint-line">' + escapeHTML(out) + ' (Kích thước sau bào tinh) · <strong>' + fmtN(qty) + '</strong> thanh (SL đạt tồn từ Bào Tinh)</div>'
+    return outs.map(o =>
+      '<div class="ps-bt-hint-line">' + escapeHTML(o.outKey) + ' (Kích thước sau bào tinh) · <strong>' + fmtN(o.qtyOk) + '</strong> thanh (SL đạt tồn từ Bào Tinh)</div>'
     ).join('');
   }
 
-  // Vẽ lại dòng gợi ý dưới mọi ô loại đầu vào (gọi sau khi thêm dòng / mở modal sửa).
+  // Khối thông tin 3 dòng dưới mỗi dòng ĐẦU VÀO (17/10/2026):
+  //   dòng 1 = cỡ thanh thô đã ghi + thể tích 1 thanh
+  //   dòng 2 = cỡ SAU BÀO TINH tương ứng + tồn BT (chưa có → cảnh báo)
+  //   dòng 3 = thể tích ĐẦU VÀO của dòng (tính theo thanh đã bào tinh)
+  function pressStickInfoHtml(key, qty) {
+    const raw = String(key || '').trim();
+    const q = Number(qty) || 0;
+    if (!raw) {
+      return '<div class="ps-bt-line ps-bt-empty">Chọn loại thanh thô / ván thô để xem cỡ sau bào tinh và thể tích đầu vào.</div>';
+    }
+    const segs = parseDimListLoose(raw);
+    if (!segs.length) {
+      return `<div class="ps-bt-line ps-bt-warn">Mã "${escapeHTML(raw)}" không phải kích thước (D×R×D) — không tính được thể tích.</div>`;
+    }
+    const isBoard = segs.every(s => s.unitVol >= 0.0015); // ≥ 0,0015 m³/thanh = tấm ván thô
+    const line1 = `<div class="ps-bt-line ps-bt-raw"><span class="ps-bt-k">${isBoard ? 'Ván thô' : 'Thanh thô'}</span> <strong>${segs.map(s => escapeHTML(s.dim)).join(' + ')}</strong> <em>· 1 thanh = ${fmtVol(segs.reduce((s, x) => s + x.unitVol, 0) / segs.length, 6)} m³</em></div>`;
+    // Cỡ sau bào tinh: gộp mọi cỡ của mọi đoạn trong ô
+    const outs = [];
+    segs.forEach(seg => pressBaoTinhOutOfStick(seg.dim).forEach(o => {
+      const cur = outs.find(x => x.outKey === o.outKey);
+      if (cur) cur.qtyOk += o.qtyOk;
+      else outs.push({ outKey: o.outKey, qtyOk: o.qtyOk });
+    }));
+    const line2 = outs.length
+      ? `<div class="ps-bt-line ps-bt-out"><span class="ps-bt-k">Sau bào tinh</span> ${outs.map(o => `<strong>${escapeHTML(o.outKey)}</strong> <em>· tồn BT ${o.qtyOk.toLocaleString('vi-VN')} thanh</em>`).join(' · ')}</div>`
+      : '<div class="ps-bt-line ps-bt-warn">Chưa có lượt Bào tinh cho cỡ này — tạm tính theo kích thước đã ghi.</div>';
+    const vol = pressStickUnitVolOf(raw) * q;
+    const line3 = (q > 0 && vol > 0)
+      ? `<div class="ps-bt-line ps-bt-vol">Thể tích đầu vào ≈ <strong>${fmtVol(vol, 4)} m³</strong>${outs.length ? ' <em>(tính theo thanh đã bào tinh)</em>' : ''}</div>`
+      : '';
+    return line1 + line2 + line3;
+  }
+
+  // Vẽ lại thông tin dưới mọi ô đầu vào + tổng thể tích đầu vào của lượt
+  // (gọi sau khi thêm dòng / mở modal sửa / gõ loại hoặc số lượng).
   function refreshPressStickHints() {
     const rows = document.querySelectorAll ? document.querySelectorAll('#press-sticks .press-line-row') : [];
+    let total = 0;
     (rows || []).forEach(row => {
       const inp = row.querySelector ? row.querySelector('.ps-nan') : null;
+      const qtyInp = row.querySelector ? row.querySelector('.ps-sticks') : null;
       const box = row.querySelector ? row.querySelector('.ps-bt-hint') : null;
-      if (inp && box) box.innerHTML = pressBaoTinhHintOf(inp.value);
+      const qty = qtyInp ? (parseFloat(qtyInp.value) || 0) : 0;
+      if (box) box.innerHTML = pressStickInfoHtml(inp ? inp.value : '', qty);
+      total += pressStickUnitVolOf(inp ? inp.value : '') * qty;
     });
+    const totalEl = document.getElementById('press-input-vol-total');
+    if (totalEl) {
+      totalEl.innerHTML = total > 0
+        ? `Tổng thể tích đầu vào ≈ <strong>${fmtVol(total, 4)} m³</strong> <em>(tính theo thanh đã bào tinh)</em>`
+        : '';
+    }
   }
 
 
@@ -756,14 +879,21 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
   }
 
   // ─── THẺ ÉP VÁN (launcher tab Công Đoạn) — 2 KHUNG: Lượt Ép / Biểu Đồ ──
-  // M³ của 1 lượt ép — CÙNG CÔNG THỨC với biểu đồ (renderPressChart):
-  //   có ván thô tạo ra → thể tích = ván thô; chỉ ép thành phẩm từ thanh
-  //   đã ép trước → thể tích = ván thô ĐẦU VÀO (thanh bào tinh).
+  // M³ của 1 lượt ép — ƯU TIÊN ĐẦU RA (sửa 17/10/2026, cùng công thức với biểu đồ):
+  //   ① có "Ván thô tạo ra"  → thể tích ván thô (tránh đếm trùng khi 1 lượt vừa
+  //      khai ván thô vừa khai thành phẩm — đó là CÙNG những tấm ván)
+  //   ② không có ①, có Thành phẩm → thể tích THÀNH PHẨM (fpDim × finishedQty)
+  //   ③ không có cả ① và ② (bản ghi cũ/thiếu đầu ra) → thể tích ĐẦU VÀO tính
+  //      theo THANH ĐÃ BÀO TINH (pressInputVolumeOf), KHÔNG dùng thanh thô.
+  // Nhờ vậy m³ giữ đúng 1 nghĩa (khối lượng sản phẩm ép ra) dù người dùng có
+  // điền "Ván thô" hay không.
   function pressRecordVolumeOf(r) {
     if (!r) return 0;
     const vt = (r.vanTho || []).reduce((s, l) => s + dimVolume(l.vtDim, l.vtQty), 0);
     if (vt > 0) return vt;
-    return (r.sticks || []).reduce((s, x) => s + dimVolume(x.nanKey, x.sticks), 0);
+    const fp = dimVolume(r.fpDim, r.finishedQty);
+    if (fp > 0) return fp;
+    return pressInputVolumeOf(r);
   }
   // Tổng m³ của danh sách lượt ép (mini card + thẻ ngày dùng chung)
   function pressVolumeTotalOf(list) {
@@ -965,6 +1095,17 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
         : '';
       const rowsHtml = rows.map(r => {
         const vol1 = pressRecordVolumeOf(r);
+        // Chip CƠ SỞ TÍNH m³ (17/10/2026): ván thô → thành phẩm → đầu vào (bào tinh)
+        const basis = pressRecordVolumeBasisOf(r);
+        const basisMap = {
+          vanTho: ['m³ ván thô', 'Thể tích = Ván thô tạo ra khai ở lượt này'],
+          thanhPham: ['m³ thành phẩm', 'Lượt KHÔNG khai Ván thô → thể tích = Kích thước thành phẩm × Số lượng TP'],
+          dauVao: ['m³ đầu vào (bào tinh)', 'Lượt không khai đầu ra → thể tích = nguyên liệu ĐẦU VÀO tính theo THANH ĐÃ BÀO TINH']
+        };
+        const bm = basisMap[basis];
+        const basisChip = bm
+          ? ` <span class="press-vol-basis press-vol-${basis}" title="${escapeHTML(bm[1])}">${bm[0]}</span>`
+          : '';
         const noteText = notesByDate.get(r.date) || '';
         const noteBadge = noteText
           ? ` <span class="press-note-badge" data-note="${escapeHTML(noteText)}" data-date="${escapeHTML(r.date)}" title="Ghi chú giải trình">!</span>`
@@ -985,7 +1126,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
             · <span title="Thông số kỹ thuật: lực ép ngang · lực ép đứng (MPa) · nhiệt độ (°C) · thời gian (phút/lượt)">${pressTechTextOf(r)}</span>
             · Keo${r.glueName ? ' ' + escapeHTML(r.glueName) : ''} <strong>${(Number(r.glue) || 0).toFixed(2)}</strong> kg
             · Phụ gia${r.additiveName ? ' ' + escapeHTML(r.additiveName) : ''} <strong>${(Number(r.additive) || 0).toFixed(2)}</strong> kg
-            · <strong>${fmtThanh(vol1)} m³</strong>${noteBadge}${workerBtn}
+            · <strong>${fmtThanh(vol1)} m³</strong>${basisChip}${noteBadge}${workerBtn}
           </div>
 
           <div class="x2-epv-row-actions" data-perm="press">
@@ -1000,7 +1141,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
             <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
             ${epVanWorkerBadge(snap.workers)}
             ${hourTxt}
-            <span class="x2-day-cap" title="Công suất thực tế = tổng thể tích ép trong ngày (m³)"><i data-lucide="gauge"></i> Công suất: <strong>${fmtThanh(vol)} m³/ngày</strong></span>
+            <span class="x2-day-cap" title="Công suất thực tế = tổng thể tích SẢN PHẨM ép ra trong ngày (m³). Mỗi lượt tính theo thứ tự: ① Ván thô tạo ra → ② Thành phẩm (khi không khai ván thô) → ③ thể tích đầu vào theo thanh đã bào tinh (chỉ khi lượt không khai đầu ra)"><i data-lucide="gauge"></i> Công suất: <strong>${fmtThanh(vol)} m³/ngày</strong></span>
             ${m3hTxt}${rateBadge}
             ${stageIncidentInputHtml('epvan', date)}
             ${shiftBreakdownHtml({
@@ -1451,7 +1592,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     // Phân loại từng lượt ép trong ngày thành 3 loại thể tích ép:
     //   Loại 1 — ép ra CẢ ván thô & thành phẩm (thể tích = ván thô tạo ra)
     //   Loại 2 — chỉ ép ván thô, chưa ép thành phẩm (thể tích = ván thô tạo ra)
-    //   Loại 3 — chỉ ép thành phẩm từ ván thô đã ép trước (thể tích = ván thô đầu vào)
+    //   Loại 3 — chỉ ép thành phẩm (thể tích = THÀNH PHẨM; không khai đầu ra mới
+    //            lấy thể tích đầu vào theo THANH ĐÃ BÀO TINH) — 17/10/2026
+    // Dùng CHUNG pressRecordVolumeOf với thẻ ngày nên 2 nơi luôn khớp số.
     // Gom cho TOÀN BỘ ngày trong bộ lọc (không giới hạn cửa sổ) để nhãn tuần
     // "TB ngày" tính trọn tuần, không đổi theo lúc người dùng vuốt/trượt biểu đồ.
     const byDay = {}; // date -> { t1, t2, t3, fp }
@@ -1460,10 +1603,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
       const d = byDay[r.date];
       const vt = (r.vanTho || []).reduce((s, l) => s + dimVolume(l.vtDim, l.vtQty), 0);
       const fp = dimVolume(r.fpDim, r.finishedQty);
-      const inputVt = (r.sticks || []).reduce((s, x) => s + dimVolume(x.nanKey, x.sticks), 0);
-      if (vt > 0 && fp > 0) d.t1 += vt;
-      else if (vt > 0) d.t2 += vt;
-      else if (fp > 0) d.t3 += inputVt;
+      if (vt > 0) d[fp > 0 ? 't1' : 't2'] += vt;
+      else d.t3 += pressRecordVolumeOf(r);
       d.fp += fp;
     });
 
@@ -2737,6 +2878,12 @@ export {
   openPressNoteModal,
   openPressWorkersModal,
   parseDimString,
+  parseDimListLoose,
+  pressBaoTinhOutOfStick,
+  pressStickUnitVolOf,
+  pressInputVolumeOf,
+  pressRecordVolumeBasisOf,
+  pressStickInfoHtml,
   populatePressInputTypeList,
   populatePressWeekFilter,
   populatePressYearFilter,

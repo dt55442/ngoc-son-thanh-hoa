@@ -2315,6 +2315,7 @@ export {
   populatePlanningProductSelect,
   populatePlanningYearFilter,
   rateDisplayLabel,
+  rateCoreProduct,
   rateNanUse,
   rateUnit,
   normalizeMaterialRate,

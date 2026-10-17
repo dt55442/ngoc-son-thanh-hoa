@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v270/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v273/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -330,9 +330,10 @@ const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
 // GIAI ĐOẠN 2 (05/10/2026): 8 thẻ Xưởng 1 ĐÃ thêm vào bản đồ VÙNG DỮ LIỆU
 // (nút "Lịch Sử" của thẻ X1 tự lọc đúng vùng) + Cắt Ván · Bào Ván (09/10/2026)
 // + Hỗ Trợ + Công Đoạn Lẻ (10/10/2026).
-// Nguồn XUẤT EXCEL = 13 thẻ Xưởng 2 (X1 chưa có form xuất riêng → fallback 'batch').
-check('DÙNG CHUNG: bản đồ VÙNG DỮ LIỆU = 13 thẻ X2 + 8 thẻ X1 (21)',
-  Object.keys(mapCn).length === 21 && Object.keys(mapEx).length === 13 &&
+// 17/10/2026: NGUỒN XUẤT EXCEL của 8 thẻ X1 ĐÃ KHAI BÁO (trước đây rơi về 'batch'
+// ⇒ bấm "Xuất Dữ Liệu" trên thẻ Xưởng 1 lại xuất Lô nan).
+check('DÙNG CHUNG: bản đồ VÙNG DỮ LIỆU = 13 thẻ X2 + 8 thẻ X1 (21) · nguồn xuất = 21',
+  Object.keys(mapCn).length === 21 && Object.keys(mapEx).length === 21 &&
   mapCn['x2-bo-luong-card'] === 'xuong2BoluongRecords' && mapEx['x2-bo-luong-card'] === 'boluong' &&
   mapCn['x2-kho-card'] === 'khoNotes' && mapEx['x2-kho-card'] === 'kho' &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
@@ -340,7 +341,11 @@ check('DÙNG CHUNG: bản đồ VÙNG DỮ LIỆU = 13 thẻ X2 + 8 thẻ X1 (21
   mapCn['x2-cat-van-card'] === 'xuong2CatVanRecords' && mapEx['x2-cat-van-card'] === 'catvan' &&
   mapCn['x2-bao-van-card'] === 'xuong2BaoVanRecords' && mapEx['x2-bao-van-card'] === 'baovan' &&
   mapCn['x2-ho-tro-card'] === 'xuong2HoTroRecords' && mapEx['x2-ho-tro-card'] === 'hotro' &&
-  mapCn['x2-than-hoa-card'] === 'batches' && mapEx['x2-than-hoa-card'] === 'batch');
+  mapCn['x2-than-hoa-card'] === 'batches' && mapEx['x2-than-hoa-card'] === 'batch' &&
+  mapEx['x1-cat-ong-card'] === 'x1catong' && mapEx['x1-say-sinh-card'] === 'x1saysinh' &&
+  mapEx['x1-boc-card'] === 'x1boc' && mapEx['x1-loc-ong-card'] === 'x1locong' &&
+  mapEx['x1-cat-mat-card'] === 'x1catmat' && mapEx['x1-bo-card'] === 'x1bo' &&
+  mapEx['x1-phoi-say-card'] === 'x1phoisay' && mapEx['x1-loc-thanh-card'] === 'x1locthanh');
 check('DÙNG CHUNG: 8 thẻ Xưởng 1 đều có vùng dữ liệu (X2 → Lịch Sử đúng vùng)',
   ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card',
    'x1-loc-ong-card', 'x1-cat-mat-card', 'x1-bo-card',
@@ -799,7 +804,7 @@ check('R14: CSS có khối 3 dòng đầu vào + tổng thể tích + chip cơ s
   cssHtml.includes('.ps-bt-line') && cssHtml.includes('.press-input-vol-total') &&
   cssHtml.includes('.press-vol-basis'));
 check('R15: sw.js đã tăng cache (v265) để PWA không dùng bản cũ',
-  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v270'));
+  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v273'));
 check('R16: ô nhiều cỡ có khung .ps-qty-list + N ô .ps-size-qty (hàm đồng bộ riêng)',
   pressSrc.includes('ps-qty-list') && pressSrc.includes('ps-size-qty') &&
   pressSrc.includes('function syncPressStickQtyInputs') && pressSrc.includes('function readPressSizeQtys'));

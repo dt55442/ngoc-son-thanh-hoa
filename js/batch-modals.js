@@ -8,7 +8,7 @@ import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_CHON_NAN, stat
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
-import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA (gộp lô vào lần đã có — chỉ đọc)
+import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes, sayBuildCharges, sayShiftMapOf, syncAlShiftField } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -261,6 +261,12 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
         // MẤT sạch các trường đó ⇒ chip "Lần than hóa" biến mất và liên kết với
         // thẻ Chọn Nan Thô bị đứt. ──
         state.batches[idx] = Object.assign({}, old, batchData);
+        // PHIẾU XUẤT TỰ ĐỘNG: sửa thẻ đổi công đoạn Kho → Sấy 2 (17/10/2026) —
+        // nếu thiếu phiếu này, lần quay lại Kho tồn sẽ bị nhân đôi.
+        if (old && old.stage === 'kho' && stageVal === 'say2') {
+          addKhoSay2AutoNote(old, Number(old.quantity) || quantity, dateVal || stageDateVal || old.date, 'move');
+          saveKhoNotes();
+        }
         showToast('Đã cập nhật thẻ nan tre thành công!', 'success');
       }
     } else {
@@ -1477,10 +1483,15 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
   // Lô TÓP = lô ở Kho mang cờ topRework
   function alTopLots() { return (state.batches || []).filter(b => b && b.stage === 'kho' && b.topRework); }
   // Tồn còn lại của lô Tóp (tối đa số thanh được lấy ra đốt lại)
+  // • Dữ liệu MỚI (17/10/2026): mỗi lần đốt lại đã tự sinh PHIẾU XUẤT (autoRework) nên
+  //   tồn kho đã trừ phần đó — KHÔNG trừ topUsed lần nữa.
+  // • Dữ liệu CŨ (chưa có phiếu tự động): vẫn trừ topUsed như trước để không bị phồng.
   function alTopRemainingOf(b) {
     if (!b) return 0;
     const used = Number(b.topUsed) || 0;
-    return Math.max(0, Math.floor((Number(khoLotRemainingOf(b)) || 0) - used));
+    const hasAuto = (state.khoNotes || []).some(n => n && n.type === 'xuat' && n.autoRework
+      && (Array.isArray(n.lots) ? n.lots : []).some(l => l && String(l.batchId || '') === String(b.id)));
+    return Math.max(0, Math.floor((Number(khoLotRemainingOf(b)) || 0) - (hasAuto ? 0 : used)));
   }
   // Số lượng đốt lại hợp lệ đang nhập cho 1 lô (mặc định = tồn; CHẶN vượt tồn)
   function alReworkQtyOf(id) {
@@ -2182,9 +2193,12 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
         updatedAt: nowISO
       };
       state.batches.unshift(rwData);
-      src.topUsed = (Number(src.topUsed) || 0) + take; // tồn Tóp nguồn giảm (không lưu cứng)
+      // PHIẾU XUẤT TỰ ĐỘNG: Tóp đốt lại → Sấy 1 (phần lấy ra RỜI nhóm ⇒ mục đích 'khac')
+      addKhoReworkAutoNote(src, take, dateVal, 'Sấy 1');
+      src.topUsed = (Number(src.topUsed) || 0) + take; // lưu để hiển thị; tồn đã trừ qua phiếu
       src.updatedAt = nowISO;
       alPicked = [];
+      saveKhoNotes();
       saveData(); closeAddLotModal(); renderAll();
       showToast(`Đã than hóa lại ${take.toLocaleString('vi-VN')} thanh → Sấy 1 (nguồn: lô Tóp ${src.code || '—'} — còn ${(rem - take).toLocaleString('vi-VN')} thanh)!`, 'success');
       return;
@@ -2207,6 +2221,8 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
         // Nhập hết phần còn lại → chuyển NGUYÊN lô sang Sấy 2 + hết cờ Tóp
         pushUndo('Than hóa lại lô Tóp → Sấy 2');
         if (!src.stageHistory || !src.stageHistory.length) src.stageHistory = [{ stage: src.stage, date: src.date }];
+        // PHIẾU XUẤT TỰ ĐỘNG: lô RỜI Kho sang Sấy 2 (nguyên lô) — số lượng = SỐ LƯỢNG CHUẨN
+        addKhoSay2AutoNote(src, Number(src.quantity) || 0, dateVal, 'move');
         src.stage = 'say2';
         src.say2Date = dateVal;                       // ngày vào Sấy 2 (badge đếm ngày)
         src.stageHistory.push({ stage: 'say2', date: dateVal });
@@ -2219,6 +2235,7 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
         delete src.topUsed;
         src.updatedAt = nowISO;
         alPicked = [];
+        saveKhoNotes();                               // lưu phiếu xuất Sấy 2 tự động
         saveData(); closeAddLotModal(); renderAll();
         showToast(`Lô Tóp ${src.code || '—'} (${rem.toLocaleString('vi-VN')} thanh) → Sấy 2 — đã hết cờ Tóp!`, 'success');
         return;
@@ -2244,15 +2261,17 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
         rework: true,
         sourceTopBatchId: String(src.id),
         stageHistory: [
-          { stage: 'kho', date: src.khoDate || src.date },
-          { stage: 'say2', date: dateVal }
+          { stage: 'say2', date: dateVal }   // lô TÁCH sinh ra tại Sấy 2 (không phải lô đã ở Kho)
         ],
         createdAt: nowISO, updatedAt: nowISO
       };
       state.batches.unshift(clone);
       src.topUsed = (Number(src.topUsed) || 0) + take;
+      // PHIẾU XUẤT TỰ ĐỘNG: Tóp đốt lại 1 PHẦN → Sấy 2 (phần tách RỜI nhóm ⇒ 'khac')
+      addKhoReworkAutoNote(src, take, dateVal, 'Sấy 2');
       src.updatedAt = nowISO;
       alPicked = [];
+      saveKhoNotes();
       saveData(); closeAddLotModal(); renderAll();
       showToast(`Đã tách ${take.toLocaleString('vi-VN')} thanh Tóp → Sấy 2 (nguồn ${src.code || '—'} còn ${(rem - take).toLocaleString('vi-VN')} thanh ở Kho)!`, 'success');
       return;
@@ -2266,6 +2285,8 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
       const useForVal = alUseFor();
       lots.forEach(b => {
         if (!b.stageHistory || !b.stageHistory.length) b.stageHistory = [{ stage: b.stage, date: b.date }];
+        // PHIẾU XUẤT TỰ ĐỘNG: mỗi lô RỜI Kho sang Sấy 2 → 1 phiếu 'say2' (SL chuẩn của lô)
+        addKhoSay2AutoNote(b, Number(b.quantity) || 0, dateVal, 'move');
         b.stage = 'say2';
         b.say2Date = dateVal;                        // ngày vào Sấy 2 thực tế (badge đếm ngày)
         b.stageHistory.push({ stage: 'say2', date: dateVal });
@@ -2279,6 +2300,7 @@ import { sayBuildCharges, sayShiftMapOf, syncAlShiftField, alShiftIdxValue } fro
         b.updatedAt = nowISO;
       });
       alPicked = [];
+      saveKhoNotes();                               // lưu các phiếu xuất Sấy 2 tự động
       saveData(); closeAddLotModal(); renderAll();
       showToast(`Đã chuyển ${lots.length} lô vào Sấy 2 — vị trí ${location} (ngày ${formatDateDDMMYY(dateVal)})!`, 'success');
       return;

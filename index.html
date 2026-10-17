@@ -265,7 +265,7 @@
           <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-kanban" title="Lịch sử thay đổi của tab này (chỉ Admin)">
             <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
           </button>
-          <button class="btn btn-success" id="btn-open-export-modal" title="Xuất file Excel tùy chỉnh">
+          <button class="btn btn-success" id="btn-open-export-modal" title="Trung tâm xuất Excel — chọn tab, báo cáo, kỳ rồi xuất/xem trước">
             <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
           </button>
         </div>
@@ -1341,7 +1341,6 @@
                 <div class="form-group" id="x2-kho-purpose-group">
                   <label for="x2-kho-purpose">Mục Đích Xuất <span class="required">*</span></label>
                   <select id="x2-kho-purpose">
-                    <option value="say2">Sấy 2 (sấy lại)</option>
                     <option value="baotinh">Bào Tinh</option>
                     <option value="bullig">Bullig (gia công)</option>
                     <option value="khac">Khác (ghi lý do)</option>
@@ -1465,17 +1464,17 @@
           </div>
 
           <div class="x2-zone" data-zone="5">
-            <div class="x2-zone-head" title="Tồn từng lô (lô xuất hết bị ẩn) — bấm lô để gắn phiếu; nút 'Tạo phiếu bù' sinh phiếu cho dữ liệu cũ (chỉ Admin / Ban Quản Lý)."><span class="x2-zone-no">5</span><i data-lucide="boxes"></i> Tồn Theo Từng Lô</div>
+            <div class="x2-zone-head" title="Tồn từng lô (lô xuất hết bị ẩn) — bấm lô để gắn phiếu; nút 'Rà soát sổ kho' dọn phiếu bù trùng + bổ sung phiếu xuất Sấy 2 tự động còn thiếu (chỉ Admin / Ban Quản Lý)."><span class="x2-zone-no">5</span><i data-lucide="boxes"></i> Tồn Theo Từng Lô</div>
           <!-- BẢNG TỒN KHO THEO LÔ — mỗi lô 1 DÒNG (kể cả lô ra/vào kho nhiều lần, có
                chip "ra/vào N lần"); lô ĐÃ XUẤT HẾT ẨN mặc định (công tắc bên dưới để hiện
-               lại); nút "Tạo phiếu bù" sinh phiếu xuất ĐÃ DUYỆT cho dữ liệu cũ (chạy 2 lần
-               không sinh trùng) -->
+               lại); nút "Rà soát sổ kho" dọn phiếu hệ thống trùng + cắt phần bù cũ vượt
+               số lượng lô + bổ sung phiếu xuất Sấy 2 tự động (chạy 2 lần không sinh trùng) -->
           <div class="x2-cut-table-wrap" id="x2-kho-stock-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="boxes"></i> Tồn Kho Theo Lô</h5>
               <span class="x2-cut-table-count" id="x2-kho-stock-count"></span>
               <label class="kho-show-used" title="Hiện cả lô đã xuất hết (tồn 0) — mặc định ẨN để tránh hiểu nhầm"><input type="checkbox" id="x2-kho-show-used"> Hiện lô đã xuất hết</label>
-              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-backfill-btn" data-perm="x2" title="Sinh phiếu xuất ĐÃ DUYỆT bù cho dữ liệu Bào Tinh / Bullig / quay lại Sấy 2 ghi TRƯỚC khi có sổ kho (chỉ Admin / Ban Quản Lý)"><i data-lucide="wand-2"></i> Tạo phiếu bù</button>
+              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-backfill-btn" data-perm="x2" title="Rà soát sổ kho: dọn phiếu hệ thống TRÙNG, cắt phần phiếu bù cũ ghi vượt số lượng lô, bổ sung phiếu xuất Sấy 2 TỰ ĐỘNG còn thiếu (chỉ Admin / Ban Quản Lý). Tự chụp bản cất trước khi sửa."><i data-lucide="wand-2"></i> Rà soát sổ kho</button>
               <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2kho-stock" title="Thu gọn / Mở rộng">
                 <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
               </button>
@@ -6067,107 +6066,6 @@
     </div>
   </div>
 
-  <!-- MODAL 6: CUSTOM EXPORT EXCEL MODAL (.xlsx) -->
-  <div class="modal-overlay" id="modal-custom-export">
-    <div class="modal-card modal-sm hud-frame">
-      <div class="modal-header">
-        <h3><i data-lucide="file-spreadsheet"></i> Xuất Nhật Ký Than Hóa (.xlsx)</h3>
-        <button class="modal-close-btn" id="btn-close-export-modal"><i data-lucide="x"></i></button>
-      </div>
-
-      <form id="custom-export-form" style="padding: 20px;">
-        <!-- Report Header Info -->
-        <div style="background:var(--surface-alt); border-radius:8px; padding:12px; margin-bottom:14px; border:1px solid var(--border);">
-          <p style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;">Thông tin tiêu đề báo cáo</p>
-          <div class="form-group" style="margin-bottom: 10px;">
-            <label for="export-requester" style="font-size:0.8rem;"><i data-lucide="user"></i> Họ và tên người đề nghị</label>
-            <input type="text" id="export-requester" placeholder="Ví dụ: Nguyễn Văn An" style="height:36px; font-size:0.85rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <label for="export-department" style="font-size:0.8rem;"><i data-lucide="building-2"></i> Bộ phận</label>
-            <input type="text" id="export-department" placeholder="Ví dụ: Phân Xưởng Sấy" style="height:36px; font-size:0.85rem;">
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-stage-select"><i data-lucide="layers"></i> Lọc Theo Công Đoạn</label>
-          <select id="export-stage-select">
-            <option value="all">Tất Cả Công Đoạn</option>
-            <option value="say1">1. Sấy 1</option>
-            <option value="say2">2. Sấy 2</option>
-            <option value="kho">3. Kho Lưu Trữ</option>
-          </select>
-          <!-- OPTION "4. Bào Tinh" ĐÃ GỠ — lô stage bao_tinh (dữ liệu cũ) bị dọn hẳn lúc boot,
-               không còn gì để lọc/xuất theo công đoạn này (code xuất vẫn hỗ trợ nếu tạm thời
-               có lô cũ từ file backup trước khi purge chạy lại). -->
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label><i data-lucide="calendar"></i> Lọc Theo Khoảng Ngày</label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <div>
-              <span style="font-size:0.75rem; color:var(--text-muted);">Từ ngày:</span>
-              <input type="date" id="export-date-from">
-            </div>
-            <div>
-              <span style="font-size:0.75rem; color:var(--text-muted);">Đến ngày:</span>
-              <input type="date" id="export-date-to">
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-location-select"><i data-lucide="map-pin"></i> Lọc Theo Vị Trí Lưu Kho/Kệ</label>
-          <select id="export-location-select">
-            <option value="all">Tất Cả Vị Trí</option>
-          </select>
-        </div>
-
-        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-export">Hủy</button>
-          <button type="button" class="btn btn-primary" id="btn-preview-custom" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
-          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 6B: XUẤT EXCEL KẾ HOẠCH SẢN XUẤT -->
-  <div class="modal-overlay" id="modal-export-planning">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3><i data-lucide="file-spreadsheet"></i> Xuất Kế Hoạch Sản Xuất (.xlsx)</h3>
-        <button class="modal-close-btn" id="btn-close-export-planning"><i data-lucide="x"></i></button>
-      </div>
-      <form id="planning-export-form" style="padding: 20px;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-planning-year"><i data-lucide="calendar-range"></i> Lọc Theo Năm</label>
-          <select id="export-planning-year">
-            <option value="all">Tất Cả Các Năm</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-planning-week"><i data-lucide="calendar-check"></i> Lọc Theo Tuần</label>
-          <select id="export-planning-week">
-            <option value="all">Tất Cả Các Tuần</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-planning-product"><i data-lucide="package"></i> Lọc Theo Sản Phẩm</label>
-          <select id="export-planning-product">
-            <option value="all">Tất Cả Sản Phẩm</option>
-          </select>
-        </div>
-        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-export-planning">Hủy</button>
-          <button type="button" class="btn btn-primary" id="btn-preview-planning" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
-          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 6C: XUẤT EXCEL SẢN LƯỢNG ÉP VÁN -->
   <!-- MODAL: XUẤT DỮ LIỆU XƯỞNG 2 — DÙNG CHUNG cho các THẺ ở tab Công Đoạn.
        Nút "Xuất Dữ Liệu X2" tự chọn VÙNG DỮ LIỆU theo thẻ đang mở; đổi được
        bằng dropdown. Nguồn "Ép Ván" mở form xuất Ép Ván chuyên sâu. -->
@@ -6195,186 +6093,34 @@
         <p id="export-x2-hint" style="margin:0; font-size:0.75rem; color:var(--text-muted);"></p>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-export-x2">Hủy Bỏ</button>
+          <button type="button" class="btn btn-primary" id="btn-preview-x2" title="Xem trước &amp; chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
           <button type="submit" class="btn btn-success"><i data-lucide="download"></i> Xuất Excel</button>
         </div>
       </form>
     </div>
   </div>
-
-  <div class="modal-overlay" id="modal-export-press">
-    <div class="modal-card modal-sm">
+  <!-- MODAL: TRUNG TÂM XUẤT EXCEL — 1 modal dùng chung cho MỌI tab/báo cáo.
+       Chọn Tab → chọn Báo cáo → bộ lọc tự sinh → Xem Trước / Xuất .xlsx.
+       Thay thế 6 modal xuất riêng rẽ trước đây (đã xóa). -->
+  <div class="modal-overlay" id="modal-report-center">
+    <div class="modal-card rc-card">
       <div class="modal-header">
-        <h3><i data-lucide="file-spreadsheet"></i> Xuất Sản Lượng Ép Ván (.xlsx)</h3>
-        <button class="modal-close-btn" id="btn-close-export-press"><i data-lucide="x"></i></button>
+        <h3><i data-lucide="file-spreadsheet"></i> Trung Tâm Xuất Excel</h3>
+        <button class="modal-close-btn" id="btn-close-report-center"><i data-lucide="x"></i></button>
       </div>
-      <form id="press-export-form" style="padding: 20px;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-press-year"><i data-lucide="calendar-range"></i> Lọc Theo Năm</label>
-          <select id="export-press-year">
-            <option value="all">Tất Cả Các Năm</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-press-week"><i data-lucide="calendar-check"></i> Lọc Theo Tuần</label>
-          <select id="export-press-week">
-            <option value="all">Tất Cả Các Tuần</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-press-product"><i data-lucide="package"></i> Lọc Theo Thành Phẩm</label>
-          <select id="export-press-product">
-            <option value="all">Tất Cả Thành Phẩm</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-press-worker"><i data-lucide="user"></i> Lọc Theo Công Nhân</label>
-          <select id="export-press-worker">
-            <option value="all">Tất Cả Công Nhân</option>
-          </select>
-        </div>
-        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-export-press">Hủy</button>
-          <button type="button" class="btn btn-primary" id="btn-preview-press" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
-          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 6D: XUẤT EXCEL NHẬT KÝ NGUYÊN LIỆU -->
-  <div class="modal-overlay" id="modal-export-materials">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3><i data-lucide="file-spreadsheet"></i> Xuất Nhật Ký Nguyên Liệu (.xlsx)</h3>
-        <button class="modal-close-btn" id="btn-close-export-materials"><i data-lucide="x"></i></button>
+      <div class="rc-body">
+        <p class="rc-subtitle" id="report-center-subtitle"></p>
+        <div class="rc-tabs" id="report-center-tabs"></div>
+        <div class="rc-list" id="report-center-list"></div>
+        <div id="report-center-filters"></div>
+        <p class="rc-hint" id="report-center-hint"></p>
       </div>
-      <form id="materials-export-form" style="padding: 20px;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-materials-location"><i data-lucide="map-pin"></i> Lọc Theo Vị Trí (Dùng Cho)</label>
-          <select id="export-materials-location">
-            <option value="all">Tất Cả Vị Trí</option>
-            <option value="lo-hoi">Lò hơi</option>
-            <option value="xuong-1">Xưởng 1</option>
-            <option value="xuong-2">Xưởng 2</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-materials-type"><i data-lucide="package"></i> Lọc Theo Loại Nguyên Liệu</label>
-          <select id="export-materials-type">
-            <option value="all">Tất Cả Loại</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-materials-supplier"><i data-lucide="truck"></i> Lọc Theo Nhà Cung Cấp</label>
-          <select id="export-materials-supplier">
-            <option value="all">Tất Cả Nhà Cung Cấp</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label><i data-lucide="calendar"></i> Lọc Theo Khoảng Ngày</label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <div>
-              <span style="font-size:0.75rem; color:var(--text-muted);">Từ ngày:</span>
-              <input type="date" id="export-materials-date-from">
-            </div>
-            <div>
-              <span style="font-size:0.75rem; color:var(--text-muted);">Đến ngày:</span>
-              <input type="date" id="export-materials-date-to">
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-export-materials">Hủy</button>
-          <button type="button" class="btn btn-primary" id="btn-preview-materials" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
-          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-
-
-  <!-- MODAL 6D2: XUẤT EXCEL QC — BẢNG XUẤT HÀNG -->
-  <div class="modal-overlay" id="modal-export-qc">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3><i data-lucide="file-spreadsheet"></i> Xuất QC — Bảng Xuất Hàng (.xlsx)</h3>
-        <button class="modal-close-btn" id="btn-close-export-qc"><i data-lucide="x"></i></button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btn-report-cancel">Hủy Bỏ</button>
+        <button type="button" class="btn btn-outline" id="btn-report-multi" title="Xuất TẤT CẢ báo cáo của tab đang chọn vào 1 file Excel (mỗi báo cáo 1 sheet)"><i data-lucide="layers"></i> Xuất Cả Nhóm</button>
+        <button type="button" class="btn btn-primary" id="btn-report-preview"><i data-lucide="eye"></i> Xem Trước</button>
+        <button type="button" class="btn btn-success" id="btn-report-export"><i data-lucide="file-spreadsheet"></i> Xuất .xlsx</button>
       </div>
-      <form id="qc-xlsx-export-form" style="padding: 20px;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-qc-year"><i data-lucide="calendar-range"></i> Lọc Theo Năm</label>
-          <select id="export-qc-year">
-            <option value="all">Tất Cả Các Năm</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-qc-week"><i data-lucide="calendar-check"></i> Lọc Theo Tuần</label>
-          <select id="export-qc-week">
-            <option value="all">Tất Cả Các Tuần</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-qc-product"><i data-lucide="package"></i> Lọc Theo Thành Phẩm</label>
-          <select id="export-qc-product">
-            <option value="all">Tất Cả Thành Phẩm</option>
-          </select>
-        </div>
-        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-export-qc">Hủy</button>
-          <button type="button" class="btn btn-primary" id="btn-preview-qc" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
-          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 6D3: XUẤT EXCEL NHÂN SỰ — CHỌN THEO THẺ NHANH (MINI CARD) -->
-  <div class="modal-overlay" id="modal-export-hr">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3><i data-lucide="file-spreadsheet"></i> Xuất Nhân Sự (.xlsx)</h3>
-        <button class="modal-close-btn" id="btn-close-export-hr"><i data-lucide="x"></i></button>
-      </div>
-      <form id="hr-xlsx-export-form" style="padding: 20px;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-hr-card"><i data-lucide="layout-grid"></i> Chọn Nội Dung Xuất (theo thẻ nhanh)</label>
-          <select id="export-hr-card">
-            <option value="hr-emp">Nhân Viên — Danh Sách Nhân Viên</option>
-            <option value="hr-timesheet">Bảng Chấm Công Theo Tháng (HC/TC)</option>
-            <option value="hr-att-day">Chấm Công &amp; Phân Vị — Theo Ngày</option>
-            <option value="hr-att-stats">Thống Kê Đi Làm — Theo Tháng</option>
-            <option value="hr-pos">Vị Trí Làm Việc &amp; Kỹ Năng</option>
-            <option value="hr-ci">Giờ Máy Chấm Công</option>
-            <option value="hr-leave">Đơn Xin Nghỉ Phép</option>
-            <option value="hr-leave-stats">Thống Kê Nghỉ Phép — Theo Nhân Viên</option>
-            <option value="hr-recruit">Nhân Sự Cần — Tuyển Dụng</option>
-            <option value="hr-posneed">Nhân Sự Cần Tại Các Vị Trí</option>
-          </select>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
-            Mỗi lựa chọn tương ứng một thẻ nhanh trên tab Nhân Sự.
-          </div>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="export-hr-dept"><i data-lucide="map-pin"></i> Lọc Theo Bộ Phận</label>
-          <select id="export-hr-dept">
-            <option value="all">Tất Cả Bộ Phận</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom: 12px; display:none;" id="export-hr-date-row">
-          <label for="export-hr-date"><i data-lucide="calendar"></i> Ngày Chấm Công (dùng cho "Chấm Công &amp; Phân Vị")</label>
-          <input type="date" id="export-hr-date">
-        </div>
-        <div class="form-group" style="margin-bottom: 12px; display:none;" id="export-hr-month-row">
-          <label for="export-hr-month"><i data-lucide="calendar-days"></i> Tháng Thống Kê (dùng cho "Thống Kê Đi Làm")</label>
-          <input type="month" id="export-hr-month">
-        </div>
-        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-export-hr">Hủy</button>
-          <button type="button" class="btn btn-primary" id="btn-preview-hr" title="Xem trước & chỉnh sửa bảng trực tiếp trước khi xuất/in"><i data-lucide="eye"></i> Xem Trước</button>
-          <button type="submit" class="btn btn-success"><i data-lucide="file-spreadsheet"></i> Xuất File .xlsx</button>
-        </div>
-      </form>
     </div>
   </div>
 
@@ -7317,6 +7063,29 @@
           <i data-lucide="eraser"></i> Xóa Sổ Xung Đột
         </button>
         <button class="btn btn-primary" id="btn-sync-conflict-ok"><i data-lucide="check"></i> Đóng</button>
+      </div>
+    </div>
+  </div>
+  <!-- ═══ MODAL: CHI TIẾT CẢNH BÁO TỒN KHO (Kho Nan — js/xuong2.js) ═══
+       Mở từ 2 chip cảnh báo trên thanh tồn: lô có phiếu vượt số lượng / lô thiếu phiếu.
+       Admin/BQL có nút "Chốt lệch" (chỉ tắt cảnh báo, KHÔNG sửa dữ liệu gốc). -->
+  <div class="modal-overlay" id="modal-kho-warn">
+    <div class="modal-card kho-warn-card">
+      <div class="modal-header">
+        <h3 id="kho-warn-title"><i data-lucide="alert-triangle"></i> Chi tiết cảnh báo tồn kho</h3>
+        <button class="modal-close" id="btn-close-kho-warn" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="kho-warn-intro">
+          <strong>Vượt số lượng</strong> = tổng phiếu xuất ĐÃ DUYỆT của lô lớn hơn sức chứa
+          (số lượng × số lần nhập) — thường do phiếu bù cũ bị nhân hoặc phiếu tay trùng với phiếu hệ thống.
+          Kiểm tra các lượt Bullig / Bào Tinh bên dưới, sửa nguồn nếu sai — hoặc bấm
+          <strong>Chốt lệch</strong> (Admin/BQL) nếu số liệu đã đúng và chấp nhận chênh lệch.
+        </p>
+        <div id="kho-warn-body" class="kho-warn-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-kho-warn-ok"><i data-lucide="check"></i> Đóng</button>
       </div>
     </div>
   </div>

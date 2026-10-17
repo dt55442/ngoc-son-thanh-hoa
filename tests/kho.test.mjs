@@ -237,37 +237,36 @@ x2.khoApproveNote(state.khoNotes[state.khoNotes.length - 1].id);
 check('LỖI BÀO TINH: tồn lỗi 20 − tái chế 5 = 15 (baoTinhDefectStock trừ phiếu đã duyệt)',
   x2.baoTinhDefectStock().find(x => x.sizeKey === '1230×14×5').remaining === 15);
 
-// ─── D. ĐỐI CHIẾU + PHIẾU BÙ DỮ LIỆU CŨ (THEO NGÀY THẬT) ─────
+// ─── D. ĐỐI CHIẾU + RÀ SOÁT SỔ KHO (bù dữ liệu cũ) ─────────────
 check('ĐỐI CHIẾU: hệ thống suy ra k3 = 500 (lượt bào tinh) — phiếu gắn k3 chưa có → lệch +500',
   utils.khoDerivedOutOf('k3') === 500 && utils.khoStockSummary().mismatchThanh > 400);
 const notesBeforeBackfill = state.khoNotes.length;
 x2.khoBackfillFromLegacy(); // confirm() stub trả true
-// Phiếu bù mới sinh theo TỪNG SỰ KIỆN (k3 Bào Tinh 16/09 + k2 quay Sấy 2 13/09) → +2 phiếu.
+// Rà soát: k3 thiếu phiếu Bào Tinh → sinh 1 phiếu bù 'khac'. k2 ĐÃ có phiếu 'say2'
+// (ngày 15/09) nên KHÔNG sinh thêm (trước đây bù mù theo ngày thật → sinh trùng).
 const backfill = state.khoNotes.find(n => n && n.status === 'da_duyet' && n.type === 'xuat' &&
   String(n.purposeNote || '').includes('Khởi tạo từ dữ liệu cũ') &&
   (n.lots || []).some(l => String(l.batchId) === 'k3'));
-check('PHIẾU BÙ (NGÀY THẬT): sinh phiếu ĐÃ DUYỆT gắn đúng lô k3 (500 thanh, ngày = ngày lượt Bào Tinh)', (() => {
+check('RÀ SOÁT (D4): sinh phiếu bù ĐÃ DUYỆT gắn đúng lô k3 (500 thanh, ngày = ngày lượt Bào Tinh)', (() => {
   const btDate = (state.xuong2BaoTinhRecords || []).find(r => r && r.kind === 'tinh' &&
     (r.sources || []).some(s => String(s.batchId) === 'k3'))?.date || '';
   return !!backfill && backfill.status === 'da_duyet' && backfill.lots[0].batchId === 'k3' && backfill.lots[0].qty === 500 &&
-    backfill.date === btDate && backfill.note.includes('NGÀY THẬT') &&
-    state.khoNotes.length === notesBeforeBackfill + 2;
+    backfill.date === btDate && backfill.note.includes('Rà soát sổ kho') &&
+    state.khoNotes.length === notesBeforeBackfill + 1;
 })());
-check('PHIẾU BÙ: snapshot vị trí lô lúc bù (lots[0].loc = K13) để kiểm chứng',
+check('RÀ SOÁT: snapshot vị trí lô lúc bù (lots[0].loc = K13) để kiểm chứng',
   !!backfill && backfill.lots[0].loc === 'K13');
 x2.khoBackfillFromLegacy(); // chạy lần 2 → KHÔNG sinh trùng
-check('PHIẾU BÙ: chạy lần 2 KHÔNG sinh trùng (số phiếu giữ nguyên)',
-  state.khoNotes.length === notesBeforeBackfill + 2);
-check('ĐỐI CHIẾU: sau phiếu bù → lệch ≈ 0 (chỉ còn sai số làm tròn)',
+check('RÀ SOÁT: chạy lần 2 KHÔNG sinh trùng (số phiếu giữ nguyên)',
+  state.khoNotes.length === notesBeforeBackfill + 1);
+check('ĐỐI CHIẾU: sau khi rà soát → lệch ≈ 0 (chỉ còn sai số làm tròn)',
   Math.abs(utils.khoStockSummary().mismatchThanh) < 2);
-// Phiếu bù purpose say2 mang NGÀY THẬT quay lại Sấy 2 (k2: 2026-09-13),
-// KHÔNG phải ngày nhập kho lần cuối (2026-09-14).
-check('PHIẾU BÙ SAY2 (NGÀY THẬT): k2 quay Sấy 2 ngày 13/09 → phiếu say2 ngày 13/09 (không phải 14/09)', (() => {
-  const say2Notes = state.khoNotes.filter(n => n && n.status === 'da_duyet' && n.type === 'xuat' &&
-    String((n.purposeNote || '')).includes('Khởi tạo từ dữ liệu cũ') && n.purpose === 'say2' &&
+// k2 đã có phiếu xuất say2 do người dùng tạo (15/09) → rà soát KHÔNG tạo thêm phiếu
+// say2 trùng cho cùng lần đi; phiếu tự động chỉ sinh khi còn THIẾU.
+check('RÀ SOÁT: KHÔNG sinh phiếu say2 trùng cho k2 (đã có phiếu say2 ngày 15/09)', (() => {
+  const say2Notes = state.khoNotes.filter(n => n && n.status === 'da_duyet' && n.type === 'xuat' && n.purpose === 'say2' &&
     (n.lots || []).some(l => String(l.batchId) === 'k2'));
-  return say2Notes.length === 1 && say2Notes[0].date === '2026-09-13' &&
-    say2Notes[0].note.includes('NGÀY THẬT') && say2Notes[0].lots[0].loc === 'K12';
+  return say2Notes.length === 1 && say2Notes[0].date === '2026-09-15';
 })());
 
 // ─── E. SỔ NHẬP/XUẤT + PLANNING (trừ tồn theo phiếu ĐÃ DUYỆT) ──
@@ -355,18 +354,22 @@ check('THẺ LÔ: helper khoStageDaysOf tính đúng ngày S1/S2/K theo lịch s
 // GIAI ĐOẠN 2 (05/10/2026): bản đồ VÙNG DỮ LIỆU thêm 8 thẻ XƯỞNG 1 → 18;
 // THẺ CẮT VÁN (09/10/2026) → 19 · THẺ BÀO VÁN (09/10/2026) → 20.
 // THẺ HỖ TRỢ + CÔNG ĐOẠN LẺ (10/10/2026) → 21.
-// Nguồn XUẤT EXCEL 10 → 13 thẻ Xưởng 2 (thêm Hỗ trợ)
-// (X1 chưa có form xuất riêng → nút Xuất về fallback 'batch').
+// Nguồn XUẤT EXCEL 13 → 21 (17/10/2026: thêm 8 thẻ Xưởng 1 — trước đây nút
+// "Xuất Dữ Liệu" của thẻ X1 rơi về 'batch' nên xuất nhầm Lô nan).
 const X2_IDS = ['x2-bo-luong-card', 'x2-cut-card', 'x2-bo-ong-card', 'x2-bao-tho-card',
   'x2-chon-nan-tho-card', 'x2-than-hoa-card', 'x2-kho-card', 'x2-bao-tinh-card',
   'x2-bullig-card', 'x2-cat-van-card', 'x2-bao-van-card', 'x2-ho-tro-card', 'x2-ep-van-card'];
-check('DÙNG CHUNG: 13 thẻ X2 đủ vùng dữ liệu + nguồn xuất (thêm Hỗ Trợ + Công Đoạn Lẻ)',
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 13 &&
+const X1_IDS = ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card', 'x1-loc-ong-card',
+  'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card'];
+check('DÙNG CHUNG: 13 thẻ X2 + 8 thẻ X1 đủ vùng dữ liệu + nguồn xuất (21/21)',
+  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 21 &&
   Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 21 &&
-  X2_IDS.every(id => !!x2.X2_CARD_HISTORY_DOMAIN[id] && !!x2.X2_CARD_EXPORT_SOURCE[id]) &&
+  [...X2_IDS, ...X1_IDS].every(id => !!x2.X2_CARD_HISTORY_DOMAIN[id] && !!x2.X2_CARD_EXPORT_SOURCE[id]) &&
   x2.X2_CARD_EXPORT_SOURCE['x2-kho-card'] === 'kho' &&
   x2.X2_CARD_HISTORY_DOMAIN['x2-ho-tro-card'] === 'xuong2HoTroRecords' &&
-  x2.X2_CARD_EXPORT_SOURCE['x2-ho-tro-card'] === 'hotro');
+  x2.X2_CARD_EXPORT_SOURCE['x2-ho-tro-card'] === 'hotro' &&
+  x2.X2_CARD_EXPORT_SOURCE['x1-cat-ong-card'] === 'x1catong' &&
+  x2.X2_CARD_EXPORT_SOURCE['x1-loc-thanh-card'] === 'x1locthanh');
 
 // ─── F3. SỬA LỖI 06/10/2026: chặn theo TỪNG LÔ · SỔ LỆCH KHÔNG KHÓA · NÚT THU GỌN ──
 // (a) SỔ LỆCH (honestThanh = 0 do phiếu bù cũ gắn lô ĐÃ RỜI kho) NHƯNG lô ở Kho vẫn
@@ -480,10 +483,10 @@ check('VÙNG: thẻ Bào Tinh được bọc 3 khung (Nhập Liệu · Thống K
   const slice = idxHtml.slice(idxHtml.indexOf('id="x2-bao-tinh-card"'), idxHtml.indexOf('id="x2-ep-van-card"'));
   return (slice.match(/class="x2-zone"/g) || []).length === 3;
 })());
-check('VÙNG: head thanh trong khung tab (Than Hóa · Ép Ván) + CSS .x2-zone/.kho-kpi + phiếu bù theo NGÀY THẬT', (() => {
+check('VÙNG: head thanh trong khung tab (Than Hóa · Ép Ván) + CSS .x2-zone/.kho-kpi + RÀ SOÁT SỔ KHO', (() => {
   const jsXuong2 = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
   return idxHtml.includes('x2-zone-bar') && cssCss.includes('.x2-zone {') && cssCss.includes('.kho-kpi {') &&
-    jsXuong2.includes('khoLedgerEvents().derived') && jsXuong2.includes('NGÀY THẬT') &&
+    jsXuong2.includes('khoLedgerEvents().derived') && jsXuong2.includes('Rà soát sổ kho') &&
     jsXuong2.includes('khoReopenNote') && jsXuong2.includes('data-kho-reopen');
 })());
 check('CẤU TRÚC (index.html): mini card + thẻ Kho Nan đủ khối (tồn · WIP · phiếu · sổ · tồn)',
@@ -503,7 +506,7 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v270/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v273/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',
@@ -538,6 +541,103 @@ check('MỞ LẠI: duyệt lại phiếu riêng → tồn trừ đúng 200 (ki�
   const n = state.khoNotes.find(x => x && x.id === nid);
   return n && n.status === 'da_duyet' && utils.khoLotRemainingOf(state.batches.find(b => b.id === 'k-reopen')) === 0;
 })());
+
+// ─── D2. PHIẾU XUẤT SẤY 2 TỰ ĐỘNG + CẢNH BÁO VƯỢT SỐ LƯỢNG (17/10/2026) ──
+state.batches.push({ id: 'k-auto', code: '260930-77', stage: 'kho', date: '2026-09-30', week: '2026-W40',
+  length: 1250, width: 18, thickness: 9, quantity: 1000, volume: 0.2025, bambooType: 'B', useFor: 'Ván',
+  location: 'K77', stageHistory: [{ stage: 'kho', date: '2026-09-30' }] });
+const autoLot = state.batches.find(b => b.id === 'k-auto');
+const autoBefore = state.khoNotes.length;
+const auto1 = x2.addKhoSay2AutoNote(autoLot, 1000, '2026-10-02', 'move');
+check('AUTO: tạo phiếu xuất "say2" ĐÃ DUYỆT, qty = SỐ LƯỢNG CHUẨN, autoSay2 = true (không cần duyệt tay)',
+  !!auto1 && auto1.type === 'xuat' && auto1.purpose === 'say2' && auto1.status === 'da_duyet' &&
+  auto1.qty === 1000 && auto1.autoSay2 === true && auto1.lots[0].batchId === 'k-auto' &&
+  auto1.note.includes('Tự động'));
+check('AUTO: gọi lần 2 CÙNG NGÀY → KHÔNG sinh trùng (vẫn 1 phiếu)',
+  x2.addKhoSay2AutoNote(autoLot, 1000, '2026-10-02', 'move') === null && state.khoNotes.length === autoBefore + 1);
+// Lô quay lại Kho: Kho 30/09 → Sấy 2 02/10 → Kho 05/10 ⇒ 2 lần nhập kho
+autoLot.stage = 'say2';
+autoLot.stageHistory.push({ stage: 'say2', date: '2026-10-02' });
+autoLot.stage = 'kho';
+autoLot.stageHistory.push({ stage: 'kho', date: '2026-10-05' });
+check('AUTO: lô quay lại Kho → TỒN KHÔNG bị nhân đôi (2 lần nhập × 1.000 − phiếu say2 1.000 = 1.000)',
+  utils.khoInCountOf(autoLot) === 2 && utils.khoLotRemainingOf(autoLot) === 1000);
+check('AUTO: phiếu tự động KHÔNG mở lại được (báo lỗi, giữ nguyên ĐÃ DUYỆT)', (() => {
+  x2.khoReopenNote(auto1.id);
+  return state.khoNotes.find(n => n.id === auto1.id).status === 'da_duyet';
+})());
+// Phiếu vượt sức chứa lô (bù cũ) → CẢNH BÁO chứ không im lặng kẹp tồn về 0
+state.batches.push({ id: 'k-over', code: '261001-99', stage: 'kho', date: '2026-10-01', week: '2026-W40',
+  length: 1250, width: 18, thickness: 7, quantity: 100, volume: 0.0158, bambooType: 'A', useFor: 'Ván',
+  location: 'K99B', stageHistory: [{ stage: 'kho', date: '2026-10-01' }] });
+const overLot = state.batches.find(b => b.id === 'k-over');
+state.khoNotes.push({ id: 'over-1', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-08',
+  qty: 150, lots: [{ batchId: 'k-over', qty: 150 }], createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)' });
+check('CẢNH BÁO: phiếu vượt sức chứa lô → khoOverAllocOf = phần vượt + khoStockSummary đếm lô vượt',
+  utils.khoOverAllocOf(overLot) === 50 && utils.khoStockSummary().overThanh >= 50 && utils.khoStockSummary().overLots >= 1);
+check('CẢNH BÁO: có CSS + markup chip "phiếu vượt" trong thẻ lô/bảng tồn',
+  cssCss.includes('.kho-over-badge') &&
+  fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8').includes('kho-over-badge'));
+// Rà soát D1: phiếu hệ thống TRÙNG y hệt → giữ bản đầu, xóa bản sau
+state.khoNotes.push({ id: 'dup-a', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-07',
+  qty: 100, lots: [{ batchId: 'k-auto', qty: 100 }], createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)' });
+state.khoNotes.push({ id: 'dup-b', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-07',
+  qty: 100, lots: [{ batchId: 'k-auto', qty: 100 }], createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)' });
+const dupPlan = x2.khoReconcilePlan();
+check('RÀ SOÁT (D1): phát hiện phiếu hệ thống TRÙNG y hệt (giữ bản đầu, xóa bản sau)',
+  dupPlan.dupIds.includes('dup-b') && !dupPlan.dupIds.includes('dup-a'));
+check('AUTO — CẤU TRÚC: form phiếu xuất KHÔNG còn lựa chọn "Sấy 2 (sấy lại)" + batch-modals gọi phiếu tự động (2 phiếu Sấy 2 · 2 phiếu Tóp)',
+  !idxHtml.includes('Sấy 2 (sấy lại)') &&
+  (fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').match(/addKhoSay2AutoNote\(/g) || []).length === 3 &&
+  (fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').match(/addKhoReworkAutoNote\(/g) || []).length === 2);
+
+// ─── D3. CẢNH BÁO: MISMATCH ẢO + D2 TRÙNG PHIẾU + CHỐT LỆCH (17/10/2026) ──
+// (a) Lô đang Sấy 2 ĐÃ có phiếu Sấy 2 → không còn bị coi là "thiếu phiếu"
+state.batches.push({ id: 'k-say2', code: '261003-88', stage: 'say2', date: '2026-10-01', week: '2026-W40',
+  length: 1250, width: 18, thickness: 7, quantity: 800, volume: 0.126, bambooType: 'A', useFor: 'Ván',
+  location: 'LS9', say2Date: '2026-10-02',
+  stageHistory: [{ stage: 'kho', date: '2026-10-01' }, { stage: 'say2', date: '2026-10-02' }] });
+state.khoNotes.push({ id: 'n-say2', type: 'xuat', status: 'da_duyet', purpose: 'say2', date: '2026-10-02',
+  qty: 800, lots: [{ batchId: 'k-say2', qty: 800 }], createdBy: 'system', createdByName: 'Hệ thống' });
+check('MISMATCH: lô đang Sấy 2 ĐÃ có phiếu Sấy 2 → KHÔNG nằm trong danh sách "thiếu phiếu" (hết cảnh báo ảo)',
+  !utils.khoStockSummary().mismatchLots.some(x => x.id === 'k-say2'));
+
+// (b) D2: phiếu bù HỆ THỐNG trùng với phiếu TAY → rà soát cắt phần trùng
+state.batches.push({ id: 'k-dup', code: '261004-77', stage: 'kho', date: '2026-10-04', week: '2026-W40',
+  length: 1250, width: 18, thickness: 7, quantity: 1000, volume: 0.1575, bambooType: 'A', useFor: 'Ván',
+  location: 'K88', stageHistory: [{ stage: 'kho', date: '2026-10-04' }] });
+state.khoNotes.push({ id: 'kdup-manual', type: 'xuat', status: 'da_duyet', purpose: 'baotinh', date: '2026-10-05',
+  qty: 1000, lots: [{ batchId: 'k-dup', qty: 1000 }], createdBy: 'user1', createdByName: 'Tổ trưởng' });
+state.khoNotes.push({ id: 'kdup-sys', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-05',
+  qty: 1000, lots: [{ batchId: 'k-dup', qty: 1000 }], createdBy: 'system', createdByName: 'Hệ thống' });
+const dupLot = () => state.batches.find(b => b.id === 'k-dup');
+check('D2: lô 1.000 có phiếu tay 1.000 + phiếu bù hệ thống 1.000 → bị ghi vượt 1.000 (cảnh báo)',
+  utils.khoOverAllocOf(dupLot()) === 1000);
+check('D2: kế hoạch rà soát phát hiện phần "khac" hệ thống TRÙNG (cắt đúng 1.000)',
+  x2.khoReconcilePlan().trims.some(t => t.lotId === 'k-dup' && t.qty === 1000));
+x2.khoReconcileLedger();
+check('D2: sau rà soát lô KHÔNG còn phiếu vượt (đã dùng đúng 1.000, tồn 0 hợp lệ)',
+  utils.khoOverAllocOf(dupLot()) === 0 && utils.khoLotRemainingOf(dupLot()) === 0);
+
+// (c) CHỐT LỆCH (Admin/BQL) — phần vượt thật của lô k-over (tạo ở mục D2 phía trên)
+const overBefore = utils.khoStockSummary().overThanh;
+x2.khoAckOverAlloc('k-over');
+check('CHỐT LỆCH: lưu khoOverAck trên lô + cảnh báo giảm đúng phần vượt (50)',
+  Number((state.batches.find(b => b.id === 'k-over') || {}).khoOverAck?.qty) === 50 &&
+  utils.khoStockSummary().overThanh === overBefore - 50);
+check('CHỐT LỆCH: lô đã chốt KHÔNG còn trong panel chi tiết',
+  !x2.khoWarnOverRows().some(r => r.b.id === 'k-over'));
+x2.khoClearOverAck('k-over');
+check('BỎ CHỐT: cảnh báo hiện lại (overThanh trở về như trước)',
+  utils.khoStockSummary().overThanh === overBefore &&
+  x2.khoWarnOverRows().some(r => r.b.id === 'k-over'));
+
+// (d) Panel chi tiết render đúng lô + nút thao tác
+x2.renderKhoWarnDetail('over');
+const warnHtml = document.getElementById('kho-warn-body').innerHTML;
+check('PANEL: chi tiết cảnh báo liệt kê lô + nút "Chốt lệch" + "Mở thẻ lô"',
+  warnHtml.includes('data-kho-warn-ack') && warnHtml.includes('data-kho-warn-edit') &&
+  warnHtml.includes('Chốt lệch') && warnHtml.includes('261001-99'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

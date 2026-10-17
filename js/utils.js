@@ -405,6 +405,27 @@ import { state } from './state.js';
     });
     return out;
   }
+  // NGÀY của TỪNG lần Kho → Sấy 2 (mốc 'say2' ngay sau mốc 'kho').
+  // Dùng cho PHIẾU XUẤT TỰ ĐỘNG (mỗi lần chuyển = 1 phiếu, số lượng = số lượng
+  // CHUẨN của lô) + nút "Rà soát sổ kho" bù phiếu cho dữ liệu cũ.
+  function khoSay2RoundDatesOf(b) {
+    const out = [];
+    let inKho = false;
+    getBatchStageHistory(b).forEach(h => {
+      if (!h || !h.stage) return;
+      if (h.stage === 'kho') inKho = true;
+      else if (h.stage === 'say2' && h.date && inKho) { out.push(String(h.date)); inKho = false; }
+    });
+    return out;
+  }
+  // Phần phiếu ĐÃ DUYỆT vượt SỨC CHỨA của lô (thanh) — để CẢNH BÁO thay vì
+  // im lặng kẹp tồn về 0 (dữ liệu phiếu bù cũ có thể ghi quá số lượng lô).
+  function khoOverAllocOf(b, alloc) {
+    if (!b) return 0;
+    const a = alloc || khoFifoAllocation();
+    const cap = khoInCountOf(b) * (Number(b.quantity) || 0);
+    return Math.max(0, (a.byLot.get(b.id) || 0) - cap);
+  }
 
   // Phiếu XUẤT kho ĐÃ DUYỆT — nguồn chính thức trừ tồn
   function khoApprovedXuatNotes() {
@@ -418,8 +439,15 @@ import { state } from './state.js';
 
   // PHÂN BỔ FIFO số thanh xuất ĐÃ DUYỆT vào các lô đang ở Kho:
   // trả { byLot: Map(batchId → đã xuất), unallocated: phần chưa gắn được lô (thanh) }
-  function khoFifoAllocation() {
-    const lots = (state.batches || []).filter(b => b && b.stage === 'kho')
+  function khoFifoAllocation(lotsArr) {
+    // lotsArr (tuỳ chọn): danh sách lô cần phân bổ phiếu (mặc định = lô ĐANG Ở KHO).
+    // Dùng danh sách rộng hơn (Sấy 1 + Sấy 2 + Kho) cho phép ĐỐI CHIẾU "thiếu phiếu"
+    // đúng với cả lô vừa rời Kho sang Sấy 2 (nếu chỉ phân bổ lô ở Kho thì phiếu của
+    // lô đang Sấy 2 bị tính = 0 → cảnh báo "thiếu phiếu" ảo).
+    const src = Array.isArray(lotsArr)
+      ? lotsArr.filter(b => b && b.id)
+      : (state.batches || []).filter(b => b && b.stage === 'kho');
+    const lots = src.slice()
       .sort((a, b) => khoFirstInDateOf(a).localeCompare(khoFirstInDateOf(b)));
     const byLot = new Map(lots.map(b => [b.id, 0]));
     const cap = new Map(lots.map(b => [b.id, khoInCountOf(b) * (Number(b.quantity) || 0)]));
@@ -488,11 +516,16 @@ import { state } from './state.js';
   function khoStockSummary() {
     const lots = (state.batches || []).filter(b => b && b.stage === 'kho');
     const alloc = khoFifoAllocation();
-    let thanh = 0, m3 = 0, live = 0, usedUp = 0;
+    let thanh = 0, m3 = 0, live = 0, usedUp = 0, overLots = 0, overThanh = 0, overAckThanh = 0;
     lots.forEach(b => {
       const used = alloc.byLot.get(b.id) || 0;
       const cap = khoInCountOf(b) * (Number(b.quantity) || 0);
       const rem = Math.max(0, cap - used);
+      // Phiếu vượt sức chứa lô — TRỪ phần Admin đã "Chốt lệch" (khoOverAck).
+      const over = Math.max(0, used - cap);
+      const ack = Math.max(0, Number(b.khoOverAck && b.khoOverAck.qty) || 0);
+      if (over > 0) overAckThanh += Math.min(ack, over);
+      if (over > ack) { overLots++; overThanh += (over - ack); }
       if (rem <= 0) { usedUp++; return; }
       live++;
       thanh += rem;
@@ -520,9 +553,13 @@ import { state } from './state.js';
     // suy ra tương ứng nên không phải là "lệch".
     let mismatch = 0;
     const mismatchLots = [];
+    // ĐỐI CHIẾU đúng cho CẢ nhóm: phân bổ phiếu trên toàn bộ lô Sấy 1 / Sấy 2 / Kho
+    // (trước đây dùng `alloc` chỉ có lô ở Kho ⇒ lô đang Sấy 2 bị coi là chưa có phiếu
+    // → cảnh báo Thiếu phiếu kho ảo 46.138 thanh).
+    const allocPool = khoFifoAllocation(pool);
     pool.forEach(b => {
-      const d = khoDerivedOutOf(b.id) - (alloc.byLot.get(b.id) || 0);
-      if (d >= 1) { mismatch += d; mismatchLots.push({ id: b.id, code: b.code || '', diff: d }); }
+      const d = khoDerivedOutOf(b.id) - (allocPool.byLot.get(b.id) || 0);
+      if (d >= 1) { mismatch += d; mismatchLots.push({ id: b.id, code: b.code || '', stage: b.stage, diff: d }); }
     });
     return {
       lots, liveLots: live, usedUpLots: usedUp,
@@ -533,7 +570,8 @@ import { state } from './state.js';
       poolLots: pool.length, poolSay1Thanh, poolSay2Thanh, poolSayThanh,
       poolThanh: poolSayThanh + thanh,
       pendingCount: pending.length, pendingQty,
-      mismatchThanh: mismatch, mismatchLots
+      mismatchThanh: mismatch, mismatchLots,
+      overLots, overThanh, overAckThanh
     };
   }
 
@@ -867,6 +905,8 @@ export {
   khoLotRemainingOf,
   khoNormPurpose,
   khoOutRoundCountOf,
+  khoSay2RoundDatesOf,
+  khoOverAllocOf,
   khoPeriodKeyOf,
   khoStockSummary,
   khoVisibilityMap,

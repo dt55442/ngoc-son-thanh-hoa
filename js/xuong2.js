@@ -23,6 +23,7 @@
 // Dữ liệu: state.xuong2BoOngRecords + state.x2BoOngRates.
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
+import { captureAutoBackup } from './autobackup.js'; // chụp bản cất TRƯỚC khi rà soát/dọn sổ kho
 import { canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
 import { logDataChange } from './history.js';
@@ -34,7 +35,7 @@ import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoPeriodKeyOf, khoStockSummary } from './utils.js';
+import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 
   // Ghi file dữ liệu qua storage.js (import động để tránh vòng phụ thuộc module
@@ -127,7 +128,17 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     'x2-cat-van-card': 'catvan',
     'x2-bao-van-card': 'baovan',
     'x2-ho-tro-card':  'hotro',
-    'x2-ep-van-card': 'epvan'
+    'x2-ep-van-card': 'epvan',
+    // XƯỞNG 1 — 8 công đoạn (17/10/2026): trước đây KHÔNG khai báo nên nút
+    // "Xuất Dữ Liệu" của thẻ X1 rơi về 'batch' (xuất nhầm Lô nan).
+    'x1-cat-ong-card':   'x1catong',
+    'x1-say-sinh-card':  'x1saysinh',
+    'x1-boc-card':       'x1boc',
+    'x1-loc-ong-card':   'x1locong',
+    'x1-cat-mat-card':   'x1catmat',
+    'x1-bo-card':        'x1bo',
+    'x1-phoi-say-card':  'x1phoisay',
+    'x1-loc-thanh-card': 'x1locthanh'
   };
   // Thẻ đang mở (null = không thẻ nào) — Lịch Sử/Xuất Excel dùng chung + gợi ý AI
   function x2OpenCardId() { return openX2Card ? openX2Card.id : null; }
@@ -11255,8 +11266,9 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     return out;
   }
   // Thẻ lô trong danh sách gắn phiếu (2 dòng như thẻ nguồn "Thêm Lô Sấy Mới")
-  function khoLotCardHtml(b) {
-    const rem = khoLotRemainingOf(b);
+  function khoLotCardHtml(b, alloc) {
+    const rem = khoLotRemainingOf(b, alloc);
+    const over = khoOverAllocOf(b, alloc);
     const picked = khoNotePicked[b.id] != null;
     const useCls = String(b.useFor || '').toLowerCase().includes('bullig') ? 'use-bullig' : 'use-van';
     const outRounds = khoOutRoundCountOf(b);
@@ -11268,7 +11280,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         <span class="al-day-badge day-s1" title="Số ngày đã ở Sấy 1">S1-${stageDays.say1} ngày</span>
         <span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${stageDays.say2} ngày</span>
         <span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${stageDays.kho} ngày</span>
-        <span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${outRounds} lần</span>${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
+        <span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — mỗi lần đi đều có PHIẾU XUẤT TỰ ĐỘNG nên tồn không bị nhân đôi">ra/vào kho ${outRounds} lần</span>${over > 0 ? `<span class="kho-over-badge" title="Phiếu xuất ĐÃ DUYỆT đang ghi vượt SỐ LƯỢNG CHUẨN của lô (${fmtThanh(over)} thanh) — bấm 'Rà soát sổ kho' hoặc xem Lịch Sử sửa đổi để kiểm tra phiếu bù cũ">⚠ phiếu vượt ${fmtThanh(over)} thanh</span>` : ''}${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
       ${picked ? `<div class="kho-lot-qty-row"><label>Số thanh xuất từ lô này:</label><input type="number" min="1" max="${rem}" step="1" value="${khoPickedQtyOf(b.id)}" data-kho-lot-qty="${escapeHTML(b.id)}"></div>` : ''}
     </div>`;
   }
@@ -11289,7 +11301,10 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         ? `<div class="al-empty">— Không có lô nào khớp "${escapeHTML([q, qQty].filter(Boolean).join(' · '))}" —</div>`
         : '<div class="al-empty">— Không có lô nào còn hàng ở Kho —</div>';
     }
-    else list.innerHTML = items.map(khoLotCardHtml).join('');
+    else {
+      const alloc = khoFifoAllocation();   // tính 1 lần cho cả danh sách (tránh O(N²))
+      list.innerHTML = items.map(b => khoLotCardHtml(b, alloc)).join('');
+    }
     // chip đếm "N đã chọn" trên nút mở danh sách (mẫu ô đếm của Thêm Lô Sấy Mới)
     const countEl = document.getElementById('x2-kho-picked-count');
     if (countEl) {
@@ -11415,9 +11430,163 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     ];
     if (s.pendingCount) parts.push(`<span class="kho-pending-chip" title="Phiếu chờ Ban lãnh đạo duyệt — CHƯA trừ tồn"><i data-lucide="clock"></i> ${s.pendingCount} phiếu chờ duyệt (${fmt(s.pendingQty)} thanh)</span>`);
     if (s.overAlloc > 0) parts.push(`<span class="kho-warn-chip" title="Phiếu đã duyệt vượt sức chứa của các lô đang ở Kho — hãy gắn lô hoặc nhập kho bổ sung">⚠ Vượt ${fmt(s.overAlloc)} thanh chưa gắn lô</span>`);
-    if (s.mismatchThanh >= 1) parts.push(`<span class="kho-warn-chip" title="Hệ thống ghi đã dùng (Bào Tinh / Bullig / quay lại Sấy 2) nhiều hơn số phiếu kho ĐÃ DUYỆT — tức là còn THIẾU phiếu. Bấm nút 'Tạo phiếu bù' ở bảng Tồn Theo Lô để sinh phiếu bù (chỉ Admin / Ban Quản Lý).">⚠ Thiếu phiếu kho ${fmt(s.mismatchThanh)} thanh</span>`);
+    if (s.overThanh > 0) parts.push(`<button type="button" class="kho-warn-chip kho-warn-btn" data-kho-warn="over" title="Phiếu xuất ĐÃ DUYỆT ghi vượt SỐ LƯỢNG CHUẨN của lô (thường do phiếu bù cũ bị nhân / phiếu tay trùng). Bấm để xem CHI TIẾT từng lô + Chốt lệch (Admin/BQL).${s.overAckThanh > 0 ? ` Đã chốt lệch ${fmt(s.overAckThanh)} thanh.` : ''}">⚠ ${s.overLots} lô phiếu vượt số lượng (${fmt(s.overThanh)} thanh) · Chi tiết</button>`);
+    if (s.mismatchThanh >= 1) parts.push(`<button type="button" class="kho-warn-chip kho-warn-btn" data-kho-warn="mismatch" title="Hệ thống ghi đã dùng (Bào Tinh / Bullig / quay lại Sấy 2) nhiều hơn số phiếu kho ĐÃ DUYỆT — bấm để xem CHI TIẾT lô nào còn thiếu; nút 'Rà soát sổ kho' sẽ bổ sung phiếu bù (chỉ Admin / Ban Quản Lý).">⚠ Thiếu phiếu kho ${fmt(s.mismatchThanh)} thanh · Chi tiết</button>`);
     bar.innerHTML = parts.join('');
   }
+  // ─── CHI TIẾT CẢNH BÁO TỒN KHO + CHỐT LỆCH (17/10/2026) ──────────────
+  // 2 chip cảnh báo trên thanh tồn nay BẤM ĐƯỢC → mở #modal-kho-warn:
+  //  • 'over'     — lô có tổng phiếu xuất ĐÃ DUYỆT > sức chứa (số lần nhập × quantity):
+  //                 liệt kê phiếu theo mục đích + các lượt Bullig/Bào Tinh gây vượt.
+  //  • 'mismatch' — lô có sổ suy ra > phiếu đã duyệt (thiếu phiếu).
+  // "Chốt lệch" lưu batch.khoOverAck = { qty, at, by, name } → cảnh báo không hiện
+  // lại phần đã chốt, KHÔNG sửa dữ liệu gốc, vẫn ghi Lịch sử sửa đổi (batches).
+  let khoWarnKind = '';
+  function khoWarnOverRows() {
+    const alloc = khoFifoAllocation();
+    const rows = [];
+    (state.batches || []).filter(b => b && b.stage === 'kho').forEach(b => {
+      const cap = khoInCountOf(b) * (Number(b.quantity) || 0);
+      const used = alloc.byLot.get(b.id) || 0;
+      const over = Math.max(0, used - cap);
+      const ack = Math.max(0, Number(b.khoOverAck && b.khoOverAck.qty) || 0);
+      if (over <= ack) return;
+      // Phiếu đã duyệt của lô — gộp theo MỤC ĐÍCH + nguồn (Hệ thống / Tay)
+      const byPurpose = {};
+      (state.khoNotes || []).forEach(n => {
+        if (!n || n.type !== 'xuat' || n.status !== 'da_duyet') return;
+        const q = (Array.isArray(n.lots) ? n.lots : []).reduce((s, l) =>
+          s + (String((l && l.batchId) || '') === String(b.id) ? (Number(l.qty) || 0) : 0), 0);
+        if (q <= 0) return;
+        const key = `${KHO_PURPOSE_LABELS[khoNormPurpose(n.purpose)] || 'Khác'} · ${n.createdBy === 'system' ? 'hệ thống' : 'tay'}`;
+        byPurpose[key] = (byPurpose[key] || 0) + q;
+      });
+      // Lượt Bullig / Bào Tinh đang lấy thanh của lô (để biết vượt do đâu)
+      const rounds = [];
+      (state.xuong2BulligRecords || []).forEach(r => {
+        if (!r || r.kind !== 'gc' || String(r.batchId || '') !== String(b.id)) return;
+        rounds.push({ date: r.date || '', kind: 'Bullig', qty: r.qtyIn != null ? (Number(r.qtyIn) || 0) : (Number(r.quantity) || 0) });
+      });
+      (state.xuong2BaoTinhRecords || []).forEach(r => {
+        if (!r || r.kind !== 'tinh') return;
+        const srcs = (Array.isArray(r.sources) && r.sources.length)
+          ? r.sources : [{ batchId: r.batchId, qty: (Number(r.qtyOk) || 0) + (Number(r.qtyErr) || 0) }];
+        srcs.forEach(s => {
+          if (String((s && s.batchId) || '') !== String(b.id)) return;
+          rounds.push({ date: r.date || '', kind: 'Bào tinh', qty: Number(s.qty) || 0 });
+        });
+      });
+      rows.push({ b, cap, used, over, ack, byPurpose, rounds });
+    });
+    return rows.sort((a, b) => (b.over - b.ack) - (a.over - a.ack));
+  }
+  function khoWarnMismatchRows() {
+    const s = khoStockSummary();
+    return (s.mismatchLots || []).map(x => {
+      const b = (state.batches || []).find(y => y && y.id === x.id);
+      return b ? { b, diff: x.diff, derived: khoDerivedOutOf(x.id) } : null;
+    }).filter(Boolean).sort((a, b) => b.diff - a.diff);
+  }
+  function khoWarnRowHtml(r, kind) {
+    const b = r.b;
+    const ack = kind === 'over' ? r.ack : 0;
+    if (kind === 'mismatch') {
+      return `<div class="kho-warn-row">
+        <div class="kho-warn-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} ·
+          ${Number(b.length) || 0}×${Number(b.width) || 0}×${Number(b.thickness) || 0} mm · ${escapeHTML(b.bambooType || '—')}</div>
+        <div class="kho-warn-line2">Sổ suy ra <strong>${fmtThanh(r.derived)}</strong> thanh · Thiếu phiếu <strong style="color:#b91c1c;">${fmtThanh(r.diff)}</strong> thanh</div>
+        <div class="kho-warn-actions"><button type="button" class="btn btn-outline btn-sm" data-kho-warn-edit="${escapeHTML(b.id)}"><i data-lucide="edit-3"></i> Mở thẻ lô</button></div>
+      </div>`;
+    }
+    const purposeTxt = Object.keys(r.byPurpose).length
+      ? Object.keys(r.byPurpose).map(k => `${escapeHTML(k)}: <strong>${fmtThanh(r.byPurpose[k])}</strong>`).join(' · ')
+      : '—';
+    const roundTxt = r.rounds.length
+      ? r.rounds.map(x => `${escapeHTML(x.kind)} ${formatDateDDMMYY(x.date)}: <strong>${fmtThanh(x.qty)}</strong>`).join(' · ')
+      : '—';
+    return `<div class="kho-warn-row">
+      <div class="kho-warn-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} ·
+        ${Number(b.length) || 0}×${Number(b.width) || 0}×${Number(b.thickness) || 0} mm · ${escapeHTML(b.bambooType || '—')}</div>
+      <div class="kho-warn-line2">SL <strong>${fmtThanh(b.quantity)}</strong> × ${khoInCountOf(b)} lần nhập = <strong>${fmtThanh(r.cap)}</strong>
+        · Đã xuất <strong>${fmtThanh(r.used)}</strong>
+        · <span style="color:#b91c1c;font-weight:700;">Vượt ${fmtThanh(r.over - ack)} thanh</span>
+        ${ack > 0 ? `<span class="kho-ack-chip" title="Đã chốt lệch ${fmtThanh(ack)} thanh — cảnh báo không tính phần này">đã chốt ${fmtThanh(ack)}</span>` : ''}</div>
+      <div class="kho-warn-line3">Phiếu đã duyệt: ${purposeTxt}</div>
+      <div class="kho-warn-line3">Lượt lấy thanh: ${roundTxt}</div>
+      <div class="kho-warn-actions">
+        <button type="button" class="btn btn-outline btn-sm" data-kho-warn-edit="${escapeHTML(b.id)}"><i data-lucide="edit-3"></i> Mở thẻ lô</button>
+        ${r.rounds.some(x => x.kind === 'Bullig') ? `<button type="button" class="btn btn-outline btn-sm" data-kho-warn-card="x2-bullig-card"><i data-lucide="layers"></i> Mở thẻ Bullig</button>` : ''}
+        ${r.rounds.some(x => x.kind === 'Bào tinh') ? `<button type="button" class="btn btn-outline btn-sm" data-kho-warn-card="x2-bao-tinh-card"><i data-lucide="sparkles"></i> Mở thẻ Bào Tinh</button>` : ''}
+        <button type="button" class="btn btn-outline btn-sm" data-kho-warn-ack="${escapeHTML(b.id)}" title="Chốt phần lệch này (không sửa dữ liệu gốc, có ghi lịch sử)"><i data-lucide="check"></i> Chốt lệch</button>
+        ${ack > 0 ? `<button type="button" class="btn btn-outline btn-sm" data-kho-warn-unack="${escapeHTML(b.id)}" title="Bỏ chốt — cảnh báo hiện lại"><i data-lucide="rotate-ccw"></i> Bỏ chốt</button>` : ''}
+      </div>
+    </div>`;
+  }
+  function renderKhoWarnDetail(kind) {
+    const box = document.getElementById('kho-warn-body');
+    const title = document.getElementById('kho-warn-title');
+    if (!box) return;
+    const k = kind || khoWarnKind || 'over';
+    khoWarnKind = k;
+    const rows = k === 'over' ? khoWarnOverRows() : khoWarnMismatchRows();
+    if (title) {
+      title.innerHTML = k === 'over'
+        ? `<i data-lucide="alert-triangle"></i> Chi tiết lô có phiếu xuất vượt số lượng (${rows.length} lô)`
+        : `<i data-lucide="alert-triangle"></i> Chi tiết lô thiếu phiếu kho (${rows.length} lô)`;
+    }
+    box.innerHTML = rows.length
+      ? rows.map(r => khoWarnRowHtml(r, k)).join('')
+      : '<div class="al-empty">— Không còn lô nào trong cảnh báo này —</div>';
+    initLucide();
+  }
+  function openKhoWarnModal(kind) {
+    khoWarnKind = kind === 'mismatch' ? 'mismatch' : 'over';
+    renderKhoWarnDetail(khoWarnKind);
+    const ov = document.getElementById('modal-kho-warn');
+    if (ov) { ov.hidden = false; ov.classList.add('show'); }
+    initLucide();
+  }
+  function closeKhoWarnModal() {
+    const ov = document.getElementById('modal-kho-warn');
+    if (ov) { ov.classList.remove('show'); ov.hidden = true; }
+  }
+
+  // CHỐT LỆCH: ghi nhận phần vượt đã được duyệt (Admin/BQL) — chỉ để tắt cảnh báo,
+  // KHÔNG sửa quantity / phiếu gốc; lưu trên lô nên đi theo batches (mây/file/history).
+  function khoAckOverAlloc(id) {
+    if (!requireEditPermission()) return;
+    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý chốt lệch tồn kho.', 'error'); return; }
+    const b = (state.batches || []).find(x => x && x.id === String(id || ''));
+    if (!b) return;
+    const cap = khoInCountOf(b) * (Number(b.quantity) || 0);
+    const used = khoFifoAllocation().byLot.get(b.id) || 0;
+    const over = Math.max(0, used - cap);
+    const ack = Math.max(0, Number(b.khoOverAck && b.khoOverAck.qty) || 0);
+    if (over <= ack) { showToast('Lô này không còn phần vượt cần chốt.', 'success'); return; }
+    if (!confirm(`Chốt lệch ${fmtThanh(over - ack)} thanh cho lô ${b.code || b.id}?\n\nKhông sửa số lượng lô hay phiếu gốc — chỉ tắt cảnh báo phần đã chốt (vẫn ghi Lịch sử sửa đổi).`)) return;
+    pushUndo('Chốt lệch tồn kho');
+    b.khoOverAck = { qty: over, at: new Date().toISOString(), by: khoUserKey(), name: khoUserName() };
+    b.updatedAt = b.khoOverAck.at;
+    storageModule().then(m => m && m.saveData()).catch(() => {});
+    renderAll();
+    renderKhoWarnDetail(khoWarnKind);
+    showToast(`Đã chốt lệch ${fmtThanh(over - ack)} thanh cho lô ${b.code || b.id}.`, 'success');
+  }
+  function khoClearOverAck(id) {
+    if (!requireEditPermission()) return;
+    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý bỏ chốt lệch.', 'error'); return; }
+    const b = (state.batches || []).find(x => x && x.id === String(id || ''));
+    if (!b || !b.khoOverAck) return;
+    if (!confirm(`Bỏ chốt lệch của lô ${b.code || b.id}? Cảnh báo sẽ hiện lại.`)) return;
+    pushUndo('Bỏ chốt lệch tồn kho');
+    delete b.khoOverAck;
+    b.updatedAt = new Date().toISOString();
+    storageModule().then(m => m && m.saveData()).catch(() => {});
+    renderAll();
+    renderKhoWarnDetail(khoWarnKind);
+    showToast('Đã bỏ chốt lệch — cảnh báo hiện lại.', 'success');
+  }
+
   // Khối TỒN TRUNG GIAN (WIP): mỗi dòng bấm = mở thẳng thẻ công đoạn tương ứng
   function renderX2KhoWipBar() {
     const bar = document.getElementById('x2-kho-wip-bar');
@@ -11456,7 +11625,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
       <div class="material-stat" title="Nan ĐANG SẤY (Sấy 1 + Sấy 2) — chưa vào kho, không trừ phiếu kho"><span class="material-stat-label">Đang sấy (S1+S2)</span><span class="material-stat-value">${fmt(s.poolSayThanh)}</span></div>
       <div class="material-stat" title="TỔNG nan trong nhà máy = Tồn Kho + nan đang sấy — số dùng cho bảng Kế Hoạch"><span class="material-stat-label">Tổng trong nhà máy</span><span class="material-stat-value">${fmt(s.poolThanh)}</span></div>
       <div class="material-stat" title="Phiếu chờ Ban lãnh đạo duyệt — CHƯA trừ tồn"><span class="material-stat-label">Phiếu chờ duyệt</span><span class="material-stat-value">${s.pendingCount} · ${fmt(s.pendingQty)} thanh</span></div>
-      <div class="material-stat" title="Hệ thống ghi đã dùng nhiều hơn phiếu kho ĐÃ DUYỆT — bấm 'Tạo phiếu bù' ở bảng Tồn Theo Lô"><span class="material-stat-label">Thiếu phiếu kho</span><span class="material-stat-value">${s.mismatchThanh >= 1 ? fmt(s.mismatchThanh) + ' thanh' : 'Khớp'}</span></div>
+      <div class="material-stat" title="Hệ thống ghi đã dùng nhiều hơn phiếu kho ĐÃ DUYỆT — bấm 'Rà soát sổ kho' ở bảng Tồn Theo Lô"><span class="material-stat-label">Thiếu phiếu kho</span><span class="material-stat-value">${s.mismatchThanh >= 1 ? fmt(s.mismatchThanh) + ' thanh' : 'Khớp'}</span></div>
       <div class="material-stat" title="Tổng phiếu xuất ĐÃ DUYỆT theo mục đích (Sấy 2 · Bào Tinh · Bullig · Khác)"><span class="material-stat-label">Xuất đã duyệt (S2 · BT · BL · Khác)</span><span class="material-stat-value">${KHO_PURPOSE_ORDER.map(p => fmt(byPurpose[p])).join(' · ')} thanh</span></div>`;
   }
 
@@ -11554,10 +11723,18 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const locTitle = 'Vị trí lô lúc xuất (phiếu mới lưu snapshot; phiếu cũ hiện vị trí hiện tại)';
     // MỞ LẠI / XÓA dòng xuất đã duyệt — chỉ admin (data-admin-only), kiểu A:
     // Mở lại → phiếu về chờ duyệt (tồn hồi ngay) → sửa thêm/bớt lô → duyệt lại.
-    const adminBtns = `<span data-admin-only><button type="button" class="btn btn-outline btn-sm" data-kho-reopen="${escapeHTML(r.noteId || '')}" title="Mở lại phiếu đã duyệt về CHỜ DUYỆT để sửa thêm/bớt lô (chỉ Quản Trị / Ban Quản Lý)"><i data-lucide="rotate-ccw"></i> Mở lại</button> <button type="button" class="btn btn-outline btn-icon btn-sm" data-kho-ledger-del="${escapeHTML(r.noteId || '')}" title="Xóa phiếu đã duyệt (tồn lô tự hồi — chỉ Quản Trị / Ban Quản Lý)" style="color:var(--danger);"><i data-lucide="trash-2"></i></button></span>`;
+    // PHIẾU TỰ ĐỘNG (autoSay2) do hệ thống quản lý — không mở lại/sửa tay.
+    const noteObj = (state.khoNotes || []).find(n => n && n.id === r.noteId);
+    const isAuto = !!(noteObj && noteObj.autoSay2);
+    const autoChip = isAuto
+      ? ' <span class="kho-auto-chip" title="Phiếu do hệ thống tự tạo khi lô rời Kho sang Sấy 2 — dùng nút Rà soát sổ kho nếu cần dọn">Tự động</span>'
+      : '';
+    const adminBtns = isAuto
+      ? '<span class="kho-auto-hint" title="Phiếu tự động — hệ thống tự quản lý">Hệ thống</span>'
+      : `<span data-admin-only><button type="button" class="btn btn-outline btn-sm" data-kho-reopen="${escapeHTML(r.noteId || '')}" title="Mở lại phiếu đã duyệt về CHỜ DUYỆT để sửa thêm/bớt lô (chỉ Quản Trị / Ban Quản Lý)"><i data-lucide="rotate-ccw"></i> Mở lại</button> <button type="button" class="btn btn-outline btn-icon btn-sm" data-kho-ledger-del="${escapeHTML(r.noteId || '')}" title="Xóa phiếu đã duyệt (tồn lô tự hồi — chỉ Quản Trị / Ban Quản Lý)" style="color:var(--danger);"><i data-lucide="trash-2"></i></button></span>`;
     return `<tr>
       ${showDate ? `<td>${formatDateDDMMYY(r.date)}</td>` : ''}
-      <td><span class="kho-purpose-chip kho-purpose-${r.purpose}">${KHO_PURPOSE_LABELS[r.purpose] || r.purpose}</span>${r.purposeNote ? ` ${escapeHTML(r.purposeNote)}` : ''}</td>
+      <td><span class="kho-purpose-chip kho-purpose-${r.purpose}">${KHO_PURPOSE_LABELS[r.purpose] || r.purpose}</span>${autoChip}${r.purposeNote ? ` ${escapeHTML(r.purposeNote)}` : ''}</td>
       <td>${escapeHTML(lotsTxt)}</td><td title="${escapeHTML(locTitle)}">${escapeHTML(locTxt)}</td><td>${fmtThanh(r.qty)}</td><td>${r.m3 ? Number(r.m3).toFixed(3) : '—'}</td><td>${escapeHTML(r.note || '')}</td><td data-perm="x2">${adminBtns}</td></tr>`;
   }
   function khoDerivedRowHtml(r, showDate) {
@@ -11652,7 +11829,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
   }
 
   // ─── BẢNG TỒN (mỗi lô 1 dòng — lô đã xuất hết ẨN mặc định) ───
-  function khoStockRowHtml(b, rem, used) {
+  function khoStockRowHtml(b, rem, used, over) {
     const inN = khoInCountOf(b);
     const cap = inN * (Number(b.quantity) || 0);
     const outR = khoOutRoundCountOf(b);
@@ -11665,7 +11842,8 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
         <span>Đã xuất: <strong>${fmtThanh(used)}</strong></span>
         <span>Còn lại: <strong>${fmtThanh(rem)}</strong> thanh · ${(calculateVolume(b.length, b.width, b.thickness, rem)).toFixed(3)} m³</span>
         <span>vào kho ${formatDateDDMMYY(khoLastInDateOf(b))}</span>
-        <span class="kho-round-badge" title="Số lần lô ra khỏi kho (sang Sấy 2) rồi nhập lại — KHÔNG phải nhiều lô">ra/vào ${outR} lần</span>
+        <span class="kho-round-badge" title="Mỗi lần lô ra khỏi kho (sang Sấy 2) đều có PHIẾU XUẤT TỰ ĐỘNG — số lượng lô không đổi">ra/vào ${outR} lần</span>
+        ${over > 0 ? `<span class="kho-over-badge" title="Phiếu xuất ĐÃ DUYỆT ghi vượt sức chứa của lô — bấm 'Rà soát sổ kho' để dọn phiếu bù trùng/quá khứ">⚠ phiếu vượt ${fmtThanh(over)} thanh</span>` : ''}
       </div>
       <div class="card-actions" data-perm="x2">
         <button class="btn btn-outline btn-icon btn-sm" onclick="app.openEditModal('${escapeHTML(b.id)}')" title="Sửa thẻ nan"><i data-lucide="edit-3"></i></button>
@@ -11684,13 +11862,13 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     lots.forEach(b => {
       const rem = khoLotRemainingOf(b, alloc);
       if (rem <= 0 && !state.khoShowUsed) return; // ẨN lô đã xuất hết (mặc định)
-      rows.push({ b, rem, used: Math.max(0, khoInCountOf(b) * (Number(b.quantity) || 0) - rem) });
+      rows.push({ b, rem, used: Math.max(0, khoInCountOf(b) * (Number(b.quantity) || 0) - rem), over: khoOverAllocOf(b, alloc) });
     });
     const filtered = q
       ? rows.filter(x => `${x.b.code || ''} ${x.b.location || ''} ${x.b.length}x${x.b.width}x${x.b.thickness} ${x.b.bambooType || ''} ${x.b.useFor || ''}`.toLowerCase().includes(q))
       : rows;
     box.innerHTML = filtered.length
-      ? filtered.map(x => khoStockRowHtml(x.b, x.rem, x.used)).join('')
+      ? filtered.map(x => khoStockRowHtml(x.b, x.rem, x.used, x.over)).join('')
       : '<div class="al-empty">— Không có lô nào ở Kho (hoặc tất cả đã xuất hết — bật "Hiện lô đã xuất hết" để xem) —</div>';
     const count = document.getElementById('x2-kho-stock-count');
     if (count) count.textContent = `${filtered.length} lô`;
@@ -11762,6 +11940,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n) return;
     if (n.status !== 'cho_duyet') { showToast('Phiếu ĐÃ DUYỆT đã trừ tồn — hãy xóa phiếu rồi tạo phiếu mới (cần quyền duyệt).', 'error'); return; }
+    if (khoNormPurpose(n.purpose) === 'say2') { showToast('Phiếu xuất Sấy 2 do hệ thống quản lý (mỗi lần Kho → Sấy 2 tự sinh) — dùng nút "Rà soát sổ kho" nếu cần dọn.', 'error'); return; }
     khoNoteEditId = id;
     khoNoteType = n.type === 'xuat' ? 'xuat' : 'xu_ly';
     const dateEl = document.getElementById('x2-kho-date');
@@ -11795,6 +11974,13 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     if (e && e.preventDefault) e.preventDefault();
     if (!requireEditPermission()) return;
     const isEdit = !!khoNoteEditId;
+    if (isEdit) {
+      const old = (state.khoNotes || []).find(x => x && x.id === khoNoteEditId);
+      if (old && khoNormPurpose(old.purpose) === 'say2') {
+        showToast('Phiếu xuất Sấy 2 do hệ thống quản lý — không sửa tay được (dùng "Rà soát sổ kho").', 'error');
+        return;
+      }
+    }
     const type = khoNoteTypeOf();
     const dateVal = ((document.getElementById('x2-kho-date') || {}).value || '').trim();
     const note = ((document.getElementById('x2-kho-note') || {}).value || '').trim();
@@ -11869,6 +12055,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n) return;
     if (n.status !== 'da_duyet') { showToast('Chỉ mở lại được phiếu ĐÃ DUYỆT!', 'error'); return; }
+    if (n.autoSay2 || khoNormPurpose(n.purpose) === 'say2') { showToast('Phiếu Sấy 2 do hệ thống quản lý (mỗi lần Kho → Sấy 2 tự sinh) — bấm "Rà soát sổ kho" nếu cần dọn.', 'error'); return; }
     const label = n.type === 'xuat'
       ? `phiếu xuất ${KHO_PURPOSE_LABELS[khoNormPurpose(n.purpose)] || ''} ngày ${formatDateDDMMYY(n.date)} (${fmtThanh(n.qty)} thanh)`
       : `phiếu xử lý ${KHO_SOURCE_LABELS[n.source] || ''} ngày ${formatDateDDMMYY(n.date)}`;
@@ -12052,88 +12239,339 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
     initLucide();
   }
 
-  // ─── PHIẾU BÙ DỮ LIỆU CŨ (chạy 1 lần khi vừa bật sổ kho) ─────
-  // Mọi lượt Bào Tinh / Bullig / quay lại Sấy 2 ghi TRƯỚC khi có sổ kho đều
-  // KHÔNG có phiếu ⇒ tồn sẽ bị "phồng". Hàm này sinh phiếu ĐÃ DUYỆT (kèm ghi
-  // chú "Khởi tạo từ dữ liệu cũ") — CHẠY 2 LẦN KHÔNG SINH TRÙNG (so phần lô
-  // đã có phiếu). Chỉ Admin / Ban Quản Lý.
-  // Số thanh của lô đã QUA KHO → SẤY 2 (mỗi vòng ra/vào = 1 lần × số lượng).
-  // Dùng khi tạo phiếu bù: phần này phải ghi purpose 'say2' — nan VẪN nằm trong
-  // nhóm Sấy 1/2/Kho nên KHÔNG trừ "Tổng nan trong nhà máy" / tồn Kế Hoạch,
-  // chỉ trừ Tồn Kho. (Bản cũ gộp vào 'khac' → tổng toàn nhóm bị trừ oan.)
-  function khoS2ExitQtyOf(b) {
-    if (b == null) return 0;
-    let qty = 0, inKho = false;
-    getBatchStageHistory(b).forEach(h => {
-      if (h == null || !h.stage) return;
-      if (h.stage === 'kho') inKho = true;
-      else if (h.stage === 'say2' && inKho) { qty += Number(b.quantity) || 0; inKho = false; }
-    });
-    return qty;
+  // ─── PHIẾU XUẤT TỰ ĐỘNG KHI LÔ RỜI KHO SANG SẤY 2 (17/10/2026) ─────
+  // LÝ DO: tồn lô ở Kho = (số lần NHẬP kho × số lượng chuẩn) − phiếu xuất ĐÃ DUYỆT.
+  // Lô đi Kho → Sấy 2 rồi quay lại Kho làm số lần nhập = 2 ⇒ nếu lần đi KHÔNG có
+  // phiếu xuất thì tồn bị NHÂN ĐÔI (VD lô 1.946 hiện 3.892 → chọn xuất sai).
+  // Nay mỗi lần chuyển Kho → Sấy 2 TỰ SINH 1 phiếu xuất 'say2' ĐÃ DUYỆT:
+  //   • chuyển NGUYÊN lô → qty = SỐ LƯỢNG CHUẨN của lô (KHÔNG phải phần còn lại:
+  //     phần đã xuất trước đó vẫn nằm ở phiếu riêng; nếu ghi phần còn lại thì khi
+  //     quay về Kho tồn sẽ bị THIẾU);
+  //   • tách 1 PHẦN (lô Tóp) → qty = đúng phần tách.
+  // Phiếu tự động: createdBy 'system', autoSay2 = true, duyệt sẵn (đây là bút toán
+  // CHUYỂN CÔNG ĐOẠN, không phải xuất bán). Bấm Lưu 2 lần KHÔNG sinh trùng.
+  function khoSay2NoteSameDateOf(lotId, dateVal) {
+    const id = String(lotId || ''), d = String(dateVal || '').slice(0, 10);
+    return (state.khoNotes || []).find(n => n && n.type === 'xuat' && n.status === 'da_duyet'
+      && khoNormPurpose(n.purpose) === 'say2' && String(n.date || '') === d
+      && (Array.isArray(n.lots) ? n.lots : []).some(l => l && String(l.batchId || '') === id)) || null;
   }
-  function khoBackfillFromLegacy() {
-    if (!requireEditPermission()) return;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý tạo được phiếu bù dữ liệu cũ.', 'error'); return; }
-    // PHIẾU BÙ THEO NGÀY THẬT (từng sự kiện suy ra — không gộp tổng theo lô):
-    //   • kind 'say2' → purpose 'say2', ngày = mốc Sấy 2 ngay sau Kho trong stageHistory.
-    //   • kind 'baotinh' → purpose 'khac' (giữ quy ước: chỉ say2 không trừ tổng nhóm),
-    //     ngày = r.date của lượt Bào Tinh; 'bullig' tương tự với lượt Gia công.
-    //   • Chỉ gộp khi CÙNG lô + CÙNG ngày + CÙNG purpose; khác ngày thì tách phiếu.
-    const events = khoLedgerEvents().derived.filter(d => d && d.lotId && d.date && (Number(d.qty) || 0) > 0);
-    if (!events.length) { showToast('Không có dữ liệu cũ nào cần tạo phiếu bù — sổ kho đã khớp!', 'success'); return; }
-    // Khóa sự kiện đã CÓ phiếu đã duyệt: "lotId|date|purpose" (+ số lượng đã bù).
-    const haveEvent = new Map();
-    (state.khoNotes || []).forEach(n => {
-      if (!n || n.status !== 'da_duyet' || n.type !== 'xuat') return;
-      const p = khoNormPurpose(n.purpose);
+  function khoPushSay2Note(lot, qty, dateVal, source) {
+    if (!lot || !lot.id) return null;
+    const d = String(dateVal || '').slice(0, 10);
+    const q = Math.round(Number(qty) || 0);
+    if (!d || !(q > 0)) return null;
+    const now = new Date().toISOString();
+    const isBackfill = source === 'backfill';
+    const note = {
+      id: `kho-note-auto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type: 'xuat', date: d, purpose: 'say2',
+      purposeNote: isBackfill ? 'Khởi tạo từ dữ liệu cũ' : '',
+      qty: q, m3: calculateVolume(lot.length, lot.width, lot.thickness, q),
+      lots: [{ batchId: String(lot.id), qty: q, loc: lot.location || '' }],
+      note: isBackfill
+        ? 'Phiếu bù tự động: bổ sung lần Kho → Sấy 2 cho dữ liệu cũ (Rà soát sổ kho)'
+        : (source === 'top-split'
+          ? 'Tự động: tách 1 phần lô Tóp → Sấy 2'
+          : 'Tự động: chuyển Kho → Sấy 2'),
+      status: 'da_duyet', autoSay2: true,
+      createdBy: 'system', createdByName: 'Hệ thống (tự động)', createdAt: now,
+      approvedBy: 'system', approvedByName: 'Hệ thống (tự động)', approvedAt: now,
+      updatedAt: now
+    };
+    state.khoNotes = [...(state.khoNotes || []), note];
+    return note;
+  }
+  // Gọi từ form "Thêm Lô Sấy Mới" (js/batch-modals.js). Trả phiếu vừa tạo (null = bỏ qua).
+  function addKhoSay2AutoNote(lot, qty, dateVal, source) {
+    if (!lot || !lot.id) return null;
+    if (khoSay2NoteSameDateOf(lot.id, dateVal)) return null;   // lần đi này đã có phiếu
+    return khoPushSay2Note(lot, qty, dateVal, source);
+  }
+  // Phiếu TỰ ĐỘNG cho lần TÓP ĐỐT LẠI (lấy 1 phần lô Tóp sang Sấy 1 / Sấy 2):
+  // mục đích 'khac' (Tóp đốt lại) để TỒN KHO + TỒN KẾ HOẠCH cùng giảm đúng phần lấy ra;
+  // KHÔNG dùng 'say2' vì phần này coi như RỜI nhóm (Sấy 1 tạo lô mới / Sấy 2 tách lô).
+  function addKhoReworkAutoNote(lot, qty, dateVal, target) {
+    if (!lot || !lot.id) return null;
+    const d = String(dateVal || '').slice(0, 10);
+    const q = Math.round(Number(qty) || 0);
+    if (!d || !(q > 0)) return null;
+    const dup = (state.khoNotes || []).some(n => n && n.type === 'xuat' && n.autoRework
+      && String(n.date || '') === d
+      && (Array.isArray(n.lots) ? n.lots : []).some(l => l && String(l.batchId || '') === String(lot.id)));
+    if (dup) return null;
+    const now = new Date().toISOString();
+    const note = {
+      id: `kho-note-auto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type: 'xuat', date: d, purpose: 'khac', purposeNote: 'Tóp đốt lại',
+      qty: q, m3: calculateVolume(lot.length, lot.width, lot.thickness, q),
+      lots: [{ batchId: String(lot.id), qty: q, loc: lot.location || '' }],
+      note: `Tự động: Tóp đốt lại → ${target || 'Sấy 1'}`,
+      status: 'da_duyet', autoSay2: false, autoRework: true,
+      createdBy: 'system', createdByName: 'Hệ thống (tự động)', createdAt: now,
+      approvedBy: 'system', approvedByName: 'Hệ thống (tự động)', approvedAt: now,
+      updatedAt: now
+    };
+    state.khoNotes = [...(state.khoNotes || []), note];
+    return note;
+  }
+
+  // ─── RÀ SOÁT SỔ KHO (thay nút "Tạo phiếu bù" cũ — 17/10/2026) ───────
+  // Dọn 4 loại sai do công thức cũ / bấm bù nhiều lần:
+  //  D1) Phiếu HỆ THỐNG trùng y hệt (cùng lô + ngày + mục đích + số lượng) —
+  //      mỗi lần/mỗi máy bấm "Tạo phiếu bù" sinh thêm 1 bản ⇒ xóa bản trùng.
+  //  D2) Phiếu bù CŨ (hệ thống) TRÙNG với phiếu TAY: bản bù sinh theo sổ suy ra
+  //      (Bào Tinh + Bullig) trong khi người dùng ĐÃ ghi phiếu tay cho cùng sự kiện
+  //      ⇒ 'khac' hệ thống bị cắt xuống = phần sổ suy ra CHƯA có phiếu tay.
+  //      KHÔNG đụng phiếu do người dùng tạo; lô chỉ có phiếu hệ thống giữ nguyên.
+  //  D3) Bổ sung phiếu 'say2' còn THIẾU = (số lần Kho→Sấy 2 × số lượng lô) −
+  //      Σ phiếu 'say2' hiện có; gắn đúng NGÀY của từng lần.
+  //  D4) Bổ sung phiếu 'khac' còn thiếu cho sổ suy ra (Bào Tinh + Bullig).
+  // Chạy lại nhiều lần KHÔNG sinh trùng; KHÔNG sửa số lượng lô; chỉ Admin/BQL.
+  function khoReconcilePlan() {
+    const notes = (state.khoNotes || []).filter(Boolean);
+    // ─ D1: phiếu hệ thống trùng y hệt (mỗi phiếu gắn đúng 1 lô) ─
+    const seen = new Set();
+    const dupIds = [];
+    let dupQty = 0;
+    const kept = [];
+    notes.forEach(n => {
+      const lots = Array.isArray(n.lots) ? n.lots.filter(Boolean) : [];
+      const isSys = n.type === 'xuat' && n.status === 'da_duyet' && n.createdBy === 'system' && lots.length === 1;
+      if (isSys) {
+        const key = `${lots[0].batchId}|${String(n.date || '')}|${khoNormPurpose(n.purpose)}|${Math.round(Number(lots[0].qty) || 0)}`;
+        if (seen.has(key)) { dupIds.push(String(n.id)); dupQty += Number(lots[0].qty) || 0; return; }
+        seen.add(key);
+      }
+      kept.push(n);
+    });
+    // Sổ đã duyệt (sau D1) theo lô — để biết lô nào đang bị ghi VƯỢT sức chứa
+    const usedOf = {};
+    kept.forEach(n => {
+      if (!n || n.type !== 'xuat' || n.status !== 'da_duyet') return;
+      (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
+        const id = String((l && l.batchId) || '');
+        if (id) usedOf[id] = (usedOf[id] || 0) + (Number(l.qty) || 0);
+      });
+    });
+    // Sổ suy ra KHÔNG phải Sấy 2 (Bào Tinh + Bullig) — theo lô và theo lô|ngày
+    const derivedNon = {};
+    const derivedByDate = {};
+    khoLedgerEvents().derived.forEach(d => {
+      if (!d || !d.lotId || d.kind === 'say2') return;
+      const q = Number(d.qty) || 0;
+      if (!(q > 0)) return;
+      derivedNon[d.lotId] = (derivedNon[d.lotId] || 0) + q;
+      const k = `${d.lotId}|${String(d.date || '')}`;
+      derivedByDate[k] = (derivedByDate[k] || 0) + q;
+    });
+    // Phiếu do NGƯỜI DÙNG tạo (không phải hệ thống), mục đích KHÁC Sấy 2 — để biết
+    // sổ suy ra đã được ghi tay chưa (tránh cộng trùng với phiếu bù hệ thống).
+    const manualNonSay2 = {};
+    kept.forEach(n => {
+      if (!n || n.type !== 'xuat' || n.status !== 'da_duyet' || n.createdBy === 'system') return;
+      if (khoNormPurpose(n.purpose) === 'say2') return;
+      (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
+        const id = String((l && l.batchId) || '');
+        if (id) manualNonSay2[id] = (manualNonSay2[id] || 0) + (Number(l.qty) || 0);
+      });
+    });
+    // ─ D2: cắt phiếu 'khac' BÙ HỆ THỐNG bị TRÙNG với phiếu tay ─────
+    // Bản bù cũ sinh theo sổ suy ra (Bào Tinh + Bullig) trong khi người dùng ĐÃ ghi
+    // phiếu tay cho đúng sự kiện đó ⇒ cùng 1 sự kiện bị trừ 2 lần (VD lô 1.750 có
+    // baotinh tay 1.750 + khac hệ thống 1.750 → tồn về 0 sai, cảnh báo "vượt").
+    // Nay: 'khac' hệ thống chỉ giữ = phần sổ suy ra CHƯA có phiếu tay.
+    const khacOf = {};
+    kept.forEach(n => {
+      if (!n || n.type !== 'xuat' || n.status !== 'da_duyet' || n.createdBy !== 'system') return;
+      if (khoNormPurpose(n.purpose) !== 'khac') return;
+      (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
+        const id = String((l && l.batchId) || '');
+        if (id) (khacOf[id] = khacOf[id] || []).push({ n, l });
+      });
+    });
+    const trims = [];
+    let trimsQty = 0;
+    Object.keys(khacOf).forEach(lid => {
+      const manual = Math.max(0, Number(manualNonSay2[lid]) || 0);
+      if (!(manual > 0)) return;                  // lô chỉ có phiếu hệ thống → giữ nguyên
+      const khacTotal = khacOf[lid].reduce((s, x) => s + (Number(x.l.qty) || 0), 0);
+      const target = Math.max(0, Math.round((derivedNon[lid] || 0) - manual));
+      let left = Math.max(0, Math.round(khacTotal - target));
+      if (left <= 0) return;
+      khacOf[lid].forEach(x => {
+        if (left <= 0) return;
+        const cut = Math.min(Number(x.l.qty) || 0, left);
+        if (cut <= 0) return;
+        trims.push({ noteId: String(x.n.id), lotId: lid, qty: cut });
+        trimsQty += cut;
+        left -= cut;
+      });
+    });
+    const trimOf = {};
+    trims.forEach(t => {
+      const k = `${t.noteId}|${t.lotId}`;
+      trimOf[k] = (trimOf[k] || 0) + t.qty;
+    });
+    // ─ D3: bổ sung phiếu 'say2' còn thiếu cho từng lần Kho → Sấy 2 ─
+    const say2Have = {};
+    kept.forEach(n => {
+      if (!n || n.type !== 'xuat' || n.status !== 'da_duyet' || khoNormPurpose(n.purpose) !== 'say2') return;
+      (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
+        const id = String((l && l.batchId) || '');
+        if (id) say2Have[id] = (say2Have[id] || 0) + (Number(l.qty) || 0);
+      });
+    });
+    const adds = [];
+    let addQty = 0, addLots = 0;
+    (state.batches || []).forEach(b => {
+      if (!b || !b.id) return;
+      const dates = khoSay2RoundDatesOf(b);
+      if (!dates.length) return;
+      const q = Number(b.quantity) || 0;
+      if (!(q > 0)) return;
+      let need = Math.round(dates.length * q - (say2Have[b.id] || 0));
+      if (need <= 0) return;
+      const before = need;
+      dates.forEach(d => {
+        if (need <= 0) return;
+        if (khoSay2NoteSameDateOf(b.id, d)) return;   // ngày đó đã có phiếu Sấy 2
+        const take = Math.min(q, need);
+        adds.push({ lot: b, qty: take, date: d });
+        need -= take;
+      });
+      if (need > 0) adds.push({ lot: b, qty: need, date: dates[0] });
+      addQty += (before - need);
+      addLots++;
+    });
+    // ─ D4: bổ sung phiếu 'khac' còn thiếu cho sổ suy ra (Bào Tinh + Bullig) ─
+    // So THEO TỔNG CỦA LÔ (không theo ngày): phiếu tay có thể ghi ngày khác ngày
+    // lượt Bào Tinh/Bullig — so theo ngày sẽ tưởng "còn thiếu" rồi sinh phiếu trùng.
+    const usedNonSay = {};
+    kept.forEach(n => {
+      if (!n || n.type !== 'xuat' || n.status !== 'da_duyet' || khoNormPurpose(n.purpose) === 'say2') return;
       (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
         const id = String((l && l.batchId) || '');
         if (!id) return;
-        const key = `${id}|${String(n.date || '')}|${p}`;
-        haveEvent.set(key, (haveEvent.get(key) || 0) + (Number(l.qty) || 0));
+        let q = Number(l.qty) || 0;
+        const cut = trimOf[`${n.id}|${id}`] || 0;
+        if (cut > 0) q = Math.max(0, q - cut);
+        if (q > 0) usedNonSay[id] = (usedNonSay[id] || 0) + q;
       });
     });
-    // Gộp sự kiện CÙNG lô + CÙNG ngày + CÙNG purpose thành 1 dòng bù.
-    const groups = new Map();
-    events.forEach(d => {
-      const purpose = d.kind === 'say2' ? 'say2' : 'khac';
-      const key = `${String(d.lotId)}|${String(d.date)}|${purpose}`;
-      const cur = groups.get(key) || { lotId: String(d.lotId), date: String(d.date), purpose, qty: 0 };
-      cur.qty += Number(d.qty) || 0;
-      groups.set(key, cur);
-    });
-    const now = new Date().toISOString();
-    const created = [];
-    groups.forEach((g, key) => {
-      const need = Math.round(g.qty) - Math.round(haveEvent.get(key) || 0);
-      if (need <= 0) return;
-      const b = (state.batches || []).find(x => x && x.id === g.lotId);
+    Object.keys(derivedNon).forEach(lid => {
+      const b = (state.batches || []).find(x => x && x.id === lid);
       if (!b) return;
-      const note = g.purpose === 'say2'
-        ? 'Phiếu bù tự sinh (NGÀY THẬT): nan QUAY LẠI SẤY 2 ngày này (vẫn nằm trong nhóm Sấy/Kho)'
-        : 'Phiếu bù tự sinh (NGÀY THẬT) từ nhật ký Bào Tinh / Bullig ngày này trước khi có sổ kho';
-      created.push({
-        id: `kho-note-${Date.now()}-${created.length + 1}`,
-        type: 'xuat', date: g.date,
-        purpose: g.purpose, purposeNote: 'Khởi tạo từ dữ liệu cũ',
-        qty: need, m3: calculateVolume(b.length, b.width, b.thickness, need),
-        lots: [{ batchId: g.lotId, qty: need, loc: b.location || '' }],
-        note,
-        status: 'da_duyet',
-        createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)', createdAt: now,
-        approvedBy: 'system', approvedByName: 'Hệ thống (khởi tạo)', approvedAt: now,
-        updatedAt: now
+      const need = Math.round((derivedNon[lid] || 0) - (usedNonSay[lid] || 0));
+      if (need <= 0) return;
+      // Ngày ghi = ngày sự kiện suy ra MUỘN NHẤT của lô (để sổ nằm đúng kỳ)
+      let date = '';
+      Object.keys(derivedByDate).forEach(k => {
+        if (k.indexOf(lid + '|') !== 0) return;
+        const d = k.slice(lid.length + 1);
+        if (d > date) date = d;
+      });
+      adds.push({ lot: b, qty: need, date: date || b.date || '', khac: true });
+    });
+    // ─ Tình trạng SAU khi dọn: còn lô nào ghi vượt sức chứa? ─
+    const finalUsed = {};
+    kept.forEach(n => {
+      if (!n || n.type !== 'xuat' || n.status !== 'da_duyet') return;
+      (Array.isArray(n.lots) ? n.lots : []).forEach(l => {
+        const id = String((l && l.batchId) || '');
+        if (!id) return;
+        let q = Number(l.qty) || 0;
+        const cut = trimOf[`${n.id}|${id}`] || 0;
+        if (cut > 0) q = Math.max(0, q - cut);
+        if (q > 0) finalUsed[id] = (finalUsed[id] || 0) + q;
       });
     });
-    if (!created.length) { showToast('Không có dữ liệu cũ nào cần tạo phiếu bù — sổ kho đã khớp!', 'success'); return; }
-    const total = created.reduce((s, n) => s + n.qty, 0);
-    if (!confirm(`Tạo ${created.length} phiếu xuất bù (ĐÃ DUYỆT) cho dữ liệu cũ — tổng ${total.toLocaleString('vi-VN')} thanh?`)) return;
-    pushUndo('Tạo phiếu bù dữ liệu cũ');
-    state.khoNotes = [...(state.khoNotes || []), ...created];
+    adds.forEach(a => { finalUsed[a.lot.id] = (finalUsed[a.lot.id] || 0) + a.qty; });
+    let overAfter = 0, overThanh = 0;
+    (state.batches || []).forEach(b => {
+      if (!b || b.stage !== 'kho') return;
+      const cap = khoInCountOf(b) * (Number(b.quantity) || 0);
+      const u = finalUsed[b.id] || 0;
+      if (u > cap) { overAfter++; overThanh += (u - cap); }
+    });
+    return {
+      dupIds, dupQty,
+      trims, trimsQty, trimNotes: new Set(trims.map(t => t.noteId)).size,
+      adds, addQty, addLots,
+      overAfter, overThanh
+    };
+  }
+  function khoReconcileLedger() {
+    if (!requireEditPermission()) return;
+    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý rà soát được sổ kho.', 'error'); return; }
+    const plan = khoReconcilePlan();
+    if (!plan.dupIds.length && !plan.trims.length && !plan.adds.length) {
+      showToast(plan.overAfter
+        ? `Sổ kho không còn gì để dọn — vẫn còn ${plan.overAfter} lô có phiếu vượt số lượng (${fmtThanh(plan.overThanh)} thanh, xem cảnh báo đỏ).`
+        : 'Sổ kho đã khớp — không có gì để dọn!', 'success');
+      return;
+    }
+    const say2Adds = plan.adds.filter(a => !a.khac);
+    const khacAdds = plan.adds.filter(a => a.khac);
+    const sumOf = list => list.reduce((s, a) => s + a.qty, 0);
+    const msg = 'Rà soát sổ kho (tự chụp bản cất trước khi sửa):\n'
+      + `• D1 — Xóa ${plan.dupIds.length} phiếu hệ thống TRÙNG (dư ${fmtThanh(plan.dupQty)} thanh)\n`
+      + `• D2 — Cắt ${fmtThanh(plan.trimsQty)} thanh ở ${plan.trimNotes} phiếu "Khác" bù cũ TRÙNG với phiếu tay\n`
+      + `• D3 — Bổ sung ${say2Adds.length} phiếu Sấy 2 tự động (${fmtThanh(sumOf(say2Adds))} thanh) cho ${plan.addLots} lô\n`
+      + `• D4 — Bổ sung ${khacAdds.length} phiếu bù Bào Tinh/Bullig (${fmtThanh(sumOf(khacAdds))} thanh)\n`
+      + `Sau khi dọn còn ${plan.overAfter} lô phiếu vượt số lượng (${fmtThanh(plan.overThanh)} thanh) — sẽ hiện cảnh báo đỏ để xem tay.\n`
+      + 'Tiếp tục?';
+    if (!confirm(msg)) return;
+    try { captureAutoBackup('Trước khi rà soát sổ kho (phiếu bù / phiếu Sấy 2 tự động)', true); } catch (e) { /* lỗi chụp không chặn */ }
+    pushUndo('Rà soát sổ kho');
+    const now = new Date().toISOString();
+    // D1 — xóa phiếu trùng (tombstone để mây/máy khác không hồi sinh)
+    if (plan.dupIds.length) {
+      plan.dupIds.forEach(id => trackDeleted('khoNotes', id));
+      state.khoNotes = (state.khoNotes || []).filter(n => !n || !plan.dupIds.includes(String(n.id)));
+    }
+    // D2 — cắt phần 'khac' dư
+    plan.trims.forEach(t => {
+      const n = (state.khoNotes || []).find(x => x && x.id === t.noteId);
+      if (!n) return;
+      const l = (Array.isArray(n.lots) ? n.lots : []).find(x => x && String(x.batchId) === t.lotId);
+      if (!l) return;
+      l.qty = Math.max(0, (Number(l.qty) || 0) - t.qty);
+      n.qty = (Array.isArray(n.lots) ? n.lots : []).reduce((s, x) => s + (Number(x && x.qty) || 0), 0);
+      n.updatedAt = now;
+    });
+    const zeroNotes = (state.khoNotes || []).filter(n => n && n.type === 'xuat'
+      && Array.isArray(n.lots) && n.lots.length && n.lots.every(l => (Number(l && l.qty) || 0) <= 0));
+    if (zeroNotes.length) {
+      zeroNotes.forEach(n => trackDeleted('khoNotes', n.id));
+      const ids = new Set(zeroNotes.map(n => n.id));
+      state.khoNotes = (state.khoNotes || []).filter(n => !n || !ids.has(n.id));
+    }
+    // D3 — phiếu Sấy 2 tự động; D4 — phiếu bù Bào Tinh / Bullig
+    plan.adds.forEach(a => {
+      if (!a.khac) { khoPushSay2Note(a.lot, a.qty, a.date, 'backfill'); return; }
+      const b = a.lot;
+      const q = Math.round(Number(a.qty) || 0);
+      if (!(q > 0)) return;
+      state.khoNotes = [...(state.khoNotes || []), {
+        id: `kho-note-auto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type: 'xuat', date: String(a.date || ''), purpose: 'khac',
+        purposeNote: 'Khởi tạo từ dữ liệu cũ',
+        qty: q, m3: calculateVolume(b.length, b.width, b.thickness, q),
+        lots: [{ batchId: String(b.id), qty: q, loc: b.location || '' }],
+        note: 'Phiếu bù tự động: Bào Tinh / Bullig ghi trước khi có sổ kho (Rà soát sổ kho)',
+        status: 'da_duyet', autoSay2: false,
+        createdBy: 'system', createdByName: 'Hệ thống (tự động)', createdAt: now,
+        approvedBy: 'system', approvedByName: 'Hệ thống (tự động)', approvedAt: now,
+        updatedAt: now
+      }];
+    });
     saveKhoNotes();
     renderAll();
-    showToast(`Đã tạo ${created.length} phiếu bù (tổng ${total.toLocaleString('vi-VN')} thanh) — tồn kho đã khớp số suy ra!`, 'success');
+    showToast(`Đã rà soát sổ kho: xóa ${plan.dupIds.length} phiếu trùng · cắt ${fmtThanh(plan.trimsQty)} thanh dư · bổ sung ${plan.adds.length} phiếu bù.`, 'success');
   }
+  // Giữ tên cũ: mọi chỗ đang gọi (nút + test) không phải sửa
+  const khoBackfillFromLegacy = khoReconcileLedger;
 
   // ═════════════════════════════════════════════════════════════
   // XƯỞNG 1 — CÁC CÔNG ĐOẠN (04/10/2026)
@@ -14163,6 +14601,17 @@ export {
   toggleX2KhoTable,
   toggleX2KhoStockTable,
   khoBackfillFromLegacy,
+  khoReconcileLedger,
+  khoReconcilePlan,
+  addKhoSay2AutoNote,
+  addKhoReworkAutoNote,
+  openKhoWarnModal,
+  closeKhoWarnModal,
+  renderKhoWarnDetail,
+  khoWarnOverRows,
+  khoWarnMismatchRows,
+  khoAckOverAlloc,
+  khoClearOverAck,
   bulligDefectStock,
   nanRejectStock,
   khoLotPickerList,

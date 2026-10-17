@@ -9047,6 +9047,11 @@ body.kanban-pick-mode .kb-pick-inline { display: inline-flex; flex-wrap: wrap; }
 .kho-card-remain { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
 .kho-card-remain strong { color: var(--text-main); }
 .kho-round-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+/* CẢNH BÁO PHIẾU VƯỢT SỐ LƯỢNG LÔ (17/10/2026) — thay vì im lặng kẹp tồn về 0 */
+.kho-over-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+/* PHIẾU XUẤT SẤY 2 TỰ ĐỘNG — chip trong sổ xuất + ghi chú thay nút sửa/xóa */
+.kho-auto-chip { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-size: 0.66rem; font-weight: 700; white-space: nowrap; }
+.kho-auto-hint { font-size: 0.7rem; color: var(--text-muted); font-style: italic; white-space: nowrap; }
 .kho-type-seg { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .kho-type-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: transparent; font-weight: 700; cursor: pointer; color: var(--text-main); }
 .kho-type-btn.active { background: #ccfbf1; border-color: #0f766e; color: #0f766e; }
@@ -11369,4 +11374,88 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   .sync-conflict-cols { grid-template-columns: 1fr; }
   .sync-conflict-body { max-height: 56dvh; }
   .sync-conflict-btn { min-height: 42px; font-size: 0.8rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHI TIẾT CẢNH BÁO TỒN KHO + CHỐT LỆCH (17/10/2026) — Kho Nan
+   Mở từ 2 chip cảnh báo trên thanh tồn (js/xuong2.js renderX2KhoStockBar)
+   ═══════════════════════════════════════════════════════════════════ */
+.kho-warn-btn { border: 1px solid #fca5a5; cursor: pointer; font: inherit; }
+.kho-warn-btn:hover { filter: brightness(0.97); }
+.kho-warn-card { max-width: 860px; width: calc(100vw - 24px); }
+.kho-warn-intro { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 10px; line-height: 1.5; }
+.kho-warn-body { max-height: 62dvh; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.kho-warn-row { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: rgba(0,0,0,0.02); }
+.kho-warn-line1 { font-size: 0.84rem; font-weight: 600; }
+.kho-warn-line2 { font-size: 0.78rem; margin-top: 3px; }
+.kho-warn-line3 { font-size: 0.74rem; color: var(--text-muted); margin-top: 3px; line-height: 1.45; }
+.kho-warn-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
+.kho-ack-chip { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-size: 0.66rem; font-weight: 700; }
+@media (max-width: 639.98px) {
+  .kho-warn-body { max-height: 60dvh; }
+  .kho-warn-row { padding: 8px; }
+  .kho-warn-actions .btn { min-height: 42px; font-size: 0.8rem; }
+
+/* ======================================================= */
+/* TRUNG TÂM XUẤT EXCEL (modal-report-center)               */
+/*   Thay 6 modal xuất riêng rẽ: Tab → Báo cáo → Bộ lọc      */
+/*   File .xlsx KHÔNG có viền/màu (SheetJS CE) — bản In/PDF  */
+/*   có khung đầy đủ (xem @media print bên dưới).            */
+/* ======================================================= */
+.rc-card { max-width: min(880px, 96vw); width: 100%; }
+.rc-body {
+  padding: 16px 20px;
+  max-height: min(72dvh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.rc-subtitle { margin: 0 0 10px; font-size: 0.82rem; font-weight: 700; color: var(--primary); }
+.rc-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.rc-tab {
+  padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-alt);
+  color: var(--text); font-size: 0.78rem; font-weight: 700;
+}
+.rc-tab.is-on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.rc-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.rc-chip {
+  padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  border: 1px dashed var(--border); background: transparent;
+  color: var(--text); font-size: 0.75rem; font-weight: 600; text-align: left;
+}
+.rc-chip.is-on { border-style: solid; border-color: var(--primary); background: rgba(124, 58, 237, 0.12); font-weight: 800; }
+.rc-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.rc-filter { margin-bottom: 0; }
+.rc-filter label { font-size: 0.76rem; }
+.rc-period-row { display: flex; gap: 6px; align-items: center; }
+.rc-period-row select { flex: 1 1 auto; }
+.rc-period-nav { display: flex; align-items: center; gap: 4px; }
+.rc-period-nav input { width: 132px; }
+.rc-nav-btn {
+  width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-alt); color: var(--text);
+  font-size: 1rem; font-weight: 800; line-height: 1;
+}
+.rc-period-label { margin: 4px 0 0; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+.rc-note, .rc-hint { margin: 10px 0 0; font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+
+/* Bản IN/PDF: lặp hàng tiêu đề mỗi trang + không cắt dòng giữa 2 trang */
+@media print {
+  #export-preview-print-area thead { display: table-header-group; }
+  #export-preview-print-area tbody tr { break-inside: avoid; page-break-inside: avoid; }
+}
+
+@media (max-width: 639.98px) {
+  .rc-body { padding: 12px; max-height: 68dvh; }
+  .rc-tab { padding: 7px 12px; min-height: 42px; }
+  .rc-chip { min-height: 42px; font-size: 0.8rem; }
+  .rc-filter-grid { grid-template-columns: 1fr; }
+  .rc-period-row { flex-wrap: wrap; }
+  .rc-period-nav { width: 100%; }
+  .rc-period-nav input { flex: 1 1 auto; width: auto; }
+  #modal-report-center .modal-footer { flex-wrap: wrap; }
+  #modal-report-center .modal-footer .btn { flex: 1 1 46%; min-height: 44px; }
+}
+
 }

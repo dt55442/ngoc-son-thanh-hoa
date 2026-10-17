@@ -238,11 +238,13 @@ check('NL: đủ 3 dòng dữ liệu + header + tổng (9 dòng)', nlAoa.length 
 check('NL: sắp xếp mới nhất lên đầu (11/08 trước 10/08)', nlAoa[5][3] === 'Keo UF' && nlAoa[6][3] === 'Tre nguyên liệu');
 check('NL: nhãn vị trí "Lò hơi" từ key lo-hoi', nlAoa[6][5] === 'Lò hơi');
 check('NL: tuần thân thiện "Tuần 33 (2026)"', nlAoa[5][2] === 'Tuần 33 (2026)');
-check('NL: đơn giá định dạng vi-VN "30.000"', nlAoa[5][9] === '30.000');
-check('NL: thành tiền "750.000" (150kg × 5.000)', nlAoa[6][10] === '750.000');
+// 17/10/2026: ô SỐ nay ghi NUMBER THẬT (SUM/lọc/sort được trong Excel),
+// không còn chuỗi định dạng vi-VN ("30.000") như trước.
+check('NL: đơn giá là SỐ THẬT 30000 (không còn chuỗi "30.000")', nlAoa[5][9] === 30000);
+check('NL: thành tiền là SỐ THẬT 750000 (150kg × 5.000)', nlAoa[6][10] === 750000);
 check('NL: số ảnh đếm đúng (dòng có 1 ảnh)', nlAoa[6][12] === 1);
-check('NL: dòng TỔNG CỘNG = 190 kg', nlAoa[8][5] === 'TỔNG CỘNG' && nlAoa[8][8] === '190');
-check('NL: tổng thành tiền = 1.450.000 đ', nlAoa[8][10] === '1.450.000');
+check('NL: dòng TỔNG CỘNG = 190 kg (number)', nlAoa[8][5] === 'TỔNG CỘNG' && nlAoa[8][8] === 190);
+check('NL: tổng thành tiền = 1.450.000 đ (number)', nlAoa[8][10] === 1450000);
 check('NL: đóng modal sau khi xuất', !modalShown('modal-export-materials'));
 
 // Lọc theo vị trí Lò hơi
@@ -250,7 +252,7 @@ xlsxMod.openMaterialsExportModal();
 setVal('export-materials-location', 'lo-hoi');
 xlsxMod.handleMaterialsExportSubmit(ev);
 check('NL: lọc Lò hơi còn 1 dòng', lastSheetAoa.length === 5 + 1 + 1);
-check('NL: tổng Lò hơi = 150 kg', lastSheetAoa[lastSheetAoa.length - 1][8] === '150');
+check('NL: tổng Lò hơi = 150 kg (number)', lastSheetAoa[lastSheetAoa.length - 1][8] === 150);
 
 // Lọc theo NCC + loại
 xlsxMod.openMaterialsExportModal();

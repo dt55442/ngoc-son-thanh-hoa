@@ -12,7 +12,8 @@ import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBacku
 import { loadDeletedIds } from './tombstone.js';
 import { deleteCustomChart, openChartBuilderModal, openDashHelp, renderDashboardCharts, toggleChartExpand } from './dashboard.js';
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
-import { loadCustomCharts, openCustomExportModal } from './export-xlsx.js';
+import { loadCustomCharts } from './export-xlsx.js';
+import { openReportCenter } from './report-center.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
@@ -480,7 +481,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
   window.app = {
     openBatchFormModal,
     openEditModal: id => openBatchFormModal(id),
-    openCustomExportModal,
+    // Tương thích API cũ: mở TRUNG TÂM XUẤT với báo cáo Lô nan (Than Hóa + Sấy)
+    openCustomExportModal: () => openReportCenter('batch'),
+    // TRUNG TÂM XUẤT EXCEL — mở đúng báo cáo của thẻ/tab đang xem
+    openExportCenter: id => openReportCenter(id),
     openChartBuilderModal: (chartId, preset) => openChartBuilderModal(chartId, preset),
     openEditChartModal: id => openChartBuilderModal(id),
     // Trợ giúp Dashboard — giải thích nhanh theo vùng/đối tượng (nút "?" trên thẻ)

@@ -7,8 +7,9 @@ import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermissio
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
-import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, closeX2ExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, handleX2ExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, openX2ExportModal, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
+import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, closeX2ExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, handleX2ExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, openX2ExportModal, openX2ExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
 import { closeHistoryModal, openHistoryModal, setHistoryDomainFilter, setHistoryTabFilter, setHistoryUserFilter, clearHistory } from './history.js';
+import { closeReportCenter, exportReportGroup, handleReportSubmit, onReportCenterClick, onReportFilterChange, openReportCenter, openReportPreview } from './report-center.js';
 import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey, aiSetModel, runAiAnalysis, initAiFabDrag, aiFabDragConsumed, aiQuickAsk, aiHideBubble, aiSetAutoGreet } from './ai.js';
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
@@ -26,7 +27,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   handleXuong2BaoVanSubmit, editXuong2BaoVan, deleteXuong2BaoVan, resetXuong2BaoVanForm,
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
   setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
-import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất
+import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
 import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
@@ -438,38 +439,52 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-cloud-backup', 'click', closeCloudBackupModal);
     safeOn('btn-reload-cloudbackups', 'click', renderCloudBackupList);
 
-    // Custom XLSX Export (nút "Xuất Excel" riêng của tab Công Đoạn)
-    safeOn('btn-open-export-modal',  'click', openCustomExportModal);
-    safeOn('btn-close-export-modal', 'click', closeCustomExportModal);
-    safeOn('btn-cancel-export',      'click', closeCustomExportModal);
-    safeOn('custom-export-form',     'submit', handleCustomExportSubmit);
+    // ── TRUNG TÂM XUẤT EXCEL (1 modal dùng chung cho MỌI tab/báo cáo) ──
+    // Nút ở từng tab chỉ mở center với ĐÚNG báo cáo của tab/thẻ đó.
+    safeOn('btn-open-export-modal',      'click', () => openReportCenter(x2OpenCardExportSource()));
+    safeOn('btn-report-export',          'click', handleReportSubmit);
+    safeOn('btn-report-preview',         'click', openReportPreview);
+    safeOn('btn-report-multi',           'click', exportReportGroup);
+    safeOn('btn-report-cancel',          'click', closeReportCenter);
+    safeOn('btn-close-report-center',    'click', closeReportCenter);
+    safeOn('report-center-tabs',         'click', onReportCenterClick);
+    safeOn('report-center-list',         'click', onReportCenterClick);
+    safeOn('report-center-filters',      'click', onReportCenterClick);
+    safeOn('report-center-filters',      'change', onReportFilterChange);
+    // Esc / bấm nền mờ → đóng Trung Tâm Xuất (modal cấp trang)
+    const rcOverlay = document.getElementById('modal-report-center');
+    if (rcOverlay) {
+      rcOverlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReportCenter(); });
+      rcOverlay.addEventListener('click', (e) => { if (e.target === rcOverlay) closeReportCenter(); });
+    }
 
     // Xuất Excel riêng từng tab: Kế Hoạch / Ép Ván / Nguyên Liệu
-    safeOn('btn-open-export-planning',   'click', openPlanningExportModal);
+    safeOn('btn-open-export-planning',   'click', () => openReportCenter('plan-items'));
     safeOn('btn-close-export-planning',  'click', closePlanningExportModal);
     safeOn('btn-cancel-export-planning', 'click', closePlanningExportModal);
     safeOn('planning-export-form',       'submit', handlePlanningExportSubmit);
     // ── 2 NÚT DÙNG CHUNG trong pop-up thẻ Xưởng 2 (Lịch Sử + Xuất Dữ Liệu) ──
     safeOn('btn-history-x2',             'click', () => openHistoryModal('kanban', x2OpenCardHistoryDomain()));
-    safeOn('btn-export-x2',              'click', () => openX2ExportModal(x2OpenCardExportSource())); // xuất theo THẺ đang mở
+    safeOn('btn-export-x2',              'click', () => openReportCenter(x2OpenCardExportSource())); // xuất theo THẺ đang mở
     safeOn('x2-export-form',             'submit', handleX2ExportSubmit);
+    safeOn('btn-preview-x2',             'click', openX2ExportPreview);
     safeOn('btn-close-export-x2',        'click', closeX2ExportModal);
     safeOn('btn-cancel-export-x2',       'click', closeX2ExportModal);
     safeOn('btn-close-export-press',     'click', closePressExportModal);
     safeOn('btn-cancel-export-press',    'click', closePressExportModal);
     safeOn('press-export-form',          'submit', handlePressExportSubmit);
-    safeOn('btn-open-export-materials',   'click', openMaterialsExportModal);
+    safeOn('btn-open-export-materials',   'click', () => openReportCenter('mat-records'));
     safeOn('btn-close-export-materials',  'click', closeMaterialsExportModal);
     safeOn('btn-cancel-export-materials', 'click', closeMaterialsExportModal);
     safeOn('materials-export-form',       'submit', handleMaterialsExportSubmit);
     // Xuất Excel tab QC — Bảng Xuất Hàng
-    safeOn('btn-open-export-qc',   'click', openQcXlsxExportModal);
+    safeOn('btn-open-export-qc',   'click', () => openReportCenter('qc-export'));
     safeOn('btn-close-export-qc',  'click', closeQcXlsxExportModal);
     safeOn('btn-cancel-export-qc', 'click', closeQcXlsxExportModal);
     safeOn('qc-xlsx-export-form',  'submit', handleQcXlsxExportSubmit);
     safeOn('btn-preview-qc',       'click', openQcXlsxExportPreview);
     // Xuất Excel tab Nhân Sự — chọn theo thẻ nhanh (mini card)
-    safeOn('btn-open-export-hr',   'click', openHrXlsxExportModal);
+    safeOn('btn-open-export-hr',   'click', () => openReportCenter('hr-emp'));
     safeOn('btn-close-export-hr',  'click', closeHrXlsxExportModal);
     safeOn('btn-cancel-export-hr', 'click', closeHrXlsxExportModal);
     safeOn('hr-xlsx-export-form',  'submit', handleHrXlsxExportSubmit);
@@ -1544,6 +1559,9 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Thứ tự Esc (giống quy tắc của thẻ QC): ① popup ĐỊNH MỨC đang mở → đóng nó
     // ② dropdown nổi (Bào Tinh/Bullig) đang mở → đóng nó ③ mới đóng pop-up thẻ.
     const escX2Priority = () => {
+      // ⓪ Ưu tiên MODAL CHI TIẾT CẢNH BÁO TỒN KHO (mở từ chip ⚠ trên thanh tồn)
+      const warnPop = document.getElementById('modal-kho-warn');
+      if (warnPop && warnPop.classList.contains('show')) { closeKhoWarnModal(); return true; }
       // ① Ưu tiên popup ĐỊNH MỨC XƯỞNG 1 (modal-x1-rate) nếu đang mở
       const x1Pop = document.getElementById('modal-x1-rate');
       if (x1Pop && x1Pop.classList.contains('show')) { closeX1RatePopup(); return true; }
@@ -1912,6 +1930,44 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x2-kho-search', 'input', renderX2KhoLedger);
     safeOn('x2-kho-show-used', 'change', (e) => khoSetShowUsed(e.target.checked));
     safeOn('x2-kho-backfill-btn', 'click', khoBackfillFromLegacy);
+    // CHI TIẾT CẢNH BÁO TỒN KHO — 2 chip ⚠ trên thanh tồn (ủy nhiệm vì innerHTML vẽ lại)
+    const khoStockBarEl = document.getElementById('x2-kho-stock-bar');
+    if (khoStockBarEl && !khoStockBarEl.dataset.warnWired) {
+      khoStockBarEl.dataset.warnWired = '1';
+      khoStockBarEl.addEventListener('click', (e) => {
+        const b = e.target && e.target.closest ? e.target.closest('[data-kho-warn]') : null;
+        if (b) openKhoWarnModal(b.getAttribute('data-kho-warn'));
+      });
+    }
+    const khoWarnBodyEl = document.getElementById('kho-warn-body');
+    if (khoWarnBodyEl && !khoWarnBodyEl.dataset.wired) {
+      khoWarnBodyEl.dataset.wired = '1';
+      khoWarnBodyEl.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const edit = t.closest('[data-kho-warn-edit]');
+        if (edit) {
+          const id = edit.getAttribute('data-kho-warn-edit');
+          if (window.app && window.app.openEditModal) window.app.openEditModal(id);
+          closeKhoWarnModal();
+          return;
+        }
+        const card = t.closest('[data-kho-warn-card]');
+        if (card) { closeKhoWarnModal(); x2OpenCard(card.getAttribute('data-kho-warn-card')); return; }
+        const ack = t.closest('[data-kho-warn-ack]');
+        if (ack) { khoAckOverAlloc(ack.getAttribute('data-kho-warn-ack')); return; }
+        const un = t.closest('[data-kho-warn-unack]');
+        if (un) { khoClearOverAck(un.getAttribute('data-kho-warn-unack')); return; }
+      });
+    }
+    safeOn('btn-close-kho-warn', 'click', closeKhoWarnModal);
+    safeOn('btn-kho-warn-ok', 'click', closeKhoWarnModal);
+    const khoWarnOvEl = document.getElementById('modal-kho-warn');
+    if (khoWarnOvEl && !khoWarnOvEl.dataset.wired) {
+      khoWarnOvEl.dataset.wired = '1';
+      khoWarnOvEl.addEventListener('click', (e) => { if (e.target === khoWarnOvEl) closeKhoWarnModal(); });
+      khoWarnOvEl.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeKhoWarnModal(); });
+    }
     safeOn('x2-kho-day-cards', 'click', khoOnLedgerClick); // Mở lại / Xóa dòng XUẤT đã duyệt (chỉ admin)
     safeOn('btn-kho-add-manual', 'click', () => openTransferKhoModal('new')); // Nhập Kho thủ công trên cột Kho
     // ── Thẻ THAN HÓA + SẤY: định mức 1 lần than hóa + thu gọn bảng Kanban ──

@@ -13,7 +13,7 @@ import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
-import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay } from './xuong2.js';
+import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
 
   // ─── CUSTOM XLSX EXPORT ───────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════
@@ -36,9 +36,22 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     { id: 'catvan',  label: 'Cắt Ván (Cắt ván + Xẻ thanh)' },
     { id: 'baovan',  label: 'Bào Ván (Bào + Chà thùng)' },
     { id: 'hotro',   label: 'Hỗ Trợ + Công Đoạn Lẻ' },
+    // ── XƯỞNG 1 (05–17/10/2026): 8 công đoạn — trước đây bấm xuất bị rơi về
+    //    nguồn 'batch' (Lô nan) nên ra SAI vùng dữ liệu.
+    { id: 'x1catong',   label: 'Xưởng 1 — Cắt Ống' },
+    { id: 'x1saysinh',  label: 'Xưởng 1 — Sấy Sinh' },
+    { id: 'x1boc',      label: 'Xưởng 1 — Bốc' },
+    { id: 'x1locong',   label: 'Xưởng 1 — Lọc Ống' },
+    { id: 'x1catmat',   label: 'Xưởng 1 — Cắt Mắt' },
+    { id: 'x1bo',       label: 'Xưởng 1 — Bổ' },
+    { id: 'x1phoisay',  label: 'Xưởng 1 — Phơi Sấy' },
+    { id: 'x1locthanh', label: 'Xưởng 1 — Lọc Thanh / Bó Xô' },
     { id: 'kho',     label: 'Kho Nan (Tồn · Nhập / Xuất / Phiếu)' },
     { id: 'epvan',   label: 'Ép Ván (mở form xuất Ép Ván)' }
   ];
+
+  // 5 công đoạn Xưởng 1 dùng chung spec (X1_CHAIN_SPECS) → mã nguồn xuất ↔ key spec
+  const X1_CHAIN_KEYS = { x1locong: 'locOng', x1catmat: 'catMat', x1bo: 'bo', x1phoisay: 'phoiSay', x1locthanh: 'locThanh' };
 
   const x2FmtKg = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
   const x2FmtSo = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
@@ -249,8 +262,17 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     }
     return true;
   }
+  // NGÀY THEO GIỜ MÁY (VN) — KHÔNG dùng toISOString (UTC) vì buổi sáng sẽ ra HÔM QUA
   function todayStamp() {
-    return new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+  // Nhãn "Ngày xuất" đầy đủ theo giờ máy: dd/mm/yyyy HH:mm
+  function nowStampVn() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
   function modalShow(id) { document.getElementById(id)?.classList.add('show'); initLucide(); }
   function modalHide(id) { document.getElementById(id)?.classList.remove('show'); }
@@ -270,10 +292,14 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     if (d.merges && d.merges.length) ws['!merges'] = d.merges;
     if (d.cols) ws['!cols'] = d.cols;
     if (d.rowH) ws['!rows'] = [{ hpt: d.rowH }];
+    // AUTO FILTER (nút lọc/sort ngay trong Excel) — SheetJS CE GHI ĐƯỢC mục này.
+    // LƯU Ý: CE KHÔNG ghi được viền/màu/đậm (bị bỏ khi ghi) và KHÔNG ghi được
+    // freeze pane / Excel Table — bản In/PDF mới có khung đầy đủ.
+    if (d.autofilter) ws['!autofilter'] = { ref: d.autofilter };
     if (d.fills) {
       Object.keys(d.fills).forEach(k => {
         const [r, c] = k.split(',').map(Number);
-        const addr = XLSX.utils.encode_cell({ r, c });
+        const addr = sheetAddr(r, c);
         if (!ws[addr]) ws[addr] = { t: 'z' };
         ws[addr].s = { fill: { patternType: 'solid', fgColor: { rgb: d.fills[k] } } };
       });
@@ -281,7 +307,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     if (d.zCells) {
       Object.keys(d.zCells).forEach(k => {
         const [r, c] = k.split(',').map(Number);
-        const addr = XLSX.utils.encode_cell({ r, c });
+        const addr = sheetAddr(r, c);
         if (ws[addr] && typeof ws[addr].v === 'number') ws[addr].z = d.zCells[k];
       });
     }
@@ -291,7 +317,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     if (d.styleCells) {
       Object.keys(d.styleCells).forEach(k => {
         const [r, c] = k.split(',').map(Number);
-        const addr = XLSX.utils.encode_cell({ r, c });
+        const addr = sheetAddr(r, c);
         if (!ws[addr]) ws[addr] = { t: 'z' };
         const cur = ws[addr].s || {};
         const st = Object.assign({}, cur);
@@ -301,13 +327,199 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
         ws[addr].s = st;
       });
     }
-    XLSX.utils.book_append_sheet(wb, ws, d.sheetName);
+    // Tên sheet: Excel KHÔNG cho phép \ / ? * [ ] : và tối đa 31 ký tự
+    const sheetName = String(d.sheetName || 'Sheet').replace(/[\\/?*[\]:]/g, ' ').trim().slice(0, 31) || 'Sheet';
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
     XLSX.writeFile(wb, d.filename);
     treOk = true;
     } finally { hideTreLoading(treOk); }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // CHUẨN HOÁ BÁO CÁO DÙNG CHUNG (mọi nguồn xuất đều đi qua đây)
+  //   ① Ô SỐ = number thật (SUM/lọc/sort được trong Excel)
+  //   ② Tự thêm DÒNG TỔNG CỘNG nếu nguồn chưa có
+  //   ③ AUTO FILTER trên vùng DỮ LIỆU (không gồm dòng tổng)
+  //   ④ zCells = định dạng hiển thị (kg / m³ / % / số nguyên)
+  //   ⑤ Ngày xuất theo GIỜ MÁY VN
+  //   KHÔNG kẻ viền/màu trong file .xlsx (SheetJS CE bỏ qua style) — bản In/PDF
+  //   (Xem Trước) mới có khung đầy đủ.
+  // ═══════════════════════════════════════════════════════════════
+  const REPORT_NUM_HDR = /(kg|thanh|tấm|m³|m3|giờ|phút|số lượng|trọng lượng|thành tiền|số ảnh|thể tích|độ ẩm|nhiệt độ|lực ép|đơn giá|đạt|lỗi|ngoại lệ|tỷ lệ|%|hiệu suất|công suất|vào|ra|đầu|cuối|tồn)/i;
+  const REPORT_TXT_HDR = /(mã|ngày|tuần|năm|tên|loại|ncc|nhà cung cấp|vị trí|dùng cho|công đoạn|ghi chú|người|k\.thước|kích thước|nguồn|ca\b|chứng từ|diễn giải)/i;
+  const REPORT_NOSUM_HDR = /(tỷ lệ|%|hiệu suất|công suất|nhiệt độ|lực ép|độ ẩm|đơn giá|trung bình|ngày|tuần|năm|stt)/i;
+
+  function reportColLetter(n) {
+    let s = '';
+    let x = Number(n) || 0;
+    do { s = String.fromCharCode(65 + (x % 26)) + s; x = Math.floor(x / 26) - 1; } while (x >= 0);
+    return s;
+  }
+  function reportHeaderText(h) { return String(h == null ? '' : h).trim(); }
+  // Địa chỉ ô A1 (tự tính — không dựa XLSX.utils.encode_cell để test/stub chạy được)
+  function sheetAddr(r, c) { return reportColLetter(c) + (Number(r) + 1); }
+  function reportIsNumCol(h) {
+    const t = reportHeaderText(h);
+    if (!t) return false;
+    // ƯU TIÊN ĐƠN VỊ trong ngoặc: "(kg)" / "(m³)" / "(thanh)" / "(tấm)" / "(giờ)" …
+    // luôn là cột SỐ — kể cả tên cột có chữ "Loại"/"Mã" (VD "KL Ngọn/Ống Loại (kg)").
+    if (/\(\s*(kg|m³|m3|thanh|tấm|giờ|phút|đ|%)\s*\)/i.test(t)) return true;
+    if (REPORT_TXT_HDR.test(t)) return false;
+    return REPORT_NUM_HDR.test(t);
+  }
+  function reportNumFmtOf(h) {
+    const t = reportHeaderText(h);
+    if (/(m³|m3|thể tích)/i.test(t)) return '0.0000';
+    if (/(%|tỷ lệ)/i.test(t)) return '0.0';
+    if (/(hiệu suất|công suất)/i.test(t)) return '0.0';
+    if (/(kg|đơn giá|thành tiền|trọng lượng)/i.test(t)) return '#,##0.00';
+    return '#,##0';
+  }
+  // Đọc số từ ô (chấp nhận "1.234,5" kiểu VN, "0.0010" kiểu thể tích, "12.5")
+  function reportCellNum(v, header) {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    const s = String(v == null ? '' : v).replace(/\u00a0/g, ' ').trim();
+    if (!s || s === '—' || s === '-' || s === '...' || s === '–') return null;
+    if (!/^-?[\d.,\s]+$/.test(s)) return null;
+    const isVol = /(m³|m3|thể tích)/i.test(reportHeaderText(header));
+    let t = s.replace(/\s/g, '');
+    if (t.includes(',')) {
+      t = t.replace(/\./g, '').replace(',', '.');
+    } else if (!isVol && /^\-?\d{1,3}(\.\d{3})+$/.test(t)) {
+      t = t.replace(/\./g, '');
+    }
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  }
+  function reportFindHeaderRow(aoa) {
+    for (let r = 0; r < Math.min(aoa.length, 12); r++) {
+      const row = aoa[r] || [];
+      for (let c = 0; c < Math.min(row.length, 3); c++) {
+        if (/^stt$/i.test(String(row[c] == null ? '' : row[c]).trim())) return r;
+      }
+    }
+    return -1;
+  }
+
+  function standardizeReportData(d) {
+    if (!d || !Array.isArray(d.aoa) || !d.aoa.length) return d;
+    const aoa = d.aoa;
+    const headerRow = Number.isInteger(d.headerRow) && d.headerRow >= 0 ? d.headerRow : reportFindHeaderRow(aoa);
+    const maxCols = aoa.reduce((m, row) => Math.max(m, (row || []).length), 0);
+    const header = headerRow >= 0 ? (aoa[headerRow] || []) : [];
+
+    // ① Ô số → number thật (chỉ ở các cột được nhận là số)
+    const numCols = [];
+    for (let c = 0; c < maxCols; c++) if (reportIsNumCol(header[c])) numCols.push(c);
+    const dataStart = headerRow >= 0 ? headerRow + 1 : 0;
+    for (let r = dataStart; r < aoa.length; r++) {
+      const row = aoa[r];
+      if (!Array.isArray(row)) continue;
+      numCols.forEach(c => {
+        const n = reportCellNum(row[c], header[c]);
+        if (n != null) row[c] = n;
+      });
+    }
+
+    // ② Dòng TỔNG CỘNG (chỉ thêm khi nguồn CHƯA có)
+    let totalIdx = -1;
+    for (let r = aoa.length - 1; r >= dataStart; r--) {
+      if ((aoa[r] || []).some(c => /tổng\s*cộng/i.test(String(c == null ? '' : c)))) { totalIdx = r; break; }
+    }
+    if (totalIdx < 0 && headerRow >= 0 && numCols.length) {
+      const lastData = aoa.length - 1;
+      if (lastData > headerRow) {
+        const labelCol = maxCols > 1 ? 1 : 0;
+        const labelRow = new Array(maxCols).fill('');
+        labelRow[labelCol] = 'TỔNG CỘNG';
+        numCols.forEach(c => {
+          const h = reportHeaderText(header[c]);
+          if (REPORT_NOSUM_HDR.test(h)) return;
+          let s = 0, any = false;
+          for (let r = dataStart; r <= lastData; r++) {
+            const v = (aoa[r] || [])[c];
+            if (typeof v === 'number') { s += v; any = true; }
+          }
+          if (any) labelRow[c] = Math.round(s * 10000) / 10000;
+        });
+        aoa.push(labelRow);
+        totalIdx = aoa.length - 1;
+      }
+    }
+
+    // ③ AutoFilter: header → dòng dữ liệu cuối (KHÔNG gồm dòng tổng)
+    let autofilter = d.autofilter || '';
+    if (!autofilter && headerRow >= 0 && maxCols > 0) {
+      const lastDataIdx = totalIdx > headerRow ? totalIdx - 1 : aoa.length - 1;
+      if (lastDataIdx > headerRow) {
+        autofilter = `A${headerRow + 1}:${reportColLetter(maxCols - 1)}${lastDataIdx + 1}`;
+      }
+    }
+
+    // ④ zCells: định dạng số cho mọi ô số của cột số
+    const zCells = Object.assign({}, d.zCells || {});
+    if (headerRow >= 0) {
+      for (let r = headerRow + 1; r < aoa.length; r++) {
+        numCols.forEach(c => {
+          const v = (aoa[r] || [])[c];
+          if (typeof v === 'number') zCells[`${r},${c}`] = reportNumFmtOf(header[c]);
+        });
+      }
+    }
+
+    return Object.assign({}, d, { aoa, headerRow, autofilter, zCells });
+  }
+
+  // Đổi lại vùng AutoFilter sau khi người dùng XOÁ DÒNG ở màn Xem Trước
+  // (nếu không Excel sẽ mở file với vùng lọc sai/lệch dòng).
+  function remapPreviewAutofilter(af, deletedRows, headerRow) {
+    if (!af) return af;
+    const m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(String(af));
+    if (!m) return af;
+    const s = Number(m[2]), e = Number(m[4]);
+    let shiftS = 0;
+    for (let r = 0; r < s - 1; r++) if (deletedRows.has(r)) shiftS++;
+    let shiftE = 0;
+    for (let r = 0; r < e; r++) if (deletedRows.has(r)) shiftE++;
+    const s2 = Math.max(headerRow >= 0 ? headerRow + 1 : 1, s - shiftS);
+    const e2 = Math.max(s2, e - shiftE);
+    return `${m[1]}${s2}:${m[3]}${e2}`;
+  }
+
+  // Xuất NHIỀU BÁO CÁO vào 1 file (mỗi báo cáo 1 sheet) — "Xuất cả nhóm"
+  function exportMultiSheetToXlsx(items, filename) {
+    if (!items || !items.length) { showToast('Không có báo cáo nào để xuất!', 'error'); return; }
+    showTreLoading('Đang xuất file Excel…');
+    let ok = false;
+    try {
+      const wb = XLSX.utils.book_new();
+      items.forEach(it => {
+        const ws = XLSX.utils.aoa_to_sheet(it.aoa);
+        if (it.merges && it.merges.length) ws['!merges'] = it.merges;
+        if (it.cols) ws['!cols'] = it.cols;
+        if (it.rowH) ws['!rows'] = [{ hpt: it.rowH }];
+        if (it.autofilter) ws['!autofilter'] = { ref: it.autofilter };
+        if (it.zCells) {
+          Object.keys(it.zCells).forEach(k => {
+            const [r, c] = k.split(',').map(Number);
+            const addr = sheetAddr(r, c);
+            if (ws[addr] && typeof ws[addr].v === 'number') ws[addr].z = it.zCells[k];
+          });
+        }
+        // Tên sheet: bỏ ký tự cấm, tối đa 31 ký tự, không trùng
+        let name = String(it.sheetName || it.title || 'Sheet').replace(/[\\/?*[\]:]/g, ' ').slice(0, 28) || 'Sheet';
+        let n = 2;
+        const base = name;
+        while (wb.SheetNames && wb.SheetNames.includes(name)) name = `${base.slice(0, 26)} ${n++}`;
+        XLSX.utils.book_append_sheet(wb, ws, name);
+      });
+      XLSX.writeFile(wb, filename);
+      ok = true;
+    } finally { hideTreLoading(ok); }
+  }
+
   // ─── 1) KẾ HOẠCH SẢN XUẤT ─────────────────────────────────────
+
   function planningProductNameOf(productId) {
     const rate = (state.materialRates || []).find(r => r.id === productId);
     return (rate && rate.product) || 'Sản phẩm cũ (định mức đã xóa)';
@@ -351,11 +563,12 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
   function closePlanningExportModal() { modalHide('modal-export-planning'); }
 
   // Dựng dữ liệu xuất Kế Hoạch (dùng chung cho xuất file & xem trước)
-  function buildPlanningExportData() {
+  function buildPlanningExportData(filters) {
     if (!requireXlsxLib()) return null;
-    const year    = document.getElementById('export-planning-year')?.value || 'all';
-    const week    = document.getElementById('export-planning-week')?.value || 'all';
-    const product = document.getElementById('export-planning-product')?.value || 'all';
+    const f = filters || {};
+    const year    = f.year != null ? f.year : (document.getElementById('export-planning-year')?.value || 'all');
+    const week    = f.week != null ? f.week : (document.getElementById('export-planning-week')?.value || 'all');
+    const product = f.product != null ? f.product : (document.getElementById('export-planning-product')?.value || 'all');
 
     const filtered = (state.planningItems || []).filter(p => {
       if (year !== 'all' && String(p.year) !== year) return false;
@@ -374,7 +587,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     // (Ghi Chú để trống — tự điền trong màn Xem Trước trước khi xuất/in).
     const aoa = [
       ['KẾ HOẠCH SẢN XUẤT'],
-      [`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`],
+      [`Ngày xuất: ${nowStampVn()}`],
       [`Bộ lọc: ${year === 'all' ? 'Tất cả năm' : 'Năm ' + year} · ${week === 'all' ? 'Tất cả tuần' : week} · ${product === 'all' ? 'Tất cả sản phẩm' : planningProductNameOf(product)}`],
       [],
       ['Stt', 'Mã SP', 'Tên SP', 'Tên Đầy Đủ', 'Số Lượng (tấm)', 'Thể Tích (m³)', 'Loại Ép', 'Ghi Chú']
@@ -406,7 +619,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } }
     ];
 
-    return {
+    return standardizeReportData({
       title: 'Kế Hoạch Sản Xuất',
       countLabel: `${filtered.length} dòng kế hoạch`,
       aoa, merges,
@@ -414,7 +627,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       rowH: 20,
       sheetName: 'Kế Hoạch SX',
       filename: `KeHoach_SanXuat_${todayStamp()}.xlsx`
-    };
+    });
   }
 
   function handlePlanningExportSubmit(e) {
@@ -526,18 +739,22 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
   function closePressExportModal() { modalHide('modal-export-press'); }
 
   // Dựng dữ liệu xuất Sản Lượng Ép Ván (dùng chung cho xuất file & xem trước)
-  function buildPressExportData() {
+  function buildPressExportData(filters) {
     if (!requireXlsxLib()) return null;
-    const year    = document.getElementById('export-press-year')?.value || 'all';
-    const week    = document.getElementById('export-press-week')?.value || 'all';
-    const product = document.getElementById('export-press-product')?.value || 'all';
-    const worker  = document.getElementById('export-press-worker')?.value || 'all';
+    const f = filters || {};
+    const year    = f.year != null ? f.year : (document.getElementById('export-press-year')?.value || 'all');
+    const week    = f.week != null ? f.week : (document.getElementById('export-press-week')?.value || 'all');
+    const product = f.product != null ? f.product : (document.getElementById('export-press-product')?.value || 'all');
+    const worker  = f.worker != null ? f.worker : (document.getElementById('export-press-worker')?.value || 'all');
 
     const filtered = (state.pressRecords || []).filter(r => {
       if (year !== 'all' && String(r.date || '').slice(0, 4) !== year) return false;
       if (week !== 'all' && r.week !== week) return false;
       if (product !== 'all' && String(r.productId || '') !== product) return false;
       if (worker !== 'all' && !pressWorkersOf(r).some(n => normWorker(n) === worker)) return false;
+      // Khoảng ngày (Trung Tâm Xuất dùng cho kỳ Ngày/Tháng)
+      if (f.from && (!r.date || String(r.date) < f.from)) return false;
+      if (f.to && (!r.date || String(r.date) > f.to)) return false;
       return true;
     });
     if (filtered.length === 0) {
@@ -547,7 +764,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
 
     const aoa = [
       ['SẢN LƯỢNG ÉP VÁN'],
-      [`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`],
+      [`Ngày xuất: ${nowStampVn()}`],
       [`Bộ lọc: ${year === 'all' ? 'Tất cả năm' : year} · ${week === 'all' ? 'Tất cả tuần' : friendlyWeek(week)} · ${product === 'all' ? 'Tất cả thành phẩm' : 'Thành phẩm đã chọn'} · ${worker === 'all' ? 'Tất cả công nhân' : 'Công nhân đã chọn'}`],
       [],
       ['Stt', 'Ngày', 'Tuần', 'Thành Phẩm', 'Mã SP', 'Tên Đầy Đủ', 'Loại Ép', 'Công Nhân', 'Kích Thước TP', 'SL TP (tấm)', 'Ván Thô', 'Thanh Thô', 'Keo (kg)', 'Phụ Gia (kg)']
@@ -574,7 +791,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }
     ];
 
-    return {
+    return standardizeReportData({
       title: 'Sản Lượng Ép Ván',
       countLabel: `${filtered.length} lượt ép`,
       aoa, merges,
@@ -582,7 +799,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       rowH: 20,
       sheetName: 'Ép Ván',
       filename: `SanLuong_EpVan_${todayStamp()}.xlsx`
-    };
+    });
   }
 
   function handlePressExportSubmit(e) {
@@ -595,12 +812,13 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
   }
 
   // Dựng dữ liệu xuất Xưởng 2 theo nguồn (dùng hàm hiển thị của xuong2.js)
-  function buildX2ExportData(sourceId) {
+  function buildX2ExportData(sourceId, filters) {
     if (!requireXlsxLib()) return null;
+    const f = filters || {};
     const source = String(sourceId || 'batch');
     const src = X2_EXPORT_SOURCES.find(s => s.id === source) || X2_EXPORT_SOURCES[0];
-    const from = (document.getElementById('export-x2-from') || {}).value || '';
-    const to   = (document.getElementById('export-x2-to') || {}).value || '';
+    const from = f.from != null ? f.from : ((document.getElementById('export-x2-from') || {}).value || '');
+    const to   = f.to != null ? f.to : ((document.getElementById('export-x2-to') || {}).value || '');
     let head = [];
     const body = [];
     let sumNote = '';
@@ -816,15 +1034,81 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       });
       const s = khoStockSummary();
       sumNote = `Tồn hiện tại ${x2FmtKg(s.remainingThanh)} thanh (${s.remainingM3.toFixed(2)} m³) · Nhập ${x2FmtKg(s.inTotal)} · Xuất đã duyệt ${x2FmtKg(s.outTotal)} thanh`;
+    } else if (source === 'x1catong') {
+      head = ['Stt', 'Ngày Cắt', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Mã NCC', 'KL Lô Đầu Vào (kg)', 'KL Đạt (kg)', 'KL Loại (kg)', 'KL Mắt (kg)', 'KL Ngọn (kg)', 'Còn Lại Của Lô (kg)', 'Tỷ Lệ QĐ (%)', 'Người Cắt', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
+      const list = (state.xuong1CatOngRecords || []).map(r => x1CatOngDisplay(r))
+        .filter(d => x2InRange(d.date, from, to))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      let inKg = 0, okKg = 0;
+      list.forEach((d, i) => {
+        inKg += d.inputWeight || 0; okKg += d.klDat || 0;
+        body.push([i + 1, formatDateDDMMYY(d.date), d.materialType || '', d.supplier || '', d.supplierCode || '',
+          d.inputWeight, d.klDat, d.klLoai, d.klMat, d.klNgon, d.lotRemaining,
+          d.ratio == null ? '—' : Math.round(d.ratio * 10) / 10, x2WorkerText(d.workerRows),
+          d.workHoursHC == null ? '—' : d.workHoursHC, d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+      });
+      sumNote = `Tổng KL đầu vào ${x2FmtKg(inKg)} kg · KL đạt ${x2FmtKg(okKg)} kg`;
+    } else if (source === 'x1saysinh') {
+      head = ['Stt', 'Ngày Sấy', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Đường Đi', 'KL Sấy (kg)', 'Còn Lại Nguồn (kg)', 'Người Sấy', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
+      const list = (state.xuong1SaySinhRecords || []).map(r => x1SaySinhDisplay(r))
+        .filter(d => x2InRange(d.date, from, to))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      let kg = 0;
+      list.forEach((d, i) => {
+        kg += d.qty || 0;
+        body.push([i + 1, formatDateDDMMYY(d.date), d.srcType || '', d.srcSupplier || '',
+          d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '', d.qty, d.srcRest,
+          x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
+          d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+      });
+      sumNote = `Tổng KL sấy ${x2FmtKg(kg)} kg`;
+    } else if (source === 'x1boc') {
+      head = ['Stt', 'Ngày Bốc', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Sấy Sinh', 'KL Bốc (kg)', 'Còn Lại Nguồn (kg)', 'Người Bốc', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
+      const list = (state.xuong1BocRecords || []).map(r => x1BocDisplay(r))
+        .filter(d => x2InRange(d.date, from, to))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      let kg = 0;
+      list.forEach((d, i) => {
+        kg += d.qty || 0;
+        body.push([i + 1, formatDateDDMMYY(d.date), d.srcType || '', d.srcSupplier || '',
+          d.srcSayDate ? formatDateDDMMYY(d.srcSayDate) : '', d.qty, d.srcRest,
+          x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
+          d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+      });
+      sumNote = `Tổng KL bốc ${x2FmtKg(kg)} kg`;
+    } else if (X1_CHAIN_KEYS[source]) {
+      const spec = X1_CHAIN_SPECS.find(sp => sp.key === X1_CHAIN_KEYS[source]);
+      if (spec) {
+        head = ['Stt', 'Ngày', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
+          'KL Vào (kg)', 'KL Đạt (kg)', 'KL Loại (kg)', 'Tỷ Lệ Đạt (%)',
+          'Người Làm', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
+        const list = (state[spec.stateKey] || []).map(r => x1ChainDisplay(spec, r))
+          .filter(d => x2InRange(d.date, from, to))
+          .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        let inKg = 0, okKg = 0;
+        list.forEach((d, i) => {
+          inKg += d.qtyIn || 0; okKg += d.qtyOk || 0;
+          body.push([i + 1, formatDateDDMMYY(d.date), d.srcType || '', d.srcSupplier || '',
+            d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '',
+            d.qtyIn, d.qtyOk, d.qtyLoai, d.ratio == null ? '—' : Math.round(d.ratio * 10) / 10,
+            x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
+            d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+        });
+        sumNote = `Tổng KL vào ${x2FmtKg(inKg)} kg · KL đạt ${x2FmtKg(okKg)} kg`;
+      }
     }
 
     if (!head.length) return null;
     if (!body.length) { showToast('Không có dữ liệu trong khoảng ngày đã chọn!', 'error'); return null; }
 
     const nCol = head.length;
+    const isX1 = source.startsWith('x1');
+    const headTitle = isX1
+      ? `XƯỞNG 1 — ${String(src.label).replace(/^Xưởng 1\s*—\s*/, '').toUpperCase()}`
+      : `XƯỞNG 2 — ${String(src.label).toUpperCase()}`;
     const aoa = [
-      [`XƯỞNG 2 — ${String(src.label).toUpperCase()}`],
-      [`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`],
+      [headTitle],
+      [`Ngày xuất: ${nowStampVn()}`],
       [`Khoảng ngày: ${from ? formatDateDDMMYY(from) : 'Từ đầu'} → ${to ? formatDateDDMMYY(to) : 'Đến nay'} · ${sumNote}`],
       [],
       head
@@ -835,15 +1119,15 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       { s: { r: 1, c: 0 }, e: { r: 1, c: nCol - 1 } },
       { s: { r: 2, c: 0 }, e: { r: 2, c: nCol - 1 } }
     ];
-    return {
+    return standardizeReportData({
       title: src.label,
       countLabel: `${body.length} dòng`,
       aoa, merges,
       cols: head.map(h => ({ wch: Math.max(10, Math.min(26, String(h).length + 4)) })),
       rowH: 20,
-      sheetName: String(src.label).slice(0, 28),
-      filename: `Xuong2_${source}_${todayStamp()}.xlsx`
-    };
+      sheetName: String(src.label).replace(/^Xưởng 1\s*—\s*/, 'X1 ').slice(0, 28),
+      filename: `${isX1 ? 'Xuong1' : 'Xuong2'}_${source}_${todayStamp()}.xlsx`
+    });
   }
 
   // Mở form xuất dữ liệu Xưởng 2 (nút dùng chung ở tab Công Đoạn gọi vào)
@@ -865,6 +1149,14 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     modalShow('modal-export-x2');
   }
   function closeX2ExportModal() { modalHide('modal-export-x2'); }
+
+  // XEM TRƯỚC dữ liệu Xưởng 2 (trước đây modal này KHÔNG có Xem Trước)
+  function openX2ExportPreview() {
+    const srcSel = document.getElementById('export-x2-source');
+    const sourceId = (srcSel && srcSel.value) || 'batch';
+    if (sourceId === 'epvan') { closeX2ExportModal(); openPressExportModal(); return; }
+    openExportPreview('modal-export-x2', () => buildX2ExportData(sourceId));
+  }
 
   function handleX2ExportSubmit(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
@@ -918,13 +1210,14 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
   function closeMaterialsExportModal() { modalHide('modal-export-materials'); }
 
   // Dựng dữ liệu xuất Nhật Ký Nguyên Liệu (dùng chung cho xuất file & xem trước)
-  function buildMaterialsExportData() {
+  function buildMaterialsExportData(filters) {
     if (!requireXlsxLib()) return null;
-    const location = document.getElementById('export-materials-location')?.value || 'all';
-    const type     = document.getElementById('export-materials-type')?.value || 'all';
-    const supplier = document.getElementById('export-materials-supplier')?.value || 'all';
-    const dateFrom = document.getElementById('export-materials-date-from')?.value || '';
-    const dateTo   = document.getElementById('export-materials-date-to')?.value || '';
+    const f = filters || {};
+    const location = f.location != null ? f.location : (document.getElementById('export-materials-location')?.value || 'all');
+    const type     = f.type != null ? f.type : (document.getElementById('export-materials-type')?.value || 'all');
+    const supplier = f.supplier != null ? f.supplier : (document.getElementById('export-materials-supplier')?.value || 'all');
+    const dateFrom = f.from != null ? f.from : (document.getElementById('export-materials-date-from')?.value || '');
+    const dateTo   = f.to != null ? f.to : (document.getElementById('export-materials-date-to')?.value || '');
 
     const filtered = (state.materialRecords || []).filter(r => {
       if (location !== 'all' && r.location !== location) return false;
@@ -946,7 +1239,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
 
     const aoa = [
       ['NHẬT KÝ NHẬP NGUYÊN LIỆU'],
-      [`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`],
+      [`Ngày xuất: ${nowStampVn()}`],
       [`Bộ lọc: ${location === 'all' ? 'Tất cả vị trí' : locLabel(location)} · ${type === 'all' ? 'Tất cả loại' : type} · ${supplier === 'all' ? 'Tất cả NCC' : supplier} · ${dateFrom || '...'} → ${dateTo || '...'}`],
       [],
       ['Stt', 'Ngày', 'Tuần', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Dùng Cho (Vị Trí)', 'Chỉ Số Đầu Vào', 'Chỉ Số Đầu Ra', 'Trọng Lượng (kg)', 'Đơn Giá (đ/kg)', 'Thành Tiền (đ)', 'Ghi Chú', 'Số Ảnh']
@@ -985,7 +1278,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } }
     ];
 
-    return {
+    return standardizeReportData({
       title: 'Nhật Ký Nhập Nguyên Liệu',
       countLabel: `${filtered.length} lần nhập nguyên liệu`,
       aoa, merges,
@@ -993,7 +1286,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       rowH: 20,
       sheetName: 'Nguyên Liệu',
       filename: `NhatKy_NguyenLieu_${todayStamp()}.xlsx`
-    };
+    });
   }
 
   function handleMaterialsExportSubmit(e) {
@@ -1068,11 +1361,12 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
 
   function closeQcXlsxExportModal() { modalHide('modal-export-qc'); }
 
-  function buildQcXlsxExportData() {
+  function buildQcXlsxExportData(filters) {
     if (!requireXlsxLib()) return null;
-    const year = document.getElementById('export-qc-year')?.value || 'all';
-    const week = document.getElementById('export-qc-week')?.value || 'all';
-    const prod = document.getElementById('export-qc-product')?.value || 'all';
+    const f = filters || {};
+    const year = f.year != null ? f.year : (document.getElementById('export-qc-year')?.value || 'all');
+    const week = f.week != null ? f.week : (document.getElementById('export-qc-week')?.value || 'all');
+    const prod = f.product != null ? f.product : (document.getElementById('export-qc-product')?.value || 'all');
     const weekNum = week === 'all' ? 0 : qcXlsxWeekNum(week);
     const filtered = (state.qcExports || []).filter(r =>
       (year === 'all' || String(r.year ?? '') === String(year)) &&
@@ -1120,7 +1414,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     if (week !== 'all') suffix += `_T${week}`;
     if (prod !== 'all') suffix += `_SP`;
 
-    return {
+    return standardizeReportData({
       title: 'QC — Bảng Xuất Hàng',
       countLabel: `${filtered.length} dòng xuất hàng`,
       aoa, merges,
@@ -1128,7 +1422,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       rowH: 20,
       sheetName: 'QC Xuất Hàng',
       filename: `QC_XuatHang${suffix}_${todayStamp()}.xlsx`
-    };
+    });
   }
 
   function handleQcXlsxExportSubmit(e) {
@@ -1220,13 +1514,14 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     if (dRow) dRow.style.display = (card === 'hr-att-day') ? '' : 'none';
   }
 
-  function buildHrXlsxExportData() {
+  function buildHrXlsxExportData(filters) {
     if (!requireXlsxLib()) return null;
-    const cardId = document.getElementById('export-hr-card')?.value || 'hr-emp';
+    const f = filters || {};
+    const cardId = f.card != null ? f.card : (document.getElementById('export-hr-card')?.value || 'hr-emp');
     const def = HR_XLSX_CARDS.find(c => c.id === cardId) || HR_XLSX_CARDS[0];
-    const dept = document.getElementById('export-hr-dept')?.value || 'all';
+    const dept = f.dept != null ? f.dept : (document.getElementById('export-hr-dept')?.value || 'all');
     // Bảng chấm công theo tháng (HC/TC) có bố cục riêng (lưới ngày) — dựng hàm riêng
-    if (def.id === 'hr-timesheet') return buildHrTimesheetExportData(def, dept);
+    if (def.id === 'hr-timesheet') return buildHrTimesheetExportData(def, dept, f.month);
     const inDept = d => dept === 'all' || (d || '—') === dept;
     const today = new Date();
     const dayLabel = `Ngày  ${today.getDate()}  Tháng  ${today.getMonth() + 1}  năm  ${today.getFullYear()}`;
@@ -1249,7 +1544,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
         break;
       }
       case 'hr-att-day': {
-        const date = document.getElementById('export-hr-date')?.value || state.hrAttDate || new Date().toISOString().split('T')[0];
+        const date = f.date || document.getElementById('export-hr-date')?.value || state.hrAttDate || todayStamp();
         header = ['Stt', 'Họ Tên', 'Mã NV', 'Bộ Phận', 'Trạng Thái', 'Vị Trí / Phân Vị Trong Ngày'];
         // Người ĐÃ NGHỈ VIỆC vẫn xuất nếu ngày xuất CHƯA qua ngày nghỉ việc
         // (vd nghỉ 15/9 thì các bảng ngày 15/9 trở về trước vẫn có người đó)
@@ -1277,7 +1572,8 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
         break;
       }
       case 'hr-att-stats': {
-        const month = document.getElementById('export-hr-month')?.value || state.hrAttMonth || new Date().toISOString().split('T')[0].slice(0, 7);
+        const month = (/^\d{4}-\d{2}$/.test(f.month || '') ? f.month
+          : (document.getElementById('export-hr-month')?.value || state.hrAttMonth || todayStamp().slice(0, 7)));
         header = ['Nhân Viên', 'Mã NV', 'Bộ Phận', 'Ngày Công', 'Nghỉ Phép', 'Vắng', 'Chưa Chấm', 'Tỷ Lệ (%)'];
         rows = computeAttendanceStats(month)
           .filter(s => inDept(s.emp.department))
@@ -1391,7 +1687,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       { s: { r: 1, c: 0 }, e: { r: 1, c: span } }
     ];
 
-    return {
+    return standardizeReportData({
       title: `Nhân Sự — ${def.label}`,
       countLabel: `${rows.length} dòng`,
       aoa, merges,
@@ -1399,7 +1695,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       rowH: 20,
       sheetName: def.sheet,
       filename: `NhanSu_${def.file}_${todayStamp()}.xlsx`
-    };
+    });
   }
 
   function handleHrXlsxExportSubmit(e) {
@@ -1438,10 +1734,11 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     return { hc, tc, worked: (hc + tc) > 0 };
   }
 
-  function buildHrTimesheetExportData(def, dept) {
+  function buildHrTimesheetExportData(def, dept, monthOverride) {
     const monthEl = document.getElementById('export-hr-month');
-    const month = (monthEl && /^\d{4}-\d{2}$/.test(monthEl.value)) ? monthEl.value
-      : (/^\d{4}-\d{2}$/.test(state.hrAttMonth || '') ? state.hrAttMonth : new Date().toISOString().split('T')[0].slice(0, 7));
+    const month = (/^\d{4}-\d{2}$/.test(monthOverride || '') ? monthOverride
+      : (monthEl && /^\d{4}-\d{2}$/.test(monthEl.value)) ? monthEl.value
+      : (/^\d{4}-\d{2}$/.test(state.hrAttMonth || '') ? state.hrAttMonth : todayStamp().slice(0, 7)));
     if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Tháng thống kê không hợp lệ!', 'error'); return null; }
     const [yy, mm] = month.split('-').map(Number);
     const nDays = new Date(yy, mm, 0).getDate();
@@ -1635,7 +1932,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     const box = document.getElementById('export-preview-table-box');
     if (!box) return;
     const { data, deletedRows, overrides, colWidths } = exportPreviewState;
-    box.innerHTML = buildExportPreviewTableHTML(data.aoa, data.merges || [], deletedRows, overrides, false, colWidths, data.fills || null);
+    box.innerHTML = buildExportPreviewTableHTML(data.aoa, data.merges || [], deletedRows, overrides, false, colWidths, data.fills || null, data.headerRow);
     const titleEl = document.getElementById('export-preview-title');
     if (titleEl) titleEl.innerHTML = `<i data-lucide="table"></i> Xem Trước: ${escapeHTML(data.title)}`;
     const infoEl = document.getElementById('export-preview-info');
@@ -1647,7 +1944,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
   // deletedRows: Set chỉ số dòng bị bỏ; overrides: {'r,c': nội dung đã sửa}.
   // colWidths: mảng độ rộng cột (px) → dựng <colgroup> đúng cân đối như file Excel.
   // fills: {'r,c': 'DDEBF7'} — màu nền minh họa (VD cột Chủ nhật của bảng chấm công tháng).
-  function buildExportPreviewTableHTML(aoa, merges, deletedRows, overrides, forPrint, colWidths, fills) {
+  function buildExportPreviewTableHTML(aoa, merges, deletedRows, overrides, forPrint, colWidths, fills, headerRow) {
     deletedRows = deletedRows || new Set();
     overrides = overrides || {};
     fills = fills || {};
@@ -1665,7 +1962,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
         for (let c = m.s.c; c <= m.e.c; c++)
           if (r !== m.s.r || c !== m.s.c) covered[r + ',' + c] = true;
     });
-    const rowsHtml = aoa.map((row, r) => {
+    const rowHtmls = aoa.map((row, r) => {
       if (deletedRows.has(r)) return '';
       let tds = '';
       for (let c = 0; c < maxCols; c++) {
@@ -1693,8 +1990,19 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       const action = forPrint ? '' :
         `<td class="export-preview-actions"><button type="button" class="export-preview-del-btn" data-del-row="${r}" title="Bỏ dòng này khỏi bản xuất/in (không ảnh hưởng dữ liệu app)">✕</button></td>`;
       return `<tr data-r="${r}">${tds}${action}</tr>`;
-    }).join('');
-    return `<table class="${forPrint ? 'export-preview-print-table' : 'export-preview-table'}">${colgroup}<tbody>${rowsHtml}</tbody></table>`;
+    });
+    // HÀNG TIÊU ĐỀ CỘT nằm trong <thead> → khi IN sẽ LẶP LẠI ở mỗi trang
+    // (chỉ khi hàng đó không bị người dùng xoá ở màn Xem Trước).
+    const hasHead = Number.isInteger(headerRow) && headerRow >= 0 && !deletedRows.has(headerRow);
+    let headHtml = '', bodyHtml = '';
+    rowHtmls.forEach((html, r) => {
+      if (!html) return;
+      if (hasHead && r === headerRow) headHtml += html;
+      else bodyHtml += html;
+    });
+    return `<table class="${forPrint ? 'export-preview-print-table' : 'export-preview-table'}">${colgroup}` +
+      (headHtml ? `<thead>${headHtml}</thead>` : '') +
+      `<tbody>${bodyHtml}</tbody></table>`;
   }
 
   // Ghi nhận nội dung người dùng vừa sửa 1 ô (đi qua input delegation từ events.js)
@@ -1769,7 +2077,8 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     const { data, deletedRows } = exportPreviewState;
     const aoa = collectPreviewAoa();
     const merges = remapPreviewMerges(data.merges || null, deletedRows, data.aoa.length);
-    exportDataToXlsx({ ...data, aoa, merges });
+    const autofilter = remapPreviewAutofilter(data.autofilter, deletedRows, data.headerRow);
+    exportDataToXlsx({ ...data, aoa, merges, autofilter });
     const kept = data.aoa.length - deletedRows.size;
     closeExportPreviewModal();
     showToast(`Đã xuất ${kept} dòng (theo bảng đã chỉnh sửa) ra file ${data.filename}!`, 'success');
@@ -1783,7 +2092,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     const { data, deletedRows } = exportPreviewState;
     const aoa = collectPreviewAoa();
     const merges = remapPreviewMerges(data.merges || null, deletedRows, data.aoa.length);
-    area.innerHTML = buildExportPreviewTableHTML(aoa, merges || [], new Set(), null, true, null, data.fills || null);
+    area.innerHTML = buildExportPreviewTableHTML(aoa, merges || [], new Set(), null, true, null, data.fills || null, data.headerRow);
     document.body.classList.add('export-preview-printing');
     const cleanup = () => {
       document.body.classList.remove('export-preview-printing');
@@ -2339,6 +2648,9 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
 export {
   buildExportPreviewTableHTML,
   buildHrXlsxExportData,
+  buildMaterialsExportData,
+  buildPlanningExportData,
+  buildPressExportData,
   buildQcXlsxExportData,
   buildX2ExportData,
   closeCustomExportModal,
@@ -2352,6 +2664,7 @@ export {
   computeChartData,
   deleteExportPreviewRow,
   exportPreviewToXlsx,
+  exportDataToXlsx,
   filterValList,
   getPaletteColors,
   handleCustomExportSubmit,
@@ -2367,6 +2680,7 @@ export {
   noteExportPreviewEdit,
   openCustomExportModal,
   openCustomExportPreview,
+  openExportPreview,
   openHrXlsxExportModal,
   openHrXlsxExportPreview,
   openMaterialsExportModal,
@@ -2378,6 +2692,11 @@ export {
   openQcXlsxExportModal,
   openQcXlsxExportPreview,
   openX2ExportModal,
+  openX2ExportPreview,
+  exportMultiSheetToXlsx,
+  standardizeReportData,
+  remapPreviewAutofilter,
+  nowStampVn,
   printExportPreview,
   refreshExportPreview,
   saveCustomCharts,

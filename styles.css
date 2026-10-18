@@ -3188,6 +3188,11 @@ body:not([data-edit-tabs~="x2"])        [data-perm="x2"] {
 body:not(.is-admin) [data-admin-only] {
   display: none !important;
 }
+/* ── BAN QUẢN LÝ: sổ XUNG ĐỘT ĐỒNG BỘ (18/10/2026) — trước đây chỉ Admin thấy,
+   nay BQL cũng phải thấy để xử lý xung đột phát sinh khi 2 máy cùng sửa. */
+body:not(.is-manager):not(.is-admin) [data-manager-only] {
+  display: none !important;
+}
 
 
 
@@ -11739,3 +11744,44 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   .x2-pp-yield-row, .x2-pp-pool-row { flex-direction: column; }
 }
 
+
+/* ======================================================= */
+/* ĐỒNG BỘ 2 CHIỀU — BANNER "GHI TẠM TRÊN MÁY" + PANEL */
+/* "VIỆC CHƯA LÊN MÂY" + CHẤM VÀNG + KHOÁ MỀM (18/10/2026) */
+/* ======================================================= */
+.sync-pending-banner {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 10040;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; font-size: 0.9rem; font-weight: 600;
+  background: #fef3c7; border-bottom: 2px solid #f59e0b; color: #92400e;
+}
+.sync-pending-banner[hidden] { display: none !important; }
+.sync-pending-banner.is-core { background: #fee2e2; border-bottom-color: #dc2626; color: #991b1b; }
+.sync-pending-banner > span { flex: 1 1 auto; }
+.sync-pending-banner-btn {
+  flex: 0 0 auto; border: 1px solid currentColor; background: transparent;
+  color: inherit; border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer;
+}
+.dropdown-item.dropdown-static { cursor: default; opacity: 0.85; }
+.pending-card { max-width: 720px; }
+.pending-body { max-height: 64vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+.pending-intro { margin: 0 0 10px; font-size: 0.88rem; line-height: 1.45; }
+.pending-list { display: flex; flex-direction: column; gap: 8px; }
+.pending-row { border: 1px solid rgba(100, 116, 139, 0.35); border-radius: 8px; padding: 8px 10px; }
+.pending-row.is-core { border-color: #dc2626; background: rgba(220, 38, 38, 0.08); }
+.pending-row-main { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+.pending-count-chip {
+  display: inline-block; min-width: 22px; text-align: center; padding: 1px 6px;
+  border-radius: 999px; background: #f59e0b; color: #fff; font-size: 0.76rem; font-weight: 700;
+}
+.pending-row-ids { margin-top: 3px; font-size: 0.8rem; opacity: 0.75; word-break: break-all; }
+.pending-empty { padding: 18px; text-align: center; color: #15803d; font-weight: 600; }
+.sync-rec-pending { color: #d97706; font-size: 0.8rem; margin-left: 4px; vertical-align: middle; }
+.sync-edit-lock {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  background: #fef3c7; color: #92400e; font-size: 0.76rem;
+}
+@media (max-width: 639.98px) {
+  .sync-pending-banner { font-size: 0.8rem; padding: 6px 10px; }
+  .pending-body { max-height: 70dvh; }
+}

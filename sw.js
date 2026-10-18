@@ -4,7 +4,7 @@
  * Chiến lược: Cache First - cập nhật nền (stale-while-revalidate)
  */
 
-const CACHE_NAME = 'nha-may-ngoc-son-v279';
+const CACHE_NAME = 'nha-may-ngoc-son-v280';
 const APP_SHELL = [
   './',
   './index.html',
@@ -134,9 +134,12 @@ self.addEventListener('fetch', (event) => {
         return cached;
       }
 
-      // Code ứng dụng: Network First -> offline mới rơi về cache
+      // Code ứng dụng: Network First -> offline mới rơi về cache.
+      // SỬA LỖI 18/10/2026: GitHub Pages trả Cache-Control max-age=600 → `fetch`
+      // mặc định có thể lấy bản JS trong HTTP CACHE (cũ) dù mạng tốt. Nay đọc
+      // thẳng server (no-store) để máy KHÔNG chạy bundle cũ sau khi deploy.
       try {
-        const response = await fetch(request);
+        const response = await fetch(request, { cache: 'no-store' });
         if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));

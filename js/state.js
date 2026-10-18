@@ -3,6 +3,11 @@
 // ═══════════════════════════════════════════════════════════
   'use strict';
 
+  // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
+  // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
+  // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
+  const APP_VERSION = 'v280';
+
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
   const STORAGE_KEY_USERS         = 'bamboo_tracker_users_v3';
@@ -535,6 +540,7 @@
   };
 
 export {
+  APP_VERSION,
   DEFAULT_USERS,
   STAGES,
   STORAGE_KEY_CUSTOM_CHARTS,

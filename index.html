@@ -49,6 +49,16 @@
     } catch (e) { /* bỏ qua — môi trường hạn chế */ }
   </script>
 
+  <!-- ═══ BANNER "GHI TẠM TRÊN MÁY" (18/10/2026 — quy tắc 73) ═══
+       Hiện khi có thay đổi CHƯA lên mây — đặc biệt phiếu kho / kiểm kê (SỔ CÁI):
+       người dùng KHÔNG được tưởng số liệu đã đồng bộ. Bật/tắt bằng
+       js/cloud.js → updateSyncPendingBanner(). -->
+  <div class="sync-pending-banner" id="sync-pending-banner" hidden role="status">
+    <i data-lucide="alert-triangle"></i>
+    <span id="sync-pending-banner-text">Có thay đổi chưa lên mây</span>
+    <button type="button" class="sync-pending-banner-btn" id="sync-pending-banner-btn" title="Kiểm tra mây ngay">Thử lại</button>
+  </div>
+
   <!-- ═══ ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js) ═══
        Hiện NGAY từ lúc mở trang (markup ở ĐẦU <body>) — che khoảng trắng khi
        app khởi động; mọi chỗ CHỜ PHẢN HỒI (AI · xuất Excel · mây · backup)
@@ -181,7 +191,7 @@
             <button class="dropdown-item" id="btn-sync-now" title="Kiểm tra mây NGAY (tự động kiểm tra mỗi 2 phút và khi quay lại tab)">
               <i data-lucide="refresh-cw" style="color:#0f766e;"></i> Đồng Bộ Ngay
             </button>
-            <button class="dropdown-item" id="btn-sync-conflicts" data-admin-only
+            <button class="dropdown-item" id="btn-sync-conflicts" data-manager-only
               title="Các bản ghi vừa bị máy này sửa vừa bị máy khác sửa — xem và chọn giữ bản nào">
               <i data-lucide="git-merge" style="color:#b45309;"></i> Xung Đột Đồng Bộ <span id="sync-conflict-count"></span>
             </button>
@@ -201,6 +211,16 @@
               <i data-lucide="upload"></i> Phục Hồi Dữ Liệu (JSON)
             </button>
             <input type="file" id="file-import-json" accept=".json" style="display: none;">
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="btn-pending-list" title="Bản ghi đã thay đổi trên MÁY NÀY nhưng CHƯA lên mây">
+              <i data-lucide="list-checks" style="color:#b45309;"></i> Việc Chưa Lên Mây <span id="pending-count"></span>
+            </button>
+            <button class="dropdown-item" id="btn-hard-reload" title="Xoá cache ứng dụng rồi tải lại bản MỚI NHẤT (khi máy chạy bản cũ)">
+              <i data-lucide="rotate-cw" style="color:#0f766e;"></i> Tải Lại Bản Mới Nhất
+            </button>
+            <div class="dropdown-item dropdown-static" id="app-version-row" title="Phiên bản giao diện đang chạy TRÊN MÁY NÀY — so với máy khác để biết máy nào cũ">
+              <i data-lucide="info" style="color:#64748b;"></i> Phiên bản: <strong id="app-version-label">—</strong>
+            </div>
             <div class="dropdown-divider"></div>
             <div class="dropdown-label">Giao diện</div>
             <button class="dropdown-item" id="btn-fx-low" title="Tắt kính mờ + animation để máy yếu chạy mượt (giữ nguyên màu theme)">
@@ -7318,6 +7338,24 @@
           <i data-lucide="eraser"></i> Xóa Sổ Xung Đột
         </button>
         <button class="btn btn-primary" id="btn-sync-conflict-ok"><i data-lucide="check"></i> Đóng</button>
+      </div>
+    </div>
+  </div>
+  <!-- ═══ MODAL: VIỆC CHƯA LÊN MÂY (18/10/2026 — quy tắc 73) ═══
+       Mở từ menu ⋮ → liệt kê TỪNG bản ghi đã đổi trên máy này nhưng CHƯA lên mây
+       (dòng đỏ = SỔ CÁI: phiếu kho / kiểm kê — cảnh báo đừng duyệt trùng máy khác). -->
+  <div class="modal-overlay" id="modal-pending-list">
+    <div class="modal-card pending-card">
+      <div class="modal-header">
+        <h3><i data-lucide="list-checks"></i> Việc Chưa Lên Mây</h3>
+        <button class="modal-close" id="btn-close-pending-list" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="pending-list-body" class="pending-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btn-pending-sync"><i data-lucide="refresh-cw"></i> Đồng Bộ Ngay</button>
+        <button class="btn btn-primary" id="btn-pending-ok"><i data-lucide="check"></i> Đóng</button>
       </div>
     </div>
   </div>

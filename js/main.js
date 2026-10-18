@@ -30,7 +30,7 @@ import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + 
 import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
-import { state } from './state.js';
+import { APP_VERSION, state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations, initVnDateInputs } from './utils.js';
 
@@ -140,6 +140,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Nhớ lại trạng thái thu gọn của các bảng dữ liệu (định mức, lượt ép, nguyên liệu)
     restoreRateTableCollapse();
     setupEventListeners();
+    // In SỐ PHIÊN BẢN đang chạy (menu ⋮) — so giữa các máy để phát hiện máy cũ.
+    try { const vEl = document.getElementById('app-version-label'); if (vEl) vEl.textContent = APP_VERSION; } catch (e) { /* bỏ qua */ }
     setupFormCalculations();
     // Áp công tắc XƯỞNG 1 / XƯỞNG 2 theo trạng thái ĐÃ NHỚ từ lần trước
     // (gọi sau setupEventListeners để nút đã tồn tại trong DOM)

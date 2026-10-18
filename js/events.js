@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
 import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
-import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts } from './cloud.js';
+import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
@@ -432,6 +432,44 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         : 'Chưa kiểm tra được mây (cần mạng). Dữ liệu máy vẫn được giữ nguyên.', ok ? 'success' : 'info');
     });
     safeOn('btn-sync-conflicts',     'click', openSyncConflicts);
+    // ─── VIỆC CHƯA LÊN MÂY + TẢI LẠI BẢN MỚI (18/10/2026 — quy tắc 73) ───
+    safeOn('btn-pending-list', 'click', () => openPendingList());
+    safeOn('btn-close-pending-list', 'click', () => closePendingList());
+    safeOn('btn-pending-ok', 'click', () => closePendingList());
+    safeOn('btn-pending-sync', 'click', async () => {
+      const ok = await syncNow({ force: true });
+      try { renderPendingList(); } catch (e) { /* bỏ qua */ }
+      showToast(ok ? 'Đã kiểm tra/đẩy xong — danh sách vừa cập nhật.' : 'Chưa kết nối được mây — việc vẫn nằm trên máy này.', ok ? 'success' : 'info');
+    });
+    safeOn('sync-pending-banner-btn', 'click', async () => {
+      const ok = await syncNow({ force: true });
+      showToast(ok ? 'Đã thử lại: mây phản hồi bình thường.' : 'Vẫn chưa kết nối được mây — thay đổi nằm trên máy này.', ok ? 'success' : 'info');
+    });
+    safeOn('btn-hard-reload', 'click', async () => {
+      if (!confirm('Xoá cache ứng dụng rồi tải lại bản MỚI NHẤT?\n(Dữ liệu trên máy KHÔNG bị xoá — chỉ xoá mã nguồn cũ đã cache)')) return;
+      showToast('Đang xoá cache và tải lại bản mới…', 'info');
+      try {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+      } catch (e) { /* bỏ qua */ }
+      try { sessionStorage.removeItem('bamboo_sw_reloaded'); } catch (e) { /* bỏ qua */ }
+      try { location.reload(); } catch (e) { /* bỏ qua */ }
+    });
+    // Esc đóng panel "Việc chưa lên mây" TRƯỚC các modal khác
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const el = document.getElementById('modal-pending-list');
+      if (el && el.classList.contains('show')) {
+        e.stopPropagation();
+        closePendingList();
+      }
+    }, true);
     safeOn('btn-close-sync-conflicts', 'click', closeSyncConflicts);
     safeOn('btn-sync-conflict-ok',   'click', closeSyncConflicts);
     safeOn('btn-sync-conflicts-clear', 'click', () => {

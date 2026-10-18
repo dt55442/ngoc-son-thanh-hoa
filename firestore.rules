@@ -1,6 +1,12 @@
 // ============================================
 // FIRESTORE SECURITY RULES - Bamboo Tracker
 // Dán vào: Firebase Console -> Firestore Database -> Rules -> Publish
+// Phiên bản: v5 (18/10/2026) — ĐỌC DỮ LIỆU apps/* PHẢI ĐĂNG NHẬP.
+//   Trước đây `allow read: if true` ⇒ ai biết projectId (có trong firebase-config.js
+//   công khai trên GitHub) cũng đọc được toàn bộ dữ liệu nhà máy. Nay đổi sang
+//   isSignedIn() cho khớp settings/roles + settings/displayNames.
+//   LƯU Ý: khách CHƯA đăng nhập sẽ chỉ thấy dữ liệu lưu trên máy (không tải mây).
+//   Nhớ Publish rules mới trong Firebase Console (file này chỉ là mẫu trong repo).
 // Phiên bản: v4 — THÊM QUYỀN CHO MẢNH DỮ LIỆU apps/main/shards/* :
 //   Khi dữ liệu vượt giới hạn 1 MiB của MỘT document, app tự NÉN GZIP và (nếu
 //   vẫn lớn) CHIA NHỎ thành các mảnh trong subcollection apps/main/shards.
@@ -53,7 +59,7 @@ service cloud.firestore {
     // AI CŨNG ĐỌC ĐƯỢC (xem công khai).
     // GHI: manager/editor/admin. Bootstrap: nếu mây CHƯA có doc quyền -> người đăng nhập đầu tiên được tạo.
     match /apps/{doc} {
-      allow read: if true;
+      allow read: if isSignedIn();   // v5: KHÔNG còn đọc công khai (18/10/2026)
       allow create: if isSignedIn()
                     && (!exists(/databases/$(database)/documents/settings/roles)
                         || isManager());
@@ -64,7 +70,7 @@ service cloud.firestore {
       // Cùng quyền với apps/main; riêng DELETE nới cho isManager() vì việc dọn
       // mảnh thừa chạy tự động trên máy của người đẩy dữ liệu (editor/manager).
       match /{document=**} {
-        allow read: if true;
+        allow read: if isSignedIn();   // v5: KHÔNG còn đọc công khai (18/10/2026)
         allow create: if isSignedIn()
                       && (!exists(/databases/$(database)/documents/settings/roles)
                           || isManager());

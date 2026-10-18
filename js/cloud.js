@@ -460,8 +460,34 @@ import { showToast } from './utils.js';
     }
   }
 
+  // ─── HỢP DẤU VẾT XOÁ (tombstone) — SỬA LỖI 18/10/2026 ─────────────────
+  // Trước đây đường ĐẨY ghi `deletedIds: snap.deletedIds` (CHỈ bản đồ của MÁY
+  // NÀY) đè lên mục lục mây ⇒ xoá mất dấu vết xoá do máy khác vừa đẩy ⇒ bản ghi
+  // đã xoá "sống lại" ở máy khác và hai máy lệch VĨNH VIỄN (VD 25 vs 24 lượt).
+  // Nay: HỢP 2 bản đồ, mốc thời gian MUỘN HƠN thắng — không bao giờ ghi đè.
+  function mergeTombMaps(a, b) {
+    const out = {};
+    const put = (src) => {
+      if (!src || typeof src !== 'object') return;
+      for (const colKey of Object.keys(src)) {
+        const col = src[colKey];
+        if (!col || typeof col !== 'object') continue;
+        const dst = out[colKey] = out[colKey] || {};
+        for (const id of Object.keys(col)) {
+          const ts = String(col[id] || '');
+          if (!ts) continue;
+          if (!dst[id] || ts > String(dst[id])) dst[id] = ts;
+        }
+      }
+    };
+    put(a); put(b);
+    return out;
+  }
+
   // Ghi MỤC LỤC + doc của các miền ĐỔI. Ném lỗi e.domainTooBig nếu 1 miền vượt giới hạn doc.
   async function writeDeltaSnapshot(snap, dh) {
+    let mergedTomb = null;
+    let dhOut = dh;
     const remoteH = fbRemoteDomainHashes;
     const cloudIsDelta = fbRemoteIsDelta === true;
     const keys = Object.keys(dh).filter(k => k !== 'deletedIds');
@@ -473,20 +499,30 @@ import { showToast } from './utils.js';
     if (!cloudIsDelta || !remoteH || !sameHashes(remoteH, dh)) {
       // `rev` tăng đơn điệu = mốc để máy khác biết "mình có cũ không"
       let prevRev = 0;
+      let curMeta = {};
       try {
         const cur = await cloudDocRef().get();
-        if (cur && cur.exists) prevRev = Number((cur.data() || {}).rev) || 0;
-      } catch (e) { prevRev = 0; }
+        if (cur && cur.exists) { curMeta = cur.data() || {}; prevRev = Number(curMeta.rev) || 0; }
+      } catch (e) { prevRev = 0; curMeta = {}; }
+      // HỢP tombstone MÂY + MÁY (mốc muộn hơn thắng) → không xoá dấu vết xoá
+      // của máy khác; đồng thời nạp tombstone mây vào máy này.
+      mergedTomb = mergeTombMaps(curMeta.deletedIds, snap.deletedIds);
+      dhOut = Object.assign({}, dh, { deletedIds: hashStr(JSON.stringify(mergedTomb)) });
+      try {
+        const chT = { flag: false };
+        mergeTombstones(mergedTomb, chT);
+        if (chT.flag) saveDeletedIds();
+      } catch (e) { /* bỏ qua */ }
       await cloudDocRef().set({
-        __fmt: 'delta-v1', __dh: dh,
-        deletedIds: snap.deletedIds || {},
+        __fmt: 'delta-v1', __dh: dhOut,
+        deletedIds: mergedTomb,
         rev: prevRev + 1,
         updatedBy: snap.updatedBy, updatedAt: snap.updatedAt
       });
       fbRemoteDocExists = true;
       fbRemoteHasData = true;
     }
-    fbPushedDomainHashes = dh; fbLocalHashes = dh; fbRemoteDomainHashes = dh; fbRemoteIsDelta = true;
+    fbPushedDomainHashes = dhOut; fbLocalHashes = dhOut; fbRemoteDomainHashes = dhOut; fbRemoteIsDelta = true;
     cleanupStaleShards(0); // dọn mảnh shard cũ của định dạng 1-doc (nếu còn)
     return { mode: 'delta-v1', changed: changed.length, size };
   }
@@ -572,7 +608,8 @@ import { showToast } from './utils.js';
           catch (e) { remoteVals.push(undefined); }
         } else remoteVals.push(('data' in dd) ? dd.data : undefined);
       }
-      const newH = Object.assign({}, idx.__dh || {}, { deletedIds: dh.deletedIds });
+      const mergedTomb = mergeTombMaps(idx.deletedIds, snap.deletedIds);
+      const newH = Object.assign({}, idx.__dh || {}, { deletedIds: hashStr(JSON.stringify(mergedTomb)) });
       const writes = [];
       for (let i = 0; i < changed.length; i++) {
         const k = changed[i];
@@ -603,13 +640,22 @@ import { showToast } from './utils.js';
       const rev = (Number(idx.rev) || 0) + 1;
       tx.set(idxRef, {
         __fmt: 'delta-v1', __dh: newH,
-        deletedIds: dh.deletedIds || {},
+        deletedIds: mergedTomb,
         rev,
         updatedBy: snap.updatedBy, updatedAt: snap.updatedAt
       });
-      return { mode: 'delta-v1', changed: changed.length, size, rev, newH };
+      return { mode: 'delta-v1', changed: changed.length, size, rev, newH, tomb: mergedTomb };
     });
     if (res && res.newH) {
+      // Nạp tombstone của mây vào MÁY NÀY (máy cũng phải xoá bản ghi máy khác đã
+      // xoá) — băm cục bộ sẽ tính lại từ tập hợp đã hợp.
+      if (res.tomb) {
+        try {
+          const chT = { flag: false };
+          mergeTombstones(res.tomb, chT);
+          if (chT.flag) saveDeletedIds();
+        } catch (e) { /* bỏ qua */ }
+      }
       fbRemoteDomainHashes = res.newH;
       fbPushedDomainHashes = res.newH;
       fbLocalHashes = null;
@@ -822,7 +868,16 @@ import { showToast } from './utils.js';
   // Cổng chặn theo ngữ cảnh tab đang mở: người dùng chỉ sửa được tab
   // được chỉ định trong quyền của họ (editTabs / admin = mọi tab)
   function requireEditPermission() {
-    if (canEditTab(currentTabId())) return true;
+    if (canEditTab(currentTabId())) {
+      // SỬA LỖI 18/10/2026: tài khoản KHÔNG có quyền đẩy mây (Người Xem) mà vẫn
+      // sửa được → bản ghi MỒ CÔI vĩnh viễn trên máy này, máy khác không thấy,
+      // số liệu hai bên lệch mãi. Nay chặn ngay từ cổng quyền.
+      if (state.currentUser && !canPushToCloud()) {
+        showToast('Tài khoản này chỉ XEM nên thay đổi sẽ KHÔNG lên mây (máy khác không thấy). Cần quyền Người Chỉnh Sửa / Ban Quản Lý / Quản Trị.', 'error');
+        return false;
+      }
+      return true;
+    }
     if (canEditAnything()) {
       showToast(`Bạn không có quyền chỉnh sửa ở tab này. Chỉ được sửa: ${listEditableTabsLabel()}.`, 'error');
     } else {
@@ -842,10 +897,255 @@ import { showToast } from './utils.js';
   // của mọi máy → chỉ admin mới được cập nhật, dù người dùng có được cấp tab
   // Công Đoạn / Kế Hoạch / QC. Chính sách nằm ở permissions.canEditRate().
   function requireRatePermission() {
-    if (canEditRate()) return true;
+    if (canEditRate()) {
+      // Định mức là dữ liệu DÙNG CHUNG: vẫn cho ghi khi chưa kết nối mây nhưng
+      // PHẢI cảnh báo (tầng warn — xem DOMAIN_POLICY).
+      warnOfflineWrite('materialRates');
+      return true;
+    }
     showToast('Chỉ Quản Trị mới được cập nhật định mức.', 'error');
     return false;
   }
+  // ═══ KIỂM TRA KẾT NỐI MÂY THẬT + TRẠNG THÁI TRUNG THỰC (18/10/2026) ══════
+  // SỬA LỖI "ẢO ONLINE": isFirebaseOnline() chỉ xem SDK đã nạp hay chưa. Wifi có
+  // nhưng mất internet / Firestore bị chặn → app vẫn tưởng đã online, người dùng
+  // vẫn sửa offline mà KHÔNG biết. Nay có phép thử THẬT (đọc mục lục từ server).
+  const CLOUD_PROBE_TIMEOUT_MS = 8000;
+  const CLOUD_PROBE_GAP_MS = 20000;
+  let fbNetState = 'unknown';   // 'ok' = mây trả lời · 'dead' = không trả lời · 'unknown'
+  let fbNetCheckedAt = 0;
+  let fbProbing = null;
+  // 'local' = chưa bật Firebase (chạy hoàn toàn cục bộ) · 'ok' · 'dead' · 'unknown'
+  function cloudNetState() {
+    if (!window.__BAMBOO_FIREBASE_READY__ || !fbEnabled) return 'local';
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return 'dead';
+    return fbNetState;
+  }
+  async function probeCloud(force) {
+    if (!isFirebaseOnline() || !fbDb) { fbNetState = 'dead'; return fbNetState; }
+    const now = Date.now();
+    if (!force && now - fbNetCheckedAt < CLOUD_PROBE_GAP_MS) return fbNetState;
+    if (fbProbing) return fbProbing;
+    fbNetCheckedAt = now;
+    fbProbing = (async () => {
+      let tid = null;
+      try {
+        const timeout = new Promise((_, rej) => {
+          tid = setTimeout(() => rej(new Error('timeout')), CLOUD_PROBE_TIMEOUT_MS);
+          if (tid && typeof tid.unref === 'function') tid.unref();
+        });
+        const read = cloudDocRef().get({ source: 'server' });
+        await Promise.race([read, timeout]);
+        fbNetState = 'ok';
+      } catch (e) {
+        fbNetState = 'dead';
+      } finally {
+        if (tid) clearTimeout(tid);
+        fbProbing = null;
+        try { updateSyncBadge(); updateSyncPendingBanner(); } catch (er) { /* bỏ qua */ }
+      }
+      return fbNetState;
+    })();
+    return fbProbing;
+  }
+
+  // ═══ DANH SÁCH "VIỆC CHƯA LÊN MÂY" (từng bản ghi) ══════════════════════
+  // Trước đây chỉ có badge chung ở header → không biết DÒNG NÀO đang chờ đẩy.
+  let fbPendingCache = null;
+  let fbPendingCacheAt = 0;
+  function pendingRecords() {
+    const d = dirtyDomains();
+    const out = [];
+    Object.keys(d).forEach((k) => {
+      const x = d[k];
+      if (!x) return;
+      if (x.kind === 'array' && Array.isArray(x.ids)) x.ids.forEach(id => out.push({ domain: k, id: String(id), kind: 'array' }));
+      else if (x.kind === 'dict' && Array.isArray(x.keys)) x.keys.forEach(id => out.push({ domain: k, id: String(id), kind: 'dict' }));
+    });
+    return out;
+  }
+  function pendingRecordsCached() {
+    const now = Date.now();
+    if (fbPendingCache && now - fbPendingCacheAt < 20000) return fbPendingCache;
+    try { fbPendingCache = pendingRecords(); } catch (e) { fbPendingCache = []; }
+    fbPendingCacheAt = now;
+    return fbPendingCache;
+  }
+  function pendingRecordCount() { return pendingRecordsCached().length; }
+  function isRecordPending(domain, id) {
+    return pendingRecordsCached().some(p => p.domain === domain && p.id === String(id));
+  }
+  // Chấm vàng "chưa lên mây" cạnh 1 bản ghi (dùng ở bảng: phiếu kho, thẻ lô…)
+  function pendingMarkHtml(domain, id) {
+    return isRecordPending(domain, id)
+      ? '<span class="sync-rec-pending" title="CHƯA lên mây — thay đổi mới chỉ nằm trên máy này">●</span>'
+      : '';
+  }
+  function pendingSinceOf() {
+    const st = loadSyncState();
+    return Number(st.pendingSince) || 0;
+  }
+  const PENDING_BANNER_COUNT = 50;                 // ≥ 50 bản ghi chờ → hiện banner
+  const PENDING_BANNER_AGE_MS = 5 * 60 * 1000;     // chờ quá 5 phút → hiện banner
+  // Banner "GHI TẠM TRÊN MÁY": để người dùng KHÔNG tưởng số liệu đã lên mây.
+  // SỔ CÁI = miền trừ tồn: có 1 phiếu chưa lên mây là phải báo NGAY (không chờ ngưỡng)
+  const CORE_LEDGER_DOMAINS = ['khoNotes', 'x2Stocktakes'];
+  function updateSyncPendingBanner() {
+    const el = document.getElementById('sync-pending-banner');
+    if (!el) return;
+    const canPush = !!(state.currentUser && canPushToCloud());
+    if (!canPush || (!fbDirty && !pendingLocalChanges())) {
+      el.hidden = true;
+      el.classList.remove('is-core');
+      return;
+    }
+    const list = pendingRecordsCached();
+    const n = list.length;
+    const core = list.filter(p => CORE_LEDGER_DOMAINS.indexOf(p.domain) >= 0).length;
+    const since = pendingSinceOf();
+    const wait = since ? (Date.now() - since) : 0;
+    const show = !!canPush && (core > 0 || n >= PENDING_BANNER_COUNT || (n > 0 && wait >= PENDING_BANNER_AGE_MS));
+    el.hidden = !show;
+    el.classList.toggle('is-core', core > 0);
+    if (!show) return;
+    const txt = document.getElementById('sync-pending-banner-text');
+    if (txt) {
+      const mins = Math.max(1, Math.round(wait / 60000));
+      txt.textContent = core > 0
+        ? ('🔴 ' + core + ' phiếu SỔ CÁI (phiếu kho / kiểm kê) CHƯA lên mây — máy khác CHƯA thấy, ĐỪNG duyệt trùng trên máy khác!')
+        : ('⚠ ' + n + ' thay đổi CHƯA lên mây (chờ ' + mins + ' phút) — máy khác CHƯA thấy số liệu này.');
+    }
+  }
+
+  // ═══ PANEL "VIỆC CHƯA LÊN MÂY" — TỪNG BẢN GHI (18/10/2026) ══════════
+  // Badge ở header chỉ nói "đang chờ đẩy"; panel này chỉ ra ĐÚNG miền + id để
+  // người dùng biết việc gì chưa lên mây (điều tra lệch số giữa 2 máy).
+  function openPendingList() {
+    const el = document.getElementById('modal-pending-list');
+    if (!el) return;
+    fbPendingCache = null;   // mở panel = quét lại cho đúng thời điểm
+    renderPendingList();
+    el.classList.add('show');
+    try { initLucide(); } catch (e) { /* bỏ qua */ }
+  }
+  function closePendingList() {
+    const el = document.getElementById('modal-pending-list');
+    if (el) el.classList.remove('show');
+  }
+  function renderPendingList() {
+    const body = document.getElementById('pending-list-body');
+    const list = pendingRecordsCached();
+    const cnt = document.getElementById('pending-count');
+    if (cnt) cnt.textContent = list.length ? '(' + list.length + ')' : '';
+    if (!body) return;
+    if (!list.length) {
+      body.innerHTML = '<div class="pending-empty">✓ Tất cả thay đổi trên máy này đã lên mây.</div>';
+      return;
+    }
+    const byDomain = {};
+    list.forEach((p) => { (byDomain[p.domain] = byDomain[p.domain] || []).push(p.id); });
+    const rows = Object.keys(byDomain).map((k) => {
+      const ids = byDomain[k];
+      const core = CORE_LEDGER_DOMAINS.indexOf(k) >= 0;
+      const shown = ids.slice(0, 8).join(' · ') + (ids.length > 8 ? ' …' : '');
+      return '<div class="pending-row' + (core ? ' is-core' : '') + '">'
+        + '<div class="pending-row-main"><strong>' + escTx(syncDomainLabel(k) || k) + '</strong>'
+        + '<span class="pending-count-chip">' + ids.length + '</span>'
+        + (core ? '<span class="pending-count-chip" style="background:#dc2626">SỔ CÁI</span>' : '') + '</div>'
+        + '<div class="pending-row-ids">' + escTx(shown) + '</div></div>';
+    }).join('');
+    body.innerHTML = '<p class="pending-intro">Bản ghi <strong>đã thay đổi trên MÁY NÀY nhưng CHƯA lên mây</strong>. '
+      + 'Dòng đỏ = SỔ CÁI (phiếu kho / kiểm kê): <strong>đừng duyệt trùng trên máy khác</strong>. '
+      + 'Máy sẽ tự đẩy khi có mạng — hoặc bấm “Đồng Bộ Ngay”.</p>'
+      + '<div class="pending-list">' + rows + '</div>';
+  }
+
+  // ═══ CHÍNH SÁCH GHI THEO MIỀN — 3 TẦNG (18/10/2026) ═══════════════════
+  // offline : ghi offline bình thường (lượt sản xuất, chấm công, QC, độ ẩm…)
+  // warn    : cho ghi nhưng CẢNH BÁO khi chưa kết nối mây (định mức, kế hoạch…)
+  // online  : BẮT BUỘC mây trả lời mới ghi (SỔ CÁI trừ tồn: phiếu kho, kiểm kê)
+  // Lý do: sổ cái mà 2 máy cùng ghi offline rồi gộp thì 1 phiếu bị mất (gộp theo
+  // bản ghi, không gộp từng trường) → ưu tiên "đúng" hơn "ghi được mọi lúc".
+  const DOMAIN_POLICY = {
+    khoNotes: 'warn',          // CHỐT 18/10/2026: KHÔNG chặn khi mất mạng (không gián đoạn sản xuất) — banner ĐỎ + chấm vàng hiện NGAY
+    x2Stocktakes: 'warn',      // kiểm kê: cảnh báo ngay, không chặn
+    materialRates: 'warn',
+    planningItems: 'warn',
+    planningForecast: 'warn',
+    planningStock: 'warn',
+    materialPlan: 'warn',
+    x2LotLocations: 'warn',
+    x2BaoThanhOutSizes: 'warn'
+  };
+  function domainPolicyOf(k) { return DOMAIN_POLICY[k] || 'offline'; }
+  let fbWarnPolicyAt = 0;
+  function warnOfflineWrite(domainKey, label) {
+    if (domainPolicyOf(domainKey) === 'offline') return true;
+    // CHỈ cảnh báo khi CHẮC CHẮN mất kết nối (trạng thái 'unknown' lúc vừa mở
+    // app chưa thăm dò xong → im lặng, tránh báo động giả mỗi lần lưu).
+    if (cloudNetState() !== 'dead') return true;
+    if (Date.now() - fbWarnPolicyAt < 60000) return true;
+    fbWarnPolicyAt = Date.now();
+    const name = label || syncDomainLabel(domainKey) || domainKey;
+    showToast('Đang ghi TẠM TRÊN MÁY cho "' + name + '" (chưa kết nối được mây) — sẽ đẩy lên khi có mạng.', 'info');
+    return true;
+  }
+  // Cổng chặn dùng cho handler GHI dữ liệu sổ cái. Trả về true = được ghi.
+  async function requireOnlineWrite(domainKey, label) {
+    const policy = domainPolicyOf(domainKey);
+    // Chưa bật Firebase (chạy hoàn toàn cục bộ / máy không cấu hình mây) → cho ghi.
+    if (!window.__BAMBOO_FIREBASE_READY__ || !fbEnabled) return true;
+    if (policy === 'offline') return true;
+    const st = (fbNetState === 'ok') ? 'ok' : await probeCloud(true);
+    if (st === 'ok') return true;
+    const name = label || syncDomainLabel(domainKey) || domainKey;
+    if (policy === 'warn') {
+      if (Date.now() - fbWarnPolicyAt > 60000) {
+        fbWarnPolicyAt = Date.now();
+        showToast('Đang ghi TẠM TRÊN MÁY cho "' + name + '" (chưa kết nối được mây).', 'info');
+      }
+      return true;
+    }
+    showToast('Không ghi được "' + name + '" khi chưa kết nối mây — đây là SỔ CÁI (trừ tồn) nên phải đồng bộ ngay để không lệch số. Kiểm tra mạng rồi lưu lại.', 'error');
+    return false;
+  }
+
+  // ═══ KHOÁ MỀM KHI SỬA BẢN GHI SỔ CÁI (60 giây) ════════════════════════
+  // Không có khoá thì 2 người cùng mở 1 phiếu, người lưu sau ghi đè người trước.
+  const EDIT_LOCK_MS = 60 * 1000;
+  function escTx(v) {
+    return String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  }
+  function lockStampOf(rec) { return Number(rec && rec.editLock && rec.editLock.at) || 0; }
+  function editLockOf(rec) {
+    if (!rec || !rec.editLock) return null;
+    const at = lockStampOf(rec);
+    if (!at || Date.now() - at > EDIT_LOCK_MS) return null;
+    return rec.editLock;
+  }
+  function claimEditLock(rec) {
+    if (!rec) return false;
+    const u = state.currentUser || {};
+    const me = String(u.email || u.username || u.id || 'local');
+    const cur = editLockOf(rec);
+    if (cur && String(cur.by || '') && String(cur.by) !== me) {
+      const who = cur.name || cur.by || 'Người khác';
+      const secs = Math.max(1, Math.round((Date.now() - Number(cur.at || 0)) / 1000));
+      if (typeof confirm === 'function'
+        && !confirm(who + ' đang sửa bản ghi này (' + secs + ' giây trước).\nVẫn sửa? Người lưu sau sẽ GHI ĐÈ người kia.')) return false;
+    }
+    rec.editLock = { by: me, name: u.fullname || u.username || '', at: Date.now() };
+    return true;
+  }
+  function releaseEditLock(rec) { if (rec && rec.editLock) delete rec.editLock; }
+  function editLockWarnHtml(rec) {
+    const l = editLockOf(rec);
+    if (!l) return '';
+    const mins = Math.max(1, Math.round((Date.now() - Number(l.at || 0)) / 60000));
+    return '<span class="sync-edit-lock" title="Người khác đang mở bản ghi này để sửa">🟡 ' + escTx(l.name || l.by) + ' đang sửa · ' + mins + ' phút</span>';
+  }
+
+
 
   // Hiển thị app; nếu đã đăng nhập thì cập nhật hồ sơ. Không ép đăng nhập (xem công khai)
   function checkAuthAndRenderFirebase() {
@@ -1103,6 +1403,7 @@ import { showToast } from './utils.js';
     if (!Array.isArray(o.conflicts)) o.conflicts = [];
     if (typeof o.lastRev !== 'number') o.lastRev = -1;
     if (typeof o.lastSyncedAt !== 'string') o.lastSyncedAt = '';
+    if (typeof o.pendingSince !== 'number') o.pendingSince = 0;
     fbSyncState = o;
     return fbSyncState;
   }
@@ -1216,17 +1517,21 @@ import { showToast } from './utils.js';
     const base = st.base || {};
     const snap = collectCloudPayload();
     const out = {};
-    if (!Object.keys(base).length) return out;   // chưa có base → luật cũ (so băm với mây)
+    // CHƯA CÓ BASE (máy mới · vừa xoá cache · vừa phục hồi backup) KHÔNG được coi
+    // là "không có gì bẩn": nếu vậy lớp bảo vệ bản-sửa-chưa-đẩy bị vô hiệu và
+    // bản ghi của máy có thể bị bản mây cũ cuốn mất. Nay coi MỌI bản ghi hiện có
+    // là "chưa đẩy" cho tới lần captureSyncBase() kế tiếp.
+    const hasBase = Object.keys(base).length > 0;
     for (const k of Object.keys(snap)) {
       if (DELTA_META_KEYS[k]) continue;
       const v = snap[k];
       const b = base[k] || null;
       if (Array.isArray(v)) {
         const ids = [];
-        v.forEach((r) => { if (r && r.id && (!b || b[r.id] !== recHashOf(r))) ids.push(r.id); });
+        v.forEach((r) => { if (r && r.id && (!hasBase || !b || b[r.id] !== recHashOf(r))) ids.push(r.id); });
         if (ids.length) out[k] = { kind: 'array', ids };
       } else if (v && typeof v === 'object') {
-        const keys = Object.keys(v).filter((kk) => !b || b[kk] !== hashStr(JSON.stringify(v[kk])));
+        const keys = Object.keys(v).filter((kk) => !hasBase || !b || b[kk] !== hashStr(JSON.stringify(v[kk])));
         if (keys.length) out[k] = { kind: 'dict', keys };
       }
     }
@@ -1355,11 +1660,22 @@ import { showToast } from './utils.js';
   }
   function markPendingLocal() {
     fbPendingLocal = true;
+    fbPendingCache = null;
     try { localStorage.setItem(PENDING_LOCAL_KEY, '1'); } catch (e) { /* bộ nhớ đầy — bỏ qua */ }
+    // Mốc "bắt đầu có thay đổi chưa đẩy" — banner cảnh báo khi chờ quá lâu
+    try {
+      const st = loadSyncState();
+      if (!Number(st.pendingSince)) { st.pendingSince = Date.now(); saveSyncState(); }
+    } catch (e) { /* bỏ qua */ }
   }
   function clearPendingLocal() {
     fbPendingLocal = false;
+    fbPendingCache = null;
     try { localStorage.removeItem(PENDING_LOCAL_KEY); } catch (e) { /* bỏ qua */ }
+    try {
+      const st = loadSyncState();
+      if (Number(st.pendingSince)) { st.pendingSince = 0; saveSyncState(); }
+    } catch (e) { /* bỏ qua */ }
   }
   // Gộp 2 danh sách CHUỖI (vị trí sấy, cỡ đầu ra bào thanh…) — không mất cái
   // nào của 2 phía, bỏ trùng theo chữ thường.
@@ -1783,6 +2099,7 @@ import { showToast } from './utils.js';
     qcPressLogs: 'Nhật Ký Ép Ván (QC)',
     qcKilnReadings: 'Độ Ẩm Lò Sấy',
     khoNotes: 'Phiếu Kho',
+    x2Stocktakes: 'Kiểm Kê Bãi (Xưởng 2)',
     suppliers: 'Nhà Cung Cấp',
     hrEmployees: 'Nhân Viên',
     hrAssignments: 'Bố Trí Nhân Sự',
@@ -1810,7 +2127,7 @@ import { showToast } from './utils.js';
     if (countEl) countEl.textContent = list.length ? ('(' + list.length + ')') : '';
     const headEl = document.getElementById('sync-conflict-count-head');
     if (headEl) headEl.textContent = list.length ? ('(' + list.length + ')') : '';
-    // Nút trong menu ⋮ chỉ hiện khi CÓ xung đột (với Admin — CSS data-admin-only lo phần quyền)
+    // Nút trong menu ⋮ chỉ hiện khi CÓ xung đột (Admin + Ban Quản Lý — CSS data-manager-only)
     const menuBtn = document.getElementById('btn-sync-conflicts');
     if (menuBtn) menuBtn.style.display = list.length ? '' : 'none';
     if (!list.length) {
@@ -1994,7 +2311,17 @@ import { showToast } from './utils.js';
       const t = setInterval(kick, SYNC_PERIODIC_MS);
       if (t && typeof t.unref === 'function') t.unref(); // Node test không bị giữ sống
       fbSyncTimer = t;
+      // Thăm dò KẾT NỐI THẬT mỗi 30 giây (chỉ khi tab đang hiện) — phát hiện
+      // "ảo online" (wifi có, internet mất) để badge/banner báo ĐÚNG.
+      const tp = setInterval(() => {
+        try {
+          if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+          probeCloud();
+        } catch (e) { /* bỏ qua */ }
+      }, 30000);
+      if (tp && typeof tp.unref === 'function') tp.unref();
     }
+    try { probeCloud(true); } catch (e) { /* bỏ qua */ }
   }
 
   function applyFireSnapshot(data) {
@@ -2191,6 +2518,7 @@ import { showToast } from './utils.js';
     };
     if (!window.__BAMBOO_FIREBASE_READY__ || !fbEnabled) { cls = 'off'; label = 'Máy cục bộ (offline)'; }
     else if (!navigator.onLine) { cls = 'err'; label = 'Mất mạng — chờ đồng bộ lại'; }
+    else if (fbNetState === 'dead') { cls = 'err'; label = 'Không kết nối được mây — ghi tạm trên máy'; }
     else if (!fbAuthLoaded) { cls = 'wait'; label = 'Đang kết nối mây…'; }
     else if (!state.currentUser) { cls = 'off'; label = 'Chưa đăng nhập — chỉ xem'; }
     else if (!canPushToCloud()) { cls = 'off'; label = 'Chỉ xem — không đẩy mây'; }
@@ -2202,7 +2530,17 @@ import { showToast } from './utils.js';
     if (txt) txt.textContent = label;
     const conflictN = fbSyncState ? (fbSyncState.conflicts || []).filter(c => c && !c.resolved).length : 0;
     const conflictBtn = document.getElementById('btn-sync-conflicts');
+    // Số "việc chưa lên mây" cạnh mục menu ⋮ (cache 20 giây — không quét lại liên tục)
+    try {
+      const cntEl = document.getElementById('pending-count');
+      if (cntEl) {
+        // Chỉ quét khi THẬT SỰ có gì chờ (tránh băm toàn bộ dữ liệu mỗi lần cập nhật badge)
+        const pn = (fbDirty || pendingLocalChanges()) ? pendingRecordsCached().length : 0;
+        cntEl.textContent = pn ? '(' + pn + ')' : '';
+      }
+    } catch (e) { /* bỏ qua */ }
     if (conflictBtn) conflictBtn.style.display = conflictN ? '' : 'none';
+    try { updateSyncPendingBanner(); } catch (e) { /* bỏ qua */ }
     el.title = 'Trạng thái đồng bộ dữ liệu mây (tự động 2 chiều)'
       + (fbSyncState && fbSyncState.lastSyncedAt ? '\nLần đồng bộ gần nhất: ' + new Date(fbSyncState.lastSyncedAt).toLocaleString('vi-VN') : '')
       + (conflictN ? '\n⚠ Có ' + conflictN + ' bản ghi xung đột — mở menu ⋮ → Xung Đột Đồng Bộ' : '');
@@ -2548,5 +2886,28 @@ export {
   stripMaterialPhotoPayload,
   uploadLocalDataToCloud,
   utf8Bytes,
-  writeCloudSnapshot
+  writeCloudSnapshot,
+  // ─── BỔ SUNG 18/10/2026 (quy tắc 73): trạng thái mạng thật · việc chờ đẩy ·
+  // chính sách ghi 3 tầng · khoá mềm khi sửa · hợp tombstone
+  cloudNetState,
+  probeCloud,
+  pendingRecords,
+  pendingRecordCount,
+  isRecordPending,
+  pendingMarkHtml,
+  updateSyncPendingBanner,
+  pendingSinceOf,
+  CORE_LEDGER_DOMAINS,
+  DOMAIN_POLICY,
+  domainPolicyOf,
+  requireOnlineWrite,
+  warnOfflineWrite,
+  claimEditLock,
+  releaseEditLock,
+  editLockOf,
+  editLockWarnHtml,
+  mergeTombMaps,
+  openPendingList,
+  closePendingList,
+  renderPendingList
 };

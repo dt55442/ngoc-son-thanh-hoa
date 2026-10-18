@@ -99,8 +99,11 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const st = cloud.loadSyncState();
   st.base = {}; st.conflicts = []; st.lastRev = -1;
   state.batches = [{ id: 'b1', qty: 100, quantity: 1, createdAt: '2026-10-01T00:00:00.000Z' }];
-  check('B0: chưa có base → KHÔNG coi là dirty (dùng luật cũ so băm với mây)',
-    Object.keys(cloud.dirtyDomains()).length === 0);
+  // ĐỔI CHUẨN 18/10/2026 (xem .clinerules quy tắc 73): trước đây "chưa có base"
+  // bị coi là KHÔNG dirty → máy mới/xoá cache/phục hồi backup MẤT lớp bảo vệ
+  // bản-sửa-chưa-đẩy. Nay coi MỌI bản ghi hiện có là chưa đẩy.
+  check('B0: chưa có base → COI MỌI bản ghi là dirty (bảo vệ bản chưa đẩy)',
+    !!cloud.dirtyDomains().batches && cloud.dirtyDomains().batches.ids.join(',') === 'b1');
   cloud.captureSyncBase();
   check('B1: chụp base → không còn dirty', Object.keys(cloud.dirtyDomains()).length === 0);
   state.batches[0].qty = 150;   // sửa nhưng KHÔNG đổi updatedAt/createdAt
@@ -280,8 +283,11 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const sw = SRC('sw.js');
   check('H1: index.html có modal XUNG ĐỘT ĐỒNG BỘ + nút Đồng Bộ Ngay',
     /id="modal-sync-conflicts"/.test(idx) && /id="sync-conflict-body"/.test(idx) && /id="btn-sync-now"/.test(idx));
-  check('H2: nút Xung Đột trong menu ⋮ chỉ dành ADMIN (data-admin-only)',
-    /id="btn-sync-conflicts"[^>]*data-admin-only/.test(idx));
+  // ĐỔI CHUẨN 18/10/2026 (quy tắc 73): mở sổ xung đột cho BAN QUẢN LÝ — người
+  // trực tiếp nhập liệu cần thấy xung đột phát sinh khi 2 máy cùng sửa.
+  check('H2: nút Xung Đột trong menu ⋮ dành ADMIN + BAN QUẢN LÝ (data-manager-only)',
+    /id="btn-sync-conflicts"[^>]*data-manager-only/.test(idx) &&
+    /body:not\(\.is-manager\):not\(\.is-admin\) \[data-manager-only\]/.test(css));
   check('H3: events.js nối Đồng Bộ Ngay + mở/đóng sổ xung đột',
     /syncNow/.test(ev) && /openSyncConflicts/.test(ev) && /applySyncConflictChoice/.test(ev) &&
     /safeOn\('btn-sync-now'/.test(ev));
@@ -295,7 +301,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   check('H7: đường NHẬN không còn dùng add-only (mọi bản sửa đều được xét)',
     !/mergeRemoteIntoLocal\(partial, true, true\)/.test(cl) &&
     !/mergeRemoteIntoLocal\(remote, true, true\)/.test(cl));
-  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v279/.test(sw));
+  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v280/.test(sw));
 }
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');

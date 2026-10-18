@@ -19,7 +19,7 @@
 // Sổ nhóm dùng chung: js/x2-pool.js.
 // Dữ liệu: state.xuong2BoOngRecords + state.x2BoOngRates.
 // ═══════════════════════════════════════════════════════════
-import { firePushSync, initLucide, requireEditPermission, requireRatePermission } from './cloud.js';
+import { firePushSync, initLucide, requireEditPermission, requireRatePermission, warnOfflineWrite, pendingMarkHtml, claimEditLock, releaseEditLock, editLockWarnHtml } from './cloud.js';
 import { captureAutoBackup } from './autobackup.js'; // chụp bản cất TRƯỚC khi rà soát/dọn sổ kho
 import { canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
@@ -12563,7 +12563,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       <label class="kho-note-pick" title="Chọn để duyệt hàng loạt"><input type="checkbox" data-kho-note-pick="${escapeHTML(n.id)}" ${picked ? 'checked' : ''}></label>
       <div class="kho-note-main">
         <div class="kho-note-line1"><span class="kho-badge kho-badge-${n.type === 'xuat' ? 'xuat' : 'xu_ly'}">${n.type === 'xuat' ? 'Xuất kho' : 'Xử lý lỗi'}</span> ${kind} · <strong>${fmtThanh(Number(n.qty) || 0)}</strong> thanh · ngày ${formatDateDDMMYY(n.date)}</div>
-        <div class="kho-note-line2">Gắn lô: ${escapeHTML(lotsTxt)} · Người tạo: ${escapeHTML(n.createdByName || n.createdBy || '—')} · Hệ thống suy ra cùng ngày: ${khoDerivedTextOf(n)}${n.note ? ` · Ghi chú: ${escapeHTML(n.note)}` : ''}</div>
+        <div class="kho-note-line2">${pendingMarkHtml('khoNotes', n.id)}${editLockWarnHtml(n)} Gắn lô: ${escapeHTML(lotsTxt)} · Người tạo: ${escapeHTML(n.createdByName || n.createdBy || '—')} · Hệ thống suy ra cùng ngày: ${khoDerivedTextOf(n)}${n.note ? ` · Ghi chú: ${escapeHTML(n.note)}` : ''}</div>
       </div>
       <div class="kho-note-actions">
         ${canApprove ? `<button type="button" class="btn btn-success btn-sm" data-kho-approve="${escapeHTML(n.id)}" title="Duyệt phiếu (số liệu chính thức trừ tồn)"><i data-lucide="check"></i> Duyệt</button>
@@ -12845,6 +12845,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     if (!n) return;
     if (n.status !== 'cho_duyet') { showToast('Phiếu ĐÃ DUYỆT đã trừ tồn — hãy xóa phiếu rồi tạo phiếu mới (cần quyền duyệt).', 'error'); return; }
     if (khoNormPurpose(n.purpose) === 'say2') { showToast('Phiếu xuất Sấy 2 do hệ thống quản lý (mỗi lần Kho → Sấy 2 tự sinh) — dùng nút "Rà soát sổ kho" nếu cần dọn.', 'error'); return; }
+    // KHOÁ MỀM 60 giây: máy khác thấy "🟡 … đang sửa" và biết sẽ bị ghi đè nếu lưu sau
+    if (!claimEditLock(n)) return;
     khoNoteEditId = id;
     khoNoteType = n.type === 'xuat' ? 'xuat' : 'xu_ly';
     const dateEl = document.getElementById('x2-kho-date');
@@ -12877,6 +12879,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   function handleKhoNoteSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!requireEditPermission()) return;
+    warnOfflineWrite('khoNotes', 'phiếu kho');   // SỔ CÁI: báo ngay khi chưa kết nối mây
     const isEdit = !!khoNoteEditId;
     if (isEdit) {
       const old = (state.khoNotes || []).find(x => x && x.id === khoNoteEditId);
@@ -12937,7 +12940,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     pushUndo(isEdit ? 'Sửa phiếu kho' : 'Thêm phiếu kho');
     if (isEdit) {
       const n = (state.khoNotes || []).find(x => x && x.id === khoNoteEditId);
-      if (n) Object.assign(n, data, { note, updatedAt: now });
+      // Lưu xong → NHẢ khoá mềm để máy khác sửa tiếp (khoá chỉ để báo "đang sửa")
+      if (n) { releaseEditLock(n); Object.assign(n, data, { note, updatedAt: now }); }
     } else {
       state.khoNotes = [...(state.khoNotes || []), Object.assign({
         id: `kho-note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -13019,6 +13023,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   // DUYỆT / TỪ CHỐI — chỉ Ban lãnh đạo (Admin / Ban Quản Lý, cổng canApproveLeave)
   function khoApproveNote(id) {
     if (!requireEditPermission()) return;
+    warnOfflineWrite('khoNotes', 'duyệt phiếu kho');
     if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n || n.status !== 'cho_duyet') return;
@@ -13043,6 +13048,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   }
   function khoRejectNote(id) {
     if (!requireEditPermission()) return;
+    warnOfflineWrite('khoNotes', 'từ chối phiếu kho');
     if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n || n.status !== 'cho_duyet') return;

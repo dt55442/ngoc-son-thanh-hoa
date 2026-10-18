@@ -269,8 +269,12 @@ function check(name, cond) {
   check('E11: doWriteCloudSnapshot ưu tiên delta, fallback định dạng cũ khi miền quá lớn',
     /writeDeltaSnapshot\(snap, dh\)/.test(src2) && /domainTooBig/.test(src2) &&
     /async function writeLegacySnapshot/.test(src2));
-  check('E12: mục lục delta ghi kèm deletedIds (tombstone không cần doc riêng)',
-    /__fmt: 'delta-v1', __dh: dh,\s*\n\s*deletedIds: snap\.deletedIds/.test(src2));
+  // ĐỔI CHUẨN 18/10/2026: mục lục ghi tombstone ĐÃ HỢP với bản mây (không ghi
+  // đè bằng bản của riêng máy này) — xem .clinerules quy tắc 73.
+  check('E12: mục lục delta ghi deletedIds ĐÃ HỢP với mây (mergeTombMaps, không ghi đè)',
+    /__fmt: 'delta-v1', __dh: dhOut,\s*\n\s*deletedIds: mergedTomb/.test(src2) &&
+    /function mergeTombMaps/.test(src2) &&
+    /mergeTombMaps\(idx\.deletedIds, snap\.deletedIds\)/.test(src2));
   check('E13: pullDeltaSnapshot chỉ tải doc miền ĐỔI rồi gộp MỘT PHẦN',
     /function pullDeltaSnapshot/.test(src2) && /localH\[k\] !== remoteH\[k\]/.test(src2));
   check('E14: subcollection miền = FB_DOMAIN_COLL, nằm dưới apps/main (rules đã phủ)',

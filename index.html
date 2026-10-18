@@ -399,6 +399,12 @@
             <span class="x2-mini-desc">Công việc hỗ trợ, công đoạn lẻ khác</span>
             <span class="x2-mini-count" id="x2-mini-count-ho-tro">–</span>
           </button>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-phu-pham-card" aria-expanded="false" title="Phụ Phẩm &amp; Băm — ngọn từ Bốc Luồng, mắt luồng + ống lỗi đem băm từ Cắt Chọn: ghi bán / tiêu hủy theo kg CÂN THỰC + đơn giá → doanh thu phụ phẩm; kèm CÂN ĐỐI KHỐI LƯỢNG, KIỂM KÊ BÃI, ĐỊNH MỨC TỶ LỆ và GIÁ THÀNH 1 KG ỐNG ĐẠT">
+            <span class="x2-mini-ic"><i data-lucide="recycle"></i></span>
+            <span class="x2-mini-title">Phụ Phẩm &amp; Băm</span>
+            <span class="x2-mini-desc">Bán ngọn/mắt/ống lỗi · cân đối · giá thành</span>
+            <span class="x2-mini-count" id="x2-mini-count-phu-pham">–</span>
+          </button>
         </div>
       </div>
       </div><!-- /#ws-x2-block -->
@@ -502,7 +508,8 @@
       <!-- ======================================================= -->
       <div id="x2-details-stack">
 
-        <!-- VỊ TRÍ: CẮT CHỌN — chọn luồng từ nguyên liệu đầu vào Xưởng 2 -->
+        <!-- VỊ TRÍ: CẮT CHỌN — 2 loại đầu vào (xe luồng cây / luồng ống nguyên liệu).
+             Từ 18/10/2026 KHÔNG chọn lô: bãi tập kết trộn lô → sổ nhóm khối lượng. -->
         <div class="planning-card x2-card-hidden" id="x2-cut-card">
           <div class="planning-card-header">
             <h4><i data-lucide="scissors"></i> Cắt Chọn — Xưởng 2</h4>
@@ -520,37 +527,95 @@
               <i data-lucide="pencil"></i> <span id="x2-cut-edit-text"></span>
             </div>
             <form id="x2-cut-form">
-              <!-- DÒNG 1: nguyên liệu đầu vào + ghi chú -->
-              <div class="x2-form-row">
-                <div class="form-group" style="flex:1.5;">
-                  <label for="x2-cut-material">Nguyên Liệu Đầu Vào (Xưởng 2) <span class="required">*</span></label>
-                  <select id="x2-cut-material" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lô CHƯA cắt — lô đã cắt tự ẩn (sửa lượt cũ vẫn thấy đúng lô của lượt đó)</small>
-                </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x2-cut-note">Ghi Chú (nhắc nhở nhà cung cấp...)</label>
-                  <input type="text" id="x2-cut-note" placeholder="VD: cây nhiều mắt, nhắc NCC chặt gọn...">
-                </div>
+              <!-- LOẠI ĐẦU VÀO (18/10/2026): Xe luồng cây (từ Bốc Luồng) HOẶC Luồng ống nguyên liệu.
+                   Không còn bắt chọn "lô" — bãi tập kết trộn lô. -->
+              <div class="x2-kind-switch" id="x2-cut-kind-switch" data-x2-pool="1">
+                <span class="x2-kind-label">Loại đầu vào:</span>
+                <button type="button" class="x2-kind-btn is-on" id="x2-cut-kind-cart" data-x2-cut-kind="cart" title="Xe luồng cây đã bốc (từ thẻ Bốc Luồng) — nhập SỐ XE, khối lượng tự suy"><i data-lucide="truck"></i> Xe luồng cây</button>
+                <button type="button" class="x2-kind-btn" id="x2-cut-kind-ong" data-x2-cut-kind="ong" title="Luồng ống nguyên liệu nhập thẳng (chọn phiếu cân) — chỉ cần lọc ống lỗi ra"><i data-lucide="package"></i> Luồng ống nguyên liệu</button>
               </div>
-              <!-- DÒNG 2: ngày cắt + các ô khối lượng -->
+
               <div class="x2-form-row">
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-cut-date">Ngày Cắt/Chọn <span class="required">*</span></label>
                   <input type="date" id="x2-cut-date" required>
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x2-cut-ongluong">KL Ống Luồng (kg)</label>
-                  <input type="number" id="x2-cut-ongluong" step="any" min="0" placeholder="0">
+                <!-- ① XE LUỒNG CÂY: Số xe × KL/xe (ô số tối đa 6 chữ số) -->
+                <div id="x2-cut-cart-group" class="x2-form-row" style="flex:2; gap:10px; margin:0;">
+                  <div class="form-group x2-num6">
+                    <label for="x2-cut-carts">Số Xe <span class="required">*</span> <span class="x2-field-help" title="Số xe luồng cây đem cắt trong lượt này — hệ thống tự trừ vào số xe đã bốc & chưa cắt.">(?)</span></label>
+                    <input type="number" id="x2-cut-carts" min="1" max="999999" step="1" placeholder="VD: 50">
+                  </div>
+                  <div class="form-group x2-num6">
+                    <label for="x2-cut-kg-cart">KL / Xe (kg) <span class="required">*</span></label>
+                    <input type="number" id="x2-cut-kg-cart" min="1" max="999999" step="any" value="600" title="Khối lượng trung bình 1 xe — mặc định 600 kg, sửa tay (tối đa 6 chữ số)">
+                  </div>
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x2-cut-cuidot">KL Củi Đốt (kg)</label>
-                  <input type="number" id="x2-cut-cuidot" step="any" min="0" placeholder="0">
+                <!-- ② LUỒNG ỐNG NGUYÊN LIỆU: NÚT CHỌN PHIẾU CÂN (mở sheet, chọn xong thu gọn)
+                     + hướng ống lỗi -->
+                <div id="x2-cut-ong-group" class="x2-form-row" style="display:none; flex:2; gap:10px; margin:0;">
+                  <div class="form-group x2-ticket-field" style="flex:1; min-width:240px;">
+                    <label>Phiếu Cân "Luồng ống" <span class="x2-field-help" title="Chọn 1 hoặc NHIỀU phiếu cân chuyến luồng ống — mặc định lấy hết phần còn lại, sửa được nếu chỉ lấy một phần. Bấm nút để mở danh sách, bấm Xong để thu gọn.">(?)</span></label>
+                    <button type="button" class="x2-ticket-trigger" id="x2-cut-tickets-btn" aria-expanded="false" aria-controls="x2-cut-tickets-sheet">
+                      <span class="x2-ticket-trigger-text">
+                        <strong id="x2-cut-tickets-summary">Chưa chọn phiếu cân</strong>
+                        <small id="x2-cut-tickets-sub">Bấm để chọn 1 hoặc nhiều phiếu</small>
+                      </span>
+                      <i data-lucide="chevron-down"></i>
+                    </button>
+                    <div class="x2-ticket-sheet" id="x2-cut-tickets-sheet" hidden>
+                      <div class="x2-ticket-sheet-head">
+                        <strong>Phiếu cân "Luồng ống"</strong>
+                        <button type="button" class="btn btn-outline btn-sm" id="x2-cut-tickets-close">Xong</button>
+                      </div>
+                      <div id="x2-cut-tickets" class="x2-ticket-picker"></div>
+                    </div>
+                  </div>
+                  <div class="form-group" id="x2-cut-reject-route-group" style="flex:0 0 200px;">
+                    <label for="x2-cut-reject-route">Hướng Ống Lỗi</label>
+                    <select id="x2-cut-reject-route" title="Ống lỗi của luồng ống: trả nhà cung cấp (trừ tiền mua) hoặc đưa đi băm tận dụng">
+                      <option value="tra_ncc">Trả nhà cung cấp (trừ tiền mua)</option>
+                      <option value="bam">Băm tận dụng (bán phụ phẩm)</option>
+                    </select>
+                  </div>
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x2-cut-cayloai">KL Cây Loại (kg)</label>
-                  <input type="number" id="x2-cut-cayloai" step="any" min="0" placeholder="0">
+                <!-- ③ LÔ CŨ (chỉ hiện khi SỬA một lượt cắt kiểu cũ) -->
+                <div id="x2-cut-legacy-group" class="x2-form-row" style="display:none; flex:2; gap:10px; margin:0;">
+                  <div class="form-group" style="flex:2;">
+                    <label for="x2-cut-material">Nguyên Liệu Đầu Vào (lô cũ)</label>
+                    <select id="x2-cut-material"></select>
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-cut-cuidot">KL Củi Đốt (kg)</label>
+                    <input type="number" id="x2-cut-cuidot" step="any" min="0" placeholder="0">
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-cut-cayloai">KL Cây Loại (kg)</label>
+                    <input type="number" id="x2-cut-cayloai" step="any" min="0" placeholder="0">
+                  </div>
                 </div>
               </div>
+
+              <!-- ĐẦU RA: ống đạt → Bổ Ống · ống lỗi → trả NCC/băm · mắt luồng → băm -->
+              <div class="x2-form-row">
+                <div class="form-group x2-num6">
+                  <label for="x2-cut-ongluong">KL Ống Đạt (kg) <span class="x2-field-help" title="Ống đạt đi tiếp sang công đoạn Bổ Ống (tối đa 6 chữ số). Với luồng ống, để trống = tự tính KL vào − ống lỗi.">(?)</span></label>
+                  <input type="number" id="x2-cut-ongluong" step="any" min="0" max="999999" placeholder="0">
+                </div>
+                <div class="form-group x2-num6" id="x2-cut-ongloi-group">
+                  <label for="x2-cut-ongloi">KL Ống Lỗi (kg)</label>
+                  <input type="number" id="x2-cut-ongloi" step="any" min="0" max="999999" placeholder="0">
+                </div>
+                <div class="form-group x2-num6" id="x2-cut-matluong-group">
+                  <label for="x2-cut-matluong">KL Mắt Luồng (kg)</label>
+                  <input type="number" id="x2-cut-matluong" step="any" min="0" max="999999" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:1.3;">
+                  <label for="x2-cut-note">Ghi Chú (nhắc nhở nhà cung cấp...)</label>
+                  <input type="text" id="x2-cut-note" placeholder="VD: cây nhiều mắt, nhắc NCC chặt gọn...">
+                </div>
+              </div>
+              <div class="x2-pool-calc" id="x2-cut-calc"></div>
               <!-- NGƯỜI CẮT + THỜI GIAN CẮT + SỐ GIỜ CẮT: TỰ ĐỘNG từ Bảng bố trí Nhân Sự
                    (vị trí "Cắt" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay, chỉ hiện ở
                    Bảng Lịch Sử Cắt/Chọn + Bảng Công Suất Theo Ngày -->
@@ -601,7 +666,8 @@
           <!-- TỒN LUỒNG CÂY CHƯA BỐC — hiện trên cùng (lô "Luồng cây" còn khối lượng) -->
           <div class="x2-stock-bar" id="x2-blg-stock-bar"></div>
 
-          <!-- FORM: Ngày bốc + Đầu vào (lô "Luồng cây..." CHƯA bốc hết) + Khối lượng thực tế.
+          <!-- FORM: Ngày bốc + NHIỀU PHIẾU CÂN "Luồng cây" (SHEET nổi) + Số xe × KL/xe.
+               (Ô "Cân mẫu" ĐÃ GỠ 18/10/2026 — chỉ nhập Số xe × KL/xe.)
                NGƯỜI BỐC + GIỜ BỐC TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Bốc Luồng"
                — Xưởng 2, đúng ngày) — không có ô nhập tay, chỉ hiện ở thẻ ngày. -->
           <div class="x2-zone" data-zone="1">
@@ -611,21 +677,56 @@
               <i data-lucide="pencil"></i> <span id="x2-blg-edit-text"></span>
             </div>
             <form id="x2-blg-form">
-              <!-- DÒNG 1: ngày bốc + lô đầu vào + khối lượng thực tế -->
+              <!-- DÒNG 1: Ngày bốc + NÚT CHỌN PHIẾU CÂN (mở sheet, chọn xong thu gọn)
+                   + khối LÔ CŨ (chỉ hiện khi sửa lượt cũ) -->
               <div class="x2-form-row">
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-blg-date">Ngày Bốc <span class="required">*</span></label>
                   <input type="date" id="x2-blg-date" required>
                 </div>
-                <div class="form-group" style="flex:2;">
-                  <label for="x2-blg-material">Đầu Vào (lô "Luồng cây...") <span class="required">*</span></label>
-                  <select id="x2-blg-material" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lô "Luồng cây" CÒN khối lượng chưa bốc — bốc hết thì lô tự ẩn (sửa lượt cũ vẫn thấy đúng lô của lượt đó)</small>
+                <div class="form-group x2-ticket-field" style="flex:1; min-width:240px;">
+                  <label>Phiếu Cân Nguồn ("Luồng cây") <span class="required">*</span> <span class="x2-field-help" title="Chọn 1 hoặc NHIỀU phiếu cân chuyến (VD NCC A 12.000 kg + NCC B 8.000 kg). Mỗi phiếu mặc định lấy HẾT phần còn lại — chỉ lấy một phần thì sửa số trong danh sách. Bấm nút để mở danh sách, bấm Xong để thu gọn.">(?)</span></label>
+                  <button type="button" class="x2-ticket-trigger" id="x2-blg-tickets-btn" aria-expanded="false" aria-controls="x2-blg-tickets-sheet">
+                    <span class="x2-ticket-trigger-text">
+                      <strong id="x2-blg-tickets-summary">Chưa chọn phiếu cân</strong>
+                      <small id="x2-blg-tickets-sub">Bấm để chọn 1 hoặc nhiều phiếu</small>
+                    </span>
+                    <i data-lucide="chevron-down"></i>
+                  </button>
+                  <div class="x2-ticket-sheet" id="x2-blg-tickets-sheet" hidden>
+                    <div class="x2-ticket-sheet-head">
+                      <strong>Phiếu cân "Luồng cây"</strong>
+                      <button type="button" class="btn btn-outline btn-sm" id="x2-blg-tickets-close">Xong</button>
+                    </div>
+                    <div id="x2-blg-tickets" class="x2-ticket-picker" data-x2-pool="1"></div>
+                  </div>
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x2-blg-qty">Khối Lượng Thực Tế (kg) <span class="required">*</span></label>
-                  <input type="number" id="x2-blg-qty" step="any" min="0" placeholder="0" required>
+                <div id="x2-blg-legacy-group" class="x2-form-row" style="display:none; flex:2; gap:10px; margin:0;">
+                  <div class="form-group" style="flex:2;">
+                    <label for="x2-blg-material">Đầu Vào (lô cũ)</label>
+                    <select id="x2-blg-material"></select>
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-blg-qty">KL Thực Tế (kg)</label>
+                    <input type="number" id="x2-blg-qty" step="any" min="0" placeholder="0">
+                  </div>
                 </div>
+              </div>
+
+              <!-- SỔ NHÓM (18/10/2026): Số xe × KL/xe (~600 kg/xe, sửa tay).
+                   KL lên xe = Số xe × KL/xe; Ngọn + hao hụt (ước tính) = KL phiếu − KL xe. -->
+              <div id="x2-blg-pool-group">
+                <div class="x2-form-row">
+                  <div class="form-group x2-num6">
+                    <label for="x2-blg-carts">Số Xe <span class="required">*</span> <span class="x2-field-help" title="Số xe chở nhỏ đã xếp luồng cây trong lượt này (1 ngày có thể vài chục xe). KHÔNG cần nhập KL từng xe.">(?)</span></label>
+                    <input type="number" id="x2-blg-carts" min="1" max="999999" step="1" placeholder="VD: 50">
+                  </div>
+                  <div class="form-group x2-num6">
+                    <label for="x2-blg-kg-cart">KL / Xe (kg) <span class="required">*</span></label>
+                    <input type="number" id="x2-blg-kg-cart" min="1" max="999999" step="any" value="600" title="Khối lượng trung bình 1 xe — mặc định 600 kg, sửa được theo thực tế (tối đa 6 chữ số)">
+                  </div>
+                </div>
+                <div class="x2-pool-calc" id="x2-blg-calc"></div>
               </div>
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
@@ -663,7 +764,7 @@
           </div>
         </div>
 
-        <!-- VỊ TRÍ: BỔ ỐNG — bổ ống luồng của LÔ ỐNG (từ Cắt Chọn) -->
+        <!-- VỊ TRÍ: BỔ ỐNG — đầu vào CHỈ CÒN ỐNG ĐẠT theo KHỐI LƯỢNG (không truy vết lô) -->
         <div class="planning-card x2-card-hidden" id="x2-bo-ong-card">
           <div class="planning-card-header">
             <h4><i data-lucide="split"></i> Bổ Ống — Xưởng 2</h4>
@@ -681,15 +782,12 @@
               <i data-lucide="pencil"></i> <span id="x2-bo-ong-edit-text"></span>
             </div>
             <form id="x2-bo-ong-form">
-              <!-- DÒNG 1: lô ống lấy từ công đoạn Cắt Chọn -->
-              <div class="x2-form-row">
-                <div class="form-group" style="flex:2;">
-                  <label for="x2-bo-ong-cut">Lô Ống Chọn (từ Cắt Chọn) <span class="required">*</span></label>
-                  <select id="x2-bo-ong-cut" required></select>
-                  <small style="color:var(--text-muted);">Mỗi lô hiện <strong>số ống còn lại / tổng lô</strong> — lô bổ 1 phần vẫn ở đây cho tới khi bổ hết (sửa lượt cũ vẫn thấy đúng lô của lượt đó)</small>
-                </div>
+              <!-- SỔ NHÓM (18/10/2026): từ công đoạn Bổ trở đi CHỈ CÒN KHỐI LƯỢNG ống đạt.
+                   Không chọn lô · không truy vết nhà cung cấp (bãi tập kết trộn lô). -->
+              <div class="x2-pool-note" id="x2-bo-ong-pool-note" data-x2-pool="1" title="Thực tế: đầu vào Bổ Ống chỉ còn ỐNG ĐẠT với khối lượng, không còn biết lô luồng của nhà cung cấp nào. Vì vậy thẻ này chỉ theo dõi khối lượng.">
+                <i data-lucide="info"></i> Đầu vào chỉ còn <strong>ỐNG ĐẠT</strong> theo khối lượng — <strong>không truy vết lô / nhà cung cấp</strong> từ công đoạn này.
               </div>
-              <!-- DÒNG 2: ngày bổ + KL ống bổ (sửa được — bổ 1 phần lô) + KL ống loại + ô tự tính -->
+              <!-- DÒNG 1: ngày bổ + KL ống đem bổ + KL ống loại + ô tự tính -->
               <div class="x2-form-row">
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-bo-ong-date">Ngày Bổ <span class="required">*</span></label>
@@ -699,17 +797,24 @@
                   <label for="x2-bo-ong-shift">Ca <span class="x2-shift-field-hint" title="Ô này CHỈ hiện khi bộ phận Xưởng 2 đặt chế độ 'Làm ca' ở tab Nhân Sự. Chọn ca để giờ + công suất + hiệu suất của lượt tính riêng theo ca đó (so sánh được ca nào làm tốt hơn). Để trống = Cả ngày / chưa rõ ca.">(?)</span></label>
                   <select id="x2-bo-ong-shift"></select>
                 </div>
-                <div class="form-group" style="flex:0 0 165px;">
-                  <label for="x2-bo-ong-bo">KL Ống Bổ (kg)</label>
-                  <input type="number" id="x2-bo-ong-bo" step="any" min="0" placeholder="0" title="Số lượng ống của lô ĐEM BỔ trong lượt này — tự điền sẵn phần CÒN LẠI của lô; ngày đó chỉ bổ 1 phần thì sửa lại số nhỏ hơn (phần dư vẫn ở trong danh sách chọn lô)">
+                <div class="form-group x2-num6">
+                  <label for="x2-bo-ong-bo">KL Ống Đem Bổ (kg)</label>
+                  <input type="number" id="x2-bo-ong-bo" step="any" min="0" max="999999" placeholder="0" title="Khối lượng ống đạt đem bổ trong lượt này (tối đa 6 chữ số). Không được vượt TỒN NHÓM ống đạt chờ bổ hiện tại.">
                 </div>
-                <div class="form-group" style="flex:0 0 165px;">
+                <div class="form-group x2-num6">
                   <label for="x2-bo-ong-loai">KL Ống Loại (kg)</label>
-                  <input type="number" id="x2-bo-ong-loai" step="any" min="0" placeholder="0" title="Phần ống LOẠI nằm TRONG số KL ống bổ ở bên — KL ống bổ đạt = KL ống bổ − KL ống loại">
+                  <input type="number" id="x2-bo-ong-loai" step="any" min="0" max="999999" placeholder="0" title="Phần ống LOẠI nằm TRONG số KL ống đem bổ ở bên (tối đa 6 chữ số) — KL ống bổ đạt = KL ống đem bổ − KL ống loại">
                 </div>
                 <div class="form-group" style="flex:1; min-width:260px;">
                   <label>Khối Lượng (tự tính)</label>
                   <div class="x2-ong-calc" id="x2-bo-ong-calc"></div>
+                </div>
+              </div>
+              <!-- LÔ CŨ (chỉ hiện khi SỬA một lượt bổ kiểu cũ có link lô) -->
+              <div id="x2-bo-ong-legacy-group" style="display:none;">
+                <div class="form-group">
+                  <label for="x2-bo-ong-cut">Lô Ống Chọn (lô cũ)</label>
+                  <select id="x2-bo-ong-cut"></select>
                 </div>
               </div>
               <!-- NGƯỜI BỔ + THỜI GIAN BỔ + SỐ GIỜ BỔ: TỰ ĐỘNG từ Bảng bố trí
@@ -717,6 +822,7 @@
                    nhập tay, chỉ hiện ở đầu thẻ ngày của bảng lịch sử bên dưới -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
                 <button type="button" class="btn btn-outline" id="btn-x2-ong-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ Ống theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-ong-all" title="Điền KL ống đem bổ = toàn bộ tồn nhóm ống đạt đang chờ bổ"><i data-lucide="arrow-down-to-line"></i> Lấy Hết Tồn</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bo-ong">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bổ Ống</button>
               </div>
@@ -1099,7 +1205,7 @@
               </p>
               <p class="x2-say-note">
                 <i data-lucide="gauge"></i>
-                <b>Hiệu suất (cả ngày) = Giờ cần ÷ (Giờ thực tế − Giờ sự cố cho phép)</b> — <b>Giờ thực tế</b> là tổng giờ HC + TC thật của ngày (từ Bảng bố trí vị trí "Than hóa"); <b>Giờ sự cố cho phép</b> nhập ở ô ngay trên dòng đầu ngày (giờ máy hỏng/thiếu nan… được trừ ra, mặc định 0). ≥100% hiển thị xanh (đạt/nhanh hơn giờ cần) · &lt;100% hiển thị cam; ngày chưa có bố trí "Than hóa" → hiệu suất "—".
+                <b>Hiệu suất tính TRONG TỪNG CA (từ 18/10/2026) = Giờ cần của ca ÷ (Giờ thực của ca − Giờ sự cố của ca)</b> — <b>không chia hiệu suất theo Sấy 1 / Sấy 2</b> (một ca có thể chạy cả 2 công đoạn sấy nên nếu chia theo công đoạn thì giờ của ca bị dùng 2 lần). Mỗi ca 1 dòng phụ ngay dưới dòng đầu ngày: m³ · phút · giờ cần · giờ HC/TC thật của ca · công suất · <b>hiệu suất của ca</b> · <b>nhãn "So ca kia"</b> (▲/▼ so hiệu suất với ca còn lại cùng ngày, giống thẻ Chọn Nan Thô). <b>Giờ thực</b> lấy từ Bảng bố trí vị trí "Than hóa" (tab Nhân Sự); <b>Giờ sự cố cho phép</b> nhập ở ô ngay trên dòng đầu ngày được chia cho các ca theo tỉ lệ số phút. Dòng đầu ngày vẫn có <b>Hiệu suất cả ngày</b> để đối chiếu (≥100% xanh · &lt;100% cam). Lần than hóa KHÔNG ghi ca → nhóm "Chưa rõ ca", không tính hiệu suất riêng.
               </p>
             </div>
           </div>
@@ -2158,6 +2264,154 @@
               </div>
               <div class="x2-cut-table-scroll">
                 <div id="x2-ht-day-cards"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ THẺ PHỤ PHẨM & BĂM + CÂN ĐỐI + KIỂM KÊ (Giai đoạn 2/3 — 18/10/2026) ═══ -->
+        <div class="planning-card x2-card-hidden" id="x2-phu-pham-card">
+          <div class="planning-card-header">
+            <h4><i data-lucide="recycle"></i> Phụ Phẩm &amp; Băm — Xưởng 2</h4>
+          </div>
+
+          <!-- TỒN PHỤ PHẨM (ước tính) + chip từng nguồn + điều chỉnh kiểm kê -->
+          <div class="x2-stock-bar" id="x2-pp-stock-bar"></div>
+
+          <!-- VÙNG 1: GHI BÁN / TIÊU HỦY — kg CÂN THỰC + đơn giá -->
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head" title="Ghi phần phụ phẩm ĐÃ BÁN hoặc TIÊU HỦY (kg cân thực + đơn giá). Phần NHẬP tự suy ra từ Bốc Luồng / Cắt Chọn — không nhập tay."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Ghi Bán / Tiêu Hủy</div>
+            <div class="x2-cut-form-wrap">
+              <div class="x2-cut-edit-banner" id="x2-pp-edit-banner" style="display:none;">
+                <i data-lucide="pencil"></i> <span id="x2-pp-edit-text"></span>
+              </div>
+              <form id="x2-pp-form">
+                <div class="x2-form-row">
+                  <div class="form-group" style="flex:0 0 155px;">
+                    <label for="x2-pp-date">Ngày <span class="required">*</span></label>
+                    <input type="date" id="x2-pp-date">
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-pp-kind">Nguồn Phụ Phẩm <span class="required">*</span></label>
+                    <select id="x2-pp-kind">
+                      <option value="ngon">Ngọn (từ Bốc Luồng)</option>
+                      <option value="mat">Mắt luồng (từ Cắt Chọn)</option>
+                      <option value="ong_loi">Ống lỗi đem băm</option>
+                      <option value="khac">Khác</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-pp-out-form">Hình Thức</label>
+                    <select id="x2-pp-out-form">
+                      <option value="raw">Bán nguyên (chưa băm)</option>
+                      <option value="chipped">Băm</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-pp-out-type">Loại Ghi</label>
+                    <select id="x2-pp-out-type">
+                      <option value="sale">Bán</option>
+                      <option value="dispose">Tiêu hủy / cho đi</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="x2-form-row">
+                  <div class="form-group x2-num6">
+                    <label for="x2-pp-kg">KL Cân Thực (kg) <span class="required">*</span></label>
+                    <input type="number" id="x2-pp-kg" step="any" min="0" max="999999" placeholder="0">
+                  </div>
+                  <div class="form-group x2-num6">
+                    <label for="x2-pp-price">Đơn Giá (đ/kg)</label>
+                    <input type="number" id="x2-pp-price" step="any" min="0" max="999999" placeholder="0">
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="x2-pp-party">Người Mua / NCC</label>
+                    <input type="text" id="x2-pp-party" maxlength="120" placeholder="VD: Nhà băm Cường…">
+                  </div>
+                  <div class="form-group" style="flex:1.3;">
+                    <label for="x2-pp-note">Ghi Chú</label>
+                    <input type="text" id="x2-pp-note" maxlength="200" placeholder="VD: băm bán cho trại nấm…">
+                  </div>
+                </div>
+                <div class="x2-pool-calc" id="x2-pp-amount"></div>
+                <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                  <button type="button" class="btn btn-outline" id="btn-cancel-x2-pp">Làm Mới Form</button>
+                  <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Phụ Phẩm</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- VÙNG 2: THỐNG KÊ + GIÁ THÀNH + SỔ GIẢM TRỪ NCC -->
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head" title="Thống kê theo tháng + GIÁ THÀNH 1 KG ỐNG ĐẠT = (tiền nguyên liệu − doanh thu phụ phẩm − giảm trừ NCC) ÷ kg ống đạt + sổ giảm trừ nhà cung cấp (ống lỗi trả lại)."><span class="x2-zone-no">2</span><i data-lucide="bar-chart-3"></i> Thống Kê · Giá Thành</div>
+            <div class="x2-pp-toolbar">
+              <label for="x2-pp-month">Kỳ tháng:</label>
+              <input type="month" id="x2-pp-month">
+              <span class="x2-pp-cost-sub">(đổi tháng → cập nhật doanh thu, giá thành, cân đối, giảm trừ NCC)</span>
+            </div>
+            <div class="material-stats" id="x2-pp-stats"></div>
+            <div id="x2-pp-cost"></div>
+            <div id="x2-pp-credit"></div>
+          </div>
+
+
+          <!-- VÙNG 3: CÂN ĐỐI KHỐI LƯỢNG + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ -->
+          <div class="x2-zone" data-zone="3">
+            <div class="x2-zone-head" title="Cân đối khối lượng từng chặng trong tháng (nhập bãi → bốc → cắt → bổ) + tỷ lệ thực tế so với định mức + ghi phiếu kiểm kê bãi (điều chỉnh tồn sổ)."><span class="x2-zone-no">3</span><i data-lucide="scale"></i> Cân Đối · Kiểm Kê</div>
+            <div id="x2-pp-balance"></div>
+
+            <div class="x2-pp-form-box" data-admin-only>
+              <div class="x2-pp-sub-head"><strong>Ghi phiếu kiểm kê bãi</strong>
+                <span class="x2-pp-cost-sub">(Quản Trị — cân/đếm thực tế rồi ghi để điều chỉnh tồn sổ)</span></div>
+              <form id="x2-pp-st-form">
+                <div class="x2-form-row">
+                  <div class="form-group" style="flex:0 0 155px;">
+                    <label for="x2-pp-st-date">Ngày Kiểm Kê</label>
+                    <input type="date" id="x2-pp-st-date">
+                  </div>
+                  <div class="form-group" style="flex:1.2;">
+                    <label for="x2-pp-st-pool">Nhóm Tồn</label>
+                    <select id="x2-pp-st-pool">
+                      <option value="cay">Luồng cây ở bãi</option>
+                      <option value="ong">Luồng ống ở bãi</option>
+                      <option value="ong_dat">Ống đạt chờ bổ</option>
+                      <option value="phu_pham">Phụ phẩm (ước tính)</option>
+                    </select>
+                  </div>
+                  <div class="form-group x2-num6">
+                    <label for="x2-pp-st-actual">KL Thực Tế (kg)</label>
+                    <input type="number" id="x2-pp-st-actual" step="any" min="0" max="999999" placeholder="0">
+                  </div>
+                  <div class="form-group" style="flex:1.5;">
+                    <label for="x2-pp-st-note">Ghi Chú</label>
+                    <input type="text" id="x2-pp-st-note" maxlength="200" placeholder="VD: kiểm kê cuối tuần…">
+                  </div>
+                </div>
+                <div class="x2-pool-calc"><span id="x2-pp-st-book"></span></div>
+                <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:10px;">
+                  <button type="submit" class="btn btn-success" data-admin-only><i data-lucide="save"></i> Lưu Kiểm Kê</button>
+                </div>
+              </form>
+            </div>
+
+            <div id="x2-pp-stocktake-list"></div>
+            <div id="x2-pp-yield"></div>
+          </div>
+
+          <!-- VÙNG 4: LỊCH SỬ — thẻ ngày (nhập ước tính + bán/tiêu hủy) -->
+          <div class="x2-zone" data-zone="4">
+            <div class="x2-zone-head" title="Lịch sử theo ngày: phần NHẬP tự suy ra từ Bốc/Cắt + phần BÁN/TIÊU HỦY do người dùng ghi."><span class="x2-zone-no">4</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
+            <div class="x2-cut-table-wrap" id="x2-pp-table-wrap">
+              <div class="x2-cut-table-head">
+                <h5><i data-lucide="history"></i> Lịch Sử Phụ Phẩm</h5>
+                <span class="x2-cut-table-count" id="x2-pp-table-count"></span>
+                <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2pp-table" title="Thu gọn / Mở rộng">
+                  <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+                </button>
+              </div>
+              <div class="x2-cut-table-scroll">
+                <div id="x2-pp-day-cards"></div>
               </div>
             </div>
           </div>
@@ -3659,6 +3913,7 @@
                 <th class="text-right" style="width:110px;">Trung Bình</th>
                 <th class="text-right" style="width:100px;">Tỷ Lệ Đạt</th>
                 <th class="text-right" style="width:100px;">Nhắc Nhở</th>
+                <th class="text-right" style="width:120px;">Giảm Trừ (đ)</th>
                 <th class="text-right" style="width:90px;">Thao Tác</th>
               </tr>
             </thead>

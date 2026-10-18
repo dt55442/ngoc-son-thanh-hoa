@@ -174,6 +174,20 @@
   // DANH SÁCH VỊ TRÍ SẤY KHAI BÁO THÊM (Than Hóa + Sấy): ô "Vị Trí" của modal
   // Thêm Lô Sấy Mới hiện sẵn LS1..LS15, người dùng bấm nút "Thêm" để khai báo
   // vị trí khác (VD: LS16, Lò 01) — mảng chuỗi tên vị trí, xem js/batch-modals.js
+  // ─── PHỤ PHẨM & BĂM + CÂN ĐỐI KHỐI LƯỢNG (thẻ x2-phu-pham-card — Giai đoạn 2/3) ──
+  // Nhật ký BÁN / TIÊU HỦY phụ phẩm (ngọn, mắt luồng, ống lỗi băm, khác):
+  // [{ id, date, outType 'sale'|'dispose', kind 'ngon'|'mat'|'ong_loi'|'bam'|'khac',
+  //    kg (cân thực), price (đ/kg), amount, party, note, createdAt, updatedAt }]
+  // Phần NHẬP (ngọn từ Bốc · mắt/ống lỗi băm từ Cắt) TỰ SUY RA từ 2 bảng cũ —
+  // KHÔNG lưu trùng, nên sửa/xóa lượt Bốc/Cắt là tồn phụ phẩm tự đúng.
+  const STORAGE_KEY_X2_PHU_PHAM = 'bamboo_tracker_x2_phu_pham_v1';
+  // PHIẾU KIỂM KÊ BÃI: [{ id, date, pool 'cay'|'ong'|'ong_dat'|'phu_pham',
+  //   bookKg (tồn sổ lúc kiểm), actualKg (cân thực), diffKg (thực − sổ), note, ... }]
+  // Tồn nhóm = sổ + Σ diff (không sửa dữ liệu gốc; xem js/x2-pool.js).
+  const STORAGE_KEY_X2_STOCKTAKE = 'bamboo_tracker_x2_stocktake_v1';
+  // ĐỊNH MỨC TỶ LỆ THU HỒI theo nhóm nguồn (Admin sửa):
+  // { cay: { ongDat: 88, ongLoi: 3, mat: 3 }, ong: { ongDat: 95, ongLoi: 5 } } (%)
+  const STORAGE_KEY_X2_YIELD_RATE = 'bamboo_tracker_x2_yield_rate_v1';
   const STORAGE_KEY_X2_LOT_LOCATIONS = 'bamboo_tracker_x2_lot_locations_v1';
   // Bảng "Thông Tin Nhà Cung" (tab Nguyên Liệu): danh mục nhà cung cấp do
   // người dùng khai báo (tên + mã số điền tay); các số liệu (tổng KL, số chuyến,
@@ -422,6 +436,11 @@
     // Người + giờ LƯU SNAPSHOT lúc ghi (mất bố trí Nhân Sự vẫn hiện đủ).
     xuong2HoTroRecords: [],
     x2HoTroEditId: null,       // id lượt Hỗ trợ đang sửa trong form (null = ghi mới)
+    // ─── PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ (thẻ x2-phu-pham-card) ───
+    x2PhuPhamRecords: [],      // nhật ký BÁN / TIÊU HỦY phụ phẩm (kg cân thực + đơn giá)
+    x2PhuPhamEditId: null,     // id lượt phụ phẩm đang sửa (null = ghi mới)
+    x2Stocktakes: [],          // phiếu kiểm kê bãi (diffKg cộng vào tồn nhóm)
+    x2YieldRates: { cay: { ongDat: 88, ongLoi: 3, mat: 3 }, ong: { ongDat: 95, ongLoi: 5 } }, // ĐỊNH MỨC TỶ LỆ (%)
     // Định mức THỜI GIAN THAN HÓA (phút cho 1 m³) theo tháng + công đoạn sấy của
     // thẻ "Than Hóa + Sấy": { s1: { 'YYYY-MM': phút/m³ }, s2: { 'YYYY-MM': phút/m³ } }
     // — nguồn tính cột "Giờ Cần" + định mức công suất m³/h của bảng thống kê sấy.
@@ -556,6 +575,9 @@ export {
   STORAGE_KEY_X2_KANBAN_COLLAPSED,
   STORAGE_KEY_X2_EP_VAN_RATE,
   STORAGE_KEY_X2_LOT_LOCATIONS,
+  STORAGE_KEY_X2_PHU_PHAM,
+  STORAGE_KEY_X2_STOCKTAKE,
+  STORAGE_KEY_X2_YIELD_RATE,
   STORAGE_KEY_X2_BAO_THANH_OUT_SIZES,
   STORAGE_KEY_SUPPLIERS,
   STORAGE_KEY_PLANNING_FORECAST,

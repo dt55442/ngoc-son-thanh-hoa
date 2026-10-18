@@ -21,6 +21,7 @@ import { qcFinalDisplay } from './qc-final.js';
 import { qcPressDisplay } from './qc-press.js';
 import { computeSupplierRating, supplierStatsOf } from './suppliers.js';
 import { rateNanUse, rateUnit, rateCoreProduct } from './planning.js';
+import { x2MassBalanceData, x2CostingData } from './x2-phu-pham.js';
 
 const RC_UI_KEY = 'bamboo_tracker_report_ui_v1'; // THUẦN UI THEO MÁY (không mây/backup)
 
@@ -525,7 +526,50 @@ function buildReportData() {
   if (spec.kind === 'suppliers') return buildSuppliersReport(spec);
   if (spec.kind === 'qcFinal') return buildQcFinalReport(spec);
   if (spec.kind === 'qcPress') return buildQcPressReport(spec);
+  if (spec.kind === 'massBalance') return buildMassBalanceReport(spec);
+  if (spec.kind === 'costing') return buildCostingReport(spec);
   return null;
+}
+
+// ─── BÁO CÁO CÂN ĐỐI KHỐI LƯỢNG (Giai đoạn 3 — thẻ Phụ Phẩm) ───
+function buildMassBalanceReport(spec) {
+  const { from, to } = currentPeriodRange();
+  const b = x2MassBalanceData(from, to);
+  const header = ['Stt', 'Chặng', 'Vào (kg)', 'Ra (kg)', 'Hao hụt (kg)', 'Ghi chú'];
+  const rows = [
+    [1, 'Nhập bãi — Luồng cây', b.intakeCay, '', '', 'phiếu cân mới trong kỳ'],
+    [2, 'Nhập bãi — Luồng ống', b.intakeOng, '', '', 'phiếu cân mới trong kỳ'],
+    [3, 'Bốc Luồng', b.boc.in, b.boc.out, b.boc.loss, 'Ra = KL lên xe · Hao hụt = ngọn + mất nước (ước tính)'],
+    [4, 'Cắt xe luồng cây', b.cart.in, b.cart.dat + b.cart.loi + b.cart.mat, b.cart.loss,
+      `Đạt ${b.cart.dat} · Lỗi ${b.cart.loi} · Mắt ${b.cart.mat}`],
+    [5, 'Cắt luồng ống', b.ong.in, b.ong.dat + b.ong.loi, b.ong.loss, `Đạt ${b.ong.dat} · Lỗi ${b.ong.loi}`],
+    [6, 'Bổ Ống', b.bo.in, b.bo.dat, b.bo.loi, 'Ra = ống bổ đạt · Hao hụt = ống loại'],
+    [7, 'Tỷ lệ Cắt xe — ống đạt (%)', b.yields.cart.ongDat == null ? '' : Math.round(b.yields.cart.ongDat * 10) / 10, '', '', `ĐM ${(b.yields.cart.target || {}).ongDat}%`],
+    [8, 'Tỷ lệ Cắt xe — mắt luồng (%)', b.yields.cart.mat == null ? '' : Math.round(b.yields.cart.mat * 10) / 10, '', '', `ĐM ${(b.yields.cart.target || {}).mat}%`],
+    [9, 'Tỷ lệ Cắt ống — ống lỗi (%)', b.yields.ong.ongLoi == null ? '' : Math.round(b.yields.ong.ongLoi * 10) / 10, '', '', `ĐM ${(b.yields.ong.target || {}).ongLoi}%`]
+  ];
+  return rcFrame('CÂN ĐỐI KHỐI LƯỢNG XƯỞNG 2',
+    `Kỳ: ${from || '…'} → ${to || '…'} · số kg là số ĐO/ƯỚC TÍNH trong kỳ`,
+    header, rows, { sheet: 'Cân Đối KL', file: spec.code });
+}
+
+// ─── BÁO CÁO GIÁ THÀNH 1 KG ỐNG ĐẠT (Giai đoạn 3) ──────────────
+function buildCostingReport(spec) {
+  const { from, to } = currentPeriodRange();
+  const c = x2CostingData(from, to);
+  const header = ['Stt', 'Chỉ Tiêu', 'Giá Trị', 'Đơn Vị', 'Ghi Chú'];
+  const rows = [
+    [1, 'Tiền nguyên liệu đã dùng', c.materialCost, 'đ', 'Σ kg lấy từ phiếu cân × đơn giá phiếu'],
+    [2, 'Doanh thu phụ phẩm', c.revenue, 'đ', 'phần đã bán trong kỳ (kg cân thực)'],
+    [3, 'Giảm trừ nhà cung cấp', c.credit, 'đ', 'ống lỗi trả lại × đơn giá bình quân NCC'],
+    [4, 'Chi phí thực', c.netCost, 'đ', 'tiền nguyên liệu − doanh thu phụ phẩm − giảm trừ NCC'],
+    [5, 'Ống đạt sản xuất', c.ongDat, 'kg', 'Σ KL ống đạt của các lượt Cắt Chọn'],
+    [6, 'Giá thành 1 kg ống đạt', c.costPerKg == null ? '' : c.costPerKg, 'đ/kg', 'chi phí thực ÷ kg ống đạt'],
+    [7, 'KL nguyên liệu CHƯA có đơn giá', c.kgNoPrice, 'kg', 'cần nhập đơn giá ở tab Nguyên Liệu để giá thành đúng']
+  ];
+  return rcFrame('GIÁ THÀNH 1 KG ỐNG ĐẠT',
+    `Kỳ: ${from || '…'} → ${to || '…'} · (tiền NL − doanh thu phụ phẩm − giảm trừ NCC) ÷ kg ống đạt · chưa gồm nhân công / điện / khấu hao`,
+    header, rows, { sheet: 'Giá Thành', file: spec.code });
 }
 
 // Nguồn dữ liệu của từng báo cáo — dùng để "Xuất cả nhóm" bỏ qua báo cáo rỗng
@@ -535,12 +579,19 @@ const RC_SOURCE_STATE = {
   boong: 'xuong2BoOngRecords', baotho: 'xuong2BaoThoRecords', chonnan: 'xuong2ChonNanThoRecords',
   baotinh: 'xuong2BaoTinhRecords', bullig: 'xuong2BulligRecords', catvan: 'xuong2CatVanRecords',
   baovan: 'xuong2BaoVanRecords', hotro: 'xuong2HoTroRecords', kho: 'khoNotes', epvan: 'pressRecords',
+  phupham: 'x2PhuPhamRecords',
   x1catong: 'xuong1CatOngRecords', x1saysinh: 'xuong1SaySinhRecords', x1boc: 'xuong1BocRecords',
   x1locong: 'xuong1LocOngRecords', x1catmat: 'xuong1CatMatRecords', x1bo: 'xuong1BoRecords',
   x1phoisay: 'xuong1PhoiSayRecords', x1locthanh: 'xuong1LocThanhRecords'
 };
 function reportHasData(spec) {
   if (!spec) return false;
+  // PHỤ PHẨM: báo cáo có cả phần NHẬP tự suy ra (từ Bốc/Cắt) nên phải kiểm cả 2 nguồn
+  if (spec.source === 'phupham') {
+    return (state.x2PhuPhamRecords || []).length > 0 ||
+      (state.xuong2BoluongRecords || []).length > 0 ||
+      (state.xuong2CutRecords || []).length > 0;
+  }
   if (spec.source) return ((state[RC_SOURCE_STATE[spec.source]] || []).length > 0);
   if (spec.builder === 'planning') return (state.planningItems || []).length > 0;
   if (spec.builder === 'materials') return (state.materialRecords || []).length > 0;
@@ -551,6 +602,16 @@ function reportHasData(spec) {
   if (spec.kind === 'suppliers') return (state.suppliers || []).length > 0;
   if (spec.kind === 'qcFinal') return (state.qcFinalRecords || []).length > 0;
   if (spec.kind === 'qcPress') return (state.pressRecords || []).length > 0;
+  if (spec.kind === 'massBalance') {
+    const { from, to } = currentPeriodRange();
+    const b = x2MassBalanceData(from, to);
+    return (b.cart.in + b.ong.in + b.boc.in + b.bo.in) > 0;
+  }
+  if (spec.kind === 'costing') {
+    const { from, to } = currentPeriodRange();
+    const c = x2CostingData(from, to);
+    return c.ongDat > 0;
+  }
   return false;
 }
 

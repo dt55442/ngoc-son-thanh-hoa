@@ -199,20 +199,22 @@ state.hrAssignments = [
 ];
 state.x2SayTimes = {};
 state.x2SayIncidents = {};
-const say1St = cap.CAP_STAGES.find(s => s.id === 'say1');
-const say2St = cap.CAP_STAGES.find(s => s.id === 'say2');
-const sayDays = cap.capStageDayRows(say1St, wk);
-check('SẤY 1: 2 m³ vào Sấy 1 ngày 10/09 → 1 lần (dữ liệu mới đếm theo lượt lưu/mặc định)',
+const saySt = cap.CAP_STAGES.find(s => s.id === 'say');
+const sayDays = cap.capStageDayRows(saySt, wk);
+check('THAN HÓA + SẤY: 1 công đoạn GỘP — KHÔNG còn 2 dòng "Sấy 1" / "Sấy 2" (18/10/2026)',
+  !!saySt && saySt.label === 'Than Hóa + Sấy' &&
+  cap.CAP_STAGES.filter(s => s.id === 'say1' || s.id === 'say2').length === 0);
+check('THAN HÓA + SẤY: 2 m³ vào sấy ngày 10/09 → 1 lần (dữ liệu mới đếm theo lượt lưu/mặc định)',
   sayDays.length === 1 && sayDays[0].turns === 1 && approx(sayDays[0].qty, 2));
-check('SẤY 1: giờ cần = 105 phút ÷ 60 = 1,75h', approx(sayDays[0].need, 105 / 60));
-check('SẤY 1: giờ thực từ Bảng bố trí "Than hóa" = 4h HC (07:00–11:00, không vắt nghỉ trưa)', approx(sayDays[0].hours, 4));
-const sayRow = cap.capStageWeekRow(say1St, wk);
-check('SẤY 1: hiệu suất = 1,75 ÷ 4 = 43,75%', approx(sayRow.eff, 43.75, 1e-4));
-check('SẤY 1: nhãn ĐM 1 lần hiện "105\'" (phút/lần)', String(sayRow.rateText).includes("105'"));
+check('THAN HÓA + SẤY: giờ cần = 105 phút ÷ 60 = 1,75h', approx(sayDays[0].need, 105 / 60));
+check('THAN HÓA + SẤY: giờ thực từ Bảng bố trí "Than hóa" = 4h HC (07:00–11:00, không vắt nghỉ trưa)', approx(sayDays[0].hours, 4));
+const sayRow = cap.capStageWeekRow(saySt, wk);
+check('THAN HÓA + SẤY: hiệu suất = 1,75 ÷ 4 = 43,75%', approx(sayRow.eff, 43.75, 1e-4));
+check('THAN HÓA + SẤY: nhãn ĐM hiện đủ 2 công đoạn sấy (S1 · S2) + phút/lần "105\'"',
+  String(sayRow.rateText).includes('S1') && String(sayRow.rateText).includes('S2') && String(sayRow.rateText).includes("105'"));
 state.x2SayIncidents = { '2026-09-10': 1 };
-const sayRow2 = cap.capStageWeekRow(say1St, wk);
-check('SẤY 1: có sự cố 1h → hiệu suất = 1,75 ÷ (4 − 1) ≈ 58,3%', approx(sayRow2.eff, (1.75 / 3) * 100, 1e-4));
-check('SẤY 2: không có lô nào vào Sấy 2 → 0 lượt', cap.capStageWeekRow(say2St, wk).turns === 0);
+const sayRow2 = cap.capStageWeekRow(saySt, wk);
+check('THAN HÓA + SẤY: có sự cố 1h → hiệu suất = 1,75 ÷ (4 − 1) ≈ 58,3%', approx(sayRow2.eff, (1.75 / 3) * 100, 1e-4));
 
 // ─── G. ÉP VÁN: m³/h theo phân vị ÉP VÁN thật ───────────────────
 state.pressRecords = [
@@ -229,11 +231,11 @@ check('ÉP VÁN: hiệu suất = (0,0864÷4) ÷ 0,03 = 72%', approx(epRow.eff, 7
 const w = cap.capWorkshopWeekRow('x2', wk);
 const expectedWsEff = (cutRowRated.eff * cutRowRated.hours + cnRow.eff * cnRow.hours + sayRow2.eff * sayRow2.hours + epRow.eff * epRow.hours)
   / (cutRowRated.hours + cnRow.hours + sayRow2.hours + epRow.hours);
-check('XƯỞNG: 5 công đoạn có dữ liệu / 15 công đoạn', w.dataCount === 5 && w.stagesCount === 15);
+check('XƯỞNG: 5 công đoạn có dữ liệu / 14 công đoạn', w.dataCount === 5 && w.stagesCount === 14);
 check('XƯỞNG: tổng giờ = 9 + 4 + 3 + 4 + 4 = 24h (mỗi ngày mỗi CĐ đếm 1 lần)', approx(w.hours, 24));
 check('XƯỞNG: 4 công đoạn tính được hiệu suất · 0 công đoạn đạt ≥100%', w.effCount === 4 && w.passCount === 0);
 check('XƯỞNG: hiệu suất xưởng = bình quân gia quyền theo GIỜ', approx(w.eff, expectedWsEff, 1e-6));
-check('XƯỞNG: nút thắt cổ chai = Sấy 1 (hiệu suất thấp nhất)', w.bottleneck && w.bottleneck.st.id === 'say1');
+check('XƯỞNG: nút thắt cổ chai = Than Hóa + Sấy (hiệu suất thấp nhất)', w.bottleneck && w.bottleneck.st.id === 'say');
 
 // ─── I. RENDER 3 TẦNG + ĐỔI XƯỞNG + THU GỌN ─────────────────────
 cap.setCapacityWeek(wk);
@@ -246,7 +248,7 @@ const tbody = document.getElementById('capacity-week-rows');
 check('RENDER: dòng tuần đang chọn mang data-cap-week-row', tbody.innerHTML.includes(`data-cap-week-row="${wk}"`));
 check('RENDER: bảng tầng 1 có ít nhất 2 dòng tuần (tuần dữ liệu + tuần hiện tại)',
   (tbody.innerHTML.match(/data-cap-week-row=/g) || []).length >= 2);
-check('RENDER: cột Nút thắt hiện đúng công đoạn thấp nhất', tbody.innerHTML.includes('Than Hóa + Sấy (Sấy 1)'));
+check('RENDER: cột Nút thắt hiện đúng công đoạn thấp nhất', tbody.innerHTML.includes('Than Hóa + Sấy'));
 cap.toggleCapacityWeekOpen(wk);
 check('TẦNG 2: bấm tuần → xổ bảng công đoạn (có cột "Định mức tuần")', tbody.innerHTML.includes('Định mức tuần'));
 check('TẦNG 2: có dòng Cắt Chọn kèm chip đơn vị kg/h', tbody.innerHTML.includes('Cắt Chọn') && tbody.innerHTML.includes('kg/h'));
@@ -299,7 +301,7 @@ check('SPARK: thẻ Cắt Chọn có SVG + số % tuần này',
   document.getElementById('x2-mini-spark-cut').innerHTML.includes('cap-spark-val'));
 check('SPARK: thẻ Bullig chưa có dữ liệu → "chưa có ĐM" (không bịa số)',
   document.getElementById('x2-mini-spark-bullig').innerHTML.includes('cap-spark-none'));
-check('SPARK: thẻ Than Hóa + Sấy có sparkline (Sấy 1 có hiệu suất)',
+check('SPARK: thẻ Than Hóa + Sấy có sparkline (dòng gộp có hiệu suất)',
   document.getElementById('x2-mini-spark-than-hoa').innerHTML.includes('cap-spark-svg'));
 const sparkCut = cap.capSparkSeries(['cut']);
 check('SPARK: chuỗi 8 tuần · phần tử CUỐI là tuần có dữ liệu có hiệu suất',
@@ -327,9 +329,9 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v273/.test(swJs));
-check('SỔ ĐĂNG KÝ: 15 dòng công đoạn Xưởng 2 (Bullig · Cắt Ván · Bào Ván đều tách 2) · 8 dòng Xưởng 1',
-  cap.capStagesOf('x2').length === 15 && cap.capStagesOf('x1').length === 8 &&
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v279/.test(swJs));
+check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 8 dòng Xưởng 1',
+  cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===
     'x1catong,x1saysinh,x1boc,x1locong,x1catmat,x1bo,x1phoisay,x1locthanh');
 check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId) + xưởng đúng',
@@ -349,15 +351,15 @@ const wEffNow = cap.capWorkshopWeekRow('x2', wk);
 check('GAUGE: có đồng hồ + số % khớp hiệu suất xưởng tính được',
   visualRow.innerHTML.includes('cap-gauge-val') &&
   visualRow.innerHTML.includes(wEffNow.eff.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%'));
-check('GAUGE: chip "Nút thắt" hiện đúng công đoạn Sấy 1',
-  visualRow.innerHTML.includes('Nút thắt') && visualRow.innerHTML.includes('Sấy 1'));
-check('RANK: đủ 15 hàng công đoạn (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 15);
-check('RANK: tag "nút thắt" gắn đúng Sấy 1', /Sấy 1[^<]*<em class="cap-rank-bt"/.test(visualRow.innerHTML));
-check('HEAT: đủ 120 ô dữ liệu (8 tuần × 15 công đoạn)', (visualRow.innerHTML.match(/data-cap-heat="/g) || []).length === 120);
+check('GAUGE: chip "Nút thắt" hiện đúng công đoạn Than Hóa + Sấy',
+  visualRow.innerHTML.includes('Nút thắt') && visualRow.innerHTML.includes('Than Hóa + Sấy'));
+check('RANK: đủ 14 hàng công đoạn (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 14);
+check('RANK: tag "nút thắt" gắn đúng Than Hóa + Sấy', /Than Hóa \+ Sấy[^<]*<em class="cap-rank-bt"/.test(visualRow.innerHTML));
+check('HEAT: đủ 112 ô dữ liệu (8 tuần × 14 công đoạn)', (visualRow.innerHTML.match(/data-cap-heat="/g) || []).length === 112);
 check('HEAT: legend đủ 4 mức màu', (visualRow.innerHTML.match(/cap-legend-item/g) || []).length === 4);
-check('CHART: mặc định tự chọn NÚT THẮT (Sấy 1) → panel đúng tiêu đề + canvas (trong dải trực quan)',
-  state.capUi.chartStage === 'say1' &&
-  visualRow.innerHTML.includes('cap-chart-head') && visualRow.innerHTML.includes('Sấy 1') &&
+check('CHART: mặc định tự chọn NÚT THẮT (Than Hóa + Sấy) → panel đúng tiêu đề + canvas (trong dải trực quan)',
+  state.capUi.chartStage === 'say' &&
+  visualRow.innerHTML.includes('cap-chart-head') && visualRow.innerHTML.includes('Than Hóa + Sấy') &&
   visualRow.innerHTML.includes('id="cap-stage-chart"'));
 check('CHART: instance Chart.js đã tạo', !!state.capacityStageInstance);
 cap.selectCapacityStage('cut');
@@ -518,6 +520,49 @@ check('CẤU TRÚC (styles.css): CSS ô chọn tháng + khối in body.cap-print
 check('CẤU TRÚC (events.js): đã nối Tuần⇄Tháng + ô tháng + In báo cáo',
   evJs.includes("setCapacityMode('week')") && evJs.includes("setCapacityMode('month')") &&
   evJs.includes('setCapacityMonth') && evJs.includes("'btn-cap-print'"));
+
+// ─── R. HIỆU SUẤT THAN HÓA + SẤY TÍNH TRONG CA (18/10/2026) ─────
+// 2 ca cùng ngày → mỗi ca 1 dòng, giờ là giờ THẬT của ca; KHÔNG chia Sấy 1/Sấy 2
+// và KHÔNG nhân đôi giờ (Σ giờ các ca = đúng giờ của ngày).
+const D2 = '2026-09-21';
+const wk2 = cap.capWeekKeyOf(D2);
+state.hrShifts = [{
+  id: 'Xưởng 2', type: 'lamca',
+  shifts: [{ name: 'Ca ngày', start: '07:00', end: '19:00' }, { name: 'Ca đêm', start: '19:00', end: '07:00' }]
+}];
+state.hrWorkCalendar = {};
+state.hrPositions = [{ id: 'pth', name: 'Than hóa', department: 'Xưởng 2' }];
+state.hrEmployees = [{ id: 'e1', name: 'Nguyễn Văn A' }, { id: 'e2', name: 'Trần Thị B' }];
+state.hrAssignments = [
+  { id: 'ta1', date: D2, department: 'Xưởng 2', positionId: 'pth', employeeId: 'e1', start: '07:00', end: '19:00', shiftIdx: 0 },
+  { id: 'ta2', date: D2, department: 'Xưởng 2', positionId: 'pth', employeeId: 'e2', start: '19:00', end: '07:00', shiftIdx: 1 }
+];
+state.batches = [
+  { id: 'sl1', code: 'SL-1', date: D2, stage: 'say1', quantity: 1000, volume: 4, length: 1250, width: 18, thickness: 7, sayCharges: { say1: 111 }, sayShift: { say1: 0 } },
+  { id: 'sl2', code: 'SL-2', date: D2, stage: 'say1', quantity: 500, volume: 2, length: 1250, width: 18, thickness: 9, sayCharges: { say1: 222 }, sayShift: { say1: 1 } }
+];
+state.x2SayIncidents = {};
+state.x2SayTimes = {};
+const sayWeek2 = cap.capStagePeriodRow(saySt, wk2, 'week');
+check('CA (Tổng hợp): 2 ca cùng ngày → 2 DÒNG (ngày, ca) — KHÔNG tách Sấy 1 / Sấy 2',
+  sayWeek2.days.length === 2 && sayWeek2.days.map(d => d.shiftIdx).join(',') === '0,1');
+check('CA (Tổng hợp): giờ từng ca là GIỜ THẬT (ca ngày 10,5h · ca đêm 11h) — Σ 21,5h = giờ ngày (KHÔNG nhân đôi)',
+  approx(sayWeek2.days[0].hours, 10.5) && approx(sayWeek2.days[1].hours, 11) && approx(sayWeek2.hours, 21.5));
+check('CA (Tổng hợp): hiệu suất kỳ = Σ giờ cần (3,5h) ÷ Σ giờ thực (21,5h) ≈ 16,3%',
+  approx(sayWeek2.days.reduce((a, d) => a + d.need, 0), 3.5) && approx(sayWeek2.eff, (3.5 / 21.5) * 100, 1e-4));
+check('CA (Tổng hợp): hiệu suất TỪNG CA = giờ cần của ca ÷ giờ thực của ca (1,75 ÷ 10,5 ≈ 16,7%)',
+  approx((sayWeek2.days[0].need / (sayWeek2.days[0].hours - sayWeek2.days[0].incident)) * 100, (1.75 / 10.5) * 100, 1e-4));
+check('CA (Tổng hợp): m³ của ca = m³ THẬT của các lô thuộc ca đó',
+  approx(sayWeek2.days[0].qty, 4) && approx(sayWeek2.days[1].qty, 2));
+cap.setCapacityView('table');
+cap.setCapacityWeek(wk2);
+cap.toggleCapacityWeekOpen(wk2);
+cap.toggleCapacityStageDays('say');
+const capTbodyCa = document.getElementById('capacity-week-rows').innerHTML;
+check('CA (Tổng hợp): tầng NGÀY gắn CHIP CA cho từng dòng (data-shift-idx)',
+  capTbodyCa.includes('x2-day-shift-chip') && capTbodyCa.includes('data-shift-idx="1"'));
+check('CA (Tổng hợp): cột Định mức của dòng gộp ghi rõ CẢ 2 công đoạn sấy (S1 · S2), KHÔNG phải 0 m³/h',
+  capTbodyCa.includes('S1 ') && capTbodyCa.includes('S2 ') && !capTbodyCa.includes('÷ ĐM 0'));
 
 // ─── Tổng kết ───────────────────────────────────────────────────
 console.log(`\nKết quả: ${pass} PASS / ${fail} FAIL`);

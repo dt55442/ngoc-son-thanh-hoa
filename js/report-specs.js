@@ -18,7 +18,7 @@ export const REPORT_GROUPS = [
   { id: 'hr',        label: 'Nhân Sự',     short: 'NS' }
 ];
 
-// 13 thẻ Xưởng 2 — id nguồn PHẢI khớp X2_EXPORT_SOURCES (js/export-xlsx.js)
+// 14 thẻ Xưởng 2 — id nguồn PHẢI khớp X2_EXPORT_SOURCES (js/export-xlsx.js)
 const X2_REPORTS = [
   { id: 'batch',   label: 'Lô nan (Than Hóa + Sấy)',        cardId: 'x2-than-hoa-card' },
   { id: 'boluong', label: 'Bốc Luồng',                      cardId: 'x2-bo-luong-card' },
@@ -31,6 +31,7 @@ const X2_REPORTS = [
   { id: 'catvan',  label: 'Cắt Ván (Cắt ván + Xẻ thanh)',   cardId: 'x2-cat-van-card' },
   { id: 'baovan',  label: 'Bào Ván (Bào + Chà thùng)',      cardId: 'x2-bao-van-card' },
   { id: 'hotro',   label: 'Hỗ Trợ + Công Đoạn Lẻ',          cardId: 'x2-ho-tro-card' },
+  { id: 'phupham', label: 'Phụ Phẩm & Băm (bán / tiêu hủy)', cardId: 'x2-phu-pham-card' },
   { id: 'kho',     label: 'Kho Nan (Tồn · Nhập / Xuất / Phiếu)', cardId: 'x2-kho-card' },
   { id: 'epvan',   label: 'Ép Ván',                         cardId: 'x2-ep-van-card' }
 ];
@@ -50,6 +51,10 @@ const X1_REPORTS = [
 export const REPORT_SPECS = [
   // ── XƯỞNG 2 ───────────────────────────────────────────────────
   ...X2_REPORTS.map(r => ({ ...r, group: 'x2', source: r.id, filters: ['period'], code: `X2_${r.id}` })),
+  { id: 'x2-balance', group: 'x2', label: 'Cân Đối Khối Lượng Theo Tháng',
+    kind: 'massBalance', filters: ['period'], code: 'X2_CanDoiKhoiLuong' },
+  { id: 'x2-costing', group: 'x2', label: 'Giá Thành 1 KG Ống Đạt (theo tháng)',
+    kind: 'costing', filters: ['period'], code: 'X2_GiaThanhOngDat' },
   // ── XƯỞNG 1 ───────────────────────────────────────────────────
   ...X1_REPORTS.map(r => ({ ...r, group: 'x1', source: r.id, filters: ['period'], code: `X1_${r.id}` })),
 

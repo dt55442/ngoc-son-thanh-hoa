@@ -18,6 +18,7 @@ import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilter
 import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
+import { loadX2PhuPham, loadX2Stocktakes, loadX2YieldRates } from './x2-phu-pham.js'; // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ
 import { loadSuppliers } from './suppliers.js';
 import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, baoTinhUsedLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan, loadXuong2CatVan, loadX2CatVanRates, loadX2CatVanSpan, loadXuong2BaoVan, loadX2BaoVanRates, loadX2BaoVanSpan, loadXuong2HoTro } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
@@ -114,6 +115,9 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2EpVanRates(); // Định mức công suất ÉP VÁN theo tháng (m³/giờ) — thẻ Ép Ván
     loadX2LotLocations(); // Vị trí sấy khai báo thêm ngoài LS1..LS15 (Than Hóa + Sấy)
     loadKhoNotes(); // PHIẾU KHO (xuất / tiêu hủy / tái chế) + công tắc hiện lô đã xuất hết
+    loadX2PhuPham(); // PHỤ PHẨM & BĂM (bán / tiêu hủy — kg cân thực + đơn giá)
+    loadX2Stocktakes(); // KIỂM KÊ BÃI (điều chỉnh tồn nhóm)
+    loadX2YieldRates(); // ĐỊNH MỨC TỶ LỆ thu hồi (%)
     loadX2SayRates(); // Định mức THỜI GIAN THAN HÓA (phút/m³) theo tháng + công đoạn sấy
     loadX2SayTimes(); // Số lần than hóa THẬT theo nhóm (ngày + công đoạn sấy của thẻ Than Hóa + Sấy)
     loadX2SayIncidents(); // Giờ SỰ CỐ CHO PHÉP theo ngày (tính Hiệu suất ngày than hóa)

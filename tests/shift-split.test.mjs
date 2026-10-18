@@ -311,7 +311,7 @@ check('I3: 4 thẻ ngày 1 công đoạn + 3 thẻ ĐÃ TÁCH CA (Bổ Ống/Bà
 check('I4: press.js + qc-final.js dùng CHUNG helper (không copy HTML/CSS)',
   pSrc.includes('shiftBreakdownHtml') && pSrc.includes('epVanShiftGroups') &&
   qSrc.includes('shiftBreakdownHtml') && qSrc.includes('qcShiftGroups'));
-check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v273'));
+check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v279'));
 
 // ═══ J. GIAI ĐOẠN 2 — NHẬP SẢN LƯỢNG RIÊNG THEO CA ═══════════════════════
 // (Bổ Ống · Chạy Máy Bào Thô · Chọn Nan Thô · Than Hóa + Sấy)
@@ -421,6 +421,34 @@ check('J18: batch-modals ghi CA (sayShift) ở CẢ 5 nhánh lưu lô (4 gán kh
 check('J19: CSS có chip ca / chip so sánh / cảnh báo lệch ca / dòng ca Than Hóa',
   cssSrc.includes('.x2-day-shift-chip') && cssSrc.includes('.x2-shift-cmp') &&
   cssSrc.includes('.x2-shift-cross') && cssSrc.includes('.x2-say-shift-row'));
+
+// ── J20. KHÔNG CHIA HIỆU SUẤT THEO SẤY 1 / SẤY 2 — GỘP TRONG CA (18/10/2026) ──
+// Thêm 1 lô vào Sấy 2 CÙNG NGÀY, CÙNG CA 1 → ca 1 phải gộp cả 2 công đoạn sấy.
+state.batches.push({
+  id: 'B3', code: 'L3', stage: 'say2', date: '2026-10-04',
+  length: 1250, width: 18, thickness: 9, quantity: 400, volume: 0.05,
+  useFor: 'Ván', location: 'LS1',
+  stageHistory: [{ stage: 'say2', date: DAY }],
+  sayCharges: { say2: 333 }, sayShift: { say2: 0 }, createdAt: '2026-10-05T04:00:00.000Z'
+});
+const sayDay2 = x2.sayChargeRows().find(r => r.date === DAY);
+const perf2 = x2.sayShiftPerfOf(sayDay2);
+check('J20: hiệu suất gộp TRONG CA — ca 1 gồm CẢ Sấy 1 và Sấy 2 (1 lần mỗi công đoạn)',
+  perf2.length === 2 && perf2[0].stageTurns.say1 === 1 && perf2[0].stageTurns.say2 === 1);
+check('J21: giờ cần của ca = Σ phút của CẢ 2 công đoạn (ca 1: 105\' + 50\' = 2,583h)',
+  Math.abs(perf2[0].need - (155 / 60)) < 1e-6);
+x2.renderX2SayStats();
+const sayHtml2 = els.get('x2-say-day-rows').innerHTML;
+check('J22: bảng chỉ có 1 dòng/ca (KHÔNG lặp theo Sấy 1 / Sấy 2) + ghi rõ thành phần ca',
+  (sayHtml2.match(/<tr class="x2-say-shift-row"/g) || []).length === 2 &&
+  sayHtml2.includes('Sấy 1: 1') && sayHtml2.includes('Sấy 2: 1'));
+check('J23: dòng ca có NHÃN "So ca kia" (▲/▼) giống thẻ Chọn Nan Thô',
+  sayHtml2.includes('x2-shift-cmp') && sayHtml2.includes('So ca kia'));
+const pct0 = (perf2[0].need / (perf2[0].hours - perf2[0].incH)) * 100;
+const pct1 = (perf2[1].need / (perf2[1].hours - perf2[1].incH)) * 100;
+const deltaTxt = Math.abs(pct0 - pct1).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+check(`J24: con số so sánh đúng ĐIỂM % (${pct0.toFixed(1)}% ↔ ${pct1.toFixed(1)}% → ▲/▼ ${deltaTxt}%)`,
+  sayHtml2.includes(`▲ ${deltaTxt}%`) && sayHtml2.includes(`▼ ${deltaTxt}%`));
 
 console.log(`\n=== TÁCH DỮ LIỆU THEO CA: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

@@ -14,6 +14,7 @@ import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, computeAttendanceStats, comp
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
+import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from './x2-phu-pham.js';
 
   // ─── CUSTOM XLSX EXPORT ───────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════
@@ -36,6 +37,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
     { id: 'catvan',  label: 'Cắt Ván (Cắt ván + Xẻ thanh)' },
     { id: 'baovan',  label: 'Bào Ván (Bào + Chà thùng)' },
     { id: 'hotro',   label: 'Hỗ Trợ + Công Đoạn Lẻ' },
+    { id: 'phupham', label: 'Phụ Phẩm & Băm (bán / tiêu hủy)' },
     // ── XƯỞNG 1 (05–17/10/2026): 8 công đoạn — trước đây bấm xuất bị rơi về
     //    nguồn 'batch' (Lô nan) nên ra SAI vùng dữ liệu.
     { id: 'x1catong',   label: 'Xưởng 1 — Cắt Ống' },
@@ -80,7 +82,8 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       bullig:  () => (state.xuong2BulligRecords || []).map(r => ({ rec: r, d: bulligDisplay(r), date: r.date || '' })),
       catvan:  () => (state.xuong2CatVanRecords || []).map(r => ({ rec: r, d: catVanDisplay(r), date: r.date || '' })),
       baovan:  () => (state.xuong2BaoVanRecords || []).map(r => ({ rec: r, d: baoVanDisplay(r), date: r.date || '' })),
-      hotro:   () => (state.xuong2HoTroRecords || []).map(r => ({ rec: r, d: hoTroDisplay(r), date: r.date || '' }))
+      hotro:   () => (state.xuong2HoTroRecords || []).map(r => ({ rec: r, d: hoTroDisplay(r), date: r.date || '' })),
+      phupham: () => x2PhuPhamRows().map(r => ({ rec: r.rec || r, d: r, date: r.date || '' }))
     };
     const fn = map[source];
     return fn ? fn() : [];
@@ -837,38 +840,49 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
       });
       sumNote = `Tổng ${x2FmtKg(qty)} thanh`;
     } else if (source === 'boluong') {
-      head = ['Stt', 'Ngày Bốc', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Mã NCC', 'KL Lô Đầu Vào (kg)', 'KL Thực Tế (kg)', 'Còn Lại Của Lô (kg)', 'Người Bốc', 'Giờ Bốc HC', 'Giờ Bốc TC'];
+      head = ['Stt', 'Ngày Bốc', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Mã NCC', 'KL Lô Đầu Vào (kg)', 'KL Thực Tế (kg)', 'Còn Lại Của Lô (kg)', 'Số Xe', 'KL/Xe (kg)', 'Ngọn + Hao Hụt Ước Tính (kg)', 'Người Bốc', 'Giờ Bốc HC', 'Giờ Bốc TC'];
       const list = x2ExportRowsOf('boluong').filter(x => x2InRange(x.date, from, to))
         .sort((a, b) => String(a.date).localeCompare(String(b.date)));
-      let bq = 0;
+      let bq = 0, bngon = 0;
       list.forEach((x, i) => {
-        const d = x.d; bq += d.qty || 0;
+        const d = x.d; bq += d.qty || 0; bngon += d.ngonKg || 0;
         body.push([i + 1, formatDateDDMMYY(d.date), d.materialType || '', d.supplier || '', d.supplierCode || '',
-          x2FmtKg(d.inputWeight), x2FmtKg(d.qty), x2FmtKg(d.lotRest),
+          x2FmtKg(d.inputWeight), x2FmtKg(d.qty), d.poolMode ? '—' : x2FmtKg(d.lotRest),
+          d.poolMode ? x2FmtKg(d.carts) : '—', d.poolMode ? x2FmtKg(d.kgPerCart) : '—', d.poolMode ? x2FmtKg(d.ngonKg) : '—',
           x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
       });
-      sumNote = `Tổng KL thực tế ${x2FmtKg(bq)} kg`;
+      sumNote = `Tổng KL thực tế ${x2FmtKg(bq)} kg` + (bngon ? ` · ngọn + hao hụt ước tính ${x2FmtKg(bngon)} kg` : '');
     } else if (source === 'cut') {
-      head = ['Stt', 'Ngày Cắt', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Mã NCC', 'KL Đầu Vào (kg)', 'KL Ống Luồng (kg)', 'KL Ngọn/Ống Loại (kg)', 'KL Củi Đốt (kg)', 'KL Cây Loại (kg)', 'Tỷ Lệ QĐ (%)', 'Người Cắt', 'Giờ Cắt HC', 'Giờ Cắt TC', 'Ghi Chú'];
+      head = ['Stt', 'Ngày Cắt', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Mã NCC', 'Loại Đầu Vào', 'Số Xe',
+        'KL Đầu Vào (kg)', 'KL Ống Đạt (kg)', 'KL Ống Lỗi (kg)', 'KL Mắt Luồng (kg)',
+        'KL Ngọn/Ống Loại (kg)', 'KL Củi Đốt (kg)', 'KL Cây Loại (kg)', 'Tỷ Lệ QĐ (%)',
+        'Hướng Ống Lỗi', 'Người Cắt', 'Giờ Cắt HC', 'Giờ Cắt TC', 'Ghi Chú'];
       const list = x2ExportRowsOf('cut').filter(x => x2InRange(x.date, from, to))
         .sort((a, b) => String(a.date).localeCompare(String(b.date)));
-      let w = 0, ong = 0;
+      let w = 0, ong = 0, loi = 0, mat = 0;
       list.forEach((x, i) => {
         const d = x.d; w += d.inputWeight || 0; ong += d.klOngLuong || 0;
+        loi += d.klOngLoi || 0; mat += d.klMatLuong || 0;
+        const routeTxt = d.rejectRoute === 'tra_ncc' ? 'Trả NCC' : d.rejectRoute === 'bam' ? 'Băm' : '—';
         body.push([i + 1, formatDateDDMMYY(d.date), d.materialType || '', d.supplier || '', d.supplierCode || '',
-          x2FmtKg(d.inputWeight), x2FmtKg(d.klOngLuong), x2FmtKg(d.klNgonOngLoai), x2FmtKg(d.klCuiDot), x2FmtKg(d.klCayLoai),
-          d.ratio == null ? '—' : x2FmtSo(d.ratio), x2WorkerText(d.cutterRows), x2FmtSo(d.cutHoursHC), x2FmtSo(d.cutHoursTC), x.rec.note || '']);
+          d.inputKindLabel || 'Lô cũ', d.carts > 0 ? x2FmtKg(d.carts) : '—',
+          x2FmtKg(d.inputWeight), x2FmtKg(d.klOngLuong), x2FmtKg(d.klOngLoi), x2FmtKg(d.klMatLuong),
+          x2FmtKg(d.klNgonOngLoai), x2FmtKg(d.klCuiDot), x2FmtKg(d.klCayLoai),
+          d.ratio == null ? '—' : x2FmtSo(d.ratio), routeTxt,
+          x2WorkerText(d.cutterRows), x2FmtSo(d.cutHoursHC), x2FmtSo(d.cutHoursTC), x.rec.note || '']);
       });
-      sumNote = `Tổng KL đầu vào ${x2FmtKg(w)} kg · KL ống luồng ${x2FmtKg(ong)} kg`;
+      sumNote = `Tổng KL đầu vào ${x2FmtKg(w)} kg · ống đạt ${x2FmtKg(ong)} kg` +
+        (loi || mat ? ` · ống lỗi ${x2FmtKg(loi)} kg · mắt luồng ${x2FmtKg(mat)} kg` : '');
     } else if (source === 'boong') {
-      head = ['Stt', 'Ngày Bổ', 'Ngày Cắt', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'KL Ống Của Lô (kg)', 'KL Ống Đem Bổ (kg)', 'KL Ống Bổ Đạt (kg)', 'KL Ống Loại (kg)', 'Tỷ Lệ Đạt (%)', 'Người Bổ', 'Giờ HC', 'Giờ TC'];
+      head = ['Stt', 'Ngày Bổ', 'Ngày Cắt', 'Nguồn', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'KL Ống Của Lô (kg)', 'KL Ống Đem Bổ (kg)', 'KL Ống Bổ Đạt (kg)', 'KL Ống Loại (kg)', 'Tỷ Lệ Đạt (%)', 'Người Bổ', 'Giờ HC', 'Giờ TC'];
       const list = x2ExportRowsOf('boong').filter(x => x2InRange(x.date, from, to))
         .sort((a, b) => String(a.date).localeCompare(String(b.date)));
       let inp = 0, ok = 0;
       list.forEach((x, i) => {
         const d = x.d; inp += d.inputOng || 0; ok += d.klOngBo || 0;
-        body.push([i + 1, formatDateDDMMYY(d.date), formatDateDDMMYY(d.cutDate), d.materialType || '', d.supplier || '',
-          x2FmtKg(d.lotOng), x2FmtKg(d.inputOng), x2FmtKg(d.klOngBo), x2FmtKg(d.klOngLoai),
+        body.push([i + 1, formatDateDDMMYY(d.date), d.poolMode ? '—' : formatDateDDMMYY(d.cutDate),
+          d.poolMode ? 'Chỉ khối lượng' : 'Lô cũ', d.materialType || '', d.supplier || '',
+          d.poolMode ? '—' : x2FmtKg(d.lotOng), x2FmtKg(d.inputOng), x2FmtKg(d.klOngBo), x2FmtKg(d.klOngLoai),
           d.ratio == null ? '—' : x2FmtSo(d.ratio), x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
       });
       sumNote = `Tổng ống đem bổ ${x2FmtKg(inp)} kg · ống bổ đạt ${x2FmtKg(ok)} kg`;
@@ -998,6 +1012,21 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisp
           d.workHoursHC != null ? x2FmtSo(d.workHoursHC) : '', d.workHoursTC != null ? x2FmtSo(d.workHoursTC) : '']);
       });
       sumNote = `Tổng ${nViec} công việc hỗ trợ / công đoạn lẻ`;
+    } else if (source === 'phupham') {
+      // PHỤ PHẨM & BĂM — phần NHẬP ước tính (từ Bốc/Cắt) + phần BÁN/TIÊU HỦY
+      head = ['Stt', 'Ngày', 'Loại Dòng', 'Nguồn', 'Hình Thức', 'KL (kg)', 'Đơn Giá (đ/kg)', 'Thành Tiền (đ)', 'Người Mua / NCC', 'Nguồn Dữ Liệu', 'Ghi Chú'];
+      const list = x2PhuPhamRows(from, to).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      let inKg = 0, outKg = 0, revenue = 0;
+      list.forEach((d, i) => {
+        const dirTxt = d.dir === 'in' ? 'Nhập ước tính' : (PP_OUT_TYPE_LABEL[d.outType] || 'Bán');
+        if (d.dir === 'in') inKg += d.kg; else { outKg += d.kg; if (d.outType === 'sale') revenue += d.amount; }
+        body.push([i + 1, formatDateDDMMYY(d.date), dirTxt, PP_KIND_SHORT[d.kind] || d.kind || '',
+          d.dir === 'in' ? '' : (PP_FORM_LABEL[d.form] || ''),
+          x2FmtKg(d.kg), d.dir === 'in' ? '' : x2FmtKg(d.price), d.dir === 'in' ? '' : x2FmtKg(d.amount),
+          d.dir === 'in' ? '' : (d.party || ''), d.dir === 'in' ? (d.ref || '') : 'Người dùng ghi',
+          d.note || '']);
+      });
+      sumNote = `Nhập ước tính ${x2FmtKg(inKg)} kg · bán/tiêu hủy ${x2FmtKg(outKg)} kg · doanh thu ${x2FmtKg(revenue)} đ`;
     } else if (source === 'kho') {
       // KHO NAN — Sổ nhập/xuất (phiếu ĐÃ DUYỆT = số chính thức) + phiếu xử lý lỗi
       head = ['Stt', 'Loại Dòng', 'Ngày', 'Lần / Mục Đích', 'Mã Lô', 'K.Thước (mm)', 'Loại', 'Dùng Cho', 'Vị Trí', 'Số Thanh', 'm³', 'Ghi Chú / Nguồn'];
@@ -2701,5 +2730,6 @@ export {
   refreshExportPreview,
   saveCustomCharts,
   setExportPreviewColWidth,
-  syncHrXlsxCardUI
+  syncHrXlsxCardUI,
+  X2_EXPORT_SOURCES
 };

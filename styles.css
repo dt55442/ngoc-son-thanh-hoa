@@ -5760,8 +5760,40 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 .x2-form-row .form-group { margin: 0; min-width: 0; }
 .x2-form-row .form-group input,
 .x2-form-row .form-group select { width: 100%; }
+
+/* Ô SỐ GỌN: tối đa 6 chữ số (999.999) — không cần rộng, số căn phải cho dễ so.
+   Desktop: 128px; điện thoại: 2 ô / hàng (xem media bên dưới). */
+.x2-form-row .form-group.x2-num6 { flex: 0 0 128px; }
+.x2-form-row .form-group.x2-num6 input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ── ĐIỆN THOẠI: GIỮ HÀNG NGANG + TỰ XUỐNG DÒNG (KHÔNG dùng column) ──
+   LỖI CŨ: `flex-direction: column` khiến các inline `flex:0 0 155px` (ô Ngày)
+   trở thành CHIỀU CAO 155px ⇒ mỗi ô cách nhau cả khoảng trắng lớn.
+   Nay: mỗi ô mặc định 100% bề ngang, riêng ô `.x2-num6` chia 2 cột. */
 @media (max-width: 640px) {
-  .x2-form-row { flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .x2-form-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .x2-form-row > .form-group,
+  .x2-form-row > .x2-form-row {
+    flex: 1 1 100% !important;
+    width: 100%;
+    max-width: 100%;
+  }
+  .x2-form-row > .form-group.x2-num6 {
+    flex: 1 1 calc(50% - 4px) !important;
+    width: calc(50% - 4px);
+    max-width: calc(50% - 4px);
+  }
+  .x2-form-row .form-group { gap: 4px; }
+  .x2-cut-form-wrap { padding: 10px 12px; }
 }
 
 /* ── BẢNG LỊCH SỬ CẮT/CHỌN: viền riêng tách khỏi form + cuộn + thu gọn ── */
@@ -10861,9 +10893,18 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 .x2-say-shift-note { font-size: 0.7rem; color: var(--text-muted); font-style: italic; }
 .x2-say-shift-perf { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; white-space: nowrap; }
 .x2-say-shift-perf > span { display: inline-flex; align-items: center; gap: 4px; }
+/* 18/10/2026 — HIỆU SUẤT TÍNH TRONG CA (không chia Sấy 1 / Sấy 2):
+   chip "So ca kia" nằm chung ô CS/HS của dòng ca; chip CA trong ô "Lần" gọn lại
+   để không tràn cột. Dòng NGÀY ở bảng Tổng hợp Công suất cũng gắn chip ca. */
+.x2-say-shift-row .x2-shift-cmp { font-size: 0.68rem; padding: 1px 6px; }
+.x2-say-shift-row .x2-day-shift-chip { font-size: 0.7rem; }
+.cap-day-row .x2-day-shift-chip { font-size: 0.66rem; padding: 0 6px; margin-left: 6px; vertical-align: middle; }
+.cap-day-row .x2-day-shift-chip svg { width: 11px; height: 11px; }
 @media (max-width: 639.98px) {
   .x2-say-shift-row > td { font-size: 0.7rem; }
   .x2-say-shift-perf { gap: 2px 6px; }
+  .x2-say-shift-row .x2-shift-cmp { font-size: 0.64rem; }
+  .cap-day-row .x2-day-shift-chip { margin-left: 4px; }
 }
 @media (max-width: 639.98px) {
   .x2-shift-field { flex: 1 1 100% !important; }
@@ -11395,6 +11436,7 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   .kho-warn-body { max-height: 60dvh; }
   .kho-warn-row { padding: 8px; }
   .kho-warn-actions .btn { min-height: 42px; font-size: 0.8rem; }
+}
 
 /* ======================================================= */
 /* TRUNG TÂM XUẤT EXCEL (modal-report-center)               */
@@ -11458,4 +11500,242 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   #modal-report-center .modal-footer .btn { flex: 1 1 46%; min-height: 44px; }
 }
 
+/* ======================================================= */
+/* SỔ NHÓM KHỐI LƯỢNG XƯỞNG 2 (18/10/2026)                  */
+/*   Bãi tập kết trộn lô → bỏ chọn lô: PHIẾU CÂN CHUYẾN →   */
+/*   XE BỐC (~600 kg) → NHÓM ỐNG ĐẠT CHỜ BỔ.                */
+/*   Dùng cho 3 thẻ: Bốc Luồng · Cắt Chọn · Bổ Ống.         */
+/* ======================================================= */
+.x2-field-help {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface-alt);
+  color: var(--text-muted); font-size: 0.62rem; font-weight: 800;
+  cursor: help; vertical-align: middle;
 }
+
+/* Công tắc chọn loại đầu vào Cắt Chọn */
+.x2-kind-switch {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-bottom: 12px; padding: 8px 10px;
+  border: 1px dashed var(--border); border-radius: 10px;
+  background: var(--surface-alt);
+}
+.x2-kind-label { font-size: 0.76rem; font-weight: 800; color: var(--text-muted); }
+.x2-kind-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 0.78rem; font-weight: 700;
+  touch-action: manipulation;
+}
+.x2-kind-btn svg { width: 15px; height: 15px; }
+.x2-kind-btn.is-on {
+  background: var(--primary); border-color: var(--primary); color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Danh sách PHIẾU CÂN (chọn nhiều) */
+.x2-ticket-picker {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 250px; overflow-y: auto; overscroll-behavior: contain;
+  padding: 6px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-alt);
+}
+.x2-ticket-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer;
+}
+.x2-ticket-row.is-picked {
+  border-color: var(--primary);
+  background: rgba(124, 58, 237, 0.08);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.x2-ticket-row > input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; }
+.x2-ticket-pick {
+  display: flex; align-items: center; gap: 10px;
+  flex: 1 1 auto; min-width: 0; cursor: pointer;
+}
+.x2-ticket-pick > input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; }
+.x2-ticket-main { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.x2-ticket-main strong { font-size: 0.8rem; }
+.x2-ticket-main em { font-style: normal; font-size: 0.72rem; color: var(--text-muted); }
+.x2-ticket-kg {
+  flex: 0 0 108px; width: 108px; text-align: right;
+  padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.x2-ticket-kg:disabled { opacity: 0.45; }
+.x2-ticket-empty {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px; border-radius: 8px;
+  background: var(--surface); color: var(--text-muted);
+  font-size: 0.78rem; font-weight: 600;
+}
+
+/* ── NÚT CHỌN PHIẾU CÂN + SHEET (dropdown desktop / bottom-sheet điện thoại) ──
+   Thay danh sách inline luôn mở: bấm nút → mở panel, chọn xong bấm "Xong"
+   (hoặc chạm ra ngoài / Esc) → THU GỌN; nút hiện "N phiếu · X kg". */
+.x2-ticket-field { min-width: 0; }
+.x2-ticket-trigger {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; min-height: 44px; padding: 7px 12px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.x2-ticket-trigger:hover { border-color: var(--primary); }
+.x2-ticket-trigger:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.x2-ticket-trigger-text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.x2-ticket-trigger-text strong {
+  font-size: 0.82rem; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.x2-ticket-trigger-text small {
+  font-size: 0.7rem; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.x2-ticket-trigger > svg { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-muted); transition: transform 0.15s; }
+.x2-ticket-trigger[aria-expanded="true"] > svg { transform: rotate(180deg); }
+
+.x2-ticket-sheet[hidden] { display: none !important; }
+.x2-ticket-sheet {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.24);
+  overflow: auto;
+}
+.x2-ticket-sheet-head {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface-alt);
+}
+.x2-ticket-sheet-head strong { font-size: 0.82rem; }
+.x2-ticket-sheet .x2-ticket-picker {
+  max-height: none; overflow: visible;
+  border: none; border-radius: 0; padding: 8px; background: transparent;
+}
+.x2-ticket-sheet .x2-ticket-row { border: 1px solid var(--border); }
+
+/* Dòng TỰ TÍNH của sổ nhóm (phiếu · xe · ngọn/hao hụt · ống đạt …) */
+.x2-pool-calc {
+  display: flex; flex-wrap: wrap; gap: 8px 16px;
+  margin-top: 8px; padding: 8px 10px;
+  border-radius: 8px; background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+}
+.x2-pool-calc-item { font-size: 0.75rem; color: var(--text); }
+.x2-pool-calc-label { color: var(--text-muted); font-weight: 700; margin-right: 4px; }
+.x2-pool-calc-sub { font-style: normal; font-size: 0.7rem; color: var(--text-muted); margin-left: 4px; }
+.x2-pool-calc-item.is-bad strong { color: #dc2626; }
+
+/* Ghi chú "chỉ khối lượng — không truy vết lô" ở thẻ Bổ Ống */
+.x2-pool-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-bottom: 12px; padding: 8px 10px;
+  border-radius: 8px; border-left: 3px solid #0ea5e9;
+  background: rgba(14, 165, 233, 0.10);
+  color: var(--text); font-size: 0.76rem; line-height: 1.5;
+}
+.x2-pool-note svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; color: #0284c7; }
+
+/* Thanh tồn nhiều đoạn (Cắt Chọn: xe chưa cắt + luồng ống) */
+.x2-stock-seg {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-left: 14px; font-size: 0.78rem;
+}
+.x2-stock-seg svg { width: 15px; height: 15px; }
+.x2-stock-sub { font-style: normal; font-size: 0.72rem; color: var(--text-muted); margin-left: 4px; }
+
+@media (max-width: 639.98px) {
+  .x2-kind-switch { padding: 8px; }
+  .x2-kind-btn { flex: 1 1 46%; justify-content: center; min-height: 44px; }
+  .x2-kind-label { flex: 1 1 100%; }
+  .x2-ticket-row { flex-wrap: wrap; }
+  .x2-ticket-pick { flex: 1 1 100%; }
+  .x2-ticket-main { flex: 1 1 calc(100% - 34px); }
+  .x2-ticket-kg { flex: 1 1 100%; width: 100%; font-size: 16px; }
+  .x2-pool-calc { flex-direction: column; gap: 4px; }
+  .x2-stock-seg { margin-left: 0; flex: 1 1 100%; }
+
+  /* SHEET chọn phiếu cân = BOTTOM-SHEET (trượt từ đáy lên, full bề ngang) */
+  .x2-ticket-sheet {
+    position: absolute !important;
+    left: 8px !important; right: 8px !important;
+    bottom: 8px !important; top: auto !important;
+    width: auto !important; max-height: 68vh !important;
+    border-radius: 16px;
+    z-index: 260 !important;
+  }
+  .x2-ticket-sheet::before {
+    content: ''; display: block; width: 36px; height: 4px; border-radius: 2px;
+    background: var(--border); margin: 6px auto 0;
+  }
+  .x2-ticket-sheet .x2-ticket-row { flex-wrap: nowrap; gap: 6px; padding: 6px 8px; }
+  .x2-ticket-sheet .x2-ticket-pick { flex: 1 1 auto; min-width: 0; }
+  .x2-ticket-sheet .x2-ticket-main { flex: 1 1 auto; min-width: 0; }
+  .x2-ticket-sheet .x2-ticket-main em { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .x2-ticket-sheet .x2-ticket-kg { flex: 0 0 92px; width: 92px; padding: 6px; }
+  .x2-ticket-sheet-head { border-radius: 16px 16px 0 0; }
+}
+
+
+/* ======================================================= */
+/* THẺ PHỤ PHẨM & BĂM + CÂN ĐỐI + KIỂM KÊ (18/10/2026)     */
+/* ======================================================= */
+.x2-pp-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 0.78rem; }
+.x2-pp-toolbar label { font-weight: 700; color: var(--text-muted); }
+.x2-pp-toolbar input[type="month"] {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-weight: 700;
+}
+.x2-pp-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-left: 10px; padding: 2px 9px; border-radius: 999px;
+  background: var(--surface-alt); border: 1px solid var(--border); font-size: 0.74rem;
+}
+.x2-pp-chip svg { width: 13px; height: 13px; }
+.x2-pp-adj { margin-left: 10px; font-size: 0.74rem; color: #b45309; font-weight: 700; }
+.x2-pp-cost-head, .x2-pp-sub-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  margin: 14px 0 8px;
+}
+.x2-pp-cost-sub { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+.x2-pp-note { margin: 8px 0 0; font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+.x2-pp-warn {
+  margin-top: 8px; padding: 7px 10px; border-radius: 8px;
+  background: rgba(220, 38, 38, 0.10); border-left: 3px solid #dc2626;
+  color: #b91c1c; font-size: 0.74rem; font-weight: 700;
+}
+.x2-pp-form-box {
+  margin-top: 12px; padding: 10px; border-radius: 10px;
+  background: var(--surface-alt); border: 1px dashed var(--border);
+}
+.x2-pp-yield-row, .x2-pp-pool-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.x2-pp-yield-chip {
+  padding: 3px 9px; border-radius: 999px; font-size: 0.73rem;
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+.x2-pp-yield-chip em { font-style: normal; color: var(--text-muted); }
+.x2-pp-yield-chip.is-low { background: rgba(220, 38, 38, 0.10); border-color: #dc2626; color: #b91c1c; }
+.x2-pp-yield-chip.is-high { background: rgba(217, 119, 6, 0.12); border-color: #d97706; color: #92400e; }
+.x2-pp-pool-chip { padding: 3px 9px; border-radius: 8px; font-size: 0.73rem; background: var(--surface); border: 1px solid var(--border); }
+.x2-pp-dir { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; }
+.x2-pp-dir.in { background: rgba(217, 119, 6, 0.14); color: #92400e; }
+.x2-pp-dir.out { background: rgba(124, 58, 237, 0.14); color: #6d28d9; }
+
+@media (max-width: 639.98px) {
+  .x2-pp-toolbar { gap: 6px; }
+  .x2-pp-toolbar input[type="month"] { flex: 1 1 100%; font-size: 16px; }
+  .x2-pp-chip { margin-left: 0; }
+  .x2-pp-cost-head, .x2-pp-sub-head { flex-direction: column; gap: 2px; }
+  .x2-pp-form-box { padding: 8px; }
+  .x2-pp-yield-row, .x2-pp-pool-row { flex-direction: column; }
+}
+

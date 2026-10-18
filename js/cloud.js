@@ -5,7 +5,7 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditRate, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
@@ -936,6 +936,9 @@ import { showToast } from './utils.js';
       x2LotLocations: state.x2LotLocations || [],
       x2BaoThanhOutSizes: state.x2BaoThanhOutSizes || [],   // Cỡ đầu ra Bào thanh (thẻ Bào Tinh)
       khoNotes: state.khoNotes || [],
+      x2PhuPhamRecords: state.x2PhuPhamRecords || [],
+      x2Stocktakes: state.x2Stocktakes || [],
+      x2YieldRates: state.x2YieldRates || {},
       history: state.history || [],
       deletedIds: state.deletedIds || {},
       updatedBy: state.currentUser ? state.currentUser.email : 'unknown',
@@ -1055,6 +1058,9 @@ import { showToast } from './utils.js';
       x2LotLocations: obj.x2LotLocations || [],
       x2BaoThanhOutSizes: obj.x2BaoThanhOutSizes || [],   // Cỡ đầu ra Bào thanh (thẻ Bào Tinh)
       khoNotes: obj.khoNotes || [],
+      x2PhuPhamRecords: obj.x2PhuPhamRecords || [],
+      x2Stocktakes: obj.x2Stocktakes || [],
+      x2YieldRates: obj.x2YieldRates || {},
       history: obj.history || [],
       deletedIds: obj.deletedIds || {}
     });
@@ -1329,6 +1335,7 @@ import { showToast } from './utils.js';
     'x2SayRates',         // Thời gian 1 lần than hóa (phút/m³)
     'x2EpVanRates'        // Ép Ván (m³/h)
     , 'x1Rates'           // Xưởng 1: Cắt Ống · Sấy Sinh · Bốc (kg/h)
+    , 'x2YieldRates'      // Định mức TỶ LỆ thu hồi (%) — thẻ Phụ Phẩm & Cân Đối
   ]);
 
   // ─── CỜ "CÓ THAY ĐỔI CỤC BỘ CHƯA LÊN MÂY" (lưu xuống máy) ───────────
@@ -1540,6 +1547,16 @@ import { showToast } from './utils.js';
     if (remote.x2SayIncidents) state.x2SayIncidents = dict(state.x2SayIncidents || {}, remote.x2SayIncidents);
     // GIỜ SỰ CỐ CHO PHÉP theo (THẺ CÔNG ĐOẠN, NGÀY) — 7 thẻ Xưởng 2
     if (remote.x2StageIncidents) state.x2StageIncidents = dict(state.x2StageIncidents || {}, remote.x2StageIncidents);
+    // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ (thẻ x2-phu-pham-card)
+    if (remote.x2PhuPhamRecords) state.x2PhuPhamRecords = m(clean('x2PhuPhamRecords', state.x2PhuPhamRecords || []), clean('x2PhuPhamRecords', remote.x2PhuPhamRecords));
+    if (remote.x2Stocktakes) state.x2Stocktakes = m(clean('x2Stocktakes', state.x2Stocktakes || []), clean('x2Stocktakes', remote.x2Stocktakes));
+    if (remote.x2YieldRates) {
+      const src = remote.x2YieldRates || {};
+      state.x2YieldRates = state.x2YieldRates || {};
+      ['cay', 'ong'].forEach(k => {
+        if (src[k]) state.x2YieldRates[k] = dict(state.x2YieldRates[k] || {}, src[k]);
+      });
+    }
     // Định mức THỜI GIAN THAN HÓA theo tháng + công đoạn sấy (phút/m³)
     if (remote.x2SayRates) {
       const src = remote.x2SayRates || {};
@@ -1632,6 +1649,9 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_QC_FINAL_RATE, JSON.stringify(state.qcFinalRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_PRESS, JSON.stringify(state.qcPressLogs || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_KHO_NOTES, JSON.stringify(state.khoNotes || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_PHU_PHAM, JSON.stringify(state.x2PhuPhamRecords || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_STOCKTAKE, JSON.stringify(state.x2Stocktakes || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X2_YIELD_RATE, JSON.stringify(state.x2YieldRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_SUPPLIERS, JSON.stringify(state.suppliers || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_CAP_RATE, JSON.stringify(state.x2CapRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_BOLUONG_RATE, JSON.stringify(state.x2BoluongRates || {})); } catch (e) {}
@@ -1776,7 +1796,10 @@ import { showToast } from './utils.js';
     xuong2BulligRecords: 'Bullig (X2)',
     xuong2CatVanRecords: 'Cắt Ván (X2)',
     xuong2BaoVanRecords: 'Bào Ván (X2)',
-    xuong2HoTroRecords: 'Hỗ Trợ (X2)'
+    xuong2HoTroRecords: 'Hỗ Trợ (X2)',
+    x2PhuPhamRecords: 'Phụ phẩm & Băm (X2)',
+    x2Stocktakes: 'Kiểm kê bãi (X2)',
+    x2YieldRates: 'Định mức tỷ lệ (X2)'
   };
   function syncDomainLabel(k) { return SYNC_DOMAIN_LABELS[k] || k; }
   function renderSyncConflicts() {
@@ -2010,6 +2033,17 @@ import { showToast } from './utils.js';
       }
       // PHIẾU KHO: nhận theo mây khi tải về (gộp theo tombstone — không hồi sinh phiếu đã xóa)
       if (data.khoNotes) state.khoNotes = clean('khoNotes', data.khoNotes);
+      // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI (gộp theo tombstone) + ĐỊNH MỨC TỶ LỆ (mây thắng từng khóa)
+      if (data.x2PhuPhamRecords) state.x2PhuPhamRecords = clean('x2PhuPhamRecords', data.x2PhuPhamRecords);
+      if (data.x2Stocktakes) state.x2Stocktakes = clean('x2Stocktakes', data.x2Stocktakes);
+      if (data.x2YieldRates && typeof data.x2YieldRates === 'object' && !Array.isArray(data.x2YieldRates)) {
+        state.x2YieldRates = state.x2YieldRates || {};
+        ['cay', 'ong'].forEach(k => {
+          if (data.x2YieldRates[k] && typeof data.x2YieldRates[k] === 'object') {
+            state.x2YieldRates[k] = Object.assign({}, state.x2YieldRates[k] || {}, data.x2YieldRates[k]);
+          }
+        });
+      }
       if (data.qcKilnThresholds !== undefined && data.qcKilnThresholds && typeof data.qcKilnThresholds === 'object') {
         state.qcKilnThresholds = data.qcKilnThresholds;
       }

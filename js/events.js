@@ -19,6 +19,11 @@ import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, delet
 import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutSize, baoTinhInputPool, setBaoThanhInput, setBaoThanhOut, toggleBaoThanhInputPicker, toggleBaoThanhOutPicker, renderBaoThanhInputList, renderX2BaoThanhForm, openX2BaoTinhRateModal, closeX2BaoTinhRateModal, renderX2BaoTinhRateModal, handleX2BaoTinhRateAddMonth, handleX2BaoTinhRateRowSave, handleX2BaoTinhRateRowReset, setX2BaoTinhFilterMode, shiftX2BaoTinhFilter, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2Boluong, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, onChonNanInlineEdit, nanSay1UseOf, editXuong2Bullig, editXuong2Cut, editXuong2Boluong, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2BoluongRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, handleXuong2BoluongSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, onBulligGroupInput, renderX2BulligGroups, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BoluongRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, resetXuong2BoluongForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2BoluongTable, toggleX2HoTroTable, toggleX2KanbanBoard, handleXuong2HoTroSubmit, editXuong2HoTro, deleteXuong2HoTro, resetXuong2HoTroForm, fillXuong2HoTroWorkers, hoTroPickAll, hoTroPickNone, updateXuong2HoTroCalc, onSayTimesChange, onSayIncidentChange, onStageIncidentChange, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, baoThoLotSelectAll, baoThoLotSelectNone, X2_RATE_POPUPS, openX2RatePopup, closeX2RatePopup, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, updateXuong2BoluongLinked, x2BaoTinhTogglePicker, x2FloatHideAll, x2FloatMaybeClose, x2FloatRepositionAll, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame, setStageWs, toggleStageWs, handleX1CatOngSubmit, handleX1SaySinhSubmit, handleX1BocSubmit, editX1CatOng, editX1SaySinh, editX1Boc, deleteX1CatOng, deleteX1SaySinh, deleteX1Boc, resetX1CatOngForm, resetX1SaySinhForm, resetX1BocForm, x1CatOngSyncLinked, x1SaySinhSyncLinked, x1BocSyncLinked, x1CatOngCalc, x1SaySinhCalc, x1BocCalc, openX1RatePopup, closeX1RatePopup, renderX1RatePopup, handleX1RateSave, handleX1RateReset,
   X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
   syncX2ShiftField, isBoOngPos, isBaoThoPos, isChonNanPos,
+  // ── SỔ NHÓM KHỐI LƯỢNG (18/10/2026): xe bốc ~600 kg + phiếu cân + 2 loại đầu vào Cắt Chọn ──
+  setX2CutInputKind, onX2BoluongTicketToggle, onX2BoluongTicketKg,
+  onX2CutTicketToggle, onX2CutTicketKg,
+  toggleX2TicketSheet, closeX2TicketSheet,
+  renderX2BoluongCalc, renderX2CutCalc,
   // ── THẺ CẮT VÁN (Cắt ván + Xẻ thanh — tồn theo kỳ 1/2 tuần) ──
   handleXuong2CatVanSubmit, editXuong2CatVan, deleteXuong2CatVan, resetXuong2CatVanForm,
   renderX2CatVanSource, renderX2CatVanCalc, renderX2CatVanRateBar, handleX2CatVanRateSave,
@@ -28,6 +33,12 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
   setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
 import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
+import { x2OngDatAvailable } from './x2-pool.js'; // SỔ NHÓM: tồn ống đạt chờ bổ (nút "Lấy Hết Tồn")
+import {
+  handleX2PhuPhamSubmit, editX2PhuPham, deleteX2PhuPham, resetX2PhuPhamForm, onX2PhuPhamCalc,
+  handleX2StocktakeSubmit, deleteX2Stocktake, renderPpStocktakeBook, handleX2YieldRateSave,
+  setPpMonth, toggleX2PhuPhamTable
+} from './x2-phu-pham.js'; // THẺ PHỤ PHẨM & BĂM + CÂN ĐỐI + KIỂM KÊ
 import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
@@ -89,6 +100,28 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     function safeOn(id, event, handler) {
       const el = document.getElementById(id);
       if (el) el.addEventListener(event, handler);
+    }
+
+    // ── SỔ NHÓM: bộ chọn NHIỀU PHIẾU CÂN (ủy nhiệm sự kiện cho danh sách) ──
+    // Mỗi dòng có: checkbox chọn phiếu + ô KL lấy từ phiếu (mặc định = còn lại).
+    // Dùng 1 listener cho cả 2 form Bốc Luồng / Cắt Chọn (danh sách vẽ lại
+    // nhiều lần nên KHÔNG gắn sự kiện trực tiếp lên từng dòng).
+    function bindX2TicketPicker(containerId, onToggle, onKg) {
+      const box = document.getElementById(containerId);
+      if (!box) return;
+      const handle = (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const cb = t.closest('[data-x2-ticket-pick]');
+        if (cb) { onToggle(cb.getAttribute('data-x2-ticket-pick'), !!cb.checked); return; }
+        const kg = t.closest('[data-x2-ticket-kg]');
+        if (kg) onKg(kg.getAttribute('data-x2-ticket-kg'), kg.value);
+      };
+      box.addEventListener('change', handle);
+      box.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t && t.closest && t.closest('[data-x2-ticket-kg]')) handle(e);
+      });
     }
 
     // Navigation
@@ -1572,7 +1605,9 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         ['x2-btinh-picker', 'x2-btinh-picker-btn'],
         ['x2-btinh-bt-in-picker', 'x2-btinh-bt-in-btn'],
         ['x2-btinh-bt-out-picker', 'x2-btinh-bt-out-btn'],
-        ['x2-bl-gc-picker', 'x2-bl-gc-btn']
+        ['x2-bl-gc-picker', 'x2-bl-gc-btn'],
+        ['x2-blg-tickets-sheet', 'x2-blg-tickets-btn'],
+        ['x2-cut-tickets-sheet', 'x2-cut-tickets-btn']
       ].find(([p]) => { const el = document.getElementById(p); return el && !el.hidden; });
       if (openFl) { x2FloatHideAll(); return true; }
       return false;
@@ -1597,9 +1632,23 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-x2-cut', 'click', () => resetXuong2CutForm());
     safeOn('x2-cut-material', 'change', updateXuong2CutLinked);
     safeOn('x2-cut-form', 'submit', handleXuong2CutSubmit);
+    // ── SỔ NHÓM: 2 LOẠI ĐẦU VÀO + PHIẾU CÂN + SỐ XE (18/10/2026) ──
+    safeOn('x2-cut-kind-cart', 'click', () => setX2CutInputKind('cart'));
+    safeOn('x2-cut-kind-ong', 'click', () => setX2CutInputKind('ong'));
+    ['x2-cut-carts', 'x2-cut-kg-cart', 'x2-cut-ongluong', 'x2-cut-ongloi', 'x2-cut-matluong'].forEach(id =>
+      safeOn(id, 'input', () => renderX2CutCalc()));
+    safeOn('x2-cut-reject-route', 'change', () => renderX2CutCalc());
+    bindX2TicketPicker('x2-cut-tickets', onX2CutTicketToggle, onX2CutTicketKg);
+    // Nút mở/đóng SHEET chọn phiếu cân (dropdown desktop / bottom-sheet điện thoại)
+    safeOn('x2-cut-tickets-btn', 'click', () => toggleX2TicketSheet('cut'));
+    safeOn('x2-cut-tickets-close', 'click', () => closeX2TicketSheet('cut'));
     // ── Vị trí BỐC LUỒNG (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
-    // Form: chọn lô "Luồng cây..." (lô đã bốc HẾT tự ẩn) + ngày bốc + khối lượng
-    // thực tế → submit lưu (NGƯỜI BỐC + GIỜ BỐC tự động từ Bảng bố trí Nhân Sự)
+    // SỔ NHÓM: chọn NHIỀU phiếu cân + Số xe + KL/xe (ô số tối đa 6 chữ số).
+    safeOn('x2-blg-carts', 'input', () => renderX2BoluongCalc());
+    safeOn('x2-blg-kg-cart', 'input', () => renderX2BoluongCalc());
+    bindX2TicketPicker('x2-blg-tickets', onX2BoluongTicketToggle, onX2BoluongTicketKg);
+    safeOn('x2-blg-tickets-btn', 'click', () => toggleX2TicketSheet('boluong'));
+    safeOn('x2-blg-tickets-close', 'click', () => closeX2TicketSheet('boluong'));
     safeOn('btn-cancel-x2-blg', 'click', () => resetXuong2BoluongForm());
     safeOn('x2-blg-material', 'change', updateXuong2BoluongLinked);
     safeOn('x2-blg-form', 'submit', handleXuong2BoluongSubmit);
@@ -1679,12 +1728,44 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x2-bao-tho-date', 'change', () => syncX2ShiftField('x2-bao-tho-shift', 'Xưởng 2', (document.getElementById('x2-bao-tho-date') || {}).value || '', isBaoThoPos));
     safeOn('x2-cn-date', 'change', () => syncX2ShiftField('x2-cn-shift', 'Xưởng 2', (document.getElementById('x2-cn-date') || {}).value || '', isChonNanPos));
     safeOn('x2-bo-ong-loai', 'input', () => updateXuong2BoOngLinked(false));
+    safeOn('btn-x2-ong-all', 'click', () => {
+      const el = document.getElementById('x2-bo-ong-bo');
+      if (el) el.value = String(x2OngDatAvailable());
+      updateXuong2BoOngLinked(false);
+    });
     safeOn('x2-bo-ong-form', 'submit', handleXuong2BoOngSubmit);
     safeOn('btn-cancel-x2-bo-ong', 'click', () => resetXuong2BoOngForm());
     // Bảng lịch sử bổ ống: thu gọn / mở rộng + lưu Định mức công suất bổ ống
     safeOn('btn-toggle-x2ong-table', 'click', toggleX2BoOngTable);
     safeOn('btn-x2-ong-rate-save', 'click', handleX2BoOngRateSave);
     safeOn('x2-ong-rate-month', 'change', renderX2BoOngRateBar); // đổi tháng → nạp định mức đã đặt
+    // ── THẺ PHỤ PHẨM & BĂM + CÂN ĐỐI + KIỂM KÊ (Giai đoạn 2/3) ──
+    safeOn('x2-pp-form', 'submit', handleX2PhuPhamSubmit);
+    safeOn('btn-cancel-x2-pp', 'click', () => resetX2PhuPhamForm());
+    ['x2-pp-kg', 'x2-pp-price'].forEach(id => safeOn(id, 'input', onX2PhuPhamCalc));
+    safeOn('x2-pp-month', 'change', () => setPpMonth((document.getElementById('x2-pp-month') || {}).value));
+    safeOn('x2-pp-st-form', 'submit', handleX2StocktakeSubmit);
+    safeOn('x2-pp-st-pool', 'change', renderPpStocktakeBook);
+    safeOn('btn-toggle-x2pp-table', 'click', toggleX2PhuPhamTable);
+    // Nút Lưu định mức tỷ lệ + nút xóa kiểm kê + sửa/xóa phụ phẩm được VẼ ĐỘNG
+    const ppYieldBox = document.getElementById('x2-pp-yield');
+    if (ppYieldBox) ppYieldBox.addEventListener('click', (e) => {
+      if (e.target && e.target.closest && e.target.closest('#btn-x2-pp-yield-save')) handleX2YieldRateSave();
+    });
+    const ppStBox = document.getElementById('x2-pp-stocktake-list');
+    if (ppStBox) ppStBox.addEventListener('click', (e) => {
+      const b = e.target && e.target.closest && e.target.closest('[data-x2-pp-st-del]');
+      if (b) deleteX2Stocktake(b.getAttribute('data-x2-pp-st-del'));
+    });
+    const ppDayBox = document.getElementById('x2-pp-day-cards');
+    if (ppDayBox) ppDayBox.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const ed = t.closest('[data-x2-pp-edit]');
+      if (ed) { editX2PhuPham(ed.getAttribute('data-x2-pp-edit')); return; }
+      const del = t.closest('[data-x2-pp-del]');
+      if (del) deleteX2PhuPham(del.getAttribute('data-x2-pp-del'));
+    });
     // ── Vị trí CHẠY MÁY BÀO THÔ (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
     // Form: chọn lô đã bổ (theo lô) / nhập Dài-Rộng-Dày (nhiều giá trị cách dấu
     // phẩy) → tự tính tổ hợp + thể tích 1 thanh; submit → lưu.

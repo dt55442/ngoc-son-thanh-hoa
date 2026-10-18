@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, showToast } from './utils.js';
 // 3 miền TRƯỚC ĐÂY THIẾU trong file bamboo_data.json (thẻ Truy Xuất Đầu Vào →
@@ -574,6 +574,47 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
     return merged;
   }
 
+  // Khôi phục PHỤ PHẨM & BĂM (bán / tiêu hủy) + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ
+  // từ file / backup / mây — GỘP, không đè bản mới hơn trên máy này.
+  function restoreX2PhuPham(incomingArr) {
+    const before = JSON.stringify(state.x2PhuPhamRecords || []);
+    const merged = mergeXuong2Records(state.x2PhuPhamRecords, incomingArr);
+    state.x2PhuPhamRecords = merged;
+    try { localStorage.setItem(STORAGE_KEY_X2_PHU_PHAM, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+  function restoreX2Stocktakes(incomingArr) {
+    const before = JSON.stringify(state.x2Stocktakes || []);
+    const merged = mergeXuong2Records(state.x2Stocktakes, incomingArr);
+    state.x2Stocktakes = merged;
+    try { localStorage.setItem(STORAGE_KEY_X2_STOCKTAKE, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+  // Định mức tỷ lệ (dict 2 cấp cay/ong) — GỘP, chỉ nhận số 0..100.
+  function restoreX2YieldRates(incoming) {
+    const src = (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) ? incoming : {};
+    const cur = (state.x2YieldRates && typeof state.x2YieldRates === 'object') ? state.x2YieldRates : {};
+    let changed = false;
+    ['cay', 'ong'].forEach(g => {
+      cur[g] = cur[g] || {};
+      const gg = (src[g] && typeof src[g] === 'object') ? src[g] : {};
+      Object.keys(gg).forEach(f => {
+        const v = Number(gg[f]);
+        if (!Number.isFinite(v) || v < 0 || v > 100) return;
+        if (cur[g][f] == null) { cur[g][f] = v; changed = true; }
+      });
+    });
+    if (changed) {
+      state.x2YieldRates = cur;
+      try { localStorage.setItem(STORAGE_KEY_X2_YIELD_RATE, JSON.stringify(cur)); } catch (err) {}
+    }
+    return cur;
+  }
+
   // ─── GỘP NHẬT KÝ HỖ TRỢ + CÔNG ĐOẠN LẺ (file / backup / mây) ──
   function restoreXuong2HoTro(incomingArr) {
     const before = JSON.stringify(state.xuong2HoTroRecords || []);
@@ -990,6 +1031,15 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         if (Array.isArray(loaded.khoNotes)) {
           restoreKhoNotes(loaded.khoNotes); // PHIẾU KHO — gộp, không mất phiếu mới hơn file
         }
+        if (Array.isArray(loaded.x2PhuPhamRecords)) {
+          restoreX2PhuPham(loaded.x2PhuPhamRecords); // PHỤ PHẨM & BĂM — gộp, không mất lượt bán mới hơn
+        }
+        if (Array.isArray(loaded.x2Stocktakes)) {
+          restoreX2Stocktakes(loaded.x2Stocktakes); // KIỂM KÊ BÃI — gộp, không mất phiếu mới hơn
+        }
+        if (loaded.x2YieldRates) {
+          restoreX2YieldRates(loaded.x2YieldRates); // ĐỊNH MỨC TỶ LỆ — gộp, không đè số đã đặt
+        }
         if (Array.isArray(loaded.qcKilnReadings)) {
           restoreQcKilnReadings(loaded.qcKilnReadings); // GỘP — không mất số đo độ ẩm mới hơn file
         }
@@ -1148,6 +1198,15 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         if (Array.isArray(loaded.khoNotes)) {
           restoreKhoNotes(loaded.khoNotes); // PHIẾU KHO — gộp, không mất phiếu mới hơn file
         }
+        if (Array.isArray(loaded.x2PhuPhamRecords)) {
+          restoreX2PhuPham(loaded.x2PhuPhamRecords); // PHỤ PHẨM & BĂM — gộp, không mất lượt bán mới hơn
+        }
+        if (Array.isArray(loaded.x2Stocktakes)) {
+          restoreX2Stocktakes(loaded.x2Stocktakes); // KIỂM KÊ BÃI — gộp, không mất phiếu mới hơn
+        }
+        if (loaded.x2YieldRates) {
+          restoreX2YieldRates(loaded.x2YieldRates); // ĐỊNH MỨC TỶ LỆ — gộp, không đè số đã đặt
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -1244,7 +1303,11 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
         qcFinalRates: state.qcFinalRates || {},       // Định mức kiểm theo tháng (tấm/h)
         qcPressLogs: state.qcPressLogs || [],         // NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — verdict PASS/Fail)
-        khoNotes: state.khoNotes || []
+        khoNotes: state.khoNotes || [],
+        // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ (thẻ x2-phu-pham-card)
+        x2PhuPhamRecords: state.x2PhuPhamRecords || [],
+        x2Stocktakes: state.x2Stocktakes || [],
+        x2YieldRates: state.x2YieldRates || {}
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -1374,7 +1437,11 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
       qcKilnThresholds: state.qcKilnThresholds || {},
       qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
       qcFinalRates: state.qcFinalRates || {},       // Định mức kiểm theo tháng (tấm/h)
-      qcPressLogs: state.qcPressLogs || []          // NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — verdict PASS/Fail)
+      qcPressLogs: state.qcPressLogs || [],         // NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — verdict PASS/Fail)
+      khoNotes: state.khoNotes || [],
+      x2PhuPhamRecords: state.x2PhuPhamRecords || [],
+      x2Stocktakes: state.x2Stocktakes || [],
+      x2YieldRates: state.x2YieldRates || {}
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -1541,6 +1608,15 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         }
         if (imported && Array.isArray(imported.khoNotes)) {
           restoreKhoNotes(imported.khoNotes); // PHIẾU KHO — gộp, không mất phiếu mới hơn backup
+        }
+        if (Array.isArray(imported.x2PhuPhamRecords)) {
+          restoreX2PhuPham(imported.x2PhuPhamRecords); // PHỤ PHẨM & BĂM — gộp, không mất lượt bán mới hơn
+        }
+        if (Array.isArray(imported.x2Stocktakes)) {
+          restoreX2Stocktakes(imported.x2Stocktakes); // KIỂM KÊ BÃI — gộp, không mất phiếu mới hơn
+        }
+        if (imported.x2YieldRates) {
+          restoreX2YieldRates(imported.x2YieldRates); // ĐỊNH MỨC TỶ LỆ — gộp, không đè số đã đặt
         }
 
         // DỌN DỮ LIỆU CŨ: file dữ liệu cũ có thể chứa lô stage 'bao_tinh' — xóa ngay
@@ -1746,6 +1822,9 @@ export {
   restoreX2SayRates,
   restoreX2SayTimes,
   restoreX2SayIncidents,
+  restoreX2PhuPham,
+  restoreX2Stocktakes,
+  restoreX2YieldRates,
   restoreX2StageIncidents,
   restoreXuong2BaoTinh,
   restoreX2BaoTinhRates,

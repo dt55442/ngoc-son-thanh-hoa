@@ -94,12 +94,12 @@ global.XLSX = {
 // ─── A. DANH MỤC BÁO CÁO ─────────────────────────────────────────
 check('A1. Có đủ 6 nhóm báo cáo (X2/X1/Kế Hoạch/Nguyên Liệu/QC/Nhân Sự)',
   specs.REPORT_GROUPS.length === 6 && specs.REPORT_GROUPS.map(g => g.id).join(',') === 'x2,x1,planning,materials,qc,hr');
-check('A2. Tổng số báo cáo = 39 (13 X2 + 8 X1 + 3 KH + 2 NL + 3 QC + 10 NS)',
-  specs.REPORT_SPECS.length === 39);
+check('A2. Tổng số báo cáo = 42 (16 X2 + 8 X1 + 3 KH + 2 NL + 3 QC + 10 NS)',
+  specs.REPORT_SPECS.length === 42);
 check('A3. 13 báo cáo Xưởng 2 + 8 báo cáo Xưởng 1',
-  specs.reportsOfGroup('x2').length === 13 && specs.reportsOfGroup('x1').length === 8);
-check('A4. MỌI thẻ có nguồn xuất đều có báo cáo (21 thẻ)',
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 21 &&
+  specs.reportsOfGroup('x2').length === 16 && specs.reportsOfGroup('x1').length === 8);
+check('A4. MỌI thẻ có nguồn xuất đều có báo cáo (22 thẻ)',
+  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 22 &&
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).every(cardId => !!specs.reportIdForCard(cardId)));
 check('A5. Thẻ Xưởng 1 trỏ ĐÚNG báo cáo X1 (không còn rơi về batch)',
   specs.reportIdForCard('x1-cat-ong-card') === 'x1catong' &&
@@ -133,18 +133,20 @@ check('B3. Bộ lọc KỲ tự sinh (chọn kiểu kỳ + giá trị + nút ‹
 rc.rcValues.periodMode = 'all';
 rc.rcValues.periodKey = '';
 const dCut = rc.buildReportData();
-check('B4. Báo cáo Cắt Chọn: header hàng 5 (index 4) + 1 dòng dữ liệu',
-  !!dCut && dCut.headerRow === 4 && dCut.aoa[4][0] === 'Stt' && dCut.aoa[4][5] === 'KL Đầu Vào (kg)' &&
+check('B4. Báo cáo Cắt Chọn: header hàng 5 (index 4) + 1 dòng dữ liệu (có cột LOẠI ĐẦU VÀO + SỐ XE)',
+  !!dCut && dCut.headerRow === 4 && dCut.aoa[4][0] === 'Stt' &&
+  dCut.aoa[4][5] === 'Loại Đầu Vào' && dCut.aoa[4][6] === 'Số Xe' &&
+  dCut.aoa[4][7] === 'KL Đầu Vào (kg)' &&
   dCut.aoa.length === 7);
-check('B5. Ô SỐ là NUMBER THẬT (1000 kg + 450 kg) — không còn chuỗi "1.000"',
-  typeof dCut.aoa[5][5] === 'number' && dCut.aoa[5][5] === 1000 &&
-  typeof dCut.aoa[5][6] === 'number' && dCut.aoa[5][6] === 450);
+check('B5. Ô SỐ là NUMBER THẬT (1000 kg vào + 450 kg ống đạt) — không còn chuỗi "1.000"',
+  typeof dCut.aoa[5][7] === 'number' && dCut.aoa[5][7] === 1000 &&
+  typeof dCut.aoa[5][8] === 'number' && dCut.aoa[5][8] === 450);
 check('B6. Có dòng TỔNG CỘNG + tổng KL đầu vào = 1000',
-  String(dCut.aoa[6][1]).includes('TỔNG CỘNG') && dCut.aoa[6][5] === 1000);
-check('B7. AutoFilter chỉ trên VÙNG DỮ LIỆU, KHÔNG gồm dòng tổng (A5:O6)',
-  dCut.autofilter === 'A5:O6');
+  String(dCut.aoa[6][1]).includes('TỔNG CỘNG') && dCut.aoa[6][7] === 1000);
+check('B7. AutoFilter chỉ trên VÙNG DỮ LIỆU, KHÔNG gồm dòng tổng (A5:T6)',
+  dCut.autofilter === 'A5:T6');
 check('B8. Có zCells định dạng số cho cột kg (2 chữ số thập phân)',
-  Object.keys(dCut.zCells || {}).length > 0 && dCut.zCells['5,5'] === '#,##0.00');
+  Object.keys(dCut.zCells || {}).length > 0 && dCut.zCells['5,7'] === '#,##0.00');
 check('B9. Ngày xuất dùng GIỜ MÁY (dd/mm/yyyy HH:mm), không phải UTC ISO',
   /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(String(dCut.aoa[1][0]).replace('Ngày xuất: ', '')));
 // ─── C. XƯỞNG 1 KHÔNG CÒN XUẤT NHẦM LÔ NAN ─────────────────────
@@ -240,14 +242,36 @@ check('F3. events.js nối center: mở theo thẻ/tab + 4 nút + lọc',
   evSrc.includes("safeOn('btn-report-multi'") && evSrc.includes("openReportCenter(x2OpenCardExportSource())") &&
   evSrc.includes("openReportCenter('plan-items')") && evSrc.includes("openReportCenter('qc-export')") &&
   evSrc.includes("safeOn('report-center-filters',      'change', onReportFilterChange)"));
-check('F4. sw.js: cache v273 + nạp report-specs.js/report-center.js vào APP_SHELL',
-  swSrc.includes("nha-may-ngoc-son-v273") && swSrc.includes("./js/report-specs.js") &&
+check('F4. sw.js: cache v275 + nạp report-specs.js/report-center.js vào APP_SHELL',
+  swSrc.includes("nha-may-ngoc-son-v279") && swSrc.includes("./js/report-specs.js") &&
   swSrc.includes("./js/report-center.js"));
 check('F5. CSS có khối .rc-* + in lặp tiêu đề + JS ghi rõ giới hạn viền/màu',
   cssSrc.includes('.rc-card') && cssSrc.includes('.rc-filter-grid') &&
   cssSrc.includes('#export-preview-print-area thead { display: table-header-group; }') &&
   fs.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8')
     .includes('KHÔNG ghi được viền/màu'));
+// F5b. CSS KHÔNG ĐƯỢC LỒNG SAI trong @media: khối .rc-* phải ở CẤP CAO NHẤT.
+// Lỗi thật 18/10/2026: thiếu "}" đóng @media (max-width: 639.98px) của khối
+// .kho-warn-* ⇒ TOÀN BỘ .rc-* bị cuốn vào media query điện thoại → mở Trung Tâm
+// Xuất trên máy tính thì modal KHÔNG có style (chip báo cáo dính thành 1 dòng chữ).
+// → Test phải kiểm CẤU TRÚC NGOẶC, không chỉ "includes(.rc-card)".
+function cssDepthOfNeedle(src, needle) {
+  const lines = String(src).split(/\r?\n/);
+  let depth = 0;
+  for (const line of lines) {
+    if (line.includes(needle)) return depth;
+    depth += (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
+    if (depth < 0) return -999; // ngoặc đóng thừa
+  }
+  return -1; // không tìm thấy
+}
+const cssOpenBraces = (cssSrc.match(/{/g) || []).length;
+const cssCloseBraces = (cssSrc.match(/}/g) || []).length;
+check('F5b. CSS .rc-* ở CẤP CAO NHẤT (không lồng trong @media) + ngoặc cân bằng',
+  cssDepthOfNeedle(cssSrc, '.rc-card {') === 0 &&
+  cssDepthOfNeedle(cssSrc, '.rc-list {') === 0 &&
+  cssDepthOfNeedle(cssSrc, '.rc-filter-grid {') === 0 &&
+  cssOpenBraces === cssCloseBraces);
 check('F6. Engine ghi AutoFilter + chuẩn hoá tên sheet (Excel không cho \\ / ? * [ ] :)',
   (function () {
     const src = fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url), 'utf8');

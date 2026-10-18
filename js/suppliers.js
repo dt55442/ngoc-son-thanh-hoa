@@ -28,6 +28,7 @@ import { logDataChange } from './history.js';
 import { trackDeleted } from './tombstone.js';
 import { STORAGE_KEY_SUPPLIERS, state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
+import { x2SupplierCreditRows } from './x2-phu-pham.js'; // giảm trừ NCC (ống lỗi trả lại — thẻ Phụ Phẩm)
 
   // Ghi file dữ liệu qua storage.js (import động để tránh vòng phụ thuộc module
   // — giống cách materials.js / xuong2.js dùng)
@@ -102,6 +103,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
   // snapshot đã lưu trong lượt cắt/chọn.
   function cutSupplierOf(cut) {
     if (!cut) return '';
+    // Lượt kiểu MỚI (xe luồng cây / luồng ống): `supplier` chỉ có khi MỌI phiếu
+    // cùng 1 NCC; nhiều NCC → rỗng (KHÔNG gán oan cho NCC của phiếu đầu tiên).
+    if (cut.inputKind) return cut.supplier || '';
     const mat = (state.materialRecords || []).find(m => m.id === cut.materialId) || null;
     return (mat && mat.supplier) || cut.supplier || '';
   }
@@ -139,8 +143,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         return {
           date: r.date || '',
           createdAt: r.createdAt || '',
-          input: mat ? materialWeightOf(mat) : (Number(r.inputWeight) || 0),
-          cayLoai: Number(r.klCayLoai) || 0,
+          // Lượt kiểu MỚI: dùng ĐÚNG khối lượng của lượt + ống lỗi (không lấy cả lô)
+          input: r.inputKind ? (Number(r.inputWeight) || 0)
+            : (mat ? materialWeightOf(mat) : (Number(r.inputWeight) || 0)),
+          cayLoai: r.inputKind ? (Number(r.klOngLoi) || 0) : (Number(r.klCayLoai) || 0),
           note: String(r.note || '').trim()
         };
       })
@@ -160,7 +166,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const nhac = recent.filter(c => c.note).length;
     const recentNotes = recent.filter(c => c.note)
       .map(c => `(${formatDateDDMMYY(c.date)}) ${c.note}`);
-    return { totalWeight, tripCount, avg, types, cutCount: cuts.length, recentCount: recent.length, tyLe, nhac, recentNotes };
+    // GIẢM TRỪ NCC = ống lỗi TRẢ LẠI (Cắt Chọn — hướng 'tra_ncc') × đơn giá bình quân
+    const credits = x2SupplierCreditRows().filter(c => supplierKey(c.supplier) === key);
+    const creditKg = credits.reduce((s, c) => s + c.kg, 0);
+    const creditAmount = credits.reduce((s, c) => s + c.amount, 0);
+    return { totalWeight, tripCount, avg, types, cutCount: cuts.length, recentCount: recent.length, tyLe, nhac, recentNotes, creditKg, creditAmount };
   }
 
   // Điểm bậc thang: giá trị ≥ ngưỡng tiers[0] → 5 điểm, ≥ tiers[1] → 4 ... dưới hết → 1
@@ -243,6 +253,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           <td class="text-right">${st.tripCount ? fmtKg(st.avg) + ' kg' : '<span style="color:var(--text-muted);">—</span>'}</td>
           <td class="text-right">${rateTxt}</td>
           <td class="text-right"><span class="${st.nhac ? 'sup-remind-yes' : ''}" title="${notesTitle}">${st.nhac} lần</span></td>
+          <td class="text-right">${st.creditAmount ? `<strong style="color:#b45309;" title="Ống lỗi trả lại ${fmtKg(st.creditKg)} kg × đơn giá bình quân — trừ vào tiền mua NCC">${st.creditAmount.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} đ</strong>` : '<span style="color:var(--text-muted);">—</span>'}</td>
           <td class="text-right">
             <button class="btn btn-icon btn-outline" title="Sửa" data-perm="materials" data-sup-edit="${escapeHTML(s.id)}"><i data-lucide="pencil"></i></button>
             <button class="btn btn-icon btn-danger" title="Xóa" data-perm="materials" data-sup-delete="${escapeHTML(s.id)}"><i data-lucide="trash-2"></i></button>
@@ -293,7 +304,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       String(a.s.name || '').localeCompare(String(b.s.name || ''), 'vi'));
     if (!list.length) {
       tbody.innerHTML = `
-        <tr><td colspan="10" class="text-center" style="color:var(--text-muted); padding:28px 10px;">
+        <tr><td colspan="11" class="text-center" style="color:var(--text-muted); padding:28px 10px;">
           <i data-lucide="truck" style="width:30px;height:30px;opacity:.5;"></i>
           <div style="margin-top:8px;">Chưa khai báo nhà cung cấp nào.<br>Bấm <strong>Thêm Nhà Cung Cấp</strong> (tên theo định dạng "Nhà + Tên", VD: Nhà Tế).</div>
         </td></tr>`;

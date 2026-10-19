@@ -32,7 +32,7 @@ import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
+import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 // SỔ NHÓM KHỐI LƯỢNG (Giai đoạn 1 — 18/10/2026): bãi tập kết trộn lô nên
 // Xưởng 2 theo dõi theo phiếu cân chuyến → xe bốc → nhóm ống đạt chờ bổ.
@@ -209,6 +209,24 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     sel.innerHTML = html;
     if (key) x2SelHtmlCache.set(key, html);
     if (prev && String(sel.innerHTML || '').includes(`value="${escapeHTML(prev)}"`)) sel.value = prev;
+  }
+
+  // ─── form.reset() LÀM MẤT LỰA CHỌN Ô CHỌN NGUỒN (19/10/2026) ──────────
+  // Trình duyệt quy ước: form.reset() đưa <select> về option ĐẦU TIÊN (không
+  // có option nào mang `selected` mặc định). Danh sách nguồn luôn xếp MỚI NHẤT
+  // lên đầu ⇒ mỗi lần Lưu lượt / Xoá lượt đang sửa (đều gọi resetX1*Form) là
+  // ô chọn tự nhảy về nguồn mới nhất, mất nguồn người dùng đang làm.
+  // Cách sửa: CHỤP nguồn đang chọn TRƯỚC khi reset rồi TRẢ LẠI NGAY sau reset
+  // (trước khi fill*Options) — nhờ vậy `prev` bên trong setX2SelectOptions
+  // chính là nguồn người dùng, kể cả nhánh cache "danh sách y nguyên".
+  // Nguồn đã hết tồn (bị lọc khỏi danh sách) → giá trị trả lại không còn option
+  // ⇒ để trống, fill*Options tự chọn nguồn còn hàng đầu tiên (đúng nghiệp vụ).
+  function x1ResetKeepingSelect(formEl, selId) {
+    const sel = document.getElementById(selId);
+    const keep = sel ? String(sel.value == null ? '' : sel.value) : '';
+    if (formEl) formEl.reset();
+    if (sel && keep) sel.value = keep;
+    return keep;
   }
 
   // ─── TỒN CHƯA CẮT + MÃ NCC + NGƯỜI CẮT (nguồn tab Nhân Sự) ────
@@ -14088,7 +14106,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   function resetX1CatOngForm() {
     const f = document.getElementById('x1-cat-ong-form');
-    if (f) f.reset();
+    // GIỮ nguồn đang chọn qua form.reset() — xem x1ResetKeepingSelect
+    x1ResetKeepingSelect(f, 'x1-cat-ong-material');
     // Stub/test không chạy reset() thật → tự clear checkbox "Đã cắt xong"
     const doneEl = document.getElementById('x1-cat-ong-done');
     if (doneEl) doneEl.checked = false;
@@ -14240,6 +14259,123 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       .reduce((s, r) => s + (Number(r.qty) || 0), 0);
     return Math.max(0, (Number(rec.qty) || 0) - used);
   }
+
+
+  // ═══════════════════════════════════════════════════════════
+  // MÃ LÔ + ĐẾM NGÀY + CẢNH BÁO "ĐẠT NGÀY" (19/10/2026)
+  // ───────────────────────────────────────────────────────────
+  // Mỗi LƯỢT Sấy Sinh = 1 LÔ (công đoạn sau là Bốc, link qua `saySinhId`).
+  // • MÃ LÔ: <V|N|chữ đầu><yy><mm><dd><NNN> — VD N261019007 = Nứa, ngày
+  //   19/10/2026, lô thứ 7 TRONG THÁNG (số thứ tự 3 chữ số, RIÊNG từng
+  //   tiền tố, tự về 001 khi sang tháng). Vầu → V, Nứa → N, loại khác lấy
+  //   chữ cái đầu (bỏ dấu), không rõ → X.
+  // • Mã lưu trên bản ghi (`code`) → đi theo file/mây/backup sẵn có.
+  //   Lô CŨ chưa có mã được cấp 1 LẦN (ensureX1SaySinhCodes, idempotent).
+  //   SỬA lô KHÔNG đổi mã; XÓA lô KHÔNG đánh lại số các lô khác.
+  // • ĐẾM NGÀY: hôm nay − Ngày Sấy (giờ máy) · `readyDays` = số ngày đạt
+  //   (mặc định 3). LÔ ĐẠT NGÀY = đã đủ ngày VÀ CÒN phần CHƯA Bốc.
+  // ═══════════════════════════════════════════════════════════
+  const X1_SS_READY_DAYS_DEFAULT = 3;
+  const X1_SS_READY_DAYS_KEY = 'bamboo_tracker_x1_ss_ready_days_v1'; // UI theo máy
+  let x1SsReadyIdx = 0;   // lô đang xem trong panel "đạt ngày" (thuần phiên)
+
+  function x1SsTodayISO() {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
+  }
+  // Tiền tố mã lô theo tên nguyên liệu (bỏ dấu, không phân biệt hoa/thường)
+  function x1SsPrefixOf(typeText) {
+    const n = normPosName(typeText);
+    if (n.includes('vau')) return 'V';
+    if (n.includes('nua')) return 'N';
+    const first = (n.match(/[a-z]/) || [])[0];
+    return first ? first.toUpperCase() : 'X';
+  }
+  function x1SsDateISOOf(r) {
+    const raw = String((r && r.date) || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const c = String((r && r.createdAt) || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(c) ? c : x1SsTodayISO();
+  }
+  const x1SsMonthKeyOf = dateISO => String(dateISO || '').slice(0, 7);
+  function x1SsCodeDatePart(dateISO) {
+    const s = String(dateISO || '').slice(0, 10);
+    return s.slice(2, 4) + s.slice(5, 7) + s.slice(8, 10); // yy mm dd
+  }
+  const X1_SS_CODE_RE = /^([A-Z])\d{9}$/;
+  function x1SsCodePartsOf(code) {
+    const m = X1_SS_CODE_RE.exec(String(code || ''));
+    return m ? { prefix: m[1], seq: Number(String(code).slice(7)) || 0 } : null;
+  }
+  // Số thứ tự kế tiếp trong THÁNG (riêng từng tiền tố)
+  function x1SsNextSeq(prefix, monthKey, excludeId) {
+    let max = 0;
+    (state.xuong1SaySinhRecords || []).forEach(r => {
+      if (excludeId && r.id === excludeId) return;
+      const parts = x1SsCodePartsOf(r.code);
+      if (!parts || parts.prefix !== prefix) return;
+      if (x1SsMonthKeyOf(x1SsDateISOOf(r)) !== monthKey) return;
+      max = Math.max(max, parts.seq);
+    });
+    return max + 1;
+  }
+  function x1SsMakeCode(dateISO, typeText) {
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(String(dateISO || '')) ? String(dateISO) : x1SsTodayISO();
+    const prefix = x1SsPrefixOf(typeText);
+    const month = x1SsMonthKeyOf(d);
+    const used = new Set((state.xuong1SaySinhRecords || []).map(r => String(r.code || '')));
+    let seq = x1SsNextSeq(prefix, month, null);
+    let code = `${prefix}${x1SsCodeDatePart(d)}${String(seq).padStart(3, '0')}`;
+    while (used.has(code)) {
+      seq += 1;
+      code = `${prefix}${x1SsCodeDatePart(d)}${String(seq).padStart(3, '0')}`;
+    }
+    return code;
+  }
+  // Cấp mã cho lô CŨ (chưa có mã) — chạy lại KHÔNG đổi mã đã cấp
+  function ensureX1SaySinhCodes(persist) {
+    const list = (state.xuong1SaySinhRecords || []).slice().sort((a, b) => {
+      const ad = x1SsDateISOOf(a), bd = x1SsDateISOOf(b);
+      if (ad !== bd) return ad.localeCompare(bd);
+      const ac = String(a.createdAt || ''), bc = String(b.createdAt || '');
+      if (ac !== bc) return ac.localeCompare(bc);
+      return String(a.id || '').localeCompare(String(b.id || ''));
+    });
+    const used = new Set();
+    const maxSeq = new Map();      // `${prefix}|${month}` → số lớn nhất
+    let changed = false;
+    // 1) Giữ mã hợp lệ + không trùng; mã rác/trùng → cấp lại
+    list.forEach(r => {
+      const c = String(r.code || '');
+      if (X1_SS_CODE_RE.test(c) && !used.has(c)) {
+        used.add(c);
+        const k = c[0] + '|' + x1SsMonthKeyOf(x1SsDateISOOf(r));
+        maxSeq.set(k, Math.max(maxSeq.get(k) || 0, Number(c.slice(7)) || 0));
+        return;
+      }
+      if (c) { r.code = ''; changed = true; }
+    });
+    // 2) Cấp mã cho lô thiếu — theo thứ tự thời gian
+    list.forEach(r => {
+      if (X1_SS_CODE_RE.test(String(r.code || ''))) return;
+      const d = x1SsDateISOOf(r);
+      const prefix = x1SsPrefixOf(r.srcType || '');
+      const k = prefix + '|' + x1SsMonthKeyOf(d);
+      let seq = (maxSeq.get(k) || 0) + 1;
+      let code = `${prefix}${x1SsCodeDatePart(d)}${String(seq).padStart(3, '0')}`;
+      while (used.has(code)) {
+        seq += 1;
+        code = `${prefix}${x1SsCodeDatePart(d)}${String(seq).padStart(3, '0')}`;
+      }
+      maxSeq.set(k, seq);
+      used.add(code);
+      r.code = code;
+      changed = true;
+    });
+    if (changed && persist !== false) saveXuong1SaySinh();
+    return changed;
+  }
   // ── NGUỒN ②: LÔ NL XƯỞNG 1 KHÔNG CHỮ "CÂY" — SẤY THẲNG ────────
   // (chính là phần CON LẠI của nguyên liệu Xưởng 1 chưa qua Cắt Ống;
   //  lô chữ "cây" KHÔNG nằm đây — chúng đi qua Cắt Ống ở nguồn ①)
@@ -14280,12 +14416,59 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       : x1SaySinhDirectRemainingOf(found.src, excludeId);
   }
 
+  // Số ngày đạt của lô (thiếu → mặc định 3)
+  function x1SsReadyDaysOf(r) {
+    const v = Math.floor(Number(r && r.readyDays));
+    return Number.isFinite(v) && v > 0 ? Math.min(999, v) : X1_SS_READY_DAYS_DEFAULT;
+  }
+  function x1SsDaysOf(r) {
+    return calculateStageDays(x1SsDateISOOf(r));
+  }
+  function x1SsOverDaysOf(r) {
+    return x1SsDaysOf(r) - x1SsReadyDaysOf(r);
+  }
+  // Lô ĐẠT NGÀY = đủ ngày VÀ còn phần CHƯA Bốc (bốc một phần vẫn cảnh báo)
+  function x1SsIsReady(r) {
+    return !!r && x1SsDaysOf(r) >= x1SsReadyDaysOf(r) && x1SaySinhRemainingOf(r, null) > 0;
+  }
+  // Danh sách lô đạt ngày — QUÁ HẠN LÂU NHẤT trước (ưu tiên xử lý lô tồn lâu)
+  function x1SsReadyLots() {
+    return (state.xuong1SaySinhRecords || [])
+      .filter(x1SsIsReady)
+      .slice()
+      .sort((a, b) => {
+        const d = x1SsOverDaysOf(b) - x1SsOverDaysOf(a);
+        if (d !== 0) return d;
+        const ad = x1SsDateISOOf(a), bd = x1SsDateISOOf(b);
+        if (ad !== bd) return ad.localeCompare(bd);
+        return String(a.code || '').localeCompare(String(b.code || ''));
+      });
+  }
+  function x1SsReadyCount() { return x1SsReadyLots().length; }
+  // Số ngày đạt mặc định cho lô MỚI — nhớ giá trị dùng gần nhất theo MÁY
+  function x1SsReadyDefaultOf() {
+    const v = Math.floor(Number(localStorage.getItem(X1_SS_READY_DAYS_KEY)));
+    return Number.isFinite(v) && v > 0 ? Math.min(999, v) : X1_SS_READY_DAYS_DEFAULT;
+  }
+  function x1SsRememberReady(days) {
+    const v = Math.floor(Number(days));
+    if (Number.isFinite(v) && v > 0) {
+      try { localStorage.setItem(X1_SS_READY_DAYS_KEY, String(Math.min(999, v))); } catch (e) { /* bộ nhớ đầy */ }
+    }
+  }
+
   function loadXuong1SaySinh() {
     const raw = localStorage.getItem(STORAGE_KEY_XUONG1_SAY_SINH);
     if (raw) {
       try { const a = JSON.parse(raw); state.xuong1SaySinhRecords = Array.isArray(a) ? a : []; }
       catch (e) { state.xuong1SaySinhRecords = []; }
     } else state.xuong1SaySinhRecords = [];
+    // Cấp mã lô cho dữ liệu CŨ (chỉ trong bộ nhớ — lưu ngay vào máy để mã ổn định)
+    if (ensureX1SaySinhCodes(false)) {
+      try {
+        localStorage.setItem(STORAGE_KEY_XUONG1_SAY_SINH, JSON.stringify(state.xuong1SaySinhRecords || []));
+      } catch (e) { /* bộ nhớ đầy — lần lưu sau sẽ ghi */ }
+    }
   }
   function saveXuong1SaySinh() {
     try { localStorage.setItem(STORAGE_KEY_XUONG1_SAY_SINH, JSON.stringify(state.xuong1SaySinhRecords || [])); }
@@ -14316,8 +14499,16 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     }
     const live = x1SaySinhAssignmentsOf(r.date || '');
     const hours = live.length ? sumPosHoursSplitX1(live, r.date || '') : null;
+    // Mã lô · đếm ngày · cảnh báo đạt ngày (19/10/2026)
+    const lotRemaining = x1SaySinhRemainingOf(r, null);
+    const days = x1SsDaysOf(r);
+    const readyDays = x1SsReadyDaysOf(r);
     return {
       date: r.date || '',
+      code: String(r.code || ''),
+      days, readyDays, overDays: days - readyDays,
+      remaining: lotRemaining,
+      isReady: days >= readyDays && lotRemaining > 0,
       // Đường đi: "Nhập thẳng — bỏ qua Cắt Ống" cho nguồn ②, ngược lại nguồn ①
       srcType, srcSupplier, srcDate, srcRest, viaDirect,
       srcRoute: viaDirect ? 'Nhập thẳng — bỏ qua Cắt Ống' : 'Lượt Cắt Ống',
@@ -14407,6 +14598,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     if (qty > rest + 1e-9) {
       showToast(`KL sấy (${fmtKg(qty)} kg) vượt phần còn chưa sấy (${fmtKg(rest)} kg) — kiểm tra lại!`, 'error'); return;
     }
+    // NGÀY ĐẠT (số ngày sấy đạt) — bắt buộc > 0, tối đa 999
+    const readyEl = document.getElementById('x1-say-sinh-ready');
+    let readyDays = Math.floor(Number(readyEl && readyEl.value));
+    if (!Number.isFinite(readyDays) || readyDays <= 0) readyDays = X1_SS_READY_DAYS_DEFAULT;
+    if (readyDays > 999) { showToast('Ngày đạt tối đa 999 ngày!', 'error'); return; }
     const sd = isMat
       ? { materialType: src.type || '', supplier: src.supplier || '' }
       : x1CatOngDisplay(src);
@@ -14417,7 +14613,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       catOngId: isMat ? '' : srcId,
       materialId: isMat ? srcId : '',
       srcType: sd.materialType, srcSupplier: sd.supplier, srcDate: src.date || '',
-      date: dateVal, qty,
+      date: dateVal, qty, readyDays,
       worker: snap.names, workTime: snap.timeStr,
       workHours: snap.hours, workHoursHC: snap.hc, workHoursTC: snap.tc,
       note
@@ -14425,18 +14621,21 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     if (state.x1SaySinhEditId) {
       const rec = (state.xuong1SaySinhRecords || []).find(r => r.id === state.x1SaySinhEditId);
       if (!rec) { showToast('Không tìm thấy lượt sấy sinh cần sửa!', 'error'); return; }
+      // SỬA lô KHÔNG đổi mã lô (mã là danh tính lô)
       Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
       saveXuong1SaySinh();
       showToast('Đã cập nhật lượt sấy sinh!', 'success');
     } else {
       (state.xuong1SaySinhRecords = state.xuong1SaySinhRecords || []).push({
         id: 'x1ss-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        code: x1SsMakeCode(dateVal, sd.materialType),   // VD V261019001
         ...payload,
         createdAt: new Date().toISOString()
       });
       saveXuong1SaySinh();
       showToast('Đã ghi lượt sấy sinh!', 'success');
     }
+    x1SsRememberReady(readyDays);
     resetX1SaySinhForm();
     renderX1SaySinhCard();
   }
@@ -14454,6 +14653,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     if (d) d.value = rec.date || '';
     const q = document.getElementById('x1-say-sinh-qty');
     if (q) q.value = (rec.qty ?? '') === '' ? '' : String(rec.qty);
+    const rd = document.getElementById('x1-say-sinh-ready');
+    if (rd) rd.value = String(x1SsReadyDaysOf(rec));
     const note = document.getElementById('x1-say-sinh-note');
     if (note) note.value = rec.note || '';
     x1SaySinhSyncLinked(false);
@@ -14478,16 +14679,23 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   function resetX1SaySinhForm() {
     const f = document.getElementById('x1-say-sinh-form');
-    if (f) f.reset();
+    // GIỮ nguồn đang chọn qua form.reset() — xem x1ResetKeepingSelect
+    x1ResetKeepingSelect(f, 'x1-say-sinh-source');
     state.x1SaySinhEditId = null;
+    // Ngày đạt: form.reset() trả về value gốc (3) → đặt lại giá trị dùng gần nhất
+    const rd = document.getElementById('x1-say-sinh-ready');
+    if (rd) rd.value = String(x1SsReadyDefaultOf());
     fillX1SaySinhOptions();
     syncX1EditBanner('x1-say-sinh');
   }
   function renderX1SaySinhCard() {
+    // Cấp mã cho lô CŨ / lô vừa về từ mây (chưa có mã) — lưu 1 lần
+    ensureX1SaySinhCodes(true);
     fillX1SaySinhOptions();
     renderX1SaySinhStockBar();
     renderX1SaySinhStats();
     renderX1SaySinhTable();
+    renderX1SsReadyPanel();
     syncX1EditBanner('x1-say-sinh');
     updateXuong2CardCounts();
   }
@@ -14498,9 +14706,13 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const pend2 = x1SaySinhDirectInputs().filter(m => x1SaySinhDirectRemainingOf(m, null) > 0);
     const totalW = pend.reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0)
       + pend2.reduce((s, m) => s + x1SaySinhDirectRemainingOf(m, null), 0);
-    bar.innerHTML = (pend.length || pend2.length)
+    const readyN = x1SsReadyCount();
+    bar.innerHTML = ((pend.length || pend2.length)
       ? `<span class="x2-stock-title" title="Tổng phần CHƯA sấy: ống đạt của lượt Cắt Ống (Vầu cây) + KL lô Vầu/Nứa Xưởng 1 KHÔNG chữ cây sấy thẳng"><i data-lucide="boxes"></i> Tồn chờ sấy: <strong>${pend.length + pend2.length} nguồn · ${fmtKg(totalW)} kg</strong></span>`
-      : `<span class="x2-stock-title"><i data-lucide="check-circle-2"></i> Tồn chờ sấy: <strong>Hết tồn</strong></span>`;
+      : `<span class="x2-stock-title"><i data-lucide="check-circle-2"></i> Tồn chờ sấy: <strong>Hết tồn</strong></span>`)
+      + (readyN
+        ? `<button type="button" class="x1-ss-ready-btn" id="x1-ss-ready-btn" title="Bấm để xem nhanh các lô ĐÃ ĐẠT NGÀY nhưng CHƯA vào công đoạn Bốc — ưu tiên lô quá hạn lâu nhất, có nút Tiếp để xem lô kế"><i data-lucide="alert-triangle"></i> ${readyN} lô đã đạt ngày — chờ Bốc</button>`
+        : '');
     initLucide();
   }
   function renderX1SaySinhStats() {
@@ -14510,10 +14722,12 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const total = disp.reduce((s, d) => s + d.qty, 0);
     const pend = (state.xuong1CatOngRecords || []).reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0)
       + x1SaySinhDirectInputs().reduce((s, m) => s + x1SaySinhDirectRemainingOf(m, null), 0);
+    const readyN = x1SsReadyCount();
     box.innerHTML = `
       <div class="material-stat"><span class="material-stat-value">${disp.length}</span><span class="material-stat-label">Lượt sấy sinh</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(total)}</span><span class="material-stat-label">Tổng KL sấy (kg)</span></div>
-      <div class="material-stat"><span class="material-stat-value">${fmtKg(pend)}</span><span class="material-stat-label">Còn chờ sấy (kg)</span></div>`;
+      <div class="material-stat"><span class="material-stat-value">${fmtKg(pend)}</span><span class="material-stat-label">Còn chờ sấy (kg)</span></div>
+      <div class="material-stat x1-ss-stat-ready${readyN ? ' is-on' : ''}" data-x1-ss-ready-open="1" role="button" tabindex="0" title="Số lô đã đủ NGÀY ĐẠT nhưng còn phần CHƯA vào công đoạn Bốc — bấm để xem nhanh (quá hạn lâu nhất trước)"><span class="material-stat-value">${readyN}</span><span class="material-stat-label">Lô đạt ngày chờ Bốc</span></div>`;
   }
   function renderX1SaySinhTable() {
     x1RenderDayCards({
@@ -14528,24 +14742,122 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       headName: 'Người sấy',
       emptyIcon: 'flame-kindling',
       emptyText: 'Chưa có lượt sấy sinh nào.<br>Chọn <strong>lượt Cắt Ống</strong> hoặc <strong>lô Vầu/Nứa nhập thẳng</strong> ở form trên rồi bấm <strong>Lưu Lượt Sấy Sinh</strong>.',
-      thead: `<th>Nguồn (Cắt Ống / Nhập thẳng)</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
-              <th class="text-right">KL sấy</th><th class="text-right">Còn chưa sấy</th>
+      thead: `<th>Mã lô · Ngày sấy</th><th>Nguồn (Cắt Ống / Nhập thẳng)</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
+              <th class="text-right">KL sấy</th><th class="text-right">Còn chưa Bốc</th>
               <th>Ghi chú</th><th class="text-right">Thao tác</th>`,
-      rowHtml: (r, d) => `
-        <tr class="x2-day-row">
+      rowHtml: (r, d) => {
+        const chipCls = d.isReady ? (d.overDays >= 2 ? 'is-over' : 'is-ready') : 'is-normal';
+        const chipTip = d.isReady
+          ? `Đã đạt ${d.readyDays} ngày — còn ${fmtKg(d.remaining)} kg CHƯA vào công đoạn Bốc`
+          : `Chưa đạt ngày (mốc ${d.readyDays} ngày) — còn ${fmtKg(d.remaining)} kg chưa Bốc`;
+        return `
+        <tr class="x2-day-row${d.isReady ? ' x1-ss-row-ready' : ''}">
+          <td>
+            <span class="x1-ss-code" title="Mã lô: ${escapeHTML(d.code || '—')} · Sấy ${formatDateDDMMYY(d.date)}">${escapeHTML(d.code || '—')}</span>
+            <div class="x1-ss-day-wrap">
+              <button type="button" class="x1-ss-day-chip ${chipCls}" data-x1-ss-lot="${escapeHTML(r.id)}" title="${escapeHTML(chipTip)}">${d.days} ngày</button>
+              <span class="x1-ss-day-target">/ ${d.readyDays} ngày</span>
+            </div>
+          </td>
           <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong>${d.viaDirect ? `<div class="x2-row-note">${escapeHTML(d.srcRoute)}</div>` : ''}</td>
           <td>${escapeHTML(d.srcSupplier || '—')}</td>
           <td>${d.srcDate ? formatDateDDMMYY(d.srcDate) : '—'}</td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.qty)}</strong></td>
-          <td class="text-right">${fmtKg(d.srcRest)}</td>
+          <td class="text-right">${fmtKg(d.remaining)}</td>
           <td>${d.note ? `<div class="x2-row-note">${escapeHTML(d.note)}</div>` : '<span style="color:var(--text-muted);">—</span>'}</td>
           <td class="text-right">
             <button class="btn btn-icon btn-outline" title="Sửa" data-x1-say-sinh-edit="${escapeHTML(r.id)}" data-perm="x1"><i data-lucide="pencil"></i></button>
             <button class="btn btn-icon btn-danger" title="Xóa" data-x1-say-sinh-delete="${escapeHTML(r.id)}" data-perm="x1"><i data-lucide="trash-2"></i></button>
           </td>
-        </tr>`
+        </tr>`;
+      }
     });
   }
+  // ─── PANEL "LÔ ĐẠT NGÀY — CHỜ BỐC" (xem nhanh từng lô) ─────────
+  // Mở từ: nút cảnh báo ở thanh tồn · ô thống kê · chip ngày trên bảng.
+  // Thứ tự: QUÁ HẠN LÂU NHẤT trước (ưu tiên xử lý lô đã tồn lâu).
+  function renderX1SsReadyPanel() {
+    const box = document.getElementById('x1-ss-ready-panel');
+    if (!box) return;
+    const lots = x1SsReadyLots();
+    if (!lots.length) {
+      box.hidden = true;
+      box.innerHTML = '';
+      x1SsReadyIdx = 0;
+      return;
+    }
+    if (x1SsReadyIdx < 0 || x1SsReadyIdx >= lots.length) x1SsReadyIdx = 0;
+    const r = lots[x1SsReadyIdx];
+    const d = x1SaySinhDisplay(r);
+    const overTxt = d.overDays > 0
+      ? `<span class="x1-ss-over">quá ${d.overDays} ngày</span>`
+      : '<span class="x1-ss-due">đúng ngày đạt</span>';
+    box.hidden = false;
+    box.innerHTML = `
+      <div class="x1-ss-ready-head">
+        <span class="x1-ss-ready-title"><i data-lucide="alert-triangle"></i> Lô đã đạt ngày — chờ Bốc <strong>(${x1SsReadyIdx + 1}/${lots.length})</strong></span>
+        <button type="button" class="btn btn-icon btn-outline x1-ss-ready-x" data-x1-ss-ready="close" title="Đóng" aria-label="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="x1-ss-ready-body">
+        <div class="x1-ss-ready-code">${escapeHTML(r.code || '—')}</div>
+        <div class="x1-ss-ready-meta">
+          <span><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong></span>
+          <span>NCC ${escapeHTML(d.srcSupplier || '—')}</span>
+          <span>Sấy ${formatDateDDMMYY(d.date)}</span>
+        </div>
+        <div class="x1-ss-ready-days">Đã sấy <strong>${d.days} ngày</strong> · Ngày đạt <strong>${d.readyDays} ngày</strong> ${overTxt}</div>
+        <div class="x1-ss-ready-kg">KL sấy <strong>${fmtKg(d.qty)} kg</strong> · Còn chưa Bốc <strong class="x1-ss-remain">${fmtKg(d.remaining)} kg</strong></div>
+        ${d.note ? `<div class="x1-ss-ready-note">${escapeHTML(d.note)}</div>` : ''}
+      </div>
+      <div class="x1-ss-ready-actions">
+        <button type="button" class="btn btn-outline btn-sm" data-x1-ss-ready="prev" title="Xem lô trước"><i data-lucide="chevron-left"></i> Trước</button>
+        <button type="button" class="btn btn-outline btn-sm" data-x1-ss-ready="next" title="Xem lô tiếp theo">Tiếp <i data-lucide="chevron-right"></i></button>
+        <button type="button" class="btn btn-success btn-sm" data-x1-ss-ready="boc" data-id="${escapeHTML(r.id)}"><i data-lucide="package-open"></i> Mở thẻ Bốc</button>
+        <button type="button" class="btn btn-outline btn-sm" data-x1-ss-ready="close">Đóng</button>
+      </div>`;
+    initLucide();
+  }
+  function x1SsOpenReadyPanel() {
+    if (!x1SsReadyCount()) {
+      showToast('Chưa có lô nào đạt ngày mà còn chờ Bốc.', 'info');
+      renderX1SsReadyPanel();
+      return;
+    }
+    x1SsReadyIdx = 0;
+    renderX1SsReadyPanel();
+    document.getElementById('x1-ss-ready-panel')?.scrollIntoView?.({ block: 'nearest' });
+  }
+  function x1SsOpenReadyPanelFor(id) {
+    const lots = x1SsReadyLots();
+    const i = lots.findIndex(r => r.id === id);
+    if (i < 0) { showToast('Lô này chưa đạt ngày (hoặc đã Bốc hết).', 'info'); return; }
+    x1SsReadyIdx = i;
+    renderX1SsReadyPanel();
+    document.getElementById('x1-ss-ready-panel')?.scrollIntoView?.({ block: 'nearest' });
+  }
+  function x1SsCloseReadyPanel() {
+    const box = document.getElementById('x1-ss-ready-panel');
+    if (box) { box.hidden = true; box.innerHTML = ''; }
+  }
+  function x1SsReadyStep(dir) {
+    const n = x1SsReadyCount();
+    if (!n) { x1SsCloseReadyPanel(); return; }
+    const step = dir < 0 ? -1 : 1;
+    x1SsReadyIdx = ((x1SsReadyIdx + step) % n + n) % n;   // quay vòng
+    renderX1SsReadyPanel();
+  }
+  // Mở thẻ Bốc + chọn sẵn đúng lô vừa xem
+  function x1SsOpenBocFor(id) {
+    if (!id) return;
+    x1SsCloseReadyPanel();
+    if (typeof x2OpenCard === 'function') x2OpenCard('x1-boc-card');
+    fillX1BocOptions();
+    const sel = document.getElementById('x1-boc-source');
+    if (sel) sel.value = id;
+    x1BocSyncLinked(true);
+    document.getElementById('x1-boc-card')?.scrollIntoView?.({ block: 'nearest' });
+  }
+
   // ═════════════════════════════════════════════════════════════
   // THẺ 3 — BỐC (x1-boc-card) · nguồn = lượt SẤY SINH
   // ═════════════════════════════════════════════════════════════
@@ -14592,6 +14904,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       srcSupplier: cdisp ? cdisp.supplier : (src ? (src.srcSupplier || '') : (r.srcSupplier || '')),
       srcSayDate: src ? src.date : (r.srcSayDate || ''),
       srcRest: src ? x1SaySinhRemainingOf(src, null) : 0,
+      // Mã lô Sấy Sinh nguồn + đếm ngày (19/10/2026)
+      srcCode: src ? String(src.code || '') : '',
+      srcDays: src ? x1SsDaysOf(src) : null,
+      srcReadyDays: src ? x1SsReadyDaysOf(src) : null,
+      srcIsReady: src ? x1SsIsReady(src) : false,
       qty: Number(r.qty) || 0,
       note: r.note || '',
       workerRows: x1WorkerRows(r, live),
@@ -14610,8 +14927,10 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
           const ss = (state.xuong1CatOngRecords || []).find(c => c.id === s.catOngId);
           const cd = ss ? x1CatOngDisplay(ss) : null;
           const rest = x1SaySinhRemainingOf(s, state.x1BocEditId || null);
+          const days = x1SsDaysOf(s);
+          const ready = x1SsIsReady(s);
           // Lượt sấy THẲNG không có catOngId → dùng snapshot srcType của lượt sấy
-          return `<option value="${escapeHTML(s.id)}">${escapeHTML(cd ? cd.materialType : (s.srcType || 'Vầu/nứa'))} · sấy ${formatDateDDMMYY(s.date)} · còn ${fmtKg(rest)} kg</option>`;
+          return `<option value="${escapeHTML(s.id)}">[${escapeHTML(s.code || '—')}] ${escapeHTML(cd ? cd.materialType : (s.srcType || 'Vầu/nứa'))} · sấy ${formatDateDDMMYY(s.date)} · ${days} ngày${ready ? ' ⚠ đạt' : ''} · còn ${fmtKg(rest)} kg</option>`;
         }).join('')
       : `<option value="">— Hết lượt Sấy Sinh chờ bốc —</option>`;
     setX2SelectOptions(sel, html);   // giữ lượt đang chọn khi thẻ được vẽ lại
@@ -14727,12 +15046,15 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   function resetX1BocForm() {
     const f = document.getElementById('x1-boc-form');
-    if (f) f.reset();
+    // GIỮ nguồn đang chọn qua form.reset() — xem x1ResetKeepingSelect
+    x1ResetKeepingSelect(f, 'x1-boc-source');
     state.x1BocEditId = null;
     fillX1BocOptions();
     syncX1EditBanner('x1-boc');
   }
   function renderX1BocCard() {
+    // Mã lô Sấy Sinh nguồn (cấp cho lô cũ nếu chưa có)
+    ensureX1SaySinhCodes(true);
     fillX1BocOptions();
     renderX1BocStockBar();
     renderX1BocStats();
@@ -14774,11 +15096,15 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       headName: 'Người bốc',
       emptyIcon: 'forklift',
       emptyText: 'Chưa có lượt bốc nào.<br>Chọn <strong>lượt Sấy Sinh</strong> ở form trên rồi bấm <strong>Lưu Lượt Bốc</strong>.',
-      thead: `<th>Nguồn (lượt Sấy Sinh)</th><th>Nhà cung cấp</th><th>Ngày sấy</th>
+      thead: `<th>Mã lô nguồn</th><th>Nguồn (lượt Sấy Sinh)</th><th>Nhà cung cấp</th><th>Ngày sấy</th>
               <th class="text-right">KL bốc</th><th class="text-right">Còn chưa bốc</th>
               <th>Ghi chú</th><th class="text-right">Thao tác</th>`,
       rowHtml: (r, d) => `
         <tr class="x2-day-row">
+          <td>
+            <span class="x1-ss-code">${escapeHTML(d.srcCode || '—')}</span>
+            ${d.srcDays == null ? '' : `<div class="x1-ss-day-wrap"><span class="x1-ss-day-chip ${d.srcIsReady ? 'is-ready' : 'is-normal'}" title="Lô nguồn đã sấy ${d.srcDays} ngày / ngày đạt ${d.srcReadyDays} ngày">${d.srcDays} ngày${d.srcIsReady ? ' ⚠' : ''}</span></div>`}
+          </td>
           <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong></td>
           <td>${escapeHTML(d.srcSupplier || '—')}</td>
           <td>${d.srcSayDate ? formatDateDDMMYY(d.srcSayDate) : '—'}</td>
@@ -15215,7 +15541,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   function resetX1ChainForm(spec) {
     const f = document.getElementById(x1Id(spec, 'form'));
-    if (f) f.reset();
+    // GIỮ nguồn đang chọn qua form.reset() — xem x1ResetKeepingSelect
+    x1ResetKeepingSelect(f, x1Id(spec, 'src'));
     state[spec.editKey] = null;
     fillX1ChainOptions(spec);
     syncX1EditBanner(spec);
@@ -15302,10 +15629,12 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     if (cardId === 'x1-say-sinh-card') {
       const pend = (state.xuong1CatOngRecords || []).filter(c => x1CatOngRemainingOf(c, null) > 0);
       const pend2 = x1SaySinhDirectInputs().filter(m => x1SaySinhDirectRemainingOf(m, null) > 0);
-      if (!pend.length && !pend2.length) return 'Hết tồn';
+      const readyN = x1SsReadyCount();
+      const readyTxt = readyN ? ` · ⚠ ${readyN} lô đạt` : '';
+      if (!pend.length && !pend2.length) return `Hết tồn${readyTxt}`;
       const total = pend.reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0)
         + pend2.reduce((s, m) => s + x1SaySinhDirectRemainingOf(m, null), 0);
-      return `Tồn ${fmtKg(total)} kg`;
+      return `Tồn ${fmtKg(total)} kg${readyTxt}`;
     }
     if (cardId === 'x1-boc-card') {
       const pend = x1BocPending();
@@ -15453,6 +15782,27 @@ export {
   x1CatOngDisplay,
   x1SaySinhDisplay,
   x1BocDisplay,
+  // ── MÃ LÔ + ĐẾM NGÀY + CẢNH BÁO "ĐẠT NGÀY" (19/10/2026) ──
+  X1_SS_READY_DAYS_DEFAULT,
+  x1SsPrefixOf,
+  x1SsDateISOOf,
+  x1SsMonthKeyOf,
+  x1SsMakeCode,
+  ensureX1SaySinhCodes,
+  x1SsReadyDaysOf,
+  x1SsDaysOf,
+  x1SsOverDaysOf,
+  x1SsIsReady,
+  x1SsReadyLots,
+  x1SsReadyCount,
+  x1SsReadyDefaultOf,
+  x1SsRememberReady,
+  renderX1SsReadyPanel,
+  x1SsOpenReadyPanel,
+  x1SsOpenReadyPanelFor,
+  x1SsCloseReadyPanel,
+  x1SsReadyStep,
+  x1SsOpenBocFor,
   // ── 5 CÔNG ĐOẠN ĐUÔI (khung SPEC dùng chung) ──
   X1_CHAIN_SPECS,
   x1ChainSpec,

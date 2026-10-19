@@ -415,7 +415,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v286/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v288/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -659,7 +659,7 @@ check('J4: ghi lượt sấy thẳng 200kg — ghi materialId (catOngId rỗng) 
 check('J5: thanh tồn + chip Sấy Sinh CỘNG cả 2 nhánh (350 Cắt Ống + 400 thẳng = 750kg)',
   (() => { x1.renderX1SaySinhCard();
     return document.getElementById('x1-say-sinh-stock-bar').innerHTML.includes('750'); })() &&
-  x1.x1CardCountText('x1-say-sinh-card') === 'Tồn 750 kg');
+  x1.x1CardCountText('x1-say-sinh-card').startsWith('Tồn 750 kg'));
 
 check('J6: sửa lượt sấy thẳng khôi phục ô nguồn x1m-d + excludeId trả phần lượt (600)',
   (() => { x1.editX1SaySinh(ssDirect.id);

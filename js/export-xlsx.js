@@ -1078,28 +1078,30 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
       });
       sumNote = `Tổng KL đầu vào ${x2FmtKg(inKg)} kg · KL đạt ${x2FmtKg(okKg)} kg`;
     } else if (source === 'x1saysinh') {
-      head = ['Stt', 'Ngày Sấy', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Đường Đi', 'KL Sấy (kg)', 'Còn Lại Nguồn (kg)', 'Người Sấy', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
+      head = ['Stt', 'Mã Lô', 'Ngày Sấy', 'Số Ngày', 'Ngày Đạt', 'Trạng Thái', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Đường Đi', 'KL Sấy (kg)', 'Còn Lại Nguồn (kg)', 'Người Sấy', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
       const list = (state.xuong1SaySinhRecords || []).map(r => x1SaySinhDisplay(r))
         .filter(d => x2InRange(d.date, from, to))
         .sort((a, b) => String(a.date).localeCompare(String(b.date)));
       let kg = 0;
       list.forEach((d, i) => {
         kg += d.qty || 0;
-        body.push([i + 1, formatDateDDMMYY(d.date), d.srcType || '', d.srcSupplier || '',
+        body.push([i + 1, d.code || '', formatDateDDMMYY(d.date), d.days, d.readyDays,
+          d.isReady ? 'Đã đạt ngày' : 'Chưa đạt', d.srcType || '', d.srcSupplier || '',
           d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '', d.qty, d.srcRest,
           x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
           d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
       });
       sumNote = `Tổng KL sấy ${x2FmtKg(kg)} kg`;
     } else if (source === 'x1boc') {
-      head = ['Stt', 'Ngày Bốc', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Sấy Sinh', 'KL Bốc (kg)', 'Còn Lại Nguồn (kg)', 'Người Bốc', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
+      head = ['Stt', 'Ngày Bốc', 'Mã Lô Nguồn', 'Số Ngày Sấy', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Sấy Sinh', 'KL Bốc (kg)', 'Còn Lại Nguồn (kg)', 'Người Bốc', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
       const list = (state.xuong1BocRecords || []).map(r => x1BocDisplay(r))
         .filter(d => x2InRange(d.date, from, to))
         .sort((a, b) => String(a.date).localeCompare(String(b.date)));
       let kg = 0;
       list.forEach((d, i) => {
         kg += d.qty || 0;
-        body.push([i + 1, formatDateDDMMYY(d.date), d.srcType || '', d.srcSupplier || '',
+        body.push([i + 1, formatDateDDMMYY(d.date), d.srcCode || '',
+          d.srcDays == null ? '—' : d.srcDays, d.srcType || '', d.srcSupplier || '',
           d.srcSayDate ? formatDateDDMMYY(d.srcSayDate) : '', d.qty, d.srcRest,
           x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
           d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);

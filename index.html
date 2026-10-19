@@ -2532,6 +2532,8 @@
             <h4><i data-lucide="flame-kindling"></i> Sấy Sinh — Xưởng 1</h4>
           </div>
           <div class="x2-stock-bar" id="x1-say-sinh-stock-bar"></div>
+          <!-- PANEL XEM NHANH LÔ ĐẠT NGÀY — CHỜ BỐC (19/10/2026) -->
+          <div class="x1-ss-ready-panel" id="x1-ss-ready-panel" hidden aria-live="polite"></div>
           <div class="x2-zone" data-zone="1">
             <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
@@ -2558,6 +2560,11 @@
                 <div class="form-group" style="flex:1;">
                   <label for="x1-say-sinh-qty">KL Sấy (kg)</label>
                   <input type="number" id="x1-say-sinh-qty" step="any" min="0" placeholder="0">
+                </div>
+                <div class="form-group" style="flex:0 0 150px;">
+                  <label for="x1-say-sinh-ready">Ngày Đạt (ngày)</label>
+                  <input type="number" id="x1-say-sinh-ready" min="1" max="999" step="1" value="3" title="Số ngày sấy để lô ĐẠT — quá số này mà còn chưa vào công đoạn Bốc sẽ hiện cảnh báo">
+                  <small style="color:var(--text-muted);">Quá số ngày này mà chưa Bốc → cảnh báo</small>
                 </div>
               </div>
               <div class="x2-cut-calc" id="x1-say-sinh-calc"></div>

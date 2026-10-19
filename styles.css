@@ -12328,3 +12328,61 @@ body[data-fx="low"] .mp-total-part { box-shadow: none; }
   border-radius: 12px;
 }
 .mp-totals .pv-unit-toggle { background: #f1f5f9; border-color: #cbd5e1; }
+
+/* ═══════════════════════════════════════════════════════════════
+   THẺ SẤY SINH (Xưởng 1) — MÃ LÔ · ĐẾM NGÀY · CẢNH BÁO ĐẠT NGÀY
+   (19/10/2026) — khối CUỐI file, cấp cao nhất
+   ═══════════════════════════════════════════════════════════════ */
+.x1-ss-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem; font-weight: 800; letter-spacing: 0.03em; color: #0f766e;
+}
+.x1-ss-day-wrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.x1-ss-day-chip {
+  border: 1px solid #cbd5e1; border-radius: 999px; padding: 1px 8px;
+  font-size: 0.7rem; font-weight: 700; cursor: pointer;
+  background: #f1f5f9; color: #334155;
+}
+.x1-ss-day-chip.is-ready { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+.x1-ss-day-chip.is-over { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+.x1-ss-day-target { font-size: 0.68rem; color: var(--text-muted); }
+.x1-ss-row-ready > td { background: rgba(245, 158, 11, 0.06); }
+
+/* Nút cảnh báo trên thanh tồn */
+.x1-ss-ready-btn {
+  margin-left: 10px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid #f59e0b;
+  background: #fef3c7; color: #92400e; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+}
+.x1-ss-ready-btn:hover { background: #fde68a; }
+.x1-ss-ready-btn svg { width: 14px; height: 14px; }
+
+/* Panel xem nhanh từng lô đạt ngày */
+.x1-ss-ready-panel {
+  margin: 0 16px 12px; padding: 12px 14px;
+  border: 1px solid #f59e0b; border-radius: 12px; background: #fffbeb;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+.x1-ss-ready-panel[hidden] { display: none !important; }
+.x1-ss-ready-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.x1-ss-ready-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #92400e; font-size: 0.85rem; }
+.x1-ss-ready-title svg { width: 16px; height: 16px; }
+.x1-ss-ready-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.15rem; font-weight: 800; letter-spacing: 0.04em; color: #0f766e; margin-top: 6px; }
+.x1-ss-ready-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.78rem; color: #475569; margin-top: 4px; }
+.x1-ss-ready-days { margin-top: 6px; font-size: 0.82rem; color: #7c2d12; }
+.x1-ss-over { color: #b91c1c; font-weight: 800; margin-left: 6px; }
+.x1-ss-due { color: #b45309; font-weight: 700; margin-left: 6px; }
+.x1-ss-ready-kg { margin-top: 4px; font-size: 0.82rem; color: #334155; }
+.x1-ss-remain { color: #dc2626; }
+.x1-ss-ready-note { margin-top: 6px; font-size: 0.75rem; color: #64748b; font-style: italic; }
+.x1-ss-ready-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.x1-ss-ready-actions .btn { display: inline-flex; align-items: center; gap: 5px; }
+.x1-ss-stat-ready { cursor: pointer; }
+.x1-ss-stat-ready.is-on .material-stat-value { color: #b45309; }
+body[data-fx="low"] .x1-ss-ready-panel { box-shadow: none; }
+@media (max-width: 640px) {
+  .x1-ss-ready-panel { margin: 0 8px 10px; padding: 10px; }
+  .x1-ss-ready-btn { margin-left: 0; margin-top: 6px; width: 100%; justify-content: center; }
+  .x1-ss-ready-code { font-size: 1rem; }
+  .x1-ss-ready-actions .btn { flex: 1 1 calc(50% - 4px); justify-content: center; }
+}

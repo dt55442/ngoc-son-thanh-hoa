@@ -263,6 +263,101 @@ state.materialRecords.push({
 x2.fillX1CatOngOptions();
 check('E2: vẽ lại khi có lô mới hơn — vẫn giữ lô đang chọn (x1m-1)', selX1.value === 'x1m-1');
 
+console.log('--- G. 8 THẺ XƯỞNG 1: LƯU/LÀM MỚI KHÔNG MẤT NGUỒN ĐANG CHỌN (19/10/2026) ---');
+// form.reset() của TRÌNH DUYỆT đưa <select> về OPTION ĐẦU TIÊN (mới nhất).
+// Stub mặc định (reset(){}) là no-op nên phải giả lập ĐÚNG hành vi này.
+function stubBrowserReset(formId, selId) {
+  const f = document.getElementById(formId);
+  const sel = document.getElementById(selId);
+  f.reset = () => {
+    const vals = [...String(sel.innerHTML || '').matchAll(/<option[^>]*value="([^"]*)"/g)].map(m => m[1]);
+    sel.value = vals.length ? vals[0] : '';
+  };
+}
+function optionValues(sel) {
+  return [...String(sel.innerHTML || '').matchAll(/<option[^>]*value="([^"]*)"/g)]
+    .map(m => m[1]).filter(Boolean);
+}
+function pickOlderSource(sel) {
+  const vals = optionValues(sel);
+  sel.value = vals[vals.length - 1];
+  return sel.value;
+}
+// Dữ liệu chuỗi Xưởng 1 (mỗi công đoạn 2 nguồn để có "nguồn cũ hơn")
+state.xuong1CatOngRecords = [
+  { id: 'gco-1', materialId: 'x1m-1', materialType: 'Vầu cây', supplier: 'Tế', date: '2026-09-12', klDat: 400, klLoai: 10, klMat: 5, klNgon: 5, createdAt: '2026-09-12T02:00:00.000Z' },
+  { id: 'gco-2', materialId: 'x1m-2', materialType: 'Nứa cây', supplier: 'Trung', date: '2026-09-13', klDat: 300, klLoai: 8, klMat: 4, klNgon: 4, createdAt: '2026-09-13T02:00:00.000Z' }
+];
+state.xuong1SaySinhRecords = [
+  { id: 'gss-1', catOngId: 'gco-1', date: '2026-09-14', qty: 300, createdAt: '2026-09-14T02:00:00.000Z' },
+  { id: 'gss-2', catOngId: 'gco-2', date: '2026-09-15', qty: 200, createdAt: '2026-09-15T02:00:00.000Z' }
+];
+state.xuong1BocRecords = [
+  { id: 'gboc-1', saySinhId: 'gss-1', date: '2026-09-16', qty: 280, createdAt: '2026-09-16T02:00:00.000Z' },
+  { id: 'gboc-2', saySinhId: 'gss-2', date: '2026-09-17', qty: 180, createdAt: '2026-09-17T02:00:00.000Z' }
+];
+// Lọc Ống KHÔNG qua Cắt Ống (bocId rỗng) → hiện được ở ô chọn Cắt Mắt
+state.xuong1LocOngRecords = [
+  { id: 'glo-1', bocId: '', date: '2026-09-18', qtyIn: 340, qtyOk: 320, createdAt: '2026-09-18T02:00:00.000Z' },
+  { id: 'glo-2', bocId: '', date: '2026-09-19', qtyIn: 240, qtyOk: 220, createdAt: '2026-09-19T02:00:00.000Z' }
+];
+state.xuong1CatMatRecords = [
+  { id: 'gcm-1', locOngId: 'glo-1', date: '2026-09-20', qtyIn: 310, qtyOk: 290, createdAt: '2026-09-20T02:00:00.000Z' },
+  { id: 'gcm-2', locOngId: 'glo-2', date: '2026-09-21', qtyIn: 210, qtyOk: 190, createdAt: '2026-09-21T02:00:00.000Z' }
+];
+state.xuong1BoRecords = [
+  { id: 'gbo-1', catMatId: 'gcm-1', date: '2026-09-22', qtyIn: 280, qtyOk: 260, createdAt: '2026-09-22T02:00:00.000Z' },
+  { id: 'gbo-2', catMatId: 'gcm-2', date: '2026-09-23', qtyIn: 180, qtyOk: 160, createdAt: '2026-09-23T02:00:00.000Z' }
+];
+state.xuong1PhoiSayRecords = [
+  { id: 'gps-1', boId: 'gbo-1', date: '2026-09-24', qtyIn: 250, qtyOk: 230, createdAt: '2026-09-24T02:00:00.000Z' },
+  { id: 'gps-2', boId: 'gbo-2', date: '2026-09-25', qtyIn: 150, qtyOk: 130, createdAt: '2026-09-25T02:00:00.000Z' }
+];
+state.xuong1LocThanhRecords = [];
+// Mỗi thẻ: render → chọn nguồn CŨ → giả lập form.reset() → gọi hàm reset của
+// đường Lưu lượt / "Làm Mới Form" → ô chọn PHẢI giữ đúng nguồn vừa chọn.
+function checkResetKeepsSource(cardLabel, formId, selId, renderFn, resetFn, editKey) {
+  renderFn();
+  const sel = document.getElementById(selId);
+  const picked = pickOlderSource(sel);
+  if (optionValues(sel).length < 2) {
+    check(`G· ${cardLabel}: cần ≥2 nguồn để kiểm thử`, false);
+    return;
+  }
+  stubBrowserReset(formId, selId);
+  resetFn();
+  check(`G· ${cardLabel}: form.reset() KHÔNG làm mất nguồn đang chọn (${picked})`, sel.value === picked);
+  check(`G· ${cardLabel}: đã thoát chế độ SỬA + ẩn banner "Đang sửa"`,
+    (!editKey || state[editKey] === null));
+}
+checkResetKeepsSource('Cắt Ống', 'x1-cat-ong-form', 'x1-cat-ong-material',
+  () => x2.renderX1CatOngCard(), () => x2.resetX1CatOngForm(), 'x1CatOngEditId');
+checkResetKeepsSource('Sấy Sinh', 'x1-say-sinh-form', 'x1-say-sinh-source',
+  () => x2.renderX1SaySinhCard(), () => x2.resetX1SaySinhForm(), 'x1SaySinhEditId');
+checkResetKeepsSource('Bốc', 'x1-boc-form', 'x1-boc-source',
+  () => x2.renderX1BocCard(), () => x2.resetX1BocForm(), 'x1BocEditId');
+x2.X1_CHAIN_SPECS.forEach(sp => {
+  checkResetKeepsSource(sp.title, 'x1-' + sp.prefix + '-form', 'x1-' + sp.prefix + '-src',
+    () => x2.renderX1ChainCard(sp), () => x2.resetX1ChainForm(sp), sp.editKey);
+});
+// Nguồn đã HẾT TỒN (bị lọc khỏi danh sách) → KHÔNG giữ chết, chuyển nguồn còn hàng
+(() => {
+  const sp = x2.X1_CHAIN_SPECS.find(s => s.key === 'locOng');
+  x2.renderX1ChainCard(sp);
+  const sel = document.getElementById('x1-loc-ong-src');
+  const picked = pickOlderSource(sel);
+  // Ghi 1 lượt dùng HẾT phần còn lại của nguồn đang chọn (chưa vẽ lại)
+  const srcRec = (state.xuong1BocRecords || []).find(b => b.id === picked) || {};
+  const fullQty = Number(srcRec.qty) || 0;
+  state.xuong1LocOngRecords.push({
+    id: 'glo-full', bocId: picked, date: '2026-10-01', qtyIn: fullQty, qtyOk: 0,
+    createdAt: '2026-10-01T02:00:00.000Z'
+  });
+  x2.resetX1ChainForm(sp);
+  check('G9: nguồn đã hết tồn → ô chọn chuyển sang nguồn CÒN HÀNG (không kẹt nguồn cũ)',
+    sel.value !== picked && optionValues(sel).includes(sel.value));
+})();
+
 console.log('--- F. CẤU TRÚC mã nguồn ---');
 const xuong2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
 const swSrc = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
@@ -277,7 +372,10 @@ check('F4: X1 chỉ tự điền ô số lượng khi ĐANG TRỐNG (không xoá
   xuong2Src.includes("x1SaySinhSyncLinked(!qtyEl") &&
   xuong2Src.includes("x1BocSyncLinked(!qtyEl") &&
   xuong2Src.includes("x1ChainSyncLinked(spec, !inEl"));
-check('F5: sw.js đã tăng cache (v275)', /nha-may-ngoc-son-v286/.test(swSrc));
+check('F5: sw.js đã tăng cache (v288)', /nha-may-ngoc-son-v288/.test(swSrc));
+check('F6: 8 thẻ Xưởng 1 — 4 hàm reset dùng helper giữ nguồn qua form.reset()',
+  xuong2Src.includes('function x1ResetKeepingSelect(formEl, selId)') &&
+  (xuong2Src.match(/x1ResetKeepingSelect\(f, /g) || []).length === 4);
 
 console.log(`\n=== KẾT QUẢ X2 FORM KEEP-SELECTION: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

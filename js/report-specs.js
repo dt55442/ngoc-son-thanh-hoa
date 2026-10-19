@@ -87,6 +87,7 @@ export const REPORT_SPECS = [
   { id: 'hr-att-stats',   group: 'hr', label: 'Thống Kê Đi Làm — Theo Tháng',        builder: 'hr', filters: ['dept', 'month'], code: 'NhanSu_TK_DiLam' },
   { id: 'hr-pos',         group: 'hr', label: 'Vị Trí Làm Việc & Kỹ Năng',           builder: 'hr', filters: ['dept'], code: 'NhanSu_ViTri' },
   { id: 'hr-ci',          group: 'hr', label: 'Giờ Máy Chấm Công',                   builder: 'hr', filters: ['dept'], code: 'NhanSu_GioMay' },
+  { id: 'hr-ci-compare',  group: 'hr', label: 'Đối Chiếu Bố Trí ↔ Máy Chấm Công',     kind: 'ciCompare', filters: ['period', 'dept'], code: 'NhanSu_DoiChieuChamCong' },
   { id: 'hr-leave',       group: 'hr', label: 'Đơn Xin Nghỉ Phép',                   builder: 'hr', filters: ['dept'], code: 'NhanSu_NghiPhep' },
   { id: 'hr-leave-stats', group: 'hr', label: 'Thống Kê Nghỉ Phép — Theo Nhân Viên', builder: 'hr', filters: ['dept'], code: 'NhanSu_TK_NghiPhep' },
   { id: 'hr-recruit',     group: 'hr', label: 'Nhân Sự Cần — Tuyển Dụng',            builder: 'hr', filters: [], code: 'NhanSu_TuyenDung' },

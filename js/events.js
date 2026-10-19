@@ -48,7 +48,7 @@ import { closeTraceSizePanel, positionTraceSizePanel, setTraceMode, setTraceProd
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
 import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
-import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition } from './hr.js';
+import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition, renderHrCheckinTable, ciShiftMonth, ciSaveUi, openCiEndfillModal, closeCiEndfillModal, renderCiEndfillList, applyCiEndfill, ciAckDay, ciUnackDay, hrDockToggle, hrDockOpenGroup, hrDockBack, hrDockClose, hrDockState } from './hr.js';
 import { state } from './state.js';
 import { getFxLow, setFxLow, applyThemeForUser } from './theme.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
@@ -176,6 +176,11 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     if (moreBtn && dropdown) {
       moreBtn.addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('show'); });
       document.addEventListener('click', () => dropdown.classList.remove('show'));
+      // Giữ menu mở khi bấm vùng trống / nhãn nhóm / tay nắm (menu cuộn được
+      // trên điện thoại) — chỉ mục chức năng (.dropdown-item) mới đóng menu.
+      dropdown.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown-item')) e.stopPropagation();
+      });
     }
 
     // Đóng dropdown lọc cột khi bấm vào vị trí trống bất kỳ bên ngoài dropdown
@@ -1323,10 +1328,30 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-toggle-hr-stats', 'click', () => { toggleRateTableCollapse('hr-stats-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-recruit', 'click', () => { toggleRateTableCollapse('hr-recruit-card'); syncHrMiniActive(); });
     safeOn('btn-toggle-hr-posneed', 'click', () => { toggleRateTableCollapse('hr-posneed-card'); syncHrMiniActive(); });
-    // Bấm thẻ launcher (grid 5/3/2) → mở bảng chi tiết dạng pop-up modal (nổi lên)
+    // Bấm thẻ launcher (dock 3 cấp) → mở bảng chi tiết dạng pop-up modal (nổi lên)
     document.querySelectorAll('.hr-mini-card').forEach(t => {
       t.addEventListener('click', () => hrOpenCard(t.getAttribute('data-hr-card')));
     });
+    // ── DOCK 3 CẤP Nhân Sự: Home (giữa dưới) → 4 nhóm → dải thẻ ──
+    safeOn('hr-dock-home', 'click', () => hrDockToggle());
+    safeOn('btn-hr-dock-open', 'click', () => { if (hrDockState().level === 0) hrDockToggle(); });
+    safeOn('hr-dock-back', 'click', hrDockBack);
+    safeOn('hr-dock-close', 'click', hrDockClose);
+    // Bấm bong bóng nhóm (ủy quyền — nút nằm trong #hr-dock-groups)
+    document.addEventListener('click', (e) => {
+      const g = e.target && e.target.closest ? e.target.closest('[data-hr-group]') : null;
+      if (!g) return;
+      hrDockOpenGroup(g.getAttribute('data-hr-group'));
+    });
+    // Esc đóng dock — nhưng ưu tiên đóng pop-up chi tiết trước (nếu đang mở)
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (hrDockState().level === 0) return;
+      const ov = document.getElementById('hr-detail-overlay');
+      if (ov && ov.classList.contains('show')) return;
+      e.stopPropagation();
+      hrDockClose();
+    }, true);
     // Đóng bảng chi tiết pop-up: nút Đóng / bấm nền mờ / phím Esc
     safeOn('btn-close-hr-detail', 'click', hrCloseOpenCard);
     const overlay = document.getElementById('hr-detail-overlay');
@@ -1444,6 +1469,38 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-apply-all-checkins', 'click', applyAllCheckins);
     safeOn('btn-delete-checkins-all', 'click', deleteCheckinsAll);
     safeOn('btn-toggle-hr-ci', 'click', () => { toggleRateTableCollapse('hr-ci-card'); syncHrMiniActive(); });
+    // ── ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG: bộ lọc kỳ / bộ phận / tìm nhanh ──
+    safeOn('hr-ci-month', 'change', (e) => { ciSaveUi({ month: e.target.value }); renderHrCheckinTable(); });
+    safeOn('btn-ci-prev', 'click', () => ciShiftMonth(-1));
+    safeOn('btn-ci-next', 'click', () => ciShiftMonth(1));
+    safeOn('hr-ci-filter-dept', 'change', (e) => { ciSaveUi({ dept: e.target.value }); renderHrCheckinTable(); });
+    safeOn('hr-ci-search', 'input', renderHrCheckinTable);
+    safeOn('hr-ci-only-issues', 'change', renderHrCheckinTable);
+    safeOn('hr-ci-show-leave', 'change', renderHrCheckinTable);
+    // ── Điền giờ kết thúc thực tế (xem trước rồi mới ghi vào Bảng bố trí) ──
+    safeOn('btn-ci-endfill', 'click', openCiEndfillModal);
+    safeOn('btn-close-ci-endfill', 'click', closeCiEndfillModal);
+    safeOn('btn-ci-endfill-cancel', 'click', closeCiEndfillModal);
+    safeOn('ci-endfill-from', 'change', renderCiEndfillList);
+    safeOn('ci-endfill-to', 'change', renderCiEndfillList);
+    safeOn('ci-endfill-round', 'change', renderCiEndfillList);
+    safeOn('btn-ci-endfill-apply', 'click', applyCiEndfill);
+    (() => {
+      const ov = document.getElementById('modal-ci-endfill');
+      if (!ov) return;
+      ov.addEventListener('click', (e) => { if (e.target === ov) closeCiEndfillModal(); });
+      ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCiEndfillModal(); });
+    })();
+    // Xác nhận / bỏ xác nhận dòng đối chiếu (ủy quyền click trong bảng)
+    document.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest ? e.target.closest('[data-ci-ack],[data-ci-unack]') : null;
+      if (!btn) return;
+      const emp = btn.getAttribute('data-ci-emp') || '';
+      const date = btn.getAttribute('data-ci-date') || '';
+      if (!emp || !date) return;
+      if (btn.hasAttribute('data-ci-unack')) ciUnackDay(emp, date);
+      else ciAckDay(emp, date);
+    });
 
     // ── Biểu đồ Kế hoạch vs Thực tế nguyên liệu theo ngày ──
     safeOn('mpc-week-filter', 'change', (e) => {

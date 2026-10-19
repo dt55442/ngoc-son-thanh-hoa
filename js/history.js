@@ -87,6 +87,7 @@ import { escapeHTML, showToast } from './utils.js';
     hrPositions:       { tab: 'hr',        label: 'Vị trí làm việc',      get: () => state.hrPositions },
     hrAttendance:      { tab: 'hr',        label: 'Chấm công & phân vị',  get: () => state.hrAttendance },
     hrCheckins:        { tab: 'hr',        label: 'Giờ máy chấm công',    get: () => state.hrCheckins },
+    hrCiAcks:          { tab: 'hr',        label: 'Xác nhận đối chiếu chấm công', get: () => state.hrCiAcks },
     customCharts:      { tab: 'dashboard', label: 'Biểu đồ Dashboard',    get: () => state.customCharts }
   };
 

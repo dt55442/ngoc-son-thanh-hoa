@@ -10,7 +10,7 @@
 import { initLucide } from './cloud.js';
 import { state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
-import { HR_DEPARTMENTS } from './hr.js';
+import { HR_DEPARTMENTS, ciRowsForRange } from './hr.js';
 import {
   buildHrXlsxExportData, buildMaterialsExportData, buildPlanningExportData, buildPressExportData,
   buildQcXlsxExportData, buildX2ExportData, exportDataToXlsx, exportMultiSheetToXlsx,
@@ -528,7 +528,55 @@ function buildReportData() {
   if (spec.kind === 'qcPress') return buildQcPressReport(spec);
   if (spec.kind === 'massBalance') return buildMassBalanceReport(spec);
   if (spec.kind === 'costing') return buildCostingReport(spec);
+  if (spec.kind === 'ciCompare') return buildCiCompareReport(spec);
   return null;
+}
+
+// ─── ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG (báo cáo Nhân Sự) ─────────
+// Số liệu lấy từ engine js/hr.js (ciRowsForRange) → khớp đúng màn hình thẻ
+// "Giờ Máy Chấm Công — Đối Chiếu": cùng quy tắc chấm sớm 30' / TC khối 30'.
+function buildCiCompareReport(spec) {
+  const { from, to } = currentPeriodRange();
+  const rows = ciRowsForRange(from || '', to || '', { dept: rcValues.dept || 'all', includeLeave: true });
+  if (!rows.length) { showToast('Không có dữ liệu đối chiếu trong kỳ!', 'error'); return null; }
+  const h = m => (m == null ? '' : Math.round((m / 60) * 100) / 100);
+  const header = ['Stt', 'Bộ Phận', 'Mã NV', 'Họ Tên', 'Ngày', 'Bố Trí (giờ)', 'Giờ Máy (vào–ra)',
+    'HC Máy (h)', 'TC Máy (h)', 'Đi Muộn (phút)', 'Về Sớm (phút)', 'TC Đơn (h)', 'Lệch TC (h)',
+    'Đơn Từ (nghỉ · tăng ca)', 'Kết Luận', 'Đã Xác Nhận'];
+  const body = rows.map((r, i) => {
+    const planTxt = r.plan.hasPlan
+      ? r.plan.assignments.map(a => `${hrPosText(a.positionId)} ${a.start}${a.end ? '–' + a.end : '→hết ca'}`).join('; ')
+      : '';
+    const otTxt = [
+      r.leave ? r.leave.label : '',
+      r.ot.approvedMin ? `TC đơn ${h(r.ot.approvedMin)}h` : '',
+      r.ot.pending.length ? 'Đơn TC chờ duyệt' : ''
+    ].filter(Boolean).join(' · ');
+    return [
+      i + 1, r.dept || '', r.empCode || '', r.employeeName, r.date, planTxt, r.timeText || '',
+      h(r.actual.hc), h(r.actual.tc), r.actual.lateMin || 0, r.actual.earlyOutMin || 0,
+      r.ot.approvedMin ? h(r.ot.approvedMin) : '',
+      (r.ot.approvedMin || r.actual.tc) ? h(r.otDelta) : '',
+      otTxt,
+      (CI_VERDICT_LABEL[r.verdict] || r.verdict),
+      r.ack ? ('Đã xác nhận' + (r.ack.by ? ' — ' + r.ack.by : '')) : ''
+    ];
+  });
+  return rcFrame('ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG',
+    `Kỳ: ${from || '…'} → ${to || '…'} · ${rows.length} dòng · quy tắc: chấm sớm < 30' tính từ giờ bắt đầu ca · tăng ca sau hết ca làm tròn XUỐNG 30 phút`,
+    header, body, { sheet: 'Đối Chiếu CC', file: spec.code });
+}
+// Nhãn kết luận (khai báo tại chỗ để report-center không phải import thêm)
+const CI_VERDICT_LABEL = {
+  ok: 'Khớp', late: 'Đi muộn', early: 'Về sớm', no_out: 'Thiếu giờ ra',
+  no_punch: 'Không quẹt máy', no_plan: 'Máy có quẹt, chưa bố trí',
+  leave_ok: 'Nghỉ có phép', leave_punch: 'Nghỉ có phép nhưng có quẹt máy',
+  leave_hours: 'Nghỉ theo giờ — lệch giờ làm', absent_punch: 'Chấm tay "Vắng"',
+  unmarked: 'Chưa chấm tay'
+};
+function hrPosText(pid) {
+  const p = (state.hrPositions || []).find(x => x.id === pid);
+  return p ? p.name : 'Vị trí';
 }
 
 // ─── BÁO CÁO CÂN ĐỐI KHỐI LƯỢNG (Giai đoạn 3 — thẻ Phụ Phẩm) ───
@@ -602,6 +650,7 @@ function reportHasData(spec) {
   if (spec.kind === 'suppliers') return (state.suppliers || []).length > 0;
   if (spec.kind === 'qcFinal') return (state.qcFinalRecords || []).length > 0;
   if (spec.kind === 'qcPress') return (state.pressRecords || []).length > 0;
+  if (spec.kind === 'ciCompare') return (state.hrCheckins || []).length > 0 || (state.hrAssignments || []).length > 0;
   if (spec.kind === 'massBalance') {
     const { from, to } = currentPeriodRange();
     const b = x2MassBalanceData(from, to);

@@ -10,7 +10,7 @@ import { captureAutoBackup } from './autobackup.js'; // Chụp backup TRƯỚC k
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
-import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
+import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, ciTimesheetHours, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
@@ -1754,11 +1754,10 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
         hc += r.hc; tc += r.tc;
       });
     } else {
-      const ci = (state.hrCheckins || []).find(c => c.employeeId === e.id && c.date === date && c.in && c.out);
-      if (ci) {
-        const r = hrSplitHoursHCDate(e.department || dept, date, ci.in, ci.out, 0);
-        hc = r.hc; tc = r.tc;
-      }
+      // Không có bố trí → dùng giờ MÁY với engine đối chiếu: tự nhận ca theo giờ
+      // quẹt, chấm sớm < 30' tính từ giờ bắt đầu ca, TC làm tròn xuống 30 phút.
+      const r = ciTimesheetHours(e, e.department || dept, date);
+      hc = r.hc; tc = r.tc;
     }
     return { hc, tc, worked: (hc + tc) > 0 };
   }

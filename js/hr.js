@@ -17,7 +17,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
-import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, state } from './state.js';
+import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc đọc file Excel
 
@@ -52,6 +52,8 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     try { state.hrPositions  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_POSITIONS))  || []; } catch (e) { state.hrPositions  = []; }
     try { state.hrAttendance = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_ATTENDANCE)) || []; } catch (e) { state.hrAttendance = []; }
     try { state.hrCheckins   = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CHECKINS))   || []; } catch (e) { state.hrCheckins   = []; }
+    try { state.hrCiAcks     = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CI_ACKS))    || []; } catch (e) { state.hrCiAcks     = []; }
+    if (!Array.isArray(state.hrCiAcks)) state.hrCiAcks = [];
     try { state.hrOvertimes  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_OVERTIMES))  || []; } catch (e) { state.hrOvertimes  = []; }
     // Lịch làm việc theo tháng (ngày nghỉ/lễ) — object theo khóa 'YYYY-MM'
     try { state.hrWorkCalendar = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CALENDAR)) || {}; } catch (e) { state.hrWorkCalendar = {}; }
@@ -68,10 +70,11 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || []));
     localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || []));
     localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || []));
+    localStorage.setItem(STORAGE_KEY_HR_CI_ACKS, JSON.stringify(state.hrCiAcks || []));
     localStorage.setItem(STORAGE_KEY_HR_OVERTIMES, JSON.stringify(state.hrOvertimes || []));
     localStorage.setItem(STORAGE_KEY_HR_CALENDAR, JSON.stringify(state.hrWorkCalendar || {}));
     // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa mục Nhân Sự nào)
-    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositionNeeds', 'hrShifts', 'hrAssignments', 'hrPositions', 'hrAttendance', 'hrCheckins', 'hrOvertimes', 'hrWorkCalendar']);
+    logDataChange(['hrEmployees', 'hrLeaves', 'hrRecruitment', 'hrPositionNeeds', 'hrShifts', 'hrAssignments', 'hrPositions', 'hrAttendance', 'hrCheckins', 'hrCiAcks', 'hrOvertimes', 'hrWorkCalendar']);
     firePushSync(); // đồng bộ lên mây nếu online
   }
 
@@ -158,6 +161,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     renderPositionNeedsTable();
     renderHrBoard();
     updateHrCardGrid();
+    hrDockRender();     // đồng bộ trạng thái dock 3 cấp (Home → nhóm → thẻ)
     syncHrMiniActive();
     initLucide();
   }
@@ -167,7 +171,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
   // nếu không, mỗi lần đổi bộ lọc (gọi renderHrView) select "Bộ phận" bị xây
   // lại và snap về "Tất Cả" khiến bộ lọc tưởng như không hoạt động.
   function populateHrSelects() {
-    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept', 'hr-attstats-filter-dept', 'hr-posneed-filter-dept'].forEach(selId => {
+    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept', 'hr-ci-filter-dept', 'hr-attstats-filter-dept', 'hr-posneed-filter-dept'].forEach(selId => {
       const sel = document.getElementById(selId);
       if (!sel) return;
       const cur = sel.value;
@@ -1252,11 +1256,34 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
   // ÁP DỤNG (tự chấm Đi làm cho ngày thiếu/lech), không ghi đè đơn nghỉ đã duyệt.
   function ciNormTime(v) {
     if (v instanceof Date) return `${String(v.getHours()).padStart(2, '0')}:${String(v.getMinutes()).padStart(2, '0')}`;
+    if (typeof v === 'number' && isFinite(v)) return ciTimeFromNum(v);
     const s = String(v || '').trim();
     let m = s.match(/(\d{1,2})[:h](\d{2})/);
     if (m) return `${String(+m[1]).padStart(2, '0')}:${m[2]}`;
     if (/^\d{3,4}$/.test(s)) { const t = s.padStart(4, '0'); return `${t.slice(0, 2)}:${t.slice(2)}`; }
+    // Ô GIỜ lưu dạng SỐ của Excel: 0.295 = 07:05 · 45000.295 = serial + giờ
+    if (/^\d+(?:[.,]\d+)?$/.test(s)) return ciTimeFromNum(Number(s.replace(',', '.')));
     return '';
+  }
+  // Số Excel (phân số ngày 0..1 HOẶC serial datetime) -> 'HH:mm'
+  function ciTimeFromNum(n) {
+    if (!isFinite(n)) return '';
+    let frac = -1;
+    if (n >= 0 && n < 1) frac = n;
+    else if (n >= 1 && n < 60000) frac = n - Math.floor(n);
+    if (frac < 0) return '';
+    const mins = Math.round(frac * 1440) % 1440;
+    return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+  }
+  // Serial ngày của Excel (1899-12-30 = 0) -> { date, time } — KHÔNG lệch múi giờ
+  function ciSerialToDateTime(n) {
+    const days = Math.floor(n);
+    const mins = Math.round((n - days) * 1440) % 1440;
+    const dt = new Date(Date.UTC(1899, 11, 30) + days * 86400000);
+    return {
+      date: `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`,
+      time: `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`
+    };
   }
   // Giải mã 1 ô Ngày / Ngày-giờ -> { date 'yyyy-mm-dd', time 'HH:mm' | '' }
   function ciNormDateTime(v) {
@@ -1264,7 +1291,17 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
       return { date: `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`,
                time: `${String(v.getHours()).padStart(2, '0')}:${String(v.getMinutes()).padStart(2, '0')}` };
     }
+    if (typeof v === 'number' && isFinite(v)) {
+      // 20000..80000 = serial ngày của Excel (1954..2119); < 1 = chỉ có giờ
+      if (v >= 20000 && v < 80000) return ciSerialToDateTime(v);
+      return { date: '', time: ciTimeFromNum(v) };
+    }
     const s = String(v || '').trim();
+    // Ô NGÀY lưu dạng SỐ của Excel (file máy xuất không định dạng ngày)
+    if (/^\d{5}(?:[.,]\d+)?$/.test(s)) {
+      const n = Number(s.replace(',', '.'));
+      if (n >= 20000 && n < 80000) return ciSerialToDateTime(n);
+    }
     // Thử định dạng ISO (yyyy-MM-dd [HH:mm]) TRƯỚC để regex dd/MM không khớp nhầm "2024-06-05"
     let m = s.match(/(\d{4})-(\d{2})-(\d{2})(?:[ T]+(\d{1,2})[:h.](\d{2}))?/);
     if (m) return { date: `${m[1]}-${m[2]}-${m[3]}`, time: m[4] ? ciNormTime(`${m[4]}:${m[5]}`) : '' };
@@ -1276,6 +1313,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     }
     return { date: '', time: '' };
   }
+
   // Tìm dòng tiêu đề: quét ~20 dòng đầu (file máy chấm công có các dòng đầu trang
   // "Công ty TNHH..." / "BÁO CÁO DỮ LIỆU CHẤM CÔNG" / "Từ ngày... Đến ngày...")
   function ciFindHeaderRow(aoa) {
@@ -1297,6 +1335,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     const col = {
       code:     find(h => /ma ?nv|ma nhan vien|ma ?the|user ?id|userid|enroll|ma ?so/.test(h)),
       name:     find(h => /ho ?ten|ten nhan vien|^ten$|name/.test(h)),
+      dept:     find(h => /phong ?ban|bo ?phan|department|dept/.test(h)),
       date:     find(h => /ngay|date/.test(h) && !/ngay ?gio|thoi ?gian/.test(h)),
       timeIn:   find(h => /gio ?vao|check ?in|^in$|vao ?lam/.test(h)),
       timeOut:  find(h => /gio ?ra|check ?out|^out$/.test(h)),
@@ -1313,13 +1352,26 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     return col;
   }
   function ciResolveEmployee(code, name) {
-    const byCode = code ? (state.hrEmployees || []).find(e =>
-      String(e.code || '').trim().toLowerCase() === String(code).trim().toLowerCase()) : null;
-    if (byCode) return byCode;
-    const byName = name ? (state.hrEmployees || []).find(e =>
-      String(e.name || '').trim().toLowerCase() === String(name).trim().toLowerCase()) : null;
-    return byName || null;
+    const list = state.hrEmployees || [];
+    const codeK = hrNormCode(code);
+    const nameK = hrNormNameKey(name);
+    // 1) Mã NV đã CHUẨN HOÁ: "NV 001" ≡ "nv001" ≡ số 1 (máy hay xuất mã khác kiểu)
+    if (codeK) {
+      const byCode = list.filter(e => hrNormCode(e.code) === codeK);
+      if (byCode.length === 1) return byCode[0];
+    }
+    // 2) Họ tên CHUẨN HOÁ (bỏ dấu, gộp khoảng trắng) — chỉ nhận khi DUY NHẤT
+    if (nameK) {
+      const byName = list.filter(e => hrNormNameKey(e.name) === nameK);
+      if (byName.length === 1) return byName[0];
+    }
+    // 3) Dự phòng: so khớp tuyệt đối như trước (tên có ký tự đặc biệt)
+    const byCode2 = code ? list.find(e => String(e.code || '').trim().toLowerCase() === String(code).trim().toLowerCase()) : null;
+    if (byCode2) return byCode2;
+    const byName2 = name ? list.find(e => String(e.name || '').trim().toLowerCase() === String(name).trim().toLowerCase()) : null;
+    return byName2 || null;
   }
+
 
   // Đọc lại ánh xạ + nhập sheet vào state.hrCheckins.
   // Hỗ trợ 3 kiểu file máy chấm công:
@@ -1339,7 +1391,9 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
       const emp = ciResolveEmployee(get(col.code), get(col.name));
       if (!emp) {
         const key = String(get(col.code) || get(col.name) || '').trim();
-        if (key && !res.unmatched.some(u => u.key === key && u.row === r + 1)) res.unmatched.push({ key, row: r + 1 });
+        if (key && !res.unmatched.some(u => u.key === key && u.row === r + 1)) {
+          res.unmatched.push({ key, row: r + 1, name: String(get(col.name) || '').trim(), dept: String(get(col.dept) || '').trim() });
+        }
         continue;
       }
       if (hasInOut) {
@@ -1350,7 +1404,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
         const outT = ciNormTime(get(col.timeOut));
         if (!inT && !outT) continue;
         res.punches++;
-        if (upsertCheckin(emp.id, dt.date, inT, outT, 1, fileName)) res.added++; else res.updated++;
+        if (upsertCheckin(emp.id, dt.date, inT, outT, 1, fileName, [inT, outT].filter(Boolean))) res.added++; else res.updated++;
       } else if (punchCols.length) {
         // Kiểu (c): lưới cột "Lần 1..N" — mỗi dòng 1 ngày, thời gian HH:MM(:SS)
         const dt = ciNormDateTime(get(col.date));
@@ -1374,7 +1428,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
       Object.keys(groups).forEach(k => {
         const [empId, date] = k.split('|');
         const times = [...groups[k]].sort();
-        if (upsertCheckin(empId, date, times[0], times.length > 1 ? times[times.length - 1] : '', times.length, fileName)) res.added++; else res.updated++;
+        if (upsertCheckin(empId, date, times[0], times.length > 1 ? times[times.length - 1] : '', times.length, fileName, times)) res.added++; else res.updated++;
       });
     }
     res.matched = res.added + res.updated;
@@ -1382,16 +1436,24 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     return res;
   }
   // Upsert 1 bản ghi giờ máy. Trả về true nếu thêm mới, false nếu cập nhật.
-  function upsertCheckin(employeeId, date, inT, outT, punchCount, fileName) {
+  // punchTimes = ĐỦ danh sách lần quét trong ngày (phục vụ đối chiếu/audit)
+  function upsertCheckin(employeeId, date, inT, outT, punchCount, fileName, punchTimes) {
     const rec = (state.hrCheckins || []).find(c => c.employeeId === employeeId && c.date === date);
     const now = new Date().toISOString();
+    const times = Array.isArray(punchTimes) ? punchTimes.filter(Boolean) : null;
     if (rec) {
-      rec.in = inT || rec.in; rec.out = outT || rec.out;
-      rec.punches = punchCount || rec.punches; rec.fileName = fileName || rec.fileName;
+      // Giữ lần quẹt SỚM NHẤT làm giờ vào, MUỘN NHẤT làm giờ ra (file có thể
+      // nhiều dòng / nhiều lần quét cho cùng 1 ngày) — nạp lại vẫn idempotent.
+      if (inT) rec.in = (rec.in && rec.in < inT) ? rec.in : inT;
+      if (outT) rec.out = (rec.out && rec.out > outT) ? rec.out : outT;
+      rec.punches = Math.max(Number(rec.punches) || 0, Number(punchCount) || 0, 1);
+      rec.fileName = fileName || rec.fileName;
+      if (times && times.length) rec.punchTimes = times.slice();
       rec.updatedAt = now;
       return false;
     }
-    state.hrCheckins.push({ id: `ci-${date}-${employeeId}`, employeeId, date, in: inT, out: outT, punches: punchCount || 1, fileName: fileName || '', createdAt: now, updatedAt: now });
+    state.hrCheckins.push({ id: `ci-${date}-${employeeId}`, employeeId, date, in: inT, out: outT,
+      punches: punchCount || 1, punchTimes: times || [], fileName: fileName || '', createdAt: now, updatedAt: now });
     return true;
   }
   function checkinRecordOf(employeeId, date) {
@@ -1450,52 +1512,793 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     renderHrView();
     showToast('Đã xóa toàn bộ dữ liệu giờ máy chấm công đã nạp', 'info');
   }
-  // Bảng đối chiếu: NV | Ngày | Giờ máy | Chấm tay | Trạng thái khớp | Thao tác
-  function renderHrCheckinTable() {
+  // Bảng đối chiếu Bố trí ↔ Máy chấm công — engine + giao diện ở khối 8b bên dưới.
+  // Giữ tên cũ để renderHrView / test cũ gọi được.
+  function renderHrCheckinTable() { ciRenderCheckinTable(); }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 8b) ĐỐI CHIẾU BẢNG BỐ TRÍ ↔ MÁY CHẤM CÔNG
+  // ───────────────────────────────────────────────────────────────
+  // Quy tắc (chốt 19/10/2026):
+  //  • Chấm sớm tối đa < 30 phút: máy cho phép quẹt trước — giờ làm tính TỪ
+  //    GIỜ BẮT ĐẦU CA, KHÔNG sinh TC cho phần sớm.
+  //  • Tăng ca sau hết ca: mỗi 30 phút mới tính → LÀM TRÒN XUỐNG
+  //    (17:59 → 0'; 18:10 → 30'; 18:35 → 60'; 19:30 → 120').
+  //  • Ngày nghỉ/lễ (Lịch làm việc tháng): toàn bộ giờ đi làm = TC, KHÔNG tròn.
+  //  • Đi muộn / về sớm: hiện số phút THẬT, chỉ gắn cờ khi vượt CI_LATE_TOL_MIN.
+  //  • Nghỉ phép cả ngày + có quẹt máy → cờ đỏ; nghỉ theo GIỜ → so phần còn
+  //    phải làm (giờ bố trí − số giờ nghỉ).
+  //  • Tăng ca: TC máy (đã tròn) ⟷ Σ đơn TC ĐÃ DUYỆT (thiếu / vượt / chưa ĐK).
+  //  • Bố trí mà KHÔNG quẹt: chỉ báo khi NGÀY ĐÓ máy có dữ liệu (tránh báo oan
+  //    ngày chưa nạp file) và không phải ngày nghỉ theo lịch.
+  //  • Ca đêm thiếu giờ ra: ghép lần quẹt sáng sớm NGÀY KẾ TIẾP làm giờ ra.
+  //  • Engine CHỈ ĐỌC dữ liệu; chỉ 3 hàm ghi: ciApplyEndFills (điền giờ kết
+  //    thúc vào Bảng bố trí), ciAckDay / ciUnackDay (đánh dấu đã xác nhận).
+  // ═══════════════════════════════════════════════════════════════
+  const CI_EARLY_ALLOW_MIN  = 30; // chấm sớm tối đa (< 30') — tính từ giờ bắt đầu ca
+  const CI_OT_BLOCK_MIN     = 30; // mỗi 30 phút mới tính tăng ca (làm tròn XUỐNG)
+  const CI_LATE_TOL_MIN     = 5;  // ngưỡng báo đi muộn / về sớm (phút)
+  const CI_WORK_DAY_MAX_MIN = 16 * 60;
+  const CI_MAX_ROWS         = 400;
+  const HR_CI_UI_KEY        = 'bamboo_tracker_hr_ci_ui_v1'; // THUẦN UI THEO MÁY (không mây/backup)
+  const CI_VERDICT = {
+    ok:           { label: 'Khớp ✓',                         cls: 'ok' },
+    late:         { label: 'Đi muộn',                        cls: 'warn' },
+    early:        { label: 'Về sớm',                         cls: 'warn' },
+    no_out:       { label: 'Thiếu giờ ra',                   cls: 'warn' },
+    no_punch:     { label: 'Không quẹt máy',                 cls: 'off' },
+    no_plan:      { label: 'Máy có quẹt, chưa bố trí',       cls: 'warn' },
+    leave_ok:     { label: 'Nghỉ có phép',                   cls: 'ok' },
+    leave_punch:  { label: 'Nghỉ có phép nhưng có quẹt máy', cls: 'off' },
+    leave_hours:  { label: 'Nghỉ theo giờ — lệch giờ làm',   cls: 'warn' },
+    absent_punch: { label: 'Chấm tay "Vắng"',                cls: 'off' },
+    unmarked:     { label: 'Chưa chấm tay',                  cls: 'warn' }
+  };
+  const CI_OT_LABEL = {
+    none: '', ok: 'TC khớp đơn', short: 'TC thiếu so đơn', over: 'TC vượt đơn',
+    unregistered: 'TC chưa đăng ký', pending: 'Đơn TC chờ duyệt',
+    waiting: 'Chờ giờ ra để đối chiếu TC'
+  };
+
+  let ciMachineDaysCache = null;
+  let ciEndfillRows = [];
+  // ── CHỈ MỤC TẠM theo (NV|ngày) cho 1 lượt vẽ bảng ────────────────
+  // Với ~6.000 dòng/tháng, quét tuyến tính từng dòng sẽ là O(n²). Khi
+  // ciRowsForRange / ciSuggestEndFills chạy, dựng Map 1 lần rồi tra O(1);
+  // gọi lẻ (test, export) thì tự quay về quét tuyến tính như cũ.
+  let ciCtx = null;
+  function ciBuildCtx() {
+    const asgByKey = new Map(), ciByKey = new Map(), attByKey = new Map(), otByKey = new Map(), lvByEmp = new Map();
+    (state.hrAssignments || []).forEach(a => {
+      if (!a || !a.employeeId || !a.date) return;
+      const k = `${a.employeeId}|${a.date}`;
+      if (!asgByKey.has(k)) asgByKey.set(k, []);
+      asgByKey.get(k).push(a);
+    });
+    asgByKey.forEach(list => list.sort((x, y) => ciToMin(x.start) - ciToMin(y.start)));
+    (state.hrCheckins || []).forEach(c => { if (c && c.employeeId) ciByKey.set(`${c.employeeId}|${c.date}`, c); });
+    (state.hrAttendance || []).forEach(a => { if (a && a.employeeId) attByKey.set(`${a.employeeId}|${a.date}`, a); });
+    (state.hrOvertimes || []).forEach(o => {
+      if (!o || !o.employeeId) return;
+      const k = `${o.employeeId}|${o.date}`;
+      if (!otByKey.has(k)) otByKey.set(k, []);
+      otByKey.get(k).push(o);
+    });
+    (state.hrLeaves || []).forEach(l => {
+      if (!l || !l.employeeId) return;
+      if (!lvByEmp.has(l.employeeId)) lvByEmp.set(l.employeeId, []);
+      lvByEmp.get(l.employeeId).push(l);
+    });
+    return { asgByKey, ciByKey, attByKey, otByKey, lvByEmp };
+  }
+  function ciWithCtx(fn) {
+    const prev = ciCtx;
+    ciCtx = ciBuildCtx();
+    try { return fn(); } finally { ciCtx = prev; }
+  }
+  function ciCheckinOf(employeeId, date) {
+    if (ciCtx) return ciCtx.ciByKey.get(`${employeeId}|${date}`) || null;
+    return (state.hrCheckins || []).find(c => c.employeeId === employeeId && c.date === date) || null;
+  }
+  function ciAttRecordOf(employeeId, date) {
+    if (ciCtx) return ciCtx.attByKey.get(`${employeeId}|${date}`) || null;
+    return (state.hrAttendance || []).find(a => a.employeeId === employeeId && a.date === date) || null;
+  }
+  function ciApprovedLeaveOf(employeeId, date) {
+    const list = ciCtx ? (ciCtx.lvByEmp.get(employeeId) || [])
+      : (state.hrLeaves || []).filter(l => l && l.employeeId === employeeId);
+    return list.find(l => (l.status || 'pending') === 'approved' && String(l.from) <= date && date <= String(l.to)) || null;
+  }
+  function ciAttStatusOf(employeeId, date) {
+    const rec = ciAttRecordOf(employeeId, date);
+    if (rec && (rec.status === 'work' || rec.status === 'absent')) return rec.status;
+    if (ciApprovedLeaveOf(employeeId, date)) return 'leave';
+    return '';
+  }
+  function ciOtListOf(employeeId, date) {
+    if (ciCtx) return ciCtx.otByKey.get(`${employeeId}|${date}`) || [];
+    return (state.hrOvertimes || []).filter(o => o && o.employeeId === employeeId && o.date === date);
+  }
+
+
+  function ciPad2(n) { return String(n).padStart(2, '0'); }
+  function ciToMin(t) { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; }
+  function ciFromMin(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${ciPad2(Math.floor(m / 60))}:${ciPad2(m % 60)}`; }
+  // Tách HC/TC theo PHÚT + xét ngày nghỉ/lễ (ngày nghỉ → toàn bộ giờ = TC)
+  function ciSplitForDate(dept, date, startMin, endMin, shiftIdx) {
+    const r = hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx);
+    if (date && hrIsRestDay(date) && r.hc > 0) return { hc: 0, tc: r.hc + r.tc };
+    return r;
+  }
+  // Tập NGÀY máy có dữ liệu (để biết ngày nào đã nạp file) — cache theo số bản ghi
+  function ciMachineDays() {
+    const list = state.hrCheckins || [];
+    const sig = `${list.length}|${list[0] ? list[0].date : ''}|${list[list.length - 1] ? list[list.length - 1].date : ''}`;
+    if (ciMachineDaysCache && ciMachineDaysCache.sig === sig) return ciMachineDaysCache.set;
+    const set = new Set(list.map(c => String(c.date || '')));
+    ciMachineDaysCache = { sig, set };
+    return set;
+  }
+  function ciAckOf(employeeId, date) {
+    return (state.hrCiAcks || []).find(a => a && a.employeeId === employeeId && a.date === date) || null;
+  }
+  function ciAssignmentsOn(employeeId, date) {
+    if (ciCtx) return ciCtx.asgByKey.get(`${employeeId}|${date}`) || [];
+    return (state.hrAssignments || [])
+      .filter(a => a && a.employeeId === employeeId && a.date === date)
+      .slice().sort((x, y) => ciToMin(x.start) - ciToMin(y.start));
+  }
+  // Giờ BỐ TRÍ của 1 NV trong ngày: khung sớm nhất → muộn nhất + HC/TC + ca
+  function ciPlannedOf(employeeId, date) {
+    const em = hrEmpById(employeeId);
+    const dept0 = em && em.department ? em.department : '';
+    const list = ciAssignmentsOn(employeeId, date);
+    let hc = 0, tc = 0, startMin = null, endMin = null;
+    const shifts = new Set();
+    list.forEach(a => {
+      const ad = a.department || dept0;
+      const r = hrSplitHoursHCDate(ad, date, a.start, a.end, a.shiftIdx || 0);
+      hc += r.hc; tc += r.tc;
+      const range = hrShiftRange(hrShiftCfg(ad), a.shiftIdx || 0);
+      const s = ciToMin(a.start) || range.startMin;
+      let e = ciToMin(a.end);
+      if (!e || e <= s) e = (e && e < s) ? e + 1440 : range.endMin;
+      if (e <= s) e += 1440;
+      startMin = startMin === null ? s : Math.min(startMin, s);
+      endMin = endMin === null ? e : Math.max(endMin, e);
+      shifts.add(`${a.shiftIdx || 0}|${ad}`);
+    });
+    return {
+      assignments: list, hasPlan: list.length > 0, dept: dept0,
+      startMin, endMin, hc, tc,
+      shiftIdx: list.length ? (list[0].shiftIdx || 0) : 0,
+      multiShift: shifts.size > 1
+    };
+  }
+  // Đoán CA khi ngày đó KHÔNG có bố trí (bảng chấm công tháng dùng): chọn ca có
+  // giờ bắt đầu gần giờ quẹt nhất (Hành chính luôn ca 0)
+  function ciShiftGuess(dept, inMin) {
+    const cfg = hrShiftCfg(dept);
+    if (cfg.type !== 'lamca') return 0;
+    let best = 0, bestDiff = Infinity;
+    (cfg.shifts || []).forEach((s, i) => {
+      const r = hrShiftRange(cfg, i);
+      const startRel = r.startMin % 1440;
+      const diff = Math.min(Math.abs(inMin - startRel), 1440 - Math.abs(inMin - startRel));
+      if (diff < bestDiff) { bestDiff = diff; best = i; }
+    });
+    return best;
+  }
+  function ciOtOf(employeeId, date) {
+    const list = ciOtListOf(employeeId, date);
+    const approved = list.filter(o => (o.status || 'pending') === 'approved');
+    const pending = list.filter(o => (o.status || 'pending') === 'pending');
+    const approvedMin = approved.reduce((s, o) => s + (Number(o.plannedMin) || Math.max(0, ciToMin(o.end) - ciToMin(o.start))), 0);
+    let earlyStartMin = null;
+    approved.forEach(o => {
+      const st = ciToMin(o.start);
+      if (st && (earlyStartMin === null || st < earlyStartMin)) earlyStartMin = st;
+    });
+    return { list, approved, pending, approvedMin, earlyStartMin };
+  }
+
+  // Giờ THỰC TẾ của 1 NV trong ngày (từ máy): HC/TC đã áp quy tắc 30' + ca đêm
+  function ciActualSplit(employeeId, date, planIn) {
+    const rec = ciCheckinOf(employeeId, date);
+    const plan = planIn || ciPlannedOf(employeeId, date);
+    const dept = plan.dept || hrEmpDept(employeeId);
+    const inMin0 = rec ? ciToMin(rec.in) : 0;
+    let outMin0 = rec ? ciToMin(rec.out) : 0;
+    let crossNight = false;
+    if (!outMin0 && inMin0) {
+      // Ca đêm: lần quẹt SÁNG SỚM ngày kế tiếp chính là giờ ra
+      const cfg0 = hrShiftCfg(dept);
+      const idx0 = plan.hasPlan ? plan.shiftIdx : ciShiftGuess(dept, inMin0 % 1440);
+      const range0 = hrShiftRange(cfg0, idx0);
+      if (cfg0.type === 'lamca' && range0.endMin > 1440) {
+        const next = ciCheckinOf(employeeId, hrShiftDateISO(date, 1));
+        const nIn = next ? ciToMin(next.in) : 0;
+        if (nIn && nIn <= 12 * 60) { outMin0 = nIn + 1440; crossNight = true; }
+      }
+    }
+    if (!inMin0 && !outMin0) {
+      return { hasPunch: false, incomplete: true, inMin: 0, outMin: 0, hc: null, tc: null,
+        tcRaw: null, workedMin: null, dept, shiftIdx: 0, crossNight: false,
+        flags: [], lateMin: 0, earlyOutMin: 0, planStart: 0 };
+    }
+    const shiftIdx = plan.hasPlan ? plan.shiftIdx : ciShiftGuess(dept, (inMin0 || outMin0) % 1440);
+    const range = hrShiftRange(hrShiftCfg(dept), shiftIdx);
+    const planStart = plan.hasPlan ? plan.startMin : range.startMin;
+    const ot = ciOtOf(employeeId, date);
+    const flags = [];
+    // ── CHẤM SỚM: máy cho phép quẹt trước < 30' → tính từ giờ bắt đầu ca.
+    // Nếu có ĐƠN TĂNG CA đã duyệt bắt đầu TRƯỚC ca thì giữ phần trong đơn.
+    let inMin = inMin0;
+    if (inMin && planStart && inMin < planStart) {
+      const early = planStart - inMin;
+      if (ot.earlyStartMin != null && ot.earlyStartMin < planStart) {
+        inMin = Math.max(inMin, ot.earlyStartMin);
+      } else {
+        inMin = planStart;
+      }
+      if (early >= CI_EARLY_ALLOW_MIN) flags.push('early_punch');
+    }
+    const incomplete = !outMin0;
+    let hc = null, tc = null, tcRaw = null, workedMin = null;
+    if (inMin && outMin0) {
+      let outMin = outMin0;
+      if (outMin <= inMin) outMin += 1440;
+      workedMin = outMin - inMin;
+      const r = ciSplitForDate(dept, date, inMin, outMin, shiftIdx);
+      hc = r.hc; tcRaw = r.tc;
+      // TC tính theo khối 30' — ngày nghỉ/lễ giữ nguyên (đó là ngày công)
+      tc = hrIsRestDay(date) ? r.tc : Math.floor(r.tc / CI_OT_BLOCK_MIN) * CI_OT_BLOCK_MIN;
+    }
+    return {
+      hasPunch: true, incomplete, inMin, outMin: outMin0,
+      inRaw: inMin0, outRaw: rec ? ciToMin(rec.out) : 0,
+      hc, tc, tcRaw, workedMin, dept, shiftIdx, crossNight, flags, planStart,
+      lateMin: (plan.hasPlan && inMin0 && plan.startMin) ? Math.max(0, inMin0 - plan.startMin) : 0,
+      earlyOutMin: (plan.hasPlan && outMin0 && plan.endMin) ? Math.max(0, plan.endMin - outMin0) : 0
+    };
+  }
+
+  // Đơn nghỉ ĐÃ DUYỆT phủ ngày — tách cả ngày / theo giờ
+  function ciLeaveInfoOf(employeeId, date) {
+    const lv = ciApprovedLeaveOf(employeeId, date);
+    if (!lv) return null;
+    const mode = lv.durationMode || 'full';
+    let hours = 0;
+    if (mode === 'hours') hours = Number(lv.hours) || 0;
+    else if (mode === 'half') hours = Number(lv.hours) || LEAVE_WORK_HOURS_PER_DAY / 2;
+    return {
+      leave: lv, mode, hours,
+      fullDay: mode === 'full' || !hours,
+      label: leaveDurationText(lv)
+    };
+  }
+
+  // ĐỐI CHIẾU 1 NGÀY: bố trí ⟷ máy ⟷ chấm tay ⟷ nghỉ phép ⟷ tăng ca
+  function ciCompareDay(employeeId, date) {
+    const plan = ciPlannedOf(employeeId, date);
+    const rec = ciCheckinOf(employeeId, date);
+    const act = ciActualSplit(employeeId, date, plan);
+    const leave = ciLeaveInfoOf(employeeId, date);
+    const att = ciAttStatusOf(employeeId, date);
+    const ot = ciOtOf(employeeId, date);
+    const ack = ciAckOf(employeeId, date);
+    const machineHas = ciMachineDays().has(String(date));
+    const flags = [];
+    let verdict = 'ok';
+    if (leave && leave.fullDay && rec) { verdict = 'leave_punch'; flags.push('leave_punch'); }
+    else if (leave && leave.fullDay) { verdict = 'leave_ok'; }
+    else if (plan.hasPlan && !rec && machineHas && !hrIsRestDay(date)) { verdict = 'no_punch'; flags.push('no_punch'); }
+    else if (rec && !rec.out && act.incomplete) { verdict = 'no_out'; flags.push('no_out'); }
+    else if (att === 'absent' && rec) { verdict = 'absent_punch'; flags.push('absent_punch'); }
+    else {
+      // Ngày KHÔNG có bố trí nhưng đã chấm tay "Đi làm" → coi là khớp (chỉ nhắc
+      // nhẹ "chưa bố trí"), tránh báo động cả tháng khi Bảng bố trí chưa nhập.
+      if (!plan.hasPlan && rec) flags.push('no_plan_info');
+      if (!plan.hasPlan && rec && att !== 'work') { verdict = 'no_plan'; flags.push('no_plan'); }
+      // Nghỉ THEO GIỜ: không so "về sớm" theo giờ hết ca (nghỉ buổi chiều là đúng)
+      const partialLeave = !!(leave && !leave.fullDay);
+      if (!partialLeave && act.lateMin > CI_LATE_TOL_MIN) { verdict = 'late'; flags.push('late'); }
+      if (!partialLeave && act.earlyOutMin > CI_LATE_TOL_MIN) { if (verdict === 'ok') verdict = 'early'; flags.push('early'); }
+      if (rec && att === '' && !leave) { if (verdict === 'ok') verdict = 'unmarked'; flags.push('unmarked'); }
+      if (act.flags && act.flags.indexOf('early_punch') !== -1) flags.push('early_punch');
+    }
+    // Nghỉ theo GIỜ — so phần còn phải làm
+    let leaveDeltaMin = 0;
+    if (leave && !leave.fullDay && act.workedMin != null && plan.hasPlan) {
+      const expected = plan.hc + plan.tc - Math.round(leave.hours * 60);
+      leaveDeltaMin = act.workedMin - expected;
+      if (Math.abs(leaveDeltaMin) > CI_LATE_TOL_MIN) {
+        flags.push('leave_mismatch');
+        if (verdict === 'ok' || verdict === 'unmarked') verdict = 'leave_hours';
+      }
+    }
+    // Tăng ca: TC máy ⟷ Σ đơn đã duyệt
+    let otStatus = 'none';
+    if (ot.pending.length) otStatus = 'pending';
+    if (ot.approvedMin > 0) {
+      if (act.incomplete) otStatus = 'waiting';
+      else {
+        const d = (act.tc || 0) - ot.approvedMin;
+        otStatus = d < -(CI_OT_BLOCK_MIN / 2) ? 'short' : (d > (CI_OT_BLOCK_MIN / 2) ? 'over' : 'ok');
+      }
+    } else if ((act.tc || 0) > 0 && !ot.pending.length) {
+      otStatus = 'unregistered';
+    }
+    const otDelta = (act.tc || 0) - ot.approvedMin;
+    const needsReview = !ack && (
+      ['late', 'early', 'no_out', 'no_punch', 'no_plan', 'leave_punch', 'absent_punch',
+        'unmarked', 'leave_hours'].indexOf(verdict) !== -1
+      || ['short', 'over', 'unregistered', 'pending'].indexOf(otStatus) !== -1
+      || flags.indexOf('early_punch') !== -1
+    );
+    const em = hrEmpById(employeeId);
+    return {
+      employeeId, employeeName: hrEmpName(employeeId), dept: hrEmpDept(employeeId),
+      empCode: em ? (em.code || '') : '', date, rec, plan, actual: act, leave, att, ot,
+      otStatus, otDelta, ack, verdict, flags, needsReview, machineHas, leaveDeltaMin,
+      timeText: rec ? `${rec.in || '?'}${rec.out ? '–' + rec.out : ''}` : ''
+    };
+  }
+
+  // ── DANH SÁCH DÒNG ĐỐI CHIẾU (hợp của Bố trí ∪ Giờ máy ∪ Đơn tăng ca) ──
+  function ciRowsForRange(from, to, opts) {
+    return ciWithCtx(() => ciRowsForRangeInner(from, to, opts));
+  }
+  function ciRowsForRangeInner(from, to, opts) {
+    const o = opts || {};
+    const inRange = d => (!from || d >= from) && (!to || d <= to);
+    const keys = new Map();
+    const add = (empId, date) => {
+      if (!empId || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
+      if (!inRange(date)) return;
+      keys.set(`${empId}|${date}`, { employeeId: empId, date });
+    };
+    (state.hrAssignments || []).forEach(a => add(a.employeeId, a.date));
+    (state.hrCheckins || []).forEach(c => add(c.employeeId, c.date));
+    (state.hrOvertimes || []).forEach(ov => add(ov.employeeId, ov.date));
+    // Ngày nghỉ có phép (chỉ khi bật "Hiện ngày nghỉ có phép")
+    if (o.includeLeave) {
+      (state.hrLeaves || []).forEach(l => {
+        if (!l || (l.status || 'pending') !== 'approved') return;
+        const d0 = String(l.from || '');
+        const d1 = String(l.to || l.from || '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d0) || !/^\d{4}-\d{2}-\d{2}$/.test(d1)) return;
+        if (from && d1 < from) return;
+        if (to && d0 > to) return;
+        let d = d0, guard = 0;
+        for (; d <= d1 && guard < 400; d = hrShiftDateISO(d, 1), guard++) {
+          if (inRange(d)) add(l.employeeId, d);
+        }
+      });
+    }
+    const dept = o.dept || 'all';
+    const q = hrStripDiacritics(o.q || '');
+    let rows = [];
+    keys.forEach(k => {
+      const em = hrEmpById(k.employeeId);
+      if (dept !== 'all' && (!em || (em.department || '—') !== dept)) return;
+      if (q) {
+        const hay = hrStripDiacritics(`${em ? em.name : ''} ${em ? em.code : ''} ${k.date} ${(em && em.department) || ''}`);
+        if (hay.indexOf(q) === -1) return;
+      }
+      rows.push(ciCompareDay(k.employeeId, k.date));
+    });
+    if (!o.includeLeave) rows = rows.filter(r => r.verdict !== 'leave_ok');
+    if (o.onlyIssues) rows = rows.filter(r => r.needsReview);
+    rows.sort((a, b) => String(b.date).localeCompare(String(a.date)) ||
+      String(a.employeeName).localeCompare(String(b.employeeName), 'vi'));
+    return rows;
+  }
+
+  function ciSummaryOf(rows) {
+    const s = { total: rows.length, ok: 0, review: 0, late: 0, early: 0, noOut: 0,
+      noPunch: 0, noPlan: 0, leavePunch: 0, absent: 0, otDiff: 0, ack: 0 };
+    rows.forEach(r => {
+      if (r.ack) s.ack++;
+      if (r.needsReview) s.review++;
+      if (!r.ack && r.verdict === 'ok') s.ok++;
+      if (r.flags.indexOf('late') !== -1) s.late++;
+      if (r.flags.indexOf('early') !== -1) s.early++;
+      if (r.verdict === 'no_out') s.noOut++;
+      if (r.verdict === 'no_punch') s.noPunch++;
+      if (r.verdict === 'no_plan') s.noPlan++;
+      if (r.verdict === 'leave_punch') s.leavePunch++;
+      if (r.verdict === 'absent_punch') s.absent++;
+      if (['short', 'over', 'unregistered', 'pending'].indexOf(r.otStatus) !== -1) s.otDiff++;
+    });
+    return s;
+  }
+
+  // ── TRẠNG THÁI BỘ LỌC (nhớ theo MÁY — thuần UI, không mây/backup) ──
+  function ciUiSaved() {
+    try { return JSON.parse(localStorage.getItem(HR_CI_UI_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function ciSaveUi(patch) {
+    try { localStorage.setItem(HR_CI_UI_KEY, JSON.stringify(Object.assign({}, ciUiSaved(), patch || {}))); } catch (e) {}
+  }
+  function ciMonthRange(month) {
+    if (!/^\d{4}-\d{2}$/.test(String(month || ''))) return { from: '', to: '' };
+    const [y, m] = month.split('-').map(Number);
+    const n = new Date(y, m, 0).getDate();
+    return { from: `${month}-01`, to: `${month}-${ciPad2(n)}` };
+  }
+  // Tháng mặc định = tháng có dữ liệu (máy hoặc bố trí) MỚI NHẤT — mở thẻ là thấy ngay
+  function ciDefaultMonth() {
+    const ds = (state.hrCheckins || []).map(c => String(c.date || '').slice(0, 7))
+      .concat((state.hrAssignments || []).map(a => String(a.date || '').slice(0, 7)))
+      .filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
+    return ds.length ? ds[ds.length - 1] : hrTodayISO().slice(0, 7);
+  }
+  function ciReadUi() {
+    const gv = id => { const el = document.getElementById(id); return el ? String(el.value || '') : ''; };
+    const saved = ciUiSaved();
+    // KỲ = tháng đã lưu (đổi qua select/nút ‹ › đều ghi vào đây); chưa có → tháng
+    // có dữ liệu máy MỚI NHẤT. KHÔNG đọc thẳng value của ô month (ô chỉ là hiển thị
+    // — nếu đọc, dữ liệu của tháng khác vừa nạp sẽ bị lọc mất).
+    const month = /^\d{4}-\d{2}$/.test(saved.month || '') ? saved.month : ciDefaultMonth();
+    // Bộ phận: ưu tiên lựa chọn đã lưu (mọi thay đổi đều được ghi lại) — ô select
+    // trên giao diện chỉ là hiển thị, tránh bị snap về "Tất Cả" khi render lại.
+    let dept = saved.dept || gv('hr-ci-filter-dept') || 'all';
+    // Bộ phận đã lưu không còn nhân viên nào → về "Tất Cả" (tránh bảng trống khó hiểu)
+    if (dept !== 'all' && !(state.hrEmployees || []).some(e => (e.department || '—') === dept)) dept = 'all';
+    const onlyEl = document.getElementById('hr-ci-only-issues');
+    const leaveEl = document.getElementById('hr-ci-show-leave');
+    return {
+      month, dept, q: gv('hr-ci-search'),
+      onlyIssues: onlyEl ? !!onlyEl.checked : true,
+      includeLeave: leaveEl ? !!leaveEl.checked : false
+    };
+  }
+  function ciSyncToolbar(ui) {
+    const mEl = document.getElementById('hr-ci-month');
+    if (mEl && mEl.value !== ui.month) mEl.value = ui.month;
+    const dEl = document.getElementById('hr-ci-filter-dept');
+    if (dEl && ui.dept && dEl.value !== ui.dept) dEl.value = ui.dept;
+    const qEl = document.getElementById('hr-ci-search');
+    if (qEl && !qEl.value && ui.q) qEl.value = ui.q;
+  }
+  function ciShiftMonth(delta) {
+    const ui = ciReadUi();
+    const [y, m] = ui.month.split('-').map(Number);
+    const d = new Date(y, m - 1 + Number(delta || 0), 1);
+    const month = `${d.getFullYear()}-${ciPad2(d.getMonth() + 1)}`;
+    const el = document.getElementById('hr-ci-month');
+    if (el) el.value = month;
+    ciSaveUi({ month });
+    renderHrCheckinTable();
+  }
+
+  // ── Ô HIỂN THỊ ─────────────────────────────────────────────────
+  function ciChip(label, cls, title) {
+    return `<span class="hr-chip ${escapeHTML(cls || '')}"${title ? ` title="${escapeHTML(title)}"` : ''}>${escapeHTML(label)}</span>`;
+  }
+  function ciPlanCell(r) {
+    if (!r.plan.hasPlan) return '<span class="ci-none">— chưa bố trí —</span>';
+    const items = r.plan.assignments.map(a => {
+      const range = hrShiftRange(hrShiftCfg(a.department || r.dept), a.shiftIdx || 0);
+      const time = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca (' + fmtHour(range.end) + ')'}`;
+      return `<span class="ci-plan-item" title="${escapeHTML(hrPosName(a.positionId) + ' · ' + time)}">
+        <strong>${escapeHTML(hrPosName(a.positionId))}</strong> ${escapeHTML(time)}</span>`;
+    }).join('');
+    const total = r.plan.hc + r.plan.tc;
+    return `<div class="ci-plan-list">${items}</div>
+      <div class="ci-sub">Bố trí <strong>${escapeHTML(fmtHm(total))}</strong>${r.plan.tc ? ` · HC ${escapeHTML(fmtHm(r.plan.hc))} + TC ${escapeHTML(fmtHm(r.plan.tc))}` : ''}</div>`;
+  }
+  function ciMachineCell(r) {
+    if (!r.rec) return '<span class="ci-none ci-none-off">Không quẹt máy</span>';
+    const extras = [];
+    if (r.rec.punches > 2) extras.push(`${r.rec.punches} lần quét`);
+    if (r.actual.crossNight) extras.push('ghép qua đêm');
+    if (r.actual.incomplete) extras.push('thiếu giờ ra');
+    return `<span class="hr-emp-code">${escapeHTML(r.timeText)}</span>` +
+      (extras.length ? `<div class="ci-sub">${escapeHTML(extras.join(' · '))}</div>` : '');
+  }
+  function ciActualCell(r) {
+    const a = r.actual;
+    if (!a.hasPunch) return '<span class="ci-none">—</span>';
+    if (a.hc == null) return '<span class="ci-none">— chờ giờ ra —</span>';
+    const rounded = (a.tcRaw != null && a.tc != null && a.tc !== a.tcRaw)
+      ? `<div class="ci-sub">TC gốc ${escapeHTML(fmtHm(a.tcRaw))} → tròn 30' = ${escapeHTML(fmtHm(a.tc))}</div>` : '';
+    return `<strong>HC ${escapeHTML(fmtHm(a.hc))}</strong> · <strong>TC ${escapeHTML(fmtHm(a.tc))}</strong>${rounded}`;
+  }
+  function ciDiffCell(r) {
+    const v = CI_VERDICT[r.verdict] || CI_VERDICT.ok;
+    let html = ciChip(v.label, v.cls, r.needsReview ? 'Cần xác nhận' : (r.ack ? 'Đã xác nhận' : 'Khớp'));
+    if (r.verdict === 'late' && r.actual.lateMin) html += ` <span class="ci-min">+${r.actual.lateMin}'</span>`;
+    if (r.flags.indexOf('early') !== -1 && r.actual.earlyOutMin) html += ` <span class="ci-min">−${r.actual.earlyOutMin}'</span>`;
+    if (r.flags.indexOf('early_punch') !== -1) html += ` <span class="ci-min ci-min-hint" title="Quẹt sớm hơn giờ bắt đầu ca từ 30 phút trở lên">quẹt sớm</span>`;
+    if (r.flags.indexOf('no_plan_info') !== -1) html += ` <span class="ci-min ci-min-hint" title="Ngày này chưa có bố trí trong Bảng bố trí — chỉ để tham khảo, không tính là lỗi khi chấm tay đã Đi làm">chưa bố trí</span>`;
+    if (r.flags.indexOf('leave_mismatch') !== -1) {
+      html += ` <span class="ci-min ci-min-hint" title="Giờ làm thực tế lệch với phần còn phải làm sau khi trừ giờ nghỉ">lệch ${escapeHTML(fmtHm(Math.abs(r.leaveDeltaMin || 0)))}</span>`;
+    }
+    if (r.ack) html += ` <span class="ci-ack-chip" title="${escapeHTML('Xác nhận bởi ' + (r.ack.by || '') + (r.ack.at ? ' lúc ' + String(r.ack.at).slice(0, 16).replace('T', ' ') : '') + (r.ack.note ? ' — ' + r.ack.note : ''))}">✓ đã xác nhận</span>`;
+    return html;
+  }
+  function ciLeaveOtCell(r) {
+    const parts = [];
+    if (r.leave) {
+      const title = `${r.leave.label}${r.leave.fullDay ? '' : ' — còn phải làm ' + fmtHm(Math.max(0, r.plan.hc + r.plan.tc - Math.round(r.leave.hours * 60)))}`
+        + (r.leave.leave.approvedBy ? ' · duyệt bởi ' + r.leave.leave.approvedBy : '');
+      parts.push(ciChip(r.leave.label, r.leave.fullDay ? 'ok' : 'warn', title));
+    }
+    if (r.ot.approvedMin > 0) parts.push(ciChip(`TC đơn ${fmtHm(r.ot.approvedMin)}`, 'warn', 'Tổng giờ tăng ca đã được duyệt trong ngày'));
+    if (r.ot.pending.length) {
+      const pendMin = r.ot.pending.reduce((s, o) => s + (Number(o.plannedMin) || 0), 0);
+      parts.push(ciChip(`TC chờ duyệt ${fmtHm(pendMin)}`, 'warn', 'Đơn tăng ca chưa được duyệt'));
+    }
+    if (r.otStatus === 'short' || r.otStatus === 'over') {
+      const sign = r.otDelta > 0 ? '+' : '−';
+      parts.push(ciChip(`${CI_OT_LABEL[r.otStatus]} ${sign}${fmtHm(Math.abs(r.otDelta))}`, r.otDelta > 0 ? 'warn' : 'off',
+        `Máy ${fmtHm(r.actual.tc || 0)} · đơn ${fmtHm(r.ot.approvedMin)}`));
+    } else if (r.otStatus === 'unregistered') {
+      parts.push(ciChip(CI_OT_LABEL.unregistered, 'off', `Máy ${fmtHm(r.actual.tc || 0)} nhưng chưa có đơn tăng ca được duyệt`));
+    } else if (r.otStatus === 'pending') {
+      if (!r.ot.pending.length) parts.push(ciChip(CI_OT_LABEL.pending, 'warn'));
+    }
+    return parts.length ? parts.join(' ') : '<span class="ci-none">—</span>';
+  }
+  function ciActionCell(r) {
+    const btns = [];
+    const canApply = r.rec && !r.leave && (r.att === '' || r.att === 'absent');
+    if (canApply) {
+      btns.push(`<button class="btn btn-success btn-sm" data-perm="hr" onclick="app.hrApplyCheckin('${escapeHTML(r.employeeId)}','${escapeHTML(r.date)}')" title="Chấm tay thành Đi làm theo máy"><i data-lucide="check"></i> Áp Dụng</button>`);
+    }
+    if (r.ack) {
+      btns.push(`<button class="btn btn-outline btn-sm" data-ci-unack="1" data-ci-emp="${escapeHTML(r.employeeId)}" data-ci-date="${escapeHTML(r.date)}" title="Bỏ đánh dấu đã xác nhận" style="color:var(--text-muted);"><i data-lucide="undo-2"></i></button>`);
+    } else {
+      btns.push(`<button class="btn btn-outline btn-sm" data-ci-ack="1" data-ci-emp="${escapeHTML(r.employeeId)}" data-ci-date="${escapeHTML(r.date)}" data-manager-only title="Xác nhận đã kiểm tra dòng này (không còn tính vào 'cần xác nhận')"><i data-lucide="badge-check"></i> Xác Nhận</button>`);
+    }
+    if (r.rec) {
+      btns.push(`<button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeleteCheckin('${escapeHTML(r.rec.id)}')" title="Xóa bản ghi giờ này" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
+    }
+    return `<div class="ci-actions">${btns.join('')}</div>`;
+  }
+
+  // ── RENDER BẢNG ĐỐI CHIẾU ──────────────────────────────────────
+  function ciRenderCheckinTable() {
     const tbody = document.getElementById('hr-ci-body');
     if (!tbody) return;
-    const list = (state.hrCheckins || []).slice()
-      .sort((a, b) => String(b.date).localeCompare(String(a.date)) ||
-        String(hrEmpName(a.employeeId)).localeCompare(String(hrEmpName(b.employeeId)), 'vi'));
+    const ui = ciReadUi();
+    ciSyncToolbar(ui);
+    const range = ciMonthRange(ui.month);
+    const allRows = ciRowsForRange(range.from, range.to, Object.assign({}, ui, { onlyIssues: false }));
+    const sum = ciSummaryOf(allRows);
+    const rows = ui.onlyIssues ? allRows.filter(r => r.needsReview) : allRows;
     const countEl = document.getElementById('hr-ci-count');
     if (countEl) {
-      const miss = list.filter(c => attStatusOf(c.employeeId, c.date) === '').length;
-      const lech = list.filter(c => attStatusOf(c.employeeId, c.date) === 'absent').length;
-      countEl.textContent = `${list.length} ngày (${miss} chưa chấm tay${lech ? `, ${lech} lệch` : ''})`;
+      countEl.textContent = `${allRows.length} dòng · ${sum.review} cần xác nhận`
+        + (sum.ack ? ` · ${sum.ack} đã xác nhận` : '');
     }
-    if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:26px;color:var(--text-muted);">
+    const chipsEl = document.getElementById('hr-ci-chips');
+    if (chipsEl) {
+      const chip = (label, n, cls) => n ? `<span class="hr-stat-chip${cls ? ' ' + cls : ''}">${escapeHTML(label)}: <strong>${n}</strong></span>` : '';
+      chipsEl.innerHTML =
+        `<span class="hr-stat-chip"><i data-lucide="rows-3"></i> Tổng: <strong>${allRows.length}</strong></span>` +
+        chip('Khớp', sum.ok) + chip('Cần xác nhận', sum.review, 'is-warn') +
+        chip('Đi muộn', sum.late) + chip('Về sớm', sum.early) +
+        chip('Thiếu giờ ra', sum.noOut) + chip('Không quẹt máy', sum.noPunch) +
+        chip('Chưa bố trí', sum.noPlan) + chip('Nghỉ có quẹt', sum.leavePunch) +
+        chip('Chấm tay Vắng', sum.absent) + chip('TC lệch', sum.otDiff);
+    }
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding:26px;color:var(--text-muted);">
         <i data-lucide="clock" style="width:26px;height:26px;margin-bottom:6px;"></i>
-        <p>Chưa nạp giờ nào. Bấm "Nạp Giờ Máy Chấm Công" để chọn file Excel máy xuất.</p></td></tr>`;
+        <p>${allRows.length ? 'Không có dòng nào cần xác nhận trong kỳ này — bỏ tích “Chỉ dòng cần xác nhận” để xem tất cả.' : 'Chưa có dữ liệu trong kỳ. Bấm “Nạp Giờ Máy” để chọn file Excel máy chấm công xuất ra.'}</p></td></tr>`;
       initLucide();
       return;
     }
-    tbody.innerHTML = list.slice(0, 400).map(c => {
-      const st = attStatusOf(c.employeeId, c.date);
-      const time = `${c.in || '?'}${c.out ? '–' + c.out : ''}${c.punches > 2 ? ` (${c.punches} lần quét)` : ''}`;
-      let matchCell, action = '';
-      if (st === 'leave') {
-        matchCell = `<span class="hr-chip ok" title="Có đơn nghỉ đã được ban lãnh đạo duyệt — giờ máy không áp dụng">Nghỉ có phép</span>`;
-      } else if (st === 'work') {
-        matchCell = `<span class="hr-chip ok">Khớp ✓</span>`;
-      } else if (st === 'absent') {
-        matchCell = `<span class="hr-chip off" title="Chấm tay ghi Vắng nhưng máy có vân tay">⚠ Chấm tay "Vắng"</span>`;
-        action = `<button class="btn btn-success btn-sm" data-perm="hr" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')" title="Đổi thành Đi làm theo máy"><i data-lucide="check"></i> Áp Dụng</button>`;
-      } else {
-        matchCell = `<span class="hr-chip warn" title="Máy có vân tay nhưng chưa ai chấm tay">Chưa chấm tay</span>`;
-        action = `<button class="btn btn-success btn-sm" data-perm="hr" onclick="app.hrApplyCheckin('${escapeHTML(c.employeeId)}','${escapeHTML(c.date)}')"><i data-lucide="check"></i> Áp Dụng</button>`;
-      }
-      return `<tr>
-        <td><strong>${escapeHTML(hrEmpName(c.employeeId))}</strong>${hrEmpDept(c.employeeId) !== '—' ? `<br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(hrEmpDept(c.employeeId))}</span>` : ''}</td>
-        <td>${fmtDateDMY(c.date)}</td>
-        <td class="hr-emp-code">${escapeHTML(time)}</td>
-        <td>${matchCell}</td>
-        <td class="text-right">${action}</td>
-        <td class="text-right"><button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeleteCheckin('${escapeHTML(c.id)}')" title="Xóa bản ghi giờ này" style="color:var(--danger);"><i data-lucide="trash-2"></i></button></td>
-      </tr>`;
-    }).join('');
+    const shown = rows.slice(0, CI_MAX_ROWS);
+    tbody.innerHTML = shown.map(r => `<tr class="${r.needsReview ? 'ci-row-review' : ''}">
+        <td><strong>${escapeHTML(r.employeeName)}</strong><br><span class="ci-sub">${escapeHTML(r.dept || '—')}${r.empCode ? ' · ' + escapeHTML(r.empCode) : ''}</span></td>
+        <td>${escapeHTML(fmtDateDMY(r.date))}</td>
+        <td>${ciPlanCell(r)}</td>
+        <td>${ciMachineCell(r)}</td>
+        <td>${ciActualCell(r)}</td>
+        <td>${ciDiffCell(r)}</td>
+        <td>${ciLeaveOtCell(r)}</td>
+        <td class="text-right">${ciActionCell(r)}</td>
+      </tr>`).join('') +
+      (rows.length > CI_MAX_ROWS
+        ? `<tr><td colspan="8" class="text-center" style="color:var(--text-muted);padding:12px;">Đang hiện ${CI_MAX_ROWS}/${rows.length} dòng — dùng bộ lọc (tháng / bộ phận / tìm nhanh) để xem tiếp.</td></tr>`
+        : '');
     initLucide();
   }
+
+  // ── TỰ ĐIỀN GIỜ KẾT THÚC THỰC TẾ VÀO BẢNG BỐ TRÍ ───────────────
+  // Chỉ: ngày TRƯỚC hôm nay · lô đang để trống `end` · là LƯỢT BỐ TRÍ CUỐI
+  // của ngày · có giờ ra từ máy · thời lượng hợp lý. KHÔNG ghi đè ô đã nhập.
+  function ciSuggestEndFills(opts) {
+    return ciWithCtx(() => ciSuggestEndFillsInner(opts));
+  }
+  function ciSuggestEndFillsInner(opts) {
+    const o = opts || {};
+    const today = hrTodayISO();
+    const from = o.from || '', to = o.to || '';
+    const deptFilter = o.dept || 'all';
+    const round = !!o.round;
+    const out = [];
+    (state.hrAssignments || []).forEach(a => {
+      if (!a || a.end) return;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(a.date || ''))) return;
+      if (a.date >= today) return;                       // chỉ ngày đã qua
+      if (from && a.date < from) return;
+      if (to && a.date > to) return;
+      const em = hrEmpById(a.employeeId);
+      if (deptFilter !== 'all' && (!em || (em.department || '—') !== deptFilter)) return;
+      const rec = ciCheckinOf(a.employeeId, a.date);
+      if (!rec || !rec.out) return;                      // chưa có giờ ra → chờ file sau
+      const list = ciAssignmentsOn(a.employeeId, a.date);
+      if (!list.length || list[list.length - 1].id !== a.id) return; // chỉ lượt cuối
+      const dept = a.department || (em && em.department) || '';
+      const range = hrShiftRange(hrShiftCfg(dept), a.shiftIdx || 0);
+      const startM = ciToMin(a.start) || range.startMin;
+      let outM = ciToMin(rec.out);
+      if (!outM) return;
+      if (outM <= startM) outM += 1440;
+      const dur = outM - startM;
+      if (dur < CI_OT_BLOCK_MIN || dur > CI_WORK_DAY_MAX_MIN) return;
+      // Làm tròn: TỔNG thời lượng làm việc xuống khối 30' (khớp quy tắc TC)
+      const newEndM = round ? startM + Math.floor(dur / CI_OT_BLOCK_MIN) * CI_OT_BLOCK_MIN : outM;
+      let oldEndM = ciToMin(a.end);
+      if (!oldEndM || oldEndM <= startM) oldEndM = range.endMin;
+      if (oldEndM <= startM) oldEndM += 1440;
+      const before = ciSplitForDate(dept, a.date, startM, oldEndM, a.shiftIdx || 0);
+      const after = ciSplitForDate(dept, a.date, startM, newEndM, a.shiftIdx || 0);
+      out.push({
+        assignId: a.id, employeeId: a.employeeId, employeeName: hrEmpName(a.employeeId),
+        dept: em ? (em.department || '') : '', date: a.date,
+        positionName: hrPosName(a.positionId),
+        startText: fmtHour(a.start), oldEndText: `hết ca (${fmtHour(range.end)})`,
+        newEnd: ciFromMin(newEndM % 1440), punchOut: rec.out,
+        deltaMin: newEndM - oldEndM, before, after
+      });
+    });
+    out.sort((x, y) => String(y.date).localeCompare(String(x.date)) ||
+      String(x.employeeName).localeCompare(String(y.employeeName), 'vi'));
+    return out;
+  }
+
+  // Ghi giờ kết thúc vào Bảng bố trí — KHÔNG đụng ô đã có `end`
+  function ciApplyEndFills(list) {
+    if (!requireEditPermission()) return 0;
+    const rows = Array.isArray(list) ? list : [];
+    if (!rows.length) return 0;
+    const now = new Date().toISOString();
+    let n = 0;
+    rows.forEach(it => {
+      const a = (state.hrAssignments || []).find(x => x.id === it.assignId);
+      if (!a || a.end) return;
+      a.end = it.newEnd;
+      a.endSource = 'machine';   // đánh dấu: giờ kết thúc lấy từ máy chấm công
+      a.updatedAt = now;
+      n++;
+    });
+    if (n) { saveHrData(); renderHrView(); }
+    return n;
+  }
+
+  // Modal xem trước "Điền Giờ Kết Thúc" (bắt buộc xem trước — đổi giờ công đoạn)
+  function openCiEndfillModal() {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-ci-endfill');
+    if (!modal) return;
+    const f = document.getElementById('ci-endfill-from');
+    if (f && !f.value) f.value = '';
+    const t = document.getElementById('ci-endfill-to');
+    if (t && !t.value) t.value = hrShiftDateISO(hrTodayISO(), -1);
+    renderCiEndfillList();
+    modal.classList.add('show');
+    initLucide();
+  }
+  function closeCiEndfillModal() {
+    document.getElementById('modal-ci-endfill')?.classList.remove('show');
+  }
+  function renderCiEndfillList() {
+    const body = document.getElementById('ci-endfill-body');
+    if (!body) return;
+    const round = (document.getElementById('ci-endfill-round')?.value || 'exact') === 'round30';
+    const from = document.getElementById('ci-endfill-from')?.value || '';
+    const to = document.getElementById('ci-endfill-to')?.value || '';
+    const dept = document.getElementById('hr-ci-filter-dept')?.value || 'all';
+    ciEndfillRows = ciSuggestEndFills({ from, to, dept, round });
+    const sumEl = document.getElementById('ci-endfill-summary');
+    if (sumEl) {
+      sumEl.innerHTML = ciEndfillRows.length
+        ? `<span class="hr-stat-chip"><i data-lucide="list-checks"></i> <strong>${ciEndfillRows.length}</strong> lượt bố trí đang để trống giờ kết thúc &amp; đã có giờ ra từ máy</span>
+           <span class="hr-stat-chip"><i data-lucide="info"></i> Chỉ áp dụng cho <strong>ngày trước hôm nay</strong> · lượt bố trí <strong>cuối</strong> của ngày · không đè ô đã nhập tay</span>`
+        : `<div style="padding:10px 12px;background:var(--bg-subtle);border:1px solid var(--border-color);border-radius:var(--radius-md);font-size:0.78rem;color:var(--text-muted);">
+             Không có lượt bố trí nào cần điền. (Cần: ngày đã qua + ô “Giờ kết thúc” đang để trống + máy đã có giờ ra.)</div>`;
+    }
+    body.innerHTML = ciEndfillRows.length ? ciEndfillRows.map(r => `<tr>
+        <td class="text-center"><input type="checkbox" data-ci-fill="${escapeHTML(r.assignId)}" checked></td>
+        <td><strong>${escapeHTML(r.employeeName)}</strong><br><span class="ci-sub">${escapeHTML(r.dept || '—')}</span></td>
+        <td>${escapeHTML(fmtDateDMY(r.date))}</td>
+        <td>${escapeHTML(r.positionName)}</td>
+        <td>${escapeHTML(r.startText)} → ${escapeHTML(r.oldEndText)}</td>
+        <td class="hr-emp-code">…${escapeHTML(r.punchOut)}</td>
+        <td><strong>${escapeHTML(r.startText)}–${escapeHTML(r.newEnd)}</strong><div class="ci-sub">HC ${escapeHTML(fmtHm(r.before.hc))}/${escapeHTML(fmtHm(r.after.hc))} · TC ${escapeHTML(fmtHm(r.before.tc))}/${escapeHTML(fmtHm(r.after.tc))}</div></td>
+      </tr>`).join('') : `<tr><td colspan="7" class="text-center" style="padding:20px;color:var(--text-muted);">— không có dòng nào —</td></tr>`;
+    initLucide();
+  }
+  function applyCiEndfill() {
+    if (!requireEditPermission()) return;
+    const picks = [];
+    const nodes = document.querySelectorAll ? Array.from(document.querySelectorAll('[data-ci-fill]')) : [];
+    nodes.forEach(el => {
+      if (!el || !el.checked) return;
+      const id = el.getAttribute('data-ci-fill');
+      const r = ciEndfillRows.find(x => x.assignId === id);
+      if (r) picks.push(r);
+    });
+    if (!picks.length) { showToast('Chưa chọn dòng nào để điền giờ kết thúc.', 'error'); return; }
+    if (!confirm(`Điền giờ kết thúc thực tế cho ${picks.length} lượt bố trí theo máy chấm công?\n\nLƯU Ý: giờ công đoạn của các ngày này sẽ thay đổi theo (công suất / hiệu suất).`)) return;
+    const n = ciApplyEndFills(picks);
+    closeCiEndfillModal();
+    showToast(`Đã điền giờ kết thúc cho ${n} lượt bố trí theo máy chấm công`, 'success');
+  }
+
+  // ── ĐÁNH DẤU "ĐÃ XÁC NHẬN" DÒNG ĐỐI CHIẾU (Admin / Ban Quản Lý) ──
+  function ciAckDay(employeeId, date, note) {
+    if (!canApproveLeave()) {
+      showToast('Chỉ Admin & Ban Quản Lý (ban lãnh đạo) mới được xác nhận dòng đối chiếu!', 'error');
+      return null;
+    }
+    if (!employeeId || !date) return null;
+    if (!Array.isArray(state.hrCiAcks)) state.hrCiAcks = [];
+    const id = `ciack-${date}-${employeeId}`;
+    const now = new Date().toISOString();
+    const who = (state.currentUser && (state.currentUser.fullname || state.currentUser.email)) || 'Ban lãnh đạo';
+    let rec = state.hrCiAcks.find(a => a && a.id === id);
+    if (rec) {
+      rec.note = note || rec.note || '';
+      rec.by = who; rec.at = now; rec.updatedAt = now;
+    } else {
+      rec = { id, employeeId, date, note: note || '', by: who, at: now, createdAt: now, updatedAt: now };
+      state.hrCiAcks.push(rec);
+    }
+    saveHrData();
+    renderHrView();
+    showToast(`Đã xác nhận đối chiếu ${hrEmpName(employeeId)} ngày ${fmtDateDMY(date)}`, 'success');
+    return rec;
+  }
+  function ciUnackDay(employeeId, date) {
+    if (!canApproveLeave()) {
+      showToast('Chỉ Admin & Ban Quản Lý mới được bỏ xác nhận!', 'error');
+      return;
+    }
+    const id = `ciack-${date}-${employeeId}`;
+    const rec = (state.hrCiAcks || []).find(a => a && a.id === id);
+    if (!rec) return;
+    trackDeleted('hrCiAcks', rec.id);
+    state.hrCiAcks = (state.hrCiAcks || []).filter(a => a.id !== id);
+    saveHrData();
+    renderHrView();
+    showToast(`Đã bỏ xác nhận ${hrEmpName(employeeId)} ngày ${fmtDateDMY(date)}`, 'info');
+  }
+  // Giờ chấm công máy dùng cho BẢNG CHẤM CÔNG THÁNG (khi ngày đó KHÔNG có bố trí)
+  function ciTimesheetHours(e, dept, date) {
+    const rec = ciCheckinOf(e.id, date);
+    if (!rec || !rec.in || !rec.out) return { hc: 0, tc: 0, worked: false };
+    const act = ciActualSplit(e.id, date);
+    if (!act || act.hc == null) return { hc: 0, tc: 0, worked: false };
+    return { hc: act.hc, tc: act.tc, worked: (act.hc + act.tc) > 0 };
+  }
+
+
+
+
+
+
+
+
+
+
+
 
   // Modal nạp file Excel máy chấm công
   let checkinImportSheet = null;
@@ -1523,67 +2326,126 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
     const box = document.getElementById('checkin-import-summary');
     const doBtn = document.getElementById('btn-do-checkin-import');
     if (!file || !box || !doBtn) return;
+    if (file.size > 30 * 1024 * 1024) {
+      checkinImportSheet = null;
+      doBtn.disabled = true;
+      box.innerHTML = `<div style="font-size:0.75rem;color:var(--danger);padding:8px 10px;background:#fee2e2;border-radius:var(--radius-md);">File quá lớn (${Math.round(file.size / 1024 / 1024)} MB). Hãy xuất Excel theo từng tháng (tối đa 30 MB).</div>`;
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      try {
-        const data = new Uint8Array(ev.target.result);
-        const wb = XLSX.read(data, { type: 'array' });
-        const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true });
-        if (!aoa.length) throw new Error('File rỗng');
-        // File máy chấm công thường có các dòng đầu trang (tên công ty, "Từ ngày... Đến ngày...")
-        const headerRow = ciFindHeaderRow(aoa);
-        if (headerRow === -1) throw new Error('Không tìm thấy dòng tiêu đề (cần cột Mã NV / Họ Tên và Ngày)');
-        const headers = (aoa[headerRow] || []).map(h => String(h ?? ''));
-        const col = ciAutoMapCols(headers);
-        if (col.code === -1 && col.name === -1) throw new Error('Không nhận ra cột Mã NV / Họ tên');
-        if (col.date === -1) throw new Error('Không nhận ra cột Ngày');
-        const dataAoa = aoa.slice(headerRow); // nạp từ dòng tiêu đề trở xuống
-        // Đếm nhanh số dòng hợp lệ + khớp NV để hiển thị trước khi nạp
-        let valid = 0, empOk = 0;
-        for (let r = 1; r < dataAoa.length; r++) {
-          const row = dataAoa[r];
-          if (!row || !row.length) continue;
-          const dt = ciNormDateTime(col.date >= 0 ? row[col.date] : '');
-          if (dt.date) { valid++; if (ciResolveEmployee(col.code >= 0 ? row[col.code] : '', col.name >= 0 ? row[col.name] : '')) empOk++; }
+      const buf = ev.target.result;
+      showTreLoading('Đang đọc file giờ máy chấm công…');
+      setTimeout(() => {
+        let treOk = false;
+        try {
+          const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          // VÙNG DÙNG THẬT của sheet (chống treo khi file có !ref phình) + trần dòng/cột
+          const used = hrSheetUsedRange(ws);
+          if (!used.rows) throw new Error('File rỗng');
+          const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '', blankrows: false, range: used.range });
+          if (!aoa.length) throw new Error('File rỗng');
+          // File máy chấm công thường có các dòng đầu trang (tên công ty, "Từ ngày... Đến ngày...")
+          const headerRow = ciFindHeaderRow(aoa);
+          if (headerRow === -1) throw new Error('Không tìm thấy dòng tiêu đề (cần cột Mã NV / Họ Tên và Ngày)');
+          const headers = (aoa[headerRow] || []).map(h => String(h ?? ''));
+          const col = ciAutoMapCols(headers);
+          if (col.code === -1 && col.name === -1) throw new Error('Không nhận ra cột Mã NV / Họ tên');
+          if (col.date === -1) throw new Error('Không nhận ra cột Ngày');
+          const dataAoa = aoa.slice(headerRow); // nạp từ dòng tiêu đề trở xuống
+          // Đếm nhanh số dòng hợp lệ + khớp NV để hiển thị trước khi nạp
+          let valid = 0, empOk = 0;
+          const missing = [];
+          for (let r = 1; r < dataAoa.length; r++) {
+            const row = dataAoa[r];
+            if (!row || !row.length) continue;
+            const dt = ciNormDateTime(col.date >= 0 ? row[col.date] : '');
+            if (!dt.date) continue;
+            valid++;
+            const emp = ciResolveEmployee(col.code >= 0 ? row[col.code] : '', col.name >= 0 ? row[col.name] : '');
+            if (emp) empOk++;
+            else if (missing.length < 8) {
+              missing.push({
+                code: String(col.code >= 0 ? (row[col.code] ?? '') : '').trim(),
+                name: String(col.name >= 0 ? (row[col.name] ?? '') : '').trim(),
+                dept: String(col.dept >= 0 ? (row[col.dept] ?? '') : '').trim()
+              });
+            }
+          }
+          checkinImportSheet = { aoa: dataAoa, col, fileName: file.name };
+          doBtn.disabled = false;
+          const colDesc = [
+            col.code !== -1 ? `Mã NV "${headers[col.code]}"` : null,
+            col.name !== -1 ? `Họ tên "${headers[col.name]}"` : null,
+            `Ngày "${headers[col.date]}"`,
+            col.timeIn !== -1
+              ? `Giờ vào "${headers[col.timeIn]}"` + (col.timeOut !== -1 ? ` / Giờ ra "${headers[col.timeOut]}"` : '')
+              : (col.punchCols && col.punchCols.length
+                ? `${col.punchCols.length} cột lần quét ("Lần 1" → "Lần ${col.punchCols.length}") → đầu = vào, cuối = ra`
+                : `Từng lần quét "${col.dateTime !== -1 ? headers[col.dateTime] : headers[col.date]}" → đầu = vào, cuối = ra`)
+          ].filter(Boolean).join(' · ');
+          const missHtml = missing.length
+            ? `<div class="ci-miss-list" style="margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--radius-sm);">
+                 <strong>Không khớp hồ sơ (${valid - empOk} dòng):</strong>
+                 ${missing.map(m => `<div>• ${escapeHTML(m.code || '(không mã)')} — ${escapeHTML(m.name || '(không tên)')}${m.dept ? ' · ' + escapeHTML(m.dept) : ''}</div>`).join('')}
+                 ${valid - empOk > missing.length ? `<div>… và ${valid - empOk - missing.length} dòng khác</div>` : ''}
+                 <div style="margin-top:4px;color:var(--text-muted);">Sửa “Mã Nhân Viên” trong hồ sơ cho khớp, hoặc kiểm tra lại Họ tên (khớp theo mã đã chuẩn hoá, sau đó theo họ tên bỏ dấu).</div>
+               </div>` : '';
+          box.innerHTML = `<div style="font-size:0.75rem; line-height:1.7; padding:8px 10px; background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+            <strong>${escapeHTML(file.name)}</strong> — tiêu đề tại dòng ${headerRow + 1}, nhận cột: ${escapeHTML(colDesc)}<br>
+            ${valid} dòng có ngày hợp lệ · <strong>${empOk} khớp nhân viên</strong>${valid - empOk > 0 ? ` · <span style="color:var(--danger);">${valid - empOk} dòng không khớp Mã NV/Tên (bỏ qua)</span>` : ''}
+            ${used.rowsCapped || used.colsCapped ? `<br><span style="color:var(--danger);">File có ${used.rows} dòng / ${used.cols} cột — chỉ đọc tối đa ${HR_IMPORT_MAX_ROWS} dòng × ${HR_IMPORT_MAX_COLS} cột. Hãy xuất theo từng tháng.</span>` : ''}
+          </div>${missHtml}`;
+          treOk = true;
+        } catch (err) {
+          checkinImportSheet = null;
+          doBtn.disabled = true;
+          box.innerHTML = `<div style="font-size:0.75rem; color:var(--danger); padding:8px 10px; background:#fee2e2; border-radius:var(--radius-md);">Không đọc được file: ${escapeHTML(err.message || String(err))}. Hãy xuất file Excel (.xlsx/.xls/.csv) từ máy chấm công.</div>`;
+        } finally {
+          hideTreLoading(treOk);
+          initLucide();
         }
-        checkinImportSheet = { aoa: dataAoa, col, fileName: file.name };
-        doBtn.disabled = false;
-        const colDesc = [
-          col.code !== -1 ? `Mã NV "${headers[col.code]}"` : null,
-          col.name !== -1 ? `Họ tên "${headers[col.name]}"` : null,
-          `Ngày "${headers[col.date]}"`,
-          col.timeIn !== -1
-            ? `Giờ vào "${headers[col.timeIn]}"` + (col.timeOut !== -1 ? ` / Giờ ra "${headers[col.timeOut]}"` : '')
-            : (col.punchCols && col.punchCols.length
-              ? `${col.punchCols.length} cột lần quét ("Lần 1" → "Lần ${col.punchCols.length}") → đầu = vào, cuối = ra`
-              : `Từng lần quét "${col.dateTime !== -1 ? headers[col.dateTime] : headers[col.date]}" → đầu = vào, cuối = ra`)
-        ].filter(Boolean).join(' · ');
-        box.innerHTML = `<div style="font-size:0.75rem; line-height:1.7; padding:8px 10px; background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md);">
-          <strong>${escapeHTML(file.name)}</strong> — tiêu đề tại dòng ${headerRow + 1}, nhận cột: ${escapeHTML(colDesc)}<br>
-          ${valid} dòng có ngày hợp lệ · <strong>${empOk} khớp nhân viên</strong>${valid - empOk > 0 ? ` · <span style="color:var(--danger);">${valid - empOk} dòng không khớp Mã NV/Tên (bỏ qua)</span>` : ''}
-        </div>`;
-      } catch (err) {
-        checkinImportSheet = null;
-        doBtn.disabled = true;
-        box.innerHTML = `<div style="font-size:0.75rem; color:var(--danger); padding:8px 10px; background:#fee2e2; border-radius:var(--radius-md);">Không đọc được file: ${escapeHTML(err.message || String(err))}. Hãy xuất file Excel (.xlsx/.xls/.csv) từ máy chấm công.</div>`;
-      }
-      initLucide();
+      }, 0);
     };
     reader.readAsArrayBuffer(file);
   }
+
   function doCheckinImport() {
     if (!requireEditPermission()) return;
     if (!checkinImportSheet) return;
-    const col = checkinImportSheet.col;
+    const sheet = checkinImportSheet;
+    const col = sheet.col;
     const mode = col.timeIn !== -1 ? 'theo ngày (giờ vào/ra riêng)'
       : (col.punchCols && col.punchCols.length ? `lưới "Lần 1..N" (${col.punchCols.length} cột lần quét, đầu = vào, cuối = ra)`
       : 'gộp từng lần quét (đầu = vào, cuối = ra)');
-    const res = importCheckinsFromSheet(checkinImportSheet.aoa, col, checkinImportSheet.fileName);
+    const res = importCheckinsFromSheet(sheet.aoa, col, sheet.fileName);
+    // Tùy chọn ngay trong modal: tự điền giờ kết thúc thực tế cho NGÀY ĐÃ QUA
+    const autoEl = document.getElementById('checkin-import-autofill');
+    const roundEl = document.getElementById('checkin-import-round');
+    const autoFill = !!(autoEl && autoEl.checked);
+    const round = !!(roundEl && roundEl.value === 'round30');
     closeCheckinImportModal();
+    // Nhảy kỳ sang THÁNG MỚI NHẤT có dữ liệu máy (file vừa nạp thường là tháng mới)
+    const latestMonth = (state.hrCheckins || [])
+      .map(c => String(c.date || '').slice(0, 7))
+      .filter(m => /^\d{4}-\d{2}$/.test(m)).sort().pop();
+    if (latestMonth) ciSaveUi({ month: latestMonth, dept: 'all' });
     renderHrView();
-    showToast(`Nạp xong từ "${checkinImportSheet.fileName}" (${mode}): ${res.matched} ngày khớp nhân viên` +
+    showToast(`Nạp xong từ "${sheet.fileName}" (${mode}): ${res.matched} ngày khớp nhân viên` +
       (res.unmatched.length ? ` · ${res.unmatched.length} dòng KHÔNG khớp Mã NV/Tên đã bỏ qua` : ''), 'success');
+    if (!autoFill) return;
+    // Mở XEM TRƯỚC (không tự ghi) — người dùng xác nhận từng dòng
+    const rows = ciSuggestEndFills({ from: '', to: '', dept: 'all', round });
+    if (!rows.length) { showToast('Không có lượt bố trí nào cần điền giờ kết thúc (chưa có giờ ra hoặc đã điền).', 'info'); return; }
+    const fEl = document.getElementById('ci-endfill-from'); if (fEl) fEl.value = '';
+    const tEl = document.getElementById('ci-endfill-to'); if (tEl) tEl.value = hrShiftDateISO(hrTodayISO(), -1);
+    const rEl = document.getElementById('ci-endfill-round'); if (rEl) rEl.value = round ? 'round30' : 'exact';
+    renderCiEndfillList();
+    const modal = document.getElementById('modal-ci-endfill');
+    if (modal) { modal.classList.add('show'); initLucide(); }
   }
+
 
   // ─── 6) THỐNG KÊ ĐI LÀM THEO THÁNG ───────────────────────────────
   // Tính theo ngày dương lịch trong tháng: đi làm / nghỉ có phép (đơn duyệt) /
@@ -2362,15 +3224,21 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
   //       Ca đêm 19:00–07:00 nghỉ 1h → làm đủ ca = 11h HC · 0 TC.
   // Trả về phút: { hc, tc } (giờ nghỉ không nằm trong cả hai).
   function hrSplitHoursHC(dept, start, end, shiftIdx) {
+    const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+    return hrSplitHoursHCMin(dept, toMin(start), toMin(end), shiftIdx);
+  }
+  // Bản dùng PHÚT trực tiếp — engine đối chiếu chấm công cần mốc > 1440 (ca đêm)
+  function hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx) {
     const cfg = hrShiftCfg(dept);
     const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
-    let s = toMin(start);
-    let e = toMin(end);
+    let s = Number(startMin) || 0;
+    let e = Number(endMin) || 0;
     // Khung ca của cột ca đang dùng — mốc phút ĐÃ CHUẨN HOÁ (ca đêm vắt đêm)
     const range = hrShiftRange(cfg, shiftIdx);
     const rStart = range.startMin, rEnd = range.endMin;
     if (!e || e === s) e = rEnd;  // giờ ra TRỐNG = HẾT CA (đúng cho cả ca đêm)
     if (e <= s) e += 1440;        // làm qua nửa đêm
+
     // Các cửa sổ giờ HC (hành chính: từng buổi, đã loại nghỉ trưa)
     const hcWindows = [];
     if (cfg.type === 'lamca') {
@@ -3709,6 +4577,117 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
   // Każda bảng Nhân Sự ma skróconą, pływającą kartę (hr-mini-card) w siatce
   // 5 thẻ na wiersz (desktop) / 3 (tablet) / 2 (telefon w pionie).
   // Bấm thẻ → otwórz szczegółowy bảng (xem / edycja), ponowne bấm → schowaj.
+  // ─── 8) THẺ NÔI — LAUNCHER BẰNG DOCK 3 CẤP (19/10/2026) ────────
+  // Cấp 1: nút HOME nổi giữa dưới → Cấp 2: 4 icon nhóm → Cấp 3: dải thẻ của
+  // nhóm (các .hr-mini-card cũ, giữ nguyên id + listener). Trạng thái THUẦN UI
+  // theo phiên (không lưu mây/backup); rời tab Nhân Sự thì tự đóng (main.js).
+  const HR_DOCK_GROUPS = [
+    { id: 'hoso',      label: 'Hồ sơ',      icon: 'users',       color: '#0284c7' },
+    { id: 'ngaycong',  label: 'Ngày công',  icon: 'clock',       color: '#d97706' },
+    { id: 'thongke',   label: 'Thống kê',   icon: 'bar-chart-3', color: '#0d9488' },
+    { id: 'tuyendung', label: 'Tuyển dụng', icon: 'user-search', color: '#db2777' }
+  ];
+  let hrDockLevel = 0;   // 0 = đóng · 1 = chọn nhóm · 2 = chọn thẻ
+  let hrDockGroup = '';
+
+  function hrDockState() { return { level: hrDockLevel, group: hrDockGroup }; }
+  function hrDockSetHidden(el, hidden) {
+    if (!el) return;
+    el.hidden = !!hidden;
+    try { el.setAttribute('aria-hidden', hidden ? 'true' : 'false'); } catch (e) {}
+  }
+  function hrDockRender() {
+    const dock = document.getElementById('hr-dock');
+    if (!dock) return;
+    try { dock.setAttribute('data-level', String(hrDockLevel)); } catch (e) {}
+    if (dock.classList) {
+      dock.classList.toggle('is-open', hrDockLevel > 0);
+      dock.classList.toggle('is-group', hrDockLevel === 2);
+    }
+    const home = document.getElementById('hr-dock-home');
+    if (home) {
+      try {
+        home.setAttribute('aria-expanded', hrDockLevel > 0 ? 'true' : 'false');
+        home.setAttribute('title', hrDockLevel > 0 ? 'Đóng bảng Nhân Sự' : 'Mở bảng Nhân Sự');
+      } catch (e) {}
+    }
+    hrDockSetHidden(document.getElementById('hr-dock-groups'), hrDockLevel !== 1);
+    hrDockSetHidden(document.getElementById('hr-dock-panel'), hrDockLevel !== 2);
+    const g = HR_DOCK_GROUPS.find(x => x.id === hrDockGroup) || null;
+    const title = document.getElementById('hr-dock-title');
+    if (title) title.textContent = g ? g.label : 'Bảng Nhân Sự';
+    const countEl = document.getElementById('hr-dock-count');
+    if (countEl) {
+      let n = 0;
+      if (hrDockGroup && typeof document.querySelector === 'function') {
+        const panelEl = document.querySelector(`[data-hr-group-panel="${hrDockGroup}"]`);
+        if (panelEl && typeof panelEl.querySelectorAll === 'function') {
+          n = panelEl.querySelectorAll('.hr-mini-card').length;
+        }
+      }
+      countEl.textContent = n ? `${n} bảng` : '';
+    }
+    const panel = document.getElementById('hr-dock-panel');
+    if (panel && panel.style && typeof panel.style.setProperty === 'function') {
+      panel.style.setProperty('--dock-g', g ? g.color : 'var(--primary)');
+    }
+    if (typeof document.querySelectorAll === 'function') {
+      document.querySelectorAll('[data-hr-group-panel]').forEach(p => {
+        if (p && p.classList) p.classList.toggle('is-active', p.getAttribute('data-hr-group-panel') === hrDockGroup);
+      });
+      document.querySelectorAll('[data-hr-group]').forEach(b => {
+        const on = b && b.getAttribute('data-hr-group') === hrDockGroup;
+        if (b && b.classList) b.classList.toggle('is-active', !!on);
+        if (b) { try { b.setAttribute('aria-expanded', on ? 'true' : 'false'); } catch (e) {} }
+      });
+    }
+  }
+  function hrDockToggle() {
+    hrDockLevel = hrDockLevel > 0 ? 0 : 1;
+    hrDockGroup = '';
+    hrDockRender();
+    return hrDockLevel;
+  }
+  function hrDockOpenGroup(id) {
+    if (!HR_DOCK_GROUPS.some(g => g.id === id)) return false;
+    hrDockGroup = id;
+    hrDockLevel = 2;
+    hrDockRender();
+    return true;
+  }
+  function hrDockBack() {
+    if (hrDockLevel !== 2) return;
+    hrDockLevel = 1;
+    hrDockGroup = '';
+    hrDockRender();
+  }
+  function hrDockClose() {
+    if (hrDockLevel === 0 && !hrDockGroup) return;
+    hrDockLevel = 0;
+    hrDockGroup = '';
+    hrDockRender();
+  }
+  // Badge trên bong bóng nhóm — chỉ hiện khi có số đáng chú ý
+  function hrDockBadges() {
+    const set = (id, text) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text || '';
+      if (el.classList) el.classList.toggle('is-on', !!text);
+    };
+    const emps = state.hrEmployees || [];
+    const act = emps.filter(e => (e.status || 'active') === 'active').length;
+    set('hr-dock-badge-hoso', emps.length ? `${act} NV` : '');
+    const pendLv = (state.hrLeaves || []).filter(l => (l.status || 'pending') === 'pending').length;
+    const pendOt = (state.hrOvertimes || []).filter(o => (o.status || 'pending') === 'pending').length;
+    set('hr-dock-badge-ngaycong', (pendLv + pendOt) ? `${pendLv + pendOt} chờ` : '');
+    set('hr-dock-badge-thongke', '');
+    const missing = (state.hrRecruitment || [])
+      .filter(r => (r.status || 'open') === 'open')
+      .reduce((s, r) => s + Math.max(0, (r.needQty || 0) - (r.hiredQty || 0)), 0);
+    set('hr-dock-badge-tuyendung', missing ? `thiếu ${missing}` : '');
+  }
+
   const HR_CARD_DEFS = {
     'hr-emp-card': { el: 'hr-mini-count-emp', count: () => {
       const all = state.hrEmployees || [];
@@ -3767,6 +4746,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
         if (el) el.textContent = String(HR_CARD_DEFS[cardId].count());
       } catch (e) { /* nie blokuj rendera tab Nhân Sự */ }
     });
+    try { hrDockBadges(); } catch (e) {}
   }
 
   // Zsynchronizuj podświetlenie thẻ ze stanem bảng — otwarta = widoczna
@@ -3917,6 +4897,15 @@ export {
   hrCloseOpenCard,
   hrPositionDetailOverlay,
   HR_CARD_DEFS,
+  // DOCK 3 CẤP (Home → nhóm → thẻ)
+  HR_DOCK_GROUPS,
+  hrDockState,
+  hrDockRender,
+  hrDockToggle,
+  hrDockOpenGroup,
+  hrDockBack,
+  hrDockClose,
+  hrDockBadges,
   hrPosName,
   hrPositionsNamesOf,
   hrPressWorkersNamesOf,
@@ -3983,6 +4972,35 @@ export {
   BOARD_SHIFT_PRESETS,
   renderHrView,
   renderHrCheckinTable,
+  // ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG (engine + thao tác)
+  ciCompareDay,
+  ciRowsForRange,
+  ciSummaryOf,
+  ciSuggestEndFills,
+  ciApplyEndFills,
+  ciAckDay,
+  ciUnackDay,
+  ciActualSplit,
+  ciPlannedOf,
+  ciTimesheetHours,
+  ciShiftMonth,
+  ciSaveUi,
+  ciReadUi,
+  ciToMin,
+  ciFromMin,
+  ciTimeFromNum,
+  ciSerialToDateTime,
+  ciResolveEmployee,
+  openCiEndfillModal,
+  closeCiEndfillModal,
+  renderCiEndfillList,
+  applyCiEndfill,
+  hrSplitHoursHCMin,
+  CI_EARLY_ALLOW_MIN,
+  CI_OT_BLOCK_MIN,
+  CI_LATE_TOL_MIN,
+  CI_VERDICT,
+  HR_CI_UI_KEY,
   applyAllCheckins,
   applyCheckinRecord,
   checkinRecordOf,

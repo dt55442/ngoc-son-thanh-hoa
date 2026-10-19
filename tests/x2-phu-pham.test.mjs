@@ -256,7 +256,7 @@ check('I6: events.js nối form + kiểm kê + định mức + tháng + sửa/x�
   evSrc.includes('handleX2YieldRateSave') && evSrc.includes("'x2-pp-month'") &&
   evSrc.includes('data-x2-pp-edit') && evSrc.includes('data-x2-pp-st-del'));
 check('I7: sw.js cache v277 + nạp js/x2-phu-pham.js',
-  /nha-may-ngoc-son-v282/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
+  /nha-may-ngoc-son-v285/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
 check('I8: styles.css có khối .x2-pp-* + bảng supplier thêm cột Giảm Trừ',
   css.includes('.x2-pp-chip') && css.includes('.x2-pp-yield-chip') &&
   idx.includes('Giảm Trừ (đ)') && supSrc.includes('x2SupplierCreditRows'));
@@ -265,8 +265,8 @@ check('I9: 14 nguồn X2 + 22 thẻ có nguồn xuất (đủ 8 X1)',
   xlsx.X2_EXPORT_SOURCES.some(s => s.id === 'phupham') &&
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 22 &&
   Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 22);
-check('I10: danh mục báo cáo 42 (X2 có phụ phẩm + cân đối + giá thành)',
-  specs.REPORT_SPECS.length === 42 &&
+check('I10: danh mục báo cáo 43 (X2 có phụ phẩm + cân đối + giá thành)',
+  specs.REPORT_SPECS.length === 43 &&
   specs.REPORT_SPECS.some(r => r.id === 'phupham') &&
   specs.REPORT_SPECS.some(r => r.kind === 'massBalance') &&
   specs.REPORT_SPECS.some(r => r.kind === 'costing'));

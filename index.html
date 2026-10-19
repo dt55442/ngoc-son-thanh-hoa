@@ -97,7 +97,7 @@
           <i data-lucide="factory"></i>
         </div>
         <div class="logo-text">
-          <h1>Nhà máy Ngọc Sơn</h1>
+          <h1>Nhà máy<br class="brand-br"> Ngọc Sơn</h1>
           <span class="sub-title">Thanh Hóa</span>
         </div>
       </div>
@@ -169,40 +169,30 @@
             <i data-lucide="more-vertical"></i>
           </button>
           <div class="dropdown-menu" id="header-dropdown">
-            <button class="dropdown-item" id="btn-select-data-folder">
-              <i data-lucide="folder-open" style="color:#0284c7;"></i> Chọn Thư Mục Dữ Liệu (File)
-            </button>
-            <button class="dropdown-item" id="btn-disconnect-data-folder" style="display:none;">
-              <i data-lucide="folder-x" style="color:var(--danger);"></i> Ngắt Kết Nối Thư Mục
-            </button>
-            <div class="dropdown-divider"></div>
-            <button class="dropdown-item" id="btn-save-local">
-              <i data-lucide="save" style="color:#15803d;"></i> Lưu Dữ Liệu Cục Bộ (Máy)
-            </button>
-            <button class="dropdown-item" id="btn-open-users-mgr">
-              <i data-lucide="users"></i> Quản Lý Người Chỉnh Sửa
-            </button>
-            <button class="dropdown-item" id="btn-upload-cloud">
-              <i data-lucide="cloud-upload" style="color:#0284c7;"></i> Đồng Bộ Dữ Liệu Máy Lên Mây
-            </button>
-            <button class="dropdown-item" id="btn-pull-cloud">
-              <i data-lucide="cloud-download" style="color:#0284c7;"></i> Tải Dữ Liệu Từ Mây Về Máy
-            </button>
+            <!-- NHÓM 1: THƯỜNG DÙNG -->
+            <div class="dropdown-label">Thường dùng</div>
             <button class="dropdown-item" id="btn-sync-now" title="Kiểm tra mây NGAY (tự động kiểm tra mỗi 2 phút và khi quay lại tab)">
               <i data-lucide="refresh-cw" style="color:#0f766e;"></i> Đồng Bộ Ngay
+            </button>
+            <button class="dropdown-item" id="btn-save-local">
+              <i data-lucide="save" style="color:#15803d;"></i> Lưu Dữ Liệu Cục Bộ (Máy)
             </button>
             <button class="dropdown-item" id="btn-sync-conflicts" data-manager-only
               title="Các bản ghi vừa bị máy này sửa vừa bị máy khác sửa — xem và chọn giữ bản nào">
               <i data-lucide="git-merge" style="color:#b45309;"></i> Xung Đột Đồng Bộ <span id="sync-conflict-count"></span>
             </button>
-            <button class="dropdown-item" id="btn-sync-photos" title="Đẩy THUMB ảnh nguyên liệu lên mây theo từng doc riêng (nhẹ, đẩy dần) để máy khác xem được ảnh">
-              <i data-lucide="image-plus" style="color:#0f766e;"></i> Đồng Bộ Ảnh Ngay<span id="photo-sync-status"></span>
+            <button class="dropdown-item" id="btn-hard-reload" title="Xoá cache ứng dụng rồi tải lại bản MỚI NHẤT (khi máy chạy bản cũ)">
+              <i data-lucide="rotate-cw" style="color:#0f766e;"></i> Tải Lại Bản Mới Nhất
             </button>
-            <button class="dropdown-item" id="btn-open-autobackup" style="display:none;">
-              <i data-lucide="archive" style="color:#7c3aed;"></i> Phục Hồi Tự Động (Bản Cất Trên Máy)
+
+            <!-- NHÓM 2: DỮ LIỆU & SAO LƯU -->
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-label">Dữ liệu &amp; sao lưu</div>
+            <button class="dropdown-item" id="btn-select-data-folder">
+              <i data-lucide="folder-open" style="color:#0284c7;"></i> Chọn Thư Mục Dữ Liệu (File)
             </button>
-            <button class="dropdown-item" id="btn-open-cloud-backup" style="display:none;">
-              <i data-lucide="cloud" style="color:#0284c7;"></i> Bản Cất Dự Phòng Trên Mây
+            <button class="dropdown-item" id="btn-disconnect-data-folder" style="display:none;">
+              <i data-lucide="folder-x" style="color:var(--danger);"></i> Ngắt Kết Nối Thư Mục
             </button>
             <button class="dropdown-item" id="btn-export-json">
               <i data-lucide="download"></i> Sao Lưu Dữ Liệu (JSON)
@@ -211,21 +201,41 @@
               <i data-lucide="upload"></i> Phục Hồi Dữ Liệu (JSON)
             </button>
             <input type="file" id="file-import-json" accept=".json" style="display: none;">
+            <button class="dropdown-item" id="btn-open-autobackup" style="display:none;">
+              <i data-lucide="archive" style="color:#7c3aed;"></i> Phục Hồi Tự Động (Bản Cất Trên Máy)
+            </button>
+            <button class="dropdown-item" id="btn-open-cloud-backup" style="display:none;">
+              <i data-lucide="cloud" style="color:#0284c7;"></i> Bản Cất Dự Phòng Trên Mây
+            </button>
+            <!-- NHÓM 3: ĐỒNG BỘ MÂY -->
             <div class="dropdown-divider"></div>
+            <div class="dropdown-label">Đồng bộ mây</div>
+            <button class="dropdown-item" id="btn-upload-cloud">
+              <i data-lucide="cloud-upload" style="color:#0284c7;"></i> Đồng Bộ Dữ Liệu Máy Lên Mây
+            </button>
+            <button class="dropdown-item" id="btn-pull-cloud">
+              <i data-lucide="cloud-download" style="color:#0284c7;"></i> Tải Dữ Liệu Từ Mây Về Máy
+            </button>
+            <button class="dropdown-item" id="btn-sync-photos" title="Đẩy THUMB ảnh nguyên liệu lên mây theo từng doc riêng (nhẹ, đẩy dần) để máy khác xem được ảnh">
+              <i data-lucide="image-plus" style="color:#0f766e;"></i> Đồng Bộ Ảnh Ngay<span id="photo-sync-status"></span>
+            </button>
             <button class="dropdown-item" id="btn-pending-list" title="Bản ghi đã thay đổi trên MÁY NÀY nhưng CHƯA lên mây">
               <i data-lucide="list-checks" style="color:#b45309;"></i> Việc Chưa Lên Mây <span id="pending-count"></span>
             </button>
-            <button class="dropdown-item" id="btn-hard-reload" title="Xoá cache ứng dụng rồi tải lại bản MỚI NHẤT (khi máy chạy bản cũ)">
-              <i data-lucide="rotate-cw" style="color:#0f766e;"></i> Tải Lại Bản Mới Nhất
+
+            <!-- NHÓM 4: KHÁC -->
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-label">Khác</div>
+            <button class="dropdown-item" id="btn-open-users-mgr">
+              <i data-lucide="users"></i> Quản Lý Người Chỉnh Sửa
+            </button>
+            <button class="dropdown-item" id="btn-fx-low" title="Tắt kính mờ + animation để máy yếu chạy mượt (giữ nguyên màu theme)">
+              <i data-lucide="gauge" style="color:#64748b;"></i> Giảm Hiệu Ứng (Máy Yếu)
             </button>
             <div class="dropdown-item dropdown-static" id="app-version-row" title="Phiên bản giao diện đang chạy TRÊN MÁY NÀY — so với máy khác để biết máy nào cũ">
               <i data-lucide="info" style="color:#64748b;"></i> Phiên bản: <strong id="app-version-label">—</strong>
             </div>
-            <div class="dropdown-divider"></div>
-            <div class="dropdown-label">Giao diện</div>
-            <button class="dropdown-item" id="btn-fx-low" title="Tắt kính mờ + animation để máy yếu chạy mượt (giữ nguyên màu theme)">
-              <i data-lucide="gauge" style="color:#64748b;"></i> Giảm Hiệu Ứng (Máy Yếu)
-            </button>
+
             <div class="dropdown-divider"></div>
             <button class="dropdown-item" id="btn-logout" style="color: var(--danger);">
               <i data-lucide="log-out"></i> Đăng Xuất
@@ -4346,12 +4356,18 @@
     <!-- 7. NHÂN SỰ VIEW -->
     <section id="hr-view" class="view-panel">
 
-      <!-- BẢNG 0: THẺ NÔI (LAUNCHER) — KATALOG BẢNG NHÂN SỰ: mỗi bảng là
-           một thẻ rút gọn; bấm thẻ để mở bảng chi tiết (xem / chỉnh sửa) -->
-      <div class="hr-cards-overview">
-        <div class="hr-cards-title" style="justify-content:space-between;">
+      <!-- THANH TIÊU ĐỀ NHÂN SỰ — mở nhanh các bảng bằng DOCK 3 CẤP ở giữa
+           phía dưới: Home → icon nhóm (Hồ sơ / Ngày công / Thống kê / Tuyển
+           dụng) → dải thẻ của nhóm. Bảng bố trí vị trí là nội dung MẶC ĐỊNH
+           ngay dưới thanh này. -->
+      <div class="hr-cards-overview hr-hero">
+        <div class="hr-cards-title">
           <h4><i data-lucide="layout-grid"></i> Bảng Nhân Sự</h4>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="hr-hero-hint hide-mobile">Mở nhanh các bảng bằng nút <strong>Home</strong> ở giữa phía dưới</span>
+          <div class="hr-hero-actions">
+            <button type="button" class="btn btn-primary" id="btn-hr-dock-open" title="Mở bảng chọn nhóm / thẻ Nhân Sự (hoặc bấm nút Home ở giữa phía dưới)">
+              <i data-lucide="layout-grid"></i> <span class="hide-mobile">Mở Bảng</span>
+            </button>
             <button type="button" class="btn btn-success" id="btn-open-export-hr" title="Xuất dữ liệu Nhân Sự ra file Excel (.xlsx) — chọn theo từng thẻ nhanh">
               <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
             </button>
@@ -4360,77 +4376,8 @@
             </button>
           </div>
         </div>
-        <div class="hr-cards" id="hr-cards-grid">
-          <!-- CỤM 1: HỒ SƠ — nhân viên + danh mục vị trí/kỹ năng -->
-          <div class="hr-cards-cluster">Hồ sơ</div>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-emp-card" aria-expanded="false" title="Danh sách nhân viên — thêm / sửa / xóa">
-            <span class="hr-mini-ic"><i data-lucide="users"></i></span>
-            <span class="hr-mini-title">Nhân Viên</span>
-            <span class="hr-mini-desc">Danh sách nhân viên</span>
-            <span class="hr-mini-count" id="hr-mini-count-emp">–</span>
-          </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-pos-card" aria-expanded="false" title="Vị trí làm việc &amp; kỹ năng — danh mục vị trí">
-            <span class="hr-mini-ic"><i data-lucide="git-branch"></i></span>
-            <span class="hr-mini-title">Vị Trí &amp; Kỹ Năng</span>
-            <span class="hr-mini-desc">Vị trí làm việc</span>
-            <span class="hr-mini-count" id="hr-mini-count-pos">–</span>
-          </button>
-          <!-- CỤM 2: NGÀY CÔNG — chấm công, giờ máy, tăng ca, nghỉ phép -->
-          <div class="hr-cards-cluster">Ngày công</div>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-att-card" aria-expanded="false" title="Chấm công & phân vị — đi làm / vắng / nghỉ có phép theo ngày">
-            <span class="hr-mini-ic"><i data-lucide="clipboard-list"></i></span>
-            <span class="hr-mini-title">Chấm Công</span>
-            <span class="hr-mini-desc">Phân vị theo ngày</span>
-            <span class="hr-mini-count" id="hr-mini-count-att">–</span>
-          </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-ci-card" aria-expanded="false" title="Giờ máy chấm công — nạp Excel + đối chiếu với chấm công tay">
-            <span class="hr-mini-ic"><i data-lucide="clock"></i></span>
-            <span class="hr-mini-title">Giờ Máy Chấm Công</span>
-            <span class="hr-mini-desc">Nạp Excel / đối chiếu</span>
-            <span class="hr-mini-count" id="hr-mini-count-ci">–</span>
-          </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-leave-card" aria-expanded="false" title="Xin nghỉ phép — đơn + duyệt ban lãnh đạo">
-            <span class="hr-mini-ic"><i data-lucide="calendar-x"></i></span>
-            <span class="hr-mini-title">Xin Nghỉ Phép</span>
-            <span class="hr-mini-desc">Đơn nghỉ + duyệt</span>
-            <span class="hr-mini-count" id="hr-mini-count-leave">–</span>
-          </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-ot-card" aria-expanded="false" title="Đăng ký tăng ca — giờ dự kiến + giờ TC thực tế tự lấy từ Bảng bố trí theo ngày">
-            <span class="hr-mini-ic"><i data-lucide="clock-plus"></i></span>
-            <span class="hr-mini-title">Tăng Ca</span>
-            <span class="hr-mini-desc">Đăng ký + duyệt</span>
-            <span class="hr-mini-count" id="hr-mini-count-ot">–</span>
-          </button>
-          <!-- CỤM 3: THỐNG KÊ — nghỉ phép TOP + đi làm theo bộ phận/cá nhân -->
-          <div class="hr-cards-cluster">Thống kê</div>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-stats-card" aria-expanded="false" title="Thống kê nghỉ phép — TOP nhân viên theo số ngày nghỉ">
-            <span class="hr-mini-ic"><i data-lucide="bar-chart-3"></i></span>
-            <span class="hr-mini-title">Thống Kê Nghỉ</span>
-            <span class="hr-mini-desc">TOP theo ngày nghỉ</span>
-            <span class="hr-mini-count" id="hr-mini-count-stats">–</span>
-          </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-att-stats-card" aria-expanded="false" title="Thống kê đi làm theo tháng — thẻ tóm tắt từng bộ phận, bấm vào để xem chi tiết cá nhân">
-            <span class="hr-mini-ic"><i data-lucide="calendar-check-2"></i></span>
-            <span class="hr-mini-title">Thống Kê Đi Làm</span>
-            <span class="hr-mini-desc">Tỷ lệ đi làm theo tháng</span>
-            <span class="hr-mini-count" id="hr-mini-count-att-stats">–</span>
-          </button>
-          <!-- CỤM 4: TUYỂN DỤNG — nhu cầu + vị trí còn thiếu -->
-          <div class="hr-cards-cluster">Tuyển dụng</div>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-recruit-card" aria-expanded="false" title="Nhân sự cần — nhu cầu tuyển dụng">
-            <span class="hr-mini-ic"><i data-lucide="user-search"></i></span>
-            <span class="hr-mini-title">Nhân Sự Cần</span>
-            <span class="hr-mini-desc">Nhu cầu tuyển dụng</span>
-            <span class="hr-mini-count" id="hr-mini-count-recruit">–</span>
-          </button>
-          <button type="button" class="hr-mini-card" data-hr-card="hr-posneed-card" aria-expanded="false" title="Nhân sự cần tại các vị trí — số người cần / số người hiện có theo từng vị trí của từng bộ phận (bảng dữ liệu trung gian)">
-            <span class="hr-mini-ic"><i data-lucide="target"></i></span>
-            <span class="hr-mini-title">Nhân Sự Cần Tại Vị Trí</span>
-            <span class="hr-mini-desc">Cần / hiện có theo vị trí</span>
-            <span class="hr-mini-count" id="hr-mini-count-posneed">–</span>
-          </button>
-        </div>
       </div>
+
 
       <!-- BẢNG ĐIỀU KHIỂN BỐ TRÍ VỊ TRÍ — HIỂN THỊ TRỰC TIẾP ngay dưới
            menu launcher (không cần bấm thẻ). Cột X = vị trí, các ô người
@@ -4448,8 +4395,8 @@
             <button type="button" class="btn btn-outline btn-sm" id="btn-hr-calendar" title="Cài đặt lịch làm việc từng tháng: ngày nghỉ theo thứ + ngày nghỉ/lễ riêng — đi làm ngày nghỉ thì giờ làm tính vào TĂNG CA">
               <i data-lucide="calendar-range"></i> Lịch Tháng
             </button>
-            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-board" title="Thu gọn / Mở rộng">
-              <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+            <button type="button" class="btn btn-outline btn-sm btn-icon rate-toggle-btn" id="btn-toggle-hr-board" title="Thu gọn / Mở rộng" aria-label="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i>
             </button>
           </div>
         </div>
@@ -4613,14 +4560,17 @@
         </div>
       </div>
 
-      <!-- BẢNG 3.5: GIỜ MÁY CHẤM CÔNG — ĐỐI CHIẾU -->
+      <!-- BẢNG 3.5: ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG -->
       <div class="planning-card hr-card-hidden" id="hr-ci-card">
         <div class="planning-card-header">
-          <h4><i data-lucide="clock"></i> Giờ Máy Chấm Công — Đối Chiếu</h4>
+          <h4><i data-lucide="clock"></i> Đối Chiếu Bố Trí ↔ Máy Chấm Công</h4>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="hr-count" id="hr-ci-count"></span>
             <button type="button" class="btn btn-outline btn-sm" id="btn-import-checkins" data-perm="hr" title="Nạp file Excel giờ vào/ra từ máy chấm công để đối chiếu">
               <i data-lucide="clock"></i> Nạp Giờ Máy
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-endfill" data-perm="hr" title="Điền giờ kết thúc thực tế (lấy từ máy) vào Bảng bố trí cho các ngày ĐÃ QUA đang để trống giờ kết thúc">
+              <i data-lucide="timer-reset"></i> Điền Giờ Kết Thúc
             </button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-apply-all-checkins" title="Tự chấm Đi làm cho các ngày máy xác nhận mà chấm tay còn thiếu hoặc đang ghi Vắng">
               <i data-lucide="check-check"></i> Áp Dụng Tất Cả
@@ -4633,16 +4583,43 @@
             </button>
           </div>
         </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item" style="display:flex; gap:4px; align-items:center;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-prev" title="Tháng trước"><i data-lucide="chevron-left"></i></button>
+            <input type="month" id="hr-ci-month" style="width:150px;" title="Kỳ đối chiếu (tháng)">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-next" title="Tháng sau"><i data-lucide="chevron-right"></i></button>
+          </div>
+          <div class="filter-item">
+            <label for="hr-ci-filter-dept">Bộ phận:</label>
+            <select id="hr-ci-filter-dept"></select>
+          </div>
+          <div class="filter-item" style="flex:1 1 170px;">
+            <label for="hr-ci-search">Tìm nhanh:</label>
+            <input type="text" id="hr-ci-search" placeholder="Tên / mã NV / bộ phận..." autocomplete="off">
+          </div>
+          <div class="filter-item">
+            <label class="ci-check" title="Chỉ hiện các dòng lệch / cần xác nhận (đi muộn, về sớm, thiếu giờ ra, không quẹt, nghỉ có quẹt, TC lệch, chưa chấm tay)"><input type="checkbox" id="hr-ci-only-issues" checked> Chỉ dòng cần xác nhận</label>
+          </div>
+          <div class="filter-item">
+            <label class="ci-check" title="Hiện cả những ngày nghỉ có phép (không quẹt máy)"><input type="checkbox" id="hr-ci-show-leave"> Hiện ngày nghỉ có phép</label>
+          </div>
+        </div>
+        <div id="hr-ci-chips" class="hr-stat-chips"></div>
+        <div class="ci-hint" title="Chấm sớm dưới 30 phút được tính từ giờ bắt đầu ca (không sinh tăng ca). Tăng ca chỉ tính phần sau giờ hết ca, mỗi 30 phút mới tính (làm tròn xuống). Nghỉ phép đã duyệt không bị máy ghi đè.">
+          Quy tắc: chấm sớm &lt; 30' tính từ giờ bắt đầu ca (không sinh TC) · tăng ca sau hết ca tính theo khối 30' (làm tròn xuống) · “Khớp ✓” = máy khớp với Bảng bố trí.
+        </div>
         <div class="table-responsive table-scroll">
           <table class="data-table" id="hr-ci-table">
             <thead>
               <tr>
                 <th>Nhân Viên</th>
                 <th>Ngày</th>
+                <th>Bố Trí (Bảng dữ liệu)</th>
                 <th>Giờ Máy (vào–ra)</th>
-                <th>Đối Chiếu Chấm Tay</th>
-                <th class="text-right">Áp Dụng</th>
-                <th class="text-right">Xóa</th>
+                <th>Thực Tế (HC/TC)</th>
+                <th>Lệch / Kết Luận</th>
+                <th>Đơn Từ (nghỉ · tăng ca)</th>
+                <th class="text-right">Thao Tác</th>
               </tr>
             </thead>
             <tbody id="hr-ci-body">
@@ -4886,6 +4863,121 @@
         </div>
       </div>
       </div> <!-- /#hr-details-stack -->
+
+      <!-- DOCK 3 CẤP — Home (giữa dưới) → icon nhóm → dải thẻ của nhóm.
+           Các .hr-mini-card GIỮ NGUYÊN id + listener đã gắn lúc boot (chỉ đổi
+           cha trong DOM); bấm thẻ vẫn mở pop-up chi tiết như trước. -->
+      <div class="hr-dock" id="hr-dock" data-level="0" aria-label="Mở nhanh bảng Nhân Sự">
+        <div class="hr-dock-groups" id="hr-dock-groups" role="menu" aria-label="Nhóm bảng Nhân Sự" aria-hidden="true" hidden>
+          <button type="button" class="hr-dock-group" data-hr-group="hoso" style="--dock-g:#0284c7" role="menuitem" aria-expanded="false" title="Hồ sơ — Nhân Viên, Vị Trí &amp; Kỹ Năng">
+            <span class="hr-dock-ic"><i data-lucide="users"></i></span>
+            <span class="hr-dock-lb">Hồ sơ</span>
+            <span class="hr-dock-badge" id="hr-dock-badge-hoso"></span>
+          </button>
+          <button type="button" class="hr-dock-group" data-hr-group="ngaycong" style="--dock-g:#d97706" role="menuitem" aria-expanded="false" title="Ngày công — Chấm Công, Giờ Máy, Xin Nghỉ Phép, Tăng Ca">
+            <span class="hr-dock-ic"><i data-lucide="clock"></i></span>
+            <span class="hr-dock-lb">Ngày công</span>
+            <span class="hr-dock-badge" id="hr-dock-badge-ngaycong"></span>
+          </button>
+          <button type="button" class="hr-dock-group" data-hr-group="thongke" style="--dock-g:#0d9488" role="menuitem" aria-expanded="false" title="Thống kê — Thống Kê Nghỉ, Thống Kê Đi Làm">
+            <span class="hr-dock-ic"><i data-lucide="bar-chart-3"></i></span>
+            <span class="hr-dock-lb">Thống kê</span>
+            <span class="hr-dock-badge" id="hr-dock-badge-thongke"></span>
+          </button>
+          <button type="button" class="hr-dock-group" data-hr-group="tuyendung" style="--dock-g:#db2777" role="menuitem" aria-expanded="false" title="Tuyển dụng — Nhân Sự Cần, Nhân Sự Cần Tại Vị Trí">
+            <span class="hr-dock-ic"><i data-lucide="user-search"></i></span>
+            <span class="hr-dock-lb">Tuyển dụng</span>
+            <span class="hr-dock-badge" id="hr-dock-badge-tuyendung"></span>
+          </button>
+        </div>
+        <div class="hr-dock-panel" id="hr-dock-panel" hidden aria-hidden="true">
+          <div class="hr-dock-head">
+            <button type="button" class="hr-dock-mini-btn" id="hr-dock-back" title="Quay lại chọn nhóm"><i data-lucide="chevron-left"></i></button>
+            <span class="hr-dock-title" id="hr-dock-title">Bảng Nhân Sự</span>
+            <span class="hr-dock-count" id="hr-dock-count"></span>
+            <button type="button" class="hr-dock-mini-btn" id="hr-dock-close" title="Đóng (Esc)"><i data-lucide="x"></i></button>
+          </div>
+          <div class="hr-cards" id="hr-cards-grid">
+            <div class="hr-dock-cards" data-hr-group-panel="hoso" role="group" aria-label="Hồ sơ">
+
+              <button type="button" class="hr-mini-card" data-hr-card="hr-emp-card" aria-expanded="false" title="Danh sách nhân viên — thêm / sửa / xóa">
+                <span class="hr-mini-ic"><i data-lucide="users"></i></span>
+                <span class="hr-mini-title">Nhân Viên</span>
+                <span class="hr-mini-desc">Danh sách nhân viên</span>
+                <span class="hr-mini-count" id="hr-mini-count-emp">–</span>
+              </button>
+              <button type="button" class="hr-mini-card" data-hr-card="hr-pos-card" aria-expanded="false" title="Vị trí làm việc &amp; kỹ năng — danh mục vị trí">
+                <span class="hr-mini-ic"><i data-lucide="git-branch"></i></span>
+                <span class="hr-mini-title">Vị Trí &amp; Kỹ Năng</span>
+                <span class="hr-mini-desc">Vị trí làm việc</span>
+                <span class="hr-mini-count" id="hr-mini-count-pos">–</span>
+              </button>
+            </div>
+            <div class="hr-dock-cards" data-hr-group-panel="ngaycong" role="group" aria-label="Ngày công">
+
+              <button type="button" class="hr-mini-card" data-hr-card="hr-att-card" aria-expanded="false" title="Chấm công & phân vị — đi làm / vắng / nghỉ có phép theo ngày">
+                <span class="hr-mini-ic"><i data-lucide="clipboard-list"></i></span>
+                <span class="hr-mini-title">Chấm Công</span>
+                <span class="hr-mini-desc">Phân vị theo ngày</span>
+                <span class="hr-mini-count" id="hr-mini-count-att">–</span>
+              </button>
+              <button type="button" class="hr-mini-card" data-hr-card="hr-ci-card" aria-expanded="false" title="Đối chiếu Bảng bố trí ↔ máy chấm công — nạp Excel, xem đi muộn/về sớm/tăng ca/nghỉ phép, điền giờ kết thúc thực tế">
+                <span class="hr-mini-ic"><i data-lucide="clock"></i></span>
+                <span class="hr-mini-title">Giờ Máy Chấm Công</span>
+                <span class="hr-mini-desc">Đối chiếu Bố trí ↔ Máy</span>
+                <span class="hr-mini-count" id="hr-mini-count-ci">–</span>
+              </button>
+              <button type="button" class="hr-mini-card" data-hr-card="hr-leave-card" aria-expanded="false" title="Xin nghỉ phép — đơn + duyệt ban lãnh đạo">
+                <span class="hr-mini-ic"><i data-lucide="calendar-x"></i></span>
+                <span class="hr-mini-title">Xin Nghỉ Phép</span>
+                <span class="hr-mini-desc">Đơn nghỉ + duyệt</span>
+                <span class="hr-mini-count" id="hr-mini-count-leave">–</span>
+              </button>
+              <button type="button" class="hr-mini-card" data-hr-card="hr-ot-card" aria-expanded="false" title="Đăng ký tăng ca — giờ dự kiến + giờ TC thực tế tự lấy từ Bảng bố trí theo ngày">
+                <span class="hr-mini-ic"><i data-lucide="clock-plus"></i></span>
+                <span class="hr-mini-title">Tăng Ca</span>
+                <span class="hr-mini-desc">Đăng ký + duyệt</span>
+                <span class="hr-mini-count" id="hr-mini-count-ot">–</span>
+              </button>
+            </div>
+            <div class="hr-dock-cards" data-hr-group-panel="thongke" role="group" aria-label="Thống kê">
+
+              <button type="button" class="hr-mini-card" data-hr-card="hr-stats-card" aria-expanded="false" title="Thống kê nghỉ phép — TOP nhân viên theo số ngày nghỉ">
+                <span class="hr-mini-ic"><i data-lucide="bar-chart-3"></i></span>
+                <span class="hr-mini-title">Thống Kê Nghỉ</span>
+                <span class="hr-mini-desc">TOP theo ngày nghỉ</span>
+                <span class="hr-mini-count" id="hr-mini-count-stats">–</span>
+              </button>
+              <button type="button" class="hr-mini-card" data-hr-card="hr-att-stats-card" aria-expanded="false" title="Thống kê đi làm theo tháng — thẻ tóm tắt từng bộ phận, bấm vào để xem chi tiết cá nhân">
+                <span class="hr-mini-ic"><i data-lucide="calendar-check-2"></i></span>
+                <span class="hr-mini-title">Thống Kê Đi Làm</span>
+                <span class="hr-mini-desc">Tỷ lệ đi làm theo tháng</span>
+                <span class="hr-mini-count" id="hr-mini-count-att-stats">–</span>
+              </button>
+            </div>
+            <div class="hr-dock-cards" data-hr-group-panel="tuyendung" role="group" aria-label="Tuyển dụng">
+
+              <button type="button" class="hr-mini-card" data-hr-card="hr-recruit-card" aria-expanded="false" title="Nhân sự cần — nhu cầu tuyển dụng">
+                <span class="hr-mini-ic"><i data-lucide="user-search"></i></span>
+                <span class="hr-mini-title">Nhân Sự Cần</span>
+                <span class="hr-mini-desc">Nhu cầu tuyển dụng</span>
+                <span class="hr-mini-count" id="hr-mini-count-recruit">–</span>
+              </button>
+              <button type="button" class="hr-mini-card" data-hr-card="hr-posneed-card" aria-expanded="false" title="Nhân sự cần tại các vị trí — số người cần / số người hiện có theo từng vị trí của từng bộ phận (bảng dữ liệu trung gian)">
+                <span class="hr-mini-ic"><i data-lucide="target"></i></span>
+                <span class="hr-mini-title">Nhân Sự Cần Tại Vị Trí</span>
+                <span class="hr-mini-desc">Cần / hiện có theo vị trí</span>
+                <span class="hr-mini-count" id="hr-mini-count-posneed">–</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="hr-dock-home" id="hr-dock-home" aria-expanded="false" aria-controls="hr-dock-groups hr-dock-panel" title="Mở bảng Nhân Sự">
+          <span class="hr-dock-ic-home"><i data-lucide="home"></i></span>
+          <span class="hr-dock-ic-close"><i data-lucide="x"></i></span>
+          <span class="hr-dock-ping" aria-hidden="true"></span>
+        </button>
+      </div>
 
       <!-- POP-UP: overlay chi tiết bảng Nhân Sự — hiển thị NỔI LÊN khi bấm thẻ -->
             <div class="modal-overlay" id="hr-detail-overlay" tabindex="-1" aria-hidden="true">
@@ -5364,15 +5456,90 @@
         </div>
         <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">
           <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
-          Hệ thống <strong>tự nhận cột</strong> (Mã NV/Tên, Ngày, Giờ vào, Giờ ra). Nếu máy xuất
-          <strong>từng lần quét</strong> (cột "Thời gian" dạng Ngày Giờ) thì tự gộp: lần quét đầu = giờ vào, lần cuối = giờ ra.
-          Khớp nhân viên theo <strong>Mã NV</strong> (dự phòng: đúng Họ tên). Giờ máy chỉ dùng để
-          <strong>đối chiếu &amp; áp dụng</strong> — không ảnh hưởng đơn nghỉ đã duyệt.
+          Hệ thống <strong>tự nhận cột</strong> (Phòng ban · Mã NV · Họ tên · Ngày · Lần 1..N / Giờ vào · Giờ ra).
+          File “BÁO CÁO DỮ LIỆU CHẤM CÔNG” (tiêu đề ở dòng 5, ngày dd-mm-yyyy, giờ HH:MM:SS) được nhận đúng:
+          mỗi dòng 1 NV × 1 ngày, <strong>lần quét đầu = giờ vào, cuối = giờ ra</strong>.
+          Khớp nhân viên theo <strong>Mã NV</strong> (đã chuẩn hoá khoảng trắng / số 0), dự phòng theo <strong>Họ tên bỏ dấu</strong>.
+          Giờ máy chỉ dùng để <strong>đối chiếu &amp; áp dụng</strong> — không ảnh hưởng đơn nghỉ đã duyệt.
+        </div>
+        <div class="ci-import-opts">
+          <label class="ci-check"><input type="checkbox" id="checkin-import-autofill"> Tự điền <strong>giờ kết thúc thực tế</strong> vào Bảng bố trí cho ngày đã qua (mở bảng xem trước, chưa ghi ngay)</label>
+          <div class="form-group" style="margin:6px 0 0 22px;max-width:340px;">
+            <label for="checkin-import-round">Làm tròn khi điền</label>
+            <select id="checkin-import-round">
+              <option value="exact">Đúng giờ máy (chính xác từng phút)</option>
+              <option value="round30">Làm tròn xuống 30 phút (khớp quy tắc tăng ca)</option>
+            </select>
+          </div>
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin:8px 0 10px;">
+          <i data-lucide="shield-check" style="width:12px;height:12px;display:inline;"></i>
+          Quy tắc đối chiếu: chấm sớm &lt; 30 phút tính từ giờ bắt đầu ca (không sinh tăng ca);
+          tăng ca sau hết ca tính theo <strong>khối 30 phút, làm tròn xuống</strong>.
         </div>
         <div id="checkin-import-summary"></div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-checkin-import">Hủy Bỏ</button>
           <button type="button" class="btn btn-primary" id="btn-do-checkin-import" disabled><i data-lucide="upload"></i> Nạp Dữ Liệu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL HR-6b: ĐIỀN GIỜ KẾT THÚC THỰC TẾ THEO MÁY CHẤM CÔNG -->
+  <div class="modal-overlay" id="modal-ci-endfill">
+    <div class="modal-card" style="max-width: 1000px;">
+      <div class="modal-header">
+        <h3><i data-lucide="timer-reset"></i> Điền Giờ Kết Thúc Thực Tế Theo Máy</h3>
+        <button class="modal-close-btn" id="btn-close-ci-endfill"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding: 16px 20px;">
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px; line-height:1.6;">
+          Bảng bố trí chỉ điền <strong>giờ bắt đầu</strong> và để trống <strong>giờ kết thúc</strong> (mặc định = hết ca).
+          Sau khi máy chấm công đã có <strong>giờ ra</strong>, dùng chức năng này để điền giờ kết thúc thực tế cho
+          <strong>ngày đã qua</strong>. Hệ thống chỉ điền các lượt bố trí <strong>đang để trống</strong> và là
+          <strong>lượt cuối</strong> của ngày; <strong>không ghi đè</strong> ô đã nhập tay.
+          <span style="color:var(--danger);">Lưu ý: giờ công đoạn của các ngày này sẽ thay đổi theo (công suất / hiệu suất).</span>
+        </div>
+        <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+          <div class="form-group">
+            <label for="ci-endfill-from">Từ ngày</label>
+            <input type="date" id="ci-endfill-from">
+          </div>
+          <div class="form-group">
+            <label for="ci-endfill-to">Đến ngày</label>
+            <input type="date" id="ci-endfill-to">
+          </div>
+          <div class="form-group">
+            <label for="ci-endfill-round">Làm tròn</label>
+            <select id="ci-endfill-round">
+              <option value="exact">Đúng giờ máy</option>
+              <option value="round30">Xuống 30 phút</option>
+            </select>
+          </div>
+        </div>
+        <div id="ci-endfill-summary" class="hr-stat-chips" style="margin:4px 0 8px;"></div>
+        <div class="table-responsive table-scroll" style="max-height:48vh;">
+          <table class="data-table" id="ci-endfill-table">
+            <thead>
+              <tr>
+                <th class="text-center" title="Bỏ tích để không điền dòng này">Chọn</th>
+                <th>Nhân Viên</th>
+                <th>Ngày</th>
+                <th>Vị Trí</th>
+                <th>Bố Trí Hiện Tại</th>
+                <th>Giờ Ra (máy)</th>
+                <th>Sau Khi Điền · HC/TC trước → sau</th>
+              </tr>
+            </thead>
+            <tbody id="ci-endfill-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+          <button type="button" class="btn btn-outline" id="btn-ci-endfill-cancel">Hủy Bỏ</button>
+          <button type="button" class="btn btn-primary" id="btn-ci-endfill-apply"><i data-lucide="check-check"></i> Áp Dụng Dòng Đã Chọn</button>
         </div>
       </div>
     </div>

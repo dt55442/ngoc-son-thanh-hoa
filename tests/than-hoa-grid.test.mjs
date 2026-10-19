@@ -460,7 +460,7 @@ check('CẤU TRÚC (js): gộp nhóm + chia FEFO + cảnh báo tuổi nan + sort
   bmSrc.includes('function alGridAllGroupList') && bmSrc.includes('function alGridAllocCards') &&
   bmSrc.includes('function alGridSetGroupQty') && bmSrc.includes('AL_GRID_STALE_DAYS') &&
   bmSrc.includes("alGridSortMode = 'size'"));
-check('CẤU TRÚC (sw.js): cache đã tăng lên v269', swHtml.includes('nha-may-ngoc-son-v282'));
+check('CẤU TRÚC (sw.js): cache đã tăng lên v269', swHtml.includes('nha-may-ngoc-son-v285'));
 check('CẤU TRÚC (package.json): bộ kiểm thử này nằm trong chuỗi npm test',
   pkg.includes('tests/than-hoa-grid.test.mjs'));
 

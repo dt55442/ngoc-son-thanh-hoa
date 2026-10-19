@@ -249,6 +249,10 @@ check('SỬA: nạp lại lượt (kỳ vẫn 2 tuần · ô đầu ra trống v
     state.x2CatVanEditId === recCat.id && recCat.qtyIn === 12);
   document.getElementById('x2-cv-qty').value = '15';
   await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
+  // Lưu xong form tự xoá ô Ngày ⇒ tồn được tính theo tuần HIỆN TẠI của máy,
+  // nên test sẽ sai khi chạy vào tuần khác. Chọn lại ngày cố định rồi vẽ lại tồn.
+  document.getElementById('x2-cv-date').value = '2026-10-06';
+  x2.renderX2CatVanSource();
   check('SỬA: 15 tấm → cập nhật + thoát chế độ sửa (dùng hết ván thô kỳ này)',
     recCat.qtyIn === 15 && state.x2CatVanEditId === null &&
     document.getElementById('x2-cv-source').innerHTML.includes('1200×382×12 — còn 50 / 50 tấm') &&
@@ -355,7 +359,7 @@ check('NỐI (main): load 3 khoá lúc boot',
 check('NỐI (export-xlsx): nguồn xuất "catvan" + cột 2 công đoạn',
   jsExport.includes("id: 'catvan'") && jsExport.includes('source === \'catvan\''));
 check('CẤU TRÚC (sw.js): CACHE_NAME v230 (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v280/.test(swJs));
+  /nha-may-ngoc-son-v282/.test(swJs));
 
 // ─── M. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
 {

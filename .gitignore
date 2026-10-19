@@ -4,3 +4,4 @@
 #   file vẫn nằm trên máy, chỉ ngừng theo dõi để repo không phình to.
 # =================================================================
 backups/
+tests/.last-run.log

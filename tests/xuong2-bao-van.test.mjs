@@ -221,6 +221,10 @@ check('SỬA: nạp lại lượt (kỳ vẫn 2 tuần · số lượng 12)',
     state.x2BaoVanEditId === recBao.id && recBao.qtyIn === 12);
   document.getElementById('x2-bv-qty').value = '40';
   await x2.handleXuong2BaoVanSubmit({ preventDefault(){} });
+  // Lưu xong form tự xoá ô Ngày ⇒ tồn tính theo tuần HIỆN TẠI của máy nên test
+  // sẽ sai khi chạy vào tuần khác. Chọn lại ngày cố định rồi vẽ lại tồn.
+  document.getElementById('x2-bv-date').value = '2026-10-06';
+  x2.renderX2BaoVanSource();
   check('SỬA: 40 tấm → cập nhật + thoát chế độ sửa (ván thô = 40 + 10 chà = 50)',
     recBao.qtyIn === 40 && state.x2BaoVanEditId === null &&
     document.getElementById('x2-bv-source').innerHTML.includes('1200×382×12 — còn 50 / 50 tấm') &&
@@ -318,7 +322,7 @@ check('NỐI (main): load 3 khoá lúc boot',
 check('NỐI (export-xlsx): nguồn xuất "baovan" + cột 2 công đoạn',
   jsExport.includes("id: 'baovan'") && jsExport.includes("source === 'baovan'"));
 check('CẤU TRÚC (styles + sw): dùng lại khối nút kỳ + CACHE_NAME v231',
-  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v280/.test(swJs));
+  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v282/.test(swJs));
 
 // ─── K. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
 {

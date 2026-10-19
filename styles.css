@@ -9715,6 +9715,13 @@ body[data-fx="low"] #add-lot-form .al-sheet-scrim { animation: none; }
 .press-input-vol-total:empty { display: none; }
 .press-input-vol-total strong { color: #b45309; }
 .press-input-vol-total em { font-style: normal; opacity: 0.85; }
+/* Gợi ý nhỏ dưới 2 ô LỰC ÉP (nhập 1 số hoặc 1 khoảng 8-10) */
+.press-force-hint {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--text-muted, #6b7280);
+}
 /* Chip CƠ SỞ TÍNH m³ trên thẻ ngày Ép Ván */
 .press-vol-basis {
   display: inline-block;
@@ -11784,4 +11791,35 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 @media (max-width: 639.98px) {
   .sync-pending-banner { font-size: 0.8rem; padding: 6px 10px; }
   .pending-body { max-height: 70dvh; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KẾT QUẢ NẠP NHÂN VIÊN TỪ EXCEL (19/10/2026)
+   Khối tổng kết hiện trong modal sau khi nạp — giữ modal mở để người
+   dùng đối chiếu: bao nhiêu dòng THÊM MỚI / CẬP NHẬT / BỔ SUNG ô trống,
+   nhờ vậy thấy ngay có bị tạo thêm dòng trùng hay không.
+   ═══════════════════════════════════════════════════════════ */
+.emp-import-result {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color, #d6d3d1);
+  border-left: 4px solid var(--primary, #0f766e);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-alt, #f8fafc);
+  max-height: 40dvh;
+  overflow: auto;
+}
+.emp-import-result[hidden] { display: none !important; }
+.emp-ires-title { margin: 0 0 8px; font-size: 0.82rem; font-weight: 700; }
+.emp-ires-row { display: flex; gap: 8px; align-items: baseline; font-size: 0.78rem; padding: 2px 0; }
+.emp-ires-k { flex: 0 0 auto; min-width: 190px; color: var(--text-muted, #64748b); }
+.emp-ires-v { font-weight: 700; font-variant-numeric: tabular-nums; }
+.emp-ires-k.is-add { color: #15803d; }
+.emp-ires-k.is-upd { color: #1d4ed8; }
+.emp-ires-k.is-fill { color: #7c3aed; }
+.emp-ires-k.is-warn { color: #b45309; }
+.emp-ires-hint { margin: 8px 0 0; font-size: 0.72rem; color: var(--text-muted, #64748b); }
+@media (max-width: 639.98px) {
+  .emp-ires-k { min-width: 130px; }
+  .emp-import-result { max-height: 34dvh; }
 }

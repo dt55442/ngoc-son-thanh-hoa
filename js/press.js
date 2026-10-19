@@ -8,7 +8,7 @@ import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrShiftCfg, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear, rateDisplayLabel, rateNanUse, rateUnit } from './planning.js';
 import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
-import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shiftGroupRows, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
+import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, numRangeText, parseNumRange, shiftBreakdownHtml, shiftGroupRows, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
 
   // =============================================================
   // SẢN LƯỢNG ÉP VÁN (PRESS VIEW)
@@ -742,7 +742,13 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
       const fpOk = !!val('press-product') && (parseFloat(val('press-fp-qty')) || 0) > 0;
       return vtOk || fpOk;
     }
-    if (name === 'tech') return ['press-force-h', 'press-force-v', 'press-temp', 'press-time'].every(id => (parseFloat(val(id)) || 0) > 0);
+    if (name === 'tech') return ['press-force-h', 'press-force-v', 'press-temp', 'press-time'].every(id => {
+      if (id === 'press-force-h' || id === 'press-force-v') {
+        const r = parseNumRange(val(id));
+        return r.ok && !r.empty && r.min > 0;
+      }
+      return (parseFloat(val(id)) || 0) > 0;
+    });
     if (name === 'chem') return !!val('press-glue-name') || !!val('press-additive-name') || (parseFloat(val('press-glue')) || 0) > 0 || (parseFloat(val('press-additive')) || 0) > 0;
     return false;
   }
@@ -811,9 +817,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
       const an = document.getElementById('press-additive-name');
       if (an && rec.additiveName) an.value = rec.additiveName;
       const fh = document.getElementById('press-force-h');
-      if (fh && rec.forceH != null) fh.value = rec.forceH;
+      if (fh && rec.forceH != null) fh.value = numRangeText(rec.forceH, rec.forceHMax);
       const fv = document.getElementById('press-force-v');
-      if (fv && rec.forceV != null) fv.value = rec.forceV;
+      if (fv && rec.forceV != null) fv.value = numRangeText(rec.forceV, rec.forceVMax);
       const tp = document.getElementById('press-temp');
       if (tp && rec.tempC != null) tp.value = rec.tempC;
       const tm = document.getElementById('press-time');
@@ -850,6 +856,18 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     document.getElementById('modal-press-record')?.classList.remove('show');
   }
 
+  // Chuyển nội dung ô lực ép ("18" / "8-10" / "8,5-10,5") → 2 TRƯỜNG lưu trữ:
+  //   forceH  = cận DƯỚI (luôn là số, 0 khi để trống)
+  //   forceHMax = cận TRÊN (CHỈ có khi nhập khoảng; không có → dữ liệu 1 số như cũ)
+  // Tách riêng để kiểm thử được mà không cần dựng cả form.
+  function pressForceFieldsOf(text) {
+    const r = parseNumRange(text);
+    if (!r.ok) return { ok: false, error: r.error, forceH: 0 };
+    const out = { ok: true, error: '', forceH: r.empty ? 0 : r.min };
+    if (r.isRange) out.forceHMax = r.max;
+    return out;
+  }
+
   // L\u01b0u l\u01b0\u1ee3t \u00e9p v\u00e1n (th\u00eam m\u1edbi ho\u1eb7c c\u1eadp nh\u1eadt) \u2014 1 form nh\u1eadp li\u1ec7u duy nh\u1ea5t:
   // - Kh\u00f4ng nh\u1eadp "V\u00e1n Th\u00f4 T\u1ea1o Ra" \u2192 th\u1ec3 t\u00edch v\u00e1n th\u00f4 = 0
   // - Kh\u00f4ng ch\u1ecdn Th\u00e0nh Ph\u1ea9m       \u2192 th\u1ec3 t\u00edch th\u00e0nh ph\u1ea9m = 0
@@ -863,8 +881,12 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
     const additive = parseFloat(document.getElementById('press-additive').value) || 0;
     const glueName = (document.getElementById('press-glue-name')?.value || '').trim();
     const additiveName = (document.getElementById('press-additive-name')?.value || '').trim();
-    const forceH = parseFloat(document.getElementById('press-force-h')?.value);
-    const forceV = parseFloat(document.getElementById('press-force-v')?.value);
+    // LỰC ÉP: cho phép nhập 1 số ("18") hoặc 1 khoảng ("8-10" = từ 8 đến 10 MPa).
+    // parseNumRange trả lỗi rõ ràng (sai định dạng · số âm · số đầu > số sau) → KHÔNG lưu.
+    const forceHF = pressForceFieldsOf(document.getElementById('press-force-h')?.value);
+    const forceVF = pressForceFieldsOf(document.getElementById('press-force-v')?.value);
+    if (!forceHF.ok) { showToast('Lực Ép Ngang: ' + forceHF.error + '!', 'error'); return; }
+    if (!forceVF.ok) { showToast('Lực Ép Đứng: ' + forceVF.error + '!', 'error'); return; }
     const tempC = parseFloat(document.getElementById('press-temp')?.value);
     const pressMin = parseFloat(document.getElementById('press-time')?.value);
     const sticks = collectPressSticks().filter(s => s.nanKey || s.sticks > 0);
@@ -917,12 +939,17 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
       finishedQty,
       glue, additive,
       glueName, additiveName,
-      forceH: Number.isFinite(forceH) ? forceH : 0,
-      forceV: Number.isFinite(forceV) ? forceV : 0,
+      forceH: forceHF.forceH,
+      forceV: forceVF.forceH,
       tempC: Number.isFinite(tempC) ? tempC : 0,
       pressMin: Number.isFinite(pressMin) ? pressMin : 0,
       updatedAt: new Date().toISOString()
     };
+
+    // GHI KÈM cận TRÊN khi người dùng nhập khoảng (VD 8-10 MPa). Chỉ nhập 1 số thì
+    // KHÔNG có trường max → dữ liệu cũ/new đều đọc ra đúng "18".
+    if (forceHF.forceHMax != null) recordData.forceHMax = forceHF.forceHMax;
+    if (forceVF.forceHMax != null) recordData.forceVMax = forceVF.forceHMax;
 
     if (recordId) {
       const idx = state.pressRecords.findIndex(r => r.id === recordId);
@@ -1293,11 +1320,14 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, shi
 
   // Text thông số kỹ thuật của 1 lượt ép (hiện trên thẻ ngày): lực ép ngang ·
   // lực ép đứng (MPa) · nhiệt độ (°C) · thời gian (phút/lượt) — thiếu thì '—'.
+  // Lực ép nhận CẢ 2 dạng: 1 số (18) hoặc 1 khoảng (8-10 → "8-10 MPa").
   function pressTechTextOf(r) {
     const rr = r || {};
     const parts = [];
-    if (Number(rr.forceH) > 0) parts.push(`Ép ngang ${rr.forceH} MPa`);
-    if (Number(rr.forceV) > 0) parts.push(`Ép đứng ${rr.forceV} MPa`);
+    const fhTxt = numRangeText(rr.forceH, rr.forceHMax);
+    const fvTxt = numRangeText(rr.forceV, rr.forceVMax);
+    if (fhTxt) parts.push(`Ép ngang ${fhTxt} MPa`);
+    if (fvTxt) parts.push(`Ép đứng ${fvTxt} MPa`);
     if (Number(rr.tempC) > 0) parts.push(`${rr.tempC}°C`);
     if (Number(rr.pressMin) > 0) parts.push(`${rr.pressMin} phút/lượt`);
     return parts.length ? parts.join(' · ') : '—';
@@ -3064,6 +3094,7 @@ export {
   getBaoTinhStockByNanKey,
   populatePressChemNameLists,
   pressBaoTinhHintOf,
+  pressForceFieldsOf,
   pressChemNameOptions,
   pressCollapseAllSecs,
   pressLastChemNames,

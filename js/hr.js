@@ -19,6 +19,7 @@ import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, state } from './state.js';
 import { escapeHTML, showToast } from './utils.js';
+import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc đọc file Excel
 
   // ─── HẰNG SỐ NHÂN SỰ ────────────────────────────────────────────
   // Bộ phận cố định theo mô hình nhà máy — thứ tự này cũng dùng để SẮP XẾP
@@ -3064,6 +3065,7 @@ import { escapeHTML, showToast } from './utils.js';
     { key: 'position',   label: 'Vị Trí',       hints: ['vi tri', 'chuc danh', 'position', 'cong viec'] },
     { key: 'title',      label: 'Chức Vụ',       hints: ['chuc vu', 'title', 'cap bac'] },
     { key: 'joinDate',   label: 'Ngày Vào Làm',  hints: ['ngay vao lam', 'ngay vao', 'ngay tuyen', 'ngay bat dau', 'join date', 'ngay vao cty'] },
+    { key: 'quitDate',   label: 'Ngày Nghỉ Việc', hints: ['ngay nghi viec', 'ngay nghi', 'nghi viec', 'quit date', 'ngay ket thuc'] },
     { key: 'status',     label: 'Trạng Thái',    hints: ['trang thai', 'status', 'tinh trang'] },
     { key: 'notes',      label: 'Ghi Chú',       hints: ['ghi chu', 'note', 'notes', 'remark', 'dien giai'] }
   ];
@@ -3148,7 +3150,228 @@ import { escapeHTML, showToast } from './utils.js';
   }
 
   // ── Luồng nhập: chọn file → đọc sheet → tự ánh xạ cột → xem trước → nhập
-  let employeeImportSheet = null; // { aoa, mapping, fileName }
+  // CHỐNG TREO (19/10/2026): `sheet_to_json` đọc theo `ws['!ref']` (vùng Excel tự
+  // khai báo), KHÔNG theo ô có dữ liệu. File có kẻ khung/format ở cột xa hoặc
+  // hàng trống rất nhiều ⇒ `!ref` phình (VD A1:ZZ20000 dù chỉ có 200 dòng thật)
+  // ⇒ materialize hàng trăm nghìn ô, đo thật 10,3 giây / 283 MB → "Page
+  // Unresponsive". Vì vậy: (1) tự tính VÙNG DÙNG THẬT rồi truyền `range`;
+  // (2) cắt cột/dòng trống cuối + chặn trần; (3) hiện overlay chờ.
+  const HR_IMPORT_MAX_COLS = 80;    // trần số cột đưa vào bảng ánh xạ
+  const HR_IMPORT_MAX_ROWS = 5000;  // trần số dòng dữ liệu
+  const HR_IMPORT_WARN_MB  = 12;    // cảnh báo file lớn
+  const HR_IMPORT_MAX_MB   = 30;    // từ chối file quá lớn
+
+  let employeeImportSheet = null; // { aoa, headers, rows, mapping, fileName, sheetName }
+
+  // Đổi địa chỉ ô ("AB12") → { r, c } (0-based) — parse tay để không phụ thuộc XLSX
+  function hrCellAddrToRC(addr) {
+    const m = String(addr || '').match(/^([A-Za-z]+)(\d+)$/);
+    if (!m) return null;
+    const letters = m[1].toUpperCase();
+    let c = 0;
+    for (let i = 0; i < letters.length; i++) c = c * 26 + (letters.charCodeAt(i) - 64);
+    return { r: parseInt(m[2], 10) - 1, c: c - 1 };
+  }
+
+  // VÙNG DÙNG THẬT của sheet (chỉ tính ô có giá trị) + cờ vượt trần cột/dòng.
+  // Tuyệt đối không tin `!ref`: file thật hay khai báo tới cột XFD hàng chục
+  // nghìn dòng trống ⇒ đọc hết sẽ treo trình duyệt.
+  function hrSheetUsedRange(ws) {
+    const empty = { range: { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } }, cols: 0, rows: 0, colsCapped: false, rowsCapped: false };
+    if (!ws || typeof ws !== 'object') return empty;
+    let maxR = -1, maxC = -1;
+    Object.keys(ws).forEach(addr => {
+      if (!addr || addr.charCodeAt(0) === 33) return; // bỏ !ref / !merges / !cols / !margins…
+      const cell = ws[addr];
+      if (!cell || typeof cell !== 'object') return;
+      const v = cell.v;
+      if (v === undefined || v === null || String(v).trim() === '') return; // ô format suông / ô rỗng
+      const pos = hrCellAddrToRC(addr);
+      if (!pos) return;
+      if (pos.r > maxR) maxR = pos.r;
+      if (pos.c > maxC) maxC = pos.c;
+    });
+    if (maxR < 0 || maxC < 0) return empty;
+    return {
+      range: {
+        s: { r: 0, c: 0 },
+        e: { r: Math.min(maxR, HR_IMPORT_MAX_ROWS - 1), c: Math.min(maxC, HR_IMPORT_MAX_COLS - 1) }
+      },
+      cols: maxC + 1,
+      rows: maxR + 1,
+      colsCapped: (maxC + 1) > HR_IMPORT_MAX_COLS,
+      rowsCapped: (maxR + 1) > HR_IMPORT_MAX_ROWS
+    };
+  }
+
+  // ─── CHUẨN HÓA KHÓA SO KHỚP (chống tạo dòng trùng khi nạp) ────────
+  // Mã NV: bỏ khoảng trắng/ký tự lạ, IN HOA, bỏ số 0 vô nghĩa:
+  // "NV 001" · "nv001" · số 1 (Excel lưu dạng số) → cùng khóa "NV1".
+  function hrNormCode(v) {
+    if (v === undefined || v === null) return '';
+    let s = String(v).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!s) return '';
+    s = s.replace(/^([A-Z]*)0+(\d)/, '$1$2');
+    return s;
+  }
+
+  // Tên để so khớp: bỏ dấu + bỏ ký tự lạ + gộp khoảng trắng + lowercase
+  // ("Nguyễn  Văn A." ≡ "nguyen van a").
+  function hrNormNameKey(v) {
+    return hrStripForMatch(v).replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  // Chỉ giữ chữ số, lấy 9 số cuối (SĐT/CCCD hay ghi +84 / 0… lệch đầu số)
+  function hrDigits9(v) {
+    const d = String(v === undefined || v === null ? '' : v).replace(/\D/g, '');
+    return d.length >= 9 ? d.slice(-9) : '';
+  }
+
+  // Giới tính / Trạng thái dạng CHẶT: không nhận ra thì trả '' (KHÔNG mặc định)
+  // — dùng khi CẬP NHẬT để ô ghi chữ lạ không tự đổi dữ liệu đang đúng.
+  function hrNormGenderStrict(v) {
+    const t = hrStripDiacritics(v);
+    if (!t) return '';
+    if (t.startsWith('nu') || t.includes('female') || t === 'f') return 'Nữ';
+    if (t.startsWith('nam') || t.includes('male') || t === 'm') return 'Nam';
+    return '';
+  }
+  function hrNormStatusStrict(v) {
+    const t = hrStripDiacritics(v);
+    if (!t) return '';
+    if (t.includes('tam nghi')) return 'pause';
+    if (t.includes('nghi viec') || t.includes('da nghi') || t.includes('nghi huu')) return 'quit';
+    if (t.includes('dang lam') || t.includes('lam viec') || t.includes('di lam') || t === 'active' || t.includes('hoat dong')) return 'active';
+    return '';
+  }
+
+  // Mã NV kế tiếp chưa dùng (NV001, NV002…) — cùng quy ước với form Thêm nhân viên.
+  // `usedSet` (tùy chọn) để nạp hàng loạt không phải quét lại nhiều lần.
+  function hrNextEmployeeCode(usedSet) {
+    const used = usedSet || new Set((state.hrEmployees || []).map(e => hrNormCode(e.code)).filter(Boolean));
+    for (let i = 1; i <= 99999; i++) {
+      const code = 'NV' + String(i).padStart(3, '0');
+      const key = hrNormCode(code);
+      if (!used.has(key)) { used.add(key); return code; }
+    }
+    return 'NV' + Date.now();
+  }
+
+  // Lập chỉ mục nhân viên đã có (Mã NV · Họ tên · SĐT) — O(N) một lần cho cả file
+  function hrEmpIndexBuild(list) {
+    const byCode = new Map(), byName = new Map(), byPhone = new Map();
+    (list || []).forEach(e => {
+      const ck = hrNormCode(e.code);
+      if (ck && !byCode.has(ck)) byCode.set(ck, e);
+      const nk = hrNormNameKey(e.name);
+      if (nk) {
+        if (!byName.has(nk)) byName.set(nk, []);
+        byName.get(nk).push(e);
+      }
+      const p9 = hrDigits9(e.phone);
+      if (p9 && !byPhone.has(p9)) byPhone.set(p9, e);
+    });
+    return { byCode, byName, byPhone };
+  }
+
+  function hrEmpIndexAdd(index, emp) {
+    const ck = hrNormCode(emp.code);
+    if (ck && !index.byCode.has(ck)) index.byCode.set(ck, emp);
+    const nk = hrNormNameKey(emp.name);
+    if (nk) {
+      if (!index.byName.has(nk)) index.byName.set(nk, []);
+      index.byName.get(nk).push(emp);
+    }
+    const p9 = hrDigits9(emp.phone);
+    if (p9 && !index.byPhone.has(p9)) index.byPhone.set(p9, emp);
+  }
+
+  // Tìm nhân viên đã có ứng với 1 dòng file.
+  // Trả { emp, how:'code'|'name'|'phone' } · { emp:null, ambiguous:[...] } ·
+  //      { emp:null, conflict:'trùng tên nhưng khác Mã NV' } · { emp:null }
+  function hrFindEmployeeMatch(row, index) {
+    const codeK = hrNormCode(row.code);
+    const nameK = hrNormNameKey(row.name);
+    const p9 = hrDigits9(row.phone);
+    const idc = hrDigits9(row.idCard);
+    if (codeK && index.byCode.has(codeK)) return { emp: index.byCode.get(codeK), how: 'code' };
+
+    const sameName = nameK ? (index.byName.get(nameK) || []) : [];
+    if (sameName.length === 1) {
+      const found = sameName[0];
+      // Người cũ ĐÃ CÓ mã, dòng mới có mã KHÁC ⇒ coi là người khác (trùng tên),
+      // KHÔNG ghi đè lên hồ sơ người cũ.
+      if (codeK && hrNormCode(found.code) && hrNormCode(found.code) !== codeK) {
+        return { emp: null, conflict: 'trùng tên nhưng khác Mã NV' };
+      }
+      return { emp: found, how: 'name' };
+    }
+    if (sameName.length > 1) {
+      // Nhiều người cùng tên → thu hẹp bằng SĐT / CCCD / ngày sinh; vẫn mơ hồ
+      // thì KHÔNG tự sửa (tránh sửa nhầm người).
+      let pool = sameName;
+      if (p9) { const p = pool.filter(e => hrDigits9(e.phone) === p9); if (p.length) pool = p; }
+      if (pool.length > 1 && idc) { const p = pool.filter(e => hrDigits9(e.idCard) === idc); if (p.length) pool = p; }
+      if (pool.length > 1 && row.birthDate) { const p = pool.filter(e => String(e.birthDate || '') === row.birthDate); if (p.length) pool = p; }
+      if (pool.length === 1) return { emp: pool[0], how: 'name' };
+      return { emp: null, ambiguous: sameName.map(e => e.name) };
+    }
+    if (p9 && index.byPhone.has(p9)) return { emp: index.byPhone.get(p9), how: 'phone' };
+    return { emp: null };
+  }
+
+  // mapping UI dạng { colIndex: fieldKey } → { fieldKey: colIndex }
+  function hrImportColMap(mapping) {
+    const colByField = {};
+    Object.keys(mapping || {}).forEach(col => {
+      const f = mapping[col];
+      if (f) colByField[f] = parseInt(col, 10);
+    });
+    return colByField;
+  }
+
+  // Đọc 1 dòng file → giá trị ĐÃ CHUẨN HÓA; ô trống trả '' (để luật "ô trống
+  // KHÔNG ghi đè dữ liệu đang có" hoạt động đúng).
+  function hrImportRowValues(row, colByField) {
+    if (!row || !row.length) return null;
+    const get = field => {
+      const col = colByField[field];
+      return (col === undefined || col === null) ? '' : row[col];
+    };
+    const text = v => String(v === undefined || v === null ? '' : v).trim();
+    const has = v => text(v) !== '';
+    const name = text(get('name'));
+    const incoming = {
+      code: hrNormCode(get('code')) ? text(get('code')) : '',
+      name,
+      gender: has(get('gender')) ? hrNormGenderStrict(get('gender')) : '',
+      birthDate: hrNormDate(get('birthDate')),
+      phone: text(get('phone')),
+      idCard: text(get('idCard')),
+      address: text(get('address')),
+      department: has(get('department')) ? hrNormDept(get('department')) : '',
+      position: text(get('position')),
+      title: text(get('title')),
+      joinDate: hrNormDate(get('joinDate')),
+      status: has(get('status')) ? hrNormStatusStrict(get('status')) : '',
+      notes: text(get('notes'))
+    };
+    return { name, incoming, get };
+  }
+
+  // Đếm số dòng trong file TRÙNG nhân viên đã có (cảnh báo trước khi chọn
+  // "Thêm mới tất cả" — tránh nhân đôi danh sách khi nạp lại cùng 1 file).
+  function hrCountImportMatches(aoa, mapping) {
+    const colByField = hrImportColMap(mapping);
+    const index = hrEmpIndexBuild(state.hrEmployees || []);
+    let n = 0;
+    for (let r = 1; r < (aoa || []).length; r++) {
+      const vals = hrImportRowValues(aoa[r], colByField);
+      if (!vals || !vals.name) continue;
+      if (hrFindEmployeeMatch(vals.incoming, index).emp) n++;
+    }
+    return n;
+  }
 
   function openEmployeeImportModal() {
     if (!requireEditPermission()) return;
@@ -3161,6 +3384,9 @@ import { escapeHTML, showToast } from './utils.js';
     if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;margin:0;">Chưa chọn file — bấm chọn file Excel để hệ thống đọc tiêu đề cột và tự ánh xạ.</p>';
     const doBtn = document.getElementById('btn-do-employee-import');
     if (doBtn) doBtn.disabled = true;
+    // Xóa kết quả của lần nạp trước (nếu có)
+    const resBox = document.getElementById('emp-import-result');
+    if (resBox) { resBox.hidden = true; resBox.innerHTML = ''; }
     modal.classList.add('show');
     initLucide();
   }
@@ -3173,38 +3399,90 @@ import { escapeHTML, showToast } from './utils.js';
     const file = e && e.target && e.target.files && e.target.files[0];
     if (!file) return;
     if (!window.XLSX) { showToast('Thư viện đọc Excel chưa sẵn sàng. Kiểm tra kết nối mạng!', 'error'); return; }
+    const sizeMb = (file.size || 0) / 1048576;
+    if (sizeMb > HR_IMPORT_MAX_MB) {
+      showToast(`File "${file.name}" quá lớn (${sizeMb.toFixed(1)} MB > ${HR_IMPORT_MAX_MB} MB). Hãy tách bớt dữ liệu rồi nạp lại!`, 'error');
+      return;
+    }
+    // Reset trạng thái cũ — tránh nạp nhầm file trước khi đọc file mới
+    employeeImportSheet = null;
+    const doBtn0 = document.getElementById('btn-do-employee-import');
+    if (doBtn0) doBtn0.disabled = true;
+    const box0 = document.getElementById('emp-import-mapping-box');
+    if (box0) box0.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;margin:0;">Đang đọc file… (file lớn có thể mất vài giây)</p>';
+    const resBox0 = document.getElementById('emp-import-result');
+    if (resBox0) { resBox0.hidden = true; resBox0.innerHTML = ''; }
+
     const reader = new FileReader();
+    showTreLoading('Đang đọc file Excel…');
     reader.onload = (evt) => {
-      try {
-        const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array', cellDates: true });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        if (!ws) { showToast('File không có sheet dữ liệu!', 'error'); return; }
-        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
-        // Dòng tiêu đề = dòng đầu tiên có ≥2 ô không trống (tránh dòng tiêu đề trang trí)
-        let headerIdx = 0;
-        for (let i = 0; i < Math.min(aoa.length, 10); i++) {
-          const filled = (aoa[i] || []).filter(c => String(c || '').trim() !== '').length;
-          if (filled >= 2) { headerIdx = i; break; }
+      // Nhường 1 nhịp để overlay chờ kịp vẽ (XLSX.read + sheet_to_json là ĐỒNG BỘ)
+      setTimeout(() => {
+        let treOk = true;
+        try {
+          const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array', cellDates: true });
+          const sheetName = (wb.SheetNames && wb.SheetNames[0]) || '';
+          const ws = sheetName ? wb.Sheets[sheetName] : null;
+          if (!ws) throw new Error('File không có sheet dữ liệu!');
+
+          // ─── ĐỌC THEO VÙNG DÙNG THẬT (chống treo "Page Unresponsive") ───
+          const used = hrSheetUsedRange(ws);
+          const aoa = XLSX.utils.sheet_to_json(ws, {
+            header: 1, raw: true, defval: '', blankrows: false, range: used.range
+          });
+          // Dòng tiêu đề = dòng đầu tiên có ≥2 ô không trống (tránh dòng trang trí)
+          let headerIdx = 0;
+          for (let i = 0; i < Math.min(aoa.length, 10); i++) {
+            const filled = (aoa[i] || []).filter(c => String(c === undefined || c === null ? '' : c).trim() !== '').length;
+            if (filled >= 2) { headerIdx = i; break; }
+          }
+          const rawHeaders = (aoa[headerIdx] || []).map(c => String(c === undefined || c === null ? '' : c).trim());
+          if (!rawHeaders.filter(Boolean).length) throw new Error('Không tìm thấy dòng tiêu đề cột (cần ≥2 ô có chữ ở dòng đầu).');
+          // Cắt cột trống ở CUỐI (Excel hay khai báo thừa cột)
+          let lastCol = rawHeaders.length - 1;
+          while (lastCol >= 0 && rawHeaders[lastCol] === '') lastCol--;
+          const headers = rawHeaders.slice(0, lastCol + 1);
+          let rows = aoa.slice(headerIdx + 1)
+            .map(r => (Array.isArray(r) ? r.slice(0, lastCol + 1) : []))
+            .filter(r => r.some(c => String(c === undefined || c === null ? '' : c).trim() !== ''));
+          if (!rows.length) throw new Error('File không có dòng dữ liệu nào!');
+          const trimmedRows = rows.length > HR_IMPORT_MAX_ROWS;
+          if (trimmedRows) rows = rows.slice(0, HR_IMPORT_MAX_ROWS);
+
+          // Tự ánh xạ cột theo tiêu đề
+          const mapping = {};
+          const usedKeys = new Set();
+          headers.forEach((h, col) => {
+            const key = h ? autoMapEmployeeField(h, usedKeys) : null;
+            mapping[col] = key;
+            if (key) usedKeys.add(key);
+          });
+
+          employeeImportSheet = { aoa: [headers, ...rows], headers, rows, mapping, fileName: file.name, sheetName };
+          renderEmployeeImportMapping(headers, rows, mapping);
+          const doBtn = document.getElementById('btn-do-employee-import');
+          if (doBtn) doBtn.disabled = false;
+
+          const warns = [];
+          if (used.colsCapped) warns.push(`chỉ đọc ${HR_IMPORT_MAX_COLS}/${used.cols} cột`);
+          if (trimmedRows) warns.push(`chỉ đọc ${HR_IMPORT_MAX_ROWS}/${used.rows} dòng`);
+          if (sizeMb > HR_IMPORT_WARN_MB) warns.push(`file ${sizeMb.toFixed(1)} MB`);
+          showToast(`Đã đọc ${rows.length} dòng từ "${file.name}"` +
+            (warns.length ? ` (${warns.join(' · ')})` : '') +
+            ' — kiểm tra ánh xạ cột rồi bấm Nhập', warns.length ? 'info' : 'success');
+        } catch (err) {
+          treOk = false;
+          const box = document.getElementById('emp-import-mapping-box');
+          if (box) box.innerHTML = `<p style="color:#dc2626;font-size:0.8rem;margin:0;">⚠ ${escapeHTML(String((err && err.message) || err))}</p>`;
+          showToast('Không đọc được file Excel: ' + String((err && err.message) || err), 'error');
+        } finally {
+          hideTreLoading(treOk);
         }
-        const headers = (aoa[headerIdx] || []).map(c => String(c || '').trim());
-        const rows = aoa.slice(headerIdx + 1).filter(r => (r || []).some(c => String(c || '').trim() !== ''));
-        if (!rows.length) { showToast('File không có dòng dữ liệu nào!', 'error'); return; }
-        // Tự ánh xạ cột theo tiêu đề
-        const mapping = {};
-        const used = new Set();
-        headers.forEach((h, col) => {
-          const key = h ? autoMapEmployeeField(h, used) : null;
-          mapping[col] = key;
-          if (key) used.add(key);
-        });
-        employeeImportSheet = { aoa: [headers, ...rows], mapping, fileName: file.name };
-        renderEmployeeImportMapping(headers, rows, mapping);
-        const doBtn = document.getElementById('btn-do-employee-import');
-        if (doBtn) doBtn.disabled = false;
-        showToast(`Đã đọc ${rows.length} dòng từ "${file.name}" — kiểm tra ánh xạ cột rồi bấm Nhập`, 'success');
-      } catch (err) {
-        showToast('Không đọc được file Excel: ' + (err && err.message), 'error');
-      }
+      }, 0);
+    };
+    reader.onerror = () => {
+      hideTreLoading(false);
+      showToast('Không đọc được file (lỗi FileReader)!', 'error');
     };
     reader.readAsArrayBuffer(file);
   }
@@ -3214,12 +3492,19 @@ import { escapeHTML, showToast } from './utils.js';
     if (!box) return;
     const fieldOptions = '<option value="">-- Bỏ qua --</option>' +
       EMPLOYEE_IMPORT_FIELDS.map(f => `<option value="${f.key}">${escapeHTML(f.label)}</option>`).join('');
-    const mapRows = headers.map((h, col) => `
+    // Chỉ vẽ tối đa HR_IMPORT_MAX_COLS cột — mỗi cột là 1 <select> + 14 <option>,
+    // vẽ hàng nghìn cột sẽ treo trình duyệt.
+    const cols = headers.slice(0, HR_IMPORT_MAX_COLS);
+    const mapRows = cols.map((h, col) => {
+      const sample = String(((rows[0] || [])[col]) === undefined || ((rows[0] || [])[col]) === null ? '' : (rows[0] || [])[col]);
+      return `
       <tr>
         <td><strong>${escapeHTML(h || ('Cột ' + (col + 1)))}</strong></td>
         <td><select data-import-col="${col}">${fieldOptions}</select></td>
-        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(String((rows[0] || [])[col] || ''))}">${escapeHTML(String((rows[0] || [])[col] || ''))}</td>
-      </tr>`).join('');
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(sample)}">${escapeHTML(sample)}</td>
+      </tr>`;
+    }).join('');
+    const droppedCols = Math.max(0, headers.length - cols.length);
     box.innerHTML = `
       <p style="font-size:0.78rem; margin:0 0 8px; font-weight:700;">Ánh xạ cột file Excel → trường nhân viên</p>
       <div class="table-responsive" style="max-height:260px; border:1px solid var(--border-color); border-radius:var(--radius-md);">
@@ -3227,7 +3512,8 @@ import { escapeHTML, showToast } from './utils.js';
           <thead><tr><th>Cột trong file</th><th>Trường nhân viên</th><th>Ví dụ (dòng đầu)</th></tr></thead>
           <tbody>${mapRows}</tbody>
         </table>
-      </div>`;
+      </div>
+      ${droppedCols ? `<p style="font-size:0.72rem;color:var(--text-muted);margin:6px 0 0;">Đã bỏ ${droppedCols} cột vượt trần ${HR_IMPORT_MAX_COLS} cột (chỉ đọc ${HR_IMPORT_MAX_COLS} cột đầu).</p>` : ''}`;
     // Gán giá trị tự ánh xạ vào từng select
     Object.keys(mapping).forEach(col => {
       const sel = box.querySelector(`select[data-import-col="${col}"]`);
@@ -3236,54 +3522,129 @@ import { escapeHTML, showToast } from './utils.js';
   }
 
   // Nhập toàn bộ sheet vào state theo ánh xạ + chế độ.
-  // mode 'add': thêm mới tất cả; 'upsert': trùng Mã NV thì cập nhật, thiếu thì thêm.
-  // Trả về { added, updated, skipped }.
+  //   mode 'upsert' : khớp Mã NV → Họ tên (→ SĐT) thì CẬP NHẬT, chưa có thì thêm mới.
+  //   mode 'add'    : thêm mới tất cả (vẫn đếm dòng "nghi trùng" để báo).
+  // LUẬT GỘP "chỉ điền, không xóa": ô TRỐNG trong file KHÔNG ghi đè dữ liệu đang
+  // có; ô CÓ dữ liệu thì cập nhật ⇒ nạp file thiếu cột = BỔ SUNG thông tin còn thiếu.
+  // Trả về { added, updated, filled, unchanged, skipped, duplicates, ambiguous,
+  //          nameConflicts, addedNames, updatedNames, duplicateNames,
+  //          ambiguousNames, conflictNames }.
   function importEmployeesFromSheet(aoa, mapping, mode) {
-    const result = { added: 0, updated: 0, skipped: 0 };
-    // mapping từ UI dạng { colIndex: fieldKey } → đảo thành { fieldKey: colIndex }
-    const colByField = {};
-    Object.keys(mapping).forEach(col => {
-      const f = mapping[col];
-      if (f) colByField[f] = parseInt(col, 10);
-    });
+    const result = {
+      added: 0, updated: 0, filled: 0, unchanged: 0, skipped: 0,
+      duplicates: 0, ambiguous: 0, nameConflicts: 0,
+      addedNames: [], updatedNames: [], duplicateNames: [],
+      ambiguousNames: [], conflictNames: []
+    };
+    const colByField = hrImportColMap(mapping);
+    const list = state.hrEmployees || (state.hrEmployees = []);
+    const index = hrEmpIndexBuild(list);
+    const usedIds = new Set(list.map(e => e.id));
+    const usedCodes = new Set(list.map(e => hrNormCode(e.code)).filter(Boolean));
+    const pushName = (arr, n) => { if (arr.length < 10) arr.push(n); };
+    let seq = 0;
+    let codeSeq = 1;
+    const takeCode = () => {
+      for (let i = codeSeq; i <= 99999; i++) {
+        const code = 'NV' + String(i).padStart(3, '0');
+        const key = hrNormCode(code);
+        if (!usedCodes.has(key)) { usedCodes.add(key); codeSeq = i + 1; return code; }
+      }
+      return 'NV' + Date.now();
+    };
+
     for (let r = 1; r < aoa.length; r++) {
-      const row = aoa[r];
-      if (!row || !row.length) continue;
-      const get = field => {
-        const col = colByField[field];
-        return (col === undefined || col === null) ? '' : row[col];
-      };
-      const name = String(get('name') || '').trim();
+      const vals = hrImportRowValues(aoa[r], colByField);
+      if (!vals) continue;
+      const { name, incoming, get } = vals;
       if (!name) { result.skipped++; continue; }
+
+      const match = hrFindEmployeeMatch(incoming, index);
+
+      // ── CẬP NHẬT (chỉ ở chế độ upsert) ──────────────────────────────
+      if (mode === 'upsert' && match.emp) {
+        const cur = match.emp;
+        const patch = {};
+        let filled = 0;
+        ['code', 'gender', 'birthDate', 'phone', 'idCard', 'address',
+          'department', 'position', 'title', 'joinDate', 'status', 'notes'].forEach(f => {
+          const val = incoming[f];
+          // Ô TRỐNG trong file ⇒ GIỮ NGUYÊN dữ liệu đang có (không xóa oan)
+          if (val === undefined || val === null || String(val).trim() === '') return;
+          const oldVal = String(cur[f] === undefined || cur[f] === null ? '' : cur[f]).trim();
+          if (oldVal === String(val).trim()) return;
+          patch[f] = val;
+          if (!oldVal) filled++;   // đang trống → nay được BỔ SUNG
+        });
+        if (String(cur.name || '').trim() !== name) patch.name = name;
+        // Trạng thái nghỉ việc phải khớp quitDate (giống form Thêm/Sửa nhân viên)
+        const nextStatus = patch.status || (cur.status || 'active');
+        if (nextStatus === 'quit') {
+          const qd = hrNormDate(get('quitDate')) || String(cur.quitDate || '');
+          if (qd && qd !== String(cur.quitDate || '')) patch.quitDate = qd;
+        } else if (cur.quitDate) {
+          patch.quitDate = '';
+        }
+        if (Object.keys(patch).length) {
+          patch.updatedAt = new Date().toISOString();
+          Object.assign(cur, patch); // giữ id / createdAt / skills / dữ liệu khác
+          result.updated++;
+          result.filled += filled;
+          pushName(result.updatedNames, name);
+        } else {
+          result.unchanged++;
+        }
+        continue;
+      }
+
+      // ── Không rõ là ai (nhiều người trùng tên) ⇒ KHÔNG tự sửa, KHÔNG thêm ──
+      if (mode === 'upsert' && match.ambiguous) {
+        result.ambiguous++;
+        pushName(result.ambiguousNames, name);
+        continue;
+      }
+      if (match.emp) {
+        // "Thêm mới tất cả": dòng trùng người đã có → vẫn thêm nhưng ĐẾM để báo
+        result.duplicates++;
+        pushName(result.duplicateNames, name);
+      } else if (match.conflict) {
+        result.nameConflicts++;
+        pushName(result.conflictNames, name);
+      }
+
+      // ── THÊM MỚI ───────────────────────────────────────────────────
+      let newId;
+      do {
+        newId = `emp-${Date.now().toString(36)}-${(++seq).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      } while (usedIds.has(newId));
+      usedIds.add(newId);
+
       const emp = {
-        code: String(get('code') || '').trim(),
+        id: newId,
+        code: incoming.code || takeCode(),
         name,
-        gender: hrNormGender(get('gender')),
-        birthDate: hrNormDate(get('birthDate')),
-        phone: String(get('phone') || '').trim(),
-        idCard: String(get('idCard') || '').trim(),
-        address: String(get('address') || '').trim(),
-        department: hrNormDept(get('department')),
-        position: String(get('position') || '').trim(),
-        title: String(get('title') || '').trim(),
-        joinDate: hrNormDate(get('joinDate')),
-        status: hrNormStatus(get('status')),
-        notes: String(get('notes') || '').trim(),
+        gender: incoming.gender || hrNormGender(''),         // trống → 'Nam'
+        birthDate: incoming.birthDate,
+        phone: incoming.phone,
+        idCard: incoming.idCard,
+        address: incoming.address,
+        department: incoming.department || hrNormDept(''),  // trống → bộ phận đầu
+        position: incoming.position,
+        title: incoming.title,
+        joinDate: incoming.joinDate,
+        status: incoming.status || hrNormStatus(''),        // trống → 'active'
+        notes: incoming.notes,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      const codeKey = emp.code.toLowerCase();
-      const idx = codeKey
-        ? (state.hrEmployees || []).findIndex(e => String(e.code || '').trim().toLowerCase() === codeKey)
-        : -1;
-      if (mode === 'upsert' && idx !== -1) {
-        state.hrEmployees[idx] = { ...state.hrEmployees[idx], ...emp, id: state.hrEmployees[idx].id };
-        result.updated++;
-      } else {
-        emp.id = `emp-${Date.now()}-${r}`;
-        emp.createdAt = new Date().toISOString();
-        state.hrEmployees.push(emp);
-        result.added++;
+      if (emp.status === 'quit') {
+        const qd = hrNormDate(get('quitDate'));
+        if (qd) emp.quitDate = qd;
       }
+      list.push(emp);
+      hrEmpIndexAdd(index, emp);
+      result.added++;
+      pushName(result.addedNames, name);
     }
     return result;
   }
@@ -3291,20 +3652,57 @@ import { escapeHTML, showToast } from './utils.js';
   // Bấm "Nhập Dữ Liệu": đọc lại ánh xạ + chế độ rồi nhập vào state
   function doEmployeeImport() {
     if (!requireEditPermission()) return;
-    if (!employeeImportSheet) return;
-    const mapping = {};
+    if (!employeeImportSheet) { showToast('Chưa chọn file Excel!', 'error'); return; }
+    // Ánh xạ: bắt đầu từ bản TỰ NHẬN, chỉ đè các cột người dùng đã đổi trong bảng
+    const mapping = Object.assign({}, employeeImportSheet.mapping || {});
     document.querySelectorAll('#emp-import-mapping-box select[data-import-col]').forEach(sel => {
       mapping[parseInt(sel.getAttribute('data-import-col'), 10)] = sel.value || null;
     });
     const upsertEl = document.getElementById('emp-import-mode-upsert');
     const mode = (upsertEl && upsertEl.checked) ? 'upsert' : 'add';
     const fileName = employeeImportSheet.fileName;
+
+    // CẢNH BÁO TRÙNG trước khi "Thêm mới tất cả" — tránh nhân đôi danh sách
+    // khi bấm nạp 2 lần cùng một file.
+    if (mode === 'add') {
+      const dup = hrCountImportMatches(employeeImportSheet.aoa, mapping);
+      if (dup > 0 && !confirm(`Có ${dup} dòng trong file trùng nhân viên đã có (Mã NV / Họ tên / SĐT).\n\nOK = vẫn THÊM MỚI ${dup} dòng (danh sách sẽ có 2 dòng cùng người).\nCancel = quay lại đổi sang chế độ "Cập nhật".`)) return;
+    }
+
     const res = importEmployeesFromSheet(employeeImportSheet.aoa, mapping, mode);
     saveHrData();
-    closeEmployeeImportModal();
     renderHrView();
-    showToast(`Nhập xong từ "${fileName}": thêm mới ${res.added}, cập nhật ${res.updated}, bỏ qua ${res.skipped} dòng thiếu tên`,
+    renderEmployeeImportResult(res, fileName);
+    const parts = [`thêm mới ${res.added}`, `cập nhật ${res.updated}`];
+    if (res.filled) parts.push(`bổ sung ${res.filled} ô trống`);
+    if (res.skipped) parts.push(`bỏ qua ${res.skipped} dòng thiếu tên`);
+    if (res.duplicates) parts.push(`nghi trùng ${res.duplicates}`);
+    if (res.ambiguous) parts.push(`trùng tên chưa rõ ${res.ambiguous}`);
+    showToast(`Nạp xong từ "${fileName}": ${parts.join(' · ')}`,
       (res.added + res.updated) > 0 ? 'success' : 'info');
+  }
+
+  // Khối KẾT QUẢ NẠP — giữ modal mở để người dùng đối chiếu (không tự đóng),
+  // nhờ vậy thấy ngay có bị tạo thêm dòng mới hay không.
+  function renderEmployeeImportResult(res, fileName) {
+    const box = document.getElementById('emp-import-result');
+    if (!box) return;
+    const row = (label, val, cls) => `<div class="emp-ires-row"><span class="emp-ires-k ${cls || ''}">${label}</span><span class="emp-ires-v">${val}</span></div>`;
+    const names = arr => (arr && arr.length)
+      ? escapeHTML(arr.slice(0, 6).join(', ')) + (arr.length > 6 ? ` … (+${arr.length - 6})` : '')
+      : '—';
+    box.innerHTML = `
+      <p class="emp-ires-title">Kết quả nạp từ "${escapeHTML(fileName || '')}"</p>
+      ${row('Thêm mới', res.added, 'is-add')}
+      ${row('Cập nhật', res.updated, 'is-upd')}
+      ${row('Bổ sung ô đang trống', res.filled || 0, 'is-fill')}
+      ${row('Không đổi', res.unchanged || 0)}
+      ${row('Bỏ qua (thiếu tên)', res.skipped || 0)}
+      ${res.duplicates ? row('Nghi trùng — đã thêm mới', `${res.duplicates}: ${names(res.duplicateNames)}`, 'is-warn') : ''}
+      ${res.nameConflicts ? row('Trùng tên khác Mã NV — đã thêm mới', `${res.nameConflicts}: ${names(res.conflictNames)}`, 'is-warn') : ''}
+      ${res.ambiguous ? row('Trùng tên — KHÔNG tự sửa', `${res.ambiguous}: ${names(res.ambiguousNames)}`, 'is-warn') : ''}
+      <p class="emp-ires-hint">Ô trống trong file KHÔNG ghi đè dữ liệu đang có. Hãy kiểm tra danh sách nhân viên trước khi đóng.</p>`;
+    box.hidden = false;
   }
 
 // ─── 8) THẺ NÔI — LAUNCHER BẂG NHÂN SỰ ─────────────────────────
@@ -3453,6 +3851,22 @@ export {
   attStatusOf,
   attRecordOf,
   autoMapEmployeeField,
+  hrSheetUsedRange,
+  hrCellAddrToRC,
+  hrNormCode,
+  hrNormNameKey,
+  hrDigits9,
+  hrNormGenderStrict,
+  hrNormStatusStrict,
+  hrEmpIndexBuild,
+  hrFindEmployeeMatch,
+  hrImportColMap,
+  hrImportRowValues,
+  hrCountImportMatches,
+  hrNextEmployeeCode,
+  renderEmployeeImportResult,
+  HR_IMPORT_MAX_COLS,
+  HR_IMPORT_MAX_ROWS,
   approveLeave,
   canApproveLeave,
   syncLeaveDurationUI,

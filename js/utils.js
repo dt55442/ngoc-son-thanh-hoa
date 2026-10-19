@@ -703,6 +703,52 @@ import { state } from './state.js';
     </span>`;
   }
 
+  // ─── NHẬP "1 SỐ HOẶC 1 KHOẢNG SỐ" CHO MỘT Ô ─────────────────────
+  // Dùng cho LỰC ÉP NGANG / ĐỨNG (MPa) của form Thêm/Sửa Lượt Ép Ván:
+  // người dùng ghi "8-10" nghĩa là máy ép trong khoảng 8 → 10 MPa.
+  //   parseNumRange('8-10')  → { ok, empty:false, min:8,  max:10, isRange:true  }
+  //   parseNumRange('18')    → { ok, empty:false, min:18, max:18, isRange:false }
+  //   parseNumRange('')      → { ok, empty:true,  min:null, max:null }
+  // Nhận dấu phân cách - – — ~ ÷ và chữ "đến"; thập phân kiểu Việt Nam (8,5).
+  // KHÔNG tự đảo khi số đầu > số sau → trả lỗi để người nhập sửa (tránh hiểu sai số liệu).
+  // Đặt ở utils.js để press.js + qc-press.js + report-center.js dùng chung KHÔNG vòng import.
+  function parseNumRange(text) {
+    const raw = String(text == null ? '' : text).trim();
+    if (!raw) return { ok: true, empty: true, min: null, max: null, isRange: false, error: '' };
+    const norm = raw
+      .replace(/\s*(?:đến|den)\s*/gi, '~')
+      .replace(/\s*[-–—~÷]\s*/g, '~')
+      .replace(/,/g, '.');
+    const parts = norm.split('~').map(s => s.trim());
+    if (parts.length > 2 || parts.some(p => p === '')) {
+      return { ok: false, empty: false, min: null, max: null, isRange: false, error: 'chỉ nhập 1 số hoặc 1 khoảng (VD: 18 hoặc 8-10)' };
+    }
+    const nums = parts.map(p => Number(p));
+    if (nums.some(n => !Number.isFinite(n))) {
+      return { ok: false, empty: false, min: null, max: null, isRange: false, error: 'giá trị phải là số (VD: 18 hoặc 8-10)' };
+    }
+    if (nums.some(n => n < 0)) {
+      return { ok: false, empty: false, min: null, max: null, isRange: false, error: 'không được âm (VD: 18 hoặc 8-10)' };
+    }
+    const min = nums[0];
+    const max = nums.length > 1 ? nums[1] : nums[0];
+    if (max < min) {
+      return { ok: false, empty: false, min, max, isRange: true, error: 'số đầu phải nhỏ hơn hoặc bằng số sau (VD: 8-10)' };
+    }
+    return { ok: true, empty: false, min, max, isRange: nums.length > 1 && max > min, error: '' };
+  }
+  // Hiện lại dạng đã nhập: (8, 10) → "8-10" · (18, 0/undefined) → "18" · rỗng → ''
+  // Thập phân hiển thị dấu phẩy (8,5) theo cách ghi tiếng Việt.
+  function numRangeText(min, max) {
+    const fmt = n => String(n).replace('.', ',');
+    const a = Number(min);
+    const b = Number(max);
+    const aOk = Number.isFinite(a) && a > 0;
+    const bOk = Number.isFinite(b) && b > a;
+    if (!aOk) return bOk ? fmt(b) : '';
+    return bOk ? `${fmt(a)}-${fmt(b)}` : fmt(a);
+  }
+
   // ─── TÁCH DỮ LIỆU THEO CA LÀM VIỆC (2 CA) ────────────────────────
   // Khi bộ phận (Xưởng 2 / Xưởng 1 / QC) được đặt chế độ "Làm ca" ở Bảng bố
   // trí Nhân Sự thì 1 ngày có thể có 2 ca cùng làm 1 công đoạn. Gộp chung 1
@@ -925,6 +971,8 @@ export {
   getStageDaysLabel,
   initVnDateInputs,
   isoToDmy,
+  numRangeText,
+  parseNumRange,
   setupFormCalculations,
   showToast,
   shiftBreakdownHtml,

@@ -17,7 +17,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { logDataChange } from './history.js';
 import { STORAGE_KEY_QC_PRESS, state } from './state.js';
-import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
+import { escapeHTML, formatDateDDMMYY, numRangeText, showToast } from './utils.js';
 
   // ─── TIỆN ÍCH CHUNG ──────────────────────────────────────────
   const qcPressTodayISO = () => {
@@ -89,6 +89,10 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const { name, qty, source } = qcPressNameQtyOf(rr);
     const forceH = qcPressNum(rr.forceH);
     const forceV = qcPressNum(rr.forceV);
+    // Lực ép có thể là 1 số (18) hoặc 1 KHOẢNG (forceH=8 + forceHMax=10 → "8-10").
+    // Giữ forceH/forceV là SỐ để tương thích số liệu cũ, thêm text để hiển thị/xuất.
+    const forceHText = numRangeText(rr.forceH, rr.forceHMax);
+    const forceVText = numRangeText(rr.forceV, rr.forceVMax);
     const tempC = qcPressNum(rr.tempC);
     const pressMin = qcPressNum(rr.pressMin);
     const glueName = String(rr.glueName || '').trim();
@@ -99,7 +103,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const coverage = (qty > 0 && (glueG + additiveG) > 0) ? (glueG + additiveG) / qty : null;
     return {
       id: rr.id || '', date: rr.date || '', name, qty, source,
-      forceH, forceV, tempC, pressMin,
+      forceH, forceV, forceHText, forceVText, tempC, pressMin,
       glueName, glueG, additiveName, additiveG, mixText, coverage,
       verdict: qcPressVerdictOf(rr.id)
     };
@@ -241,8 +245,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
       const body = disp.map(d => `<tr>
         <td title="${d.source === 'vanTho' ? 'Tên lấy từ ô Ván Thô (ưu tiên)' : d.source === 'thanhPham' ? 'Không có ván thô nên lấy từ ô Thành Phẩm' : 'Lượt ép chưa có đầu ra'}">${d.name ? escapeHTML(d.name) : '—'}${d.source === 'vanTho' ? ' <span class="qcp-src-tag" title="Ưu tiên lấy ở ô Ván thô">Ván thô</span>' : d.source === 'thanhPham' ? ' <span class="qcp-src-tag qcp-src-fp" title="Không có ván thô nên lấy ở ô Thành phẩm">TP</span>' : ''}</td>
         <td style="text-align:right;"><strong>${d.qty ? qcPressFmt(d.qty) : '—'}</strong></td>
-        <td style="text-align:right;">${d.forceH ? qcPressFmt(d.forceH, 2) : '—'}</td>
-        <td style="text-align:right;">${d.forceV ? qcPressFmt(d.forceV, 2) : '—'}</td>
+        <td style="text-align:right;">${d.forceHText ? escapeHTML(d.forceHText) : '—'}</td>
+        <td style="text-align:right;">${d.forceVText ? escapeHTML(d.forceVText) : '—'}</td>
         <td style="text-align:right;">${d.tempC ? qcPressFmt(d.tempC, 1) : '—'}</td>
         <td style="text-align:right;">${d.pressMin ? qcPressFmt(d.pressMin, 1) : '—'}</td>
         <td>${d.glueName ? escapeHTML(d.glueName) : '—'}</td>
@@ -264,8 +268,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           <thead><tr>
             <th>Tên ván/thanh</th>
             <th style="text-align:right;">Số lượng</th>
-            <th style="text-align:right;">Lực ép ngang (MPa)</th>
-            <th style="text-align:right;">Lực ép đứng (MPa)</th>
+            <th style="text-align:right;" title="Lực ép ngang (MPa) — có thể là 1 số (18) hoặc 1 khoảng (8-10)">Lực ép ngang (MPa)</th>
+            <th style="text-align:right;" title="Lực ép đứng (MPa) — có thể là 1 số (22) hoặc 1 khoảng (8-10)">Lực ép đứng (MPa)</th>
             <th style="text-align:right;">Nhiệt độ (°C)</th>
             <th style="text-align:right;">Thời gian ép (phút/lượt)</th>
             <th>Tên keo</th>

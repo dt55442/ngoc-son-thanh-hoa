@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v280/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v282/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -804,7 +804,7 @@ check('R14: CSS có khối 3 dòng đầu vào + tổng thể tích + chip cơ s
   cssHtml.includes('.ps-bt-line') && cssHtml.includes('.press-input-vol-total') &&
   cssHtml.includes('.press-vol-basis'));
 check('R15: sw.js đã tăng cache (v265) để PWA không dùng bản cũ',
-  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v280'));
+  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v282'));
 check('R16: ô nhiều cỡ có khung .ps-qty-list + N ô .ps-size-qty (hàm đồng bộ riêng)',
   pressSrc.includes('ps-qty-list') && pressSrc.includes('ps-size-qty') &&
   pressSrc.includes('function syncPressStickQtyInputs') && pressSrc.includes('function readPressSizeQtys'));
@@ -850,6 +850,54 @@ check('S8: CSS modal trợ giúp (.epv-help-card · bảng ví dụ · chip · g
   cssHtml.includes('.epv-help-card') && cssHtml.includes('#epv-help-body') &&
   cssHtml.includes('.epv-help-ex') && cssHtml.includes('.epv-help-chip') &&
   cssHtml.includes('.epv-help-note'));
+
+// ── T. LỰC ÉP DẠNG KHOẢNG "8-10" MPa (19/10/2026) ───────────────
+// Cho phép nhập 1 số (18) hoặc 1 khoảng (8-10 = từ 8 đến 10 MPa). Lưu forceH =
+// cận dưới (SỐ, tương thích dữ liệu cũ) + forceHMax = cận trên (chỉ khi là khoảng).
+console.log('--- T. LỰC ÉP: NHẬP 1 SỐ HOẶC KHOẢNG (8-10) ---');
+const utils = await import('../js/utils.js');
+const r810 = utils.parseNumRange('8-10');
+check('T1: parse "8-10" → min 8 · max 10 · isRange true',
+  r810.ok && !r810.empty && r810.min === 8 && r810.max === 10 && r810.isRange === true);
+check('T2: nhận dấu – ~ ÷ và chữ "đến" (8 – 10 · 8~10 · 8÷10 · 8 đến 10)',
+  ['8 – 10', '8~10', '8÷10', '8 đến 10'].every(t => {
+    const r = utils.parseNumRange(t);
+    return r.ok && r.min === 8 && r.max === 10;
+  }));
+check('T3: "18" → 1 số (min = max = 18, isRange false)',
+  (() => { const r = utils.parseNumRange('18'); return r.ok && r.min === 18 && r.max === 18 && r.isRange === false; })());
+check('T4: thập phân kiểu Việt Nam "8,5-10,5" → 8,5 · 10,5',
+  (() => { const r = utils.parseNumRange('8,5-10,5'); return r.ok && r.min === 8.5 && r.max === 10.5; })());
+check('T5: từ chối số đầu > số sau ("10-8") + nêu cách sửa',
+  (() => { const r = utils.parseNumRange('10-8'); return r.ok === false && /số đầu/.test(r.error); })());
+check('T6: từ chối "abc" · "-5" · "8-" · "8-10-12"',
+  ['abc', '-5', '8-', '8-10-12'].every(t => utils.parseNumRange(t).ok === false));
+check('T7: để trống → ok + empty (không báo lỗi)',
+  (() => { const r = utils.parseNumRange(''); return r.ok === true && r.empty === true; })());
+check('T8: numRangeText: (8,10)="8-10" · (18,0)="18" · (8.5,10.5)="8,5-10,5" · (0,0)=""',
+  utils.numRangeText(8, 10) === '8-10' && utils.numRangeText(18, 0) === '18' &&
+  utils.numRangeText(8.5, 10.5) === '8,5-10,5' && utils.numRangeText(0, 0) === '');
+check('T9: pressForceFieldsOf("8-10") → lưu forceH 8 + forceHMax 10',
+  (() => { const f = press.pressForceFieldsOf('8-10'); return f.ok && f.forceH === 8 && f.forceHMax === 10; })());
+check('T10: pressForceFieldsOf("18") → forceH 18, KHÔNG có forceHMax (như dữ liệu 1 số cũ)',
+  (() => { const f = press.pressForceFieldsOf('18'); return f.ok && f.forceH === 18 && f.forceHMax === undefined; })());
+check('T11: pressForceFieldsOf("10-8") → ok false + error rõ',
+  (() => { const f = press.pressForceFieldsOf('10-8'); return f.ok === false && !!f.error; })());
+check('T12: THẺ NGÀY hiện "Ép ngang 8-10 MPa"; dữ liệu cũ vẫn "Ép ngang 18 MPa"',
+  press.pressTechTextOf({ forceH: 8, forceHMax: 10 }).includes('Ép ngang 8-10 MPa') &&
+  press.pressTechTextOf({ forceH: 18 }).includes('Ép ngang 18 MPa'));
+check('T13: index.html 2 ô lực ép là type="text" (gõ được dấu "-") + có gợi ý .press-force-hint',
+  /type="text"[^>]*id="press-force-h"/.test(idxHtml) &&
+  /type="text"[^>]*id="press-force-v"/.test(idxHtml) &&
+  !/id="press-force-h"[^>]*type="number"/.test(idxHtml) &&
+  idxHtml.includes('press-force-hint') && idxHtml.includes('VD 8-10'));
+check('T14: submit dùng pressForceFieldsOf + ghi forceHMax/forceVMax; sửa lượt nạp numRangeText',
+  pressSrc.includes('pressForceFieldsOf(') && pressSrc.includes('recordData.forceHMax') &&
+  pressSrc.includes('recordData.forceVMax') &&
+  pressSrc.includes('numRangeText(rec.forceH, rec.forceHMax)'));
+check('T15: CSS .press-force-hint có trong styles.css', cssHtml.includes('.press-force-hint'));
+check('T16: tick xanh cụm "Thông số KT" chấp nhận khoảng (pressSecFilled dùng parseNumRange)',
+  pressSrc.includes('parseNumRange(val(id))'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

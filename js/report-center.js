@@ -483,7 +483,7 @@ function buildQcPressReport(spec) {
     'Nhiệt Độ (°C)', 'Thời Gian Ép (phút)', 'Tên Keo', 'Keo (g)', 'Phụ Gia', 'Phụ Gia (g)',
     'Tỷ Lệ Keo - Phụ Gia', 'Độ Phủ (g/đơn vị)', 'Kết Quả QC'];
   const rows = list.map((d, i) => [
-    i + 1, formatDateDDMMYY(d.date), d.name || '', d.qty || 0, d.forceH || '', d.forceV || '',
+    i + 1, formatDateDDMMYY(d.date), d.name || '', d.qty || 0, d.forceHText || d.forceH || '', d.forceVText || d.forceV || '',
     d.tempC || '', d.pressMin || '', d.glueName || '', d.glueG || 0,
     d.additiveName || '', d.additiveG || 0, d.mixText || '',
     d.coverage == null ? '' : Math.round(d.coverage * 100) / 100,

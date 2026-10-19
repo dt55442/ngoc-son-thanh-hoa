@@ -3692,11 +3692,13 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label for="press-force-h">Lực Ép Ngang (MPa)</label>
-                  <input type="number" id="press-force-h" min="0" step="any" placeholder="VD: 18" title="Lực ép ngang của máy ép (MPa)">
+                  <input type="text" inputmode="decimal" id="press-force-h" maxlength="12" placeholder="VD: 18" title="Lực ép ngang của máy ép (MPa) — nhập 1 số (VD: 18) hoặc 1 khoảng (VD: 8-10 nghĩa là từ 8 đến 10 MPa)">
+                  <div class="press-force-hint">Nhập 1 số (VD 18) hoặc khoảng (VD 8-10)</div>
                 </div>
                 <div class="form-group">
                   <label for="press-force-v">Lực Ép Đứng (MPa)</label>
-                  <input type="number" id="press-force-v" min="0" step="any" placeholder="VD: 22" title="Lực ép đứng của máy ép (MPa)">
+                  <input type="text" inputmode="decimal" id="press-force-v" maxlength="12" placeholder="VD: 22" title="Lực ép đứng của máy ép (MPa) — nhập 1 số (VD: 22) hoặc 1 khoảng (VD: 8-10 nghĩa là từ 8 đến 10 MPa)">
+                  <div class="press-force-hint">Nhập 1 số (VD 22) hoặc khoảng (VD 8-10)</div>
                 </div>
                 <div class="form-group">
                   <label for="press-temp">Nhiệt Độ (°C)</label>
@@ -5328,12 +5330,18 @@
         <div class="form-group">
           <label>Chế độ nhập</label>
           <label style="display:flex; gap:6px; align-items:center; font-weight:400;">
-            <input type="radio" name="emp-import-mode" id="emp-import-mode-add" value="add" checked> Thêm mới tất cả các dòng
+            <input type="radio" name="emp-import-mode" id="emp-import-mode-add" value="add" checked> Thêm mới tất cả các dòng (có cảnh báo nếu trùng người đã có)
           </label>
           <label style="display:flex; gap:6px; align-items:center; font-weight:400;">
-            <input type="radio" name="emp-import-mode" id="emp-import-mode-upsert" value="upsert"> Cập nhật nhân viên trùng Mã NV (chưa có thì thêm mới)
+            <input type="radio" name="emp-import-mode" id="emp-import-mode-upsert" value="upsert"> Cập nhật nhân viên trùng (Mã NV / Họ tên) — chưa có thì thêm mới
           </label>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">
+            <i data-lucide="info" style="width:12px;height:12px;display:inline;"></i>
+            Chế độ <strong>Cập nhật</strong> chỉ điền các ô <strong>có dữ liệu</strong> trong file —
+            ô trống <strong>KHÔNG</strong> xóa thông tin đang có (bổ sung thông tin còn thiếu).
+          </div>
         </div>
+        <div id="emp-import-result" class="emp-import-result" hidden></div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-employee-import">Hủy Bỏ</button>
           <button type="button" class="btn btn-primary" id="btn-do-employee-import" disabled><i data-lucide="upload"></i> Nhập Dữ Liệu</button>

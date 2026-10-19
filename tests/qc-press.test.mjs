@@ -119,6 +119,24 @@ const d3 = qcp.qcPressDisplay(state.pressRecords[2]);
 check('THIẾU keo/phụ gia → tỷ lệ "—" · độ phủ null', d3.mixText === '—' && d3.coverage === null);
 check('THÔNG SỐ KT: p1 đọc đủ lực ép ngang/đứng · nhiệt độ · thời gian',
   (() => { const d = qcp.qcPressDisplay(state.pressRecords[0]); return d.forceH === 18 && d.forceV === 22 && d.tempC === 120 && d.pressMin === 25; })());
+// LỰC ÉP DẠNG KHOẢNG "8-10" MPa (19/10/2026): lưu forceH=8 + forceHMax=10.
+// forceH/forceV vẫn là SỐ (tương thích số liệu cũ) — thêm forceHText/forceVText để hiển thị.
+const dRange = qcp.qcPressDisplay({
+  id: 'p-range', date: '2026-09-25', forceH: 8, forceHMax: 10, forceV: 20, forceVMax: 24,
+  tempC: 120, pressMin: 25, glue: 0, additive: 0,
+  vanTho: [{ vtDim: '1200x600x12', vtQty: 10 }]
+});
+check('LỰC ÉP KHOẢNG: forceH 8 + forceHMax 10 → hiện "8-10", forceH vẫn là số 8',
+  dRange.forceHText === '8-10' && dRange.forceH === 8);
+check('LỰC ÉP KHOẢNG: cận đứng 20 + 24 → hiện "20-24"',
+  dRange.forceVText === '20-24' && dRange.forceV === 20);
+check('LỰC ÉP 1 SỐ: p1 (18 · 22) → text "18" / "22" (không đổi số liệu cũ)',
+  (() => { const d = qcp.qcPressDisplay(state.pressRecords[0]); return d.forceHText === '18' && d.forceVText === '22'; })());
+check('BÁO CÁO EXCEL: cột lực ép ưu tiên forceHText/forceVText (xuất "8-10" thay vì rỗng)',
+  (() => {
+    const rcSrc = fsMod.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8');
+    return rcSrc.includes('d.forceHText || d.forceH') && rcSrc.includes('d.forceVText || d.forceV');
+  })());
 
 // ═══ C. VERDICT 1-1 (ghi đè) + LƯU ═══
 console.log('--- C. VERDICT PASS/FAIL 1-1 + LƯU ---');
@@ -245,7 +263,7 @@ check('history.js: miền qcPressLogs thuộc tab qc',
   hiJs.includes('qcPressLogs:') && hiJs.includes("label: 'Nhật ký ép ván (QC kiểm)'"));
 check('main.js: loadQcPressLogs lúc boot', mnJs.includes('loadQcPressLogs'));
 check('sw.js: CACHE_NAME v226 + js/qc-press.js vào APP_SHELL',
-  /nha-may-ngoc-son-v280/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
+  /nha-may-ngoc-son-v282/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
 check('styles.css: launcher hồng + stamp PASS NGHIÊNG (font-style: italic) + nút ✅/❌',
   cssHtml.includes('qc-press-card') && cssHtml.includes('.qcp-stamp-pass') &&
   cssHtml.includes('font-style: italic') && cssHtml.includes('.qcp-check-pass') &&

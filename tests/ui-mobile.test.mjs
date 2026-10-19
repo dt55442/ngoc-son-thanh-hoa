@@ -77,8 +77,8 @@ check('D5. tôn trọng giảm hiệu ứng + ẩn khi in',
 // ─── E. WIRING + PHIÊN BẢN ──────────────────────────────────────
 check('E1. events giữ menu mở khi bấm vùng trống/nhãn nhóm (chỉ item mới đóng)',
   /dropdown\.addEventListener\('click'[\s\S]{0,220}?closest\('\.dropdown-item'\)[\s\S]{0,80}?stopPropagation\(\)/.test(evSrc));
-check('E2. sw.js cache v285', swSrc.includes('nha-may-ngoc-son-v285'));
-check('E3. APP_VERSION v285', stateSrc.includes("APP_VERSION = 'v285'"));
+check('E2. sw.js cache v286', swSrc.includes('nha-may-ngoc-son-v286'));
+check('E3. APP_VERSION v286', stateSrc.includes("APP_VERSION = 'v286'"));
 
 console.log(`\nUI-MOBILE: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);

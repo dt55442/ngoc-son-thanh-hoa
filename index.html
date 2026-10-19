@@ -3178,30 +3178,129 @@
       <!-- Vỏ cột = kế hoạch TB/ngày (bảng Kế Hoạch Nguyên Liệu ở    -->
       <!-- tab Nguyên liệu) · cột đặc = thực tế nhập trong ngày      -->
       <!-- ======================================================= -->
-      <div class="planning-card press-chart-card pv-card" id="material-plan-chart-card">
+      <div class="planning-card press-chart-card pv-card" id="material-plan-chart-card" data-mp-mode="chart">
         <div class="planning-card-header">
-          <h4><i data-lucide="bar-chart-3"></i> Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)
-            <!-- Nút "?" TRỢ GIÚP — giải thích cột rỗng/đặc, hình thân cây, dải hôm nay -->
+          <!-- NÚT CHUYỂN CHẾ ĐỘ = CHÍNH TÊN THẺ (mẫu #pv-mode-toggle của thẻ gộp
+               Kế Hoạch vs Đã Ép): 'chart' = biểu đồ theo ngày · 'totals' = vùng
+               Tổng Nhập Mua (chia theo vị trí nhập, lọc Tuần/Tháng/Năm). -->
+          <h4 class="pv-mode-head">
+            <button type="button" class="pv-mode-btn" id="mpc-mode-toggle" aria-pressed="false"
+                    title="Bấm để chuyển: Biểu đồ Kế Hoạch vs Thực Tế ↔ Tổng Nhập Mua Nguyên Liệu (theo kỳ)">
+              <i data-lucide="bar-chart-3" class="pv-mode-ico mpc-ico-chart"></i>
+              <i data-lucide="wallet" class="pv-mode-ico mpc-ico-totals"></i>
+              <span class="pv-mode-label" id="mpc-mode-label">Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)</span>
+              <i data-lucide="repeat-2" class="pv-mode-ico pv-mode-swap" title="Đổi chế độ xem"></i>
+            </button>
+            <!-- Nút "?" TRỢ GIÚP — nội dung đổi theo chế độ đang xem (events.js) -->
             <button type="button" class="btn-dash-help" id="btn-help-material"
-                    title="Giải thích nhanh: cột rỗng = kế hoạch · cột đặc = thực tế, hình thân cây theo vị trí, dải nền cam = hôm nay.">?</button>
+                    title="Giải thích nhanh cách đọc biểu đồ / tổng nhập mua (chia theo vị trí nhập).">?</button>
           </h4>
           <div class="pv-toolbar">
-            <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần">
+            <!-- Ô chọn tuần chỉ dùng cho BIỂU ĐỒ — chế độ Tổng Nhập Mua ẩn đi
+                 (bộ lọc Tuần/Tháng/Năm nằm trong vùng #mp-totals). -->
+            <div class="pv-week-nav" role="group" aria-label="Điều hướng theo tuần" id="mpc-week-nav">
               <button type="button" class="pv-week-btn" id="mpc-week-prev" title="Tuần trước"><i data-lucide="chevron-left"></i></button>
               <select id="mpc-week-filter" title="Chọn tuần hiển thị"></select>
               <button type="button" class="pv-week-btn" id="mpc-week-next" title="Tuần sau"><i data-lucide="chevron-right"></i></button>
             </div>
-            <span class="material-kpi-caption" id="mpc-caption"></span>
             <button type="button" class="btn btn-outline btn-icon press-expand-btn btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
               <i data-lucide="maximize"></i>
             </button>
           </div>
         </div>
         <!-- title = tooltip giải thích thay ghi chú — rê vào khung biểu đồ hiện cách đọc -->
-        <div class="press-chart-box"
+        <div class="press-chart-box" id="mpc-chart-box"
              title="Vỏ cột (khung rỗng) = Kế hoạch trung bình/ngày · cột đặc = Thực tế nhập trong ngày. Hình thân cây theo vị trí: tre = Xưởng 2 · ống nứa (vầu/nứa) = Xưởng 1 · khúc gỗ trơn = Lò hơi. Dải nền cam nhạt = hôm nay. Rê chuột vào cột để xem số liệu.">
           <canvas id="material-plan-chart"></canvas>
         </div>
+
+        <!-- ======================================================= -->
+        <!-- VÙNG TỔNG NHẬP MUA (chế độ thứ 2 của thẻ)                -->
+        <!-- Chia 2 phần: ① Tổng khối lượng · ② Tổng tiền — MỌI số    -->
+        <!-- đều chia theo VỊ TRÍ NHẬP (Lò hơi / Xưởng 1 / Xưởng 2).  -->
+        <!-- Chỉ ĐỌC state.materialRecords — không lưu dữ liệu mới.   -->
+        <!-- ======================================================= -->
+        <div class="mp-totals" id="mp-totals" hidden>
+          <div class="mp-totals-bar">
+            <div class="pv-unit-toggle" role="group" aria-label="Chọn kỳ tổng hợp">
+              <button type="button" class="pv-unit-btn" data-mp-pmode="week" aria-pressed="false" title="Tổng khối lượng &amp; tiền theo TUẦN">Tuần</button>
+              <button type="button" class="pv-unit-btn" data-mp-pmode="month" aria-pressed="false" title="Tổng khối lượng &amp; tiền theo THÁNG">Tháng</button>
+              <button type="button" class="pv-unit-btn" data-mp-pmode="year" aria-pressed="false" title="Tổng khối lượng &amp; tiền theo NĂM">Năm</button>
+            </div>
+            <div class="mp-period-nav">
+              <button type="button" class="mp-period-btn" id="mp-totals-prev" title="Kỳ trước"><i data-lucide="chevron-left"></i></button>
+              <select id="mp-totals-period" class="mp-period-select" title="Chọn kỳ cần xem"></select>
+              <button type="button" class="mp-period-btn" id="mp-totals-next" title="Kỳ sau"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <span class="mp-totals-range" id="mp-totals-range"></span>
+          </div>
+
+          <div class="mp-totals-grid">
+            <!-- ① TỔNG KHỐI LƯỢNG -->
+            <section class="mp-total-part" data-part="kg"
+                     title="Tổng khối lượng nhập mua trong kỳ = Σ (chỉ số đầu vào − chỉ số đầu ra) của các lần nhập, chia theo vị trí nhập.">
+              <div class="mp-total-head">
+                <span class="mp-total-tag">①</span>
+                <div class="mp-total-head-txt">
+                  <h5>Tổng Khối Lượng</h5>
+                  <p class="mp-total-hint">Chia theo vị trí nhập</p>
+                </div>
+                <i data-lucide="weight" class="mp-total-ico"></i>
+              </div>
+              <div class="mp-total-big" id="mp-total-kg">—</div>
+              <div class="mp-total-sub" id="mp-total-kg-sub"></div>
+              <div class="mp-total-chips" id="mp-total-kg-chips"></div>
+              <div class="mp-total-meta" id="mp-total-kg-meta"></div>
+              <div class="mp-total-table-wrap">
+                <table class="mp-total-table">
+                  <thead>
+                    <tr>
+                      <th>Vị trí nhập</th>
+                      <th class="num">Lượt</th>
+                      <th class="num">Khối lượng</th>
+                      <th class="num">Tỷ trọng</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mp-total-loc-kg"></tbody>
+                  <tfoot id="mp-total-loc-kg-foot"></tfoot>
+                </table>
+              </div>
+            </section>
+
+            <!-- ② TỔNG TIỀN -->
+            <section class="mp-total-part" data-part="money"
+                     title="Tổng tiền nhập mua trong kỳ = Σ thành tiền (khối lượng × đơn giá đ/kg), chia theo vị trí nhập. Lượt chưa có đơn giá được cảnh báo riêng.">
+              <div class="mp-total-head">
+                <span class="mp-total-tag">②</span>
+                <div class="mp-total-head-txt">
+                  <h5>Tổng Tiền</h5>
+                  <p class="mp-total-hint">Chia theo vị trí nhập</p>
+                </div>
+                <i data-lucide="wallet" class="mp-total-ico"></i>
+              </div>
+              <div class="mp-total-big" id="mp-total-amount">—</div>
+              <div class="mp-total-sub" id="mp-total-amount-sub"></div>
+              <div class="mp-total-chips" id="mp-total-amount-chips"></div>
+              <div class="mp-total-meta" id="mp-total-amount-meta"></div>
+              <div class="mp-total-table-wrap">
+                <table class="mp-total-table">
+                  <thead>
+                    <tr>
+                      <th>Vị trí nhập</th>
+                      <th class="num">Thành tiền</th>
+                      <th class="num">Đơn giá TB</th>
+                      <th class="num">Tỷ trọng</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mp-total-loc-money"></tbody>
+                  <tfoot id="mp-total-loc-money-foot"></tfoot>
+                </table>
+              </div>
+            </section>
+          </div>
+          <p class="mp-totals-note" id="mp-totals-note"></p>
+        </div>
+
       </div>
 
       <!-- ======================================================= -->

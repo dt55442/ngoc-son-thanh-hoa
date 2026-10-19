@@ -12174,3 +12174,157 @@ body[data-fx="low"] .hr-dock-group { animation: none !important; }
 @media print {
   .dropdown-menu { display: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   TỔNG NHẬP MUA NGUYÊN LIỆU — CHẾ ĐỘ XEM THỨ 2 CỦA THẺ
+   #material-plan-chart-card (tab Tổng Quan)
+   - Nút TÊN THẺ (#mpc-mode-toggle) đổi chế độ: biểu đồ ⇄ tổng nhập mua
+   - #mp-totals chia 2 phần: ① tổng khối lượng · ② tổng tiền
+   - Mọi số chia theo VỊ TRÍ NHẬP (phân biệt nguồn mua)
+   ═══════════════════════════════════════════════════════════ */
+#material-plan-chart-card .mpc-ico-totals { display: none; }
+#material-plan-chart-card[data-mp-mode="totals"] .mpc-ico-chart { display: none; }
+#material-plan-chart-card[data-mp-mode="totals"] .mpc-ico-totals { display: inline-block; }
+/* Chế độ BIỂU ĐỒ: nút nổi — tông xanh tre (khác thẻ Kế Hoạch vs Đã Ép) */
+#material-plan-chart-card[data-mp-mode="chart"] .pv-mode-btn {
+  background-color: #15803d;
+  background-image: linear-gradient(130deg, #84cc16 0%, #16a34a 46%, #0f766e 100%);
+  box-shadow: 0 5px 0 rgba(20, 83, 45, 0.55), 0 10px 18px rgba(15, 23, 42, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+/* Chế độ TỔNG: nút THỤT vào — tông hổ phách (báo đang xem số liệu tổng) */
+#material-plan-chart-card[data-mp-mode="totals"] .pv-mode-btn {
+  background-color: #b45309;
+  background-image: linear-gradient(130deg, #b45309 0%, #d97706 55%, #f59e0b 100%);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 4px 9px rgba(120, 53, 15, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: translateY(1px) scale(0.985);
+  animation: none;
+}
+#material-plan-chart-card[data-mp-mode="totals"] .pv-mode-btn::after { animation: none; opacity: 0.5; }
+#material-plan-chart-card[data-mp-mode="totals"] .pv-mode-btn:hover { transform: translateY(1px) scale(1.01); }
+
+/* hidden phải THẮNG display của .pv-week-nav / .mp-totals (author CSS đè hidden) */
+#mpc-week-nav[hidden],
+.mp-totals[hidden] { display: none !important; }
+
+.mp-totals { display: grid; gap: 12px; padding: 14px 16px 18px; }
+.mp-totals-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mp-period-nav { display: inline-flex; align-items: center; gap: 5px; }
+.mp-period-btn {
+  width: 30px; height: 30px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  border: 1px solid #94a3b8; border-radius: var(--radius-full);
+  background: #fff; color: #15803d; cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.mp-period-btn:hover { background: #ecfdf5; }
+.mp-period-btn:active { transform: scale(0.92); }
+.mp-period-btn svg { width: 16px; height: 16px; }
+.mp-period-select {
+  height: 30px; max-width: 250px; padding: 0 10px;
+  border: 1px solid #cbd5e1; border-radius: var(--radius-full);
+  background: #fff; color: #0f172a; font-size: 0.8rem; font-weight: 700;
+}
+.mp-totals-range { font-size: 0.78rem; font-weight: 700; color: #334155; }
+.mp-totals-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.mp-total-part {
+  min-width: 0; padding: 14px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #cbd5e1; border-top: 4px solid #16a34a;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+}
+.mp-total-part[data-part="money"] { border-top-color: #d97706; }
+.mp-total-head { display: flex; align-items: center; gap: 10px; }
+.mp-total-head-txt { min-width: 0; }
+.mp-total-tag {
+  width: 28px; height: 28px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: #dcfce7; color: #166534;
+  font-weight: 800; font-size: 0.85rem;
+}
+.mp-total-part[data-part="money"] .mp-total-tag { background: #fef3c7; color: #b45309; }
+.mp-total-head h5 { margin: 0; font-size: 0.95rem; color: #14532d; }
+.mp-total-part[data-part="money"] .mp-total-head h5 { color: #92400e; }
+.mp-total-hint { margin: 0; font-size: 0.7rem; color: #64748b; }
+.mp-total-ico { margin-left: auto; width: 22px; height: 22px; color: #16a34a; opacity: 0.85; flex-shrink: 0; }
+.mp-total-part[data-part="money"] .mp-total-ico { color: #d97706; }
+.mp-total-big {
+  margin-top: 10px; font-size: 1.8rem; font-weight: 800; line-height: 1.15;
+  letter-spacing: 0.3px; color: #0f172a; font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.mp-total-part[data-part="kg"] .mp-total-big { color: #15803d; }
+.mp-total-part[data-part="money"] .mp-total-big { color: #b45309; }
+.mp-total-sub { font-size: 0.8rem; font-weight: 600; color: #475569; min-height: 1.1em; }
+.mp-total-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
+.mp-loc-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border: 1px solid #e2e8f0; border-radius: 999px;
+  background: #f8fafc; font-size: 0.74rem; color: #334155;
+}
+.mp-loc-chip strong { font-variant-numeric: tabular-nums; color: #0f172a; }
+.mp-loc-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; flex-shrink: 0; }
+.mp-loc-dot[data-loc="lo-hoi"] { background: #8b5e34; }
+.mp-loc-dot[data-loc="xuong-1"] { background: #b3a271; }
+.mp-loc-dot[data-loc="xuong-2"] { background: #4caf50; }
+.mp-loc-dot[data-loc="khac"] { background: #64748b; }
+.mp-total-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.mp-meta-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  background: #ecfdf5; border: 1px solid #bbf7d0;
+  font-size: 0.7rem; font-weight: 600; color: #166534;
+}
+.mp-meta-chip.is-warn { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.mp-total-table-wrap { margin-top: 10px; overflow-x: auto; }
+.mp-total-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.mp-total-table th {
+  padding: 6px 8px; text-align: left; white-space: nowrap;
+  color: #475569; font-weight: 700; border-bottom: 1px solid #e2e8f0;
+}
+.mp-total-table th.num, .mp-total-table td.num { text-align: right; }
+.mp-total-table td { padding: 6px 8px; border-bottom: 1px dashed #e2e8f0; vertical-align: middle; }
+.mp-total-table tfoot td {
+  padding: 7px 8px; font-weight: 800; color: #0f172a;
+  border-top: 2px solid #cbd5e1;
+}
+.mp-loc-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #1e293b; white-space: nowrap; }
+.mp-share { display: block; width: 64px; height: 5px; margin: 3px 0 0 auto; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+.mp-share i { display: block; height: 100%; border-radius: 99px; background: #16a34a; }
+.mp-total-part[data-part="money"] .mp-share i { background: #d97706; }
+.mp-share-pct { font-size: 0.7rem; color: #475569; font-variant-numeric: tabular-nums; }
+.mp-empty { padding: 18px 8px !important; text-align: center; color: #64748b; }
+.mp-totals-note {
+  margin: 0; padding: 7px 10px;
+  border: 1px dashed #cbd5e1; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 0.72rem; line-height: 1.5; color: #475569;
+}
+.mp-totals-note .is-warn { color: #b91c1c; font-weight: 700; }
+/* Mở rộng toàn màn hình: vùng tổng cuộn trong khung */
+.planning-card.press-chart-card.chart-expanded .mp-totals,
+.planning-card.press-chart-card:fullscreen .mp-totals {
+  max-height: calc(100dvh - 120px); overflow: auto;
+}
+@media (max-width: 900px) {
+  .mp-totals-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .mp-totals { padding: 10px; }
+  .mp-totals-bar { gap: 8px; }
+  .mp-period-select { max-width: 100%; flex: 1 1 160px; }
+  .mp-total-big { font-size: 1.45rem; }
+  .mp-total-table { font-size: 0.74rem; }
+  .mp-total-table th, .mp-total-table td { padding: 5px 6px; }
+}
+body[data-fx="low"] .mp-total-part { box-shadow: none; }
+
+/* Thanh lọc kỳ nằm trên nền thẻ xanh → nền trắng mờ để chữ/nút dễ đọc */
+.mp-totals-bar {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 12px;
+}
+.mp-totals .pv-unit-toggle { background: #f1f5f9; border-color: #cbd5e1; }

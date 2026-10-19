@@ -1238,6 +1238,11 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         ? (state.planCapacityInstance || null)
         : (state.planVsPressInstance || null);
     }
+    // Thẻ Kế Hoạch vs Thực Tế Nguyên Liệu có canvas riêng #material-plan-chart —
+    // trả đúng instance để nút Mở rộng toàn màn hình resize đúng biểu đồ.
+    if (card && card.querySelector && card.querySelector('#material-plan-chart')) {
+      return state.materialPlanChartInstance || null;
+    }
     const id = card.getAttribute('data-chart-id');
     if (id && state.customChartInstances[id]) return state.customChartInstances[id];
     return state.pressChartInstance || null;
@@ -1466,6 +1471,36 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           <ul>
             <li>Rê chuột vào cột hiện kế hoạch / thực tế / tỷ lệ của ngày đó.</li>
             <li>Vuốt ngang biểu đồ hoặc dùng <b>‹ ›</b> để xem thêm ngày; đổi tuần ở ô chọn tuần.</li>
+            <li><b>Bấm tên thẻ</b> để chuyển sang <b>Tổng Nhập Mua</b> — tổng khối lượng &amp; tổng tiền chia theo vị trí nhập, lọc Tuần/Tháng/Năm.</li>
+          </ul>
+        </div>`
+    },
+    'material-totals': {
+      title: 'Cách Đọc: Tổng Nhập Mua Nguyên Liệu',
+      body: `
+        <div class="dash-help-sec">
+          <h5>2 phần của vùng thống kê</h5>
+          <ul>
+            <li><b>① Tổng Khối Lượng</b>: tổng kg nhập mua trong kỳ (quy đổi thêm tấn), chia theo <b>vị trí nhập</b>.</li>
+            <li><b>② Tổng Tiền</b>: tổng thành tiền (đ, quy đổi triệu/tỷ), <b>đơn giá TB đ/kg</b> của từng vị trí và toàn kỳ.</li>
+            <li>Mỗi phần có chip 3 vị trí ở trên + bảng chi tiết bên dưới (Lượt · Giá trị · Tỷ trọng).</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Bộ lọc kỳ &amp; cách tính</h5>
+          <ul>
+            <li>Chọn <b>Tuần / Tháng / Năm</b> rồi bấm <b>‹ ›</b> hoặc chọn kỳ trong ô để đổi kỳ.</li>
+            <li><b>Khối lượng</b> = Σ (chỉ số đầu vào − chỉ số đầu ra) của các lần nhập trong kỳ.</li>
+            <li><b>Thành tiền</b> = Σ (khối lượng × đơn giá đ/kg); <b>Đơn giá TB</b> = tổng tiền ÷ tổng khối lượng.</li>
+            <li>Bản ghi cũ thiếu thành tiền nhưng có đơn giá → tự tính lại; bản ghi có vị trí lạ gom vào dòng <b>Khác / không rõ</b>.</li>
+          </ul>
+        </div>
+        <div class="dash-help-sec">
+          <h5>Lưu ý số liệu</h5>
+          <ul>
+            <li>Chip <b>⚠ N lượt chưa có đơn giá</b> = tổng tiền CHỈ tính các lượt đã có giá (không đoán giá).</li>
+            <li>Bản ghi thiếu ngày không được tính vào kỳ (có cảnh báo riêng) — số liệu không bị bỏ im lặng.</li>
+            <li>Chế độ xem &amp; kỳ được nhớ theo MÁY, không đẩy lên mây (chỉ là giao diện).</li>
           </ul>
         </div>`
     },

@@ -277,7 +277,7 @@ check('F4: X1 chỉ tự điền ô số lượng khi ĐANG TRỐNG (không xoá
   xuong2Src.includes("x1SaySinhSyncLinked(!qtyEl") &&
   xuong2Src.includes("x1BocSyncLinked(!qtyEl") &&
   xuong2Src.includes("x1ChainSyncLinked(spec, !inEl"));
-check('F5: sw.js đã tăng cache (v275)', /nha-may-ngoc-son-v285/.test(swSrc));
+check('F5: sw.js đã tăng cache (v275)', /nha-may-ngoc-son-v286/.test(swSrc));
 
 console.log(`\n=== KẾT QUẢ X2 FORM KEEP-SELECTION: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

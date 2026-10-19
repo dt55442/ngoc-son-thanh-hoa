@@ -852,11 +852,16 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
   // nhãn = [T2,T2,T2,T3,T3,T3,...] (21 nhãn), mỗi vị trí chiếm các cột
   // [0,3,6,...] / [1,4,7,...] / [2,5,8,...].
   function renderMaterialPlanChart() {
+    // Thẻ có 2 chế độ xem (nút TÊN THẺ đổi chế độ như #pv-mode-toggle):
+    //   'chart'  = biểu đồ Kế Hoạch vs Thực Tế theo ngày
+    //   'totals' = vùng Tổng Nhập Mua chia theo VỊ TRÍ NHẬP
+    // Đồng bộ nhãn/nút/khung TRƯỚC rồi chỉ vẽ phần đang xem.
+    const mpView = applyMpViewDom();
+    if (mpView === 'totals') { renderMaterialTotals(); return; }
     const canvas = document.getElementById('material-plan-chart');
     if (!canvas || typeof Chart === 'undefined') return;
     renderMaterialPlanChartWeekSelect();
     const weekKey = state.materialPlanChartWeek || currentPlanWeekKey();
-    const caption = document.getElementById('mpc-caption');
 
     // Labels + datasets cho PHẠM VI từ tuần đang chọn đến hết năm đó
     // (đủ cả thứ 7 & chủ nhật của mỗi tuần)
@@ -903,14 +908,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
       else weekGroups.push({ weekNum: s.weekNum, i0: vi, i1: vi });
     });
 
-    // Chú thích: dải tuần/ngày đang hiển thị
-    if (caption) {
-      const s0 = built.daySlots[idxs[0]];
-      const s1 = built.daySlots[idxs[idxs.length - 1]];
-      caption.textContent = (s0 && s1)
-        ? `Tuần ${s0.weekNum} → Tuần ${s1.weekNum} (${weekKey.split('-W')[0]}) · ${s0.day.label} → ${s1.day.label}`
-        : '';
-    }
+    // Chú thích tuần ở header ĐÃ BỎ (chữ mờ, trùng thông tin ô chọn tuần + nhãn
+    // ngày trên trục X). Dải "Tuần N" dưới trục X vẫn giữ để phân cách 2 tuần.
 
     // Max dữ liệu trong cửa sổ → cộng thêm 1 vạch chia (×1,2) để cột cao nhất
     // không chạm trần (VD: max 50.000 kg → vạch chia lớn nhất 60T)
@@ -999,6 +998,450 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
       state.materialPlanChartInstance.destroy();
     }
     state.materialPlanChartInstance = new Chart(canvas.getContext('2d'), cfg);
+  }
+
+  // ─── CHẾ ĐỘ XEM THỨ 2: TỔNG NHẬP MUA NGUYÊN LIỆU ──────────────
+  // Thẻ #material-plan-chart-card có 2 chế độ (nút tên thẻ #mpc-mode-toggle):
+  //   'chart'  = biểu đồ Kế Hoạch vs Thực Tế theo ngày (mặc định, như cũ)
+  //   'totals' = vùng thống kê tổng nhập mua chia 2 phần:
+  //              ① Tổng khối lượng (kg → tấn)
+  //              ② Tổng tiền (đ → triệu/tỷ)
+  // MỌI số đều chia theo VỊ TRÍ NHẬP (Lò hơi · Xưởng 1 · Xưởng 2 · Khác)
+  // vì mỗi vị trí nhập mua khác loại nguyên liệu và đơn giá.
+  // Chỉ ĐỌC state.materialRecords — KHÔNG lưu dữ liệu mới, KHÔNG đồng bộ mây.
+  // Trạng thái xem/kỳ là UI THEO MÁY (localStorage) như RATE_COLLAPSE_KEY.
+  const MP_TOTALS_UI_KEY = 'bamboo_tracker_mp_totals_ui_v1';
+  const MP_TOTALS_MODES = [
+    { key: 'week',  label: 'Tuần' },
+    { key: 'month', label: 'Tháng' },
+    { key: 'year',  label: 'Năm' }
+  ];
+  const mpTotalsUi = {
+    loaded: false,
+    view: 'chart',   // 'chart' | 'totals'
+    mode: 'week',    // 'week' | 'month' | 'year'
+    week: '', month: '', year: ''
+  };
+
+  function mpTotalsViewOf() { return mpTotalsUi.view === 'totals' ? 'totals' : 'chart'; }
+  function mpTotalsModeOf() {
+    return MP_TOTALS_MODES.some(m => m.key === mpTotalsUi.mode) ? mpTotalsUi.mode : 'week';
+  }
+  function loadMpTotalsUi() {
+    if (mpTotalsUi.loaded) return mpTotalsUi;
+    mpTotalsUi.loaded = true;
+    try {
+      const raw = localStorage.getItem(MP_TOTALS_UI_KEY);
+      const o = raw ? JSON.parse(raw) : null;
+      if (o && typeof o === 'object') {
+        if (o.view === 'totals' || o.view === 'chart') mpTotalsUi.view = o.view;
+        if (MP_TOTALS_MODES.some(m => m.key === o.mode)) mpTotalsUi.mode = o.mode;
+        ['week', 'month', 'year'].forEach((k) => {
+          if (typeof o[k] === 'string' && o[k]) mpTotalsUi[k] = o[k];
+        });
+      }
+    } catch (e) { /* bộ nhớ chưa sẵn sàng — dùng mặc định */ }
+    return mpTotalsUi;
+  }
+  function saveMpTotalsUi() {
+    try {
+      localStorage.setItem(MP_TOTALS_UI_KEY, JSON.stringify({
+        view: mpTotalsUi.view, mode: mpTotalsUi.mode,
+        week: mpTotalsUi.week, month: mpTotalsUi.month, year: mpTotalsUi.year
+      }));
+    } catch (e) { /* bỏ qua */ }
+  }
+  // Kỳ mặc định theo GIỜ MÁY (dùng mpTodayIso của biểu đồ)
+  function mpTotalsDefaultKeyOf(mode) {
+    const today = mpTodayIso();
+    if (mode === 'month') return today.slice(0, 7);
+    if (mode === 'year') return today.slice(0, 4);
+    return materialWeekLabel(today);
+  }
+  function mpTotalsKeyOf(mode) {
+    const m = mode || mpTotalsModeOf();
+    if (!mpTotalsUi[m]) {
+      // Lần đầu mở Tổng: lấy đúng tuần đang xem ở biểu đồ (tránh nhảy tuần)
+      if (m === 'week' && /^\d{4}-W\d{1,2}$/.test(String(state.materialPlanChartWeek || ''))) {
+        mpTotalsUi.week = state.materialPlanChartWeek;
+      } else {
+        mpTotalsUi[m] = mpTotalsDefaultKeyOf(m);
+      }
+    }
+    return mpTotalsUi[m];
+  }
+  // Chuẩn hóa ngày về ISO 'YYYY-MM-DD' (dữ liệu cũ có thể dd/mm/yyyy)
+  function mpDateIsoOf(v) {
+    const s = String(v || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    if (m) return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+    return '';
+  }
+  function mpIsoOfUtcDate(d) { return d.toISOString().split('T')[0]; }
+  function mpDdMm(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? `${m[3]}/${m[2]}` : '';
+  }
+  // Kỳ đang chọn → { mode, key, from, to, label, rangeLabel }
+  function mpTotalsRangeOf(mode, key) {
+    const m = mode || mpTotalsModeOf();
+    const k = String(key || mpTotalsKeyOf(m));
+    if (m === 'month') {
+      const mm = /^(\d{4})-(\d{2})$/.exec(k);
+      if (!mm) return { mode: m, key: k, from: '9999-99-99', to: '0000-00-00', label: '—', rangeLabel: '' };
+      const y = parseInt(mm[1], 10);
+      const mo = parseInt(mm[2], 10);
+      const last = new Date(Date.UTC(y, mo, 0));
+      return {
+        mode: m, key: k, from: `${k}-01`, to: `${k}-${String(last.getUTCDate()).padStart(2, '0')}`,
+        label: `Tháng ${mo}/${y}`,
+        rangeLabel: `01/${mm[2]} → ${String(last.getUTCDate()).padStart(2, '0')}/${mm[2]}`
+      };
+    }
+    if (m === 'year') {
+      if (!/^\d{4}$/.test(k)) return { mode: m, key: k, from: '9999-99-99', to: '0000-00-00', label: '—', rangeLabel: '' };
+      return { mode: m, key: k, from: `${k}-01-01`, to: `${k}-12-31`, label: `Năm ${k}`, rangeLabel: '01/01 → 31/12' };
+    }
+    const mon = mondayOfISOWeek(k);
+    if (!mon) return { mode: 'week', key: k, from: '9999-99-99', to: '0000-00-00', label: '—', rangeLabel: '' };
+    const sun = new Date(mon.getTime());
+    sun.setUTCDate(mon.getUTCDate() + 6);
+    const wn = parseInt(String(k).split('-W')[1], 10) || 0;
+    return {
+      mode: 'week', key: k, from: mpIsoOfUtcDate(mon), to: mpIsoOfUtcDate(sun),
+      label: `Tuần ${wn} · ${String(k).split('-W')[0]}`,
+      rangeLabel: `${mpDdMm(mpIsoOfUtcDate(mon))} → ${mpDdMm(mpIsoOfUtcDate(sun))}`
+    };
+  }
+
+  function mpTotalsFilteredRecords(range) {
+    const r = range || mpTotalsRangeOf();
+    return (state.materialRecords || []).filter((rec) => {
+      const d = mpDateIsoOf(rec.date);
+      return !!d && d >= r.from && d <= r.to;
+    });
+  }
+  function mpTotalsUndatedCount() {
+    return (state.materialRecords || []).filter((r) => !mpDateIsoOf(r.date)).length;
+  }
+  // Thành tiền 1 lượt: ưu tiên totalAmount đã lưu; dữ liệu cũ thiếu thì tự tính
+  function mpRecordAmount(r) {
+    const total = Number(r && r.totalAmount);
+    if (Number.isFinite(total) && total !== 0) return total;
+    const w = Number(r && r.weight) || 0;
+    const p = Number(r && r.unitPrice) || 0;
+    return Math.round(w * p * 100) / 100;
+  }
+  function mpTotalsSummary(range) {
+    const rng = range || mpTotalsRangeOf();
+    const recs = mpTotalsFilteredRecords(rng);
+    const rows = MATERIAL_LOCATIONS.map((l) => ({ key: l.key, label: l.label, count: 0, weight: 0, amount: 0 }));
+    const other = { key: 'khac', label: 'Khác / không rõ', count: 0, weight: 0, amount: 0 };
+    const days = new Set();
+    const types = new Set();
+    const suppliers = new Set();
+    let count = 0, weight = 0, amount = 0, pricedCount = 0, missingPriceCount = 0;
+    recs.forEach((r) => {
+      const w = Number(r.weight) || 0;
+      const a = mpRecordAmount(r);
+      const p = Number(r.unitPrice) || 0;
+      count++; weight += w; amount += a;
+      if (p > 0) pricedCount++; else missingPriceCount++;
+      const d = mpDateIsoOf(r.date); if (d) days.add(d);
+      const t = String(r.type || '').trim(); if (t) types.add(t);
+      const sp = String(r.supplier || '').trim(); if (sp) suppliers.add(sp);
+      // Chấp nhận cả location dạng KEY ('xuong-2') lẫn NHÃN cũ ('Xưởng 2')
+      const locV = String(r.location || '').trim();
+      const locKey = (MATERIAL_LOCATIONS.find((l) => l.key === locV || l.label === locV) || {}).key || '';
+      const row = rows.find((x) => x.key === locKey) || other;
+      row.count++; row.weight += w; row.amount += a;
+    });
+    if (other.count > 0) rows.push(other);
+    rows.forEach((row) => {
+      row.avgPrice = row.weight > 0 ? row.amount / row.weight : 0;
+      row.shareWeight = weight > 0 ? (row.weight / weight) * 100 : 0;
+      row.shareAmount = amount > 0 ? (row.amount / amount) * 100 : 0;
+    });
+    return {
+      range: rng, count, days: days.size, types: types.size, suppliers: suppliers.size,
+      weight, amount, pricedCount, missingPriceCount,
+      avgPrice: weight > 0 ? amount / weight : 0,
+      rows, undatedCount: mpTotalsUndatedCount()
+    };
+  }
+  // Danh sách năm có dữ liệu + năm hiện tại + năm của kỳ đang chọn
+  function mpTotalsYears() {
+    const set = new Set([mpTodayIso().slice(0, 4)]);
+    (state.materialRecords || []).forEach((r) => {
+      const d = mpDateIsoOf(r.date);
+      if (d) set.add(d.slice(0, 4));
+    });
+    const cy = /^(\d{4})/.exec(mpTotalsKeyOf(mpTotalsModeOf()));
+    if (cy) set.add(cy[1]);
+    return [...set].filter((y) => /^\d{4}$/.test(y)).sort((a, b) => a.localeCompare(b));
+  }
+  // Lựa chọn của ô chọn kỳ: Tuần (52/53 tuần mỗi năm) · Tháng (12) · Năm
+  function mpTotalsPeriodOptions(mode) {
+    const out = [];
+    mpTotalsYears().forEach((y) => {
+      if (mode === 'year') {
+        out.push({ value: y, label: `Năm ${y}`, group: '' });
+      } else if (mode === 'month') {
+        for (let m = 1; m <= 12; m++) {
+          const mm = String(m).padStart(2, '0');
+          out.push({ value: `${y}-${mm}`, label: `Tháng ${m} · ${y}`, group: `Năm ${y}` });
+        }
+      } else {
+        const total = isoWeeksInYear(y);
+        for (let w = 1; w <= total; w++) {
+          out.push({ value: `${y}-W${String(w).padStart(2, '0')}`, label: `Tuần ${w} · ${y}`, group: `Năm ${y}` });
+        }
+      }
+    });
+    return out;
+  }
+  function mpTotalsOptionsHtml(mode, curKey) {
+    const html = [];
+    let group = null;
+    mpTotalsPeriodOptions(mode).forEach((o) => {
+      if (o.group !== group) {
+        if (group !== null) html.push('</optgroup>');
+        if (o.group) html.push(`<optgroup label="${escapeHTML(o.group)}">`);
+        group = o.group || null;
+      }
+      html.push(`<option value="${escapeHTML(o.value)}"${o.value === curKey ? ' selected' : ''}>${escapeHTML(o.label)}</option>`);
+    });
+    if (group !== null) html.push('</optgroup>');
+    return html.join('');
+  }
+  function shiftMpTotalsPeriod(delta) {
+    loadMpTotalsUi();
+    const mode = mpTotalsModeOf();
+    const step = Number(delta) || 0;
+    if (!step) return;
+    const key = mpTotalsKeyOf(mode);
+    if (mode === 'year') {
+      const y = parseInt(key, 10);
+      if (Number.isFinite(y)) mpTotalsUi.year = String(y + step);
+    } else if (mode === 'month') {
+      const m = /^(\d{4})-(\d{2})$/.exec(key);
+      if (m) {
+        const d = new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1 + step, 1));
+        mpTotalsUi.month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      }
+    } else {
+      const mon = mondayOfISOWeek(key);
+      if (mon) {
+        mon.setUTCDate(mon.getUTCDate() + step * 7);
+        mpTotalsUi.week = materialWeekLabel(mpIsoOfUtcDate(mon));
+      }
+    }
+    saveMpTotalsUi();
+    renderMaterialTotals();
+  }
+  function setMpTotalsPeriod(key) {
+    loadMpTotalsUi();
+    const mode = mpTotalsModeOf();
+    const val = String(key || '').trim();
+    if (!val) return;
+    if (mode === 'week' && !/^\d{4}-W\d{1,2}$/.test(val)) return;
+    if (mode === 'month' && !/^\d{4}-\d{2}$/.test(val)) return;
+    if (mode === 'year' && !/^\d{4}$/.test(val)) return;
+    mpTotalsUi[mode] = val;
+    saveMpTotalsUi();
+    if (mpTotalsViewOf() === 'totals') renderMaterialTotals();
+  }
+  function setMpTotalsMode(mode) {
+    if (!MP_TOTALS_MODES.some((m) => m.key === mode)) return;
+    loadMpTotalsUi();
+    mpTotalsUi.mode = mode;
+    mpTotalsKeyOf(mode); // khởi tạo kỳ mặc định của chế độ
+    saveMpTotalsUi();
+    applyMpViewDom();
+    if (mpTotalsViewOf() === 'totals') renderMaterialTotals();
+  }
+
+  // ─── ĐỊNH DẠNG & ĐỒNG BỘ GIAO DIỆN 2 CHẾ ĐỘ ───────────────────
+  function mpFmtInt(v) {
+    return Math.round(Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+  }
+  function mpFmtKg2(v) {
+    return (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  }
+  function mpFmtPrice(v) {
+    return (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  }
+  function mpFmtMoneyShort(v) {
+    const n = Number(v) || 0;
+    if (n >= 1e9) return `≈ ${(n / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tỷ đ`;
+    if (n >= 1e6) return `≈ ${(n / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} triệu đ`;
+    return '';
+  }
+  function mpPctText(v) { return `${(Number(v) || 0).toFixed(1).replace('.', ',')}%`; }
+
+  // Đồng bộ nhãn nút / khung đang xem / nút chọn kỳ — KHÔNG vẽ dữ liệu
+  function applyMpViewDom() {
+    loadMpTotalsUi();
+    const view = mpTotalsViewOf();
+    const card = document.getElementById('material-plan-chart-card');
+    if (card && card.dataset) card.dataset.mpMode = view;
+    const btn = document.getElementById('mpc-mode-toggle');
+    if (btn) {
+      if (btn.setAttribute) btn.setAttribute('aria-pressed', view === 'totals' ? 'true' : 'false');
+      btn.title = view === 'totals'
+        ? 'Đang xem Tổng Nhập Mua Nguyên Liệu — bấm để quay lại biểu đồ Kế Hoạch vs Thực Tế'
+        : 'Đang xem biểu đồ Kế Hoạch vs Thực Tế — bấm để xem Tổng Nhập Mua (theo vị trí)';
+    }
+    const label = document.getElementById('mpc-mode-label');
+    if (label) label.textContent = view === 'totals'
+      ? 'Tổng Nhập Mua Nguyên Liệu (Theo Kỳ)'
+      : 'Kế Hoạch vs Thực Tế Nguyên Liệu (Theo Ngày)';
+    const nav = document.getElementById('mpc-week-nav');
+    if (nav) nav.hidden = view !== 'chart';
+    const box = document.getElementById('mpc-chart-box');
+    if (box) box.hidden = view !== 'chart';
+    const totals = document.getElementById('mp-totals');
+    if (totals) totals.hidden = view !== 'totals';
+    if (totals && totals.querySelectorAll) {
+      totals.querySelectorAll('[data-mp-pmode]').forEach((b) => {
+        const on = b.getAttribute('data-mp-pmode') === mpTotalsModeOf();
+        b.classList.toggle('active', on);
+        if (b.setAttribute) b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    return view;
+  }
+  function setMpView(view) {
+    loadMpTotalsUi();
+    mpTotalsUi.view = view === 'totals' ? 'totals' : 'chart';
+    saveMpTotalsUi();
+    applyMpViewDom();
+    const box = document.getElementById(mpTotalsUi.view === 'totals' ? 'mp-totals' : 'mpc-chart-box');
+    if (box && box.classList) {
+      box.classList.remove('pv-rise-in', 'pv-sink-in');
+      void box.offsetWidth; // ép reflow để animation chạy lại từ đầu
+      box.classList.add(mpTotalsUi.view === 'totals' ? 'pv-rise-in' : 'pv-sink-in');
+    }
+    initLucide();
+    renderMaterialPlanChart();
+  }
+  function toggleMpView() { setMpView(mpTotalsViewOf() === 'totals' ? 'chart' : 'totals'); }
+
+  // ─── VẼ VÙNG TỔNG NHẬP MUA (2 phần, chia theo vị trí nhập) ─────
+  function mpTotalsRowsHtml(sum, part) {
+    if (!sum.count) {
+      return '<tr><td colspan="4" class="mp-empty">Kỳ này chưa có lần nhập nguyên liệu nào.</td></tr>';
+    }
+    return sum.rows.map((row) => {
+      const pct = part === 'kg' ? row.shareWeight : row.shareAmount;
+      const w = Math.max(0, Math.min(100, Number(pct) || 0));
+      const bar = `<span class="mp-share"><i style="width:${w.toFixed(1)}%"></i></span>`;
+      const name = `<span class="mp-loc-name"><i class="mp-loc-dot" data-loc="${row.key}"></i>${escapeHTML(row.label)}</span>`;
+      if (part === 'kg') {
+        return `<tr data-loc="${row.key}">
+          <td>${name}</td>
+          <td class="num">${row.count}</td>
+          <td class="num"><strong>${mpFmtKg2(row.weight)}</strong> kg</td>
+          <td class="num"><span class="mp-share-pct">${mpPctText(pct)}</span>${bar}</td>
+        </tr>`;
+      }
+      return `<tr data-loc="${row.key}">
+        <td>${name}</td>
+        <td class="num"><strong>${mpFmtInt(row.amount)}</strong> đ</td>
+        <td class="num">${row.weight > 0 && row.amount > 0 ? `${mpFmtPrice(row.avgPrice)} đ/kg` : '—'}</td>
+        <td class="num"><span class="mp-share-pct">${mpPctText(pct)}</span>${bar}</td>
+      </tr>`;
+    }).join('');
+  }
+  function mpTotalsFootHtml(sum, part) {
+    if (!sum.count) return '';
+    if (part === 'kg') {
+      return `<tr><td>Tổng</td><td class="num">${sum.count}</td><td class="num">${mpFmtKg2(sum.weight)} kg</td><td class="num">100%</td></tr>`;
+    }
+    return `<tr><td>Tổng</td><td class="num">${mpFmtInt(sum.amount)} đ</td><td class="num">${sum.weight > 0 && sum.amount > 0 ? `${mpFmtPrice(sum.avgPrice)} đ/kg` : '—'}</td><td class="num">100%</td></tr>`;
+  }
+  function mpTotalsChipsHtml(sum, part) {
+    if (!sum.count) return '';
+    return sum.rows.map((row) => {
+      const val = part === 'kg' ? `${mpFmtKg2(row.weight)} kg` : `${mpFmtInt(row.amount)} đ`;
+      return `<span class="mp-loc-chip" data-loc="${row.key}"><i class="mp-loc-dot" data-loc="${row.key}"></i>${escapeHTML(row.label)} <strong>${val}</strong></span>`;
+    }).join('');
+  }
+
+  function renderMaterialTotals() {
+    applyMpViewDom();
+    const sum = mpTotalsSummary();
+    const rng = sum.range;
+    // Thanh lọc kỳ
+    const rangeEl = document.getElementById('mp-totals-range');
+    if (rangeEl) rangeEl.textContent = rng.rangeLabel ? `${rng.label} · ${rng.rangeLabel}` : rng.label;
+    const sel = document.getElementById('mp-totals-period');
+    if (sel) {
+      const html = mpTotalsOptionsHtml(mpTotalsModeOf(), rng.key);
+      if (sel.innerHTML !== html) sel.innerHTML = html;
+      sel.value = rng.key;
+    }
+    // ① Tổng khối lượng
+    const kgEl = document.getElementById('mp-total-kg');
+    if (kgEl) kgEl.textContent = sum.count ? `${mpFmtKg2(sum.weight)} kg` : '—';
+    const kgSub = document.getElementById('mp-total-kg-sub');
+    if (kgSub) kgSub.textContent = sum.count
+      ? `≈ ${mpFmtKg2(sum.weight / 1000)} tấn`
+      : 'Chưa có dữ liệu trong kỳ';
+    const kgChips = document.getElementById('mp-total-kg-chips');
+    if (kgChips) kgChips.innerHTML = mpTotalsChipsHtml(sum, 'kg');
+    const kgMeta = document.getElementById('mp-total-kg-meta');
+    if (kgMeta) {
+      kgMeta.innerHTML = sum.count
+        ? `<span class="mp-meta-chip">${sum.count} lượt nhập</span>`
+          + `<span class="mp-meta-chip">${sum.days} ngày</span>`
+          + `<span class="mp-meta-chip">${sum.types} loại NL</span>`
+          + `<span class="mp-meta-chip">${sum.suppliers} NCC</span>`
+        : '';
+    }
+    const kgBody = document.getElementById('mp-total-loc-kg');
+    if (kgBody) kgBody.innerHTML = mpTotalsRowsHtml(sum, 'kg');
+    const kgFoot = document.getElementById('mp-total-loc-kg-foot');
+    if (kgFoot) kgFoot.innerHTML = mpTotalsFootHtml(sum, 'kg');
+    // ② Tổng tiền
+    const amountEl = document.getElementById('mp-total-amount');
+    if (amountEl) amountEl.textContent = sum.count ? `${mpFmtInt(sum.amount)} đ` : '—';
+    const amountSub = document.getElementById('mp-total-amount-sub');
+    if (amountSub) amountSub.textContent = sum.count
+      ? (mpFmtMoneyShort(sum.amount) || '—')
+      : 'Chưa có dữ liệu trong kỳ';
+    const amountChips = document.getElementById('mp-total-amount-chips');
+    if (amountChips) amountChips.innerHTML = mpTotalsChipsHtml(sum, 'money');
+    const amountMeta = document.getElementById('mp-total-amount-meta');
+    if (amountMeta) {
+      const parts = [];
+      if (sum.count) {
+        parts.push(`<span class="mp-meta-chip">Đơn giá TB: ${sum.weight > 0 && sum.amount > 0 ? mpFmtPrice(sum.avgPrice) : '—'} đ/kg</span>`);
+        parts.push(`<span class="mp-meta-chip">${sum.pricedCount}/${sum.count} lượt có đơn giá</span>`);
+        if (sum.missingPriceCount > 0) {
+          parts.push(`<span class="mp-meta-chip is-warn">⚠ ${sum.missingPriceCount} lượt chưa có đơn giá</span>`);
+        }
+      }
+      amountMeta.innerHTML = parts.join('');
+    }
+    const amountBody = document.getElementById('mp-total-loc-money');
+    if (amountBody) amountBody.innerHTML = mpTotalsRowsHtml(sum, 'money');
+    const amountFoot = document.getElementById('mp-total-loc-money-foot');
+    if (amountFoot) amountFoot.innerHTML = mpTotalsFootHtml(sum, 'money');
+    // Ghi chú: nguồn + công thức + cảnh báo số liệu thiếu
+    const noteEl = document.getElementById('mp-totals-note');
+    if (noteEl) {
+      const notes = [];
+      if (!sum.count) notes.push('Kỳ này chưa có lần nhập nguyên liệu nào.');
+      if (sum.missingPriceCount > 0) notes.push(`⚠ ${sum.missingPriceCount}/${sum.count} lượt chưa có đơn giá → tổng tiền chỉ tính các lượt đã có giá.`);
+      if (sum.undatedCount > 0) notes.push(`⚠ ${sum.undatedCount} lượt thiếu ngày nên không được tính vào kỳ.`);
+      notes.push('Khối lượng = đầu vào − đầu ra · Đơn giá TB = tổng tiền ÷ tổng khối lượng · Mọi số chia theo vị trí nhập.');
+      // (Không lặp lại "Kỳ đang xem" ở đây — nhãn kỳ đã hiện trên thanh lọc.)
+      noteEl.innerHTML = notes.map((t) => (t.startsWith('⚠') || t.startsWith('Kỳ này chưa'))
+        ? `<span class="is-warn">${escapeHTML(t)}</span>`
+        : escapeHTML(t)).join(' · ');
+    }
   }
 
   // ─── QUYỀN ───────────────────────────────────────────────────
@@ -1599,7 +2042,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
 export {
   MATERIAL_KPI_PERIODS,
   MATERIAL_LOCATIONS,
+  MP_TOTALS_MODES,
+  MP_TOTALS_UI_KEY,
   addMaterialPlanWeek,
+  applyMpViewDom,
   buildMaterialPlanVsActualData,
   canEditMaterials,
   closeMaterialModal,
@@ -1627,6 +2073,15 @@ export {
   migrateMaterialImages,
   buildMaterialPlanSpanData,
   mpChartWindow,
+  mpDateIsoOf,
+  mpRecordAmount,
+  mpTotalsFilteredRecords,
+  mpTotalsKeyOf,
+  mpTotalsModeOf,
+  mpTotalsPeriodOptions,
+  mpTotalsRangeOf,
+  mpTotalsSummary,
+  mpTotalsViewOf,
   openMaterialModal,
   openMaterialPhotoModal,
   removeMaterialPlanWeek,
@@ -1638,11 +2093,17 @@ export {
   renderMaterialStats,
   renderMaterialTable,
   renderMaterialTabs,
+  renderMaterialTotals,
   renderMaterialView,
   refreshMaterialTypeSuggestions,
   saveMaterialPlan,
   saveMaterialRecords,
+  setMpTotalsMode,
+  setMpTotalsPeriod,
+  setMpView,
   shiftMaterialPlanChartWeek,
+  shiftMpTotalsPeriod,
+  toggleMpView,
   updateMaterialAmount,
   updateMaterialWeight
 };

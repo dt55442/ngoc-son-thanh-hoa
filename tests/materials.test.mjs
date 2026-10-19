@@ -1,6 +1,7 @@
 // tests/materials.test.mjs — Kiểm thử tab NHẬP NGUYÊN LIỆU (materials)
 // Bao phủ: tuần ISO, nhãn vị trí, nén ảnh, lưu form (trọng lượng = đầu vào − đầu ra),
-// chặn dữ liệu không hợp lệ, sửa/xóa, lưu/nạp localStorage, engine biểu đồ nguồn 'materials'.
+// chặn dữ liệu không hợp lệ, sửa/xóa, lưu/nạp localStorage, engine biểu đồ nguồn 'materials',
+// chế độ Tổng Nhập Mua chia theo vị trí nhập (Tuần/Tháng/Năm).
 'use strict';
 import fs from 'node:fs';
 
@@ -374,6 +375,117 @@ const fNone = fakeBandChart();
 bandPlugin.beforeDatasetsDraw(fNone, {}, { dayGroups: groupsToday, weekGroups: [] });
 check('Dải hôm nay: thiếu todayIso → không tô gì', fNone._calls.length === 0);
 
+// ─── L. TỔNG NHẬP MUA THEO KỲ (chế độ xem thứ 2 của thẻ Nguyên liệu) ───
+console.log('--- TỔNG NHẬP MUA THEO KỲ ---');
+state.materialRecords = [
+  { id: 'tt1', date: '2026-10-12', location: 'xuong-2', weight: 1000, unitPrice: 2000, totalAmount: 2000000, type: 'Luồng', supplier: 'A' },
+  { id: 'tt2', date: '2026-10-13', location: 'xuong-2', weight: 500, unitPrice: 2000, totalAmount: 1000000, type: 'Luồng', supplier: 'A' },
+  // Thiếu totalAmount nhưng có đơn giá ⇒ tự tính 300 × 3.000 = 900.000 (dữ liệu cũ)
+  // location dùng NHÃN cũ 'Xưởng 1' (không phải key) ⇒ vẫn phải gom đúng vào cột Xưởng 1
+  { id: 'tt3', date: '2026-10-14', location: 'Xưởng 1', weight: 300, unitPrice: 3000, totalAmount: 0, type: 'Nứa', supplier: 'B' },
+  // Không có đơn giá ⇒ 0 đồng + đếm vào "chưa có đơn giá"
+  { id: 'tt4', date: '2026-10-15', location: 'lo-hoi', weight: 200, unitPrice: 0, totalAmount: 0, type: 'Gỗ', supplier: 'C' },
+  // Tuần sau (20/10) — KHÔNG được tính vào tuần 42
+  { id: 'tt5', date: '2026-10-20', location: 'xuong-2', weight: 9999, unitPrice: 1000, totalAmount: 9999000, type: 'Luồng', supplier: 'A' },
+  // Tháng trước (30/09) — không tính vào tháng 10 nhưng CÓ trong năm 2026
+  { id: 'tt6', date: '2026-09-30', location: 'xuong-2', weight: 400, unitPrice: 2500, totalAmount: 1000000, type: 'Luồng', supplier: 'A' },
+  // Thiếu ngày — không tính vào kỳ nào (có cảnh báo riêng)
+  { id: 'tt7', date: '', location: 'xuong-2', weight: 50, unitPrice: 1000, totalAmount: 50000, type: 'Luồng', supplier: 'A' },
+  // Vị trí lạ ⇒ gom vào dòng "Khác / không rõ"; thiếu totalAmount ⇒ 100 × 1.000
+  { id: 'tt8', date: '2026-10-16', location: 'kho-x', weight: 100, unitPrice: 1000, type: 'Luồng', supplier: 'D' }
+];
+mat.setMpView('chart'); // bắt đầu từ chế độ biểu đồ
+
+const rngW = mat.mpTotalsRangeOf('week', '2026-W42');
+check('Tổng kỳ: tuần 2026-W42 = 12/10 → 18/10', rngW.from === '2026-10-12' && rngW.to === '2026-10-18');
+check('Tổng kỳ: nhãn tuần có số tuần + khoảng ngày', rngW.label.includes('Tuần 42') && rngW.rangeLabel === '12/10 → 18/10');
+const rngM = mat.mpTotalsRangeOf('month', '2026-10');
+check('Tổng kỳ: tháng 10/2026 = 01/10 → 31/10', rngM.from === '2026-10-01' && rngM.to === '2026-10-31' && rngM.label === 'Tháng 10/2026');
+const rngY = mat.mpTotalsRangeOf('year', '2026');
+check('Tổng kỳ: năm 2026 = 01/01 → 31/12', rngY.from === '2026-01-01' && rngY.to === '2026-12-31' && rngY.label === 'Năm 2026');
+
+check('Thành tiền 1 lượt: ưu tiên totalAmount đã lưu', mat.mpRecordAmount(state.materialRecords[0]) === 2000000);
+check('Thành tiền 1 lượt: thiếu totalAmount → weight × unitPrice', mat.mpRecordAmount(state.materialRecords[2]) === 900000);
+
+const sumW = mat.mpTotalsSummary(rngW);
+check('Tổng tuần: đúng 5 lượt trong kỳ (bỏ tuần sau + tháng trước + thiếu ngày)', sumW.count === 5);
+check('Tổng tuần: khối lượng = 1.000 + 500 + 300 + 200 + 100 = 2.100 kg', sumW.weight === 2100);
+check('Tổng tuần: tổng tiền = 2tr + 1tr + 0,9tr + 0 + 0,1tr = 4.000.000 đ', sumW.amount === 4000000);
+check('Tổng tuần: đơn giá TB = tiền ÷ kg', Math.abs(sumW.avgPrice - (4000000 / 2100)) < 0.001);
+check('Tổng tuần: 4 lượt có đơn giá / 1 lượt chưa có', sumW.pricedCount === 4 && sumW.missingPriceCount === 1);
+check('Tổng tuần: 5 ngày + 1 lượt thiếu ngày được đếm cảnh báo', sumW.days === 5 && sumW.undatedCount === 1);
+check('Tổng tuần: chia theo vị trí — Xưởng 2 = 1.500 kg / 3.000.000 đ',
+  sumW.rows[2].key === 'xuong-2' && sumW.rows[2].weight === 1500 && sumW.rows[2].amount === 3000000);
+check('Tổng tuần: chia theo vị trí — Xưởng 1 = 300 kg / 900.000 đ (tự tính thành tiền)',
+  sumW.rows[1].key === 'xuong-1' && sumW.rows[1].weight === 300 && sumW.rows[1].amount === 900000);
+check('Tổng tuần: chia theo vị trí — Lò hơi = 200 kg / 0 đ',
+  sumW.rows[0].key === 'lo-hoi' && sumW.rows[0].weight === 200 && sumW.rows[0].amount === 0);
+check('Tổng tuần: vị trí lạ gom vào dòng "Khác / không rõ" (100 kg / 100.000 đ)',
+  sumW.rows.length === 4 && sumW.rows[3].key === 'khac' && sumW.rows[3].weight === 100 && sumW.rows[3].amount === 100000);
+check('Tổng tuần: tỷ trọng khối lượng cộng lại ~100%',
+  Math.abs(sumW.rows.reduce((a, r) => a + r.shareWeight, 0) - 100) < 0.01);
+
+const sumM = mat.mpTotalsSummary(rngM);
+check('Tổng tháng 10: 6 lượt · 12.099 kg · 13.999.000 đ (có lượt 20/10)',
+  sumM.count === 6 && sumM.weight === 12099 && sumM.amount === 13999000);
+const sumY2 = mat.mpTotalsSummary(rngY);
+check('Tổng năm 2026: 7 lượt · 12.499 kg · 14.999.000 đ (có lượt 30/09)',
+  sumY2.count === 7 && sumY2.weight === 12499 && sumY2.amount === 14999000);
+check('Tổng năm: KHÔNG tính lượt thiếu ngày', sumY2.count === 7 && sumY2.undatedCount === 1);
+
+// Đồng bộ giao diện + render thật vào các ô
+mat.setMpView('totals');
+mat.setMpTotalsMode('week');
+mat.setMpTotalsPeriod('2026-W42');
+check('Chế độ Tổng: thẻ mang data-mp-mode="totals"', els.get('material-plan-chart-card').dataset.mpMode === 'totals');
+check('Chế độ Tổng: hiện #mp-totals + ẩn khung biểu đồ + ẩn ô chọn tuần',
+  els.get('mp-totals').hidden === false && els.get('mpc-chart-box').hidden === true && els.get('mpc-week-nav').hidden === true);
+check('Chế độ Tổng: tên thẻ đổi thành "Tổng Nhập Mua Nguyên Liệu (Theo Kỳ)"',
+  els.get('mpc-mode-label').textContent === 'Tổng Nhập Mua Nguyên Liệu (Theo Kỳ)');
+check('Chế độ Tổng: nút chuyển đổi tooltip sang Tổng Nhập Mua', els.get('mpc-mode-toggle').title.includes('Tổng Nhập Mua'));
+check('Render ①: tổng khối lượng 2.100 kg + quy đổi tấn',
+  els.get('mp-total-kg').textContent === '2.100 kg' && els.get('mp-total-kg-sub').textContent.includes('2,1 tấn'));
+check('Render ②: tổng tiền 4.000.000 đ', els.get('mp-total-amount').textContent === '4.000.000 đ');
+check('Render ②: đơn giá TB + cảnh báo 1 lượt chưa có đơn giá',
+  els.get('mp-total-amount-meta').innerHTML.includes('Đơn giá TB') && els.get('mp-total-amount-meta').innerHTML.includes('chưa có đơn giá'));
+check('Render ①: bảng chia đúng vị trí Xưởng 2 / Xưởng 1 / Lò hơi / Khác',
+  ['Xưởng 2', 'Xưởng 1', 'Lò hơi', 'Khác / không rõ', '1.500'].every((t) => els.get('mp-total-loc-kg').innerHTML.includes(t)));
+check('Render ②: bảng tiền chia đúng vị trí (3.000.000 · 900.000 · 100.000)',
+  ['Xưởng 2', 'Xưởng 1', 'Lò hơi', '3.000.000', '900.000', '100.000'].every((t) => els.get('mp-total-loc-money').innerHTML.includes(t)));
+check('Render: dòng Tổng khối lượng (2.100 kg) + dòng Tổng tiền có trong tfoot',
+  els.get('mp-total-loc-kg-foot').innerHTML.includes('2.100') && els.get('mp-total-loc-money-foot').innerHTML.includes('Tổng'));
+check('Render: ghi chú cảnh báo lượt thiếu ngày', els.get('mp-totals-note').innerHTML.includes('thiếu ngày'));
+
+mat.setMpTotalsMode('month');
+check('Đổi kỳ Tháng: mode = month', mat.mpTotalsModeOf() === 'month');
+mat.setMpTotalsPeriod('2026-10');
+check('Đổi kỳ Tháng: render tổng 12.099 kg', els.get('mp-total-kg').textContent === '12.099 kg');
+mat.setMpTotalsMode('year');
+mat.setMpTotalsPeriod('2026');
+check('Đổi kỳ Năm: render tổng 14.999.000 đ', els.get('mp-total-amount').textContent === '14.999.000 đ');
+
+mat.setMpTotalsMode('week');
+mat.setMpTotalsPeriod('2026-W42');
+mat.shiftMpTotalsPeriod(1);
+check('Kỳ trước/sau: tiến tuần 42 → 43', mat.mpTotalsKeyOf('week') === '2026-W43');
+const savedUi = JSON.parse(localStorage.getItem(mat.MP_TOTALS_UI_KEY) || '{}');
+check('Nhớ theo máy: lưu view/mode/week vào localStorage',
+  savedUi.view === 'totals' && savedUi.mode === 'week' && savedUi.week === '2026-W43');
+mat.shiftMpTotalsPeriod(-1);
+
+mat.setMpTotalsPeriod('2020-W01');
+check('Kỳ rỗng: tổng hiện "—" + bảng báo chưa có lần nhập',
+  els.get('mp-total-kg').textContent === '—' && els.get('mp-total-loc-kg').innerHTML.includes('chưa có lần nhập'));
+
+check('Xuất hàm: materials.js export đủ API Tổng Nhập Mua',
+  typeof mat.mpTotalsSummary === 'function' && typeof mat.toggleMpView === 'function' &&
+  typeof mat.setMpView === 'function' && typeof mat.applyMpViewDom === 'function' &&
+  mat.MP_TOTALS_UI_KEY === 'bamboo_tracker_mp_totals_ui_v1');
+
+mat.setMpView('chart');
+check('Quay lại biểu đồ: ẩn vùng tổng + hiện lại khung canvas',
+  els.get('mp-totals').hidden === true && els.get('mpc-chart-box').hidden === false);
+
 // ─── I. CUỘN BẢNG NGUYÊN LIỆU (.table-scroll: dọc 60vh + tiêu đề dính + trượt ngang) ───
 const matIdxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const matCssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -387,6 +499,36 @@ check('CUỘN (styles.css): .table-scroll = khung cuộn dọc 60vh + dòng tiê
 check('CUỘN (styles.css): bảng nhiều cột có min-width → trượt ngang khi màn hình hẹp (cột không bóp)',
   matCssHtml.includes('#material-table { min-width: 1040px') && matCssHtml.includes('#supplier-table { min-width: 980px') &&
   matCssHtml.includes('#material-plan-table { min-width: 560px'));
+
+// ─── L2. CẤU TRÚC: nút chuyển chế độ + vùng Tổng Nhập Mua ───
+function cssDepthAt(src, needle) {
+  const i = src.indexOf(needle);
+  if (i < 0) return -1;
+  let d = 0;
+  for (let j = 0; j < i; j++) {
+    if (src[j] === '{') d++;
+    else if (src[j] === '}') d--;
+  }
+  return d;
+}
+const evSrcMat = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+check('TỔNG NHẬP MUA: bỏ chú thích tuần mờ #mpc-caption khỏi header', !matIdxHtml.includes('mpc-caption'));
+check('TỔNG NHẬP MUA: có nút chuyển chế độ + vùng 2 phần + 2 bảng vị trí',
+  matIdxHtml.includes('id="mpc-mode-toggle"') && matIdxHtml.includes('id="mp-totals"') &&
+  matIdxHtml.includes('id="mp-total-loc-kg"') && matIdxHtml.includes('id="mp-total-loc-money"'));
+check('TỔNG NHẬP MUA: bộ lọc Tuần/Tháng/Năm + ô chọn kỳ',
+  matIdxHtml.includes('data-mp-pmode="week"') && matIdxHtml.includes('data-mp-pmode="month"') &&
+  matIdxHtml.includes('data-mp-pmode="year"') && matIdxHtml.includes('id="mp-totals-period"'));
+check('TỔNG NHẬP MUA (CSS): .mp-totals ở cấp cao nhất (không lọt @media)',
+  cssDepthAt(matCssHtml, '.mp-totals {') === 0);
+check('TỔNG NHẬP MUA (CSS): ẩn thật bằng [hidden] + 2 phần xếp 2 cột',
+  matCssHtml.includes('.mp-totals[hidden]') && matCssHtml.includes('.mp-totals-grid') &&
+  matCssHtml.includes('grid-template-columns: repeat(2'));
+check('TỔNG NHẬP MUA (events): nối nút chuyển + bộ lọc kỳ + ủy quyền chọn Tuần/Tháng/Năm',
+  evSrcMat.includes("safeOn('mpc-mode-toggle'") && evSrcMat.includes("safeOn('mp-totals-period'") &&
+  evSrcMat.includes('setMpTotalsMode(') && evSrcMat.includes("closest('[data-mp-pmode]')"));
+check('TỔNG NHẬP MUA: giữ dải tuần dưới trục X (plugin vẫn dùng weekGroups)',
+  /weekGroups/.test(fs.readFileSync(new URL('../js/materials.js', import.meta.url), 'utf8')));
 
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed ? 1 : 0);

@@ -1539,6 +1539,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('hr-ci-search', 'input', renderHrCheckinTable);
     safeOn('hr-ci-only-issues', 'change', renderHrCheckinTable);
     safeOn('hr-ci-show-leave', 'change', renderHrCheckinTable);
+    safeOn('hr-ci-only-anomaly', 'change', renderHrCheckinTable);
     // ── Điền giờ kết thúc thực tế (xem trước rồi mới ghi vào Bảng bố trí) ──
     safeOn('btn-ci-endfill', 'click', openCiEndfillModal);
     safeOn('btn-close-ci-endfill', 'click', closeCiEndfillModal);

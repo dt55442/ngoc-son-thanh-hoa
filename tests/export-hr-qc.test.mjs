@@ -210,7 +210,9 @@ check('HR[VT]: vị trí Ép ván có cột số NV kỹ năng', lastSheetAoa.so
 // 5) Giờ máy
 exportHrCard('hr-ci');
 check('HR[GM]: 1 bản ghi giờ máy', dataRowsOf().length === 1);
-check('HR[GM]: giờ vào/ra + nhãn khớp "Đi làm"', lastSheetAoa.some(r => r[1] === 'Nguyễn Văn A' && r[4] === '07:02' && r[5] === '17:05' && String(r[7]).includes('Đi làm')));
+check('HR[GM]: giờ vào/ra đã làm tròn mốc 30\' (07:02→07:30 · 17:05→17:00) + nhãn khớp "Đi làm" + giữ giờ quẹt thô',
+  lastSheetAoa.some(r => r[1] === 'Nguyễn Văn A' && r[4] === '07:30' && r[5] === '17:00' &&
+    String(r[7]).includes('Đi làm') && String(r[8]).includes('07:02')));
 
 // 6) Đơn nghỉ phép
 exportHrCard('hr-leave');

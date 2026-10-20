@@ -13,6 +13,7 @@ import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
 import { showToast } from './utils.js';
+import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — cache localStorage 2 tháng
 
   // Nhãn danh sách tab được sửa (dùng trong thông báo phân quyền)
   function listEditableTabsLabel() {
@@ -2020,10 +2021,16 @@ import { showToast } from './utils.js';
     try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_POSNEEDS, JSON.stringify(state.hrPositionNeeds || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_SHIFTS, JSON.stringify(state.hrShifts || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_HR_ASSIGN, JSON.stringify(state.hrAssignments || [])); } catch (e) {}
+    // 3 miền LỚN của Nhân Sự: localStorage chỉ giữ cache 2 tháng gần nhất,
+    // toàn bộ dữ liệu ghi vào IndexedDB theo tháng (js/repo.js) — tránh đầy
+    // localStorage (5–10 MB) và tránh ghi lại cả mảng mỗi lần nhận dữ liệu mây.
+    try { localStorage.setItem(STORAGE_KEY_HR_ASSIGN, JSON.stringify(repo.healthy('hrAssignments') ? repo.cacheSlice(state.hrAssignments || [], 2) : (state.hrAssignments || []))); } catch (e) {}
+    try { repo.putDomain('hrAssignments', state.hrAssignments || [], { dropMissing: true }); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(state.hrAttendance || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(state.hrCheckins || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(repo.healthy('hrAttendance') ? repo.cacheSlice(state.hrAttendance || [], 2) : (state.hrAttendance || []))); } catch (e) {}
+    try { repo.putDomain('hrAttendance', state.hrAttendance || [], { dropMissing: true }); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(repo.healthy('hrCheckins') ? repo.cacheSlice(state.hrCheckins || [], 2) : (state.hrCheckins || []))); } catch (e) {}
+    try { repo.putDomain('hrCheckins', state.hrCheckins || [], { dropMissing: true }); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_CI_ACKS, JSON.stringify(state.hrCiAcks || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_OVERTIMES, JSON.stringify(state.hrOvertimes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_CALENDAR, JSON.stringify(state.hrWorkCalendar || {})); } catch (e) {}

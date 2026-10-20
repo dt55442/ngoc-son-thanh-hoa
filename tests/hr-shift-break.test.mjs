@@ -99,7 +99,10 @@ check('B5: Ca đêm 19:00 → hết ca = 11h HC (12h − 1h nghỉ) · 0 TC — 
 check('B6: Ca đêm 19:00–07:00 (vắt qua nửa đêm) = 11h HC · 0 TC', eq(H('Xưởng 2', '19:00', '07:00', 1), 660, 0));
 check('B7: Ca đêm làm thêm 19:00–08:00 = 11h HC + 1h TC', eq(H('Xưởng 2', '19:00', '08:00', 1), 660, 60));
 check('B8: Ca đêm ra sớm 19:00–23:00 = 4h HC · 0 TC (chưa tới giờ nghỉ)', eq(H('Xưởng 2', '19:00', '23:00', 1), 240, 0));
-check('B9: bản ghi CŨ của ca đêm (end 01:00) = 6h HC · 0 TC (không đổi)', eq(H('Xưởng 2', '19:00', '01:00', 1), 360, 0));
+check('B9: ca đêm ra 01:00 (đã lẹm 30\' vào giờ nghỉ giữa ca 00:30–01:30) = 5h30 HC · 0 TC',
+  eq(H('Xưởng 2', '19:00', '01:00', 1), 330, 0));
+check('B9b: ca đêm ra 00:30 (hết phần làm TRƯỚC giờ nghỉ) = 5h30 HC · 0 TC',
+  eq(H('Xưởng 2', '19:00', '00:30', 1), 330, 0));
 
 // ═══ C. CA 10 GIỜ → NGHỈ 1H = 9H (đúng ví dụ người dùng) ═════════════════
 state.hrShifts = [{ id: 'Xưởng 2', type: 'lamca', shifts: [
@@ -154,7 +157,7 @@ check('H1: chế độ Làm ca → mỗi ca có 1 ô nhập nghỉ (2 ca = 2 ô)
 check('H2: hàng tiêu đề ghi "Nghỉ (giờ)"', shiftHtml.includes('Nghỉ (giờ)') && shiftHtml.includes('shift-row-head'));
 check('H3: ô nghỉ nạp ĐÚNG mặc định (ca 1 = 1.5 · ca 2 = 1)',
   shiftHtml.includes('data-shift-f="brk" value="1.5"') && shiftHtml.includes('data-shift-f="brk" value="1"'));
-check('H4: chú thích nói rõ trừ vào CUỐI CA + mặc định', shiftHtml.includes('CUỐI CA') && shiftHtml.includes('mặc định ca 1 nghỉ 1h30'));
+check('H4: chú thích nói rõ trừ vào GIỮA CA + mặc định', shiftHtml.includes('GIỮA CA') && shiftHtml.includes('mặc định ca 1 nghỉ 1h30'));
 hr.renderShiftRows({ type: 'hanhchinh', shifts: [
   { name: 'Sáng', start: '07:00', end: '11:30' }, { name: 'Chiều', start: '13:00', end: '17:30' }
 ] });
@@ -169,13 +172,13 @@ const cssSrc = fs.readFileSync('styles.css', 'utf8');
 const swSrc = fs.readFileSync('sw.js', 'utf8');
 check('I1: ĐÃ BỎ HẲN hack "+ 480" (nguyên nhân ca đêm ra 8h)', !hrSrc.includes('+ 480'));
 check('I2: hr.js có hrShiftBrkH + mốc endMin + quy ước ghi rõ',
-  hrSrc.includes('function hrShiftBrkH') && hrSrc.includes('endMin') && hrSrc.includes('TRỪ VÀO CUỐI CA'));
+  hrSrc.includes('function hrShiftBrkH') && hrSrc.includes('endMin') && hrSrc.includes('TRỪ VÀO GIỮA CA'));
 check('I3: hrShiftBrkH + hrShiftRange + renderShiftRows đã export',
   typeof hr.hrShiftBrkH === 'function' && typeof hr.hrShiftRange === 'function' && typeof hr.renderShiftRows === 'function');
 check('I4: index.html modal Cài Đặt Ca ghi rõ "giờ nghỉ"', idxSrc.includes('Thời Gian Ca (tên ca / bắt đầu / kết thúc / giờ nghỉ)'));
 check('I5: styles.css có bảng 4 cột ca (.shift-row / -head / -na)',
   cssSrc.includes('.shift-row-head, .shift-row') && cssSrc.includes('.shift-row-na'));
-check('I6: sw.js đã bump cache v265', /nha-may-ngoc-son-v292/.test(swSrc));
+check('I6: sw.js đã bump cache v265', /nha-may-ngoc-son-v295/.test(swSrc));
 
 console.log(`\n=== GIỜ NGHỈ CỦA CA (LÀM CA): ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

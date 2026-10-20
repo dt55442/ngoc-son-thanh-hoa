@@ -243,7 +243,7 @@ check('F3. events.js nối center: mở theo thẻ/tab + 4 nút + lọc',
   evSrc.includes("openReportCenter('plan-items')") && evSrc.includes("openReportCenter('qc-export')") &&
   evSrc.includes("safeOn('report-center-filters',      'change', onReportFilterChange)"));
 check('F4. sw.js: cache v275 + nạp report-specs.js/report-center.js vào APP_SHELL',
-  swSrc.includes("nha-may-ngoc-son-v292") && swSrc.includes("./js/report-specs.js") &&
+  swSrc.includes("nha-may-ngoc-son-v295") && swSrc.includes("./js/report-specs.js") &&
   swSrc.includes("./js/report-center.js"));
 check('F5. CSS có khối .rc-* + in lặp tiêu đề + JS ghi rõ giới hạn viền/màu',
   cssSrc.includes('.rc-card') && cssSrc.includes('.rc-filter-grid') &&

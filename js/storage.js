@@ -10,6 +10,8 @@ import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
 import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
+import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — 3 miền Nhân sự
+import { STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_CALENDAR } from './state.js';
 import { bumpIncidentCache, escapeHTML, showToast } from './utils.js';
 // 3 miền TRƯỚC ĐÂY THIẾU trong file bamboo_data.json (thẻ Truy Xuất Đầu Vào →
 // Đầu Ra + tab Kế Hoạch cần): định mức nguyên vật liệu · sản lượng ép ván ·
@@ -1494,7 +1496,21 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
       x2PhuPhamRecords: state.x2PhuPhamRecords || [],
       x2Stocktakes: state.x2Stocktakes || [],
       x2YieldRates: state.x2YieldRates || {},
-      rateApprovals: state.rateApprovals || []
+      rateApprovals: state.rateApprovals || [],
+      // ── NHÂN SỰ (trước đây file sao lưu THIẾU HOÀN TOÀN — mất dữ liệu khi
+      // phục hồi sang máy khác). 3 miền lớn ghi kèm để file tự đủ.
+      hrEmployees: state.hrEmployees || [],
+      hrPositions: state.hrPositions || [],
+      hrPositionNeeds: state.hrPositionNeeds || [],
+      hrShifts: state.hrShifts || [],
+      hrLeaves: state.hrLeaves || [],
+      hrRecruitment: state.hrRecruitment || [],
+      hrOvertimes: state.hrOvertimes || [],
+      hrWorkCalendar: state.hrWorkCalendar || {},
+      hrCiAcks: state.hrCiAcks || [],
+      hrAssignments: state.hrAssignments || [],
+      hrAttendance: state.hrAttendance || [],
+      hrCheckins: state.hrCheckins || []
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -1502,6 +1518,58 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
     downloadOrShareJSON(jsonStr, filename, 'Đã lưu dữ liệu cục bộ thành công!');
 
     closeSaveLocalModal();
+  }
+
+  // ─── KHÔI PHỤC NHÂN SỰ TỪ FILE SAO LƯU (20/10/2026) ─────────────
+  // File bamboo_data.json trước đây KHÔNG chứa dữ liệu Nhân sự. Nay có.
+  // Gộp theo id (mốc updatedAt/createdAt mới hơn thắng) — KHÔNG xoá dữ liệu
+  // đang có trên máy. 3 miền lớn ghi IndexedDB theo tháng + cache localStorage.
+  function restoreHrFromBackup(imported) {
+    if (!imported) return;
+    const stamp = r => String((r && (r.updatedAt || r.createdAt)) || '');
+    const merge = (cur, inc) => {
+      const map = new Map();
+      (cur || []).forEach(r => { if (r && r.id) map.set(r.id, r); });
+      (inc || []).forEach(r => {
+        if (!r || !r.id) return;
+        const old = map.get(r.id);
+        if (!old || stamp(r) >= stamp(old)) map.set(r.id, r);
+      });
+      return [...map.values()];
+    };
+    const small = [
+      ['hrEmployees', STORAGE_KEY_HR_EMPLOYEES],
+      ['hrPositions', STORAGE_KEY_HR_POSITIONS],
+      ['hrPositionNeeds', STORAGE_KEY_HR_POSNEEDS],
+      ['hrShifts', STORAGE_KEY_HR_SHIFTS],
+      ['hrLeaves', STORAGE_KEY_HR_LEAVES],
+      ['hrRecruitment', STORAGE_KEY_HR_RECRUITMENT],
+      ['hrOvertimes', STORAGE_KEY_HR_OVERTIMES],
+      ['hrCiAcks', STORAGE_KEY_HR_CI_ACKS]
+    ];
+    const big = [
+      ['hrAssignments', STORAGE_KEY_HR_ASSIGN],
+      ['hrAttendance', STORAGE_KEY_HR_ATTENDANCE],
+      ['hrCheckins', STORAGE_KEY_HR_CHECKINS]
+    ];
+    small.forEach(([dom, key]) => {
+      if (!Array.isArray(imported[dom])) return;
+      state[dom] = merge(state[dom], imported[dom]);
+      try { localStorage.setItem(key, JSON.stringify(state[dom] || [])); } catch (e) {}
+    });
+    big.forEach(([dom, key]) => {
+      if (!Array.isArray(imported[dom])) return;
+      state[dom] = merge(state[dom], imported[dom]);
+      const slice = repo.healthy(dom) ? repo.cacheSlice(state[dom], 2) : state[dom];
+      try { localStorage.setItem(key, JSON.stringify(slice || [])); } catch (e) {}
+      try { repo.putDomain(dom, state[dom] || []); } catch (e) {}
+    });
+    if (imported.hrWorkCalendar && typeof imported.hrWorkCalendar === 'object') {
+      state.hrWorkCalendar = Object.assign({}, state.hrWorkCalendar || {}, imported.hrWorkCalendar);
+      try { localStorage.setItem(STORAGE_KEY_HR_CALENDAR, JSON.stringify(state.hrWorkCalendar)); } catch (e) {}
+    }
+    try { renderAll(); } catch (e) {}
+    try { showToast('Đã khôi phục dữ liệu Nhân sự từ file sao lưu (gộp, không xoá dữ liệu đang có).', 'success'); } catch (e) {}
   }
 
   function loadDataFromLocalFile(e) {
@@ -1527,6 +1595,9 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
           state.customCharts = imported.customCharts;
           saveCustomCharts();
         }
+
+        // ── NHÂN SỰ (file sao lưu cũ không có mục này → bỏ qua an toàn) ──
+        try { restoreHrFromBackup(imported); } catch (e) { /* không chặn nạp file */ }
 
         // ── 3 MIỀN TAB KẾ HOẠCH / ÉP VÁN (trước đây file thiếu nên bị mất) ──
         if (imported && Array.isArray(imported.materialRates)) restoreMaterialRates(imported.materialRates);

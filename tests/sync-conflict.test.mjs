@@ -301,7 +301,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   check('H7: đường NHẬN không còn dùng add-only (mọi bản sửa đều được xét)',
     !/mergeRemoteIntoLocal\(partial, true, true\)/.test(cl) &&
     !/mergeRemoteIntoLocal\(remote, true, true\)/.test(cl));
-  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v292/.test(sw));
+  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v295/.test(sw));
 }
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');

@@ -4717,10 +4717,13 @@
           <div class="filter-item">
             <label class="ci-check" title="Hiện cả những ngày nghỉ có phép (không quẹt máy)"><input type="checkbox" id="hr-ci-show-leave"> Hiện ngày nghỉ có phép</label>
           </div>
+          <div class="filter-item">
+            <label class="ci-check" title="Chỉ hiện các dòng số VÔ LÝ cần rà lại: vào = ra (0 phút) · có HC nhưng 0 phút · HC+TC &gt; 16 giờ · quẹt dài hơn bố trí &gt; 2h (có thể thiếu vị trí bố trí) · giờ ra ≤ giờ vào · TC vượt đơn &gt; 4h"><input type="checkbox" id="hr-ci-only-anomaly"> ⚠ Chỉ dòng bất thường</label>
+          </div>
         </div>
         <div id="hr-ci-chips" class="hr-stat-chips"></div>
-        <div class="ci-hint" title="Chấm sớm dưới 30 phút được tính từ giờ bắt đầu ca (không sinh tăng ca). Tăng ca chỉ tính phần sau giờ hết ca, mỗi 30 phút mới tính (làm tròn xuống). Nghỉ phép đã duyệt không bị máy ghi đè.">
-          Quy tắc: chấm sớm &lt; 30' tính từ giờ bắt đầu ca (không sinh TC) · tăng ca sau hết ca tính theo khối 30' (làm tròn xuống) · “Khớp ✓” = máy khớp với Bảng bố trí.
+        <div class="ci-hint" title="Chấm sớm dưới 30 phút được tính từ giờ bắt đầu ca (không sinh tăng ca). Giờ quẹt làm tròn mốc 30 phút: giờ vào lên mốc kế (12:31–12:59 = 13:00), giờ ra xuống mốc trước (17:34 = 17:30). Giờ nghỉ của ca đặt GIỮA CA. Tăng ca chỉ tính phần sau giờ hết ca, mỗi 30 phút mới tính (làm tròn xuống). Nghỉ phép đã duyệt không bị máy ghi đè.">
+          Quy tắc: chấm sớm &lt; 30' tính từ giờ bắt đầu ca (không sinh TC) · giờ quẹt làm tròn mốc 30' (vào lên · ra xuống) · tăng ca sau hết ca tính theo khối 30' (làm tròn xuống) · “Khớp ✓” = máy khớp với Bảng bố trí.
         </div>
         <div class="table-responsive table-scroll">
           <table class="data-table" id="hr-ci-table">

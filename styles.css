@@ -11939,6 +11939,11 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 .ci-ack-chip { display: inline-block; font-size: 0.68rem; color: #15803d; background: #dcfce7; border-radius: 999px; padding: 1px 7px; }
 .ci-actions { display: flex; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
 .ci-row-review > td { background: rgba(245, 158, 11, 0.07); }
+/* RÀ SOÁT BẤT THƯỜNG (20/10/2026): dòng số vô lý + chip cảnh báo */
+.ci-row-bad > td { background: rgba(220, 38, 38, 0.07); }
+.ci-row-bad.ci-row-review > td { background: rgba(220, 38, 38, 0.11); }
+.ci-bad-hint { color: #b91c1c; background: #fee2e2; cursor: help; }
+.hr-stat-chip.is-danger { background: #fee2e2; color: #b91c1c; font-weight: 600; }
 .hr-stat-chip.is-warn { background: #fef3c7; color: #92400e; font-weight: 600; }
 #hr-ci-card .hr-filter-toolbar { flex-wrap: wrap; }
 @media (max-width: 639.98px) {

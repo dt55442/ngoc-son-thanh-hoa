@@ -10,7 +10,7 @@
 import { initLucide } from './cloud.js';
 import { state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
-import { HR_DEPARTMENTS, ciRowsForRange } from './hr.js';
+import { HR_DEPARTMENTS, CI_ANOMALY_LABEL, ciRowsForRange } from './hr.js';
 import {
   buildHrXlsxExportData, buildMaterialsExportData, buildPlanningExportData, buildPressExportData,
   buildQcXlsxExportData, buildX2ExportData, exportDataToXlsx, exportMultiSheetToXlsx,
@@ -572,7 +572,7 @@ function buildCiCompareReport(spec) {
   const h = m => (m == null ? '' : Math.round((m / 60) * 100) / 100);
   const header = ['Stt', 'Bộ Phận', 'Mã NV', 'Họ Tên', 'Ngày', 'Bố Trí (giờ)', 'Giờ Máy (vào–ra)',
     'HC Máy (h)', 'TC Máy (h)', 'Đi Muộn (phút)', 'Về Sớm (phút)', 'TC Đơn (h)', 'Lệch TC (h)',
-    'Đơn Từ (nghỉ · tăng ca)', 'Kết Luận', 'Đã Xác Nhận'];
+    'Đơn Từ (nghỉ · tăng ca)', 'Kết Luận', '⚠ Bất Thường', 'Đã Xác Nhận'];
   const body = rows.map((r, i) => {
     const planTxt = r.plan.hasPlan
       ? r.plan.assignments.map(a => `${hrPosText(a.positionId)} ${a.start}${a.end ? '–' + a.end : '→hết ca'}`).join('; ')
@@ -589,6 +589,7 @@ function buildCiCompareReport(spec) {
       (r.ot.approvedMin || r.actual.tc) ? h(r.otDelta) : '',
       otTxt,
       (CI_VERDICT_LABEL[r.verdict] || r.verdict),
+      (r.anomalies || []).map(k => CI_ANOMALY_LABEL[k] || k).join(' · '),
       r.ack ? ('Đã xác nhận' + (r.ack.by ? ' — ' + r.ack.by : '')) : ''
     ];
   });
@@ -599,6 +600,7 @@ function buildCiCompareReport(spec) {
 // Nhãn kết luận (khai báo tại chỗ để report-center không phải import thêm)
 const CI_VERDICT_LABEL = {
   ok: 'Khớp', late: 'Đi muộn', early: 'Về sớm', no_out: 'Thiếu giờ ra',
+  no_in: 'Thiếu giờ vào', night_out: 'Giờ ra ca đêm hôm trước',
   no_punch: 'Không quẹt máy', no_plan: 'Máy có quẹt, chưa bố trí',
   leave_ok: 'Nghỉ có phép', leave_punch: 'Nghỉ có phép nhưng có quẹt máy',
   leave_hours: 'Nghỉ theo giờ — lệch giờ làm', absent_punch: 'Chấm tay "Vắng"',

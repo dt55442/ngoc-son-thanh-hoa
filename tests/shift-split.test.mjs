@@ -204,8 +204,8 @@ check('D2: đúng 2 dòng ca + tên 2 ca',
   (cnHtml.match(/class="x2-shift-row"/g) || []).length === 2 && cnHtml.includes('Ca ngày') && cnHtml.includes('Ca đêm'));
 check('D3: NGƯỜI mỗi ca đúng (A = ca ngày · B = ca đêm)',
   cnHtml.includes('Nguyễn Văn A') && cnHtml.includes('Trần Thị B'));
-check('D4: GIỜ từng ca = số thật (ca ngày 12h − 1h30 nghỉ = 10h30 HC · ca đêm 6h HC)',
-  cnHtml.includes('10,5h HC') && cnHtml.includes('6,0h HC'));
+check('D4: GIỜ từng ca = số thật (ca ngày 12h − 1h30 nghỉ = 10h30 HC · ca đêm 19:00–01:00 lẹm 30\' nghỉ giữa ca = 5h30 HC)',
+  cnHtml.includes('10,5h HC') && cnHtml.includes('5,5h HC'));
 check('D5: sản lượng ƯỚC TÍNH + ghi chú chưa so được ca nào tốt hơn',
   (cnHtml.match(/SL ~/g) || []).length === 2 && cnHtml.includes('chưa so được ca nào làm tốt hơn'));
 state.hrAssignments = [asgCN('s1', 0, 'eA', '07:00', '19:00')];
@@ -248,8 +248,8 @@ state.x1Rates = { catOng: { '2026-10': 500 } };
 x2.renderX1CatOngCard();
 const x1Html = els.get('x1-cat-ong-day-cards').innerHTML;
 check('F1: thẻ ngày Xưởng 1 có khối theo ca', x1Html.includes('class="x2-shift-rows"'));
-check('F2: người + giờ từng ca theo bộ phận Xưởng 1 (10h30 · 6h HC)',
-  x1Html.includes('Lê Văn C') && x1Html.includes('Phạm Thị D') && x1Html.includes('10,5h HC') && x1Html.includes('6,0h HC'));
+check('F2: người + giờ từng ca theo bộ phận Xưởng 1 (10h30 · 5h30 HC)',
+  x1Html.includes('Lê Văn C') && x1Html.includes('Phạm Thị D') && x1Html.includes('10,5h HC') && x1Html.includes('5,5h HC'));
 
 // ═══ G. ÉP VÁN (thẻ trong tab Công Đoạn SX) ═════════════════════════════
 const press = await import('../js/press.js');
@@ -270,7 +270,7 @@ press.renderX2EpVanDayCards();
 const pvHtml = els.get('x2-epv-day-cards').innerHTML;
 check('G1: thẻ ngày Ép Ván có khối theo ca (m³/h)', pvHtml.includes('class="x2-shift-rows"') && pvHtml.includes('Ép ván'));
 check('G2: người + giờ từng ca của Ép Ván',
-  pvHtml.includes('10,5h HC') && pvHtml.includes('6,0h HC') && pvHtml.includes('Lê Văn C') && pvHtml.includes('Phạm Thị D'));
+  pvHtml.includes('10,5h HC') && pvHtml.includes('5,5h HC') && pvHtml.includes('Lê Văn C') && pvHtml.includes('Phạm Thị D'));
 
 // ═══ H. QC — KIỂM SAU SẢN XUẤT ══════════════════════════════════════════
 const qcf = await import('../js/qc-final.js');
@@ -287,8 +287,8 @@ state.qcFinalRates = { '2026-10': { van: 20, thanh: 100 } };
 qcf.renderQcFinalTable();
 const qcfHtml = els.get('qcf-day-cards').innerHTML;
 check('H1: thẻ ngày QC có khối theo ca', qcfHtml.includes('class="x2-shift-rows"'));
-check('H2: người + giờ từng ca của QC (10h30 · 6h HC)',
-  qcfHtml.includes('10,5h HC') && qcfHtml.includes('6,0h HC') && qcfHtml.includes('Lê Văn C'));
+check('H2: người + giờ từng ca của QC (10h30 · 5h30 HC)',
+  qcfHtml.includes('10,5h HC') && qcfHtml.includes('5,5h HC') && qcfHtml.includes('Lê Văn C'));
 
 // ═══ I. CẤU TRÚC (styles / sw / js) ═════════════════════════════════════
 const cssSrc = fs.readFileSync('styles.css', 'utf8');
@@ -311,7 +311,7 @@ check('I3: 4 thẻ ngày 1 công đoạn + 3 thẻ ĐÃ TÁCH CA (Bổ Ống/Bà
 check('I4: press.js + qc-final.js dùng CHUNG helper (không copy HTML/CSS)',
   pSrc.includes('shiftBreakdownHtml') && pSrc.includes('epVanShiftGroups') &&
   qSrc.includes('shiftBreakdownHtml') && qSrc.includes('qcShiftGroups'));
-check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v292'));
+check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v295'));
 
 // ═══ J. GIAI ĐOẠN 2 — NHẬP SẢN LƯỢNG RIÊNG THEO CA ═══════════════════════
 // (Bổ Ống · Chạy Máy Bào Thô · Chọn Nan Thô · Than Hóa + Sấy)
@@ -338,8 +338,8 @@ document.getElementById('x2-cn-shift').value = '1';          // CA ĐÊM
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 const cnShiftRec = (state.xuong2ChonNanThoRecords || []).find(r => r.date === DAY && r.shiftIdx === 1);
 check('J1: lưu lượt Chọn Nan có ghi CA → bản ghi lưu shiftIdx = 1', !!cnShiftRec && cnShiftRec.shiftIdx === 1);
-check('J2: SNAPSHOT giờ của lượt = CHỈ ca đêm (6h HC · 0h TC, không cộng ca ngày)',
-  cnShiftRec && Math.abs(Number(cnShiftRec.workHoursHC) - 6) < 1e-9 && Math.abs(Number(cnShiftRec.workHoursTC)) < 1e-9);
+check('J2: SNAPSHOT giờ của lượt = CHỈ ca đêm (5h30 HC · 0h TC, không cộng ca ngày)',
+  cnShiftRec && Math.abs(Number(cnShiftRec.workHoursHC) - 5.5) < 1e-9 && Math.abs(Number(cnShiftRec.workHoursTC)) < 1e-9);
 check('J3: SNAPSHOT người của lượt = CHỈ người ca đêm', cnShiftRec && cnShiftRec.worker === 'Trần Thị B');
 
 // ── J4. THẺ NGÀY TÁCH THEO (NGÀY, CA) + CHIP SO SÁNH ─────────────────────
@@ -356,8 +356,9 @@ check('J4: thẻ ngày Chọn Nan tách 2 ca cùng ngày (2 thẻ, có chip ca)'
   cnCards.includes('Ca ngày') && cnCards.includes('Ca đêm'));
 check('J5: thẻ CẢ NGÀY / CHƯA RÕ CA riêng cho lượt không ghi ca',
   cnCards.includes('Cả ngày / chưa rõ ca') && (cnCards.match(/data-shift=""/g) || []).length === 1);
-check('J6: công suất 2 ca KHÁC NHAU theo SỐ THẬT (ca ngày 2.000÷10h30=190 · ca đêm 900÷6h=150 thanh/h)',
-  (cnCards.match(/190 thanh\/h/g) || []).length >= 1 && (cnCards.match(/150 thanh\/h/g) || []).length >= 1);
+check('J6: công suất 2 ca KHÁC NHAU theo SỐ THẬT (ca ngày 2.000÷10h30=190 · ca đêm 900÷5h30=164 thanh/h)',
+  (cnCards.match(/190 thanh\/h/g) || []).length >= 1 && (cnCards.match(/164 thanh\/h/g) || []).length >= 1);
+// ═══ K. CẤU TRÚC ═══
 check('J7: có chip SO SÁNH hiệu suất với ca kia (▲/▼)',
   cnCards.includes('x2-shift-cmp') && (cnCards.includes('▲') || cnCards.includes('▼')));
 check('J8: thẻ "chưa rõ ca" vẫn giữ khối ƯỚC TÍNH Giai đoạn 1 + ghi chú trung thực',

@@ -111,7 +111,7 @@ check('B11: main.js — preloadCoreViews() chạy sau boot khi bootOk (tải s�
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
 check('C1: CACHE_NAME v229 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v292/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+  /nha-may-ngoc-son-v295/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════
@@ -242,6 +242,31 @@ check('F5: tre nằm hẳn → is-gone (Dashboard hiện ra — không cần b�
   ov.classList.contains('is-gone'));
 check('F6: skipTreLoading khi KHÔNG còn game → bỏ qua an toàn (trả % cũ, overlay giữ nguyên)',
   ld.skipTreLoading() === 100 && ov.classList.contains('is-gone'));
+
+// ── G. XOAY CÂU VUI khi chờ (opts.phrases — 20/10/2026) ──────────
+ld.TRE_TIMING.load = 0;
+ld.TRE_TIMING.fall = 60;
+ld.TRE_TIMING.phrase = 600;   // production clamp = tối thiểu 600ms/câu
+const PHRASES = ['Câu 1 🎋', 'Câu 2 🌿', 'Câu 3 💪'];
+ld.showTreLoading('Nhãn mặc định', { phrases: PHRASES });
+check('G1: mở overlay là hiện NGAY câu ĐẦU TIÊN (không phải nhãn mặc định)', txt.textContent === 'Câu 1 🎋');
+await sleep(700);
+check('G2: tự xoay sang câu kế tiếp khi chờ lâu', txt.textContent !== 'Câu 1 🎋' && PHRASES.includes(txt.textContent));
+const lastPhrase = txt.textContent;
+ld.hideTreLoading(false);
+check('G3: xong/lỗi → DỪNG xoay (không nhảy câu nữa)', txt.textContent === lastPhrase || txt.textContent === 'Xong rồi!');
+await sleep(80);
+check('G4: sau khi dọn overlay, câu không tiếp tục đổi', txt.textContent === lastPhrase || txt.textContent === 'Xong rồi!');
+ld.showTreLoading('Chỉ một nhãn');
+await sleep(50);
+check('G5: KHÔNG truyền phrases → giữ nguyên 1 nhãn như cũ (mọi chỗ chờ khác không đổi)',
+  txt.textContent === 'Chỉ một nhãn');
+ld.hideTreLoading(true);
+await sleep(120);
+check('G6: cấu trúc loading.js — có TRE_TIMING.phrase + hàm xoay câu (clear khi gãy)',
+  /phrase:\s*\d+/.test(fs.readFileSync(new URL('../js/loading.js', import.meta.url), 'utf8')) &&
+  ldJs.includes('function treStartPhrases') && ldJs.includes('function treStopPhrases') &&
+  /function treFall\(el\)[\s\S]{0,220}?treStopPhrases\(\)/.test(ldJs));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

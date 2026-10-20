@@ -10,7 +10,7 @@ import { captureAutoBackup } from './autobackup.js'; // Chụp backup TRƯỚC k
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
-import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, ciTimesheetHours, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
+import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
@@ -1633,7 +1633,21 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
       }
 
       case 'hr-ci': {
-        header = ['Stt', 'Nhân Viên', 'Bộ Phận', 'Ngày', 'Giờ Vào', 'Giờ Ra', 'Lần Quét', 'Chấm Tay'];
+        header = ['Stt', 'Nhân Viên', 'Bộ Phận', 'Ngày', 'Giờ Vào', 'Giờ Ra', 'Lần Quét', 'Chấm Tay', 'Quẹt Thô'];
+        // Dùng ENGINE đối chiếu (ghép ca đêm + làm tròn mốc 30'): cột Giờ Vào/Ra
+        // là MỐC ĐÃ TÍNH LƯƠNG, cột "Quẹt Thô" giữ nguyên giờ máy ghi.
+        const hmText = m => {
+          if (!m) return '';
+          const v = m % 1440;
+          return `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`;
+        };
+        const ciMap = new Map();
+        try {
+          const ciDates = (state.hrCheckins || []).map(c => String(c.date || ''))
+            .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+          const from = ciDates[0] || '', to = ciDates[ciDates.length - 1] || '';
+          if (from) ciRowsForRange(from, to, {}).forEach(r => ciMap.set(`${r.employeeId}|${r.date}`, r));
+        } catch (e) { /* engine lỗi → in giờ thô */ }
         rows = (state.hrCheckins || [])
           .filter(c => inDept(hrXlsxEmpDept(c.employeeId)))
           .slice()
@@ -1647,8 +1661,18 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
               if (st === 'work') label = 'Khớp — Đi làm';
               else if (st === 'absent') label = 'Lệch — Chấm tay Vắng';
             }
+            const rawText = `${c.in || '?'}${c.out ? '–' + c.out : ''}`;
+            let inText = c.in || '';
+            let outText = c.out || '';
+            const d = ciMap.get(`${c.employeeId}|${c.date}`);
+            const act = d && d.actual;
+            if (act && act.hasPunch) {
+              inText = hmText(act.inMin);
+              outText = act.outMin ? hmText(act.outMin) + (act.crossNight ? ' (+1)' : '') : '';
+              if (d.verdict === 'night_out') label = 'Giờ ra ca đêm hôm trước';
+            }
             return [i + 1, hrXlsxEmpName(c.employeeId), hrXlsxEmpDept(c.employeeId),
-              c.date ? formatDateDDMMYY(c.date) : '', c.in || '', c.out || '', c.punches || 0, label];
+              c.date ? formatDateDDMMYY(c.date) : '', inText, outText, c.punches || 0, label, rawText];
           });
         if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
         break;

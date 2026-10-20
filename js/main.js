@@ -29,7 +29,7 @@ import { loadQcFinal, loadQcFinalRates } from './qc-final.js'; // THẺ KIỂM S
 import { loadQcPressLogs } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail — js/qc-press.js)
 import { loadX2IncidentReports, updateIncidentBadge } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
-import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS, hrDockClose } from './hr.js';
+import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, renderHrVisible, renderHrAfterBoardChange, hrShowMoreRows, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS, hrDockClose } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { APP_VERSION, state } from './state.js';
@@ -361,7 +361,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     if (targetViewId === 'planning-view') renderPlanningView();
     if (targetViewId === 'materials-view') renderMaterialView();
     if (targetViewId === 'qc-view') renderQcView();
-    if (targetViewId === 'hr-view') renderHrView();
+    if (targetViewId === 'hr-view') renderHrVisible();
     // "Nan Bot" chào + nhắc nhanh theo tab vừa mở (tầng offline hiện ngay,
     // tầng AI lầy hơn sẽ tự thay câu khi có key + mạng + còn quota)
     try { aiAutoGreet(targetViewId); } catch (e) { /* lỗi gợi ý tự động — bỏ qua */ }
@@ -483,7 +483,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     if (state.activeView === 'planning-view') renderPlanningView();
     if (state.activeView === 'materials-view') renderMaterialView();
     if (state.activeView === 'qc-view') renderQcView();
-    if (state.activeView === 'hr-view') renderHrView();
+    if (state.activeView === 'hr-view') renderHrVisible();
     if (state.activeView === 'kanban-view') {
       // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)
       renderX2MiniSparklines();
@@ -585,6 +585,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Thẻ Nhân Sự — launcher 5/3/2 (mở nổi lên dạng pop-up modal)
     hrOpenCard,
     hrCloseCard: hrCloseOpenCard,
+    // Bảng dài (nhân viên/chấm công/đối chiếu máy): bấm "Xem thêm" tăng số dòng
+    hrShowMoreRows,
     // Giờ máy chấm công (onclick trong HTML render động)
     hrApplyCheckin: applyCheckinRecord,
     hrDeleteCheckin: deleteCheckin

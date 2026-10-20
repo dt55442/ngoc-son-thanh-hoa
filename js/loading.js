@@ -33,7 +33,7 @@ const TRE_CARD_ID = 'tre-loading-card';
 //   firstTab = cửa sổ MỞ TAB LẦN ĐẦU (switchView truyền qua opts.dur)
 //   fall     = thời gian tre ngã trước khi overlay mờ (đồng bộ CSS 700ms)
 //   hitStep  = % mỗi nhát bấm ở chế độ game (100 / 5 = 20 nhát)
-const TRE_TIMING = { load: 5000, firstTab: 5000, fall: 700, hitStep: 5 };
+const TRE_TIMING = { load: 5000, firstTab: 5000, fall: 700, hitStep: 5, phrase: 2200 };
 let treDepth = 0;       // số tác vụ ĐANG chờ (refcount)
 let treShownAt = 0;     // thời điểm hiện loading gần nhất
 let treDur = 5000;      // cửa sổ auto của lần hiện này (ms)
@@ -42,6 +42,30 @@ let treGame = false;    // đang CHỜ người bấm đủ 100%?
 let trePct = 0;         // tiến độ hiện tại 0..100
 let treHideTimer = 0, treFallTimer = 0, treTickTimer = 0;
 let treHitBound = false;
+// ── XOAY CÂU VUI (opts.phrases) ──────────────────────────────────────
+// Nhiều câu → đổi nhãn mỗi TRE_TIMING.phrase ms để người dùng thấy app vẫn
+// đang chạy (không tưởng máy treo). Chỉ dùng khi caller truyền opts.phrases;
+// không truyền → giữ nguyên 1 nhãn như cũ.
+let trePhrases = [];
+let trePhraseIdx = 0;
+let trePhraseTimer = 0;
+function treStopPhrases() {
+  if (trePhraseTimer) clearInterval(trePhraseTimer);
+  trePhraseTimer = 0;
+}
+function treStartPhrases(list) {
+  treStopPhrases();
+  trePhrases = Array.isArray(list) ? list.filter(s => typeof s === 'string' && s) : [];
+  trePhraseIdx = 0;
+  if (trePhrases.length < 2) return;
+  const gap = Math.max(600, Number(TRE_TIMING.phrase) || 2200);
+  trePhraseTimer = setInterval(() => {
+    trePhraseIdx = (trePhraseIdx + 1) % trePhrases.length;
+    const txt = treEl(TRE_TEXT_ID);
+    if (txt) txt.textContent = trePhrases[trePhraseIdx];
+  }, gap);
+  if (trePhraseTimer && typeof trePhraseTimer.unref === 'function') trePhraseTimer.unref();
+}
 
 function treEl(id) {
   try { return document.getElementById(id); } catch (e) { return null; }
@@ -81,6 +105,7 @@ function treStartTick() {
 // ── GÃY (auto xong / game đạt 100%) → is-fall → is-gone ──────────────
 function treFall(el) {
   treStopTick();
+  treStopPhrases();      // dừng xoay câu — nhãn chuyển "Xong rồi!"
   treSetProgress(100);
   el.classList.add('is-fall');
   const txt = treEl(TRE_TEXT_ID);
@@ -101,6 +126,7 @@ function treHint() {
 // ── CHẾ ĐỘ GAME: boot xong NHƯNG KHÔNG tự gãy — chờ người bấm ────────
 function treEnterGame(el) {
   treStopTick();
+  treStopPhrases();
   treGame = true;
   treSetProgress(0);
   el.classList.remove('is-fall', 'is-gone');
@@ -205,10 +231,14 @@ function showTreLoading(label, opts) {
   treDur = (opts && typeof opts.dur === 'number') ? opts.dur : TRE_TIMING.load;
   if (treMode === 'game') { treStopTick(); treSetProgress(0); }
   else treStartTick();
-  if (label != null && label !== '') {
+  // Nhãn: opts.phrases[0] (nếu có) → xoay tiếp mỗi TRE_TIMING.phrase
+  const list = (opts && Array.isArray(opts.phrases)) ? opts.phrases.filter(s => typeof s === 'string' && s) : [];
+  const shownLabel = list.length ? list[0] : label;
+  if (shownLabel != null && shownLabel !== '') {
     const txt = treEl(TRE_TEXT_ID);
-    if (txt) txt.textContent = String(label);
+    if (txt) txt.textContent = String(shownLabel);
   }
+  treStartPhrases(list);
 }
 
 // Ẩn loading — gọi khi ĐÃ CÓ kết quả (refcount--; về 0 mới kết thúc)
@@ -227,7 +257,7 @@ function hideTreLoading(ok, opts) {
     : Math.max(0, minShow - (Date.now() - treShownAt));
   treHideTimer = treLater(() => {
     treHideTimer = 0;
-    if (ok === false) { treStopTick(); el.classList.add('is-gone'); return; }
+    if (ok === false) { treStopTick(); treStopPhrases(); el.classList.add('is-gone'); return; }
     if (treMode === 'game') { treEnterGame(el); return; }
     treFall(el);                            // auto: xong + đủ cửa sổ → GÃY
   }, wait);

@@ -215,7 +215,7 @@ check('E2. events có Esc đóng dock (ưu tiên đóng pop-up chi tiết)',
   /hrDockState\(\)\.level === 0[\s\S]{0,400}?hrDockClose\(\)/.test(evSrc));
 check('E3. rời tab Nhân Sự tự đóng dock (main.js)',
   mainSrc.includes('hrDockClose') && /closeViewScopedModals[\s\S]{0,900}?hrDockClose/.test(mainSrc));
-check('E4. sw.js cache v284', swSrc.includes('nha-may-ngoc-son-v288'));
+check('E4. sw.js cache v284', swSrc.includes('nha-may-ngoc-son-v289'));
 
 console.log(`\nHR-DOCK: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);

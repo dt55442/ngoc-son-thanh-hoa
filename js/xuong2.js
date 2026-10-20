@@ -32,7 +32,7 @@ import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
+import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, incidentApprovedHoursOf, incidentReportStatsOf, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 // SỔ NHÓM KHỐI LƯỢNG (Giai đoạn 1 — 18/10/2026): bãi tập kết trộn lô nên
 // Xưởng 2 theo dõi theo phiếu cân chuyến → xe bốc → nhóm ống đạt chờ bổ.
@@ -1091,31 +1091,80 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     }
     firePushSync();
   }
-  // Giờ SỰ CỐ CHO PHÉP của 1 ngày (0 = chưa nhập)
+  // Giờ SỰ CỐ của 1 ngày = TỔNG giờ phiếu báo cáo sự cố ĐÃ DUYỆT (công đoạn 'say');
+  // chưa có phiếu duyệt nào thì dùng số NHẬP TAY (ô trên bảng thống kê / dữ liệu cũ).
   function sayIncidentOf(dateVal) {
-    const v = Number((state.x2SayIncidents || {})[String(dateVal || '').trim()]);
+    const date = String(dateVal || '').trim();
+    const auto = incidentApprovedHoursOf('say', date);
+    if (auto > 0) return auto;
+    const v = Number((state.x2SayIncidents || {})[date]);
     return Number.isFinite(v) && v > 0 ? v : 0;
   }
-  // Lưu Giờ sự cố cho phép của 1 NGÀY (ô nhập ở dòng đầu ngày của bảng thống kê).
-  // Để trống / 0 → xoá (coi như không có sự cố).
-  function setSayIncident(dateVal, value) {
-    if (!requireEditPermission()) return false;
+  // ÁP GIÁ TRỊ "GIỜ SỰ CỐ CỦA NGÀY" VÀO STATE — dùng chung cho lưu thường (change)
+  // và lưu im lặng khi đang gõ (input). Trả về { key, v, cleared } hoặc null (không đổi).
+  //
+  // ⚠ ĐÃ SỬA 20/10/2026 — LỖI "SỰ CỐ TỰ HỒI SINH": trước đây xoá giá trị thì
+  // `delete` HẲN khoá khỏi dict. Cơ chế đồng bộ mây chỉ coi là "dirty" những khoá
+  // CÒN TỒN TẠI (dirtyDomains) và khi đẩy chỉ ghi đè các khoá dirty
+  // (pushDirtyViaTransaction) ⇒ khoá vừa xoá KHÔNG được đẩy lên mây, mây vẫn giữ
+  // giá trị cũ; lần đồng bộ sau (2 phút/lần, khi focus…) máy tải miền về và
+  // mergeDictRemoteWins (mây thắng từng khoá) ghi lại giá trị cũ ⇒ ô Sự cố "tự
+  // hồi sinh". Nay GIỮ KHOÁ với giá trị 0: khoá vẫn tồn tại ⇒ dirty ⇒ đẩy 0 lên
+  // mây ⇒ mọi máy đều thấy 0. Đọc vẫn đúng vì sayIncidentOf() coi ≤ 0 là 0.
+  function applySayIncidentValue(dateVal, value) {
     const key = String(dateVal || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+    // Có phiếu sự cố ĐÃ DUYỆT cho ngày này → KHOÁ nhập tay (tránh đếm 2 lần)
+    if (incidentApprovedHoursOf('say', key) > 0) return { key, v: 0, blocked: true };
     const v = Number(value);
     state.x2SayIncidents = state.x2SayIncidents || {};
+    const cur = state.x2SayIncidents[key];
     if (!Number.isFinite(v) || v <= 0) {
-      if (state.x2SayIncidents[key] == null) return false;
-      delete state.x2SayIncidents[key];
-      showToast(`Ngày ${formatDateDDMMYY(key)}: bỏ giờ sự cố cho phép (coi như 0 giờ).`, 'info');
-    } else {
-      state.x2SayIncidents[key] = v;
-      showToast(`Ngày ${formatDateDDMMYY(key)}: giờ sự cố cho phép ${fmtGio(v)}h.`, 'success');
+      if (cur == null || cur === 0) return null;   // chưa từng có / đã 0 → không ghi
+      state.x2SayIncidents[key] = 0;               // GIỮ KHOÁ = 0 (không xoá)
+      return { key, v: 0, cleared: true };
     }
+    if (cur === v) return null;
+    state.x2SayIncidents[key] = v;
+    return { key, v, cleared: false };
+  }
+  // Lưu Giờ sự cố cho phép của 1 NGÀY (ô nhập ở dòng đầu ngày của bảng thống kê).
+  // Để trống / 0 → ghi 0 (coi như không có sự cố).
+  function setSayIncident(dateVal, value) {
+    if (!requireEditPermission()) return false;
+    const res = applySayIncidentValue(dateVal, value);
+    if (!res) return false;
+    if (res.blocked) {
+      showToast('Ngày này đã có phiếu sự cố ĐÃ DUYỆT — sửa/xoá phiếu trong "Báo Cáo Sự Cố" thay vì nhập tay (tránh đếm 2 lần).', 'error');
+      return false;
+    }
+    showToast(res.cleared
+      ? `Ngày ${formatDateDDMMYY(res.key)}: bỏ giờ sự cố cho phép (coi như 0 giờ).`
+      : `Ngày ${formatDateDDMMYY(res.key)}: giờ sự cố cho phép ${fmtGio(res.v)}h.`,
+      res.cleared ? 'info' : 'success');
     saveX2SayIncidents();
     renderX2SayStats();
     initLucide();
     return true;
+  }
+  // LƯU IM LẶNG khi người dùng ĐANG GÕ (uỷ nhiệm `input`): không toast, không vẽ lại.
+  // Vì sao cần: ô chỉ lưu ở `change` nên nếu bảng bị dựng lại giữa lúc gõ (đồng bộ
+  // mây / renderAll) thì phần tử input bị thay ⇒ `change` KHÔNG bắn ⇒ mất thao tác.
+  function saveSayIncidentSilent(dateVal, value) {
+    if (!requireEditPermission()) return false;
+    const res = applySayIncidentValue(dateVal, value);
+    if (!res || res.blocked) return false;
+    saveX2SayIncidents();
+    return true;
+  }
+  // Bộ đếm gộp cho ô nhập đang gõ (mỗi ô 1 timer, gõ tiếp thì hoãn lại)
+  const x2IncidentInputTimers = new Map();
+  function debounceIncidentInput(key, fn, wait) {
+    if (x2IncidentInputTimers.has(key)) clearTimeout(x2IncidentInputTimers.get(key));
+    x2IncidentInputTimers.set(key, setTimeout(() => {
+      x2IncidentInputTimers.delete(key);
+      try { fn(); } catch (e) { /* không chặn thao tác khác */ }
+    }, Number(wait) || 400));
   }
   // Uỷ nhiệm change cho ô "Sự cố cho phép" (dòng đầu ngày)
   function onSayIncidentChange(e) {
@@ -1124,6 +1173,16 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const dateVal = t.getAttribute('data-say-incident');
     if (!dateVal) return;
     setSayIncident(dateVal, t.value);
+  }
+  // Uỷ nhiệm input (đang gõ) → lưu im lặng sau 400ms
+  function onSayIncidentInput(e) {
+    const t = e && e.target;
+    if (!t || typeof t.getAttribute !== 'function') return false;
+    const dateVal = t.getAttribute('data-say-incident');
+    if (!dateVal) return false;
+    const val = t.value;
+    debounceIncidentInput(`say|${dateVal}`, () => saveSayIncidentSilent(dateVal, val), 400);
+    return true;
   }
 
   // ─── GIỜ SỰ CỐ CHO PHÉP CỦA 7 THẺ CÔNG ĐOẠN XƯỞNG 2 ────────────
@@ -1154,24 +1213,68 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     }
     firePushSync();
   }
-  // Lưu giờ sự cố của 1 (thẻ, ngày) — để trống / 0 → xoá. Trả về true nếu có đổi.
-  function setStageIncident(cardId, dateVal, value) {
-    if (!requireEditPermission()) return false;
+  // ÁP GIÁ TRỊ "GIỜ SỰ CỐ" CỦA (THẺ, NGÀY) VÀO STATE — dùng chung cho lưu thường
+  // (change) và lưu im lặng khi đang gõ (input). Trả { cardId, date, v, cleared } | null.
+  //
+  // ⚠ ĐÃ SỬA 20/10/2026 — LỖI "SỰ CỐ TỰ HỒI SINH" (xem chi tiết ở
+  // applySayIncidentValue phía trên): KHÔNG `delete` khoá nữa mà GIỮ KHOÁ = 0 để
+  // cơ chế đồng bộ mây thấy khoá "dirty" và đẩy 0 lên mây; nếu xoá hẳn khoá thì
+  // dirtyDomains + pushDirtyViaTransaction bỏ qua ⇒ mây giữ giá trị cũ và
+  // mergeDictRemoteWins ghi trả lại ⇒ giá trị hồi sinh sau ~2 phút.
+  function applyStageIncidentValue(cardId, dateVal, value) {
     const cid = String(cardId || '').trim();
     const key = String(dateVal || '').trim();
-    if (!cid || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+    if (!cid || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+    // Có phiếu sự cố ĐÃ DUYỆT cho (công đoạn, ngày) → KHOÁ nhập tay (tránh đếm 2 lần)
+    if (incidentApprovedHoursOf(cid, key) > 0) return { cardId: cid, date: key, v: 0, blocked: true };
     const k = stageIncidentKey(cid, key);
     const v = Number(value);
     state.x2StageIncidents = state.x2StageIncidents || {};
+    const cur = state.x2StageIncidents[k];
     if (!Number.isFinite(v) || v <= 0) {
-      if (state.x2StageIncidents[k] == null) return false;
-      delete state.x2StageIncidents[k];
-      showToast(`Ngày ${formatDateDDMMYY(key)}: bỏ giờ sự cố cho phép (coi như 0 giờ).`, 'info');
-    } else {
-      state.x2StageIncidents[k] = v;
-      showToast(`Ngày ${formatDateDDMMYY(key)}: giờ sự cố cho phép ${fmtGio(v)}h.`, 'success');
+      if (cur == null || cur === 0) return null;   // chưa từng có / đã 0 → không ghi
+      state.x2StageIncidents[k] = 0;               // GIỮ KHOÁ = 0 (không xoá)
+      return { cardId: cid, date: key, v: 0, cleared: true };
     }
+    if (cur === v) return null;
+    state.x2StageIncidents[k] = v;
+    return { cardId: cid, date: key, v, cleared: false };
+  }
+  // Lưu giờ sự cố của 1 (thẻ, ngày) — để trống / 0 → ghi 0. Trả về true nếu có đổi.
+  function setStageIncident(cardId, dateVal, value) {
+    if (!requireEditPermission()) return false;
+    const res = applyStageIncidentValue(cardId, dateVal, value);
+    if (!res) return false;
+    if (res.blocked) {
+      showToast('Ngày này đã có phiếu sự cố ĐÃ DUYỆT — sửa/xoá phiếu trong "Báo Cáo Sự Cố" thay vì nhập tay (tránh đếm 2 lần).', 'error');
+      return false;
+    }
+    showToast(res.cleared
+      ? `Ngày ${formatDateDDMMYY(res.date)}: bỏ giờ sự cố cho phép (coi như 0 giờ).`
+      : `Ngày ${formatDateDDMMYY(res.date)}: giờ sự cố cho phép ${fmtGio(res.v)}h.`,
+      res.cleared ? 'info' : 'success');
     saveX2StageIncidents();
+    return true;
+  }
+  // LƯU IM LẶNG khi đang gõ (uỷ nhiệm `input`) — không toast, KHÔNG vẽ lại bảng
+  // (vẽ lại sẽ làm mất con trỏ). Nhờ vậy nếu bảng bị renderAll() dựng lại giữa lúc
+  // gõ thì giá trị vừa xoá/nhập vẫn đã nằm trong state, không bị mất.
+  function saveStageIncidentSilent(cardId, dateVal, value) {
+    if (!requireEditPermission()) return false;
+    const res = applyStageIncidentValue(cardId, dateVal, value);
+    if (!res || res.blocked) return false;
+    saveX2StageIncidents();
+    return true;
+  }
+  // Uỷ nhiệm input (đang gõ) → lưu im lặng sau 400ms
+  function onStageIncidentInput(e) {
+    const t = e && e.target;
+    if (!t || typeof t.getAttribute !== 'function') return false;
+    const cardId = t.getAttribute('data-x2-incident');
+    const dateVal = t.getAttribute('data-x2-incident-date');
+    if (!cardId || !dateVal) return false;
+    const val = t.value;
+    debounceIncidentInput(`stage|${cardId}|${dateVal}`, () => saveStageIncidentSilent(cardId, dateVal, val), 400);
     return true;
   }
   // Uỷ nhiệm change cho ô "Sự cố cho phép" trên đầu thẻ ngày (data-x2-incident)
@@ -1318,13 +1421,23 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       const effCls = r.eff == null ? '' : (r.eff >= 1 ? ' x2-say-eff-good' : ' x2-say-eff-low');
       const needTxt = `Giờ cần ${fmtGio(r.need)}h · Thực tế ${r.hasAssign ? fmtGio(r.hours) + 'h' : '—'}`;
       const workers = r.workers.length ? escapeHTML(r.workers.join(', ')) : 'chưa bố trí vị trí "Than hóa"';
+      // PHIẾU BÁO CÁO SỰ CỐ ĐÃ DUYỆT → khoá ô nhập tay + chip xem phiếu
+      const saySt = incidentReportStatsOf('say', r.date);
+      const sayAuto = saySt.approved > 0;
+      const sayChip = (sayAuto
+        ? `<button type="button" class="x2-inc-chip is-auto" data-inc-open="say|${escapeHTML(r.date)}" title="${saySt.approvedCount} phiếu sự cố ĐÃ DUYỆT cho ngày này — bấm để xem/sửa phiếu">🧾 ${saySt.approvedCount} phiếu</button>`
+        : '')
+        + (saySt.pending > 0
+          ? `<button type="button" class="x2-inc-chip is-pending" data-inc-open="say|${escapeHTML(r.date)}" title="${saySt.pending} phiếu sự cố CHỜ DUYỆT — chưa trừ vào hiệu suất">⏳ ${saySt.pending} chờ</button>`
+          : '')
+        + `<button type="button" class="x2-inc-chip is-new" data-inc-new="say|${escapeHTML(r.date)}" title="Lập phiếu Báo Cáo Sự Cố cho ngày này">＋ Báo cáo</button>`;
       const head = `<tr class="x2-say-day-head"><td colspan="8">
         <span class="x2-say-day-date"><i data-lucide="calendar-days"></i> ${escapeHTML(formatDateDDMMYY(r.date))}</span>
         <span class="x2-say-day-workers" title="${escapeHTML(r.timeStr || '')}">${workers}</span>
-        <span class="x2-say-day-inc">
-          <label>Sự cố cho phép:</label>
-          <input type="number" class="x2-say-inc-input" data-say-incident="${escapeHTML(r.date)}" min="0" step="any" value="${r.incident > 0 ? r.incident : ''}" placeholder="0" title="Giờ SỰ CỐ CHO PHÉP của ngày (giờ kết thúc dự kiến bị đẩy lùi do máy hỏng/thiếu nan…) — Hiệu suất = Giờ cần ÷ (Giờ thực tế − Giờ sự cố cho phép)">
-          <span class="x2-say-inc-unit">h</span>
+        <span class="x2-say-day-inc${sayAuto ? ' is-auto' : ''}">
+          <label>Sự cố:</label>
+          <input type="number" class="x2-say-inc-input" data-say-incident="${escapeHTML(r.date)}" min="0" step="any" value="${r.incident > 0 ? r.incident : ''}" placeholder="0"${sayAuto ? ' readonly' : ''} title="${sayAuto ? `Lấy từ ${saySt.approvedCount} phiếu sự cố ĐÃ DUYỆT (${r.incident} giờ) — sửa/xoá phiếu trong Báo Cáo Sự Cố thay vì nhập tay` : 'Giờ SỰ CỐ của ngày (giờ kết thúc dự kiến bị đẩy lùi do máy hỏng/thiếu nan…) — Hiệu suất = Giờ cần ÷ (Giờ thực tế − Giờ sự cố)'}">
+          <span class="x2-say-inc-unit">h</span>${sayChip}
         </span>
         <span class="x2-say-eff-badge${effCls}" title="${needTxt}${r.incident > 0 ? ' · Sự cố ' + fmtGio(r.incident) + 'h' : ''} → Hiệu suất CẢ NGÀY = Giờ cần ÷ (Giờ thực tế − Sự cố). Muốn biết từng ca làm tốt hay kém: xem các dòng phụ 'Theo ca' bên dưới (hiệu suất tính trong ca, không chia Sấy 1/Sấy 2).">Hiệu suất cả ngày ${effTxt}</span>
         <span class="x2-say-day-sum">${r.lanCount} lần · ${fmtM3(r.vol)} m³ · Cần ${fmtGio(r.need)}h · HC ${r.hasAssign ? fmtGio(r.hc) + 'h' : '—'} · TC ${r.hasAssign ? fmtGio(r.tc) + 'h' : '—'}</span>
@@ -15917,10 +16030,17 @@ export {
   sayIncidentOf,
   setSayIncident,
   onSayIncidentChange,
+  onSayIncidentInput,
+  applySayIncidentValue,
+  saveSayIncidentSilent,
   loadX2SayIncidents,
   loadX2StageIncidents,
   setStageIncident,
   onStageIncidentChange,
+  onStageIncidentInput,
+  applyStageIncidentValue,
+  saveStageIncidentSilent,
+  debounceIncidentInput,
   sayRateEntryOf,
   sayMinutesPerCharge,
   sayM3PerCharge,

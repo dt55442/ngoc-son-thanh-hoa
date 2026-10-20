@@ -22,6 +22,7 @@ import { qcPressDisplay } from './qc-press.js';
 import { computeSupplierRating, supplierStatsOf } from './suppliers.js';
 import { rateNanUse, rateUnit, rateCoreProduct } from './planning.js';
 import { x2MassBalanceData, x2CostingData } from './x2-phu-pham.js';
+import { incidentDisplay } from './x2-incidents.js';
 
 const RC_UI_KEY = 'bamboo_tracker_report_ui_v1'; // THUẦN UI THEO MÁY (không mây/backup)
 
@@ -494,6 +495,34 @@ function buildQcPressReport(spec) {
     `Kỳ: ${periodLabel(rcValues.periodMode, rcValues.periodKey)} · Kết quả: ${vLabel}`, header, rows,
     { sheet: 'Nhật Ký Ép Ván', file: spec.code });
 }
+// ─── BÁO CÁO SỰ CỐ SẢN XUẤT (tab Công Đoạn SX — js/x2-incidents.js) ──
+// Cột Số giờ là SỐ → tự cộng dòng TỔNG CỘNG. Phiếu ĐÃ DUYỆT chính là giờ sự cố
+// đang trừ vào công suất/hiệu suất của công đoạn tương ứng.
+function buildIncidentsReport(spec) {
+  const { from, to } = currentPeriodRange();
+  const list = (state.x2IncidentReports || []).map(incidentDisplay)
+    .filter(d => (!from || d.date >= from) && (!to || d.date <= to))
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  if (!list.length) { showToast('Không có phiếu sự cố nào trong kỳ đã chọn!', 'error'); return null; }
+  const header = ['Stt', 'Ngày', 'Công đoạn', 'Ca', 'Giờ bắt đầu', 'Giờ kết thúc', 'Số giờ',
+    'Loại sự cố', 'Mô tả / Nguyên nhân', 'Biện pháp xử lý', 'Người báo',
+    'Trạng thái', 'Người duyệt', 'Thời điểm duyệt', 'Lý do từ chối', 'Ghi chú'];
+  const rows = list.map((d, i) => [
+    i + 1, formatDateDDMMYY(d.date), d.stageLabel, d.shiftLabel,
+    d.startTime || '', d.endTime || '', d.hours,
+    d.causeLabel, d.description || '', d.fixAction || '', d.reporterName || '',
+    d.statusLabel, d.approvedBy || '', d.approvedAt || '', d.rejectReason || '', d.note || ''
+  ]);
+  const ap = list.filter(d => d.status === 'da_duyet');
+  const pe = list.filter(d => d.status === 'cho_duyet');
+  const apH = Math.round(ap.reduce((s, d) => s + d.hours, 0) * 100) / 100;
+  const peH = Math.round(pe.reduce((s, d) => s + d.hours, 0) * 100) / 100;
+  return rcFrame('BÁO CÁO SỰ CỐ SẢN XUẤT',
+    `Kỳ: ${periodLabel(rcValues.periodMode, rcValues.periodKey)}`
+    + ` · ${list.length} phiếu · Đã duyệt ${apH}h (${ap.length} phiếu)`
+    + ` · Chờ duyệt ${peH}h (${pe.length} phiếu)`,
+    header, rows, { sheet: 'Sự Cố SX', file: spec.code });
+}
 // ─── CHỌN BÁO CÁO ĐỂ DỰNG DỮ LIỆU ──────────────────────────────
 function buildReportData() {
   const spec = reportById(rcReportId);
@@ -528,6 +557,7 @@ function buildReportData() {
   if (spec.kind === 'qcPress') return buildQcPressReport(spec);
   if (spec.kind === 'massBalance') return buildMassBalanceReport(spec);
   if (spec.kind === 'costing') return buildCostingReport(spec);
+  if (spec.kind === 'incidents') return buildIncidentsReport(spec);
   if (spec.kind === 'ciCompare') return buildCiCompareReport(spec);
   return null;
 }
@@ -650,6 +680,7 @@ function reportHasData(spec) {
   if (spec.kind === 'suppliers') return (state.suppliers || []).length > 0;
   if (spec.kind === 'qcFinal') return (state.qcFinalRecords || []).length > 0;
   if (spec.kind === 'qcPress') return (state.pressRecords || []).length > 0;
+  if (spec.kind === 'incidents') return (state.x2IncidentReports || []).length > 0;
   if (spec.kind === 'ciCompare') return (state.hrCheckins || []).length > 0 || (state.hrAssignments || []).length > 0;
   if (spec.kind === 'massBalance') {
     const { from, to } = currentPeriodRange();

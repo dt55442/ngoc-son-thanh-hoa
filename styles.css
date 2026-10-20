@@ -12385,4 +12385,102 @@ body[data-fx="low"] .x1-ss-ready-panel { box-shadow: none; }
   .x1-ss-ready-btn { margin-left: 0; margin-top: 6px; width: 100%; justify-content: center; }
   .x1-ss-ready-code { font-size: 1rem; }
   .x1-ss-ready-actions .btn { flex: 1 1 calc(50% - 4px); justify-content: center; }
+
+
+
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BÁO CÁO SỰ CỐ (tab Công Đoạn SX — js/x2-incidents.js)
+   + CHIP trạng thái trên ô Sự cố của các thẻ ngày
+   ══════════════════════════════════════════════════════════════ */
+/* Huy hiệu số phiếu chờ duyệt trên nút thanh tiêu đề tab */
+.inc-count-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px;
+  border-radius: 999px; font-size: 0.7rem; font-weight: 700;
+  background: rgba(217, 119, 6, 0.16); color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.45);
+}
+.inc-count-chip.is-pending { background: #d97706; color: #fff; border-color: #b45309; }
+
+/* Chip nhỏ trong ô Sự cố của thẻ ngày (🧾 N phiếu · ⏳ N chờ · ＋ Báo cáo) */
+.x2-day-inc, .x2-say-day-inc { flex-wrap: wrap; }
+.x2-inc-chip {
+  margin-left: 4px; padding: 1px 6px; border-radius: 999px;
+  font-size: 0.66rem; font-weight: 700; line-height: 1.5;
+  border: 1px dashed rgba(14, 116, 144, 0.5); background: rgba(14, 116, 144, 0.08);
+  color: #0e7490; cursor: pointer; white-space: nowrap;
+}
+.x2-inc-chip:hover { background: rgba(14, 116, 144, 0.18); }
+.x2-inc-chip.is-auto { border-style: solid; background: rgba(22, 163, 74, 0.12); border-color: rgba(22, 163, 74, 0.55); color: #15803d; }
+.x2-inc-chip.is-pending { border-style: solid; background: rgba(217, 119, 6, 0.14); border-color: rgba(217, 119, 6, 0.55); color: #b45309; }
+.x2-inc-chip.is-new { border-color: rgba(124, 58, 237, 0.5); background: rgba(124, 58, 237, 0.08); color: #6d28d9; }
+.x2-day-inc.is-auto .x2-say-inc-input { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.55); cursor: not-allowed; font-weight: 700; }
+.x2-say-day-inc.is-auto .x2-say-inc-input { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.55); cursor: not-allowed; font-weight: 700; }
+
+/* Modal */
+.inc-card { max-width: 1080px; width: 100%; }
+.inc-body { max-height: 74dvh; overflow: auto; }
+.inc-edit-banner {
+  margin: 0 0 10px; padding: 8px 12px; border-radius: 10px;
+  background: #fff7ed; border: 1px dashed #f59e0b; color: #92400e;
+  font-size: 0.8rem; font-weight: 700;
+}
+.inc-filter-bar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 10px;
+}
+.inc-filter-bar .form-group { margin: 0; flex: 0 0 150px; }
+.inc-filter-bar .inc-search-g { flex: 1 1 220px; }
+.inc-note-row { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.8; }
+.inc-pill {
+  display: inline-block; padding: 1px 8px; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 700; border: 1px solid transparent;
+}
+.inc-pill.is-wait { background: rgba(217, 119, 6, 0.14); color: #b45309; border-color: rgba(217, 119, 6, 0.4); }
+.inc-pill.is-ok { background: rgba(22, 163, 74, 0.14); color: #15803d; border-color: rgba(22, 163, 74, 0.4); }
+.inc-pill.is-no { background: rgba(220, 38, 38, 0.12); color: #b91c1c; border-color: rgba(220, 38, 38, 0.4); }
+.inc-perm-hint { margin-left: 6px; color: #15803d; font-weight: 700; }
+.inc-stats {
+  padding: 8px 12px; border-radius: 10px; background: var(--bg-hover);
+  border: 1px solid var(--border-color); font-size: 0.8rem; font-weight: 600;
+}
+.inc-list-area { display: flex; flex-direction: column; gap: 10px; }
+.inc-day-card .inc-day-head { gap: 10px; }
+.inc-day-sum { font-size: 0.76rem; color: var(--text-muted); }
+.inc-day-stages { margin-left: auto; font-size: 0.74rem; color: var(--primary); font-weight: 700; }
+.inc-table-scroll { max-height: 46vh; overflow: auto; }
+.inc-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 0.78rem; }
+.inc-table thead th {
+  position: sticky; top: 0; z-index: 1; background: var(--bg-card);
+  text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-color);
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-muted);
+}
+.inc-table td { padding: 6px 8px; border-bottom: 1px dashed var(--border-color); vertical-align: top; }
+.inc-row-da_duyet td { background: rgba(22, 163, 74, 0.05); }
+.inc-row-tu_choi td { background: rgba(220, 38, 38, 0.04); }
+.inc-td-hours { white-space: nowrap; color: var(--primary); }
+.inc-td-time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.inc-td-desc { max-width: 260px; }
+.inc-sub { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+.inc-st {
+  display: inline-block; padding: 1px 8px; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+}
+.inc-st.is-wait { background: rgba(217, 119, 6, 0.14); color: #b45309; }
+.inc-st.is-ok { background: rgba(22, 163, 74, 0.16); color: #15803d; }
+.inc-st.is-no { background: rgba(220, 38, 38, 0.14); color: #b91c1c; }
+.inc-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.inc-empty {
+  padding: 22px 12px; text-align: center; color: var(--text-muted);
+  border: 1px dashed var(--border-color); border-radius: 12px; font-size: 0.82rem; line-height: 1.7;
+}
+@media (max-width: 639.98px) {
+  .inc-filter-bar .form-group,
+  .inc-filter-bar .inc-search-g { flex: 1 1 calc(50% - 4px); min-width: 0; }
+  .inc-body { max-height: 78dvh; }
+  .inc-table { min-width: 760px; }
+  .inc-day-stages { width: 100%; margin-left: 0; }
+  .inc-actions .btn { min-width: 40px; min-height: 40px; }
+  .x2-inc-chip { font-size: 0.62rem; }
 }

@@ -55,6 +55,10 @@ export const REPORT_SPECS = [
     kind: 'massBalance', filters: ['period'], code: 'X2_CanDoiKhoiLuong' },
   { id: 'x2-costing', group: 'x2', label: 'Giá Thành 1 KG Ống Đạt (theo tháng)',
     kind: 'costing', filters: ['period'], code: 'X2_GiaThanhOngDat' },
+  // BÁO CÁO SỰ CỐ (20/10/2026): phiếu sự cố của CẢ 2 xưởng + Than Hóa + Sấy.
+  // Phiếu ĐÃ DUYỆT chính là giờ sự cố đang trừ vào công suất/hiệu suất công đoạn.
+  { id: 'suco', group: 'x2', label: 'Báo Cáo Sự Cố (X2 + Than Hóa + X1)',
+    kind: 'incidents', filters: ['period'], code: 'BaoCao_SuCo' },
   // ── XƯỞNG 1 ───────────────────────────────────────────────────
   ...X1_REPORTS.map(r => ({ ...r, group: 'x1', source: r.id, filters: ['period'], code: `X1_${r.id}` })),
 

@@ -583,7 +583,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v288/.test(swJs));
+  /nha-may-ngoc-son-v289/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -795,7 +795,8 @@ check('HIỆU SUẤT NGÀY: giờ sự cố ≥ giờ thực tế → không tí
     const d = x2.sayChargeRows().find(r => r.date === '2026-09-21');
     const stored = String(storeBacking.get('bamboo_tracker_x2_say_incident_v1') || '').includes('"2026-09-21":9.5');
     x2.setSayIncident('2026-09-21', '');
-    return !!d && d.eff === null && stored && state.x2SayIncidents['2026-09-21'] === undefined;
+    // ⚠ 20/10/2026: xoá giờ sự cố KHÔNG xoá khoá — ghi 0 (chống "tự hồi sinh" khi đồng bộ mây)
+    return !!d && d.eff === null && stored && state.x2SayIncidents['2026-09-21'] === 0;
   })());
 check('HIỆU SUẤT NGÀY: ngày KHÔNG bố trí "Than hóa" (19/09) → giờ thực tế 0 ⇒ hiệu suất trống (vẫn có giờ cần)',
   (() => {
@@ -894,8 +895,8 @@ check('RENDER: bảng vẽ DÒNG ĐẦU NGÀY + DÒNG NHÓM công đoạn + TỪ
 check('RENDER: dòng nhóm có ô nhập "Số lần TH" của NGÀY (data-say-times + data-say-stage) + phút 105\' + giờ cần 1,75 h',
   statsHtml.includes('data-say-times="2026-09-21"') && statsHtml.includes('data-say-stage="say1"') &&
   statsHtml.includes('Số lần TH') && statsHtml.includes("105'") && statsHtml.includes('1,75 h'));
-check('RENDER: dòng đầu NGÀY có ô "Sự cố cho phép" (data-say-incident) + nhãn Hiệu suất của ngày',
-  statsHtml.includes('data-say-incident="2026-09-21"') && statsHtml.includes('Sự cố cho phép') &&
+check('RENDER: dòng đầu NGÀY có ô "Sự cố" (data-say-incident) + nhãn Hiệu suất của ngày',
+  statsHtml.includes('data-say-incident="2026-09-21"') && statsHtml.includes('Sự cố') &&
   statsHtml.includes('x2-say-eff-badge') && statsHtml.includes('Hiệu suất'));
 check('RENDER: thanh tiêu đề đếm số ngày + số LẦN than hóa + tổng m³',
   document.getElementById('x2-say-stats-count').textContent.includes('lần than hóa') &&

@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v288';
+  const APP_VERSION = 'v289';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -153,6 +153,11 @@
   //   { '<cardId>|<YYYY-MM-DD>': giờ }  →  Hiệu suất = Công suất ÷ Định mức
   //   với Công suất = Sản lượng ÷ (Giờ thực − Giờ sự cố cho phép)
   const STORAGE_KEY_X2_STAGE_INCIDENT = 'bamboo_tracker_x2_stage_incident_v1';
+  // PHIẾU BÁO CÁO SỰ CỐ (tab Công Đoạn SX — nút dùng chung trên thanh tiêu đề).
+  // Mỗi phiếu gắn 1 CÔNG ĐOẠN + 1 NGÀY + số giờ; khi Ban lãnh đạo DUYỆT thì số giờ
+  // của phiếu tự trở thành GIỜ SỰ CỐ của đúng công đoạn + ngày đó (xem
+  // utils.stageIncidentOf) — thay cho số nhập tay trên đầu thẻ ngày.
+  const STORAGE_KEY_X2_INCIDENT_REPORTS = 'bamboo_tracker_x2_incident_reports_v1';
   // Trạng thái THU GỌN bảng Kanban lô nan của thẻ "Than Hóa + Sấy" ('1' = đang
   // thu gọn: chỉ hiện thanh công cụ + bảng thống kê, ẩn bảng Kanban) — nhớ theo máy.
   const STORAGE_KEY_X2_KANBAN_COLLAPSED = 'bamboo_tracker_x2_kanban_collapsed_v1';
@@ -395,6 +400,12 @@
     // { '<cardId>|<YYYY-MM-DD>': giờ } · cardId ∈ boluong/cut/boong/baotho/
     // chonnan/baotinh/bullig/epvan (Than Hóa + Sấy đã có key riêng x2SayIncidents)
     x2StageIncidents: {},
+    // PHIẾU BÁO CÁO SỰ CỐ (tab Công Đoạn SX — nút "Báo Cáo Sự Cố" trên thanh tiêu đề):
+    // [{ id, stage, date, shiftIdx, startTime, endTime, hours, cause, description,
+    //    fixAction, reporterName, status 'cho_duyet'|'da_duyet'|'tu_choi',
+    //    approvedBy, approvedAt, rejectReason, note, createdAt, updatedAt }]
+    // Phiếu 'da_duyet' tự trở thành GIỜ SỰ CỐ của (stage, date) — xem utils.stageIncidentOf
+    x2IncidentReports: [],
     // Định mức công suất bào thô theo tháng (thanh/giờ): { 'YYYY-MM': thanh/h }
     x2BaoThoRates: {},
     // Nhật ký chọn nan thô (vị trí Chọn Nan Thô — Xưởng 2): mỗi lượt link 1 lô
@@ -584,6 +595,7 @@ export {
   STORAGE_KEY_X2_SAY_TIMES,
   STORAGE_KEY_X2_SAY_INCIDENT,
   STORAGE_KEY_X2_STAGE_INCIDENT,
+  STORAGE_KEY_X2_INCIDENT_REPORTS,
   STORAGE_KEY_X2_KANBAN_COLLAPSED,
   STORAGE_KEY_X2_EP_VAN_RATE,
   STORAGE_KEY_X2_LOT_LOCATIONS,

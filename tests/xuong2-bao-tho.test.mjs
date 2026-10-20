@@ -421,13 +421,15 @@ check('GIỜ SỰ CỐ: nối đủ 6 chỗ — storage / cloud / history / main
   jsMain.includes('loadX2StageIncidents'));
 check('GIỜ SỰ CỐ: bảng Tổng hợp Công suất (capacity.js) cũng TRỪ giờ sự cố',
   jsCap.includes('stageIncidentOf') && jsCap.includes('capIncKeyOf'));
-check('GIỜ SỰ CỐ: setStageIncident ghi + tự vẽ lại thẻ ngày',
+check('GIỜ SỰ CỐ: setStageIncident ghi + tự vẽ lại thẻ ngày', 
   typeof x2.setStageIncident === 'function' &&
   typeof x2.onStageIncidentChange === 'function' &&
   x2.setStageIncident('baotho', '2026-09-10', '1.5') === true &&
   JSON.parse(localStorage.getItem('bamboo_tracker_x2_stage_incident_v1') || '{}')['baotho|2026-09-10'] === 1.5 &&
+  // ⚠ 20/10/2026: xoá giờ sự cố KHÔNG xoá khoá — GHI 0 (chống "tự hồi sinh" khi
+  // đồng bộ mây: khoá bị xoá không được coi là dirty nên mây trả lại giá trị cũ)
   x2.setStageIncident('baotho', '2026-09-10', '') === true &&
-  !Object.keys(JSON.parse(localStorage.getItem('bamboo_tracker_x2_stage_incident_v1') || '{}')).length);
+  JSON.parse(localStorage.getItem('bamboo_tracker_x2_stage_incident_v1') || '{}')['baotho|2026-09-10'] === 0);
 
 check('DROPDOWN NỔI: helper portal (x2FloatShow/Hide/MaybeClose/RepositionAll)',
   ['x2FloatShow', 'x2FloatHide', 'x2FloatHideAll', 'x2FloatMaybeClose', 'x2FloatRepositionAll',

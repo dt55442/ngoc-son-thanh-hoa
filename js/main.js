@@ -26,6 +26,7 @@ import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPre
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
 import { loadQcFinal, loadQcFinalRates } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
 import { loadQcPressLogs } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail — js/qc-press.js)
+import { loadX2IncidentReports, updateIncidentBadge } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
 import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS, hrDockClose } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
@@ -126,6 +127,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadQcFinal();       // KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
     loadQcFinalRates();  // Định mức kiểm sau sản xuất theo tháng (tấm/h)
     loadQcPressLogs();   // NHẬT KÝ THEO DÕI ÉP VÁN (verdict PASS/Fail — js/qc-press.js)
+    loadX2IncidentReports(); // PHIẾU BÁO CÁO SỰ CỐ (giờ sự cố lấy từ phiếu ĐÃ DUYỆT)
     loadKilnData(); // Độ ẩm lò sấy + ngưỡng đạt (QC nhập hàng ngày — js/kiln.js)
     loadHrData();
     // DỌN DỮ LIỆU CŨ: xóa hẳn lô nan còn sót stage 'bao_tinh' (cột Kanban "4. Bào
@@ -455,6 +457,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Quan (biểu đồ + Bảng Tổng hợp) cũng cần vẽ lại (xem scheduleViewDecor)
     kanbanDirty = true;
     dashboardDirty = true;
+    // Huy hiệu số phiếu sự cố chờ duyệt trên nút thanh tiêu đề tab Công Đoạn SX
+    try { updateIncidentBadge(); } catch (e) { /* không chặn render */ }
     const filtered = getFilteredBatches();
     // TỐI ƯU: chỉ vẽ lại khu Kanban khi tab Công Đoạn đang mở. Trước đây MỖI
     // lần lưu/đồng bộ mây đều vẽ lại toàn bộ bảng Kanban (mỗi thẻ 1 khối DOM)

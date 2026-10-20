@@ -70,6 +70,7 @@ import { escapeHTML, showToast } from './utils.js';
     x2SayTimes:        { tab: 'kanban',    label: 'Số lần than hóa theo ngày', get: () => state.x2SayTimes },
     x2SayIncidents:    { tab: 'kanban',    label: 'Giờ sự cố cho phép theo ngày', get: () => state.x2SayIncidents },
     x2StageIncidents:  { tab: 'kanban',    label: 'Giờ sự cố cho phép theo thẻ công đoạn', get: () => state.x2StageIncidents },
+    x2IncidentReports: { tab: 'kanban',    label: 'Phiếu báo cáo sự cố (giờ sự cố theo công đoạn)', get: () => state.x2IncidentReports },
     khoNotes:          { tab: 'kanban',    label: 'Phiếu kho (xuất / tiêu hủy / tái chế)', get: () => state.khoNotes },
     x2PhuPhamRecords:  { tab: 'kanban',    label: 'Phụ phẩm & Băm (bán / tiêu hủy)', get: () => state.x2PhuPhamRecords },
     x2Stocktakes:      { tab: 'kanban',    label: 'Kiểm kê bãi (điều chỉnh tồn)',   get: () => state.x2Stocktakes },

@@ -291,7 +291,11 @@
             2 xưởng riêng biệt — chuyển bằng nút XƯỞNG 1 / XƯỞNG 2 bên dưới. Bảng Kanban lô nan nằm trong thẻ "Than Hóa + Sấy" (Sấy 1 → Sấy 2 → Kho Lưu Trữ → Bào Tinh).
           </p>
         </div>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" id="btn-incident-reports" title="Báo Cáo Sự Cố — lập phiếu sự cố cho đúng công đoạn + ngày (máy hỏng, mất điện, thiếu nan…). Phiếu được Ban lãnh đạo DUYỆT thì số giờ sự cố TỰ ĐỘNG trừ vào công suất/hiệu suất của công đoạn đó — phủ cả Xưởng 2, Than Hóa + Sấy và Xưởng 1">
+            <i data-lucide="alert-triangle"></i> <span class="hide-mobile">Báo Cáo Sự Cố</span>
+            <span class="inc-count-chip" id="btn-incident-count">0</span>
+          </button>
           <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-kanban" title="Lịch sử thay đổi của tab này (chỉ Admin)">
             <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
           </button>
@@ -7663,5 +7667,145 @@
       </div>
     </div>
   </div>
+  <!-- ═══ MODAL: BÁO CÁO SỰ CỐ (tab Công Đoạn SX — js/x2-incidents.js) ═══
+       Nút mở: #btn-incident-reports trên thanh tiêu đề tab (cạnh Lịch Sử / Xuất Excel)
+       + chip "＋ Báo cáo" trong ô Sự cố của từng thẻ ngày.
+       DUYỆT phiếu = số giờ sự cố TỰ ĐỘNG trừ vào công suất/hiệu suất của đúng
+       công đoạn + ngày (utils.stageIncidentOf đọc tổng giờ phiếu đã duyệt). -->
+  <div class="modal-overlay" id="modal-x2-incidents">
+    <div class="modal-card inc-card">
+      <div class="modal-header">
+        <h3><i data-lucide="alert-triangle"></i> Báo Cáo Sự Cố</h3>
+        <button class="modal-close" id="btn-close-x2-incidents" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body inc-body">
+        <div class="inc-edit-banner" id="inc-edit-banner" hidden></div>
+
+        <!-- ① PHIẾU: công đoạn + ngày + ca + giờ -->
+        <div class="ck-sec" data-zone="1">
+          <div class="ck-sec-head">
+            <span class="ck-sec-num">1</span> Phiếu sự cố
+            <i class="ck-help" data-lucide="info" title="Chọn ĐÚNG công đoạn bị sự cố + ngày xảy ra. Nhập giờ bắt đầu/kết thúc để tự tính số giờ (qua đêm vẫn đúng), hoặc gõ thẳng số giờ."></i>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group">
+              <label for="inc-stage">Công đoạn bị sự cố</label>
+              <select id="inc-stage"></select>
+            </div>
+            <div class="form-group" style="flex:0 0 150px">
+              <label for="inc-date">Ngày</label>
+              <input type="date" id="inc-date">
+            </div>
+            <div class="form-group" style="flex:0 0 140px">
+              <label for="inc-shift">Ca</label>
+              <select id="inc-shift"></select>
+            </div>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group" style="flex:0 0 120px">
+              <label for="inc-start">Bắt đầu</label>
+              <input type="time" id="inc-start">
+            </div>
+            <div class="form-group" style="flex:0 0 120px">
+              <label for="inc-end">Kết thúc</label>
+              <input type="time" id="inc-end">
+            </div>
+            <div class="form-group x2-num6">
+              <label for="inc-hours">Số giờ sự cố</label>
+              <input type="number" id="inc-hours" min="0" max="24" step="0.1" placeholder="VD: 1,5">
+            </div>
+          </div>
+        </div>
+
+        <!-- ② NỘI DUNG -->
+        <div class="ck-sec" data-zone="2">
+          <div class="ck-sec-head">
+            <span class="ck-sec-num">2</span> Nội dung sự cố
+            <i class="ck-help" data-lucide="info" title="Loại sự cố + mô tả giúp Ban lãnh đạo duyệt nhanh và tổng hợp được nguyên nhân theo tháng."></i>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group" style="flex:0 0 220px">
+              <label for="inc-cause">Loại sự cố</label>
+              <select id="inc-cause"></select>
+            </div>
+            <div class="form-group">
+              <label for="inc-reporter">Người báo</label>
+              <input type="text" id="inc-reporter" placeholder="Tên người phát hiện / tổ trưởng">
+            </div>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group">
+              <label for="inc-desc">Mô tả / nguyên nhân</label>
+              <input type="text" id="inc-desc" placeholder="VD: đứt dây curoa máy bào, cháy át lò hơi…">
+            </div>
+            <div class="form-group">
+              <label for="inc-fix">Biện pháp xử lý</label>
+              <input type="text" id="inc-fix" placeholder="VD: gọi thợ điện, thay dao…">
+            </div>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group">
+              <label for="inc-note">Ghi chú</label>
+              <input type="text" id="inc-note" placeholder="Không bắt buộc">
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ③ DUYỆT -->
+        <div class="ck-sec" data-zone="3">
+          <div class="ck-sec-head">
+            <span class="ck-sec-num">3</span> Duyệt phiếu
+            <i class="ck-help" data-lucide="info" title="Phiếu CHỜ DUYỆT chưa trừ vào hiệu suất. Khi Ban lãnh đạo (Quản Trị / Ban Quản Lý) bấm DUYỆT, số giờ của phiếu tự trở thành giờ sự cố của đúng công đoạn + ngày — ô nhập tay trên thẻ ngày bị khoá để tránh đếm 2 lần."></i>
+          </div>
+          <div class="inc-note-row">
+            <span class="inc-pill is-wait">Chờ duyệt</span> chưa trừ giờ →
+            <span class="inc-pill is-ok">Đã duyệt</span> tự trừ vào công suất/hiệu suất →
+            <span class="inc-pill is-no">Từ chối</span> không tính.
+            <span class="inc-perm-hint" data-manager-only>Bạn có quyền DUYỆT / TỪ CHỐI / MỞ LẠI.</span>
+          </div>
+          <div class="inc-stats" id="inc-stats">Chưa có phiếu sự cố.</div>
+        </div>
+
+        <!-- ④ DANH SÁCH THEO NGÀY -->
+        <div class="ck-sec" data-zone="4">
+          <div class="ck-sec-head">
+            <span class="ck-sec-num">4</span> Danh sách phiếu (theo ngày)
+            <i class="ck-help" data-lucide="info" title="Lọc theo tháng / công đoạn / trạng thái. Bấm DUYỆT để áp giờ vào công đoạn; MỞ LẠI để trả giờ về; sửa/xoá phiếu đã duyệt chỉ Ban lãnh đạo làm được."></i>
+          </div>
+          <div class="inc-filter-bar">
+            <div class="form-group">
+              <label for="inc-filter-month">Tháng</label>
+              <input type="month" id="inc-filter-month">
+            </div>
+            <div class="form-group">
+              <label for="inc-filter-stage">Công đoạn</label>
+              <select id="inc-filter-stage"></select>
+            </div>
+            <div class="form-group">
+              <label for="inc-filter-status">Trạng thái</label>
+              <select id="inc-filter-status">
+                <option value="all">Tất cả</option>
+                <option value="cho_duyet">Chờ duyệt</option>
+                <option value="da_duyet">Đã duyệt</option>
+                <option value="tu_choi">Từ chối</option>
+              </select>
+            </div>
+            <div class="form-group inc-search-g">
+              <label for="inc-search">Tìm nhanh</label>
+              <input type="search" id="inc-search" placeholder="công đoạn · loại · mô tả · người báo">
+            </div>
+          </div>
+          <div id="inc-list-area" class="inc-list-area"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btn-inc-reset"><i data-lucide="rotate-ccw"></i> Làm Mới Form</button>
+        <button type="button" class="btn btn-primary" id="btn-inc-save"><i data-lucide="save"></i> Lưu Phiếu</button>
+        <button type="button" class="btn btn-outline" id="btn-inc-close"><i data-lucide="x"></i> Đóng</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

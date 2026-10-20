@@ -673,33 +673,102 @@ import { state } from './state.js';
     return d;
   }
 
-  // ─── GIỜ SỰ CỐ CHO PHÉP THEO (THẺ CÔNG ĐOẠN, NGÀY) ─────────────
-  // state.x2StageIncidents = { '<cardId>|<YYYY-MM-DD>': giờ } — người dùng nhập
-  // ở ô "Sự cố cho phép" trên ĐẦU THẺ NGÀN; giờ này được TRỪ khỏi giờ làm
-  // khi tính CÔNG SUẤT → HIỆU SUẤT của 7 thẻ Xưởng 2 (Cắt · Bổ Ống · Bào Thô ·
-  // Chọn Nan · Bào Tinh · Bullig · Ép Ván). Đọc tại đây (utils) để press.js +
-  // xuong2.js dùng chung KHÔNG vòng import; GHI/ load / save nằm trong xuong2.js.
+  // ─── GIỜ SỰ CỐ: NHẬP TAY + PHIẾU BÁO CÁO SỰ CỐ ĐÃ DUYỆT ────────
+  // 2 NGUỒN dữ liệu:
+  //   ① state.x2StageIncidents = { '<cardId>|<YYYY-MM-DD>': giờ } — NHẬP TAY trên
+  //      đầu thẻ ngày của từng công đoạn (hành vi cũ, dùng cho dữ liệu lịch sử /
+  //      sửa nhanh khi chưa kịp lập phiếu).
+  //   ② state.x2IncidentReports = [{ stage, date, hours, status, ... }] — PHIẾU
+  //      BÁO CÁO SỰ CỐ (tab Công Đoạn SX). CHỈ phiếu status 'da_duyet' mới tính.
+  // GIỜ SỰ CỐ HIỆU LỰC của (công đoạn, ngày) = TỔNG giờ phiếu ĐÃ DUYỆT; nếu chưa
+  // có phiếu duyệt nào thì dùng số NHẬP TAY. Nhờ vậy khi Ban lãnh đạo DUYỆT phiếu,
+  // thời gian sự cố tự "link" sang đúng công đoạn + ngày mà KHÔNG phải sửa tay —
+  // mọi nơi đọc chung stageIncidentOf() (13 thẻ Xưởng 2 · Than Hóa + Sấy · 8 thẻ
+  // Xưởng 1 · Ép Ván · Bảng Tổng Hợp Công Suất · Truy Xuất · Xuất Excel).
+  // Cache theo THAM CHIẾU mảng + SỐ PHIÊN BẢN (bumpIncidentCache mỗi lần ghi) để
+  // stageIncidentOf() vẫn O(1) dù được gọi hàng nghìn lần khi vẽ bảng.
+  let incidentMapRef = null;
+  let incidentMapVer = 0;
+  let incidentMapValue = null;
+  function bumpIncidentCache() {
+    incidentMapVer++;
+    incidentMapValue = null;
+    incidentMapRef = null;
+  }
+  function incidentReportMap() {
+    const list = Array.isArray(state.x2IncidentReports) ? state.x2IncidentReports : [];
+    if (incidentMapValue && incidentMapRef === list && incidentMapValue.__ver === incidentMapVer) return incidentMapValue;
+    const map = { __ver: incidentMapVer };
+    list.forEach((r) => {
+      if (!r || !r.date || !r.stage) return;
+      const k = `${String(r.stage).trim()}|${String(r.date).trim()}`;
+      const slot = map[k] || (map[k] = { approved: 0, approvedCount: 0, pending: 0, rejected: 0 });
+      const st = String(r.status || '');
+      if (st === 'da_duyet') {
+        const h = Number(r.hours);
+        if (Number.isFinite(h) && h > 0) { slot.approved += h; slot.approvedCount++; }
+      } else if (st === 'cho_duyet') slot.pending++;
+      else if (st === 'tu_choi') slot.rejected++;
+    });
+    // Làm tròn tổng (0,1 + 0,2 → 0,3) để hiệu suất không lệch số lẻ vô nghĩa
+    Object.keys(map).forEach((k) => {
+      if (k !== '__ver') map[k].approved = Math.round(map[k].approved * 100) / 100;
+    });
+    incidentMapValue = map;
+    incidentMapRef = list;
+    return map;
+  }
+  function incidentReportStatsOf(stage, date) {
+    const m = incidentReportMap();
+    return m[`${String(stage || '').trim()}|${String(date || '').trim()}`]
+      || { approved: 0, approvedCount: 0, pending: 0, rejected: 0 };
+  }
+  // Tổng giờ sự cố của các PHIẾU ĐÃ DUYỆT (0 = chưa có phiếu nào được duyệt)
+  function incidentApprovedHoursOf(stage, date) {
+    return incidentReportStatsOf(stage, date).approved || 0;
+  }
   function stageIncidentKey(cardId, date) {
     return `${String(cardId || '').trim()}|${String(date || '').trim()}`;
   }
+  // GIỜ SỰ CỐ HIỆU LỰC: ưu tiên tổng giờ phiếu ĐÃ DUYỆT, không có thì số nhập tay
   function stageIncidentOf(cardId, date) {
+    const auto = incidentApprovedHoursOf(cardId, date);
+    if (auto > 0) return auto;
     const v = Number((state.x2StageIncidents || {})[stageIncidentKey(cardId, date)]);
     return Number.isFinite(v) && v > 0 ? v : 0;
   }
-  // Giờ làm VIỆC ĐƯỢC TÍNH = giờ thực − giờ sự cố cho phép (không bao giờ < 0)
+  // Giờ làm VIỆC ĐƯỢC TÍNH = giờ thực − giờ sự cố (không bao giờ < 0)
   function stageEffHours(cardId, date, hours) {
     const h = Number(hours) || 0;
     return Math.max(0, h - stageIncidentOf(cardId, date));
   }
-  // Ô NHẬP "Sự cố cho phép" đặt trên ĐẦU THẺ NGÀN của từng thẻ công đoạn.
-  // Uỷ nhiệm `change` trên document (js/events.js) → xuong2.onStageIncidentChange.
+  // Ô NHẬP "Sự cố" đặt trên ĐẦU THẺ NGÀY của từng thẻ công đoạn + CHIP trạng thái:
+  //   • Có phiếu ĐÃ DUYỆT  → ô bị KHOÁ (readonly) + chip "🧾 N phiếu đã duyệt"
+  //   • Có phiếu CHỜ DUYỆT  → chip "⏳ N chờ duyệt" (chưa trừ giờ)
+  //   • Luôn có nút "＋ Báo cáo" → mở form Báo Cáo Sự Cố điền sẵn công đoạn + ngày
+  // Uỷ nhiệm `change`/`input` trên document (js/events.js) → xuong2.onStageIncident…
+  // Bấm chip/nút → js/events.js đọc data-inc-open / data-inc-new.
   function stageIncidentInputHtml(cardId, date, label) {
-    const v = stageIncidentOf(cardId, date);
+    const st = incidentReportStatsOf(cardId, date);
+    const manual = Number((state.x2StageIncidents || {})[stageIncidentKey(cardId, date)]);
+    const auto = st.approved > 0;
+    const v = auto ? st.approved : (Number.isFinite(manual) && manual > 0 ? manual : 0);
     const dmy = formatDateDDMMYY(date);
-    return `<span class="x2-day-inc" title="Giờ SỰ CỐ CHO PHÉP của ngày ${dmy} (máy hỏng, thiếu nan, mất điện…) — giờ này được TRỪ khỏi giờ làm khi tính CÔNG SUẤT → HIỆU SUẤT. Để trống = 0.">
+    const key = `${cardId}|${date}`;
+    const title = auto
+      ? `Giờ sự cố ngày ${dmy} lấy từ ${st.approvedCount} phiếu báo cáo sự cố ĐÃ DUYỆT (${v} giờ). Muốn đổi: mở "Báo Cáo Sự Cố" sửa/xoá phiếu — nhập tay bị KHOÁ để tránh đếm 2 lần.`
+      : `Giờ SỰ CỐ CHO PHÉP của ngày ${dmy} (máy hỏng, thiếu nan, mất điện…) — giờ này được TRỪ khỏi giờ làm khi tính CÔNG SUẤT → HIỆU SUẤT. Để trống = 0. Nên lập phiếu "Báo Cáo Sự Cố" để có biên bản + người duyệt.`;
+    const chipAuto = auto
+      ? `<button type="button" class="x2-inc-chip is-auto" data-inc-open="${escapeHTML(key)}" title="Có ${st.approvedCount} phiếu sự cố ĐÃ DUYỆT cho ${escapeHTML(dmy)} — bấm để xem/sửa phiếu">🧾 ${st.approvedCount} phiếu</button>`
+      : '';
+    const chipPending = st.pending > 0
+      ? `<button type="button" class="x2-inc-chip is-pending" data-inc-open="${escapeHTML(key)}" title="${st.pending} phiếu sự cố đang CHỜ DUYỆT cho ${escapeHTML(dmy)} — chưa trừ vào hiệu suất cho tới khi duyệt">⏳ ${st.pending} chờ</button>`
+      : '';
+    const btnNew = `<button type="button" class="x2-inc-chip is-new" data-inc-new="${escapeHTML(key)}" title="Lập phiếu Báo Cáo Sự Cố cho ngày ${escapeHTML(dmy)} (điền sẵn công đoạn + ngày)">＋ Báo cáo</button>`;
+    return `<span class="x2-day-inc${auto ? ' is-auto' : ''}" title="${escapeHTML(title)}">
       <i data-lucide="alert-triangle"></i> ${escapeHTML(label || 'Sự cố')}:
-      <input type="number" class="x2-say-inc-input" data-x2-incident="${escapeHTML(cardId)}" data-x2-incident-date="${escapeHTML(date)}" min="0" step="any" value="${v > 0 ? v : ''}" placeholder="0" aria-label="Giờ sự cố cho phép">
-      <small>h</small>
+      <input type="number" class="x2-say-inc-input" data-x2-incident="${escapeHTML(cardId)}" data-x2-incident-date="${escapeHTML(date)}" min="0" step="any" value="${v > 0 ? v : ''}" placeholder="0"${auto ? ' readonly' : ''} aria-label="Giờ sự cố cho phép">
+      <small>h</small>${chipAuto}${chipPending}${btnNew}
     </span>`;
   }
 
@@ -984,6 +1053,10 @@ export {
   shiftSuggestOf,
   stageEffHours,
   stageIncidentInputHtml,
+  bumpIncidentCache,
+  incidentReportMap,
+  incidentReportStatsOf,
+  incidentApprovedHoursOf,
   stageIncidentKey,
   stageIncidentOf,
   uiChartWinSize,

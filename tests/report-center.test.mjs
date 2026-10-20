@@ -94,10 +94,10 @@ global.XLSX = {
 // ─── A. DANH MỤC BÁO CÁO ─────────────────────────────────────────
 check('A1. Có đủ 6 nhóm báo cáo (X2/X1/Kế Hoạch/Nguyên Liệu/QC/Nhân Sự)',
   specs.REPORT_GROUPS.length === 6 && specs.REPORT_GROUPS.map(g => g.id).join(',') === 'x2,x1,planning,materials,qc,hr');
-check('A2. Tổng số báo cáo = 43 (16 X2 + 8 X1 + 3 KH + 2 NL + 3 QC + 11 NS)',
-  specs.REPORT_SPECS.length === 43);
-check('A3. 13 báo cáo Xưởng 2 + 8 báo cáo Xưởng 1',
-  specs.reportsOfGroup('x2').length === 16 && specs.reportsOfGroup('x1').length === 8);
+check('A2. Tổng số báo cáo = 44 (17 X2 + 8 X1 + 3 KH + 2 NL + 3 QC + 11 NS)',
+  specs.REPORT_SPECS.length === 44);
+check('A3. 14 báo cáo Xưởng 2 (gồm Báo Cáo Sự Cố) + 8 báo cáo Xưởng 1',
+  specs.reportsOfGroup('x2').length === 17 && specs.reportsOfGroup('x1').length === 8);
 check('A4. MỌI thẻ có nguồn xuất đều có báo cáo (22 thẻ)',
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 22 &&
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).every(cardId => !!specs.reportIdForCard(cardId)));
@@ -243,7 +243,7 @@ check('F3. events.js nối center: mở theo thẻ/tab + 4 nút + lọc',
   evSrc.includes("openReportCenter('plan-items')") && evSrc.includes("openReportCenter('qc-export')") &&
   evSrc.includes("safeOn('report-center-filters',      'change', onReportFilterChange)"));
 check('F4. sw.js: cache v275 + nạp report-specs.js/report-center.js vào APP_SHELL',
-  swSrc.includes("nha-may-ngoc-son-v288") && swSrc.includes("./js/report-specs.js") &&
+  swSrc.includes("nha-may-ngoc-son-v289") && swSrc.includes("./js/report-specs.js") &&
   swSrc.includes("./js/report-center.js"));
 check('F5. CSS có khối .rc-* + in lặp tiêu đề + JS ghi rõ giới hạn viền/màu',
   cssSrc.includes('.rc-card') && cssSrc.includes('.rc-filter-grid') &&

@@ -8,9 +8,9 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
-import { escapeHTML, showToast } from './utils.js';
+import { bumpIncidentCache, escapeHTML, showToast } from './utils.js';
 // 3 miền TRƯỚC ĐÂY THIẾU trong file bamboo_data.json (thẻ Truy Xuất Đầu Vào →
 // Đầu Ra + tab Kế Hoạch cần): định mức nguyên vật liệu · sản lượng ép ván ·
 // bản ghi kế hoạch. Nay ghi kèm để nạp lại file không mất số.
@@ -492,6 +492,29 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
     if (changed) {
       state.qcPressLogs = merged;
       try { localStorage.setItem(STORAGE_KEY_QC_PRESS, JSON.stringify(merged)); } catch (err) {}
+    }
+    return merged;
+  }
+
+  // ─── GỘP PHIẾU BÁO CÁO SỰ CỐ (file / backup / mây) ──
+  // Mỗi phiếu 1 id; bản có updatedAt/createdAt MỚI HƠN thắng → không mất phiếu vừa
+  // duyệt/xoá trạng thái ở máy khác. Không bao giờ xoá phiếu đang có trên máy.
+  function restoreX2IncidentReports(incomingArr) {
+    const incoming = Array.isArray(incomingArr) ? incomingArr.filter(r => r && r.id) : [];
+    if (!incoming.length) return state.x2IncidentReports || [];
+    const stamp = s => String((s && (s.updatedAt || s.createdAt)) || '');
+    const map = new Map((state.x2IncidentReports || []).filter(r => r && r.id).map(r => [r.id, r]));
+    let changed = false;
+    incoming.forEach(r => {
+      const cur = map.get(r.id);
+      if (!cur || stamp(r) >= stamp(cur)) { map.set(r.id, r); changed = true; }
+    });
+    const merged = [...map.values()];
+    if (changed) {
+      state.x2IncidentReports = merged;
+      try { localStorage.setItem(STORAGE_KEY_X2_INCIDENT_REPORTS, JSON.stringify(merged)); } catch (err) {}
+      // Giờ sự cố hiệu lực đọc từ mảng này → xoá cache bản đồ duyệt để bảng vẽ lại đúng
+      try { bumpIncidentCache(); } catch (err) {}
     }
     return merged;
   }
@@ -996,6 +1019,10 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         if (loaded.x2BaoVanRates) {
           restoreX2BaoVanRates(loaded.x2BaoVanRates); // GỘP theo tháng + công đoạn (cả 2 tấm/h)
         }
+        // PHIẾU BÁO CÁO SỰ CỐ (gộp theo id — chạy ĐỘC LẬP, không nằm trong chuỗi if lồng)
+        if (Array.isArray(loaded.x2IncidentReports)) {
+          restoreX2IncidentReports(loaded.x2IncidentReports);
+        }
         if (loaded.x2SayRates) {
           restoreX2SayRates(loaded.x2SayRates); // ĐỊNH MỨC thời gian than hóa (phút/m³) — gộp theo tháng
         if (loaded.x2SayTimes) {
@@ -1163,6 +1190,10 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         if (loaded.x2BaoVanRates) {
           restoreX2BaoVanRates(loaded.x2BaoVanRates); // GỘP theo tháng + công đoạn (cả 2 tấm/h)
         }
+        // PHIẾU BÁO CÁO SỰ CỐ (gộp theo id — chạy ĐỘC LẬP, không nằm trong chuỗi if lồng)
+        if (Array.isArray(loaded.x2IncidentReports)) {
+          restoreX2IncidentReports(loaded.x2IncidentReports);
+        }
         if (loaded.x2SayRates) {
           restoreX2SayRates(loaded.x2SayRates); // ĐỊNH MỨC thời gian than hóa (phút/m³) — gộp theo tháng
         if (loaded.x2SayTimes) {
@@ -1292,6 +1323,7 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         x2SayTimes: state.x2SayTimes || {},
         x2SayIncidents: state.x2SayIncidents || {},
       x2StageIncidents: state.x2StageIncidents || {},
+      x2IncidentReports: state.x2IncidentReports || [],
 
 
 
@@ -1425,6 +1457,7 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
       x2SayTimes: state.x2SayTimes || {},
       x2SayIncidents: state.x2SayIncidents || {},
         x2StageIncidents: state.x2StageIncidents || {},
+      x2IncidentReports: state.x2IncidentReports || [],
 
 
 
@@ -1554,6 +1587,9 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         }
         if (imported && imported.x2BaoVanRates) {
           restoreX2BaoVanRates(imported.x2BaoVanRates); // GỘP theo tháng + công đoạn
+        }
+        if (imported && Array.isArray(imported.x2IncidentReports)) {
+          restoreX2IncidentReports(imported.x2IncidentReports); // PHIẾU SỰ CỐ — gộp
         }
         if (imported && imported.x2SayRates) {
           restoreX2SayRates(imported.x2SayRates); // ĐỊNH MỨC thời gian than hóa (phút/m³) — gộp theo tháng
@@ -1793,6 +1829,7 @@ export {
   restoreQcFinal,
   restoreQcFinalRates,
   restoreQcPressLogs,
+  restoreX2IncidentReports,
   restoreX2BaoThoRates,
   restoreX2BoOngRates,
   restoreX2ChonNanRates,

@@ -89,6 +89,9 @@ export function normalizeUser(u) {
 // ─── TRUY VẤN QUYỀN ───────────────────────────────────────────
 export function getUserRole() { return currentUser()?.role || null; }
 export function isAdmin() { return getUserRole() === 'admin'; }
+// Ban Quản Lý (Ban lãnh đạo) — xem vùng nâng cao + duyệt phiếu (kho, sự cố, nghỉ,
+// tăng ca) + DUYỆT ĐỊNH MỨC (xem canApproveRate bên dưới).
+export function isManager() { return getUserRole() === 'manager'; }
 
 // Quyền sửa của tab CHA 'kanban' (Công Đoạn SX) = có ít nhất MỘT xưởng
 // (x1 hoặc x2) — vì requireEditPermission() kiểm theo currentTabId() = 'kanban'
@@ -138,6 +141,13 @@ export function canEditTab(tabId) {
 // Mọi nơi lưu định mức đều đi qua cloud.requireRatePermission() → cổng này,
 // nên muốn đổi chính sách chỉ cần sửa tại đây.
 export function canEditRate() { return isAdmin(); }
+
+// ─── QUYỀN PHÊ DUYỆT ĐỊNH MỨC ───────────────────────────────────
+// Bảng Định Mức tổng hợp (nút "Định Mức" ở tab Công Đoạn SX — js/rate-center.js):
+// NHẬP số = admin (canEditRate ở trên) · DUYỆT = Quản Trị + Ban Quản Lý (Ban
+// lãnh đạo). Tách khỏi hr.canApproveLeave để không phải import hr.js vào module
+// định mức (tránh vòng import), nhưng CÙNG chính sách.
+export function canApproveRate() { return isAdmin() || isManager(); }
 
 // Sửa được biểu đồ hay không = quyền SỬA TAB NGUỒN của biểu đồ đó.
 // (Khái niệm "vùng nâng cao" của biểu đồ đã bị XÓA — xem js/dashboard.js)

@@ -296,6 +296,10 @@
             <i data-lucide="alert-triangle"></i> <span class="hide-mobile">Báo Cáo Sự Cố</span>
             <span class="inc-count-chip" id="btn-incident-count">0</span>
           </button>
+          <button type="button" class="btn btn-outline" id="btn-rate-center" title="Bảng ĐỊNH MỨC CÔNG SUẤT của TẤT CẢ công đoạn xưởng đang xem — nhập theo tháng, có phê duyệt (Admin + Ban Quản Lý). Người xem chỉ đọc số + thông tin duyệt.">
+            <i data-lucide="target"></i> <span class="hide-mobile">Định Mức</span>
+            <span class="rc-pending-chip" id="btn-rate-pending" hidden>0</span>
+          </button>
           <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-kanban" title="Lịch sử thay đổi của tab này (chỉ Admin)">
             <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
           </button>
@@ -655,7 +659,7 @@
                    Bảng Lịch Sử Cắt/Chọn + Bảng Công Suất Theo Ngày -->
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-cut-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-cut-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cut">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Cắt/Chọn</button>
               </div>
@@ -764,7 +768,7 @@
               </div>
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-blg">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Bốc Luồng</button>
               </div>
@@ -855,7 +859,7 @@
                    Nhân Sự (vị trí "Bổ Ống" — Xưởng 2, đúng ngày) — KHÔNG có ô
                    nhập tay, chỉ hiện ở đầu thẻ ngày của bảng lịch sử bên dưới -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-ong-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ Ống theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-ong-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ Ống theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-x2-ong-all" title="Điền KL ống đem bổ = toàn bộ tồn nhóm ống đạt đang chờ bổ"><i data-lucide="arrow-down-to-line"></i> Lấy Hết Tồn</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bo-ong">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bổ Ống</button>
@@ -951,7 +955,7 @@
                    (vị trí "Bào thô" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay;
                    SỐ LƯỢNG THANH + THỂ TÍCH QUY ĐỔI tự lấy từ công đoạn Chọn Nan Thô -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-bt-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Thô theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-bt-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Thô theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bao-tho">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Chạy Máy</button>
               </div>
@@ -1076,7 +1080,7 @@
               <!-- NGƯỜI CHỌN NAN + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự
                    (vị trí "Chọn nan" — Xưởng 2, đúng ngày) — KHÔNG có ô nhập tay -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-cn-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Chọn Nan theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-cn-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Chọn Nan theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cn">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Chọn Nan</button>
               </div>
@@ -1197,7 +1201,7 @@
           <div class="x2-say-rate-line" id="x2-say-rate-line">
             <span class="x2-rate-title"><i data-lucide="flame"></i> Thời gian than hóa:</span>
             <span class="x2-say-rate-chip" id="x2-say-rate-chip" title="Đổi số phút ở nút Định mức (theo tháng, riêng Ván/Bullig)"></span>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-x2-say-rate" data-perm="x2" data-admin-only title="Mở bảng định mức thời gian 1 lần than hóa theo tháng (Ván / Bullig) — CHỈ Quản Trị sửa">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-x2-say-rate" hidden data-perm="x2" data-admin-only title="Mở bảng định mức thời gian 1 lần than hóa theo tháng (Ván / Bullig) — CHỈ Quản Trị sửa">
               <i data-lucide="table-2"></i> Định mức
             </button>
           </div>
@@ -1751,7 +1755,7 @@
               <!-- NGƯỜI BÀO + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí
                    chứa "bào tinh" / "bào thanh" — Xưởng 2, đúng ngày) -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:10px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-btinh-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Tinh theo tháng — 1 chỉ số CHUNG (thanh/giờ) dùng cho CẢ Bào tinh · Hạ cấp · Bào thanh — CHỈ Quản Trị sửa">
+                <button type="button" class="btn btn-outline" id="btn-x2-btinh-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Tinh theo tháng — 1 chỉ số CHUNG (thanh/giờ) dùng cho CẢ Bào tinh · Hạ cấp · Bào thanh — CHỈ Quản Trị sửa">
                   <i data-lucide="target"></i> Định mức
                 </button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-btinh">Làm Mới Form</button>
@@ -1813,7 +1817,7 @@
               <div class="x2-epv-head-btns" role="group" aria-label="Thao tác nhanh thẻ Ép Ván">
                 <button type="button" class="btn btn-primary btn-icon btn-sm" id="btn-add-press-2" data-perm="press" title="Thêm Lượt Ép — mở form nhập lượt ép ván (ván thô · thanh · keo · phụ gia · thành phẩm)"><i data-lucide="plus"></i></button>
                 <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-add-press-note-2" data-perm="press" title="Ghi Chú Giải Trình — tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt"><i data-lucide="pencil"></i><i data-lucide="alert-triangle" class="x2-epv-note-warn"></i></button>
-                <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-x2-epv-rate" data-perm="press" data-admin-only title="Định mức — mở bảng ĐỊNH MỨC công suất Ép Ván theo tháng (m³/h), nguồn cho cột Hiệu suất của thẻ ngày — CHỈ Quản Trị sửa"><i data-lucide="target"></i></button>
+                <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-x2-epv-rate" hidden data-perm="press" data-admin-only title="Định mức — mở bảng ĐỊNH MỨC công suất Ép Ván theo tháng (m³/h), nguồn cho cột Hiệu suất của thẻ ngày — CHỈ Quản Trị sửa"><i data-lucide="target"></i></button>
                 <button type="button" class="btn-dash-help" id="btn-epv-help" aria-haspopup="dialog" title="Hướng dẫn điền thông tin & cách tính thể tích, công suất, hiệu suất (kèm ví dụ minh hoạ)">?</button>
               </div>
             </div>
@@ -1977,7 +1981,7 @@
               <!-- NGƯỜI LÀM + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (phân vị
                    "Gia công" / "Chọn thanh" — Xưởng 2, đúng ngày) — KHÔNG nhập tay -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-bl-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bullig theo tháng + công đoạn nhỏ (thanh/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-bl-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bullig theo tháng + công đoạn nhỏ (thanh/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bl">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bullig</button>
               </div>
@@ -2095,7 +2099,7 @@
               </div>
               <!-- NGƯỜI CẮT / NGƯỜI XẺ + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-cv-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Ván theo tháng + công đoạn (Cắt ván = tấm/h · Xẻ thanh = thanh/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-cv-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Ván theo tháng + công đoạn (Cắt ván = tấm/h · Xẻ thanh = thanh/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cv">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Cắt Ván</button>
               </div>
@@ -2195,7 +2199,7 @@
               </div>
               <!-- NGƯỜI BÀO / NGƯỜI CHÀ + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự -->
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-bv-rate" data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Ván theo tháng + công đoạn (CẢ 2 = tấm/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-bv-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bào Ván theo tháng + công đoạn (CẢ 2 = tấm/h) (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-bv">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Bào Ván</button>
               </div>
@@ -2507,7 +2511,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-cat-ong-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-cat-ong-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Ống theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-cat-ong-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Ống theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-cat-ong">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Cắt Ống</button>
               </div>
@@ -2573,7 +2577,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-say-sinh-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-say-sinh-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Sấy Sinh theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-say-sinh-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Sấy Sinh theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-say-sinh">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Sấy Sinh</button>
               </div>
@@ -2632,7 +2636,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-boc-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-boc-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-boc-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-boc">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Bốc</button>
               </div>
@@ -2698,7 +2702,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-loc-ong-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-loc-ong-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Ống theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-loc-ong-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Ống theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-loc-ong">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Lọc Ống</button>
               </div>
@@ -2764,7 +2768,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-cat-mat-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-cat-mat-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Mắt theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-cat-mat-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt Mắt theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-cat-mat">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Cắt Mắt</button>
               </div>
@@ -2830,7 +2834,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-bo-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-bo-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-bo-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-bo">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Bổ</button>
               </div>
@@ -2896,7 +2900,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-phoi-say-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-phoi-say-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Phơi Sấy theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-phoi-say-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Phơi Sấy theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-phoi-say">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Phơi Sấy</button>
               </div>
@@ -2962,7 +2966,7 @@
               </div>
               <div class="x2-cut-calc" id="x1-loc-thanh-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-loc-thanh-rate" data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Thanh / Bó Xô theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x1-loc-thanh-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Thanh / Bó Xô theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x1-loc-thanh">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Lọc Thanh</button>
               </div>
@@ -7507,6 +7511,25 @@
     </div>
   </div>
 
+
+  <!-- ═══ BẢNG ĐỊNH MỨC TỔNG HỢP — TẤT CẢ CÔNG ĐOẠN CỦA XƯỞNG (tab Công Đoạn SX).
+       Mở bằng nút "Định Mức" trên thanh tiêu đề (cạnh "Lịch Sử"). Dòng = THÁNG,
+       cột = toàn bộ công đoạn của xưởng đang chọn; PHÊ DUYỆT theo tháng (Quản Trị
+       + Ban Quản Lý); người xem chỉ đọc số + "Duyệt bởi ...".
+       Nội dung dựng động bởi js/rate-center.js ═══ -->
+  <div class="modal-overlay" id="modal-rate-center">
+    <div class="modal-card rate-center-card">
+      <div class="modal-header">
+        <h3><i data-lucide="target"></i> Bảng Định Mức Công Suất</h3>
+        <button class="modal-close-btn" id="btn-close-rate-center" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" id="rc-body"><!-- Nội dung dựng động bởi js/rate-center.js --></div>
+      <div class="modal-footer">
+        <span class="rc-foot-note">Định mức đã lưu có hiệu lực tính Hiệu suất ngay; phê duyệt là xác nhận chính thức (Quản Trị / Ban Quản Lý).</span>
+        <button type="button" class="btn btn-outline" id="btn-rc-close">Đóng</button>
+      </div>
+    </div>
+  </div>
 
   <div class="kb-pick-bar" id="kb-pick-bar" role="status" aria-live="polite">
     <span>Đã chọn <b id="kb-pick-count">0</b> lô</span>

@@ -18,6 +18,7 @@ import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilter
 import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
+import { loadRateApprovals, updateRatePendingBadge } from './rate-center.js';
 import { loadX2PhuPham, loadX2Stocktakes, loadX2YieldRates } from './x2-phu-pham.js'; // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ
 import { loadSuppliers } from './suppliers.js';
 import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, baoTinhUsedLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan, loadXuong2CatVan, loadX2CatVanRates, loadX2CatVanSpan, loadXuong2BaoVan, loadX2BaoVanRates, loadX2BaoVanSpan, loadXuong2HoTro } from './xuong2.js';
@@ -128,6 +129,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadQcFinalRates();  // Định mức kiểm sau sản xuất theo tháng (tấm/h)
     loadQcPressLogs();   // NHẬT KÝ THEO DÕI ÉP VÁN (verdict PASS/Fail — js/qc-press.js)
     loadX2IncidentReports(); // PHIẾU BÁO CÁO SỰ CỐ (giờ sự cố lấy từ phiếu ĐÃ DUYỆT)
+    loadRateApprovals(); // BẢNG ĐỊNH MỨC TỔNG HỢP — bản ghi PHÊ DUYỆT theo (xưởng, tháng)
     loadKilnData(); // Độ ẩm lò sấy + ngưỡng đạt (QC nhập hàng ngày — js/kiln.js)
     loadHrData();
     // DỌN DỮ LIỆU CŨ: xóa hẳn lô nan còn sót stage 'bao_tinh' (cột Kanban "4. Bào
@@ -459,6 +461,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     dashboardDirty = true;
     // Huy hiệu số phiếu sự cố chờ duyệt trên nút thanh tiêu đề tab Công Đoạn SX
     try { updateIncidentBadge(); } catch (e) { /* không chặn render */ }
+    // Huy hiệu số THÁNG ĐỊNH MỨC đang chờ duyệt / cần duyệt lại (nút "Định Mức")
+    try { updateRatePendingBadge(); } catch (e) { /* không chặn render */ }
     const filtered = getFilteredBatches();
     // TỐI ƯU: chỉ vẽ lại khu Kanban khi tab Công Đoạn đang mở. Trước đây MỖI
     // lần lưu/đồng bộ mây đều vẽ lại toàn bộ bảng Kanban (mỗi thẻ 1 khối DOM)

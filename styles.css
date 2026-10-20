@@ -12484,3 +12484,82 @@ body[data-fx="low"] .x1-ss-ready-panel { box-shadow: none; }
   .inc-actions .btn { min-width: 40px; min-height: 40px; }
   .x2-inc-chip { font-size: 0.62rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   BẢNG ĐỊNH MỨC TỔNG HỢP + PHÊ DUYỆT (js/rate-center.js)
+   Nút "Định Mức" trên thanh tiêu đề tab Công Đoạn SX (cạnh "Lịch Sử").
+   Dòng = THÁNG, cột = toàn bộ công đoạn của xưởng đang chọn.
+   ═══════════════════════════════════════════════════════════ */
+.rc-pending-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; margin-left: 4px;
+  border-radius: 999px; background: #d97706; color: #fff;
+  font-size: 0.66rem; font-weight: 800; line-height: 1;
+}
+.rc-pending-chip[hidden] { display: none !important; }
+
+.rate-center-card { max-width: 1180px; width: calc(100vw - 32px); }
+#rc-body { padding: 12px 16px 16px; max-height: 72dvh; overflow: auto; }
+.rc-intro { font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 10px; }
+.rc-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.rc-ws-switch { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: rgba(15, 118, 110, 0.08); }
+.rc-ws-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+  color: var(--text-muted); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+}
+.rc-ws-btn svg { width: 15px; height: 15px; }
+.rc-ws-btn.is-on { background: var(--bg-card); color: var(--primary); border-color: rgba(15, 118, 110, 0.35); box-shadow: var(--shadow-sm); }
+.rc-add-month { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-muted); }
+.rc-add-month input {
+  padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 8px;
+  background: var(--bg-input); color: var(--text-primary); font: inherit;
+}
+.rc-table-wrap { max-height: 58vh; border: 1px solid var(--border-color); border-radius: 10px; }
+.rc-table { width: 100%; min-width: 1500px; border-collapse: separate; border-spacing: 0; font-size: 0.76rem; }
+.rc-table thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color); padding: 5px 6px;
+  text-align: center; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); white-space: nowrap;
+}
+.rc-th-sub { font-weight: 600; text-transform: none; }
+.rc-th-month { left: 0; min-width: 104px; text-align: left !important; }
+.rc-th-side { min-width: 120px; }
+.rc-table tbody td { border-bottom: 1px dashed var(--border-color); padding: 4px 6px; vertical-align: middle; }
+.rc-td.rc-month { position: sticky; left: 0; z-index: 1; background: var(--bg-card); font-weight: 700; white-space: nowrap; }
+.rc-input {
+  width: 84px; padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 6px;
+  background: var(--bg-input); color: var(--text-primary); font: inherit; font-size: 0.76rem;
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+.rc-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15); }
+.rc-input.is-default { color: var(--text-muted); border-style: dashed; }
+.rc-ro { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rc-row-approved td { background: rgba(22, 163, 74, 0.04); }
+.rc-row-changed td { background: rgba(217, 119, 6, 0.07); }
+.rc-status { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+.rc-status.is-none { background: rgba(120, 113, 108, 0.14); color: var(--text-muted); }
+.rc-status.is-wait { background: rgba(217, 119, 6, 0.16); color: #b45309; }
+.rc-status.is-warn { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+.rc-status.is-ok { background: rgba(22, 163, 74, 0.16); color: #15803d; }
+.rc-status.is-changed { background: rgba(234, 88, 12, 0.14); color: #c2410c; }
+.rc-approver { line-height: 1.45; }
+.rc-approver b { color: #15803d; }
+.rc-approver-sub { font-size: 0.68rem; color: var(--text-muted); }
+.rc-approver-warn { font-size: 0.68rem; color: #b45309; }
+.rc-muted { color: var(--text-muted); }
+.rc-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.rc-actions .rc-btn { white-space: nowrap; }
+.rc-note { margin: 8px 0 0; font-size: 0.72rem; color: var(--text-muted); }
+.rc-foot-note { font-size: 0.72rem; color: var(--text-muted); margin-right: auto; }
+
+@media (max-width: 639.98px) {
+  .rate-center-card { width: calc(100vw - 12px); }
+  #rc-body { padding: 10px; max-height: 76dvh; }
+  .rc-table { min-width: 1320px; }
+  .rc-input { width: 74px; font-size: 16px; min-height: 38px; }
+  .rc-toolbar { gap: 8px; }
+  .rc-ws-btn { min-height: 38px; }
+  .rc-actions .btn { min-height: 38px; }
+  .rc-foot-note { display: none; }
+}

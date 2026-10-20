@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v289';
+  const APP_VERSION = 'v290';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -158,6 +158,15 @@
   // của phiếu tự trở thành GIỜ SỰ CỐ của đúng công đoạn + ngày đó (xem
   // utils.stageIncidentOf) — thay cho số nhập tay trên đầu thẻ ngày.
   const STORAGE_KEY_X2_INCIDENT_REPORTS = 'bamboo_tracker_x2_incident_reports_v1';
+  // BẢNG ĐỊNH MỨC TỔNG HỢP + PHÊ DUYỆT (nút "Định Mức" cạnh "Lịch Sử" ở tab
+  // Công Đoạn SX — xem js/rate-center.js). Mỗi bản ghi = 1 XƯỞNG + 1 THÁNG:
+  // [{ id 'rc-<ws>-<YYYY-MM>', ws 'x1'|'x2', month, status 'cho_duyet'|'da_duyet',
+  //    values { <khóa công đoạn>: số }, submittedBy/Name/At,
+  //    approvedBy/Name/At, updatedAt }]
+  // values = ẢNH CHỤP số định mức lúc trình/duyệt → so với số hiện tại để tự báo
+  // "Cần duyệt lại" khi ai đó sửa định mức sau khi đã duyệt.
+  // Quyền: NHẬP = admin (giữ quy tắc 34) · DUYỆT = admin + Ban Quản Lý.
+  const STORAGE_KEY_RATE_APPROVALS = 'bamboo_tracker_rate_approvals_v1';
   // Trạng thái THU GỌN bảng Kanban lô nan của thẻ "Than Hóa + Sấy" ('1' = đang
   // thu gọn: chỉ hiện thanh công cụ + bảng thống kê, ẩn bảng Kanban) — nhớ theo máy.
   const STORAGE_KEY_X2_KANBAN_COLLAPSED = 'bamboo_tracker_x2_kanban_collapsed_v1';
@@ -476,6 +485,9 @@
     // Định mức công suất ÉP VÁN theo tháng (m³/giờ): { 'YYYY-MM': m³/h } —
     // không đặt thì thẻ ngày Ép Ván chỉ hiện công suất m³/ngày.
     x2EpVanRates: {},
+    // BẢNG ĐỊNH MỨC TỔNG HỢP (nút "Định Mức" thanh tiêu đề tab Công Đoạn SX):
+    // bản ghi PHÊ DUYỆT theo (xưởng, tháng) — xem STORAGE_KEY_RATE_APPROVALS.
+    rateApprovals: [],
     // ═══ XƯỞNG 1 — 8 CÔNG ĐOẠN (04–05/10/2026) ═══════════════
     // Chuỗi: Cắt Ống → Sấy Sinh → Bốc → Lọc Ống → Cắt Mắt → Bổ →
     //        Phơi Sấy → Lọc Thanh/Bó Xô
@@ -596,6 +608,7 @@ export {
   STORAGE_KEY_X2_SAY_INCIDENT,
   STORAGE_KEY_X2_STAGE_INCIDENT,
   STORAGE_KEY_X2_INCIDENT_REPORTS,
+  STORAGE_KEY_RATE_APPROVALS,
   STORAGE_KEY_X2_KANBAN_COLLAPSED,
   STORAGE_KEY_X2_EP_VAN_RATE,
   STORAGE_KEY_X2_LOT_LOCATIONS,

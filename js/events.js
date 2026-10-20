@@ -10,6 +10,8 @@ import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openCh
 import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, closeX2ExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, handleX2ExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, openX2ExportModal, openX2ExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
 import { closeHistoryModal, openHistoryModal, setHistoryDomainFilter, setHistoryTabFilter, setHistoryUserFilter, clearHistory } from './history.js';
 import { closeReportCenter, exportReportGroup, handleReportSubmit, onReportCenterClick, onReportFilterChange, openReportCenter, openReportPreview } from './report-center.js';
+// BẢNG ĐỊNH MỨC TỔNG HỢP + PHÊ DUYỆT (nút "Định Mức" cạnh "Lịch Sử" — tab Công Đoạn SX)
+import { closeRateCenter, onRateCenterClick, openRateCenter } from './rate-center.js';
 import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey, aiSetModel, runAiAnalysis, initAiFabDrag, aiFabDragConsumed, aiQuickAsk, aiHideBubble, aiSetAutoGreet } from './ai.js';
 import { closeColumnFilters } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
@@ -535,6 +537,23 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       rcOverlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReportCenter(); });
       rcOverlay.addEventListener('click', (e) => { if (e.target === rcOverlay) closeReportCenter(); });
     }
+
+    // ── BẢNG ĐỊNH MỨC TỔNG HỢP (nút cạnh "Lịch Sử" — tất cả công đoạn 1 xưởng) ──
+    // Mở cho MỌI người (người xem chỉ đọc số + "Duyệt bởi ..."); nút Lưu chỉ hiện
+    // với admin, nút Duyệt chỉ hiện với Admin/Ban Quản Lý (js/rate-center.js).
+    safeOn('btn-rate-center',      'click', () => openRateCenter());
+    safeOn('btn-close-rate-center','click', closeRateCenter);
+    safeOn('btn-rc-close',         'click', closeRateCenter);
+    safeOn('rc-body',              'click', onRateCenterClick);
+    const rateCenterOverlay = document.getElementById('modal-rate-center');
+    if (rateCenterOverlay) {
+      rateCenterOverlay.addEventListener('click', (e) => { if (e.target === rateCenterOverlay) closeRateCenter(); });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const ov = document.getElementById('modal-rate-center');
+      if (ov && ov.classList.contains('show')) closeRateCenter();
+    });
 
     // Xuất Excel riêng từng tab: Kế Hoạch / Ép Ván / Nguyên Liệu
     safeOn('btn-open-export-planning',   'click', () => openReportCenter('plan-items'));

@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { bumpIncidentCache, escapeHTML, showToast } from './utils.js';
 // 3 miền TRƯỚC ĐÂY THIẾU trong file bamboo_data.json (thẻ Truy Xuất Đầu Vào →
@@ -638,6 +638,18 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
     return cur;
   }
 
+  // BẢNG ĐỊNH MỨC TỔNG HỢP — bản ghi PHÊ DUYỆT theo (xưởng, tháng):
+  // GỘP theo id (updatedAt mới hơn thắng), không xóa bản ghi mới hơn trên máy này.
+  function restoreRateApprovals(incomingArr) {
+    const before = JSON.stringify(state.rateApprovals || []);
+    const merged = mergeXuong2Records(state.rateApprovals, incomingArr);
+    state.rateApprovals = merged;
+    try { localStorage.setItem(STORAGE_KEY_RATE_APPROVALS, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+
   // ─── GỘP NHẬT KÝ HỖ TRỢ + CÔNG ĐOẠN LẺ (file / backup / mây) ──
   function restoreXuong2HoTro(incomingArr) {
     const before = JSON.stringify(state.xuong2HoTroRecords || []);
@@ -1082,6 +1094,9 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         if (Array.isArray(loaded.qcPressLogs)) {
           restoreQcPressLogs(loaded.qcPressLogs); // NHẬT KÝ ÉP VÁN — gộp, không mất verdict PASS/Fail mới hơn file
         }
+        if (Array.isArray(loaded.rateApprovals)) {
+          restoreRateApprovals(loaded.rateApprovals); // PHÊ DUYỆT ĐỊNH MỨC — gộp theo (xưởng, tháng)
+        }
         renderAll();
         showToast(`Đã kết nối thư mục "${dirHandle.name}" và nạp dữ liệu từ file!`, 'success');
       } else {
@@ -1238,6 +1253,9 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         if (loaded.x2YieldRates) {
           restoreX2YieldRates(loaded.x2YieldRates); // ĐỊNH MỨC TỶ LỆ — gộp, không đè số đã đặt
         }
+        if (Array.isArray(loaded.rateApprovals)) {
+          restoreRateApprovals(loaded.rateApprovals); // PHÊ DUYỆT ĐỊNH MỨC — gộp theo (xưởng, tháng)
+        }
         renderAll();
       }
       updateFileStorageUI();
@@ -1339,7 +1357,8 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ (thẻ x2-phu-pham-card)
         x2PhuPhamRecords: state.x2PhuPhamRecords || [],
         x2Stocktakes: state.x2Stocktakes || [],
-        x2YieldRates: state.x2YieldRates || {}
+        x2YieldRates: state.x2YieldRates || {},
+        rateApprovals: state.rateApprovals || []
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -1474,7 +1493,8 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
       khoNotes: state.khoNotes || [],
       x2PhuPhamRecords: state.x2PhuPhamRecords || [],
       x2Stocktakes: state.x2Stocktakes || [],
-      x2YieldRates: state.x2YieldRates || {}
+      x2YieldRates: state.x2YieldRates || {},
+      rateApprovals: state.rateApprovals || []
     };
 
     const filename = `NhaMayNgocSon_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -1653,6 +1673,9 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         }
         if (imported.x2YieldRates) {
           restoreX2YieldRates(imported.x2YieldRates); // ĐỊNH MỨC TỶ LỆ — gộp, không đè số đã đặt
+        }
+        if (Array.isArray(imported.rateApprovals)) {
+          restoreRateApprovals(imported.rateApprovals); // PHÊ DUYỆT ĐỊNH MỨC — gộp theo (xưởng, tháng)
         }
 
         // DỌN DỮ LIỆU CŨ: file dữ liệu cũ có thể chứa lô stage 'bao_tinh' — xóa ngay
@@ -1862,6 +1885,7 @@ export {
   restoreX2PhuPham,
   restoreX2Stocktakes,
   restoreX2YieldRates,
+  restoreRateApprovals,
   restoreX2StageIncidents,
   restoreXuong2BaoTinh,
   restoreX2BaoTinhRates,

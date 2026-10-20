@@ -7,7 +7,7 @@
 // 4. Phê duyệt: Admin + Ban Quản Lý duyệt được; Editor/Người xem bị chặn.
 //    Sửa định mức sau khi duyệt → "Cần duyệt lại" (so ảnh chụp), không duyệt được.
 // 5. Người xem: chỉ đọc số + "Duyệt bởi ..." (không có input/nút Lưu).
-// 6. Cấu trúc: nút cạnh Lịch Sử, modal, nối storage/cloud/history/main/sw v290.
+// 6. Cấu trúc: nút cạnh Lịch Sử, modal, nối storage/cloud/history/main/sw v292.
 'use strict';
 import fs from 'node:fs';
 
@@ -315,11 +315,11 @@ check('H3: đã ẩn 19 nút định mức cũ trong các thẻ (giữ id cho t�
 check('H4: events.js nối mở/đóng + uỷ nhiệm click trong #rc-body',
   ev.includes("safeOn('btn-rate-center'") && ev.includes("safeOn('rc-body'") &&
   ev.includes('onRateCenterClick') && ev.includes("safeOn('btn-rc-close'"));
-check('H5: sw.js CACHE_NAME v290 + js/rate-center.js trong APP_SHELL',
-  sw.includes('nha-may-ngoc-son-v290') && sw.includes("'./js/rate-center.js'"));
-check('H6: state.js có key + mảng rateApprovals + APP_VERSION v290',
+check('H5: sw.js CACHE_NAME v292 + js/rate-center.js trong APP_SHELL',
+  sw.includes('nha-may-ngoc-son-v292') && sw.includes("'./js/rate-center.js'"));
+check('H6: state.js có key + mảng rateApprovals + APP_VERSION v292',
   stSrc.includes('bamboo_tracker_rate_approvals_v1') &&
-  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v290'"));
+  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v292'"));
 check('H7: storage.js nối restore + ghi vào 2 file snapshot',
   stg.includes('function restoreRateApprovals') &&
   (stg.match(/rateApprovals: state\.rateApprovals \|\| \[\]/g) || []).length >= 2);

@@ -259,7 +259,7 @@ check('F3: styles.css có khối .x1-ss-ready-panel[hidden] + chip .is-over/.is-
 check('F4: export Excel có cột Mã Lô + Số Ngày + Ngày Đạt + Mã Lô Nguồn',
   expSrc.includes("'Mã Lô'") && expSrc.includes("'Số Ngày'") &&
   expSrc.includes("'Ngày Đạt'") && expSrc.includes("'Mã Lô Nguồn'"));
-check('F5: sw.js cache v288', /nha-may-ngoc-son-v290/.test(swSrc));
+check('F5: sw.js cache v288', /nha-may-ngoc-son-v292/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
 
 console.log(`\n=== KẾT QUẢ X1 SẤY SINH LOT: ${pass} PASS / ${fail} FAIL ===`);

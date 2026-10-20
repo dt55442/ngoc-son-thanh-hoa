@@ -7290,6 +7290,102 @@ body[data-theme="night"] .modal-header::after {
   position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
   background: linear-gradient(90deg, #66a03a, rgba(102, 160, 58, 0.10) 65%, transparent);
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   CHUẨN MODAL & BẢNG RỘNG (20/10/2026)
+   ─ (1) VỎ MODAL: TIÊU ĐỀ + THANH NÚT luôn dính ở mọi cỡ màn hình; chỉ
+     phần nội dung ở giữa cuộn. Trước đây `.modal-footer` chỉ sticky trong
+     @media ≤540/≤639px nên trên máy tính phải kéo xuống CUỐI mới thấy nút
+     Lưu/Đóng, và tiêu đề trôi mất khi đang xem bảng dài.
+   ─ (2) BẢNG NẰM TRONG MODAL: khung cuộn riêng (thanh cuộn NGANG nằm
+     trong tầm mắt, không phải kéo hết danh sách) + dòng tiêu đề dính.
+   ─ (3) CỘT NHẬN DIỆN DÍNH TRÁI (`.tbl-pin1` / `.tbl-pin2`): cuộn ngang
+     vẫn thấy tên người / mã lô / ngày của đúng dòng đang xem — hết cảnh
+     "quên thông tin đó là gì" phải cuộn lại.
+   ─ (4) MODAL CHỨA BẢNG RỘNG HƠN: `.modal-wide` / `.modal-lg` — dialog mặc
+     định chỉ 680px trong khi bảng 900–1500px nên luôn phải cuộn ngang.
+   Tất cả KHÔNG đổi id/cấu trúc modal, chỉ thêm class + CSS.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* (1) Tiêu đề + thanh nút dính — MỌI kích thước màn hình */
+.modal-card > .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  background-color: var(--bg-card);
+}
+.modal-card > .modal-footer,
+.modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 7;
+  box-shadow: 0 -3px 10px rgba(15, 23, 42, 0.08);
+}
+/* Thắng `position: relative` của theme (`.modal-header` ở khối trên) và của
+   `body[data-theme="night"] .hud-frame > * { position: relative }` */
+body[data-theme="night"] .modal-card > .modal-header,
+body[data-theme="night"] .modal-card > .modal-footer {
+  position: sticky;
+  z-index: 7;
+}
+
+/* (2) Bảng trong modal: khung cuộn riêng + tiêu đề dính
+   (`.table-scroll` / `.hr-table-scroll` đã có chuẩn riêng nên loại trừ) */
+.modal-card .table-responsive:not(.table-scroll):not(.hr-table-scroll) {
+  max-height: min(55dvh, 480px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.modal-card .table-responsive:not(.table-scroll):not(.hr-table-scroll) thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 1px 0 var(--border-color);
+}
+
+/* (3) Cột nhận diện DÍNH TRÁI khi cuộn ngang.
+   `.tbl-pin1` = dính cột 1 · `.tbl-pin2` = dính cột 2 (bảng có cột checkbox
+   ở đầu, vd bảng "Tự điền giờ kết thúc"). Phải `border-collapse: separate`
+   — để `collapse` thì viền của ô dính bị mất khi cuộn. */
+.tbl-pin1,
+.tbl-pin2 {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.tbl-pin1 th:first-child,
+.tbl-pin1 td:first-child,
+.tbl-pin2 th:nth-child(2),
+.tbl-pin2 td:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #fffdf6;
+  box-shadow: 1px 0 0 var(--border-color);
+}
+.tbl-pin1 thead th:first-child,
+.tbl-pin2 thead th:nth-child(2) {
+  z-index: 6;
+  background: var(--bg-subtle);
+}
+/* Dòng chẵn / rê chuột ở giao diện Tre Sáng: giữ đúng sắc nền của cả dòng */
+body[data-theme="night"] .tbl-pin1 thead th:first-child,
+body[data-theme="night"] .tbl-pin2 thead th:nth-child(2) {
+  background: linear-gradient(180deg, #e7efdb, #d9e7c8);
+}
+body[data-theme="night"] .tbl-pin1 tbody tr:nth-child(even) td:first-child,
+body[data-theme="night"] .tbl-pin2 tbody tr:nth-child(even) td:nth-child(2) {
+  background: linear-gradient(rgba(90, 110, 70, 0.05), rgba(90, 110, 70, 0.05)) #fffdf6;
+}
+body[data-theme="night"] .tbl-pin1 tbody tr:hover td:first-child,
+body[data-theme="night"] .tbl-pin2 tbody tr:hover td:nth-child(2) {
+  background: linear-gradient(rgba(46, 125, 50, 0.10), rgba(46, 125, 50, 0.10)) #fffdf6;
+}
+
+/* (4) Modal chứa bảng rộng ra (giảm nhu cầu cuộn ngang ngay từ đầu) */
+.modal-card.modal-lg { max-width: min(980px, 96vw); }
+.modal-card.modal-wide { max-width: min(1180px, 96vw); }
+
 body[data-theme="night"] .dropdown-menu {
   background: rgba(253, 251, 243, 0.97);
   border-color: rgba(46, 125, 50, 0.40);
@@ -12563,3 +12659,212 @@ body[data-fx="low"] .x1-ss-ready-panel { box-shadow: none; }
   .rc-actions .btn { min-height: 38px; }
   .rc-foot-note { display: none; }
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   ĐIỆN THOẠI: MODAL LỚN = TẤM TRƯỢT TỪ DƯỚI LÊN (bottom sheet)
+   (20/10/2026 — Gói B, chỉ áp cho ≤639.98px)
+   ─ Mượn đúng ngôn ngữ đã có của dự án: menu ⋮ (bottom sheet) và
+     `.x2-ticket-sheet` / `.al-sheet-card`.
+   ─ GIỮ CĂN GIỮA: `.modal-sm` (hộp xác nhận nhỏ) và 3 shell pop-up thẻ
+     chi tiết (đã có khối "CHỈ GIỮ 1 KHUNG", vốn phủ gần hết màn hình).
+   ─ Khung tre trên điện thoại hạ về 14px như chuẩn "thẻ CHA" hiện có →
+     thêm ~16px bề ngang cho bảng.
+   ═════════════════════════════════════════════════════════════════════ */
+@media (max-width: 639.98px) {
+  /* Khung phủ: dồn modal xuống ĐÁY màn hình */
+  .modal-overlay.show { align-items: flex-end; padding: 0; }
+
+  .modal-card:not(.modal-sm):not(.x2-detail-modal):not(.qc-detail-modal):not(.hr-detail-modal) {
+    position: relative;
+    width: 100%;
+    max-width: 100% !important;
+    max-height: 92dvh;
+    border-radius: 18px 18px 0 0;
+    animation: sheetUp 0.22s ease-out;
+  }
+
+  /* Tay nắm (gợi ý kéo/đóng) */
+  .modal-card:not(.modal-sm):not(.x2-detail-modal):not(.qc-detail-modal):not(.hr-detail-modal)::before {
+    content: "";
+    position: absolute;
+    top: 7px; left: 50%;
+    transform: translateX(-50%);
+    width: 44px; height: 4px;
+    border-radius: 999px;
+    background: rgba(46, 125, 50, 0.45);
+    z-index: 9;
+  }
+  .modal-card:not(.modal-sm) > .modal-header { padding-top: 18px; }
+
+  /* Khung tre mảnh 14px (chuẩn thẻ CHA trên điện thoại) — rộng thêm ~16px */
+  body[data-theme="night"] .modal-card {
+    border-width: 14px !important;
+    border-image-width: 14px !important;
+  }
+
+  /* Thanh nút chừa vạch home iPhone */
+  .modal-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+@keyframes sheetUp {
+  from { transform: translateY(28px); opacity: 0.65; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+body[data-fx="low"] .modal-card { animation: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   ĐĂNG NHẬP / QUÊN MẬT KHẨU — TRẠNG THÁI CHỜ (P3 — 20/10/2026)
+   ─ Không còn tự đăng ký trên UI; Admin tạo tài khoản.
+   ─ Thanh tiến trình + spinner + khoá nút do js/auth-ui.js điều khiển.
+   ═══════════════════════════════════════════════════════════ */
+.auth-card { position: relative; }
+.login-modal-banner { position: relative; }
+.auth-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.auth-close-btn:hover { background: rgba(46, 125, 50, 0.1); color: var(--primary); }
+
+.auth-busy-bar {
+  height: 4px;
+  margin: 0 20px 2px 20px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(22, 163, 74, 0.12);
+}
+.auth-busy-bar[hidden] { display: none !important; }
+.auth-busy-bar > span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #16a34a, #7c3aed, #ea580c);
+  animation: authBarSlide 1.1s linear infinite;
+}
+@keyframes authBarSlide {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(340%); }
+}
+
+.auth-status {
+  margin: 0;
+  padding: 8px 20px 0 20px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.auth-status[hidden] { display: none !important; }
+
+/* Spinner trong nút (giữ nguyên kích thước nút, không nhảy layout) */
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  vertical-align: -2px;
+  animation: authSpin 0.7s linear infinite;
+}
+.btn-outline .btn-spinner,
+.btn-success .btn-spinner {
+  border-color: rgba(22, 163, 74, 0.3);
+  border-top-color: #16a34a;
+}
+@keyframes authSpin { to { transform: rotate(360deg); } }
+
+/* Ô mật khẩu + nút hiện/ẩn */
+.auth-pass-wrap { position: relative; }
+.auth-pass-wrap input { padding-right: 46px; }
+.pass-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pass-toggle:hover { background: rgba(46, 125, 50, 0.08); color: var(--primary); }
+.pass-toggle svg { width: 18px; height: 18px; }
+
+/* Link "Quên mật khẩu?" */
+.auth-forgot-row { display: flex; justify-content: flex-end; margin-top: -4px; }
+.auth-forgot {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Dòng trợ giúp "chưa có tài khoản → liên hệ Quản trị" */
+.login-help-row {
+  margin: 2px 0 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
+.login-help-row strong { color: var(--text-main); word-break: break-all; }
+
+/* Panel Quên mật khẩu (ẩn/hiện bằng thuộc tính hidden — phải thắng display:flex) */
+.auth-panel[hidden] { display: none !important; }
+.auth-panel-title {
+  margin: 0 0 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
+  color: var(--primary);
+}
+.auth-panel-note {
+  margin: 0 0 6px 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* Khối tuỳ chọn khi Admin tạo tài khoản đăng nhập */
+.admin-auth-create-row { gap: 4px; }
+#group-new-user-create .edit-tab-check { font-weight: 500; }
+#new-user-create-note { color: var(--text-muted); line-height: 1.45; }
+
+/* Tôn trọng Giảm Hiệu Ứng */
+body[data-fx="low"] .btn-spinner,
+body[data-fx="low"] .auth-busy-bar > span { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner,
+  .auth-busy-bar > span { animation: none; }
+}
+
+@media (max-width: 639.98px) {
+  .auth-status { padding: 8px 16px 0 16px; }
+  .auth-busy-bar { margin: 0 16px 2px 16px; }
+  /* Chạm 46px cho nút hiện/ẩn mật khẩu */
+  .pass-toggle { width: 44px; height: 44px; }
+  .auth-forgot { padding: 8px 0; font-size: 0.86rem; }
+  .login-help-row { font-size: 0.78rem; }
+}
+

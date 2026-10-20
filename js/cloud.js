@@ -2,6 +2,8 @@
 // js/cloud.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { saveSession, updateUserProfileHeader } from './auth.js';
+// TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
+import { authMarkStep, authNotifySettled } from './auth-ui.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { canEditAnything, canEditRate, canEditTab, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
@@ -28,6 +30,7 @@ import { showToast } from './utils.js';
   let fbEnabled = false;
   let fbDb = null;
   let fbAuthLoaded = false;       // đã có kết quả trạng thái đăng nhập
+  let fbLastAuthUid = '';         // uid/email của lần đăng nhập ĐÃ báo toast (chống lặp khi refresh token)
   let fbDidLoadRemote = false;    // đã nhận dữ liệu từ Firestore ít nhất 1 lần
   let fbApplying = false;         // đang áp dụng remote (tránh lặp vô hạn)
   let fbUnsubDoc = null;
@@ -776,16 +779,23 @@ import { showToast } from './utils.js';
     fbAuthLoaded = true;
     if (!user) {
       // Khách vãng lai (chưa đăng nhập): chỉ XEM, không ép mở modal đăng nhập
+      const hadSession = !!state.currentUser;
       state.currentUser = null;
-      saveSession();
+      fbLastAuthUid = ''; // đăng xuất → lần đăng nhập sau vẫn có toast chào
+      if (hadSession) saveSession();
       applyRoleToUI(null);
-      renderAll();
+      // Chỉ renderAll khi TRƯỚC ĐÓ có phiên — tránh dựng lại toàn bộ dashboard
+      // vô ích mỗi lần mở app (authState null bắn ngay lúc boot).
+      if (hadSession) renderAll();
+      authNotifySettled(); // nhả trạng thái chờ đăng nhập (nếu có)
       return;
     }
     resolveFirebaseRole(user);
   }
 
   async function resolveFirebaseRole(user) {
+    authMarkStep('Đang xác minh quyền…');
+    let notGranted = false;
     try {
       const email = (user.email || '').trim().toLowerCase();
       const rolesSnap = await fbDb.collection(FB_SETTINGS_COLL).doc(FB_ROLES_DOC).get();
@@ -818,6 +828,7 @@ import { showToast } from './utils.js';
           });
         } else {
           role = 'viewer'; // email chưa khai báo => chỉ xem
+          notGranted = true; // P3: Admin chưa cấp quyền → nhắc người dùng liên hệ
         }
       }
 
@@ -847,11 +858,22 @@ import { showToast } from './utils.js';
       setupFirestoreSync();
       checkAuthAndRenderFirebase();
       flushPendingCloudPush(); // vừa có quyền -> đẩy nốt các thay đổi còn kẹt trên máy
-      showToast(`Đã đăng nhập (${role})`, 'success');
+      // Chống toast lặp: Firebase bắn onAuthStateChanged lại mỗi lần refresh token
+      const authKey = user.uid || email;
+      if (fbLastAuthUid !== authKey) {
+        fbLastAuthUid = authKey;
+        if (notGranted) {
+          showToast('Tài khoản chưa được cấp quyền — đang ở chế độ chỉ xem. Vui lòng liên hệ Quản trị viên.', 'info');
+        } else {
+          showToast(`Đã đăng nhập (${role})`, 'success');
+        }
+      }
     } catch (e) {
       console.warn('[FB] Lỗi lấy quyền', e);
-      showToast('Lỗi xác thực quyền: ' + e.message
+      showToast('Lỗi xác thực quyền: ' + (e && e.message ? e.message : e)
         + (isPermDeniedErr(e) ? '. ' + fbOwnerHint() : ''), 'error');
+    } finally {
+      authNotifySettled(); // nhả trạng thái chờ của modal đăng nhập
     }
   }
 
@@ -882,7 +904,10 @@ import { showToast } from './utils.js';
       showToast(`Bạn không có quyền chỉnh sửa ở tab này. Chỉ được sửa: ${listEditableTabsLabel()}.`, 'error');
     } else {
       showToast('Bạn đang XEM ở chế độ công khai. Vui lòng Đăng Nhập để sửa đổi thông tin.', 'error');
-      document.getElementById('modal-login')?.classList.add('show');
+      // Mở qua NÚT CHUẨN để panel luôn về "Đăng Nhập" + điền email Quản trị
+      const openLoginBtn = document.getElementById('btn-open-login');
+      if (openLoginBtn) openLoginBtn.click();
+      else document.getElementById('modal-login')?.classList.add('show');
     }
     return false;
   }

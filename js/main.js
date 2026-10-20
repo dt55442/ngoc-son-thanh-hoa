@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // js/main.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal } from './auth.js';
+import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal, sendPasswordResetToUser } from './auth.js';
 import { deleteBatch, exitKanbanPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
 import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
@@ -504,6 +504,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Trợ giúp Dashboard — giải thích nhanh theo vùng/đối tượng (nút "?" trên thẻ)
     openDashHelp,
     openUserPermsModal: id => openUserPermsModal(id),
+    sendPasswordResetToUser,
     deleteCustomChart,
     // Mở rộng biểu đồ toàn màn hình / xoay ngang (nút ⤢ trên thẻ biểu đồ)
     toggleChartExpand,

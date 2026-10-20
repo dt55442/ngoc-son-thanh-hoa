@@ -2,6 +2,8 @@
 // js/auth.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { FB_ROLES_DOC, FB_SETTINGS_COLL, applyRoleToUI, fbDb, initLucide, isFirebaseOnline } from './cloud.js';
+// TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
+import { authErrorText, isAuthBusy, setAuthBusy } from './auth-ui.js';
 import { ALL_EDITABLE_IDS, ROLES, ROLE_ORDER, expandWsTabs, getTabDef, normalizeUser } from './permissions.js';
 import { renderAll } from './main.js';
 import { DEFAULT_USERS, STORAGE_KEY_SESSION, STORAGE_KEY_USERS, state } from './state.js';
@@ -87,57 +89,105 @@ import { escapeHTML, showToast } from './utils.js';
     }
   }
 
-  // ─── ĐĂNG KÝ TÀI KHOẢN (ONLINE) ──────────────────────────────
-  function toggleRegisterForm(show) {
-    const regForm = document.getElementById('register-form');
-    const logForm = document.getElementById('login-form');
-    const toggleBtn = document.getElementById('btn-toggle-register');
-    if (!regForm || !logForm) return;
-    const toReg = (typeof show === 'boolean') ? show : (regForm.style.display === 'none');
-    regForm.style.display = toReg ? '' : 'none';
-    logForm.style.display = toReg ? 'none' : '';
-    if (toggleBtn) toggleBtn.style.display = toReg ? 'none' : '';
-    if (toReg) initLucide();
+  // ─── 2 PANEL XÁC THỰC: ĐĂNG NHẬP ⇄ QUÊN MẬT KHẨU (P3) ────────
+  // P3 (20/10/2026 — chốt với người dùng): KHÔNG tự đăng ký trên UI.
+  // Tài khoản do Admin tạo (modal Quản Lý Người Chỉnh Sửa hoặc Firebase Console)
+  // ⇒ tránh việc ai đăng ký cũng đọc được dữ liệu, và tránh hiểu nhầm
+  // "phải thêm email trước trên Firebase mới đăng ký được".
+  function toggleAuthPanel(panel) {
+    const want = panel === 'reset' ? 'reset' : 'login';
+    const loginForm = document.getElementById('login-form');
+    const resetForm = document.getElementById('reset-form');
+    if (!loginForm || !resetForm) return;
+    const showReset = want === 'reset';
+    loginForm.hidden = showReset;
+    loginForm.style.display = showReset ? 'none' : '';
+    resetForm.hidden = !showReset;
+    resetForm.style.display = showReset ? '' : 'none';
+    // Dọn trạng thái chờ + dòng thông báo của panel trước
+    const st = document.getElementById('auth-status');
+    if (st) { st.textContent = ''; st.hidden = true; st.style.display = 'none'; }
+    const bar = document.getElementById('auth-busy-bar');
+    if (bar) { bar.hidden = true; bar.style.display = 'none'; }
+    const focusEl = document.getElementById(showReset ? 'reset-email' : 'login-username');
+    try { if (focusEl && focusEl.focus) focusEl.focus(); } catch (e) { /* bỏ qua */ }
+    initLucide();
+  }
+  // Tương thích tên cũ (không còn form đăng ký) — luôn về panel Đăng Nhập
+  function toggleRegisterForm() { toggleAuthPanel('login'); }
+
+  // ─── QUÊN MẬT KHẨU (tự phục vụ qua email) ────────────────────
+  async function handleResetSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isAuthBusy()) return; // chống bấm nhiều lần
+    const emailEl = document.getElementById('reset-email');
+    const email = String((emailEl && emailEl.value) || '').trim().toLowerCase();
+    if (!email.includes('@')) { showToast('Email không hợp lệ!', 'error'); return; }
+    if (!isFirebaseOnline()) {
+      showToast('Gửi email đặt lại mật khẩu cần kết nối mạng. Tài khoản lưu trên máy này: liên hệ Quản trị để đổi mật khẩu.', 'error');
+      return;
+    }
+    setAuthBusy('reset', true, 'Đang gửi email đặt lại mật khẩu…');
+    // Thông điệp TRUNG TÍNH: không tiết lộ email có tồn tại hay không
+    const neutral = 'Nếu email có trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu. Hãy kiểm tra Hộp thư và thư rác.';
+    try {
+      await window.firebase.auth().sendPasswordResetEmail(email);
+      showToast(neutral, 'success');
+      const u = document.getElementById('login-username');
+      if (u) u.value = email;
+      toggleAuthPanel('login');
+      const p = document.getElementById('login-password');
+      if (p) { p.value = ''; try { p.focus(); } catch (err) { /* bỏ qua */ } }
+    } catch (err) {
+      const code = err && err.code;
+      console.warn('[FB] Lỗi gửi email đặt lại mật khẩu', err);
+      if (code === 'auth/user-not-found') {
+        // Bảo mật: giữ câu trả lời trung tính (chống dò tài khoản)
+        showToast(neutral, 'success');
+        toggleAuthPanel('login');
+      } else {
+        showToast(authErrorText(code, (err && err.message) || 'Không gửi được email đặt lại mật khẩu.'), 'error');
+      }
+    } finally {
+      setAuthBusy('reset', false);
+    }
   }
 
-  function handleRegisterSubmit(e) {
-    e.preventDefault();
-    if (!isFirebaseOnline()) { showToast('Đăng ký chỉ dùng ở bản Online (cần kết nối mạng + SDK)', 'error'); return; }
-    const email   = document.getElementById('reg-email').value.trim().toLowerCase();
-    const pass    = document.getElementById('reg-password').value;
-    const pass2   = document.getElementById('reg-password-confirm').value;
-    if (!email.includes('@')) { showToast('Email không hợp lệ!', 'error'); return; }
-    if (pass.length < 6) { showToast('Mật khẩu tối thiểu 6 ký tự!', 'error'); return; }
-    if (pass !== pass2) { showToast('Xác nhận mật khẩu không khớp!', 'error'); return; }
-    window.firebase.auth().createUserWithEmailAndPassword(email, pass)
-      .then(async () => {
-        // Tài khoản chưa có quyền -> mặc định là Viewer để admin thấy & cấp quyền
-        try {
-          if (isFirebaseOnline()) {
-            const roles = await fetchRolesDoc();
-            const all = [...roles.adminEmails, ...roles.managerEmails, ...roles.editorEmails, ...roles.viewerEmails];
-            if (!all.includes(email)) {
-              roles.viewerEmails.push(email);
-              await saveRolesDoc(roles);
-            }
-          }
-        } catch (err) { console.warn('[FB] Không gán viewer mặc định', err); }
-        // Đăng xuất để họ đăng nhập chính thức (tránh phiên lạ)
-        await window.firebase.auth().signOut();
-        document.getElementById('reg-email').value = '';
-        document.getElementById('reg-password').value = '';
-        document.getElementById('reg-password-confirm').value = '';
-        toggleRegisterForm(false);
-        showToast('Tạo tài khoản thành công! Vui lòng đăng nhập.', 'success');
-      })
-      .catch((err) => {
-        console.warn('[FB] Lỗi đăng ký', err);
-        let msg = err && err.message ? err.message : 'Đăng ký thất bại';
-        if (err && err.code === 'auth/email-already-in-use') msg = 'Email này đã được đăng ký. Hãy đăng nhập.';
-        if (err && err.code === 'auth/invalid-email') msg = 'Email không hợp lệ.';
-        if (err && err.code === 'auth/weak-password') msg = 'Mật khẩu quá yếu (tối thiểu 6 ký tự).';
-        showToast(msg, 'error');
-      });
+  // Admin gửi email đặt lại mật khẩu cho 1 người dùng (online)
+  async function sendPasswordResetToUser(emailRaw) {
+    if (state.currentUser?.role !== 'admin') { showToast('Chỉ Admin mới có quyền!', 'error'); return false; }
+    const email = String(emailRaw || '').trim().toLowerCase();
+    if (!email.includes('@')) { showToast('Email không hợp lệ!', 'error'); return false; }
+    if (!isFirebaseOnline()) { showToast('Chức năng này cần kết nối mạng.', 'error'); return false; }
+    try {
+      await window.firebase.auth().sendPasswordResetEmail(email);
+      showToast('Đã gửi email đặt lại mật khẩu tới ' + email + '.', 'success');
+      return true;
+    } catch (err) {
+      console.warn('[FB] Lỗi gửi email đặt lại', err);
+      showToast(authErrorText(err && err.code, (err && err.message) || 'Không gửi được email.'), 'error');
+      return false;
+    }
+  }
+
+  // Tạo tài khoản Firebase Auth KHÔNG làm mất phiên Admin:
+  // dùng APP PHỤ (persistence key tách theo appName) → tạo xong signOut + xoá app phụ.
+  async function createAuthUserSecondary(email, password) {
+    const cfg = window.FIREBASE_CONFIG;
+    if (!window.firebase || typeof window.firebase.initializeApp !== 'function') {
+      throw new Error('Chưa nạp Firebase SDK.');
+    }
+    if (!cfg) throw new Error('Thiếu cấu hình Firebase.');
+    const appName = 'bamboo-create-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const secApp = window.firebase.initializeApp(cfg, appName);
+    try {
+      const secAuth = secApp.auth();
+      await secAuth.createUserWithEmailAndPassword(email, password);
+      try { await secAuth.signOut(); } catch (e) { /* bỏ qua */ }
+      return true;
+    } finally {
+      try { await secApp.delete(); } catch (e) { console.warn('[FB] Không xoá được app phụ', e); }
+    }
   }
 
   // ─── USER MANAGEMENT MODAL ────────────────────────────────────
@@ -148,15 +198,32 @@ import { escapeHTML, showToast } from './utils.js';
     const noteEl = document.getElementById('users-mode-note');
     if (noteEl) {
       noteEl.innerHTML = isOnline
-        ? '<strong>Chế độ Online:</strong> Ai cũng XEM được dữ liệu. Muốn sửa phải đăng nhập với vai trò <strong>Ban Quản Lý / Editor</strong> hoặc <strong>Admin</strong>.<br>' +
-          'Nhập <strong>email</strong> + chọn vai trò rồi bấm "Thêm / Cấp Quyền". <strong>Ban Quản Lý</strong> được xem Vùng Nâng Cao; <strong>Editor</strong> chỉ sửa các tab được chỉ định. Người được thêm sẽ tự đăng ký tài khoản qua nút "Đăng Ký" ở màn hình đăng nhập (bằng đúng email này) — KHÔNG cần vào Firebase Console.'
+        ? '<strong>Chế độ Online (P3):</strong> Không còn tự đăng ký trên màn hình đăng nhập — <strong>Quản trị tạo tài khoản tại đây</strong>: nhập email + mật khẩu tạm bên dưới (hoặc tạo trong Firebase Console → Authentication → Users), rồi chọn vai trò và cấp quyền.<br>' +
+          'Tài khoản mới nên bật <strong>"Gửi email để người dùng tự đặt mật khẩu"</strong> để họ không dùng mật khẩu tạm.'
         : '<strong>Chế độ Offline:</strong> Dữ liệu lưu trên máy này. Nhập tên đăng nhập + mật khẩu cho từng tài khoản. Chọn vai trò và tích <strong>tab được phép chỉnh sửa</strong> — Editor/Ban Quản Lý chỉ sửa được đúng tab đã cấp.';
     }
+    // Ô mật khẩu: LUÔN hiện (online = mật khẩu tạm khi tạo tài khoản)
     const pwdGrp = document.getElementById('group-new-user-password');
-    if (pwdGrp) {
-      pwdGrp.style.display = isOnline ? 'none' : '';
-      const inp = document.getElementById('new-user-password');
-      if (inp) inp.required = !isOnline;
+    if (pwdGrp) pwdGrp.style.display = '';
+    const pwdInp = document.getElementById('new-user-password');
+    if (pwdInp) {
+      pwdInp.required = !isOnline; // offline bắt buộc; online chỉ khi tích tạo tài khoản
+      pwdInp.placeholder = isOnline ? 'Mật khẩu tạm ≥ 6 ký tự' : 'Mật khẩu đăng nhập máy này';
+    }
+    const pwdLabel = document.getElementById('new-user-password-label');
+    if (pwdLabel) pwdLabel.textContent = isOnline ? 'Mật Khẩu Tạm (khi tạo tài khoản)' : 'Mật Khẩu';
+    // Khối tuỳ chọn CHỈ có ở bản online
+    const createGrp = document.getElementById('group-new-user-create');
+    if (createGrp) createGrp.style.display = isOnline ? '' : 'none';
+    const createChk = document.getElementById('new-user-create-account');
+    if (createChk) createChk.checked = isOnline;
+    const sendChk = document.getElementById('new-user-send-reset');
+    if (sendChk) sendChk.checked = true;
+    const createNote = document.getElementById('new-user-create-note');
+    if (createNote) {
+      createNote.textContent = isOnline
+        ? 'Bỏ tích nếu email đã có tài khoản (chỉ cấp quyền). Nếu Firebase đang tắt "Create (sign-up)" thì hãy tạo tài khoản trong Firebase Console.'
+        : '';
     }
     renderUsersTable();
     document.getElementById('modal-users-mgr')?.classList.add('show');
@@ -249,6 +316,7 @@ import { escapeHTML, showToast } from './utils.js';
                 <span class="text-muted">Chính bạn</span>` : `
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserEditModal('${escapeHTML(ent.key)}')" title="Sửa thông tin / vai trò"><i data-lucide="edit-3"></i></button>
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.openUserPermsModal('${escapeHTML(ent.key)}')" title="Cấu hình quyền chi tiết"><i data-lucide="user-cog"></i></button>
+                <button class="btn btn-outline btn-icon btn-sm" onclick="app.sendPasswordResetToUser('${escapeHTML(ent.key)}')" title="Gửi email đặt lại mật khẩu"><i data-lucide="key-round"></i></button>
                 <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteUser('${escapeHTML(ent.key)}')" style="color:var(--danger);" title="Xóa quyền"><i data-lucide="trash-2"></i></button>`}
             </td>`;
           tbody.appendChild(tr);
@@ -292,12 +360,18 @@ import { escapeHTML, showToast } from './utils.js';
     e.preventDefault();
     const fullname = document.getElementById('new-user-fullname').value.trim();
     const username = document.getElementById('new-user-username').value.trim();
-    const password = document.getElementById('new-user-password').value.trim();
+    const password = document.getElementById('new-user-password').value; // KHÔNG trim mật khẩu (khớp đăng nhập)
     const role     = document.getElementById('new-user-role').value;
     const editTabs = readEditTabsChecks('new-user-edit-tabs') || [...ALL_EDITABLE_IDS];
 
     if (isFirebaseOnline()) {
-      handleAddOnlineRole(username, role, fullname, editTabs);
+      const createChk = document.getElementById('new-user-create-account');
+      const sendChk = document.getElementById('new-user-send-reset');
+      handleAddOnlineRole(username, role, fullname, editTabs, {
+        createAccount: !!(createChk && createChk.checked),
+        password,
+        sendReset: !!(sendChk && sendChk.checked)
+      });
       return;
     }
     // OFFLINE
@@ -317,12 +391,49 @@ import { escapeHTML, showToast } from './utils.js';
     showToast(`Đã thêm người dùng ${fullname || username} (${ROLES[role]?.name || role}) thành công!`, 'success');
   }
 
-  async function handleAddOnlineRole(emailRaw, role, fullname, editTabs) {
+  let adminCreateBusy = false; // chặn bấm "Thêm / Cấp Quyền" nhiều lần khi đang tạo tài khoản
+
+  async function handleAddOnlineRole(emailRaw, role, fullname, editTabs, opts) {
     const email = (emailRaw || '').trim().toLowerCase();
     if (!email.includes('@')) { showToast('Chế độ Online cần nhập Email hợp lệ!', 'error'); return; }
+    const options = opts || {};
     const roles = await fetchRolesDoc();
     const all = [...roles.adminEmails, ...roles.managerEmails, ...roles.editorEmails, ...roles.viewerEmails];
     if (all.includes(email)) { showToast('Email này đã có quyền!', 'error'); return; }
+
+    // ① TẠO TÀI KHOẢN ĐĂNG NHẬP (tuỳ chọn) — dùng APP PHỤ, KHÔNG mất phiên Admin
+    let created = false;
+    if (options.createAccount) {
+      if (adminCreateBusy) { showToast('Đang tạo tài khoản, vui lòng chờ…', 'info'); return; }
+      const pwd = String(options.password || '');
+      if (pwd.length < 6) {
+        showToast('Mật khẩu tạm tối thiểu 6 ký tự — hoặc bỏ tích "Tạo tài khoản đăng nhập" nếu email đã có tài khoản.', 'error');
+        return;
+      }
+      adminCreateBusy = true;
+      let btn = null;
+      try { btn = document.querySelector('#add-user-form button[type="submit"]'); } catch (e) { btn = null; }
+      const oldHtml = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span> Đang tạo tài khoản…'; }
+      try {
+        await createAuthUserSecondary(email, pwd);
+        created = true;
+      } catch (err) {
+        const code = err && err.code;
+        if (code === 'auth/email-already-in-use') {
+          showToast('Email đã có tài khoản đăng nhập — chỉ cấp quyền.', 'info');
+        } else {
+          console.warn('[FB] Lỗi tạo tài khoản', err);
+          showToast(authErrorText(code, (err && err.message) || 'Không tạo được tài khoản đăng nhập.'), 'error');
+          return;
+        }
+      } finally {
+        adminCreateBusy = false;
+        if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+      }
+    }
+
+    // ② CẤP QUYỀN (settings/roles) — Admin ghi được theo firestore.rules
     roles[rolesDocKey(role)].push(email);
     // Lưu quyền chi tiết (tab được sửa + vùng nâng cao) nếu có chọn
     if (Array.isArray(editTabs)) {
@@ -339,14 +450,25 @@ import { escapeHTML, showToast } from './utils.js';
         try {
           const un = fbDb.collection(FB_SETTINGS_COLL).doc('displayNames');
           await un.set({ [email]: fullname }, { merge: true });
-        } catch (e) {}
+        } catch (e) { /* bỏ qua */ }
+      }
+      // Gửi email để người dùng tự đặt mật khẩu (không phải dùng mật khẩu tạm)
+      if (created && options.sendReset) {
+        await sendPasswordResetToUser(email);
       }
       renderUsersTable();
       document.getElementById('add-user-form').reset();
-      showToast(`Đã cấp quyền ${role.toUpperCase()} cho ${email}!`, 'success');
+      const roleName = ROLES[role]?.name || role;
+      if (created && options.sendReset) {
+        showToast(`Đã tạo tài khoản + cấp quyền ${roleName} cho ${email}. Đã gửi email để người dùng tự đặt mật khẩu.`, 'success');
+      } else if (created) {
+        showToast(`Đã tạo tài khoản + cấp quyền cho ${email}. Hãy gửi mật khẩu tạm cho người dùng và nhắc họ đổi mật khẩu.`, 'success');
+      } else {
+        showToast(`Đã cấp quyền ${roleName} cho ${email}!`, 'success');
+      }
     } catch (err) {
       console.warn('[FB] Lỗi cấp quyền', err);
-      showToast('Lỗi khi cấp quyền: ' + err.message + ' (Hãy đảm bảo là Admin và có kết nối)', 'error');
+      showToast('Lỗi khi cấp quyền: ' + ((err && err.message) || err) + ' (Hãy đảm bảo là Admin và có kết nối)', 'error');
     }
   }
 
@@ -391,6 +513,9 @@ import { escapeHTML, showToast } from './utils.js';
         }
         if (pwdGrp) pwdGrp.style.display = 'none';
         if (pwdInput) pwdInput.value = '';
+        // Online: đổi mật khẩu qua EMAIL đặt lại (Firebase không cho admin biết mật khẩu)
+        const resetRow = document.getElementById('user-edit-reset-row');
+        if (resetRow) resetRow.style.display = '';
         roleSel.value = role;
         roleSel.disabled = isSelf;
         if (isSelf) roleSel.title = 'Không thể tự đổi vai trò của chính mình';
@@ -415,6 +540,9 @@ import { escapeHTML, showToast } from './utils.js';
     }
     if (pwdGrp) pwdGrp.style.display = '';
     if (pwdInput) { pwdInput.value = ''; pwdInput.placeholder = 'Bỏ trống = giữ mật khẩu hiện tại'; }
+    // Offline: đổi mật khẩu trực tiếp nên KHÔNG hiện nút gửi email đặt lại
+    const resetRowOff = document.getElementById('user-edit-reset-row');
+    if (resetRowOff) resetRowOff.style.display = 'none';
     roleSel.value = user.role || 'viewer';
     if (isDefaultAdmin) { roleSel.disabled = true; roleSel.title = 'Admin mặc định luôn toàn quyền'; }
     else roleSel.title = '';
@@ -642,12 +770,13 @@ export {
   closeUserEditModal,
   closeUserPermsModal,
   closeUsersMgrModal,
+  createAuthUserSecondary,
   deleteOnlineRole,
   deleteUser,
   fetchRolesDoc,
   handleAddOnlineRole,
   handleAddUserSubmit,
-  handleRegisterSubmit,
+  handleResetSubmit,
   handleUserEditSubmit,
   handleUserPermsSubmit,
   loadSession,
@@ -661,6 +790,8 @@ export {
   saveRolesDoc,
   saveSession,
   saveUsers,
+  sendPasswordResetToUser,
+  toggleAuthPanel,
   toggleRegisterForm,
   updateUserProfileHeader
 };

@@ -1,9 +1,11 @@
 // ═══════════════════════════════════════════════════════════
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleRegisterSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, toggleRegisterForm } from './auth.js';
+import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleResetSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, sendPasswordResetToUser, toggleAuthPanel } from './auth.js';
+// TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
+import { authErrorText, authMarkStep, authReset, isAuthBusy, setAuthBusy } from './auth-ui.js';
 import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
-import { applyRoleToUI, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
+import { applyRoleToUI, initLucide, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
@@ -195,27 +197,55 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       }
     });
 
-    // Login
+    // ── ĐĂNG NHẬP (P3: KHÔNG tự đăng ký) + QUÊN MẬT KHẨU ──
     safeOn('btn-open-login', 'click', () => {
+      toggleAuthPanel('login');
+      // Dòng trợ giúp: hiện email Quản trị lấy từ firebase-config.js
+      const ownerEl = document.getElementById('login-owner-email');
+      const cfg = (typeof window !== 'undefined' && window.FIREBASE_CONFIG) || {};
+      if (ownerEl) ownerEl.textContent = cfg.ownerEmail ? cfg.ownerEmail : 'Quản trị viên';
       document.getElementById('modal-login')?.classList.add('show');
+      initLucide();
     });
-    safeOn('btn-toggle-register', 'click', toggleRegisterForm);
-    safeOn('btn-back-login', 'click', () => toggleRegisterForm(false));
-    safeOn('register-form', 'submit', handleRegisterSubmit);
+    safeOn('btn-forgot-password', 'click', () => toggleAuthPanel('reset'));
+    safeOn('btn-back-login', 'click', () => toggleAuthPanel('login'));
+    safeOn('btn-close-login', 'click', () => {
+      authReset();
+      document.getElementById('modal-login')?.classList.remove('show');
+    });
+    safeOn('reset-form', 'submit', handleResetSubmit);
+    // Hiện / ẩn mật khẩu (giữ nguyên giá trị ô nhập)
+    safeOn('btn-toggle-pass', 'click', () => {
+      const inp = document.getElementById('login-password');
+      const btn = document.getElementById('btn-toggle-pass');
+      if (!inp) return;
+      const toText = inp.type === 'password';
+      inp.type = toText ? 'text' : 'password';
+      if (btn) {
+        btn.innerHTML = '<i data-lucide="' + (toText ? 'eye-off' : 'eye') + '"></i>';
+        btn.setAttribute('aria-label', toText ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+      }
+      initLucide();
+      try { inp.focus(); } catch (err) { /* bỏ qua */ }
+    });
     safeOn('login-form', 'submit', (e) => {
       e.preventDefault();
-      const userVal = document.getElementById('login-username').value.trim();
-      const passVal = document.getElementById('login-password').value.trim();
+      if (isAuthBusy()) return; // ĐANG xác thực → bỏ qua lượt bấm thêm (chống bấm nhiều lần)
+      const userVal = (document.getElementById('login-username').value || '').trim();
+      // KHÔNG trim mật khẩu: mật khẩu lưu nguyên chuỗi (tránh lỗi không đăng nhập được)
+      const passVal = document.getElementById('login-password').value || '';
+      if (!userVal) { showToast('Vui lòng nhập email / tên đăng nhập!', 'error'); return; }
+      if (!passVal) { showToast('Vui lòng nhập mật khẩu!', 'error'); return; }
 
       // ONLINE: nếu nhập email (chứa '@') => dùng Firebase Auth
       if (isFirebaseOnline() && userVal.includes('@')) {
+        setAuthBusy('login', true, 'Đang đăng nhập…');
         window.firebase.auth().signInWithEmailAndPassword(userVal, passVal)
+          .then(() => { authMarkStep('Đang xác minh quyền & tải dữ liệu…'); })
           .catch((err) => {
-            let msg = err && err.message ? err.message : 'Đăng nhập thất bại';
-            if (err && err.code === 'auth/user-not-found') msg = 'Tài khoản Firebase chưa được tạo, hoặc email sai.';
-            if (err && err.code === 'auth/wrong-password') msg = 'Mật khẩu không đúng.';
-            if (err && err.code === 'auth/invalid-credential') msg = 'Email hoặc mật khẩu không đúng.';
-            showToast(msg, 'error');
+            setAuthBusy('login', false); // nhả khoá NGAY để thử lại được
+            console.warn('[FB] Lỗi đăng nhập', err);
+            showToast(authErrorText(err && err.code, (err && err.message) || 'Đăng nhập thất bại'), 'error');
           });
         return;
       }
@@ -235,7 +265,17 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       }
     });
 
+    // Modal Sửa Người Dùng → gửi email đặt lại mật khẩu (chỉ tài khoản Online)
+    safeOn('btn-user-edit-send-reset', 'click', () => {
+      const target = (document.getElementById('user-edit-target')?.value || '');
+      const [kind, ...rest] = target.split(':');
+      const key = rest.join(':');
+      if (kind !== 'email' || !key) { showToast('Chỉ gửi được cho tài khoản Online.', 'info'); return; }
+      sendPasswordResetToUser(key);
+    });
+
     safeOn('btn-logout', 'click', () => {
+      authReset(); // dọn trạng thái chờ nếu còn kẹt
       // Nếu online: đăng xuất khỏi Firebase (authState sẽ trả về null -> về màn hình đăng nhập)
       if (isFirebaseOnline()) {
         window.firebase.auth().signOut().catch(() => {});

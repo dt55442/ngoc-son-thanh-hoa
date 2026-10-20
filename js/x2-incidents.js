@@ -582,7 +582,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     return `<div class="x2-day-card inc-day-card">
       ${head}
       <div class="inc-table-scroll">
-        <table class="inc-table">
+        <table class="inc-table tbl-pin1">
           <thead><tr>
             <th>Công đoạn</th><th>Ca</th><th>Giờ</th><th>Số giờ</th><th>Loại sự cố</th>
             <th>Mô tả / Xử lý</th><th>Người báo</th><th>Trạng thái</th><th>Thao tác</th>

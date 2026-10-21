@@ -179,18 +179,20 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   // Riêng kind 'time': thêm { need (giờ cần), incident (giờ sự cố CHIA THEO TỈ LỆ giờ cần) }.
   const CAP_STAGES = [
     {
-      id: 'boluong', ws: 'x2', label: 'Bốc Luồng', unit: 'kg/h', unitQty: 'kg', cardId: 'x2-bo-luong-card', kind: 'cap',
+      id: 'boluong', ws: 'x2', label: 'Bốc Luồng', unit: 'xe/h', unitQty: 'xe', cardId: 'x2-bo-luong-card', kind: 'cap',
       rows: () => (state.xuong2BoluongRecords || []).map(r => {
         const d = boluongDisplay(r);
-        return { date: d.date, qty: d.qty, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        // Sản lượng tính theo SỐ XE (xe/h) — lượt chưa ghi Số xe dùng số xe TƯƠNG ĐƯƠNG
+        return { date: d.date, qty: d.cartsEq, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => boluongRateOf(m)
     },
     {
-      id: 'cut', ws: 'x2', label: 'Cắt Chọn', unit: 'kg/h', unitQty: 'kg', cardId: 'x2-cut-card', kind: 'cap',
+      id: 'cut', ws: 'x2', label: 'Cắt Chọn', unit: 'xe/h', unitQty: 'xe', cardId: 'x2-cut-card', kind: 'cap',
       rows: () => (state.xuong2CutRecords || []).map(r => {
         const d = cutDisplay(r);
-        return { date: d.date, qty: d.inputWeight, qtyKnown: true, hours: d.cutHours, hc: d.cutHoursHC, tc: d.cutHoursTC };
+        // Sản lượng tính theo SỐ XE đem cắt (xe/h) — thiếu số xe → xe tương đương ≈ KL ÷ 600
+        return { date: d.date, qty: d.cartsEq, qtyKnown: true, hours: d.cutHours, hc: d.cutHoursHC, tc: d.cutHoursTC };
       }),
       rateOf: m => capRateOf(m)
     },

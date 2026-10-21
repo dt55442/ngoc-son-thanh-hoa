@@ -10,7 +10,7 @@
 import { initLucide } from './cloud.js';
 import { state } from './state.js';
 import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
-import { HR_DEPARTMENTS, CI_ANOMALY_LABEL, ciRowsForRange } from './hr.js';
+import { HR_DEPARTMENTS, CI_ANOMALY_LABEL, ciRowsForRange, payLockOf, payLockScan } from './hr.js';
 import {
   buildHrXlsxExportData, buildMaterialsExportData, buildPlanningExportData, buildPressExportData,
   buildQcXlsxExportData, buildX2ExportData, exportDataToXlsx, exportMultiSheetToXlsx,
@@ -559,6 +559,9 @@ function buildReportData() {
   if (spec.kind === 'costing') return buildCostingReport(spec);
   if (spec.kind === 'incidents') return buildIncidentsReport(spec);
   if (spec.kind === 'ciCompare') return buildCiCompareReport(spec);
+  if (spec.kind === 'payLock') return buildPayLockReport(spec);
+  if (spec.kind === 'paySummary') return buildPaySummaryReport(spec);
+  if (spec.kind === 'paySlip') return buildPaySlipReport(spec);
   return null;
 }
 
@@ -596,6 +599,81 @@ function buildCiCompareReport(spec) {
   return rcFrame('ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG',
     `Kỳ: ${from || '…'} → ${to || '…'} · ${rows.length} dòng · quy tắc: chấm sớm < 30' tính từ giờ bắt đầu ca · tăng ca sau hết ca làm tròn XUỐNG 30 phút`,
     header, body, { sheet: 'Đối Chiếu CC', file: spec.code });
+}
+// ─── CHỐT CÔNG / PHIẾU CÔNG (20/10/2026) ──────────────────────────
+function rcPayMonthOf() {
+  if (rcValues.periodMode === 'month' && /^\d{4}-\d{2}$/.test(rcValues.periodKey || '')) return rcValues.periodKey;
+  if (/^\d{4}-\d{2}$/.test(rcValues.month || '')) return rcValues.month;
+  return todayISO().slice(0, 7);
+}
+function rcMonthText(m) { return `Tháng ${String(m).slice(5, 7)}/${String(m).slice(0, 4)}`; }
+function rcPaySource() {
+  const month = rcPayMonthOf();
+  const lock = payLockOf(month);
+  const scan = payLockScan(month);
+  const useLock = !!(lock && Array.isArray(lock.rows) && lock.rows.length && (lock.status === 'da_chot' || lock.status === 'cho_duyet'));
+  return {
+    month, lock,
+    rows: useLock ? lock.rows.slice() : scan.rows,
+    totals: (useLock && Array.isArray(lock.totals) && lock.totals.length) ? lock.totals : scan.totals,
+    fromLock: useLock
+  };
+}
+function rcPayLockStateText(lock) {
+  if (!lock) return 'CHƯA CHỐT';
+  if (lock.status === 'da_chot') return `ĐÃ CHỐT bởi ${lock.approvedByName || '—'}${lock.approvedAt ? ' lúc ' + String(lock.approvedAt).slice(0, 16).replace('T', ' ') : ''}`;
+  if (lock.status === 'cho_duyet') return `CHỜ DUYỆT · trình bởi ${lock.preparedByName || '—'}`;
+  return 'ĐÃ MỞ KHÓA — cần chốt lại';
+}
+function buildPayLockReport(spec) {
+  const { month, lock, rows, fromLock } = rcPaySource();
+  if (!rows.length) { showToast('Chưa có dữ liệu công trong kỳ!', 'error'); return null; }
+  const h = m => Math.round(((Number(m) || 0) / 60) * 100) / 100;
+  const ATT = { work: 'Đi làm', leave: 'Nghỉ có phép', absent: 'Vắng' };
+  const header = ['Stt', 'Bộ Phận', 'Mã NV', 'Họ Tên', 'Ngày', 'HC (h)', 'TC (h)',
+    'TC Đơn (h)', 'TC Ghi Nhận (h)', 'TC Hủy (h)', 'Chấm Tay', 'Ghi Chú'];
+  const sorted = rows.slice().sort((a, b) => String(a.dept).localeCompare(String(b.dept), 'vi')
+    || String(a.employeeName).localeCompare(String(b.employeeName), 'vi') || String(a.date).localeCompare(String(b.date)));
+  const body = sorted.map((r, i) => [
+    i + 1, r.dept || '', r.empCode || '', r.employeeName, r.date,
+    h(r.hc), h(r.tc), h(r.otApprovedMin), h(r.otAcceptedMin), h(r.otRejectedMin),
+    ATT[r.attStatus] || '', r.note || ''
+  ]);
+  const sub = `${rcMonthText(month)} · ${rows.length} dòng · ${fromLock ? 'SỐ CỦA BẢN ĐÃ LƯU' : 'SỐ HIỆN TẠI (chưa chốt)'}`
+    + ` · ${rcPayLockStateText(lock)}` + (lock && lock.hash ? ` · băm ${String(lock.hash).slice(0, 12)}` : '');
+  return rcFrame('BẢNG CHỐT CÔNG THEO THÁNG', sub, header, body, { sheet: 'ChotCong', file: spec.code });
+}
+function buildPaySummaryReport(spec) {
+  const { month, lock, totals, fromLock } = rcPaySource();
+  if (!totals.length) { showToast('Chưa có dữ liệu công trong kỳ!', 'error'); return null; }
+  const h = m => Math.round(((Number(m) || 0) / 60) * 100) / 100;
+  const signed = new Set(((lock && lock.paperSigned) || []).map(x => x && x.employeeId));
+  const header = ['Stt', 'Bộ Phận', 'Mã NV', 'Họ Tên', 'Ngày Công', 'Giờ HC (h)', 'Giờ TC (h)',
+    'TC Ghi Nhận (h)', 'TC Hủy (h)', 'Phiếu Giấy', 'Trạng Thái Kỳ'];
+  const body = totals.slice().sort((a, b) => String(a.dept).localeCompare(String(b.dept), 'vi')
+    || String(a.employeeName).localeCompare(String(b.employeeName), 'vi'))
+    .map((t, i) => [i + 1, t.dept || '', t.empCode || '', t.employeeName, t.days,
+      h(t.hcMin), h(t.tcMin), h(t.otMin), h(t.otRejectedMin || 0),
+      signed.has(t.employeeId) ? 'Đã thu' : 'Chưa thu', lock ? (lock.status === 'da_chot' ? 'Đã chốt' : 'Chờ duyệt') : 'Chưa chốt']);
+  const sub = `${rcMonthText(month)} · ${totals.length} nhân viên · ${fromLock ? 'SỐ CỦA BẢN ĐÃ LƯU' : 'SỐ HIỆN TẠI (chưa chốt)'}`
+    + ` · ${rcPayLockStateText(lock)}`;
+  return rcFrame('TỔNG HỢP CÔNG THEO NHÂN VIÊN', sub, header, body, { sheet: 'TongHopCong', file: spec.code });
+}
+function buildPaySlipReport(spec) {
+  const { month, lock, rows } = rcPaySource();
+  if (!rows.length) { showToast('Chưa có dữ liệu công trong kỳ!', 'error'); return null; }
+  const h = m => Math.round(((Number(m) || 0) / 60) * 100) / 100;
+  const header = ['Bộ Phận', 'Mã NV', 'Họ Tên', 'Ngày', 'Thứ', 'Giờ HC (h)', 'Giờ TC (h)', 'TC Ghi Nhận (h)', 'Ghi Chú'];
+  const DOW = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const dowOf = d => { try { return DOW[new Date(d + 'T00:00:00').getDay()] || ''; } catch (e) { return ''; } };
+  const body = rows.slice().sort((a, b) => String(a.employeeName).localeCompare(String(b.employeeName), 'vi')
+    || String(a.date).localeCompare(String(b.date)))
+    .map(r => [r.dept || '', r.empCode || '', r.employeeName, r.date, dowOf(r.date),
+      h(r.hc), h(r.tc), h(r.otAcceptedMin), (r.otRejectedMin ? `Hủy TC ${h(r.otRejectedMin)}h` : (r.note || ''))]);
+  const sub = `${rcMonthText(month)} · ${rows.length} dòng · ${rcPayLockStateText(lock)}`
+    + ` · quy tắc: vào làm tròn LÊN 30' · ra làm tròn XUỐNG 30' · nghỉ giữa ca · ngày nghỉ = TC`
+    + (lock && lock.disputeUntil ? ` · hạn khiếu nại ${lock.disputeUntil}` : '');
+  return rcFrame('PHIẾU CÔNG CÁ NHÂN (IN KÝ)', sub, header, body, { sheet: 'PhieuCong', file: spec.code });
 }
 // Nhãn kết luận (khai báo tại chỗ để report-center không phải import thêm)
 const CI_VERDICT_LABEL = {
@@ -684,6 +762,9 @@ function reportHasData(spec) {
   if (spec.kind === 'qcPress') return (state.pressRecords || []).length > 0;
   if (spec.kind === 'incidents') return (state.x2IncidentReports || []).length > 0;
   if (spec.kind === 'ciCompare') return (state.hrCheckins || []).length > 0 || (state.hrAssignments || []).length > 0;
+  if (spec.kind === 'payLock' || spec.kind === 'paySummary' || spec.kind === 'paySlip') {
+    return (state.hrCheckins || []).length > 0 || (state.hrAssignments || []).length > 0;
+  }
   if (spec.kind === 'massBalance') {
     const { from, to } = currentPeriodRange();
     const b = x2MassBalanceData(from, to);

@@ -83,6 +83,11 @@ export function normalizeUser(u) {
   // (dùng chung expandWsTabs — idempotent, chạy lại vẫn cho cùng kết quả)
   u.editTabs = expandWsTabs(u.editTabs);
   if (typeof u.allowAdvanced !== 'boolean') u.allowAdvanced = !!info.canAdvanced;
+  // QUYỀN CHỐT CÔNG (20/10/2026): mặc định KHÔNG có — Admin phải cấp riêng.
+  // Tuyệt đối KHÔNG đưa vào ALL_EDITABLE_IDS: normalizeUser cấp ALL_EDITABLE_IDS
+  // cho editor/manager chưa có editTabs ⇒ sẽ tự mở quyền nguy hiểm cho user cũ.
+  u.payApply = u.payApply === true;
+  u.payLock  = u.payLock === true;
   return u;
 }
 
@@ -149,6 +154,26 @@ export function canEditRate() { return isAdmin(); }
 // định mức (tránh vòng import), nhưng CÙNG chính sách.
 export function canApproveRate() { return isAdmin() || isManager(); }
 
+// ─── QUYỀN CHỐT CÔNG / ÁP DỤNG GIỜ MÁY (20/10/2026) ─────────────
+// HAI QUYỀN RIÊNG, MẶC ĐỊNH KHÔNG AI CÓ (trừ Quản Trị) — chỉ Admin cấp trong
+// modal "Quản Lý Người Chỉnh Sửa". Tách hẳn khỏi quyền tab 'hr' vì đây là
+// thao tác GHI ĐÈ dữ liệu chấm công và CHỐT số giờ để tính tiền lương:
+//   • payApply : Áp dụng chấm công theo máy · Xóa giờ máy ·
+//                Áp dụng tất cả / Xóa theo kỳ (thao tác hàng loạt)
+//   • payLock  : Xử lý dòng công (chấp nhận · bổ sung đơn TC · hủy TC ·
+//                miễn trừ) + Trình chốt công / Mở khóa kỳ
+// Người CHỈ có quyền tab 'hr' (nhập liệu) KHÔNG mặc nhiên có 2 quyền này.
+export function canPayApply() {
+  const u = currentUser();
+  if (!u) return false;
+  return roleInfo(u.role).editAll || u.payApply === true;
+}
+export function canPayLock() {
+  const u = currentUser();
+  if (!u) return false;
+  return roleInfo(u.role).editAll || u.payLock === true;
+}
+
 // Sửa được biểu đồ hay không = quyền SỬA TAB NGUỒN của biểu đồ đó.
 // (Khái niệm "vùng nâng cao" của biểu đồ đã bị XÓA — xem js/dashboard.js)
 
@@ -177,6 +202,8 @@ export function syncPermissionUI() {
   body.classList.toggle('read-only', !canEdit);
   body.classList.toggle('can-advanced', canViewAdvanced());
   body.dataset.editTabs = getEditableTabs().join(' ');
+  // Quyền CHỐT CÔNG (20/10/2026) → CSS ẩn nút theo data-pay="apply|lock"
+  body.dataset.payPerms = [canPayApply() ? 'apply' : '', canPayLock() ? 'lock' : ''].filter(Boolean).join(' ');
   body.dataset.role = role || 'guest';
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
   // Mục chỉ dành cho Admin trong menu

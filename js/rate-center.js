@@ -112,6 +112,28 @@ function rcSimple(key, group, sub, storeKey) {
     write: (m, v) => { const d = getDict(); if (d) d[m] = v > 0 ? v : 0; }
   };
 }
+// ─── ĐỊNH MỨC TÍNH THEO SỐ XE/GIỜ (Bốc Luồng · Cắt Chọn — 21/10/2026) ──
+// Số CŨ khai theo kg/h (1800–3000) được QUY ĐỔI ÷ KL/xe mặc định (600 kg) khi
+// ĐỌC (2000 kg/h → 3,333 xe/h) nên HIỆU SUẤT LỊCH SỬ KHÔNG ĐỔI; lần "Lưu &
+// trình" kế tiếp ghi số xe/h vào dict. Chỉ quy đổi giá trị > RC_XE_LEGACY_MAX
+// để KHÔNG chia 2 lần. ⚠ Giữ ĐỒNG BỘ với js/xuong2.js (xeRateOf).
+const RC_XE_LEGACY_MAX = 100;
+const RC_KG_PER_CART = 600;
+function rcXeRate(v) {
+  const n = rcNum(v);
+  if (!(n > 0)) return 0;
+  if (n > RC_XE_LEGACY_MAX) return Math.round((n / RC_KG_PER_CART) * 1000) / 1000;
+  return n;
+}
+function rcXe(key, group, storeKey) {
+  const getDict = () => (RC_STORES[storeKey] ? RC_STORES[storeKey].get() : null) || {};
+  return {
+    key, group, sub: 'xe/h', storeKey,
+    read: m => rcXeRate(getDict()[m]),
+    effective: m => rcXeRate(getDict()[m]),
+    write: (m, v) => { const d = getDict(); if (d) d[m] = v > 0 ? v : 0; }
+  };
+}
 function rcNested(key, group, sub, storeKey, subKey) {
   const getParent = () => (RC_STORES[storeKey] ? RC_STORES[storeKey].get() : null) || {};
   return {
@@ -184,8 +206,8 @@ function rcSay(key, sub, grp, field) {
 }
 
 const X2_FIELDS = [
-  rcSimple('boluong', 'Bốc Luồng', 'kg/h', STORAGE_KEY_X2_BOLUONG_RATE),
-  rcSimple('cut', 'Cắt Chọn', 'kg/h', STORAGE_KEY_X2_CAP_RATE),
+  rcXe('boluong', 'Bốc Luồng', STORAGE_KEY_X2_BOLUONG_RATE),
+  rcXe('cut', 'Cắt Chọn', STORAGE_KEY_X2_CAP_RATE),
   rcSimple('boong', 'Bổ Ống', 'kg/h', STORAGE_KEY_X2_BO_ONG_RATE),
   rcSimple('baotho', 'Chạy Máy Bào Thô', 'thanh/h', STORAGE_KEY_X2_BAO_THO_RATE),
   rcSimple('chonnan', 'Chọn Nan Thô', 'thanh/h', STORAGE_KEY_X2_CHON_NAN_RATE),
@@ -683,7 +705,10 @@ export {
   rcSaveMonth,
   rcApproveMonth,
   rcRevokeApproval,
-  onRateCenterClick
+  onRateCenterClick,
+  // Đơn vị định mức xe/h (Bốc Luồng · Cắt Chọn) — dùng cho kiểm thử
+  RC_XE_LEGACY_MAX,
+  rcXeRate
 };
 
 

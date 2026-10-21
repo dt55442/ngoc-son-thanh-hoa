@@ -157,8 +157,11 @@ check('CẤU TRÚC (index.html): vùng THẺ NGÀY (x2-day-cards) + bảng lô g
 check('CẤU TRÚC (index.html): thanh ĐỊNH MỨC CÔNG SUẤT có sẵn + bảng lô render động trong thẻ',
   idxHtml.includes('x2-rate-month') && idxHtml.includes('btn-x2-rate-save') &&
   idxHtml.includes('x2-day-cards') && !idxHtml.includes('x2-cut-table-body'));
-// Seed ĐỊNH MỨC công suất tháng 9 = 3000 kg/h (nguồn cột Hiệu suất)
+// Seed ĐỊNH MỨC tháng 9 = 3000 (số CŨ khai theo kg/h → hệ thống tự quy đổi
+// ÷ 600 = 5 xe/h khi ĐỌC; nhờ vậy HIỆU SUẤT không đổi so với cách tính cũ)
 state.x2CapRates = { '2026-09': 3000 };
+check('ĐỊNH MỨC: capRateOf quy đổi số cũ 3000 kg/h → 5 xe/h (dict vẫn giữ 3000)',
+  x2.capRateOf('2026-09-10') === 5 && state.x2CapRates['2026-09'] === 3000);
 // Điền khối lượng (dùng cho lưu ở mục E — validate khi lưu thay cho dòng tự tính đã gỡ)
 document.getElementById('x2-cut-ongluong').value = '400';
 document.getElementById('x2-cut-cuidot').value   = '100';
@@ -183,7 +186,7 @@ check('LƯU: THỜI GIAN CẮT tự động = "07:00–12:00, 13:00 → hết ca
 check('LƯU: SỐ GIỜ CẮT tự động = 9 giờ HC (07:00–12:00 + 13:00→hết ca 17h30, TRỪ nghỉ trưa)', rec.cutHours === 9);
 check('LƯU: GIỜ CẮT tách HC/TC = 9h HC / 0h TC (07:00–11:30 + 13:00–17:30 trong ca hành chính)',
   rec.cutHoursHC === 9 && rec.cutHoursTC === 0);
-check('LƯU: ĐỊNH MỨC tháng 9 = 3000 kg/h có trong state + localStorage (lưu cùng lượt cắt)',
+check('LƯU: ĐỊNH MỨC tháng 9 (số cũ kg/h) vẫn giữ trong state + localStorage (lưu cùng lượt cắt)',
   state.x2CapRates['2026-09'] === 3000);
 check('LƯU: tuần tự tạo theo ngày (2026-W…)', String(rec.week || '').startsWith('2026-W'));
 check('LƯU: form reset về chế độ ghi mới (x2CutEditId = null)', state.x2CutEditId === null);
@@ -204,10 +207,14 @@ check('THẺ NGÀY: đầu thẻ hiển thị Ngày 10/09/26 (định dạng dd/
 check('THẺ NGÀY: giờ cắt tách badge HC/TC = "9h HC" / "0h TC" (giờ ra trống = hết ca)',
   document.getElementById('x2-day-cards').innerHTML.includes('9h HC') &&
   document.getElementById('x2-day-cards').innerHTML.includes('0h TC'));
-check('THẺ NGÀY: CÔNG SUẤT THỰC TẾ = KL đầu vào ÷ giờ = 1000/9 = "111,11 kg/h"',
-  document.getElementById('x2-day-cards').innerHTML.includes('111,11 kg/h'));
-check('THẺ NGÀY: HIỆU SUẤT = Công suất thực tế ÷ Định mức = 111,11/3000 = "3,7%"',
+check('THẺ NGÀY: SỐ XE ≈ 1,67 (1.000 kg ÷ 600 — lượt lô cũ chưa ghi Số Xe)',
+  document.getElementById('x2-day-cards').innerHTML.includes('≈ 1,67'));
+check('THẺ NGÀY: CÔNG SUẤT THỰC TẾ = 1,67 xe ÷ 9h = "0,19 xe/h"',
+  document.getElementById('x2-day-cards').innerHTML.includes('0,19 xe/h'));
+check('THẺ NGÀY: HIỆU SUẤT = 0,19 xe/h ÷ 5 xe/h = "3,7%" (KHÔNG đổi so với tính theo kg)',
   document.getElementById('x2-day-cards').innerHTML.includes('3,7%'));
+check('THẺ NGÀY: tooltip vẫn ghi tương đương kg/h cũ ("111,11 kg/h")',
+  document.getElementById('x2-day-cards').innerHTML.includes('111,11 kg/h'));
 check('BẢNG LÔ TRONG THẺ: đủ 4 khối lượng + tỷ lệ QĐ 40% + ô Giá ống trống (lô "Luồng cây xô")',
   document.getElementById('x2-day-cards').innerHTML.includes('Luồng cây xô') &&
   document.getElementById('x2-day-cards').innerHTML.includes('400') &&

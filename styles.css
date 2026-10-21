@@ -12873,3 +12873,268 @@ body[data-fx="low"] .auth-busy-bar > span { animation: none; }
   .login-help-row { font-size: 0.78rem; }
 }
 
+
+/* ═══════════════════════════════════════════════════════════════
+   QUYỀN CHỐT CÔNG (20/10/2026)
+   Ẩn nút theo quyền do Admin cấp — body[data-pay-perms] do
+   permissions.syncPermissionUI() đặt. Hàm xử lý VẪN tự chặn (không chỉ ẩn).
+   ═══════════════════════════════════════════════════════════════ */
+body:not([data-pay-perms~="apply"]) [data-pay="apply"] { display: none !important; }
+body:not([data-pay-perms~="lock"]) [data-pay="lock"] { display: none !important; }
+
+.perm-chip-pay { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.perm-chip-pay svg { width: 13px; height: 13px; }
+
+#modal-ci-bulk .ci-bulk-warn {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  border-left: 3px solid #dc2626;
+}
+#modal-ci-bulk .ci-bulk-warn[hidden] { display: none !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   XỬ LÝ DÒNG CÔNG — CHỐT CÔNG ĐỂ TÍNH LƯƠNG (20/10/2026)
+   ═══════════════════════════════════════════════════════════════ */
+.ci-pay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.ci-pay-chip.is-ok   { background: #dcfce7; color: #166534; border-color: #86efac; }
+.ci-pay-chip.is-wait { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.ci-pay-chip.is-bad  { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.ci-pay-chip.is-mien { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+
+.ci-pay-info {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+}
+.ci-pay-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 14px; }
+.ci-pay-grid > div { display: flex; flex-direction: column; gap: 2px; font-size: 0.82rem; }
+.ci-pay-grid span { color: var(--text-muted, #64748b); font-size: 0.72rem; }
+.ci-pay-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+.ci-pay-gap {
+  font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;
+}
+.ci-pay-ok {
+  font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7;
+}
+.ci-pay-bad { margin-top: 8px; font-size: 0.78rem; color: #b91c1c; }
+.ci-pay-hint { font-size: 0.75rem; color: var(--text-muted, #64748b); line-height: 1.5; margin-top: 4px; }
+.ot-ci-banner {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  border-left: 3px solid #ea580c;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.ot-ci-banner[hidden] { display: none !important; }
+#modal-ci-pay .form-group[hidden] { display: none !important; }
+
+@media (max-width: 639.98px) {
+  .ci-pay-grid { grid-template-columns: 1fr 1fr; }
+  #modal-ci-pay input[type="text"] { font-size: 16px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHỐT CÔNG LƯƠNG THEO THÁNG (20/10/2026)
+   ═══════════════════════════════════════════════════════════════ */
+.pay-lock-statebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px 0;
+  font-size: 0.8rem;
+}
+.pay-lock-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  border: 1px solid transparent;
+}
+.pay-lock-state.is-ok   { background: #dcfce7; color: #166534; border-color: #86efac; }
+.pay-lock-state.is-wait { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.pay-lock-state.is-mien { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+.pay-lock-state.is-none { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.pay-lock-meta {
+  font-size: 0.74rem;
+  color: var(--text-muted, #64748b);
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.pay-lock-meta.is-warn { background: #fef3c7; color: #92400e; border-color: #fcd34d; font-weight: 600; }
+.pay-lock-drift {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-left: 3px solid #dc2626;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.pay-lock-blockers {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff7ed;
+  border-left: 3px solid #ea580c;
+  font-size: 0.8rem;
+}
+.pay-lock-blockers-head { font-weight: 700; color: #9a3412; margin-bottom: 4px; }
+.pay-lock-blockers ul,
+.pay-lock-modal-list { margin: 0; padding-left: 18px; line-height: 1.6; }
+.pay-lock-blockers li,
+.pay-lock-modal-list li { font-size: 0.78rem; color: var(--text, #1e293b); }
+.pay-lock-modal-list { margin-top: 6px; }
+
+@media (max-width: 639.98px) {
+  .pay-lock-meta { font-size: 0.7rem; }
+  #modal-pay-lock input[type="text"],
+  #modal-pay-lock input[type="number"],
+  #modal-pay-lock input[type="month"] { font-size: 16px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   IN PHIẾU CÔNG CÁ NHÂN (ký giấy) — 20/10/2026
+   ═══════════════════════════════════════════════════════════════ */
+.pay-print-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.pay-print-preview {
+  padding: 12px;
+  max-height: 64dvh;
+  overflow: auto;
+  background: #e2e8f0;
+}
+.payslip-page {
+  background: #fff;
+  color: #111827;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+}
+.ps-head { text-align: center; margin-bottom: 10px; }
+.ps-brand { font-weight: 700; font-size: 13px; letter-spacing: 0.4px; }
+.ps-title { font-size: 16px; font-weight: 800; margin: 2px 0; }
+.ps-status { font-size: 11px; color: #b91c1c; font-weight: 700; }
+.ps-info { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; font-size: 12px; }
+.ps-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.ps-table th, .ps-table td { border: 1px solid #334155; padding: 3px 5px; }
+.ps-table thead th { background: #f1f5f9; }
+.ps-table .ps-c { text-align: center; }
+.ps-rules { margin-top: 8px; font-size: 10.5px; line-height: 1.5; }
+.ps-sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; text-align: center; }
+.ps-sign > div { padding-top: 38px; }
+.ps-sign span { display: block; font-weight: 700; font-size: 11.5px; }
+.ps-sign em { display: block; font-size: 10px; font-style: italic; }
+.ps-foot { margin-top: 10px; font-size: 10px; color: #475569; }
+
+#pay-print-area { display: none; }
+
+@media print {
+  body.pay-printing > *:not(#pay-print-area) { display: none !important; }
+  body.pay-printing #pay-print-area { display: block !important; }
+  body.pay-printing #pay-print-area .payslip-page {
+    box-shadow: none;
+    margin: 0;
+    max-width: none;
+    padding: 0 6mm;
+    page-break-after: always;
+    break-after: page;
+  }
+  body.pay-printing #pay-print-area .payslip-page:last-child { page-break-after: auto; break-after: auto; }
+  body.pay-printing #pay-print-area .ps-table th,
+  body.pay-printing #pay-print-area .ps-table td { border: 1px solid #000; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   KỲ NGÀY/TUẦN/THÁNG + CHÍP LỌC + TÔ SÁNG DÒNG (21/10/2026)
+   ═══════════════════════════════════════════════════════════════ */
+.ci-period-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ci-period-modes {
+  display: inline-flex;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 999px;
+  overflow: hidden;
+  background: #fff;
+}
+.ci-period-btn {
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+}
+.ci-period-btn + .ci-period-btn { border-left: 1px solid var(--border, #e2e8f0); }
+.ci-period-btn.is-active { background: var(--primary, #0f766e); color: #fff; }
+.ci-period-label { font-size: 0.8rem; font-weight: 700; color: var(--primary, #0f766e); white-space: nowrap; }
+.ci-period-bar [hidden] { display: none !important; }
+
+.hr-stat-chip.ci-chip { font: inherit; line-height: 1.25; -webkit-appearance: none; appearance: none; cursor: pointer; user-select: none; border: 1px solid transparent; transition: box-shadow .15s, transform .1s; }
+.hr-stat-chip.ci-chip:hover { box-shadow: 0 1px 6px rgba(0, 0, 0, .12); transform: translateY(-1px); }
+.hr-stat-chip.ci-chip.is-active { outline: 2px solid var(--primary, #0f766e); outline-offset: 1px; font-weight: 700; }
+.ci-chip-clear { background: #f1f5f9; color: #334155; }
+
+.ci-cell-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline dotted rgba(100, 116, 139, .5);
+  text-underline-offset: 2px;
+}
+.ci-cell-link:hover { color: var(--primary, #0f766e); }
+
+@keyframes ciFlash {
+  0%   { background: rgba(245, 158, 11, 0.55); }
+  60%  { background: rgba(245, 158, 11, 0.20); }
+  100% { background: transparent; }
+}
+tr.ci-row-flash > td { animation: ciFlash 1.6s ease-out 1; }
+tr.ci-row-flash > td:first-child { box-shadow: inset 3px 0 0 #d97706; }
+body[data-fx="low"] tr.ci-row-flash > td { animation: none; background: rgba(245, 158, 11, .18); }
+
+@media (max-width: 639.98px) {
+  .ci-period-bar { width: 100%; }
+  .ci-period-btn { padding: 8px 12px; }
+  .ci-period-label { flex-basis: 100%; }
+}

@@ -320,7 +320,7 @@ check('H7: CSS có khối sổ nhóm (công tắc · phiếu cân · dòng tự 
   css.includes('.x2-kind-switch') && css.includes('.x2-ticket-picker') &&
   css.includes('.x2-pool-calc') && css.includes('.x2-pool-note'));
 check('H8: sw.js cache v278 + nạp js/x2-pool.js vào APP_SHELL',
-  /nha-may-ngoc-son-v295/.test(sw) && sw.includes("./js/x2-pool.js"));
+  /nha-may-ngoc-son-v298/.test(sw) && sw.includes("./js/x2-pool.js"));
 
 // ═══ J. UI ĐIỆN THOẠI: SHEET CHỌN PHIẾU + Ô SỐ 6 CHỮ SỐ + KHÔNG CÒN KHOẢNG TRẮNG ═══
 // (1) Sheet chọn phiếu cân: nút "N phiếu · X kg" → mở panel → chọn nhiều phiếu →

@@ -152,11 +152,11 @@ check('C2. đúng 4 nhóm + đúng thứ tự Hồ sơ → Ngày công → Thố
 check('C3. đúng 4 khối thẻ theo nhóm',
   (idxDock.match(/data-hr-group-panel="/g) || []).length === 4);
 
-const CARD_IDS = ['hr-emp-card', 'hr-pos-card', 'hr-att-card', 'hr-ci-card', 'hr-leave-card',
+const CARD_IDS = ['hr-emp-card', 'hr-pos-card', 'hr-att-card', 'hr-pay-card', 'hr-ci-card', 'hr-leave-card',
   'hr-ot-card', 'hr-stats-card', 'hr-att-stats-card', 'hr-recruit-card', 'hr-posneed-card'];
 const cardIds = (idxDock.match(/data-hr-card="([a-z-]+)"/g) || []).map(x => x.split('"')[1]);
-check('C4. đủ 10 thẻ mini + đúng data-hr-card',
-  cardIds.length === 10 && CARD_IDS.every(id => cardIds.includes(id)));
+check('C4. đủ 11 thẻ mini + đúng data-hr-card',
+  cardIds.length === 11 && CARD_IDS.every(id => cardIds.includes(id)));
 
 claimOk:
 {
@@ -169,6 +169,7 @@ claimOk:
   check('C5. thẻ nằm ĐÚNG nhóm',
     sec(a, b).includes('data-hr-card="hr-emp-card"') && sec(a, b).includes('data-hr-card="hr-pos-card"') && !sec(a, b).includes('data-hr-card="hr-att-card"')
     && sec(b, c).includes('data-hr-card="hr-att-card"') && sec(b, c).includes('data-hr-card="hr-ci-card"')
+    && sec(b, c).includes('data-hr-card="hr-pay-card"')
     && sec(b, c).includes('data-hr-card="hr-leave-card"') && sec(b, c).includes('data-hr-card="hr-ot-card"')
     && sec(c, d).includes('data-hr-card="hr-stats-card"') && sec(c, d).includes('data-hr-card="hr-att-stats-card"')
     && sec(d, e).includes('data-hr-card="hr-recruit-card"') && sec(d, e).includes('data-hr-card="hr-posneed-card"'));
@@ -215,7 +216,7 @@ check('E2. events có Esc đóng dock (ưu tiên đóng pop-up chi tiết)',
   /hrDockState\(\)\.level === 0[\s\S]{0,400}?hrDockClose\(\)/.test(evSrc));
 check('E3. rời tab Nhân Sự tự đóng dock (main.js)',
   mainSrc.includes('hrDockClose') && /closeViewScopedModals[\s\S]{0,900}?hrDockClose/.test(mainSrc));
-check('E4. sw.js cache v284', swSrc.includes('nha-may-ngoc-son-v295'));
+check('E4. sw.js cache v284', swSrc.includes('nha-may-ngoc-son-v298'));
 
 console.log(`\nHR-DOCK: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);

@@ -51,7 +51,7 @@ import { escapeHTML, showToast } from './utils.js';
     xuong1LocThanhRecords:{ tab: 'kanban',  label: 'Lọc Thanh/Bó Xô X1',   get: () => state.xuong1LocThanhRecords },
     x1Rates:              { tab: 'kanban',  label: 'Định mức Xưởng 1 (kg/h)', get: () => state.x1Rates },
     xuong2BoluongRecords:{ tab: 'kanban',  label: 'Bốc luồng Xưởng 2',    get: () => state.xuong2BoluongRecords },
-    x2BoluongRates:    { tab: 'kanban',    label: 'Định mức bốc luồng (kg/h)', get: () => state.x2BoluongRates },
+    x2BoluongRates:    { tab: 'kanban',    label: 'Định mức bốc luồng (xe/h)', get: () => state.x2BoluongRates },
     xuong2BoOngRecords:{ tab: 'kanban',    label: 'Bổ ống Xưởng 2',       get: () => state.xuong2BoOngRecords },
     xuong2BaoThoRecords:{ tab: 'kanban',   label: 'Chạy máy bào thô X2',  get: () => state.xuong2BaoThoRecords },
     xuong2ChonNanThoRecords:{ tab: 'kanban', label: 'Chọn nan thô Xưởng 2', get: () => state.xuong2ChonNanThoRecords },
@@ -90,6 +90,8 @@ import { escapeHTML, showToast } from './utils.js';
     hrAttendance:      { tab: 'hr',        label: 'Chấm công & phân vị',  get: () => state.hrAttendance },
     hrCheckins:        { tab: 'hr',        label: 'Giờ máy chấm công',    get: () => state.hrCheckins },
     hrCiAcks:          { tab: 'hr',        label: 'Xác nhận đối chiếu chấm công', get: () => state.hrCiAcks },
+    hrPayRows:         { tab: 'hr',        label: 'Dòng công đã xử lý (chốt lương)', get: () => state.hrPayRows },
+    hrPayLocks:        { tab: 'hr',        label: 'Bản chốt công theo tháng', get: () => state.hrPayLocks },
     customCharts:      { tab: 'dashboard', label: 'Biểu đồ Dashboard',    get: () => state.customCharts }
   };
 

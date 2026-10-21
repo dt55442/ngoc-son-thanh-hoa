@@ -1543,9 +1543,54 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     initLucide();
   }
 
-  // ─── ĐỊNH MỨC CÔNG SUẤT CẮT (kg/giờ) THEO TỪNG THÁNG ─────────
-  // Người quản lý đặt riêng cho từng tháng (VD tháng 9 = 3000 kg/h, tháng 10 = 3200
-  // kg/h) — nguồn cho cột "Hiệu suất" = Công suất thực tế ÷ Công suất định mức.
+  // ══════════════════════════════════════════════════════════════
+  // ĐƠN VỊ ĐỊNH MỨC 2 CÔNG ĐOẠN: BỐC LUỒNG + CẮT CHỌN = SỐ XE / GIỜ
+  // (21/10/2026 — chốt với người dùng; phương án A)
+  //   • Công suất = tổng SỐ XE trong ngày ÷ giờ làm việc hiệu dụng.
+  //   • Hiệu suất  = Công suất ÷ Định mức tháng (xe/h).
+  //   • Lượt CHƯA có số xe (lô cũ / luồng ống) → SỐ XE TƯƠNG ĐƯƠNG
+  //     ≈ KL ÷ KL/xe (kgPerCart của lượt nếu có, mặc định 600 kg) — hiển thị "≈".
+  //   • Định mức đã khai theo kg/h TRƯỚC ĐÂY (VD 2000 kg/h) được QUY ĐỔI
+  //     ÷ KL/xe mặc định → 3,333 xe/h. Nhờ vậy HIỆU SUẤT LỊCH SỬ KHÔNG ĐỔI
+  //     (tử số và mẫu số cùng chia 600). Chỉ quy đổi giá trị > XE_RATE_LEGACY_MAX
+  //     nên KHÔNG BAO GIỜ chia 2 lần (3,33 < 100 → giữ nguyên).
+  // ══════════════════════════════════════════════════════════════
+  const XE_RATE_LEGACY_MAX = 100;   // xe/h không thể > 100 ⇒ số lớn hơn = kg/h cũ
+  function xeRateOf(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    if (n > XE_RATE_LEGACY_MAX) {
+      const per = Number(X2_KG_PER_CART_DEFAULT) > 0 ? Number(X2_KG_PER_CART_DEFAULT) : 600;
+      // 3 chữ số thập phân: đủ chính xác để HIỆU SUẤT lịch sử gần như không đổi
+      // (VD 2500 kg/h → 4,167 xe/h), mà ô nhập vẫn gọn.
+      return Math.round((n / per) * 1000) / 1000;
+    }
+    return n;
+  }
+  // Số xe dùng cho CÔNG SUẤT/HIỆU SUẤT của 1 lượt:
+  // ưu tiên SỐ XE THẬT; thiếu (lô cũ / luồng ống) → suy từ KL ÷ KL/xe.
+  //   est = true nghĩa là số XE TƯƠNG ĐƯƠNG (ước tính) — cần hiển thị dấu "≈".
+  function xeCartsOf(cartsVal, kgVal, kgPerCartVal) {
+    const real = Number(cartsVal) || 0;
+    if (real > 0) return { carts: real, est: false };
+    const kg = Number(kgVal) || 0;
+    const per = Number(kgPerCartVal) > 0 ? Number(kgPerCartVal) : X2_KG_PER_CART_DEFAULT;
+    if (!(kg > 0) || !(per > 0)) return { carts: 0, est: true };
+    // GIỮ NGUYÊN độ chính xác (không làm tròn) để hiệu suất khớp cách tính theo
+    // kg trước đây — chỉ làm tròn lúc HIỂN THỊ.
+    return { carts: kg / per, est: true };
+  }
+  // Nhãn số xe: "40" (thật) · "≈ 40" (tương đương từ kg)
+  function xeTextOf(carts, est) {
+    const n = Number(carts) || 0;
+    if (!(n > 0)) return '—';
+    return `${est ? '≈ ' : ''}${fmtKg(n)}`;
+  }
+
+  // ─── ĐỊNH MỨC CÔNG SUẤT CẮT (SỐ XE/GIỜ) THEO TỪNG THÁNG ──────
+  // Người quản lý đặt riêng cho từng tháng (VD tháng 10 = 3,33 xe/h) — nguồn
+  // cho cột "Hiệu suất" = Công suất thực tế (xe/h) ÷ Định mức (xe/h).
+  // Số cũ khai theo kg/h (1800–3000) được `xeRateOf()` quy đổi ÷ 600 khi đọc.
   function loadX2CapRates() {
     const raw = localStorage.getItem(STORAGE_KEY_X2_CAP_RATE);
     if (raw) {
@@ -1571,14 +1616,14 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     firePushSync();
   }
 
-  // Định mức công suất của tháng chứa dateVal (kg/giờ) — null nếu chưa đặt
+  // Định mức công suất của tháng chứa dateVal (SỐ XE/GIỜ) — null nếu chưa đặt
+  // (số cũ khai theo kg/h được quy đổi ÷ KL/xe mặc định qua xeRateOf)
   function capRateOf(dateVal) {
     const key = String(dateVal || '').slice(0, 7);
-    const v = Number((state.x2CapRates || {})[key]);
-    return Number.isFinite(v) && v > 0 ? v : null;
+    return xeRateOf((state.x2CapRates || {})[key]);
   }
 
-  // Lưu định mức 1 tháng (từ thanh điền nhanh trên bảng)
+  // Lưu định mức 1 tháng (từ popup "Định mức" trên form nhập)
   function handleX2CapRateSave() {
     if (!requireRatePermission()) return;
     const monthEl = document.getElementById('x2-rate-month');
@@ -1586,29 +1631,34 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const month = String((monthEl && monthEl.value) || '').trim();
     const v = Number((valEl && valEl.value) || 0);
     if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chưa chọn tháng để lưu định mức!', 'error'); return; }
-    if (!Number.isFinite(v) || v <= 0) { showToast('Định mức công suất phải là số kg/giờ lớn hơn 0!', 'error'); return; }
+    if (!Number.isFinite(v) || v <= 0) { showToast('Định mức công suất phải là số XE/GIỜ lớn hơn 0!', 'error'); return; }
     (state.x2CapRates = state.x2CapRates || {})[month] = v;
     saveX2CapRates();
     renderX2RateBar();
     renderXuong2CutTable(); // cột Hiệu suất tự cập nhật
-    showToast(`Đã lưu định mức công suất ${fmtKg(v)} kg/giờ cho tháng ${month.slice(5)}!`, 'success');
+    showToast(`Đã lưu định mức cắt chọn ${fmtKg(v)} xe/giờ cho tháng ${month.slice(5)}!`, 'success');
   }
 
-  // Thanh điền ĐỊNH MỨC: chọn tháng (gợi ý các tháng có lượt cắt + tháng hiện tại)
+  // Ô chọn tháng trong popup ĐỊNH MỨC: chọn tháng (gợi ý các tháng có lượt cắt
+  // + các tháng đã đặt định mức + tháng hiện tại) — số hiện ra ĐÃ quy đổi xe/h.
   function renderX2RateBar() {
     const bar = document.getElementById('x2-rate-bar');
     if (!bar) return;
     const sel = bar.querySelector('#x2-rate-month');
     const valEl = bar.querySelector('#x2-rate-value');
     if (!sel) return;
-    const months = new Set([...(state.xuong2CutRecords || []).map(r => String(r.date || '').slice(0, 7)), new Date().toISOString().slice(0, 7)]);
+    const months = new Set([
+      ...(state.xuong2CutRecords || []).map(r => String(r.date || '').slice(0, 7)),
+      ...Object.keys(state.x2CapRates || {}),
+      new Date().toISOString().slice(0, 7)
+    ]);
     const curMonth = sel.value || new Date().toISOString().slice(0, 7);
     sel.innerHTML = [...months].filter(Boolean).sort((a, b) => b.localeCompare(a))
       .map(m => `<option value="${escapeHTML(m)}">Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</option>`).join('');
     sel.value = months.has(curMonth) ? curMonth : [...months][0] || '';
     if (valEl) {
-      const v = Number((state.x2CapRates || {})[sel.value]);
-      valEl.value = Number.isFinite(v) && v > 0 ? v : '';
+      const v = capRateOf(sel.value);
+      valEl.value = v != null ? v : '';
     }
   }
 
@@ -1947,12 +1997,17 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     } else {
       cutHours = snapshotCutHours(r.cutTime);
     }
+    // SỐ XE dùng cho CÔNG SUẤT/HIỆU SUẤT (xe/h): số xe THẬT, thiếu (lô cũ /
+    // luồng ống) → số XE TƯƠNG ĐƯƠNG ≈ KL đầu vào ÷ KL/xe (mặc định 600 kg).
+    const xe = xeCartsOf(r.carts, inputWeight, r.kgPerCart);
     return {
       date: r.date || '',
       inputKind: isNew ? r.inputKind : 'legacy',
       inputKindLabel: cutInputKindLabel(r),
       carts: Number(r.carts) || 0,
       kgPerCart: Number(r.kgPerCart) || 0,
+      cartsEq: xe.carts,
+      cartsEst: xe.est,
       materialType: isNew ? (r.materialType || '') : (mat ? (mat.type || '') : (r.materialType || '')),
       supplier: isNew
         ? (r.supplierLabel || r.supplier || '')
@@ -2726,15 +2781,16 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const totalLoi  = disp.reduce((s, d) => s + d.klOngLoi, 0);
     const totalMat  = disp.reduce((s, d) => s + d.klMatLuong, 0);
     const totalHao  = disp.reduce((s, d) => s + Math.max(0, d.klNgonOngLoai), 0);
-    const totalCarts = disp.reduce((s, d) => s + (d.carts || 0), 0);
+    const totalCarts = disp.reduce((s, d) => s + (d.cartsEq || 0), 0);
+    const xeEstCount = disp.filter(d => d.cartsEst && d.cartsEq > 0).length;
     box.innerHTML = `
       <div class="material-stat">
         <span class="material-stat-value">${disp.length}</span>
         <span class="material-stat-label">Lượt cắt/chọn</span>
       </div>
-      <div class="material-stat">
+      <div class="material-stat" title="Tổng SỐ XE đem cắt (xe/h là đơn vị định mức mới).${xeEstCount ? ` Có ${xeEstCount} lượt chưa ghi Số Xe nên dùng số XE TƯƠNG ĐƯƠNG ≈ KL ÷ 600.` : ''}">
         <span class="material-stat-value">${fmtKg(totalCarts)}</span>
-        <span class="material-stat-label">Tổng số xe đã cắt</span>
+        <span class="material-stat-label">Tổng số xe đã cắt${xeEstCount ? ' (gồm ≈)' : ''}</span>
       </div>
       <div class="material-stat">
         <span class="material-stat-value">${Math.round(totalIn).toLocaleString('vi-VN')}</span>
@@ -2760,9 +2816,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   // ─── BẢNG LỊCH SỬ CẮT/CHỌN — NHÓM THEO NGÀY (theo mẫu Excel) ─
   // DÒNG NHÓM NGÀY: Ngày | Người cắt | Giờ cắt HC | TC | Công suất thực tế |
-  // Hiệu suất (= Công suất thực tế ÷ Công suất định mức của tháng).
-  //   Công suất thực tế = TỔNG KL ĐẦU VÀO ÷ tổng số giờ làm việc (kg/h) —
-  //   tổng giờ làm việc lấy từ tab Nhân Sự (Bảng bố trí/chấm công vị trí Cắt).
+  // Hiệu suất (= Công suất thực tế ÷ Định mức của tháng).
+  //   Công suất thực tế = TỔNG SỐ XE ÷ tổng số giờ làm việc (xe/h) — từ
+  //   21/10/2026 đơn vị định mức là SỐ XE/GIỜ; lượt chưa ghi Số Xe (lô cũ /
+  //   luồng ống) được quy đổi ≈ KL ÷ KL/xe mặc định (600 kg) và hiện dấu "≈".
+  //   Tổng giờ làm việc lấy từ tab Nhân Sự (Bảng bố trí vị trí Cắt).
   // Sau đó các DÒNG LÔ trong ngày: Loại NL | NCC | KL đầu vào | KL ống đạt |
   // KL củi đốt | KL cây loại | KL ngọn/ống loại | Tỷ lệ QĐ | Giá ống tương đương |
   // Thao tác. Nguồn giờ cắt: Bảng bố trí Nhân Sự (dữ liệu SỐNG); mất bố trí → snapshot.
@@ -2795,9 +2853,13 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     for (const [date, list] of groups) {
       const first = cutDisplay(list[0]); // thông tin CHUNG của ngày (người cắt/giờ)
       let totalIn = 0;
+      let totalXe = 0;      // Σ SỐ XE (thật + tương đương) — nguồn tính công suất xe/h
+      let totalXeEst = 0;   // phần xe phải quy đổi ≈ từ kg (để ghi trong tooltip)
       const rowsHtml = list.map(r => {
         const d = cutDisplay(r);
         totalIn += d.inputWeight;
+        totalXe += d.cartsEq;
+        if (d.cartsEst) totalXeEst += d.cartsEq;
         const ratioTxt = d.ratio == null ? '—' : `${fmtRatio(d.ratio)}%`;
         const kindSub = d.inputKind === 'cart'
           ? `Xe luồng cây · ${fmtKg(d.carts)} xe × ${fmtKg(d.kgPerCart)} kg`
@@ -2808,7 +2870,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
         <tr class="x2-day-row" data-x2-cut-row="${escapeHTML(r.id)}">
           <td><strong>${escapeHTML(d.materialType || '—')}</strong><div class="x2-row-note">${escapeHTML(kindSub)}</div></td>
           <td>${escapeHTML(d.supplier || '—')}${d.note ? `<div class="x2-row-note">${escapeHTML(d.note)}</div>` : ''}</td>
-          <td class="text-right">${d.carts > 0 ? `<strong>${fmtKg(d.carts)}</strong>` : '—'}</td>
+          <td class="text-right"${d.cartsEst && d.cartsEq > 0 ? ' title="Số xe TƯƠNG ĐƯƠNG — quy đổi từ KL đầu vào ÷ KL/xe mặc định (600 kg) vì lượt này chưa ghi Số Xe. Số xe thật chỉ có ở lượt nhập theo xe luồng cây."' : ''}><strong>${xeTextOf(d.cartsEq, d.cartsEst)}</strong></td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.inputWeight)}</strong></td>
           <td class="text-right">${fmtKg(d.klOngLuong)}</td>
           <td class="text-right">${d.inputKind === 'legacy' ? '—' : fmtKg(d.klOngLoi)}</td>
@@ -2829,15 +2891,21 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       // CÔNG SUẤT → HIỆU SUẤT của ngày.
       const hoursEff = stageEffHours('cut', date, hours);
       const incH = stageIncidentOf('cut', date);
-      const cap = hoursEff > 0 ? (totalIn / hoursEff) : null; // Công suất thực tế (kg/h)
-      const rate = capRateOf(date); // Công suất định mức của tháng (kg/h)
+      // CÔNG SUẤT = Σ SỐ XE ÷ giờ hiệu dụng (xe/h) — đơn vị mới từ 21/10/2026
+      const cap = hoursEff > 0 ? (totalXe / hoursEff) : null;
+      const rate = capRateOf(date);                  // Định mức tháng (xe/h)
       const eff = (cap != null && rate) ? (cap / rate) * 100 : null; // Hiệu suất (%)
+      // Quy đổi tương đương kg/h để đối chiếu với cách tính cũ (chỉ trong tooltip)
+      const capKg = hoursEff > 0 ? (totalIn / hoursEff) : null;
+      const xeNote = totalXeEst > 0
+        ? ` · trong đó ≈ ${fmtKg(totalXeEst)} xe quy đổi từ kg (lượt chưa ghi Số Xe)`
+        : '';
       const effTxt = eff == null
         ? '<em style="color:var(--text-muted);">—</em>'
         : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
       const effTip = eff == null
-        ? 'Chưa đủ dữ liệu (thiếu giờ cắt / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức công suất cho tháng này)'
-        : `Hiệu suất = Công suất thực tế (${fmtKg(cap)} kg/h = ${fmtKg(totalIn)} kg ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}) ÷ Công suất định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} kg/h)`;
+        ? 'Chưa đủ dữ liệu (chưa có số xe / thiếu giờ cắt / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức cho tháng này)'
+        : `Hiệu suất = Công suất thực tế (${fmtKg(cap)} xe/h = ${fmtKg(totalXe)} xe ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}${xeNote}) ÷ Định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} xe/h)`;
       const hcTxt = first.cutHoursHC != null ? fmtRatio(first.cutHoursHC) : '—';
       const tcTxt = first.cutHoursTC != null ? fmtRatio(first.cutHoursTC) : '—';
       const cutters = first.cutterRows.filter(x => x.name);
@@ -2853,11 +2921,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
             <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
             <span class="x2-day-cutters" title="Người cắt/chọn tự động từ Bảng bố trí Nhân Sự (vị trí Cắt — Xưởng 2)"><i data-lucide="users"></i> ${cuttersMain || '<em style="color:var(--text-muted);">chưa bố trí người cắt</em>'}${cuttersMore}</span>
             <span class="x2-day-hours" title="Số giờ cắt = tổng giờ công vị trí Cắt trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ cắt: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế = Tổng KL đầu vào (${fmtKg(totalIn)} kg) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
+            <span class="x2-day-cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('cut', date)}
           </div>
-          ${x2ShiftBlockOf(date, isCutSelectPos, 'Cắt chọn', { qty: totalIn, unit: 'kg/h', rate, incH })}
+          ${x2ShiftBlockOf(date, isCutSelectPos, 'Cắt chọn', { qty: totalXe, unit: 'xe/h', rate, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -2901,7 +2969,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   //     khỏi ô chọn (đang sửa lượt cũ vẫn thấy đúng lô của lượt đó);
   //   • NGƯỜI BỐC + GIỜ BỐC tự động từ Bảng bố trí Nhân Sự (vị trí chứa
   //     "bốc luồng" — Xưởng 2, đúng ngày; giờ tách HC/TC theo cửa sổ ca);
-  //   • ĐỊNH MỨC CÔNG SUẤT BỐC LUỒNG theo THÁNG (kg/h) → Hiệu suất
+  //   • ĐỊNH MỨC CÔNG SUẤT BỐC LUỒNG theo THÁNG (SỐ XE/GIỜ) → Hiệu suất
   //     = Công suất thực tế ÷ Định mức.
   // Dữ liệu: state.xuong2BoluongRecords (localStorage + file + mây, tombstone).
 
@@ -3200,6 +3268,9 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     } else {
       workHours = snapshotCutHours(r.workTime);
     }
+    // SỐ XE dùng cho CÔNG SUẤT/HIỆU SUẤT (xe/h): số xe THẬT, thiếu → số XE
+    // TƯƠNG ĐƯƠNG ≈ KL luồng lên xe ÷ KL/xe (dữ liệu cũ chỉ ghi KL, chưa có Số xe).
+    const xe = xeCartsOf(carts, qty, kgPerCart);
     return {
       date: r.date || '',
       materialType: poolMode ? (r.materialType || x2TypeLabelOf(alloc, 'cay')) : (mat ? (mat.type || '') : (r.materialType || '')),
@@ -3213,6 +3284,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       poolMode,
       carts,
       kgPerCart,
+      cartsEq: xe.carts,
+      cartsEst: xe.est,
       ngonKg,
       tickets: alloc,
       lotUsed,
@@ -3504,8 +3577,10 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const box = document.getElementById('x2-blg-stats');
     if (!box) return;
     const list = state.xuong2BoluongRecords || [];
+    const disp = list.map(boluongDisplay);
     const totalQty = list.reduce((s, r) => s + (Number(r.qty) || 0), 0);
-    const totalCarts = list.reduce((s, r) => s + (Number(r.carts) || 0), 0);
+    const totalCarts = disp.reduce((s, d) => s + (d.cartsEq || 0), 0);
+    const xeEstCount = disp.filter(d => d.cartsEst && d.cartsEq > 0).length;
     const totalNgon = list.reduce((s, r) => s + (Number(r.ngonKg) || 0), 0);
     const t = x2TicketTotals('cay', x2BoluongExclude());
     const days = new Set(list.map(r => r.date).filter(Boolean)).size;
@@ -3514,9 +3589,9 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
         <span class="material-stat-value">${list.length}</span>
         <span class="material-stat-label">Lượt bốc luồng</span>
       </div>
-      <div class="material-stat">
+      <div class="material-stat" title="Tổng SỐ XE bốc (xe/h là đơn vị định mức mới).${xeEstCount ? ` Có ${xeEstCount} lượt chưa ghi Số Xe nên dùng số XE TƯƠNG ĐƯƠNG ≈ KL ÷ 600.` : ''}">
         <span class="material-stat-value">${fmtKg(totalCarts)}</span>
-        <span class="material-stat-label">Tổng số xe bốc</span>
+        <span class="material-stat-label">Tổng số xe bốc${xeEstCount ? ' (gồm ≈)' : ''}</span>
       </div>
       <div class="material-stat">
         <span class="material-stat-value">${fmtKg(totalQty)}</span>
@@ -3538,8 +3613,10 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   // ─── BẢNG LỊCH SỬ BỐC LUỒNG — THẺ NGÀY (mỗi ngày 1 thẻ) ──────
   // DÒNG ĐẦU THẺ: Ngày | Người bốc | Giờ bốc HC/TC | Công suất thực tế |
-  // Hiệu suất (= Công suất thực tế ÷ Công suất định mức của tháng).
-  //   Công suất thực tế = TỔNG KHỐI LƯỢNG THỰC TẾ ÷ giờ làm việc hiệu dụng
+  // Hiệu suất (= Công suất thực tế ÷ Định mức của tháng).
+  //   Công suất thực tế = TỔNG SỐ XE ÷ giờ làm việc hiệu dụng (xe/h) — đơn vị
+  //   định mức từ 21/10/2026 là SỐ XE/GIỜ; lượt cũ chưa ghi Số xe được quy đổi
+  //   ≈ KL bốc được ÷ KL/xe mặc định (600 kg) và hiện dấu "≈".
   //   (giờ HC/TC từ Bảng bố trí Nhân Sự vị trí "Bốc Luồng", trừ giờ sự cố).
   // Sau đó các DÒNG LƯỢT trong ngày: Loại NL | NCC | KL thực tế | KL lô đầu vào |
   // Còn lại của lô | Thao tác.
@@ -3572,14 +3649,18 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     for (const [date, recs] of groups) {
       const first = boluongDisplay(recs[0]); // thông tin CHUNG của ngày (người bốc/giờ)
       let totalQty = 0;
+      let totalXe = 0;      // Σ SỐ XE (thật + tương đương) — nguồn tính công suất xe/h
+      let totalXeEst = 0;   // phần xe phải quy đổi ≈ từ kg (để ghi trong tooltip)
       const rowsHtml = recs.map(r => {
         const d = boluongDisplay(r);
         totalQty += d.qty;
+        totalXe += d.cartsEq;
+        if (d.cartsEst) totalXeEst += d.cartsEq;
         return `
         <tr class="x2-day-row" data-x2-blg-row="${escapeHTML(r.id)}">
           <td><strong>${escapeHTML(d.materialType || '—')}</strong>${!d.poolMode && d.lotRest > 0 ? `<div class="x2-row-note">lô cũ · còn ${fmtKg(d.lotRest)} kg</div>` : ''}</td>
           <td>${escapeHTML(d.supplier || '—')}${d.supplierCode ? ` <span style="color:var(--text-muted);">(${escapeHTML(d.supplierCode)})</span>` : ''}</td>
-          <td class="text-right">${d.poolMode ? `<strong>${fmtKg(d.carts)}</strong><em class="x2-row-note"> × ${fmtKg(d.kgPerCart)} kg</em>` : '—'}</td>
+          <td class="text-right"${d.cartsEst && d.cartsEq > 0 ? ' title="Số xe TƯƠNG ĐƯƠNG — quy đổi từ KL bốc được ÷ KL/xe mặc định (600 kg) vì lượt này chưa ghi Số xe"' : ''}>${d.cartsEq > 0 ? `<strong>${xeTextOf(d.cartsEq, d.cartsEst)}</strong>${d.poolMode ? `<em class="x2-row-note"> × ${fmtKg(d.kgPerCart)} kg</em>` : ''}` : '—'}</td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.qty)}</strong></td>
           <td class="text-right">${fmtKg(d.inputWeight)}</td>
           <td class="text-right">${d.poolMode ? `<strong style="color:#b45309;">${fmtKg(d.ngonKg)}</strong>` : '—'}</td>
@@ -3595,15 +3676,21 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       // CÔNG SUẤT → HIỆU SUẤT của ngày.
       const hoursEff = stageEffHours('boluong', date, hours);
       const incH = stageIncidentOf('boluong', date);
-      const cap = hoursEff > 0 ? (totalQty / hoursEff) : null; // Công suất thực tế (kg/h)
-      const rate = boluongRateOf(date);                        // Định mức của tháng (kg/h)
+      // CÔNG SUẤT = Σ SỐ XE ÷ giờ hiệu dụng (xe/h) — đơn vị mới từ 21/10/2026
+      const cap = hoursEff > 0 ? (totalXe / hoursEff) : null;
+      const rate = boluongRateOf(date);              // Định mức tháng (xe/h)
       const eff = (cap != null && rate) ? (cap / rate) * 100 : null; // Hiệu suất (%)
+      // Quy đổi tương đương kg/h để đối chiếu với cách tính cũ (chỉ trong tooltip)
+      const capKg = hoursEff > 0 ? (totalQty / hoursEff) : null;
+      const xeNote = totalXeEst > 0
+        ? ` · trong đó ≈ ${fmtKg(totalXeEst)} xe quy đổi từ kg (lượt chưa ghi Số xe)`
+        : '';
       const effTxt = eff == null
         ? '<em style="color:var(--text-muted);">—</em>'
         : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
       const effTip = eff == null
-        ? 'Chưa đủ dữ liệu (thiếu giờ bốc / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức công suất cho tháng này)'
-        : `Hiệu suất = Công suất thực tế (${fmtKg(cap)} kg/h = ${fmtKg(totalQty)} kg ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}) ÷ Công suất định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} kg/h)`;
+        ? 'Chưa đủ dữ liệu (chưa có số xe / thiếu giờ bốc / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức cho tháng này)'
+        : `Hiệu suất = Công suất thực tế (${fmtKg(cap)} xe/h = ${fmtKg(totalXe)} xe ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}${xeNote}) ÷ Định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} xe/h)`;
       const hcTxt = first.workHoursHC != null ? fmtRatio(first.workHoursHC) : '—';
       const tcTxt = first.workHoursTC != null ? fmtRatio(first.workHoursTC) : '—';
       const workers = first.workerRows.filter(x => x.name);
@@ -3619,11 +3706,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
             <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
             <span class="x2-day-cutters" title="Người bốc tự động từ Bảng bố trí Nhân Sự (vị trí Bốc Luồng — Xưởng 2)"><i data-lucide="users"></i> ${workerMain || '<em style="color:var(--text-muted);">chưa bố trí người bốc</em>'}${workerMore}</span>
             <span class="x2-day-hours" title="Giờ bốc = tổng giờ công vị trí Bốc Luồng trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ bốc: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế = Tổng KL thực tế (${fmtKg(totalQty)} kg) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
+            <span class="x2-day-cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
             <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('boluong', date)}
           </div>
-          ${x2ShiftBlockOf(date, isBocLuongPos, 'Bốc luồng', { qty: totalQty, unit: 'kg/h', rate, incH })}
+          ${x2ShiftBlockOf(date, isBocLuongPos, 'Bốc luồng', { qty: totalXe, unit: 'xe/h', rate, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -3668,7 +3755,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
 
   // ═══════════════════════════════════════════════════════════
-  // ─── ĐỊNH MỨC CÔNG SUẤT BỐC LUỒNG (kg/giờ) THEO TỪNG THÁNG ─────
+  // ─── ĐỊNH MỨC CÔNG SUẤT BỐC LUỒNG (SỐ XE/GIỜ) THEO TỪNG THÁNG ──
   // Người quản lý đặt riêng cho từng tháng — nguồn cho cột "Hiệu suất"
   // = Công suất thực tế ÷ Công suất định mức.
   function loadX2BoluongRates() {
@@ -3695,11 +3782,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     firePushSync();
   }
 
-  // Định mức công suất bốc luồng của tháng chứa dateVal (kg/giờ) — null nếu chưa đặt
+  // Định mức công suất bốc luồng của tháng chứa dateVal (SỐ XE/GIỜ) — null nếu chưa đặt
+  // (số cũ khai theo kg/h được quy đổi ÷ KL/xe mặc định qua xeRateOf)
   function boluongRateOf(dateVal) {
     const key = String(dateVal || '').slice(0, 7);
-    const v = Number((state.x2BoluongRates || {})[key]);
-    return Number.isFinite(v) && v > 0 ? v : null;
+    return xeRateOf((state.x2BoluongRates || {})[key]);
   }
 
   // Lưu định mức 1 tháng (từ popup "Định mức" trên form nhập)
@@ -3710,12 +3797,12 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const month = String((monthEl && monthEl.value) || '').trim();
     const v = Number((valEl && valEl.value) || 0);
     if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chưa chọn tháng để lưu định mức!', 'error'); return; }
-    if (!Number.isFinite(v) || v <= 0) { showToast('Định mức công suất phải là số kg/giờ lớn hơn 0!', 'error'); return; }
+    if (!Number.isFinite(v) || v <= 0) { showToast('Định mức công suất phải là số XE/GIỜ lớn hơn 0!', 'error'); return; }
     (state.x2BoluongRates = state.x2BoluongRates || {})[month] = v;
     saveX2BoluongRates();
     renderX2BoluongRateBar();
     renderXuong2BoluongTable(); // cột Hiệu suất tự cập nhật
-    showToast(`Đã lưu định mức bốc luồng ${fmtKg(v)} kg/giờ cho tháng ${month.slice(5)}!`, 'success');
+    showToast(`Đã lưu định mức bốc luồng ${fmtKg(v)} xe/giờ cho tháng ${month.slice(5)}!`, 'success');
   }
 
   // Ô chọn tháng trong popup ĐỊNH MỨC (các tháng có lượt bốc + tháng đã đặt
@@ -3735,15 +3822,15 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       .map(m => `<option value="${escapeHTML(m)}">Tháng ${Number(m.slice(5))}/${m.slice(0, 4)}</option>`).join('');
     selEl.value = months.has(curMonth) ? curMonth : list[0] || '';
     if (valInput) {
-      const v = Number((state.x2BoluongRates || {})[selEl.value]);
-      valInput.value = Number.isFinite(v) && v > 0 ? v : '';
+      const v = boluongRateOf(selEl.value);
+      valInput.value = v != null ? v : '';
     }
     const chips = document.getElementById('x2-blg-rate-chips');
     if (chips) {
       const keys = Object.keys(state.x2BoluongRates || {})
-        .filter(k => Number(state.x2BoluongRates[k]) > 0)
+        .filter(k => xeRateOf(state.x2BoluongRates[k]) != null)
         .sort((a, b) => b.localeCompare(a));
-      chips.innerHTML = keys.map(k => `<button type="button" class="x2-rate-chip" data-x2-boluong-rate="${escapeHTML(k)}" title="Bấm để nạp định mức tháng này vào ô nhập để sửa lại">T${Number(k.slice(5))} = ${fmtKg(state.x2BoluongRates[k])} kg/h</button>`).join('');
+      chips.innerHTML = keys.map(k => `<button type="button" class="x2-rate-chip" data-x2-boluong-rate="${escapeHTML(k)}" title="Bấm để nạp định mức tháng này vào ô nhập để sửa lại">T${Number(k.slice(5))} = ${fmtKg(xeRateOf(state.x2BoluongRates[k]))} xe/h</button>`).join('');
     }
     initLucide();
   }
@@ -16075,6 +16162,11 @@ export {
   //    Bảng Tổng Hợp Công Suất & Hiệu Suất (js/capacity.js) để định mức chỉ có
   //    MỘT nguồn chân lý (không đọc lại state.x2*Rates ở nơi khác):
   capRateOf,
+  // ĐƠN VỊ ĐỊNH MỨC XE/H (Bốc Luồng + Cắt Chọn) — 21/10/2026
+  XE_RATE_LEGACY_MAX,
+  xeRateOf,
+  xeCartsOf,
+  xeTextOf,
   boOngRateOf,
   baoThoRateOf,
   chonNanRateOf,

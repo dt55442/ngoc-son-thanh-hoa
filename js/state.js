@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v295';
+  const APP_VERSION = 'v298';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -261,6 +261,11 @@
   // Chỉ lưu trên các máy đã bấm Xác Nhận — dòng đã xác nhận KHÔNG tính vào
   // "cần xác nhận" nữa nhưng vẫn hiện khi bỏ lọc (xem js/hr.js ciCompareDay)
   const STORAGE_KEY_HR_CI_ACKS    = 'bamboo_tracker_hr_ci_acks_v1';
+  // DÒNG CÔNG ĐÃ XỬ LÝ (20/10/2026) — kết quả nút "Xử lý" ở bảng đối chiếu:
+  // chấp nhận giờ làm · bổ sung đơn TC · sửa giờ máy · hủy TC vượt · miễn trừ.
+  // Đây là CƠ SỞ để chốt công theo tháng (bản chốt lưu ảnh chụp các dòng này).
+  const STORAGE_KEY_HR_PAY_ROWS   = 'bamboo_tracker_hr_pay_rows_v1';
+  const STORAGE_KEY_HR_PAY_LOCKS  = 'bamboo_tracker_hr_pay_locks_v1';
   // Đăng ký tăng ca: { id, employeeId, date, start, end (giờ DỰ KIẾN), plannedMin,
   // reason, status pending|approved|rejected, approvedBy, approvedAt, createdAt, updatedAt }
   // Giờ tăng ca THỰC TẾ KHÔNG lưu ở đây — tự tính từ Bảng bố trí vị trí theo ngày
@@ -357,6 +362,8 @@
     khoShowUsed: false,        // công tắc "Hiện lô đã xuất hết" (mặc định ẨN)
     hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, punchTimes[], fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
     hrCiAcks: [],      // [{ id, employeeId, date, note, by, at }] — đánh dấu "đã xác nhận" dòng đối chiếu Bố trí ↔ Máy chấm công
+    hrPayRows: [],     // [{ id, employeeId, date, month, action, status, before{}, after{}, reason, otId, by/at }] — dòng công đã xử lý
+    hrPayLocks: [],    // [{ id, month, status, version, rows[], totals[], hash, preparedBy/At, approvedBy/At, reopenHistory[] }] — bản chốt công
     hrOvertimes: [],   // [{ id, employeeId, date, start, end (dự kiến), plannedMin, reason, status, approvedBy, approvedAt, ... }] — đăng ký tăng ca (giờ thực tế tự tính từ hrAssignments)
     // Lịch làm việc theo tháng: { 'YYYY-MM': { weekdaysOff: [0..6], restDays: ['YYYY-MM-DD'...] } }
     // Ngày nghỉ/lễ: đi làm vào ngày đó thì toàn bộ giờ làm được tính vào TĂNG CA (js/hr.js)
@@ -653,6 +660,8 @@ export {
   STORAGE_KEY_HR_ATTENDANCE,
   STORAGE_KEY_HR_CHECKINS,
   STORAGE_KEY_HR_CI_ACKS,
+  STORAGE_KEY_HR_PAY_ROWS,
+  STORAGE_KEY_HR_PAY_LOCKS,
   STORAGE_KEY_HR_OVERTIMES,
   STORAGE_KEY_HR_CALENDAR,
   STORAGE_KEY_SESSION,

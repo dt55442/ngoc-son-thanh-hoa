@@ -14,10 +14,11 @@
 //   7. THỐNG KÊ ĐI LÀM THEO THÁNG (ngày công, nghỉ phép, vắng, tỷ lệ đi làm)
 // Lưu localStorage + đồng bộ mây (firePushSync) như các tab khác.
 // ═══════════════════════════════════════════════════════════
-import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
+import { firePushSync, initLucide, requireEditPermission, requirePayApply, requirePayLock } from './cloud.js';
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
-import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, state } from './state.js';
+import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, APP_VERSION, state } from './state.js';
+import { canPayLock } from './permissions.js';
 import { escapeHTML, showToast } from './utils.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc đọc file Excel
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB)
@@ -165,6 +166,11 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { state.hrCheckins   = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CHECKINS))   || []; } catch (e) { state.hrCheckins   = []; }
     try { state.hrCiAcks     = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CI_ACKS))    || []; } catch (e) { state.hrCiAcks     = []; }
     if (!Array.isArray(state.hrCiAcks)) state.hrCiAcks = [];
+    // DÒNG CÔNG ĐÃ XỬ LÝ + BẢN CHỐT CÔNG (20/10/2026)
+    try { state.hrPayRows = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_PAY_ROWS)) || []; } catch (e) { state.hrPayRows = []; }
+    if (!Array.isArray(state.hrPayRows)) state.hrPayRows = [];
+    try { state.hrPayLocks = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_PAY_LOCKS)) || []; } catch (e) { state.hrPayLocks = []; }
+    if (!Array.isArray(state.hrPayLocks)) state.hrPayLocks = [];
     try { state.hrOvertimes  = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_OVERTIMES))  || []; } catch (e) { state.hrOvertimes  = []; }
     // Lịch làm việc theo tháng (ngày nghỉ/lễ) — object theo khóa 'YYYY-MM'
     try { state.hrWorkCalendar = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CALENDAR)) || {}; } catch (e) { state.hrWorkCalendar = {}; }
@@ -191,6 +197,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     { dom: 'hrAttendance',    key: STORAGE_KEY_HR_ATTENDANCE, get: () => state.hrAttendance,    def: [] },
     { dom: 'hrCheckins',      key: STORAGE_KEY_HR_CHECKINS,   get: () => state.hrCheckins,      def: [] },
     { dom: 'hrCiAcks',        key: STORAGE_KEY_HR_CI_ACKS,    get: () => state.hrCiAcks,        def: [] },
+    { dom: 'hrPayRows',       key: STORAGE_KEY_HR_PAY_ROWS,   get: () => state.hrPayRows,       def: [] },
+    { dom: 'hrPayLocks',      key: STORAGE_KEY_HR_PAY_LOCKS,  get: () => state.hrPayLocks,      def: [] },
     { dom: 'hrOvertimes',     key: STORAGE_KEY_HR_OVERTIMES,  get: () => state.hrOvertimes,     def: [] },
     { dom: 'hrWorkCalendar',  key: STORAGE_KEY_HR_CALENDAR,   get: () => state.hrWorkCalendar,  def: {} }
   ];
@@ -382,7 +390,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // test + các luồng nhập liệu lớn). Truyền mảng phần (vd ['employees']) thì
   // CHỈ vẽ phần đó → dùng cho renderAll()/switchView() để không phải dựng lại
   // 12 bảng + 1.559 icon mỗi lần đồng bộ mây (trước đây 671 ms/lần).
-  const HR_RENDER_PARTS = ['employees', 'attendance', 'checkin', 'positions', 'leaves', 'overtime', 'stats', 'recruitment', 'posneeds'];
+  const HR_RENDER_PARTS = ['employees', 'attendance', 'checkin', 'positions', 'leaves', 'overtime', 'stats', 'recruitment', 'posneeds', 'pay'];
   function renderHrView(parts) {
     const all = !Array.isArray(parts);
     const has = p => all || parts.indexOf(p) !== -1;
@@ -396,6 +404,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (has('stats')) renderHrAttendanceStats();
     if (has('recruitment')) renderHrRecruitmentTable();
     if (has('posneeds')) renderPositionNeedsTable();
+    // THẺ CHỐT CÔNG: chỉ quét tháng khi ĐƯỢC YÊU CẦU (mở thẻ) hoặc thẻ đang mở —
+    // tránh quét toàn bộ tháng 2 lần cho mỗi lần render toàn tab (quy tắc 86).
+    if (has('pay') && (Array.isArray(parts) || hrPayCardIsOpen())) renderHrPayCard();
     // Bảng bố trí + đếm trên thẻ + dock: luôn cập nhật (đều nhẹ)
     renderHrBoard();
     updateHrCardGrid();
@@ -417,7 +428,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       'hr-overtime-card': ['overtime'],
       'hr-att-stats-card': ['stats'],
       'hr-recruitment-card': ['recruitment'],
-      'hr-posneeds-card': ['posneeds']
+      'hr-posneeds-card': ['posneeds'],
+      'hr-pay-card': ['pay']
     };
     return map[cardId] || [];
   }
@@ -981,8 +993,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
   }
 
-  function openOvertimeModal() {
-    if (!requireEditPermission()) return;
+  // pending link: đơn TC đang được tạo từ nút "Xử lý" của 1 dòng công
+  let ciPayPendingOt = null;
+  function openOvertimeModal(preset) {
+    // Người được Admin cấp quyền CHỐT CÔNG cũng gửi được đơn bổ sung (không cần
+    // quyền sửa tab Nhân sự) — quyết định 20/10/2026.
+    if (!canPayLock() && !requireEditPermission()) return;
     const modal = document.getElementById('modal-overtime');
     const form = document.getElementById('ot-form');
     if (!modal || !form) return;
@@ -991,6 +1007,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       showToast('Chưa có nhân viên nào — thêm nhân viên trước khi đăng ký tăng ca!', 'error');
       return;
     }
+    ciPayPendingOt = (preset && preset.employeeId) ? { employeeId: preset.employeeId, date: preset.date } : null;
     // Danh sách mốc 30 phút (05:00 → 23:30) cho giờ dự kiến
     const opts = `<option value="">--</option>` + hrHalfHourOptions().map(t => `<option value="${t}">${t}</option>`).join('');
     const startSel = document.getElementById('ot-start');
@@ -1005,6 +1022,24 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const empHidden = document.getElementById('ot-employee-id');
     if (empInput) empInput.value = '';
     if (empHidden) empHidden.value = '';
+    const banner = document.getElementById('ot-ci-banner');
+    if (banner) { banner.hidden = true; banner.textContent = ''; }
+    // ĐIỀN SẴN từ dòng công đang xử lý (bổ sung đơn TC — không giới hạn ngày)
+    if (preset && preset.employeeId) {
+      if (empHidden) empHidden.value = preset.employeeId;
+      if (empInput) empInput.value = preset.employeeName || hrEmpName(preset.employeeId);
+      const dateEl = document.getElementById('ot-date');
+      if (dateEl) dateEl.value = preset.date || today;
+      if (startSel && preset.start) startSel.value = preset.start;
+      if (endSel && preset.end) endSel.value = preset.end;
+      const rs = document.getElementById('ot-reason');
+      if (rs) rs.value = preset.reason || '';
+      if (banner) {
+        banner.hidden = false;
+        banner.textContent = `Bổ sung đơn tăng ca cho dòng đang xử lý: ${preset.employeeName || hrEmpName(preset.employeeId)} · ${fmtDateDMY(preset.date)}`
+          + (preset.gapMin ? ` — TC thực tế vượt đơn ${fmtHm(preset.gapMin)}` : '');
+      }
+    }
     hideOvertimeEmployeeSuggestions();
     modal.classList.add('show');
     hrScheduleIcons();
@@ -1016,7 +1051,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   function handleOvertimeSubmit(e) {
     e.preventDefault();
-    if (!requireEditPermission()) return;
+    // Người có quyền CHỐT CÔNG được gửi đơn bổ sung dù không có quyền sửa tab NS
+    if (!canPayLock() && !requireEditPermission()) return;
     const empInput = (document.getElementById('ot-employee')?.value || '').trim();
     let employeeId = document.getElementById('ot-employee-id')?.value || '';
     if (!employeeId && empInput) {
@@ -1035,18 +1071,24 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (plannedMin < 0) plannedMin += 1440; // làm qua nửa đêm
     if (plannedMin === 0) { showToast('Giờ kết thúc phải khác giờ bắt đầu!', 'error'); return; }
 
+    const linked = !!(ciPayPendingOt && ciPayPendingOt.employeeId === employeeId && ciPayPendingOt.date === date);
+    const otId = `ot-${Date.now()}`;
     state.hrOvertimes.push({
-      id: `ot-${Date.now()}`,
+      id: otId,
       employeeId, date, start, end,
       plannedMin,
       reason,
       status: 'pending',
+      autoFromCi: linked,
       createdAt: new Date().toISOString()
     });
     saveHrData();
+    // Gắn mã đơn vào DÒNG CÔNG đang xử lý → đơn được duyệt là dòng tự chốt
+    if (linked) payMarkAddOt(employeeId, date, otId, reason || 'Bổ sung đơn TC từ bảng đối chiếu');
+    ciPayPendingOt = null;
     closeOvertimeModal();
     renderHrView();
-    showToast(`Đã gửi đăng ký tăng ca ${fmtHour(start)} → ${fmtHour(end)} (${fmtHm(plannedMin)}) cho ${hrEmpName(employeeId)} — chờ ban lãnh đạo duyệt`, 'success');
+    showToast(`Đã gửi đăng ký tăng ca ${fmtHour(start)} → ${fmtHour(end)} (${fmtHm(plannedMin)}) cho ${hrEmpName(employeeId)} — chờ ban lãnh đạo duyệt${linked ? ' (đã gắn vào dòng công đang xử lý)' : ''}`, 'success');
   }
 
   // Ban lãnh đạo duyệt: Đồng ý / Không đồng ý (chỉ đơn đang chờ)
@@ -1094,6 +1136,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     o.approvedAt = new Date().toISOString();
     o.updatedAt = o.approvedAt;
     saveHrData();
+    // Dòng công đang chờ "Bổ sung đơn TC" → tự chốt nếu TC đã được phủ đủ
+    paySyncOtApproved(o);
     renderHrView();
     const act = overtimeActualMin(o);
     showToast(`Đã ĐỒNG Ý tăng ca của ${hrEmpName(o.employeeId)} (${overtimePlannedText(o)}${act > 0 ? ` · thực tế TC ${fmtHm(act)}` : ''})`, 'success');
@@ -1111,6 +1155,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     o.approvedAt = new Date().toISOString();
     o.updatedAt = o.approvedAt;
     saveHrData();
+    // Dòng công chờ đơn TC này → chuyển "Bị từ chối" để người xử lý biết
+    paySyncOtRejected(o, 'Đơn tăng ca bị Ban lãnh đạo từ chối');
     renderHrView();
     showToast(`Đã KHÔNG duyệt đăng ký tăng ca của ${hrEmpName(o.employeeId)}`, 'info');
   }
@@ -1737,10 +1783,13 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
 
   // Áp dụng 1 ngày theo máy chấm công: tự chấm "Đi làm" (không đụng đơn nghỉ đã duyệt)
+  // QUYỀN (20/10/2026): phải được Admin cấp quyền "Áp dụng chấm công theo máy"
+  // (quyền tab Nhân sự KHÔNG đủ) — tránh người nhập liệu tự sửa công để tính lương.
   function applyCheckinRecord(employeeId, date) {
-    if (!requireEditPermission()) return;
+    if (!requirePayApply()) return;
     const rec = checkinRecordOf(employeeId, date);
     if (!rec) return;
+    if (!ciRequireMonthUnlocked(String(date).slice(0, 7), 'áp dụng chấm công')) return;
     // Chỉ còn lần quẹt sáng của ca đêm HÔM TRƯỚC → không phải ngày đi làm
     const consumed = ciNightConsumedOf(employeeId, date);
     if (consumed) {
@@ -1752,49 +1801,162 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       return;
     }
     const hadOld = !!attRecordOf(employeeId, date);
-    ensureAttRecord(employeeId, date).status = 'work';
+    const att = ensureAttRecord(employeeId, date);
+    att.status = 'work';
+    att.appliedBy = (state.currentUser && (state.currentUser.fullname || state.currentUser.email || state.currentUser.username)) || '';
+    att.appliedAt = new Date().toISOString();
     saveHrData();
     renderHrView();
     showToast(`Đã chấm ĐI LÀM theo máy chấm công: ${hrEmpName(employeeId)} ${fmtDateDMY(date)} (${rec.in || '?'}${rec.out ? '–' + rec.out : ''})${hadOld ? ' (đã đổi từ trạng thái cũ)' : ''}`, 'success');
   }
-  // Áp dụng TẤT CẢ ngày máy xác nhận mà chấm tay còn thiếu / lệch
-  function applyAllCheckins() {
-    if (!requireEditPermission()) return;
+  // KỲ ĐÃ CHỐT CÔNG chưa? (thao tác ghi dữ liệu giờ công của tháng đó bị khóa)
+  function ciMonthShort(month) {
+    const s = String(month || '');
+    return /^\d{4}-\d{2}$/.test(s) ? `${s.slice(5, 7)}/${s.slice(0, 4)}` : s;
+  }
+  function ciPayLockOfMonth(month) {
+    const list = Array.isArray(state.hrPayLocks) ? state.hrPayLocks : [];
+    return list.find(l => l && l.month === month && l.status === 'da_chot') || null;
+  }
+  function ciRequireMonthUnlocked(month, actionLabel) {
+    const lk = ciPayLockOfMonth(month);
+    if (!lk) return true;
+    showToast(`Kỳ ${ciMonthShort(month)} đã CHỐT CÔNG (${lk.approvedByName || lk.preparedByName || '—'}) — không thể ${actionLabel}. Hãy Mở Khóa Kỳ trước.`, 'error');
+    return false;
+  }
+  // Kỳ đang xem có thể VẮT 2 tháng (tuần cuối/đầu tháng) → kiểm MỌI tháng trong khoảng
+  function ciMonthsOfRange(range) {
+    const out = new Set();
+    if (!range || !range.from) return out;
+    let d = range.from;
+    for (let i = 0; i < 400 && d && d <= range.to; i++) { out.add(String(d).slice(0, 7)); d = ciShiftDays(d, 1); }
+    return out;
+  }
+  function ciRequireRangeUnlocked(range, actionLabel) {
+    const months = ciMonthsOfRange(range);
+    for (const m of months) {
+      if (!ciRequireMonthUnlocked(m, actionLabel)) return false;
+    }
+    return true;
+  }
+  // Áp dụng TẤT CẢ ngày máy xác nhận mà chấm tay còn thiếu / lệch — CHỈ TRONG KỲ
+  // (20/10/2026: trước đây áp cho MỌI tháng đã nạp ⇒ dễ sửa oan dữ liệu tháng cũ).
+  // (21/10/2026: kỳ = NGÀY / TUẦN / THÁNG theo thanh lọc đang xem)
+  function applyAllCheckins(reason) {
+    if (!requirePayApply()) return false;
+    const range = ciRangeOf(ciReadUi());
+    if (!ciRequireRangeUnlocked(range, 'áp dụng chấm công')) return false;
     const targets = (state.hrCheckins || []).filter(c => {
+      if (!c || !c.date || c.date < range.from || c.date > range.to) return false;
       // Bỏ qua ngày chỉ có lần quẹt SÁNG của ca đêm hôm trước
       if (ciNightConsumedOf(c.employeeId, c.date)) return false;
       const st = attStatusOf(c.employeeId, c.date);
       return st === '' || st === 'absent';
     });
-    if (!targets.length) { showToast('Không có ngày nào cần áp dụng — chấm tay đã khớp máy chấm công.', 'info'); return; }
-    if (!confirm(`Áp dụng "Đi làm" theo máy chấm công cho ${targets.length} ngày (ngày còn thiếu hoặc đang ghi Vắng)? Tiếp tục?`)) return;
+    if (!targets.length) { showToast(`Không có ngày nào cần áp dụng trong kỳ ${range.label} — chấm tay đã khớp máy chấm công.`, 'info'); return false; }
+    const note = String(reason || '').trim();
+    const who = (state.currentUser && (state.currentUser.fullname || state.currentUser.email || state.currentUser.username)) || '';
+    const now = new Date().toISOString();
     targets.forEach(c => {
       const r = ensureAttRecord(c.employeeId, c.date);
       r.status = 'work';
-      r.updatedAt = new Date().toISOString();
+      r.appliedBy = who;
+      r.appliedAt = now;
+      if (note) r.applyNote = note;
+      r.updatedAt = now;
     });
     saveHrData();
     renderHrView();
-    showToast(`Đã áp dụng "Đi làm" theo máy chấm công cho ${targets.length} ngày`, 'success');
+    showToast(`Đã áp dụng "Đi làm" cho ${targets.length} ngày trong kỳ ${range.label}${note ? ` — lý do: ${note}` : ''}`, 'success');
+    return targets.length;
   }
   function deleteCheckin(id) {
-    if (!requireEditPermission()) return;
+    if (!requirePayApply()) return;
+    const rec = (state.hrCheckins || []).find(c => c.id === id);
+    if (rec && !ciRequireMonthUnlocked(String(rec.date).slice(0, 7), 'xóa giờ máy')) return;
     trackDeleted('hrCheckins', id);
     state.hrCheckins = (state.hrCheckins || []).filter(c => c.id !== id);
     saveHrData();
     renderHrView();
     showToast('Đã xóa 1 bản ghi giờ máy chấm công', 'info');
   }
-  function deleteCheckinsAll() {
-    if (!requireEditPermission()) return;
-    const n = (state.hrCheckins || []).length;
-    if (!n) return;
-    if (!confirm(`Xóa toàn bộ ${n} bản ghi giờ đã nạp từ máy chấm công? (Không ảnh hưởng dữ liệu chấm công tay)`)) return;
-    trackDeleted('hrCheckins', (state.hrCheckins || []).map(c => c.id));
-    state.hrCheckins = [];
+  // Xóa giờ máy THEO KỲ đang xem (trước đây xóa toàn bộ mọi tháng)
+  function deleteCheckinsAll(reason) {
+    if (!requirePayApply()) return false;
+    const range = ciRangeOf(ciReadUi());
+    if (!ciRequireRangeUnlocked(range, 'xóa giờ máy')) return false;
+    const inRange = (state.hrCheckins || []).filter(c => c && c.date >= range.from && c.date <= range.to);
+    if (!inRange.length) { showToast(`Không có giờ máy nào trong kỳ ${range.label}.`, 'info'); return false; }
+    const note = String(reason || '').trim();
+    trackDeleted('hrCheckins', inRange.map(c => c.id));
+    const ids = new Set(inRange.map(c => c.id));
+    state.hrCheckins = (state.hrCheckins || []).filter(c => !ids.has(c.id));
     saveHrData();
     renderHrView();
-    showToast('Đã xóa toàn bộ dữ liệu giờ máy chấm công đã nạp', 'info');
+    showToast(`Đã xóa ${inRange.length} bản ghi giờ máy của kỳ ${range.label}${note ? ` — lý do: ${note}` : ''} (không ảnh hưởng chấm tay)`, 'info');
+    return inRange.length;
+  }
+  // ── MODAL "ÁP DỤNG / XÓA THEO KỲ" (bắt buộc nhập lý do) ─────────
+  function ciBulkPlanOf(kind) {
+    const range = ciRangeOf(ciReadUi());
+    const inRange = (state.hrCheckins || []).filter(c => c && c.date >= range.from && c.date <= range.to);
+    if (kind === 'delete') return { kind, month: range.from.slice(0, 7), range, count: inRange.length, unit: 'bản ghi giờ máy' };
+    const need = inRange.filter(c => {
+      if (ciNightConsumedOf(c.employeeId, c.date)) return false;
+      const st = attStatusOf(c.employeeId, c.date);
+      return st === '' || st === 'absent';
+    });
+    const emps = new Set(need.map(c => c.employeeId));
+    return { kind, month: range.from.slice(0, 7), range, count: need.length, unit: `ngày của ${emps.size} nhân viên` };
+  }
+  function openCiBulkModal(kind) {
+    if (!requirePayApply()) return;
+    const k = kind === 'delete' ? 'delete' : 'apply';
+    const modal = document.getElementById('modal-ci-bulk');
+    if (!modal) return;
+    const plan = ciBulkPlanOf(k);
+    const kindEl = document.getElementById('ci-bulk-kind');
+    if (kindEl) kindEl.value = k;
+    const title = document.getElementById('ci-bulk-title');
+    if (title) title.innerHTML = k === 'delete'
+      ? '<i data-lucide="trash-2"></i> Xóa Giờ Máy Theo Kỳ'
+      : '<i data-lucide="check-check"></i> Áp Dụng Chấm Công Theo Kỳ';
+    const scope = document.getElementById('ci-bulk-scope-info');
+    if (scope) scope.textContent = `${(plan.range && plan.range.label) || ciMonthShort(plan.month)} · ${plan.count} ${plan.unit}`;
+    const reason = document.getElementById('ci-bulk-reason');
+    if (reason) reason.value = '';
+    const warn = document.getElementById('ci-bulk-warn');
+    if (warn) {
+      // Kỳ có thể VẮT 2 tháng (tuần) → tìm tháng nào đã chốt công
+      let lockedMonth = '';
+      const months = (plan.range && plan.range.from) ? ciMonthsOfRange(plan.range) : new Set([plan.month]);
+      for (const m of months) { if (ciPayLockOfMonth(m)) { lockedMonth = m; break; } }
+      const lk = lockedMonth ? ciPayLockOfMonth(lockedMonth) : null;
+      warn.hidden = !lk;
+      warn.textContent = lk ? `⚠ Kỳ ${ciMonthShort(lockedMonth)} đã CHỐT CÔNG (${lk.approvedByName || lk.preparedByName || '—'}) — phải Mở Khóa Kỳ trước khi thay đổi.` : '';
+    }
+    const ok = document.getElementById('btn-ci-bulk-ok');
+    if (ok) {
+      ok.className = k === 'delete' ? 'btn btn-danger' : 'btn btn-primary';
+      ok.innerHTML = k === 'delete'
+        ? '<i data-lucide="trash-2"></i> Xóa Trong Kỳ'
+        : '<i data-lucide="check"></i> Áp Dụng Trong Kỳ';
+    }
+    modal.classList.add('show');
+    hrScheduleIcons();
+    const inp = document.getElementById('ci-bulk-reason');
+    if (inp && typeof inp.focus === 'function') inp.focus();
+  }
+  function closeCiBulkModal() {
+    document.getElementById('modal-ci-bulk')?.classList.remove('show');
+  }
+  function ciBulkSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const kind = (document.getElementById('ci-bulk-kind') || {}).value || 'apply';
+    const reason = String((document.getElementById('ci-bulk-reason') || {}).value || '').trim();
+    if (!reason) { showToast('Vui lòng nhập LÝ DO (bắt buộc) để lưu vào nhật ký.', 'error'); return; }
+    const n = kind === 'delete' ? deleteCheckinsAll(reason) : applyAllCheckins(reason);
+    if (n !== false) closeCiBulkModal();
   }
   // Bảng đối chiếu Bố trí ↔ Máy chấm công — engine + giao diện ở khối 8b bên dưới.
   // Giữ tên cũ để renderHrView / test cũ gọi được.
@@ -2450,13 +2612,84 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       .filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
     return ds.length ? ds[ds.length - 1] : hrTodayISO().slice(0, 7);
   }
+  // ─── KỲ ĐỐI CHIẾU: NGÀY / TUẦN / THÁNG (21/10/2026) ─────────────
+  // Mặc định 'month' để KHÔNG đổi hành vi cũ. Tuần theo ISO 8601
+  // (Thứ 2 → Chủ nhật, tuần chứa Thứ 5). Tự tính tại đây — KHÔNG import
+  // planning/report-center (tránh vòng import).
+  function ciShiftDays(iso, days) {
+    const s = String(iso || '').slice(0, 10);
+    const d = new Date(s + 'T00:00:00');
+    if (isNaN(d.getTime())) return s;
+    d.setDate(d.getDate() + Number(days || 0));
+    return `${d.getFullYear()}-${ciPad2(d.getMonth() + 1)}-${ciPad2(d.getDate())}`;
+  }
+  function ciDefaultDay() {
+    const ds = (state.hrCheckins || []).map(c => String(c.date || ''))
+      .concat((state.hrAssignments || []).map(a => String(a.date || '')))
+      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    return ds.length ? ds[ds.length - 1] : hrTodayISO();
+  }
+  function ciIsoWeekOf(iso) {
+    const s = String(iso || '').slice(0, 10);
+    const d = new Date(s + 'T00:00:00');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || isNaN(d.getTime())) return { year: 0, week: 0 };
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dow = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - dow);
+    const year = t.getUTCFullYear();
+    const y0 = new Date(Date.UTC(year, 0, 1));
+    return { year, week: Math.ceil((((t - y0) / 86400000) + 1) / 7) };
+  }
+  function ciIsoWeekKey(iso) {
+    const w = ciIsoWeekOf(iso);
+    return (w.year && w.week) ? `${w.year}-W${ciPad2(w.week)}` : '';
+  }
+  function ciIsoWeekRange(weekKey) {
+    const m = /^(\d{4})-W(\d{1,2})$/.exec(String(weekKey || ''));
+    if (!m) return { from: '', to: '' };
+    const y = Number(m[1]), w = Math.min(53, Math.max(1, Number(m[2])));
+    const mon = new Date(Date.UTC(y, 0, 4));
+    const dow = mon.getUTCDay() || 7;
+    mon.setUTCDate(mon.getUTCDate() - dow + 1 + (w - 1) * 7);
+    const from = mon.toISOString().slice(0, 10);
+    const sun = new Date(mon); sun.setUTCDate(sun.getUTCDate() + 6);
+    return { from, to: sun.toISOString().slice(0, 10) };
+  }
+  function ciPeriodLabelOf(mode, from, to) {
+    if (!from) return 'Tất cả thời gian';
+    if (mode === 'day') return fmtDateDMY(from);
+    if (mode === 'week') {
+      const w = ciIsoWeekOf(from);
+      return `Tuần ${w.week} · ${fmtDateDMY(from)} – ${fmtDateDMY(to)}`;
+    }
+    return `Tháng ${from.slice(5, 7)}/${from.slice(0, 4)}`;
+  }
+  // Khoảng ngày đang xem — nguồn CHÂN LÝ cho bảng + thao tác hàng loạt
+  function ciRangeOf(uiIn) {
+    const u = uiIn || ciReadUi();
+    if (u.mode === 'day') {
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(u.day || '') ? u.day : ciDefaultDay();
+      return { mode: 'day', from: day, to: day, label: ciPeriodLabelOf('day', day, day) };
+    }
+    if (u.mode === 'week') {
+      const key = /^\d{4}-W\d{1,2}$/.test(u.week || '') ? u.week : ciIsoWeekKey(u.day || ciDefaultDay());
+      const r = ciIsoWeekRange(key);
+      return { mode: 'week', key, from: r.from, to: r.to, label: ciPeriodLabelOf('week', r.from, r.to) };
+    }
+    const mr = ciMonthRange(u.month);
+    return { mode: 'month', from: mr.from, to: mr.to, label: ciPeriodLabelOf('month', mr.from, mr.to) };
+  }
+
   function ciReadUi() {
     const gv = id => { const el = document.getElementById(id); return el ? String(el.value || '') : ''; };
     const saved = ciUiSaved();
-    // KỲ = tháng đã lưu (đổi qua select/nút ‹ › đều ghi vào đây); chưa có → tháng
-    // có dữ liệu máy MỚI NHẤT. KHÔNG đọc thẳng value của ô month (ô chỉ là hiển thị
-    // — nếu đọc, dữ liệu của tháng khác vừa nạp sẽ bị lọc mất).
+    // KỲ = đã lưu (đổi qua ô nhập/nút ‹ › đều ghi vào đây); chưa có → tháng có dữ
+    // liệu máy MỚI NHẤT. KHÔNG đọc thẳng value ô nhập (ô chỉ là hiển thị — nếu
+    // đọc, dữ liệu của tháng khác vừa nạp sẽ bị lọc mất).
+    const mode = ['day', 'week', 'month'].indexOf(saved.mode) !== -1 ? saved.mode : 'month';
     const month = /^\d{4}-\d{2}$/.test(saved.month || '') ? saved.month : ciDefaultMonth();
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(saved.day || '') ? saved.day : ciDefaultDay();
+    const week = /^\d{4}-W\d{1,2}$/.test(saved.week || '') ? saved.week : ciIsoWeekKey(day);
     // Bộ phận: ưu tiên lựa chọn đã lưu (mọi thay đổi đều được ghi lại) — ô select
     // trên giao diện chỉ là hiển thị, tránh bị snap về "Tất Cả" khi render lại.
     let dept = saved.dept || gv('hr-ci-filter-dept') || 'all';
@@ -2466,29 +2699,120 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const leaveEl = document.getElementById('hr-ci-show-leave');
     const badEl = document.getElementById('hr-ci-only-anomaly');
     return {
-      month, dept, q: gv('hr-ci-search'),
+      mode, day, week, month, dept, q: gv('hr-ci-search'),
+      chip: typeof saved.chip === 'string' ? saved.chip : '',
       onlyIssues: onlyEl ? !!onlyEl.checked : true,
       includeLeave: leaveEl ? !!leaveEl.checked : false,
       onlyAnomaly: badEl ? !!badEl.checked : false
     };
   }
+  // Ngày "neo" khi đổi chế độ: tuần → Thứ 2 của tuần; tháng → hôm nay nếu cùng tháng
+  function ciBaseDayOf(ui) {
+    if (ui.mode === 'week' && ui.week) return ciIsoWeekRange(ui.week).from || ui.day;
+    if (ui.mode === 'day') return ui.day;
+    const today = hrTodayISO();
+    return (today.slice(0, 7) === ui.month) ? today : `${ui.month}-01`;
+  }
+  function applyCiPeriodUi(ui) {
+    const mode = ui.mode || 'month';
+    const dayEl = document.getElementById('hr-ci-day');
+    const monEl = document.getElementById('hr-ci-month');
+    if (dayEl) dayEl.hidden = (mode === 'month');
+    if (monEl) monEl.hidden = (mode !== 'month');
+    if (typeof document.querySelectorAll === 'function') {
+      document.querySelectorAll('[data-ci-mode]').forEach(b => {
+        if (!b || !b.classList) return;
+        const on = b.getAttribute('data-ci-mode') === mode;
+        b.classList.toggle('is-active', on);
+        try { b.setAttribute('aria-pressed', on ? 'true' : 'false'); } catch (e) {}
+      });
+    }
+  }
   function ciSyncToolbar(ui) {
     const mEl = document.getElementById('hr-ci-month');
     if (mEl && mEl.value !== ui.month) mEl.value = ui.month;
+    const dayEl = document.getElementById('hr-ci-day');
+    if (dayEl) {
+      const dayVal = (ui.mode === 'week') ? (ciIsoWeekRange(ui.week).from || ui.day) : ui.day;
+      if (dayEl.value !== dayVal) dayEl.value = dayVal;
+    }
     const dEl = document.getElementById('hr-ci-filter-dept');
     if (dEl && ui.dept && dEl.value !== ui.dept) dEl.value = ui.dept;
     const qEl = document.getElementById('hr-ci-search');
     if (qEl && !qEl.value && ui.q) qEl.value = ui.q;
+    // Ô tick phải phản ánh đúng trạng thái đã lưu (bấm chip sẽ tự bỏ tick)
+    const oi = document.getElementById('hr-ci-only-issues');
+    if (oi && oi.checked !== ui.onlyIssues) oi.checked = ui.onlyIssues;
+    const ol = document.getElementById('hr-ci-show-leave');
+    if (ol && ol.checked !== ui.includeLeave) ol.checked = ui.includeLeave;
+    const oa = document.getElementById('hr-ci-only-anomaly');
+    if (oa && oa.checked !== ui.onlyAnomaly) oa.checked = ui.onlyAnomaly;
+    const lbl = document.getElementById('hr-ci-period-label');
+    if (lbl) lbl.textContent = ciRangeOf(ui).label;
+    applyCiPeriodUi(ui);
   }
-  function ciShiftMonth(delta) {
+  // Đổi chế độ kỳ (Ngày/Tuần/Tháng) — giữ ngày đang xem làm mốc
+  function ciSetPeriodMode(mode) {
+    if (['day', 'week', 'month'].indexOf(mode) === -1) return false;
     const ui = ciReadUi();
-    const [y, m] = ui.month.split('-').map(Number);
-    const d = new Date(y, m - 1 + Number(delta || 0), 1);
-    const month = `${d.getFullYear()}-${ciPad2(d.getMonth() + 1)}`;
-    const el = document.getElementById('hr-ci-month');
-    if (el) el.value = month;
-    ciSaveUi({ month });
-    renderHrCheckinTable();
+    const base = ciBaseDayOf(ui);
+    const patch = { mode };
+    if (mode === 'week') { patch.week = ciIsoWeekKey(base); patch.day = base; }
+    else if (mode === 'day') { patch.day = base; }
+    else { patch.month = String(base).slice(0, 7); }
+    ciSaveUi(patch);
+    ciRenderCheckinTable();
+    return true;
+  }
+  // ‹ › nhảy theo ĐÚNG chế độ đang xem
+  function ciShiftPeriod(delta) {
+    const d = Number(delta) || 0;
+    if (!d) return;
+    const ui = ciReadUi();
+    if (ui.mode === 'day') {
+      const day = ciShiftDays(ui.day, d);
+      ciSaveUi({ day, month: day.slice(0, 7), week: ciIsoWeekKey(day) });
+    } else if (ui.mode === 'week') {
+      const day = ciShiftDays(ciBaseDayOf(ui), d * 7);
+      ciSaveUi({ day, week: ciIsoWeekKey(day), month: day.slice(0, 7) });
+    } else {
+      const [y, m] = ui.month.split('-').map(Number);
+      const nd = new Date(y, m - 1 + d, 1);
+      const month = `${nd.getFullYear()}-${ciPad2(nd.getMonth() + 1)}`;
+      const el = document.getElementById('hr-ci-month');
+      if (el) el.value = month;
+      ciSaveUi({ month });
+    }
+    ciRenderCheckinTable();
+  }
+  // Giữ tên cũ (test/legacy) — nay mode-aware
+  function ciShiftMonth(delta) { ciShiftPeriod(delta); }
+  function ciGoToday() {
+    const today = hrTodayISO();
+    ciSaveUi({ mode: 'day', day: today, month: today.slice(0, 7), week: ciIsoWeekKey(today) });
+    ciRenderCheckinTable();
+  }
+  // Đổi ô NGÀY: chế độ Ngày → đúng ngày đó; chế độ Tuần → tuần chứa ngày đó
+  function ciOnDayInput(val) {
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(String(val || '')) ? String(val) : ciDefaultDay();
+    const ui = ciReadUi();
+    const patch = { day, month: day.slice(0, 7) };
+    if (ui.mode === 'week') patch.week = ciIsoWeekKey(day);
+    ciSaveUi(patch);
+    ciRenderCheckinTable();
+  }
+  // Điều hướng ngược: bấm Ô NGÀY → xem riêng ngày đó (bỏ lọc chip)
+  function ciGotoDay(date) {
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? String(date) : hrTodayISO();
+    ciSaveUi({ mode: 'day', day, month: day.slice(0, 7), week: ciIsoWeekKey(day), chip: '' });
+    ciRenderCheckinTable();
+  }
+  // Điều hướng ngược: bấm TÊN NV → lọc nhanh theo người đó
+  function ciFilterByEmployee(employeeId) {
+    const name = hrEmpName(employeeId);
+    const el = document.getElementById('hr-ci-search');
+    if (el) el.value = name || '';
+    ciRenderCheckinTable();
   }
 
   // ── Ô HIỂN THỊ ─────────────────────────────────────────────────
@@ -2514,7 +2838,11 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (r.actual.crossNight) extras.push('ghép qua đêm');
     if (r.verdict === 'night_out') extras.push('của ca đêm hôm trước');
     if (r.actual.incomplete && r.verdict !== 'night_out') extras.push(r.actual.inMin ? 'thiếu giờ ra' : 'thiếu giờ vào');
-    return `<span class="hr-emp-code">${escapeHTML(r.timeText)}</span>` +
+    // Bấm giờ máy = mở luôn "Xử lý dòng công" (chỉ khi có quyền chốt công)
+    const timeHtml = canPayLock()
+      ? `<button type="button" class="ci-cell-link hr-emp-code" data-ci-open-pay="1" data-ci-emp="${escapeHTML(r.employeeId)}" data-ci-date="${escapeHTML(r.date)}" title="Bấm để mở Xử lý dòng công">${escapeHTML(r.timeText)}</button>`
+      : `<span class="hr-emp-code">${escapeHTML(r.timeText)}</span>`;
+    return timeHtml +
       (extras.length ? `<div class="ci-sub">${escapeHTML(extras.join(' · '))}</div>` : '');
   }
   function ciActualCell(r) {
@@ -2541,6 +2869,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       html += ` <span class="ci-min ci-min-hint" title="Giờ làm thực tế lệch với phần còn phải làm sau khi trừ giờ nghỉ">lệch ${escapeHTML(fmtHm(Math.abs(r.leaveDeltaMin || 0)))}</span>`;
     }
     if (r.ack) html += ` <span class="ci-ack-chip" title="${escapeHTML('Xác nhận bởi ' + (r.ack.by || '') + (r.ack.at ? ' lúc ' + String(r.ack.at).slice(0, 16).replace('T', ' ') : '') + (r.ack.note ? ' — ' + r.ack.note : ''))}">✓ đã xác nhận</span>`;
+    // Trạng thái XỬ LÝ DÒNG CÔNG (20/10/2026): Chờ duyệt / Đã chốt / Bị từ chối / Miễn trừ
+    const payChip = payRowChipHtml(r.employeeId, r.date);
+    if (payChip) html += ' ' + payChip;
     return html;
   }
   function ciLeaveOtCell(r) {
@@ -2570,67 +2901,178 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const btns = [];
     const canApply = r.rec && !r.leave && r.verdict !== 'night_out' && (r.att === '' || r.att === 'absent');
     if (canApply) {
-      btns.push(`<button class="btn btn-success btn-sm" data-perm="hr" onclick="app.hrApplyCheckin('${escapeHTML(r.employeeId)}','${escapeHTML(r.date)}')" title="Chấm tay thành Đi làm theo máy"><i data-lucide="check"></i> Áp Dụng</button>`);
+      btns.push(`<button class="btn btn-success btn-sm" data-pay="apply" onclick="app.hrApplyCheckin('${escapeHTML(r.employeeId)}','${escapeHTML(r.date)}')" title="Chấm tay thành Đi làm theo máy"><i data-lucide="check"></i> Áp Dụng</button>`);
     }
-    if (r.ack) {
-      btns.push(`<button class="btn btn-outline btn-sm" data-ci-unack="1" data-ci-emp="${escapeHTML(r.employeeId)}" data-ci-date="${escapeHTML(r.date)}" title="Bỏ đánh dấu đã xác nhận" style="color:var(--text-muted);"><i data-lucide="undo-2"></i></button>`);
-    } else {
-      btns.push(`<button class="btn btn-outline btn-sm" data-ci-ack="1" data-ci-emp="${escapeHTML(r.employeeId)}" data-ci-date="${escapeHTML(r.date)}" data-manager-only title="Xác nhận đã kiểm tra dòng này (không còn tính vào 'cần xác nhận')"><i data-lucide="badge-check"></i> Xác Nhận</button>`);
+    // XỬ LÝ DÒNG CÔNG — thay nút "Xác Nhận" cũ (20/10/2026): ghi nhận giờ để
+    // tính lương / bổ sung đơn TC / sửa giờ máy / hủy TC vượt / miễn trừ.
+    const pr = payRowOf(r.employeeId, r.date);
+    const empA = escapeHTML(r.employeeId);
+    const dateA = escapeHTML(r.date);
+    btns.push(`<button class="btn btn-outline btn-sm" data-pay="lock" data-ci-pay="1" data-ci-emp="${empA}" data-ci-date="${dateA}" title="Xử lý dòng công: chấp nhận giờ làm · bổ sung đơn TC · sửa giờ máy · hủy TC vượt · miễn trừ"><i data-lucide="clipboard-check"></i> Xử lý</button>`);
+    if (pr && pr.status === 'cho_duyet') {
+      btns.push(`<button class="btn btn-success btn-sm" data-manager-only data-ci-pay-approve="1" data-ci-emp="${empA}" data-ci-date="${dateA}" title="Duyệt đề nghị của dòng này (Admin / Ban Quản Lý)"><i data-lucide="badge-check"></i> Duyệt</button>`);
+      btns.push(`<button class="btn btn-outline btn-sm" data-manager-only data-ci-pay-reject="1" data-ci-emp="${empA}" data-ci-date="${dateA}" title="Từ chối đề nghị của dòng này" style="color:var(--danger);"><i data-lucide="x"></i></button>`);
     }
     if (r.rec) {
-      btns.push(`<button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeleteCheckin('${escapeHTML(r.rec.id)}')" title="Xóa bản ghi giờ này" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
+      btns.push(`<button class="btn btn-outline btn-icon btn-sm" data-pay="apply" onclick="app.hrDeleteCheckin('${escapeHTML(r.rec.id)}')" title="Xóa bản ghi giờ này" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
     }
     return `<div class="ci-actions">${btns.join('')}</div>`;
   }
 
   // ── RENDER BẢNG ĐỐI CHIẾU ──────────────────────────────────────
+  // ── CHÍP LỌC NHANH (21/10/2026) ─────────────────────────────────
+  // Bấm chíp = LỌC theo nhóm + tự bỏ tick "Chỉ dòng cần xác nhận/bất thường"
+  // + nhảy tới dòng đầu tiên (tô sáng). Bấm lại / chíp Tổng = bỏ lọc.
+  const CI_CHIP_DEFS = [
+    { key: 'ok', label: 'Khớp' },
+    { key: 'review', label: 'Cần xác nhận', cls: 'is-warn' },
+    { key: 'bad', label: '⚠ Bất thường', cls: 'is-danger' },
+    { key: 'late', label: 'Đi muộn' },
+    { key: 'early', label: 'Về sớm' },
+    { key: 'noOut', label: 'Thiếu giờ ra' },
+    { key: 'noIn', label: 'Thiếu giờ vào' },
+    { key: 'nightOut', label: 'Ca đêm (ra hôm trước)', cls: 'is-off' },
+    { key: 'noPunch', label: 'Không quẹt máy' },
+    { key: 'noPlan', label: 'Chưa bố trí' },
+    { key: 'leavePunch', label: 'Nghỉ có quẹt' },
+    { key: 'absent', label: 'Chấm tay Vắng' },
+    { key: 'otDiff', label: 'TC lệch' }
+  ];
+  const CI_CHIP_MATCH = {
+    ok: r => !r.ack && r.verdict === 'ok',
+    review: r => !!r.needsReview,
+    bad: r => !!(r.anomalies && r.anomalies.length),
+    late: r => (r.flags || []).indexOf('late') !== -1,
+    early: r => (r.flags || []).indexOf('early') !== -1,
+    noOut: r => r.verdict === 'no_out',
+    noIn: r => r.verdict === 'no_in',
+    nightOut: r => r.verdict === 'night_out',
+    noPunch: r => r.verdict === 'no_punch',
+    noPlan: r => r.verdict === 'no_plan',
+    leavePunch: r => r.verdict === 'leave_punch',
+    absent: r => r.verdict === 'absent_punch',
+    otDiff: r => ['short', 'over', 'unregistered', 'pending'].indexOf(r.otStatus) !== -1
+  };
+  let ciPendingFlash = false;   // đặt = true khi bấm chíp → render sau tô sáng dòng đầu
+  function ciChipCountOf(key, sum) {
+    const map = {
+      ok: sum.ok, review: sum.review, bad: sum.bad, late: sum.late, early: sum.early,
+      noOut: sum.noOut, noIn: sum.noIn, nightOut: sum.nightOut, noPunch: sum.noPunch,
+      noPlan: sum.noPlan, leavePunch: sum.leavePunch, absent: sum.absent, otDiff: sum.otDiff
+    };
+    return map[key] || 0;
+  }
+  function ciChipLabelOf(key) {
+    const d = CI_CHIP_DEFS.find(x => x.key === key);
+    return d ? d.label : key;
+  }
+  function ciChipsHtml(sum, total, ui) {
+    const active = ui.chip || '';
+    const totalOn = !active || active === 'all';
+    let html = `<button type="button" class="hr-stat-chip ci-chip${totalOn ? ' is-active' : ''}"`
+      + ` data-ci-chip="all" aria-pressed="${totalOn ? 'true' : 'false'}" title="Bấm để bỏ lọc chip — xem tất cả">`
+      + `<i data-lucide="rows-3"></i> Tổng: <strong>${total}</strong></button>`;
+    html += CI_CHIP_DEFS.map(d => {
+      const n = ciChipCountOf(d.key, sum);
+      if (!n && active !== d.key) return '';
+      const on = active === d.key;
+      return `<button type="button" class="hr-stat-chip ci-chip${d.cls ? ' ' + d.cls : ''}${on ? ' is-active' : ''}"`
+        + ` data-ci-chip="${d.key}" aria-pressed="${on ? 'true' : 'false'}"`
+        + ` title="Bấm để lọc ${escapeHTML(d.label)} + nhảy tới dòng đầu tiên">`
+        + `${escapeHTML(d.label)}: <strong>${n}</strong></button>`;
+    }).join('');
+    if (active && active !== 'all') {
+      html += `<button type="button" class="hr-stat-chip ci-chip ci-chip-clear" data-ci-chip="all" title="Bỏ lọc chip">✕ Bỏ lọc</button>`;
+    }
+    return html;
+  }
+  function ciOnChipClick(key) {
+    const ui = ciReadUi();
+    const k = String(key || '');
+    const cur = ui.chip || '';
+    const patch = { onlyIssues: false, onlyAnomaly: false };
+    if (!k || k === 'all' || k === cur) {
+      patch.chip = '';
+      patch.onlyIssues = true;      // về mặc định: chỉ dòng cần xác nhận
+    } else {
+      patch.chip = k;
+    }
+    ciSaveUi(patch);
+    // PHẢI cập nhật ô tick NGAY: ciReadUi() đọc trạng thái checkbox từ DOM, nếu
+    // không render kế tiếp sẽ đọc lại giá trị CŨ và ghi đè quyết định vừa lưu.
+    const oiEl = document.getElementById('hr-ci-only-issues');
+    if (oiEl) oiEl.checked = !!patch.onlyIssues;
+    const oaEl = document.getElementById('hr-ci-only-anomaly');
+    if (oaEl) oaEl.checked = false;
+    ciPendingFlash = !!patch.chip;
+    ciRenderCheckinTable();
+    ciScrollToFirstRow();
+  }
+  function ciScrollToFirstRow() {
+    try {
+      const tbody = document.getElementById('hr-ci-body');
+      const tr = (tbody && typeof tbody.querySelector === 'function') ? tbody.querySelector('tr[data-ci-row]') : null;
+      if (!tr || typeof tr.scrollIntoView !== 'function') return false;
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return true;
+    } catch (e) { return false; }
+  }
   function ciRenderCheckinTable() {
     const tbody = document.getElementById('hr-ci-body');
     if (!tbody) return;
     const ui = ciReadUi();
     ciSyncToolbar(ui);
-    const range = ciMonthRange(ui.month);
+    // KỲ = Ngày / Tuần / Tháng (nguồn chân lý chung cho cả thao tác hàng loạt)
+    const range = ciRangeOf(ui);
     const allRows = ciRowsForRange(range.from, range.to, Object.assign({}, ui, { onlyIssues: false, onlyAnomaly: false }));
     const sum = ciSummaryOf(allRows);
     let rows = ui.onlyIssues ? allRows.filter(r => r.needsReview) : allRows;
     if (ui.onlyAnomaly) rows = rows.filter(r => r.anomalies && r.anomalies.length);
+    // CHÍP đang chọn là bộ lọc CUỐI (đã tự bỏ 2 ô tick khi bấm chíp)
+    if (ui.chip && ui.chip !== 'all' && CI_CHIP_MATCH[ui.chip]) rows = rows.filter(CI_CHIP_MATCH[ui.chip]);
+    if (hrRowsLimit.ci < 1) hrRowsLimit.ci = HR_ROWS_PAGE;
+    // Tô sáng dòng ĐẦU TIÊN sau khi bấm chíp (dòng đầu luôn nằm trong trang 1)
+    const flashKey = ciPendingFlash && rows.length ? `${rows[0].employeeId}|${rows[0].date}` : '';
+    ciPendingFlash = false;
     const countEl = document.getElementById('hr-ci-count');
     if (countEl) {
-      countEl.textContent = `${allRows.length} dòng · ${sum.review} cần xác nhận`
+      countEl.textContent = `${range.label} · ${allRows.length} dòng · ${sum.review} cần xác nhận`
         + (sum.ack ? ` · ${sum.ack} đã xác nhận` : '')
-        + (sum.bad ? ` · ⚠ ${sum.bad} bất thường` : '');
+        + (sum.bad ? ` · ⚠ ${sum.bad} bất thường` : '')
+        + (ui.chip && ui.chip !== 'all' ? ` · đang lọc: ${ciChipLabelOf(ui.chip)}` : '');
     }
     const chipsEl = document.getElementById('hr-ci-chips');
-    if (chipsEl) {
-      const chip = (label, n, cls) => n ? `<span class="hr-stat-chip${cls ? ' ' + cls : ''}">${escapeHTML(label)}: <strong>${n}</strong></span>` : '';
-      chipsEl.innerHTML =
-        `<span class="hr-stat-chip"><i data-lucide="rows-3"></i> Tổng: <strong>${allRows.length}</strong></span>` +
-        chip('Khớp', sum.ok) + chip('Cần xác nhận', sum.review, 'is-warn') +
-        chip('⚠ Bất thường', sum.bad, 'is-danger') +
-        chip('Đi muộn', sum.late) + chip('Về sớm', sum.early) +
-        chip('Thiếu giờ ra', sum.noOut) + chip('Thiếu giờ vào', sum.noIn) +
-        chip('Ca đêm (ra hôm trước)', sum.nightOut, 'is-off') + chip('Không quẹt máy', sum.noPunch) +
-        chip('Chưa bố trí', sum.noPlan) + chip('Nghỉ có quẹt', sum.leavePunch) +
-        chip('Chấm tay Vắng', sum.absent) + chip('TC lệch', sum.otDiff);
-    }
+    if (chipsEl) chipsEl.innerHTML = ciChipsHtml(sum, allRows.length, ui);
     if (!rows.length) {
+      const msg = !allRows.length
+        ? 'Chưa có dữ liệu trong kỳ. Bấm “Nạp Giờ Máy” để chọn file Excel máy chấm công xuất ra.'
+        : (ui.chip && ui.chip !== 'all'
+          ? `Không có dòng nào thuộc nhóm “${escapeHTML(ciChipLabelOf(ui.chip))}” trong kỳ này — bấm chíp “Tổng” để bỏ lọc.`
+          : (ui.onlyAnomaly
+            ? 'Không có dòng nào BẤT THƯỜNG trong kỳ này — bỏ tích “Chỉ dòng bất thường” (hoặc bấm chíp “Tổng”).'
+            : 'Không có dòng nào cần xác nhận trong kỳ này — bỏ tích “Chỉ dòng cần xác nhận” (hoặc bấm chíp “Tổng”).'));
       tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding:26px;color:var(--text-muted);">
         <i data-lucide="clock" style="width:26px;height:26px;margin-bottom:6px;"></i>
-        <p>${allRows.length ? (ui.onlyAnomaly ? 'Không có dòng nào BẤT THƯỜNG trong kỳ này — bỏ tích “Chỉ dòng bất thường” để xem tất cả.' : 'Không có dòng nào cần xác nhận trong kỳ này — bỏ tích “Chỉ dòng cần xác nhận” để xem tất cả.') : 'Chưa có dữ liệu trong kỳ. Bấm “Nạp Giờ Máy” để chọn file Excel máy chấm công xuất ra.'}</p></td></tr>`;
+        <p>${msg}</p></td></tr>`;
       hrScheduleIcons();
       return;
     }
     const shown = rows.slice(0, hrRowsLimit.ci);
-    tbody.innerHTML = shown.map(r => `<tr class="${r.needsReview ? 'ci-row-review' : ''}${(r.anomalies && r.anomalies.length) ? ' ci-row-bad' : ''}">
-        <td><strong>${escapeHTML(r.employeeName)}</strong><br><span class="ci-sub">${escapeHTML(r.dept || '—')}${r.empCode ? ' · ' + escapeHTML(r.empCode) : ''}</span></td>
-        <td>${escapeHTML(fmtDateDMY(r.date))}</td>
+    tbody.innerHTML = shown.map(r => {
+      const key = `${r.employeeId}|${r.date}`;
+      const cls = [r.needsReview ? 'ci-row-review' : '', (r.anomalies && r.anomalies.length) ? 'ci-row-bad' : '',
+        (flashKey && key === flashKey) ? 'ci-row-flash' : ''].filter(Boolean).join(' ');
+      return `<tr class="${cls}" data-ci-row="${escapeHTML(key)}">
+        <td><button type="button" class="ci-cell-link" data-ci-emp="${escapeHTML(r.employeeId)}" title="Bấm để lọc theo nhân viên này"><strong>${escapeHTML(r.employeeName)}</strong></button><br><span class="ci-sub">${escapeHTML(r.dept || '—')}${r.empCode ? ' · ' + escapeHTML(r.empCode) : ''}</span></td>
+        <td><button type="button" class="ci-cell-link" data-ci-goto-day="${escapeHTML(r.date)}" title="Bấm để xem riêng ngày ${escapeHTML(fmtDateDMY(r.date))}">${escapeHTML(fmtDateDMY(r.date))}</button></td>
         <td>${ciPlanCell(r)}</td>
         <td>${ciMachineCell(r)}</td>
         <td>${ciActualCell(r)}</td>
         <td>${ciDiffCell(r)}</td>
         <td>${ciLeaveOtCell(r)}</td>
         <td class="text-right">${ciActionCell(r)}</td>
-      </tr>`).join('') +
+      </tr>`;
+    }).join('') +
       hrMoreRowHtml('ci', shown.length, rows.length, 8);
     hrScheduleIcons();
   }
@@ -2712,7 +3154,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   // Modal xem trước "Điền Giờ Kết Thúc" (bắt buộc xem trước — đổi giờ công đoạn)
   function openCiEndfillModal() {
-    if (!requireEditPermission()) return;
+    // Ghi giờ kết thúc vào BẢNG BỐ TRÍ ⇒ đổi giờ công đoạn ⇒ phải có quyền
+    // "Áp dụng chấm công theo máy" (20/10/2026), không chỉ quyền tab Nhân sự.
+    if (!requirePayApply()) return;
     const modal = document.getElementById('modal-ci-endfill');
     if (!modal) return;
     const f = document.getElementById('ci-endfill-from');
@@ -2754,7 +3198,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     hrScheduleIcons();
   }
   function applyCiEndfill() {
-    if (!requireEditPermission()) return;
+    if (!requirePayApply()) return;
     const picks = [];
     const nodes = document.querySelectorAll ? Array.from(document.querySelectorAll('[data-ci-fill]')) : [];
     nodes.forEach(el => {
@@ -2807,6 +3251,979 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     saveHrData();
     renderHrView();
     showToast(`Đã bỏ xác nhận ${hrEmpName(employeeId)} ngày ${fmtDateDMY(date)}`, 'info');
+  }
+  // ═══════════════════════════════════════════════════════════════
+  // 8c) XỬ LÝ DÒNG CÔNG — CƠ SỞ CHỐT CÔNG ĐỂ TÍNH LƯƠNG (20/10/2026)
+  // ───────────────────────────────────────────────────────────────
+  // Mỗi dòng (NV, ngày) có lệch/TC chưa có đơn PHẢI được "Xử lý" trước khi
+  // chốt công tháng. 5 hình thức (chốt với người dùng 20/10/2026):
+  //   accept    : Chấp nhận giờ làm (ghi nhận HC/TC để tính lương) — hiệu lực ngay
+  //   add_ot    : Bổ sung đơn TC (mở form đơn, KHÔNG giới hạn ngày) — chờ duyệt đơn
+  //   edit      : Sửa giờ máy (đề xuất in/out) — chờ Admin/BQL duyệt
+  //   reject_ot : Hủy phần TC vượt đơn — chờ Admin/BQL duyệt
+  //   waive     : Miễn trừ (chỉ Admin) — vẫn ghi số hiện tại + lý do
+  // TẤT CẢ đều lưu before/after + người/lúc/lý do ⇒ hồ sơ đối chiếu khi tính lương.
+  const PAY_ROW_STATUS = {
+    cho_duyet: { label: 'Chờ duyệt', cls: 'wait' },
+    da_chot:   { label: 'Đã chốt',  cls: 'ok' },
+    tu_choi:   { label: 'Bị từ chối', cls: 'bad' },
+    mien:      { label: 'Miễn trừ', cls: 'mien' }
+  };
+  const PAY_ACTION_LABEL = {
+    accept:    'Chấp nhận giờ làm',
+    add_ot:    'Bổ sung đơn TC',
+    edit:      'Sửa thông tin giờ máy',
+    reject_ot: 'Hủy phần TC vượt đơn',
+    waive:     'Miễn trừ'
+  };
+  function payWho() {
+    return (state.currentUser && (state.currentUser.fullname || state.currentUser.email || state.currentUser.username)) || '';
+  }
+  function payRowId(employeeId, date) { return `payrow-${date}-${employeeId}`; }
+  function payRowOf(employeeId, date) {
+    return (state.hrPayRows || []).find(pr => pr && pr.employeeId === employeeId && pr.date === date) || null;
+  }
+  function payRowsOfMonth(month) {
+    const m = String(month || '');
+    return (state.hrPayRows || []).filter(pr => pr && String(pr.month || String(pr.date || '').slice(0, 7)) === m);
+  }
+  function paySaveRow(rec) {
+    const list = state.hrPayRows || (state.hrPayRows = []);
+    const i = list.findIndex(pr => pr && pr.id === rec.id);
+    if (i >= 0) list[i] = Object.assign({}, list[i], rec); else list.push(rec);
+    saveHrData(['hrPayRows']);
+  }
+  // Ảnh chụp "trước khi xử lý" — lấy từ engine đối chiếu (1 dòng, không quét bảng)
+  function paySnapshotOf(employeeId, date) {
+    const r = ciCompareDay(employeeId, date);
+    const a = (r && r.actual) || {};
+    return {
+      row: r,
+      before: {
+        hc: Number(a.hc) || 0,
+        tc: Number(a.tc) || 0,
+        otApprovedMin: Number(r && r.ot ? r.ot.approvedMin : 0) || 0,
+        attStatus: (r && r.att) || '',
+        verdict: (r && r.verdict) || '',
+        anomalies: (r && r.anomalies) ? r.anomalies.slice() : []
+      }
+    };
+  }
+  // Số giờ ĐƯỢC GHI NHẬN của 1 dòng (dùng cho bản chốt công + xuất Excel)
+  function payEffectiveOf(row) {
+    const a = (row && row.after) || {};
+    return {
+      hc: Math.max(0, Number(a.hc) || 0),
+      tc: Math.max(0, Number(a.tc) || 0),
+      otAcceptedMin: Math.max(0, Number(a.otAcceptedMin) || 0),
+      otRejectedMin: Math.max(0, Number(a.otRejectedMin) || 0)
+    };
+  }
+  // ① CHẤP NHẬN GIỜ LÀM
+  function payAcceptRow(employeeId, date, opts) {
+    if (!requirePayLock()) return false;
+    const o = opts || {};
+    const snap = paySnapshotOf(employeeId, date);
+    const r = snap.row;
+    if (!r) return false;
+    if (!r.actual || (!r.actual.hasPunch && !(r.leave && r.leave.fullDay))) {
+      showToast('Dòng này không có giờ máy để chấp nhận. Hãy dùng "Sửa thông tin" hoặc "Miễn trừ".', 'error');
+      return false;
+    }
+    const tc = Number(r.actual.tc) || 0;
+    const approved = Number(r.ot.approvedMin) || 0;
+    const otMode = o.otMode === 'orderOnly' ? 'orderOnly' : 'asIs';
+    const otAccepted = otMode === 'orderOnly' ? Math.min(tc, approved) : tc;
+    const old = payRowOf(employeeId, date);
+    const now = new Date().toISOString();
+    const who = payWho();
+    paySaveRow({
+      id: payRowId(employeeId, date), employeeId, date, month: String(date).slice(0, 7),
+      action: 'accept', status: 'da_chot',
+      before: snap.before,
+      after: { hc: Number(r.actual.hc) || 0, tc, otAcceptedMin: otAccepted, otRejectedMin: Math.max(0, tc - otAccepted) },
+      otMode, reason: String(o.reason || '').trim(), note: String(o.reason || '').trim(),
+      requestedBy: who, requestedAt: now, approvedBy: who, approvedAt: now,
+      version: (old && old.version ? old.version : 0) + 1, updatedAt: now
+    });
+    renderHrView();
+    showToast(`Đã CHẤP NHẬN giờ làm ${hrEmpName(employeeId)} · ${fmtDateDMY(date)}: HC ${fmtHm(Number(r.actual.hc) || 0)} · TC ghi nhận ${fmtHm(otAccepted)}${tc > otAccepted ? ` (hủy ${fmtHm(tc - otAccepted)})` : ''}`, 'success');
+    return true;
+  }
+  // ④ HỦY PHẦN TC VƯỢT ĐƠN — cần Admin/BQL duyệt
+  function payRejectOtRow(employeeId, date, reason) {
+    if (!requirePayLock()) return false;
+    const why = String(reason || '').trim();
+    if (!why) { showToast('Vui lòng nhập lý do hủy giờ tăng ca.', 'error'); return false; }
+    const snap = paySnapshotOf(employeeId, date);
+    const r = snap.row;
+    if (!r) return false;
+    const tc = Number(r.actual.tc) || 0;
+    const approved = Number(r.ot.approvedMin) || 0;
+    const otAccepted = Math.min(tc, approved);
+    const old = payRowOf(employeeId, date);
+    const now = new Date().toISOString();
+    paySaveRow({
+      id: payRowId(employeeId, date), employeeId, date, month: String(date).slice(0, 7),
+      action: 'reject_ot', status: 'cho_duyet',
+      before: snap.before,
+      after: { hc: Number(r.actual.hc) || 0, tc, otAcceptedMin: otAccepted, otRejectedMin: Math.max(0, tc - otAccepted) },
+      reason: why, note: why,
+      requestedBy: payWho(), requestedAt: now,
+      version: (old && old.version ? old.version : 0) + 1, updatedAt: now
+    });
+    renderHrView();
+    showToast(`Đã gửi đề nghị HỦY ${fmtHm(Math.max(0, tc - otAccepted))} TC vượt đơn — chờ Admin/Ban Quản Lý duyệt.`, 'success');
+    return true;
+  }
+  // ⑤ MIỄN TRỪ — chỉ Admin
+  function payWaiveRow(employeeId, date, reason) {
+    if (!state.currentUser || state.currentUser.role !== 'admin') {
+      showToast('Chỉ Quản Trị mới được MIỄN TRỪ dòng công.', 'error');
+      return false;
+    }
+    const why = String(reason || '').trim();
+    if (!why) { showToast('Vui lòng nhập lý do miễn trừ.', 'error'); return false; }
+    const snap = paySnapshotOf(employeeId, date);
+    if (!snap.row) return false;
+    const tc = Number(snap.row.actual.tc) || 0;
+    const approved = Number(snap.row.ot.approvedMin) || 0;
+    const old = payRowOf(employeeId, date);
+    const now = new Date().toISOString();
+    paySaveRow({
+      id: payRowId(employeeId, date), employeeId, date, month: String(date).slice(0, 7),
+      action: 'waive', status: 'mien',
+      before: snap.before,
+      after: { hc: Number(snap.row.actual.hc) || 0, tc, otAcceptedMin: Math.min(tc, approved), otRejectedMin: Math.max(0, tc - approved) },
+      reason: why, note: why,
+      requestedBy: payWho(), requestedAt: now, approvedBy: payWho(), approvedAt: now,
+      version: (old && old.version ? old.version : 0) + 1, updatedAt: now
+    });
+    renderHrView();
+    showToast(`Đã MIỄN TRỪ dòng ${hrEmpName(employeeId)} · ${fmtDateDMY(date)} (lý do: ${why})`, 'success');
+    return true;
+  }
+  // ③ SỬA GIỜ MÁY — đề xuất giá trị mới, chờ Admin/BQL duyệt rồi mới ghi
+  function payEditRequest(employeeId, date, proposed, reason) {
+    if (!requirePayLock()) return false;
+    const why = String(reason || '').trim();
+    if (!why) { showToast('Vui lòng nhập lý do sửa giờ máy.', 'error'); return false; }
+    const inT = String((proposed && proposed.in) || '').trim();
+    const outT = String((proposed && proposed.out) || '').trim();
+    if (!inT && !outT) { showToast('Nhập ít nhất Giờ vào hoặc Giờ ra mới.', 'error'); return false; }
+    const snap = paySnapshotOf(employeeId, date);
+    const old = payRowOf(employeeId, date);
+    const now = new Date().toISOString();
+    paySaveRow({
+      id: payRowId(employeeId, date), employeeId, date, month: String(date).slice(0, 7),
+      action: 'edit', status: 'cho_duyet',
+      before: snap.before,
+      after: { hc: 0, tc: 0, otAcceptedMin: 0, otRejectedMin: 0 },   // tính lại khi duyệt
+      proposed: { in: inT, out: outT },
+      reason: why, note: why,
+      requestedBy: payWho(), requestedAt: now,
+      version: (old && old.version ? old.version : 0) + 1, updatedAt: now
+    });
+    renderHrView();
+    showToast(`Đã gửi đề nghị SỬA GIỜ MÁY (${inT || '?'}–${outT || '?'}) — chờ Admin/Ban Quản Lý duyệt.`, 'success');
+    return true;
+  }
+  // ② BỔ SUNG ĐƠN TC: ghi nhận "đang chờ duyệt đơn" + mã đơn
+  function payMarkAddOt(employeeId, date, otId, reason) {
+    const snap = paySnapshotOf(employeeId, date);
+    if (!snap.row) return false;
+    const tc = Number(snap.row.actual.tc) || 0;
+    const approved = Number(snap.row.ot.approvedMin) || 0;
+    const old = payRowOf(employeeId, date);
+    const now = new Date().toISOString();
+    paySaveRow({
+      id: payRowId(employeeId, date), employeeId, date, month: String(date).slice(0, 7),
+      action: 'add_ot', status: 'cho_duyet',
+      before: snap.before,
+      after: { hc: Number(snap.row.actual.hc) || 0, tc, otAcceptedMin: Math.min(tc, approved), otRejectedMin: Math.max(0, tc - approved) },
+      otId: otId || '',
+      reason: String(reason || '').trim(), note: String(reason || '').trim(),
+      requestedBy: payWho(), requestedAt: now,
+      version: (old && old.version ? old.version : 0) + 1, updatedAt: now
+    });
+    return true;
+  }
+  // DUYỆT / TỪ CHỐI dòng công (Admin + Ban Quản Lý)
+  function payApproveRow(employeeId, date) {
+    if (!canApproveLeave()) { showToast('Chỉ Admin & Ban Quản Lý mới được duyệt dòng công.', 'error'); return false; }
+    const row = payRowOf(employeeId, date);
+    if (!row) return false;
+    if (row.status !== 'cho_duyet') { showToast('Dòng này không ở trạng thái chờ duyệt.', 'info'); return false; }
+    if (row.action === 'add_ot') { showToast('Dòng này chờ duyệt ĐƠN TĂNG CA — hãy duyệt đơn TC, hệ thống tự chốt dòng.', 'info'); return false; }
+    const now = new Date().toISOString();
+    if (row.action === 'edit') {
+      // Ghi giờ máy đã duyệt rồi tính lại số
+      const rec = (state.hrCheckins || []).find(c => c.employeeId === employeeId && c.date === date);
+      if (!rec) { showToast('Không còn bản ghi giờ máy cho ngày này.', 'error'); return false; }
+      // ⚠ punchTimes ĐƯỢC ƯU TIÊN hơn in/out khi tính giờ (xem ciPunchListOf)
+      // ⇒ phải cập nhật CẢ danh sách lần quẹt, nếu không sửa giờ sẽ KHÔNG có tác dụng.
+      const prevIn = rec.in, prevOut = rec.out;
+      const newIn = (row.proposed && row.proposed.in) ? row.proposed.in : prevIn;
+      const newOut = (row.proposed && row.proposed.out) ? row.proposed.out : prevOut;
+      rec.in = newIn; rec.out = newOut;
+      if (Array.isArray(rec.punchTimes) && rec.punchTimes.length) {
+        const times = rec.punchTimes.map(t => (t === prevIn ? newIn : (t === prevOut ? newOut : t)));
+        if (newIn && times.indexOf(newIn) === -1) times.push(newIn);
+        if (newOut && times.indexOf(newOut) === -1) times.push(newOut);
+        rec.punchTimes = [...new Set(times)].filter(Boolean).sort();
+      }
+      rec.editedBy = payWho(); rec.editedAt = now;
+      const snap = paySnapshotOf(employeeId, date);
+      const tc = Number(snap.row.actual.tc) || 0;
+      const approved = Number(snap.row.ot.approvedMin) || 0;
+      row.after = { hc: Number(snap.row.actual.hc) || 0, tc, otAcceptedMin: tc, otRejectedMin: Math.max(0, tc - approved) };
+      row.status = 'da_chot';
+      saveHrData(['hrCheckins']);
+    } else {
+      row.status = row.action === 'waive' ? 'mien' : 'da_chot';
+    }
+    row.approvedBy = payWho(); row.approvedAt = now; row.updatedAt = now;
+    row.version = (Number(row.version) || 0) + 1;
+    paySaveRow(row);
+    renderHrView();
+    showToast(`Đã DUYỆT ${PAY_ACTION_LABEL[row.action] || row.action}: ${hrEmpName(employeeId)} · ${fmtDateDMY(date)}`, 'success');
+    return true;
+  }
+  function payRejectRow(employeeId, date, reason) {
+    if (!canApproveLeave()) { showToast('Chỉ Admin & Ban Quản Lý mới được từ chối dòng công.', 'error'); return false; }
+    const row = payRowOf(employeeId, date);
+    if (!row || row.status !== 'cho_duyet') return false;
+    const why = String(reason || '').trim();
+    const now = new Date().toISOString();
+    row.status = 'tu_choi';
+    row.rejectReason = why;
+    row.approvedBy = payWho(); row.approvedAt = now; row.updatedAt = now;
+    row.version = (Number(row.version) || 0) + 1;
+    paySaveRow(row);
+    renderHrView();
+    showToast(`Đã TỪ CHỐI ${PAY_ACTION_LABEL[row.action] || row.action}: ${hrEmpName(employeeId)} · ${fmtDateDMY(date)}${why ? ` — ${why}` : ''}`, 'info');
+    return true;
+  }
+  // Đơn TC được DUYỆT → tự chốt dòng "add_ot" nếu TC thực tế đã được phủ đủ
+  function paySyncOtApproved(ot) {
+    if (!ot || !ot.employeeId || !ot.date) return;
+    const row = payRowOf(ot.employeeId, ot.date);
+    if (!row || row.action !== 'add_ot' || row.otId !== ot.id) return;
+    const snap = paySnapshotOf(ot.employeeId, ot.date);
+    const tc = Number(snap.row && snap.row.actual ? snap.row.actual.tc : 0) || 0;
+    const approved = Number(snap.row && snap.row.ot ? snap.row.ot.approvedMin : 0) || 0;
+    const now = new Date().toISOString();
+    row.after = { hc: Number(snap.row && snap.row.actual ? snap.row.actual.hc : 0) || 0, tc,
+      otAcceptedMin: Math.min(tc, approved), otRejectedMin: Math.max(0, tc - approved) };
+    row.updatedAt = now;
+    row.version = (Number(row.version) || 0) + 1;
+    if (approved >= tc) {
+      row.status = 'da_chot';
+      row.approvedBy = payWho(); row.approvedAt = now;
+    } else {
+      row.status = 'cho_duyet';
+      row.note = `Đơn TC đã duyệt ${fmtHm(approved)} nhưng TC thực tế ${fmtHm(tc)} — còn vượt ${fmtHm(tc - approved)}`;
+    }
+    paySaveRow(row);
+  }
+  function paySyncOtRejected(ot, reason) {
+    if (!ot || !ot.employeeId || !ot.date) return;
+    const row = payRowOf(ot.employeeId, ot.date);
+    if (!row || row.action !== 'add_ot' || row.otId !== ot.id) return;
+    const now = new Date().toISOString();
+    row.status = 'tu_choi';
+    row.rejectReason = reason || 'Đơn tăng ca bị từ chối';
+    row.updatedAt = now;
+    row.version = (Number(row.version) || 0) + 1;
+    paySaveRow(row);
+  }
+  // Nhãn/chip trạng thái dòng công cho bảng đối chiếu
+  function payRowChipHtml(employeeId, date) {
+    const row = payRowOf(employeeId, date);
+    if (!row) return '';
+    const st = PAY_ROW_STATUS[row.status] || PAY_ROW_STATUS.cho_duyet;
+    const title = `${PAY_ACTION_LABEL[row.action] || row.action} · ${st.label}`
+      + (row.reason ? ` · lý do: ${row.reason}` : '')
+      + (row.requestedBy ? ` · gửi bởi ${row.requestedBy}` : '')
+      + (row.approvedBy ? ` · duyệt bởi ${row.approvedBy}` : '');
+    return `<span class="ci-pay-chip is-${st.cls}" title="${escapeHTML(title)}">${escapeHTML(st.label)}</span>`;
+  }
+  // ── MODAL "XỬ LÝ DÒNG CÔNG" ─────────────────────────────────────
+  function ciPayInfoHtml(r) {
+    const a = r.actual || {};
+    const planTxt = r.plan.hasPlan
+      ? `${r.plan.assignments.map(x => hrPosName(x.positionId)).join(' + ')} · ${fmtHm(r.plan.hc + r.plan.tc)}`
+      : '— chưa bố trí —';
+    const approved = Number(r.ot ? r.ot.approvedMin : 0) || 0;
+    const tc = Number(a.tc) || 0;
+    const gap = Math.max(0, tc - approved);
+    const v = CI_VERDICT[r.verdict] || CI_VERDICT.ok;
+    const bad = (r.anomalies && r.anomalies.length)
+      ? `<div class="ci-pay-bad">⚠ ${escapeHTML(r.anomalies.map(k => CI_ANOMALY_LABEL[k] || k).join(' · '))}</div>` : '';
+    return `<div class="ci-pay-grid">
+        <div><span>Nhân viên</span><strong>${escapeHTML(hrEmpName(r.employeeId))}</strong></div>
+        <div><span>Ngày</span><strong>${escapeHTML(fmtDateDMY(r.date))}</strong></div>
+        <div><span>Bố trí</span><strong>${escapeHTML(planTxt)}</strong></div>
+        <div><span>Giờ máy</span><strong>${escapeHTML(r.timeText || '—')}</strong></div>
+        <div><span>Thực tế</span><strong>HC ${escapeHTML(fmtHm(a.hc || 0))} · TC ${escapeHTML(fmtHm(tc))}</strong></div>
+        <div><span>Đơn TC đã duyệt</span><strong>${escapeHTML(fmtHm(approved))}</strong></div>
+      </div>
+      <div class="ci-pay-tags">${ciChip(v.label, v.cls)}
+        ${gap > 0 ? `<span class="ci-pay-gap">TC vượt đơn ${escapeHTML(fmtHm(gap))}</span>` : '<span class="ci-pay-ok">TC nằm trong đơn</span>'}
+        ${r.leave ? ciChip(r.leave.label, 'warn') : ''}
+      </div>${bad}`;
+  }
+  function openCiPayModal(employeeId, date) {
+    if (!requirePayLock()) return;
+    const modal = document.getElementById('modal-ci-pay');
+    if (!modal) return;
+    const r = ciCompareDay(employeeId, date);
+    if (!r) return;
+    const empEl = document.getElementById('ci-pay-emp');
+    const dateEl = document.getElementById('ci-pay-date');
+    if (empEl) empEl.value = employeeId;
+    if (dateEl) dateEl.value = date;
+    const info = document.getElementById('ci-pay-info');
+    if (info) info.innerHTML = ciPayInfoHtml(r);
+    const tc = Number(r.actual ? r.actual.tc : 0) || 0;
+    const approved = Number(r.ot ? r.ot.approvedMin : 0) || 0;
+    const act = document.getElementById('ci-pay-action');
+    if (act) act.value = (!r.actual || !r.actual.hasPunch) ? 'waive' : (tc > approved ? 'add_ot' : 'accept');
+    const waiveOpt = document.getElementById('ci-pay-waive-opt');
+    if (waiveOpt) waiveOpt.hidden = !(state.currentUser && state.currentUser.role === 'admin');
+    const inEl = document.getElementById('ci-pay-in');
+    const outEl = document.getElementById('ci-pay-out');
+    if (inEl) inEl.value = (r.rec && r.rec.in) ? r.rec.in : '';
+    if (outEl) outEl.value = (r.rec && r.rec.out) ? r.rec.out : '';
+    const reasonEl = document.getElementById('ci-pay-reason');
+    if (reasonEl) reasonEl.value = '';
+    syncCiPayForm();
+    modal.classList.add('show');
+    hrScheduleIcons();
+  }
+  function closeCiPayModal() {
+    document.getElementById('modal-ci-pay')?.classList.remove('show');
+  }
+  function syncCiPayForm() {
+    const act = (document.getElementById('ci-pay-action') || {}).value || 'accept';
+    const reqEl = document.getElementById('ci-pay-req');
+    if (reqEl) reqEl.style.display = act === 'accept' ? 'none' : '';
+    const otMode = document.getElementById('ci-pay-otmode-group');
+    if (otMode) otMode.hidden = act !== 'accept';
+    const editG = document.getElementById('ci-pay-edit-group');
+    if (editG) editG.hidden = act !== 'edit';
+    const hint = document.getElementById('ci-pay-hint');
+    const HINT = {
+      accept: 'Ghi nhận HC/TC của dòng này làm CƠ SỞ TÍNH LƯƠNG. Nếu TC máy > đơn đã duyệt, chọn phần TC được tính.',
+      add_ot: 'Mở form đơn tăng ca (điền sẵn từ giờ hết ca → giờ ra thực tế). Đơn được duyệt thì dòng TỰ CHỐT; KHÔNG giới hạn ngày bổ sung.',
+      edit: 'Đề xuất giờ vào/ra đúng thực tế. Chỉ ghi vào dữ liệu máy SAU KHI Admin/Ban Quản Lý duyệt.',
+      reject_ot: 'Không tính phần TC vượt đơn (quy định: tăng ca phải đăng ký trước). Cần Admin/Ban Quản Lý duyệt.',
+      waive: 'Chỉ Quản Trị: chấp nhận ngoại lệ, VẪN ghi số hiện tại + lý do vào biên bản chốt công.'
+    };
+    if (hint) hint.textContent = HINT[act] || '';
+  }
+  function ciPaySubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const emp = (document.getElementById('ci-pay-emp') || {}).value || '';
+    const date = (document.getElementById('ci-pay-date') || {}).value || '';
+    const act = (document.getElementById('ci-pay-action') || {}).value || 'accept';
+    const reason = String((document.getElementById('ci-pay-reason') || {}).value || '').trim();
+    if (!emp || !date) return;
+    const otRadio = (typeof document.querySelector === 'function')
+      ? document.querySelector('input[name="ci-pay-otmode"]:checked') : null;
+    const otMode = (otRadio && otRadio.value) || 'asIs';
+    if (act !== 'accept' && !reason) { showToast('Vui lòng nhập LÝ DO (bắt buộc với hình thức này).', 'error'); return; }
+    if (act === 'accept') {
+      if (payAcceptRow(emp, date, { otMode, reason })) closeCiPayModal();
+      return;
+    }
+    if (act === 'reject_ot') {
+      if (payRejectOtRow(emp, date, reason)) closeCiPayModal();
+      return;
+    }
+    if (act === 'waive') {
+      if (payWaiveRow(emp, date, reason)) closeCiPayModal();
+      return;
+    }
+    if (act === 'edit') {
+      const inT = String((document.getElementById('ci-pay-in') || {}).value || '').trim();
+      const outT = String((document.getElementById('ci-pay-out') || {}).value || '').trim();
+      if (payEditRequest(emp, date, { in: inT, out: outT }, reason)) closeCiPayModal();
+      return;
+    }
+    if (act === 'add_ot') {
+      const r = ciCompareDay(emp, date);
+      const dept = (r && r.dept) || hrEmpDept(emp);
+      const range = hrShiftRange(hrShiftCfg(dept), (r && r.actual ? r.actual.shiftIdx : 0) || 0);
+      const planEnd = (r && r.plan && r.plan.hasPlan && r.plan.endMin) ? r.plan.endMin : range.endMin;
+      const outMin = (r && r.actual && r.actual.outMin) ? r.actual.outMin : 0;
+      const startT = ciFromMin(planEnd % 1440);
+      const endT = outMin ? ciFromMin(outMin % 1440) : '';
+      const tc = Number(r && r.actual ? r.actual.tc : 0) || 0;
+      const approved = Number(r && r.ot ? r.ot.approvedMin : 0) || 0;
+      closeCiPayModal();
+      openOvertimeModal({
+        employeeId: emp, employeeName: hrEmpName(emp), date,
+        start: startT, end: endT,
+        reason: reason || 'Bổ sung đơn TC từ bảng đối chiếu',
+        gapMin: Math.max(0, tc - approved)
+      });
+      return;
+    }
+  }
+  // ═══════════════════════════════════════════════════════════════
+  // 8d) CHỐT CÔNG THEO THÁNG (20/10/2026)
+  // ───────────────────────────────────────────────────────────────
+  // 1 bản chốt / THÁNG (phạm vi chốt với người dùng). Quy trình:
+  //   Trình chốt (payLock) → DUYỆT (Admin/Ban Quản Lý) → ĐÃ CHỐT (bất biến)
+  //   → Mở khóa (chỉ Admin, có lý do, version + 1) → phải trình lại.
+  // Bản chốt lưu ẢNH CHỤP từng dòng + LUẬT TÍNH + CẤU HÌNH CA lúc chốt + băm
+  // ⇒ in lại/đối chiếu sau nhiều tháng vẫn ra đúng số cũ.
+  const PAY_LOCK_STATUS = {
+    cho_duyet:  { label: 'Chờ duyệt',  cls: 'wait' },
+    da_chot:    { label: 'Đã chốt',    cls: 'ok' },
+    da_mo_khoa: { label: 'Đã mở khóa', cls: 'mien' }
+  };
+  function payLockOf(month) {
+    const m = String(month || '');
+    const list = (state.hrPayLocks || []).filter(l => l && l.month === m);
+    if (!list.length) return null;
+    list.sort((a, b) => (Number(a.version) || 0) - (Number(b.version) || 0));
+    return list[list.length - 1];
+  }
+  function payRuleSetOf() {
+    return {
+      earlyAllowMin: CI_EARLY_ALLOW_MIN,
+      otBlockMin: CI_OT_BLOCK_MIN,
+      lateTolMin: CI_LATE_TOL_MIN,
+      workDayMaxMin: CI_WORK_DAY_MAX_MIN,
+      breakMode: 'mid',              // nghỉ của ca đặt GIỮA CA (quy tắc 85)
+      roundIn: 'up30', roundOut: 'down30',
+      nightPair: true,               // ghép ca đêm qua ngày
+      restDayAllTc: true             // ngày nghỉ/lễ: toàn bộ giờ = TC
+    };
+  }
+  function payShiftSnapOf() {
+    const out = {};
+    (HR_DEPARTMENTS || []).forEach(dept => {
+      try {
+        const cfg = hrShiftCfg(dept);
+        out[dept] = {
+          type: cfg.type,
+          shifts: (cfg.shifts || []).map((sh, i) => ({ name: sh.name, start: sh.start, end: sh.end, brk: hrShiftBrkH(cfg, i) }))
+        };
+      } catch (e) { /* bỏ qua bộ phận lỗi cấu hình */ }
+    });
+    return out;
+  }
+  function payHashStr(str) {
+    const s = String(str || '');
+    let h1 = 0x811c9dc5, h2 = 0x01000193;
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      h1 ^= c; h1 = (h1 * 16777619) >>> 0;
+      h2 = (h2 + c * (i + 1)) >>> 0;
+    }
+    return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0') + s.length.toString(16);
+  }
+  // Quét 1 lượt: dòng công + chặn + cảnh báo
+  function payLockScan(month) {
+    const m = String(month || '');
+    const range = ciMonthRange(m);
+    const list = (range.from && range.to)
+      ? ciRowsForRange(range.from, range.to, { onlyIssues: false, onlyAnomaly: false, includeLeave: false })
+      : [];
+    const rows = [], blockers = [], warns = [];
+    // Chỉ mục theo (NV|ngày) — tránh quét tuyến tính hrPayRows cho từng dòng công
+    const prMap = new Map();
+    (state.hrPayRows || []).forEach(pr => {
+      if (pr && pr.employeeId && pr.date) prMap.set(`${pr.employeeId}|${pr.date}`, pr);
+    });
+    list.forEach(r => {
+      const a = r.actual || {};
+      const pr = prMap.get(`${r.employeeId}|${r.date}`) || null;
+      const tc = Number(a.tc) || 0;
+      const approved = Number(r.ot ? r.ot.approvedMin : 0) || 0;
+      const done = pr && (pr.status === 'da_chot' || pr.status === 'mien');
+      // SỐ HiỆU LỰC = số SỐNG hiện tại + QUYẾT ĐỊNH của dòng xử lý:
+      //  • accept (tính TC theo máy) / waive  → ghi nhận TOÀN BỘ TC thực tế
+      //  • accept (chỉ theo đơn) / reject_ot / add_ot → tối đa bằng TC đơn đã duyệt
+      // Nhờ vậy sửa giờ máy SAU khi chốt vẫn phát hiện được LỆCH (payDriftOfLock).
+      let otAccepted = Math.min(tc, approved);
+      if (done) {
+        if (pr.action === 'accept') otAccepted = (pr.otMode === 'orderOnly') ? Math.min(tc, approved) : tc;
+        else if (pr.action === 'waive') otAccepted = tc;
+        else otAccepted = Math.min(tc, approved);
+      }
+      const eff = {
+        hc: Number(a.hc) || 0, tc,
+        otAcceptedMin: Math.max(0, otAccepted),
+        otRejectedMin: Math.max(0, tc - otAccepted)
+      };
+      const em = hrEmpById(r.employeeId);
+      const has = eff.hc > 0 || eff.tc > 0 || approved > 0 || !!r.leave || a.hasPunch || r.plan.hasPlan;
+      if (!has) return;
+      const row = {
+        employeeId: r.employeeId, employeeName: hrEmpName(r.employeeId), empCode: (em && em.code) || '',
+        dept: r.dept || '', date: r.date,
+        hc: eff.hc, tc: eff.tc,
+        otApprovedMin: approved, otAcceptedMin: eff.otAcceptedMin, otRejectedMin: eff.otRejectedMin,
+        attStatus: r.att || '', verdict: r.verdict || '', note: pr ? (pr.reason || '') : '',
+        payStatus: pr ? pr.status : '', payRowId: pr ? pr.id : '', anomalies: (r.anomalies || []).slice()
+      };
+      rows.push(row);
+      // ── CHẶN CHỐT (đúng ma trận đã chốt với người dùng) ──
+      const why = [];
+      if (pr && pr.status === 'cho_duyet') why.push('Đề nghị xử lý đang CHỜ DUYỆT');
+      if (pr && pr.status === 'tu_choi') why.push('Đề nghị xử lý BỊ TỪ CHỐI');
+      if (!done && tc > approved) why.push(`TC vượt đơn ${fmtHm(tc - approved)} chưa có đơn`);
+      if (!done && row.anomalies.some(k => ['zero_span', 'too_long', 'out_before_in'].indexOf(k) !== -1)) why.push('Bất thường nặng (vào = ra / >16h / ra trước vào)');
+      if (!done && (r.verdict === 'no_out' || r.verdict === 'no_in')) why.push('Thiếu giờ vào/ra');
+      if (!done && r.verdict === 'no_punch') why.push('Không quẹt máy (có bố trí)');
+      if (why.length) blockers.push({ employeeId: r.employeeId, employeeName: row.employeeName, date: r.date, reasons: why });
+      // ── CẢNH BÁO (cho phép chốt kèm lý do) ──
+      if (!done && ['late', 'early', 'no_plan', 'unmarked', 'leave_punch'].indexOf(r.verdict) !== -1) {
+        warns.push({ employeeId: r.employeeId, employeeName: row.employeeName, date: r.date, verdict: r.verdict });
+      }
+    });
+    const totalsMap = new Map();
+    rows.forEach(r => {
+      const t = totalsMap.get(r.employeeId) || { employeeId: r.employeeId, employeeName: r.employeeName, empCode: r.empCode, dept: r.dept, days: 0, hcMin: 0, tcMin: 0, otMin: 0, otRejectedMin: 0 };
+      if (r.hc > 0 || r.tc > 0 || r.attStatus === 'work' || r.attStatus === 'leave') t.days += 1;
+      t.hcMin += r.hc; t.tcMin += r.tc; t.otMin += r.otAcceptedMin; t.otRejectedMin += r.otRejectedMin;
+      totalsMap.set(r.employeeId, t);
+    });
+    const totals = [...totalsMap.values()].sort((x, y) => String(x.dept).localeCompare(String(y.dept), 'vi') || String(x.employeeName).localeCompare(String(y.employeeName), 'vi'));
+    return { month: m, rows, totals, blockers, warns };
+  }
+  // ── TRÌNH CHỐT → DUYỆT → MỞ KHÓA ────────────────────────────────
+  function payPrepareLock(month, opts) {
+    if (!requirePayLock()) return { ok: false };
+    const m = String(month || '');
+    if (!/^\d{4}-\d{2}$/.test(m)) { showToast('Kỳ chốt công không hợp lệ.', 'error'); return { ok: false }; }
+    const o = opts || {};
+    const active = payLockOf(m);
+    if (active && active.status === 'da_chot') {
+      showToast(`Kỳ ${ciMonthShort(m)} đã CHỐT CÔNG — phải Mở Khóa Kỳ trước khi trình lại.`, 'error');
+      return { ok: false, locked: true };
+    }
+    const scan = payLockScan(m);
+    if (scan.blockers.length) {
+      showToast(`Còn ${scan.blockers.length} dòng PHẢI xử lý trước khi chốt công (TC vượt đơn / thiếu giờ / bất thường). Mở bảng đối chiếu để xử lý.`, 'error');
+      return { ok: false, blockers: scan.blockers };
+    }
+    const now = new Date().toISOString();
+    const who = payWho();
+    const days = (o.disputeDays != null && Number.isFinite(Number(o.disputeDays))) ? Math.max(0, Number(o.disputeDays)) : 3;
+    let disputeUntil = '';
+    try { const d = new Date(); d.setDate(d.getDate() + days); disputeUntil = d.toISOString().slice(0, 10); } catch (e) {}
+    const ruleSet = payRuleSetOf();
+    const shiftSnap = payShiftSnapOf();
+    const rows = scan.rows;
+    const lock = {
+      id: `paylock-${m}`, month: m,
+      status: 'cho_duyet',
+      version: active ? (Number(active.version) || 0) + 1 : 1,
+      ruleSet, shiftSnap, rows, totals: scan.totals,
+      hash: payHashStr(JSON.stringify({ month: m, rows, ruleSet, shiftSnap })),
+      preparedBy: who, preparedByName: who, preparedAt: now,
+      note: String(o.note || '').trim(),
+      disputeDays: days, disputeUntil,
+      warnings: scan.warns.length,
+      paperSigned: [],
+      reopenHistory: (active && Array.isArray(active.reopenHistory)) ? active.reopenHistory.slice() : [],
+      appVersion: (typeof APP_VERSION === 'string') ? APP_VERSION : '',
+      createdAt: (active && active.createdAt) ? active.createdAt : now,
+      updatedAt: now
+    };
+    const list = state.hrPayLocks || (state.hrPayLocks = []);
+    const i = list.findIndex(l => l && l.month === m);
+    if (i >= 0) list[i] = lock; else list.push(lock);
+    saveHrData(['hrPayLocks']);
+    renderHrView();
+    showToast(`Đã TRÌNH CHỐT CÔNG kỳ ${ciMonthShort(m)}: ${rows.length} dòng · ${scan.totals.length} nhân viên — chờ Admin/Ban Quản Lý duyệt.`, 'success');
+    return { ok: true, lock };
+  }
+  function payDriftOfLock(lock) {
+    if (!lock || !lock.month) return { changedCount: 0, changed: [], same: true };
+    const scan = payLockScan(lock.month);
+    const keyOf = r => `${r.employeeId}|${r.date}`;
+    const nowMap = new Map(scan.rows.map(r => [keyOf(r), r]));
+    const lockMap = new Map((lock.rows || []).map(r => [keyOf(r), r]));
+    const changed = [];
+    lockMap.forEach((lr, k) => {
+      const nr = nowMap.get(k);
+      if (!nr) { changed.push({ key: k, employeeName: lr.employeeName, date: lr.date, type: 'missing' }); return; }
+      if (lr.hc !== nr.hc || lr.tc !== nr.tc || lr.otAcceptedMin !== nr.otAcceptedMin) {
+        changed.push({ key: k, employeeName: nr.employeeName, date: nr.date, type: 'value',
+          before: { hc: lr.hc, tc: lr.tc, ot: lr.otAcceptedMin }, after: { hc: nr.hc, tc: nr.tc, ot: nr.otAcceptedMin } });
+      }
+    });
+    nowMap.forEach((nr, k) => { if (!lockMap.has(k)) changed.push({ key: k, employeeName: nr.employeeName, date: nr.date, type: 'new' }); });
+    return {
+      changedCount: changed.length, changed: changed.slice(0, 100),
+      hashNow: payHashStr(JSON.stringify({ month: lock.month, rows: scan.rows, ruleSet: lock.ruleSet, shiftSnap: lock.shiftSnap })),
+      hashLocked: lock.hash || '',
+      same: changed.length === 0
+    };
+  }
+  function payApproveLock(month, opts) {
+    if (!canApproveLeave()) { showToast('Chỉ Admin & Ban Quản Lý mới được DUYỆT chốt công.', 'error'); return false; }
+    const m = String(month || '');
+    const lock = payLockOf(m);
+    if (!lock) { showToast('Chưa có bản trình chốt công cho kỳ này.', 'info'); return false; }
+    if (lock.status !== 'cho_duyet') { showToast('Bản chốt công không ở trạng thái chờ duyệt.', 'info'); return false; }
+    const drift = payDriftOfLock(lock);
+    if (drift.changedCount > 0) {
+      showToast(`Số liệu đã ĐỔI sau khi trình (${drift.changedCount} dòng) — cần TRÌNH LẠI bản chốt trước khi duyệt.`, 'error');
+      return false;
+    }
+    const now = new Date().toISOString();
+    const who = payWho();
+    lock.status = 'da_chot';
+    lock.approvedBy = who; lock.approvedByName = who; lock.approvedAt = now;
+    lock.selfApproved = (lock.preparedBy === who);
+    lock.approveNote = String((opts && opts.note) || '').trim();
+    lock.updatedAt = now;
+    saveHrData(['hrPayLocks']);
+    renderHrView();
+    showToast(`Đã DUYỆT CHỐT CÔNG kỳ ${ciMonthShort(m)} (${lock.rows.length} dòng)${lock.selfApproved ? ' — người trình cũng là người duyệt' : ''}.`, 'success');
+    return true;
+  }
+  function payReopenLock(month, reason) {
+    if (!state.currentUser || state.currentUser.role !== 'admin') {
+      showToast('Chỉ Quản Trị mới được MỞ KHÓA kỳ công.', 'error');
+      return false;
+    }
+    const why = String(reason || '').trim();
+    if (!why) { showToast('Vui lòng nhập lý do mở khóa kỳ công.', 'error'); return false; }
+    const m = String(month || '');
+    const lock = payLockOf(m);
+    if (!lock) return false;
+    const now = new Date().toISOString();
+    lock.reopenHistory = Array.isArray(lock.reopenHistory) ? lock.reopenHistory : [];
+    lock.reopenHistory.push({ by: payWho(), at: now, reason: why, version: Number(lock.version) || 0 });
+    lock.status = 'da_mo_khoa';
+    lock.version = (Number(lock.version) || 0) + 1;
+    lock.updatedAt = now;
+    saveHrData(['hrPayLocks']);
+    renderHrView();
+    showToast(`Đã MỞ KHÓA kỳ ${ciMonthShort(m)} (version ${lock.version}) — cần trình chốt lại. Lý do: ${why}`, 'info');
+    return true;
+  }
+  // ── GIAO DIỆN THẺ "CHỐT CÔNG LƯƠNG" ────────────────────────────
+  function payLockMonthOf() {
+    const el = document.getElementById('hr-pay-month');
+    const v = el ? String(el.value || '') : '';
+    if (/^\d{4}-\d{2}$/.test(v)) return v;
+    return ciReadUi().month || ciDefaultMonth();
+  }
+  function payLockBtnStateHtml(lock) {
+    const st = lock ? (PAY_LOCK_STATUS[lock.status] || PAY_LOCK_STATUS.cho_duyet) : { label: 'Chưa chốt', cls: 'none' };
+    let html = `<span class="pay-lock-state is-${st.cls}">${escapeHTML(st.label)}</span>`;
+    if (lock) {
+      html += `<span class="pay-lock-meta">v${Number(lock.version) || 1} · băm ${escapeHTML(String(lock.hash || '').slice(0, 10))}…</span>`;
+      if (lock.preparedByName) html += `<span class="pay-lock-meta">Trình: ${escapeHTML(lock.preparedByName)}${lock.preparedAt ? ' · ' + escapeHTML(String(lock.preparedAt).slice(0, 16).replace('T', ' ')) : ''}</span>`;
+      if (lock.approvedByName) html += `<span class="pay-lock-meta">Duyệt: ${escapeHTML(lock.approvedByName)}${lock.approvedAt ? ' · ' + escapeHTML(String(lock.approvedAt).slice(0, 16).replace('T', ' ')) : ''}</span>`;
+      if (lock.selfApproved) html += `<span class="pay-lock-meta is-warn">⚠ Người trình cũng là người duyệt</span>`;
+      if (lock.disputeUntil) html += `<span class="pay-lock-meta">Hạn khiếu nại: ${escapeHTML(fmtDateDMY(lock.disputeUntil))}</span>`;
+    }
+    return html;
+  }
+  function hrPayCardIsOpen() {
+    const el = document.getElementById('hr-pay-card');
+    return !!(el && el.classList && !el.classList.contains('hr-card-hidden'));
+  }
+  function renderHrPayCard() {
+    const body = document.getElementById('hr-pay-body');
+    if (!body) return;
+    const month = payLockMonthOf();
+    const mEl = document.getElementById('hr-pay-month');
+    if (mEl && mEl.value !== month) mEl.value = month;
+    const lock = payLockOf(month);
+    const scan = payLockScan(month);
+    const locked = !!(lock && lock.status === 'da_chot');
+    const drift = lock ? payDriftOfLock(lock) : { changedCount: 0 };
+    const totalHc = scan.totals.reduce((s, t) => s + t.hcMin, 0);
+    const totalTc = scan.totals.reduce((s, t) => s + t.tcMin, 0);
+    const totalOt = scan.totals.reduce((s, t) => s + t.otMin, 0);
+    const chips = `<div class="hr-stat-chips">
+        <span class="hr-stat-chip">Kỳ: <strong>${escapeHTML(ciMonthShort(month))}</strong></span>
+        <span class="hr-stat-chip">Dòng: <strong>${scan.rows.length}</strong></span>
+        <span class="hr-stat-chip">Nhân viên: <strong>${scan.totals.length}</strong></span>
+        <span class="hr-stat-chip">Giờ HC: <strong>${escapeHTML(fmtHm(totalHc))}</strong></span>
+        <span class="hr-stat-chip">TC ghi nhận: <strong>${escapeHTML(fmtHm(totalOt))}</strong> / ${escapeHTML(fmtHm(totalTc))}</span>
+        ${scan.blockers.length ? `<span class="hr-stat-chip is-danger">Phải xử lý: <strong>${scan.blockers.length}</strong></span>` : '<span class="hr-stat-chip">Đủ điều kiện chốt ✓</span>'}
+        ${scan.warns.length ? `<span class="hr-stat-chip is-warn">Ngoại lệ: <strong>${scan.warns.length}</strong></span>` : ''}
+      </div>`;
+    const driftHtml = (drift.changedCount > 0)
+      ? `<div class="pay-lock-drift">⚠ Số liệu đã ĐỔI sau khi chốt/trình: <strong>${drift.changedCount}</strong> dòng
+          — bản đã chốt KHÔNG tự đổi (dùng để đối chiếu). Xem chi tiết ở bảng đối chiếu hoặc trình lại bản chốt.</div>` : '';
+    const blockerHtml = scan.blockers.length
+      ? `<div class="pay-lock-blockers"><div class="pay-lock-blockers-head">Phải xử lý trước khi chốt (${scan.blockers.length})</div>
+          <ul>${scan.blockers.slice(0, 40).map(b => `<li><strong>${escapeHTML(b.employeeName)}</strong> · ${escapeHTML(fmtDateDMY(b.date))} — ${escapeHTML(b.reasons.join(' · '))}</li>`).join('')}
+          ${scan.blockers.length > 40 ? `<li>… và ${scan.blockers.length - 40} dòng khác</li>` : ''}</ul></div>` : '';
+    const signSet = new Set(((lock && lock.paperSigned) || []).map(x => x && x.employeeId));
+    const rowsHtml = scan.totals.map(t => `<tr>
+        <td><strong>${escapeHTML(t.employeeName)}</strong><div class="ci-sub">${escapeHTML(t.dept || '—')}${t.empCode ? ' · ' + escapeHTML(t.empCode) : ''}</div></td>
+        <td class="text-right">${t.days}</td>
+        <td class="text-right">${escapeHTML(fmtHm(t.hcMin))}</td>
+        <td class="text-right"><strong>${escapeHTML(fmtHm(t.tcMin))}</strong></td>
+        <td class="text-right">${escapeHTML(fmtHm(t.otMin))}</td>
+        <td class="text-right">${t.otRejectedMin ? escapeHTML(fmtHm(t.otRejectedMin)) : '—'}</td>
+        <td class="text-right">${lock
+          ? `<button type="button" class="btn btn-outline btn-sm" data-pay="lock" data-pay-paper="${escapeHTML(t.employeeId)}" title="Đánh dấu đã thu phiếu giấy đã ký">${signSet.has(t.employeeId) ? '✓ Đã thu' : 'Chưa thu'}</button>`
+          : '—'}</td>
+      </tr>`).join('');
+    body.innerHTML = `${chips}
+      <div class="pay-lock-statebar">${payLockBtnStateHtml(lock)}</div>
+      ${driftHtml}${blockerHtml}
+      <div class="table-responsive table-scroll" style="max-height:46vh;">
+        <table class="data-table tbl-pin1">
+          <thead><tr>
+            <th>Nhân Viên</th><th class="text-right">Ngày công</th><th class="text-right">Giờ HC</th>
+            <th class="text-right">Giờ TC</th><th class="text-right">TC ghi nhận</th><th class="text-right">TC hủy</th>
+            <th class="text-right">Phiếu giấy</th>
+          </tr></thead>
+          <tbody>${rowsHtml || '<tr><td colspan="7" class="text-center" style="padding:18px;color:var(--text-muted);">Chưa có dữ liệu công trong kỳ này.</td></tr>'}</tbody>
+        </table>
+      </div>
+      <p class="ci-pay-hint" style="margin-top:8px;">
+        ${locked ? 'Kỳ đã CHỐT CÔNG: số liệu trên là BẢN ĐÃ CHỐT (bất biến). Muốn sửa phải Mở Khóa Kỳ (chỉ Quản Trị).'
+          : 'Chốt công yêu cầu: mọi dòng TC vượt đơn / thiếu giờ / bất thường phải được Xử lý trước. Bản chốt lưu ảnh chụp + luật tính + cấu hình ca + mã băm.'}
+      </p>`;
+    hrScheduleIcons();
+  }
+  // ── MODAL TRÌNH / DUYỆT / MỞ KHÓA CHỐT CÔNG ─────────────────────
+  function payLockModalInfoHtml(act, month) {
+    const lock = payLockOf(month);
+    const scan = payLockScan(month);
+    const totalHc = scan.totals.reduce((s, t) => s + t.hcMin, 0);
+    const totalTc = scan.totals.reduce((s, t) => s + t.tcMin, 0);
+    const totalOt = scan.totals.reduce((s, t) => s + t.otMin, 0);
+    let html = `<div class="ci-pay-grid">
+        <div><span>Kỳ</span><strong>${escapeHTML(ciMonthShort(month))}</strong></div>
+        <div><span>Dòng công</span><strong>${scan.rows.length} · ${scan.totals.length} nhân viên</strong></div>
+        <div><span>Giờ HC</span><strong>${escapeHTML(fmtHm(totalHc))}</strong></div>
+        <div><span>TC ghi nhận / TC máy</span><strong>${escapeHTML(fmtHm(totalOt))} / ${escapeHTML(fmtHm(totalTc))}</strong></div>
+      </div>`;
+    if (act === 'prepare') {
+      html += `<div class="ci-pay-tags">
+        ${scan.blockers.length ? `<span class="ci-pay-gap">Còn ${scan.blockers.length} dòng phải xử lý</span>` : '<span class="ci-pay-ok">Đủ điều kiện chốt ✓</span>'}
+        ${scan.warns.length ? `<span class="ci-pay-gap">${scan.warns.length} dòng ngoại lệ (đi muộn/về sớm/chưa bố trí…)</span>` : ''}
+      </div>`;
+      if (scan.blockers.length) {
+        html += `<ul class="pay-lock-modal-list">${scan.blockers.slice(0, 8).map(b => `<li><strong>${escapeHTML(b.employeeName)}</strong> · ${escapeHTML(fmtDateDMY(b.date))} — ${escapeHTML(b.reasons.join(' · '))}</li>`).join('')}
+          ${scan.blockers.length > 8 ? `<li>… và ${scan.blockers.length - 8} dòng khác</li>` : ''}</ul>`;
+      }
+    } else if (act === 'approve') {
+      const drift = lock ? payDriftOfLock(lock) : { changedCount: 0 };
+      html += `<div class="ci-pay-tags">
+        ${lock ? `<span class="ci-pay-ok">Bản trình v${Number(lock.version) || 1}</span>
+          <span class="ci-pay-ok">Người trình: ${escapeHTML(lock.preparedByName || '—')}</span>
+          <span class="ci-pay-ok">Băm ${escapeHTML(String(lock.hash || '').slice(0, 12))}…</span>` : '<span class="ci-pay-gap">Chưa có bản trình</span>'}
+        ${drift.changedCount ? `<span class="ci-pay-gap">⚠ Số liệu đã đổi ${drift.changedCount} dòng — phải trình lại</span>` : ''}
+      </div>`;
+    } else {
+      html += `<div class="ci-pay-tags">
+        ${lock ? `<span class="ci-pay-ok">Trạng thái: ${escapeHTML((PAY_LOCK_STATUS[lock.status] || {}).label || lock.status)}</span>
+          <span class="ci-pay-ok">v${Number(lock.version) || 1}</span>
+          ${lock.approvedByName ? `<span class="ci-pay-ok">Duyệt: ${escapeHTML(lock.approvedByName)}</span>` : ''}` : ''}
+      </div>`;
+      const hist = (lock && Array.isArray(lock.reopenHistory)) ? lock.reopenHistory.slice(-3) : [];
+      if (hist.length) html += `<ul class="pay-lock-modal-list">${hist.map(h => `<li>${escapeHTML(String(h.at || '').slice(0, 16).replace('T', ' '))} · ${escapeHTML(h.by || '')} — ${escapeHTML(h.reason || '')}</li>`).join('')}</ul>`;
+    }
+    return html;
+  }
+  function openPayLockModal(action) {
+    const act = action === 'approve' ? 'approve' : (action === 'reopen' ? 'reopen' : 'prepare');
+    if (act === 'prepare' && !requirePayLock()) return;
+    if (act === 'approve' && !canApproveLeave()) { showToast('Chỉ Admin & Ban Quản Lý mới được duyệt chốt công.', 'error'); return; }
+    if (act === 'reopen' && !(state.currentUser && state.currentUser.role === 'admin')) { showToast('Chỉ Quản Trị mới được mở khóa kỳ công.', 'error'); return; }
+    const modal = document.getElementById('modal-pay-lock');
+    if (!modal) return;
+    const month = payLockMonthOf();
+    const actEl = document.getElementById('pay-lock-action');
+    if (actEl) actEl.value = act;
+    const mEl = document.getElementById('pay-lock-month');
+    if (mEl) mEl.value = month;
+    const info = document.getElementById('pay-lock-info');
+    if (info) info.innerHTML = payLockModalInfoHtml(act, month);
+    const title = document.getElementById('pay-lock-title');
+    if (title) title.innerHTML = act === 'approve' ? '<i data-lucide="badge-check"></i> Duyệt Chốt Công'
+      : (act === 'reopen' ? '<i data-lucide="lock-open"></i> Mở Khóa Kỳ Công' : '<i data-lucide="send"></i> Trình Chốt Công');
+    const disputeG = document.getElementById('pay-lock-dispute-group');
+    if (disputeG) disputeG.hidden = act !== 'prepare';
+    const reqEl = document.getElementById('pay-lock-req');
+    if (reqEl) reqEl.style.display = act === 'reopen' ? '' : 'none';
+    const note = document.getElementById('pay-lock-note');
+    if (note) note.value = '';
+    const ok = document.getElementById('btn-pay-lock-ok');
+    if (ok) {
+      ok.className = act === 'reopen' ? 'btn btn-danger' : (act === 'approve' ? 'btn btn-success' : 'btn btn-primary');
+      ok.innerHTML = act === 'reopen' ? '<i data-lucide="lock-open"></i> Mở Khóa'
+        : (act === 'approve' ? '<i data-lucide="badge-check"></i> Duyệt Chốt' : '<i data-lucide="send"></i> Trình Chốt');
+    }
+    modal.classList.add('show');
+    hrScheduleIcons();
+  }
+  function closePayLockModal() {
+    document.getElementById('modal-pay-lock')?.classList.remove('show');
+  }
+  function payLockSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const act = (document.getElementById('pay-lock-action') || {}).value || 'prepare';
+    const month = String((document.getElementById('pay-lock-month') || {}).value || '').trim();
+    const note = String((document.getElementById('pay-lock-note') || {}).value || '').trim();
+    const days = Number((document.getElementById('pay-lock-dispute') || {}).value || 0);
+    if (!/^\d{4}-\d{2}$/.test(month)) { showToast('Chọn kỳ (tháng) hợp lệ.', 'error'); return; }
+    if (act === 'prepare') { if (payPrepareLock(month, { note, disputeDays: days }).ok) closePayLockModal(); return; }
+    if (act === 'approve') { if (payApproveLock(month, { note })) closePayLockModal(); return; }
+    if (act === 'reopen') {
+      if (!note) { showToast('Bắt buộc nhập LÝ DO mở khóa.', 'error'); return; }
+      if (payReopenLock(month, note)) closePayLockModal();
+    }
+  }
+  // ── IN PHIẾU CÔNG CÁ NHÂN (ký giấy) — 20/10/2026 ────────────────
+  function paySlipRowsOf(month) {
+    const lock = payLockOf(month);
+    const useLock = !!(lock && Array.isArray(lock.rows) && lock.rows.length && (lock.status === 'da_chot' || lock.status === 'cho_duyet'));
+    const scan = useLock ? null : payLockScan(month);
+    const rows = useLock ? lock.rows.slice() : scan.rows.slice();
+    return { lock, rows, fromLock: useLock };
+  }
+  function paySlipPagesHtml(month) {
+    const { lock, rows, fromLock } = paySlipRowsOf(month);
+    const byEmp = new Map();
+    rows.forEach(r => {
+      if (!byEmp.has(r.employeeId)) byEmp.set(r.employeeId, []);
+      byEmp.get(r.employeeId).push(r);
+    });
+    const signedSet = new Set(((lock && lock.paperSigned) || []).map(x => x && x.employeeId));
+    const statusTxt = fromLock
+      ? (lock.status === 'da_chot' ? `ĐÃ CHỐT · ${lock.approvedByName || ''}` : `BẢN TRÌNH CHỜ DUYỆT · ${lock.preparedByName || ''}`)
+      : 'BẢN NHÁP — CHƯA CHỐT';
+    const hashTxt = fromLock ? String(lock.hash || '') : payHashStr(JSON.stringify(rows));
+    const dispute = (fromLock && lock.disputeUntil) ? fmtDateDMY(lock.disputeUntil) : '';
+    const pages = [...byEmp.entries()].map(([empId, list]) => {
+      list.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      const name = list[0].employeeName || hrEmpName(empId);
+      const code = list[0].empCode || '';
+      const dept = list[0].dept || '';
+      let hc = 0, tc = 0, ot = 0, days = 0;
+      const body = list.map(r => {
+        hc += Number(r.hc) || 0; tc += Number(r.tc) || 0; ot += Number(r.otAcceptedMin) || 0;
+        if ((Number(r.hc) || 0) > 0 || (Number(r.tc) || 0) > 0) days += 1;
+        const dow = (() => { try { return HR_DOW_SHORT[new Date(r.date + 'T00:00:00').getDay()] || ''; } catch (e) { return ''; } })();
+        return `<tr>
+          <td class="ps-c">${escapeHTML(fmtDateDMY(r.date))}</td>
+          <td class="ps-c">${escapeHTML(dow)}</td>
+          <td class="ps-c">${escapeHTML(fmtHm(r.hc))}</td>
+          <td class="ps-c">${escapeHTML(fmtHm(r.tc))}</td>
+          <td class="ps-c"><strong>${escapeHTML(fmtHm(r.otAcceptedMin))}</strong></td>
+          <td>${escapeHTML((r.verdict === 'ok' ? '' : (r.note || '')) + (r.otRejectedMin ? ` (hủy TC ${fmtHm(r.otRejectedMin)})` : ''))}</td>
+        </tr>`;
+      }).join('');
+      return `<div class="payslip-page" data-pay-slip="${escapeHTML(empId)}">
+        <div class="ps-head">
+          <div class="ps-brand">NHÀ MÁY NGỌC SƠN THANH HÓA</div>
+          <div class="ps-title">PHIẾU XÁC NHẬN CÔNG THÁNG ${escapeHTML(ciMonthShort(month))}</div>
+          <div class="ps-status">${escapeHTML(statusTxt)}</div>
+        </div>
+        <div class="ps-info">
+          <span><strong>Họ tên:</strong> ${escapeHTML(name)}</span>
+          <span><strong>Mã NV:</strong> ${escapeHTML(code || '—')}</span>
+          <span><strong>Bộ phận:</strong> ${escapeHTML(dept || '—')}</span>
+        </div>
+        <table class="ps-table">
+          <thead><tr>
+            <th>Ngày</th><th>Thứ</th><th>Giờ HC</th><th>Giờ TC</th><th>TC ghi nhận</th><th>Ghi chú</th>
+          </tr></thead>
+          <tbody>${body}</tbody>
+          <tfoot><tr>
+            <td colspan="2" class="ps-c"><strong>TỔNG (${days} ngày)</strong></td>
+            <td class="ps-c"><strong>${escapeHTML(fmtHm(hc))}</strong></td>
+            <td class="ps-c"><strong>${escapeHTML(fmtHm(tc))}</strong></td>
+            <td class="ps-c"><strong>${escapeHTML(fmtHm(ot))}</strong></td>
+            <td></td>
+          </tr></tfoot>
+        </table>
+        <div class="ps-rules">
+          Quy tắc tính: giờ vào làm tròn LÊN mốc 30 phút, giờ ra làm tròn XUỐNG mốc 30 phút ·
+          nghỉ của ca đặt giữa ca · ngày nghỉ/lễ đi làm tính toàn bộ là TC ·
+          tăng ca chỉ tính phần sau giờ hết ca theo khối 30 phút (làm tròn xuống) và phải đăng ký trước.
+          ${dispute ? `<br><strong>Hạn khiếu nại: ${escapeHTML(dispute)}.</strong>` : ''}
+        </div>
+        <div class="ps-sign">
+          <div><span>Người lao động</span><em>(Ký, ghi rõ họ tên)</em></div>
+          <div><span>Trưởng bộ phận</span><em>(Ký, ghi rõ họ tên)</em></div>
+          <div><span>Kế toán / Quản trị</span><em>(Ký, ghi rõ họ tên)</em></div>
+        </div>
+        <div class="ps-foot">
+          Mã đối chiếu: <strong>${escapeHTML(hashTxt)}</strong> · In lúc ${escapeHTML(new Date().toLocaleString('vi-VN'))}
+          · Trạng thái phiếu giấy: <strong>${signedSet.has(empId) ? 'ĐÃ THU' : 'CHƯA THU'}</strong>
+        </div>
+      </div>`;
+    }).join('');
+    return pages || '<div class="payslip-page"><p style="padding:24px;text-align:center;">Chưa có dữ liệu công trong kỳ này.</p></div>';
+  }
+  function renderPayPrintPreview(month) {
+    const m = /^\d{4}-\d{2}$/.test(String(month || '')) ? String(month) : payLockMonthOf();
+    const prev = document.getElementById('pay-print-preview');
+    if (prev) prev.innerHTML = paySlipPagesHtml(m);
+    const title = document.getElementById('pay-print-title');
+    if (title) title.textContent = `Phiếu Công Tháng ${ciMonthShort(m)}`;
+    return m;
+  }
+  function openPayPrintModal() {
+    if (!requirePayLock()) return;
+    const modal = document.getElementById('modal-pay-print');
+    if (!modal) return;
+    const month = payLockMonthOf();
+    renderPayPrintPreview(month);
+    const mEl = document.getElementById('pay-print-month');
+    if (mEl) mEl.value = month;
+    modal.classList.add('show');
+    hrScheduleIcons();
+  }
+  function closePayPrintModal() {
+    document.getElementById('modal-pay-print')?.classList.remove('show');
+  }
+  function doPayPrint() {
+    const area = document.getElementById('pay-print-area');
+    const prev = document.getElementById('pay-print-preview');
+    if (!area || !prev) return;
+    area.innerHTML = prev.innerHTML;
+    document.body.classList.add('pay-printing');
+    try {
+      if (typeof window !== 'undefined' && typeof window.print === 'function') window.print();
+    } finally {
+      setTimeout(() => document.body.classList.remove('pay-printing'), 900);
+    }
+  }
+  // Đánh dấu ĐÃ THU phiếu giấy (ký xong) — lưu vào bản chốt để đối chiếu
+  function payMarkPaperSigned(employeeId, on) {
+    if (!requirePayLock()) return false;
+    if (!employeeId) return false;
+    const month = payLockMonthOf();
+    const lock = payLockOf(month);
+    if (!lock) { showToast('Chưa có bản chốt công cho kỳ này — không đánh dấu được phiếu giấy.', 'error'); return false; }
+    lock.paperSigned = Array.isArray(lock.paperSigned) ? lock.paperSigned : [];
+    const i = lock.paperSigned.findIndex(x => x && x.employeeId === employeeId);
+    if (on) {
+      const rec = { employeeId, at: new Date().toISOString(), by: payWho() };
+      if (i >= 0) lock.paperSigned[i] = rec; else lock.paperSigned.push(rec);
+    } else if (i >= 0) {
+      lock.paperSigned.splice(i, 1);
+    }
+    lock.updatedAt = new Date().toISOString();
+    saveHrData(['hrPayLocks']);
+    renderHrPayCard();
+    return true;
+  }
+  function paySlipCount(month) {
+    const { rows } = paySlipRowsOf(month || payLockMonthOf());
+    return new Set(rows.map(r => r.employeeId)).size;
   }
   // Giờ chấm công máy dùng cho BẢNG CHẤM CÔNG THÁNG (khi ngày đó KHÔNG có bố trí)
   function ciTimesheetHours(e, dept, date) {
@@ -2992,7 +4409,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         const latestMonth = (state.hrCheckins || [])
           .map(c => String(c.date || '').slice(0, 7))
           .filter(m => /^\d{4}-\d{2}$/.test(m)).sort().pop();
-        if (latestMonth) ciSaveUi({ month: latestMonth, dept: 'all' });
+        if (latestMonth) ciSaveUi({ month: latestMonth, mode: 'month', chip: '', dept: 'all' });
         renderHrView();
         showToast(`Nạp xong từ "${sheet.fileName}" (${mode}): ${res.matched} ngày khớp nhân viên` +
           (res.unmatched.length ? ` · ${res.unmatched.length} dòng KHÔNG khớp Mã NV/Tên đã bỏ qua` : ''), 'success');
@@ -5310,6 +6727,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     } },
     'hr-pos-card': { el: 'hr-mini-count-pos', count: () => `${(state.hrPositions || []).length} vị trí` },
     'hr-ci-card': { el: 'hr-mini-count-ci', count: () => `${(state.hrCheckins || []).length} giờ máy` },
+    'hr-pay-card': { el: 'hr-mini-count-pay', count: () => {
+      const month = ciReadUi().month || ciDefaultMonth();
+      const lock = payLockOf(month);
+      if (lock && lock.status === 'da_chot') return `Đã chốt ${ciMonthShort(month)}`;
+      if (lock && lock.status === 'cho_duyet') return `Chờ duyệt ${ciMonthShort(month)}`;
+      const pend = payRowsOfMonth(month).filter(r => r && r.status === 'cho_duyet').length;
+      return pend ? `${pend} chờ duyệt` : `Chưa chốt ${ciMonthShort(month)}`;
+    } },
     'hr-leave-card': { el: 'hr-mini-count-leave', count: () => {
       const pend = (state.hrLeaves || []).filter(l => (l.status || 'pending') === 'pending').length;
       return pend ? `${pend} chờ duyệt` : `${(state.hrLeaves || []).length} đơn`;
@@ -5591,6 +7016,7 @@ export {
   renderHrCheckinTable,
   // ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG (engine + thao tác)
   ciCompareDay,
+  ciActionCell,
   ciRowsForRange,
   ciSummaryOf,
   ciSuggestEndFills,
@@ -5608,6 +7034,27 @@ export {
   ciPlannedOf,
   ciTimesheetHours,
   ciShiftMonth,
+  ciShiftPeriod,
+  ciGoToday,
+  ciSetPeriodMode,
+  ciRangeOf,
+  ciDefaultDay,
+  ciIsoWeekOf,
+  ciIsoWeekKey,
+  ciIsoWeekRange,
+  ciPeriodLabelOf,
+  ciBaseDayOf,
+  ciMonthsOfRange,
+  ciRequireRangeUnlocked,
+  ciOnDayInput,
+  ciGotoDay,
+  ciFilterByEmployee,
+  ciChipsHtml,
+  ciChipCountOf,
+  ciChipLabelOf,
+  ciOnChipClick,
+  ciScrollToFirstRow,
+  CI_CHIP_DEFS,
   ciSaveUi,
   ciReadUi,
   ciToMin,
@@ -5626,6 +7073,59 @@ export {
   CI_VERDICT,
   HR_CI_UI_KEY,
   applyAllCheckins,
+  ciBulkPlanOf,
+  ciBulkSubmit,
+  ciMonthShort,
+  ciPayLockOfMonth,
+  ciRequireMonthUnlocked,
+  closeCiBulkModal,
+  openCiBulkModal,
+  openCiPayModal,
+  closeCiPayModal,
+  ciPaySubmit,
+  ciPayInfoHtml,
+  syncCiPayForm,
+  payAcceptRow,
+  payApproveRow,
+  payEditRequest,
+  payEffectiveOf,
+  payMarkAddOt,
+  payRejectOtRow,
+  payRejectRow,
+  payRowChipHtml,
+  payRowOf,
+  payRowsOfMonth,
+  paySnapshotOf,
+  paySyncOtApproved,
+  paySyncOtRejected,
+  payWaiveRow,
+  PAY_ACTION_LABEL,
+  PAY_ROW_STATUS,
+  PAY_LOCK_STATUS,
+  payLockOf,
+  payLockScan,
+  payPrepareLock,
+  payApproveLock,
+  payReopenLock,
+  payDriftOfLock,
+  payRuleSetOf,
+  payShiftSnapOf,
+  payHashStr,
+  payLockMonthOf,
+  payLockBtnStateHtml,
+  payLockModalInfoHtml,
+  renderHrPayCard,
+  openPayLockModal,
+  closePayLockModal,
+  payLockSubmit,
+  paySlipRowsOf,
+  paySlipPagesHtml,
+  paySlipCount,
+  renderPayPrintPreview,
+  openPayPrintModal,
+  closePayPrintModal,
+  doPayPrint,
+  payMarkPaperSigned,
   applyCheckinRecord,
   checkinRecordOf,
   ciAutoMapCols,

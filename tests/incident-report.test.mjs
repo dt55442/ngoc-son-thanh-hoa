@@ -350,7 +350,7 @@ check('F5: bấm chip "＋ Báo cáo" mở form điền sẵn công đoạn + ng
 // Xuất Excel: có báo cáo Sự Cố trong Trung tâm xuất Excel
 const sucoSpec = specs.reportById('suco');
 check('F6: Trung tâm Xuất Excel có báo cáo "Báo Cáo Sự Cố" (kind incidents)',
-  !!sucoSpec && sucoSpec.kind === 'incidents' && specs.REPORT_SPECS.length === 44);
+  !!sucoSpec && sucoSpec.kind === 'incidents' && specs.REPORT_SPECS.length === 47);
 
 // Cấu trúc: index / events / storage / cloud / history / main / sw / css
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');

@@ -129,26 +129,31 @@ check('A5: có đủ 4 công đoạn 2 chỉ số (Bullig · Cắt Ván · Bào 
   rc.RC_WORKSHOPS.x2.fields.some(f => f.group === 'Ép Ván' && f.sub === 'm³/h'));
 
 // ─── B. DANH SÁCH THÁNG + GIÁ TRỊ ───────────────────────────────
-state.x2CapRates = { '2026-09': 1500 };
+// Định mức Bốc Luồng · Cắt Chọn nay là SỐ XE/GIỜ (21/10/2026)
+state.x2CapRates = { '2026-09': 2.5 };
 state.xuong2CutRecords = [{ id: 'c1', date: '2026-10-05' }];
 const months2 = rc.rcMonthsOf('x2');
 check('B1: gom tháng đã có định mức + tháng có dữ liệu sản xuất',
   months2.includes('2026-09') && months2.includes('2026-10'));
 check('B2: sắp xếp mới nhất trước', months2.indexOf('2026-10') < months2.indexOf('2026-09'));
 check('B3: hình chụp giá trị chỉ gồm chỉ số > 0',
-  rc.rcMonthValues('x2', '2026-09').cut === 1500 &&
+  rc.rcMonthValues('x2', '2026-09').cut === 2.5 &&
   Object.keys(rc.rcMonthValues('x2', '2026-09')).length === 1);
+check('B4: 2 cột Bốc Luồng · Cắt Chọn dùng đơn vị xe/h',
+  ['boluong', 'cut'].every(k => rc.RC_WORKSHOPS.x2.fields.find(f => f.key === k).sub === 'xe/h'));
+check('B5: số CŨ khai theo kg/h được quy đổi ÷ 600 (1500 → 2,5 xe/h), số xe/h giữ nguyên',
+  rc.rcXeRate(1500) === 2.5 && rc.rcXeRate(2.5) === 2.5);
 
 // ─── C. LƯU & TRÌNH DUYỆT ───────────────────────────────────────
 setInputs(baseMap({
-  cut: 1600, boluong: 1200, baotho: 900,
+  cut: 2.6, boluong: 2, baotho: 900,
   'say.s1.van': 110, 'say.s1.bullig': 100, 'say.s2.van': 55,
   'say.s2.bullig': 50, 'say.s1.m3': 2.5, 'say.s2.m3': 2
 }));
 const okSave = rc.rcSaveMonth('x2', '2026-10');
-check('C1: Admin lưu được — ghi đúng dict cắt/bốc/bào thô',
-  okSave === true && state.x2CapRates['2026-10'] === 1600 &&
-  state.x2BoluongRates['2026-10'] === 1200 && state.x2BaoThoRates['2026-10'] === 900);
+check('C1: Admin lưu được — ghi đúng dict cắt/bốc (xe/h) + bào thô (thanh/h)',
+  okSave === true && state.x2CapRates['2026-10'] === 2.6 &&
+  state.x2BoluongRates['2026-10'] === 2 && state.x2BaoThoRates['2026-10'] === 900);
 check('C2: Than Hóa + Sấy ghi đúng object lồng van/bullig/m3',
   state.x2SayRates.s1['2026-10'].van.phut === 110 &&
   state.x2SayRates.s1['2026-10'].bullig.phut === 100 &&
@@ -158,20 +163,20 @@ check('C3: ô trống → ghi 0 và GIỮ khoá tháng (không xoá khoá — qu
   state.x2BoOngRates['2026-10'] === 0 && Object.prototype.hasOwnProperty.call(state.x2BoOngRates, '2026-10'));
 const rec1 = rc.rcApprovalOf('x2', '2026-10');
 check('C4: tạo bản ghi CHỜ DUYỆT + ảnh chụp values + người trình',
-  !!rec1 && rec1.status === 'cho_duyet' && rec1.values.cut === 1600 &&
+  !!rec1 && rec1.status === 'cho_duyet' && rec1.values.cut === 2.6 &&
   rec1.values['say.s1.van'] === 110 && rec1.submittedByName === 'Quản Trị A');
 check('C5: localStorage lưu bản ghi phê duyệt + dict định mức',
   String(localStorage.getItem('bamboo_tracker_rate_approvals_v1') || '').includes('rc-x2-2026-10') &&
-  String(localStorage.getItem('bamboo_tracker_x2_capacity_rate_v1') || '').includes('1600'));
+  String(localStorage.getItem('bamboo_tracker_x2_capacity_rate_v1') || '').includes('2.6'));
 
 // Số âm bị chặn, không ghi gì
 setInputs(baseMap({ cut: '-5' }));
 const okNeg = rc.rcSaveMonth('x2', '2026-10');
 check('C6: chặn số âm — trả false và KHÔNG đổi định mức',
-  okNeg === false && state.x2CapRates['2026-10'] === 1600);
+  okNeg === false && state.x2CapRates['2026-10'] === 2.6);
 
 // Ô trống của Than Hóa + Sấy → ghi MẶC ĐỊNH (105/50/2)
-setInputs(baseMap({ cut: 1600 }));
+setInputs(baseMap({ cut: 2.6 }));
 rc.rcSaveMonth('x2', '2026-10');
 check('C7: Than Hóa + Sấy để trống → mặc định S1 105 · S2 50 · 2 m³',
   state.x2SayRates.s1['2026-10'].van.phut === 105 &&
@@ -188,18 +193,18 @@ check('D1: Admin duyệt được — ghi người duyệt + thời điểm',
 check('D2: trạng thái chuyển "Đã duyệt"', rc.rcApprovalState('x2', '2026-10').code === 'approved');
 
 // Sửa định mức trực tiếp (mô phỏng popup định mức cũ của thẻ) → phát hiện lệch
-state.x2CapRates['2026-10'] = 1700;
+state.x2CapRates['2026-10'] = 2.7;
 check('D3: số đổi sau khi duyệt → "Cần duyệt lại" (so ảnh chụp)',
   rc.rcApprovalState('x2', '2026-10').code === 'changed');
 check('D4: KHÔNG duyệt lại được khi số đã đổi (phải lưu lại trước)',
   rc.rcApproveMonth('x2', '2026-10') === false);
 
 // Admin lưu lại = trình duyệt lại với ảnh chụp mới
-setInputs(baseMap({ cut: 1700 }));
+setInputs(baseMap({ cut: 2.7 }));
 rc.rcSaveMonth('x2', '2026-10');
 const recD5 = rc.rcApprovalOf('x2', '2026-10');
 check('D5: lưu lại → Chờ duyệt + ảnh chụp mới + xoá người duyệt cũ',
-  recD5.status === 'cho_duyet' && recD5.values.cut === 1700 && recD5.approvedAt === '' && recD5.approvedByName === '');
+  recD5.status === 'cho_duyet' && recD5.values.cut === 2.7 && recD5.approvedAt === '' && recD5.approvedByName === '');
 
 // Ban Quản Lý (Ban lãnh đạo): duyệt được nhưng KHÔNG nhập định mức
 state.currentUser = { username: 'ql1', role: 'manager', name: 'Ban QL B', editTabs: [], allowAdvanced: true };
@@ -209,7 +214,7 @@ check('D6: Ban Quản Lý duyệt được',
 setInputs(baseMap({ cut: 1900 }));
 const okMgrSave = rc.rcSaveMonth('x2', '2026-10');
 check('D7: Ban Quản Lý KHÔNG được nhập định mức (giữ quy tắc 34)',
-  okMgrSave === false && state.x2CapRates['2026-10'] === 1700);
+  okMgrSave === false && state.x2CapRates['2026-10'] === 2.7);
 
 state.currentUser = { username: 'ed1', role: 'editor', name: 'Editor C' };
 check('D8: Người chỉnh sửa KHÔNG duyệt được', rc.rcApproveMonth('x2', '2026-10') === false);
@@ -234,11 +239,11 @@ check('E3: Người xem thấy thông tin "Duyệt bởi …"',
 // Tháng đang CHỜ DUYỆT → Ban Quản Lý thấy nút Duyệt
 state.rateApprovals.push({
   id: 'rc-x2-2026-08', ws: 'x2', month: '2026-08', status: 'cho_duyet',
-  values: { cut: 1500 }, submittedBy: 'admin@x', submittedByName: 'Quản Trị A',
+  values: { cut: 2.5 }, submittedBy: 'admin@x', submittedByName: 'Quản Trị A',
   submittedAt: '2026-08-31T08:00:00.000Z', createdAt: '2026-08-31T08:00:00.000Z',
   updatedAt: '2026-08-31T08:00:00.000Z'
 });
-state.x2CapRates['2026-08'] = 1500;
+state.x2CapRates['2026-08'] = 2.5;
 state.currentUser = { username: 'ql1', role: 'manager', name: 'Ban QL B', editTabs: [], allowAdvanced: true };
 rc.renderRateCenter();
 check('E4: Ban Quản Lý thấy nút Duyệt cho tháng CHỜ DUYỆT',
@@ -316,10 +321,10 @@ check('H4: events.js nối mở/đóng + uỷ nhiệm click trong #rc-body',
   ev.includes("safeOn('btn-rate-center'") && ev.includes("safeOn('rc-body'") &&
   ev.includes('onRateCenterClick') && ev.includes("safeOn('btn-rc-close'"));
 check('H5: sw.js CACHE_NAME v295 + js/rate-center.js trong APP_SHELL',
-  sw.includes('nha-may-ngoc-son-v295') && sw.includes("'./js/rate-center.js'"));
-check('H6: state.js có key + mảng rateApprovals + APP_VERSION v295',
+  sw.includes('nha-may-ngoc-son-v298') && sw.includes("'./js/rate-center.js'"));
+check('H6: state.js có key + mảng rateApprovals + APP_VERSION v298',
   stSrc.includes('bamboo_tracker_rate_approvals_v1') &&
-  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v295'"));
+  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v298'"));
 check('H7: storage.js nối restore + ghi vào 2 file snapshot',
   stg.includes('function restoreRateApprovals') &&
   (stg.match(/rateApprovals: state\.rateApprovals \|\| \[\]/g) || []).length >= 2);

@@ -364,8 +364,8 @@ reset({ hrAssignments: [assign({})], hrCheckins: [checkin({ in: '06:56', out: '1
 hr.renderHrCheckinTable();
 const htmlK = document.getElementById('hr-ci-body').innerHTML;
 check('K1 hiện giờ máy dạng 06:56–18:35', htmlK.includes('06:56–18:35'));
-check('K2 hiện "Chưa chấm tay" + nút Xác Nhận',
-  htmlK.includes('Chưa chấm tay') && htmlK.includes('Xác Nhận'));
+check('K2 hiện "Chưa chấm tay" + nút "Xử lý" (thay nút Xác Nhận cũ — 20/10/2026)',
+  htmlK.includes('Chưa chấm tay') && htmlK.includes('Xử lý') && htmlK.includes('data-ci-pay="1"') && !htmlK.includes('Xác Nhận'));
 check('K3 hiện vị trí bố trí + "hết ca"', htmlK.includes('Cắt chọn') && htmlK.includes('hết ca'));
 check('K4 dải chip có "Tổng" và "Cần xác nhận"',
   document.getElementById('hr-ci-chips').innerHTML.includes('Tổng:') &&
@@ -401,7 +401,7 @@ check('L5 hr.js có engine + hàm chia giờ theo phút',
   hrSrc.includes('CI_OT_BLOCK_MIN'));
 check('L6 styles.css có khối .ci-*',
   /\.ci-row-review\s*>\s*td\s*\{/.test(cssSrc) && /\.ci-ack-chip\s*\{/.test(cssSrc));
-check('L7 sw.js cache v283', swSrc.includes('nha-may-ngoc-son-v295'));
+check('L7 sw.js cache v283', swSrc.includes('nha-may-ngoc-son-v298'));
 const specsSrc = fs.readFileSync(new URL('../js/report-specs.js', import.meta.url), 'utf8');
 const rcSrc = fs.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8');
 check('L8 báo cáo "Đối Chiếu Bố Trí ↔ Máy" có trong Trung tâm Xuất Excel',
@@ -609,7 +609,7 @@ check('N5 index có lọc "Chỉ dòng bất thường" + hint quy tắc làm tr
 check('N5b styles.css có dòng bất thường + chip cảnh báo',
   cssSrc.includes('.ci-row-bad') && cssSrc.includes('.ci-bad-hint') && cssSrc.includes('.hr-stat-chip.is-danger'));
 check('N5c events nối lọc bất thường + hr.js có ciAnomalyOf',
-  evSrc.includes("safeOn('hr-ci-only-anomaly', 'change', renderHrCheckinTable)") &&
+  evSrc.includes("safeOn('hr-ci-only-anomaly', 'change'") &&
   hrSrc.includes('function ciAnomalyOf(') && hrSrc.includes('CI_ANOMALY_LABEL'));
 
 console.log(`\nHR-CHECKIN-COMPARE: ${passed} PASS, ${failed} FAIL`);

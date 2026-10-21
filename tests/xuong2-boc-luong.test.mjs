@@ -159,17 +159,19 @@ check('HTML: thanh tồn + khối thống kê + bảng lịch sử có sẵn',
   idxHtml.includes('id="x2-blg-stock-bar"') && idxHtml.includes('id="x2-blg-stats"') &&
   idxHtml.includes('id="x2-blg-table-wrap"'));
 
-// ĐỊNH MỨC: popup lưu kg/h cho tháng 9
+// ĐỊNH MỨC (21/10/2026): ĐƠN VỊ MỚI = SỐ XE/GIỜ
 document.getElementById('x2-blg-rate-month').value = '2026-09';
-document.getElementById('x2-blg-rate-value').value = '500';
+document.getElementById('x2-blg-rate-value').value = '0.8';
 x2.handleX2BoluongRateSave();
-check('ĐỊNH MỨC: state.x2BoluongRates["2026-09"] = 500', state.x2BoluongRates['2026-09'] === 500);
+check('ĐỊNH MỨC: state.x2BoluongRates["2026-09"] = 0,8 xe/h', state.x2BoluongRates['2026-09'] === 0.8);
 check('ĐỊNH MỨC: localStorage đã ghi key riêng',
-  JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BOLUONG_RATE) || '{}')['2026-09'] === 500);
-check('ĐỊNH MỨC: boluongRateOf(2026-09-10) = 500 · tháng khác = null',
-  x2.boluongRateOf('2026-09-10') === 500 && x2.boluongRateOf('2026-10-10') === null);
-check('ĐỊNH MỨC: chip tháng đã đặt hiển thị "T9 = 500 kg/h"',
-  document.getElementById('x2-blg-rate-chips').innerHTML.includes('T9 = 500 kg/h'));
+  JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BOLUONG_RATE) || '{}')['2026-09'] === 0.8);
+check('ĐỊNH MỨC: boluongRateOf(2026-09-10) = 0,8 xe/h · tháng khác = null',
+  x2.boluongRateOf('2026-09-10') === 0.8 && x2.boluongRateOf('2026-10-10') === null);
+check('ĐỊNH MỨC: chip tháng đã đặt hiển thị "T9 = 0,8 xe/h"',
+  document.getElementById('x2-blg-rate-chips').innerHTML.includes('T9 = 0,8 xe/h'));
+check('ĐỊNH MỨC: số CŨ khai theo kg/h (500) tự quy đổi ÷ 600 → 0,833 xe/h',
+  x2.xeRateOf(500) === 0.833 && x2.xeRateOf(0.8) === 0.8);
 
 // ─── E. LƯU LƯỢT BỐC LUỒNG ───────────────────────────────────────
 document.getElementById('x2-blg-qty').value = '400';
@@ -198,8 +200,10 @@ const day = document.getElementById('x2-blg-day-cards').innerHTML;
 check('THẺ NGÀY: có ngày 10/09/26 + người bốc chính + "+1 người khác"',
   day.includes('10/09/26') && day.includes('Nguyễn Văn A') && day.includes('+1 người khác'));
 check('THẺ NGÀY: giờ bốc badge "9h HC" / "0h TC"', day.includes('9h HC') && day.includes('0h TC'));
-check('THẺ NGÀY: CÔNG SUẤT = 400 ÷ 9 = "44,44 kg/h"', day.includes('44,44 kg/h'));
-check('THẺ NGÀY: HIỆU SUẤT = 44,44 ÷ 500 = "8,9%"', day.includes('8,9%'));
+check('THẺ NGÀY: CÔNG SUẤT = (400 kg ≈ 0,67 xe) ÷ 9h = "0,07 xe/h"', day.includes('0,07 xe/h'));
+check('THẺ NGÀY: ô Số xe hiện "≈ 0,67" (xe tương đương quy đổi từ kg)', day.includes('≈ 0,67'));
+check('THẺ NGÀY: HIỆU SUẤT = 0,074 xe/h ÷ 0,8 xe/h = "9,3%"', day.includes('9,3%'));
+check('THẺ NGÀY: tooltip vẫn ghi tương đương kg/h cũ ("44,44 kg/h")', day.includes('44,44 kg/h'));
 check('THẺ NGÀY: có ô nhập GIỜ SỰ CỐ (data-x2-incident=boluong)',
   day.includes('data-x2-incident="boluong"'));
 check('BẢNG: đếm "1 lượt đã bốc luồng"',
@@ -333,13 +337,13 @@ check('NỐI (export): nguồn "boluong" + cột + nhánh dựng bảng',
   jsXlsx.includes("id: 'boluong'") && jsXlsx.includes("source === 'boluong'") &&
   jsXlsx.includes('boluongDisplay'));
 const swSrc = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): CACHE_NAME đã tăng v203', /nha-may-ngoc-son-v295/.test(swSrc));
+check('CẤU TRÚC (sw.js): CACHE_NAME đã tăng v203', /nha-may-ngoc-son-v298/.test(swSrc));
 
 // ─── M. BẢNG TỔNG HỢP CÔNG SUẤT ĐỌC ĐÚC DỮ LIỆU THẺ ────────────
 const cap = await import('../js/capacity.js');
 const blgSt = cap.CAP_STAGES.find(s => s.id === 'boluong');
-check('CAPACITY: dòng boluong đơn vị kg/h + cardId đúng thẻ',
-  !!blgSt && blgSt.unit === 'kg/h' && blgSt.cardId === 'x2-bo-luong-card');
+check('CAPACITY: dòng boluong đơn vị xe/h + cardId đúng thẻ',
+  !!blgSt && blgSt.unit === 'xe/h' && blgSt.unitQty === 'xe' && blgSt.cardId === 'x2-bo-luong-card');
 state.xuong2BoluongRecords = [{
   id: 'x2blg-test', materialId: 'mat-a', materialType: 'Luồng cây xô', supplier: 'Tế',
   inputWeight: 1000, qty: 300, date: '2026-09-10', week: '2026-W37',
@@ -347,8 +351,8 @@ state.xuong2BoluongRecords = [{
   createdAt: '2026-09-10T03:00:00.000Z'
 }];
 const blgRows = blgSt.rows();
-check('CAPACITY: rows() trả qty = 300 kg + giờ 9h (đúng nguồn thẻ Bốc Luồng)',
-  blgRows.length === 1 && blgRows[0].qty === 300 && blgRows[0].hours === 9);
+check('CAPACITY: rows() trả qty = 0,5 xe (300 kg ÷ 600) + giờ 9h (đúng nguồn thẻ Bốc Luồng)',
+  blgRows.length === 1 && Math.abs(blgRows[0].qty - 0.5) < 1e-9 && blgRows[0].hours === 9);
 state.xuong2BoluongRecords = [];
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);

@@ -117,7 +117,7 @@ check('SAVE: 2 domain → đúng 2 key (bố trí + chấm công)',
   hrWrites().length === 2 && hrWrites().indexOf(STORAGE_KEY_HR_ASSIGN) !== -1 && hrWrites().indexOf(STORAGE_KEY_HR_ATTENDANCE) !== -1);
 writeCalls = [];
 hr.saveHrData();
-check('SAVE: không truyền tham số = hành vi cũ (ghi đủ 12 key)', hrWrites().length === 12);
+check('SAVE: không truyền tham số = hành vi cũ (ghi đủ 14 key — thêm 2 key chốt công 20/10/2026)', hrWrites().length === 14);
 
 // ─── B. RENDER THEO PHẦN (renderAll không vẽ 12 bảng) ──────────
 document.getElementById('hr-employees-body').innerHTML = '';

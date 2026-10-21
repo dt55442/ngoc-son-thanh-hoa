@@ -268,11 +268,12 @@ import { escapeHTML, showToast } from './utils.js';
     return `<span class="role-tag" style="background:${bg};color:${color}" title="${escapeHTML(info.desc)}">${escapeHTML(info.name)}</span>`;
   }
 
-  // Chip hiển thị quyền chi tiết (tab được sửa + vùng nâng cao)
+  // Chip hiển thị quyền chi tiết (tab được sửa + vùng nâng cao + chốt công)
   function permsChipsHtml(userLike) {
     const role = userLike.role || 'viewer';
     if (role === 'admin') {
-      return `<span class="perm-chip perm-chip-all"><i data-lucide="check-check"></i> Toàn quyền mọi tab</span>`;
+      return `<span class="perm-chip perm-chip-all"><i data-lucide="check-check"></i> Toàn quyền mọi tab</span>`
+        + `<span class="perm-chip perm-chip-pay"><i data-lucide="lock"></i> Chốt công</span>`;
     }
     const tabs = Array.isArray(userLike.editTabs) ? expandWsTabs(userLike.editTabs) : [];
     const chips = tabs.length
@@ -280,7 +281,12 @@ import { escapeHTML, showToast } from './utils.js';
       : `<span class="perm-chip perm-chip-none">Không sửa tab nào</span>`;
     const adv = userLike.allowAdvanced
       ? `<span class="perm-chip perm-chip-adv"><i data-lucide="shield"></i> Vùng nâng cao</span>` : '';
-    return chips + adv;
+    // Quyền CHỐT CÔNG (20/10/2026) — cấp riêng, mặc định KHÔNG có
+    const pay = (userLike.payApply
+      ? `<span class="perm-chip perm-chip-pay" title="Được Áp dụng chấm công theo máy / Xóa giờ máy theo kỳ"><i data-lucide="check-square"></i> Áp dụng giờ máy</span>` : '')
+      + (userLike.payLock
+        ? `<span class="perm-chip perm-chip-pay" title="Được Xử lý dòng công + Trình chốt công / Mở khóa kỳ"><i data-lucide="lock"></i> Xử lý &amp; chốt công</span>` : '');
+    return chips + adv + pay;
   }
 
   function renderUsersTable() {
@@ -304,7 +310,8 @@ import { escapeHTML, showToast } from './utils.js';
           const isSelf = state.currentUser && ent.key === state.currentUser.email;
           // Quyền chi tiết cấp riêng cho email này (nếu có)
           const grants = (roles.userGrants || {})[ent.key] || {};
-          const userLike = { role: ent.role, editTabs: grants.editTabs, allowAdvanced: grants.allowAdvanced };
+          const userLike = { role: ent.role, editTabs: grants.editTabs, allowAdvanced: grants.allowAdvanced,
+            payApply: grants.payApply === true, payLock: grants.payLock === true };
           tr.innerHTML = `
             <td><strong>${escapeHTML(ent.key)}</strong></td>
             <td><code style="font-family:var(--font-mono);">${escapeHTML(ent.key)}</code></td>
@@ -363,6 +370,11 @@ import { escapeHTML, showToast } from './utils.js';
     const password = document.getElementById('new-user-password').value; // KHÔNG trim mật khẩu (khớp đăng nhập)
     const role     = document.getElementById('new-user-role').value;
     const editTabs = readEditTabsChecks('new-user-edit-tabs') || [...ALL_EDITABLE_IDS];
+    // Quyền CHỐT CÔNG — mặc định KHÔNG tích (Admin cấp riêng)
+    const payApplyEl = document.getElementById('new-user-pay-apply');
+    const payLockEl  = document.getElementById('new-user-pay-lock');
+    const payApply = !!(payApplyEl && payApplyEl.checked);
+    const payLock  = !!(payLockEl && payLockEl.checked);
 
     if (isFirebaseOnline()) {
       const createChk = document.getElementById('new-user-create-account');
@@ -370,7 +382,9 @@ import { escapeHTML, showToast } from './utils.js';
       handleAddOnlineRole(username, role, fullname, editTabs, {
         createAccount: !!(createChk && createChk.checked),
         password,
-        sendReset: !!(sendChk && sendChk.checked)
+        sendReset: !!(sendChk && sendChk.checked),
+        payApply,
+        payLock
       });
       return;
     }
@@ -383,6 +397,7 @@ import { escapeHTML, showToast } from './utils.js';
     const newUser = normalizeUser({
       id: `usr-${Date.now()}`, username, password, fullname, role,
       editTabs, allowAdvanced: role === 'admin' || role === 'manager',
+      payApply, payLock,
       createdAt: new Date().toISOString().split('T')[0]
     });
     state.users.push(newUser);
@@ -440,7 +455,10 @@ import { escapeHTML, showToast } from './utils.js';
       roles.userGrants = roles.userGrants || {};
       roles.userGrants[email] = {
         editTabs: role === 'admin' ? [...ALL_EDITABLE_IDS] : editTabs,
-        allowAdvanced: role === 'admin' || role === 'manager'
+        allowAdvanced: role === 'admin' || role === 'manager',
+        // Quyền CHỐT CÔNG — chỉ Admin cấp, mặc định false
+        payApply: role === 'admin' ? true : !!(options && options.payApply),
+        payLock:  role === 'admin' ? true : !!(options && options.payLock)
       };
     }
     try {
@@ -579,7 +597,10 @@ import { escapeHTML, showToast } from './utils.js';
       const grants = roles.userGrants[key] || {};
       roles.userGrants[key] = {
         editTabs: Array.isArray(grants.editTabs) && grants.editTabs.length ? grants.editTabs : [...ALL_EDITABLE_IDS],
-        allowAdvanced: role === 'admin' || role === 'manager'
+        allowAdvanced: role === 'admin' || role === 'manager',
+        // GIỮ 2 quyền CHỐT CÔNG khi Admin chỉ đổi vai trò (tránh xóa quyền oan)
+        payApply: role === 'admin' ? true : grants.payApply === true,
+        payLock: role === 'admin' ? true : grants.payLock === true
       };
       try {
         await saveRolesDoc(roles);
@@ -681,6 +702,9 @@ import { escapeHTML, showToast } from './utils.js';
     const targetInput = document.getElementById('user-perms-target');
     const roleBadge = document.getElementById('user-perms-role-badge');
     const advCheck = document.getElementById('user-perms-allow-advanced');
+    // Quyền CHỐT CÔNG (20/10/2026)
+    const payApplyCheck = document.getElementById('user-perms-pay-apply');
+    const payLockCheck  = document.getElementById('user-perms-pay-lock');
 
     if (isFirebaseOnline()) {
       const email = (userIdOrEmail || '').trim().toLowerCase();
@@ -695,6 +719,8 @@ import { escapeHTML, showToast } from './utils.js';
         roleBadge.dataset.role = role;
         setEditTabsChecks('user-perms-edit-tabs', expandWsTabs(grants.editTabs) || (role === 'admin' ? [...ALL_EDITABLE_IDS] : []));
         advCheck.checked = !!grants.allowAdvanced || role === 'admin' || role === 'manager';
+        if (payApplyCheck) payApplyCheck.checked = role === 'admin' || grants.payApply === true;
+        if (payLockCheck) payLockCheck.checked = role === 'admin' || grants.payLock === true;
         initLucide();
       });
     } else {
@@ -707,6 +733,8 @@ import { escapeHTML, showToast } from './utils.js';
       // (nếu không admin mở modal rồi lưu là mất quyền oan)
       setEditTabsChecks('user-perms-edit-tabs', expandWsTabs(user.editTabs) || []);
       advCheck.checked = !!user.allowAdvanced;
+      if (payApplyCheck) payApplyCheck.checked = user.role === 'admin' || user.payApply === true;
+      if (payLockCheck) payLockCheck.checked = user.role === 'admin' || user.payLock === true;
     }
     document.getElementById('modal-user-perms')?.classList.add('show');
     initLucide();
@@ -732,12 +760,17 @@ import { escapeHTML, showToast } from './utils.js';
     const key = rest.join(':');
     const editTabs = readEditTabsChecks('user-perms-edit-tabs') || [];
     const allowAdvanced = document.getElementById('user-perms-allow-advanced')?.checked || false;
+    // Quyền CHỐT CÔNG (20/10/2026)
+    const payApplyCheck = document.getElementById('user-perms-pay-apply');
+    const payLockCheck  = document.getElementById('user-perms-pay-lock');
+    const payApply = !!(payApplyCheck && payApplyCheck.checked);
+    const payLock  = !!(payLockCheck && payLockCheck.checked);
 
     if (kind === 'email') {
       // ONLINE: lưu vào roles.userGrants[email]
       const roles = await fetchRolesDoc();
       roles.userGrants = roles.userGrants || {};
-      roles.userGrants[key] = { editTabs, allowAdvanced };
+      roles.userGrants[key] = { editTabs, allowAdvanced, payApply, payLock };
       try {
         await saveRolesDoc(roles);
         renderUsersTable();
@@ -754,11 +787,15 @@ import { escapeHTML, showToast } from './utils.js';
     if (user.username === 'admin') { showToast('Admin luôn có toàn quyền, không cần cấu hình!', 'info'); return; }
     user.editTabs = editTabs;
     user.allowAdvanced = allowAdvanced;
+    user.payApply = payApply;
+    user.payLock = payLock;
     saveUsers(); renderUsersTable(); closeUserPermsModal();
     // Nếu đang sửa chính mình thì cập nhật lại giao diện phân quyền
     if (state.currentUser && state.currentUser.username === user.username) {
       state.currentUser.editTabs = [...editTabs];
       state.currentUser.allowAdvanced = allowAdvanced;
+      state.currentUser.payApply = payApply;
+      state.currentUser.payLock = payLock;
       saveSession(); applyRoleToUI(state.currentUser.role);
       renderAll();
     }

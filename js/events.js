@@ -54,7 +54,7 @@ import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomN
 import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
 import { closeIncidentReports, handleIncidentSubmit, onIncidentChipClick, onIncidentFiltersChange, onIncidentReportsClick, openIncidentReports, resetIncidentForm, syncIncidentHoursFromTimes } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
-import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition, renderHrCheckinTable, ciShiftMonth, ciSaveUi, openCiEndfillModal, closeCiEndfillModal, renderCiEndfillList, applyCiEndfill, ciAckDay, ciUnackDay, hrDockToggle, hrDockOpenGroup, hrDockBack, hrDockClose, hrDockState } from './hr.js';
+import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition, renderHrCheckinTable, ciShiftMonth, ciSaveUi, openCiEndfillModal, closeCiEndfillModal, renderCiEndfillList, applyCiEndfill, ciAckDay, ciUnackDay, hrDockToggle, hrDockOpenGroup, hrDockBack, hrDockClose, ciBulkSubmit, closeCiBulkModal, openCiBulkModal, ciPaySubmit, closeCiPayModal, openCiPayModal, syncCiPayForm, payApproveRow, payRejectRow, renderHrPayCard, openPayLockModal, closePayLockModal, payLockSubmit, openPayPrintModal, closePayPrintModal, doPayPrint, payMarkPaperSigned, renderPayPrintPreview, ciOnDayInput, ciShiftPeriod, ciGoToday, ciSetPeriodMode, ciOnChipClick, ciGotoDay, ciFilterByEmployee, hrDockState } from './hr.js';
 import { state } from './state.js';
 import { getFxLow, setFxLow, applyThemeForUser } from './theme.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
@@ -1528,18 +1528,102 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-checkin-import', 'click', closeCheckinImportModal);
     safeOn('checkin-import-file', 'change', handleCheckinImportFile);
     safeOn('btn-do-checkin-import', 'click', doCheckinImport);
-    safeOn('btn-apply-all-checkins', 'click', applyAllCheckins);
-    safeOn('btn-delete-checkins-all', 'click', deleteCheckinsAll);
+    safeOn('btn-apply-all-checkins', 'click', () => openCiBulkModal('apply'));
+    safeOn('btn-delete-checkins-all', 'click', () => openCiBulkModal('delete'));
+    safeOn('ci-bulk-form', 'submit', ciBulkSubmit);
+    safeOn('btn-close-ci-bulk', 'click', closeCiBulkModal);
+    safeOn('btn-cancel-ci-bulk', 'click', closeCiBulkModal);
+    // ── XỬ LÝ DÒNG CÔNG (thay nút "Xác Nhận" cũ — 20/10/2026) ──
+    safeOn('ci-pay-form', 'submit', ciPaySubmit);
+    safeOn('ci-pay-action', 'change', syncCiPayForm);
+    safeOn('btn-close-ci-pay', 'click', closeCiPayModal);
+    safeOn('btn-cancel-ci-pay', 'click', closeCiPayModal);
+    (() => {
+      const ov = document.getElementById('modal-ci-pay');
+      if (!ov) return;
+      ov.addEventListener('click', (e) => { if (e.target === ov) closeCiPayModal(); });
+      ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCiPayModal(); });
+    })();
+    document.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest ? e.target.closest('[data-ci-pay],[data-ci-pay-approve],[data-ci-pay-reject]') : null;
+      if (!btn) return;
+      const emp = btn.getAttribute('data-ci-emp') || '';
+      const date = btn.getAttribute('data-ci-date') || '';
+      if (!emp || !date) return;
+      if (btn.hasAttribute('data-ci-pay')) { openCiPayModal(emp, date); return; }
+      if (btn.hasAttribute('data-ci-pay-approve')) { payApproveRow(emp, date); return; }
+      const why = (typeof prompt === 'function') ? (prompt('Lý do TỪ CHỐI dòng công này (không bắt buộc):', '') || '') : '';
+      payRejectRow(emp, date, why);
+    });
+    // ── CHỐT CÔNG LƯƠNG THEO THÁNG (20/10/2026) ──
+    safeOn('hr-pay-month', 'change', renderHrPayCard);
+    safeOn('btn-pay-prepare', 'click', () => openPayLockModal('prepare'));
+    safeOn('btn-pay-approve', 'click', () => openPayLockModal('approve'));
+    safeOn('btn-pay-reopen', 'click', () => openPayLockModal('reopen'));
+    safeOn('pay-lock-form', 'submit', payLockSubmit);
+    safeOn('btn-close-pay-lock', 'click', closePayLockModal);
+    safeOn('btn-cancel-pay-lock', 'click', closePayLockModal);
+    safeOn('btn-toggle-hr-pay', 'click', () => { toggleRateTableCollapse('hr-pay-card'); syncHrMiniActive(); });
+    (() => {
+      const ov = document.getElementById('modal-pay-lock');
+      if (!ov) return;
+      ov.addEventListener('click', (e) => { if (e.target === ov) closePayLockModal(); });
+      ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePayLockModal(); });
+    })();
+    // ── IN PHIẾU CÔNG + ĐÁNH DẤU ĐÃ THU PHIẾU GIẤY ──
+    safeOn('btn-pay-print', 'click', openPayPrintModal);
+    safeOn('btn-close-pay-print', 'click', closePayPrintModal);
+    safeOn('btn-pay-print-do', 'click', doPayPrint);
+    safeOn('btn-pay-print-reload', 'click', () => {
+      renderPayPrintPreview((document.getElementById('pay-print-month') || {}).value || '');
+    });
+    (() => {
+      const ov = document.getElementById('modal-pay-print');
+      if (!ov) return;
+      ov.addEventListener('click', (e) => { if (e.target === ov) closePayPrintModal(); });
+      ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePayPrintModal(); });
+    })();
+    document.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest ? e.target.closest('[data-pay-paper]') : null;
+      if (!btn) return;
+      const emp = btn.getAttribute('data-pay-paper') || '';
+      if (!emp) return;
+      const on = String(btn.textContent || '').indexOf('Đã thu') === -1;
+      payMarkPaperSigned(emp, on);
+    });
+    (() => {
+      const ov = document.getElementById('modal-ci-bulk');
+      if (!ov) return;
+      ov.addEventListener('click', (e) => { if (e.target === ov) closeCiBulkModal(); });
+      ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCiBulkModal(); });
+    })();
     safeOn('btn-toggle-hr-ci', 'click', () => { toggleRateTableCollapse('hr-ci-card'); syncHrMiniActive(); });
     // ── ĐỐI CHIẾU BỐ TRÍ ↔ MÁY CHẤM CÔNG: bộ lọc kỳ / bộ phận / tìm nhanh ──
-    safeOn('hr-ci-month', 'change', (e) => { ciSaveUi({ month: e.target.value }); renderHrCheckinTable(); });
-    safeOn('btn-ci-prev', 'click', () => ciShiftMonth(-1));
-    safeOn('btn-ci-next', 'click', () => ciShiftMonth(1));
+    safeOn('hr-ci-month', 'change', (e) => { ciSaveUi({ month: e.target.value, mode: 'month' }); renderHrCheckinTable(); });
+    safeOn('hr-ci-day', 'change', (e) => ciOnDayInput(e.target.value));
+    safeOn('btn-ci-prev', 'click', () => ciShiftPeriod(-1));
+    safeOn('btn-ci-next', 'click', () => ciShiftPeriod(1));
+    safeOn('btn-ci-today', 'click', ciGoToday);
+    // ── KỲ NGÀY/TUẦN/THÁNG + CHÍP LỌC + ĐIỀU HƯỚNG NGƯỢC (21/10/2026) ──
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      const closest = (sel) => (t && t.closest) ? t.closest(sel) : null;
+      const modeBtn = closest('[data-ci-mode]');
+      if (modeBtn) { ciSetPeriodMode(modeBtn.getAttribute('data-ci-mode')); return; }
+      const chipBtn = closest('[data-ci-chip]');
+      if (chipBtn) { ciOnChipClick(chipBtn.getAttribute('data-ci-chip')); return; }
+      const dayBtn = closest('[data-ci-goto-day]');
+      if (dayBtn) { ciGotoDay(dayBtn.getAttribute('data-ci-goto-day')); return; }
+      const nameBtn = closest('[data-ci-emp].ci-cell-link:not([data-ci-open-pay])');
+      if (nameBtn) { ciFilterByEmployee(nameBtn.getAttribute('data-ci-emp')); return; }
+      const payBtn = closest('[data-ci-open-pay]');
+      if (payBtn) { openCiPayModal(payBtn.getAttribute('data-ci-emp'), payBtn.getAttribute('data-ci-date')); }
+    });
     safeOn('hr-ci-filter-dept', 'change', (e) => { ciSaveUi({ dept: e.target.value }); renderHrCheckinTable(); });
     safeOn('hr-ci-search', 'input', renderHrCheckinTable);
-    safeOn('hr-ci-only-issues', 'change', renderHrCheckinTable);
+    safeOn('hr-ci-only-issues', 'change', () => { ciSaveUi({ chip: '' }); renderHrCheckinTable(); });
     safeOn('hr-ci-show-leave', 'change', renderHrCheckinTable);
-    safeOn('hr-ci-only-anomaly', 'change', renderHrCheckinTable);
+    safeOn('hr-ci-only-anomaly', 'change', () => { ciSaveUi({ chip: '' }); renderHrCheckinTable(); });
     // ── Điền giờ kết thúc thực tế (xem trước rồi mới ghi vào Bảng bố trí) ──
     safeOn('btn-ci-endfill', 'click', openCiEndfillModal);
     safeOn('btn-close-ci-endfill', 'click', closeCiEndfillModal);

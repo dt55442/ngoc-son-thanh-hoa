@@ -659,7 +659,7 @@
                    Bảng Lịch Sử Cắt/Chọn + Bảng Công Suất Theo Ngày -->
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-cut-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-cut-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Cắt theo tháng (SỐ XE/GIỜ) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cut">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Cắt/Chọn</button>
               </div>
@@ -768,7 +768,7 @@
               </div>
 
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (kg/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
+                <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (SỐ XE/GIỜ) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-blg">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Bốc Luồng</button>
               </div>
@@ -4683,13 +4683,13 @@
             <button type="button" class="btn btn-outline btn-sm" id="btn-import-checkins" data-perm="hr" title="Nạp file Excel giờ vào/ra từ máy chấm công để đối chiếu">
               <i data-lucide="clock"></i> Nạp Giờ Máy
             </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-endfill" data-perm="hr" title="Điền giờ kết thúc thực tế (lấy từ máy) vào Bảng bố trí cho các ngày ĐÃ QUA đang để trống giờ kết thúc">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-endfill" data-pay="apply" title="Điền giờ kết thúc thực tế (lấy từ máy) vào Bảng bố trí cho các ngày ĐÃ QUA đang để trống giờ kết thúc">
               <i data-lucide="timer-reset"></i> Điền Giờ Kết Thúc
             </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-apply-all-checkins" title="Tự chấm Đi làm cho các ngày máy xác nhận mà chấm tay còn thiếu hoặc đang ghi Vắng">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-apply-all-checkins" data-pay="apply" title="Áp dụng Đi làm cho các ngày máy xác nhận mà chấm tay còn thiếu hoặc đang ghi Vắng — CHỈ TRONG KỲ ĐANG XEM">
               <i data-lucide="check-check"></i> Áp Dụng Tất Cả
             </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-delete-checkins-all" title="Xóa toàn bộ giờ đã nạp (không ảnh hưởng chấm công tay)" style="color:var(--danger);">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-delete-checkins-all" data-pay="apply" title="Xóa giờ máy đã nạp TRONG KỲ ĐANG XEM (không ảnh hưởng chấm công tay)" style="color:var(--danger);">
               <i data-lucide="trash-2"></i> Xóa Hết
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-ci" title="Thu gọn / Mở rộng">
@@ -4698,10 +4698,18 @@
           </div>
         </div>
         <div class="hr-filter-toolbar">
-          <div class="filter-item" style="display:flex; gap:4px; align-items:center;">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-prev" title="Tháng trước"><i data-lucide="chevron-left"></i></button>
-            <input type="month" id="hr-ci-month" style="width:150px;" title="Kỳ đối chiếu (tháng)">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-next" title="Tháng sau"><i data-lucide="chevron-right"></i></button>
+          <div class="filter-item ci-period-bar">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-prev" title="Kỳ trước (theo chế độ đang chọn)"><i data-lucide="chevron-left"></i></button>
+            <div class="ci-period-modes" role="group" aria-label="Chọn kỳ đối chiếu">
+              <button type="button" class="ci-period-btn" data-ci-mode="day" title="Xem theo 1 NGÀY">Ngày</button>
+              <button type="button" class="ci-period-btn" data-ci-mode="week" title="Xem theo TUẦN (Thứ 2 → Chủ nhật)">Tuần</button>
+              <button type="button" class="ci-period-btn is-active" data-ci-mode="month" title="Xem theo THÁNG">Tháng</button>
+            </div>
+            <input type="date" id="hr-ci-day" style="width:150px;" title="Ngày cần xem (chế độ Ngày/Tuần)" hidden>
+            <input type="month" id="hr-ci-month" style="width:150px;" title="Tháng cần xem" hidden>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-next" title="Kỳ sau (theo chế độ đang chọn)"><i data-lucide="chevron-right"></i></button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ci-today" title="Về hôm nay (chế độ Ngày)">Hôm Nay</button>
+            <span id="hr-ci-period-label" class="ci-period-label"></span>
           </div>
           <div class="filter-item">
             <label for="hr-ci-filter-dept">Bộ phận:</label>
@@ -4722,8 +4730,8 @@
           </div>
         </div>
         <div id="hr-ci-chips" class="hr-stat-chips"></div>
-        <div class="ci-hint" title="Chấm sớm dưới 30 phút được tính từ giờ bắt đầu ca (không sinh tăng ca). Giờ quẹt làm tròn mốc 30 phút: giờ vào lên mốc kế (12:31–12:59 = 13:00), giờ ra xuống mốc trước (17:34 = 17:30). Giờ nghỉ của ca đặt GIỮA CA. Tăng ca chỉ tính phần sau giờ hết ca, mỗi 30 phút mới tính (làm tròn xuống). Nghỉ phép đã duyệt không bị máy ghi đè.">
-          Quy tắc: chấm sớm &lt; 30' tính từ giờ bắt đầu ca (không sinh TC) · giờ quẹt làm tròn mốc 30' (vào lên · ra xuống) · tăng ca sau hết ca tính theo khối 30' (làm tròn xuống) · “Khớp ✓” = máy khớp với Bảng bố trí.
+        <div class="ci-hint" title="Bấm vào CHÍP để lọc nhanh + nhảy tới dòng đầu tiên (tô sáng). Bấm lại chip đang chọn hoặc chip Tổng để bỏ lọc. Chấm sớm dưới 30 phút được tính từ giờ bắt đầu ca (không sinh tăng ca). Giờ quẹt làm tròn mốc 30 phút: giờ vào lên mốc kế (12:31–12:59 = 13:00), giờ ra xuống mốc trước (17:34 = 17:30). Giờ nghỉ của ca đặt GIỮA CA. Tăng ca chỉ tính phần sau giờ hết ca, mỗi 30 phút mới tính (làm tròn xuống). Nghỉ phép đã duyệt không bị máy ghi đè.">
+          Quy tắc: chấm sớm &lt; 30' tính từ giờ bắt đầu ca (không sinh TC) · giờ quẹt làm tròn mốc 30' (vào lên · ra xuống) · tăng ca sau hết ca tính theo khối 30' (làm tròn xuống) · “Khớp ✓” = máy khớp với Bảng bố trí · <strong>bấm chíp để lọc + nhảy tới dòng</strong>.
         </div>
         <div class="table-responsive table-scroll">
           <table class="data-table" id="hr-ci-table">
@@ -4846,6 +4854,32 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- BẢNG 5b: CHỐT CÔNG LƯƠNG THEO THÁNG (20/10/2026) -->
+      <div class="planning-card hr-card-hidden" id="hr-pay-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="lock"></i> Chốt Công Lương</h4>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <input type="month" id="hr-pay-month" style="width:150px;" title="Kỳ chốt công (tháng)">
+            <button type="button" class="btn btn-primary btn-sm" data-pay="lock" id="btn-pay-prepare" title="Dựng ảnh chụp công tháng và trình Admin/Ban Quản Lý duyệt (chặn nếu còn dòng TC vượt đơn chưa xử lý)">
+              <i data-lucide="send"></i> Trình Chốt
+            </button>
+            <button type="button" class="btn btn-success btn-sm" data-manager-only id="btn-pay-approve" title="Duyệt bản trình chốt công (Admin / Ban Quản Lý)">
+              <i data-lucide="badge-check"></i> Duyệt Chốt
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" data-admin-only id="btn-pay-reopen" title="Mở khóa kỳ đã chốt (chỉ Quản Trị, bắt buộc lý do)">
+              <i data-lucide="lock-open"></i> Mở Khóa
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" data-pay="lock" id="btn-pay-print" title="In phiếu công từng nhân viên (A4) để ký giấy xác nhận">
+              <i data-lucide="printer"></i> In Phiếu
+            </button>
+            <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-pay" title="Thu gọn / Mở rộng">
+              <i data-lucide="chevron-up"></i>
+            </button>
+          </div>
+        </div>
+        <div id="hr-pay-body"></div>
       </div>
 
       <!-- BẢNG 6: THỐNG KÊ ĐI LÀM THEO THÁNG -->
@@ -5032,6 +5066,12 @@
             </div>
             <div class="hr-dock-cards" data-hr-group-panel="ngaycong" role="group" aria-label="Ngày công">
 
+              <button type="button" class="hr-mini-card" data-hr-card="hr-pay-card" aria-expanded="false" title="Chốt công theo tháng — cơ sở tính lương: trình chốt, Admin/BQL duyệt, khóa kỳ, mở khóa có lý do">
+                <span class="hr-mini-ic"><i data-lucide="lock"></i></span>
+                <span class="hr-mini-title">Chốt Công Lương</span>
+                <span class="hr-mini-desc">Chốt công → duyệt → khóa kỳ</span>
+                <span class="hr-mini-count" id="hr-mini-count-pay">–</span>
+              </button>
               <button type="button" class="hr-mini-card" data-hr-card="hr-att-card" aria-expanded="false" title="Chấm công & phân vị — đi làm / vắng / nghỉ có phép theo ngày">
                 <span class="hr-mini-ic"><i data-lucide="clipboard-list"></i></span>
                 <span class="hr-mini-title">Chấm Công</span>
@@ -5271,6 +5311,7 @@
         <button class="modal-close-btn" id="btn-close-overtime"><i data-lucide="x"></i></button>
       </div>
       <form id="ot-form" style="padding: 20px;">
+        <div id="ot-ci-banner" class="ot-ci-banner" hidden></div>
         <div class="form-group">
           <label for="ot-employee">Nhân Viên <span class="required">*</span></label>
           <div class="hr-combobox">
@@ -5661,6 +5702,143 @@
       </div>
     </div>
   </div>
+  <!-- MODAL: ÁP DỤNG / XÓA GIỜ MÁY THEO KỲ (20/10/2026)
+       Chỉ người được Admin cấp quyền "Áp dụng chấm công theo máy" mới thấy nút.
+       PHẠM VI LUÔN = THÁNG đang xem ở bảng đối chiếu (không áp dụng mọi tháng). -->
+  <div class="modal-overlay" id="modal-ci-bulk">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="ci-bulk-title"><i data-lucide="check-check"></i> Áp Dụng Theo Kỳ</h3>
+        <button class="modal-close-btn" id="btn-close-ci-bulk"><i data-lucide="x"></i></button>
+      </div>
+      <form id="ci-bulk-form" style="padding:20px;">
+        <input type="hidden" id="ci-bulk-kind" value="apply">
+        <div class="form-group">
+          <label>Phạm Vi Áp Dụng</label>
+          <div id="ci-bulk-scope-info" style="font-size:0.9rem; font-weight:600; color:var(--primary);">—</div>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+            Chỉ áp dụng cho <strong>KỲ đang xem</strong> ở bảng đối chiếu (Ngày / Tuần / Tháng). Muốn làm kỳ khác: đổi kỳ rồi mở lại.
+          </p>
+        </div>
+        <div class="form-group">
+          <label for="ci-bulk-reason">Lý Do <span style="color:var(--danger);">*</span></label>
+          <input type="text" id="ci-bulk-reason" placeholder="VD: đối chiếu tháng 10 theo file máy chấm công" autocomplete="off" required>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+            Lý do được lưu vào nhật ký sửa đổi để đối chiếu khi tính lương.
+          </p>
+        </div>
+        <div id="ci-bulk-warn" class="ci-bulk-warn" hidden></div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:12px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-ci-bulk">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary" id="btn-ci-bulk-ok"><i data-lucide="check"></i> Xác Nhận</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- MODAL: XỬ LÝ DÒNG CÔNG (20/10/2026)
+       Nút "Xác Nhận" cũ chỉ đánh dấu bỏ qua — nay thay bằng "Xử lý": ghi nhận
+       giờ làm để tính lương, bổ sung đơn TC, sửa giờ máy, hủy TC vượt, miễn trừ. -->
+  <div class="modal-overlay" id="modal-ci-pay">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="ci-pay-title"><i data-lucide="clipboard-check"></i> Xử Lý Dòng Công</h3>
+        <button class="modal-close-btn" id="btn-close-ci-pay"><i data-lucide="x"></i></button>
+      </div>
+      <form id="ci-pay-form" style="padding:20px;">
+        <input type="hidden" id="ci-pay-emp" value="">
+        <input type="hidden" id="ci-pay-date" value="">
+        <div id="ci-pay-info" class="ci-pay-info"></div>
+        <div class="form-group">
+          <label for="ci-pay-action">Hình Thức Xử Lý <span style="color:var(--danger);">*</span></label>
+          <select id="ci-pay-action">
+            <option value="accept">① Chấp nhận giờ làm — ghi nhận để tính lương</option>
+            <option value="add_ot">② Bổ sung đơn tăng ca — chờ Ban lãnh đạo duyệt</option>
+            <option value="edit">③ Sửa thông tin giờ máy — chờ duyệt</option>
+            <option value="reject_ot">④ Hủy phần TC vượt đơn — chờ duyệt</option>
+            <option value="waive" id="ci-pay-waive-opt">⑤ Miễn trừ — chỉ Quản Trị</option>
+          </select>
+          <div id="ci-pay-hint" class="ci-pay-hint"></div>
+        </div>
+        <div class="form-group" id="ci-pay-otmode-group">
+          <label>Phần TC Được Tính</label>
+          <label class="edit-tab-check" style="display:block;">
+            <input type="radio" name="ci-pay-otmode" value="asIs" checked> Tính TC theo MÁY (kể cả phần chưa có đơn)
+          </label>
+          <label class="edit-tab-check" style="display:block;">
+            <input type="radio" name="ci-pay-otmode" value="orderOnly"> Chỉ tính TC theo ĐƠN đã duyệt
+          </label>
+        </div>
+        <div class="form-group" id="ci-pay-edit-group" hidden>
+          <label>Giờ Máy Đề Xuất Sửa</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <input type="text" id="ci-pay-in" placeholder="Giờ vào (HH:mm)" autocomplete="off">
+            <input type="text" id="ci-pay-out" placeholder="Giờ ra (HH:mm)" autocomplete="off">
+          </div>
+          <p class="ci-pay-hint" style="margin-top:6px;">Chỉ ghi vào dữ liệu máy SAU KHI Admin/Ban Quản Lý duyệt.</p>
+        </div>
+        <div class="form-group">
+          <label for="ci-pay-reason">Lý Do / Ghi Chú <span id="ci-pay-req" style="color:var(--danger);">*</span></label>
+          <input type="text" id="ci-pay-reason" placeholder="VD: đã đăng ký tăng ca trước bằng giấy / quên quẹt máy..." autocomplete="off">
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:12px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-ci-pay">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary" id="btn-ci-pay-ok"><i data-lucide="check"></i> Lưu Xử Lý</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TRÌNH / DUYỆT / MỞ KHÓA CHỐT CÔNG (20/10/2026) -->
+  <div class="modal-overlay" id="modal-pay-lock">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="pay-lock-title"><i data-lucide="lock"></i> Trình Chốt Công</h3>
+        <button class="modal-close-btn" id="btn-close-pay-lock"><i data-lucide="x"></i></button>
+      </div>
+      <form id="pay-lock-form" style="padding:20px;">
+        <input type="hidden" id="pay-lock-action" value="prepare">
+        <div class="form-group">
+          <label for="pay-lock-month">Kỳ Chốt Công (tháng)</label>
+          <input type="month" id="pay-lock-month">
+        </div>
+        <div id="pay-lock-info" class="ci-pay-info"></div>
+        <div class="form-group" id="pay-lock-dispute-group">
+          <label for="pay-lock-dispute">Hạn Khiếu Nại (ngày kể từ khi chốt)</label>
+          <input type="number" id="pay-lock-dispute" min="0" max="30" value="3">
+          <p class="ci-pay-hint">In trên phiếu công để nhân viên biết hạn phản hồi. Để 0 = không đặt hạn.</p>
+        </div>
+        <div class="form-group">
+          <label for="pay-lock-note">Ghi Chú / Lý Do <span id="pay-lock-req" style="color:var(--danger);">*</span></label>
+          <input type="text" id="pay-lock-note" placeholder="VD: chốt công tháng 10/2026 theo bảng đối chiếu máy chấm công" autocomplete="off">
+        </div>
+        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:12px;">
+          <button type="button" class="btn btn-outline" id="btn-cancel-pay-lock">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary" id="btn-pay-lock-ok"><i data-lucide="check"></i> Xác Nhận</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: IN PHIẾU CÔNG CÁ NHÂN (ký giấy) — 20/10/2026 -->
+  <div class="modal-overlay" id="modal-pay-print">
+    <div class="modal-card modal-wide">
+      <div class="modal-header">
+        <h3 id="pay-print-title"><i data-lucide="printer"></i> Phiếu Công</h3>
+        <button class="modal-close-btn" id="btn-close-pay-print"><i data-lucide="x"></i></button>
+      </div>
+      <div class="pay-print-toolbar">
+        <input type="month" id="pay-print-month" title="Kỳ in phiếu">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-pay-print-reload"><i data-lucide="refresh-cw"></i> Xem Lại</button>
+        <span class="ci-pay-hint">Mỗi nhân viên 1 trang · in ra để ký xác nhận; bản nháp có ghi “CHƯA CHỐT”.</span>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-pay-print-do"><i data-lucide="printer"></i> In / Lưu PDF</button>
+      </div>
+      <div id="pay-print-preview" class="pay-print-preview"></div>
+    </div>
+  </div>
+  <!-- VÙNG IN THẬT (chỉ hiện khi in) -->
+  <div id="pay-print-area"></div>
 
   <!-- MODAL HR-5: THÊM / SỬA VỊ TRÍ LÀM VIỆC -->
   <div class="modal-overlay" id="modal-position">
@@ -6529,6 +6707,20 @@
                 <label class="edit-tab-check"><input type="checkbox" value="dashboard" checked> Dashboard (Biểu đồ)</label>
               </div>
             </div>
+            <div class="form-group col-span-full">
+              <label>Quyền Chốt Công <span style="font-size:0.75rem; color:var(--text-muted);">(chỉ Admin cấp — mặc định KHÔNG có)</span></label>
+              <label class="edit-tab-check" style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="new-user-pay-apply">
+                Được <strong>Áp dụng chấm công theo máy</strong> · Xóa giờ máy (thao tác hàng loạt theo kỳ)
+              </label>
+              <label class="edit-tab-check" style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                <input type="checkbox" id="new-user-pay-lock">
+                Được <strong>Xử lý dòng công</strong> · Trình chốt công / Mở khóa kỳ
+              </label>
+              <div id="new-user-pay-note" class="sub-text" style="font-size:0.72rem; margin-top:4px;">
+                Hai quyền này ghi đè dữ liệu chấm công &amp; chốt giờ để tính lương — quyền tab “Nhân Sự” KHÔNG tự có.
+              </div>
+            </div>
             <div class="form-group col-span-full text-right">
               <button type="submit" class="btn btn-success btn-sm">
                 <i data-lucide="plus"></i> Thêm / Cấp Quyền
@@ -6649,6 +6841,22 @@
           </label>
           <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
             Vùng nâng cao chứa phân tích chuyên sâu — mặc định chỉ Admin &amp; Ban Quản Lý được xem.
+          </p>
+        </div>
+        <div class="form-group">
+          <label>Quyền Chốt Công <span style="font-size:0.75rem; color:var(--text-muted);">(mặc định KHÔNG có)</span></label>
+          <label class="edit-tab-check" style="font-size:0.85rem;">
+            <input type="checkbox" id="user-perms-pay-apply">
+            <i data-lucide="check-square" style="width:14px;height:14px;color:#0f766e;"></i>
+            Được <strong>Áp dụng chấm công theo máy</strong> / Xóa giờ máy
+          </label>
+          <label class="edit-tab-check" style="font-size:0.85rem; margin-top:6px;">
+            <input type="checkbox" id="user-perms-pay-lock">
+            <i data-lucide="lock" style="width:14px;height:14px;color:#b45309;"></i>
+            Được <strong>Xử lý dòng công</strong> / Trình chốt công / Mở khóa kỳ
+          </label>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+            Đây là 2 quyền GHI ĐÈ dữ liệu chấm công và CHỐT giờ để tính lương — quyền tab “Nhân Sự” KHÔNG tự có 2 quyền này.
           </p>
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
@@ -7287,14 +7495,15 @@
       </div>
       <div class="modal-body" style="padding:14px 18px 18px;">
         <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
-          Công suất định mức của <b>từng tháng</b> (<b>kg/giờ</b>) — nguồn tính <b>Hiệu suất</b>
-          của thẻ ngày Bốc Luồng. Chưa đặt định mức → Hiệu suất hiện "—".
+          Công suất định mức của <b>từng tháng</b> tính theo <b>SỐ XE/GIỜ</b> (1 xe ≈ 600 kg) — nguồn tính <b>Hiệu suất</b>
+          của thẻ ngày Bốc Luồng. Chưa đặt định mức → Hiệu suất hiện "—".<br>
+          <em>Định mức khai theo kg/h trước đây được tự quy đổi (÷ 600) khi hiển thị; bấm Lưu để ghi lại theo xe/h.</em>
         </p>
         <div class="x2-rate-bar" id="x2-blg-rate-bar">
           <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất bốc luồng:</span>
           <select id="x2-blg-rate-month" title="Chọn tháng"></select>
-          <input type="number" id="x2-blg-rate-value" min="0" step="any" placeholder="VD: 4000" title="Công suất định mức của tháng (kg/giờ)">
-          <span class="x2-rate-unit">kg/h</span>
+          <input type="number" id="x2-blg-rate-value" min="0" step="any" placeholder="VD: 1.5" title="Công suất định mức của tháng — SỐ XE/GIỜ">
+          <span class="x2-rate-unit">xe/h</span>
           <button type="button" class="btn btn-primary btn-sm" id="btn-x2-blg-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất bốc luồng của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-blg-rate-chips"></div>
         </div>
@@ -7310,14 +7519,15 @@
       </div>
       <div class="modal-body" style="padding:14px 18px 18px;">
         <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
-          Công suất định mức của <b>từng tháng</b> (<b>kg/giờ</b>) — nguồn tính <b>Hiệu suất</b>
-          của thẻ ngày Cắt Chọn. Chưa đặt định mức → Hiệu suất hiện "—".
+          Công suất định mức của <b>từng tháng</b> tính theo <b>SỐ XE/GIỜ</b> (1 xe ≈ 600 kg) — nguồn tính <b>Hiệu suất</b>
+          của thẻ ngày Cắt Chọn. Chưa đặt định mức → Hiệu suất hiện "—".<br>
+          <em>Định mức khai theo kg/h trước đây được tự quy đổi (÷ 600) khi hiển thị; bấm Lưu để ghi lại theo xe/h.</em>
         </p>
         <div class="x2-rate-bar" id="x2-rate-bar">
           <span class="x2-rate-title"><i data-lucide="target"></i> Định mức công suất cắt:</span>
           <select id="x2-rate-month" title="Chọn tháng"></select>
-          <input type="number" id="x2-rate-value" min="0" step="any" placeholder="VD: 3000" title="Công suất định mức của tháng (kg/giờ)">
-          <span class="x2-rate-unit">kg/h</span>
+          <input type="number" id="x2-rate-value" min="0" step="any" placeholder="VD: 2.5" title="Công suất định mức của tháng — SỐ XE/GIỜ">
+          <span class="x2-rate-unit">xe/h</span>
           <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-rate-chips"></div>
         </div>

@@ -858,7 +858,7 @@ import { state } from './state.js';
   }
 
   // 1 CÔNG ĐOẠN trong khối ca — trả null khi công đoạn đó KHÔNG có ≥2 ca bố trí.
-  //   sec = { label, groups, qty, unit ('kg/h'|'thanh/h'|'m³/h'|'tấm/h'),
+  //   sec = { label, groups, qty, unit ('xe/h'|'kg/h'|'thanh/h'|'m³/h'|'tấm/h'),
   //           rate (định mức tháng CÙNG đơn vị), incHours (giờ sự cố cho phép) }
   function shiftSectionRows(sec) {
     const groups = (sec && sec.groups) || [];

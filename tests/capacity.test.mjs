@@ -122,15 +122,18 @@ const cutDays = cap.capStageDayRows(cutSt, wk);
 check('CẮT: 2 ngày có dữ liệu trong tuần (10/09 và 11/09)', cutDays.length === 2);
 check('CẮT: ngày 10/09 có 2 lượt nhưng GIỜ chỉ đếm 1 LẦN = 5h (không nhân đôi)',
   cutDays[0].turns === 2 && cutDays[0].hours === 5);
-check('CẮT: sản lượng ngày 10/09 = 1.500 kg (cộng đủ 2 lượt)', cutDays[0].qty === 1500);
+check('CẮT: sản lượng ngày 10/09 = 2,5 xe (1.000÷600 + 500÷600 — đơn vị mới xe/h)',
+  Math.abs(cutDays[0].qty - 2.5) < 1e-9);
 const cutRow = cap.capStageWeekRow(cutSt, wk); // CHƯA có ĐM — dùng kiểm tra số thô
-check('CẮT: tuần = 3 lượt · 2.300 kg · 9 giờ (5 + 4)',
-  cutRow.turns === 3 && cutRow.qty === 2300 && cutRow.hours === 9);
+check('CẮT: tuần = 3 lượt · 3,83 xe · 9 giờ (5 + 4)',
+  cutRow.turns === 3 && Math.abs(cutRow.qty - (2300 / 600)) < 1e-9 && cutRow.hours === 9);
 check('CẮT: chưa có ĐM → hiệu suất tuần "—"', cutRow.eff == null);
+// Định mức CŨ khai 300 kg/h → tự quy đổi ÷ 600 = 0,5 xe/h (hiệu suất KHÔNG đổi)
 state.x2CapRates = { '2026-09': 300 };
 const cutRowRated = cap.capStageWeekRow(cutSt, wk);
-check('CẮT: công suất tuần = 2.300 ÷ 9 ≈ 255,556 kg/h', approx(cutRowRated.cap, 2300 / 9));
-check('CẮT: hiệu suất tuần = 255,556 ÷ 300 ≈ 85,2%', approx(cutRowRated.eff, (2300 / 9) / 300 * 100, 1e-4));
+check('CẮT: công suất tuần = 3,83 xe ÷ 9h ≈ 0,426 xe/h', approx(cutRowRated.cap, (2300 / 600) / 9));
+check('CẮT: ĐM cũ 300 kg/h → 0,5 xe/h · hiệu suất tuần vẫn ≈ 85,2%',
+  approx(cutRowRated.rate, 0.5) && approx(cutRowRated.eff, (2300 / 600) / 9 / 0.5 * 100, 1e-4));
 check('EXPORT: 6 hàm đọc định mức đã export từ xuong2.js (1 nguồn chân lý)',
   typeof x2.capRateOf === 'function' && typeof x2.bulligRateOf === 'function' &&
   typeof x2.boOngRateOf === 'function' && typeof x2.baoThoRateOf === 'function' &&
@@ -251,13 +254,13 @@ check('RENDER: bảng tầng 1 có ít nhất 2 dòng tuần (tuần dữ liệu
 check('RENDER: cột Nút thắt hiện đúng công đoạn thấp nhất', tbody.innerHTML.includes('Than Hóa + Sấy'));
 cap.toggleCapacityWeekOpen(wk);
 check('TẦNG 2: bấm tuần → xổ bảng công đoạn (có cột "Định mức tuần")', tbody.innerHTML.includes('Định mức tuần'));
-check('TẦNG 2: có dòng Cắt Chọn kèm chip đơn vị kg/h', tbody.innerHTML.includes('Cắt Chọn') && tbody.innerHTML.includes('kg/h'));
+check('TẦNG 2: có dòng Cắt Chọn kèm chip đơn vị xe/h', tbody.innerHTML.includes('Cắt Chọn') && tbody.innerHTML.includes('xe/h'));
 check('TẦNG 2: dòng Bào Thô hiện "chưa có ĐM" (chưa khai định mức)', tbody.innerHTML.includes('chưa có ĐM'));
 check('TẦNG 2: có cột So tuần trước + nút Mở thẻ công đoạn',
   tbody.innerHTML.includes('cap-delta') && tbody.innerHTML.includes('data-cap-open-card="x2-cut-card"'));
 cap.toggleCapacityStageDays('cut');
 check('TẦNG 3: bấm công đoạn → xổ khối NGÀY (cap-day-tr)', tbody.innerHTML.includes('cap-day-tr'));
-check('TẦNG 3: ngày 10/09/26 · 1.500 kg · công suất ngày 300 kg/h (1500 ÷ 5h)', tbody.innerHTML.includes('10/09/26') && tbody.innerHTML.includes('1.500 kg') && tbody.innerHTML.includes('300 kg/h'));
+check('TẦNG 3: ngày 10/09/26 · 2,5 xe · công suất ngày 0,5 xe/h (2,5 ÷ 5h)', tbody.innerHTML.includes('10/09/26') && tbody.innerHTML.includes('2,5 xe') && tbody.innerHTML.includes('0,5 xe/h'));
 cap.toggleCapacityStageDays('cut');
 check('TẦNG 3: bấm lần nữa → đóng khối ngày', !tbody.innerHTML.includes('cap-day-tr'));
 // ─── K. ĐIỀU HƯỚNG TUẦN + ĐỔI XƯỞNG + THU GỌN + NHỚ UI ─────────
@@ -329,7 +332,7 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v295/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v298/.test(swJs));
 check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 8 dòng Xưởng 1',
   cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===
@@ -451,10 +454,10 @@ check('THÁNG: nhãn rút gọn "T9" cho trục biểu đồ/ô bản đồ nhi�
 // P2. Gộp theo THÁNG (mode='month') — cùng dữ liệu đã seed ở trên
 const cutStP = cap.CAP_STAGES.find(s => s.id === 'cut');
 const cutMonthRow = cap.capStagePeriodRow(cutStP, '2026-09', 'month');
-check('THÁNG: Cắt Chọn gộp CẢ THÁNG = 3 lượt · 2.300 kg · 9 giờ (giờ vẫn đếm 1 lần/ngày)',
-  cutMonthRow.turns === 3 && cutMonthRow.qty === 2300 && cutMonthRow.hours === 9);
-check('THÁNG: định mức = ĐM của chính tháng (300 kg/h) → hiệu suất ≈ 85,2%',
-  approx(cutMonthRow.rate, 300) && approx(cutMonthRow.eff, (2300 / 9) / 300 * 100, 1e-4));
+check('THÁNG: Cắt Chọn gộp CẢ THÁNG = 3 lượt · 3,83 xe · 9 giờ (giờ vẫn đếm 1 lần/ngày)',
+  cutMonthRow.turns === 3 && Math.abs(cutMonthRow.qty - (2300 / 600)) < 1e-9 && cutMonthRow.hours === 9);
+check('THÁNG: định mức cũ 300 kg/h → 0,5 xe/h → hiệu suất ≈ 85,2%',
+  approx(cutMonthRow.rate, 0.5) && approx(cutMonthRow.eff, (2300 / 600) / 9 / 0.5 * 100, 1e-4));
 check('TUẦN: bản cũ capStageWeekRow giữ nguyên hành vi (không đổi gì)',
   cap.capStageWeekRow(cutStP, wk).turns === 3 && cap.capStageWeekRow(cutStP, wk).hours === 9);
 

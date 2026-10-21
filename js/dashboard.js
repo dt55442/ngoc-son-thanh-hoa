@@ -1367,7 +1367,8 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           <h5>Chọn kỳ xem</h5>
           <ul>
             <li>Nút <b>Tuần / Tháng</b> ở đầu thẻ đổi kỳ tổng hợp; <b>‹ ›</b> nhảy nhanh kỳ trước/sau; chế độ Tháng có ô chọn tháng riêng.</li>
-            <li>Chế độ <b>Biểu đồ</b> = đồng hồ hiệu suất · thang xếp hạng · bản đồ nhiệt 8 kỳ · biểu đồ công đoạn. Chế độ <b>Bảng dữ liệu</b> = bảng 3 tầng.</li>
+            <li>Chế độ <b>Biểu đồ</b> = đồng hồ hiệu suất · thang xếp hạng · biểu đồ công đoạn. Chế độ <b>Bảng dữ liệu</b> = bảng 3 tầng.</li>
+            <li><b>Cảnh báo dữ liệu quá hạn</b> (dải vàng dưới các chip): nêu công đoạn + xưởng chưa cập nhật quá 1 ngày làm việc, ngày cập nhật cuối, số ngày và ảnh hưởng; bấm để mở bảng chi tiết và nút <b>Mở thẻ</b>. Ngày nghỉ (CN + ngày nghỉ trong Lịch Làm Việc) không tính là quá hạn.</li>
           </ul>
         </div>
         <div class="dash-help-sec">
@@ -1392,7 +1393,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
           <h5>Mẹo</h5>
           <ul>
             <li>Rê chuột vào <b>tiêu đề từng cột bảng</b> hiện giải thích của cột đó.</li>
-            <li>Nút <b>In báo cáo</b> in thông tin chung của TẤT CẢ bộ phận (không kèm bản đồ nhiệt/biểu đồ 8 kỳ).</li>
+            <li>Nút <b>In báo cáo</b> in thông tin chung của TẤT CẢ bộ phận (không kèm biểu đồ 8 kỳ).</li>
           </ul>
         </div>`
     },

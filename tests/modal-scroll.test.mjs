@@ -139,7 +139,7 @@ check('F5. vẫn giữ khung cuộn dùng chung `.table-scroll, .hr-table-scroll
 // ─── G. PHIÊN BẢN ───────────────────────────────────────────────
 const swVer = (swSrc.match(/CACHE_NAME = 'nha-may-ngoc-son-(v\d+)'/) || [])[1];
 const appVer = (stSrc.match(/APP_VERSION = '(v\d+)'/) || [])[1];
-check('G1. sw.js CACHE_NAME = v298 (đã tăng cache)', swVer === 'v298');
+check('G1. sw.js CACHE_NAME = v301 (đã tăng cache)', swVer === 'v301');
 check('G2. APP_VERSION trong state.js = CACHE_NAME của sw.js', swVer === appVer);
 
 console.log('\nKẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');

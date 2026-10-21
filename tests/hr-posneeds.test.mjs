@@ -90,8 +90,9 @@ const pqcrow = state.hrPositionNeeds.find(r => r.positionId === 'pqc');
 check('POS-NEED: Số người hiện có tự đếm (Ép ván=2 bỏ NV nghỉ, Kiểm chất=1)', px1row.haveQty === 2 && pqcrow.haveQty === 1);
 check('POS-NEED: Số người cần mặc định = 1', px1row.needQty === 1 && pqcrow.needQty === 1);
 let bodyHTML = document.getElementById('hr-posneed-body').innerHTML;
-check('POS-NEED: render 2 dòng + ô nhập số (value="2")', (bodyHTML.match(/<tr/g) || []).length === 2 && bodyHTML.includes('Ép ván') && bodyHTML.includes('value="2"'));
-check('POS-NEED: chip tổng hợp "Cần 2 — hiện có 3"', document.getElementById('hr-posneed-count').textContent.includes('Cần 2') && document.getElementById('hr-posneed-count').textContent.includes('hiện có 3'));
+check('POS-NEED: render 2 dòng + ô nhập NHU CẦU (value="1" mặc định)', (bodyHTML.match(/<tr/g) || []).length === 2 && bodyHTML.includes('Ép ván') && bodyHTML.includes('value="1"'));
+check('POS-NEED: bảng KHÔNG còn ô nhập "hiện có" (đã thay bằng số live)', !bodyHTML.includes("'haveQty'"));
+check('POS-NEED: chip tổng hợp nói rõ CHƯA có dữ liệu bố trí (không bịa số)', document.getElementById('hr-posneed-count').textContent.includes('chưa có dữ liệu bố trí'));
 
 // ─── B. CHỈNH SỬA TAY từng ô Số người cần / hiện có ────────────
 hr.hrSetPositionNeedQty('posneed-pos-px1', 'needQty', '5');
@@ -100,12 +101,12 @@ check('POS-NEED: sửa tay cần=5, hiện có=3', px1row.needQty === 5 && px1ro
 check('POS-NEED: bảng hiển thị giá trị sửa (value="5")', document.getElementById('hr-posneed-body').innerHTML.includes('value="5"'));
 check('POS-NEED: đã lưu localStorage sau sửa tay', JSON.parse(storeBacking.get(STORAGE_KEY_HR_POSNEEDS) || '[]').some(r => r.id === 'posneed-pos-px1' && r.needQty === 5));
 
-// ─── C. BỘ LỌC BỘ PHẬN ─────────────────────────────────────────
-document.getElementById('hr-posneed-filter-dept').value = 'QC';
-hr.renderPositionNeedsTable();
+// ─── C. BỘ LỌC BỘ PHẬN → nay là BONG BÓNG cấp 1 (bấm bộ phận để "zoom") ─
+hr.hnmSelectDept('QC');
 let bodyQC = document.getElementById('hr-posneed-body').innerHTML;
-check('POS-NEED: lọc Bộ phận QC -> 1 dòng (Kiểm chất)', (bodyQC.match(/<tr/g) || []).length === 1 && bodyQC.includes('Kiểm chất') && !bodyQC.includes('Ép ván'));
-document.getElementById('hr-posneed-filter-dept').value = 'all';
+check('POS-NEED: chọn bong bóng QC -> 1 dòng (Kiểm chất)', (bodyQC.match(/<tr/g) || []).length === 1 && bodyQC.includes('Kiểm chất') && !bodyQC.includes('Ép ván'));
+check('POS-NEED: bấm bộ phận ghi nhớ lựa chọn (UI theo máy)', hr.hrNeedReadUi().dept === 'QC');
+hr.hnmBack();
 
 // ─── D. ĐỒNG BỘ TỪ HỒ SƠ (lấy dữ liệu từ bảng khác) ────────────
 hr.syncPositionNeedsFromEmployees();
@@ -114,8 +115,8 @@ check('POS-NEED: localStorage cập nhật sau đồng bộ', JSON.parse(storeBa
 
 // ─── E. THẺ LAUNCHER (counter trên thẻ mini) ───────────────────
 hr.renderHrView();
-// Ép ván: cần 5 - có 2 = thiếu 3; Kiểm chất: cần 1 - có 1 = 0
-check('POS-NEED: licznik thẻ = "2 vị trí · thiếu 3"', document.getElementById('hr-mini-count-posneed').textContent === '2 vị trí · thiếu 3');
+// Chưa có lượt bố trí nào trong ngày → KHÔNG bịa "thiếu", ghi rõ chưa có bố trí
+check('POS-NEED: chip thẻ = "2 vị trí · chưa có bố trí"', document.getElementById('hr-mini-count-posneed').textContent === '2 vị trí · chưa có bố trí');
 
 // ─── F. XÓA DÒNG TỰ NẠP -> KHÔNG HỒI SINH ──────────────────────
 hr.deletePositionNeed('posneed-pos-pqc');

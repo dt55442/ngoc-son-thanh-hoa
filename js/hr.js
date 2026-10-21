@@ -25,8 +25,25 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   // ─── HẰNG SỐ NHÂN SỰ ────────────────────────────────────────────
   // Bộ phận cố định theo mô hình nhà máy — thứ tự này cũng dùng để SẮP XẾP
-  // nhóm bộ phận trên bảng chấm công (Văn Phòng -> Cơ Điện -> QC -> Xưởng 1 -> Xưởng 2)
-  const HR_DEPARTMENTS = ['Văn Phòng', 'Cơ Điện', 'QC', 'Xưởng 1', 'Xưởng 2', 'Lò Hơi'];
+  // nhóm bộ phận trên bảng chấm công.
+  // 21/10/2026 (yêu cầu người dùng): "Lò Hơi" GỘP VÀO "Cơ Điện" ⇒ còn 5 bộ
+  // phận. Dữ liệu cũ được DI TRÚ một lần bằng migrateHrDeptMerge() (gọi trong
+  // loadHrData + sau khi nạp bù IndexedDB + khi phục hồi backup). Dữ liệu vừa
+  // về từ mây/file cũ vẫn được gom đúng nhờ hrDeptAliasOf().
+  // ⚠ ĐỪNG NHẦM: "Lò hơi" ở tab NGUYÊN LIỆU (materialActiveLoc 'lo-hoi', cột
+  // "Lò Hơi (TB/ngày)") là VỊ TRÍ NHẬP NGUYÊN LIỆU — KHÔNG gộp, KHÔNG đổi.
+  const HR_DEPARTMENTS = ['Văn Phòng', 'Cơ Điện', 'QC', 'Xưởng 1', 'Xưởng 2'];
+  const HR_DEPT_ALIAS = { 'Lò Hơi': 'Cơ Điện', 'Lò hơi': 'Cơ Điện', 'Lo Hoi': 'Cơ Điện', 'lo hoi': 'Cơ Điện' };
+  // Bộ phận hiển thị sau khi gộp — nhận cả dữ liệu cũ chưa kịp di trú
+  function hrDeptAliasOf(dept) {
+    const raw = String(dept || '').trim();
+    if (!raw) return raw;
+    if (HR_DEPT_ALIAS[raw]) return HR_DEPT_ALIAS[raw];
+    if (hrStripDiacritics(raw).toLowerCase() === 'lo hoi') return 'Cơ Điện';
+    return raw;
+  }
+  // Đã kiểm tra di trú bộ phận trong phiên này chưa (tránh quét lại mảng lớn mỗi render)
+  let hrDeptMergeChecked = false;
   const EMP_STATUS  = { active: 'Đang làm việc', pause: 'Tạm nghỉ', quit: 'Đã nghỉ việc' };
   const LEAVE_TYPES  = ['Nghỉ phép', 'Nghỉ chờ việc', 'Nghỉ không lương', 'Ốm', 'Việc gia đình', 'Khác'];
   const LEAVE_STATUS = { pending: 'Chờ duyệt', approved: 'Đồng ý', rejected: 'Không đồng ý' };
@@ -123,6 +140,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         });
         hrHydrated = true;
         hrBumpIndex();
+        // Dữ liệu bố trí nạp bù từ IndexedDB có thể còn nhãn cũ "Lò Hơi" ⇒ di trú
+        try { migrateHrDeptMerge(); } catch (e) {}
         HR_BIG_DOMAINS.forEach(d => { if (repo.healthy(d)) hrWriteLocalCache(d); }); // thu gọn localStorage còn 2 tháng
         if (migrated) console.info('[NHÂN SỰ] Đã chuyển dữ liệu lớn (bố trí/chấm công/giờ máy) sang IndexedDB theo tháng.');
         if (state.activeView === 'hr-view') { try { renderHrVisible(); } catch (e) {} }
@@ -177,6 +196,66 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (!state.hrWorkCalendar || typeof state.hrWorkCalendar !== 'object') state.hrWorkCalendar = {};
     // Nạp nốt các tháng cũ từ IndexedDB (không chặn boot) — xem hrHydrateFromRepo
     hrHydrateFromRepo();
+    // GỘP BỘ PHẬN "Lò Hơi" → "Cơ Điện" (21/10/2026) — chạy sau khi đã nạp đủ
+    // dữ liệu nhỏ; phần bố trí nạp bù từ IndexedDB sẽ được di trú tiếp trong
+    // hrHydrateFromRepo (idempotent nên chạy 2 lần không sao).
+    try { migrateHrDeptMerge(); } catch (e) { /* không chặn boot */ }
+  }
+
+  // ─── DI TRÚ BỘ PHẬN: "Lò Hơi" → "Cơ Điện" (21/10/2026) ──────────
+  // Đổi nhãn bộ phận ở 5 miền dữ liệu + cấu hình ca. KHÔNG xóa bản ghi nào
+  // (chỉ đổi `department`), KHÔNG đụng 'lo-hoi' của tab Nguyên Liệu.
+  // Idempotent: lần chạy sau không còn bản ghi nào đổi ⇒ không ghi localStorage.
+  function migrateHrDeptMerge() {
+    const NEW = 'Cơ Điện';
+    const touched = [];
+    const fixList = (list, dom) => {
+      let n = 0;
+      (list || []).forEach(r => {
+        if (!r) return;
+        const cur = String(r.department || '').trim();
+        if (!cur || cur === NEW) return;
+        if (hrDeptAliasOf(cur) !== NEW) return;
+        r.department = NEW;
+        r.updatedAt = new Date().toISOString();   // để máy khác nhận đúng bản mới (quy tắc 65)
+        n++;
+      });
+      if (n) touched.push(dom);
+      return n;
+    };
+    const nEmp  = fixList(state.hrEmployees, 'hrEmployees');
+    const nPos  = fixList(state.hrPositions, 'hrPositions');
+    const nNeed = fixList(state.hrPositionNeeds, 'hrPositionNeeds');
+    const nRec  = fixList(state.hrRecruitment, 'hrRecruitment');
+    const nAsg  = fixList(state.hrAssignments, 'hrAssignments');
+    // CẤU HÌNH CA (khoá theo bộ phận): chỉ có Lò Hơi → đổi id; có cả 2 → giữ
+    // Cơ Điện, bỏ Lò Hơi (giờ công lịch sử sẽ tính theo cấu hình Cơ Điện).
+    let shiftMerged = false;
+    const shifts = state.hrShifts || [];
+    const oldCfg = shifts.find(s => s && hrDeptAliasOf(s.id) === NEW && s.id !== NEW);
+    const newCfg = shifts.find(s => s && s.id === NEW);
+    if (oldCfg) {
+      shiftMerged = true;
+      if (!newCfg) oldCfg.id = NEW;
+      else state.hrShifts = shifts.filter(s => s !== oldCfg);
+      touched.push('hrShifts');
+    }
+    if (state.hrBoardDept && hrDeptAliasOf(state.hrBoardDept) !== state.hrBoardDept) {
+      state.hrBoardDept = hrDeptAliasOf(state.hrBoardDept);
+    }
+    if (!touched.length) return 0;
+    saveHrData([...new Set(touched)]);
+    const parts = [];
+    if (nEmp)  parts.push(`${nEmp} nhân viên`);
+    if (nPos)  parts.push(`${nPos} vị trí`);
+    if (nNeed) parts.push(`${nNeed} dòng nhu cầu`);
+    if (nRec)  parts.push(`${nRec} nhu cầu tuyển`);
+    if (nAsg)  parts.push(`${nAsg} lượt bố trí`);
+    try {
+      showToast(`Đã gộp bộ phận "Lò Hơi" vào "Cơ Điện"${parts.length ? ': ' + parts.join(' · ') : ''}.`, 'info');
+      if (shiftMerged) showToast('Cấu hình ca của "Lò Hơi" đã gộp vào "Cơ Điện" — kiểm tra lại giờ ca ở Cài Đặt Ca.', 'info');
+    } catch (e) { /* toast không chặn */ }
+    return nEmp + nPos + nNeed + nRec + nAsg;
   }
 
   // ─── LƯU DỮ LIỆU NHÂN SỰ — CHỈ GHI KEY ĐÃ ĐỔI (20/10/2026) ──────
@@ -418,20 +497,38 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // Vẽ ĐÚNG phần đang mở (thẻ chi tiết nào đang pop-up) — dùng cho renderAll
   // và switchView. Không có thẻ nào mở → chỉ vẽ bảng bố trí + đếm + dock.
   function hrCardRenderParts(cardId) {
+    // 21/10/2026 — SỬA LỖI "MỞ THẺ TRỐNG": map cũ dùng id KHÔNG khớp id thật
+    // trong index.html (vd 'hr-posneeds-card' vs 'hr-posneed-card') ⇒
+    // hrOpenCard gọi renderHrView([]) → không vẽ phần nào. Nay map theo ĐÚNG id
+    // của thẻ, giữ alias id cũ, và id lạ thì vẽ ĐỦ (không bao giờ trả rỗng).
     const map = {
+      // id THẬT trong index.html
+      'hr-emp-card': ['employees'],
+      'hr-att-card': ['attendance'],
+      'hr-ci-card': ['checkin'],
+      'hr-pos-card': ['positions'],
+      'hr-leave-card': ['leaves'],
+      'hr-ot-card': ['overtime'],
+      'hr-stats-card': ['leaves'],          // Thống kê nghỉ phép (bảng + top)
+      'hr-att-stats-card': ['stats'],       // Thống kê đi làm theo tháng
+      'hr-recruit-card': ['recruitment'],
+      'hr-posneed-card': ['posneeds'],      // Sơ đồ bong bóng 3 cấp
+      'hr-pay-card': ['pay'],
+      // alias id CŨ (giữ để tương thích)
       'hr-employees-card': ['employees'],
       'hr-attendance-card': ['attendance'],
       'hr-checkin-card': ['checkin'],
-      'hr-ci-card': ['checkin'],
       'hr-positions-card': ['positions'],
       'hr-leaves-card': ['leaves'],
       'hr-overtime-card': ['overtime'],
-      'hr-att-stats-card': ['stats'],
       'hr-recruitment-card': ['recruitment'],
-      'hr-posneeds-card': ['posneeds'],
-      'hr-pay-card': ['pay']
+      'hr-posneeds-card': ['posneeds']
     };
-    return map[cardId] || [];
+    // Không có thẻ nào đang mở ⇒ chỉ vẽ bảng bố trí + đếm + dock (như cũ,
+    // tránh vẽ lại 12 bảng mỗi lần đồng bộ mây — quy tắc 86).
+    if (!cardId) return [];
+    // Thẻ LẠ (không có trong map) → vẽ ĐỦ phần (trước đây trả [] làm thẻ trống trơn)
+    return map[cardId] || HR_RENDER_PARTS.slice();
   }
   function renderHrVisible() {
     const cardId = openDetailCard ? openDetailCard.id : '';
@@ -455,7 +552,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // nếu không, mỗi lần đổi bộ lọc (gọi renderHrView) select "Bộ phận" bị xây
   // lại và snap về "Tất Cả" khiến bộ lọc tưởng như không hoạt động.
   function populateHrSelects() {
-    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept', 'hr-ci-filter-dept', 'hr-attstats-filter-dept', 'hr-posneed-filter-dept'].forEach(selId => {
+    ['hr-emp-filter-dept', 'hr-recruit-filter-dept', 'hr-att-filter-dept', 'hr-ci-filter-dept', 'hr-attstats-filter-dept'].forEach(selId => {
       const sel = document.getElementById(selId);
       if (!sel) return;
       const cur = sel.value;
@@ -4876,57 +4973,758 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     showToast('Đã xóa nhu cầu tuyển dụng', 'info');
   }
 
-  // ─── 4b) NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ — BẢNG DỮ LIỆU TRUNG GIAN ────
-  // Mỗi dòng = 1 vị trí của 1 bộ phận: SỐ NGƯỜI CẦN + SỐ NGƯỜI HIỆN CÓ.
-  // Đây là bảng trung gian: dữ liệu có thể NHẬP TAY hoặc LẤY TỪ BẢNG KHÁC
-  // (nút "Đồng Bộ Từ Hồ Sơ" đếm tự động từ danh sách nhân viên), đồng thời
-  // CUNG CẤP DỮ LIỆU cho các bảng/chức năng sắp bổ sung (biểu đồ kiểm soát
-  // nhân sự, so sánh kế hoạch - hiện trạng...).
+  // ─── 4b) NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ — SƠ ĐỒ BONG BÓNG 3 CẤP ──────
+  // Bảng cũ (Cần / Hiện có / Còn thiếu) đã được thay bằng sơ đồ 3 cấp:
+  //   cấp 1 bong bóng bộ phận → cấp 2 thẻ vị trí (sửa "Cần" tại chỗ) →
+  //   cấp 3 người (đang bố trí · dự bị · dùng chung · trùng giờ).
+  // Số liệu LIVE 100% từ Bảng bố trí của NGÀY đang xem — xem khối 4c.
   function renderPositionNeedsTable() {
-    const tbody = document.getElementById('hr-posneed-body');
-    if (!tbody) return;
+    // Lưới an toàn: dữ liệu vừa về từ MÂY/backup có thể còn nhãn cũ "Lò Hơi"
+    // (migrate chỉ chạy 1 lần/phiên ở đây; loadHrData đã chạy sẵn lúc boot).
+    if (!hrDeptMergeChecked) {
+      hrDeptMergeChecked = true;
+      try { migrateHrDeptMerge(); } catch (e) { /* không chặn render */ }
+    }
     // TỰ ĐỘNG NẠP: mỗi vị trí trong danh mục (hrPositions) có 1 dòng trong bảng
     // (chỉ thêm lần đầu / khi có vị trí mới — dòng đã xóa tay không hồi sinh).
     ensurePositionNeedsFromPositions();
-    const dept = document.getElementById('hr-posneed-filter-dept')?.value || 'all';
-    const list = (state.hrPositionNeeds || []).filter(r => dept === 'all' || r.department === dept);
+    renderHrNeedCard();
+  }
 
-    const countEl = document.getElementById('hr-posneed-count');
-    if (countEl) {
-      const need = (state.hrPositionNeeds || []).reduce((s, r) => s + (r.needQty || 0), 0);
-      const have = (state.hrPositionNeeds || []).reduce((s, r) => s + (r.haveQty || 0), 0);
-      countEl.textContent = `Cần ${need} — hiện có ${have} — còn thiếu ${Math.max(0, need - have)} (${list.length} dòng)`;
+  // ════════════════════════════════════════════════════════════════
+  // 4c) NHU CẦU NHÂN SỰ THEO CA + SƠ ĐỒ BONG BÓNG 3 CẤP (21/10/2026)
+  // ────────────────────────────────────────────────────────────────
+  // Người dùng phản ánh 3 điểm sai của bảng cũ:
+  //   (1) "Số người hiện có" thực chất là ĐẾM NGƯỜI CÓ KỸ NĂNG ⇒ 1 người
+  //       3 kỹ năng bị đếm 3 lần, không phải số người đang làm thật;
+  //   (2) bộ phận để "Làm ca" thì Bảng bố trí dùng nguyên needQty cho TỪNG ca
+  //       ("cần 1" × 2 ca = 2 suất) nhưng bảng vẫn ghi "cần 1" ⇒ lệch sổ;
+  //   (3) không thấy ai làm nhiều vị trí / ai bị xếp trùng giờ / ai bố trí
+  //       ngoài kỹ năng.
+  // CHUẨN MỚI:
+  //   • needQty = NHU CẦU CẢ NGÀY; chia ca bằng hrNeedSplitOf():
+  //       'even' (mặc định): 4 → 2+2 · 3 → 2+1 · 1 → 1+1 · 0 → 0+0
+  //       (need > 0 thì MỖI CA tối thiểu 1 suất — đúng yêu cầu người dùng)
+  //       'each': mỗi ca đủ N (vị trí trực 24/24)
+  //   • TÁCH 3 CON SỐ: Có kỹ năng (hồ sơ, distinct) · Đang bố trí (Bảng bố trí
+  //     của NGÀY đang xem, theo ca) · Dùng chung (≥2 vị trí/ngày)
+  //   • Còn thiếu = Σ theo ca max(0, cần_ca − có_ca) — KHÔNG dùng số unique
+  //   • Ngày chưa có lượt bố trí nào → trạng thái 'no-data' (xám), KHÔNG báo thiếu
+  //   • haveQty GIỮ trong dữ liệu (mây/file/Excel tương thích) nhưng KHÔNG dùng
+  //     để kết luận thiếu/đủ nữa.
+  // ════════════════════════════════════════════════════════════════
+  const HR_NEED_UI_KEY = 'bamboo_tracker_hr_need_ui_v1'; // thuần UI theo MÁY
+  const HR_NEED_MIN_PER_SHIFT = 1;                       // need > 0 ⇒ mỗi ca ≥ 1
+
+  function hrNeedReadUi() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(HR_NEED_UI_KEY) || 'null'); } catch (e) { raw = null; }
+    const ui = Object.assign({ dept: '', date: '', onlyShort: false, showSkillLinks: false, q: '', openPos: null }, (raw && typeof raw === 'object') ? raw : {});
+    if (!Array.isArray(ui.openPos)) ui.openPos = null;
+    return ui;
+  }
+  function hrNeedWriteUi(patch) {
+    const ui = Object.assign(hrNeedReadUi(), patch || {});
+    try { localStorage.setItem(HR_NEED_UI_KEY, JSON.stringify(ui)); } catch (e) { /* bỏ qua */ }
+    return ui;
+  }
+  function hrNeedDateISO() {
+    const ui = hrNeedReadUi();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ui.date || '')) return ui.date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(state.hrBoardDate || '')) return state.hrBoardDate;
+    return hrTodayISO();
+  }
+
+  // CHIA NHU CẦU NGÀY → TỪNG CA (nguồn chân lý duy nhất cho sơ đồ + Bảng bố trí)
+  function hrNeedSplitOf(need, colCount, mode) {
+    const n = Math.max(0, parseInt(need, 10) || 0);
+    const cols = Math.max(1, parseInt(colCount, 10) || 1);
+    if (cols <= 1) return [n];
+    if (mode === 'each') return Array.from({ length: cols }, () => n);
+    if (n <= 0) return Array.from({ length: cols }, () => 0);
+    const base = Math.floor(n / cols);
+    const rem = n % cols;
+    return Array.from({ length: cols }, (_, i) => Math.max(HR_NEED_MIN_PER_SHIFT, base + (i < rem ? 1 : 0)));
+  }
+  function hrNeedModeOf(row) { return (row && row.needMode === 'each') ? 'each' : 'even'; }
+  function hrNeedColCount(dept) {
+    const cfg = hrShiftCfg(dept || '');
+    return cfg.type === 'lamca' ? Math.max(1, (cfg.shifts || []).length) : 1;
+  }
+
+  // '07:30' → 450 · rỗng → null
+  function hrNeedMinOf(t) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || ''));
+    return m ? (+m[1]) * 60 + (+m[2]) : null;
+  }
+  // Khoảng giờ THẬT của 1 lượt bố trí: giờ ra trống = hết ca; ca đêm vắt 24h
+  function hrNeedSpanOf(a) {
+    const pos = hrPosById(a.positionId);
+    const dept = hrDeptAliasOf(a.department || (pos && pos.department) || '');
+    const cfg = hrShiftCfg(dept || state.hrBoardDept || 'Xưởng 2');
+    const rng = hrShiftRange(cfg, a.shiftIdx || 0);
+    let s = hrNeedMinOf(a.start);
+    if (s == null) s = rng.startMin;
+    let e = hrNeedMinOf(a.end);
+    if (e == null) e = rng.endMin;
+    if (e <= s) e += 1440;
+    return { s, e };
+  }
+  // Nhân viên có kỹ năng / đang giữ vị trí này?
+  function hrEmployeeHasPos(e, positionId, positionName) {
+    if (!e) return false;
+    const skills = Array.isArray(e.skills) ? e.skills : [];
+    if (positionId && skills.includes(positionId)) return true;
+    return !!(positionName && (e.position || '').trim() === String(positionName).trim());
+  }
+
+  // Bối cảnh 1 NGÀY: bố trí theo vị trí / theo người / người dùng chung / trùng giờ
+  function hrNeedCtx(dateISO) {
+    const assigns = hrAssignmentsOf(dateISO).filter(a => a && a.positionId && a.employeeId);
+    const byPos = new Map();
+    const byEmp = new Map();
+    assigns.forEach(a => {
+      if (!byPos.has(a.positionId)) byPos.set(a.positionId, []);
+      byPos.get(a.positionId).push(a);
+      if (!byEmp.has(a.employeeId)) byEmp.set(a.employeeId, []);
+      byEmp.get(a.employeeId).push(a);
+    });
+    // DÙNG CHUNG = 1 người ở ≥ 2 VỊ TRÍ KHÁC NHAU (khác ca cùng vị trí không tính)
+    const shared = new Map();
+    byEmp.forEach((list, empId) => {
+      const posIds = [...new Set(list.map(a => a.positionId))];
+      if (posIds.length >= 2) shared.set(empId, posIds);
+    });
+    // TRÙNG GIỜ = 2 lượt KHÁC VỊ TRÍ có khoảng giờ chồng nhau
+    const conflict = new Set();
+    byEmp.forEach(list => {
+      if (list.length < 2) return;
+      const spans = list.map(a => Object.assign({ a }, hrNeedSpanOf(a)));
+      for (let i = 0; i < spans.length; i++) {
+        for (let j = i + 1; j < spans.length; j++) {
+          if (spans[i].a.positionId === spans[j].a.positionId) continue;
+          if (Math.max(spans[i].s, spans[j].s) < Math.min(spans[i].e, spans[j].e)) {
+            conflict.add(spans[i].a.id);
+            conflict.add(spans[j].a.id);
+          }
+        }
+      }
+    });
+    return { dateISO, assigns, byPos, byEmp, shared, conflict, hasData: assigns.length > 0 };
+  }
+
+  // Số liệu 1 dòng (vị trí) — LIVE, không lưu vào state
+  function hrNeedRowMetrics(r, ctx) {
+    const pos = r.positionId ? hrPosById(r.positionId) : null;
+    const dept = hrDeptAliasOf(r.department || (pos && pos.department) || '');
+    const cols = hrNeedColCount(dept || '');
+    const needDay = Math.max(0, parseInt(r.needQty, 10) || 0);
+    const mode = hrNeedModeOf(r);
+    const needPerShift = hrNeedSplitOf(needDay, cols, mode);
+    const positionName = String(r.position || (pos && pos.name) || '').trim();
+    const positionId = r.positionId || '';
+    const mine = positionId ? (ctx.byPos.get(positionId) || []) : [];
+    const perShift = Array.from({ length: cols }, (_, si) => mine.filter(a => (a.shiftIdx || 0) === si));
+    const extraShift = mine.filter(a => (a.shiftIdx || 0) >= cols);
+    const counts = perShift.map(l => l.length);
+    let needTotal = 0, covered = 0, shortage = 0, over = 0;
+    needPerShift.forEach((n, si) => {
+      needTotal += n;
+      covered += Math.min(n, counts[si]);
+      shortage += Math.max(0, n - counts[si]);
+      if (n > 0) over += Math.max(0, counts[si] - n);
+    });
+    over += extraShift.length;
+    // CÓ KỸ NĂNG (distinct, KHÔNG lọc bộ phận — 1 người có thể làm nhiều nơi)
+    const emps = state.hrEmployees || [];
+    const skilledList = emps.filter(e => (e.status || 'active') === 'active' && hrEmployeeHasPos(e, positionId, positionName));
+    const skilledIds = skilledList.map(e => e.id);
+    const skilledSame = skilledList.filter(e => hrDeptAliasOf(e.department) === dept).length;
+    const assignedIds = [...new Set(mine.map(a => a.employeeId))];
+    const assignedSet = new Set(assignedIds);
+    const reserveIds = skilledIds.filter(id => !assignedSet.has(id));
+    const reserveIdleIds = reserveIds.filter(id => !ctx.byEmp.has(id)); // rảnh hẳn trong ngày
+    const sharedEmpIds = assignedIds.filter(id => ctx.shared.has(id));
+    const conflictIds = [...new Set(mine.filter(a => ctx.conflict.has(a.id)).map(a => a.employeeId))];
+    const unskilledIds = assignedIds.filter(id => {
+      const e = hrEmpById(id);
+      if (!e) return false;
+      const skills = Array.isArray(e.skills) ? e.skills : [];
+      if (!skills.length) return false;           // chưa khai kỹ năng → không kết luận
+      return !hrEmployeeHasPos(e, positionId, positionName);
+    });
+    let status = 'ok';
+    if (!ctx.hasData) status = 'no-data';
+    else if (needDay <= 0) status = 'none';
+    else if (shortage > 0) status = 'short';
+    else if (over > 0) status = 'over';
+    // NGÀY CHƯA CÓ LƯỢT BỐ TRÍ NÀO → KHÔNG kết luận thiếu (tránh báo đỏ oan)
+    if (status === 'no-data') { shortage = 0; over = 0; }
+    return {
+      key: positionId || r.id,
+      row: r, dept, cols, mode,
+      positionId, positionName,
+      needDay, needPerShift, needTotal,
+      assigned: mine, perShift, counts, assignedIds, assignedTotal: mine.length,
+      covered, shortage, over,
+      rate: needTotal ? covered / needTotal : null,
+      skilled: skilledList.length, skilledSame,
+      skilledIds, reserveIds, reserveIdleIds,
+      sharedEmpIds, conflictIds,
+      unskilledIds,
+      status
+    };
+  }
+
+  function hrNeedAllRows(dateISO) {
+    const ctx = hrNeedCtx(dateISO);
+    const rows = (state.hrPositionNeeds || []).map(r => hrNeedRowMetrics(r, ctx));
+    return { ctx, rows };
+  }
+
+  // Tổng hợp (1 bộ phận hoặc toàn bộ) — cộng theo CA, không cộng unique
+  function hrNeedTotalsOf(rows, dept) {
+    const list = dept ? rows.filter(rm => rm.dept === dept) : rows;
+    const t = { need: 0, assigned: 0, covered: 0, shortage: 0, over: 0, positions: list.length, shared: 0, unskilled: 0, reserveIdle: 0, rows: list };
+    const shared = new Set(), unskilled = new Set(), reserve = new Set();
+    list.forEach(rm => {
+      t.need += rm.needTotal;
+      t.assigned += rm.assignedTotal;
+      t.covered += rm.covered;
+      t.shortage += rm.shortage;
+      t.over += rm.over;
+      rm.sharedEmpIds.forEach(id => shared.add(id));
+      rm.unskilledIds.forEach(id => unskilled.add(id));
+      rm.reserveIdleIds.forEach(id => reserve.add(id));
+    });
+    t.shared = shared.size;
+    t.unskilled = unskilled.size;
+    t.reserveIdle = reserve.size;
+    return t;
+  }
+
+  // Tổng hợp theo TỪNG bộ phận (cho bong bóng cấp 1)
+  function hrNeedDeptSummaries(rows, ctx) {
+    return HR_DEPARTMENTS.map(dept => {
+      const list = rows.filter(rm => rm.dept === dept);
+      const t = hrNeedTotalsOf(list);
+      let status = 'empty';
+      if (!ctx.hasData) status = 'no-data';
+      else if (!list.length) status = 'empty';
+      else if (t.shortage > 0) status = 'short';
+      else if (t.over > 0) status = 'over';
+      else status = 'ok';
+      return Object.assign({ dept, status }, t);
+    });
+  }
+
+  // Nhãn + màu trạng thái dùng chung
+  function hrNeedStatusMeta(status) {
+    const map = {
+      ok:      { label: 'Đủ người', cls: 'is-ok' },
+      short:   { label: 'Còn thiếu', cls: 'is-short' },
+      over:    { label: 'Dư người', cls: 'is-over' },
+      none:    { label: 'Không cần', cls: 'is-none' },
+      'no-data': { label: 'Chưa có bố trí', cls: 'is-nodata' },
+      empty:   { label: 'Chưa có vị trí', cls: 'is-empty' }
+    };
+    return map[status] || map.ok;
+  }
+
+  // ── RENDER: SƠ ĐỒ 3 CẤP ─────────────────────────────────────────
+  // Cấp 1 = bong bóng bộ phận (nước dâng = % độ phủ) → bấm 1 bộ phận thì
+  // thu 4 bộ phận còn lại về chùm chấm nhỏ, bong bóng đang chọn co lại bên
+  // trái và xòe cấp 2 (thẻ vị trí) + cấp 3 (người + đường nối SVG).
+  function hnmToolbarHtml(ui, dateISO) {
+    const hasData = hrNeedCtx(dateISO).hasData;
+    return `
+      <div class="hnm-toolbar">
+        <div class="hnm-period">
+          <button type="button" class="hnm-btn" data-hnm-day="-1" title="Ngày trước"><i data-lucide="chevron-left"></i></button>
+          <input type="date" id="hnm-date" class="hnm-date" value="${escapeHTML(dateISO)}" title="Ngày xem bố trí">
+          <button type="button" class="hnm-btn" data-hnm-day="1" title="Ngày sau"><i data-lucide="chevron-right"></i></button>
+          <button type="button" class="hnm-btn hnm-today" data-hnm-today title="Về hôm nay">Hôm nay</button>
+        </div>
+        <label class="hnm-check" title="Chỉ hiện vị trí còn thiếu người">
+          <input type="checkbox" id="hnm-only-short" ${ui.onlyShort ? 'checked' : ''}> Chỉ chỗ thiếu
+        </label>
+        <label class="hnm-check" title="Vẽ đường nét đứt tới các vị trí người dự bị có thể làm">
+          <input type="checkbox" id="hnm-skill-links" ${ui.showSkillLinks ? 'checked' : ''}> Đường kỹ năng
+        </label>
+        <input type="search" id="hnm-search" class="hnm-search" value="${escapeHTML(ui.q || '')}" placeholder="Tìm người / vị trí…">
+        <span class="hnm-live ${hasData ? 'is-live' : 'is-nodata'}">
+          <i data-lucide="${hasData ? 'radio' : 'cloud-off'}"></i>${hasData ? 'Số liệu sống từ Bảng bố trí' : 'Chưa có bố trí ngày này'}
+        </span>
+      </div>`;
+  }
+
+  function hnmKpiHtml(t, dept) {
+    return `
+      <span class="hnm-kpi is-need"><i data-lucide="target"></i><b>${t.need}</b><em>suất cần${dept ? '' : ' (toàn bộ)'}</em></span>
+      <span class="hnm-kpi is-have"><i data-lucide="user-check"></i><b>${t.assigned}</b><em>đang bố trí</em></span>
+      <span class="hnm-kpi ${t.shortage ? 'is-bad' : 'is-ok'}"><i data-lucide="alert-triangle"></i><b>${t.shortage}</b><em>còn thiếu</em></span>
+      <span class="hnm-kpi is-shared"><i data-lucide="link-2"></i><b>${t.shared}</b><em>người làm nhiều vị trí</em></span>
+      <span class="hnm-kpi is-unskilled"><i data-lucide="user-x"></i><b>${t.unskilled}</b><em>bố trí ngoài kỹ năng</em></span>
+      <span class="hnm-kpi is-reserve"><i data-lucide="sprout"></i><b>${t.reserveIdle}</b><em>dự bị rảnh</em></span>`;
+  }
+
+  // Bong bóng bộ phận — nước dâng = tỷ lệ phủ (đã bố trí / cần), màu theo trạng thái
+  function hnmBubblesHtml(rows, ctx, activeDept) {
+    const list = hrNeedDeptSummaries(rows, ctx);
+    return list.map(d => {
+      const meta = hrNeedStatusMeta(d.status);
+      const pct = d.need ? Math.round(d.covered * 100 / d.need) : (d.status === 'empty' ? 0 : 100);
+      const size = 76 + Math.min(28, (d.positions || 0) * 4);
+      const sub = d.positions ? `${d.positions} vị trí` : 'chưa có vị trí';
+      const title = `${d.dept} — cần ${d.need} suất · đang bố trí ${d.assigned} · thiếu ${d.shortage}`
+        + (ctx.hasData ? '' : ' · chưa có dữ liệu bố trí ngày này');
+      return `<button type="button" class="hnm-bubble ${meta.cls}${d.dept === activeDept ? ' is-on' : ''}"
+          data-hnm-dept="${escapeHTML(d.dept)}" style="--fill:${pct}%;--hs:${size}px" title="${escapeHTML(title)}"
+          aria-pressed="${d.dept === activeDept ? 'true' : 'false'}">
+        <span class="hnm-bubble-fill" aria-hidden="true"></span>
+        <span class="hnm-bubble-in">
+          <b>${ctx.hasData ? `${d.assigned}/${d.need}` : '—'}</b>
+          <i>${escapeHTML(d.dept)}</i>
+          <u>${escapeHTML(sub)}${d.shortage ? ` · thiếu ${d.shortage}` : ''}</u>
+        </span>
+        ${d.shortage ? '<span class="hnm-bubble-dot" aria-hidden="true"></span>' : ''}
+      </button>`;
+    }).join('');
+  }
+
+  // Bong bóng đang chọn (thu nhỏ) + chùm chấm 4 bộ phận còn lại để đổi nhanh
+  function hnmFocusHtml(rows, ctx, dept) {
+    const sums = hrNeedDeptSummaries(rows, ctx);       // tính 1 lần
+    const sum = sums.find(d => d.dept === dept) || { dept, need: 0, assigned: 0, covered: 0, shortage: 0, status: 'empty', positions: 0 };
+    const meta = hrNeedStatusMeta(sum.status);
+    const pct = sum.need ? Math.round((sum.covered || 0) * 100 / sum.need) : 0;
+    const others = sums.filter(d => d.dept !== dept).map(d => {
+      const m = hrNeedStatusMeta(d.status);
+      return `<button type="button" class="hnm-dot ${m.cls}" data-hnm-dept="${escapeHTML(d.dept)}" title="${escapeHTML(d.dept)} — ${escapeHTML(m.label)}">${escapeHTML(d.dept.slice(0, 2))}</button>`;
+    }).join('');
+    return `
+      <button type="button" class="hnm-back" data-hnm-back title="Quay lại chùm bong bóng bộ phận">
+        <i data-lucide="chevron-left"></i> Bộ phận
+      </button>
+      <div class="hnm-bubble hnm-bubble-sm ${meta.cls} is-on" style="--fill:${pct}%">
+        <span class="hnm-bubble-fill" aria-hidden="true"></span>
+        <span class="hnm-bubble-in"><b>${sum.assigned}/${sum.need}</b><i>${escapeHTML(dept)}</i><u>${escapeHTML(meta.label)}</u></span>
+      </div>
+      <div class="hnm-dots">${others}</div>`;
+  }
+
+  // Cấp 2 — 1 THẺ VỊ TRÍ (pill) + cấp 3 (chip người) nằm ngay bên phải
+  function hnmPosRowHtml(rm, ctx, ui) {
+    const meta = hrNeedStatusMeta(rm.status);
+    const open = hnmIsPosOpen(ui, rm.key);
+    const q = hnmNormQ(ui.q);
+    const hitPos = q && hnmNormQ(rm.positionName).includes(q);
+    const split = rm.needPerShift.join('+');
+    const badge = `${rm.assignedTotal}/${rm.needTotal}`;
+    const modeTip = rm.mode === 'each'
+      ? 'Đang chia: MỖI CA ĐỦ N (bấm để chuyển sang chia đều)'
+      : 'Đang chia: CHIA ĐỀU theo ca (bấm để chuyển sang mỗi ca đủ N)';
+    const gauges = rm.needPerShift.map((n, si) => {
+      const have = rm.counts[si];
+      const w = n > 0 ? Math.min(100, Math.round(have * 100 / n)) : 0;
+      const gcls = n <= 0 ? 'is-off' : (have >= n ? 'is-full' : (have ? 'is-part' : 'is-empty'));
+      const label = rm.cols > 1 ? `Ca ${si + 1}` : 'Suất';
+      return `<span class="hnm-gauge ${gcls}" title="${label}: ${have}/${n} người">
+        <span class="hnm-gauge-bar"><i style="width:${w}%"></i></span><em>${label}</em><b>${have}/${n}</b>
+      </span>`;
+    }).join('');
+    const chips = [];
+    rm.assigned.forEach(a => chips.push(hnmPersonChipHtml(a, rm, ctx, q)));
+    // Ô thiếu: bấm để mở hộp bố trí đúng ca
+    rm.needPerShift.forEach((n, si) => {
+      for (let k = rm.counts[si]; k < n; k++) {
+        chips.push(`<button type="button" class="hnm-slot" data-hnm-add="${escapeHTML(rm.positionId)}" data-shift="${si}"
+          title="Thiếu người — bấm để bố trí cho ${rm.cols > 1 ? 'ca ' + (si + 1) : 'vị trí này'}">
+          <span>?</span><em>${rm.cols > 1 ? 'Ca ' + (si + 1) : 'Thiếu'}</em></button>`);
+      }
+    });
+    if (!chips.length) {
+      chips.push(`<span class="hnm-empty-chip">${ctx.hasData ? 'Chưa bố trí ai' : 'Chưa có dữ liệu bố trí ngày này'}</span>`);
     }
+    return `<div class="hnm-pos ${meta.cls}${open ? ' is-open' : ''}${hitPos ? ' is-hit' : ''}" data-hnm-row="${escapeHTML(rm.key)}">
+      <div class="hnm-pos-line">
+        <button type="button" class="hnm-pos-pill" data-hnm-toggle="${escapeHTML(rm.key)}" aria-expanded="${open ? 'true' : 'false'}"
+          title="${escapeHTML(rm.positionName)} — ${escapeHTML(meta.label)}">
+          <span class="hnm-pos-ic"><i data-lucide="git-branch"></i></span>
+          <span class="hnm-pos-name">${escapeHTML(rm.positionName || '—')}</span>
+          <span class="hnm-pos-badge">${badge}</span>
+        </button>
+        <span class="hnm-pos-tools">
+          <label class="hnm-need hnm-edit-only" title="Số suất cần cho CẢ NGÀY (tự chia theo ca)">Cần
+            <input type="number" min="0" max="999" step="1" value="${rm.needDay}" data-hnm-need="${escapeHTML(rm.row.id)}">
+          </label>
+          <span class="hnm-split${rm.cols > 1 ? '' : ' is-off'}" title="Chia theo ca">${rm.cols > 1 ? split : '1 ca'}</span>
+          <button type="button" class="hnm-mini hnm-edit-only${rm.mode === 'each' ? ' is-each' : ''}" data-hnm-mode="${escapeHTML(rm.row.id)}" title="${modeTip}">
+            <i data-lucide="${rm.mode === 'each' ? 'copy' : 'columns'}"></i>
+          </button>
+          ${rm.positionId ? `<button type="button" class="hnm-mini hnm-edit-only" data-hnm-add="${escapeHTML(rm.positionId)}" data-shift="0" title="Bố trí người cho vị trí này">
+            <i data-lucide="user-plus"></i>
+          </button>
+          <button type="button" class="hnm-mini" data-hnm-board="${escapeHTML(rm.positionId)}" title="Mở Bảng bố trí đúng ngày/bộ phận">
+            <i data-lucide="external-link"></i>
+          </button>` : ''}
+        </span>
+      </div>
+      <div class="hnm-pos-detail"${open ? '' : ' hidden'}>
+        <div class="hnm-gauges">${gauges}</div>
+        <div class="hnm-chips">${chips.join('')}</div>
+        <div class="hnm-pos-foot">
+          <span class="hnm-foot-item" title="Số người ĐANG LÀM VIỆC có kỹ năng vị trí này (đếm 1 người 1 lần, không phụ thuộc bộ phận)">
+            <i data-lucide="award"></i>${rm.skilled} có kỹ năng${rm.skilledSame !== rm.skilled ? ` (${rm.skilledSame} cùng BP)` : ''}
+          </span>
+          ${rm.sharedEmpIds.length ? `<span class="hnm-foot-item is-shared"><i data-lucide="link-2"></i>${rm.sharedEmpIds.length} làm nhiều vị trí</span>` : ''}
+          ${rm.unskilledIds.length ? `<span class="hnm-foot-item is-warn"><i data-lucide="user-x"></i>${rm.unskilledIds.length} ngoài kỹ năng</span>` : ''}
+          ${rm.conflictIds.length ? `<span class="hnm-foot-item is-bad"><i data-lucide="alarm-clock"></i>${rm.conflictIds.length} trùng giờ</span>` : ''}
+          ${rm.status === 'no-data' ? '<span class="hnm-foot-item is-muted"><i data-lucide="cloud-off"></i>chưa có bố trí</span>' : ''}
+        </div>
+      </div>
+    </div>`;
+  }
 
+  // Chip 1 NGƯỜI trong thẻ vị trí (cấp 3) — dùng chung/ngoài kỹ năng/trùng giờ có dấu riêng
+  function hnmPersonChipHtml(a, rm, ctx, q) {
+    const emp = hrEmpById(a.employeeId);
+    const name = emp ? (emp.name || '') : 'Đã xóa';
+    const shared = ctx.shared.has(a.employeeId);
+    const conflict = ctx.conflict.has(a.id);
+    const unskilled = rm.unskilledIds.includes(a.employeeId);
+    const hit = q && (hnmNormQ(name).includes(q) || hnmNormQ(emp ? emp.code : '').includes(q));
+    const timeTxt = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}`;
+    const cls = ['hnm-person'];
+    if (shared) cls.push('is-shared');
+    if (conflict) cls.push('is-conflict');
+    if (unskilled) cls.push('is-unskilled');
+    if (hit) cls.push('is-hit');
+    const tip = `${name}${emp && emp.code ? ' · ' + emp.code : ''} · ${timeTxt}`
+      + (shared ? ' · làm nhiều vị trí' : '') + (conflict ? ' · TRÙNG GIỜ với vị trí khác' : '')
+      + (unskilled ? ' · bố trí ngoài kỹ năng' : '');
+    return `<button type="button" class="${cls.join(' ')}" data-hnm-person="${escapeHTML(a.employeeId)}"
+        data-hnm-pos="${escapeHTML(rm.positionId)}" data-hnm-assign="${escapeHTML(a.id)}" title="${escapeHTML(tip)}">
+      <b>${escapeHTML(hrShortName(name))}</b><i>${escapeHTML(timeTxt)}</i>
+      ${shared ? '<u title="Làm nhiều vị trí">↔</u>' : ''}${conflict ? '<s title="Trùng giờ">!</s>' : ''}
+    </button>`;
+  }
+
+  function hnmNormQ(s) { return hrStripDiacritics(String(s || '')).toLowerCase().replace(/\s+/g, ' ').trim(); }
+
+  function hnmIsPosOpen(ui, key) {
+    if (!Array.isArray(ui.openPos)) return true;         // mặc định mở tất cả
+    return ui.openPos.includes(key);
+  }
+
+  // Cột phải: NGƯỜI LÀM NHIỀU VỊ TRÍ (+ DỰ BỊ khi bật "Đường kỹ năng")
+  function hnmSharedColHtml(rows, ctx, dept, ui) {
+    const sharedNodes = [];
+    ctx.shared.forEach((posIds, empId) => {
+      const mine = rows.filter(rm => rm.assignedIds.includes(empId));
+      const inDept = mine.filter(rm => rm.dept === dept);
+      if (!inDept.length) return;
+      const emp = hrEmpById(empId);
+      const list = mine.map(rm => {
+        const a = rm.assigned.find(x => x.employeeId === empId);
+        const conflict = a && ctx.conflict.has(a.id);
+        return `<span class="hnm-node-pos${conflict ? ' is-bad' : ''}" data-hnm-node-pos="${escapeHTML(rm.positionId)}">${escapeHTML(rm.positionName)}${conflict ? ' ⚠' : ''}</span>`;
+      }).join('');
+      sharedNodes.push(`<div class="hnm-node is-shared" data-hnm-person="${escapeHTML(empId)}" title="${escapeHTML(emp ? emp.name : 'Đã xóa')} — làm ${mine.length} vị trí">
+        <b>${escapeHTML(hrShortName(emp ? emp.name : 'Đã xóa'))}</b>
+        <span class="hnm-node-pos-list">${list}</span>
+      </div>`);
+    });
+    const reserveNodes = [];
+    if (ui.showSkillLinks) {
+      const byEmp = new Map();
+      rows.filter(rm => rm.dept === dept).forEach(rm => {
+        rm.reserveIds.forEach(id => {
+          if (!byEmp.has(id)) byEmp.set(id, []);
+          byEmp.get(id).push(rm.positionId);
+        });
+      });
+      byEmp.forEach((posIds, empId) => {
+        const emp = hrEmpById(empId);
+        if (!emp) return;
+        reserveNodes.push(`<div class="hnm-node is-reserve" data-hnm-person="${escapeHTML(empId)}" data-hnm-reserve-pos="${escapeHTML(posIds.join(','))}"
+          title="${escapeHTML(emp.name)} — có kỹ năng, chưa bố trí ở vị trí này">
+          <b>${escapeHTML(hrShortName(emp.name))}</b><em>${posIds.length} kỹ năng</em>
+        </div>`);
+      });
+    }
+    if (!sharedNodes.length && !reserveNodes.length) {
+      return `<div class="hnm-node-empty">${ctx.hasData ? 'Không có ai làm nhiều vị trí trong ngày này.' : 'Chưa có dữ liệu bố trí.'}</div>`;
+    }
+    return `
+      ${sharedNodes.length ? `<div class="hnm-node-head"><i data-lucide="link-2"></i> Người làm nhiều vị trí <b>${sharedNodes.length}</b></div>${sharedNodes.join('')}` : ''}
+      ${reserveNodes.length ? `<div class="hnm-node-head"><i data-lucide="sprout"></i> Dự bị (có kỹ năng) <b>${reserveNodes.length}</b></div>${reserveNodes.join('')}` : ''}`;
+  }
+
+  // Danh sách thẻ vị trí (cấp 2) của bộ phận đang chọn
+  function hnmPosListHtml(rows, ctx, dept, ui) {
+    const q = hnmNormQ(ui.q);
+    let list = rows.filter(rm => rm.dept === dept);
+    if (ui.onlyShort) list = list.filter(rm => rm.status === 'short');
+    if (q) {
+      list = list.filter(rm => {
+        if (hnmNormQ(rm.positionName).includes(q)) return true;
+        if (rm.assigned.some(a => { const e = hrEmpById(a.employeeId); return e && (hnmNormQ(e.name).includes(q) || hnmNormQ(e.code).includes(q)); })) return true;
+        return rm.skilledIds.some(id => { const e = hrEmpById(id); return e && hnmNormQ(e.name).includes(q); });
+      });
+    }
+    list = list.slice().sort((a, b) => {
+      const w = x => (x.status === 'short' ? 0 : x.status === 'no-data' ? 1 : x.status === 'over' ? 2 : 3);
+      return w(a) - w(b) || String(a.positionName).localeCompare(String(b.positionName), 'vi');
+    });
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:22px;color:var(--text-muted);">
+      const deptRows = rows.filter(rm => rm.dept === dept);
+      const msg = !deptRows.length
+        ? `Bộ phận <b>${escapeHTML(dept)}</b> chưa có vị trí nào.`
+        : (ui.onlyShort ? 'Không có vị trí nào đang thiếu người 🎉' : 'Không tìm thấy vị trí / người khớp từ khóa.');
+      return `<div class="hnm-empty">
+        <i data-lucide="git-branch"></i><p>${msg}</p>
+        ${!deptRows.length ? `<button type="button" class="btn btn-outline btn-sm" data-hnm-addpos="${escapeHTML(dept)}" data-perm="hr"><i data-lucide="plus"></i> Thêm vị trí</button>` : ''}
+      </div>`;
+    }
+    return list.map(rm => hnmPosRowHtml(rm, ctx, ui)).join('');
+  }
+
+  // BẢNG CHI TIẾT (thu gọn) — vẫn cho sửa "Cần", xem ghi chú, sửa/xóa dòng
+  function renderHrNeedTable(rows, dept) {
+    const tbody = document.getElementById('hr-posneed-body');
+    if (!tbody) return;
+    const list = (dept ? rows.filter(rm => rm.dept === dept) : rows).slice().sort((a, b) =>
+      HR_DEPARTMENTS.indexOf(a.dept) - HR_DEPARTMENTS.indexOf(b.dept) ||
+      String(a.positionName).localeCompare(String(b.positionName), 'vi'));
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding:22px;color:var(--text-muted);">
         <i data-lucide="target" style="width:26px;height:26px;margin-bottom:6px;"></i>
-        <p>Chưa có vị trí nào — thêm Vị Trí Làm Việc ở thẻ <b>"Vị Trí &amp; Kỹ Năng"</b>, dòng sẽ tự động xuất hiện tại đây. Có thể bấm "Thêm Vị Trí Cần" để tạo dòng thủ công.</p></td></tr>`;
-      hrScheduleIcons();
+        <p>Chưa có vị trí nào — thêm Vị Trí Làm Việc ở thẻ <b>"Vị Trí &amp; Kỹ Năng"</b>, dòng sẽ tự động xuất hiện. Có thể bấm "Thêm Vị Trí Cần" để tạo dòng thủ công.</p></td></tr>`;
       return;
     }
-
-    tbody.innerHTML = [...list].sort((a, b) =>
-      String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
-      String(a.position || '').localeCompare(String(b.position || ''), 'vi')).map(r => {
-      const missing = Math.max(0, (r.needQty || 0) - (r.haveQty || 0));
-      return `<tr>
-        <td>${escapeHTML(r.department || '—')}</td>
-        <td><strong>${escapeHTML(r.position || '—')}</strong></td>
-        <td><input type="number" min="0" class="form-input" style="width:74px;padding:3px 6px;" value="${parseInt(r.needQty, 10) || 0}"
-          onchange="app.hrSetPositionNeedQty('${r.id}','needQty',this.value)" title="Số người cần (chỉnh sửa tay)"></td>
-        <td><input type="number" min="0" class="form-input" style="width:74px;padding:3px 6px;" value="${parseInt(r.haveQty, 10) || 0}"
-          onchange="app.hrSetPositionNeedQty('${r.id}','haveQty',this.value)" title="Số người hiện có (chỉnh sửa tay hoặc bấm Đồng Bộ)"></td>
-        <td><strong style="color:${missing > 0 ? 'var(--danger)' : '#16a34a'};">${missing}</strong></td>
-        <td class="hr-notes" title="${escapeHTML(r.notes || '')}">${escapeHTML(r.notes || '—')}</td>
+    tbody.innerHTML = list.map(rm => {
+      const meta = hrNeedStatusMeta(rm.status);
+      const sharedNames = rm.sharedEmpIds.map(id => (hrEmpById(id) || {}).name || '').filter(Boolean).join(', ');
+      const shiftTxt = rm.cols > 1
+        ? rm.counts.map((c, i) => `Ca ${i + 1}: ${c}/${rm.needPerShift[i]}`).join(' · ')
+        : `${rm.counts[0]}/${rm.needPerShift[0]}`;
+      return `<tr class="${rm.status === 'short' ? 'is-short-row' : ''}">
+        <td>${escapeHTML(rm.dept || '—')}</td>
+        <td><strong>${escapeHTML(rm.positionName || '—')}</strong>
+          <span class="hnm-status ${meta.cls}">${escapeHTML(meta.label)}</span></td>
+        <td><input type="number" min="0" max="999" class="form-input" style="width:74px;padding:3px 6px;" value="${rm.needDay}"
+          onchange="app.hrSetPositionNeedQty('${rm.row.id}','needQty',this.value)" title="Số suất cần cho CẢ NGÀY (tự chia theo ca)"></td>
+        <td><span class="hnm-split${rm.cols > 1 ? '' : ' is-off'}">${rm.cols > 1 ? rm.needPerShift.join('+') : '1 ca'}</span></td>
+        <td>${rm.skilled}${rm.skilledSame !== rm.skilled ? ` <small class="hnm-muted">(${rm.skilledSame} cùng BP)</small>` : ''}</td>
+        <td>${rm.assignedTotal} <small class="hnm-muted">${escapeHTML(shiftTxt)}</small></td>
+        <td>${rm.sharedEmpIds.length ? `<span class="hnm-shared-tag" title="${escapeHTML(sharedNames)}">↔ ${rm.sharedEmpIds.length}</span>` : '<span class="hnm-muted">—</span>'}</td>
+        <td><strong style="color:${rm.shortage > 0 ? 'var(--danger)' : (rm.status === 'no-data' ? 'var(--text-muted)' : '#16a34a')};">${rm.status === 'no-data' ? '—' : rm.shortage}</strong></td>
+        <td class="hr-notes" title="${escapeHTML(rm.row.notes || '')}">${escapeHTML(rm.row.notes || '—')}</td>
         <td class="text-right">
           <div style="display:flex;justify-content:flex-end;gap:4px;">
-            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrEditPositionNeed('${r.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
-            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeletePositionNeed('${r.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrEditPositionNeed('${rm.row.id}')" title="Sửa"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" data-perm="hr" onclick="app.hrDeletePositionNeed('${rm.row.id}')" title="Xóa" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
           </div>
         </td>
       </tr>`;
     }).join('');
+  }
+
+  // ĐIỂM RENDER DUY NHẤT của thẻ (gọi trong renderPositionNeedsTable)
+  function renderHrNeedCard() {
+    const ui = hrNeedReadUi();
+    const dateISO = hrNeedDateISO();
+    const { ctx, rows } = hrNeedAllRows(dateISO);
+    const dept = HR_DEPARTMENTS.includes(ui.dept) ? ui.dept : '';
+    const totals = hrNeedTotalsOf(rows, dept);
+    const countEl = document.getElementById('hr-posneed-count');
+    if (countEl) {
+      if (!ctx.hasData) {
+        countEl.textContent = `${dept || 'Tất cả bộ phận'} · ${fmtDateDMY(dateISO)} — chưa có dữ liệu bố trí ngày này`;
+      } else {
+        countEl.textContent = `${dept || 'Tất cả bộ phận'} · ${fmtDateDMY(dateISO)} — cần ${totals.need} suất · đang bố trí ${totals.assigned} · còn thiếu ${totals.shortage}`
+          + ` · ${totals.shared} người làm nhiều vị trí (${totals.positions} vị trí)`;
+      }
+    }
+    const tb = document.getElementById('hnm-toolbar');
+    if (tb) tb.innerHTML = hnmToolbarHtml(ui, dateISO);
+    const wrap = document.getElementById('hr-need-map');
+    if (wrap) {
+      wrap.dataset.dept = dept;
+      const kpi = document.getElementById('hnm-kpi');
+      if (kpi) kpi.innerHTML = hnmKpiHtml(totals, dept);
+      const bub = document.getElementById('hnm-dept-bubbles');
+      if (bub) bub.innerHTML = hnmBubblesHtml(rows, ctx, dept);
+      const focus = document.getElementById('hnm-focus');
+      if (focus) focus.innerHTML = dept ? hnmFocusHtml(rows, ctx, dept) : '';
+      const posCol = document.getElementById('hnm-pos-col');
+      if (posCol) posCol.innerHTML = dept ? hnmPosListHtml(rows, ctx, dept, ui) : '';
+      const sharedCol = document.getElementById('hnm-shared-col');
+      if (sharedCol) sharedCol.innerHTML = dept ? hnmSharedColHtml(rows, ctx, dept, ui) : '';
+      const legend = document.getElementById('hnm-legend');
+      if (legend) {
+        legend.innerHTML = dept ? `
+          <span class="hnm-lg is-ok">Đủ người</span>
+          <span class="hnm-lg is-short">Thiếu</span>
+          <span class="hnm-lg is-over">Dư</span>
+          <span class="hnm-lg is-nodata">Chưa có bố trí</span>
+          <span class="hnm-lg-note">Thanh = suất theo ca · chip ↔ = người làm nhiều vị trí · nét đứt = đường kỹ năng · bấm chip để tô sáng người đó</span>` : '';
+      }
+      // Đường nối vẽ SAU khi trình duyệt bố cục xong
+      const raf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (cb => setTimeout(cb, 0));
+      raf(() => hnmDrawLinks());
+    }
+    renderHrNeedTable(rows, dept);
+    hrScheduleIcons();
+  }
+
+  // ── TƯƠNG TÁC SƠ ĐỒ 3 CẤP ──────────────────────────────────────
+  function hnmSelectDept(dept) {
+    if (!HR_DEPARTMENTS.includes(dept)) return;
+    hrNeedWriteUi({ dept, q: '' });
+    renderHrNeedCard();
+    updateHrCardGrid();
+  }
+  function hnmBack() {
+    hrNeedWriteUi({ dept: '' });
+    renderHrNeedCard();
+    updateHrCardGrid();
+  }
+  function hnmSetDate(d) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))) return;
+    hrNeedWriteUi({ date: d });
+    renderHrNeedCard();
+  }
+  function hnmShiftDay(days) { hnmSetDate(hrShiftDateISO(hrNeedDateISO(), Number(days) || 0)); }
+  function hnmToday() { hnmSetDate(hrTodayISO()); }
+  function hnmSetSearch(val) { hrNeedWriteUi({ q: String(val || '') }); renderHrNeedCard(); }
+  function hnmSetOnlyShort(on) { hrNeedWriteUi({ onlyShort: !!on }); renderHrNeedCard(); }
+  function hnmSetSkillLinks(on) { hrNeedWriteUi({ showSkillLinks: !!on }); renderHrNeedCard(); }
+  function hnmTogglePos(key) {
+    const ui = hrNeedReadUi();
+    const all = (state.hrPositionNeeds || []).map(r => r.positionId || r.id);
+    let open = Array.isArray(ui.openPos) ? ui.openPos.slice() : all;
+    if (open.includes(key)) open = open.filter(x => x !== key);
+    else open.push(key);
+    hrNeedWriteUi({ openPos: open });
+    renderHrNeedCard();
+  }
+  function hnmNeedRow(rowId) { return (state.hrPositionNeeds || []).find(r => r.id === rowId) || null; }
+  function hnmSetNeed(rowId, val) {
+    if (!requireEditPermission()) return;
+    const r = hnmNeedRow(rowId);
+    if (!r) return;
+    const v = Math.max(0, Math.min(999, parseInt(val, 10) || 0));
+    if (v === (parseInt(r.needQty, 10) || 0)) return;
+    r.needQty = v;
+    r.updatedAt = new Date().toISOString();
+    saveHrData(['hrPositionNeeds']);
+    renderHrNeedCard();
+    updateHrCardGrid();
+    try { renderHrBoard(); } catch (e) { /* bảng bố trí đang đóng */ }
+  }
+  function hnmToggleMode(rowId) {
+    if (!requireEditPermission()) return;
+    const r = hnmNeedRow(rowId);
+    if (!r) return;
+    r.needMode = hrNeedModeOf(r) === 'each' ? 'even' : 'each';
+    r.updatedAt = new Date().toISOString();
+    saveHrData(['hrPositionNeeds']);
+    renderHrNeedCard();
+    updateHrCardGrid();
+    try { renderHrBoard(); } catch (e) { /* bảng bố trí đang đóng */ }
+  }
+  // Mở Bảng bố trí đúng NGÀY + BỘ PHẬN của vị trí (bấm từ pill)
+  function hnmOpenBoard(posId) {
+    const pos = posId ? hrPosById(posId) : null;
+    state.hrBoardDate = hrNeedDateISO();
+    if (pos && pos.department) state.hrBoardDept = hrDeptAliasOf(pos.department);
+    else if (HR_DEPARTMENTS.includes(hrNeedReadUi().dept)) state.hrBoardDept = hrNeedReadUi().dept;
+    try { renderHrBoard(); } catch (e) {}
+    try { hrOpenCard('hr-board-card'); } catch (e) {}
+    const board = document.getElementById('hr-board');
+    if (board && typeof board.scrollIntoView === 'function') board.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function hnmOpenAssign(posId, shiftIdx) {
+    if (!requireEditPermission()) return;
+    const pos = posId ? hrPosById(posId) : null;
+    state.hrBoardDate = hrNeedDateISO();
+    if (pos && pos.department) state.hrBoardDept = hrDeptAliasOf(pos.department);
+    else if (HR_DEPARTMENTS.includes(hrNeedReadUi().dept)) state.hrBoardDept = hrNeedReadUi().dept;
+    try { renderHrBoard(); } catch (e) {}
+    try { hrBoardOpenAssign(posId, Number(shiftIdx) || 0, ''); } catch (e) {}
+  }
+  function hnmAddPosition(dept) {
+    if (!requireEditPermission()) return;
+    try { openPositionModal(); } catch (e) { return; }
+    const sel = document.getElementById('position-department');
+    if (sel && dept) sel.value = dept;
+  }
+
+  // Bấm 1 người → tô sáng MỌI chip/node của người đó (thấy ngay ai làm nhiều vị trí)
+  function hnmHotPerson(empId) {
+    if (!empId || !document.querySelectorAll) return;
+    const nodes = Array.from(document.querySelectorAll('[data-hnm-person]'));
+    const anyHot = nodes.some(el => el.classList && el.classList.contains('is-hot'));
+    const same = nodes.some(el => el.classList && el.classList.contains('is-hot') && el.getAttribute('data-hnm-person') === empId);
+    const on = !(anyHot && same);            // bấm lại đúng người đang tô = bỏ tô
+    nodes.forEach(el => {
+      if (!el.classList) return;
+      el.classList.toggle('is-hot', on && el.getAttribute('data-hnm-person') === empId);
+    });
+    if (document.querySelectorAll) {
+      Array.from(document.querySelectorAll('.hnm-pos')).forEach(el => { if (el.classList) el.classList.remove('is-hot-pos'); });
+    }
+    if (on) {
+      nodes.forEach(el => {
+        if (!el.classList || el.getAttribute('data-hnm-person') !== empId) return;
+        const rowEl = el.closest ? el.closest('.hnm-pos') : null;
+        if (rowEl && rowEl.classList) rowEl.classList.add('is-hot-pos');
+      });
+    }
+    hnmDrawLinks();
+  }
+
+  // NỐI ĐƯỜNG (SVG): pill ↔ node "người làm nhiều vị trí" + nét đứt tới "dự bị"
+  function hnmDrawLinks() {
+    const svg = document.getElementById('hnm-links');
+    if (!svg || !document.querySelector) return;
+    const stage = document.querySelector('.hnm-stage');
+    if (!stage || typeof stage.getBoundingClientRect !== 'function') return;
+    let base = null;
+    try { base = stage.getBoundingClientRect(); } catch (e) { base = null; }
+    if (!base || !base.width) return;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', `0 0 ${Math.round(base.width)} ${Math.round(base.height)}`);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    const rectOf = el => { try { return el.getBoundingClientRect(); } catch (e) { return null; } };
+    const pillOf = pid => document.querySelector(`.hnm-pos[data-hnm-row="${pid}"] .hnm-pos-pill`);
+    const draw = (from, to, cls) => {
+      if (!from || !to) return;
+      const a = rectOf(from), b = rectOf(to);
+      if (!a || !b) return;
+      if (typeof document.createElementNS !== 'function') return;
+      const x1 = a.right - base.left, y1 = a.top - base.top + a.height / 2;
+      const x2 = b.left - base.left, y2 = b.top - base.top + b.height / 2;
+      const dx = Math.max(24, Math.abs(x2 - x1) * 0.45);
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+      p.setAttribute('class', 'hnm-link ' + (cls || ''));
+      svg.appendChild(p);
+    };
+    // 1) người làm nhiều vị trí: nối tới TỪNG thẻ vị trí của họ
+    Array.from(document.querySelectorAll('.hnm-node.is-shared')).forEach(node => {
+      Array.from(node.querySelectorAll('[data-hnm-node-pos]')).forEach(tag => {
+        draw(pillOf(tag.getAttribute('data-hnm-node-pos')), node, 'is-shared');
+      });
+    });
+    // 2) dự bị: nét đứt tới các vị trí họ có kỹ năng
+    Array.from(document.querySelectorAll('.hnm-node.is-reserve')).forEach(node => {
+      String(node.getAttribute('data-hnm-reserve-pos') || '').split(',').filter(Boolean).forEach(pid => {
+        draw(pillOf(pid), node, 'is-skill');
+      });
+    });
   }
 
   function openPositionNeedModal(id) {
@@ -4944,9 +5742,11 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (!r) return;
       if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3"></i> Sửa Vị Trí Cần: ${escapeHTML(r.position || '')}`;
       document.getElementById('posneed-id').value = r.id;
-      document.getElementById('posneed-department').value = r.department || HR_DEPARTMENTS[0];
+      document.getElementById('posneed-department').value = hrDeptAliasOf(r.department) || HR_DEPARTMENTS[0];
       fillPosNeedPositionSelect(r.positionId, r.position);
       document.getElementById('posneed-need').value = r.needQty || 1;
+      const modeEl = document.getElementById('posneed-mode');
+      if (modeEl) modeEl.value = hrNeedModeOf(r);
       document.getElementById('posneed-have').value = r.haveQty || 0;
       document.getElementById('posneed-notes').value = r.notes || '';
     } else {
@@ -4954,6 +5754,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       document.getElementById('posneed-id').value = '';
       fillPosNeedPositionSelect();
       document.getElementById('posneed-need').value = 1;
+      const modeEl = document.getElementById('posneed-mode');
+      if (modeEl) modeEl.value = 'even';
       document.getElementById('posneed-have').value = 0;
     }
     modal.classList.add('show');
@@ -4968,7 +5770,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (!sel) return;
     const dept = document.getElementById('posneed-department')?.value || '';
     const opts = (state.hrPositions || [])
-      .filter(p => !dept || !p.department || p.department === dept)
+      .filter(p => !dept || !p.department || hrDeptAliasOf(p.department) === dept)
       .map(p => `<option value="${escapeHTML(p.name)}" data-pos-id="${escapeHTML(p.id)}">${escapeHTML(p.name)}${p.department ? ' — ' + escapeHTML(p.department) : ''}</option>`).join('');
     sel.innerHTML = '<option value="">— Chọn vị trí —</option>' + opts +
       (keepName && !(state.hrPositions || []).some(p => p.name === keepName)
@@ -4988,12 +5790,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (!requireEditPermission()) return;
     const id = document.getElementById('posneed-id').value;
     const position = document.getElementById('posneed-position').value.trim();
-    const department = document.getElementById('posneed-department').value;
+    const department = hrDeptAliasOf(document.getElementById('posneed-department').value);
     const needQty = parseInt(document.getElementById('posneed-need').value) || 0;
+    const needModeEl = document.getElementById('posneed-mode');
+    const needMode = needModeEl && needModeEl.value === 'each' ? 'each' : 'even';
     if (!position) { showToast('Vị trí không được để trống!', 'error'); return; }
     // Trùng (bộ phận + vị trí): yêu cầu sửa dòng có sẵn thay vì tạo dòng trùng lặp
     const dup = (state.hrPositionNeeds || []).find(r =>
-      r.id !== id && r.department === department && (r.position || '').trim() === position);
+      r.id !== id && hrDeptAliasOf(r.department) === department && (r.position || '').trim() === position);
     if (dup) { showToast(`Vị trí "${position}" của bộ phận ${department} đã có trong bảng — sửa dòng đã có nhé!`, 'error'); return; }
     if (needQty <= 0) { showToast('Số người cần phải lớn hơn 0!', 'error'); return; }
     const posDef = (state.hrPositions || []).find(p => p.name === position);
@@ -5003,6 +5807,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       position,
       positionId: posDef ? posDef.id : '',
       needQty,
+      needMode,
       haveQty: parseInt(document.getElementById('posneed-have').value) || 0,
       notes: document.getElementById('posneed-notes').value.trim(),
       updatedAt: new Date().toISOString()
@@ -5043,15 +5848,17 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const positions = state.hrPositions || [];
     if (!positions.length) return false;
     const have = new Set((state.hrPositionNeeds || []).map(r => r.id));
+    // Đã có dòng (nhập tay hoặc tự nạp) cho vị trí này ⇒ KHÔNG nạp thêm dòng trùng
+    const havePos = new Set((state.hrPositionNeeds || []).map(r => r.positionId).filter(Boolean));
     const dead = (state.deletedIds && state.deletedIds.hrPositionNeeds) || {};
     let added = false;
     positions.forEach(p => {
       const id = posNeedIdForPosition(p.id);
-      if (have.has(id) || dead[id]) return;
+      if (have.has(id) || havePos.has(p.id) || dead[id]) return;
       state.hrPositionNeeds = state.hrPositionNeeds || [];
       state.hrPositionNeeds.push({
         id,
-        department: p.department || 'Chung',
+        department: hrDeptAliasOf(p.department) || 'Chung',
         position: p.name,
         positionId: p.id,
         needQty: 1,
@@ -5098,9 +5905,10 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   //   - ưu tiên khớp kỹ năng (skills chứa positionId), nếu không có
   //     positionId thì khớp theo tên vị trí trong hồ sơ nhân viên.
   function hrCountEmployeesAtPosition(department, positionId, positionName) {
+    const dept = hrDeptAliasOf(department);
     return (state.hrEmployees || []).filter(e => {
       if ((e.status || 'active') !== 'active') return false;
-      if (department && (e.department || '') !== department) return false;
+      if (dept && hrDeptAliasOf(e.department) !== dept) return false;
       if (positionId && Array.isArray(e.skills) && e.skills.includes(positionId)) return true;
       return positionName && (e.position || '').trim() === positionName.trim();
     }).length;
@@ -5507,18 +6315,26 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const dept = state.hrBoardDept;
     const cfg = hrShiftCfg(dept);
     const colCount = cfg.type === 'lamca' ? Math.max(1, cfg.shifts.length) : 1;
-    const positions = (state.hrPositions || []).filter(p => p.department === dept);
+    const positions = (state.hrPositions || []).filter(p => hrDeptAliasOf(p.department) === dept);
     const posNeedOf = pid => (state.hrPositionNeeds || []).find(r => r.positionId === pid);
+    // NHU CẦU CHIA THEO CA (21/10/2026): needQty = suất CẢ NGÀY ⇒ chia đều cho
+    // các ca (mỗi ca tối thiểu 1 khi need > 0) hoặc "mỗi ca đủ N" tuỳ dòng.
+    const needSplitOf = p => {
+      const row = posNeedOf(p.id);
+      const needDay = Math.max(0, parseInt(row && row.needQty, 10) || 1);
+      return hrNeedSplitOf(needDay, colCount, hrNeedModeOf(row));
+    };
     const assigns = hrAssignmentsOf(state.hrBoardDate).filter(a => positions.some(p => p.id === a.positionId));
 
     // Chip tổng hợp tinh gọn trên đầu board
     const countEl = document.getElementById('hr-board-count');
     if (countEl) {
-      const totalNeed = positions.reduce((s, p) => s + (Math.max(0, parseInt(posNeedOf(p.id)?.needQty, 10) || 1)) * colCount, 0);
+      const totalNeed = positions.reduce((s, p) => s + needSplitOf(p).reduce((x, n) => x + n, 0), 0);
       const fullCols = positions.reduce((s, p) => {
+        const per = needSplitOf(p);
         for (let si = 0; si < colCount; si++) {
           const c = assigns.filter(a => a.positionId === p.id && (a.shiftIdx || 0) === si).length;
-          s += Math.min(c, Math.max(0, parseInt(posNeedOf(p.id)?.needQty, 10) || 1));
+          s += Math.min(c, per[si] || 0);
         }
         return s;
       }, 0);
@@ -5539,13 +6355,15 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
 
     board.innerHTML = positions.map(p => {
-      const need = Math.max(0, parseInt(posNeedOf(p.id)?.needQty, 10) || 1);
+      const needPerShift = needSplitOf(p);
+      const need = needPerShift.reduce((s, n) => s + n, 0);
       let complete = true;
       const shifts = Array.from({ length: colCount }, (_, si) => {
         const range = hrShiftRange(cfg, si);
+        const needSi = needPerShift[si] || 0;
         const mine = assigns.filter(a => a.positionId === p.id && (a.shiftIdx || 0) === si)
           .sort((a, b) => String(a.start).localeCompare(String(b.start)));
-        if (mine.length < need) complete = false;
+        if (mine.length < needSi) complete = false;
         const slots = mine.map(a => {
           const emp = hrEmpById(a.employeeId);
           const timeTxt = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}`;
@@ -5556,7 +6374,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
             <button type="button" class="slot-x" title="Bỏ người khỏi vị trí" onclick="event.stopPropagation(); app.hrBoardRemoveAssign('${a.id}')"><i data-lucide="x"></i></button>
           </div>`;
         });
-        for (let k = mine.length; k < need; k++) {
+        for (let k = mine.length; k < needSi; k++) {
           slots.push(`<div class="slot empty" title="Chưa có người — bấm để thêm"
             onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '')"
             ondragover="event.preventDefault()" ondragenter="this.classList.add('over')" ondragleave="this.classList.remove('over')"
@@ -5573,7 +6391,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       return `<div class="board-col${complete ? ' complete' : ''}">
         <div class="board-col-head">
           <span class="board-col-title" title="${escapeHTML(p.name)}">${escapeHTML(p.name)}</span>
-          <span class="board-col-need">cần ${need}${colCount > 1 ? `×${colCount}` : ''}</span>
+          <span class="board-col-need">cần ${need}${colCount > 1 ? ` → ${needPerShift.join('+')}` : ''}</span>
           <span class="board-col-dot${complete ? ' ok' : ' warn'}" title="${complete ? 'Đã đủ người' : 'Chưa đủ người'}"></span>
         </div>
         <div class="board-col-body">${shifts}</div>
@@ -6029,15 +6847,17 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (t.includes('van phong')) return 'Văn Phòng';
     if (t.includes('qc') || t.includes('chat luong')) return 'QC';
     if (t.includes('co dien')) return 'Cơ Điện';
-    if (t.includes('lo hoi')) return 'Lò Hơi';
+    // "Lò Hơi" đã gộp vào "Cơ Điện" (21/10/2026)
+    if (t.includes('lo hoi')) return 'Cơ Điện';
     if (t.includes('xuong 1') || t === 'x1') return 'Xưởng 1';
     if (t.includes('xuong 2') || t === 'x2') return 'Xưởng 2';
-    return raw;
+    return hrDeptAliasOf(raw);
   }
 
-  // Danh sách tùy chọn Bộ Phận: 6 bộ phận chuẩn + các bộ phận có sẵn trong dữ liệu
+  // Danh sách tùy chọn Bộ Phận: 5 bộ phận chuẩn + các bộ phận KHÁC có sẵn trong
+  // dữ liệu (đã gom nhãn cũ "Lò Hơi" về "Cơ Điện" để không sinh lựa chọn trùng).
   function hrDeptOptions() {
-    const extra = [...new Set((state.hrEmployees || []).map(e => (e.department || '').trim()).filter(Boolean))]
+    const extra = [...new Set((state.hrEmployees || []).map(e => hrDeptAliasOf(e.department)).filter(Boolean))]
       .filter(d => !HR_DEPARTMENTS.includes(d));
     return [...HR_DEPARTMENTS, ...extra].map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
   }
@@ -6764,10 +7584,11 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       return `${open.length} tuyển${missing ? ` · ${missing} thiếu` : ''}`;
     } },
     'hr-posneed-card': { el: 'hr-mini-count-posneed', count: () => {
-      const list = state.hrPositionNeeds || [];
-      const need = list.reduce((s, r) => s + (r.needQty || 0), 0);
-      const missing = list.reduce((s, r) => s + Math.max(0, (r.needQty || 0) - (r.haveQty || 0)), 0);
-      return `${list.length} vị trí${missing ? ` · thiếu ${missing}` : ''}`;
+      // LIVE theo Bảng bố trí của NGÀY đang xem (không còn dùng haveQty = kỹ năng)
+      const { ctx, rows } = hrNeedAllRows(hrNeedDateISO());
+      const t = hrNeedTotalsOf(rows);
+      if (!ctx.hasData) return `${rows.length} vị trí · chưa có bố trí`;
+      return `${rows.length} vị trí${t.shortage ? ` · thiếu ${t.shortage} suất` : ' · đủ người'}`;
     } }
   };
 
@@ -6822,7 +7643,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // THẺ ĐANG ĐÓNG thì bảng bên trong không được vẽ lại mỗi lần renderAll
     // (xem renderHrView(parts)) ⇒ trước khi hiện phải vẽ ĐÚNG phần của thẻ này
     // để không bao giờ hiện số liệu cũ.
-    try { renderHrView(hrCardRenderParts(cardId)); } catch (e) { /* không chặn mở thẻ */ }
+    try { renderHrView(hrCardRenderParts(cardId)); }
+    catch (e) { console.error('[NHÂN SỰ] lỗi vẽ nội dung thẻ', cardId, e); }
     // Mo bang: bo an + di chuyen DOM node vao trong modal overlay
     card.classList.remove('hr-card-hidden');
     card.classList.remove('rate-table-collapsed');
@@ -6862,6 +7684,52 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
 export {
   HR_DEPARTMENTS,
+  HR_DEPT_ALIAS,
+  hrDeptAliasOf,
+  migrateHrDeptMerge,
+  HR_NEED_UI_KEY,
+  hrNeedReadUi,
+  hrNeedWriteUi,
+  hrNeedDateISO,
+  hrNeedSplitOf,
+  hrNeedModeOf,
+  hrNeedColCount,
+  hrNeedSpanOf,
+  hrNormDept,
+  hrDeptOptions,
+  hrEmployeeHasPos,
+  hrNeedCtx,
+  hrNeedRowMetrics,
+  hrNeedAllRows,
+  hrNeedTotalsOf,
+  hrNeedDeptSummaries,
+  hrNeedStatusMeta,
+  renderHrNeedCard,
+  renderHrNeedTable,
+  hnmToolbarHtml,
+  hnmKpiHtml,
+  hnmBubblesHtml,
+  hnmFocusHtml,
+  hnmPosRowHtml,
+  hnmPosListHtml,
+  hnmPersonChipHtml,
+  hnmSharedColHtml,
+  hnmSelectDept,
+  hnmBack,
+  hnmSetDate,
+  hnmShiftDay,
+  hnmToday,
+  hnmSetSearch,
+  hnmSetOnlyShort,
+  hnmSetSkillLinks,
+  hnmTogglePos,
+  hnmSetNeed,
+  hnmToggleMode,
+  hnmOpenBoard,
+  hnmOpenAssign,
+  hnmAddPosition,
+  hnmHotPerson,
+  hnmDrawLinks,
   LEAVE_TYPES,
   ATT_STATUS,
   approvedLeaveOn,

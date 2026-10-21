@@ -10,7 +10,7 @@ import { captureAutoBackup } from './autobackup.js'; // Chụp backup TRƯỚC k
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
-import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf } from './hr.js';
+import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf, hrNeedAllRows, hrNeedDateISO } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
@@ -1713,15 +1713,31 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
         break;
       }
       case 'hr-posneed': {
-        header = ['Bộ Phận', 'Vị Trí', 'Cần', 'Hiện Có', 'Còn Thiếu', 'Ghi Chú'];
-        const list = (state.hrPositionNeeds || []).filter(r => inDept(r.department))
-          .sort((a, b) => String(a.department || '').localeCompare(String(b.department || ''), 'vi') ||
-            String(a.position || '').localeCompare(String(b.position || ''), 'vi'));
-        rows = list.map(r => [r.department || '', r.position || '', parseInt(r.needQty, 10) || 0,
-          parseInt(r.haveQty, 10) || 0, Math.max(0, (parseInt(r.needQty, 10) || 0) - (parseInt(r.haveQty, 10) || 0)), r.notes || '']);
-        const tNeed = list.reduce((a, r) => a + (parseInt(r.needQty, 10) || 0), 0);
-        const tHave = list.reduce((a, r) => a + (parseInt(r.haveQty, 10) || 0), 0);
-        totalRow = ['TỔNG CỘNG', '', tNeed, tHave, Math.max(0, tNeed - tHave), ''];
+        // SỐ LIỆU LIVE (21/10/2026): "Đang bố trí" đếm từ Bảng bố trí của ngày
+        // đang xem; "Có kỹ năng" đếm distinct từ hồ sơ. Ngày CHƯA có bố trí thì
+        // fallback số đã lưu (haveQty) và ghi rõ trong ghi chú để không bịa số.
+        header = ['Bộ Phận', 'Vị Trí', 'Cần', 'Hiện Có', 'Còn Thiếu', 'Cần Ca 1', 'Cần Ca 2',
+          'Có Kỹ Năng', 'Đang Bố Trí', 'Ngoài Kỹ Năng', 'Dùng Chung', 'Ghi Chú'];
+        const live = hrNeedAllRows(hrNeedDateISO());
+        const hasBoard = live.ctx.hasData;
+        const list = live.rows.filter(rm => inDept(rm.dept))
+          .sort((a, b) => String(a.dept || '').localeCompare(String(b.dept || ''), 'vi') ||
+            String(a.positionName || '').localeCompare(String(b.positionName || ''), 'vi'));
+        rows = list.map(rm => {
+          const need = rm.needDay;
+          const have = hasBoard ? rm.assignedTotal : (parseInt(rm.row.haveQty, 10) || 0);
+          const miss = hasBoard ? rm.shortage : Math.max(0, need - have);
+          return [rm.dept || '', rm.positionName || '', need, have, miss,
+            rm.needPerShift[0] || 0, rm.needPerShift[1] || '',
+            rm.skilled, hasBoard ? rm.assignedTotal : '', rm.unskilledIds.length, rm.sharedEmpIds.length,
+            (rm.row.notes || '') + (hasBoard ? '' : ' (chưa có bố trí ngày này — hiện có là số đã lưu)')];
+        });
+        const tNeed = list.reduce((a, rm) => a + rm.needDay, 0);
+        const tHave = list.reduce((a, rm) => a + (hasBoard ? rm.assignedTotal : (parseInt(rm.row.haveQty, 10) || 0)), 0);
+        const tMiss = list.reduce((a, rm) => a + (hasBoard ? rm.shortage : Math.max(0, rm.needDay - (parseInt(rm.row.haveQty, 10) || 0))), 0);
+        totalRow = ['TỔNG CỘNG', '', tNeed, tHave, tMiss, '', '',
+          list.reduce((a, rm) => a + rm.skilled, 0), hasBoard ? list.reduce((a, rm) => a + rm.assignedTotal, 0) : '',
+          list.reduce((a, rm) => a + rm.unskilledIds.length, 0), list.reduce((a, rm) => a + rm.sharedEmpIds.length, 0), ''];
         if (dept !== 'all') extraNote = `Bộ phận: ${dept}`;
         break;
       }

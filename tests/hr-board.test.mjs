@@ -101,7 +101,7 @@ check('BOARD: preset Làm ca = 2 ca (ngày/đêm)', hr.BOARD_SHIFT_PRESETS.lamca
 state.hrBoardDate = '2026-09-15';
 hr.renderHrView();
 check('BOARD: mặc định mở Xưởng 2', state.hrBoardDept === 'Xưởng 2');
-check('BOARD: tab bộ phận render đủ 6 bộ phận', (document.getElementById('hr-board-dept-tabs').innerHTML.match(/data-board-dept/g) || []).length === 6);
+check('BOARD: tab bộ phận render đủ 5 bộ phận (Lò Hơi đã gộp vào Cơ Điện)', (document.getElementById('hr-board-dept-tabs').innerHTML.match(/data-board-dept/g) || []).length === 5);
 const boardHTML = document.getElementById('hr-board').innerHTML;
 check('BOARD: lưới thẻ — 2 cột vị trí (board-col)', (boardHTML.match(/board-col-head/g) || []).length === 2);
 check('BOARD: 5 ô trống "?" (cần 3 + 2, chưa gán ai)', (boardHTML.match(/slot empty/g) || []).length === 5);

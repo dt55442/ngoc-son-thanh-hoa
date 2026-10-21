@@ -47,7 +47,7 @@ import {
 import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
-import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
+import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapStale, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
 // Thẻ TRUY XUẤT ĐẦU VÀO → ĐẦU RA (Vùng Nâng Cao — js/trace.js)
 import { closeTraceSizePanel, positionTraceSizePanel, setTraceMode, setTraceProduct, setTraceSizeQuery, shiftTracePeriod, toggleTraceDetail, toggleTraceSizePanel, traceSizePanelOpen, TRACE_SIZE_BTN_ID, TRACE_SIZE_PANEL_ID } from './trace.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
@@ -55,6 +55,7 @@ import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, 
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
 import { closeIncidentReports, handleIncidentSubmit, onIncidentChipClick, onIncidentFiltersChange, onIncidentReportsClick, openIncidentReports, resetIncidentForm, syncIncidentHoursFromTimes } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition, renderHrCheckinTable, ciShiftMonth, ciSaveUi, openCiEndfillModal, closeCiEndfillModal, renderCiEndfillList, applyCiEndfill, ciAckDay, ciUnackDay, hrDockToggle, hrDockOpenGroup, hrDockBack, hrDockClose, ciBulkSubmit, closeCiBulkModal, openCiBulkModal, ciPaySubmit, closeCiPayModal, openCiPayModal, syncCiPayForm, payApproveRow, payRejectRow, renderHrPayCard, openPayLockModal, closePayLockModal, payLockSubmit, openPayPrintModal, closePayPrintModal, doPayPrint, payMarkPaperSigned, renderPayPrintPreview, ciOnDayInput, ciShiftPeriod, ciGoToday, ciSetPeriodMode, ciOnChipClick, ciGotoDay, ciFilterByEmployee, hrDockState } from './hr.js';
+import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard, hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday, hnmSetSearch, hnmSetOnlyShort, hnmSetSkillLinks, hnmDrawLinks } from './hr.js'; // SƠ ĐỒ BONG BÓNG NHÂN SỰ 3 CẤP (21/10/2026)
 import { state } from './state.js';
 import { getFxLow, setFxLow, applyThemeForUser } from './theme.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
@@ -1343,7 +1344,59 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-cancel-posneed', 'click', closePositionNeedModal);
     safeOn('position-need-form', 'submit', handlePositionNeedSubmit);
     safeOn('btn-sync-posneed', 'click', syncPositionNeedsFromEmployees);
-    safeOn('hr-posneed-filter-dept', 'change', renderPositionNeedsTable);
+    // ── SƠ ĐỒ BONG BÓNG NHÂN SỰ 3 CẤP (21/10/2026) ────────────────
+    // Nội dung thẻ được vẽ lại liên tục ⇒ UỶ NHIỆM sự kiện trên thẻ (không gắn
+    // trực tiếp lên từng bong bóng / pill / chip).
+    const needCardEl = document.getElementById('hr-posneed-card');
+    if (needCardEl) {
+      needCardEl.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const deptBtn = t.closest('[data-hnm-dept]');
+        if (deptBtn) { hnmSelectDept(deptBtn.getAttribute('data-hnm-dept')); return; }
+        if (t.closest('[data-hnm-back]')) { hnmBack(); return; }
+        const toggle = t.closest('[data-hnm-toggle]');
+        if (toggle) { hnmTogglePos(toggle.getAttribute('data-hnm-toggle')); return; }
+        const modeBtn = t.closest('[data-hnm-mode]');
+        if (modeBtn) { hnmToggleMode(modeBtn.getAttribute('data-hnm-mode')); return; }
+        const addBtn = t.closest('[data-hnm-add]');
+        if (addBtn) { hnmOpenAssign(addBtn.getAttribute('data-hnm-add'), addBtn.getAttribute('data-shift')); return; }
+        const boardBtn = t.closest('[data-hnm-board]');
+        if (boardBtn) { hnmOpenBoard(boardBtn.getAttribute('data-hnm-board')); return; }
+        const addPos = t.closest('[data-hnm-addpos]');
+        if (addPos) { hnmAddPosition(addPos.getAttribute('data-hnm-addpos')); return; }
+        const dayBtn = t.closest('[data-hnm-day]');
+        if (dayBtn) { hnmShiftDay(Number(dayBtn.getAttribute('data-hnm-day')) || 0); return; }
+        if (t.closest('[data-hnm-today]')) { hnmToday(); return; }
+        const person = t.closest('[data-hnm-person]');
+        if (person) { hnmHotPerson(person.getAttribute('data-hnm-person')); return; }
+      });
+      needCardEl.addEventListener('change', (e) => {
+        const t = e.target;
+        if (!t) return;
+        if (t.id === 'hnm-date') { hnmSetDate(t.value); return; }
+        if (t.id === 'hnm-only-short') { hnmSetOnlyShort(t.checked); return; }
+        if (t.id === 'hnm-skill-links') { hnmSetSkillLinks(t.checked); return; }
+        const needFor = t.getAttribute && t.getAttribute('data-hnm-need');
+        if (needFor) hnmSetNeed(needFor, t.value);
+      });
+      let hnmSearchTimer = 0;
+      needCardEl.addEventListener('input', (e) => {
+        const t = e.target;
+        if (!t || t.id !== 'hnm-search') return;
+        clearTimeout(hnmSearchTimer);
+        hnmSearchTimer = setTimeout(() => hnmSetSearch(t.value), 180);
+      });
+    }
+    // Đường nối SVG phải vẽ lại khi đổi kích thước / cuộn (toạ độ theo pixel)
+    let hnmLinkRaf = 0;
+    const redrawNeedLinks = () => {
+      if (hnmLinkRaf) return;
+      const raf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (cb => setTimeout(cb, 0));
+      hnmLinkRaf = raf(() => { hnmLinkRaf = 0; try { hnmDrawLinks(); } catch (err) {} });
+    };
+    window.addEventListener('resize', redrawNeedLinks);
+    window.addEventListener('scroll', redrawNeedLinks, true);
     // ── Bảng bố trí vị trí theo ngày ──
     safeOn('btn-board-prev', 'click', () => hrBoardShiftDay(-1));
     safeOn('btn-board-next', 'click', () => hrBoardShiftDay(1));
@@ -1766,15 +1819,16 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
           x2OpenCard(openBtn.getAttribute('data-cap-open-card'));
           return;
         }
-        // Chế độ "Biểu đồ": bấm 1 HÀNG thang xếp hạng hoặc 1 Ô bản đồ nhiệt
-        // → chọn công đoạn (+ tuần) và vẽ biểu đồ 8 tuần của công đoạn đó
-        const heatCell = t && t.closest ? t.closest('[data-cap-heat]') : null;
-        if (heatCell) { selectCapacityStage(heatCell.getAttribute('data-cap-heat'), heatCell.getAttribute('data-cap-heat-week')); return; }
+        // CẢNH BÁO DỮ LIỆU QUÁ HẠN: chip trên thanh công cụ → mở rộng thẻ +
+        // mở panel chi tiết; bấm tiêu đề banner → bật/tắt panel
+        const staleChip = t && t.closest ? t.closest('#cap-stale-chip') : null;
+        if (staleChip) { toggleCapStale(true); return; }
+        const staleHead = t && t.closest ? t.closest('#cap-stale-toggle') : null;
+        if (staleHead) { toggleCapStale(); return; }
+        // Chế độ "Biểu đồ": bấm 1 HÀNG thang xếp hạng → chọn công đoạn và vẽ
+        // biểu đồ 8 kỳ của công đoạn đó (bản đồ nhiệt đã gỡ 21/10/2026)
         const rankRow = t && t.closest ? t.closest('[data-cap-rank]') : null;
         if (rankRow) { selectCapacityStage(rankRow.getAttribute('data-cap-rank')); return; }
-        // Tiêu đề CỘT tuần trên bản đồ nhiệt → chỉ đổi tuần đang xem
-        const heatCol = t && t.closest ? t.closest('.cap-heat-col[data-cap-heat-week]') : null;
-        if (heatCol) { setCapacityWeek(heatCol.getAttribute('data-cap-heat-week')); return; }
         const stageRow = t && t.closest ? t.closest('[data-cap-stage-row]') : null;
         if (stageRow) { toggleCapacityStageDays(stageRow.getAttribute('data-cap-stage-row')); return; }
         const weekRow = t && t.closest ? t.closest('[data-cap-week-row]') : null;

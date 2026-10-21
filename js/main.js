@@ -29,6 +29,7 @@ import { loadQcFinal, loadQcFinalRates } from './qc-final.js'; // THẺ KIỂM S
 import { loadQcPressLogs } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail — js/qc-press.js)
 import { loadX2IncidentReports, updateIncidentBadge } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
+import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard, hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday } from './hr.js'; // SƠ ĐỒ BONG BÓNG NHÂN SỰ (21/10/2026)
 import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, renderHrVisible, renderHrAfterBoardChange, hrShowMoreRows, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS, hrDockClose } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
@@ -576,6 +577,9 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     hrEditPositionNeed: openPositionNeedModal,
     hrDeletePositionNeed: deletePositionNeed,
     hrSetPositionNeedQty,
+    // SƠ ĐỒ BONG BÓNG NHÂN SỰ 3 CẤP (gọi từ HTML render động)
+    hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard,
+    hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday,
     // Bảng bố trí vị trí theo ngày (onclick render động: ô board / kéo thả / cài ca)
     hrBoardOpenAssign,
     hrBoardRemoveAssign,

@@ -332,7 +332,7 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v298/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v301/.test(swJs));
 check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 8 dòng Xưởng 1',
   cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===
@@ -358,8 +358,8 @@ check('GAUGE: chip "Nút thắt" hiện đúng công đoạn Than Hóa + Sấy',
   visualRow.innerHTML.includes('Nút thắt') && visualRow.innerHTML.includes('Than Hóa + Sấy'));
 check('RANK: đủ 14 hàng công đoạn (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 14);
 check('RANK: tag "nút thắt" gắn đúng Than Hóa + Sấy', /Than Hóa \+ Sấy[^<]*<em class="cap-rank-bt"/.test(visualRow.innerHTML));
-check('HEAT: đủ 112 ô dữ liệu (8 tuần × 14 công đoạn)', (visualRow.innerHTML.match(/data-cap-heat="/g) || []).length === 112);
-check('HEAT: legend đủ 4 mức màu', (visualRow.innerHTML.match(/cap-legend-item/g) || []).length === 4);
+check('GỠ BẢN ĐỒ NHIỆT: dải trực quan KHÔNG còn lưới nhiệt (đã bỏ 21/10/2026 để tiết kiệm diện tích)',
+  !visualRow.innerHTML.includes('data-cap-heat') && !visualRow.innerHTML.includes('cap-heat'));
 check('CHART: mặc định tự chọn NÚT THẮT (Than Hóa + Sấy) → panel đúng tiêu đề + canvas (trong dải trực quan)',
   state.capUi.chartStage === 'say' &&
   visualRow.innerHTML.includes('cap-chart-head') && visualRow.innerHTML.includes('Than Hóa + Sấy') &&
@@ -372,8 +372,9 @@ cap.selectCapacityStage('cut'); // bấm lần nữa → đóng panel
 check('CHART: bấm lần nữa → đóng panel (KHÔNG tự mở lại nút thắt)',
   state.capUi.chartStage === '' && state.capUi.chartClosed === true &&
   document.getElementById('cap-stage-chart-panel').hidden === true && state.capacityStageInstance == null);
-cap.selectCapacityStage('cut', cap.capWeekShift(wk, -1)); // bấm ô nhiệt tuần trước
-check('CHART: bấm ô nhiệt tuần trước → đổi tuần + mở panel đúng công đoạn',
+cap.setCapacityWeek(cap.capWeekShift(wk, -1)); // đổi kỳ về tuần trước
+cap.selectCapacityStage('cut');
+check('CHART: đổi kỳ (‹ ›) rồi chọn công đoạn → đúng kỳ + mở panel đúng công đoạn',
   state.capUi.week === cap.capWeekShift(wk, -1) && state.capUi.chartStage === 'cut');
 cap.setCapacityWeek(wk); // quay lại tuần dữ liệu
 // Thiếu Chart.js → hiện text thay thế, KHÔNG crash (guard window.Chart)
@@ -401,10 +402,10 @@ const savedView = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || '{
 check('NHỚ UI: chế độ "Bảng dữ liệu" đã lưu theo máy', savedView.view === 'table');
 cap.setCapacityView('visual');
 const savedView2 = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || '{}');
-check('CHẾ ĐỘ: quay lại "Biểu đồ" → dải trực quan đủ 4 khối + đã lưu',
+check('CHẾ ĐỘ: quay lại "Biểu đồ" → dải trực quan đủ 3 khối + đã lưu',
   savedView2.view === 'visual' && document.getElementById('cap-visual-row').hidden === false &&
   visualRow.innerHTML.includes('cap-gauge') && visualRow.innerHTML.includes('cap-rank') &&
-  visualRow.innerHTML.includes('cap-heat') && visualRow.innerHTML.includes('cap-stage-chart-panel'));
+  !visualRow.innerHTML.includes('cap-heat') && visualRow.innerHTML.includes('cap-stage-chart-panel'));
 const dashJs = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 const capJs = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): nút chuyển chế độ + khối trực quan (canvas do JS dựng)',
@@ -414,9 +415,9 @@ check('CẤU TRÚC (capacity.js): panel biểu đồ dựng canvas #cap-stage-ch
   capJs.includes('id="cap-stage-chart"') && capJs.includes("id: 'capTargetLine'"));
 check('CẤU TRÚC (dashboard.js): nút mở rộng nhận thẻ tổng hợp + instance chart riêng',
   dashJs.includes('.capacity-card') && dashJs.includes('#cap-stage-chart'));
-check('CẤU TRÚC (styles.css): CSS widget trực quan + fullscreen thẻ tổng hợp',
-  stylesCss.includes('.cap-heat-cell') && stylesCss.includes('.cap-gauge-svg') &&
-  stylesCss.includes('.capacity-card:fullscreen'));
+check('CẤU TRÚC (styles.css): CSS widget trực quan + cảnh báo quá hạn + fullscreen thẻ tổng hợp',
+  stylesCss.includes('.cap-stale-head') && stylesCss.includes('.cap-gauge-svg') &&
+  stylesCss.includes('.capacity-card:fullscreen') && !stylesCss.includes('.cap-heat-cell'));
 
 // ─── O. NÚT CHẾ ĐỘ TƯƠNG PHẢN · KÉO NGANG NHIỆT · MÀU TAB ĐANG CHỌN ──
 check('NÚT CHẾ ĐỘ: nút chưa chọn = chữ ĐẬM (không còn chữ trắng khó thấy)',
@@ -425,14 +426,12 @@ check('NÚT CHẾ ĐỘ: nút chưa chọn = chữ ĐẬM (không còn chữ tr�
 check('NÚT CHẾ ĐỘ: nút đang chọn nổi gradient xanh teal + chữ trắng',
   stylesCss.includes('.pv-unit-btn.active') &&
   stylesCss.includes('background: linear-gradient(135deg, #0f766e, #0369a1)'));
-check('NHIỆT: cuộn ngang mượt (touch + overscroll contain) + scrollbar mảnh',
-  stylesCss.includes('.cap-heat-grid') && stylesCss.includes('-webkit-overflow-scrolling: touch;   /* cuộn mượt trên iOS */') &&
-  stylesCss.includes('overscroll-behavior-x: contain') && stylesCss.includes('.cap-heat-grid.cap-heat-dragging'));
-check('NHIỆT: kéo ngang bằng chuột/cảm ứng (Pointer Events trong capacity.js)',
-  capJs.includes('capAttachHeatDrag') && capJs.includes('pointerdown') && capJs.includes('scrollLeft = startLeft - dx'));
-check('NHIỆT: lưới nhiệt có id="cap-heat-grid" — hàm kéo ngang tìm ĐÚNG phần tử\n' +
-  '  (trước đây markup thiếu id → getElementById trả null → kéo chuột không bao giờ gắn được)',
-  capJs.includes('id="cap-heat-grid"') && capJs.includes("getElementById('cap-heat-grid')"));
+check('GỠ BẢN ĐỒ NHIỆT: KHÔNG còn CSS lưới nhiệt / kéo ngang nhiệt (đã bỏ 21/10/2026)',
+  !stylesCss.includes('.cap-heat-grid') && !stylesCss.includes('.cap-heat-dragging') &&
+  !stylesCss.includes('.cap-heat-cell') && !capJs.includes('capAttachHeatDrag'));
+check('GỠ BẢN ĐỒ NHIỆT: KHÔNG còn markup/handler ô nhiệt trong capacity.js + events.js',
+  !capJs.includes('data-cap-heat') && !capJs.includes('capHeatHtml') &&
+  !fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8').includes('data-cap-heat'));
 check('TAB: bỏ ép màu xanh lá #2e7d32 cho tab đang chọn ở theme hiện tại',
   !stylesCss.includes('body[data-theme="night"] .nav-btn.active') &&
   !stylesCss.includes('#2e7d32;\n  text-shadow'));
@@ -448,7 +447,7 @@ check('THÁNG: nhãn đầy đủ = "Tháng 9/2026 · 01/09 – 30/09"',
   cap.capMonthHeadLabel('2026-09') === 'Tháng 9/2026' &&
   cap.capMonthRangeLabel('2026-09') === '01/09 – 30/09' &&
   cap.capPeriodLabel('2026-09', 'month') === 'Tháng 9/2026 · 01/09 – 30/09');
-check('THÁNG: nhãn rút gọn "T9" cho trục biểu đồ/ô bản đồ nhiệt',
+check('THÁNG: nhãn rút gọn "T9" cho trục biểu đồ', 
   cap.capPeriodShortLabel('2026-09', 'month') === 'T9' && cap.capPeriodShortLabel(wk, 'week') === `T${cap.capWeekNumOf(wk)}`);
 
 // P2. Gộp theo THÁNG (mode='month') — cùng dữ liệu đã seed ở trên
@@ -502,7 +501,7 @@ check('IN: gồm TẤT CẢ bộ phận trong sổ CAP_WORKSHOPS (Xưởng 2 có
   reportHtml.includes('Xưởng 1') && reportHtml.includes('Chưa có công đoạn nào'));
 check('IN: bảng có cột Giờ HC · Giờ TC · Tổng giờ RIÊNG BIỆT',
   reportHtml.includes('Giờ HC') && reportHtml.includes('Giờ TC') && reportHtml.includes('Tổng giờ'));
-check('IN: KHÔNG chứa bản đồ nhiệt (data-cap-heat) · biểu đồ 8 kỳ (cap-stage-chart) · gauge (cap-gauge)',
+check('IN: KHÔNG chứa bản đồ nhiệt (đã gỡ) · biểu đồ 8 kỳ (cap-stage-chart) · gauge (cap-gauge)',
   !reportHtml.includes('data-cap-heat') && !reportHtml.includes('cap-stage-chart') && !reportHtml.includes('cap-gauge'));
 check('IN: dòng TỔNG xưởng KHÔNG cộng sản lượng khác đơn vị (ô sản lượng là "—")',
   /TỔNG Xưởng 2[\s\S]*?<td class="num"[^>]*>—<\/td>/.test(reportHtml));
@@ -566,6 +565,106 @@ check('CA (Tổng hợp): tầng NGÀY gắn CHIP CA cho từng dòng (data-shif
   capTbodyCa.includes('x2-day-shift-chip') && capTbodyCa.includes('data-shift-idx="1"'));
 check('CA (Tổng hợp): cột Định mức của dòng gộp ghi rõ CẢ 2 công đoạn sấy (S1 · S2), KHÔNG phải 0 m³/h',
   capTbodyCa.includes('S1 ') && capTbodyCa.includes('S2 ') && !capTbodyCa.includes('÷ ĐM 0'));
+
+// ─── S. CẢNH BÁO DỮ LIỆU QUÁ HẠN (21/10/2026 — thay bản đồ nhiệt đã gỡ) ──
+// Quy tắc: quá 1 NGÀY LÀM VIỆC chưa cập nhật là cảnh báo; bỏ qua CN/ngày nghỉ
+// theo Lịch Làm Việc (trừ ngày làm bù); công đoạn chưa từng nhập → 'never' (xám).
+state.hrWorkCalendar = { '2026-10': { weekdaysOff: [0] } };
+check('QUÁ HẠN: CN mặc định nghỉ → không tính là ngày làm việc (17/10 Thứ 7 → 19/10 Thứ 2 = 1 ngày)',
+  cap.capIsWorkDay('2026-10-17') && !cap.capIsWorkDay('2026-10-18') &&
+  cap.capIsWorkDay('2026-10-19') && cap.capWorkDaysSince('2026-10-17', '2026-10-19') === 1);
+check('QUÁ HẠN: ngày nghỉ/lễ trong Lịch (restDays) và ngày LÀM BÙ (workDays) đọc đúng',
+  (() => {
+    state.hrWorkCalendar = { '2026-10': { weekdaysOff: [0], restDays: ['2026-10-19'], workDays: ['2026-10-18'] } };
+    const ok = !cap.capIsWorkDay('2026-10-19') && cap.capIsWorkDay('2026-10-18');
+    state.hrWorkCalendar = { '2026-10': { weekdaysOff: [0] } };
+    return ok;
+  })());
+check('QUÁ HẠN: "hôm nay" lấy theo GIỜ MÁY (không lệch 1 ngày do toISOString/UTC)',
+  cap.capTodayLocalISO() === (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })());
+check('QUÁ HẠN: ngày lịch (16/10 → 20/10 = 4) khác ngày làm việc (3: 17, 19, 20 — bỏ CN 18)',
+  cap.capCalendarDaysSince('2026-10-16', '2026-10-20') === 4 &&
+  cap.capWorkDaysSince('2026-10-16', '2026-10-20') === 3);
+
+// Dữ liệu thử: chỉ Bổ Ống cũ (16/10) + Cắt Chọn mới (20/10), các công đoạn khác rỗng
+[
+  'xuong2BoluongRecords', 'xuong2CutRecords', 'xuong2BoOngRecords', 'xuong2BaoThoRecords',
+  'xuong2ChonNanThoRecords', 'xuong2BaoTinhRecords', 'pressRecords', 'xuong2BulligRecords',
+  'xuong2CatVanRecords', 'xuong2BaoVanRecords', 'xuong1CatOngRecords', 'xuong1SaySinhRecords',
+  'xuong1BocRecords', 'xuong1LocOngRecords', 'xuong1CatMatRecords', 'xuong1BoRecords',
+  'xuong1PhoiSayRecords', 'xuong1LocThanhRecords'
+].forEach(k => { state[k] = []; });
+state.batches = [];
+state.x2SayRates = {}; state.x2SayIncidents = {}; state.x2SayTimes = {};
+state.xuong2CutRecords = [{ id: 's-cut', materialId: 'mat-a', date: '2026-10-20', cutHours: 8 }];
+state.xuong2BoOngRecords = [{ id: 's-boong', date: '2026-10-16', inputOng: 1000 }];
+const staleScan = cap.capStaleScan('2026-10-21');
+const staleCut = staleScan.find(r => r.stageId === 'cut');
+const staleBoong = staleScan.find(r => r.stageId === 'boong');
+const staleX1 = staleScan.find(r => r.stageId === 'x1catong');
+check('QUÁ HẠN: mới 1 ngày làm việc (Cắt Chọn 20/10) → KHÔNG cảnh báo', staleCut && staleCut.status === 'ok');
+check('QUÁ HẠN: 4 ngày làm việc (Bổ Ống 16/10) → cảnh báo + đếm đúng ngày lịch/ngày làm việc',
+  staleBoong && staleBoong.status === 'late' && staleBoong.workDays === 4 && staleBoong.calDays === 5);
+check('QUÁ HẠN: nêu ĐÚNG xưởng + công đoạn (Xưởng 2 · Bổ Ống)', staleBoong.wsLabel === 'Xưởng 2' && staleBoong.stageLabel === 'Bổ Ống');
+check('QUÁ HẠN: công đoạn chưa từng nhập → never (KHÔNG đỏ), vẫn có trong panel',
+  staleX1 && staleX1.status === 'never' && staleX1.wsLabel === 'Xưởng 1');
+check('QUÁ HẠN: quét CẢ 2 xưởng dù đang xem Xưởng 2 (14 X2 + 8 X1 = 22 công đoạn)',
+  state.capUi.ws === 'x2' && staleScan.length === 22 &&
+  staleScan.some(r => r.ws === 'x1') && staleScan.some(r => r.ws === 'x2'));
+const lateRows = staleScan.filter(r => r.status === 'late');
+const neverRows = staleScan.filter(r => r.status === 'never');
+check('QUÁ HẠN: tóm tắt 1 dòng ghi đúng xưởng + công đoạn + số ngày',
+  cap.capStaleSummaryOf(lateRows).includes('Xưởng 2') && cap.capStaleSummaryOf(lateRows).includes('Bổ Ống (4 ngày)'));
+check('QUÁ HẠN: câu ảnh hưởng nêu hụt hiệu suất + công đoạn sau bị thiếu đầu vào',
+  cap.capStaleImpactOf(staleBoong).includes('thấp hơn thực tế') &&
+  cap.capStaleImpactOf(staleBoong).includes('Chạy Máy Bào Thô'));
+
+
+const staleHtml = cap.capStaleHtml(lateRows, neverRows);
+check('QUÁ HẠN: banner + panel nêu ngày cập nhật cuối, số ngày, nút Mở thẻ đúng công đoạn',
+  staleHtml.includes('Bổ Ống') && staleHtml.includes('16/10') &&
+  staleHtml.includes('data-cap-open-card="x2-bo-ong-card"') && staleHtml.includes('Chưa cập nhật'));
+check('QUÁ HẠN: panel có mục xám công đoạn chưa từng nhập + khối nhắc ẢNH HƯỞNG',
+  staleHtml.includes('Chưa từng có số liệu') &&
+  staleHtml.includes('Số liệu không cập nhật thì ảnh hưởng thế nào?') &&
+  staleHtml.includes('Hiệu suất xưởng tuần/tháng bị hụt hoặc sai') &&
+  staleHtml.includes('Báo cáo In · Xuất Excel · Trợ lý AI'));
+cap.renderCapStale(staleScan, false);
+check('QUÁ HẠN: renderCapStale đổ banner vào #cap-stale + chip #cap-stale-chip',
+  document.getElementById('cap-stale').hidden === false &&
+  document.getElementById('cap-stale').innerHTML.includes('Bổ Ống') &&
+  document.getElementById('cap-stale-chip').hidden === false &&
+  document.getElementById('cap-stale-chip').innerHTML.includes('CĐ quá hạn'));
+cap.renderCapStale(staleScan, true);
+check('QUÁ HẠN: xưởng chưa có số liệu (suppress) → ẩn banner + chip, không chồng thông báo',
+  document.getElementById('cap-stale').hidden === true &&
+  document.getElementById('cap-stale-chip').hidden === true);
+// Không báo sai khi số liệu là HÔM NAY/HÔM QUA
+state.xuong2BoOngRecords = [{ id: 's-boong2', date: '2026-10-20', inputOng: 900 }];
+check('QUÁ HẠN: cập nhật hôm qua → không còn cảnh báo (tránh báo phiền buổi sáng)',
+  cap.capStaleScan('2026-10-21').every(r => r.stageId !== 'boong' || r.status === 'ok'));
+state.xuong2BoOngRecords = [{ id: 's-boong', date: '2026-10-16', inputOng: 1000 }];
+// Nhớ trạng thái mở/đóng panel THEO MÁY (state.capUi.staleOpen trong key UI sẵn có)
+cap.toggleCapStale(true);
+const staleUiSaved = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || '{}');
+check('QUÁ HẠN: mở panel nhớ theo máy (staleOpen=true) + tự mở rộng thẻ khi đang thu gọn',
+  state.capUi.staleOpen === true && staleUiSaved.staleOpen === true && state.capUi.collapsed === false);
+cap.toggleCapStale(false);
+check('QUÁ HẠN: bấm lại → đóng panel (staleOpen=false)', state.capUi.staleOpen === false);
+const capJsStale = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
+const evJsStale = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+check('CẤU TRÚC (index.html): có banner #cap-stale + chip #cap-stale-chip trong thẻ công suất',
+  indexHtml.includes('id="cap-stale"') && indexHtml.includes('id="cap-stale-chip"'));
+check('CẤU TRÚC (capacity.js): CAP_STALE_DAYS + quét 2 xưởng + ngày theo giờ máy',
+  capJsStale.includes('const CAP_STALE_DAYS = 1') && capJsStale.includes('function capStaleScan(') &&
+  capJsStale.includes('capTodayLocalISO'));
+check('CẤU TRÚC (events.js + styles.css): nối toggle panel/chip + CSS banner & bảng chi tiết',
+  evJsStale.includes('toggleCapStale') && evJsStale.includes('#cap-stale-toggle') &&
+  stylesCss.includes('.cap-stale-panel') && stylesCss.includes('.cap-stale-impact'));
+
 
 // ─── Tổng kết ───────────────────────────────────────────────────
 console.log(`\nKết quả: ${pass} PASS / ${fail} FAIL`);

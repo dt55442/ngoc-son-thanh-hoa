@@ -3026,10 +3026,13 @@
       <!-- 3 tầng xổ TẠI CHỖ: KỲ (cấp xưởng, có GIỜ HC/TC tách       -->
       <!-- riêng) → bấm 1 kỳ ra TỪNG CÔNG ĐOẠN → bấm tiếp ra TỪNG    -->
       <!-- NGÀY. Nút TÊN thẻ đổi xưởng (X2 ⇄ X1). Nút "In báo cáo"   -->
-      <!-- in THÔNG TIN CHUNG của TẤT CẢ bộ phận (không có bản đồ    -->
-      <!-- nhiệt/biểu đồ 8 kỳ — vùng in #cap-print-area). Chỉ ĐỌC —  -->
+      <!-- in THÔNG TIN CHUNG của TẤT CẢ bộ phận (không có biểu đồ   -->
+      <!-- 8 kỳ — vùng in #cap-print-area). Chỉ ĐỌC —                -->
       <!-- số liệu lấy từ các thẻ công đoạn ở tab Công Đoạn; bấm     -->
       <!-- nút "Mở thẻ" ở tầng công đoạn để sang tab Công Đoạn sửa.  -->
+      <!-- CẢNH BÁO DỮ LIỆU QUÁ HẠN: #cap-stale (banner + panel chi  -->
+      <!-- tiết nêu Xưởng · Công đoạn · ngày cập nhật cuối · ảnh     -->
+      <!-- hưởng) + chip #cap-stale-chip trên thanh công cụ.          -->
       <!-- js/capacity.js · test: tests/capacity.test.mjs            -->
       <!-- ======================================================= -->
       <div class="planning-card capacity-card" id="capacity-card" data-cap-ws="x2">
@@ -3050,7 +3053,7 @@
           </h4>
           <div class="cap-toolbar">
             <div class="pv-unit-toggle cap-view-toggle" role="group" aria-label="Chuyển chế độ xem: Biểu đồ ⇄ Bảng dữ liệu">
-              <button type="button" class="pv-unit-btn active" id="cap-view-visual" data-cap-view="visual" title="Chế độ trực quan: đồng hồ hiệu suất xưởng · thang xếp hạng công đoạn · bản đồ nhiệt 8 tuần · biểu đồ công đoạn">
+              <button type="button" class="pv-unit-btn active" id="cap-view-visual" data-cap-view="visual" title="Chế độ trực quan: đồng hồ hiệu suất xưởng · thang xếp hạng công đoạn · biểu đồ công đoạn">
                 <i data-lucide="bar-chart-3"></i> <span class="cap-btn-text">Biểu đồ</span>
               </button>
               <button type="button" class="pv-unit-btn" id="cap-view-table" data-cap-view="table" title="Chế độ bảng dữ liệu 3 tầng: Tuần → Công đoạn → Ngày">
@@ -3069,8 +3072,10 @@
               <span class="cap-week-label" id="capacity-week-label">—</span>
               <button type="button" class="cap-week-btn" id="capacity-week-next" title="Kỳ sau"><i data-lucide="chevron-right"></i></button>
             </div>
+            <button type="button" class="cap-stale-chip" id="cap-stale-chip" hidden
+                    title="Công đoạn chưa cập nhật số liệu — bấm để xem chi tiết và ảnh hưởng"></button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-cap-print"
-                    title="In báo cáo công suất & hiệu suất — chỉ lấy thông tin chung của TẤT CẢ bộ phận (Xưởng 2, Xưởng 1, …), không kèm bản đồ nhiệt và biểu đồ 8 kỳ">
+                    title="In báo cáo công suất & hiệu suất — chỉ lấy thông tin chung của TẤT CẢ bộ phận (Xưởng 2, Xưởng 1, …), không kèm biểu đồ 8 kỳ">
               <i data-lucide="printer"></i> <span class="cap-btn-text">In báo cáo</span>
             </button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-capacity" title="Thu gọn / Mở rộng bảng tổng hợp">
@@ -3080,9 +3085,13 @@
         </div>
         <div class="cap-body" id="capacity-body">
           <div class="cap-summary-strip" id="cap-summary-strip"></div>
+          <!-- CẢNH BÁO DỮ LIỆU QUÁ HẠN (js/capacity.js renderCapStale):
+               banner nêu xưởng + công đoạn + số ngày chưa cập nhật, bấm mở
+               panel chi tiết (bảng + ảnh hưởng + nút Mở thẻ). Ẩn khi không có. -->
+          <div class="cap-stale" id="cap-stale" hidden></div>
           <!-- Dải TRỰC QUAN (chế độ "Biểu đồ"): gauge hiệu suất xưởng · thang xếp
-               hạng công đoạn · bản đồ nhiệt 8 tuần × công đoạn · biểu đồ Chart.js
-               của công đoạn đang chọn. Chế độ "Bảng dữ liệu" ẩn dải này. -->
+               hạng công đoạn · biểu đồ Chart.js của công đoạn đang chọn.
+               Chế độ "Bảng dữ liệu" ẩn dải này. -->
           <div class="cap-visual-row" id="cap-visual-row"></div>
           <!-- title = tooltip thay đoạn p.cap-note (đã ẨN) — rê chuột vào bảng hiện cách đọc -->
           <div class="table-responsive cap-scroll" id="cap-table-wrap"
@@ -4967,10 +4976,11 @@
         </div>
       </div>
 
-      <!-- BẢNG 8: NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ — BẢNG DỮ LIỆU TRUNG GIAN:
-           số người cần / số người hiện có cho mỗi vị trí của từng bộ phận.
-           Nhập tay HOẶC lấy từ bảng khác (nút Đồng Bộ Từ Hồ Sơ đếm từ danh
-           sách nhân viên); cung cấp dữ liệu cho các chức năng sắp bổ sung -->
+      <!-- BẢNG 8: NHÂN SỰ CẦN TẠI CÁC VỊ TRÍ — SƠ ĐỒ BONG BÓNG 3 CẤP (21/10/2026):
+           cấp 1 bong bóng bộ phận → cấp 2 thẻ vị trí (sửa "Cần" tại chỗ) →
+           cấp 3 người (đang bố trí · dự bị · dùng chung · trùng giờ). Số liệu
+           LIVE 100% từ Bảng bố trí của ngày đang xem (không còn "hiện có =
+           đếm kỹ năng"). Bảng chi tiết thu gọn ở dưới để nhập ghi chú / xuất Excel. -->
       <div class="planning-card hr-card-hidden" id="hr-posneed-card">
         <div class="planning-card-header">
           <h4><i data-lucide="target"></i> Nhân Sự Cần Tại Các Vị Trí</h4>
@@ -4978,40 +4988,55 @@
             <button type="button" class="btn btn-primary btn-sm" id="btn-add-posneed" data-perm="hr" title="Thêm dòng vị trí cần nhân sự">
               <i data-lucide="plus"></i> Thêm Vị Trí Cần
             </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-posneed" title="Cập nhật &quot;Số người hiện có&quot; của mọi dòng từ danh sách nhân viên đang làm việc">
-              <i data-lucide="refresh-cw"></i> Đồng Bộ Từ Hồ Sơ
+            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-posneed" title="Cập nhật lại số người có kỹ năng (số dự phòng) của mọi dòng từ hồ sơ nhân viên đang làm việc">
+              <i data-lucide="refresh-cw"></i> Đồng Bộ Kỹ Năng
             </button>
             <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-posneed" title="Thu gọn / Mở rộng">
               <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
             </button>
           </div>
         </div>
-        <div class="hr-filter-toolbar">
-          <div class="filter-item">
-            <label for="hr-posneed-filter-dept">Bộ phận:</label>
-            <select id="hr-posneed-filter-dept"></select>
+        <div class="hnm-head">
+          <div class="hnm-toolbar" id="hnm-toolbar"></div>
+          <div class="hnm-kpis" id="hnm-kpi"></div>
+        </div>
+        <div id="hr-need-map" class="hnm-map" data-dept="">
+          <div class="hnm-stage">
+            <div class="hnm-bubbles" id="hnm-dept-bubbles"></div>
+            <div class="hnm-focus" id="hnm-focus"></div>
+            <div class="hnm-pos-col" id="hnm-pos-col"></div>
+            <div class="hnm-shared-col" id="hnm-shared-col"></div>
+            <svg class="hnm-links" id="hnm-links" aria-hidden="true"></svg>
           </div>
-          <span class="hr-count">Bảng dữ liệu trung gian — nhập tay hoặc đồng bộ từ hồ sơ; nguồn cho các bảng/chức năng sắp bổ sung</span>
+          <div class="hnm-legend" id="hnm-legend"></div>
+        </div>
+        <div class="hnm-count-row">
           <span class="hr-count" id="hr-posneed-count"></span>
         </div>
-        <div class="table-responsive table-scroll">
-          <table class="data-table" id="hr-posneed-table">
-            <thead>
-              <tr>
-                <th>Bộ Phận</th>
-                <th>Vị Trí</th>
-                <th>Số Người Cần</th>
-                <th>Số Người Hiện Có</th>
-                <th>Còn Thiếu</th>
-                <th>Ghi Chú</th>
-                <th class="text-right">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody id="hr-posneed-body">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-        </div>
+        <details class="hnm-table-box" id="hnm-table-box">
+          <summary><i data-lucide="table-2"></i> Bảng chi tiết &amp; chỉnh sửa (nhu cầu · chia ca · ghi chú)</summary>
+          <div class="table-responsive table-scroll">
+            <table class="data-table" id="hr-posneed-table">
+              <thead>
+                <tr>
+                  <th>Bộ Phận</th>
+                  <th>Vị Trí</th>
+                  <th>Nhu Cầu / Ngày</th>
+                  <th>Chia Ca</th>
+                  <th>Có Kỹ Năng</th>
+                  <th>Đang Bố Trí</th>
+                  <th>Dùng Chung</th>
+                  <th>Còn Thiếu</th>
+                  <th>Ghi Chú</th>
+                  <th class="text-right">Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody id="hr-posneed-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </details>
       </div>
       </div> <!-- /#hr-details-stack -->
 
@@ -5120,10 +5145,10 @@
                 <span class="hr-mini-desc">Nhu cầu tuyển dụng</span>
                 <span class="hr-mini-count" id="hr-mini-count-recruit">–</span>
               </button>
-              <button type="button" class="hr-mini-card" data-hr-card="hr-posneed-card" aria-expanded="false" title="Nhân sự cần tại các vị trí — số người cần / số người hiện có theo từng vị trí của từng bộ phận (bảng dữ liệu trung gian)">
+              <button type="button" class="hr-mini-card" data-hr-card="hr-posneed-card" aria-expanded="false" title="Nhân sự cần tại các vị trí — sơ đồ bong bóng 3 cấp (bộ phận → vị trí → người), số liệu LIVE từ Bảng bố trí của ngày đang xem">
                 <span class="hr-mini-ic"><i data-lucide="target"></i></span>
                 <span class="hr-mini-title">Nhân Sự Cần Tại Vị Trí</span>
-                <span class="hr-mini-desc">Cần / hiện có theo vị trí</span>
+                <span class="hr-mini-desc">Bong bóng bộ phận → vị trí → người</span>
                 <span class="hr-mini-count" id="hr-mini-count-posneed">–</span>
               </button>
             </div>
@@ -5541,11 +5566,22 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Số Người Cần / Số Người Hiện Có <span class="required">*</span></label>
+          <label>Nhu Cầu CẢ NGÀY <span class="required">*</span></label>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <input type="number" id="posneed-need" min="1" step="1" required>
-            <input type="number" id="posneed-have" min="0" step="1" placeholder="Hiện có">
+            <input type="number" id="posneed-need" min="1" step="1" required placeholder="VD: 3">
+            <input type="number" id="posneed-have" min="0" step="1" placeholder="Số kỹ năng (tự đếm)">
           </div>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+            "Cần" là số suất cho <b>cả ngày</b> — hệ thống tự chia theo ca. Ô thứ 2 chỉ lưu số người
+            có kỹ năng (tham khảo, bấm "Đồng Bộ Kỹ Năng" để tự đếm) — KHÔNG dùng để kết luận thiếu/đủ.
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="posneed-mode">Cách Chia Ca <span style="font-weight:400;font-size:0.72rem;color:var(--text-muted)">(bộ phận để "Làm ca")</span></label>
+          <select id="posneed-mode">
+            <option value="even">Chia đều theo ca (3 → 2+1 · 1 → 1+1)</option>
+            <option value="each">Mỗi ca đủ N (vị trí trực 24/24)</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="posneed-notes">Ghi Chú</label>
@@ -6953,7 +6989,7 @@
 
   <!-- Vùng in BÁO CÁO CÔNG SUẤT & HIỆU SUẤT (nút #btn-cap-print — thẻ #capacity-card
        tab Tổng Quan): chỉ in thông tin chung của TẤT CẢ bộ phận (mỗi xưởng 1 bảng
-       công đoạn + dòng TỔNG), KHÔNG có bản đồ nhiệt/biểu đồ 8 kỳ. js/capacity.js
+       công đoạn + dòng TỔNG), KHÔNG có biểu đồ 8 kỳ. js/capacity.js
        printCapacityReport() + CSS @media print body.cap-printing (styles.css). -->
   <div id="cap-print-area" aria-hidden="true"></div>
 

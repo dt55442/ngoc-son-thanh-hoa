@@ -21,10 +21,10 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission, requireRatePermission, warnOfflineWrite, pendingMarkHtml, claimEditLock, releaseEditLock, editLockWarnHtml } from './cloud.js';
 import { captureAutoBackup } from './autobackup.js'; // chụp bản cất TRƯỚC khi rà soát/dọn sổ kho
-import { canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
+import { canArea, canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
 import { logDataChange } from './history.js';
-import { canApproveLeave, hrShiftCfg, hrSplitHoursHCDate } from './hr.js';
+import { hrShiftCfg, hrSplitHoursHCDate } from './hr.js';
 import { renderAll } from './main.js'; // vẽ lại toàn bộ (Kanban cột Kho ẩn lô hết) — dùng lúc chạy
 import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
@@ -32,6 +32,8 @@ import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
+// CỜ TÍNH NĂNG (Cài Đặt Hệ Thống): incident-manual = cho phép nhập tay giờ sự cố
+import { applySysAreaDom, flagOn } from './sys-settings.js';
 import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, incidentApprovedHoursOf, incidentReportStatsOf, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 // SỔ NHÓM KHỐI LƯỢNG (Giai đoạn 1 — 18/10/2026): bãi tập kết trộn lô nên
@@ -1382,8 +1384,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
           ${base}
           <td title="Giờ HC/TC của ca này (từ Bảng bố trí Nhân Sự)">${s.hours > 0 ? fmtGio(s.hc) + 'h / ' + fmtGio(s.tc) + 'h' : dash}</td>
           <td class="x2-say-shift-perf">
-            <span title="Công suất CỦA CA = ${fmtM3(s.vol)} m³ ÷ ${s.hours > 0 ? fmtGio(s.hours) + 'h' : '0h'} của ca">CS ${s.cap == null ? '—' : fmtM3(s.cap) + ' m³/h'}</span>
-            <span class="x2-say-eff-badge${effCls}" title="Hiệu suất CỦA CA = Giờ cần ${fmtGio(s.need)}h ÷ (Giờ ca ${fmtGio(s.hours)}h${s.incH > 0 ? ` − sự cố ${fmtGio(s.incH)}h` : ''}) — gộp cả Sấy 1 và Sấy 2 trong ca">HS ${effTxt}</span>
+            <span data-flag-show="see.perf.cap" title="Công suất CỦA CA = ${fmtM3(s.vol)} m³ ÷ ${s.hours > 0 ? fmtGio(s.hours) + 'h' : '0h'} của ca">CS ${s.cap == null ? '—' : fmtM3(s.cap) + ' m³/h'}</span>
+            <span class="x2-say-eff-badge${effCls}" data-flag-show="see.perf.eff"  title="Hiệu suất CỦA CA = Giờ cần ${fmtGio(s.need)}h ÷ (Giờ ca ${fmtGio(s.hours)}h${s.incH > 0 ? ` − sự cố ${fmtGio(s.incH)}h` : ''}) — gộp cả Sấy 1 và Sấy 2 trong ca">HS ${effTxt}</span>
             ${cmp}
           </td>
         </tr>`;
@@ -1436,10 +1438,14 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
         <span class="x2-say-day-workers" title="${escapeHTML(r.timeStr || '')}">${workers}</span>
         <span class="x2-say-day-inc${sayAuto ? ' is-auto' : ''}">
           <label>Sự cố:</label>
-          <input type="number" class="x2-say-inc-input" data-say-incident="${escapeHTML(r.date)}" min="0" step="any" value="${r.incident > 0 ? r.incident : ''}" placeholder="0"${sayAuto ? ' readonly' : ''} title="${sayAuto ? `Lấy từ ${saySt.approvedCount} phiếu sự cố ĐÃ DUYỆT (${r.incident} giờ) — sửa/xoá phiếu trong Báo Cáo Sự Cố thay vì nhập tay` : 'Giờ SỰ CỐ của ngày (giờ kết thúc dự kiến bị đẩy lùi do máy hỏng/thiếu nan…) — Hiệu suất = Giờ cần ÷ (Giờ thực tế − Giờ sự cố)'}">
-          <span class="x2-say-inc-unit">h</span>${sayChip}
+          ${flagOn('incident-manual')
+            ? `<input type="number" class="x2-say-inc-input" data-say-incident="${escapeHTML(r.date)}" min="0" step="any" value="${r.incident > 0 ? r.incident : ''}" placeholder="0"${sayAuto ? ' readonly' : ''} title="${sayAuto ? `Lấy từ ${saySt.approvedCount} phiếu sự cố ĐÃ DUYỆT (${r.incident} giờ) — sửa/xoá phiếu trong Báo Cáo Sự Cố thay vì nhập tay` : 'Giờ SỰ CỐ của ngày (giờ kết thúc dự kiến bị đẩy lùi do máy hỏng/thiếu nan…) — Hiệu suất = Giờ cần ÷ (Giờ thực tế − Giờ sự cố)'}">
+              <span class="x2-say-inc-unit">h</span>`
+            : `<strong class="x2-inc-val" data-say-incident="${escapeHTML(r.date)}" data-say-incident-value="${r.incident > 0 ? r.incident : 0}"
+                title="Giờ sự cố CHỈ lấy từ phiếu Báo Cáo Sự Cố ĐÃ DUYỆT — không nhập tay (Quản Trị mở lại ở Cài Đặt Hệ Thống khi cần)">${r.incident > 0 ? r.incident : 0} h</strong>`}
+          ${sayChip}
         </span>
-        <span class="x2-say-eff-badge${effCls}" title="${needTxt}${r.incident > 0 ? ' · Sự cố ' + fmtGio(r.incident) + 'h' : ''} → Hiệu suất CẢ NGÀY = Giờ cần ÷ (Giờ thực tế − Sự cố). Muốn biết từng ca làm tốt hay kém: xem các dòng phụ 'Theo ca' bên dưới (hiệu suất tính trong ca, không chia Sấy 1/Sấy 2).">Hiệu suất cả ngày ${effTxt}</span>
+        <span class="x2-say-eff-badge${effCls}" data-flag-show="see.perf.eff"  title="${needTxt}${r.incident > 0 ? ' · Sự cố ' + fmtGio(r.incident) + 'h' : ''} → Hiệu suất CẢ NGÀY = Giờ cần ÷ (Giờ thực tế − Sự cố). Muốn biết từng ca làm tốt hay kém: xem các dòng phụ 'Theo ca' bên dưới (hiệu suất tính trong ca, không chia Sấy 1/Sấy 2).">Hiệu suất cả ngày ${effTxt}</span>
         <span class="x2-say-day-sum">${r.lanCount} lần · ${fmtM3(r.vol)} m³ · Cần ${fmtGio(r.need)}h · HC ${r.hasAssign ? fmtGio(r.hc) + 'h' : '—'} · TC ${r.hasAssign ? fmtGio(r.tc) + 'h' : '—'}</span>
       </td></tr>`;
       const body = sayShiftRowsHtml(r) + r.groups.map(g => groupHtml(r, g) + (g.charges.length ? g.charges.map(rowHtml).join('') : '')).join('');
@@ -1782,7 +1788,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const tip = cmp.better
       ? `Hiệu suất ca này CAO HƠN ca "${refName}" ${pct} điểm % (cùng ngày, cùng công đoạn)`
       : `Hiệu suất ca này THẤP HƠN ca "${refName}" ${pct} điểm % (cùng ngày, cùng công đoạn)`;
-    return `<span class="x2-shift-cmp ${cmp.better ? 'better' : 'worse'}" title="${escapeHTML(tip)}">So ca kia: <strong>${cmp.better ? '▲' : '▼'} ${pct}%</strong></span>`;
+    return `<span class="x2-shift-cmp ${cmp.better ? 'better' : 'worse'}" data-flag-show="see.perf.eff"  title="${escapeHTML(tip)}">So ca kia: <strong>${cmp.better ? '▲' : '▼'} ${pct}%</strong></span>`;
   }
   // GOM BẢN GHI THEO (NGÀY, CA) — mỗi ca 1 THẺ NGÀY riêng + bảng so sánh 2 ca.
   // disp(r) = hàm hiển thị của thẻ · qtyOf(r, d) = sản lượng của lượt
@@ -2282,6 +2288,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       overlay.classList.add('show');
       overlay.setAttribute('aria-hidden', 'false');
       x2PositionDetailOverlay();
+      // Ẩn nút không đủ quyền theo VÙNG của thẻ vừa mở (Cài Đặt Hệ Thống)
+      try { applySysAreaDom(); } catch (e) { /* bỏ qua */ }
       if (typeof overlay.focus === 'function') overlay.focus({ preventScroll: true });
     }
     syncX2MiniActive();
@@ -2921,8 +2929,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
             <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
             <span class="x2-day-cutters" title="Người cắt/chọn tự động từ Bảng bố trí Nhân Sự (vị trí Cắt — Xưởng 2)"><i data-lucide="users"></i> ${cuttersMain || '<em style="color:var(--text-muted);">chưa bố trí người cắt</em>'}${cuttersMore}</span>
             <span class="x2-day-hours" title="Số giờ cắt = tổng giờ công vị trí Cắt trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ cắt: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
-            <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
+            <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('cut', date)}
           </div>
           ${x2ShiftBlockOf(date, isCutSelectPos, 'Cắt chọn', { qty: totalXe, unit: 'xe/h', rate, incH })}
@@ -3706,8 +3714,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
             <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
             <span class="x2-day-cutters" title="Người bốc tự động từ Bảng bố trí Nhân Sự (vị trí Bốc Luồng — Xưởng 2)"><i data-lucide="users"></i> ${workerMain || '<em style="color:var(--text-muted);">chưa bố trí người bốc</em>'}${workerMore}</span>
             <span class="x2-day-hours" title="Giờ bốc = tổng giờ công vị trí Bốc Luồng trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ bốc: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
-            <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
+            <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('boluong', date)}
           </div>
           ${x2ShiftBlockOf(date, isBocLuongPos, 'Bốc luồng', { qty: totalXe, unit: 'xe/h', rate, incH })}
@@ -4566,8 +4574,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
               <i data-lucide="users"></i> ${workersMain} ${workersMore}
             </span>
             <span class="x2-day-hours" title="Số giờ bổ ${shiftIdx == null ? 'trong ngày' : 'CỦA CA NÀY'} (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ bổ: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế ${shiftIdx == null ? '= Tổng KL ống đầu vào' : 'CỦA CA NÀY'} (${fmtKg(totalIn)} kg) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
-            <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế ${shiftIdx == null ? '= Tổng KL ống đầu vào' : 'CỦA CA NÀY'} (${fmtKg(totalIn)} kg) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
+            <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('boong', date)}
           </div>
           ${shiftIdx == null ? x2ShiftBlockOf(date, isBoOngPos, 'Bổ ống', { qty: totalIn, unit: 'kg/h', rate, incH }) : ''}
@@ -5331,8 +5339,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
               <i data-lucide="users"></i> ${workersMain} ${workersMore}
             </span>
             <span class="x2-day-hours" title="Thời gian ${shiftIdx == null ? 'trong ngày' : 'CỦA CA NÀY'} (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất ${shiftIdx == null ? '' : 'CỦA CA NÀY '}= Tổng số thanh ${allQtyKnown ? `(${fmtThanh(totalQty)} thanh)` : '(chờ Chọn Nan Thô)'} ÷ giờ chạy máy hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
-            <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất ${shiftIdx == null ? '' : 'CỦA CA NÀY '}= Tổng số thanh ${allQtyKnown ? `(${fmtThanh(totalQty)} thanh)` : '(chờ Chọn Nan Thô)'} ÷ giờ chạy máy hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
+            <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('baotho', date)}
           </div>
           ${shiftIdx == null ? x2ShiftBlockOf(date, isBaoThoPos, 'Bào thô', { qty: (allQtyKnown ? totalQty : null), unit: 'thanh/h', rate, incH }) : ''}
@@ -6323,8 +6331,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
             <i data-lucide="users"></i> ${workersMain} ${workersMore}
           </span>
           <span class="x2-day-hours" title="Thời gian ${shiftIdx == null ? 'trong ngày' : 'CỦA CA NÀY'} (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-          <span class="x2-day-cap" title="Công suất thực tế ${shiftIdx == null ? '' : 'CỦA CA NÀY '}= Tổng số thanh (${fmtThanh(totalQty)} thanh) ÷ giờ chọn nan hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
-          <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế ${shiftIdx == null ? '' : 'CỦA CA NÀY '}= Tổng số thanh (${fmtThanh(totalQty)} thanh) ÷ giờ chọn nan hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
+          <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
           ${stageIncidentInputHtml('chonnan', date)}
           <span class="x2-day-sum" title="Tổng số thanh nan thô đã chọn trong ngày (KHÔNG gồm các lượt nhập ở ngoài công đoạn)"><i data-lucide="hash"></i> Tổng thanh: <strong>${fmtThanh(totalQty)}</strong></span>
           <span class="x2-day-sum" title="Tổng thể tích quy đổi của số thanh đã chọn trong ngày"><i data-lucide="box"></i> Tổng thể tích: <strong>${totalVol.toFixed(4)} m³</strong></span>
@@ -7419,7 +7427,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const effTip = eff == null
       ? `Chưa đủ dữ liệu (thiếu giờ ${kindLabel} / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức công suất ${kindLabel} cho tháng này)`
       : `Hiệu suất = Công suất thực tế (${fmtThanh(capInfo.cap)} thanh/h = ${fmtThanh(capInfo.qty)} thanh ÷ ${fmtRatio(capInfo.hoursEff)} giờ${capInfo.incH > 0 ? ` [đã trừ ${fmtGio(capInfo.incH)}h sự cố]` : ''}) ÷ Định mức ${kindLabel} (${fmtThanh(capInfo.rate)} thanh/h)`;
-    return `<span class="x2-day-eff" title="${escapeHTML(effTip)}">H.suất ${kindLabel}: <strong>${effTxt}</strong></span>`;
+    return `<span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">H.suất ${kindLabel}: <strong>${effTxt}</strong></span>`;
   }
 
   // 1 DÒNG NHÁNH VÙNG 1: GIA CÔNG — nguồn lô ghi rõ KÍCH THƯỚC + PHÂN LOẠI +
@@ -7515,9 +7523,9 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
           ${workerBlock(liveCt, ctWorkerRows, 'Chọn thanh')}
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ Gia công: ${hoursTxt(spGc)}</span>
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ Chọn thanh: ${hoursTxt(spCt)}</span>
-          <span class="x2-day-cap" title="Công suất Gia công = tổng thanh thô gia công ÷ tổng giờ Gia công">CS Gia công: <strong>${gcCap.cap != null ? `${fmtThanh(gcCap.cap)} thanh/h` : '—'}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Gia công = tổng thanh thô gia công ÷ tổng giờ Gia công">CS Gia công: <strong>${gcCap.cap != null ? `${fmtThanh(gcCap.cap)} thanh/h` : '—'}</strong></span>
           ${bulligEffHtml(gcCap, 'Gia công')}
-          <span class="x2-day-cap" title="Công suất Chọn thanh = tổng thanh chọn (đạt + lỗi) ÷ tổng giờ Chọn thanh">CS Chọn: <strong>${ctCap.cap != null ? `${fmtThanh(ctCap.cap)} thanh/h` : '—'}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Chọn thanh = tổng thanh chọn (đạt + lỗi) ÷ tổng giờ Chọn thanh">CS Chọn: <strong>${ctCap.cap != null ? `${fmtThanh(ctCap.cap)} thanh/h` : '—'}</strong></span>
           ${bulligEffHtml(ctCap, 'Chọn thanh')}
           ${stageIncidentInputHtml('bullig', date)}
         </div>
@@ -8260,7 +8268,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const effTip = eff == null
       ? `Chưa đủ dữ liệu (thiếu giờ ${label.toLowerCase()} / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức ${label} cho tháng này)`
       : `Hiệu suất = Công suất thực tế (${fmtThanh(info.cap)} ${info.rateUnit} = ${fmtThanh(info.qty)} ${info.unit} ÷ ${fmtRatio(info.hoursEff)} giờ${info.incH > 0 ? ` [đã trừ ${fmtGio(info.incH)}h sự cố]` : ''}) ÷ Định mức ${label} (${fmtThanh(info.rate)} ${info.rateUnit})`;
-    return `<span class="x2-day-eff" title="${escapeHTML(effTip)}">H.suất ${label}: <strong>${effTxt}</strong></span>`;
+    return `<span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">H.suất ${label}: <strong>${effTxt}</strong></span>`;
   }
 
   // 1 DÒNG NHÁNH VÙNG 1: CẮT VÁN
@@ -8336,9 +8344,9 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
           ${workerBlock(liveXe, xeDisp.length ? xeDisp[0].workerRows : [], 'Xẻ Thanh')}
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ cắt: ${hoursTxt(spCat)}</span>
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ xẻ: ${hoursTxt(spXe)}</span>
-          <span class="x2-day-cap" title="Công suất Cắt ván = tổng tấm ván cắt ÷ tổng giờ cắt">CS Cắt: <strong>${catCap.cap != null ? `${fmtThanh(catCap.cap)} tấm/h` : '—'}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Cắt ván = tổng tấm ván cắt ÷ tổng giờ cắt">CS Cắt: <strong>${catCap.cap != null ? `${fmtThanh(catCap.cap)} tấm/h` : '—'}</strong></span>
           ${catVanEffHtml(catCap, 'cat')}
-          <span class="x2-day-cap" title="Công suất Xẻ thanh = tổng THANH xẻ ra ÷ tổng giờ xẻ">CS Xẻ: <strong>${xeCap.cap != null ? `${fmtThanh(xeCap.cap)} thanh/h` : '—'}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Xẻ thanh = tổng THANH xẻ ra ÷ tổng giờ xẻ">CS Xẻ: <strong>${xeCap.cap != null ? `${fmtThanh(xeCap.cap)} thanh/h` : '—'}</strong></span>
           ${catVanEffHtml(xeCap, 'xe')}
           ${periodChip}
           ${stageIncidentInputHtml('catvan', date)}
@@ -8886,7 +8894,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const effTip = eff == null
       ? `Chưa đủ dữ liệu (thiếu giờ ${label.toLowerCase()} / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức ${label} cho tháng này)`
       : `Hiệu suất = Công suất thực tế (${fmtThanh(info.cap)} tấm/h = ${fmtThanh(info.qty)} tấm ÷ ${fmtRatio(info.hoursEff)} giờ${info.incH > 0 ? ` [đã trừ ${fmtGio(info.incH)}h sự cố]` : ''}) ÷ Định mức ${label} (${fmtThanh(info.rate)} tấm/h)`;
-    return `<span class="x2-day-eff" title="${escapeHTML(effTip)}">H.suất ${label}: <strong>${effTxt}</strong></span>`;
+    return `<span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">H.suất ${label}: <strong>${effTxt}</strong></span>`;
   }
 
   // 1 DÒNG NHÁNH — giống nhau cho cả Bào lẫn Chà thùng (chỉ Đầu vào + Số lượng)
@@ -8947,9 +8955,9 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
           ${workerBlock(liveCha, chaDisp.length ? chaDisp[0].workerRows : [], 'Chà Thùng')}
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ bào: ${hoursTxt(spBao)}</span>
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ chà: ${hoursTxt(spCha)}</span>
-          <span class="x2-day-cap" title="Công suất Bào = tổng tấm ván bào ÷ tổng giờ bào">CS Bào: <strong>${baoCap.cap != null ? `${fmtThanh(baoCap.cap)} tấm/h` : '—'}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Bào = tổng tấm ván bào ÷ tổng giờ bào">CS Bào: <strong>${baoCap.cap != null ? `${fmtThanh(baoCap.cap)} tấm/h` : '—'}</strong></span>
           ${baoVanEffHtml(baoCap, 'bao')}
-          <span class="x2-day-cap" title="Công suất Chà thùng = tổng tấm ván chà ÷ tổng giờ chà">CS Chà: <strong>${chaCap.cap != null ? `${fmtThanh(chaCap.cap)} tấm/h` : '—'}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Chà thùng = tổng tấm ván chà ÷ tổng giờ chà">CS Chà: <strong>${chaCap.cap != null ? `${fmtThanh(chaCap.cap)} tấm/h` : '—'}</strong></span>
           ${baoVanEffHtml(chaCap, 'cha')}
           ${periodChip}
           ${stageIncidentInputHtml('baovan', date)}
@@ -11917,7 +11925,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       const effK = (cap != null && rateK) ? (cap / rateK) * 100 : null;
       const effTxt = effK == null ? '—' : `${fmtRatio(effK)}%`;
       const effColor = effK == null ? 'inherit' : (effK >= 100 ? '#16a34a' : effK >= 70 ? '#0f766e' : '#b45309');
-      const kindChip = `<span class="x2-day-cap" title="Hiệu suất CHUNG cả 3 nhánh (Bào tinh · Hạ cấp · Bào thanh): công suất ${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'} (${fmtThanh(tIn)} thanh ÷ ${fmtRatio(hoursEff)} giờ hiệu dụng${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}) ÷ định mức Bào tinh${rateK ? ` ${fmtThanh(rateK)} thanh/h` : ' (chưa đặt)'} — giờ làm KHÔNG tách theo nhánh nên tính CHUNG 1 hiệu suất">Hiệu suất: <strong style="color:${effColor};">${effTxt}</strong>${rateK ? ` · ĐM ${fmtThanh(rateK)} thanh/h` : ' (chưa đặt Định mức)'}</span>`;
+      const kindChip = `<span class="x2-day-cap" data-flag-show="see.perf.eff" title="Hiệu suất CHUNG cả 3 nhánh (Bào tinh · Hạ cấp · Bào thanh): công suất ${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'} (${fmtThanh(tIn)} thanh ÷ ${fmtRatio(hoursEff)} giờ hiệu dụng${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}) ÷ định mức Bào tinh${rateK ? ` ${fmtThanh(rateK)} thanh/h` : ' (chưa đặt)'} — giờ làm KHÔNG tách theo nhánh nên tính CHUNG 1 hiệu suất">Hiệu suất: <strong style="color:${effColor};">${effTxt}</strong>${rateK ? ` · ĐM ${fmtThanh(rateK)} thanh/h` : ' (chưa đặt Định mức)'}</span>`;
       const kindParts = kindOrder.map(k => {
         const qtyK = rows.reduce((s, r) => s + (((r.kind || 'tinh') === k) ? baoTinhQtyInOf(r) : 0), 0);
         return `${baoTinhKindLabel(k)} ${fmtThanh(qtyK)}`;
@@ -11947,7 +11955,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
               <i data-lucide="users"></i> ${workersMain} ${workersMore}
             </span>
             <span class="x2-day-hours" title="Thời gian = tổng giờ công vị trí Bào tinh trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Thời gian: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế = Tổng thanh đưa vào (${fmtThanh(tIn)} thanh) ÷ giờ bào hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng thanh đưa vào (${fmtThanh(tIn)} thanh) ÷ giờ bào hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố` : ''})">Công suất: <strong>${cap != null ? `${fmtThanh(cap)} thanh/h` : '—'}</strong></span>
             ${stageIncidentInputHtml('baotinh', date)}
             ${kindChip}${kindDetail}
             <span class="x2-day-cap" title="Tổng thanh ĐẠT trong ngày">Đạt: <strong>${fmtThanh(tOk)} thanh</strong></span>
@@ -12677,7 +12685,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   // KHÔNG sửa quantity / phiếu gốc; lưu trên lô nên đi theo batches (mây/file/history).
   function khoAckOverAlloc(id) {
     if (!requireEditPermission()) return;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý chốt lệch tồn kho.', 'error'); return; }
+    if (!canArea('ap.kho', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý chốt lệch tồn kho.', 'error'); return; }
     const b = (state.batches || []).find(x => x && x.id === String(id || ''));
     if (!b) return;
     const cap = khoInCountOf(b) * (Number(b.quantity) || 0);
@@ -12696,7 +12704,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   }
   function khoClearOverAck(id) {
     if (!requireEditPermission()) return;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý bỏ chốt lệch.', 'error'); return; }
+    if (!canArea('ap.kho', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý bỏ chốt lệch.', 'error'); return; }
     const b = (state.batches || []).find(x => x && x.id === String(id || ''));
     if (!b || !b.khoOverAck) return;
     if (!confirm(`Bỏ chốt lệch của lô ${b.code || b.id}? Cảnh báo sẽ hiện lại.`)) return;
@@ -12766,7 +12774,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     return dv.length ? `${fmtThanh(dv.reduce((s, d) => s + d.qty, 0))} thanh` : '0 thanh';
   }
   function khoNoteRowHtml(n) {
-    const canApprove = canApproveLeave();
+    const canApprove = canArea('ap.kho', 'approve');
     const picked = khoPickIds.has(n.id);
     const kind = n.type === 'xuat'
       ? `Xuất → <strong>${KHO_PURPOSE_LABELS[khoNormPurpose(n.purpose)] || '—'}</strong>${n.purposeNote ? ` (${escapeHTML(n.purposeNote)})` : ''}`
@@ -12807,7 +12815,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       list.innerHTML = rows.map(khoNoteRowHtml).join('');
     }
     const approveAll = document.getElementById('x2-kho-approve-all');
-    if (approveAll) approveAll.style.display = (rows.length && canApproveLeave()) ? '' : 'none';
+    if (approveAll) approveAll.style.display = (rows.length && canArea('ap.kho', 'approve')) ? '' : 'none';
     initLucide();
   }
 
@@ -13177,7 +13185,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   // tồn lô TỰ HỒI ngay (phiếu chờ không trừ FIFO) → sửa thêm/bớt lô ở form → duyệt lại.
   function khoReopenNote(id) {
     if (!requireEditPermission()) return;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý mở lại được phiếu kho!', 'error'); return; }
+    if (!canArea('ap.kho', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý mở lại được phiếu kho!', 'error'); return; }
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n) return;
     if (n.status !== 'da_duyet') { showToast('Chỉ mở lại được phiếu ĐÃ DUYỆT!', 'error'); return; }
@@ -13200,7 +13208,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     if (!requireEditPermission()) return;
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n) return;
-    if (n.status === 'da_duyet' && !canApproveLeave()) {
+    if (n.status === 'da_duyet' && !canArea('ap.kho', 'approve')) {
       showToast('Phiếu ĐÃ DUYỆT — chỉ Quản Trị / Ban Quản Lý xóa được.', 'error');
       return;
     }
@@ -13242,7 +13250,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   function khoApproveNote(id) {
     if (!requireEditPermission()) return;
     warnOfflineWrite('khoNotes', 'duyệt phiếu kho');
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
+    if (!canArea('ap.kho', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n || n.status !== 'cho_duyet') return;
     if (n.type === 'xuat') {
@@ -13267,7 +13275,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   function khoRejectNote(id) {
     if (!requireEditPermission()) return;
     warnOfflineWrite('khoNotes', 'từ chối phiếu kho');
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
+    if (!canArea('ap.kho', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
     const n = (state.khoNotes || []).find(x => x && x.id === id);
     if (!n || n.status !== 'cho_duyet') return;
     const reason = (typeof prompt === 'function') ? (prompt('Lý do từ chối phiếu (ghi chú cho người tạo):', '') || '') : '';
@@ -13295,7 +13303,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   }
   function khoApprovePicked() {
     if (!requireEditPermission()) return;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
+    if (!canArea('ap.kho', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu kho!', 'error'); return; }
     const ids = [...khoPickIds];
     if (!ids.length) { showToast('Chưa chọn phiếu nào để duyệt!', 'error'); return; }
     pushUndo('Duyệt nhiều phiếu kho');
@@ -13631,7 +13639,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   }
   function khoReconcileLedger() {
     if (!requireEditPermission()) return;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý rà soát được sổ kho.', 'error'); return; }
+    if (!canArea('x2.kho.recon', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý rà soát được sổ kho.', 'error'); return; }
     const plan = khoReconcilePlan();
     if (!plan.dupIds.length && !plan.trims.length && !plan.adds.length) {
       showToast(plan.overAfter
@@ -13920,8 +13928,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
             <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
             <span class="x2-day-cutters" title="${escapeHTML(cfg.headName)} tự động từ Bảng bố trí Nhân Sự (bộ phận Xưởng 1)"><i data-lucide="users"></i> ${main || `<em style="color:var(--text-muted);">chưa bố trí ${escapeHTML(cfg.headName.toLowerCase())}</em>`}${more}</span>
             <span class="x2-day-hours" title="Tổng giờ làm vị trí này trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / tăng ca (TC)">Giờ làm: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" title="Công suất thực tế = Tổng KL (${fmtKg(totalQty)} kg) ÷ giờ hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
-            <span class="x2-day-eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng KL (${fmtKg(totalQty)} kg) ÷ giờ hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
+            <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml(cfg.incKey, date)}
           </div>
           ${shiftBreakdownHtml({
@@ -15923,6 +15931,72 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   }
   // ─── (X1) HẾT KHỐI ───
 
+  // ═══ NÚT TRƯỢT NGANG CHO KHUNG LỊCH SỬ (VÙNG 3) — 22/10/2026 ═══
+  // 25 khung `.x2-cut-table-scroll` (mọi thẻ công đoạn + Kho + Ép Ván) được
+  // chèn 2 nút ‹ › vào `.x2-cut-table-head` (trước nút Thu gọn).
+  // • Tự ẩn khi nội dung không tràn; disable nút ở 2 đầu.
+  // • Theo dõi scroll + ResizeObserver ⇒ thẻ mở muộn (pop-up) vẫn đúng.
+  // • Bấm = trượt 80% bề ngang khung (hỗ trợ điện thoại không cần vuốt).
+  function setupHistoryHScroll() {
+    if (typeof document === 'undefined' || !document.querySelectorAll) return 0;
+    const wraps = document.querySelectorAll('.x2-cut-table-scroll');
+    let wired = 0;
+    wraps.forEach(el => {
+      const wrap = el.parentElement;
+      let head = null;
+      if (wrap) {
+        for (let i = 0; i < wrap.children.length; i++) {
+          if (wrap.children[i].classList && wrap.children[i].classList.contains('x2-cut-table-head')) { head = wrap.children[i]; break; }
+        }
+      }
+      let nav = wrap ? wrap.querySelector('.x2-hscroll-nav') : null;
+      if (!nav) {
+        nav = document.createElement('div');
+        nav.className = 'x2-hscroll-nav';
+        nav.innerHTML = '<button type="button" class="x2-hscroll-btn" data-hscroll="left" aria-label="Trượt sang trái" title="Xem cột bên trái">‹</button>'
+          + '<button type="button" class="x2-hscroll-btn" data-hscroll="right" aria-label="Trượt sang phải" title="Xem cột bên phải">›</button>';
+        if (head) {
+          const toggle = head.querySelector('.rate-toggle-btn');
+          if (toggle) head.insertBefore(nav, toggle); else head.appendChild(nav);
+        } else if (wrap) {
+          wrap.insertBefore(nav, wrap.firstChild);
+        } else {
+          return;
+        }
+      }
+      const sync = () => {
+        const max = el.scrollWidth - el.clientWidth;
+        const over = max > 2;
+        nav.hidden = !over;
+        if (!over) return;
+        const l = nav.querySelector('[data-hscroll="left"]');
+        const r = nav.querySelector('[data-hscroll="right"]');
+        if (l) l.disabled = el.scrollLeft <= 2;
+        if (r) r.disabled = el.scrollLeft >= max - 2;
+      };
+      if (el.dataset.hscrollReady !== '1') {
+        el.dataset.hscrollReady = '1';
+        wired++;
+        el.addEventListener('scroll', sync, { passive: true });
+        nav.addEventListener('click', (e) => {
+          const b = e.target && e.target.closest ? e.target.closest('[data-hscroll]') : null;
+          if (!b) return;
+          e.preventDefault();
+          const dir = b.getAttribute('data-hscroll') === 'left' ? -1 : 1;
+          const step = Math.max(160, Math.round(el.clientWidth * 0.8));
+          if (typeof el.scrollBy === 'function') el.scrollBy({ left: dir * step, behavior: 'smooth' });
+          else el.scrollLeft += dir * step;
+        });
+        if (typeof ResizeObserver !== 'undefined') {
+          try { new ResizeObserver(sync).observe(el); } catch (e) { /* bỏ qua */ }
+        }
+        if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', sync);
+      }
+      sync();
+    });
+    return wraps.length;
+  }
+
 export {
   X2_CARD_DEFS,
   // ── CÔNG TẮC CHUYỂN XƯỞNG (tab Công Đoạn SX) ──
@@ -16153,6 +16227,7 @@ export {
   batchVolumeOf,
   batchPassedStage,
   toggleX2KanbanBoard,
+  setupHistoryHScroll,
   applyX2KanbanCollapsed,
   applyX2SayFrame,
   switchX2SayFrame,

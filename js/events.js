@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // js/events.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
-import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleResetSubmit, handleUserEditSubmit, handleUserPermsSubmit, openUsersMgrModal, saveSession, sendPasswordResetToUser, toggleAuthPanel } from './auth.js';
+import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleResetSubmit, handleUserEditSubmit, handleUserPermsSubmit, onSysExport, onSysFlagPreset, onSysFlagToggle, onSysPermChange, onSysPermReset, onSysReset, openUsersMgrModal, renderSysPerms, saveSession, sendPasswordResetToUser, sysSetTab, toggleAuthPanel } from './auth.js';
 // TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
 import { authErrorText, authMarkStep, authReset, isAuthBusy, setAuthBusy } from './auth-ui.js';
 import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
@@ -108,6 +108,37 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const el = document.getElementById(id);
       if (el) el.addEventListener(event, handler);
     }
+
+    // ── CÀI ĐẶT HỆ THỐNG (panel 4 tab) — UỶ NHIỆM SỰ KIỆN ──
+    // Các tab/ma trận/cờ được vẽ lại nhiều lần nên KHÔNG gắn trực tiếp lên
+    // từng ô; gắn 1 lần trên modal rồi đọc data-* của phần tử được bấm.
+    const sysRoot = document.getElementById('modal-users-mgr');
+    if (sysRoot) {
+      sysRoot.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const tab = t.closest('[data-sys-tab]');
+        if (tab) { sysSetTab(tab.getAttribute('data-sys-tab')); return; }
+        const rst = t.closest('[data-sys-perm-reset]');
+        if (rst) { onSysPermReset(rst.getAttribute('data-sys-perm-reset')); return; }
+        const all = t.closest('[data-sys-flag-all]');
+        if (all) { onSysFlagPreset(all.getAttribute('data-sys-flag-all'), true); return; }
+        const none = t.closest('[data-sys-flag-none]');
+        if (none) { onSysFlagPreset(none.getAttribute('data-sys-flag-none'), false); return; }
+      });
+      sysRoot.addEventListener('change', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('[data-sys-perm]')) { onSysPermChange(e); return; }
+        if (t.closest('[data-sys-flag]')) { onSysFlagToggle(e); return; }
+        if (t.id === 'sys-perm-only-set') renderSysPerms();
+      });
+      sysRoot.addEventListener('input', (e) => {
+        if (e.target && e.target.id === 'sys-perm-search') renderSysPerms();
+      });
+    }
+    safeOn('btn-sys-reset', 'click', onSysReset);
+    safeOn('btn-sys-export', 'click', onSysExport);
 
     // ── SỔ NHÓM: bộ chọn NHIỀU PHIẾU CÂN (ủy nhiệm sự kiện cho danh sách) ──
     // Mỗi dòng có: checkbox chọn phiếu + ô KL lấy từ phiếu (mặc định = còn lại).

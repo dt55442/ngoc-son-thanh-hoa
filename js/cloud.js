@@ -6,11 +6,12 @@ import { saveSession, updateUserProfileHeader } from './auth.js';
 import { authMarkStep, authNotifySettled } from './auth-ui.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
-import { canEditAnything, canEditRate, canEditTab, canPayApply, canPayLock, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { areaLabel, canArea, canEditAnything, canEditRate, canEditTab, canPayApply, canPayLock, currentAreaId, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
+import { applySysSettings, mergeSysSettings, normalizeSysSettings } from './sys-settings.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
 import { showToast } from './utils.js';
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — cache localStorage 2 tháng
@@ -893,7 +894,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
   // Cổng chặn theo ngữ cảnh tab đang mở: người dùng chỉ sửa được tab
   // được chỉ định trong quyền của họ (editTabs / admin = mọi tab)
-  function requireEditPermission() {
+  // 22/10/2026 — thêm tham số `area` (Cài Đặt Hệ Thống): kiểm thêm QUYỀN THEO
+  // VÙNG (none/view/edit/approve). Gọi 1 tham số như cũ vẫn chạy (chỉ tab).
+  function requireEditPermission(area) {
+    const ar = area || currentAreaId();
+    if (ar && !canArea(ar, 'edit')) {
+      showToast(`Bạn không có quyền "${areaLabel(ar)}". Liên hệ Quản Trị nếu cần.`, 'error');
+      return false;
+    }
     if (canEditTab(currentTabId())) {
       // SỬA LỖI 18/10/2026: tài khoản KHÔNG có quyền đẩy mây (Người Xem) mà vẫn
       // sửa được → bản ghi MỒ CÔI vĩnh viễn trên máy này, máy khác không thấy,
@@ -1119,7 +1127,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     materialPlan: 'warn',
     x2LotLocations: 'warn',
     x2BaoThanhOutSizes: 'warn',
-    rateApprovals: 'warn'   // phê duyệt định mức: cảnh báo khi chưa kết nối mây, không chặn
+    rateApprovals: 'warn',  // phê duyệt định mức: cảnh báo khi chưa kết nối mây, không chặn
+    sysSettings: 'warn'     // cài đặt hệ thống: cảnh báo, không chặn
   };
   function domainPolicyOf(k) { return DOMAIN_POLICY[k] || 'offline'; }
   let fbWarnPolicyAt = 0;
@@ -1232,6 +1241,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       qcPressLogs: state.qcPressLogs || [],         // NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — verdict PASS/Fail)
       x2IncidentReports: state.x2IncidentReports || [],   // PHIẾU BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
       rateApprovals: state.rateApprovals || [],           // PHÊ DUYỆT ĐỊNH MỨC theo (xưởng, tháng)
+      sysSettings: state.sysSettings || {},               // CÀI ĐẶT HỆ THỐNG (cờ + quyền vùng + nhật ký)
       pressRecords: state.pressRecords,
       pressNotes: state.pressNotes || [],
       hrEmployees: state.hrEmployees || [],
@@ -1364,6 +1374,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       qcPressLogs: obj.qcPressLogs || [],         // NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — verdict PASS/Fail)
       x2IncidentReports: obj.x2IncidentReports || [],   // PHIẾU BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
       rateApprovals: obj.rateApprovals || [],           // PHÊ DUYỆT ĐỊNH MỨC theo (xưởng, tháng)
+      sysSettings: obj.sysSettings || {},
       pressRecords: obj.pressRecords || [],
       hrEmployees: obj.hrEmployees || [], hrLeaves: obj.hrLeaves || [], hrRecruitment: obj.hrRecruitment || [],
       hrPositionNeeds: obj.hrPositionNeeds || [],
@@ -1691,7 +1702,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     'x2CatVanRates',      // Cắt Ván: Cắt ván (tấm/h) + Xẻ thanh (thanh/h)
     'x2BaoVanRates',      // Bào Ván: Bào + Chà thùng (cả 2 tấm/h)
     'x2SayRates',         // Thời gian 1 lần than hóa (phút/m³)
-    'x2EpVanRates'        // Ép Ván (m³/h)
+    'x2EpVanRates',       // Ép Ván (m³/h)
+    'sysSettings'         // CÀI ĐẶT HỆ THỐNG — chỉ admin ghi
     , 'x1Rates'           // Xưởng 1: Cắt Ống · Sấy Sinh · Bốc (kg/h)
     , 'x2YieldRates'      // Định mức TỶ LỆ thu hồi (%) — thẻ Phụ Phẩm & Cân Đối
   ]);
@@ -1832,6 +1844,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (remote.x2IncidentReports) state.x2IncidentReports = m(clean('x2IncidentReports', state.x2IncidentReports || []), clean('x2IncidentReports', remote.x2IncidentReports));
     // PHÊ DUYỆT ĐỊNH MỨC theo (xưởng, tháng) — gộp theo id, mới hơn thắng
     if (remote.rateApprovals) state.rateApprovals = m(clean('rateApprovals', state.rateApprovals || []), clean('rateApprovals', remote.rateApprovals));
+    if (remote.sysSettings) state.sysSettings = mergeSysSettings(state.sysSettings || {}, remote.sysSettings);
     // PHIẾU KHO (xuất / tiêu hủy / tái chế) — gộp theo id, mới hơn thắng + tôn trọng tombstone
     // (phiếu do tổ trưởng tạo trên máy này, lãnh đạo duyệt trên máy khác → phải gộp 2 chiều)
     if (remote.khoNotes) state.khoNotes = m(clean('khoNotes', state.khoNotes || []), clean('khoNotes', remote.khoNotes));
@@ -2026,7 +2039,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_QC_FINAL_RATE, JSON.stringify(state.qcFinalRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_PRESS, JSON.stringify(state.qcPressLogs || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_INCIDENT_REPORTS, JSON.stringify(state.x2IncidentReports || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_RATE_APPROVALS, JSON.stringify(state.rateApprovals || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, JSON.stringify(state.rateApprovals || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_SYS_SETTINGS, JSON.stringify(state.sysSettings || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_KHO_NOTES, JSON.stringify(state.khoNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_PHU_PHAM, JSON.stringify(state.x2PhuPhamRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_STOCKTAKE, JSON.stringify(state.x2Stocktakes || [])); } catch (e) {}
@@ -2171,6 +2185,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     qcPressLogs: 'Nhật Ký Ép Ván (QC)',
     x2IncidentReports: 'Báo Cáo Sự Cố (Công Đoạn SX)',
     rateApprovals: 'Phê duyệt định mức (theo xưởng + tháng)',
+    sysSettings: 'Cài đặt hệ thống (cờ hiển thị + quyền vùng)',
     qcKilnReadings: 'Độ Ẩm Lò Sấy',
     khoNotes: 'Phiếu Kho',
     x2Stocktakes: 'Kiểm Kê Bãi (Xưởng 2)',
@@ -2435,6 +2450,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (data.x2IncidentReports) state.x2IncidentReports = clean('x2IncidentReports', data.x2IncidentReports);
       // PHÊ DUYỆT ĐỊNH MỨC: nhận theo mây khi tải về (gộp theo id)
       if (data.rateApprovals) state.rateApprovals = clean('rateApprovals', data.rateApprovals);
+      if (data.sysSettings) { state.sysSettings = normalizeSysSettings(data.sysSettings); applySysSettings(); }
       // ĐỊNH MỨC KIỂM SAU SẢN XUẤT: nhận theo mây khi tải về (ghi đè từng tháng)
       if (data.qcFinalRates && typeof data.qcFinalRates === 'object' && !Array.isArray(data.qcFinalRates)) {
         state.qcFinalRates = Object.assign({}, state.qcFinalRates || {}, data.qcFinalRates);

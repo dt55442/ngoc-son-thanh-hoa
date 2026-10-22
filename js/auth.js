@@ -5,8 +5,14 @@ import { FB_ROLES_DOC, FB_SETTINGS_COLL, applyRoleToUI, fbDb, initLucide, isFire
 // TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
 import { authErrorText, isAuthBusy, setAuthBusy } from './auth-ui.js';
 import { ALL_EDITABLE_IDS, ROLES, ROLE_ORDER, expandWsTabs, getTabDef, normalizeUser } from './permissions.js';
+// CÀI ĐẶT HỆ THỐNG (22/10/2026) — panel 4 tab trong modal "Cài Đặt Hệ Thống"
+import {
+  PERM_GROUPS, PERM_AREAS, PERM_LEVEL_LABEL, PERM_LEVELS, UI_FLAGS, areaConfigured,
+  flagRoles, pushAudit, resetSysSettings, roleLevel, saveSysSettings, savedPermLevel,
+  setFlagRole, setPermLevel, sysSettingsExport, sysSettingsState
+} from './sys-settings.js';
 import { renderAll } from './main.js';
-import { DEFAULT_USERS, STORAGE_KEY_SESSION, STORAGE_KEY_USERS, state } from './state.js';
+import { DEFAULT_USERS, STORAGE_KEY_SESSION, STORAGE_KEY_USERS, APP_VERSION, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { escapeHTML, showToast } from './utils.js';
 
@@ -190,6 +196,266 @@ import { escapeHTML, showToast } from './utils.js';
     }
   }
 
+  // ═══ CÀI ĐẶT HỆ THỐNG — 4 TAB (22/10/2026) ═══════════════════
+  // Tab 1 Người dùng (giữ nguyên toàn bộ form/bảng cũ) · Tab 2 ma trận quyền
+  // 37 vùng · Tab 3 cờ hiển thị (admin bật/tắt chủ động) · Tab 4 nhật ký.
+  let sysTab = 'users';
+
+  function sysEscape(s) { return escapeHTML(s == null ? '' : String(s)); }
+
+  function sysSetTab(tab) {
+    sysTab = ['users', 'perms', 'flags', 'system'].includes(tab) ? tab : 'users';
+    document.querySelectorAll('#modal-users-mgr [data-sys-tab]').forEach(b => {
+      const on = b.getAttribute('data-sys-tab') === sysTab;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#modal-users-mgr [data-sys-panel]').forEach(p => {
+      const on = p.getAttribute('data-sys-panel') === sysTab;
+      p.hidden = !on;
+      p.style.display = on ? '' : 'none';
+    });
+    renderSysSettings();
+    initLucide();
+  }
+
+  function renderSysSettings() {
+    const chips = document.getElementById('sys-mgr-chips');
+    if (chips) chips.innerHTML = sysChipsHtml();
+    if (sysTab === 'perms') renderSysPerms();
+    if (sysTab === 'flags') renderSysFlags();
+    if (sysTab === 'system') { renderSysStatus(); renderSysAudit(); }
+  }
+
+  function sysChipsHtml() {
+    const users = Array.isArray(state.users) ? state.users : [];
+    const count = r => users.filter(u => u.role === r).length;
+    return [
+      `<span class="sys-chip"><i data-lucide="users"></i> ${users.length} người dùng</span>`,
+      `<span class="sys-chip is-admin"><i data-lucide="shield"></i> ${count('admin')} Quản Trị</span>`,
+      `<span class="sys-chip"><i data-lucide="briefcase"></i> ${count('manager')} BQL</span>`,
+      `<span class="sys-chip"><i data-lucide="pencil"></i> ${count('editor')} Chỉnh sửa</span>`,
+      `<span class="sys-chip ${isFirebaseOnline() ? 'is-on' : 'is-off'}"><i data-lucide="cloud"></i> ${isFirebaseOnline() ? 'Online' : 'Offline'}</span>`,
+      `<span class="sys-chip is-ver">${sysEscape(APP_VERSION)}</span>`
+    ].join('');
+  }
+
+  // ─── TAB 2: MA TRẬN QUYỀN THEO VÙNG ─────────────────────────
+  function renderSysPerms() {
+    const box = document.getElementById('sys-perm-body');
+    if (!box) return;
+    const qRaw = document.getElementById('sys-perm-search')?.value || '';
+    const onlySet = !!document.getElementById('sys-perm-only-set')?.checked;
+    const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase();
+    const q = norm(qRaw.trim());
+    const rows = [];
+    let shown = 0;
+    PERM_GROUPS.forEach(g => {
+      const areas = PERM_AREAS.filter(a => a.group === g.id
+        && (!onlySet || areaConfigured(a.id))
+        && (!q || norm(`${a.label} ${a.id} ${a.desc || ''}`).includes(q)));
+      if (!areas.length) return;
+      rows.push(`<tr class="sys-perm-group"><td colspan="5">
+        <span class="sys-perm-gname"><i data-lucide="${sysEscape(g.icon)}"></i> ${sysEscape(g.label)}</span>
+        <span class="sys-perm-gdesc">${sysEscape(g.desc)}</span></td></tr>`);
+      areas.forEach(a => { shown++; rows.push(sysPermRowHtml(a)); });
+    });
+    box.innerHTML = rows.length ? rows.join('')
+      : '<tr><td colspan="5" class="sys-empty">Không có vùng phù hợp.</td></tr>';
+    const cnt = document.getElementById('sys-perm-count');
+    if (cnt) cnt.textContent = `${shown}/${PERM_AREAS.length} vùng`;
+    initLucide();
+  }
+
+  function sysPermRowHtml(a) {
+    const set = areaConfigured(a.id);
+    const cell = (role) => {
+      const saved = savedPermLevel(a.id, role);
+      const eff = roleLevel(a.id, role);
+      const opts = [`<option value=""${saved ? '' : ' selected'}>Theo tab</option>`]
+        .concat(PERM_LEVELS.map(l =>
+          `<option value="${l}"${saved === l ? ' selected' : ''}>${PERM_LEVEL_LABEL[l]}</option>`));
+      return `<td class="sys-perm-cell">
+        <select class="sys-perm-sel lv-${eff}" data-sys-perm="${a.id}|${role}"
+          title="Mức hiệu lực hiện tại: ${PERM_LEVEL_LABEL[eff]}">${opts.join('')}</select></td>`;
+    };
+    return `<tr data-perm-row="${sysEscape(a.id)}" class="${set ? 'is-set' : ''}">
+      <td class="sys-perm-name">
+        <strong>${sysEscape(a.label)}</strong>
+        ${a.desc ? `<span class="sys-perm-desc">${sysEscape(a.desc)}</span>` : ''}
+        <span class="sys-perm-code">${sysEscape(a.id)}</span>
+        ${set ? `<button type="button" class="sys-mini-link" data-sys-perm-reset="${sysEscape(a.id)}"
+          title="Bỏ tuỳ chỉnh của vùng này, quay về 'Theo tab'">↺ bỏ đặt</button>` : ''}
+      </td>
+      <td class="sys-perm-cell"><span class="sys-lock" title="Admin luôn toàn quyền — không thể tự hạ (chống khoá mình)">
+        <i data-lucide="lock"></i> Duyệt / khoá</span></td>
+      ${cell('manager')}${cell('editor')}${cell('viewer')}
+    </tr>`;
+  }
+
+  // ─── TAB 3: CỜ HIỂN THỊ (bật/tắt chủ động) ──────────────────
+  const SYS_ROLE_LABEL = { admin: 'Quản Trị', manager: 'Ban Quản Lý', editor: 'Người Chỉnh Sửa', viewer: 'Người Xem' };
+
+  function renderSysFlags() {
+    const box = document.getElementById('sys-flags-list');
+    if (!box) return;
+    box.innerHTML = UI_FLAGS.map(sysFlagCardHtml).join('');
+    initLucide();
+  }
+
+  function sysFlagCardHtml(f) {
+    const roles = flagRoles(f.id);
+    const seen = ['admin', 'manager', 'editor', 'viewer'].filter(r => roles[r]).map(r => SYS_ROLE_LABEL[r]);
+    const chips = ['admin', 'manager', 'editor', 'viewer'].map(r => `
+      <label class="sys-role-chip${roles[r] ? ' is-on' : ''}">
+        <input type="checkbox" data-sys-flag="${f.id}|${r}"${roles[r] ? ' checked' : ''}>
+        <span>${SYS_ROLE_LABEL[r]}</span>
+      </label>`).join('');
+    return `<section class="sys-flag-card" data-flag-card="${f.id}">
+      <div class="sys-flag-head">
+        <span class="sys-flag-ic"><i data-lucide="${sysEscape(f.icon)}"></i></span>
+        <div class="sys-flag-title">
+          <strong>${sysEscape(f.label)}</strong>
+          <div class="sys-flag-desc">${sysEscape(f.desc)}</div>
+        </div>
+        <span class="sys-flag-state ${seen.length ? 'is-on' : 'is-off'}">${seen.length ? 'Đang hiện' : 'Đang ẩn'}</span>
+      </div>
+      <div class="sys-flag-roles">
+        <span class="sys-flag-roles-lbl">Ai được thấy:</span>
+        ${chips}
+        <span class="sys-flag-quick">
+          <button type="button" class="sys-mini-link" data-sys-flag-all="${f.id}">Tất cả</button>
+          <button type="button" class="sys-mini-link" data-sys-flag-none="${f.id}">Không ai</button>
+        </span>
+      </div>
+      <div class="sys-flag-note">Hiện với: <strong>${seen.length ? sysEscape(seen.join(', ')) : 'không ai'}</strong>
+        · Mã: <code>${sysEscape(f.id)}</code></div>
+    </section>`;
+  }
+  // Cờ được ẩn/hiện bằng CSS: body[data-on] + [data-flag-show] — không cần render lại thẻ.
+
+  // ─── TAB 4: TÌNH TRẠNG + NHẬT KÝ ────────────────────────────
+  function sysFmtAt(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso || '');
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  function renderSysStatus() {
+    const box = document.getElementById('sys-status');
+    if (!box) return;
+    const u = state.currentUser;
+    const s = sysSettingsState();
+    box.innerHTML = `
+      <div class="sys-status-row"><i data-lucide="cloud"></i> Mây: <strong>${isFirebaseOnline() ? 'Đang kết nối' : 'Ngoại tuyến (lưu trên máy)'}</strong></div>
+      <div class="sys-status-row"><i data-lucide="user-round"></i> Tài khoản: <strong>${sysEscape(u ? (u.fullname || u.username) : '—')}</strong> · ${sysEscape(u ? (ROLES[u.role]?.name || u.role) : '—')}</div>
+      <div class="sys-status-row"><i data-lucide="layers"></i> Phiên bản: <strong>${sysEscape(APP_VERSION)}</strong></div>
+      <div class="sys-status-row"><i data-lucide="list-checks"></i> Đã tuỳ chỉnh: <strong>${Object.keys(s.perms || {}).length} vùng quyền</strong> · <strong>${Object.keys(s.flags || {}).length} cờ</strong></div>`;
+    initLucide();
+  }
+
+  function renderSysAudit() {
+    const box = document.getElementById('sys-audit-list');
+    if (!box) return;
+    const list = (sysSettingsState().audit || []).slice(0, 40);
+    box.innerHTML = list.length ? list.map(x => `
+      <div class="sys-audit-row">
+        <span class="sys-audit-at">${sysEscape(sysFmtAt(x.at))}</span>
+        <span class="sys-audit-who">${sysEscape(x.name || x.by)}</span>
+        <span class="sys-audit-what">${sysEscape(x.what)}</span>
+        <span class="sys-audit-delta">${sysEscape(x.from || '—')} → <strong>${sysEscape(x.to || '—')}</strong></span>
+      </div>`).join('')
+      : '<div class="sys-empty">Chưa có thay đổi nào.</div>';
+  }
+
+  // ─── SỰ KIỆN CỦA PANEL (gọi từ js/events.js) ───────────────
+  function onSysPermChange(e) {
+    const t = e.target && e.target.closest ? e.target.closest('[data-sys-perm]') : null;
+    if (!t) return false;
+    const [area, role] = String(t.getAttribute('data-sys-perm')).split('|');
+    const val = t.value;
+    const s = sysSettingsState();
+    if (!val) {
+      if (s.perms[area]) {
+        delete s.perms[area][role];
+        if (!Object.keys(s.perms[area]).length) delete s.perms[area];
+      }
+      pushAudit(`Quyền: ${area} · ${SYS_ROLE_LABEL[role]}`, 'đã đặt', 'Theo tab');
+    } else if (setPermLevel(area, role, val)) {
+      pushAudit(`Quyền: ${area} · ${SYS_ROLE_LABEL[role]}`, '', PERM_LEVEL_LABEL[val]);
+    } else {
+      showToast('Không đổi được quyền này.', 'error');
+      renderSysPerms();
+      return false;
+    }
+    saveSysSettings();
+    renderSysPerms();
+    showToast('Đã lưu quyền — có hiệu lực ngay.', 'success');
+    return true;
+  }
+
+  function onSysPermReset(area) {
+    const s = sysSettingsState();
+    if (!s.perms[area]) return false;
+    delete s.perms[area];
+    pushAudit(`Bỏ đặt quyền cả vùng ${area}`, 'đã đặt', 'Theo tab');
+    saveSysSettings();
+    renderSysPerms();
+    return true;
+  }
+
+  function onSysFlagToggle(e) {
+    const t = e.target && e.target.closest ? e.target.closest('[data-sys-flag]') : null;
+    if (!t) return false;
+    const [id, role] = String(t.getAttribute('data-sys-flag')).split('|');
+    const on = !!t.checked;
+    setFlagRole(id, role, on);
+    const label = (UI_FLAGS.find(f => f.id === id) || {}).label || id;
+    pushAudit(`Cờ "${label}": ${SYS_ROLE_LABEL[role]}`, on ? 'tắt' : 'bật', on ? 'bật' : 'tắt');
+    saveSysSettings();
+    renderSysFlags();
+    renderAll(); // cờ "nhập tay giờ sự cố" đổi cách render ô Sự cố
+    initLucide();
+    return true;
+  }
+
+  function onSysFlagPreset(id, on) {
+    ['admin', 'manager', 'editor', 'viewer'].forEach(r => setFlagRole(id, r, on));
+    const label = (UI_FLAGS.find(f => f.id === id) || {}).label || id;
+    pushAudit(`Cờ "${label}"`, '', on ? 'bật cho MỌI vai trò' : 'tắt với MỌI vai trò');
+    saveSysSettings();
+    renderSysFlags();
+    renderAll();
+    initLucide();
+    return true;
+  }
+
+  function onSysReset() {
+    if (!confirm('Khôi phục MẶC ĐỊNH toàn bộ cài đặt hệ thống?\n\n• Cờ hiển thị về mặc định\n• Mọi tuỳ chỉnh quyền theo vùng bị xoá (về "Theo tab")\n• Nhật ký được giữ lại\n\nThao tác này có ghi nhật ký.')) return false;
+    resetSysSettings();
+    renderSysSettings();
+    renderAll();
+    showToast('Đã khôi phục mặc định cài đặt hệ thống.', 'success');
+    return true;
+  }
+
+  function onSysExport() {
+    try {
+      const blob = new Blob([sysSettingsExport()], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `cai-dat-he-thong-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+      showToast('Đã xuất cấu hình.', 'success');
+    } catch (err) {
+      showToast('Không xuất được cấu hình.', 'error');
+    }
+    return true;
+  }
+
   // ─── USER MANAGEMENT MODAL ────────────────────────────────────
   function openUsersMgrModal() {
     if (state.currentUser?.role !== 'admin') { showToast('Chỉ Admin mới có quyền!', 'error'); return; }
@@ -226,6 +492,7 @@ import { escapeHTML, showToast } from './utils.js';
         : '';
     }
     renderUsersTable();
+    sysSetTab('users'); // Cài Đặt Hệ Thống: mở tab Người dùng + vẽ chip + các panel
     document.getElementById('modal-users-mgr')?.classList.add('show');
     initLucide();
   }
@@ -818,9 +1085,18 @@ export {
   handleUserPermsSubmit,
   loadSession,
   loadUsers,
+  onSysExport,
+  onSysFlagPreset,
+  onSysFlagToggle,
+  onSysPermChange,
+  onSysPermReset,
+  onSysReset,
   openUserEditModal,
   openUserPermsModal,
   openUsersMgrModal,
+  renderSysPerms,
+  renderSysSettings,
+  renderSysFlags,
   renderUsersTable,
   roleTagHtml,
   rolesDocKey,
@@ -828,6 +1104,7 @@ export {
   saveSession,
   saveUsers,
   sendPasswordResetToUser,
+  sysSetTab,
   toggleAuthPanel,
   toggleRegisterForm,
   updateUserProfileHeader

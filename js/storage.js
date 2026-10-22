@@ -16,7 +16,9 @@ import { bumpIncidentCache, escapeHTML, showToast } from './utils.js';
 // 3 miền TRƯỚC ĐÂY THIẾU trong file bamboo_data.json (thẻ Truy Xuất Đầu Vào →
 // Đầu Ra + tab Kế Hoạch cần): định mức nguyên vật liệu · sản lượng ép ván ·
 // bản ghi kế hoạch. Nay ghi kèm để nạp lại file không mất số.
-import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRESS_RECORDS } from './state.js';
+import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_SYS_SETTINGS } from './state.js';
+// CÀI ĐẶT HỆ THỐNG (cờ hiển thị + quyền theo vùng) — chuẩn hoá khi nạp file/backup
+import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
   function loadData() {
@@ -761,6 +763,23 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
     return cur;
   }
 
+  // ─── KHÔI PHỤC CÀI ĐẶT HỆ THỐNG (cờ hiển thị + quyền theo vùng + nhật ký) ──
+  // GỘP: cấu hình ĐANG CÓ (vừa nhận mây) thắng; bản file/backup chỉ bù chỗ trống.
+  function restoreSysSettings(incoming) {
+    const cur = normalizeSysSettings(state.sysSettings);
+    const src = normalizeSysSettings(incoming);
+    if (!Object.keys(src.perms).length && !Object.keys(src.flags).length) return cur;
+    const merged = normalizeSysSettings({
+      flags: Object.assign({}, src.flags, cur.flags),
+      perms: Object.assign({}, src.perms, cur.perms),
+      audit: cur.audit.length ? cur.audit : src.audit
+    });
+    state.sysSettings = merged;
+    try { localStorage.setItem(STORAGE_KEY_SYS_SETTINGS, JSON.stringify(merged)); } catch (e) { /* bỏ qua */ }
+    applySysSettings();
+    return merged;
+  }
+
   // ─── GỘP NHẬT KÝ BÀO TINH XƯỞNG 2 (file / backup / mây) ──
   function restoreXuong2BaoTinh(incomingArr) {
     const before = JSON.stringify(state.xuong2BaoTinhRecords || []);
@@ -1045,6 +1064,7 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
           restoreX2SayIncidents(loaded.x2SayIncidents); // GIỜ SỰ CỐ CHO PHÉP theo ngày — gộp, không đè
         if (loaded.x2StageIncidents) {
           restoreX2StageIncidents(loaded.x2StageIncidents); // GIỜ SỰ CỐ theo (thẻ công đoạn, ngày) — gộp, không đè
+          if (loaded.sysSettings) restoreSysSettings(loaded.sysSettings); // CÀI ĐẶT HỆ THỐNG — gộp, cấu hình đang có thắng
         }
         }
 
@@ -1219,6 +1239,7 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
           restoreX2SayIncidents(loaded.x2SayIncidents); // GIỜ SỰ CỐ CHO PHÉP theo ngày — gộp, không đè
         if (loaded.x2StageIncidents) {
           restoreX2StageIncidents(loaded.x2StageIncidents); // GIỜ SỰ CỐ theo (thẻ công đoạn, ngày) — gộp, không đè
+          if (loaded.sysSettings) restoreSysSettings(loaded.sysSettings); // CÀI ĐẶT HỆ THỐNG — gộp, cấu hình đang có thắng
         }
         }
 
@@ -1360,7 +1381,8 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
         x2PhuPhamRecords: state.x2PhuPhamRecords || [],
         x2Stocktakes: state.x2Stocktakes || [],
         x2YieldRates: state.x2YieldRates || {},
-        rateApprovals: state.rateApprovals || []
+        rateApprovals: state.rateApprovals || [],
+        sysSettings: state.sysSettings || {}
       };
       await writable.write(JSON.stringify(allData, null, 2));
       await writable.close();
@@ -1497,6 +1519,7 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
       x2Stocktakes: state.x2Stocktakes || [],
       x2YieldRates: state.x2YieldRates || {},
       rateApprovals: state.rateApprovals || [],
+      sysSettings: state.sysSettings || {},
       // ── NHÂN SỰ (trước đây file sao lưu THIẾU HOÀN TOÀN — mất dữ liệu khi
       // phục hồi sang máy khác). 3 miền lớn ghi kèm để file tự đủ.
       hrEmployees: state.hrEmployees || [],
@@ -1694,6 +1717,7 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
           restoreX2SayIncidents(imported.x2SayIncidents); // GIỜ SỰ CỐ CHO PHÉP theo ngày — gộp, không đè
         if (imported && imported.x2StageIncidents) {
           restoreX2StageIncidents(imported.x2StageIncidents); // GIỜ SỰ CỐ theo (thẻ công đoạn, ngày) — gộp, không đè
+          if (imported.sysSettings) restoreSysSettings(imported.sysSettings); // CÀI ĐẶT HỆ THỐNG — gộp
         }
         }
 
@@ -1962,6 +1986,7 @@ export {
   restoreX2YieldRates,
   restoreRateApprovals,
   restoreX2StageIncidents,
+  restoreSysSettings,
   restoreXuong2BaoTinh,
   restoreX2BaoTinhRates,
   saveData,

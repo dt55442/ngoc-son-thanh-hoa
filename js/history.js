@@ -76,6 +76,7 @@ import { escapeHTML, showToast } from './utils.js';
     x2Stocktakes:      { tab: 'kanban',    label: 'Kiểm kê bãi (điều chỉnh tồn)',   get: () => state.x2Stocktakes },
     x2YieldRates:      { tab: 'kanban',    label: 'Định mức tỷ lệ thu hồi (%)',     get: () => state.x2YieldRates },
     rateApprovals:     { tab: 'kanban',    label: 'Phê duyệt định mức (xưởng + tháng)', get: () => state.rateApprovals },
+    sysSettings:       { tab: 'dashboard', label: 'Cài đặt hệ thống (cờ hiển thị + quyền theo vùng)', get: () => state.sysSettings },
     suppliers:         { tab: 'materials', label: 'Nhà cung cấp',         get: () => state.suppliers },
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
     qcFinalRecords:    { tab: 'qc',        label: 'Kiểm sau sản xuất',    get: () => state.qcFinalRecords },

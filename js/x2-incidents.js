@@ -17,7 +17,8 @@
 // ═══════════════════════════════════════════════════════════
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { logDataChange } from './history.js';
-import { canApproveLeave, hrShiftCfg } from './hr.js';
+import { canArea } from './permissions.js';
+import { hrShiftCfg } from './hr.js';
 import { renderAll } from './main.js'; // vẽ lại thẻ ngày của công đoạn sau khi duyệt/xoá phiếu
 import { STORAGE_KEY_X2_INCIDENT_REPORTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
@@ -356,7 +357,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       if (idx < 0) { showToast('Không tìm thấy phiếu cần sửa (có thể đã bị xoá).', 'error'); resetIncidentForm(); return false; }
       const old = state.x2IncidentReports[idx];
       // Sửa phiếu ĐÃ DUYỆT = sửa số giờ đang trừ vào hiệu suất → chỉ BQL/Admin
-      if (old.status === 'da_duyet' && !canApproveLeave()) {
+      if (old.status === 'da_duyet' && !canArea('ap.incident', 'approve')) {
         showToast('Phiếu đã duyệt — chỉ Quản Trị / Ban Quản Lý được sửa. Hãy báo BQL mở lại phiếu.', 'error');
         return false;
       }
@@ -393,7 +394,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     const r = (state.x2IncidentReports || []).find(x => x && x.id === id);
     if (!r) return false;
     if (!requireEditPermission()) return false;
-    if (r.status === 'da_duyet' && !canApproveLeave()) {
+    if (r.status === 'da_duyet' && !canArea('ap.incident', 'approve')) {
       showToast('Phiếu đã duyệt — chỉ Quản Trị / Ban Quản Lý được sửa.', 'error');
       return false;
     }
@@ -429,7 +430,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     if (idx < 0) return false;
     const r = list[idx];
     if (!requireEditPermission()) return false;
-    if (r.status === 'da_duyet' && !canApproveLeave()) {
+    if (r.status === 'da_duyet' && !canArea('ap.incident', 'approve')) {
       showToast('Phiếu đã duyệt — chỉ Quản Trị / Ban Quản Lý được xoá.', 'error');
       return false;
     }
@@ -449,11 +450,11 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     showToast(`Đã xoá phiếu sự cố ${d.stageLabel} ngày ${d.dateTxt}.`, 'info');
     return true;
   }
-  // DUYỆT — cổng canApproveLeave() (Admin / Ban Quản Lý), giống phiếu Kho
+  // DUYỆT — cổng canArea('ap.incident', 'approve') (Admin / Ban Quản Lý), giống phiếu Kho
   function approveIncidentReport(id) {
     const r = (state.x2IncidentReports || []).find(x => x && x.id === id);
     if (!r) return false;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu sự cố!', 'error'); return false; }
+    if (!canArea('ap.incident', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý duyệt được phiếu sự cố!', 'error'); return false; }
     if (r.status === 'da_duyet') return false;
     r.status = 'da_duyet';
     r.approvedBy = incidentFormUserName();
@@ -470,7 +471,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
   function rejectIncidentReport(id) {
     const r = (state.x2IncidentReports || []).find(x => x && x.id === id);
     if (!r) return false;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý từ chối được phiếu sự cố!', 'error'); return false; }
+    if (!canArea('ap.incident', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý từ chối được phiếu sự cố!', 'error'); return false; }
     let reason = '';
     if (typeof prompt === 'function') {
       reason = String(prompt('Lý do từ chối phiếu sự cố (không bắt buộc):', r.rejectReason || '') || '');
@@ -489,7 +490,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
   function reopenIncidentReport(id) {
     const r = (state.x2IncidentReports || []).find(x => x && x.id === id);
     if (!r) return false;
-    if (!canApproveLeave()) { showToast('Chỉ Quản Trị / Ban Quản Lý mở lại được phiếu sự cố!', 'error'); return false; }
+    if (!canArea('ap.incident', 'approve')) { showToast('Chỉ Quản Trị / Ban Quản Lý mở lại được phiếu sự cố!', 'error'); return false; }
     if (r.status === 'cho_duyet') return false;
     const d = incidentDisplay(r);
     if (typeof confirm === 'function' && !confirm(
@@ -525,7 +526,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     return `<span class="inc-st ${cls}">${escapeHTML(d.statusLabel)}</span>`;
   }
   function incidentRowActions(d) {
-    const canApp = (() => { try { return canApproveLeave(); } catch (e) { return false; } })();
+    const canApp = (() => { try { return canArea('ap.incident', 'approve'); } catch (e) { return false; } })();
     const id = escapeHTML(d.id);
     const perm = `data-perm="${d.ws || 'x2'}"`;
     const btns = [];

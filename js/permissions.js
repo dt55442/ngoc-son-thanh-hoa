@@ -11,6 +11,10 @@
 //   allowAdvanced : Được xem Vùng Nâng Cao (VD: Ban quản lý, cộng tác viên)
 // ═══════════════════════════════════════════════════════════
 import { state } from './state.js';
+// QUYỀN THEO VÙNG (Cài Đặt Hệ Thống — 22/10/2026). sys-settings.js chỉ import
+// state.js nên KHÔNG vòng import; logic "mức hiệu lực" nằm ở đó, permissions chỉ
+// là lớp truy vấn cho toàn app.
+import { applySysSettings, canLevel, levelOf, permAreaDef, AREA_BY_CARD, AREA_BY_MODAL, AREA_BY_TAB } from './sys-settings.js';
 
 // ─── ĐỊNH NGHĨA VAI TRÒ ───────────────────────────────────────
 export const ROLES = {
@@ -145,14 +149,14 @@ export function canEditTab(tabId) {
 // nguyên vật liệu, định mức kiểm QC…) — người được cấp tab vẫn KHÔNG đủ.
 // Mọi nơi lưu định mức đều đi qua cloud.requireRatePermission() → cổng này,
 // nên muốn đổi chính sách chỉ cần sửa tại đây.
-export function canEditRate() { return isAdmin(); }
+export function canEditRate() { return canLevel('sys.rates', 'edit'); }
 
 // ─── QUYỀN PHÊ DUYỆT ĐỊNH MỨC ───────────────────────────────────
 // Bảng Định Mức tổng hợp (nút "Định Mức" ở tab Công Đoạn SX — js/rate-center.js):
 // NHẬP số = admin (canEditRate ở trên) · DUYỆT = Quản Trị + Ban Quản Lý (Ban
 // lãnh đạo). Tách khỏi hr.canApproveLeave để không phải import hr.js vào module
 // định mức (tránh vòng import), nhưng CÙNG chính sách.
-export function canApproveRate() { return isAdmin() || isManager(); }
+export function canApproveRate() { return canLevel('ap.rate', 'approve'); }
 
 // ─── QUYỀN CHỐT CÔNG / ÁP DỤNG GIỜ MÁY (20/10/2026) ─────────────
 // HAI QUYỀN RIÊNG, MẶC ĐỊNH KHÔNG AI CÓ (trừ Quản Trị) — chỉ Admin cấp trong
@@ -163,16 +167,8 @@ export function canApproveRate() { return isAdmin() || isManager(); }
 //   • payLock  : Xử lý dòng công (chấp nhận · bổ sung đơn TC · hủy TC ·
 //                miễn trừ) + Trình chốt công / Mở khóa kỳ
 // Người CHỈ có quyền tab 'hr' (nhập liệu) KHÔNG mặc nhiên có 2 quyền này.
-export function canPayApply() {
-  const u = currentUser();
-  if (!u) return false;
-  return roleInfo(u.role).editAll || u.payApply === true;
-}
-export function canPayLock() {
-  const u = currentUser();
-  if (!u) return false;
-  return roleInfo(u.role).editAll || u.payLock === true;
-}
+export function canPayApply() { return canLevel('hr.machine', 'edit'); }
+export function canPayLock() { return canLevel('ap.pay', 'approve'); }
 
 // Sửa được biểu đồ hay không = quyền SỬA TAB NGUỒN của biểu đồ đó.
 // (Khái niệm "vùng nâng cao" của biểu đồ đã bị XÓA — xem js/dashboard.js)
@@ -180,6 +176,40 @@ export function canPayLock() {
 // Sửa được ít nhất một thứ gì đó (dùng cho nút Undo, module chung...)
 export function canEditAnything() {
   return isAdmin() || getEditableTabs().length > 0;
+}
+
+// ─── QUYỀN THEO VÙNG (Cài Đặt Hệ Thống — 37 vùng) ───────────
+// Dùng cho nút/khối có data-area-perm và cho handler (chặn cả khi gọi app.*).
+export function areaLevel(area) { return levelOf(area); }
+export function canArea(area, need) { return canLevel(area, need || 'view'); }
+export function areaLabel(area) { return permAreaDef(area)?.label || area; }
+export function requireArea(area, need) {
+  if (canArea(area, need)) return true;
+  import('./utils.js')
+    .then(m => m.showToast(`Bạn không có quyền "${areaLabel(area)}". Liên hệ Quản Trị nếu cần.`, 'error'))
+    .catch(() => {});
+  return false;
+}
+
+// Vùng quyền đang thao tác (để cổng requireEditPermission kiểm đúng vùng):
+//   ① modal/thẻ đặt tường minh state.sysActiveArea
+//   ② thẻ công đoạn đang mở (state.x2OpenCardId)
+//   ③ tab đang đứng
+export function currentAreaId() {
+  // ① modal đang mở (chuẩn xác nhất — modal nào đang .show thì biết vùng đó)
+  if (typeof document !== 'undefined' && document.getElementById) {
+    for (const id of Object.keys(AREA_BY_MODAL)) {
+      const el = document.getElementById(id);
+      if (el && el.classList && el.classList.contains('show')) return AREA_BY_MODAL[id];
+    }
+  }
+  // ② modal/thẻ đặt tường minh
+  if (state.sysActiveArea) return state.sysActiveArea;
+  // ③ thẻ công đoạn đang mở
+  const card = state.x2OpenCardId;
+  if (card && AREA_BY_CARD[card]) return AREA_BY_CARD[card];
+  // ④ tab đang đứng
+  return AREA_BY_TAB[currentTabId()] || '';
 }
 
 // Tab ID ứng với view đang mở (để gate thao tác theo ngữ cảnh)
@@ -215,4 +245,7 @@ export function syncPermissionUI() {
   // Khách: hiện nút Đăng Nhập, ẩn pill hồ sơ; đã đăng nhập: ngược lại
   show('btn-open-login', !u);
   show('user-profile-badge', !!u);
+  // CÀI ĐẶT HỆ THỐNG: tính lại cờ hiển thị + quyền theo vùng của user hiện tại
+  // (CSS ẩn/hiện dựa vào body[data-on] / body[data-area-*]).
+  applySysSettings();
 }

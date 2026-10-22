@@ -210,8 +210,8 @@ check('C4: nút render động trong JS cũng gắn data-admin-only',
 // ─── D. TƯỜNG LƯA MÂY + CỔNG QUYỀN ───────────────────────────────
 console.log('--- D. TƯỜNG LƯA ĐỊNH MỨC TRÊN MÂY ---');
 const cloudSrc = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
-check('D1: RATE_DOMAINS = 15 miền định mức (materialRates + QC + 11 định mức Xưởng 2 + Xưởng 1 + tỷ lệ Phụ Phẩm)',
-  cloud.RATE_DOMAINS.size === 15 && cloud.RATE_DOMAINS.has('materialRates') &&
+check('D1: RATE_DOMAINS = 16 miền chỉ-admin-ghi (15 định mức + sysSettings)',
+  cloud.RATE_DOMAINS.size === 16 && cloud.RATE_DOMAINS.has('materialRates') &&
   cloud.RATE_DOMAINS.has('qcFinalRates') && cloud.RATE_DOMAINS.has('x2CapRates') &&
   cloud.RATE_DOMAINS.has('x2EpVanRates') && cloud.RATE_DOMAINS.has('x2BulligRates') &&
   cloud.RATE_DOMAINS.has('x2CatVanRates') && cloud.RATE_DOMAINS.has('x2BaoVanRates') &&

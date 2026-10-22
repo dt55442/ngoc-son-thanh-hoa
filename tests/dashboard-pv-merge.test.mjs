@@ -213,13 +213,13 @@ check('CẤU TRÚC (dashboard.js): nạp chế độ đã nhớ trước khi v�
 check('CẤU TRÚC (press.js): hiệu ứng trượt cửa sổ tuần Khả Năng dùng khung MỚI (#pv-chart-box-cap)',
   jsPress.includes("document.getElementById('pv-chart-box-cap')"));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v301/.test(swJs));
+  /nha-may-ngoc-son-v302/.test(swJs));
 
 // ─── 8. TRỢ GIÚP DASHBOARD: ẩn ghi chú + tooltip + nút "?" + modal ───
 console.log('--- 8. TRỢ GIÚP DASHBOARD ---');
 const jsMain = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (index.html): 5 nút "?" theo vùng + modal dùng chung #modal-dash-help',
-  ['btn-help-capacity', 'btn-help-pv', 'btn-help-material', 'btn-help-zone-basic', 'btn-help-zone-advanced']
+check('CẤU TRÚC (index.html): 4 nút "?" theo vùng + modal dùng chung #modal-dash-help',
+  ['btn-help-capacity', 'btn-help-pv', 'btn-help-material', 'btn-help-zone-advanced']
     .every(id => idxHtml.includes(`id="${id}"`)) &&
   idxHtml.includes('id="modal-dash-help"') && idxHtml.includes('id="dash-help-body"') &&
   idxHtml.includes('id="dash-help-title"') && idxHtml.includes('id="btn-close-dash-help"') &&
@@ -241,8 +241,8 @@ check('CẤU TRÚC (dashboard.js): DASH_HELP 6 mục + open/closeDashHelp + char
   jsDash.includes('function chartSubtitleOf(') &&
   jsDash.includes("app.openDashHelp('chart', '${chartDef.id}')") &&
   jsDash.includes('title="${escapeHTML(subtitle)}"'));
-check('CẤU TRÚC (events.js): wire 5 nút ? + đóng bằng nút ✕ / Đã Hiểu / nền mờ / Esc',
-  ['btn-help-capacity', 'btn-help-pv', 'btn-help-material', 'btn-help-zone-basic', 'btn-help-zone-advanced', 'btn-close-dash-help', 'btn-dash-help-ok']
+check('CẤU TRÚC (events.js): wire 4 nút ? + đóng bằng nút ✕ / Đã Hiểu / nền mờ / Esc',
+  ['btn-help-capacity', 'btn-help-pv', 'btn-help-material', 'btn-help-zone-advanced', 'btn-close-dash-help', 'btn-dash-help-ok']
     .every(id => jsEvents.includes(`safeOn('${id}'`)) &&
   jsEvents.includes('if (e.target === dashHelpOv) closeDashHelp();') &&
   jsEvents.includes("if (e.key !== 'Escape') return;"));
@@ -274,4 +274,3 @@ check('HÀNH VI: key lạ / thẻ biểu đồ không tồn tại → KHÔNG m�
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
-

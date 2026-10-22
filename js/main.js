@@ -17,10 +17,12 @@ import { openReportCenter } from './report-center.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
-import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
+import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, setupHistoryHScroll, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
 import { loadRateApprovals, updateRatePendingBadge } from './rate-center.js';
 import { loadX2PhuPham, loadX2Stocktakes, loadX2YieldRates } from './x2-phu-pham.js'; // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ
 import { loadSuppliers } from './suppliers.js';
+import { loadSysSettings } from './sys-settings.js';
+import { applySysAreaDom } from './sys-settings.js';
 import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, baoTinhUsedLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan, loadXuong2CatVan, loadX2CatVanRates, loadX2CatVanSpan, loadXuong2BaoVan, loadX2BaoVanRates, loadX2BaoVanSpan, loadXuong2HoTro } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
 import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
@@ -125,6 +127,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadX2SayTimes(); // Số lần than hóa THẬT theo nhóm (ngày + công đoạn sấy của thẻ Than Hóa + Sấy)
     loadX2SayIncidents(); // Giờ SỰ CỐ CHO PHÉP theo ngày (tính Hiệu suất ngày than hóa)
     loadX2StageIncidents(); // Giờ SỰ CỐ CHO PHÉP theo (thẻ công đoạn, ngày) — 7 thẻ Xưởng 2
+    loadSysSettings(); // CÀI ĐẶT HỆ THỐNG (cờ hiển thị công suất/hiệu suất · quyền theo vùng)
     loadQcExports();
     loadQcFinal();       // KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
     loadQcFinalRates();  // Định mức kiểm sau sản xuất theo tháng (tấm/h)
@@ -151,6 +154,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     // Áp công tắc XƯỞNG 1 / XƯỞNG 2 theo trạng thái ĐÃ NHỚ từ lần trước
     // (gọi sau setupEventListeners để nút đã tồn tại trong DOM)
     applyStageWsDom();
+    // Nút ‹ › trượt ngang cho 25 khung Lịch Sử Theo Ngày (vùng 3) — idempotent
+    setupHistoryHScroll();
     // Mọi ô chọn ngày hiển thị & nhập theo dd/mm/yyyy (văn hóa Việt Nam):
     // khởi tạo cho các ô có sẵn + tự bắt các ô ngày được tạo động sau này
     initVnDateInputs();
@@ -354,6 +359,7 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       }
       // Áp lại công tắc XƯỞNG 1 / XƯỞNG 2 (grid ẩn/hiện + nút đang chọn)
       applyStageWsDom();
+      setupHistoryHScroll(); // nút ‹ › của khung lịch sử (thẻ mở sau vẫn có)
       // Sparkline hiệu suất 8 tuần trên mini card = trang trí → hoãn 1 frame,
       // dùng CHUNG cờ với bảng (dữ liệu không đổi thì bỏ qua)
       scheduleViewDecor(targetViewId, needPaint);
@@ -489,6 +495,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
       // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)
       renderX2MiniSparklines();
     }
+    // Quyền theo vùng: ẩn nút vừa được vẽ lại nếu vai trò không có quyền sửa vùng đó
+    try { applySysAreaDom(); } catch (e) { /* không chặn render */ }
     initLucide();
   }
 

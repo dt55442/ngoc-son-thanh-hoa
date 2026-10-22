@@ -313,8 +313,8 @@ check('F8. Dòng có data-ci-row + ô Ngày/Tên bấm được + giờ máy m�
   hrSrc.includes('data-ci-open-pay="1"'));
 check('F9. Chip là BUTTON (không còn span tĩnh) + có aria-pressed',
   hrSrc.includes('data-ci-chip="${d.key}"') && hrSrc.includes('aria-pressed='));
-check('F10. Cache + APP_VERSION = v301',
-  swSrc.includes("nha-may-ngoc-son-v301") && stateSrc.includes("'v301'"));
+check('F10. Cache + APP_VERSION = v302',
+  swSrc.includes("nha-may-ngoc-son-v302") && stateSrc.includes("'v302'"));
 check('F11. Modal bulk ghi rõ KỲ (ngày/tuần/tháng) chứ không chỉ tháng',
   idxHtml.includes('KỲ đang xem') && hrSrc.includes('plan.range && plan.range.label'));
 

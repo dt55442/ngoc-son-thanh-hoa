@@ -18,7 +18,7 @@ import { firePushSync, initLucide, requireEditPermission, requirePayApply, requi
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, APP_VERSION, state } from './state.js';
-import { canPayLock } from './permissions.js';
+import { canArea, canPayLock } from './permissions.js';
 import { escapeHTML, showToast } from './utils.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc đọc file Excel
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB)
@@ -855,7 +855,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
     const sorted = [...leaves].sort((a, b) =>
       String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-    const approver = canApproveLeave();
+    const approver = canArea('ap.leave', 'approve');
 
     tbody.innerHTML = sorted.map(l => {
       const st = l.status || 'pending';
@@ -1005,7 +1005,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       hrScheduleIcons();
       return;
     }
-    const approver = canApproveLeave(); // duyệt/xóa: chỉ Admin & Ban Quản Lý
+    const approver = canArea('ap.ot', 'approve'); // duyệt/xóa: Admin / Ban Quản Lý (theo vùng ap.ot)
     const sorted = [...list].sort((a, b) =>
       String(b.date || '').localeCompare(String(a.date || '')) ||
       String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
@@ -1190,7 +1190,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   // Ban lãnh đạo duyệt: Đồng ý / Không đồng ý (chỉ đơn đang chờ)
   function approveLeave(id) {
-    if (!canApproveLeave()) {
+    if (!canArea('ap.leave', 'approve')) {
       showToast('Chỉ Admin & Ban Quản Lý (ban lãnh đạo) mới được duyệt đơn nghỉ phép!', 'error');
       return;
     }
@@ -1205,7 +1205,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
 
   function rejectLeave(id) {
-    if (!canApproveLeave()) {
+    if (!canArea('ap.leave', 'approve')) {
       showToast('Chỉ Admin & Ban Quản Lý (ban lãnh đạo) mới được duyệt đơn nghỉ phép!', 'error');
       return;
     }
@@ -1222,7 +1222,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // Duyệt / không duyệt / xóa đăng ký tăng ca — chỉ Admin & Ban Quản Lý
   // (dùng chung cổng canApproveLeave với đơn nghỉ; editor chỉ gửi đăng ký).
   function approveOvertime(id) {
-    if (!canApproveLeave()) {
+    if (!canArea('ap.ot', 'approve')) {
       showToast('Chỉ Admin & Ban Quản Lý mới được duyệt đăng ký tăng ca!', 'error');
       return;
     }
@@ -1241,7 +1241,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
 
   function rejectOvertime(id) {
-    if (!canApproveLeave()) {
+    if (!canArea('ap.ot', 'approve')) {
       showToast('Chỉ Admin & Ban Quản Lý mới được duyệt đăng ký tăng ca!', 'error');
       return;
     }
@@ -1260,7 +1260,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   function deleteOvertime(id) {
     // Chỉ Admin & Ban Quản Lý — editor chỉ được GỬI đăng ký mới
-    if (!canApproveLeave()) {
+    if (!canArea('ap.ot', 'approve')) {
       showToast('Chỉ Admin & Ban Quản Lý mới được xóa đăng ký tăng ca!', 'error');
       return;
     }
@@ -1273,7 +1273,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   function deleteLeave(id) {
     // Chỉ Admin & Ban Quản Lý được xóa đơn nghỉ — editor chỉ được TẠO đơn mới
-    if (!canApproveLeave()) {
+    if (!canArea('ap.leave', 'approve')) {
       showToast('Chỉ Admin & Ban Quản Lý mới được xóa đơn nghỉ phép!', 'error');
       return;
     }

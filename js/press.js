@@ -1226,11 +1226,11 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
       const perHour = (hoursEff > 0 && vol > 0) ? (vol / hoursEff) : null;
       const eff = (perHour != null && rate) ? (perHour / rate) * 100 : null;
       const m3hTxt = (rate && perHour != null)
-        ? `<span class="x2-day-cap" title="m³/h = tổng thể tích ép trong ngày ÷ giờ Ép hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${incH}h sự cố` : ''})">m³/h: <strong>${fmtThanh(perHour)}</strong></span>
-           <span class="x2-day-eff" title="Hiệu suất = m³/h thực tế (${fmtThanh(perHour)} = ${fmtThanh(vol)} m³ ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${incH}h sự cố]` : ''}) ÷ định mức ép ván tháng ${Number(String(date).slice(5, 7))} (${fmtThanh(rate)} m³/h)">Hiệu suất: <strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong></span>`
+        ? `<span class="x2-day-cap" data-flag-show="see.perf.cap" title="m³/h = tổng thể tích ép trong ngày ÷ giờ Ép hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${incH}h sự cố` : ''})">m³/h: <strong>${fmtThanh(perHour)}</strong></span>
+           <span class="x2-day-eff" data-flag-show="see.perf.eff" title="Hiệu suất = m³/h thực tế (${fmtThanh(perHour)} = ${fmtThanh(vol)} m³ ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${incH}h sự cố]` : ''}) ÷ định mức ép ván tháng ${Number(String(date).slice(5, 7))} (${fmtThanh(rate)} m³/h)">Hiệu suất: <strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong></span>`
         : '';
       const rateBadge = rate
-        ? `<span class="x2-day-cap" title="Định mức công suất ép ván của tháng">ĐM: <strong>${fmtThanh(rate)} m³/h</strong></span>`
+        ? `<span class="x2-day-cap" data-flag-show="see.perf.eff" title="Định mức công suất ép ván của tháng">ĐM: <strong>${fmtThanh(rate)} m³/h</strong></span>`
         : '';
       // Nguồn giờ: liệt kê ĐÚNG các vị trí Ép Ván đã cộng (không gồm vị trí công đoạn Xưởng 2)
       const posTip = (snap.posRows || []).length
@@ -1287,7 +1287,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
             <span class="x2-day-date"><i data-lucide="calendar"></i> ${formatDateDDMMYY(date)}</span>
             ${epVanWorkerBadge(snap.workers)}
             ${hourTxt}
-            <span class="x2-day-cap" title="Công suất thực tế = tổng thể tích SẢN PHẨM ép ra trong ngày (m³). Mỗi lượt tính theo thứ tự: ① Ván thô tạo ra → ② Thành phẩm (khi không khai ván thô) → ③ thể tích đầu vào theo thanh đã bào tinh (chỉ khi lượt không khai đầu ra)"><i data-lucide="gauge"></i> Công suất: <strong>${fmtThanh(vol)} m³/ngày</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = tổng thể tích SẢN PHẨM ép ra trong ngày (m³). Mỗi lượt tính theo thứ tự: ① Ván thô tạo ra → ② Thành phẩm (khi không khai ván thô) → ③ thể tích đầu vào theo thanh đã bào tinh (chỉ khi lượt không khai đầu ra)"><i data-lucide="gauge"></i> Công suất: <strong>${fmtThanh(vol)} m³/ngày</strong></span>
             ${m3hTxt}${rateBadge}
             ${stageIncidentInputHtml('epvan', date)}
             ${shiftBreakdownHtml({

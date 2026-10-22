@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { initLucide } from './cloud.js';
 import { state } from './state.js';
+import { flagOn } from './sys-settings.js';
 
   // ─── HELPERS ──────────────────────────────────────────────────
   function formatDateDDMMYY(dateString) {
@@ -755,20 +756,32 @@ import { state } from './state.js';
     const v = auto ? st.approved : (Number.isFinite(manual) && manual > 0 ? manual : 0);
     const dmy = formatDateDDMMYY(date);
     const key = `${cardId}|${date}`;
+    // CỜ "incident-manual" (Cài Đặt Hệ Thống — mặc định TẮT): cho phép admin bật
+    // lại ô NHẬP TAY khi cần chỉnh dữ liệu cũ; tắt (mặc định) = CHỈ ĐỌC, lấy từ
+    // phiếu Báo Cáo Sự Cố ĐÃ DUYỆT.
+    const manualEdit = flagOn('incident-manual');
+    const legacy = (!auto && v > 0);
     const title = auto
-      ? `Giờ sự cố ngày ${dmy} lấy từ ${st.approvedCount} phiếu báo cáo sự cố ĐÃ DUYỆT (${v} giờ). Muốn đổi: mở "Báo Cáo Sự Cố" sửa/xoá phiếu — nhập tay bị KHOÁ để tránh đếm 2 lần.`
-      : `Giờ SỰ CỐ CHO PHÉP của ngày ${dmy} (máy hỏng, thiếu nan, mất điện…) — giờ này được TRỪ khỏi giờ làm khi tính CÔNG SUẤT → HIỆU SUẤT. Để trống = 0. Nên lập phiếu "Báo Cáo Sự Cố" để có biên bản + người duyệt.`;
+      ? `Giờ sự cố ngày ${dmy} lấy từ ${st.approvedCount} phiếu báo cáo sự cố ĐÃ DUYỆT (${v} giờ). Muốn đổi: sửa/xoá phiếu trong "Báo Cáo Sự Cố".`
+      : (manualEdit
+        ? `Giờ SỰ CỐ CHO PHÉP của ngày ${dmy} (máy hỏng, thiếu nan, mất điện…) — giờ này được TRỪ khỏi giờ làm khi tính CÔNG SUẤT → HIỆU SUẤT. Để trống = 0. Nên lập phiếu "Báo Cáo Sự Cố" để có biên bản + người duyệt.`
+        : `Giờ SỰ CỐ của ngày ${dmy} chỉ lấy từ phiếu "Báo Cáo Sự Cố" ĐÃ DUYỆT — KHÔNG nhập tay (Quản Trị có thể mở lại ở Cài Đặt Hệ Thống khi cần sửa dữ liệu cũ).`);
     const chipAuto = auto
       ? `<button type="button" class="x2-inc-chip is-auto" data-inc-open="${escapeHTML(key)}" title="Có ${st.approvedCount} phiếu sự cố ĐÃ DUYỆT cho ${escapeHTML(dmy)} — bấm để xem/sửa phiếu">🧾 ${st.approvedCount} phiếu</button>`
       : '';
     const chipPending = st.pending > 0
       ? `<button type="button" class="x2-inc-chip is-pending" data-inc-open="${escapeHTML(key)}" title="${st.pending} phiếu sự cố đang CHỜ DUYỆT cho ${escapeHTML(dmy)} — chưa trừ vào hiệu suất cho tới khi duyệt">⏳ ${st.pending} chờ</button>`
       : '';
+    const chipLegacy = legacy
+      ? `<span class="x2-inc-legacy" title="Số giờ sự cố NHẬP TAY từ trước (khi chưa có phiếu) — chỉ đọc, vẫn được tính để không đổi hiệu suất lịch sử">số cũ</span>`
+      : '';
     const btnNew = `<button type="button" class="x2-inc-chip is-new" data-inc-new="${escapeHTML(key)}" title="Lập phiếu Báo Cáo Sự Cố cho ngày ${escapeHTML(dmy)} (điền sẵn công đoạn + ngày)">＋ Báo cáo</button>`;
-    return `<span class="x2-day-inc${auto ? ' is-auto' : ''}" title="${escapeHTML(title)}">
+    const valueHtml = manualEdit
+      ? `<input type="number" class="x2-say-inc-input" data-x2-incident="${escapeHTML(cardId)}" data-x2-incident-date="${escapeHTML(date)}" min="0" step="any" value="${v > 0 ? v : ''}" placeholder="0"${auto ? ' readonly' : ''} aria-label="Giờ sự cố cho phép">`
+      : `<strong class="x2-inc-val" data-x2-incident="${escapeHTML(cardId)}" data-x2-incident-date="${escapeHTML(date)}" data-x2-incident-value="${v}" aria-label="Giờ sự cố (từ phiếu đã duyệt)">${v > 0 ? v : 0} h</strong>`;
+    return `<span class="x2-day-inc${auto ? ' is-auto' : ''}${manualEdit ? '' : ' is-readonly'}" title="${escapeHTML(title)}">
       <i data-lucide="alert-triangle"></i> ${escapeHTML(label || 'Sự cố')}:
-      <input type="number" class="x2-say-inc-input" data-x2-incident="${escapeHTML(cardId)}" data-x2-incident-date="${escapeHTML(date)}" min="0" step="any" value="${v > 0 ? v : ''}" placeholder="0"${auto ? ' readonly' : ''} aria-label="Giờ sự cố cho phép">
-      <small>h</small>${chipAuto}${chipPending}${btnNew}
+      ${valueHtml}${manualEdit ? '<small>h</small>' : ''}${chipAuto}${chipPending}${chipLegacy}${btnNew}
     </span>`;
   }
 
@@ -920,10 +933,10 @@ import { state } from './state.js';
           : `<span class="x2-shift-qty" title="Sản lượng của ca này là ƯỚC TÍNH — phân bổ theo tỉ lệ giờ làm của ca (form nhập 1 số lượng cho cả ngày)">SL ~<strong>${shiftFmtNum(r.qty, 0)}</strong>${unitQty ? ` ${escapeHTML(unitQty)}` : ''}</span>`;
         const shareTxt = `<span class="x2-shift-share" title="Tỉ lệ giờ làm của ca này trên tổng giờ của cả ngày">${shiftFmtNum(r.hours, 1)}h/ngày</span>`;
         const capTxt = (showPerf && r.cap != null)
-          ? `<span class="x2-shift-cap" title="Công suất của ca = sản lượng nhập RIÊNG của ca ÷ giờ hiệu dụng của ca${r.incH > 0 ? ` (đã trừ ${shiftFmtNum(r.incH, 2)}h sự cố)` : ''}">C.suất: <strong>${shiftFmtNum(r.cap)}${sec.unit ? ' ' + escapeHTML(sec.unit) : ''}</strong></span>`
+          ? `<span class="x2-shift-cap" data-flag-show="see.perf.cap" title="Công suất của ca = sản lượng nhập RIÊNG của ca ÷ giờ hiệu dụng của ca${r.incH > 0 ? ` (đã trừ ${shiftFmtNum(r.incH, 2)}h sự cố)` : ''}">C.suất: <strong>${shiftFmtNum(r.cap)}${sec.unit ? ' ' + escapeHTML(sec.unit) : ''}</strong></span>`
           : '';
         const effTxt = (showPerf && r.eff != null)
-          ? `<span class="x2-shift-eff" title="Hiệu suất của ca = công suất ca ÷ định mức tháng">H.suất: <strong style="color:${r.eff >= 100 ? '#16a34a' : r.eff >= 70 ? '#0f766e' : '#b45309'};">${shiftFmtNum(r.eff, 1)}%</strong></span>`
+          ? `<span class="x2-shift-eff" data-flag-show="see.perf.eff" title="Hiệu suất của ca = công suất ca ÷ định mức tháng">H.suất: <strong style="color:${r.eff >= 100 ? '#16a34a' : r.eff >= 70 ? '#0f766e' : '#b45309'};">${shiftFmtNum(r.eff, 1)}%</strong></span>`
           : '';
         const t = timeOf(r.shiftIdx);
         return `<div class="x2-shift-row" data-shift-idx="${r.shiftIdx}">

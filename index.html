@@ -714,10 +714,10 @@
             <div class="x2-cut-edit-banner" id="x2-blg-edit-banner" style="display:none;">
               <i data-lucide="pencil"></i> <span id="x2-blg-edit-text"></span>
             </div>
-            <form id="x2-blg-form">
+            <form id="x2-blg-form" class="x2-stage-entry x2-stage-entry-boluong">
               <!-- DÒNG 1: Ngày bốc + NÚT CHỌN PHIẾU CÂN (mở sheet, chọn xong thu gọn)
                    + khối LÔ CŨ (chỉ hiện khi sửa lượt cũ) -->
-              <div class="x2-form-row">
+              <div class="x2-form-row x2-blg-source-row">
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-blg-date">Ngày Bốc <span class="required">*</span></label>
                   <input type="date" id="x2-blg-date" required>
@@ -754,7 +754,7 @@
               <!-- SỔ NHÓM (18/10/2026): Số xe × KL/xe (~600 kg/xe, sửa tay).
                    KL lên xe = Số xe × KL/xe; Ngọn + hao hụt (ước tính) = KL phiếu − KL xe. -->
               <div id="x2-blg-pool-group">
-                <div class="x2-form-row">
+                <div class="x2-form-row x2-blg-quantity-row">
                   <div class="form-group x2-num6">
                     <label for="x2-blg-carts">Số Xe <span class="required">*</span> <span class="x2-field-help" title="Số xe chở nhỏ đã xếp luồng cây trong lượt này (1 ngày có thể vài chục xe). KHÔNG cần nhập KL từng xe.">(?)</span></label>
                     <input type="number" id="x2-blg-carts" min="1" max="999999" step="1" placeholder="VD: 50">
@@ -767,7 +767,7 @@
                 <div class="x2-pool-calc" id="x2-blg-calc"></div>
               </div>
 
-              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+              <div class="modal-footer x2-blg-actions" style="padding-left:0; padding-right:0; margin-top:14px;">
                 <button type="button" class="btn btn-outline" id="btn-x2-blg-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bốc Luồng theo tháng (SỐ XE/GIỜ) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-blg">Làm Mới Form</button>
                 <button type="submit" class="btn btn-success"><i data-lucide="check"></i> Lưu Lượt Bốc Luồng</button>
@@ -3325,36 +3325,6 @@
           <p class="mp-totals-note" id="mp-totals-note"></p>
         </div>
 
-      </div>
-
-      <!-- ======================================================= -->
-      <!-- VÙNG CƠ BẢN — mọi người đều xem được                    -->
-      <!-- ======================================================= -->
-      <div class="dash-zone" id="dash-zone-basic">
-        <div class="dash-zone-header">
-          <div class="dash-zone-title">
-            <span class="dash-zone-icon zone-basic" style="--chip-color:var(--primary);"><i data-lucide="users"></i></span>
-            <div>
-              <h3><span class="zone-badge zone-badge-basic">CƠ BẢN</span> Biểu Đồ Chung Của Các Tab</h3>
-              <p>Tổng hợp biểu đồ từ tất cả các tab (Công Đoạn, Kế Hoạch, Ép Ván, Nguyên Liệu) — mọi người đều xem được</p>
-            </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <!-- Nút "?" TRỢ GIÚP vùng — mô tả vùng (p trong .dash-zone-title) đã ẨN; hover nút hiện mô tả, bấm mở modal -->
-            <button type="button" class="btn-dash-help" id="btn-help-zone-basic"
-                    title="Tổng hợp biểu đồ từ tất cả các tab (Công Đoạn, Kế Hoạch, Ép Ván, Nguyên Liệu) — mọi người đều xem được. Bấm để xem giải thích nhanh cách dùng vùng.">?</button>
-            <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-dashboard" title="Lịch sử thay đổi biểu đồ Dashboard (chỉ Admin)">
-              <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
-            </button>
-            <button class="btn btn-primary btn-sm" id="btn-open-chart-builder">
-              <i data-lucide="plus-circle"></i> + Tạo Biểu Đồ
-            </button>
-          </div>
-        </div>
-        <!-- DYNAMIC BASIC CHARTS GRID -->
-        <div id="custom-charts-grid" class="charts-grid" style="grid-template-columns: repeat(2, 1fr);">
-          <!-- Rendered dynamically by JavaScript -->
-        </div>
       </div>
 
       <!-- ======================================================= -->
@@ -6685,11 +6655,28 @@
   <div class="modal-overlay" id="modal-users-mgr">
     <div class="modal-card modal-wide">
       <div class="modal-header">
-        <h3><i data-lucide="users"></i> Quản Lý Người Chỉnh Sửa (Admin Panel)</h3>
+        <h3><i data-lucide="settings-2"></i> Cài Đặt Hệ Thống</h3>
         <button class="modal-close-btn" id="btn-close-users"><i data-lucide="x"></i></button>
       </div>
 
-      <div class="users-mgr-body" style="padding: 20px;">
+      <!-- THANH TAB (giữ nguyên toàn bộ id cũ của form/bảng người dùng) -->
+      <div class="sys-mgr-tabs" role="tablist" aria-label="Nhóm cài đặt">
+        <button type="button" class="sys-tab is-active" data-sys-tab="users" role="tab" aria-selected="true">
+          <i data-lucide="users"></i> Người dùng
+        </button>
+        <button type="button" class="sys-tab" data-sys-tab="perms" role="tab" aria-selected="false">
+          <i data-lucide="shield-check"></i> Phân quyền theo vùng
+        </button>
+        <button type="button" class="sys-tab" data-sys-tab="flags" role="tab" aria-selected="false">
+          <i data-lucide="toggle-right"></i> Hiển thị &amp; Tính năng
+        </button>
+        <button type="button" class="sys-tab" data-sys-tab="system" role="tab" aria-selected="false">
+          <i data-lucide="scroll-text"></i> Nhật ký &amp; Hệ thống
+        </button>
+      </div>
+      <div class="sys-mgr-chips" id="sys-mgr-chips"></div>
+
+      <div class="users-mgr-body sys-panel" data-sys-panel="users" style="padding: 20px;">
         
         <!-- Ghi chú thông minh theo chế độ Online/Offline -->
         <div id="users-mode-note" class="users-mode-note" style="margin-bottom:14px; padding:10px 12px; border-radius:var(--radius-md); background:#eff6ff; border:1px solid #bfdbfe; font-size:0.78rem; color:#1e40af; line-height:1.6;"></div>
@@ -6784,6 +6771,66 @@
           </table>
         </div>
 
+      </div>
+
+      <!-- ═══ TAB 2: PHÂN QUYỀN THEO VÙNG (37 vùng × 4 vai trò × 4 mức) ═══ -->
+      <div class="users-mgr-body sys-panel" data-sys-panel="perms" hidden>
+        <p class="sys-lead">
+          Mỗi vùng một dòng. <strong>Admin luôn "Duyệt / khoá"</strong> (khoá, không tự hạ quyền được).
+          Ô để <em>“Theo tab”</em> = giữ đúng hành vi hiện tại (theo vai trò + tab được cấp) —
+          đổi sang mức khác là siết/ mở ngay cho vai trò đó.
+        </p>
+        <div class="sys-legend">
+          <span class="sys-lv is-none">Không thấy</span>
+          <span class="sys-lv is-view">Chỉ xem</span>
+          <span class="sys-lv is-edit">Được sửa</span>
+          <span class="sys-lv is-approve">Duyệt / khoá</span>
+          <span class="sys-legend-note">Quyền riêng của từng người (tab được sửa) chỉ có thể THU HẸP thêm.</span>
+        </div>
+        <div class="sys-perm-tools">
+          <input type="search" id="sys-perm-search" placeholder="Tìm vùng… (VD: kho, hiệu suất, chấm công)">
+          <label class="sys-mini-check"><input type="checkbox" id="sys-perm-only-set"> Chỉ vùng đã đặt</label>
+          <span class="sys-count" id="sys-perm-count"></span>
+        </div>
+        <div class="table-responsive table-scroll sys-perm-scroll">
+          <table class="data-table sys-perm-table tbl-pin1">
+            <thead>
+              <tr>
+                <th>Vùng quyền</th>
+                <th class="sys-col-role">Admin</th>
+                <th class="sys-col-role">Ban Quản Lý</th>
+                <th class="sys-col-role">Người Chỉnh Sửa</th>
+                <th class="sys-col-role">Người Xem</th>
+              </tr>
+            </thead>
+            <tbody id="sys-perm-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TAB 3: HIỂN THỊ & TÍNH NĂNG (admin bật/tắt chủ động) ═══ -->
+      <div class="users-mgr-body sys-panel" data-sys-panel="flags" hidden>
+        <p class="sys-lead">
+          Bật/tắt <strong>chủ động theo từng vai trò</strong> — bấm là có hiệu lực NGAY trên mọi máy
+          (không hẹn giờ). Bật/tắt đều được ghi vào <strong>Nhật ký</strong> để biết “lúc này cho phép,
+          lúc khác tắt”. Mọi thay đổi chỉ Quản Trị làm được.
+        </p>
+        <div id="sys-flags-list" class="sys-flags-list"></div>
+      </div>
+
+      <!-- ═══ TAB 4: NHẬT KÝ & HỆ THỐNG ═══ -->
+      <div class="users-mgr-body sys-panel" data-sys-panel="system" hidden>
+        <div class="sys-status" id="sys-status"></div>
+        <div class="sys-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-sys-export" title="Tải cấu hình cờ + quyền ra file JSON để sao lưu">
+            <i data-lucide="download"></i> Xuất cấu hình
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-sys-reset" title="Xoá mọi tuỳ chỉnh, quay về mặc định (có ghi nhật ký)">
+            <i data-lucide="rotate-ccw"></i> Khôi phục mặc định
+          </button>
+        </div>
+        <h4 class="sys-h4"><i data-lucide="scroll-text"></i> Nhật ký thay đổi cài đặt</h4>
+        <div id="sys-audit-list" class="sys-audit-list"></div>
       </div>
 
       <div class="modal-footer">
@@ -7117,153 +7164,6 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btn-cancel-history">Đóng</button>
       </div>
-    </div>
-  </div>
-
-  <!-- MODAL 8: CUSTOM CHART BUILDER & CUSTOMIZER -->
-  <div class="modal-overlay" id="modal-chart-builder">
-    <div class="modal-card" style="max-width: 780px;">
-      <div class="modal-header">
-        <h3 id="chart-builder-modal-title">
-          <i data-lucide="sliders"></i> Tạo & Tùy Chỉnh Biểu Đồ Dashboard
-        </h3>
-        <button class="modal-close-btn" id="btn-close-chart-builder"><i data-lucide="x"></i></button>
-      </div>
-
-      <form id="chart-builder-form" style="padding: 20px; max-height: calc(85vh - 120px); overflow-y: auto;">
-        <input type="hidden" id="builder-chart-id" value="">
-
-        <!-- Top Section: Title & Chart Type -->
-        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px; margin-bottom:14px;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-title" style="font-weight:600;">
-              <i data-lucide="type"></i> Tên Biểu Đồ
-            </label>
-            <input type="text" id="builder-title" placeholder="VD: Phân bổ Thể tích theo Vị trí lưu kho" required>
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-type" style="font-weight:600;">
-              <i data-lucide="bar-chart-3"></i> Loại Biểu Đồ
-            </label>
-            <select id="builder-type" required>
-              <option value="bar">📊 Cột Đứng (Vertical Bar)</option>
-              <option value="horizontalBar">📊 Cột Ngang (Horizontal Bar)</option>
-              <option value="line">📈 Đường Xu Hướng (Line)</option>
-              <option value="pie">🥧 Biểu Đồ Tròn (Pie)</option>
-              <option value="doughnut">🍩 Biểu Đồ Vành Khăn (Doughnut)</option>
-              <option value="stackedBar">📑 Cột Xếp Chồng (Stacked Bar)</option>
-              <option value="planVsActual">🎯 Kế Hoạch vs Thực Tế (Cột Lồng)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- NGUỒN DỮ LIỆU & VÙNG HIỂN THỊ & ĐỘ RỘNG -->
-        <div style="display:grid; grid-template-columns: 1.4fr 1fr 1fr; gap:12px; margin-bottom:14px; padding:12px; background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md);">
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-source" style="font-weight:600;">
-              <i data-lucide="database"></i> Nguồn Dữ Liệu (Tab)
-            </label>
-            <select id="builder-source">
-              <option value="kanban">Công Đoạn (Lô Nan)</option>
-              <option value="planning">Kế Hoạch Sản Xuất</option>
-              <option value="press">Ép Ván (Sản Lượng Ép Ván)</option>
-              <option value="materials">Nhập Nguyên Liệu</option>
-              <option value="materialsPlan">Kế Hoạch vs Thực Tế Nguyên Liệu</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-width" style="font-weight:600;">
-              <i data-lucide="move-horizontal"></i> Độ Rộng Thẻ
-            </label>
-            <select id="builder-width">
-              <option value="half">Nửa hàng (mặc định)</option>
-              <option value="full">Toàn hàng</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Middle Section: Grouping & Metric -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-group-by" style="font-weight:600;">
-              <i data-lucide="list-tree"></i> Phân Nhóm Chính (Trục X)
-            </label>
-            <select id="builder-group-by" required>
-              <option value="stage">1. Theo Công Đoạn (Sấy 1, Sấy 2, Kho, Bào tinh)</option>
-              <option value="thickness">2. Theo Độ Dày Nan (Nan 6mm, 7mm, 8mm...)</option>
-              <option value="dimFull">3. Theo Kích Thước Đầy Đủ Dài × Rộng × Dày</option>
-              <option value="bambooType">4. Theo Loại Nan (Loại A, Loại A1, Loại B)</option>
-              <option value="useFor">5. Theo Mục Đích Sử Dụng (Ván, Bullig)</option>
-              <option value="location">6. Theo Vị Trí Lưu Kho / Kệ Sấy</option>
-              <option value="week">7. Theo Tuần Sản Xuất</option>
-              <option value="date">8. Theo Ngày Nhập / Chế Biến</option>
-            </select>
-          </div>
-
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-metric" style="font-weight:600;">
-              <i data-lucide="calculator"></i> Chỉ Số Tính Toán (Metric)
-            </label>
-            <select id="builder-metric" required>
-              <option value="volume">Tổng Thể Tích Nan ($m^3$)</option>
-              <option value="quantity">Tổng Số Lượng Thanh (Thanh)</option>
-              <option value="batchCount">Số Lượng Lô Nan (Lô)</option>
-              <option value="avgVolume">Thể Tích Trung Bình / Lô ($m^3$)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Stacking & Color Palette -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-stack-by" style="font-weight:600;">
-              <i data-lucide="layers"></i> Phân Nhóm Phụ / Xếp Tầng (Sub-group)
-            </label>
-            <select id="builder-stack-by">
-              <option value="none">Không phân nhóm phụ (Đơn)</option>
-              <option value="stage">Phân theo Công Đoạn</option>
-              <option value="dimRatio">Theo Quy Cách Dài × Rộng</option>
-              <option value="bambooType">Phân theo Loại Nan (A / A1 / B)</option>
-              <option value="useFor">Phân theo Dùng Cho (Ván / Bullig)</option>
-              <option value="location">Phân theo Vị Trí Kho</option>
-            </select>
-          </div>
-
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="builder-palette" style="font-weight:600;">
-              <i data-lucide="palette"></i> Bảng Màu Sắc
-            </label>
-            <select id="builder-palette">
-              <option value="vibrant">🌈 Đa Sắc Rực Rỡ (Vibrant Multi)</option>
-              <option value="green">🌿 Xanh Tre Tự Nhiên (Bamboo Forest)</option>
-              <option value="amber">🍂 Vàng Hổ Phách (Warm Amber)</option>
-              <option value="blue">🌊 Xanh Biển Sâu (Ocean Blue)</option>
-              <option value="purple">🔮 Tím Thạch Anh (Royal Purple)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Filters Box: nội dung bộ lọc được sinh động theo nguồn dữ liệu (dashboard.js → renderBuilderFilters) -->
-        <div id="builder-filters-box" style="background:var(--surface-alt); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px;"></div>
-
-        <!-- Preview Canvas -->
-        <div class="chart-builder-preview-box" style="margin-top:8px;">
-          <p style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;">
-            <i data-lucide="eye"></i> Xem Trước
-          </p>
-          <div style="position:relative; width:100%; height:220px; background:var(--bg-subtle); border-radius:8px; overflow:hidden;">
-            <canvas id="chart-builder-preview-canvas" style="width:100% !important; height:100% !important;"></canvas>
-          </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-builder-refresh-preview" style="margin-top:8px;">
-            <i data-lucide="refresh-cw"></i> Làm Mới Xem Trước
-          </button>
-        </div>
-
-        <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-chart-builder">Hủy</button>
-          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Biểu Đồ</button>
-        </div>
-      </form>
     </div>
   </div>
 

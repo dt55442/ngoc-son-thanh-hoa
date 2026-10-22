@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v301';
+  const APP_VERSION = 'v302';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -153,6 +153,13 @@
   //   { '<cardId>|<YYYY-MM-DD>': giờ }  →  Hiệu suất = Công suất ÷ Định mức
   //   với Công suất = Sản lượng ÷ (Giờ thực − Giờ sự cố cho phép)
   const STORAGE_KEY_X2_STAGE_INCIDENT = 'bamboo_tracker_x2_stage_incident_v1';
+  // CÀI ĐẶT HỆ THỐNG (22/10/2026) — 1 chỗ duy nhất chứa:
+  //   flags : bật/tắt hiển thị (công suất · hiệu suất · giá mây… · nhập tay giờ sự cố)
+  //   perms : quyền theo VÙNG (37 vùng × 4 vai trò × 4 mức none/view/edit/approve)
+  //   audit : nhật ký đổi cài đặt (ai · lúc nào · từ gì → thành gì)
+  // Admin sửa trong panel "Cài Đặt Hệ Thống"; đồng bộ mây nhưng máy không phải
+  // admin KHÔNG đẩy đè được (xem RATE_DOMAINS ở js/cloud.js).
+  const STORAGE_KEY_SYS_SETTINGS = 'bamboo_tracker_sys_settings_v1';
   // PHIẾU BÁO CÁO SỰ CỐ (tab Công Đoạn SX — nút dùng chung trên thanh tiêu đề).
   // Mỗi phiếu gắn 1 CÔNG ĐOẠN + 1 NGÀY + số giờ; khi Ban lãnh đạo DUYỆT thì số giờ
   // của phiếu tự trở thành GIỜ SỰ CỐ của đúng công đoạn + ngày đó (xem
@@ -416,6 +423,12 @@
     // { '<cardId>|<YYYY-MM-DD>': giờ } · cardId ∈ boluong/cut/boong/baotho/
     // chonnan/baotinh/bullig/epvan (Than Hóa + Sấy đã có key riêng x2SayIncidents)
     x2StageIncidents: {},
+    // CÀI ĐẶT HỆ THỐNG (22/10/2026): { v, savedAt, flags:{id:{roles}}, perms:{area:{role}},
+    // audit:[{at,by,name,what,from,to}] } — admin bật/tắt chủ động, KHÔNG hẹn giờ.
+    sysSettings: {},
+    // Vùng quyền đang thao tác (modal/thẻ đặt tường minh) — dùng cho
+    // permissions.currentAreaId(); rỗng = suy ra từ thẻ đang mở hoặc tab.
+    sysActiveArea: '',
     // PHIẾU BÁO CÁO SỰ CỐ (tab Công Đoạn SX — nút "Báo Cáo Sự Cố" trên thanh tiêu đề):
     // [{ id, stage, date, shiftIdx, startTime, endTime, hours, cause, description,
     //    fixAction, reporterName, status 'cho_duyet'|'da_duyet'|'tu_choi',
@@ -614,6 +627,7 @@ export {
   STORAGE_KEY_X2_SAY_TIMES,
   STORAGE_KEY_X2_SAY_INCIDENT,
   STORAGE_KEY_X2_STAGE_INCIDENT,
+  STORAGE_KEY_SYS_SETTINGS,
   STORAGE_KEY_X2_INCIDENT_REPORTS,
   STORAGE_KEY_RATE_APPROVALS,
   STORAGE_KEY_X2_KANBAN_COLLAPSED,

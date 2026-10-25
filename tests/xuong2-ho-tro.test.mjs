@@ -354,7 +354,7 @@ check('K9 (styles.css): khối CSS riêng (.x2-ht-worker-tools + #x2-ht-workers 
 check('K10 (export-xlsx): nguồn "hotro" + nhánh cột Ngày/Nội dung/Người/Mô tả/Giờ',
   jsXlsx.includes("id: 'hotro'") && jsXlsx.includes('state.xuong2HoTroRecords') &&
   jsXlsx.includes("source === 'hotro'"));
-check('K11 (sw.js): đã tăng CACHE_NAME v233', /nha-may-ngoc-son-v305/.test(swJs));
+check('K11 (sw.js): đã tăng CACHE_NAME v233', /nha-may-ngoc-son-v308/.test(swJs));
 check('K12 (index.html): gợi ý ô người nêu rõ CHỈ vị trí "Hỗ Trợ + Công Đoạn Lẻ" (Xưởng 2)',
   idxHtml.includes('Chỉ hiện người đang bố trí vị trí <b>"Hỗ Trợ + Công Đoạn Lẻ"</b>'));
 

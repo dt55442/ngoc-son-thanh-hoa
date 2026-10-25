@@ -7,7 +7,8 @@
 //   - Khi chọn bộ lọc / gõ tìm kiếm → bảng CHỈ hiển thị kết quả khớp.
 //   - Tuần (đầu vào) đã nhập là KHÓA — hiển thị badge chỉ đọc, không sửa.
 //   - Tên hàng lấy từ thành phẩm trong Kế Hoạch Sản Xuất.
-// Dữ liệu state.qcExports: [{ id, productId, name, week 'Tuần 34', year, qty, note, createdAt, updatedAt }]
+// Dữ liệu state.qcExports: [{ id, productId, name, week, weeks?: number[], year, qty, note, createdAt, updatedAt }]
+// weeks[] dùng cho xuất một tổng lượng gắn với một hoặc hai tuần; bản ghi cũ chỉ có week vẫn hợp lệ.
 // Lưu localStorage + đồng bộ mây (firePushSync); là nguồn dữ liệu
 // cột "Số Lượng Xuất" trong biểu đồ Kế Hoạch vs Đã Ép (press.js).
 // ═══════════════════════════════════════════════════════════
@@ -28,6 +29,12 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
   function parseWeekNum(weekLabel) {
     const m = String(weekLabel || '').match(/Tuần\s*(\d+)/i);
     return m ? parseInt(m[1], 10) : 0;
+  }
+
+  function qcRowWeeks(row) {
+    const values = Array.isArray(row?.weeks) && row.weeks.length ? row.weeks : [row?.week];
+    return [...new Set(values.map(value => typeof value === 'number' ? value : parseWeekNum(value))
+      .filter(week => week >= 1 && week <= 53))];
   }
 
   function qcTodayISO() {
@@ -152,7 +159,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     const q = qcStripForSearch(state.qcSearchQ || '');
     return (state.qcExports || []).filter(r =>
       (yearStr === 'all' || String(r.year ?? '') === yearStr) &&
-      (weeks.length === 0 || weeks.includes(parseWeekNum(r.week))) &&
+      (weeks.length === 0 || qcRowWeeks(r).some(week => weeks.includes(week))) &&
       (!q || qcStripForSearch(qcRowName(r)).includes(q))
     );
   }
@@ -173,7 +180,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     const rowsOfYear = yearStr === 'all'
       ? (state.qcExports || [])
       : (state.qcExports || []).filter(r => String(r.year) === yearStr);
-    const weeks = [...new Set(rowsOfYear.map(r => parseWeekNum(r.week)).filter(Boolean))].sort((a, b) => a - b);
+    const weeks = [...new Set(rowsOfYear.flatMap(qcRowWeeks))].sort((a, b) => a - b);
     const chipsEl = document.getElementById('qc-sum-weeks');
     if (chipsEl) {
       const allActive = state.qcSumWeeks.length === 0;
@@ -212,7 +219,8 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
       </td></tr>`;
     } else {
       tbody.innerHTML = rows.map(row => {
-        const weekNum = parseWeekNum(row.week);
+        const rowWeeks = qcRowWeeks(row);
+        const weekLabel = rowWeeks.length ? rowWeeks.map(week => `Tuần ${week}`).join(' · ') : '—';
         const isCustom = !row.productId;
         return `
           <tr>
@@ -221,7 +229,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
               ${isCustom ? '<span class="qc-custom-badge" title="Thành phẩm thêm ngoài danh sách kế hoạch">ngoài kế hoạch</span>' : ''}
             </td>
             <td style="width:110px;">
-              <span class="qc-week-badge" title="Tuần xuất đã nhập đầu vào — không cần sửa">${weekNum ? `Tuần ${weekNum}` : '—'}</span>
+              <span class="qc-week-badge" title="Tuần xuất đã chọn — không cần sửa">${escapeHTML(weekLabel)}</span>
               <div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">${row.year || qcCurrentYear()}</div>
             </td>
             <td style="width:120px;">
@@ -284,6 +292,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     if (field === 'week') {
       const n = parseInt(value, 10);
       row.week = n > 0 ? `Tuần ${n}` : '';
+      row.weeks = n > 0 ? [n] : [];
     } else if (field === 'qty') {
       row.qty = Math.max(0, parseInt(value, 10) || 0);
     } else if (field === 'note') {
@@ -302,7 +311,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     if (!requireEditPermission()) return;
     const row = (state.qcExports || []).find(q => q.id === id);
     if (!row) return;
-    if (!confirm(`Xóa dòng xuất hàng "${qcRowName(row)}" (${row.week || 'chưa chọn tuần'})?`)) return;
+    if (!confirm(`Xóa dòng xuất hàng "${qcRowName(row)}" (${qcRowWeeks(row).map(week => `Tuần ${week}`).join(', ') || 'chưa chọn tuần'})?`)) return;
     trackDeleted('qcExports', id);
     state.qcExports = state.qcExports.filter(q => q.id !== id);
     saveQcExports();
@@ -315,13 +324,11 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
   }
 
   // ─── MODAL TẠO DÒNG XUẤT HÀNG THEO TUẦN ──────────────────────
-  // Quy trình mới: chọn Tuần xuất → tự nạp TOÀN BỘ thành phẩm theo kế hoạch
-  // tuần đó (checkbox tick sẵn, SỐ LƯỢNG để TRỐNG điền tay số thực tế).
-  // Mỗi dòng có nút bỏ dòng (không xuất trong tuần). Có nút thêm thành phẩm
-  // ngoài kế hoạch. Submit tạo các dòng đã tick có số lượng > 0.
+  // Cho phép chọn một tuần hoặc hai tuần; số lượng nhập là một tổng duy nhất.
   let qcImpCustomIdx = 0; // đếm số TP ngoài kế hoạch đã thêm trong 1 lần mở
-  // Danh sách dòng đang soạn trong modal ({ key, productId, name, planQty, plan, qty, checked })
+  // Danh sách dòng đang soạn trong modal ({ key, productId, name, planQtyByWeek, plan, qty, checked })
   let qcImpRows = [];
+  let qcImpLastSelectedWeeks = [];
 
   // Thành phẩm theo KẾ HOẠCH của năm + tuần (distinct theo mã, giữ thứ tự plan)
   function qcPlanProductsFor(yearVal, weekNum) {
@@ -339,37 +346,86 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     }).filter(Boolean);
   }
 
+  function qcImpSelectedWeeks() {
+    const select = document.getElementById('qc-imp-week');
+    if (!select) return [];
+    const selectedOptions = select.selectedOptions ? Array.from(select.selectedOptions) : [];
+    const values = selectedOptions.map(option => parseInt(option.value, 10));
+    if (values.length && Number(select.value) !== values[0]) return [parseInt(select.value, 10)].filter(Boolean);
+    if (!values.length && select.value) values.push(parseInt(select.value, 10));
+    return [...new Set(values.filter(week => week >= 1 && week <= 53))].sort((a, b) => a - b);
+  }
+
+  function qcImpSyncWeekFields() {
+    const weeks = qcImpSelectedWeeks();
+    const chips = document.getElementById('qc-imp-selected-weeks');
+    const qtyHeading = document.getElementById('qc-imp-qty-heading');
+    if (chips) {
+      chips.innerHTML = weeks.length
+        ? weeks.map(week => `<span class="qc-imp-week-chip"><i data-lucide="calendar-days"></i> Tuần ${week}</span>`).join('')
+        : '<span class="qc-imp-week-empty">Chưa chọn tuần xuất</span>';
+    }
+    if (qtyHeading) qtyHeading.textContent = weeks.length > 1 ? 'Số lượng tổng' : 'Số lượng';
+    initLucide();
+  }
+
+  function qcImpOnWeeksChange() {
+    const select = document.getElementById('qc-imp-week');
+    let weeks = qcImpSelectedWeeks();
+    if (weeks.length > 2) {
+      const added = weeks.filter(week => !qcImpLastSelectedWeeks.includes(week));
+      const rejected = added[added.length - 1] || weeks[weeks.length - 1];
+      const option = Array.from(select?.options || []).find(item => Number(item.value) === rejected);
+      if (option) option.selected = false;
+      showToast('Chỉ có thể chọn tối đa 2 tuần xuất.', 'error');
+      weeks = qcImpSelectedWeeks();
+    }
+    qcImpLastSelectedWeeks = weeks;
+    if (!weeks.length) {
+      qcImpRows = [];
+      qcImpSyncWeekFields();
+      qcImpPlanInfo();
+      renderQcImpRows();
+      return;
+    }
+    qcImpLoadPlan(false);
+  }
+
   function qcImpPlanInfo() {
     const yearVal = document.getElementById('qc-imp-year')?.value || '';
-    const weekNum = parseInt(document.getElementById('qc-imp-week')?.value, 10) || 0;
-    const plan = qcPlanProductsFor(yearVal, weekNum);
+    const weeks = qcImpSelectedWeeks();
+    const weekPlans = weeks.map(week => ({ week, plan: qcPlanProductsFor(yearVal, week) }));
     const txt = document.getElementById('qc-imp-plan-text');
     if (txt) {
-      txt.innerHTML = plan.length
-        ? `Kế hoạch tuần <strong>${weekNum}</strong> năm <strong>${yearVal}</strong>: <strong>${plan.length}</strong> thành phẩm (tổng KH <strong>${plan.reduce((a, p) => a + p.planQty, 0).toLocaleString('vi-VN')}</strong> tấm). Bỏ tick / bấm nút xóa dòng KHÔNG xuất, điền tay số lượng thực tế.`
-        : `Kế hoạch tuần <strong>${weekNum}</strong> năm <strong>${yearVal}</strong>: <strong>không có</strong> thành phẩm nào. Dùng "Nạp Kế Hoạch Tuần Này" hoặc "Thêm Sản Phẩm Ngoài Kế Hoạch".`;
+      txt.innerHTML = weekPlans.length
+        ? `<div class="qc-imp-plan-weeks">${weekPlans.map(({ week, plan }) =>
+          `<span class="qc-imp-plan-week"><strong>Tuần ${week}</strong><span>${plan.length} TP · KH ${plan.reduce((a, p) => a + p.planQty, 0).toLocaleString('vi-VN')} tấm</span></span>`
+        ).join('')}</div><span>Nhập một số lượng tổng cho các tuần đã chọn.</span>`
+        : 'Chọn năm và tuần xuất hàng để xem kế hoạch.';
     }
-    return plan;
+    return weekPlans;
   }
 
   // Vẽ lại danh sách dòng trong modal (giữ số lượng người dùng đã điền qua qcImpRows)
   function renderQcImpRows() {
     const box = document.getElementById('qc-imp-products');
     if (!box) return;
+    const weeks = qcImpSelectedWeeks();
+    box.dataset.weekCount = String(weeks.length);
     if (!qcImpRows.length) {
-      box.innerHTML = `<div class="qc-imp-empty">Chưa có dòng nào — bấm <strong>Nạp Kế Hoạch Tuần Này</strong> hoặc <strong>Thêm Sản Phẩm Ngoài Kế Hoạch</strong>.</div>`;
+      box.innerHTML = `<div class="qc-imp-empty">Chưa có sản phẩm — nạp kế hoạch hoặc thêm sản phẩm ngoài kế hoạch để bắt đầu.</div>`;
     } else {
       box.innerHTML = qcImpRows.map(r => {
-        const planBadge = r.plan
-          ? `<span class="qc-imp-plan-badge" title="Số lượng kế hoạch tuần này">KH: ${(r.planQty || 0).toLocaleString('vi-VN')}</span>`
+        const planBadges = r.plan
+          ? weeks.map(week => `<span class="qc-imp-plan-badge">KH T${week}: ${(Number(r.planQtyByWeek?.[week]) || 0).toLocaleString('vi-VN')}</span>`).join('')
           : `<span class="qc-custom-badge">ngoài kế hoạch</span>`;
         return `<div class="qc-imp-row" data-qc-imp-key="${r.key}">
           <label class="qc-imp-check-label"><input type="checkbox" class="qc-imp-check" data-qc-imp-check="${r.key}"${r.checked === false ? '' : ' checked'} title="Tick để tạo dòng xuất"></label>
           <div class="qc-imp-name-cell">
             <div class="qc-product-name">${escapeHTML(r.name)}</div>
-            ${planBadge}
+            <div class="qc-imp-badges">${planBadges}</div>
           </div>
-          <input type="number" min="0" step="1" class="qc-imp-qty qc-row-qty" data-qc-imp-qty="${r.key}" value="${(Number(r.qty) || 0) > 0 ? Number(r.qty) : ''}" placeholder="Số lượng thực tế" title="Điền số lượng xuất thực tế (để trống = bỏ qua dòng này)">
+          <label class="qc-imp-qty-field"><span>${weeks.length > 1 ? 'Tổng cho các tuần đã chọn' : 'Số lượng xuất'}</span><input type="number" min="0" step="1" inputmode="numeric" class="qc-imp-qty qc-row-qty" data-qc-imp-qty="${r.key}" value="${(Number(r.qty) || 0) > 0 ? Number(r.qty) : ''}" placeholder="Số lượng tổng" title="Nhập tổng số lượng cho các tuần đã chọn"></label>
           <button type="button" class="qc-row-delete" data-qc-imp-remove="${r.key}" title="Bỏ dòng này (không xuất trong tuần)"><i data-lucide="trash-2"></i></button>
         </div>`;
       }).join('');
@@ -378,14 +434,13 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     initLucide();
   }
 
-  // Dòng thông tin dưới cùng: sẽ tạo bao nhiêu dòng / tổng tấm
+  // Tóm tắt số dòng và tổng sản lượng cho toàn bộ tuần đã chọn
   function qcImpFooterInfo() {
     const info = document.getElementById('qc-imp-footer-info');
     if (!info) return;
-    const picked = qcImpRows.filter(r => r.checked !== false && (Number(r.qty) || 0) > 0);
-    info.innerHTML = picked.length
-      ? `<i data-lucide="info"></i> Sẽ tạo <strong>${picked.length}</strong> dòng xuất — tổng <strong>${picked.reduce((a, r) => a + (Number(r.qty) || 0), 0).toLocaleString('vi-VN')}</strong> tấm (dòng tick nhưng chưa điền số lượng sẽ BỎ QUA).`
-      : `<i data-lucide="info"></i> Chưa điền số lượng nào — dòng tick mà số lượng trống sẽ bị bỏ qua.`;
+    const picked = qcImpRows.filter(row => row.checked !== false && (Number(row.qty) || 0) > 0);
+    const total = picked.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
+    info.innerHTML = `<i data-lucide="info"></i><span class="qc-imp-footer-totals"><strong>Sẽ tạo ${picked.length} dòng · tổng ${total.toLocaleString('vi-VN')} tấm</strong></span><span class="qc-imp-footer-hint">Số lượng là tổng cho toàn bộ tuần đã chọn, không nhân đôi.</span>`;
     initLucide();
   }
 
@@ -407,19 +462,37 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
   }
   function qcImpSetQty(key, value) {
     const row = qcImpRows.find(r => r.key === key);
-    if (row) { row.qty = Math.max(0, parseInt(value, 10) || 0); qcImpFooterInfo(); }
+    if (row) {
+      row.qty = Math.max(0, parseInt(value, 10) || 0);
+      qcImpFooterInfo();
+    }
   }
 
   function qcImpLoadPlan(keepQty = true) {
     const yearVal = document.getElementById('qc-imp-year')?.value || '';
-    const weekNum = parseInt(document.getElementById('qc-imp-week')?.value, 10) || 0;
-    if (!yearVal || !weekNum) { showToast('Vui lòng chọn Năm và Tuần Xuất trước!', 'error'); return; }
-    const prevQty = {};
-    if (keepQty) qcImpRows.forEach(r => { if ((Number(r.qty) || 0) > 0) prevQty[r.productId || r.name] = Number(r.qty); });
-    const plan = qcImpPlanInfo();
-    const planRows = plan.map(p => ({
-      key: `p-${p.id}`, productId: p.id, name: p.name, planQty: p.planQty, plan: true,
-      qty: keepQty ? (prevQty[p.id] || 0) : 0, checked: true
+    const weeks = qcImpSelectedWeeks();
+    if (!yearVal || !weeks.length || weeks.length > 2) { showToast('Vui lòng chọn Năm và tối đa 2 tuần xuất!', 'error'); return; }
+    qcImpSyncWeekFields();
+    const prevQtyByProduct = new Map();
+    const prevCheckedByProduct = new Map();
+    if (keepQty) qcImpRows.forEach(r => {
+      if (r.productId) {
+        prevQtyByProduct.set(r.productId, Number(r.qty) || 0);
+        prevCheckedByProduct.set(r.productId, r.checked !== false);
+      }
+    });
+    const weekPlans = qcImpPlanInfo();
+    const planByProduct = new Map();
+    weekPlans.forEach(({ week, plan }) => plan.forEach(product => {
+      if (!planByProduct.has(product.id)) {
+        planByProduct.set(product.id, { id: product.id, name: product.name, planQtyByWeek: {} });
+      }
+      planByProduct.get(product.id).planQtyByWeek[week] = product.planQty;
+    }));
+    const planRows = [...planByProduct.values()].map(product => ({
+      key: `p-${product.id}`, productId: product.id, name: product.name, planQtyByWeek: product.planQtyByWeek, plan: true,
+      qty: keepQty ? (prevQtyByProduct.get(product.id) || 0) : 0,
+      checked: keepQty ? (prevCheckedByProduct.get(product.id) !== false) : true
     }));
     const customs = qcImpRows.filter(r => !r.plan); // dòng ngoài kế hoạch giữ nguyên
     qcImpRows = [...planRows, ...customs];
@@ -431,14 +504,21 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     const input = document.getElementById('qc-custom-name');
     const name = String(input?.value || '').trim();
     if (!name) { showToast('Vui lòng nhập tên thành phẩm!', 'error'); input?.focus(); return; }
+    const weeks = qcImpSelectedWeeks();
+    if (!weeks.length || weeks.length > 2) { showToast('Vui lòng chọn một hoặc hai tuần xuất!', 'error'); return; }
+    const qtyInput = document.getElementById('qc-custom-qty');
+    const qty = Math.max(0, parseInt(qtyInput?.value, 10) || 0);
+    if (!qty) {
+      showToast('Vui lòng nhập số lượng tổng lớn hơn 0!', 'error');
+      qtyInput?.focus();
+      return;
+    }
     if (qcImpRows.some(r => (r.name || '').toLowerCase() === name.toLowerCase())) {
       showToast('Thành phẩm này đã có trong danh sách!', 'error'); return;
     }
     qcImpCustomIdx++;
-    qcImpRows.push({ key: `c-${Date.now()}-${qcImpCustomIdx}`, productId: null, name, planQty: 0, plan: false, qty: 0, checked: true });
-    if (input) input.value = '';
-    const group = document.getElementById('qc-custom-name-group');
-    if (group) group.style.display = 'none';
+    qcImpRows.push({ key: `c-${Date.now()}-${qcImpCustomIdx}`, productId: null, name, planQtyByWeek: {}, plan: false, qty, checked: true });
+    hideQcCustomName();
     renderQcImpRows();
     showToast(`Đã thêm "${name}" vào danh sách soạn!`, 'success');
   }
@@ -452,7 +532,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     qcImpCustomIdx = 0;
     qcImpRows = [];
 
-    // Năm + tuần: mặc định là hiện tại
+    // Năm + tuần: mặc định một tuần hiện tại; có thể chọn thêm một tuần.
     const yearSel = document.getElementById('qc-imp-year');
     if (yearSel) {
       yearSel.innerHTML = qcYearList()
@@ -462,7 +542,9 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     if (weekSel) {
       const curW = qcCurrentWeekNum();
       weekSel.innerHTML = Array.from({ length: 53 }, (_, i) => i + 1)
-        .map(w => `<option value="${w}"${w === curW ? ' selected' : ''}>Tuần ${w}</option>`).join('');
+        .map(week => `<option value="${week}"${week === curW ? ' selected' : ''}>Tuần ${week}</option>`).join('');
+      weekSel.value = String(curW);
+      qcImpLastSelectedWeeks = [curW];
     }
     const noteEl = document.getElementById('qc-imp-note');
     if (noteEl) noteEl.value = '';
@@ -489,6 +571,8 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     if (group) group.style.display = 'none';
     const input = document.getElementById('qc-custom-name');
     if (input) { input.required = false; input.value = ''; }
+    const qtyInput = document.getElementById('qc-custom-qty');
+    if (qtyInput) qtyInput.value = '';
   }
 
   // (Giữ tương thích tên cũ — select chọn TP đơn lẻ đã thay bằng danh sách tuần)
@@ -498,31 +582,32 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
   function handleQcExportSubmit(e) {
     e.preventDefault();
     const yearVal = parseInt(document.getElementById('qc-imp-year')?.value, 10) || 0;
-    const weekNum = parseInt(document.getElementById('qc-imp-week')?.value, 10) || 0;
+    const weeks = qcImpSelectedWeeks();
     const note = String(document.getElementById('qc-imp-note')?.value || '').trim();
     if (!yearVal) { showToast('Năm xuất hàng không được để trống!', 'error'); return; }
-    if (!weekNum) { showToast('Vui lòng chọn tuần xuất hàng!', 'error'); return; }
+    if (!weeks.length || weeks.length > 2) { showToast('Vui lòng chọn một hoặc hai tuần xuất hàng!', 'error'); return; }
 
-    const picked = qcImpRows.filter(r => r.checked !== false && (Number(r.qty) || 0) > 0);
+    const picked = qcImpRows.filter(row => row.checked !== false && (Number(row.qty) || 0) > 0);
     if (!picked.length) {
       showToast('Chưa có dòng nào có số lượng — điền số lượng thực tế cho các dòng cần xuất!', 'error');
       return;
     }
 
     const now = new Date().toISOString();
-    (state.qcExports = state.qcExports || []).push(...picked.map(r => ({
+    (state.qcExports = state.qcExports || []).push(...picked.map(row => ({
       id: `qc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      productId: r.productId || null,
-      name: r.name,
-      week: `Tuần ${weekNum}`,
+      productId: row.productId || null,
+      name: row.name,
+      week: `Tuần ${weeks[0]}`,
+      weeks: [...weeks],
       year: yearVal,
-      qty: Number(r.qty) || 0,
+      qty: Number(row.qty) || 0,
       note,
       createdAt: now,
       updatedAt: now
     })));
 
-    const totalQty = picked.reduce((a, r) => a + (Number(r.qty) || 0), 0);
+    const totalQty = picked.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
     saveQcExports();
     closeQcExportModal();
     renderQcTable();
@@ -530,7 +615,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     renderQcSearch();
     updateQcCardGrid();
     initLucide();
-    showToast(`Đã tạo ${picked.length} dòng xuất (tổng ${totalQty.toLocaleString('vi-VN')} tấm) — Tuần ${weekNum}/${yearVal}!`, 'success');
+    showToast(`Đã tạo ${picked.length} dòng xuất — tổng ${totalQty.toLocaleString('vi-VN')} tấm cho ${weeks.map(week => `Tuần ${week}`).join(' và ')}/${yearVal}!`, 'success');
   }
 
   // ─── TÌM KIẾM / DẢI KẾT QUẢ LỌC ─────────────────────────────
@@ -682,6 +767,7 @@ export {
   qcImpAddCustom,
   qcImpFooterInfo,
   qcImpLoadPlan,
+  qcImpOnWeeksChange,
   qcImpRemoveRow,
   qcImpSetChecked,
   qcImpSetQty,

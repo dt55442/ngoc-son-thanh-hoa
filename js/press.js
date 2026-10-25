@@ -2437,7 +2437,11 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     // hiển thị theo mã hàng kế hoạch).
     const exportQty = {};
     (state.qcExports || []).forEach(q => {
-      if (!q || !yOn(q.year) || !wkOn(getWeekNumber(q.week))) return;
+      const weeks = Array.isArray(q?.weeks) && q.weeks.length
+        ? q.weeks.map(Number).filter(week => week >= 1 && week <= 53)
+        : [getWeekNumber(q?.week)].filter(week => week >= 1 && week <= 53);
+      // Không phân bổ lượng tổng nhiều tuần vào từng tuần riêng lẻ.
+      if (!q || !weeks.length || !yOn(q.year) || !weeks.every(wkOn)) return;
       let pid = q.productId || null;
       if (!pid) {
         const nm = String(q.name || '').trim().toLowerCase();

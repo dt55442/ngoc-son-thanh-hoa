@@ -64,6 +64,17 @@ function aiTodayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+function aiQcExportsForWeek(year, weekLabel) {
+  const weekNum = Number(String(weekLabel).match(/W(\d+)$/i)?.[1]) ||
+    Number(String(weekLabel).match(/Tuần\s*(\d+)/i)?.[1]) || 0;
+  return (state.qcExports || []).filter(q => {
+    if (String(q.year || '') !== String(year)) return false;
+    const weeks = Array.isArray(q.weeks) && q.weeks.length
+      ? q.weeks.map(Number)
+      : [Number(String(q.week || '').match(/Tuần\s*(\d+)/i)?.[1]) || 0];
+    return weeks.includes(weekNum);
+  });
+}
 
 // ─── MODAL ──────────────────────────────────────────────────────
 let aiLastResult = '';
@@ -192,7 +203,7 @@ function buildAiDataSummary() {
   const mat7 = (state.materialRecords || []).filter(r => (r.date || '') >= weekAgo);
   L.push(`Nguyên liệu 7 ngày qua: ${mat7.length} lượt nhập, tổng trọng lượng ${mat7.reduce((a, r) => a + (r.weight || 0), 0)} kg`);
   // QC xuất hàng tuần này
-  const qc = (state.qcExports || []).filter(q => q.week === weekLabel && String(q.year || '') === year);
+  const qc = aiQcExportsForWeek(year, weekLabel);
   L.push(`QC xuất hàng ${weekLabel}: ${qc.length} dòng, tổng ${qc.reduce((a, q) => a + (q.qty || 0), 0)} sản phẩm`);
   // Nhân sự hôm nay
   const emps = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active');
@@ -333,7 +344,7 @@ function aiTabContextOf(viewId) {
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const mat7 = (state.materialRecords || []).filter(r => (r.date || '') >= weekAgo);
   const mat7kg = mat7.reduce((a, r) => a + (r.weight || 0), 0);
-  const qcW = (state.qcExports || []).filter(q => q.week === weekLabel && String(q.year || '') === year);
+  const qcW = aiQcExportsForWeek(year, weekLabel);
   const qcQty = qcW.reduce((a, q) => a + (q.qty || 0), 0);
   const emps = (state.hrEmployees || []).filter(e => (e.status || 'active') === 'active');
   const unmarked = emps.filter(e => !attStatusOf(e.id, iso)).length;

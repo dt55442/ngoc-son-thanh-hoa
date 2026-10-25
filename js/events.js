@@ -51,7 +51,7 @@ import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupp
 import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapStale, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
 // Thẻ TRUY XUẤT ĐẦU VÀO → ĐẦU RA (Vùng Nâng Cao — js/trace.js)
 import { closeTraceSizePanel, positionTraceSizePanel, setTraceMode, setTraceProduct, setTraceSizeQuery, shiftTracePeriod, toggleTraceDetail, toggleTraceSizePanel, traceSizePanelOpen, TRACE_SIZE_BTN_ID, TRACE_SIZE_PANEL_ID } from './trace.js';
-import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
+import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpOnWeeksChange, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
 import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
 import { closeIncidentReports, handleIncidentSubmit, onIncidentChipClick, onIncidentFiltersChange, onIncidentReportsClick, openIncidentReports, resetIncidentForm, syncIncidentHoursFromTimes } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
@@ -1257,15 +1257,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     window.addEventListener('resize', positionQcFinalPicker);
 
     // ── Modal tạo dòng theo tuần: đổi Năm/Tuần → nạp lại danh sách kế hoạch ──
-    ['qc-imp-year', 'qc-imp-week'].forEach(fid => {
-      safeOn(fid, 'change', () => qcImpLoadPlan(false));
-    });
+    safeOn('qc-imp-year', 'change', () => qcImpLoadPlan(false));
+    safeOn('qc-imp-week', 'change', qcImpOnWeeksChange);
     safeOn('btn-qc-imp-refresh-plan', 'click', () => qcImpLoadPlan(true)); // giữ SL đã điền
     safeOn('btn-qc-imp-add-custom', 'click', () => {
       const group = document.getElementById('qc-custom-name-group');
-      if (group && group.style.display === 'none') { showQcCustomName(); return; }
-      qcImpAddCustom(); // lần 2: nhập tên rồi bấm để thêm vào danh sách
+      if (group && group.style.display === 'none') showQcCustomName();
+      else hideQcCustomName();
     });
+    safeOn('btn-qc-custom-add', 'click', qcImpAddCustom);
     // Delegation trong danh sách soạn: tick / điền SL / bỏ dòng
     // (qcImpRows là trạng thái riêng của qc.js — cập nhật qua hàm xuất khẩu,
     //  không tham chiếu trực tiếp được vì ES-module import là read-only)
@@ -1282,8 +1282,12 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       }
     });
     // Ô nhập tên TP ngoài kế hoạch: Enter trong ô = thêm vào danh sách
-    safeOn('qc-custom-name', 'keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); qcImpAddCustom(); }
+    document.addEventListener('keydown', (e) => {
+      const target = e.target;
+      if (e.key === 'Enter' && target && (target.id === 'qc-custom-name' || target.id === 'qc-custom-qty')) {
+        e.preventDefault();
+        qcImpAddCustom();
+      }
     });
     // Thu gọn / mở rộng bảng xuất hàng (trong thẻ Xuất Hàng)
     safeOn('btn-toggle-qc-table', 'click', () => toggleRateTableCollapse('qc-export-card'));

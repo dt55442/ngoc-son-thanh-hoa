@@ -1353,6 +1353,10 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
     return dim ? dimVolume(dim, qty) : 0;
   }
   const qcXlsxWeekNum = w => parseInt(String(w || '').replace(/\D/g, ''), 10) || 0;
+  const qcXlsxWeeks = row => {
+    const values = Array.isArray(row.weeks) && row.weeks.length ? row.weeks : [row.week];
+    return [...new Set(values.map(qcXlsxWeekNum).filter(week => week >= 1 && week <= 53))];
+  };
 
   function openQcXlsxExportModal() {
     const recs = state.qcExports || [];
@@ -1370,7 +1374,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
     // Tuần: các tuần CÓ dữ liệu xuất
     const weekSel = document.getElementById('export-qc-week');
     if (weekSel) {
-      const weeks = [...new Set(recs.map(r => qcXlsxWeekNum(r.week)).filter(Boolean))].sort((a, b) => a - b);
+      const weeks = [...new Set(recs.flatMap(qcXlsxWeeks))].sort((a, b) => a - b);
       weekSel.innerHTML = '<option value="all">Tất Cả Các Tuần</option>' +
         weeks.map(w => `<option value="${w}">Tuần ${w}</option>`).join('');
       weekSel.value = 'all';
@@ -1403,7 +1407,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
     const weekNum = week === 'all' ? 0 : qcXlsxWeekNum(week);
     const filtered = (state.qcExports || []).filter(r =>
       (year === 'all' || String(r.year ?? '') === String(year)) &&
-      (!weekNum || qcXlsxWeekNum(r.week) === weekNum) &&
+      (!weekNum || qcXlsxWeeks(r).includes(weekNum)) &&
       (prod === 'all' || (r.productId ? r.productId === prod : (r.name || '') === prod))
     );
     if (!filtered.length) {
@@ -1414,7 +1418,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
     // Sắp theo năm → tuần → tên thành phẩm cho dễ đối chiếu
     const sorted = [...filtered].sort((a, b) =>
       (Number(a.year) || 0) - (Number(b.year) || 0) ||
-      qcXlsxWeekNum(a.week) - qcXlsxWeekNum(b.week) ||
+      (qcXlsxWeeks(a)[0] || 0) - (qcXlsxWeeks(b)[0] || 0) ||
       qcXlsxRowName(a).localeCompare(qcXlsxRowName(b), 'vi'));
 
     const aoa = [];
@@ -1430,8 +1434,9 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
       const vol = Math.round(qcXlsxRowVolume(r) * 10000) / 10000;
       totalQty += qty;
       totalVol += vol;
-      const w = qcXlsxWeekNum(r.week);
-      aoa.push([stt++, qcXlsxRowName(r), w ? `Tuần ${w}` : '', r.year || '', qty, vol || '', r.note || '']);
+      const weeks = qcXlsxWeeks(r);
+      const weekLabel = weeks.map(week => `Tuần ${week}`).join(', ');
+      aoa.push([stt++, qcXlsxRowName(r), weekLabel, r.year || '', qty, vol || '', r.note || '']);
     });
     aoa.push(['', 'TỔNG CỘNG', '', '', totalQty, Math.round(totalVol * 10000) / 10000, '']);
     const totalIdx = aoa.length - 1;

@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v305/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v308/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -804,7 +804,7 @@ check('R14: CSS có khối 3 dòng đầu vào + tổng thể tích + chip cơ s
   cssHtml.includes('.ps-bt-line') && cssHtml.includes('.press-input-vol-total') &&
   cssHtml.includes('.press-vol-basis'));
 check('R15: sw.js đã tăng cache (v265) để PWA không dùng bản cũ',
-  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v305'));
+  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v308'));
 check('R16: ô nhiều cỡ có khung .ps-qty-list + N ô .ps-size-qty (hàm đồng bộ riêng)',
   pressSrc.includes('ps-qty-list') && pressSrc.includes('ps-size-qty') &&
   pressSrc.includes('function syncPressStickQtyInputs') && pressSrc.includes('function readPressSizeQtys'));

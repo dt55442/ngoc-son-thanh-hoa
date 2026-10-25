@@ -95,13 +95,14 @@ state.planningItems = [
 state.qcExports = [
   { id: 'q1', productId: 'rate-1', week: 'Tuần 33', year: 2026, qty: 10,  note: 'đơn A' },
   { id: 'q2', productId: 'rate-2', week: 'Tuần 34', year: 2026, qty: 5,   note: '' },
-  { id: 'q3', productId: null,     name: 'Hàng mẫu khách B', week: 'Tuần 33', year: 2025, qty: 7, note: 'ngoài kế hoạch' }
+  { id: 'q3', productId: null,     name: 'Hàng mẫu khách B', week: 'Tuần 33', year: 2025, qty: 7, note: 'ngoài kế hoạch' },
+  { id: 'q4', productId: 'rate-1', week: 'Tuần 33', weeks: [33, 35], year: 2026, qty: 8, note: 'tổng hai tuần' }
 ];
 
 xlsxMod.openQcXlsxExportModal();
 check('QC: mở modal xuất', modalShown('modal-export-qc'));
 check('QC: select năm có 2025 & 2026', document.getElementById('export-qc-year').innerHTML.includes('>2025<') && document.getElementById('export-qc-year').innerHTML.includes('>2026<'));
-check('QC: select tuần gộp đúng Tuần 33/34', document.getElementById('export-qc-week').innerHTML.includes('>Tuần 33<') && document.getElementById('export-qc-week').innerHTML.includes('>Tuần 34<'));
+check('QC: select tuần có cả hai tuần của bản ghi gộp', document.getElementById('export-qc-week').innerHTML.includes('>Tuần 33<') && document.getElementById('export-qc-week').innerHTML.includes('>Tuần 34<') && document.getElementById('export-qc-week').innerHTML.includes('>Tuần 35<'));
 check('QC: select thành phẩm có "Ván 1200x382x9" và hàng mẫu', document.getElementById('export-qc-product').innerHTML.includes('Ván 1200x382x9') && document.getElementById('export-qc-product').innerHTML.includes('Hàng mẫu khách B'));
 
 // Xuất tất cả
@@ -111,9 +112,9 @@ xlsxMod.handleQcXlsxExportSubmit(ev);
 check('QC: xuất được 1 file', writtenFiles.length === 1);
 check('QC: tên file QC_XuatHang_*.xlsx', /QC_XuatHang_\d{4}-\d{2}-\d{2}\.xlsx$/.test(writtenFiles[0]?.filename || ''));
 check('QC: sheet "QC Xuất Hàng"', lastSheetName === 'QC Xuất Hàng');
-check('QC: đủ 3 dòng dữ liệu', dataRowsOf().length === 3);
+check('QC: đủ 4 dòng dữ liệu', dataRowsOf().length === 4);
 const qcTotal = lastSheetAoa.find(r => r[1] === 'TỔNG CỘNG');
-check('QC: tổng số lượng = 22', !!qcTotal && qcTotal[4] === 22);
+check('QC: tổng số lượng cộng bản ghi hai tuần một lần = 30', !!qcTotal && qcTotal[4] === 30);
 check('QC: dòng có định mức có thể tích > 0', lastSheetAoa.some(r => r[1] === 'Ván 1200x382x9' && Number(r[5]) > 0));
 check('QC: dòng ngoài kế hoạch thể tích = trống', lastSheetAoa.some(r => r[1] === 'Hàng mẫu khách B' && (r[5] === '' || r[5] === 0)));
 
@@ -128,6 +129,13 @@ writtenFiles = [];
 setVal('export-qc-year', 'all'); setVal('export-qc-week', '34'); setVal('export-qc-product', 'all');
 xlsxMod.handleQcXlsxExportSubmit(ev);
 check('QC: lọc tuần 34 còn 1 dòng (rate-2)', dataRowsOf().length === 1 && dataRowsOf()[0][1] === 'Ván 1200x382x12');
+
+// Bản ghi hai tuần phải xuất hiện một lần ở bộ lọc của từng tuần, vẫn giữ nguyên tổng
+writtenFiles = [];
+setVal('export-qc-year', 'all'); setVal('export-qc-week', '35'); setVal('export-qc-product', 'all');
+xlsxMod.handleQcXlsxExportSubmit(ev);
+check('QC: lọc tuần 35 lấy bản ghi gộp một lần và hiển thị đủ hai tuần',
+  dataRowsOf().length === 1 && dataRowsOf()[0][2] === 'Tuần 33, Tuần 35' && dataRowsOf()[0][4] === 8);
 
 // Lọc kết hợp không có kết quả → không tạo file + giữ modal (mở lại modal trước khi thử)
 xlsxMod.openQcXlsxExportModal();

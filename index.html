@@ -3192,7 +3192,7 @@
         <div class="pv-cap-hint-row" id="pv-cap-hint-row" hidden><span class="pv-cap-hint">Xanh: đủ 100% • vàng: thiếu — rê/chạm cột để xem nguyên nhân</span></div>
         <!-- Khung 1: Kế Hoạch vs Đã Ép — title = tooltip thay ghi chú đứng yên -->
         <div class="press-chart-box" id="pv-chart-box-plan"
-             title="Tím = Kế hoạch · Xanh lá = Đã Ép (Xuất hàng) — rê chuột vào cột để xem số liệu chi tiết. Đổi đơn vị m³ / Số lượng · 1–2 tuần · Total ở thanh công cụ phía trên.">
+             title="Tím = Kế hoạch · Xanh lá = Đã Ép · Cam = Số Lượng Xuất — rê chuột vào cột để xem số liệu. Đổi đơn vị m³ / Số lượng · 1–2 tuần · Total ở thanh công cụ. Tổng xuất gắn nhiều tuần chỉ hiện khi kỳ lọc bao phủ đủ các tuần; chọn Tất Cả để xem mọi tổng.">
           <span class="pv-total-stamp" id="pv-total-stamp" aria-hidden="true"></span>
           <canvas id="plan-vs-press-chart"></canvas>
         </div>
@@ -4414,9 +4414,11 @@
                 <label for="qc-imp-year">Năm <span class="required">*</span></label>
                 <select id="qc-imp-year" class="form-select" required></select>
               </div>
-              <div class="form-group">
+              <div class="form-group qc-imp-week-group">
                 <label for="qc-imp-week">Tuần Xuất <span class="required">*</span></label>
-                <select id="qc-imp-week" class="form-select" required></select>
+                <select id="qc-imp-week" class="form-select qc-imp-week-select" multiple size="4" required aria-describedby="qc-imp-week-help qc-imp-selected-weeks"></select>
+                <div id="qc-imp-week-help" class="qc-imp-week-help">Chọn 1 tuần; giữ Ctrl và bấm để chọn thêm tuần thứ hai.</div>
+                <div id="qc-imp-selected-weeks" class="qc-imp-selected-weeks" aria-live="polite"></div>
               </div>
             </div>
             <div class="qc-imp-plan-info" id="qc-imp-plan-info">
@@ -4424,19 +4426,37 @@
             </div>
             <div class="qc-imp-toolbar">
               <button type="button" class="btn btn-outline btn-sm" id="btn-qc-imp-refresh-plan" title="Nạp lại danh sách thành phẩm theo kế hoạch của tuần đã chọn">
-                <i data-lucide="clipboard-list"></i> Nạp Kế Hoạch Tuần Này
+                <i data-lucide="clipboard-list"></i> Nạp Lại Kế Hoạch
               </button>
               <button type="button" class="btn btn-outline btn-sm" id="btn-qc-imp-add-custom" title="Thêm thành phẩm không có trong kế hoạch tuần">
-                <i data-lucide="plus-circle"></i> Thêm Sản Phẩm Ngoài Kế Hoạch
+                <i data-lucide="plus-circle"></i> Thêm Ngoài Kế Hoạch
               </button>
+            </div>
+            <div class="qc-imp-list-header" id="qc-imp-list-header">
+              <span aria-hidden="true"></span>
+              <span class="qc-imp-list-product-heading">Thành phẩm</span>
+              <span id="qc-imp-qty-heading">Số lượng</span>
+              <span aria-hidden="true"></span>
             </div>
             <div class="qc-imp-list" id="qc-imp-products">
               <!-- Dòng thành phẩm render động: checkbox + tên + SỐ LƯỢNG (điền tay) + nút bỏ dòng -->
             </div>
             <div class="form-group" id="qc-custom-name-group" style="display:none;">
-              <label for="qc-custom-name">Tên Thành Phẩm Ngoài Kế Hoạch <span class="required">*</span></label>
-              <input type="text" id="qc-custom-name" placeholder="VD: Ván 1200x382x12 (đơn hàng khách A)">
-              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Bấm "Thêm Sản Phẩm Ngoài Kế Hoạch" để đưa tên này vào danh sách.</div>
+              <div class="qc-custom-form-title">Thông tin sản phẩm ngoài kế hoạch</div>
+              <div class="qc-custom-fields">
+                <div class="form-group">
+                  <label for="qc-custom-name">Tên thành phẩm <span class="required">*</span></label>
+                  <input type="text" id="qc-custom-name" placeholder="VD: Ván 1200x382x12 (đơn hàng khách A)">
+                </div>
+                <label class="qc-custom-qty-field">
+                  <span>Số lượng tổng</span>
+                  <input type="number" id="qc-custom-qty" min="0" step="1" inputmode="numeric" placeholder="Số lượng">
+                </label>
+              </div>
+              <div class="qc-custom-form-actions">
+                <span>Nhập ít nhất một số lượng lớn hơn 0.</span>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-qc-custom-add"><i data-lucide="plus"></i> Thêm vào danh sách</button>
+              </div>
             </div>
             <div class="form-group">
               <label for="qc-imp-note">Ghi Chú Chung (áp dụng cho các dòng tạo ra)</label>

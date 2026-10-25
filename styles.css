@@ -4526,7 +4526,7 @@ body.can-advanced .advanced-locked-note { display: none !important; }
 }
 
 /* Modal tạo dòng xuất theo tuần */
-.modal-card.qc-imp-card { max-width: min(680px, 94vw); width: 100%; }
+.modal-card.qc-imp-card { max-width: min(820px, 96vw); width: 100%; }
 .qc-imp-plan-info {
   display: flex; align-items: flex-start; gap: 8px;
   margin: 4px 0 10px; padding: 9px 12px;
@@ -4535,29 +4535,90 @@ body.can-advanced .advanced-locked-note { display: none !important; }
   border: 1px solid var(--border-color); border-radius: var(--radius-sm);
 }
 .qc-imp-plan-info svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; color: var(--primary); }
+.qc-imp-plan-info #qc-imp-plan-text { display: grid; gap: 5px; min-width: 0; }
+.qc-imp-plan-weeks { display: flex; flex-wrap: wrap; gap: 8px; }
+.qc-imp-plan-week { display: grid; gap: 1px; min-width: 125px; }
+.qc-imp-plan-week > strong { color: var(--primary); }
+.qc-imp-plan-week > span { color: var(--text-muted); font-size: 0.72rem; }
+.qc-imp-week-select { min-height: 108px; padding: 4px 8px; }
+.qc-imp-week-select option { padding: 3px 5px; }
+.qc-imp-week-help { margin-top: 4px; color: var(--text-muted); font-size: 0.69rem; }
+.qc-imp-selected-weeks { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; min-height: 22px; }
+.qc-imp-week-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border: 1px solid #bbf7d0; border-radius: 999px;
+  background: #f0fdf4; color: #166534; font-size: 0.7rem; font-weight: 700;
+}
+.qc-imp-week-chip svg { width: 12px; height: 12px; }
+.qc-imp-week-empty { color: var(--text-muted); font-size: 0.7rem; }
 .qc-imp-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.qc-imp-list-header {
+  display: grid;
+  grid-template-columns: 20px minmax(150px, 1fr) minmax(120px, 150px) 26px;
+  align-items: center; gap: 8px;
+  padding: 0 8px 6px;
+  color: var(--text-muted); font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.035em;
+}
+.qc-imp-list-header > span:not(:first-child):not(:last-child) { text-align: right; }
+.qc-imp-list-product-heading { text-align: left !important; }
 .qc-imp-list {
   display: flex; flex-direction: column; gap: 6px;
-  max-height: 320px; overflow-y: auto;
+  max-height: min(42vh, 360px); min-height: 90px; overflow-y: auto;
   border: 1px solid var(--border-color); border-radius: var(--radius-sm);
-  padding: 8px; background: var(--bg-card);
+  padding: 8px; background: var(--bg-subtle);
 }
 .qc-imp-empty { font-size: 0.78rem; color: var(--text-muted); padding: 14px 10px; text-align: center; }
 .qc-imp-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: 20px minmax(150px, 1fr) minmax(120px, 150px) 26px;
+  align-items: center; gap: 8px;
+  padding: 9px 8px;
   border: 1px solid var(--border-color); border-radius: var(--radius-sm);
   background: var(--bg-card);
 }
+.qc-imp-row:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--border-color)); }
+.qc-imp-row > .qc-imp-empty { grid-column: 1 / -1; }
 .qc-imp-check-label { display: flex; align-items: center; cursor: pointer; }
 .qc-imp-check { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
 .qc-imp-name-cell { flex: 1 1 auto; min-width: 0; }
-.qc-imp-qty { flex: 0 0 150px; width: 150px; }
+.qc-imp-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.qc-imp-plan-badge { margin-top: 0; }
+.qc-imp-qty-field { display: grid; gap: 3px; min-width: 0; color: var(--text-muted); font-size: 0.65rem; }
+.qc-imp-qty { width: 100%; min-width: 0; padding: 6px 7px; font-size: 0.78rem; }
 .qc-imp-footer-info {
-  display: flex; align-items: center; gap: 6px;
-  margin-top: 10px; font-size: 0.76rem; color: var(--text-muted);
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 10px; font-size: 0.75rem; color: var(--text-muted);
 }
-.qc-imp-footer-info svg { width: 14px; height: 14px; flex-shrink: 0; }
+.qc-imp-footer-info > svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 2px; }
+.qc-imp-footer-totals { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--text-main); }
+.qc-imp-footer-hint { margin-left: auto; }
+.qc-custom-form-title { font-size: 0.82rem; font-weight: 700; margin-bottom: 8px; }
+.qc-custom-fields { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(120px, 150px); align-items: end; gap: 10px; }
+.qc-custom-fields .form-group { margin: 0; }
+.qc-custom-qty-field { display: grid; gap: 6px; color: var(--text-secondary); font-size: 0.76rem; font-weight: 600; }
+.qc-custom-qty-field input { width: 100%; min-width: 0; }
+.qc-custom-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.qc-custom-form-actions > span { color: var(--text-muted); font-size: 0.72rem; }
+
+@media (max-width: 640px) {
+  .modal-card.qc-imp-card { max-width: 100%; width: 100%; }
+  .qc-imp-list-header { display: none; }
+  .qc-imp-week-select { min-height: 96px; }
+  .qc-imp-row {
+    grid-template-columns: 20px minmax(0, 1fr) 26px;
+    gap: 8px; padding: 9px 7px;
+  }
+  .qc-imp-check-label { grid-column: 1; grid-row: 1 / span 3; align-self: start; padding-top: 3px; }
+  .qc-imp-name-cell { grid-column: 2; grid-row: 1; }
+  .qc-imp-row > .qc-imp-qty-field { grid-column: 2 / 4; }
+  .qc-imp-row > .qc-row-delete { grid-column: 3; grid-row: 1; }
+  .qc-custom-fields { grid-template-columns: minmax(0, 1fr); }
+  .qc-custom-fields > .form-group { grid-column: 1 / -1; }
+  .qc-custom-form-actions { align-items: flex-start; flex-direction: column; }
+  .qc-imp-footer-info { flex-wrap: wrap; }
+  .qc-imp-footer-hint { flex-basis: 100%; margin-left: 23px; }
+}
 
 /* Tìm kiếm trong bảng xuất (trong thanh công cụ của thẻ Xuất Hàng) */
 .qc-search-bar {

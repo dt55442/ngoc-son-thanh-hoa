@@ -176,6 +176,16 @@ check('F8: xuong2.js cảnh báo khi lưu/duyệt phiếu kho + khoá mềm + ch
   x2Src.includes("pendingMarkHtml('khoNotes', n.id)"));
 check('F9: firestore.rules KHÔNG còn đọc công khai apps/*',
   !/allow read: if true;/.test(rulesSrc) && /allow read: if isSignedIn\(\);/.test(rulesSrc));
+const uploadStart = cloudSrc.indexOf('async function uploadLocalDataToCloud()');
+const uploadEnd = cloudSrc.indexOf('async function pullCloudToLocal()', uploadStart);
+const uploadSrc = cloudSrc.slice(uploadStart, uploadEnd);
+check('F10: đẩy thủ công chụp lại base + mốc đã đồng bộ sau khi ghi thành công',
+  uploadStart >= 0 && uploadEnd > uploadStart &&
+  uploadSrc.indexOf('const w = await writeCloudSnapshot()') >= 0 &&
+  uploadSrc.indexOf('captureSyncBase(null, {})') > uploadSrc.indexOf('const w = await writeCloudSnapshot()') &&
+  uploadSrc.indexOf('markSynced(') > uploadSrc.indexOf('captureSyncBase(null, {})'));
+check('F11: chỉ làm mất hiệu lực cache việc chờ khi bắt đầu chuỗi thay đổi mới',
+  /function markPendingLocal\(\)\s*\{\s*const wasPending = pendingLocalChanges\(\);\s*fbPendingLocal = true;\s*if \(!wasPending\) fbPendingCache = null;/.test(cloudSrc));
 
 console.log('\n=== KẾT QUẢ SYNC-HARDENING: ' + pass + ' PASS / ' + fail + ' FAIL ===');
 if (fail) process.exitCode = 1;

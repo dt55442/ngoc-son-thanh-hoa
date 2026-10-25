@@ -1,9 +1,4 @@
-// tests/xuong1-say-sinh-lot.test.mjs — MÃ LÔ · ĐẾM NGÀY · CẢNH BÁO "ĐẠT NGÀY"
-// Thẻ Sấy Sinh (Xưởng 1) — 19/10/2026
-//  · Mã lô = <V|N|chữ đầu><yy><mm><dd><NNN> (số thứ tự 3 chữ số theo THÁNG)
-//  · Lô cũ chưa có mã được cấp 1 lần (idempotent), sửa lô KHÔNG đổi mã
-//  · Đếm ngày tới HÔM NAY · đạt ngày khi đủ `readyDays` VÀ còn chưa Bốc
-//  · Panel xem nhanh: quá hạn lâu nhất trước + nút Tiếp/Trước
+// tests/xuong1-say-sinh-lot.test.mjs — MÃ LÔ · CHU KỲ · QC · NHẮC LÔ CŨ
 import fs from 'node:fs';
 
 function makeEl(id) {
@@ -26,18 +21,34 @@ function makeEl(id) {
 function makeSelect(id) {
   const el = makeEl(id);
   let html = '';
+  let options = [];
+  el.multiple = id === 'x1-say-sinh-source';
   Object.defineProperty(el, 'innerHTML', {
     configurable: true,
     get() { return html; },
     set(v) {
       html = String(v == null ? '' : v);
-      const vals = [...html.matchAll(/<option[^>]*value="([^"]*)"/g)].map(m => m[1]);
-      el.value = vals.length ? vals[0] : '';
+      const selected = new Set(options.filter(o => o.selected).map(o => o.value));
+      options = [...html.matchAll(/<option[^>]*value="([^"]*)"/g)].map(m => ({
+        value: m[1], selected: selected.has(m[1])
+      }));
+      if (!el.multiple && !options.some(o => o.selected) && options.length) options[0].selected = true;
     }
   });
+  Object.defineProperty(el, 'options', { get() { return options; } });
+  Object.defineProperty(el, 'selectedOptions', { get() { return options.filter(o => o.selected); } });
+  Object.defineProperty(el, 'value', {
+    get() { return (options.find(o => o.selected) || {}).value || ''; },
+    set(value) {
+      options.forEach(o => { o.selected = String(o.value) === String(value); });
+    }
+  });
+  if (id === 'x1-say-sinh-qc-status') {
+    el.innerHTML = '<option value="pending">Chờ QC</option><option value="pass">Đạt</option><option value="fail">Không đạt</option>';
+  }
   return el;
 }
-const SELECT_IDS = new Set(['x1-say-sinh-source', 'x1-boc-source']);
+const SELECT_IDS = new Set(['x1-say-sinh-source', 'x1-say-sinh-repeat-lot', 'x1-say-sinh-qc-status', 'x1-boc-source']);
 const els = new Map();
 function elOf(id) { if (!els.has(id)) els.set(id, SELECT_IDS.has(id) ? makeSelect(id) : makeEl(id)); return els.get(id); }
 global.document = {
@@ -80,6 +91,14 @@ let pass = 0, fail = 0;
 function check(label, cond) {
   if (cond) { pass++; console.log('PASS ' + label); }
   else { fail++; console.log('FAIL ' + label); }
+}
+function selectValues(id, values) {
+  const sel = document.getElementById(id);
+  const selected = new Set(values.map(String));
+  sel.options.forEach(o => { o.selected = selected.has(String(o.value)); });
+}
+function setAllocation(id, qty) {
+  document.getElementById(`x1-say-sinh-allocation-${id}`).value = String(qty);
 }
 const { state } = await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
@@ -135,19 +154,24 @@ state.xuong1SaySinhRecords.push(rec('dup', '2026-09-15', { code: 'V260910001' })
 x2.ensureX1SaySinhCodes(false);
 check('B4: mã TRÙNG được cấp lại (không còn 2 lô cùng mã)',
   codeOf('dup') !== 'V260910001' && state.xuong1SaySinhRecords.filter(r => r.code === 'V260910001').length === 1);
-// SỬA lô: đổi ngày nhưng mã giữ nguyên
+// SỬA lô: đổi chu kỳ/đánh giá QC nhưng mã giữ nguyên
 state.materialRecords = [{ id: 'mat-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-09-01', createdAt: '2026-09-01T02:00:00.000Z' }];
-state.xuong1SaySinhRecords = [rec('edit-me', '2026-09-20', { materialId: 'mat-v', code: 'V260920007', qty: 100 })];
-state.x1SaySinhEditId = 'edit-me';
+state.xuong1SaySinhRecords = [rec('edit-me', '2026-09-20', { materialId: 'mat-v', code: 'V260920007', qty: 100, sulfurQty: 1 })];
 x2.fillX1SaySinhOptions();
-document.getElementById('x1-say-sinh-source').value = 'mat-v';
+selectValues('x1-say-sinh-source', ['mat-v']);
+setAllocation('mat-v', 90);
+document.getElementById('x1-say-sinh-sulfur-qty').value = '2';
+document.getElementById('x1-say-sinh-note').value = '';
+x2.setX1SaySinhQcStatus('edit-me', 'pass');
+x2.editX1SaySinh('edit-me');
 document.getElementById('x1-say-sinh-date').value = '2026-09-25';
-document.getElementById('x1-say-sinh-qty').value = '90';
-document.getElementById('x1-say-sinh-ready').value = '5';
+setAllocation('mat-v', 90);
+document.getElementById('x1-say-sinh-sulfur-qty').value = '2';
 x2.handleX1SaySinhSubmit({ preventDefault(){} });
 const edited = state.xuong1SaySinhRecords.find(r => r.id === 'edit-me');
-check('B5: SỬA lô đổi Ngày nhưng MÃ LÔ giữ nguyên + cập nhật Ngày Đạt',
-  edited.code === 'V260920007' && edited.readyDays === 5 && edited.date === '2026-09-25');
+check('B5: sửa phân bổ/chu kỳ và QC, mã lô giữ nguyên',
+  edited.code === 'V260920007' && edited.date === '2026-09-25' &&
+  edited.sourceAllocations[0].qty === 90 && edited.cycles[0].sulfurQty === 2 && edited.qcStatus === 'pass');
 // XOÁ lô giữa: mã các lô khác không đổi
 state.xuong1SaySinhRecords = [
   rec('k1', '2026-09-01', { code: 'V260901001' }),
@@ -158,87 +182,115 @@ x2.deleteX1SaySinh('k2');
 check('B6: XOÁ lô không đánh lại số (k3 vẫn V260903003)',
   (state.xuong1SaySinhRecords.find(r => r.id === 'k3') || {}).code === 'V260903003');
 
-console.log('--- C. ĐẾM NGÀY + ĐIỀU KIỆN ĐẠT (còn chưa Bốc) ---');
+console.log('--- C. TUỔI LÔ + ƯU TIÊN LÔ CŨ NHẤT ---');
 state.xuong1BocRecords = [];
 state.xuong1SaySinhRecords = [
-  rec('today', isoAgo(0), { qty: 100, readyDays: 3, code: 'V000000001' }),
-  rec('d5', isoAgo(5), { qty: 100, readyDays: 3, code: 'V000000002' }),
+  rec('today', isoAgo(0), { qty: 100, code: 'V000000001' }),
+  rec('d5', isoAgo(5), { qty: 100, code: 'V000000002', cycles: [{ date: isoAgo(5), sulfurQty: 1 }, { date: isoAgo(4), sulfurQty: 2 }] }),
   rec('d2', isoAgo(4), { qty: 100, code: 'V000000003' })
 ];
 check('C1: hôm nay = 0 ngày · lô 5 ngày trước = 5 ngày',
   x2.x1SsDaysOf(state.xuong1SaySinhRecords[0]) === 0 &&
   x2.x1SsDaysOf(state.xuong1SaySinhRecords[1]) === 5);
-check('C2: thiếu readyDays → mặc định 3 ngày', x2.x1SsReadyDaysOf(state.xuong1SaySinhRecords[2]) === 3);
-check('C3: đạt ngày khi đủ ngưỡng + còn chưa Bốc',
-  x2.x1SsIsReady(state.xuong1SaySinhRecords[1]) === true &&
-  x2.x1SsIsReady(state.xuong1SaySinhRecords[0]) === false);
+check('C2: lô cũ thiếu đánh giá QC được xếp Chờ QC', x2.x1SsQcStatusOf(state.xuong1SaySinhRecords[2]) === 'pending');
+check('C3: số lần sấy và lượng lưu huỳnh cộng dồn theo chu kỳ',
+  x2.x1SsCyclesOf(state.xuong1SaySinhRecords[1]).length === 2 &&
+  x2.x1SaySinhDisplay(state.xuong1SaySinhRecords[1]).sulfurQty === 3);
 state.xuong1BocRecords.push({ id: 'b-full', saySinhId: 'd5', date: isoAgo(1), qty: 100 });
-check('C4: lô đã Bốc HẾT → không còn cảnh báo', x2.x1SsIsReady(state.xuong1SaySinhRecords[1]) === false);
+check('C4: lô đã Bốc hết được bỏ khỏi danh sách nhắc tồn', !x2.x1SsOldLots().some(r => r.id === 'd5'));
 state.xuong1BocRecords = [];
-check('C5: danh sách đạt ngày sắp QUÁ HẠN LÂU NHẤT trước',
-  x2.x1SsReadyLots().map(r => r.id).join(',') === 'd5,d2' && x2.x1SsReadyCount() === 2);
+check('C5: danh sách nhắc xếp lô cũ nhất trước; tổng số chu kỳ được đếm',
+  x2.x1SsOldLots().map(r => r.id).join(',') === 'd5,d2,today' && x2.x1SsTotalCycleCount() === 4);
 
-console.log('--- D. LƯU LÔ MỚI: mã + Ngày Đạt (nhớ theo máy) ---');
+console.log('--- D. NHIỀU PHIẾU + CHU KỲ LẶP + QC ---');
 state.xuong1BocRecords = [];
 state.xuong1SaySinhRecords = [];
 state.xuong1CatOngRecords = [];
-state.materialRecords = [{ id: 'mat-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-10-01', createdAt: '2026-10-01T02:00:00.000Z' }];
+state.materialRecords = [
+  { id: 'mat-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-10-01', createdAt: '2026-10-01T02:00:00.000Z' },
+  { id: 'mat-n', type: 'Nứa khô', supplier: 'Lý', location: 'xuong-1', weight: 500, date: '2026-10-02', createdAt: '2026-10-02T02:00:00.000Z' }
+];
 x2.fillX1SaySinhOptions();
-document.getElementById('x1-say-sinh-source').value = 'mat-v';
+selectValues('x1-say-sinh-source', ['mat-v', 'mat-n']);
+x2.x1SaySinhRenderAllocations();
+setAllocation('mat-v', 100);
+setAllocation('mat-n', 200);
 document.getElementById('x1-say-sinh-date').value = '2026-10-19';
-document.getElementById('x1-say-sinh-qty').value = '100';
-document.getElementById('x1-say-sinh-ready').value = '4';
+document.getElementById('x1-say-sinh-sulfur-qty').value = '3.5';
 x2.handleX1SaySinhSubmit({ preventDefault(){} });
 const created = state.xuong1SaySinhRecords[0];
-check('D1: lô mới có MÃ V261019001 + readyDays = 4 (ô Ngày Đạt)',
-  !!created && created.code === 'V261019001' && created.readyDays === 4);
-check('D2: nhớ giá trị Ngày Đạt dùng gần nhất theo máy (localStorage)',
-  localStorage.getItem('bamboo_tracker_x1_ss_ready_days_v1') === '4' && x2.x1SsReadyDefaultOf() === 4);
-check('D3: form reset nạp lại Ngày Đạt mặc định đã nhớ (4)',
-  document.getElementById('x1-say-sinh-ready').value === '4');
-x2.editX1SaySinh(created.id);
-check('D4: mở SỬA nạp đúng Ngày Đạt của lô', document.getElementById('x1-say-sinh-ready').value === '4');
+check('D1: một lô liên kết nhiều phiếu và giữ phân bổ khối lượng chính xác',
+  !!created && created.code === 'V261019001' && created.qty === 300 &&
+  created.sourceAllocations.length === 2 &&
+  created.sourceAllocations.find(a => a.sourceId === 'mat-v').qty === 100 &&
+  created.sourceAllocations.find(a => a.sourceId === 'mat-n').qty === 200);
+check('D2: chu kỳ đầu lưu lượng lưu huỳnh và trạng thái QC Chờ QC',
+  created.cycles.length === 1 && created.cycles[0].sulfurQty === 3.5 && created.qcStatus === 'pending');
+check('D3: số lượng còn lại được trừ chính xác ở từng phiếu',
+  x2.x1SaySinhDirectRemainingOf(state.materialRecords[0], null) === 900 &&
+  x2.x1SaySinhDirectRemainingOf(state.materialRecords[1], null) === 300);
+check('D3b: lịch sử và display thể hiện khối lượng phân bổ của từng phiếu',
+  x2.x1SaySinhDisplay(created).sourceSummary.includes('100 kg') &&
+  x2.x1SaySinhDisplay(created).sourceSummary.includes('200 kg'));
+document.getElementById('x1-say-sinh-repeat-lot').value = created.id;
+x2.x1SaySinhSyncLinked(true);
+document.getElementById('x1-say-sinh-date').value = '2026-10-20';
+document.getElementById('x1-say-sinh-sulfur-qty').value = '1.25';
+x2.handleX1SaySinhSubmit({ preventDefault(){} });
+check('D4: sấy tiếp bổ sung chu kỳ cùng lô, không đổi mã hoặc trừ lại nguyên liệu',
+  created.cycles.length === 2 && created.cycles[1].sulfurQty === 1.25 &&
+  created.code === 'V261019001' && created.qty === 300 && created.qcStatus === 'pending' &&
+  x2.x1SaySinhDirectRemainingOf(state.materialRecords[0], null) === 900);
+check('D4b: chu kỳ mới đưa QC về Chờ QC cho đến khi kiểm tra thủ công',
+  x2.setX1SaySinhQcStatus(created.id, 'pass') && created.qcStatus === 'pass');
+check('D5: sửa lô nạp đúng phân bổ và đánh giá QC hiện tại',
+  (x2.editX1SaySinh(created.id), created.qcStatus === 'pass' &&
+   document.getElementById('x1-say-sinh-sulfur-qty').value === '3.5'));
 
-console.log('--- E. PANEL ĐẠT NGÀY: mở · Tiếp/Trước · Mở thẻ Bốc ---');
+console.log('--- E. CẢNH BÁO LÔ CŨ NHẤT + BỐC ---');
 state.x1SaySinhEditId = null;
 state.xuong1SaySinhRecords = [
-  rec('r-old', isoAgo(10), { qty: 100, readyDays: 2, code: 'V261001001' }),
-  rec('r-new', isoAgo(4), { qty: 90, readyDays: 3, code: 'V261002002' }),
-  rec('r-not', isoAgo(1), { qty: 80, readyDays: 5, code: 'V261003003' })
+  rec('r-old', isoAgo(10), { qty: 100, code: 'V261001001', cycles: [{ date: isoAgo(10), sulfurQty: 2 }, { date: isoAgo(8), sulfurQty: 1 }] }),
+  rec('r-new', isoAgo(4), { qty: 90, code: 'V261002002' }),
+  rec('r-not', isoAgo(1), { qty: 80, code: 'V261003003', qcStatus: 'fail' })
 ];
 x2.renderX1SaySinhCard();
 const barHtml = document.getElementById('x1-say-sinh-stock-bar').innerHTML;
-check('E1: thanh tồn hiện nút cảnh báo "2 lô đã đạt ngày"',
-  barHtml.includes('x1-ss-ready-btn') && barHtml.includes('2 lô đã đạt ngày'));
-check('E2: thống kê có ô Lô đạt ngày chờ Bốc = 2',
+check('E1: thanh tồn chỉ nhắc số lần sấy và tuổi lô cũ nhất',
+  barHtml.includes('4 lần sấy sinh') && barHtml.includes('lô cũ nhất 10 ngày') && !barHtml.includes('đạt ngày'));
+check('E2: thống kê hiển thị số lần sấy và ngày của lô cũ nhất',
   document.getElementById('x1-say-sinh-stats').innerHTML.includes('2') &&
-  document.getElementById('x1-say-sinh-stats').innerHTML.includes('Lô đạt ngày chờ Bốc'));
+  document.getElementById('x1-say-sinh-stats').innerHTML.includes('Ngày lô cũ nhất'));
 const table = document.getElementById('x1-say-sinh-day-cards').innerHTML;
-check('E3: bảng có cột Mã lô + chip ngày (đạt/quá hạn)',
-  table.includes('Mã lô · Ngày sấy') && table.includes('V261001001') &&
-  table.includes('x1-ss-day-chip is-over') && table.includes('x1-ss-day-chip is-ready'));
-check('E4: chip launcher có "⚠ 2 lô đạt"',
-  x2.x1CardCountText('x1-say-sinh-card').includes('⚠ 2 lô đạt'));
-x2.x1SsOpenReadyPanel();
+check('E3: lịch sử hiển thị chu kỳ, QC thủ công và không dùng nhãn đạt ngày',
+  table.includes('Số lần · Lưu huỳnh') && table.includes('Chờ QC') &&
+  table.includes('Không đạt') && !table.includes('đạt ngày'));
+check('E3b: QC cập nhật trực tiếp trên lô, không cần sửa chu kỳ',
+  x2.setX1SaySinhQcStatus('r-new', 'pass') &&
+  state.xuong1SaySinhRecords.find(r => r.id === 'r-new').qcStatus === 'pass');
+check('E4: chip launcher nhắc lô cũ nhất, không đánh dấu tự động Đạt',
+  x2.x1CardCountText('x1-say-sinh-card').includes('lô cũ nhất 10 ngày') &&
+  !x2.x1CardCountText('x1-say-sinh-card').includes('lô đạt'));
+x2.x1SsOpenOldPanel();
 const panel = document.getElementById('x1-ss-ready-panel');
-check('E5: panel mở, lô QUÁ HẠN LÂU NHẤT trước (r-old, 8 ngày quá hạn)',
-  panel.hidden === false && panel.innerHTML.includes('V261001001') && panel.innerHTML.includes('(1/2)'));
-x2.x1SsReadyStep(1);
-check('E6: bấm Tiếp → sang lô kế (r-new)', panel.innerHTML.includes('V261002002') && panel.innerHTML.includes('(2/2)'));
-x2.x1SsReadyStep(1);
-check('E7: Tiếp ở lô cuối → QUAY VÒNG về lô đầu', panel.innerHTML.includes('V261001001'));
-x2.x1SsReadyStep(-1);
-check('E8: Trước ở lô đầu → về lô cuối', panel.innerHTML.includes('V261002002'));
-x2.x1SsOpenReadyPanelFor('r-new');
-check('E9: bấm chip ngày của 1 lô → panel mở đúng lô đó', panel.innerHTML.includes('V261002002') && panel.innerHTML.includes('(2/2)'));
+check('E5: panel mở và ưu tiên lô cũ nhất',
+  panel.hidden === false && panel.innerHTML.includes('V261001001') &&
+  panel.innerHTML.includes('2 lần sấy sinh') && panel.innerHTML.includes('10 ngày'));
+x2.x1SsOldStep(1);
+check('E6: điều hướng sang lô kế tiếp theo thứ tự ngày', panel.innerHTML.includes('V261002002'));
+x2.x1SsOldStep(1);
+check('E7: điều hướng tiếp theo vẫn xếp lô cũ trước', panel.innerHTML.includes('V261003003'));
+x2.x1SsOldStep(1);
+check('E8: điều hướng vòng về lô cũ nhất', panel.innerHTML.includes('V261001001'));
 x2.x1SsCloseReadyPanel();
-check('E10: Đóng panel → ẩn', panel.hidden === true);
+check('E9: Đóng panel → ẩn', panel.hidden === true);
 x2.renderX1BocCard();
 const bocSel = document.getElementById('x1-boc-source');
-check('E11: ô chọn Bốc hiện [MÃ LÔ] + số ngày + cờ ⚠ cho lô đạt',
-  bocSel.innerHTML.includes('[V261001001]') && bocSel.innerHTML.includes('⚠ đạt'));
+check('E10: ô chọn Bốc hiện tuổi lô và trạng thái QC thủ công',
+  bocSel.innerHTML.includes('[V261001001]') && bocSel.innerHTML.includes('Chờ QC') &&
+  !bocSel.innerHTML.includes('⚠ đạt'));
 x2.x1SsOpenBocFor('r-new');
-check('E12: "Mở thẻ Bốc" chọn sẵn đúng lô vừa xem', bocSel.value === 'r-new');
+check('E11: "Mở thẻ Bốc" chọn sẵn đúng lô được nhắc', bocSel.value === 'r-new');
 
 console.log('--- F. CẤU TRÚC (index/events/CSS/export/sw) ---');
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -247,19 +299,25 @@ const cssSrc = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8'
 const expSrc = fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url), 'utf8');
 const swSrc = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-check('F1: index.html có ô #x1-say-sinh-ready (mặc định 3) + panel #x1-ss-ready-panel (hidden)',
-  idxHtml.includes('id="x1-say-sinh-ready"') && idxHtml.includes('id="x1-ss-ready-panel"') &&
-  idxHtml.includes('value="3"'));
-check('F2: events.js nối nút cảnh báo + panel + chip + ô thống kê',
-  evSrc.includes("'x1-ss-ready-btn'") && evSrc.includes("'x1-ss-ready-panel'") &&
-  evSrc.includes("'[data-x1-ss-lot]'") && evSrc.includes("'[data-x1-ss-ready-open]'"));
-check('F3: styles.css có khối .x1-ss-ready-panel[hidden] + chip .is-over/.is-ready',
-  cssSrc.includes('.x1-ss-ready-panel[hidden]') && cssSrc.includes('.x1-ss-day-chip.is-over') &&
-  cssSrc.includes('.x1-ss-day-chip.is-ready'));
-check('F4: export Excel có cột Mã Lô + Số Ngày + Ngày Đạt + Mã Lô Nguồn',
-  expSrc.includes("'Mã Lô'") && expSrc.includes("'Số Ngày'") &&
-  expSrc.includes("'Ngày Đạt'") && expSrc.includes("'Mã Lô Nguồn'"));
-check('F5: sw.js cache v288', /nha-may-ngoc-son-v302/.test(swSrc));
+check('F1: form có chọn nhiều phiếu, phân bổ, lưu huỳnh, QC và lô sấy tiếp',
+  idxHtml.includes('id="x1-say-sinh-source" multiple') &&
+  idxHtml.includes('id="x1-say-sinh-allocations"') &&
+  idxHtml.includes('id="x1-say-sinh-sulfur-qty"') &&
+  idxHtml.includes('id="x1-say-sinh-repeat-lot"') &&
+  !idxHtml.includes('id="x1-say-sinh-qc-status"') &&
+  table.includes('data-x1-say-sinh-qc'));
+check('F2: events.js nối chọn nhiều nguồn, chu kỳ sấy lại và cảnh báo lô cũ',
+  evSrc.includes("'x1-say-sinh-allocations'") && evSrc.includes("'x1-say-sinh-repeat-lot'") &&
+  evSrc.includes("'x1-say-sinh-day-cards', 'change'") &&
+  evSrc.includes("'x1-ss-ready-btn'") && evSrc.includes('x1SsOpenOldPanel'));
+check('F3: styles.css có kiểu phân bổ, trạng thái QC và panel cảnh báo',
+  cssSrc.includes('.x1-ss-allocation-list') && cssSrc.includes('.x1-ss-qc.is-pass') &&
+  cssSrc.includes('.x1-ss-ready-panel[hidden]'));
+check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ công',
+  expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
+  expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
+  !expSrc.includes("'Ngày Đạt'"));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v305/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
 
 console.log(`\n=== KẾT QUẢ X1 SẤY SINH LOT: ${pass} PASS / ${fail} FAIL ===`);

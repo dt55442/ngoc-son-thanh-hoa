@@ -296,11 +296,13 @@ check('D6: giờ cắt snapshot = 4.5h HC (07:00–11:30, nửa sau vắt vào n
 // Ghi 1 lượt Sấy Sinh — CHẶN vượt phần còn chưa sấy
 document.getElementById('x1-say-sinh-source').value = co.id;
 document.getElementById('x1-say-sinh-date').value = '2026-09-10';
-document.getElementById('x1-say-sinh-qty').value = '900'; // VƯỢT 850
+x1.x1SaySinhRenderAllocations();
+document.getElementById(`x1-say-sinh-allocation-${co.id}`).value = '900'; // VƯỢT 850
+document.getElementById('x1-say-sinh-sulfur-qty').value = '2';
 x1.handleX1SaySinhSubmit({ preventDefault(){} });
 check('D7: CHẶN lưu KL sấy vượt phần còn chưa sấy (900 > 850)',
   state.xuong1SaySinhRecords.length === 0);
-document.getElementById('x1-say-sinh-qty').value = '500';
+document.getElementById(`x1-say-sinh-allocation-${co.id}`).value = '500';
 x1.handleX1SaySinhSubmit({ preventDefault(){} });
 check('D8: ghi lượt Sấy Sinh 500kg → tồn Cắt Ống còn 350kg',
   state.xuong1SaySinhRecords.length === 1 && x1.x1CatOngRemainingOf(co, null) === 350);
@@ -376,6 +378,7 @@ check('E8: reader chuẩn hoá dữ liệu cũ thiếu khối vẫn đủ 3 kh�
 // ─── F. NỐI ĐỦ 6 CHỖ (state · storage · cloud · history · main · capacity) ──
 console.log('--- F. NỐI 6 CHỖ + SW ---');
 const x2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
+const exportSrc = fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url), 'utf8');
 const capSrc = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 check('F1: state.js khai 4 key + export',
@@ -415,7 +418,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME v211', /nha-may-ngoc-son-v302/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v305/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -432,10 +435,14 @@ const spLT = x1.x1ChainSpecByKey('locThanh');
 const ALL5 = [spLO, spCM, spBO, spPS, spLT];
 ALL5.forEach(s => { state[s.stateKey] = []; state[s.editKey] = null; });
 // Nguồn gốc = 1 lượt BỐC 1000kg (xây độc lập cho mục H)
+const saySinhRecordsBeforeChain = state.xuong1SaySinhRecords;
 state.xuong1BocRecords = [{
   id: 'boc-h', date: '2026-09-12', qty: 1000,
   materialType: 'Vầu/nứa tươi', supplier: 'Tế',
   srcType: 'Vầu/nứa tươi', srcSupplier: 'Tế', saySinhId: 'ss-x'
+}];
+state.xuong1SaySinhRecords = [...saySinhRecordsBeforeChain, {
+  id: 'ss-x', code: 'SS-2026-0910-01', date: '2026-09-10'
 }];
 const bocH = state.xuong1BocRecords[0];
 function hFill(spec, srcId, d, qi, qok, ql) {
@@ -454,7 +461,8 @@ check('H2: tồn nguồn Bốc = 1000kg (chưa lượt Lọc Ống nào)', x1.x1
 check('H3: ô chọn Lọc Ống liệt kê lượt Bốc + tự điền ngày + qtyIn = phần còn lại',
   (() => { x1.fillX1ChainOptions(spLO);
     const sel = document.getElementById('x1-loc-ong-src');
-    const okHtml = sel.innerHTML.includes('boc-h') && sel.innerHTML.includes('còn 1.000 kg');
+    const okHtml = sel.innerHTML.includes('boc-h') &&
+      sel.innerHTML.includes('[SS-2026-0910-01]') && sel.innerHTML.includes('còn 1.000 kg');
     sel.value = 'boc-h';                    // người dùng chọn (browser tự chọn option đầu)
     x1.x1ChainSyncLinked(spLO, true);       // đúng handler 'change' của events.js
     return okHtml &&
@@ -471,27 +479,41 @@ check('H6: ghi lượt Lọc Ống 800kg (750 đạt + 50 loại) → tồn Bố
   state.xuong1LocOngRecords.length === 1 && x1.x1ChainRemainingOf(spLO, bocH, null) === 200);
 const lo = state.xuong1LocOngRecords[0];
 check('H7: snapshot nguồn theo BỐC (type + NCC + ngày) chép vào lượt Lọc Ống',
-  lo.srcType === 'Vầu/nứa tươi' && lo.srcSupplier === 'Tế' && lo.srcDate === '2026-09-12');
+  lo.srcType === 'Vầu/nứa tươi' && lo.srcSupplier === 'Tế' && lo.srcDate === '2026-09-12' &&
+  lo.lotCode === 'SS-2026-0910-01');
 
 // ── Vòng tiếp: Lọc Ống → Cắt Mắt → Bổ → Phơi Sấy → Lọc Thanh ──
 check('H8: Cắt Mắt nhận tồn từ phần ĐẠT của Lọc Ống (750kg)',
-  x1.x1ChainRemainingOf(spCM, lo, null) === 750);
+  x1.x1ChainRemainingOf(spCM, lo, null) === 750 &&
+  (() => { x1.fillX1ChainOptions(spCM);
+    return document.getElementById('x1-cat-mat-src').innerHTML.includes('[SS-2026-0910-01]'); })());
 hFill(spCM, lo.id, '2026-09-14', 750, 700, 50);
 const cm = state.xuong1CatMatRecords[0];
 check('H9: ghi lượt Cắt Mắt 750kg → Lọc Ống hết hàng (TỰ ẨN khỏi ô chọn)',
-  !!cm && x1.x1ChainRemainingOf(spCM, lo, null) === 0 &&
+  !!cm && cm.lotCode === 'SS-2026-0910-01' &&
+  x1.x1ChainDisplay(spCM, cm).lotCode === 'SS-2026-0910-01' &&
+  x1.x1ChainRemainingOf(spCM, lo, null) === 0 &&
   (() => { x1.fillX1ChainOptions(spCM);
     return !document.getElementById('x1-cat-mat-src').innerHTML.includes(lo.id); })());
 hFill(spBO, cm.id, '2026-09-15', 700, 660, 40);
 const bo = state.xuong1BoRecords[0];
-check('H10: ghi lượt Bổ 700kg → tồn Cắt Mắt = 0', !!bo && x1.x1ChainRemainingOf(spBO, cm, null) === 0);
+check('H10: ghi lượt Bổ 700kg → tồn Cắt Mắt = 0',
+  !!bo && bo.lotCode === 'SS-2026-0910-01' && x1.x1ChainRemainingOf(spBO, cm, null) === 0);
 hFill(spPS, bo.id, '2026-09-16', 660, 640, 20);
 const ps = state.xuong1PhoiSayRecords[0];
-check('H11: ghi lượt Phơi Sấy 660kg → tồn Bổ = 0', !!ps && x1.x1ChainRemainingOf(spPS, bo, null) === 0);
+check('H11: ghi lượt Phơi Sấy 660kg → tồn Bổ = 0',
+  !!ps && ps.lotCode === 'SS-2026-0910-01' && x1.x1ChainRemainingOf(spPS, bo, null) === 0);
 hFill(spLT, ps.id, '2026-09-17', 640, 620, 20);
 const lt = state.xuong1LocThanhRecords[0];
 check('H12: ghi lượt Lọc Thanh 640kg → tồn Phơi Sấy = 0',
-  !!lt && x1.x1ChainRemainingOf(spLT, ps, null) === 0 && x1.x1ChainPending(spLT).length === 0);
+  !!lt && lt.lotCode === 'SS-2026-0910-01' &&
+  x1.x1ChainRemainingOf(spLT, ps, null) === 0 && x1.x1ChainPending(spLT).length === 0);
+const chainForLot = [[spLO, lo], [spCM, cm], [spBO, bo], [spPS, ps], [spLT, lt]];
+chainForLot.forEach(([, record]) => { delete record.lotCode; });
+check('H12a: dữ liệu cũ vẫn truy ngược mã lô qua các liên kết công đoạn',
+  chainForLot.every(([spec, record]) =>
+    x1.x1ChainDisplay(spec, record).lotCode === 'SS-2026-0910-01'));
+chainForLot.forEach(([, record]) => { record.lotCode = 'SS-2026-0910-01'; });
 check('H13: chip đếm 5 thẻ đuôi trả SỐ LIỆU thật (không còn "Sắp có"/"–")',
   ALL5.every(s => !['Sắp có', '–'].includes(x1.x1CardCountText(s.cardId))) &&
   ['catMat', 'bo', 'phoiSay', 'locThanh']
@@ -520,10 +542,15 @@ check('H16: xóa lượt Lọc Thanh → mảng trống + tồn Phơi Sấy tr�
 
 // ── RENDER thẻ ngày + thanh tồn của 1 thẻ đuôi ──
 x1.renderX1ChainCard(spLO);
-check('H17: render thẻ Lọc Ống → thanh tồn + thống kê + thẻ ngày có dữ liệu',
+check('H17: render thẻ Lọc Ống → hiển thị mã lô trong lịch sử',
+  document.getElementById('x1-loc-ong-day-cards').innerHTML.includes('SS-2026-0910-01'));
+check('H17b: lịch sử Lọc Ống vẫn hiển thị nguồn và thống kê',
+  document.getElementById('x1-loc-ong-day-cards').innerHTML.includes('Vầu/nứa tươi') &&
   document.getElementById('x1-loc-ong-stock-bar').innerHTML.length > 0 &&
-  document.getElementById('x1-loc-ong-stats').innerHTML.includes('Lượt lọc ống') &&
-  document.getElementById('x1-loc-ong-day-cards').innerHTML.includes('Vầu/nứa tươi'));
+  document.getElementById('x1-loc-ong-stats').innerHTML.includes('Lượt lọc ống'));
+check('H17c: xuất Excel chuỗi Xưởng 1 có cột Mã Lô',
+  exportSrc.includes("'Mã Lô'") && exportSrc.includes("d.lotCode || ''"));
+state.xuong1SaySinhRecords = saySinhRecordsBeforeChain;
 
 check('H18: 5 form có đủ nguồn · ô tính · nút định mức data-admin-only',
   ALL5.every(s => {
@@ -646,11 +673,13 @@ check('J2: helper tồn nguồn thẳng (600kg) + x1SaySinhFindSrc phân loại 
 // Ghi lượt sấy THẲNG — chặn trước
 document.getElementById('x1-say-sinh-source').value = 'x1m-d';
 document.getElementById('x1-say-sinh-date').value = '2026-09-25';
-document.getElementById('x1-say-sinh-qty').value = '700'; // VƯỢT 600
+x1.x1SaySinhRenderAllocations();
+document.getElementById('x1-say-sinh-allocation-x1m-d').value = '700'; // VƯỢT 600
+document.getElementById('x1-say-sinh-sulfur-qty').value = '2';
 x1.handleX1SaySinhSubmit({ preventDefault(){} });
 check('J3: CHẶN KL sấy thẳng vượt phần còn lại của lô (700 > 600) — vẫn 1 lượt cũ',
   state.xuong1SaySinhRecords.length === 1);
-document.getElementById('x1-say-sinh-qty').value = '200';
+document.getElementById('x1-say-sinh-allocation-x1m-d').value = '200';
 x1.handleX1SaySinhSubmit({ preventDefault(){} });
 const ssDirect = state.xuong1SaySinhRecords.find(r => r.materialId === 'x1m-d');
 check('J4: ghi lượt sấy thẳng 200kg — ghi materialId (catOngId rỗng) + tồn lô về 400kg',
@@ -673,7 +702,7 @@ check('J7: bảng lịch sử lượt sấy thẳng hiện dòng chú "Nhập th
     const h = document.getElementById('x1-say-sinh-day-cards').innerHTML;
     return h.includes('bỏ qua Cắt Ống') && h.includes('200'); })());
 check('J8: nhãn form diễn giải 2 nguồn + capacity.js vẫn đọc x1SaySinhDisplay + thẻ Bốc nhận nguồn sấy thẳng',
-  idxHtml.includes('lô Vầu/Nứa Xưởng 1 KHÔNG chữ "cây" sấy THẲNG') &&
+  x2Src.includes('phiếu đầu vào ở form trên rồi ghi chu kỳ sấy') &&
   capSrc.includes('x1SaySinhDisplay') &&
   (() => { x1.fillX1BocOptions();
     return document.getElementById('x1-boc-source').innerHTML.includes('x1ss-'); })());
@@ -770,4 +799,3 @@ check('K14: capacity.js đọc turnKg (KL cắt được/lượt) — cắt nhi�
 
 console.log(`\n=== KẾT QUẢ XUONG1: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);
-

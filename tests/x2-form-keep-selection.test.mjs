@@ -369,14 +369,14 @@ check('F3: Bổ Ống chỉ tự điền KL khi ĐỔI LÔ hoặc ô TRỐNG (bo
   xuong2Src.includes('let boOngFilledCutId = null;') &&
   /changedLot \|\| empty/.test(xuong2Src));
 check('F4: X1 chỉ tự điền ô số lượng khi ĐANG TRỐNG (không xoá số đã nhập)',
-  xuong2Src.includes("x1SaySinhSyncLinked(!qtyEl") &&
+  xuong2Src.includes('function x1SaySinhRenderAllocations()') &&
+  xuong2Src.includes('current.has(id) ? current.get(id)') &&
   xuong2Src.includes("x1BocSyncLinked(!qtyEl") &&
   xuong2Src.includes("x1ChainSyncLinked(spec, !inEl"));
-check('F5: sw.js đã tăng cache (v288)', /nha-may-ngoc-son-v302/.test(swSrc));
+check('F5: sw.js đã tăng cache cho giao diện mới', /nha-may-ngoc-son-v305/.test(swSrc));
 check('F6: 8 thẻ Xưởng 1 — 4 hàm reset dùng helper giữ nguồn qua form.reset()',
   xuong2Src.includes('function x1ResetKeepingSelect(formEl, selId)') &&
   (xuong2Src.match(/x1ResetKeepingSelect\(f, /g) || []).length === 4);
 
 console.log(`\n=== KẾT QUẢ X2 FORM KEEP-SELECTION: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);
-

@@ -1078,15 +1078,17 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
       });
       sumNote = `Tổng KL đầu vào ${x2FmtKg(inKg)} kg · KL đạt ${x2FmtKg(okKg)} kg`;
     } else if (source === 'x1saysinh') {
-      head = ['Stt', 'Mã Lô', 'Ngày Sấy', 'Số Ngày', 'Ngày Đạt', 'Trạng Thái', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Đường Đi', 'KL Sấy (kg)', 'Còn Lại Nguồn (kg)', 'Người Sấy', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
+      head = ['Stt', 'Mã Lô', 'Ngày Sấy', 'Số Ngày Tồn', 'Số Lần Sấy', 'KL Lưu Huỳnh (kg)', 'Đánh Giá QC', 'Phiếu Đầu Vào / Phân Bổ', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Đường Đi', 'KL Nguyên Liệu (kg)', 'Còn Lại Nguồn (kg)', 'Người Sấy', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
       const list = (state.xuong1SaySinhRecords || []).map(r => x1SaySinhDisplay(r))
         .filter(d => x2InRange(d.date, from, to))
         .sort((a, b) => String(a.date).localeCompare(String(b.date)));
       let kg = 0;
       list.forEach((d, i) => {
         kg += d.qty || 0;
-        body.push([i + 1, d.code || '', formatDateDDMMYY(d.date), d.days, d.readyDays,
-          d.isReady ? 'Đã đạt ngày' : 'Chưa đạt', d.srcType || '', d.srcSupplier || '',
+        body.push([i + 1, d.code || '', formatDateDDMMYY(d.date), d.days, d.cycleCount, d.sulfurQty,
+          d.qcStatus === 'pass' ? 'Đạt' : d.qcStatus === 'fail' ? 'Không đạt' : 'Chờ QC',
+          d.sourceSummary || '',
+          d.srcType || '', d.srcSupplier || '',
           d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '', d.qty, d.srcRest,
           x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
           d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
@@ -1110,7 +1112,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
     } else if (X1_CHAIN_KEYS[source]) {
       const spec = X1_CHAIN_SPECS.find(sp => sp.key === X1_CHAIN_KEYS[source]);
       if (spec) {
-        head = ['Stt', 'Ngày', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
+        head = ['Stt', 'Ngày', 'Mã Lô', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
           'KL Vào (kg)', 'KL Đạt (kg)', 'KL Loại (kg)', 'Tỷ Lệ Đạt (%)',
           'Người Làm', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
         const list = (state[spec.stateKey] || []).map(r => x1ChainDisplay(spec, r))
@@ -1119,7 +1121,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
         let inKg = 0, okKg = 0;
         list.forEach((d, i) => {
           inKg += d.qtyIn || 0; okKg += d.qtyOk || 0;
-          body.push([i + 1, formatDateDDMMYY(d.date), d.srcType || '', d.srcSupplier || '',
+          body.push([i + 1, formatDateDDMMYY(d.date), d.lotCode || '', d.srcType || '', d.srcSupplier || '',
             d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '',
             d.qtyIn, d.qtyOk, d.qtyLoai, d.ratio == null ? '—' : Math.round(d.ratio * 10) / 10,
             x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,

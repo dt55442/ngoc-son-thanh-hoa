@@ -12448,13 +12448,16 @@ body[data-fx="low"] .mp-total-part { box-shadow: none; }
 .x1-ss-day-wrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 .x1-ss-day-chip {
   border: 1px solid #cbd5e1; border-radius: 999px; padding: 1px 8px;
-  font-size: 0.7rem; font-weight: 700; cursor: pointer;
+  font-size: 0.7rem; font-weight: 700;
   background: #f1f5f9; color: #334155;
 }
-.x1-ss-day-chip.is-ready { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
-.x1-ss-day-chip.is-over { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
-.x1-ss-day-target { font-size: 0.68rem; color: var(--text-muted); }
-.x1-ss-row-ready > td { background: rgba(245, 158, 11, 0.06); }
+.x1-ss-allocation-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.x1-ss-allocation-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.78rem; }
+.x1-ss-allocation-row input { width: 110px; min-width: 80px; }
+.x1-ss-qc { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.x1-ss-qc.is-pending { color: #92400e; background: #fef3c7; }
+.x1-ss-qc.is-pass { color: #166534; background: #dcfce7; }
+.x1-ss-qc.is-fail { color: #991b1b; background: #fee2e2; }
 
 /* Nút cảnh báo trên thanh tồn */
 .x1-ss-ready-btn {
@@ -12465,7 +12468,7 @@ body[data-fx="low"] .mp-total-part { box-shadow: none; }
 .x1-ss-ready-btn:hover { background: #fde68a; }
 .x1-ss-ready-btn svg { width: 14px; height: 14px; }
 
-/* Panel xem nhanh từng lô đạt ngày */
+/* Panel xem nhanh số lần sấy và tuổi lô */
 .x1-ss-ready-panel {
   margin: 0 16px 12px; padding: 12px 14px;
   border: 1px solid #f59e0b; border-radius: 12px; background: #fffbeb;

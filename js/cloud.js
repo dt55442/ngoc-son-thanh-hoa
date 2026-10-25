@@ -1724,8 +1724,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return fbPendingLocal;
   }
   function markPendingLocal() {
+    const wasPending = pendingLocalChanges();
     fbPendingLocal = true;
-    fbPendingCache = null;
+    if (!wasPending) fbPendingCache = null;
     try { localStorage.setItem(PENDING_LOCAL_KEY, '1'); } catch (e) { /* bộ nhớ đầy — bỏ qua */ }
     // Mốc "bắt đầu có thay đổi chưa đẩy" — banner cảnh báo khi chờ quá lâu
     try {
@@ -2819,6 +2820,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       fbDirty = false;
       clearPendingLocal(); // bản của máy này đã lên mây
       try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+      // Nút đẩy thủ công cũng phải cập nhật sổ base; nếu thiếu, dữ liệu cũ sẽ
+      // bị tính lại là dirty sau khi tải lại trang.
+      try {
+        captureSyncBase(null, {});
+        markSynced({ rev: (w && typeof w.rev === 'number') ? w.rev : undefined });
+      } catch (e) { /* lần đồng bộ sau sẽ đối chiếu lại */ }
       // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
       captureAutoBackup('Sau khi đồng bộ mây (thủ công)', false);
       maybeWriteCloudBackup();

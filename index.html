@@ -60,32 +60,26 @@
   </div>
 
   <!-- ═══ ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js) ═══
-       Hiện NGAY từ lúc mở trang (markup ở ĐẦU <body>) — che khoảng trắng khi
-       app khởi động; mọi chỗ CHỜ PHẢN HỒI (AI · xuất Excel · mây · backup)
-       cũng dùng chung overlay này. NỀN MỜ + BLUR → nội dung Dashboard hiện
-       lờ mờ phía sau. 2 CHẾ ĐỘ TIẾN ĐỘ (thanh #tre-progress 0→100%):
-       · BOOT = MINI GAME "NGHI THỨC CẦP LUỒNG": bấm "Chặt!" 5%/nhát (20 nhát)
-         đủ 100% cây MỚI GÃY → MỚI thấy được Dashboard, hoặc bấm "Bỏ qua" để
-         vào thẳng; · các chỗ chờ khác = auto, trôi ~5s rồi
-         gãy. LỖI → tre KHÔNG gãy, overlay mờ dần. Nền watchdog (boot-guard,
-         z-index 99999) vẫn nổi TRÊN overlay này. -->
+       Overlay hiển thị trong lúc khởi động và các tác vụ thực sự chờ phản hồi.
+       Chuyển tab không dùng overlay để tránh chặn thao tác sau khi render đồng bộ.
+       Mini-game tùy chọn chạy đồng thời; boot xong tự đóng overlay.
+       Nền watchdog (boot-guard, z-index 99999) vẫn nổi TRÊN overlay này. -->
   <div class="tre-loading" id="tre-loading-overlay" role="status" aria-live="polite">
     <div class="tre-loading-card" id="tre-loading-card">
       <!-- CẢNH = SPRITE 18 FRAME 640×360 (icons/loading/tre-sprite.png, 6 cột × 3 dòng)
            — do make-loading-sprite.cjs ghép từ 3 sheet AI (nông dân · tre · hiệu ứng).
-           CSS styles.css chạy 2 pha: treChop (frame 1–13, lặp 0.83s ≈ 6 vòng/5s — CHỈ auto;
-           game đứng yên frame 1, mỗi bấm chặt 1 nhát treHitOnce 600ms) → treFall (14–18, .is-fall). -->
-      <div class="tre-scene" aria-hidden="true"></div>
+           CSS styles.css chạy 2 pha: treChop (frame 1–13) → treFall (14–18, .is-fall).
+           Trong game, mỗi lần bấm chặt chạy 1 nhát treHitOnce 600ms. -->
+      <div class="tre-scene" id="tre-loading-scene" aria-hidden="true"></div>
       <div class="tre-loading-text" id="tre-loading-text">Đang tải dữ liệu nhà máy…</div>
-      <!-- THANH TIẾN ĐỘ 0→100% — auto: trôi theo TRE_TIMING.load (~5s); game: +5%/nhát bấm -->
+      <!-- Tiến độ minh họa tăng đều, chờ boot hoàn tất mới chạy tới 100%. -->
       <div class="tre-progress" id="tre-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div class="tre-progress-fill" id="tre-progress-fill"></div>
         <span class="tre-progress-pct" id="tre-progress-pct">0%</span>
       </div>
-      <!-- NÚT CHƠI (chỉ hiện ở chế độ game — boot): 20 nhát × 5% = 100% → cây gãy;
-           nút "Bỏ qua" = lối tắt vào thẳng Dashboard (skipTreLoading — js/loading.js) -->
-      <button type="button" class="tre-hit-btn" id="tre-hit-btn" hidden>🪓 Chặt! (+5%)</button>
-      <button type="button" class="tre-skip-btn" id="tre-skip-btn" hidden>⏭ Bỏ qua — vào thẳng</button>
+      <div class="tre-game-counter" id="tre-game-counter" aria-live="polite" hidden></div>
+      <button type="button" class="tre-hit-btn" id="tre-hit-btn" hidden>🪓 Chặt tre</button>
+      <button type="button" class="tre-skip-btn" id="tre-skip-btn" hidden>⏭ Bỏ qua trò chơi</button>
     </div>
   </div>
 

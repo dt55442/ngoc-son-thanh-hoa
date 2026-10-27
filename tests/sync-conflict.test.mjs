@@ -155,11 +155,21 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 {
   const store = new Map();
   const stats = { sets: 0, gets: 0 };
+  let failCloudWrites = false;
   const makeDoc = (collPath, id) => {
     const key = collPath + '/' + id;
     return {
       _key: key,
-      set(data) { stats.sets++; store.set(key, JSON.parse(JSON.stringify(data))); return Promise.resolve(); },
+      set(data) {
+        stats.sets++;
+        if (failCloudWrites) {
+          const err = new Error('Temporary network failure');
+          err.code = 'unavailable';
+          throw err;
+        }
+        store.set(key, JSON.parse(JSON.stringify(data)));
+        return Promise.resolve();
+      },
       get() { stats.gets++; return Promise.resolve({ exists: store.has(key), data: () => store.get(key) }); },
       delete() { store.delete(key); return Promise.resolve(); },
       onSnapshot() { return () => {}; },
@@ -262,6 +272,20 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const st2 = cloud.loadSyncState();
   check('G4: lưu mốc lastRev = rev mục lục', st2.lastRev === (Number(store.get('apps/main').rev) || 0));
   check('G5: lưu thời điểm đồng bộ lastSyncedAt', typeof st2.lastSyncedAt === 'string' && st2.lastSyncedAt.length > 10);
+  state.currentUser = { email: 'admin@example.test', fullname: 'Admin', role: 'admin' };
+  cloud.captureSyncBase();
+  state.batches.push({ id: 'pending-upload', qty: 777, createdAt: '2026-10-09T00:00:00.000Z' });
+  cloud.markPendingLocal();
+  failCloudWrites = true;
+  const firstPush = await cloud.flushPendingCloudPush();
+  check('G6: lỗi mạng tạm thời giữ thay đổi ở trạng thái pending',
+    firstPush === false && cloud.pendingLocalChanges());
+  failCloudWrites = false;
+  const retryPush = await cloud.flushPendingCloudPush();
+  check('G7: flush thử lại đẩy được thay đổi đã lưu cục bộ',
+    retryPush === true &&
+    store.get('apps/main/d/batches').data.some(r => r.id === 'pending-upload' && r.qty === 777) &&
+    cloud.pendingLocalChanges() === false);
 }
 
 // ─── E. DICT (ĐỊNH MỨC THÁNG): GIỮ KHÓA ĐANG SỬA, NHẬN KHÓA KHÁC ──
@@ -301,7 +325,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   check('H7: đường NHẬN không còn dùng add-only (mọi bản sửa đều được xét)',
     !/mergeRemoteIntoLocal\(partial, true, true\)/.test(cl) &&
     !/mergeRemoteIntoLocal\(remote, true, true\)/.test(cl));
-  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v308/.test(sw));
+  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v310/.test(sw));
 }
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');

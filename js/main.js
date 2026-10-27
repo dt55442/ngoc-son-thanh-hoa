@@ -5,7 +5,7 @@ import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditMod
 import { deleteBatch, exitKanbanPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
 import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
-import { TRE_TIMING, hideTreLoading, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot + mở tab lần đầu
+import { hideTreLoading, setTreLoadingStatus, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
 import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần)
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
@@ -39,45 +39,35 @@ import { APP_VERSION, state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations, initVnDateInputs } from './utils.js';
 
-  // ── TẢI SẴN NỘI DUNG DƯỚI OVERLAY (cửa chờ ~5s / lúc chơi game) ─────
-  // Vẽ sẵn bảng Kanban + mini card Xưởng 2 + sparkline trong lúc overlay còn
-  // mở (nguồn lag chính — xem quy tắc 41) → mở tab Công Đoạn đầu tiên là
-  // tức thì, không lag. KHÔNG pre-render tab có Chart.js (canvas ẩn = kích
-  // thước 0 → biểu đồ vỡ); các tab khác render đồng bộ dưới overlay ngay lúc
-  // switchView lần đầu + cửa sổ 5s đủ cho decor hoãn 1 frame chạy xong.
-  let trePreloaded = false;
-  function preloadCoreViews() {
-    if (trePreloaded) return;
-    trePreloaded = true;
-    try {
-      if (state.activeView !== 'kanban-view' && kanbanNeedsPaint()) {
-        renderKanbanBoard(getFilteredBatches());
-        renderXuong2Cards();
-        renderX2MiniSparklines();
-      }
-    } catch (e) { /* preload lỗi — không phá boot */ }
-  }
+function yieldBootFrame() {
+  return new Promise(resolve => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    } else {
+      setTimeout(resolve, 16);
+    }
+  });
+}
 
   // ─── INIT ─────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    // LOADING "NÔNG DÂN CHẶT TRE": hiện ngay lúc mở app — che khoảng trắng
-    // khi nạp dữ liệu. CHẾ ĐỘ GAME "NGHI THỨC CẦP LUỒNG" (mỗi lần mở trang):
-    // boot xong CŨNG CHƯA gãy — bấm "Chặt!" đủ 100% (20 nhát × 5%) cây mới
-    // đổ → MỚI thấy Dashboard (nền blur), hoặc bấm "Bỏ qua" vào thẳng.
-    // Lỗi giữa chừng → bootOk false → tre KHÔNG gãy,
-    // overlay mờ dần (không ép chơi khi app đang lỗi).
+  document.addEventListener('DOMContentLoaded', async () => {
     showTreLoading('Đang nạp dữ liệu nhà máy…', { mode: 'game' });
     let bootOk = false;
     try {
+    await yieldBootFrame();
     initLucide();
     loadUsers();
     loadSession();
     initTheme(); // Áp giao diện đã chọn (theo máy + theo người đăng nhập) — trước khi vẽ biểu đồ
     loadData();
+    await yieldBootFrame();
+    setTreLoadingStatus('Đang nạp kế hoạch và định mức…');
     loadDeletedIds(); // dấu vết xóa (tombstone) cho đồng bộ mây — nạp trước mọi thao tác
     loadAutoBackups(); // bản cất tự động (auto backup cục bộ) — js/autobackup.js
     loadPhotoQueue(); // hàng đợi KÊNH ẢNH THUMB (hộp thư đi theo máy) — js/photo-sync.js
     loadCustomCharts();
+    await yieldBootFrame();
+    setTreLoadingStatus('Đang nạp dữ liệu nguyên liệu và sản xuất…');
     loadMaterialRates();
     loadPlanningItems();
     loadPlanningForecast();
@@ -86,6 +76,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadPressNotes();
     loadMaterialRecords();
     loadMaterialPlan();
+    await yieldBootFrame();
+    setTreLoadingStatus('Đang nạp nhật ký các công đoạn…');
     loadXuong2Cuts(); // vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn)
     loadStageWs(); // công tắc XƯỞNG 1 / XƯỞNG 2 ở tab Công Đoạn SX (nhớ theo máy)
     // ── XƯỞNG 1: 3 công đoạn đầu (04/10/2026) + định mức kg/h ──
@@ -104,6 +96,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadXuong2BaoVan(); // Nhật ký Bào Ván Xưởng 2 (Bào + Chà thùng — tồn theo kỳ)
     loadXuong2HoTro(); // Nhật ký HỖ TRỢ + CÔNG ĐOẠN LẺ Xưởng 2 (công việc phát sinh)
 
+    await yieldBootFrame();
+    setTreLoadingStatus('Đang nạp định mức và kiểm soát chất lượng…');
     loadX2BaoVanSpan(); // Kỳ tồn form Bào Ván (1 tuần / 2 tuần — thuần UI theo máy)
     loadSuppliers(); // Bảng Thông Tin Nhà Cung (tab Nguyên Liệu)
     loadX2CapRates(); // Định mức công suất cắt theo tháng (tab Công Đoạn)
@@ -136,6 +130,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     loadRateApprovals(); // BẢNG ĐỊNH MỨC TỔNG HỢP — bản ghi PHÊ DUYỆT theo (xưởng, tháng)
     loadKilnData(); // Độ ẩm lò sấy + ngưỡng đạt (QC nhập hàng ngày — js/kiln.js)
     loadHrData();
+    await yieldBootFrame();
+    setTreLoadingStatus('Đang hoàn tất giao diện…');
     // DỌN DỮ LIỆU CŨ: xóa hẳn lô nan còn sót stage 'bao_tinh' (cột Kanban "4. Bào
     // Tinh" đã gỡ — số liệu Bào Tinh nay nằm ở thẻ riêng state.xuong2BaoTinhRecords).
     // Chụp backup force TRƯỚC khi xóa + ghi tombstone chặn mây/máy khác đẩy ngược.
@@ -193,14 +189,10 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     window.addEventListener('online', () => { flushPendingCloudPush(); photoSyncKick(); });
     // Trạng thái kênh ảnh (số ảnh chờ) hiện cạnh nút "Đồng Bộ Ảnh Ngay" ở menu ⋮
     updatePhotoSyncUI();
-      bootOk = true; // boot trọn vẹn → game chờ bấm / auto gãy sau cửa sổ
+      await yieldBootFrame();
+      bootOk = true;
     } finally {
       hideTreLoading(bootOk);
-      // TẢI SẴN bảng Kanban TRONG LÚC overlay còn mở → tab đầu không lag
-      if (bootOk) {
-        const t = setTimeout(preloadCoreViews, 150);
-        if (t && typeof t.unref === 'function') t.unref(); // Node test không bị giữ
-      }
     }
   });
   // ─── VIEW SWITCHING ───────────────────────────────────────────
@@ -282,41 +274,8 @@ import { setupFormCalculations, initVnDateInputs } from './utils.js';
     });
   }
 
-  // ─── MỞ TAB LẦN ĐẦU TRONG PHIÊN → CHẠY HẾT ANIMATION LOADING ────────
-  // Mỗi tab chỉ 1 lần đầu tiên được mở trong phiên: overlay "nông dân chặt
-  // tre" phải chạy TRỌN cảnh (chặt → tre GÃY → mờ) dù nội dung tab render
-  // xong tức thì (minShow = TRE_TIMING.firstTab). Từ lần 2 trở đi: chuyển
-  // tab như cũ, KHÔNG hiện overlay. Các chỗ chờ khác (boot · AI · Excel ·
-  // mây · backup) giữ nguyên logic cũ. Tab Tổng Quan coi như ĐÃ mở từ boot
-  // (boot đã chạy trọn animation ngay khi vào trang).
-  const treVisitedViews = new Set(['dashboard-view']);
-  const VIEW_LOADING_LABELS = {
-    'dashboard-view': 'Đang tải tab Tổng Quan…',
-    'kanban-view': 'Đang tải tab Công Đoạn SX…',
-    'planning-view': 'Đang tải tab Kế Hoạch…',
-    'materials-view': 'Đang tải tab Nguyên Liệu…',
-    'qc-view': 'Đang tải tab QC…',
-    'hr-view': 'Đang tải tab Nhân Sự…'
-  };
-
   function switchView(targetViewId) {
-    // Lần đầu mở tab NÀY (bấm lại tab đang đứng = không tính là mở lại)
-    const firstVisit = targetViewId !== state.activeView && !treVisitedViews.has(targetViewId);
-    if (firstVisit) showTreLoading(VIEW_LOADING_LABELS[targetViewId] || 'Đang tải dữ liệu nhà máy…', { dur: TRE_TIMING.firstTab });
-    let tabOk = true; // render tab trọn vẹn → tre gãy; lỗi → tre đứng im rồi overlay mờ
-    try {
-      switchViewCore(targetViewId);
-    } catch (e) {
-      tabOk = false;
-      throw e; // giữ nguyên hành vi lỗi của switchView cũ (ném ra cho nơi gọi)
-    } finally {
-      if (firstVisit) {
-        treVisitedViews.add(targetViewId); // đã mở rồi → lần sau không loading nữa
-        // Chờ đủ TRE_TIMING.firstTab cảnh "đang chặt" rồi mới gãy — dù render
-        // tab chạy xong trong vài ms, người dùng vẫn thấy trọn animation
-        hideTreLoading(tabOk, { minShow: TRE_TIMING.firstTab });
-      }
-    }
+    switchViewCore(targetViewId);
   }
 
   function switchViewCore(targetViewId) {

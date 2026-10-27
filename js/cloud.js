@@ -42,6 +42,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   let fbRemoteHasData = false;     // doc trên mây có dữ liệu thực (khác rỗng)
   let fbLastRemote = null;         // bản snapshot mây gần nhất (nút tải về + gộp khéo trước khi đẩy)
   let fbDirty = false;             // có thay đổi CHƯA được đẩy lên mây
+  let fbChangeVersion = 0;
   let fbSyncWarnAt = 0;            // thời điểm lần cuối cảnh báo không đồng bộ được (chống spam)
   let fbListenWarnAt = 0;          // thời điểm lần cuối cảnh báo lỗi lắng nghe mây (chống spam)
 
@@ -2665,11 +2666,29 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // (flushPendingCloudPush giữ nguyên) → không tăng nguy cơ mất dữ liệu.
   const FB_PUSH_IDLE_MS = 5000;      // đợi "ngừng việc" 5 giây rồi mới đẩy
   const FB_PUSH_MAX_WAIT_MS = 30000; // chuỗi việc dài quá 30 giây vẫn đẩy 1 lần
+  const FB_PUSH_RETRY_WAITS = [5000, 15000, 60000];
   let fbPushFirstAt = 0;             // thời điểm thay đổi ĐẦU TIÊN của chuỗi đang chờ
+  let fbPushRetryAttempt = 0;
+
+  function isRetryablePushError(err) {
+    const code = String((err && err.code) || '').toLowerCase().split('/').pop();
+    return ['aborted', 'cancelled', 'deadline-exceeded', 'network-request-failed', 'resource-exhausted', 'unavailable'].includes(code);
+  }
+
+  function schedulePushRetry() {
+    if (!fbDirty || fbPushRetryAttempt >= FB_PUSH_RETRY_WAITS.length) return;
+    clearTimeout(fbPushTimer);
+    const wait = FB_PUSH_RETRY_WAITS[fbPushRetryAttempt++];
+    fbPushTimer = setTimeout(() => {
+      fbPushTimer = null;
+      doFirePush();
+    }, wait);
+  }
 
   // Đẩy dữ liệu hiện tại lên mây (admin/editor/manager)
   function firePushSync() {
     fbLocalHashes = null; // có thay đổi cục bộ → băm miền cần tính lại
+    fbChangeVersion++;
     // Đánh dấu "bản sửa CHƯA lên mây" (lưu xuống máy — vẫn nhớ sau khi tải lại
     // trang). Chỉ đặt khi người dùng CÓ QUYỀN đẩy: máy chỉ-xem không bao giờ
     // đẩy nên không đặt → luôn nhận định mức mới từ mây.
@@ -2681,12 +2700,16 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       return;
     }
     fbDirty = true;
+    fbPushRetryAttempt = 0;
     const now = Date.now();
     if (!fbPushFirstAt) fbPushFirstAt = now;          // mở chuỗi mới
     clearTimeout(fbPushTimer);
     // Hẹn lần đẩy: chờ "ngừng việc" 5s, nhưng KHÔNG hoãn quá 30s kể từ thay đổi đầu
     const waitMax = FB_PUSH_MAX_WAIT_MS - (now - fbPushFirstAt);
-    fbPushTimer = setTimeout(() => doFirePush(), Math.max(0, Math.min(FB_PUSH_IDLE_MS, waitMax)));
+    fbPushTimer = setTimeout(() => {
+      fbPushTimer = null;
+      doFirePush();
+    }, Math.max(0, Math.min(FB_PUSH_IDLE_MS, waitMax)));
     updateSyncBadge();
   }
 
@@ -2705,24 +2728,44 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   // Đẩy NGAY phần dữ liệu chờ đẩy (dùng khi rời trang / vừa có quyền / vừa online)
   function flushPendingCloudPush() {
-    if (!fbDirty) return;
+    if (!fbDirty && pendingLocalChanges()) fbDirty = true;
+    if (!fbDirty) return Promise.resolve(true);
     clearTimeout(fbPushTimer);
     fbPushTimer = null;
-    doFirePush();
+    fbPushRetryAttempt = 0;
+    return doFirePush();
   }
 
   async function doFirePush() {
+    if (fbApplying) {
+      if (fbDirty && !fbPushTimer) {
+        fbPushTimer = setTimeout(() => {
+          fbPushTimer = null;
+          if (fbDirty) doFirePush();
+        }, 1000);
+      }
+      return false;
+    }
     if (!fbDidLoadRemote) {
       // Chưa nhận dữ liệu mây lần nào -> hẹn thử lại thay vì bỏ im lặng (dữ liệu kẹt trên máy)
       if (fbDirty) {
         clearTimeout(fbPushTimer);
-        fbPushTimer = setTimeout(() => { if (fbDirty) doFirePush(); }, 3000);
+        fbPushTimer = setTimeout(() => {
+          fbPushTimer = null;
+          if (fbDirty) doFirePush();
+        }, 3000);
       }
-      return;
+      return false;
     }
     fbPushFirstAt = 0; // chuỗi thay đổi này đã được xử lý — thao tác kế tiếp mở chuỗi mới
-    if (fbSeedCore && cloudCore(collectCloudSnapshot()) === fbSeedCore) { fbDirty = false; clearPendingLocal(); return; } // chưa có thay đổi thực tế
-    if (!isFirebaseOnline() || !state.currentUser || !canPushToCloud()) return; // giữ cờ bẩn, chờ lần sau
+    if (fbSeedCore && cloudCore(collectCloudSnapshot()) === fbSeedCore) {
+      fbDirty = false;
+      fbPushRetryAttempt = 0;
+      clearPendingLocal();
+      return true;
+    } // chưa có thay đổi thực tế
+    if (!isFirebaseOnline() || !state.currentUser || !canPushToCloud()) return false; // giữ cờ bẩn, chờ lần sau
+    const pushVersion = fbChangeVersion;
     fbApplying = true;
     try {
       const t0 = Date.now();
@@ -2732,18 +2775,26 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       console.log('[FB] Đã đẩy: ' + Math.round(((res && res.size) || 0) / 1024) + 'KB'
         + ' · chế độ ' + ((res && res.mode) || '?')
         + ' · ' + (Date.now() - t0) + 'ms');
-      fbDirty = false;
-      clearPendingLocal(); // đã lên mây → hết cảnh "bản sửa chưa đồng bộ"
-      try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
-      // Đẩy xong = các bản ghi dirty đã nằm trên mây → đặt lại sổ đồng bộ (dirty rỗng)
-      try { captureSyncBase(null, {}); markSynced({ rev: (res && typeof res.rev === 'number') ? res.rev : undefined }); } catch (e) {}
+      if (fbChangeVersion === pushVersion) {
+        fbDirty = false;
+        fbPushRetryAttempt = 0;
+        clearPendingLocal(); // đã lên mây → hết cảnh "bản sửa chưa đồng bộ"
+        try { fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+        // Đẩy xong = các bản ghi dirty đã nằm trên mây → đặt lại sổ đồng bộ (dirty rỗng)
+        try { captureSyncBase(null, {}); markSynced({ rev: (res && typeof res.rev === 'number') ? res.rev : undefined }); } catch (e) {}
+      } else {
+        fbDirty = true;
+      }
       // AUTO BACKUP: bản cất cục bộ (throttle 5 phút) + backup mây 1 lần/ngày
       captureAutoBackup('Sau khi đồng bộ mây', false);
       maybeWriteCloudBackup();
+      return true;
     } catch (e) {
       console.warn('[FB] Lỗi đẩy dữ liệu', e);
       showToast('Không đồng bộ lên mây: ' + e.message, 'error');
       if (isPermDeniedErr(e)) deepPermissionDiagnosis();
+      else if (isRetryablePushError(e)) schedulePushRetry();
+      return false;
     } finally {
       fbApplying = false;
       updateSyncBadge();

@@ -269,9 +269,9 @@ check('I5: CSS ẩn theo cờ + ẩn nút theo vùng + panel',
 check('I6: CSS vùng 3 không thụt lề + 1 trục cuộn trên điện thoại + nút ‹ ›',
   cssSrc.includes('.x2-zone[data-zone="3"]:has(> .x2-cut-table-wrap)')
   && cssSrc.includes('overflow-y: hidden') && cssSrc.includes('.x2-hscroll-btn'));
-check('I7: sw.js có js/sys-settings.js + cache v308', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v308'));
-check('I8: state.js có key riêng + APP_VERSION v308',
-  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v308'"));
+check('I7: sw.js có js/sys-settings.js + cache v310', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v310'));
+check('I8: state.js có key riêng + APP_VERSION v310',
+  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v310'"));
 check('I9: nối đủ cloud / storage / history / main',
   cloudSrc.includes('sysSettings') && cloudSrc.includes("'sysSettings'")
   && storageSrc.includes('restoreSysSettings') && histSrc.includes('sysSettings') && mainSrc.includes('loadSysSettings'));
@@ -303,6 +303,5 @@ check('J5: bấm › trượt sang phải 80% bề ngang', scrollEl._scrollBy &&
 
 console.log(`\nKẾT QUẢ: ${pass} PASS / ${fail} FAIL`);
 if (fail) process.exitCode = 1;
-
 
 

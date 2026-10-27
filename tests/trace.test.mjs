@@ -483,7 +483,7 @@ check('H8: dashboard.js gọi renderTraceCard trong renderDashboardCharts (chỉ
   dashSrc.includes("from './trace.js'") && dashSrc.includes('if (canViewAdvanced()) renderTraceCard();'));
 
 check('H9: sw.js có ./js/trace.js trong APP_SHELL', swJs.includes("'./js/trace.js'"));
-check('H10: sw.js đã tăng cache lên v252', /nha-may-ngoc-son-v308/.test(swJs));
+check('H10: sw.js đã tăng cache lên v252', /nha-may-ngoc-son-v310/.test(swJs));
 
 check('H11: styles.css có khối THẺ TRUY XUẤT (.trace-card/.trace-kpi/.trace-table)',
   cssSrc.includes('THẺ TRUY XUẤT ĐẦU VÀO → ĐẦU RA') &&
@@ -797,5 +797,4 @@ check('L6: trace.js KHÔNG còn sinh div chip (chỉ tooltip) — không còn ch
 
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
-
 

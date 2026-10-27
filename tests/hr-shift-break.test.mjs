@@ -178,7 +178,7 @@ check('I3: hrShiftBrkH + hrShiftRange + renderShiftRows đã export',
 check('I4: index.html modal Cài Đặt Ca ghi rõ "giờ nghỉ"', idxSrc.includes('Thời Gian Ca (tên ca / bắt đầu / kết thúc / giờ nghỉ)'));
 check('I5: styles.css có bảng 4 cột ca (.shift-row / -head / -na)',
   cssSrc.includes('.shift-row-head, .shift-row') && cssSrc.includes('.shift-row-na'));
-check('I6: sw.js đã bump cache v265', /nha-may-ngoc-son-v308/.test(swSrc));
+check('I6: sw.js đã bump cache v265', /nha-may-ngoc-son-v310/.test(swSrc));
 
 console.log(`\n=== GIỜ NGHỈ CỦA CA (LÀM CA): ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

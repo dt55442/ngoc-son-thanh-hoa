@@ -5,7 +5,7 @@ import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsers
 // TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
 import { authErrorText, authMarkStep, authReset, isAuthBusy, setAuthBusy } from './auth-ui.js';
 import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
-import { applyRoleToUI, initLucide, isFirebaseOnline, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
+import { applyRoleToUI, flushPendingCloudPush, initLucide, isFirebaseOnline, pendingRecordCount, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
@@ -519,13 +519,17 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-pending-list', 'click', () => closePendingList());
     safeOn('btn-pending-ok', 'click', () => closePendingList());
     safeOn('btn-pending-sync', 'click', async () => {
-      const ok = await syncNow({ force: true });
+      await syncNow({ force: true });
+      const pushed = await flushPendingCloudPush();
+      const ok = pushed && pendingRecordCount() === 0;
       try { renderPendingList(); } catch (e) { /* bỏ qua */ }
       showToast(ok ? 'Đã kiểm tra/đẩy xong — danh sách vừa cập nhật.' : 'Chưa kết nối được mây — việc vẫn nằm trên máy này.', ok ? 'success' : 'info');
     });
     safeOn('sync-pending-banner-btn', 'click', async () => {
-      const ok = await syncNow({ force: true });
-      showToast(ok ? 'Đã thử lại: mây phản hồi bình thường.' : 'Vẫn chưa kết nối được mây — thay đổi nằm trên máy này.', ok ? 'success' : 'info');
+      await syncNow({ force: true });
+      const pushed = await flushPendingCloudPush();
+      const ok = pushed && pendingRecordCount() === 0;
+      showToast(ok ? 'Đã thử lại và đẩy xong dữ liệu đang chờ.' : 'Vẫn còn việc chưa lên mây — dữ liệu vẫn được giữ trên máy này.', ok ? 'success' : 'info');
     });
     safeOn('btn-hard-reload', 'click', async () => {
       if (!confirm('Xoá cache ứng dụng rồi tải lại bản MỚI NHẤT?\n(Dữ liệu trên máy KHÔNG bị xoá — chỉ xoá mã nguồn cũ đã cache)')) return;

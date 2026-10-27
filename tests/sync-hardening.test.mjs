@@ -186,6 +186,19 @@ check('F10: đẩy thủ công chụp lại base + mốc đã đồng bộ sau k
   uploadSrc.indexOf('markSynced(') > uploadSrc.indexOf('captureSyncBase(null, {})'));
 check('F11: chỉ làm mất hiệu lực cache việc chờ khi bắt đầu chuỗi thay đổi mới',
   /function markPendingLocal\(\)\s*\{\s*const wasPending = pendingLocalChanges\(\);\s*fbPendingLocal = true;\s*if \(!wasPending\) fbPendingCache = null;/.test(cloudSrc));
+check('F12: sau tải lại, flush phục hồi cờ bẩn từ trạng thái pending đã lưu trên máy',
+  /function flushPendingCloudPush\(\)\s*\{\s*if \(!fbDirty && pendingLocalChanges\(\)\) fbDirty = true;/.test(cloudSrc) &&
+  /return doFirePush\(\);/.test(cloudSrc));
+check('F13: lỗi mạng tạm thời được retry có giới hạn; lỗi quyền không bị retry tự động',
+  /FB_PUSH_RETRY_WAITS = \[5000, 15000, 60000\]/.test(cloudSrc) &&
+  /isRetryablePushError\(e\)\) schedulePushRetry\(\)/.test(cloudSrc));
+check('F14: cả hai nút "thử lại" đều đọc trạng thái rồi chủ động đẩy hàng đợi pending',
+  (evSrc.match(/await flushPendingCloudPush\(\)/g) || []).length >= 2 &&
+  evSrc.includes('pendingRecordCount() === 0'));
+check('F15: thay đổi mới trong lúc đang đẩy không bị đánh dấu đã đồng bộ nhầm',
+  /let fbChangeVersion = 0/.test(cloudSrc) &&
+  /const pushVersion = fbChangeVersion/.test(cloudSrc) &&
+  /if \(fbChangeVersion === pushVersion\)/.test(cloudSrc));
 
 console.log('\n=== KẾT QUẢ SYNC-HARDENING: ' + pass + ' PASS / ' + fail + ' FAIL ===');
 if (fail) process.exitCode = 1;

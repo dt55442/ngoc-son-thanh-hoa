@@ -111,7 +111,7 @@ if (!global.URL.revokeObjectURL) global.URL.revokeObjectURL = () => {};
 
     await import('../js/main.js');
     // Bắn sự kiện DOMContentLoaded để chạy luồng khởi động thật
-    for (const f of docHandlers['DOMContentLoaded'] || []) f({ preventDefault(){} });
+    for (const f of docHandlers['DOMContentLoaded'] || []) await f({ preventDefault(){} });
     const app = global.window.app;
     if (!app) throw new Error('window.app không tồn tại sau khi boot');
     const nExports = Object.keys(app).length;

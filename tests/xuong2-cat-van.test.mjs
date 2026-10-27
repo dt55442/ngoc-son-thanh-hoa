@@ -359,7 +359,7 @@ check('NỐI (main): load 3 khoá lúc boot',
 check('NỐI (export-xlsx): nguồn xuất "catvan" + cột 2 công đoạn',
   jsExport.includes("id: 'catvan'") && jsExport.includes('source === \'catvan\''));
 check('CẤU TRÚC (sw.js): CACHE_NAME v230 (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v308/.test(swJs));
+  /nha-may-ngoc-son-v310/.test(swJs));
 
 // ─── M. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
 {
@@ -374,7 +374,6 @@ check('CẤU TRÚC (sw.js): CACHE_NAME v230 (PWA không dùng cache cũ)',
 
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
-
 
 
 

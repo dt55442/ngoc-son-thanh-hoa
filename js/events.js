@@ -2097,7 +2097,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── GIAI ĐOẠN 2: đổi NGÀY → cập nhật Ô CA (gợi ý ca theo Bảng bố trí Nhân Sự) ──
     safeOn('x2-bo-ong-date', 'change', () => syncX2ShiftField('x2-bo-ong-shift', 'Xưởng 2', (document.getElementById('x2-bo-ong-date') || {}).value || '', isBoOngPos));
     safeOn('x2-bao-tho-date', 'change', () => syncX2ShiftField('x2-bao-tho-shift', 'Xưởng 2', (document.getElementById('x2-bao-tho-date') || {}).value || '', isBaoThoPos));
-    safeOn('x2-cn-date', 'change', () => syncX2ShiftField('x2-cn-shift', 'Xưởng 2', (document.getElementById('x2-cn-date') || {}).value || '', isChonNanPos));
+    safeOn('x2-cn-date', 'change', () => {
+      syncX2ShiftField('x2-cn-shift', 'Xưởng 2', (document.getElementById('x2-cn-date') || {}).value || '', isChonNanPos);
+      renderX2ChonNanCalc();
+    });
     safeOn('x2-bo-ong-loai', 'input', () => updateXuong2BoOngLinked(false));
     safeOn('btn-x2-ong-all', 'click', () => {
       const el = document.getElementById('x2-bo-ong-bo');
@@ -2170,7 +2173,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // (Người chọn nan + thời gian TỰ ĐỘNG từ Bảng bố trí Nhân Sự — không điền tay)
     safeOn('x2-cn-baotho', 'change', updateXuong2ChonNanLinked);
     safeOn('x2-cn-size', 'change', renderX2ChonNanCalc);
-    ['x2-cn-dai', 'x2-cn-rong', 'x2-cn-day', 'x2-cn-qty'].forEach(id => {
+    ['x2-cn-dai', 'x2-cn-rong', 'x2-cn-day', 'x2-cn-ncc',
+      'x2-cn-qty-A', 'x2-cn-qty-A1', 'x2-cn-qty-B', 'x2-cn-qty-reject'].forEach(id => {
       safeOn(id, 'input', renderX2ChonNanCalc);
     });
     safeOn('x2-cn-form', 'submit', handleXuong2ChonNanSubmit);

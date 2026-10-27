@@ -1008,7 +1008,7 @@
                 <div class="form-group" style="flex:2; min-width:320px;">
                   <label for="x2-cn-baotho">Lô Đã Bào Thô (chọn theo ngày bào thô) <span class="required">*</span></label>
                   <select id="x2-cn-baotho" required></select>
-                  <small style="color:var(--text-muted);">Chọn theo <strong>ngày bào thô</strong> — nhãn hiện ngày bào thô · Loại NL · NCC · số lượt đã chọn (gõ vào ô để tìm theo ngày/NCC). Kích thước nan chọn ở ô <strong>Loại nan</strong> bên dưới · chọn <strong>Thêm loại mới</strong> khi nan mua ở <strong>ngoài công đoạn</strong> (tự khai Nhà cung cấp + kích thước, không cộng sang Bào Thô).</small>
+                  <small style="color:var(--text-muted);">Chọn theo <strong>ngày bào thô</strong> — nhãn hiện ngày · ca · khối lượng · số lượt đã chọn (gõ vào ô để tìm theo ngày/ca). Kích thước nan chọn ở ô <strong>Loại nan</strong> bên dưới · chọn <strong>Thêm loại mới</strong> khi nan mua ở <strong>ngoài công đoạn</strong> (tự khai Nhà cung cấp + kích thước, không cộng sang Bào Thô).</small>
                 </div>
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x2-cn-date">Ngày Chọn <span class="required">*</span></label>
@@ -1019,7 +1019,7 @@
                   <select id="x2-cn-shift"></select>
                 </div>
               </div>
-              <!-- DÒNG 2: loại nan (kích thước của lô đã bào thô) + phân loại + số lượng
+              <!-- DÒNG 2: loại nan (kích thước của lô đã bào thô) + số lượng theo 4 phân loại
                    Khi chọn "Thêm loại mới" ở ô Lô đã bào thô: ô Loại nan được THAY bằng
                    ô Nhà cung cấp (nan mua ngoài — tự khai NCC và kích thước Dài/Rộng/Dày). -->
               <div class="x2-form-row">
@@ -1034,18 +1034,33 @@
                   <datalist id="x2-cn-ncc-list"></datalist>
                   <small style="color:var(--text-muted);">Nan mua ở <strong>ngoài công đoạn</strong> — ghi rõ nhà cung cấp (VD: <strong>Luồng thanh - NCC</strong>).</small>
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x2-cn-class">Phân Loại <span class="required">*</span></label>
-                  <select id="x2-cn-class">
-                    <option value="A">A</option>
-                    <option value="A1">A1 – Ít bọng cật</option>
-                    <option value="B">B – Nhiều bọng cật</option>
-                    <option value="reject">Loại hẳn</option>
-                  </select>
-                </div>
-                <div class="form-group" style="flex:0 0 150px;">
-                  <label for="x2-cn-qty">Số Lượng (thanh) <span class="required">*</span></label>
-                  <input type="number" id="x2-cn-qty" step="1" min="0" placeholder="0">
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group x2-cn-qty-group">
+                  <label>Số Lượng Theo Phân Loại (thanh)</label>
+                  <small class="x2-cn-qty-help">Nhập tổng mới cho một hoặc nhiều loại; ô trống = giữ nguyên. Số hiện có hiển thị dưới từng ô.</small>
+                  <div class="x2-cn-qty-grid">
+                    <div class="x2-cn-qty-cell">
+                      <label for="x2-cn-qty-A">A</label>
+                      <input type="number" id="x2-cn-qty-A" step="1" min="1" max="999999" placeholder="Tổng mới">
+                      <small id="x2-cn-current-A">Đã ghi: 0 thanh</small>
+                    </div>
+                    <div class="x2-cn-qty-cell">
+                      <label for="x2-cn-qty-A1">A1 · Ít bọng cật</label>
+                      <input type="number" id="x2-cn-qty-A1" step="1" min="1" max="999999" placeholder="Tổng mới">
+                      <small id="x2-cn-current-A1">Đã ghi: 0 thanh</small>
+                    </div>
+                    <div class="x2-cn-qty-cell">
+                      <label for="x2-cn-qty-B">B · Nhiều bọng cật</label>
+                      <input type="number" id="x2-cn-qty-B" step="1" min="1" max="999999" placeholder="Tổng mới">
+                      <small id="x2-cn-current-B">Đã ghi: 0 thanh</small>
+                    </div>
+                    <div class="x2-cn-qty-cell">
+                      <label for="x2-cn-qty-reject">Loại hẳn</label>
+                      <input type="number" id="x2-cn-qty-reject" step="1" min="1" max="999999" placeholder="Tổng mới">
+                      <small id="x2-cn-current-reject">Đã ghi: 0 thanh</small>
+                    </div>
+                  </div>
                 </div>
               </div>
               <!-- DÒNG 3 (CHỈ hiện khi chọn "Thêm loại mới" ở ô Lô đã bào thô):
@@ -1076,7 +1091,7 @@
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
                 <button type="button" class="btn btn-outline" id="btn-x2-cn-rate" hidden data-perm="x2" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Chọn Nan theo tháng (thanh/h) — nguồn cho cột Hiệu suất (CHỈ Quản Trị sửa)"><i data-lucide="target"></i> Định mức</button>
                 <button type="button" class="btn btn-outline" id="btn-cancel-x2-cn">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Lượt Chọn Nan</button>
+                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Lưu Số Lượng Phân Loại</button>
               </div>
             </form>
           </div>

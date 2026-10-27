@@ -311,7 +311,7 @@ check('I3: 4 thẻ ngày 1 công đoạn + 3 thẻ ĐÃ TÁCH CA (Bổ Ống/Bà
 check('I4: press.js + qc-final.js dùng CHUNG helper (không copy HTML/CSS)',
   pSrc.includes('shiftBreakdownHtml') && pSrc.includes('epVanShiftGroups') &&
   qSrc.includes('shiftBreakdownHtml') && qSrc.includes('qcShiftGroups'));
-check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v310'));
+check('I5: sw.js đã tăng cache (v259) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v311'));
 
 // ═══ J. GIAI ĐOẠN 2 — NHẬP SẢN LƯỢNG RIÊNG THEO CA ═══════════════════════
 // (Bổ Ống · Chạy Máy Bào Thô · Chọn Nan Thô · Than Hóa + Sấy)
@@ -330,8 +330,7 @@ document.getElementById('x2-cn-ncc').value = 'NCC Ngoài';
 document.getElementById('x2-cn-dai').value = '900';
 document.getElementById('x2-cn-rong').value = '70';
 document.getElementById('x2-cn-day').value = '10';
-document.getElementById('x2-cn-class').value = 'A';
-document.getElementById('x2-cn-qty').value = '500';
+document.getElementById('x2-cn-qty-A').value = '500';
 document.getElementById('x2-cn-date').value = DAY;
 x2.syncX2ShiftField('x2-cn-shift', 'Xưởng 2', DAY, null);   // nạp options trước khi chọn
 document.getElementById('x2-cn-shift').value = '1';          // CA ĐÊM

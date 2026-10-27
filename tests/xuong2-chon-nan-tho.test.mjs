@@ -77,6 +77,8 @@ function check(label, cond) {
   if (cond) { pass++; console.log('PASS ' + label); }
   else { fail++; console.log('FAIL ' + label); }
 }
+const setQty = (cls, value) => { document.getElementById(`x2-cn-qty-${cls}`).value = value; };
+const getQty = cls => document.getElementById(`x2-cn-qty-${cls}`).value;
 
 const { state, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_X2_CHON_NAN_RATE } = await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
@@ -93,15 +95,19 @@ state.xuong2BaoThoRecords = [
     date: '2026-09-10', daiText: '1250,1300', rongText: '80', dayText: '12',
     dais: [1250, 1300], rongs: [80], thicks: [12],
     worker: 'Lê Văn Bình', workTime: '07:00–12:00, 13:00 → hết ca', workHours: 9, workHoursHC: 9, workHoursTC: 0,
-    createdAt: '2026-09-10T03:00:00.000Z' },
+    shiftIdx: 0, createdAt: '2026-09-10T03:00:00.000Z' },
   { id: 'bt-2', boOngId: 'lot-2', materialType: 'Luồng ống', supplier: 'Nhà Trung', boDate: '2026-09-12',
     date: '2026-09-12', daiText: '1300', rongText: '90', dayText: '12,15',
     dais: [1300], rongs: [90], thicks: [12, 15],
     worker: 'Lê Văn Bình', workTime: '07:00–12:00', workHours: 5, workHoursHC: 5, workHoursTC: 0,
-    createdAt: '2026-09-12T03:00:00.000Z' }
+    shiftIdx: 1, createdAt: '2026-09-12T03:00:00.000Z' }
 ];
 state.xuong2ChonNanThoRecords = [];
 state.x2ChonNanRates = {};
+state.hrShifts = [{ id: 'Xưởng 2', type: 'lamca', shifts: [
+  { name: 'Ca ngày', start: '07:00', end: '19:00' },
+  { name: 'Ca đêm', start: '19:00', end: '07:00' }
+] }];
 // Nhân Sự: vị trí "Chọn Nan Thô" (khớp) — "Chọn nan thô 2" cũng khớp; "Bào Tinh" KHÔNG
 state.hrEmployees = [
   { id: 'empA', name: 'Nguyễn Văn A', quitDate: '' },
@@ -131,12 +137,24 @@ check('THẺ: pop-up bật + bảng Chọn Nan Thô hiện (không còn x2-card-
 check('TIẾN ĐỘ: 2 lô bào thô chưa chọn nan → "2 / 2 lô bào thô chưa chọn"',
   document.getElementById('x2-cn-stock-bar').innerHTML.includes('2 / 2 lô bào thô chưa chọn'));
 
-// ─── B. Ô CHỌN LÔ (theo NGÀY BÀO THÔ) + LOẠI NAN CỦA LÔ ──────────
+// ─── B. Ô CHỌN LÔ (theo NGÀY, CA + KHỐI LƯỢNG BÀO THÔ) ────────────
 const selBt = document.getElementById('x2-cn-baotho');
 const selSize = document.getElementById('x2-cn-size');
-check('Ô CHỌN LÔ: có 2 lô bào thô, nhãn hiện NGÀY BÀO THÔ + loại NL + NCC',
+check('Ô CHỌN LÔ: nhãn hiện NGÀY BÀO THÔ + ca + KL (kg), không hiện loại NL/NCC',
   selBt.innerHTML.includes('Bào thô 10/09/26') && selBt.innerHTML.includes('Bào thô 12/09/26') &&
-  selBt.innerHTML.includes('Luồng cây xô') && selBt.innerHTML.includes('NCC Nhà Tế'));
+  selBt.innerHTML.includes('Ca ngày · 350 kg') && selBt.innerHTML.includes('Ca đêm · 300 kg') &&
+  !selBt.innerHTML.includes('Nhiều nguồn') && !selBt.innerHTML.includes('NCC Nhà Tế'));
+state.xuong2BaoThoRecords[1].shiftIdx = null;
+x2.fillXuong2ChonNanOptions();
+const legacyLotOption = selBt.innerHTML.match(/<option value="bt-2">([^<]+)<\/option>/);
+check('Ô CHỌN LÔ: dữ liệu cũ không có ca thì ẩn nhãn ca, vẫn hiện KL',
+  !!legacyLotOption && !legacyLotOption[1].includes('Ca đêm') &&
+  !legacyLotOption[1].includes('Cả ngày') && legacyLotOption[1].includes('300 kg'));
+state.xuong2BaoThoRecords[1].shiftIdx = 1;
+x2.fillXuong2ChonNanOptions();
+state.xuong2BaoThoRecords.forEach(r => { r.shiftIdx = null; });
+state.hrShifts = [];
+x2.fillXuong2ChonNanOptions();
 selBt.value = 'bt-1';
 x2.updateXuong2ChonNanLinked();
 check('LINK: Ngày chọn mặc định theo ngày bào thô = 2026-09-10',
@@ -155,8 +173,7 @@ check('CHẾ ĐỘ LÔ: đang chọn lô có sẵn → hiện ô Loại nan, Ẩ
 
 // ─── C. LƯU LƯỢT CHỌN NAN (loại nan LẤY TỪ LÔ BÀO THÔ) ───────────
 selSize.value = '1250×80×12';
-document.getElementById('x2-cn-class').value = 'A';
-document.getElementById('x2-cn-qty').value = '1000';
+setQty('A', '1000');
 x2.renderX2ChonNanCalc();
 const calc1 = document.getElementById('x2-cn-calc').innerHTML;
 check('TỰ TÍNH: thể tích 1 thanh 1250×80×12 = 0,0012 m³ + thể tích lượt 1.000 thanh = 1,2000 m³',
@@ -188,9 +205,9 @@ check('LƯU: danh sách loại nan hiện "đã chọn 1.000 thanh" cho cỡ 125
 // GIỮ NGUYÊN lựa chọn sau khi lưu (nhập số lượng liên tiếp không phải chọn lại)
 check('LƯU XONG: GIỮ NGUYÊN ô chọn lô (bt-1) · ngày chọn (2026-09-16) · Loại nan (1250×80×12) · Phân loại (A)',
   selBt.value === 'bt-1' && document.getElementById('x2-cn-date').value === '2026-09-16' &&
-  selSize.value === '1250×80×12' && document.getElementById('x2-cn-class').value === 'A');
-check('LƯU XONG: CHỈ xoá ô Số lượng (để nhập tiếp số lượng khác)',
-  document.getElementById('x2-cn-qty').value === '');
+  selSize.value === '1250×80×12');
+check('LƯU XONG: giữ lô/ngày/kích thước và xóa 4 ô số lượng để nhập tiếp',
+  ['A', 'A1', 'B', 'reject'].every(cls => getQty(cls) === ''));
 check('LƯU XONG: đếm "đã chọn X thanh" của cỡ đó tự cập nhật lên 1.000',
   selSize.innerHTML.includes('đã chọn 1.000 thanh'));
 
@@ -213,7 +230,7 @@ check('THÊM MỚI: 3 ô Dài/Rộng/Dày HIỆN ra', document.getElementById('x
 document.getElementById('x2-cn-dai').value = '900';
 document.getElementById('x2-cn-rong').value = '70';
 document.getElementById('x2-cn-day').value = '10';
-document.getElementById('x2-cn-qty').value = '300';
+setQty('B', '300');
 x2.renderX2ChonNanCalc();
 const calc2 = document.getElementById('x2-cn-calc').innerHTML;
 check('THÊM MỚI: tự tính thể tích + báo nguồn "ngoài công đoạn" (0,0006 m³/thanh · 0,1890 m³)',
@@ -226,7 +243,6 @@ x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 check('THÊM MỚI (CHẶN): chưa ghi Nhà cung cấp → không lưu',
   state.xuong2ChonNanThoRecords.length === cntExt0);
 document.getElementById('x2-cn-ncc').value = 'Luồng thanh - NCC';
-document.getElementById('x2-cn-class').value = 'B';
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 const cnExt = state.xuong2ChonNanThoRecords.find(r => r.external);
 check('THÊM MỚI: lưu lượt external = true + NCC tự khai + kích thước tự nhập (900×70×10), KHÔNG gắn lô bào thô',
@@ -288,8 +304,7 @@ check('HIỆU SUẤT: 111 thanh/h ÷ 700 thanh/h = 15,9%',
 selBt.value = 'bt-1';
 x2.updateXuong2ChonNanLinked();
 selSize.value = '1250×80×12';
-document.getElementById('x2-cn-class').value = 'reject';
-document.getElementById('x2-cn-qty').value = '250';
+setQty('reject', '250');
 document.getElementById('x2-cn-date').value = '2026-09-16';
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 check('LOẠI HẲN: lưu được lượt phân loại "Loại hẳn" (cls = reject)',
@@ -315,9 +330,8 @@ check('SỬA: banner "Đang sửa lượt chọn nan" hiện lên',
   document.getElementById('x2-cn-edit-banner').style.display === '');
 check('SỬA: nạp lại lô · loại nan · phân loại · số lượng',
   selBt.value === 'bt-1' && selSize.value === '1250×80×12' &&
-  document.getElementById('x2-cn-class').value === 'reject' &&
-  document.getElementById('x2-cn-qty').value === '250');
-document.getElementById('x2-cn-qty').value = '125';
+  getQty('A') === '1000' && getQty('reject') === '250');
+setQty('reject', '125');
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 check('SỬA: số lượng 250 → 125 (tỷ lệ loại cỡ 1250×80×12 còn 125/1.125 = 11,1%)',
   cnRej.quantity === 125 && Math.abs(cnRej.volume - 0.15) < 1e-9 &&
@@ -335,10 +349,10 @@ x2.resetXuong2ChonNanForm();
 
 // ─── J. CHẶN DỮ LIỆU KHÔNG HỢP LỆ ──────────────────────────────
 const cntBefore = state.xuong2ChonNanThoRecords.length;
-document.getElementById('x2-cn-qty').value = '0';
+setQty('A', '0');
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 check('CHẶN: số lượng = 0 → không lưu', state.xuong2ChonNanThoRecords.length === cntBefore);
-document.getElementById('x2-cn-qty').value = '100';
+setQty('A', '100');
 selBt.value = '__new__';
 x2.updateXuong2ChonNanLinked();
 document.getElementById('x2-cn-ncc').value = 'NCC Test';
@@ -348,7 +362,7 @@ check('CHẶN: "Thêm loại mới" mà thiếu Dài/Rộng/Dày → không lưu
   state.xuong2ChonNanThoRecords.length === cntBefore);
 x2.resetXuong2ChonNanForm();
 check('RESET: về chế độ ghi mới + phân loại A + NCC & 3 ô kích thước trống + về chế độ LÔ có sẵn',
-  state.x2ChonNanEditId === null && document.getElementById('x2-cn-class').value === 'A' &&
+  state.x2ChonNanEditId === null && ['A', 'A1', 'B', 'reject'].every(cls => getQty(cls) === '') &&
   document.getElementById('x2-cn-dai').value === '' &&
   document.getElementById('x2-cn-ncc').value === '' &&
   document.getElementById('x2-cn-ncc-group').style.display === 'none' &&
@@ -374,18 +388,20 @@ x2.toggleX2ChonNanTable();
 check('BẢNG: mở rộng lại (bỏ class x2-cut-collapsed)',
   !document.getElementById('x2-cn-table-wrap').classList.contains('x2-cut-collapsed'));
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-check('CẤU TRÚC (index.html): form có lô bào thô + ngày + loại nan + phân loại + số lượng + 3 ô thêm mới',
+check('CẤU TRÚC (index.html): form có lô bào thô + ngày + loại nan + 4 ô phân loại + 3 ô thêm mới',
   idxHtml.includes('"x2-cn-baotho"') && idxHtml.includes('"x2-cn-date"') &&
-  idxHtml.includes('"x2-cn-size"') && idxHtml.includes('"x2-cn-class"') &&
-  idxHtml.includes('"x2-cn-qty"') && idxHtml.includes('x2-cn-new-size-row') &&
+  idxHtml.includes('"x2-cn-size"') && idxHtml.includes('id="x2-cn-qty-A"') &&
+  idxHtml.includes('id="x2-cn-qty-A1"') && idxHtml.includes('id="x2-cn-qty-B"') &&
+  idxHtml.includes('id="x2-cn-qty-reject"') && idxHtml.includes('x2-cn-new-size-row') &&
   idxHtml.includes('"x2-cn-dai"') && idxHtml.includes('"x2-cn-rong"') && idxHtml.includes('"x2-cn-day"'));
 check('CẤU TRÚC (index.html): ô "Nhà cung cấp" (nan mua ngoài) gợi ý sẵn "Luồng thanh - NCC" + datalist',
   idxHtml.includes('id="x2-cn-ncc"') && idxHtml.includes('placeholder="Luồng thanh - NCC"') &&
   idxHtml.includes('id="x2-cn-ncc-list"') && idxHtml.includes('id="x2-cn-ncc-group"') &&
   idxHtml.includes('id="x2-cn-size-group"'));
-check('CẤU TRÚC (index.html): 4 mức phân loại A / A1 / B / Loại hẳn trong ô chọn',
-  idxHtml.includes('>A1 – Ít bọng cật<') && idxHtml.includes('>B – Nhiều bọng cật<') &&
-  idxHtml.includes('>Loại hẳn<'));
+check('CẤU TRÚC (index.html): 4 ô số lượng A / A1 / B / Loại hẳn',
+  idxHtml.includes('id="x2-cn-qty-A"') && idxHtml.includes('id="x2-cn-qty-A1"') &&
+  idxHtml.includes('id="x2-cn-qty-B"') && idxHtml.includes('id="x2-cn-qty-reject"') &&
+  idxHtml.includes('ô trống = giữ nguyên'));
 check('CẤU TRÚC (index.html): bảng phụ định mức công suất chọn nan theo tháng (thanh/h)',
   idxHtml.includes('x2-cn-rate-month') && idxHtml.includes('btn-x2-cn-rate-save') &&
   idxHtml.includes('id="x2-cn-rate-bar"'));
@@ -524,8 +540,7 @@ check('KHÓA GỘP: cùng lô · ngày · k.thước · phân loại → cùng k
 // Lưu LẠI tổ hợp đã có → KHÔNG tạo dòng mới, số nhập = TỔNG mới (ghi đè)
 document.getElementById('x2-cn-date').value = '2026-09-18';
 selSize.value = '1250×80×12';
-document.getElementById('x2-cn-class').value = 'A';
-document.getElementById('x2-cn-qty').value = '1500';
+setQty('A', '1500');
 x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
 check('GỘP 1 DÒNG: lưu trùng tổ hợp → vẫn 3 dòng (KHÔNG thêm dòng thứ 4)',
   state.xuong2ChonNanThoRecords.length === 3);
@@ -560,6 +575,32 @@ check('MIGRATE: lô Sấy 1 trỏ o-dup-2 được TRỎ LẠI o-dup-1 + tombsto
 check('MIGRATE: đã lưu lại localStorage (danh sách gộp = 2 dòng)',
   JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_CHON_NAN) || '[]').length === 2);
 
+// ─── O1. NHẬP NHIỀU PHÂN LOẠI CÙNG LÚC + Ô TRỐNG GIỮ NGUYÊN ──────
+selBt.value = 'bt-2';
+x2.updateXuong2ChonNanLinked();
+document.getElementById('x2-cn-date').value = '2026-09-25';
+selSize.value = '1300×90×12';
+['A', 'A1', 'B', 'reject'].forEach(cls => setQty(cls, ''));
+setQty('A', '40');
+setQty('B', '60');
+const multiBefore = state.xuong2ChonNanThoRecords.length;
+x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
+const multiRows = state.xuong2ChonNanThoRecords.filter(r =>
+  r.baothoId === 'bt-2' && r.date === '2026-09-25' && r.sizeKey === '1300×90×12');
+check('NHẬP NHANH: một lần lưu tạo cả A=40 và B=60; ô trống không tạo dòng',
+  state.xuong2ChonNanThoRecords.length === multiBefore + 2 &&
+  multiRows.length === 2 && multiRows.some(r => r.cls === 'A' && r.quantity === 40) &&
+  multiRows.some(r => r.cls === 'B' && r.quantity === 60) &&
+  !multiRows.some(r => r.cls === 'A1' || r.cls === 'reject'));
+setQty('B', '70');
+x2.handleXuong2ChonNanSubmit({ preventDefault(){} });
+check('NHẬP NHANH: lưu B=70 cập nhật tổng B; ô A trống giữ nguyên A=40',
+  state.xuong2ChonNanThoRecords.length === multiBefore + 2 &&
+  (state.xuong2ChonNanThoRecords.find(r => r.baothoId === 'bt-2' &&
+    r.date === '2026-09-25' && r.cls === 'A') || {}).quantity === 40 &&
+  (state.xuong2ChonNanThoRecords.find(r => r.baothoId === 'bt-2' &&
+    r.date === '2026-09-25' && r.cls === 'B') || {}).quantity === 70);
+
 // ─── O2. CẤU TRÚC cho chức năng 1 tổ hợp 1 dòng (gộp dòng trùng) ──
 check('CẤU TRÚC (js/xuong2.js): key/merge/dedupe + export (KHÔNG còn ô tồn theo lô/ngày)',
   jsX2Src.includes('function chonNanRowKeyOf') && jsX2Src.includes('function chonNanMergeInto') &&
@@ -573,4 +614,3 @@ check('CẤU TRÚC (styles.css): KHÔNG còn khối CSS .x2-cn-lot-*',
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
-

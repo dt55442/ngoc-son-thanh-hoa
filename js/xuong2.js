@@ -5473,6 +5473,21 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       r.external ? (r.supplier || '') : ''
     ].join('|');
   }
+  function chonNanQtyByClassOf(group) {
+    const totals = Object.fromEntries(NAN_CLASSES.map(c => [c.id, 0]));
+    (state.xuong2ChonNanThoRecords || []).forEach(r => {
+      if (!r || !!r.external !== !!group.external ||
+          String(r.date || '') !== String(group.date || '') ||
+          String(r.sizeKey || '') !== String(group.sizeKey || '')) return;
+      if (group.external
+        ? String(r.supplier || '') !== String(group.supplier || '')
+        : String(r.baothoId || '') !== String(group.baothoId || '')) return;
+      if (Object.prototype.hasOwnProperty.call(totals, r.cls)) {
+        totals[r.cls] += Number(r.quantity) || 0;
+      }
+    });
+    return totals;
+  }
   // Gộp các dòng TRÙNG (1 tổ hợp = 1 dòng) — trả về dòng sống nếu có gộp, null nếu không.
   //   • keepId khác rỗng (đang SỬA): giữ chính dòng keepId, gán payload, xóa dòng trùng khác.
   //   • keepId rỗng (GHI MỚI): đã có dòng trùng → chọn dòng sống (ưu tiên dòng đang có
@@ -5771,7 +5786,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       const d = baoThoDisplay(bt);
       const runs = chonNanRunsOf(bt.id);
       const runTxt = runs > 0 ? ` · đã chọn ${runs} lượt` : '';
-      return `<option value="${escapeHTML(bt.id)}">Bào thô ${formatDateDDMMYY(bt.date)} · ${escapeHTML(d.materialType || '—')} · NCC ${escapeHTML(d.supplier || '—')}${escapeHTML(runTxt)}</option>`;
+      const shiftName = d.shiftIdx == null ? '' : (shiftMetaOf('Xưởng 2')[d.shiftIdx] || {}).name || `Ca ${d.shiftIdx + 1}`;
+      const shiftTxt = shiftName ? ` · ${escapeHTML(shiftName)}` : '';
+      const weight = Number(d.klOngBo);
+      const weightTxt = ` · ${Number.isFinite(weight) && weight > 0 ? fmtKg(weight) : '—'} kg`;
+      return `<option value="${escapeHTML(bt.id)}">Bào thô ${formatDateDDMMYY(bt.date)}${shiftTxt}${weightTxt}${escapeHTML(runTxt)}</option>`;
     });
     let html = lots.join('');
     if (!html) html = `<option value="" disabled>— Chưa có lô bào thô (vẫn có thể chọn "Thêm loại mới") —</option>`;
@@ -5869,18 +5888,42 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     return { dims: parts, sizeKey: v, external: false };
   }
 
-  // Ô TỰ TÍNH: thể tích 1 thanh · thể tích lượt + cảnh báo NGUỒN (cộng/không cộng)
+  function chonNanFormGroupOf(size) {
+    const lotSel = document.getElementById('x2-cn-baotho');
+    return {
+      baothoId: size.external ? '' : ((lotSel && lotSel.value) || ''),
+      date: ((document.getElementById('x2-cn-date') || {}).value) || '',
+      sizeKey: size.sizeKey || dimKeyOf(size.dims[0], size.dims[1], size.dims[2]),
+      external: !!size.external,
+      supplier: size.external ? (((document.getElementById('x2-cn-ncc') || {}).value) || '').trim() : ''
+    };
+  }
+
+  function renderX2ChonNanQtySummary() {
+    const size = currentChonNanSize();
+    const totals = chonNanQtyByClassOf(chonNanFormGroupOf(size));
+    NAN_CLASSES.forEach(c => {
+      const el = document.getElementById(`x2-cn-current-${c.id}`);
+      if (el) el.textContent = `Đã ghi: ${fmtThanh(totals[c.id])} thanh`;
+    });
+  }
+
+  // Ô TỰ TÍNH: thể tích 1 thanh · thể tích các số lượng vừa nhập + cảnh báo NGUỒN
   function renderX2ChonNanCalc() {
     const box = document.getElementById('x2-cn-calc');
     if (!box) return;
     const size = currentChonNanSize();
+    renderX2ChonNanQtySummary();
     const [d, r, t] = size.dims;
     if (!(d > 0 && r > 0 && t > 0)) {
       box.innerHTML = `<span class="x2-ong-calc-label">Chọn loại nan (hoặc nhập Dài/Rộng/Dày khi thêm mới)</span>`;
       return;
     }
     const unit = unitVolOf(d, r, t);
-    const qty = Number((document.getElementById('x2-cn-qty') || {}).value) || 0;
+    const qty = NAN_CLASSES.reduce((sum, c) => {
+      const raw = String((document.getElementById(`x2-cn-qty-${c.id}`) || {}).value || '').trim();
+      return sum + (raw ? (Number(raw) || 0) : 0);
+    }, 0);
     const vol = Math.round(qty * unit * 10000) / 10000;
     const srcTxt = size.external
       ? '<strong style="color:#b45309;">ngoài công đoạn</strong>'
@@ -5893,12 +5936,11 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   function resetXuong2ChonNanForm() {
     state.x2ChonNanEditId = null;
-    ['x2-cn-dai', 'x2-cn-rong', 'x2-cn-day', 'x2-cn-qty', 'x2-cn-ncc'].forEach(id => {
+    ['x2-cn-dai', 'x2-cn-rong', 'x2-cn-day', 'x2-cn-ncc',
+      ...NAN_CLASSES.map(c => `x2-cn-qty-${c.id}`)].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
-    const cls = document.getElementById('x2-cn-class');
-    if (cls) cls.value = 'A';
     const d = document.getElementById('x2-cn-date');
     if (d) d.value = '';
     const sh = document.getElementById('x2-cn-shift');
@@ -5914,13 +5956,14 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     syncX2ChonNanEditBanner();
   }
 
-  // ─── SAU KHI LƯU (ghi mới): GIỮ NGUYÊN Lô · Ngày · Loại nan · Phân loại ──
-  // Người chọn nan thường nhập liên tiếp nhiều số lượng cho cùng một loại nan /
-  // nhiều phân loại → chỉ XOÁ ô Số lượng, không bắt chọn lại từ đầu.
+  // ─── SAU KHI LƯU (ghi mới): GIỮ NGUYÊN Lô · Ngày · Loại nan ──
+  // Các ô số lượng về trống; số đã ghi được cập nhật dưới từng phân loại.
   function keepChonNanFormAfterSave() {
     state.x2ChonNanEditId = null;
-    const qty = document.getElementById('x2-cn-qty');
-    if (qty) qty.value = '';
+    NAN_CLASSES.forEach(c => {
+      const qty = document.getElementById(`x2-cn-qty-${c.id}`);
+      if (qty) qty.value = '';
+    });
     const sel = document.getElementById('x2-cn-baotho');
     const isNew = !!(sel && sel.value === CN_NEW_LOT_VALUE);
     const bt = baoThoLotOf(sel ? sel.value : '');
@@ -5962,10 +6005,29 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       showToast('Nan mua ngoài công đoạn: hãy ghi Nhà cung cấp!', 'error');
       return;
     }
-    const cls = (document.getElementById('x2-cn-class') || {}).value || 'A';
-    if (!NAN_CLASSES.some(c => c.id === cls)) { showToast('Hãy chọn phân loại nan!', 'error'); return; }
-    const quantity = Number((document.getElementById('x2-cn-qty') || {}).value) || 0;
-    if (!Number.isFinite(quantity) || quantity <= 0) { showToast('Số lượng phải là số thanh lớn hơn 0!', 'error'); return; }
+    const quantities = NAN_CLASSES.map(c => {
+      const el = document.getElementById(`x2-cn-qty-${c.id}`);
+      const raw = String((el && el.value) || '').trim();
+      return { cls: c.id, raw, quantity: raw ? Number(raw) : null };
+    }).filter(x => x.raw !== '');
+    if (!quantities.length) {
+      showToast('Nhập số lượng cho ít nhất một phân loại nan!', 'error');
+      return;
+    }
+    for (const item of quantities) {
+      if (!Number.isFinite(item.quantity) || !Number.isInteger(item.quantity) || item.quantity <= 0) {
+        showToast(`${nanClassLabel(item.cls)} phải là số thanh nguyên lớn hơn 0!`, 'error');
+        return;
+      }
+      if (!x2Num6Ok(item.quantity, `Số lượng ${nanClassLabel(item.cls)}`)) return;
+    }
+    const editing = state.x2ChonNanEditId
+      ? (state.xuong2ChonNanThoRecords || []).find(r2 => r2.id === state.x2ChonNanEditId)
+      : null;
+    if (state.x2ChonNanEditId && !editing) {
+      showToast('Không tìm thấy lượt chọn nan cần sửa!', 'error');
+      return;
+    }
 
     // NGƯỜI CHỌN NAN + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Chọn nan")
     // GIAI ĐOẠN 2: nếu lượt ghi CA → snapshot CHỈ lấy người + giờ của ca đó; số thanh
@@ -5974,7 +6036,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const snap = hrChonNanSnapshot(dateVal, shiftIdx);
     const btD = bt ? baoThoDisplay(bt) : null;
     const unitVol = unitVolOf(d, r, t);
-    const payload = {
+    const basePayload = {
       baothoId,
       external: !!size.external,   // true = nan mua ngoài công đoạn → KHÔNG cộng sang Bào Thô
       materialId: bt ? (bt.materialId || '') : '',
@@ -5987,41 +6049,42 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       shiftIdx,                    // GIAI ĐOẠN 2: ca của lượt (null = cả ngày/chưa rõ ca)
       dims: [d, r, t],
       sizeKey: size.sizeKey || dimKeyOf(d, r, t),
-      cls,
-      quantity,
-      unitVol,
-      volume: Math.round(quantity * unitVol * 10000) / 10000,
       worker: snap.worker, workTime: snap.workTime,
       workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
     };
 
-    if (state.x2ChonNanEditId) {
-      const rec = (state.xuong2ChonNanThoRecords || []).find(r2 => r2.id === state.x2ChonNanEditId);
-      if (!rec) { showToast('Không tìm thấy lượt chọn nan cần sửa!', 'error'); return; }
-      Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
-      // Sửa sang tổ hợp ĐANG CÓ dòng khác (cùng lô · ngày · kích thước · phân loại)
-      // → gộp về dòng đang sửa (số nhập = TỔNG), xóa dòng trùng (kèm trỏ lô Sấy 1)
-      chonNanMergeInto(payload, rec.id);
-      saveXuong2ChonNan();
-      showToast('Đã cập nhật lượt chọn nan thô!', 'success');
-      resetXuong2ChonNanForm();          // sửa xong → về form ghi mới (trắng)
-    } else {
-      const list = (state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords || []);
-      // MỖI TỔ HỢP CHỈ 1 DÒNG — số nhập = TỔNG: đã có dòng trùng (kể cả dữ liệu cũ
-      // nhiều dòng cùng kích thước · phân loại) → cập nhật dòng đó, KHÔNG cộng dồn.
+    const list = (state.xuong2ChonNanThoRecords = state.xuong2ChonNanThoRecords || []);
+    let total = 0;
+    quantities.forEach(item => {
+      const payload = {
+        ...basePayload,
+        cls: item.cls,
+        quantity: item.quantity,
+        unitVol,
+        volume: Math.round(item.quantity * unitVol * 10000) / 10000
+      };
+      total += item.quantity;
+      if (editing && editing.cls === item.cls) {
+        Object.assign(editing, payload, { updatedAt: new Date().toISOString() });
+        chonNanMergeInto(payload, editing.id);
+        return;
+      }
       const merged = chonNanMergeInto(payload, null);
-      if (merged) {
-        showToast(`Đã cập nhật TỔNG ${fmtThanh(quantity)} thanh cho ${size.sizeKey} · ${nanClassLabel(cls)} (ngày ${formatDateDDMMYY(dateVal)})!`, 'success');
-      } else {
+      if (!merged) {
         list.push({
           id: 'x2cn-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
           ...payload,
           createdAt: new Date().toISOString()
         });
-        showToast('Đã ghi lượt chọn nan thô!', 'success');
       }
-      saveXuong2ChonNan();
-      keepChonNanFormAfterSave();        // GIỮ lô/ngày/loại nan/phân loại để nhập tiếp
+    });
+    saveXuong2ChonNan();
+    if (editing) {
+      showToast(`Đã cập nhật ${quantities.length} phân loại · ${fmtThanh(total)} thanh!`, 'success');
+      resetXuong2ChonNanForm();
+    } else {
+      showToast(`Đã lưu ${quantities.length} phân loại · ${fmtThanh(total)} thanh!`, 'success');
+      keepChonNanFormAfterSave();        // GIỮ lô/ngày/loại nan để nhập tiếp
       x2ShiftEmptyToast('x2-cn-shift');  // nhắc nhẹ nếu chưa ghi ca (không chặn)
     }
     renderX2ChonNanCard();
@@ -6052,9 +6115,8 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     const dims = Array.isArray(rec.dims) ? rec.dims : [];
     const setVal = (fid, v) => { const el = document.getElementById(fid); if (el) el.value = (v == null || v === '') ? '' : String(v); };
     setVal('x2-cn-dai', dims[0]); setVal('x2-cn-rong', dims[1]); setVal('x2-cn-day', dims[2]);
-    setVal('x2-cn-qty', rec.quantity);
-    const cls = document.getElementById('x2-cn-class');
-    if (cls) cls.value = rec.cls || 'A';
+    const qtyByClass = chonNanQtyByClassOf(rec);
+    NAN_CLASSES.forEach(c => setVal(`x2-cn-qty-${c.id}`, qtyByClass[c.id] > 0 ? qtyByClass[c.id] : ''));
     renderX2ChonNanCalc();
     syncX2ChonNanEditBanner();
   }
@@ -6190,7 +6252,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       const rec = (state.xuong2ChonNanThoRecords || []).find(r => r.id === state.x2ChonNanEditId);
       if (txt) {
         txt.textContent = rec
-          ? `Đang sửa lượt chọn nan ngày ${formatDateDDMMYY(rec.date)} — bấm "Lưu Lượt Chọn Nan" hoặc "Làm Mới Form" để thoát.`
+          ? `Đang sửa nhóm nan ${rec.sizeKey || ''} ngày ${formatDateDDMMYY(rec.date)} — có thể cập nhật nhiều phân loại cùng lúc.`
           : 'Đang sửa lượt chọn nan thô.';
       }
       banner.style.display = '';

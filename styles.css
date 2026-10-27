@@ -5827,6 +5827,32 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 .x2-form-row .form-group input,
 .x2-form-row .form-group select { width: 100%; }
 
+.x2-cn-qty-group { flex: 1 1 100%; }
+.x2-cn-qty-help { color: var(--text-muted); }
+.x2-cn-qty-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.x2-cn-qty-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+.x2-cn-qty-cell label { font-weight: 700; }
+.x2-cn-qty-cell input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.x2-cn-qty-cell small { color: var(--text-muted); }
+
 /* Ô SỐ GỌN: tối đa 6 chữ số (999.999) — không cần rộng, số căn phải cho dễ so.
    Desktop: 128px; điện thoại: 2 ô / hàng (xem media bên dưới). */
 .x2-form-row .form-group.x2-num6 { flex: 0 0 128px; }
@@ -5860,6 +5886,8 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
   }
   .x2-form-row .form-group { gap: 4px; }
   .x2-cut-form-wrap { padding: 10px 12px; }
+  .x2-cn-qty-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .x2-cn-qty-cell { padding: 8px; }
 }
 
 /* ── BẢNG LỊCH SỬ CẮT/CHỌN: viền riêng tách khỏi form + cuộn + thu gọn ── */

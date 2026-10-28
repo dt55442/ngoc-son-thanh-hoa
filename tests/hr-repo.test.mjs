@@ -46,6 +46,12 @@ await repo.putDomain('demo', [
 ]);
 check('PUT: dữ liệu KHÔNG đổi -> không ghi lại tháng 11 (tiết kiệm)', repo.jsonOf('demo', '2026-11') === first);
 await repo.putDomain('demo', [
+  { id: 'a', date: '2026-10-01', updatedAt: '2026-10-01T00:00:00Z', value: 7 },
+  { id: 'b', date: '2026-11-01', updatedAt: '2026-11-01T00:00:00Z' }
+]);
+check('PUT: sửa nội dung cùng số dòng và dấu thời gian vẫn ghi lại tháng cũ',
+  repo.loadDomainSync('demo').find(r => r.id === 'a').value === 7);
+await repo.putDomain('demo', [
   { id: 'a', date: '2026-10-01', updatedAt: '2026-10-01T00:00:00Z' }
 ]);
 check('PUT: mặc định KHÔNG xoá tháng vắng mặt (an toàn khi state mới có cache)',

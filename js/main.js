@@ -32,7 +32,7 @@ import { loadQcPressLogs } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI �
 import { loadX2IncidentReports, updateIncidentBadge } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
 import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard, hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday } from './hr.js'; // SƠ ĐỒ BONG BÓNG NHÂN SỰ (21/10/2026)
-import { applyCheckinRecord, approveLeave, approveOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deleteOvertime, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, renderHrView, renderHrVisible, renderHrAfterBoardChange, hrShowMoreRows, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, setShiftTypePreset, HR_CARD_DEFS, hrDockClose } from './hr.js';
+import { applyCheckinRecord, approveLeave, approveOvertime, approveOvertimeAmendment, cancelOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeOvertimeAmendmentModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleOvertimeAmendmentSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, rejectOvertimeAmendment, renderHrView, renderHrVisible, renderHrAfterBoardChange, hrShowMoreRows, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, requestOvertimeAmendment, setShiftTypePreset, HR_CARD_DEFS, hrDockClose } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { APP_VERSION, state } from './state.js';
@@ -129,7 +129,7 @@ function yieldBootFrame() {
     loadX2IncidentReports(); // PHIẾU BÁO CÁO SỰ CỐ (giờ sự cố lấy từ phiếu ĐÃ DUYỆT)
     loadRateApprovals(); // BẢNG ĐỊNH MỨC TỔNG HỢP — bản ghi PHÊ DUYỆT theo (xưởng, tháng)
     loadKilnData(); // Độ ẩm lò sấy + ngưỡng đạt (QC nhập hàng ngày — js/kiln.js)
-    loadHrData();
+    await loadHrData();
     await yieldBootFrame();
     setTreLoadingStatus('Đang hoàn tất giao diện…');
     // DỌN DỮ LIỆU CŨ: xóa hẳn lô nan còn sót stage 'bao_tinh' (cột Kanban "4. Bào
@@ -173,7 +173,7 @@ function yieldBootFrame() {
     // Đăng ký Service Worker để hoạt động OFFLINE (PWA)
     registerServiceWorker();
     // Khởi động đồng bộ ONLINE (Firebase) nếu có kết nối & SDK
-    initFirebase();
+    await initFirebase();
     // Lưới an toàn đồng bộ: đẩy nốt dữ liệu chờ lên mây khi người dùng rời trang,
     // chuyển sang tab khác, hoặc mạng vừa quay lại (tránh mất dữ liệu ép ván mới nhập)
     document.addEventListener('visibilitychange', () => {
@@ -531,10 +531,14 @@ function yieldBootFrame() {
     hrApproveLeave: approveLeave,
     hrRejectLeave: rejectLeave,
     hrDeleteLeave: deleteLeave,
-    // Đăng ký tăng ca (mini card tab Nhân Sự — duyệt/xóa chỉ Admin & Ban Quản Lý)
+    // Đăng ký tăng ca (mini card tab Nhân Sự — duyệt/hủy chỉ Admin & Ban Quản Lý)
     hrApproveOvertime: approveOvertime,
     hrRejectOvertime: rejectOvertime,
-    hrDeleteOvertime: deleteOvertime,
+    hrDeleteOvertime: cancelOvertime,
+    hrRequestOvertimeAmendment: requestOvertimeAmendment,
+    hrApproveOvertimeAmendment: approveOvertimeAmendment,
+    hrRejectOvertimeAmendment: rejectOvertimeAmendment,
+    hrCancelOvertime: cancelOvertime,
     hrEditRecruitment: openRecruitmentModal,
     hrDeleteRecruitment: deleteRecruitment,
     // Vị trí làm việc (onclick trong HTML render động)

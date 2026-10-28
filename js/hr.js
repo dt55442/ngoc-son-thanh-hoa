@@ -18,7 +18,7 @@ import { firePushSync, initLucide, requireEditPermission, requirePayApply, requi
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, APP_VERSION, state } from './state.js';
-import { canArea, canPayLock } from './permissions.js';
+import { canArea, canEditAnything, canPayLock } from './permissions.js';
 import { escapeHTML, showToast } from './utils.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc đọc file Excel
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB)
@@ -85,7 +85,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   //   · localStorage chỉ giữ CACHE 2 tháng gần nhất để mở app là thấy ngay
   //   · Phần cũ tự nạp sau (không chặn boot) rồi vẽ lại nếu đang ở tab HR
   const HR_BIG_DOMAINS = ['hrAssignments', 'hrAttendance', 'hrCheckins'];
-  let hrHydrated = false, hrHydrating = false;
+  let hrHydrated = false;
+  let hrHydrationPromise = null;
+  let hrRepoWarned = false;
   function hrMonthKeyOf(rec) {
     return String((rec && (rec.date || rec.from || (rec.createdAt || '').slice(0, 10))) || '').slice(0, 7);
   }
@@ -118,36 +120,47 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (!io) return;
     try { localStorage.setItem(io.key, JSON.stringify(hrCacheSlice(state[dom] || []))); } catch (e) {}
   }
-  // Nạp phần dữ liệu cũ từ IndexedDB (KHÔNG chặn boot). Lần đầu chạy: chuyển
-  // dữ liệu đang có trong localStorage sang IndexedDB rồi thu gọn localStorage.
+  // Nạp phần dữ liệu cũ từ IndexedDB trước khi bật đồng bộ mây.
   function hrHydrateFromRepo() {
-    if (!repo.available() || hrHydrated || hrHydrating) return;
-    hrHydrating = true;
-    repo.prime(HR_BIG_DOMAINS)
+    if (!repo.available() || hrHydrated) return Promise.resolve(true);
+    if (hrHydrationPromise) return hrHydrationPromise;
+    hrHydrationPromise = repo.prime(HR_BIG_DOMAINS)
       .then(() => Promise.all(HR_BIG_DOMAINS.map(d => repo.loadDomain(d).then(arr => [d, arr]))))
       .then(pairs => {
-        let migrated = false;
+        const writes = [];
         pairs.forEach(([dom, arr]) => {
           const local = state[dom] || [];
-          if (!arr.length && local.length) {
-            // lần đầu: chuyển sang IndexedDB; CHỈ thu gọn localStorage sau khi
-            // ghi chắc chắn thành công (tránh mất dữ liệu nếu IndexedDB lỗi)
-            migrated = true;
-            repo.putDomain(dom, local).then(res => { if (res && res.persisted) hrWriteLocalCache(dom); });
-            return;
+          const merged = arr.length ? hrMergeRecords(arr, local) : local;
+          state[dom] = merged;
+          if (JSON.stringify(merged) !== JSON.stringify(arr) && merged.length) {
+            writes.push(repo.putDomain(dom, merged, { dropMissing: true }));
           }
-          if (arr.length) state[dom] = hrMergeRecords(arr, local);
         });
-        hrHydrated = true;
-        hrBumpIndex();
-        // Dữ liệu bố trí nạp bù từ IndexedDB có thể còn nhãn cũ "Lò Hơi" ⇒ di trú
-        try { migrateHrDeptMerge(); } catch (e) {}
-        HR_BIG_DOMAINS.forEach(d => { if (repo.healthy(d)) hrWriteLocalCache(d); }); // thu gọn localStorage còn 2 tháng
-        if (migrated) console.info('[NHÂN SỰ] Đã chuyển dữ liệu lớn (bố trí/chấm công/giờ máy) sang IndexedDB theo tháng.');
-        if (state.activeView === 'hr-view') { try { renderHrVisible(); } catch (e) {} }
+        return Promise.all(writes).then(results => {
+          const failed = results.find(r => !r || !r.persisted);
+          if (failed) throw (failed.error || new Error('Không ghi được dữ liệu Nhân sự đã hợp nhất vào IndexedDB.'));
+          hrHydrated = true;
+          hrBumpIndex();
+          // Dữ liệu bố trí nạp bù từ IndexedDB có thể còn nhãn cũ "Lò Hơi" ⇒ di trú
+          try { migrateHrDeptMerge(); } catch (e) { console.error('[NHÂN SỰ] Không di trú được bộ phận cũ:', e); }
+          HR_BIG_DOMAINS.forEach(d => { if (repo.healthy(d)) hrWriteLocalCache(d); });
+          if (state.activeView === 'hr-view') { try { renderHrVisible(); } catch (e) { console.error('[NHÂN SỰ] Không vẽ lại được dữ liệu đã nạp:', e); } }
+          return true;
+        });
       })
-      .catch(() => {})
-      .then(() => { hrHydrating = false; });
+      .catch(e => {
+        console.error('[NHÂN SỰ] Không nạp/ghi bền được kho IndexedDB:', e);
+        if (!hrRepoWarned) {
+          hrRepoWarned = true;
+          showToast('Không nạp hoặc lưu bền được toàn bộ dữ liệu Nhân Sự trên thiết bị. Dữ liệu chưa được xác nhận vẫn cần sao lưu/đồng bộ lại.', 'error');
+        }
+        return false;
+      })
+      .then(ok => {
+        hrHydrationPromise = null;
+        return ok;
+      });
+    return hrHydrationPromise;
   }
 
   // ─── GIỚI HẠN SỐ DÒNG BẢNG (20/10/2026) ────────────────────────
@@ -194,12 +207,13 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // Lịch làm việc theo tháng (ngày nghỉ/lễ) — object theo khóa 'YYYY-MM'
     try { state.hrWorkCalendar = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CALENDAR)) || {}; } catch (e) { state.hrWorkCalendar = {}; }
     if (!state.hrWorkCalendar || typeof state.hrWorkCalendar !== 'object') state.hrWorkCalendar = {};
-    // Nạp nốt các tháng cũ từ IndexedDB (không chặn boot) — xem hrHydrateFromRepo
-    hrHydrateFromRepo();
-    // GỘP BỘ PHẬN "Lò Hơi" → "Cơ Điện" (21/10/2026) — chạy sau khi đã nạp đủ
-    // dữ liệu nhỏ; phần bố trí nạp bù từ IndexedDB sẽ được di trú tiếp trong
-    // hrHydrateFromRepo (idempotent nên chạy 2 lần không sao).
-    try { migrateHrDeptMerge(); } catch (e) { /* không chặn boot */ }
+    // Hoàn tất nạp từ IndexedDB trước khi khởi tạo đồng bộ; sau đó áp dụng
+    // migration cho cả chế độ fallback khi IndexedDB không khả dụng.
+    return hrHydrateFromRepo().then(() => {
+      try { migrateHrDeptMerge(); }
+      catch (e) { console.error('[NHÂN SỰ] Không di trú được bộ phận cũ:', e); }
+      return true;
+    });
   }
 
   // ─── DI TRÚ BỘ PHẬN: "Lò Hơi" → "Cơ Điện" (21/10/2026) ──────────
@@ -282,17 +296,47 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     { dom: 'hrWorkCalendar',  key: STORAGE_KEY_HR_CALENDAR,   get: () => state.hrWorkCalendar,  def: {} }
   ];
   let hrQuotaWarned = false;
+  function reportHrRepoFailure(io, value, error) {
+    console.error('[NHÂN SỰ] Không ghi bền được ' + io.dom + ' vào IndexedDB:', error);
+    try {
+      localStorage.setItem(io.key, JSON.stringify(value == null ? io.def : value));
+    } catch (fallbackError) {
+      console.error('[NHÂN SỰ] Không thể giữ bản dự phòng localStorage cho ' + io.dom + ':', fallbackError);
+      showToast('Không ghi được dữ liệu Nhân Sự vào IndexedDB hoặc bộ nhớ dự phòng. Hãy xuất dữ liệu ngay và kiểm tra dung lượng thiết bị.', 'error');
+      return;
+    }
+    if (!hrRepoWarned) {
+      hrRepoWarned = true;
+      showToast('Kho Nhân Sự IndexedDB đang lỗi; dữ liệu được giữ tạm trong localStorage trên thiết bị này. Chưa thể bảo đảm đồng bộ đầy đủ.', 'error');
+    }
+  }
   function saveHrData(keys) {
     const want = Array.isArray(keys) && keys.length ? keys : HR_DOMAIN_IO.map(x => x.dom);
     const changed = [];
+    const persistenceWrites = [];
     want.forEach(dom => {
       const io = HR_DOMAIN_IO.find(x => x.dom === dom);
       if (!io) return;
       const val = io.get();
       const isBig = HR_BIG_DOMAINS.indexOf(dom) !== -1;
+      const repoWasHealthy = isBig && repo.healthy(dom);
+      if (isBig) {
+        try {
+          const write = repo.putDomain(dom, val || [], { dropMissing: hrHydrated });
+          persistenceWrites.push(Promise.resolve(write).then(result => {
+            if (!repo.available() || (result && result.persisted)) {
+              if (result && result.persisted && hrHydrated) hrWriteLocalCache(dom);
+              return;
+            }
+            reportHrRepoFailure(io, val, (result && result.error) || repo.lastWriteErrorRef());
+          }).catch(error => reportHrRepoFailure(io, val, error)));
+        } catch (error) {
+          persistenceWrites.push(Promise.resolve().then(() => reportHrRepoFailure(io, val, error)));
+        }
+      }
       // Miền LỚN: localStorage chỉ giữ 2 tháng gần nhất (cache mở app nhanh),
       // toàn bộ dữ liệu nằm ở IndexedDB theo tháng (xem hrHydrateFromRepo).
-      const payload = (isBig && repo.healthy(dom)) ? hrCacheSlice(val) : (val == null ? io.def : val);
+      const payload = (isBig && repoWasHealthy) ? hrCacheSlice(val) : (val == null ? io.def : val);
       try {
         localStorage.setItem(io.key, JSON.stringify(payload));
       } catch (e) {
@@ -304,12 +348,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
           try { showToast('Bộ nhớ trình duyệt đã đầy — dữ liệu Nhân Sự vẫn được giữ trên máy và đồng bộ mây, nhưng nên xuất file sao lưu.', 'error'); } catch (e2) {}
         }
       }
-      if (isBig) { try { repo.putDomain(dom, val || [], { dropMissing: hrHydrated }); } catch (e) {} }
       changed.push(dom);
     });
     if (changed.length) logDataChange(changed);
     hrBumpIndex();   // dữ liệu đổi → chỉ mục tra cứu dựng lại ở lần đọc kế tiếp
     firePushSync();  // đồng bộ lên mây nếu online
+    return Promise.all(persistenceWrites);
   }
 
   // ─── CHỈ MỤC TRA CỨU O(1) (20/10/2026) ──────────────────────────
@@ -989,6 +1033,84 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return `${fmtHour(ot.start)} → ${fmtHour(ot.end)} · ${fmtHm(m)}`;
   }
 
+  function overtimeActor() {
+    const user = state.currentUser || {};
+    return {
+      uid: String(user.uid || ''),
+      email: String(user.email || user.username || ''),
+      name: String(user.fullname || user.username || user.email || 'Không rõ'),
+      role: String(user.role || '')
+    };
+  }
+  function sameOvertimeActor(a, b) {
+    if (!a || !b) return false;
+    if (a.uid && b.uid) return a.uid === b.uid;
+    return !!(a.email && b.email && a.email.toLowerCase() === b.email.toLowerCase());
+  }
+  function overtimeSnapshot(ot) {
+    if (!ot) return null;
+    return {
+      employeeId: ot.employeeId || '',
+      date: ot.date || '',
+      start: ot.start || '',
+      end: ot.end || '',
+      plannedMin: Number(ot.plannedMin) || 0,
+      reason: ot.reason || '',
+      status: ot.status || 'pending'
+    };
+  }
+  function appendOvertimeAudit(ot, action, before, after, reason) {
+    if (!Array.isArray(ot.auditTrail)) ot.auditTrail = [];
+    const actor = overtimeActor();
+    ot.auditTrail.push({
+      id: 'ot-audit-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+      at: new Date().toISOString(),
+      action,
+      actor,
+      reason: String(reason || ''),
+      before: before ? JSON.parse(JSON.stringify(before)) : null,
+      after: after ? JSON.parse(JSON.stringify(after)) : null
+    });
+  }
+  function overtimeCanRequestAmendment(ot) {
+    const actor = overtimeActor();
+    const creator = ot && ot.createdBy ? ot.createdBy : {};
+    if (canArea('ap.ot', 'approve')) return true;
+    if (!state.currentUser) return false;
+    if (!creator.email && !creator.uid) return canEditAnything() || canPayLock();
+    return (!!creator.email && creator.email.toLowerCase() === actor.email.toLowerCase())
+      || (!!creator.uid && creator.uid === actor.uid);
+  }
+  function overtimeAuditActionLabel(action) {
+    return ({
+      submitted: 'Đã gửi đơn',
+      approved: 'Đã duyệt',
+      rejected: 'Đã từ chối',
+      amendment_requested: 'Đã yêu cầu điều chỉnh',
+      amendment_approved: 'Đã duyệt điều chỉnh',
+      amendment_rejected: 'Đã từ chối điều chỉnh',
+      cancelled: 'Đã hủy đơn'
+    })[action] || 'Đã thay đổi';
+  }
+  function overtimeAuditHtml(ot) {
+    const events = Array.isArray(ot.auditTrail) ? ot.auditTrail : [];
+    if (!events.length) return '<p class="hr-notes">Đơn cũ chưa có nhật ký chi tiết.</p>';
+    return '<details class="hr-overtime-audit"><summary>Nhật ký thao tác (' + events.length + ')</summary><ol>'
+      + events.map(ev => {
+        const actor = ev.actor || {};
+        const beforeAfter = (ev.before || ev.after)
+          ? '<details><summary>Xem nội dung trước/sau</summary><pre>' + escapeHTML(JSON.stringify({ before: ev.before, after: ev.after }, null, 2)) + '</pre></details>'
+          : '';
+        return '<li><strong>' + escapeHTML(overtimeAuditActionLabel(ev.action)) + '</strong>'
+          + ' · ' + escapeHTML(actor.name || actor.email || 'Không rõ')
+          + (actor.email ? ' (' + escapeHTML(actor.email) + ')' : '')
+          + ' · ' + escapeHTML(ev.at ? new Date(ev.at).toLocaleString('vi-VN') : '')
+          + (ev.reason ? '<br>Lý do: ' + escapeHTML(ev.reason) : '')
+          + beforeAfter + '</li>';
+      }).join('')
+      + '</ol></details>';
+  }
+
   function renderHrOvertimesTable() {
     const tbody = document.getElementById('hr-ot-body');
     if (!tbody) return;
@@ -1005,13 +1127,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       hrScheduleIcons();
       return;
     }
-    const approver = canArea('ap.ot', 'approve'); // duyệt/xóa: Admin / Ban Quản Lý (theo vùng ap.ot)
+    const approver = canArea('ap.ot', 'approve');
     const sorted = [...list].sort((a, b) =>
       String(b.date || '').localeCompare(String(a.date || '')) ||
       String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     tbody.innerHTML = sorted.map(o => {
       const st = o.status || 'pending';
-      const stCls = st === 'approved' ? 'ok' : (st === 'rejected' ? 'off' : 'warn');
+      const stCls = st === 'approved' ? 'ok' : (st === 'rejected' || st === 'cancelled' ? 'off' : 'warn');
+      const stLabel = ({ pending: 'Chờ duyệt', approved: 'Đồng ý', rejected: 'Không đồng ý', cancelled: 'Đã hủy' })[st] || 'Không rõ';
       const actMin = overtimeActualMin(o);
       const actHtml = actMin > 0
         ? `<span class="hr-chip on" title="Giờ tăng ca THỰC TẾ — tự tính từ Bảng bố trí theo ngày (tự cập nhật khi sửa giờ/sự cố)"><i data-lucide="check"></i> TC <strong>${fmtHm(actMin)}</strong></span>`
@@ -1021,16 +1144,34 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         actions.push(`<button class="btn btn-success btn-sm" onclick="app.hrApproveOvertime('${o.id}')" title="Duyệt Đồng ý"><i data-lucide="check"></i> Đồng Ý</button>`);
         actions.push(`<button class="btn btn-outline btn-sm" onclick="app.hrRejectOvertime('${o.id}')" title="Không duyệt" style="color:var(--danger);"><i data-lucide="x"></i> Không Đồng Ý</button>`);
       }
-      if (approver) {
-        actions.push(`<button class="btn btn-outline btn-icon btn-sm" onclick="app.hrDeleteOvertime('${o.id}')" title="Xóa đăng ký" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>`);
+      if (st !== 'cancelled' && overtimeCanRequestAmendment(o)) {
+        actions.push(`<button class="btn btn-outline btn-sm" onclick="app.hrRequestOvertimeAmendment('${o.id}')" title="Gửi yêu cầu điều chỉnh"><i data-lucide="file-pen-line"></i> Yêu cầu sửa</button>`);
       }
+      if (approver && st !== 'cancelled') {
+        actions.push(`<button class="btn btn-outline btn-sm" onclick="app.hrCancelOvertime('${o.id}')" title="Hủy đơn (giữ lại lịch sử)" style="color:var(--danger);"><i data-lucide="ban"></i> Hủy đơn</button>`);
+      }
+      const creator = o.createdBy || {};
+      const amendments = Array.isArray(o.amendments) ? o.amendments : [];
+      const amendmentHtml = amendments.map(a => {
+        const aLabel = ({ pending: 'Chờ duyệt', approved: 'Đã duyệt', rejected: 'Không đồng ý' })[a.status] || 'Không rõ';
+        const changes = a.proposed || {};
+        const amendActions = a.status === 'pending' && approver
+          ? `<button class="btn btn-success btn-sm" onclick="app.hrApproveOvertimeAmendment('${o.id}','${a.id}')">Duyệt sửa</button> <button class="btn btn-outline btn-sm" onclick="app.hrRejectOvertimeAmendment('${o.id}','${a.id}')">Từ chối sửa</button>`
+          : '';
+        return `<div class="hr-overtime-amendment"><strong>Yêu cầu sửa · ${escapeHTML(aLabel)}</strong>`
+          + `<div>${escapeHTML(a.requestedBy?.name || a.requestedBy?.email || 'Không rõ người gửi')} · ${escapeHTML(a.requestedAt ? new Date(a.requestedAt).toLocaleString('vi-VN') : '')}</div>`
+          + `<div>Lý do: ${escapeHTML(a.reason || '—')}</div>`
+          + `<div>Đề xuất: ${escapeHTML(changes.date || o.date)} · ${escapeHTML(changes.start || o.start)}–${escapeHTML(changes.end || o.end)} · ${escapeHTML(changes.reason || '—')}</div>`
+          + (a.reviewedBy ? `<div>Người xử lý: ${escapeHTML(a.reviewedBy.name || a.reviewedBy.email || '')} · ${escapeHTML(a.reviewedAt || '')}</div>` : '')
+          + amendActions + '</div>';
+      }).join('');
       return `<tr>
         <td><strong>${escapeHTML(hrEmpName(o.employeeId))}</strong><br><span style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(hrEmpDept(o.employeeId))}</span></td>
         <td>${fmtDateDMY(o.date)}</td>
         <td>${overtimePlannedText(o)}</td>
         <td>${actHtml}</td>
-        <td><span class="hr-chip ${stCls}">${LEAVE_STATUS[st]}</span>${o.approvedBy ? `<br><span style="font-size:0.68rem;color:var(--text-muted);">bởi ${escapeHTML(o.approvedBy)}</span>` : ''}</td>
-        <td class="hr-notes" title="${escapeHTML(o.reason || '')}">${escapeHTML(o.reason || '—')}</td>
+        <td><span class="hr-chip ${stCls}">${stLabel}</span>${creator.name ? `<br><span style="font-size:0.68rem;color:var(--text-muted);">Tạo bởi ${escapeHTML(creator.name)}${creator.email ? ' · ' + escapeHTML(creator.email) : ''}</span>` : '<br><span style="font-size:0.68rem;color:var(--text-muted);">Đơn cũ chưa lưu người tạo</span>'}${o.approvedBy ? `<br><span style="font-size:0.68rem;color:var(--text-muted);">Duyệt bởi ${escapeHTML(o.approvedBy)}</span>` : ''}</td>
+        <td class="hr-notes" title="${escapeHTML(o.reason || '')}">${escapeHTML(o.reason || '—')}${amendmentHtml}${overtimeAuditHtml(o)}</td>
         <td class="text-right"><div style="display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap;">${actions.join('')}</div></td>
       </tr>`;
     }).join('');
@@ -1146,6 +1287,97 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     document.getElementById('modal-overtime')?.classList.remove('show');
   }
 
+  function requestOvertimeAmendment(id) {
+    const ot = (state.hrOvertimes || []).find(x => x && x.id === id);
+    if (!ot || ot.status === 'cancelled') return;
+    if (!overtimeCanRequestAmendment(ot)) {
+      showToast('Chỉ người gửi đơn hoặc người có quyền duyệt mới được yêu cầu điều chỉnh.', 'error');
+      return;
+    }
+    if ((ot.amendments || []).some(a => a && a.status === 'pending')) {
+      showToast('Đơn này đang có yêu cầu điều chỉnh chờ duyệt.', 'error');
+      return;
+    }
+    const modal = document.getElementById('modal-overtime-amendment');
+    const startSel = document.getElementById('ot-amend-start');
+    const endSel = document.getElementById('ot-amend-end');
+    if (!modal || !startSel || !endSel) return;
+    const opts = `<option value="">--</option>` + hrHalfHourOptions().map(t => `<option value="${t}">${t}</option>`).join('');
+    startSel.innerHTML = opts;
+    endSel.innerHTML = opts;
+    document.getElementById('ot-amend-request-id').value = ot.id;
+    document.getElementById('ot-amend-employee').textContent = hrEmpName(ot.employeeId);
+    document.getElementById('ot-amend-date').value = ot.date || '';
+    startSel.value = ot.start || '';
+    endSel.value = ot.end || '';
+    document.getElementById('ot-amend-reason').value = ot.reason || '';
+    document.getElementById('ot-amend-why').value = '';
+    modal.classList.add('show');
+    hrScheduleIcons();
+  }
+
+  function closeOvertimeAmendmentModal() {
+    document.getElementById('modal-overtime-amendment')?.classList.remove('show');
+  }
+
+  function handleOvertimeAmendmentSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('ot-amend-request-id')?.value || '';
+    const ot = (state.hrOvertimes || []).find(x => x && x.id === id);
+    if (!ot || ot.status === 'cancelled') return;
+    if (!overtimeCanRequestAmendment(ot)) {
+      showToast('Chỉ người gửi đơn hoặc người có quyền duyệt mới được yêu cầu điều chỉnh.', 'error');
+      return;
+    }
+    if ((ot.amendments || []).some(a => a && a.status === 'pending')) {
+      showToast('Đơn này đang có yêu cầu điều chỉnh chờ duyệt.', 'error');
+      return;
+    }
+    const date = document.getElementById('ot-amend-date')?.value || '';
+    const start = document.getElementById('ot-amend-start')?.value || '';
+    const end = document.getElementById('ot-amend-end')?.value || '';
+    const businessReason = (document.getElementById('ot-amend-reason')?.value || '').trim();
+    const reason = (document.getElementById('ot-amend-why')?.value || '').trim();
+    if (!date || !start || !end) {
+      showToast('Vui lòng nhập đủ ngày và giờ dự kiến mới.', 'error');
+      return;
+    }
+    if (!reason) {
+      showToast('Bắt buộc nêu lý do điều chỉnh để người duyệt đối chiếu.', 'error');
+      return;
+    }
+    let plannedMin = toMinT(end) - toMinT(start);
+    if (plannedMin < 0) plannedMin += 1440;
+    if (!plannedMin) {
+      showToast('Giờ kết thúc phải khác giờ bắt đầu.', 'error');
+      return;
+    }
+    const proposed = { date, start, end, plannedMin, reason: businessReason };
+    const before = overtimeSnapshot(ot);
+    if (JSON.stringify(before) === JSON.stringify(Object.assign({}, before, proposed))) {
+      showToast('Nội dung điều chỉnh không có thay đổi.', 'info');
+      return;
+    }
+    const actor = overtimeActor();
+    const requestedAt = new Date().toISOString();
+    const amendment = {
+      id: 'otam-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+      status: 'pending',
+      requestedBy: actor,
+      requestedAt,
+      reason,
+      proposed
+    };
+    if (!Array.isArray(ot.amendments)) ot.amendments = [];
+    ot.amendments.push(amendment);
+    ot.updatedAt = requestedAt;
+    appendOvertimeAudit(ot, 'amendment_requested', before, Object.assign({}, before, proposed), reason);
+    saveHrData(['hrOvertimes']);
+    closeOvertimeAmendmentModal();
+    renderHrView();
+    showToast('Đã gửi yêu cầu điều chỉnh tăng ca; dữ liệu gốc được giữ nguyên cho tới khi duyệt.', 'success');
+  }
+
   function handleOvertimeSubmit(e) {
     e.preventDefault();
     // Người có quyền CHỐT CÔNG được gửi đơn bổ sung dù không có quyền sửa tab NS
@@ -1164,22 +1396,29 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const reason = (document.getElementById('ot-reason')?.value || '').trim();
     if (!date) { showToast('Vui lòng chọn ngày tăng ca!', 'error'); return; }
     if (!start || !end) { showToast('Vui lòng chọn giờ tăng ca dự kiến (từ → đến)!', 'error'); return; }
+    if (!reason) { showToast('Vui lòng nêu lý do đăng ký tăng ca!', 'error'); return; }
     let plannedMin = toMinT(end) - toMinT(start);
     if (plannedMin < 0) plannedMin += 1440; // làm qua nửa đêm
     if (plannedMin === 0) { showToast('Giờ kết thúc phải khác giờ bắt đầu!', 'error'); return; }
 
     const linked = !!(ciPayPendingOt && ciPayPendingOt.employeeId === employeeId && ciPayPendingOt.date === date);
-    const otId = `ot-${Date.now()}`;
-    state.hrOvertimes.push({
+    const otId = `ot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const createdAt = new Date().toISOString();
+    const ot = {
       id: otId,
       employeeId, date, start, end,
       plannedMin,
       reason,
       status: 'pending',
       autoFromCi: linked,
-      createdAt: new Date().toISOString()
-    });
-    saveHrData();
+      createdAt,
+      updatedAt: createdAt,
+      createdBy: overtimeActor(),
+      auditTrail: []
+    };
+    appendOvertimeAudit(ot, 'submitted', null, overtimeSnapshot(ot), reason);
+    state.hrOvertimes.push(ot);
+    saveHrData(['hrOvertimes']);
     // Gắn mã đơn vào DÒNG CÔNG đang xử lý → đơn được duyệt là dòng tự chốt
     if (linked) payMarkAddOt(employeeId, date, otId, reason || 'Bổ sung đơn TC từ bảng đối chiếu');
     ciPayPendingOt = null;
@@ -1219,8 +1458,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     showToast(`Đã KHÔNG ĐỒNG Ý đơn nghỉ của ${hrEmpName(l.employeeId)}`, 'info');
   }
 
-  // Duyệt / không duyệt / xóa đăng ký tăng ca — chỉ Admin & Ban Quản Lý
-  // (dùng chung cổng canApproveLeave với đơn nghỉ; editor chỉ gửi đăng ký).
+  // Duyệt / không duyệt / hủy đăng ký tăng ca — chỉ Admin & Ban Quản Lý.
   function approveOvertime(id) {
     if (!canArea('ap.ot', 'approve')) {
       showToast('Chỉ Admin & Ban Quản Lý mới được duyệt đăng ký tăng ca!', 'error');
@@ -1228,11 +1466,19 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
     const o = (state.hrOvertimes || []).find(x => x.id === id);
     if (!o || (o.status || 'pending') !== 'pending') return;
+    const actor = overtimeActor();
+    if (sameOvertimeActor(o.createdBy, actor)) {
+      showToast('Người tạo đơn không được tự duyệt đơn của mình.', 'error');
+      return;
+    }
+    const before = overtimeSnapshot(o);
     o.status = 'approved';
-    o.approvedBy = state.currentUser ? (state.currentUser.fullname || state.currentUser.username) : '';
+    o.approvedBy = actor.name;
+    o.approvedByEmail = actor.email;
     o.approvedAt = new Date().toISOString();
     o.updatedAt = o.approvedAt;
-    saveHrData();
+    appendOvertimeAudit(o, 'approved', before, overtimeSnapshot(o), '');
+    saveHrData(['hrOvertimes']);
     // Dòng công đang chờ "Bổ sung đơn TC" → tự chốt nếu TC đã được phủ đủ
     paySyncOtApproved(o);
     renderHrView();
@@ -1247,28 +1493,119 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
     const o = (state.hrOvertimes || []).find(x => x.id === id);
     if (!o || (o.status || 'pending') !== 'pending') return;
+    const actor = overtimeActor();
+    if (sameOvertimeActor(o.createdBy, actor)) {
+      showToast('Người tạo đơn không được tự từ chối đơn của mình.', 'error');
+      return;
+    }
+    const reviewReason = String(window.prompt('Nhập lý do từ chối đăng ký tăng ca:') || '').trim();
+    if (!reviewReason) {
+      showToast('Cần ghi lý do từ chối để lưu vết kiểm tra.', 'error');
+      return;
+    }
+    const before = overtimeSnapshot(o);
     o.status = 'rejected';
-    o.approvedBy = state.currentUser ? (state.currentUser.fullname || state.currentUser.username) : '';
+    o.approvedBy = actor.name;
+    o.approvedByEmail = actor.email;
     o.approvedAt = new Date().toISOString();
+    o.reviewReason = reviewReason;
     o.updatedAt = o.approvedAt;
-    saveHrData();
+    appendOvertimeAudit(o, 'rejected', before, overtimeSnapshot(o), reviewReason);
+    saveHrData(['hrOvertimes']);
     // Dòng công chờ đơn TC này → chuyển "Bị từ chối" để người xử lý biết
     paySyncOtRejected(o, 'Đơn tăng ca bị Ban lãnh đạo từ chối');
     renderHrView();
     showToast(`Đã KHÔNG duyệt đăng ký tăng ca của ${hrEmpName(o.employeeId)}`, 'info');
   }
 
-  function deleteOvertime(id) {
-    // Chỉ Admin & Ban Quản Lý — editor chỉ được GỬI đăng ký mới
+  function cancelOvertime(id) {
     if (!canArea('ap.ot', 'approve')) {
-      showToast('Chỉ Admin & Ban Quản Lý mới được xóa đăng ký tăng ca!', 'error');
+      showToast('Chỉ Admin & Ban Quản Lý mới được hủy đăng ký tăng ca!', 'error');
       return;
     }
-    trackDeleted('hrOvertimes', id);
-    state.hrOvertimes = (state.hrOvertimes || []).filter(o => o.id !== id);
-    saveHrData();
+    const o = (state.hrOvertimes || []).find(x => x.id === id);
+    if (!o || o.status === 'cancelled') return;
+    const reason = String(window.prompt('Nhập lý do hủy đơn tăng ca (bản ghi sẽ được giữ lại):') || '').trim();
+    if (!reason) {
+      showToast('Cần ghi lý do hủy; đơn chưa bị thay đổi.', 'error');
+      return;
+    }
+    const before = overtimeSnapshot(o);
+    const actor = overtimeActor();
+    const at = new Date().toISOString();
+    o.status = 'cancelled';
+    o.cancelledBy = actor;
+    o.cancelledAt = at;
+    o.updatedAt = at;
+    (o.amendments || []).filter(a => a && a.status === 'pending').forEach(a => {
+      a.status = 'rejected';
+      a.reviewedBy = actor;
+      a.reviewedAt = at;
+      a.reviewReason = 'Đơn tăng ca đã được hủy.';
+    });
+    appendOvertimeAudit(o, 'cancelled', before, overtimeSnapshot(o), reason);
+    saveHrData(['hrOvertimes']);
     renderHrView();
-    showToast('Đã xóa đăng ký tăng ca', 'info');
+    showToast('Đã hủy đơn tăng ca; bản ghi và lịch sử được giữ lại.', 'info');
+  }
+
+  function deleteOvertime(id) {
+    return cancelOvertime(id);
+  }
+
+  function approveOvertimeAmendment(id, amendmentId) {
+    if (!canArea('ap.ot', 'approve')) {
+      showToast('Chỉ Admin & Ban Quản Lý mới được duyệt điều chỉnh tăng ca!', 'error');
+      return;
+    }
+    const ot = (state.hrOvertimes || []).find(x => x && x.id === id);
+    const amendment = ot && (ot.amendments || []).find(a => a && a.id === amendmentId);
+    if (!ot || ot.status === 'cancelled' || !amendment || amendment.status !== 'pending') return;
+    const actor = overtimeActor();
+    if (sameOvertimeActor(amendment.requestedBy, actor)) {
+      showToast('Người yêu cầu điều chỉnh không được tự duyệt yêu cầu của mình.', 'error');
+      return;
+    }
+    const before = overtimeSnapshot(ot);
+    Object.assign(ot, amendment.proposed);
+    amendment.status = 'approved';
+    amendment.reviewedBy = actor;
+    amendment.reviewedAt = new Date().toISOString();
+    ot.updatedAt = amendment.reviewedAt;
+    appendOvertimeAudit(ot, 'amendment_approved', before, overtimeSnapshot(ot), amendment.reason);
+    saveHrData(['hrOvertimes']);
+    renderHrView();
+    showToast('Đã duyệt yêu cầu điều chỉnh; bản gốc vẫn còn trong nhật ký.', 'success');
+  }
+
+  function rejectOvertimeAmendment(id, amendmentId) {
+    if (!canArea('ap.ot', 'approve')) {
+      showToast('Chỉ Admin & Ban Quản Lý mới được từ chối điều chỉnh tăng ca!', 'error');
+      return;
+    }
+    const ot = (state.hrOvertimes || []).find(x => x && x.id === id);
+    const amendment = ot && (ot.amendments || []).find(a => a && a.id === amendmentId);
+    if (!ot || ot.status === 'cancelled' || !amendment || amendment.status !== 'pending') return;
+    const actor = overtimeActor();
+    if (sameOvertimeActor(amendment.requestedBy, actor)) {
+      showToast('Người yêu cầu điều chỉnh không được tự xử lý yêu cầu của mình.', 'error');
+      return;
+    }
+    const reason = String(window.prompt('Nhập lý do từ chối yêu cầu điều chỉnh:') || '').trim();
+    if (!reason) {
+      showToast('Cần ghi lý do từ chối để lưu vết kiểm tra.', 'error');
+      return;
+    }
+    const before = overtimeSnapshot(ot);
+    amendment.status = 'rejected';
+    amendment.reviewedBy = actor;
+    amendment.reviewedAt = new Date().toISOString();
+    amendment.reviewReason = reason;
+    ot.updatedAt = amendment.reviewedAt;
+    appendOvertimeAudit(ot, 'amendment_rejected', before, overtimeSnapshot(ot), reason);
+    saveHrData(['hrOvertimes']);
+    renderHrView();
+    showToast('Đã từ chối yêu cầu điều chỉnh; dữ liệu gốc được giữ nguyên.', 'info');
   }
 
   function deleteLeave(id) {
@@ -7759,10 +8096,16 @@ export {
   renderHrOvertimesTable,
   openOvertimeModal,
   closeOvertimeModal,
+  closeOvertimeAmendmentModal,
   handleOvertimeSubmit,
+  handleOvertimeAmendmentSubmit,
   approveOvertime,
   rejectOvertime,
   deleteOvertime,
+  cancelOvertime,
+  requestOvertimeAmendment,
+  approveOvertimeAmendment,
+  rejectOvertimeAmendment,
   renderOvertimeEmployeeSuggestions,
   pickOvertimeEmployee,
   handleOvertimeEmployeeKeydown,

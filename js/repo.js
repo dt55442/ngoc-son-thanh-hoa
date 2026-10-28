@@ -14,8 +14,10 @@
 // ═══════════════════════════════════════════════════════════
 
 const REPO_DB_NAME = 'bamboo_tracker_records';
-const REPO_DB_VERSION = 1;
+const REPO_DB_VERSION = 2;
 const REPO_STORE = 'months';
+const REPO_META_STORE = 'meta';
+const SYNC_PENDING_KEY = 'cloud-pending';
 
 let dbPromise = null;
 // Cache RAM: `${domain}|${month}` → { domain, month, count, stamp, json }
@@ -26,6 +28,8 @@ const writeOk = Object.create(null);
 // Hàng đợi ghi (gộp nhiều lần lưu liên tiếp) — không chặn UI
 let writeChain = Promise.resolve();
 let lastWriteError = null;
+const pendingWrites = new Map();
+const pendingDeletes = new Set();
 
 function available() {
   return typeof indexedDB !== 'undefined' && !!indexedDB;
@@ -39,9 +43,22 @@ function openDb() {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(REPO_STORE)) db.createObjectStore(REPO_STORE);
+      if (!db.objectStoreNames.contains(REPO_META_STORE)) db.createObjectStore(REPO_META_STORE);
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      db.onversionchange = () => {
+        db.close();
+        dbPromise = null;
+      };
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('Cơ sở dữ liệu cục bộ đang được mở ở thẻ khác; hãy tải lại thẻ đó rồi thử lại.'));
+  });
+  dbPromise = dbPromise.catch(e => {
+    dbPromise = null;
+    throw e;
   });
   return dbPromise;
 }
@@ -82,7 +99,15 @@ function cacheSlice(arr, n) {
 // Dùng cho quyết định "có được thu gọn localStorage hay chưa": chỉ true khi
 // IndexedDB khả dụng VÀ miền này đã có dữ liệu nằm an toàn trong đó.
 function healthy(domain) {
-  return available() && (writeOk[domain] === true || monthsOf(domain).length > 0);
+  return available() && !hasPendingWrites(domain) && (writeOk[domain] === true || monthsOf(domain).length > 0);
+}
+
+function hasPendingWrites(domain) {
+  const prefix = domain + '|';
+  for (const key of pendingWrites.keys()) {
+    if (key.indexOf(prefix) === 0) return true;
+  }
+  return false;
 }
 
 // "Dấu vân tay" rẻ để biết 1 tháng có đổi không: số bản ghi + mốc updatedAt lớn nhất
@@ -115,7 +140,7 @@ function loadDomainSync(domain) {
 
 function loadDomain(domain) {
   if (!available()) return Promise.resolve(loadDomainSync(domain));
-  return openDb().then(db => new Promise((resolve) => {
+  return openDb().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction(REPO_STORE, 'readonly');
     const store = tx.objectStore(REPO_STORE);
     const out = [];
@@ -133,8 +158,12 @@ function loadDomain(domain) {
       }
     };
     tx.oncomplete = () => resolve(out);
-    tx.onerror = () => resolve(loadDomainSync(domain));
-  })).catch(() => loadDomainSync(domain));
+    tx.onerror = () => reject(tx.error || new Error('Không đọc được miền ' + domain + ' từ IndexedDB.'));
+    tx.onabort = () => reject(tx.error || new Error('Giao dịch đọc miền ' + domain + ' từ IndexedDB đã bị hủy.'));
+  })).catch(e => {
+    lastWriteError = e;
+    throw e;
+  });
 }
 
 // Ghi 1 miền: CHỈ serialize + ghi các THÁNG ĐÃ ĐỔI.
@@ -145,47 +174,125 @@ function putDomain(domain, arr, opts) {
   const dropMissing = !!(opts && opts.dropMissing);
   const groups = groupByMonth(arr);
   const changed = [];
-  const removed = [];
 
   Object.keys(groups).forEach(month => {
     const list = groups[month];
     const count = list.length;
     const stamp = stampOf(list);
     const k = cacheKey(domain, month);
+    if (pendingDeletes.has(k)) {
+      pendingDeletes.delete(k);
+      pendingWrites.delete(k);
+    }
     const old = cache.get(k);
-    if (old && old.count === count && old.stamp === stamp) return; // không đổi
-    const row = { domain, month, count, stamp, json: JSON.stringify(list) };
+    const json = JSON.stringify(list);
+    if (old && old.json === json && !pendingWrites.has(k)) return;
+    const row = { domain, month, count, stamp, json };
     cache.set(k, row);
+    pendingWrites.set(k, json);
     changed.push(row);
   });
+  const removeKeys = new Set();
   if (dropMissing) {
     [...cache.keys()].forEach(k => {
       if (k.indexOf(domain + '|') !== 0) return;
       const month = k.slice(domain.length + 1);
       if (!groups[month] || !groups[month].length) {
         cache.delete(k);
-        removed.push(month);
+        pendingDeletes.add(k);
+        pendingWrites.set(k, null);
       }
+    });
+    pendingDeletes.forEach(k => {
+      if (k.indexOf(domain + '|') === 0 && !groups[k.slice(domain.length + 1)]) removeKeys.add(k);
     });
   }
 
-  if (!available() || (!changed.length && !removed.length)) {
+  const removed = [...removeKeys].map(k => k.slice(domain.length + 1));
+  if (!available()) {
     return Promise.resolve({ domain, changed, removed, persisted: false });
   }
+  if (!changed.length && !removed.length) {
+    return Promise.resolve({ domain, changed, removed, persisted: !hasPendingWrites(domain) });
+  }
   // Nối vào hàng đợi để 2 lần lưu liên tiếp không ghi chồng
-  writeChain = writeChain.then(() => openDb()).then(db => new Promise((resolve) => {
+  const operation = writeChain.then(() => openDb()).then(db => new Promise((resolve) => {
     const tx = db.transaction(REPO_STORE, 'readwrite');
     const store = tx.objectStore(REPO_STORE);
     changed.forEach(row => store.put(row, cacheKey(row.domain, row.month)));
     removed.forEach(m => store.delete(cacheKey(domain, m)));
-    tx.oncomplete = () => { writeOk[domain] = true; resolve({ domain, changed, removed, persisted: true }); };
-    tx.onerror = () => { lastWriteError = tx.error; resolve({ domain, changed, removed, persisted: false }); }
-  })).catch(e => { lastWriteError = e; return { domain, changed, removed, persisted: false }; });
-  return writeChain;
+    tx.oncomplete = () => {
+      changed.forEach(row => {
+        const k = cacheKey(domain, row.month);
+        if (pendingWrites.get(k) === row.json) pendingWrites.delete(k);
+      });
+      removed.forEach(month => {
+        const k = cacheKey(domain, month);
+        if (pendingWrites.has(k) && pendingWrites.get(k) === null) {
+          pendingWrites.delete(k);
+          pendingDeletes.delete(k);
+        }
+      });
+      const persisted = !hasPendingWrites(domain);
+      if (persisted) {
+        writeOk[domain] = true;
+        lastWriteError = null;
+      }
+      resolve({ domain, changed, removed, persisted });
+    };
+    tx.onerror = () => {
+      lastWriteError = tx.error || new Error('Không ghi được dữ liệu vào IndexedDB.');
+      resolve({ domain, changed, removed, persisted: false, error: lastWriteError });
+    };
+    tx.onabort = () => {
+      lastWriteError = tx.error || new Error('Giao dịch ghi IndexedDB đã bị hủy.');
+      resolve({ domain, changed, removed, persisted: false, error: lastWriteError });
+    };
+  })).catch(e => {
+    lastWriteError = e;
+    return { domain, changed, removed, persisted: false, error: e };
+  });
+  writeChain = operation.then(() => undefined);
+  return operation;
 }
 
 // Chờ mọi lần ghi xong (dùng cho test + trước khi xuất file/backup)
-function flush() { return writeChain.catch(() => {}); }
+function flush() {
+  return writeChain.then(() => {
+    if (!available()) return;
+    if (pendingWrites.size) throw lastWriteError || new Error('Một số dữ liệu chưa được ghi bền vào IndexedDB.');
+  });
+}
+
+function setSyncPending(value) {
+  if (!available()) return Promise.resolve(false);
+  const operation = writeChain.then(() => openDb()).then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(REPO_META_STORE, 'readwrite');
+    tx.objectStore(REPO_META_STORE).put(!!value, SYNC_PENDING_KEY);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('Không lưu được trạng thái đồng bộ vào IndexedDB.'));
+    tx.onabort = () => reject(tx.error || new Error('Giao dịch trạng thái đồng bộ đã bị hủy.'));
+  }));
+  writeChain = operation.then(() => undefined, () => undefined);
+  return operation.catch(e => {
+    lastWriteError = e;
+    throw e;
+  });
+}
+
+function getSyncPending() {
+  if (!available()) return Promise.resolve(false);
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(REPO_META_STORE, 'readonly');
+    const req = tx.objectStore(REPO_META_STORE).get(SYNC_PENDING_KEY);
+    req.onsuccess = () => resolve(req.result === true);
+    req.onerror = () => reject(req.error || new Error('Không đọc được trạng thái đồng bộ từ IndexedDB.'));
+    tx.onerror = () => reject(tx.error || new Error('Không đọc được trạng thái đồng bộ từ IndexedDB.'));
+  })).catch(e => {
+    lastWriteError = e;
+    throw e;
+  });
+}
 
 // Chuỗi JSON theo tháng (backup/đồng bộ KHÔNG cần parse lại)
 function dumpStrings() {
@@ -230,7 +337,7 @@ function clearDomain(domain) {
 // Nạp sẵn cache từ IndexedDB (gọi 1 lần lúc boot trước khi hydrate)
 function prime(domains) {
   if (!available()) return Promise.resolve(false);
-  return openDb().then(db => new Promise((resolve) => {
+  return openDb().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction(REPO_STORE, 'readonly');
     const store = tx.objectStore(REPO_STORE);
     const req = store.openCursor();
@@ -243,13 +350,17 @@ function prime(domains) {
       }
     };
     tx.oncomplete = () => resolve(true);
-    tx.onerror = () => resolve(false);
-  })).catch(() => false);
+    tx.onerror = () => reject(tx.error || new Error('Không nạp được chỉ mục IndexedDB.'));
+    tx.onabort = () => reject(tx.error || new Error('Giao dịch nạp chỉ mục IndexedDB đã bị hủy.'));
+  })).catch(e => {
+    lastWriteError = e;
+    throw e;
+  });
 }
 
 export {
-  available, cacheSlice, clearDomain, healthy, dumpStrings, flush, groupByMonth, jsonOf, loadDomain,
+  available, cacheSlice, clearDomain, healthy, dumpStrings, flush, getSyncPending, groupByMonth, jsonOf, loadDomain,
   loadDomainSync, monthArrays, monthOf, monthsOf, prime, putDomain, recentMonths, stampOf,
-  cache as repoCache, lastWriteErrorRef
+  setSyncPending, cache as repoCache, lastWriteErrorRef
 };
 function lastWriteErrorRef() { return lastWriteError; }

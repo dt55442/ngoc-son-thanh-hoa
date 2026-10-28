@@ -1341,6 +1341,21 @@ h1, h2, h3, h4, h5 {
 #hr-recruit-table { min-width: 980px; }
 #hr-posneed-table { min-width: 760px; }
 
+.hr-overtime-amendment,
+.hr-overtime-audit {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--surface-2, var(--bg-secondary));
+  font-size: 0.76rem;
+}
+.hr-overtime-amendment > div { margin-top: 4px; }
+.hr-overtime-audit summary { cursor: pointer; font-weight: 600; }
+.hr-overtime-audit ol { padding-left: 20px; }
+.hr-overtime-audit li { margin-top: 8px; }
+.hr-overtime-audit pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

@@ -2,6 +2,7 @@
 // tạo đăng ký (giờ DỰ KIẾN), duyệt CHỈ Admin/Manager, giờ TC THỰC TẾ tự tính
 // từ Bảng bố trí vị trí theo ngày (hrAssignments) — không lưu cứng.
 'use strict';
+import fs from 'node:fs';
 
 // ─── Stubs môi trường (giống hr-cards.test.mjs) ─────────────────
 function makeEl(id) {
@@ -47,7 +48,9 @@ global.addEventListener = () => {}; global.removeEventListener = () => {}; globa
 global.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
 global.cancelAnimationFrame = clearTimeout;
 global.window = global; global.self = global;
-global.alert = () => {}; global.confirm = () => true; global.prompt = () => '';
+global.alert = () => {}; global.confirm = () => true;
+let promptResult = '';
+global.prompt = () => promptResult;
 global.lucide = { createIcons(){} };
 global.Chart = class {
   constructor(ctx, cfg) { this.ctx = ctx; this.config = cfg; this.data = (cfg && cfg.data) || { labels: [], datasets: [] }; }
@@ -72,7 +75,7 @@ function check(name, cond) {
 }
 
 
-const { state, STORAGE_KEY_HR_OVERTIMES } = await import('../js/state.js');
+const { state, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_RATE_APPROVALS } = await import('../js/state.js');
 const hr = await import('../js/hr.js');
 const cloud = await import('../js/cloud.js');
 
@@ -97,6 +100,18 @@ check('OT: editor gửi được đăng ký (1 đơn, chờ duyệt)', state.hrO
 const ot = state.hrOvertimes[0];
 check('OT: giờ dự kiến lưu đúng (17:30→19:30, 120 phút)', ot.start === '17:30' && ot.end === '19:30' && ot.plannedMin === 120);
 check('OT: localStorage đã ghi', JSON.parse(storeBacking.get(STORAGE_KEY_HR_OVERTIMES) || '[]').length === 1);
+const overtimeHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const overtimeEvents = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+const overtimeMain = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+check('OT: modal điều chỉnh nằm ngoài form đăng ký gốc và có trường lý do bắt buộc',
+  overtimeHtml.includes('id="modal-overtime-amendment"')
+  && /id="ot-amend-why"[^>]*required/.test(overtimeHtml)
+  && overtimeHtml.indexOf('id="modal-overtime-amendment"')
+    > overtimeHtml.indexOf('</form>', overtimeHtml.indexOf('id="ot-form"')));
+check('OT: submit/đóng modal và các thao tác audit được nối tới app',
+  overtimeEvents.includes("safeOn('ot-amend-form', 'submit', handleOvertimeAmendmentSubmit)")
+  && overtimeMain.includes('hrApproveOvertimeAmendment: approveOvertimeAmendment')
+  && overtimeMain.includes('hrCancelOvertime: cancelOvertime'));
 
 // ─── B. GIỜ THỰC TẾ: chưa có trên Bảng bố trí → 0 ───────────────
 check('OT: chưa có trên Bảng bố trí -> TC thực tế = 0', hr.overtimeActualMin(ot) === 0);
@@ -125,17 +140,67 @@ check('OT: editor xóa -> bị chặn (còn 1 đơn)', state.hrOvertimes.length 
 state.currentUser = { username: 'ql', role: 'manager', fullname: 'Ban Quản Lý', editTabs: [], allowAdvanced: true };
 hr.approveOvertime(ot.id);
 check('OT: manager duyệt -> approved + ghi người duyệt', ot.status === 'approved' && ot.approvedBy === 'Ban Quản Lý');
-// Manager xóa được
-hr.deleteOvertime(ot.id);
-check('OT: manager xóa -> hết đơn + tombstone', state.hrOvertimes.length === 0 && (state.deletedIds.hrOvertimes || {})[ot.id]);
+check('OT: submit và duyệt có người thực hiện trong nhật ký', ot.auditTrail.length === 2
+  && ot.auditTrail[0].action === 'submitted' && ot.auditTrail[1].action === 'approved');
 
-// ─── E. ĐỒNG BỘ MÂY ─────────────────────────────────────────────
+// ─── E. ĐIỀU CHỈNH CÓ LÝ DO, CHỜ NGƯỜI KHÁC DUYỆT ────────────────
+hr.requestOvertimeAmendment(ot.id);
+setField('ot-amend-date', '2024-06-07');
+setField('ot-amend-start', '17:00'); setField('ot-amend-end', '20:00');
+setField('ot-amend-reason', 'Chốt lại giờ dự kiến');
+setField('ot-amend-why', 'Điều chỉnh theo phiếu xác nhận của quản đốc');
+hr.handleOvertimeAmendmentSubmit({ preventDefault(){} });
+const amendment = ot.amendments[0];
+check('OT: yêu cầu điều chỉnh có người gửi/lý do, đơn gốc chưa đổi',
+  amendment.status === 'pending' && amendment.requestedBy.name === 'Ban Quản Lý'
+  && amendment.reason.length > 0 && ot.date === '2024-06-06');
+hr.approveOvertimeAmendment(ot.id, amendment.id);
+check('OT: người yêu cầu không tự duyệt được điều chỉnh', amendment.status === 'pending');
+state.currentUser = { username: 'admin2', role: 'admin', fullname: 'Quản Trị 2', editTabs: [], allowAdvanced: true };
+hr.approveOvertimeAmendment(ot.id, amendment.id);
+check('OT: người khác duyệt áp dụng đề xuất, giữ audit trước/sau',
+  amendment.status === 'approved' && ot.date === '2024-06-07'
+  && ot.auditTrail.some(e => e.action === 'amendment_approved' && e.before.date === '2024-06-06' && e.after.date === '2024-06-07'));
+
+// Hủy thay cho xóa cứng, bắt buộc lý do và giữ bản ghi.
+state.currentUser = { username: 'ql', role: 'manager', fullname: 'Ban Quản Lý', editTabs: [], allowAdvanced: true };
+promptResult = 'Đơn được thay bằng phiếu mới';
+hr.deleteOvertime(ot.id);
+check('OT: hủy có lý do giữ bản ghi và lịch sử, không tạo tombstone',
+  state.hrOvertimes.length === 1 && ot.status === 'cancelled'
+  && ot.auditTrail.at(-1).action === 'cancelled'
+  && ot.auditTrail.at(-1).reason === promptResult
+  && !(state.deletedIds.hrOvertimes || {})[ot.id]);
+check('OT: trạng thái hủy và audit được lưu cục bộ',
+  JSON.parse(storeBacking.get(STORAGE_KEY_HR_OVERTIMES) || '[]')[0].auditTrail.at(-1).action === 'cancelled');
+
+const rejected = {
+  id: 'ot-reject', employeeId: 'empB', date: '2024-06-08', start: '17:30',
+  end: '19:00', plannedMin: 90, reason: 'Gấp hàng', status: 'pending',
+  createdBy: { uid: 'employee-b', email: 'employee-b@example.test', name: 'Nhân viên B' }
+};
+state.hrOvertimes.push(rejected);
+promptResult = '';
+hr.rejectOvertime(rejected.id);
+check('OT: từ chối không có lý do thì không đổi trạng thái', rejected.status === 'pending');
+promptResult = 'Không có lệnh sản xuất xác nhận';
+hr.rejectOvertime(rejected.id);
+check('OT: từ chối bắt buộc lý do và lưu dấu người xử lý',
+  rejected.status === 'rejected' && rejected.reviewReason === promptResult
+  && rejected.auditTrail.at(-1).action === 'rejected');
+
+// ─── F. ĐỒNG BỘ MÂY ─────────────────────────────────────────────
 state.hrOvertimes = [{ id: 'ot-r', employeeId: 'empB', date: '2024-06-07', start: '17:30', end: '20:00', plannedMin: 150, reason: '', status: 'pending', createdAt: '' }];
 const snap = cloud.collectCloudSnapshot();
 check('OT: snapshot mây chứa hrOvertimes', Array.isArray(snap.hrOvertimes) && snap.hrOvertimes.length === 1);
 check('OT: cloudCore có khóa hrOvertimes', cloud.cloudCore(snap).includes('"hrOvertimes"'));
-cloud.applyFireSnapshot({ hrOvertimes: [{ id: 'ot-remote', employeeId: 'empA', date: '2024-06-08', start: '17:30', end: '19:00', plannedMin: 90, reason: '', status: 'pending', createdAt: '' }] });
+cloud.applyFireSnapshot({
+  hrOvertimes: [{ id: 'ot-remote', employeeId: 'empA', date: '2024-06-08', start: '17:30', end: '19:00', plannedMin: 90, reason: '', status: 'pending', createdAt: '' }],
+  rateApprovals: [{ id: 'approval-remote', month: '2026-10', status: 'approved' }]
+});
 check('OT: applyFireSnapshot nhận từ mây', state.hrOvertimes.some(o => o.id === 'ot-remote'));
+check('SYNC: nạp từ mây lưu rateApprovals vào đúng localStorage key',
+  JSON.parse(storeBacking.get(STORAGE_KEY_RATE_APPROVALS) || '[]').some(r => r.id === 'approval-remote'));
 
 console.log(`KẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail) process.exit(1);

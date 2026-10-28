@@ -759,13 +759,22 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return !!window.__BAMBOO_FIREBASE_READY__ && fbEnabled;
   }
 
-  function initFirebase() {
-    if (!window.__BAMBOO_FIREBASE_READY__) { console.warn('[FB] SKIP - chế độ OFFLINE'); return; }
-    try { fbDb = window.firebase.firestore(); } catch (e) { console.warn('[FB] Lỗi Firestore', e); return; }
+  async function initFirebase() {
+    if (!window.__BAMBOO_FIREBASE_READY__) { console.warn('[FB] SKIP - chế độ OFFLINE'); return false; }
+    try { fbDb = window.firebase.firestore(); } catch (e) { console.warn('[FB] Lỗi Firestore', e); return false; }
     fbEnabled = true;
     console.log('[FB] Đồng bộ online đã khởi động');
     loadSyncState(); // sổ đồng bộ cục bộ (base/dirty/xung đột) — thuần máy
     try { if (fbSeedCore === null) fbSeedCore = cloudCore(collectCloudSnapshot()); } catch (e) {}
+    try {
+      if (await repo.getSyncPending()) {
+        fbPendingLocal = true;
+        fbDirty = true;
+      }
+    } catch (e) {
+      console.error('[FB] Không đọc được hàng chờ đồng bộ bền trên thiết bị:', e);
+      showToast('Không đọc được hàng chờ đồng bộ trên thiết bị. Kiểm tra bộ nhớ trình duyệt trước khi đóng ứng dụng.', 'error');
+    }
     // XEM CÔNG KHAI: lắng nghe dữ liệu ngay cả khi CHƯA đăng nhập
     setupFirestoreSync();
     // Tự kiểm tra mây khi quay lại tab / có mạng / định kỳ 2 phút (17/10/2026)
@@ -776,6 +785,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try {
       window.firebase.auth().onAuthStateChanged((user) => handleFirebaseAuth(user));
     } catch (e) { console.warn('[FB] Lỗi Auth', e); }
+    return true;
   }
 
   function handleFirebaseAuth(user) {
@@ -1717,6 +1727,13 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // mức mới từ mây (đúng vai trò máy xem).
   const PENDING_LOCAL_KEY = 'bamboo_tracker_cloud_pending_v1';
   let fbPendingLocal = null;
+  let fbPendingStoreWarnAt = 0;
+  function warnPendingStoreFailure(message, error) {
+    console.error('[FB] ' + message, error);
+    if (Date.now() - fbPendingStoreWarnAt < 30000) return;
+    fbPendingStoreWarnAt = Date.now();
+    showToast(message + ' Dữ liệu chưa được xác nhận trên mây; hãy giữ thiết bị và thử đồng bộ lại.', 'error');
+  }
   function pendingLocalChanges() {
     if (fbPendingLocal === null) {
       try { fbPendingLocal = localStorage.getItem(PENDING_LOCAL_KEY) === '1'; }
@@ -1728,7 +1745,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const wasPending = pendingLocalChanges();
     fbPendingLocal = true;
     if (!wasPending) fbPendingCache = null;
-    try { localStorage.setItem(PENDING_LOCAL_KEY, '1'); } catch (e) { /* bộ nhớ đầy — bỏ qua */ }
+    try { localStorage.setItem(PENDING_LOCAL_KEY, '1'); }
+    catch (e) { warnPendingStoreFailure('Không lưu được cờ chờ đồng bộ vào localStorage.', e); }
+    repo.setSyncPending(true).catch(e => warnPendingStoreFailure('Không lưu được hàng chờ đồng bộ vào IndexedDB.', e));
     // Mốc "bắt đầu có thay đổi chưa đẩy" — banner cảnh báo khi chờ quá lâu
     try {
       const st = loadSyncState();
@@ -1738,7 +1757,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   function clearPendingLocal() {
     fbPendingLocal = false;
     fbPendingCache = null;
-    try { localStorage.removeItem(PENDING_LOCAL_KEY); } catch (e) { /* bỏ qua */ }
+    try { localStorage.removeItem(PENDING_LOCAL_KEY); }
+    catch (e) { warnPendingStoreFailure('Không xóa được cờ chờ đồng bộ trong localStorage.', e); }
+    repo.setSyncPending(false).catch(e => warnPendingStoreFailure('Không cập nhật được hàng chờ đồng bộ trong IndexedDB.', e));
     try {
       const st = loadSyncState();
       if (Number(st.pendingSince)) { st.pendingSince = 0; saveSyncState(); }
@@ -2041,7 +2062,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_QC_FINAL_RATE, JSON.stringify(state.qcFinalRates || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_PRESS, JSON.stringify(state.qcPressLogs || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_INCIDENT_REPORTS, JSON.stringify(state.x2IncidentReports || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, JSON.stringify(state.rateApprovals || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_RATE_APPROVALS, JSON.stringify(state.rateApprovals || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_SYS_SETTINGS, JSON.stringify(state.sysSettings || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_KHO_NOTES, JSON.stringify(state.khoNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X2_PHU_PHAM, JSON.stringify(state.x2PhuPhamRecords || [])); } catch (e) {}

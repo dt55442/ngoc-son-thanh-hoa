@@ -34,7 +34,7 @@ import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XU
 import { trackDeleted } from './tombstone.js';
 // CỜ TÍNH NĂNG (Cài Đặt Hệ Thống): incident-manual = cho phép nhập tay giờ sự cố
 import { applySysAreaDom, flagOn } from './sys-settings.js';
-import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, incidentApprovedHoursOf, incidentReportStatsOf, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
+import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, incidentApprovedHoursOf, incidentReportStatsOf, setupHScrollNav, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 // SỔ NHÓM KHỐI LƯỢNG (Giai đoạn 1 — 18/10/2026): bãi tập kết trộn lô nên
 // Xưởng 2 theo dõi theo phiếu cân chuyến → xe bốc → nhóm ống đạt chờ bổ.
@@ -16158,63 +16158,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
   // • Theo dõi scroll + ResizeObserver ⇒ thẻ mở muộn (pop-up) vẫn đúng.
   // • Bấm = trượt 80% bề ngang khung (hỗ trợ điện thoại không cần vuốt).
   function setupHistoryHScroll() {
-    if (typeof document === 'undefined' || !document.querySelectorAll) return 0;
-    const wraps = document.querySelectorAll('.x2-cut-table-scroll');
-    let wired = 0;
-    wraps.forEach(el => {
-      const wrap = el.parentElement;
-      let head = null;
-      if (wrap) {
-        for (let i = 0; i < wrap.children.length; i++) {
-          if (wrap.children[i].classList && wrap.children[i].classList.contains('x2-cut-table-head')) { head = wrap.children[i]; break; }
-        }
-      }
-      let nav = wrap ? wrap.querySelector('.x2-hscroll-nav') : null;
-      if (!nav) {
-        nav = document.createElement('div');
-        nav.className = 'x2-hscroll-nav';
-        nav.innerHTML = '<button type="button" class="x2-hscroll-btn" data-hscroll="left" aria-label="Trượt sang trái" title="Xem cột bên trái">‹</button>'
-          + '<button type="button" class="x2-hscroll-btn" data-hscroll="right" aria-label="Trượt sang phải" title="Xem cột bên phải">›</button>';
-        if (head) {
-          const toggle = head.querySelector('.rate-toggle-btn');
-          if (toggle) head.insertBefore(nav, toggle); else head.appendChild(nav);
-        } else if (wrap) {
-          wrap.insertBefore(nav, wrap.firstChild);
-        } else {
-          return;
-        }
-      }
-      const sync = () => {
-        const max = el.scrollWidth - el.clientWidth;
-        const over = max > 2;
-        nav.hidden = !over;
-        if (!over) return;
-        const l = nav.querySelector('[data-hscroll="left"]');
-        const r = nav.querySelector('[data-hscroll="right"]');
-        if (l) l.disabled = el.scrollLeft <= 2;
-        if (r) r.disabled = el.scrollLeft >= max - 2;
-      };
-      if (el.dataset.hscrollReady !== '1') {
-        el.dataset.hscrollReady = '1';
-        wired++;
-        el.addEventListener('scroll', sync, { passive: true });
-        nav.addEventListener('click', (e) => {
-          const b = e.target && e.target.closest ? e.target.closest('[data-hscroll]') : null;
-          if (!b) return;
-          e.preventDefault();
-          const dir = b.getAttribute('data-hscroll') === 'left' ? -1 : 1;
-          const step = Math.max(160, Math.round(el.clientWidth * 0.8));
-          if (typeof el.scrollBy === 'function') el.scrollBy({ left: dir * step, behavior: 'smooth' });
-          else el.scrollLeft += dir * step;
-        });
-        if (typeof ResizeObserver !== 'undefined') {
-          try { new ResizeObserver(sync).observe(el); } catch (e) { /* bỏ qua */ }
-        }
-        if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', sync);
-      }
-      sync();
-    });
-    return wraps.length;
+    return setupHScrollNav('.x2-cut-table-scroll');
   }
 
 export {

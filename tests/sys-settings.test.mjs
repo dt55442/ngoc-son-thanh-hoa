@@ -1,6 +1,6 @@
 // tests/sys-settings.test.mjs — CÀI ĐẶT HỆ THỐNG (22/10/2026)
 // Cờ hiển thị (admin bật/tắt chủ động) · 37 vùng quyền × 4 vai trò × 4 mức
-// · ẩn nút theo vùng · ô Sự cố chỉ đọc · khung lịch sử 1 trục cuộn.
+// · ẩn nút theo vùng · ô Sự cố chỉ đọc · bảng và thẻ cuộn độc lập.
 'use strict';
 import fs from 'node:fs';
 
@@ -266,9 +266,23 @@ check('I5: CSS ẩn theo cờ + ẩn nút theo vùng + panel',
   cssSrc.includes('body:not([data-on~="see.perf.cap"])')
   && cssSrc.includes('[data-flag-show~="see.perf.eff"]')
   && cssSrc.includes('.area-denied') && cssSrc.includes('.sys-flag-card'));
-check('I6: CSS vùng 3 không thụt lề + 1 trục cuộn trên điện thoại + nút ‹ ›',
+check('I6: CSS vùng 3 không thụt lề + cuộn dọc/ngang trên điện thoại + nút ‹ ›',
   cssSrc.includes('.x2-zone[data-zone="3"]:has(> .x2-cut-table-wrap)')
-  && cssSrc.includes('overflow-y: hidden') && cssSrc.includes('.x2-hscroll-btn'));
+  && cssSrc.includes('overflow-y: auto') && cssSrc.includes('.x2-hscroll-btn'));
+check('I6a: thẻ QC/Xưởng 2 canh lề + bảng nhỏ có cuộn dọc riêng giới hạn chiều cao',
+  cssSrc.includes('.qc-detail-content .x2-day-card,')
+  && cssSrc.includes('.x2-cut-table-scroll .x2-day-card')
+  && cssSrc.includes('.x2-detail-content .x2-cut-table-wrap')
+  && cssSrc.includes('#qc-detail-content .table-responsive,')
+  && cssSrc.includes('#qc-detail-content .x2-cut-table-scroll,')
+  && cssSrc.includes('#x2-detail-content .table-responsive,')
+  && cssSrc.includes('max-height: min(46vh, 340px)')
+  && cssSrc.includes('overflow-y: auto'));
+check('I6b: tay nắm cuộn dọc bảng QC rõ, tương phản và đủ lớn để chạm',
+  cssSrc.includes('scrollbar-color: #66717f #e9ecef')
+  && cssSrc.includes('#qc-detail-content .table-responsive::-webkit-scrollbar-thumb')
+  && cssSrc.includes('min-height: 64px')
+  && !fs.readFileSync('js/utils.js', 'utf8').includes('setupVScrollControls'));
 check('I7: sw.js có js/sys-settings.js + cache v312', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v312'));
 check('I8: state.js có key riêng + APP_VERSION v312',
   stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v312'"));
@@ -301,7 +315,24 @@ check('J4: có gắn sự kiện scroll + click', (scrollEl._h.scroll || []).len
 navEl._h.click[0]({ target: { closest: () => ({ getAttribute: () => 'right' }) }, preventDefault() {} });
 check('J5: bấm › trượt sang phải 80% bề ngang', scrollEl._scrollBy && scrollEl._scrollBy.left === Math.round(800 * 0.8));
 
+const qcScrollEl = makeEl('qcp-table');
+qcScrollEl.scrollWidth = 1600; qcScrollEl.clientWidth = 400;
+qcScrollEl.scrollBy = (o) => { qcScrollEl._scrollBy = o; };
+const qcHeadEl = makeEl('qc-day-head'); qcHeadEl.classList.add('x2-day-head');
+const qcDayEl = makeEl('qc-day'); qcDayEl.children = [qcHeadEl];
+qcScrollEl.parentElement = qcDayEl;
+global.document.querySelectorAll = (sel) => (sel === '#qc-detail-content .table-responsive' ? [qcScrollEl] : []);
+utils.setupHScrollNav('#qc-detail-content .table-responsive');
+const qcNavEl = qcHeadEl.children[0];
+check('J6: bảng QC được thêm nút cuộn trong tiêu đề ngày',
+  !!qcNavEl && (qcNavEl.className === 'x2-hscroll-nav' || qcNavEl.classList.contains('x2-hscroll-nav')));
+check('J7: bảng QC được nối sự kiện cuộn ngang',
+  qcScrollEl.dataset.hscrollReady === '1' && (qcScrollEl._h.scroll || []).length === 1
+  && (qcNavEl._h.click || []).length === 1);
+qcNavEl._h.click[0]({ target: { closest: () => ({ getAttribute: () => 'right' }) }, preventDefault() {} });
+check('J8: nút phải bảng QC trượt 80% bề ngang',
+  qcScrollEl._scrollBy && qcScrollEl._scrollBy.left === Math.round(400 * 0.8));
+global.document.querySelectorAll = oldQSA2;
+
 console.log(`\nKẾT QUẢ: ${pass} PASS / ${fail} FAIL`);
 if (fail) process.exitCode = 1;
-
-

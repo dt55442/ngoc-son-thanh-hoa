@@ -1,6 +1,6 @@
 // tests/qc-press.test.mjs — THẺ "NHẬT KÝ THEO DÕI ÉP VÁN" (tab QC — js/qc-press.js).
 // Bao phủ: tên/số lượng ƯU TIÊN ô Ván Thô → fallback ô Thành Phẩm · đổi keo/phụ
-// gia KG → GAM · tỷ lệ pha trộn "100g - 12g" · độ phủ = (keo + phụ gia) ÷ SL ·
+// gia KG → GAM · tỷ lệ trong thẻ chuẩn hóa theo 100g keo · độ phủ = (keo + phụ gia) ÷ SL ·
 // verdict PASS/Fail 1-1 (ghi đè) + lưu localStorage · lọc PASS/Fail/chưa kiểm ·
 // tìm nhanh · render thẻ ngày (nhãn PASS NGHIÊNG + 2 nút ✅/❌) · mini card ·
 // cấu trúc (index.html · qc.js · events.js · state/storage/cloud/history/main ·
@@ -112,11 +112,20 @@ check('TÊN: p4 chỉ có ván thô → ván thô "1220x2440x9" (80)',
 console.log('--- B. GAM · TỶ LỆ PHA TRỘN · ĐỘ PHỦ ---');
 const d2 = qcp.qcPressDisplay(state.pressRecords[1]);
 check('GAM: keo 0.1kg → 100g · phụ gia 0.012kg → 12g', d2.glueG === 100 && d2.additiveG === 12);
-check('TỶ LỆ: đúng dạng "100g - 12g"', d2.mixText === '100g - 12g');
+check('TỶ LỆ BÁO CÁO: giữ dạng "100g - 12g"', d2.mixText === '100g - 12g');
+check('TỶ LỆ THẺ QC: 26.000g keo + 3.120g phụ gia quy về "100g-12g"',
+  qcp.qcPressDisplay({ glue: 26, additive: 3.12 }).cardMixText === '100g-12g');
+check('TỶ LỆ THẺ QC: số phụ gia được chuẩn hóa theo 100g keo',
+  qcp.qcPressDisplay({ glue: 26, additive: 3.25 }).cardMixText === '100g-12,5g');
+check('TỶ LỆ THẺ QC: báo cáo vẫn giữ tổng lượng thực tế',
+  qcp.qcPressDisplay({ glue: 26, additive: 3.12 }).mixText === '26.000g - 3.120g');
+check('TỶ LỆ THẺ QC: không có keo thì không thể chuẩn hóa',
+  qcp.qcPressDisplay({ glue: 0, additive: 0.012 }).cardMixText === '—');
 check('ĐỘ PHỦ: (100+12)g ÷ 150 thanh ván thô', approx(d2.coverage, 112 / 150));
 check('ĐỘ PHỦ p4: (100+12) ÷ 80 = 1,4 g/tấm', approx(qcp.qcPressDisplay(state.pressRecords[3]).coverage, 1.4));
 const d3 = qcp.qcPressDisplay(state.pressRecords[2]);
-check('THIẾU keo/phụ gia → tỷ lệ "—" · độ phủ null', d3.mixText === '—' && d3.coverage === null);
+check('THIẾU keo/phụ gia → tỷ lệ thẻ "—" · độ phủ null',
+  d3.cardMixText === '—' && d3.coverage === null);
 check('THÔNG SỐ KT: p1 đọc đủ lực ép ngang/đứng · nhiệt độ · thời gian',
   (() => { const d = qcp.qcPressDisplay(state.pressRecords[0]); return d.forceH === 18 && d.forceV === 22 && d.tempC === 120 && d.pressMin === 25; })());
 // LỰC ÉP DẠNG KHOẢNG "8-10" MPa (19/10/2026): lưu forceH=8 + forceHMax=10.
@@ -196,8 +205,8 @@ check('ĐẾM: chip đầu bảng "4/4 lượt ép"', document.getElementById('q
 const dayHtml = document.getElementById('qcp-day-cards').innerHTML;
 check('THẺ NGÀY: gom theo ngày + đếm PASS/Fail trong ngày',
   dayHtml.includes('x2-day-card') && dayHtml.includes('PASS: <strong>1</strong>') && dayHtml.includes('Fail: <strong>1</strong>'));
-check('BẢNG: hiện tỷ lệ "100g - 12g" + cột Độ phủ "g/tấm"',
-  dayHtml.includes('100g - 12g') && dayHtml.includes('g/tấm'));
+check('BẢNG: hiện tỷ lệ chuẩn hóa "100g-12g" + cột Độ phủ "g/tấm"',
+  dayHtml.includes('100g-12g') && dayHtml.includes('g/tấm'));
 check('BẢNG: đủ tiêu đề (Lực ép ngang/đứng đơn vị MPa · Nhiệt độ · Thời gian ép · QC kiểm)',
   dayHtml.includes('Lực ép ngang (MPa)') && dayHtml.includes('Lực ép đứng (MPa)') && dayHtml.includes('Nhiệt độ') &&
   dayHtml.includes('Thời gian ép') && dayHtml.includes('QC kiểm'));
@@ -272,4 +281,3 @@ check('package.json: có trong chuỗi npm test', pkgJson.includes('tests/qc-pre
 
 console.log(`\nKẾT QUẢ: ${passed} pass, ${failed} fail`);
 if (failed > 0) process.exit(1);
-

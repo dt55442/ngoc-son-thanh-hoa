@@ -1015,6 +1015,73 @@ import { flagOn } from './sys-settings.js';
     return map;
   }
 
+function setupHScrollNav(selector) {
+  if (typeof document === 'undefined' || !document.querySelectorAll) return 0;
+  const wraps = document.querySelectorAll(selector);
+  wraps.forEach(el => {
+    const parent = el.parentElement;
+    if (!parent) return;
+    let head = null;
+    const children = parent.children || [];
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      if (child.classList && (child.classList.contains('x2-cut-table-head') || child.classList.contains('x2-day-head'))) {
+        head = child;
+        break;
+      }
+    }
+    let nav = el._hscrollNav || (head && head.querySelector ? head.querySelector('.x2-hscroll-nav') : null);
+    let row = el._hscrollNavRow || null;
+    if (!nav) {
+      nav = document.createElement('div');
+      nav.className = 'x2-hscroll-nav';
+      nav.innerHTML = '<button type="button" class="x2-hscroll-btn" data-hscroll="left" aria-label="Trượt sang trái" title="Xem cột bên trái">‹</button>'
+        + '<button type="button" class="x2-hscroll-btn" data-hscroll="right" aria-label="Trượt sang phải" title="Xem cột bên phải">›</button>';
+      if (head) {
+        const toggle = head.querySelector('.rate-toggle-btn');
+        if (toggle) head.insertBefore(nav, toggle); else head.appendChild(nav);
+      } else {
+        row = document.createElement('div');
+        row.className = 'x2-hscroll-row';
+        row.appendChild(nav);
+        parent.insertBefore(row, el);
+      }
+      el._hscrollNav = nav;
+      el._hscrollNavRow = row;
+    }
+    const sync = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      const over = max > 2;
+      if (row) row.hidden = !over;
+      else nav.hidden = !over;
+      if (!over) return;
+      const left = nav.querySelector('[data-hscroll="left"]');
+      const right = nav.querySelector('[data-hscroll="right"]');
+      if (left) left.disabled = el.scrollLeft <= 2;
+      if (right) right.disabled = el.scrollLeft >= max - 2;
+    };
+    if (el.dataset.hscrollReady !== '1') {
+      el.dataset.hscrollReady = '1';
+      el.addEventListener('scroll', sync, { passive: true });
+      nav.addEventListener('click', e => {
+        const button = e.target && e.target.closest ? e.target.closest('[data-hscroll]') : null;
+        if (!button) return;
+        e.preventDefault();
+        const direction = button.getAttribute('data-hscroll') === 'left' ? -1 : 1;
+        const step = Math.max(160, Math.round(el.clientWidth * 0.8));
+        if (typeof el.scrollBy === 'function') el.scrollBy({ left: direction * step, behavior: 'smooth' });
+        else el.scrollLeft += direction * step;
+      });
+      if (typeof ResizeObserver !== 'undefined') {
+        try { new ResizeObserver(sync).observe(el); } catch (e) { /* bỏ qua */ }
+      }
+      if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', sync);
+    }
+    sync();
+  });
+  return wraps.length;
+}
+
 export {
   KHO_METHOD_LABELS,
   KHO_POOL_STAGES,
@@ -1064,6 +1131,7 @@ export {
   shiftOptionsHtml,
   shiftSectionRows,
   shiftSuggestOf,
+  setupHScrollNav,
   stageEffHours,
   stageIncidentInputHtml,
   bumpIncidentCache,

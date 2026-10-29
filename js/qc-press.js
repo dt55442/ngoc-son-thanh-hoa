@@ -7,8 +7,8 @@
 //   state.qcPressLogs = [{ id, pressId, verdict 'pass'|'fail', checkedBy, checkedAt, updatedAt }]
 // Cột hiển thị (đúng yêu cầu): Ngày · Tên ván/thanh · Số lượng · Lực ép ngang ·
 // Lực ép đứng · Nhiệt độ · Thời gian ép (phút/lượt) · Tên keo · Số lượng keo ·
-// Phụ gia · Số lượng phụ gia · Tỷ lệ pha trộn Keo - phụ gia (đơn vị GRAM,
-// dạng "100g - 12g") · Độ phủ = (keo + phụ gia) ÷ số lượng ván (g/tấm) ·
+// Phụ gia · Số lượng phụ gia · Tỷ lệ pha trộn chuẩn hóa theo 100g keo
+// (đơn vị GRAM) · Độ phủ = (keo + phụ gia) ÷ số lượng ván (g/tấm) ·
 // QC kiểm (nút ✅ xanh / ❌ đỏ + nhãn PASS nghiêng / Fail).
 // QUY TẮC TÊN + SỐ LƯỢNG (đã chốt): ưu tiên ô VÁN THÔ (dòng vtQty > 0 đầu
 // tiên) → không có mới lấy ô THÀNH PHẨM (productName/fpDim + finishedQty).
@@ -17,7 +17,7 @@
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { logDataChange } from './history.js';
 import { STORAGE_KEY_QC_PRESS, state } from './state.js';
-import { escapeHTML, formatDateDDMMYY, numRangeText, showToast } from './utils.js';
+import { escapeHTML, formatDateDDMMYY, numRangeText, setupHScrollNav, showToast } from './utils.js';
 
   // ─── TIỆN ÍCH CHUNG ──────────────────────────────────────────
   const qcPressTodayISO = () => {
@@ -82,7 +82,7 @@ import { escapeHTML, formatDateDDMMYY, numRangeText, showToast } from './utils.j
 
   // ─── SỐ LIỆU HIỂN THỊ CỦA 1 LƯỢT ÉP ─────────────────────────
   // Keo/phụ gia Ép Ván lưu KG → đổi sang GAM ở đây (×1000, làm tròn nguyên).
-  //   Tỷ lệ keo - phụ gia : "100g - 12g" (thiếu cả hai → "—")
+  //   Tỷ lệ trong bảng chuẩn hóa theo 100g keo: "100g-12g" (không có keo → "—")
   //   Độ phủ               : (keo + phụ gia) gam ÷ số lượng ván/thanh (g/tấm)
   function qcPressDisplay(r) {
     const rr = r || {};
@@ -100,11 +100,14 @@ import { escapeHTML, formatDateDDMMYY, numRangeText, showToast } from './utils.j
     const glueG = Math.round(qcPressNum(rr.glue) * 1000);
     const additiveG = Math.round(qcPressNum(rr.additive) * 1000);
     const mixText = (glueG > 0 || additiveG > 0) ? `${qcPressFmt(glueG)}g - ${qcPressFmt(additiveG)}g` : '—';
+    const cardMixText = glueG > 0
+      ? `100g-${qcPressFmt(additiveG * 100 / glueG, 2)}g`
+      : '—';
     const coverage = (qty > 0 && (glueG + additiveG) > 0) ? (glueG + additiveG) / qty : null;
     return {
       id: rr.id || '', date: rr.date || '', name, qty, source,
       forceH, forceV, forceHText, forceVText, tempC, pressMin,
-      glueName, glueG, additiveName, additiveG, mixText, coverage,
+      glueName, glueG, additiveName, additiveG, mixText, cardMixText, coverage,
       verdict: qcPressVerdictOf(rr.id)
     };
   }
@@ -253,7 +256,7 @@ import { escapeHTML, formatDateDDMMYY, numRangeText, showToast } from './utils.j
         <td style="text-align:right;">${d.glueG ? qcPressFmt(d.glueG) : '—'}</td>
         <td>${d.additiveName ? escapeHTML(d.additiveName) : '—'}</td>
         <td style="text-align:right;">${d.additiveG ? qcPressFmt(d.additiveG) : '—'}</td>
-        <td style="white-space:nowrap;">${escapeHTML(d.mixText)}</td>
+        <td style="white-space:nowrap;">${escapeHTML(d.cardMixText)}</td>
         <td style="text-align:right;white-space:nowrap;" title="Độ phủ = (số lượng keo + phụ gia) ÷ số lượng ván/thanh">${d.coverage == null ? '—' : `${qcPressFmt(d.coverage, 2)} g/tấm`}</td>
         <td>${qcPressCheckCellHtml(d)}</td>
       </tr>`).join('');
@@ -285,6 +288,7 @@ import { escapeHTML, formatDateDDMMYY, numRangeText, showToast } from './utils.j
       </div>`;
     }
     box.innerHTML = html;
+    setupHScrollNav('#qc-detail-content .table-responsive, #qc-detail-content .x2-cut-table-scroll');
     initLucide();
   }
 

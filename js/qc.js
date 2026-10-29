@@ -19,7 +19,7 @@ import { canEditTab } from './permissions.js';
 import { restoreRateTableCollapse } from './planning.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { STORAGE_KEY_QC_EXPORTS, state } from './state.js';
-import { escapeHTML, getISOWeekString, showToast } from './utils.js';
+import { escapeHTML, getISOWeekString, setupHScrollNav, showToast } from './utils.js';
 import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // Bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
 import { qcFinalCardCount, renderQcFinalCard, setQcFinalPickerOpen } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm)
 import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail từng lượt ép)
@@ -729,6 +729,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
       qcPositionDetailOverlay();
       if (typeof overlay.focus === 'function') overlay.focus({ preventScroll: true });
     }
+    setupHScrollNav('#qc-detail-content .table-responsive, #qc-detail-content .x2-cut-table-scroll');
     syncQcMiniActive();
     initLucide();
     return true;

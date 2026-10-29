@@ -1,5 +1,5 @@
 // tests/x2-zone3.test.mjs — VÙNG 3 "LỊCH SỬ THEO NGÀY" (22/10/2026)
-// • Không thụt lề trái/phải; khung lịch sử 1 TRỤC CUỘN (ngang) trên điện thoại
+// • Không thụt lề trái/phải; bảng lịch sử có cuộn ngang + dọc giới hạn
 // • Nút ‹ › trượt ngang (xuong2.setupHistoryHScroll)
 // • Cờ Công suất / Hiệu suất gắn đúng chỗ, KHÔNG gắn nhầm Đạt/Lỗi/Chờ QC
 import fs from 'node:fs';
@@ -37,8 +37,8 @@ console.log('--- C. CSS vùng 3 ---');
 check('C1: bỏ thụt lề trái/phải cho khung lịch sử', css.includes('.x2-zone[data-zone="3"]:has(> .x2-cut-table-wrap) { padding-top: 6px')
   && css.includes('.x2-zone[data-zone="3"] > .x2-cut-table-wrap,'));
 check('C2: thẻ ngày không còn margin 2 bên trong vùng 3', css.includes('.x2-zone[data-zone="3"] .x2-day-card,'));
-check('C3: điện thoại BỎ cuộn dọc bên trong khung lịch sử', /\.x2-zone\[data-zone="3"\] \.x2-cut-table-scroll[\s\S]{0,320}max-height: none/.test(css));
-check('C4: điện thoại chỉ cuộn NGANG + touch-action', /overflow-x: auto;[\s\S]{0,200}overflow-y: hidden;[\s\S]{0,200}touch-action: pan-x pan-y/.test(css));
+check('C3: điện thoại vẫn giới hạn chiều cao bảng lịch sử để cuộn riêng', /\.x2-zone\[data-zone="3"\] \.x2-cut-table-scroll,[\s\S]{0,220}max-height: min\(46vh, 320px\)/.test(css));
+check('C4: bảng lịch sử cho phép cuộn ngang và dọc độc lập', /\.x2-zone\[data-zone="3"\] \.x2-cut-table-scroll,[\s\S]{0,320}overflow-x: auto;[\s\S]{0,200}overflow-y: auto;[\s\S]{0,160}touch-action: pan-x pan-y/.test(css));
 check('C5: thẻ ngày đủ rộng (min-width 760px) để bảng không bị bóp', css.includes('min-width: 760px;'));
 check('C6: tiêu đề cột xuống dòng trên điện thoại', css.includes('.x2-day-table th { white-space: normal; }'));
 check('C7: nút ‹ › có CSS + ẩn khi không tràn', css.includes('.x2-hscroll-nav[hidden] { display: none !important; }')
@@ -49,8 +49,10 @@ console.log('--- D. Cấu trúc + nối ---');
 check('D1: 25 khung lịch sử dùng chung class', count(idx, 'class="x2-cut-table-scroll"') >= 20);
 check('D2: main.js gọi setupHistoryHScroll (boot + chuyển tab)', count(main, 'setupHistoryHScroll()') >= 2);
 check('D3: js/xuong2.js có hàm + export', x2.includes('function setupHistoryHScroll') && x2.includes('  setupHistoryHScroll,'));
-check('D4: mỗi khung chỉ gắn sự kiện 1 lần (cờ data-hscroll-ready)', x2.includes("el.dataset.hscrollReady !== '1'"));
+check('D4: mỗi khung chỉ gắn sự kiện 1 lần (cờ data-hscroll-ready)', ut.includes("el.dataset.hscrollReady !== '1'"));
 check('D5: không phá id khung lịch sử cũ', idx.includes('id="x2-day-cards"') && idx.includes('id="x2-cn-day-cards"') && idx.includes('id="x2-epv-day-cards"'));
+check('D6: tay nắm cuộn dọc Xưởng 2 rõ và dễ chạm', css.includes('#x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb')
+  && css.includes('min-height: 64px') && !ut.includes('setupVScrollControls'));
 
 console.log(`\nKẾT QUẢ: ${pass} PASS / ${fail} FAIL`);
 if (fail) process.exitCode = 1;

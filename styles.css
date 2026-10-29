@@ -13905,12 +13905,7 @@ body:not([data-area-approve~="sys.rates"]) [data-area-perm~="sys.rates:approve"]
 }
 
 /* ═══════════════════════════════════════════════════════════
-   VÙNG 3 "LỊCH SỬ THEO NGÀY" — KHÔNG THỤT LỀ + CUỘN 1 TRỤC + NÚT ‹ ›
-   22/10/2026 (yêu cầu người dùng):
-   • Không thụt lề trái/phải → tận dụng hết bề ngang.
-   • Trên ĐIỆN THOẠI: khung lịch sử CHỈ cuộn NGANG (bỏ cuộn dọc bên trong)
-     ⇒ vuốt dọc = cuộn trang, KHÔNG bị "khựng" khi đi qua bảng.
-   • Nút ‹ › do js/xuong2.js → setupHistoryHScroll() chèn vào đầu thẻ.
+   VÙNG 3 "LỊCH SỬ THEO NGÀY" — KHÔNG THỤT LỀ + NÚT TRƯỢT NGANG
    ═══════════════════════════════════════════════════════════ */
 .x2-zone[data-zone="3"]:has(> .x2-cut-table-wrap) { padding-top: 6px; padding-bottom: 8px; padding-left: 0; padding-right: 0; }
 .x2-zone[data-zone="3"] > .x2-cut-table-wrap,
@@ -13932,9 +13927,11 @@ body:not([data-area-approve~="sys.rates"]) [data-area-perm~="sys.rates:approve"]
 #x2-say-stats-wrap .x2-cut-table-head,
 #x2-epv-day-wrap .x2-cut-table-head { padding-left: 8px; padding-right: 8px; }
 
-/* Nút trượt ngang (chung cho cả 25 khung lịch sử) */
+/* Nút trượt ngang cho khung lịch sử Xưởng 2 và bảng chi tiết QC. */
 .x2-hscroll-nav { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
 .x2-hscroll-nav[hidden] { display: none !important; }
+.x2-hscroll-row { display: flex; justify-content: flex-end; padding: 2px 8px; }
+.x2-hscroll-row[hidden] { display: none !important; }
 .x2-hscroll-btn {
   width: 34px;
   height: 34px;
@@ -13955,6 +13952,72 @@ body:not([data-area-approve~="sys.rates"]) [data-area-perm~="sys.rates:approve"]
 .x2-hscroll-btn:hover:not([disabled]) { background: rgba(15, 118, 110, 0.1); border-color: #0f766e; }
 .x2-hscroll-btn[disabled] { opacity: 0.32; cursor: default; }
 .x2-cut-table-head:has(.x2-hscroll-nav) .rate-toggle-btn { margin-left: 0; }
+
+/* Các bảng ngày trong QC và Công Đoạn SX dùng chung một lề trái. */
+.qc-detail-content .x2-day-card,
+.x2-cut-table-scroll .x2-day-card { margin-left: 0; margin-right: 0; }
+.qc-detail-content .x2-cut-table-wrap,
+.x2-detail-content .x2-cut-table-wrap { margin-left: 0; margin-right: 0; }
+.qc-detail-content > .planning-card,
+.x2-detail-content > .planning-card {
+  box-shadow: inset 0 0 0 1px var(--primary), var(--shadow-sm);
+}
+body[data-theme="night"] .qc-detail-content > .planning-card,
+body[data-theme="night"] .x2-detail-content > .planning-card {
+  box-shadow: inset 0 0 0 1px var(--primary), 0 14px 34px rgba(80, 70, 30, 0.22);
+}
+/* Bảng nhỏ có vùng cuộn dọc riêng và giới hạn chiều cao; modal cuộn độc lập. */
+#qc-detail-content .table-responsive,
+#qc-detail-content .x2-cut-table-scroll,
+#x2-detail-content .table-responsive,
+#x2-detail-content .x2-cut-table-scroll {
+  max-height: min(46vh, 340px);
+  overflow-x: auto;
+  overflow-y: auto;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: auto;
+  scrollbar-color: #66717f #e9ecef;
+}
+#qc-detail-content .table-responsive::-webkit-scrollbar,
+#qc-detail-content .x2-cut-table-scroll::-webkit-scrollbar,
+#x2-detail-content .table-responsive::-webkit-scrollbar,
+#x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar {
+  width: 18px;
+  height: 14px;
+}
+#qc-detail-content .table-responsive::-webkit-scrollbar-track,
+#qc-detail-content .x2-cut-table-scroll::-webkit-scrollbar-track,
+#x2-detail-content .table-responsive::-webkit-scrollbar-track,
+#x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar-track {
+  background: #e9ecef;
+  border-radius: 999px;
+}
+#qc-detail-content .table-responsive::-webkit-scrollbar-thumb,
+#qc-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb,
+#x2-detail-content .table-responsive::-webkit-scrollbar-thumb,
+#x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb {
+  min-height: 56px;
+  border: 3px solid #e9ecef;
+  border-radius: 999px;
+  background: #66717f;
+  background-clip: padding-box;
+}
+#qc-detail-content .table-responsive::-webkit-scrollbar-thumb:hover,
+#qc-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb:hover,
+#x2-detail-content .table-responsive::-webkit-scrollbar-thumb:hover,
+#x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+  background-clip: padding-box;
+}
+#qc-detail-content .table-responsive::-webkit-scrollbar-thumb:active,
+#qc-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb:active,
+#x2-detail-content .table-responsive::-webkit-scrollbar-thumb:active,
+#x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb:active {
+  background: #374151;
+  background-clip: padding-box;
+}
 
 /* Ô "Sự cố" khi TẮT nhập tay (cờ incident-manual) — số CHỈ ĐỌC từ phiếu đã duyệt */
 .x2-inc-val {
@@ -13977,11 +14040,11 @@ body:not([data-area-approve~="sys.rates"]) [data-area-perm~="sys.rates:approve"]
   .x2-zone[data-zone="3"] .x2-cut-table-scroll,
   #x2-say-stats-wrap .x2-cut-table-scroll,
   #x2-epv-day-wrap .x2-cut-table-scroll {
-    max-height: none;          /* BỎ cuộn dọc bên trong → vuốt dọc cuộn TRANG */
-    overflow-x: auto;          /* chỉ còn 1 trục cuộn: NGANG */
-    overflow-y: hidden;
+    max-height: min(46vh, 320px);
+    overflow-x: auto;
+    overflow-y: auto;
     touch-action: pan-x pan-y;
-    overscroll-behavior-x: contain;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
   .x2-zone[data-zone="3"] .x2-day-card,
@@ -13991,6 +14054,14 @@ body:not([data-area-approve~="sys.rates"]) [data-area-perm~="sys.rates:approve"]
   .x2-zone[data-zone="3"] .x2-day-head,
   #x2-epv-day-wrap .x2-day-head { padding: 8px 10px; gap: 6px 12px; }
   .x2-hscroll-btn { width: 40px; height: 40px; font-size: 1.15rem; }
+  #qc-detail-content .table-responsive::-webkit-scrollbar,
+  #qc-detail-content .x2-cut-table-scroll::-webkit-scrollbar,
+  #x2-detail-content .table-responsive::-webkit-scrollbar,
+  #x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar { width: 20px; }
+  #qc-detail-content .table-responsive::-webkit-scrollbar-thumb,
+  #qc-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb,
+  #x2-detail-content .table-responsive::-webkit-scrollbar-thumb,
+  #x2-detail-content .x2-cut-table-scroll::-webkit-scrollbar-thumb { min-height: 64px; }
 }
 
 /* Chuẩn hóa bố cục thẻ nhập liệu công đoạn Xưởng 1 / Xưởng 2 */

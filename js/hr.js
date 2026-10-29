@@ -212,6 +212,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return hrHydrateFromRepo().then(() => {
       try { migrateHrDeptMerge(); }
       catch (e) { console.error('[NHÂN SỰ] Không di trú được bộ phận cũ:', e); }
+      if (hrReconcileAllAssignmentEnds()) saveHrData(['hrAssignments']);
       return true;
     });
   }
@@ -1022,9 +1023,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // lượt gán người đó trong ngày trên Bảng bố trí. Chưa có dữ liệu → 0.
   function overtimeActualMin(ot) {
     if (!ot || !ot.employeeId || !ot.date) return 0;
-    return (state.hrAssignments || [])
-      .filter(a => a.date === ot.date && a.employeeId === ot.employeeId)
-      .reduce((sum, a) => sum + hrSplitHoursHCDate(a.department || hrEmpDept(ot.employeeId), ot.date, a.start, a.end, a.shiftIdx).tc, 0);
+    const assignments = hrAssignmentsOf(ot.date).filter(a => a.employeeId === ot.employeeId);
+    const schedule = hrAssignmentScheduleOf(assignments);
+    return assignments.reduce((sum, a) => sum + hrSplitAssignmentHoursDate(a, ot.date, schedule).tc, 0);
   }
   // Nhãn giờ DỰ KIẾN: "17:30 → 19:30 · 2h"
   function overtimePlannedText(ot) {
@@ -1974,14 +1975,15 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       //    giờ làm) + badge tổng HC (giờ hành chính) / TC (tăng ca) trong ngày.
       //  • Chưa có dữ liệu Board -> giữ chip phân vị thủ công như cũ (fallback).
       const dayAs = hrAssignmentsOf(state.hrAttDate).filter(a => a.employeeId === e.id)
-        .sort((a, b) => String(a.start).localeCompare(String(b.start)));
+        .sort((a, b) => hrAssignmentStartMin(a) - hrAssignmentStartMin(b));
       let posCell;
       if (dayAs.length) {
+        const schedule = hrAssignmentScheduleOf(dayAs);
         const chips = dayAs.map(a =>
-          `<span class="att-pos-chip on" title="${escapeHTML(hrPosName(a.positionId))} · ${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}">` +
-          `${escapeHTML(hrPosName(a.positionId))} <b style="font-weight:600;">${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ''}</b></span>`).join('');
+          `<span class="att-pos-chip on" title="${escapeHTML(hrPosName(a.positionId))} · ${fmtHour(a.start)}${schedule.endById.get(a.id) ? '–' + fmtHour(schedule.endById.get(a.id)) : ' → hết ca'}">` +
+          `${escapeHTML(hrPosName(a.positionId))} <b style="font-weight:600;">${fmtHour(a.start)}${schedule.endById.get(a.id) ? '–' + fmtHour(schedule.endById.get(a.id)) : ''}</b></span>`).join('');
         const tot = dayAs.reduce((acc, a) => {
-          const r = hrSplitHoursHCDate(a.department || e.department, state.hrAttDate, a.start, a.end, a.shiftIdx || 0);
+          const r = hrSplitAssignmentHoursDate(a, state.hrAttDate, schedule);
           acc.hc += r.hc; acc.tc += r.tc; return acc;
         }, { hc: 0, tc: 0 });
         const badge = `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
@@ -2638,7 +2640,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (ciCtx) return ciCtx.asgByKey.get(`${employeeId}|${date}`) || [];
     return (state.hrAssignments || [])
       .filter(a => a && a.employeeId === employeeId && a.date === date)
-      .slice().sort((x, y) => ciToMin(x.start) - ciToMin(y.start));
+      .slice().sort((x, y) => hrAssignmentStartMin(x) - hrAssignmentStartMin(y));
   }
   // Giờ BỐ TRÍ của 1 NV trong ngày: khung sớm nhất → muộn nhất + HC/TC + ca
   // ⚠ GỘP KHOẢNG THỜI GIAN TRÙNG (union) — 20/10/2026: trước đây CỘNG dồn mọi
@@ -2649,17 +2651,16 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const em = hrEmpById(employeeId);
     const dept0 = em && em.department ? em.department : '';
     const list = ciAssignmentsOn(employeeId, date);
+    const schedule = hrAssignmentScheduleOf(list);
     let startMin = null, endMin = null;
     const shifts = new Set();
     const groups = new Map();   // 'bộphận|cộtCa' → [[s,e], ...]
     list.forEach(a => {
       const ad = a.department || dept0;
       const idx = a.shiftIdx || 0;
-      const range = hrShiftRange(hrShiftCfg(ad), idx);
-      const s = ciToMin(a.start) || range.startMin;
-      let e = ciToMin(a.end);
-      if (!e || e <= s) e = (e && e < s) ? e + 1440 : range.endMin;
-      if (e <= s) e += 1440;
+      const interval = schedule.intervals.get(a.id) || hrAssignmentInterval(a, schedule.endById.get(a.id));
+      const s = interval.startMin;
+      const e = interval.endMin;
       const key = `${ad}|${idx}`;
       if (!groups.has(key)) groups.set(key, { ad, idx, ivs: [] });
       groups.get(key).ivs.push([s, e]);
@@ -3255,9 +3256,11 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
   function ciPlanCell(r) {
     if (!r.plan.hasPlan) return '<span class="ci-none">— chưa bố trí —</span>';
+    const schedule = hrAssignmentScheduleOf(r.plan.assignments);
     const items = r.plan.assignments.map(a => {
       const range = hrShiftRange(hrShiftCfg(a.department || r.dept), a.shiftIdx || 0);
-      const time = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca (' + fmtHour(range.end) + ')'}`;
+      const end = schedule.endById.get(a.id) || '';
+      const time = `${fmtHour(a.start)}${end ? '–' + fmtHour(end) : ' → hết ca (' + fmtHour(range.end) + ')'}`;
       return `<span class="ci-plan-item" title="${escapeHTML(hrPosName(a.positionId) + ' · ' + time)}">
         <strong>${escapeHTML(hrPosName(a.positionId))}</strong> ${escapeHTML(time)}</span>`;
     }).join('');
@@ -5389,24 +5392,6 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return cfg.type === 'lamca' ? Math.max(1, (cfg.shifts || []).length) : 1;
   }
 
-  // '07:30' → 450 · rỗng → null
-  function hrNeedMinOf(t) {
-    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || ''));
-    return m ? (+m[1]) * 60 + (+m[2]) : null;
-  }
-  // Khoảng giờ THẬT của 1 lượt bố trí: giờ ra trống = hết ca; ca đêm vắt 24h
-  function hrNeedSpanOf(a) {
-    const pos = hrPosById(a.positionId);
-    const dept = hrDeptAliasOf(a.department || (pos && pos.department) || '');
-    const cfg = hrShiftCfg(dept || state.hrBoardDept || 'Xưởng 2');
-    const rng = hrShiftRange(cfg, a.shiftIdx || 0);
-    let s = hrNeedMinOf(a.start);
-    if (s == null) s = rng.startMin;
-    let e = hrNeedMinOf(a.end);
-    if (e == null) e = rng.endMin;
-    if (e <= s) e += 1440;
-    return { s, e };
-  }
   // Nhân viên có kỹ năng / đang giữ vị trí này?
   function hrEmployeeHasPos(e, positionId, positionName) {
     if (!e) return false;
@@ -5418,6 +5403,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // Bối cảnh 1 NGÀY: bố trí theo vị trí / theo người / người dùng chung / trùng giờ
   function hrNeedCtx(dateISO) {
     const assigns = hrAssignmentsOf(dateISO).filter(a => a && a.positionId && a.employeeId);
+    const schedule = hrAssignmentScheduleOf(assigns);
     const byPos = new Map();
     const byEmp = new Map();
     assigns.forEach(a => {
@@ -5433,21 +5419,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (posIds.length >= 2) shared.set(empId, posIds);
     });
     // TRÙNG GIỜ = 2 lượt KHÁC VỊ TRÍ có khoảng giờ chồng nhau
-    const conflict = new Set();
-    byEmp.forEach(list => {
-      if (list.length < 2) return;
-      const spans = list.map(a => Object.assign({ a }, hrNeedSpanOf(a)));
-      for (let i = 0; i < spans.length; i++) {
-        for (let j = i + 1; j < spans.length; j++) {
-          if (spans[i].a.positionId === spans[j].a.positionId) continue;
-          if (Math.max(spans[i].s, spans[j].s) < Math.min(spans[i].e, spans[j].e)) {
-            conflict.add(spans[i].a.id);
-            conflict.add(spans[j].a.id);
-          }
-        }
-      }
-    });
-    return { dateISO, assigns, byPos, byEmp, shared, conflict, hasData: assigns.length > 0 };
+    const conflict = schedule.conflictIds;
+    return { dateISO, assigns, byPos, byEmp, shared, conflict, schedule, hasData: assigns.length > 0 };
   }
 
   // Số liệu 1 dòng (vị trí) — LIVE, không lưu vào state
@@ -5731,7 +5704,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const conflict = ctx.conflict.has(a.id);
     const unskilled = rm.unskilledIds.includes(a.employeeId);
     const hit = q && (hnmNormQ(name).includes(q) || hnmNormQ(emp ? emp.code : '').includes(q));
-    const timeTxt = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}`;
+    const end = ctx.schedule.endById.get(a.id) || '';
+    const timeTxt = `${fmtHour(a.start)}${end ? '–' + fmtHour(end) : ' → hết ca'}`;
     const cls = ['hnm-person'];
     if (shared) cls.push('is-shared');
     if (conflict) cls.push('is-conflict');
@@ -6329,16 +6303,166 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (!endMin || endMin <= startMin) endMin += 1440;   // ca đêm vắt qua nửa đêm
     return { start: s.start, end: s.end, label: s.name, brkH: hrShiftBrkH(cfg, idx), startMin, endMin };
   }
+  const HR_ASSIGN_END_BASE = '_hrEndBase';
+
+  function hrAssignmentStartMin(a) {
+    const cfg = hrShiftCfg(a.department || hrEmpDept(a.employeeId));
+    const range = hrShiftRange(cfg, a.shiftIdx || 0);
+    const start = toMinT(a.start);
+    return range.endMin > 1440 && start < range.startMin ? start + 1440 : start;
+  }
+
+  function hrAssignmentInterval(a, endValue) {
+    const cfg = hrShiftCfg(a.department || hrEmpDept(a.employeeId));
+    const range = hrShiftRange(cfg, a.shiftIdx || 0);
+    const startMin = hrAssignmentStartMin(a);
+    const rawEnd = endValue !== undefined
+      ? endValue
+      : (Object.prototype.hasOwnProperty.call(a, HR_ASSIGN_END_BASE) ? a[HR_ASSIGN_END_BASE] : a.end);
+    if (!rawEnd) {
+      return { startMin, endMin: range.endMin > startMin ? range.endMin : startMin };
+    }
+    let endMin = toMinT(rawEnd);
+    if (range.endMin > 1440 && endMin < range.startMin) endMin += 1440;
+    if (endMin < startMin || endMin === startMin) endMin += 1440;
+    return { startMin, endMin };
+  }
+
+  function hrAssignmentBaseEnd(a, next) {
+    if (Object.prototype.hasOwnProperty.call(a, HR_ASSIGN_END_BASE)) return a[HR_ASSIGN_END_BASE] || '';
+    // Older versions replaced an implicit end-of-shift with the next start.
+    if (next && hrAssignmentStartMin(next) > hrAssignmentStartMin(a) && a.end === next.start) return '';
+    return a.end || '';
+  }
+
+  function hrAssignmentScheduleOf(assignments) {
+    const groups = new Map();
+    (assignments || []).forEach(a => {
+      if (!a || !a.employeeId || !a.date) return;
+      const key = `${a.date}|${a.employeeId}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(a);
+    });
+    const endById = new Map();
+    const nextById = new Map();
+    const intervals = new Map();
+    const conflictIds = new Set();
+    const conflictPairs = [];
+    groups.forEach(items => {
+      items.sort((a, b) => hrAssignmentStartMin(a) - hrAssignmentStartMin(b) || String(a.id).localeCompare(String(b.id)));
+      items.forEach((a, i) => {
+        const next = items[i + 1];
+        const startMin = hrAssignmentStartMin(a);
+        const nextStartMin = next ? hrAssignmentStartMin(next) : startMin;
+        const end = next && nextStartMin > startMin ? next.start : hrAssignmentBaseEnd(a, next);
+        nextById.set(a.id, next || null);
+        endById.set(a.id, end || '');
+        intervals.set(a.id, hrAssignmentInterval(a, end));
+      });
+      for (let i = 0; i < items.length; i++) {
+        const first = items[i];
+        const firstTime = intervals.get(first.id);
+        for (let j = i + 1; j < items.length; j++) {
+          const second = items[j];
+          const secondTime = intervals.get(second.id);
+          const sameStart = firstTime.startMin === secondTime.startMin;
+          const overlap = firstTime.startMin < secondTime.endMin && secondTime.startMin < firstTime.endMin;
+          if (sameStart || overlap) {
+            conflictIds.add(first.id);
+            conflictIds.add(second.id);
+            conflictPairs.push([first, second]);
+          }
+        }
+      }
+    });
+    return { endById, nextById, intervals, conflictIds, conflictPairs };
+  }
+
+  function hrReconcileAssignmentGroup(items) {
+    items.sort((a, b) => hrAssignmentStartMin(a) - hrAssignmentStartMin(b) || String(a.id).localeCompare(String(b.id)));
+    let changed = false;
+    items.forEach((a, i) => {
+      const next = items[i + 1];
+      let itemChanged = false;
+      if (next && hrAssignmentStartMin(next) > hrAssignmentStartMin(a)) {
+        if (!Object.prototype.hasOwnProperty.call(a, HR_ASSIGN_END_BASE)) {
+          a[HR_ASSIGN_END_BASE] = a.end === next.start ? '' : (a.end || '');
+          changed = true;
+          itemChanged = true;
+        }
+        if (a.end !== next.start) {
+          a.end = next.start;
+          changed = true;
+          itemChanged = true;
+        }
+        if (itemChanged) a.updatedAt = new Date().toISOString();
+      } else if (Object.prototype.hasOwnProperty.call(a, HR_ASSIGN_END_BASE)) {
+        const restoredEnd = a[HR_ASSIGN_END_BASE] || '';
+        if (a.end !== restoredEnd) {
+          a.end = restoredEnd;
+          changed = true;
+          itemChanged = true;
+        }
+        delete a[HR_ASSIGN_END_BASE];
+        changed = true;
+        itemChanged = true;
+        if (itemChanged) a.updatedAt = new Date().toISOString();
+      }
+    });
+    return changed;
+  }
+
+  function hrReconcileAssignmentEnds(assignments, employeeId, date) {
+    const items = (assignments || []).filter(a => a && a.employeeId === employeeId && a.date === date);
+    return hrReconcileAssignmentGroup(items);
+  }
+
+  function hrReconcileAllAssignmentEnds() {
+    const groups = new Map();
+    (state.hrAssignments || []).forEach(a => {
+      if (!a || !a.employeeId || !a.date) return;
+      const key = `${a.employeeId}|${a.date}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(a);
+    });
+    let changed = false;
+    groups.forEach(items => {
+      if (hrReconcileAssignmentGroup(items)) changed = true;
+    });
+    return changed;
+  }
+
+  function hrCommitAssignmentProposal(current, proposed) {
+    const currentById = new Map((current || []).map(a => [a.id, a]));
+    return (proposed || []).map(next => {
+      const existing = currentById.get(next.id);
+      if (!existing) return next;
+      Object.keys(existing).forEach(key => {
+        if (!Object.prototype.hasOwnProperty.call(next, key)) delete existing[key];
+      });
+      Object.assign(existing, next);
+      return existing;
+    });
+  }
+
+  function hrSplitAssignmentHoursDate(a, date, schedule) {
+    const interval = schedule?.intervals.get(a.id) || hrAssignmentInterval(a, schedule?.endById.get(a.id));
+    if (interval.endMin <= interval.startMin) return { hc: 0, tc: 0 };
+    const r = hrSplitHoursHCMin(a.department || hrEmpDept(a.employeeId), interval.startMin, interval.endMin, a.shiftIdx || 0);
+    if (date && hrIsRestDay(date) && r.hc > 0) return { hc: 0, tc: r.hc + r.tc };
+    return r;
+  }
+
   // Các bản ghi gán người của 1 ngày (tùy chọn lọc vị trí)
   // → đã chuyển sang CHỈ MỤC Map ở đầu file (hrAssignmentsOf — tránh quét
   //   toàn bộ state.hrAssignments mỗi lần vẽ bảng chấm công).
   // Giờ làm của 1 nhân viên trong ngày (từ board) — nguồn cho chấm công/tăng ca:
   // [{ position, positionId, start, end, shiftLabel }] đã sắp theo giờ bắt đầu
   function hrAssignTimesOf(employeeId, date) {
-    return (state.hrAssignments || [])
-      .filter(a => a.date === date && a.employeeId === employeeId)
-      .map(a => ({ position: hrPosName(a.positionId), positionId: a.positionId, start: a.start, end: a.end, shiftLabel: a.shiftLabel || '' }))
-      .sort((x, y) => String(x.start).localeCompare(String(y.start)));
+    const assignments = hrAssignmentsOf(date).filter(a => a.employeeId === employeeId);
+    const schedule = hrAssignmentScheduleOf(assignments);
+    return assignments.slice().sort((a, b) => hrAssignmentStartMin(a) - hrAssignmentStartMin(b))
+      .map(a => ({ position: hrPosName(a.positionId), positionId: a.positionId, start: a.start, end: schedule.endById.get(a.id) || '', shiftLabel: a.shiftLabel || '' }));
   }
 
   // '540' phút -> '9h' / '390' -> '6h30'
@@ -6364,7 +6488,15 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // Trả về phút: { hc, tc } (giờ nghỉ không nằm trong cả hai).
   function hrSplitHoursHC(dept, start, end, shiftIdx) {
     const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
-    return hrSplitHoursHCMin(dept, toMin(start), toMin(end), shiftIdx);
+    const cfg = hrShiftCfg(dept);
+    const range = hrShiftRange(cfg, shiftIdx);
+    let startMin = toMin(start);
+    let endMin = toMin(end);
+    if (range.endMin > 1440) {
+      if (startMin < range.startMin) startMin += 1440;
+      if (end && endMin < range.startMin) endMin += 1440;
+    }
+    return hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx);
   }
   // Bản dùng PHÚT trực tiếp — engine đối chiếu chấm công cần mốc > 1440 (ca đêm)
   function hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx) {
@@ -6661,7 +6793,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       const needDay = Math.max(0, parseInt(row && row.needQty, 10) || 1);
       return hrNeedSplitOf(needDay, colCount, hrNeedModeOf(row));
     };
-    const assigns = hrAssignmentsOf(state.hrBoardDate).filter(a => positions.some(p => p.id === a.positionId));
+    const dayAssignments = hrAssignmentsOf(state.hrBoardDate);
+    const schedule = hrAssignmentScheduleOf(dayAssignments);
+    const assigns = dayAssignments.filter(a => positions.some(p => p.id === a.positionId));
 
     // Chip tổng hợp tinh gọn trên đầu board
     const countEl = document.getElementById('hr-board-count');
@@ -6699,15 +6833,33 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         const range = hrShiftRange(cfg, si);
         const needSi = needPerShift[si] || 0;
         const mine = assigns.filter(a => a.positionId === p.id && (a.shiftIdx || 0) === si)
-          .sort((a, b) => String(a.start).localeCompare(String(b.start)));
+          .sort((a, b) => hrAssignmentStartMin(a) - hrAssignmentStartMin(b));
         if (mine.length < needSi) complete = false;
         const slots = mine.map(a => {
           const emp = hrEmpById(a.employeeId);
-          const timeTxt = `${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : ' → hết ca'}`;
-          return `<div class="slot filled" draggable="true" title="${escapeHTML(emp?.name || '')} · ${escapeHTML(timeTxt)}"
+          const end = schedule.endById.get(a.id) || '';
+          const timeTxt = `${fmtHour(a.start)}${end ? '–' + fmtHour(end) : ' → hết ca'}`;
+          const sameEmployee = dayAssignments.filter(x => x.employeeId === a.employeeId);
+          const repeatCount = sameEmployee.length;
+          const repeatTxt = sameEmployee.map(x => {
+            const xEnd = schedule.endById.get(x.id) || '';
+            return `${hrPosName(x.positionId)} ${fmtHour(x.start)}${xEnd ? '–' + fmtHour(xEnd) : '→ hết ca'}`;
+          }).join(', ');
+          const conflicts = schedule.conflictPairs.filter(pair => pair.some(x => x.id === a.id));
+          const conflictTxt = conflicts.map(pair => {
+            const other = pair.find(x => x.id !== a.id);
+            return other ? `${hrPosName(other.positionId)} ${fmtHour(other.start)}${schedule.endById.get(other.id) ? '–' + fmtHour(schedule.endById.get(other.id)) : '→ hết ca'}` : '';
+          }).filter(Boolean).join(', ');
+          const flag = conflicts.length
+            ? `<em class="slot-repeat-badge conflict" aria-label="Trùng giờ">!</em>`
+            : (repeatCount > 1 ? `<em class="slot-repeat-badge" aria-label="Được bố trí nhiều công đoạn">×${repeatCount}</em>` : '');
+          const title = `${emp?.name || ''} · ${timeTxt}` +
+            (repeatCount > 1 ? ` · Đã bố trí ${repeatCount} công đoạn: ${repeatTxt}` : '') +
+            (conflictTxt ? ` · Trùng giờ với: ${conflictTxt}` : '');
+          return `<div class="slot filled${repeatCount > 1 ? ' repeated' : ''}${conflicts.length ? ' conflict' : ''}" draggable="true" title="${escapeHTML(title)}"
             ondragstart="app.hrBoardDragStart(event, '${a.id}')" ondragend="this.classList.remove('dragging')" onclick="app.hrBoardOpenAssign('${p.id}', ${si}, '${a.id}')">
             <span class="slot-ava">${escapeHTML(hrInitials(emp?.name))}</span>
-            <span class="slot-info"><b>${escapeHTML(hrShortName(emp?.name || 'Đã xóa'))}</b><i>${escapeHTML(timeTxt)}</i></span>
+            <span class="slot-info"><b>${escapeHTML(hrShortName(emp?.name || 'Đã xóa'))}${flag}</b><i>${escapeHTML(timeTxt)}</i></span>
             <button type="button" class="slot-x" title="Bỏ người khỏi vị trí" onclick="event.stopPropagation(); app.hrBoardRemoveAssign('${a.id}')"><i data-lucide="x"></i></button>
           </div>`;
         });
@@ -6768,14 +6920,16 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       box.style.display = 'block';
       return;
     }
+    const dayAssignments = hrAssignmentsOf(state.hrBoardDate);
+    const schedule = hrAssignmentScheduleOf(dayAssignments);
     box.innerHTML = list.map(e => {
       const skilled = (e.skills || []).includes(hrBoardSuggestFor);
       // Người đã được bố trí trong ngày -> đánh dấu "Đã bố trí: ..." ngay trên
       // dòng gợi ý (VẪN chọn được — phục vụ 1 người nhiều công đoạn theo khung giờ)
-      const mine = hrAssignmentsOf(state.hrBoardDate).filter(a => a.employeeId === e.id)
-        .sort((a, b) => String(a.start).localeCompare(String(b.start)));
+      const mine = dayAssignments.filter(a => a.employeeId === e.id)
+        .sort((a, b) => hrAssignmentStartMin(a) - hrAssignmentStartMin(b));
       const mineTxt = mine.length
-        ? ` · Đã bố trí: ${mine.map(a => `${hrPosName(a.positionId)} ${fmtHour(a.start)}${a.end ? '–' + fmtHour(a.end) : '→hết ca'}`).join(', ')}`
+        ? ` · Đã bố trí: ${mine.map(a => `${hrPosName(a.positionId)} ${fmtHour(a.start)}${schedule.endById.get(a.id) ? '–' + fmtHour(schedule.endById.get(a.id)) : '→hết ca'}`).join(', ')}`
         : '';
       return `<div class="hr-combobox-item${mine.length ? ' picked' : ''}" data-emp-id="${escapeHTML(e.id)}">
         <strong>${escapeHTML(e.name)}</strong>
@@ -6818,6 +6972,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const srcId = mode === 'move' ? String(assignId).slice(5) : assignId;
     const src = srcId ? (state.hrAssignments || []).find(a => a.id === srcId) : null;
     const range = hrShiftRange(cfg, shiftIdx);
+    const srcSchedule = src ? hrAssignmentScheduleOf(hrAssignmentsOf(src.date)) : null;
+    const srcEnd = src ? hrAssignmentBaseEnd(src, srcSchedule.nextById.get(src.id)) : '';
 
     document.getElementById('board-assign-mode').value = mode === 'edit' ? srcId : '';
     document.getElementById('board-assign-movefrom').value = mode === 'move' ? srcId : '';
@@ -6834,7 +6990,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
     if (src && mode !== 'new') {
       pickBoardAssignEmployee(src.employeeId);
-      fillBoardAssignTimeSelects(cfg, shiftIdx, src.start, mode === 'move' ? '' : src.end);
+      fillBoardAssignTimeSelects(cfg, shiftIdx, src.start, mode === 'move' ? '' : srcEnd);
     } else {
       fillBoardAssignTimeSelects(cfg, shiftIdx, range.start, '');
       const inp = document.getElementById('board-assign-employee');
@@ -6876,67 +7032,54 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       shiftLabel: cfg.type === 'lamca' ? (cfg.shifts[shiftIdx]?.name || '') : 'Hành chính',
       updatedAt: new Date().toISOString()
     };
-    // Dời ô (kéo thả): LUÔN GIỮ LỊCH SỬ tại vị trí cũ — bản ghi cũ được chấm
-    // dứt lúc giờ bắt đầu của vị trí mới (giờ mới = giờ kết thúc cũ, VD:
-    // L.V.Tuấn 7h00–9h00 tại Bổ ống 2 → 9h00–hết ca tại Bốc luồng). Nếu giờ
-    // mới <= giờ cũ thì bản ghi cũ GIỮ NGUYÊN — không bao giờ xóa lịch sử.
-    if (moveFromId && moveFromId !== editId) {
-      const src = (state.hrAssignments || []).find(a => a.id === moveFromId);
-      if (src) {
-        if (start > src.start) {
-          src.end = start;
-          src.updatedAt = new Date().toISOString();
-        }
-        hrSyncAttPositionsFromAssignments(src.employeeId, src.date);
-      }
-    }
-    // Chặn TRÙNG: cùng người + cùng vị trí + cùng cột ca mà KHUNG GIỜ giao
-    // nhau -> chặn (tránh ghi nhầm 2 lần). Người làm thêm ở KHUNG GIỜ KHÁC
-    // nhau (kể cả quay lại đúng vị trí cũ) vẫn thêm bình thường.
-    const toMinT = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
-    const newStart = toMinT(start);
-    let newEnd = toMinT(end);
-    if (!newEnd || newEnd <= newStart) { const r = hrShiftRange(cfg, shiftIdx); newEnd = newEnd ? newEnd + 1440 : r.endMin; if (newEnd <= newStart) newEnd += 1440; }
-    const conflict = (state.hrAssignments || []).find(a =>
-      a.id !== editId && a.id !== moveFromId && a.date === date &&
-      a.employeeId === employeeId && a.positionId === positionId && (a.shiftIdx || 0) === shiftIdx &&
-      (() => {
-        const as = toMinT(a.start);
-        let ae = toMinT(a.end);
-        if (!ae || ae <= as) { ae = ae ? ae + 1440 : hrShiftRange(cfg, a.shiftIdx || 0).endMin; if (ae <= as) ae += 1440; }
-        return as < newEnd && newStart < ae;
-      })());
+    const currentAssignments = state.hrAssignments || [];
+    const existing = currentAssignments.find(a => a.id === editId);
+    const currentSchedule = hrAssignmentScheduleOf(currentAssignments.filter(a => a.date === date && a.employeeId === employeeId && a.id !== editId));
+    const candidateInterval = hrAssignmentInterval(data, end);
+    const duplicateStart = currentAssignments.find(a =>
+      a.id !== editId && a.date === date && a.employeeId === employeeId &&
+      hrAssignmentStartMin(a) === candidateInterval.startMin);
+    const samePositionConflict = currentAssignments.find(a => {
+      if (a.id === editId || a.date !== date || a.employeeId !== employeeId ||
+          a.positionId !== positionId || (a.shiftIdx || 0) !== shiftIdx) return false;
+      const interval = currentSchedule.intervals.get(a.id) || hrAssignmentInterval(a, currentSchedule.endById.get(a.id));
+      return interval.startMin < candidateInterval.endMin && candidateInterval.startMin < interval.endMin;
+    });
+    const conflict = duplicateStart || samePositionConflict;
     if (conflict) {
-      showToast(`Đã bố trí ${hrEmpName(employeeId)} tại "${hrPosName(positionId)}" lúc ${fmtHour(conflict.start)}${conflict.end ? '–' + fmtHour(conflict.end) : ' → hết ca'} — trùng khung giờ. Chọn khung giờ khác nếu muốn làm thêm.`, 'error');
+      const conflictSchedule = currentSchedule;
+      const conflictEnd = conflictSchedule.endById.get(conflict.id) || '';
+      const reason = duplicateStart ? 'cùng giờ bắt đầu với một công đoạn khác' : 'trùng khung giờ tại cùng vị trí';
+      showToast(`Đã bố trí ${hrEmpName(employeeId)} tại "${hrPosName(conflict.positionId)}" lúc ${fmtHour(conflict.start)}${conflictEnd ? '–' + fmtHour(conflictEnd) : ' → hết ca'} — ${reason}.`, 'error');
       return;
     }
-    if (editId) {
-      const idx = (state.hrAssignments || []).findIndex(a => a.id === editId);
-      if (idx !== -1) state.hrAssignments[idx] = { ...state.hrAssignments[idx], ...data };
-      else state.hrAssignments.push(data);
-    } else {
-      data.createdAt = new Date().toISOString();
-      state.hrAssignments.push(data);
+    const proposedAssignments = currentAssignments.map(a => ({ ...a }));
+    if (existing) hrReconcileAssignmentEnds(proposedAssignments, existing.employeeId, existing.date);
+    const oldIndex = proposedAssignments.findIndex(a => a.id === editId);
+    if (oldIndex !== -1) proposedAssignments.splice(oldIndex, 1);
+    if (!editId) data.createdAt = new Date().toISOString();
+    proposedAssignments.push(data);
+    if (existing && (existing.employeeId !== employeeId || existing.date !== date)) {
+      hrReconcileAssignmentEnds(proposedAssignments, existing.employeeId, existing.date);
     }
-    // ĐIỀN TAY (thêm mới / sửa giờ) tại vị trí khác — KHUNG GIỜ KHÁC: giờ BẮT
-    // ĐẦU tại vị trí mới cũng là GIỜ KẾT THÚC tại các vị trí cũ của cùng nhân
-    // viên (cùng ngày + cùng cột ca + cùng bộ phận) — giờ cũ tự cắt, không
-    // chồng lấn. Chỉ cắt khi giờ mới MUỘN hơn giờ bắt đầu cũ (giữ lịch sử, GIỐNG
-    // logic kéo thẻ: L.V.Tuấn 7h00–9h00 tại Bổ ống 2 → 9h00–hết ca tại Bốc luồng).
-    const cutPos = [];
-    (state.hrAssignments || []).forEach(a => {
-      if (a.id === editId || a.id === moveFromId) return; // bỏ qua bản đang tạo/sửa/dời
-      if (a.date !== date || a.employeeId !== employeeId) return;
-      if (a.department !== dept || (a.shiftIdx || 0) !== shiftIdx) return;
-      const as = toMinT(a.start);
-      let ae = toMinT(a.end);
-      if (!ae || ae <= as) { ae = hrShiftRange(cfg, a.shiftIdx || 0).endMin; if (ae <= as) ae += 1440; }
-      if (newStart > as && ae > newStart) {
-        a.end = start;
-        a.updatedAt = new Date().toISOString();
-        cutPos.push(hrPosName(a.positionId));
-      }
-    });
+    hrReconcileAssignmentEnds(proposedAssignments, employeeId, date);
+    const proposedSchedule = hrAssignmentScheduleOf(proposedAssignments.filter(a => a.date === date));
+    const invalidPair = proposedSchedule.conflictPairs.find(pair => pair.some(a => a.id === data.id));
+    if (invalidPair) {
+      const other = invalidPair.find(a => a.id !== data.id);
+      showToast(`Đã bố trí ${hrEmpName(employeeId)} tại "${hrPosName(other?.positionId || positionId)}" cùng giờ ${fmtHour(start)} — không thể xếp đồng thời hai vị trí.`, 'error');
+      return;
+    }
+    const cutPos = proposedAssignments
+      .filter(a => a.id !== data.id && a.date === date && a.employeeId === employeeId &&
+        proposedSchedule.endById.get(a.id) === start &&
+        currentSchedule.endById.get(a.id) !== start)
+      .map(a => hrPosName(a.positionId));
+    state.hrAssignments = hrCommitAssignmentProposal(currentAssignments, proposedAssignments);
+    if (moveFromId && moveFromId !== editId) {
+      const src = state.hrAssignments.find(a => a.id === moveFromId);
+      if (src) hrSyncAttPositionsFromAssignments(src.employeeId, src.date);
+    }
     // Gán người = có mặt làm việc: tự chấm "Đi làm" nếu ngày chưa chấm tay
     const rec = ensureAttRecord(employeeId, date);
     if (rec.status !== 'leave') rec.status = 'work';
@@ -6961,7 +7104,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const a = (state.hrAssignments || []).find(x => x.id === id);
     if (!a) return;
     trackDeleted('hrAssignments', id);
-    state.hrAssignments = (state.hrAssignments || []).filter(x => x.id !== id);
+    const currentAssignments = state.hrAssignments || [];
+    const assignments = currentAssignments.map(x => ({ ...x }));
+    hrReconcileAssignmentEnds(assignments, a.employeeId, a.date);
+    const proposedAssignments = assignments.filter(x => x.id !== id);
+    hrReconcileAssignmentEnds(proposedAssignments, a.employeeId, a.date);
+    state.hrAssignments = hrCommitAssignmentProposal(currentAssignments, proposedAssignments);
     hrSyncAttPositionsFromAssignments(a.employeeId, a.date);
     saveHrData(['hrAssignments', 'hrAttendance']);
     renderHrAfterBoardChange();
@@ -8031,7 +8179,6 @@ export {
   hrNeedSplitOf,
   hrNeedModeOf,
   hrNeedColCount,
-  hrNeedSpanOf,
   hrNormDept,
   hrDeptOptions,
   hrEmployeeHasPos,

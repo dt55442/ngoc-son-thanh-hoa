@@ -349,7 +349,7 @@
     hrRecruitment: [], // [{ id, department, position, needQty, hiredQty, needDate, status open|done, notes, createdAt, updatedAt }]
     hrPositionNeeds: [], // BẢNG TRUNG GIAN "Nhân sự cần tại các vị trí": [{ id, department, position, positionId, needQty, haveQty, notes, createdAt, updatedAt }]
     hrShifts: [],      // Cài đặt ca làm việc theo bộ phận: [{ id: dept, type 'hanhchinh'|'lamca', shifts: [{ name, start, end }] }]
-    hrAssignments: [], // Bố trí vị trí theo ngày: [{ id, date, department, positionId, shiftIdx, employeeId, start, end, createdAt, updatedAt }]
+    hrAssignments: [], // Bố trí theo ngày; end là mốc hiệu lực, _hrEndBase giữ giờ gốc khi tự nối công đoạn kế tiếp
     hrBoardDate: '',   // ngày đang xem của bảng bố trí ('yyyy-mm-dd')
     hrBoardDept: '',   // bộ phận đang xem của bảng bố trí (mặc định 'Xưởng 2')
     hrPositions: [],   // [{ id, name, department, note, createdAt, updatedAt }] — danh mục vị trí làm việc của xưởng

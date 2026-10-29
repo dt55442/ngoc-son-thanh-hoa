@@ -4536,7 +4536,7 @@
             <button class="btn btn-outline btn-sm" id="btn-board-next" title="Ngày sau"><i data-lucide="chevron-right"></i></button>
             <button class="btn btn-outline btn-sm" id="btn-board-today" title="Về hôm nay">Hôm Nay</button>
           </div>
-          <span class="hr-count">Ô "?" = trống · ô xanh = đã có người · bấm ô hoặc "+" để thêm · kéo chip để chuyển vị trí (giữ lịch sử giờ tại vị trí cũ) · <b>giữ chuột + rê ngang</b> để cuộn bảng khi nhiều vị trí</span>
+          <span class="hr-count">Ô "?" = trống · ô xanh = đã có người · nhãn ×N = nhân viên được xếp N công đoạn, giờ kết thúc tự nối theo công đoạn sau · viền đỏ ! = giờ trùng · bấm ô hoặc "+" để thêm · kéo chip để chuyển vị trí · <b>giữ chuột + rê ngang</b> để cuộn bảng khi nhiều vị trí</span>
           <span class="hr-count" id="hr-board-count"></span>
         </div>
         <div id="hr-board-dept-tabs" class="hr-board-tabs"></div>
@@ -5501,7 +5501,7 @@
           <select id="board-assign-start"></select>
         </div>
         <div class="form-group">
-          <label for="board-assign-end">Bước 3 — Giờ Kết Thúc <span style="font-weight:400; font-size:0.72rem; color:var(--text-muted);">(bỏ trống = hết ca của ngày)</span></label>
+          <label for="board-assign-end">Bước 3 — Giờ Kết Thúc <span style="font-weight:400; font-size:0.72rem; color:var(--text-muted);">(bỏ trống = hết ca; nếu có công đoạn sau thì tự nối giờ)</span></label>
           <select id="board-assign-end"></select>
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">

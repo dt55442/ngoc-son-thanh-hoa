@@ -657,7 +657,9 @@ check('ĐÁNH GIÁ: người không có quyền không mở được bảng ngu�
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 hr.setWorkerEvaluationEfficiencyProvider(() => new Map([['worker-prod', {
   efficiency: 68.8, validHours: 6, assignedHours: 7.5, coverageRate: 80,
-  estimatedHours: 1, overlapCount: 1, stages: 2
+  estimatedHours: 1, overlapCount: 1, stages: 1, unmatchedCount: 0, tieMissing: false,
+  stageDetails: [{ id: 'cut', label: 'Cắt Chọn', selected: true, efficiency: 68.8, rawEfficiency: 68.8,
+    validHours: 6, assignedHours: 7.5, coverageRate: 80, estimatedHours: 1 }]
 }]]));
 const linkedEvaluation = hr.computeWorkerEvaluation('2024-06');
 const linkedProd = linkedEvaluation.rows.find(r => r.emp.id === 'worker-prod');
@@ -666,16 +668,116 @@ check('ĐÁNH GIÁ HS: chỉ số tham chiếu không bị gọi nhầm là năn
   linkedProd.attendanceRate === 4 && linkedEvaluation.summary.employeesWithStageEfficiency === 1);
 hr.renderWorkerEvaluation();
 check('ĐÁNH GIÁ HS: bảng hiển thị giờ hợp lệ, độ phủ và cảnh báo sản lượng ước tính',
-  document.getElementById('hr-eval-body').innerHTML.includes('68,8% tham chiếu') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('68,8% công đoạn') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('Cắt Chọn') &&
   document.getElementById('hr-eval-body').innerHTML.includes('độ phủ 80%') &&
   document.getElementById('hr-eval-body').innerHTML.includes('sản lượng quy đổi/ước tính') &&
   document.getElementById('hr-eval-body').innerHTML.includes('Có ước tính') &&
   document.getElementById('hr-eval-body').innerHTML.includes('Có lịch trùng'));
 hr.setWorkerEvaluationView('cards');
 check('ĐÁNH GIÁ HS: thẻ mini dùng cùng chỉ số tham chiếu và độ phủ',
-  document.getElementById('hr-eval-cards').innerHTML.includes('68,8% tham chiếu') &&
+  document.getElementById('hr-eval-cards').innerHTML.includes('68,8% công đoạn') &&
   document.getElementById('hr-eval-cards').innerHTML.includes('độ phủ 80%') &&
   document.getElementById('hr-eval-cards').innerHTML.includes('Công việc Cơ Điện'));
+check('ĐÁNH GIÁ HS: danh sách chỉ hiện một tỷ lệ, độ phủ nằm trong chi tiết',
+  [...document.getElementById('hr-eval-body').innerHTML.matchAll(/<details class="hr-eval-disclosure"><summary title="Xem chi tiết hiệu suất tham chiếu và cảnh báo phân công">([\s\S]*?)<\/summary>/g)]
+    .every(match => !match[1].includes('độ phủ')) &&
+  [...document.getElementById('hr-eval-cards').innerHTML.matchAll(/<details class="hr-eval-disclosure"><summary title="Xem chi tiết hiệu suất tham chiếu và cảnh báo phân công">([\s\S]*?)<\/summary>/g)]
+    .every(match => !match[1].includes('độ phủ')));
+hr.setWorkerEvaluationEfficiencyProvider(() => new Map([['worker-prod', {
+  efficiency: 80, validHours: 4, assignedHours: 4, coverageRate: 100, estimatedHours: 0,
+  overlapCount: 0, unmatchedCount: 0, tieMissing: true,
+  stageDetails: [
+    { id: 'cut', label: 'Cắt Chọn', selected: true, efficiency: 80, rawEfficiency: 80, validHours: 4, assignedHours: 4, coverageRate: 100, estimatedHours: 0 },
+    { id: 'boong', label: 'Bổ Ống', selected: false, efficiency: null, rawEfficiency: null, validHours: 0, assignedHours: 4, coverageRate: 0, estimatedHours: 0 }
+  ]
+}]]));
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ HS: cảnh báo khi công đoạn đồng giờ thiếu số liệu so sánh',
+  document.getElementById('hr-eval-body').innerHTML.includes('Chưa đủ dữ liệu so sánh') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('không thể khẳng định công đoạn được chọn'));
+hr.setWorkerEvaluationEfficiencyProvider(() => new Map([['worker-prod', {
+  efficiency: 90, validHours: 4, assignedHours: 4, coverageRate: 100, estimatedHours: 0,
+  overlapCount: 0, unmatchedCount: 0, tieMissing: false,
+  stageDetails: [
+    { id: 'cut', label: 'Cắt Chọn', selected: true, efficiency: 90, rawEfficiency: 90, validHours: 4, assignedHours: 4, coverageRate: 100, estimatedHours: 0 },
+    { id: 'boong', label: 'Bổ Ống', selected: false, efficiency: 80, rawEfficiency: 80, validHours: 4, assignedHours: 4, coverageRate: 100, estimatedHours: 4 }
+  ]
+}]]));
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ HS: cảnh báo cả dữ liệu ước tính dùng để so sánh công đoạn đồng giờ',
+  document.getElementById('hr-eval-body').innerHTML.includes('Có ước tính'));
+hr.setWorkerEvaluationEfficiencyProvider(() => new Map([['worker-prod', {
+  efficiency: 80, validHours: null, assignedHours: null, coverageRate: null, estimatedHours: null,
+  overlapCount: 0, unmatchedCount: 0, tieMissing: false,
+  stageDetails: [
+    { id: 'cut', label: 'Cắt Chọn', selected: true, efficiency: 80, rawEfficiency: 80, validHours: 4, assignedHours: 4, coverageRate: 100, estimatedHours: 0 },
+    { id: 'boong', label: 'Bổ Ống', selected: true, efficiency: 80, rawEfficiency: 80, validHours: 3, assignedHours: 4, coverageRate: 75, estimatedHours: 0 }
+  ]
+}]]));
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ HS: đồng chính hiện tên và chi tiết riêng, không cộng độ phủ',
+  document.getElementById('hr-eval-cards').innerHTML.includes('Cắt Chọn · Bổ Ống') &&
+  document.getElementById('hr-eval-cards').innerHTML.includes('độ phủ 100%') &&
+  document.getElementById('hr-eval-cards').innerHTML.includes('độ phủ 75%'));
+hr.setWorkerEvaluationEfficiencyProvider(() => new Map([['worker-prod', {
+  efficiency: 86.7, validHours: 144, assignedHours: 153, coverageRate: 94.1,
+  estimatedHours: 0, overlapCount: 0, unmatchedCount: 1, tieMissing: false,
+  unmatchedAssignments: [{
+    id: 'unknown-stage', date: '2024-06-11', department: 'Xưởng 2',
+    positionName: 'Vị trí chưa ánh xạ', start: '07:00', end: '09:00',
+    reason: 'Vị trí chưa được ánh xạ vào công đoạn hiệu suất'
+  }],
+  stageDetails: [{
+    id: 'epvan', label: 'Ép Ván', selected: true, efficiency: 86.7, rawEfficiency: 86.7,
+    validHours: 144, assignedHours: 153, coverageRate: 94.1, estimatedHours: 0
+  }]
+}]]));
+hr.renderWorkerEvaluation();
+const partialEvalHtml = document.getElementById('hr-eval-body').innerHTML;
+check('ĐÁNH GIÁ HS: vẫn hiển thị tỷ lệ nhận diện được, phân biệt rõ kết quả tạm tính',
+  partialEvalHtml.includes('86,7% công đoạn') &&
+  partialEvalHtml.includes('Ép Ván') &&
+  partialEvalHtml.includes('nhiều giờ nhất trong dữ liệu nhận diện') &&
+  partialEvalHtml.includes('chưa thể xác nhận là công đoạn chính của toàn bộ lịch') &&
+  !partialEvalHtml.includes('Chưa xác định công đoạn chính'));
+const evalBoardCard = document.getElementById('hr-board-card');
+const evalHrView = document.getElementById('hr-view');
+const evalDetailsStack = document.getElementById('hr-details-stack');
+evalBoardCard.parentElement = evalDetailsStack;
+evalDetailsStack.parentElement = evalHrView;
+evalHrView.insertBefore = child => { child.parentElement = evalHrView; };
+evalBoardCard.classList.add('hr-card-hidden', 'rate-table-collapsed');
+check('ĐÁNH GIÁ HS: truy vết được phân công chưa nhận diện đến đúng ngày và bảng bố trí',
+  partialEvalHtml.includes('Vị trí chưa được ánh xạ vào công đoạn hiệu suất') &&
+  partialEvalHtml.includes('data-eval-assignment-date="2024-06-11"') &&
+  hr.openWorkerEvaluationAssignmentDate('2024-06-11', 'Xưởng 2') &&
+  state.hrBoardDate === '2024-06-11' && state.hrBoardDept === 'Xưởng 2' &&
+  evalBoardCard.parentElement === evalHrView &&
+  !evalBoardCard.classList.contains('hr-card-hidden') &&
+  !evalBoardCard.classList.contains('rate-table-collapsed'));
+hr.hrCloseOpenCard();
+hr.setWorkerEvaluationEfficiencyProvider(() => new Map([['worker-prod', {
+  efficiency: 86.7, validHours: 144, assignedHours: 153, coverageRate: 94.1,
+  estimatedHours: 0, overlapCount: 2, unmatchedCount: 0, tieMissing: false,
+  overlapAssignments: [{
+    id: 'overlap-one', date: '2024-06-12', department: 'Xưởng 2',
+    positionName: 'Ép Ván', start: '07:00', end: '10:00',
+    reason: 'Phân công có khoảng giờ giao nhau',
+    conflicts: [{ positionName: 'Bào Tinh', start: '09:00', end: '11:00' }]
+  }],
+  stageDetails: [{
+    id: 'epvan', label: 'Ép Ván', selected: true, efficiency: 86.7, rawEfficiency: 86.7,
+    validHours: 144, assignedHours: 153, coverageRate: 94.1, estimatedHours: 0
+  }]
+}]]));
+hr.renderWorkerEvaluation();
+const overlapEvalHtml = document.getElementById('hr-eval-body').innerHTML;
+check('ĐÁNH GIÁ HS: cảnh báo lịch trùng dẫn đến ngày, vị trí và khoảng phân công liên quan',
+  overlapEvalHtml.includes('Có lịch trùng (2)') &&
+  overlapEvalHtml.includes('12/06/2024 · Ép Ván · 07:00–10:00') &&
+  overlapEvalHtml.includes('Trùng với Bào Tinh 09:00–11:00') &&
+  overlapEvalHtml.includes('data-eval-assignment-date="2024-06-12"'));
 const attStatsFilter = document.getElementById('hr-attstats-filter-dept');
 attStatsFilter.options = [{ value: 'all' }, { value: 'Xưởng 1' }];
 check('ĐÁNH GIÁ: mở thống kê chấm công đúng kỳ và bộ phận',

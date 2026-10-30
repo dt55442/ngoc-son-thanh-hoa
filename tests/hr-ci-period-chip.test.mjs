@@ -314,7 +314,7 @@ check('F8. Dòng có data-ci-row + ô Ngày/Tên bấm được + giờ máy m�
 check('F9. Chip là BUTTON (không còn span tĩnh) + có aria-pressed',
   hrSrc.includes('data-ci-chip="${d.key}"') && hrSrc.includes('aria-pressed='));
 check('F10. Cache + APP_VERSION = v313',
-  swSrc.includes("nha-may-ngoc-son-v318") && stateSrc.includes("'v318'"));
+  swSrc.includes("nha-may-ngoc-son-v322") && stateSrc.includes("'v322'"));
 check('F11. Modal bulk ghi rõ KỲ (ngày/tuần/tháng) chứ không chỉ tháng',
   idxHtml.includes('KỲ đang xem') && hrSrc.includes('plan.range && plan.range.label'));
 

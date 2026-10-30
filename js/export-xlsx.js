@@ -1645,26 +1645,39 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
         const evaluationRows = result.rows.filter(r => inDept(r.department));
         if (!evaluationRows.length) return noData();
         header = ['Nhân Viên', 'Mã NV', 'Bộ Phận', 'Ngày Công (Tất Cả)', 'Nghỉ Có Phép', 'Vắng (Chưa Xác Định Phép)', 'Chưa Chấm',
-          'Chuyên Cần (%)', 'Hiệu Suất Công Đoạn Tham Chiếu (%)', 'Giờ Có Hiệu Suất',
-          'Giờ Phân Công Có Liên Kết', 'Độ Phủ Hiệu Suất (%)', 'Giờ Dùng Sản Lượng Ước Tính',
+          'Chuyên Cần (%)', 'Hiệu Suất Công Đoạn Tham Chiếu (%)', 'Giờ Có Hiệu Suất (Công Đoạn Tham Chiếu)',
+          'Giờ Phân Công Công Đoạn Tham Chiếu', 'Độ Phủ Công Đoạn Tham Chiếu (%)', 'Giờ Dùng Sản Lượng Ước Tính',
           'Phân Công Trùng Giờ Bị Loại', 'Việc Cơ Điện Được Giao', 'Việc Đã Nghiệm Thu',
           'Nghiệm Thu Đúng Hạn (có đủ mốc)', 'Không Tái Phát (có theo dõi)', 'Đánh Giá (Quản Lý)',
-          'Công Chuẩn', 'Ngày Làm Trong Lịch Chuẩn', 'Ngày Làm Vào Ngày Nghỉ'];
+          'Công Chuẩn', 'Ngày Làm Trong Lịch Chuẩn', 'Ngày Làm Vào Ngày Nghỉ',
+          'Công Đoạn Được Chọn (Dữ Liệu Nhận Diện)', 'Chi Tiết Công Đoạn Đồng Giờ',
+          'Phân Công Chưa Nhận Diện', 'Cảnh Báo So Sánh', 'Chi Tiết Lịch Trùng',
+          'Chi Tiết Phân Công Chưa Nhận Diện'];
         rows = evaluationRows.map(r => [
           r.emp.name || '', r.emp.code || '', r.department, r.work, r.leave, r.absent, r.unmarked,
           r.attendanceRate === null ? '' : r.attendanceRate,
           r.stageEfficiency === null ? 'Chưa đủ dữ liệu hiệu suất' : r.stageEfficiency,
-          r.stageEfficiencyValidHours || '',
-          r.stageEfficiencyAssignedHours || '',
+          r.stageEfficiencyValidHours === null ? '' : r.stageEfficiencyValidHours,
+          r.stageEfficiencyAssignedHours === null ? '' : r.stageEfficiencyAssignedHours,
           r.stageEfficiencyCoverageRate === null ? '' : r.stageEfficiencyCoverageRate,
-          r.stageEfficiencyEstimatedHours || '',
+          r.stageEfficiencyEstimatedHours === null ? '' : r.stageEfficiencyEstimatedHours,
           r.stageEfficiencyOverlapCount || '',
           r.assignedTasks, r.verifiedTasks,
           r.onTimeEligibleTasks ? `${r.onTimeTasks}/${r.onTimeEligibleTasks}` : '',
           r.noRecurrenceEligibleTasks ? `${r.noRecurrenceTasks}/${r.noRecurrenceEligibleTasks}` : '',
-          r.evaluationGrade || '', r.standardDays, r.workedStandardDays, r.workedRestDays
+          r.evaluationGrade || '', r.standardDays, r.workedStandardDays, r.workedRestDays,
+          r.stageEfficiencyDetails.filter(stage => stage.selected).map(stage => stage.label).join(' · '),
+          r.stageEfficiencyDetails.map(stage => `${stage.label}${stage.selected ? (r.stageEfficiencyOverlapCount || r.stageEfficiencyUnmatchedCount ? ' (nhiều giờ nhất trong dữ liệu nhận diện)' : ' (chính)') : r.stageEfficiencyDetails.length > 1 ? ' (đồng giờ)' : ' (nhiều giờ nhất trong dữ liệu nhận diện)'}: ${stage.efficiency === null ? 'thiếu hiệu suất' : stage.rawEfficiency + '%'}; ${stage.validHours}/${stage.assignedHours} giờ; độ phủ ${stage.coverageRate === null ? '—' : stage.coverageRate + '%'}; ${stage.estimatedHours} giờ ước tính`).join(' | '),
+          r.stageEfficiencyUnmatchedCount,
+          r.stageEfficiencyTieMissing ? 'Công đoạn đồng giờ thiếu hiệu suất, không thể so sánh đầy đủ' : '',
+          (r.stageEfficiencyOverlapAssignments || []).map(issue =>
+            `${issue.date} · ${issue.positionName || 'Vị trí chưa rõ'} ${issue.start || '—'}–${issue.end || 'hết ca'}: ${issue.reason}${issue.conflicts && issue.conflicts.length ? `; trùng với ${issue.conflicts.map(other => `${other.positionName || 'Vị trí chưa rõ'} ${other.start || '—'}–${other.end || 'hết ca'}`).join(', ')}` : ''}`
+          ).join(' | '),
+          (r.stageEfficiencyUnmatchedAssignments || []).map(issue =>
+            `${issue.date} · ${issue.positionName || 'Vị trí chưa rõ'} ${issue.start || '—'}–${issue.end || 'hết ca'}: ${issue.reason}`
+          ).join(' | ')
         ]);
-        extraNote = `Tháng: ${month}. Chuyên cần = ngày làm trong lịch chuẩn / công chuẩn cả tháng theo thời gian làm việc; ngày làm vào ngày nghỉ không tính vào tỷ lệ. Chưa chấm tính đến hôm nay, kể cả ngày nghỉ; vắng chưa xác định phép. Kết quả tháng hiện tại là tạm thời. Mức đánh giá A/B/C do Quản lý nhập; không có điểm tổng hay lương thưởng tự động. Hiệu suất công đoạn/nhóm được gia quyền theo giờ phân công khớp employeeId; không phải sản lượng riêng của từng người. Giờ trùng lịch bị loại; giờ thiếu dữ liệu không bị tính thành 0.`;
+        extraNote = `Tháng: ${month}. Chuyên cần = ngày làm trong lịch chuẩn / công chuẩn cả tháng theo thời gian làm việc; ngày làm vào ngày nghỉ không tính vào tỷ lệ. Chưa chấm tính đến hôm nay, kể cả ngày nghỉ; vắng chưa xác định phép. Kết quả tháng hiện tại là tạm thời. Hạng A/B/C do Quản lý nhập; không có điểm tổng hay lương thưởng tự động. Hiệu suất là của công đoạn có nhiều giờ phân công nhất trên phần lịch nhận diện được và không trùng, chỉ tính ngày/ca đã tham gia; không phải sản lượng cá nhân, công đoạn hỗ trợ không tính. Nếu còn phân công chưa nhận diện hoặc giờ trùng, tỷ lệ là tạm tính trên dữ liệu đủ căn cứ và không khẳng định công đoạn chính của toàn bộ lịch. Công thức mới có thể làm kết quả các kỳ trước thay đổi. Dữ liệu thiếu không tính thành 0. Nếu đồng chính, xem chi tiết từng công đoạn thay vì cộng giờ.`;
         break;
       }
       case 'hr-pos': {

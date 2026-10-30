@@ -24,7 +24,7 @@ import { captureAutoBackup } from './autobackup.js'; // chụp bản cất TRƯ�
 import { canArea, canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
 import { logDataChange } from './history.js';
-import { hrShiftCfg, hrSplitHoursHCDate } from './hr.js';
+import { hrShiftCfg, hrSplitHoursHCDate, hrAssignmentInterval } from './hr.js';
 import { renderAll } from './main.js'; // vẽ lại toàn bộ (Kanban cột Kho ẩn lô hết) — dùng lúc chạy
 import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
@@ -259,6 +259,14 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     return String(name || '').toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, ' ').trim();
+  }
+  function isNonEfficiencyEvaluationPosition(name) {
+    const normalized = normPosName(name).replace(/đ/g, 'd');
+    const compact = normalized.replace(/\s*\/\s*/g, '/');
+    return normalized.includes('ho tro') ||
+      compact.includes('tt/tp') ||
+      normalized.includes('to truong') ||
+      normalized.includes('to pho');
   }
   function isCutSelectPos(name) {
     return normPosName(name).includes('cat chon');
@@ -16161,7 +16169,7 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     return setupHScrollNav('.x2-cut-table-scroll');
   }
 
-  function workerAssignmentsForCapacityMonth(month) {
+  function workerAssignmentsForCapacityMonth(month, options = {}) {
     const monthKey = String(month || '');
     if (!/^\d{4}-\d{2}$/.test(monthKey)) return [];
     const assignments = (state.hrAssignments || []).filter(a =>
@@ -16214,33 +16222,52 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
       const department = String(assignment.department || '').trim();
       if (department !== 'Xưởng 1' && department !== 'Xưởng 2') return;
       const positionName = positionNameOf(assignment);
+      if (isNonEfficiencyEvaluationPosition(positionName)) return;
       const matches = stageMatchers.filter(stage =>
         stage.dept === department && stage.match(positionName, assignment.date));
-      if (matches.length !== 1) return;
       const employeeId = String(assignment.employeeId || '').trim();
       const start = String(assignment.start || '').trim();
-      if (!employeeId || !employees.has(employeeId) || !start) return;
+      const end = String(assignment.end || '').trim();
+      if (!employeeId || !employees.has(employeeId)) return;
+      if (!options.includeUnmatched && (matches.length !== 1 || !start)) return;
+      const timePattern = /^(?:[01]?\d|2[0-3]):[0-5]\d$/;
+      const timeValid = timePattern.test(start) && (!end || timePattern.test(end));
       const shiftIdx = assignment.shiftIdx == null || assignment.shiftIdx === ''
         ? null : Number(assignment.shiftIdx);
-      const split = hrSplitHoursHCDate(
+      const split = !options.includeUnmatched || timeValid ? hrSplitHoursHCDate(
         department,
         assignment.date,
         start,
-        String(assignment.end || '').trim(),
+        end,
         shiftIdx == null ? 0 : shiftIdx
-      );
+      ) : { hc: 0, tc: 0 };
       const hours = ((Number(split.hc) || 0) + (Number(split.tc) || 0)) / 60;
-      if (!(hours > 0)) return;
+      if (!(hours > 0) && !options.includeUnmatched) return;
+      const interval = timeValid ? hrAssignmentInterval(assignment, end) : null;
+      const unmatchedReason = matches.length === 0
+        ? 'Vị trí chưa được ánh xạ vào công đoạn hiệu suất'
+        : matches.length > 1
+          ? 'Vị trí khớp nhiều công đoạn hiệu suất'
+          : !start
+            ? 'Thiếu giờ bắt đầu'
+            : !timeValid
+              ? 'Giờ phân công không hợp lệ'
+              : !(hours > 0)
+                ? 'Không tính được giờ phân công'
+                : '';
       out.push({
         id: String(assignment.id || `hr-assignment-${index}`),
-        stageId: matches[0].id,
+        stageId: matches.length === 1 && start && hours > 0 ? matches[0].id : null,
+        unmatchedReason,
         date: String(assignment.date),
         department,
         employeeId,
         positionName,
         shiftIdx,
         start,
-        end: String(assignment.end || '').trim(),
+        end,
+        startMin: interval ? interval.startMin : null,
+        endMin: interval ? interval.endMin : null,
         hours
       });
     });

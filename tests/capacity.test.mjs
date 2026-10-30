@@ -332,7 +332,7 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v318', /nha-may-ngoc-son-v318/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v322', /nha-may-ngoc-son-v322/.test(swJs));
 check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 8 dòng Xưởng 1',
   cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===
@@ -691,18 +691,29 @@ state.xuong2CutRecords = [
 ];
 state.xuong2BoOngRecords = [{ id: 'eff-boong-rec', date: '2026-09-10', inputOng: 300 }];
 const weightedEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
-check('ĐÁNH GIÁ HS: nhiều công đoạn/ngày và giờ tháng được gia quyền, không lấy max',
-  !!weightedEfficiency && weightedEfficiency.efficiency === 68.8 &&
-  weightedEfficiency.validHours === 16 && weightedEfficiency.assignedHours === 16 &&
-  weightedEfficiency.coverageRate === 100 && weightedEfficiency.stages === 2);
+check('ĐÁNH GIÁ HS: chọn công đoạn nhiều giờ nhất, không chọn hiệu suất cao nhất',
+  !!weightedEfficiency && weightedEfficiency.efficiency === 80 &&
+  weightedEfficiency.validHours === 10 && weightedEfficiency.assignedHours === 10 &&
+  weightedEfficiency.coverageRate === 100 && weightedEfficiency.stageDetails[0].id === 'cut');
 
 state.hrAssignments = state.hrAssignments.concat([
   { id: 'eff-unlinked', date: '2026-09-10', employeeId: '', department: 'Xưởng 2', positionId: 'eff-cut', start: '09:00', end: '10:00', shiftIdx: 0 }
 ]);
 const incompleteEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
 check('ĐÁNH GIÁ HS: thiếu employeeId làm loại cả ngày công đoạn không khớp giờ nhóm',
-  !!incompleteEfficiency && incompleteEfficiency.efficiency === 64.3 &&
-  incompleteEfficiency.validHours === 14 && incompleteEfficiency.coverageRate === 87.5);
+  !!incompleteEfficiency && incompleteEfficiency.efficiency === 75 &&
+  incompleteEfficiency.validHours === 8 && incompleteEfficiency.assignedHours === 10 && incompleteEfficiency.coverageRate === 80);
+
+state.hrPositions = state.hrPositions.concat([{ id: 'eff-unmatched', name: 'Vị trí chưa ánh xạ', department: 'Xưởng 2' }]);
+state.hrAssignments = state.hrAssignments.filter(a => a.id !== 'eff-unlinked').concat([
+  { id: 'eff-unmatched-record', date: '2026-09-12', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-unmatched', start: '07:00', end: '10:00', shiftIdx: 0 }
+]);
+const partialEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
+check('ĐÁNH GIÁ HS: vẫn hiển thị hiệu suất tính được dù có phân công chưa nhận diện, kèm chi tiết truy vết',
+  partialEfficiency.efficiency === 80 && partialEfficiency.unmatchedCount === 1 &&
+  partialEfficiency.stageDetails.find(stage => stage.selected).id === 'cut' &&
+  partialEfficiency.unmatchedAssignments[0].date === '2026-09-12' &&
+  partialEfficiency.unmatchedAssignments[0].reason.includes('chưa được ánh xạ'));
 
 state.hrAssignments = state.hrAssignments.filter(a => a.id !== 'eff-unlinked').concat([
   { id: 'eff-overlap', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '08:00', end: '10:00', shiftIdx: 0 }
@@ -710,7 +721,108 @@ state.hrAssignments = state.hrAssignments.filter(a => a.id !== 'eff-unlinked').c
 const overlapEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
 check('ĐÁNH GIÁ HS: loại giờ phân công chồng lấn và không cộng trùng',
   !!overlapEfficiency && overlapEfficiency.efficiency === 75 &&
-  overlapEfficiency.validHours === 8 && overlapEfficiency.overlapCount === 3);
+  overlapEfficiency.validHours === 8 && overlapEfficiency.overlapCount === 3 &&
+  overlapEfficiency.overlapAssignments.length === 3 &&
+  overlapEfficiency.overlapAssignments.some(issue => issue.date === '2026-09-10' && issue.conflicts.length > 0));
+
+const savedCutRows = cutSt.rows, savedCutRate = cutSt.rateOf;
+const savedBoRows = boongSt.rows, savedBoRate = boongSt.rateOf;
+cutSt.rateOf = boongSt.rateOf = () => 100;
+state.hrEmployees = [{ id: 'one', name: 'Một' }, { id: 'two', name: 'Hai' }];
+const asg = (id, employeeId, positionId, date, start, end) =>
+  ({ id, employeeId, positionId, date, start, end, department: 'Xưởng 2', shiftIdx: 0 });
+const stageRow = (date, hours, qty) => ({ date, hours, qty, qtyKnown: true });
+state.hrAssignments = [
+  asg('one-cut-a', 'one', 'eff-cut', '2026-09-10', '07:00', '11:00'),
+  asg('one-bo-a', 'one', 'eff-boong', '2026-09-10', '13:00', '15:00'),
+  asg('two-cut-a', 'two', 'eff-cut', '2026-09-10', '07:00', '11:00'),
+  asg('one-cut-b', 'one', 'eff-cut', '2026-09-11', '07:00', '09:00')
+];
+cutSt.rows = () => [stageRow('2026-09-10', 8, 800), stageRow('2026-09-11', 2, 100)];
+boongSt.rows = () => [stageRow('2026-09-10', 2, 400)];
+let byPerson = cap.computeWorkerStageEfficiency('2026-09');
+check('ĐÁNH GIÁ HS: người cùng công đoạn chính có thể khác kết quả theo ngày tham gia',
+  byPerson.get('one').efficiency === 83.3 && byPerson.get('two').efficiency === 100 &&
+  byPerson.get('one').stageDetails[0].id === 'cut');
+state.hrAssignments = [
+  asg('tie-cut', 'one', 'eff-cut', '2026-09-10', '07:00', '11:00'),
+  asg('tie-bo', 'one', 'eff-boong', '2026-09-10', '13:00', '17:00')
+];
+cutSt.rows = () => [stageRow('2026-09-10', 4, 320)];
+boongSt.rows = () => [stageRow('2026-09-10', 4, 480)];
+let tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: bằng giờ chọn công đoạn có hiệu suất cao hơn',
+  tie.efficiency === 120 && tie.stageDetails.find(s => s.selected).id === 'boong' && tie.stageDetails.length === 2);
+boongSt.rows = () => [stageRow('2026-09-10', 4, 320)];
+tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: bằng giờ và hiệu suất giữ cả hai công đoạn đồng chính',
+  tie.efficiency === 80 && tie.stageDetails.filter(s => s.selected).length === 2 &&
+  tie.assignedHours === null && tie.coverageRate === null);
+cutSt.rows = () => [stageRow('2026-09-10', 4, 320.016)];
+boongSt.rows = () => [stageRow('2026-09-10', 4, 320.012)];
+tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: so sánh tỷ lệ trước làm tròn khi các số hiển thị bằng nhau',
+  tie.efficiency === 80 && tie.stageDetails.filter(s => s.selected).length === 1 &&
+  tie.stageDetails.find(s => s.selected).id === 'cut' &&
+  tie.stageDetails[0].efficiency === tie.stageDetails[1].efficiency);
+cutSt.rows = () => [{ ...stageRow('2026-09-10', 4, 320), qtyEstimated: true }];
+boongSt.rows = () => [];
+tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: bằng giờ và thiếu một hiệu suất thì chọn số có dữ liệu kèm cảnh báo',
+  tie.efficiency === 80 && tie.tieMissing && tie.stageDetails.find(s => s.selected).id === 'cut' &&
+  tie.estimatedHours === 4 && tie.stageDetails.find(s => s.selected).estimatedHours === 4);
+cutSt.rows = () => [];
+tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: bằng giờ nhưng cả hai thiếu hiệu suất thì không tạo tỷ lệ',
+  tie.efficiency === null && !tie.tieMissing && tie.stageDetails.length === 2);
+state.hrAssignments = [
+  asg('main-cut', 'one', 'eff-cut', '2026-09-10', '07:00', '11:00'),
+  asg('support-bo', 'one', 'eff-boong', '2026-09-10', '13:00', '15:00')
+];
+boongSt.rows = () => [stageRow('2026-09-10', 2, 400)];
+let missingMain = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: công đoạn chính thiếu dữ liệu không thay bằng công đoạn hỗ trợ',
+  missingMain.efficiency === null && missingMain.stageDetails[0].id === 'cut');
+state.hrPositions = state.hrPositions.concat([{ id: 'unknown-pos', name: 'Vị trí chưa ánh xạ', department: 'Xưởng 2' }]);
+state.hrAssignments.push(asg('unknown', 'one', 'unknown-pos', '2026-09-11', '07:00', '09:00'));
+state.hrPositions = state.hrPositions.concat([
+  { id: 'support-odd-pos', name: 'Hỗ trợ/ Công đoạn lẻ', department: 'Xưởng 2' },
+  { id: 'support-plus-pos', name: 'Hỗ trợ + Công đoạn lẻ', department: 'Xưởng 2' },
+  { id: 'support-pos', name: 'Hỗ trợ', department: 'Xưởng 2' },
+  { id: 'leader-compact-pos', name: 'TT/TP', department: 'Xưởng 2' },
+  { id: 'leader-full-pos', name: 'Tổ trưởng', department: 'Xưởng 2' },
+  { id: 'deputy-full-pos', name: 'Tổ phó', department: 'Xưởng 2' }
+]);
+state.hrAssignments.push(
+  asg('support-odd-assignment', 'one', 'support-odd-pos', '2026-09-12', '07:00', '08:00'),
+  asg('support-plus-assignment', 'one', 'support-plus-pos', '2026-09-12', '08:00', '09:00'),
+  asg('support-assignment', 'one', 'support-pos', '2026-09-12', '09:00', '10:00'),
+  asg('leader-compact-assignment', 'one', 'leader-compact-pos', '2026-09-12', '10:00', '11:00'),
+  asg('leader-full-assignment', 'one', 'leader-full-pos', '2026-09-12', '11:00', '12:00'),
+  asg('deputy-full-assignment', 'one', 'deputy-full-pos', '2026-09-12', '12:00', '13:00')
+);
+const evaluationAssignments = x2.workerAssignmentsForCapacityMonth('2026-09', { includeUnmatched: true });
+check('ĐÁNH GIÁ HS: bỏ qua Hỗ trợ + Công đoạn lẻ và TT/TP/Tổ trưởng/Tổ phó, không tạo cảnh báo chưa nhận diện',
+  !evaluationAssignments.some(assignment =>
+    ['support-odd-assignment', 'support-plus-assignment', 'support-assignment', 'leader-compact-assignment', 'leader-full-assignment', 'deputy-full-assignment'].includes(assignment.id)) &&
+  evaluationAssignments.some(assignment => assignment.id === 'unknown' &&
+    assignment.unmatchedReason.includes('chưa được ánh xạ')));
+missingMain = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: vẫn cảnh báo vị trí thực sự chưa nhận diện',
+  missingMain.efficiency === null && missingMain.unmatchedCount === 1);
+state.hrAssignments = [asg('invalid-time', 'one', 'eff-cut', '2026-09-10', '99:99', '11:00')];
+const invalidTime = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: giờ phân công không hợp lệ không tạo công đoạn chính',
+  invalidTime.efficiency === null && invalidTime.unmatchedCount === 1);
+state.hrAssignments = [
+  asg('open-end', 'one', 'eff-cut', '2026-09-10', '07:00', ''),
+  asg('overlap-open', 'one', 'eff-boong', '2026-09-10', '13:00', '15:00')
+];
+const openEnd = cap.computeWorkerStageEfficiency('2026-09').get('one');
+check('ĐÁNH GIÁ HS: phát hiện lịch trùng với phân công kết thúc mặc định hết ca',
+  openEnd.efficiency === null && openEnd.overlapCount === 2);
+cutSt.rows = savedCutRows; cutSt.rateOf = savedCutRate;
+boongSt.rows = savedBoRows; boongSt.rateOf = savedBoRate;
 
 // ─── Tổng kết ───────────────────────────────────────────────────
 console.log(`\nKết quả: ${pass} PASS / ${fail} FAIL`);

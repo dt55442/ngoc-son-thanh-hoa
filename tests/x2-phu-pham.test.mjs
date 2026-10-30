@@ -256,7 +256,7 @@ check('I6: events.js nối form + kiểm kê + định mức + tháng + sửa/x�
   evSrc.includes('handleX2YieldRateSave') && evSrc.includes("'x2-pp-month'") &&
   evSrc.includes('data-x2-pp-edit') && evSrc.includes('data-x2-pp-st-del'));
 check('I7: sw.js cache v277 + nạp js/x2-phu-pham.js',
-  /nha-may-ngoc-son-v318/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
+  /nha-may-ngoc-son-v322/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
 check('I8: styles.css có khối .x2-pp-* + bảng supplier thêm cột Giảm Trừ',
   css.includes('.x2-pp-chip') && css.includes('.x2-pp-yield-chip') &&
   idx.includes('Giảm Trừ (đ)') && supSrc.includes('x2SupplierCreditRows'));

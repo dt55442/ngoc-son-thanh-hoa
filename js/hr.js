@@ -5076,12 +5076,19 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         individualEfficiency: null,
         stageEfficiency: stageEfficiency && Number.isFinite(stageEfficiency.efficiency)
           ? stageEfficiency.efficiency : null,
-        stageEfficiencyValidHours: stageEfficiency ? Number(stageEfficiency.validHours) || 0 : 0,
-        stageEfficiencyAssignedHours: stageEfficiency ? Number(stageEfficiency.assignedHours) || 0 : 0,
+        stageEfficiencyValidHours: stageEfficiency && Number.isFinite(stageEfficiency.validHours) ? stageEfficiency.validHours : null,
+        stageEfficiencyAssignedHours: stageEfficiency && Number.isFinite(stageEfficiency.assignedHours) ? stageEfficiency.assignedHours : null,
         stageEfficiencyCoverageRate: stageEfficiency && Number.isFinite(stageEfficiency.coverageRate)
           ? stageEfficiency.coverageRate : null,
-        stageEfficiencyEstimatedHours: stageEfficiency ? Number(stageEfficiency.estimatedHours) || 0 : 0,
+        stageEfficiencyEstimatedHours: stageEfficiency && Number.isFinite(stageEfficiency.estimatedHours) ? stageEfficiency.estimatedHours : null,
         stageEfficiencyOverlapCount: stageEfficiency ? Number(stageEfficiency.overlapCount) || 0 : 0,
+        stageEfficiencyUnmatchedCount: stageEfficiency ? Number(stageEfficiency.unmatchedCount) || 0 : 0,
+        stageEfficiencyOverlapAssignments: stageEfficiency && Array.isArray(stageEfficiency.overlapAssignments)
+          ? stageEfficiency.overlapAssignments : [],
+        stageEfficiencyUnmatchedAssignments: stageEfficiency && Array.isArray(stageEfficiency.unmatchedAssignments)
+          ? stageEfficiency.unmatchedAssignments : [],
+        stageEfficiencyTieMissing: !!(stageEfficiency && stageEfficiency.tieMissing),
+        stageEfficiencyDetails: stageEfficiency && Array.isArray(stageEfficiency.stageDetails) ? stageEfficiency.stageDetails : [],
         stageEfficiencyStages: stageEfficiency ? Number(stageEfficiency.stages) || 0 : 0,
         evaluationGrade: evaluationByEmployee.get(String(s.emp.id)) || '',
         tasks: employeeTasks,
@@ -5207,6 +5214,46 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return true;
   }
 
+  function openWorkerEvaluationAssignmentDate(date, department) {
+    const dateKey = String(date || '');
+    const dept = hrDeptAliasOf(department);
+    if (!canApproveLeave() || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey) ||
+        (dept !== 'Xưởng 1' && dept !== 'Xưởng 2')) {
+      showToast('Không thể mở bảng bố trí cho phân công này.', 'error');
+      return false;
+    }
+    state.hrBoardDate = dateKey;
+    state.hrBoardDept = dept;
+    return revealHrBoardInline();
+  }
+
+  function revealHrBoardInline() {
+    const boardCard = document.getElementById('hr-board-card');
+    const hrView = document.getElementById('hr-view');
+    if (!boardCard || !hrView) {
+      showToast('Không tìm thấy bảng bố trí vị trí trong tab Nhân Sự.', 'error');
+      return false;
+    }
+
+    hrCloseOpenCard();
+    hrDockClose();
+    const stack = document.getElementById('hr-details-stack');
+    if (boardCard.parentElement !== hrView) {
+      if (stack && stack.parentElement === hrView && typeof hrView.insertBefore === 'function') {
+        hrView.insertBefore(boardCard, stack);
+      } else if (typeof hrView.appendChild === 'function') {
+        hrView.appendChild(boardCard);
+      }
+    }
+    boardCard.classList.remove('hr-card-hidden');
+    boardCard.classList.remove('rate-table-collapsed');
+    renderHrBoard();
+    if (typeof boardCard.scrollIntoView === 'function') {
+      boardCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    return true;
+  }
+
   function renderWorkerEvaluation() {
     const monthEl = document.getElementById('hr-eval-month');
     if (!monthEl) return;
@@ -5271,6 +5318,20 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         ? `<span class="hr-eval-meta">${row.onTimeTasks}/${row.onTimeEligibleTasks} việc nghiệm thu đúng hạn (có đủ mốc hạn/hoàn thành)</span>` : '';
       const recurrenceMetrics = row.noRecurrenceEligibleTasks
         ? `<span class="hr-eval-meta">${row.noRecurrenceTasks}/${row.noRecurrenceEligibleTasks} việc không ghi nhận tái phát</span>` : '';
+      const hasAssignmentIssues = row.stageEfficiencyOverlapCount > 0 || row.stageEfficiencyUnmatchedCount > 0;
+      const assignmentIssueList = (items, fallback, showConflicts) => {
+        if (!items.length) return fallback;
+        return `<ul class="hr-eval-task-list">${items.map(issue => {
+          const date = fmtDateDMY(issue.date);
+          const position = escapeHTML(issue.positionName || 'Vị trí chưa rõ');
+          const hours = `${escapeHTML(issue.start || '—')}–${escapeHTML(issue.end || 'hết ca')}`;
+          const conflicts = showConflicts && issue.conflicts && issue.conflicts.length
+            ? ` · Trùng với ${issue.conflicts.map(other => `${escapeHTML(other.positionName || 'Vị trí chưa rõ')} ${escapeHTML(other.start || '—')}–${escapeHTML(other.end || 'hết ca')}`).join(', ')}`
+            : '';
+          return `<li>${escapeHTML(date)} · ${position} · ${hours} — ${escapeHTML(issue.reason || '')}${conflicts}` +
+            ` <button type="button" class="hr-eval-source" data-eval-assignment-date="${escapeHTML(issue.date)}" data-eval-assignment-department="${escapeHTML(issue.department)}">Mở bảng bố trí ngày →</button></li>`;
+        }).join('')}</ul>`;
+      };
       const taskDetails = row.tasks.length
         ? `<ul class="hr-eval-task-list">${row.tasks.map(t =>
             `<li>${escapeHTML(t.date)} · ${escapeHTML(t.stage || 'Sự cố')} · ${escapeHTML(t.statusLabel)}${t.priority ? ` · ${escapeHTML(t.priority)}` : ''}${t.description ? ` — ${escapeHTML(t.description)}` : ''}${t.outcome ? `<span class="hr-eval-meta">Kết quả: ${escapeHTML(t.outcome)}</span>` : ''}</li>`
@@ -5279,20 +5340,29 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       const efficiency = isMechanical
         ? `<details class="hr-eval-disclosure"><summary title="Xem công việc Cơ Điện"><strong>${row.assignedTasks} việc</strong> · ${row.verifiedTasks} nghiệm thu</summary>` +
           `<div class="hr-eval-detail-panel"><strong>Công việc Cơ Điện</strong><p>${row.inProgressTasks} đang xử lý · ${row.completedTasks} hoàn thành/đã nghiệm thu</p>${verifiedMetrics}${recurrenceMetrics}${taskDetails}</div></details>`
-        : `<details class="hr-eval-disclosure"><summary title="Xem chi tiết hiệu suất công đoạn">` +
+        : `<details class="hr-eval-disclosure"><summary title="Xem chi tiết hiệu suất tham chiếu và cảnh báo phân công">` +
           (row.stageEfficiency === null
-            ? '<span class="hr-eval-badge needs-data">Chưa đủ dữ liệu hiệu suất</span>'
-            : `<span class="hr-eval-badge has-data">${formatEfficiencyNumber(row.stageEfficiency)}% tham chiếu</span>` +
-              `<span class="hr-eval-coverage">độ phủ ${row.stageEfficiencyCoverageRate === null ? '—' : formatEfficiencyNumber(row.stageEfficiencyCoverageRate) + '%'}</span>`) +
-          (row.stageEfficiencyEstimatedHours > 0 ? '<span class="hr-eval-badge needs-data">Có ước tính</span>' : '') +
-          (row.stageEfficiencyOverlapCount > 0 ? '<span class="hr-eval-badge needs-data">Có lịch trùng</span>' : '') +
+            ? `<span class="hr-eval-badge needs-data">Chưa đủ dữ liệu hiệu suất</span>`
+            : `<span class="hr-eval-badge has-data">${formatEfficiencyNumber(row.stageEfficiency)}% công đoạn</span>` +
+              `<span class="hr-eval-coverage">${escapeHTML(row.stageEfficiencyDetails.filter(stage => stage.selected).map(stage => stage.label).join(' · '))}</span>`) +
+          (row.stageEfficiencyDetails.some(stage => stage.estimatedHours > 0) ? '<span class="hr-eval-badge needs-data">Có ước tính</span>' : '') +
+          (row.stageEfficiencyOverlapCount > 0 ? `<span class="hr-eval-badge needs-data" title="Mở chi tiết để xem ngày và phân công bị trùng">Có lịch trùng (${row.stageEfficiencyOverlapCount})</span>` : '') +
+          (row.stageEfficiencyUnmatchedCount ? `<span class="hr-eval-badge needs-data" title="Mở chi tiết để xem vị trí/giờ chưa nhận diện">Có phân công chưa xác định (${row.stageEfficiencyUnmatchedCount})</span>` : '') +
+          (row.stageEfficiencyTieMissing ? '<span class="hr-eval-badge needs-data">Chưa đủ dữ liệu so sánh</span>' : '') +
           `</summary><div class="hr-eval-detail-panel"><strong>Hiệu suất tham chiếu</strong>` +
-          (row.stageEfficiency === null
-            ? '<p>Không có đủ giờ phân công gắn mã nhân viên và hiệu suất hợp lệ.</p>'
-            : `<p>${formatEfficiencyNumber(row.stageEfficiencyValidHours)} / ${formatEfficiencyNumber(row.stageEfficiencyAssignedHours)} giờ phân công có hiệu suất · độ phủ ${row.stageEfficiencyCoverageRate === null ? '—' : formatEfficiencyNumber(row.stageEfficiencyCoverageRate) + '%'} · ${row.stageEfficiencyStages} công đoạn.</p>`) +
-          `<p>Chỉ số công đoạn/nhóm gia quyền theo giờ, không phải sản lượng riêng; giờ thiếu liên kết hoặc trùng lịch không được tính.</p>` +
-          (row.stageEfficiencyEstimatedHours > 0 ? `<p>${formatEfficiencyNumber(row.stageEfficiencyEstimatedHours)} giờ dùng sản lượng quy đổi/ước tính.</p>` : '') +
-          (row.stageEfficiencyOverlapCount > 0 ? `<p>Đã loại ${row.stageEfficiencyOverlapCount} phân công bị trùng giờ.</p>` : '') +
+          (row.stageEfficiencyDetails.length
+            ? row.stageEfficiencyDetails.map(stage => `<p><strong>${escapeHTML(stage.label)}</strong>${stage.selected ? (hasAssignmentIssues ? ' · nhiều giờ nhất trong dữ liệu nhận diện' : ' · công đoạn chính') : row.stageEfficiencyDetails.length > 1 ? ' · đồng giờ' : ' · nhiều giờ nhất trong dữ liệu nhận diện'}: ${stage.efficiency === null ? 'chưa đủ dữ liệu hiệu suất' : formatEfficiencyNumber(stage.efficiency) + '%'}; ${formatEfficiencyNumber(stage.validHours)} / ${formatEfficiencyNumber(stage.assignedHours)} giờ phân công có hiệu suất · độ phủ ${stage.coverageRate === null ? '—' : formatEfficiencyNumber(stage.coverageRate) + '%'}.${stage.estimatedHours > 0 ? ` ${formatEfficiencyNumber(stage.estimatedHours)} giờ dùng sản lượng quy đổi/ước tính.` : ''}${stage.rawEfficiency !== null && row.stageEfficiencyDetails.length > 1 ? ` Tỷ lệ trước làm tròn: ${stage.rawEfficiency.toLocaleString('vi-VN', { maximumFractionDigits: 12 })}%.` : ''}</p>`).join('')
+            : '<p>Không đủ phân công có công đoạn và giờ được nhận diện để xác định công đoạn chính.</p>') +
+          (hasAssignmentIssues
+            ? '<p>Tỷ lệ hiển thị được tính trên phần phân công nhận diện được và không trùng. Công đoạn nêu trên có nhiều giờ nhất trong dữ liệu này; chưa thể xác nhận là công đoạn chính của toàn bộ lịch.</p>'
+            : '<p>Chọn công đoạn theo giờ phân công nhiều nhất; chỉ tính hiệu suất nhóm trong ngày/ca đã tham gia, không phải sản lượng riêng. Công đoạn hỗ trợ không được tính.</p>') +
+          (row.stageEfficiencyTieMissing ? '<p>Các công đoạn bằng giờ nhưng có công đoạn thiếu dữ liệu; không thể khẳng định công đoạn được chọn có hiệu suất cao hơn.</p>' : '') +
+          (row.stageEfficiencyUnmatchedCount
+            ? `<p>Có ${row.stageEfficiencyUnmatchedCount} phân công chưa nhận diện được công đoạn hoặc giờ; không đưa vào tỷ lệ.</p>${assignmentIssueList(row.stageEfficiencyUnmatchedAssignments, '<p>Không có chi tiết phân công để truy vết.</p>', false)}`
+            : '') +
+          (row.stageEfficiencyOverlapCount > 0
+            ? `<p>Đã loại ${row.stageEfficiencyOverlapCount} phân công bị trùng giờ; mở bảng bố trí để kiểm tra các khoảng giờ giao nhau.</p>${assignmentIssueList(row.stageEfficiencyOverlapAssignments, '<p>Không có chi tiết lịch trùng để truy vết.</p>', true)}`
+            : '') +
           `</div></details>`;
       const gradeControl = workerEvaluationGradeControl(row, monthEl.value);
       return {
@@ -5310,7 +5380,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
           </div>
           <div class="hr-eval-card-metrics">
             <div class="hr-eval-card-metric"><span>Chuyên cần</span>${attendance}</div>
-            <div class="hr-eval-card-metric"><span>${isMechanical ? 'Công việc Cơ Điện' : 'Hiệu suất công đoạn'}</span>${efficiency}</div>
+            <div class="hr-eval-card-metric"><span>${isMechanical ? 'Công việc Cơ Điện' : 'Hiệu suất công đoạn chính'}</span>${efficiency}</div>
           </div>
           <div class="hr-eval-card-assessment"><span>Đánh giá của quản lý</span>${gradeControl}</div>
         </article>`
@@ -6330,10 +6400,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     state.hrBoardDate = hrNeedDateISO();
     if (pos && pos.department) state.hrBoardDept = hrDeptAliasOf(pos.department);
     else if (HR_DEPARTMENTS.includes(hrNeedReadUi().dept)) state.hrBoardDept = hrNeedReadUi().dept;
-    try { renderHrBoard(); } catch (e) {}
-    try { hrOpenCard('hr-board-card'); } catch (e) {}
-    const board = document.getElementById('hr-board');
-    if (board && typeof board.scrollIntoView === 'function') board.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    revealHrBoardInline();
   }
   function hnmOpenAssign(posId, shiftIdx) {
     if (!requireEditPermission()) return;
@@ -8653,6 +8720,7 @@ export {
   setWorkerEvaluationGrade,
   setWorkerEvaluationView,
   openWorkerEvaluationAttendance,
+  openWorkerEvaluationAssignmentDate,
   renderWorkerEvaluation,
   computeLeaveStats,
   deleteEmployee,
@@ -8734,6 +8802,7 @@ export {
   handleShiftSubmit,
   setShiftTypePreset,
   hrShiftCfg,
+  hrAssignmentInterval,
   hrShiftRange,
   hrShiftBrkH,
   renderShiftRows,

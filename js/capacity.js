@@ -590,8 +590,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       dailyByStage.set(stage.id, days);
     });
 
-    const assignments = workerAssignmentsForCapacityMonth(monthKey)
-      .filter(assignment => stageById.has(assignment.stageId));
+    const assignments = workerAssignmentsForCapacityMonth(monthKey, { includeUnmatched: true });
     const byEmployeeDate = new Map();
     assignments.forEach(assignment => {
       const key = `${assignment.employeeId}|${assignment.date}`;
@@ -599,22 +598,23 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       byEmployeeDate.get(key).push(assignment);
     });
     const overlaps = new Set();
-    const minuteOf = value => {
-      const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''));
-      return match ? Number(match[1]) * 60 + Number(match[2]) : null;
-    };
+    const overlapConflictsById = new Map();
     byEmployeeDate.forEach(list => {
       for (let i = 0; i < list.length; i++) {
-        const aStart = minuteOf(list[i].start);
-        const aEnd = minuteOf(list[i].end);
-        if (aStart == null || aEnd == null || aEnd <= aStart) continue;
+        const aStart = list[i].startMin;
+        const aEnd = list[i].endMin;
+        if (!Number.isFinite(aStart) || !Number.isFinite(aEnd) || aEnd <= aStart) continue;
         for (let j = i + 1; j < list.length; j++) {
-          const bStart = minuteOf(list[j].start);
-          const bEnd = minuteOf(list[j].end);
-          if (bStart == null || bEnd == null || bEnd <= bStart) continue;
+          const bStart = list[j].startMin;
+          const bEnd = list[j].endMin;
+          if (!Number.isFinite(bStart) || !Number.isFinite(bEnd) || bEnd <= bStart) continue;
           if (Math.max(aStart, bStart) < Math.min(aEnd, bEnd)) {
             overlaps.add(list[i].id);
             overlaps.add(list[j].id);
+            if (!overlapConflictsById.has(list[i].id)) overlapConflictsById.set(list[i].id, []);
+            if (!overlapConflictsById.has(list[j].id)) overlapConflictsById.set(list[j].id, []);
+            overlapConflictsById.get(list[i].id).push(list[j]);
+            overlapConflictsById.get(list[j].id).push(list[i]);
           }
         }
       }
@@ -623,23 +623,56 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     const totals = new Map();
     const ensureTotal = employeeId => {
       if (!totals.has(employeeId)) totals.set(employeeId, {
-        weightedEfficiency: 0,
-        validHours: 0,
-        assignedHours: 0,
-        estimatedHours: 0,
         overlapCount: 0,
-        stages: new Set()
+        unmatchedCount: 0,
+        overlapAssignments: [],
+        unmatchedAssignments: [],
+        stages: new Map()
       });
       return totals.get(employeeId);
     };
+    const ensureStage = (total, stageId) => {
+      if (!total.stages.has(stageId)) total.stages.set(stageId, {
+        weightedEfficiency: 0, validHours: 0, assignedHours: 0, estimatedHours: 0
+      });
+      return total.stages.get(stageId);
+    };
+    const issueAssignment = (assignment, reason, conflicts = []) => ({
+      id: assignment.id,
+      date: assignment.date,
+      department: assignment.department,
+      positionName: assignment.positionName || '',
+      start: assignment.start || '',
+      end: assignment.end || '',
+      reason,
+      conflicts: conflicts.map(other => ({
+        positionName: other.positionName || '',
+        start: other.start || '',
+        end: other.end || ''
+      }))
+    });
     const groups = new Map();
     assignments.forEach(assignment => {
       const total = ensureTotal(assignment.employeeId);
       if (overlaps.has(assignment.id)) {
         total.overlapCount++;
+        total.overlapAssignments.push(issueAssignment(
+          assignment,
+          'Phân công có khoảng giờ giao nhau',
+          overlapConflictsById.get(assignment.id) || []
+        ));
+      }
+      if (!stageById.has(assignment.stageId)) {
+        total.unmatchedCount++;
+        total.unmatchedAssignments.push(issueAssignment(
+          assignment,
+          assignment.unmatchedReason || 'Không nhận diện được công đoạn hoặc giờ'
+        ));
+      }
+      if (overlaps.has(assignment.id) || !stageById.has(assignment.stageId)) {
         return;
       }
-      total.assignedHours += assignment.hours;
+      ensureStage(total, assignment.stageId).assignedHours += assignment.hours;
       const key = `${assignment.stageId}|${assignment.date}|${assignment.shiftIdx == null ? '*' : assignment.shiftIdx}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(assignment);
@@ -658,27 +691,50 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       if (!(weightScale > 0)) return;
       list.forEach(assignment => {
         const weightHours = assignment.hours * weightScale;
-        const total = ensureTotal(assignment.employeeId);
+        const total = ensureStage(ensureTotal(assignment.employeeId), stage.id);
         total.weightedEfficiency += day.efficiency * weightHours;
         total.validHours += weightHours;
         if (day.estimated) total.estimatedHours += weightHours;
-        total.stages.add(stage.id);
       });
     });
 
     totals.forEach((total, employeeId) => {
+      const candidates = [...total.stages].map(([stageId, stage]) => ({
+        id: stageId,
+        label: stageById.get(stageId).label,
+        assignedMinutes: Math.round(stage.assignedHours * 60),
+        assignedHours: Math.round(stage.assignedHours * 100) / 100,
+        validHours: Math.round(stage.validHours * 100) / 100,
+        coverageRate: stage.assignedHours > 0 ? Math.round(stage.validHours * 1000 / stage.assignedHours) / 10 : null,
+        estimatedHours: Math.round(stage.estimatedHours * 100) / 100,
+        rawEfficiency: stage.validHours > 0 ? stage.weightedEfficiency / stage.validHours : null
+      }));
+      const maxMinutes = Math.max(0, ...candidates.map(stage => stage.assignedMinutes));
+      const tied = candidates.filter(stage => stage.assignedMinutes === maxMinutes);
+      const measured = tied.filter(stage => stage.rawEfficiency !== null);
+      const highest = measured.length ? Math.max(...measured.map(stage => stage.rawEfficiency)) : null;
+      const selected = highest === null
+        ? [] : measured.filter(stage => Math.abs(stage.rawEfficiency - highest) < 1e-9);
+      const stageDetails = tied.map(stage => ({
+        ...stage,
+        efficiency: stage.rawEfficiency === null ? null : Math.round(stage.rawEfficiency * 10) / 10,
+        selected: selected.includes(stage)
+      }));
+      const chosen = stageDetails.filter(stage => stage.selected);
+      const single = chosen.length === 1 ? chosen[0] : null;
       result.set(employeeId, {
-        efficiency: total.validHours > 0
-          ? Math.round(total.weightedEfficiency * 10 / total.validHours) / 10
-          : null,
-        validHours: Math.round(total.validHours * 100) / 100,
-        assignedHours: Math.round(total.assignedHours * 100) / 100,
-        coverageRate: total.assignedHours > 0
-          ? Math.round(total.validHours * 1000 / total.assignedHours) / 10
-          : null,
-        estimatedHours: Math.round(total.estimatedHours * 100) / 100,
+        efficiency: chosen.length ? Math.round(highest * 10) / 10 : null,
+        validHours: single ? single.validHours : null,
+        assignedHours: single ? single.assignedHours : null,
+        coverageRate: single ? single.coverageRate : null,
+        estimatedHours: single ? single.estimatedHours : null,
         overlapCount: total.overlapCount,
-        stages: total.stages.size
+        unmatchedCount: total.unmatchedCount,
+        overlapAssignments: total.overlapAssignments,
+        unmatchedAssignments: total.unmatchedAssignments,
+        tieMissing: tied.length > 1 && measured.length > 0 && measured.length < tied.length,
+        stageDetails,
+        stages: chosen.length
       });
     });
     return result;

@@ -289,6 +289,38 @@ check('HR[ĐG]: loại Văn Phòng, giữ đủ dữ liệu chuyên cần và C�
 check('HR[ĐG]: hiệu suất công đoạn được ghi rõ thiếu dữ liệu, không suy đoán điểm', lastSheetAoa.some(r => r[0] === 'Công Nhân SX' && r[8] === 'Chưa đủ dữ liệu hiệu suất'));
 check('HR[ĐG]: xuất kèm hạng đánh giá do Quản Lý nhập', lastSheetAoa.some(r => r[0] === 'Công Nhân SX' && r[18] === 'A') &&
   lastSheetAoa.some(r => r[0] === 'Nhân Viên' && r.includes('Đánh Giá (Quản Lý)')));
+const hrEval = await import('../js/hr.js');
+hrEval.setWorkerEvaluationEfficiencyProvider(() => new Map([['eval-prod', {
+  efficiency: 80, validHours: null, assignedHours: null, coverageRate: null, estimatedHours: null,
+  overlapCount: 0, unmatchedCount: 0, tieMissing: false,
+  stageDetails: [
+    { label: 'Cắt Chọn', selected: true, efficiency: 80, rawEfficiency: 80, validHours: 4, assignedHours: 4, coverageRate: 100, estimatedHours: 0 },
+    { label: 'Bổ Ống', selected: true, efficiency: 80, rawEfficiency: 80, validHours: 3, assignedHours: 4, coverageRate: 75, estimatedHours: 1 }
+  ]
+}]]));
+exportHrCard('hr-evaluation', { month: '2026-09' });
+check('HR[ĐG]: Excel giữ riêng dữ liệu từng công đoạn đồng chính',
+  lastSheetAoa.some(r => r[0] === 'Công Nhân SX' && r[8] === 80 && r[9] === '' && r[11] === '' &&
+    r[22] === 'Cắt Chọn · Bổ Ống' && r[23].includes('4/4 giờ') && r[23].includes('3/4 giờ') &&
+    r[23].includes('độ phủ 75%')));
+hrEval.setWorkerEvaluationEfficiencyProvider(() => new Map([['eval-prod', {
+  efficiency: 86.7, validHours: 144, assignedHours: 153, coverageRate: 94.1, estimatedHours: 0,
+  overlapCount: 0, unmatchedCount: 1, tieMissing: false,
+  unmatchedAssignments: [{
+    date: '2026-09-12', positionName: 'Vị trí chưa ánh xạ',
+    start: '07:00', end: '09:00', reason: 'Vị trí chưa được ánh xạ vào công đoạn hiệu suất'
+  }],
+  stageDetails: [{
+    label: 'Ép Ván', selected: true, efficiency: 86.7, rawEfficiency: 86.7,
+    validHours: 144, assignedHours: 153, coverageRate: 94.1, estimatedHours: 0
+  }]
+}]]));
+exportHrCard('hr-evaluation', { month: '2026-09' });
+check('HR[ĐG]: Excel giữ tỷ lệ nhận diện được và chi tiết phân công chưa nhận diện',
+  lastSheetAoa.some(r => r[0] === 'Công Nhân SX' && r[8] === 86.7 &&
+    r[22] === 'Ép Ván' && r[23].includes('nhiều giờ nhất trong dữ liệu nhận diện') &&
+    r[24] === 1 && r[27].includes('2026-09-12') && r[27].includes('Vị trí chưa được ánh xạ')));
+hrEval.setWorkerEvaluationEfficiencyProvider(null);
 state.currentUser = { username: 'editor', role: 'editor', editTabs: ['hr'], allowAdvanced: false };
 exportHrCard('hr-evaluation', { month: '2026-09' });
 check('HR[ĐG]: Editor không được xuất dữ liệu đánh giá nhân sự', writtenFiles.length === 0);

@@ -51,7 +51,14 @@ function yieldBootFrame() {
 
   // ─── INIT ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
-    showTreLoading('Đang nạp dữ liệu nhà máy…', { mode: 'game' });
+    showTreLoading('Đang nạp dữ liệu nhà máy…', {
+      phrases: [
+        'Đang nạp dữ liệu nhà máy…',
+        'Đang đối chiếu dữ liệu đã lưu…',
+        'Đang cập nhật số liệu mới nhất…',
+        'Đang đồng bộ các phân hệ…'
+      ]
+    });
     let bootOk = false;
     try {
     await yieldBootFrame();
@@ -172,7 +179,8 @@ function yieldBootFrame() {
     autoReconnectDataFolder();
     // Đăng ký Service Worker để hoạt động OFFLINE (PWA)
     registerServiceWorker();
-    // Khởi động đồng bộ ONLINE (Firebase) nếu có kết nối & SDK
+    // Chờ dữ liệu Firebase ban đầu được áp dụng trước khi mở dashboard.
+    setTreLoadingStatus('Đang xác nhận số liệu mới nhất từ Firebase…');
     await initFirebase();
     // Lưới an toàn đồng bộ: đẩy nốt dữ liệu chờ lên mây khi người dùng rời trang,
     // chuyển sang tab khác, hoặc mạng vừa quay lại (tránh mất dữ liệu ép ván mới nhập)

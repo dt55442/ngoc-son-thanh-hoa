@@ -168,6 +168,18 @@ cloud.applyFireSnapshot({ qcKilnReadings: kept });
 state.qcKilnThresholds = { say1: 15, say2: 12 }; // trả ngưỡng chuẩn cho các test sau
 
 // ─── E. VẼ BẢNG ĐIỀU KHIỂN (2 hàng) + 3 MÀU + CHÚ GIẢI ───────
+state.batches.push(
+  { id: 'k-date-range-1', stage: 'say1', date: '2026-10-01', location: 'LS10', stageHistory: [{ stage: 'say1', date: '2026-10-01' }, { stage: 'kho', date: '2026-10-02' }, { stage: 'say1', date: '2026-10-15' }] },
+  { id: 'k-date-range-2', stage: 'say1', date: '2026-10-16', location: 'LS10', stageHistory: [{ stage: 'say1', date: '2026-10-16' }] },
+  { id: 'k-date-range-duplicate', stage: 'say1', date: '2026-10-15', location: 'LS10', stageHistory: [{ stage: 'say1', date: '2026-10-15' }] },
+  { id: 'k-date-single', stage: 'say2', date: '2026-10-20', location: 'LS11' }
+);
+const rangeInfo = kiln.kilnInfoOf('LS10');
+check('NGÀY VÀO LÒ: lấy lần vào công đoạn gần nhất, gộp ngày trùng và hiển thị dải ngày',
+  rangeInfo.startDates.join(',') === '2026-10-15,2026-10-16' &&
+  rangeInfo.startDateLabel === 'Vào lò 15-16/10/2026');
+check('NGÀY VÀO LÒ: lô cũ không có stageHistory dùng ngày công đoạn hiện tại',
+  kiln.kilnInfoOf('LS11').startDateLabel === 'Vào lò 20/10/2026');
 kiln.renderKilnBoard();
 const boardEl = document.getElementById('x2-kiln-board');
 const boardHtml = boardEl.innerHTML;
@@ -190,6 +202,8 @@ check('3 MÀU TRẠNG THÁI: LS4 vàng (kiln--ready + chip Đạt ẩm) · LS3 x
 check('THẺ LÒ: mã lò + chip loại sấy (Sấy 1/Sấy 2) + icon Vào Kho + ngày sấy + độ ẩm',
   boardHtml.includes('data-kiln-kho="LS3"') && boardHtml.includes('kiln-stage-say1') && boardHtml.includes('kiln-stage-say2') &&
   /kiln-days/.test(boardHtml) && /kiln-hum/.test(boardHtml));
+check('CHIP NGÀY BẮT ĐẦU: thẻ lò hiển thị ngày vào sấy thực tế dạng dải ngày',
+  boardHtml.includes('kiln-start-date') && boardHtml.includes('Vào lò 15-16/10/2026'));
 const legendHtml = document.getElementById('x2-kiln-legend').innerHTML;
 check('CHÚ GIẢI: đếm trạng thái + ngưỡng đạt (Sấy 1 ≤ 15% · Sấy 2 ≤ 12%)',
   legendHtml.includes('Đang sấy') && legendHtml.includes('Đạt ẩm') && legendHtml.includes('Chưa dùng') &&
@@ -269,24 +283,31 @@ check('CHUYỂN KHO NHANH (hàm chung): lô LS6 vào Kho · ngày hôm nay · l�
 check('CHUYỂN KHO NHANH: lò LS6 về trạng thái XÁM (không còn lô đang sấy)',
   kiln.kilnInfoOf('LS6').status === 'idle');
 
-// VÀO KHO CÓ ĐỔI VỊ TRÍ (prompt): nhập K99 → lô vào Kho đúng vị trí mới
+// VÀO KHO CÓ ĐỔI VỊ TRÍ + NGÀY THỰC TẾ: hộp thoại mặc định hôm nay, người dùng sửa được
 state.batches.push({ id: 'k11', code: '261002-11', stage: 'say2', date: daysAgoIso(1), location: 'LS8', quantity: 50, volume: 0.08, stageHistory: [{ stage: 'say2', date: daysAgoIso(1) }] });
-const oldPrompt = global.prompt;
-global.prompt = () => 'K99';
 const khoBtnLS8 = { getAttribute: (a) => (a === 'data-kiln-kho' ? 'LS8' : null) };
 kiln.onKilnBoardClick({ target: { closest: (sel) => (sel === '[data-kiln-kho]' ? khoBtnLS8 : null) } });
-global.prompt = oldPrompt;
+const quickKhoModal = document.getElementById('modal-kiln-quick-kho');
+const quickKhoDate = document.getElementById('kiln-quick-kho-date');
+const quickKhoLocation = document.getElementById('kiln-quick-kho-location');
+check('CHUYỂN KHO NHANH: mở hộp thoại, ngày mặc định hôm nay và có gợi ý vị trí',
+  quickKhoModal.classList.contains('show') && quickKhoDate.value === todayIso &&
+  document.getElementById('kiln-quick-kho-locations').innerHTML.includes('LS3'));
+quickKhoDate.value = '2026-10-21';
+quickKhoLocation.value = 'K99';
+kiln.handleKilnQuickTransferSubmit({ preventDefault(){} });
 const k11 = state.batches.find(b => b.id === 'k11');
-check('VÀO KHO + ĐỔI VỊ TRÍ: nhập K99 ở prompt → lô LS8 vào Kho đúng vị trí mới',
-  k11.stage === 'kho' && k11.location === 'K99');
-// Hủy prompt → KHÔNG chuyển
+check('VÀO KHO + ĐỔI VỊ TRÍ: ghi đúng ngày thực tế, stageHistory và vị trí mới',
+  k11.stage === 'kho' && k11.khoDate === '2026-10-21' && k11.location === 'K99' &&
+  k11.stageHistory.some(h => h.stage === 'kho' && h.date === '2026-10-21'));
+// Hủy hộp thoại → KHÔNG chuyển, không ghi ngày Kho
 state.batches.push({ id: 'k12', code: '261002-12', stage: 'say1', date: daysAgoIso(1), location: 'LS9', quantity: 10, volume: 0.02, stageHistory: [{ stage: 'say1', date: daysAgoIso(1) }] });
-global.prompt = () => null;
 const khoBtnLS9 = { getAttribute: (a) => (a === 'data-kiln-kho' ? 'LS9' : null) };
 kiln.onKilnBoardClick({ target: { closest: (sel) => (sel === '[data-kiln-kho]' ? khoBtnLS9 : null) } });
-global.prompt = oldPrompt;
-check('VÀO KHO — HỦY PROMPT: lô vẫn ở Sấy 1 (không chuyển)',
-  state.batches.find(b => b.id === 'k12').stage === 'say1');
+kiln.closeKilnQuickTransferModal();
+const k12 = state.batches.find(b => b.id === 'k12');
+check('VÀO KHO — HỦY HỘP THOẠI: lô vẫn ở Sấy 1, không có khoDate',
+  k12.stage === 'say1' && !k12.khoDate && !document.getElementById('modal-kiln-quick-kho').classList.contains('show'));
 
 // Menu chạm trên LÒ TRỐNG → 2 nút Thêm (Sấy 1 / Sấy 2)
 const tileLS5 = { getAttribute: (a) => (a === 'data-kiln' ? 'LS5' : null) };
@@ -313,14 +334,20 @@ check('MENU CHẠM (lò đang sấy): có "Thêm lô" + "Vào Kho"',
 let dragPayload = '';
 kiln.kilnTileDragStart({ target: { closest: (sel) => (sel === '.kiln-tile' ? { getAttribute: () => 'LS4' } : null) }, dataTransfer: { setData: (k, v) => { dragPayload = v; }, effectAllowed: '' } });
 kiln.onKilnKhoDrop({ preventDefault(){}, dataTransfer: { getData: () => dragPayload } });
-check('KÉO THẢ VÀO KHO: thả thẻ lò LS4 → lô Sấy 2 vào Kho (payload đúng lò)',
-  JSON.parse(dragPayload).kiln === 'LS4' && state.batches.find(b => b.id === 'k2').stage === 'kho');
+document.getElementById('kiln-quick-kho-date').value = '2026-10-19';
+kiln.handleKilnQuickTransferSubmit({ preventDefault(){} });
+check('KÉO THẢ VÀO KHO: mở chung hộp thoại và lưu ngày thực tế đã chọn',
+  JSON.parse(dragPayload).kiln === 'LS4' && state.batches.find(b => b.id === 'k2').stage === 'kho' &&
+  state.batches.find(b => b.id === 'k2').khoDate === '2026-10-19');
 
 // ICON kho trên thẻ lò = chuyển nhanh (LS3 — lô Sấy 1)
 const khoBtnLS3 = { getAttribute: (a) => (a === 'data-kiln-kho' ? 'LS3' : null) };
 kiln.onKilnBoardClick({ target: { closest: (sel) => (sel === '[data-kiln-kho]' ? khoBtnLS3 : null) } });
-check('ICON VÀO KHO: bấm icon kho trên thẻ lò LS3 → lô Sấy 1 vào Kho',
-  state.batches.find(b => b.id === 'k1').stage === 'kho');
+document.getElementById('kiln-quick-kho-date').value = '2026-10-22';
+kiln.handleKilnQuickTransferSubmit({ preventDefault(){} });
+check('ICON VÀO KHO: bấm icon mở hộp thoại, lưu ngày thực tế đã chọn',
+  state.batches.find(b => b.id === 'k1').stage === 'kho' &&
+  state.batches.find(b => b.id === 'k1').khoDate === '2026-10-22');
 
 // ─── H. MA TRẬN ĐỘ ẨM (tab QC — ngày × lò, tối ưu điện thoại) ─────
 const savedReadings = state.qcKilnReadings;
@@ -421,7 +448,7 @@ check('CẤU TRÚC (index.html): thẻ QC "Độ Ẩm Lò Sấy" — launcher + 
 check('CẤU TRÚC (styles.css): khung ẩn + 3 màu + chip đạt ẩm + menu + lối đi + lò rộng + MA TRẬN (sticky cột Lò · highlight hôm nay · ô nhập số)',
   cssHtml.includes('.x2-say-frame[hidden]') && cssHtml.includes('.kiln-tile.kiln--active') &&
   cssHtml.includes('.kiln-tile.kiln--ready') && cssHtml.includes('.kiln-tile.kiln--idle') &&
-  cssHtml.includes('.kiln-ready-chip') && cssHtml.includes('.kiln-menu') &&
+  cssHtml.includes('.kiln-ready-chip') && cssHtml.includes('.kiln-start-date') && cssHtml.includes('.kiln-menu') &&
   cssHtml.includes('.kiln-legend') && cssHtml.includes('.kiln-kho-drop.kiln-drop-over') &&
   cssHtml.includes('.kiln-aisle') && cssHtml.includes('.kiln-tile.kiln-wide') &&
   cssHtml.includes('.kiln-hum-matrix-wrap') && cssHtml.includes('.km-kiln') &&
@@ -435,16 +462,15 @@ check('CẤU TRÚC (styles.css): pop NỔI TRÊN CÙNG (hover có z-index:40) + 
   cssHtml.includes('calc((100% - 11 * 8px) / 6 + 8px)') &&
   cssHtml.includes('.kiln-tile.kiln-todo'));
 check('CẤU TRÚC (sw.js): CACHE_NAME v194 + js/kiln.js trong APP_SHELL',
-  /nha-may-ngoc-son-v312/.test(swJs) && swJs.includes("'./js/kiln.js'"));
+  /nha-may-ngoc-son-v313/.test(swJs) && swJs.includes("'./js/kiln.js'"));
 check('CẤU TRÚC (js): key riêng + nối đủ state/storage/cloud/history/main/events',
   jsState.includes('bamboo_tracker_qc_kiln_humidity_v1') && jsState.includes('bamboo_tracker_qc_kiln_threshold_v1') &&
   jsState.includes('bamboo_tracker_x2_say_frame_v1') && jsStorage.includes('restoreQcKilnReadings') &&
   jsStorage.includes('qcKilnThresholds') && jsCloud.includes('qcKilnReadings') &&
   jsHistory.includes('qcKilnReadings') && jsMain.includes('loadKilnData') &&
   jsEvents.includes('x2-say-tab-ctrl') && jsEvents.includes('btn-kiln-hum-save') &&
-  jsEvents.includes('x2-kiln-kho-drop') && jsEvents.includes('kiln-hum-matrix'));
+  jsEvents.includes('x2-kiln-kho-drop') && jsEvents.includes('kiln-quick-kho-form') &&
+  idxHtml.includes('id="kiln-quick-kho-date"') && jsEvents.includes('kiln-hum-matrix'));
 
 console.log(`\nKẾT QUẢ: ${passed} pass, ${failed} fail`);
 if (failed) process.exit(1);
-
-

@@ -401,7 +401,7 @@ check('L5 hr.js có engine + hàm chia giờ theo phút',
   hrSrc.includes('CI_OT_BLOCK_MIN'));
 check('L6 styles.css có khối .ci-*',
   /\.ci-row-review\s*>\s*td\s*\{/.test(cssSrc) && /\.ci-ack-chip\s*\{/.test(cssSrc));
-check('L7 sw.js cache v283', swSrc.includes('nha-may-ngoc-son-v312'));
+check('L7 sw.js cache v283', swSrc.includes('nha-may-ngoc-son-v313'));
 const specsSrc = fs.readFileSync(new URL('../js/report-specs.js', import.meta.url), 'utf8');
 const rcSrc = fs.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8');
 check('L8 báo cáo "Đối Chiếu Bố Trí ↔ Máy" có trong Trung tâm Xuất Excel',

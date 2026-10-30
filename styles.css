@@ -8826,6 +8826,25 @@ body[data-theme="night"] .cap-stage-chart-panel { background: rgba(255, 255, 255
 .kiln-main { font-size: 0.78rem; font-weight: 700; color: #334155; }
 .kiln-sub { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; color: #475569; }
 .kiln-sub svg { width: 11px; height: 11px; vertical-align: -1px; }
+.kiln-start-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 1px 5px;
+  overflow: hidden;
+  border: 1px solid #99f6e4;
+  border-radius: 999px;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kiln-start-date svg { width: 10px; height: 10px; flex: 0 0 auto; }
 .kiln-hum.kiln-hum-ok { color: #a16207; font-weight: 800; }
 .kiln-hum.kiln-hum-high { color: #0f766e; font-weight: 700; }
 .kiln-hum.kiln-hum-none { color: #94a3b8; }
@@ -10033,6 +10052,20 @@ body[data-fx="low"] #add-lot-form .al-sheet-scrim { animation: none; }
 .tre-loading-text {
   font-weight: 700; font-size: .95rem; color: #14532d; text-align: center;
 }
+.tre-loading-status {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 28px;
+}
+.tre-loading-spinner {
+  width: 20px; height: 20px; flex: 0 0 20px;
+  border: 3px solid rgb(15 118 110 / .22);
+  border-top-color: #0f766e;
+  border-radius: 50%;
+  animation: treLoadingSpin .9s linear infinite;
+}
+@keyframes treLoadingSpin {
+  to { transform: rotate(360deg); }
+}
 /* ── TIẾN ĐỘ MINH HỌA: tăng theo frame, giữ ở 90% đến khi boot hoàn tất. ── */
 .tre-progress {
   position: relative;
@@ -10160,11 +10193,13 @@ body[data-fx="low"] .tre-loading.is-game.is-hitting .tre-scene { animation: none
 body[data-fx="low"] .tre-loading.is-fall .tre-scene { animation: treFall 350ms steps(1) forwards; }
 body[data-fx="low"] .tre-loading-card.tre-hit-punch { animation: none; }
 body[data-fx="low"] .tre-loading { -webkit-backdrop-filter: none; backdrop-filter: none; }
+body[data-fx="low"] .tre-loading-spinner { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .tre-scene { animation: none; }
   .tre-loading.is-game.is-hitting .tre-scene { animation: none; } /* nhát bấm cũng tắt */
   .tre-loading.is-fall .tre-scene { animation: treFall 350ms steps(1) forwards; }
   .tre-loading-card.tre-hit-punch { animation: none; }
+  .tre-loading-spinner { animation: none; }
 }
 /* In ẩn loading (nếu dính vào lúc in) */
 @media print { .tre-loading { display: none !important; } }
@@ -12002,6 +12037,14 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
   flex: 0 0 auto; border: 1px solid currentColor; background: transparent;
   color: inherit; border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer;
 }
+.firebase-data-warning {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px;
+  background: #fff7ed; border-bottom: 2px solid #f97316; color: #9a3412;
+  font-size: .9rem; font-weight: 700; line-height: 1.4;
+}
+.firebase-data-warning[hidden] { display: none !important; }
+.firebase-data-warning > span { flex: 1 1 auto; }
 .dropdown-item.dropdown-static { cursor: default; opacity: 0.85; }
 .pending-card { max-width: 720px; }
 .pending-body { max-height: 64vh; overflow: auto; -webkit-overflow-scrolling: touch; }
@@ -12023,6 +12066,7 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 }
 @media (max-width: 639.98px) {
   .sync-pending-banner { font-size: 0.8rem; padding: 6px 10px; }
+  .firebase-data-warning { font-size: .82rem; padding: 7px 10px; }
   .pending-body { max-height: 70dvh; }
 }
 

@@ -45,7 +45,7 @@ import {
   handleX2StocktakeSubmit, deleteX2Stocktake, renderPpStocktakeBook, handleX2YieldRateSave,
   setPpMonth, toggleX2PhuPhamTable
 } from './x2-phu-pham.js'; // THẺ PHỤ PHẨM & BĂM + CÂN ĐỐI + KIỂM KÊ
-import { closeKilnMenus, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
+import { closeKilnMenus, closeKilnQuickTransferModal, handleKilnQuickTransferSubmit, handleKilnThresholdSave, kilnTileDragStart, onKilnBoardClick, onKilnKhoDragLeave, onKilnKhoDragOver, onKilnKhoDrop, onKilnMatrixClick, saveKilnHumidityForm } from './kiln.js'; // Bảng điều khiển lò sấy + Ma trận độ ẩm lò sấy
 import { closeSupplierModal, deleteSupplier, handleSupplierSubmit, normalizeSupplierNames, openSupplierModal } from './suppliers.js';
 // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ #capacity-card — đầu tab Tổng Quan)
 import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityMonth, setCapacityView, setCapacityWeek, shiftCapacityWeek, toggleCapStale, toggleCapacityCollapse, toggleCapacityStageDays, toggleCapacityWeekOpen, toggleCapacityWorkshop } from './capacity.js';
@@ -2504,6 +2504,12 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x2-kiln-kho-drop', 'dragover', onKilnKhoDragOver);
     safeOn('x2-kiln-kho-drop', 'dragleave', onKilnKhoDragLeave);
     safeOn('x2-kiln-kho-drop', 'drop', onKilnKhoDrop);
+    safeOn('btn-close-kiln-quick-kho', 'click', closeKilnQuickTransferModal);
+    safeOn('btn-cancel-kiln-quick-kho', 'click', closeKilnQuickTransferModal);
+    safeOn('kiln-quick-kho-form', 'submit', handleKilnQuickTransferSubmit);
+    safeOn('modal-kiln-quick-kho', 'click', (e) => {
+      if (e.target === e.currentTarget) closeKilnQuickTransferModal();
+    });
     document.addEventListener('click', (e) => {
       if (!e.target.closest || !e.target.closest('.kiln-tile')) closeKilnMenus();
     });

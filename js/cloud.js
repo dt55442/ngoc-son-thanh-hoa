@@ -36,6 +36,10 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   let fbDidLoadRemote = false;    // đã nhận dữ liệu từ Firestore ít nhất 1 lần
   let fbApplying = false;         // đang áp dụng remote (tránh lặp vô hạn)
   let fbUnsubDoc = null;
+  let fbInitialSyncPromise = null;
+  let fbInitialSyncResolve = null;
+  let fbInitialSyncSettled = false;
+  let fbHasServerSnapshot = false;
   let fbPushTimer = null;
   let fbSeedCore = null; // core dữ liệu tại lần đồng bộ (đẩy/áp mây) gần nhất - nhận diện "chưa có thay đổi thật"
   let fbRemoteDocExists = false;   // doc apps/main đã tồn tại trên mây
@@ -54,11 +58,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   const SYNC_STATE_KEY = 'bamboo_tracker_sync_state_v1';
   const SYNC_DEVICE_KEY = 'bamboo_tracker_device_id_v1';
   const SYNC_CONFLICT_LIMIT = 100;     // giữ tối đa 100 dòng xung đột gần nhất
-  const SYNC_PERIODIC_MS = 120000;     // tự kiểm tra mây mỗi 2 phút (chỉ đọc mục lục)
   const SYNC_MIN_GAP_MS = 15000;       // không gọi syncNow dày hơn 15 giây/lần
   let fbSyncState = null;   // { lastRev, lastSyncedAt, base: {miền: {id: băm}}, conflicts: [] }
   let fbPendingPull = false; // có snapshot mây đến trong lúc đang ghi → phải pull lại sau
-  let fbSyncTimer = null;    // interval kiểm tra mây định kỳ
   let fbSyncWired = false;   // đã gắn listener focus/visibility/online chưa
   let fbLastSyncTryAt = 0;   // lần cuối gọi syncNow (chống gọi dồn)
   let fbLastSyncOkAt = 0;    // lần cuối đồng bộ THÀNH CÔNG (hiện trên badge)
@@ -761,7 +763,11 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
   async function initFirebase() {
     if (!window.__BAMBOO_FIREBASE_READY__) { console.warn('[FB] SKIP - chế độ OFFLINE'); return false; }
-    try { fbDb = window.firebase.firestore(); } catch (e) { console.warn('[FB] Lỗi Firestore', e); return false; }
+    try { fbDb = window.firebase.firestore(); } catch (e) {
+      console.warn('[FB] Lỗi Firestore', e);
+      setRemoteDataWarning('Không kết nối được Firebase. Đang hiển thị dữ liệu đã lưu trên máy; số liệu có thể chưa mới nhất.');
+      return false;
+    }
     fbEnabled = true;
     console.log('[FB] Đồng bộ online đã khởi động');
     loadSyncState(); // sổ đồng bộ cục bộ (base/dirty/xung đột) — thuần máy
@@ -776,8 +782,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       showToast('Không đọc được hàng chờ đồng bộ trên thiết bị. Kiểm tra bộ nhớ trình duyệt trước khi đóng ứng dụng.', 'error');
     }
     // XEM CÔNG KHAI: lắng nghe dữ liệu ngay cả khi CHƯA đăng nhập
-    setupFirestoreSync();
-    // Tự kiểm tra mây khi quay lại tab / có mạng / định kỳ 2 phút (17/10/2026)
+    const initialSync = setupFirestoreSync();
+    // Listener tự nhận dữ liệu; chỉ đọc mục lục khi người dùng quay lại tab.
     scheduleSyncWatch();
     wireSyncBadgeListeners();
     updateSyncBadge();
@@ -785,7 +791,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try {
       window.firebase.auth().onAuthStateChanged((user) => handleFirebaseAuth(user));
     } catch (e) { console.warn('[FB] Lỗi Auth', e); }
-    return true;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      fbNetState = 'dead';
+      setRemoteDataWarning('Đang ngoại tuyến. Dashboard dùng dữ liệu trên máy, có thể chưa phải số liệu mới nhất.');
+      settleInitialSync(false);
+    }
+    return await initialSync;
   }
 
   function handleFirebaseAuth(user) {
@@ -1079,6 +1090,17 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
   }
 
+  function setRemoteDataWarning(message) {
+    const el = document.getElementById('firebase-data-warning');
+    const txt = document.getElementById('firebase-data-warning-text');
+    if (!el || !txt) {
+      if (message) console.warn('[FB] Không tìm thấy vùng cảnh báo dữ liệu cục bộ:', message);
+      return;
+    }
+    txt.textContent = message || '';
+    el.hidden = !message;
+  }
+
   // ═══ PANEL "VIỆC CHƯA LÊN MÂY" — TỪNG BẢN GHI (18/10/2026) ══════════
   // Badge ở header chỉ nói "đang chờ đẩy"; panel này chỉ ra ĐÚNG miền + id để
   // người dùng biết việc gì chưa lên mây (điều tra lệch số giữa 2 máy).
@@ -1218,19 +1240,68 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     renderAll();
   }
   // ─── ĐỒNG BỘ DỮ LIỆU (FIRESTORE) ───────────────────────────────
+  function settleInitialSync(ok) {
+    if (fbInitialSyncSettled) return;
+    fbInitialSyncSettled = true;
+    if (fbInitialSyncResolve) fbInitialSyncResolve(!!ok);
+    fbInitialSyncResolve = null;
+  }
   function setupFirestoreSync() {
-    if (fbUnsubDoc) return;
-    fbUnsubDoc = fbDb.collection(FB_COLL).doc(FB_DOC).onSnapshot(
-      (snap) => handleRemoteSnapshot(snap),
-      (err) => {
+    if (fbUnsubDoc) return fbInitialSyncPromise || Promise.resolve(fbHasServerSnapshot);
+    if (!fbInitialSyncPromise) {
+      fbInitialSyncSettled = false;
+      fbInitialSyncPromise = new Promise(resolve => { fbInitialSyncResolve = resolve; });
+    }
+    try {
+      fbUnsubDoc = fbDb.collection(FB_COLL).doc(FB_DOC).onSnapshot(
+        { includeMetadataChanges: true },
+        (snap) => {
+          const fromCache = !!(snap && snap.metadata && snap.metadata.fromCache);
+          if (!fromCache) {
+            fbHasServerSnapshot = true;
+            fbNetState = 'ok';
+            fbNetCheckedAt = Date.now();
+            fbLastSyncTryAt = fbNetCheckedAt;
+          } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            fbNetState = 'dead';
+          }
+          Promise.resolve().then(() => handleRemoteSnapshot(snap)).then(ok => {
+            if (fromCache || ok === null) return;
+            if (ok === false) {
+              setRemoteDataWarning('Chưa nhận đủ dữ liệu mới từ Firebase. Đang hiển thị dữ liệu trên máy; số liệu có thể chưa mới nhất.');
+              settleInitialSync(false);
+              return;
+            }
+            if (ok !== true) return;
+            setRemoteDataWarning('');
+            settleInitialSync(true);
+          }).catch(err => {
+            console.warn('[FB] Lỗi xử lý snapshot đầu tiên', err);
+            setRemoteDataWarning('Không thể áp dụng dữ liệu mới từ Firebase. Đang hiển thị dữ liệu trên máy; số liệu có thể chưa mới nhất.');
+            settleInitialSync(false);
+          });
+        },
+        (err) => {
         console.warn('[FB] Lỗi lắng nghe dữ liệu', err);
+        fbUnsubDoc = null;
+        fbNetState = 'dead';
+        setRemoteDataWarning('Mất kết nối đồng bộ Firebase. Đang hiển thị dữ liệu trên máy; số liệu có thể chưa mới nhất.');
+        settleInitialSync(false);
         // Trước đây chỉ console.warn -> máy nhận "mù" dữ liệu mây mà không ai hay biết
         if (Date.now() - fbListenWarnAt > 30000) {
           fbListenWarnAt = Date.now();
           showToast('Mất kết nối lắng nghe dữ liệu mây: ' + ((err && err.message) || err), 'error');
         }
-      }
-    );
+        }
+      );
+    } catch (e) {
+      console.warn('[FB] Không thể đăng ký lắng nghe dữ liệu', e);
+      fbUnsubDoc = null;
+      fbNetState = 'dead';
+      setRemoteDataWarning('Không thể bắt đầu đồng bộ Firebase. Đang hiển thị dữ liệu trên máy; số liệu có thể chưa mới nhất.');
+      settleInitialSync(false);
+    }
+    return fbInitialSyncPromise;
   }
 
   // Dữ liệu ứng dụng hiện tại (toàn bộ) để gửi lên mây
@@ -2137,7 +2208,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // Đang TỰ GHI (đẩy/tải) → KHÔNG bỏ nhịp này: đánh dấu để pull lại NGAY sau khi
     // ghi xong. Trước đây `return` luôn → nếu máy khác vừa sửa đúng lúc này thì
     // nhịp đó MẤT, phải tải lại trang mới thấy dữ liệu mới.
-    if (fbApplying) { fbPendingPull = true; return Promise.resolve(); }
+    if (fbApplying) { fbPendingPull = true; return Promise.resolve(null); }
     // ─── ĐỊNH DẠNG DELTA (giai đoạn 2): MỤC LỤC apps/main + doc từng miền ──
     // Chỉ tải doc của miền ĐỔI; __dh giống hệt băm cục bộ → THOÁT NGAY.
     if (snap.exists && meta && meta.__fmt === 'delta-v1' && meta.__dh) {
@@ -2148,7 +2219,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       // → trước đây máy tưởng "đã giống mây" nên KHÔNG tải, mãi hiển thị dữ liệu cũ.
       if (!firstLoad && sameHashes(meta.__dh, localHashesNow(true))) {
         markSynced(meta);
-        return Promise.resolve();
+        return Promise.resolve(true);
       }
       return pullDeltaSnapshot(meta);
     }
@@ -2162,7 +2233,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // Không áp dụng cho lần nạp ĐẦU (để thiết lập fbLastRemote/fbRemoteHasData).
     if (snap.exists && !firstLoad && meta && meta.__dh && sameHashes(meta.__dh, localHashesNow(true))) {
       markSynced(meta);
-      return Promise.resolve();
+      return Promise.resolve(true);
     }
     // Dữ liệu mây có thể ở dạng gzip/shard → phải LẮP RÁP BẤT ĐỒNG BỘ trước khi
     // gộp về máy. fbRemoteSeq: nếu mục lục đổi giữa chừng (máy khác vừa đẩy) thì
@@ -2170,14 +2241,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // Trả về promise để có thể chờ (dùng trong kiểm thử / đồng bộ tuần tự).
     const seq = ++fbRemoteSeq;
     return assembleRemoteObject(meta).then((remote) => {
-      if (seq !== fbRemoteSeq) return;      // đã có bản mây mới hơn → bỏ qua
+      if (seq !== fbRemoteSeq) return null; // đã có bản mây mới hơn → bỏ qua
       fbLastRemote = remote;
       fbRemoteHasData = hasCloudData(remote);
-      if (fbApplying) { fbPendingPull = true; return; }   // đang ghi → pull lại sau
-      if (!snap.exists) return;             // mây chưa có dữ liệu -> KHÔNG hỏi, dùng nút thủ công khi cần
-      if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) { markSynced(meta); return; } // giống nhau
+      if (fbApplying) { fbPendingPull = true; return null; }   // đang ghi → pull lại sau
+      if (!snap.exists) return true;         // mây chưa có dữ liệu -> KHÔNG hỏi, dùng nút thủ công khi cần
+      if (cloudCore(remote) === cloudCore(collectCloudSnapshot())) { markSynced(meta); return true; } // giống nhau
       // Máy này chưa có dữ liệu thật -> nhận theo mây luôn, KHÔNG hỏi (tránh ghi đè mất dữ liệu)
-      if (!localHasAnyData()) { applyFireSnapshot(remote); markSynced(meta); return; }
+      if (!localHasAnyData()) { applyFireSnapshot(remote); markSynced(meta); return true; }
       // Dữ liệu mây KHÁC máy -> KHÔNG HỎI (tránh bấm nhầm gây ghi đè): nhận bản
       // MỚI HƠN cho từng bản ghi; bản ghi máy đang có sửa CHƯA ĐẨY thì giữ bản máy
       // + ghi sổ xung đột (xem mergeRemoteIntoLocal / stripDirtyFromRemote).
@@ -2186,12 +2257,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       }
       if (!hasSyncBase()) { try { captureSyncBase(null, {}); } catch (e) { /* bỏ qua */ } }
       markSynced(meta);
+      return true;
     }).catch((e) => {
       console.warn('[FB] Lỗi đọc/lắp ráp dữ liệu mây', e);
       if (Date.now() - fbReadWarnAt > 30000) {
         fbReadWarnAt = Date.now();
         showToast('Lỗi đọc dữ liệu từ mây: ' + ((e && e.message) || e), 'error');
       }
+      return false;
     });
   }
 
@@ -2316,7 +2389,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
   const SYNC_RETRY_WAITS = [2000, 5000, 15000];   // đọc lỗi miền → thử lại (tổng 3 lần)
   function pullDeltaSnapshot(meta, attempt) {
-    if (fbApplying) { fbPendingPull = true; return Promise.resolve(); }  // đang ghi → pull lại sau
+    if (fbApplying) { fbPendingPull = true; return Promise.resolve(null); }  // đang ghi → pull lại sau
     const seq = ++fbRemoteSeq;
     const tryNo = Number(attempt) || 0;
     return (async () => {
@@ -2326,7 +2399,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       const partial = {};
       if (meta && meta.deletedIds !== undefined) partial.deletedIds = meta.deletedIds;
       const vals = await Promise.all(changed.map(k => readDomainDoc(k).catch(() => undefined)));
-      if (seq !== fbRemoteSeq) return;          // đã có mục lục mới hơn → bỏ
+      if (seq !== fbRemoteSeq) return null;     // đã có mục lục mới hơn → bỏ
       // Không nuốt im lặng: miền nào đọc lỗi/tồn tại trong mục lục mà doc mất
       // thì báo + TỰ THỬ LẠI (2s → 5s → 15s). Trước đây chỉ chờ "lần đồng bộ sau"
       // mà lần sau chỉ xảy ra khi có người ghi lên mây → máy kẹt dữ liệu cũ.
@@ -2334,19 +2407,26 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (missed.length) {
         console.warn('[FB] Nhận mây delta: không đọc được ' + missed.length + ' miền ('
           + missed.join(', ') + ') — sẽ thử lại');
+        setRemoteDataWarning('Chưa nhận đủ dữ liệu mới từ Firebase. Đang hiển thị dữ liệu trên máy; số liệu có thể chưa mới nhất.');
         if (tryNo < SYNC_RETRY_WAITS.length) {
           const wait = SYNC_RETRY_WAITS[tryNo];
           setTimeout(() => { try { if (!fbApplying) pullDeltaSnapshot(meta, tryNo + 1); } catch (e) {} }, wait);
         }
       }
       changed.forEach((k, i) => { if (vals[i] !== undefined) partial[k] = vals[i]; });
-      if (fbApplying) { fbPendingPull = true; return; }   // đang ghi → pull lại sau
+      if (fbApplying) { fbPendingPull = true; return null; }   // đang ghi → pull lại sau
       // Máy chưa có dữ liệu thật -> nhận thẳng các miền vừa tải (máy mới: tải đủ)
       if (!localHasAnyData()) {
         applyFireSnapshot(partial);
         if (!hasSyncBase()) { try { captureSyncBase(null, {}); } catch (e) {} }
-        markSynced(meta);
-        return;
+        if (!missed.length) {
+          markSynced(meta);
+          if (fbHasServerSnapshot) {
+            setRemoteDataWarning('');
+            settleInitialSync(true);
+          }
+        }
+        return !missed.length;
       }
       // Máy đã có dữ liệu -> TỰ GỘP theo mây: bản MỚI HƠN thắng; bản ghi máy đang
       // có sửa CHƯA ĐẨY thì giữ bản máy + ghi sổ xung đột (xem mergeRemoteIntoLocal)
@@ -2355,22 +2435,31 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       }
       // Khởi tạo sổ đồng bộ nếu chưa có (miền không đổi ⇒ local == mây ⇒ base = local)
       if (!hasSyncBase()) { try { captureSyncBase(null, {}); } catch (e) { /* bỏ qua */ } }
-      markSynced(meta);
+      if (!missed.length) {
+        markSynced(meta);
+        if (fbHasServerSnapshot) {
+          setRemoteDataWarning('');
+          settleInitialSync(true);
+        }
+      }
+      return !missed.length;
     })().catch((e) => {
       console.warn('[FB] Lỗi nhận dữ liệu mây (delta)', e);
       if (Date.now() - fbReadWarnAt > 30000) {
         fbReadWarnAt = Date.now();
         showToast('Lỗi nhận dữ liệu mây: ' + ((e && e.message) || e), 'error');
       }
+      setRemoteDataWarning('Không thể tải đủ dữ liệu mới từ Firebase. Đang hiển thị dữ liệu trên máy; số liệu có thể chưa mới nhất.');
+      settleInitialSync(false);
       if (tryNo < SYNC_RETRY_WAITS.length) {
         setTimeout(() => { try { if (!fbApplying) pullDeltaSnapshot(meta, tryNo + 1); } catch (err) {} }, SYNC_RETRY_WAITS[tryNo]);
       }
+      return false;
     });
   }
 
   // ─── ĐỒNG BỘ NGAY: đọc mục lục mây 1 lần rồi xử lý như snapshot ──────
-  // Dùng cho: quay lại tab, có mạng lại, định kỳ 2 phút, nút "Đồng Bộ Ngay".
-  // Rẻ khi không có gì mới: 1 lượt đọc doc mục lục rồi thoát.
+  // Dùng khi quay lại tab hoặc nút "Đồng Bộ Ngay"; listener xử lý thay đổi realtime.
   async function syncNow(opts) {
     if (!isFirebaseOnline() || !fbDb) return false;
     if (fbApplying || fbSyncing) { fbPendingPull = true; return false; }
@@ -2383,7 +2472,18 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try {
       const snap = await cloudDocRef().get();
       const meta = snap && snap.exists ? (snap.data() || {}) : {};
-      await handleRemoteSnapshot({ exists: !!(snap && snap.exists), data: () => meta });
+      fbHasServerSnapshot = true;
+      fbNetState = 'ok';
+      const applied = await handleRemoteSnapshot({ exists: !!(snap && snap.exists), data: () => meta });
+      if (applied !== true) {
+        if (applied === false) {
+          setRemoteDataWarning('Chưa nhận đủ dữ liệu mới từ Firebase. Đang hiển thị dữ liệu trên máy; số liệu có thể chưa mới nhất.');
+          settleInitialSync(false);
+        }
+        return false;
+      }
+      setRemoteDataWarning('');
+      settleInitialSync(true);
       if (snap && snap.exists) markSynced(meta);
       return true;
     } catch (e) {
@@ -2392,6 +2492,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         fbReadWarnAt = Date.now();
         showToast('Không kiểm tra được dữ liệu mới trên mây: ' + ((e && e.message) || e), 'error');
       }
+      setRemoteDataWarning('Không kiểm tra được Firebase. Đang hiển thị dữ liệu đã lưu trên máy; số liệu có thể chưa mới nhất.');
       return false;
     } finally { fbSyncing = false; updateSyncBadge(); }
   }
@@ -2411,33 +2512,34 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     fbPendingPull = false;
     setTimeout(() => { try { syncNow({ force: true }); } catch (e) { /* bỏ qua */ } }, 300);
   }
-  // Tự kiểm tra mây: quay lại tab · có mạng · focus · định kỳ 2 phút
+  // Listener tự nhận thay đổi realtime; chỉ đọc mục lục khi người dùng quay lại tab.
   function scheduleSyncWatch() {
     if (fbSyncWired) return;
     fbSyncWired = true;
-    const kick = () => { try { syncNow(); } catch (e) { /* không phá app */ } };
+    const kick = () => {
+      if (!fbUnsubDoc) setupFirestoreSync();
+      if (!fbHasServerSnapshot) return;
+      try { syncNow(); } catch (e) { /* không phá app */ }
+    };
     try { window.addEventListener('focus', kick); } catch (e) {}
-    try { window.addEventListener('online', kick); } catch (e) {}
+    try {
+      window.addEventListener('online', () => {
+        fbNetState = 'unknown';
+        updateSyncBadge();
+        if (!fbUnsubDoc) setupFirestoreSync();
+      });
+      window.addEventListener('offline', () => {
+        fbNetState = 'dead';
+        updateSyncBadge();
+        setRemoteDataWarning('Đang ngoại tuyến. Dashboard dùng dữ liệu trên máy, có thể chưa phải số liệu mới nhất.');
+        settleInitialSync(false);
+      });
+    } catch (e) {}
     try {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') kick();
       });
     } catch (e) {}
-    if (typeof setInterval === 'function') {
-      const t = setInterval(kick, SYNC_PERIODIC_MS);
-      if (t && typeof t.unref === 'function') t.unref(); // Node test không bị giữ sống
-      fbSyncTimer = t;
-      // Thăm dò KẾT NỐI THẬT mỗi 30 giây (chỉ khi tab đang hiện) — phát hiện
-      // "ảo online" (wifi có, internet mất) để badge/banner báo ĐÚNG.
-      const tp = setInterval(() => {
-        try {
-          if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-          probeCloud();
-        } catch (e) { /* bỏ qua */ }
-      }, 30000);
-      if (tp && typeof tp.unref === 'function') tp.unref();
-    }
-    try { probeCloud(true); } catch (e) { /* bỏ qua */ }
   }
 
   function applyFireSnapshot(data) {

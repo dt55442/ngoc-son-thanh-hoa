@@ -194,14 +194,24 @@ function check(name, cond) {
 {
   const store = new Map();
   let setCount = 0;
+  let domainReadCount = 0;
+  let cloudListenerNext = null;
+  let cloudListenerError = null;
   const makeDoc = (collPath, id) => {
     const key = collPath + '/' + id;
     return {
       _key: key,
       set(data) { setCount++; store.set(key, JSON.parse(JSON.stringify(data))); return Promise.resolve(); },
-      get() { return Promise.resolve({ exists: store.has(key), data: () => store.get(key) }); },
+      get() {
+        if (key.indexOf('apps/main/d/') === 0) domainReadCount++;
+        return Promise.resolve({ exists: store.has(key), data: () => store.get(key) });
+      },
       delete() { store.delete(key); return Promise.resolve(); },
-      onSnapshot() { return () => {}; },
+      onSnapshot(options, next, error) {
+        cloudListenerNext = typeof options === 'function' ? options : next;
+        cloudListenerError = typeof options === 'function' ? next : error;
+        return () => {};
+      },
       collection(sub) { return makeColl(collPath + '/' + id + '/' + sub); },
       where() { return { get: () => Promise.resolve({ forEach(){} }) }; }
     };
@@ -214,7 +224,7 @@ function check(name, cond) {
   global.__BAMBOO_FIREBASE_READY__ = true;
   global.FIREBASE_CONFIG = { ownerEmail: 'dt55442@gmail.com', projectId: 'test-delta' };
   global.firebase = { apps: [], initializeApp(){}, firestore: () => fakeDb, auth: () => ({ onAuthStateChanged(){}, currentUser: null, signOut(){ return Promise.resolve(); } }) };
-  cloud.initFirebase();
+  const initPromise = cloud.initFirebase();
   check('E0: Firebase (fake) đã bật → chế độ online', cloud.isFirebaseOnline() === true);
 
   state.pressRecords = [{ id: 'P1', qty: 10, updatedAt: '2030-01-01T00:00:00.000Z' }];
@@ -224,6 +234,24 @@ function check(name, cond) {
 
   const r1 = await cloud.writeCloudSnapshot();
   check('E1: lần đẩy đầu → định dạng delta-v1 + ghi ĐỦ mọi miền (>5)', r1.mode === 'delta-v1' && r1.changed > 5);
+  let initStatus = 'pending';
+  initPromise.then(ok => { initStatus = ok ? 'ready' : 'local'; });
+  cloudListenerNext({
+    exists: true,
+    metadata: { fromCache: true },
+    data: () => store.get('apps/main')
+  });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  check('E1b: snapshot chỉ có trong cache không kết thúc trạng thái chờ boot',
+    initStatus === 'pending');
+  cloudListenerNext({
+    exists: true,
+    metadata: { fromCache: false },
+    data: () => store.get('apps/main')
+  });
+  await initPromise;
+  check('E1c: boot readiness chỉ hoàn tất sau snapshot server đầu tiên được áp dụng',
+    initStatus === 'ready');
   {
     const m = store.get('apps/main');
     check('E2: mục lục apps/main có __fmt=delta-v1 + __dh + deletedIds',
@@ -237,6 +265,13 @@ function check(name, cond) {
   const r2 = await cloud.writeCloudSnapshot();
   check('E4: đẩy lần 2 KHÔNG đổi gì → changed = 0 và KHÔNG ghi gì thêm',
     r2.mode === 'delta-v1' && r2.changed === 0 && setCount === c2);
+  const readsBeforeUnchangedSnapshot = domainReadCount;
+  await cloud.handleRemoteSnapshot({
+    exists: true,
+    data: () => store.get('apps/main')
+  });
+  check('E4b: warm reload có hash miền khớp không đọc lại domain docs',
+    domainReadCount === readsBeforeUnchangedSnapshot);
 
   const c3 = setCount;
   state.pressRecords.push({ id: 'P2', qty: 5, updatedAt: '2030-01-02T00:00:00.000Z' });
@@ -279,6 +314,10 @@ function check(name, cond) {
     /function pullDeltaSnapshot/.test(src2) && /localH\[k\] !== remoteH\[k\]/.test(src2));
   check('E14: subcollection miền = FB_DOMAIN_COLL, nằm dưới apps/main (rules đã phủ)',
     cloud.FB_DOMAIN_COLL === 'd' && typeof cloud.domainDocRef === 'function');
+  check('E15: listener realtime thay polling server-read định kỳ',
+    !/setInterval|probeCloud\(/.test(
+      src2.slice(src2.indexOf('function scheduleSyncWatch()'), src2.indexOf('function applyFireSnapshot'))
+    ));
 
   // ─── F. SỬA LỖI "ĐẨY THÀNH CÔNG MÀY KHÁC VẪN KHÁC SỐ LIỆU" (07/10/2026) ──
   // F1/F2: đọc mây thiếu doc miền → PHẢI ném lỗi (không im lặng) + tự chữa lành.
@@ -323,8 +362,11 @@ function check(name, cond) {
     /state\[key\] = Object\.assign\(\{\}, v\)/.test(srcF));
   check('F8: nhận mây delta báo console khi không đọc được miền (không nuốt)',
     /không đọc được .* miền/.test(srcF));
+  cloudListenerError(new Error('permission-denied'));
+  check('F9: listener lỗi hiện cảnh báo dữ liệu cục bộ rõ ràng',
+    els.get('firebase-data-warning').hidden === false &&
+    els.get('firebase-data-warning-text').textContent.includes('dữ liệu trên máy'));
 }
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
-

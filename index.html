@@ -49,6 +49,11 @@
     } catch (e) { /* bỏ qua — môi trường hạn chế */ }
   </script>
 
+  <div class="firebase-data-warning" id="firebase-data-warning" hidden role="status" aria-live="polite">
+    <i data-lucide="cloud-off" aria-hidden="true"></i>
+    <span id="firebase-data-warning-text"></span>
+  </div>
+
   <!-- ═══ BANNER "GHI TẠM TRÊN MÁY" (18/10/2026 — quy tắc 73) ═══
        Hiện khi có thay đổi CHƯA lên mây — đặc biệt phiếu kho / kiểm kê (SỔ CÁI):
        người dùng KHÔNG được tưởng số liệu đã đồng bộ. Bật/tắt bằng
@@ -62,16 +67,18 @@
   <!-- ═══ ICON LOADING "ANH NÔNG DÂN CHẶT TRE" (js/loading.js) ═══
        Overlay hiển thị trong lúc khởi động và các tác vụ thực sự chờ phản hồi.
        Chuyển tab không dùng overlay để tránh chặn thao tác sau khi render đồng bộ.
-       Mini-game tùy chọn chạy đồng thời; boot xong tự đóng overlay.
+       Sprite và vòng chờ chạy trong khi boot; mini-game không bật lúc khởi động.
        Nền watchdog (boot-guard, z-index 99999) vẫn nổi TRÊN overlay này. -->
   <div class="tre-loading" id="tre-loading-overlay" role="status" aria-live="polite">
     <div class="tre-loading-card" id="tre-loading-card">
       <!-- CẢNH = SPRITE 18 FRAME 640×360 (icons/loading/tre-sprite.png, 6 cột × 3 dòng)
            — do make-loading-sprite.cjs ghép từ 3 sheet AI (nông dân · tre · hiệu ứng).
-           CSS styles.css chạy 2 pha: treChop (frame 1–13) → treFall (14–18, .is-fall).
-           Trong game, mỗi lần bấm chặt chạy 1 nhát treHitOnce 600ms. -->
+           CSS styles.css chạy 2 pha: treChop (frame 1–13) → treFall (14–18, .is-fall). -->
       <div class="tre-scene" id="tre-loading-scene" aria-hidden="true"></div>
-      <div class="tre-loading-text" id="tre-loading-text">Đang tải dữ liệu nhà máy…</div>
+      <div class="tre-loading-status">
+        <span class="tre-loading-spinner" aria-hidden="true"></span>
+        <div class="tre-loading-text" id="tre-loading-text">Đang tải dữ liệu nhà máy…</div>
+      </div>
       <!-- Tiến độ minh họa tăng đều, chờ boot hoàn tất mới chạy tới 100%. -->
       <div class="tre-progress" id="tre-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div class="tre-progress-fill" id="tre-progress-fill"></div>
@@ -6658,6 +6665,37 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" id="btn-cancel-transfer-kho">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Chuyển Vào Kho</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hộp thoại chuyển nhanh từ bảng lò: cho nhập ngày Kho thực tế và vị trí đích tùy chọn. -->
+  <div class="modal-overlay" id="modal-kiln-quick-kho" aria-hidden="true">
+    <div class="modal-card modal-sm" role="dialog" aria-modal="true" aria-labelledby="kiln-quick-kho-title">
+      <div class="modal-header">
+        <h3 id="kiln-quick-kho-title"><i data-lucide="warehouse"></i> Chuyển nhanh vào Kho</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-kiln-quick-kho" aria-label="Đóng" title="Đóng">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="kiln-quick-kho-form">
+        <div class="form-grid">
+          <p class="col-span-full" id="kiln-quick-kho-summary"></p>
+          <div class="form-group col-span-full">
+            <label for="kiln-quick-kho-date">Ngày vào Kho thực tế <span class="required">*</span></label>
+            <input type="date" id="kiln-quick-kho-date" required>
+          </div>
+          <div class="form-group col-span-full">
+            <label for="kiln-quick-kho-location">Vị trí mới ở Kho <span class="text-muted">(không bắt buộc)</span></label>
+            <input type="text" id="kiln-quick-kho-location" list="kiln-quick-kho-locations"
+              placeholder="Để trống = giữ nguyên vị trí cũ" autocomplete="off">
+            <datalist id="kiln-quick-kho-locations"></datalist>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btn-cancel-kiln-quick-kho">Hủy Bỏ</button>
           <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Chuyển Vào Kho</button>
         </div>
       </form>

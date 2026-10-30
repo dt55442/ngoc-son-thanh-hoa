@@ -32,7 +32,7 @@ const TRE_CARD_ID = 'tre-loading-card';
 //   fall     = thời gian tre ngã trước khi overlay mờ (đồng bộ CSS 700ms)
 //   hitStep  = số phần trăm quy đổi mỗi nhát (100 / 5 = 20 nhát)
 //   progressFinish = thời gian hoàn tất thanh tải sau khi boot xong
-const TRE_TIMING = { load: 5000, fall: 700, hitStep: 5, phrase: 2200, progressFinish: 360 };
+const TRE_TIMING = { load: 5000, fall: 700, hitStep: 5, phrase: 1800, progressFinish: 360 };
 let treDepth = 0;       // số tác vụ ĐANG chờ (refcount)
 let treShownAt = 0;     // thời điểm hiện loading gần nhất
 let treDur = 5000;      // cửa sổ auto của lần hiện này (ms)
@@ -173,8 +173,14 @@ function treSetGameButtons(hidden) {
   if (skip) skip.hidden = hidden;
 }
 function treSetLoadingStatus(label) {
+  if (!label) return;
+  const value = String(label);
+  if (trePhrases.length) {
+    trePhrases[0] = value;
+    trePhraseIdx = 0;
+  }
   const txt = treEl(TRE_TEXT_ID);
-  if (txt && label) txt.textContent = String(label);
+  if (txt) txt.textContent = value;
 }
 // Bộ đếm game không dùng phần trăm của tiến độ tải.
 function treHint() {

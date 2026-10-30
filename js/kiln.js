@@ -96,6 +96,38 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
     }
     return 0;
   }
+  function kilnLotStartDateOf(b) {
+    if (!b) return '';
+    const hist = getBatchStageHistory(b);
+    for (let i = hist.length - 1; i >= 0; i--) {
+      if (hist[i] && hist[i].stage === b.stage) {
+        const date = String(hist[i].date || '').slice(0, 10);
+        return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
+      }
+    }
+    return '';
+  }
+  function kilnStartDatesOf(lots) {
+    return [...new Set((lots || []).map(kilnLotStartDateOf).filter(Boolean))].sort();
+  }
+  function kilnFormatStartDate(date) {
+    const [year, month, day] = String(date || '').split('-');
+    return year && month && day ? `${day}/${month}/${year}` : '';
+  }
+  function kilnStartDateLabel(dates) {
+    const valid = (dates || []).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))).sort();
+    if (!valid.length) return '';
+    if (valid.length === 1) return `Vào lò ${kilnFormatStartDate(valid[0])}`;
+    const [firstYear, firstMonth, firstDay] = valid[0].split('-');
+    const [lastYear, lastMonth, lastDay] = valid[valid.length - 1].split('-');
+    if (firstYear === lastYear && firstMonth === lastMonth) {
+      return `Vào lò ${firstDay}-${lastDay}/${firstMonth}/${firstYear}`;
+    }
+    if (firstYear === lastYear) {
+      return `Vào lò ${firstDay}/${firstMonth}-${lastDay}/${lastMonth}/${firstYear}`;
+    }
+    return `Vào lò ${kilnFormatStartDate(valid[0])}-${kilnFormatStartDate(valid[valid.length - 1])}`;
+  }
 
   // ─── ĐỘ ẨM + NGƯỠNG ĐẠT ─────────────────────────────────────
   // Ngưỡng độ ẩm ĐẠT của 1 công đoạn sấy (%) — đạt khi độ ẩm ≤ ngưỡng
@@ -126,6 +158,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
     const volume = lots.reduce((s, b) => s + kilnBatchVolumeOf(b), 0);
     const qty = lots.reduce((s, b) => s + (Number(b.quantity) || 0), 0);
     const days = lots.reduce((m, b) => Math.max(m, kilnLotDaysOf(b)), 0);
+    const startDates = kilnStartDatesOf(lots);
     const reading = kilnReadingOf(location);
     const age = reading ? kilnDayDiff(reading.date, kilnTodayISO()) : null;
     const humidity = (reading && age !== null && age >= 0 && age <= KILN_HUMIDITY_FRESH_DAYS)
@@ -133,7 +166,11 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
     const threshold = stage ? kilnThresholdOf(stage) : null;
     const status = !lots.length ? 'idle'
       : (humidity != null && threshold != null && humidity <= threshold ? 'ready' : 'active');
-    return { location: String(location || '').trim(), stage, lots, volume, qty, days, reading, readingAge: age, humidity, threshold, status };
+    return {
+      location: String(location || '').trim(), stage, lots, volume, qty, days,
+      startDates, startDateLabel: kilnStartDateLabel(startDates),
+      reading, readingAge: age, humidity, threshold, status
+    };
   }
 
   // ─── LOAD / SAVE (localStorage riêng — như qcExports) ────────
@@ -247,6 +284,9 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
       : 'QC chưa đo độ ẩm lò này';
     const humCls = info.humidity != null ? (info.status === 'ready' ? 'kiln-hum-ok' : 'kiln-hum-high') : 'kiln-hum-none';
     const stageName = info.stage ? ((STAGES[info.stage] && STAGES[info.stage].short) || '') : '';
+    const startDateTitle = info.startDates.length
+      ? `Ngày vào lò: ${info.startDates.map(kilnFormatStartDate).join(', ')}`
+      : '';
     // NHÃN ARIA (không hiển thị) — thay cho title cũ từng lặp lại toàn bộ thông tin
     const aria = info.lots.length
       ? `Lò ${info.location}${stageName ? ' — ' + stageName : ''} — chạm để xem danh sách nan và thao tác Thêm lô / Vào Kho`
@@ -264,6 +304,7 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
           <span class="kiln-days" title="Số ngày đã sấy (lô lâu nhất trong lò)"><i data-lucide="calendar-days"></i> ${info.lots.length ? `${info.days} ngày` : '—'}</span>
           <span class="kiln-hum ${humCls}" title="${escapeHTML(humTitle)}"><i data-lucide="droplets"></i> ${hum}</span>
         </span>
+        ${info.startDateLabel ? `<span class="kiln-start-date" title="${escapeHTML(startDateTitle)}"><i data-lucide="calendar"></i> ${escapeHTML(info.startDateLabel)}</span>` : ''}
         ${info.status === 'ready' ? '<span class="kiln-ready-chip">Đạt ẩm</span>' : ''}
         ${kilnNanListHtml(info)}
         ${open ? kilnMenuHtml(info) : ''}
@@ -342,22 +383,62 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
     renderKilnBoard();
   }
   // Chuyển nhanh TẤT CẢ lô trong lò vào Kho (tái dùng logic modal "Chuyển Kho").
-  // HỎI VỊ TRÍ MỚI Ở KHO (prompt): bỏ trống = giữ nguyên vị trí cũ · hủy = không chuyển.
+  // Ngày thực tế và vị trí Kho mới được nhập trong một hộp thoại gọn.
+  let kilnQuickTransferLocation = '';
   function kilnQuickToKho(location) {
     if (!requireEditPermission()) return;
     const info = kilnInfoOf(location);
     if (!info.lots.length) { showToast('Lò này đang trống — không có lô để chuyển!', 'info'); return; }
     kilnOpenMenu = '';
-    let newLoc = '';
-    if (typeof prompt === 'function') {
-      const used = khoLocationsInUse();
-      const goiY = used.length ? `\nGợi ý (vị trí Kho đang có): ${used.slice(0, 8).join(', ')}` : '';
-      const ans = prompt(`Vị trí mới ở KHO cho các lô từ ${info.location} (bỏ trống = giữ nguyên vị trí cũ):${goiY}`, '');
-      if (ans === null) return; // người dùng hủy → không chuyển
-      newLoc = String(ans || '').trim();
+    const modal = document.getElementById('modal-kiln-quick-kho');
+    const dateEl = document.getElementById('kiln-quick-kho-date');
+    const locEl = document.getElementById('kiln-quick-kho-location');
+    const summaryEl = document.getElementById('kiln-quick-kho-summary');
+    const locListEl = document.getElementById('kiln-quick-kho-locations');
+    if (!modal || !dateEl || !locEl || !summaryEl || !locListEl) {
+      showToast('Không mở được hộp thoại chuyển Kho nhanh. Vui lòng tải lại trang.', 'error');
+      return;
     }
-    const moved = quickTransferLotsToKho(info.stage, info.location, kilnTodayISO(), newLoc);
-    if (moved) renderKilnBoard();
+    kilnQuickTransferLocation = info.location;
+    dateEl.value = kilnTodayISO();
+    locEl.value = '';
+    summaryEl.textContent = `Chuyển ${info.lots.length} lô từ ${info.location} (${info.stage === 'say2' ? 'Sấy 2' : 'Sấy 1'}) vào Kho.`;
+    locListEl.innerHTML = khoLocationsInUse()
+      .map(loc => `<option value="${escapeHTML(loc)}"></option>`).join('');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    initLucide();
+    dateEl.focus();
+  }
+  function closeKilnQuickTransferModal() {
+    kilnQuickTransferLocation = '';
+    const modal = document.getElementById('modal-kiln-quick-kho');
+    if (modal) {
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+  function handleKilnQuickTransferSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!requireEditPermission()) return;
+    const location = kilnQuickTransferLocation;
+    if (!location) {
+      showToast('Không xác định được lò cần chuyển vào Kho.', 'error');
+      closeKilnQuickTransferModal();
+      return;
+    }
+    const dateVal = String((document.getElementById('kiln-quick-kho-date') || {}).value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      showToast('Vui lòng chọn Ngày vào Kho hợp lệ!', 'error');
+      return;
+    }
+    const info = kilnInfoOf(location);
+    const newLoc = String((document.getElementById('kiln-quick-kho-location') || {}).value || '').trim();
+    const moved = quickTransferLotsToKho(info.stage, info.location, dateVal, newLoc);
+    if (moved) {
+      closeKilnQuickTransferModal();
+      renderKilnBoard();
+    }
   }
   // Mở form "Thêm Lô Sấy Mới" với Vị trí + Công đoạn điền sẵn
   function kilnOpenAdd(stage, location) {
@@ -579,7 +660,9 @@ import { calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, ge
 export {
   KILN_BASE,
   KILN_THRESHOLD_DEFAULT,
+  closeKilnQuickTransferModal,
   closeKilnMenus,
+  handleKilnQuickTransferSubmit,
   handleKilnThresholdSave,
   kilnBatchVolumeOf,
   kilnHumidityCardCount,
@@ -589,6 +672,8 @@ export {
   kilnLotsOf,
   kilnReadingAt,
   kilnReadingOf,
+  kilnStartDateLabel,
+  kilnStartDatesOf,
   kilnStageOf,
   kilnThresholdOf,
   kilnTileDragStart,
@@ -609,7 +694,6 @@ export {
   saveKilnThresholds,
   upsertKilnReading
 };
-
 
 
 

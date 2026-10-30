@@ -51,6 +51,11 @@ check('A5b: THANH TIẾN ĐỘ + NÚT CHẶT + NÚT BỎ QUA + NỀN BLUR (mờ 
   css.includes('.tre-skip-btn[hidden]') && ldJs.includes('function skipTreLoading') &&
   css.includes('@keyframes treHitPunch') && css.includes('backdrop-filter') &&
   css.includes('is-game'));
+check('A5d: vòng chờ quay cạnh nhãn tải, có giảm chuyển động cho FX thấp/reduced-motion',
+  idx.includes('class="tre-loading-spinner"') && css.includes('@keyframes treLoadingSpin') &&
+  css.includes('animation: treLoadingSpin .9s linear infinite') &&
+  css.includes('body[data-fx="low"] .tre-loading-spinner { animation: none; }') &&
+  css.includes('.tre-loading-spinner { animation: none; }'));
 check('A5c: thanh tải dùng transform thân thiện với compositor, không transition width',
   css.includes('transform: scaleX(0)') && css.includes('transform-origin: left center') &&
   !/\.tre-progress-fill\s*\{[^}]*transition:\s*width/.test(css));
@@ -82,8 +87,11 @@ check('A9: KHÔNG dùng class .modal-overlay (không làm khoá cuộn trang nh�
 console.log('--- B. WIRING 5 NHÓM CHỖ CHỜ ---');
 check('B1: js/loading.js — không import module nào (không vòng import) + refcount show/hide',
   !/^\s*import\s/m.test(ldJs) && ldJs.includes('function showTreLoading') && ldJs.includes('function hideTreLoading'));
-check('B2: boot (main.js) — overlay có game tùy chọn và chỉ đóng sau khi dữ liệu sẵn sàng',
-  /showTreLoading\('Đang nạp dữ liệu nhà máy…',\s*\{\s*mode:\s*'game'\s*\}\)/.test(mnJs) &&
+check('B2: boot ẩn mini-game, xoay câu trạng thái và chờ Firebase trước khi kết thúc overlay',
+  /showTreLoading\('Đang nạp dữ liệu nhà máy…',\s*\{\s*phrases:/.test(mnJs) &&
+  !/showTreLoading\('Đang nạp dữ liệu nhà máy…',\s*\{\s*mode:\s*'game'/.test(mnJs) &&
+  /Đang xác nhận số liệu mới nhất từ Firebase/.test(mnJs) &&
+  /await initFirebase\(\)/.test(mnJs) &&
   /hideTreLoading\(bootOk\)/.test(mnJs) &&
   /setTreLoadingStatus/.test(mnJs));
 check('B3: AI (ai.js) — hiện khi chờ Gemini + finally hideTreLoading(aiOk)',
@@ -112,8 +120,8 @@ check('B11: boot yield giữa các nhóm khởi tạo để overlay có cơ hộ
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v229 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v312/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v313 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v313/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════

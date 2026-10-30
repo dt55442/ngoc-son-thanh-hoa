@@ -153,10 +153,10 @@ check('C3. đúng 4 khối thẻ theo nhóm',
   (idxDock.match(/data-hr-group-panel="/g) || []).length === 4);
 
 const CARD_IDS = ['hr-emp-card', 'hr-pos-card', 'hr-att-card', 'hr-pay-card', 'hr-ci-card', 'hr-leave-card',
-  'hr-ot-card', 'hr-stats-card', 'hr-att-stats-card', 'hr-recruit-card', 'hr-posneed-card'];
+  'hr-ot-card', 'hr-stats-card', 'hr-att-stats-card', 'hr-worker-eval-card', 'hr-recruit-card', 'hr-posneed-card'];
 const cardIds = (idxDock.match(/data-hr-card="([a-z-]+)"/g) || []).map(x => x.split('"')[1]);
-check('C4. đủ 11 thẻ mini + đúng data-hr-card',
-  cardIds.length === 11 && CARD_IDS.every(id => cardIds.includes(id)));
+check('C4. đủ 12 thẻ mini + đúng data-hr-card',
+  cardIds.length === 12 && CARD_IDS.every(id => cardIds.includes(id)));
 
 claimOk:
 {
@@ -216,9 +216,8 @@ check('E2. events có Esc đóng dock (ưu tiên đóng pop-up chi tiết)',
   /hrDockState\(\)\.level === 0[\s\S]{0,400}?hrDockClose\(\)/.test(evSrc));
 check('E3. rời tab Nhân Sự tự đóng dock (main.js)',
   mainSrc.includes('hrDockClose') && /closeViewScopedModals[\s\S]{0,900}?hrDockClose/.test(mainSrc));
-check('E4. sw.js cache v284', swSrc.includes('nha-may-ngoc-son-v313'));
+check('E4. sw.js cache v284', swSrc.includes('nha-may-ngoc-son-v318'));
 
 console.log(`\nHR-DOCK: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);
-
 

@@ -10,7 +10,7 @@ import { captureAutoBackup } from './autobackup.js'; // Chụp backup TRƯỚC k
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
 import { writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
-import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf, hrNeedAllRows, hrNeedDateISO } from './hr.js';
+import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, canApproveLeave, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeWorkerEvaluation, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf, hrNeedAllRows, hrNeedDateISO } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
@@ -1484,6 +1484,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
     { id: 'hr-timesheet',   label: 'Bảng Chấm Công Theo Tháng (HC/TC)',   sheet: 'Chấm Công Tháng', file: 'ChamCongThang' },
     { id: 'hr-att-day',     label: 'Chấm Công & Phân Vị — Theo Ngày',     sheet: 'Chấm Công Ngày', file: 'ChamCongNgay' },
     { id: 'hr-att-stats',   label: 'Thống Kê Đi Làm — Theo Tháng',        sheet: 'TK Đi Làm',      file: 'TK_DiLam' },
+    { id: 'hr-evaluation',  label: 'Đánh Giá Công Nhân — Theo Tháng',     sheet: 'Đánh Giá CN',    file: 'DanhGiaCongNhan' },
     { id: 'hr-pos',         label: 'Vị Trí Làm Việc & Kỹ Năng',           sheet: 'Vị Trí',         file: 'ViTri' },
     { id: 'hr-ci',          label: 'Giờ Máy Chấm Công',                   sheet: 'Giờ Máy',        file: 'GioMay' },
     { id: 'hr-leave',       label: 'Đơn Xin Nghỉ Phép',                   sheet: 'Nghỉ Phép',      file: 'NghiPhep' },
@@ -1548,8 +1549,16 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
     const card = document.getElementById('export-hr-card')?.value || 'hr-emp';
     const mRow = document.getElementById('export-hr-month-row');
     const dRow = document.getElementById('export-hr-date-row');
-    if (mRow) mRow.style.display = (card === 'hr-att-stats' || card === 'hr-timesheet') ? '' : 'none';
+    if (mRow) mRow.style.display = (card === 'hr-att-stats' || card === 'hr-evaluation' || card === 'hr-timesheet') ? '' : 'none';
     if (dRow) dRow.style.display = (card === 'hr-att-day') ? '' : 'none';
+    const deptSel = document.getElementById('export-hr-dept');
+    if (deptSel) {
+      const current = deptSel.value || 'all';
+      const depts = HR_DEPARTMENTS.filter(d => card !== 'hr-evaluation' || d !== 'Văn Phòng');
+      deptSel.innerHTML = '<option value="all">Tất Cả Bộ Phận</option>' +
+        depts.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
+      deptSel.value = depts.includes(current) ? current : 'all';
+    }
   }
 
   function buildHrXlsxExportData(filters) {
@@ -1566,6 +1575,11 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
 
     let header = [], rows = [], totalRow = null, extraNote = '';
     const noData = () => { showToast('Không có dữ liệu nào thỏa mãn bộ lọc!', 'error'); return null; };
+
+    if (def.id === 'hr-evaluation' && !canApproveLeave()) {
+      showToast('Chỉ Quản Trị / Ban Quản Lý được xuất đánh giá nhân sự.', 'error');
+      return null;
+    }
 
     switch (def.id) {
       case 'hr-emp': {
@@ -1622,6 +1636,35 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
         const counted = t.work + t.leave + t.absent;
         totalRow = ['TỔNG CỘNG', '', '', t.work, t.leave, t.absent, t.unmarked, counted ? Math.round(t.work * 1000 / counted) / 10 : ''];
         extraNote = `Tháng: ${month}`;
+        break;
+      }
+      case 'hr-evaluation': {
+        const month = (/^\d{4}-\d{2}$/.test(f.month || '') ? f.month
+          : (document.getElementById('export-hr-month')?.value || state.hrAttMonth || todayStamp().slice(0, 7)));
+        const result = computeWorkerEvaluation(month);
+        const evaluationRows = result.rows.filter(r => inDept(r.department));
+        if (!evaluationRows.length) return noData();
+        header = ['Nhân Viên', 'Mã NV', 'Bộ Phận', 'Ngày Công (Tất Cả)', 'Nghỉ Có Phép', 'Vắng (Chưa Xác Định Phép)', 'Chưa Chấm',
+          'Chuyên Cần (%)', 'Hiệu Suất Công Đoạn Tham Chiếu (%)', 'Giờ Có Hiệu Suất',
+          'Giờ Phân Công Có Liên Kết', 'Độ Phủ Hiệu Suất (%)', 'Giờ Dùng Sản Lượng Ước Tính',
+          'Phân Công Trùng Giờ Bị Loại', 'Việc Cơ Điện Được Giao', 'Việc Đã Nghiệm Thu',
+          'Nghiệm Thu Đúng Hạn (có đủ mốc)', 'Không Tái Phát (có theo dõi)', 'Đánh Giá (Quản Lý)',
+          'Công Chuẩn', 'Ngày Làm Trong Lịch Chuẩn', 'Ngày Làm Vào Ngày Nghỉ'];
+        rows = evaluationRows.map(r => [
+          r.emp.name || '', r.emp.code || '', r.department, r.work, r.leave, r.absent, r.unmarked,
+          r.attendanceRate === null ? '' : r.attendanceRate,
+          r.stageEfficiency === null ? 'Chưa đủ dữ liệu hiệu suất' : r.stageEfficiency,
+          r.stageEfficiencyValidHours || '',
+          r.stageEfficiencyAssignedHours || '',
+          r.stageEfficiencyCoverageRate === null ? '' : r.stageEfficiencyCoverageRate,
+          r.stageEfficiencyEstimatedHours || '',
+          r.stageEfficiencyOverlapCount || '',
+          r.assignedTasks, r.verifiedTasks,
+          r.onTimeEligibleTasks ? `${r.onTimeTasks}/${r.onTimeEligibleTasks}` : '',
+          r.noRecurrenceEligibleTasks ? `${r.noRecurrenceTasks}/${r.noRecurrenceEligibleTasks}` : '',
+          r.evaluationGrade || '', r.standardDays, r.workedStandardDays, r.workedRestDays
+        ]);
+        extraNote = `Tháng: ${month}. Chuyên cần = ngày làm trong lịch chuẩn / công chuẩn cả tháng theo thời gian làm việc; ngày làm vào ngày nghỉ không tính vào tỷ lệ. Chưa chấm tính đến hôm nay, kể cả ngày nghỉ; vắng chưa xác định phép. Kết quả tháng hiện tại là tạm thời. Mức đánh giá A/B/C do Quản lý nhập; không có điểm tổng hay lương thưởng tự động. Hiệu suất công đoạn/nhóm được gia quyền theo giờ phân công khớp employeeId; không phải sản lượng riêng của từng người. Giờ trùng lịch bị loại; giờ thiếu dữ liệu không bị tính thành 0.`;
         break;
       }
       case 'hr-pos': {

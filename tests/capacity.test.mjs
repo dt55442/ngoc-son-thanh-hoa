@@ -332,7 +332,7 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v313/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v318', /nha-may-ngoc-son-v318/.test(swJs));
 check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 8 dòng Xưởng 1',
   cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===
@@ -665,6 +665,52 @@ check('CẤU TRÚC (events.js + styles.css): nối toggle panel/chip + CSS banne
   evJsStale.includes('toggleCapStale') && evJsStale.includes('#cap-stale-toggle') &&
   stylesCss.includes('.cap-stale-panel') && stylesCss.includes('.cap-stale-impact'));
 
+// ─── HIỆU SUẤT CÔNG NHÂN: gia quyền theo giờ, fail-closed khi thiếu liên kết ──
+state.hrEmployees = [{ id: 'eff-worker', name: 'Công nhân kiểm thử' }];
+state.hrPositions = [
+  { id: 'eff-cut', name: 'Cắt Chọn', department: 'Xưởng 2' },
+  { id: 'eff-boong', name: 'Bổ Ống', department: 'Xưởng 2' }
+];
+state.hrShifts = [{ id: 'Xưởng 2', type: 'hanhchinh', shifts: [
+  { name: 'Sáng', start: '07:00', end: '11:30' },
+  { name: 'Chiều', start: '13:00', end: '17:30' }
+] }];
+state.hrAssignments = [
+  { id: 'eff-cut-day1', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '07:00', end: '09:00', shiftIdx: 0 },
+  { id: 'eff-boong-day1a', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-boong', start: '09:00', end: '11:30', shiftIdx: 0 },
+  { id: 'eff-boong-day1b', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-boong', start: '13:00', end: '16:30', shiftIdx: 0 },
+  { id: 'eff-cut-day2a', date: '2026-09-11', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '07:00', end: '11:30', shiftIdx: 0 },
+  { id: 'eff-cut-day2b', date: '2026-09-11', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '13:00', end: '16:30', shiftIdx: 0 }
+];
+state.x2CapRates = { '2026-09': 1 };
+state.x2BoOngRates = { '2026-09': 100 };
+state.materialRecords = [];
+state.xuong2CutRecords = [
+  { id: 'eff-cut-rec1', date: '2026-09-10', inputKind: 'luong-cay', inputWeight: 1200, carts: 2, kgPerCart: 600 },
+  { id: 'eff-cut-rec2', date: '2026-09-11', inputKind: 'luong-cay', inputWeight: 3600, carts: 6, kgPerCart: 600 }
+];
+state.xuong2BoOngRecords = [{ id: 'eff-boong-rec', date: '2026-09-10', inputOng: 300 }];
+const weightedEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
+check('ĐÁNH GIÁ HS: nhiều công đoạn/ngày và giờ tháng được gia quyền, không lấy max',
+  !!weightedEfficiency && weightedEfficiency.efficiency === 68.8 &&
+  weightedEfficiency.validHours === 16 && weightedEfficiency.assignedHours === 16 &&
+  weightedEfficiency.coverageRate === 100 && weightedEfficiency.stages === 2);
+
+state.hrAssignments = state.hrAssignments.concat([
+  { id: 'eff-unlinked', date: '2026-09-10', employeeId: '', department: 'Xưởng 2', positionId: 'eff-cut', start: '09:00', end: '10:00', shiftIdx: 0 }
+]);
+const incompleteEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
+check('ĐÁNH GIÁ HS: thiếu employeeId làm loại cả ngày công đoạn không khớp giờ nhóm',
+  !!incompleteEfficiency && incompleteEfficiency.efficiency === 64.3 &&
+  incompleteEfficiency.validHours === 14 && incompleteEfficiency.coverageRate === 87.5);
+
+state.hrAssignments = state.hrAssignments.filter(a => a.id !== 'eff-unlinked').concat([
+  { id: 'eff-overlap', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '08:00', end: '10:00', shiftIdx: 0 }
+]);
+const overlapEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
+check('ĐÁNH GIÁ HS: loại giờ phân công chồng lấn và không cộng trùng',
+  !!overlapEfficiency && overlapEfficiency.efficiency === 75 &&
+  overlapEfficiency.validHours === 8 && overlapEfficiency.overlapCount === 3);
 
 // ─── Tổng kết ───────────────────────────────────────────────────
 console.log(`\nKết quả: ${pass} PASS / ${fail} FAIL`);

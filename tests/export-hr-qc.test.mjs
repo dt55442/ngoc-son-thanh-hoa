@@ -1,7 +1,7 @@
 // tests/export-hr-qc.test.mjs — Kiểm thử XUẤT EXCEL tab QC (Bảng Xuất Hàng)
 // và tab Nhân Sự (xuất theo thẻ nhanh / mini card).
 // Bao phủ: modal bộ lọc + điền option, lọc năm/tuần/thành phẩm, dòng TỔNG CỘNG,
-// thể tích quy đổi, 9 lựa chọn Nhân Sự, lọc bộ phận, chặn xuất khi không có dữ liệu.
+// thể tích quy đổi, các lựa chọn Nhân Sự, lọc bộ phận, chặn xuất khi không có dữ liệu.
 'use strict';
 
 // ─── Stubs môi trường (giống export-tabs.test.mjs) ────────────────
@@ -259,6 +259,40 @@ setVal('export-hr-card', 'hr-att-stats'); xlsxMod.syncHrXlsxCardUI();
 check('HR: chọn TK Đi Làm -> hiện ô Tháng, ẩn ô Ngày', document.getElementById('export-hr-month-row').style.display === '' && document.getElementById('export-hr-date-row').style.display === 'none');
 setVal('export-hr-card', 'hr-att-day'); xlsxMod.syncHrXlsxCardUI();
 check('HR: chọn Chấm Công Ngày -> hiện ô Ngày, ẩn ô Tháng', document.getElementById('export-hr-date-row').style.display === '' && document.getElementById('export-hr-month-row').style.display === 'none');
+setVal('export-hr-card', 'hr-evaluation'); xlsxMod.syncHrXlsxCardUI();
+check('HR: chọn Đánh Giá -> hiện ô Tháng, ẩn Văn Phòng khỏi bộ lọc', document.getElementById('export-hr-month-row').style.display === '' && !document.getElementById('export-hr-dept').innerHTML.includes('Văn Phòng'));
+
+// 10) Đánh giá công nhân — chỉ non-office, không sinh điểm cá nhân từ dữ liệu cấp công đoạn
+state.hrEmployees = [
+  { id: 'eval-prod', code: 'SX01', name: 'Công Nhân SX', department: 'Xưởng 1', status: 'active', joinDate: '2026-09-01' },
+  { id: 'eval-office', code: 'VP01', name: 'Nhân Viên VP', department: 'Văn Phòng', status: 'active', joinDate: '2026-09-01' },
+  { id: 'eval-me', code: 'CD01', name: 'Thợ Cơ Điện', department: 'Cơ Điện', status: 'active', joinDate: '2026-09-01' }
+];
+state.hrAttendance = [
+  { id: 'eval-work', employeeId: 'eval-prod', date: '2026-09-01', status: 'work' },
+  { id: 'eval-absent', employeeId: 'eval-prod', date: '2026-09-02', status: 'absent' }
+];
+state.hrLeaves = [];
+state.hrWorkerEvaluations = [{
+  id: 'worker-evaluation:2026-09:eval-prod', employeeId: 'eval-prod', month: '2026-09',
+  grade: 'A', updatedBy: 'admin', updatedAt: '2026-09-30T10:00:00.000Z'
+}];
+state.x2IncidentReports = [{
+  id: 'eval-task', date: '2026-09-01', repairAssigneeIds: ['eval-me'], repairStatus: 'verified',
+  repairDueAt: '2026-09-01T11:00', repairCompletedAt: '2026-09-01T10:00', repairRecurrence: false
+}];
+exportHrCard('hr-evaluation', { month: '2026-09' });
+check('HR[ĐG]: xuất được báo cáo đánh giá công nhân theo kỳ', /NhanSu_DanhGiaCongNhan_/.test(writtenFiles[0]?.filename || ''));
+check('HR[ĐG]: loại Văn Phòng, giữ đủ dữ liệu chuyên cần và Cơ Điện', dataRowsOf().length === 2 &&
+  lastSheetAoa.some(r => r[0] === 'Công Nhân SX' && r[7] === 3.8 && r[19] === 26 && r[20] === 1 && r[21] === 0) &&
+  lastSheetAoa.some(r => r[0] === 'Thợ Cơ Điện' && r[14] === 1));
+check('HR[ĐG]: hiệu suất công đoạn được ghi rõ thiếu dữ liệu, không suy đoán điểm', lastSheetAoa.some(r => r[0] === 'Công Nhân SX' && r[8] === 'Chưa đủ dữ liệu hiệu suất'));
+check('HR[ĐG]: xuất kèm hạng đánh giá do Quản Lý nhập', lastSheetAoa.some(r => r[0] === 'Công Nhân SX' && r[18] === 'A') &&
+  lastSheetAoa.some(r => r[0] === 'Nhân Viên' && r.includes('Đánh Giá (Quản Lý)')));
+state.currentUser = { username: 'editor', role: 'editor', editTabs: ['hr'], allowAdvanced: false };
+exportHrCard('hr-evaluation', { month: '2026-09' });
+check('HR[ĐG]: Editor không được xuất dữ liệu đánh giá nhân sự', writtenFiles.length === 0);
+state.currentUser = { username: 'admin', role: 'admin', editTabs: ['qc', 'hr'], allowAdvanced: true };
 
 // ─── KẾT LUẬN ────────────────────────────────────────────────
 console.log('───────────────────────────');

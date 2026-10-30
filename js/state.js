@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v313';
+  const APP_VERSION = 'v318';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -288,6 +288,7 @@
   // Quy tắc: nếu nhân viên đi làm vào ngày nghỉ/lễ thì TOÀN BỘ giờ làm trong
   // ngày được tính vào TĂNG CA (xem hrSplitHoursHCDate trong js/hr.js).
   const STORAGE_KEY_HR_CALENDAR   = 'bamboo_tracker_hr_calendar_v1';
+  const STORAGE_KEY_HR_WORKER_EVALUATIONS = 'bamboo_tracker_hr_worker_evaluations_v1';
   // Lịch sử sửa đổi (audit log): ai đã sửa gì, ở tab nào, lúc nào — chỉ Admin xem được
   const STORAGE_KEY_HISTORY = 'bamboo_tracker_history_v1';
   // Dấu vết xóa (tombstone) cho đồng bộ mây: { <tên-danh-sách>: { <id>: <thời điểm xóa ISO> } }
@@ -376,6 +377,7 @@
     // Ngày nghỉ/lễ: đi làm vào ngày đó thì toàn bộ giờ làm được tính vào TĂNG CA (js/hr.js)
     hrWorkCalendar: {},  // không có cấu hình cho tháng nào -> mặc định nghỉ Chủ nhật (wd 0)
     hrCalMonth: '',    // tháng đang xem/cài đặt trong modal Lịch Làm Việc ('YYYY-MM')
+    hrWorkerEvaluations: [], // [{ id, employeeId, month, grade: 'A'|'B'|'C'|'', updatedBy, updatedAt }]
     qcExports: [],
     // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) + NGƯỠNG độ ẩm đạt theo công đoạn sấy
     qcKilnReadings: [],                   // [{ id, date, location, value, note, by, createdAt, updatedAt }]
@@ -678,6 +680,7 @@ export {
   STORAGE_KEY_HR_PAY_LOCKS,
   STORAGE_KEY_HR_OVERTIMES,
   STORAGE_KEY_HR_CALENDAR,
+  STORAGE_KEY_HR_WORKER_EVALUATIONS,
   STORAGE_KEY_SESSION,
   STORAGE_KEY_USERS,
   state

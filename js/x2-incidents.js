@@ -60,6 +60,12 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
   ];
   const INCIDENT_STATUS_LABEL = { cho_duyet: 'Chờ duyệt', da_duyet: 'Đã duyệt', tu_choi: 'Từ chối' };
   const INCIDENT_STATUS_ORDER = ['cho_duyet', 'da_duyet', 'tu_choi'];
+  const REPAIR_STATUS_LABEL = {
+    not_started: 'Chưa bắt đầu',
+    in_progress: 'Đang xử lý',
+    completed: 'Đã hoàn thành',
+    verified: 'Đã nghiệm thu'
+  };
 
   // ─── TIỆN ÍCH ────────────────────────────────────────────────
   const incTodayISO = () => {
@@ -175,6 +181,15 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       approvedBy: rr.approvedBy || '',
       approvedAt: String(rr.approvedAt || '').slice(0, 16).replace('T', ' '),
       rejectReason: rr.rejectReason || '',
+      repairAssigneeIds: Array.isArray(rr.repairAssigneeIds) ? rr.repairAssigneeIds.map(String) : [],
+      repairAssigneeNames: (Array.isArray(rr.repairAssigneeIds) ? rr.repairAssigneeIds : [])
+        .map(id => (state.hrEmployees || []).find(e => e && String(e.id) === String(id)))
+        .filter(Boolean).map(e => String(e.name || e.code || '')),
+      repairStatus: Object.prototype.hasOwnProperty.call(REPAIR_STATUS_LABEL, rr.repairStatus)
+        ? rr.repairStatus : 'not_started',
+      repairStatusLabel: REPAIR_STATUS_LABEL[rr.repairStatus] || REPAIR_STATUS_LABEL.not_started,
+      repairPriority: rr.repairPriority || 'normal',
+      repairOutcome: rr.repairOutcome || '',
       createdTxt: created ? formatDateDDMMYY(created) : '—'
     };
   }
@@ -206,10 +221,11 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
 
   // ─── FORM: ĐIỀN LỰA CHỌN + LÀM MỚI ──────────────────────────
   let incidentEditId = '';
+  let incidentRepairOnly = false;
   // Bộ lọc (thuần phiên — mở lại form là nhớ tháng đang xem)
   const incidentFilter = { month: incTodayISO().slice(0, 7), stage: 'all', status: 'all', q: '' };
 
-  function fillIncidentFormOptions() {
+  function fillIncidentFormOptions(preserveMechanicIds) {
     const sel = document.getElementById('inc-stage');
     if (sel) {
       const cur = sel.value;
@@ -232,6 +248,23 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       fStage.innerHTML = '<option value="all">Tất cả công đoạn</option>'
         + INCIDENT_STAGES.map(s => `<option value="${s.key}">${escapeHTML(s.label)}</option>`).join('');
       fStage.value = cur;
+    }
+    const mechanics = document.getElementById('inc-repair-assignees');
+    if (mechanics) {
+      const current = Array.isArray(preserveMechanicIds)
+        ? preserveMechanicIds.map(String)
+        : Array.from(mechanics.selectedOptions || []).map(o => String(o.value || ''));
+      const preserve = new Set(current);
+      const people = (state.hrEmployees || []).filter(e => {
+        if (!e) return false;
+        const dept = incNorm(e.department);
+        return (e.status || 'active') === 'active' && (dept === 'co dien' || dept === 'lo hoi') ||
+          preserve.has(String(e.id));
+      });
+      mechanics.innerHTML = people.map(e =>
+        `<option value="${escapeHTML(e.id)}">${escapeHTML(e.name || e.code || e.id)}${e.code ? ` (${escapeHTML(e.code)})` : ''}${(e.status || 'active') === 'active' ? '' : ' (nhân viên cũ)'}</option>`
+      ).join('');
+      Array.from(mechanics.options || []).forEach(o => { o.selected = preserve.has(String(o.value)); });
     }
     syncIncidentShiftOptions();
   }
@@ -256,8 +289,14 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
   }
   function resetIncidentForm() {
     incidentEditId = '';
+    incidentRepairOnly = false;
     fillIncidentFormOptions();
     const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    ['inc-stage', 'inc-date', 'inc-shift', 'inc-start', 'inc-end', 'inc-hours', 'inc-cause',
+      'inc-desc', 'inc-fix', 'inc-reporter', 'inc-note'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = false;
+    });
     setVal('inc-date', incTodayISO());
     setVal('inc-shift', '');
     setVal('inc-start', '');
@@ -268,6 +307,16 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     setVal('inc-fix', '');
     setVal('inc-note', '');
     setVal('inc-reporter', incidentFormUserName());
+    const assignees = document.getElementById('inc-repair-assignees');
+    if (assignees) Array.from(assignees.options || []).forEach(o => { o.selected = false; });
+    setVal('inc-repair-priority', 'normal');
+    setVal('inc-repair-status', 'not_started');
+    setVal('inc-repair-assigned-at', '');
+    setVal('inc-repair-started-at', '');
+    setVal('inc-repair-due-at', '');
+    setVal('inc-repair-completed-at', '');
+    setVal('inc-repair-outcome', '');
+    setVal('inc-repair-recurrence', '');
     const banner = document.getElementById('inc-edit-banner');
     if (banner) banner.hidden = true;
     const btn = document.getElementById('btn-inc-save');
@@ -316,26 +365,109 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
   }
   function handleIncidentSubmit() {
     if (!requireEditPermission()) return false;
-    const stage = incidentFormValue('inc-stage');
+    const old = incidentEditId
+      ? (state.x2IncidentReports || []).find(r => r && r.id === incidentEditId)
+      : null;
+    if (incidentEditId && !old) { showToast('Không tìm thấy phiếu cần sửa (có thể đã bị xoá).', 'error'); resetIncidentForm(); return false; }
+    const repairOnly = incidentRepairOnly && !!old;
+    const stage = repairOnly ? old.stage : incidentFormValue('inc-stage');
     const def = incidentStageDef(stage);
     if (!def) { showToast('Chọn công đoạn bị sự cố!', 'error'); return false; }
-    const date = incidentFormValue('inc-date');
+    const date = repairOnly ? old.date : incidentFormValue('inc-date');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { showToast('Chọn ngày xảy ra sự cố (dd/mm/yyyy)!', 'error'); return false; }
-    const startTime = incidentFormValue('inc-start');
-    const endTime = incidentFormValue('inc-end');
-    let hours = Number(incidentFormValue('inc-hours').replace(',', '.'));
-    if (!Number.isFinite(hours) || hours <= 0) {
+    const startTime = repairOnly ? old.startTime : incidentFormValue('inc-start');
+    const endTime = repairOnly ? old.endTime : incidentFormValue('inc-end');
+    let hours = repairOnly ? Number(old.hours) : Number(incidentFormValue('inc-hours').replace(',', '.'));
+    if (!repairOnly && (!Number.isFinite(hours) || hours <= 0)) {
       const fromTimes = incidentHoursFromTimes(startTime, endTime);
       if (fromTimes != null && fromTimes > 0) hours = fromTimes;
     }
-    if (!Number.isFinite(hours) || hours <= 0) {
+    if (!repairOnly && (!Number.isFinite(hours) || hours <= 0)) {
       showToast('Nhập SỐ GIỜ sự cố (hoặc giờ bắt đầu – kết thúc)!', 'error');
       return false;
     }
-    if (hours > 24) { showToast('Số giờ sự cố tối đa 24 giờ!', 'error'); return false; }
-    const shiftRaw = incidentFormValue('inc-shift');
-    const shiftIdx = shiftRaw === '' ? null : Number(shiftRaw);
+    if (!repairOnly && hours > 24) { showToast('Số giờ sự cố tối đa 24 giờ!', 'error'); return false; }
+    const shiftRaw = repairOnly ? old.shiftIdx : incidentFormValue('inc-shift');
+    const shiftIdx = shiftRaw === '' || shiftRaw == null ? null : Number(shiftRaw);
     const now = new Date().toISOString();
+    const assigneeEl = document.getElementById('inc-repair-assignees');
+    const selectedAssigneeIds = assigneeEl
+      ? [...new Set(Array.from(assigneeEl.selectedOptions || []).map(o => String(o.value || '').trim()).filter(Boolean))]
+      : [];
+    const validMechanicIds = new Set((state.hrEmployees || []).filter(e => {
+      if (!e || (e.status || 'active') !== 'active') return false;
+      const dept = incNorm(e.department);
+      return dept === 'co dien' || dept === 'lo hoi';
+    }).map(e => String(e.id)));
+    const previousAssigneeIds = new Set(old && Array.isArray(old.repairAssigneeIds)
+      ? old.repairAssigneeIds.map(String) : []);
+    if (selectedAssigneeIds.some(id => !validMechanicIds.has(id) && !previousAssigneeIds.has(id))) {
+      showToast('Chỉ chọn nhân viên đang làm việc thuộc bộ phận Cơ Điện.', 'error');
+      return false;
+    }
+    const repairAssigneeIds = selectedAssigneeIds;
+    const repairStatus = incidentFormValue('inc-repair-status') || 'not_started';
+    const repairAssignedAt = incidentFormValue('inc-repair-assigned-at');
+    const repairStartedAt = incidentFormValue('inc-repair-started-at');
+    const repairDueAt = incidentFormValue('inc-repair-due-at');
+    const repairCompletedAt = incidentFormValue('inc-repair-completed-at');
+    const repairOutcome = incidentFormValue('inc-repair-outcome');
+    const recurrence = incidentFormValue('inc-repair-recurrence');
+    if (!Object.prototype.hasOwnProperty.call(REPAIR_STATUS_LABEL, repairStatus)) {
+      showToast('Trạng thái công việc Cơ Điện không hợp lệ.', 'error');
+      return false;
+    }
+    if (recurrence && recurrence !== 'yes' && recurrence !== 'no') {
+      showToast('Giá trị tái phát không hợp lệ.', 'error');
+      return false;
+    }
+    if (repairStatus !== 'not_started' && !repairAssigneeIds.length) {
+      showToast('Chọn ít nhất một người Cơ Điện trước khi cập nhật tiến độ công việc.', 'error');
+      return false;
+    }
+    if ((repairStatus === 'completed' || repairStatus === 'verified') && (!repairCompletedAt || !repairOutcome)) {
+      showToast('Hoàn thành công việc cần có thời điểm hoàn thành và kết quả xử lý.', 'error');
+      return false;
+    }
+    if (repairStartedAt && repairCompletedAt &&
+        (!Number.isFinite(Date.parse(repairStartedAt)) || !Number.isFinite(Date.parse(repairCompletedAt)) ||
+         Date.parse(repairCompletedAt) < Date.parse(repairStartedAt))) {
+      showToast('Thời điểm hoàn thành phải hợp lệ và không thể trước lúc bắt đầu xử lý.', 'error');
+      return false;
+    }
+    if (old && old.repairStatus === 'verified' && repairStatus !== 'verified' &&
+        !canArea('ap.incident', 'approve')) {
+      showToast('Chỉ Quản Trị / Ban Quản Lý mới được mở lại công việc đã nghiệm thu.', 'error');
+      return false;
+    }
+    if (repairStatus === 'verified') {
+      if (!canArea('ap.incident', 'approve')) {
+        showToast('Chỉ Quản Trị / Ban Quản Lý mới được xác nhận nghiệm thu công việc.', 'error');
+        return false;
+      }
+      if (!repairCompletedAt || !repairDueAt || !repairOutcome ||
+          !Number.isFinite(Date.parse(repairDueAt)) || !Number.isFinite(Date.parse(repairCompletedAt))) {
+        showToast('Nghiệm thu cần có hạn xử lý, thời điểm hoàn thành và kết quả xử lý.', 'error');
+        return false;
+      }
+    }
+    const repairPatch = {
+      repairAssigneeIds,
+      repairPriority: incidentFormValue('inc-repair-priority') || 'normal',
+      repairStatus,
+      repairAssignedAt,
+      repairStartedAt,
+      repairDueAt,
+      repairCompletedAt,
+      repairOutcome,
+      repairRecurrence: recurrence === 'yes' ? true : (recurrence === 'no' ? false : null),
+      repairVerifiedBy: repairStatus === 'verified'
+        ? (old && old.repairStatus === 'verified' ? old.repairVerifiedBy : incidentFormUserName())
+        : '',
+      repairVerifiedAt: repairStatus === 'verified'
+        ? (old && old.repairStatus === 'verified' ? old.repairVerifiedAt : now)
+        : ''
+    };
     const patch = {
       stage,
       date,
@@ -348,6 +480,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       fixAction: incidentFormValue('inc-fix'),
       reporterName: incidentFormValue('inc-reporter') || incidentFormUserName(),
       note: incidentFormValue('inc-note'),
+      ...repairPatch,
       updatedAt: now
     };
     state.x2IncidentReports = Array.isArray(state.x2IncidentReports) ? state.x2IncidentReports : [];
@@ -355,13 +488,9 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     if (incidentEditId) {
       const idx = state.x2IncidentReports.findIndex(r => r && r.id === incidentEditId);
       if (idx < 0) { showToast('Không tìm thấy phiếu cần sửa (có thể đã bị xoá).', 'error'); resetIncidentForm(); return false; }
-      const old = state.x2IncidentReports[idx];
-      // Sửa phiếu ĐÃ DUYỆT = sửa số giờ đang trừ vào hiệu suất → chỉ BQL/Admin
-      if (old.status === 'da_duyet' && !canArea('ap.incident', 'approve')) {
-        showToast('Phiếu đã duyệt — chỉ Quản Trị / Ban Quản Lý được sửa. Hãy báo BQL mở lại phiếu.', 'error');
-        return false;
-      }
-      saved = Object.assign({}, old, patch);
+      const current = state.x2IncidentReports[idx];
+      saved = Object.assign({}, current, repairOnly ? repairPatch : patch);
+      saved.updatedAt = now;
       state.x2IncidentReports[idx] = saved;
     } else {
       const id = `x2inc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -394,12 +523,9 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     const r = (state.x2IncidentReports || []).find(x => x && x.id === id);
     if (!r) return false;
     if (!requireEditPermission()) return false;
-    if (r.status === 'da_duyet' && !canArea('ap.incident', 'approve')) {
-      showToast('Phiếu đã duyệt — chỉ Quản Trị / Ban Quản Lý được sửa.', 'error');
-      return false;
-    }
+    incidentRepairOnly = r.status === 'da_duyet' && !canArea('ap.incident', 'approve');
     incidentEditId = id;
-    fillIncidentFormOptions();
+    fillIncidentFormOptions(Array.isArray(r.repairAssigneeIds) ? r.repairAssigneeIds : []);
     const setVal = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v; };
     setVal('inc-stage', r.stage || '');
     setVal('inc-date', r.date || '');
@@ -412,10 +538,30 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     setVal('inc-fix', r.fixAction || '');
     setVal('inc-reporter', r.reporterName || '');
     setVal('inc-note', r.note || '');
+    const assignees = document.getElementById('inc-repair-assignees');
+    const repairIds = Array.isArray(r.repairAssigneeIds) ? r.repairAssigneeIds.map(String) : [];
+    if (assignees) Array.from(assignees.options || []).forEach(o => { o.selected = repairIds.includes(String(o.value)); });
+    setVal('inc-repair-priority', r.repairPriority || 'normal');
+    setVal('inc-repair-status', Object.prototype.hasOwnProperty.call(REPAIR_STATUS_LABEL, r.repairStatus) ? r.repairStatus : 'not_started');
+    setVal('inc-repair-assigned-at', r.repairAssignedAt || '');
+    setVal('inc-repair-started-at', r.repairStartedAt || '');
+    setVal('inc-repair-due-at', r.repairDueAt || '');
+    setVal('inc-repair-completed-at', r.repairCompletedAt || '');
+    setVal('inc-repair-outcome', r.repairOutcome || '');
+    setVal('inc-repair-recurrence', r.repairRecurrence === true ? 'yes' : (r.repairRecurrence === false ? 'no' : ''));
+    if (incidentRepairOnly) {
+      ['inc-stage', 'inc-date', 'inc-shift', 'inc-start', 'inc-end', 'inc-hours', 'inc-cause',
+        'inc-desc', 'inc-fix', 'inc-reporter', 'inc-note'].forEach(eid => {
+        const el = document.getElementById(eid);
+        if (el) el.disabled = true;
+      });
+    }
     const banner = document.getElementById('inc-edit-banner');
     if (banner) {
       banner.hidden = false;
-      banner.textContent = `Đang SỬA phiếu ${incidentStageLabel(r.stage)} ngày ${formatDateDDMMYY(r.date)} (${INCIDENT_STATUS_LABEL[r.status] || 'Chờ duyệt'})`;
+      banner.textContent = incidentRepairOnly
+        ? `Chỉ cập nhật công việc Cơ Điện — thông tin/giờ sự cố đã duyệt được khóa.`
+        : `Đang SỬA phiếu ${incidentStageLabel(r.stage)} ngày ${formatDateDDMMYY(r.date)} (${INCIDENT_STATUS_LABEL[r.status] || 'Chờ duyệt'})`;
     }
     const btn = document.getElementById('btn-inc-save');
     if (btn) btn.innerHTML = '<i data-lucide="save"></i> Cập Nhật Phiếu';
@@ -518,7 +664,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       if (incidentFilter.stage !== 'all' && d.stage !== incidentFilter.stage) return false;
       if (incidentFilter.status !== 'all' && d.status !== incidentFilter.status) return false;
       if (!q) return true;
-      return incNorm([d.stageLabel, d.causeLabel, d.description, d.fixAction, d.reporterName, d.dateTxt, d.note].join(' ')).includes(q);
+      return incNorm([d.stageLabel, d.causeLabel, d.description, d.fixAction, d.reporterName, d.repairAssigneeNames.join(' '), d.repairOutcome, d.dateTxt, d.note].join(' ')).includes(q);
     });
   }
   function incidentStatusChip(d) {
@@ -530,9 +676,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     const id = escapeHTML(d.id);
     const perm = `data-perm="${d.ws || 'x2'}"`;
     const btns = [];
-    if (d.status !== 'da_duyet') {
-      btns.push(`<button type="button" class="btn btn-outline btn-icon btn-sm" data-inc-act="edit" data-inc-id="${id}" ${perm} title="Sửa phiếu"><i data-lucide="pencil"></i></button>`);
-    }
+    btns.push(`<button type="button" class="btn btn-outline btn-icon btn-sm" data-inc-act="edit" data-inc-id="${id}" ${perm} title="${d.status === 'da_duyet' && !canApp ? 'Cập nhật riêng công việc Cơ Điện (không đổi giờ sự cố)' : 'Sửa phiếu / cập nhật công việc Cơ Điện'}"><i data-lucide="pencil"></i></button>`);
     if (d.status === 'cho_duyet' && canApp) {
       btns.push(`<button type="button" class="btn btn-success btn-icon btn-sm" data-inc-act="approve" data-inc-id="${id}" title="DUYỆT — giờ sự cố tự trừ vào công đoạn"><i data-lucide="check"></i></button>`);
       btns.push(`<button type="button" class="btn btn-outline btn-icon btn-sm" data-inc-act="reject" data-inc-id="${id}" title="Từ chối phiếu"><i data-lucide="x"></i></button>`);
@@ -575,7 +719,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       <td class="inc-td-time">${escapeHTML(d.timeTxt)}</td>
       <td class="inc-td-hours"><strong>${incFmt(d.hours, 2)}h</strong></td>
       <td>${escapeHTML(d.causeLabel)}</td>
-      <td class="inc-td-desc">${escapeHTML(d.description || '—')}${d.fixAction ? `<span class="inc-sub">Xử lý: ${escapeHTML(d.fixAction)}</span>` : ''}</td>
+      <td class="inc-td-desc">${escapeHTML(d.description || '—')}${d.fixAction ? `<span class="inc-sub">Xử lý: ${escapeHTML(d.fixAction)}</span>` : ''}${d.repairAssigneeNames.length ? `<span class="inc-sub">Cơ Điện: ${escapeHTML(d.repairAssigneeNames.join(', '))} · ${escapeHTML(d.repairStatusLabel)}</span>` : ''}${d.repairOutcome ? `<span class="inc-sub">Kết quả: ${escapeHTML(d.repairOutcome)}</span>` : ''}</td>
       <td>${escapeHTML(d.reporterName || '—')}</td>
       <td>${incidentStatusChip(d)}${d.status === 'da_duyet' && d.approvedBy ? `<span class="inc-sub">${escapeHTML(d.approvedBy)}${d.approvedAt ? ' · ' + escapeHTML(d.approvedAt) : ''}</span>` : ''}${d.status === 'tu_choi' && d.rejectReason ? `<span class="inc-sub">Lý do: ${escapeHTML(d.rejectReason)}</span>` : ''}</td>
       <td>${incidentRowActions(d)}</td>
@@ -704,4 +848,3 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     onIncidentReportsClick, onIncidentChipClick,
     incTodayISO, incidentFilter
   };
-

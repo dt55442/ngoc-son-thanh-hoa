@@ -4947,6 +4947,62 @@
         </div>
       </div>
 
+      <!-- ĐÁNH GIÁ CÔNG NHÂN — chỉ tổng hợp chỉ số có thể truy nguyên; không tự chấm điểm khi thiếu dữ liệu cá nhân -->
+      <div class="planning-card hr-card-hidden" id="hr-worker-eval-card">
+        <div class="planning-card-header">
+          <h4><i data-lucide="badge-check"></i> Đánh Giá Công Nhân</h4>
+          <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-hr-worker-eval" title="Thu gọn / Mở rộng">
+            <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
+          </button>
+        </div>
+        <div class="hr-filter-toolbar">
+          <div class="filter-item">
+            <label for="hr-eval-month">Kỳ đánh giá:</label>
+            <input type="month" id="hr-eval-month" style="width:160px;">
+          </div>
+          <div class="filter-item">
+            <label for="hr-eval-filter-dept">Bộ phận:</label>
+            <select id="hr-eval-filter-dept"></select>
+          </div>
+          <div class="filter-item">
+            <label for="hr-eval-search">Nhân viên:</label>
+            <input type="search" id="hr-eval-search" placeholder="Tên hoặc mã nhân viên">
+          </div>
+          <div class="hr-eval-view-toggle" role="group" aria-label="Kiểu hiển thị danh sách công nhân">
+            <button type="button" class="hr-eval-view-btn active" id="hr-eval-view-table" data-eval-view="table" aria-pressed="true" title="Xem dạng bảng chi tiết">
+              <i data-lucide="table-2"></i><span>Bảng</span>
+            </button>
+            <button type="button" class="hr-eval-view-btn" id="hr-eval-view-cards" data-eval-view="cards" aria-pressed="false" title="Xem dạng thẻ công nhân">
+              <i data-lucide="layout-grid"></i><span>Thẻ</span>
+            </button>
+          </div>
+        </div>
+        <div class="hr-eval-overview">
+          <div id="hr-eval-summary" class="hr-eval-summary" aria-live="polite"></div>
+          <details class="hr-eval-help">
+            <summary title="Giải thích các chỉ số">ⓘ Cách hiểu chỉ số</summary>
+            <div>Chuyên cần = ngày đi làm trong lịch chuẩn ÷ công chuẩn cả tháng theo thời gian làm việc; ngày làm vào ngày nghỉ hiển thị riêng. Ngày chưa chấm được đếm đến hôm nay, kể cả ngày nghỉ.
+              Hiệu suất là chỉ số công đoạn/nhóm gia quyền theo giờ phân công, không phải sản lượng riêng.
+              Hạng A/B/C do quản lý chọn; không tự tính điểm tổng hay lương thưởng.</div>
+          </details>
+        </div>
+        <div id="hr-eval-cards" class="hr-eval-cards" hidden></div>
+        <div id="hr-eval-table-wrap" class="table-responsive table-scroll">
+          <table class="data-table tbl-pin1 hr-eval-table" id="hr-eval-table">
+            <thead>
+              <tr>
+                <th>Nhân Viên</th>
+                <th>Bộ Phận</th>
+                <th title="Ngày đi làm trong lịch chuẩn chia cho công chuẩn tháng">Chuyên Cần ⓘ</th>
+                <th title="Chỉ số công đoạn/nhóm, không phải sản lượng cá nhân">Hiệu Suất / Công Việc ⓘ</th>
+                <th>Đánh Giá (Quản Lý)</th>
+              </tr>
+            </thead>
+            <tbody id="hr-eval-body"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- BẢNG 7: NHÂN SỰ CẦN — TUYỂN DỤNG -->
       <div class="planning-card hr-card-hidden" id="hr-recruit-card">
         <div class="planning-card-header">
@@ -5148,6 +5204,12 @@
                 <span class="hr-mini-title">Thống Kê Đi Làm</span>
                 <span class="hr-mini-desc">Tỷ lệ đi làm theo tháng</span>
                 <span class="hr-mini-count" id="hr-mini-count-att-stats">–</span>
+              </button>
+              <button type="button" class="hr-mini-card" data-hr-card="hr-worker-eval-card" aria-expanded="false" title="Đánh giá công nhân theo kỳ — chuyên cần, minh chứng công việc và mức độ đủ dữ liệu; không tự xếp hạng khi thiếu dữ liệu">
+                <span class="hr-mini-ic"><i data-lucide="badge-check"></i></span>
+                <span class="hr-mini-title">Đánh Giá Công Nhân</span>
+                <span class="hr-mini-desc">Chuyên cần · công việc · minh chứng</span>
+                <span class="hr-mini-count" id="hr-mini-count-worker-eval">–</span>
               </button>
             </div>
             <div class="hr-dock-cards" data-hr-group-panel="tuyendung" role="group" aria-label="Tuyển dụng">
@@ -8065,6 +8127,57 @@
           </div>
         </div>
 
+        <div class="ck-sec" data-zone="2">
+          <div class="ck-sec-head">
+            <span class="ck-sec-num">B</span> Công việc Cơ Điện liên quan
+            <i class="ck-help" data-lucide="info" title="Phần giao việc độc lập với trạng thái duyệt sự cố. Chỉ Quản Trị / Ban Quản Lý xác nhận nghiệm thu; không dùng số lượng sự cố để quy trách nhiệm cho thợ."></i>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group">
+              <label for="inc-repair-assignees">Người phụ trách / phối hợp (Cơ Điện)</label>
+              <select id="inc-repair-assignees" multiple size="3" aria-describedby="inc-repair-assignees-hint"></select>
+              <small id="inc-repair-assignees-hint" class="muted">Có thể chọn nhiều người. Không chọn người xử lý thì phiếu không được tính là minh chứng cá nhân.</small>
+            </div>
+            <div class="form-group" style="flex:0 0 170px">
+              <label for="inc-repair-priority">Mức ưu tiên</label>
+              <select id="inc-repair-priority">
+                <option value="low">Thấp</option>
+                <option value="normal" selected>Bình thường</option>
+                <option value="high">Cao</option>
+                <option value="urgent">Khẩn cấp</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:0 0 180px">
+              <label for="inc-repair-status">Trạng thái công việc</label>
+              <select id="inc-repair-status">
+                <option value="not_started">Chưa bắt đầu</option>
+                <option value="in_progress">Đang xử lý</option>
+                <option value="completed">Đã hoàn thành</option>
+                <option value="verified">Đã nghiệm thu</option>
+              </select>
+            </div>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group"><label for="inc-repair-assigned-at">Thời điểm giao/tiếp nhận</label><input type="datetime-local" id="inc-repair-assigned-at"></div>
+            <div class="form-group"><label for="inc-repair-started-at">Bắt đầu xử lý</label><input type="datetime-local" id="inc-repair-started-at"></div>
+            <div class="form-group"><label for="inc-repair-due-at">Hạn xử lý</label><input type="datetime-local" id="inc-repair-due-at"></div>
+            <div class="form-group"><label for="inc-repair-completed-at">Hoàn thành</label><input type="datetime-local" id="inc-repair-completed-at"></div>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group">
+              <label for="inc-repair-outcome">Kết quả / xác nhận xử lý</label>
+              <input type="text" id="inc-repair-outcome" placeholder="VD: thay vòng bi, máy chạy thử đạt">
+            </div>
+            <div class="form-group" style="flex:0 0 230px">
+              <label for="inc-repair-recurrence">Tái phát trong kỳ theo dõi?</label>
+              <select id="inc-repair-recurrence">
+                <option value="">Chưa xác định</option>
+                <option value="no">Không</option>
+                <option value="yes">Có</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
         <!-- ③ DUYỆT -->
         <div class="ck-sec" data-zone="3">

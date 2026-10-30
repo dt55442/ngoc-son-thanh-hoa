@@ -8,6 +8,7 @@ import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { areaLabel, canArea, canEditAnything, canEditRate, canEditTab, canPayApply, canPayLock, currentAreaId, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
 import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_HR_WORKER_EVALUATIONS } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
@@ -1340,6 +1341,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       hrPayLocks: state.hrPayLocks || [],
       hrOvertimes: state.hrOvertimes || [],
       hrWorkCalendar: state.hrWorkCalendar || {},
+      hrWorkerEvaluations: state.hrWorkerEvaluations || [],
       xuong2CutRecords: state.xuong2CutRecords || [],
       xuong2BoluongRecords: state.xuong2BoluongRecords || [],
       xuong1CatOngRecords: state.xuong1CatOngRecords || [],
@@ -1467,6 +1469,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       hrPayRows: obj.hrPayRows || [], hrPayLocks: obj.hrPayLocks || [],
       hrOvertimes: obj.hrOvertimes || [],
       hrWorkCalendar: obj.hrWorkCalendar || {},
+      hrWorkerEvaluations: obj.hrWorkerEvaluations || [],
       xuong2CutRecords: obj.xuong2CutRecords || [],
       xuong2BoluongRecords: obj.xuong2BoluongRecords || [],
       xuong1CatOngRecords: obj.xuong1CatOngRecords || [],
@@ -1961,6 +1964,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (remote.hrAssignments) state.hrAssignments = m(clean('hrAssignments', state.hrAssignments || []), clean('hrAssignments', remote.hrAssignments));
     if (remote.hrOvertimes) state.hrOvertimes = m(clean('hrOvertimes', state.hrOvertimes || []), clean('hrOvertimes', remote.hrOvertimes));
     if (remote.hrWorkCalendar) state.hrWorkCalendar = mergeKeyedDict(state.hrWorkCalendar || {}, remote.hrWorkCalendar);
+    if (remote.hrWorkerEvaluations) state.hrWorkerEvaluations = m(clean('hrWorkerEvaluations', state.hrWorkerEvaluations || []), clean('hrWorkerEvaluations', remote.hrWorkerEvaluations));
     // Vị trí công đoạn Xưởng 2 — nhật ký cắt/chọn (thẻ launcher tab Công Đoạn)
     if (remote.xuong2CutRecords) state.xuong2CutRecords = m(clean('xuong2CutRecords', state.xuong2CutRecords || []), clean('xuong2CutRecords', remote.xuong2CutRecords));
     // Vị trí công đoạn Xưởng 2 — nhật ký bốc luồng (thẻ launcher tab Công Đoạn)
@@ -2167,6 +2171,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_HR_PAY_LOCKS, JSON.stringify(state.hrPayLocks || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_OVERTIMES, JSON.stringify(state.hrOvertimes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_CALENDAR, JSON.stringify(state.hrWorkCalendar || {})); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_WORKER_EVALUATIONS, JSON.stringify(state.hrWorkerEvaluations || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_CUTS, JSON.stringify(state.xuong2CutRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BOLUONG, JSON.stringify(state.xuong2BoluongRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG1_CAT_ONG, JSON.stringify(state.xuong1CatOngRecords || [])); } catch (e) {}
@@ -2287,6 +2292,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     x2Stocktakes: 'Kiểm Kê Bãi (Xưởng 2)',
     suppliers: 'Nhà Cung Cấp',
     hrEmployees: 'Nhân Viên',
+    hrWorkerEvaluations: 'Đánh Giá Công Nhân',
     hrAssignments: 'Bố Trí Nhân Sự',
     hrAttendance: 'Chấm Công',
     hrCheckins: 'Giờ Máy Chấm Công',
@@ -2701,6 +2707,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (data.hrPayLocks) state.hrPayLocks = clean('hrPayLocks', data.hrPayLocks);
       if (data.hrOvertimes) state.hrOvertimes = clean('hrOvertimes', data.hrOvertimes);
       if (data.hrWorkCalendar) state.hrWorkCalendar = mergeKeyedDict(state.hrWorkCalendar || {}, data.hrWorkCalendar);
+      if (data.hrWorkerEvaluations) state.hrWorkerEvaluations = clean('hrWorkerEvaluations', data.hrWorkerEvaluations);
       if (data.history) {
         // Lịch sử từ mây: gộp thêm các dòng máy chưa có + giới hạn số dòng
         state.history = mergeAddMissing(state.history || [], data.history || []);

@@ -290,8 +290,37 @@ check('D2: Editor KHÔNG duyệt được (cổng canApproveLeave)', inc.approve
   (state.x2IncidentReports || [])[0].status === 'cho_duyet');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 inc.approveIncidentReport(dRep.rec.id);
+state.hrEmployees = [{ id: 'mechanic-1', name: 'Thợ Cơ Điện', department: 'Cơ Điện', status: 'active' }];
 state.currentUser = { username: 'editor1', role: 'editor', editTabs: ['x2'] };
-check('D3: Editor KHÔNG sửa được phiếu ĐÃ DUYỆT', inc.editIncidentReport(dRep.rec.id) === false);
+const approvedHours = (state.x2IncidentReports || []).find(r => r.id === dRep.rec.id).hours;
+check('D3: Editor được cập nhật riêng công việc trên phiếu đã duyệt, trường sự cố bị khóa',
+  inc.editIncidentReport(dRep.rec.id) === true && document.getElementById('inc-hours').disabled === true);
+document.getElementById('inc-repair-assignees').selectedOptions = [{ value: 'mechanic-1' }];
+setVal('inc-repair-status', 'in_progress');
+check('D3a: lưu tiến độ bảo trì không sửa trạng thái duyệt hoặc số giờ sự cố',
+  inc.handleIncidentSubmit() === true &&
+  (state.x2IncidentReports || []).find(r => r.id === dRep.rec.id).repairStatus === 'in_progress' &&
+  (state.x2IncidentReports || []).find(r => r.id === dRep.rec.id).status === 'da_duyet' &&
+  (state.x2IncidentReports || []).find(r => r.id === dRep.rec.id).hours === approvedHours);
+inc.editIncidentReport(dRep.rec.id);
+document.getElementById('inc-repair-assignees').selectedOptions = [{ value: 'mechanic-1' }];
+setVal('inc-repair-status', 'verified');
+setVal('inc-repair-due-at', '2026-10-25T10:00');
+setVal('inc-repair-completed-at', '2026-10-25T09:00');
+setVal('inc-repair-outcome', 'Đã chạy thử đạt');
+check('D3a2: Editor không thể tự xác nhận nghiệm thu', inc.handleIncidentSubmit() === false);
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
+inc.editIncidentReport(dRep.rec.id);
+document.getElementById('inc-repair-assignees').selectedOptions = [{ value: 'mechanic-1' }];
+setVal('inc-repair-status', 'verified');
+setVal('inc-repair-due-at', '2026-10-25T10:00');
+setVal('inc-repair-completed-at', '2026-10-25T09:00');
+setVal('inc-repair-outcome', 'Đã chạy thử đạt');
+setVal('inc-repair-recurrence', 'no');
+check('D3b: Admin nghiệm thu khi đủ mốc hạn/hoàn thành/kết quả', inc.handleIncidentSubmit() === true &&
+  (state.x2IncidentReports || []).find(r => r.id === dRep.rec.id).repairStatus === 'verified' &&
+  (state.x2IncidentReports || []).find(r => r.id === dRep.rec.id).repairVerifiedBy === 'admin');
+state.currentUser = { username: 'editor1', role: 'editor', editTabs: ['x2'] };
 check('D4: Editor KHÔNG xoá được phiếu ĐÃ DUYỆT', inc.deleteIncidentReport(dRep.rec.id) === false &&
   (state.x2IncidentReports || []).length === 1);
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
@@ -364,7 +393,8 @@ const jsState2 = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'ut
 const css2 = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 check('F7: index.html có nút Báo Cáo Sự Cố trên thanh tiêu đề tab Công Đoạn SX',
   idxHtml.includes('id="btn-incident-reports"') && idxHtml.includes('id="btn-incident-count"') &&
-  idxHtml.includes('id="modal-x2-incidents"') && idxHtml.includes('id="inc-list-area"'));
+  idxHtml.includes('id="modal-x2-incidents"') && idxHtml.includes('id="inc-list-area"') &&
+  idxHtml.includes('id="inc-repair-assignees"') && idxHtml.includes('id="inc-repair-due-at"'));
 check('F8: events.js nối mở/đóng/lưu/duyệt + chip trong thẻ ngày + Esc',
   /openIncidentReports/.test(jsEv2) && /handleIncidentSubmit/.test(jsEv2) &&
   /onIncidentReportsClick/.test(jsEv2) && /onIncidentChipClick/.test(jsEv2));
@@ -391,5 +421,3 @@ check('F11: nạp từ file/backup/mây GỘP theo id (mới hơn thắng, giữ
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
-
-

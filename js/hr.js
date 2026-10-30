@@ -18,6 +18,7 @@ import { firePushSync, initLucide, requireEditPermission, requirePayApply, requi
 import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_CALENDAR, APP_VERSION, state } from './state.js';
+import { STORAGE_KEY_HR_WORKER_EVALUATIONS } from './state.js';
 import { canArea, canEditAnything, canPayLock } from './permissions.js';
 import { escapeHTML, showToast } from './utils.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc đọc file Excel
@@ -33,6 +34,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // ⚠ ĐỪNG NHẦM: "Lò hơi" ở tab NGUYÊN LIỆU (materialActiveLoc 'lo-hoi', cột
   // "Lò Hơi (TB/ngày)") là VỊ TRÍ NHẬP NGUYÊN LIỆU — KHÔNG gộp, KHÔNG đổi.
   const HR_DEPARTMENTS = ['Văn Phòng', 'Cơ Điện', 'QC', 'Xưởng 1', 'Xưởng 2'];
+  const HR_EVAL_VIEW_KEY = 'bamboo_tracker_hr_eval_view_v1';
+  var workerEvaluationEfficiencyProvider;
   const HR_DEPT_ALIAS = { 'Lò Hơi': 'Cơ Điện', 'Lò hơi': 'Cơ Điện', 'Lo Hoi': 'Cơ Điện', 'lo hoi': 'Cơ Điện' };
   // Bộ phận hiển thị sau khi gộp — nhận cả dữ liệu cũ chưa kịp di trú
   function hrDeptAliasOf(dept) {
@@ -207,6 +210,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // Lịch làm việc theo tháng (ngày nghỉ/lễ) — object theo khóa 'YYYY-MM'
     try { state.hrWorkCalendar = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_CALENDAR)) || {}; } catch (e) { state.hrWorkCalendar = {}; }
     if (!state.hrWorkCalendar || typeof state.hrWorkCalendar !== 'object') state.hrWorkCalendar = {};
+    try { state.hrWorkerEvaluations = JSON.parse(localStorage.getItem(STORAGE_KEY_HR_WORKER_EVALUATIONS)) || []; } catch (e) { state.hrWorkerEvaluations = []; }
+    if (!Array.isArray(state.hrWorkerEvaluations)) state.hrWorkerEvaluations = [];
     // Hoàn tất nạp từ IndexedDB trước khi khởi tạo đồng bộ; sau đó áp dụng
     // migration cho cả chế độ fallback khi IndexedDB không khả dụng.
     return hrHydrateFromRepo().then(() => {
@@ -294,7 +299,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     { dom: 'hrPayRows',       key: STORAGE_KEY_HR_PAY_ROWS,   get: () => state.hrPayRows,       def: [] },
     { dom: 'hrPayLocks',      key: STORAGE_KEY_HR_PAY_LOCKS,  get: () => state.hrPayLocks,      def: [] },
     { dom: 'hrOvertimes',     key: STORAGE_KEY_HR_OVERTIMES,  get: () => state.hrOvertimes,     def: [] },
-    { dom: 'hrWorkCalendar',  key: STORAGE_KEY_HR_CALENDAR,   get: () => state.hrWorkCalendar,  def: {} }
+    { dom: 'hrWorkCalendar',  key: STORAGE_KEY_HR_CALENDAR,    get: () => state.hrWorkCalendar, def: {} },
+    { dom: 'hrWorkerEvaluations', key: STORAGE_KEY_HR_WORKER_EVALUATIONS, get: () => state.hrWorkerEvaluations, def: [] }
   ];
   let hrQuotaWarned = false;
   function reportHrRepoFailure(io, value, error) {
@@ -514,7 +520,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // test + các luồng nhập liệu lớn). Truyền mảng phần (vd ['employees']) thì
   // CHỈ vẽ phần đó → dùng cho renderAll()/switchView() để không phải dựng lại
   // 12 bảng + 1.559 icon mỗi lần đồng bộ mây (trước đây 671 ms/lần).
-  const HR_RENDER_PARTS = ['employees', 'attendance', 'checkin', 'positions', 'leaves', 'overtime', 'stats', 'recruitment', 'posneeds', 'pay'];
+  const HR_RENDER_PARTS = ['employees', 'attendance', 'checkin', 'positions', 'leaves', 'overtime', 'stats', 'evaluation', 'recruitment', 'posneeds', 'pay'];
   function renderHrView(parts) {
     const all = !Array.isArray(parts);
     const has = p => all || parts.indexOf(p) !== -1;
@@ -526,6 +532,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (has('leaves')) { renderHrLeavesTable(); renderHrLeaveStats(); }
     if (has('overtime')) renderHrOvertimesTable();
     if (has('stats')) renderHrAttendanceStats();
+    if (has('evaluation') && (Array.isArray(parts) || (openDetailCard && openDetailCard.id === 'hr-worker-eval-card'))) {
+      renderWorkerEvaluation();
+    }
     if (has('recruitment')) renderHrRecruitmentTable();
     if (has('posneeds')) renderPositionNeedsTable();
     // THẺ CHỐT CÔNG: chỉ quét tháng khi ĐƯỢC YÊU CẦU (mở thẻ) hoặc thẻ đang mở —
@@ -556,6 +565,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       'hr-ot-card': ['overtime'],
       'hr-stats-card': ['leaves'],          // Thống kê nghỉ phép (bảng + top)
       'hr-att-stats-card': ['stats'],       // Thống kê đi làm theo tháng
+      'hr-worker-eval-card': ['evaluation'],
       'hr-recruit-card': ['recruitment'],
       'hr-posneed-card': ['posneeds'],      // Sơ đồ bong bóng 3 cấp
       'hr-pay-card': ['pay'],
@@ -605,6 +615,15 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         HR_DEPARTMENTS.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
       if (cur) sel.value = cur;
     });
+    const evalDept = document.getElementById('hr-eval-filter-dept');
+    if (evalDept) {
+      const cur = evalDept.value;
+      const depts = HR_DEPARTMENTS.filter(d => d !== 'Văn Phòng');
+      evalDept.innerHTML = '<option value="all">Tất Cả Bộ Phận (trừ Văn Phòng)</option>' +
+        depts.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join('');
+      if (cur && depts.includes(cur)) evalDept.value = cur;
+      else evalDept.value = 'all';
+    }
   }
 
   // ─── 1) DANH SÁCH NHÂN VIÊN ──────────────────────────────────────
@@ -4944,6 +4963,365 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return rates;
   }
 
+  function isHrMechanicalDepartment(department) {
+    const dept = hrDeptAliasOf(department);
+    return dept === 'Cơ Điện';
+  }
+
+  function setWorkerEvaluationEfficiencyProvider(provider) {
+    if (provider !== null && typeof provider !== 'function') {
+      throw new TypeError('Nguồn hiệu suất đánh giá phải là hàm hoặc null.');
+    }
+    workerEvaluationEfficiencyProvider = provider;
+  }
+
+  function workerEvaluationAttendance(month, employee) {
+    const [year, monthNumber] = month.split('-').map(Number);
+    const daysInMonth = new Date(year, monthNumber, 0).getDate();
+    const join = String(employee.joinDate || '');
+    const quit = (employee.status || 'active') === 'quit' ? String(employee.quitDate || '') : '';
+    const today = hrTodayISO();
+    let standardDays = 0, workedStandardDays = 0, workedRestDays = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = `${month}-${String(day).padStart(2, '0')}`;
+      if ((join && date < join) || (quit && date > quit)) continue;
+      const isRest = hrIsRestDay(date);
+      if (!isRest) standardDays++;
+      if (date <= today && attStatusOf(employee.id, date) === 'work') {
+        if (isRest) workedRestDays++;
+        else workedStandardDays++;
+      }
+    }
+    return { standardDays, workedStandardDays, workedRestDays };
+  }
+
+  function computeWorkerEvaluation(month) {
+    if (!/^\d{4}-\d{2}$/.test(String(month || ''))) {
+      return { rows: [], summary: { employees: 0, attendanceCount: 0, averageAttendance: null, verifiedTasks: 0, employeesWithStageEfficiency: 0 } };
+    }
+
+    const attendanceRows = computeAttendanceStats(month).filter(s =>
+      hrDeptAliasOf(s.emp.department) !== 'Văn Phòng');
+    const stageEfficiencyByEmployee = workerEvaluationEfficiencyProvider
+      ? workerEvaluationEfficiencyProvider(month)
+      : new Map();
+    if (!(stageEfficiencyByEmployee instanceof Map)) {
+      throw new TypeError('Nguồn hiệu suất đánh giá phải trả về Map theo employeeId.');
+    }
+    const tasksByEmployee = new Map();
+    const taskStatusLabels = {
+      not_started: 'Chưa bắt đầu',
+      in_progress: 'Đang xử lý',
+      completed: 'Đã hoàn thành',
+      verified: 'Đã nghiệm thu'
+    };
+
+    (state.x2IncidentReports || []).forEach(report => {
+      if (!report || !Array.isArray(report.repairAssigneeIds)) return;
+      const taskDate = String(report.repairCompletedAt || report.repairAssignedAt ||
+        report.repairStartedAt || report.date || '').slice(0, 10);
+      if (taskDate.slice(0, 7) !== month) return;
+      const status = Object.prototype.hasOwnProperty.call(taskStatusLabels, report.repairStatus)
+        ? report.repairStatus : 'not_started';
+      const task = {
+        id: String(report.id || ''),
+        date: taskDate,
+        stage: String(report.stage || ''),
+        description: String(report.description || report.fixAction || report.cause || ''),
+        status,
+        statusLabel: taskStatusLabels[status],
+        priority: String(report.repairPriority || ''),
+        dueAt: String(report.repairDueAt || ''),
+        completedAt: String(report.repairCompletedAt || ''),
+        recurrence: typeof report.repairRecurrence === 'boolean' ? report.repairRecurrence : null,
+        outcome: String(report.repairOutcome || '')
+      };
+      [...new Set(report.repairAssigneeIds.map(id => String(id || '').trim()).filter(Boolean))]
+        .forEach(employeeId => {
+          if (!tasksByEmployee.has(employeeId)) tasksByEmployee.set(employeeId, []);
+          tasksByEmployee.get(employeeId).push(task);
+        });
+    });
+
+    const evaluationByEmployee = new Map((state.hrWorkerEvaluations || [])
+      .filter(record => record && record.month === month)
+      .map(record => [
+        String(record.employeeId || ''),
+        ['A', 'B', 'C'].includes(record.grade) ? record.grade : ''
+      ]));
+    const rows = attendanceRows.map(s => {
+      const department = hrDeptAliasOf(s.emp.department) || '—';
+      const attendance = workerEvaluationAttendance(month, s.emp);
+      const stageEfficiency = stageEfficiencyByEmployee.get(String(s.emp.id)) || null;
+      const employeeTasks = isHrMechanicalDepartment(department)
+        ? (tasksByEmployee.get(String(s.emp.id)) || []) : [];
+      const verified = employeeTasks.filter(t => t.status === 'verified');
+      const dueTasks = verified.filter(t => t.dueAt && t.completedAt);
+      const recurrenceTasks = verified.filter(t => t.recurrence !== null);
+      const onTime = dueTasks.filter(t => Date.parse(t.completedAt) <= Date.parse(t.dueAt)).length;
+      const noRecurrence = recurrenceTasks.filter(t => !t.recurrence).length;
+      return {
+        emp: s.emp,
+        department,
+        work: s.work,
+        leave: s.leave,
+        absent: s.absent,
+        unmarked: s.unmarked,
+        standardDays: attendance.standardDays,
+        workedStandardDays: attendance.workedStandardDays,
+        workedRestDays: attendance.workedRestDays,
+        attendanceRate: attendance.standardDays && s.counted
+          ? Math.round(attendance.workedStandardDays * 1000 / attendance.standardDays) / 10
+          : null,
+        individualEfficiency: null,
+        stageEfficiency: stageEfficiency && Number.isFinite(stageEfficiency.efficiency)
+          ? stageEfficiency.efficiency : null,
+        stageEfficiencyValidHours: stageEfficiency ? Number(stageEfficiency.validHours) || 0 : 0,
+        stageEfficiencyAssignedHours: stageEfficiency ? Number(stageEfficiency.assignedHours) || 0 : 0,
+        stageEfficiencyCoverageRate: stageEfficiency && Number.isFinite(stageEfficiency.coverageRate)
+          ? stageEfficiency.coverageRate : null,
+        stageEfficiencyEstimatedHours: stageEfficiency ? Number(stageEfficiency.estimatedHours) || 0 : 0,
+        stageEfficiencyOverlapCount: stageEfficiency ? Number(stageEfficiency.overlapCount) || 0 : 0,
+        stageEfficiencyStages: stageEfficiency ? Number(stageEfficiency.stages) || 0 : 0,
+        evaluationGrade: evaluationByEmployee.get(String(s.emp.id)) || '',
+        tasks: employeeTasks,
+        assignedTasks: employeeTasks.length,
+        inProgressTasks: employeeTasks.filter(t => t.status === 'in_progress').length,
+        completedTasks: employeeTasks.filter(t => t.status === 'completed' || t.status === 'verified').length,
+        verifiedTasks: verified.length,
+        onTimeEligibleTasks: dueTasks.length,
+        onTimeTasks: onTime,
+        noRecurrenceEligibleTasks: recurrenceTasks.length,
+        noRecurrenceTasks: noRecurrence
+      };
+    });
+    const departmentOrder = new Map(HR_DEPARTMENTS.filter(d => d !== 'Văn Phòng').map((d, i) => [d, i]));
+    rows.sort((a, b) =>
+      (departmentOrder.has(a.department) ? departmentOrder.get(a.department) : 99) -
+        (departmentOrder.has(b.department) ? departmentOrder.get(b.department) : 99) ||
+      String(a.department).localeCompare(String(b.department), 'vi') ||
+      String(a.emp.name || '').localeCompare(String(b.emp.name || ''), 'vi'));
+    const rates = rows.map(r => r.attendanceRate).filter(v => v !== null);
+    return {
+      rows,
+      summary: {
+        employees: rows.length,
+        attendanceCount: rates.length,
+        averageAttendance: rates.length
+          ? Math.round(rates.reduce((a, b) => a + b, 0) * 10 / rates.length) / 10
+          : null,
+        verifiedTasks: rows.reduce((sum, r) => sum + r.verifiedTasks, 0),
+        employeesWithStageEfficiency: rows.filter(r => r.stageEfficiency !== null).length
+      }
+    };
+  }
+
+  function readWorkerEvaluationView() {
+    try { return localStorage.getItem(HR_EVAL_VIEW_KEY) === 'cards' ? 'cards' : 'table'; }
+    catch (e) { return 'table'; }
+  }
+  let workerEvaluationView = readWorkerEvaluationView();
+
+  function setWorkerEvaluationView(view) {
+    if (view !== 'table' && view !== 'cards') return false;
+    workerEvaluationView = view;
+    try { localStorage.setItem(HR_EVAL_VIEW_KEY, view); }
+    catch (e) { console.warn('[NHÂN SỰ] Không lưu được tùy chọn kiểu hiển thị đánh giá:', e); }
+    renderWorkerEvaluation();
+    return true;
+  }
+
+  function setWorkerEvaluationGrade(employeeId, month, grade) {
+    if (!canApproveLeave()) {
+      showToast('Chỉ Quản Trị / Ban Quản Lý được đánh giá nhân viên.', 'error');
+      renderWorkerEvaluation();
+      return false;
+    }
+    const employeeKey = String(employeeId || '').trim();
+    const monthKey = String(month || '');
+    const gradeKey = String(grade || '').trim().toUpperCase();
+    if (!employeeKey || !/^\d{4}-\d{2}$/.test(monthKey) || !['', 'A', 'B', 'C'].includes(gradeKey)) {
+      showToast('Thông tin đánh giá không hợp lệ. Hãy chọn kỳ và mức A, B hoặc C.', 'error');
+      renderWorkerEvaluation();
+      return false;
+    }
+    const eligible = computeWorkerEvaluation(monthKey).rows.some(row => String(row.emp.id) === employeeKey);
+    if (!eligible) {
+      showToast('Không tìm thấy nhân viên ngoài Văn Phòng trong kỳ đánh giá này.', 'error');
+      renderWorkerEvaluation();
+      return false;
+    }
+
+    const id = `worker-evaluation:${monthKey}:${employeeKey}`;
+    const records = Array.isArray(state.hrWorkerEvaluations) ? state.hrWorkerEvaluations : [];
+    const existing = records.find(record => record && record.id === id);
+    const now = new Date().toISOString();
+    const user = state.currentUser || {};
+    const by = String(user.displayName || user.fullName || user.username || 'Quản lý');
+    const record = {
+      id,
+      employeeId: employeeKey,
+      month: monthKey,
+      grade: gradeKey,
+      createdBy: existing && existing.createdBy ? existing.createdBy : by,
+      createdAt: existing && existing.createdAt ? existing.createdAt : now,
+      updatedBy: by,
+      updatedAt: now
+    };
+    state.hrWorkerEvaluations = records.filter(item => !item || item.id !== id).concat(record);
+    saveHrData(['hrWorkerEvaluations']);
+    renderWorkerEvaluation();
+    showToast(gradeKey ? `Đã lưu đánh giá ${gradeKey} cho nhân viên.` : 'Đã xóa mức đánh giá của nhân viên.', 'success');
+    return true;
+  }
+
+  function workerEvaluationGradeControl(row, month) {
+    const selected = row.evaluationGrade;
+    const options = [
+      ['', 'Chưa đánh giá'],
+      ['A', 'A'],
+      ['B', 'B'],
+      ['C', 'C']
+    ];
+    const optionsHtml = options.map(([value, label]) =>
+      `<option value="${value}"${selected === value ? ' selected' : ''}>${label}</option>`
+    ).join('');
+    return `<select class="hr-eval-grade-select" data-worker-eval-grade="1" data-eval-employee="${escapeHTML(row.emp.id)}" data-eval-month="${escapeHTML(month)}" aria-label="Đánh giá ${escapeHTML(row.emp.name || row.emp.code || '')}">${optionsHtml}</select>`;
+  }
+
+  function openWorkerEvaluationAttendance(month, department) {
+    if (!canApproveLeave() || !/^\d{4}-\d{2}$/.test(String(month || ''))) {
+      showToast('Không thể mở thống kê chấm công cho kỳ này.', 'error');
+      return false;
+    }
+    state.hrAttMonth = month;
+    const filter = document.getElementById('hr-attstats-filter-dept');
+    if (filter) {
+      const option = Array.from(filter.options || []).find(item => item.value === department);
+      filter.value = option ? department : 'all';
+    }
+    if (!hrOpenCard('hr-att-stats-card')) {
+      showToast('Không thể mở bảng thống kê chấm công.', 'error');
+      return false;
+    }
+    return true;
+  }
+
+  function renderWorkerEvaluation() {
+    const monthEl = document.getElementById('hr-eval-month');
+    if (!monthEl) return;
+    if (!/^\d{4}-\d{2}$/.test(monthEl.value || '')) monthEl.value = hrTodayISO().slice(0, 7);
+    const result = computeWorkerEvaluation(monthEl.value);
+    const deptSelect = document.getElementById('hr-eval-filter-dept');
+    const deptFilter = deptSelect && deptSelect.value ? deptSelect.value : 'all';
+    const search = hrStripDiacritics(document.getElementById('hr-eval-search')?.value || '').toLowerCase().trim();
+    const summaryEl = document.getElementById('hr-eval-summary');
+    const tbody = document.getElementById('hr-eval-body');
+    const tableWrap = document.getElementById('hr-eval-table-wrap');
+    const cardsEl = document.getElementById('hr-eval-cards');
+    const tableViewBtn = document.getElementById('hr-eval-view-table');
+    const cardsViewBtn = document.getElementById('hr-eval-view-cards');
+    if (!summaryEl || !tbody || !tableWrap || !cardsEl) return;
+    const isCardsView = workerEvaluationView === 'cards';
+    tableWrap.hidden = isCardsView;
+    cardsEl.hidden = !isCardsView;
+    if (tableViewBtn) {
+      tableViewBtn.classList.toggle('active', !isCardsView);
+      tableViewBtn.setAttribute('aria-pressed', String(!isCardsView));
+    }
+    if (cardsViewBtn) {
+      cardsViewBtn.classList.toggle('active', isCardsView);
+      cardsViewBtn.setAttribute('aria-pressed', String(isCardsView));
+    }
+    if (!canApproveLeave()) {
+      summaryEl.innerHTML = '';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:22px;color:var(--text-muted);">Chỉ Quản Trị / Ban Quản Lý được xem đánh giá nhân sự.</td></tr>';
+      cardsEl.innerHTML = '<div class="hr-eval-empty">Chỉ Quản Trị / Ban Quản Lý được xem đánh giá nhân sự.</div>';
+      return;
+    }
+
+    const rows = result.rows.filter(r =>
+      (deptFilter === 'all' || r.department === deptFilter) &&
+      (!search || hrStripDiacritics(`${r.emp.name || ''} ${r.emp.code || ''}`).toLowerCase().includes(search)));
+    summaryEl.innerHTML = `<strong>${rows.length}</strong> nhân viên · <strong>${rows.filter(r => r.evaluationGrade).length}</strong> đã đánh giá` +
+      ' <span class="hr-eval-summary-note">· Hạng do quản lý chọn</span>';
+    if (!rows.length) {
+      const emptyMessage = result.rows.length
+        ? 'Không có nhân viên khớp bộ lọc hoặc từ khóa.'
+        : 'Chưa có nhân viên ngoài Văn Phòng trong kỳ này.';
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:22px;color:var(--text-muted);">${emptyMessage}</td></tr>`;
+      cardsEl.innerHTML = `<div class="hr-eval-empty">${emptyMessage}</div>`;
+      return;
+    }
+    const renderRow = row => {
+      const isMechanical = isHrMechanicalDepartment(row.department);
+      const formatEfficiencyNumber = value => Number(value || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+      const attendance = `<details class="hr-eval-disclosure"><summary title="Xem chi tiết chuyên cần">` +
+        (row.attendanceRate === null
+          ? `<span class="hr-eval-badge needs-data">${row.standardDays === 0 ? 'Không có công chuẩn' : 'Chưa có dữ liệu'}</span>`
+          : `<strong class="hr-eval-rate">${row.attendanceRate}%</strong>`) +
+        (row.unmarked ? ` <span class="hr-eval-badge needs-data">${row.unmarked} chưa chấm</span>` : '') +
+        `</summary><div class="hr-eval-detail-panel"><strong>Chuyên cần</strong>` +
+        `<p>${row.workedStandardDays} ngày đi làm trong lịch chuẩn / ${row.standardDays} công chuẩn · ${row.workedRestDays} ngày làm vào ngày nghỉ</p>` +
+        `<p>${row.leave} nghỉ có phép · ${row.absent} vắng (chưa xác định phép) · ${row.unmarked} chưa chấm</p>` +
+        `<p>Công chuẩn tính theo lịch cả tháng, trong thời gian làm việc của nhân viên; ngày làm vào ngày nghỉ không tính vào chuyên cần. Ngày chưa chấm được đếm đến hôm nay, kể cả ngày nghỉ. Kết quả tháng hiện tại là tạm thời.</p>` +
+        `<p>Bảng thống kê chấm công dùng mẫu số khác nên tỷ lệ có thể khác.</p>` +
+        `<button type="button" class="hr-eval-source" data-eval-attendance-source="1" data-eval-month="${escapeHTML(monthEl.value)}" data-eval-department="${escapeHTML(row.department)}">Mở thống kê chấm công theo tháng →</button></div></details>`;
+      const verifiedMetrics = row.onTimeEligibleTasks
+        ? `<span class="hr-eval-meta">${row.onTimeTasks}/${row.onTimeEligibleTasks} việc nghiệm thu đúng hạn (có đủ mốc hạn/hoàn thành)</span>` : '';
+      const recurrenceMetrics = row.noRecurrenceEligibleTasks
+        ? `<span class="hr-eval-meta">${row.noRecurrenceTasks}/${row.noRecurrenceEligibleTasks} việc không ghi nhận tái phát</span>` : '';
+      const taskDetails = row.tasks.length
+        ? `<ul class="hr-eval-task-list">${row.tasks.map(t =>
+            `<li>${escapeHTML(t.date)} · ${escapeHTML(t.stage || 'Sự cố')} · ${escapeHTML(t.statusLabel)}${t.priority ? ` · ${escapeHTML(t.priority)}` : ''}${t.description ? ` — ${escapeHTML(t.description)}` : ''}${t.outcome ? `<span class="hr-eval-meta">Kết quả: ${escapeHTML(t.outcome)}</span>` : ''}</li>`
+          ).join('')}</ul>`
+        : '';
+      const efficiency = isMechanical
+        ? `<details class="hr-eval-disclosure"><summary title="Xem công việc Cơ Điện"><strong>${row.assignedTasks} việc</strong> · ${row.verifiedTasks} nghiệm thu</summary>` +
+          `<div class="hr-eval-detail-panel"><strong>Công việc Cơ Điện</strong><p>${row.inProgressTasks} đang xử lý · ${row.completedTasks} hoàn thành/đã nghiệm thu</p>${verifiedMetrics}${recurrenceMetrics}${taskDetails}</div></details>`
+        : `<details class="hr-eval-disclosure"><summary title="Xem chi tiết hiệu suất công đoạn">` +
+          (row.stageEfficiency === null
+            ? '<span class="hr-eval-badge needs-data">Chưa đủ dữ liệu hiệu suất</span>'
+            : `<span class="hr-eval-badge has-data">${formatEfficiencyNumber(row.stageEfficiency)}% tham chiếu</span>` +
+              `<span class="hr-eval-coverage">độ phủ ${row.stageEfficiencyCoverageRate === null ? '—' : formatEfficiencyNumber(row.stageEfficiencyCoverageRate) + '%'}</span>`) +
+          (row.stageEfficiencyEstimatedHours > 0 ? '<span class="hr-eval-badge needs-data">Có ước tính</span>' : '') +
+          (row.stageEfficiencyOverlapCount > 0 ? '<span class="hr-eval-badge needs-data">Có lịch trùng</span>' : '') +
+          `</summary><div class="hr-eval-detail-panel"><strong>Hiệu suất tham chiếu</strong>` +
+          (row.stageEfficiency === null
+            ? '<p>Không có đủ giờ phân công gắn mã nhân viên và hiệu suất hợp lệ.</p>'
+            : `<p>${formatEfficiencyNumber(row.stageEfficiencyValidHours)} / ${formatEfficiencyNumber(row.stageEfficiencyAssignedHours)} giờ phân công có hiệu suất · độ phủ ${row.stageEfficiencyCoverageRate === null ? '—' : formatEfficiencyNumber(row.stageEfficiencyCoverageRate) + '%'} · ${row.stageEfficiencyStages} công đoạn.</p>`) +
+          `<p>Chỉ số công đoạn/nhóm gia quyền theo giờ, không phải sản lượng riêng; giờ thiếu liên kết hoặc trùng lịch không được tính.</p>` +
+          (row.stageEfficiencyEstimatedHours > 0 ? `<p>${formatEfficiencyNumber(row.stageEfficiencyEstimatedHours)} giờ dùng sản lượng quy đổi/ước tính.</p>` : '') +
+          (row.stageEfficiencyOverlapCount > 0 ? `<p>Đã loại ${row.stageEfficiencyOverlapCount} phân công bị trùng giờ.</p>` : '') +
+          `</div></details>`;
+      const gradeControl = workerEvaluationGradeControl(row, monthEl.value);
+      return {
+        table: `<tr>
+        <td class="hr-eval-employee"><strong>${escapeHTML(row.emp.name || '')}</strong>${row.emp.code ? `<span class="hr-eval-meta">${escapeHTML(row.emp.code)}</span>` : ''}</td>
+        <td>${escapeHTML(row.department)}</td>
+        <td>${attendance}</td>
+        <td>${efficiency}</td>
+        <td>${gradeControl}</td>
+      </tr>`,
+        card: `<article class="hr-eval-worker-card">
+          <div class="hr-eval-card-head">
+            <div><h5>${escapeHTML(row.emp.name || 'Chưa có tên')}</h5><span class="hr-eval-card-identity">${escapeHTML(row.emp.code || 'Chưa có mã')} · ${escapeHTML(row.department)}</span></div>
+            <span class="hr-eval-card-grade grade-${row.evaluationGrade || 'none'}">${row.evaluationGrade || '—'}</span>
+          </div>
+          <div class="hr-eval-card-metrics">
+            <div class="hr-eval-card-metric"><span>Chuyên cần</span>${attendance}</div>
+            <div class="hr-eval-card-metric"><span>${isMechanical ? 'Công việc Cơ Điện' : 'Hiệu suất công đoạn'}</span>${efficiency}</div>
+          </div>
+          <div class="hr-eval-card-assessment"><span>Đánh giá của quản lý</span>${gradeControl}</div>
+        </article>`
+      };
+    };
+    const renderedRows = rows.map(renderRow);
+    tbody.innerHTML = renderedRows.map(row => row.table).join('');
+    cardsEl.innerHTML = renderedRows.map(row => row.card).join('');
+    hrScheduleIcons();
+  }
+
   function renderHrAttendanceStats() {
     if (!/^\d{4}-\d{2}$/.test(state.hrAttMonth || '')) state.hrAttMonth = hrTodayISO().slice(0, 7);
     const monthInput = document.getElementById('hr-att-month');
@@ -8063,6 +8441,11 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       const rate = c ? Math.round(work * 1000 / c) / 10 : null;
       return rate === null ? `${state.hrAttMonth}` : `${rate}% đi làm`;
     } },
+    'hr-worker-eval-card': { el: 'hr-mini-count-worker-eval', count: () => {
+      const count = (state.hrEmployees || []).filter(e =>
+        (e.status || 'active') === 'active' && hrDeptAliasOf(e.department) !== 'Văn Phòng').length;
+      return `${count} NV`;
+    } },
     'hr-recruit-card': { el: 'hr-mini-count-recruit', count: () => {
       const open = (state.hrRecruitment || []).filter(r => (r.status || 'open') === 'open');
       const missing = open.reduce((s, r) => s + Math.max(0, (r.needQty || 0) - (r.hiredQty || 0)), 0);
@@ -8265,6 +8648,12 @@ export {
   closePositionNeedModal,
   collectEmployeeSkills,
   computeAttendanceStats,
+  computeWorkerEvaluation,
+  setWorkerEvaluationEfficiencyProvider,
+  setWorkerEvaluationGrade,
+  setWorkerEvaluationView,
+  openWorkerEvaluationAttendance,
+  renderWorkerEvaluation,
   computeLeaveStats,
   deleteEmployee,
   deleteLeave,

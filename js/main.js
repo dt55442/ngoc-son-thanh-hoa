@@ -15,7 +15,7 @@ import { setupEventListeners, undoLastAction, updateUndoButton } from './events.
 import { loadCustomCharts } from './export-xlsx.js';
 import { openReportCenter } from './report-center.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
-import { renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
+import { computeWorkerStageEfficiency, renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
 import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, setupHistoryHScroll, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
 import { loadRateApprovals, updateRatePendingBadge } from './rate-center.js';
@@ -32,12 +32,14 @@ import { loadQcPressLogs } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI �
 import { loadX2IncidentReports, updateIncidentBadge } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
 import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard, hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday } from './hr.js'; // SƠ ĐỒ BONG BÓNG NHÂN SỰ (21/10/2026)
-import { applyCheckinRecord, approveLeave, approveOvertime, approveOvertimeAmendment, cancelOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeOvertimeAmendmentModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleOvertimeAmendmentSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, rejectOvertimeAmendment, renderHrView, renderHrVisible, renderHrAfterBoardChange, hrShowMoreRows, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, requestOvertimeAmendment, setShiftTypePreset, HR_CARD_DEFS, hrDockClose } from './hr.js';
+import { applyCheckinRecord, approveLeave, approveOvertime, approveOvertimeAmendment, cancelOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeOvertimeAmendmentModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleOvertimeAmendmentSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, rejectOvertimeAmendment, renderHrView, renderHrVisible, renderHrAfterBoardChange, hrShowMoreRows, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, requestOvertimeAmendment, setShiftTypePreset, setWorkerEvaluationEfficiencyProvider, HR_CARD_DEFS, hrDockClose } from './hr.js';
 import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { APP_VERSION, state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations, initVnDateInputs } from './utils.js';
+
+setWorkerEvaluationEfficiencyProvider(computeWorkerStageEfficiency);
 
 function yieldBootFrame() {
   return new Promise(resolve => {

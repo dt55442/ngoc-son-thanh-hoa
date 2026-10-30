@@ -239,7 +239,7 @@ check('CSS: khối .hnm-* ở cấp cao nhất (không lọt vào @media)', (() 
   return d === 0;
 })());
 check('CSS: ngoặc { } cân bằng + có keyframes', (cssSrc.match(/{/g) || []).length === (cssSrc.match(/}/g) || []).length && cssSrc.includes('@keyframes hnmFloat'));
-check('CACHE: sw.js v313 khớp APP_VERSION', /nha-may-ngoc-son-v313/.test(swSrc) && /APP_VERSION = 'v313'/.test(stateSrc));
+check('CACHE: sw.js v318 khớp APP_VERSION', /nha-may-ngoc-son-v318/.test(swSrc) && /APP_VERSION = 'v318'/.test(stateSrc));
 
 // ─── H. MỞ THẺ THẬT — CHỐNG LỖI "THẺ TRỐNG" (map thẻ ↔ phần vẽ) ─
 check('THẺ: map có đúng id thật "hr-posneed-card" -> posneeds', hr.hrCardRenderParts('hr-posneed-card').includes('posneeds'));
@@ -247,7 +247,7 @@ check('THẺ: alias id cũ "hr-posneeds-card" vẫn chạy', hr.hrCardRenderPart
 check('THẺ: id lạ -> vẽ ĐỦ phần (không trả rỗng)', hr.hrCardRenderParts('thẻ-không-tồn-tại').length >= 5);
 check('THẺ: không có thẻ mở -> [] (giữ tối ưu chỉ vẽ bảng bố trí)', hr.hrCardRenderParts('').length === 0);
 const cardIds = [...idx.matchAll(/data-hr-card="([^"]+)"/g)].map(m => m[1]);
-check('THẺ: 11 thẻ launcher đều có phần vẽ (không thẻ nào trống)', cardIds.length === 11 && cardIds.every(id => hr.hrCardRenderParts(id).length > 0));
+check('THẺ: 12 thẻ launcher đều có phần vẽ (không thẻ nào trống)', cardIds.length === 12 && cardIds.every(id => hr.hrCardRenderParts(id).length > 0));
 hr.hrOpenCard('hr-posneed-card');
 check('MỞ THẺ: toolbar + KPI có nội dung', document.getElementById('hnm-toolbar').innerHTML.length > 100 && document.getElementById('hnm-kpi').innerHTML.includes('đang bố trí'));
 check('MỞ THẺ: bong bóng bộ phận được vẽ', (document.getElementById('hnm-dept-bubbles').innerHTML.match(/data-hnm-dept=/g) || []).length === 5);
@@ -255,7 +255,5 @@ check('MỞ THẺ: bảng chi tiết có dòng dữ liệu', document.getElement
 
 console.log(`\nWYNIK: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
-
-
 
 

@@ -76,7 +76,7 @@ const ev = { preventDefault(){} };
 function setVal(id, v) { const el = document.getElementById(id); el.value = v; return el; }
 function modalShown(id) { return document.getElementById(id).classList._s.has('show'); }
 
-const { state, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_POSITIONS } = await import('../js/state.js');
+const { state, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_WORKER_EVALUATIONS } = await import('../js/state.js');
 const hr = await import('../js/hr.js');
 const cloud = await import('../js/cloud.js');
 
@@ -86,6 +86,7 @@ state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvan
 state.hrEmployees = [];
 state.hrLeaves = [];
 state.hrAttendance = [];
+state.hrWorkerEvaluations = [];
 state.hrPositions = [];
 
 // ─── A. LOAD / SAVE ───────────────────────────────────────────
@@ -521,6 +522,168 @@ press.closePressWorkersModal();
 let renderOk = true;
 try { hr.renderHrView(); } catch (e) { renderOk = false; console.log('renderHrView error:', e && e.message); }
 check('HR-ATT: renderHrView (cả 7 bảng) chạy không lỗi', renderOk);
+
+// ─── J. ĐÁNH GIÁ CÔNG NHÂN: MINH CHỨNG CÁ NHÂN + CƠ ĐIỆN ──────
+state.hrEmployees = [
+  { id: 'worker-prod', code: 'SX01', name: 'Công Nhân SX', department: 'Xưởng 1', status: 'active', joinDate: '2024-06-01' },
+  { id: 'worker-me', code: 'CD01', name: 'Thợ Cơ Điện', department: 'Cơ Điện', status: 'active', joinDate: '2024-06-01' },
+  { id: 'worker-office', code: 'VP01', name: 'Nhân Viên VP', department: 'Văn Phòng', status: 'active', joinDate: '2024-06-01' }
+];
+state.hrAttendance = [
+  { id: 'eval-work', employeeId: 'worker-prod', date: '2024-06-01', status: 'work' },
+  { id: 'eval-absent', employeeId: 'worker-prod', date: '2024-06-02', status: 'absent' },
+  { id: 'eval-me-work', employeeId: 'worker-me', date: '2024-06-01', status: 'work' }
+];
+state.hrLeaves = [
+  { id: 'eval-leave', employeeId: 'worker-prod', from: '2024-06-03', to: '2024-06-03', status: 'approved' }
+];
+state.x2IncidentReports = [
+  { id: 'eval-repair-ok', date: '2024-06-01', repairAssigneeIds: ['worker-me'], repairStatus: 'verified',
+    repairDueAt: '2024-06-01T11:00', repairCompletedAt: '2024-06-01T10:00', repairRecurrence: false },
+  { id: 'eval-repair-open', date: '2024-06-01', repairAssigneeIds: ['worker-me'], repairStatus: 'in_progress' }
+];
+const evalResult = hr.computeWorkerEvaluation('2024-06');
+const prodEval = evalResult.rows.find(r => r.emp.id === 'worker-prod');
+const mechEval = evalResult.rows.find(r => r.emp.id === 'worker-me');
+check('ĐÁNH GIÁ: loại Văn Phòng; kỳ có đúng 2 công nhân', evalResult.rows.length === 2 && !evalResult.rows.some(r => r.emp.id === 'worker-office'));
+check('ĐÁNH GIÁ: chuyên cần là ngày làm trong lịch chuẩn chia công chuẩn cả tháng',
+  !!prodEval && prodEval.work === 1 && prodEval.leave === 1 && prodEval.absent === 1 &&
+  prodEval.standardDays === 25 && prodEval.workedStandardDays === 1 && prodEval.attendanceRate === 4);
+check('ĐÁNH GIÁ: hiệu suất cá nhân chưa có dữ liệu gắn người thì không tạo điểm', !!prodEval && prodEval.individualEfficiency === null);
+check('ĐÁNH GIÁ: Cơ Điện chỉ đếm nghiệm thu, đúng hạn và không tái phát từ hồ sơ đã đủ minh chứng',
+  !!mechEval && mechEval.assignedTasks === 2 && mechEval.verifiedTasks === 1 &&
+  mechEval.onTimeTasks === 1 && mechEval.noRecurrenceTasks === 1);
+const originalEvaluationFixture = {
+  employees: state.hrEmployees, attendance: state.hrAttendance, leaves: state.hrLeaves,
+  calendar: state.hrWorkCalendar
+};
+state.hrEmployees = [
+  { id: 'partial', name: 'Giữa tháng', department: 'Xưởng 1', status: 'quit', joinDate: '2024-06-10', quitDate: '2024-06-20' },
+  { id: 'unmarked', name: 'Chưa chấm', department: 'Xưởng 1', status: 'active', joinDate: '2024-06-01' }
+];
+state.hrAttendance = [
+  { id: 'partial-outside', employeeId: 'partial', date: '2024-06-09', status: 'work' },
+  { id: 'partial-work', employeeId: 'partial', date: '2024-06-11', status: 'work' },
+  { id: 'partial-makeup', employeeId: 'partial', date: '2024-06-16', status: 'work' },
+  { id: 'partial-holiday', employeeId: 'partial', date: '2024-06-10', status: 'work' },
+  { id: 'partial-absent', employeeId: 'partial', date: '2024-06-13', status: 'absent' }
+];
+state.hrLeaves = [{ id: 'partial-leave', employeeId: 'partial', from: '2024-06-12', to: '2024-06-12', status: 'approved' }];
+state.hrWorkCalendar = { '2024-06': { weekdaysOff: [0], restDays: ['2024-06-10'], workDays: ['2024-06-16'] } };
+const partialEval = hr.computeWorkerEvaluation('2024-06').rows.find(r => r.emp.id === 'partial');
+check('ĐÁNH GIÁ: công chuẩn theo ngày vào/nghỉ, nghỉ lễ và ngày làm bù',
+  !!partialEval && partialEval.standardDays === 10 && partialEval.workedStandardDays === 2 &&
+  partialEval.workedRestDays === 1 && partialEval.attendanceRate === 20);
+check('ĐÁNH GIÁ: tách phép đã duyệt, vắng chưa xác định và ngày chưa chấm',
+  partialEval.leave === 1 && partialEval.absent === 1 && partialEval.unmarked === 6 &&
+  hr.computeWorkerEvaluation('2024-06').rows.find(r => r.emp.id === 'unmarked').attendanceRate === null);
+state.hrWorkCalendar = { '2024-06': { weekdaysOff: [0, 1, 2, 3, 4, 5, 6], restDays: [], workDays: [] } };
+check('ĐÁNH GIÁ: không chia cho 0 khi không có ngày công chuẩn',
+  hr.computeWorkerEvaluation('2024-06').rows.find(r => r.emp.id === 'partial').attendanceRate === null);
+document.getElementById('hr-eval-month').value = '2024-06';
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ: không có công chuẩn được phân biệt với thiếu dữ liệu',
+  document.getElementById('hr-eval-body').innerHTML.includes('Không có công chuẩn'));
+const now = new Date();
+const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+const currentDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+state.hrEmployees = [{ id: 'current', name: 'Tháng này', department: 'Xưởng 1', status: 'active', joinDate: `${currentMonth}-01` }];
+state.hrAttendance = [{ id: 'current-work', employeeId: 'current', date: `${currentMonth}-01`, status: 'work' }];
+state.hrLeaves = [];
+state.hrWorkCalendar = { [currentMonth]: { weekdaysOff: [], restDays: [], workDays: [] } };
+const currentEval = hr.computeWorkerEvaluation(currentMonth).rows[0];
+check('ĐÁNH GIÁ: tháng hiện tại dùng công chuẩn cả tháng, chưa cộng ngày tương lai',
+  currentEval.standardDays === currentDays && currentEval.workedStandardDays === 1 &&
+  currentEval.attendanceRate === Math.round(1000 / currentDays) / 10);
+state.hrEmployees = originalEvaluationFixture.employees;
+state.hrAttendance = originalEvaluationFixture.attendance;
+state.hrLeaves = originalEvaluationFixture.leaves;
+state.hrWorkCalendar = originalEvaluationFixture.calendar;
+document.getElementById('hr-eval-month').value = '2024-06';
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ: bảng có cảnh báo chưa đủ dữ liệu và không hiện nhân viên Văn Phòng',
+  document.getElementById('hr-eval-body').innerHTML.includes('Chưa đủ dữ liệu hiệu suất') &&
+  !document.getElementById('hr-eval-body').innerHTML.includes('Nhân Viên VP'));
+check('ĐÁNH GIÁ: dữ liệu chưa chấm và công việc Cơ Điện được hiển thị ngắn gọn',
+  document.getElementById('hr-eval-body').innerHTML.includes(`${prodEval.unmarked} chưa chấm`) &&
+  document.getElementById('hr-eval-body').innerHTML.includes('2 việc</strong> · 1 nghiệm thu') &&
+  !document.getElementById('hr-eval-body').innerHTML.includes('Chỉ áp dụng cho Cơ Điện'));
+check('ĐÁNH GIÁ: có chi tiết mở bằng bàn phím/chạm và giải thích khác biệt mẫu số',
+  document.getElementById('hr-eval-body').innerHTML.includes('<details class="hr-eval-disclosure">') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('Bảng thống kê chấm công dùng mẫu số khác') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('vắng (chưa xác định phép)') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('công chuẩn') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('data-eval-attendance-source="1"'));
+document.getElementById('hr-eval-search').value = 'CD01';
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ: tìm nhanh theo mã nhân viên', document.getElementById('hr-eval-body').innerHTML.includes('Thợ Cơ Điện') &&
+  !document.getElementById('hr-eval-body').innerHTML.includes('Công Nhân SX'));
+check('ĐÁNH GIÁ: tóm tắt phản ánh kết quả tìm kiếm',
+  document.getElementById('hr-eval-summary').innerHTML.includes('<strong>1</strong> nhân viên'));
+document.getElementById('hr-eval-search').value = '';
+check('ĐÁNH GIÁ: mặc định hiển thị bảng chi tiết', !document.getElementById('hr-eval-table-wrap').hidden &&
+  document.getElementById('hr-eval-cards').hidden);
+check('ĐÁNH GIÁ: quản lý lưu hạng A theo đúng nhân viên và kỳ', hr.setWorkerEvaluationGrade('worker-prod', '2024-06', 'A') &&
+  state.hrWorkerEvaluations.some(r => r.employeeId === 'worker-prod' && r.month === '2024-06' && r.grade === 'A') &&
+  JSON.parse(storeBacking.get(STORAGE_KEY_HR_WORKER_EVALUATIONS) || '[]').some(r => r.employeeId === 'worker-prod' && r.grade === 'A'));
+check('ĐÁNH GIÁ: bảng có ô chọn hạng A/B/C', !document.getElementById('hr-eval-table-wrap').hidden &&
+  document.getElementById('hr-eval-body').innerHTML.includes('data-worker-eval-grade="1"') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('value="A" selected'));
+const evalSnapshot = cloud.collectCloudSnapshot();
+check('ĐÁNH GIÁ: hạng có trong dữ liệu đồng bộ / sao lưu', evalSnapshot.hrWorkerEvaluations
+  .some(r => r.employeeId === 'worker-prod' && r.month === '2024-06' && r.grade === 'A') &&
+  cloud.cloudCore(evalSnapshot).includes('"grade":"A"'));
+check('ĐÁNH GIÁ: hạng không bị dùng sang kỳ khác', !hr.computeWorkerEvaluation('2024-07').rows
+  .some(r => r.emp.id === 'worker-prod' && r.evaluationGrade === 'A'));
+hr.setWorkerEvaluationView('cards');
+const evalCards = document.getElementById('hr-eval-cards').innerHTML;
+check('ĐÁNH GIÁ: chế độ thẻ có tên, mã, chuyên cần, hiệu suất và mức A/B/C',
+  document.getElementById('hr-eval-cards').hidden === false && document.getElementById('hr-eval-table-wrap').hidden &&
+  evalCards.includes('Công Nhân SX') && evalCards.includes('SX01') && evalCards.includes('Chuyên cần') &&
+  evalCards.includes('Hiệu suất công đoạn') && evalCards.includes('Đánh giá của quản lý') && evalCards.includes('grade-A'));
+hr.setWorkerEvaluationView('table');
+state.currentUser = { username: 'manager', role: 'manager', editTabs: [] };
+check('ĐÁNH GIÁ: Ban Quản Lý có thể cập nhật hạng', hr.setWorkerEvaluationGrade('worker-prod', '2024-06', 'B') &&
+  state.hrWorkerEvaluations.find(r => r.employeeId === 'worker-prod' && r.month === '2024-06')?.grade === 'B');
+state.currentUser = { username: 'editor', role: 'editor', editTabs: ['hr'] };
+check('ĐÁNH GIÁ: Editor không thể tự sửa hạng', !hr.setWorkerEvaluationGrade('worker-prod', '2024-06', 'C') &&
+  state.hrWorkerEvaluations.find(r => r.employeeId === 'worker-prod' && r.month === '2024-06')?.grade === 'B');
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ: người không phải Quản Trị/Ban Quản Lý không xem được dữ liệu cá nhân',
+  document.getElementById('hr-eval-body').innerHTML.includes('Chỉ Quản Trị / Ban Quản Lý') &&
+  !document.getElementById('hr-eval-body').innerHTML.includes('Thợ Cơ Điện'));
+check('ĐÁNH GIÁ: người không có quyền không mở được bảng nguồn qua thao tác đánh giá',
+  !hr.openWorkerEvaluationAttendance('2024-06', 'Xưởng 1'));
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
+hr.setWorkerEvaluationEfficiencyProvider(() => new Map([['worker-prod', {
+  efficiency: 68.8, validHours: 6, assignedHours: 7.5, coverageRate: 80,
+  estimatedHours: 1, overlapCount: 1, stages: 2
+}]]));
+const linkedEvaluation = hr.computeWorkerEvaluation('2024-06');
+const linkedProd = linkedEvaluation.rows.find(r => r.emp.id === 'worker-prod');
+check('ĐÁNH GIÁ HS: chỉ số tham chiếu không bị gọi nhầm là năng suất cá nhân hay điểm thưởng',
+  linkedProd.stageEfficiency === 68.8 && linkedProd.individualEfficiency === null &&
+  linkedProd.attendanceRate === 4 && linkedEvaluation.summary.employeesWithStageEfficiency === 1);
+hr.renderWorkerEvaluation();
+check('ĐÁNH GIÁ HS: bảng hiển thị giờ hợp lệ, độ phủ và cảnh báo sản lượng ước tính',
+  document.getElementById('hr-eval-body').innerHTML.includes('68,8% tham chiếu') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('độ phủ 80%') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('sản lượng quy đổi/ước tính') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('Có ước tính') &&
+  document.getElementById('hr-eval-body').innerHTML.includes('Có lịch trùng'));
+hr.setWorkerEvaluationView('cards');
+check('ĐÁNH GIÁ HS: thẻ mini dùng cùng chỉ số tham chiếu và độ phủ',
+  document.getElementById('hr-eval-cards').innerHTML.includes('68,8% tham chiếu') &&
+  document.getElementById('hr-eval-cards').innerHTML.includes('độ phủ 80%') &&
+  document.getElementById('hr-eval-cards').innerHTML.includes('Công việc Cơ Điện'));
+const attStatsFilter = document.getElementById('hr-attstats-filter-dept');
+attStatsFilter.options = [{ value: 'all' }, { value: 'Xưởng 1' }];
+check('ĐÁNH GIÁ: mở thống kê chấm công đúng kỳ và bộ phận',
+  hr.openWorkerEvaluationAttendance('2024-06', 'Xưởng 1') &&
+  state.hrAttMonth === '2024-06' && attStatsFilter.value === 'Xưởng 1' &&
+  document.getElementById('hr-att-month').value === '2024-06');
+hr.hrCloseOpenCard();
+hr.setWorkerEvaluationEfficiencyProvider(null);
 
 console.log('───────────────────────────');
 console.log(`HR-ATTENDANCE: ${pass} PASS, ${fail} FAIL`);

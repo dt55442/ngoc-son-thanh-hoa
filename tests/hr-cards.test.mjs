@@ -78,7 +78,7 @@ const hr = await import('../js/hr.js');
 // Stan domyślny bảng Nhân Sự w index.html: każda szczegółowa bảng jest
 // ukryta (hr-card-hidden) — pojawia się dopiero po bấm thẻ (symulacja HTML).
 const HR_CARD_IDS = ['hr-emp-card', 'hr-att-card', 'hr-pos-card', 'hr-ci-card',
-  'hr-leave-card', 'hr-stats-card', 'hr-att-stats-card', 'hr-recruit-card'];
+  'hr-leave-card', 'hr-stats-card', 'hr-att-stats-card', 'hr-worker-eval-card', 'hr-recruit-card'];
 HR_CARD_IDS.forEach(id => document.getElementById(id).classList.add('hr-card-hidden'));
 
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
@@ -107,6 +107,7 @@ check('THẺ: licznik Giờ Máy = 1 giờ máy', document.getElementById('hr-mi
 check('THẺ: licznik Xin Nghỉ Phép = 1 chờ duyệt', document.getElementById('hr-mini-count-leave').textContent === '1 chờ duyệt');
 check('THẺ: licznik Thống Kê Nghỉ = 2 ngày nghỉ (duyệt)', document.getElementById('hr-mini-count-stats').textContent === '2 ngày nghỉ');
 check('THẺ: licznik Thống Kê Đi Làm = 100% đi làm', document.getElementById('hr-mini-count-att-stats').textContent === '100% đi làm');
+check('THẺ: licznik Đánh Giá Công Nhân loại Văn Phòng + NV nghỉ', document.getElementById('hr-mini-count-worker-eval').textContent === '2 NV');
 check('THẺ: licznik Nhân Sự Cần = 1 tuyển · 2 thiếu', document.getElementById('hr-mini-count-recruit').textContent === '1 tuyển · 2 thiếu');
 
 // ─── B. OTWIERANIE / SCHOWANIE SZCZEGÓŁOWEGO BẂGU ────────────
@@ -144,13 +145,33 @@ hr.hrCloseOpenCard();
 check('THẺ: đóng pop-up → overlay tắt (không show)', !_ov.classList.contains('show'));
 check('THẺ: sau khi đóng → thẻ emp lại bị ẩn (hr-card-hidden)', document.getElementById('hr-emp-card').classList.contains('hr-card-hidden'));
 
-// ─── E. CUỘN BẢNG NHÂN SỰ: 10 bảng đều bọc .table-scroll (dọc 60vh + tiêu đề dính) ──
+// ─── E. CUỘN BẢNG NHÂN SỰ: 11 bảng đều bọc .table-scroll (dọc 60vh + tiêu đề dính) ──
 const hrIdxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const hrCssHtml = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+check('ĐÁNH GIÁ: có nút chuyển Bảng/Thẻ và vùng thẻ mini', hrIdxHtml.includes('id="hr-eval-view-table"') &&
+  hrIdxHtml.includes('id="hr-eval-view-cards"') && hrIdxHtml.includes('id="hr-eval-cards"'));
+check('ĐÁNH GIÁ: thẻ mini hiển thị tên, mã, chuyên cần, hiệu suất và mức quản lý',
+  hrCssHtml.includes('.hr-eval-worker-card') && hrCssHtml.includes('.hr-eval-card-metrics') &&
+  hrIdxHtml.includes('Đánh Giá (Quản Lý)'));
+function contrastRatio(foreground, background) {
+  const luminance = hex => {
+    const rgb = hex.match(/[0-9a-f]{2}/gi).map(value => parseInt(value, 16) / 255)
+      .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  };
+  const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
+const badgeRules = [...hrCssHtml.matchAll(/(?:body\[data-theme="night"\] )?\.hr-eval-badge\.(?:has-data|needs-data)\s*\{\s*color:\s*(#[0-9a-f]{6});\s*background:\s*(#[0-9a-f]{6});/gi)];
+check('ĐÁNH GIÁ: bốn chip sáng/tối có độ tương phản chữ ít nhất 4,5:1',
+  badgeRules.length === 4 && badgeRules.every(rule => contrastRatio(rule[1], rule[2]) >= 4.5));
+check('ĐÁNH GIÁ: bảng gọn và có phần trợ giúp mở được',
+  hrIdxHtml.includes('class="hr-eval-help"') && !hrIdxHtml.includes('id="hr-eval-depts"') &&
+  hrCssHtml.includes('#hr-detail-content > #hr-worker-eval-card > .planning-card-header { display: none; }'));
 const HR_SCROLL_TABLES = ['hr-employees-table', 'hr-att-table', 'hr-positions-table', 'hr-ci-table',
-  'hr-leaves-table', 'hr-ot-table', 'hr-leave-stats-table', 'hr-att-stats-table', 'hr-recruit-table', 'hr-posneed-table'];
-check('CUỘN: 10 bảng Nhân Sự đều bọc khung .table-responsive.table-scroll',
-  HR_SCROLL_TABLES.every(id => new RegExp('table-responsive table-scroll"[\\s\\S]{0,80}?id="' + id + '"').test(hrIdxHtml)));
+  'hr-leaves-table', 'hr-ot-table', 'hr-leave-stats-table', 'hr-att-stats-table', 'hr-eval-table', 'hr-recruit-table', 'hr-posneed-table'];
+check('CUỘN: 11 bảng Nhân Sự đều bọc khung .table-responsive.table-scroll',
+  HR_SCROLL_TABLES.every(id => new RegExp('table-responsive table-scroll"[\\s\\S]{0,160}?id="' + id + '"').test(hrIdxHtml)));
 check('CUỘN (styles.css): .table-scroll dùng chung với .hr-table-scroll (max-height 60vh + thead sticky)',
   /\.table-scroll,\s*\.hr-table-scroll\s*\{/.test(hrCssHtml) && hrCssHtml.includes('max-height: 60vh;') &&
   /\.table-scroll thead th,\s*\.hr-table-scroll thead th\s*\{[\s\S]{0,220}?position: sticky;/.test(hrCssHtml));

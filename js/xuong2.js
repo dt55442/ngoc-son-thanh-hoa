@@ -16161,6 +16161,92 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     return setupHScrollNav('.x2-cut-table-scroll');
   }
 
+  function workerAssignmentsForCapacityMonth(month) {
+    const monthKey = String(month || '');
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) return [];
+    const assignments = (state.hrAssignments || []).filter(a =>
+      a && String(a.date || '').slice(0, 7) === monthKey);
+    const positions = new Map((state.hrPositions || []).filter(p => p && p.id).map(p => [p.id, p.name || '']));
+    const positionNameOf = assignment => String(positions.get(assignment.positionId) || '').trim();
+    const strictBulligGcDates = new Set();
+    const strictBulligCtDates = new Set();
+    assignments.forEach(assignment => {
+      if (String(assignment.department || '').trim() !== 'Xưởng 2') return;
+      const positionName = positionNameOf(assignment);
+      if (isBulligGcPos(positionName)) strictBulligGcDates.add(assignment.date);
+      if (isBulligCtPos(positionName)) strictBulligCtDates.add(assignment.date);
+    });
+    const stageMatchers = [
+      { id: 'boluong', dept: 'Xưởng 2', match: isBocLuongPos },
+      { id: 'cut', dept: 'Xưởng 2', match: isCutSelectPos },
+      { id: 'boong', dept: 'Xưởng 2', match: isBoOngPos },
+      { id: 'baotho', dept: 'Xưởng 2', match: isBaoThoPos },
+      { id: 'chonnan', dept: 'Xưởng 2', match: isChonNanPos },
+      { id: 'say', dept: 'Xưởng 2', match: isThanHoaPos },
+      { id: 'baotinh', dept: 'Xưởng 2', match: isBaoTinhPos },
+      { id: 'epvan', dept: 'Xưởng 2', match: name => normPosName(name).includes('ep van') },
+      { id: 'bullig_gc', dept: 'Xưởng 2', match: (name, date) =>
+        isBulligGcPos(name) || (!strictBulligGcDates.has(date) && normPosName(name).includes('gia cong')) },
+      { id: 'bullig_ct', dept: 'Xưởng 2', match: (name, date) =>
+        isBulligCtPos(name) || (!strictBulligCtDates.has(date) && normPosName(name).includes('chon thanh')) },
+      { id: 'catvan_cat', dept: 'Xưởng 2', match: name => isCatVanPos(name) && !isXeThanhPos(name) },
+      { id: 'catvan_xe', dept: 'Xưởng 2', match: isXeThanhPos },
+      { id: 'baovan_bao', dept: 'Xưởng 2', match: name => isBaoVanPos(name) && !isChaThungPos(name) },
+      { id: 'baovan_cha', dept: 'Xưởng 2', match: isChaThungPos },
+      { id: 'x1catong', dept: 'Xưởng 1', match: isX1CatOngPos },
+      { id: 'x1saysinh', dept: 'Xưởng 1', match: isX1SaySinhPos },
+      { id: 'x1boc', dept: 'Xưởng 1', match: isX1BocPos }
+    ];
+    [
+      ['locOng', 'x1locong'],
+      ['catMat', 'x1catmat'],
+      ['bo', 'x1bo'],
+      ['phoiSay', 'x1phoisay'],
+      ['locThanh', 'x1locthanh']
+    ].forEach(([key, id]) => {
+      const spec = x1ChainSpecByKey(key);
+      if (spec) stageMatchers.push({ id, dept: 'Xưởng 1', match: spec.posMatch });
+    });
+
+    const employees = new Set((state.hrEmployees || []).filter(e => e && e.id).map(e => String(e.id)));
+    const out = [];
+    assignments.forEach((assignment, index) => {
+      const department = String(assignment.department || '').trim();
+      if (department !== 'Xưởng 1' && department !== 'Xưởng 2') return;
+      const positionName = positionNameOf(assignment);
+      const matches = stageMatchers.filter(stage =>
+        stage.dept === department && stage.match(positionName, assignment.date));
+      if (matches.length !== 1) return;
+      const employeeId = String(assignment.employeeId || '').trim();
+      const start = String(assignment.start || '').trim();
+      if (!employeeId || !employees.has(employeeId) || !start) return;
+      const shiftIdx = assignment.shiftIdx == null || assignment.shiftIdx === ''
+        ? null : Number(assignment.shiftIdx);
+      const split = hrSplitHoursHCDate(
+        department,
+        assignment.date,
+        start,
+        String(assignment.end || '').trim(),
+        shiftIdx == null ? 0 : shiftIdx
+      );
+      const hours = ((Number(split.hc) || 0) + (Number(split.tc) || 0)) / 60;
+      if (!(hours > 0)) return;
+      out.push({
+        id: String(assignment.id || `hr-assignment-${index}`),
+        stageId: matches[0].id,
+        date: String(assignment.date),
+        department,
+        employeeId,
+        positionName,
+        shiftIdx,
+        start,
+        end: String(assignment.end || '').trim(),
+        hours
+      });
+    });
+    return out;
+  }
+
 export {
   X2_CARD_DEFS,
   // ── CÔNG TẮC CHUYỂN XƯỞNG (tab Công Đoạn SX) ──
@@ -16241,6 +16327,7 @@ export {
   x1SsOpenBocFor,
   // ── 5 CÔNG ĐOẠN ĐUÔI (khung SPEC dùng chung) ──
   X1_CHAIN_SPECS,
+  workerAssignmentsForCapacityMonth,
   x1ChainSpec,
   x1ChainSpecByKey,
   renderX1CardOf,

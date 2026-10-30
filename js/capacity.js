@@ -61,6 +61,7 @@ import {
   catVanDisplay, catVanRateOf,
   baoVanDisplay, baoVanRateOf,
   sayChargeRows, sayShiftPerfOf, sayRateEntryOf,
+  workerAssignmentsForCapacityMonth,
   // Thẻ Than Hóa + Sấy: hiệu suất tính THEO CA nên bảng Tổng hợp cũng tính theo
   // (ngày, ca); chip ca ở tầng NGÀY dùng đúng chip của thẻ (một nguồn hiển thị).
   x2ShiftChipHtml,
@@ -193,7 +194,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       rows: () => (state.xuong2BoluongRecords || []).map(r => {
         const d = boluongDisplay(r);
         // Sản lượng tính theo SỐ XE (xe/h) — lượt chưa ghi Số xe dùng số xe TƯƠNG ĐƯƠNG
-        return { date: d.date, qty: d.cartsEq, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        return { date: d.date, qty: d.cartsEq, qtyKnown: true, qtyEstimated: !!d.cartsEst, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => boluongRateOf(m)
     },
@@ -202,7 +203,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       rows: () => (state.xuong2CutRecords || []).map(r => {
         const d = cutDisplay(r);
         // Sản lượng tính theo SỐ XE đem cắt (xe/h) — thiếu số xe → xe tương đương ≈ KL ÷ 600
-        return { date: d.date, qty: d.cartsEq, qtyKnown: true, hours: d.cutHours, hc: d.cutHoursHC, tc: d.cutHoursTC };
+        return { date: d.date, qty: d.cartsEq, qtyKnown: true, qtyEstimated: !!d.cartsEst, hours: d.cutHours, hc: d.cutHoursHC, tc: d.cutHoursTC };
       }),
       rateOf: m => capRateOf(m)
     },
@@ -511,6 +512,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         turns: st.kind === 'time' ? list.reduce((a, x) => a + (Number(x.turns) || 0), 0) : list.length,
         qty: qtyKnown ? list.reduce((s, x) => s + (Number(x.qty) || 0), 0) : null,
         qtyKnown,
+        qtyEstimated: list.some(x => x.qtyEstimated === true),
         hours: sum('hours'),
         hc: sum('hc'),
         tc: sum('tc'),
@@ -551,6 +553,135 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       rateText = st.rateTextOf ? st.rateTextOf(days.map(d => d.date)) : '';
     }
     return { stageId: st.id, weekKey: key, days, turns, qty, qtyKnown, hours, hc, tc, cap, rate, rateText, eff };
+  }
+  function capStageDayEfficiency(st, day) {
+    if (!day || !(Number(day.hours) > 0)) return null;
+    if (st.kind === 'time') {
+      const hoursEff = Math.max(0, Number(day.hours) - (Number(day.incident) || 0));
+      const need = Number(day.need) || 0;
+      return need > 0 && hoursEff > 0 ? need / hoursEff * 100 : null;
+    }
+    if (day.qtyKnown === false || !(Number(day.qty) > 0)) return null;
+    const hoursEff = Math.max(0, Number(day.hours) - (Number(day.incident) || 0));
+    const rate = Number(st.rateOf(String(day.date || '').slice(0, 7))) || 0;
+    return hoursEff > 0 && rate > 0 ? (Number(day.qty) / hoursEff / rate) * 100 : null;
+  }
+  function computeWorkerStageEfficiency(month) {
+    const monthKey = String(month || '');
+    const result = new Map();
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) return result;
+
+    const stageById = new Map(CAP_STAGES.map(stage => [stage.id, stage]));
+    const dailyByStage = new Map();
+    CAP_STAGES.forEach(stage => {
+      const recs = capStageRowsByPeriod(stage, 'month').get(monthKey) || [];
+      if (!recs.length) return;
+      const period = capStagePeriodRowFromRecs(stage, recs, monthKey, 'month');
+      const days = new Map();
+      period.days.forEach(day => {
+        const key = `${day.date}|${day.shiftIdx == null ? '*' : day.shiftIdx}`;
+        days.set(key, {
+          efficiency: capStageDayEfficiency(stage, day),
+          hours: Number(day.hours) || 0,
+          incident: Number(day.incident) || 0,
+          estimated: day.qtyEstimated === true
+        });
+      });
+      dailyByStage.set(stage.id, days);
+    });
+
+    const assignments = workerAssignmentsForCapacityMonth(monthKey)
+      .filter(assignment => stageById.has(assignment.stageId));
+    const byEmployeeDate = new Map();
+    assignments.forEach(assignment => {
+      const key = `${assignment.employeeId}|${assignment.date}`;
+      if (!byEmployeeDate.has(key)) byEmployeeDate.set(key, []);
+      byEmployeeDate.get(key).push(assignment);
+    });
+    const overlaps = new Set();
+    const minuteOf = value => {
+      const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''));
+      return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+    };
+    byEmployeeDate.forEach(list => {
+      for (let i = 0; i < list.length; i++) {
+        const aStart = minuteOf(list[i].start);
+        const aEnd = minuteOf(list[i].end);
+        if (aStart == null || aEnd == null || aEnd <= aStart) continue;
+        for (let j = i + 1; j < list.length; j++) {
+          const bStart = minuteOf(list[j].start);
+          const bEnd = minuteOf(list[j].end);
+          if (bStart == null || bEnd == null || bEnd <= bStart) continue;
+          if (Math.max(aStart, bStart) < Math.min(aEnd, bEnd)) {
+            overlaps.add(list[i].id);
+            overlaps.add(list[j].id);
+          }
+        }
+      }
+    });
+
+    const totals = new Map();
+    const ensureTotal = employeeId => {
+      if (!totals.has(employeeId)) totals.set(employeeId, {
+        weightedEfficiency: 0,
+        validHours: 0,
+        assignedHours: 0,
+        estimatedHours: 0,
+        overlapCount: 0,
+        stages: new Set()
+      });
+      return totals.get(employeeId);
+    };
+    const groups = new Map();
+    assignments.forEach(assignment => {
+      const total = ensureTotal(assignment.employeeId);
+      if (overlaps.has(assignment.id)) {
+        total.overlapCount++;
+        return;
+      }
+      total.assignedHours += assignment.hours;
+      const key = `${assignment.stageId}|${assignment.date}|${assignment.shiftIdx == null ? '*' : assignment.shiftIdx}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(assignment);
+    });
+    groups.forEach(list => {
+      const first = list[0];
+      const stage = stageById.get(first.stageId);
+      const dayRows = dailyByStage.get(first.stageId);
+      const dayKey = `${first.date}|${first.shiftIdx == null ? '*' : first.shiftIdx}`;
+      const day = dayRows && (dayRows.get(dayKey) || dayRows.get(`${first.date}|*`));
+      if (!day || !Number.isFinite(day.efficiency) || !(day.hours > 0)) return;
+      const scheduledHours = list.reduce((sum, assignment) => sum + assignment.hours, 0);
+      if (Math.abs(scheduledHours - day.hours) > 0.05) return;
+      const effectiveHours = Math.max(0, day.hours - day.incident);
+      const weightScale = effectiveHours / day.hours;
+      if (!(weightScale > 0)) return;
+      list.forEach(assignment => {
+        const weightHours = assignment.hours * weightScale;
+        const total = ensureTotal(assignment.employeeId);
+        total.weightedEfficiency += day.efficiency * weightHours;
+        total.validHours += weightHours;
+        if (day.estimated) total.estimatedHours += weightHours;
+        total.stages.add(stage.id);
+      });
+    });
+
+    totals.forEach((total, employeeId) => {
+      result.set(employeeId, {
+        efficiency: total.validHours > 0
+          ? Math.round(total.weightedEfficiency * 10 / total.validHours) / 10
+          : null,
+        validHours: Math.round(total.validHours * 100) / 100,
+        assignedHours: Math.round(total.assignedHours * 100) / 100,
+        coverageRate: total.assignedHours > 0
+          ? Math.round(total.validHours * 1000 / total.assignedHours) / 10
+          : null,
+        estimatedHours: Math.round(total.estimatedHours * 100) / 100,
+        overlapCount: total.overlapCount,
+        stages: total.stages.size
+      });
+    });
+    return result;
   }
   // Bản TUẦN ISO (giữ tên cũ — kiểm thử cũ + chỗ khác gọi vẫn chạy)
   function capStageWeekRowFromRecs(st, recs, weekKey) {
@@ -1843,6 +1974,7 @@ export {
   capStageDayRows,
   capStageWeekRow,
   capStagePeriodRow,
+  computeWorkerStageEfficiency,
   capWeekRowsFor,
   capPeriodsFor,
   capWorkshopWeekRow,

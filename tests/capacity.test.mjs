@@ -1,7 +1,7 @@
 // tests/capacity.test.mjs — Kiểm thử BẢNG TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT
 // (thẻ #capacity-card — đầu tab Tổng Quan, js/capacity.js):
 //   • Khóa tuần ISO khớp materialWeekLabel + dịch tuần 2 chiều;
-//   • Giờ đếm ĐÚNG 1 LẦN mỗi (công đoạn, ngày) — 2 lượt cắt cùng ngày không nhân đôi giờ;
+//   • Giờ đếm ĐÚNG 1 LẦN mỗi (công đoạn, ca) khi có ca; nếu không thì 1 lần/ngày;
 //   • Công suất/Hiệu suất TUẦN = Σ sản lượng ÷ Σ giờ ÷ định mức tuần;
 //   • Định mức TUẦN vắt 2 tháng = bình quân GIA QUYỀN theo sản lượng;
 //   • Chọn Nan Thô bỏ lượt nan mua ngoài (external); Bào Thô chờ Chọn Nan Thô → "—";
@@ -183,6 +183,92 @@ const bthSt = cap.CAP_STAGES.find(s => s.id === 'baotho');
 const bthRow = cap.capStageWeekRow(bthSt, wk);
 check('BÀO THÔ: chưa link Chọn Nan Thô → qty null (không bịa số)', bthRow.qty == null && bthRow.qtyKnown === false);
 check('BÀO THÔ: công suất + hiệu suất đều "—"', bthRow.cap == null && bthRow.eff == null);
+
+// ─── E1. CÔNG ĐOẠN GHI SẢN LƯỢNG THEO CA: tổng giờ phải cộng theo CA ──
+const shiftDate = '2026-09-11';
+const shiftWeek = cap.capWeekKeyOf(shiftDate);
+const baselineBoOngRecords = state.xuong2BoOngRecords;
+const baselineBoOngRates = state.x2BoOngRates;
+const baselineBaoThoRecords = state.xuong2BaoThoRecords;
+const baselineBaoThoRates = state.x2BaoThoRates;
+const baselineChonNanRecords = state.xuong2ChonNanThoRecords;
+const baselineChonNanRates = state.x2ChonNanRates;
+state.hrAssignments = [];
+state.xuong2BoOngRecords = [
+  { id: 'bo-s0a', date: shiftDate, shiftIdx: 0, inputOng: 500, workHoursHC: 10.5, workHoursTC: 0 },
+  { id: 'bo-s0b', date: shiftDate, shiftIdx: 0, inputOng: 300, workHoursHC: 10.5, workHoursTC: 0 },
+  { id: 'bo-s1', date: shiftDate, shiftIdx: 1, inputOng: 1200, workHoursHC: 5.5, workHoursTC: 0 }
+];
+state.x2BoOngRates = { '2026-09': 100 };
+const boOngShiftDays = cap.capStageDayRows(boongSt, shiftWeek);
+const boOngShiftRow = cap.capStageWeekRow(boongSt, shiftWeek);
+check('BỔ ỐNG: ngày ghi riêng 2 ca → chi tiết có 2 hàng ca, giờ của ca lặp nhiều lượt chỉ đếm 1 lần',
+  boOngShiftDays.length === 2 &&
+  boOngShiftDays[0].shiftIdx === 0 && boOngShiftDays[0].turns === 2 &&
+  boOngShiftDays[0].qty === 800 && boOngShiftDays[0].hours === 10.5 &&
+  boOngShiftDays[1].shiftIdx === 1 && boOngShiftDays[1].qty === 1200 &&
+  boOngShiftDays[1].hours === 5.5);
+check('BỔ ỐNG: tổng tuần chia 2.000 kg cho tổng 16h (không chỉ 10,5h ca ngày)',
+  boOngShiftRow.qty === 2000 && boOngShiftRow.hours === 16 &&
+  approx(boOngShiftRow.cap, 125) && approx(boOngShiftRow.eff, 125));
+const baselineStageIncidents = state.x2StageIncidents;
+const baselineIncidentReports = state.x2IncidentReports;
+state.x2StageIncidents = { 'boong|2026-09-11': 2 };
+state.x2IncidentReports = [];
+const boOngIncidentRow = cap.capStageWeekRow(boongSt, shiftWeek);
+check('BỔ ỐNG: 2h sự cố theo ngày phân bổ theo tỉ lệ ca và chỉ trừ đúng 2h trong tổng kỳ',
+  approx(boOngIncidentRow.days.reduce((sum, day) => sum + day.incident, 0), 2) &&
+  approx(boOngIncidentRow.cap, 2000 / 14));
+state.xuong2BoOngRecords = [
+  { id: 'bo-no-hours-s0', date: shiftDate, shiftIdx: 0, inputOng: 500, workHoursHC: 0, workHoursTC: 0 },
+  { id: 'bo-no-hours-s1', date: shiftDate, shiftIdx: 1, inputOng: 500, workHoursHC: 0, workHoursTC: 0 }
+];
+state.x2StageIncidents = { 'boong|2026-09-11': 1 };
+const boOngNoHoursIncidentRow = cap.capStageWeekRow(boongSt, shiftWeek);
+check('BỔ ỐNG: khi tổng giờ ca bằng 0, sự cố vẫn chỉ ghi một lần và không gây lỗi',
+  approx(boOngNoHoursIncidentRow.days.reduce((sum, day) => sum + day.incident, 0), 1) &&
+  boOngNoHoursIncidentRow.days[0].incident === 1 &&
+  boOngNoHoursIncidentRow.days[1].incident === 0);
+state.x2StageIncidents = baselineStageIncidents;
+state.x2IncidentReports = baselineIncidentReports;
+
+state.xuong2BaoThoRecords = [
+  { id: 'bt-s0', date: shiftDate, shiftIdx: 0, daiText: '1250', rongText: '80', dayText: '12', workHoursHC: 10.5, workHoursTC: 0 },
+  { id: 'bt-s1', date: shiftDate, shiftIdx: 1, daiText: '1250', rongText: '80', dayText: '12', workHoursHC: 5.5, workHoursTC: 0 }
+];
+state.xuong2ChonNanThoRecords = [
+  { id: 'cn-bt-s0', date: shiftDate, baothoId: 'bt-s0', quantity: 800, cls: 'A', dims: [1250, 80, 12], unitVol: 0.0012, volume: 0.96, shiftIdx: 0 },
+  { id: 'cn-bt-s1', date: shiftDate, baothoId: 'bt-s1', quantity: 400, cls: 'A', dims: [1250, 80, 12], unitVol: 0.0012, volume: 0.48, shiftIdx: 1 }
+];
+state.x2BaoThoRates = { '2026-09': 100 };
+const bthShiftRow = cap.capStageWeekRow(bthSt, shiftWeek);
+check('BÀO THÔ: tổng sản lượng liên kết theo ca chia cho tổng giờ của cả hai ca',
+  bthShiftRow.qty === 1200 && bthShiftRow.hours === 16 && approx(bthShiftRow.cap, 75));
+
+state.xuong2ChonNanThoRecords = [
+  { id: 'cn-s0', date: shiftDate, quantity: 800, cls: 'A', dims: [1250, 80, 12], shiftIdx: 0, workHoursHC: 10.5, workHoursTC: 0 },
+  { id: 'cn-s1', date: shiftDate, quantity: 400, cls: 'A', dims: [1250, 80, 12], shiftIdx: 1, workHoursHC: 5.5, workHoursTC: 0 }
+];
+state.x2ChonNanRates = { '2026-09': 100 };
+const cnShiftRow = cap.capStageWeekRow(cnSt, shiftWeek);
+check('CHỌN NAN: tổng hiệu suất dùng đủ giờ của hai ca',
+  cnShiftRow.qty === 1200 && cnShiftRow.hours === 16 && approx(cnShiftRow.cap, 75));
+
+state.xuong2BoOngRecords = [
+  { id: 'bo-mixed-day', date: '2026-09-12', inputOng: 100, workHours: 9 },
+  { id: 'bo-mixed-shift', date: '2026-09-12', shiftIdx: 1, inputOng: 200, workHoursHC: 5.5, workHoursTC: 0 }
+];
+const mixedBoOngDays = cap.capStageDayRows(boongSt, cap.capWeekKeyOf('2026-09-12'));
+check('BỔ ỐNG: ngày trộn dữ liệu cũ và ghi ca vẫn gộp ngày, giữ giờ bản ghi đầu',
+  mixedBoOngDays.length === 1 && mixedBoOngDays[0].shiftIdx == null &&
+  mixedBoOngDays[0].qty === 300 && mixedBoOngDays[0].hours === 9);
+state.xuong2BoOngRecords = baselineBoOngRecords;
+state.x2BoOngRates = baselineBoOngRates;
+state.xuong2BaoThoRecords = baselineBaoThoRecords;
+state.x2BaoThoRates = baselineBaoThoRates;
+state.xuong2ChonNanThoRecords = baselineChonNanRecords;
+state.x2ChonNanRates = baselineChonNanRates;
+
 // ─── F. THAN HÓA + SẤY: giờ cần ÷ (giờ thực − sự cố) ────────────
 const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const stylesCss = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -332,7 +418,7 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v322', /nha-may-ngoc-son-v322/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v323', /nha-may-ngoc-son-v323/.test(swJs));
 check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 8 dòng Xưởng 1',
   cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===

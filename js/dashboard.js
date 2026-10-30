@@ -1382,7 +1382,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
         <div class="dash-help-sec">
           <h5>Ý nghĩa cột số liệu</h5>
           <ul>
-            <li><b>Giờ HC / Giờ TC</b>: tách từ Bảng bố trí Nhân Sự — mỗi ngày mỗi công đoạn chỉ đếm 1 lần; ngày nghỉ/lễ đi làm tính toàn TC.</li>
+            <li><b>Giờ HC / Giờ TC</b>: tách từ Bảng bố trí Nhân Sự — công đoạn ghi riêng ca tính giờ một lần mỗi ca, công đoạn không tách ca tính một lần mỗi ngày; ngày nghỉ/lễ đi làm tính toàn TC.</li>
             <li><b>Công suất thực</b> = sản lượng ÷ giờ hiệu dụng (giờ − giờ sự cố).</li>
             <li><b>Hiệu suất</b> = công suất thực ÷ định mức (tuần vắt 2 tháng = bình quân gia quyền theo sản lượng). ≥100% tô xanh, dưới 100% tô cam.</li>
             <li><b>Đạt ≥100%</b> = số công đoạn đạt định mức / số công đoạn tính được hiệu suất.</li>

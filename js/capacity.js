@@ -62,8 +62,8 @@ import {
   baoVanDisplay, baoVanRateOf,
   sayChargeRows, sayShiftPerfOf, sayRateEntryOf,
   workerAssignmentsForCapacityMonth,
-  // Thẻ Than Hóa + Sấy: hiệu suất tính THEO CA nên bảng Tổng hợp cũng tính theo
-  // (ngày, ca); chip ca ở tầng NGÀY dùng đúng chip của thẻ (một nguồn hiển thị).
+  // Chip ca dùng chung ở chi tiết Dashboard cho Than Hóa + Sấy và các công đoạn
+  // nhập sản lượng theo ca; một nguồn hiển thị nhãn ca.
   x2ShiftChipHtml,
   // XƯỞNG 1 — 8 công đoạn (04–05/10/2026)
   x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay,
@@ -185,8 +185,9 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   // cardId (thẻ ở tab Công Đoạn để nút "Mở thẻ" nhảy đúng chỗ) · kind:
   //   'cap'  = công suất thường: sản lượng ÷ giờ ÷ định mức tháng;
   //   'time' = Than Hóa + Sấy: hiệu suất theo GIỜ CẦN ÷ (giờ thực − sự cố).
-  // rows() trả MẢNG bản ghi thô đã quy về: { date, qty, qtyKnown, hours, hc, tc }
-  // (hours = giờ CẢ NGÀY — chung cho mọi lượt cùng ngày; phần gộp sẽ đếm 1 lần/ngày).
+  // rows() trả bản ghi chuẩn { date, qty, qtyKnown, hours, hc, tc }.
+  // Bổ Ống/Bào Thô/Chọn Nan mang thêm shiftIdx và giờ của ca; công đoạn còn lại
+  // dùng giờ cả ngày chung cho mọi lượt cùng ngày.
   // Riêng kind 'time': thêm { need (giờ cần), incident (giờ sự cố CHIA THEO TỈ LỆ giờ cần) }.
   const CAP_STAGES = [
     {
@@ -211,7 +212,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       id: 'boong', ws: 'x2', label: 'Bổ Ống', unit: 'kg/h', unitQty: 'kg', cardId: 'x2-bo-ong-card', kind: 'cap',
       rows: () => (state.xuong2BoOngRecords || []).map(r => {
         const d = boOngDisplay(r);
-        return { date: d.date, qty: d.inputOng, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        return { date: d.date, shiftIdx: d.shiftIdx, qty: d.inputOng, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => boOngRateOf(m)
     },
@@ -220,7 +221,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       rows: () => (state.xuong2BaoThoRecords || []).map(r => {
         const d = baoThoDisplay(r);
         // Chưa có số lượng tự động (chờ công đoạn Chọn Nan Thô) → qty null, qtyKnown false
-        return { date: d.date, qty: d.qty, qtyKnown: d.qty != null, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        return { date: d.date, shiftIdx: d.shiftIdx, qty: d.qty, qtyKnown: d.qty != null, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => baoThoRateOf(m)
     },
@@ -229,7 +230,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       rows: () => (state.xuong2ChonNanThoRecords || []).map(r => {
         const d = chonNanDisplay(r);
         // Sản lượng CHỈ tính phần CỘNG sang Bào Thô (bỏ lượt nan mua ngoài — external)
-        return { date: d.date, qty: d.external ? 0 : d.quantity, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        return { date: d.date, shiftIdx: d.shiftIdx, qty: d.external ? 0 : d.quantity, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
       }),
       rateOf: m => chonNanRateOf(m)
     },
@@ -483,22 +484,58 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   // Bản TUẦN ISO — sparkline mini card + kiểm thử cũ vẫn dùng
   function capStageRowsByWeek(st) { return capStageRowsByPeriod(st, 'week'); }
   // Dòng KỲ của 1 công đoạn từ danh sách bản ghi thô của kỳ đó (mode 'week'|'month').
-  // Gom theo NGÀY — giờ đếm 1 LẦN/ngày (bản ghi ĐẦU của ngày mang giờ chung
-  // của ngày đọc từ Bảng bố trí Nhân Sự / snapshot).
+  // Công đoạn ghi sản lượng theo ca gom theo (NGÀY, CA); công đoạn cũ gom theo
+  // NGÀY và giờ chỉ đếm 1 lần. Nếu một ngày trộn bản ghi có/không có ca thì giữ
+  // cách gom cả ngày để không cộng nhầm giờ snapshot cả ngày với giờ của một ca.
   function capStagePeriodRowFromRecs(st, recs, key, mode) {
     const byDate = new Map();
     (recs || []).forEach(r => {
       if (!r || !r.date) return;
-      // THAN HÓA + SẤY (kind 'time'): mỗi dòng là 1 (NGÀY, CA) với giờ THẬT của
-      // ca → gom theo khóa ngày|ca và CỘNG giờ (Σ giờ các ca = giờ của ngày,
-      // không nhân đôi). Các công đoạn khác giữ luật cũ: giờ là số của CẢ NGÀY
-      // nên chỉ lấy bản ghi ĐẦU của ngày.
-      const gk = (st.kind === 'time' && r.shiftIdx != null) ? `${r.date}|${r.shiftIdx}` : String(r.date);
-      if (!byDate.has(gk)) byDate.set(gk, []);
-      byDate.get(gk).push(r);
+      const date = String(r.date);
+      if (!byDate.has(date)) byDate.set(date, []);
+      byDate.get(date).push(r);
+    });
+    const groups = [];
+    byDate.forEach(list => {
+      if (st.kind === 'time') {
+        const byShift = new Map();
+        list.forEach(r => {
+          const shiftIdx = r.shiftIdx == null ? null : Number(r.shiftIdx);
+          const gk = shiftIdx == null ? '' : String(shiftIdx);
+          if (!byShift.has(gk)) byShift.set(gk, []);
+          byShift.get(gk).push(r);
+        });
+        byShift.forEach((shiftRows, gk) => {
+          groups.push({ list: shiftRows, shiftIdx: gk === '' ? null : Number(gk) });
+        });
+        return;
+      }
+
+      const allHaveShift = list.length > 0 && list.every(r =>
+        r.shiftIdx != null && r.shiftIdx !== '' && Number.isFinite(Number(r.shiftIdx)));
+      if (!allHaveShift) {
+        groups.push({ list, shiftIdx: null });
+        return;
+      }
+
+      const byShift = new Map();
+      list.forEach(r => {
+        const shiftIdx = Number(r.shiftIdx);
+        if (!byShift.has(shiftIdx)) byShift.set(shiftIdx, []);
+        byShift.get(shiftIdx).push(r);
+      });
+      const shiftGroups = [...byShift.entries()];
+      const totalShiftHours = shiftGroups.reduce((sum, [, shiftRows]) =>
+        sum + (Number(shiftRows[0].hours) || 0), 0);
+      const fallbackShiftIdx = shiftGroups.length
+        ? Math.min(...shiftGroups.map(([shiftIdx]) => shiftIdx))
+        : null;
+      shiftGroups.forEach(([shiftIdx, shiftRows]) => {
+        groups.push({ list: shiftRows, shiftIdx, splitByShift: true, totalShiftHours, fallbackShiftIdx });
+      });
     });
     const days = [];
-    byDate.forEach(list => {
+    groups.forEach(({ list, shiftIdx, splitByShift, totalShiftHours, fallbackShiftIdx }) => {
       const first = list[0];
       const perRowHours = st.kind === 'time' && list.length > 1;
       const sum = fn => perRowHours
@@ -507,7 +544,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       const qtyKnown = list.every(x => x.qtyKnown !== false);
       const day = {
         date: String(first.date),
-        shiftIdx: (first.shiftIdx == null ? null : Number(first.shiftIdx)),
+        shiftIdx: (shiftIdx == null ? null : Number(shiftIdx)),
         // THAN HÓA + SẤY: "Lượt" = số LẦN than hóa của ca (không phải số dòng)
         turns: st.kind === 'time' ? list.reduce((a, x) => a + (Number(x.turns) || 0), 0) : list.length,
         qty: qtyKnown ? list.reduce((s, x) => s + (Number(x.qty) || 0), 0) : null,
@@ -522,8 +559,14 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         day.need = list.reduce((s, x) => s + (Number(x.need) || 0), 0);
         day.incident = list.reduce((s, x) => s + (Number(x.incident) || 0), 0);
       } else {
-        // Giờ SỰ CỐ CHO PHÉP nhập trên đầu thẻ ngày (0 nếu chưa nhập)
-        day.incident = capIncKeyOf(st) ? stageIncidentOf(capIncKeyOf(st), first.date) : 0;
+        // Giờ sự cố nhập theo ngày; chia theo tỉ lệ giờ để tổng kỳ chỉ trừ đúng
+        // một lần, thay vì trừ toàn bộ sự cố cho từng ca.
+        const incident = capIncKeyOf(st) ? stageIncidentOf(capIncKeyOf(st), first.date) : 0;
+        day.incident = splitByShift
+          ? (totalShiftHours > 0
+            ? incident * day.hours / totalShiftHours
+            : (day.shiftIdx === fallbackShiftIdx ? incident : 0))
+          : incident;
       }
       days.push(day);
     });
@@ -902,7 +945,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
   }
   // Ô GIỜ HC / TC (tách riêng 2 cột — lãnh đạo đọc thẳng số giờ hành chính/tăng ca)
   function capHcTd(hc) {
-    return `<td class="text-right cap-hc" title="Giờ HÀNH CHÍNH (HC) của kỳ — mỗi ngày mỗi công đoạn chỉ đếm 1 lần">${hc > 0 ? fmtNum1(hc) : '—'}</td>`;
+    return `<td class="text-right cap-hc" title="Giờ HÀNH CHÍNH (HC) của kỳ — mỗi ca công đoạn chỉ đếm 1 lần; không tách ca thì tính một lần/ngày">${hc > 0 ? fmtNum1(hc) : '—'}</td>`;
   }
   function capTcTd(tc) {
     return `<td class="text-right cap-tc" title="Giờ TĂNG CA (TC) của kỳ — ngày nghỉ/lễ đi làm tính toàn giờ tăng ca">${tc > 0 ? fmtNum1(tc) : '—'}</td>`;
@@ -922,7 +965,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         <td class="text-right">${w.dataCount}/${w.stagesCount}</td>
         ${capHcTd(w.hc)}
         ${capTcTd(w.tc)}
-        <td class="text-right cap-hours" title="Tổng giờ làm (HC + TC) của các công đoạn trong kỳ — mỗi ngày chỉ đếm 1 lần">${w.hours > 0 ? fmtNum1(w.hours) : '—'}</td>
+        <td class="text-right cap-hours" title="Tổng giờ làm (HC + TC) — mỗi ca công đoạn chỉ đếm 1 lần; không tách ca thì tính một lần/ngày">${w.hours > 0 ? fmtNum1(w.hours) : '—'}</td>
         <td class="text-right">${capEffBadgeHtml(w.eff, effTip)}</td>
         <td class="text-right">${w.effCount ? `${w.passCount}/${w.effCount}` : '—'}</td>
         <td title="${escapeHTML(botTip)}">${w.bottleneck ? `${escapeHTML(w.bottleneck.st.label)} (${fmtNum1(w.bottleneck.row.eff)}%)` : '—'}</td>
@@ -996,7 +1039,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         <td class="text-right">${qtyTxt}</td>
         ${capHcTd(r.hc)}
         ${capTcTd(r.tc)}
-        <td class="text-right cap-hours" title="Tổng giờ làm (HC + TC) — mỗi ngày chỉ đếm 1 lần">${hoursTxt}</td>
+        <td class="text-right cap-hours" title="Tổng giờ làm (HC + TC) — mỗi ca chỉ đếm 1 lần nếu có dữ liệu ca, ngược lại một lần/ngày">${hoursTxt}</td>
         <td class="text-right">${capTxt}</td>
         <td class="text-right">${rateTxt}</td>
         <td class="text-right">${capEffBadgeHtml(r.eff, effTip)}</td>
@@ -1036,7 +1079,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
         : `Công suất ${fmtNum2(cap)} ${st.unit} = ${fmtNum2(d.qty)} ÷ ${fmtNum1(hoursEff)} giờ${d.incident > 0 ? ` [đã trừ ${fmtNum2(d.incident)}h sự cố]` : ''} ÷ Định mức tháng ${fmtNum2(d.rate)} ${st.unit}`;
       return `
         <tr class="cap-day-row">
-          <td><i data-lucide="calendar-days"></i> ${dateTxt}</td>
+          <td><i data-lucide="calendar-days"></i> ${dateTxt}${d.shiftIdx != null ? ` ${x2ShiftChipHtml(d.shiftIdx, 'Xưởng 2')}` : ''}</td>
           <td class="text-right">${d.turns}</td>
           <td class="text-right">${d.qty == null ? '—' : `${fmtNum2(d.qty)} ${st.unitQty}`}</td>
           ${capHcTd(d.hc)}
@@ -1075,7 +1118,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       <span class="cap-chip" title="Số công đoạn đã ghi lượt trong kỳ / tổng số công đoạn của xưởng"><i data-lucide="layers"></i> <strong>${w.dataCount}/${w.stagesCount}</strong> CĐ có dữ liệu</span>
       <span class="cap-chip" title="Tổng giờ HÀNH CHÍNH (HC) của các công đoạn trong kỳ"><i data-lucide="clock"></i> Giờ HC: <strong>${w.hc > 0 ? fmtNum1(w.hc) : '—'}</strong></span>
       <span class="cap-chip" title="Tổng giờ TĂNG CA (TC) của các công đoạn trong kỳ — ngày nghỉ/lễ đi làm tính toàn giờ tăng ca"><i data-lucide="clock-4"></i> Giờ TC: <strong>${w.tc > 0 ? fmtNum1(w.tc) : '—'}</strong></span>
-      <span class="cap-chip" title="Tổng giờ làm (HC + TC) của các công đoạn trong kỳ — mỗi ngày chỉ đếm 1 lần"><i data-lucide="alarm-clock"></i> Tổng: <strong>${w.hours > 0 ? fmtNum1(w.hours) : '—'}</strong> giờ</span>
+      <span class="cap-chip" title="Tổng giờ làm (HC + TC) — mỗi ca công đoạn chỉ đếm 1 lần; không tách ca thì tính một lần/ngày"><i data-lucide="alarm-clock"></i> Tổng: <strong>${w.hours > 0 ? fmtNum1(w.hours) : '—'}</strong> giờ</span>
       <span class="cap-chip" title="${escapeHTML(effTip)}">Hiệu suất xưởng: ${capEffBadgeHtml(w.eff, effTip)}</span>
       <span class="cap-chip" title="Số công đoạn đạt ≥100% định mức / số công đoạn tính được hiệu suất"><i data-lucide="circle-check"></i> Đạt: <strong>${w.effCount ? `${w.passCount}/${w.effCount}` : '—'}</strong></span>
       ${w.bottleneck ? `<span class="cap-chip cap-chip-warn" title="Công đoạn có hiệu suất thấp nhất kỳ này — nên kiểm tra trước"><i data-lucide="alert-triangle"></i> Nút thắt: <strong>${escapeHTML(w.bottleneck.st.label)}</strong> ${fmtNum1(w.bottleneck.row.eff)}%</span>` : ''}`;

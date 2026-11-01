@@ -1013,7 +1013,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
       });
       sumNote = `Tổng ${nViec} công việc hỗ trợ / công đoạn lẻ`;
     } else if (source === 'phupham') {
-      // PHỤ PHẨM & BĂM — phần NHẬP ước tính (từ Bốc/Cắt) + phần BÁN/TIÊU HỦY
+      // PHỤ PHẨM & BĂM — phần NHẬP ước tính (Bốc/Cắt/Bào) + phần BÁN/TIÊU HỦY
       head = ['Stt', 'Ngày', 'Loại Dòng', 'Nguồn', 'Hình Thức', 'KL (kg)', 'Đơn Giá (đ/kg)', 'Thành Tiền (đ)', 'Người Mua / NCC', 'Nguồn Dữ Liệu', 'Ghi Chú'];
       const list = x2PhuPhamRows(from, to).sort((a, b) => String(a.date).localeCompare(String(b.date)));
       let inKg = 0, outKg = 0, revenue = 0;

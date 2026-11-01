@@ -190,8 +190,8 @@ check('UI: hai màn hình Cơ điện dùng lớp phủ toàn màn hình, có t�
 check('Sự cố: thẻ Cơ điện mở chế độ riêng, vẫn nhóm phiếu theo ngày và giữ điểm mở cũ',
   incidentSource.includes('function openMechanicalIncidentCenter()') && incidentSource.includes('function incidentDayCardHtml') &&
   incidentSource.includes('byDate.get(dt)') && events.includes("safeOn('btn-incident-reports', 'click', () => openIncidentReports())"));
-check('PWA: cache v329 đồng bộ APP_VERSION và đưa module Cơ điện vào shell', sw.includes('nha-may-ngoc-son-v329') &&
-  sw.includes("'./js/mech-work.js'") && stateSource.includes("APP_VERSION = 'v329'"));
+check('PWA: cache v332 đồng bộ APP_VERSION và đưa module Cơ điện vào shell', sw.includes('nha-may-ngoc-son-v332') &&
+  sw.includes("'./js/mech-work.js'") && stateSource.includes("APP_VERSION = 'v332'"));
 
 console.log(`MECH-WORK-PLAN: ${passed} PASS, ${failed} FAIL`);
 if (failed) process.exitCode = 1;

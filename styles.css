@@ -15320,7 +15320,7 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
   font-size: 5.3pt;
   font-variant-numeric: tabular-nums;
 }
-#leadership-view .leadership-stage-meta > span { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 3px; }
+#leadership-view .leadership-stage-meta > span { min-width: 0; display: flex; flex-wrap: nowrap; align-items: baseline; gap: 0 3px; white-space: nowrap; }
 #leadership-view .leadership-stage-chart { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; margin-top: 1px; }
 #leadership-view .leadership-stage-efficiency { display: flex; align-items: baseline; color: #69766b; font-size: 5.3pt; }
 #leadership-view .leadership-main-stages { margin-top: 4px; padding-top: 2px; border-top: 1.5px solid #89958a; }
@@ -15351,3 +15351,248 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
   #leadership-view .leadership-paper { font-size: 8pt; }
   #leadership-view .leadership-purchase-pie { max-height: 52mm; }
 }
+
+#leadership-view .leadership-paper {
+  color: #23352a;
+  font-size: 8.5pt;
+}
+#leadership-view .leadership-paper-title p { color: #4c5d50; font-size: 8pt; }
+#leadership-view .leadership-paper-date { color: #4f5d52; font-size: 7pt; }
+#leadership-view .leadership-paper-date strong { color: #254d34; font-size: 8.5pt; }
+#leadership-view .leadership-paper-subheader { color: #4d5e51; font-size: 7.5pt; }
+#leadership-view .leadership-paper-subheader strong { color: #264d33; font-size: 8pt; }
+#leadership-view .leadership-section-header {
+  min-height: 28px;
+  gap: 8px;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, #edf5ee 0%, #f6f5eb 100%);
+  border: 1px solid #d8e5d9;
+  border-left: 3px solid #527d5b;
+  border-radius: 4px;
+}
+#leadership-view .leadership-section-header > span {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  color: #315f3d;
+  background: #dcebe0;
+  border-radius: 50%;
+  font-size: 7.5pt;
+}
+#leadership-view .leadership-section-header h2 { color: #233f2c; font-size: 11pt; }
+#leadership-view .leadership-detail-link {
+  padding: 3px 6px;
+  color: #315d3b;
+  background: #e4efe5;
+  border-radius: 4px;
+  font-size: 7pt;
+  font-weight: 700;
+}
+#leadership-view .leadership-data-note { color: #4e5e51; font-size: 7pt; }
+#leadership-view .leadership-delta {
+  padding: 1px 4px;
+  color: #244e68;
+  background: #e8f2f8;
+  border-radius: 4px;
+  font-size: 6.2pt;
+  font-weight: 700;
+}
+#leadership-view .leadership-delta.is-up { color: #245c72; background: #e4f2f7; }
+#leadership-view .leadership-delta.is-down { color: #79513a; background: #f7eee5; }
+#leadership-view .leadership-delta.is-flat { color: #4d5b63; background: #e9edef; }
+#leadership-view .leadership-delta.is-unavailable { color: #5f6b65; background: #eff1ef; }
+#leadership-view .leadership-purchase-summary > div {
+  padding: 4px 8px;
+  background: #edf5ee;
+  border-left: 3px solid #4f815b;
+  border-radius: 4px;
+}
+#leadership-view .leadership-purchase-summary > div > strong { color: #214c31; font-size: 15pt; }
+#leadership-view .leadership-purchase-summary > div > span { color: #445b49; font-size: 7pt; }
+#leadership-view .leadership-pie-label {
+  fill: #293d30;
+  font-size: 8.8px;
+  font-weight: 700;
+}
+#leadership-view .leadership-pie-label tspan:last-child { fill: #405b48; font-size: 8.2px; font-weight: 600; }
+#leadership-view .leadership-purchase-location-totals { gap: 4px 8px; padding: 5px 0; }
+#leadership-view .leadership-purchase-location {
+  padding: 4px 6px;
+  color: #35473a;
+  background: #f3f6f3;
+  border-top: 2px solid #718477;
+  border-radius: 3px;
+  font-size: 6.8pt;
+}
+#leadership-view .leadership-purchase-location:nth-child(1) { background: #fbf3eb; border-top-color: #bf8058; }
+#leadership-view .leadership-purchase-location:nth-child(2) { background: #edf3f8; border-top-color: #5d85a7; }
+#leadership-view .leadership-purchase-location:nth-child(3) { background: #edf5ee; border-top-color: #4f815b; }
+#leadership-view .leadership-purchase-location > strong { color: #263d2d; font-size: 7.2pt; }
+#leadership-view .leadership-money-chart { gap: 6px 12px; }
+#leadership-view .leadership-money-item {
+  padding: 5px 7px;
+  background: #f5f7f5;
+  border: 1px solid #e4e9e4;
+  border-radius: 4px;
+}
+#leadership-view .leadership-money-label > span { color: #344b3b; font-size: 6.8pt; font-weight: 600; }
+#leadership-view .leadership-money-label > strong { color: #273f2e; font-size: 7.5pt; }
+#leadership-view .leadership-money-track { height: 26px; }
+#leadership-view .leadership-money-track i { width: 34px; }
+#leadership-view .leadership-byproduct-revenue { gap: 4px 8px; color: #405347; font-size: 6.2pt; }
+#leadership-view .leadership-byproduct-revenue span {
+  padding: 3px 5px;
+  background: #fbf2e8;
+  border-radius: 3px;
+}
+#leadership-view .leadership-byproduct-revenue strong { color: #704b2d; }
+#leadership-view .leadership-stage-legend { color: #526457; font-size: 6.5pt; }
+#leadership-view .leadership-workshop {
+  padding: 6px 7px 5px;
+  background: #f8faf8;
+  border: 1px solid #dfe8e0;
+  border-top: 3px solid #63856a;
+  border-radius: 5px;
+}
+#leadership-view .leadership-workshop-head { margin-bottom: 5px; }
+#leadership-view .leadership-workshop-head h3 { color: #244b31; font-size: 9pt; }
+#leadership-view .leadership-workshop-head span { color: #4c5c50; font-size: 7pt; }
+#leadership-view .leadership-workshop-head > strong { color: #205a35; font-size: 12pt; }
+#leadership-view .leadership-stage-row {
+  padding: 4px 5px;
+  background: #fff;
+  border-top-color: #e1e9e2;
+}
+#leadership-view .leadership-stage-title strong { color: #263d2d; font-size: 7pt; }
+#leadership-view .leadership-stage-title > span { color: #344c3a; font-size: 6.8pt; font-weight: 600; }
+#leadership-view .leadership-stage-title > span i { color: #718174; }
+#leadership-view .leadership-estimate-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 4px;
+  color: #77551e;
+  background: #fbf1d8;
+  border-radius: 3px;
+  font-size: 6pt;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+#leadership-view .leadership-stage-meta { gap: 3px; margin-top: 3px; font-size: 6.4pt; }
+#leadership-view .leadership-stage-meta > span {
+  padding: 2px 4px;
+  color: #304d3a;
+  background: #edf4ee;
+  border: 1px solid #e0e9e1;
+  border-radius: 4px;
+  font-size: 6.4pt;
+}
+#leadership-view .leadership-stage-meta > span:nth-child(1) { color: #315673; background: #edf4f9; border-color: #dbe8f0; }
+#leadership-view .leadership-stage-meta > span:nth-child(2) { color: #77552e; background: #fbf4e8; border-color: #f0e4ce; }
+#leadership-view .leadership-stage-meta > span:nth-child(3) { color: #315a3b; background: #edf5ee; border-color: #dce9de; }
+#leadership-view .leadership-stage-meta .leadership-delta { font-size: 5.8pt; }
+#leadership-view .leadership-stage-chart { gap: 6px; }
+#leadership-view .leadership-eff-track { height: 4px; }
+#leadership-view .leadership-eff-row > strong { color: #354a3a; font-size: 6.5pt; }
+#leadership-view .leadership-stage-efficiency { font-size: 6pt; }
+#leadership-view .leadership-main-stages {
+  margin-top: 5px;
+  padding: 4px 5px 2px;
+  background: #f0f6f1;
+  border-top: 2px solid #47734f;
+  border-radius: 0 0 4px 4px;
+}
+#leadership-view .leadership-bottleneck { color: #42584a; font-size: 6.6pt; }
+#leadership-view .leadership-stock-legend { color: #344b3a; font-size: 7pt; }
+#leadership-view .leadership-stock-detail { color: #4d5d50; font-size: 6.8pt; }
+#leadership-view .leadership-quality-workshop > h3 { color: #284b33; font-size: 8pt; }
+#leadership-view .leadership-quality-x2-grid { gap: 4px; border: 0; }
+#leadership-view .leadership-quality-kind {
+  padding: 6px 7px;
+  background: #f0f6f1;
+  border: 1px solid #dce8de;
+  border-radius: 4px;
+}
+#leadership-view .leadership-quality-kind:nth-child(2) { background: #eef4f9; border-color: #dce6ef; }
+#leadership-view .leadership-quality-kind:nth-child(3) { background: #fbf4e9; border-color: #eee2cd; }
+#leadership-view .leadership-quality-kind + .leadership-quality-kind { border-left: 1px solid #dce8de; }
+#leadership-view .leadership-quality-kind .leadership-quality-head { color: #304638; font-size: 7pt; }
+#leadership-view .leadership-quality-kind .leadership-quality-head b {
+  padding: 2px 4px;
+  color: #225c36;
+  background: #dcefe0;
+  border-radius: 4px;
+  font-size: 7pt;
+}
+#leadership-view .leadership-quality-kind .leadership-quality-legend { color: #3f5044; font-size: 6.3pt; }
+#leadership-view .leadership-quality-comparison { color: #48594d; font-size: 6.2pt; }
+#leadership-view .leadership-labor-summary { color: #435448; font-size: 7pt; }
+#leadership-view .leadership-labor-summary > strong { color: #214c31; font-size: 16pt; }
+#leadership-view .leadership-dept-row { color: #3e5144; font-size: 6.8pt; }
+#leadership-view .leadership-dept-row strong { color: #2b4332; font-size: 6.8pt; }
+#leadership-view .leadership-dept-track { height: 5px; }
+#leadership-view .leadership-shipment-summary { color: #425548; font-size: 7pt; }
+#leadership-view .leadership-shipment-summary strong { color: #234a30; font-size: 13pt; }
+#leadership-view .leadership-shipment-chart .leadership-breakdown-row { font-size: 7pt; }
+#leadership-view .leadership-shipment-chart .leadership-breakdown-row > strong { color: #294a34; font-size: 7pt; }
+#leadership-view .leadership-quality-workshop:not(.leadership-quality-x2) > .leadership-quality-item {
+  margin-top: 0;
+  padding: 6px 8px;
+  background: #f0f6f1;
+  border: 1px solid #dce8de;
+  border-radius: 4px;
+}
+#leadership-view .leadership-data-notes { color: #46564a; font-size: 7pt; }
+#leadership-view .leadership-muted, #leadership-view .leadership-empty { color: #46594b; font-size: 7pt; }
+#leadership-view .leadership-paper-footer { color: #526055; font-size: 6.5pt; }
+#leadership-view .leadership-stage-meta .leadership-delta { font-size: 6pt; }
+#leadership-view .leadership-paper-header { padding-bottom: 4mm; }
+#leadership-view .leadership-paper-title p { white-space: nowrap; }
+#leadership-view .leadership-purchase-visual-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 158px;
+  align-items: center;
+  gap: 8px;
+}
+#leadership-view .leadership-purchase-pie { max-height: 46mm; }
+#leadership-view .leadership-purchase-location-totals {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+  padding: 0;
+  border: 0;
+}
+#leadership-view .leadership-purchase-location {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 4px;
+  padding: 5px 6px;
+}
+#leadership-view .leadership-purchase-location > span {
+  grid-column: 1 / -1;
+  flex-basis: auto;
+}
+#leadership-view .leadership-purchase-location > strong { grid-column: 1; }
+#leadership-view .leadership-purchase-location > .leadership-delta { grid-column: 2; justify-self: end; }
+#leadership-view .leadership-pie-position-ring-base {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 11;
+}
+#leadership-view .leadership-pie-position-ring {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: butt;
+}
+#leadership-view .leadership-pie-ring-separator {
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+#leadership-view .leadership-pie-label { font-size: 10px; }
+#leadership-view .leadership-pie-label tspan:last-child { font-size: 9.3px; }
+#leadership-view .leadership-workshop.is-empty { align-self: start; }
+#leadership-view .leadership-workshop:not(.is-empty) { padding-top: 4px; }
+#leadership-view .leadership-stage-row { padding-block: 2px; }
+#leadership-view .leadership-stage-meta { gap: 2px; }
+#leadership-view .leadership-main-stages { margin-top: 3px; padding-top: 2px; }

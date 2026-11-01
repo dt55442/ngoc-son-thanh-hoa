@@ -744,11 +744,13 @@ const RC_SOURCE_STATE = {
 };
 function reportHasData(spec) {
   if (!spec) return false;
-  // PHỤ PHẨM: báo cáo có cả phần NHẬP tự suy ra (từ Bốc/Cắt) nên phải kiểm cả 2 nguồn
+  // PHỤ PHẨM: báo cáo có cả phần nhập tự suy ra từ các công đoạn nguồn
   if (spec.source === 'phupham') {
     return (state.x2PhuPhamRecords || []).length > 0 ||
       (state.xuong2BoluongRecords || []).length > 0 ||
-      (state.xuong2CutRecords || []).length > 0;
+      (state.xuong2CutRecords || []).length > 0 ||
+      (state.xuong2BaoThoRecords || []).length > 0 ||
+      (state.xuong2BaoTinhRecords || []).length > 0;
   }
   if (spec.source) return ((state[RC_SOURCE_STATE[spec.source]] || []).length > 0);
   if (spec.builder === 'planning') return (state.planningItems || []).length > 0;
@@ -875,5 +877,4 @@ export {
   periodLabel,
   isoWeekKey
 };
-
 

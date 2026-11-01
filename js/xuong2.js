@@ -47,7 +47,7 @@ import {
   x2TicketTotals, x2TypeLabelOf
 } from './x2-pool.js';
 // Thẻ PHỤ PHẨM & BĂM + CÂN ĐỐI (Giai đoạn 2/3 — 18/10/2026)
-import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
+import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } from './x2-phu-pham.js';
 
   // Ghi file dữ liệu qua storage.js (import động để tránh vòng phụ thuộc module
   // — giống cách materials.js dùng)
@@ -16273,6 +16273,15 @@ import { renderX2PhuPhamCard, x2PhuPhamCardCount } from './x2-phu-pham.js';
     });
     return out;
   }
+
+setX2PhuPhamStageDataReader(() => ({
+  baoTho: (state.xuong2BaoThoRecords || [])
+    .filter(r => r)
+    .map(r => Object.assign({ id: r.id }, baoThoDisplay(r))),
+  baoTinh: (state.xuong2BaoTinhRecords || [])
+    .filter(r => r)
+    .map(r => Object.assign({ id: r.id, inSizeKey: r.inSizeKey }, baoTinhDisplay(r)))
+}));
 
 export {
   X2_CARD_DEFS,

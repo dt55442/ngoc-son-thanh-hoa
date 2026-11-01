@@ -400,7 +400,7 @@ function fmtCurrency(value) {
   return `${fmt(value, 0)} đ`;
 }
 
-function renderComparison(current, previous, unit, digits = 1, percentagePoints = false) {
+function renderComparison(current, previous, unit, digits = 1, percentagePoints = false, includePercent = true) {
   if (current == null || previous == null || !Number.isFinite(Number(current)) || !Number.isFinite(Number(previous))) {
     return '<span class="leadership-delta is-unavailable" title="Không đủ dữ liệu để so sánh">—</span>';
   }
@@ -410,7 +410,7 @@ function renderComparison(current, previous, unit, digits = 1, percentagePoints 
   }
   const direction = delta > 0 ? 'is-up' : 'is-down';
   const symbol = delta > 0 ? '▲' : '▼';
-  const percent = Number(previous) !== 0 && !percentagePoints
+  const percent = includePercent && Number(previous) !== 0 && !percentagePoints
     ? ` · ${fmt(Math.abs(delta / Number(previous) * 100))}%`
     : '';
   const shownUnit = percentagePoints ? 'điểm %' : unit;
@@ -457,13 +457,13 @@ function renderCapacity(summary, previousCapacity) {
       const estimate = stage.estimated ? ' · ước tính' : '';
       return `<div class="leadership-stage-row" title="${escapeHTML(stage.turns ? `${fmt(stage.turns, 0)} lượt${estimate}` : 'Chưa ghi lượt')}">
         <div class="leadership-stage-title">
-          <strong>${escapeHTML(stage.label)}</strong>
+          <strong>${escapeHTML(stage.label)}${stage.estimated ? '<small class="leadership-estimate-badge">Ước tính 600 kg/xe</small>' : ''}</strong>
           <span>${escapeHTML(output)}${stage.estimated ? ' ≈' : ''} <i>·</i> ${escapeHTML(capacity)}</span>
         </div>
         <div class="leadership-stage-meta">
-          <span>Giờ làm ${fmt(stage.hours, 1)} h ${renderComparison(stage.hours, before && before.hours, 'h', 1)}</span>
-          <span>Sự cố ${fmt(stage.incidentHours, 1)} h ${renderComparison(stage.incidentHours, before && before.incidentHours, 'h', 1)}</span>
-          <span>SL ${renderComparison(stage.quantity, before && before.quantity, stage.quantityUnit, 1)}</span>
+          <span>Giờ làm ${fmt(stage.hours, 1)} h ${renderComparison(stage.hours, before && before.hours, 'h', 1, false, false)}</span>
+          <span>Sự cố ${fmt(stage.incidentHours, 1)} h ${renderComparison(stage.incidentHours, before && before.incidentHours, 'h', 1, false, false)}</span>
+          <span>SL ${renderComparison(stage.quantity, before && before.quantity, stage.quantityUnit, 1, false, false)}</span>
         </div>
         <div class="leadership-stage-chart">
           ${efficiencyBar(stage.efficiency, `${workshop.label} · ${stage.label}`)}
@@ -477,12 +477,11 @@ function renderCapacity(summary, previousCapacity) {
       ? `Nút thắt: ${escapeHTML(workshop.bottleneck.label)} (${fmtPct(workshop.bottleneck.efficiency)})`
       : 'Chưa đủ dữ liệu định mức để xác định nút thắt';
     const count = stages.filter(stage => stage.turns > 0).length;
-    return `<article class="leadership-workshop">
+    return `<article class="leadership-workshop${count ? '' : ' is-empty'}">
       <header class="leadership-workshop-head">
         <div><h3>${escapeHTML(workshop.label)}</h3><span>${count}/${stages.length} công đoạn có dữ liệu</span></div>
         <strong>${fmtPct(workshop.efficiency)} ${renderComparison(workshop.efficiency, previous && previous.efficiency, 'điểm %', 1, true)}</strong>
       </header>
-      <div class="leadership-stage-legend"><span>Công đoạn</span><span>Sản lượng · tốc độ · giờ làm/sự cố</span></div>
       ${count ? componentStages.filter(stage => stage.turns > 0 || stage.quantity > 0).map(renderStage).join('') : '<p class="leadership-empty">Chưa có sản lượng được ghi trong kỳ này.</p>'}
       ${count && mainStages.some(stage => stage.turns > 0 || stage.quantity > 0)
         ? `<div class="leadership-main-stages">${mainStages.filter(stage => stage.turns > 0 || stage.quantity > 0).map(renderStage).join('')}</div>`
@@ -512,6 +511,13 @@ function svgPoint(cx, cy, radius, angle) {
   return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
 }
 
+function svgArcPath(cx, cy, radius, startAngle, endAngle) {
+  const start = svgPoint(cx, cy, radius, startAngle);
+  const end = svgPoint(cx, cy, radius, endAngle);
+  const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+}
+
 function renderPurchasePie(purchases) {
   const groups = purchases.byLocation.map((location, index) => ({
     ...location,
@@ -530,20 +536,27 @@ function renderPurchasePie(purchases) {
   ];
   const segments = [];
   const boundaries = [];
+  const positionSegments = [];
   let angle = -Math.PI / 2;
   groups.forEach(group => {
+    const start = angle;
     boundaries.push(angle);
     group.slices.forEach((slice, sliceIndex) => {
-      const start = angle;
-      const end = start + (slice.weight / total) * Math.PI * 2;
+      const sliceStart = angle;
+      const end = sliceStart + (slice.weight / total) * Math.PI * 2;
       segments.push({
         ...slice,
         location: group.label,
         locationIndex: Math.min(group.locationIndex, palettes.length - 1),
         color: palettes[Math.min(group.locationIndex, palettes.length - 1)][Math.min(sliceIndex, 3)],
-        start, end, mid: (start + end) / 2
+        start: sliceStart, end, mid: (sliceStart + end) / 2
       });
       angle = end;
+    });
+    positionSegments.push({
+      start,
+      end: angle,
+      color: palettes[Math.min(group.locationIndex, palettes.length - 1)][0]
     });
   });
 
@@ -580,8 +593,24 @@ function renderPurchasePie(purchases) {
     const point = svgPoint(cx, cy, radius + 1, boundary);
     return `<line x1="${cx}" y1="${cy}" x2="${point.x.toFixed(2)}" y2="${point.y.toFixed(2)}" class="leadership-pie-location-boundary"/>`;
   }).join('');
+  const ringRadius = radius + 10;
+  const positionRing = positionSegments.map(group => {
+    const fullCircle = Math.abs((group.end - group.start) - Math.PI * 2) < 1e-6;
+    const shape = fullCircle
+      ? `<circle cx="${cx}" cy="${cy}" r="${ringRadius}" class="leadership-pie-position-ring" stroke="${group.color}"/>`
+      : `<path d="${svgArcPath(cx, cy, ringRadius, group.start, group.end)}" class="leadership-pie-position-ring" stroke="${group.color}"/>`;
+    return shape;
+  }).join('');
+  const ringSeparators = boundaries.map(boundary => {
+    const inner = svgPoint(cx, cy, radius + 5, boundary);
+    const outer = svgPoint(cx, cy, radius + 15, boundary);
+    return `<line x1="${inner.x.toFixed(2)}" y1="${inner.y.toFixed(2)}" x2="${outer.x.toFixed(2)}" y2="${outer.y.toFixed(2)}" class="leadership-pie-ring-separator"/>`;
+  }).join('');
   const aria = segments.map(segment => `${segment.location}, ${segment.label}: ${fmt(segment.weight / 1000, 2)} t`).join('; ');
   return `<svg class="leadership-purchase-pie" viewBox="0 0 620 180" role="img" aria-label="${escapeHTML(`Cơ cấu mua vào theo vị trí và nguyên liệu: ${aria}`)}">
+    <circle cx="${cx}" cy="${cy}" r="${ringRadius}" class="leadership-pie-position-ring-base"/>
+    ${positionRing}
+    ${ringSeparators}
     ${shapes}
     <circle cx="${cx}" cy="${cy}" r="${radius}" class="leadership-pie-outline"/>
     ${boundaryLines}
@@ -618,8 +647,10 @@ function renderPurchases(purchases, previousPurchases, sales, previousSales) {
       <div><strong>${fmt(purchases.weight / 1000, 2)} <small>t</small></strong><span>${purchases.rows} phiếu nhập trong kỳ</span></div>
       ${renderComparison(purchases.weight / 1000, previousPurchases.weight / 1000, 't', 2)}
     </div>
-    ${renderPurchasePie(purchases)}
-    <div class="leadership-purchase-location-totals">${locations}</div>
+    <div class="leadership-purchase-visual-row">
+      ${renderPurchasePie(purchases)}
+      <div class="leadership-purchase-location-totals">${locations}</div>
+    </div>
     ${renderMoneyChart(purchases, previousPurchases, sales, previousSales)}`;
 }
 
@@ -696,7 +727,18 @@ function renderShipments(shipments, previous, hasHistory) {
     ${gap}`;
 }
 
+function compactPeriodLabel(mode, key) {
+  if (mode === 'week') {
+    const match = /^(\d{4})-W(\d{1,2})$/.exec(String(key || ''));
+    return match ? `Tuần ${Number(match[2])}-${match[1]}` : String(key || '');
+  }
+  const match = /^(\d{4})-(\d{2})$/.exec(String(key || ''));
+  return match ? `Tháng ${Number(match[2])}-${match[1]}` : String(key || '');
+}
+
 export function buildLeadershipReportMarkup(summary) {
+  const currentPeriodLabel = compactPeriodLabel(summary.mode, summary.key);
+  const previousPeriodLabel = compactPeriodLabel(summary.previous.mode, summary.previous.key);
   const inventoryText = summary.inventory.current == null
     ? 'Chưa có dữ liệu tồn kho'
     : `${fmt(summary.inventory.current, 0)} thanh`;
@@ -725,7 +767,7 @@ export function buildLeadershipReportMarkup(summary) {
     <article class="leadership-paper" data-report-page="1">
       <header class="leadership-paper-header">
         <div class="leadership-paper-brand"><span>NHÀ MÁY NGỌC SƠN</span><span>THANH HÓA</span></div>
-        <div class="leadership-paper-title"><h1>BÁO CÁO ĐIỀU HÀNH</h1><p>${escapeHTML(summary.label)} <i>·</i> ${summary.range.from} — ${summary.range.to} <i>·</i> So với ${escapeHTML(summary.previous.label)}</p></div>
+        <div class="leadership-paper-title"><h1>BÁO CÁO ĐIỀU HÀNH</h1><p>${escapeHTML(currentPeriodLabel)} vs ${escapeHTML(previousPeriodLabel)}</p></div>
         <span class="leadership-paper-date">Ngày lập<br><strong>${todayISO()}</strong></span>
       </header>
       <section class="leadership-section">
@@ -734,13 +776,12 @@ export function buildLeadershipReportMarkup(summary) {
       </section>
       <section class="leadership-section">
         <header class="leadership-section-header"><span>02</span><h2>Sản xuất &amp; công suất</h2>${detailLink('dashboard-view', 'Dashboard')}</header>
-        <p class="leadership-data-note">Bốc luồng/Cắt chọn quy đổi kg; ký hiệu ≈ là ước tính 600 kg/xe. Giờ làm, sự cố và hiệu suất so với kỳ liền trước.</p>
         <div class="leadership-workshops">${renderCapacity(summary, summary.previous.capacity)}</div>
       </section>
       <footer class="leadership-paper-footer"><span>BÁO CÁO NỘI BỘ · THEO DỮ LIỆU ĐÃ GHI NHẬN</span><span>01 / 02</span></footer>
     </article>
     <article class="leadership-paper" data-report-page="2">
-      <header class="leadership-paper-subheader"><span>NHÀ MÁY NGỌC SƠN · BÁO CÁO ĐIỀU HÀNH</span><strong>${escapeHTML(summary.label)} · So với ${escapeHTML(summary.previous.label)}</strong></header>
+      <header class="leadership-paper-subheader"><span>NHÀ MÁY NGỌC SƠN · BÁO CÁO ĐIỀU HÀNH</span><strong>${escapeHTML(currentPeriodLabel)} vs ${escapeHTML(previousPeriodLabel)}</strong></header>
       <section class="leadership-section">
         <header class="leadership-section-header"><span>03</span><h2>Tồn kho</h2>${detailLink('kanban-view', 'Kho Nan')}</header>
         <div class="leadership-stock-summary">

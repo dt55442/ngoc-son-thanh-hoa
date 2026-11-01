@@ -109,30 +109,61 @@ check('A3: tồn ban đầu = 2.000 + 200 + 300 = 2.500 kg',
   pp.x2PhuPhamStockTotal() === 2500);
 check('A4: mỗi nguồn có tồn riêng (ngọn 2.000 · mắt 200 · ống lỗi 300)',
   pp.x2PhuPhamStock('ngon') === 2000 && pp.x2PhuPhamStock('mat') === 200 && pp.x2PhuPhamStock('ong_loi') === 300);
+state.x2PhuPhamRecords = [
+  { id: 'legacy-raw', date: '2026-10-18', kind: 'ngon', form: 'raw', outType: 'sale', kg: 0, price: 500, amount: 0 },
+  { id: 'legacy-chipped', date: '2026-10-18', kind: 'ong_loi', form: 'chipped', outType: 'sale', kg: 0, price: 500, amount: 0 }
+];
+const legacyForms = pp.x2PhuPhamOutRows();
+check('A5: dữ liệu cũ Bán nguyên/Băm hiển thị thành Cọc/Rác băm',
+  legacyForms.find(r => r.id === 'legacy-raw').form === 'coc' &&
+  legacyForms.find(r => r.id === 'legacy-chipped').form === 'rac_bam');
+state.x2PhuPhamRecords = [];
 
 // ─── B. GHI BÁN / TIÊU HỦY (handler thật) ─────────────────────
 const g = id => document.getElementById(id);
 g('x2-pp-date').value = '2026-10-18';
-g('x2-pp-kind').value = 'ngon';
-g('x2-pp-out-form').value = 'raw';
+g('x2-pp-out-form').value = 'coc';
 g('x2-pp-out-type').value = 'sale';
-g('x2-pp-kg').value = '1000';
+g('x2-pp-scale-in').value = '5000';
+g('x2-pp-scale-out').value = '6000';
 g('x2-pp-price').value = '500';
 g('x2-pp-party').value = 'Trại nấm';
 g('x2-pp-note').value = 'bán ngọn';
 pp.onX2PhuPhamCalc();
-check('B1: dòng tự tính thành tiền = 1.000 × 500 = 500.000 đ',
+check('B1: cân thực tự tính = cân ra 6.000 − cân vào 5.000 = 1.000 kg',
+  g('x2-pp-kg').value === '1000');
+check('B2: dòng tự tính thành tiền = 1.000 × 500 = 500.000 đ',
   String(g('x2-pp-amount').textContent).includes('500.000'));
 pp.handleX2PhuPhamSubmit({ preventDefault(){} });
 const sale = state.x2PhuPhamRecords[0];
-check('B2: lưu lượt bán: 1.000 kg · 500 đ/kg · 500.000 đ · người mua',
-  !!sale && sale.kg === 1000 && sale.price === 500 && sale.amount === 500000 && sale.party === 'Trại nấm');
-check('B3: tồn giảm: ngọn còn 1.000 kg · tổng còn 1.500 kg',
-  pp.x2PhuPhamStock('ngon') === 1000 && pp.x2PhuPhamStockTotal() === 1500);
-check('B4: doanh thu tháng = 500.000 đ', pp.x2PhuPhamRevenue('2026-10-01', '2026-10-31') === 500000);
+check('B3: lưu lượt bán cùng hai chỉ số cân và KL thực tính được',
+  !!sale && sale.scaleInKg === 5000 && sale.scaleOutKg === 6000 &&
+  sale.kg === 1000 && sale.price === 500 && sale.amount === 500000 && sale.party === 'Trại nấm');
+check('B4: bán không chọn nguồn và trừ vào tồn gộp còn 1.500 kg',
+  sale.kind === 'all' && pp.x2PhuPhamStockTotal() === 1500);
+check('B5: doanh thu tháng = 500.000 đ', pp.x2PhuPhamRevenue('2026-10-01', '2026-10-31') === 500000);
+pp.editX2PhuPham(sale.id);
+check('B6: sửa lượt bán nạp lại chỉ số cân vào/ra và KL thực',
+  g('x2-pp-scale-in').value === '5000' && g('x2-pp-scale-out').value === '6000' &&
+  g('x2-pp-kg').value === '1000');
+g('x2-pp-scale-out').value = '4000';
+pp.onX2PhuPhamCalc();
+const saleCount = state.x2PhuPhamRecords.length;
+pp.handleX2PhuPhamSubmit({ preventDefault(){} });
+check('B7: cân ra thấp hơn cân vào cho KL âm và không lưu lượt sửa',
+  g('x2-pp-kg').value === '-1000' && state.x2PhuPhamRecords.length === saleCount &&
+  sale.kg === 1000);
+pp.resetX2PhuPhamForm();
+g('x2-pp-scale-in').value = '5000';
+pp.onX2PhuPhamCalc();
+const incompleteCount = state.x2PhuPhamRecords.length;
+pp.handleX2PhuPhamSubmit({ preventDefault(){} });
+check('B8: thiếu một chỉ số cân thì không lưu lượt mới',
+  state.x2PhuPhamRecords.length === incompleteCount);
+pp.resetX2PhuPhamForm();
 // Thêm 1 lượt TIÊU HỦY 100 kg (giá 0)
 state.x2PhuPhamRecords.push({ id: 'pp-dispose', date: '2026-10-18', kind: 'ngon', form: 'chipped', outType: 'dispose', kg: 100, price: 0, amount: 0, party: '', note: '' });
-check('B5: tiêu hủy 100 kg → tổng tồn còn 1.400 kg · doanh thu KHÔNG đổi',
+check('B9: tiêu hủy 100 kg → tổng tồn còn 1.400 kg · doanh thu KHÔNG đổi',
   pp.x2PhuPhamStockTotal() === 1400 && pp.x2PhuPhamRevenue('2026-10-01', '2026-10-31') === 500000);
 
 
@@ -183,38 +214,95 @@ pp.handleX2StocktakeSubmit({ preventDefault(){} });
 check('F3: kiểm kê bãi luồng cây: sổ 5.000 → thực 4.800 · tồn nhóm = 4.800 kg',
   state.x2Stocktakes.length === 2 && pool.x2TicketTotals('cay').kg === 4800);
 
-// ─── G. ĐỊNH MỨC TỶ LỆ (Admin) ───────────────────────────────
+// ─── G. ƯỚC TÍNH MÙN TỪ NHẬT KÝ CÔNG ĐOẠN ───────────────────
+state.xuong2BoOngRecords.push({
+  id: 'bo-rough', date: '2026-10-18', poolMode: true, inputOng: 2000, klOngLoai: 0, klOngBo: 2000
+});
+state.xuong2BaoThoRecords = [{
+  id: 'rough-run', date: '2026-10-18', boOngIds: ['bo-rough'],
+  dais: [1200], rongs: [18], thicks: [7]
+}];
+state.xuong2ChonNanThoRecords = [{
+  id: 'rough-output', date: '2026-10-18', baothoId: 'rough-run', shiftIdx: null,
+  quantity: 10000, unitVol: 0.0001512, volume: 1.512, cls: 'A'
+}];
+state.xuong2BaoTinhRecords = [
+  {
+    id: 'fine-run', date: '2026-10-18', kind: 'tinh', batchDims: [1200, 24, 7],
+    inQty: 1000, qtyOk: 800, qtyErr: 200, outDims: [1200, 20, 6]
+  },
+  {
+    id: 'downgrade-run', date: '2026-10-18', kind: 'ha_cap', batchDims: [1200, 20, 6],
+    inQty: 100, qtyOk: 90, qtyErr: 10, outDims: [1200, 18, 5]
+  },
+  {
+    id: 'planing-run', date: '2026-10-18', kind: 'bao_thanh', inDims: [1200, 18, 6],
+    inQty: 100, qtyOk: 90, qtyErr: 10, outDims: [1200, 16, 5]
+  }
+];
+const estimatedMùn = pp.x2PhuPhamInRows('2026-10-01', '2026-10-31')
+  .filter(r => r.kind === 'mun_tuoi' || r.kind === 'mun_kho');
+check('G1: Mùn tươi = 2.000 kg ống vào − 1.512 kg thanh lý thuyết = 488 kg',
+  estimatedMùn.find(r => r.kind === 'mun_tuoi').kg === 488);
+check('G2: Mùn khô suy ra theo thể tích hao hụt của Bào tinh + Hạ cấp',
+  estimatedMùn.filter(r => r.kind === 'mun_kho').reduce((s, r) => s + r.kg, 0) === 61.2 &&
+  !estimatedMùn.some(r => r.id === 'in-btinh-planing-run'));
+check('G3: mùn tự suy ra được cộng vào tồn phụ phẩm ước tính gộp',
+  pp.x2PhuPhamStockTotal() === 1749.2);
+const totalBeforeInvalidEstimate = pp.x2PhuPhamStockTotal();
+state.xuong2BoOngRecords.push({
+  id: 'bo-negative', date: '2026-10-18', poolMode: true, inputOng: 1, klOngLoai: 0, klOngBo: 1
+});
+state.xuong2BaoThoRecords.push({
+  id: 'rough-negative', date: '2026-10-18', boOngIds: ['bo-negative'],
+  dais: [1200], rongs: [18], thicks: [7]
+});
+state.xuong2ChonNanThoRecords.push({
+  id: 'rough-negative-output', date: '2026-10-18', baothoId: 'rough-negative', shiftIdx: null,
+  quantity: 100, unitVol: 0.001, volume: 0.1, cls: 'A'
+});
+const invalidEstimate = pp.x2PhuPhamInRows().find(r => r.id === 'in-bt-rough-negative');
+check('G4: khối lượng lý thuyết vượt đầu vào được cảnh báo, không tính mùn âm',
+  !!invalidEstimate && invalidEstimate.warning === true && invalidEstimate.kg === 0 &&
+  invalidEstimate.note.includes('cần kiểm tra'));
+check('G5: ước tính bất hợp lý không làm đổi tồn gộp',
+  pp.x2PhuPhamStockTotal() === totalBeforeInvalidEstimate);
+
+// ─── H. ĐỊNH MỨC TỶ LỆ (Admin) ───────────────────────────────
 g('x2-pp-y-cay-ongdat').value = '90';
 g('x2-pp-y-cay-ongloi').value = '2';
 g('x2-pp-y-cay-mat').value = '2';
 g('x2-pp-y-ong-ongdat').value = '96';
 g('x2-pp-y-ong-ongloi').value = '4';
 pp.handleX2YieldRateSave();
-check('G1: lưu định mức tỷ lệ: xe 90/2/2 · ống 96/4',
+check('H1: lưu định mức tỷ lệ: xe 90/2/2 · ống 96/4',
   state.x2YieldRates.cay.ongDat === 90 && state.x2YieldRates.cay.mat === 2 &&
   state.x2YieldRates.ong.ongDat === 96 && state.x2YieldRates.ong.ongLoi === 4);
-check('G2: định mức được ghi xuống localStorage',
+check('H2: định mức được ghi xuống localStorage',
   JSON.parse(localStorage.getItem('bamboo_tracker_x2_yield_rate_v1') || '{}').cay.ongDat === 90);
 
-// ─── H. RENDER THẺ THẬT ───────────────────────────────────────
+// ─── I. RENDER THẺ THẬT ───────────────────────────────────────
+pp.setPpMonth('2026-10');
 pp.renderX2PhuPhamCard();
-check('H1: thanh tồn hiện "Tồn phụ phẩm" + chip từng nguồn',
+check('I1: thanh tồn chỉ hiện tổng gộp, không hiện chip từng nguồn',
   String(g('x2-pp-stock-bar').innerHTML).includes('Tồn phụ phẩm') &&
-  String(g('x2-pp-stock-bar').innerHTML).includes('Ngọn'));
-check('H2: khối giá thành hiện "Giá thành 1 kg ống đạt"',
+  !String(g('x2-pp-stock-bar').innerHTML).includes('Ngọn'));
+check('I2: khối giá thành hiện "Giá thành 1 kg ống đạt"',
   String(g('x2-pp-cost').innerHTML).includes('Giá thành 1 kg ống đạt'));
-check('H3: khối cân đối hiện "Cân đối khối lượng"',
+check('I3: khối cân đối hiện "Cân đối khối lượng"',
   String(g('x2-pp-balance').innerHTML).includes('Cân đối khối lượng'));
-check('H4: bảng lịch sử có dòng "Nhập ước tính" + lượt bán',
+check('I4: lịch sử giữ nguồn tự tính, hiển thị mùn và lượt bán',
   String(g('x2-pp-day-cards').innerHTML).includes('Nhập ước tính') &&
-  String(g('x2-pp-day-cards').innerHTML).includes('Trại nấm'));
-check('H5: sổ giảm trừ NCC hiện "Nhà Tế"',
+  String(g('x2-pp-day-cards').innerHTML).includes('Trại nấm') &&
+  String(g('x2-pp-day-cards').innerHTML).includes('Mùn tươi') &&
+  String(g('x2-pp-day-cards').innerHTML).includes('Mùn khô'));
+check('I5: sổ giảm trừ NCC hiện "Nhà Tế"',
   String(g('x2-pp-credit').innerHTML).includes('Nhà Tế'));
-check('H6: mở thẻ x2-phu-pham-card không lỗi',
+check('I6: mở thẻ x2-phu-pham-card không lỗi',
   x2.x2OpenCard('x2-phu-pham-card') === true);
 
 
-// ─── I. CẤU TRÚC + NỐI 6 CHỖ + BÁO CÁO/XUẤT EXCEL ─────────────
+// ─── J. CẤU TRÚC + NỐI 6 CHỖ + BÁO CÁO/XUẤT EXCEL ─────────────
 const stSrc = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
 const stgSrc = fs.readFileSync(new URL('../js/storage.js', import.meta.url), 'utf8');
 const cloudSrc = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
@@ -226,53 +314,67 @@ const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const supSrc = fs.readFileSync(new URL('../js/suppliers.js', import.meta.url), 'utf8');
 const rcSrc = fs.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8');
+const x2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
 
-check('I1: state.js có 3 key + 3 trường dữ liệu mới',
+check('J1: state.js có 3 key + 3 trường dữ liệu mới',
   stSrc.includes("STORAGE_KEY_X2_PHU_PHAM = 'bamboo_tracker_x2_phu_pham_v1'") &&
   stSrc.includes("STORAGE_KEY_X2_STOCKTAKE = 'bamboo_tracker_x2_stocktake_v1'") &&
   stSrc.includes("STORAGE_KEY_X2_YIELD_RATE = 'bamboo_tracker_x2_yield_rate_v1'") &&
   stSrc.includes('x2PhuPhamRecords:') && stSrc.includes('x2Stocktakes:') && stSrc.includes('x2YieldRates:'));
-check('I2: storage.js có 3 hàm khôi phục + ghi vào file/backup + export',
+check('J2: storage.js có 3 hàm khôi phục + ghi vào file/backup + export',
   stgSrc.includes('function restoreX2PhuPham') && stgSrc.includes('function restoreX2Stocktakes') &&
   stgSrc.includes('function restoreX2YieldRates') && stgSrc.includes('x2PhuPhamRecords:') &&
   stgSrc.includes('x2Stocktakes:') && stgSrc.includes('x2YieldRates:') &&
   stgSrc.includes('restoreX2PhuPham,'));
-check('I3: cloud.js có snapshot/core/merge/persist/apply + RATE_DOMAINS',
+check('J3: cloud.js có snapshot/core/merge/persist/apply + RATE_DOMAINS',
   (cloudSrc.match(/x2PhuPhamRecords:/g) || []).length >= 2 &&
   (cloudSrc.match(/x2PhuPhamRecords\)/g) || []).length >= 2 &&
   cloudSrc.includes("STORAGE_KEY_X2_PHU_PHAM") &&
   cloudSrc.includes("'x2YieldRates'") &&
   cloudSrc.includes('if (data.x2PhuPhamRecords)'));
-check('I4: history.js + main.js đã nối 3 miền',
+check('J4: history.js + main.js đã nối 3 miền',
   histSrc.includes('x2PhuPhamRecords:') && histSrc.includes('x2Stocktakes:') &&
   mainSrc.includes('loadX2PhuPham()') && mainSrc.includes('loadX2Stocktakes()') && mainSrc.includes('loadX2YieldRates()'));
-check('I5: index.html có mini card + thẻ chi tiết + form + các vùng',
+check('J5: index.html có mini card + thẻ chi tiết + form + các vùng',
   idx.includes('data-x2-card="x2-phu-pham-card"') && idx.includes('id="x2-phu-pham-card"') &&
   idx.includes('id="x2-pp-form"') && idx.includes('id="x2-pp-st-form"') &&
+  idx.includes('id="x2-pp-scale-in"') && idx.includes('id="x2-pp-scale-out"') &&
+  /<input[^>]*id="x2-pp-kg"[^>]*readonly/i.test(idx) &&
   idx.includes('id="x2-pp-stock-bar"') && idx.includes('id="x2-pp-cost"') &&
-  idx.includes('id="x2-pp-balance"') && idx.includes('id="x2-pp-credit"'));
-check('I6: events.js nối form + kiểm kê + định mức + tháng + sửa/xóa',
+  idx.includes('id="x2-pp-balance"') && idx.includes('id="x2-pp-credit"') &&
+  !idx.includes('id="x2-pp-kind"') && idx.includes('<option value="coc">Cọc</option>') &&
+  idx.includes('<option value="rac_bam">Rác băm</option>') &&
+  idx.includes('<option value="mun_tuoi">Mùn tươi</option>') &&
+  idx.includes('<option value="mun_kho">Mùn khô</option>'));
+check('J6: events.js nối form + kiểm kê + định mức + tháng + sửa/xóa',
   evSrc.includes('handleX2PhuPhamSubmit') && evSrc.includes('handleX2StocktakeSubmit') &&
+  evSrc.includes("'x2-pp-scale-in'") && evSrc.includes("'x2-pp-scale-out'") &&
   evSrc.includes('handleX2YieldRateSave') && evSrc.includes("'x2-pp-month'") &&
   evSrc.includes('data-x2-pp-edit') && evSrc.includes('data-x2-pp-st-del'));
-check('I7: sw.js cache v277 + nạp js/x2-phu-pham.js',
-  /nha-may-ngoc-son-v329/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
-check('I8: styles.css có khối .x2-pp-* + bảng supplier thêm cột Giảm Trừ',
+check('J7: sw.js cache v332 + nạp js/x2-phu-pham.js',
+  /nha-may-ngoc-son-v332/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
+check('J8: styles.css có khối .x2-pp-* + bảng supplier thêm cột Giảm Trừ',
   css.includes('.x2-pp-chip') && css.includes('.x2-pp-yield-chip') &&
   idx.includes('Giảm Trừ (đ)') && supSrc.includes('x2SupplierCreditRows'));
-check('I9: 14 nguồn X2 + 22 thẻ có nguồn xuất (đủ 8 X1)',
+check('J9: 14 nguồn X2 + 22 thẻ có nguồn xuất (đủ 8 X1)',
   xlsx.X2_EXPORT_SOURCES.length === 22 &&
   xlsx.X2_EXPORT_SOURCES.some(s => s.id === 'phupham') &&
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 22 &&
   Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 22);
-check('I10: danh mục báo cáo 47 (X2 có phụ phẩm + cân đối + giá thành + sự cố · NS thêm 3 báo cáo chốt công)',
+check('J10: danh mục báo cáo 47 (X2 có phụ phẩm + cân đối + giá thành + sự cố · NS thêm 3 báo cáo chốt công)',
   specs.REPORT_SPECS.length === 47 &&
   specs.REPORT_SPECS.some(r => r.id === 'phupham') &&
   specs.REPORT_SPECS.some(r => r.kind === 'massBalance') &&
   specs.REPORT_SPECS.some(r => r.kind === 'costing'));
-check('I11: report-center có 2 builder cân đối + giá thành',
+check('J11: report-center có 2 builder cân đối + giá thành',
   rcSrc.includes('buildMassBalanceReport') && rcSrc.includes('buildCostingReport') &&
   rcSrc.includes("spec.kind === 'massBalance'") && rcSrc.includes("spec.kind === 'costing'"));
+check('J12: Bào Thô/Bào Tinh được đọc qua adapter, không tạo key nhập mùn riêng',
+  x2Src.includes('setX2PhuPhamStageDataReader') &&
+  x2Src.includes('baoThoDisplay(r)') && x2Src.includes('baoTinhDisplay(r)') &&
+  pp.PP_KIND_SHORT.mun_tuoi === 'Mùn tươi' && pp.PP_FORM_LABEL.mun_kho === 'Mùn khô');
+check('J13: report-center nhận dữ liệu Bào Thô/Bào Tinh làm nguồn phụ phẩm',
+  rcSrc.includes('state.xuong2BaoThoRecords') && rcSrc.includes('state.xuong2BaoTinhRecords'));
 
 console.log(`\nKẾT QUẢ PHỤ PHẨM & CÂN ĐỐI: ${pass} PASS / ${fail} FAIL`);
 if (fail > 0) process.exit(1);

@@ -142,21 +142,29 @@ try {
   assert.match(markup, /leadership-purchase-pie/);
   assert.equal((markup.match(/class="leadership-purchase-pie"/g) || []).length, 1);
   assert.equal((markup.match(/class="leadership-pie-location-boundary"/g) || []).length, 3);
+  assert.equal((markup.match(/class="leadership-pie-position-ring"/g) || []).length, 3);
+  assert.equal((markup.match(/class="leadership-pie-ring-separator"/g) || []).length, 3);
   assert.match(markup, /leadership-pie-location-boundary/);
   assert.match(markup, /<polyline points=/);
+  assert.match(markup, /class="leadership-purchase-visual-row">[\s\S]*class="leadership-purchase-location-totals"/);
+  assert.match(markup, /Tuần 44-2026 vs Tuần 43-2026/);
   assert.match(markup, /Xưởng 2 · Luồng ống/);
   assert.match(markup, /leadership-money-chart/);
   assert.match(markup, /Thu bán phụ phẩm/);
   assert.match(markup, /leadership-quality-x2-grid/);
   assert.match(markup, /Bullig/);
   assert.match(markup, /leadership-stage-meta/);
+  const stageMetaBlocks = markup.match(/<div class="leadership-stage-meta">[\s\S]*?<\/div>/g) || [];
+  assert.ok(stageMetaBlocks.length > 0);
+  assert.ok(stageMetaBlocks.every(block => !block.includes('%')));
   assert.match(markup, /leadership-main-stages/);
   assert.match(markup, /Giờ làm/);
   assert.match(markup, /Sự cố/);
   assert.match(markup, /m³/);
-  assert.match(markup, /So với Tuần 43/);
+  assert.match(markup, /Bullig - Chọn thanh/);
   assert.match(markup, /＝ Không đổi/);
   assert.doesNotMatch(markup, /Bullig - gia công|Cắt ván|Bào ván/);
+  assert.doesNotMatch(markup, /Bốc luồng\/Cắt chọn quy đổi kg/);
   assert.ok(markup.indexOf('Bốc luồng') < markup.indexOf('leadership-main-stages'));
   assert.ok(markup.indexOf('leadership-main-stages') < markup.indexOf('Ép ván'));
 
@@ -166,6 +174,7 @@ try {
   assert.equal(month.quality.x1.checked, 0);
   assert.equal(month.shipments.quantity, 99);
   assert.equal(month.shipments.unattributedRows, 2);
+  assert.match(buildLeadershipReportMarkup(month), /Tháng 10-2026 vs Tháng 9-2026/);
 
   const report = buildLeadershipReportData(week);
   assert.equal(report.headerRow, 4);
@@ -212,10 +221,15 @@ try {
   assert.ok(styles.includes('@page leadership-report { size: A4 portrait; margin: 0; }'));
   assert.ok(styles.includes('body.leadership-printing .leadership-paper'));
   assert.ok(styles.includes('.leadership-pie-location-boundary'));
+  assert.ok(styles.includes('.leadership-pie-position-ring'));
+  assert.ok(styles.includes('.leadership-purchase-visual-row'));
   assert.ok(styles.includes('.leadership-quality-x2-grid'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v329'"));
+  assert.ok(styles.includes('.leadership-stage-meta > span:nth-child(2)'));
+  assert.ok(styles.includes('flex-wrap: nowrap; align-items: baseline; gap: 0 3px; white-space: nowrap;'));
+  assert.ok(styles.includes('.leadership-section-header'));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v332'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v329'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v332'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

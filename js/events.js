@@ -2156,7 +2156,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── THẺ PHỤ PHẨM & BĂM + CÂN ĐỐI + KIỂM KÊ (Giai đoạn 2/3) ──
     safeOn('x2-pp-form', 'submit', handleX2PhuPhamSubmit);
     safeOn('btn-cancel-x2-pp', 'click', () => resetX2PhuPhamForm());
-    ['x2-pp-kg', 'x2-pp-price'].forEach(id => safeOn(id, 'input', onX2PhuPhamCalc));
+    ['x2-pp-scale-in', 'x2-pp-scale-out', 'x2-pp-price'].forEach(id => safeOn(id, 'input', onX2PhuPhamCalc));
     safeOn('x2-pp-month', 'change', () => setPpMonth((document.getElementById('x2-pp-month') || {}).value));
     safeOn('x2-pp-st-form', 'submit', handleX2StocktakeSubmit);
     safeOn('x2-pp-st-pool', 'change', renderPpStocktakeBook);

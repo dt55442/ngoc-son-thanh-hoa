@@ -5,9 +5,10 @@
 //   • NGỌN + hao hụt (ước tính) từ Bốc Luồng — `ngonKg`
 //   • MẮT LUỒNG từ Cắt Chọn (xe luồng cây) — `klMatLuong`
 //   • ỐNG LỖI đem BĂM từ Cắt Chọn (rejectRoute='bam') — `klOngLoi`
-// PHẦN NHẬP TỰ SUY RA từ 2 bảng cũ (KHÔNG lưu trùng): sửa/xóa lượt Bốc/Cắt là
-// tồn phụ phẩm tự đúng. Thẻ chỉ LƯU phần BÁN / TIÊU HỦY (kg CÂN THỰC + đơn
-// giá) → doanh thu phụ phẩm, dùng TRỪ vào chi phí nguyên liệu để ra
+//   • MÙN TƯƠI / MÙN KHÔ từ khối lượng lý thuyết theo nhật ký Bào Thô/Bào Tinh
+// PHẦN NHẬP TỰ SUY RA (KHÔNG lưu trùng): sửa/xóa nhật ký nguồn là
+// tồn phụ phẩm tự đúng. Thẻ chỉ LƯU phần BÁN / TIÊU HỦY (chỉ số cân vào/ra,
+// kg thực = cân ra − cân vào) + đơn giá → doanh thu phụ phẩm, dùng TRỪ vào chi phí
 // GIÁ THÀNH 1 KG ỐNG ĐẠT.
 // Kèm theo (Giai đoạn 3): CÂN ĐỐI KHỐI LƯỢNG theo tháng · KIỂM KÊ BÃI (điều
 // chỉnh tồn nhóm) · ĐỊNH MỨC TỶ LỆ thu hồi (Admin) · SỔ GIẢM TRỪ NCC.
@@ -33,16 +34,26 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
   ];
   const PP_KIND_LABEL = Object.fromEntries(PP_KINDS.map(k => [k.id, k.label]));
   const PP_KIND_SHORT = Object.fromEntries(PP_KINDS.map(k => [k.id, k.short]));
+  PP_KIND_LABEL.all = 'Nguồn phụ phẩm gộp';
+  PP_KIND_SHORT.all = 'Gộp nguồn';
+  PP_KIND_LABEL.mun_tuoi = 'Mùn tươi';
+  PP_KIND_SHORT.mun_tuoi = 'Mùn tươi';
+  PP_KIND_LABEL.mun_kho = 'Mùn khô';
+  PP_KIND_SHORT.mun_kho = 'Mùn khô';
   const PP_OUT_TYPES = [
     { id: 'sale',    label: 'Bán' },
     { id: 'dispose', label: 'Tiêu hủy / cho đi' }
   ];
   const PP_OUT_TYPE_LABEL = Object.fromEntries(PP_OUT_TYPES.map(t => [t.id, t.label]));
   const PP_FORMS = [
-    { id: 'raw',     label: 'Bán nguyên (chưa băm)' },
-    { id: 'chipped', label: 'Băm' }
+    { id: 'coc',      label: 'Cọc' },
+    { id: 'rac_bam',  label: 'Rác băm' },
+    { id: 'mun_tuoi', label: 'Mùn tươi' },
+    { id: 'mun_kho',  label: 'Mùn khô' }
   ];
   const PP_FORM_LABEL = Object.fromEntries(PP_FORMS.map(f => [f.id, f.label]));
+  PP_FORM_LABEL.raw = 'Cọc';
+  PP_FORM_LABEL.chipped = 'Rác băm';
   const PP_POOLS = [
     { id: 'cay',      label: 'Luồng cây ở bãi' },
     { id: 'ong',      label: 'Luồng ống ở bãi' },
@@ -50,6 +61,9 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     { id: 'phu_pham', label: 'Phụ phẩm (ước tính)' }
   ];
   const PP_DEFAULT_YIELD = { cay: { ongDat: 88, ongLoi: 3, mat: 3 }, ong: { ongDat: 95, ongLoi: 5 } };
+  const PP_THEORY_KG_PER_M3 = 1000;
+  // `xuong2.js` registers its display helpers during a cyclic module load.
+  var ppStageDataReader;
 
   const ppKg = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
   const ppNum = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
@@ -75,6 +89,29 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     const d = String(date || '');
     if (!d) return false;
     return (!from || d >= from) && (!to || d <= to);
+  }
+  function ppFormOf(rec) {
+    const form = String((rec && rec.form) || '');
+    if (form === 'raw') return 'coc';
+    if (form === 'chipped') return 'rac_bam';
+    return form;
+  }
+  function ppUnitVolOf(dims) {
+    if (!Array.isArray(dims) || dims.length !== 3) return 0;
+    const values = dims.map(Number);
+    if (!values.every(v => Number.isFinite(v) && v > 0)) return 0;
+    return values[0] * values[1] * values[2] / 1e9;
+  }
+  function setX2PhuPhamStageDataReader(reader) {
+    if (typeof reader !== 'function') throw new TypeError('Bộ đọc dữ liệu Bào Thô/Bào Tinh phải là hàm.');
+    ppStageDataReader = reader;
+  }
+  function ppStageDataOf() {
+    const data = typeof ppStageDataReader === 'function' ? ppStageDataReader() : null;
+    return {
+      baoTho: data && Array.isArray(data.baoTho) ? data.baoTho : [],
+      baoTinh: data && Array.isArray(data.baoTinh) ? data.baoTinh : []
+    };
   }
 
   // ─── NẠP / LƯU 3 MIỀN MỚI ────────────────────────────────────
@@ -142,7 +179,7 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
   function ppCutLabel(r) {
     return String((r && (r.supplierLabel || r.supplier || r.materialType)) || 'Cắt Chọn');
   }
-  // PHẦN NHẬP ƯỚC TÍNH từ Bốc Luồng + Cắt Chọn trong kỳ (bỏ trống = toàn bộ)
+  // PHẦN NHẬP ƯỚC TÍNH từ Bốc/Cắt + hao hụt Bào Thô/Bào Tinh (bỏ trống = toàn bộ)
   function x2PhuPhamInRows(from, to) {
     const rows = [];
     (state.xuong2BoluongRecords || []).forEach(r => {
@@ -172,6 +209,49 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
         });
       }
     });
+    const stages = ppStageDataOf();
+    stages.baoTho.forEach(r => {
+      if (!r || !ppInPeriod(r.date, from, to)) return;
+      const inputKg = Number(r.klOngBo);
+      const volume = Number(r.volume);
+      if (!(inputKg > 0 && r.qty != null && Number.isFinite(volume) && volume > 0)) return;
+      const outputTheoryKg = volume * PP_THEORY_KG_PER_M3;
+      const rawKg = inputKg - outputTheoryKg;
+      const warning = rawKg < -0.005;
+      const kg = Math.max(0, Math.round(rawKg * 100) / 100);
+      if (kg <= 0 && !warning) return;
+      rows.push({
+        id: 'in-bt-' + r.id, date: r.date || '', dir: 'in', kind: 'mun_tuoi', form: 'mun_tuoi',
+        kg, price: 0, amount: 0, party: '', auto: true, ref: 'Bào Thô',
+        note: warning ? 'Khối lượng lý thuyết đầu ra lớn hơn khối lượng ống đầu vào; cần kiểm tra dữ liệu.' :
+          `${ppNum(r.qty)} thanh · ống đầu vào ${ppKg(inputKg)} kg − khối lượng thanh lý thuyết ${ppKg(outputTheoryKg)} kg`,
+        warning
+      });
+    });
+    stages.baoTinh.forEach(r => {
+      if (!r || !ppInPeriod(r.date, from, to) || !['tinh', 'ha_cap'].includes(r.kind)) return;
+      const inputDims = Array.isArray(r.batchDims) && r.batchDims.length === 3
+        ? r.batchDims
+        : (Array.isArray(r.inDims) && r.inDims.length === 3 ? r.inDims : null);
+      const inputVol = ppUnitVolOf(inputDims);
+      const outputVol = ppUnitVolOf(r.outDims);
+      const qty = Number(r.qtyIn);
+      if (!(inputVol > 0 && outputVol > 0 && Number.isFinite(qty) && qty > 0)) return;
+      const lossRate = (inputVol - outputVol) / inputVol;
+      const inputTheoryKg = qty * inputVol * PP_THEORY_KG_PER_M3;
+      const rawKg = inputTheoryKg * lossRate;
+      const warning = rawKg < -0.005;
+      const kg = Math.max(0, Math.round(rawKg * 100) / 100);
+      if (kg <= 0 && !warning) return;
+      const label = r.kind === 'ha_cap' ? 'Bào tinh hạ cấp' : 'Bào tinh';
+      rows.push({
+        id: 'in-btinh-' + r.id, date: r.date || '', dir: 'in', kind: 'mun_kho', form: 'mun_kho',
+        kg, price: 0, amount: 0, party: '', auto: true, ref: label,
+        note: warning ? 'Khối lượng lý thuyết đầu ra lớn hơn đầu vào; cần kiểm tra kích thước hoặc số lượng.' :
+          `${ppNum(qty)} thanh · khối lượng lý thuyết ${ppKg(inputTheoryKg)} kg × hao hụt ${ppPct(lossRate * 100)}`,
+        warning
+      });
+    });
     return rows;
   }
   function ppOutAmountOf(r) {
@@ -184,7 +264,7 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
       .filter(r => r && ppInPeriod(r.date, from, to))
       .map(r => ({
         id: r.id, date: r.date || '', dir: 'out', kind: r.kind || 'khac',
-        form: r.form || 'chipped', kg: Number(r.kg) || 0, price: Number(r.price) || 0,
+        form: ppFormOf(r) || 'rac_bam', kg: Number(r.kg) || 0, price: Number(r.price) || 0,
         amount: ppOutAmountOf(r), party: r.party || '',
         outType: r.outType === 'dispose' ? 'dispose' : 'sale',
         note: r.note || '', rec: r
@@ -208,10 +288,13 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
       .reduce((s, r) => s + (Number(r.kg) || 0), 0);
   }
   function x2PhuPhamStock(kind) {
+    if (kind === 'all') return x2PhuPhamStockRawTotal();
     return x2PhuPhamInKgOf(kind) - x2PhuPhamOutKgOf(kind);
   }
   function x2PhuPhamStockRawTotal() {
-    return PP_KINDS.reduce((s, k) => s + x2PhuPhamStock(k.id), 0);
+    const incoming = x2PhuPhamInRows().reduce((s, r) => s + (Number(r.kg) || 0), 0);
+    const outgoing = x2PhuPhamOutRows().reduce((s, r) => s + (Number(r.kg) || 0), 0);
+    return Math.round((incoming - outgoing) * 100) / 100;
   }
   function x2PhuPhamStockTotal() {
     return Math.max(0, x2PhuPhamStockRawTotal() + x2StocktakeAdjustment('phu_pham'));
@@ -420,15 +503,10 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     if (!bar) return;
     const total = x2PhuPhamStockTotal();
     const adj = x2StocktakeAdjustment('phu_pham');
-    const chips = PP_KINDS.map(k => {
-      const v = x2PhuPhamStock(k.id);
-      return `<span class="x2-pp-chip" title="${escapeHTML(k.label)} — tồn ước tính (chưa trừ điều chỉnh kiểm kê)"><i data-lucide="leaf"></i> ${escapeHTML(k.short)}: <strong>${ppKg(Math.max(0, v))}</strong> kg</span>`;
-    }).join('');
     bar.innerHTML = `
-      <span class="x2-stock-title" title="Tồn phụ phẩm = phần NHẬP ước tính từ Bốc/Cắt − phần đã BÁN/TIÊU HỦY − điều chỉnh kiểm kê">
+      <span class="x2-stock-title" title="Tồn phụ phẩm = phần nhập ước tính từ Bốc/Cắt/Bào Thô/Bào Tinh − phần đã bán/tiêu hủy − điều chỉnh kiểm kê">
         <i data-lucide="recycle"></i> Tồn phụ phẩm (ước tính): <strong>${ppKg(total)} kg</strong>
       </span>
-      ${chips}
       ${adj ? `<span class="x2-pp-adj" title="Tổng chênh lệch các phiếu kiểm kê bãi (âm = thiếu so với sổ)">Điều chỉnh kiểm kê: <strong>${adj > 0 ? '+' : ''}${ppKg(adj)} kg</strong></span>` : ''}`;
     initLucide();
   }
@@ -450,8 +528,8 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
       stat(ppKg(soldKg), `Đã bán ${ppMonthLabel(ppMonth)} (kg)`),
       stat(ppNum(revenue), `Doanh thu ${ppMonthLabel(ppMonth)} (đ)`),
       stat(outN, 'Lượt bán / tiêu hủy trong tháng'),
-      stat(ppKg(x2PhuPhamInKgOf('ngon')), 'Ngọn nhập (kg, ước tính)'),
-      stat(ppKg(x2PhuPhamInKgOf('mat') + x2PhuPhamInKgOf('ong_loi')), 'Mắt + ống lỗi băm (kg)')
+      stat(ppKg(x2PhuPhamInKgOf('mun_tuoi')), 'Mùn tươi ước tính (kg)'),
+      stat(ppKg(x2PhuPhamInKgOf('mun_kho')), 'Mùn khô ước tính (kg)')
     ].join('');
   }
 
@@ -655,7 +733,7 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     if (countEl) countEl.textContent = rows.length ? `${rows.length} dòng (nhập ước tính + bán/tiêu hủy)` : '';
     if (!rows.length) {
       box.innerHTML = `<div class="x2-day-card x2-day-card-empty"><i data-lucide="recycle"></i>
-        <div>Chưa có phụ phẩm.<br>Phần <strong>nhập</strong> tự hiện khi ghi <strong>Bốc Luồng</strong> / <strong>Cắt Chọn</strong>;
+        <div>Chưa có phụ phẩm.<br>Phần <strong>nhập ước tính</strong> tự hiện từ <strong>Bốc Luồng</strong>, <strong>Cắt Chọn</strong>, <strong>Bào Thô</strong> và <strong>Bào Tinh</strong>;
         phần <strong>bán / tiêu hủy</strong> ghi ở form trên.</div></div>`;
       initLucide();
       return;
@@ -671,11 +749,13 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
       let inKg = 0, outKg = 0, revenue = 0;
       const body = list.map(r => {
         if (r.dir === 'in') inKg += r.kg; else { outKg += r.kg; if (r.outType === 'sale') revenue += r.amount; }
-        const kindTxt = `${PP_KIND_SHORT[r.kind] || r.kind || '—'}${r.dir === 'in' ? '' : ` · ${PP_FORM_LABEL[r.form] || ''}`}`;
+        const kindTxt = r.dir === 'in'
+          ? (r.kind === 'mun_tuoi' ? 'Mùn tươi' : r.kind === 'mun_kho' ? 'Mùn khô' : (PP_KIND_SHORT[r.kind] || r.kind || '—'))
+          : `${PP_FORM_LABEL[r.form] || r.form || '—'}${r.kind ? ` · ${PP_KIND_SHORT[r.kind] || r.kind}` : ''}`;
         return `<tr class="x2-day-row">
           <td>${ppDirChip(r)}</td>
-          <td><strong>${escapeHTML(kindTxt)}</strong>${r.note ? `<div class="x2-row-note">${escapeHTML(r.note)}</div>` : ''}</td>
-          <td class="text-right"><strong style="color:${r.dir === 'in' ? '#b45309' : 'var(--primary)'};">${ppKg(r.kg)}</strong></td>
+          <td><strong>${escapeHTML(kindTxt)}</strong>${r.note ? `<div class="x2-row-note"${r.warning ? ' style="color:var(--danger);"' : ''}>${escapeHTML(r.note)}</div>` : ''}</td>
+          <td class="text-right"><strong style="color:${r.warning ? 'var(--danger)' : r.dir === 'in' ? '#b45309' : 'var(--primary)'};">${ppKg(r.kg)}</strong></td>
           <td class="text-right">${r.dir === 'in' ? '—' : (r.price ? ppNum(r.price) : '—')}</td>
           <td class="text-right">${r.dir === 'in' ? '—' : `<strong style="color:#16a34a;">${ppNum(r.amount)}</strong>`}</td>
           <td>${escapeHTML(r.dir === 'in' ? (r.ref || '') : (r.party || '—'))}</td>
@@ -751,25 +831,57 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     }
     return true;
   }
+  function ppScaleReadings() {
+    const scaleInRaw = String((document.getElementById('x2-pp-scale-in') || {}).value || '').trim();
+    const scaleOutRaw = String((document.getElementById('x2-pp-scale-out') || {}).value || '').trim();
+    if (!scaleInRaw && !scaleOutRaw) {
+      const rec = state.x2PhuPhamEditId &&
+        (state.x2PhuPhamRecords || []).find(r => r.id === state.x2PhuPhamEditId);
+      const legacy = !!rec && rec.scaleInKg == null && rec.scaleOutKg == null;
+      return {
+        scaleInKg: null,
+        scaleOutKg: null,
+        kg: legacy && Number.isFinite(Number(rec.kg)) ? Number(rec.kg) : null,
+        missing: !legacy,
+        legacy
+      };
+    }
+    if (!scaleInRaw || !scaleOutRaw) {
+      return { scaleInKg: null, scaleOutKg: null, kg: null, partial: true, legacy: false };
+    }
+    const scaleInKg = Number(scaleInRaw);
+    const scaleOutKg = Number(scaleOutRaw);
+    if (!Number.isFinite(scaleInKg) || scaleInKg < 0 ||
+        !Number.isFinite(scaleOutKg) || scaleOutKg < 0) {
+      return { scaleInKg, scaleOutKg, kg: null, invalid: true, legacy: false };
+    }
+    return {
+      scaleInKg,
+      scaleOutKg,
+      kg: Math.round((scaleOutKg - scaleInKg) * 100) / 100,
+      legacy: false
+    };
+  }
   function onX2PhuPhamCalc() {
     const box = document.getElementById('x2-pp-amount');
     if (!box) return;
-    const kg = Number((document.getElementById('x2-pp-kg') || {}).value) || 0;
+    const readings = ppScaleReadings();
+    const kgEl = document.getElementById('x2-pp-kg');
+    if (kgEl) kgEl.value = readings.kg == null ? '' : String(readings.kg);
+    const kg = Number(readings.kg) || 0;
     const price = Number((document.getElementById('x2-pp-price') || {}).value) || 0;
     box.textContent = `Thành tiền: ${ppNum(Math.round(kg * price * 100) / 100)} đ`;
   }
   function resetX2PhuPhamForm() {
     state.x2PhuPhamEditId = null;
-    ['x2-pp-kg', 'x2-pp-price', 'x2-pp-party', 'x2-pp-note'].forEach(id => {
+    ['x2-pp-scale-in', 'x2-pp-scale-out', 'x2-pp-kg', 'x2-pp-price', 'x2-pp-party', 'x2-pp-note'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
     const d = document.getElementById('x2-pp-date');
     if (d) d.value = ppTodayISO();
-    const kind = document.getElementById('x2-pp-kind');
-    if (kind) kind.value = 'ngon';
     const f = document.getElementById('x2-pp-out-form');
-    if (f) f.value = 'raw';
+    if (f) f.value = 'coc';
     const t = document.getElementById('x2-pp-out-type');
     if (t) t.value = 'sale';
     onX2PhuPhamCalc();
@@ -781,12 +893,29 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     const val = id => String((document.getElementById(id) || {}).value || '').trim();
     const date = val('x2-pp-date');
     if (!date) { showToast('Ngày bán / tiêu hủy không được để trống!', 'error'); return; }
-    const kind = val('x2-pp-kind');
-    if (!PP_KINDS.some(k => k.id === kind)) { showToast('Nguồn phụ phẩm không hợp lệ!', 'error'); return; }
-    const form = val('x2-pp-out-form') === 'chipped' ? 'chipped' : 'raw';
+    const form = val('x2-pp-out-form');
+    if (!PP_FORMS.some(f => f.id === form)) { showToast('Hình thức phụ phẩm không hợp lệ!', 'error'); return; }
     const outType = val('x2-pp-out-type') === 'dispose' ? 'dispose' : 'sale';
-    const kg = Number((document.getElementById('x2-pp-kg') || {}).value);
-    if (!Number.isFinite(kg) || kg <= 0) { showToast('KL cân thực phải là số lớn hơn 0 kg!', 'error'); return; }
+    const readings = ppScaleReadings();
+    if (readings.missing || readings.partial) {
+      showToast('Vui lòng nhập đủ chỉ số cân vào và cân ra!', 'error');
+      return;
+    }
+    if (readings.invalid) {
+      showToast('Chỉ số cân vào và cân ra phải là số không âm!', 'error');
+      return;
+    }
+    const scaleInKg = readings.scaleInKg;
+    const scaleOutKg = readings.scaleOutKg;
+    if (scaleInKg != null && !ppNum6Ok(scaleInKg, 'Chỉ số cân vào')) return;
+    if (scaleOutKg != null && !ppNum6Ok(scaleOutKg, 'Chỉ số cân ra')) return;
+    const kg = Number(readings.kg);
+    if (!Number.isFinite(kg) || kg <= 0) {
+      showToast(readings.legacy
+        ? 'KL cân thực phải là số lớn hơn 0 kg!'
+        : 'Chỉ số cân ra phải lớn hơn chỉ số cân vào để KL cân thực lớn hơn 0 kg!', 'error');
+      return;
+    }
     if (!ppNum6Ok(kg, 'KL cân thực')) return;
     const priceRaw = Number((document.getElementById('x2-pp-price') || {}).value);
     if (Number.isFinite(priceRaw) && priceRaw < 0) { showToast('Đơn giá phải là số không âm!', 'error'); return; }
@@ -795,7 +924,7 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     const party = val('x2-pp-party');
     const note = val('x2-pp-note');
     const amount = Math.round(kg * price * 100) / 100;
-    const payload = { date, kind, form, outType, kg, price, amount, party, note };
+    const payload = { date, form, outType, scaleInKg, scaleOutKg, kg, price, amount, party, note };
     if (state.x2PhuPhamEditId) {
       const rec = (state.x2PhuPhamRecords || []).find(r => r.id === state.x2PhuPhamEditId);
       if (!rec) { showToast('Không tìm thấy lượt phụ phẩm cần sửa!', 'error'); return; }
@@ -805,7 +934,7 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     } else {
       (state.x2PhuPhamRecords = state.x2PhuPhamRecords || []).push(Object.assign({
         id: 'x2pp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(), kind: 'all'
       }, payload));
       saveX2PhuPham();
       showToast(outType === 'sale' ? `Đã ghi bán ${ppKg(kg)} kg phụ phẩm!` : `Đã ghi tiêu hủy ${ppKg(kg)} kg phụ phẩm!`, 'success');
@@ -820,9 +949,10 @@ import { x2MaterialKindOf, x2OngDatAvailable, x2PoolSnapshot, x2StocktakeAdjustm
     state.x2PhuPhamEditId = id;
     const set = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = (v == null ? '' : String(v)); };
     set('x2-pp-date', rec.date || '');
-    set('x2-pp-kind', rec.kind || 'ngon');
-    set('x2-pp-out-form', rec.form || 'chipped');
+    set('x2-pp-out-form', ppFormOf(rec) || 'rac_bam');
     set('x2-pp-out-type', rec.outType || 'sale');
+    set('x2-pp-scale-in', rec.scaleInKg);
+    set('x2-pp-scale-out', rec.scaleOutKg);
     set('x2-pp-kg', rec.kg);
     set('x2-pp-price', rec.price);
     set('x2-pp-party', rec.party || '');
@@ -926,6 +1056,7 @@ export {
   PP_FORMS, PP_FORM_LABEL, PP_POOLS, PP_DEFAULT_YIELD,
   loadX2PhuPham, saveX2PhuPham, loadX2Stocktakes, saveX2Stocktakes,
   loadX2YieldRates, saveX2YieldRates, ppYieldNorm,
+  setX2PhuPhamStageDataReader,
   renderX2PhuPhamCard, x2PhuPhamCardCount, setPpMonth, toggleX2PhuPhamTable,
   handleX2PhuPhamSubmit, editX2PhuPham, deleteX2PhuPham, resetX2PhuPhamForm, onX2PhuPhamCalc,
   handleX2StocktakeSubmit, deleteX2Stocktake, resetX2StocktakeForm, renderPpStocktakeBook,
@@ -937,4 +1068,3 @@ export {
   ppMonthRange, ppMonthLabel, ppPoolBookKg, x2StocktakeRows,
   ppKg, ppNum, ppPct
 };
-

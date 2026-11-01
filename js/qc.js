@@ -683,7 +683,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
       const c = document.getElementById(cardId);
       if (c && !c.classList.contains('qc-card-hidden') && !c.classList.contains('rate-table-collapsed')) openId = cardId;
     });
-    document.querySelectorAll('.qc-mini-card').forEach(t => {
+    document.querySelectorAll('.qc-mini-card[data-qc-card]').forEach(t => {
       const act = t.getAttribute('data-qc-card') === openId;
       t.classList.toggle('qc-mini-active', act);
       t.setAttribute('aria-expanded', act ? 'true' : 'false');
@@ -774,6 +774,7 @@ export {
   qcImpSetQty,
   qcOpenCard,
   qcPositionDetailOverlay,
+  qcRowWeeks,
   qcRowVolume,
   renderQcImpRows,
   renderQcSearch,

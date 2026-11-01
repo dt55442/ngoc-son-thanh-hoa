@@ -1,0 +1,222 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { state } from '../js/state.js';
+globalThis.window = { Chart: null };
+globalThis.document = { addEventListener() {} };
+const {
+  buildLeadershipReportMarkup,
+  buildLeadershipReportData,
+  buildLeadershipSummary,
+  canAccessLeadershipDashboard,
+  printLeadershipReport
+} = await import('../js/leadership-dashboard.js');
+
+const saved = {
+  currentUser: state.currentUser,
+  materialRecords: state.materialRecords,
+  qcFinalRecords: state.qcFinalRecords,
+  qcExports: state.qcExports,
+  hrEmployees: state.hrEmployees,
+  materialRates: state.materialRates,
+  x2PhuPhamRecords: state.x2PhuPhamRecords,
+  xuong2BulligRecords: state.xuong2BulligRecords,
+  xuong2BoluongRecords: state.xuong2BoluongRecords,
+  xuong2CutRecords: state.xuong2CutRecords,
+  batches: state.batches
+};
+
+try {
+  state.currentUser = { role: 'manager' };
+  state.materialRecords = [
+    { date: '2026-10-27', location: 'xuong-2', type: 'Luồng ống', weight: 120, totalAmount: 120000 },
+    { date: '2026-10-28', location: 'xuong-2', type: 'Luồng cây', weight: 20, totalAmount: 30000 },
+    { date: '2026-10-31', location: 'Xưởng 1', type: 'Luồng cây', weight: 30, totalAmount: 45000 },
+    { date: '2026-11-01', location: 'lo-hoi', type: 'Dăm', weight: 5, totalAmount: 5000 },
+    { date: '2026-10-20', location: 'xuong-2', type: 'Luồng ống', weight: 40, totalAmount: 40000 },
+    { date: '2026-11-02', location: 'xuong-2', weight: 999 }
+  ];
+  state.qcFinalRecords = [
+    { id: 'q2', date: '2026-10-28', workshop: 'x2', qtyOk: 8, qtyExcept: 1, qtyReject: 1 },
+    { id: 'q-bullig', date: '2026-10-29', workshop: 'x2', kind: 'thanh', productId: 'rate-bullig', qtyOk: 100, qtyReject: 5 },
+    { id: 'q1', date: '2026-11-01', workshop: 'x1', qtyOk: 3, qtyExcept: 0, qtyReject: 1 }
+  ];
+  state.hrEmployees = [
+    { id: 'e1', department: 'Xưởng 2', status: 'active', joinDate: '2026-10-27' },
+    { id: 'e2', department: 'Xưởng 1', status: 'quit', joinDate: '2025-01-01', quitDate: '2026-10-30' },
+    { id: 'e3', department: 'QC', status: 'active' }
+  ];
+  state.qcExports = [
+    { year: 2026, week: 'Tuần 44', weeks: [44], qty: 12 },
+    { year: 2026, weeks: [44, 45], qty: 18 },
+    { year: 2026, weeks: [43], qty: 99 }
+  ];
+  state.materialRates = [{ id: 'rate-bullig', product: 'Bullig 1200x600x12', nanUse: 'Bullig' }];
+  state.x2PhuPhamRecords = [
+    { date: '2026-10-29', kind: 'ngon', kg: 100, price: 2000, amount: 200000, outType: 'sell' },
+    { date: '2026-10-30', kind: 'mat', kg: 10, price: 1000, amount: 10000, outType: 'dispose' },
+    { date: '2026-10-20', kind: 'ngon', kg: 50, price: 2000, amount: 100000, outType: 'sell' }
+  ];
+  state.xuong2BulligRecords = [
+    { date: '2026-10-29', kind: 'ct', qtyOk: 7, qtyErr: 1 },
+    { date: '2026-10-20', kind: 'ct', qtyOk: 4, qtyErr: 1 }
+  ];
+  state.xuong2BoluongRecords = [
+    { date: '2026-10-27', inputWeight: 3000, carts: 5 },
+    { date: '2026-10-20', inputWeight: 2000, carts: 3 }
+  ];
+  state.xuong2CutRecords = [
+    { date: '2026-10-27', inputKind: 'new', inputWeight: 4000, carts: 6 },
+    { date: '2026-10-20', inputKind: 'new', inputWeight: 2500, carts: 4 }
+  ];
+  state.batches = [
+    { stage: 'say1', length: 1200, width: 600, thickness: 12, quantity: 100 },
+    { stage: 'say2', length: 1200, width: 600, thickness: 12, quantity: 200 }
+  ];
+
+  const stage = (id, label, quantity, options = {}) => ({
+    id, label, unit: 'xe/h', quantityUnit: 'xe', turns: 2, quantity,
+    quantityKnown: true, estimated: false, capacity: 5, efficiency: 90,
+    hours: 8, incidentHours: 1, ...options
+  });
+  const capacity = [
+    { id: 'x2', label: 'Xưởng 2', efficiency: 90, hours: 40, incidentHours: 3, bottleneck: null, stages: [
+      stage('boluong', 'Bốc luồng', 10),
+      stage('cut', 'Cắt Chọn', 10),
+      stage('epvan', 'Ép ván', 0.5, { unit: 'm³/h', quantityUnit: 'm³' }),
+      stage('bullig_ct', 'Bullig - Chọn thanh', 100, { unit: 'thanh/h', quantityUnit: 'thanh' }),
+      stage('bullig_gc', 'Bullig - gia công', 50),
+      stage('catvan_cat', 'Cắt ván', 25),
+      stage('baovan_bao', 'Bào ván', 15)
+    ] },
+    { id: 'x1', label: 'Xưởng 1', efficiency: null, hours: 0, incidentHours: 0, bottleneck: null, stages: [] }
+  ];
+  const previousCapacity = [
+    { ...capacity[0], efficiency: 80, hours: 36, incidentHours: 4, stages: capacity[0].stages.map(item => ({
+      ...item, quantity: item.id === 'cut' ? 8 : item.quantity, hours: 6, incidentHours: 2, efficiency: 80
+    })) },
+    capacity[1]
+  ];
+  const inventory = {
+    remainingThanh: 50, remainingM3: 0.25, poolThanh: 80,
+    poolSay1Thanh: 12, poolSay2Thanh: 18,
+    pendingCount: 1, pendingQty: 4, mismatchThanh: 2
+  };
+
+  assert.equal(canAccessLeadershipDashboard(), true);
+  const week = buildLeadershipSummary('week', '2026-W44', state, capacity, inventory, previousCapacity);
+  assert.deepEqual(week.range, { from: '2026-10-26', to: '2026-11-01' });
+  assert.equal(week.purchases.weight, 175);
+  assert.equal(week.purchases.amount, 200000);
+  assert.equal(week.purchases.byLocation.find(row => row.key === 'xuong-2').weight, 140);
+  assert.equal(week.purchases.byLocation.find(row => row.key === 'xuong-2').byType.length, 2);
+  assert.equal(week.byproductSales.amount, 200000);
+  assert.equal(week.previous.byproductSales.amount, 100000);
+  assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'boluong').quantity, 3000);
+  assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'boluong').quantityUnit, 'kg');
+  assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'cut').quantity, 4000);
+  assert.equal(week.previous.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'cut').quantity, 2500);
+  assert.equal(week.quality.x2.checked, 18);
+  assert.equal(week.quality.x2.passed, 16);
+  assert.equal(week.quality.x2.byKind.bullig.checked, 8);
+  assert.equal(week.quality.x2.byKind.bullig.rejected, 1);
+  assert.equal(week.previous.quality.x2.byKind.bullig.checked, 5);
+  assert.equal(week.quality.x1.checked, 4);
+  assert.equal(week.labor.active, 2);
+  assert.equal(week.labor.joined, 1);
+  assert.equal(week.labor.left, 1);
+  assert.equal(week.labor.missingJoinDate, 1);
+  assert.equal(week.shipments.quantity, 12);
+  assert.equal(week.shipments.unattributedRows, 1);
+
+  const markup = buildLeadershipReportMarkup(week);
+  assert.equal((markup.match(/class="leadership-paper" data-report-page=/g) || []).length, 2);
+  assert.doesNotMatch(markup, /leadership-kpi/);
+  for (const heading of ['Nguyên liệu mua vào', 'Sản xuất &amp; công suất', 'Tồn kho', 'Chất lượng', 'Lao động', 'Xuất hàng']) {
+    assert.ok(markup.includes(`<h2>${heading}</h2>`), `missing report heading: ${heading}`);
+  }
+  assert.match(markup, /class="is-pass" style="width:80%"/);
+  assert.match(markup, /class="is-exception" style="width:10%"/);
+  assert.match(markup, /class="is-reject" style="width:10%"/);
+  assert.match(markup, /Sấy 1 · 12/);
+  assert.match(markup, /Sấy 2 · 18/);
+  assert.match(markup, /leadership-purchase-pie/);
+  assert.equal((markup.match(/class="leadership-purchase-pie"/g) || []).length, 1);
+  assert.equal((markup.match(/class="leadership-pie-location-boundary"/g) || []).length, 3);
+  assert.match(markup, /leadership-pie-location-boundary/);
+  assert.match(markup, /<polyline points=/);
+  assert.match(markup, /Xưởng 2 · Luồng ống/);
+  assert.match(markup, /leadership-money-chart/);
+  assert.match(markup, /Thu bán phụ phẩm/);
+  assert.match(markup, /leadership-quality-x2-grid/);
+  assert.match(markup, /Bullig/);
+  assert.match(markup, /leadership-stage-meta/);
+  assert.match(markup, /leadership-main-stages/);
+  assert.match(markup, /Giờ làm/);
+  assert.match(markup, /Sự cố/);
+  assert.match(markup, /m³/);
+  assert.match(markup, /So với Tuần 43/);
+  assert.match(markup, /＝ Không đổi/);
+  assert.doesNotMatch(markup, /Bullig - gia công|Cắt ván|Bào ván/);
+  assert.ok(markup.indexOf('Bốc luồng') < markup.indexOf('leadership-main-stages'));
+  assert.ok(markup.indexOf('leadership-main-stages') < markup.indexOf('Ép ván'));
+
+  const month = buildLeadershipSummary('month', '2026-10', state, capacity, inventory);
+  assert.deepEqual(month.range, { from: '2026-10-01', to: '2026-10-31' });
+  assert.equal(month.purchases.weight, 210);
+  assert.equal(month.quality.x1.checked, 0);
+  assert.equal(month.shipments.quantity, 99);
+  assert.equal(month.shipments.unattributedRows, 2);
+
+  const report = buildLeadershipReportData(week);
+  assert.equal(report.headerRow, 4);
+  assert.equal(report.aoa[0][0], 'BÁO CÁO TỔNG HỢP BAN LÃNH ĐẠO');
+  assert.deepEqual(report.aoa[4], ['Nhóm', 'Xưởng / Bộ phận', 'Chỉ số', 'Giá trị', 'Đơn vị', 'Ghi chú']);
+  assert.match(report.filename, /2026-W44/);
+  assert.ok(report.aoa.some(row => row[0] === 'Giao hàng' && row[1] === 'Xưởng 1'));
+  assert.ok(report.aoa.some(row => row[0] === 'Phụ phẩm' && row[2] === 'Thu bán phụ phẩm' && row[3] === 200000));
+  assert.ok(report.aoa.some(row => row[0] === 'Chất lượng' && row[1] === 'Bullig'));
+  assert.ok(report.aoa.some(row => row[0] === 'Sản xuất' && row[2] === 'Giờ sự cố'));
+  assert.ok(!report.aoa.some(row => /Bullig - gia công|Cắt ván|Bào ván/.test(row[1] || '')));
+
+  const printClasses = new Set();
+  let afterPrint;
+  let printCalled = false;
+  globalThis.document.body = { classList: {
+    add: value => printClasses.add(value),
+    remove: value => printClasses.delete(value)
+  } };
+  globalThis.document.getElementById = id => id === 'leadership-content'
+    ? { querySelector: () => ({}) }
+    : null;
+  globalThis.window.addEventListener = (event, listener) => {
+    if (event === 'afterprint') afterPrint = listener;
+  };
+  globalThis.window.print = () => { printCalled = true; };
+  printLeadershipReport();
+  assert.equal(printCalled, true);
+  assert.equal(printClasses.has('leadership-printing'), true);
+  afterPrint();
+  assert.equal(printClasses.has('leadership-printing'), false);
+
+  state.currentUser = { role: 'viewer' };
+  assert.equal(canAccessLeadershipDashboard(), false);
+  state.currentUser = { role: 'admin' };
+  assert.equal(canAccessLeadershipDashboard(), true);
+
+  const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+  const moduleSource = fs.readFileSync(new URL('../js/leadership-dashboard.js', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  assert.ok(index.includes('id="leadership-view"') && moduleSource.includes('data-leadership-target'));
+  assert.ok(index.includes('id="btn-leadership-print"') && index.includes('user-scalable=yes'));
+  assert.ok(styles.includes('@page leadership-report { size: A4 portrait; margin: 0; }'));
+  assert.ok(styles.includes('body.leadership-printing .leadership-paper'));
+  assert.ok(styles.includes('.leadership-pie-location-boundary'));
+  assert.ok(styles.includes('.leadership-quality-x2-grid'));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v329'"));
+  assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v329'"));
+  console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
+} finally {
+  Object.assign(state, saved);
+}

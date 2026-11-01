@@ -66,6 +66,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     completed: 'Đã hoàn thành',
     verified: 'Đã nghiệm thu'
   };
+  const REPAIR_PRIORITY_LABEL = { low: 'Thấp', normal: 'Bình thường', high: 'Cao', urgent: 'Khẩn cấp' };
 
   // ─── TIỆN ÍCH ────────────────────────────────────────────────
   const incTodayISO = () => {
@@ -189,6 +190,8 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
         ? rr.repairStatus : 'not_started',
       repairStatusLabel: REPAIR_STATUS_LABEL[rr.repairStatus] || REPAIR_STATUS_LABEL.not_started,
       repairPriority: rr.repairPriority || 'normal',
+      repairPriorityLabel: REPAIR_PRIORITY_LABEL[rr.repairPriority] || REPAIR_PRIORITY_LABEL.normal,
+      repairDueAt: rr.repairDueAt || '',
       repairOutcome: rr.repairOutcome || '',
       createdTxt: created ? formatDateDDMMYY(created) : '—'
     };
@@ -324,9 +327,19 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
   }
 
   // ─── MỞ / ĐÓNG MODAL ────────────────────────────────────────
-  function openIncidentReports(prefill) {
+  function openIncidentReports(prefill, options = {}) {
     const modal = document.getElementById('modal-x2-incidents');
     if (!modal) return false;
+    modal.classList.toggle('is-mech-center', !!options.mechanicalCenter);
+    modal.classList.remove('is-creating');
+    const title = document.getElementById('inc-modal-title');
+    if (title) title.textContent = options.mechanicalCenter ? 'Trung tâm xử lý sự cố Cơ điện' : 'Báo Cáo Sự Cố';
+    const statsTitle = document.getElementById('inc-stats-section-title');
+    if (statsTitle) statsTitle.textContent = options.mechanicalCenter ? 'Tình hình xử lý' : 'Duyệt phiếu';
+    const listTitle = document.getElementById('inc-list-section-title');
+    if (listTitle) listTitle.textContent = options.mechanicalCenter ? 'Sự cố theo ngày' : 'Danh sách phiếu (theo ngày)';
+    const mechNewButton = document.getElementById('btn-inc-mech-new');
+    if (mechNewButton) mechNewButton.hidden = !options.mechanicalCenter;
     fillIncidentFormOptions();
     resetIncidentForm();
     if (prefill && prefill.stage) {
@@ -347,13 +360,42 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     initLucide();
     return true;
   }
+  function openIncidentReportsAll() {
+    incidentFilter.month = '';
+    incidentFilter.stage = 'all';
+    incidentFilter.status = 'all';
+    incidentFilter.q = '';
+    return openIncidentReports();
+  }
+  function openMechanicalIncidentCenter() {
+    incidentFilter.month = '';
+    incidentFilter.stage = 'all';
+    incidentFilter.status = 'all';
+    incidentFilter.q = '';
+    return openIncidentReports(null, { mechanicalCenter: true });
+  }
+  function showMechanicalIncidentForm() {
+    const modal = document.getElementById('modal-x2-incidents');
+    if (!modal || !modal.classList.contains('is-mech-center')) return false;
+    modal.classList.add('is-creating');
+    const button = document.getElementById('btn-inc-mech-new');
+    if (button) button.hidden = true;
+    modal.querySelector('[data-zone="1"]')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    return true;
+  }
   // Mở form điền sẵn công đoạn + ngày (bấm nút "＋ Báo cáo" trên thẻ ngày)
   function openIncidentReportsFor(stage, date, shiftIdx) {
     return openIncidentReports({ stage, date, shiftIdx });
   }
   function closeIncidentReports() {
     const modal = document.getElementById('modal-x2-incidents');
-    if (modal) modal.classList.remove('show');
+    if (modal) {
+      modal.classList.remove('show');
+      modal.classList.remove('is-mech-center');
+      modal.classList.remove('is-creating');
+    }
+    const mechNewButton = document.getElementById('btn-inc-mech-new');
+    if (mechNewButton) mechNewButton.hidden = true;
     return true;
   }
 
@@ -702,9 +744,44 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       + (rj.length ? ` · Từ chối ${rj.length}` : '');
   }
 
+  function renderMechanicalIncidentSummary() {
+    const box = document.getElementById('inc-mech-summary');
+    const modal = document.getElementById('modal-x2-incidents');
+    if (!box || !modal) return;
+    const isMechanicalCenter = modal.classList.contains('is-mech-center');
+    box.hidden = !isMechanicalCenter;
+    if (!isMechanicalCenter) return;
+    const reports = (state.x2IncidentReports || []).filter(Boolean);
+    const hasRepair = report => (Array.isArray(report.repairAssigneeIds) && report.repairAssigneeIds.length > 0) ||
+      !!(report.repairAssignedAt || report.repairStartedAt || report.repairDueAt || report.repairCompletedAt || report.repairOutcome);
+    const isOpen = report => hasRepair(report) && report.repairStatus !== 'verified';
+    const now = Date.now();
+    const counts = {
+      pending: reports.filter(report => report.status === 'cho_duyet').length,
+      open: reports.filter(isOpen).length,
+      overdue: reports.filter(report => {
+        if (!isOpen(report) || !report.repairDueAt) return false;
+        const due = Date.parse(report.repairDueAt);
+        return Number.isFinite(due) && due < now;
+      }).length
+    };
+    [['inc-mech-kpi-pending', counts.pending], ['inc-mech-kpi-open', counts.open],
+      ['inc-mech-kpi-overdue', counts.overdue]].forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(value);
+    });
+  }
 
   function incidentDayCardHtml(date, rows) {
     const ds = rows.map(incidentDisplay);
+    if (document.getElementById('modal-x2-incidents')?.classList.contains('is-mech-center')) {
+      const priorityRank = { urgent: 4, high: 3, normal: 2, low: 1 };
+      const statusRank = { in_progress: 0, not_started: 1, completed: 2, verified: 3 };
+      ds.sort((a, b) =>
+        Number(b.status === 'cho_duyet') - Number(a.status === 'cho_duyet') ||
+        (priorityRank[b.repairPriority] || 0) - (priorityRank[a.repairPriority] || 0) ||
+        (statusRank[a.repairStatus] ?? 4) - (statusRank[b.repairStatus] ?? 4));
+    }
     const approvedH = incRound2(ds.filter(d => d.status === 'da_duyet').reduce((s, d) => s + d.hours, 0));
     const pendingH = incRound2(ds.filter(d => d.status === 'cho_duyet').reduce((s, d) => s + d.hours, 0));
     const stages = [...new Set(ds.map(d => d.stageLabel))];
@@ -719,7 +796,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
       <td class="inc-td-time">${escapeHTML(d.timeTxt)}</td>
       <td class="inc-td-hours"><strong>${incFmt(d.hours, 2)}h</strong></td>
       <td>${escapeHTML(d.causeLabel)}</td>
-      <td class="inc-td-desc">${escapeHTML(d.description || '—')}${d.fixAction ? `<span class="inc-sub">Xử lý: ${escapeHTML(d.fixAction)}</span>` : ''}${d.repairAssigneeNames.length ? `<span class="inc-sub">Cơ Điện: ${escapeHTML(d.repairAssigneeNames.join(', '))} · ${escapeHTML(d.repairStatusLabel)}</span>` : ''}${d.repairOutcome ? `<span class="inc-sub">Kết quả: ${escapeHTML(d.repairOutcome)}</span>` : ''}</td>
+      <td class="inc-td-desc">${escapeHTML(d.description || '—')}${d.fixAction ? `<span class="inc-sub">Xử lý: ${escapeHTML(d.fixAction)}</span>` : ''}${d.repairAssigneeNames.length ? `<span class="inc-sub inc-repair-meta">Cơ Điện: ${escapeHTML(d.repairAssigneeNames.join(', '))} · ${escapeHTML(d.repairStatusLabel)} · Ưu tiên ${escapeHTML(d.repairPriorityLabel)}</span>` : ''}${d.repairDueAt ? `<span class="inc-sub inc-repair-due">Hạn Cơ Điện: ${escapeHTML(String(d.repairDueAt).replace('T', ' '))}</span>` : ''}${d.repairOutcome ? `<span class="inc-sub">Kết quả: ${escapeHTML(d.repairOutcome)}</span>` : ''}</td>
       <td>${escapeHTML(d.reporterName || '—')}</td>
       <td>${incidentStatusChip(d)}${d.status === 'da_duyet' && d.approvedBy ? `<span class="inc-sub">${escapeHTML(d.approvedBy)}${d.approvedAt ? ' · ' + escapeHTML(d.approvedAt) : ''}</span>` : ''}${d.status === 'tu_choi' && d.rejectReason ? `<span class="inc-sub">Lý do: ${escapeHTML(d.rejectReason)}</span>` : ''}</td>
       <td>${incidentRowActions(d)}</td>
@@ -742,7 +819,10 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     if (!box) return;
     const rows = incidentFilteredRows();
     if (!rows.length) {
-      box.innerHTML = `<div class="inc-empty"><i data-lucide="inbox"></i> Chưa có phiếu sự cố nào khớp bộ lọc.<br><span>Lập phiếu ở khối ① rồi bấm "Lưu Phiếu"; duyệt xong là giờ sự cố tự trừ vào công đoạn tương ứng.</span></div>`;
+      const mechCenter = document.getElementById('modal-x2-incidents')?.classList.contains('is-mech-center');
+      box.innerHTML = mechCenter
+        ? `<div class="inc-empty"><i data-lucide="inbox"></i> Chưa có sự cố nào khớp bộ lọc.<br><span>Dùng “Lập phiếu mới” để ghi nhận sự cố sản xuất.</span></div>`
+        : `<div class="inc-empty"><i data-lucide="inbox"></i> Chưa có phiếu sự cố nào khớp bộ lọc.<br><span>Lập phiếu ở khối ① rồi bấm "Lưu Phiếu"; duyệt xong là giờ sự cố tự trừ vào công đoạn tương ứng.</span></div>`;
       initLucide();
       return;
     }
@@ -766,6 +846,7 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     setIf('inc-filter-status', incidentFilter.status);
     setIf('inc-search', incidentFilter.q);
     renderIncidentStats();
+    renderMechanicalIncidentSummary();
     renderIncidentList();
     updateIncidentBadge();
     return true;
@@ -840,7 +921,8 @@ import { bumpIncidentCache, escapeHTML, formatDateDDMMYY, showToast } from './ut
     incidentShiftLabel, incidentPendingCount, incidentApprovedCount, incidentCardCount,
     updateIncidentBadge,
     fillIncidentFormOptions, syncIncidentShiftOptions, resetIncidentForm,
-    openIncidentReports, openIncidentReportsFor, closeIncidentReports,
+    openIncidentReports, openIncidentReportsFor, openIncidentReportsAll, openMechanicalIncidentCenter,
+    showMechanicalIncidentForm, closeIncidentReports,
     handleIncidentSubmit, editIncidentReport, deleteIncidentReport,
     approveIncidentReport, rejectIncidentReport, reopenIncidentReport,
     incidentFilteredRows, renderIncidentReports, renderIncidentList, renderIncidentStats,

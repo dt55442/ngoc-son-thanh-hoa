@@ -852,6 +852,41 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     });
     return capWorkshopAggregate(key, parts);
   }
+  function leadershipCapacitySnapshot(key, mode) {
+    return CAP_WORKSHOPS.map(workshop => {
+      const aggregate = capWorkshopPeriodRowFromMap(
+        workshop.id, key, capPeriodAggregates(workshop.id, mode), mode
+      );
+      return {
+        id: workshop.id,
+        label: workshop.label,
+        efficiency: aggregate.eff,
+        hours: aggregate.hours,
+        incidentHours: aggregate.parts.reduce((total, part) => total
+          + part.row.days.reduce((hours, day) => hours + (Number(day.incident) || 0), 0), 0),
+        bottleneck: aggregate.bottleneck
+          ? {
+            label: aggregate.bottleneck.st.label,
+            efficiency: aggregate.bottleneck.row.eff
+          }
+          : null,
+        stages: aggregate.parts.map(({ st, row }) => ({
+          id: st.id,
+          label: st.label,
+          unit: st.unit,
+          quantityUnit: st.unitQty,
+          turns: row.turns,
+          quantity: row.qty,
+          quantityKnown: row.qtyKnown !== false,
+          estimated: row.qtyEstimated === true,
+          hours: row.hours,
+          incidentHours: row.days.reduce((total, day) => total + (Number(day.incident) || 0), 0),
+          capacity: row.cap,
+          efficiency: row.eff
+        }))
+      };
+    });
+  }
   // Bản TUẦN ISO (kiểm thử cũ + sparkline vẫn dùng)
   function capWorkshopWeekRowFromMap(ws, weekKey, byWeek) {
     return capWorkshopPeriodRowFromMap(ws, weekKey, byWeek, 'week');
@@ -2073,6 +2108,7 @@ export {
   capStageDayRows,
   capStageWeekRow,
   capStagePeriodRow,
+  leadershipCapacitySnapshot,
   computeWorkerStageEfficiency,
   capWeekRowsFor,
   capPeriodsFor,

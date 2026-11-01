@@ -419,5 +419,36 @@ check('F11: nạp từ file/backup/mây GỘP theo id (mới hơn thắng, giữ
   (state.x2IncidentReports || []).find(r => r.id === 'a').hours === 2 &&
   (state.x2IncidentReports || []).find(r => r.id === 'a').status === 'da_duyet');
 
+state.x2IncidentReports = [
+  { id: 'center-pending', stage: 'cut', date: '2026-10-30', hours: 2, status: 'cho_duyet',
+    repairAssigneeIds: ['mechanic-1'], repairStatus: 'in_progress', repairPriority: 'urgent', repairDueAt: '2020-01-01T10:00' },
+  { id: 'center-verified', stage: 'say', date: '2026-10-29', hours: 1, status: 'da_duyet',
+    repairAssigneeIds: ['mechanic-1'], repairStatus: 'verified', repairPriority: 'normal' }
+];
+inc.openMechanicalIncidentCenter();
+const mechIncidentModal = document.getElementById('modal-x2-incidents');
+check('F12: mở từ thẻ Cơ điện bật chế độ toàn màn hình, KPI và nhóm ngày', mechIncidentModal.classList.contains('is-mech-center') &&
+  document.getElementById('inc-mech-summary').hidden === false &&
+  document.getElementById('inc-modal-title').textContent === 'Trung tâm xử lý sự cố Cơ điện' &&
+  document.getElementById('inc-list-section-title').textContent === 'Sự cố theo ngày' &&
+  document.getElementById('inc-mech-kpi-pending').textContent === '1' &&
+  document.getElementById('inc-mech-kpi-open').textContent === '1' &&
+  document.getElementById('inc-mech-kpi-overdue').textContent === '1' &&
+  (document.getElementById('inc-list-area').innerHTML.match(/inc-day-card/g) || []).length === 2);
+check('F13: trung tâm hiển thị ưu tiên/hạn Cơ điện và nút lập phiếu', document.getElementById('inc-list-area').innerHTML.includes('Khẩn cấp') &&
+  document.getElementById('inc-list-area').innerHTML.includes('Hạn Cơ Điện') &&
+  document.getElementById('btn-inc-mech-new').hidden === false);
+inc.showMechanicalIncidentForm();
+check('F14: nút lập phiếu mở biểu mẫu mà không tạo luồng sự cố riêng', mechIncidentModal.classList.contains('is-creating') &&
+  document.getElementById('btn-inc-mech-new').hidden === true);
+inc.closeIncidentReports();
+check('F15: đóng trung tâm gỡ chế độ riêng', !mechIncidentModal.classList.contains('is-mech-center') &&
+  !mechIncidentModal.classList.contains('is-creating'));
+inc.openIncidentReports();
+check('F16: mở từ Công đoạn SX vẫn dùng modal và tiêu đề cũ', !mechIncidentModal.classList.contains('is-mech-center') &&
+  document.getElementById('inc-modal-title').textContent === 'Báo Cáo Sự Cố' &&
+  document.getElementById('inc-mech-summary').hidden === true);
+inc.closeIncidentReports();
+
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

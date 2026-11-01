@@ -9,6 +9,7 @@ import { renderAll } from './main.js';
 import { areaLabel, canArea, canEditAnything, canEditRate, canEditTab, canPayApply, canPayLock, currentAreaId, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
 import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { STORAGE_KEY_HR_WORKER_EVALUATIONS } from './state.js';
+import { STORAGE_KEY_MECH_WORK_PLANS } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
@@ -1317,6 +1318,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       planningForecast: state.planningForecast,
       planningStock: state.planningStock,
       qcExports: state.qcExports || [],
+      mechWorkPlans: state.mechWorkPlans || [],
       qcKilnReadings: state.qcKilnReadings || [],
       qcKilnThresholds: state.qcKilnThresholds || {},
       qcFinalRecords: state.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
@@ -1451,6 +1453,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       pressNotes: obj.pressNotes || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
       qcExports: obj.qcExports || [],
+      mechWorkPlans: obj.mechWorkPlans || [],
       qcKilnReadings: obj.qcKilnReadings || [],
       qcKilnThresholds: obj.qcKilnThresholds || {},
       qcFinalRecords: obj.qcFinalRecords || [],   // KIỂM SAU SẢN XUẤT (tab QC)
@@ -1931,6 +1934,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (remote.materialRates) state.materialRates = rateArrMerge(clean('materialRates', state.materialRates), clean('materialRates', remote.materialRates));
     if (remote.customCharts) state.customCharts = m(clean('customCharts', state.customCharts), clean('customCharts', remote.customCharts));
     if (remote.qcExports) state.qcExports = m(clean('qcExports', state.qcExports || []), clean('qcExports', remote.qcExports));
+    if (remote.mechWorkPlans) state.mechWorkPlans = m(clean('mechWorkPlans', state.mechWorkPlans || []), clean('mechWorkPlans', remote.mechWorkPlans));
     // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) — gộp theo id, mới hơn thắng + tôn trọng tombstone
     if (remote.qcKilnReadings) state.qcKilnReadings = m(clean('qcKilnReadings', state.qcKilnReadings || []), clean('qcKilnReadings', remote.qcKilnReadings));
     // KIỂM SAU SẢN XUẤT (tab QC) — gộp theo id, mới hơn thắng + tôn trọng tombstone
@@ -2131,6 +2135,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_MECH_WORK_PLANS, JSON.stringify(state.mechWorkPlans || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_KILN_HUMIDITY, JSON.stringify(state.qcKilnReadings || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_KILN_THRESHOLD, JSON.stringify(state.qcKilnThresholds || {})); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_FINAL, JSON.stringify(state.qcFinalRecords || [])); } catch (e) {}
@@ -2282,6 +2287,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     materialRates: 'Định Mức Nguyên Vật Liệu',
     planningItems: 'Kế Hoạch Sản Xuất',
     qcExports: 'Xuất Hàng QC',
+    mechWorkPlans: 'Kế hoạch công việc Cơ điện',
     qcFinalRecords: 'Kiểm Sau Sản Xuất',
     qcPressLogs: 'Nhật Ký Ép Ván (QC)',
     x2IncidentReports: 'Báo Cáo Sự Cố (Công Đoạn SX)',
@@ -2572,6 +2578,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (data.planningForecast !== undefined) state.planningForecast = data.planningForecast;
       if (data.planningStock !== undefined) state.planningStock = data.planningStock;
       if (data.qcExports) state.qcExports = clean('qcExports', data.qcExports);
+      if (data.mechWorkPlans) state.mechWorkPlans = clean('mechWorkPlans', data.mechWorkPlans);
       // ĐỘ ẨM LÒ SẤY: số đo gộp theo tombstone; ngưỡng nhận nguyên theo mây (tải về = ghi đè)
       if (data.qcKilnReadings) state.qcKilnReadings = clean('qcKilnReadings', data.qcKilnReadings);
       // KIỂM SAU SẢN XUẤT: nhận theo mây khi tải về (gộp theo tombstone — không hồi sinh lượt đã xóa)

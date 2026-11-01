@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v323';
+  const APP_VERSION = 'v329';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -225,6 +225,7 @@
   // dùng bấm nút 'Thêm' trong ô Đầu Ra để khai báo thêm — mảng chuỗi 'Dài×Rộng×Dày'
   const STORAGE_KEY_X2_BAO_THANH_OUT_SIZES = 'bamboo_tracker_x2_bao_thanh_out_sizes_v1';
   const STORAGE_KEY_QC_EXPORTS = 'bamboo_tracker_qc_exports_v1';
+  const STORAGE_KEY_MECH_WORK_PLANS = 'bamboo_tracker_mech_work_plans_v1';
   // ĐỘ ẨM LÒ SẤY (tab QC — QC đo & nhập HÀNG NGÀY cho từng lò sấy LS1..LS15):
   // [{ id, date 'YYYY-MM-DD', location 'LS3', value (%), note, by, createdAt, updatedAt }]
   // — nguồn cho cột "Độ ẩm hiện tại" + màu đạt ẩm của BẢNG ĐIỀU KHIỂN LÒ SẤY (js/kiln.js)
@@ -379,6 +380,7 @@
     hrCalMonth: '',    // tháng đang xem/cài đặt trong modal Lịch Làm Việc ('YYYY-MM')
     hrWorkerEvaluations: [], // [{ id, employeeId, month, grade: 'A'|'B'|'C'|'', updatedBy, updatedAt }]
     qcExports: [],
+    mechWorkPlans: [], // [{ id, date, title, description, assigneeIds[], priority, status, dueDate, outcome, createdAt, updatedAt }]
     // ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày) + NGƯỠNG độ ẩm đạt theo công đoạn sấy
     qcKilnReadings: [],                   // [{ id, date, location, value, note, by, createdAt, updatedAt }]
     qcKilnThresholds: { say1: 15, say2: 12 }, // đạt khi độ ẩm ≤ ngưỡng của loại sấy
@@ -658,6 +660,7 @@ export {
   STORAGE_KEY_XUONG1_LOC_THANH,
   STORAGE_KEY_X1_RATES,
   STORAGE_KEY_QC_EXPORTS,
+  STORAGE_KEY_MECH_WORK_PLANS,
   STORAGE_KEY_QC_KILN_HUMIDITY,
   STORAGE_KEY_QC_KILN_THRESHOLD,
   STORAGE_KEY_QC_FINAL,

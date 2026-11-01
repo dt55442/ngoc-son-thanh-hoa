@@ -355,8 +355,11 @@ state.qcSumYear = 'all'; state.qcSumWeeks = []; state.qcSearchQ = '';
 qc.renderQcView();
 const fsMod = await import('node:fs');
 const qcHTML = fsMod.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-check('THẺ QC: index.html có launcher 3 thẻ (Xuất Hàng / Kiểm Đầu Vào / Kiểm Sau Sản Xuất)',
-  qcHTML.includes('data-qc-card="qc-export-card"') && qcHTML.includes('data-qc-card="qc-incoming-card"') && qcHTML.includes('data-qc-card="qc-final-card"'));
+check('THẺ QC: launcher có đủ 5 thẻ QC trên cùng lưới',
+  (qcHTML.match(/class="qc-mini-card" data-qc-card=/g) || []).length === 5 &&
+  qcHTML.includes('data-qc-card="qc-export-card"') && qcHTML.includes('data-qc-card="qc-incoming-card"') &&
+  qcHTML.includes('data-qc-card="qc-final-card"') && qcHTML.includes('data-qc-card="qc-humidity-card"') &&
+  qcHTML.includes('data-qc-card="qc-press-card"'));
 check('MODAL QC: hỗ trợ chọn nhiều tuần và hiển thị chip xác nhận',
   qcHTML.includes('id="qc-imp-week"') && qcHTML.includes('multiple size="4"') && qcHTML.includes('id="qc-imp-selected-weeks"') &&
   qcHTML.includes('giữ Ctrl'));

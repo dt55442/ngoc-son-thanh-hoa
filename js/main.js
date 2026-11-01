@@ -11,6 +11,7 @@ import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.j
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
 import { deleteCustomChart, openChartBuilderModal, openDashHelp, renderDashboardCharts, toggleChartExpand } from './dashboard.js';
+import { canAccessLeadershipDashboard, renderLeadershipDashboard } from './leadership-dashboard.js';
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts } from './export-xlsx.js';
 import { openReportCenter } from './report-center.js';
@@ -29,6 +30,7 @@ import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPre
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
 import { loadQcFinal, loadQcFinalRates } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
 import { loadQcPressLogs } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail — js/qc-press.js)
+import { closeMechWorkPlan, loadMechWorkPlans, renderMechCards } from './mech-work.js';
 import { loadX2IncidentReports, updateIncidentBadge } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
 import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard, hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday } from './hr.js'; // SƠ ĐỒ BONG BÓNG NHÂN SỰ (21/10/2026)
@@ -37,7 +39,7 @@ import { canViewAdvanced } from './permissions.js';
 import { initHistory } from './history.js';
 import { APP_VERSION, state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
-import { setupFormCalculations, initVnDateInputs } from './utils.js';
+import { setupFormCalculations, initVnDateInputs, showToast } from './utils.js';
 
 setWorkerEvaluationEfficiencyProvider(computeWorkerStageEfficiency);
 
@@ -139,6 +141,7 @@ function yieldBootFrame() {
     loadRateApprovals(); // BẢNG ĐỊNH MỨC TỔNG HỢP — bản ghi PHÊ DUYỆT theo (xưởng, tháng)
     loadKilnData(); // Độ ẩm lò sấy + ngưỡng đạt (QC nhập hàng ngày — js/kiln.js)
     await loadHrData();
+    loadMechWorkPlans();
     await yieldBootFrame();
     setTreLoadingStatus('Đang hoàn tất giao diện…');
     // DỌN DỮ LIỆU CŨ: xóa hẳn lô nan còn sót stage 'bao_tinh' (cột Kanban "4. Bào
@@ -215,7 +218,7 @@ function yieldBootFrame() {
   function closeViewScopedModals(viewEl) {
     if (!viewEl) return;
     if (viewEl.id === 'kanban-view') { try { x2CloseOpenCard(); } catch (e) {} }
-    if (viewEl.id === 'qc-view') { try { qcCloseOpenCard(); } catch (e) {} }
+    if (viewEl.id === 'qc-view') { try { qcCloseOpenCard(); } catch (e) {} try { closeMechWorkPlan(); } catch (e) {} }
     if (viewEl.id === 'hr-view') { try { hrCloseOpenCard(); } catch (e) {} try { hrDockClose(); } catch (e) {} }
     if (typeof viewEl.querySelectorAll !== 'function') return;
     viewEl.querySelectorAll('.modal-overlay.show').forEach(o => o.classList.remove('show'));
@@ -289,6 +292,10 @@ function yieldBootFrame() {
   }
 
   function switchViewCore(targetViewId) {
+    if (targetViewId === 'leadership-view' && !canAccessLeadershipDashboard()) {
+      showToast('Chỉ Ban Quản Lý và Admin được xem tổng hợp lãnh đạo.', 'error');
+      targetViewId = 'dashboard-view';
+    }
     const prevView = state.activeView;
     state.activeView = targetViewId;
     // Chỉ đặt lại vị trí về TUẦN HIỆN TẠI khi CHUYỂN TỪ TAB KHÁC sang tab Kế hoạch
@@ -335,8 +342,9 @@ function yieldBootFrame() {
       filterMobileKanbanColumns();
     }
     if (targetViewId === 'planning-view') renderPlanningView();
+    if (targetViewId === 'leadership-view') renderLeadershipDashboard();
     if (targetViewId === 'materials-view') renderMaterialView();
-    if (targetViewId === 'qc-view') renderQcView();
+    if (targetViewId === 'qc-view') { renderQcView(); renderMechCards(); }
     if (targetViewId === 'hr-view') renderHrVisible();
     // "Nan Bot" chào + nhắc nhanh theo tab vừa mở (tầng offline hiện ngay,
     // tầng AI lầy hơn sẽ tự thay câu khi có key + mạng + còn quota)
@@ -456,9 +464,10 @@ function yieldBootFrame() {
       renderCapacityCard();
       dashboardDirty = false; // vừa vẽ xong tại chỗ → không phải vẽ lại khi quay lại tab
     }
+    if (state.activeView === 'leadership-view') renderLeadershipDashboard();
     if (state.activeView === 'planning-view') renderPlanningView();
     if (state.activeView === 'materials-view') renderMaterialView();
-    if (state.activeView === 'qc-view') renderQcView();
+    if (state.activeView === 'qc-view') { renderQcView(); renderMechCards(); }
     if (state.activeView === 'hr-view') renderHrVisible();
     if (state.activeView === 'kanban-view') {
       // Sparkline hiệu suất 8 tuần trên các mini card launcher Xưởng 2 (js/capacity.js)

@@ -41,7 +41,7 @@ export const APP_TABS = [
   { id: 'planning', viewId: 'planning-view', name: 'Kế Hoạch Sản Xuất',  short: 'Kế Hoạch',   icon: 'clipboard-list', color: '#7c3aed' },
   { id: 'press',    viewId: 'press-view',    name: 'Sản Lượng Ép Ván',   short: 'Ép Ván',     icon: 'factory',        color: '#ea580c' },
   { id: 'materials',viewId: 'materials-view',name: 'Nhập Nguyên Liệu',   short: 'Nguyên Liệu',icon: 'package-plus',   color: '#db2777' },
-  { id: 'qc',       viewId: 'qc-view',       name: 'QC — Xuất Hàng',     short: 'QC',         icon: 'clipboard-check',color: '#0d9488' },
+  { id: 'qc',       viewId: 'qc-view',       name: 'QC + Cơ điện',       short: 'QC + Cơ điện', icon: 'clipboard-check',color: '#0d9488' },
   { id: 'hr',       viewId: 'hr-view',       name: 'Nhân Sự',            short: 'Nhân Sự',     icon: 'users',         color: '#2563eb' }
 ];
 
@@ -236,6 +236,20 @@ export function syncPermissionUI() {
   body.dataset.payPerms = [canPayApply() ? 'apply' : '', canPayLock() ? 'lock' : ''].filter(Boolean).join(' ');
   body.dataset.role = role || 'guest';
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  const canSeeLeadership = role === 'admin' || role === 'manager';
+  show('nav-leadership', canSeeLeadership);
+  show('mobile-nav-leadership', canSeeLeadership);
+  const leadershipView = document.getElementById('leadership-view');
+  if (leadershipView) leadershipView.hidden = !canSeeLeadership;
+  if (!canSeeLeadership && state.activeView === 'leadership-view') {
+    state.activeView = 'dashboard-view';
+    if (leadershipView) leadershipView.classList.remove('active');
+    const dashboardView = document.getElementById('dashboard-view');
+    if (dashboardView) dashboardView.classList.add('active');
+    document.querySelectorAll('.nav-btn, .mobile-nav-item').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-target') === 'dashboard-view');
+    });
+  }
   // Mục chỉ dành cho Admin trong menu
   show('btn-open-users-mgr', role === 'admin');
   show('btn-import-json', role === 'admin');

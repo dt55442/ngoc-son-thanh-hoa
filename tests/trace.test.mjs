@@ -483,7 +483,7 @@ check('H8: dashboard.js gọi renderTraceCard trong renderDashboardCharts (chỉ
   dashSrc.includes("from './trace.js'") && dashSrc.includes('if (canViewAdvanced()) renderTraceCard();'));
 
 check('H9: sw.js có ./js/trace.js trong APP_SHELL', swJs.includes("'./js/trace.js'"));
-check('H10: sw.js đã tăng cache lên v252', /nha-may-ngoc-son-v323/.test(swJs));
+check('H10: sw.js đã tăng cache lên v252', /nha-may-ngoc-son-v329/.test(swJs));
 
 check('H11: styles.css có khối THẺ TRUY XUẤT (.trace-card/.trace-kpi/.trace-table)',
   cssSrc.includes('THẺ TRUY XUẤT ĐẦU VÀO → ĐẦU RA') &&
@@ -795,6 +795,29 @@ check('L5: styles.css ĐÃ XÓA .trace-ref-chip và THÊM .trace-size-warn',
 check('L6: trace.js KHÔNG còn sinh div chip (chỉ tooltip) — không còn chuỗi trace-ref-chip trong mã',
   !traceSrc.includes('trace-ref-chip'));
 
+// BỔ ỐNG SỔ NHÓM: không có cutId, nên dùng KL đem bổ đã cân làm cơ sở theo cỡ.
+state.materialRecords = [
+  { id: 'mat-pool', date: '2026-10-05', location: 'xuong-2', weight: 10000 }
+];
+state.xuong2CutRecords = [
+  { id: 'cut-pool-ratio', date: '2026-10-05', inputWeight: 10000, klOngLuong: 5000 }
+];
+state.xuong2BoOngRecords = [
+  { id: 'bo-pool', cutId: '', poolMode: true, lotOng: 0, inputOng: 500, klOngLoai: 50, date: '2026-10-05' }
+];
+state.xuong2BaoThoRecords = [
+  { id: 'bt-pool', boOngId: 'bo-pool', date: '2026-10-05' }
+];
+state.xuong2ChonNanThoRecords = [
+  { id: 'cn-pool', baothoId: 'bt-pool', date: '2026-10-05', dims: [1250, 18, 7],
+    unitVol: 0.0001575, quantity: 1000, cls: 'A', external: false }
+];
+setPeriod('month', '2026-10', '');
+const poolData = trace.traceOngSizeRows();
+const poolSize = poolData.rows.find(r => r.sizeKey === '1250×18×7');
+check('M1: Bổ Ống sổ nhóm không có cutId vẫn tính KL theo KL đem bổ đã cân',
+  !!poolSize && near(poolSize.kgPerThanhLuong, 0.5, 0.001) &&
+  near(poolSize.kgPerThanhTuoi, 1, 0.001) && poolData.knownThanh === 1000);
+
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
-

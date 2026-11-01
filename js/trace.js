@@ -658,7 +658,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, chonNanDisp
       groups.set(gid, g);
     });
 
-    // ② KG của từng nhóm: kg ống bổ đạt (bổ ống) + kg ống luồng (cắt chọn)
+    // ② KG của từng nhóm: ống bổ đạt + ống luồng; sổ nhóm dùng trực tiếp KL đem bổ.
     //    Lượt bổ dùng CHUNG cho nhiều lượt bào thô → chia kg theo TỈ TRỌNG THỂ TÍCH
     //    của các nhóm cùng dùng lượt bổ đó.
     const boOf = (id) => (state.xuong2BoOngRecords || []).find(x => x && x.id === id) || null;
@@ -703,8 +703,10 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, chonNanDisp
         const sumIn = cutInOngSum.get(bo.cutId) || 0;
         const my = Number(bd.inputOng) || 0;
         ongKgOfBo = sumIn > 0 ? (Number(cd.klOngLuong) || 0) * (my / sumIn) : 0;
+      } else if (bd.poolMode) {
+        ongKgOfBo = Number(bd.inputOng) || 0; // sổ nhóm: dùng KL ống đem bổ đã cân
       } else {
-        ongKgOfBo = Number(bd.lotOng) || 0;   // mất link cắt → dùng snapshot KL ống của lô
+        ongKgOfBo = Number(bd.lotOng) || 0;   // lượt cũ mất link cắt → dùng snapshot KL lô
       }
       gidVols.forEach((v, gid) => {
         const t = gTotals.get(gid);
@@ -724,7 +726,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, chonNanDisp
         const row = target || rowOf(sizeKey, false);
         const w = g.vol > 0 ? (s.vol / g.vol) : 0;
         row.thanh += s.thanh;
-        row.kgLuong += t.kgLuong * w;          // CƠ SỞ = kg ống luồng (quy về Cắt chọn)
+        row.kgLuong += t.kgLuong * w;          // CƠ SỞ = kg ống luồng / đem bổ
         if (!target && s.unitVol > 0) row.unitVol = s.unitVol;   // thể tích 1 thanh (cùng cỡ = cùng vol)
         row.groups.add(gid);
       });
@@ -1063,7 +1065,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, chonNanDisp
         ? 'Không tra được chuỗi liên kết Chọn nan thô → Bào thô → Bổ ống (bản ghi cũ đã xóa hoặc thiếu mã lô) nên CHƯA tính được kg — số thanh vẫn được giữ ở đây, không bị bỏ và KHÔNG tính vào bình quân.'
         : 'Cỡ thanh nan (Dài × Rộng × Dày, mm)')}">${escapeHTML(r.isUnknown ? 'Không rõ (mất link)' : r.sizeKey)}</td>
       <td class="trace-num">${fmtNumT(r.thanh)}</td>
-      <td class="trace-num trace-head-num" title="KL ỐNG LUỒNG / 1 thanh — CƠ SỞ: kg ống luồng của lô cắt (quy về Cắt chọn) chia theo tỉ trọng thể tích rồi ÷ số thanh cỡ này.">${r.kgPerThanhLuong == null ? '—' : fmtKg2(r.kgPerThanhLuong)}</td>
+      <td class="trace-num trace-head-num" title="KL ỐNG LUỒNG / 1 thanh — CƠ SỞ: lượt cũ phân bổ kg lô Cắt Chọn theo KL đem bổ; sổ nhóm dùng trực tiếp KL đem bổ đã cân. Sau đó phân bổ theo tỉ trọng thể tích rồi ÷ số thanh cỡ này.">${r.kgPerThanhLuong == null ? '—' : fmtKg2(r.kgPerThanhLuong)}</td>
       <td class="trace-num" title="KL TƯƠI quy đổi / 1 thanh = cột ỐNG LUỒNG ÷ tỷ lệ ống/tươi kỳ — SUY RA TỪ ỐNG nên 2 cột luôn nhất quán.">${r.kgPerThanhTuoi == null ? '—' : fmtKg2(r.kgPerThanhTuoi)}</td>
       <td class="trace-num" title="KL THẬT TẾ ≈ của 1 thanh (lý thuyết, đối chiếu) = thể tích 1 thanh × 1.000 (tre tươi ~1 kg/L) — KHÔNG phải số cân thật. Thứ tự đúng: thực tế &lt; ống luồng &lt; tươi quy đổi.">${r.kgRealTheoLyThuyet == null ? '—' : fmtKg2(r.kgRealTheoLyThuyet)}${sizeWarnOf(r)}</td>
       <td class="trace-num">${fmtNumT(r.groups)}</td>
@@ -1107,7 +1109,7 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, chonNanDisp
       </div>
       <div class="trace-size-note">
         <i data-lucide="info"></i>
-        <span>CƠ SỞ TÍNH = <strong>KL ống luồng / thanh</strong> (quy về Cắt chọn); KL tươi quy đổi = cột cơ sở ÷ tỷ lệ ống/tươi (${fmtNumT(data.ongRatio * 100)}%)${data.usingRefRatio ? ` (mượn cửa sổ tham chiếu ${escapeHTML(data.refLabel)} — kỳ này thiếu dữ liệu cắt)` : ''} — 2 cột SUY RA TỪ ỐNG nên luôn nhất quán. Cột <strong>KL thanh thực tế ≈</strong> chỉ là tham chiếu lý thuyết (thể tích × 1.000), để đối chiếu thứ tự: thực tế &lt; ống &lt; tươi.
+        <span>CƠ SỞ TÍNH = <strong>KL ống luồng / thanh</strong> (lượt cũ phân bổ từ lô Cắt Chọn; sổ nhóm dùng KL đem bổ đã cân); KL tươi quy đổi = cột cơ sở ÷ tỷ lệ ống/tươi (${fmtNumT(data.ongRatio * 100)}%)${data.usingRefRatio ? ` (mượn cửa sổ tham chiếu ${escapeHTML(data.refLabel)} — kỳ này thiếu dữ liệu cắt)` : ''} — 2 cột SUY RA TỪ ỐNG nên luôn nhất quán. Cột <strong>KL thanh thực tế ≈</strong> chỉ là tham chiếu lý thuyết (thể tích × 1.000), để đối chiếu thứ tự: thực tế &lt; ống &lt; tươi.
         Kg của mỗi lô được chia cho từng cỡ theo <strong>tỉ trọng thể tích</strong> (số thanh × thể tích 1 thanh) vì hao hụt giữa các công đoạn không tách riêng được theo cỡ.
         ${extras.length ? escapeHTML(extras.join(' · ')) + '.' : ''}</span>
       </div>`;

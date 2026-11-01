@@ -79,6 +79,7 @@ import { escapeHTML, showToast } from './utils.js';
     sysSettings:       { tab: 'dashboard', label: 'Cài đặt hệ thống (cờ hiển thị + quyền theo vùng)', get: () => state.sysSettings },
     suppliers:         { tab: 'materials', label: 'Nhà cung cấp',         get: () => state.suppliers },
     qcExports:         { tab: 'qc',        label: 'Dòng xuất hàng',       get: () => state.qcExports },
+    mechWorkPlans:     { tab: 'qc',        label: 'Kế hoạch công việc Cơ điện', get: () => state.mechWorkPlans },
     qcFinalRecords:    { tab: 'qc',        label: 'Kiểm sau sản xuất',    get: () => state.qcFinalRecords },
     qcFinalRates:      { tab: 'qc',        label: 'Định mức kiểm sau SX', get: () => state.qcFinalRates },
     qcPressLogs:       { tab: 'qc',        label: 'Nhật ký ép ván (QC kiểm)', get: () => state.qcPressLogs },

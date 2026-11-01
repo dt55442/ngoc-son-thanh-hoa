@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>Nhà máy Ngọc Sơn Thanh Hóa - Quản Lý & Theo Dõi Sản Xuất</title>
 
   <!-- PWA Manifest & Meta -->
@@ -109,6 +109,10 @@
           <i data-lucide="bar-chart-3"></i>
           <span>Tổng Quan (Dashboard)</span>
         </button>
+        <button class="nav-btn" data-target="leadership-view" id="nav-leadership" style="display:none;">
+          <i data-lucide="briefcase-business"></i>
+          <span>Lãnh Đạo</span>
+        </button>
         <button class="nav-btn" data-target="kanban-view" id="nav-kanban">
           <i data-lucide="layout-grid"></i>
           <span>Công Đoạn SX</span>
@@ -123,7 +127,7 @@
         </button>
         <button class="nav-btn" data-target="qc-view" id="nav-qc">
           <i data-lucide="clipboard-check"></i>
-          <span>QC</span>
+          <span>QC + Cơ điện</span>
         </button>
         <button class="nav-btn" data-target="hr-view" id="nav-hr">
           <i data-lucide="users"></i>
@@ -252,6 +256,10 @@
     <button class="mobile-nav-item active" data-target="dashboard-view">
       <i data-lucide="pie-chart"></i>
       <span>Tổng Quan</span>
+    </button>
+    <button class="mobile-nav-item" data-target="leadership-view" id="mobile-nav-leadership" style="display:none;">
+      <i data-lucide="briefcase-business"></i>
+      <span>Lãnh Đạo</span>
     </button>
     <button class="mobile-nav-item" data-target="kanban-view">
       <i data-lucide="layout-grid"></i>
@@ -3442,6 +3450,35 @@
 
     </section>
 
+    <!-- TỔNG HỢP RIÊNG CHO BAN LÃNH ĐẠO -->
+    <section id="leadership-view" class="view-panel leadership-view" hidden>
+      <div class="leadership-toolbar" aria-label="Điều khiển báo cáo">
+        <div class="leadership-period-controls">
+          <label for="leadership-period-mode">Kỳ báo cáo</label>
+          <select id="leadership-period-mode" aria-label="Chọn kỳ xem">
+            <option value="week">Tuần</option>
+            <option value="month">Tháng</option>
+          </select>
+          <div class="leadership-period-picker">
+            <button type="button" class="btn btn-outline btn-icon" id="btn-leadership-period-prev" title="Kỳ trước"><i data-lucide="chevron-left"></i></button>
+            <input id="leadership-period-key" type="week" aria-label="Chọn tuần hoặc tháng">
+            <button type="button" class="btn btn-outline btn-icon" id="btn-leadership-period-next" title="Kỳ sau"><i data-lucide="chevron-right"></i></button>
+          </div>
+        </div>
+        <div class="leadership-export-actions">
+          <button type="button" class="btn btn-outline" id="btn-leadership-print" title="In báo cáo theo khổ A4 dọc hoặc lưu PDF">
+            <i data-lucide="printer"></i> In / PDF
+          </button>
+          <button type="button" class="btn btn-success" id="btn-leadership-export" title="Xem trước và xuất số liệu báo cáo sang Excel">
+            <i data-lucide="file-spreadsheet"></i> Xuất Excel
+          </button>
+        </div>
+      </div>
+      <div class="leadership-sheet-scroll">
+        <div id="leadership-content" aria-live="polite"></div>
+      </div>
+    </section>
+
     <!-- 4. KẾ HOẠCH SẢN XUẤT VIEW -->
     <section id="planning-view" class="view-panel">
       
@@ -4079,12 +4116,12 @@
            một thẻ rút gọn; bấm thẻ để mở bảng chi tiết (xem / chỉnh sửa) -->
       <div class="qc-cards-overview">
         <div class="qc-cards-title" style="justify-content:space-between;">
-          <h4><i data-lucide="layout-grid"></i> Bảng QC</h4>
+          <h4><i data-lucide="layout-grid"></i> QC</h4>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="btn btn-success" id="btn-open-export-qc" title="Xuất bảng Xuất Hàng QC ra file Excel (.xlsx)">
               <i data-lucide="file-spreadsheet"></i> <span class="hide-mobile">Xuất Excel</span>
             </button>
-            <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-qc" title="Lịch sử thay đổi của tab QC (chỉ Admin)">
+            <button type="button" class="btn btn-outline history-admin-btn" id="btn-history-qc" title="Lịch sử thay đổi của tab QC + Cơ điện (chỉ Admin)">
               <i data-lucide="history"></i> <span class="hide-mobile">Lịch Sử</span>
             </button>
           </div>
@@ -4120,6 +4157,116 @@
             <span class="qc-mini-desc">QC theo dõi từng lượt ép</span>
             <span class="qc-mini-count" id="qc-mini-count-press">–</span>
           </button>
+        </div>
+      </div>
+
+      <div class="qc-cards-overview">
+        <div class="qc-cards-title">
+          <h4><i data-lucide="wrench"></i> Cơ điện</h4>
+        </div>
+        <div class="qc-cards qc-mech-cards">
+          <button type="button" class="qc-mini-card" id="btn-open-mech-work-plan" data-mech-card="work-plan" aria-haspopup="dialog" title="Kế hoạch công việc Cơ điện — theo dõi người phụ trách, tiến độ, thời gian bố trí HR và phiếu tăng ca">
+            <span class="qc-mini-ic"><i data-lucide="calendar-check"></i></span>
+            <span class="qc-mini-title">Kế hoạch công việc</span>
+            <span class="qc-mini-desc">Giao việc, theo dõi tiến độ và giờ HR</span>
+            <span class="qc-mini-count" id="mech-work-plan-count">Đang cập nhật</span>
+          </button>
+          <button type="button" class="qc-mini-card" id="btn-open-mech-incidents" data-mech-card="incidents" aria-haspopup="dialog" title="Sự cố sản xuất — dữ liệu trực tiếp từ tab Công Đoạn SX">
+            <span class="qc-mini-ic"><i data-lucide="triangle-alert"></i></span>
+            <span class="qc-mini-title">Sự cố sản xuất</span>
+            <span class="qc-mini-desc">Phiếu chờ duyệt, việc chưa nghiệm thu và quá hạn</span>
+            <span class="qc-mini-count" id="mech-incident-count">Đang cập nhật</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="modal-mech-work-plan" aria-hidden="true">
+        <div class="modal-card mech-work-modal" role="dialog" aria-modal="true" aria-labelledby="mech-work-modal-title">
+          <div class="modal-header">
+            <h3 id="mech-work-modal-title"><i data-lucide="calendar-check"></i> Lịch điều hành Cơ điện</h3>
+            <button type="button" class="modal-close-btn" id="btn-close-mech-work-plan" title="Đóng"><i data-lucide="x"></i></button>
+          </div>
+          <div class="mech-work-modal-body">
+            <div class="mech-work-summary" aria-label="Tổng quan kế hoạch Cơ điện">
+              <div class="mech-work-kpi"><span>Việc trong ngày</span><strong id="mech-work-kpi-today">0</strong><small>Lịch theo ngày thực hiện</small></div>
+              <div class="mech-work-kpi is-active"><span>Đang thực hiện</span><strong id="mech-work-kpi-progress">0</strong><small>Trên toàn bộ kế hoạch</small></div>
+              <div class="mech-work-kpi is-warning"><span>Quá hạn</span><strong id="mech-work-kpi-overdue">0</strong><small>Chưa hoàn thành</small></div>
+              <div class="mech-work-kpi is-danger"><span>Thiếu phiếu tăng ca</span><strong id="mech-work-kpi-overtime">0</strong><small>Đối chiếu HR theo người/ngày</small></div>
+            </div>
+            <div class="mech-work-toolbar">
+              <div class="mech-work-date-tools" aria-label="Điều hướng lịch">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-mech-work-date-prev" title="Ngày trước"><i data-lucide="chevron-left"></i></button>
+                <input type="date" id="mech-work-date-filter" aria-label="Lọc kế hoạch theo ngày">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-mech-work-date-next" title="Ngày sau"><i data-lucide="chevron-right"></i></button>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-mech-work-date-today">Hôm nay</button>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-mech-work-date-all">Toàn bộ lịch</button>
+              </div>
+              <div class="mech-work-list-tools">
+                <label class="mech-work-status-filter" for="mech-work-status-filter">Trạng thái
+                  <select id="mech-work-status-filter">
+                    <option value="all">Tất cả</option>
+                    <option value="not_started">Chưa bắt đầu</option>
+                    <option value="in_progress">Đang thực hiện</option>
+                    <option value="completed">Hoàn thành</option>
+                  </select>
+                </label>
+              <button type="button" class="btn btn-primary" id="btn-add-mech-work-plan"><i data-lucide="plus"></i> Thêm công việc</button>
+              </div>
+            </div>
+            <div id="mech-work-plan-empty" class="mech-work-empty" hidden>Chưa có kế hoạch công việc Cơ điện.</div>
+            <div id="mech-work-plan-list" class="mech-work-list"></div>
+            <form id="mech-work-plan-form" class="mech-work-form" hidden>
+              <h4 id="mech-work-form-title">Thêm kế hoạch công việc</h4>
+              <div class="form-grid mech-work-form-grid">
+                <div class="form-group">
+                  <label for="mech-work-title">Tên công việc <span class="required">*</span></label>
+                  <input id="mech-work-title" type="text" maxlength="160" required>
+                </div>
+                <div class="form-group">
+                  <label for="mech-work-date">Ngày thực hiện <span class="required">*</span></label>
+                  <input id="mech-work-date" type="date" required>
+                </div>
+                <div class="form-group">
+                  <label for="mech-work-assignees">Người phụ trách <span class="required">*</span></label>
+                  <select id="mech-work-assignees" multiple size="4" required aria-describedby="mech-work-assignees-hint"></select>
+                  <small id="mech-work-assignees-hint">Chọn một hoặc nhiều nhân viên thuộc Cơ điện. Tên chỉ phục vụ giao việc, không dùng để chấm điểm.</small>
+                </div>
+                <div class="form-group">
+                  <label for="mech-work-description">Nội dung công việc</label>
+                  <textarea id="mech-work-description" rows="3" maxlength="1000"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="mech-work-priority">Mức ưu tiên</label>
+                  <select id="mech-work-priority">
+                    <option value="low">Thấp</option>
+                    <option value="normal" selected>Bình thường</option>
+                    <option value="high">Cao</option>
+                    <option value="urgent">Khẩn cấp</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="mech-work-status">Trạng thái</label>
+                  <select id="mech-work-status">
+                    <option value="not_started">Chưa bắt đầu</option>
+                    <option value="in_progress">Đang thực hiện</option>
+                    <option value="completed">Hoàn thành</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="mech-work-due-date">Hạn hoàn thành</label>
+                  <input id="mech-work-due-date" type="date">
+                </div>
+                <div class="form-group">
+                  <label for="mech-work-outcome">Kết quả / ghi chú hoàn thành</label>
+                  <input id="mech-work-outcome" type="text" maxlength="500">
+                </div>
+              </div>
+              <div class="mech-work-form-actions">
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Lưu công việc</button>
+                <button type="button" class="btn btn-outline" id="btn-cancel-mech-work-edit">Hủy</button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -6903,7 +7050,7 @@
                 <label class="edit-tab-check"><input type="checkbox" value="planning" checked> Kế Hoạch Sản Xuất</label>
                 <label class="edit-tab-check"><input type="checkbox" value="press" checked> Ép Ván (thẻ trong Công Đoạn)</label>
                 <label class="edit-tab-check"><input type="checkbox" value="materials" checked> Nhập Nguyên Liệu</label>
-                <label class="edit-tab-check"><input type="checkbox" value="qc" checked> QC (Xuất Hàng)</label>
+                <label class="edit-tab-check"><input type="checkbox" value="qc" checked> QC + Cơ điện</label>
                 <label class="edit-tab-check"><input type="checkbox" value="hr" checked> Nhân Sự</label>
                 <label class="edit-tab-check"><input type="checkbox" value="dashboard" checked> Dashboard (Biểu đồ)</label>
               </div>
@@ -7086,7 +7233,7 @@
             <label class="edit-tab-check"><input type="checkbox" value="planning"> Kế Hoạch Sản Xuất</label>
             <label class="edit-tab-check"><input type="checkbox" value="press"> Ép Ván (thẻ trong Công Đoạn)</label>
             <label class="edit-tab-check"><input type="checkbox" value="materials"> Nhập Nguyên Liệu</label>
-            <label class="edit-tab-check"><input type="checkbox" value="qc"> QC (Xuất Hàng)</label>
+            <label class="edit-tab-check"><input type="checkbox" value="qc"> QC + Cơ điện</label>
             <label class="edit-tab-check"><input type="checkbox" value="hr"> Nhân Sự</label>
             <label class="edit-tab-check"><input type="checkbox" value="dashboard"> Dashboard (Biểu đồ)</label>
           </div>
@@ -8051,8 +8198,14 @@
   <div class="modal-overlay" id="modal-x2-incidents">
     <div class="modal-card inc-card">
       <div class="modal-header">
-        <h3><i data-lucide="alert-triangle"></i> Báo Cáo Sự Cố</h3>
+        <h3><i data-lucide="alert-triangle"></i> <span id="inc-modal-title">Báo Cáo Sự Cố</span></h3>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-inc-mech-new" hidden><i data-lucide="plus"></i> Lập phiếu mới</button>
         <button class="modal-close" id="btn-close-x2-incidents" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="mech-incident-summary" id="inc-mech-summary" hidden aria-label="Tổng quan xử lý sự cố Cơ điện">
+        <div><span>Chờ duyệt</span><strong id="inc-mech-kpi-pending">0</strong></div>
+        <div><span>Chưa nghiệm thu</span><strong id="inc-mech-kpi-open">0</strong></div>
+        <div><span>Quá hạn</span><strong id="inc-mech-kpi-overdue">0</strong></div>
       </div>
       <div class="modal-body inc-body">
         <div class="inc-edit-banner" id="inc-edit-banner" hidden></div>
@@ -8182,7 +8335,7 @@
         <!-- ③ DUYỆT -->
         <div class="ck-sec" data-zone="3">
           <div class="ck-sec-head">
-            <span class="ck-sec-num">3</span> Duyệt phiếu
+            <span class="ck-sec-num">3</span><span id="inc-stats-section-title">Duyệt phiếu</span>
             <i class="ck-help" data-lucide="info" title="Phiếu CHỜ DUYỆT chưa trừ vào hiệu suất. Khi Ban lãnh đạo (Quản Trị / Ban Quản Lý) bấm DUYỆT, số giờ của phiếu tự trở thành giờ sự cố của đúng công đoạn + ngày — ô nhập tay trên thẻ ngày bị khoá để tránh đếm 2 lần."></i>
           </div>
           <div class="inc-note-row">
@@ -8197,7 +8350,7 @@
         <!-- ④ DANH SÁCH THEO NGÀY -->
         <div class="ck-sec" data-zone="4">
           <div class="ck-sec-head">
-            <span class="ck-sec-num">4</span> Danh sách phiếu (theo ngày)
+            <span class="ck-sec-num">4</span><span id="inc-list-section-title">Danh sách phiếu (theo ngày)</span>
             <i class="ck-help" data-lucide="info" title="Lọc theo tháng / công đoạn / trạng thái. Bấm DUYỆT để áp giờ vào công đoạn; MỞ LẠI để trả giờ về; sửa/xoá phiếu đã duyệt chỉ Ban lãnh đạo làm được."></i>
           </div>
           <div class="inc-filter-bar">

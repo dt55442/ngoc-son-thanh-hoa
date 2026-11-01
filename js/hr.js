@@ -1046,6 +1046,30 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const schedule = hrAssignmentScheduleOf(assignments);
     return assignments.reduce((sum, a) => sum + hrSplitAssignmentHoursDate(a, ot.date, schedule).tc, 0);
   }
+
+  function hrAssignmentWorktimeOf(employeeId, date) {
+    if (!employeeId || !date) return { assignments: [], regularMin: 0, overtimeMin: 0 };
+    const assignments = hrAssignmentsOf(date).filter(a => a && String(a.employeeId) === String(employeeId));
+    const schedule = hrAssignmentScheduleOf(assignments);
+    let regularMin = 0;
+    let overtimeMin = 0;
+    const rows = assignments.slice()
+      .sort((a, b) => hrAssignmentStartMin(a) - hrAssignmentStartMin(b))
+      .map(a => {
+        const split = hrSplitAssignmentHoursDate(a, date, schedule);
+        regularMin += split.hc;
+        overtimeMin += split.tc;
+        return {
+          position: hrPosName(a.positionId),
+          start: a.start || '',
+          end: schedule.endById.get(a.id) || '',
+          shiftLabel: a.shiftLabel || '',
+          regularMin: split.hc,
+          overtimeMin: split.tc
+        };
+      });
+    return { assignments: rows, regularMin, overtimeMin };
+  }
   // Nhãn giờ DỰ KIẾN: "17:30 → 19:30 · 2h"
   function overtimePlannedText(ot) {
     let m = toMinT(ot.end) - toMinT(ot.start);
@@ -8690,6 +8714,7 @@ export {
   canApproveLeave,
   syncLeaveDurationUI,
   overtimeActualMin,
+  hrAssignmentWorktimeOf,
   renderHrOvertimesTable,
   openOvertimeModal,
   closeOvertimeModal,

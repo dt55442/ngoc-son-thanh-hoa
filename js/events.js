@@ -12,6 +12,7 @@ import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openCh
 import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, closeX2ExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, handleX2ExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, openX2ExportModal, openX2ExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
 import { closeHistoryModal, openHistoryModal, setHistoryDomainFilter, setHistoryTabFilter, setHistoryUserFilter, clearHistory } from './history.js';
 import { closeReportCenter, exportReportGroup, handleReportSubmit, onReportCenterClick, onReportFilterChange, openReportCenter, openReportPreview } from './report-center.js';
+import { openLeadershipReportPreview, printLeadershipReport, setLeadershipPeriodKey, setLeadershipPeriodMode, shiftLeadershipPeriod } from './leadership-dashboard.js';
 // BẢNG ĐỊNH MỨC TỔNG HỢP + PHÊ DUYỆT (nút "Định Mức" cạnh "Lịch Sử" — tab Công Đoạn SX)
 import { closeRateCenter, onRateCenterClick, openRateCenter } from './rate-center.js';
 import { closeAiAssistant, copyAiResult, openAiAssistant, aiSaveKey, aiToggleKey, aiSetModel, runAiAnalysis, initAiFabDrag, aiFabDragConsumed, aiQuickAsk, aiHideBubble, aiSetAutoGreet } from './ai.js';
@@ -54,7 +55,8 @@ import { closeTraceSizePanel, positionTraceSizePanel, setTraceMode, setTraceProd
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpOnWeeksChange, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
 import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
-import { closeIncidentReports, handleIncidentSubmit, onIncidentChipClick, onIncidentFiltersChange, onIncidentReportsClick, openIncidentReports, resetIncidentForm, syncIncidentHoursFromTimes } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
+import { closeIncidentReports, handleIncidentSubmit, onIncidentChipClick, onIncidentFiltersChange, onIncidentReportsClick, openIncidentReports, openMechanicalIncidentCenter, resetIncidentForm, showMechanicalIncidentForm, syncIncidentHoursFromTimes } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
+import { cancelMechWorkPlanEdit, closeMechWorkPlan, handleMechWorkPlanSubmit, onMechWorkPlanListClick, openMechWorkPlan, renderMechWorkPlanList, setMechWorkPlanDateToday, shiftMechWorkPlanDate, showAllMechWorkPlanDates, startMechWorkPlan } from './mech-work.js';
 import { openWorkerEvaluationAssignmentDate, openWorkerEvaluationAttendance } from './hr.js';
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, closeOvertimeAmendmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeAmendmentSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderWorkerEvaluation, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition, renderHrCheckinTable, ciShiftMonth, ciSaveUi, openCiEndfillModal, closeCiEndfillModal, renderCiEndfillList, applyCiEndfill, ciAckDay, ciUnackDay, hrDockToggle, hrDockOpenGroup, hrDockBack, hrDockClose, ciBulkSubmit, closeCiBulkModal, openCiBulkModal, ciPaySubmit, closeCiPayModal, openCiPayModal, syncCiPayForm, payApproveRow, payRejectRow, renderHrPayCard, openPayLockModal, closePayLockModal, payLockSubmit, openPayPrintModal, closePayPrintModal, doPayPrint, payMarkPaperSigned, renderPayPrintPreview, ciOnDayInput, ciShiftPeriod, ciGoToday, ciSetPeriodMode, ciOnChipClick, ciGotoDay, ciFilterByEmployee, hrDockState } from './hr.js';
 import { setWorkerEvaluationGrade, setWorkerEvaluationView } from './hr.js';
@@ -610,6 +612,16 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('report-center-list',         'click', onReportCenterClick);
     safeOn('report-center-filters',      'click', onReportCenterClick);
     safeOn('report-center-filters',      'change', onReportFilterChange);
+    safeOn('leadership-period-mode', 'change', e => setLeadershipPeriodMode(e.target.value));
+    safeOn('leadership-period-key', 'change', e => setLeadershipPeriodKey(e.target.value));
+    safeOn('btn-leadership-period-prev', 'click', () => shiftLeadershipPeriod(-1));
+    safeOn('btn-leadership-period-next', 'click', () => shiftLeadershipPeriod(1));
+    safeOn('btn-leadership-print', 'click', printLeadershipReport);
+    safeOn('btn-leadership-export', 'click', openLeadershipReportPreview);
+    safeOn('leadership-content', 'click', e => {
+      const link = e.target && e.target.closest && e.target.closest('[data-leadership-target]');
+      if (link) switchView(link.getAttribute('data-leadership-target'));
+    });
     // Esc / bấm nền mờ → đóng Trung Tâm Xuất (modal cấp trang)
     const rcOverlay = document.getElementById('modal-report-center');
     if (rcOverlay) {
@@ -1151,7 +1163,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
 
     // ── QC — Module thẻ (launcher) + Bảng Xuất Hàng ──
     // Bấm thẻ launcher (grid) → mở bảng chi tiết dạng pop-up modal (nổi lên)
-    document.querySelectorAll('.qc-mini-card').forEach(t => {
+    document.querySelectorAll('.qc-mini-card[data-qc-card]').forEach(t => {
       t.addEventListener('click', () => qcOpenCard(t.getAttribute('data-qc-card')));
     });
     // Đóng bảng chi tiết pop-up: nút Đóng / bấm nền mờ / phím Esc
@@ -2478,6 +2490,32 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // ── BÁO CÁO SỰ CỐ (tab Công Đoạn SX — js/x2-incidents.js) ──
     // Nút mở trên thanh tiêu đề + chip "＋ Báo cáo" / "🧾 N phiếu" trong thẻ ngày
     safeOn('btn-incident-reports', 'click', () => openIncidentReports());
+    safeOn('btn-open-mech-incidents', 'click', openMechanicalIncidentCenter);
+    safeOn('btn-inc-mech-new', 'click', showMechanicalIncidentForm);
+    safeOn('btn-open-mech-work-plan', 'click', openMechWorkPlan);
+    safeOn('btn-close-mech-work-plan', 'click', closeMechWorkPlan);
+    safeOn('btn-add-mech-work-plan', 'click', startMechWorkPlan);
+    safeOn('btn-mech-work-date-prev', 'click', () => shiftMechWorkPlanDate(-1));
+    safeOn('btn-mech-work-date-next', 'click', () => shiftMechWorkPlanDate(1));
+    safeOn('btn-mech-work-date-today', 'click', setMechWorkPlanDateToday);
+    safeOn('btn-mech-work-date-all', 'click', showAllMechWorkPlanDates);
+    safeOn('mech-work-date-filter', 'change', renderMechWorkPlanList);
+    safeOn('mech-work-status-filter', 'change', renderMechWorkPlanList);
+    safeOn('btn-cancel-mech-work-edit', 'click', cancelMechWorkPlanEdit);
+    safeOn('mech-work-plan-form', 'submit', handleMechWorkPlanSubmit);
+    safeOn('mech-work-plan-list', 'click', onMechWorkPlanListClick);
+    const mechPlanModal = document.getElementById('modal-mech-work-plan');
+    if (mechPlanModal) {
+      mechPlanModal.addEventListener('click', (e) => { if (e.target === mechPlanModal) closeMechWorkPlan(); });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e && e.key === 'Escape' && document.getElementById('modal-mech-work-plan')?.classList.contains('show')) {
+        closeMechWorkPlan();
+      }
+      if (e && e.key === 'Escape' && document.getElementById('modal-x2-incidents')?.classList.contains('is-mech-center')) {
+        closeIncidentReports();
+      }
+    });
     safeOn('btn-close-x2-incidents', 'click', closeIncidentReports);
     safeOn('btn-inc-close', 'click', closeIncidentReports);
     safeOn('btn-inc-save', 'click', handleIncidentSubmit);

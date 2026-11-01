@@ -335,10 +335,17 @@ check('J3: cloud.js có snapshot/core/merge/persist/apply + RATE_DOMAINS',
 check('J4: history.js + main.js đã nối 3 miền',
   histSrc.includes('x2PhuPhamRecords:') && histSrc.includes('x2Stocktakes:') &&
   mainSrc.includes('loadX2PhuPham()') && mainSrc.includes('loadX2Stocktakes()') && mainSrc.includes('loadX2YieldRates()'));
-check('J5: index.html có mini card + thẻ chi tiết + form + các vùng',
+const ppFormStart = idx.indexOf('<form id="x2-pp-form">');
+const ppFirstRowStart = idx.indexOf('<div class="x2-form-row">', ppFormStart);
+const ppSecondRowStart = idx.indexOf('<div class="x2-form-row">', ppFirstRowStart + 1);
+const ppFirstRow = idx.slice(ppFirstRowStart, ppSecondRowStart);
+check('J5: index.html có mini card + form gọn, cân vào/ra ở hàng đầu + các vùng',
   idx.includes('data-x2-card="x2-phu-pham-card"') && idx.includes('id="x2-phu-pham-card"') &&
   idx.includes('id="x2-pp-form"') && idx.includes('id="x2-pp-st-form"') &&
   idx.includes('id="x2-pp-scale-in"') && idx.includes('id="x2-pp-scale-out"') &&
+  ppFirstRow.includes('id="x2-pp-out-form"') && ppFirstRow.includes('id="x2-pp-out-type"') &&
+  ppFirstRow.includes('id="x2-pp-scale-in"') && ppFirstRow.includes('id="x2-pp-scale-out"') &&
+  ppFirstRow.includes('style="flex:0 0 175px;"') && ppFirstRow.includes('style="flex:0 0 190px;"') &&
   /<input[^>]*id="x2-pp-kg"[^>]*readonly/i.test(idx) &&
   idx.includes('id="x2-pp-stock-bar"') && idx.includes('id="x2-pp-cost"') &&
   idx.includes('id="x2-pp-balance"') && idx.includes('id="x2-pp-credit"') &&
@@ -351,8 +358,8 @@ check('J6: events.js nối form + kiểm kê + định mức + tháng + sửa/x�
   evSrc.includes("'x2-pp-scale-in'") && evSrc.includes("'x2-pp-scale-out'") &&
   evSrc.includes('handleX2YieldRateSave') && evSrc.includes("'x2-pp-month'") &&
   evSrc.includes('data-x2-pp-edit') && evSrc.includes('data-x2-pp-st-del'));
-check('J7: sw.js cache v332 + nạp js/x2-phu-pham.js',
-  /nha-may-ngoc-son-v332/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
+check('J7: sw.js cache v333 + nạp js/x2-phu-pham.js',
+  /nha-may-ngoc-son-v333/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
 check('J8: styles.css có khối .x2-pp-* + bảng supplier thêm cột Giảm Trừ',
   css.includes('.x2-pp-chip') && css.includes('.x2-pp-yield-chip') &&
   idx.includes('Giảm Trừ (đ)') && supSrc.includes('x2SupplierCreditRows'));

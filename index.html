@@ -4695,8 +4695,11 @@
             <button class="btn btn-outline btn-sm" id="btn-board-next" title="Ngày sau"><i data-lucide="chevron-right"></i></button>
             <button class="btn btn-outline btn-sm" id="btn-board-today" title="Về hôm nay">Hôm Nay</button>
           </div>
-          <span class="hr-count">Ô "?" = trống · ô xanh = đã có người · nhãn ×N = nhân viên được xếp N công đoạn, giờ kết thúc tự nối theo công đoạn sau · viền đỏ ! = giờ trùng · bấm ô hoặc "+" để thêm · kéo chip để chuyển vị trí · <b>giữ chuột + rê ngang</b> để cuộn bảng khi nhiều vị trí</span>
-          <span class="hr-count" id="hr-board-count"></span>
+          <span class="hr-board-help" tabindex="0" role="img"
+            title="Ô ? = trống · ô xanh = đã có người · ×N = nhân viên được xếp N công đoạn · viền đỏ ! = giờ trùng · bấm ô hoặc + để thêm · kéo chip để chuyển vị trí · giữ chuột và rê ngang để cuộn."
+            aria-label="Hướng dẫn bố trí vị trí trong ngày"><i data-lucide="info" aria-hidden="true"></i></span>
+          <div id="hr-board-count" class="hr-board-count"></div>
+          <div id="hr-board-assignment-alert" class="hr-board-assignment-alert" role="status" aria-live="polite"></div>
         </div>
         <div id="hr-board-dept-tabs" class="hr-board-tabs"></div>
         <div id="hr-board" class="board-grid"></div>

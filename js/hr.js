@@ -7238,6 +7238,81 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
+  function hrEmployeeEmployedOnDate(employee, date) {
+    if (!employee) return false;
+    const joinDate = String(employee.joinDate || '').slice(0, 10);
+    if (joinDate && date < joinDate) return false;
+    const status = employee.status || 'active';
+    if (status === 'active') return true;
+    if (status !== 'quit') return false;
+    const quitDate = String(employee.quitDate || '').slice(0, 10);
+    return !!quitDate && date <= quitDate;
+  }
+
+  function renderHrBoardAssignmentAlert(date) {
+    const alertEl = document.getElementById('hr-board-assignment-alert');
+    if (!alertEl) return;
+
+    const clearAlert = () => {
+      alertEl.className = 'hr-board-assignment-alert';
+      alertEl.innerHTML = '';
+    };
+    if (hrIsRestDay(date)) { clearAlert(); return; }
+
+    const assignedIds = new Set((state.hrAssignments || [])
+      .filter(a => a && a.date === date && a.employeeId)
+      .map(a => String(a.employeeId)));
+    const eligible = (state.hrEmployees || []).filter(employee => {
+      if (!hrEmployeeEmployedOnDate(employee, date)) return false;
+      const department = hrDeptAliasOf(employee.department);
+      if (hrStripDiacritics(department).trim().toLowerCase() === 'van phong') return false;
+      const attendanceStatus = attStatusOf(employee.id, date);
+      return attendanceStatus !== 'absent' && attendanceStatus !== 'leave';
+    });
+
+    if (!eligible.length) {
+      clearAlert();
+      return;
+    }
+
+    const unassigned = eligible.filter(employee => !assignedIds.has(String(employee.id)));
+    if (!unassigned.length) {
+      clearAlert();
+      return;
+    }
+
+    const byDepartment = new Map();
+    unassigned.forEach(employee => {
+      const department = hrDeptAliasOf(employee.department) || 'Chưa rõ bộ phận';
+      if (!byDepartment.has(department)) byDepartment.set(department, []);
+      byDepartment.get(department).push(employee);
+    });
+    const departmentOrder = new Map(HR_DEPARTMENTS.map((department, index) => [department, index]));
+    const groups = [...byDepartment.entries()]
+      .sort((a, b) => (departmentOrder.get(a[0]) ?? Number.MAX_SAFE_INTEGER)
+        - (departmentOrder.get(b[0]) ?? Number.MAX_SAFE_INTEGER))
+      .map(([department, employees]) => `<section class="hr-board-assignment-dept">
+        <strong>${escapeHTML(department)} · ${employees.length}</strong>
+        <ul>${employees.map(employee => {
+          const label = [employee.code, employee.name].filter(Boolean).join(' · ') || 'Chưa có tên';
+          return `<li>${escapeHTML(label)}</li>`;
+        }).join('')}</ul>
+      </section>`).join('');
+
+    const detailLabel = `Có ${unassigned.length} nhân viên chưa được bố trí · bấm để xem danh sách`;
+    alertEl.className = 'hr-board-assignment-alert is-warning';
+    alertEl.innerHTML = `<details class="hr-board-assignment-details">
+      <summary title="${escapeHTML(detailLabel)}" aria-label="${escapeHTML(detailLabel)}">
+        <i data-lucide="alert-triangle" aria-hidden="true"></i>
+        <span aria-hidden="true">${unassigned.length}</span>
+      </summary>
+      <div class="hr-board-assignment-details-body">
+        <strong>Chưa bố trí việc: ${unassigned.length}/${eligible.length} nhân viên · ${escapeHTML(fmtDateDMY(date))}</strong>
+        <div class="hr-board-assignment-groups">${groups}</div>
+      </div>
+    </details>`;
+  }
+
   function renderHrBoard() {
     const board = document.getElementById('hr-board');
     if (!board) return;
@@ -7245,6 +7320,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (!state.hrBoardDept) state.hrBoardDept = 'Xưởng 2';
     const dateInput = document.getElementById('hr-board-date');
     if (dateInput && dateInput.value !== state.hrBoardDate) dateInput.value = state.hrBoardDate;
+    renderHrBoardAssignmentAlert(state.hrBoardDate);
     const deptTabs = document.getElementById('hr-board-dept-tabs');
     if (deptTabs) {
       deptTabs.innerHTML = HR_DEPARTMENTS.map(d =>
@@ -7266,23 +7342,20 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const schedule = hrAssignmentScheduleOf(dayAssignments);
     const assigns = dayAssignments.filter(a => positions.some(p => p.id === a.positionId));
 
-    // Chip tổng hợp tinh gọn trên đầu board
+    // Tóm tắt số người của bộ phận, không đếm trùng công đoạn.
     const countEl = document.getElementById('hr-board-count');
     if (countEl) {
-      const totalNeed = positions.reduce((s, p) => s + needSplitOf(p).reduce((x, n) => x + n, 0), 0);
-      const fullCols = positions.reduce((s, p) => {
-        const per = needSplitOf(p);
-        for (let si = 0; si < colCount; si++) {
-          const c = assigns.filter(a => a.positionId === p.id && (a.shiftIdx || 0) === si).length;
-          s += Math.min(c, per[si] || 0);
-        }
-        return s;
-      }, 0);
+      const departmentEmployees = (state.hrEmployees || []).filter(employee =>
+        hrEmployeeEmployedOnDate(employee, state.hrBoardDate) &&
+        hrDeptAliasOf(employee.department) === dept);
+      const departmentEmployeeIds = new Set(departmentEmployees.map(employee => String(employee.id)));
+      const assignedEmployeeCount = new Set(assigns
+        .filter(assignment => assignment.employeeId && departmentEmployeeIds.has(String(assignment.employeeId)))
+        .map(assignment => String(assignment.employeeId))).size;
+      const shiftLabel = cfg.type === 'lamca' ? `${colCount} ca` : 'Hành chính';
       countEl.innerHTML =
-        `<span class="hr-stat-chip"><i data-lucide="calendar-days"></i> ${fmtDateDMY(state.hrBoardDate)}</span>` +
-        `<span class="hr-stat-chip"><i data-lucide="layout-panel-left"></i> ${escapeHTML(dept)}</span>` +
-        `<span class="hr-stat-chip"><i data-lucide="${cfg.type === 'lamca' ? 'moon-star' : 'sun'}"></i> ${cfg.type === 'lamca' ? colCount + ' ca' : 'Hành chính'}</span>` +
-        `<span class="hr-stat-chip"><i data-lucide="users"></i> Đã bố trí <strong>${assigns.length}</strong>/${totalNeed}</span>`;
+        `<span class="hr-stat-chip" title="Chế độ ca làm việc của bộ phận"><i data-lucide="${cfg.type === 'lamca' ? 'moon-star' : 'sun'}"></i> ${shiftLabel}</span>` +
+        `<span class="hr-stat-chip" title="Số nhân viên của bộ phận đã được bố trí ít nhất một vị trí / tổng nhân viên tính đến ngày đã chọn"><i data-lucide="users"></i> Đã bố trí <strong>${assignedEmployeeCount}</strong>/${departmentEmployees.length} người</span>`;
     }
 
     if (!positions.length) {

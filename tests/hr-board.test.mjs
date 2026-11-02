@@ -105,7 +105,8 @@ check('BOARD: tab bộ phận render đủ 5 bộ phận (Lò Hơi đã gộp v�
 const boardHTML = document.getElementById('hr-board').innerHTML;
 check('BOARD: lưới thẻ — 2 cột vị trí (board-col)', (boardHTML.match(/board-col-head/g) || []).length === 2);
 check('BOARD: 5 ô trống "?" (cần 3 + 2, chưa gán ai)', (boardHTML.match(/slot empty/g) || []).length === 5);
-check('BOARD: chip tổng hợp "Đã bố trí 0/5"', document.getElementById('hr-board-count').innerHTML.includes('Đã bố trí') && document.getElementById('hr-board-count').innerHTML.includes('0</strong>/5'));
+check('BOARD: chip tổng hợp "Đã bố trí 0/2 người"', document.getElementById('hr-board-count').innerHTML.includes('Đã bố trí') && document.getElementById('hr-board-count').innerHTML.includes('0</strong>/2 người'));
+check('BOARD: chip bỏ ngày/bộ phận trùng và giữ thông tin ca', !document.getElementById('hr-board-count').innerHTML.includes('2026') && !document.getElementById('hr-board-count').innerHTML.includes('Xưởng 2') && document.getElementById('hr-board-count').innerHTML.includes('Hành chính'));
 check('BOARD: nhãn cột "Hành chính" + giờ 7h00–17h30', boardHTML.includes('Hành chính') && boardHTML.includes('7h00') && boardHTML.includes('17h30'));
 check('BOARD: chấm tròn trạng thái chưa đủ (warn)', boardHTML.includes('board-col-dot warn'));
 check('BOARD: badge "cần" trên đầu cột', boardHTML.includes('cần 3') && boardHTML.includes('cần 2'));
@@ -128,6 +129,7 @@ check('BOARD: bản ghi đúng vị trí + ca + giờ bắt đầu 07:30', asg.p
 check('BOARD: gán người -> tự chấm Đi làm ngày đó', (state.hrAttendance || []).some(a => a.employeeId === 'empB' && a.date === asg.date && a.status === 'work'));
 check('BOARD: người gán tự học kỹ năng vị trí', (state.hrEmployees.find(e => e.id === 'empB').skills || []).includes('px2'));
 check('BOARD: board render ô XANH avatar + tên rút gọn + giờ', document.getElementById('hr-board').innerHTML.includes('H.V.Chiến') && document.getElementById('hr-board').innerHTML.includes('7h30') && document.getElementById('hr-board').innerHTML.includes('>HC<'));
+check('BOARD: đếm nhân viên đã bố trí, không đếm số công đoạn', document.getElementById('hr-board-count').innerHTML.includes('1</strong>/2 người'));
 check('BOARD: nút "+" Thêm người cho từng cột vị trí (2 cột -> 2 nút)', (document.getElementById('hr-board').innerHTML.match(/slot add/g) || []).length === 2);
 check('BOARD: đã bỏ thẻ mini — board luôn hiển thị trực tiếp', typeof hr.HR_CARD_DEFS['hr-board-card'] === 'undefined' && document.getElementById('hr-board-card') !== null);
 
@@ -138,6 +140,7 @@ document.getElementById('board-assign-start').value = '09:00';
 document.getElementById('board-assign-end').value = '11:30';
 hr.handleBoardAssignSubmit(ev);
 check('BOARD: empB làm 2 vị trí trong ngày (2 bản ghi)', (state.hrAssignments || []).filter(a => a.employeeId === 'empB').length === 2);
+check('BOARD: một nhân viên nhiều vị trí vẫn chỉ tính một người đã bố trí', document.getElementById('hr-board-count').innerHTML.includes('1</strong>/2 người'));
 const times = hr.hrAssignTimesOf('empB', state.hrBoardDate);
 check('BOARD: hrAssignTimesOf trả giờ làm sắp theo bắt đầu', times.length === 2 && times[0].start === '07:30' && times[1].start === '09:00');
 
@@ -354,7 +357,7 @@ check('PAN: events.js có handler pointerdown/pointermove trên #hr-board', /get
 check('PAN: bỏ qua khi bắt đầu trên .slot / button (không phá kéo-thả + bấm)', boardEv.includes("closest('.slot, button, input, select, a')"));
 check('PAN: ngưỡng 6px phân biệt bấm thường với kéo', boardEv.includes('Math.abs(dx) < 6'));
 check('PAN: styles.css có cursor grab + is-drag-scrolling grabbing trên .board-grid', boardCss.includes('cursor: grab') && boardCss.includes('.board-grid.is-drag-scrolling { cursor: grabbing; }'));
-check('PAN: index.html có hướng dẫn "giữ chuột + rê ngang"', boardIdx.includes('giữ chuột + rê ngang'));
+check('PAN: hướng dẫn cuộn ngang chỉ hiển thị trong tooltip', /class="hr-board-help"[^>]*title="[^"]*rê ngang/.test(boardIdx));
 
 // ─── K. GIỜ KẾT THÚC ĐỘNG, KHÔI PHỤC KHI XÓA + HC/TC ───────────
 state.hrAssignments = [];
@@ -437,6 +440,85 @@ check('CHAIN: ca đêm qua nửa đêm tính HC đúng, không bị nhầm sang 
   const second = hr.hrSplitHoursHC('Xưởng 2', '01:00', '02:00', 1);
   return first.hc === 330 && second.hc === 30 && first.tc === 0 && second.tc === 0;
 })());
+
+// ─── L. CẢNH BÁO NHÂN VIÊN CHƯA ĐƯỢC BỐ TRÍ ───────────────────
+const assignmentAlertIndex = boardIdx.indexOf('id="hr-board-assignment-alert"');
+const departmentTabsIndex = boardIdx.indexOf('id="hr-board-dept-tabs"');
+check('UNASSIGNED: cảnh báo nằm cùng hàng chọn ngày', assignmentAlertIndex >= 0 && assignmentAlertIndex < departmentTabsIndex && boardIdx.indexOf('id="hr-board-date"') < assignmentAlertIndex);
+check('UNASSIGNED: có kiểu nút biểu tượng thu gọn trong styles.css', boardCss.includes('.hr-board-assignment-details summary'));
+check('UNASSIGNED: ghi chú hướng dẫn chỉ còn tooltip', boardIdx.includes('class="hr-board-help"') && /class="hr-board-help"[^>]*title="/.test(boardIdx));
+const assignmentAlertDate = '2030-05-13';
+state.hrBoardDate = assignmentAlertDate;
+state.hrBoardDept = 'Xưởng 2';
+state.hrWorkCalendar = {};
+state.hrEmployees = [
+  { id: 'missing-x2', code: 'NV101', name: 'Chưa Xếp A', department: 'Xưởng 2', status: 'active' },
+  { id: 'missing-x1', code: 'NV102', name: 'Chưa Xếp B', department: 'Xưởng 1', status: 'active' },
+  { id: 'office', code: 'NV103', name: 'Nhân viên Văn phòng', department: 'văn phòng', status: 'active' },
+  { id: 'quit', code: 'NV104', name: 'Đã nghỉ việc', department: 'QC', status: 'quit' },
+  { id: 'on-leave', code: 'NV105', name: 'Đang nghỉ phép', department: 'QC', status: 'active' },
+  { id: 'absent', code: 'NV106', name: 'Đã chấm vắng', department: 'Cơ Điện', status: 'active' },
+  { id: 'assigned', code: 'NV107', name: 'Đã có việc', department: 'Xưởng 1', status: 'active' },
+  { id: 'working-on-leave', code: 'NV108', name: 'Đi làm dù có đơn phép', department: 'QC', status: 'active' },
+  { id: 'unknown-dept', code: 'NV109', name: 'Chưa rõ nhóm', department: 'Tổ Mới', status: 'active' }
+];
+state.hrAssignments = [
+  { id: 'asg-assigned', date: assignmentAlertDate, department: 'Xưởng 2', positionId: 'px2', employeeId: 'assigned', start: '07:00', end: '' }
+];
+state.hrLeaves = [
+  { id: 'leave-approved', employeeId: 'on-leave', from: assignmentAlertDate, to: assignmentAlertDate, status: 'approved' },
+  { id: 'leave-working', employeeId: 'working-on-leave', from: assignmentAlertDate, to: assignmentAlertDate, status: 'approved' }
+];
+state.hrAttendance = [
+  { id: 'att-absent', employeeId: 'absent', date: assignmentAlertDate, status: 'absent' },
+  { id: 'att-working', employeeId: 'working-on-leave', date: assignmentAlertDate, status: 'work' }
+];
+hr.renderHrBoard();
+let assignmentAlert = document.getElementById('hr-board-assignment-alert').innerHTML;
+check('UNASSIGNED: đếm người thiếu trên toàn bộ bộ phận ngoài Văn phòng', assignmentAlert.includes('Chưa bố trí việc: 4/5'));
+check('UNASSIGNED: hiện tên theo bộ phận, kể cả bộ phận mới', assignmentAlert.includes('Chưa Xếp A') && assignmentAlert.includes('Chưa Xếp B') && assignmentAlert.includes('Chưa rõ nhóm') && assignmentAlert.includes('Tổ Mới'));
+check('UNASSIGNED: bỏ Văn phòng, nghỉ việc, nghỉ phép, chấm vắng và người đã có việc', !assignmentAlert.includes('Nhân viên Văn phòng') && !assignmentAlert.includes('Đã nghỉ việc') && !assignmentAlert.includes('Đang nghỉ phép') && !assignmentAlert.includes('Đã chấm vắng') && !assignmentAlert.includes('Đã có việc'));
+check('UNASSIGNED: người được chấm đi làm vẫn phải có việc dù có đơn phép', assignmentAlert.includes('Đi làm dù có đơn phép'));
+check('UNASSIGNED: chỉ hiện nút biểu tượng, danh sách đóng đến khi bấm', /<details class="hr-board-assignment-details">/.test(assignmentAlert) && assignmentAlert.includes('<summary') && !/<details[^>]*\sopen/.test(assignmentAlert));
+
+state.hrAssignments.push({
+  id: 'asg-missing-x2', date: assignmentAlertDate, department: 'Xưởng 2', positionId: 'px2',
+  employeeId: 'missing-x2', start: '07:00', end: ''
+});
+hr.renderHrBoard();
+assignmentAlert = document.getElementById('hr-board-assignment-alert').innerHTML;
+check('UNASSIGNED: đổi phân công cập nhật cảnh báo ngay', assignmentAlert.includes('Chưa bố trí việc: 3/5') && !assignmentAlert.includes('Chưa Xếp A'));
+
+hr.hrBoardSetDate('2030-05-12');
+assignmentAlert = document.getElementById('hr-board-assignment-alert').innerHTML;
+check('UNASSIGNED: ngày nghỉ theo lịch không hiện cảnh báo', assignmentAlert === '');
+state.hrWorkCalendar = {
+  '2030-05': { weekdaysOff: [0], restDays: [], workDays: ['2030-05-12'] }
+};
+hr.renderHrBoard();
+assignmentAlert = document.getElementById('hr-board-assignment-alert').innerHTML;
+check('UNASSIGNED: ngày làm bù theo lịch vẫn được kiểm tra', assignmentAlert.includes('Chưa bố trí việc: 7/7'));
+
+// ─── M. SĨ SỐ THEO NGÀY VÀ ĐẾM NGƯỜI DUY NHẤT ─────────────────
+state.hrBoardDate = '2030-05-13';
+state.hrEmployees = [
+  { id: 'x2-current', department: 'Xưởng 2', status: 'active', joinDate: '2030-01-01' },
+  { id: 'x2-future', department: 'Xưởng 2', status: 'active', joinDate: '2030-05-14' },
+  { id: 'x2-quit-before', department: 'Xưởng 2', status: 'quit', joinDate: '2020-01-01', quitDate: '2030-05-12' },
+  { id: 'x2-quit-today', department: 'Xưởng 2', status: 'quit', joinDate: '2020-01-01', quitDate: '2030-05-13' }
+];
+state.hrLeaves = [];
+state.hrAttendance = [];
+state.hrAssignments = [
+  { id: 'asg-current-a', date: '2030-05-13', department: 'Xưởng 2', positionId: 'px2', employeeId: 'x2-current', start: '07:00', end: '09:00' },
+  { id: 'asg-current-b', date: '2030-05-13', department: 'Xưởng 2', positionId: 'pkh2', employeeId: 'x2-current', start: '09:00', end: '' },
+  { id: 'asg-quit-today', date: '2030-05-13', department: 'Xưởng 2', positionId: 'px2', employeeId: 'x2-quit-today', start: '07:00', end: '' },
+  { id: 'asg-future', date: '2030-05-14', department: 'Xưởng 2', positionId: 'px2', employeeId: 'x2-future', start: '07:00', end: '' }
+];
+hr.renderHrBoard();
+check('BOARD: sĩ số trong ngày tính ngày vào làm và ngày nghỉ việc', document.getElementById('hr-board-count').innerHTML.includes('2</strong>/2 người'));
+hr.hrBoardSetDate('2030-05-14');
+check('BOARD: sĩ số cập nhật khi nhân viên mới bắt đầu làm', document.getElementById('hr-board-count').innerHTML.includes('1</strong>/2 người'));
 
 console.log(`\nWYNIK: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

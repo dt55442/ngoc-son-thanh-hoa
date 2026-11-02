@@ -1520,6 +1520,45 @@ h1, h2, h3, h4, h5 {
 .pos-need-qty-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
 
 /* ── BẢNG ĐIỀU KHIỂN BỐ TRÍ VỊ TRÍ THEO NGÀY (visual board, tinh gọn) ── */
+.hr-board-assignment-alert {
+  display: flex; flex: 0 0 auto; align-items: center; margin: 0;
+}
+.hr-board-assignment-alert:empty { display: none; }
+.hr-board-help {
+  display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: 1px solid var(--border-color); border-radius: 50%;
+  color: var(--text-muted); cursor: help;
+}
+.hr-board-help svg { width: 16px; height: 16px; }
+.hr-board-count {
+  display: flex; flex: 0 0 auto; align-items: center; gap: 6px; white-space: nowrap;
+}
+.hr-board-count .hr-stat-chip { white-space: nowrap; }
+#hr-board-card .hr-filter-toolbar { flex-wrap: nowrap; overflow-x: auto; }
+#hr-board-card .hr-filter-toolbar > .filter-item { flex: 0 0 auto; }
+.hr-board-assignment-details summary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  min-width: 38px; min-height: 38px; padding: 5px 10px;
+  border: 1px solid #fdba74; border-radius: 999px;
+  color: #9a3412; background: #fff7ed; cursor: pointer; list-style: none;
+}
+.hr-board-assignment-details summary::-webkit-details-marker { display: none; }
+.hr-board-assignment-details summary svg { width: 18px; height: 18px; }
+.hr-board-assignment-details summary span {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px;
+  color: #fff; background: #c2410c; font-size: 0.68rem; font-weight: 800;
+}
+.hr-board-assignment-details[open] summary { box-shadow: 0 0 0 2px rgba(194, 65, 12, 0.12); }
+.hr-board-assignment-details-body {
+  max-height: 50vh; overflow: auto; margin-top: 8px; padding: 10px 12px;
+  border: 1px solid #fdba74; border-radius: 12px; color: #9a3412; background: #fff7ed;
+  font-size: 0.84rem; line-height: 1.45;
+}
+.hr-board-assignment-groups { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 6px; }
+.hr-board-assignment-dept { min-width: 180px; }
+.hr-board-assignment-dept ul { margin: 3px 0 0; padding-left: 20px; }
+.hr-board-assignment-dept li { overflow-wrap: anywhere; }
 .hr-board-tabs { display:flex; gap:8px; flex-wrap:wrap; padding:8px 0 12px; }
 .hr-board-tab {
   padding: 7px 16px; border: 1px solid var(--border-color); border-radius: 999px;

@@ -3,10 +3,12 @@ import { capMonthShift, capPeriodKeyValid, capPeriodLabel, capWeekKeyOf, capWeek
 import { HR_DEPARTMENTS } from './hr.js';
 import { MATERIAL_LOCATIONS } from './materials.js';
 import { rateNanUse, rateUnit } from './planning.js';
-import { dimVolume } from './press.js';
+import { dimVolume, pressInputVolumeOf, pressRecordVolumeBasisOf, pressRecordVolumeOf } from './press.js';
 import { qcRowWeeks } from './qc.js';
 import { qcFinalDisplay } from './qc-final.js';
 import { state } from './state.js';
+import { traceChainFor } from './trace.js';
+import { x2MassBalanceData } from './x2-phu-pham.js';
 import { bulligDisplay, boluongDisplay, cutDisplay } from './xuong2.js';
 import { calculateVolume, escapeHTML, khoStockSummary, showToast } from './utils.js';
 
@@ -444,6 +446,42 @@ function reportCapacityForPeriod(capacityRows, source, range) {
   }));
 }
 
+function buildConsumptionSummary(range) {
+  const balance = x2MassBalanceData(range.from, range.to);
+  const chain = traceChainFor(date => inRange(date, range));
+  const rate = (output, input) => input > 0 ? output / input * 100 : null;
+  const pressRecords = (state.pressRecords || []).filter(record => record && inRange(record.date, range));
+  const pressInputM3 = pressRecords.reduce((total, record) => total + pressInputVolumeOf(record), 0);
+  const pressOutputM3 = pressRecords.reduce((total, record) => {
+    const basis = pressRecordVolumeBasisOf(record);
+    return basis === 'vanTho' || basis === 'thanhPham'
+      ? total + pressRecordVolumeOf(record)
+      : total;
+  }, 0);
+  return {
+    cart: {
+      input: balance.boc.in,
+      output: balance.cart.dat,
+      rate: rate(balance.cart.dat, balance.boc.in)
+    },
+    pipe: {
+      input: balance.ong.in,
+      output: balance.ong.dat,
+      rate: rate(balance.ong.dat, balance.ong.in)
+    },
+    rough: {
+      inputKg: balance.boc.in,
+      outputM3: chain.baoThoM3,
+      consumption: chain.baoThoM3 > 0 ? balance.boc.in / chain.baoThoM3 : null
+    },
+    press: {
+      inputM3: pressInputM3,
+      outputM3: pressOutputM3,
+      consumption: pressOutputM3 > 0 ? pressInputM3 / pressOutputM3 : null
+    }
+  };
+}
+
 function buildLeadershipPeriodSummary(mode, key, source, capacity, stock) {
   const period = normalizePeriod(mode, key);
   const range = periodRange(period.mode, period.key);
@@ -479,6 +517,7 @@ function buildLeadershipPeriodSummary(mode, key, source, capacity, stock) {
     quality,
     qualityHasHistory: Object.values(quality).some(item => item.rows > 0),
     qualityKindHasHistory: Object.fromEntries(Object.entries(quality.x2.byKind).map(([kind, item]) => [kind, item.rows > 0])),
+    consumption: buildConsumptionSummary(range),
     labor: buildLabor(source.hrEmployees || [], range),
     shipments: summarizeShipments(
       shipmentSource,
@@ -873,6 +912,37 @@ function renderShipments(shipments, previous, hasHistory) {
     ${gap}`;
 }
 
+function renderConsumption(consumption) {
+  const cards = [
+    { key: 'cart', label: 'Luồng cây → ống đạt', input: consumption.cart.input, output: consumption.cart.output, rate: consumption.cart.rate, unit: 'kg' },
+    { key: 'pipe', label: 'Luồng ống → ống đạt', input: consumption.pipe.input, output: consumption.pipe.output, rate: consumption.pipe.rate, unit: 'kg' },
+    { key: 'rough', label: 'Luồng cây (kg) → thanh thô (m³)', input: consumption.rough.inputKg, output: consumption.rough.outputM3, consumption: consumption.rough.consumption },
+    { key: 'press', label: 'Thanh tinh → BTP / thành phẩm', input: consumption.press.inputM3, output: consumption.press.outputM3, consumption: consumption.press.consumption }
+  ];
+  return `<div class="leadership-consumption-grid">${cards.map(card => {
+    let result = fmtPct(card.rate);
+    if (card.key === 'rough') {
+      result = card.consumption == null ? '—' : `${fmt(card.consumption, 0)} kg/m³`;
+    } else if (card.key === 'press') {
+      result = card.consumption == null ? '—' : `${fmt(card.consumption, 2)} m³/m³`;
+    }
+    const hasValues = Number(card.input) > 0 || Number(card.output) > 0;
+    let details = '—';
+    if (hasValues && card.key === 'rough') {
+      details = `${fmt(card.input, 0)} kg → ${fmt(card.output, 3)} m³`;
+    } else if (hasValues && card.key === 'press') {
+      details = `${fmt(card.input, 3)} m³ vào → ${fmt(card.output, 3)} m³ ra`;
+    } else if (hasValues) {
+      details = `${fmt(card.input, 0)} → ${fmt(card.output, 0)} ${card.unit}`;
+    }
+    return `<article class="leadership-consumption-card">
+      <span class="leadership-consumption-label">${escapeHTML(card.label)}</span>
+      <div class="leadership-consumption-result"><strong>${result}</strong></div>
+      <span class="leadership-consumption-detail">${details}</span>
+    </article>`;
+  }).join('')}</div>`;
+}
+
 function compactPeriodLabel(mode, key) {
   if (mode === 'week') {
     const match = /^(\d{4})-W(\d{1,2})$/.exec(String(key || ''));
@@ -902,14 +972,6 @@ export function buildLeadershipReportMarkup(summary) {
       <span><i class="is-say2"></i>Sấy 2 · ${fmt(summary.inventory.say2, 0)} thanh · ${fmt(summary.inventory.say2M3, 3)} m³</span>
       <span><i class="is-warehouse"></i>Kho · ${fmt(summary.inventory.current, 0)} thanh · ${fmt(summary.inventory.currentM3, 3)} m³</span>
     </div>`;
-  const warnings = [
-    'Tồn kho là snapshot hiện tại của Sấy/Kho Xưởng 2, không phải tồn tại ngày cuối kỳ; chưa có số tồn Xưởng 1.'
-  ];
-  if (!summary.qualityHasHistory) warnings.push('Chưa có dữ liệu kiểm sau sản xuất để tính tỷ lệ đạt/lỗi.');
-  if (!summary.shipmentHasHistory) warnings.push('Chưa có dữ liệu xuất hàng QC.');
-  if (summary.shipments.unattributedRows) warnings.push('Dòng xuất hàng gộp nhiều tuần không thuộc cặp hai tuần liên tiếp nên chưa thể phân bổ vào kỳ.');
-  if (summary.shipments.unclassifiedRows) warnings.push('Có dòng xuất hàng chưa khớp định mức; các dòng này được tách riêng và không tính vào tỷ lệ ba nhóm.');
-  if (summary.labor.missingJoinDate) warnings.push(`${summary.labor.missingJoinDate} hồ sơ thiếu ngày vào; lịch sử biến động lao động có thể chưa đầy đủ.`);
   return `<div class="leadership-paper-stack">
     <article class="leadership-paper" data-report-page="1">
       <header class="leadership-paper-header">
@@ -952,10 +1014,10 @@ export function buildLeadershipReportMarkup(summary) {
           ${renderShipments(summary.shipments, summary.previous.shipments, summary.shipmentHasHistory)}
         </section>
       </div>
-      <aside class="leadership-data-notes">
-        <strong>Phạm vi &amp; lưu ý dữ liệu</strong>
-        <ul>${warnings.map(warning => `<li>${escapeHTML(warning)}</li>`).join('')}</ul>
-      </aside>
+      <section class="leadership-section leadership-consumption-section">
+        <header class="leadership-section-header"><span>07</span><h2>Chỉ số tiêu hao</h2></header>
+        ${renderConsumption(summary.consumption)}
+      </section>
       <footer class="leadership-paper-footer"><span>Số liệu phản ánh dữ liệu đã ghi nhận trên hệ thống</span><span>02 / 02</span></footer>
     </article>
   </div>`;
@@ -1077,6 +1139,41 @@ export function buildLeadershipReportData(summary) {
       add('Sản xuất', `${workshop.label} · ${stage.label}`, 'Giờ sự cố', stage.incidentHours, 'giờ',
         compareNote(stage.incidentHours, before && before.incidentHours, 'giờ'));
     });
+  });
+  [
+    {
+      entity: 'Xưởng 2 · Luồng cây',
+      inputLabel: 'Đầu vào Bốc luồng', input: report.consumption.cart.input, inputUnit: 'kg',
+      outputLabel: 'Ống đạt sau Cắt chọn', output: report.consumption.cart.output, outputUnit: 'kg',
+      metric: 'Tỷ lệ ống đạt / đầu vào', value: report.consumption.cart.rate, unit: '%',
+      previous: report.previous.consumption.cart.rate, digits: 1
+    },
+    {
+      entity: 'Xưởng 2 · Luồng ống',
+      inputLabel: 'Đầu vào Cắt chọn', input: report.consumption.pipe.input, inputUnit: 'kg',
+      outputLabel: 'Ống đạt', output: report.consumption.pipe.output, outputUnit: 'kg',
+      metric: 'Tỷ lệ ống đạt / đầu vào', value: report.consumption.pipe.rate, unit: '%',
+      previous: report.previous.consumption.pipe.rate, digits: 1
+    },
+    {
+      entity: 'Xưởng 2 · Thanh thô',
+      inputLabel: 'Luồng cây đầu vào Bốc luồng', input: report.consumption.rough.inputKg, inputUnit: 'kg',
+      outputLabel: 'Thanh thô đầu ra', output: report.consumption.rough.outputM3, outputUnit: 'm³',
+      metric: 'Tiêu hao luồng cây / m³ thanh thô', value: report.consumption.rough.consumption, unit: 'kg/m³',
+      previous: report.previous.consumption.rough.consumption, digits: 0
+    },
+    {
+      entity: 'Xưởng 2 · Ép ván',
+      inputLabel: 'Thanh tinh đầu vào', input: report.consumption.press.inputM3, inputUnit: 'm³',
+      outputLabel: 'BTP / thành phẩm đầu ra', output: report.consumption.press.outputM3, outputUnit: 'm³',
+      metric: 'Tiêu hao thanh tinh / m³ đầu ra', value: report.consumption.press.consumption, unit: 'm³/m³',
+      previous: report.previous.consumption.press.consumption, digits: 2
+    }
+  ].forEach(item => {
+    add('Tiêu hao', item.entity, item.inputLabel, item.input, item.inputUnit);
+    add('Tiêu hao', item.entity, item.outputLabel, item.output, item.outputUnit);
+    add('Tiêu hao', item.entity, item.metric, item.value, item.unit,
+      compareNote(item.value, item.previous, item.unit, item.digits));
   });
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.current, 'thanh', 'Ảnh chụp hiện tại, không hồi tố theo kỳ');
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.currentM3, 'm³');

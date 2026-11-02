@@ -23,6 +23,10 @@ const saved = {
   xuong2BulligRecords: state.xuong2BulligRecords,
   xuong2BoluongRecords: state.xuong2BoluongRecords,
   xuong2CutRecords: state.xuong2CutRecords,
+  xuong2BaoThoRecords: state.xuong2BaoThoRecords,
+  xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords,
+  xuong2BaoTinhRecords: state.xuong2BaoTinhRecords,
+  pressRecords: state.pressRecords,
   batches: state.batches
 };
 
@@ -81,8 +85,28 @@ try {
     { date: '2026-10-20', inputWeight: 2000, carts: 3 }
   ];
   state.xuong2CutRecords = [
-    { date: '2026-10-27', inputKind: 'new', inputWeight: 4000, carts: 6 },
-    { date: '2026-10-20', inputKind: 'new', inputWeight: 2500, carts: 4 }
+    { date: '2026-10-27', inputKind: 'cart', inputWeight: 2500, klOngLuong: 1250, klOngLoi: 200, klMatLuong: 100, carts: 4 },
+    { date: '2026-10-27', inputKind: 'ong', inputWeight: 1500, klOngLuong: 1350, klOngLoi: 50, carts: 2 },
+    { date: '2026-10-20', inputKind: 'cart', inputWeight: 1500, klOngLuong: 1200, klOngLoi: 100, klMatLuong: 50, carts: 3 },
+    { date: '2026-10-20', inputKind: 'ong', inputWeight: 1000, klOngLuong: 900, klOngLoi: 50, carts: 1 }
+  ];
+  state.xuong2BaoThoRecords = [
+    { id: 'rough-week', date: '2026-10-29' },
+    { id: 'rough-previous', date: '2026-10-20' }
+  ];
+  state.xuong2ChonNanThoRecords = [
+    { id: 'rough-out-week', date: '2026-10-29', baothoId: 'rough-week', cls: 'A', quantity: 200, unitVol: 0.00072, volume: 0.144 },
+    { id: 'rough-out-previous', date: '2026-10-20', baothoId: 'rough-previous', cls: 'A', quantity: 100, unitVol: 0.00072, volume: 0.072 }
+  ];
+  state.xuong2BaoTinhRecords = [
+    { id: 'bt-week', date: '2026-10-29', kind: 'tinh', qtyOk: 9, qtyErr: 1, outDims: [1200, 50, 12] },
+    { id: 'bt-previous', date: '2026-10-20', kind: 'tinh', qtyOk: 8, qtyErr: 2, outDims: [1200, 50, 12] }
+  ];
+  state.pressRecords = [
+    { date: '2026-10-29', sticks: [{ nanKey: '1200x50x12', sticks: 9 }], finishedQty: 7, fpDim: '1200x50x12' },
+    { date: '2026-10-30', sticks: [{ nanKey: '1200x50x12', sticks: 5 }], vanTho: [{ vtDim: '1200x50x12', vtQty: 4 }] },
+    { date: '2026-10-30', sticks: [{ nanKey: '1200x50x12', sticks: 3 }] },
+    { date: '2026-10-20', sticks: [{ nanKey: '1200x50x12', sticks: 8 }], finishedQty: 6, fpDim: '1200x50x12' }
   ];
   state.batches = [
     { stage: 'say1', length: 1200, width: 600, thickness: 12, quantity: 100 },
@@ -131,6 +155,15 @@ try {
   assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'boluong').quantityUnit, 'kg');
   assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'cut').quantity, 4000);
   assert.equal(week.previous.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'cut').quantity, 2500);
+  assert.equal(week.consumption.cart.input, 3000);
+  assert.ok(Math.abs(week.consumption.cart.rate - (1250 / 3000 * 100)) < 1e-9);
+  assert.equal(week.consumption.pipe.rate, 90);
+  assert.equal(week.consumption.rough.inputKg, 3000);
+  assert.equal(week.consumption.rough.outputM3, 0.144);
+  assert.ok(Math.abs(week.consumption.rough.consumption - (3000 / 0.144)) < 1e-9);
+  assert.ok(Math.abs(week.consumption.press.inputM3 - 0.01224) < 1e-9);
+  assert.ok(Math.abs(week.consumption.press.outputM3 - 0.00792) < 1e-9);
+  assert.ok(Math.abs(week.consumption.press.consumption - (0.01224 / 0.00792)) < 1e-9);
   assert.equal(week.quality.x2.checked, 18);
   assert.equal(week.quality.x2.passed, 16);
   assert.equal(week.quality.x2.byKind.bullig.checked, 8);
@@ -212,6 +245,12 @@ try {
   assert.doesNotMatch(markup, /Bốc luồng\/Cắt chọn quy đổi kg/);
   assert.ok(markup.indexOf('Bốc luồng') < markup.indexOf('leadership-main-stages'));
   assert.ok(markup.indexOf('leadership-main-stages') < markup.indexOf('Ép ván'));
+  assert.match(markup, /Chỉ số tiêu hao/);
+  assert.match(markup, /Luồng cây → ống đạt/);
+  assert.match(markup, /Luồng cây \(kg\) → thanh thô \(m³\)/);
+  assert.match(markup, /Thanh tinh → BTP \/ thành phẩm/);
+  assert.doesNotMatch(markup, /ĐM \d/);
+  assert.doesNotMatch(markup, /Phạm vi &amp; lưu ý dữ liệu|leadership-data-notes/);
 
   const month = buildLeadershipSummary('month', '2026-10', state, capacity, inventory);
   assert.deepEqual(month.range, { from: '2026-10-01', to: '2026-10-31' });
@@ -220,6 +259,11 @@ try {
   assert.equal(month.shipments.quantity, 99);
   assert.equal(month.shipments.unattributedRows, 5);
   assert.match(buildLeadershipReportMarkup(month), /Tháng 10-2026 vs Tháng 9-2026/);
+  const emptyPeriod = buildLeadershipSummary('week', '2026-W41', state, capacity, inventory);
+  assert.equal(emptyPeriod.consumption.cart.rate, null);
+  assert.equal(emptyPeriod.consumption.pipe.rate, null);
+  assert.equal(emptyPeriod.consumption.rough.consumption, null);
+  assert.equal(emptyPeriod.consumption.press.consumption, null);
 
   const report = buildLeadershipReportData(week);
   assert.equal(report.headerRow, 4);
@@ -234,6 +278,9 @@ try {
   assert.ok(report.aoa.some(row => row[0] === 'Phụ phẩm' && row[2] === 'Thu bán phụ phẩm' && row[3] === 200000));
   assert.ok(report.aoa.some(row => row[0] === 'Chất lượng' && row[1] === 'Bullig'));
   assert.ok(report.aoa.some(row => row[0] === 'Sản xuất' && row[2] === 'Giờ sự cố'));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Luồng cây' && row[2] === 'Tỷ lệ ống đạt / đầu vào' && Math.abs(row[3] - (1250 / 3000 * 100)) < 1e-9));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Thanh thô' && row[4] === 'kg/m³'));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Ép ván' && row[4] === 'm³/m³'));
   assert.ok(!report.aoa.some(row => /Bullig - gia công|Cắt ván|Bào ván/.test(row[1] || '')));
 
   const printClasses = new Set();
@@ -278,9 +325,11 @@ try {
   assert.ok(styles.includes('.leadership-shipment-groups'));
   assert.ok(styles.includes('.leadership-shipment-progress'));
   assert.ok(styles.includes('.leadership-section-header'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v336'"));
+  assert.ok(styles.includes('.leadership-consumption-grid'));
+  assert.ok(!styles.includes('.leadership-data-notes'));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v338'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v336'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v338'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

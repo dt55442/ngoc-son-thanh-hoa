@@ -290,8 +290,8 @@ function makeFakeFirestore() {
     /PHOTO_BATCH_LIMIT = 200/.test(src) && /PHOTO_GAP_MS = 120/.test(src));
   check('G3: chỉ chạy khi ONLINE + có quyền (canPushToCloud) + còn việc',
     /if \(!isFirebaseOnline\(\) \|\| !canPushToCloud\(\)\)/.test(src));
-  check('G4: sw.js thêm js/photo-sync.js vào APP_SHELL + tăng CACHE_NAME v336',
-    swSrc.includes("'./js/photo-sync.js'") && /nha-may-ngoc-son-v336/.test(swSrc));
+  check('G4: sw.js thêm js/photo-sync.js vào APP_SHELL + tăng CACHE_NAME v338',
+    swSrc.includes("'./js/photo-sync.js'") && /nha-may-ngoc-son-v338/.test(swSrc));
   check('G5: index.html có nút "Đồng Bộ Ảnh Ngay" + span trạng thái',
     idxSrc.includes('id="btn-sync-photos"') && idxSrc.includes('id="photo-sync-status"'));
   check('G6: materials.js LƯU thumb vào kho riêng + enqueue (không nhúng thumb vào bản ghi)',

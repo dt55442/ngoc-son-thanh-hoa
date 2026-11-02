@@ -290,6 +290,62 @@ state.planningItems = [{ id: 'p-1', year: Y, week: 'Tuần 1', productId: 'r1', 
 planning.renderPlanningListSection(Y);
 check('G2: có dữ liệu trở lại → bảng sổ dựng đủ', document.getElementById('planning-list-section').innerHTML.includes('plan-hist-table'));
 
+// ═══════════════════════════════════════════════════════════════════
+// H. XÓA / NHÂN BẢN KẾ HOẠCH
+// ═══════════════════════════════════════════════════════════════════
+console.log('--- H. XÓA / NHÂN BẢN KẾ HOẠCH ---');
+const listContainer = document.getElementById('planning-list-section');
+const previousWrap = makeEl('previous-plan-hist-wrap');
+previousWrap.scrollTop = 245;
+previousWrap.scrollLeft = 18;
+const renderedWrap = makeEl('rendered-plan-hist-wrap');
+let wrapQueryCount = 0;
+const originalContainerQuery = listContainer.querySelector;
+listContainer.querySelector = selector => {
+  if (selector !== '.plan-hist-wrap') return originalContainerQuery.call(listContainer, selector);
+  return wrapQueryCount++ === 0 ? previousWrap : renderedWrap;
+};
+planning.renderPlanningListSection(Y);
+listContainer.querySelector = originalContainerQuery;
+check('H1: dựng lại sổ kế hoạch vẫn giữ vị trí cuộn dọc/ngang',
+  renderedWrap.scrollTop === 245 && renderedWrap.scrollLeft === 18);
+
+const sourcePlan = { id: 'source-52', year: Y, week: 'Tuần 52', productId: 'r1', qty: 100 };
+state.planningItems = [sourcePlan];
+const sourceSnapshot = JSON.stringify(sourcePlan);
+planning.duplicatePlanningGroup(52, Y);
+const targetYearHtml = document.getElementById('plan-edit-year').innerHTML;
+const targetWeekHtml = document.getElementById('plan-edit-week').innerHTML;
+check('H2: copy Tuần 52 mặc định sang Tuần 1 của năm kế tiếp',
+  targetYearHtml.includes(`value="${Y + 1}" selected`) && targetWeekHtml.includes('value="1" selected'));
+check('H3: mở thao tác nhân bản không sửa hay xóa kế hoạch nguồn',
+  state.planningItems.length === 1 && JSON.stringify(state.planningItems[0]) === sourceSnapshot);
+
+const originalQuerySelectorAll = document.querySelectorAll;
+const originalDateNow = Date.now;
+document.querySelectorAll = selector => selector === '#plan-edit-items .plan-edit-qty'
+  ? [{ value: '100' }]
+  : originalQuerySelectorAll(selector);
+Date.now = () => 123456;
+try {
+  document.getElementById('plan-edit-year').value = String(Y + 1);
+  document.getElementById('plan-edit-week').value = '1';
+  planning.handlePlanningEditSubmit({ preventDefault(){} });
+  planning.duplicatePlanningGroup(52, Y);
+  document.getElementById('plan-edit-year').value = String(Y + 1);
+  document.getElementById('plan-edit-week').value = '1';
+  planning.handlePlanningEditSubmit({ preventDefault(){} });
+} finally {
+  document.querySelectorAll = originalQuerySelectorAll;
+  Date.now = originalDateNow;
+}
+const copies = state.planningItems.filter(item => item.duplicatedFrom === sourcePlan.id);
+check('H4: nhân bản hai lần vẫn giữ nguyên nguồn và tạo đúng hai bản sao tuần kế tiếp',
+  state.planningItems.length === 3 &&
+  JSON.stringify(state.planningItems[0]) === sourceSnapshot &&
+  copies.length === 2 && copies.every(item => item.year === Y + 1 && item.week === 'Tuần 1' && item.qty === 100));
+check('H5: các bản sao có ID riêng biệt dù được tạo cùng một thời điểm',
+  new Set(state.planningItems.map(item => item.id)).size === state.planningItems.length);
+
 console.log(`\nKẾT QUẢ: ${passed} pass, ${failed} fail`);
 if (failed > 0) process.exit(1);
-

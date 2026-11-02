@@ -8,6 +8,8 @@ import { getDateYear, getPressedQtyForPlan, pressRecordWeek } from './press.js';
 import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, state } from './state.js';
 import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoApprovedXuatNotes, khoFirstInDateOf, khoInCountOf, khoNormPurpose } from './utils.js';
 
+  let planningItemIdSequence = 0;
+
   // =============================================================
   // KẾ HOẠCH SẢN XUẤT (PLANNING VIEW)
   // =============================================================
@@ -52,6 +54,14 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems));
     logDataChange(['planningItems']);
     firePushSync();
+  }
+
+  function createPlanningItemId() {
+    let id;
+    do {
+      id = `plan-${Date.now()}-${planningItemIdSequence++}`;
+    } while (state.planningItems.some(item => item.id === id));
+    return id;
   }
 
   function loadPlanningForecast() {
@@ -543,6 +553,9 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     const container = document.getElementById('planning-list-section');
     if (!container) return;
     if (!planHistUiLoaded) loadPlanHistUi();
+    const currentWrap = container.querySelector('.plan-hist-wrap');
+    const scrollTop = currentWrap ? currentWrap.scrollTop : 0;
+    const scrollLeft = currentWrap ? currentWrap.scrollLeft : 0;
     const yearNum = parseInt(year);
     const items = state.planningItems.filter(p => {
       const py = p.year || getYearFromWeek(p.week);
@@ -598,6 +611,11 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       </div>`;
     renderPlanHistBody();
     initLucide();
+    const nextWrap = container.querySelector('.plan-hist-wrap');
+    if (currentWrap && nextWrap) {
+      nextWrap.scrollTop = scrollTop;
+      nextWrap.scrollLeft = scrollLeft;
+    }
   }
 
 
@@ -2080,7 +2098,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     const weekLabel = `Tuần ${weekNum}`;
 
     state.planningItems.push({
-      id: `plan-${Date.now()}`,
+      id: createPlanningItemId(),
       week: weekLabel,
       year: parseInt(yearVal),
       productId,
@@ -2122,6 +2140,8 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       const years = getAvailablePlanningYears();
       const currentYear = new Date().getFullYear();
       if (!years.includes(currentYear)) years.push(currentYear);
+      const selectedYear = parseInt(year);
+      if (Number.isFinite(selectedYear) && !years.includes(selectedYear)) years.push(selectedYear);
       years.sort((a, b) => a - b);
       yearSelect.innerHTML = '<option value="">-- Chọn năm --</option>' +
         years.map(y => `<option value="${y}" ${String(y) === String(year) ? 'selected' : ''}>Năm ${y}</option>`).join('');
@@ -2185,8 +2205,10 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     if (!requireEditPermission()) return;
     const items = getPlanningItemsOfWeek(weekNum, yearNum);
     if (items.length === 0) return;
-    const nextWeek = Math.min(parseInt(weekNum) + 1, 52);
-    openPlanningEditModal('dup', items.map(p => p.id), yearNum, nextWeek);
+    const currentWeek = parseInt(weekNum);
+    const nextWeek = currentWeek >= 52 ? 1 : currentWeek + 1;
+    const nextYear = currentWeek >= 52 ? parseInt(yearNum) + 1 : parseInt(yearNum);
+    openPlanningEditModal('dup', items.map(p => p.id), nextYear, nextWeek);
   }
 
   // Sửa thẻ kế hoạch: đổi tên tuần & số lượng ván của cả nhóm
@@ -2219,11 +2241,15 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     const weekLabel = `Tuần ${weekNum}`;
     const yearNum = parseInt(yearVal);
     const targetItems = state.planningItems.filter(p => ids.includes(p.id));
+    if (targetItems.length !== ids.length) {
+      showToast('Một hoặc nhiều kế hoạch nguồn không còn tồn tại. Vui lòng mở lại thao tác.', 'error');
+      return;
+    }
 
     if (mode === 'dup') {
       targetItems.forEach((src, i) => {
         state.planningItems.push({
-          id: `plan-${Date.now()}-${i}`,
+          id: createPlanningItemId(),
           week: weekLabel,
           year: yearNum,
           productId: src.productId,

@@ -12222,12 +12222,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // Nay chặn theo PHẦN CÒN LẠI CỦA TỪNG LÔ đang gắn phiếu — đúng với dữ liệu thật;
   // cảnh báo lệch SỔ chỉ là cảnh báo (hiện ở ô tự tính), không khóa thao tác mới.
   // Trả [{ id, code, qty, cap }] = các lô gắn phiếu xuất quá phần còn lại của nó.
-  function khoLotsOverflow(lots) {
+  function khoLotsOverflow(lots, allocation) {
     const bad = [];
+    if (!(lots || []).length) return bad;
+    const alloc = allocation || khoFifoAllocation();
     (lots || []).forEach(l => {
       const b = (state.batches || []).find(x => x && x.id === String((l && l.batchId) || ''));
       if (!b) return;
-      const cap = khoLotRemainingOf(b);     // phiếu SỬA LUÔN là chờ duyệt → chưa trừ FIFO → cap đúng
+      const cap = khoLotRemainingOf(b, alloc);     // phiếu SỬA LUÔN là chờ duyệt → chưa trừ FIFO → cap đúng
       const qty = Number(l.qty) || 0;
       if (qty > cap) bad.push({ id: b.id, code: b.code || b.id, qty, cap });
     });
@@ -12245,21 +12247,23 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // Danh sách LÔ đang ở Kho CÒN HÀNG (chọn gắn lô cho phiếu xuất) — mới nhất lên đầu.
   // Khi đang SỬA phiếu (khoNoteEditId): cộng thêm các lô đang gắn trong phiếu
   // (kể cả tồn 0) để luôn THÊM/BỚT được lô — hết sửa thì về lọc cũ.
-  function khoLotPickerList() {
+  function khoLotPickerList(allocation) {
+    const alloc = allocation || khoFifoAllocation();
     const editingIds = khoNoteEditId
       ? new Set(((state.khoNotes || []).find(n => n && n.id === khoNoteEditId) || { lots: [] }).lots.map(l => String((l && l.batchId) || '')).filter(Boolean))
       : null;
     return (state.batches || [])
-      .filter(b => b && b.stage === 'kho' && (khoLotRemainingOf(b) > 0 || (editingIds && editingIds.has(String(b.id)))))
+      .filter(b => b && b.stage === 'kho' && (khoLotRemainingOf(b, alloc) > 0 || (editingIds && editingIds.has(String(b.id)))))
       .sort((a, b) => khoFirstInDateOf(b).localeCompare(khoFirstInDateOf(a)));
   }
   function khoPickLot(id) {
     const b = (state.batches || []).find(x => x && x.id === id);
     if (!b) return;
+    const alloc = khoFifoAllocation();
     if (khoNotePicked[id] != null) delete khoNotePicked[id];
-    else khoNotePicked[id] = khoLotRemainingOf(b); // mặc định lấy NGUYÊN phần còn lại của lô
-    renderX2KhoLotsList();
-    renderX2KhoCalc();
+    else khoNotePicked[id] = khoLotRemainingOf(b, alloc); // mặc định lấy NGUYÊN phần còn lại của lô
+    renderX2KhoLotsList(alloc);
+    renderX2KhoCalc(alloc);
   }
   function khoPickedQtyOf(id) { return Number(khoNotePicked[id]) || 0; }
   function khoPickedTotal() { return Object.keys(khoNotePicked).reduce((s, id) => s + khoPickedQtyOf(id), 0); }
@@ -12484,17 +12488,18 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       ${picked ? `<div class="kho-lot-qty-row"><label>Số thanh xuất từ lô này:</label><input type="number" min="1" max="${rem}" step="1" value="${khoPickedQtyOf(b.id)}" data-kho-lot-qty="${escapeHTML(b.id)}"></div>` : ''}
     </div>`;
   }
-  function renderX2KhoLotsList() {
+  function renderX2KhoLotsList(allocation) {
     const list = document.getElementById('x2-kho-lots-list');
     if (!list) return;
+    const alloc = allocation || khoFifoAllocation();
     const q = khoLotsQuery.trim().toLowerCase();
     const qQty = khoLotsQtyQuery.trim();
-    let items = khoLotPickerList();
+    let items = khoLotPickerList(alloc);
     if (q) items = items.filter(b => `${b.code || ''} ${b.location || ''} ${b.length}x${b.width}x${b.thickness} ${b.bambooType || ''} ${b.useFor || ''}`.toLowerCase().includes(q));
     // Ô ② — TÌM THEO SỐ LƯỢNG: chỉ so SỐ (bỏ dấu phân cách nghìn) — điều kiện VÀ với ô chữ
     if (qQty) {
       const digits = qQty.replace(/\D/g, '');
-      if (digits) items = items.filter(b => String(Math.round(khoLotRemainingOf(b))).includes(digits));
+      if (digits) items = items.filter(b => String(Math.round(khoLotRemainingOf(b, alloc))).includes(digits));
     }
     if (!items.length) {
       list.innerHTML = (q || qQty)
@@ -12502,7 +12507,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         : '<div class="al-empty">— Không có lô nào còn hàng ở Kho —</div>';
     }
     else {
-      const alloc = khoFifoAllocation();   // tính 1 lần cho cả danh sách (tránh O(N²))
       list.innerHTML = items.map(b => khoLotCardHtml(b, alloc)).join('');
     }
     // chip đếm "N đã chọn" trên nút mở danh sách (mẫu ô đếm của Thêm Lô Sấy Mới)
@@ -12531,13 +12535,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // Đặt số thanh xuất của 1 thẻ lô (dùng cho ô nhập trong thẻ + test) — kẹp 0..còn lại
   function khoSetLotQty(id, qty, inputEl) {
     const b = (state.batches || []).find(x => x && x.id === id);
-    const max = b ? khoLotRemainingOf(b) : 0;
+    const alloc = b ? khoFifoAllocation() : null;
+    const max = b ? khoLotRemainingOf(b, alloc) : 0;
     let v = Math.floor(Number(qty) || 0);
     const el = inputEl || null;
     if (v > max) { v = max; if (el && el != null) el.value = max; }
-    if (v <= 0) { delete khoNotePicked[id]; renderX2KhoLotsList(); }
+    if (v <= 0) { delete khoNotePicked[id]; renderX2KhoLotsList(alloc); }
     else khoNotePicked[id] = v;
-    renderX2KhoCalc();
+    renderX2KhoCalc(alloc);
     return v;
   }
   // Gợi ý kích thước TỒN LỖI theo nguồn đang chọn (datalist)
@@ -12555,7 +12560,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     dl.innerHTML = rows.map(x => `<option value="${escapeHTML(x.sizeKey)}"></option>`).join('');
   }
   // Ô tự tính: nguồn · số thanh · m³ · chặn vượt tồn (tô đỏ ô số lượng)
-  function renderX2KhoCalc() {
+  function renderX2KhoCalc(allocation) {
     const el = document.getElementById('x2-kho-calc');
     if (!el) return;
     const type = khoNoteTypeOf();
@@ -12564,20 +12569,22 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (type === 'xuat') {
       // PHIẾU XUẤT: không còn ô số lượng — tổng LUÔN = Σ thanh của các thẻ lô đã gắn
       const picked = khoPickedTotal();
+      let alloc = allocation || null;
       let text = '';
       if (picked > 0) {
+        if (!alloc) alloc = khoFifoAllocation();
         const pickedLots = Object.keys(khoNotePicked).map(id => ({ batchId: id, qty: khoPickedQtyOf(id) }));
         const m3 = khoNoteM3Of(pickedLots);
         text = `Tổng phiếu (tự cộng từ ${Object.keys(khoNotePicked).length} thẻ lô): <strong>${fmtThanh(picked)}</strong> thanh · ${m3.toFixed(3)} m³`;
         // ① Chặn theo TỒN TỪNG LÔ đang gắn (dữ liệu thật) → đỏ, bấm Lưu sẽ bị từ chối
-        const bad = khoLotsOverflow(pickedLots);
+        const bad = khoLotsOverflow(pickedLots, alloc);
         if (bad.length) {
           const b0 = bad[0];
           text += ` · <span class="kho-warn" title="Mỗi lô không được xuất quá phần CÒN LẠI của chính nó — bấm Lưu sẽ bị từ chối">VƯỢT tồn lô ${escapeHTML(b0.code)} (còn ${fmtThanh(b0.cap)} thanh)</span>`;
         }
         // ② Lệch SỔ (phiếu bù cũ ghi hơn sức chứa) → CHỈ cảnh báo vàng, KHÔNG chặn
         else {
-          const sum = khoStockSummary();
+          const sum = khoStockSummary(alloc);
           if (sum.mismatchThanh >= 1 || sum.honestThanh < picked) {
             text += ` · <span class="kho-warn" style="color:#b45309;" title="Sổ kho đang lệch (phiếu bù cũ ghi nhiều hơn sức chứa, xem chip ⚠ ở thanh tồn) — chỉ là CẢNH BÁO, vẫn tạo được phiếu nếu các lô đã chọn còn tồn">⚠ Sổ kho lệch — không chặn phiếu gắn lô còn tồn</span>`;
           }

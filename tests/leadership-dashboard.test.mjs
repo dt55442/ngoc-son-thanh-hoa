@@ -227,9 +227,9 @@ try {
   assert.ok(styles.includes('.leadership-stage-meta > span:nth-child(2)'));
   assert.ok(styles.includes('flex-wrap: nowrap; align-items: baseline; gap: 0 3px; white-space: nowrap;'));
   assert.ok(styles.includes('.leadership-section-header'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v333'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v335'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v333'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v335'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

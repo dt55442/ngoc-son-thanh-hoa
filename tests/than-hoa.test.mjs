@@ -583,7 +583,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v333/.test(swJs));
+  /nha-may-ngoc-son-v335/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -1325,7 +1325,7 @@ check('TÌM SỐ LƯỢNG (index.html): ô RIÊNG #al-source-qty-search đặt N
 check('TÌM SỐ LƯỢNG (js): chỉ so SỐ LƯỢNG + lọc KẾT HỢP 2 ô (VÀ) + xóa cả 2 khi đổi công đoạn',
   jsBatchModals.includes('function alSourceQtyMatches') &&
   jsBatchModals.includes('function alSetSourceQtyQuery') &&
-  jsBatchModals.includes('alSourceQtyMatches(it, stage, alSourceQtyQuery)') &&
+  jsBatchModals.includes('alSourceQtyMatches(it, stage, alSourceQtyQuery, alloc)') &&
   jsBatchModals.includes('alSourceQuery.trim(), alSourceQtyQuery.trim()') &&
   jsBatchModals.includes("alSourceQtyQuery = '';"));
 check('DROPDOWN NỔI (js): đo cao 5 dòng thẻ + neo theo nút chọn (hết chỗ mở ngược lên)',

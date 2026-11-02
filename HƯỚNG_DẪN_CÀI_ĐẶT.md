@@ -1,47 +1,35 @@
-# 📱 HƯỚNG DẪN CÀI ĐẶT & SỬ DỤNG NHÀ MÁY NGỌC SƠN THANH HÓA TRÊN ANDROID
+# 📱 HƯỚNG DẪN CÀI ĐẶT & SỬ DỤNG NHÀ MÁY NGỌC SƠN THANH HÓA TRÊN ĐIỆN THOẠI
 
-Ứng dụng **Nhà máy Ngọc Sơn Thanh Hóa** đã được chuyển thành **PWA (Progressive Web App)** hoạt động **hoàn toàn OFFLINE** - không cần mạng để sử dụng, dữ liệu JSON xuất bình thường.
+Ứng dụng **Nhà máy Ngọc Sơn Thanh Hóa** là **PWA (Progressive Web App)**. Một số chức năng lưu cục bộ có thể dùng khi offline; đồng bộ Firebase và các chức năng trực tuyến cần kết nối mạng.
 
 ---
 
-## ✅ CÁC BƯỚC CÀI ĐẶT TRÊN ĐIỆN THOẠI ANDROID
+## Điều kiện trước khi cài
 
-### Bước 1: Copy toàn bộ thư mục lên điện thoại
+- Chỉ mở ứng dụng từ **đường dẫn HTTPS đã xác nhận an toàn**. Trước khi dùng dữ liệu thật, cần chắc chắn nguồn publish không chứa dữ liệu sản xuất/nhân sự hoặc tệp nội bộ công khai; HTTPS không tự làm dữ liệu riêng tư.
+- **Không** copy thư mục rồi mở `index.html` bằng trình quản lý tệp (`file://`); cách đó không đăng ký service worker và không cài được PWA. `http://localhost` chỉ dùng cho phát triển trên chính thiết bị đang chạy máy chủ, không phải địa chỉ để điện thoại khác truy cập.
+- Lần đầu cần có mạng để tải trang, manifest, icon và service worker. Repo đã có manifest, icon và service worker; nếu vẫn không thấy tùy chọn cài, kiểm tra URL có HTTPS và tải lại trang khi online.
 
-Copy toàn bộ thư mục dự án này sang điện thoại Android qua:
-- Cáp USB (chế độ truyền file MTP)
-- Zalo/Email/Google Drive rồi tải về
-- Bluetooth
+## Cài trên Android
 
-> ⚠️ **QUAN TRỌNG:** Phải chuyển **TOÀN BỘ thư mục** gồm các file/subfolder:
-> - `index.html`
-> - `styles.css`
-> - `js/` (14 module logic — xem cấu trúc bên dưới)
-> - `firebase-config.js`
-> - `manifest.json`
-> - `sw.js`
-> - `vendor/` (thư viện offline)
-> - `fonts/` (font offline)
-> - `icons/` (icon ứng dụng)
-> - `bamboo_data.json`, `Backup_BambooTracker_*.json` (dữ liệu hiện có)
+1. Mở đường dẫn HTTPS của ứng dụng bằng **Chrome**.
+2. Chạm **⋮** → **Cài đặt ứng dụng** hoặc **Thêm vào màn hình chính**. Có thể mở menu ⋮ của ứng dụng rồi chọn **Cài Ứng Dụng** để xem hướng dẫn.
+3. Xác nhận; biểu tượng ứng dụng sẽ xuất hiện trên màn hình chính.
 
-### Bước 2: Mở file index.html bằng Chrome
+## Cài trên iPhone/iPad
 
-1. Dùng ứng dụng **File Manager** (Quản lý tệp) tìm file `index.html`
-2. Chạm vào file → chọn **Chrome** (hoặc trình duyệt hỗ trợ PWA)
+1. Mở đường dẫn HTTPS bằng **Safari**.
+2. Chạm **Chia sẻ** → **Thêm vào Màn hình chính** → **Thêm**.
+3. Mở ứng dụng từ biểu tượng vừa tạo.
 
-### Bước 3: Cài đặt ứng dụng (Thêm vào Màn hình chính)
+Thông báo Web Push trên iPhone/iPad còn cần ứng dụng đã được thêm vào Màn hình chính, phiên bản hệ điều hành/trình duyệt hỗ trợ và người dùng cấp quyền. Bản hiện tại **chưa có dịch vụ gửi push khi ứng dụng đóng**; muốn gửi thông báo cá nhân sau này cần thiết kế định danh người nhận và một sender/backend được công ty duyệt.
 
-| Cách 1 - Trình đơn Chrome | Cách 2 - Nút cài đặt |
-|---|---|
-| 1. Mở ứng dụng trong Chrome<br>2. Chạm vào biểu tượng **⋮** (3 chấm) góc trên phải<br>3. Chọn **"Thêm vào màn hình chính"**<br>4. Xác nhận → App xuất hiện trên màn hình chính | 1. Chrome sẽ hiện banner **"Cài đặt ứng dụng"**<br>2. Chạm **"Cài đặt"**<br>3. App xuất hiện trên màn hình chính |
-
-### Bước 4: Sử dụng như App thật
+## Sử dụng sau khi cài
 
 Sau khi cài đặt, app sẽ:
 - ✅ Hiển thị icon riêng trên màn hình chính
 - ✅ Mở toàn màn hình (không có thanh địa chỉ Chrome)
-- ✅ **Hoạt động 100% OFFLINE** - không cần mạng
+- ✅ Các chức năng lưu cục bộ tiếp tục hoạt động khi offline
 - ✅ Dữ liệu lưu tự động vào bộ nhớ điện thoại
 - ✅ Xuất file JSON / Excel bình thường
 
@@ -103,10 +91,10 @@ Khi online (Firebase), dữ liệu được đồng bộ qua đám mây **KHÔNG
 
 ## 💡 LƯU Ý
 
-- **Lần đầu mở cần có mạng** trong vài giây để Chrome nhận diện là PWA (tải manifest + icon)
-- Sau khi đã cài đặt và mở 1 lần, app **không bao giờ cần mạng lại**
+- Lần đầu cài cần mở URL HTTPS khi có mạng để trình duyệt tải manifest, icon và service worker.
+- Sau khi tài nguyên đã được cache, các chức năng lưu cục bộ có thể dùng offline; đồng bộ Firebase và các tính năng trực tuyến vẫn cần mạng.
 - Nếu thay đổi code, hãy xóa app cũ và cài lại hoặc hard-refresh (Ctrl+Shift+R trên desktop / xóa cache Chrome)
-- Tài khoản mặc định: `admin` / `admin123` — thêm sẵn: `quanly1` / `123456` (Ban Quản Lý), `editor1` / `123456` (Editor)
+- Thông tin đăng nhập do quản trị viên cấp. Không ghi hoặc chia sẻ mật khẩu trong tài liệu; hãy thay/thu hồi mọi thông tin mặc định trước khi dùng với dữ liệu thật.
 
 ---
 
@@ -143,9 +131,10 @@ Tab QC (Xuất Hàng) là ví dụ mẫu: `APP_TABS` + section `qc-view` trong `
 
 ## 🔒 BẢO MẬT DỮ LIỆU
 
-- Toàn bộ dữ liệu lưu **cục bộ trong bộ nhớ điện thoại** - không gửi lên bất kỳ server nào
-- Dữ liệu lưu dưới dạng JSON trong localStorage & IndexedDB của Chrome
-- Khi xóa app khỏi điện thoại → dữ liệu cũng bị xóa. Nên thường xuyên **Sao Lưu JSON**!
+- Dữ liệu có bản lưu cục bộ trong localStorage/IndexedDB; khi kết nối Firebase, một số dữ liệu được đồng bộ lên Firestore. Không mặc định rằng dữ liệu chỉ nằm trên điện thoại.
+- Xóa dữ liệu trình duyệt/app có thể làm mất bản cục bộ. Nếu dùng đồng bộ đám mây, hãy kiểm tra trạng thái đồng bộ trước khi khôi phục.
+- File sao lưu JSON có thể chứa dữ liệu sản xuất/nhân sự; chỉ lưu và chia sẻ qua nơi được công ty cho phép.
+- Không đưa JSON dữ liệu, bản sao lưu, tệp debug hoặc thông tin truy cập vào nguồn website công khai.
 
 ---
 
@@ -169,16 +158,9 @@ Rồi mở `http://localhost:8080`
 
 ---
 
-## 📡 CHẠY SERVER & CÀI ĐẶT TRÊN ĐIỆN THOẠI (VIA WIFI)
+## 📡 CÀI ỨNG DỤNG TRÊN ĐIỆN THOẠI
 
-1. Chạy `chay_app.bat` trên máy tính
-2. Tìm IP máy tính: `ipconfig` → IPv4 Address (VD: 192.168.1.100)
-3. Trên điện thoại Android (cùng WiFi):
-   - Mở Chrome → địать `http://192.168.1.100:8080`
-   - Chrome sẽ hiện banner **"Cài đặt ứng dụng"** → chạm **Cài đặt**
-4. App xuất hiện trên màn hình chính điện thoại
-
-> 💡 **Lần đầu mở cần mạng** để Chrome nhận diện PWA. Sau đó app hoạt **100% OFFLINE**.
+Để cài PWA trên điện thoại, dùng URL **HTTPS** của website đã được kiểm tra và làm theo hướng dẫn Android/iPhone ở đầu tài liệu. Địa chỉ HTTP trong mạng LAN (ví dụ `http://192.168.x.x:8080`) chỉ phù hợp để truy cập thử; không đáp ứng điều kiện secure context để cài PWA/service worker.
 
 ---
 

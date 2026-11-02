@@ -513,10 +513,44 @@ import { flagOn } from './sys-settings.js';
     return out;
   }
 
+  function khoDerivedOutByLot(lots) {
+    const outByLot = new Map();
+    const add = (batchId, qty) => {
+      const id = String(batchId || '');
+      if (!id) return;
+      outByLot.set(id, (outByLot.get(id) || 0) + (Number(qty) || 0));
+    };
+    (state.xuong2BaoTinhRecords || []).forEach(r => {
+      if (!r || r.kind !== 'tinh') return;
+      if (Array.isArray(r.sources) && r.sources.length) {
+        r.sources.forEach(s => { if (s) add(s.batchId, s.qty); });
+      } else {
+        add(r.batchId, (Number(r.qtyOk) || 0) + (Number(r.qtyErr) || 0));
+      }
+    });
+    (state.xuong2BulligRecords || []).forEach(r => {
+      if (!r || r.kind !== 'gc') return;
+      add(r.batchId, r.qtyIn != null ? r.qtyIn : r.quantity);
+    });
+    (lots || []).forEach(b => {
+      if (!b || !b.id) return;
+      let inKho = false;
+      getBatchStageHistory(b).forEach(h => {
+        if (!h || !h.stage) return;
+        if (h.stage === 'kho') inKho = true;
+        else if (h.stage === 'say2' && inKho) {
+          add(b.id, b.quantity);
+          inKho = false;
+        }
+      });
+    });
+    return outByLot;
+  }
+
   // Tổng hợp TỒN KHO hiện tại (vật lý) + TỒN NAN TOÀN NHÓM (Sấy 1/2/Kho) + đối chiếu
-  function khoStockSummary() {
+  function khoStockSummary(allocation) {
     const lots = (state.batches || []).filter(b => b && b.stage === 'kho');
-    const alloc = khoFifoAllocation();
+    const alloc = allocation || khoFifoAllocation();
     let thanh = 0, m3 = 0, live = 0, usedUp = 0, overLots = 0, overThanh = 0, overAckThanh = 0;
     lots.forEach(b => {
       const used = alloc.byLot.get(b.id) || 0;
@@ -558,8 +592,9 @@ import { flagOn } from './sys-settings.js';
     // (trước đây dùng `alloc` chỉ có lô ở Kho ⇒ lô đang Sấy 2 bị coi là chưa có phiếu
     // → cảnh báo Thiếu phiếu kho ảo 46.138 thanh).
     const allocPool = khoFifoAllocation(pool);
+    const derivedByLot = khoDerivedOutByLot(pool);
     pool.forEach(b => {
-      const d = khoDerivedOutOf(b.id) - (allocPool.byLot.get(b.id) || 0);
+      const d = (derivedByLot.get(String(b.id)) || 0) - (allocPool.byLot.get(b.id) || 0);
       if (d >= 1) { mismatch += d; mismatchLots.push({ id: b.id, code: b.code || '', stage: b.stage, diff: d }); }
     });
     return {

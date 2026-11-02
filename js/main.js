@@ -43,6 +43,74 @@ import { setupFormCalculations, initVnDateInputs, showToast } from './utils.js';
 
 setWorkerEvaluationEfficiencyProvider(computeWorkerStageEfficiency);
 
+let pwaInstallPrompt = null;
+
+function isPwaInstalled() {
+  const standalone = typeof window.matchMedia === 'function'
+    && window.matchMedia('(display-mode: standalone)').matches;
+  return standalone || navigator.standalone === true;
+}
+
+function isAppleMobileDevice() {
+  const ua = navigator.userAgent || '';
+  return /iPhone|iPad|iPod/.test(ua)
+    || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+function initPwaInstall() {
+  if (typeof document === 'undefined'
+      || typeof document.getElementById !== 'function'
+      || typeof navigator === 'undefined'
+      || !navigator.serviceWorker) return;
+  const button = document.getElementById('btn-install-app');
+  if (!button) return;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    pwaInstallPrompt = event;
+  });
+  window.addEventListener('appinstalled', () => {
+    pwaInstallPrompt = null;
+    showToast('Đã cài ứng dụng lên thiết bị.', 'success');
+  });
+
+  button.addEventListener('click', async () => {
+    if (isPwaInstalled()) {
+      showToast('Ứng dụng đã được cài trên thiết bị này.', 'info');
+      return;
+    }
+    if (!window.isSecureContext) {
+      showToast('Cần mở ứng dụng bằng đường dẫn HTTPS để cài. Không mở trực tiếp file HTML hoặc bằng HTTP qua mạng LAN.', 'error');
+      return;
+    }
+    if (isAppleMobileDevice()) {
+      showToast('Trên iPhone/iPad: mở bằng Safari, chạm Chia sẻ rồi chọn “Thêm vào Màn hình chính”.', 'info');
+      return;
+    }
+    if (!pwaInstallPrompt) {
+      showToast('Mở menu Chrome ⋮ rồi chọn “Cài đặt ứng dụng” hoặc “Thêm vào màn hình chính”. Nếu không thấy, hãy kiểm tra đường dẫn HTTPS và tải lại trang khi có mạng.', 'info');
+      return;
+    }
+
+    const prompt = pwaInstallPrompt;
+    pwaInstallPrompt = null;
+    try {
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        showToast('Đang cài ứng dụng…', 'success');
+      } else {
+        showToast('Bạn chưa cài ứng dụng. Có thể thử lại từ menu trình duyệt.', 'info');
+      }
+    } catch (error) {
+      console.error('[PWA] Không mở được hộp thoại cài ứng dụng', error);
+      showToast('Không mở được hộp thoại cài. Hãy dùng menu Chrome ⋮ → “Cài đặt ứng dụng”.', 'error');
+    }
+  });
+}
+
+initPwaInstall();
+
 function yieldBootFrame() {
   return new Promise(resolve => {
     if (typeof requestAnimationFrame === 'function') {

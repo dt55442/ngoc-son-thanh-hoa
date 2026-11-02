@@ -460,7 +460,24 @@ check('CẤU TRÚC (js): gộp nhóm + chia FEFO + cảnh báo tuổi nan + sort
   bmSrc.includes('function alGridAllGroupList') && bmSrc.includes('function alGridAllocCards') &&
   bmSrc.includes('function alGridSetGroupQty') && bmSrc.includes('AL_GRID_STALE_DAYS') &&
   bmSrc.includes("alGridSortMode = 'size'"));
-check('CẤU TRÚC (sw.js): cache đã tăng lên v269', swHtml.includes('nha-may-ngoc-son-v333'));
+const setLineStart = bmSrc.indexOf('function alGridSetLineQty(');
+const setLineEnd = bmSrc.indexOf('function alGridFillLine(', setLineStart);
+const setLineBlock = setLineStart >= 0 && setLineEnd > setLineStart
+  ? bmSrc.slice(setLineStart, setLineEnd)
+  : '';
+const sourceListStart = bmSrc.indexOf('function renderAlSourceList()');
+const sourceListEnd = bmSrc.indexOf('// Chọn / bỏ chọn 1 nguồn', sourceListStart);
+const sourceListBlock = sourceListStart >= 0 && sourceListEnd > sourceListStart
+  ? bmSrc.slice(sourceListStart, sourceListEnd)
+  : '';
+check('HIỆU NĂNG: bộ chọn nguồn và nhập SL dùng bản đồ Đã Dùng một lượt thay vì quét lô cho từng thẻ',
+  bmSrc.includes('function nanCardUsageMap()') &&
+  bmSrc.includes('nanCardUsedOf(id, null, usedByNan)') &&
+  sourceListBlock.includes('const usedByNan = stage === \'say1\' ? nanCardUsageMap() : null;') &&
+  sourceListBlock.includes('alCandidatesOf(stage, alloc, usedByNan)') &&
+  setLineBlock.includes('const usedByNan = nanCardUsageMap();') &&
+  setLineBlock.includes('alGridApplyGroupLines(key, inputEl, usedByNan)'));
+check('CẤU TRÚC (sw.js): cache đã tăng lên v335', swHtml.includes('nha-may-ngoc-son-v335'));
 check('CẤU TRÚC (package.json): bộ kiểm thử này nằm trong chuỗi npm test',
   pkg.includes('tests/than-hoa-grid.test.mjs'));
 

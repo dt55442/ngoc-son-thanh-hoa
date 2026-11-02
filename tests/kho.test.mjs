@@ -506,7 +506,7 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v333/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v335', /nha-may-ngoc-son-v335/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',
@@ -638,6 +638,38 @@ const warnHtml = document.getElementById('kho-warn-body').innerHTML;
 check('PANEL: chi tiết cảnh báo liệt kê lô + nút "Chốt lệch" + "Mở thẻ lô"',
   warnHtml.includes('data-kho-warn-ack') && warnHtml.includes('data-kho-warn-edit') &&
   warnHtml.includes('Chốt lệch') && warnHtml.includes('261001-99'));
+
+const summaryWithSharedAllocation = utils.khoStockSummary(utils.khoFifoAllocation());
+const summaryWithFreshAllocation = utils.khoStockSummary();
+check('HIỆU NĂNG: truyền FIFO allocation dùng chung không đổi kết quả tổng tồn/đối chiếu',
+  summaryWithSharedAllocation.remainingThanh === summaryWithFreshAllocation.remainingThanh &&
+  summaryWithSharedAllocation.honestThanh === summaryWithFreshAllocation.honestThanh &&
+  summaryWithSharedAllocation.mismatchThanh === summaryWithFreshAllocation.mismatchThanh &&
+  JSON.stringify(summaryWithSharedAllocation.mismatchLots) === JSON.stringify(summaryWithFreshAllocation.mismatchLots));
+
+const x2Source = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
+const pickerStart = x2Source.indexOf('function khoLotPickerList(allocation)');
+const pickerEnd = x2Source.indexOf('function khoPickLot(', pickerStart);
+const pickerBlock = pickerStart >= 0 && pickerEnd > pickerStart ? x2Source.slice(pickerStart, pickerEnd) : '';
+const listStart = x2Source.indexOf('function renderX2KhoLotsList(allocation)');
+const listEnd = x2Source.indexOf('function khoSetLotsQuery(', listStart);
+const listBlock = listStart >= 0 && listEnd > listStart ? x2Source.slice(listStart, listEnd) : '';
+const summaryStart = fs.readFileSync(new URL('../js/utils.js', import.meta.url), 'utf8');
+const stockSummaryStart = summaryStart.indexOf('function khoStockSummary(allocation)');
+const stockSummaryEnd = summaryStart.indexOf('function khoVisibilityMap()', stockSummaryStart);
+const stockSummaryBlock = stockSummaryStart >= 0 && stockSummaryEnd > stockSummaryStart
+  ? summaryStart.slice(stockSummaryStart, stockSummaryEnd)
+  : '';
+check('HIỆU NĂNG: lọc Kho Nan chia sẻ 1 FIFO allocation thay vì tính lại cho từng lô',
+  pickerBlock.includes('khoLotRemainingOf(b, alloc)') &&
+  !pickerBlock.includes('khoLotRemainingOf(b)') &&
+  (listBlock.match(/khoFifoAllocation\(\)/g) || []).length === 1 &&
+  listBlock.includes('khoLotPickerList(alloc)') &&
+  listBlock.includes('khoLotRemainingOf(b, alloc)') &&
+  listBlock.includes('khoLotCardHtml(b, alloc)'));
+check('HIỆU NĂNG: tổng đối chiếu gom dữ liệu theo lô 1 lượt, không quét toàn bộ lịch sử cho từng lô',
+  stockSummaryBlock.includes('khoDerivedOutByLot(pool)') &&
+  !stockSummaryBlock.includes('khoDerivedOutOf(b.id)'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

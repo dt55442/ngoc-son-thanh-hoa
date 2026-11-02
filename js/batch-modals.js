@@ -7,7 +7,7 @@ import { renderAll } from './main.js';
 import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_CHON_NAN, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
-import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
+import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoFifoAllocation, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
 import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes, sayBuildCharges, sayShiftMapOf, syncAlShiftField } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
@@ -477,7 +477,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   //   • Sấy 2 (lô ở Kho): Dòng 1 = Vị trí · Kích thước · Loại · Số lượng;
   //       Dòng 2 = Dùng cho · badge đếm ngày S1/S2/K — mỗi badge 1 màu
   // sub = chuỗi thuần (dùng tìm kiếm) · subHtml = HTML có badge màu
-  function alCardLines(it, stage) {
+  function alCardLines(it, stage, allocation, usageMap) {
     const isLot = stage === 'say2';
     const dims = isLot
       ? `${it.length || '?'}×${it.width || '?'}×${it.thickness || '?'}`
@@ -486,12 +486,12 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     // Sấy 2 (lô ở Kho): in TỒN CÒN THỰC — cùng sổ với thẻ Kho. Lô nguyên
     // (còn = gốc) giữ chữ cũ "X thanh" cho gọn; lô đã xuất 1 phần in rõ
     // "còn X/Y thanh" để không nhầm với số gốc.
-    const lotRem = isLot ? (Math.round(khoLotRemainingOf(it)) || 0) : 0;
+    const lotRem = isLot ? (Math.round(khoLotRemainingOf(it, allocation)) || 0) : 0;
     const lotTotal = isLot ? (Number(it.quantity) || 0) : 0;
     // Sấy 1 (thẻ nan): TỔNG của thẻ (số nhập ở Chọn Nan Thô) · ĐÃ DÙNG (đã tạo lô
     // Sấy 1) · CÒN LẠI (tối đa lấy cho lô mới — có thể lấy 1 PHẦN để chia nhiều lô)
     const nanTotal = isLot ? 0 : (Number(it.quantity) || 0);
-    const nanUsed = isLot ? 0 : nanCardUsedOf(it.id);
+    const nanUsed = isLot ? 0 : nanCardUsedOf(it.id, null, usageMap);
     const nanRem = isLot ? 0 : Math.max(0, nanTotal - nanUsed);
     const qtyLbl = isLot
       ? (lotRem === lotTotal
@@ -530,10 +530,10 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     return { main, sub, subHtml };
   }
   // Thẻ nguồn có khớp từ khóa tìm nhanh không (tìm trong mọi thông tin hiển thị)
-  function alSourceMatches(it, stage, query) {
+  function alSourceMatches(it, stage, query, allocation, usageMap) {
     const q = alNorm(query).trim();
     if (!q) return true;
-    const lines = alCardLines(it, stage);
+    const lines = alCardLines(it, stage, allocation, usageMap);
     return alNorm(`${lines.main} ${lines.sub} ${it.code || ''}`).includes(q);
   }
   let alSourceQuery = '';
@@ -562,10 +562,10 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   //     (khoLotRemainingOf: số lần nhập × số lượng − phiếu xuất ĐÃ DUYỆT).
   //     Lô đã xuất hết (tồn 0) không có số nào → ô tìm số tự ẩn.
   //   • Sấy 1 (thẻ Chọn Nan Thô) = phần CÒN LẠI in trên thẻ + số lượng gốc của thẻ
-  function alSourceQtyValues(it, stage) {
+  function alSourceQtyValues(it, stage, allocation) {
     const vals = [];
     if (stage === 'say2') {
-      vals.push(Math.round(khoLotRemainingOf(it)) || 0);
+      vals.push(Math.round(khoLotRemainingOf(it, allocation)) || 0);
     } else {
       vals.push(nanCardRemainingOf(it));
       vals.push(Number(it && it.quantity) || 0);
@@ -574,18 +574,19 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   }
   // Thẻ nguồn có khớp ô tìm theo SỐ LƯỢNG không — CHỈ so số lượng, dạng CHỨA;
   // chuỗi rỗng / không có chữ số → không lọc (hiện mọi thẻ)
-  function alSourceQtyMatches(it, stage, qtyQuery) {
+  function alSourceQtyMatches(it, stage, qtyQuery, allocation) {
     const q = alQtyNorm(qtyQuery).split('').filter(ch => ch >= '0' && ch <= '9').join('');
     if (!q) return true;
-    return alSourceQtyValues(it, stage).some(v => String(v).includes(q));
+    return alSourceQtyValues(it, stage, allocation).some(v => String(v).includes(q));
   }
   function alSetSourceQtyQuery(v) {
     alSourceQtyQuery = String(v || '');
     renderAlSourceList();
   }
   // Số thanh ĐÃ dùng của 1 thẻ chọn nan (đã tạo lô sấy từ thẻ đó)
-  function nanCardUsedOf(chonNanId, excludeBatchId) {
+  function nanCardUsedOf(chonNanId, excludeBatchId, usageMap) {
     const key = String(chonNanId);
+    if (usageMap instanceof Map && excludeBatchId == null) return usageMap.get(key) || 0;
     return (state.batches || []).reduce((sum, b) => {
       if (!b || b.id === excludeBatchId) return sum;
       // LÔ GỘP (chế độ Bảng): nguồn nằm trong b.sources[] — cộng ĐÚNG phần đã lấy
@@ -597,21 +598,40 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
       return sum + (String(b.sourceChonNanId || '') === key ? (Number(b.quantity) || 0) : 0);
     }, 0);
   }
+  function nanCardUsageMap() {
+    const usedByNan = new Map();
+    const add = (chonNanId, qty) => {
+      const id = String(chonNanId || '');
+      if (!id) return;
+      usedByNan.set(id, (usedByNan.get(id) || 0) + (Number(qty) || 0));
+    };
+    (state.batches || []).forEach(b => {
+      if (!b) return;
+      if (Array.isArray(b.sources) && b.sources.length) {
+        b.sources.forEach(src => { if (src) add(src.chonNanId, src.qty); });
+      } else {
+        add(b.sourceChonNanId, b.quantity);
+      }
+    });
+    return usedByNan;
+  }
   // Số thanh CÒN LẠI của 1 thẻ chọn nan (chưa tạo lô sấy)
-  function nanCardRemainingOf(rec) {
-    return Math.max(0, (Number(rec.quantity) || 0) - nanCardUsedOf(rec.id));
+  function nanCardRemainingOf(rec, usageMap) {
+    return Math.max(0, (Number(rec.quantity) || 0) - nanCardUsedOf(rec.id, null, usageMap));
   }
   // Thẻ nan SẤY 1 khả dụng: chưa dùng hết + KHÔNG phải "Loại hẳn"
-  function availableSay1Cards() {
+  function availableSay1Cards(usageMap) {
+    const usedByNan = usageMap || nanCardUsageMap();
     return (state.xuong2ChonNanThoRecords || [])
-      .filter(r => r && r.cls !== 'reject' && nanCardRemainingOf(r) > 0)
+      .filter(r => r && r.cls !== 'reject' && nanCardRemainingOf(r, usedByNan) > 0)
       .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   }
   // Lô KHO khả dụng cho Sấy 2 — cùng sổ với thẻ Kho: CHỈ lô CÒN HÀNG
   // (khoLotRemainingOf > 0). Lô đã xuất hết không hiện ở cả 2 nơi nên gõ cùng
   // 1 số tồn không còn lệch 2 so 1.
-  function availableKhoLots() {
-    return (state.batches || []).filter(b => b && b.stage === 'kho' && khoLotRemainingOf(b) > 0);
+  function availableKhoLots(allocation) {
+    const alloc = allocation || khoFifoAllocation();
+    return (state.batches || []).filter(b => b && b.stage === 'kho' && khoLotRemainingOf(b, alloc) > 0);
   }
 
   // ─── MODAL "THÊM LÔ SẤY MỚI" — mở/đóng/đổi nguồn/lưu ─────────
@@ -623,10 +643,10 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   // thể lấy 1 PHẦN (chia 1 thẻ thành nhiều lô — VD tổng 5.000 thanh chia 3 lô).
   const alCardQty = {};
   // Số lượng hợp lệ đang nhập cho 1 thẻ nan (mặc định = tồn; CHẶN vượt tồn)
-  function alCardQtyOf(id) {
+  function alCardQtyOf(id, usageMap) {
     const rec = (state.xuong2ChonNanThoRecords || []).find(x => String(x.id || '') === String(id));
     if (!rec) return 0;
-    const cap = nanCardRemainingOf(rec);
+    const cap = nanCardRemainingOf(rec, usageMap);
     const v = Math.floor(Number(alCardQty[String(id)]));
     if (v > 0) return Math.min(v, cap);
     // Chế độ BẢNG: thẻ KHÔNG có trong alCardQty = chưa lấy (0) — không mặc định
@@ -667,8 +687,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   }
   function alPickedIds() { return alPicked.slice(); }
   // Danh sách nguồn khả dụng của công đoạn đang chọn
-  function alCandidatesOf(stage) {
-    return stage === 'say2' ? availableKhoLots() : availableSay1Cards();
+  function alCandidatesOf(stage, allocation, usageMap) {
+    return stage === 'say2' ? availableKhoLots(allocation) : availableSay1Cards(usageMap);
   }
   function alAvailableSources() { return alCandidatesOf(alStageOf()); }
 
@@ -744,7 +764,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     });
   }
 
-  function alGridAllGroupList() {
+  function alGridAllGroupList(usageMap) {
+    const usedByNan = usageMap || nanCardUsageMap();
     const map = new Map();
     (state.xuong2ChonNanThoRecords || []).forEach(it => {
       if (!it || it.cls === 'reject') return;
@@ -765,7 +786,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
       const g = map.get(key);
       const id = String(it.id);
       const total = Number(it.quantity) || 0;
-      const used = nanCardUsedOf(id);
+      const used = nanCardUsedOf(id, null, usedByNan);
       const remaining = Math.max(0, total - used);
       let alloc = 0;
       if (Object.prototype.hasOwnProperty.call(alCardQty, id)) alloc = Math.floor(Number(alCardQty[id])) || 0;
@@ -905,13 +926,14 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   }
   // Gom thẻ nguồn theo NGÀY CHỌN NAN → chip lọc nhanh (người nhập biết đang xử lý
   // lô nan của ngày nào; hệ thống KHÔNG tự chọn giúp)
-  function alGridDateBuckets() {
+  function alGridDateBuckets(usageMap) {
+    const usedByNan = usageMap || nanCardUsageMap();
     const map = new Map();
-    alCandidatesOf('say1').forEach(it => {
+    alCandidatesOf('say1', null, usedByNan).forEach(it => {
       const date = String(it.date || '').trim() || '—';
       const cur = map.get(date) || { date, count: 0, thanh: 0 };
       cur.count += 1;
-      cur.thanh += nanCardRemainingOf(it);
+      cur.thanh += nanCardRemainingOf(it, usedByNan);
       map.set(date, cur);
     });
     return [...map.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -931,10 +953,11 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   function alGridDimsCmp(a, b) {
     return (b.dims[0] - a.dims[0]) || (b.dims[1] - a.dims[1]) || (b.dims[2] - a.dims[2]);
   }
-  function alGridRows() {
+  function alGridRows(usageMap) {
+    const usedByNan = usageMap || nanCardUsageMap();
     const q = alNorm(alGridSearchQ).trim();
-    let groups = alGridAllGroupList();
-    if (q) groups = groups.filter(g => g.cards.some(c => alSourceMatches(c.it, 'say1', q)));
+    let groups = alGridAllGroupList(usedByNan);
+    if (q) groups = groups.filter(g => g.cards.some(c => alSourceMatches(c.it, 'say1', q, null, usedByNan)));
     groups = groups.filter(g => g.remaining > 0);
     groups.sort((a, b) => {
       if (alGridSortMode === 'sizeAsc') {
@@ -948,9 +971,9 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     return groups;
   }
   // Tổng SL LÔ MỚI (theo NHÓM) — đọc từ alCardQty/alPicked để khớp lúc Lưu.
-  function alRefreshGridFoot() {
+  function alRefreshGridFoot(usageMap) {
     const foot = document.getElementById('al-grid-foot');
-    const groups = alGridAllGroupList().filter(g => g.qty > 0);
+    const groups = alGridAllGroupList(usageMap).filter(g => g.qty > 0);
     const lots = groups.reduce((n, g) => n + (g.lines || []).filter(l => l && l.qty > 0).length, 0);
     const qty = groups.reduce((s, g) => s + g.qty, 0);
     const vol = groups.reduce((s, g) => s + g.vol, 0);
@@ -989,7 +1012,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   }
   function renderAlGrid() {
     if (alEntryModeOf() !== 'grid') return false;
-    const rows = alGridRows();
+    const usedByNan = nanCardUsageMap();
+    const rows = alGridRows(usedByNan);
     const datesEl = document.getElementById('al-grid-dates');
     const sumEl = document.getElementById('al-grid-dates-sum');
     if (sumEl) {
@@ -998,7 +1022,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
         : 'Tất cả ngày') + ` · ${rows.length} nhóm`;
     }
     if (datesEl) {
-      const buckets = alGridDateBuckets();
+      const buckets = alGridDateBuckets(usedByNan);
       const allOn = alGridDates.length === 0;
       const all = `<button type="button" class="al-grid-date${allOn ? ' active' : ''}" data-al-grid-date="" aria-pressed="${allOn ? 'true' : 'false'}" title="Bỏ chọn mọi ngày — hiện tất cả thẻ còn tồn">Tất cả ngày</button>`;
       // Giữ vị trí CUỘN NGANG của dải chip (điện thoại) sau khi vẽ lại
@@ -1013,7 +1037,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     if (!body) return false;
     if (!rows.length) {
       body.innerHTML = '<tr><td colspan="6" class="al-grid-empty">— Không có nhóm nào còn tồn khớp bộ lọc (kiểm tra ngày / ô tìm) —</td></tr>';
-      alRefreshGridFoot();
+      alRefreshGridFoot(usedByNan);
       return true;
     }
     body.innerHTML = rows.map(g => {
@@ -1057,7 +1081,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
       </td>
     </tr>${alGridExpand.has(g.key) ? `<tr class="al-grid-split-row" data-al-grid-split-row="${key}"><td colspan="6">${alGridSplitHtml(g)}</td></tr>` : ''}`;
     }).join('');
-    alRefreshGridFoot();
+    alRefreshGridFoot(usedByNan);
     return true;
   }
   // Cập nhật chip cảnh báo ⚠ thẻ cũ NGAY khi gõ SL (không cần vẽ lại bảng)
@@ -1082,9 +1106,10 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   }
   // Áp toàn bộ dòng của 1 nhóm: chuẩn hoá số, chia lại thẻ FEFO cho TỔNG nhóm,
   // cập nhật alCardQty/alPicked + dòng cảnh báo/khối ▸ (không vẽ lại cả bảng).
-  function alGridApplyGroupLines(groupKey, inputEl) {
+  function alGridApplyGroupLines(groupKey, inputEl, usageMap) {
     const key = String(groupKey || '');
-    const group = alGridAllGroupList().find(g => g.key === key);
+    const usedByNan = usageMap || nanCardUsageMap();
+    const group = alGridAllGroupList(usedByNan).find(g => g.key === key);
     if (!group) {
       delete alGridGroupLines[key];
       delete alGridGroupQty[key];
@@ -1119,21 +1144,22 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     const row = (inputEl && typeof inputEl.closest === 'function')
       ? inputEl.closest('[data-al-grid-group]') : null;
     if (row && row.classList) row.classList.toggle('picked', total > 0);
-    const after = alGridAllGroupList().find(g => g.key === key);
+    const after = alGridAllGroupList(usedByNan).find(g => g.key === key);
     if (after) alGridUpdateRowWarn(row, after);
     if (row && alGridExpand.has(key) && row.nextElementSibling &&
         typeof row.nextElementSibling.getAttribute === 'function' &&
         row.nextElementSibling.getAttribute('data-al-grid-split-row') === key) {
       row.nextElementSibling.innerHTML = `<td colspan="6">${alGridSplitHtml(after)}</td>`;
     }
-    alRefreshGridFoot();
-    alRefreshSummary();
+    alRefreshGridFoot(usedByNan);
+    alRefreshSummary(usedByNan);
     return total;
   }
   // Đặt SL cho NHÓM = 1 dòng (giữ tương thích chế độ Thẻ / test cũ)
   function alGridSetGroupQty(groupKey, value, inputEl) {
     const key = String(groupKey || '');
-    const group = alGridAllGroupList().find(g => g.key === key);
+    const usedByNan = nanCardUsageMap();
+    const group = alGridAllGroupList(usedByNan).find(g => g.key === key);
     if (!group) return 0;
     let want = Math.floor(Number(String(value == null ? '' : value).replace(/[^\d]/g, '')) || 0);
     if (want > group.remaining) {
@@ -1142,7 +1168,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
       showToast(`Nhóm ${group.dimsText} · ${group.cls} chỉ còn ${group.remaining.toLocaleString('vi-VN')} thanh — đã điều về tối đa!`, 'info');
     }
     alGridGroupLines[key] = [want];
-    alGridApplyGroupLines(key, inputEl);
+    alGridApplyGroupLines(key, inputEl, usedByNan);
     return want;
   }
   function alGridLineIdxOf(el) {
@@ -1175,7 +1201,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   }
   function alGridSetLineQty(groupKey, idx, value, inputEl) {
     const key = String(groupKey || '');
-    const group = alGridAllGroupList().find(g => g.key === key);
+    const usedByNan = nanCardUsageMap();
+    const group = alGridAllGroupList(usedByNan).find(g => g.key === key);
     if (!group) return 0;
     const lines = alGridEnsureLines(group);
     const i = Number(idx);
@@ -1190,7 +1217,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     }
     lines[i] = want;
     alGridGroupLines[key] = lines;
-    alGridApplyGroupLines(key, inputEl);
+    alGridApplyGroupLines(key, inputEl, usedByNan);
     return want;
   }
   function alGridFillLine(groupKey, idx) {
@@ -1486,18 +1513,18 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   // • Dữ liệu MỚI (17/10/2026): mỗi lần đốt lại đã tự sinh PHIẾU XUẤT (autoRework) nên
   //   tồn kho đã trừ phần đó — KHÔNG trừ topUsed lần nữa.
   // • Dữ liệu CŨ (chưa có phiếu tự động): vẫn trừ topUsed như trước để không bị phồng.
-  function alTopRemainingOf(b) {
+  function alTopRemainingOf(b, allocation) {
     if (!b) return 0;
     const used = Number(b.topUsed) || 0;
     const hasAuto = (state.khoNotes || []).some(n => n && n.type === 'xuat' && n.autoRework
       && (Array.isArray(n.lots) ? n.lots : []).some(l => l && String(l.batchId || '') === String(b.id)));
-    return Math.max(0, Math.floor((Number(khoLotRemainingOf(b)) || 0) - (hasAuto ? 0 : used)));
+    return Math.max(0, Math.floor((Number(khoLotRemainingOf(b, allocation)) || 0) - (hasAuto ? 0 : used)));
   }
   // Số lượng đốt lại hợp lệ đang nhập cho 1 lô (mặc định = tồn; CHẶN vượt tồn)
-  function alReworkQtyOf(id) {
+  function alReworkQtyOf(id, allocation) {
     const b = (state.batches || []).find(x => String(x.id || '') === String(id));
     if (!b) return 0;
-    const cap = alTopRemainingOf(b);
+    const cap = alTopRemainingOf(b, allocation);
     const v = Math.floor(Number(alTopQty[String(id)]));
     return v > 0 ? Math.min(v, cap) : cap;
   }
@@ -1517,10 +1544,11 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     if (!on || !inp) { if (inp) inp.value = ''; return false; }
     const b = alTopPicked();
     if (!b) { inp.value = ''; inp.max = '1'; inp.placeholder = 'Chọn 1 lô Tóp trước'; return false; }
-    const cap = alTopRemainingOf(b);
+    const alloc = khoFifoAllocation();
+    const cap = alTopRemainingOf(b, alloc);
     inp.max = String(Math.max(1, cap));
     inp.placeholder = `Tối đa ${cap.toLocaleString('vi-VN')} thanh (tồn lô)`;
-    if (document.activeElement !== inp) inp.value = String(alReworkQtyOf(b.id) || '');
+    if (document.activeElement !== inp) inp.value = String(alReworkQtyOf(b.id, alloc) || '');
     return true;
   }
   // Ô NHẬP SỐ LƯỢNG đốt lại — clamp về tồn lô khi nhập vượt
@@ -1528,7 +1556,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     const inp = document.getElementById('al-rework-qty');
     const b = alTopPicked();
     if (!inp || !b) return 0;
-    const cap = alTopRemainingOf(b);
+    const cap = alTopRemainingOf(b, khoFifoAllocation());
     let v = Math.floor(Number(String(inp.value == null ? '' : inp.value).replace(/[^\d]/g, '')) || 0);
     if (v > cap) { v = cap; inp.value = String(v); }   // chặn vượt tồn (tự điều về tối đa)
     if (v > 0) alTopQty[String(b.id)] = v; else delete alTopQty[String(b.id)];
@@ -1547,9 +1575,10 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   function renderAlTopList(listEl) {
     listEl.classList.add('is-top');
     const stage = alStageOf();
+    const alloc = khoFifoAllocation();
     const items = alTopLots().filter(it =>
-      alSourceMatches(it, stage, alSourceQuery) &&
-      alSourceQtyMatches(it, stage, alSourceQtyQuery));
+      alSourceMatches(it, stage, alSourceQuery, alloc) &&
+      alSourceQtyMatches(it, stage, alSourceQtyQuery, alloc));
     if (!items.length) {
       listEl.innerHTML = '<div class="al-empty">— Không có lô TÓP nào đang ở Kho — (chuyển lô Tóp vào Kho ở form Chuyển Kho trước)</div>';
       return;
@@ -1557,8 +1586,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     listEl.innerHTML = items.map(it => {
       const id = String(it.id);
       const on = alPicked.includes(id);
-      const cap = alTopRemainingOf(it);
-      const lines = alCardLines(it, 'say2');
+      const cap = alTopRemainingOf(it, alloc);
+      const lines = alCardLines(it, 'say2', alloc);
       const main = `${it.location || '—'} · ${it.length}×${it.width}×${it.thickness} · ${it.bambooType || '—'} · Tồn ${cap.toLocaleString('vi-VN')} / ${(Number(it.quantity) || 0).toLocaleString('vi-VN')} thanh`;
       return `<button type="button" class="al-card${on ? ' picked' : ''}" data-al-pick="${escapeHTML(id)}" aria-pressed="${on ? 'true' : 'false'}" title="Lô TÓP ở Kho — Tồn ${cap.toLocaleString('vi-VN')} thanh. Bấm để chọn đốt lại">
         <span class="al-card-body">
@@ -1635,20 +1664,23 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     return false;
   }
   // Cập nhật 2 DÒNG TÓM TẮT + CHÂN FORM DÍNH (số nguồn/thanh + vị trí)
-  function alRefreshSummary() {
+  function alRefreshSummary(usageMap) {
     const srcEl = document.getElementById('al-sum-src');
     const locEl = document.getElementById('al-sum-loc');
     const footEl = document.getElementById('al-foot-sum');
     const n = alPicked.length;
     let qty = 0;
     if (n) {
-      const picked = alCandidatesOf(alStageOf()).filter(it => alPicked.includes(String(it.id)));
+      const stage = alStageOf();
+      const alloc = stage === 'say2' ? khoFifoAllocation() : null;
+      const usedByNan = stage === 'say1' ? (usageMap || nanCardUsageMap()) : null;
+      const picked = alCandidatesOf(stage, alloc, usedByNan).filter(it => alPicked.includes(String(it.id)));
       qty = picked.reduce((s, it) => {
         // Sấy 2: tồn thực của lô ở Kho · Sấy 1: SỐ LƯỢNG đang nhập cho từng thẻ nan
         // (mặc định = phần còn lại, có thể nhập nhỏ hơn để chia nhiều lô)
         const q = (alStageOf() === 'say2')
-          ? (Math.round(khoLotRemainingOf(it)) || 0)
-          : alCardQtyOf(it.id);
+          ? (Math.round(khoLotRemainingOf(it, alloc)) || 0)
+          : alCardQtyOf(it.id, usedByNan);
         return s + q;
       }, 0);
     }
@@ -1695,7 +1727,9 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     // ── CHẾ ĐỘ THAN HÓA LẠI: nguồn = lô TÓP ở Kho (Tồn/Tổng) ──
     if (alReworkOn()) { renderAlTopList(listEl); initLucide(); alPositionSourcePanel(); return; }
     listEl.classList.remove('is-top');
-    const items = alCandidatesOf(stage);
+    const alloc = stage === 'say2' ? khoFifoAllocation() : null;
+    const usedByNan = stage === 'say1' ? nanCardUsageMap() : null;
+    const items = alCandidatesOf(stage, alloc, usedByNan);
     if (!items.length) {
       listEl.innerHTML = `<div class="al-empty">${stage === 'say2'
         ? '— Không có lô nào còn hàng ở Kho (lô đã xuất hết không hiện ở đây — kiểm tra thẻ Kho Nan) —'
@@ -1706,8 +1740,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     // 2 Ô TÌM KẾT HỢP (điều kiện VÀ): ô tìm nhanh (vị trí/mã/kích thước/loại/…) 
     // + ô tìm THEO SỐ LƯỢNG — thẻ phải khớp CẢ HAI mới được hiển thị
     const visible = items.filter(it =>
-      alSourceMatches(it, stage, alSourceQuery) &&
-      alSourceQtyMatches(it, stage, alSourceQtyQuery));
+      alSourceMatches(it, stage, alSourceQuery, alloc, usedByNan) &&
+      alSourceQtyMatches(it, stage, alSourceQtyQuery, alloc));
     if (!visible.length) {
       const keys = [alSourceQuery.trim(), alSourceQtyQuery.trim()].filter(Boolean).join(' · ');
       listEl.innerHTML = `<div class="al-empty">Không có thẻ/lô nào khớp "${escapeHTML(keys)}"</div>`;
@@ -1717,7 +1751,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     listEl.innerHTML = visible.map(it => {
       const id  = String(it.id);
       const on  = alPicked.includes(id);
-      const lines = alCardLines(it, stage);
+      const lines = alCardLines(it, stage, alloc, usedByNan);
       return `<button type="button" class="al-card${on ? ' picked' : ''}" data-al-pick="${escapeHTML(id)}" aria-pressed="${on ? 'true' : 'false'}" title="${escapeHTML(lines.sub)}">
         <span class="al-card-body">
           <span class="al-card-main">${escapeHTML(lines.main)}</span>

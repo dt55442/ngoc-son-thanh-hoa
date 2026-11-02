@@ -246,7 +246,7 @@ check('js/press.js: nhãn dùng rateDisplayLabel + nhóm Total dùng rateNanUse/
   jsPress.includes('rateDisplayLabel(rate)') && jsPress.includes("rateNanUse(rate) === 'Bullig'") && jsPress.includes("rateUnit(rate) === 'Thanh'"));
 check("js/press.js: ĐÃ BỎ cách gộp Total theo tên (nm.includes('bullig'))",
   !jsPress.includes("nm.includes('bullig')"));
-check('sw.js: đã tăng CACHE_NAME v194', /nha-may-ngoc-son-v333/.test(swSrc));
+check('sw.js: đã tăng CACHE_NAME v335', /nha-may-ngoc-son-v335/.test(swSrc));
 
 // ─── H. NHẬN DIỆN BULLIG THEO "Sử Dụng Nan" (tên chỉ còn kích thước) ──────
 console.log('--- H. NHẬN DIỆN BULLIG KHÔNG DÙNG TÊN ---');
@@ -262,4 +262,3 @@ check('HỆ SỐ QUY ĐỔI: bulligConvertInfo nhận định mức Bullig theo 
 
 console.log(`\nKẾT QUẢ: ${passed} pass, ${failed} fail`);
 if (failed > 0) process.exit(1);
-

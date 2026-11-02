@@ -2,6 +2,8 @@ import { initLucide } from './cloud.js';
 import { capMonthShift, capPeriodKeyValid, capPeriodLabel, capWeekKeyOf, capWeekShift, leadershipCapacitySnapshot } from './capacity.js';
 import { HR_DEPARTMENTS } from './hr.js';
 import { MATERIAL_LOCATIONS } from './materials.js';
+import { rateNanUse, rateUnit } from './planning.js';
+import { dimVolume } from './press.js';
 import { qcRowWeeks } from './qc.js';
 import { qcFinalDisplay } from './qc-final.js';
 import { state } from './state.js';
@@ -76,12 +78,53 @@ function isoWeekMonday(year, week) {
   return localISO(new Date(Number(year), 0, 4 - ((jan4.getDay() + 6) % 7) + (Number(week) - 1) * 7));
 }
 
-function summarizeShipments(records, mode, key) {
+const SHIPMENT_CATEGORIES = [
+  { key: 'bullig', label: 'Bullig', unit: 'thanh' },
+  { key: 'thanh', label: 'Thanh', unit: 'thanh' },
+  { key: 'van', label: 'Ván', unit: 'tấm' }
+];
+
+function shipmentPairEvenWeek(weeks) {
+  if (weeks.length !== 2) return 0;
+  const [first, second] = [...weeks].sort((a, b) => a - b);
+  if (second !== first + 1) return 0;
+  return first % 2 === 0 ? first : second;
+}
+
+function shipmentRateForRow(row, ratesById, ratesByName) {
+  const productId = String(row && row.productId || '');
+  const rate = productId ? ratesById.get(productId) : null;
+  if (rate) return rate;
+  const name = String(row && row.name || '').trim().toLocaleLowerCase('vi');
+  return name ? ratesByName.get(name) || null : null;
+}
+
+function shipmentCategoryForRate(rate) {
+  if (!rate) return '';
+  if (rateNanUse(rate) === 'Bullig') return 'bullig';
+  if (rateUnit(rate) === 'Thanh') return 'thanh';
+  if (rateUnit(rate) === 'Tấm') return 'van';
+  return '';
+}
+
+function shipmentVolumeForRate(rate, quantity) {
+  const dimensions = String(rate && rate.product || '').match(
+    /(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)/i
+  );
+  if (!dimensions) return null;
+  const dimensionKey = dimensions[0].replace(/,/g, '.').replace(/[x*]/gi, '×');
+  return dimVolume(dimensionKey, quantity);
+}
+
+function summarizeShipments(records, mode, key, rates = [], planningItems = []) {
   const range = periodRange(mode, key);
   const targetWeek = mode === 'week' ? Number(key.slice(6)) : 0;
-  const targetYear = mode === 'week' ? Number(key.slice(0, 4)) : 0;
+  const targetYear = Number(key.slice(0, 4));
   const matched = [];
   let unattributedRows = 0;
+  const ratesById = new Map((rates || []).filter(rate => rate && rate.id).map(rate => [String(rate.id), rate]));
+  const ratesByName = new Map((rates || []).filter(rate => rate && rate.product)
+    .map(rate => [String(rate.product).trim().toLocaleLowerCase('vi'), rate]));
   (records || []).forEach(row => {
     const weeks = qcRowWeeks(row);
     const year = Number(row && row.year);
@@ -95,30 +138,103 @@ function summarizeShipments(records, mode, key) {
     const overlaps = weekRanges.some(weekRange => weekRange.to >= range.from && weekRange.from <= range.to);
     if (mode === 'week') {
       if (year !== targetYear || !weeks.includes(targetWeek)) return;
-      if (weeks.length !== 1) { unattributedRows++; return; }
-      matched.push(row);
+      if (weeks.length === 1) {
+        matched.push({ row, weeks });
+        return;
+      }
+      const evenWeek = shipmentPairEvenWeek(weeks);
+      if (evenWeek) {
+        if (targetWeek === evenWeek) matched.push({ row, weeks });
+        return;
+      }
+      unattributedRows++;
       return;
     }
     const fullyInsideMonth = weekRanges.length > 0
       && weekRanges.every(weekRange => weekRange.from >= range.from && weekRange.to <= range.to);
-    if (fullyInsideMonth) matched.push(row);
+    if (fullyInsideMonth) matched.push({ row, weeks });
     else if (overlaps) unattributedRows++;
   });
+  const categoryRows = new Map(SHIPMENT_CATEGORIES.map(category => [category.key, {
+    ...category,
+    quantity: 0,
+    volumeM3: 0,
+    volumeKnown: true,
+    rows: 0,
+    planWeeks: new Set()
+  }]));
+  const planningRows = (planningItems || []).filter(item => Number(item && item.year) === targetYear);
+  const planWeekOf = item => qcRowWeeks({ week: item && item.week })[0] || 0;
+  const initialPlanWeeks = new Set();
+  if (mode === 'week' && targetWeek) initialPlanWeeks.add(targetWeek);
+  else {
+    planningRows.forEach(item => {
+      const week = planWeekOf(item);
+      if (!week) return;
+      const from = isoWeekMonday(targetYear, week);
+      const end = new Date(`${from}T00:00:00`);
+      end.setDate(end.getDate() + 6);
+      if (from >= range.from && localISO(end) <= range.to) initialPlanWeeks.add(week);
+    });
+  }
+  categoryRows.forEach(category => { category.planWeeks = new Set(initialPlanWeeks); });
+  let unclassifiedRows = 0;
+  const byProduct = new Map();
+  matched.forEach(({ row, weeks }) => {
+    const rate = shipmentRateForRow(row, ratesById, ratesByName);
+    const categoryKey = shipmentCategoryForRate(rate);
+    const quantity = Number(row && row.qty) || 0;
+    const label = String(rate && rate.product || row && row.name || 'Chưa phân loại');
+    const product = byProduct.get(label) || { label, quantity: 0, rows: 0 };
+    product.quantity += quantity;
+    product.rows++;
+    byProduct.set(label, product);
+    if (!categoryKey) {
+      unclassifiedRows++;
+      return;
+    }
+    const category = categoryRows.get(categoryKey);
+    category.quantity += quantity;
+    category.rows++;
+    if (categoryKey === 'van') {
+      const volume = shipmentVolumeForRate(rate, quantity);
+      if (volume == null) category.volumeKnown = false;
+      else category.volumeM3 += volume;
+    }
+    weeks.forEach(week => category.planWeeks.add(week));
+  });
+  planningRows.forEach(item => {
+    const week = planWeekOf(item);
+    if (!week) return;
+    const rate = ratesById.get(String(item.productId || ''));
+    const category = categoryRows.get(shipmentCategoryForRate(rate));
+    if (!category || !category.planWeeks.has(week)) return;
+    category.planQuantity = (category.planQuantity || 0) + (Number(item.qty) || 0);
+  });
+  const byCategory = SHIPMENT_CATEGORIES.map(definition => {
+    const category = categoryRows.get(definition.key);
+    const planQuantity = category.planQuantity || 0;
+    return {
+      key: category.key,
+      label: category.label,
+      unit: category.unit,
+      quantity: category.quantity,
+      volumeM3: category.volumeM3,
+      volumeKnown: category.volumeKnown,
+      rows: category.rows,
+      planQuantity,
+      attainment: planQuantity > 0 ? category.quantity / planQuantity * 100 : null,
+      planWeeks: [...category.planWeeks].sort((a, b) => a - b)
+    };
+  });
   return {
-    quantity: sum(matched, 'qty'),
+    quantity: matched.reduce((total, item) => total + (Number(item.row && item.row.qty) || 0), 0),
     rows: matched.length,
     unattributedRows,
+    unclassifiedRows,
     workshop: 'Xưởng 2',
-    byProduct: [...matched.reduce((products, row) => {
-      const productId = String(row.productId || '');
-      const rate = productId && (state.materialRates || []).find(item => item.id === productId);
-      const label = String(rate && rate.product || row.name || 'Chưa phân loại');
-      const product = products.get(label) || { label, quantity: 0, rows: 0 };
-      product.quantity += Number(row.qty) || 0;
-      product.rows++;
-      products.set(label, product);
-      return products;
-    }, new Map()).values()].sort((a, b) => b.quantity - a.quantity)
+    byCategory,
+    byProduct: [...byProduct.values()].sort((a, b) => b.quantity - a.quantity)
   };
 }
 
@@ -364,7 +480,13 @@ function buildLeadershipPeriodSummary(mode, key, source, capacity, stock) {
     qualityHasHistory: Object.values(quality).some(item => item.rows > 0),
     qualityKindHasHistory: Object.fromEntries(Object.entries(quality.x2.byKind).map(([kind, item]) => [kind, item.rows > 0])),
     labor: buildLabor(source.hrEmployees || [], range),
-    shipments: summarizeShipments(shipmentSource, period.mode, period.key),
+    shipments: summarizeShipments(
+      shipmentSource,
+      period.mode,
+      period.key,
+      source.materialRates || [],
+      source.planningItems || []
+    ),
     shipmentHasHistory: shipmentSource.length > 0
   };
 }
@@ -708,22 +830,46 @@ function renderLabor(labor, previous) {
 }
 
 function renderShipments(shipments, previous, hasHistory) {
-  const max = Math.max(1, ...shipments.byProduct.map(item => item.quantity));
-  const products = shipments.byProduct.slice(0, 5).map(item => `<div class="leadership-breakdown-row">
-    <span>${escapeHTML(item.label)}</span>
-    <div class="leadership-breakdown-track" role="img" aria-label="${escapeHTML(`${item.label}: ${fmt(item.quantity, 0)} sản phẩm`)}"><i style="width:${Math.max(0, Math.min(100, item.quantity / max * 100))}%"></i></div>
-    <strong>${fmt(item.quantity, 0)} SP</strong><small>${item.rows} dòng</small>
-  </div>`).join('');
-  const status = hasHistory ? `${fmt(shipments.quantity, 0)} sản phẩm` : 'Chưa có dữ liệu xuất hàng QC';
+  const groups = shipments.byCategory.map(category => {
+    const before = previous.byCategory.find(item => item.key === category.key);
+    const ratio = category.attainment == null
+      ? 0
+      : Math.round(Math.max(0, Math.min(100, category.attainment)) * 10) / 10;
+    const volume = category.key === 'van'
+      ? `<small class="leadership-shipment-volume">· ${category.volumeKnown ? fmt(category.volumeM3, 3) : '—'} m³</small>`
+      : '';
+    const plan = category.planQuantity > 0
+      ? `${fmt(category.planQuantity, 0)} ${category.unit}`
+      : 'Chưa có kế hoạch';
+    const attainment = category.attainment == null ? '—' : fmtPct(category.attainment);
+    return `<article class="leadership-shipment-group is-${category.key}">
+      <div class="leadership-shipment-group-head">
+        <strong>${escapeHTML(category.label)} <small>· ${escapeHTML(category.unit)}</small></strong>
+        <strong class="leadership-shipment-quantity">${fmt(category.quantity, 0)} ${escapeHTML(category.unit)} ${volume}</strong>
+      </div>
+      <div class="leadership-shipment-progress" role="img" aria-label="${escapeHTML(`${category.label}: ${attainment} kế hoạch`)}"><i style="width:${ratio}%"></i></div>
+      <div class="leadership-shipment-group-meta">
+        <span>KH <b>${escapeHTML(plan)}</b></span>
+        <strong>Đạt ${escapeHTML(attainment)}</strong>
+        <span>So kỳ trước ${renderComparison(category.quantity, before && before.quantity, category.unit, 0)}</span>
+      </div>
+    </article>`;
+  }).join('');
+  const status = !hasHistory
+    ? 'Chưa có dữ liệu xuất hàng QC'
+    : shipments.rows ? `${shipments.rows} dòng ghi nhận` : 'Không có dòng xuất trong kỳ';
   const gap = shipments.unattributedRows
-    ? `<p class="leadership-data-note">${shipments.unattributedRows} dòng theo cặp nhiều tuần không thể phân bổ chính xác vào kỳ đã chọn nên được loại khỏi tổng.</p>`
+    ? `<p class="leadership-data-note">${shipments.unattributedRows} dòng gộp nhiều tuần không thuộc cặp hai tuần liên tiếp nên chưa thể phân bổ vào kỳ.</p>`
+    : '';
+  const unclassified = shipments.unclassifiedRows
+    ? `<p class="leadership-data-note">${shipments.unclassifiedRows} dòng “Chưa phân loại”; không tính vào tỷ lệ của ba nhóm.</p>`
     : '';
   return `<div class="leadership-shipment-summary">
       <div><strong>${escapeHTML(status)}</strong><span>Xưởng 2 · theo tuần xuất hàng QC</span></div>
-      <span>${shipments.rows} dòng ghi nhận · ${renderComparison(shipments.quantity, previous.quantity, 'SP', 0)}</span>
     </div>
-    <div class="leadership-shipment-chart" aria-label="Biểu đồ xuất hàng theo sản phẩm">${products || '<p class="leadership-empty">Chưa có dòng xuất hàng xác định trong kỳ.</p>'}</div>
+    <div class="leadership-shipment-chart leadership-shipment-groups" aria-label="Xuất hàng và tỷ lệ đạt kế hoạch theo nhóm">${groups}</div>
     <p class="leadership-data-note">Chỉ tiêu theo số lượng đã khai báo, không xác nhận giao thực tế. Xưởng 1 chưa có sổ giao hàng riêng.</p>
+    ${unclassified}
     ${gap}`;
 }
 
@@ -761,7 +907,8 @@ export function buildLeadershipReportMarkup(summary) {
   ];
   if (!summary.qualityHasHistory) warnings.push('Chưa có dữ liệu kiểm sau sản xuất để tính tỷ lệ đạt/lỗi.');
   if (!summary.shipmentHasHistory) warnings.push('Chưa có dữ liệu xuất hàng QC.');
-  if (summary.shipments.unattributedRows) warnings.push('Dòng xuất hàng gộp nhiều tuần không thể phân bổ chính xác vào kỳ đã chọn, được loại khỏi tổng.');
+  if (summary.shipments.unattributedRows) warnings.push('Dòng xuất hàng gộp nhiều tuần không thuộc cặp hai tuần liên tiếp nên chưa thể phân bổ vào kỳ.');
+  if (summary.shipments.unclassifiedRows) warnings.push('Có dòng xuất hàng chưa khớp định mức; các dòng này được tách riêng và không tính vào tỷ lệ ba nhóm.');
   if (summary.labor.missingJoinDate) warnings.push(`${summary.labor.missingJoinDate} hồ sơ thiếu ngày vào; lịch sử biến động lao động có thể chưa đầy đủ.`);
   return `<div class="leadership-paper-stack">
     <article class="leadership-paper" data-report-page="1">
@@ -964,16 +1111,32 @@ export function buildLeadershipReportData(summary) {
   add('Nhân sự', 'Toàn nhà máy', 'Nghỉ theo hồ sơ trong kỳ', report.labor.left, 'người');
   add('Nhân sự', 'Toàn nhà máy', 'Biến động ròng', report.labor.netChange, 'người',
     compareNote(report.labor.netChange, report.previous.labor.netChange, 'người', 0));
-  add('Giao hàng', 'Xưởng 2 · Xuất hàng QC', 'Số lượng đã khai báo', report.shipmentHasHistory ? report.shipments.quantity : null, 'sản phẩm',
-    `Không phải xác nhận giao thực tế · ${report.shipments.rows} dòng · ${compareNote(report.shipments.quantity, report.previous.shipments.quantity, 'sản phẩm', 0)}${report.shipments.unattributedRows ? ` · ${report.shipments.unattributedRows} dòng không phân bổ được` : ''}`);
-  report.shipments.byProduct.forEach(item => add('Giao hàng', `Xưởng 2 · ${item.label}`, 'Số lượng đã khai báo', item.quantity, 'sản phẩm', `${item.rows} dòng`));
+  report.shipments.byCategory.forEach(item => {
+    const before = report.previous.shipments.byCategory.find(row => row.key === item.key);
+    const planNote = item.planQuantity > 0
+      ? `Kế hoạch ${fmt(item.planQuantity, 0)} ${item.unit} · Đạt ${fmtPct(item.attainment)}`
+      : 'Chưa có kế hoạch trong kỳ';
+    add('Giao hàng', `Xưởng 2 · ${item.label}`, 'Số lượng xuất khai báo', item.quantity, item.unit,
+      `${item.rows} dòng · ${planNote} · ${compareNote(item.quantity, before && before.quantity, item.unit, 0)}`);
+    add('Giao hàng', `Xưởng 2 · ${item.label}`, 'Tỷ lệ đạt kế hoạch', item.attainment, '%',
+      `${planNote} · ${compareNote(item.attainment, before && before.attainment, 'điểm %')}`);
+    if (item.key === 'van') {
+      add('Giao hàng', 'Xưởng 2 · Ván', 'Thể tích quy đổi', item.volumeKnown ? item.volumeM3 : null, 'm³',
+        item.volumeKnown ? `${item.rows} dòng có thể quy đổi theo kích thước định mức` : 'Thiếu kích thước định mức để quy đổi đầy đủ');
+    }
+  });
+  if (report.shipments.unclassifiedRows) {
+    add('Giao hàng', 'Xưởng 2 · Chưa phân loại', 'Số dòng xuất', report.shipments.unclassifiedRows, 'dòng',
+      'Không khớp định mức; không tính vào tỷ lệ đạt kế hoạch của ba nhóm');
+  }
   add('Giao hàng', 'Xưởng 1', 'Theo dõi riêng', null, '', 'Chưa có sổ giao hàng riêng trong dữ liệu hiện tại');
   const notes = [
     'Tồn kho là ảnh chụp hiện tại của Kho Nan Xưởng 2; không có tồn kho Xưởng 1 hoặc lịch sử tồn theo kỳ.',
     'Số lượng xuất hàng lấy từ bảng xuất hàng QC theo tuần, không có xác nhận giao thực tế; chưa có sổ riêng Xưởng 1.',
     'Biến động nhân sự dựa trên ngày vào/nghỉ được ghi trong hồ sơ nhân viên.'
   ];
-  if (report.shipments.unattributedRows) notes.push('Các dòng xuất hàng nhiều tuần không thể phân bổ chính xác vào kỳ đã chọn đã được loại khỏi tổng.');
+  if (report.shipments.unattributedRows) notes.push('Các dòng xuất hàng gộp nhiều tuần không thuộc cặp hai tuần liên tiếp chưa thể phân bổ vào kỳ.');
+  if (report.shipments.unclassifiedRows) notes.push('Dòng xuất hàng chưa khớp định mức được tách riêng và không tính vào tỷ lệ đạt kế hoạch của ba nhóm.');
   const aoa = [
     ['BÁO CÁO TỔNG HỢP BAN LÃNH ĐẠO'],
     [`Kỳ báo cáo: ${report.label}`],

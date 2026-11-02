@@ -16,6 +16,7 @@ const saved = {
   materialRecords: state.materialRecords,
   qcFinalRecords: state.qcFinalRecords,
   qcExports: state.qcExports,
+  planningItems: state.planningItems,
   hrEmployees: state.hrEmployees,
   materialRates: state.materialRates,
   x2PhuPhamRecords: state.x2PhuPhamRecords,
@@ -46,11 +47,26 @@ try {
     { id: 'e3', department: 'QC', status: 'active' }
   ];
   state.qcExports = [
-    { year: 2026, week: 'Tuần 44', weeks: [44], qty: 12 },
-    { year: 2026, weeks: [44, 45], qty: 18 },
-    { year: 2026, weeks: [43], qty: 99 }
+    { year: 2026, week: 'Tuần 44', weeks: [44], productId: 'rate-bullig', qty: 12 },
+    { year: 2026, week: 'Tuần 43', weeks: [43, 44], productId: 'rate-van', qty: 18 },
+    { year: 2026, week: 'Tuần 44', weeks: [44, 45], productId: 'rate-thanh', qty: 6 },
+    { year: 2026, week: 'Tuần 44', weeks: [44], name: 'Hàng ngoài định mức', qty: 4 },
+    { year: 2026, week: 'Tuần 44', weeks: [44, 46], productId: 'rate-van', qty: 7 },
+    { year: 2026, week: 'Tuần 43', weeks: [43], productId: 'rate-van', qty: 99 }
   ];
-  state.materialRates = [{ id: 'rate-bullig', product: 'Bullig 1200x600x12', nanUse: 'Bullig' }];
+  state.materialRates = [
+    { id: 'rate-bullig', product: 'Bullig 1200x600x12', nanUse: 'Bullig', unit: 'Thanh' },
+    { id: 'rate-thanh', product: 'Thanh 1200x50x12', nanUse: 'Ván', unit: 'Thanh' },
+    { id: 'rate-van', product: 'Ván 1200x382x12', nanUse: 'Ván', unit: 'Tấm' }
+  ];
+  state.planningItems = [
+    { year: 2026, week: 'Tuần 44', productId: 'rate-bullig', qty: 10 },
+    { year: 2026, week: 'Tuần 44', productId: 'rate-thanh', qty: 15 },
+    { year: 2026, week: 'Tuần 45', productId: 'rate-thanh', qty: 5 },
+    { year: 2026, week: 'Tuần 43', productId: 'rate-van', qty: 30 },
+    { year: 2026, week: 'Tuần 44', productId: 'rate-van', qty: 40 },
+    { year: 2026, week: 'Tuần 45', productId: 'rate-van', qty: 10 }
+  ];
   state.x2PhuPhamRecords = [
     { date: '2026-10-29', kind: 'ngon', kg: 100, price: 2000, amount: 200000, outType: 'sell' },
     { date: '2026-10-30', kind: 'mat', kg: 10, price: 1000, amount: 10000, outType: 'dispose' },
@@ -125,8 +141,28 @@ try {
   assert.equal(week.labor.joined, 1);
   assert.equal(week.labor.left, 1);
   assert.equal(week.labor.missingJoinDate, 1);
-  assert.equal(week.shipments.quantity, 12);
+  assert.equal(week.shipments.quantity, 40);
+  assert.equal(week.shipments.rows, 4);
   assert.equal(week.shipments.unattributedRows, 1);
+  assert.equal(week.shipments.unclassifiedRows, 1);
+  const shipmentBullig = week.shipments.byCategory.find(item => item.key === 'bullig');
+  const shipmentThanh = week.shipments.byCategory.find(item => item.key === 'thanh');
+  const shipmentVan = week.shipments.byCategory.find(item => item.key === 'van');
+  assert.deepEqual(shipmentBullig.planWeeks, [44]);
+  assert.equal(shipmentBullig.quantity, 12);
+  assert.equal(shipmentBullig.planQuantity, 10);
+  assert.equal(shipmentBullig.attainment, 120);
+  assert.deepEqual(shipmentThanh.planWeeks, [44, 45]);
+  assert.equal(shipmentThanh.quantity, 6);
+  assert.equal(shipmentThanh.planQuantity, 20);
+  assert.deepEqual(shipmentVan.planWeeks, [43, 44]);
+  assert.equal(shipmentVan.quantity, 18);
+  assert.equal(shipmentVan.planQuantity, 70);
+  assert.ok(Math.abs(shipmentVan.volumeM3 - 0.0990144) < 1e-9);
+
+  const oddPairWeek = buildLeadershipSummary('week', '2026-W43', state, capacity, inventory, previousCapacity);
+  assert.equal(oddPairWeek.shipments.quantity, 99);
+  assert.equal(oddPairWeek.shipments.unattributedRows, 0);
 
   const markup = buildLeadershipReportMarkup(week);
   assert.equal((markup.match(/class="leadership-paper" data-report-page=/g) || []).length, 2);
@@ -153,6 +189,15 @@ try {
   assert.match(markup, /Thu bán phụ phẩm/);
   assert.match(markup, /leadership-quality-x2-grid/);
   assert.match(markup, /Bullig/);
+  const shipmentSection = markup.match(/class="leadership-section leadership-shipment-section">[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(shipmentSection, /Bullig/);
+  assert.match(shipmentSection, /Thanh/);
+  assert.match(shipmentSection, /Ván/);
+  assert.match(shipmentSection, /Đạt 120%/);
+  assert.match(shipmentSection, /KH <b>70 tấm<\/b>/);
+  assert.match(shipmentSection, /m³/);
+  assert.match(shipmentSection, /Chưa phân loại/);
+  assert.doesNotMatch(shipmentSection, /40 sản phẩm/);
   assert.match(markup, /leadership-stage-meta/);
   const stageMetaBlocks = markup.match(/<div class="leadership-stage-meta">[\s\S]*?<\/div>/g) || [];
   assert.ok(stageMetaBlocks.length > 0);
@@ -173,7 +218,7 @@ try {
   assert.equal(month.purchases.weight, 210);
   assert.equal(month.quality.x1.checked, 0);
   assert.equal(month.shipments.quantity, 99);
-  assert.equal(month.shipments.unattributedRows, 2);
+  assert.equal(month.shipments.unattributedRows, 5);
   assert.match(buildLeadershipReportMarkup(month), /Tháng 10-2026 vs Tháng 9-2026/);
 
   const report = buildLeadershipReportData(week);
@@ -182,6 +227,10 @@ try {
   assert.deepEqual(report.aoa[4], ['Nhóm', 'Xưởng / Bộ phận', 'Chỉ số', 'Giá trị', 'Đơn vị', 'Ghi chú']);
   assert.match(report.filename, /2026-W44/);
   assert.ok(report.aoa.some(row => row[0] === 'Giao hàng' && row[1] === 'Xưởng 1'));
+  assert.ok(report.aoa.some(row => row[0] === 'Giao hàng' && row[1] === 'Xưởng 2 · Bullig' && row[3] === 12 && row[4] === 'thanh'));
+  assert.ok(report.aoa.some(row => row[0] === 'Giao hàng' && row[1] === 'Xưởng 2 · Thanh' && row[2] === 'Tỷ lệ đạt kế hoạch' && row[3] === 30));
+  assert.ok(report.aoa.some(row => row[0] === 'Giao hàng' && row[1] === 'Xưởng 2 · Ván' && row[2] === 'Thể tích quy đổi' && row[4] === 'm³'));
+  assert.ok(report.aoa.some(row => row[0] === 'Giao hàng' && row[1] === 'Xưởng 2 · Chưa phân loại'));
   assert.ok(report.aoa.some(row => row[0] === 'Phụ phẩm' && row[2] === 'Thu bán phụ phẩm' && row[3] === 200000));
   assert.ok(report.aoa.some(row => row[0] === 'Chất lượng' && row[1] === 'Bullig'));
   assert.ok(report.aoa.some(row => row[0] === 'Sản xuất' && row[2] === 'Giờ sự cố'));
@@ -226,10 +275,12 @@ try {
   assert.ok(styles.includes('.leadership-quality-x2-grid'));
   assert.ok(styles.includes('.leadership-stage-meta > span:nth-child(2)'));
   assert.ok(styles.includes('flex-wrap: nowrap; align-items: baseline; gap: 0 3px; white-space: nowrap;'));
+  assert.ok(styles.includes('.leadership-shipment-groups'));
+  assert.ok(styles.includes('.leadership-shipment-progress'));
   assert.ok(styles.includes('.leadership-section-header'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v335'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v336'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v335'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v336'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

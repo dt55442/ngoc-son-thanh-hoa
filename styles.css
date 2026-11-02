@@ -14870,6 +14870,22 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 .leadership-shipment-summary > div { display: grid; gap: 2px; }
 .leadership-shipment-summary strong { color: #2f4936; font-size: 12pt; font-variant-numeric: tabular-nums; }
 .leadership-shipment-chart { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 12px; }
+.leadership-shipment-groups { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+.leadership-shipment-group { min-width: 0; display: grid; gap: 2px; padding: 3px 5px; background: #f5f8f5; border: 1px solid #e0e9e1; border-left: 3px solid #6f9c77; border-radius: 4px; }
+.leadership-shipment-group.is-bullig { background: #fbf7ef; border-color: #efe5d2; border-left-color: #c89a4c; }
+.leadership-shipment-group.is-thanh { background: #f1f6fa; border-color: #dce8f0; border-left-color: #668aa2; }
+.leadership-shipment-group.is-van { background: #f1f7f2; border-color: #dce9de; border-left-color: #578b60; }
+.leadership-shipment-group-head { min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 4px; color: #3b4e40; font-size: 6.4pt; }
+.leadership-shipment-group-head > strong:first-child { white-space: nowrap; }
+.leadership-shipment-group-head > strong:first-child small { color: #78857a; font-size: 5.5pt; font-weight: 500; }
+.leadership-shipment-quantity { color: #294a34; font-size: 7pt; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.leadership-shipment-volume { color: #66766a; font-size: 5.8pt; font-weight: 500; }
+.leadership-shipment-progress { height: 3px; overflow: hidden; background: #e5ebe5; border-radius: 999px; }
+.leadership-shipment-progress i { display: block; height: 100%; background: #578b60; border-radius: inherit; }
+.leadership-shipment-group-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 5px; color: #66746a; font-size: 5.7pt; font-variant-numeric: tabular-nums; }
+.leadership-shipment-group-meta > span { min-width: 0; }
+.leadership-shipment-group-meta > strong { color: #315a3b; white-space: nowrap; }
+.leadership-shipment-group-meta .leadership-delta { font-size: 5.3pt; }
 .leadership-shipment-chart .leadership-breakdown-row { grid-template-columns: minmax(0, 1fr) auto; }
 .leadership-data-notes { margin-top: 5mm; padding-top: 3mm; color: #727d73; border-top: 1px solid #dce5dc; font-size: 6.5pt; line-height: 1.45; }
 .leadership-data-notes > strong { color: #3c5040; font-size: 7pt; }
@@ -15531,8 +15547,12 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 #leadership-view .leadership-dept-row { color: #3e5144; font-size: 6.8pt; }
 #leadership-view .leadership-dept-row strong { color: #2b4332; font-size: 6.8pt; }
 #leadership-view .leadership-dept-track { height: 5px; }
-#leadership-view .leadership-shipment-summary { color: #425548; font-size: 7pt; }
-#leadership-view .leadership-shipment-summary strong { color: #234a30; font-size: 13pt; }
+#leadership-view .leadership-shipment-summary { margin: 2px 0 4px; color: #425548; font-size: 6pt; }
+#leadership-view .leadership-shipment-summary strong { color: #234a30; font-size: 8pt; }
+#leadership-view .leadership-shipment-group { padding-block: 3px; }
+#leadership-view .leadership-shipment-group-head { font-size: 6.4pt; }
+#leadership-view .leadership-shipment-quantity { font-size: 7pt; }
+#leadership-view .leadership-shipment-group-meta { font-size: 5.6pt; }
 #leadership-view .leadership-shipment-chart .leadership-breakdown-row { font-size: 7pt; }
 #leadership-view .leadership-shipment-chart .leadership-breakdown-row > strong { color: #294a34; font-size: 7pt; }
 #leadership-view .leadership-quality-workshop:not(.leadership-quality-x2) > .leadership-quality-item {

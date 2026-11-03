@@ -7,7 +7,7 @@ import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrShiftCfg, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear, rateDisplayLabel, rateNanUse, rateUnit } from './planning.js';
-import { STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
+import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, numRangeText, parseNumRange, shiftBreakdownHtml, shiftGroupRows, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
 
   // =============================================================
@@ -61,6 +61,36 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || []));
     logDataChange(['pressNotes']);
     firePushSync();
+  }
+
+  function loadPressInventoryAdjustments() {
+    const raw = localStorage.getItem(STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS);
+    if (!raw) {
+      state.pressInventoryAdjustments = [];
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) throw new Error('Dữ liệu điều chỉnh tồn ép ván không phải danh sách.');
+      state.pressInventoryAdjustments = parsed;
+    } catch (err) {
+      console.warn('[Press] Không thể nạp điều chỉnh tồn ép ván', err);
+      state.pressInventoryAdjustments = [];
+      showToast('Không thể nạp dữ liệu điều chỉnh tồn ép ván từ máy.', 'error');
+    }
+  }
+
+  function savePressInventoryAdjustments() {
+    try {
+      localStorage.setItem(STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS, JSON.stringify(state.pressInventoryAdjustments || []));
+    } catch (err) {
+      console.error('[Press] Không thể lưu điều chỉnh tồn ép ván', err);
+      showToast('Không thể lưu điều chỉnh tồn ép ván trên máy.', 'error');
+      return false;
+    }
+    logDataChange(['pressInventoryAdjustments']);
+    firePushSync();
+    return true;
   }
 
   // Map ngày -> nội dung ghi chú (dùng cho biểu đồ & bảng)
@@ -2260,6 +2290,366 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
       .filter(x => x.productId);
   }
 
+  function isStockISODate(value) {
+    const date = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const parsed = new Date(`${date}T00:00:00Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+  }
+
+  function isoWeekStartDate(year, week) {
+    const y = Number(year), w = Number(week);
+    if (!Number.isInteger(y) || y < 1 || !Number.isInteger(w) || w < 1 || w > 53) return '';
+    const jan4 = new Date(Date.UTC(y, 0, 4));
+    const mondayOffset = (jan4.getUTCDay() + 6) % 7;
+    jan4.setUTCDate(jan4.getUTCDate() - mondayOffset + (w - 1) * 7);
+    return jan4.toISOString().slice(0, 10);
+  }
+
+  const PRESS_INVENTORY_LIVE_START_DATE = '2026-10-05';
+
+  function isoWeekEndDate(year, week) {
+    const monday = isoWeekStartDate(year, week);
+    if (!monday) return '';
+    const sunday = new Date(`${monday}T00:00:00Z`);
+    sunday.setUTCDate(sunday.getUTCDate() + 6);
+    return sunday.toISOString().slice(0, 10);
+  }
+
+  function isoWeekParts(dateISO) {
+    if (!isStockISODate(dateISO)) return null;
+    const date = new Date(`${dateISO}T00:00:00Z`);
+    const thursday = new Date(date);
+    thursday.setUTCDate(date.getUTCDate() + 3 - ((date.getUTCDay() + 6) % 7));
+    return { year: thursday.getUTCFullYear(), week: getWeekNumber(getISOWeekString(dateISO)) };
+  }
+
+  function pressRecordDateOf(record) {
+    if (isStockISODate(record && record.date)) return String(record.date);
+    const rawWeek = String((record && record.week) || '');
+    const week = getWeekNumber(rawWeek);
+    const match = rawWeek.match(/^(\d{4})-W/i);
+    const year = Number((match && match[1]) || (record && record.year) || 0);
+    return week > 0 ? isoWeekEndDate(year, week) : '';
+  }
+
+  function pressExportPeriodOf(record) {
+    const rawWeek = String(record && record.week || '');
+    const weeks = Array.isArray(record && record.weeks) && record.weeks.length
+      ? record.weeks.map(Number).filter(week => Number.isInteger(week) && week >= 1 && week <= 53)
+      : [getWeekNumber(rawWeek)].filter(week => week >= 1 && week <= 53);
+    const week = weeks.length ? Math.max(...weeks) : 0;
+    const yearMatch = rawWeek.match(/^(\d{4})-W/i);
+    const year = Number(record && record.year) || Number(yearMatch && yearMatch[1]) || 0;
+    return week ? { year, week } : null;
+  }
+
+  function pressExportPeriodDateOf(record) {
+    const period = pressExportPeriodOf(record);
+    return period ? isoWeekEndDate(period.year, period.week) : '';
+  }
+
+  function pressExportDateOf(record) {
+    if (isStockISODate(record && record.exportDate)) return String(record.exportDate);
+    return pressExportPeriodDateOf(record);
+  }
+
+  function pressStockProductId(productId, name) {
+    if (productId) return String(productId);
+    const normalized = String(name || '').trim().toLowerCase();
+    if (!normalized) return '';
+    const rate = (state.materialRates || []).find(item =>
+      String(item && item.product || '').trim().toLowerCase() === normalized);
+    return rate ? String(rate.id) : '';
+  }
+
+  function pressInventoryEvents() {
+    const events = [];
+    const add = (date, productId, field, qty) => {
+      const amount = Number(qty);
+      const period = isoWeekParts(date);
+      if (!period || !productId || !Number.isFinite(amount) ||
+        (field === 'adjusted' ? amount === 0 : amount <= 0)) return;
+      events.push({ date, year: period.year, week: period.week, productId, field, qty: amount });
+    };
+
+    (state.pressRecords || []).forEach(record => {
+      if (!record) return;
+      add(pressRecordDateOf(record), pressStockProductId(record.productId, record.productName), 'produced', record.finishedQty);
+    });
+    getBulligCtOutputRows().forEach(record => {
+      add(record.date, pressStockProductId(record.productId), 'produced', record.qty);
+    });
+    getQcThanhOutputRows().forEach(record => {
+      add(record.date, pressStockProductId(record.productId), 'produced', record.qty);
+    });
+    (state.qcExports || []).forEach(record => {
+      if (!record) return;
+      add(pressExportPeriodDateOf(record), pressStockProductId(record.productId, record.name), 'exported', record.qty);
+    });
+    (state.qcFinalRecords || []).forEach(record => {
+      if (!record) return;
+      const productId = pressStockProductId(
+        record.productId || (record.kind === 'thanh' ? qcThanhPlanProductId(record.sizeKey) : ''),
+        record.productName
+      );
+      add(pressRecordDateOf(record), productId, 'rejected', record.qtyReject);
+    });
+    (state.pressInventoryAdjustments || []).forEach(record => {
+      const year = Number(record && record.year);
+      const week = Number(record && record.week);
+      const productId = String(record && record.productId || '').trim();
+      const qty = Number(record && record.qty);
+      const date = isStockISODate(record && record.date)
+        ? String(record.date)
+        : isoWeekEndDate(year, week);
+      if (!isStockISODate(date) || !productId || !Number.isFinite(qty) || qty === 0) return;
+      const period = isoWeekParts(date);
+      if (period) events.push({ date, year: period.year, week: period.week, productId, field: 'adjusted', qty });
+    });
+    return events;
+  }
+
+  function pressInventoryLiveByProduct(asOfDate = todayLocalISO()) {
+    if (!isStockISODate(asOfDate)) return [];
+    const asOfPeriod = isoWeekParts(asOfDate);
+    if (!asOfPeriod) return [];
+    const byProduct = new Map();
+    const rowOf = productId => {
+      if (!byProduct.has(productId)) {
+        byProduct.set(productId, {
+          productId, produced: 0, exported: 0, rejected: 0, adjusted: 0, closing: 0
+        });
+      }
+      return byProduct.get(productId);
+    };
+    const byProductDate = new Map();
+    pressInventoryEvents().forEach(event => {
+      if (event.date < PRESS_INVENTORY_LIVE_START_DATE) return;
+      const eventIsInFutureWeek = event.year > asOfPeriod.year ||
+        (event.year === asOfPeriod.year && event.week > asOfPeriod.week);
+      if (event.field === 'exported' ? eventIsInFutureWeek : event.date > asOfDate) return;
+      const row = rowOf(event.productId);
+      if (!byProductDate.has(event.productId)) byProductDate.set(event.productId, new Map());
+      const days = byProductDate.get(event.productId);
+      if (!days.has(event.date)) days.set(event.date, { produced: 0, exported: 0, rejected: 0, adjusted: 0 });
+      days.get(event.date)[event.field] += event.qty;
+      row[event.field] += event.qty;
+    });
+    return [...byProduct.values()]
+      .map(row => {
+        let closing = 0;
+        const days = byProductDate.get(row.productId);
+        if (days) {
+          [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([, totals]) => {
+            closing = Math.max(0, closing + totals.produced - totals.exported - totals.rejected + totals.adjusted);
+          });
+        }
+        row.closing = closing;
+        return row;
+      })
+      .sort((a, b) => a.productId.localeCompare(b.productId));
+  }
+
+  function pressInventoryByWeek(year, week, fromDate = '') {
+    const start = isoWeekStartDate(year, week);
+    if (!start) return [];
+    const byProduct = new Map();
+    const rowOf = productId => {
+      if (!byProduct.has(productId)) {
+        byProduct.set(productId, { productId, opening: 0, produced: 0, exported: 0, rejected: 0, adjusted: 0 });
+      }
+      return byProduct.get(productId);
+    };
+    const priorWeeks = new Map();
+    pressInventoryEvents().forEach(event => {
+      if (fromDate && event.date < fromDate) return;
+      const eventWeekStart = isoWeekStartDate(event.year, event.week);
+      if (!eventWeekStart || eventWeekStart > start) return;
+      const row = rowOf(event.productId);
+      if (eventWeekStart < start) {
+        if (!priorWeeks.has(event.productId)) priorWeeks.set(event.productId, new Map());
+        const weeks = priorWeeks.get(event.productId);
+        if (!weeks.has(eventWeekStart)) weeks.set(eventWeekStart, { produced: 0, exported: 0, rejected: 0, adjusted: 0 });
+        weeks.get(eventWeekStart)[event.field] += event.qty;
+      } else {
+        row[event.field] += event.qty;
+      }
+    });
+    return [...byProduct.values()]
+      .map(row => {
+        let opening = 0;
+        const weeks = priorWeeks.get(row.productId);
+        if (weeks) {
+          [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([, totals]) => {
+            opening = Math.max(0, opening + totals.produced - totals.exported - totals.rejected + totals.adjusted);
+          });
+        }
+        row.opening = opening;
+        row.closing = Math.max(0, opening + row.produced - row.exported - row.rejected + row.adjusted);
+        return row;
+      })
+      .sort((a, b) => a.productId.localeCompare(b.productId));
+  }
+
+  function pressInventoryQtyLabel(value) {
+    return (Number(value) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  }
+
+  function renderPlanVsPressInventoryTable() {
+    const tableEl = document.getElementById('pv-inventory-table');
+    if (!tableEl) return;
+    const asOfDate = todayLocalISO();
+    const periodEl = document.getElementById('pv-inventory-period');
+    if (periodEl) periodEl.textContent = `Cập nhật đến ${formatDateDDMMYY(asOfDate)}`;
+    const stocks = new Map(pressInventoryLiveByProduct(asOfDate).map(row => [row.productId, row]));
+    const products = new Map();
+    (state.materialRates || []).forEach(rate => {
+      if (rate && rate.id) products.set(String(rate.id), rate);
+    });
+    stocks.forEach((row, id) => {
+      if (!products.has(id)) products.set(id, null);
+    });
+    if (!products.size) {
+      tableEl.innerHTML = '<div class="pv-inventory-empty">Chưa có mã sản phẩm trong định mức hoặc lịch sử ép/xuất.</div>';
+      const countEl = document.getElementById('pv-inventory-count');
+      if (countEl) countEl.textContent = '0 sản phẩm';
+      return;
+    }
+
+    const rows = [...products.entries()].sort((a, b) => {
+      const labelA = a[1] ? rateDisplayLabel(a[1]) : a[0];
+      const labelB = b[1] ? rateDisplayLabel(b[1]) : b[0];
+      return labelA.localeCompare(labelB, 'vi');
+    }).map(([productId, rate]) => {
+      const stock = stocks.get(productId) || { produced: 0, exported: 0, rejected: 0, adjusted: 0, closing: 0 };
+      const sourceName = [
+        ...(state.pressRecords || []),
+        ...(state.qcExports || []),
+        ...(state.qcFinalRecords || [])
+      ].find(record => String(record.productId || '') === productId &&
+        (record.productName || record.name));
+      const productLabel = rate
+        ? rateDisplayLabel(rate)
+        : String(sourceName && (sourceName.productName || sourceName.name) ||
+          (/^rate-\d+$/i.test(productId) ? 'Sản phẩm ngoài danh mục' : `Sản phẩm ${productId}`));
+      const productCode = rate && String(rate.productCode || '').trim();
+      const visibleCode = productCode && !/^rate-\d+$/i.test(productCode) ? productCode : '';
+      const unit = rate ? rateUnit(rate) : '—';
+      const closing = Math.max(0, Number(stock.closing) || 0);
+      const searchText = [productLabel, visibleCode, productId].filter(Boolean).join(' ');
+      return `<tr data-pv-product-row data-pv-search="${escapeHTML(searchText)}">
+        <td class="pv-inventory-product">
+          <strong>${escapeHTML(productLabel)}</strong>
+          ${visibleCode ? `<span class="pv-inventory-product-code">${escapeHTML(visibleCode)}</span>` : ''}
+        </td>
+        <td>${escapeHTML(unit)}</td>
+        <td class="num">${pressInventoryQtyLabel(stock.produced)}</td>
+        <td class="num">${pressInventoryQtyLabel(stock.exported)}</td>
+        <td class="num">${pressInventoryQtyLabel(stock.rejected)}</td>
+        <td class="num">${pressInventoryQtyLabel(stock.adjusted)}</td>
+        <td><div class="pv-inventory-edit">
+          <input type="number" min="0" step="1" data-pv-stock-value="${escapeHTML(productId)}" value="${closing}" aria-label="Tồn thực tế ${escapeHTML(productLabel)}">
+          <button type="button" class="pv-stock-save" data-pv-stock-save="${escapeHTML(productId)}">Lưu</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+    tableEl.innerHTML = `<div class="pv-inventory-table-wrap"><table class="pv-inventory-table">
+      <thead><tr><th>Sản phẩm</th><th>ĐVT</th><th>Đã ép</th><th>Đã xuất</th><th>QC loại</th><th>Điều chỉnh</th><th>Tồn hiện tại</th></tr></thead>
+      <tbody>${rows}<tr id="pv-inventory-no-results" hidden><td colspan="7">Không tìm thấy sản phẩm phù hợp.</td></tr></tbody>
+    </table></div>`;
+    const searchInput = document.getElementById('pv-inventory-search');
+    filterPressInventoryProducts(searchInput ? searchInput.value : '');
+  }
+
+  function filterPressInventoryProducts(query) {
+    const tableEl = document.getElementById('pv-inventory-table');
+    if (!tableEl || !tableEl.querySelectorAll) return 0;
+    const normalizedQuery = String(query == null ? '' : query).trim().toLocaleLowerCase('vi')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+    const rows = [...tableEl.querySelectorAll('[data-pv-product-row]')];
+    let visible = 0;
+    rows.forEach(row => {
+      const text = String(row.getAttribute('data-pv-search') || '').toLocaleLowerCase('vi')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+      const matches = !normalizedQuery || text.includes(normalizedQuery);
+      row.hidden = !matches;
+      if (matches) visible += 1;
+    });
+    const noResults = tableEl.querySelector('#pv-inventory-no-results');
+    if (noResults) noResults.hidden = !normalizedQuery || visible > 0;
+    const countEl = document.getElementById('pv-inventory-count');
+    if (countEl) countEl.textContent = `${visible.toLocaleString('vi-VN')} / ${rows.length.toLocaleString('vi-VN')} sản phẩm`;
+    const clearButton = document.getElementById('pv-inventory-search-clear');
+    if (clearButton) clearButton.hidden = !normalizedQuery;
+    return visible;
+  }
+
+  function savePressInventoryLive(productId, liveQty) {
+    if (!requireEditPermission()) return false;
+    const id = String(productId || '').trim();
+    const submittedQty = Number(liveQty);
+    if (!id || !Number.isFinite(submittedQty) || (submittedQty >= 0 && !Number.isSafeInteger(submittedQty))) {
+      showToast('Tồn thực tế phải là số nguyên; giá trị âm được quy về 0.', 'error');
+      return false;
+    }
+    const qty = Math.max(0, submittedQty);
+    const currentStock = pressInventoryLiveByProduct().find(row => row.productId === id);
+    const currentLive = currentStock ? currentStock.closing : 0;
+    const delta = qty - currentLive;
+    if (delta === 0) {
+      showToast(submittedQty < 0
+        ? `Tồn âm đã được điều chỉnh về 0 cho ${id}.`
+        : `Tồn live của ${id} đã khớp với số liệu đang tính.`, 'info');
+      renderPlanVsPressInventoryTable();
+      return true;
+    }
+
+    const adjustments = Array.isArray(state.pressInventoryAdjustments) ? state.pressInventoryAdjustments : [];
+    state.pressInventoryAdjustments = adjustments;
+    const date = todayLocalISO();
+    const index = adjustments.findIndex(record =>
+      record.live === true && record.date === date && String(record.productId) === id);
+    const existing = index >= 0 ? adjustments[index] : null;
+    if (existing) {
+      const combinedDelta = (Number(existing.qty) || 0) + delta;
+      if (combinedDelta === 0) adjustments.splice(index, 1);
+      else Object.assign(existing, { qty: combinedDelta, updatedAt: new Date().toISOString() });
+    } else {
+      const now = new Date();
+      const timestamp = now.toISOString();
+      adjustments.push({
+        id: `press-stock-live-${encodeURIComponent(id)}-${date}`,
+        live: true,
+        date,
+        productId: id,
+        qty: delta,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      });
+    }
+    if (!savePressInventoryAdjustments()) return false;
+    renderPlanVsPressChart();
+    showToast(submittedQty < 0
+      ? `Tồn âm đã được điều chỉnh về 0 cho ${id}.`
+      : `Đã cập nhật tồn live cho ${id}.`, 'success');
+    return true;
+  }
+
+  function handlePressInventoryAdjustment(e) {
+    const button = e && e.target && e.target.closest ? e.target.closest('[data-pv-stock-save]') : null;
+    if (!button) return false;
+    const productId = button.getAttribute('data-pv-stock-save') || '';
+    const row = button.closest ? button.closest('tr') : null;
+    const input = row && row.querySelector ? row.querySelector('[data-pv-stock-value]') : null;
+    if (!input) {
+      showToast('Không tìm thấy ô nhập tồn cho mã sản phẩm này.', 'error');
+      return true;
+    }
+    savePressInventoryLive(productId, input.value);
+    return true;
+  }
+
   // ─── THẺ GỘP 2 BIỂU ĐỒ DASHBOARD: NÚT TÊN BIỂU ĐỒ ─────────────
   // Thẻ #plan-vs-press-card chứa CẢ HAI biểu đồ (chỉ hiện 1 khung tại 1 thời điểm):
   //   'plan' = Kế Hoạch vs Đã Ép (Theo Sản Phẩm) → nút tên NỔI lên
@@ -2333,9 +2723,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
   }
 
   function renderPlanVsPressChart() {
-    // Thẻ GỘP 2 biểu đồ: chỉ vẽ khi ĐANG xem biểu đồ này (nút tên NỔI = 'plan');
+    // Thẻ GỘP 2 BIỂU ĐỒ: chỉ vẽ khi ĐANG xem biểu đồ này (nút tên NỔI = 'plan');
     // nhỡ nhãn/nút/toolbar luôn khớp chế độ đã nhớ trước khi vẽ.
     applyPvChartModeDom();
+    renderPlanVsPressInventoryTable();
     if (state.pvChartMode !== 'plan') return;
     const canvas = document.getElementById('plan-vs-press-chart');
     if (!canvas || !window.Chart) return;
@@ -2374,6 +2765,10 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     getBulligCtOutputRows().forEach(x => { if (x.date) years.add(String(getDateYear(x.date))); });
     // Năm của các lượt QC Kiểm thanh — nguồn ĐÃ ÉP cho sản phẩm ĐVT = Thanh
     getQcThanhOutputRows().forEach(x => { if (x.date) years.add(String(getDateYear(x.date))); });
+    (state.qcExports || []).forEach(record => {
+      const period = isoWeekParts(pressExportPeriodDateOf(record));
+      if (period) years.add(String(period.year));
+    });
     const yearList = [...years].filter(Boolean).sort((a, b) => Number(b) - Number(a));
     if (!['all', ...yearList].includes(String(state.planVsPressYear))) state.planVsPressYear = curYearStr;
     const yearSel = document.getElementById('pv-year-filter');
@@ -2431,31 +2826,36 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
       pressVol[x.productId] = (pressVol[x.productId] || 0) + dimVolume(x.sizeKey || getProductDimsStr(x.productId), x.qty);
     });
 
-    // SỐ LƯỢNG XUẤT (tab QC — Bảng Xuất Hàng): gộp theo mã hàng với cùng
-    // bộ lọc năm/tuần. Dòng "ngoài danh sách" (không có productId) được thử
-    // khớp theo TÊN với định mức; không khớp mã nào thì bỏ qua (biểu đồ
-    // hiển thị theo mã hàng kế hoạch).
+    // Tuần giao đã chọn quyết định kỳ xuất; ngày cụ thể chỉ phục vụ tra cứu.
     const exportQty = {};
     (state.qcExports || []).forEach(q => {
-      const weeks = Array.isArray(q?.weeks) && q.weeks.length
-        ? q.weeks.map(Number).filter(week => week >= 1 && week <= 53)
-        : [getWeekNumber(q?.week)].filter(week => week >= 1 && week <= 53);
-      // Không phân bổ lượng tổng nhiều tuần vào từng tuần riêng lẻ.
-      if (!q || !weeks.length || !yOn(q.year) || !weeks.every(wkOn)) return;
-      let pid = q.productId || null;
-      if (!pid) {
-        const nm = String(q.name || '').trim().toLowerCase();
-        if (!nm) return;
-        const rate = state.materialRates.find(r => String(r.product || '').trim().toLowerCase() === nm);
-        if (!rate) return;
-        pid = rate.id;
-      }
+      if (!q) return;
+      const period = isoWeekParts(pressExportPeriodDateOf(q));
+      if (!period || !yOn(period.year) || !wkOn(period.week)) return;
+      const pid = pressStockProductId(q.productId, q.name);
+      if (!pid) return;
       exportQty[pid] = (exportQty[pid] || 0) + (Number(q.qty) || 0);
     });
 
-    const ids = [...new Set([...Object.keys(planQty), ...Object.keys(pressQty), ...Object.keys(exportQty)])];
+    // Tồn đầu khoảng lấy từ cùng sổ phát sinh, để xếp chồng với sản lượng kỳ này.
+    const stockQty = {};
+    if (state.planVsPressYear !== 'all' || state.planVsPressWeek !== 'all') {
+      const carryWeek = state.planVsPressWeek === 'all'
+        ? 1
+        : (pvSpan === 2 ? pvPairStart : Number(state.planVsPressWeek));
+      const stockYears = state.planVsPressYear === 'all' ? yearList.map(Number) : [Number(state.planVsPressYear)];
+      stockYears.forEach(year => {
+        pressInventoryByWeek(year, carryWeek, PRESS_INVENTORY_LIVE_START_DATE).forEach(row => {
+          if (row.opening !== 0) stockQty[row.productId] = (stockQty[row.productId] || 0) + row.opening;
+        });
+      });
+    }
+
+    renderPlanVsPressInventoryTable();
+    // Chỉ vẽ sản phẩm có kế hoạch trong kỳ lọc; các mã khác vẫn có mặt trong bảng tồn.
+    const ids = Object.keys(planQty);
     // Sắp xếp: sản phẩm có tổng số lượng (kế hoạch + ép + xuất) lớn nhất đứng trước
-    ids.sort((a, b) => ((planQty[b] || 0) + (pressQty[b] || 0) + (exportQty[b] || 0)) - ((planQty[a] || 0) + (pressQty[a] || 0) + (exportQty[a] || 0)));
+    ids.sort((a, b) => ((planQty[b] || 0) + (pressQty[b] || 0) + (stockQty[b] || 0) + (exportQty[b] || 0)) - ((planQty[a] || 0) + (pressQty[a] || 0) + (stockQty[a] || 0) + (exportQty[a] || 0)));
     // Nhãn sản phẩm theo ĐỊNH MỨC (tab Kế Hoạch): Bullig → "Bullig <kích thước>"
     // ở CẢ 2 chế độ; còn lại theo ĐVT — Tấm → "Ván …", Thanh → "Thanh …".
     const rateOf = id => state.materialRates.find(r => r.id === id);
@@ -2472,8 +2872,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     const unitVol = id => dimVolume(getProductDimsStr(id), 1);
     // Chế độ TOTAL: gộp sản phẩm theo SỬ DỤNG NAN + ĐVT của ĐỊNH MỨC (không còn
     // cắt chữ trong tên) — Bullig → nhóm "Bullig" (luôn giữ tên Bullig như cũ);
-    // còn lại theo ĐVT: Tấm → "Ván", Thanh → "Thanh". Mỗi nhóm vẫn đủ 3 cột
-    // Kế Hoạch / Đã Ép / Số Lượng Xuất; quy tắc hiển thị giữ nguyên.
+    // còn lại theo ĐVT: Tấm → "Ván", Thanh → "Thanh". Tồn chuyển kỳ cũng
+    // được gộp theo cùng nhóm khi bật Total.
     const isTotalMode = state.planVsPressTotal === true;
     const groupOfId = id => {
       const rate = rateOf(id);
@@ -2487,9 +2887,11 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
       label: labelOf(id),
       planVol: (planQty[id] || 0) * unitVol(id),
       pressVol: pressVol[id] || 0,
+      stockVol: (stockQty[id] || 0) * unitVol(id),
       exportVol: (exportQty[id] || 0) * unitVol(id),
       planQty: planQty[id] || 0,
       pressQty: pressQty[id] || 0,
+      stockQty: stockQty[id] || 0,
       exportQty: exportQty[id] || 0
     }));
     if (isTotalMode) {
@@ -2499,18 +2901,22 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
           if (groupOfId(id) !== g) return acc;
           acc.planVol += (planQty[id] || 0) * unitVol(id);
           acc.pressVol += pressVol[id] || 0;
+          acc.stockVol += (stockQty[id] || 0) * unitVol(id);
           acc.exportVol += (exportQty[id] || 0) * unitVol(id);
           acc.planQty += planQty[id] || 0;
           acc.pressQty += pressQty[id] || 0;
+          acc.stockQty += stockQty[id] || 0;
           acc.exportQty += exportQty[id] || 0;
           return acc;
-        }, { label: g, planVol: 0, pressVol: 0, exportVol: 0, planQty: 0, pressQty: 0, exportQty: 0 }));
+        }, { label: g, planVol: 0, pressVol: 0, stockVol: 0, exportVol: 0, planQty: 0, pressQty: 0, stockQty: 0, exportQty: 0 }));
     }
     const planVolData   = pvRows.map(r => r.planVol);
     const pressVolData  = pvRows.map(r => r.pressVol);
+    const stockVolData  = pvRows.map(r => r.stockVol);
     const exportVolData = pvRows.map(r => r.exportVol);
     const planQtyData   = pvRows.map(r => r.planQty);
     const pressQtyData  = pvRows.map(r => r.pressQty);
+    const stockQtyData  = pvRows.map(r => r.stockQty);
     const exportQtyData = pvRows.map(r => r.exportQty);
     const labelsData    = pvRows.map(r => r.label);
 
@@ -2534,15 +2940,17 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     }
     const fmtVol = v => String(+Number(v).toFixed(3));
     const fmtQty = v => Math.round(Number(v)).toLocaleString('vi-VN');
-    const valOf  = (dIdx, i) => (dIdx === 0
+    const valOf  = (dIdx, i) => dIdx === 0
       ? (isVol ? planVolData[i] : planQtyData[i])
       : dIdx === 1
       ? (isVol ? pressVolData[i] : pressQtyData[i])
-      : (isVol ? exportVolData[i] : exportQtyData[i]));
+      : dIdx === 2
+      ? (isVol ? stockVolData[i] : stockQtyData[i])
+      : (isVol ? exportVolData[i] : exportQtyData[i]);
     const fmtVal = v => (isVol ? fmtVol(v) : fmtQty(v));
     const fmtTick = v => String(Number(Number(v).toFixed(2)));
 
-    // Plugin vẽ số THỰC TẾ lên đỉnh TỪNG cột (cả 3 dataset: Kế Hoạch / Đã Ép / Số Lượng Xuất)
+    // Plugin vẽ số thực tế lên từng cột/thành phần chồng.
     const valueLabelPlugin = {
       id: 'pvValueLabels',
       afterDatasetsDraw(chart) {
@@ -2568,13 +2976,13 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
       plugins: [valueLabelPlugin],
       data: {
         labels: labelsData,
-        // Màu cột: Kế Hoạch TÍM · Đã Ép XANH LÁ · Số Lượng Xuất CAM (`#ea580c` —
-        // trước đây là xanh dương `#2563eb`). KHÔNG ghép xanh lá + xanh nước
-        // biển trong cùng một biểu đồ (quy tắc đổ màu — xem .clinerules mục 12).
+        // Màu cột: Kế Hoạch TÍM · Đã Ép XANH LÁ · Tồn đầu khoảng XANH NHẠT ·
+        // Số Lượng Xuất CAM. Tồn và sản lượng dùng chung stack.
         datasets: [
-          { label: 'Kế Hoạch',       data: planVolData,   backgroundColor: 'rgba(124, 58, 237, 0.78)', borderColor: '#7c3aed', borderWidth: 1, borderRadius: 4 },
-          { label: 'Đã Ép',          data: pressVolData,  backgroundColor: 'rgba(22, 163, 74, 0.78)',  borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 },
-          { label: 'Số Lượng Xuất',  data: exportVolData, backgroundColor: 'rgba(234, 88, 12, 0.78)',  borderColor: '#ea580c', borderWidth: 1, borderRadius: 4 }
+          { label: 'Kế Hoạch',       data: planVolData,   backgroundColor: 'rgba(124, 58, 237, 0.78)', borderColor: '#7c3aed', borderWidth: 1, borderRadius: 4, stack: 'plan' },
+          { label: 'Đã Ép',          data: pressVolData,  backgroundColor: 'rgba(22, 163, 74, 0.78)',  borderColor: '#16a34a', borderWidth: 1, borderRadius: 4, stack: 'actual' },
+          { label: 'Tồn đầu khoảng', data: stockVolData,  backgroundColor: 'rgba(134, 239, 172, 0.82)', borderColor: '#22c55e', borderWidth: 1, borderRadius: 4, stack: 'actual' },
+          { label: 'Số Lượng Xuất',  data: exportVolData, backgroundColor: 'rgba(234, 88, 12, 0.78)', borderColor: '#ea580c', borderWidth: 1, borderRadius: 4, stack: 'export' }
         ]
       },
       options: {
@@ -2591,9 +2999,11 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
                 const i = c.dataIndex;
                 const qty = c.datasetIndex === 0 ? planQtyData[i]
                   : c.datasetIndex === 1 ? pressQtyData[i]
+                  : c.datasetIndex === 2 ? stockQtyData[i]
                   : exportQtyData[i];
                 const vol = c.datasetIndex === 0 ? planVolData[i]
                   : c.datasetIndex === 1 ? pressVolData[i]
+                  : c.datasetIndex === 2 ? stockVolData[i]
                   : exportVolData[i];
                 return ` ${c.dataset.label}: ${isVol ? `${fmtVol(vol)} m³` : fmtQty(qty)}`;
               }
@@ -2601,9 +3011,9 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
           }
         },
         scales: {
-          x: { ticks: { font: { size: 10 } } },
+          x: { stacked: true, ticks: { font: { size: 10 } } },
           // Xem "Số lượng": chiều cao cột theo m³ → ẩn trục Y để tránh hiểu nhầm
-          y: { display: isVol, beginAtZero: true, ticks: { font: { size: 10 }, callback: v => fmtTick(v) } }
+          y: { stacked: true, display: isVol, beginAtZero: true, ticks: { font: { size: 10 }, callback: v => fmtTick(v) } }
         }
       }
     });
@@ -3118,10 +3528,12 @@ export {
   handlePressRecordSubmit,
   handlePressNoteDelete,
   handlePressNoteSubmit,
+  handlePressInventoryAdjustment,
   hidePressNotePopover,
   highlightPressDayCardByDate,
   loadPressRecords,
   loadPressNotes,
+  loadPressInventoryAdjustments,
   migratePressRecord,
   openPressModal,
   openPressNoteModal,
@@ -3176,6 +3588,13 @@ export {
   loadX2EpVanRates,
   pressRecordVolumeOf,
   pressVolumeTotalOf,
+  pressInventoryLiveByProduct,
+  pressInventoryByWeek,
+  savePressInventoryLive,
+  filterPressInventoryProducts,
+  pressRecordDateOf,
+  pressExportDateOf,
+  pressExportPeriodDateOf,
   epVanRateOf,
   epVanSnapshotOf,
   savePressRecords,

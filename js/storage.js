@@ -17,6 +17,7 @@ import { bumpIncidentCache, escapeHTML, showToast } from './utils.js';
 // Đầu Ra + tab Kế Hoạch cần): định mức nguyên vật liệu · sản lượng ép ván ·
 // bản ghi kế hoạch. Nay ghi kèm để nạp lại file không mất số.
 import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_SYS_SETTINGS } from './state.js';
+import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS } from './state.js';
 // CÀI ĐẶT HỆ THỐNG (cờ hiển thị + quyền theo vùng) — chuẩn hoá khi nạp file/backup
 import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
 
@@ -143,6 +144,16 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
     const merged = mergeXuong2Records(state.pressRecords, incomingArr);
     state.pressRecords = merged;
     try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+
+  function restorePressInventoryAdjustments(incomingArr) {
+    const before = JSON.stringify(state.pressInventoryAdjustments || []);
+    const merged = mergeXuong2Records(state.pressInventoryAdjustments, incomingArr);
+    state.pressInventoryAdjustments = merged;
+    try { localStorage.setItem(STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS, JSON.stringify(merged)); } catch (err) {}
     if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
     syncHistorySnapshots();
     return merged;
@@ -1333,6 +1344,7 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
         materialRates: state.materialRates || [],
         planningItems: state.planningItems || [],
         pressRecords: state.pressRecords || [],
+        pressInventoryAdjustments: state.pressInventoryAdjustments || [],
         xuong2CutRecords: state.xuong2CutRecords || [],
         xuong2BoluongRecords: state.xuong2BoluongRecords || [],
         xuong1CatOngRecords: state.xuong1CatOngRecords || [],
@@ -1630,6 +1642,9 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
         if (imported && Array.isArray(imported.materialRates)) restoreMaterialRates(imported.materialRates);
         if (imported && Array.isArray(imported.planningItems)) restorePlanningItems(imported.planningItems);
         if (imported && Array.isArray(imported.pressRecords)) restorePressRecords(imported.pressRecords);
+        if (imported && Array.isArray(imported.pressInventoryAdjustments)) {
+          restorePressInventoryAdjustments(imported.pressInventoryAdjustments);
+        }
 
         if (imported && Array.isArray(imported.materialRecords)) {
           restoreMaterialRecords(imported.materialRecords); // GỘP — không xóa các lần nhập mới hơn backup

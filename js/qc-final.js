@@ -3,9 +3,9 @@
 // ═══════════════════════════════════════════════════════════
 // QC kiểm VÁN THÔ / THÀNH PHẨM Ép Ván trước khi xuất xưởng, ghi theo NGÀY + VỊ TRÍ
 // (Xưởng 1 / Xưởng 2). Mỗi lượt kiểm nhập:
-//   • ĐẦU VÀO KIỂM — Xưởng 2: CHỌN từ 2 NHÓM nguồn trong CẶP 2 TUẦN xuất hàng
-//     (tuần lẻ + tuần kế — giống nút "2 tuần" của biểu đồ "Kế Hoạch vs Đã Ép":
-//     kiểm tuần 39 hay tuần 40 đều lấy cặp 39–40):
+//   • ĐẦU VÀO KIỂM — Xưởng 2: CHỌN từ 2 NHÓM nguồn tồn CHƯA KIỂM lũy kế đến
+//     ngày kiểm (ván thô BTP + thành phẩm Ép Ván); tồn đã kiểm đạt được giữ
+//     trong tồn vật lý/biểu đồ nhưng không được đưa lại vào danh sách chờ QC.
 //       ① VÁN THÔ BTP (bán thành phẩm) — dòng "Ván Thô Tạo Ra" của các lượt ép
 //          CHỈ điền ván thô, KHÔNG điền trường Thành Phẩm của thẻ Ép Ván;
 //       ② THÀNH PHẨM Ép Ván — các lượt ép có chọn Thành Phẩm.
@@ -33,7 +33,7 @@ import { firePushSync, initLucide, requireEditPermission, requireRatePermission 
 import { logDataChange } from './history.js';
 import { hrShiftCfg, hrSplitHoursHCDate } from './hr.js';
 import { rateUnit } from './planning.js';
-import { pressRecordWeek } from './press.js';
+import { pressExportDateOf, pressRecordDateOf, pressRecordWeek } from './press.js';
 import { STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shiftGroupRows, showToast } from './utils.js';
@@ -229,23 +229,43 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     if (String(r.productId || '').trim() || String(r.productName || '').trim()) return false;
     return (Array.isArray(r.vanTho) ? r.vanTho : []).some(l => (parseFloat(l && l.vtQty) || 0) > 0);
   }
-  // Tồn KIỂM theo thành phẩm của cặp 2 tuần: TỔNG Ép Ván − ĐÃ KIỂM (Σ Đầu vào
-  // kiểm của các lượt cùng sản phẩm + cùng cặp tuần) = CÒN LẠI.
-  // Dữ liệu kiểm cũ KHÔNG có pairKey → suy lại từ ngày kiểm.
-  function qcFinalProductStocks(dateISO) {
-    const key = qcFinalPairKeyOf(dateISO);
-    const rows = qcFinalProducts2Weeks(dateISO).map(p => ({
-      productId: p.productId, name: p.name, total: p.qty, used: 0
-    }));
-    if (!key) return rows.map(r => Object.assign(r, { remain: r.total }));
-    const byKey = new Map(rows.map(r => [r.productId || `name:${r.name}`, r]));
+  // Tồn chưa kiểm theo thành phẩm đến ngày kiểm: sản lượng lũy kế trừ phần đã
+  // kiểm hoặc đã xuất. Xuất hàng thường là hàng đã kiểm; dùng max để không trừ
+  // hai lần cùng một lượng khi dữ liệu không gắn từng kiện với lượt kiểm.
+  function qcFinalProductStocks(dateISO, excludeId) {
+    const map = new Map();
+    (state.pressRecords || []).forEach(record => {
+      if (!record) return;
+      const producedDate = pressRecordDateOf(record);
+      if (!producedDate || producedDate > dateISO || qcFinalIsBtpPress(record)) return;
+      const productId = String(record.productId || '').trim();
+      const name = String(record.productName || '').trim()
+        || String((state.materialRates || []).find(rate => rate.id === productId)?.product || '').trim();
+      if (!productId && !name) return;
+      if (qcFinalNameIsThanh(productId, name)) return;
+      const key = productId || `name:${name}`;
+      const row = map.get(key) || { productId, name, total: 0, used: 0, exported: 0 };
+      row.total += Number(record.finishedQty) || 0;
+      map.set(key, row);
+    });
     (state.qcFinalRecords || []).forEach(rec => {
-      if (!rec) return;
-      if ((rec.pairKey || qcFinalPairKeyOf(rec.date)) !== key) return;
-      const row = byKey.get(rec.productId || `name:${rec.productName || ''}`);
+      if (!rec || rec.id === excludeId || qcFinalKindOf(rec.kind) !== 'van' || !rec.date || rec.date > dateISO) return;
+      const key = String(rec.productId || '').trim() || `name:${String(rec.productName || '').trim()}`;
+      const row = map.get(key);
       if (row) row.used += Number(rec.inputQty) || 0;
     });
-    return rows.map(r => Object.assign(r, { remain: Math.max(0, r.total - r.used) }));
+    (state.qcExports || []).forEach(record => {
+      if (!record) return;
+      const exportDate = pressExportDateOf(record);
+      if (!exportDate || exportDate > dateISO) return;
+      const key = String(record.productId || '').trim()
+        || `name:${String(record.name || '').trim()}`;
+      const row = map.get(key);
+      if (row) row.exported += Number(record.qty) || 0;
+    });
+    return [...map.values()]
+      .map(row => Object.assign(row, { remain: Math.max(0, row.total - Math.max(row.used, row.exported)) }))
+      .sort((a, b) => b.remain - a.remain || b.total - a.total);
   }
   // Danh sách THÀNH PHẨM Ép Ván của cặp 2 tuần chứa ngày kiểm: gộp finishedQty
   // theo sản phẩm (ưu tiên productId), CHỈ nhận lượt ép cùng NĂM với ngày kiểm
@@ -274,27 +294,23 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     });
     return [...map.values()].filter(x => x.qty > 0).sort((a, b) => b.qty - a.qty);
   }
-  // ─── TỒN VÁN THÔ BTP CHO "KIỂM VÁN" (cặp 2 tuần của ngày kiểm) ─────────
+  // ─── TỒN VÁN THÔ BTP CHỜ KIỂM (lũy kế đến ngày kiểm) ─────────────────
   // Nguồn = dòng "Ván Thô Tạo Ra" của các lượt ép CHỈ điền ván thô, KHÔNG điền
   // trường Thành Phẩm (bán thành phẩm). Gộp theo cỡ chuẩn hoá 'A×B×C':
-  //   TỔNG = Σ số lượng ván thô · ĐÃ KIỂM = Σ Đầu vào kiểm của các lượt "Kiểm
-  //   ván" cùng cỡ + cùng cặp tuần (dữ liệu cũ không pairKey → suy từ ngày)
+  //   TỔNG = Σ số lượng ván thô đã ép · ĐÃ KIỂM = Σ Đầu vào kiểm của các lượt
+  //   "Kiểm ván" cùng cỡ đến ngày chọn
   //   · CÒN LẠI = TỔNG − ĐÃ KIỂM.
   // `excludeId` = lượt đang SỬA (trả lại phần của chính nó).
   // Cỡ có THỂ TÍCH 1 thế < QC_FINAL_BTP_PIECE_MAX_VOL bị LOẠI = thanh BTP
   // (sang "Kiểm Thanh") — tự phân biệt KHÔNG cần định mức.
   const QC_FINAL_BTP_PIECE_MAX_VOL = 0.0015; // m³ — GIỐNG BAO_THANH_PIECE_MAX_VOL (js/xuong2.js): 1200×18×15 = 0,000324 ⇒ thanh · 1220×2440×9 = 0,0268 ⇒ ván
   function qcFinalVanBtpStocks(dateISO, excludeId) {
-    const pair = qcFinalPairWeeks(dateISO);
-    if (!pair.start) return [];
-    const year = String(qcFinalYearOf(dateISO));
-    const key = qcFinalPairKeyOf(dateISO);
+    if (!dateISO) return [];
     const map = new Map();
     (state.pressRecords || []).forEach(r => {
       if (!qcFinalIsBtpPress(r)) return;
-      const w = pressRecordWeek(r);
-      if (!w || (w !== pair.start && (pair.end == null || w !== pair.end))) return;
-      if (String(r.year || qcFinalYearOf(r.date)) !== year) return;
+      const producedDate = pressRecordDateOf(r);
+      if (!producedDate || producedDate > dateISO) return;
       (Array.isArray(r.vanTho) ? r.vanTho : []).forEach(l => {
         const qty = parseFloat(l && l.vtQty) || 0;
         if (qty <= 0) return;
@@ -309,11 +325,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
         map.set(sizeKey, cur);
       });
     });
-    if (!key) return [...map.values()].map(x => Object.assign(x, { remain: x.total }));
     (state.qcFinalRecords || []).forEach(rec => {
-      if (!rec || rec.id === excludeId) return;
-      if (qcFinalKindOf(rec.kind) !== 'van') return;
-      if ((rec.pairKey || qcFinalPairKeyOf(rec.date)) !== key) return;
+      if (!rec || rec.id === excludeId || qcFinalKindOf(rec.kind) !== 'van' || !rec.date || rec.date > dateISO) return;
       const row = map.get(String(rec.sizeKey || '').trim());
       if (row) row.used += Number(rec.inputQty) || 0;
     });
@@ -519,7 +532,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
 
   // ─── ĐỒNG BỘ FORM theo VỊ TRÍ + LOẠI KIỂM ────────────────────
   // Danh sách nguồn đầu vào CHỈ dùng cho Xưởng 2:
-  //   • Kiểm Ván   → danh sách THÀNH PHẨM Ép Ván của cặp 2 tuần
+  //   • Kiểm Ván   → tồn chưa kiểm lũy kế đến ngày kiểm (BTP + thành phẩm Ép Ván)
   //   • Kiểm Thanh → danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh
   //                  (còn chờ kiểm) — LINK kết quả về thẻ Bào Tinh
   //   • Xưởng 1    → "Sắp có" (nhập tay số lượng)
@@ -591,7 +604,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     }
   }
 
-  // ─── DANH SÁCH NGUỒN KIỂM VÁN: VÁN THÔ BTP + THÀNH PHẨM ÉP VÁN (cặp 2 tuần) ──
+  // ─── DANH SÁCH NGUỒN KIỂM VÁN: TỒN CHƯA KIỂM ĐẾN NGÀY ────────────────
   // Cơ chế POP-UP NỔI: khi mở, node `#qcf-picker` được KÉO RA làm CON TRỰC TIẾP
   // của `#qc-detail-overlay` (lớp fixed đã phủ toàn màn hình, z:200) + neo bằng
   // INLINE `position:absolute` theo rect của nút nguồn đầu vào:
@@ -675,20 +688,20 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');
     if (kind === 'thanh') { renderQcFinalThanhList(listEl); return; }
     const dateVal = (document.getElementById('qcf-date') || {}).value || qcFinalTodayISO();
-    const pairTxt = qcFinalPairLabel(dateVal);
-    // 2 NHÓM nguồn của "Kiểm Ván" (cùng cặp 2 tuần — 1 cặp kiểm nhiều ngày mới hết):
+    const asOfLabel = formatDateDDMMYY(dateVal);
+    // 2 nhóm nguồn của "Kiểm Ván" giữ tồn chưa kiểm qua nhiều tuần:
     //   ① VÁN THÔ BTP — tồn theo CỠ ván thô (lượt ép CHỈ điền "Ván Thô Tạo Ra";
     //      LOẠI cỡ thể tích < 0,0015 m³ = thanh BTP)
     //   ② THÀNH PHẨM Ép Ván — tồn theo SẢN PHẨM (tổng Ép Ván − ĐÃ KIỂM)
     const vtRows = qcFinalVanBtpStocks(dateVal, qcFinalEditId || '');
-    const pdRows = qcFinalProductStocks(dateVal);
+    const pdRows = qcFinalProductStocks(dateVal, qcFinalEditId || '');
     const q = qcFinalStripQ(qcFinalSearchQ);
     const vtHits = q ? vtRows.filter(r => qcFinalStripQ(`${r.name} ${r.sizeKey}`).includes(q)) : vtRows;
     const pdHits = q ? pdRows.filter(r => qcFinalStripQ(r.name).includes(q)) : pdRows;
-    const vtHead = `<div class="qcf-pick-head"><i data-lucide="box"></i> Ván thô BTP — <strong>${escapeHTML(pairTxt || '—')}</strong></div>`;
-    const pdHead = `<div class="qcf-pick-head"><i data-lucide="package"></i> Thành phẩm Ép Ván — <strong>${escapeHTML(pairTxt || '—')}</strong></div>`;
+    const vtHead = `<div class="qcf-pick-head"><i data-lucide="box"></i> Ván thô BTP chưa kiểm đến <strong>${escapeHTML(asOfLabel || '—')}</strong></div>`;
+    const pdHead = `<div class="qcf-pick-head"><i data-lucide="package"></i> Thành phẩm Ép Ván chưa kiểm đến <strong>${escapeHTML(asOfLabel || '—')}</strong></div>`;
     if (!vtRows.length && !pdRows.length) {
-      listEl.innerHTML = vtHead + `<div class="al-empty">Chưa có lượt Ép Ván nào trong ${escapeHTML(pairTxt || 'cặp tuần này')} (ván thô BTP = lượt chỉ điền khối "Ván Thô Tạo Ra", không điền Thành Phẩm; thanh BTP thể tích < 0,0015 m³ và mục ĐVT = Thanh được loại). Kiểm tra lại Ngày hoặc ghi lượt ép ở thẻ Ép Ván.</div>`;
+      listEl.innerHTML = vtHead + `<div class="al-empty">Chưa có tồn chưa kiểm đến ngày này. Ván thô BTP là lượt chỉ điền khối "Ván Thô Tạo Ra"; thanh BTP thể tích < 0,0015 m³ và thành phẩm ĐVT = Thanh được loại. Kiểm tra lại Ngày hoặc ghi lượt ép ở thẻ Ép Ván.</div>`;
       initLucide();
       return;
     }
@@ -703,12 +716,12 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
         const done = p.remain <= 0;
         const on = qcFinalPicked && qcFinalPicked.sizeKey && qcFinalPicked.sizeKey === p.sizeKey;
         return `
-      <button type="button" class="al-card qcf-product${on ? ' picked' : ''}" data-qcf-vt="${escapeHTML(p.sizeKey)}" title="Chọn ván thô BTP này — tự điền số CÒN LẠI (tổng ván thô của cặp tuần trừ phần đã kiểm các ngày trước) vào ô Đầu vào kiểm (sửa được)">
+      <button type="button" class="al-card qcf-product${on ? ' picked' : ''}" data-qcf-vt="${escapeHTML(p.sizeKey)}" title="Chọn ván thô BTP này — tự điền số chưa kiểm lũy kế đến ngày đã chọn">
         <span class="qcf-product-line1">
           <span class="qcf-product-name">${escapeHTML(p.name)} mm</span>
-          ${done ? '<span class="qcf-done">Đã kiểm đủ cặp tuần</span>' : ''}
+          ${done ? '<span class="qcf-done">Đã kiểm đủ</span>' : ''}
         </span>
-        <span class="qcf-product-meta">Tổng <strong>${qcFinalFmt(p.total)}</strong> · Đã kiểm ${qcFinalFmt(p.used)} · <b class="qcf-remain${done ? ' zero' : ''}">Còn lại ${qcFinalFmt(p.remain)}</b></span>
+        <span class="qcf-product-meta">Tổng <strong>${qcFinalFmt(p.total)}</strong> · Đã kiểm ${qcFinalFmt(p.used)} · <b class="qcf-remain${done ? ' zero' : ''}">Chờ kiểm ${qcFinalFmt(p.remain)}</b></span>
       </button>`;
       }).join('') : `<div class="al-empty">Không có ván thô BTP nào khớp "${escapeHTML(qcFinalSearchQ)}".</div>`);
     }
@@ -718,12 +731,12 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
         const on = qcFinalPicked && !qcFinalPicked.sizeKey &&
           qcFinalPicked.productId === p.productId && qcFinalPicked.name === p.name;
         return `
-      <button type="button" class="al-card qcf-product${on ? ' picked' : ''}" data-qcf-product="${escapeHTML(p.productId || p.name)}" title="Chọn thành phẩm này — tự điền số CÒN LẠI (tổng Ép Ván của cặp tuần trừ phần đã kiểm các ngày trước) vào ô Đầu vào kiểm (sửa được)">
+      <button type="button" class="al-card qcf-product${on ? ' picked' : ''}" data-qcf-product="${escapeHTML(p.productId || p.name)}" title="Chọn thành phẩm này — tự điền số chưa kiểm lũy kế đến ngày đã chọn">
         <span class="qcf-product-line1">
           <span class="qcf-product-name">${escapeHTML(p.name)}</span>
-          ${done ? '<span class="qcf-done">Đã kiểm đủ cặp tuần</span>' : ''}
+          ${done ? '<span class="qcf-done">Đã kiểm đủ</span>' : ''}
         </span>
-        <span class="qcf-product-meta">Tổng <strong>${qcFinalFmt(p.total)}</strong> · Đã kiểm ${qcFinalFmt(p.used)} · <b class="qcf-remain${done ? ' zero' : ''}">Còn lại ${qcFinalFmt(p.remain)}</b></span>
+        <span class="qcf-product-meta">Tổng <strong>${qcFinalFmt(p.total)}</strong> · Đã kiểm ${qcFinalFmt(p.used)} · Đã xuất ${qcFinalFmt(p.exported)} · <b class="qcf-remain${done ? ' zero' : ''}">Chờ kiểm ${qcFinalFmt(p.remain)}</b></span>
       </button>`;
       }).join('') : `<div class="al-empty">Không có thành phẩm nào khớp "${escapeHTML(qcFinalSearchQ)}".</div>`);
     }
@@ -764,8 +777,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     initLucide();
   }
   // Chọn 1 mục trong danh sách nguồn (ủy quyền click từ events.js):
-  //   • Kiểm Ván ① → VÁN THÔ BTP, tự điền số CÒN LẠI của cặp 2 tuần
-  //   • Kiểm Ván ② → thành phẩm Ép Ván, tự điền số CÒN LẠI của cặp 2 tuần
+  //   • Kiểm Ván ① → VÁN THÔ BTP, tự điền số CHỜ KIỂM lũy kế đến ngày đã chọn
+  //   • Kiểm Ván ② → thành phẩm Ép Ván, tự điền số CHỜ KIỂM lũy kế đến ngày đã chọn
   //   • Kiểm Thanh → CỠ thanh đầu ra của Bào thanh, tự điền số CÒN LẠI (chờ kiểm)
   function onQcFinalListClick(e) {
     const vtBtn = e.target && e.target.closest ? e.target.closest('[data-qcf-vt]') : null;
@@ -782,7 +795,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       setQcFinalPickerOpen(false);
       renderQcFinalProductList();
       if (row.remain <= 0) {
-        showToast(`Ván thô ${qcFinalSizeLabel(row.dims)} mm đã kiểm đủ trong cặp tuần — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
+        showToast(`Ván thô ${qcFinalSizeLabel(row.dims)} mm đã kiểm đủ đến ngày đã chọn — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
       }
       return true;
     }
@@ -807,7 +820,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     if (!btn) return false;
     const key = btn.getAttribute('data-qcf-product') || '';
     const dateVal = (document.getElementById('qcf-date') || {}).value || qcFinalTodayISO();
-    const row = qcFinalProductStocks(dateVal).find(p => (p.productId || p.name) === key);
+    const row = qcFinalProductStocks(dateVal, qcFinalEditId || '').find(p => (p.productId || p.name) === key);
     if (!row) return false;
     qcFinalPicked = { productId: row.productId, name: row.name, qty: row.remain };
     qcFinalPickedSize = null;
@@ -817,7 +830,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     setQcFinalPickerOpen(false);
     renderQcFinalProductList();
     if (row.remain <= 0) {
-      showToast(`"${row.name}" đã kiểm đủ trong cặp tuần — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
+      showToast(`"${row.name}" đã kiểm đủ đến ngày đã chọn — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
     }
     return true;
   }
@@ -1193,7 +1206,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     const snap = hrQcFinalSnapshot(date);
     const now = new Date().toISOString();
     // 'Kiểm thanh' → gắn CỠ thanh được kiểm (LINK về thẻ Bào Tinh cùng cỡ);
-    // 'Kiểm ván' chọn VÁN THÔ BTP → cũng gắn cỡ (tồn kiểm theo cặp tuần)
+    // 'Kiểm ván' chọn VÁN THÔ BTP → gắn cỡ để tiếp tục theo dõi tồn chờ kiểm.
     const sizeFields = kind === 'thanh'
       ? { sizeKey: qcFinalPickedSize ? qcFinalPickedSize.sizeKey : '', sizeDims: qcFinalPickedSize ? qcFinalPickedSize.dims : [] }
       : { sizeKey: (qcFinalPicked && qcFinalPicked.sizeKey) || '', sizeDims: (qcFinalPicked && qcFinalPicked.dims) || [] };
@@ -1250,7 +1263,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       ? { sizeKey: String(r.sizeKey), dims: Array.isArray(r.sizeDims) ? r.sizeDims.map(Number) : [], remain: Number(r.inputQty) || 0 }
       : null;
     // 'Kiểm ván' chọn VÁN THÔ BTP → khôi phục luôn cỡ (sizeKey/sizeDims) để
-    // lưu lại vẫn liên kết tồn kiểm theo cặp tuần
+    // lưu lại vẫn liên kết đúng dòng tồn chờ kiểm.
     if (qcFinalKindOf(r.kind) === 'van' && r.sizeKey) {
       if (!qcFinalPicked) {
         qcFinalPicked = {
@@ -1313,11 +1326,10 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     setQcFinalPickerOpen(false);
     return true;
   }
-  // ĐỔI NGÀY KIỂM: thành phẩm đã chọn gắn với cặp tuần CŨ → bỏ chọn + xoá ô
-  // Đầu vào kiểm (trừ khi đang SỬA 1 lượt — giữ nguyên số đang nạp), rồi vẽ lại
-  // danh sách nguồn Kiểm Ván (ván thô BTP + thành phẩm) của cặp 2 tuần mới.
+  // ĐỔI NGÀY KIỂM: bỏ lựa chọn nguồn cũ để số dư được nạp lại theo ngày mới
+  // (trừ khi đang SỬA 1 lượt — giữ nguyên số đang nạp), rồi vẽ lại danh sách.
   function qcFinalOnDateChange() {
-    // Kiểm Ván: thành phẩm gắn với cặp tuần → đổi ngày là bỏ chọn.
+    // Kiểm Ván: số tồn chưa kiểm phụ thuộc ngày → đổi ngày là bỏ chọn.
     // Kiểm Thanh: cỡ thanh KHÔNG phụ thuộc ngày → giữ nguyên lựa chọn.
     const kindSel = document.getElementById('qcf-kind');
     const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');

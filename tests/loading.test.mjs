@@ -87,11 +87,12 @@ check('A9: KHÔNG dùng class .modal-overlay (không làm khoá cuộn trang nh�
 console.log('--- B. WIRING 5 NHÓM CHỖ CHỜ ---');
 check('B1: js/loading.js — không import module nào (không vòng import) + refcount show/hide',
   !/^\s*import\s/m.test(ldJs) && ldJs.includes('function showTreLoading') && ldJs.includes('function hideTreLoading'));
-check('B2: boot ẩn mini-game, xoay câu trạng thái và chờ Firebase trước khi kết thúc overlay',
+check('B2: boot dựng giao diện cục bộ trước; Firebase đồng bộ nền không giữ overlay',
   /showTreLoading\('Đang nạp dữ liệu nhà máy…',\s*\{\s*phrases:/.test(mnJs) &&
   !/showTreLoading\('Đang nạp dữ liệu nhà máy…',\s*\{\s*mode:\s*'game'/.test(mnJs) &&
-  /Đang xác nhận số liệu mới nhất từ Firebase/.test(mnJs) &&
-  /await initFirebase\(\)/.test(mnJs) &&
+  /Đang kết nối Firebase ở nền/.test(mnJs) &&
+  /void initFirebase\(\)\.catch\(/.test(mnJs) &&
+  !/await initFirebase\(\)/.test(mnJs) &&
   /hideTreLoading\(bootOk\)/.test(mnJs) &&
   /setTreLoadingStatus/.test(mnJs));
 check('B3: AI (ai.js) — hiện khi chờ Gemini + finally hideTreLoading(aiOk)',
@@ -120,8 +121,8 @@ check('B11: boot yield giữa các nhóm khởi tạo để overlay có cơ hộ
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v340 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v340/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v349 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v349/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════

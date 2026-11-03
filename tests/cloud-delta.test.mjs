@@ -27,13 +27,15 @@ function makeEl(id) {
   return el;
 }
 const els = new Map();
+const docHandlers = {};
 global.document = {
   body: makeEl('body'), head: makeEl('head'), documentElement: makeEl('html'),
   activeElement: null, readyState: 'complete', visibilityState: 'visible',
   getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
   createElement: () => makeEl(), createTextNode: (t) => ({ textContent: t }),
   querySelector: () => makeEl(), querySelectorAll: () => [],
-  addEventListener(){}, removeEventListener(){}, escapeCSS: (s) => s
+  addEventListener(type, handler) { (docHandlers[type] = docHandlers[type] || []).push(handler); },
+  removeEventListener(){}, escapeCSS: (s) => s
 };
 global.location = { href: 'http://localhost:8080/', origin: 'http://localhost:8080', pathname: '/', search: '', hash: '', reload(){} };
 global.history = { replaceState(){}, pushState(){}, back(){}, state: null };
@@ -48,7 +50,9 @@ global.localStorage = {
   key: (i) => [...storeBacking.keys()][i] ?? null,
   get length() { return storeBacking.size; }
 };
-global.addEventListener = () => {}; global.removeEventListener = () => {}; global.dispatchEvent = () => true;
+const windowHandlers = {};
+global.addEventListener = (type, handler) => { (windowHandlers[type] = windowHandlers[type] || []).push(handler); };
+global.removeEventListener = () => {}; global.dispatchEvent = () => true;
 global.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
 global.cancelAnimationFrame = clearTimeout;
 global.window = global; global.self = global;
@@ -195,6 +199,7 @@ function check(name, cond) {
   const store = new Map();
   let setCount = 0;
   let domainReadCount = 0;
+  let mainReadCount = 0;
   let cloudListenerNext = null;
   let cloudListenerError = null;
   const makeDoc = (collPath, id) => {
@@ -203,6 +208,7 @@ function check(name, cond) {
       _key: key,
       set(data) { setCount++; store.set(key, JSON.parse(JSON.stringify(data))); return Promise.resolve(); },
       get() {
+        if (key === 'apps/main') mainReadCount++;
         if (key.indexOf('apps/main/d/') === 0) domainReadCount++;
         return Promise.resolve({ exists: store.has(key), data: () => store.get(key) });
       },
@@ -252,6 +258,23 @@ function check(name, cond) {
   await initPromise;
   check('E1c: boot readiness chỉ hoàn tất sau snapshot server đầu tiên được áp dụng',
     initStatus === 'ready');
+  {
+    const readsBeforeFocus = mainReadCount;
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() + 16000;
+      (windowHandlers.focus || []).forEach(handler => handler());
+      await new Promise(resolve => setTimeout(resolve, 0));
+      check('E1d: quay lại focus không đọc lại cloud; Firestore listener tiếp tục nhận realtime',
+        mainReadCount === readsBeforeFocus);
+      const readsBeforeVisible = mainReadCount;
+      Date.now = () => realNow() + 32000;
+      (docHandlers.visibilitychange || []).forEach(handler => handler());
+      await new Promise(resolve => setTimeout(resolve, 0));
+      check('E1e: tab hiện lại không kích hoạt lượt đọc cloud dư thừa',
+        mainReadCount === readsBeforeVisible);
+    } finally { Date.now = realNow; }
+  }
   {
     const m = store.get('apps/main');
     check('E2: mục lục apps/main có __fmt=delta-v1 + __dh + deletedIds',

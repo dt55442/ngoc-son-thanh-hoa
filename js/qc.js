@@ -7,8 +7,8 @@
 //   - Khi chọn bộ lọc / gõ tìm kiếm → bảng CHỈ hiển thị kết quả khớp.
 //   - Tuần (đầu vào) đã nhập là KHÓA — hiển thị badge chỉ đọc, không sửa.
 //   - Tên hàng lấy từ thành phẩm trong Kế Hoạch Sản Xuất.
-// Dữ liệu state.qcExports: [{ id, productId, name, week, weeks?: number[], year, qty, note, createdAt, updatedAt }]
-// weeks[] dùng cho xuất một tổng lượng gắn với một hoặc hai tuần; bản ghi cũ chỉ có week vẫn hợp lệ.
+// Dữ liệu state.qcExports: [{ id, productId, name, week, weeks?: number[], year, qty, exportDate?, note, createdAt, updatedAt }]
+// Tuần giao đã chọn dùng để tính xuất/tồn; exportDate tùy chọn để tra cứu, truy nguồn.
 // Lưu localStorage + đồng bộ mây (firePushSync); là nguồn dữ liệu
 // cột "Số Lượng Xuất" trong biểu đồ Kế Hoạch vs Đã Ép (press.js).
 // ═══════════════════════════════════════════════════════════
@@ -41,6 +41,12 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     const d = new Date();
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
+  }
+  function qcIsValidISODate(value) {
+    const date = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const parsed = new Date(`${date}T00:00:00Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
   }
 
   function qcCurrentWeekNum() { return parseWeekNum(getISOWeekString(qcTodayISO())); }
@@ -212,7 +218,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     const allCount = (state.qcExports || []).length;
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px 12px; color:var(--text-muted); font-size:0.85rem;">
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:28px 12px; color:var(--text-muted); font-size:0.85rem;">
         ${allCount
           ? 'Không có dòng nào khớp bộ lọc / từ khóa — bấm <strong>Xóa Lọc</strong> để hiện tất cả.'
           : 'Chưa có dòng xuất hàng nào — bấm <strong>+ Thêm Dòng Xuất</strong> để bắt đầu.'}
@@ -231,6 +237,9 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
             <td style="width:110px;">
               <span class="qc-week-badge" title="Tuần xuất đã chọn — không cần sửa">${escapeHTML(weekLabel)}</span>
               <div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">${row.year || qcCurrentYear()}</div>
+            </td>
+            <td style="width:150px;">
+              <input type="date" class="qc-row-input qc-row-date" data-qc-id="${row.id}" data-qc-field="exportDate" value="${escapeHTML(row.exportDate || '')}" aria-label="Ngày xuất để tra cứu — ${escapeHTML(qcRowName(row))}" title="${row.exportDate ? 'Ngày xuất chỉ để tra cứu; tuần đã chọn dùng để tính xuất và tồn' : 'Ngày xuất tùy chọn; tuần đã chọn dùng để tính xuất và tồn'}">
             </td>
             <td style="width:120px;">
               <input type="number" min="0" step="1" class="qc-row-input qc-row-qty" data-qc-id="${row.id}" data-qc-field="qty" value="${Number(row.qty) || ''}" placeholder="0" ${dis}>
@@ -254,6 +263,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     if (totalBody) {
       totalBody.innerHTML = `<tr class="qc-total-row">
         <td colspan="2"><i data-lucide="sigma" style="width:13px;height:13px;"></i> <strong>${filtered ? 'Tổng cộng (bộ lọc)' : 'Tổng cộng (tất cả)'}</strong> — ${rows.length}/${allCount} dòng</td>
+        <td></td>
         <td class="text-right"><strong>${totalQty.toLocaleString('vi-VN')}</strong></td>
         <td class="text-right"><strong>${qcFmtVol(totalVol)}</strong></td>
         <td colspan="2"></td>
@@ -293,6 +303,13 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
       const n = parseInt(value, 10);
       row.week = n > 0 ? `Tuần ${n}` : '';
       row.weeks = n > 0 ? [n] : [];
+    } else if (field === 'exportDate') {
+      const date = String(value || '').trim();
+      if (date && !qcIsValidISODate(date)) {
+        showToast('Ngày xuất thực tế không hợp lệ!', 'error');
+        return;
+      }
+      row.exportDate = date;
     } else if (field === 'qty') {
       row.qty = Math.max(0, parseInt(value, 10) || 0);
     } else if (field === 'note') {
@@ -302,7 +319,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     }
     row.updatedAt = new Date().toISOString();
     saveQcExports();
-    if (field === 'week') renderQcTable(); // dòng có thể ra/vào bộ lọc → vẽ lại bảng
+    if (field === 'week' || field === 'exportDate') renderQcTable(); // vẽ lại ô vừa sửa và tuần lọc
     else refreshQcTotal(); // chỉ cập nhật tổng + ô thể tích (giữ focus khi đang gõ)
     renderQcSearch(); // dải kết quả lọc thay theo
   }
@@ -531,6 +548,8 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     if (form) form.reset();
     qcImpCustomIdx = 0;
     qcImpRows = [];
+    const exportDateEl = document.getElementById('qc-imp-date');
+    if (exportDateEl) exportDateEl.value = '';
 
     // Năm + tuần: mặc định một tuần hiện tại; có thể chọn thêm một tuần.
     const yearSel = document.getElementById('qc-imp-year');
@@ -583,9 +602,14 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
     e.preventDefault();
     const yearVal = parseInt(document.getElementById('qc-imp-year')?.value, 10) || 0;
     const weeks = qcImpSelectedWeeks();
+    const exportDate = String(document.getElementById('qc-imp-date')?.value || '').trim();
     const note = String(document.getElementById('qc-imp-note')?.value || '').trim();
     if (!yearVal) { showToast('Năm xuất hàng không được để trống!', 'error'); return; }
     if (!weeks.length || weeks.length > 2) { showToast('Vui lòng chọn một hoặc hai tuần xuất hàng!', 'error'); return; }
+    if (exportDate && !qcIsValidISODate(exportDate)) {
+      showToast('Ngày xuất để tra cứu không hợp lệ!', 'error');
+      return;
+    }
 
     const picked = qcImpRows.filter(row => row.checked !== false && (Number(row.qty) || 0) > 0);
     if (!picked.length) {
@@ -602,6 +626,7 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
       weeks: [...weeks],
       year: yearVal,
       qty: Number(row.qty) || 0,
+      exportDate,
       note,
       createdAt: now,
       updatedAt: now

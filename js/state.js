@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v340';
+  const APP_VERSION = 'v349';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -20,6 +20,7 @@
   const STORAGE_KEY_PLANNING_STOCK = 'bamboo_tracker_planning_stock_v1';
   const STORAGE_KEY_PRESS_RECORDS = 'bamboo_tracker_press_records_v1';
   const STORAGE_KEY_PRESS_NOTES = 'bamboo_tracker_press_notes_v1';
+  const STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS = 'bamboo_tracker_press_inventory_adjustments_v1';
   // THẺ GỘP 2 BIỂU ĐỒ DASHBOARD ("Kế Hoạch vs Đã Ép" + "Khả Năng Đáp Ứng Kế
   // Hoạch"): chế độ đang xem — nhớ theo MÁY (thuần UI, không lên mây).
   const STORAGE_KEY_PV_CHART_MODE = 'bamboo_tracker_pv_chart_mode_v1';
@@ -338,6 +339,7 @@
     planningStock: {}, // { year: { week: { glue: qty, additive: qty } } }
     // Sản lượng ép ván
     pressRecords: [],       // [{ id, date, week, year, lines[], productId, fpDim, finishedQty, glue, additive, worker }]
+    pressInventoryAdjustments: [], // [{ id, year, week, productId, qty, createdAt, updatedAt }]
     pressChartInstance: null,
     pressYearFilter: 'all',
     pressWeekFilter: 'all', // 'all' hoặc số tuần (1..53)
@@ -647,6 +649,7 @@ export {
   STORAGE_KEY_PLANNING_STOCK,
   STORAGE_KEY_PRESS_RECORDS,
   STORAGE_KEY_PRESS_NOTES,
+  STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS,
   STORAGE_KEY_PV_CHART_MODE,
   STORAGE_KEY_CAPACITY_UI,
   STORAGE_KEY_STAGE_WS,

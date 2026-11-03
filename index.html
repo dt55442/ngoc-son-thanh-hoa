@@ -176,7 +176,7 @@
           <div class="dropdown-menu" id="header-dropdown">
             <!-- NHÓM 1: THƯỜNG DÙNG -->
             <div class="dropdown-label">Thường dùng</div>
-            <button class="dropdown-item" id="btn-sync-now" title="Kiểm tra mây NGAY (tự động kiểm tra mỗi 2 phút và khi quay lại tab)">
+            <button class="dropdown-item" id="btn-sync-now" title="Kiểm tra dữ liệu trên mây ngay (ứng dụng tự nhận thay đổi theo thời gian thực)">
               <i data-lucide="refresh-cw" style="color:#0f766e;"></i> Đồng Bộ Ngay
             </button>
             <button class="dropdown-item" id="btn-save-local">
@@ -3221,7 +3221,7 @@
         <div class="pv-cap-hint-row" id="pv-cap-hint-row" hidden><span class="pv-cap-hint">Xanh: đủ 100% • vàng: thiếu — rê/chạm cột để xem nguyên nhân</span></div>
         <!-- Khung 1: Kế Hoạch vs Đã Ép — title = tooltip thay ghi chú đứng yên -->
         <div class="press-chart-box" id="pv-chart-box-plan"
-             title="Tím = Kế hoạch · Xanh lá = Đã Ép · Cam = Số Lượng Xuất — rê chuột vào cột để xem số liệu. Đổi đơn vị m³ / Số lượng · 1–2 tuần · Total ở thanh công cụ. Tổng xuất gắn nhiều tuần chỉ hiện khi kỳ lọc bao phủ đủ các tuần; chọn Tất Cả để xem mọi tổng.">
+             title="Tím = Kế hoạch · Xanh lá = Đã Ép · Xanh nhạt = Tồn đầu khoảng (cộng chồng với Đã Ép) · Cam = Số Lượng Xuất theo tuần giao trong khoảng lọc.">
           <span class="pv-total-stamp" id="pv-total-stamp" aria-hidden="true"></span>
           <canvas id="plan-vs-press-chart"></canvas>
         </div>
@@ -3547,6 +3547,29 @@
           </button>
         </div>
       </div>
+
+      <section class="pv-inventory-panel" id="pv-inventory-panel" aria-labelledby="pv-inventory-title">
+        <div class="pv-inventory-heading">
+          <div>
+            <h5 id="pv-inventory-title">Tồn các loại</h5>
+          </div>
+          <strong id="pv-inventory-period"></strong>
+        </div>
+        <div class="pv-inventory-toolbar">
+          <div class="pv-inventory-search">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <input id="pv-inventory-search" type="search" autocomplete="off" placeholder="Tên sản phẩm hoặc mã thực..." aria-label="Tìm nhanh sản phẩm tồn kho">
+            <button type="button" class="pv-inventory-search-btn" id="pv-inventory-search-btn">
+              <i data-lucide="search" aria-hidden="true"></i> Tìm nhanh
+            </button>
+            <button type="button" class="pv-inventory-search-clear" id="pv-inventory-search-clear" title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm" hidden>
+              <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+          </div>
+          <span class="pv-inventory-count" id="pv-inventory-count" aria-live="polite"></span>
+        </div>
+        <div id="pv-inventory-table"></div>
+      </section>
 
       <!-- BẢNG PHỤ: ĐỊNH MỨC (chuyển xuống dưới) -->
       <div class="planning-card" id="rate-main-card">
@@ -4144,7 +4167,7 @@
             <span class="qc-mini-desc">Kiểm tra nguyên liệu đầu vào</span>
             <span class="qc-mini-count" id="qc-mini-count-incoming">–</span>
           </button>
-          <button type="button" class="qc-mini-card" data-qc-card="qc-final-card" aria-expanded="false" title="Kiểm Sau Sản Xuất — QC kiểm thành phẩm SAU Ép Ván trước khi xuất xưởng: Đầu vào kiểm (X2 = ván thô BTP + thành phẩm Ép Ván của cặp 2 tuần xuất hàng), Đạt / Ngoại lệ / Loại, người kiểm + giờ tự động từ Nhân Sự">
+          <button type="button" class="qc-mini-card" data-qc-card="qc-final-card" aria-expanded="false" title="Kiểm Sau Sản Xuất — QC kiểm thành phẩm SAU Ép Ván trước khi xuất xưởng: nguồn Xưởng 2 gồm tồn chưa kiểm lũy kế đến ngày kiểm, Đạt / Ngoại lệ / Loại, người kiểm + giờ tự động từ Nhân Sự">
             <span class="qc-mini-ic"><i data-lucide="badge-check"></i></span>
             <span class="qc-mini-title">Kiểm Sau Sản Xuất</span>
             <span class="qc-mini-desc">Kiểm thành phẩm sau Ép Ván</span>
@@ -4345,7 +4368,8 @@
             <thead>
               <tr>
                 <th style="min-width:220px;">Tên Hàng</th>
-                <th style="width:110px;">Tuần</th>
+                <th style="width:110px;">Tuần KH</th>
+                <th style="width:150px;">Ngày Xuất Thực Tế</th>
                 <th style="width:120px;">Số Lượng Xuất</th>
                 <th class="text-right" style="width:130px;">Thể Tích (m³)</th>
                 <th style="min-width:160px;">Ghi Chú</th>
@@ -4375,7 +4399,7 @@
       <!-- MODULE KIỂM SAU SẢN XUẤT: QC kiểm thành phẩm SAU Ép Ván trước khi xuất
            xưởng, ghi theo NGÀY + VỊ TRÍ (Xưởng 1 / Xưởng 2). Form gọn: Vị trí ·
            Ngày · Đầu vào kiểm (X2 = chọn VÁN THÔ BTP hoặc THÀNH PHẨM Ép Ván
-           của CẶP 2 TUẦN xuất hàng — tuần lẻ + tuần kế; ván thô loại theo thể
+           còn chờ kiểm, được chuyển tồn qua các tuần; ván thô loại theo thể
            tích < 0,0015 m³, thành phẩm loại ĐVT = Thanh;
            X1 = "Sắp có") · Số lượng đạt · Ngoại lệ ·
            Loại (= số lượng bị loại = lỗi). Công thức: Tổng kiểm = Đạt + Ngoại lệ
@@ -4417,7 +4441,7 @@
               <div class="form-group qcf-g-in" id="qcf-in-group">
                 <label for="qcf-input-qty">Đầu Vào Kiểm (<span id="qcf-unit-in">tấm</span>) <span class="required">*</span></label>
                 <div class="qcf-in-controls">
-                  <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Kiểm Ván: 2 nhóm nguồn trong CẶP 2 TUẦN xuất hàng — ① VÁN THÔ BTP (lượt ép chỉ điền khối 'Ván Thô Tạo Ra', KHÔNG điền thành phẩm; tự LOẠI thanh BTP theo THỂ TÍCH < 0,0015 m³, VD 1200×18×15) ② THÀNH PHẨM Ép Ván (LOẠI mục ĐVT = Thanh theo định mức như 640x14x12 — ĐVT chỉ phân biệt khi đã là thành phẩm) (chọn 1 thẻ → tự điền số CÒN LẠI). Kiểm Thanh: danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh còn chờ kiểm (chọn 1 thẻ → tự điền số CÒN LẠI và LINK kết quả về thẻ Bào Tinh).">
+                  <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Kiểm Ván: tồn chưa kiểm lũy kế đến ngày kiểm — ① VÁN THÔ BTP (lượt ép chỉ điền khối 'Ván Thô Tạo Ra', KHÔNG điền thành phẩm; tự LOẠI thanh BTP theo THỂ TÍCH < 0,0015 m³, VD 1200×18×15) ② THÀNH PHẨM Ép Ván (LOẠI mục ĐVT = Thanh theo định mức như 640x14x12 — ĐVT chỉ phân biệt khi đã là thành phẩm); hàng đã kiểm đạt vẫn còn tồn vật lý nhưng không hiện lại cho QC. Kiểm Thanh: danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh còn chờ kiểm.">
                     <i data-lucide="list-checks"></i>
                     <span id="qcf-picker-text">Ván thô Ép Ván</span>
                     <span class="al-picked-count" id="qcf-picked-count">Chưa chọn</span>
@@ -4587,6 +4611,10 @@
                 <select id="qc-imp-week" class="form-select qc-imp-week-select" multiple size="4" required aria-describedby="qc-imp-week-help qc-imp-selected-weeks"></select>
                 <div id="qc-imp-week-help" class="qc-imp-week-help">Chọn 1 tuần; giữ Ctrl và bấm để chọn thêm tuần thứ hai.</div>
                 <div id="qc-imp-selected-weeks" class="qc-imp-selected-weeks" aria-live="polite"></div>
+              </div>
+              <div class="form-group">
+                <label for="qc-imp-date">Ngày xuất (tùy chọn, để tra cứu)</label>
+                <input type="date" id="qc-imp-date" title="Ngày này chỉ phục vụ tra cứu; tuần giao đã chọn dùng để tính xuất và tồn.">
               </div>
             </div>
             <div class="qc-imp-plan-info" id="qc-imp-plan-info">

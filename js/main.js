@@ -26,7 +26,7 @@ import { loadSysSettings } from './sys-settings.js';
 import { applySysAreaDom } from './sys-settings.js';
 import { loadX2BaoThoRates, loadX2BaoTinhRates, loadX2BoOngRates, loadX2BoluongRates, loadX2BulligRates, loadX2CapRates, loadX2ChonNanRates, loadX2SayIncidents, loadX2StageIncidents, loadX2SayRates, loadX2SayTimes, loadX2BaoThanhOutSizes, sayBatchChargeLabel, baoTinhUsedLabel, loadXuong2BaoTho, loadXuong2BaoTinh, loadXuong2BoOng, loadXuong2Bullig, loadXuong2ChonNan, loadXuong2CatVan, loadX2CatVanRates, loadX2CatVanSpan, loadXuong2BaoVan, loadX2BaoVanRates, loadX2BaoVanSpan, loadXuong2HoTro } from './xuong2.js';
 import { deleteMaterialRate, deletePlanningItem, duplicatePlanningGroup, editPlanningGroup, forecastAssumeWeek, forecastClearWeek, loadMaterialRates, loadPlanningForecast, loadPlanningItems, loadPlanningStock, openMaterialRateModal, renderPlanningView, restoreRateTableCollapse, selectPlanningProduct } from './planning.js';
-import { addPressLine, addPressStick, deletePressRecord, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
+import { addPressLine, addPressStick, deletePressRecord, loadPressInventoryAdjustments, loadPressNotes, loadPressRecords, loadX2EpVanRates, openPressModal, openPressWorkersModal, removePressLine, removePressStick } from './press.js';
 import { loadQcExports, qcCloseOpenCard, renderQcView } from './qc.js';
 import { loadQcFinal, loadQcFinalRates } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm — js/qc-final.js)
 import { loadQcPressLogs } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (QC chấm PASS/Fail — js/qc-press.js)
@@ -153,6 +153,7 @@ function yieldBootFrame() {
     loadPlanningStock();
     loadPressRecords();
     loadPressNotes();
+    loadPressInventoryAdjustments();
     loadMaterialRecords();
     loadMaterialPlan();
     await yieldBootFrame();
@@ -252,9 +253,12 @@ function yieldBootFrame() {
     autoReconnectDataFolder();
     // Đăng ký Service Worker để hoạt động OFFLINE (PWA)
     registerServiceWorker();
-    // Chờ dữ liệu Firebase ban đầu được áp dụng trước khi mở dashboard.
-    setTreLoadingStatus('Đang xác nhận số liệu mới nhất từ Firebase…');
-    await initFirebase();
+    // Dữ liệu cục bộ đã sẵn sàng; Firebase khởi tạo và đồng bộ trong nền.
+    setTreLoadingStatus('Đang kết nối Firebase ở nền…');
+    void initFirebase().catch((e) => {
+      console.error('[FB] Không thể khởi động đồng bộ nền:', e);
+      showToast('Không thể khởi động đồng bộ Firebase: ' + ((e && e.message) || e), 'error');
+    });
     // Lưới an toàn đồng bộ: đẩy nốt dữ liệu chờ lên mây khi người dùng rời trang,
     // chuyển sang tab khác, hoặc mạng vừa quay lại (tránh mất dữ liệu ép ván mới nhập)
     document.addEventListener('visibilitychange', () => {

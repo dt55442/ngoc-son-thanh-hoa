@@ -275,8 +275,9 @@ check('MINI CARD: renderQcView cập nhật đếm thẻ launcher',
   document.getElementById('qc-mini-count-final').textContent === '1 lượt · 440 tấm đạt');
 // ═══ PHẦN 6 ═══
 
-// ─── G2. TỒN KIỂM THEO CẶP TUẦN (Tổng · Đã kiểm · Còn lại) ────
-// Kiểm nhiều ngày mới hết số của cặp: sp1 (tổng 500) đã kiểm 200 ngày 24/09
+// ─── G2. TỒN CHỜ QC LŨY KẾ (Tổng · Đã kiểm · Đã xuất · Còn lại) ──
+// Sản lượng tuần 38 (999) chuyển sang tồn; tuần 39–40 ép thêm 500, kiểm 200.
+state.qcExports = [];
 state.qcFinalRecords.push({
   id: 'qcf-sp1', date: '2026-09-24', workshop: 'x2', kind: 'van',
   pairKey: qcf.qcFinalPairKeyOf('2026-09-24'),
@@ -285,22 +286,32 @@ state.qcFinalRecords.push({
   workerNames: '', workTime: '', workHours: 0, workHoursHC: 0, workHoursTC: 0,
   createdAt: '2026-09-24T00:00:00Z', updatedAt: '2026-09-24T00:00:00Z'
 });
-const stocks = qcf.qcFinalProductStocks('2026-09-23'); // cùng cặp 39–40
+const stocks = qcf.qcFinalProductStocks('2026-10-01');
 const stSp1 = stocks.find(s => s.productId === 'sp1');
 const stSp2 = stocks.find(s => s.productId === 'sp2');
-check('TỒN KIỂM: sp1 Tổng 500 · Đã kiểm 200 · CÒN LẠI 300 (cùng cặp 39–40)',
-  stSp1 && stSp1.total === 500 && stSp1.used === 200 && stSp1.remain === 300);
+check('TỒN CHỜ QC: sp1 có tồn chuyển từ tuần 38 · Tổng 1499 · Đã kiểm 200 · Còn 1299',
+  stSp1 && stSp1.total === 1499 && stSp1.used === 200 && stSp1.remain === 1299);
 check('TỒN KIỂM: sp2 chưa kiểm → Còn lại = Tổng (200)',
   stSp2 && stSp2.total === 200 && stSp2.used === 0 && stSp2.remain === 200);
+state.qcExports = [
+  { id: 'ship-overlap', productId: 'sp1', name: 'Ván 1220×2440×9', year: 2026, weeks: [39, 40], qty: 80, exportDate: '2026-09-25' }
+];
+check('TỒN CHỜ QC: hàng đã kiểm rồi xuất không bị trừ hai lần',
+  (qcf.qcFinalProductStocks('2026-10-01').find(x => x.productId === 'sp1') || {}).remain === 1299);
+state.qcExports[0].qty = 250;
+check('TỒN CHỜ QC: xuất vượt lượng đã kiểm thì cũng loại phần đã xuất khỏi nguồn QC',
+  (qcf.qcFinalProductStocks('2026-10-01').find(x => x.productId === 'sp1') || {}).remain === 1249);
+state.qcExports = [];
 check('TỒN KIỂM: lượt kiểm KHÔNG có pairKey (dữ liệu cũ) vẫn tính theo ngày', (() => {
   delete state.qcFinalRecords[1].pairKey;
-  const s = qcf.qcFinalProductStocks('2026-09-23').find(x => x.productId === 'sp1');
+  const s = qcf.qcFinalProductStocks('2026-10-01').find(x => x.productId === 'sp1');
   state.qcFinalRecords[1].pairKey = qcf.qcFinalPairKeyOf('2026-09-24');
-  return s && s.used === 200 && s.remain === 300;
+  return s && s.used === 200 && s.remain === 1299;
 })());
-// Danh sách thẻ hiển thị Tổng/Đã kiểm/Còn lại + chọn thẻ → tự điền CÒN LẠI
-setVal('qcf-workshop', 'x2'); setVal('qcf-kind', 'van'); setVal('qcf-date', '2026-09-23');
+// Danh sách thẻ hiển thị tồn lũy kế + chọn thẻ → tự điền CHỜ KIỂM
+setVal('qcf-workshop', 'x2'); setVal('qcf-kind', 'van'); setVal('qcf-date', '2026-10-01');
 qcf.syncQcFinalKindFields();
+qcf.setQcFinalSearchQ('');
 qcf.setQcFinalPickerOpen(true);
 const pickHtml = document.getElementById('qcf-product-list').innerHTML;
 check('DROPDOWN NỔI: mở → node PORTAL ra `#qc-detail-overlay` (lớp fixed phủ màn hình — không rơi đáy trang)',
@@ -311,13 +322,13 @@ check('DROPDOWN NỔI: neo bằng INLINE STYLE — position:absolute + z-index:2
   /^\d+px$/.test(document.getElementById('qcf-picker').style.top) &&
   /^\d+px$/.test(document.getElementById('qcf-picker').style.left) &&
   /^\d+px$/.test(document.getElementById('qcf-picker').style.width));
-check('DANH SÁCH THẺ: mỗi thẻ 2 dòng — tên + "Tổng 500 · Đã kiểm 200 · Còn lại 300"',
-  pickHtml.includes('Tổng <strong>500</strong>') && pickHtml.includes('Đã kiểm 200') &&
-  pickHtml.includes('Còn lại 300'));
+check('DANH SÁCH THẺ: tồn chuyển kỳ hiển thị "Tổng 1499 · Đã kiểm 200 · Chờ kiểm 1299"',
+  pickHtml.includes('Tổng <strong>1.499</strong>') && pickHtml.includes('Đã kiểm 200') &&
+  pickHtml.includes('Đã xuất 0') && pickHtml.includes('Chờ kiểm 1.299'));
 const pickEvt = { target: { closest: (sel) => (sel === '[data-qcf-product]' ? { getAttribute: () => 'sp1' } : null) } };
 qcf.onQcFinalListClick(pickEvt);
-check('CHỌN THẺ: ô Đầu vào kiểm tự điền số CÒN LẠI (300 — không phải tổng 500)',
-  document.getElementById('qcf-input-qty').value === '300');
+check('CHỌN THẺ: ô Đầu vào kiểm tự điền số CHỜ KIỂM (1299 — không phải tổng 1499)',
+  document.getElementById('qcf-input-qty').value === '1299');
 qcf.resetQcFinalForm();
 check('DROPDOWN NỔI: đóng → node TRỞ VỀ ô Đầu vào kiểm (không còn trong overlay)',
   document.getElementById('qcf-picker').parentElement !== document.getElementById('qc-detail-overlay'));
@@ -440,6 +451,7 @@ state.pressRecords = [
 ];
 setVal('qcf-kind', 'van'); setVal('qcf-workshop', 'x2'); setVal('qcf-date', '2026-09-23');
 qcf.syncQcFinalKindFields();
+qcf.setQcFinalSearchQ('');
 check('VÁN THÔ BTP: tồn gộp theo cỡ — chỉ còn 1220×2440×9 (Tổng 50) · LOẠI 640×14×12 + 1200×18×15 theo THỂ TÍCH', (() => {
   const rows = qcf.qcFinalVanBtpStocks('2026-09-23');
   const van = rows.find(x => x.sizeKey === '1220×2440×9');
@@ -453,18 +465,22 @@ check('THÀNH PHẨM 2 TUẦN: chỉ còn sp ĐVT Tấm (1220x2440x9 = 40) — l
   const rows = qcf.qcFinalProducts2Weeks('2026-09-23');
   return rows.length === 1 && rows[0].productId === 'r-van' && rows[0].qty === 40;
 })());
+setVal('qcf-date', '2026-09-24');
+qcf.syncQcFinalKindFields();
+qcf.setQcFinalSearchQ('');
 qcf.setQcFinalPickerOpen(true);
 const vanListHtml = document.getElementById('qcf-product-list').innerHTML;
 check('DANH SÁCH KIỂM VÁN: 2 nhóm head (Ván thô BTP · Thành phẩm Ép Ván) + thẻ data-qcf-vt',
-  vanListHtml.includes('Ván thô BTP —') && vanListHtml.includes('Thành phẩm Ép Ván —') &&
+  vanListHtml.includes('Ván thô BTP chưa kiểm đến') && vanListHtml.includes('Thành phẩm Ép Ván chưa kiểm đến') &&
   vanListHtml.includes('data-qcf-vt="1220×2440×9"') && vanListHtml.includes('data-qcf-product="r-van"'));
 check('DANH SÁCH KIỂM VÁN: KHÔNG còn sót thanh — 640×14×12 · 1200×18×15 (BTP) và sp ĐVT Thanh',
   !vanListHtml.includes('640 × 14 × 12') && !vanListHtml.includes('1200 × 18 × 15') &&
   !vanListHtml.includes('data-qcf-product="r-thanh"'));
-check('THẺ VÁN THÔ BTP: 2 dòng — "Ván thô 1220 × 2440 × 9 mm" + Tổng 50 · Đã kiểm 0 · Còn lại 50',
+check('THẺ VÁN THÔ BTP: 2 dòng — "Ván thô 1220 × 2440 × 9 mm" + Tổng 50 · Đã kiểm 0 · Chờ kiểm 50',
   vanListHtml.includes('Ván thô 1220 × 2440 × 9 mm') &&
   vanListHtml.includes('Tổng <strong>50</strong>') &&
-  vanListHtml.includes('Đã kiểm 0') && vanListHtml.includes('Còn lại 50'));
+  vanListHtml.includes('Đã kiểm 0') && vanListHtml.includes('Chờ kiểm 50'));
+setVal('qcf-date', '2026-09-23');
 qcf.onQcFinalListClick({ target: { closest: sel => sel === '[data-qcf-vt]' ? { getAttribute: () => '1220×2440×9' } : null } });
 check('CHỌN THẺ VÁN THÔ: tự điền CÒN LẠI (50) + nhãn nút đổi thành tên ván thô',
   document.getElementById('qcf-input-qty').value === '50' &&
@@ -493,6 +509,13 @@ qcf.deleteQcFinalRecord(qcBtp.id);
 check('XÓA LƯỢT BTP: không còn lượt nào + tồn trả lại 50',
   state.qcFinalRecords.length === 0 &&
   (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220×2440×9') || {}).remain === 50);
+state.pressRecords.push({
+  id: 'pb-old', date: '2026-09-15', week: '2026-W38', year: 2026,
+  productId: '', productName: '', finishedQty: 0, sticks: [],
+  vanTho: [{ vtDim: '1220×2440×9', vtQty: 30 }]
+});
+check('VÁN THÔ BTP: tồn chưa kiểm tuần 38 vẫn chuyển sang ngày kiểm tuần 39',
+  (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220×2440×9') || {}).remain === 80);
 state.pressRecords = []; state.materialRates = []; state.qcFinalRecords = [];
 
 // ─── J. CẤU TRÚC (index.html · qc.js · events.js · 4 nơi · sw.js · css) ──
@@ -526,7 +549,7 @@ check('CẤU TRÚC (events.js): wire form · Loại kiểm · picker · sửa/x�
   evJs.includes('onQcFinalTableClick') && evJs.includes("safeOn('qcf-kind', 'change'") &&
   evJs.includes('openQcFinalRateModal') && evJs.includes('onQcFinalRateRowClick') &&
   evJs.includes('qcFinalMaybeClosePicker'));
-check('CẤU TRÚC (js/qc-final.js): tồn kiểm theo cặp tuần (pairKey) + đơn vị theo Loại kiểm + tồn ván thô BTP',
+check('CẤU TRÚC (js/qc-final.js): tồn chờ QC lũy kế theo ngày (pairKey báo cáo) + đơn vị theo Loại kiểm + tồn ván thô BTP',
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('qcFinalProductStocks') &&
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('qcFinalPairKeyOf') &&
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('syncQcFinalKindFields') &&
@@ -539,8 +562,8 @@ check('CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · histo
   stoJs.includes('restoreQcFinal') && stoJs.includes('qcFinalRecords') &&
   clJs.includes('qcFinalRecords') && clJs.includes('qcFinalRates') &&
   hiJs.includes('qcFinalRecords') && mnJs.includes('loadQcFinal'));
-check('CẤU TRÚC (sw.js): CACHE_NAME v340 + js/qc-final.js vào APP_SHELL',
-  /nha-may-ngoc-son-v340/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
+check('CẤU TRÚC (sw.js): CACHE_NAME v349 + js/qc-final.js vào APP_SHELL',
+  /nha-may-ngoc-son-v349/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
 check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)',
   cssHtml.includes('.qcf-picker') && cssHtml.includes('.qcf-row-main') && cssHtml.includes('.qcf-ws-chip') &&
   cssHtml.includes('.qcf-kind-chip') && cssHtml.includes('.qcf-product-meta') &&

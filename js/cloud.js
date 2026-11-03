@@ -10,6 +10,7 @@ import { areaLabel, canArea, canEditAnything, canEditRate, canEditTab, canPayApp
 import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { STORAGE_KEY_HR_WORKER_EVALUATIONS } from './state.js';
 import { STORAGE_KEY_MECH_WORK_PLANS } from './state.js';
+import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS } from './state.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
@@ -785,7 +786,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
     // XEM CÔNG KHAI: lắng nghe dữ liệu ngay cả khi CHƯA đăng nhập
     const initialSync = setupFirestoreSync();
-    // Listener tự nhận dữ liệu; chỉ đọc mục lục khi người dùng quay lại tab.
+    // Listener tự nhận dữ liệu realtime; không chờ cloud trước khi giao diện cục bộ hoạt động.
     scheduleSyncWatch();
     wireSyncBadgeListeners();
     updateSyncBadge();
@@ -1329,6 +1330,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       sysSettings: state.sysSettings || {},               // CÀI ĐẶT HỆ THỐNG (cờ + quyền vùng + nhật ký)
       pressRecords: state.pressRecords,
       pressNotes: state.pressNotes || [],
+      pressInventoryAdjustments: state.pressInventoryAdjustments || [],
       hrEmployees: state.hrEmployees || [],
       hrLeaves: state.hrLeaves || [],
       hrRecruitment: state.hrRecruitment || [],
@@ -1451,6 +1453,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       materialPlan: obj.materialPlan || {},
       planningItems: obj.planningItems || [],
       pressNotes: obj.pressNotes || [],
+      pressInventoryAdjustments: obj.pressInventoryAdjustments || [],
       planningForecast: obj.planningForecast || {}, planningStock: obj.planningStock || {},
       qcExports: obj.qcExports || [],
       mechWorkPlans: obj.mechWorkPlans || [],
@@ -1919,6 +1922,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const clean = (colKey, arr) => applyTombstonesToRecordList(colKey, arr, changedTomb);
     if (remote.batches) state.batches = m(clean('batches', state.batches), clean('batches', remote.batches));
     if (remote.pressRecords) state.pressRecords = m(clean('pressRecords', state.pressRecords), clean('pressRecords', remote.pressRecords));
+    if (remote.pressInventoryAdjustments) {
+      state.pressInventoryAdjustments = m(
+        clean('pressInventoryAdjustments', state.pressInventoryAdjustments || []),
+        clean('pressInventoryAdjustments', remote.pressInventoryAdjustments)
+      );
+    }
     if (remote.materialRecords) {
       const prevRecs = state.materialRecords; // thumb cục bộ — lấy lại sau khi gộp
       state.materialRecords = clean('materialRecords', state.materialRecords);
@@ -2134,6 +2143,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS, JSON.stringify(state.pressInventoryAdjustments || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_MECH_WORK_PLANS, JSON.stringify(state.mechWorkPlans || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_QC_KILN_HUMIDITY, JSON.stringify(state.qcKilnReadings || [])); } catch (e) {}
@@ -2283,6 +2293,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     batches: 'Lô nan (Than Hóa + Sấy)',
     pressRecords: 'Lượt Ép Ván',
     pressNotes: 'Ghi chú giải trình Ép Ván',
+    pressInventoryAdjustments: 'Điều chỉnh tồn Ép Ván',
     materialRecords: 'Nhập Nguyên Liệu',
     materialRates: 'Định Mức Nguyên Vật Liệu',
     planningItems: 'Kế Hoạch Sản Xuất',
@@ -2471,7 +2482,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
 
   // ─── ĐỒNG BỘ NGAY: đọc mục lục mây 1 lần rồi xử lý như snapshot ──────
-  // Dùng khi quay lại tab hoặc nút "Đồng Bộ Ngay"; listener xử lý thay đổi realtime.
+  // Dùng cho nút "Đồng Bộ Ngay"; listener xử lý thay đổi realtime.
   async function syncNow(opts) {
     if (!isFirebaseOnline() || !fbDb) return false;
     if (fbApplying || fbSyncing) { fbPendingPull = true; return false; }
@@ -2524,21 +2535,19 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     fbPendingPull = false;
     setTimeout(() => { try { syncNow({ force: true }); } catch (e) { /* bỏ qua */ } }, 300);
   }
-  // Listener tự nhận thay đổi realtime; chỉ đọc mục lục khi người dùng quay lại tab.
+  // Listener realtime tự cập nhật khi tab hoạt động lại; focus chỉ khôi phục listener nếu bị ngắt.
   function scheduleSyncWatch() {
     if (fbSyncWired) return;
     fbSyncWired = true;
-    const kick = () => {
-      if (!fbUnsubDoc) setupFirestoreSync();
-      if (!fbHasServerSnapshot) return;
-      try { syncNow(); } catch (e) { /* không phá app */ }
+    const ensureListener = () => {
+      if (!fbUnsubDoc && isFirebaseOnline()) setupFirestoreSync();
     };
-    try { window.addEventListener('focus', kick); } catch (e) {}
+    try { window.addEventListener('focus', ensureListener); } catch (e) {}
     try {
       window.addEventListener('online', () => {
         fbNetState = 'unknown';
         updateSyncBadge();
-        if (!fbUnsubDoc) setupFirestoreSync();
+        ensureListener();
       });
       window.addEventListener('offline', () => {
         fbNetState = 'dead';
@@ -2549,7 +2558,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     } catch (e) {}
     try {
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') kick();
+        if (document.visibilityState === 'visible') ensureListener();
       });
     } catch (e) {}
   }
@@ -2611,6 +2620,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       }
       if (data.pressRecords) state.pressRecords = clean('pressRecords', data.pressRecords);
       if (data.pressNotes) state.pressNotes = clean('pressNotes', data.pressNotes);
+      if (data.pressInventoryAdjustments) {
+        state.pressInventoryAdjustments = clean('pressInventoryAdjustments', data.pressInventoryAdjustments);
+      }
       // ── NHẬT KÝ XƯỞNG 2 + DANH MỤC NHÀ CUNG (tab Công Đoạn / Nguyên Liệu) ──
       // TRƯỚC ĐÂY THIẾU TOÀN BỘ NHÓM NÀY → nút "Tải Từ Mây Về Máy" báo thành
       // công nhưng máy vẫn giữ dữ liệu/định mức CŨ (nguyên nhân chính của lỗi
@@ -2947,7 +2959,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const arrFilled = (v) => Array.isArray(v) && v.length > 0;
     if (arrFilled(data.batches) || arrFilled(data.customCharts) ||
         arrFilled(data.materialRates) || arrFilled(data.planningItems) ||
-        arrFilled(data.pressRecords) || arrFilled(data.materialRecords)) return true;
+        arrFilled(data.pressRecords) || arrFilled(data.pressInventoryAdjustments) ||
+        arrFilled(data.materialRecords)) return true;
     if (data.planningForecast && typeof data.planningForecast === 'object' && Object.keys(data.planningForecast).length > 0) return true;
     if (data.planningStock && typeof data.planningStock === 'object' && Object.keys(data.planningStock).length > 0) return true;
     if (data.materialPlan && typeof data.materialPlan === 'object' && Object.keys(data.materialPlan).length > 0) return true;
@@ -2961,6 +2974,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (Array.isArray(state.planningItems) && state.planningItems.length) return true;
     if (Array.isArray(state.customCharts) && state.customCharts.length) return true;
     if (Array.isArray(state.pressRecords) && state.pressRecords.length) return true;
+    if (Array.isArray(state.pressInventoryAdjustments) && state.pressInventoryAdjustments.length) return true;
     if (Array.isArray(state.materialRecords) && state.materialRecords.length) return true;
     if (state.planningForecast && typeof state.planningForecast === 'object' && Object.keys(state.planningForecast).length) return true;
     if (state.planningStock && typeof state.planningStock === 'object' && Object.keys(state.planningStock).length) return true;

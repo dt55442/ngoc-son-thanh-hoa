@@ -37,6 +37,7 @@ import { escapeHTML, showToast } from './utils.js';
     planningStock:     { tab: 'planning',  label: 'Tồn kho (Kế hoạch)',   get: () => state.planningStock },
     pressRecords:      { tab: 'kanban',    label: 'Lượt ép ván',          get: () => state.pressRecords },
     pressNotes:        { tab: 'kanban',    label: 'Ghi chú giải trình',   get: () => state.pressNotes },
+    pressInventoryAdjustments: { tab: 'planning', label: 'Điều chỉnh tồn Ép Ván', get: () => state.pressInventoryAdjustments },
     materialRecords:   { tab: 'materials', label: 'Nhật ký nguyên liệu',  get: () => state.materialRecords },
     materialPlan:      { tab: 'materials', label: 'Kế hoạch nguyên liệu', get: () => state.materialPlan },
     xuong2CutRecords:  { tab: 'kanban',    label: 'Cắt chọn Xưởng 2',     get: () => state.xuong2CutRecords },

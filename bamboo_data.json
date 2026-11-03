@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-11-02T14:22:02.378Z",
+  "savedAt": "2026-11-03T02:00:30.280Z",
   "batches": [
     {
       "notes": "",
@@ -26340,12 +26340,12 @@
       "duplicatedFrom": "plan-1789974642309-0"
     },
     {
-      "createdAt": "2026-10-05T03:19:56.941Z",
       "productId": "rate-1787619453372",
-      "week": "Tuần 41",
-      "id": "plan-1791170396941-1",
       "qty": 250,
       "year": 2026,
+      "id": "plan-1791170396941-1",
+      "createdAt": "2026-10-05T03:19:56.941Z",
+      "week": "Tuần 41",
       "duplicatedFrom": "plan-1789974642309-1"
     },
     {
@@ -74222,21 +74222,21 @@
       "month": "2026-10",
       "status": "da_duyet",
       "values": {
-        "boluong": 2500,
-        "bullig.gc": 600,
         "boong": 1639,
-        "say.s2.bullig": 130,
-        "baotinh": 712,
-        "say.s1.van": 135,
-        "say.s2.m3": 1.8,
-        "chonnan": 960,
-        "epvan": 0.05,
-        "say.s2.van": 80,
-        "baotho": 960,
+        "say.s1.m3": 1.8,
         "cut": 2000,
+        "epvan": 0.05,
+        "chonnan": 960,
+        "say.s2.bullig": 130,
+        "boluong": 2500,
+        "baotinh": 712,
         "say.s1.bullig": 163,
-        "bullig.ct": 1866,
-        "say.s1.m3": 1.8
+        "say.s2.m3": 1.8,
+        "say.s2.van": 80,
+        "say.s1.van": 135,
+        "bullig.gc": 600,
+        "baotho": 960,
+        "bullig.ct": 1866
       },
       "submittedBy": "dt55442@gmail.com",
       "submittedByName": "dt55442@gmail.com",

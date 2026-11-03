@@ -90,6 +90,37 @@ state.hrOvertimes = [];
 state.hrAssignments = [];
 function setField(id, v) { document.getElementById(id).value = v; }
 
+// ─── DUYỆT ĐƠN NGHỈ: BẢN TRẠNG THÁI MỚI THẮNG BẢN CHỜ CŨ ─────────
+state.hrLeaves = [{
+  id: 'leave-approve', employeeId: 'empA', type: 'Nghỉ phép',
+  from: '2024-06-10', to: '2024-06-10', days: 1, status: 'pending',
+  createdAt: '2024-06-01T00:00:00.000Z'
+}];
+const stalePendingLeave = { ...state.hrLeaves[0] };
+hr.approveLeave(stalePendingLeave.id);
+cloud.mergeRemoteIntoLocal({
+  hrLeaves: [{ ...stalePendingLeave, updatedAt: '2024-01-01T00:00:00.000Z' }]
+}, false, false, { mergeNewer: true });
+check('LEAVE: duyệt ghi updatedAt mới hơn và không bị bản chờ cũ đồng bộ đè',
+  state.hrLeaves[0].status === 'approved'
+  && !!state.hrLeaves[0].updatedAt
+  && cloud.recCompare(state.hrLeaves[0], stalePendingLeave) > 0);
+
+state.hrLeaves = [{
+  id: 'leave-reject', employeeId: 'empB', type: 'Ốm',
+  from: '2024-06-10', to: '2024-06-10', days: 1, status: 'pending',
+  createdAt: '2024-06-01T00:00:00.000Z'
+}];
+const stalePendingRejectedLeave = { ...state.hrLeaves[0] };
+hr.rejectLeave(stalePendingRejectedLeave.id);
+cloud.mergeRemoteIntoLocal({
+  hrLeaves: [{ ...stalePendingRejectedLeave, updatedAt: '2024-01-01T00:00:00.000Z' }]
+}, false, false, { mergeNewer: true });
+check('LEAVE: từ chối ghi updatedAt mới hơn và không bị bản chờ cũ đồng bộ đè',
+  state.hrLeaves[0].status === 'rejected'
+  && !!state.hrLeaves[0].updatedAt
+  && cloud.recCompare(state.hrLeaves[0], stalePendingRejectedLeave) > 0);
+
 // ─── A. EDITOR GỬI ĐĂNG KÝ (được phép) ──────────────────────────
 state.currentUser = { username: 'ed', role: 'editor', fullname: 'Kế Toán', editTabs: ['hr'], allowAdvanced: false };
 setField('ot-employee', 'Nguyễn Văn A'); setField('ot-employee-id', 'empA');
@@ -138,8 +169,12 @@ hr.deleteOvertime(ot.id);
 check('OT: editor xóa -> bị chặn (còn 1 đơn)', state.hrOvertimes.length === 1);
 // Manager duyệt được
 state.currentUser = { username: 'ql', role: 'manager', fullname: 'Ban Quản Lý', editTabs: [], allowAdvanced: true };
+const stalePendingOt = { ...ot, updatedAt: '2024-01-01T00:00:00.000Z' };
 hr.approveOvertime(ot.id);
-check('OT: manager duyệt -> approved + ghi người duyệt', ot.status === 'approved' && ot.approvedBy === 'Ban Quản Lý');
+cloud.mergeRemoteIntoLocal({ hrOvertimes: [stalePendingOt] }, false, false, { mergeNewer: true });
+check('OT: manager duyệt -> bản chờ cũ đồng bộ không ghi đè',
+  ot.status === 'approved' && ot.approvedBy === 'Ban Quản Lý'
+  && cloud.recCompare(ot, stalePendingOt) > 0);
 check('OT: submit và duyệt có người thực hiện trong nhật ký', ot.auditTrail.length === 2
   && ot.auditTrail[0].action === 'submitted' && ot.auditTrail[1].action === 'approved');
 
@@ -184,10 +219,13 @@ promptResult = '';
 hr.rejectOvertime(rejected.id);
 check('OT: từ chối không có lý do thì không đổi trạng thái', rejected.status === 'pending');
 promptResult = 'Không có lệnh sản xuất xác nhận';
+const staleRejectedOt = { ...rejected, updatedAt: '2024-01-01T00:00:00.000Z' };
 hr.rejectOvertime(rejected.id);
+cloud.mergeRemoteIntoLocal({ hrOvertimes: [staleRejectedOt] }, false, false, { mergeNewer: true });
 check('OT: từ chối bắt buộc lý do và lưu dấu người xử lý',
   rejected.status === 'rejected' && rejected.reviewReason === promptResult
-  && rejected.auditTrail.at(-1).action === 'rejected');
+  && rejected.auditTrail.at(-1).action === 'rejected'
+  && cloud.recCompare(rejected, staleRejectedOt) > 0);
 
 // ─── F. ĐỒNG BỘ MÂY ─────────────────────────────────────────────
 state.hrOvertimes = [{ id: 'ot-r', employeeId: 'empB', date: '2024-06-07', start: '17:30', end: '20:00', plannedMin: 150, reason: '', status: 'pending', createdAt: '' }];

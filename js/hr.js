@@ -1482,6 +1482,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     l.status = 'approved';
     l.approvedBy = state.currentUser?.fullname || state.currentUser?.email || 'Ban lãnh đạo';
     l.approvedAt = new Date().toISOString();
+    l.updatedAt = l.approvedAt;
     saveHrData();
     renderHrView();
     showToast(`Đã ĐỒNG Ý đơn nghỉ của ${hrEmpName(l.employeeId)} (${leaveDurationText(l)})`, 'success');
@@ -1497,6 +1498,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     l.status = 'rejected';
     l.approvedBy = state.currentUser?.fullname || state.currentUser?.email || 'Ban lãnh đạo';
     l.approvedAt = new Date().toISOString();
+    l.updatedAt = l.approvedAt;
     saveHrData();
     renderHrView();
     showToast(`Đã KHÔNG ĐỒNG Ý đơn nghỉ của ${hrEmpName(l.employeeId)}`, 'info');

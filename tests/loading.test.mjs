@@ -121,8 +121,8 @@ check('B11: boot yield giữa các nhóm khởi tạo để overlay có cơ hộ
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v349 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v349/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v351 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v351/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════

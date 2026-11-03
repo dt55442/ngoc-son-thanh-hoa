@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 240" role="img" aria-labelledby="title">
+  <title id="title">BAMBU</title>
+  <g fill="#f0fdf4" font-family="Arial, Helvetica, sans-serif" font-size="218" font-weight="800">
+    <text x="12" y="200">B</text>
+    <text x="313" y="200">M</text>
+    <text x="535" y="200">B</text>
+    <text x="713" y="200">U</text>
+  </g>
+  <path d="M230 20c-43 45-72 105-65 184 35-31 60-77 65-184Z" fill="#a3e635"/>
+  <path d="M230 20c51 43 78 102 63 184-34-33-58-80-63-184Z" fill="#6ee7b7"/>
+  <path d="M183 145h94a9 9 0 0 1 0 18h-94a9 9 0 0 1 0-18Z" fill="#f0fdf4"/>
+</svg>

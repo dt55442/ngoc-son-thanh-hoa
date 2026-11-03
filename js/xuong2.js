@@ -34,7 +34,7 @@ import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XU
 import { trackDeleted } from './tombstone.js';
 // CỜ TÍNH NĂNG (Cài Đặt Hệ Thống): incident-manual = cho phép nhập tay giờ sự cố
 import { applySysAreaDom, flagOn } from './sys-settings.js';
-import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, incidentApprovedHoursOf, incidentReportStatsOf, setupHScrollNav, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
+import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, incidentApprovedHoursOf, incidentReportStatsOf, setupHScrollNav, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
 import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY (khung mặc định thẻ Than Hóa + Sấy)
 // SỔ NHÓM KHỐI LƯỢNG (Giai đoạn 1 — 18/10/2026): bãi tập kết trộn lô nên
 // Xưởng 2 theo dõi theo phiếu cân chuyến → xe bốc → nhóm ống đạt chờ bổ.
@@ -12129,6 +12129,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   let khoLedgerOpen = true;        // bảng sổ đang mở?
   let khoStockOpen = true;         // bảng TỒN đang mở?
   let khoNotePicked = {};          // { batchId: số thanh xuất gắn lô (mặc định = tồn lô) }
+  let khoBulkEntry = false;
   const khoPickIds = new Set();    // phiếu đang tích chọn để duyệt hàng loạt
 
   // Tên / khóa người dùng đang đăng nhập (Người tạo · Người duyệt phiếu)
@@ -12443,6 +12444,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   function setKhoNoteType(t) {
     khoNoteType = (t === 'xu_ly') ? 'xu_ly' : 'xuat';
+    if (khoNoteType !== 'xuat') khoBulkEntry = false;
+    syncKhoBulkEntryUi();
     syncX2KhoNoteTypeRows();
     fillX2KhoSizeSuggestions();
     renderX2KhoCalc();
@@ -12454,6 +12457,85 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const btnText = document.getElementById('x2-kho-lots-btn-text');
     if (btnText) btnText.textContent = khoLotsOpen ? 'Đóng danh sách lô' : 'Chọn Lô Gắn Phiếu';
     if (khoLotsOpen) renderX2KhoLotsList();
+  }
+  function khoBulkRowHtml() {
+    return `<tr data-x2-kho-bulk-row>
+      <td><input type="number" min="1" step="1" data-x2-kho-bulk-dim="length" aria-label="Dài (mm)" placeholder="1250"></td>
+      <td><input type="number" min="0.1" step="0.1" data-x2-kho-bulk-dim="width" aria-label="Rộng (mm)" placeholder="22"></td>
+      <td><input type="number" min="0.1" step="0.1" data-x2-kho-bulk-dim="thickness" aria-label="Dày (mm)" placeholder="9"></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-x2-kho-bulk-qty="A" aria-label="Số lượng loại A"></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-x2-kho-bulk-qty="A1" aria-label="Số lượng loại A1"></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-x2-kho-bulk-qty="B" aria-label="Số lượng loại B"></td>
+      <td><button type="button" class="btn btn-outline btn-sm" data-x2-kho-bulk-remove aria-label="Xóa dòng">×</button></td>
+    </tr>`;
+  }
+  function resetKhoBulkRows() {
+    const body = document.getElementById('x2-kho-bulk-rows');
+    if (body) body.innerHTML = khoBulkRowHtml();
+  }
+  function syncKhoBulkEntryUi() {
+    const available = khoNoteTypeOf() === 'xuat';
+    const toggle = document.getElementById('x2-kho-bulk-toggle');
+    const panel = document.getElementById('x2-kho-bulk-entry');
+    if (toggle) {
+      toggle.hidden = !available;
+      toggle.setAttribute('aria-pressed', available && khoBulkEntry ? 'true' : 'false');
+      toggle.innerHTML = khoBulkEntry
+        ? '<i data-lucide="list"></i> Đóng nhập lô mới'
+        : '<i data-lucide="table-2"></i> Tạo lô mới theo bảng kê';
+    }
+    if (panel) panel.hidden = !available || !khoBulkEntry;
+    initLucide();
+  }
+  function setKhoBulkEntry(enabled) {
+    khoBulkEntry = khoNoteTypeOf() === 'xuat' && !!enabled;
+    syncKhoBulkEntryUi();
+    renderX2KhoCalc();
+  }
+  function toggleKhoBulkEntry() { setKhoBulkEntry(!khoBulkEntry); }
+  function khoBulkAddRow() {
+    const body = document.getElementById('x2-kho-bulk-rows');
+    if (body) body.insertAdjacentHTML('beforeend', khoBulkRowHtml());
+  }
+  function khoBulkOnClick(e) {
+    const button = e && e.target && e.target.closest ? e.target.closest('[data-x2-kho-bulk-remove]') : null;
+    if (!button) return;
+    const body = document.getElementById('x2-kho-bulk-rows');
+    const row = button.closest('[data-x2-kho-bulk-row]');
+    if (!body || !row) return;
+    const rows = body.querySelectorAll('[data-x2-kho-bulk-row]');
+    if (rows.length <= 1) row.querySelectorAll('input').forEach(input => { input.value = ''; });
+    else row.remove();
+    renderX2KhoCalc();
+  }
+  function readKhoBulkRows() {
+    const body = document.getElementById('x2-kho-bulk-rows');
+    const rows = body ? [...body.querySelectorAll('[data-x2-kho-bulk-row]')] : [];
+    const items = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const dim = key => String((row.querySelector(`[data-x2-kho-bulk-dim="${key}"]`) || {}).value || '').trim();
+      const dimValues = { length: dim('length'), width: dim('width'), thickness: dim('thickness') };
+      const dimNums = Object.fromEntries(Object.entries(dimValues).map(([k, v]) => [k, Number(v)]));
+      const quantities = {};
+      let hasQty = false;
+      for (const type of ['A', 'A1', 'B']) {
+        const raw = String((row.querySelector(`[data-x2-kho-bulk-qty="${type}"]`) || {}).value || '').trim();
+        if (!raw) { quantities[type] = 0; continue; }
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < 0) return { items: [], error: `Dòng ${i + 1}: số lượng phải là số nguyên không âm.` };
+        quantities[type] = n;
+        if (n > 0) hasQty = true;
+      }
+      if (!hasQty) continue;
+      if (Object.values(dimNums).some(n => !Number.isFinite(n) || n <= 0)) {
+        return { items: [], error: `Dòng ${i + 1}: nhập đủ Dài × Rộng × Dày lớn hơn 0.` };
+      }
+      for (const type of ['A', 'A1', 'B']) {
+        if (quantities[type] > 0) items.push({ ...dimNums, bambooType: type, quantity: quantities[type] });
+      }
+    }
+    return { items, error: '' };
   }
   // Số NGÀY đã ở từng công đoạn của 1 lô Kho (Sấy 1 · Sấy 2 · Kho) — cùng cách
   // tính với thẻ nguồn Than Hóa + Sấy (alStageDaysOf trong js/batch-modals.js).
@@ -12567,15 +12649,26 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const qtyEl = document.getElementById('x2-kho-qty');
     const qty = Math.floor(Number((qtyEl || {}).value) || 0);
     if (type === 'xuat') {
-      // PHIẾU XUẤT: không còn ô số lượng — tổng LUÔN = Σ thanh của các thẻ lô đã gắn
+      // PHIẾU XUẤT: tổng gồm thẻ lô đã chọn và lô mới đang nhập theo bảng kê.
       const picked = khoPickedTotal();
+      const bulk = khoBulkEntry ? readKhoBulkRows() : { items: [], error: '' };
+      const bulkQty = bulk.items.reduce((sum, item) => sum + item.quantity, 0);
+      const bulkM3 = bulk.items.reduce((sum, item) =>
+        sum + calculateVolume(item.length, item.width, item.thickness, item.quantity), 0);
+      const total = picked + bulkQty;
       let alloc = allocation || null;
       let text = '';
-      if (picked > 0) {
+      if (bulk.error) {
+        text = `<span class="kho-warn">${escapeHTML(bulk.error)}</span>`;
+      } else if (total > 0) {
         if (!alloc) alloc = khoFifoAllocation();
         const pickedLots = Object.keys(khoNotePicked).map(id => ({ batchId: id, qty: khoPickedQtyOf(id) }));
-        const m3 = khoNoteM3Of(pickedLots);
-        text = `Tổng phiếu (tự cộng từ ${Object.keys(khoNotePicked).length} thẻ lô): <strong>${fmtThanh(picked)}</strong> thanh · ${m3.toFixed(3)} m³`;
+        const m3 = khoNoteM3Of(pickedLots) + bulkM3;
+        const countLabel = [
+          picked > 0 ? `${Object.keys(khoNotePicked).length} lô tồn` : '',
+          bulkQty > 0 ? `${bulk.items.length} lô mới` : ''
+        ].filter(Boolean).join(' + ');
+        text = `Tổng phiếu (${countLabel}): <strong>${fmtThanh(total)}</strong> thanh · ${m3.toFixed(3)} m³`;
         // ① Chặn theo TỒN TỪNG LÔ đang gắn (dữ liệu thật) → đỏ, bấm Lưu sẽ bị từ chối
         const bad = khoLotsOverflow(pickedLots, alloc);
         if (bad.length) {
@@ -12585,7 +12678,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         // ② Lệch SỔ (phiếu bù cũ ghi hơn sức chứa) → CHỈ cảnh báo vàng, KHÔNG chặn
         else {
           const sum = khoStockSummary(alloc);
-          if (sum.mismatchThanh >= 1 || sum.honestThanh < picked) {
+          if (sum.mismatchThanh >= 1 || sum.honestThanh < total) {
             text += ` · <span class="kho-warn" style="color:#b45309;" title="Sổ kho đang lệch (phiếu bù cũ ghi nhiều hơn sức chứa, xem chip ⚠ ở thanh tồn) — chỉ là CẢNH BÁO, vẫn tạo được phiếu nếu các lô đã chọn còn tồn">⚠ Sổ kho lệch — không chặn phiếu gắn lô còn tồn</span>`;
           }
         }
@@ -13106,6 +13199,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function renderX2KhoCard() {
     renderX2KhoStockBar();
     renderX2KhoWipBar();
+    syncKhoBulkEntryUi();
     syncX2KhoNoteTypeRows();
     if (khoLotsOpen) renderX2KhoLotsList();
     fillX2KhoSizeSuggestions();
@@ -13127,6 +13221,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (dateEl) dateEl.value = today;
       khoNoteType = 'xuat';
     }
+    khoBulkEntry = false;
+    resetKhoBulkRows();
+    const bulkUseEl = document.getElementById('x2-kho-bulk-use');
+    if (bulkUseEl) bulkUseEl.value = 'Ván';
     const qtyEl = document.getElementById('x2-kho-qty');
     if (qtyEl) { qtyEl.value = ''; qtyEl.classList.remove('kho-qty-bad'); }
     const sizeEl = document.getElementById('x2-kho-size');
@@ -13139,6 +13237,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     khoNoteEditId = null;
     if (khoLotsOpen) khoToggleLotsPanel(false);
     syncX2KhoNoteTypeRows();
+    syncKhoBulkEntryUi();
     renderX2KhoCalc();
   }
   // Sửa phiếu — CHỈ phiếu 'cho_duyet' (phiếu đã duyệt đã trừ tồn: xóa rồi tạo lại)
@@ -13151,7 +13250,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     // KHOÁ MỀM 60 giây: máy khác thấy "🟡 … đang sửa" và biết sẽ bị ghi đè nếu lưu sau
     if (!claimEditLock(n)) return;
     khoNoteEditId = id;
+    khoBulkEntry = false;
+    resetKhoBulkRows();
+    syncKhoBulkEntryUi();
     khoNoteType = n.type === 'xuat' ? 'xuat' : 'xu_ly';
+    syncKhoBulkEntryUi();
     const dateEl = document.getElementById('x2-kho-date');
     if (dateEl) dateEl.value = n.date || '';
     const purposeEl = document.getElementById('x2-kho-purpose');
@@ -13197,10 +13300,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!dateVal) { showToast('Chọn NGÀY phiếu!', 'error'); return; }
     const now = new Date().toISOString();
     let data;
+    let bulkItems = [];
     if (type === 'xuat') {
       // ── PHIẾU XUẤT: KHÔNG có ô số lượng — tổng = Σ số thanh của các thẻ lô đã gắn ──
       const purpose = khoNormPurpose((document.getElementById('x2-kho-purpose') || {}).value);
       const purposeNote = ((document.getElementById('x2-kho-purpose-note') || {}).value || '').trim();
+      const bulk = khoBulkEntry ? readKhoBulkRows() : { items: [], error: '' };
+      if (bulk.error) { showToast(bulk.error, 'error'); return; }
+      bulkItems = bulk.items;
       // Snapshot VỊ TRÍ từng lô lúc tạo/sửa (l.spec loc) để sổ xuất kiểm chứng
       // được lô đang nằm đâu — dữ liệu cũ không có lịch sử vị trí nên fallback
       // vị trí hiện tại khi vẽ sổ (js/utils.js khoLedgerEvents).
@@ -13209,7 +13316,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         return { batchId: id, qty: khoPickedQtyOf(id), loc: (b && b.location) || '' };
       });
       const qty = lots.reduce((s, l) => s + l.qty, 0);
-      if (!lots.length || qty <= 0) { showToast('Chọn ít nhất 1 THẺ LÔ để gắn phiếu — tổng phiếu tự cộng từ số thanh của các thẻ!', 'error'); return; }
+      if ((!lots.length || qty <= 0) && !bulkItems.length) {
+        showToast('Chọn ít nhất 1 thẻ lô hoặc nhập số lượng lô mới theo bảng kê.', 'error');
+        return;
+      }
       // ── CHẶN THEO TỒN TỪNG LÔ (không dùng tổng kho — sổ có thể lệch do phiếu bù cũ) ──
       // Mỗi lô không được xuất quá phần CÒN LẠI của chính nó; chạy CẢ khi sửa phiếu
       // (phiếu đang sửa chưa duyệt → chưa từng trừ FIFO → tồn lô vẫn là số đúng).
@@ -13241,6 +13351,36 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       data = { type: method === 'taiche' ? 'taiche' : 'tieuhuy', source, method, sizeKey, qty, m3: 0, lots: [] };
     }
     pushUndo(isEdit ? 'Sửa phiếu kho' : 'Thêm phiếu kho');
+    if (type === 'xuat' && bulkItems.length) {
+      if (!state.batches) state.batches = [];
+      const useFor = (document.getElementById('x2-kho-bulk-use') || {}).value || 'Ván';
+      const newLots = bulkItems.map(item => {
+        const id = `batch-${Date.now()}-bulk-${Math.random().toString(36).slice(2, 8)}`;
+        const batch = {
+          id,
+          code: generateBatchCodeYYMMDD(dateVal),
+          stage: 'kho',
+          date: dateVal,
+          week: getISOWeekString(dateVal),
+          length: item.length, width: item.width, thickness: item.thickness,
+          quantity: item.quantity,
+          volume: calculateVolume(item.length, item.width, item.thickness, item.quantity),
+          bambooType: item.bambooType,
+          useFor,
+          location: '',
+          khoDate: dateVal,
+          notes: note,
+          stageHistory: [{ stage: 'kho', date: dateVal }],
+          createdAt: now,
+          updatedAt: now
+        };
+        state.batches.unshift(batch);
+        return { batchId: id, qty: item.quantity, loc: '' };
+      });
+      data.lots = [...(data.lots || []), ...newLots];
+      data.qty = data.lots.reduce((sum, lot) => sum + (Number(lot.qty) || 0), 0);
+      data.m3 = khoNoteM3Of(data.lots);
+    }
     if (isEdit) {
       const n = (state.khoNotes || []).find(x => x && x.id === khoNoteEditId);
       // Lưu xong → NHẢ khoá mềm để máy khác sửa tiếp (khoá chỉ để báo "đang sửa")
@@ -13254,9 +13394,22 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       }, data, { updatedAt: now })];
     }
     saveKhoNotes();
+    if (type === 'xuat' && bulkItems.length) {
+      storageModule().then(m => {
+        if (!m || typeof m.saveData !== 'function') {
+          showToast('Phiếu đã lưu nhưng không thể lưu các lô mới vào bộ nhớ dữ liệu. Vui lòng kiểm tra và tải lại.', 'error');
+          return;
+        }
+        return m.saveData();
+      }).catch(() => {
+        showToast('Phiếu đã lưu nhưng không lưu được các lô mới vào bộ nhớ dữ liệu.', 'error');
+      });
+    }
     resetX2KhoNoteForm(true); // giữ ngày + loại phiếu để nhập phiếu kế tiếp
     renderAll();
-    showToast(isEdit ? 'Đã cập nhật phiếu kho!' : 'Đã gửi phiếu kho — chờ Ban lãnh đạo duyệt!', 'success');
+    showToast(type === 'xuat' && bulkItems.length
+      ? `Đã tạo ${bulkItems.length} lô mới ở Kho và ${isEdit ? 'cập nhật' : 'gửi'} phiếu xuất — chờ Ban lãnh đạo duyệt!`
+      : (isEdit ? 'Đã cập nhật phiếu kho!' : 'Đã gửi phiếu kho — chờ Ban lãnh đạo duyệt!'), 'success');
   }
   // MỞ LẠI phiếu đã duyệt về CHỜ DUYỆT (kiểu A — chỉ Admin/Ban Quản Lý):
   // tồn lô TỰ HỒI ngay (phiếu chờ không trừ FIFO) → sửa thêm/bớt lô ở form → duyệt lại.
@@ -16414,6 +16567,9 @@ export {
   khoToggleLotsPanel,
   khoOnLotsPanelClick,
   khoOnLotsQtyInput,
+  khoBulkAddRow,
+  khoBulkOnClick,
+  toggleKhoBulkEntry,
   khoSetLotsQuery,
   khoSetLotsQtyQuery,
   khoPickLot,

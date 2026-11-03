@@ -1874,7 +1874,7 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
 
   // ─── JSON BACKUP / RESTORE ────────────────────────────────────
   function exportToJSON() {
-    const filename = `Backup_BambooTracker_${new Date().toISOString().split('T')[0]}.json`;
+    const filename = `BAMBU_Backup_${new Date().toISOString().split('T')[0]}.json`;
     const jsonStr  = JSON.stringify(state.batches, null, 2);
     downloadOrShareJSON(jsonStr, filename, 'Đã xuất tệp sao lưu JSON!');
   }
@@ -1890,8 +1890,8 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
       if (navigator.canShare({ files: [file] })) {
         navigator.share({
           files: [file],
-          title: 'Nhà máy Ngọc Sơn Thanh Hóa - Sao lưu dữ liệu',
-          text: 'Dữ liệu sao lưu từ ứng dụng Nhà máy Ngọc Sơn Thanh Hóa'
+          title: 'BAMBU - Sao lưu dữ liệu',
+          text: 'Dữ liệu sao lưu từ ứng dụng BAMBU'
         }).then(() => {
           showToast(successMessage, 'success');
         }).catch((err) => {

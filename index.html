@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Nhà máy Ngọc Sơn Thanh Hóa - Quản Lý & Theo Dõi Sản Xuất</title>
+  <title>BAMBU - Quản lý &amp; Theo dõi Sản Xuất</title>
 
   <!-- PWA Manifest & Meta -->
   <link rel="manifest" href="manifest.json">
@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Ngọc Sơn">
+  <meta name="apple-mobile-web-app-title" content="BAMBU">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -94,13 +94,7 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand-logo">
-        <div class="logo-icon">
-          <i data-lucide="factory"></i>
-        </div>
-        <div class="logo-text">
-          <h1>Nhà máy<br class="brand-br"> Ngọc Sơn</h1>
-          <span class="sub-title">Thanh Hóa</span>
-        </div>
+        <img class="bambu-wordmark" src="icons/bambu-wordmark.svg" alt="BAMBU">
       </div>
 
       <!-- Navigation Tabs (Desktop & Tablet) — Dashboard là màn hình mặc định -->
@@ -1553,6 +1547,37 @@
                    2 Ô TÌM KẾT HỢP điều kiện VÀ: ① chữ (mã/vị trí/k.thước) ② SỐ LƯỢNG -->
               <div class="form-group col-span-full" id="x2-kho-lots-group">
                 <label>Gắn Lô <span class="required">*</span> — tổng phiếu tự cộng từ các thẻ lô</label>
+                <div class="bulk-lot-entry-head">
+                  <span>Có thể chọn lô đang tồn hoặc nhập các lô mới theo bảng kê.</span>
+                  <button type="button" class="btn btn-outline btn-sm" id="x2-kho-bulk-toggle" aria-pressed="false"><i data-lucide="table-2"></i> Tạo lô mới theo bảng kê</button>
+                </div>
+                <div class="bulk-lot-entry" id="x2-kho-bulk-entry" hidden>
+                  <div class="bulk-lot-entry-head">
+                    <span>Mỗi dòng kích thước có thể có số lượng ở nhiều loại. Các lô mới vào Kho, chưa gán vị trí, và được gắn vào phiếu này.</span>
+                    <button type="button" class="btn btn-outline btn-sm" id="x2-kho-bulk-add-row"><i data-lucide="plus"></i> Thêm dòng</button>
+                  </div>
+                  <div class="bulk-lot-grid-scroll">
+                    <table class="bulk-lot-grid">
+                      <thead><tr><th>Dài (mm)</th><th>Rộng</th><th>Dày</th><th>A</th><th>A1</th><th>B</th><th></th></tr></thead>
+                      <tbody id="x2-kho-bulk-rows">
+                        <tr data-x2-kho-bulk-row>
+                          <td><input type="number" min="1" step="1" data-x2-kho-bulk-dim="length" aria-label="Dài (mm)" placeholder="1250"></td>
+                          <td><input type="number" min="0.1" step="0.1" data-x2-kho-bulk-dim="width" aria-label="Rộng (mm)" placeholder="22"></td>
+                          <td><input type="number" min="0.1" step="0.1" data-x2-kho-bulk-dim="thickness" aria-label="Dày (mm)" placeholder="9"></td>
+                          <td><input type="number" min="0" step="1" inputmode="numeric" data-x2-kho-bulk-qty="A" aria-label="Số lượng loại A"></td>
+                          <td><input type="number" min="0" step="1" inputmode="numeric" data-x2-kho-bulk-qty="A1" aria-label="Số lượng loại A1"></td>
+                          <td><input type="number" min="0" step="1" inputmode="numeric" data-x2-kho-bulk-qty="B" aria-label="Số lượng loại B"></td>
+                          <td><button type="button" class="btn btn-outline btn-sm" data-x2-kho-bulk-remove aria-label="Xóa dòng">×</button></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <label class="bulk-lot-use-for" for="x2-kho-bulk-use">Dùng Cho các lô mới</label>
+                  <select id="x2-kho-bulk-use">
+                    <option value="Ván">Ván</option>
+                    <option value="Bullig">Bullig</option>
+                  </select>
+                </div>
                 <button type="button" class="btn btn-outline" id="x2-kho-lots-btn" data-perm="x2">
                   <i data-lucide="list"></i> <span id="x2-kho-lots-btn-text">Chọn Lô Gắn Phiếu</span>
                   <span class="al-picked-count" id="x2-kho-picked-count"></span>
@@ -6565,6 +6590,35 @@
             <i data-lucide="chevron-right" class="al-sum-chev" aria-hidden="true"></i>
           </button>
 
+          <div class="form-group col-span-full" id="al-bulk-toggle-wrap" hidden>
+            <button type="button" class="btn btn-outline" id="al-bulk-toggle" aria-pressed="false">
+              <i data-lucide="table-2"></i> Nhập nhanh nhiều lô Sấy 2
+            </button>
+          </div>
+          <div class="form-group col-span-full bulk-lot-entry" id="al-bulk-entry" hidden>
+            <div class="bulk-lot-entry-head">
+              <span>Nhập kích thước và số thanh theo loại. Mỗi ô số lượng lớn hơn 0 sẽ tạo một lô.</span>
+              <button type="button" class="btn btn-outline btn-sm" id="al-bulk-add-row"><i data-lucide="plus"></i> Thêm dòng</button>
+            </div>
+            <div class="bulk-lot-grid-scroll">
+              <table class="bulk-lot-grid">
+                <thead><tr><th>Dài (mm)</th><th>Rộng</th><th>Dày</th><th>A</th><th>A1</th><th>B</th><th></th></tr></thead>
+                <tbody id="al-bulk-rows">
+                  <tr data-al-bulk-row>
+                    <td><input type="number" min="1" step="1" data-al-bulk-dim="length" aria-label="Dài (mm)" placeholder="1250"></td>
+                    <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="width" aria-label="Rộng (mm)" placeholder="22"></td>
+                    <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="thickness" aria-label="Dày (mm)" placeholder="9"></td>
+                    <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A" aria-label="Số lượng loại A"></td>
+                    <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A1" aria-label="Số lượng loại A1"></td>
+                    <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="B" aria-label="Số lượng loại B"></td>
+                    <td><button type="button" class="btn btn-outline btn-sm" data-al-bulk-remove aria-label="Xóa dòng">×</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="bulk-lot-entry-note">Ngày vào Kho tự lấy theo ngày vào Sấy 2; hệ thống ghi lịch sử Kho → Sấy 2 và phiếu xuất Sấy 2 tự động. Vị trí Kho để trống nếu chưa biết.</div>
+          </div>
+
           <!-- KHỐI ③ — DÒNG TÓM TẮT "Vị Trí Sấy" — BẤM = MỞ TẤM TRƯỢT CHỌN VỊ TRÍ -->
           <button type="button" class="ck-sec al-sum-row col-span-full" data-ck-sec="3" id="al-loc-group"
             data-al-sheet="loc" aria-haspopup="dialog"
@@ -6954,10 +7008,7 @@
         <button type="button" class="modal-close-btn auth-close-btn" id="btn-close-login" aria-label="Đóng" title="Đóng">
           <i data-lucide="x"></i>
         </button>
-        <div class="logo-icon large">
-          <i data-lucide="factory"></i>
-        </div>
-        <h2>Nhà máy Ngọc Sơn Thanh Hóa</h2>
+        <img class="bambu-wordmark" src="icons/bambu-wordmark.svg" alt="BAMBU">
         <p>Đăng nhập hệ thống theo dõi sản xuất</p>
       </div>
 

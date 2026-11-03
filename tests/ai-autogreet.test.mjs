@@ -145,7 +145,7 @@ state.pressRecords.push({ id: 'p3', date: today, week: weekLabel, year: nowD.get
 ai.aiAutoGreet('press-view');
 check('có key + còn quota: 3 chấm "đang suy nghĩ" hiện', document.getElementById('ai-fab-bubble-thinking').classList.contains('show'));
 const sentPrompt = (() => { try { return JSON.parse(lastBody).contents[0].parts[0].text || ''; } catch (e) { return ''; } })();
-check('prompt Nan Bot: persona + tên "A" + số liệu tab Ép Ván', sentPrompt.includes('Nan Bot') && sentPrompt.includes('"A"') && sentPrompt.includes('SỐ LIỆU TAB Ép Ván'));
+check('prompt Nan Bot: BAMBU + persona + tên "A" + số liệu tab Ép Ván', sentPrompt.includes('Nan Bot') && sentPrompt.includes('BAMBU') && sentPrompt.includes('"A"') && sentPrompt.includes('SỐ LIỆU TAB Ép Ván'));
 resolveTalk();
 await new Promise((r2) => setTimeout(r2, 0));
 check('AI xong: câu Nan Bot thay câu offline (dòng 🤖)', document.getElementById('ai-fab-bubble-text').innerHTML.includes('Nan Bot') && document.getElementById('ai-fab-bubble-text').innerHTML.includes('10%'));

@@ -215,39 +215,10 @@ h1, h2, h3, h4, h5 {
   gap: 10px;
 }
 
-.logo-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--primary), #166534);
-  color: white;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(21, 128, 61, 0.3);
-}
-
-.logo-icon.large {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-lg);
-  margin: 0 auto 12px auto;
-}
-
-.logo-text h1 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-main);
-  line-height: 1.1;
-}
-
-.logo-text .sub-title {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
+.bambu-wordmark {
+  display: block;
+  width: 148px;
+  height: auto;
 }
 
 /* Nav Tabs */
@@ -1746,22 +1717,20 @@ h1, h2, h3, h4, h5 {
 /* LOGIN MODAL DESIGN */
 .login-modal-banner {
   text-align: center;
-  padding: 24px 20px 10px 20px;
-  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+  padding: 26px 20px 14px;
+  background: linear-gradient(145deg, #168a45 0%, #06472e 100%);
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
 }
 
-.login-modal-banner h2 {
-  font-size: 1.3rem;
-  color: var(--primary);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+.login-modal-banner .bambu-wordmark {
+  width: min(230px, 82%);
+  margin: 0 auto 12px;
 }
 
 .login-modal-banner p {
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: rgba(240, 253, 244, 0.82);
 }
 
 .login-form-body {
@@ -3299,9 +3268,7 @@ body:not(.is-manager):not(.is-admin) [data-manager-only] {
     flex-wrap: wrap;
     row-gap: 8px;
   }
-  .logo-icon { width: 34px; height: 34px; border-radius: var(--radius-sm); }
-  .logo-text h1 { font-size: 0.95rem; }
-  .logo-text .sub-title { display: none; }
+  .bambu-wordmark { width: 126px; }
   .header-actions { gap: 6px; flex-wrap: wrap; }
   .header-actions .btn { padding: 8px 10px; min-height: 38px; }
   .user-profile-pill { padding: 5px 8px; font-size: 0.78rem; max-width: 150px; }
@@ -3362,7 +3329,7 @@ body:not(.is-manager):not(.is-admin) [data-manager-only] {
 
 /* Màn hình rất hẹp (≤380px) */
 @media (max-width: 380px) {
-  .logo-text h1 { font-size: 0.85rem; }
+  .bambu-wordmark { width: 112px; }
 }
 
 /* ======================================================= */
@@ -12828,18 +12795,6 @@ body[data-fx="low"] .hr-dock-group { animation: none !important; }
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   HEADER MOBILE + MENU ⋮ CUỘN ĐƯỢC (19/10/2026)
-   · Tên nhà máy xuống 2 dòng cân đối ở ≤540px
-   · Menu ⋮: cuộn được mọi cỡ màn hình; điện thoại = bottom sheet
-   ═══════════════════════════════════════════════════════════════ */
-.brand-br { display: none; }
-
-@media (max-width: 540px) {
-  .brand-br { display: inline; }
-  .logo-text h1 { line-height: 1.12; }
-}
-
 /* ── Menu ⋮ cuộn được (desktop + tablet) ── */
 .dropdown-menu {
   max-height: calc(100dvh - 90px);
@@ -15764,3 +15719,52 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 #leadership-view .leadership-stage-row { padding-block: 2px; }
 #leadership-view .leadership-stage-meta { gap: 2px; }
 #leadership-view .leadership-main-stages { margin-top: 3px; padding-top: 2px; }
+/* Nhập nhiều lô từ bảng kê (Sấy 2 / phiếu xuất Kho). */
+.bulk-lot-entry[hidden] { display: none !important; }
+.bulk-lot-entry {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+.bulk-lot-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.bulk-lot-grid-scroll { overflow-x: auto; }
+.bulk-lot-grid {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+.bulk-lot-grid th,
+.bulk-lot-grid td {
+  padding: 4px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+}
+.bulk-lot-grid th { color: var(--text-muted); white-space: nowrap; }
+.bulk-lot-grid input {
+  width: 100%;
+  min-width: 54px;
+  padding: 7px 5px;
+  text-align: center;
+}
+.bulk-lot-grid td:last-child { width: 40px; }
+.bulk-lot-entry-note {
+  color: var(--text-muted);
+  font-size: 0.73rem;
+}
+.bulk-lot-use-for { font-size: 0.78rem; font-weight: 600; }
+#x2-kho-bulk-use { max-width: 220px; }
+@media (max-width: 600px) {
+  .bulk-lot-entry-head { align-items: flex-start; }
+  .bulk-lot-entry-head > span { flex: 1; }
+}

@@ -445,6 +445,41 @@ check('DÙNG CHUNG: 14 thẻ X2 + 8 thẻ X1 đủ vùng dữ liệu + nguồn x
       .includes("toggle('rate-table-collapsed'"));
 }
 
+// ─── F2. LẬP PHIẾU XUẤT KÈM NHIỀU LÔ MỚI ─────────────────────
+{
+  const previousBatches = state.batches;
+  const previousNotes = state.khoNotes;
+  state.batches = [];
+  state.khoNotes = [];
+  const date = '2026-10-24';
+  x2.resetX2KhoNoteForm(false);
+  x2.setKhoNoteType('xuat');
+  document.getElementById('x2-kho-date').value = date;
+  document.getElementById('x2-kho-purpose').value = 'baotinh';
+  const values = {
+    '[data-x2-kho-bulk-dim="length"]': { value: '1250' },
+    '[data-x2-kho-bulk-dim="width"]': { value: '22' },
+    '[data-x2-kho-bulk-dim="thickness"]': { value: '9' },
+    '[data-x2-kho-bulk-qty="A"]': { value: '1000' },
+    '[data-x2-kho-bulk-qty="A1"]': { value: '750' },
+    '[data-x2-kho-bulk-qty="B"]': { value: '' }
+  };
+  const row = { querySelector: (selector) => values[selector] || null };
+  document.getElementById('x2-kho-bulk-rows').querySelectorAll = (selector) =>
+    selector === '[data-x2-kho-bulk-row]' ? [row] : [];
+  x2.toggleKhoBulkEntry();
+  x2.handleKhoNoteSubmit({ preventDefault(){} });
+  const note = state.khoNotes.find(n => n.type === 'xuat' && n.status === 'cho_duyet');
+  const created = state.batches.slice();
+  check('PHIẾU XUẤT NHANH: tự tạo các lô A/A1 ở Kho và gắn đủ số lượng vào cùng phiếu chờ duyệt',
+    note && note.qty === 1750 && note.lots.length === 2 &&
+    created.length === 2 && created.every(b => b.stage === 'kho' && b.location === '' &&
+      b.stageHistory.length === 1 && b.stageHistory[0].stage === 'kho') &&
+    note.lots.every(l => created.some(b => b.id === l.batchId && b.quantity === l.qty)));
+  state.batches = previousBatches;
+  state.khoNotes = previousNotes;
+}
+
 // ─── G. CẤU TRÚC (index.html · js · sw.js · npm test) ───────────
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const jsState = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
@@ -506,7 +541,10 @@ check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xu�
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
 check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v349', /nha-may-ngoc-son-v349/.test(swJs));
+check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
+  idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
+  idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v351', /nha-may-ngoc-son-v351/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',
@@ -586,9 +624,9 @@ state.khoNotes.push({ id: 'dup-b', type: 'xuat', status: 'da_duyet', purpose: 'k
 const dupPlan = x2.khoReconcilePlan();
 check('RÀ SOÁT (D1): phát hiện phiếu hệ thống TRÙNG y hệt (giữ bản đầu, xóa bản sau)',
   dupPlan.dupIds.includes('dup-b') && !dupPlan.dupIds.includes('dup-a'));
-check('AUTO — CẤU TRÚC: form phiếu xuất KHÔNG còn lựa chọn "Sấy 2 (sấy lại)" + batch-modals gọi phiếu tự động (2 phiếu Sấy 2 · 2 phiếu Tóp)',
+check('AUTO — CẤU TRÚC: form phiếu xuất KHÔNG còn lựa chọn "Sấy 2 (sấy lại)" + batch-modals gọi phiếu tự động (3 luồng Sấy 2 · 2 luồng Tóp)',
   !idxHtml.includes('Sấy 2 (sấy lại)') &&
-  (fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').match(/addKhoSay2AutoNote\(/g) || []).length === 3 &&
+  (fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').match(/addKhoSay2AutoNote\(/g) || []).length === 4 &&
   (fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').match(/addKhoReworkAutoNote\(/g) || []).length === 2);
 
 // ─── D3. CẢNH BÁO: MISMATCH ẢO + D2 TRÙNG PHIẾU + CHỐT LỆCH (17/10/2026) ──

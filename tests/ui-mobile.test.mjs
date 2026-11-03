@@ -1,5 +1,5 @@
-// tests/ui-mobile.test.mjs — HEADER MOBILE + NÚT THU GỌN ICON + MENU ⋮ CUỘN ĐƯỢC
-// (19/10/2026): tên nhà máy xuống 2 dòng cân đối ≤540px · nút thu gọn Bảng bố
+// tests/ui-mobile.test.mjs — BAMBU BRANDING + HEADER MOBILE + MENU ⋮ CUỘN ĐƯỢC
+// (19/10/2026): wordmark gọn trên điện thoại · nút thu gọn Bảng bố
 // trí chỉ còn icon · menu ⋮ giữ đủ 20 chức năng nhưng có nhãn nhóm, cuộn được
 // (desktop = dropdown, điện thoại = bottom sheet nằm trên thanh nav dưới).
 'use strict';
@@ -10,6 +10,9 @@ const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const evSrc = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
 const stateSrc = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
 const swSrc = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+const manifest = JSON.parse(fs.readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+const storageSrc = fs.readFileSync(new URL('../js/storage.js', import.meta.url), 'utf8');
+const wordmark = fs.readFileSync(new URL('../icons/bambu-wordmark.svg', import.meta.url), 'utf8');
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -17,12 +20,27 @@ function check(name, cond) {
   else { fail++; console.error('FAIL ' + name); }
 }
 
-// ─── A. HEADER: TÊN NHÀ MÁY XUỐNG 2 DÒNG TRÊN ĐIỆN THOẠI ────────
-check('A1. index có thẻ ngắt dòng brand-br giữa "Nhà máy" và "Ngọc Sơn"',
-  /<h1>\s*Nhà máy\s*<br class="brand-br">\s*Ngọc Sơn\s*<\/h1>/.test(idx));
-check('A2. desktop: .brand-br ẩn (một dòng)', /\.brand-br\s*\{\s*display:\s*none;\s*\}/.test(css));
-check('A3. điện thoại ≤540px: .brand-br hiện + line-height cân đối',
-  /@media \(max-width: 540px\)\s*\{[\s\S]{0,260}?\.brand-br\s*\{\s*display:\s*inline;\s*\}[\s\S]{0,160}?\.logo-text h1\s*\{\s*line-height:\s*1\.12;\s*\}/.test(css));
+// ─── A. BAMBU WORDMARK + APP METADATA ────────────────────────────
+check('A1. header and login use the BAMBU wordmark asset',
+  (idx.match(/src="icons\/bambu-wordmark\.svg" alt="BAMBU"/g) || []).length === 2);
+check('A2. wordmark is sized for desktop and compact mobile headers',
+  /\.bambu-wordmark\s*\{\s*display:\s*block;\s*width:\s*148px;/.test(css) &&
+  /@media \(max-width: 540px\)[\s\S]*?\.bambu-wordmark\s*\{\s*width:\s*126px;\s*\}/.test(css) &&
+  /@media \(max-width: 380px\)[\s\S]*?\.bambu-wordmark\s*\{\s*width:\s*112px;\s*\}/.test(css));
+check('A3. browser and installed-app names show BAMBU',
+  /<title>BAMBU/.test(idx) && /apple-mobile-web-app-title" content="BAMBU"/.test(idx) &&
+  manifest.name.startsWith('BAMBU') && manifest.short_name === 'BAMBU');
+check('A4. wordmark SVG includes the leaf A and uses offline shell caching',
+  wordmark.includes('BAMBU') && wordmark.includes('#a3e635') && swSrc.includes("'./icons/bambu-wordmark.svg'"));
+check('A5. backup filename and share labels use BAMBU',
+  storageSrc.includes('BAMBU_Backup_') && storageSrc.includes('BAMBU - Sao lưu dữ liệu') &&
+  storageSrc.includes('từ ứng dụng BAMBU'));
+check('A6. all manifest PNG icons exist at their declared sizes', manifest.icons.every((entry) => {
+  const png = fs.readFileSync(new URL('../' + entry.src, import.meta.url));
+  const size = Number.parseInt(entry.sizes, 10);
+  return png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) &&
+    png.readUInt32BE(16) === size && png.readUInt32BE(20) === size;
+}));
 
 // ─── B. NÚT THU GỌN BẢNG BỐ TRÍ = CHỈ ICON ──────────────────────
 const boardBtn = (idx.match(/<button[^>]*id="btn-toggle-hr-board"[\s\S]*?<\/button>/) || [''])[0];
@@ -77,8 +95,8 @@ check('D5. tôn trọng giảm hiệu ứng + ẩn khi in',
 // ─── E. WIRING + PHIÊN BẢN ──────────────────────────────────────
 check('E1. events giữ menu mở khi bấm vùng trống/nhãn nhóm (chỉ item mới đóng)',
   /dropdown\.addEventListener\('click'[\s\S]{0,220}?closest\('\.dropdown-item'\)[\s\S]{0,80}?stopPropagation\(\)/.test(evSrc));
-check('E2. sw.js cache v349', swSrc.includes('nha-may-ngoc-son-v349'));
-check('E3. APP_VERSION v349', stateSrc.includes("APP_VERSION = 'v349'"));
+check('E2. sw.js cache v351', swSrc.includes('nha-may-ngoc-son-v351'));
+check('E3. APP_VERSION v351', stateSrc.includes("APP_VERSION = 'v351'"));
 
 console.log(`\nUI-MOBILE: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);

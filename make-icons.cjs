@@ -1,9 +1,9 @@
 /**
  * make-icons.cjs
- * Tạo lại 4 icon PWA cho "Nhà máy Ngọc Sơn Thanh Hóa":
- *   icon-192.png / icon-512.png            -> nền bo tròn (góc trong suốt), glyph nhà máy trắng
- *   icon-maskable-192.png / icon-maskable-512.png -> nền full vuông, glyph nằm trong vùng an toàn
- * Thiết kế: nhà máy trắng trên nền xanh đậm #14532d (theo theme màu của ứng dụng).
+ * Tạo lại 4 icon PWA cho BAMBU:
+ *   icon-192.png / icon-512.png            -> nền bo tròn (góc trong suốt), biểu tượng lá tre
+ *   icon-maskable-192.png / icon-maskable-512.png -> nền full vuông, biểu tượng nằm trong vùng an toàn
+ * Thiết kế: chữ A cách điệu từ hai lá tre trên nền xanh chuyển sắc theo logo BAMBU.
  * Thuần Node.js (zlib) - không cần thư viện ngoài. Chạy: node make-icons.cjs
  */
 const fs = require('fs');
@@ -54,17 +54,16 @@ function encodePNG(width, height, rgba) {
 }
 
 // ---------- Màu thương hiệu ----------
-const BG = [0x14, 0x53, 0x2d]; // #14532d - xanh lá đậm (theme_color của app)
-const FG = [255, 255, 255];    // glyph trắng
+const BG_TOP = [0x18, 0x9b, 0x4e];
+const BG_BOTTOM = [0x00, 0x48, 0x30];
+const LEAF_LEFT = [0xa3, 0xe6, 0x35];
+const LEAF_RIGHT = [0x6e, 0xe7, 0xb7];
+const FG = [0xf0, 0xfd, 0xf4];
 
-// ---------- Hình nhà máy (lưới 24x24, phong cách icon Lucide "factory") ----------
-// Tháp cao bên trái + 2 mái răng cưa + thân nhà
-const FACTORY = [[2, 4], [8, 4], [8, 13], [15, 8], [15, 13], [22, 8], [22, 22], [2, 22]];
-// Cửa sổ đục lỗ (vẽ đè màu nền) [x0, y0, x1, y1]
-const WINDOWS = [
-  [4.5, 17.0, 6.5, 19.0],
-  [10.5, 17.0, 12.5, 19.0],
-  [16.0, 17.0, 18.0, 19.0],
+// ---------- Chữ A cách điệu bằng hai lá tre (lưới 24x24) ----------
+const LEAVES = [
+  { poly: [[12, 1.8], [10.4, 4], [8.8, 7], [7.3, 10], [6.2, 13], [5.7, 16], [6, 19], [7.1, 22], [8.8, 19], [10.2, 16], [11.2, 12], [11.7, 8]], color: LEAF_LEFT },
+  { poly: [[12, 1.8], [13.6, 4], [15.2, 7], [16.7, 10], [17.8, 13], [18.3, 16], [18, 19], [16.9, 22], [15.2, 19], [13.8, 16], [12.8, 12], [12.3, 8]], color: LEAF_RIGHT },
 ];
 
 function inPoly(px, py, poly) {
@@ -92,24 +91,29 @@ function render(size, maskable) {
   const N = size * SS;
   const buf = Buffer.alloc(N * N * 4);
   // Tỷ lệ pixel trên 1 đơn vị lưới 24 (glyph rộng 20 đơn vị, cao 18 đơn vị)
-  const S = maskable ? N * 0.026 : (N * 0.62) / 20;
-  const x0 = N / 2 - 10 * S; // tâm glyph (12,13) khớp tâm canvas
-  const y0 = N / 2 - 9 * S;
+  const S = N * (maskable ? 0.036 : 0.04);
+  const x0 = N / 2 - 12 * S;
+  const y0 = N / 2 - 12 * S;
   const r = N * 0.22; // bo góc nền
   for (let py = 0; py < N; py++) {
     for (let px = 0; px < N; px++) {
       const ux = (px + 0.5 - x0) / S;
       const uy = (py + 0.5 - y0) / S;
+      const gradient = (px + py) / (2 * (N - 1));
+      const bg = BG_TOP.map((c, i) => Math.round(c + (BG_BOTTOM[i] - c) * gradient));
       let rgb = [0, 0, 0], alpha = 0;
       if (maskable || inRoundRect(px + 0.5, py + 0.5, N, r)) {
-        rgb = BG; alpha = 255;
+        rgb = bg; alpha = 255;
       }
-      if (inPoly(ux, uy, FACTORY)) {
-        rgb = FG; alpha = 255;
-        // Đục lỗ cửa sổ (vẽ đè màu nền lên glyph trắng)
-        for (const w of WINDOWS) {
-          if (ux >= w[0] && ux <= w[2] && uy >= w[1] && uy <= w[3]) { rgb = BG; alpha = 255; break; }
+      for (const leaf of LEAVES) {
+        if (inPoly(ux, uy, leaf.poly)) {
+          rgb = leaf.color;
+          alpha = 255;
         }
+      }
+      if (ux >= 8.1 && ux <= 15.9 && uy >= 13.1 && uy <= 15.1) {
+        rgb = FG;
+        alpha = 255;
       }
       const o = (py * N + px) * 4;
       buf[o] = rgb[0]; buf[o + 1] = rgb[1]; buf[o + 2] = rgb[2]; buf[o + 3] = alpha;
@@ -151,4 +155,4 @@ for (const [name, size, maskable] of targets) {
   fs.writeFileSync(path.join(iconDir, name), png);
   console.log(`Da tao icons/${name} (${size}x${size}, ${(png.length / 1024).toFixed(1)} KB)`);
 }
-console.log('Xong! Icon nha may tren nen xanh #14532d.');
+console.log('Xong! Icon BAMBU voi bieu tuong la tre tren nen xanh.');

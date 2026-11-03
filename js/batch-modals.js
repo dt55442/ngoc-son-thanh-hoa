@@ -638,6 +638,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   // Nguồn đang chọn (mảng id — CHỌN ĐƯỢC NHIỀU nguồn cùng lúc) + vị trí đang chọn
   let alPicked = [];
   let alLocation = '';
+  let alBulkMode = false;
   // ─── SỐ LƯỢNG TẠO LÔ đang nhập cho TỪNG THẺ NAN (Sấy 1) — 16/10/2026 ──
   // id thẻ nan → số thanh sẽ tạo lô. Mặc định = phần CÒN LẠI của thẻ; 1 lô sấy có
   // thể lấy 1 PHẦN (chia 1 thẻ thành nhiều lô — VD tổng 5.000 thanh chia 3 lô).
@@ -2031,6 +2032,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     form.reset();
     alPicked = [];
     alLocation = '';
+    alBulkMode = false;
+    resetAlBulkRows();
     const today = new Date().toISOString().split('T')[0];
     const dEl = document.getElementById('al-date');
     if (dEl) dEl.value = today;
@@ -2047,6 +2050,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   }
 
   function closeAddLotModal() {
+    alBulkMode = false;
+    syncAlBulkEntryUI();
     document.getElementById('modal-add-lot')?.classList.remove('show');
     alCloseSheet();     // đóng tấm trượt (nếu đang mở) — lần sau mở form lại sạch
     alClosePanels();
@@ -2055,6 +2060,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   // Đổi Công đoạn → nạp danh sách NGUỒN tương ứng (bỏ chọn nguồn của công đoạn cũ)
   function syncAddLotUI() {
     alPicked = [];
+    alBulkMode = false;
     alClearSourceQuery();
     alResetGridFilters();          // bộ lọc riêng của BẢNG NHẬP NHANH (ngày/tìm)
     alClosePanels();
@@ -2070,8 +2076,154 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     renderAlChargeOptions();      // Ô LẦN THAN HÓA theo đúng (Ngày + Công đoạn)
     syncAlShiftField();           // Ô CA (Giai đoạn 2): hiện khi Xưởng 2 để "Làm ca" + gợi ý ca
     syncAddLotSource();
+    syncAlBulkEntryUI();
     alRefreshSummary();           // 2 dòng tóm tắt + chân form dính
     syncAlEntryModeUi();          // CÁCH NHẬP (thẻ ⇄ bảng): bảng chỉ bật cho Sấy 1
+  }
+
+  function alBulkRowHtml() {
+    return `<tr data-al-bulk-row>
+      <td><input type="number" min="1" step="1" data-al-bulk-dim="length" aria-label="Dài (mm)" placeholder="1250"></td>
+      <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="width" aria-label="Rộng (mm)" placeholder="22"></td>
+      <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="thickness" aria-label="Dày (mm)" placeholder="9"></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A" aria-label="Số lượng loại A"></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A1" aria-label="Số lượng loại A1"></td>
+      <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="B" aria-label="Số lượng loại B"></td>
+      <td><button type="button" class="btn btn-outline btn-sm" data-al-bulk-remove aria-label="Xóa dòng">×</button></td>
+    </tr>`;
+  }
+  function resetAlBulkRows() {
+    const body = document.getElementById('al-bulk-rows');
+    if (body) body.innerHTML = alBulkRowHtml();
+  }
+  function syncAlBulkEntryUI() {
+    const show = alStageOf() === 'say2';
+    const wrap = document.getElementById('al-bulk-toggle-wrap');
+    const src = document.getElementById('al-src-group');
+    const entry = document.getElementById('al-bulk-entry');
+    const toggle = document.getElementById('al-bulk-toggle');
+    if (wrap) wrap.hidden = !show;
+    if (src) src.hidden = show && alBulkMode;
+    if (entry) entry.hidden = !show || !alBulkMode;
+    if (toggle) {
+      toggle.setAttribute('aria-pressed', alBulkMode ? 'true' : 'false');
+      toggle.innerHTML = alBulkMode
+        ? '<i data-lucide="list"></i> Quay lại chọn lô đang ở Kho'
+        : '<i data-lucide="table-2"></i> Nhập nhanh nhiều lô Sấy 2';
+    }
+    if (show && alBulkMode) alBulkOnInput();
+    initLucide();
+  }
+  function setAlBulkEntryMode(enabled) {
+    alBulkMode = alStageOf() === 'say2' && !!enabled;
+    syncAlBulkEntryUI();
+    if (!alBulkMode) alRefreshSummary();
+  }
+  function toggleAlBulkEntryMode() { setAlBulkEntryMode(!alBulkMode); }
+  function alBulkAddRow() {
+    const body = document.getElementById('al-bulk-rows');
+    if (!body) return;
+    body.insertAdjacentHTML('beforeend', alBulkRowHtml());
+  }
+  function alBulkOnClick(e) {
+    const button = e && e.target && e.target.closest ? e.target.closest('[data-al-bulk-remove]') : null;
+    if (!button) return;
+    const body = document.getElementById('al-bulk-rows');
+    const row = button.closest('[data-al-bulk-row]');
+    if (!body || !row) return;
+    const rows = body.querySelectorAll('[data-al-bulk-row]');
+    if (rows.length <= 1) {
+      row.querySelectorAll('input').forEach(input => { input.value = ''; });
+    } else {
+      row.remove();
+    }
+    alBulkOnInput();
+  }
+  function alBulkOnInput() {
+    const body = document.getElementById('al-bulk-rows');
+    const sum = document.getElementById('al-foot-sum');
+    if (!body || !sum || !alBulkMode) return;
+    let lots = 0, qty = 0;
+    body.querySelectorAll('[data-al-bulk-row]').forEach(row => {
+      row.querySelectorAll('[data-al-bulk-qty]').forEach(input => {
+        const n = Math.floor(Number(input.value) || 0);
+        if (n > 0) { lots++; qty += n; }
+      });
+    });
+    sum.textContent = `${lots} lô mới · ${qty.toLocaleString('vi-VN')} thanh · ${alCurrentLocation() || 'chưa chọn lò'}`;
+  }
+  function readAlBulkRows() {
+    const body = document.getElementById('al-bulk-rows');
+    const rows = body ? [...body.querySelectorAll('[data-al-bulk-row]')] : [];
+    const items = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const dim = key => String((row.querySelector(`[data-al-bulk-dim="${key}"]`) || {}).value || '').trim();
+      const dimValues = { length: dim('length'), width: dim('width'), thickness: dim('thickness') };
+      const dimNums = Object.fromEntries(Object.entries(dimValues).map(([k, v]) => [k, Number(v)]));
+      const quantities = {};
+      let hasQty = false;
+      for (const type of ['A', 'A1', 'B']) {
+        const raw = String((row.querySelector(`[data-al-bulk-qty="${type}"]`) || {}).value || '').trim();
+        if (!raw) { quantities[type] = 0; continue; }
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < 0) return { items: [], error: `Dòng ${i + 1}: số lượng phải là số nguyên không âm.` };
+        quantities[type] = n;
+        if (n > 0) hasQty = true;
+      }
+      if (!hasQty) continue;
+      if (Object.values(dimNums).some(n => !Number.isFinite(n) || n <= 0)) {
+        return { items: [], error: `Dòng ${i + 1}: nhập đủ Dài × Rộng × Dày lớn hơn 0.` };
+      }
+      for (const type of ['A', 'A1', 'B']) {
+        if (quantities[type] > 0) items.push({ ...dimNums, bambooType: type, quantity: quantities[type] });
+      }
+    }
+    return { items, error: '' };
+  }
+  function handleAlBulkSay2(dateVal, location, notes, chargeAt, shiftIdx) {
+    const parsed = readAlBulkRows();
+    if (parsed.error) { showToast(parsed.error, 'error'); return; }
+    if (!parsed.items.length) { showToast('Nhập ít nhất một số lượng loại A, A1 hoặc B.', 'error'); return; }
+    const nowISO = new Date().toISOString();
+    const useFor = alUseFor();
+    pushUndo(`Nhập nhanh ${parsed.items.length} lô Sấy 2`);
+    if (!state.batches) state.batches = [];
+    parsed.items.forEach(item => {
+      const id = `batch-${Date.now()}-bulk-${Math.random().toString(36).slice(2, 8)}`;
+      const batch = {
+        id,
+        code: generateBatchCodeYYMMDD(dateVal),
+        stage: 'kho',
+        date: dateVal,
+        week: getISOWeekString(dateVal),
+        length: item.length, width: item.width, thickness: item.thickness,
+        quantity: item.quantity,
+        volume: calculateVolume(item.length, item.width, item.thickness, item.quantity),
+        bambooType: item.bambooType,
+        useFor,
+        location: '',
+        khoDate: dateVal,
+        stageHistory: [{ stage: 'kho', date: dateVal }],
+        createdAt: nowISO,
+        updatedAt: nowISO
+      };
+      addKhoSay2AutoNote(batch, item.quantity, dateVal, 'bulk-entry');
+      batch.stage = 'say2';
+      batch.say2Date = dateVal;
+      batch.location = location;
+      batch.notes = notes;
+      batch.stageHistory.push({ stage: 'say2', date: dateVal });
+      batch.sayCharges = { say2: chargeAt };
+      batch.sayShift = sayShiftMapOf(null, 'say2', shiftIdx);
+      state.batches.unshift(batch);
+    });
+    alPicked = [];
+    saveKhoNotes();
+    saveData();
+    closeAddLotModal();
+    renderAll();
+    showToast(`Đã tạo ${parsed.items.length} lô Sấy 2 tại ${location} — ngày ${formatDateDDMMYY(dateVal)}!`, 'success');
   }
 
   // ── Ô CHỌN LẦN THAN HÓA (15/10/2026) — gộp lô vào LẦN ĐÃ CÓ ──
@@ -2184,6 +2336,11 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     const notes = ((document.getElementById('al-notes') || {}).value || '').trim();
     if (!dateVal) { showToast('Vui lòng chọn Ngày!', 'error'); return; }
     if (!location) { showToast('Vui lòng chọn Vị Trí!', 'error'); return; }
+    if (stage === 'say2' && alBulkMode) {
+      const chargeAt = alChargeMarkOf() || Date.now();
+      handleAlBulkSay2(dateVal, location, notes, chargeAt, alShiftIdxValue());
+      return;
+    }
     if (!alPicked.length) { showToast('Chưa chọn nguồn nào — bấm nút "Chọn Lô Nan" để chọn thẻ/lô nguồn!', 'error'); return; }
     const nowISO = new Date().toISOString();
     // MÃ MẺ: nếu chọn 1 LẦN THAN HÓA ĐÃ CÓ ở ô #al-charge → tái dùng mã mẻ đó
@@ -2988,6 +3145,10 @@ export {
   availableSay1Cards,
   batchesAtPosition,
   closeAddLotModal,
+  alBulkAddRow,
+  alBulkOnClick,
+  alBulkOnInput,
+  toggleAlBulkEntryMode,
   closeBatchFormModal,
   closeTransferKhoModal,
   ckBulkPick,

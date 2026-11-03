@@ -1,6 +1,6 @@
-# 📱 HƯỚNG DẪN CÀI ĐẶT & SỬ DỤNG NHÀ MÁY NGỌC SƠN THANH HÓA TRÊN ĐIỆN THOẠI
+# 📱 HƯỚNG DẪN CÀI ĐẶT & SỬ DỤNG BAMBU TRÊN ĐIỆN THOẠI
 
-Ứng dụng **Nhà máy Ngọc Sơn Thanh Hóa** là **PWA (Progressive Web App)**. Một số chức năng lưu cục bộ có thể dùng khi offline; đồng bộ Firebase và các chức năng trực tuyến cần kết nối mạng.
+Ứng dụng **BAMBU** là **PWA (Progressive Web App)**. Một số chức năng lưu cục bộ có thể dùng khi offline; đồng bộ Firebase và các chức năng trực tuyến cần kết nối mạng.
 
 ---
 
@@ -167,7 +167,7 @@ Rồi mở `http://localhost:8080`
 ## 📁 CẤU TRÚC FILE DỰ ÁN
 
 ```
-📁 Nhà máy Ngọc Sơn Thanh Hóa/
+📁 BAMBU/
 ├── index.html          ← Ứng dụng chính (nạp <script type="module" src="js/main.js">)
 ├── styles.css          ← Style
 ├── js/                 ← ⭐ Logic ứng dụng (ES Modules)
@@ -198,7 +198,7 @@ Rồi mở `http://localhost:8080`
 ├── fonts/              ← Font offline (Inter, JetBrains Mono)
 ├── icons/              ← Icon ứng (192, 512, maskable)
 ├── bamboo_data.json    ← Dữ liệu hiện có
-└── Backup_BambooTracker_*.json ← Sao lưu
+└── BAMBU_Backup_*.json ← Sao lưu
 ```
 
 **Chúc bạn sử dụng hiệu quả! 🎋**

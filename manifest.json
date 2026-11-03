@@ -1,7 +1,7 @@
 {
-  "name": "Nhà máy Ngọc Sơn Thanh Hóa",
-  "short_name": "Ngọc Sơn",
-  "description": "Hệ thống quản lý & theo dõi sản xuất - Nhà máy Ngọc Sơn Thanh Hóa. Hoạt động hoàn toàn offline.",
+  "name": "BAMBU - Quản lý sản xuất",
+  "short_name": "BAMBU",
+  "description": "BAMBU - Hệ thống quản lý và theo dõi sản xuất nan tre. Hoạt động hoàn toàn offline.",
   "lang": "vi",
   "start_url": "./index.html",
   "scope": "./",

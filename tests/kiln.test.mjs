@@ -423,6 +423,45 @@ check('MA TRẬN — XÓA Ô: để trống → gỡ số đo + tombstone',
   !state.qcKilnReadings.some(r => r.date === daysAgoIso(3) && r.location === 'LS2') &&
   !!(state.deletedIds.qcKilnReadings || {})[`kh-${daysAgoIso(3)}-LS2`]);
 
+// ─── G2. NHẬP NHANH NHIỀU LÔ SẤY 2 ────────────────────────────
+{
+  const previousBatches = state.batches;
+  const previousNotes = state.khoNotes;
+  state.batches = [];
+  state.khoNotes = [];
+  const date = '2026-10-24';
+  bm.openAddLotModal({ stage: 'say2', location: 'LS12' });
+  document.getElementById('al-date').value = date;
+  const values = {
+    '[data-al-bulk-dim="length"]': { value: '1250' },
+    '[data-al-bulk-dim="width"]': { value: '22' },
+    '[data-al-bulk-dim="thickness"]': { value: '9' },
+    '[data-al-bulk-qty="A"]': { value: '420' },
+    '[data-al-bulk-qty="A1"]': { value: '1330' },
+    '[data-al-bulk-qty="B"]': { value: '' }
+  };
+  const row = {
+    querySelector: (selector) => values[selector] || null,
+    querySelectorAll: (selector) => selector === '[data-al-bulk-qty]' ? [values['[data-al-bulk-qty="A"]'], values['[data-al-bulk-qty="A1"]'], values['[data-al-bulk-qty="B"]']] : []
+  };
+  document.getElementById('al-bulk-rows').querySelectorAll = (selector) =>
+    selector === '[data-al-bulk-row]' ? [row] : [];
+  bm.toggleAlBulkEntryMode();
+  bm.handleAddLotSubmit({ preventDefault(){} });
+  const created = state.batches.filter(b => b.stage === 'say2' && b.location === 'LS12');
+  check('NHẬP NHANH SẤY 2: tạo riêng lô A/A1 theo số lượng bảng kê, cùng lò và ngày',
+    created.length === 2 && created.some(b => b.bambooType === 'A' && b.quantity === 420) &&
+    created.some(b => b.bambooType === 'A1' && b.quantity === 1330));
+  check('NHẬP NHANH SẤY 2: lịch sử Kho → Sấy 2 cùng ngày + tự tạo phiếu xuất Sấy 2 đã duyệt',
+    created.every(b => b.khoDate === date && b.say2Date === date &&
+      b.stageHistory.length === 2 && b.stageHistory[0].stage === 'kho' &&
+      b.stageHistory[1].stage === 'say2') &&
+    created.every(b => state.khoNotes.some(n => n.autoSay2 && n.status === 'da_duyet' &&
+      n.lots.some(l => l.batchId === b.id && l.qty === b.quantity))));
+  state.batches = previousBatches;
+  state.khoNotes = previousNotes;
+}
+
 // ─── I. CẤU TRÚC (index.html · styles.css · sw.js · 4 nơi nối dữ liệu) ───
 const idxHtml = fsMod.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const cssHtml = fsMod.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -438,6 +477,9 @@ check('CẤU TRÚC (index.html): 2 tab chuyển khung + 2 khung + bảng lò + �
   idxHtml.includes('id="x2-say-frame-ctrl"') && idxHtml.includes('id="x2-say-frame-data"') &&
   idxHtml.includes('id="x2-kiln-board"') && idxHtml.includes('id="x2-kiln-kho-drop"') &&
   idxHtml.includes('id="x2-kiln-legend"'));
+check('NHẬP NHANH SẤY 2: có bảng nhiều dòng và điều khiển thêm dòng',
+  idxHtml.includes('id="al-bulk-toggle"') && idxHtml.includes('id="al-bulk-rows"') &&
+  idxHtml.includes('id="al-bulk-add-row"') && jsEvents.includes('al-bulk-toggle'));
 check('CẤU TRÚC (index.html): thẻ QC "Độ Ẩm Lò Sấy" — launcher + ngưỡng + MA TRẬN (đã bỏ lịch sử / cột Đang chứa / ô chọn ngày)',
   idxHtml.includes('data-qc-card="qc-humidity-card"') && idxHtml.includes('id="qc-humidity-card"') &&
   idxHtml.includes('id="kiln-th-say1"') && idxHtml.includes('id="kiln-th-say2"') &&
@@ -461,8 +503,8 @@ check('CẤU TRÚC (styles.css): pop NỔI TRÊN CÙNG (hover có z-index:40) + 
   /\.kiln-row\.kiln-row-2\s*\{[^}]*justify-content: flex-end|\.kiln-row:last-child \{ justify-content: flex-end; \}/.test(cssHtml) &&
   cssHtml.includes('calc((100% - 11 * 8px) / 6 + 8px)') &&
   cssHtml.includes('.kiln-tile.kiln-todo'));
-check('CẤU TRÚC (sw.js): CACHE_NAME v349 + js/kiln.js trong APP_SHELL',
-  /nha-may-ngoc-son-v349/.test(swJs) && swJs.includes("'./js/kiln.js'"));
+check('CẤU TRÚC (sw.js): CACHE_NAME v351 + js/kiln.js trong APP_SHELL',
+  /nha-may-ngoc-son-v351/.test(swJs) && swJs.includes("'./js/kiln.js'"));
 check('CẤU TRÚC (js): key riêng + nối đủ state/storage/cloud/history/main/events',
   jsState.includes('bamboo_tracker_qc_kiln_humidity_v1') && jsState.includes('bamboo_tracker_qc_kiln_threshold_v1') &&
   jsState.includes('bamboo_tracker_x2_say_frame_v1') && jsStorage.includes('restoreQcKilnReadings') &&

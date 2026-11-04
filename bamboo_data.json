@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-11-03T14:19:52.254Z",
+  "savedAt": "2026-11-04T01:22:53.973Z",
   "batches": [
     {
       "length": 1250,
@@ -28683,20 +28683,20 @@
       "date": "2026-10-28"
     },
     {
-      "location": "xuong-2",
-      "supplier": "Nhà Uyên",
-      "note": "",
       "images": [],
       "date": "2026-10-29",
-      "weight": 5170,
       "totalAmount": 9306000,
-      "unitPrice": 1800,
-      "createdAt": "2026-10-29T10:05:43.548Z",
-      "outputIndex": 5250,
-      "inputIndex": 10420,
+      "location": "xuong-2",
+      "weight": 5170,
+      "note": "",
+      "id": "mat-1793268343547-yuauc",
       "week": "2026-W44",
+      "inputIndex": 10420,
       "type": "Luồng ống",
-      "id": "mat-1793268343547-yuauc"
+      "outputIndex": 5250,
+      "supplier": "Nhà Uyên",
+      "createdAt": "2026-10-29T10:05:43.548Z",
+      "unitPrice": 1800
     },
     {
       "id": "mat-1793320480740-m2b2k",
@@ -29348,20 +29348,20 @@
       "images": []
     },
     {
-      "images": [],
-      "weight": 2640,
       "supplier": "Nhà Chiến",
-      "week": "2026-W45",
-      "id": "mat-1793714569195-3zttk",
+      "createdAt": "2026-11-03T14:02:49.195Z",
       "unitPrice": 1150,
       "totalAmount": 3036000,
-      "note": "",
-      "inputIndex": 5260,
-      "createdAt": "2026-11-03T14:02:49.195Z",
+      "weight": 2640,
+      "week": "2026-W45",
       "type": "Gỗ",
-      "outputIndex": 2620,
+      "id": "mat-1793714569195-3zttk",
+      "images": [],
+      "note": "",
       "location": "lo-hoi",
-      "date": "2026-11-02"
+      "inputIndex": 5260,
+      "date": "2026-11-02",
+      "outputIndex": 2620
     },
     {
       "id": "mat-1793714634611-1bkxb",
@@ -29394,9 +29394,10 @@
     },
     {
       "type": "Gỗ",
-      "supplier": "Nhà Chiến",
       "note": "",
-      "weight": 4390,
+      "inputIndex": 7000,
+      "outputIndex": 2610,
+      "createdAt": "2026-11-03T14:04:59.176Z",
       "images": [
         {
           "id": "ph-mw0rf0xl-ljubns"
@@ -29411,31 +29412,79 @@
           "id": "ph-mw0rf0y6-oyafsw"
         }
       ],
-      "createdAt": "2026-11-03T14:04:59.176Z",
-      "date": "2026-11-03",
-      "id": "mat-1793714699176-0g92h",
-      "inputIndex": 7000,
-      "week": "2026-W45",
-      "outputIndex": 2610,
-      "unitPrice": 1150,
       "totalAmount": 5048500,
-      "location": "lo-hoi"
+      "week": "2026-W45",
+      "date": "2026-11-03",
+      "location": "lo-hoi",
+      "weight": 4390,
+      "unitPrice": 1150,
+      "supplier": "Nhà Chiến",
+      "id": "mat-1793714699176-0g92h"
     },
     {
-      "id": "mat-1793714776214-09w1i",
-      "date": "2026-11-02",
-      "week": "2026-W45",
       "type": "Mắt luồng",
-      "supplier": "Nhà Tâm Sơn",
-      "location": "lo-hoi",
+      "week": "2026-W45",
+      "totalAmount": 7220000,
+      "createdAt": "2026-11-03T14:06:16.214Z",
       "inputIndex": 16030,
+      "unitPrice": 950,
+      "date": "2026-11-02",
+      "note": "",
+      "supplier": "Nhà Tâm Sơn",
       "outputIndex": 8430,
       "weight": 7600,
-      "unitPrice": 950,
-      "totalAmount": 7220000,
-      "note": "",
       "images": [],
-      "createdAt": "2026-11-03T14:06:16.214Z"
+      "location": "lo-hoi",
+      "id": "mat-1793714776214-09w1i"
+    },
+    {
+      "images": [],
+      "weight": 18290,
+      "totalAmount": 27435000,
+      "id": "mat-1793754779415-c6r7y",
+      "supplier": "Nhà Khoa Dự Sơn Điện",
+      "createdAt": "2026-11-04T01:12:59.415Z",
+      "unitPrice": 1500,
+      "note": "",
+      "date": "2026-11-03",
+      "location": "xuong-2",
+      "inputIndex": 26430,
+      "type": "Luồng cây xô",
+      "outputIndex": 8140,
+      "week": "2026-W45"
+    },
+    {
+      "weight": 9830,
+      "type": "Luồng cây xô",
+      "images": [],
+      "week": "2026-W45",
+      "createdAt": "2026-11-04T01:14:51.548Z",
+      "unitPrice": 1500,
+      "totalAmount": 14745000,
+      "location": "xuong-2",
+      "date": "2026-11-03",
+      "note": "",
+      "supplier": "Nhà Hưởng Sơn Điện",
+      "inputIndex": 17970,
+      "outputIndex": 8140,
+      "id": "mat-1793754891548-adw5s"
+    },
+    {
+      "supplier": "Nhà Nam Hương",
+      "type": "Luồng cây xô",
+      "week": "2026-W45",
+      "note": "",
+      "totalAmount": 13410000,
+      "createdAt": "2026-11-04T01:16:18.922Z",
+      "unitPrice": 1500,
+      "updatedAt": "2026-11-04T01:16:36.443Z",
+      "date": "2026-11-03",
+      "weight": 8940,
+      "inputIndex": 15500,
+      "images": [],
+      "location": "xuong-2",
+      "id": "mat-1793754978922-pgrv0",
+      "outputIndex": 6560
     }
   ],
   "materialRates": [
@@ -32654,30 +32703,30 @@
       "updatedAt": "2026-09-10T10:16:05.431Z"
     },
     {
-      "date": "2026-09-09",
-      "fpDim": "",
-      "finishedQty": 0,
-      "additive": 15,
-      "id": "press-1789006232806",
-      "week": "Tuần 37",
-      "productId": "",
       "sticks": [
         {
-          "sticks": 14400,
-          "nanKey": "1250×22×7"
+          "nanKey": "1250×22×7",
+          "sticks": 14400
         }
       ],
       "createdAt": "2026-09-10T02:10:32.807Z",
+      "finishedQty": 0,
+      "updatedAt": "2026-09-10T09:22:24.325Z",
+      "productId": "",
+      "additive": 15,
+      "id": "press-1789006232806",
+      "productName": "",
+      "fpDim": "",
+      "date": "2026-09-09",
       "vanTho": [
         {
           "vtQty": 240,
           "vtDim": "1200×300×20"
         }
       ],
+      "year": 2026,
       "glue": 60,
-      "productName": "",
-      "updatedAt": "2026-09-10T09:22:24.325Z",
-      "year": 2026
+      "week": "Tuần 37"
     },
     {
       "date": "2026-09-11",
@@ -35229,36 +35278,36 @@
       "glueName": "PT663L"
     },
     {
-      "glueName": "PT663L",
-      "productName": "",
-      "year": 2026,
-      "pressMin": 0,
-      "createdAt": "2026-10-17T21:33:01.939Z",
-      "id": "press-1792272781939",
-      "additive": 1.56,
-      "tempC": 0,
-      "fpDim": "",
-      "date": "2026-10-17",
-      "forceH": 0,
-      "productId": "",
-      "forceV": 0,
-      "updatedAt": "2026-10-17T21:33:01.939Z",
-      "additiveName": "UAP9",
       "finishedQty": 0,
       "week": "Tuần 42",
       "glue": 13,
+      "year": 2026,
       "sticks": [
         {
           "sticks": 2508,
           "nanKey": "1250×18×11"
         }
       ],
+      "additive": 1.56,
+      "id": "press-1792272781939",
+      "glueName": "PT663L",
+      "date": "2026-10-17",
+      "forceV": 0,
+      "tempC": 0,
+      "forceH": 0,
+      "productId": "",
+      "fpDim": "",
+      "productName": "",
+      "createdAt": "2026-10-17T21:33:01.939Z",
       "vanTho": [
         {
           "vtDim": "120×340×18",
           "vtQty": 66
         }
-      ]
+      ],
+      "updatedAt": "2026-10-17T21:33:01.939Z",
+      "pressMin": 0,
+      "additiveName": "UAP9"
     },
     {
       "tempC": 0,
@@ -36983,6 +37032,94 @@
       "forceH": 8,
       "id": "press-1793673724714",
       "year": 2026
+    },
+    {
+      "sticks": [
+        {
+          "sticks": 1428,
+          "nanKey": "1250×22×10"
+        },
+        {
+          "sticks": 741,
+          "nanKey": "1250×22×8"
+        }
+      ],
+      "productId": "rate-1787619453372",
+      "additiveName": "UAP9",
+      "productName": "1200x370x22",
+      "forceH": 8,
+      "createdAt": "2026-11-04T01:15:34.313Z",
+      "fpDim": "1200×370×22",
+      "updatedAt": "2026-11-04T01:15:34.313Z",
+      "forceV": 10,
+      "additive": 1.92,
+      "glueName": "PT663L",
+      "finishedQty": 39,
+      "id": "press-1793754934313",
+      "tempC": 70,
+      "date": "2026-11-03",
+      "forceHMax": 10,
+      "pressMin": 25,
+      "year": 2026,
+      "week": "Tuần 45",
+      "vanTho": [],
+      "glue": 16
+    },
+    {
+      "glue": 13,
+      "pressMin": 25,
+      "week": "Tuần 45",
+      "productId": "rate-1787619453372",
+      "year": 2026,
+      "id": "press-1793754990462",
+      "date": "2026-11-03",
+      "fpDim": "1200×370×22",
+      "createdAt": "2026-11-04T01:16:30.462Z",
+      "updatedAt": "2026-11-04T01:16:30.462Z",
+      "vanTho": [],
+      "productName": "1200x370x22",
+      "forceHMax": 10,
+      "sticks": [
+        {
+          "sticks": 1536,
+          "nanKey": "1250×22×9"
+        }
+      ],
+      "tempC": 70,
+      "additive": 1.56,
+      "glueName": "PT663L",
+      "forceV": 10,
+      "finishedQty": 27,
+      "additiveName": "UAP9",
+      "forceH": 8
+    },
+    {
+      "additiveName": "UAP9",
+      "id": "press-1793755069139",
+      "fpDim": "1200×382×12",
+      "date": "2026-11-03",
+      "productId": "rate-1787125542008",
+      "finishedQty": 143,
+      "vanTho": [],
+      "createdAt": "2026-11-04T01:17:49.139Z",
+      "updatedAt": "2026-11-04T01:17:49.139Z",
+      "year": 2026,
+      "pressMin": 25,
+      "week": "Tuần 45",
+      "glue": 40,
+      "productName": "1200x382x12",
+      "sticks": [
+        {
+          "sticks": 5720,
+          "nanKey": "1250×22×8"
+        }
+      ],
+      "forceHMax": 10,
+      "additive": 4.8,
+      "glueName": "PT663L",
+      "tempC": 70,
+      "forceH": 8,
+      "forceV": 10
     }
   ],
   "pressInventoryAdjustments": [
@@ -36996,13 +37133,13 @@
       "createdAt": "2026-11-03T10:24:20.889Z"
     },
     {
-      "id": "press-stock-2026-W45-rate-1791170748070",
-      "week": 45,
-      "year": 2026,
       "updatedAt": "2026-11-03T10:24:33.088Z",
-      "productId": "rate-1791170748070",
       "createdAt": "2026-11-03T10:24:33.088Z",
-      "qty": 4700
+      "id": "press-stock-2026-W45-rate-1791170748070",
+      "productId": "rate-1791170748070",
+      "qty": 4700,
+      "year": 2026,
+      "week": 45
     },
     {
       "year": 2026,
@@ -37014,13 +37151,13 @@
       "id": "press-stock-2026-W45-rate-1787707645463"
     },
     {
-      "year": 2026,
-      "week": 45,
+      "productId": "rate-1787707893175",
       "id": "press-stock-2026-W45-rate-1787707893175",
-      "updatedAt": "2026-11-03T10:24:56.118Z",
+      "year": 2026,
       "qty": 80672,
-      "createdAt": "2026-11-03T10:24:56.118Z",
-      "productId": "rate-1787707893175"
+      "week": 45,
+      "updatedAt": "2026-11-03T10:24:56.118Z",
+      "createdAt": "2026-11-03T10:24:56.118Z"
     },
     {
       "year": 2026,
@@ -40108,24 +40245,24 @@
       "materialType": "Luồng cây xô"
     },
     {
-      "materialType": "Luồng cây xô",
-      "inputOng": 6012,
+      "workHoursHC": 9,
+      "klOngLoai": 60,
       "lotOng": 6012,
-      "week": "2026-W40",
+      "id": "x2bo-1791345213364-hn0s9",
+      "workTime": "07:00 → hết ca",
+      "cutId": "x2cut-1790929649474-p1feq",
+      "createdAt": "2026-10-07T03:53:33.364Z",
+      "worker": "Lục Văn Tuấn",
+      "inputOng": 6012,
+      "workHours": 9,
       "cutDate": "2026-09-28",
       "date": "2026-09-28",
-      "cutId": "x2cut-1790929649474-p1feq",
+      "materialId": "mat-1790646067822-mlovv",
+      "workHoursTC": 0,
       "klOngBo": 5952,
       "supplier": "Nhà Tế",
-      "createdAt": "2026-10-07T03:53:33.364Z",
-      "workHours": 9,
-      "workHoursHC": 9,
-      "workTime": "07:00 → hết ca",
-      "klOngLoai": 60,
-      "worker": "Lục Văn Tuấn",
-      "materialId": "mat-1790646067822-mlovv",
-      "id": "x2bo-1791345213364-hn0s9",
-      "workHoursTC": 0
+      "week": "2026-W40",
+      "materialType": "Luồng cây xô"
     },
     {
       "materialType": "Luồng ống",
@@ -45660,32 +45797,32 @@
       "date": "2026-10-20"
     },
     {
-      "cls": "A",
-      "boDate": "",
-      "workHoursHC": 0,
-      "quantity": 1680,
-      "external": true,
-      "materialType": "",
-      "id": "x2cn-1790817595356-ta909",
-      "supplier": "BỔ SUNG",
-      "worker": "",
       "createdAt": "2026-10-01T01:19:55.356Z",
-      "sizeKey": "1250×18×9",
-      "workHoursTC": 0,
-      "btDate": "",
+      "unitVol": 0.0002025,
+      "worker": "",
       "dims": [
         1250,
         18,
         9
       ],
-      "workHours": 0,
-      "date": "2026-09-28",
+      "external": true,
+      "supplier": "BỔ SUNG",
+      "workHoursTC": 0,
+      "quantity": 1680,
+      "boDate": "",
       "volume": 0.3402,
-      "unitVol": 0.0002025,
+      "id": "x2cn-1790817595356-ta909",
       "materialId": "",
-      "workTime": "",
+      "date": "2026-09-28",
+      "btDate": "",
+      "sizeKey": "1250×18×9",
+      "workHoursHC": 0,
       "week": "2026-W40",
-      "baothoId": ""
+      "workTime": "",
+      "materialType": "",
+      "cls": "A",
+      "baothoId": "",
+      "workHours": 0
     },
     {
       "workHoursHC": 0,
@@ -47588,33 +47725,33 @@
       "btDate": "2026-10-20"
     },
     {
-      "materialId": "",
-      "workHours": 45,
-      "unitVol": 0.0001575,
-      "workHoursHC": 45,
-      "btDate": "2026-10-22",
       "workHoursTC": 0,
-      "quantity": 882,
-      "createdAt": "2026-10-29T01:07:43.267Z",
-      "baothoId": "x2bt-1792750632057-cstos",
-      "shiftIdx": 0,
-      "workTime": "07:00–17:30, 07:00 → hết ca, 07:00 → hết ca, 07:00–17:30, 07:00 → hết ca",
-      "sizeKey": "1250×18×7",
       "boDate": "2026-10-22",
-      "supplier": "",
-      "id": "x2cn-1793236063267-pfpzt",
       "volume": 0.1389,
       "date": "2026-10-22",
-      "week": "2026-W43",
-      "worker": "Hà Thị Thủy, Ngân Thị Thích, Đinh Thị Chuẩn, Vi Thị Dung, Hà Thị Nhẫn",
-      "external": false,
       "materialType": "Nhiều nguồn (chỉ khối lượng)",
+      "id": "x2cn-1793236063267-pfpzt",
+      "baothoId": "x2bt-1792750632057-cstos",
+      "createdAt": "2026-10-29T01:07:43.267Z",
+      "worker": "Hà Thị Thủy, Ngân Thị Thích, Đinh Thị Chuẩn, Vi Thị Dung, Hà Thị Nhẫn",
+      "workTime": "07:00–17:30, 07:00 → hết ca, 07:00 → hết ca, 07:00–17:30, 07:00 → hết ca",
+      "unitVol": 0.0001575,
+      "week": "2026-W43",
       "dims": [
         1250,
         18,
         7
       ],
-      "cls": "A"
+      "workHoursHC": 45,
+      "external": false,
+      "workHours": 45,
+      "sizeKey": "1250×18×7",
+      "cls": "A",
+      "shiftIdx": 0,
+      "materialId": "",
+      "quantity": 882,
+      "btDate": "2026-10-22",
+      "supplier": ""
     },
     {
       "btDate": "2026-10-22",
@@ -56785,34 +56922,34 @@
       "id": "x2cn-1793008587070-dq6ok"
     },
     {
-      "worker": "Hà Thị Nhẫn, Hà Thị Dậu, Vi Thị Buôn, Hà Thị Khoái, Vi Thị Dung, Lữ Thị Hà",
-      "supplier": "",
-      "cls": "A1",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "week": "2026-W43",
-      "id": "x2cn-1793008602222-mrysv",
-      "external": false,
-      "boDate": "2026-10-24",
-      "baothoId": "x2bt-1793099495215-xjdlu",
       "unitVol": 0.000275,
-      "volume": 0.2503,
-      "quantity": 910,
-      "materialType": "Nhiều nguồn (chỉ khối lượng)",
-      "btDate": "2026-10-24",
+      "worker": "Hà Thị Nhẫn, Hà Thị Dậu, Vi Thị Buôn, Hà Thị Khoái, Vi Thị Dung, Lữ Thị Hà",
       "workHours": 54,
       "materialId": "",
-      "createdAt": "2026-10-26T09:56:42.222Z",
-      "sizeKey": "1250×22×10",
-      "workHoursTC": 0,
+      "id": "x2cn-1793008602222-mrysv",
+      "external": false,
       "dims": [
         1250,
         22,
         10
       ],
+      "supplier": "",
+      "volume": 0.2503,
+      "boDate": "2026-10-24",
+      "quantity": 910,
+      "workHoursTC": 0,
       "shiftIdx": 0,
+      "date": "2026-10-24",
+      "btDate": "2026-10-24",
+      "materialType": "Nhiều nguồn (chỉ khối lượng)",
       "workHoursHC": 54,
-      "updatedAt": "2026-10-27T11:34:15.547Z",
-      "date": "2026-10-24"
+      "week": "2026-W43",
+      "cls": "A1",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "sizeKey": "1250×22×10",
+      "createdAt": "2026-10-26T09:56:42.222Z",
+      "baothoId": "x2bt-1793099495215-xjdlu",
+      "updatedAt": "2026-10-27T11:34:15.547Z"
     },
     {
       "workHoursTC": 0,
@@ -62263,33 +62400,33 @@
       "materialId": ""
     },
     {
+      "id": "x2cn-1793342278985-75t7l",
+      "date": "2026-10-29",
+      "cls": "A1",
       "quantity": 336,
-      "workHoursTC": 0,
-      "worker": "Hà Thị Nhẫn, Hà Thị Khoái, Ngân Thị Thích, Lục Thị Linh",
-      "unitVol": 0.00024,
-      "baothoId": "x2bt-1793341886392-qf162",
-      "btDate": "2026-10-29",
-      "materialType": "Nhiều nguồn (chỉ khối lượng)",
-      "boDate": "2026-10-29",
+      "workTime": "07:00 → hết ca, 07:00–17:30, 07:00–17:30, 07:00–17:30",
       "week": "2026-W44",
-      "supplier": "",
       "dims": [
         1250,
         24,
         8
       ],
-      "workHours": 36,
-      "workTime": "07:00 → hết ca, 07:00–17:30, 07:00–17:30, 07:00–17:30",
-      "id": "x2cn-1793342278985-75t7l",
-      "date": "2026-10-29",
-      "external": false,
-      "shiftIdx": 0,
-      "cls": "A1",
-      "sizeKey": "1250×24×8",
-      "volume": 0.0806,
+      "boDate": "2026-10-29",
+      "baothoId": "x2bt-1793341886392-qf162",
+      "unitVol": 0.00024,
+      "supplier": "",
+      "workHoursTC": 0,
       "workHoursHC": 36,
+      "createdAt": "2026-10-30T06:37:58.985Z",
+      "workHours": 36,
+      "volume": 0.0806,
+      "sizeKey": "1250×24×8",
+      "materialType": "Nhiều nguồn (chỉ khối lượng)",
+      "external": false,
+      "worker": "Hà Thị Nhẫn, Hà Thị Khoái, Ngân Thị Thích, Lục Thị Linh",
+      "shiftIdx": 0,
       "materialId": "",
-      "createdAt": "2026-10-30T06:37:58.985Z"
+      "btDate": "2026-10-29"
     },
     {
       "volume": 0.252,
@@ -62528,7 +62665,25 @@
       "unitVol": 0.000275
     },
     {
+      "shiftIdx": 0,
+      "week": "2026-W44",
+      "quantity": 30,
+      "materialType": "Nhiều nguồn (chỉ khối lượng)",
+      "workHoursTC": 0,
+      "supplier": "",
       "createdAt": "2026-10-30T06:40:44.967Z",
+      "external": false,
+      "date": "2026-10-29",
+      "btDate": "2026-10-29",
+      "unitVol": 0.000275,
+      "materialId": "",
+      "baothoId": "x2bt-1793341886392-qf162",
+      "sizeKey": "1250×22×10",
+      "workTime": "07:00 → hết ca, 07:00–17:30, 07:00–17:30, 07:00–17:30",
+      "boDate": "2026-10-29",
+      "volume": 0.0083,
+      "workHoursHC": 36,
+      "id": "x2cn-1793342444967-h1jqp",
       "workHours": 36,
       "dims": [
         1250,
@@ -62536,25 +62691,7 @@
         10
       ],
       "cls": "reject",
-      "btDate": "2026-10-29",
-      "workTime": "07:00 → hết ca, 07:00–17:30, 07:00–17:30, 07:00–17:30",
-      "id": "x2cn-1793342444967-h1jqp",
-      "external": false,
-      "worker": "Hà Thị Nhẫn, Hà Thị Khoái, Ngân Thị Thích, Lục Thị Linh",
-      "boDate": "2026-10-29",
-      "materialId": "",
-      "workHoursHC": 36,
-      "workHoursTC": 0,
-      "date": "2026-10-29",
-      "supplier": "",
-      "sizeKey": "1250×22×10",
-      "baothoId": "x2bt-1793341886392-qf162",
-      "volume": 0.0083,
-      "unitVol": 0.000275,
-      "materialType": "Nhiều nguồn (chỉ khối lượng)",
-      "quantity": 30,
-      "shiftIdx": 0,
-      "week": "2026-W44"
+      "worker": "Hà Thị Nhẫn, Hà Thị Khoái, Ngân Thị Thích, Lục Thị Linh"
     },
     {
       "week": "2026-W44",
@@ -63921,33 +64058,33 @@
       "materialId": ""
     },
     {
-      "createdAt": "2026-11-02T01:51:20.233Z",
-      "materialId": "",
-      "workHoursHC": 36,
-      "id": "x2cn-1793584280233-pgfl0",
-      "cls": "A1",
-      "week": "2026-W44",
+      "workHours": 36,
+      "quantity": 840,
       "btDate": "2026-10-31",
-      "external": false,
+      "shiftIdx": 0,
       "sizeKey": "1250×22×9",
       "supplier": "",
-      "quantity": 840,
-      "date": "2026-10-31",
-      "shiftIdx": 0,
-      "unitVol": 0.0002475,
-      "workHoursTC": 0,
-      "materialType": "Nhiều nguồn (chỉ khối lượng)",
-      "worker": "Hà Thị Khoái, Ngân Thị Thích, Lương Thị Mừng, Vi Thị Dung",
       "dims": [
         1250,
         22,
         9
       ],
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
-      "boDate": "2026-10-31",
-      "volume": 0.2079,
+      "external": false,
+      "workHoursTC": 0,
       "baothoId": "x2bt-1793584005869-apr0q",
-      "workHours": 36
+      "date": "2026-10-31",
+      "materialId": "",
+      "worker": "Hà Thị Khoái, Ngân Thị Thích, Lương Thị Mừng, Vi Thị Dung",
+      "id": "x2cn-1793584280233-pgfl0",
+      "materialType": "Nhiều nguồn (chỉ khối lượng)",
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "week": "2026-W44",
+      "unitVol": 0.0002475,
+      "cls": "A1",
+      "volume": 0.2079,
+      "boDate": "2026-10-31",
+      "workHoursHC": 36,
+      "createdAt": "2026-11-02T01:51:20.233Z"
     },
     {
       "dims": [
@@ -64849,33 +64986,33 @@
       "external": false
     },
     {
-      "workHoursTC": 0,
-      "workHoursHC": 50,
+      "worker": "Hà Thị Khoái, Lục Thị Linh, Hà Thị Nhẫn, Hà Thị Nương, Phạm Thị Hoan, Hà Thị Thoan",
       "sizeKey": "1250×22×9",
+      "workHours": 50,
+      "external": false,
+      "btDate": "2026-11-02",
+      "createdAt": "2026-11-03T03:38:00.112Z",
+      "shiftIdx": 0,
+      "materialType": "Nhiều nguồn (chỉ khối lượng)",
+      "volume": 0.1732,
+      "materialId": "",
+      "workHoursHC": 50,
+      "workHoursTC": 0,
       "boDate": "2026-11-02",
-      "unitVol": 0.0002475,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 09:00 → hết ca, 09:00–17:30",
+      "quantity": 700,
+      "cls": "B",
+      "week": "2026-W45",
       "dims": [
         1250,
         22,
         9
       ],
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 09:00 → hết ca, 09:00–17:30",
-      "volume": 0.1732,
-      "external": false,
-      "btDate": "2026-11-02",
-      "week": "2026-W45",
-      "materialType": "Nhiều nguồn (chỉ khối lượng)",
-      "supplier": "",
-      "id": "x2cn-1793677080112-3ge4p",
-      "cls": "B",
       "baothoId": "x2bt-1793676758292-nk7kw",
-      "worker": "Hà Thị Khoái, Lục Thị Linh, Hà Thị Nhẫn, Hà Thị Nương, Phạm Thị Hoan, Hà Thị Thoan",
       "date": "2026-11-02",
-      "createdAt": "2026-11-03T03:38:00.112Z",
-      "workHours": 50,
-      "materialId": "",
-      "shiftIdx": 0,
-      "quantity": 700
+      "id": "x2cn-1793677080112-3ge4p",
+      "unitVol": 0.0002475,
+      "supplier": ""
     },
     {
       "btDate": "2026-11-02",
@@ -66483,29 +66620,16 @@
       "createdAt": "2026-10-02T04:20:50.968Z"
     },
     {
-      "convertFactor": 5.999,
-      "workHours": 36,
-      "batchId": "batch-1790770648215",
-      "createdAt": "2026-10-02T10:25:03.518Z",
       "qtyIn": 2913.819,
-      "kind": "gc",
-      "workHoursTC": 0,
-      "quantity": 17480,
-      "workHoursHC": 36,
-      "date": "2026-09-29",
-      "unitVol": 0.00002128,
-      "outSizeKey": "304×10×7",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "workHours": 36,
       "outDims": [
         304,
         10,
         7
       ],
-      "id": "x2bl-1790936703518-anez1",
+      "unitVol": 0.00002128,
       "week": "2026-W40",
-      "gcTotalPicked": 2954,
-      "worker": "Hà Thị Đàm, Hà Thị Chính, Lữ Thị Hà, Vi Thị Dung B",
-      "volume": 0.372,
+      "id": "x2bl-1790936703518-anez1",
       "sources": [
         {
           "batchId": "batch-1790770648215",
@@ -66514,15 +66638,28 @@
         },
         {
           "batchId": "batch-1790764515143",
-          "code": "260930-25",
-          "qty": 812
+          "qty": 812,
+          "code": "260930-25"
         },
         {
-          "code": "260930-10",
           "batchId": "batch-1790761933806",
-          "qty": 169.819
+          "qty": 169.819,
+          "code": "260930-10"
         }
-      ]
+      ],
+      "quantity": 17480,
+      "batchId": "batch-1790770648215",
+      "outSizeKey": "304×10×7",
+      "date": "2026-09-29",
+      "workHoursTC": 0,
+      "volume": 0.372,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "kind": "gc",
+      "convertFactor": 5.999,
+      "gcTotalPicked": 2954,
+      "createdAt": "2026-10-02T10:25:03.518Z",
+      "worker": "Hà Thị Đàm, Hà Thị Chính, Lữ Thị Hà, Vi Thị Dung B",
+      "workHoursHC": 36
     },
     {
       "workHoursTC": 0,
@@ -69504,8 +69641,8 @@
       "van": 31.11
     },
     "2026-09": {
-      "thanh": 245,
-      "van": 31.11
+      "van": 31.11,
+      "thanh": 245
     }
   },
   "qcPressLogs": [
@@ -71741,28 +71878,28 @@
       "purposeNote": "Khởi tạo từ dữ liệu cũ"
     },
     {
-      "m3": 0.1925,
       "lots": [
         {
           "qty": 94,
           "batchId": "batch-1790771379034"
         }
       ],
-      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
-      "purposeNote": "Khởi tạo từ dữ liệu cũ",
-      "status": "da_duyet",
-      "updatedAt": "2026-10-17T12:24:43.915Z",
+      "id": "kho-note-1791267062817-27",
+      "m3": 0.1925,
       "type": "xuat",
+      "approvedBy": "system",
+      "createdByName": "Hệ thống (khởi tạo)",
+      "date": "2026-09-30",
+      "approvedAt": "2026-10-06T06:11:02.816Z",
+      "purposeNote": "Khởi tạo từ dữ liệu cũ",
+      "updatedAt": "2026-10-17T12:24:43.915Z",
+      "createdAt": "2026-10-06T06:11:02.816Z",
+      "createdBy": "system",
+      "purpose": "khac",
+      "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
       "approvedByName": "Hệ thống (khởi tạo)",
       "qty": 94,
-      "approvedBy": "system",
-      "createdBy": "system",
-      "date": "2026-09-30",
-      "purpose": "khac",
-      "approvedAt": "2026-10-06T06:11:02.816Z",
-      "id": "kho-note-1791267062817-27",
-      "createdByName": "Hệ thống (khởi tạo)",
-      "createdAt": "2026-10-06T06:11:02.816Z"
+      "status": "da_duyet"
     },
     {
       "note": "Phiếu bù tự sinh từ nhật ký Bào Tinh / Bullig / quay lại Sấy 2 trước khi có sổ kho",
@@ -75056,30 +75193,30 @@
       "createdAt": "2026-10-17T12:24:04.480Z"
     },
     {
-      "id": "kho-note-auto-1792239844480-je45t",
-      "autoSay2": true,
-      "approvedBy": "system",
-      "createdAt": "2026-10-17T12:24:04.480Z",
+      "createdByName": "Hệ thống (tự động)",
       "approvedByName": "Hệ thống (tự động)",
-      "m3": 0.344,
+      "qty": 2184,
+      "approvedBy": "system",
+      "purpose": "say2",
+      "updatedAt": "2026-10-17T12:24:04.480Z",
+      "createdAt": "2026-10-17T12:24:04.480Z",
       "approvedAt": "2026-10-17T12:24:04.480Z",
+      "createdBy": "system",
+      "id": "kho-note-auto-1792239844480-je45t",
+      "m3": 0.344,
+      "note": "Phiếu bù tự động: bổ sung lần Kho → Sấy 2 cho dữ liệu cũ (Rà soát sổ kho)",
+      "date": "2026-10-14",
+      "status": "da_duyet",
+      "autoSay2": true,
       "lots": [
         {
+          "loc": "LS13",
           "batchId": "batch-1792225212136",
-          "qty": 2184,
-          "loc": "LS13"
+          "qty": 2184
         }
       ],
-      "createdByName": "Hệ thống (tự động)",
-      "status": "da_duyet",
-      "updatedAt": "2026-10-17T12:24:04.480Z",
-      "date": "2026-10-14",
-      "purposeNote": "Khởi tạo từ dữ liệu cũ",
-      "purpose": "say2",
-      "qty": 2184,
       "type": "xuat",
-      "note": "Phiếu bù tự động: bổ sung lần Kho → Sấy 2 cho dữ liệu cũ (Rà soát sổ kho)",
-      "createdBy": "system"
+      "purposeNote": "Khởi tạo từ dữ liệu cũ"
     },
     {
       "id": "kho-note-auto-1792239844480-bfbht",
@@ -75525,29 +75662,29 @@
     },
     {
       "createdBy": "system",
-      "id": "kho-note-auto-1792239844481-qzgp6",
-      "purpose": "say2",
-      "type": "xuat",
-      "approvedByName": "Hệ thống (tự động)",
-      "approvedAt": "2026-10-17T12:24:04.481Z",
-      "createdByName": "Hệ thống (tự động)",
+      "autoSay2": true,
       "purposeNote": "Khởi tạo từ dữ liệu cũ",
-      "approvedBy": "system",
-      "note": "Phiếu bù tự động: bổ sung lần Kho → Sấy 2 cho dữ liệu cũ (Rà soát sổ kho)",
+      "updatedAt": "2026-10-17T12:24:04.481Z",
       "createdAt": "2026-10-17T12:24:04.481Z",
+      "purpose": "say2",
+      "createdByName": "Hệ thống (tự động)",
+      "status": "da_duyet",
+      "approvedByName": "Hệ thống (tự động)",
+      "type": "xuat",
       "lots": [
         {
-          "loc": "LS9",
           "batchId": "batch-1791944527254-0",
+          "loc": "LS9",
           "qty": 2268
         }
       ],
-      "qty": 2268,
-      "autoSay2": true,
-      "status": "da_duyet",
-      "updatedAt": "2026-10-17T12:24:04.481Z",
+      "approvedAt": "2026-10-17T12:24:04.481Z",
+      "date": "2026-10-15",
+      "id": "kho-note-auto-1792239844481-qzgp6",
+      "note": "Phiếu bù tự động: bổ sung lần Kho → Sấy 2 cho dữ liệu cũ (Rà soát sổ kho)",
+      "approvedBy": "system",
       "m3": 0.3572,
-      "date": "2026-10-15"
+      "qty": 2268
     },
     {
       "qty": 1456,
@@ -79862,29 +79999,29 @@
       "date": "2026-10-21"
     },
     {
+      "purpose": "say2",
+      "autoSay2": true,
+      "id": "kho-note-auto-1793678703133-c3oxg",
+      "createdByName": "Hệ thống (tự động)",
+      "m3": 0.3308,
+      "qty": 2100,
+      "createdAt": "2026-11-03T04:05:03.133Z",
+      "updatedAt": "2026-11-03T04:05:03.133Z",
       "approvedByName": "Hệ thống (tự động)",
+      "createdBy": "system",
+      "date": "2026-10-21",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "status": "da_duyet",
       "purposeNote": "",
       "approvedAt": "2026-11-03T04:05:03.133Z",
-      "status": "da_duyet",
-      "note": "Tự động: chuyển Kho → Sấy 2",
-      "date": "2026-10-21",
-      "createdBy": "system",
-      "purpose": "say2",
-      "createdByName": "Hệ thống (tự động)",
-      "autoSay2": true,
-      "updatedAt": "2026-11-03T04:05:03.133Z",
-      "qty": 2100,
+      "type": "xuat",
       "lots": [
         {
           "qty": 2100,
-          "batchId": "batch-1793323976079-0-0",
-          "loc": "LS2"
+          "loc": "LS2",
+          "batchId": "batch-1793323976079-0-0"
         }
       ],
-      "m3": 0.3308,
-      "createdAt": "2026-11-03T04:05:03.133Z",
-      "type": "xuat",
-      "id": "kho-note-auto-1793678703133-c3oxg",
       "approvedBy": "system"
     },
     {
@@ -80880,15 +81017,15 @@
       "approvedByName": "Hệ thống (tự động)"
     },
     {
-      "approvedByName": "Hệ thống (tự động)",
-      "id": "kho-note-auto-1793709558830-bjfu1",
-      "m3": 0.3719,
-      "approvedAt": "2026-11-03T12:39:18.830Z",
       "note": "Tự động: chuyển Kho → Sấy 2",
-      "status": "da_duyet",
+      "approvedAt": "2026-11-03T12:39:18.830Z",
+      "qty": 1932,
+      "date": "2026-11-02",
+      "approvedBy": "system",
       "type": "xuat",
-      "updatedAt": "2026-11-03T12:39:18.830Z",
-      "createdBy": "system",
+      "status": "da_duyet",
+      "purpose": "say2",
+      "purposeNote": "",
       "lots": [
         {
           "qty": 1932,
@@ -80896,14 +81033,14 @@
           "loc": "LS12"
         }
       ],
-      "approvedBy": "system",
-      "createdAt": "2026-11-03T12:39:18.830Z",
-      "qty": 1932,
+      "approvedByName": "Hệ thống (tự động)",
+      "createdByName": "Hệ thống (tự động)",
+      "id": "kho-note-auto-1793709558830-bjfu1",
       "autoSay2": true,
-      "purpose": "say2",
-      "purposeNote": "",
-      "date": "2026-11-02",
-      "createdByName": "Hệ thống (tự động)"
+      "m3": 0.3719,
+      "updatedAt": "2026-11-03T12:39:18.830Z",
+      "createdAt": "2026-11-03T12:39:18.830Z",
+      "createdBy": "system"
     },
     {
       "note": "Tự động: chuyển Kho → Sấy 2",
@@ -81088,7 +81225,20 @@
       "createdBy": "system"
     },
     {
+      "id": "kho-note-auto-1793710214512-yj0jc",
+      "status": "da_duyet",
+      "qty": 1848,
+      "m3": 0.3557,
+      "approvedAt": "2026-11-03T12:50:14.512Z",
+      "purpose": "say2",
+      "autoSay2": true,
       "createdByName": "Hệ thống (tự động)",
+      "approvedBy": "system",
+      "createdBy": "system",
+      "createdAt": "2026-11-03T12:50:14.512Z",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "updatedAt": "2026-11-03T12:50:14.512Z",
+      "date": "2026-11-02",
       "approvedByName": "Hệ thống (tự động)",
       "lots": [
         {
@@ -81097,21 +81247,8 @@
           "batchId": "batch-1793709825926"
         }
       ],
-      "createdBy": "system",
-      "m3": 0.3557,
-      "createdAt": "2026-11-03T12:50:14.512Z",
-      "approvedAt": "2026-11-03T12:50:14.512Z",
-      "id": "kho-note-auto-1793710214512-yj0jc",
-      "date": "2026-11-02",
-      "purposeNote": "",
-      "updatedAt": "2026-11-03T12:50:14.512Z",
-      "status": "da_duyet",
-      "qty": 1848,
       "type": "xuat",
-      "autoSay2": true,
-      "purpose": "say2",
-      "approvedBy": "system",
-      "note": "Tự động: chuyển Kho → Sấy 2"
+      "purposeNote": ""
     },
     {
       "approvedByName": "Hệ thống (tự động)",
@@ -81218,56 +81355,56 @@
       "approvedBy": "system"
     },
     {
-      "qty": 1610,
-      "m3": 0.3864,
+      "createdBy": "system",
       "createdAt": "2026-11-03T12:51:33.343Z",
-      "purpose": "say2",
-      "date": "2026-11-02",
-      "note": "Tự động: chuyển Kho → Sấy 2",
-      "type": "xuat",
-      "autoSay2": true,
-      "id": "kho-note-auto-1793710293343-8mb2p",
-      "status": "da_duyet",
       "updatedAt": "2026-11-03T12:51:33.343Z",
-      "approvedByName": "Hệ thống (tự động)",
-      "approvedAt": "2026-11-03T12:51:33.343Z",
+      "createdByName": "Hệ thống (tự động)",
       "purposeNote": "",
+      "approvedBy": "system",
+      "qty": 1610,
+      "purpose": "say2",
+      "approvedByName": "Hệ thống (tự động)",
       "lots": [
         {
-          "loc": "LS9",
           "batchId": "batch-1793710043864",
+          "loc": "LS9",
           "qty": 1610
         }
       ],
-      "approvedBy": "system",
-      "createdBy": "system",
-      "createdByName": "Hệ thống (tự động)"
+      "id": "kho-note-auto-1793710293343-8mb2p",
+      "m3": 0.3864,
+      "type": "xuat",
+      "status": "da_duyet",
+      "approvedAt": "2026-11-03T12:51:33.343Z",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "date": "2026-11-02",
+      "autoSay2": true
     },
     {
-      "purposeNote": "",
-      "autoSay2": true,
-      "updatedAt": "2026-11-03T13:01:31.904Z",
       "id": "kho-note-auto-1793710891904-bj06n",
-      "approvedByName": "Hệ thống (tự động)",
-      "createdAt": "2026-11-03T13:01:31.904Z",
       "qty": 1610,
-      "m3": 0.3864,
+      "purposeNote": "",
+      "approvedAt": "2026-11-03T13:01:31.904Z",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "purpose": "say2",
+      "type": "xuat",
+      "createdByName": "Hệ thống (tự động)",
+      "approvedByName": "Hệ thống (tự động)",
       "lots": [
         {
-          "qty": 1610,
+          "loc": "LS11",
           "batchId": "batch-1793710603033",
-          "loc": "LS11"
+          "qty": 1610
         }
       ],
-      "date": "2026-11-02",
       "createdBy": "system",
       "status": "da_duyet",
-      "purpose": "say2",
-      "createdByName": "Hệ thống (tự động)",
+      "createdAt": "2026-11-03T13:01:31.904Z",
+      "date": "2026-11-02",
       "approvedBy": "system",
-      "approvedAt": "2026-11-03T13:01:31.904Z",
-      "type": "xuat",
-      "note": "Tự động: chuyển Kho → Sấy 2"
+      "m3": 0.3864,
+      "autoSay2": true,
+      "updatedAt": "2026-11-03T13:01:31.904Z"
     },
     {
       "lots": [
@@ -81322,56 +81459,56 @@
       "createdAt": "2026-11-03T13:01:31.904Z"
     },
     {
-      "status": "da_duyet",
-      "approvedAt": "2026-11-03T13:01:31.904Z",
-      "note": "Tự động: chuyển Kho → Sấy 2",
-      "approvedByName": "Hệ thống (tự động)",
-      "type": "xuat",
-      "purposeNote": "",
-      "autoSay2": true,
-      "createdAt": "2026-11-03T13:01:31.904Z",
-      "createdByName": "Hệ thống (tự động)",
-      "createdBy": "system",
-      "purpose": "say2",
       "qty": 1540,
-      "updatedAt": "2026-11-03T13:01:31.904Z",
-      "date": "2026-11-02",
-      "approvedBy": "system",
+      "approvedAt": "2026-11-03T13:01:31.904Z",
       "lots": [
         {
-          "loc": "LS11",
           "qty": 1540,
+          "loc": "LS11",
           "batchId": "batch-1793710641834"
         }
       ],
+      "createdBy": "system",
+      "type": "xuat",
+      "createdAt": "2026-11-03T13:01:31.904Z",
+      "purposeNote": "",
+      "updatedAt": "2026-11-03T13:01:31.904Z",
+      "purpose": "say2",
+      "approvedBy": "system",
+      "createdByName": "Hệ thống (tự động)",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "date": "2026-11-02",
+      "approvedByName": "Hệ thống (tự động)",
+      "m3": 0.3812,
       "id": "kho-note-auto-1793710891904-pypq3",
-      "m3": 0.3812
+      "autoSay2": true,
+      "status": "da_duyet"
     },
     {
-      "createdBy": "system",
-      "approvedBy": "system",
-      "status": "da_duyet",
-      "createdAt": "2026-11-03T13:02:37.922Z",
-      "approvedByName": "Hệ thống (tự động)",
-      "qty": 1610,
-      "type": "xuat",
-      "autoSay2": true,
-      "note": "Tự động: chuyển Kho → Sấy 2",
-      "purposeNote": "",
-      "approvedAt": "2026-11-03T13:02:37.922Z",
       "purpose": "say2",
+      "approvedByName": "Hệ thống (tự động)",
+      "id": "kho-note-auto-1793710957922-0j8c1",
+      "createdBy": "system",
+      "purposeNote": "",
+      "updatedAt": "2026-11-03T13:02:37.922Z",
+      "createdAt": "2026-11-03T13:02:37.922Z",
+      "m3": 0.3864,
+      "approvedAt": "2026-11-03T13:02:37.922Z",
+      "autoSay2": true,
+      "type": "xuat",
+      "createdByName": "Hệ thống (tự động)",
+      "qty": 1610,
       "lots": [
         {
-          "loc": "LS11",
+          "qty": 1610,
           "batchId": "batch-1793710780933",
-          "qty": 1610
+          "loc": "LS11"
         }
       ],
-      "createdByName": "Hệ thống (tự động)",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "approvedBy": "system",
       "date": "2026-11-02",
-      "updatedAt": "2026-11-03T13:02:37.922Z",
-      "m3": 0.3864,
-      "id": "kho-note-auto-1793710957922-0j8c1"
+      "status": "da_duyet"
     },
     {
       "createdByName": "Hệ thống (tự động)",
@@ -81426,56 +81563,56 @@
       "qty": 1540
     },
     {
-      "createdByName": "Hệ thống (tự động)",
+      "date": "2026-11-02",
+      "purposeNote": "",
+      "updatedAt": "2026-11-03T13:05:09.380Z",
       "note": "Tự động: chuyển Kho → Sấy 2",
+      "createdAt": "2026-11-03T13:05:09.380Z",
       "createdBy": "system",
       "type": "xuat",
-      "m3": 0.3084,
-      "qty": 1246,
-      "approvedByName": "Hệ thống (tự động)",
-      "id": "kho-note-auto-1793711109380-wxbsq",
-      "autoSay2": true,
-      "date": "2026-11-02",
-      "updatedAt": "2026-11-03T13:05:09.380Z",
-      "approvedAt": "2026-11-03T13:05:09.380Z",
       "lots": [
         {
+          "qty": 1246,
           "loc": "LS13",
-          "batchId": "batch-1793711063510",
-          "qty": 1246
+          "batchId": "batch-1793711063510"
         }
       ],
-      "status": "da_duyet",
-      "createdAt": "2026-11-03T13:05:09.380Z",
-      "purposeNote": "",
       "purpose": "say2",
-      "approvedBy": "system"
+      "qty": 1246,
+      "createdByName": "Hệ thống (tự động)",
+      "approvedBy": "system",
+      "approvedByName": "Hệ thống (tự động)",
+      "status": "da_duyet",
+      "autoSay2": true,
+      "id": "kho-note-auto-1793711109380-wxbsq",
+      "m3": 0.3084,
+      "approvedAt": "2026-11-03T13:05:09.380Z"
     },
     {
-      "purposeNote": "",
-      "id": "kho-note-auto-1793711611956-l7ynl",
-      "m3": 0.3719,
+      "createdBy": "system",
+      "updatedAt": "2026-11-03T13:13:31.956Z",
+      "createdAt": "2026-11-03T13:13:31.956Z",
       "date": "2026-11-02",
-      "purpose": "say2",
-      "createdByName": "Hệ thống (tự động)",
-      "qty": 1932,
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "autoSay2": true,
+      "type": "xuat",
       "lots": [
         {
-          "loc": "LS13",
           "batchId": "batch-1793711245250",
+          "loc": "LS13",
           "qty": 1932
         }
       ],
-      "approvedBy": "system",
-      "createdBy": "system",
-      "autoSay2": true,
-      "createdAt": "2026-11-03T13:13:31.956Z",
-      "note": "Tự động: chuyển Kho → Sấy 2",
-      "updatedAt": "2026-11-03T13:13:31.956Z",
-      "type": "xuat",
+      "purpose": "say2",
+      "id": "kho-note-auto-1793711611956-l7ynl",
+      "m3": 0.3719,
+      "qty": 1932,
+      "purposeNote": "",
+      "approvedByName": "Hệ thống (tự động)",
       "approvedAt": "2026-11-03T13:13:31.956Z",
       "status": "da_duyet",
-      "approvedByName": "Hệ thống (tự động)"
+      "createdByName": "Hệ thống (tự động)",
+      "approvedBy": "system"
     },
     {
       "approvedBy": "system",
@@ -81530,87 +81667,96 @@
       "qty": 1540
     },
     {
-      "status": "da_duyet",
-      "approvedByName": "Hệ thống (tự động)",
-      "updatedAt": "2026-11-03T13:13:31.957Z",
-      "approvedBy": "system",
       "date": "2026-11-02",
       "autoSay2": true,
+      "id": "kho-note-auto-1793711611957-uou2w",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "m3": 0.4235,
+      "status": "da_duyet",
       "lots": [
         {
-          "qty": 1540,
+          "batchId": "batch-1793711334595",
           "loc": "LS13",
-          "batchId": "batch-1793711334595"
+          "qty": 1540
         }
       ],
-      "type": "xuat",
-      "id": "kho-note-auto-1793711611957-uou2w",
-      "m3": 0.4235,
-      "purposeNote": "",
-      "note": "Tự động: chuyển Kho → Sấy 2",
-      "approvedAt": "2026-11-03T13:13:31.957Z",
-      "purpose": "say2",
-      "createdBy": "system",
-      "createdAt": "2026-11-03T13:13:31.957Z",
       "qty": 1540,
-      "createdByName": "Hệ thống (tự động)"
+      "type": "xuat",
+      "createdBy": "system",
+      "updatedAt": "2026-11-03T13:13:31.957Z",
+      "createdAt": "2026-11-03T13:13:31.957Z",
+      "createdByName": "Hệ thống (tự động)",
+      "approvedBy": "system",
+      "purpose": "say2",
+      "approvedAt": "2026-11-03T13:13:31.957Z",
+      "purposeNote": "",
+      "approvedByName": "Hệ thống (tự động)"
     },
     {
-      "id": "kho-note-auto-1793711680376-24d26",
-      "type": "xuat",
-      "date": "2026-11-02",
-      "purpose": "say2",
-      "purposeNote": "",
-      "qty": 1372,
-      "m3": 0.3396,
+      "approvedBy": "system",
       "lots": [
         {
           "batchId": "batch-1793711371386",
-          "qty": 1372,
-          "loc": "LS13"
+          "loc": "LS13",
+          "qty": 1372
+        }
+      ],
+      "type": "xuat",
+      "m3": 0.3396,
+      "id": "kho-note-auto-1793711680376-24d26",
+      "date": "2026-11-02",
+      "autoSay2": true,
+      "qty": 1372,
+      "approvedAt": "2026-11-03T13:14:40.376Z",
+      "note": "Tự động: chuyển Kho → Sấy 2",
+      "createdBy": "system",
+      "status": "da_duyet",
+      "createdAt": "2026-11-03T13:14:40.376Z",
+      "updatedAt": "2026-11-03T13:14:40.376Z",
+      "createdByName": "Hệ thống (tự động)",
+      "approvedByName": "Hệ thống (tự động)",
+      "purpose": "say2",
+      "purposeNote": ""
+    },
+    {
+      "approvedBy": "system",
+      "status": "da_duyet",
+      "createdByName": "Hệ thống (tự động)",
+      "qty": 2100,
+      "createdAt": "2026-11-03T13:14:40.376Z",
+      "updatedAt": "2026-11-03T13:14:40.376Z",
+      "createdBy": "system",
+      "approvedByName": "Hệ thống (tự động)",
+      "m3": 0.4253,
+      "purpose": "say2",
+      "id": "kho-note-auto-1793711680376-z5b0j",
+      "approvedAt": "2026-11-03T13:14:40.376Z",
+      "autoSay2": true,
+      "purposeNote": "",
+      "type": "xuat",
+      "lots": [
+        {
+          "loc": "LS13",
+          "qty": 2100,
+          "batchId": "batch-1793711408646"
         }
       ],
       "note": "Tự động: chuyển Kho → Sấy 2",
-      "status": "da_duyet",
-      "autoSay2": true,
-      "createdBy": "system",
-      "createdByName": "Hệ thống (tự động)",
-      "createdAt": "2026-11-03T13:14:40.376Z",
-      "approvedBy": "system",
-      "approvedByName": "Hệ thống (tự động)",
-      "approvedAt": "2026-11-03T13:14:40.376Z",
-      "updatedAt": "2026-11-03T13:14:40.376Z"
+      "date": "2026-11-02"
     },
     {
-      "id": "kho-note-auto-1793711680376-z5b0j",
-      "updatedAt": "2026-11-03T13:14:40.376Z",
-      "createdAt": "2026-11-03T13:14:40.376Z",
-      "m3": 0.4253,
-      "approvedByName": "Hệ thống (tự động)",
-      "createdByName": "Hệ thống (tự động)",
-      "lots": [
-        {
-          "batchId": "batch-1793711408646",
-          "qty": 2100,
-          "loc": "LS13"
-        }
-      ],
-      "qty": 2100,
-      "date": "2026-11-02",
-      "approvedAt": "2026-11-03T13:14:40.376Z",
-      "autoSay2": true,
+      "note": "Tự động: chuyển Kho → Sấy 2",
       "createdBy": "system",
-      "purposeNote": "",
+      "approvedBy": "system",
+      "qty": 1540,
       "purpose": "say2",
+      "updatedAt": "2026-11-03T13:14:40.376Z",
+      "date": "2026-11-02",
+      "createdAt": "2026-11-03T13:14:40.376Z",
+      "id": "kho-note-auto-1793711680376-2jb1x",
+      "approvedByName": "Hệ thống (tự động)",
+      "m3": 0.4235,
       "type": "xuat",
-      "approvedBy": "system",
-      "status": "da_duyet",
-      "note": "Tự động: chuyển Kho → Sấy 2"
-    },
-    {
-      "approvedBy": "system",
-      "status": "da_duyet",
-      "createdBy": "system",
       "autoSay2": true,
       "lots": [
         {
@@ -81619,19 +81765,10 @@
           "loc": "LS13"
         }
       ],
-      "approvedByName": "Hệ thống (tự động)",
-      "purposeNote": "",
       "approvedAt": "2026-11-03T13:14:40.376Z",
+      "purposeNote": "",
       "createdByName": "Hệ thống (tự động)",
-      "date": "2026-11-02",
-      "updatedAt": "2026-11-03T13:14:40.376Z",
-      "m3": 0.4235,
-      "qty": 1540,
-      "purpose": "say2",
-      "note": "Tự động: chuyển Kho → Sấy 2",
-      "id": "kho-note-auto-1793711680376-2jb1x",
-      "type": "xuat",
-      "createdAt": "2026-11-03T13:14:40.376Z"
+      "status": "da_duyet"
     },
     {
       "status": "da_duyet",
@@ -81860,50 +81997,50 @@
       "price": 1300
     },
     {
-      "id": "x2pp-1793714971795-brfcf",
-      "createdAt": "2026-11-03T14:09:31.795Z",
-      "kind": "all",
-      "date": "2026-11-02",
+      "price": 400,
       "form": "mun_tuoi",
       "outType": "sale",
+      "id": "x2pp-1793714971795-brfcf",
+      "kind": "all",
       "scaleInKg": 11090,
-      "scaleOutKg": 25510,
-      "kg": 14420,
-      "price": 400,
-      "amount": 5768000,
       "party": "Công Hằng",
-      "note": ""
+      "note": "",
+      "createdAt": "2026-11-03T14:09:31.795Z",
+      "date": "2026-11-02",
+      "kg": 14420,
+      "scaleOutKg": 25510,
+      "amount": 5768000
     },
     {
-      "party": "Công Hằng",
-      "form": "mun_tuoi",
-      "kg": 14270,
-      "price": 400,
-      "scaleInKg": 11190,
-      "outType": "sale",
       "scaleOutKg": 25460,
-      "amount": 5708000,
+      "createdAt": "2026-11-03T14:10:16.015Z",
+      "updatedAt": "2026-11-03T14:11:59.120Z",
+      "party": "Công Hằng",
+      "outType": "sale",
+      "date": "2026-11-03",
       "note": "",
       "id": "x2pp-1793715016015-s94nt",
-      "createdAt": "2026-11-03T14:10:16.015Z",
-      "date": "2026-11-03",
+      "kg": 14270,
+      "price": 400,
       "kind": "all",
-      "updatedAt": "2026-11-03T14:11:59.120Z"
+      "amount": 5708000,
+      "form": "mun_tuoi",
+      "scaleInKg": 11190
     },
     {
-      "id": "x2pp-1793715092122-wb8cl",
-      "createdAt": "2026-11-03T14:11:32.122Z",
-      "kind": "all",
       "date": "2026-11-02",
-      "form": "coc",
-      "outType": "sale",
+      "note": "",
       "scaleInKg": 8600,
-      "scaleOutKg": 15870,
-      "kg": 7270,
-      "price": 1300,
-      "amount": 9451000,
+      "id": "x2pp-1793715092122-wb8cl",
       "party": "A Tuấn",
-      "note": ""
+      "outType": "sale",
+      "form": "coc",
+      "amount": 9451000,
+      "kg": 7270,
+      "createdAt": "2026-11-03T14:11:32.122Z",
+      "scaleOutKg": 15870,
+      "kind": "all",
+      "price": 1300
     }
   ],
   "x2Stocktakes": [],

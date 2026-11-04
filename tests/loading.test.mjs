@@ -24,7 +24,6 @@ const css = rd('styles.css');
 const ldJs = rd('js/loading.js');
 const mnJs = rd('js/main.js');
 const swJs = rd('sw.js');
-const aiJs = rd('js/ai.js');
 const xlJs = rd('js/export-xlsx.js');
 const clJs = rd('js/cloud.js');
 const abJs = rd('js/autobackup.js');
@@ -95,8 +94,8 @@ check('B2: boot dựng giao diện cục bộ trước; Firebase đồng bộ n�
   !/await initFirebase\(\)/.test(mnJs) &&
   /hideTreLoading\(bootOk\)/.test(mnJs) &&
   /setTreLoadingStatus/.test(mnJs));
-check('B3: AI (ai.js) — hiện khi chờ Gemini + finally hideTreLoading(aiOk)',
-  /showTreLoading\('Đang chờ AI trả lời…'\)/.test(aiJs) && /hideTreLoading\(aiOk\)/.test(aiJs));
+check('B3: module AI đã gỡ — không còn overlay chờ AI',
+  !fs.existsSync(new URL('../js/ai.js', import.meta.url)) && !/Đang chờ AI trả lời/.test(mnJs));
 check('B4: Xuất Excel (export-xlsx.js) — bọc exportDataToXlsx + finally hideTreLoading(treOk)',
   /showTreLoading\('Đang xuất file Excel…'\)/.test(xlJs) && /finally\s*\{\s*hideTreLoading\(treOk\);?\s*\}/.test(xlJs));
 check('B5: Mây (cloud.js) — đúng 2 nút THỦ CÔNG (đẩy + tải về), auto push nền KHÔNG hiện overlay',
@@ -104,7 +103,7 @@ check('B5: Mây (cloud.js) — đúng 2 nút THỦ CÔNG (đẩy + tải về), 
 check('B6: Backup (autobackup.js) — 3 chỗ: phục hồi máy · phục hồi mây · danh sách backup mây',
   (abJs.match(/showTreLoading\(/g) || []).length === 3 && (abJs.match(/hideTreLoading\(treOk\)/g) || []).length === 3);
 check('B7: mọi chỗ lỗi (ok=false) đều đi finally → tre KHÔNG gãy nhưng overlay vẫn được dọn',
-  [mnJs, aiJs, xlJs, clJs, abJs].every(s => /hideTreLoading\((bootOk|aiOk|treOk)(?:\s*,[^)]*)?\)/.test(s)));
+  [mnJs, xlJs, clJs, abJs].every(s => /hideTreLoading\((bootOk|treOk)(?:\s*,[^)]*)?\)/.test(s)));
 // ─── B2. CHUYỂN TAB KHÔNG CHỜ ANIMATION HOẶC RENDER TRƯỚC ───────────
 check('B8: switchView không đặt overlay chặn thao tác ở lần mở tab đầu',
   /function switchView\(targetViewId\)\s*\{\s*switchViewCore\(targetViewId\);\s*\}/.test(mnJs) &&
@@ -121,8 +120,8 @@ check('B11: boot yield giữa các nhóm khởi tạo để overlay có cơ hộ
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v351 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v351/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v352 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v352/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════

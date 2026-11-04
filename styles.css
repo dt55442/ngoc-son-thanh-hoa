@@ -219,6 +219,10 @@ h1, h2, h3, h4, h5 {
   display: block;
   width: 148px;
   height: auto;
+  filter: drop-shadow(0 2px 6px rgba(6, 71, 46, 0.45)) drop-shadow(0 0 10px rgba(34, 197, 94, 0.45));
+}
+body[data-fx="low"] .bambu-wordmark {
+  filter: drop-shadow(0 1px 2px rgba(6, 71, 46, 0.4));
 }
 
 /* Nav Tabs */
@@ -7372,201 +7376,6 @@ body:not(.is-admin) #btn-open-cloud-backup { display: none !important; }
   padding: 7px 10px;
 }
 
-/* ─── TRỢ LÝ AI (Google Gemini) — nút nổi KÉO ĐƯỢC + modal ─────── */
-.ai-fab {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 1250;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-lg, 0 10px 24px rgba(0, 0, 0, 0.22));
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  /* Cho phép KÉO DI CHUYỂN: chặn cuộn trang/chọn chữ khi giữ nút trên cảm ứng */
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.ai-fab:hover { transform: translateY(-2px) scale(1.05); }
-/* Đang kéo: phóng nhẹ + bóng đậm, tắt chuyển động để nút bám sát tay
-   (đặt sau :hover để đè hiệu ứng hover khi giữ nút) */
-.ai-fab.ai-fab-dragging {
-  transition: none;
-  transform: scale(1.12);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
-  cursor: grabbing;
-  opacity: 0.95;
-}
-.ai-fab svg { width: 22px; height: 22px; }
-/* Ô hỏi AI tự do + chip hỏi nhanh theo tab/nội dung */
-.ai-question-row { margin-bottom: 10px; }
-.ai-question-row textarea {
-  width: 100%;
-  min-height: 62px;
-  max-height: 150px;
-  resize: vertical;
-  box-sizing: border-box;
-  border: 1px solid var(--border, #e7e5e4);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font: inherit;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  background: var(--surface-2, #fafaf9);
-  color: var(--text-main, #1c1917);
-}
-.ai-question-row textarea:focus { outline: 2px solid rgba(124, 58, 237, 0.22); border-color: #7c3aed; }
-.ai-quick-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
-.ai-quick-chip {
-  border: 1px solid #ddd6fe;
-  background: #f5f3ff;
-  color: #6d28d9;
-  border-radius: 999px;
-  padding: 4px 11px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-.ai-quick-chip:hover { background: #ede9fe; border-color: #c4b5fd; }
-/* Dòng nhắc lại câu hỏi phía trên kết quả AI */
-.ai-q-echo {
-  font-size: 0.78rem;
-  color: var(--text-main, #1c1917);
-  background: #f5f3ff;
-  border-left: 3px solid #7c3aed;
-  border-radius: 0 8px 8px 0;
-  padding: 6px 10px;
-  margin-bottom: 8px;
-  overflow-wrap: anywhere;
-}
-/* ─── Bong bóng gợi ý tự động "Nan Bot" (bám nút AI nổi) ────────── */
-.ai-fab-bubble {
-  display: none;
-  position: fixed;
-  z-index: 1260; /* trên nút AI (1250), dưới modal (10000) */
-  max-width: min(300px, 78vw);
-  background: var(--surface, #ffffff);
-  border: 1px solid #ddd6fe;
-  border-radius: 14px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-  padding: 10px 12px;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: var(--text-main, #1c1917);
-  cursor: pointer;
-}
-.ai-fab-bubble.show { display: block; animation: aiBubblePop 0.18s ease; }
-@keyframes aiBubblePop {
-  from { transform: translateY(6px) scale(0.96); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
-/* Đuôi tam giác nhỏ hướng xuống nút AI (đổi mép theo anchor) */
-.ai-fab-bubble::after {
-  content: '';
-  position: absolute;
-  bottom: -7px;
-  width: 14px;
-  height: 14px;
-  background: var(--surface, #ffffff);
-  border-right: 1px solid #ddd6fe;
-  border-bottom: 1px solid #ddd6fe;
-  transform: rotate(45deg);
-}
-.ai-fab-bubble.anchor-right::after { right: 18px; }
-.ai-fab-bubble.anchor-left::after { left: 18px; }
-.ai-fab-bubble-text { overflow-wrap: anywhere; }
-.ai-fab-bubble-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; min-height: 18px; }
-.ai-fab-bubble-close {
-  border: none;
-  background: transparent;
-  color: var(--text-muted, #78716c);
-  cursor: pointer;
-  font-size: 0.75rem;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-.ai-fab-bubble-close:hover { background: #f5f3ff; color: #6d28d9; }
-/* 3 chấm "đang suy nghĩ" (CSS thuần — không JS timer) */
-.ai-fab-bubble-thinking { display: none; gap: 3px; align-items: center; }
-.ai-fab-bubble-thinking.show { display: inline-flex; }
-.ai-fab-bubble-thinking i { width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; animation: aiThinkBounce 1s infinite; }
-.ai-fab-bubble-thinking i:nth-child(2) { animation-delay: 0.15s; }
-.ai-fab-bubble-thinking i:nth-child(3) { animation-delay: 0.3s; }
-@keyframes aiThinkBounce {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-  40% { transform: translateY(-4px); opacity: 1; }
-}
-/* Dòng "đang suy nghĩ" dùng chung trong modal AI */
-.ai-thinking { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted, #78716c); font-style: italic; }
-.ai-thinking i { width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; animation: aiThinkBounce 1s infinite; }
-.ai-thinking i:nth-child(2) { animation-delay: 0.15s; }
-.ai-thinking i:nth-child(3) { animation-delay: 0.3s; }
-@media (prefers-reduced-motion: reduce) {
-  .ai-fab-bubble-thinking i, .ai-thinking i { animation: none; }
-}
-/* Hàng công tắc gợi ý tự động trong modal */
-.ai-autogreet-row {
-  margin-top: 8px;
-  padding: 8px 10px;
-  border: 1px dashed #ddd6fe;
-  border-radius: 8px;
-  background: #fafaff;
-  font-size: 0.75rem;
-}
-.ai-autogreet-row label { display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
-.ai-autogreet-note { display: block; color: var(--text-muted, #78716c); margin-top: 3px; }
-.modal-ai-card { width: min(680px, 96vw); max-height: 88vh; display: flex; flex-direction: column; }
-.ai-body { padding: 16px 20px; overflow-y: auto; }
-.ai-section { margin-bottom: 14px; }
-.ai-section h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 0.86rem; }
-.ai-reminders { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.ai-reminders li {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 0.82rem;
-  line-height: 1.4;
-  padding: 7px 10px;
-  border-radius: 8px;
-  background: var(--surface-2, #f5f5f4);
-  border: 1px solid var(--border, #e7e5e4);
-}
-.ai-reminders li.warn { border-color: #f59e0b; background: #fffbeb; }
-.ai-reminders li.ok { border-color: #4ade80; background: #f0fdf4; }
-.ai-key-line { display: flex; gap: 8px; }
-.ai-key-line input { flex: 1; }
-.ai-out-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.ai-model-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.ai-model-row label { display: flex; align-items: center; gap: 4px; font-size: 0.76rem; font-weight: 600; white-space: nowrap; }
-.ai-model-row select { flex: 1; font-size: 0.78rem; }
-.ai-key-status { font-size: 0.7rem; color: var(--text-muted, #78716c); }
-.ai-output {
-  min-height: 110px;
-  max-height: 320px;
-  overflow-y: auto;
-  font-size: 0.84rem;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  background: var(--surface-2, #fafaf9);
-  border: 1px solid var(--border, #e7e5e4);
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-.ai-output strong { font-weight: 700; }
-.ai-loading { color: var(--text-muted, #78716c); font-style: italic; }
-.ai-error { color: var(--danger, #dc2626); }
-@media print { .ai-fab { display: none !important; } }
-
 /* ═══════════════════════════════════════════════════════════
    BẢNG THÔNG TIN NHÀ CUNG (tab Nguyên Liệu — js/suppliers.js)
    ═══════════════════════════════════════════════════════════ */
@@ -7945,26 +7754,6 @@ body[data-theme="night"] .hud-frame {
 body[data-theme="night"] .hud-frame::after { content: none; } /* bỏ lớp ngạnh cyan cũ */
 body[data-theme="night"] .hud-frame > * { position: relative; z-index: 1; }
 
-/* ── NAN BOT phiên bản đêm: bong bóng khung tre nhỏ (10px) ── */
-body[data-theme="night"] .ai-fab-bubble {
-  background: linear-gradient(180deg, rgba(253, 251, 243, 0.97), rgba(247, 243, 226, 0.97));
-  border: 10px solid transparent;
-  border-image: var(--khung-tre-svg) 34 / 10px stretch;
-  background-clip: padding-box;
-  background-origin: padding-box;
-  box-shadow: 0 12px 28px rgba(80, 70, 30, 0.25);
-  color: #2b3427;
-}
-body[data-theme="night"] .ai-fab-bubble::after { display: none; } /* không đuôi — đã có nút dây ở 4 góc */
-/* Dòng năng lượng: chỉ khi Nan Bot đang "suy nghĩ" — tự tắt khi xong */
-body[data-theme="night"] .ai-fab-bubble:has(.ai-fab-bubble-thinking.show) {
-  animation: aiEnergyPulse 1.2s ease-in-out infinite;
-}
-@keyframes aiEnergyPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(46, 125, 50, 0.16), 0 12px 28px rgba(80, 70, 30, 0.25); }
-  50% { box-shadow: 0 0 36px rgba(46, 125, 50, 0.40), 0 12px 28px rgba(80, 70, 30, 0.25); }
-}
-
 /* ── HỘP CANVAS BIỂU ĐỒ: khung tre nằm Ở THẺ NGOÀI (press-chart-card /
    custom-chart-card), hộp bên trong chỉ còn mặt tối + viền mảnh để tách
    vùng vẽ — KHÔNG đụng tới nội dung canvas bên trong. ── */
@@ -8108,9 +7897,7 @@ body[data-theme="night"] .x2-mini-card {
 /* ── GIẢM HIỆU ỨNG (máy yếu): tắt kính mờ + animation, GIỮ màu theme ── */
 body[data-theme="night"][data-fx="low"] * { backdrop-filter: none !important; }
 body[data-theme="night"][data-fx="low"] .modal-card,
-body[data-theme="night"][data-fx="low"] .ai-fab-bubble.show,
 body[data-theme="night"][data-fx="low"] .dropdown-menu { animation: none !important; }
-body[data-theme="night"][data-fx="low"] .ai-fab-bubble:has(.ai-fab-bubble-thinking.show) { animation: none !important; }
 
 /* ─────────────────────────────────────────────────────────────
    KHUNG CÂY TRE TRUYỀN THỐNG — trang trí các bảng & thẻ chính
@@ -8666,7 +8453,6 @@ body:has(.view-panel.active .modal-overlay.show) { overflow: hidden; }
   .modal-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   .modal-card select, .modal-card textarea,
   .column-search-input,
-  #ai-question,
   .x2-detail-modal input, .x2-detail-modal select, .x2-detail-modal textarea {
     font-size: 16px;
   }

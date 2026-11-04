@@ -3,7 +3,6 @@
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal, sendPasswordResetToUser } from './auth.js';
 import { deleteBatch, exitKanbanPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
-import { aiAutoGreet } from './ai.js';
 import { initTheme } from './theme.js';
 import { hideTreLoading, setTreLoadingStatus, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
@@ -247,8 +246,6 @@ function yieldBootFrame() {
     updateUndoButton();
     updateFileStorageUI();
     checkAuthAndRender();
-    // "Nan Bot" chào mở màn khi vừa vào app (tự kiểm tra: chỉ chào khi đã đăng nhập)
-    try { aiAutoGreet('dashboard-view'); } catch (e) { /* bỏ qua */ }
     // Tự động kết nối lại thư mục dữ liệu đã chọn trước đó
     autoReconnectDataFolder();
     // Đăng ký Service Worker để hoạt động OFFLINE (PWA)
@@ -418,13 +415,8 @@ function yieldBootFrame() {
     if (targetViewId === 'materials-view') renderMaterialView();
     if (targetViewId === 'qc-view') { renderQcView(); renderMechCards(); }
     if (targetViewId === 'hr-view') renderHrVisible();
-    // "Nan Bot" chào + nhắc nhanh theo tab vừa mở (tầng offline hiện ngay,
-    // tầng AI lầy hơn sẽ tự thay câu khi có key + mạng + còn quota)
-    try { aiAutoGreet(targetViewId); } catch (e) { /* lỗi gợi ý tự động — bỏ qua */ }
     // Vẽ icon lucide của tab vừa mở: svg CŨ đã bị gỡ data-lucide nên lần này
-    // chỉ xử lý <i data-lucide> MỚI (rẻ). Trước đây switchView KHÔNG gọi —
-    // icon trên thẻ lô chỉ được vẽ nhờ aiAutoGreet (ngẫu nhiên) nên CÓ THỂ MẤT
-    // khi Nan Bot đã chào trong ngày hoặc công tắc tự chào đang tắt.
+    // chỉ xử lý <i data-lucide> MỚI (rẻ).
     initLucide();
   }
 

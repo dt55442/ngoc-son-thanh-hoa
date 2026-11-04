@@ -321,8 +321,8 @@ check('NỐI (main): load 3 khoá lúc boot',
   jsMain.includes('loadX2BaoVanSpan()'));
 check('NỐI (export-xlsx): nguồn xuất "baovan" + cột 2 công đoạn',
   jsExport.includes("id: 'baovan'") && jsExport.includes("source === 'baovan'"));
-check('CẤU TRÚC (styles + sw): dùng lại khối nút kỳ + CACHE_NAME v352',
-  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v352/.test(swJs));
+check('CẤU TRÚC (styles + sw): dùng lại khối nút kỳ + CACHE_NAME v355',
+  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v355/.test(swJs));
 
 // ─── K. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
 {

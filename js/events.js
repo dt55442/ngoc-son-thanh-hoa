@@ -4,7 +4,7 @@
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleResetSubmit, handleUserEditSubmit, handleUserPermsSubmit, onSysExport, onSysFlagPreset, onSysFlagToggle, onSysPermChange, onSysPermReset, onSysReset, openUsersMgrModal, renderSysPerms, saveSession, sendPasswordResetToUser, sysSetTab, toggleAuthPanel } from './auth.js';
 // TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
 import { authErrorText, authMarkStep, authReset, isAuthBusy, setAuthBusy } from './auth-ui.js';
-import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, alBulkAddRow, alBulkOnClick, alBulkOnInput, toggleAlBulkEntryMode, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, exitKanbanPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
+import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, alBulkAddRow, alBulkOnClick, alBulkOnInput, toggleAlBulkEntryMode, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, deletePickedKhoStockLots, exitKanbanPickMode, exitKhoStockPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, onKhoStockPickChange, openAddLotModal, openBatchFormModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, selectAllKhoStockLots, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, toggleKhoStockPickMode, updateCkNewVolume, updateCkPosInfo } from './batch-modals.js';
 import { applyRoleToUI, flushPendingCloudPush, initLucide, isFirebaseOnline, pendingRecordCount, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
@@ -37,7 +37,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   handleXuong2BaoVanSubmit, editXuong2BaoVan, deleteXuong2BaoVan, resetXuong2BaoVanForm,
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
   setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
-import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
+import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck, saveKhoNotes } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
 import { setX1SaySinhQcStatus } from './xuong2.js';
 import { x2OngDatAvailable } from './x2-pool.js'; // SỔ NHÓM: tồn ống đạt chờ bổ (nút "Lấy Hết Tồn")
 import {
@@ -67,12 +67,14 @@ import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJS
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
 
   // ─── UNDO / HOÀN TÁC ──────────────────────────────────────────
-  function pushUndo(label) {
-    state.undoStack.push({
+  function pushUndo(label, options = {}) {
+    const entry = {
       label,
       batches: JSON.parse(JSON.stringify(state.batches)),
       timestamp: Date.now()
-    });
+    };
+    if (options.includeKhoNotes) entry.khoNotes = JSON.parse(JSON.stringify(state.khoNotes || []));
+    state.undoStack.push(entry);
     // Giới hạn tối đa 30 bước undo
     if (state.undoStack.length > 30) state.undoStack.shift();
     updateUndoButton();
@@ -89,6 +91,11 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Hoàn tác có thể khôi phục lại lô đã xóa -> gỡ tombstone của các id đang sống lại,
     // nếu không lần đẩy mây sau sẽ mang theo dấu vết xóa che mất lô vừa được phục hồi
     untrackDeleted('batches', (state.batches || []).map(b => b.id));
+    if (Array.isArray(last.khoNotes)) {
+      state.khoNotes = last.khoNotes;
+      untrackDeleted('khoNotes', state.khoNotes.map(n => n && n.id).filter(Boolean));
+      saveKhoNotes();
+    }
     saveData();
     renderAll();
     updateUndoButton();
@@ -346,6 +353,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Nút thực thi XÓA NHIỀU ngay trên thanh công cụ (thanh nổi đáy màn hình vẫn giữ)
     safeOn('kb-pick-inline-del', 'click', () => deletePickedBatches());
     safeOn('kb-pick-inline-cancel', 'click', () => exitKanbanPickMode());
+    safeOn('x2-kho-pick-toggle', 'click', () => toggleKhoStockPickMode());
+    safeOn('x2-kho-bulk-select-all', 'click', () => selectAllKhoStockLots());
+    safeOn('x2-kho-bulk-delete', 'click', () => deletePickedKhoStockLots());
+    safeOn('x2-kho-bulk-cancel', 'click', () => exitKhoStockPickMode());
+    safeOn('x2-kho-stock-rows', 'change', e => {
+      const box = e.target && e.target.closest ? e.target.closest('[data-x2-kho-pick-id]') : null;
+      if (!box) return;
+      onKhoStockPickChange(box.getAttribute('data-x2-kho-pick-id'), !!box.checked);
+    });
     // Ô tích chọn trên thẻ lô là NỘI DUNG ĐỘNG (vẽ lại mỗi lần render) → uỷ nhiệm
     // sự kiện change qua document, bắt mọi ô .kb-pick-box ở mọi thời điểm
     document.addEventListener('change', (e) => {

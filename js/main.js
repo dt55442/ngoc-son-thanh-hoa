@@ -2,7 +2,7 @@
 // js/main.js — tách từ app.js (refactor ES-modules phase 1)
 // ═══════════════════════════════════════════════════════════
 import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditModal, openUserPermsModal, sendPasswordResetToUser } from './auth.js';
-import { deleteBatch, exitKanbanPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
+import { deleteBatch, exitKanbanPickMode, exitKhoStockPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
 import { initTheme } from './theme.js';
 import { hideTreLoading, setTreLoadingStatus, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
@@ -385,6 +385,7 @@ function yieldBootFrame() {
     // treo lơ lửng ở tab khác; không vẽ lại — tab mới tự vẽ nội dung khi mở)
     if (prevView === 'kanban-view' && targetViewId !== 'kanban-view') {
       try { exitKanbanPickMode(false); } catch (e) {}
+      try { exitKhoStockPickMode(false); } catch (e) {}
     }
     if (targetViewId === 'dashboard-view') {
       // Biểu đồ + Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan):

@@ -1670,6 +1670,15 @@
               <h5><i data-lucide="boxes"></i> Tồn Kho Theo Lô</h5>
               <span class="x2-cut-table-count" id="x2-kho-stock-count"></span>
               <label class="kho-show-used" title="Hiện cả lô đã xuất hết (tồn 0) — mặc định ẨN để tránh hiểu nhầm"><input type="checkbox" id="x2-kho-show-used"> Hiện lô đã xuất hết</label>
+              <div class="kho-stock-bulk-controls admin-only-btn" id="x2-kho-bulk-controls">
+                <button type="button" class="btn btn-outline btn-sm" id="x2-kho-pick-toggle" title="Bật chọn nhiều lô Kho để xóa"><i data-lucide="list-checks"></i> Xóa nhiều</button>
+                <div class="kho-stock-bulk-actions">
+                  <span>Đã chọn <strong id="x2-kho-bulk-count">0</strong> lô</span>
+                  <button type="button" class="btn btn-outline btn-sm" id="x2-kho-bulk-select-all" title="Chọn tất cả lô đang hiển thị">Chọn tất cả đang hiện</button>
+                  <button type="button" class="btn btn-danger btn-sm" id="x2-kho-bulk-delete" disabled><i data-lucide="trash-2"></i> Xóa đã chọn</button>
+                  <button type="button" class="btn btn-outline btn-sm" id="x2-kho-bulk-cancel">Hủy</button>
+                </div>
+              </div>
               <button type="button" class="btn btn-outline btn-sm" id="x2-kho-backfill-btn" data-perm="x2" title="Rà soát sổ kho: dọn phiếu hệ thống TRÙNG, cắt phần phiếu bù cũ ghi vượt số lượng lô, bổ sung phiếu xuất Sấy 2 TỰ ĐỘNG còn thiếu (chỉ Admin / Ban Quản Lý). Tự chụp bản cất trước khi sửa."><i data-lucide="wand-2"></i> Rà soát sổ kho</button>
               <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2kho-stock" title="Thu gọn / Mở rộng">
                 <i data-lucide="chevron-up"></i> <span>Thu gọn</span>
@@ -2746,18 +2755,18 @@
                   <label for="x1-loc-ong-date">Ngày Lọc <span class="required">*</span></label>
                   <input type="date" id="x1-loc-ong-date" required>
                 </div>
-                                <div class="form-group" style="flex:1;">
+              </div>
+              <div class="x2-form-row">
+                <div class="form-group x1-loc-ong-qty-group">
                   <label for="x1-loc-ong-in">KL Ống Đem Lọc (kg)</label>
                   <input type="number" id="x1-loc-ong-in" step="any" min="0" placeholder="0">
                 </div>
-              </div>
-              <div class="x2-form-row">
-                <div class="form-group" style="flex:1;">
+                <div class="form-group x1-loc-ong-qty-group">
                   <label for="x1-loc-ong-ok">KL Ống Đạt (kg)</label>
                   <input type="number" id="x1-loc-ong-ok" step="any" min="0" placeholder="0">
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x1-loc-ong-loai">KL Loại (kg)</label>
+                <div class="form-group x1-loc-ong-qty-group">
+                  <label for="x1-loc-ong-loai">KL Sót Mắt (kg)</label>
                   <input type="number" id="x1-loc-ong-loai" step="any" min="0" placeholder="0">
                 </div>
               </div>
@@ -2864,9 +2873,9 @@
             <form id="x1-bo-form">
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1.5;">
-                  <label for="x1-bo-src">Nguồn (nguồn) <span class="required">*</span></label>
+                  <label for="x1-bo-src">Lô đầu vào <span class="required">*</span></label>
                   <select id="x1-bo-src" required></select>
-                  <small style="color:var(--text-muted);">2 nguồn: lượt Cắt Mắt còn CHƯA bổ + lượt LỌC ỐNG của lô ĐÃ qua Cắt Ống (bỏ qua Cắt Mắt)</small>
+                  <small style="color:var(--text-muted);">Gom theo lô: Ống Đạt từ Lọc Ống + phần Ống Sót Mắt đã Cắt Mắt; mặc định lấy tổng còn lại, có thể sửa để Bổ một phần. Lô đã qua Cắt Ống vẫn giữ nhánh bỏ qua Cắt Mắt.</small>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-bo-note">Ghi Chú</label>
@@ -6597,17 +6606,22 @@
           </div>
           <div class="form-group col-span-full bulk-lot-entry" id="al-bulk-entry" hidden>
             <div class="bulk-lot-entry-head">
-              <span>Nhập kích thước và số thanh theo loại. Mỗi ô số lượng lớn hơn 0 sẽ tạo một lô.</span>
+              <span>Dòng mới lấy rộng/dày theo dòng trước; mỗi ô số lượng lớn hơn 0 sẽ tạo một lô.</span>
               <button type="button" class="btn btn-outline btn-sm" id="al-bulk-add-row"><i data-lucide="plus"></i> Thêm dòng</button>
             </div>
+            <label class="bulk-lot-default-length" for="al-bulk-default-length">
+              Chiều dài chung (mm)
+              <input type="number" id="al-bulk-default-length" min="1" step="1" value="1250" inputmode="numeric">
+              <span>Dùng cho các dòng không nhập chiều dài riêng.</span>
+            </label>
             <div class="bulk-lot-grid-scroll">
               <table class="bulk-lot-grid">
-                <thead><tr><th>Dài (mm)</th><th>Rộng</th><th>Dày</th><th>A</th><th>A1</th><th>B</th><th></th></tr></thead>
+                <thead><tr><th>Dài riêng (mm)</th><th>Rộng</th><th>Dày</th><th>A</th><th>A1</th><th>B</th><th></th></tr></thead>
                 <tbody id="al-bulk-rows">
                   <tr data-al-bulk-row>
-                    <td><input type="number" min="1" step="1" data-al-bulk-dim="length" aria-label="Dài (mm)" placeholder="1250"></td>
-                    <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="width" aria-label="Rộng (mm)" placeholder="22"></td>
-                    <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="thickness" aria-label="Dày (mm)" placeholder="9"></td>
+                    <td><input type="number" min="1" step="1" data-al-bulk-dim="length" aria-label="Dài riêng (mm)" placeholder="Mặc định"></td>
+                    <td><select data-al-bulk-dim="width" aria-label="Rộng (mm)"><option value="">Chọn</option><option value="15">15</option><option value="18">18</option><option value="22">22</option><option value="24">24</option></select></td>
+                    <td><select data-al-bulk-dim="thickness" aria-label="Dày (mm)"><option value="">Chọn</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option></select></td>
                     <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A" aria-label="Số lượng loại A"></td>
                     <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A1" aria-label="Số lượng loại A1"></td>
                     <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="B" aria-label="Số lượng loại B"></td>

@@ -8,7 +8,7 @@ import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_CHON_NAN, stat
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoFifoAllocation, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
-import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes, sayBuildCharges, sayShiftMapOf, syncAlShiftField } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG
+import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormUsesBatches, renderX2KhoStockTable, saveKhoNotes, sayBuildCharges, sayShiftMapOf, syncAlShiftField, toggleX2KhoStockTable } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -293,19 +293,64 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   // 1 renderAll · 1 toast. Trước đây xóa N lô là N chuỗi đầy đủ (N lần vẽ lại
   // toàn bộ Kanban + N lần hẹn đẩy mây) → nguyên nhân chính gây độ trễ cao khi
   // xóa từng lô liên tục.
-  function deleteBatches(ids) {
+  function planKhoNoteUnlink(batchIds) {
+    const removedBatchIds = new Set(batchIds.map(id => String(id)));
+    const batchesById = new Map((state.batches || []).map(b => [String(b.id), b]));
+    const removedNoteIds = [];
+    let changed = false;
+    const now = new Date().toISOString();
+    const notes = [];
+
+    (state.khoNotes || []).forEach(note => {
+      const lots = Array.isArray(note && note.lots) ? note.lots : null;
+      if (!lots) { notes.push(note); return; }
+      const remainingLots = lots.filter(lot => !lot || !removedBatchIds.has(String(lot.batchId || '')));
+      if (remainingLots.length === lots.length) { notes.push(note); return; }
+      changed = true;
+      if (!remainingLots.length) {
+        if (note.id) removedNoteIds.push(note.id);
+        return;
+      }
+
+      const qty = remainingLots.reduce((sum, lot) => sum + (Number(lot && lot.qty) || 0), 0);
+      const hasMissingBatch = remainingLots.some(lot => !batchesById.has(String((lot && lot.batchId) || '')));
+      const m3 = hasMissingBatch
+        ? (Number(note.m3) || 0) * qty / Math.max(1, Number(note.qty) || 0)
+        : remainingLots.reduce((sum, lot) => {
+          const batch = batchesById.get(String(lot.batchId || ''));
+          if (!batch) return sum;
+          const dims = Array.isArray(batch.dimensions) ? batch.dimensions : [];
+          const length = Number(batch.length) || Number(dims[0]) || 0;
+          const width = Number(batch.width) || Number(dims[1]) || 0;
+          const thickness = Number(batch.thickness) || Number(dims[2]) || 0;
+          return sum + calculateVolume(length, width, thickness, Number(lot.qty) || 0);
+        }, 0);
+      notes.push(Object.assign({}, note, { lots: remainingLots, qty, m3, updatedAt: now }));
+    });
+
+    return { changed, notes, removedNoteIds };
+  }
+
+  function deleteBatches(ids, options = {}) {
     if (!requireEditPermission()) return 0;
-    const list = (Array.isArray(ids) ? ids : [ids]).map(v => String(v || '')).filter(Boolean);
+    const requestedIds = [...new Set((Array.isArray(ids) ? ids : [ids]).map(v => String(v || '')).filter(Boolean))];
+    const list = state.batches.filter(b => b && requestedIds.includes(String(b.id))).map(b => String(b.id));
     if (!list.length) return 0;
-    const targets = state.batches.filter(b => list.includes(String(b.id)));
-    if (!targets.length) return 0;
+    const targets = state.batches.filter(b => b && list.includes(String(b.id)));
     const names = targets.map(b => b.code || b.id);
+    const khoNotePlan = options.unlinkKhoNotes ? planKhoNoteUnlink(list) : null;
     pushUndo(names.length === 1
       ? `Xóa lô ${names[0]}`
-      : `Xóa ${names.length} lô: ${names.slice(0, 3).join(', ')}${names.length > 3 ? '…' : ''}`);
+      : `Xóa ${names.length} lô: ${names.slice(0, 3).join(', ')}${names.length > 3 ? '…' : ''}`,
+    { includeKhoNotes: !!(khoNotePlan && khoNotePlan.changed) });
     trackDeleted('batches', list); // dấu vết xóa: chặn máy khác đẩy ngược lô này lên mây
     const picked = new Set(list);
     state.batches = state.batches.filter(b => !picked.has(String(b.id)));
+    if (khoNotePlan && khoNotePlan.changed) {
+      trackDeleted('khoNotes', khoNotePlan.removedNoteIds);
+      state.khoNotes = khoNotePlan.notes;
+      saveKhoNotes();
+    }
     saveData(); renderAll();
     showToast(names.length === 1 ? `Đã xóa lô nan ${names[0]}` : `Đã xóa ${names.length} lô nan`, 'info');
     return names.length;
@@ -394,6 +439,94 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     state.kanbanPicked = [];          // gỡ khỏi danh sách chọn TRƯỚC khi vẽ lại
     deleteBatches(ids);               // tự saveData + renderAll + toast
     syncKanbanPickBar();
+  }
+
+  // ─── CHỌN NHIỀU LÔ TRONG BẢNG TỒN KHO XƯỞNG 2 ────────────────
+  function syncKhoStockPickUi() {
+    if (typeof document === 'undefined' || !document.getElementById) return;
+    const controls = document.getElementById('x2-kho-bulk-controls');
+    if (controls && controls.classList) controls.classList.toggle('picking', !!state.khoStockPickMode);
+    const rows = document.getElementById('x2-kho-stock-rows');
+    if (rows && rows.classList) rows.classList.toggle('kho-stock-pick-mode', !!state.khoStockPickMode && isAdminUser());
+    const count = document.getElementById('x2-kho-bulk-count');
+    if (count) count.textContent = String((state.khoStockPicked || []).length);
+    const del = document.getElementById('x2-kho-bulk-delete');
+    if (del) del.disabled = !(state.khoStockPicked || []).length;
+  }
+
+  function toggleKhoStockPickMode() {
+    if (state.khoStockPickMode) { exitKhoStockPickMode(); return; }
+    if (!isAdminUser()) { showToast('Xóa nhiều lô trong Kho chỉ dành cho Quản Trị (Admin).', 'error'); return; }
+    if (!requireEditPermission()) return;
+    const stockWrap = typeof document !== 'undefined' && document.getElementById
+      ? document.getElementById('x2-kho-stock-wrap')
+      : null;
+    if (stockWrap && stockWrap.classList && stockWrap.classList.contains('x2-cut-collapsed')) toggleX2KhoStockTable();
+    state.khoStockPickMode = true;
+    state.khoStockPicked = [];
+    renderX2KhoStockTable();
+    syncKhoStockPickUi();
+    renderAll();
+    showToast('Đã bật chọn nhiều lô Kho — tích chọn lô rồi bấm "Xóa đã chọn".', 'info');
+  }
+
+  function exitKhoStockPickMode(reRender = true) {
+    if (!state.khoStockPickMode && !(state.khoStockPicked || []).length) return;
+    state.khoStockPickMode = false;
+    state.khoStockPicked = [];
+    renderX2KhoStockTable();
+    syncKhoStockPickUi();
+    if (reRender) renderAll();
+  }
+
+  function onKhoStockPickChange(batchId, checked) {
+    if (!state.khoStockPickMode) return;
+    if (!isAdminUser()) { exitKhoStockPickMode(); showToast('Xóa nhiều lô trong Kho chỉ dành cho Quản Trị (Admin).', 'error'); return; }
+    if (!requireEditPermission()) return;
+    const id = String(batchId || '');
+    const batch = (state.batches || []).find(b => b && String(b.id) === id && b.stage === 'kho');
+    if (!batch) return;
+    const picked = new Set(state.khoStockPicked || []);
+    if (checked) picked.add(id); else picked.delete(id);
+    state.khoStockPicked = [...picked];
+    syncKhoStockPickUi();
+  }
+
+  function selectAllKhoStockLots() {
+    if (!state.khoStockPickMode) return;
+    if (!isAdminUser()) { exitKhoStockPickMode(); showToast('Xóa nhiều lô trong Kho chỉ dành cho Quản Trị (Admin).', 'error'); return; }
+    if (!requireEditPermission()) return;
+    const picked = new Set(state.khoStockPicked || []);
+    if (typeof document !== 'undefined' && document.querySelectorAll) {
+      document.querySelectorAll('#x2-kho-stock-rows [data-x2-kho-pick-id]').forEach(box => {
+        const id = box && box.getAttribute ? box.getAttribute('data-x2-kho-pick-id') : null;
+        if (!id || !(state.batches || []).some(b => b && String(b.id) === String(id) && b.stage === 'kho')) return;
+        picked.add(String(id));
+        if ('checked' in box) box.checked = true;
+      });
+    }
+    state.khoStockPicked = [...picked];
+    syncKhoStockPickUi();
+  }
+
+  function deletePickedKhoStockLots() {
+    if (!state.khoStockPickMode) return;
+    if (!isAdminUser()) { showToast('Xóa nhiều lô trong Kho chỉ dành cho Quản Trị (Admin).', 'error'); return; }
+    if (!requireEditPermission()) return;
+    const ids = [...new Set((state.khoStockPicked || []).filter(id =>
+      (state.batches || []).some(b => b && String(b.id) === String(id) && b.stage === 'kho')
+    ))];
+    if (!ids.length) { showToast('Chưa chọn lô nào ở Kho để xóa!', 'info'); return; }
+    if (khoNoteFormUsesBatches(ids)) {
+      showToast('Hãy lưu hoặc hủy phiếu Kho đang nhập/sửa trước khi xóa các lô đang chọn.', 'error');
+      return;
+    }
+    if (typeof confirm === 'function' &&
+        !confirm(`Xóa ${ids.length} lô nan đã chọn? Phiếu Kho liên quan sẽ bỏ các lô này; phiếu hết lô sẽ bị xóa. Có thể bấm Hoàn Tác để khôi phục.`)) return;
+    state.khoStockPicked = [];
+    state.khoStockPickMode = false;
+    syncKhoStockPickUi();
+    deleteBatches(ids, { unlinkKhoNotes: true });
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -2081,11 +2214,16 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     syncAlEntryModeUi();          // CÁCH NHẬP (thẻ ⇄ bảng): bảng chỉ bật cho Sấy 1
   }
 
-  function alBulkRowHtml() {
+  function alBulkSelectOptions(values, selected = '') {
+    return `<option value="">Chọn</option>${values.map(value =>
+      `<option value="${value}"${String(value) === String(selected) ? ' selected' : ''}>${value}</option>`
+    ).join('')}`;
+  }
+  function alBulkRowHtml(width = '', thickness = '') {
     return `<tr data-al-bulk-row>
-      <td><input type="number" min="1" step="1" data-al-bulk-dim="length" aria-label="Dài (mm)" placeholder="1250"></td>
-      <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="width" aria-label="Rộng (mm)" placeholder="22"></td>
-      <td><input type="number" min="0.1" step="0.1" data-al-bulk-dim="thickness" aria-label="Dày (mm)" placeholder="9"></td>
+      <td><input type="number" min="1" step="1" data-al-bulk-dim="length" aria-label="Dài riêng (mm)" placeholder="Mặc định"></td>
+      <td><select data-al-bulk-dim="width" aria-label="Rộng (mm)">${alBulkSelectOptions([15, 18, 22, 24], width)}</select></td>
+      <td><select data-al-bulk-dim="thickness" aria-label="Dày (mm)">${alBulkSelectOptions([7, 8, 9, 10, 11], thickness)}</select></td>
       <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A" aria-label="Số lượng loại A"></td>
       <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="A1" aria-label="Số lượng loại A1"></td>
       <td><input type="number" min="0" step="1" inputmode="numeric" data-al-bulk-qty="B" aria-label="Số lượng loại B"></td>
@@ -2123,7 +2261,10 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   function alBulkAddRow() {
     const body = document.getElementById('al-bulk-rows');
     if (!body) return;
-    body.insertAdjacentHTML('beforeend', alBulkRowHtml());
+    const rows = body.querySelectorAll('[data-al-bulk-row]');
+    const previous = rows.length ? rows[rows.length - 1] : null;
+    const value = key => String((previous && previous.querySelector(`[data-al-bulk-dim="${key}"]`) || {}).value || '');
+    body.insertAdjacentHTML('beforeend', alBulkRowHtml(value('width'), value('thickness')));
   }
   function alBulkOnClick(e) {
     const button = e && e.target && e.target.closest ? e.target.closest('[data-al-bulk-remove]') : null;
@@ -2133,7 +2274,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
     if (!body || !row) return;
     const rows = body.querySelectorAll('[data-al-bulk-row]');
     if (rows.length <= 1) {
-      row.querySelectorAll('input').forEach(input => { input.value = ''; });
+      row.querySelectorAll('input, select').forEach(input => { input.value = ''; });
     } else {
       row.remove();
     }
@@ -2155,11 +2296,12 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
   function readAlBulkRows() {
     const body = document.getElementById('al-bulk-rows');
     const rows = body ? [...body.querySelectorAll('[data-al-bulk-row]')] : [];
+    const defaultLength = String((document.getElementById('al-bulk-default-length') || {}).value || '').trim();
     const items = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const dim = key => String((row.querySelector(`[data-al-bulk-dim="${key}"]`) || {}).value || '').trim();
-      const dimValues = { length: dim('length'), width: dim('width'), thickness: dim('thickness') };
+      const dimValues = { length: dim('length') || defaultLength, width: dim('width'), thickness: dim('thickness') };
       const dimNums = Object.fromEntries(Object.entries(dimValues).map(([k, v]) => [k, Number(v)]));
       const quantities = {};
       let hasQty = false;
@@ -2174,6 +2316,9 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, saveKhoNotes
       if (!hasQty) continue;
       if (Object.values(dimNums).some(n => !Number.isFinite(n) || n <= 0)) {
         return { items: [], error: `Dòng ${i + 1}: nhập đủ Dài × Rộng × Dày lớn hơn 0.` };
+      }
+      if (![15, 18, 22, 24].includes(dimNums.width) || ![7, 8, 9, 10, 11].includes(dimNums.thickness)) {
+        return { items: [], error: `Dòng ${i + 1}: chọn Rộng 15/18/22/24 và Dày 7–11.` };
       }
       for (const type of ['A', 'A1', 'B']) {
         if (quantities[type] > 0) items.push({ ...dimNums, bambooType: type, quantity: quantities[type] });
@@ -3148,6 +3293,7 @@ export {
   alBulkAddRow,
   alBulkOnClick,
   alBulkOnInput,
+  readAlBulkRows,
   toggleAlBulkEntryMode,
   closeBatchFormModal,
   closeTransferKhoModal,
@@ -3165,10 +3311,15 @@ export {
   deleteBatch,
   deleteBatches,
   deletePickedBatches,
+  deletePickedKhoStockLots,
+  exitKhoStockPickMode,
+  onKhoStockPickChange,
   exitKanbanPickMode,
   kanbanSelectAll,
   onKanbanPickChange,
+  selectAllKhoStockLots,
   syncKanbanPickBar,
+  toggleKhoStockPickMode,
   toggleKanbanPickMode,
   handleAddLotSubmit,
   handleAlAddLocation,

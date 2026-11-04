@@ -1113,7 +1113,7 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
       const spec = X1_CHAIN_SPECS.find(sp => sp.key === X1_CHAIN_KEYS[source]);
       if (spec) {
         head = ['Stt', 'Ngày', 'Mã Lô', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
-          'KL Vào (kg)', 'KL Đạt (kg)', 'KL Loại (kg)', 'Tỷ Lệ Đạt (%)',
+          'KL Vào (kg)', 'KL Đạt (kg)', spec.key === 'locOng' ? 'KL Sót Mắt (kg)' : 'KL Loại (kg)', 'Tỷ Lệ Đạt (%)',
           'Người Làm', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
         const list = (state[spec.stateKey] || []).map(r => x1ChainDisplay(spec, r))
           .filter(d => x2InRange(d.date, from, to))

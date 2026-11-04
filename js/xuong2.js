@@ -12166,6 +12166,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     firePushSync(); // đồng bộ lên mây nếu online
   }
+  function khoNoteFormUsesBatches(ids) {
+    const targetIds = new Set((Array.isArray(ids) ? ids : [ids]).map(id => String(id || '')).filter(Boolean));
+    if (!targetIds.size) return false;
+    if (Object.keys(khoNotePicked || {}).some(id => targetIds.has(String(id)))) return true;
+    const editing = (state.khoNotes || []).find(n => n && String(n.id) === String(khoNoteEditId || ''));
+    return !!(editing && (Array.isArray(editing.lots) ? editing.lots : [])
+      .some(lot => lot && targetIds.has(String(lot.batchId || ''))));
+  }
 
   // ─── TỒN TRUNG GIAN (WIP) — nằm ở TỪNG CÔNG ĐOẠN, KHÔNG nằm ở Kho ──
   // • Thanh lỗi BÀO TINH: baoTinhDefectStock() (đã có) + trừ phiếu xử lý ĐÃ DUYỆT.
@@ -13133,8 +13141,13 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const inN = khoInCountOf(b);
     const cap = inN * (Number(b.quantity) || 0);
     const outR = khoOutRoundCountOf(b);
+    const pickMode = state.khoStockPickMode && state.currentUser && state.currentUser.role === 'admin';
+    const picked = (state.khoStockPicked || []).includes(String(b.id));
+    const pick = pickMode
+      ? `<label class="kho-stock-pick"><input type="checkbox" data-x2-kho-pick-id="${escapeHTML(b.id)}"${picked ? ' checked' : ''} aria-label="Chọn lô ${escapeHTML(b.code || b.id)}"> Chọn</label>`
+      : '';
     return `<div class="kho-stock-row${rem <= 0 ? ' used' : ''}">
-      <div class="kho-stock-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${Number(b.length) || 0}×${Number(b.width) || 0}×${Number(b.thickness) || 0} mm
+      <div class="kho-stock-line1">${pick}<strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${Number(b.length) || 0}×${Number(b.width) || 0}×${Number(b.thickness) || 0} mm
         <span class="tag-badge tag-type-${escapeHTML(b.bambooType || 'A')}">Loại ${escapeHTML(b.bambooType || '—')}</span>
         <span class="tag-badge tag-use-${escapeHTML(b.useFor || 'Van')}">${escapeHTML(b.useFor || '—')}</span></div>
       <div class="kho-stock-line2">
@@ -13154,6 +13167,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function renderX2KhoStockTable() {
     const box = document.getElementById('x2-kho-stock-rows');
     if (!box) return;
+    const pickMode = state.khoStockPickMode && state.currentUser && state.currentUser.role === 'admin';
+    if (box.classList) box.classList.toggle('kho-stock-pick-mode', !!pickMode);
     const alloc = khoFifoAllocation();
     const q = khoStockQuery.trim().toLowerCase();
     const lots = (state.batches || []).filter(b => b && b.stage === 'kho')
@@ -13172,6 +13187,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       : '<div class="al-empty">— Không có lô nào ở Kho (hoặc tất cả đã xuất hết — bật "Hiện lô đã xuất hết" để xem) —</div>';
     const count = document.getElementById('x2-kho-stock-count');
     if (count) count.textContent = `${filtered.length} lô`;
+    const pickedCount = document.getElementById('x2-kho-bulk-count');
+    if (pickedCount) pickedCount.textContent = String((state.khoStockPicked || []).length);
+    const deleteButton = document.getElementById('x2-kho-bulk-delete');
+    if (deleteButton) deleteButton.disabled = !(state.khoStockPicked || []).length;
     const chk = document.getElementById('x2-kho-show-used');
     if (chk) chk.checked = !!state.khoShowUsed;
     initLucide();
@@ -15688,7 +15707,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // ═════════════════════════════════════════════════════════════
   // 5 CÔNG ĐOẠN ĐUÔI — KHUNG THẺ DÙNG CHUNG (Giai đoạn 2 · 05/10/2026)
   // ═════════════════════════════════════════════════════════════
-  //   Lọc Ống ← Bốc · Cắt Mắt ← Lọc Ống · Bổ ← Cắt Mắt ·
+  //   Lọc Ống ← Bốc · Cắt Mắt ← Lọc Ống · Bổ ← Đạt từ Lọc Ống + Cắt Mắt ·
   //   Phơi Sấy ← Bổ · Lọc Thanh/Bó Xô ← Phơi Sấy
   //
   // Thay vì 5 bộ hàm gần giống nhau, mỗi công đoạn chỉ là 1 SPEC mô tả;
@@ -15713,22 +15732,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!ss) return false;
     return (state.xuong1CatOngRecords || []).some(r => r.id === ss.catOngId);
   }
-  // Số kg 1 lô Lọc Ống đã bị 2 đường tiêu thụ (chống ăn trùng khi Bổ nhận
-  // thẳng từ Lọc Ống): đường Cắt Mắt (lượt cũ trước khi đổi quy tắc)…
-  function x1CatMatUsedOf(locOngId, excludeId) {
-    if (!locOngId) return 0;
-    return (state.xuong1CatMatRecords || [])
-      .filter(r => r.locOngId === locOngId && r.id !== excludeId)
-      .reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
-  }
-  // …và đường Bổ thẳng (lượt mới — bỏ qua Cắt Mắt).
-  function x1BoDirectUsedOf(locOngId, excludeId) {
-    if (!locOngId) return 0;
-    return (state.xuong1BoRecords || [])
-      .filter(r => r.locOngId === locOngId && r.id !== excludeId)
-      .reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
-  }
-
   // TỒN của nguồn = sản lượng nguồn − Σ qtyIn các lượt liên kết
   // (đang SỬA 1 lượt → excludeId trả lại phần của chính nó; hết → tự ẩn).
   const X1_CHAIN_SPECS = [
@@ -15739,7 +15742,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       rateKind: 'locOng', incKey: 'x1locong',
       title: 'Lọc Ống', icon: 'list-filter',
       headName: 'Người lọc', srcName: 'Bốc',
-      inLabel: 'KL ống đem lọc', okLabel: 'KL ống đạt', loaiLabel: 'KL loại',
+      inLabel: 'KL ống đem lọc', okLabel: 'KL ống đạt', loaiLabel: 'KL sót mắt',
       unitWord: 'ống', statWord: 'Lượt lọc ống',
       srcRecords: () => state.xuong1BocRecords || [],
       srcOutputOf: r => Number(r.qty) || 0,
@@ -15757,16 +15760,13 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       inLabel: 'KL đem cắt', okLabel: 'KL đạt', loaiLabel: 'KL mắt/ống loại',
       unitWord: 'ống', statWord: 'Lượt cắt mắt',
       srcRecords: () => state.xuong1LocOngRecords || [],
-      srcOutputOf: r => Number(r.qtyOk) || 0,
+      srcOutputOf: r => Number(r.qtyLoai) || 0,
       posMatch: n => normPosName(n).includes('cat mat'),
       emptyIcon: 'crop',
-      // ⚠ 12/10/2026: lô Lọc Ống đã QUA CẮT ỐNG bị ẨN khỏi ô chọn này
-      //   (hiện thẳng ở thẻ Bổ) — chống ăn trùng: phần đã Bổ thẳng cũng
-      //   bị trừ khỏi "còn lại" (lifetime edit dữ liệu cũ).
+      // Lô đã qua Cắt Ống giữ luồng bỏ qua Cắt Mắt, như các bản ghi cũ.
       srcVisible: s => !x1LocOngViaCutOng(s),
-      remainingExtraOf: (src) => x1BoDirectUsedOf(src.id, null),
       srcEmptyNote: '— Lượt Lọc Ống đã QUA CẮT ỐNG hiện ở thẻ BỔ (bỏ qua Cắt Mắt) —',
-      srcHint: 'Chỉ hiện lượt Lọc Ống CHƯA qua Cắt Ống còn CHƯA cắt mắt — lô qua Cắt Ống → thẻ Bổ'
+      srcHint: 'Chỉ hiện lượt Lọc Ống còn KL sót mắt CHƯA cắt hết — lô qua Cắt Ống → thẻ Bổ'
     },
     {
       key: 'bo', prefix: 'bo', cardId: 'x1-bo-card',
@@ -15779,18 +15779,28 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       unitWord: 'ống', statWord: 'Lượt bổ',
       srcRecords: () => state.xuong1CatMatRecords || [],
       srcOutputOf: r => Number(r.qtyOk) || 0,
-      posMatch: n => { const s = normPosName(n); return s === 'bo' || s.startsWith('bo '); },
+      posMatch: n => normPosName(n) === 'bo ong 1',
       emptyIcon: 'split',
-      // ── 2 NGUỒN (12/10/2026): Cắt Mắt (đường cũ) + LỌC ỐNG THẲNG ──
-      // Lô đã qua Cắt Ống → bỏ qua Cắt Mắt: Bổ nhận thẳng từ lượt Lọc Ống.
+      // Lượt Bổ chọn theo lô và phân bổ vào đầu ra của cả hai công đoạn.
       altSrcField: 'locOngId',
       altSrcRecords: () => state.xuong1LocOngRecords || [],
       altSrcName: 'Lọc Ống',
       altSrcVisible: s => x1LocOngViaCutOng(s),
-      // Chống ăn trùng: lô Lọc Ống nhận thẳng bị trừ phần đã qua Cắt Mắt (lượt cũ)
-      remainingExtraOf: (src) =>
-        ((state.xuong1LocOngRecords || []).some(r => r.id === src.id) ? x1CatMatUsedOf(src.id, null) : 0),
-      srcHint: 'Chỉ hiện lượt Cắt Mắt còn CHƯA bổ hết + lượt Lọc Ống của lô ĐÃ qua Cắt Ống (bỏ qua Cắt Mắt)'
+      sourceGroups: x1BoSourceGroups,
+      sourceRemainingOf: x1BoSourceRemainingOf,
+      sourceGroupIdForRecord: x1BoSourceGroupIdForRecord,
+      sourceGroupForRecord: x1BoSourceGroupForRecord,
+      sourceAllocationsOf: x1BoAllocationsForQty,
+      sourceGroupIdField: 'boSourceGroupId',
+      sourceAllocationsField: 'sourceAllocations',
+      autoFillQty: rest => rest,
+      sourceGroupHeading: 'Theo lô: Lọc Ống + Cắt Mắt',
+      sourceLabel: 'Ống Đạt từ Lọc Ống + Ống Đạt từ Cắt Mắt',
+      sourceRouteOf: (r, group) => r.boSourceGroupId
+        ? group.route
+        : (r.locOngId ? 'Lọc Ống — bỏ qua Cắt Mắt' : 'Cắt Mắt'),
+      srcEmptyNote: '— Chưa có Ống Đạt từ Lọc Ống hoặc Cắt Mắt chờ Bổ —',
+      srcHint: 'Gom theo lô: Ống Đạt từ Lọc Ống + phần Ống Sót Mắt đã Cắt Mắt; Bổ một phần vẫn được'
     },
     {
       key: 'phoiSay', prefix: 'phoi-say', cardId: 'x1-phoi-say-card',
@@ -15841,11 +15851,139 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   const x1SrcTypeOf   = r => (r && (r.materialType || r.srcType)) || '';
   const x1SrcSupplierOf = r => (r && (r.supplier || r.srcSupplier)) || '';
 
+  function x1BoSourceAllocationsOf(r) {
+    if (Array.isArray(r && r.sourceAllocations)) {
+      return r.sourceAllocations.map(a => ({
+        sourceType: String(a && a.sourceType || ''),
+        sourceId: String(a && a.sourceId || ''),
+        qty: Math.max(0, Number(a && a.qty) || 0)
+      })).filter(a => a.sourceId && a.qty > 0);
+    }
+    const qty = Math.max(0, Number(r && r.qtyIn) || 0);
+    if (r && r.catMatId) return [{ sourceType: 'catMat', sourceId: r.catMatId, qty }];
+    if (r && r.locOngId) return [{ sourceType: 'locOng', sourceId: r.locOngId, qty }];
+    return [];
+  }
+  function x1BoSourceUsedOf(sourceType, sourceId, excludeId) {
+    if (!sourceId) return 0;
+    return (state.xuong1BoRecords || [])
+      .filter(r => r.id !== excludeId)
+      .reduce((sum, r) => sum + x1BoSourceAllocationsOf(r)
+        .filter(a => a.sourceType === sourceType && a.sourceId === sourceId)
+        .reduce((n, a) => n + a.qty, 0), 0);
+  }
+  function x1BoSourceGroups() {
+    const groups = new Map();
+    const add = (sourceType, record) => {
+      if (!record || !record.id) return;
+      const parentLoc = sourceType === 'catMat'
+        ? (state.xuong1LocOngRecords || []).find(r => r.id === record.locOngId) : null;
+      const lotCode = x1TraceLotCodeOf(record) || (parentLoc ? x1TraceLotCodeOf(parentLoc) : '');
+      const fallbackKey = parentLoc ? `locOng:${parentLoc.id}` : `${sourceType}:${record.id}`;
+      const key = lotCode ? `lot:${lotCode}` : fallbackKey;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key, lotCode,
+          sources: [], types: [], suppliers: [], dates: []
+        });
+      }
+      const group = groups.get(key);
+      group.sources.push({
+        sourceType, sourceId: record.id,
+        outputQty: Math.max(0, Number(record.qtyOk) || 0),
+        record
+      });
+      const type = x1SrcTypeOf(record) || (parentLoc && x1SrcTypeOf(parentLoc)) || '';
+      const supplier = x1SrcSupplierOf(record) || (parentLoc && x1SrcSupplierOf(parentLoc)) || '';
+      const date = record.date || (parentLoc && parentLoc.date) || '';
+      if (type && !group.types.includes(type)) group.types.push(type);
+      if (supplier && !group.suppliers.includes(supplier)) group.suppliers.push(supplier);
+      if (date) group.dates.push(date);
+    };
+    (state.xuong1LocOngRecords || []).forEach(r => add('locOng', r));
+    (state.xuong1CatMatRecords || []).forEach(r => add('catMat', r));
+    return [...groups.values()].map(group => {
+      const hasLocOng = group.sources.some(s => s.sourceType === 'locOng');
+      const hasCatMat = group.sources.some(s => s.sourceType === 'catMat');
+      const onlyViaCutOng = hasLocOng && group.sources
+        .filter(s => s.sourceType === 'locOng')
+        .every(s => x1LocOngViaCutOng(s.record));
+      const route = hasLocOng && hasCatMat
+        ? 'Ống Đạt từ Lọc Ống + Sót Mắt đã Cắt Mắt'
+        : hasCatMat
+          ? 'Sót Mắt đã Cắt Mắt'
+          : `Ống Đạt từ Lọc Ống${onlyViaCutOng ? ' — bỏ qua Cắt Mắt' : ''}`;
+      return {
+        ...group,
+        id: `x1bo-lot:${encodeURIComponent(group.key)}`,
+        srcType: group.types.join(', ') || 'Vầu/nứa',
+        srcSupplier: group.suppliers.join(', '),
+        date: group.dates.sort()[0] || '',
+        route
+      };
+    }).sort((a, b) => String(b.date).localeCompare(String(a.date)) || a.id.localeCompare(b.id));
+  }
+  function x1BoSourceRemainingOf(source, excludeId) {
+    let sources = source && Array.isArray(source.sources) ? source.sources : null;
+    if (!sources && source && source.id) {
+      const locOng = (state.xuong1LocOngRecords || []).find(r => r.id === source.id);
+      const catMat = locOng ? null : (state.xuong1CatMatRecords || []).find(r => r.id === source.id);
+      const record = locOng || catMat;
+      if (record) {
+        sources = [{
+          sourceType: locOng ? 'locOng' : 'catMat',
+          sourceId: record.id,
+          outputQty: Math.max(0, Number(record.qtyOk) || 0)
+        }];
+      }
+    }
+    return (sources || []).reduce((sum, s) => sum + Math.max(0,
+      (Number(s.outputQty) || 0) - x1BoSourceUsedOf(s.sourceType, s.sourceId, excludeId)), 0);
+  }
+  function x1BoSourceGroupForRecord(record, groups = x1BoSourceGroups()) {
+    if (!record) return null;
+    const saved = groups.find(g => g.id === record.boSourceGroupId);
+    if (saved) return saved;
+    const allocations = x1BoSourceAllocationsOf(record);
+    return groups.find(g => allocations.some(a => g.sources.some(s =>
+      s.sourceType === a.sourceType && s.sourceId === a.sourceId))) || null;
+  }
+  function x1BoSourceGroupIdForRecord(record) {
+    return x1BoSourceGroupForRecord(record)?.id || String((record && record.boSourceGroupId) || '');
+  }
+  function x1BoAllocationsForQty(group, qty, excludeId) {
+    const availableSources = [...(group && group.sources || [])];
+    const ordered = [
+      ...availableSources.filter(s => s.sourceType === 'catMat'),
+      ...availableSources.filter(s => s.sourceType === 'locOng')
+    ];
+    let remaining = Math.max(0, Number(qty) || 0);
+    const allocations = [];
+    ordered.forEach(source => {
+      if (remaining <= 1e-9) return;
+      const rest = Math.max(0, (Number(source.outputQty) || 0) -
+        x1BoSourceUsedOf(source.sourceType, source.sourceId, excludeId));
+      const amount = Math.min(rest, remaining);
+      if (amount > 1e-9) {
+        allocations.push({ sourceType: source.sourceType, sourceId: source.sourceId, qty: amount });
+        remaining -= amount;
+      }
+    });
+    return remaining > 1e-9 ? null : allocations;
+  }
+
   // Phần CÒN LẠI của 1 nguồn (excludeId = lượt ĐANG SỬA → phần đó được trả lại)
-  // ── NHÓM NGUỒN (spec có 2 nhánh → dùng cho THẺ BỔ) ──────────────
-  // linked: lượt ĐANG SỬA vẫn thấy đúng nguồn của nó (kể cả nguồn đã bị ẩn
-  // do đổi quy tắc 12/10/2026 — không thì mất link khi sửa).
+  // ── NHÓM NGUỒN: hỗ trợ nhóm theo lô và các link nguồn cũ ───────
+  // Khi sửa, vẫn hiển thị đúng nguồn đang liên kết dù nguồn đã hết tồn.
   function x1ChainSrcGroups(spec, editId) {
+    if (spec.sourceGroups) {
+      const editRec = editId
+        ? (state[spec.stateKey] || []).find(r => r.id === editId) : null;
+      const linkedId = spec.sourceGroupIdForRecord ? spec.sourceGroupIdForRecord(editRec) : '';
+      const base = spec.sourceGroups().filter(s =>
+        spec.sourceRemainingOf(s, editId) > 0 || s.id === linkedId);
+      return { base, alt: [] };
+    }
     const linked = s => !!(editId && (state[spec.stateKey] || [])
       .some(r => r.id === editId && (r[spec.srcField] === s.id || (spec.altSrcField && r[spec.altSrcField] === s.id))));
     const base = (spec.srcRecords() || []).filter(s =>
@@ -15856,15 +15994,18 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       : [];
     return { base, alt };
   }
-  // Trường link của 1 lượt: bản cũ thẻ Bổ có catMatId, bản mới nhận thẳng
-  // từ Lọc Ống có locOngId (2 trường KHÔNG cùng trỏ 1 nguồn).
+  // Trường link nguồn cho các lượt chuỗi và bản ghi Bổ cũ.
   function x1ChainSrcFieldOf(spec, rec) {
     if (spec.altSrcField && rec && rec[spec.altSrcField]) return spec.altSrcField;
     return spec.srcField;
   }
-  // Tìm nguồn theo id trong CẢ 2 nhánh (Bổ: Cắt Mắt lẫn Lọc Ống)
+  // Tìm nguồn theo id; thẻ Bổ còn hỗ trợ id nhóm lô mới và link nguồn cũ.
   function x1ChainFindSrc(spec, srcId) {
     if (!srcId) return null;
+    if (spec.sourceGroups) {
+      const group = spec.sourceGroups().find(s => s.id === srcId);
+      if (group) return group;
+    }
     const base = (spec.srcRecords() || []).find(s => s.id === srcId);
     if (base) return base;
     if (spec.altSrcRecords) return (spec.altSrcRecords() || []).find(s => s.id === srcId) || null;
@@ -15882,10 +16023,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   function x1ChainRemainingOf(spec, src, excludeId) {
     if (!src) return 0;
-    // extra = phần đã bị ĐƯỜNG KHÁC tiêu thụ (VD lô Lọc Ống vừa bị Cắt Mắt
-    // (lượt cũ) vừa bị Bổ thẳng — cộng cả 2 để không ăn trùng).
-    const extra = spec.remainingExtraOf ? (spec.remainingExtraOf(src, excludeId) || 0) : 0;
-    return Math.max(0, (spec.srcOutputOf(src) || 0) - x1ChainUsedOf(spec, src.id, excludeId) - extra);
+    if (spec.sourceRemainingOf) return spec.sourceRemainingOf(src, excludeId);
+    return Math.max(0, (spec.srcOutputOf(src) || 0) - x1ChainUsedOf(spec, src.id, excludeId));
   }
   function x1ChainPending(spec) {
     const g = x1ChainSrcGroups(spec, null);
@@ -15918,6 +16057,17 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const saySinh = (state.xuong1SaySinhRecords || []).find(r => r.id === record.saySinhId);
       if (saySinh && saySinh.code) return String(saySinh.code);
     }
+    if (Array.isArray(record.sourceAllocations)) {
+      for (const allocation of record.sourceAllocations) {
+        const records = allocation && allocation.sourceType === 'locOng'
+          ? state.xuong1LocOngRecords
+          : allocation && allocation.sourceType === 'catMat'
+            ? state.xuong1CatMatRecords : null;
+        const parent = records && records.find(r => r.id === allocation.sourceId);
+        const code = x1TraceLotCodeOf(parent, seen);
+        if (code) return code;
+      }
+    }
     const upstream = [
       ['bocId', state.xuong1BocRecords],
       ['locOngId', state.xuong1LocOngRecords],
@@ -15937,8 +16087,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // ─── SỐ LIỆU HIỂN THỊ (link SỐNG tới nguồn) ────────────────────
   function x1ChainDisplay(spec, r) {
     const field = x1ChainSrcFieldOf(spec, r);
-    const src = x1ChainFindSrc(spec, r[field]);
-    const viaAlt = spec.altSrcField && field === spec.altSrcField;
+    const sourceGroup = spec.sourceGroupForRecord ? spec.sourceGroupForRecord(r) : null;
+    const src = sourceGroup || x1ChainFindSrc(spec, r[field]);
+    const viaAlt = !sourceGroup && spec.altSrcField && field === spec.altSrcField;
     const live = hrX1AssignmentsAt(r.date || '', spec.posMatch);
     const hours = live.length ? sumPosHoursSplitX1(live, r.date || '') : null;
     return {
@@ -15947,9 +16098,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       srcType: src ? x1SrcTypeOf(src) : (r.srcType || ''),
       srcSupplier: src ? x1SrcSupplierOf(src) : (r.srcSupplier || ''),
       srcDate: src ? (src.date || '') : (r.srcDate || ''),
-      lotCode: String(r.lotCode || x1TraceLotCodeOf(src) || r.srcLotCode || ''),
-      // Đường đi của nguồn (thẻ Bổ: "Lọc Ống — bỏ qua Cắt Mắt")
-      srcRoute: viaAlt ? `${spec.altSrcName} — bỏ qua ${spec.srcName}` : spec.srcName,
+      lotCode: String(r.lotCode || (src && src.lotCode) || x1TraceLotCodeOf(src) || r.srcLotCode || ''),
+      srcRoute: sourceGroup && spec.sourceRouteOf
+        ? spec.sourceRouteOf(r, sourceGroup)
+        : (r.srcRoute || (viaAlt ? `${spec.altSrcName} — bỏ qua ${spec.srcName}` : spec.srcName)),
       srcRest: src ? x1ChainRemainingOf(spec, src, null) : 0,
       qtyIn: Number(r.qtyIn) || 0,
       qtyOk: Number(r.qtyOk) || 0,
@@ -15972,8 +16124,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const optOf = (s, isAlt) => {
       const rest = x1ChainRemainingOf(spec, s, editId);
       const nm = x1SrcTypeOf(s) || 'Vầu/nứa';
-      const route = isAlt ? `${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName;
-      const lotCode = x1TraceLotCodeOf(s);
+      const route = s.route || (isAlt ? `${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName);
+      const lotCode = s.lotCode || x1TraceLotCodeOf(s);
       return `<option value="${escapeHTML(s.id)}">${lotCode ? `[${escapeHTML(lotCode)}] ` : ''}${escapeHTML(nm)} · ${escapeHTML(route)} ${formatDateDDMMYY(s.date)} · còn ${fmtKg(rest)} kg</option>`;
     };
     const total = g.base.length + g.alt.length;
@@ -15982,8 +16134,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       html = spec.srcEmptyNote
         ? `<option value="">${escapeHTML(spec.srcEmptyNote)}</option>`
         : `<option value="">— Hết lượt ${escapeHTML(spec.srcName)} chờ ${escapeHTML(spec.title.toLowerCase())} —</option>`;
+    } else if (spec.sourceGroups) {
+      html = `<optgroup label="${escapeHTML(spec.sourceGroupHeading || spec.srcName)}">${g.base.map(s => optOf(s, false)).join('')}</optgroup>`;
     } else {
-      // Thẻ Bổ có 2 nhánh → chia <optgroup>; các thẻ khác giữ danh sách phẳng (như cũ)
+      // Nguồn legacy có 2 nhánh → chia <optgroup>; các thẻ khác giữ danh sách phẳng.
       html =
         (g.base.length
           ? (spec.altSrcField ? `<optgroup label="Từ ${escapeHTML(spec.srcName)}">` : '')
@@ -16008,7 +16162,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const dateEl = document.getElementById(x1Id(spec, 'date'));
     if (autoFill && dateEl && !dateEl.value && src && src.date) dateEl.value = src.date;
     const inEl = document.getElementById(x1Id(spec, 'in'));
-    if (autoFill && inEl && rest > 0) inEl.value = String(Math.round(rest));
+    if (autoFill && inEl && rest > 0) {
+      const autoFillQty = spec.autoFillQty ? spec.autoFillQty(rest) : Math.round(rest);
+      inEl.value = String(autoFillQty);
+    }
     x1ChainCalc(spec);
   }
   function x1ChainCalc(spec) {
@@ -16054,6 +16211,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       showToast(`${spec.inLabel} (${fmtKg(qtyIn)} kg) vượt phần còn lại của nguồn (${fmtKg(rest)} kg) — kiểm tra lại!`, 'error');
       return;
     }
+    const sourceAllocations = spec.sourceAllocationsOf
+      ? spec.sourceAllocationsOf(src, qtyIn, editId) : null;
+    if (spec.sourceAllocationsOf && !sourceAllocations) {
+      showToast(`${spec.inLabel} vượt tồn theo lô; vui lòng kiểm tra lại nguồn!`, 'error');
+      return;
+    }
     const note = ((document.getElementById(x1Id(spec, 'note')) || {}).value || '').trim();
     const snap = x1Snapshot(dateVal, hrX1AssignmentsAt(dateVal, spec.posMatch));
     const payload = {
@@ -16062,11 +16225,15 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       lotCode: x1TraceLotCodeOf(src),
       worker: snap.names, workTime: snap.timeStr,
       workHours: snap.hours, workHoursHC: snap.hc, workHoursTC: snap.tc,
-      note
+      note,
+      ...(spec.sourceRouteOf ? { srcRoute: spec.sourceRouteOf({ boSourceGroupId: src.id }, src) } : {})
     };
-    // Thẻ Bổ có 2 nhánh: ghi vào ĐÚNG trường (locOngId khi nhận thẳng từ
-    // Lọc Ống, catMatId khi qua Cắt Mắt) — trường kia để rỗng không lẫn.
-    if (spec.altSrcField) {
+    if (spec.sourceAllocationsOf) {
+      payload[spec.sourceGroupIdField] = src.id;
+      payload[spec.sourceAllocationsField] = sourceAllocations;
+      payload[spec.srcField] = '';
+      if (spec.altSrcField) payload[spec.altSrcField] = '';
+    } else if (spec.altSrcField) {
       payload[spec.srcField] = viaAlt ? '' : srcId;
       payload[spec.altSrcField] = viaAlt ? srcId : '';
     } else {
@@ -16099,7 +16266,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     state[spec.editKey] = id;
     fillX1ChainOptions(spec);
     const sel = document.getElementById(x1Id(spec, 'src'));
-    if (sel) sel.value = rec[x1ChainSrcFieldOf(spec, rec)] || '';
+    if (sel) sel.value = (spec.sourceGroupIdForRecord && spec.sourceGroupIdForRecord(rec)) ||
+      rec[x1ChainSrcFieldOf(spec, rec)] || '';
     const d = document.getElementById(x1Id(spec, 'date'));
     if (d) d.value = rec.date || '';
     [['in', 'qtyIn'], ['ok', 'qtyOk'], ['loai', 'qtyLoai']].forEach(([part, fld]) => {
@@ -16154,8 +16322,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!bar) return;
     const pend = x1ChainPending(spec);
     const total = pend.reduce((s, x) => s + x1ChainRemainingOf(spec, x, null), 0);
-    // Thẻ Bổ có 2 nguồn → nhãn gộp cả 2 cho đúng (Cắt Mắt / Lọc Ống)
-    const srcLabel = spec.altSrcName ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName;
+    // Nhãn tồn phản ánh đúng nguồn đang chờ công đoạn.
+    const srcLabel = spec.sourceLabel || (spec.altSrcName ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName);
     bar.innerHTML = pend.length
       ? `<span class="x2-stock-title" title="Tổng phần đã làm ở ${escapeHTML(srcLabel)} CHƯA làm ${escapeHTML(spec.title.toLowerCase())}"><i data-lucide="boxes"></i> Tồn chờ ${escapeHTML(spec.title.toLowerCase())}: <strong>${pend.length} lượt · ${fmtKg(total)} kg</strong></span>`
       : `<span class="x2-stock-title"><i data-lucide="check-circle-2"></i> Tồn chờ ${escapeHTML(spec.title.toLowerCase())}: <strong>Hết tồn</strong></span>`;
@@ -16188,8 +16356,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       shiftMatchPos: spec.posMatch,
       headName: spec.headName,
       emptyIcon: spec.emptyIcon,
-      emptyText: `Chưa có lượt ${escapeHTML(spec.title.toLowerCase())} nào.<br>Chọn <strong>${escapeHTML(spec.altSrcName ? `${spec.srcName} hoặc ${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName)}</strong> ở form trên rồi bấm <strong>Lưu Lượt ${escapeHTML(spec.title)}</strong>.`,
-      thead: `<th>Mã Lô</th><th>Nguồn (${escapeHTML(spec.altSrcName ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName)})</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
+      emptyText: `Chưa có lượt ${escapeHTML(spec.title.toLowerCase())} nào.<br>Chọn <strong>${escapeHTML(spec.sourceLabel || (spec.altSrcName ? `${spec.srcName} hoặc ${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName))}</strong> ở form trên rồi bấm <strong>Lưu Lượt ${escapeHTML(spec.title)}</strong>.`,
+      thead: `<th>Mã Lô</th><th>Nguồn (${escapeHTML(spec.sourceLabel || (spec.altSrcName ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName))})</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
               <th class="text-right">${escapeHTML(spec.inLabel)}</th><th class="text-right">${escapeHTML(spec.okLabel)}</th>
               <th class="text-right">${escapeHTML(spec.loaiLabel)}</th><th class="text-right">Tỷ lệ đạt</th>
               <th>Ghi chú</th><th class="text-right">Thao tác</th>`,
@@ -16550,6 +16718,7 @@ export {
   // ── KHO NAN: thẻ launcher + phiếu kho (xuất / tiêu hủy / tái chế) + sổ theo kỳ ──
   loadKhoNotes,
   saveKhoNotes,
+  khoNoteFormUsesBatches,
   renderX2KhoCard,
   renderX2KhoStockBar,
   renderX2KhoWipBar,

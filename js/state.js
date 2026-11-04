@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v352';
+  const APP_VERSION = 'v355';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -537,6 +537,8 @@
     // (giống x2BulligPicked) — bật/tắt bằng nút "Xóa Nhiều" trên thanh công cụ.
     kanbanPickMode: false,   // đang bật chế độ tích chọn nhiều lô để xóa
     kanbanPicked: [],        // id các lô đang được tích chọn
+    khoStockPickMode: false, // đang chọn nhiều lô trong bảng Tồn Kho Xưởng 2
+    khoStockPicked: [],      // id các lô Kho đang chọn để xóa
     // Vị trí sấy khai báo THÊM ngoài LS1..LS15 (nút "Thêm" ở ô Vị Trí của modal
     // Thêm Lô Sấy Mới) — VD ['LS16', 'Lò 01']. Dùng để dựng danh sách vị trí.
     x2LotLocations: [],

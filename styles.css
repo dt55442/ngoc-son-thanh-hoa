@@ -9561,6 +9561,16 @@ body.kanban-pick-mode .kb-pick-inline { display: inline-flex; flex-wrap: wrap; }
 .kho-stock-line1 { font-size: 0.8rem; margin-bottom: 4px; padding-right: 70px; }
 .kho-stock-line2 { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.72rem; color: var(--text-muted); }
 .kho-stock-row .card-actions { position: absolute; top: 6px; right: 8px; }
+.kho-stock-pick { display: none; align-items: center; gap: 4px; margin-right: 8px; color: #b91c1c; font-weight: 700; cursor: pointer; }
+.kho-stock-pick input { width: 16px; height: 16px; accent-color: #dc2626; }
+.kho-stock-pick-mode .kho-stock-pick { display: inline-flex; }
+.kho-stock-pick-mode .kho-stock-row .card-actions { display: none; }
+.kho-stock-bulk-controls { align-items: center; gap: 6px; }
+.kho-stock-bulk-actions { display: none; align-items: center; flex-wrap: wrap; gap: 6px; }
+.kho-stock-bulk-controls.picking .kho-stock-bulk-actions { display: flex; }
+.kho-stock-bulk-controls.picking #x2-kho-pick-toggle { display: none; }
+.kho-stock-bulk-actions > span { font-size: 0.75rem; white-space: nowrap; }
+.kho-stock-bulk-actions #x2-kho-bulk-count { color: #b91c1c; }
 .kho-show-used { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; }
 .kho-col-add { margin-left: 8px; }
 .kho-lot-card { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
@@ -14389,6 +14399,7 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
   font-size: 0.8rem;
   font-weight: 700;
 }
+.x2-form-row .form-group.x1-loc-ong-qty-group { flex: 0 0 160px; }
 .material-stats { gap: 12px; }
 .material-stat {
   min-width: 0;
@@ -14495,6 +14506,10 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
   .x2-zone { padding: 9px; }
   .x2-cut-form-wrap { padding: 10px; }
   .x2-form-row { gap: 8px; }
+  .x2-form-row > .form-group.x1-loc-ong-qty-group {
+    flex: 1 1 calc(50% - 4px) !important;
+    width: calc(50% - 4px);
+  }
   .material-stats { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
   .material-stat { min-height: 72px; padding: 10px; }
   .x2-pool-calc { grid-template-columns: 1fr; }
@@ -15523,6 +15538,22 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
   color: var(--text-muted);
   font-size: 0.78rem;
 }
+.bulk-lot-default-length {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.bulk-lot-default-length input {
+  width: 100px;
+  padding: 6px 8px;
+}
+.bulk-lot-default-length span {
+  color: var(--text-muted);
+  font-weight: 400;
+}
 .bulk-lot-grid-scroll { overflow-x: auto; }
 .bulk-lot-grid {
   width: 100%;
@@ -15537,7 +15568,8 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
   text-align: center;
 }
 .bulk-lot-grid th { color: var(--text-muted); white-space: nowrap; }
-.bulk-lot-grid input {
+.bulk-lot-grid input,
+.bulk-lot-grid select {
   width: 100%;
   min-width: 54px;
   padding: 7px 5px;
@@ -15553,4 +15585,5 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 @media (max-width: 600px) {
   .bulk-lot-entry-head { align-items: flex-start; }
   .bulk-lot-entry-head > span { flex: 1; }
+  .bulk-lot-default-length { flex-wrap: wrap; }
 }

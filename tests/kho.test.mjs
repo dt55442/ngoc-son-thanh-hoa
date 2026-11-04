@@ -98,6 +98,7 @@ state.batches = [
 
 const utils = await import('../js/utils.js');
 const x2 = await import('../js/xuong2.js');
+const batchModals = await import('../js/batch-modals.js');
 
 // ─── A. TỒN KHO THEO LẦN NHẬP (chưa có phiếu nào) ───────────────
 check('TỒN: số lần NHẬP kho — k1=1 · k2=2 (ra/vào 1 lần) · k3=1',
@@ -544,7 +545,7 @@ check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerE
 check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
   idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
   idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v352', /nha-may-ngoc-son-v352/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v355', /nha-may-ngoc-son-v355/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',
@@ -684,6 +685,125 @@ check('HIỆU NĂNG: truyền FIFO allocation dùng chung không đổi kết qu
   summaryWithSharedAllocation.honestThanh === summaryWithFreshAllocation.honestThanh &&
   summaryWithSharedAllocation.mismatchThanh === summaryWithFreshAllocation.mismatchThanh &&
   JSON.stringify(summaryWithSharedAllocation.mismatchLots) === JSON.stringify(summaryWithFreshAllocation.mismatchLots));
+
+// ─── E. XÓA NHIỀU LÔ TRONG BẢNG TỒN KHO (CHỈ ADMIN) ───────────────
+const bulkStateBefore = {
+  batches: state.batches,
+  khoNotes: state.khoNotes,
+  deletedIds: state.deletedIds,
+  undoStack: state.undoStack,
+  user: state.currentUser,
+  showUsed: state.khoShowUsed,
+  pickMode: state.khoStockPickMode,
+  picked: state.khoStockPicked
+};
+state.batches = [
+  { id: 'bulk-k1', code: '261104-01', stage: 'kho', length: 1250, width: 18, thickness: 7, quantity: 100, location: 'K1', stageHistory: [{ stage: 'kho', date: '2026-11-04' }] },
+  { id: 'bulk-k2', code: '261104-02', stage: 'kho', length: 1250, width: 18, thickness: 7, quantity: 100, location: 'K2', stageHistory: [{ stage: 'kho', date: '2026-11-04' }] },
+  { id: 'bulk-k3', code: '261104-03', stage: 'kho', length: 1300, width: 20, thickness: 8, quantity: 100, location: 'K3', stageHistory: [{ stage: 'kho', date: '2026-11-04' }] },
+  { id: 'bulk-s1', code: '261104-04', stage: 'say1', length: 1250, width: 18, thickness: 7, quantity: 100, location: 'LS1', stageHistory: [{ stage: 'say1', date: '2026-11-04' }] }
+];
+state.khoNotes = [
+  { id: 'bulk-note-partial', type: 'xuat', status: 'cho_duyet', qty: 30, m3: 0.008, lots: [{ batchId: 'bulk-k1', qty: 10 }, { batchId: 'bulk-k2', qty: 20 }] },
+  { id: 'bulk-note-empty', type: 'xuat', status: 'tu_choi', qty: 10, m3: 0.002, lots: [{ batchId: 'bulk-k1', qty: 10 }] },
+  { id: 'bulk-note-other', type: 'xuat', status: 'da_duyet', qty: 10, m3: 0.002, lots: [{ batchId: 'bulk-k3', qty: 10 }] },
+  { id: 'bulk-note-use-k2', type: 'xuat', status: 'da_duyet', qty: 100, m3: 0.02, lots: [{ batchId: 'bulk-k2', qty: 100 }] }
+];
+state.deletedIds = {};
+state.undoStack = [];
+state.khoShowUsed = false;
+state.khoStockPickMode = false;
+state.khoStockPicked = [];
+state.currentUser = { username: 'editor', role: 'editor', editTabs: ['kanban', 'x2'], allowAdvanced: true };
+batchModals.toggleKhoStockPickMode();
+check('XÓA NHIỀU KHO — CHẶN QUYỀN: editor không bật được chế độ chọn',
+  state.khoStockPickMode === false && state.khoStockPicked.length === 0);
+state.khoStockPickMode = true;
+state.khoStockPicked = ['bulk-k1'];
+batchModals.deletePickedKhoStockLots();
+check('XÓA NHIỀU KHO — CHẶN HANDLER: editor không xóa được dù gửi yêu cầu trực tiếp',
+  state.batches.some(b => b.id === 'bulk-k1'));
+state.khoStockPickMode = false;
+state.khoStockPicked = [];
+
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
+const khoIndexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const eventSource = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+check('XÓA NHIỀU KHO — GIAO DIỆN: nút chọn nhiều nằm trong quyền Admin và đủ hành động',
+  khoIndexHtml.includes('id="x2-kho-bulk-controls"') &&
+  khoIndexHtml.includes('class="kho-stock-bulk-controls admin-only-btn"') &&
+  khoIndexHtml.includes('id="x2-kho-bulk-select-all"') &&
+  khoIndexHtml.includes('id="x2-kho-bulk-delete"') &&
+  eventSource.includes("safeOn('x2-kho-pick-toggle'") &&
+  eventSource.includes("safeOn('x2-kho-bulk-select-all'") &&
+  eventSource.includes("safeOn('x2-kho-bulk-delete'"));
+check('XÓA NHIỀU KHO — id nút chọn nhiều KHÔNG trùng id nào khác trong index.html',
+  [...khoIndexHtml.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]).filter((v, i, a) => a.indexOf(v) !== i).length === 0);
+batchModals.toggleKhoStockPickMode();
+x2.renderX2KhoStockTable();
+const bulkRowsHtml = document.getElementById('x2-kho-stock-rows').innerHTML;
+check('XÓA NHIỀU KHO — DANH SÁCH: hiện checkbox cho lô đang tồn, ẩn lô hết tồn và lô ngoài Kho',
+  bulkRowsHtml.includes('data-x2-kho-pick-id="bulk-k1"') &&
+  bulkRowsHtml.includes('data-x2-kho-pick-id="bulk-k3"') &&
+  !bulkRowsHtml.includes('data-x2-kho-pick-id="bulk-k2"') &&
+  !bulkRowsHtml.includes('data-x2-kho-pick-id="bulk-s1"'));
+const originalQuerySelectorAll = document.querySelectorAll;
+document.querySelectorAll = selector => {
+  if (selector !== '#x2-kho-stock-rows [data-x2-kho-pick-id]') return [];
+  return [...bulkRowsHtml.matchAll(/data-x2-kho-pick-id="([^"]+)"/g)].map(match => ({
+    checked: false,
+    getAttribute: name => name === 'data-x2-kho-pick-id' ? match[1] : null
+  }));
+};
+batchModals.selectAllKhoStockLots();
+document.querySelectorAll = originalQuerySelectorAll;
+check('XÓA NHIỀU KHO — CHỌN TẤT CẢ: chỉ chọn lô đang hiển thị sau lọc',
+  state.khoStockPicked.slice().sort().join(',') === 'bulk-k1,bulk-k3');
+batchModals.onKhoStockPickChange('bulk-s1', true);
+check('XÓA NHIỀU KHO — GIỚI HẠN: không nhận lô không ở Kho',
+  state.khoStockPicked.slice().sort().join(',') === 'bulk-k1,bulk-k3');
+
+x2.resetX2KhoNoteForm(true);
+x2.khoPickLot('bulk-k1');
+batchModals.deletePickedKhoStockLots();
+check('XÓA NHIỀU KHO — PHIẾU ĐANG NHẬP: chặn xóa lô đang được chọn trong phiếu chưa lưu',
+  state.batches.some(b => b.id === 'bulk-k1') && state.khoStockPicked.includes('bulk-k1'));
+x2.resetX2KhoNoteForm(true);
+
+const originalConfirm = global.confirm;
+let bulkConfirmText = '';
+global.confirm = text => { bulkConfirmText = text; return true; };
+batchModals.deletePickedKhoStockLots();
+global.confirm = originalConfirm;
+check('XÓA NHIỀU KHO — XÁC NHẬN: cảnh báo rõ xử lý phiếu Kho liên quan',
+  bulkConfirmText.includes('Phiếu Kho liên quan') && !state.khoStockPickMode);
+check('XÓA NHIỀU KHO — KẾT QUẢ: chỉ xóa 2 lô Kho đã chọn',
+  !state.batches.some(b => ['bulk-k1', 'bulk-k3'].includes(b.id)) &&
+  state.batches.some(b => b.id === 'bulk-k2') && state.batches.some(b => b.id === 'bulk-s1'));
+const partialNote = state.khoNotes.find(n => n.id === 'bulk-note-partial');
+check('XÓA NHIỀU KHO — PHIẾU NHIỀU LÔ: bỏ lô đã xóa, giữ lô còn lại và cập nhật số lượng',
+  !!partialNote && partialNote.lots.length === 1 && partialNote.lots[0].batchId === 'bulk-k2' &&
+  partialNote.qty === 20 && Math.abs(partialNote.m3 - utils.calculateVolume(1250, 18, 7, 20)) < 0.000001);
+check('XÓA NHIỀU KHO — PHIẾU RỖNG: xóa phiếu hết lô và ghi tombstone',
+  !state.khoNotes.some(n => n.id === 'bulk-note-empty') &&
+  !!(state.deletedIds.khoNotes && state.deletedIds.khoNotes['bulk-note-empty']) &&
+  !state.khoNotes.some(n => n.id === 'bulk-note-other'));
+
+const bulkUndo = await import('../js/events.js');
+bulkUndo.undoLastAction();
+check('XÓA NHIỀU KHO — HOÀN TÁC: khôi phục lô, nội dung phiếu và gỡ tombstone',
+  state.batches.some(b => b.id === 'bulk-k1') && state.batches.some(b => b.id === 'bulk-k3') &&
+  state.khoNotes.find(n => n.id === 'bulk-note-partial')?.lots.length === 2 &&
+  state.khoNotes.some(n => n.id === 'bulk-note-empty') &&
+  !(state.deletedIds.khoNotes && state.deletedIds.khoNotes['bulk-note-empty']));
+state.batches = bulkStateBefore.batches;
+state.khoNotes = bulkStateBefore.khoNotes;
+state.deletedIds = bulkStateBefore.deletedIds;
+state.undoStack = bulkStateBefore.undoStack;
+state.currentUser = bulkStateBefore.user;
+state.khoShowUsed = bulkStateBefore.showUsed;
+state.khoStockPickMode = bulkStateBefore.pickMode;
+state.khoStockPicked = bulkStateBefore.picked;
 
 const x2Source = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
 const pickerStart = x2Source.indexOf('function khoLotPickerList(allocation)');

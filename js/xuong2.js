@@ -6900,22 +6900,24 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     // GIA CÔNG (nguồn = phiếu xuất): tổng hợp từ BẢNG theo kích thước
     const gcs = bulligGcGroups();
     const tIn = gcs.reduce((s, g) => s + g.inQty, 0);
-    let tQty = 0, tTho = 0, tErr = 0;
+    let tQty = 0, tTho = 0, tUsed = 0, tErr = 0;
     gcs.forEach(g => {
       const qty = blNumDraft(blQtyDraft, g.key);
-      const err = blNumDraft(blErrDraft, g.key);
-      const f = blConvOf(g.key).factor;
+      const err = blNumDraft(blErrDraft, g.key, 3);
+      const tho = blEquivalentOf(g.key);
       tQty += qty;
-      tTho += f > 0 ? Math.round((qty / f) * 1000) / 1000 : qty;
+      tTho += tho;
+      tUsed += blUsedOf(g.key, tho, err);
       tErr += err;
     });
-    const tTon = Math.max(0, Math.round((tIn - tTho - tErr) * 1000) / 1000);
+    const tTon = Math.max(0, Math.round((tIn - tUsed) * 1000) / 1000);
     box.innerHTML = `
       <span class="x2-ong-calc-item x2-ong-calc-in" title="Tổng thanh thô CÒN LẠI của các phiếu xuất đã chọn (theo kích thước trong phiếu)"><span class="x2-ong-calc-label">Thô vào:</span><strong>${fmtThanh(tIn)} thanh</strong></span>
       <span class="x2-ong-calc-item x2-ong-calc-bo" title="Tổng số thanh THÀNH PHẨM gia công được (nhập trong bảng tổng hợp)"><span class="x2-ong-calc-label">Gia công:</span><strong>${fmtThanh(tQty)} thanh</strong></span>
       <span class="x2-ong-calc-item" title="Tổng thanh thô TƯƠNG ĐƯỢNG đã dùng = Σ (SL gia công ÷ hệ số định mức)"><span class="x2-ong-calc-label">Thô tương đương:</span><strong>${fmtThanh(tTho)} thanh</strong></span>
-      <span class="x2-ong-calc-item" title="Tổng thanh THÔ LỖI nhập tay trong bảng tổng hợp"><span class="x2-ong-calc-label">Lỗi:</span><strong>${fmtThanh(tErr)} thanh</strong></span>
-      <span class="x2-ong-calc-item x2-ong-calc-after" title="Tồn = vào − thô tương đương − lỗi — phần phiếu CHƯA dùng, làm tiếp ngày sau"><span class="x2-ong-calc-label">Tồn:</span><strong>${fmtThanh(tTon)} thanh</strong></span>
+      <span class="x2-ong-calc-item" title="Tổng thanh thô thực dùng (nhập tay hoặc bằng tương đương + lỗi)"><span class="x2-ong-calc-label">Thô dùng:</span><strong>${fmtThanh(tUsed)} thanh</strong></span>
+      <span class="x2-ong-calc-item" title="Tổng thanh THÔ LỖI; tự tính bằng Thô dùng − Thô tương đương khi nhập Thô dùng"><span class="x2-ong-calc-label">Lỗi:</span><strong>${fmtThanh(tErr)} thanh</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Tồn = vào − Thô dùng"><span class="x2-ong-calc-label">Tồn:</span><strong>${fmtThanh(tTon)} thanh</strong></span>
       <span class="x2-ong-calc-item" title="Kích thước thành phẩm nhập trong bảng tổng hợp (1 dòng/cỡ)"><span class="x2-ong-calc-label">K.thước TP:</span><strong>${blOutDraft.size ? [...blOutDraft.values()].filter(Boolean).join(' · ') : '—'}</strong></span>
       <span class="x2-ong-calc-item x2-ong-calc-after" title="Số thanh lấy từ PHIẾU XUẤT KHO mục đích Bullig (mục đích = Bullig)"><span class="x2-ong-calc-label">Nguồn:</span><strong style="color:#0f766e;">phiếu xuất Bullig</strong></span>`;
   }
@@ -7031,12 +7033,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
 
   // ─── BẢNG TỔNG HỢP GIA CÔNG theo KÍCH THƯỚC (nguồn = PHIẾU XUẤT) ──
-  // Nháp theo kích thước: KT thành phẩm (text) · SL gia công được · SL thanh lỗi.
-  // SL thô tương đương TỰ TÍNH = SL gia công ÷ hệ số định mức Bullig;
-  // Tồn = vào − thô tương đương − lỗi (phần phiếu CHƯA dùng).
+  // Nháp theo kích thước: KT thành phẩm · SL gia công · Thô dùng (tùy chọn) · SL lỗi.
   const blOutDraft = new Map();    // sizeKey → text "1250x80x12"
   const blQtyDraft = new Map();    // sizeKey → SL gia công được (thành phẩm)
+  const blUsedDraft = new Map();   // sizeKey → SL thô thực dùng (nếu nhập tay)
   const blErrDraft = new Map();    // sizeKey → SL thanh THÔ lỗi
+  const blErrManualDraft = new Set();
   // Nhóm các kích thước CÒN LẠI của các phiếu Gia công đã chọn (gộp cùng cỡ)
   function bulligGcGroups() {
     const map = new Map();
@@ -7054,13 +7056,33 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     });
     return [...map.values()].sort((a, b) => b.inQty - a.inQty);
   }
-  function blNumDraft(map, key) { return Math.max(0, Math.round(Number(map.get(key)) || 0)); }
+  function blNumDraft(map, key, precision) {
+    const scale = Math.pow(10, precision || 0);
+    return Math.max(0, Math.round((Number(map.get(key)) || 0) * scale) / scale);
+  }
   // Hệ số quy đổi cho 1 dòng (theo kích thước thành phẩm đang nhập)
   function blConvOf(key) {
     const raw = String(blOutDraft.get(key) || '').trim();
     const d = raw ? raw.split(/[x×*,;\s]+/).map(s => Number(String(s).trim())).filter(v => Number.isFinite(v) && v > 0) : [];
     const outKey = d.length >= 3 ? dimKeyOf(d[0], d[1], d[2]) : '';
     return bulligConvertInfo(outKey);
+  }
+  function blEquivalentOf(key) {
+    const qty = blNumDraft(blQtyDraft, key);
+    const factor = blConvOf(key).factor;
+    return Math.round((factor > 0 ? qty / factor : qty) * 1000) / 1000;
+  }
+  function blUsedOf(key, equivalent, err) {
+    return blUsedDraft.has(key)
+      ? blNumDraft(blUsedDraft, key)
+      : Math.round((equivalent + err) * 1000) / 1000;
+  }
+  function updateBulligAutoError(key) {
+    if (!blUsedDraft.has(key)) return;
+    const used = blNumDraft(blUsedDraft, key);
+    const equivalent = blEquivalentOf(key);
+    blErrDraft.set(key, Math.max(0, Math.round((used - equivalent) * 1000) / 1000));
+    blErrManualDraft.delete(key);
   }
   // Vẽ bảng tổng hợp (ẩn khi chưa chọn phiếu / đang ở Chọn thanh)
   function renderX2BulligGroups() {
@@ -7074,24 +7096,25 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const rows = groups.map(g => {
       const raw = String(blOutDraft.get(g.key) || '');
       const qty = blNumDraft(blQtyDraft, g.key);
-      const err = blNumDraft(blErrDraft, g.key);
-      const conv = blConvOf(g.key);
-      const tho = conv.factor > 0 ? Math.round((qty / conv.factor) * 1000) / 1000 : qty;
-      const ton = Math.max(0, Math.round((g.inQty - tho - err) * 1000) / 1000);
+      const equivalent = blEquivalentOf(g.key);
+      const err = blNumDraft(blErrDraft, g.key, 3);
+      const used = blUsedOf(g.key, equivalent, err);
+      const ton = Math.max(0, Math.round((g.inQty - used) * 1000) / 1000);
+      const rawUsed = blUsedDraft.has(g.key) ? String(blNumDraft(blUsedDraft, g.key)) : '';
       const inCell = `<span class="x2-nan-chip">${comboLabel({ d: g.dims[0], r: g.dims[1], t: g.dims[2] })}</span>${g.noteIds.length > 1 ? ` <small class="x2-btinh-src">${g.noteIds.length} phiếu</small>` : ''}`;
       return `<tr data-bl-row="${escapeHTML(g.key)}">
         <td class="x2-btinh-in-cell">${inCell}</td>
         <td class="text-right x2-btinh-qty-cell"><strong>${fmtThanh(g.inQty)}</strong></td>
         <td class="x2-btinh-out-cell"><input type="text" class="x2-btinh-out-text" data-bl-out="${escapeHTML(g.key)}" list="x2-bl-out-list" placeholder="VD: 1250x80x12" autocomplete="off" value="${escapeHTML(raw)}"></td>
         <td class="x2-btinh-ok-cell"><input type="number" class="x2-btinh-ok" data-bl-qty="${escapeHTML(g.key)}" min="0" step="1" placeholder="0" value="${qty ? qty : ''}"></td>
-        <td class="text-right x2-btinh-ton-cell"><strong class="x2-bl-tho">${fmtThanh(tho)}</strong></td>
-        <td class="x2-btinh-ok-cell"><input type="number" class="x2-btinh-ok" data-bl-err="${escapeHTML(g.key)}" min="0" step="1" placeholder="0" value="${err ? err : ''}"></td>
+        <td class="x2-btinh-ok-cell"><input type="number" class="x2-btinh-ok" data-bl-used="${escapeHTML(g.key)}" min="0" step="1" placeholder="Tự tính" title="Để trống để nhập lỗi thủ công và tính tồn theo Thô tương đương + lỗi" value="${escapeHTML(rawUsed)}"></td>
+        <td class="x2-btinh-ok-cell"><input type="number" class="x2-btinh-ok x2-bl-err" data-bl-err="${escapeHTML(g.key)}" min="0" step="0.001" placeholder="0" value="${err ? err : ''}"></td>
         <td class="text-right x2-btinh-ton-cell"><strong class="x2-btinh-ton">${fmtThanh(ton)}</strong></td>
       </tr>`;
     }).join('');
     box.innerHTML = `
       <div class="x2-btinh-groups-head">
-        <i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước thanh thô trong phiếu xuất</strong> — nhập <strong>K.thước thành phẩm</strong> + <strong>SL gia công</strong> · <strong>Thô tương đương</strong> tự tính theo định mức · <strong>Tồn = vào − thô tương đương − lỗi</strong>
+        <i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước thanh thô trong phiếu xuất</strong> — nhập <strong>K.thước thành phẩm</strong> + <strong>SL gia công</strong> · nhập <strong>Thô dùng</strong> để tự tính lỗi, hoặc để trống và nhập lỗi thủ công
       </div>
       <div class="x2-btinh-group-scroll">
         <table class="data-table x2-btinh-group-table">
@@ -7100,7 +7123,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
             <th class="text-right" title="Tổng thanh thô của kích thước này còn lại trong phiếu">SL vào</th>
             <th title="Kích thước THÀNH PHẨM làm ra (nhập 1 dòng, VD 1250x80x12)">K.thước thành phẩm</th>
             <th title="Số thanh THÀNH PHẨM gia công được">SL gia công</th>
-            <th class="text-right" title="Số thanh thô TƯƠNG ĐƯỢNG = SL gia công ÷ hệ số định mức Bullig (tự tính)">Thô tương đương</th>
+            <th title="Số thanh thô thực dùng; nhập để tự tính lỗi = Thô dùng − Thô tương đương">Thô dùng</th>
             <th title="Số thanh THÔ bị lỗi trong lúc gia công">SL lỗi</th>
             <th class="text-right" title="Tồn = vào − thô tương đương − lỗi — phần phiếu CHƯA dùng">Tồn</th>
           </tr></thead>
@@ -7117,37 +7140,57 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const v = Number(raw);
     const bad = (raw === '' || raw == null || !Number.isFinite(v));
     const outKey = t.getAttribute('data-bl-out');
-    if (outKey) { blOutDraft.set(outKey, String(raw || '').trim()); updateBulligGroupNumbers(); return; }
+    if (outKey) {
+      blOutDraft.set(outKey, String(raw || '').trim());
+      updateBulligAutoError(outKey);
+      updateBulligGroupNumbers();
+      return;
+    }
     const qtyKey = t.getAttribute('data-bl-qty');
     if (qtyKey) {
       if (bad) blQtyDraft.delete(qtyKey); else blQtyDraft.set(qtyKey, Math.max(0, Math.floor(v)));
+      updateBulligAutoError(qtyKey);
       updateBulligGroupNumbers(); return;
+    }
+    const usedKey = t.getAttribute('data-bl-used');
+    if (usedKey) {
+      if (bad) blUsedDraft.delete(usedKey);
+      else blUsedDraft.set(usedKey, Math.max(0, Math.floor(v)));
+      updateBulligAutoError(usedKey);
+      updateBulligGroupNumbers();
+      return;
     }
     const errKey = t.getAttribute('data-bl-err');
     if (errKey) {
-      if (bad) blErrDraft.delete(errKey); else blErrDraft.set(errKey, Math.max(0, Math.floor(v)));
+      if (bad) {
+        blErrDraft.delete(errKey);
+        blErrManualDraft.delete(errKey);
+      } else {
+        blErrDraft.set(errKey, Math.max(0, Math.round(v * 1000) / 1000));
+        blErrManualDraft.add(errKey);
+      }
       updateBulligGroupNumbers(); return;
     }
   }
-  // Cập nhật cột Thô tương đương + Tồn của TỪNG dòng (KHÔNG vẽ lại bảng → giữ con trỏ)
+  // Cập nhật SL lỗi + Tồn từng dòng mà không vẽ lại bảng, giữ nguyên con trỏ nhập.
   function updateBulligGroupNumbers() {
     const box = document.getElementById('x2-bl-groups');
-    if (!box || typeof box.querySelectorAll !== 'function') return;
-    const rows = box.querySelectorAll('tr[data-bl-row]');
-    if (!rows || !rows.length) return;
-    bulligGcGroups().forEach((g, i) => {
-      const row = rows[i];
-      if (!row || typeof row.querySelector !== 'function') return;
-      const qty = blNumDraft(blQtyDraft, g.key);
-      const err = blNumDraft(blErrDraft, g.key);
-      const conv = blConvOf(g.key);
-      const tho = conv.factor > 0 ? Math.round((qty / conv.factor) * 1000) / 1000 : qty;
-      const ton = Math.max(0, Math.round((g.inQty - tho - err) * 1000) / 1000);
-      const thoEl = row.querySelector('.x2-bl-tho');
-      const tonEl = row.querySelector('.x2-btinh-ton');
-      if (thoEl) thoEl.textContent = fmtThanh(tho);
-      if (tonEl) tonEl.textContent = fmtThanh(ton);
-    });
+    if (box && typeof box.querySelectorAll === 'function') {
+      const rows = box.querySelectorAll('tr[data-bl-row]');
+      bulligGcGroups().forEach((g, i) => {
+        const row = rows[i];
+        if (!row || typeof row.querySelector !== 'function') return;
+        const equivalent = blEquivalentOf(g.key);
+        const err = blNumDraft(blErrDraft, g.key, 3);
+        const used = blUsedOf(g.key, equivalent, err);
+        const ton = Math.max(0, Math.round((g.inQty - used) * 1000) / 1000);
+        const errEl = row.querySelector('.x2-bl-err');
+        const tonEl = row.querySelector('.x2-btinh-ton');
+        if (errEl) errEl.value = String(err);
+        if (tonEl) tonEl.textContent = fmtThanh(ton);
+      });
+    }
+    renderX2BulligCalc();
   }
 
   // ─── ẨN/HIỆN FORM theo CÔNG ĐOẠN NHỎ ───────────────────────────
@@ -7158,7 +7201,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     bulligClearPicks();
     blOutDraft.clear();
     blQtyDraft.clear();
+    blUsedDraft.clear();
     blErrDraft.clear();
+    blErrManualDraft.clear();
     ['x2-bl-gc-qty', 'x2-bl-out', 'x2-bl-ct-ok', 'x2-bl-ct-err'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -7214,8 +7259,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       };
     } else {
       // ── GIA CÔNG (nguồn = PHIẾU XUẤT mục Bullig — bảng tổng hợp theo kích thước) ──
-      // Mỗi dòng = 1 kích thước: KT thành phẩm · SL gia công · SL thô tương đương
-      // (÷ hệ số định mức) · SL thanh lỗi → phân bổ FIFO từ các phiếu đã chọn.
+      // Mỗi dòng = 1 kích thước: KT thành phẩm · SL gia công · Thô dùng tùy chọn · SL lỗi.
       const groups = bulligGcGroups();
       if (!bulligPicked().length) { showToast('Hãy chọn ít nhất 1 PHIẾU XUẤT mục đích "Bullig"!', 'error'); return; }
       if (!groups.length) { showToast('Chưa có kích thước nào trong các phiếu đã chọn!', 'error'); return; }
@@ -7225,8 +7269,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         const raw = String(blOutDraft.get(g.key) || '').trim();
         const outDims = raw ? raw.split(/[x×*,;\s]+/).map(s => Number(String(s).trim())).filter(v => Number.isFinite(v) && v > 0).slice(0, 3) : [];
         const quantity = blNumDraft(blQtyDraft, g.key);
-        const errTho = blNumDraft(blErrDraft, g.key);
-        if (quantity <= 0 && errTho <= 0) { skipped++; continue; }
+        const errTho = blNumDraft(blErrDraft, g.key, 3);
+        const hasRawUsed = blUsedDraft.has(g.key);
+        const rawUsed = hasRawUsed ? blNumDraft(blUsedDraft, g.key) : null;
+        if (quantity <= 0 && errTho <= 0 && (!hasRawUsed || rawUsed <= 0)) { skipped++; continue; }
         if (quantity <= 0) {
           showToast(`Kích thước ${g.key}: nhập SỐ LƯỢNG GIA CÔNG ĐƯỢC (lớn hơn 0) — nhập rồi bấm Lưu!`, 'error');
           return;
@@ -7239,9 +7285,13 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         const conv = bulligConvertInfo(outSizeKey);
         const factor = conv.factor;
         const qtyIn = factor > 0 ? Math.round((quantity / factor) * 1000) / 1000 : quantity;
-        const need = Math.round((qtyIn + errTho) * 1000) / 1000;
+        if (hasRawUsed && rawUsed + 0.001 < qtyIn) {
+          showToast(`Kích thước ${g.key}: Thô dùng (${fmtThanh(rawUsed)}) không được nhỏ hơn Thô tương đương (${fmtThanh(qtyIn)})!`, 'error');
+          return;
+        }
+        const need = hasRawUsed ? rawUsed : Math.round((qtyIn + errTho) * 1000) / 1000;
         if (need > g.inQty) {
-          showToast(`Kích thước ${g.key}: thô tương đương (${fmtThanh(qtyIn)}) + lỗi (${fmtThanh(errTho)}) vượt SL vào (${fmtThanh(g.inQty)}) — kiểm tra lại!`, 'error');
+          showToast(`Kích thước ${g.key}: Thô dùng (${fmtThanh(need)}) vượt SL vào (${fmtThanh(g.inQty)}) — kiểm tra lại!`, 'error');
           return;
         }
         // Phân bổ FIFO từ các PHIẾU đã chọn (phiếu cũ trước)
@@ -7260,8 +7310,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           noteUses: alloc.uses,
           gcTotalPicked: g.inQty,
           quantity,                       // SỐ LƯỢNG GIA CÔNG ĐƯỢC (thành phẩm)
-          qtyIn,                          // thanh thô thực dùng
+          qtyIn: need,                    // thanh thô thực dùng
+          qtyRawUsed: hasRawUsed ? rawUsed : null,
           qtyErr: errTho,                 // thanh thô LỖI (cộng vào rút phiếu)
+          qtyErrManual: blErrManualDraft.has(g.key),
           convertFactor: factor,          // chốt hệ số lúc lưu (định mức đổi sau vẫn đúng)
           inSizeKey: g.key,               // kích thước THÔ nguồn (trong phiếu)
           inDims: g.dims,
@@ -7342,7 +7394,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     } else {
       blOutDraft.clear();
       blQtyDraft.clear();
+      blUsedDraft.clear();
       blErrDraft.clear();
+      blErrManualDraft.clear();
       // Nguồn PHIẾU XUẤT: chọn lại đúng phiếu đã dùng (noteUses) hoặc dữ liệu cũ (lô)
       if (Array.isArray(rec.noteUses) && rec.noteUses.length) {
         const noteIds = [...new Set(rec.noteUses.map(u => String(u.noteId)))];
@@ -7358,7 +7412,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (inKey) {
         blOutDraft.set(inKey, (od0[0] > 0) ? `${od0[0]}x${od0[1]}x${od0[2]}` : '');
         blQtyDraft.set(inKey, Math.round(Number(rec.quantity) || 0));
-        if (Number(rec.qtyErr)) blErrDraft.set(inKey, Math.round(Number(rec.qtyErr)));
+        if (rec.qtyRawUsed != null && Number.isFinite(Number(rec.qtyRawUsed))) {
+          blUsedDraft.set(inKey, Math.max(0, Math.floor(Number(rec.qtyRawUsed))));
+        }
+        if (Number(rec.qtyErr)) blErrDraft.set(inKey, Math.round(Number(rec.qtyErr) * 1000) / 1000);
+        if (rec.qtyErrManual) blErrManualDraft.add(inKey);
       }
       fillXuong2BulligOptions();
       renderX2BulligLotList();
@@ -7686,7 +7744,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     bulligClearPicks();
     blOutDraft.clear();
     blQtyDraft.clear();
+    blUsedDraft.clear();
     blErrDraft.clear();
+    blErrManualDraft.clear();
     fillXuong2BulligOptions();
     renderX2BulligLotList();
     renderX2BulligGroups();

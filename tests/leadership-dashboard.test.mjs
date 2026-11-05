@@ -327,9 +327,9 @@ try {
   assert.ok(styles.includes('.leadership-section-header'));
   assert.ok(styles.includes('.leadership-consumption-grid'));
   assert.ok(!styles.includes('.leadership-data-notes'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v355'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v356'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v355'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v356'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

@@ -296,6 +296,22 @@ function check(name, cond) {
   check('E4b: warm reload có hash miền khớp không đọc lại domain docs',
     domainReadCount === readsBeforeUnchangedSnapshot);
 
+  {
+    const savedPressRecords = state.pressRecords;
+    state.pressRecords = [{ id: 'P-local-only', qty: 99 }];
+    const readsBeforeDuplicateSnapshots = domainReadCount;
+    const changedSnapshot = {
+      exists: true,
+      data: () => store.get('apps/main')
+    };
+    cloudListenerNext(Object.assign({ metadata: { fromCache: true } }, changedSnapshot));
+    cloudListenerNext(Object.assign({ metadata: { fromCache: false } }, changedSnapshot));
+    await new Promise(resolve => setTimeout(resolve, 10));
+    check('E4c: snapshot cache/server trùng nhau chỉ đọc domain docs một lần',
+      domainReadCount - readsBeforeDuplicateSnapshots === 1);
+    state.pressRecords = savedPressRecords;
+  }
+
   const c3 = setCount;
   state.pressRecords.push({ id: 'P2', qty: 5, updatedAt: '2030-01-02T00:00:00.000Z' });
   const r3 = await cloud.writeCloudSnapshot();

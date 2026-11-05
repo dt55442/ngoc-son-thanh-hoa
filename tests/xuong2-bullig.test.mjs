@@ -197,6 +197,8 @@ x2.renderX2BulligGroups();
 check('BẢNG TỔNG HỢP: 1 dòng kích thước 1250×80×12 với SL vào 1.400 (gộp 2 phiếu)',
   document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-qty="1250×80×12"') &&
   document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-out="1250×80×12"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-used="1250×80×12"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('>Thô dùng</th>') &&
   document.getElementById('x2-bl-groups').innerHTML.includes('1.400') &&
   document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-err="1250×80×12"'));
 
@@ -211,16 +213,21 @@ check('GỢI Ý SỐ LƯỢNG: nhập VƯỢT tổng đã chọn → tô đỏ c
   document.getElementById('x2-bl-gc-total-hint').classList.contains('over'));
 document.getElementById('x2-bl-gc-qty').value = '700';
 x2.renderX2BulligCalc();
-// Nhập vào BẢNG TỔNG HỢP: KT thành phẩm 1250x80x12 · SL gia công 700 · SL lỗi 0
+// Nhập vào BẢNG TỔNG HỢP: KT thành phẩm 1250x80x12 · SL gia công 700 · SL lỗi 20.
 x2.onBulligGroupInput({ target: { value: '1250x80x12', getAttribute: (k) => (k === 'data-bl-out' ? '1250×80×12' : null) } });
 x2.onBulligGroupInput({ target: { value: '700', getAttribute: (k) => (k === 'data-bl-qty' ? '1250×80×12' : null) } });
-x2.onBulligGroupInput({ target: { value: '0', getAttribute: (k) => (k === 'data-bl-err' ? '1250×80×12' : null) } });
+x2.onBulligGroupInput({ target: { value: '20', getAttribute: (k) => (k === 'data-bl-err' ? '1250×80×12' : null) } });
+check('TÍNH TỒN thủ công: để trống Thô dùng → Tồn = vào − tương đương − lỗi',
+  document.getElementById('x2-bl-calc').innerHTML.includes('Thô dùng:</span><strong>720 thanh</strong>') &&
+  document.getElementById('x2-bl-calc').innerHTML.includes('Lỗi:</span><strong>20 thanh</strong>') &&
+  document.getElementById('x2-bl-calc').innerHTML.includes('Tồn:</span><strong>680 thanh</strong>'));
 await x2.handleXuong2BulligSubmit({ preventDefault(){} });
 check('LƯU GIA CÔNG: ghi 1 lượt kind = gc',
   state.xuong2BulligRecords.length === 1 && state.xuong2BulligRecords[0].kind === 'gc');
 const gc = state.xuong2BulligRecords[0];
-check('LƯU GIA CÔNG: phân bổ FIFO từ PHIẾU CŨ nb1 (k-1 lấy đủ 700) + ghi noteUses',
-  gc.sources.length === 1 && gc.sources[0].batchId === 'k1' && gc.sources[0].qty === 700 &&
+check('LƯU GIA CÔNG: lỗi nhập tay được cộng vào Thô tương đương khi rút phiếu',
+  gc.qtyIn === 720 && gc.qtyErr === 20 &&
+  gc.sources.length === 1 && gc.sources[0].batchId === 'k1' && gc.sources[0].qty === 720 &&
   gc.noteUses.length === 1 && gc.noteUses[0].noteId === 'nb1');
 check('LƯU GIA CÔNG: đúng số lượng + kích thước thành phẩm + tổng đã chọn 1.400 (tự tính)',
   gc.quantity === 700 && gc.outSizeKey === '1250×80×12' && gc.gcTotalPicked === 1400);
@@ -297,16 +304,16 @@ check('THẺ NGÀY: vùng Chọn thanh có tỷ lệ đạt 94,3%',
   dayHtml.includes('94,3%'));
 check('BẢNG DỮ LIỆU: mỗi vùng có dòng TỔNG ngày (tfoot) — gia công được + THÔ ĐÃ SỬ DỤNG · chọn thanh đạt/lỗi/tỷ lệ',
   dayHtml.includes('x2-bl-day-total') &&
-  dayHtml.includes('Tổng số thanh thô đã sử dụng: <strong>700</strong> thanh') &&
+  dayHtml.includes('Tổng số thanh thô đã sử dụng: <strong>720</strong> thanh') &&
   dayHtml.includes('Tổng ngày: <strong>700</strong> thanh gia công được') &&
   dayHtml.includes('đạt <strong>660</strong> · lỗi <strong>40</strong> · tổng <strong>700</strong> thanh'));
 check('BẢNG DỮ LIỆU: thanh tiêu đề ghi TỔNG thanh thô đã dùng của cả lịch sử',
-  document.getElementById('x2-bl-table-count').textContent === '2 lượt Bullig · thô đã dùng 700 thanh');
-check('THẺ NGÀY vùng Gia công: nguồn lô hiện KÍCH THƯỚC(PHÂN LOẠI,SỐ LƯỢNG thô) — 1250×80×12(—,700)',
-  dayHtml.includes('1250×80×12(—,700)') && dayHtml.includes('Lô LOT-B1'));
+  document.getElementById('x2-bl-table-count').textContent === '2 lượt Bullig · thô đã dùng 720 thanh');
+check('THẺ NGÀY vùng Gia công: nguồn lô hiện KÍCH THƯỚC(PHÂN LOẠI,SỐ LƯỢNG thô) — 1250×80×12(—,720)',
+  dayHtml.includes('1250×80×12(—,720)') && dayHtml.includes('Lô LOT-B1'));
 check('THẺ NGÀY vùng Gia công: dòng SL gia công được (x/tối đa) + Thô dùng kèm hệ số quy đổi',
   dayHtml.includes('SL gia công được (x/tối đa)') &&
-  dayHtml.includes('Thô dùng: 700 thanh (1 thô = 1)'));
+  dayHtml.includes('Thô dùng: 720 thanh (1 thô = 1)'));
 check('THẺ NGÀY vùng Chọn thanh: hiện THÀNH PHẨM = đúng kích thước đã chọn (hết cảnh "—")',
   /x2-nan-chip">1250×80×12</.test(dayHtml) &&
   dayHtml.includes('Thành phẩm sau Gia công = đúng kích thước này'));
@@ -321,6 +328,11 @@ x2.resetXuong2BulligForm();
 check('LÀM MỚI FORM: về công đoạn Gia công + xoá ô nhập',
   document.getElementById('x2-bl-kind').value === 'gc' &&
   document.getElementById('x2-bl-gc-qty').value === '');
+x2.editXuong2Bullig(gc.id);
+check('SỬA: lượt không có Thô dùng tiếp tục giữ chế độ nhập lỗi thủ công',
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-used="1250×80×12"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-err="1250×80×12" min="0" step="0.001" placeholder="0" value="20"'));
+x2.resetXuong2BulligForm();
 {
   const beforeDel = state.xuong2BulligRecords.length;
   x2.deleteXuong2Bullig(gc.id);
@@ -351,23 +363,42 @@ check('HỆ SỐ QUY ĐỔI: ô tự tính nêu Thô vào · Gia công · Thô t
   document.getElementById('x2-bl-calc').innerHTML.includes('Gia công:') &&
   document.getElementById('x2-bl-calc').innerHTML.includes('Thô tương đương:'));
 
-// LƯU: nhập SỐ LƯỢNG GIA CÔNG ĐƯỢC 4.200 → thanh thô tiêu thụ = 4.200 ÷ 6 = 700
+// LƯU: nhập 4.200 thành phẩm (tương đương 700 thô), Thô dùng 750 → lỗi tự tính 50.
 document.getElementById('x2-bl-gc-qty').value = '4200';
 x2.renderX2BulligCalc();
-// Nhập vào BẢNG TỔNG HỢP (nguồn phiếu): 4.200 thành phẩm · lỗi 0
+// Nhập vào BẢNG TỔNG HỢP (nguồn phiếu): 4.200 thành phẩm · thử lỗi tay rồi nhập Thô dùng.
 x2.onBulligGroupInput({ target: { value: '1250x80x12', getAttribute: (k) => (k === 'data-bl-out' ? '1250×80×12' : null) } });
 x2.onBulligGroupInput({ target: { value: '4200', getAttribute: (k) => (k === 'data-bl-qty' ? '1250×80×12' : null) } });
-x2.onBulligGroupInput({ target: { value: '0', getAttribute: (k) => (k === 'data-bl-err' ? '1250×80×12' : null) } });
+x2.onBulligGroupInput({ target: { value: '99', getAttribute: (k) => (k === 'data-bl-err' ? '1250×80×12' : null) } });
+x2.onBulligGroupInput({ target: { value: '750', getAttribute: (k) => (k === 'data-bl-used' ? '1250×80×12' : null) } });
+x2.renderX2BulligGroups();
 x2.renderX2BulligCalc();
 check('HỆ SỐ QUY ĐỔI: ô tự tính quy đổi ra THÔ TƯƠNG ĐƯỢG = 700 thanh (4.200 ÷ 6)',
   document.getElementById('x2-bl-calc').innerHTML.includes('Thô tương đương:') &&
   document.getElementById('x2-bl-calc').innerHTML.includes('700 thanh'));
+check('THÔ DÙNG: nhập 750 tự tính lỗi = 750 − 700 = 50, ghi đè lỗi nhập tay trước đó',
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-used="1250×80×12" min="0" step="1" placeholder="Tự tính"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-used="1250×80×12"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('value="750"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-err="1250×80×12" min="0" step="0.001" placeholder="0" value="50"') &&
+  document.getElementById('x2-bl-calc').innerHTML.includes('Tồn:</span><strong>250 thanh</strong>'));
+const beforeInvalidRawUsed = state.xuong2BulligRecords.length;
+x2.onBulligGroupInput({ target: { value: '699', getAttribute: (k) => (k === 'data-bl-used' ? '1250×80×12' : null) } });
+await x2.handleXuong2BulligSubmit({ preventDefault(){} });
+x2.onBulligGroupInput({ target: { value: '1001', getAttribute: (k) => (k === 'data-bl-used' ? '1250×80×12' : null) } });
+await x2.handleXuong2BulligSubmit({ preventDefault(){} });
+check('THÔ DÙNG: chặn nhỏ hơn tương đương hoặc vượt SL vào',
+  state.xuong2BulligRecords.length === beforeInvalidRawUsed);
+x2.onBulligGroupInput({ target: { value: '750', getAttribute: (k) => (k === 'data-bl-used' ? '1250×80×12' : null) } });
+x2.renderX2BulligGroups();
+x2.renderX2BulligCalc();
 await x2.handleXuong2BulligSubmit({ preventDefault(){} });
 const gc2 = state.xuong2BulligRecords.filter(r => r.kind === 'gc').pop();
 check('LƯU GIA CÔNG: quantity = SỐ LƯỢNG GIA CÔNG ĐƯỢC (4.200 thành phẩm) + chốt hệ số 6 vào lượt',
-  !!gc2 && gc2.quantity === 4200 && gc2.convertFactor === 6 && gc2.qtyIn === 700);
-check('LƯU GIA CÔNG: rút từ PHIẾU nb1 theo THÔ tiêu thụ (700 của k-1) · SL vào phiếu 1.000',
-  gc2.sources.length === 1 && gc2.sources[0].batchId === 'k1' && gc2.sources[0].qty === 700 &&
+  !!gc2 && gc2.quantity === 4200 && gc2.convertFactor === 6 && gc2.qtyIn === 750 &&
+  gc2.qtyRawUsed === 750 && gc2.qtyErr === 50 && gc2.qtyErrManual === false);
+check('LƯU GIA CÔNG: rút từ PHIẾU nb1 theo Thô dùng (750 của k-1) · SL vào phiếu 1.000',
+  gc2.sources.length === 1 && gc2.sources[0].batchId === 'k1' && gc2.sources[0].qty === 750 &&
   gc2.gcTotalPicked === 1000);
 check('TỒN: thành phẩm chờ Chọn thanh = 4.200 gia công được − 700 đã chọn = 3.500 thanh',
   document.getElementById('x2-bl-stock-bar').innerHTML.includes('Tồn thành phẩm chờ Chọn thanh: <strong>3.500 thanh</strong>'));
@@ -379,6 +410,13 @@ check('TỒN: thành phẩm chờ Chọn thanh = 4.200 gia công được − 70
   check('LƯU GIA CÔNG: CHẶN số lượng vượt khả năng (thanh thô × hệ số quy đổi) — không ghi lượt',
     state.xuong2BulligRecords.length === before);
 }
+x2.editXuong2Bullig(gc2.id);
+check('SỬA: khôi phục Thô dùng + lỗi đã lưu trên bảng tổng hợp',
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-used="1250×80×12" min="0" step="1" placeholder="Tự tính"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-used="1250×80×12"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('value="750"') &&
+  document.getElementById('x2-bl-groups').innerHTML.includes('data-bl-err="1250×80×12" min="0" step="0.001" placeholder="0" value="50"'));
+x2.resetXuong2BulligForm();
 // Chưa khai định mức Bullig ở tab Kế Hoạch → cảnh báo + tạm tính 1 thô = 1 thành phẩm
 state.materialRates = [];
 document.getElementById('x2-bl-out').value = '1250x80x12';
@@ -408,14 +446,14 @@ check('PHIẾU: dùng hết phiếu nb2 (400 thanh thô) — nguồn của lư�
       r.noteUses.length === 1 && r.noteUses[0].noteId === 'nb2'; })());
 x2.renderX2BulligLotList();
 const listAfterUse = document.getElementById('x2-bl-gc-list').innerHTML;
-check('THẺ PHIẾU: phiếu ĐÃ DÙNG HẾT tự ẨN (không còn nb2 · vẫn còn nb1 300/1.000)',
+check('THẺ PHIẾU: phiếu ĐÃ DÙNG HẾT tự ẨN (không còn nb2 · vẫn còn nb1 250/1.000)',
   !listAfterUse.includes('data-bl-pick="nb2"') && !listAfterUse.includes('16/09/26') &&
-  listAfterUse.includes('data-bl-pick="nb1"') && listAfterUse.includes('300/1.000 thanh (còn)'));
-// Dùng hết nốt phần còn lại của phiếu nb1 (300 thô × 6 = 1.800) → không còn phiếu DUYỆT nào
+  listAfterUse.includes('data-bl-pick="nb1"') && listAfterUse.includes('250/1.000 thanh (còn)'));
+// Dùng hết nốt phần còn lại của phiếu nb1 (250 thô × 6 = 1.500) → không còn phiếu DUYỆT nào
 state.x2BulligPicked = ['nb1'];
-document.getElementById('x2-bl-gc-qty').value = '1800';
+document.getElementById('x2-bl-gc-qty').value = '1500';
 x2.onBulligGroupInput({ target: { value: '1250x80x12', getAttribute: (k) => (k === 'data-bl-out' ? '1250×80×12' : null) } });
-x2.onBulligGroupInput({ target: { value: '1800', getAttribute: (k) => (k === 'data-bl-qty' ? '1250×80×12' : null) } });
+x2.onBulligGroupInput({ target: { value: '1500', getAttribute: (k) => (k === 'data-bl-qty' ? '1250×80×12' : null) } });
 x2.onBulligGroupInput({ target: { value: '0', getAttribute: (k) => (k === 'data-bl-err' ? '1250×80×12' : null) } });
 await x2.handleXuong2BulligSubmit({ preventDefault(){} });
 x2.renderX2BulligLotList();

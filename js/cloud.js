@@ -50,6 +50,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   let fbLastRemote = null;         // bản snapshot mây gần nhất (nút tải về + gộp khéo trước khi đẩy)
   let fbDirty = false;             // có thay đổi CHƯA được đẩy lên mây
   let fbChangeVersion = 0;
+  const fbDeltaPulls = new Map();  // gộp các callback snapshot đồng thời cùng chữ ký miền
   let fbSyncWarnAt = 0;            // thời điểm lần cuối cảnh báo không đồng bộ được (chống spam)
   let fbListenWarnAt = 0;          // thời điểm lần cuối cảnh báo lỗi lắng nghe mây (chống spam)
 
@@ -2413,10 +2414,13 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   const SYNC_RETRY_WAITS = [2000, 5000, 15000];   // đọc lỗi miền → thử lại (tổng 3 lần)
   function pullDeltaSnapshot(meta, attempt) {
     if (fbApplying) { fbPendingPull = true; return Promise.resolve(null); }  // đang ghi → pull lại sau
+    const remoteH = (meta && meta.__dh) || {};
+    const pullKey = JSON.stringify(Object.keys(remoteH).sort().map(k => [k, remoteH[k]]));
+    const activePull = fbDeltaPulls.get(pullKey);
+    if (activePull) return activePull;
     const seq = ++fbRemoteSeq;
     const tryNo = Number(attempt) || 0;
-    return (async () => {
-      const remoteH = (meta && meta.__dh) || {};
+    const pullTask = (async () => {
       const localH = localHashesNow(true);   // LUÔN tính lại — cache cũ từng làm sót cập nhật
       const changed = Object.keys(remoteH).filter(k => k !== 'deletedIds' && localH[k] !== remoteH[k]);
       const partial = {};
@@ -2479,6 +2483,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       }
       return false;
     });
+    let trackedPull;
+    trackedPull = pullTask.finally(() => {
+      if (fbDeltaPulls.get(pullKey) === trackedPull) fbDeltaPulls.delete(pullKey);
+    });
+    fbDeltaPulls.set(pullKey, trackedPull);
+    return trackedPull;
   }
 
   // ─── ĐỒNG BỘ NGAY: đọc mục lục mây 1 lần rồi xử lý như snapshot ──────

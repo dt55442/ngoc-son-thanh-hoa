@@ -429,7 +429,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v356/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v358/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -476,7 +476,8 @@ check('H3: ô chọn Lọc Ống liệt kê lượt Bốc + tự điền ngày +
   (() => { x1.fillX1ChainOptions(spLO);
     const sel = document.getElementById('x1-loc-ong-src');
     const okHtml = sel.innerHTML.includes('boc-h') &&
-      sel.innerHTML.includes('[SS-2026-0910-01]') && sel.innerHTML.includes('còn 1.000 kg');
+      sel.innerHTML.includes('[SS-2026-0910-01]') && sel.innerHTML.includes('NCC Tế') &&
+      sel.innerHTML.includes('Bốc 12/09/26') && sel.innerHTML.includes('Tồn 1.000 kg');
     sel.value = 'boc-h';                    // người dùng chọn (browser tự chọn option đầu)
     x1.x1ChainSyncLinked(spLO, true);       // đúng handler 'change' của events.js
     return okHtml &&
@@ -500,7 +501,9 @@ check('H7: snapshot nguồn theo BỐC (type + NCC + ngày) chép vào lượt L
 check('H8: Cắt Mắt nhận tồn từ KL sót mắt của Lọc Ống (50kg)',
   x1.x1ChainRemainingOf(spCM, lo, null) === 50 &&
   (() => { x1.fillX1ChainOptions(spCM);
-    return document.getElementById('x1-cat-mat-src').innerHTML.includes('[SS-2026-0910-01]'); })());
+    const optionHtml = document.getElementById('x1-cat-mat-src').innerHTML;
+    return optionHtml.includes('[SS-2026-0910-01]') && optionHtml.includes('NCC Tế') &&
+      optionHtml.includes('Lọc Ống 13/09/26') && optionHtml.includes('Tồn 50 kg'); })());
 hFill(spCM, lo.id, '2026-09-14', 50, 45, 5);
 const cm = state.xuong1CatMatRecords[0];
 check('H9: ghi lượt Cắt Mắt 50kg → KL sót mắt của Lọc Ống hết hàng (TỰ ẨN khỏi ô chọn)',
@@ -652,7 +655,7 @@ check('I5: ô chọn Bổ gom theo lô và tự tính tổng 575kg từ hai nhá
     document.getElementById('x1-bo-src').value = viaGroup.id;
     x1.x1ChainSyncLinked(spBO, true);
     return h.includes('Theo lô: Lọc Ống + Cắt Mắt') &&
-           h.includes('[SS-2026-0920-01]') && h.includes('còn 575 kg') &&
+           h.includes('[SS-2026-0920-01]') && h.includes('Tồn 575 kg') &&
            document.getElementById('x1-bo-in').value === '575'; })());
 const oldViaOk = loVia.qtyOk, oldCmOk = state.xuong1CatMatRecords.find(r => r.id === 'cm-legacy').qtyOk;
 loVia.qtyOk = 480.5;

@@ -15573,9 +15573,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           const cd = ss ? x1CatOngDisplay(ss) : null;
           const rest = x1SaySinhRemainingOf(s, state.x1BocEditId || null);
           const days = x1SsDaysOf(s);
+          const supplier = cd ? cd.supplier : (s.srcSupplier || '—');
+          const materialType = cd ? cd.materialType : (s.srcType || 'Vầu/nứa');
           const qc = x1SsQcStatusOf(s) === 'pass' ? 'QC Đạt'
             : x1SsQcStatusOf(s) === 'fail' ? 'QC Không đạt' : 'Chờ QC';
-          return `<option value="${escapeHTML(s.id)}">[${escapeHTML(s.code || '—')}] ${escapeHTML(cd ? cd.materialType : (s.srcType || 'Vầu/nứa'))} · ${days} ngày · ${qc} · còn ${fmtKg(rest)} kg</option>`;
+          return `<option value="${escapeHTML(s.id)}">[${escapeHTML(s.code || '—')}] · NCC ${escapeHTML(supplier)} · ${escapeHTML(materialType)} · Sấy Sinh ${formatDateDDMMYY(s.date)} · ${days} ngày sấy sinh · ${qc} · Tồn ${fmtKg(rest)} kg</option>`;
         }).join('')
       : `<option value="">— Hết lượt Sấy Sinh chờ bốc —</option>`;
     setX2SelectOptions(sel, html);   // giữ lượt đang chọn khi thẻ được vẽ lại
@@ -16184,9 +16186,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const optOf = (s, isAlt) => {
       const rest = x1ChainRemainingOf(spec, s, editId);
       const nm = x1SrcTypeOf(s) || 'Vầu/nứa';
+      const supplier = x1SrcSupplierOf(s) || '—';
       const route = s.route || (isAlt ? `${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName);
       const lotCode = s.lotCode || x1TraceLotCodeOf(s);
-      return `<option value="${escapeHTML(s.id)}">${lotCode ? `[${escapeHTML(lotCode)}] ` : ''}${escapeHTML(nm)} · ${escapeHTML(route)} ${formatDateDDMMYY(s.date)} · còn ${fmtKg(rest)} kg</option>`;
+      return `<option value="${escapeHTML(s.id)}">${lotCode ? `[${escapeHTML(lotCode)}]` : '—'} · NCC ${escapeHTML(supplier)} · ${escapeHTML(nm)} · ${escapeHTML(route)} ${formatDateDDMMYY(s.date)} · Tồn ${fmtKg(rest)} kg</option>`;
     };
     const total = g.base.length + g.alt.length;
     let html = '';

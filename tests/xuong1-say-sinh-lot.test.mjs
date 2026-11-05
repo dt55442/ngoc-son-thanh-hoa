@@ -133,6 +133,14 @@ check('A3: số thứ tự nối tiếp trong THÁNG (V lô 3)', x2.x1SsMakeCode
 check('A4: N có dãy RIÊNG (N lô 1) và tháng mới reset về 001',
   x2.x1SsMakeCode('2026-10-19', 'Nứa') === 'N261019001' &&
   x2.x1SsMakeCode('2026-11-02', 'Vầu') === 'V261102001');
+state.xuong1SaySinhRecords = [];
+const sameDayV1 = x2.x1SsMakeCode('2026-11-01', 'Vầu');
+state.xuong1SaySinhRecords.push(rec('same-day-v1', '2026-11-01', { code: sameDayV1 }));
+const sameDayV2 = x2.x1SsMakeCode('2026-11-01', 'Vầu');
+const sameDayN1 = x2.x1SsMakeCode('2026-11-01', 'Nứa');
+check('A5: cùng ngày, cùng loại tăng số; loại nguyên liệu khác dùng dãy riêng',
+  sameDayV1 === 'V261101001' && sameDayV2 === 'V261101002' &&
+  sameDayN1 === 'N261101001');
 
 console.log('--- B. MIGRATE lô cũ + không đổi mã khi sửa/xoá ---');
 state.xuong1SaySinhRecords = [
@@ -286,9 +294,12 @@ x2.x1SsCloseReadyPanel();
 check('E9: Đóng panel → ẩn', panel.hidden === true);
 x2.renderX1BocCard();
 const bocSel = document.getElementById('x1-boc-source');
-check('E10: ô chọn Bốc hiện tuổi lô và trạng thái QC thủ công',
-  bocSel.innerHTML.includes('[V261001001]') && bocSel.innerHTML.includes('Chờ QC') &&
-  !bocSel.innerHTML.includes('⚠ đạt'));
+const oldBocOption = (bocSel.innerHTML.match(/<option[^>]*value="r-old"[^>]*>([\s\S]*?)<\/option>/) || [])[1] || '';
+check('E10: ô chọn Bốc hiện mã lô, NCC, ngày sấy, tuổi lô và tồn',
+  oldBocOption.includes('[V261001001] · NCC Tế') &&
+  /Sấy Sinh \d{2}\/\d{2}\/\d{2}/.test(oldBocOption) &&
+  oldBocOption.includes('10 ngày sấy sinh') && oldBocOption.includes('Tồn 100 kg') &&
+  oldBocOption.includes('Chờ QC') && !oldBocOption.includes('⚠ đạt'));
 x2.x1SsOpenBocFor('r-new');
 check('E11: "Mở thẻ Bốc" chọn sẵn đúng lô được nhắc', bocSel.value === 'r-new');
 
@@ -317,7 +328,7 @@ check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ côn
   expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
   expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
   !expSrc.includes("'Ngày Đạt'"));
-check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v356/.test(swSrc));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v358/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
 
 console.log(`\n=== KẾT QUẢ X1 SẤY SINH LOT: ${pass} PASS / ${fail} FAIL ===`);

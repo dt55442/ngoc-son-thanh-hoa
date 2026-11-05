@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-11-05T04:06:20.637Z",
+  "savedAt": "2026-11-05T04:21:53.708Z",
   "batches": [
     {
       "volume": 0.3696,
@@ -17249,8 +17249,6 @@
       "note": ""
     },
     {
-      "id": "mat-1793714634611-1bkxb",
-      "totalAmount": 3599500,
       "images": [
         {
           "id": "ph-mw0rdn75-4tj8aj"
@@ -17265,17 +17263,19 @@
           "id": "ph-mw0rdn7z-vcsbxw"
         }
       ],
-      "location": "lo-hoi",
-      "outputIndex": 2620,
       "note": "",
-      "type": "Gỗ",
-      "unitPrice": 1150,
-      "supplier": "Nhà Chiến",
+      "outputIndex": 2620,
       "inputIndex": 5750,
       "weight": 3130,
-      "date": "2026-11-03",
+      "createdAt": "2026-11-03T14:03:54.611Z",
+      "type": "Gỗ",
+      "location": "lo-hoi",
       "week": "2026-W45",
-      "createdAt": "2026-11-03T14:03:54.611Z"
+      "date": "2026-11-03",
+      "supplier": "Nhà Chiến",
+      "id": "mat-1793714634611-1bkxb",
+      "totalAmount": 3599500,
+      "unitPrice": 1150
     },
     {
       "week": "2026-W45",
@@ -17584,18 +17584,18 @@
     {
       "id": "mat-1793848569941-lbyi0",
       "outputIndex": 2280,
-      "images": [],
-      "weight": 2580,
-      "inputIndex": 4860,
-      "week": "2026-W45",
-      "supplier": "Nhà Tâm",
-      "location": "xuong-2",
+      "type": "Luồng ống",
       "note": "",
+      "inputIndex": 4860,
+      "location": "xuong-2",
       "unitPrice": 1800,
+      "weight": 2580,
+      "totalAmount": 4644000,
+      "supplier": "Nhà Tâm",
       "createdAt": "2026-11-05T03:16:09.942Z",
       "date": "2026-11-04",
-      "type": "Luồng ống",
-      "totalAmount": 4644000
+      "images": [],
+      "week": "2026-W45"
     }
   ],
   "materialRates": [
@@ -27215,39 +27215,39 @@
       "createdAt": "2026-11-05T03:04:45.462Z"
     },
     {
-      "inputWeight": 2580,
-      "returnedKg": 136,
       "klOngLoi": 136,
-      "klCayLoai": 0,
-      "klOngLuong": 2443,
+      "supplier": "Nhà Tâm",
       "code": "",
-      "kgPerCart": 0,
-      "klCuiDot": 0,
-      "date": "2026-11-04",
-      "carts": 0,
-      "cutter": "Lục Văn Tuấn, Lương Thị Dướng, Ngân Thị Thích, Lữ Thị Hà",
-      "materialId": "mat-1793848569941-lbyi0",
-      "klMatLuong": 0,
-      "supplierLabel": "Nhà Tâm",
-      "cutHoursTC": 0,
+      "cutHours": 36,
       "tickets": [
         {
           "materialId": "mat-1793848569941-lbyi0",
           "kg": 2580
         }
       ],
+      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "cutHoursHC": 36,
+      "cutHoursTC": 0,
+      "inputKind": "ong",
+      "createdAt": "2026-11-05T03:19:36.512Z",
+      "klCayLoai": 0,
+      "supplierLabel": "Nhà Tâm",
+      "carts": 0,
+      "klMatLuong": 0,
+      "cutter": "Lục Văn Tuấn, Lương Thị Dướng, Ngân Thị Thích, Lữ Thị Hà",
+      "note": "",
+      "materialId": "mat-1793848569941-lbyi0",
+      "materialType": "Luồng ống",
+      "returnedKg": 136,
       "klNgonOngLoai": 1,
       "week": "2026-W45",
-      "cutHoursHC": 36,
-      "createdAt": "2026-11-05T03:19:36.512Z",
-      "note": "",
-      "cutHours": 36,
-      "supplier": "Nhà Tâm",
       "rejectRoute": "tra_ncc",
-      "inputKind": "ong",
-      "materialType": "Luồng ống",
+      "inputWeight": 2580,
+      "date": "2026-11-04",
+      "klCuiDot": 0,
+      "klOngLuong": 2443,
       "id": "x2cut-1793848776512-00bfz",
-      "cutTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca"
+      "kgPerCart": 0
     }
   ],
   "xuong2BoluongRecords": [
@@ -31791,13 +31791,28 @@
       "createdAt": "2026-11-03T03:33:06.006Z"
     },
     {
+      "boOngId": "x2bo-1793758172203-zgce4",
+      "date": "2026-11-03",
+      "cutDate": "",
+      "createdAt": "2026-11-04T03:26:55.934Z",
       "rongText": "22,24,15,",
+      "boDate": "2026-11-03",
+      "klOngBo": 10200,
+      "week": "2026-W45",
+      "workHoursHC": 36,
+      "shiftIdx": 0,
       "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
       "boOngIds": [
         "x2bo-1793758172203-zgce4"
       ],
+      "dais": [
+        1250
+      ],
+      "worker": "Vi Văn Tùng, Phạm Thị Hoan, Lục Văn Tuấn, Lữ Thị Hà",
+      "materialType": "Nhiều nguồn (chỉ khối lượng)",
+      "dayText": "7,8,9,10,11,12",
+      "id": "x2bt-1793762815934-sr2pb",
       "workHours": 36,
-      "daiText": "1250",
       "thicks": [
         7,
         8,
@@ -31806,30 +31821,15 @@
         11,
         12
       ],
+      "supplier": "",
+      "daiText": "1250",
       "rongs": [
         15,
         22,
         24
       ],
-      "supplier": "",
       "workHoursTC": 0,
-      "date": "2026-11-03",
-      "worker": "Vi Văn Tùng, Phạm Thị Hoan, Lục Văn Tuấn, Lữ Thị Hà",
-      "boDate": "2026-11-03",
-      "id": "x2bt-1793762815934-sr2pb",
-      "klOngBo": 10200,
-      "shiftIdx": 0,
-      "boOngId": "x2bo-1793758172203-zgce4",
-      "workHoursHC": 36,
-      "createdAt": "2026-11-04T03:26:55.934Z",
-      "dayText": "7,8,9,10,11,12",
-      "week": "2026-W45",
-      "cutDate": "",
-      "materialId": "",
-      "dais": [
-        1250
-      ],
-      "materialType": "Nhiều nguồn (chỉ khối lượng)"
+      "materialId": ""
     },
     {
       "rongs": [
@@ -31873,6 +31873,28 @@
       "cutDate": ""
     },
     {
+      "supplier": "",
+      "date": "2026-11-04",
+      "dayText": "7,8,9,10,11,12",
+      "boDate": "2026-11-04",
+      "week": "2026-W45",
+      "daiText": "1250",
+      "workHoursTC": 0,
+      "workHours": 27,
+      "dais": [
+        1250
+      ],
+      "boOngId": "x2bo-1793848864394-y1qtz",
+      "cutDate": "",
+      "materialId": "",
+      "worker": "Phạm Thị Hoan, Hà Thị Đàm, Hà Văn Ước",
+      "shiftIdx": 0,
+      "klOngBo": 11550,
+      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "id": "x2bt-1793848887256-hf1w5",
+      "boOngIds": [
+        "x2bo-1793848864394-y1qtz"
+      ],
       "thicks": [
         7,
         8,
@@ -31881,37 +31903,15 @@
         11,
         12
       ],
-      "dais": [
-        1250
-      ],
-      "id": "x2bt-1793848887256-hf1w5",
-      "shiftIdx": 0,
       "materialType": "Nhiều nguồn (chỉ khối lượng)",
-      "week": "2026-W45",
-      "dayText": "7,8,9,10,11,12",
-      "boDate": "2026-11-04",
-      "boOngId": "x2bo-1793848864394-y1qtz",
-      "worker": "Phạm Thị Hoan, Hà Thị Đàm, Hà Văn Ước",
-      "workHours": 27,
-      "cutDate": "",
-      "workHoursHC": 27,
-      "supplier": "",
-      "materialId": "",
-      "workTime": "07:00 → hết ca, 07:00 → hết ca, 07:00 → hết ca",
+      "createdAt": "2026-11-05T03:21:27.256Z",
       "rongText": "22,24,15,",
-      "workHoursTC": 0,
-      "klOngBo": 11550,
-      "date": "2026-11-04",
-      "boOngIds": [
-        "x2bo-1793848864394-y1qtz"
-      ],
       "rongs": [
         15,
         22,
         24
       ],
-      "createdAt": "2026-11-05T03:21:27.256Z",
-      "daiText": "1250"
+      "workHoursHC": 27
     }
   ],
   "xuong2ChonNanThoRecords": [
@@ -58344,6 +58344,38 @@
       "stage": "say",
       "reporterName": "phambanghi1989@gmail.com",
       "endTime": "14:00"
+    },
+    {
+      "rejectReason": "",
+      "startTime": "10:30",
+      "endTime": "11:10",
+      "hours": 0.67,
+      "status": "cho_duyet",
+      "approvedAt": "",
+      "repairDueAt": "",
+      "repairVerifiedBy": "",
+      "repairRecurrence": null,
+      "cause": "khac",
+      "shiftIdx": 0,
+      "repairStartedAt": "",
+      "repairVerifiedAt": "",
+      "updatedAt": "2026-11-05T04:20:42.692Z",
+      "repairCompletedAt": "",
+      "repairStatus": "not_started",
+      "repairPriority": "normal",
+      "repairAssigneeIds": [],
+      "note": "",
+      "createdAt": "2026-11-05T04:20:42.692Z",
+      "approvedBy": "",
+      "stage": "cut",
+      "repairAssignedAt": "",
+      "fixAction": "",
+      "createdBy": "phambanghi1989@gmail.com",
+      "repairOutcome": "",
+      "description": "Hỗ trợ bốc ống luồng",
+      "id": "x2inc-1793852442693-0o4wf",
+      "date": "2026-11-05",
+      "reporterName": "phambanghi1989@gmail.com"
     }
   ],
   "xuong2BaoTinhRecords": [
@@ -68804,19 +68836,19 @@
       "price": 1300
     },
     {
-      "price": 1300,
-      "createdAt": "2026-11-04T12:29:54.255Z",
-      "note": "",
-      "scaleInKg": 15670,
-      "amount": 21268000,
-      "party": "A Tuấn",
-      "outType": "sale",
-      "kg": 16360,
-      "kind": "all",
-      "date": "2026-11-04",
       "id": "x2pp-1793795394255-2h9s7",
+      "note": "",
+      "outType": "sale",
+      "price": 1300,
       "form": "rac_bam",
-      "scaleOutKg": 32030
+      "scaleInKg": 15670,
+      "kg": 16360,
+      "date": "2026-11-04",
+      "amount": 21268000,
+      "kind": "all",
+      "scaleOutKg": 32030,
+      "createdAt": "2026-11-04T12:29:54.255Z",
+      "party": "A Tuấn"
     }
   ],
   "x2Stocktakes": [],

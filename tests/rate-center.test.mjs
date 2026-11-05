@@ -320,11 +320,11 @@ check('H3: đã ẩn 19 nút định mức cũ trong các thẻ (giữ id cho t�
 check('H4: events.js nối mở/đóng + uỷ nhiệm click trong #rc-body',
   ev.includes("safeOn('btn-rate-center'") && ev.includes("safeOn('rc-body'") &&
   ev.includes('onRateCenterClick') && ev.includes("safeOn('btn-rc-close'"));
-check('H5: sw.js CACHE_NAME v356 + js/rate-center.js trong APP_SHELL',
-  sw.includes('nha-may-ngoc-son-v356') && sw.includes("'./js/rate-center.js'"));
-check('H6: state.js có key + mảng rateApprovals + APP_VERSION v356',
+check('H5: sw.js CACHE_NAME v358 + js/rate-center.js trong APP_SHELL',
+  sw.includes('nha-may-ngoc-son-v358') && sw.includes("'./js/rate-center.js'"));
+check('H6: state.js có key + mảng rateApprovals + APP_VERSION v358',
   stSrc.includes('bamboo_tracker_rate_approvals_v1') &&
-  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v356'"));
+  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v358'"));
 check('H7: storage.js nối restore + ghi vào 2 file snapshot',
   stg.includes('function restoreRateApprovals') &&
   (stg.match(/rateApprovals: state\.rateApprovals \|\| \[\]/g) || []).length >= 2);

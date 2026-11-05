@@ -144,20 +144,33 @@ function loadDomain(domain) {
     const tx = db.transaction(REPO_STORE, 'readonly');
     const store = tx.objectStore(REPO_STORE);
     const out = [];
+    let readError = null;
     const range = (typeof IDBKeyRange !== 'undefined') ? IDBKeyRange.bound(domain + '|', domain + '|\uffff') : null;
     const req = range ? store.openCursor(range) : store.openCursor();
     req.onsuccess = () => {
       const cur = req.result;
       if (cur) {
         const v = cur.value;
-        if (v && v.json) {
-          cache.set(cacheKey(v.domain, v.month), v);
-          try { out.push(...JSON.parse(v.json)); } catch (e) {}
+        if (v && v.domain === domain) {
+          try {
+            const records = JSON.parse(v.json);
+            if (!Array.isArray(records)) throw new Error('Dữ liệu tháng không phải là một danh sách.');
+            cache.set(cacheKey(v.domain, v.month), v);
+            for (let i = 0; i < records.length; i++) out.push(records[i]);
+          } catch (e) {
+            const month = v.month ? ' tháng ' + v.month : '';
+            const detail = e && e.message ? ': ' + e.message : '';
+            readError = new Error('Không đọc được miền ' + domain + month + ' từ IndexedDB' + detail);
+            return;
+          }
         }
         cur.continue();
       }
     };
-    tx.oncomplete = () => resolve(out);
+    tx.oncomplete = () => {
+      if (readError) reject(readError);
+      else resolve(out);
+    };
     tx.onerror = () => reject(tx.error || new Error('Không đọc được miền ' + domain + ' từ IndexedDB.'));
     tx.onabort = () => reject(tx.error || new Error('Giao dịch đọc miền ' + domain + ' từ IndexedDB đã bị hủy.'));
   })).catch(e => {

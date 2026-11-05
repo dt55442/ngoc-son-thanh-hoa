@@ -1967,17 +1967,15 @@
                   <input type="date" id="x2-bl-date" required>
                 </div>
                 <div class="form-group" style="flex:1; min-width:190px;">
-                  <label for="x2-bl-kind">Công Đoạn <span class="required">*</span></label>
-                  <select id="x2-bl-kind">
+                  <label for="x2-bl-kind" title="Gia công lấy thanh thô từ lô Bullig ở Kho; Chọn thanh phân loại thành phẩm đạt và lỗi.">Công Đoạn <span class="required">*</span></label>
+                  <select id="x2-bl-kind" title="Gia công lấy thanh thô từ lô Bullig ở Kho; Chọn thanh phân loại thành phẩm đạt và lỗi.">
                     <option value="gc">Gia công (chọn thanh thô từ lô Bullig)</option>
                     <option value="ct">Chọn thanh (đạt / lỗi)</option>
                   </select>
-                  <small style="color:var(--text-muted);"><strong>Gia công</strong>: lấy thanh thô từ lô ở Kho (Dùng Cho = Bullig) · <strong>Chọn thanh</strong>: chọn Loại thanh từ thành phẩm Gia công → nhập SL đạt / lỗi.</small>
                 </div>
                 <div class="form-group" id="x2-bl-gc-btn-group" style="flex:2; min-width:260px;">
-                  <label for="x2-bl-gc-btn">Chọn thanh thô vào (lô ở Kho · Dùng Cho = Bullig) <span class="required">*</span></label>
-                  <button type="button" class="btn btn-outline" id="x2-bl-gc-btn" style="width:100%; justify-content:flex-start;"><i data-lucide="list"></i> Mở danh sách lô Bullig (chọn được nhiều)</button>
-                  <small style="color:var(--text-muted);">Bấm thẻ = CHỌN, bấm nữa = BỎ CHỌN. Thanh thô tiêu thụ = Số lượng gia công được ÷ hệ số quy đổi (Định mức Bullig).</small>
+                  <label for="x2-bl-gc-btn" title="Chọn một hoặc nhiều phiếu xuất Bullig đã duyệt. Bấm phiếu lần nữa để bỏ chọn.">Thanh thô vào <span class="required">*</span></label>
+                  <button type="button" class="btn btn-outline" id="x2-bl-gc-btn" style="width:100%; justify-content:flex-start;" title="Chọn một hoặc nhiều phiếu xuất Bullig đã duyệt. Bấm phiếu lần nữa để bỏ chọn."><i data-lucide="list"></i> Chọn lô Bullig</button>
                 </div>
               </div>
               <!-- DANH SÁCH THẺ LÔ (Gia công) — 1 KHUNG DUY NHẤT bọc ô tìm nhanh +
@@ -1995,21 +1993,19 @@
                    Gia Công kèm GỢI Ý "/ tổng đã chọn" ngay cạnh ô nhập -->
               <div class="x2-form-row" id="x2-bl-gc-group">
                 <div class="form-group x2-bl-dim-g">
-                  <label for="x2-bl-out">Kích Thước Thành Phẩm (Dài x Rộng x Dày mm) <span class="required">*</span></label>
-                  <input type="text" id="x2-bl-out" list="x2-bl-out-list" placeholder="VD: 1250x80x12" autocomplete="off">
+                  <label for="x2-bl-out" title="Nhập kích thước thành phẩm theo thứ tự dài × rộng × dày, đơn vị mm.">Kích Thước Thành Phẩm <span class="required">*</span></label>
+                  <input type="text" id="x2-bl-out" list="x2-bl-out-list" placeholder="VD: 1250x80x12" autocomplete="off" title="Nhập kích thước thành phẩm theo thứ tự dài × rộng × dày, đơn vị mm.">
                   <datalist id="x2-bl-out-list"></datalist>
-                  <small style="color:var(--text-muted);">Gợi ý sẵn khi đã từng nhập — vẫn sửa lại được.</small>
                 </div>
                 <div class="form-group x2-bl-qty-g">
-                  <label for="x2-bl-gc-qty">Số Lượng Gia Công Được <span class="required">*</span></label>
+                  <label for="x2-bl-gc-qty" title="Nhập số thanh thành phẩm. Số tối đa được tính từ tổng thanh thô đã chọn và hệ số quy đổi.">Số Lượng Gia Công Được <span class="required">*</span></label>
                   <div class="x2-bl-qty-wrap">
-                    <input type="number" id="x2-bl-gc-qty" min="0" step="any" placeholder="0">
+                    <input type="number" id="x2-bl-gc-qty" min="0" step="any" placeholder="0" title="Nhập số thanh thành phẩm. Số tối đa được tính từ tổng thanh thô đã chọn và hệ số quy đổi.">
                     <span class="x2-bl-qty-hint" id="x2-bl-gc-total-hint" title="Số thanh gia công được TỐI ĐA = tổng thanh thô đã chọn × hệ số quy đổi">/ 0</span>
                   </div>
                   <div class="x2-bl-conv-row">
-                    <span class="x2-bl-conv-chip" id="x2-bl-gc-conv-hint" title="Hệ số quy đổi lấy từ ĐỊNH MỨC (tab Kế Hoạch) của sản phẩm Bullig">1 thanh thô = 1 thanh gia công</span>
+                    <span class="x2-bl-conv-chip" id="x2-bl-gc-conv-hint" title="Hệ số quy đổi lấy từ định mức Bullig trong tab Kế Hoạch." aria-label="Hệ số quy đổi" tabindex="0" role="img">i</span>
                   </div>
-                  <small style="color:var(--text-muted);">Nhập số <strong>THÀNH PHẨM làm ra</strong> — hệ thống tự tính thanh thô cần dùng và trừ vào tồn lô.</small>
                 </div>
               </div>
               <!-- BẢNG TỔNG HỢP GIA CÔNG theo KÍCH THƯỚC trong phiếu xuất (nguồn mới):
@@ -2019,9 +2015,8 @@
               <!-- DÒNG (CHỌN THANH): Loại thanh + SL đạt + SL lỗi -->
               <div class="x2-form-row" id="x2-bl-ct-size-group" style="display:none;">
                 <div class="form-group" style="flex:2; min-width:240px;">
-                  <label for="x2-bl-ct-size">Loại Thanh (kích thước thành phẩm) <span class="required">*</span></label>
-                  <select id="x2-bl-ct-size"></select>
-                  <small style="color:var(--text-muted);">Lấy từ thành phẩm đã Gia công (kèm số thanh còn lại của từng cỡ). <strong>Thành phẩm sau Chọn thanh = ĐÚNG kích thước này</strong> (chọn 304x14x7 → thành phẩm 304×14×7).</small>
+                  <label for="x2-bl-ct-size" title="Chọn kích thước thành phẩm còn tồn chờ phân loại.">Loại Thanh <span class="required">*</span></label>
+                  <select id="x2-bl-ct-size" title="Kích thước thành phẩm sau Chọn thanh giữ nguyên theo cỡ đã chọn."></select>
                 </div>
                 <div class="form-group" id="x2-bl-ct-ok-group" style="flex:1;">
                   <label for="x2-bl-ct-ok">Số Lượng Đạt <span class="required">*</span></label>
@@ -2035,7 +2030,7 @@
               <!-- Ô TỰ TÍNH -->
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1;">
-                  <label>Tự Tính</label>
+                  <label title="Các số liệu tạm tính theo lựa chọn và giá trị đang nhập; chưa lưu lượt.">Tự Tính</label>
                   <div class="x2-ong-calc" id="x2-bl-calc"></div>
                 </div>
               </div>
@@ -2065,6 +2060,16 @@
           <div class="x2-cut-table-wrap" id="x2-bl-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Bullig (Gia công + Chọn thanh)</h5>
+              <div class="x2-bl-history-filters" id="x2-bl-history-filters">
+                <input type="search" id="x2-bl-history-search" placeholder="Tìm lô / kích thước…" aria-label="Tìm lịch sử Bullig theo lô hoặc kích thước" title="Tìm theo mã lô, kích thước, nhà cung cấp hoặc người làm">
+                <input type="date" id="x2-bl-history-date" aria-label="Lọc lịch sử Bullig theo ngày" title="Lọc lịch sử theo ngày">
+                <select id="x2-bl-history-kind" aria-label="Lọc lịch sử Bullig theo công đoạn" title="Lọc theo công đoạn">
+                  <option value="">Tất cả công đoạn</option>
+                  <option value="gc">Gia công</option>
+                  <option value="ct">Chọn thanh</option>
+                </select>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-x2-bl-filter-clear" title="Xóa bộ lọc lịch sử" aria-label="Xóa bộ lọc lịch sử"><i data-lucide="rotate-ccw"></i></button>
+              </div>
               <span class="x2-cut-table-count" id="x2-bl-table-count"></span>
               <button type="button" class="btn btn-outline btn-sm rate-toggle-btn" id="btn-toggle-x2bl-table" title="Thu gọn / Mở rộng">
                 <i data-lucide="chevron-up"></i> <span>Thu gọn</span>

@@ -298,8 +298,10 @@ state.xuong1BocRecords = [
 ];
 // Lọc Ống KHÔNG qua Cắt Ống (bocId rỗng) → hiện được ở ô chọn Cắt Mắt
 state.xuong1LocOngRecords = [
-  { id: 'glo-1', bocId: '', date: '2026-09-18', qtyIn: 340, qtyOk: 320, createdAt: '2026-09-18T02:00:00.000Z' },
-  { id: 'glo-2', bocId: '', date: '2026-09-19', qtyIn: 240, qtyOk: 220, createdAt: '2026-09-19T02:00:00.000Z' }
+  { id: 'glo-1', bocId: '', date: '2026-09-18', qtyIn: 340, qtyOk: 320, qtyLoai: 20, createdAt: '2026-09-18T02:00:00.000Z' },
+  { id: 'glo-2', bocId: '', date: '2026-09-19', qtyIn: 240, qtyOk: 220, qtyLoai: 20, createdAt: '2026-09-19T02:00:00.000Z' },
+  { id: 'glo-3', bocId: '', date: '2026-09-26', qtyIn: 340, qtyOk: 320, qtyLoai: 20, createdAt: '2026-09-26T02:00:00.000Z' },
+  { id: 'glo-4', bocId: '', date: '2026-09-27', qtyIn: 240, qtyOk: 220, qtyLoai: 20, createdAt: '2026-09-27T02:00:00.000Z' }
 ];
 state.xuong1CatMatRecords = [
   { id: 'gcm-1', locOngId: 'glo-1', date: '2026-09-20', qtyIn: 310, qtyOk: 290, createdAt: '2026-09-20T02:00:00.000Z' },
@@ -373,7 +375,7 @@ check('F4: X1 chỉ tự điền ô số lượng khi ĐANG TRỐNG (không xoá
   xuong2Src.includes('current.has(id) ? current.get(id)') &&
   xuong2Src.includes("x1BocSyncLinked(!qtyEl") &&
   xuong2Src.includes("x1ChainSyncLinked(spec, !inEl"));
-check('F5: sw.js đã tăng cache cho giao diện mới', /nha-may-ngoc-son-v358/.test(swSrc));
+check('F5: sw.js đã tăng cache cho giao diện mới', /nha-may-ngoc-son-v359/.test(swSrc));
 check('F6: 8 thẻ Xưởng 1 — 4 hàm reset dùng helper giữ nguồn qua form.reset()',
   xuong2Src.includes('function x1ResetKeepingSelect(formEl, selId)') &&
   (xuong2Src.match(/x1ResetKeepingSelect\(f, /g) || []).length === 4);

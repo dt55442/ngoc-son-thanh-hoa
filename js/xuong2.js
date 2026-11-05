@@ -24,7 +24,7 @@ import { captureAutoBackup } from './autobackup.js'; // chụp bản cất TRƯ�
 import { canArea, canEditTab } from './permissions.js';   // SỬA NHANH inline trong thẻ ngày (chỉ người có quyền tab Công Đoạn)
 import { pushUndo } from './events.js'; // hoàn tác khi thêm/sửa/xóa phiếu kho (chỉ dùng lúc chạy)
 import { logDataChange } from './history.js';
-import { hrShiftCfg, hrSplitHoursHCDate, hrAssignmentInterval } from './hr.js';
+import { hrAssignmentsOf, hrEmpById, hrPosById, hrShiftCfg, hrSplitHoursHCDate, hrAssignmentInterval } from './hr.js';
 import { renderAll } from './main.js'; // vẽ lại toàn bộ (Kanban cột Kho ẩn lô hết) — dùng lúc chạy
 import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
@@ -286,30 +286,31 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function isChonNanPos(name) {
     return normPosName(name).includes('chon nan');
   }
-  // Bố trí của 1 vị trí trong ngày (matchPos = hàm khớp tên vị trí)
-  function hrAssignmentsAt(dateVal, matchPos) {
+  function hrAssignmentsInDepartmentAt(dateVal, department, matchPos) {
     if (!dateVal) return [];
-    const posNameOf = id => {
-      const p = (state.hrPositions || []).find(x => x.id === id);
-      return String((p && p.name) || '').trim();
-    };
-    const emplOf = id => (state.hrEmployees || []).find(x => x.id === id) || null;
-    return (state.hrAssignments || [])
-      .filter(a => a.date === dateVal &&
-                   String(a.department || '').trim() === 'Xưởng 2' &&
-                   matchPos(posNameOf(a.positionId)))
-      .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')))
+    return hrAssignmentsOf(dateVal)
       .map(a => {
-        const e = emplOf(a.employeeId);
+        const p = hrPosById(a.positionId);
+        return { assignment: a, positionName: String((p && p.name) || '').trim() };
+      })
+      .filter(({ assignment, positionName }) =>
+        String(assignment.department || '').trim() === department && matchPos(positionName))
+      .sort((a, b) => String(a.assignment.start || '').localeCompare(String(b.assignment.start || '')))
+      .map(({ assignment: a, positionName }) => {
+        const e = hrEmpById(a.employeeId);
         return {
           employeeId: a.employeeId || '',
           name: String((e && e.name) || a.employeeId || '').trim(),
-          positionName: posNameOf(a.positionId),
+          positionName,
           shiftIdx: Number(a.shiftIdx) || 0,
           start: String(a.start || '').trim(),
           end: String(a.end || '').trim()
         };
       });
+  }
+  // Bố trí của 1 vị trí trong ngày (matchPos = hàm khớp tên vị trí)
+  function hrAssignmentsAt(dateVal, matchPos) {
+    return hrAssignmentsInDepartmentAt(dateVal, 'Xưởng 2', matchPos);
   }
   function hrCutAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isCutSelectPos); }
   function hrBoluongAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isBocLuongPos); }
@@ -6863,10 +6864,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     const chip = document.getElementById('x2-bl-gc-conv-hint');
     if (chip) {
-      chip.textContent = `1 thanh thô = ${fmtThanh(c.factor)} thanh gia công`;
+      chip.textContent = 'i';
       chip.title = c.rateName
         ? `Theo ĐỊNH MỨC "${c.rateName}" ở tab Kế Hoạch: 1 thanh thô làm được ${fmtThanh(c.factor)} thanh thành phẩm`
         : 'Chưa có định mức cho sản phẩm Bullig ở tab Kế Hoạch — tạm tính 1 thanh thô = 1 thanh thành phẩm (khai định mức với số thanh nan dạng "1/6" để đúng hệ số)';
+      chip.setAttribute('aria-label', chip.title);
       chip.classList.toggle('warn', !c.matched);
     }
   }
@@ -6891,10 +6893,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       // THÀNH PHẨM sau Chọn thanh = ĐÚNG kích thước đã chọn ở ô Loại thanh
       const sizeKey = String((document.getElementById('x2-bl-ct-size') || {}).value || '');
       box.innerHTML = `
-        <span class="x2-ong-calc-item x2-ong-calc-in" title="Thành phẩm sau Chọn thanh CHÍNH LÀ kích thước đã chọn (không đổi kích thước)"><span class="x2-ong-calc-label">Thành phẩm:</span><strong>${sizeKey ? escapeHTML(sizeKey) : '—'}</strong></span>
-        <span class="x2-ong-calc-item" title="Tổng số thanh chọn = thanh đạt + thanh lỗi"><span class="x2-ong-calc-label">Tổng số lượng chọn:</span><strong>${fmtThanh(ok + err)} thanh</strong></span>
-        <span class="x2-ong-calc-item" title="Tỷ lệ đạt = thanh đạt ÷ tổng số thanh chọn"><span class="x2-ong-calc-label">Tỷ lệ đạt:</span><strong>${ok + err > 0 ? fmtRatio((ok / (ok + err)) * 100) + '%' : '—'}</strong></span>
-        <span class="x2-ong-calc-item x2-ong-calc-after" title="Loại thanh lấy từ thành phẩm Gia công — chọn xong TRỪ vào tồn thành phẩm"><span class="x2-ong-calc-label">Nguồn:</span><strong style="color:#0f766e;">thành phẩm Gia công</strong></span>`;
+        <span class="x2-ong-calc-item x2-ong-calc-in" title="Kích thước thành phẩm sau Chọn thanh giữ nguyên theo cỡ đã chọn."><span class="x2-ong-calc-label">Thành phẩm:</span><strong>${sizeKey ? escapeHTML(sizeKey) : '—'}</strong></span>
+        <span class="x2-ong-calc-item" title="Tổng chọn = số thanh đạt + số thanh lỗi."><span class="x2-ong-calc-label">Tổng chọn:</span><strong>${fmtThanh(ok + err)} thanh</strong></span>
+        <span class="x2-ong-calc-item" title="Tỷ lệ đạt = số thanh đạt ÷ tổng số thanh chọn."><span class="x2-ong-calc-label">Tỷ lệ đạt:</span><strong>${ok + err > 0 ? fmtRatio((ok / (ok + err)) * 100) + '%' : '—'}</strong></span>`;
       return;
     }
     // GIA CÔNG (nguồn = phiếu xuất): tổng hợp từ BẢNG theo kích thước
@@ -7113,8 +7114,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       </tr>`;
     }).join('');
     box.innerHTML = `
-      <div class="x2-btinh-groups-head">
-        <i data-lucide="calculator"></i> Tổng hợp theo <strong>kích thước thanh thô trong phiếu xuất</strong> — nhập <strong>K.thước thành phẩm</strong> + <strong>SL gia công</strong> · nhập <strong>Thô dùng</strong> để tự tính lỗi, hoặc để trống và nhập lỗi thủ công
+      <div class="x2-btinh-groups-head" title="Nhập kích thước thành phẩm và số lượng gia công. Nhập thô dùng để tự tính lỗi; để trống nếu muốn nhập lỗi thủ công.">
+        <i data-lucide="calculator"></i> Tổng hợp theo kích thước lô
       </div>
       <div class="x2-btinh-group-scroll">
         <table class="data-table x2-btinh-group-table">
@@ -7459,35 +7460,28 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const gcOut = gc.reduce((s, d) => s + d.quantity, 0);     // SỐ THÀNH PHẨM gia công được
     const okQty = ct.reduce((s, d) => s + d.qtyOk, 0);
     const errQty = ct.reduce((s, d) => s + d.qtyErr, 0);
-    const rate = (okQty + errQty) > 0 ? (okQty / (okQty + errQty)) * 100 : null;
+    const totalChosen = okQty + errQty;
+    const rate = totalChosen > 0 ? (okQty / totalChosen) * 100 : null;
     box.innerHTML = `
-      <div class="material-stat">
-        <span class="material-stat-value">${gc.length}</span>
-        <span class="material-stat-label">Lượt Gia công</span>
-      </div>
-      <div class="material-stat">
-        <span class="material-stat-value">${fmtThanh(gcTho)}</span>
-        <span class="material-stat-label">Thanh thô đã Gia công</span>
-      </div>
-      <div class="material-stat">
+      <div class="material-stat" title="Tổng số thanh thành phẩm đã gia công được.">
         <span class="material-stat-value">${fmtThanh(gcOut)}</span>
-        <span class="material-stat-label">Thành phẩm Gia công được</span>
+        <span class="material-stat-label">Gia công được</span>
+        <span class="material-stat-detail">${gc.length} lượt</span>
       </div>
-      <div class="material-stat">
-        <span class="material-stat-value">${ct.length}</span>
-        <span class="material-stat-label">Lượt Chọn thanh</span>
+      <div class="material-stat" title="Tổng số thanh thô đã dùng cho Gia công.">
+        <span class="material-stat-value">${fmtThanh(gcTho)}</span>
+        <span class="material-stat-label">Thô đã dùng</span>
+        <span class="material-stat-detail">Đầu vào Gia công</span>
       </div>
-      <div class="material-stat">
+      <div class="material-stat" title="Số thanh đạt sau công đoạn Chọn thanh.">
         <span class="material-stat-value">${fmtThanh(okQty)}</span>
-        <span class="material-stat-label">Thanh Đạt (Chọn thanh)</span>
+        <span class="material-stat-label">Chọn đạt</span>
+        <span class="material-stat-detail">${ct.length} lượt · lỗi ${fmtThanh(errQty)}</span>
       </div>
-      <div class="material-stat">
-        <span class="material-stat-value">${fmtThanh(errQty)}</span>
-        <span class="material-stat-label">Thanh Lỗi</span>
-      </div>
-      <div class="material-stat">
+      <div class="material-stat" title="Tỷ lệ đạt = thanh đạt ÷ tổng thanh đã chọn.">
         <span class="material-stat-value">${rate == null ? '—' : fmtRatio(rate) + '%'}</span>
-        <span class="material-stat-label">Tỷ lệ đạt (Chọn thanh)</span>
+        <span class="material-stat-label">Tỷ lệ đạt</span>
+        <span class="material-stat-detail">Tổng chọn ${fmtThanh(totalChosen)} thanh</span>
       </div>`;
   }
 
@@ -7500,19 +7494,41 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function renderX2BulligTable() {
     const box = document.getElementById('x2-bl-day-cards');
     if (!box) return;
-    const list = [...(state.xuong2BulligRecords || [])].sort((a, b) => {
+    const allRecords = state.xuong2BulligRecords || [];
+    const search = bulligNorm(String((document.getElementById('x2-bl-history-search') || {}).value || '').trim());
+    const dateFilter = String((document.getElementById('x2-bl-history-date') || {}).value || '');
+    const kindFilter = String((document.getElementById('x2-bl-history-kind') || {}).value || '');
+    const filterActive = !!(search || dateFilter || kindFilter);
+    const list = [...allRecords].filter(r => {
+      if (dateFilter && String(r.date || '') !== dateFilter) return false;
+      if (kindFilter && (r.kind || 'gc') !== kindFilter) return false;
+      if (!search) return true;
+      const d = bulligDisplay(r);
+      const haystack = bulligNorm([
+        d.lotCodes, d.outSizeKey, d.inSizeKey, d.materialType, d.supplier,
+        r.worker, r.workTime, bulligKindLabel(r.kind || 'gc')
+      ].join(' '));
+      return haystack.includes(search);
+    }).sort((a, b) => {
       if ((b.date || '') !== (a.date || '')) return (b.date || '').localeCompare(a.date || '');
       return (b.createdAt || '').localeCompare(a.createdAt || '');
     });
     const countEl = document.getElementById('x2-bl-table-count');
     // TỔNG số thanh THÔ đã sử dụng của toàn bộ lịch sử (hiện ngay ở thanh tiêu đề)
     const totalTho = list.map(bulligDisplay).filter(d => d.kind === 'gc').reduce((s, d) => s + (Number(d.qtyIn) || 0), 0);
-    if (countEl) countEl.textContent = list.length ? `${list.length} lượt Bullig · thô đã dùng ${fmtThanh(totalTho)} thanh` : '';
+    if (countEl) {
+      countEl.textContent = list.length
+        ? `${list.length} lượt${filterActive ? ' phù hợp' : ''} · thô đã dùng ${fmtThanh(totalTho)} thanh`
+        : (filterActive ? 'Không có kết quả' : '');
+      countEl.title = filterActive ? `Đang lọc từ ${allRecords.length} lượt Bullig.` : 'Tổng số lượt và thanh thô trong lịch sử.';
+    }
+    const clearFilter = document.getElementById('btn-x2-bl-filter-clear');
+    if (clearFilter) clearFilter.disabled = !filterActive;
     if (!list.length) {
       box.innerHTML = `
         <div class="x2-day-card x2-day-card-empty">
           <i data-lucide="package"></i>
-          <div>Chưa có lượt Bullig nào.<br>Chọn <strong>Công đoạn</strong> (Gia công / Chọn thanh) ở form trên rồi bấm <strong>Lưu Lượt Bullig</strong>.</div>
+          <div>${filterActive ? 'Không có lượt Bullig phù hợp bộ lọc.' : 'Chưa có lượt Bullig nào.'}</div>
         </div>`;
       initLucide();
       return;
@@ -7535,7 +7551,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const qty = kind === 'ct'
       ? rows.reduce((s, d) => s + d.qtyOk + d.qtyErr, 0)
       : rows.reduce((s, d) => s + d.quantity, 0);
-    const hours = rows.reduce((s, d) => s + (d.workHours || 0), 0);
+    // Each row carries the same total daily position hours; count them once.
+    const hours = rows.length ? (Number(rows[0].workHours) || 0) : 0;
     const date = disp.length ? disp[0].date : '';
     // Giờ SỰ CỐ CHO PHÉP được TRỪ khỏi giờ làm khi tính CÔNG SUẤT → HIỆU SUẤT
     const hoursEff = stageEffHours('bullig', date, hours);
@@ -7565,12 +7582,13 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       ? d.lots.map(x => `${bulligLotSizeText(x.batch)}(${escapeHTML(x.batch.bambooType || '—')},${fmtThanh(x.qty)})`).join(' + ')
       : '—';
     const lotCodes = d.lots.map(x => x.batch.code || '—').filter(Boolean).join(' + ');
+    const sourceTip = [`Lô ${lotCodes || '—'}`, d.materialType, d.supplier ? `NCC ${d.supplier}` : ''].filter(Boolean).join(' · ');
     return `
       <tr class="x2-day-row" data-x2-bl-row="${escapeHTML(d.id)}">
-        <td>${srcTxt}<div class="x2-row-note">Lô ${escapeHTML(lotCodes || '—')}${d.materialType ? ` · ${escapeHTML(d.materialType)}` : ''}${d.supplier ? ` · NCC ${escapeHTML(d.supplier)}` : ''}</div></td>
-        <td class="text-right"><strong>${fmtThanh(d.quantity)}</strong> <small style="color:var(--text-muted);">/ ${fmtThanh(d.maxOut)} thanh</small><div class="x2-row-note">Thô dùng: ${fmtThanh(d.qtyIn)} thanh (1 thô = ${fmtThanh(d.convertFactor)})</div></td>
-        <td><span class="x2-nan-chip">${escapeHTML(d.outSizeKey || '—')}</span></td>
-        <td class="text-right"><strong style="color:#0f766e;">${d.volume.toFixed(4)}</strong> <small style="color:var(--text-muted);">m³</small></td>
+        <td data-label="Nguồn" title="${escapeHTML(sourceTip)}">${srcTxt}</td>
+        <td class="text-right" data-label="Gia công" title="Thô dùng ${fmtThanh(d.qtyIn)} thanh · hệ số ${fmtThanh(d.convertFactor)} thanh thành phẩm/thô"><strong>${fmtThanh(d.quantity)}</strong> <small style="color:var(--text-muted);">/ ${fmtThanh(d.maxOut)} thanh</small></td>
+        <td data-label="Kích thước"><span class="x2-nan-chip">${escapeHTML(d.outSizeKey || '—')}</span></td>
+        <td class="text-right" data-label="Thể tích" title="Thể tích thành phẩm gia công được"><strong style="color:#0f766e;">${d.volume.toFixed(4)}</strong> <small style="color:var(--text-muted);">m³</small></td>
         <td class="text-right">
           <button class="btn btn-icon btn-outline" title="Sửa" data-x2-bl-edit="${escapeHTML(d.id)}"><i data-lucide="pencil"></i></button>
           <button class="btn btn-icon btn-danger" title="Xóa" data-x2-bl-delete="${escapeHTML(d.id)}"><i data-lucide="trash-2"></i></button>
@@ -7584,11 +7602,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const rate = (d.qtyOk + d.qtyErr) > 0 ? (d.qtyOk / (d.qtyOk + d.qtyErr)) * 100 : null;
     return `
       <tr class="x2-day-row" data-x2-bl-row="${escapeHTML(d.id)}">
-        <td><span class="x2-nan-chip">${escapeHTML(d.inSizeKey || '—')}</span><div class="x2-row-note">Thành phẩm sau Gia công = đúng kích thước này</div></td>
-        <td class="text-right"><strong style="color:#16a34a;">${fmtThanh(d.qtyOk)}</strong></td>
-        <td class="text-right"><strong style="color:#b45309;">${fmtThanh(d.qtyErr)}</strong></td>
-        <td class="text-right"><strong>${fmtThanh(d.inQty)}</strong> <small style="color:var(--text-muted);">thanh</small></td>
-        <td class="text-right">${rate == null ? '—' : `<strong style="color:${rate >= 90 ? '#16a34a' : '#b45309'};">${fmtRatio(rate)}%</strong>`}</td>
+        <td data-label="Loại thanh" title="Kích thước thành phẩm sau Chọn thanh giữ nguyên theo cỡ đã chọn"><span class="x2-nan-chip">${escapeHTML(d.inSizeKey || '—')}</span></td>
+        <td class="text-right" data-label="Đạt"><strong style="color:#16a34a;">${fmtThanh(d.qtyOk)}</strong></td>
+        <td class="text-right" data-label="Lỗi"><strong style="color:#b45309;">${fmtThanh(d.qtyErr)}</strong></td>
+        <td class="text-right" data-label="Tổng chọn" title="Tổng chọn = số thanh đạt + số thanh lỗi"><strong>${fmtThanh(d.inQty)}</strong> <small style="color:var(--text-muted);">thanh</small></td>
+        <td class="text-right" data-label="Tỷ lệ đạt" title="Tỷ lệ đạt = thanh đạt ÷ tổng thanh đã chọn">${rate == null ? '—' : `<strong style="color:${rate >= 90 ? '#16a34a' : '#b45309'};">${fmtRatio(rate)}%</strong>`}</td>
         <td class="text-right">
           <button class="btn btn-icon btn-outline" title="Sửa" data-x2-bl-edit="${escapeHTML(d.id)}"><i data-lucide="pencil"></i></button>
           <button class="btn btn-icon btn-danger" title="Xóa" data-x2-bl-delete="${escapeHTML(d.id)}"><i data-lucide="trash-2"></i></button>
@@ -7636,10 +7654,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const ctErrSum = ctDisp.reduce((s, d) => s + (Number(d.qtyErr) || 0), 0);
     const ctRate = (ctOkSum + ctErrSum) > 0 ? (ctOkSum / (ctOkSum + ctErrSum)) * 100 : null;
     const gcFoot = gcDisp.length
-      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="2">Tổng ngày: <strong>${fmtThanh(gcOutSum)}</strong> thanh gia công được</td><td colspan="3" class="text-right">Tổng số thanh thô đã sử dụng: <strong>${fmtThanh(gcThoSum)}</strong> thanh</td></tr></tfoot>`
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="2">Gia công <strong>${fmtThanh(gcOutSum)}</strong></td><td colspan="3" class="text-right" title="Tổng thanh thô đã sử dụng">Thô dùng <strong>${fmtThanh(gcThoSum)}</strong></td></tr></tfoot>`
       : '';
     const ctFoot = ctDisp.length
-      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="6">Tổng ngày: đạt <strong>${fmtThanh(ctOkSum)}</strong> · lỗi <strong>${fmtThanh(ctErrSum)}</strong> · tổng <strong>${fmtThanh(ctOkSum + ctErrSum)}</strong> thanh${ctRate == null ? '' : ` · Tỷ lệ đạt <strong>${fmtRatio(ctRate)}%</strong>`}</td></tr></tfoot>`
+      ? `<tfoot><tr class="x2-bl-day-total"><td colspan="6">Đạt <strong>${fmtThanh(ctOkSum)}</strong> · lỗi <strong>${fmtThanh(ctErrSum)}</strong> · tỷ lệ <strong>${ctRate == null ? '—' : `${fmtRatio(ctRate)}%`}</strong></td></tr></tfoot>`
       : '';
     const emptyZone = (msg) => `
       <tr class="x2-day-row"><td colspan="5" style="color:var(--text-muted); font-style:italic; text-align:center; padding:8px;">${msg}</td></tr>`;
@@ -7651,9 +7669,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           ${workerBlock(liveCt, ctWorkerRows, 'Chọn thanh')}
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ Gia công: ${hoursTxt(spGc)}</span>
           <span class="x2-day-hours" title="${escapeHTML(hoursTip)}">Giờ Chọn thanh: ${hoursTxt(spCt)}</span>
-          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Gia công = tổng thanh thô gia công ÷ tổng giờ Gia công">CS Gia công: <strong>${gcCap.cap != null ? `${fmtThanh(gcCap.cap)} thanh/h` : '—'}</strong></span>
+          <span class="x2-day-cap x2-bl-day-cap-primary" data-flag-show="see.perf.cap" title="Công suất Gia công = tổng thanh gia công được ÷ tổng giờ Gia công trong ngày">Gia công <strong>${gcCap.cap != null ? `${fmtThanh(gcCap.cap)} thanh/h` : '—'}</strong></span>
           ${bulligEffHtml(gcCap, 'Gia công')}
-          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Chọn thanh = tổng thanh chọn (đạt + lỗi) ÷ tổng giờ Chọn thanh">CS Chọn: <strong>${ctCap.cap != null ? `${fmtThanh(ctCap.cap)} thanh/h` : '—'}</strong></span>
+          <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất Chọn thanh = tổng thanh chọn (đạt + lỗi) ÷ tổng giờ Chọn thanh">Chọn <strong>${ctCap.cap != null ? `${fmtThanh(ctCap.cap)} thanh/h` : '—'}</strong></span>
           ${bulligEffHtml(ctCap, 'Chọn thanh')}
           ${stageIncidentInputHtml('bullig', date)}
         </div>
@@ -14060,31 +14078,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
 
   // ─── NGƯỜI LÀM + GIỜ LÀM CỦA XƯỞNG 1 (bộ phận "Xưởng 1") ─────
-  // Khác bản X2 đúng 1 chỗ: lọc theo department 'Xưởng 1' (hrAssignmentsAt
-  // cứng 'Xưởng 2' nên không dùng lại được). Khớp tên vị trí vẫn MỀM (bỏ dấu).
+  // Khớp tên vị trí vẫn MỀM (bỏ dấu).
   function hrX1AssignmentsAt(dateVal, matchPos) {
-    if (!dateVal) return [];
-    const posNameOf = id => {
-      const p = (state.hrPositions || []).find(x => x.id === id);
-      return String((p && p.name) || '').trim();
-    };
-    const emplOf = id => (state.hrEmployees || []).find(x => x.id === id) || null;
-    return (state.hrAssignments || [])
-      .filter(a => a.date === dateVal &&
-                   String(a.department || '').trim() === 'Xưởng 1' &&
-                   matchPos(posNameOf(a.positionId)))
-      .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')))
-      .map(a => {
-        const e = emplOf(a.employeeId);
-        return {
-          employeeId: a.employeeId || '',
-          name: String((e && e.name) || a.employeeId || '').trim(),
-          positionName: posNameOf(a.positionId),
-          shiftIdx: Number(a.shiftIdx) || 0,
-          start: String(a.start || '').trim(),
-          end: String(a.end || '').trim()
-        };
-      });
+    return hrAssignmentsInDepartmentAt(dateVal, 'Xưởng 1', matchPos);
   }
   // Giờ tách HC/TC theo cửa sổ ca của bộ phận Xưởng 1 (trả GIỜ, không phải phút)
   function sumPosHoursSplitX1(list, dateVal) {

@@ -8151,6 +8151,83 @@ body[data-theme="night"] .x2-bl-conv-chip { background: #fdf3c8; }
 #x2-bullig-card .x2-form-row .form-group { gap: 2px; }
 #x2-bullig-card .x2-form-row .form-group label { font-size: 0.78rem; }
 #x2-bullig-card .x2-form-row .form-group small { margin-top: 2px; }
+#x2-bullig-card .x2-bl-conv-chip {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  cursor: help;
+}
+#x2-bullig-card .x2-bl-conv-row { margin-top: 2px; }
+#x2-bullig-card #x2-bl-calc .x2-ong-calc-item:nth-child(n + 7) { display: none; }
+#x2-bullig-card #x2-bl-calc .x2-ong-calc {
+  min-height: 32px;
+  gap: 8px 14px;
+  padding: 5px 9px;
+  border-style: solid;
+}
+#x2-bullig-card .material-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 1120px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+#x2-bullig-card .material-stat {
+  min-width: 0;
+  min-height: 76px;
+  padding: 10px 12px;
+  gap: 3px;
+}
+#x2-bullig-card .material-stat-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+}
+#x2-bullig-card .material-stat-label { font-size: 0.7rem; }
+#x2-bullig-card .material-stat-detail {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#x2-bullig-card .x2-cut-table-head { flex-wrap: wrap; gap: 8px 12px; }
+#x2-bullig-card .x2-bl-history-filters {
+  display: flex;
+  flex: 1 1 420px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+#x2-bullig-card .x2-bl-history-filters input[type="search"] { flex: 1 1 180px; min-width: 120px; }
+#x2-bullig-card .x2-bl-history-filters input[type="date"] { flex: 0 1 145px; min-width: 135px; }
+#x2-bullig-card .x2-bl-history-filters select { flex: 0 1 150px; min-width: 135px; }
+#x2-bullig-card .x2-bl-history-filters button { flex: 0 0 auto; }
+#x2-bullig-card .x2-day-card { width: 100%; min-width: 0; }
+#x2-bullig-card .x2-day-head { flex-wrap: wrap; gap: 7px 12px; }
+#x2-bullig-card .x2-bl-day-cap-primary {
+  padding: 4px 9px;
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+}
+#x2-bullig-card .x2-day-table { width: 100%; min-width: 0; table-layout: fixed; }
+#x2-bullig-card .x2-day-table th,
+#x2-bullig-card .x2-day-table td {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+#x2-bullig-card .x2-day-table td:last-child { white-space: nowrap; }
+#x2-bullig-card .x2-day-table .x2-bl-day-total td { padding-top: 6px; padding-bottom: 6px; }
+#x2-bullig-card .x2-day-table .x2-row-note { display: none; }
+#x2-detail-content #x2-bullig-card .x2-cut-table-scroll { overflow-x: hidden; }
 /* Tiêu đề 2 VÙNG công đoạn nhỏ trong thẻ ngày */
 .x2-bl-zone-head {
   display: flex;
@@ -8166,6 +8243,62 @@ body[data-theme="night"] .x2-bl-conv-chip { background: #fdf3c8; }
 .x2-bl-zone-gc { background: #fef3c7; color: #92400e; }  /* Vàng hổ phách — Gia công */
 .x2-bl-zone-ct { background: #dcfce7; color: #166534; }  /* Xanh lá — Chọn thanh */
 .x2-day-card > .x2-bl-zone-head:first-of-type { margin-top: 6px; }
+
+@media (max-width: 900px) {
+  #x2-bullig-card .material-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #x2-bullig-card .x2-bl-history-filters { flex-basis: 100%; justify-content: flex-start; }
+}
+@media (max-width: 640px) {
+  #x2-bullig-card .x2-cut-table-scroll { overflow-x: hidden; }
+  #x2-detail-content #x2-bullig-card .x2-cut-table-scroll { overflow-x: hidden; }
+  #x2-bullig-card .x2-stock-bar { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  #x2-bullig-card .x2-stock-title { white-space: normal; }
+  #x2-bullig-card .x2-day-card { width: 100% !important; min-width: 0 !important; }
+  #x2-bullig-card .x2-day-table,
+  #x2-bullig-card .x2-day-table tbody,
+  #x2-bullig-card .x2-day-table tfoot { display: block; width: 100%; }
+  #x2-bullig-card .x2-day-table thead { display: none; }
+  #x2-bullig-card .x2-day-table tr.x2-day-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 12px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  #x2-bullig-card .x2-day-table tr.x2-day-row td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    padding: 4px 0;
+    border: 0;
+    text-align: right;
+  }
+  #x2-bullig-card .x2-day-table tr.x2-day-row td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    text-align: left;
+  }
+  #x2-bullig-card .x2-day-table tr.x2-day-row td:first-child { grid-column: 1 / -1; }
+  #x2-bullig-card .x2-day-table tr.x2-day-row td:last-child {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+  #x2-bullig-card .x2-day-table tfoot tr { display: block; }
+  #x2-bullig-card .x2-day-table tfoot td {
+    display: block;
+    width: 100%;
+    padding: 5px 10px;
+    border: 0;
+    text-align: left !important;
+  }
+  #x2-bullig-card .x2-bl-history-filters { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  #x2-bullig-card .x2-bl-history-filters input[type="search"] { grid-column: 1 / -1; }
+  #x2-bullig-card .x2-bl-history-filters input[type="date"],
+  #x2-bullig-card .x2-bl-history-filters select { width: 100%; min-width: 0; }
+}
 
 .x2-btinh-groups-head {
   display: flex;

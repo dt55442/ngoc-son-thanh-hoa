@@ -88,6 +88,78 @@ state.activeView = 'dashboard-view';
 const mats = await import('../js/materials.js');
 const x2 = await import('../js/xuong2.js');
 const cap = await import('../js/capacity.js');
+
+const indexedDisplayState = {
+  hrAssignments: state.hrAssignments,
+  hrEmployees: state.hrEmployees,
+  hrPositions: state.hrPositions,
+  materialRecords: state.materialRecords,
+  xuong2BoluongRecords: state.xuong2BoluongRecords,
+  xuong1CatOngRecords: state.xuong1CatOngRecords,
+  pressRecords: state.pressRecords
+};
+let fullAssignmentFilterCalls = 0, fullAssignmentIterationCalls = 0;
+const indexedDisplayAssignments = Array.from({ length: 15000 }, (_, i) => ({
+  id: `indexed-noise-${i}`,
+  date: `2026-09-${String((i % 28) + 1).padStart(2, '0')}`,
+  department: 'Xưởng 2',
+  positionId: 'indexed-unmatched-position',
+  employeeId: 'indexed-worker',
+  start: '07:00',
+  end: '08:00'
+}));
+indexedDisplayAssignments.push(
+  { id: 'indexed-x2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'indexed-x2-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' },
+  { id: 'indexed-x1', date: '2026-09-10', department: 'Xưởng 1', positionId: 'indexed-x1-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' },
+  { id: 'indexed-press', date: '2026-09-10', department: 'Xưởng 2', positionId: 'indexed-press-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' }
+);
+state.hrAssignments = new Proxy(indexedDisplayAssignments, {
+  get(target, property, receiver) {
+    if (property === 'filter') return (...args) => {
+      fullAssignmentFilterCalls++;
+      return Array.prototype.filter.apply(target, args);
+    };
+    if (property === 'forEach') return (...args) => {
+      fullAssignmentIterationCalls++;
+      return Array.prototype.forEach.apply(target, args);
+    };
+    return Reflect.get(target, property, receiver);
+  }
+});
+state.hrEmployees = [{ id: 'indexed-worker', name: 'Indexed Worker' }];
+state.hrPositions = [
+  { id: 'indexed-x2-position', name: 'Bốc Luồng', department: 'Xưởng 2' },
+  { id: 'indexed-x1-position', name: 'Cắt Ống', department: 'Xưởng 1' },
+  { id: 'indexed-press-position', name: 'Ép Ván', department: 'Xưởng 2' }
+];
+state.materialRecords = [];
+state.xuong2BoluongRecords = [];
+state.xuong1CatOngRecords = [];
+state.pressRecords = [{ id: 'indexed-press-record', date: '2026-09-10', fpDim: '100x100x10', finishedQty: 1 }];
+const indexedBoluongDisplay = x2.boluongDisplay({
+  id: 'indexed-boluong', materialId: 'indexed-material', date: '2026-09-10',
+  inputWeight: 100, qty: 100, workHours: 1
+});
+const indexedCatOngDisplay = x2.x1CatOngDisplay({
+  id: 'indexed-cat-ong', materialId: 'indexed-material', date: '2026-09-10',
+  inputWeight: 100, klDat: 100
+});
+const press = await import('../js/press.js');
+const indexedPressSnapshot = press.epVanSnapshotOf('2026-09-10');
+const indexedPressRows = cap.CAP_STAGES.find(stage => stage.id === 'epvan').rows();
+check('HIỆU NĂNG: tra cứu bố trí công đoạn dùng chỉ mục theo ngày',
+  fullAssignmentIterationCalls === 1 && fullAssignmentFilterCalls === 0 &&
+  indexedBoluongDisplay.workerRows.some(row => row.name === 'Indexed Worker') &&
+  indexedCatOngDisplay.workerRows.some(row => row.name === 'Indexed Worker') &&
+  indexedPressSnapshot.hours === 1 && indexedPressRows.length === 1);
+state.hrAssignments = indexedDisplayState.hrAssignments;
+state.hrEmployees = indexedDisplayState.hrEmployees;
+state.hrPositions = indexedDisplayState.hrPositions;
+state.materialRecords = indexedDisplayState.materialRecords;
+state.xuong2BoluongRecords = indexedDisplayState.xuong2BoluongRecords;
+state.xuong1CatOngRecords = indexedDisplayState.xuong1CatOngRecords;
+state.pressRecords = indexedDisplayState.pressRecords;
+
 // ─── A. TUẦN ISO ──────────────────────────────────────────────
 check('TUẦN: khóa tuần khớp materialWeekLabel (chuẩn chung của app)',
   cap.capWeekKeyOf('2026-09-10') === mats.materialWeekLabel('2026-09-10'));
@@ -418,7 +490,7 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v358', /nha-may-ngoc-son-v358/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v359', /nha-may-ngoc-son-v359/.test(swJs));
 check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 8 dòng Xưởng 1',
   cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 8 &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===

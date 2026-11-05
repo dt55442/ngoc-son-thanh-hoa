@@ -294,29 +294,61 @@ check('THẺ NGÀY: giờ HC/TC tách riêng từng phân vị (Gia công 4,5h H
   dayHtml.includes('Giờ Gia công:') && dayHtml.includes('Giờ Chọn thanh:') &&
   dayHtml.includes('4,5h HC'));
 check('THẺ NGÀY: công suất từng công đoạn (Gia công 700 ÷ 4,5h = 156 · Chọn thanh 700 ÷ 4,5h = 156 thanh/h)',
-  dayHtml.includes('CS Gia công: <strong>156 thanh/h</strong>') &&
-  dayHtml.includes('CS Chọn: <strong>156 thanh/h</strong>'));
+  dayHtml.includes('Gia công <strong>156 thanh/h</strong>') &&
+  dayHtml.includes('Chọn <strong>156 thanh/h</strong>'));
 check('THẺ NGÀY: hiệu suất từng công đoạn ÷ định mức tháng (155,6% và 77,8%)',
   dayHtml.includes('155,6%') && dayHtml.includes('77,8%'));
+{
+  const capacityRecords = state.xuong2BulligRecords;
+  state.xuong2BulligRecords = [
+    { id: 'gc-multi-1', kind: 'gc', date: '2026-09-18', quantity: 5000, workHoursHC: 34, workHoursTC: 0 },
+    { id: 'gc-multi-2', kind: 'gc', date: '2026-09-18', quantity: 4500, workHoursHC: 34, workHoursTC: 0 },
+    { id: 'gc-multi-3', kind: 'gc', date: '2026-09-18', quantity: 4484, workHoursHC: 34, workHoursTC: 0 }
+  ];
+  x2.renderX2BulligCard();
+  const multiDayHtml = document.getElementById('x2-bl-day-cards').innerHTML;
+  check('THẺ NGÀY: 13.984 thanh trên 3 dòng / 34 giờ ngày = 411 thanh/h (không nhân giờ theo số dòng)',
+    multiDayHtml.includes('Gia công <strong>411 thanh/h</strong>'));
+  state.xuong2BulligRecords = capacityRecords;
+  x2.renderX2BulligCard();
+}
 check('THẺ NGÀY: vùng Gia công có nguồn lô · SL x/tổng · k.thước thành phẩm',
   dayHtml.includes('/ 1.400 thanh') && dayHtml.includes('1250×80×12'));
 check('THẺ NGÀY: vùng Chọn thanh có tỷ lệ đạt 94,3%',
   dayHtml.includes('94,3%'));
 check('BẢNG DỮ LIỆU: mỗi vùng có dòng TỔNG ngày (tfoot) — gia công được + THÔ ĐÃ SỬ DỤNG · chọn thanh đạt/lỗi/tỷ lệ',
   dayHtml.includes('x2-bl-day-total') &&
-  dayHtml.includes('Tổng số thanh thô đã sử dụng: <strong>720</strong> thanh') &&
-  dayHtml.includes('Tổng ngày: <strong>700</strong> thanh gia công được') &&
-  dayHtml.includes('đạt <strong>660</strong> · lỗi <strong>40</strong> · tổng <strong>700</strong> thanh'));
+  dayHtml.includes('Thô dùng <strong>720</strong>') &&
+  dayHtml.includes('Gia công <strong>700</strong>') &&
+  dayHtml.includes('Đạt <strong>660</strong> · lỗi <strong>40</strong>'));
 check('BẢNG DỮ LIỆU: thanh tiêu đề ghi TỔNG thanh thô đã dùng của cả lịch sử',
-  document.getElementById('x2-bl-table-count').textContent === '2 lượt Bullig · thô đã dùng 720 thanh');
+  document.getElementById('x2-bl-table-count').textContent === '2 lượt · thô đã dùng 720 thanh');
+{
+  const search = document.getElementById('x2-bl-history-search');
+  const date = document.getElementById('x2-bl-history-date');
+  const kind = document.getElementById('x2-bl-history-kind');
+  search.value = '1250';
+  date.value = '2026-09-16';
+  kind.value = 'ct';
+  x2.renderX2BulligCard();
+  const filteredHtml = document.getElementById('x2-bl-day-cards').innerHTML;
+  check('LỊCH SỬ: lọc đồng thời theo ngày, công đoạn và kích thước',
+    document.getElementById('x2-bl-table-count').textContent.startsWith('1 lượt phù hợp') &&
+    filteredHtml.includes(`data-x2-bl-row="${ct.id}"`) &&
+    !filteredHtml.includes(`data-x2-bl-row="${gc.id}"`));
+  search.value = '';
+  date.value = '';
+  kind.value = '';
+  x2.renderX2BulligCard();
+}
 check('THẺ NGÀY vùng Gia công: nguồn lô hiện KÍCH THƯỚC(PHÂN LOẠI,SỐ LƯỢNG thô) — 1250×80×12(—,720)',
   dayHtml.includes('1250×80×12(—,720)') && dayHtml.includes('Lô LOT-B1'));
 check('THẺ NGÀY vùng Gia công: dòng SL gia công được (x/tối đa) + Thô dùng kèm hệ số quy đổi',
   dayHtml.includes('SL gia công được (x/tối đa)') &&
-  dayHtml.includes('Thô dùng: 720 thanh (1 thô = 1)'));
+  dayHtml.includes('Thô dùng 720 thanh · hệ số 1 thanh thành phẩm/thô'));
 check('THẺ NGÀY vùng Chọn thanh: hiện THÀNH PHẨM = đúng kích thước đã chọn (hết cảnh "—")',
   /x2-nan-chip">1250×80×12</.test(dayHtml) &&
-  dayHtml.includes('Thành phẩm sau Gia công = đúng kích thước này'));
+  dayHtml.includes('Kích thước thành phẩm sau Chọn thanh giữ nguyên theo cỡ đã chọn'));
 
 // ─── H. SỬA / XÓA + TOMBSTONE ───────────────────────────────────
 x2.editXuong2Bullig(ct.id);
@@ -354,7 +386,8 @@ document.getElementById('x2-bl-out').value = '1250x80x12';
 x2.renderX2BulligGroups();
 x2.renderX2BulligCalc();
 check('HỆ SỐ QUY ĐỔI: chip cạnh ô Số Lượng = "1 thanh thô = 6 thanh gia công" (định mức nan = 1/6)',
-  document.getElementById('x2-bl-gc-conv-hint').textContent === '1 thanh thô = 6 thanh gia công' &&
+  document.getElementById('x2-bl-gc-conv-hint').textContent === 'i' &&
+  document.getElementById('x2-bl-gc-conv-hint').title.includes('1 thanh thô làm được 6 thanh thành phẩm') &&
   !document.getElementById('x2-bl-gc-conv-hint').classList.contains('warn'));
 check('HỆ SỐ QUY ĐỔI: gợi ý "/ tối đa" = 1.000 thanh thô × 6 = 6.000 thanh gia công được',
   document.getElementById('x2-bl-gc-total-hint').textContent === '/ 6.000');
@@ -423,7 +456,8 @@ document.getElementById('x2-bl-out').value = '1250x80x12';
 x2.renderX2BulligCalc();
 check('HỆ SỐ QUY ĐỔI: chưa có định mức Bullig → chip CẢNH BÁO + tạm tính 1 thanh thô = 1 thanh',
   document.getElementById('x2-bl-gc-conv-hint').classList.contains('warn') &&
-  document.getElementById('x2-bl-gc-conv-hint').textContent === '1 thanh thô = 1 thanh gia công');
+  document.getElementById('x2-bl-gc-conv-hint').textContent === 'i' &&
+  document.getElementById('x2-bl-gc-conv-hint').title.includes('tạm tính 1 thanh thô = 1 thanh thành phẩm'));
 
 // ─── K2. LÔ ĐÃ DÙNG HẾT → TỰ ẨN KHỎI DANH SÁCH CHỌN LÔ ──────────
 state.materialRates = [
@@ -492,6 +526,7 @@ const jsExport = fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url
 const htmlSrc = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const cssSrc = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const jsXuong2 = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
+const jsEvents = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (js): nối storage/cloud/history/main + xuất Excel',
   jsStorage.includes('xuong2BulligRecords') && jsStorage.includes('x2BulligRates') &&
   jsCloud.includes('xuong2BulligRecords') && jsCloud.includes('x2BulligRates') &&
@@ -507,6 +542,17 @@ check('CẤU TRÚC (index.html): thẻ Bullig có thanh tồn · form đổi the
   htmlSrc.includes('id="x2-bl-rate-kind"') && htmlSrc.includes('id="x2-bl-day-cards"'));
 check('CẤU TRÚC (styles.css): có khối 2 VÙNG thẻ ngày Bullig',
   cssSrc.includes('.x2-bl-zone-gc') && cssSrc.includes('.x2-bl-zone-ct'));
+check('GIAO DIỆN BULLIG: ghi chú form được thay bằng tooltip, lịch sử có bộ lọc',
+  !/<small\b/.test(htmlSrc.slice(htmlSrc.indexOf('<form id="x2-bl-form">'), htmlSrc.indexOf('</form>', htmlSrc.indexOf('<form id="x2-bl-form">')))) &&
+  htmlSrc.includes('id="x2-bl-history-search"') &&
+  htmlSrc.includes('id="x2-bl-history-date"') &&
+  htmlSrc.includes('id="x2-bl-history-kind"') &&
+  jsEvents.includes("safeOn('x2-bl-history-search', 'input', renderX2BulligCard)") &&
+  jsEvents.includes("safeOn('btn-x2-bl-filter-clear', 'click'"));
+check('GIAO DIỆN BULLIG: KPI rút còn 4 và lịch sử có bố cục di động riêng',
+  (document.getElementById('x2-bl-stats').innerHTML.match(/class="material-stat"/g) || []).length === 4 &&
+  cssSrc.includes('#x2-bullig-card .material-stats') &&
+  cssSrc.includes('#x2-bullig-card .x2-day-table tr.x2-day-row'));
 check('CẤU TRÚC (xuong2.js): KHÔNG dùng alNorm (hàm của module khác — từng gây lỗi mở thẻ)',
   !/\balNorm\(/.test(jsXuong2));
 

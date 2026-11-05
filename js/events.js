@@ -23,7 +23,7 @@ import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, delet
 import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutSize, baoTinhInputPool, setBaoThanhInput, setBaoThanhOut, toggleBaoThanhInputPicker, toggleBaoThanhOutPicker, renderBaoThanhInputList, renderX2BaoThanhForm, openX2BaoTinhRateModal, closeX2BaoTinhRateModal, renderX2BaoTinhRateModal, handleX2BaoTinhRateAddMonth, handleX2BaoTinhRateRowSave, handleX2BaoTinhRateRowReset, setX2BaoTinhFilterMode, shiftX2BaoTinhFilter, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2Boluong, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, onChonNanInlineEdit, nanSay1UseOf, editXuong2Bullig, editXuong2Cut, editXuong2Boluong, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2BoluongRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, handleXuong2BoluongSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, onBulligGroupInput, renderX2BulligGroups, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BoluongRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, resetXuong2BoluongForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2BoluongTable, toggleX2HoTroTable, toggleX2KanbanBoard, handleXuong2HoTroSubmit, editXuong2HoTro, deleteXuong2HoTro, resetXuong2HoTroForm, fillXuong2HoTroWorkers, hoTroPickAll, hoTroPickNone, updateXuong2HoTroCalc, onSayTimesChange, onSayIncidentChange, onSayIncidentInput, onStageIncidentChange, onStageIncidentInput, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, baoThoLotSelectAll, baoThoLotSelectNone, X2_RATE_POPUPS, openX2RatePopup, closeX2RatePopup, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, updateXuong2BoluongLinked, x2BaoTinhTogglePicker, x2FloatHideAll, x2FloatMaybeClose, x2FloatRepositionAll, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame, setStageWs, toggleStageWs, handleX1CatOngSubmit, handleX1SaySinhSubmit, handleX1BocSubmit, editX1CatOng, editX1SaySinh, editX1Boc, deleteX1CatOng, deleteX1SaySinh, deleteX1Boc, resetX1CatOngForm, resetX1SaySinhForm, resetX1BocForm, x1CatOngSyncLinked, x1SaySinhSyncLinked, x1BocSyncLinked, x1CatOngCalc, x1SaySinhCalc, x1BocCalc, openX1RatePopup, closeX1RatePopup, renderX1RatePopup, handleX1RateSave, handleX1RateReset,
   x1SsOpenOldPanel, x1SsCloseReadyPanel, x1SsOldStep, x1SsOpenBocFor,
   X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
-  syncX2ShiftField, isBoOngPos, isBaoThoPos, isChonNanPos,
+  syncX2ShiftField, isBoOngPos, isBaoThoPos, isChonNanPos, renderX2BulligCard,
   // ── SỔ NHÓM KHỐI LƯỢNG (18/10/2026): xe bốc ~600 kg + phiếu cân + 2 loại đầu vào Cắt Chọn ──
   setX2CutInputKind, onX2BoluongTicketToggle, onX2BoluongTicketKg,
   onX2CutTicketToggle, onX2CutTicketKg,
@@ -2246,6 +2246,16 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x2-bl-form', 'submit', handleXuong2BulligSubmit);
     safeOn('btn-cancel-x2-bl', 'click', () => resetXuong2BulligForm());
     safeOn('btn-toggle-x2bl-table', 'click', toggleX2BulligTable);
+    safeOn('x2-bl-history-search', 'input', renderX2BulligCard);
+    safeOn('x2-bl-history-date', 'change', renderX2BulligCard);
+    safeOn('x2-bl-history-kind', 'change', renderX2BulligCard);
+    safeOn('btn-x2-bl-filter-clear', 'click', () => {
+      ['x2-bl-history-search', 'x2-bl-history-date', 'x2-bl-history-kind'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      renderX2BulligCard();
+    });
     safeOn('btn-x2-bl-rate-save', 'click', handleX2BulligRateSave);
     safeOn('x2-bl-rate-month', 'change', renderX2BulligRateBar);
     safeOn('x2-bl-rate-kind', 'change', renderX2BulligRateBar);

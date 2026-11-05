@@ -5,7 +5,7 @@ import { firePushSync, initLucide, requireEditPermission, requireRatePermission 
 import { trackDeleted } from './tombstone.js';
 import { collapseChartCard } from './dashboard.js';
 import { logDataChange } from './history.js';
-import { attRecordOf, attStatusOf, approvedLeaveOn, hrEmpByName, hrPositionsNamesOf, hrPosName, hrShiftCfg, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
+import { attRecordOf, attStatusOf, approvedLeaveOn, hrAssignmentsOf, hrEmpById, hrEmpByName, hrPositionsNamesOf, hrPosName, hrShiftCfg, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear, rateDisplayLabel, rateNanUse, rateUnit } from './planning.js';
 import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, numRangeText, parseNumRange, shiftBreakdownHtml, shiftGroupRows, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
@@ -1086,8 +1086,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     const workers = hrWorkersForPress(date);
     let hours = 0, hoursHC = 0, hoursTC = 0;
     const posRows = [];
-    (state.hrAssignments || []).forEach(a => {
-      if ((a.date || '') !== date) return;
+    hrAssignmentsOf(date).forEach(a => {
       const posName = hrPosName(a.positionId);
       if (!isPressEpPos(posName)) return;
       const h = hrSplitHoursHCDate(a.department || '', date, a.start, a.end, a.shiftIdx || 0);
@@ -1124,8 +1123,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
   // Các lượt bố trí vị trí ÉP VÁN thật trong ngày → NHÓM THEO CA (giờ HC/TC
   // tách đúng cửa sổ ca). Mất bố trí thì khối ca không hiện (không bịa số).
   function epVanShiftGroups(date) {
-    const rows = (state.hrAssignments || [])
-      .filter(a => (a.date || '') === date && a.start && isPressEpPos(hrPosName(a.positionId)))
+    const rows = hrAssignmentsOf(date)
+      .filter(a => a.start && isPressEpPos(hrPosName(a.positionId)))
       .map(a => {
         const h = hrSplitHoursHCDate(a.department || 'Xưởng 2', date, a.start, a.end, a.shiftIdx || 0);
         return { shiftIdx: a.shiftIdx || 0, name: hrEmpNameOf(a.employeeId), hc: (h.hc || 0) / 60, tc: (h.tc || 0) / 60 };
@@ -1135,7 +1134,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
 
   // Tên nhân viên theo id (dùng cho tooltip nguồn giờ) — '' nếu không tìm thấy
   function hrEmpNameOf(employeeId) {
-    const e = (state.hrEmployees || []).find(x => x && x.id === employeeId);
+    const e = hrEmpById(employeeId);
     return e ? String(e.name || '') : '';
   }
 

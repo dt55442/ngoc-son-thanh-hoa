@@ -66,6 +66,68 @@ check('LOAD: loadDomainSync ghép lại đúng mảng',
   repo.loadDomainSync('demo').length === 1 && repo.loadDomainSync('demo')[0].id === 'a');
 check('AVAILABLE: Node không có IndexedDB -> false (hệ thống dùng fallback)', repo.available() === false);
 
+// ─── E. NẠP MẢNG LỚN (không phụ thuộc giới hạn đối số của push(...)) ─
+const largeRecords = Array.from({ length: 150000 }, (_, i) => ({ id: 'large-' + i }));
+const idbRows = [
+  { domain: 'demo', month: '2026-10', json: JSON.stringify(largeRecords) },
+  { domain: 'other-domain', month: '2026-10', json: '[{"id":"wrong-domain"}]' }
+];
+let fakeDb;
+fakeDb = {
+  objectStoreNames: { contains: () => true },
+  transaction() {
+    const tx = {};
+    tx.objectStore = () => ({
+      openCursor() {
+        const req = {};
+        let index = 0;
+        const dispatch = () => setTimeout(() => {
+          if (index >= idbRows.length) {
+            req.result = null;
+            req.onsuccess();
+            setTimeout(() => { if (tx.oncomplete) tx.oncomplete(); }, 0);
+            return;
+          }
+          let continued = false;
+          req.result = {
+            value: idbRows[index++],
+            continue() { continued = true; dispatch(); }
+          };
+          req.onsuccess();
+          if (!continued) setTimeout(() => { if (tx.oncomplete) tx.oncomplete(); }, 0);
+        }, 0);
+        dispatch();
+        return req;
+      }
+    });
+    return tx;
+  }
+};
+globalThis.IDBKeyRange = undefined;
+globalThis.indexedDB = {
+  open() {
+    const req = {};
+    setTimeout(() => {
+      req.result = fakeDb;
+      if (req.onsuccess) req.onsuccess();
+    }, 0);
+    return req;
+  }
+};
+const loadedLarge = await repo.loadDomain('demo');
+check('LOAD: nạp đủ 150.000 bản ghi và bỏ qua miền khác khi không có IDBKeyRange',
+  loadedLarge.length === largeRecords.length &&
+  loadedLarge[0].id === 'large-0' &&
+  loadedLarge[loadedLarge.length - 1].id === 'large-149999');
+idbRows[0].json = '{invalid';
+let readError = null;
+try { await repo.loadDomain('demo'); }
+catch (e) { readError = e; }
+check('LOAD: báo lỗi rõ miền dữ liệu khi JSON trong IndexedDB bị hỏng',
+  !!readError && readError.message.includes('demo'));
+delete globalThis.indexedDB;
+delete globalThis.IDBKeyRange;
+
 // ─── D. ĐÃ NỐI VÀO HỆ THỐNG ─────────────────────────────────────
 const hrSrc = fs.readFileSync(new URL('../js/hr.js', import.meta.url), 'utf8');
 const cloudSrc = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');

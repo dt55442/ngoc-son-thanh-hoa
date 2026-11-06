@@ -6171,6 +6171,18 @@ body.is-admin .history-admin-btn { display: inline-flex !important; }
 .x2-form-row .form-group input,
 .x2-form-row .form-group select { width: 100%; }
 
+.x2-bao-tho-thickness-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+  gap: 6px;
+}
+.x2-bao-tho-thickness-cell { min-width: 0; }
+.x2-bao-tho-thickness-cell label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .x2-cn-qty-group { flex: 1 1 100%; }
 .x2-cn-qty-help { color: var(--text-muted); }
 .x2-cn-qty-grid {
@@ -14891,8 +14903,11 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 .leadership-labor-summary > span b:first-child { color: #49845a; }
 .leadership-labor-summary > span b:last-child { color: #b75a50; }
 .leadership-dept-list { display: grid; gap: 4px; }
-.leadership-dept-row { display: grid; grid-template-columns: 68px minmax(0, 1fr) 24px; align-items: center; gap: 5px; color: #68746a; font-size: 6pt; }
-.leadership-dept-row strong { color: #35483a; font-size: 6.5pt; text-align: right; }
+.leadership-dept-row { display: grid; grid-template-columns: 68px minmax(0, 1fr) 104px; align-items: center; gap: 5px; color: #68746a; font-size: 6pt; }
+.leadership-dept-row strong { display: grid; justify-items: end; gap: 1px; color: #35483a; font-size: 6.5pt; text-align: right; white-space: nowrap; }
+.leadership-dept-change { display: flex; gap: 4px; font-size: 5.2pt; font-weight: 400; }
+.leadership-dept-change span:first-child { color: #49845a; }
+.leadership-dept-change span:last-child { color: #b75a50; }
 .leadership-dept-track { height: 4px; }
 .leadership-dept-track i { background: #7c9f80; }
 .leadership-muted { color: #879188; font-size: 5.8pt; line-height: 1.4; }
@@ -15250,7 +15265,7 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 #leadership-view .leadership-dept-list { grid-template-columns: 1fr; gap: 4px; }
 #leadership-view .leadership-dept-row {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr) 24px;
+  grid-template-columns: 68px minmax(0, 1fr) 104px;
   align-items: center;
   gap: 5px;
   padding: 0;
@@ -15392,8 +15407,9 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 #leadership-view .leadership-quality-kind .leadership-quality-head b { font-size: 6.3pt; }
 #leadership-view .leadership-quality-kind .leadership-quality-legend { display: grid; grid-template-columns: 1fr; gap: 2px; font-size: 5.1pt; }
 #leadership-view .leadership-quality-comparison { display: flex; flex-wrap: wrap; gap: 2px 6px; color: #78837a; font-size: 5.2pt; }
-#leadership-view .leadership-dept-row { grid-template-columns: 58px minmax(0, 1fr) 76px; }
-#leadership-view .leadership-dept-row strong { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 3px; font-size: 6.2pt; }
+#leadership-view .leadership-dept-row { grid-template-columns: 58px minmax(0, 1fr) 104px; }
+#leadership-view .leadership-dept-row strong { font-size: 6.2pt; }
+#leadership-view .leadership-dept-change { font-size: 5.2pt; }
 #leadership-view .leadership-second-page-grid .leadership-section { min-width: 0; }
 #leadership-view .leadership-shipment-section .leadership-shipment-summary > span { text-align: right; }
 #leadership-view .leadership-shipment-summary .leadership-delta { white-space: normal; }

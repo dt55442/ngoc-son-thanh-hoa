@@ -108,6 +108,13 @@ state.hrAssignments = [
 ];
 
 const x2 = await import('../js/xuong2.js');
+const setBaoThoWidths = value => {
+  document.getElementById('x2-bao-tho-rong').value = value;
+  x2.syncX2BaoThoThicknessInputs();
+};
+const setBaoThoThickness = (index, value) => {
+  document.getElementById(`x2-bao-tho-day-${index}`).value = value;
+};
 
 // ─── A. THẺ LAUNCHER + MỞ POP-UP ────────────────────────────────
 x2.renderXuong2Cards();
@@ -132,8 +139,8 @@ x2.updateXuong2BaoThoLinked();
 check('LINK: Ngày chạy máy mặc định theo ngày bổ của lô = 2026-09-10',
   document.getElementById('x2-bao-tho-date').value === '2026-09-10');
 document.getElementById('x2-bao-tho-dai').value = '1250,1300';
-document.getElementById('x2-bao-tho-rong').value = '80';
-document.getElementById('x2-bao-tho-day').value = '12';
+setBaoThoWidths('80');
+setBaoThoThickness(0, '12');
 x2.renderX2BaoThoCalc();
 const calc = document.getElementById('x2-bao-tho-calc').innerHTML;
 check('LOẠI NAN: 2 giá trị Dài × 1 Rộng × 1 Dày → 2 TỔ HỢP kích thước',
@@ -143,6 +150,23 @@ check('LOẠI NAN: thể tích quy đổi 1 thanh (TB) = (0,0012 + 0,001248)/2 =
 check('LOẠI NAN: ô số lượng báo chờ công đoạn Chọn Nan Thô',
   calc.includes('chờ Chọn Nan Thô'));
 
+const thicknessGroups = document.getElementById('x2-bao-tho-day-groups');
+const originalThicknessQuery = thicknessGroups.querySelectorAll;
+thicknessGroups.querySelectorAll = () => [
+  { dataset: { x2BaoThoWidth: '15' }, value: '7,8' },
+  { dataset: { x2BaoThoWidth: '18' }, value: '9' }
+];
+setBaoThoWidths('18,15,24');
+check('NHẬP NHANH: ô Dày tạo theo từng Rộng và giữ đúng giá trị theo Rộng khi đổi thứ tự',
+  document.getElementById('x2-bao-tho-day-0').value === '9' &&
+  document.getElementById('x2-bao-tho-day-1').value === '7,8' &&
+  document.getElementById('x2-bao-tho-day-2').value === '' &&
+  thicknessGroups.innerHTML.includes('Rộng 18') &&
+  thicknessGroups.innerHTML.includes('Rộng 15') &&
+  thicknessGroups.innerHTML.includes('Rộng 24'));
+thicknessGroups.querySelectorAll = originalThicknessQuery;
+setBaoThoWidths('80');
+setBaoThoThickness(0, '12');
 
 // ─── D. LƯU LƯỢT CHẠY MÁY ───────────────────────────────────────
 x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
@@ -151,7 +175,9 @@ const rec = state.xuong2BaoThoRecords[0];
 check('LƯU: link đúng lô đã bổ (boOngId = lot-1)', rec.boOngId === 'lot-1');
 check('LƯU: tách đúng 3 danh sách kích thước (Dài 2 giá trị · Rộng 1 · Dày 1)',
   rec.dais.length === 2 && rec.dais[0] === 1250 && rec.dais[1] === 1300 &&
-  rec.rongs.length === 1 && rec.rongs[0] === 80 && rec.thicks.length === 1 && rec.thicks[0] === 12);
+  rec.rongs.length === 1 && rec.rongs[0] === 80 && rec.thicks.length === 1 && rec.thicks[0] === 12 &&
+  rec.widthThicknessPairs.length === 1 && rec.widthThicknessPairs[0].width === 80 &&
+  rec.widthThicknessPairs[0].thicknesses[0] === 12);
 check('LƯU: giữ nguyên chuỗi người dùng nhập (để sửa lại sau)',
   rec.daiText === '1250,1300' && rec.rongText === '80' && rec.dayText === '12');
 check('LƯU: snapshot lô (loại NL · NCC · ngày bổ · ống bổ đạt)',
@@ -265,20 +291,25 @@ selLot.value = 'lot-2';
 x2.updateXuong2BaoThoLinked();
 document.getElementById('x2-bao-tho-date').value = '2026-09-12';
 const cntBefore = state.xuong2BaoThoRecords.length;
-['x2-bao-tho-dai', 'x2-bao-tho-rong', 'x2-bao-tho-day'].forEach(id => {
+['x2-bao-tho-dai', 'x2-bao-tho-rong'].forEach(id => {
   document.getElementById(id).value = '';
 });
+ x2.syncX2BaoThoThicknessInputs();
 x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
 check('CHẶN: chưa nhập Dài/Rộng/Dày → không lưu', state.xuong2BaoThoRecords.length === cntBefore);
 document.getElementById('x2-bao-tho-dai').value = '1250';
-document.getElementById('x2-bao-tho-rong').value = '80';
+setBaoThoWidths('80');
 x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
 check('CHẶN: thiếu ô Dày → không lưu', state.xuong2BaoThoRecords.length === cntBefore);
+setBaoThoWidths('80,90');
+setBaoThoThickness(0, '12');
+x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
+check('CHẶN: thiếu Dày ở một Rộng → không lưu', state.xuong2BaoThoRecords.length === cntBefore);
 
 // ─── I. LƯU THÊM LƯỢT Ở NGÀY KHÁC (2 thẻ ngày) ─────────────────
 document.getElementById('x2-bao-tho-dai').value = '1300';
-document.getElementById('x2-bao-tho-rong').value = '90';
-document.getElementById('x2-bao-tho-day').value = '12,15';
+setBaoThoWidths('90');
+setBaoThoThickness(0, '12,15');
 x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
 check('LƯU: lượt 2 lưu đúng lô lot-2 + Dày có 2 giá trị (2 tổ hợp)',
   state.xuong2BaoThoRecords.length === 2 &&
@@ -297,8 +328,8 @@ check('SỬA: banner "Đang sửa lượt chạy máy" hiện lên',
 check('SỬA: nạp lại 3 ô kích thước + lô gốc',
   document.getElementById('x2-bao-tho-dai').value === '1250,1300' &&
   document.getElementById('x2-bao-tho-rong').value === '80' &&
-  document.getElementById('x2-bao-tho-day').value === '12' && selLot.value === 'lot-1');
-document.getElementById('x2-bao-tho-day').value = '15';
+  document.getElementById('x2-bao-tho-day-0').value === '12' && selLot.value === 'lot-1');
+setBaoThoThickness(0, '15');
 x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
 check('SỬA: đổi Dày thành 15 → thicks = [15], vẫn giữ 2 giá trị Dài',
   rec.thicks.length === 1 && rec.thicks[0] === 15 && rec.dais.length === 2);
@@ -306,6 +337,7 @@ check('SỬA: sau lưu về lại chế độ ghi mới', state.x2BaoThoEditId =
 x2.resetXuong2BaoThoForm();
 check('RESET: form trống 3 ô kích thước + banner ẩn lại',
   document.getElementById('x2-bao-tho-dai').value === '' &&
+  document.getElementById('x2-bao-tho-rong').value === '' &&
   document.getElementById('x2-bao-tho-edit-banner').style.display === 'none');
 
 // ─── K. XÓA LƯỢT CHẠY MÁY (+ tombstone) ────────────────────────
@@ -329,7 +361,7 @@ const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8
 check('CẤU TRÚC (index.html): form có lô đã bổ + ngày + Dài/Rộng/Dày + ô tự tính',
   idxHtml.includes('"x2-bao-tho-lot"') && idxHtml.includes('"x2-bao-tho-date"') &&
   idxHtml.includes('"x2-bao-tho-dai"') && idxHtml.includes('"x2-bao-tho-rong"') &&
-  idxHtml.includes('"x2-bao-tho-day"') && idxHtml.includes('x2-bao-tho-calc'));
+  idxHtml.includes('x2-bao-tho-day-groups') && idxHtml.includes('x2-bao-tho-calc'));
 check('CẤU TRÚC (index.html): bảng phụ định mức công suất bào thô theo tháng (thanh/h)',
   idxHtml.includes('x2-bt-rate-month') && idxHtml.includes('btn-x2-bt-rate-save') &&
   idxHtml.includes('id="x2-bt-rate-bar"') && idxHtml.includes('thanh/h'));
@@ -344,8 +376,8 @@ selLot.selectedOptions = [{ value: 'lot-1' }, { value: 'lot-2' }];
 check('NHIỀU LÔ: baoThoPickedIds() đọc được CẢ 2 lô đang chọn',
   JSON.stringify(x2.baoThoPickedIds()) === JSON.stringify(['lot-1', 'lot-2']));
 document.getElementById('x2-bao-tho-dai').value = '1250';
-document.getElementById('x2-bao-tho-rong').value = '80';
-document.getElementById('x2-bao-tho-day').value = '12';
+setBaoThoWidths('80');
+setBaoThoThickness(0, '12');
 x2.renderX2BaoThoCalc();
 check('NHIỀU LÔ: ô tự tính ghi "2 lô · 650 kg" (TỔNG KL ống bổ 350 + 300)',
   document.getElementById('x2-bao-tho-calc').innerHTML.includes('2 lô · 650 kg'));
@@ -374,6 +406,59 @@ x2.deleteXuong2BaoTho(multi.id);
 selLot.selectedOptions = undefined;
 selLot.value = '';
 x2.resetXuong2BaoThoForm();
+
+// ─── N.1. GHÉP CHÍNH XÁC CÁC CẶP RỘNG-DÀY ───────────────────────
+selLot.selectedOptions = [{ value: 'lot-1' }];
+selLot.value = 'lot-1';
+document.getElementById('x2-bao-tho-date').value = '2026-09-10';
+document.getElementById('x2-bao-tho-dai').value = '1250,1300';
+setBaoThoWidths('15,18,24');
+setBaoThoThickness(0, '7,8');
+setBaoThoThickness(1, '9');
+setBaoThoThickness(2, '8');
+x2.renderX2BaoThoCalc();
+check('GHÉP CẶP: 2 Dài × (2 + 1 + 1) Dày theo từng Rộng = 8 tổ hợp, không nhân chéo',
+  /Tổ hợp kích thước:<\/span><strong[^>]*>8</.test(document.getElementById('x2-bao-tho-calc').innerHTML));
+const pairedBefore = state.xuong2BaoThoRecords.length;
+x2.handleXuong2BaoThoSubmit({ preventDefault(){} });
+const paired = state.xuong2BaoThoRecords[pairedBefore];
+const pairedCombos = x2.baoThoDisplay(paired).combos.map(c => `${c.d}×${c.r}×${c.t}`);
+check('GHÉP CẶP: lưu đúng 3 nhóm Rộng-Dày và chỉ sinh đúng 8 tổ hợp',
+  paired.widthThicknessPairs.length === 3 &&
+  paired.widthThicknessPairs[0].width === 15 &&
+  paired.widthThicknessPairs[0].thicknesses.join(',') === '7,8' &&
+  paired.widthThicknessPairs[1].width === 18 &&
+  paired.widthThicknessPairs[1].thicknesses.join(',') === '9' &&
+  paired.widthThicknessPairs[2].width === 24 &&
+  paired.widthThicknessPairs[2].thicknesses.join(',') === '8' &&
+  JSON.stringify(pairedCombos) === JSON.stringify([
+    '1250×15×7', '1250×15×8', '1250×18×9', '1250×24×8',
+    '1300×15×7', '1300×15×8', '1300×18×9', '1300×24×8'
+  ]) &&
+  !pairedCombos.includes('1250×15×9') &&
+  !pairedCombos.includes('1250×18×7'));
+x2.editXuong2BaoTho(paired.id);
+check('SỬA CẶP: nạp lại Dày đúng theo từng Rộng',
+  document.getElementById('x2-bao-tho-day-0').value === '7,8' &&
+  document.getElementById('x2-bao-tho-day-1').value === '9' &&
+  document.getElementById('x2-bao-tho-day-2').value === '8');
+x2.resetXuong2BaoThoForm();
+x2.deleteXuong2BaoTho(paired.id);
+selLot.selectedOptions = undefined;
+selLot.value = '';
+
+const legacyEdit = {
+  id: 'bt-legacy-edit', boOngId: 'lot-1', date: '2026-09-10',
+  daiText: '1250', rongText: '80,90', dayText: '12,15',
+  dais: [1250], rongs: [80, 90], thicks: [12, 15]
+};
+state.xuong2BaoThoRecords.push(legacyEdit);
+x2.editXuong2BaoTho(legacyEdit.id);
+check('SỬA BẢN CŨ: Dày chung được nạp vào từng ô Rộng để giữ nguyên các tổ hợp cũ',
+  document.getElementById('x2-bao-tho-day-0').value === '12,15' &&
+  document.getElementById('x2-bao-tho-day-1').value === '12,15');
+x2.resetXuong2BaoThoForm();
+state.xuong2BaoThoRecords = state.xuong2BaoThoRecords.filter(record => record.id !== legacyEdit.id);
 
 // ─── O. POPUP ĐỊNH MỨC + GIỜ SỰ CỐ + DROPDOWN NỔI (02/10/2026) ───
 const rd = f => fs.readFileSync(new URL(`../js/${f}`, import.meta.url), 'utf8');
@@ -442,4 +527,3 @@ check('DROPDOWN NỔI (styles.css): CSS cho chip ô sự cố + panel nổi',
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
-

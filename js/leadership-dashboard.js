@@ -7,7 +7,7 @@ import { dimVolume, pressInputVolumeOf, pressRecordVolumeBasisOf, pressRecordVol
 import { qcRowWeeks } from './qc.js';
 import { qcFinalDisplay } from './qc-final.js';
 import { state } from './state.js';
-import { traceChainFor } from './trace.js';
+import { traceChainFor, traceFreshBambooFlowFor } from './trace.js';
 import { x2MassBalanceData } from './x2-phu-pham.js';
 import { bulligDisplay, boluongDisplay, cutDisplay } from './xuong2.js';
 import { calculateVolume, escapeHTML, khoStockSummary, showToast } from './utils.js';
@@ -62,6 +62,21 @@ function periodRange(mode, key) {
 function inRange(date, range) {
   const value = String(date || '').slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && value >= range.from && value <= range.to;
+}
+
+function latestDateInRange(records, range, throughDate = '') {
+  return (records || []).reduce((latest, record) => {
+    const date = String(record && record.date || '').slice(0, 10);
+    return inRange(date, range) && (!throughDate || date <= throughDate) && date > latest
+      ? date
+      : latest;
+  }, '');
+}
+
+function shortDate(date) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))
+    ? `${date.slice(8, 10)}/${date.slice(5, 7)}`
+    : '';
 }
 
 function sum(rows, field) {
@@ -376,25 +391,31 @@ function buildQuality(records, bulligRecords, range, rates) {
 }
 
 function buildLabor(employees, range) {
-  const rows = employees || [];
+  const rows = (employees || []).filter(Boolean);
   const active = rows.filter(employee => (employee.status || 'active') === 'active');
-  const departments = HR_DEPARTMENTS.map(department => ({
-    department,
-    active: active.filter(employee => employee.department === department).length
-  }));
-  const otherDepartments = [...new Set(active.map(employee => String(employee.department || '').trim())
-    .filter(department => department && !HR_DEPARTMENTS.includes(department)))];
-  otherDepartments.forEach(department => departments.push({
-    department,
-    active: active.filter(employee => employee.department === department).length
-  }));
+  const departmentOf = employee => String(employee.department || '').trim() || 'Chưa phân loại';
+  const otherDepartments = [...new Set(rows.map(departmentOf)
+    .filter(department => !HR_DEPARTMENTS.includes(department)))];
+  const departments = [...HR_DEPARTMENTS, ...otherDepartments].map(department => {
+    const members = rows.filter(employee => departmentOf(employee) === department);
+    const joined = members.filter(employee => inRange(employee.joinDate, range)).length;
+    const left = members.filter(employee => inRange(employee.quitDate, range)).length;
+    return {
+      department,
+      active: members.filter(employee => (employee.status || 'active') === 'active').length,
+      joined,
+      left,
+      netChange: joined - left
+    };
+  });
+  const joined = rows.filter(employee => inRange(employee.joinDate, range)).length;
+  const left = rows.filter(employee => inRange(employee.quitDate, range)).length;
   return {
     active: active.length,
     departments,
-    joined: rows.filter(employee => inRange(employee.joinDate, range)).length,
-    left: rows.filter(employee => inRange(employee.quitDate, range)).length,
-    netChange: rows.filter(employee => inRange(employee.joinDate, range)).length
-      - rows.filter(employee => inRange(employee.quitDate, range)).length,
+    joined,
+    left,
+    netChange: joined - left,
     missingJoinDate: rows.filter(employee => !String(employee.joinDate || '').slice(0, 10)).length
   };
 }
@@ -449,6 +470,18 @@ function reportCapacityForPeriod(capacityRows, source, range) {
 function buildConsumptionSummary(range) {
   const balance = x2MassBalanceData(range.from, range.to);
   const chain = traceChainFor(date => inRange(date, range));
+  const freshFlow = traceFreshBambooFlowFor(date => inRange(date, range));
+  const outputRecords = (state.xuong2ChonNanThoRecords || [])
+    .filter(record => record && !record.external && Number(record.quantity) > 0);
+  const outputThroughDate = latestDateInRange(outputRecords, range);
+  const inputThroughDate = outputThroughDate
+    ? latestDateInRange(state.xuong2BoOngRecords, range, outputThroughDate)
+    : '';
+  const inputBalance = inputThroughDate
+    ? x2MassBalanceData(range.from, inputThroughDate)
+    : null;
+  const roughInputKg = inputBalance ? inputBalance.boc.in + inputBalance.ong.in : 0;
+  const periodInputKg = balance.boc.in + balance.ong.in;
   const rate = (output, input) => input > 0 ? output / input * 100 : null;
   const pressRecords = (state.pressRecords || []).filter(record => record && inRange(record.date, range));
   const pressInputM3 = pressRecords.reduce((total, record) => total + pressInputVolumeOf(record), 0);
@@ -470,9 +503,17 @@ function buildConsumptionSummary(range) {
       rate: rate(balance.ong.dat, balance.ong.in)
     },
     rough: {
-      inputKg: balance.boc.in,
-      outputM3: chain.baoThoM3,
-      consumption: chain.baoThoM3 > 0 ? balance.boc.in / chain.baoThoM3 : null
+      inputKg: roughInputKg,
+      outputM3: chain.chonNanM3,
+      consumption: inputThroughDate && roughInputKg > 0 && chain.chonNanM3 > 0
+        ? roughInputKg / chain.chonNanM3
+        : null,
+      inputThroughDate,
+      outputThroughDate,
+      unattributedM3: freshFlow.unattributedM3,
+      unattributedRows: freshFlow.unattributedRows,
+      periodInputKg: inputThroughDate ? roughInputKg : periodInputKg,
+      periodOutputM3: chain.chonNanM3
     },
     press: {
       inputM3: pressInputM3,
@@ -851,21 +892,25 @@ function renderQuality(quality, previous, hasHistory) {
     <div class="leadership-quality-workshop leadership-quality-x2"><h3>${escapeHTML(quality.x2.label)}</h3><div class="leadership-quality-x2-grid">${x2Items}</div></div>`;
 }
 
-function renderLabor(labor, previous) {
+function renderLabor(labor) {
   const max = Math.max(1, ...labor.departments.map(item => item.active));
-  const previousDepartments = new Map(previous.departments.map(item => [item.department, item]));
-  const departments = labor.departments.map(item => `<div class="leadership-dept-row">
-    <span>${escapeHTML(item.department)}</span>
-    <div class="leadership-dept-track" role="img" aria-label="${escapeHTML(`${item.department}: ${fmt(item.active, 0)} người`)}"><i style="width:${item.active / max * 100}%"></i></div>
-    <strong>${fmt(item.active, 0)} ${renderComparison(item.active, (previousDepartments.get(item.department) || {}).active, 'người', 0)}</strong>
-  </div>`).join('');
+  const departments = labor.departments.map(item => {
+    const movement = `<span>+${fmt(item.joined, 0)} vào</span><span>−${fmt(item.left, 0)} nghỉ</span>`;
+    const movementTitle = `Trong kỳ: +${fmt(item.joined, 0)} vào, −${fmt(item.left, 0)} nghỉ`;
+    return `<div class="leadership-dept-row">
+      <span>${escapeHTML(item.department)}</span>
+      <div class="leadership-dept-track" role="img" aria-label="${escapeHTML(`${item.department}: ${fmt(item.active, 0)} người`)}"><i style="width:${item.active / max * 100}%"></i></div>
+      <strong>${fmt(item.active, 0)}<small class="leadership-dept-change" title="${escapeHTML(movementTitle)}">${movement}</small></strong>
+    </div>`;
+  }).join('');
+  const netChange = `${labor.netChange > 0 ? '+' : ''}${fmt(labor.netChange, 0)}`;
   return `<div class="leadership-labor-summary">
       <strong>${fmt(labor.active, 0)} <small>người</small></strong>
-      <span>Biến động ròng ${renderComparison(labor.netChange, previous.netChange, 'người', 0)} · ${renderComparison(labor.active, previous.active, 'người', 0)} tổng lao động</span>
+      <span>Biến động ròng <b>${netChange}</b> người trong kỳ</span>
       <span><b>+${fmt(labor.joined, 0)}</b> vào · <b>−${fmt(labor.left, 0)}</b> nghỉ trong kỳ</span>
     </div>
     <div class="leadership-dept-list" aria-label="Biểu đồ lao động theo bộ phận">${departments}</div>
-    <small class="leadership-muted">Biến động theo ngày vào/nghỉ ghi trên hồ sơ nhân viên.</small>`;
+    <small class="leadership-muted">Biến động phân bổ theo phòng ban ghi trên hồ sơ nhân viên.</small>`;
 }
 
 function renderShipments(shipments, previous, hasHistory) {
@@ -916,20 +961,53 @@ function renderConsumption(consumption) {
   const cards = [
     { key: 'cart', label: 'Luồng cây → ống đạt', input: consumption.cart.input, output: consumption.cart.output, rate: consumption.cart.rate, unit: 'kg' },
     { key: 'pipe', label: 'Luồng ống → ống đạt', input: consumption.pipe.input, output: consumption.pipe.output, rate: consumption.pipe.rate, unit: 'kg' },
-    { key: 'rough', label: 'Luồng cây (kg) → thanh thô (m³)', input: consumption.rough.inputKg, output: consumption.rough.outputM3, consumption: consumption.rough.consumption },
+    {
+      key: 'rough', label: 'Luồng cây + luồng ống (kg) → Thanh thô (m³)',
+      input: consumption.rough.inputKg, output: consumption.rough.outputM3,
+      consumption: consumption.rough.consumption,
+      inputThroughDate: consumption.rough.inputThroughDate,
+      outputThroughDate: consumption.rough.outputThroughDate,
+      periodInputKg: consumption.rough.periodInputKg,
+      periodOutputM3: consumption.rough.periodOutputM3,
+      unattributedRows: consumption.rough.unattributedRows
+    },
     { key: 'press', label: 'Thanh tinh → BTP / thành phẩm', input: consumption.press.inputM3, output: consumption.press.outputM3, consumption: consumption.press.consumption }
   ];
   return `<div class="leadership-consumption-grid">${cards.map(card => {
     let result = fmtPct(card.rate);
     if (card.key === 'rough') {
-      result = card.consumption == null ? '—' : `${fmt(card.consumption, 0)} kg/m³`;
+      result = card.consumption != null
+        ? `${fmt(card.consumption, 0)} kg/m³`
+        : Number(card.periodOutputM3) > 0
+          ? `${fmt(card.periodOutputM3, 3)} m³`
+          : Number(card.periodInputKg) > 0
+            ? `${fmt(card.periodInputKg, 0)} kg`
+            : card.unattributedRows > 0
+              ? `${fmt(card.unattributedRows, 0)} phiếu`
+              : 'Chưa phát sinh';
     } else if (card.key === 'press') {
       result = card.consumption == null ? '—' : `${fmt(card.consumption, 2)} m³/m³`;
     }
     const hasValues = Number(card.input) > 0 || Number(card.output) > 0;
     let details = '—';
-    if (hasValues && card.key === 'rough') {
-      details = `${fmt(card.input, 0)} kg → ${fmt(card.output, 3)} m³`;
+    if (card.key === 'rough' && card.consumption == null) {
+      const inputKg = Number(card.periodInputKg) || 0;
+      const outputM3 = Number(card.periodOutputM3) || 0;
+      if (inputKg > 0 && outputM3 > 0) {
+        details = `Bốc Luồng + Luồng ống: ${fmt(inputKg, 0)} kg · Chọn Nan Thô: ${fmt(outputM3, 3)} m³ (tổng riêng theo kỳ)`;
+      } else if (outputM3 > 0) {
+        details = `Chọn Nan Thô: ${fmt(outputM3, 3)} m³ trong kỳ; chưa có mốc Bổ Ống`;
+      } else if (inputKg > 0) {
+        details = card.inputThroughDate
+          ? `Bốc Luồng + Luồng ống đến ${shortDate(card.inputThroughDate)}; chưa có đầu ra Chọn Nan Thô`
+          : 'Đầu vào Bốc Luồng + Luồng ống trong kỳ; chưa có mốc Bổ Ống';
+      } else if (card.unattributedRows > 0) {
+        details = `Đầu ra có ${fmt(card.unattributedRows, 0)} phiếu thiếu thể tích để tính`;
+      } else {
+        details = 'Chưa ghi nhận đầu vào hoặc đầu ra Chọn Nan Thô';
+      }
+    } else if (hasValues && card.key === 'rough') {
+      details = `${fmt(card.input, 0)} kg đến ${shortDate(card.inputThroughDate)} → ${fmt(card.output, 3)} m³ đến ${shortDate(card.outputThroughDate)}`;
     } else if (hasValues && card.key === 'press') {
       details = `${fmt(card.input, 3)} m³ vào → ${fmt(card.output, 3)} m³ ra`;
     } else if (hasValues) {
@@ -1007,7 +1085,7 @@ export function buildLeadershipReportMarkup(summary) {
       <div class="leadership-second-page-grid">
         <section class="leadership-section">
           <header class="leadership-section-header"><span>05</span><h2>Lao động</h2>${detailLink('hr-view', 'Nhân sự')}</header>
-          ${renderLabor(summary.labor, summary.previous.labor)}
+          ${renderLabor(summary.labor)}
         </section>
         <section class="leadership-section leadership-shipment-section">
           <header class="leadership-section-header"><span>06</span><h2>Xuất hàng</h2>${detailLink('qc-view', 'Xuất hàng QC')}</header>
@@ -1157,10 +1235,27 @@ export function buildLeadershipReportData(summary) {
     },
     {
       entity: 'Xưởng 2 · Thanh thô',
-      inputLabel: 'Luồng cây đầu vào Bốc luồng', input: report.consumption.rough.inputKg, inputUnit: 'kg',
-      outputLabel: 'Thanh thô đầu ra', output: report.consumption.rough.outputM3, outputUnit: 'm³',
-      metric: 'Tiêu hao luồng cây / m³ thanh thô', value: report.consumption.rough.consumption, unit: 'kg/m³',
-      previous: report.previous.consumption.rough.consumption, digits: 0
+      inputLabel: report.consumption.rough.inputThroughDate
+        ? `Bốc Luồng + Luồng ống đến ${shortDate(report.consumption.rough.inputThroughDate)}`
+        : 'Bốc Luồng + Luồng ống trong kỳ',
+      input: report.consumption.rough.inputThroughDate
+        ? report.consumption.rough.inputKg
+        : report.consumption.rough.periodInputKg,
+      inputUnit: 'kg',
+      outputLabel: report.consumption.rough.outputThroughDate
+        ? `Thể tích Chọn Nan Thô đến ${shortDate(report.consumption.rough.outputThroughDate)} (đạt + loại hẳn)`
+        : 'Thể tích Chọn Nan Thô trong kỳ (đạt + loại hẳn)',
+      output: report.consumption.rough.outputM3, outputUnit: 'm³',
+      metric: 'Tiêu hao luồng cây + luồng ống / m³ Chọn Nan Thô',
+      value: report.consumption.rough.consumption, unit: 'kg/m³',
+      previous: report.previous.consumption.rough.consumption, digits: 0,
+      note: report.consumption.rough.consumption == null
+        ? report.consumption.rough.inputThroughDate
+          ? 'Chưa đủ đầu vào hoặc đầu ra để tính tỷ lệ.'
+          : 'Chưa có ngày Bổ Ống trong kỳ để chốt mốc đầu vào; không ghép hai tổng thành tỷ lệ.'
+        : report.consumption.rough.unattributedRows
+          ? `${fmt(report.consumption.rough.unattributedRows, 0)} phiếu (${fmt(report.consumption.rough.unattributedM3, 3)} m³) chưa đủ liên kết để truy nguồn; vẫn nằm trong tổng đầu ra`
+          : `Tỷ lệ tổng hợp đầu vào đến ${shortDate(report.consumption.rough.inputThroughDate)} và đầu ra đến ${shortDate(report.consumption.rough.outputThroughDate)}; không phân bổ theo từng thanh`
     },
     {
       entity: 'Xưởng 2 · Ép ván',
@@ -1173,8 +1268,17 @@ export function buildLeadershipReportData(summary) {
     add('Tiêu hao', item.entity, item.inputLabel, item.input, item.inputUnit);
     add('Tiêu hao', item.entity, item.outputLabel, item.output, item.outputUnit);
     add('Tiêu hao', item.entity, item.metric, item.value, item.unit,
-      compareNote(item.value, item.previous, item.unit, item.digits));
+      `${compareNote(item.value, item.previous, item.unit, item.digits)}${item.note ? ` · ${item.note}` : ''}`);
   });
+  if (report.consumption.rough.consumption == null) {
+    const rough = report.consumption.rough;
+    add('Tiêu hao', 'Xưởng 2 · Luồng cây + luồng ống', 'Đầu vào trong kỳ (tổng riêng)', rough.periodInputKg, 'kg',
+      'Không ghép với đầu ra để tính tỷ lệ.');
+    add('Tiêu hao', 'Xưởng 2 · Chọn Nan Thô', 'Thể tích đầu ra trong kỳ (tổng riêng)', rough.periodOutputM3, 'm³',
+      rough.unattributedRows
+        ? `${fmt(rough.unattributedRows, 0)} phiếu (${fmt(rough.unattributedM3, 3)} m³) chưa đủ liên kết để truy nguồn.`
+        : 'Tổng đầu ra, chưa phân bổ theo nguồn.');
+  }
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.current, 'thanh', 'Ảnh chụp hiện tại, không hồi tố theo kỳ');
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.currentM3, 'm³');
   add('Tồn kho', 'Xưởng 2 · Sấy/Kho', 'Tồn toàn nhóm', report.inventory.pool, 'thanh');
@@ -1200,9 +1304,9 @@ export function buildLeadershipReportData(summary) {
   });
   add('Nhân sự', 'Toàn nhà máy', 'Đang làm việc', report.labor.active, 'người', 'Số hiện tại');
   report.labor.departments.forEach(item => {
-    const before = report.previous.labor.departments.find(row => row.department === item.department);
-    add('Nhân sự', item.department, 'Đang làm việc', item.active, 'người',
-      compareNote(item.active, before && before.active, 'người', 0));
+    add('Nhân sự', item.department, 'Đang làm việc', item.active, 'người', 'Số hiện tại');
+    add('Nhân sự', item.department, 'Biến động trong kỳ', item.netChange, 'người',
+      `+${fmt(item.joined, 0)} vào · −${fmt(item.left, 0)} nghỉ`);
   });
   add('Nhân sự', 'Toàn nhà máy', 'Vào theo hồ sơ trong kỳ', report.labor.joined, 'người');
   add('Nhân sự', 'Toàn nhà máy', 'Nghỉ theo hồ sơ trong kỳ', report.labor.left, 'người');

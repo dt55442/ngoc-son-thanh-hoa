@@ -183,6 +183,57 @@ check('C8: bào thô — 2.600 thanh (2.100 + 500, KHÔNG tính 900 mua ngoài)'
 check('C9: bào thô — thể tích quy đổi 0,4095 m³', near(chain.baoThoM3, 0.4095, 0.0002));
 check('C10: chọn nan — 2.600 thanh · "Loại hẳn" 500 thanh',
   near(chain.chonNanThanh, 2600, 0.5) && near(chain.chonNanReject, 500, 0.5));
+const completedFlow = trace.traceFreshBambooFlowFor(date => date === '2026-10-06');
+check('C10a: luồng cây chỉ tính phần qua liên kết tới Chọn Nan Thô, gồm cả nan loại hẳn',
+  near(completedFlow.inputKg, 12100 * (5205 / 5559), 0.01) &&
+  near(completedFlow.outputM3, 0.4095, 0.0002) &&
+  completedFlow.unattributedRows === 0);
+const originalCuts = state.xuong2CutRecords;
+const originalBoOng = state.xuong2BoOngRecords;
+const originalBaoTho = state.xuong2BaoThoRecords;
+const originalSelections = state.xuong2ChonNanThoRecords;
+state.xuong2CutRecords = [...originalCuts, {
+  id: 'cut-pipe-only', date: '2026-10-06', inputKind: 'ong', inputWeight: 5000, klOngLuong: 2000
+}];
+state.xuong2BoOngRecords = [...originalBoOng, {
+  id: 'bo-pipe-only', cutId: 'cut-pipe-only', date: '2026-10-06', inputOng: 2000, klOngLoai: 0
+}];
+state.xuong2BaoThoRecords = [...originalBaoTho, {
+  id: 'bt-pipe-only', boOngId: 'bo-pipe-only', date: '2026-10-06'
+}];
+state.xuong2ChonNanThoRecords = [...originalSelections, {
+  id: 'cn-pipe-only', date: '2026-10-06', baothoId: 'bt-pipe-only',
+  quantity: 100, unitVol: 0.001, volume: 0.1, external: false
+}];
+const flowWithPipe = trace.traceFreshBambooFlowFor(date => date === '2026-10-06');
+check('C10b: luồng ống đã liên kết không bị tính vào chỉ số luồng cây',
+  near(flowWithPipe.inputKg, completedFlow.inputKg, 0.01) &&
+  near(flowWithPipe.outputM3, completedFlow.outputM3, 0.0002) &&
+  flowWithPipe.unattributedRows === 0);
+state.xuong2CutRecords = originalCuts;
+state.xuong2BoOngRecords = originalBoOng;
+state.xuong2BaoThoRecords = originalBaoTho;
+state.xuong2ChonNanThoRecords = originalSelections;
+state.xuong2CutRecords = [...originalCuts, {
+  id: 'cut-wip-only', date: '2026-10-06', inputKind: 'cart', inputWeight: 8000, klOngLuong: 4000
+}];
+check('C10c: luồng cây ở công đoạn trước nhưng chưa có đầu ra Chọn Nan Thô không làm tăng tỷ lệ',
+  near(trace.traceFreshBambooFlowFor(date => date === '2026-10-06').inputKg, completedFlow.inputKg, 0.01));
+state.xuong2ChonNanThoRecords = [...originalSelections, {
+  id: 'cn-unlinked', date: '2026-10-06', quantity: 100, unitVol: 0.001, volume: 0.1, external: false
+}];
+const flowWithUnlinkedOutput = trace.traceFreshBambooFlowFor(date => date === '2026-10-06');
+check('C10d: đầu ra không có liên kết được loại khỏi tỷ lệ và được báo riêng',
+  near(flowWithUnlinkedOutput.outputM3, completedFlow.outputM3, 0.0002) &&
+  near(flowWithUnlinkedOutput.unattributedM3, 0.1, 0.0001) &&
+  flowWithUnlinkedOutput.unattributedRows === 1);
+state.xuong2ChonNanThoRecords = originalSelections.map(record => ({ ...record, date: '2026-11-02' }));
+const nextMonthFlow = trace.traceFreshBambooFlowFor(date => date >= '2026-11-01' && date <= '2026-11-30');
+check('C10e: đầu vào từ kỳ trước vẫn ghép với đầu ra theo kỳ Chọn Nan Thô',
+  near(nextMonthFlow.inputKg, completedFlow.inputKg, 0.01) &&
+  near(nextMonthFlow.outputM3, completedFlow.outputM3, 0.0002));
+state.xuong2CutRecords = originalCuts;
+state.xuong2ChonNanThoRecords = originalSelections;
 check('C11: bào tinh — vào 2.100 · đạt 2.000 · lỗi 100',
   near(chain.baoTinhIn, 2100, 0.5) && near(chain.baoTinhOk, 2000, 0.5) && near(chain.baoTinhErr, 100, 0.5));
 check('C12: bào tinh — thể tích đạt 0,315 m³', near(chain.baoTinhM3Ok, 0.315, 0.0002));
@@ -483,7 +534,7 @@ check('H8: dashboard.js gọi renderTraceCard trong renderDashboardCharts (chỉ
   dashSrc.includes("from './trace.js'") && dashSrc.includes('if (canViewAdvanced()) renderTraceCard();'));
 
 check('H9: sw.js có ./js/trace.js trong APP_SHELL', swJs.includes("'./js/trace.js'"));
-check('H10: sw.js đã tăng cache lên v359', /nha-may-ngoc-son-v359/.test(swJs));
+check('H10: sw.js đã tăng cache lên v363', /nha-may-ngoc-son-v363/.test(swJs));
 
 check('H11: styles.css có khối THẺ TRUY XUẤT (.trace-card/.trace-kpi/.trace-table)',
   cssSrc.includes('THẺ TRUY XUẤT ĐẦU VÀO → ĐẦU RA') &&

@@ -612,5 +612,26 @@ check('CẤU TRÚC (index.html): KHÔNG còn khối ô tồn theo lô/ngày tron
 check('CẤU TRÚC (styles.css): KHÔNG còn khối CSS .x2-cn-lot-*',
   !cssX2Src.includes('.x2-cn-lot-status {') && !cssX2Src.includes('.x2-cn-lot-row {'));
 
+const pairedBaoTho = {
+  id: 'bt-paired', boOngId: 'lot-1', date: '2026-09-10',
+  dais: [1250], rongs: [15, 18, 24], thicks: [7, 8, 9],
+  widthThicknessPairs: [
+    { width: 15, thicknesses: [7, 8] },
+    { width: 18, thicknesses: [9] },
+    { width: 24, thicknesses: [8] }
+  ]
+};
+state.xuong2BaoThoRecords.push(pairedBaoTho);
+x2.fillXuong2ChonNanOptions();
+selBt.value = pairedBaoTho.id;
+x2.updateXuong2ChonNanLinked();
+check('LIÊN KẾT CẶP RỘNG-DÀY: Chọn Nan Thô chỉ liệt kê đúng các cỡ đã ghép',
+  ['1250 × 15 × 7', '1250 × 15 × 8', '1250 × 18 × 9', '1250 × 24 × 8']
+    .every(size => selSize.innerHTML.includes(size)) &&
+  !selSize.innerHTML.includes('1250 × 15 × 9') &&
+  !selSize.innerHTML.includes('1250 × 18 × 7'));
+state.xuong2BaoThoRecords.pop();
+x2.fillXuong2ChonNanOptions();
+
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

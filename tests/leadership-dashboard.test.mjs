@@ -23,6 +23,7 @@ const saved = {
   xuong2BulligRecords: state.xuong2BulligRecords,
   xuong2BoluongRecords: state.xuong2BoluongRecords,
   xuong2CutRecords: state.xuong2CutRecords,
+  xuong2BoOngRecords: state.xuong2BoOngRecords,
   xuong2BaoThoRecords: state.xuong2BaoThoRecords,
   xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords,
   xuong2BaoTinhRecords: state.xuong2BaoTinhRecords,
@@ -82,21 +83,31 @@ try {
   ];
   state.xuong2BoluongRecords = [
     { date: '2026-10-27', inputWeight: 3000, carts: 5 },
+    { date: '2026-10-30', inputWeight: 800, carts: 1 },
     { date: '2026-10-20', inputWeight: 2000, carts: 3 }
   ];
   state.xuong2CutRecords = [
-    { date: '2026-10-27', inputKind: 'cart', inputWeight: 2500, klOngLuong: 1250, klOngLoi: 200, klMatLuong: 100, carts: 4 },
-    { date: '2026-10-27', inputKind: 'ong', inputWeight: 1500, klOngLuong: 1350, klOngLoi: 50, carts: 2 },
-    { date: '2026-10-20', inputKind: 'cart', inputWeight: 1500, klOngLuong: 1200, klOngLoi: 100, klMatLuong: 50, carts: 3 },
-    { date: '2026-10-20', inputKind: 'ong', inputWeight: 1000, klOngLuong: 900, klOngLoi: 50, carts: 1 }
+    { id: 'cut-week-cart', date: '2026-10-27', inputKind: 'cart', inputWeight: 2500, klOngLuong: 1250, klOngLoi: 200, klMatLuong: 100, carts: 4 },
+    { id: 'cut-week-ong', date: '2026-10-27', inputKind: 'ong', inputWeight: 1500, klOngLuong: 1350, klOngLoi: 50, carts: 2 },
+    { id: 'cut-late-ong', date: '2026-10-30', inputKind: 'ong', inputWeight: 4000, klOngLuong: 3600, klOngLoi: 100, carts: 4 },
+    { id: 'cut-previous-cart', date: '2026-10-20', inputKind: 'cart', inputWeight: 1500, klOngLuong: 1200, klOngLoi: 100, klMatLuong: 50, carts: 3 },
+    { id: 'cut-previous-ong', date: '2026-10-20', inputKind: 'ong', inputWeight: 1000, klOngLuong: 900, klOngLoi: 50, carts: 1 }
+  ];
+  state.xuong2BoOngRecords = [
+    { id: 'bo-week', cutId: 'cut-week-cart', date: '2026-10-28', inputOng: 1250, klOngLoai: 0 },
+    { id: 'bo-after-output', cutId: 'cut-late-ong', date: '2026-10-30', inputOng: 2500, klOngLoai: 0 },
+    { id: 'bo-previous', cutId: 'cut-previous-cart', date: '2026-10-20', inputOng: 1200, klOngLoai: 0 }
   ];
   state.xuong2BaoThoRecords = [
-    { id: 'rough-week', date: '2026-10-29' },
-    { id: 'rough-previous', date: '2026-10-20' }
+    { id: 'rough-week', boOngId: 'bo-week', date: '2026-10-29' },
+    { id: 'rough-previous', boOngId: 'bo-previous', date: '2026-10-20' }
   ];
   state.xuong2ChonNanThoRecords = [
     { id: 'rough-out-week', date: '2026-10-29', baothoId: 'rough-week', cls: 'A', quantity: 200, unitVol: 0.00072, volume: 0.144 },
-    { id: 'rough-out-previous', date: '2026-10-20', baothoId: 'rough-previous', cls: 'A', quantity: 100, unitVol: 0.00072, volume: 0.072 }
+    { id: 'rough-reject-week', date: '2026-10-29', baothoId: 'rough-week', cls: 'reject', quantity: 10, unitVol: 0.00072, volume: 0.0072 },
+    { id: 'rough-out-previous', date: '2026-10-20', baothoId: 'rough-previous', cls: 'A', quantity: 100, unitVol: 0.00072, volume: 0.072 },
+    { id: 'rough-out-external', date: '2026-10-29', external: true, cls: 'A', quantity: 100, unitVol: 0.003, volume: 0.3 },
+    { id: 'rough-out-unlinked', date: '2026-10-29', cls: 'A', quantity: 100, unitVol: 0.002, volume: 0.2 }
   ];
   state.xuong2BaoTinhRecords = [
     { id: 'bt-week', date: '2026-10-29', kind: 'tinh', qtyOk: 9, qtyErr: 1, outDims: [1200, 50, 12] },
@@ -151,16 +162,20 @@ try {
   assert.equal(week.purchases.byLocation.find(row => row.key === 'xuong-2').byType.length, 2);
   assert.equal(week.byproductSales.amount, 200000);
   assert.equal(week.previous.byproductSales.amount, 100000);
-  assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'boluong').quantity, 3000);
+  assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'boluong').quantity, 3800);
   assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'boluong').quantityUnit, 'kg');
-  assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'cut').quantity, 4000);
+  assert.equal(week.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'cut').quantity, 8000);
   assert.equal(week.previous.capacity.find(row => row.id === 'x2').stages.find(row => row.id === 'cut').quantity, 2500);
-  assert.equal(week.consumption.cart.input, 3000);
-  assert.ok(Math.abs(week.consumption.cart.rate - (1250 / 3000 * 100)) < 1e-9);
+  assert.equal(week.consumption.cart.input, 3800);
+  assert.ok(Math.abs(week.consumption.cart.rate - (1250 / 3800 * 100)) < 1e-9);
   assert.equal(week.consumption.pipe.rate, 90);
-  assert.equal(week.consumption.rough.inputKg, 3000);
-  assert.equal(week.consumption.rough.outputM3, 0.144);
-  assert.ok(Math.abs(week.consumption.rough.consumption - (3000 / 0.144)) < 1e-9);
+  assert.equal(week.consumption.rough.inputKg, 4500);
+  assert.equal(week.consumption.rough.outputM3, 0.3512);
+  assert.equal(week.consumption.rough.inputThroughDate, '2026-10-28');
+  assert.equal(week.consumption.rough.outputThroughDate, '2026-10-29');
+  assert.ok(Math.abs(week.consumption.rough.consumption - (4500 / 0.3512)) < 1e-9);
+  assert.equal(week.consumption.rough.unattributedRows, 1);
+  assert.equal(week.consumption.rough.unattributedM3, 0.2);
   assert.ok(Math.abs(week.consumption.press.inputM3 - 0.01224) < 1e-9);
   assert.ok(Math.abs(week.consumption.press.outputM3 - 0.00792) < 1e-9);
   assert.ok(Math.abs(week.consumption.press.consumption - (0.01224 / 0.00792)) < 1e-9);
@@ -173,6 +188,9 @@ try {
   assert.equal(week.labor.active, 2);
   assert.equal(week.labor.joined, 1);
   assert.equal(week.labor.left, 1);
+  assert.equal(week.labor.netChange, 0);
+  assert.equal(week.labor.departments.find(row => row.department === 'Xưởng 2').joined, 1);
+  assert.equal(week.labor.departments.find(row => row.department === 'Xưởng 1').left, 1);
   assert.equal(week.labor.missingJoinDate, 1);
   assert.equal(week.shipments.quantity, 40);
   assert.equal(week.shipments.rows, 4);
@@ -192,6 +210,25 @@ try {
   assert.equal(shipmentVan.quantity, 18);
   assert.equal(shipmentVan.planQuantity, 70);
   assert.ok(Math.abs(shipmentVan.volumeM3 - 0.0990144) < 1e-9);
+
+  const savedEmployees = state.hrEmployees;
+  state.hrEmployees = [
+    { id: 'existing-office', department: 'Văn Phòng', status: 'active', joinDate: '2025-01-01' },
+    { id: 'left-x1', department: 'Xưởng 1', status: 'quit', joinDate: '2025-01-01', quitDate: '2026-10-30' },
+    ...Array.from({ length: 5 }, (_, index) => ({
+      id: `joined-x2-${index}`, department: 'Xưởng 2', status: 'active', joinDate: '2026-10-27'
+    }))
+  ];
+  const movedLabor = buildLeadershipSummary('week', '2026-W44', state, capacity, inventory);
+  assert.equal(movedLabor.labor.netChange, 4);
+  assert.equal(movedLabor.labor.departments.find(row => row.department === 'Xưởng 2').netChange, 5);
+  assert.equal(movedLabor.labor.departments.find(row => row.department === 'Xưởng 1').netChange, -1);
+  const movedMarkup = buildLeadershipReportMarkup(movedLabor);
+  const movedLaborSection = movedMarkup.match(/<section class="leadership-section">\s*<header class="leadership-section-header"><span>05<\/span><h2>Lao động<\/h2>[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(movedLaborSection, /<span>Xưởng 2<\/span>[\s\S]*?title="Trong kỳ: \+5 vào, −0 nghỉ"/);
+  assert.match(movedLaborSection, /<span>Xưởng 1<\/span>[\s\S]*?title="Trong kỳ: \+0 vào, −1 nghỉ"/);
+  assert.doesNotMatch(movedLaborSection, /＝ Không đổi/);
+  state.hrEmployees = savedEmployees;
 
   const oddPairWeek = buildLeadershipSummary('week', '2026-W43', state, capacity, inventory, previousCapacity);
   assert.equal(oddPairWeek.shipments.quantity, 99);
@@ -247,10 +284,12 @@ try {
   assert.ok(markup.indexOf('leadership-main-stages') < markup.indexOf('Ép ván'));
   assert.match(markup, /Chỉ số tiêu hao/);
   assert.match(markup, /Luồng cây → ống đạt/);
-  assert.match(markup, /Luồng cây \(kg\) → thanh thô \(m³\)/);
+  assert.match(markup, /Luồng cây \+ luồng ống \(kg\) → Thanh thô \(m³\)/);
   assert.match(markup, /Thanh tinh → BTP \/ thành phẩm/);
   assert.doesNotMatch(markup, /ĐM \d/);
   assert.doesNotMatch(markup, /Phạm vi &amp; lưu ý dữ liệu|leadership-data-notes/);
+  const consumptionSection = markup.match(/<section class="leadership-section leadership-consumption-section">[\s\S]*?<\/section>/)?.[0] || '';
+  assert.doesNotMatch(consumptionSection, /leadership-data-note|phiếu|truy nguồn/);
 
   const month = buildLeadershipSummary('month', '2026-10', state, capacity, inventory);
   assert.deepEqual(month.range, { from: '2026-10-01', to: '2026-10-31' });
@@ -264,6 +303,7 @@ try {
   assert.equal(emptyPeriod.consumption.pipe.rate, null);
   assert.equal(emptyPeriod.consumption.rough.consumption, null);
   assert.equal(emptyPeriod.consumption.press.consumption, null);
+  assert.match(buildLeadershipReportMarkup(emptyPeriod), /Chưa phát sinh/);
 
   const report = buildLeadershipReportData(week);
   assert.equal(report.headerRow, 4);
@@ -278,10 +318,33 @@ try {
   assert.ok(report.aoa.some(row => row[0] === 'Phụ phẩm' && row[2] === 'Thu bán phụ phẩm' && row[3] === 200000));
   assert.ok(report.aoa.some(row => row[0] === 'Chất lượng' && row[1] === 'Bullig'));
   assert.ok(report.aoa.some(row => row[0] === 'Sản xuất' && row[2] === 'Giờ sự cố'));
-  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Luồng cây' && row[2] === 'Tỷ lệ ống đạt / đầu vào' && Math.abs(row[3] - (1250 / 3000 * 100)) < 1e-9));
-  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Thanh thô' && row[4] === 'kg/m³'));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Luồng cây' && row[2] === 'Tỷ lệ ống đạt / đầu vào' && Math.abs(row[3] - (1250 / 3800 * 100)) < 1e-9));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Thanh thô' &&
+    row[2] === 'Tiêu hao luồng cây + luồng ống / m³ Chọn Nan Thô' && row[3] === 4500 / 0.3512 &&
+    row[4] === 'kg/m³' && row[5].includes('1 phiếu (0,2 m³) chưa đủ liên kết để truy nguồn')));
   assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Ép ván' && row[4] === 'm³/m³'));
   assert.ok(!report.aoa.some(row => /Bullig - gia công|Cắt ván|Bào ván/.test(row[1] || '')));
+  assert.ok(report.aoa.some(row => row[0] === 'Nhân sự' && row[1] === 'Xưởng 2' &&
+    row[2] === 'Biến động trong kỳ' && row[3] === 1 && row[5] === '+1 vào · −0 nghỉ'));
+
+  const linkedBoOngRecords = state.xuong2BoOngRecords;
+  state.xuong2BoOngRecords = [];
+  const unlinkedSummary = buildLeadershipSummary('week', '2026-W44', state, capacity, inventory);
+  assert.equal(unlinkedSummary.consumption.rough.consumption, null);
+  assert.equal(unlinkedSummary.consumption.rough.periodInputKg, 9300);
+  assert.equal(unlinkedSummary.consumption.rough.periodOutputM3, 0.3512);
+  const unlinkedMarkup = buildLeadershipReportMarkup(unlinkedSummary);
+  assert.match(unlinkedMarkup, /0,351 m³/);
+  assert.match(unlinkedMarkup, /9\.300 kg/);
+  assert.match(unlinkedMarkup, /Bốc Luồng \+ Luồng ống: 9\.300 kg/);
+  const unlinkedReport = buildLeadershipReportData(unlinkedSummary);
+  assert.ok(unlinkedReport.aoa.some(row => row[0] === 'Tiêu hao' &&
+    row[1] === 'Xưởng 2 · Luồng cây + luồng ống' && row[2] === 'Đầu vào trong kỳ (tổng riêng)' &&
+    row[3] === 9300 && row[4] === 'kg'));
+  assert.ok(unlinkedReport.aoa.some(row => row[0] === 'Tiêu hao' &&
+    row[1] === 'Xưởng 2 · Chọn Nan Thô' && row[2] === 'Thể tích đầu ra trong kỳ (tổng riêng)' &&
+    row[3] === 0.3512 && row[4] === 'm³'));
+  state.xuong2BoOngRecords = linkedBoOngRecords;
 
   const printClasses = new Set();
   let afterPrint;
@@ -327,9 +390,9 @@ try {
   assert.ok(styles.includes('.leadership-section-header'));
   assert.ok(styles.includes('.leadership-consumption-grid'));
   assert.ok(!styles.includes('.leadership-data-notes'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v359'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v363'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v359'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v363'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

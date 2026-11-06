@@ -4622,9 +4622,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // VỊ TRÍ: CHẠY MÁY BÀO THÔ — Xưởng 2 (thẻ launcher tab Công Đoạn)
   // ═══════════════════════════════════════════════════════════
   // Nguồn "lô đã bổ" = các lượt BỔ ỐNG (state.xuong2BoOngRecords) đã có ống bổ.
-  // Mỗi lượt chạy máy link 1 lô đã bổ + KHAI BÁO LOẠI NAN theo 3 thông tin
-  // Dài / Rộng / Dày (mm) — mỗi ô có thể nhiều giá trị ngăn cách bằng dấu phẩy
-  // (VD Dài: 1250,1300) → sinh ra nhiều TỔ HỢP kích thước cho lượt đó.
+  // Mỗi lượt chạy máy link 1 lô đã bổ + khai báo Dài và các cặp Rộng-Dày.
+  // Mỗi ô Dày có thể chứa nhiều giá trị; mọi Dài sẽ ghép với các cặp đã khai báo.
   //   • NGƯỜI CHẠY MÁY + THỜI GIAN tự động từ Bảng bố trí Nhân Sự (vị trí chứa
   //     "bào thô" — Xưởng 2, đúng ngày; giờ tách HC/TC theo cửa sổ ca)
   //   • ĐỊNH MỨC CÔNG SUẤT theo THÁNG (THANH/GIỜ) → Hiệu suất
@@ -4657,16 +4656,54 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       .filter(r => r.id !== excludeId && baoThoLotIdsOf(r).includes(boOngId)).length;
   }
 
-  // ─── LOẠI NAN: DÀI / RỘNG / DÀY (mỗi ô nhiều giá trị, ngăn cách dấu phẩy) ──
-  // "1250, 1300" → [1250, 1300] — bỏ giá trị rỗng/không hợp lệ, sắp tăng dần.
-  // TỔ HỢP KÍCH THƯỚC = tích số giá trị của 3 chiều (VD 2×2×1 = 4 tổ hợp).
+  // ─── LOẠI NAN: DÀI + CÁC CẶP RỘNG/DÀY ────────────────────────────
   const BAO_THO_MAX_COMBOS = 400; // chặn nhập quá nhiều tổ hợp (lỗi gõ)
-  function parseDimList(text) {
-    return [...new Set(String(text || '')
+  function parseDimList(text, preserveOrder = false) {
+    const values = [...new Set(String(text || '')
       .split(/[,;]+/)
       .map(s => Number(String(s).trim()))
-      .filter(v => Number.isFinite(v) && v > 0))]
-      .sort((a, b) => a - b);
+      .filter(v => Number.isFinite(v) && v > 0))];
+    return preserveOrder ? values : values.sort((a, b) => a - b);
+  }
+  function baoThoThicknessInputId(index) {
+    return `x2-bao-tho-day-${index}`;
+  }
+  function syncX2BaoThoThicknessInputs(valuesByWidth) {
+    const box = document.getElementById('x2-bao-tho-day-groups');
+    if (!box) return;
+    const values = new Map();
+    const current = box.querySelectorAll ? box.querySelectorAll('[data-x2-bao-tho-width]') : [];
+    Array.from(current).forEach(input => {
+      if (input.dataset && input.dataset.x2BaoThoWidth != null) {
+        values.set(String(input.dataset.x2BaoThoWidth), String(input.value || ''));
+      }
+    });
+    if (valuesByWidth) {
+      Object.entries(valuesByWidth).forEach(([width, text]) => values.set(String(width), String(text || '')));
+    }
+    const widths = parseDimList((document.getElementById('x2-bao-tho-rong') || {}).value, true);
+    box.innerHTML = widths.length
+      ? widths.map((width, index) => {
+        const key = String(width);
+        const value = escapeHTML(values.get(key) || '');
+        return `<div class="x2-bao-tho-thickness-cell">
+          <label for="${baoThoThicknessInputId(index)}">Rộng ${escapeHTML(key)} → Dày</label>
+          <input type="text" id="${baoThoThicknessInputId(index)}" data-x2-bao-tho-width="${escapeHTML(key)}" inputmode="numeric" placeholder="VD: 12,15" value="${value}" aria-label="Dày (mm) cho Rộng ${escapeHTML(key)}">
+        </div>`;
+      }).join('')
+      : '<span class="al-hint">Nhập Rộng để tạo ô Dày tương ứng.</span>';
+    widths.forEach((width, index) => {
+      const input = document.getElementById(baoThoThicknessInputId(index));
+      if (input) input.value = values.get(String(width)) || '';
+    });
+  }
+  function baoThoWidthThicknessPairsFromForm() {
+    const widths = parseDimList((document.getElementById('x2-bao-tho-rong') || {}).value, true);
+    return widths.map((width, index) => {
+      const input = document.getElementById(baoThoThicknessInputId(index));
+      const text = input ? input.value : '';
+      return { width, thicknesses: parseDimList(text) };
+    });
   }
   // Số thanh hiển thị gọn: 1.200 (không thập phân)
   function fmtThanh(v) {
@@ -4684,7 +4721,19 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     })));
     return out;
   }
+  function baoThoCombosFromPairs(dais, widthThicknessPairs) {
+    const out = [];
+    (dais || []).forEach(d => (widthThicknessPairs || []).forEach(pair => {
+      (pair.thicknesses || []).forEach(t => {
+        out.push({ d, r: pair.width, t, unitVol: unitVolOf(d, pair.width, t) });
+      });
+    }));
+    return out;
+  }
   function baoThoCombos(rec) {
+    if (rec && Array.isArray(rec.widthThicknessPairs) && rec.widthThicknessPairs.length) {
+      return baoThoCombosFromPairs(rec.dais, rec.widthThicknessPairs);
+    }
     return baoThoCombosOf(rec && rec.dais, rec && rec.rongs, rec && rec.thicks);
   }
   // Thể tích quy đổi TRUNG BÌNH 1 thanh (m³) của các tổ hợp trong lượt
@@ -5065,28 +5114,30 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const totOng = lotDs.reduce((s, d) => s + (Number(d.klOngBo) || 0), 0);
     const lotItem = `<span class="x2-ong-calc-item x2-ong-calc-bo" title="TỔNG KL ống bổ đạt của CÁC LÔ đã chọn trong lượt này — chọn nhiều lô thì CỘNG TỔNG các lô"><span class="x2-ong-calc-label">Lô đã chọn:</span><strong>${picks.length} lô · ${fmtKg(totOng)} kg</strong></span>`;
     const dais = parseDimList((document.getElementById('x2-bao-tho-dai') || {}).value);
-    const rongs = parseDimList((document.getElementById('x2-bao-tho-rong') || {}).value);
-    const thicks = parseDimList((document.getElementById('x2-bao-tho-day') || {}).value);
-    const combos = baoThoCombosOf(dais, rongs, thicks);
+    const pairs = baoThoWidthThicknessPairsFromForm();
+    const combos = baoThoCombosFromPairs(dais, pairs);
     if (!combos.length) {
-      box.innerHTML = `${lotItem}<span class="x2-ong-calc-label">Nhập Dài / Rộng / Dày (mm) — nhiều giá trị ngăn cách bằng dấu phẩy</span>`;
+      box.innerHTML = `${lotItem}<span class="x2-ong-calc-label">Nhập Dài, Rộng và Dày tương ứng cho từng Rộng</span>`;
       return;
     }
     const unit = Math.round((combos.reduce((s, c) => s + c.unitVol, 0) / combos.length) * 10000) / 10000;
     const tooMany = combos.length > BAO_THO_MAX_COMBOS;
+    const missingWidths = pairs.filter(pair => !pair.thicknesses.length).map(pair => pair.width);
     box.innerHTML = `${lotItem}
-      <span class="x2-ong-calc-item x2-ong-calc-in" title="Số tổ hợp kích thước = số Dài × số Rộng × số Dày đã nhập"><span class="x2-ong-calc-label">Tổ hợp kích thước:</span><strong style="${tooMany ? 'color:#dc2626;' : ''}">${combos.length}</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-in" title="Số tổ hợp = số Dài × tổng số Dày đã nhập trong các ô Rộng tương ứng"><span class="x2-ong-calc-label">Tổ hợp kích thước:</span><strong style="${tooMany ? 'color:#dc2626;' : ''}">${combos.length}</strong></span>
       <span class="x2-ong-calc-item x2-ong-calc-bo" title="Thể tích quy đổi TRUNG BÌNH 1 thanh = Dài × Rộng × Dày (mm) ÷ 1 tỷ"><span class="x2-ong-calc-label">Thể tích 1 thanh (TB):</span><strong>${unit.toFixed(4)} m³</strong></span>
-      <span class="x2-ong-calc-item x2-ong-calc-after" title="Số lượng thanh lấy TỰ ĐỘNG từ công đoạn Chọn Nan Thô (chưa có dữ liệu)"><span class="x2-ong-calc-label">Số lượng:</span><strong>chờ Chọn Nan Thô</strong></span>`;
+      <span class="x2-ong-calc-item x2-ong-calc-after" title="Số lượng thanh lấy TỰ ĐỘNG từ công đoạn Chọn Nan Thô (chưa có dữ liệu)"><span class="x2-ong-calc-label">Số lượng:</span><strong>chờ Chọn Nan Thô</strong></span>
+      ${missingWidths.length ? `<span class="x2-ong-calc-label" style="color:#dc2626;">Còn thiếu Dày cho Rộng ${missingWidths.map(escapeHTML).join(', ')} mm</span>` : ''}`;
   }
 
   function resetXuong2BaoThoForm() {
     state.x2BaoThoEditId = null;
     state.x2BaoThoPicked = [];          // bỏ hết lô đang chọn
-    ['x2-bao-tho-dai', 'x2-bao-tho-rong', 'x2-bao-tho-day'].forEach(id => {
+    ['x2-bao-tho-dai', 'x2-bao-tho-rong'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    syncX2BaoThoThicknessInputs();
     const d = document.getElementById('x2-bao-tho-date');
     if (d) d.value = '';
     const sh = document.getElementById('x2-bao-tho-shift');
@@ -5110,17 +5161,23 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const dateVal = (document.getElementById('x2-bao-tho-date') || {}).value || '';
     if (!dateVal) { showToast('Ngày chạy máy không được để trống!', 'error'); return; }
 
-    // LOẠI NAN: Dài / Rộng / Dày — mỗi ô có thể nhiều giá trị (ngăn cách dấu phẩy)
+    // LOẠI NAN: Dài × các cặp Rộng-Dày; mỗi ô Dày có thể chứa nhiều giá trị
     const dais   = parseDimList((document.getElementById('x2-bao-tho-dai')  || {}).value);
-    const rongs  = parseDimList((document.getElementById('x2-bao-tho-rong') || {}).value);
-    const thicks = parseDimList((document.getElementById('x2-bao-tho-day')  || {}).value);
-    if (!dais.length || !rongs.length || !thicks.length) {
-      showToast('Nhập đủ Dài / Rộng / Dày (mm) của loại nan — nhiều giá trị thì ngăn cách bằng dấu phẩy!', 'error');
+    const widthThicknessPairs = baoThoWidthThicknessPairsFromForm();
+    const rongs = widthThicknessPairs.map(pair => pair.width);
+    if (!dais.length || !widthThicknessPairs.length) {
+      showToast('Nhập đủ Dài và Rộng (mm) của loại nan!', 'error');
       return;
     }
-    const nCombo = dais.length * rongs.length * thicks.length;
+    const missingWidths = widthThicknessPairs.filter(pair => !pair.thicknesses.length).map(pair => pair.width);
+    if (missingWidths.length) {
+      showToast(`Nhập Dày cho từng Rộng (còn thiếu: ${missingWidths.join(', ')} mm)!`, 'error');
+      return;
+    }
+    const thicks = parseDimList(widthThicknessPairs.flatMap(pair => pair.thicknesses).join(','));
+    const nCombo = dais.length * widthThicknessPairs.reduce((sum, pair) => sum + pair.thicknesses.length, 0);
     if (nCombo > BAO_THO_MAX_COMBOS) {
-      showToast(`Quá nhiều tổ hợp kích thước (${nCombo}) — kiểm tra lại 3 ô Dài/Rộng/Dày!`, 'error');
+      showToast(`Quá nhiều tổ hợp kích thước (${nCombo}) — kiểm tra lại các ô Dài/Rộng/Dày!`, 'error');
       return;
     }
     // NGƯỜI CHẠY MÁY + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Bào thô")
@@ -5146,8 +5203,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       shiftIdx,                    // GIAI ĐOẠN 2: ca của lượt (null = cả ngày/chưa rõ ca)
       daiText:  String((document.getElementById('x2-bao-tho-dai')  || {}).value || '').trim(),
       rongText: String((document.getElementById('x2-bao-tho-rong') || {}).value || '').trim(),
-      dayText:  String((document.getElementById('x2-bao-tho-day')  || {}).value || '').trim(),
+      dayText: thicks.join(','),
       dais, rongs, thicks,
+      widthThicknessPairs: widthThicknessPairs.map(pair => ({
+        width: pair.width,
+        thicknesses: [...pair.thicknesses]
+      })),
       worker: snap.worker, workTime: snap.workTime,
       workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC
     };
@@ -5188,11 +5249,24 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     syncX2ShiftField('x2-bao-tho-shift', 'Xưởng 2', rec.date || '', isBaoThoPos);
     const shEl = document.getElementById('x2-bao-tho-shift');
     if (shEl) shEl.value = (rec.shiftIdx == null) ? '' : String(rec.shiftIdx);
-    const fields = { 'x2-bao-tho-dai': rec.daiText, 'x2-bao-tho-rong': rec.rongText, 'x2-bao-tho-day': rec.dayText };
+    const widthText = rec.rongText || (rec.rongs || []).join(',');
+    const fields = { 'x2-bao-tho-dai': rec.daiText, 'x2-bao-tho-rong': widthText };
     Object.keys(fields).forEach(fid => {
       const el = document.getElementById(fid);
       if (el) el.value = fields[fid] || '';
     });
+    const widthThicknessValues = {};
+    if (Array.isArray(rec.widthThicknessPairs) && rec.widthThicknessPairs.length) {
+      rec.widthThicknessPairs.forEach(pair => {
+        widthThicknessValues[String(pair.width)] = (pair.thicknesses || []).join(',');
+      });
+    } else {
+      const legacyThicknessText = rec.dayText || (rec.thicks || []).join(',');
+      parseDimList(widthText, true).forEach(width => {
+        widthThicknessValues[String(width)] = legacyThicknessText;
+      });
+    }
+    syncX2BaoThoThicknessInputs(widthThicknessValues);
     renderX2BaoThoCalc();
     syncX2BaoThoEditBanner();
   }
@@ -12594,32 +12668,124 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     else row.remove();
     renderX2KhoCalc();
   }
+  function khoBulkItemsFromValues(values, rowNumber) {
+    const dimValues = { length: values[0], width: values[1], thickness: values[2] };
+    const dimNums = Object.fromEntries(Object.entries(dimValues).map(([key, value]) => [key, Number(String(value || '').trim())]));
+    const quantities = {};
+    let hasQty = false;
+    for (const [index, type] of ['A', 'A1', 'B'].entries()) {
+      const raw = String(values[index + 3] || '').trim();
+      if (!raw) { quantities[type] = 0; continue; }
+      const quantity = Number(raw);
+      if (!Number.isInteger(quantity) || quantity < 0) {
+        return { items: [], error: `Dòng ${rowNumber}: số lượng phải là số nguyên không âm.` };
+      }
+      quantities[type] = quantity;
+      if (quantity > 0) hasQty = true;
+    }
+    if (!hasQty) return { items: [], error: '' };
+    if (Object.values(dimNums).some(value => !Number.isFinite(value) || value <= 0)) {
+      return { items: [], error: `Dòng ${rowNumber}: nhập đủ Dài × Rộng × Dày lớn hơn 0.` };
+    }
+    return {
+      items: ['A', 'A1', 'B'].filter(type => quantities[type] > 0).map(type => ({
+        ...dimNums, bambooType: type, quantity: quantities[type]
+      })),
+      error: ''
+    };
+  }
+  function parseKhoBulkPaste(text) {
+    const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r\n?|\n/);
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+    const rows = lines.map(line => line.split('\t').map(value => value.trim()));
+    const normalizeHeader = value => String(value || '').normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const header = rows[0] || [];
+    const headerTypes = ['a', 'a1', 'b'].every((type, index) => {
+      const value = normalizeHeader(header[index + 3]);
+      return value === type || value === `loai${type}`;
+    });
+    const hasHeader = header.length >= 6 &&
+      normalizeHeader(header[0]).startsWith('dai') &&
+      normalizeHeader(header[1]).startsWith('rong') &&
+      normalizeHeader(header[2]).startsWith('day') &&
+      headerTypes;
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    const normalizedRows = [];
+    const items = [];
+    for (let index = 0; index < dataRows.length; index++) {
+      const values = dataRows[index];
+      const rowNumber = index + (hasHeader ? 2 : 1);
+      if (values.every(value => !value)) {
+        normalizedRows.push(Array(6).fill(''));
+        continue;
+      }
+      if (values.length > 6) return { rows: [], items: [], error: `Dòng ${rowNumber}: bảng kê tối đa 6 cột (Dài, Rộng, Dày, A, A1, B).` };
+      if (values.length < 3) return { rows: [], items: [], error: `Dòng ${rowNumber}: cần đủ cột Dài, Rộng, Dày.` };
+      const normalized = [...values, ...Array(6 - values.length).fill('')];
+      const checked = khoBulkItemsFromValues(normalized, rowNumber);
+      if (checked.error) return { rows: [], items: [], error: checked.error };
+      normalizedRows.push(normalized);
+      items.push(...checked.items);
+    }
+    if (!normalizedRows.length) return { rows: [], items: [], error: 'Bảng kê chưa có dòng dữ liệu.' };
+    return { rows: normalizedRows, items, error: '' };
+  }
+  function khoBulkOnPaste(e) {
+    const target = e && e.target && e.target.closest
+      ? e.target.closest('input[data-x2-kho-bulk-dim="length"]')
+      : null;
+    const clipboard = e && e.clipboardData;
+    const text = clipboard && typeof clipboard.getData === 'function'
+      ? clipboard.getData('text/plain')
+      : '';
+    if (!target || (!text.includes('\t') && !/[\r\n]/.test(text))) return;
+    if (e.preventDefault) e.preventDefault();
+    const parsed = parseKhoBulkPaste(text);
+    if (parsed.error) { showToast(parsed.error, 'error'); return; }
+    const body = document.getElementById('x2-kho-bulk-rows');
+    const startRow = target.closest('[data-x2-kho-bulk-row]');
+    if (!body || !startRow) {
+      showToast('Không tìm thấy dòng bắt đầu để dán bảng kê.', 'error');
+      return;
+    }
+    let rows = [...body.querySelectorAll('[data-x2-kho-bulk-row]')];
+    const startIndex = rows.indexOf(startRow);
+    if (startIndex < 0) {
+      showToast('Không tìm thấy dòng bắt đầu để dán bảng kê.', 'error');
+      return;
+    }
+    while (rows.length < startIndex + parsed.rows.length) {
+      khoBulkAddRow();
+      rows = [...body.querySelectorAll('[data-x2-kho-bulk-row]')];
+    }
+    parsed.rows.forEach((values, index) => {
+      const row = rows[startIndex + index];
+      const inputs = [
+        ...['length', 'width', 'thickness'].map(key => row.querySelector(`[data-x2-kho-bulk-dim="${key}"]`)),
+        ...['A', 'A1', 'B'].map(type => row.querySelector(`[data-x2-kho-bulk-qty="${type}"]`))
+      ];
+      inputs.forEach((input, column) => { if (input) input.value = values[column]; });
+    });
+    renderX2KhoCalc();
+    const count = parsed.rows.filter(values => values.some(value => value)).length;
+    showToast(`Đã dán ${count} dòng bảng kê.`, 'success');
+  }
   function readKhoBulkRows() {
     const body = document.getElementById('x2-kho-bulk-rows');
     const rows = body ? [...body.querySelectorAll('[data-x2-kho-bulk-row]')] : [];
     const items = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const dim = key => String((row.querySelector(`[data-x2-kho-bulk-dim="${key}"]`) || {}).value || '').trim();
-      const dimValues = { length: dim('length'), width: dim('width'), thickness: dim('thickness') };
-      const dimNums = Object.fromEntries(Object.entries(dimValues).map(([k, v]) => [k, Number(v)]));
-      const quantities = {};
-      let hasQty = false;
-      for (const type of ['A', 'A1', 'B']) {
-        const raw = String((row.querySelector(`[data-x2-kho-bulk-qty="${type}"]`) || {}).value || '').trim();
-        if (!raw) { quantities[type] = 0; continue; }
-        const n = Number(raw);
-        if (!Number.isInteger(n) || n < 0) return { items: [], error: `Dòng ${i + 1}: số lượng phải là số nguyên không âm.` };
-        quantities[type] = n;
-        if (n > 0) hasQty = true;
-      }
-      if (!hasQty) continue;
-      if (Object.values(dimNums).some(n => !Number.isFinite(n) || n <= 0)) {
-        return { items: [], error: `Dòng ${i + 1}: nhập đủ Dài × Rộng × Dày lớn hơn 0.` };
-      }
-      for (const type of ['A', 'A1', 'B']) {
-        if (quantities[type] > 0) items.push({ ...dimNums, bambooType: type, quantity: quantities[type] });
-      }
+      const values = [
+        ...['length', 'width', 'thickness'].map(key =>
+          String((row.querySelector(`[data-x2-kho-bulk-dim="${key}"]`) || {}).value || '').trim()),
+        ...['A', 'A1', 'B'].map(type =>
+          String((row.querySelector(`[data-x2-kho-bulk-qty="${type}"]`) || {}).value || '').trim())
+      ];
+      const checked = khoBulkItemsFromValues(values, i + 1);
+      if (checked.error) return { items: [], error: checked.error };
+      items.push(...checked.items);
     }
     return { items, error: '' };
   }
@@ -16797,6 +16963,8 @@ export {
   khoOnLotsQtyInput,
   khoBulkAddRow,
   khoBulkOnClick,
+  khoBulkOnPaste,
+  parseKhoBulkPaste,
   toggleKhoBulkEntry,
   khoSetLotsQuery,
   khoSetLotsQtyQuery,
@@ -17055,6 +17223,7 @@ export {
   loadXuong2ChonNan,
   loadXuong2BaoTinh,
   loadXuong2Cuts,
+  syncX2BaoThoThicknessInputs,
   renderX2BaoThoCalc,
   renderX2BaoThoCard,
   renderX2BaoThoRateBar,

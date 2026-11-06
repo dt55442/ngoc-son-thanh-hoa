@@ -100,6 +100,86 @@ const utils = await import('../js/utils.js');
 const x2 = await import('../js/xuong2.js');
 const batchModals = await import('../js/batch-modals.js');
 
+const quickPaste = x2.parseKhoBulkPaste([
+  'Dài (mm)\tRộng\tDày\tA\tA1\tB',
+  '1250\t22\t9\t5\t\t',
+  '1250\t18\t8\t\t3\t',
+  '1250\t22\t9\t5\t\t'
+].join('\r\n'));
+check('NHẬP NHANH: dán nhiều dòng nhận tiêu đề và chiều dài lặp',
+  !quickPaste.error && quickPaste.rows.length === 3 && quickPaste.items.length === 3 &&
+  quickPaste.items[0].length === 1250 && quickPaste.items[1].length === 1250 &&
+  quickPaste.items[0].width !== quickPaste.items[1].width);
+check('NHẬP NHANH: dòng trùng hoàn toàn vẫn được giữ thành lô riêng',
+  quickPaste.items.length === 3 &&
+  JSON.stringify(quickPaste.items[0]) === JSON.stringify(quickPaste.items[2]));
+function makeBulkPasteRow() {
+  const inputs = {
+    'dim:length': { value: '' }, 'dim:width': { value: '' }, 'dim:thickness': { value: '' },
+    'qty:A': { value: '' }, 'qty:A1': { value: '' }, 'qty:B': { value: '' }
+  };
+  const row = {
+    querySelector(selector) {
+      const match = selector.match(/data-x2-kho-bulk-(dim|qty)="([^"]+)"/);
+      return match ? inputs[`${match[1]}:${match[2]}`] : null;
+    }
+  };
+  Object.entries(inputs).forEach(([key, input]) => {
+    input.closest = selector => selector === '[data-x2-kho-bulk-row]' ? row
+      : (key === 'dim:length' && selector === 'input[data-x2-kho-bulk-dim="length"]' ? input : null);
+  });
+  return row;
+}
+const bulkPasteBody = {
+  rows: [makeBulkPasteRow()],
+  querySelectorAll() { return this.rows; },
+  insertAdjacentHTML() { this.rows.push(makeBulkPasteRow()); }
+};
+const originalGetElementById = document.getElementById;
+const originalSetTimeout = global.setTimeout;
+document.getElementById = id => id === 'x2-kho-bulk-rows' ? bulkPasteBody : originalGetElementById(id);
+global.setTimeout = () => 0;
+try {
+  let pastePrevented = false;
+  x2.khoBulkOnPaste({
+    target: bulkPasteBody.rows[0].querySelector('[data-x2-kho-bulk-dim="length"]'),
+    clipboardData: { getData: () => '1250\t22\t9\t5\t\t\n1250\t18\t8\t\t3\t' },
+    preventDefault() { pastePrevented = true; }
+  });
+  check('NHẬP NHANH: dán trực tiếp tạo thêm dòng và điền đúng các cột',
+    pastePrevented && bulkPasteBody.rows.length === 2 &&
+    bulkPasteBody.rows[0].querySelector('[data-x2-kho-bulk-qty="A"]').value === '5' &&
+    bulkPasteBody.rows[1].querySelector('[data-x2-kho-bulk-dim="length"]').value === '1250' &&
+    bulkPasteBody.rows[1].querySelector('[data-x2-kho-bulk-qty="A1"]').value === '3');
+  const pastedValuesBeforeError = bulkPasteBody.rows.map(row =>
+    ['length', 'width', 'thickness'].map(key => row.querySelector(`[data-x2-kho-bulk-dim="${key}"]`).value)
+      .concat(['A', 'A1', 'B'].map(type => row.querySelector(`[data-x2-kho-bulk-qty="${type}"]`).value)));
+  x2.khoBulkOnPaste({
+    target: bulkPasteBody.rows[0].querySelector('[data-x2-kho-bulk-dim="length"]'),
+    clipboardData: { getData: () => '1250\t22\t9\t-1\t\t' },
+    preventDefault() { pastePrevented = true; }
+  });
+  const pastedValuesAfterError = bulkPasteBody.rows.map(row =>
+    ['length', 'width', 'thickness'].map(key => row.querySelector(`[data-x2-kho-bulk-dim="${key}"]`).value)
+      .concat(['A', 'A1', 'B'].map(type => row.querySelector(`[data-x2-kho-bulk-qty="${type}"]`).value)));
+  check('NHẬP NHANH: dữ liệu lỗi không ghi đè một phần bảng kê',
+    JSON.stringify(pastedValuesAfterError) === JSON.stringify(pastedValuesBeforeError));
+} finally {
+  document.getElementById = originalGetElementById;
+  global.setTimeout = originalSetTimeout;
+}
+const invalidQuickPaste = x2.parseKhoBulkPaste([
+  'Dài (mm)\tRộng\tDày\tA\tA1\tB',
+  '1250\t22\t9\t1.5\t\t'
+].join('\n'));
+check('NHẬP NHANH: báo đúng dòng khi số lượng dán không nguyên',
+  invalidQuickPaste.error.includes('Dòng 2') && invalidQuickPaste.error.includes('số nguyên'));
+const x2EventsSource = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
+const indexSource = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+check('NHẬP NHANH: giao diện hướng dẫn dán từ ô Dài và sự kiện paste được nối',
+  indexSource.includes('chọn ô Dài rồi dán bảng') &&
+  x2EventsSource.includes("safeOn('x2-kho-bulk-rows', 'paste', khoBulkOnPaste)"));
+
 // ─── A. TỒN KHO THEO LẦN NHẬP (chưa có phiếu nào) ───────────────
 check('TỒN: số lần NHẬP kho — k1=1 · k2=2 (ra/vào 1 lần) · k3=1',
   utils.khoInCountOf(state.batches[0]) === 1 && utils.khoInCountOf(state.batches[1]) === 2 &&
@@ -545,7 +625,7 @@ check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerE
 check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
   idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
   idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v359', /nha-may-ngoc-son-v359/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v363', /nha-may-ngoc-son-v363/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

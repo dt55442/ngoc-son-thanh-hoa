@@ -938,7 +938,7 @@
                   <select id="x2-bao-tho-shift"></select>
                 </div>
               </div>
-              <!-- DÒNG 2: LOẠI NAN theo 3 thông tin — mỗi ô có thể nhiều giá trị, ngăn cách dấu phẩy -->
+              <!-- DÒNG 2: mỗi Rộng có ô Dày riêng; Dài áp dụng cho các cặp Rộng-Dày -->
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1;">
                   <label for="x2-bao-tho-dai">Dài (mm)</label>
@@ -946,11 +946,12 @@
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x2-bao-tho-rong">Rộng (mm)</label>
-                  <input type="text" id="x2-bao-tho-rong" inputmode="numeric" placeholder="VD: 80,90" title="Chiều rộng nan (mm) — nhiều giá trị ngăn cách bằng dấu phẩy, VD: 80,90">
+                  <input type="text" id="x2-bao-tho-rong" inputmode="numeric" placeholder="VD: 80,90" title="Chiều rộng nan (mm) — mỗi giá trị sẽ có ô Dày tương ứng">
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x2-bao-tho-day">Dày (mm)</label>
-                  <input type="text" id="x2-bao-tho-day" inputmode="numeric" placeholder="VD: 12" title="Độ dày nan (mm) — nhiều giá trị ngăn cách bằng dấu phẩy, VD: 12,15">
+                <div class="form-group x2-bao-tho-thickness-group" style="flex:1.6; min-width:240px;">
+                  <label>Dày (mm) theo từng Rộng</label>
+                  <div id="x2-bao-tho-day-groups" class="x2-bao-tho-thickness-groups"></div>
+                  <small>Nhập một hoặc nhiều số, cách nhau bằng dấu phẩy, trong ô ứng với từng Rộng.</small>
                 </div>
                 <div class="form-group" style="flex:1.4; min-width:260px;">
                   <label>Loại Nan (tự tính)</label>
@@ -1556,6 +1557,7 @@
                     <span>Mỗi dòng kích thước có thể có số lượng ở nhiều loại. Các lô mới vào Kho, chưa gán vị trí, và được gắn vào phiếu này.</span>
                     <button type="button" class="btn btn-outline btn-sm" id="x2-kho-bulk-add-row"><i data-lucide="plus"></i> Thêm dòng</button>
                   </div>
+                  <div class="bulk-lot-entry-note">Nhập nhanh: chọn ô Dài rồi dán bảng từ Excel/Sheets theo thứ tự Dài, Rộng, Dày, A, A1, B. Chiều dài trùng và các dòng trùng kích thước vẫn được giữ riêng.</div>
                   <div class="bulk-lot-grid-scroll">
                     <table class="bulk-lot-grid">
                       <thead><tr><th>Dài (mm)</th><th>Rộng</th><th>Dày</th><th>A</th><th>A1</th><th>B</th><th></th></tr></thead>

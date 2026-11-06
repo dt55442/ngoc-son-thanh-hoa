@@ -256,6 +256,161 @@ import { baoThoDisplay, baoTinhDisplay, boOngDisplay, bulligDisplay, chonNanDisp
     };
   }
 
+  // Ghép luồng cây đã dùng với thể tích Chọn Nan Thô theo liên kết đầu vào.
+  // Các lượt dùng chung lô được phân bổ theo thể tích đầu ra đã ghi nhận.
+  function traceFreshBambooFlowFor(matchFn) {
+    const match = typeof matchFn === 'function' ? matchFn : () => true;
+    const outputsByBaoTho = new Map();
+    let unattributedM3 = 0;
+    let unattributedRows = 0;
+    const addUnattributed = (volume, rows = 1) => {
+      unattributedM3 += Number(volume) || 0;
+      unattributedRows += rows;
+    };
+
+    (state.xuong2ChonNanThoRecords || []).forEach(record => {
+      if (!record || record.external) return;
+      const display = chonNanDisplay(record);
+      if (!(Number(display.quantity) > 0)) return;
+      const volume = Number(display.volume) || 0;
+      const inPeriod = match(record.date);
+      const baoThoId = String(record.baothoId || '');
+      if (!baoThoId) {
+        if (inPeriod) addUnattributed(volume);
+        return;
+      }
+      const group = outputsByBaoTho.get(baoThoId) || {
+        volume: 0, periodVolume: 0, periodRows: 0, invalidRows: 0
+      };
+      if (volume > 0) group.volume += volume;
+      else group.invalidRows += 1;
+      if (inPeriod) {
+        group.periodRows += 1;
+        if (volume > 0) group.periodVolume += volume;
+      }
+      outputsByBaoTho.set(baoThoId, group);
+    });
+
+    const baoThoById = new Map();
+    const baoThoIdsByBo = new Map();
+    const lotIdsOf = record => {
+      const ids = Array.isArray(record.boOngIds) && record.boOngIds.length
+        ? record.boOngIds.filter(Boolean)
+        : (record.boOngId ? [record.boOngId] : []);
+      return [...new Set(ids.map(String))];
+    };
+    (state.xuong2BaoThoRecords || []).forEach(record => {
+      if (!record || !record.id) return;
+      const baoThoId = String(record.id);
+      baoThoById.set(baoThoId, record);
+      lotIdsOf(record).forEach(boId => {
+        const ids = baoThoIdsByBo.get(boId) || new Set();
+        ids.add(baoThoId);
+        baoThoIdsByBo.set(boId, ids);
+      });
+    });
+
+    const boOngById = new Map();
+    const boInputByCut = new Map();
+    (state.xuong2BoOngRecords || []).forEach(record => {
+      if (!record || !record.id) return;
+      const boId = String(record.id);
+      boOngById.set(boId, record);
+      if (!record.cutId) return;
+      const cutId = String(record.cutId);
+      const inputOng = Number(boOngDisplay(record).inputOng) || 0;
+      boInputByCut.set(cutId, (boInputByCut.get(cutId) || 0) + inputOng);
+    });
+
+    const cutById = new Map((state.xuong2CutRecords || [])
+      .filter(record => record && record.id)
+      .map(record => [String(record.id), record]));
+    const boSource = new Map();
+    boOngById.forEach((record, boId) => {
+      const cut = record.cutId ? cutById.get(String(record.cutId)) : null;
+      if (!cut) {
+        boSource.set(boId, { kind: 'unknown', freshKg: 0 });
+        return;
+      }
+      const display = cutDisplay(cut);
+      const type = String(display.materialType || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const kind = display.inputKind === 'cart'
+        ? 'fresh'
+        : display.inputKind === 'ong'
+          ? 'other'
+          : type.includes('luong cay')
+            ? 'fresh'
+            : type.includes('luong ong') || type.includes('ong luong')
+              ? 'other'
+              : 'unknown';
+      if (kind !== 'fresh') {
+        boSource.set(boId, { kind, freshKg: 0 });
+        return;
+      }
+      const inputOng = Number(boOngDisplay(record).inputOng) || 0;
+      const cutOng = Number(display.klOngLuong) || 0;
+      const allUsedOng = boInputByCut.get(String(record.cutId)) || 0;
+      const freshKg = Number(display.inputWeight) > 0 && cutOng > 0 && inputOng > 0 &&
+        allUsedOng <= cutOng + 0.01
+        ? Number(display.inputWeight) * inputOng / cutOng
+        : 0;
+      boSource.set(boId, { kind: freshKg > 0 ? 'fresh' : 'unknown', freshKg });
+    });
+
+    const boAllocation = new Map();
+    baoThoIdsByBo.forEach((baoThoIds, boId) => {
+      const groups = [...baoThoIds].map(id => outputsByBaoTho.get(id));
+      const hasPendingOutput = groups.some(group => !group || group.invalidRows || !(group.volume > 0));
+      const totalVolume = groups.reduce((sum, group) => sum + (group ? group.volume : 0), 0);
+      boAllocation.set(boId, { hasPendingOutput, totalVolume });
+    });
+
+    let inputKg = 0;
+    let outputM3 = 0;
+    outputsByBaoTho.forEach((group, baoThoId) => {
+      if (!(group.periodVolume > 0)) {
+        if (group.periodRows && group.invalidRows) addUnattributed(0, group.periodRows);
+        return;
+      }
+      const baoTho = baoThoById.get(baoThoId);
+      const boIds = baoTho ? lotIdsOf(baoTho) : [];
+      if (!baoTho || !boIds.length || group.invalidRows) {
+        addUnattributed(group.periodVolume, group.periodRows);
+        return;
+      }
+
+      const sources = boIds.map(boId => {
+        const source = boSource.get(boId);
+        const allocation = boAllocation.get(boId);
+        const groupVolume = group.volume;
+        if (!source || !allocation || allocation.hasPendingOutput || !(allocation.totalVolume > 0)) {
+          return { kind: 'unknown', freshKg: 0 };
+        }
+        return {
+          kind: source.kind,
+          freshKg: source.freshKg * groupVolume / allocation.totalVolume
+        };
+      });
+      if (sources.some(source => source.kind === 'unknown') ||
+        (sources.some(source => source.kind === 'fresh') && sources.some(source => source.kind === 'other'))) {
+        addUnattributed(group.periodVolume, group.periodRows);
+        return;
+      }
+      if (!sources.some(source => source.kind === 'fresh')) return;
+
+      const groupFreshKg = sources.reduce((sum, source) => sum + source.freshKg, 0);
+      if (!(groupFreshKg > 0)) {
+        addUnattributed(group.periodVolume, group.periodRows);
+        return;
+      }
+      outputM3 += group.periodVolume;
+      inputKg += groupFreshKg * group.periodVolume / group.volume;
+    });
+
+    return { inputKg, outputM3, unattributedM3, unattributedRows };
+  }
+
   // Chuỗi giá trị của KỲ đang chọn (theo bộ lọc Tuần/Tháng/Năm trên thẻ)
   function traceChainData() {
     return traceChainFor(d => traceInPeriod(d));
@@ -1249,6 +1404,7 @@ export {
   traceInPeriod,
   traceChainData,
   traceChainFor,
+  traceFreshBambooFlowFor,
   traceReferenceWindow,
   traceMonthLabelOf,
   traceNormSize,

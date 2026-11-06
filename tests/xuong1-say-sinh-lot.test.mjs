@@ -266,9 +266,7 @@ x2.renderX1SaySinhCard();
 const barHtml = document.getElementById('x1-say-sinh-stock-bar').innerHTML;
 check('E1: thanh tồn chỉ nhắc số lần sấy và tuổi lô cũ nhất',
   barHtml.includes('4 lần sấy sinh') && barHtml.includes('lô cũ nhất 10 ngày') && !barHtml.includes('đạt ngày'));
-check('E2: thống kê hiển thị số lần sấy và ngày của lô cũ nhất',
-  document.getElementById('x1-say-sinh-stats').innerHTML.includes('2') &&
-  document.getElementById('x1-say-sinh-stats').innerHTML.includes('Ngày lô cũ nhất'));
+// E2 (KPI Thống Kê) ĐÃ GỠ khỏi thẻ — kiểm tra cấu trúc chuyển xuống mục F7
 const table = document.getElementById('x1-say-sinh-day-cards').innerHTML;
 check('E3: lịch sử = THẺ LÔ (dòng thời gian từng lần + QC thủ công, không nhãn đạt ngày)',
   table.includes('x1-ss-lot-card') && table.includes('x1-ss-tl-row') &&
@@ -329,8 +327,12 @@ check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ côn
   expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
   expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
   !expSrc.includes("'Ngày Đạt'"));
-check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v367/.test(swSrc));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v370/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
+check('F7: KPI Vùng ② Thống Kê ĐÃ GỠ khỏi thẻ Sấy Sinh (tổng hợp ở bảng toàn xưởng sau)',
+  !idxHtml.includes('id="x1-say-sinh-stats"') && !xuong2Src.includes('renderX1SaySinhStats') &&
+  !evSrc.includes("'x1-say-sinh-stats'") &&
+  idxHtml.includes('<span class="x2-zone-no">2</span><i data-lucide="history">'));
 
 console.log('--- G. LƯU HUỲNH TỰ ĐỊNH + GIỜ SẤY + XEM CHI TIẾT ---');
 check('G1: x1SsSulfurHint lần 1 = 1,3 kg/tấn', (() => {
@@ -437,7 +439,8 @@ const lotCardHtml = document.getElementById('x1-say-sinh-day-cards').innerHTML;
 check('G24: THẺ LÔ (mặc định) — dòng thời gian từng lần + ⏰ giờ kiểm tra kế tiếp',
   lotCardHtml.includes('x1-ss-lot-card') && lotCardHtml.includes('Lần 1') &&
   lotCardHtml.includes('Lần 2') && lotCardHtml.includes('Lần kế tiếp') &&
-  lotCardHtml.includes('21/10/26 08:00'));
+  lotCardHtml.includes('21/10/26 08:00') &&
+  lotCardHtml.includes('x1-ss-accent-dot') && lotCardHtml.includes('border-left-color:#'));
 x2.setX1SsViewMode('day');
 const dayReportHtml = document.getElementById('x1-say-sinh-day-cards').innerHTML;
 check('G25: BÁO CÁO THEO NGÀY — thẻ ngày có người sấy + lần thứ + giờ sấy',
@@ -509,6 +512,30 @@ check('H7: CSS banner (chạy chữ) + nút to + thu gọn + mobile gọn',
 check('H8: panel nhắc lô có dòng ⏰ Lần kế tiếp + chip lý do',
   xuong2Src.includes('x1-ss-ready-when') && xuong2Src.includes('x1-ss-alert-chip') &&
   typeof x2.x1SsOpenInputModal === 'function' && typeof x2.x1SsToggleTimeline === 'function');
+check('H9: 2 nút ĐỔ MÀU ĐẦY + hiệu ứng nổi (gradient · translateY · tắt khi Giảm Hiệu Ứng)',
+  cssSrc.includes('.x1-ss-input-btn:hover') && cssSrc.includes('translateY(-2px)') &&
+  cssSrc.includes('linear-gradient(180deg') && cssSrc.includes('.is-repeat') &&
+  cssSrc.includes('body[data-fx="low"] .x1-ss-input-btn:hover { transform: none') &&
+  cssSrc.includes('text-shadow'));
+check('H10: thẻ lô có VIỀN MÀU LUÂN PHIÊN + chấm màu phân biệt (5 màu chuẩn)',
+  xuong2Src.includes('X1_SS_CARD_ACCENTS') && xuong2Src.includes('x1-ss-accent-dot') &&
+  xuong2Src.includes("border-left-color:' + accent") &&
+  cssSrc.includes('.x1-ss-accent-dot'));
+check('H11: gợi ý GIỜ sấy tiếp = giờ lần sấy TRƯỚC (đúng cặp +24h với ngày gợi ý)', (() => {
+  state.xuong1SaySinhRecords = [rec('hr-1', '2026-10-21', { code: 'VHR', cycles: [
+    { date: '2026-10-21', sulfurQty: 1.3, hour: '14:30' },
+    { date: '2026-10-22', sulfurQty: 1.3, hour: '15:45' }
+  ] })];
+  x2.fillX1SaySinhOptions();
+  document.getElementById('x1-say-sinh-repeat-lot').value = 'hr-1';
+  x2.x1SaySinhSyncLinked(true);
+  const d = document.getElementById('x1-say-sinh-date').value;
+  const h = document.getElementById('x1-say-sinh-hour').value;
+  return d === '2026-10-23' && h === '15:45';
+})());
+check('H12: form căn đáy hàng ô nhập (nhãn 2 dòng không lệch) + hint dạng hàng ngang',
+  cssSrc.includes('#x1-say-sinh-form .x2-form-row { align-items: flex-end') &&
+  cssSrc.includes('#x1-say-sinh-sulfur-hint {') && cssSrc.includes('#x1-say-sinh-sulfur-hint > svg'));
 
 
 console.log(`\n=== KẾT QUẢ X1 SẤY SINH LOT: ${pass} PASS / ${fail} FAIL ===`);

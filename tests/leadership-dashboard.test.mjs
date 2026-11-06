@@ -94,9 +94,9 @@ try {
     { id: 'cut-previous-ong', date: '2026-10-20', inputKind: 'ong', inputWeight: 1000, klOngLuong: 900, klOngLoi: 50, carts: 1 }
   ];
   state.xuong2BoOngRecords = [
-    { id: 'bo-week', cutId: 'cut-week-cart', date: '2026-10-28', inputOng: 1250, klOngLoai: 0 },
-    { id: 'bo-after-output', cutId: 'cut-late-ong', date: '2026-10-30', inputOng: 2500, klOngLoai: 0 },
-    { id: 'bo-previous', cutId: 'cut-previous-cart', date: '2026-10-20', inputOng: 1200, klOngLoai: 0 }
+    { id: 'bo-week', cutId: 'cut-week-cart', date: '2026-10-28', inputOng: 1250, klOngBo: 1250, klOngLoai: 0 },
+    { id: 'bo-after-output', cutId: 'cut-late-ong', date: '2026-10-30', inputOng: 2500, klOngBo: 2500, klOngLoai: 0 },
+    { id: 'bo-previous', cutId: 'cut-previous-cart', date: '2026-10-20', inputOng: 1200, klOngBo: 1200, klOngLoai: 0 }
   ];
   state.xuong2BaoThoRecords = [
     { id: 'rough-week', boOngId: 'bo-week', date: '2026-10-29' },
@@ -169,11 +169,11 @@ try {
   assert.equal(week.consumption.cart.input, 3800);
   assert.ok(Math.abs(week.consumption.cart.rate - (1250 / 3800 * 100)) < 1e-9);
   assert.equal(week.consumption.pipe.rate, 90);
-  assert.equal(week.consumption.rough.inputKg, 4500);
+  assert.equal(week.consumption.rough.inputKg, 1250);
   assert.equal(week.consumption.rough.outputM3, 0.3512);
   assert.equal(week.consumption.rough.inputThroughDate, '2026-10-28');
   assert.equal(week.consumption.rough.outputThroughDate, '2026-10-29');
-  assert.ok(Math.abs(week.consumption.rough.consumption - (4500 / 0.3512)) < 1e-9);
+  assert.ok(Math.abs(week.consumption.rough.consumption - (1250 / 0.3512)) < 1e-9);
   assert.equal(week.consumption.rough.unattributedRows, 1);
   assert.equal(week.consumption.rough.unattributedM3, 0.2);
   assert.ok(Math.abs(week.consumption.press.inputM3 - 0.01224) < 1e-9);
@@ -284,7 +284,8 @@ try {
   assert.ok(markup.indexOf('leadership-main-stages') < markup.indexOf('Ép ván'));
   assert.match(markup, /Chỉ số tiêu hao/);
   assert.match(markup, /Luồng cây → ống đạt/);
-  assert.match(markup, /Luồng cây \+ luồng ống \(kg\) → Thanh thô \(m³\)/);
+  assert.match(markup, /Tỷ lệ đầu vào \/ m³ thanh thô/);
+  assert.ok(!markup.includes('kg đến'));
   assert.match(markup, /Thanh tinh → BTP \/ thành phẩm/);
   assert.doesNotMatch(markup, /ĐM \d/);
   assert.doesNotMatch(markup, /Phạm vi &amp; lưu ý dữ liệu|leadership-data-notes/);
@@ -320,27 +321,30 @@ try {
   assert.ok(report.aoa.some(row => row[0] === 'Sản xuất' && row[2] === 'Giờ sự cố'));
   assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Luồng cây' && row[2] === 'Tỷ lệ ống đạt / đầu vào' && Math.abs(row[3] - (1250 / 3800 * 100)) < 1e-9));
   assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Thanh thô' &&
-    row[2] === 'Tiêu hao luồng cây + luồng ống / m³ Chọn Nan Thô' && row[3] === 4500 / 0.3512 &&
-    row[4] === 'kg/m³' && row[5].includes('1 phiếu (0,2 m³) chưa đủ liên kết để truy nguồn')));
+    row[2] === 'Ống bổ đạt đến 29/10' && row[3] === 1250 && row[4] === 'kg'));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Thanh thô' &&
+    row[2] === 'Tỷ lệ đầu vào / m³ thanh thô' && Math.abs(row[3] - (1250 / 0.3512)) < 1e-9 &&
+    row[4] === 'kg/m³' && !String(row[5] || '').includes('chưa đủ liên kết')));
   assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Ép ván' && row[4] === 'm³/m³'));
   assert.ok(!report.aoa.some(row => /Bullig - gia công|Cắt ván|Bào ván/.test(row[1] || '')));
   assert.ok(report.aoa.some(row => row[0] === 'Nhân sự' && row[1] === 'Xưởng 2' &&
     row[2] === 'Biến động trong kỳ' && row[3] === 1 && row[5] === '+1 vào · −0 nghỉ'));
 
   const linkedBoOngRecords = state.xuong2BoOngRecords;
-  state.xuong2BoOngRecords = [];
+  // Không còn lượt bổ trước mốc đầu ra (chỉ còn lượt bổ 30/10 — sau mốc chọn nan 29/10)
+  // → không chốt được mốc đầu vào, hiển thị tổng riêng theo kỳ thay vì tỷ lệ.
+  state.xuong2BoOngRecords = linkedBoOngRecords.filter(record => record.id !== 'bo-week');
   const unlinkedSummary = buildLeadershipSummary('week', '2026-W44', state, capacity, inventory);
   assert.equal(unlinkedSummary.consumption.rough.consumption, null);
-  assert.equal(unlinkedSummary.consumption.rough.periodInputKg, 9300);
+  assert.equal(unlinkedSummary.consumption.rough.periodInputKg, 2500);
   assert.equal(unlinkedSummary.consumption.rough.periodOutputM3, 0.3512);
   const unlinkedMarkup = buildLeadershipReportMarkup(unlinkedSummary);
   assert.match(unlinkedMarkup, /0,351 m³/);
-  assert.match(unlinkedMarkup, /9\.300 kg/);
-  assert.match(unlinkedMarkup, /Bốc Luồng \+ Luồng ống: 9\.300 kg/);
+  assert.ok(!unlinkedMarkup.includes('Bốc Luồng + Luồng ống'));
   const unlinkedReport = buildLeadershipReportData(unlinkedSummary);
   assert.ok(unlinkedReport.aoa.some(row => row[0] === 'Tiêu hao' &&
-    row[1] === 'Xưởng 2 · Luồng cây + luồng ống' && row[2] === 'Đầu vào trong kỳ (tổng riêng)' &&
-    row[3] === 9300 && row[4] === 'kg'));
+    row[1] === 'Xưởng 2 · Ống bổ đạt' && row[2] === 'Đầu vào trong kỳ (tổng riêng)' &&
+    row[3] === 2500 && row[4] === 'kg'));
   assert.ok(unlinkedReport.aoa.some(row => row[0] === 'Tiêu hao' &&
     row[1] === 'Xưởng 2 · Chọn Nan Thô' && row[2] === 'Thể tích đầu ra trong kỳ (tổng riêng)' &&
     row[3] === 0.3512 && row[4] === 'm³'));
@@ -390,9 +394,9 @@ try {
   assert.ok(styles.includes('.leadership-section-header'));
   assert.ok(styles.includes('.leadership-consumption-grid'));
   assert.ok(!styles.includes('.leadership-data-notes'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v367'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v370'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v367'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v370'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

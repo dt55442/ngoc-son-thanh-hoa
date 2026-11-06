@@ -321,10 +321,10 @@ check('H4: events.js nối mở/đóng + uỷ nhiệm click trong #rc-body',
   ev.includes("safeOn('btn-rate-center'") && ev.includes("safeOn('rc-body'") &&
   ev.includes('onRateCenterClick') && ev.includes("safeOn('btn-rc-close'"));
 check('H5: sw.js CACHE_NAME v364 + js/rate-center.js trong APP_SHELL',
-  sw.includes('nha-may-ngoc-son-v367') && sw.includes("'./js/rate-center.js'"));
+  sw.includes('nha-may-ngoc-son-v370') && sw.includes("'./js/rate-center.js'"));
 check('H6: state.js có key + mảng rateApprovals + APP_VERSION v364',
   stSrc.includes('bamboo_tracker_rate_approvals_v1') &&
-  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v367'"));
+  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v370'"));
 check('H7: storage.js nối restore + ghi vào 2 file snapshot',
   stg.includes('function restoreRateApprovals') &&
   (stg.match(/rateApprovals: state\.rateApprovals \|\| \[\]/g) || []).length >= 2);

@@ -477,11 +477,13 @@ function buildConsumptionSummary(range) {
   const inputThroughDate = outputThroughDate
     ? latestDateInRange(state.xuong2BoOngRecords, range, outputThroughDate)
     : '';
-  const inputBalance = inputThroughDate
-    ? x2MassBalanceData(range.from, inputThroughDate)
+  // ĐẦU VÀO = ỐNG BỔ ĐẠT (đầu ra ĐẠT của Bổ Ống — klOngBo) đến mốc đầu ra Chọn Nan Thô.
+  // Bỏ cách cũ cộng Bốc Luồng + Luồng ống: tử số gồm cả WIP "đã bốc chưa cắt" làm chỉ số phồng.
+  const inputBalance = outputThroughDate && inputThroughDate
+    ? x2MassBalanceData(range.from, outputThroughDate)
     : null;
-  const roughInputKg = inputBalance ? inputBalance.boc.in + inputBalance.ong.in : 0;
-  const periodInputKg = balance.boc.in + balance.ong.in;
+  const roughInputKg = inputBalance ? inputBalance.bo.dat : 0;
+  const periodInputKg = balance.bo.dat;
   const rate = (output, input) => input > 0 ? output / input * 100 : null;
   const pressRecords = (state.pressRecords || []).filter(record => record && inRange(record.date, range));
   const pressInputM3 = pressRecords.reduce((total, record) => total + pressInputVolumeOf(record), 0);
@@ -962,7 +964,7 @@ function renderConsumption(consumption) {
     { key: 'cart', label: 'Luồng cây → ống đạt', input: consumption.cart.input, output: consumption.cart.output, rate: consumption.cart.rate, unit: 'kg' },
     { key: 'pipe', label: 'Luồng ống → ống đạt', input: consumption.pipe.input, output: consumption.pipe.output, rate: consumption.pipe.rate, unit: 'kg' },
     {
-      key: 'rough', label: 'Luồng cây + luồng ống (kg) → Thanh thô (m³)',
+      key: 'rough', label: 'Tỷ lệ đầu vào / m³ thanh thô',
       input: consumption.rough.inputKg, output: consumption.rough.outputM3,
       consumption: consumption.rough.consumption,
       inputThroughDate: consumption.rough.inputThroughDate,
@@ -990,24 +992,8 @@ function renderConsumption(consumption) {
     }
     const hasValues = Number(card.input) > 0 || Number(card.output) > 0;
     let details = '—';
-    if (card.key === 'rough' && card.consumption == null) {
-      const inputKg = Number(card.periodInputKg) || 0;
-      const outputM3 = Number(card.periodOutputM3) || 0;
-      if (inputKg > 0 && outputM3 > 0) {
-        details = `Bốc Luồng + Luồng ống: ${fmt(inputKg, 0)} kg · Chọn Nan Thô: ${fmt(outputM3, 3)} m³ (tổng riêng theo kỳ)`;
-      } else if (outputM3 > 0) {
-        details = `Chọn Nan Thô: ${fmt(outputM3, 3)} m³ trong kỳ; chưa có mốc Bổ Ống`;
-      } else if (inputKg > 0) {
-        details = card.inputThroughDate
-          ? `Bốc Luồng + Luồng ống đến ${shortDate(card.inputThroughDate)}; chưa có đầu ra Chọn Nan Thô`
-          : 'Đầu vào Bốc Luồng + Luồng ống trong kỳ; chưa có mốc Bổ Ống';
-      } else if (card.unattributedRows > 0) {
-        details = `Đầu ra có ${fmt(card.unattributedRows, 0)} phiếu thiếu thể tích để tính`;
-      } else {
-        details = 'Chưa ghi nhận đầu vào hoặc đầu ra Chọn Nan Thô';
-      }
-    } else if (hasValues && card.key === 'rough') {
-      details = `${fmt(card.input, 0)} kg đến ${shortDate(card.inputThroughDate)} → ${fmt(card.output, 3)} m³ đến ${shortDate(card.outputThroughDate)}`;
+    if (card.key === 'rough') {
+      details = ''; // thẻ chỉ hiển thị số — không chú thích
     } else if (hasValues && card.key === 'press') {
       details = `${fmt(card.input, 3)} m³ vào → ${fmt(card.output, 3)} m³ ra`;
     } else if (hasValues) {
@@ -1236,8 +1222,8 @@ export function buildLeadershipReportData(summary) {
     {
       entity: 'Xưởng 2 · Thanh thô',
       inputLabel: report.consumption.rough.inputThroughDate
-        ? `Bốc Luồng + Luồng ống đến ${shortDate(report.consumption.rough.inputThroughDate)}`
-        : 'Bốc Luồng + Luồng ống trong kỳ',
+        ? `Ống bổ đạt đến ${shortDate(report.consumption.rough.outputThroughDate)}`
+        : 'Ống bổ đạt trong kỳ',
       input: report.consumption.rough.inputThroughDate
         ? report.consumption.rough.inputKg
         : report.consumption.rough.periodInputKg,
@@ -1246,16 +1232,10 @@ export function buildLeadershipReportData(summary) {
         ? `Thể tích Chọn Nan Thô đến ${shortDate(report.consumption.rough.outputThroughDate)} (đạt + loại hẳn)`
         : 'Thể tích Chọn Nan Thô trong kỳ (đạt + loại hẳn)',
       output: report.consumption.rough.outputM3, outputUnit: 'm³',
-      metric: 'Tiêu hao luồng cây + luồng ống / m³ Chọn Nan Thô',
+      metric: 'Tỷ lệ đầu vào / m³ thanh thô',
       value: report.consumption.rough.consumption, unit: 'kg/m³',
       previous: report.previous.consumption.rough.consumption, digits: 0,
-      note: report.consumption.rough.consumption == null
-        ? report.consumption.rough.inputThroughDate
-          ? 'Chưa đủ đầu vào hoặc đầu ra để tính tỷ lệ.'
-          : 'Chưa có ngày Bổ Ống trong kỳ để chốt mốc đầu vào; không ghép hai tổng thành tỷ lệ.'
-        : report.consumption.rough.unattributedRows
-          ? `${fmt(report.consumption.rough.unattributedRows, 0)} phiếu (${fmt(report.consumption.rough.unattributedM3, 3)} m³) chưa đủ liên kết để truy nguồn; vẫn nằm trong tổng đầu ra`
-          : `Tỷ lệ tổng hợp đầu vào đến ${shortDate(report.consumption.rough.inputThroughDate)} và đầu ra đến ${shortDate(report.consumption.rough.outputThroughDate)}; không phân bổ theo từng thanh`
+      note: ''
     },
     {
       entity: 'Xưởng 2 · Ép ván',
@@ -1272,12 +1252,8 @@ export function buildLeadershipReportData(summary) {
   });
   if (report.consumption.rough.consumption == null) {
     const rough = report.consumption.rough;
-    add('Tiêu hao', 'Xưởng 2 · Luồng cây + luồng ống', 'Đầu vào trong kỳ (tổng riêng)', rough.periodInputKg, 'kg',
-      'Không ghép với đầu ra để tính tỷ lệ.');
-    add('Tiêu hao', 'Xưởng 2 · Chọn Nan Thô', 'Thể tích đầu ra trong kỳ (tổng riêng)', rough.periodOutputM3, 'm³',
-      rough.unattributedRows
-        ? `${fmt(rough.unattributedRows, 0)} phiếu (${fmt(rough.unattributedM3, 3)} m³) chưa đủ liên kết để truy nguồn.`
-        : 'Tổng đầu ra, chưa phân bổ theo nguồn.');
+    add('Tiêu hao', 'Xưởng 2 · Ống bổ đạt', 'Đầu vào trong kỳ (tổng riêng)', rough.periodInputKg, 'kg');
+    add('Tiêu hao', 'Xưởng 2 · Chọn Nan Thô', 'Thể tích đầu ra trong kỳ (tổng riêng)', rough.periodOutputM3, 'm³');
   }
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.current, 'thanh', 'Ảnh chụp hiện tại, không hồi tố theo kỳ');
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.currentM3, 'm³');

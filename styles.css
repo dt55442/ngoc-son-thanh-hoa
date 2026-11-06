@@ -16080,21 +16080,66 @@ body[data-fx="low"] .x1-ss-alert-text.is-marquee .x1-ss-marq { animation: none; 
   display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
 }
 
-/* ── 2 NÚT TO NHẬP LIỆU (thay form inline) ── */
+/* ── 2 NÚT TO NHẬP LIỆU — ĐỔ MÀU ĐẦY + HIỆU ỨNG NỔI (GPU: transform + box-shadow;
+   KHÔNG đổi padding/kích thước; tự tắt chuyển động khi Giảm Hiệu Ứng) ── */
 .x1-ss-input-btns { display: flex; gap: 10px; }
 .x1-ss-input-btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 14px 10px; border-radius: 12px;
-  border: 1px solid var(--border); background: var(--surface, #fff);
+  border: 1px solid #14663a; border-bottom-width: 3px;
+  background: linear-gradient(180deg, #1d9e4b 0%, #15803d 55%, #14663a 100%);
   cursor: pointer; min-height: 68px;
-  transition: border-color .15s, box-shadow .15s, transform .1s;
+  box-shadow: 0 3px 0 #0f5132, 0 5px 12px rgba(21, 128, 61, 0.32);
+  transform: translateY(0);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
-.x1-ss-input-btn:hover { border-color: var(--primary, #16a34a); box-shadow: 0 2px 8px rgba(22, 163, 74, 0.14); }
-.x1-ss-input-btn:active { transform: scale(0.985); }
-.x1-ss-input-btn > svg { width: 24px; height: 24px; color: var(--primary, #16a34a); }
-.x1-ss-input-btn.is-repeat > svg { color: #d97706; }
-.x1-ss-input-btn strong { font-size: 0.95rem; color: var(--text, #222); }
-.x1-ss-input-btn small { color: var(--text-muted, #777); font-size: 0.74rem; text-align: center; }
+.x1-ss-input-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #0f5132, 0 10px 18px rgba(21, 128, 61, 0.40);
+  filter: brightness(1.06);
+}
+.x1-ss-input-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0f5132, 0 2px 5px rgba(21, 128, 61, 0.30);
+}
+.x1-ss-input-btn.is-repeat {
+  border-color: #92400e;
+  background: linear-gradient(180deg, #d97706 0%, #b45309 55%, #92400e 100%);
+  box-shadow: 0 3px 0 #7c2d12, 0 5px 12px rgba(180, 83, 9, 0.32);
+}
+.x1-ss-input-btn.is-repeat:hover {
+  box-shadow: 0 6px 0 #7c2d12, 0 10px 18px rgba(180, 83, 9, 0.40);
+}
+.x1-ss-input-btn.is-repeat:active {
+  box-shadow: 0 1px 0 #7c2d12, 0 2px 5px rgba(180, 83, 9, 0.30);
+}
+.x1-ss-input-btn > svg { width: 24px; height: 24px; color: #fff; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3)); }
+.x1-ss-input-btn strong {
+  font-size: 0.98rem; color: #fff; letter-spacing: .2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.x1-ss-input-btn small {
+  color: rgba(255, 255, 255, 0.94); font-size: 0.74rem; text-align: center;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+body[data-fx="low"] .x1-ss-input-btn { transition: none; }
+body[data-fx="low"] .x1-ss-input-btn:hover { transform: none; filter: none; }
+body[data-fx="low"] .x1-ss-input-btn:active { transform: none; }
+
+/* ── CHẤM MÀU PHÂN BIỆT THẺ LÔ (đi cùng viền trái luân phiên) ── */
+.x1-ss-accent-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex: 0 0 auto; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65) inset;
+}
+
+/* ── FORM SẤY SINH: căn đáy hàng ô nhập — nhãn 2 dòng (Tổng KL / Lưu huỳnh)
+   không đẩy ô nhập lệch hàng so với nhãn 1 dòng (Ngày/Giờ) ── */
+#x1-say-sinh-form .x2-form-row { align-items: flex-end; }
+#x1-say-sinh-sulfur-hint {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+#x1-say-sinh-sulfur-hint > svg { width: 15px; height: 15px; flex: 0 0 auto; }
+#x1-say-sinh-sulfur-hint small { flex-basis: 100%; }
 
 /* ── NÚT THU GỌN DÒNG THỜI GIAN TRÊN THẺ LÔ ── */
 .x1-ss-tl-toggle {

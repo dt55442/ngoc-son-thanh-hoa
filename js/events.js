@@ -2088,9 +2088,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       else if (act === 'close') x1SsCloseReadyPanel();
       else if (act === 'boc') x1SsOpenBocFor(btn.getAttribute('data-id'));
     });
-    safeOn('x1-say-sinh-stats', 'click', (e) => {
-      if (e.target.closest && e.target.closest('[data-x1-ss-ready-open]')) x1SsOpenOldPanel();
-    });
+    // (Ô KPI "Ngày lô cũ nhất" đã gỡ — điểm nhấn chuyển sang banner cảnh báo trên cùng)
     // ── THẺ 3: BỐC ──
     safeOn('x1-boc-form', 'submit', handleX1BocSubmit);
     safeOn('btn-cancel-x1-boc', 'click', () => resetX1BocForm());

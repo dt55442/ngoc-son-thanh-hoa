@@ -251,10 +251,12 @@ check('C4: thứ tự 8 thẻ theo đúng LUỒNG SX (Cắt Ống → … → L�
 check('C5: cả 8 thẻ chi tiết Xưởng 1 nằm trong #x2-details-stack (dùng chung pop-up)',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x2-details-stack"'), idxHtml.indexOf('/#x2-details-stack'));
     return X1_PFX.every(p => blk.includes(`id="${p}-card"`)); })());
-check('C6: mọi thẻ chi tiết X1 có form + thanh tồn + thống kê + khung thẻ ngày',
+check('C6: mọi thẻ chi tiết X1 có form + thanh tồn + khung thẻ ngày (KPI Thống Kê TRỪ Sấy Sinh — đã gỡ 11/2026)',
   X1_PFX.every(p =>
     idxHtml.includes(`id="${p}-form"`) && idxHtml.includes(`id="${p}-stock-bar"`) &&
-    idxHtml.includes(`id="${p}-stats"`) && idxHtml.includes(`id="${p}-day-cards"`)));
+    idxHtml.includes(`id="${p}-day-cards"`)) &&
+  X1_PFX.filter(p => p !== 'x1-say-sinh').every(p => idxHtml.includes(`id="${p}-stats"`)) &&
+  !idxHtml.includes('id="x1-say-sinh-stats"'));
 check('C7: chip đếm + sparkline trên launcher X1 có ô riêng (#x2-mini-count/spark-x1-*)',
   X1_PFX.every(p => idxHtml.includes(`id="x2-mini-count-${p}"`) &&
                     idxHtml.includes(`id="x2-mini-spark-${p}"`)));
@@ -429,7 +431,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v367/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v370/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -752,10 +754,12 @@ check('I8h: lượt Bổ cũ liên kết Cắt Mắt vẫn truy được lô và
   x1.x1ChainDisplay(spBO, legacyBoCatMat).lotCode === 'SS-2026-0920-01');
 
 // ── CẤU TRÚC: 8 thẻ Xưởng 1 bọc đủ 3 vùng như Xưởng 2 ──
-check('I9: 8 thẻ Xưởng 1 đều có 3 vùng .x2-zone (Nhập Liệu · Thống Kê · Lịch Sử) = 24 vùng',
+check('I9: 8 thẻ Xưởng 1 bọc vùng .x2-zone — Sấy Sinh 2 vùng (KPI đã gỡ 11/2026), 7 thẻ còn lại 3 vùng = 23 vùng',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x1-cat-ong-card"'), idxHtml.indexOf('/#x2-details-stack'));
-    return (blk.match(/class="x2-zone"/g) || []).length === 24 &&
-      ['1', '2', '3'].every(z => (blk.match(new RegExp(`data-zone="${z}"`, 'g')) || []).length === 8); })());
+    return (blk.match(/class="x2-zone"/g) || []).length === 23 &&
+      (blk.match(new RegExp('data-zone="1"', 'g')) || []).length === 8 &&
+      (blk.match(new RegExp('data-zone="2"', 'g')) || []).length === 7 &&
+      (blk.match(new RegExp('data-zone="3"', 'g')) || []).length === 8; })());
 check('I10: nhãn form phản ánh quy tắc mới (CHỈ lô chữ "CÂY" · bỏ qua Cắt Mắt)',
   idxHtml.includes('CHỈ hiện lô CÓ CHỮ "CÂY"') &&
   idxHtml.includes('lô ĐÃ qua Cắt Ống hiện ở thẻ Bổ (bỏ qua Cắt Mắt)') &&

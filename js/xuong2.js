@@ -15141,6 +15141,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   // Giờ mặc định cho mỗi chu kỳ sấy (cách nhau 24h)
   const X1_SS_DEFAULT_HOUR = '08:00';
+  // Màu viền LUÂN PHIÊN phân biệt các THẺ LÔ cạnh nhau (bảng màu chuẩn quy tắc 12)
+  const X1_SS_CARD_ACCENTS = ['#16a34a', '#7c3aed', '#ea580c', '#d97706', '#db2777'];
 
   // Cộng trừ ngày ISO (YYYY-MM-DD) — tính theo múi giờ địa phương (tránh lỗi UTC offset)
   function x1SsAddDays(dateISO, days) {
@@ -15349,7 +15351,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           sulfurEl.value = String(hint.suggested);
           sulfurEl.title = `${hint.note} · gợi ý: ${fmtKg(hint.suggested)} kg`;
         }
-        if (hourEl && hourEl.value === '') hourEl.value = X1_SS_DEFAULT_HOUR;
+        // GIỜ sấy tiếp = giờ của lần sấy TRƯỚC (đúng cặp +24h với ngày gợi ý)
+        // — ghi ĐÈ luôn vì ô giờ có value mặc định 08:00 cứng trong HTML
+        if (hourEl) hourEl.value = (lastCycle && lastCycle.hour) || X1_SS_DEFAULT_HOUR;
         if (qtyEl) qtyEl.value = String(Number(lot.qty) || 0);
       }
     }
@@ -15601,7 +15605,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     fillX1SaySinhOptions();
     renderX1SaySinhStockBar();
     renderX1SsAlertBanner();
-    renderX1SaySinhStats();
     renderX1SsHistory();
     renderX1SsOldPanel();
     syncX1EditBanner('x1-say-sinh');
@@ -15624,21 +15627,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         : '');
     initLucide();
   }
-  function renderX1SaySinhStats() {
-    const box = document.getElementById('x1-say-sinh-stats');
-    if (!box) return;
-    const disp = (state.xuong1SaySinhRecords || []).map(x1SaySinhDisplay);
-    const total = disp.reduce((s, d) => s + d.qty, 0);
-    const pend = (state.xuong1CatOngRecords || []).reduce((s, c) => s + x1CatOngRemainingOf(c, null), 0)
-      + x1SaySinhDirectInputs().reduce((s, m) => s + x1SaySinhDirectRemainingOf(m, null), 0);
-    const cycles = x1SsTotalCycleCount();
-    const oldest = x1SsOldLots()[0];
-    box.innerHTML = `
-      <div class="material-stat"><span class="material-stat-value">${cycles}</span><span class="material-stat-label">Lần sấy sinh</span></div>
-      <div class="material-stat"><span class="material-stat-value">${fmtKg(total)}</span><span class="material-stat-label">Tổng KL nguyên liệu (kg)</span></div>
-      <div class="material-stat"><span class="material-stat-value">${fmtKg(pend)}</span><span class="material-stat-label">Còn chờ sấy (kg)</span></div>
-      <div class="material-stat x1-ss-stat-ready${oldest ? ' is-on' : ''}" data-x1-ss-ready-open="1" role="button" tabindex="0" title="Xem lô cũ nhất trước"><span class="material-stat-value">${oldest ? x1SsDaysOf(oldest) : 0}</span><span class="material-stat-label">Ngày lô cũ nhất</span></div>`;
-  }
+  // (Vùng ② KPI Thống Kê ĐÃ GỠ khỏi thẻ Sấy Sinh — số liệu sẽ tổng hợp ở bảng toàn xưởng; hàm thống kê cũ đã xóa)
   // (Bảng lịch sử Sấy Sinh đã thay bằng 2 CHẾ ĐỘ XEM: Thẻ Lô + Báo cáo theo ngày — renderX1SsHistory)
   // ─── NHẮC SỐ LẦN SẤY + TUỔI LÔ CŨ NHẤT ───────────────────────
   function renderX1SsOldPanel() {
@@ -15774,7 +15763,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       return;
     }
     let html = '';
+    let accentIdx = 0;
     for (const r of recs) {
+      const accent = X1_SS_CARD_ACCENTS[accentIdx % X1_SS_CARD_ACCENTS.length];
+      accentIdx += 1;
       const d = x1SaySinhDisplay(r);
       const cycles = x1SsCyclesOf(r);
       const qc = d.qcStatus;
@@ -15808,8 +15800,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         : '<div><strong>' + escapeHTML(d.srcType || 'Vầu/nứa') + '</strong> · NCC ' + escapeHTML(d.srcSupplier || '—') + ' · ' + fmtKg(d.qty) + ' kg</div>';
       // Thu gọn dòng thời gian: điện thoại mặc định ĐÓNG, máy tính mặc định MỞ (nhớ lựa chọn tay)
       const tlOpen = x1SsTlState.get(r.id) || (x1SsTlDefaultOpen() ? 'open' : 'closed');
-      html += '<div class="x1-ss-lot-card' + (tlOpen === 'closed' ? ' is-closed' : '') + '" id="x1-ss-card-' + escapeHTML(r.id) + '">'
+      html += '<div class="x1-ss-lot-card' + (tlOpen === 'closed' ? ' is-closed' : '') + '" id="x1-ss-card-' + escapeHTML(r.id) + '" style="border-left-color:' + accent + ';">'
         + '<div class="x1-ss-lot-head">'
+        + '<span class="x1-ss-accent-dot" style="background:' + accent + '" aria-hidden="true" title="Màu phân biệt thẻ lô"></span>'
         + '<span class="x1-ss-code" title="Mã lô — sấy lần đầu ' + formatDateDDMMYY(d.date) + '">' + escapeHTML(d.code || '—') + '</span>'
         + '<span class="x1-ss-qc-chip ' + qcCls + '">' + qcTxt + '</span>'
         + '<span class="x1-ss-day-chip" title="Tuổi lô tính từ lần sấy đầu tiên">' + d.days + ' ngày</span>'
@@ -16005,6 +15998,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     x1SsSetGroupHidden(document.getElementById('x1-ss-repeat-group'), mode !== 'repeat');
     x1SsSetGroupHidden(document.getElementById('x1-say-sinh-allocations'), mode === 'repeat');
     if (mode === 'repeat') x1SaySinhSyncLinked(true); // tự gợi ý ngày/giờ/lưu huỳnh theo lô
+    x1SsUpdateSulfurHint(); // điền sẵn dòng gợi ý lưu huỳnh (không để icon ⓘ đứng trống)
     syncX1EditBanner('x1-say-sinh');
     ov.classList.add('show');
     initLucide();

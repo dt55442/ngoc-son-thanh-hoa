@@ -299,7 +299,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
 
   function createBambooCardElement(batch) {
     const card = document.createElement('div');
-    card.className = 'bamboo-card';
+    card.className = 'bamboo-card kanban-card-modern';
     card.setAttribute('data-id', batch.id);
 
     // Ô TÍCH CHỌN khi bật chế độ "Xóa Nhiều" (Admin) — ẩn bằng CSS khi chưa bật
@@ -342,38 +342,38 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
 
     card.innerHTML = `
       ${pickHtml}
-      <div class="card-top">
-        <div class="batch-code"><i data-lucide="box"></i> ${escapeHTML(batch.code)}</div>
+      <div class="card-header-modern">
+        <div class="batch-code-modern"><i data-lucide="box"></i> ${escapeHTML(batch.code)}</div>
         <span class="week-pill">${escapeHTML(batch.week)} (${formatDateDDMMYY(batch.date)})</span>
       </div>
       <div class="stage-days-list">${daysBadgesHtml}</div>
-      <div class="card-dimensions">
-        <span class="dim-spec">${batch.length} × ${batch.width} × ${batch.thickness} mm</span>
+      <div class="dim-spec-modern">
+        <span class="dim-val">${batch.length} × ${batch.width} × ${batch.thickness} mm</span>
         <span class="card-volume">${(batch.volume || 0).toFixed(4)} m³</span>
       </div>
       ${batch.stage === 'kho' ? `<div class="kho-card-remain" title="Tồn kho THỰC = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT (js/utils.js)">
         Tồn kho: <strong>${khoLotRemainingOf(batch).toLocaleString('vi-VN')}</strong> / ${(batch.quantity || 0).toLocaleString('vi-VN')} thanh${khoOutRoundCountOf(batch) ? ` · <span class="kho-round-badge" title="Số lần lô RA khỏi kho (Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${khoOutRoundCountOf(batch)} lần</span>` : ''}
       </div>` : ''}
       <div class="card-quantities">
-        <div class="qty-box">
+        <div class="qty-box qty-chip">
           <span class="label">Số lượng</span>
-          <span class="val">${(batch.quantity || 0).toLocaleString('vi-VN')} <small>thanh</small></span>
+          <span class="val qty-num">${(batch.quantity || 0).toLocaleString('vi-VN')} <small>thanh</small></span>
         </div>
-        <div class="qty-box">
+        <div class="qty-box qty-chip">
           <span class="label">Vị trí</span>
           <span class="val" style="font-size:0.82rem; color:#1e293b;">${escapeHTML(batch.location || 'Kho')}</span>
         </div>
       </div>
       <div class="card-tags">
-        <span class="tag-badge tag-type-${batch.bambooType}">Loại ${escapeHTML(batch.bambooType)}</span>
-        <span class="tag-badge tag-use-${batch.useFor}">${escapeHTML(batch.useFor)}</span>
+        <span class="tag-badge tag-type-${batch.bambooType} stage-chip">Loại ${escapeHTML(batch.bambooType)}</span>
+        <span class="tag-badge tag-use-${batch.useFor} stage-chip">${escapeHTML(batch.useFor)}</span>
         ${thChip}
         ${btChip}
         ${topChip}
-        <span class="tag-badge tag-location"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
+        <span class="tag-badge tag-location stage-chip"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
       </div>
       ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}
-      <div class="card-actions" data-perm="x2">
+      <div class="card-actions card-actions-modern" data-perm="x2">
         <div class="card-tools">
           <button class="btn btn-outline btn-icon btn-sm" onclick="app.openEditModal('${batch.id}')" title="Sửa thẻ"><i data-lucide="edit-3"></i></button>
           <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteBatch('${batch.id}')" title="Xóa thẻ" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>

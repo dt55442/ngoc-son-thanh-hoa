@@ -2615,50 +2615,19 @@
           <div class="x2-zone" data-zone="1">
             <div class="x2-zone-head" title="Khung nhập liệu của công đoạn — điền thông tin rồi bấm Lưu; giải thích chi tiết từng ô hiện khi rê chuột."><span class="x2-zone-no">1</span><i data-lucide="pencil"></i> Nhập Liệu</div>
           <div class="x2-cut-form-wrap">
-            <div class="x2-cut-edit-banner" id="x1-say-sinh-edit-banner" style="display:none;">
-              <i data-lucide="pencil"></i> <span id="x1-say-sinh-edit-text"></span>
+            <button type="button" class="x1-ss-alert-banner" id="x1-ss-alert-banner" hidden aria-live="polite" title="Bấm để xem danh sách lô cần xử lý (quá hạn · sắp đến giờ · đã Đạt chờ Bốc)"></button>
+            <div class="x1-ss-input-btns">
+              <button type="button" class="x1-ss-input-btn" id="btn-x1-ss-new" data-perm="x1" title="Ghi lần sấy ĐẦU TIÊN cho nguyên liệu mới: chọn phiếu nhập → phân bổ khối lượng → ngày/giờ/lưu huỳnh">
+                <i data-lucide="flame-kindling"></i>
+                <strong>Tạo Lô Sấy Lần Đầu</strong>
+                <small>Chọn phiếu nhập · ghi lần sấy 1</small>
+              </button>
+              <button type="button" class="x1-ss-input-btn is-repeat" id="btn-x1-ss-repeat" data-perm="x1" title="Ghi THÊM lần sấy kế tiếp cho lô đã có — cách lần trước 24 giờ, tự gợi ý ngày + lưu huỳnh">
+                <i data-lucide="repeat-2"></i>
+                <strong>Sấy Tiếp Lô Đã Có</strong>
+                <small>Ghi lần kế · tự gợi ý lưu huỳnh</small>
+              </button>
             </div>
-            <form id="x1-say-sinh-form">
-              <div class="x2-form-row">
-                <div class="form-group" style="flex:1.5;">
-                  <label for="x1-say-sinh-source">Phiếu Nhập (có thể chọn nhiều) <span class="required">*</span></label>
-                  <select id="x1-say-sinh-source" multiple size="4"></select>
-                  <small style="color:var(--text-muted);">Chọn nhiều phiếu nếu cần; phân bổ khối lượng cho từng phiếu ở bên dưới.</small>
-                </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x1-say-sinh-note">Ghi Chú</label>
-                  <input type="text" id="x1-say-sinh-note" placeholder="VD: sấy 8 giờ, độ ẩm đạt...">
-                </div>
-              </div>
-              <div class="form-group" id="x1-say-sinh-allocations"></div>
-              <div class="form-group">
-                <label for="x1-say-sinh-repeat-lot">Hoặc sấy tiếp lô đã có</label>
-                <select id="x1-say-sinh-repeat-lot">
-                  <option value="">— Tạo lô sấy mới từ phiếu nhập —</option>
-                </select>
-                <small style="color:var(--text-muted);">Chọn lô để ghi thêm một chu kỳ, không trừ lại khối lượng nguyên liệu.</small>
-              </div>
-              <div class="x2-form-row">
-                <div class="form-group" style="flex:0 0 155px;">
-                  <label for="x1-say-sinh-date">Ngày Sấy <span class="required">*</span></label>
-                  <input type="date" id="x1-say-sinh-date" required>
-                </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x1-say-sinh-qty">Tổng KL nguyên liệu (kg)</label>
-                  <input type="number" id="x1-say-sinh-qty" step="any" min="0" placeholder="0" readonly>
-                </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x1-say-sinh-sulfur-qty">Khối lượng lưu huỳnh (kg) <span class="required">*</span></label>
-                  <input type="number" id="x1-say-sinh-sulfur-qty" step="any" min="0" placeholder="0" required>
-                </div>
-              </div>
-              <div class="x2-cut-calc" id="x1-say-sinh-calc"></div>
-              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-say-sinh-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Sấy Sinh theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
-                <button type="button" class="btn btn-outline" id="btn-cancel-x1-say-sinh">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Sấy Sinh</button>
-              </div>
-            </form>
           </div>
           </div>
           <div class="x2-zone" data-zone="2">
@@ -2666,11 +2635,15 @@
             <div class="material-stats" id="x1-say-sinh-stats"></div>
           </div>
           <div class="x2-zone" data-zone="3">
-            <div class="x2-zone-head" title="Bảng lịch sử — mỗi ngày 1 thẻ."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Theo Ngày</div>
+            <div class="x2-zone-head" title="Lịch sử sấy sinh — 2 chế độ xem: Thẻ Lô (mỗi lô 1 thẻ, dễ hiểu nhất) và Báo cáo theo ngày (công nhân làm ngày nào, mấy giờ)."><span class="x2-zone-no">3</span><i data-lucide="history"></i> Lịch Sử Sấy Sinh</div>
           <div class="x2-cut-table-wrap" id="x1-say-sinh-table-wrap">
             <div class="x2-cut-table-head">
               <h5><i data-lucide="history"></i> Lịch Sử Sấy Sinh</h5>
               <span class="x2-cut-table-count" id="x1-say-sinh-table-count"></span>
+              <div class="x1-ss-view-toggle" role="radiogroup" aria-label="Chế độ xem lịch sử sấy sinh">
+                <button type="button" class="x1-ss-view-btn" id="x1-ss-view-card" data-view="card" aria-pressed="true" title="Thẻ Lô — mỗi lô 1 thẻ: đủ các lần sấy + giờ kiểm tra kế tiếp (dễ xem nhất)"><i data-lucide="layout-grid"></i> Thẻ Lô</button>
+                <button type="button" class="x1-ss-view-btn" id="x1-ss-view-day" data-view="day" aria-pressed="false" title="Báo cáo theo ngày — công nhân sấy ngày nào, mấy giờ, lưu huỳnh lần nào"><i data-lucide="calendar-days"></i> Báo cáo theo ngày</button>
+              </div>
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-say-sinh-day-cards"></div></div>
           </div>
@@ -7900,6 +7873,72 @@
           <button type="button" class="btn btn-primary btn-sm" id="btn-x2-rate-save" data-perm="x2" data-admin-only title="Lưu định mức công suất của tháng (CHỈ Quản Trị)"><i data-lucide="save"></i> Lưu</button>
           <div class="x2-rate-chips" id="x2-rate-chips"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ POPUP NHẬP LIỆU SẤY SINH XƯỞNG 1 — mở từ 2 NÚT TO trên thẻ
+       (Tạo Lô Sấy Lần Đầu · Sấy Tiếp Lô Đã Có) hoặc nút Sửa trên Thẻ Lô.
+       1 form dùng chung: đổi TIÊU ĐỀ + ẩn/hiện nhóm ô theo chế độ. ═══ -->
+  <div class="modal-overlay" id="modal-x1-ss-input">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="flame-kindling"></i> <span id="x1-ss-input-title">Tạo Lô Sấy Lần Đầu</span></h3>
+        <button class="modal-close-btn" id="btn-close-x1-ss-input" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="x2-cut-edit-banner" id="x1-say-sinh-edit-banner" style="display:none;">
+        <i data-lucide="pencil"></i> <span id="x1-say-sinh-edit-text"></span>
+      </div>
+      <div class="modal-body" style="padding:12px 18px 16px;">
+        <form id="x1-say-sinh-form">
+          <div class="x2-form-row" id="x1-ss-src-group">
+            <div class="form-group" style="flex:1.5;">
+              <label for="x1-say-sinh-source">Phiếu Nhập (có thể chọn nhiều) <span class="required">*</span></label>
+              <select id="x1-say-sinh-source" multiple size="4"></select>
+              <small style="color:var(--text-muted);">Chọn nhiều phiếu nếu cần; phân bổ khối lượng cho từng phiếu ở bên dưới.</small>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label for="x1-say-sinh-note">Ghi Chú</label>
+              <input type="text" id="x1-say-sinh-note" placeholder="VD: sấy 8 giờ, độ ẩm đạt...">
+            </div>
+          </div>
+          <div class="form-group" id="x1-say-sinh-allocations"></div>
+          <div class="form-group" id="x1-ss-repeat-group">
+            <label for="x1-say-sinh-repeat-lot">Chọn lô sấy tiếp <span class="required">*</span></label>
+            <select id="x1-say-sinh-repeat-lot">
+              <option value="">— Chọn lô sấy tiếp —</option>
+            </select>
+            <small style="color:var(--text-muted);">Ghi thêm một chu kỳ cho lô đã chọn — không trừ lại khối lượng nguyên liệu.</small>
+          </div>
+          <div class="x2-form-row">
+            <div class="form-group" style="flex:0 0 155px;">
+              <label for="x1-say-sinh-date">Ngày Sấy <span class="required">*</span></label>
+              <input type="date" id="x1-say-sinh-date" required>
+            </div>
+            <div class="form-group" style="flex:0 0 130px;">
+              <label for="x1-say-sinh-hour">Giờ Sấy</label>
+              <input type="time" id="x1-say-sinh-hour" value="08:00">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label for="x1-say-sinh-qty">Tổng KL nguyên liệu (kg)</label>
+              <input type="number" id="x1-say-sinh-qty" step="any" min="0" placeholder="0" readonly>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label for="x1-say-sinh-sulfur-qty">Khối lượng lưu huỳnh (kg) <span class="required">*</span></label>
+              <input type="number" id="x1-say-sinh-sulfur-qty" step="any" min="0" placeholder="0" required>
+            </div>
+          </div>
+          <div class="form-group" id="x1-say-sinh-sulfur-hint" style="font-size:0.85rem; color:var(--text-muted); margin-top:6px;">
+            <i data-lucide="info"></i> <span id="x1-say-sinh-sulfur-hint-text"></span>
+            <small style="color:var(--text-muted); display:block; margin-top:2px;">Mỗi lần sấy cách nhau 24h · Lần 1-2: 1,3 kg lưu huỳnh/tấn · Lần 3-4: 0,8 kg/tấn</small>
+          </div>
+          <div class="x2-cut-calc" id="x1-say-sinh-calc"></div>
+          <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+            <button type="button" class="btn btn-outline" id="btn-x1-say-sinh-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Sấy Sinh theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+            <button type="button" class="btn btn-outline" id="btn-cancel-x1-say-sinh">Làm Mới Form</button>
+            <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Sấy Sinh</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

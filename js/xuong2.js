@@ -15124,6 +15124,36 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return oldest ? x1SsDaysOf(oldest) : 0;
   }
 
+  // ═════════════════════════════════════════════════════════════
+  // GỢI Ý KHỐI LƯỢNG LƯU HUỲNH THEO SỐ LẦN SẤY (19/10/2026)
+  // Lần 1-2: 1.3 kg/tấn · Lần 3-4: 0.8 kg/tấn
+  // ═════════════════════════════════════════════════════════════
+  const X1_SS_SULFUR_RATE_1_2 = 1.3;   // kg lưu huỳnh / tấn nguyên liệu (lần 1, 2)
+  const X1_SS_SULFUR_RATE_3_4 = 0.8;   // kg lưu huỳnh / tấn nguyên liệu (lần 3, 4)
+  function x1SsSulfurHint(qtyKg, cycleIndex) {
+    const n = Math.max(1, Number(cycleIndex || 1));
+    const rate = n <= 2 ? X1_SS_SULFUR_RATE_1_2 : X1_SS_SULFUR_RATE_3_4;
+    const suggested = Math.max(0, Number(qtyKg || 0)) * rate / 1000;
+    const note = n <= 2
+      ? `Lần ${n}: ${rate} kg lưu huỳnh / 1 tấn`
+      : `Lần ${n}: ${rate} kg lưu huỳnh / 1 tấn`;
+    return { suggested, rate, note };
+  }
+  // Giờ mặc định cho mỗi chu kỳ sấy (cách nhau 24h)
+  const X1_SS_DEFAULT_HOUR = '08:00';
+
+  // Cộng trừ ngày ISO (YYYY-MM-DD) — tính theo múi giờ địa phương (tránh lỗi UTC offset)
+  function x1SsAddDays(dateISO, days) {
+    if (!dateISO) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateISO));
+    if (!m) return '';
+    const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + days);
+    const yy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+  }
+
   function loadXuong1SaySinh() {
     const raw = localStorage.getItem(STORAGE_KEY_XUONG1_SAY_SINH);
     if (raw) {
@@ -15178,6 +15208,27 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const days = x1SsDaysOf(r);
     const cycles = x1SsCyclesOf(r);
     const inputQty = allocations.reduce((sum, a) => sum + a.qty, 0) || (Number(r.qty) || 0);
+    // Tổng số giờ sấy = số chu kỳ × 24h (mỗi lần cách nhau 24h)
+    const totalHours = cycles.length * 24;
+    // Giờ cần kiểm tra tiếp theo = ngày/giờ chu kỳ cuối + 24h
+    let nextCheckHour = '—';
+    if (cycles.length) {
+      const last = cycles[cycles.length - 1];
+      const lastDate = last.date || r.date || '';
+      const lastHour = last.hour || X1_SS_DEFAULT_HOUR;
+      if (lastDate) {
+        // Hiển thị theo giờ địa phương (tránh toISOString gây lệch múi giờ UTC → 01:00 sáng)
+        const nextDate = x1SsAddDays(lastDate, 1);
+        nextCheckHour = `${nextDate} ${lastHour}`;
+      }
+    }
+    const cycleDetails = cycles.map((c, i) => ({
+      num: i + 1,
+      date: c.date || x1SsAddDays(r.date, i) || '',
+      hour: c.hour || X1_SS_DEFAULT_HOUR,
+      sulfurQty: Number(c.sulfurQty) || 0,
+      rate: i + 1 <= 2 ? X1_SS_SULFUR_RATE_1_2 : X1_SS_SULFUR_RATE_3_4
+    }));
     return {
       date: r.date || '',
       code: String(r.code || ''),
@@ -15185,6 +15236,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       sulfurQty: cycles.reduce((sum, c) => sum + (Number(c.sulfurQty) || 0), 0),
       qcStatus: x1SsQcStatusOf(r),
       remaining: lotRemaining,
+      totalHours,
+      nextCheckHour,
+      nextCycleNum: cycles.length + 1,
+      cycleDetails,
       sources,
       sourceSummary: sources.length
         ? sources.map(s => `${s.materialType || 'Vầu/nứa'} · NCC ${s.supplier || '—'} · ${formatDateDDMMYY(s.date)} · ${fmtKg(s.qty)} kg`).join(' | ')
@@ -15244,11 +15299,16 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     const repeatSel = document.getElementById('x1-say-sinh-repeat-lot');
     if (repeatSel) {
+      // KHÔNG hiển thị lô đã Đạt (qcStatus === 'pass') trong danh sách sấy tiếp
       const lots = (state.xuong1SaySinhRecords || []).filter(r =>
-        x1SaySinhRemainingOf(r, null) > 0 || (editing && r.id === editing.id));
-      const lotHtml = '<option value="">— Tạo lô sấy mới từ phiếu nhập —</option>' + lots
+        r.qcStatus !== 'pass' && (x1SaySinhRemainingOf(r, null) > 0 || (editing && r.id === editing.id)));
+      const lotHtml = '<option value="">— Chọn lô sấy tiếp —</option>' + lots
         .sort((a, b) => x1SsDateISOOf(a).localeCompare(x1SsDateISOOf(b)))
-        .map(r => `<option value="${escapeHTML(r.id)}">[${escapeHTML(r.code || '—')}] ${escapeHTML(r.srcType || 'Vầu/nứa')} · còn ${fmtKg(x1SaySinhRemainingOf(r, null))} kg</option>`)
+        .map(r => {
+          const cycles = x1SsCyclesOf(r).length;
+          const next = cycles + 1;
+          return `<option value="${escapeHTML(r.id)}">[${escapeHTML(r.code || '—')}] ${escapeHTML(r.srcType || 'Vầu/nứa')} · sấy tiếp lần ${next} · còn ${fmtKg(x1SaySinhRemainingOf(r, null))} kg</option>`;
+        })
         .join('');
       setX2SelectOptions(repeatSel, lotHtml);
       if (previousRepeat) repeatSel.value = previousRepeat;
@@ -15272,7 +15332,26 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (sourceSel) sourceSel.disabled = !!repeatId;
     if (autoFill && repeatId && dateEl) {
       const lot = (state.xuong1SaySinhRecords || []).find(r => r.id === repeatId);
-      if (lot) dateEl.value = x1SsTodayISO();
+      if (lot) {
+        // Gợi ý ngày lần tiếp theo = ngày của chu kỳ cuối cùng + 24h (nếu có), không thì hôm nay
+        const lotCycles = x1SsCyclesOf(lot);
+        const lastCycle = lotCycles.length ? lotCycles[lotCycles.length - 1] : null;
+        const suggestedDate = lastCycle && lastCycle.date ? x1SsAddDays(lastCycle.date, 1) : x1SsTodayISO();
+        dateEl.value = suggestedDate;
+        // Tự điền gợi ý lưu huỳnh theo số lần tiếp theo (nếu ô đang trống)
+        const sulfurEl = document.getElementById('x1-say-sinh-sulfur-qty');
+        const qtyEl = document.getElementById('x1-say-sinh-qty');
+        const hourEl = document.getElementById('x1-say-sinh-hour');
+        const cycles = x1SsCyclesOf(lot).length;
+        const nextCycle = cycles + 1;
+        const hint = x1SsSulfurHint(lot.qty, nextCycle);
+        if (sulfurEl && sulfurEl.value === '') {
+          sulfurEl.value = String(hint.suggested);
+          sulfurEl.title = `${hint.note} · gợi ý: ${fmtKg(hint.suggested)} kg`;
+        }
+        if (hourEl && hourEl.value === '') hourEl.value = X1_SS_DEFAULT_HOUR;
+        if (qtyEl) qtyEl.value = String(Number(lot.qty) || 0);
+      }
     }
     x1SaySinhRenderAllocations();
     x1SaySinhCalc();
@@ -15351,6 +15430,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         (sulfurValue !== '' && (!Number.isFinite(sulfurQty) || sulfurQty <= 0))) {
       showToast('Khối lượng lưu huỳnh phải lớn hơn 0!', 'error'); return;
     }
+    const hourEl = document.getElementById('x1-say-sinh-hour');
+    const hourVal = (hourEl && hourEl.value) || X1_SS_DEFAULT_HOUR;
     let allocations = [];
     if (repeatId) {
       if (state.x1SaySinhEditId) { showToast('Không thể vừa sửa lô vừa thêm chu kỳ mới!', 'error'); return; }
@@ -15358,7 +15439,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (!lot) { showToast('Không tìm thấy lô cần sấy tiếp!', 'error'); return; }
       if (x1SaySinhRemainingOf(lot, null) <= 0) { showToast('Lô này đã Bốc hết, không thể ghi thêm chu kỳ sấy!', 'error'); return; }
       if (!Array.isArray(lot.cycles)) lot.cycles = x1SsCyclesOf(lot);
-      lot.cycles.push({ date: dateVal, sulfurQty });
+      // LƯU SNAPSHOT người + giờ của NGÀY sấy tiếp (báo cáo theo ngày không vỡ khi bố trí bị xóa)
+      const snapC = x1Snapshot(dateVal, x1SaySinhAssignmentsOf(dateVal));
+      lot.cycles.push({ date: dateVal, sulfurQty, hour: hourVal, worker: snapC.names, workTime: snapC.timeStr, workHours: snapC.hours, workHoursHC: snapC.hc, workHoursTC: snapC.tc });
       lot.qcStatus = 'pending';
       lot.updatedAt = new Date().toISOString();
       saveXuong1SaySinh();
@@ -15398,7 +15481,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       sourceAllocations: allocations,
       srcType, srcSupplier, srcDate,
       date: dateVal, qty,
-      cycles: [{ date: dateVal, sulfurQty }],
+      cycles: [{ date: dateVal, sulfurQty, hour: hourVal }],
       qcStatus: state.x1SaySinhEditId
         ? x1SsQcStatusOf((state.xuong1SaySinhRecords || []).find(r => r.id === state.x1SaySinhEditId))
         : 'pending',
@@ -15443,6 +15526,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const cycle = x1SsCyclesOf(rec)[0] || {};
     const sulfur = document.getElementById('x1-say-sinh-sulfur-qty');
     if (sulfur) sulfur.value = cycle.sulfurQty == null ? '' : String(cycle.sulfurQty);
+    const hour = document.getElementById('x1-say-sinh-hour');
+    if (hour) hour.value = cycle.hour || X1_SS_DEFAULT_HOUR;
     const note = document.getElementById('x1-say-sinh-note');
     if (note) note.value = rec.note || '';
     x1SaySinhRenderAllocations();
@@ -15454,7 +15539,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (qty) qty.value = String(Number(rec.qty) || 0);
     x1SaySinhSyncLinked(false);
     syncX1EditBanner('x1-say-sinh');
-    document.getElementById('x1-say-sinh-card')?.scrollIntoView({ block: 'nearest' });
+    // Nút Sửa trên Thẻ Lô → mở POPUP nhập liệu (prefilled) thay vì cuộn tới thẻ
+    x1SsOpenInputModal('edit');
   }
 
   function deleteX1SaySinh(id) {
@@ -15507,14 +15593,16 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (sel && sel.options) Array.from(sel.options).forEach(o => { o.selected = selected.includes(String(o.value)); });
     x1SaySinhRenderAllocations();
     syncX1EditBanner('x1-say-sinh');
+    x1SsCloseInputModal(); // Lưu xong / Làm Mới Form → đóng pop-up nhập liệu (nếu đang mở)
   }
   function renderX1SaySinhCard() {
     // Cấp mã cho lô CŨ / lô vừa về từ mây (chưa có mã) — lưu 1 lần
     ensureX1SaySinhCodes(true);
     fillX1SaySinhOptions();
     renderX1SaySinhStockBar();
+    renderX1SsAlertBanner();
     renderX1SaySinhStats();
-    renderX1SaySinhTable();
+    renderX1SsHistory();
     renderX1SsOldPanel();
     syncX1EditBanner('x1-say-sinh');
     updateXuong2CardCounts();
@@ -15551,50 +15639,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       <div class="material-stat"><span class="material-stat-value">${fmtKg(pend)}</span><span class="material-stat-label">Còn chờ sấy (kg)</span></div>
       <div class="material-stat x1-ss-stat-ready${oldest ? ' is-on' : ''}" data-x1-ss-ready-open="1" role="button" tabindex="0" title="Xem lô cũ nhất trước"><span class="material-stat-value">${oldest ? x1SsDaysOf(oldest) : 0}</span><span class="material-stat-label">Ngày lô cũ nhất</span></div>`;
   }
-  function renderX1SaySinhTable() {
-    x1RenderDayCards({
-      boxId: 'x1-say-sinh-day-cards',
-      countId: 'x1-say-sinh-table-count',
-      records: state.xuong1SaySinhRecords || [],
-      disp: x1SaySinhDisplay,
-      qtyOf: r => Number(r.qty) || 0,
-      incKey: 'x1saysinh',
-      rateKind: 'saySinh',
-      shiftMatchPos: isX1SaySinhPos,
-      headName: 'Người sấy',
-      emptyIcon: 'flame-kindling',
-      emptyText: 'Chưa có lô sấy sinh nào.<br>Chọn một hoặc nhiều phiếu đầu vào ở form trên rồi ghi chu kỳ sấy.',
-      thead: `<th>Mã lô · Ngày sấy</th><th>Phiếu đầu vào</th><th>Số lần · Lưu huỳnh</th><th>QC</th>
-              <th class="text-right">KL nguyên liệu</th><th class="text-right">Còn chưa Bốc</th>
-              <th>Ghi chú</th><th class="text-right">Thao tác</th>`,
-      rowHtml: (r, d) => {
-        const statusClass = d.qcStatus === 'pass' ? 'is-pass' : d.qcStatus === 'fail' ? 'is-fail' : 'is-pending';
-        return `
-        <tr class="x2-day-row">
-          <td>
-            <span class="x1-ss-code" title="Mã lô: ${escapeHTML(d.code || '—')} · Sấy ${formatDateDDMMYY(d.date)}">${escapeHTML(d.code || '—')}</span>
-            <div class="x1-ss-day-wrap">
-              <span class="x1-ss-day-chip">${d.days} ngày</span>
-            </div>
-          </td>
-          <td>${d.sources.length ? d.sources.map(s => `<div><strong>${escapeHTML(s.materialType || 'Vầu/nứa')}</strong> · NCC ${escapeHTML(s.supplier || '—')} · ${s.date ? formatDateDDMMYY(s.date) : '—'} · ${fmtKg(s.qty)} kg</div>`).join('') : `<strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong> · ${fmtKg(d.qty)} kg`}<div class="x2-row-note">${escapeHTML(d.srcRoute)}</div></td>
-          <td>${d.cycleCount} lần · ${fmtKg(d.sulfurQty)} kg</td>
-          <td><select class="x1-ss-qc ${statusClass}" data-x1-say-sinh-qc="${escapeHTML(r.id)}" data-perm="x1" aria-label="Đánh giá QC cho lô ${escapeHTML(d.code || '')}">
-            <option value="pending"${d.qcStatus === 'pending' ? ' selected' : ''}>Chờ QC</option>
-            <option value="pass"${d.qcStatus === 'pass' ? ' selected' : ''}>Đạt</option>
-            <option value="fail"${d.qcStatus === 'fail' ? ' selected' : ''}>Không đạt</option>
-          </select></td>
-          <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.qty)}</strong></td>
-          <td class="text-right">${fmtKg(d.remaining)}</td>
-          <td>${d.note ? `<div class="x2-row-note">${escapeHTML(d.note)}</div>` : '<span style="color:var(--text-muted);">—</span>'}</td>
-          <td class="text-right">
-            <button class="btn btn-icon btn-outline" title="Sửa" data-x1-say-sinh-edit="${escapeHTML(r.id)}" data-perm="x1"><i data-lucide="pencil"></i></button>
-            <button class="btn btn-icon btn-danger" title="Xóa" data-x1-say-sinh-delete="${escapeHTML(r.id)}" data-perm="x1"><i data-lucide="trash-2"></i></button>
-          </td>
-        </tr>`;
-      }
-    });
-  }
+  // (Bảng lịch sử Sấy Sinh đã thay bằng 2 CHẾ ĐỘ XEM: Thẻ Lô + Báo cáo theo ngày — renderX1SsHistory)
   // ─── NHẮC SỐ LẦN SẤY + TUỔI LÔ CŨ NHẤT ───────────────────────
   function renderX1SsOldPanel() {
     const box = document.getElementById('x1-ss-ready-panel');
@@ -15623,6 +15668,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           <span>Lô đã tồn <strong>${d.days} ngày</strong></span>
         </div>
         <div class="x1-ss-ready-kg">QC <strong>${d.qcStatus === 'pass' ? 'Đạt' : d.qcStatus === 'fail' ? 'Không đạt' : 'Chờ QC'}</strong> · Còn chưa Bốc <strong class="x1-ss-remain">${fmtKg(d.remaining)} kg</strong></div>
+        ${(() => {
+          const nk = x1SsNextCheckOf(r);
+          const a = x1SsAlertKindOf(r);
+          if (!nk && !a) return '';
+          return `<div class="x1-ss-ready-when">⏰ Lần kế tiếp: <strong>${nk ? x1SsFmtDateTime(nk.date, nk.hour) : '—'}</strong>${a ? ` · <span class="x1-ss-alert-chip is-${a.kind}">${a.label}${a.when ? ' · ' + a.when : ''}</span>` : ''}</div>`;
+        })()}
         ${d.note ? `<div class="x1-ss-ready-note">${escapeHTML(d.note)}</div>` : ''}
       </div>
       <div class="x1-ss-ready-actions">
@@ -15664,6 +15715,324 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (sel) sel.value = id;
     x1BocSyncLinked(true);
     document.getElementById('x1-boc-card')?.scrollIntoView?.({ block: 'nearest' });
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // 2 CHẾ ĐỘ XEM LỊCH SỬ SẤY SINH (Phương án B — 11/2026):
+  //   🗂 'card' THẺ LÔ (mặc định — người không rành công nghệ hiểu nhanh):
+  //      mỗi lô 1 thẻ: dòng thời gian TỪNG lần sấy (ngày · giờ · lưu huỳnh)
+  //      + ⏰ giờ kiểm tra & bổ lưu huỳnh lần kế tiếp.
+  //   📅 'day' BÁO CÁO THEO NGÀY: mỗi ngày 1 thẻ — Người sấy + Giờ HC/TC
+  //      (tự động từ Bảng bố trí, snapshot dự phòng) + từng lượt sấy trong
+  //      ngày (lần thứ mấy · lưu huỳnh) + Công suất/Hiệu suất ngày.
+  // Trạng thái THUẦN UI THEO MÁY: X1_SS_VIEW_KEY — KHÔNG mây/backup.
+  // ═════════════════════════════════════════════════════════════
+  const X1_SS_VIEW_KEY = 'bamboo_tracker_x1_ss_view_v1';
+  function loadX1SsView() {
+    try { return String(localStorage.getItem(X1_SS_VIEW_KEY) || '') === 'day' ? 'day' : 'card'; }
+    catch (e) { return 'card'; }
+  }
+  function saveX1SsView(mode) {
+    try { localStorage.setItem(X1_SS_VIEW_KEY, mode === 'day' ? 'day' : 'card'); } catch (e) { /* bộ nhớ đầy */ }
+  }
+  // "24/10/2026 08:00" — GIỜ ĐỊA PHƯƠNG (tránh toISOString lệch UTC thành 01:00 sáng)
+  function x1SsFmtDateTime(dateISO, hour) {
+    const d = String(dateISO || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return '—';
+    return `${formatDateDDMMYY(d)} ${hour || X1_SS_DEFAULT_HOUR}`;
+  }
+  // Ngày thực tế của 1 chu kỳ: lưu cứng khi sấy; lô CŨ thiếu → suy từ ngày đầu + i ngày
+  function x1SsCycleDateOf(r, c, i) {
+    return String(c.date || '') || x1SsAddDays(r.date, i) || String(r.date || '');
+  }
+  // ── GỢI Ý LƯU HUỲNH cập nhật theo ô KL (events.js chỉ gọi hàm này — hết dùng fmtKg trong events) ──
+  function x1SsUpdateSulfurHint() {
+    const qtyEl = document.getElementById('x1-say-sinh-qty');
+    const hintEl = document.getElementById('x1-say-sinh-sulfur-hint-text');
+    if (!qtyEl || !hintEl) return;
+    const repeatSel = document.getElementById('x1-say-sinh-repeat-lot');
+    const repeatId = repeatSel ? String(repeatSel.value || '') : '';
+    const lot = repeatId ? (state.xuong1SaySinhRecords || []).find(r => r.id === repeatId) : null;
+    const cycles = lot ? x1SsCyclesOf(lot).length : 0;
+    const qty = Number(qtyEl.value) || 0;
+    if (qty <= 0) {
+      hintEl.textContent = 'Nhập khối lượng để xem gợi ý lưu huỳnh — lần 1-2: 1,3 kg/tấn · lần 3-4: 0,8 kg/tấn';
+      return;
+    }
+    const hint = x1SsSulfurHint(qty, cycles + 1);
+    hintEl.textContent = `${hint.note} → gợi ý ${fmtKg(hint.suggested)} kg`;
+  }
+  // ── CHẾ ĐỘ THẺ LÔ: mỗi lô 1 thẻ trực quan ────────────────────
+  function renderX1SsLotCards() {
+    const box = document.getElementById('x1-say-sinh-day-cards');
+    if (!box) return;
+    const recs = (state.xuong1SaySinhRecords || []).slice()
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    if (!recs.length) {
+      box.innerHTML = '<div class="x2-day-card x2-day-card-empty"><i data-lucide="flame-kindling"></i><div>Chưa có lô sấy sinh nào.<br>Chọn một hoặc nhiều phiếu đầu vào ở form trên rồi ghi chu kỳ sấy.</div></div>';
+      initLucide();
+      return;
+    }
+    let html = '';
+    for (const r of recs) {
+      const d = x1SaySinhDisplay(r);
+      const cycles = x1SsCyclesOf(r);
+      const qc = d.qcStatus;
+      const qcCls = qc === 'pass' ? 'is-pass' : qc === 'fail' ? 'is-fail' : 'is-pending';
+      const qcTxt = qc === 'pass' ? 'Đạt' : qc === 'fail' ? 'Không đạt' : 'Chờ QC';
+      // Dòng thời gian từng lần sấy
+      let tl = '';
+      cycles.forEach((c, i) => {
+        const rate = i + 1 <= 2 ? X1_SS_SULFUR_RATE_1_2 : X1_SS_SULFUR_RATE_3_4;
+        tl += '<div class="x1-ss-tl-row">'
+          + '<span class="x1-ss-tl-num">Lần ' + (i + 1) + '</span>'
+          + '<span class="x1-ss-tl-when"><i data-lucide="clock"></i> ' + x1SsFmtDateTime(x1SsCycleDateOf(r, c, i), c.hour) + '</span>'
+          + '<span class="x1-ss-tl-lh">' + fmtKg(Number(c.sulfurQty) || 0) + ' kg lưu huỳnh <em>(' + fmtRatio(rate) + ' kg/tấn)</em></span>'
+          + '</div>';
+      });
+      // Dòng ⏰ lần kế tiếp (chỉ khi lô còn hàng và chưa Đạt)
+      let next = '';
+      if (d.remaining > 0 && qc !== 'pass' && cycles.length) {
+        const lastC = cycles[cycles.length - 1];
+        const nd = x1SsAddDays(x1SsCycleDateOf(r, lastC, cycles.length - 1), 1);
+        const nh = lastC.hour || X1_SS_DEFAULT_HOUR;
+        const hint = x1SsSulfurHint(d.qty, cycles.length + 1);
+        next = '<div class="x1-ss-tl-next" title="Sau lần sấy cuối 24 giờ cần đi kiểm tra lô và bổ lưu huỳnh cho lần sấy kế tiếp">'
+          + '<i data-lucide="alarm-clock"></i> Lần kế tiếp: <strong>' + x1SsFmtDateTime(nd, nh) + '</strong>'
+          + ' — kiểm tra & bổ lưu huỳnh ~' + fmtKg(hint.suggested) + ' kg (' + fmtRatio(hint.rate) + ' kg/tấn)</div>';
+      } else if (d.remaining <= 0) {
+        next = '<div class="x1-ss-tl-next is-done" title="Lô đã Bốc hết — chỉ còn chờ QC nghiệm thu"><i data-lucide="check-circle-2"></i> Đã Bốc hết — chờ QC nghiệm thu</div>';
+      }
+      const srcTxt = d.sources.length
+        ? d.sources.map(s => '<div><strong>' + escapeHTML(s.materialType || 'Vầu/nứa') + '</strong> · NCC ' + escapeHTML(s.supplier || '—') + ' · ' + (s.date ? formatDateDDMMYY(s.date) : '—') + ' · ' + fmtKg(s.qty) + ' kg</div>').join('')
+        : '<div><strong>' + escapeHTML(d.srcType || 'Vầu/nứa') + '</strong> · NCC ' + escapeHTML(d.srcSupplier || '—') + ' · ' + fmtKg(d.qty) + ' kg</div>';
+      // Thu gọn dòng thời gian: điện thoại mặc định ĐÓNG, máy tính mặc định MỞ (nhớ lựa chọn tay)
+      const tlOpen = x1SsTlState.get(r.id) || (x1SsTlDefaultOpen() ? 'open' : 'closed');
+      html += '<div class="x1-ss-lot-card' + (tlOpen === 'closed' ? ' is-closed' : '') + '" id="x1-ss-card-' + escapeHTML(r.id) + '">'
+        + '<div class="x1-ss-lot-head">'
+        + '<span class="x1-ss-code" title="Mã lô — sấy lần đầu ' + formatDateDDMMYY(d.date) + '">' + escapeHTML(d.code || '—') + '</span>'
+        + '<span class="x1-ss-qc-chip ' + qcCls + '">' + qcTxt + '</span>'
+        + '<span class="x1-ss-day-chip" title="Tuổi lô tính từ lần sấy đầu tiên">' + d.days + ' ngày</span>'
+        + '<span class="x1-ss-lot-tools">'
+        + '<select class="x1-ss-qc ' + qcCls + '" data-x1-say-sinh-qc="' + escapeHTML(r.id) + '" data-perm="x1" aria-label="Đánh giá QC cho lô ' + escapeHTML(d.code || '') + '">'
+        + '<option value="pending"' + (qc === 'pending' ? ' selected' : '') + '>Chờ QC</option>'
+        + '<option value="pass"' + (qc === 'pass' ? ' selected' : '') + '>Đạt</option>'
+        + '<option value="fail"' + (qc === 'fail' ? ' selected' : '') + '>Không đạt</option>'
+        + '</select>'
+        + '<button class="btn btn-icon btn-outline" title="Sửa" data-x1-say-sinh-edit="' + escapeHTML(r.id) + '" data-perm="x1"><i data-lucide="pencil"></i></button>'
+        + '<button class="btn btn-icon btn-danger" title="Xóa" data-x1-say-sinh-delete="' + escapeHTML(r.id) + '" data-perm="x1"><i data-lucide="trash-2"></i></button>'
+        + '</span></div>'
+        + '<div class="x1-ss-lot-src" title="Phiếu đầu vào · ' + escapeHTML(d.srcRoute) + '">' + srcTxt
+        + '<span class="x2-row-note">' + escapeHTML(d.srcRoute) + ' · Còn chưa Bốc <strong>' + fmtKg(d.remaining) + ' kg</strong></span></div>'
+        + '<button type="button" class="x1-ss-tl-toggle" data-x1-ss-toggle="' + escapeHTML(r.id) + '" aria-expanded="' + (tlOpen === 'open' ? 'true' : 'false') + '" title="Thu gọn / xổ ra dòng thời gian từng lần sấy">'
+        + (tlOpen === 'closed' ? '<i data-lucide="chevron-down"></i> Xem ' : '<i data-lucide="chevron-up"></i> Ẩn ') + cycles.length + ' lần sấy</button>'
+        + '<div class="x1-ss-timeline">' + tl + next + '</div>'
+        + '</div>';
+    }
+    box.innerHTML = html;
+    initLucide();
+  }
+  // ── Người + giờ HC/TC của 1 NGÀY (SỐNG từ Bảng bố trí; mất → snapshot) ──
+  function x1SsDayMetaOf(date) {
+    const live = x1SaySinhAssignmentsOf(date);
+    if (live.length) {
+      const split = sumPosHoursSplitX1(live, date);
+      return { rows: x1WorkerRows({ worker: '', workTime: '' }, live), hc: split.hc, tc: split.tc };
+    }
+    // SNAPSHOT: chu kỳ sấy tiếp có lưu người (từ 11/2026) hoặc lô có r.date trùng ngày
+    const cands = [];
+    (state.xuong1SaySinhRecords || []).forEach(r => {
+      if (String(r.date || '') === date && r.worker) cands.push(r);
+      x1SsCyclesOf(r).forEach(c => { if (String(c.date || '') === date && c.worker) cands.push(c); });
+    });
+    const src = cands[0] || null;
+    if (src) {
+      return { rows: x1WorkerRows(src, []), hc: src.workHoursHC != null ? Number(src.workHoursHC) : null, tc: src.workHoursTC != null ? Number(src.workHoursTC) : null };
+    }
+    return { rows: [], hc: null, tc: null };
+  }
+  // ── CHẾ ĐỘ BÁO CÁO THEO NGÀY: công nhân làm ngày nào, thế nào ──
+  function renderX1SsDayReport() {
+    const box = document.getElementById('x1-say-sinh-day-cards');
+    const countEl = document.getElementById('x1-say-sinh-table-count');
+    if (!box) return;
+    // Dựng danh sách lượt = mỗi CHU KỲ 1 mục (ngày thực tế · lô · lần thứ mấy)
+    const items = [];
+    (state.xuong1SaySinhRecords || []).forEach(r => {
+      const cycles = x1SsCyclesOf(r);
+      cycles.forEach((c, i) => {
+        items.push({ date: x1SsCycleDateOf(r, c, i), lot: r, idx: i, hour: c.hour, sulfurQty: Number(c.sulfurQty) || 0 });
+      });
+    });
+    if (!items.length) {
+      box.innerHTML = '<div class="x2-day-card x2-day-card-empty"><i data-lucide="calendar-days"></i><div>Chưa có chu kỳ sấy nào để lập báo cáo theo ngày.</div></div>';
+      if (countEl) countEl.textContent = '';
+      initLucide();
+      return;
+    }
+    const groups = new Map();
+    items.forEach(it => { if (!groups.has(it.date)) groups.set(it.date, []); groups.get(it.date).push(it); });
+    const dates = [...groups.keys()].sort((a, b) => String(b).localeCompare(String(a)));
+    if (countEl) countEl.textContent = dates.length + ' ngày';
+    let html = '';
+    for (const date of dates) {
+      const list = groups.get(date);
+      const meta = x1SsDayMetaOf(date);
+      // Sản lượng ngày = KL các lô có lần sấy ĐẦU trong ngày (lần sấy tiếp không cộng lại — tránh đếm trùng)
+      const firstKg = list.filter(it => it.idx === 0).reduce((s, it) => s + (Number(it.lot.qty) || 0), 0);
+      const hours = (meta.hc != null || meta.tc != null) ? (Number(meta.hc) || 0) + (Number(meta.tc) || 0) : 0;
+      const incH = stageIncidentOf('x1saysinh', date);
+      const hoursEff = stageEffHours('x1saysinh', date, hours);
+      const cap = firstKg > 0 && hoursEff > 0 ? firstKg / hoursEff : null;
+      const rate = x1RateOf(date, 'saySinh');
+      const eff = (cap != null && rate) ? (cap / rate) * 100 : null;
+      const effTxt = eff == null ? '<em style="color:var(--text-muted);">—</em>'
+        : '<strong style="color:' + (eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309') + ';">' + fmtRatio(eff) + '%</strong>';
+      const hcTxt = meta.hc != null ? fmtRatio(meta.hc) : '—';
+      const tcTxt = meta.tc != null ? fmtRatio(meta.tc) : '—';
+      const rows0 = (meta.rows || []).filter(x => x.name);
+      const main = rows0.length ? escapeHTML(rows0[0].name) + (rows0[0].time ? ' (' + escapeHTML(rows0[0].time) + ')' : '') : '';
+      const more = rows0.length > 1
+        ? '<em class="x2-day-cutters-more" title="Người khác cùng ngày: ' + escapeHTML(rows0.slice(1).map(x => x.name + (x.time ? ' (' + x.time + ')' : '')).join(', ')) + '">+' + (rows0.length - 1) + ' người khác</em>' : '';
+      const rowsHtml = list.map(it => {
+        const d = x1SaySinhDisplay(it.lot);
+        const rate = it.idx + 1 <= 2 ? X1_SS_SULFUR_RATE_1_2 : X1_SS_SULFUR_RATE_3_4;
+        return '<tr class="x2-day-row">'
+          + '<td><span class="x1-ss-code">' + escapeHTML(d.code || '—') + '</span></td>'
+          + '<td>Lần ' + (it.idx + 1) + (it.idx === 0 ? ' <em style="color:var(--text-muted);">(sấy mới)</em>' : '') + '</td>'
+          + '<td>' + x1SsFmtDateTime(date, it.hour) + '</td>'
+          + '<td class="text-right">' + (it.idx === 0 ? fmtKg(Number(it.lot.qty) || 0) : '<span style="color:var(--text-muted);">—</span>') + '</td>'
+          + '<td class="text-right">' + fmtKg(it.sulfurQty) + '</td>'
+          + '<td class="text-right">' + fmtRatio(rate) + '</td>'
+          + '</tr>';
+      }).join('');
+      html += '<div class="x2-day-card">'
+        + '<div class="x2-day-head">'
+        + '<span class="x2-day-date"><i data-lucide="calendar-days"></i> ' + formatDateDDMMYY(date) + '</span>'
+        + '<span class="x2-day-cutters" title="Người sấy tự động từ Bảng bố trí Nhân Sự (bộ phận Xưởng 1)"><i data-lucide="users"></i> ' + (main || '<em style="color:var(--text-muted);">chưa bố trí người sấy</em>') + more + '</span>'
+        + '<span class="x2-day-hours" title="Tổng giờ làm vị trí này trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / tăng ca (TC)">Giờ làm: <span class="x2-hours-hc">' + hcTxt + 'h HC</span><span class="x2-hours-tc">' + tcTxt + 'h TC</span></span>'
+        + '<span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất = tổng KL các lô SẤY MỚI trong ngày (' + fmtKg(firstKg) + ' kg — lần sấy tiếp không cộng lại) ÷ giờ hiệu dụng (' + fmtRatio(hoursEff) + ' h' + (incH > 0 ? ' — đã TRỪ ' + fmtGio(incH) + 'h sự cố' : '') + ')">Công suất thực tế: <strong>' + (cap != null ? fmtKg(cap) + ' kg/h' : '—') + '</strong></span>'
+        + '<span class="x2-day-eff" data-flag-show="see.perf.eff" title="Hiệu suất = Công suất thực tế ÷ Định mức tháng ' + Number(String(date).slice(5)) + ' (' + (rate ? fmtKg(rate) + ' kg/h' : 'chưa đặt') + ')">Hiệu suất: <strong>' + effTxt + '</strong></span>'
+        + stageIncidentInputHtml('x1saysinh', date)
+        + '</div>'
+        + shiftBreakdownHtml({ date, incHours: incH, shiftMeta: shiftMetaOf('Xưởng 1'), sections: [{ label: 'Người sấy', groups: shiftGroupsForX1(date, isX1SaySinhPos), qty: firstKg, unit: 'kg/h', rate, incHours: incH }] })
+        + '<table class="data-table x2-day-table">'
+        + '<thead><tr><th>Mã lô</th><th>Lần thứ</th><th>Giờ sấy</th><th class="text-right">KL lô (kg)</th><th class="text-right">Lưu huỳnh (kg)</th><th class="text-right">Tỉ lệ (kg/tấn)</th></tr></thead>'
+        + '<tbody>' + rowsHtml + '</tbody>'
+        + '</table></div>';
+    }
+    box.innerHTML = html;
+    initLucide();
+  }
+  // ── DISPATCH + NÚT CHUYỂN (2 nút ở đầu VÙNG ③ — cạnh bộ đếm) ──
+  function renderX1SsHistory() {
+    if (!state.x1SsViewMode) state.x1SsViewMode = loadX1SsView();
+    const mode = state.x1SsViewMode;
+    document.querySelectorAll('.x1-ss-view-btn').forEach(b => {
+      const on = b.getAttribute('data-view') === mode;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    const countEl = document.getElementById('x1-say-sinh-table-count');
+    if (countEl && mode === 'card') countEl.textContent = (state.xuong1SaySinhRecords || []).length ? state.xuong1SaySinhRecords.length + ' lô' : '';
+    if (mode === 'day') renderX1SsDayReport(); else renderX1SsLotCards();
+  }
+  function setX1SsViewMode(mode) {
+    state.x1SsViewMode = mode === 'day' ? 'day' : 'card';
+    saveX1SsView(state.x1SsViewMode);
+    renderX1SsHistory();
+  }
+
+
+
+  // ── BANNER CẢNH BÁO TRÊN CÙNG THẺ: quá hạn · sắp đến giờ · đã Đạt chờ Bốc ──
+  function x1SsNextCheckOf(r) {
+    const cycles = x1SsCyclesOf(r);
+    if (!cycles.length) return null;
+    const lastC = cycles[cycles.length - 1];
+    const nd = x1SsAddDays(x1SsCycleDateOf(r, lastC, cycles.length - 1), 1);
+    return { date: nd, hour: lastC.hour || X1_SS_DEFAULT_HOUR };
+  }
+  // Phân loại cần xử lý của 1 lô: 'over' quá hạn · 'soon' sắp đến giờ (≤3h) · 'qcpass' đã Đạt chờ Bốc
+  function x1SsAlertKindOf(r) {
+    const d = x1SaySinhDisplay(r);
+    if (d.qcStatus === 'pass' && d.remaining > 0) return { kind: 'qcpass', label: 'Đã Đạt QC — chờ Bốc', when: '' };
+    const nk = x1SsNextCheckOf(r);
+    if (!nk) return null;
+    const t = new Date(nk.date + 'T' + nk.hour + ':00');
+    const diffH = (t.getTime() - Date.now()) / 3600000;
+    if (diffH <= 0) return { kind: 'over', label: 'QUÁ HẠN ' + fmtGio(-diffH) + 'h', when: x1SsFmtDateTime(nk.date, nk.hour) };
+    if (diffH <= 3) return { kind: 'soon', label: 'Sắp đến giờ', when: x1SsFmtDateTime(nk.date, nk.hour) };
+    return null;
+  }
+  function renderX1SsAlertBanner() {
+    const box = document.getElementById('x1-ss-alert-banner');
+    if (!box) return;
+    const recs = (state.xuong1SaySinhRecords || []).filter(r => x1SaySinhRemainingOf(r, null) > 0);
+    const alerts = recs.map(r => ({ r, a: x1SsAlertKindOf(r) })).filter(x => x.a);
+    if (!alerts.length) { box.hidden = true; box.innerHTML = ''; return; }
+    const over = alerts.filter(x => x.a.kind === 'over');
+    const soon = alerts.filter(x => x.a.kind === 'soon');
+    const qcp = alerts.filter(x => x.a.kind === 'qcpass');
+    const parts = [];
+    if (over.length) parts.push('🔴 <strong>' + over.length + ' lô QUÁ HẠN</strong> sấy tiếp (' + over.slice(0, 3).map(x => escapeHTML(x.r.code || '—')).join(', ') + (over.length > 3 ? '…' : '') + ')');
+    if (soon.length) parts.push('⏰ ' + soon.length + ' lô <strong>sắp đến giờ</strong> (' + soon.slice(0, 3).map(x => escapeHTML(x.r.code || '—') + ' ' + x.a.when).join(', ') + (soon.length > 3 ? '…' : '') + ')');
+    if (qcp.length) parts.push('📦 ' + qcp.length + ' lô <strong>đã Đạt QC</strong> — chờ Bốc (' + qcp.slice(0, 3).map(x => escapeHTML(x.r.code || '—')).join(', ') + (qcp.length > 3 ? '…' : '') + ')');
+    const text = parts.join(' &nbsp;·&nbsp; ');
+    const marq = alerts.length >= 2;
+    box.className = 'x1-ss-alert-banner' + (over.length ? ' is-over' : ' is-soon');
+    box.hidden = false;
+    box.innerHTML = '<i data-lucide="bell-ring"></i>'
+      + '<span class="x1-ss-alert-text' + (marq ? ' is-marquee' : '') + '"><span class="x1-ss-marq">' + text + (marq ? ' &nbsp;·&nbsp; ' + text : '') + '</span></span>'
+      + '<span class="x1-ss-alert-count">' + alerts.length + '</span>';
+    initLucide();
+  }
+  // ── POPUP NHẬP LIỆU DÙNG CHUNG (2 nút to + nút Sửa trên Thẻ Lô) ──
+  const X1_SS_TITLES = { new: 'Tạo Lô Sấy Lần Đầu', repeat: 'Sấy Tiếp Lô Đã Có', edit: 'Sửa Lượt Sấy Sinh' };
+  function x1SsSetGroupHidden(el, hidden) {
+    if (!el) return;
+    el.hidden = hidden;
+    el.style.display = hidden ? 'none' : '';
+  }
+  // mode: 'new' (Tạo lô lần đầu) | 'repeat' (Sấy tiếp) | 'edit' (Sửa từ Thẻ Lô)
+  function x1SsOpenInputModal(mode) {
+    const ov = document.getElementById('modal-x1-ss-input');
+    if (!ov) return;
+    if (mode !== 'edit') resetX1SaySinhForm(); // form sạch trước khi mở (riêng 'edit' giữ dữ liệu prefill)
+    const title = document.getElementById('x1-ss-input-title');
+    if (title) title.textContent = X1_SS_TITLES[mode] || X1_SS_TITLES.new;
+    x1SsSetGroupHidden(document.getElementById('x1-ss-src-group'), mode === 'repeat');
+    x1SsSetGroupHidden(document.getElementById('x1-ss-repeat-group'), mode !== 'repeat');
+    x1SsSetGroupHidden(document.getElementById('x1-say-sinh-allocations'), mode === 'repeat');
+    if (mode === 'repeat') x1SaySinhSyncLinked(true); // tự gợi ý ngày/giờ/lưu huỳnh theo lô
+    syncX1EditBanner('x1-say-sinh');
+    ov.classList.add('show');
+    initLucide();
+  }
+  function x1SsCloseInputModal() {
+    const ov = document.getElementById('modal-x1-ss-input');
+    if (ov && ov.classList.contains('show')) ov.classList.remove('show');
+  }
+  // ── THU GỌN DÒNG THỜI GIAN TRÊN THẺ LÔ (điện thoại mặc định thu gọn) ──
+  const x1SsTlState = new Map(); // id lô → 'open' | 'closed' (lựa chọn tay của người dùng)
+  function x1SsTlDefaultOpen() {
+    try { return !(window.innerWidth <= 639); } catch (e) { return true; }
+  }
+  function x1SsToggleTimeline(id) {
+    const cur = x1SsTlState.get(id) || (x1SsTlDefaultOpen() ? 'open' : 'closed');
+    const next = cur === 'open' ? 'closed' : 'open';
+    x1SsTlState.set(id, next);
+    const card = document.getElementById('x1-ss-card-' + id);
+    if (!card) return;
+    card.classList.toggle('is-closed', next === 'closed');
+    const btn = card.querySelector('.x1-ss-tl-toggle');
+    if (btn) {
+      const lot = (state.xuong1SaySinhRecords || []).find(r => r.id === id);
+      const n = lot ? x1SsCyclesOf(lot).length : 0;
+      btn.innerHTML = (next === 'closed' ? '<i data-lucide="chevron-down"></i> Xem ' : '<i data-lucide="chevron-up"></i> Ẩn ') + n + ' lần sấy';
+      btn.setAttribute('aria-expanded', next === 'open' ? 'true' : 'false');
+      initLucide();
+    }
   }
 
   // ═════════════════════════════════════════════════════════════
@@ -16914,6 +17283,20 @@ export {
   x1SsCloseReadyPanel,
   x1SsOldStep,
   x1SsOpenBocFor,
+  // ── LƯU HUỲNH TỰ ĐỊNH + GIỜ SẤY + XEM CHI TIẾT ──
+  x1SsAddDays,
+  x1SsSulfurHint,
+  X1_SS_DEFAULT_HOUR,
+  X1_SS_VIEW_KEY,
+  setX1SsViewMode,
+  renderX1SsHistory,
+  x1SsFmtDateTime,
+  x1SsUpdateSulfurHint,
+  x1SsOpenInputModal,
+  x1SsCloseInputModal,
+  x1SsToggleTimeline,
+  renderX1SsAlertBanner,
+  x1SsAlertKindOf,
   // ── 5 CÔNG ĐOẠN ĐUÔI (khung SPEC dùng chung) ──
   X1_CHAIN_SPECS,
   workerAssignmentsForCapacityMonth,

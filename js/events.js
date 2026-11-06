@@ -38,7 +38,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
   setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
 import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, khoBulkOnPaste, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck, saveKhoNotes } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
-import { setX1SaySinhQcStatus } from './xuong2.js';
+import { setX1SaySinhQcStatus, setX1SsViewMode, x1SsUpdateSulfurHint, x1SsOpenInputModal, x1SsCloseInputModal, x1SsToggleTimeline } from './xuong2.js';
 import { x2OngDatAvailable } from './x2-pool.js'; // SỔ NHÓM: tồn ống đạt chờ bổ (nút "Lấy Hết Tồn")
 import {
   handleX2PhuPhamSubmit, editX2PhuPham, deleteX2PhuPham, resetX2PhuPhamForm, onX2PhuPhamCalc,
@@ -1979,6 +1979,9 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Thứ tự Esc (giống quy tắc của thẻ QC): ① popup ĐỊNH MỨC đang mở → đóng nó
     // ② dropdown nổi (Bào Tinh/Bullig) đang mở → đóng nó ③ mới đóng pop-up thẻ.
     const escX2Priority = () => {
+      // ⓪ Ưu tiên POPUP NHẬP LIỆU SẤY SINH (2 nút to) đang mở
+      const x1SsPop = document.getElementById('modal-x1-ss-input');
+      if (x1SsPop && x1SsPop.classList.contains('show')) { x1SsCloseInputModal(); return true; }
       // ⓪ Ưu tiên MODAL CHI TIẾT CẢNH BÁO TỒN KHO (mở từ chip ⚠ trên thanh tồn)
       const warnPop = document.getElementById('modal-kho-warn');
       if (warnPop && warnPop.classList.contains('show')) { closeKhoWarnModal(); return true; }
@@ -2098,7 +2101,19 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       .forEach(id => safeOn(id, 'input', x1CatOngCalc));
     safeOn('x1-cat-ong-done', 'change', x1CatOngCalc);
     safeOn('x1-say-sinh-sulfur-qty', 'input', x1SaySinhCalc);
+    safeOn('x1-say-sinh-qty', 'input', x1SsUpdateSulfurHint);
     safeOn('x1-boc-qty', 'input', x1BocCalc);
+    // ── 2 NÚT TO nhập liệu Sấy Sinh + POPUP dùng chung (Tạo lô lần đầu / Sấy tiếp) ──
+    safeOn('btn-x1-ss-new', 'click', () => x1SsOpenInputModal('new'));
+    safeOn('btn-x1-ss-repeat', 'click', () => x1SsOpenInputModal('repeat'));
+    safeOn('btn-close-x1-ss-input', 'click', () => x1SsCloseInputModal());
+    const x1SsOv = document.getElementById('modal-x1-ss-input');
+    if (x1SsOv) x1SsOv.addEventListener('click', (e) => { if (e.target === x1SsOv) x1SsCloseInputModal(); });
+    // Banner cảnh báo → mở panel danh sách lô cần xử lý
+    safeOn('x1-ss-alert-banner', 'click', () => x1SsOpenOldPanel());
+    // Chuyển chế độ xem lịch sử Sấy Sinh: 🗂 Thẻ Lô ↔ 📅 Báo cáo theo ngày (nút ở VÙNG ③)
+    safeOn('x1-ss-view-card', 'click', () => setX1SsViewMode('card'));
+    safeOn('x1-ss-view-day', 'click', () => setX1SsViewMode('day'));
     // ── POPUP ĐỊNH MỨC XƯỞNG 1 (1 popup cho 3 công đoạn) ──
     safeOn('btn-x1-cat-ong-rate', 'click', () => openX1RatePopup('catOng'));
     safeOn('btn-x1-say-sinh-rate', 'click', () => openX1RatePopup('saySinh'));
@@ -2612,6 +2627,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const htDel = e.target.closest && e.target.closest('[data-x2-ht-delete]');
       if (htDel) { deleteXuong2HoTro(htDel.getAttribute('data-x2-ht-delete')); return; }
       // ── Click ủy quyền 3 THẺ XƯỞNG 1: sửa / xóa lượt ──
+      const x1SsTg = e.target.closest && e.target.closest('[data-x1-ss-toggle]');
+      if (x1SsTg) { x1SsToggleTimeline(x1SsTg.getAttribute('data-x1-ss-toggle')); return; }
       const x1COEdit = e.target.closest && e.target.closest('[data-x1-cat-ong-edit]');
       if (x1COEdit) { editX1CatOng(x1COEdit.getAttribute('data-x1-cat-ong-edit')); return; }
       const x1CODel = e.target.closest && e.target.closest('[data-x1-cat-ong-delete]');

@@ -58,6 +58,21 @@
   
   --transition-fast: all 0.15s ease-in-out;
   --transition-normal: all 0.25s ease-in-out;
+
+  /* ══════════════════════════════════════════════════════════════════════════════
+     DESIGN SYSTEM — TAB CÔNG ĐOẠN SX (KANBAN) — 21/10/2026
+     Giữ nguyên màu sắc Treat Sáng (data-theme="night"), chỉ gọn gàng hơn. ═══════════════════════════════════════════════════════════════════ */
+  --kanban-card-radius: 10px;
+  --kanban-card-shadow: var(--shadow-sm);
+  --kanban-card-hover-shadow: var(--shadow-md);
+  --kanban-column-bg: #fbfdfa;
+  --kanban-gap: 16px;
+  --kanban-chip-bg: var(--bg-subtle);
+  --kanban-chip-text: var(--text-muted);
+  --kanban-actions-gap: 8px;
+  --stage-say1-accent: #c2410c;
+  --stage-say2-accent: #a16207;
+  --stage-kho-accent: #1d4ed8;
 }
 
 /* Reset & Base Styles */
@@ -1040,9 +1055,9 @@ body[data-fx="low"] .bambu-wordmark {
 .bamboo-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--kanban-card-radius);
+  padding: 10px;
+  box-shadow: var(--kanban-card-shadow);
   transition: var(--transition-fast);
   position: relative;
 }
@@ -13307,6 +13322,198 @@ body[data-fx="low"] .x1-ss-ready-panel { box-shadow: none; }
 }
 body[data-fx="low"] .modal-card { animation: none; }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   KANBAN MODERN — TAB CÔNG ĐOẠN SX (21/10/2026)
+   Thẻ lô gọn hơn, chip công đoạn màu sắc, nhóm nút hành động trên cùng.
+   Giữ nguyên toàn bộ id / data-target / data-perm hiện có. ═════════════════════════════════════════════════════════════════════════════════════ */
+
+.kanban-card-modern {
+  border: 1px solid var(--border-color);
+  border-radius: var(--kanban-card-radius);
+  background: var(--bg-card);
+  box-shadow: var(--kanban-card-shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  overflow: hidden;
+}
+
+.kanban-card-modern:hover {
+  box-shadow: var(--kanban-card-hover-shadow);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+.kanban-card-modern .card-header-modern {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bg-subtle);
+}
+
+.kanban-card-modern .batch-code-modern {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanban-card-modern .stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kanban-card-modern .stage-chip.say1 { background: var(--stage-say1-bg); color: var(--stage-say1-accent); border: 1px solid var(--stage-say1-border); }
+.kanban-card-modern .stage-chip.say2 { background: var(--stage-say2-bg); color: var(--stage-say2-accent); border: 1px solid var(--stage-say2-border); }
+.kanban-card-modern .stage-chip.kho  { background: var(--stage-kho-bg);  color: var(--stage-kho-accent);  border: 1px solid var(--stage-kho-border); }
+
+.kanban-card-modern .dim-spec-modern {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.kanban-card-modern .dim-spec-modern .dim-val {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.kanban-card-modern .qty-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--kanban-chip-bg);
+  color: var(--kanban-chip-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.kanban-card-modern .qty-chip .qty-num { color: var(--primary); font-family: var(--font-mono); }
+
+.kanban-card-modern .card-actions-modern {
+  display: flex;
+  align-items: center;
+  gap: var(--kanban-actions-gap);
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--bg-subtle);
+}
+
+.kanban-card-modern .card-actions-modern .btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.kanban-card-modern .card-actions-modern .btn-icon:hover {
+  background: var(--primary);
+  color: var(--text-inverse);
+  border-color: var(--primary);
+}
+
+/* Header cột Kanban hiện đại */
+.kanban-column-modern .column-header-modern {
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border-color);
+  border-top-left-radius: var(--kanban-card-radius);
+  border-top-right-radius: var(--kanban-card-radius);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kanban-column-modern .column-header-modern.stage-say1 { background: var(--stage-say1-bg); border-bottom-color: var(--stage-say1-border); }
+.kanban-column-modern .column-header-modern.stage-say2 { background: var(--stage-say2-bg); border-bottom-color: var(--stage-say2-border); }
+.kanban-column-modern .column-header-modern.stage-kho  { background: var(--stage-kho-bg);  border-bottom-color: var(--stage-kho-border); }
+
+.kanban-column-modern .header-title-modern {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kanban-column-modern .stage-dot-modern {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+
+.kanban-column-modern .stage-dot-modern.say1 { background: var(--stage-say1-accent); box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.15); }
+.kanban-column-modern .stage-dot-modern.say2 { background: var(--stage-say2-accent); box-shadow: 0 0 0 3px rgba(161, 98, 7, 0.15); }
+.kanban-column-modern .stage-dot-modern.kho  { background: var(--stage-kho-accent);  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15); }
+
+.kanban-column-modern .column-header-modern h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.kanban-column-modern .count-badge-modern {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(21, 128, 61, 0.10);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(21, 128, 61, 0.20);
+}
+
+.kanban-column-modern .column-metrics-modern {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Nút hành động thanh công cụ Kanban gọn hơn */
+.kanban-toolbar-modern .btn {
+  font-size: 0.85rem;
+  padding: 8px 14px;
+  min-height: 40px;
+}
+
+/* Mobile: thẻ con bỏ khung tre, chỉ viền mảnh (quy tắc 15/16) */
+@media (max-width: 639.98px) {
+  .kanban-card-modern { border-radius: 8px; padding: 8px; }
+  .kanban-card-modern .btn-icon { width: 32px; height: 32px; font-size: 0.8rem; }
+  .kanban-column-modern { max-height: 74vh; }
+  body[data-theme="night"] .view-panel { zoom: 0.9; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   ĐĂNG NHẬP / QUÊN MẬT KHẨU — TRẠNG THÁI CHỜ (P3 — 20/10/2026)
+
 /* ═══════════════════════════════════════════════════════════
    ĐĂNG NHẬP / QUÊN MẬT KHẨU — TRẠNG THÁI CHỜ (P3 — 20/10/2026)
    ─ Không còn tự đăng ký trên UI; Admin tạo tài khoản.
@@ -15735,4 +15942,190 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
   .bulk-lot-entry-head { align-items: flex-start; }
   .bulk-lot-entry-head > span { flex: 1; }
   .bulk-lot-default-length { flex-wrap: wrap; }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   XƯỞNG 1 — SẤY SINH: 2 CHẾ ĐỘ XEM LỊCH SỬ
+   (🗂 Thẻ Lô — mặc định · 📅 Báo cáo theo ngày; nút ở VÙNG ③)
+   ═════════════════════════════════════════════════════════════ */
+.x1-ss-view-toggle {
+  display: inline-flex; gap: 0; margin-left: 10px;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  background: var(--surface, #fff);
+}
+.x1-ss-view-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: transparent; cursor: pointer;
+  padding: 6px 12px; font-size: 0.82rem; font-weight: 600;
+  color: var(--text-muted, #666); transition: background .15s, color .15s;
+}
+.x1-ss-view-btn + .x1-ss-view-btn { border-left: 1px solid var(--border); }
+.x1-ss-view-btn:hover { background: rgba(22, 163, 74, 0.08); color: var(--text, #222); }
+.x1-ss-view-btn.is-on {
+  background: var(--primary, #16a34a); color: #fff;
+}
+.x1-ss-view-btn svg { width: 14px; height: 14px; }
+
+/* ── THẺ LÔ ── */
+.x1-ss-lot-card {
+  border: 1px solid var(--border); border-left: 4px solid var(--primary, #16a34a);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;
+  background: var(--surface, #fff);
+}
+.x1-ss-lot-head {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.x1-ss-lot-head .x1-ss-code { font-size: 1.05rem; }
+.x1-ss-qc-chip {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 700;
+}
+.x1-ss-qc-chip.is-pass { background: rgba(22, 163, 74, 0.14); color: #16a34a; }
+.x1-ss-qc-chip.is-fail { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+.x1-ss-qc-chip.is-pending { background: rgba(217, 119, 6, 0.14); color: #d97706; }
+.x1-ss-day-chip {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 600;
+  background: rgba(15, 118, 110, 0.1); color: #0f766e;
+}
+.x1-ss-lot-tools { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.x1-ss-lot-src {
+  font-size: 0.85rem; color: var(--text-muted, #666);
+  padding: 6px 8px; border-radius: 6px;
+  background: rgba(0, 0, 0, 0.025); margin-bottom: 8px;
+}
+.x1-ss-lot-src .x2-row-note { margin-top: 2px; }
+
+/* ── DÒNG THỜI GIAN TỪNG LẦN SẤY ── */
+.x1-ss-timeline {
+  display: flex; flex-direction: column; gap: 4px;
+  border-left: 2px dashed var(--border);
+  padding: 2px 0 2px 12px; margin-left: 6px;
+}
+.x1-ss-tl-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 0.86rem; padding: 3px 0;
+}
+.x1-ss-tl-num {
+  flex: 0 0 auto; font-weight: 700; font-size: 0.76rem;
+  background: rgba(22, 163, 74, 0.12); color: #16a34a;
+  padding: 2px 8px; border-radius: 999px;
+}
+.x1-ss-tl-when {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-variant-numeric: tabular-nums; color: var(--text, #222);
+}
+.x1-ss-tl-when svg { width: 13px; height: 13px; color: var(--text-muted, #888); }
+.x1-ss-tl-lh { color: var(--text-muted, #666); }
+.x1-ss-tl-lh em { font-style: normal; font-size: 0.78rem; opacity: 0.85; }
+.x1-ss-tl-next {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 6px; padding: 7px 10px;
+  border: 1px dashed #d97706; border-radius: 8px;
+  background: rgba(217, 119, 6, 0.07);
+  font-size: 0.85rem; color: #92400e;
+}
+.x1-ss-tl-next svg { width: 15px; height: 15px; flex: 0 0 auto; color: #d97706; }
+.x1-ss-tl-next strong { color: #b45309; font-variant-numeric: tabular-nums; }
+.x1-ss-tl-next.is-done {
+  border-color: #16a34a; background: rgba(22, 163, 74, 0.07); color: #15803d;
+}
+.x1-ss-tl-next.is-done svg { color: #16a34a; }
+
+@media (max-width: 639.98px) {
+  .x1-ss-view-toggle { margin-left: 0; width: 100%; }
+  .x1-ss-view-btn { flex: 1; justify-content: center; padding: 8px 6px; font-size: 0.8rem; }
+  .x1-ss-lot-tools { margin-left: 0; width: 100%; justify-content: flex-end; }
+  .x1-ss-tl-row { gap: 6px; font-size: 0.82rem; }
+  .x1-ss-tl-when { flex: 1 1 auto; }
+}
+
+/* ── BANNER CẢNH BÁO (quá hạn · sắp đến giờ · đã Đạt chờ Bốc) ── */
+.x1-ss-alert-banner {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; margin: 0 0 12px; padding: 9px 12px;
+  border: 1px solid #f59e0b; border-radius: 10px;
+  background: #fef3c7; color: #92400e;
+  font-size: 0.86rem; cursor: pointer; overflow: hidden;
+  text-align: left;
+}
+.x1-ss-alert-banner.is-over { border-color: #dc2626; background: #fee2e2; color: #991b1b; }
+.x1-ss-alert-banner.is-soon { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
+.x1-ss-alert-banner > svg { width: 17px; height: 17px; flex: 0 0 auto; }
+.x1-ss-alert-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; }
+.x1-ss-alert-text.is-marquee { overflow: visible; }
+.x1-ss-marq { display: inline-block; white-space: nowrap; }
+.x1-ss-alert-text.is-marquee .x1-ss-marq { animation: x1SsMarquee 20s linear infinite; }
+@keyframes x1SsMarquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+body[data-fx="low"] .x1-ss-alert-text.is-marquee .x1-ss-marq { animation: none; }
+.x1-ss-alert-count {
+  flex: 0 0 auto; min-width: 22px; height: 22px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.14); color: inherit;
+  font-size: 0.75rem; font-weight: 800; padding: 0 6px;
+}
+.x1-ss-alert-chip {
+  display: inline-block; padding: 1px 8px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700;
+}
+.x1-ss-alert-chip.is-over { background: rgba(220, 38, 38, 0.14); color: #dc2626; }
+.x1-ss-alert-chip.is-soon { background: rgba(217, 119, 6, 0.16); color: #d97706; }
+.x1-ss-alert-chip.is-qcpass { background: rgba(22, 163, 74, 0.14); color: #16a34a; }
+.x1-ss-ready-when {
+  font-size: 0.84rem; margin-top: 4px; color: var(--text-muted, #666);
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+}
+
+/* ── 2 NÚT TO NHẬP LIỆU (thay form inline) ── */
+.x1-ss-input-btns { display: flex; gap: 10px; }
+.x1-ss-input-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 14px 10px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface, #fff);
+  cursor: pointer; min-height: 68px;
+  transition: border-color .15s, box-shadow .15s, transform .1s;
+}
+.x1-ss-input-btn:hover { border-color: var(--primary, #16a34a); box-shadow: 0 2px 8px rgba(22, 163, 74, 0.14); }
+.x1-ss-input-btn:active { transform: scale(0.985); }
+.x1-ss-input-btn > svg { width: 24px; height: 24px; color: var(--primary, #16a34a); }
+.x1-ss-input-btn.is-repeat > svg { color: #d97706; }
+.x1-ss-input-btn strong { font-size: 0.95rem; color: var(--text, #222); }
+.x1-ss-input-btn small { color: var(--text-muted, #777); font-size: 0.74rem; text-align: center; }
+
+/* ── NÚT THU GỌN DÒNG THỜI GIAN TRÊN THẺ LÔ ── */
+.x1-ss-tl-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: transparent; cursor: pointer;
+  padding: 3px 0; margin: 2px 0 4px;
+  font-size: 0.8rem; font-weight: 700; color: var(--primary, #16a34a);
+}
+.x1-ss-tl-toggle svg { width: 14px; height: 14px; }
+.x1-ss-lot-card.is-closed .x1-ss-timeline { display: none; }
+.x1-ss-lot-card.is-closed { border-left-color: var(--border); }
+
+/* ── TỐI ƯU ĐIỆN THOẠI: THẺ LÔ GỌN + 2 NÚT XẾP DỌC ── */
+@media (max-width: 639.98px) {
+  .x1-ss-input-btns { flex-direction: column; gap: 8px; }
+  .x1-ss-input-btn { flex-direction: row; justify-content: flex-start; gap: 10px; min-height: 54px; padding: 10px 12px; }
+  .x1-ss-input-btn > svg { width: 22px; height: 22px; }
+  .x1-ss-input-btn small { text-align: left; }
+  .x1-ss-alert-banner { padding: 8px 10px; font-size: 0.8rem; }
+  .x1-ss-lot-card { padding: 8px 9px; border-radius: 8px; margin-bottom: 9px; }
+  .x1-ss-lot-head { gap: 5px; }
+  .x1-ss-lot-head .x1-ss-code { font-size: 0.95rem; }
+  .x1-ss-qc-chip { padding: 1px 7px; font-size: 0.7rem; }
+  .x1-ss-day-chip { display: none; } /* tuổi lô có trong dòng thời gian, gọn hơn */
+  .x1-ss-lot-tools { margin-left: 0; width: 100%; justify-content: flex-end; }
+  .x1-ss-lot-src { padding: 4px 7px; font-size: 0.78rem; margin-bottom: 4px; }
+  .x1-ss-lot-src > div {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .x1-ss-tl-row { font-size: 0.78rem; gap: 5px; padding: 2px 0; }
+  .x1-ss-tl-lh em { display: none; } /* tỉ lệ kg/tấn ẩn trên mobile cho gọn */
+  .x1-ss-tl-next { font-size: 0.78rem; padding: 6px 8px; }
+  .x1-ss-tl-toggle { font-size: 0.78rem; }
 }

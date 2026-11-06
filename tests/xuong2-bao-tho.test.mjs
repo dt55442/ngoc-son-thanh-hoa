@@ -492,8 +492,8 @@ check('POPUP ĐM: thanh định mức inline ĐÃ DỜ khỏi thân 6 thẻ (n�
 check('GIỜ SỰ CỐ: helper stageIncidentOf/stageEffHours trong utils.js',
   ['stageIncidentKey', 'stageIncidentOf', 'stageEffHours', 'stageIncidentInputHtml']
     .every(fn => jsUtils.includes(`function ${fn}`)));
-check('GIỜ SỰ CỐ: 10 thẻ đều chèn ô nhập data-x2-incident vào đầu thẻ ngày (9 chỗ trong xuong2.js)',
-  (jsX2.match(/stageIncidentInputHtml\('/g) || []).length === 9 &&
+check('GIỜ SỰ CỐ: 11 thẻ đều chèn ô nhập data-x2-incident vào đầu thẻ ngày (10 chỗ trong xuong2.js — thêm Báo cáo ngày Sấy Sinh)',
+  (jsX2.match(/stageIncidentInputHtml\('/g) || []).length === 10 &&
   jsPress.includes("stageIncidentInputHtml('epvan'"));
 check('GIỜ SỰ CỐ: state + storage key đã khai báo (bamboo_tracker_x2_stage_incident_v1)',
   jsState.includes('STORAGE_KEY_X2_STAGE_INCIDENT') &&

@@ -3195,15 +3195,21 @@ body:not(.is-admin) #btn-reset-data {
 }
 
 /* ── CHẾ ĐỘ XEM CÔNG KHAI ─────────────────────────────── */
-/* Khách (chưa đăng nhập): hiện nút Đăng Nhập, ẩn hồ sơ & mục đăng xuất.
-   Đã đăng nhập (admin/editor): ngược lại. */
-body.can-edit #btn-open-login,
-body.is-admin #btn-open-login {
+/* ─── TRẠNG THÁI ĐĂNG NHẬP (11/2026 — SỬA LỖI "MẤT NÚT ĐĂNG NHẬP/ĐĂNG XUẤT"):
+   điều kiện theo data-role (guest = khách) chứ KHÔNG theo quyền sửa —
+   trước đây dùng body.can-edit nên NGƯỜI XEM đăng nhập bị ẩn CẢ pill hồ sơ
+   lẫn nút Đăng Nhập lẫn mục Đăng Xuất (không còn cách nào đăng xuất). */
+body[data-role="guest"] #user-profile-badge,
+body[data-role="guest"] #btn-logout {
   display: none !important;
 }
 
-body:not(.can-edit) #user-profile-badge,
-body:not(.can-edit) #btn-logout {
+body:not([data-role="guest"]) #btn-open-login {
+  display: none !important;
+}
+
+/* BẮT BUỘC ĐĂNG NHẬP (11/2026): cổng khóa — khách không được đóng modal đăng nhập */
+body[data-role="guest"] #btn-close-login {
   display: none !important;
 }
 /* ── PHÂN QUYỀN THEO TAB: ẨN NÚT THÊM/SỬA/XÓA ─────────────────
@@ -16173,4 +16179,23 @@ body[data-fx="low"] .x1-ss-input-btn:active { transform: none; }
   .x1-ss-tl-lh em { display: none; } /* tỉ lệ kg/tấn ẩn trên mobile cho gọn */
   .x1-ss-tl-next { font-size: 0.78rem; padding: 6px 8px; }
   .x1-ss-tl-toggle { font-size: 0.78rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* DẢI "ĐANG CẬP NHẬT SỐ LIỆU TỪ MÁY KHÁC" (11/2026 — nạp theo vai trò):
+   hiện từ lúc mở app tới khi lần đồng bộ ĐẦU hoàn tất. Dùng lại khung
+   .sync-pending-banner (đã có rule [hidden] + responsive sẵn). */
+/* ═══════════════════════════════════════════════════════════════ */
+.sync-pending-banner.is-fresh {
+  background: #e0f2fe; border-bottom-color: #0284c7; color: #075985;
+}
+.sync-pending-banner.is-fresh svg { width: 16px; height: 16px; flex: 0 0 16px; }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* BẮT BUỘC ĐĂNG NHẬP (11/2026): dòng hướng dẫn đăng nhập offline trong modal */
+/* ═══════════════════════════════════════════════════════════════ */
+.login-offline-hint {
+  margin: 8px 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--text-muted);
+  background: var(--bg-subtle, #f8fafc); border: 1px dashed var(--border-color, #cbd5e1);
+  border-radius: 8px; padding: 7px 10px; text-align: left;
 }

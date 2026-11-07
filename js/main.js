@@ -6,7 +6,7 @@ import { deleteBatch, exitKanbanPickMode, exitKhoStockPickMode, loadX2LotLocatio
 import { initTheme } from './theme.js';
 import { hideTreLoading, setTreLoadingStatus, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot
 import { kickXlsxBackgroundLoad } from './xlsx-lazy.js'; // SheetJS nạp NGẦM sau boot (boot nhanh — 11/2026)
-import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
+import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, updateSyncFreshBanner, uploadLocalDataToCloud } from './cloud.js';
 import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần)
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
@@ -35,7 +35,7 @@ import { loadX2IncidentReports, updateIncidentBadge } from './x2-incidents.js'; 
 import { loadKilnData } from './kiln.js'; // Độ ẩm lò sấy (QC nhập) + ngưỡng đạt — Bảng Điều Khiển Lò Sấy
 import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard, hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday } from './hr.js'; // SƠ ĐỒ BONG BÓNG NHÂN SỰ (21/10/2026)
 import { applyCheckinRecord, approveLeave, approveOvertime, approveOvertimeAmendment, cancelOvertime, closeEmployeeModal, closeLeaveModal, closeOvertimeModal, closeOvertimeAmendmentModal, closeRecruitmentModal, deleteCheckin, deleteEmployee, deleteLeave, deletePosition, deleteRecruitment, deletePositionNeed, handleEmployeeSubmit, handleLeaveSubmit, handleOvertimeAmendmentSubmit, handleRecruitmentSubmit, loadHrData, openEmployeeModal, openLeaveModal, openPositionModal, openPositionNeedModal, openRecruitmentModal, rejectLeave, rejectOvertime, rejectOvertimeAmendment, renderHrView, renderHrVisible, renderHrAfterBoardChange, hrShowMoreRows, hrOpenCard, hrCloseOpenCard, hrSetPositionNeedQty, hrBoardOpenAssign, hrBoardRemoveAssign, hrBoardDragStart, hrBoardDrop, requestOvertimeAmendment, setShiftTypePreset, setWorkerEvaluationEfficiencyProvider, HR_CARD_DEFS, hrDockClose } from './hr.js';
-import { canViewAdvanced } from './permissions.js';
+import { APP_TABS, canViewAdvanced, getEditableTabs } from './permissions.js';
 import { initHistory } from './history.js';
 import { APP_VERSION, state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
@@ -142,17 +142,36 @@ function yieldBootFrame() {
   // Cờ CHỈ bật trong boot: renderAll lần đầu HOÃN vẽ biểu đồ Dashboard + Bảng
   // Tổng hợp sang frame kế (scheduleViewDecor) — giao diện hiện ngay trên máy yếu.
   let deferInitialDashDecor = false;
+  // BOOT THEO VAI TRÒ (11/2026): Editor → KHÔNG vẽ trang trí Tổng Quan lúc mở
+  // (dashboardDirty giữ true → tự vẽ khi họ mở tab Tổng Quan qua switchView).
+  let skipDashDecorBoot = false;
+
+  // View NHẬP LIỆU ĐẦU TIÊN editor được cấp quyền (thứ tự theo luồng sản xuất:
+  // Công Đoạn SX (kanban/x1/x2) → Kế Hoạch → Nguyên Liệu → QC → Nhân Sự).
+  // Trả '' khi không có tab nào (→ giữ tab Tổng Quan).
+  function firstEditableDataView() {
+    let tabs = [];
+    try { tabs = getEditableTabs() || []; } catch (e) { return ''; }
+    for (const t of APP_TABS) {
+      if (!t.viewId) continue; // x1/x2 là tab-phụ — đã tính qua 'kanban'
+      if (t.id === 'kanban') {
+        if (tabs.some(k => k === 'kanban' || k === 'x1' || k === 'x2')) return t.viewId;
+        continue;
+      }
+      if (tabs.includes(t.id)) return t.viewId;
+    }
+    return '';
+  }
+  // Đồng bộ class .active của view-panel + nav (KHÔNG render — renderAll tự vẽ)
+  function syncActiveViewDom(viewId) {
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.toggle('active', p.id === viewId));
+    document.querySelectorAll('.nav-btn, .mobile-nav-item').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-target') === viewId);
+    });
+  }
 
   // ─── INIT ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
-    showTreLoading('Đang nạp dữ liệu nhà máy…', {
-      phrases: [
-        'Đang nạp dữ liệu nhà máy…',
-        'Đang đối chiếu dữ liệu đã lưu…',
-        'Đang cập nhật số liệu mới nhất…',
-        'Đang đồng bộ các phân hệ…'
-      ]
-    });
     let bootOk = false;
     try {
     await yieldBootFrame();
@@ -160,6 +179,18 @@ function yieldBootFrame() {
     loadUsers();
     loadSession();
     initTheme(); // Áp giao diện đã chọn (theo máy + theo người đăng nhập) — trước khi vẽ biểu đồ
+    // Câu chờ THEO VAI TRÒ (11/2026 — nạp dữ liệu theo vai trò): Admin/BQL nạp
+    // TOÀN BỘ dữ liệu → nói trước để không tưởng máy treo; Editor nạp nhẹ hơn.
+    const bootPhrases = [
+      'Đang nạp dữ liệu nhà máy…',
+      'Đang đối chiếu dữ liệu đã lưu…',
+      'Đang cập nhật số liệu mới nhất…',
+      'Đang đồng bộ các phân hệ…'
+    ];
+    if (state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'manager')) {
+      bootPhrases.push('Tài khoản Quản Trị: đang nạp toàn bộ dữ liệu — vui lòng chờ…');
+    }
+    showTreLoading('Đang nạp dữ liệu nhà máy…', { phrases: bootPhrases });
     loadData();
     await yieldBootFrame();
     setTreLoadingStatus('Đang nạp kế hoạch và định mức…');
@@ -273,12 +304,26 @@ function yieldBootFrame() {
     }
     updateUndoButton();
     updateFileStorageUI();
+    // BOOT THEO VAI TRÒ (11/2026): Editor → KHÔNG vẽ biểu đồ lúc mở (giữ cờ
+    // dirty — tự vẽ khi họ mở tab Tổng Quan) + mở thẳng tab NHẬP LIỆU đầu tiên
+    // được cấp quyền để vào việc ngay. Admin/BQL/Viewer giữ luồng đầy đủ.
+    skipDashDecorBoot = true;
+    if (state.currentUser && state.currentUser.role === 'editor') {
+      const bootView = firstEditableDataView();
+      if (bootView && bootView !== 'dashboard-view') {
+        state.activeView = bootView;
+        syncActiveViewDom(bootView);
+      }
+    }
     // BOOT NHANH (11/2026): LẦN VẼ ĐẦU chỉ hiện tab Tổng Quan (dữ liệu + nút),
     // biểu đồ + Bảng Tổng hợp Công suất (trang trí nặng) HOÃN sang frame kế qua
     // scheduleViewDecor — máy yếu không đứng hình lúc mở app.
     deferInitialDashDecor = true;
     checkAuthAndRender();
     deferInitialDashDecor = false; // các lần renderAll SAU vẫn vẽ ngay như cũ
+    skipDashDecorBoot = false;
+    // Dải "đang cập nhật số liệu từ máy khác" — tự tắt khi lần đồng bộ đầu xong
+    try { updateSyncFreshBanner(); } catch (e) { /* bỏ qua */ }
     // Tự động kết nối lại thư mục dữ liệu đã chọn trước đó
     autoReconnectDataFolder();
     // NỘI DUNG NỀN (11/2026): đăng ký Service Worker (precache ~80 file) +
@@ -559,7 +604,11 @@ function yieldBootFrame() {
       filterMobileKanbanColumns();
     }
     if (state.activeView === 'dashboard-view') {
-      if (deferInitialDashDecor) {
+      if (skipDashDecorBoot) {
+        // BOOT THEO VAI TRÒ (editor): KHÔNG vẽ trang trí lúc mở — cờ dirty giữ
+        // true → tự vẽ khi người dùng mở tab Tổng Quan (switchView)
+        dashboardDirty = true;
+      } else if (deferInitialDashDecor) {
         // BOOT NHANH: lần vẽ ĐẦU chỉ hiện khung — biểu đồ + Bảng Tổng hợp vẽ
         // ở frame kế qua scheduleViewDecor (tab đã hiện ra trước đó)
         dashboardDirty = true; // vẫn báo CẦN VẼ để khung hoãn vẽ đủ

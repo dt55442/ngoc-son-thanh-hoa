@@ -185,8 +185,9 @@ check('E14: KHÔNG trim mật khẩu khi đăng nhập (chỉ trim email)',
 check('E15: cloud.js báo bước + nhả khoá khi xác thực xong, chống toast lặp khi refresh token',
   clJs.includes("authMarkStep('Đang xác minh quyền…')") && clJs.includes('authNotifySettled()') &&
   clJs.includes('fbLastAuthUid'));
-check('E16: cloud.js không renderAll vô ích khi phiên đã null từ đầu',
-  clJs.includes('const hadSession = !!state.currentUser;') && clJs.includes('if (hadSession) renderAll();'));
+check('E16: cloud.js không renderAll vô ích khi phiên đã null từ đầu (cổng khóa chỉ khi có phiên trước)',
+  clJs.includes('const hadSession = !!state.currentUser;') && clJs.includes('if (hadSession) checkAuthAndRenderFirebase();')
+  && !/if \(!user\) \{[\s\S]{0,700}if \(hadSession\) renderAll\(\);/.test(clJs));
 check('E17: main.js mở API app.sendPasswordResetToUser cho nút trong bảng người dùng',
   rd('js/main.js').includes('sendPasswordResetToUser'));
 
@@ -207,9 +208,9 @@ check('E19: CSS có spinner + thanh chạy + ẩn panel bằng [hidden] !importa
 check('E20: ngoặc CSS cân bằng', (css.match(/\{/g) || []).length === (css.match(/\}/g) || []).length);
 const swJs = rd('sw.js');
 check('E21: sw.js v364 + ./js/auth-ui.js trong APP_SHELL',
-  swJs.includes("'nha-may-ngoc-son-v371'") && swJs.includes("'./js/auth-ui.js'"));
+  swJs.includes("'nha-may-ngoc-son-v372'") && swJs.includes("'./js/auth-ui.js'"));
 check('E22: APP_VERSION = v364 (khớp CACHE_NAME — quy tắc 73)',
-  rd('js/state.js').includes("APP_VERSION = 'v371'"));
+  rd('js/state.js').includes("APP_VERSION = 'v372'"));
 check('E23: tests/auth-ui.test.mjs đã nằm trong chuỗi npm test',
   rd('package.json').includes('tests/auth-ui.test.mjs'));
 

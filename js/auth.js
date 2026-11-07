@@ -63,8 +63,18 @@ import { escapeHTML, showToast } from './utils.js';
   }
 
   function checkAuthAndRender() {
-    // XEM CÔNG KHAI: không ép đăng nhập; ai cũng xem được
-    document.getElementById('modal-login')?.classList.remove('show');
+    // BẮT BUỘC ĐĂNG NHẬP (11/2026 — đổi chuẩn P3, đã chốt với người dùng):
+    // chưa đăng nhập → CỔNG KHÓA: modal đăng nhập hiện và KHÔNG đóng được
+    // (ẩn nút Đóng bằng CSS body[data-role="guest"] + chặn bấm Đóng ở events.js).
+    // Đăng nhập xong (cục bộ hoặc Firebase) → cổng tự nhả, app hiện bình thường.
+    const gate = !state.currentUser;
+    state.loginGate = gate;
+    const loginModal = document.getElementById('modal-login');
+    if (loginModal) {
+      if (gate) loginModal.classList.add('show');
+      else if (state.loginGateWasOn) loginModal.classList.remove('show');
+    }
+    state.loginGateWasOn = gate;
     if (state.currentUser) {
       updateUserProfileHeader();
       applyRoleToUI(state.currentUser.role);

@@ -806,15 +806,26 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   function handleFirebaseAuth(user) {
     fbAuthLoaded = true;
     if (!user) {
-      // Khách vãng lai (chưa đăng nhập): chỉ XEM, không ép mở modal đăng nhập
+      // TÀI KHOẢN CỤC BỘ (11/2026): bản ghi không có `uid` = đăng nhập từ danh
+      // sách người dùng TRÊN MÁY — Firebase chưa đăng nhập KHÔNG được đá phiên
+      // này (trước đây onAuthStateChanged(null) xóa state.currentUser khiến
+      // người dùng cục bộ mất phiên mỗi lần online).
+      const cur = state.currentUser;
+      if (cur && !cur.uid) {
+        applyRoleToUI(cur.role);
+        authNotifySettled();
+        return;
+      }
       const hadSession = !!state.currentUser;
       state.currentUser = null;
       fbLastAuthUid = ''; // đăng xuất → lần đăng nhập sau vẫn có toast chào
       if (hadSession) saveSession();
       applyRoleToUI(null);
-      // Chỉ renderAll khi TRƯỚC ĐÓ có phiên — tránh dựng lại toàn bộ dashboard
-      // vô ích mỗi lần mở app (authState null bắn ngay lúc boot).
-      if (hadSession) renderAll();
+      // CỔNG KHÓA ĐĂNG NHẬP: hết phiên (đăng xuất / hết hạn) → quay lại màn
+      // đăng nhập. Chỉ làm khi TRƯỚC ĐÓ có phiên — tránh dựng lại toàn bộ
+      // dashboard vô ích mỗi lần mở app (authState null bắn ngay lúc boot;
+      // lúc boot thì checkAuthAndRender đã mở cổng).
+      if (hadSession) checkAuthAndRenderFirebase();
       authNotifySettled(); // nhả trạng thái chờ đăng nhập (nếu có)
       return;
     }
@@ -1237,9 +1248,17 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
 
 
 
-  // Hiển thị app; nếu đã đăng nhập thì cập nhật hồ sơ. Không ép đăng nhập (xem công khai)
+  // Hiển thị app + CỔNG KHÓA ĐĂNG NHẬP (11/2026 — bắt buộc đăng nhập, chốt với
+  // người dùng): chưa đăng nhập → giữ/mở modal; chỉ tự đóng khi vừa THOÁT khỏi
+  // cổng (loginGateWasOn) — tránh đóng nhầm modal đăng nhập được mở tay khác.
   function checkAuthAndRenderFirebase() {
-    document.getElementById('modal-login')?.classList.remove('show');
+    const gate = !state.currentUser;
+    const loginModal = document.getElementById('modal-login');
+    if (loginModal) {
+      if (gate) loginModal.classList.add('show');
+      else if (state.loginGateWasOn) loginModal.classList.remove('show');
+    }
+    state.loginGateWasOn = gate;
     if (state.currentUser) updateUserProfileHeader();
     renderAll();
   }
@@ -2802,6 +2821,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     } catch (e) { /* bỏ qua */ }
     if (conflictBtn) conflictBtn.style.display = conflictN ? '' : 'none';
     try { updateSyncPendingBanner(); } catch (e) { /* bỏ qua */ }
+    try { updateSyncFreshBanner(); } catch (e) { /* bỏ qua */ }
     el.title = 'Trạng thái đồng bộ dữ liệu mây (tự động 2 chiều)'
       + (fbSyncState && fbSyncState.lastSyncedAt ? '\nLần đồng bộ gần nhất: ' + new Date(fbSyncState.lastSyncedAt).toLocaleString('vi-VN') : '')
       + (conflictN ? '\n⚠ Có ' + conflictN + ' bản ghi xung đột — mở menu ⋮ → Xung Đột Đồng Bộ' : '');
@@ -2812,6 +2832,20 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     window.addEventListener('online', updateSyncBadge);
     window.addEventListener('offline', updateSyncBadge);
     document.addEventListener('visibilitychange', updateSyncBadge);
+  }
+
+  // ─── DẢI "ĐANG CẬP NHẬT SỐ LIỆU TỪ MÁY KHÁC" (11/2026 — nạp theo vai trò) ──
+  // Hiện từ lúc mở app tới khi lần đồng bộ ĐẦU hoàn tất (đã nhận dữ liệu mây
+  // ≥ 1 lần) → người dùng biết bảng/công đoạn có thể CHƯA đủ số mới nhất, khỏi
+  // tưởng số liệu sai. Offline / máy cục bộ → ẩn (badge đã báo đỏ/xám).
+  function cloudInitialSyncPending() {
+    return !!window.__BAMBOO_FIREBASE_READY__ && fbEnabled && !fbDidLoadRemote
+      && (typeof navigator === 'undefined' || navigator.onLine !== false);
+  }
+  function updateSyncFreshBanner() {
+    const el = document.getElementById('sync-fresh-banner');
+    if (!el) return;
+    el.hidden = !cloudInitialSyncPending();
   }
 
   // ─── ĐẨY MÂY THEO CHUỖI VIỆC (idle-debounce) ──────────────────
@@ -3136,6 +3170,8 @@ export {
   canPushToCloud,
   captureSyncBase,
   checkAuthAndRenderFirebase,
+  cloudInitialSyncPending,
+  updateSyncFreshBanner,
   chunkString,
   clearAllSyncConflicts,
   clearSyncConflict,

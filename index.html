@@ -77,6 +77,11 @@
     <span id="firebase-data-warning-text"></span>
   </div>
 
+  <div class="sync-pending-banner is-fresh" id="sync-fresh-banner" hidden role="status">
+    <i data-lucide="refresh-cw"></i>
+    <span>Đang cập nhật số liệu từ máy khác… (bảng có thể chưa đủ số mới nhất)</span>
+  </div>
+
   <!-- ═══ BANNER "GHI TẠM TRÊN MÁY" (18/10/2026 — quy tắc 73) ═══
        Hiện khi có thay đổi CHƯA lên mây — đặc biệt phiếu kho / kiểm kê (SỔ CÁI):
        người dùng KHÔNG được tưởng số liệu đã đồng bộ. Bật/tắt bằng
@@ -7056,6 +7061,10 @@
 
         <p class="login-help-row">Chưa có tài khoản? Vui lòng liên hệ Quản trị viên
           <strong id="login-owner-email">Quản trị viên</strong> để được cấp tài khoản.</p>
+
+        <!-- BẮT BUỘC ĐĂNG NHẬP (11/2026): hướng dẫn đăng nhập khi mất mạng -->
+        <p class="login-offline-hint">💡 Mất mạng? Đăng nhập bằng <strong>TÊN ĐĂNG NHẬP</strong> do Quản trị
+          cấp (tài khoản cục bộ trên máy). Tài khoản email cần mạng ở lần đăng nhập đầu.</p>
       </form>
 
       <!-- PANEL 2: QUÊN MẬT KHẨU (P3 — KHÔNG còn tự đăng ký; Admin tạo tài khoản) -->

@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v371';
+  const APP_VERSION = 'v372';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -318,6 +318,12 @@
 
   let state = {
     currentUser: null,
+    // BẮT BUỘC ĐĂNG NHẬP (11/2026 — đổi chuẩn P3, chốt với người dùng):
+    // loginGate = true khi CHƯA đăng nhập → modal đăng nhập thành CỔNG KHÓA
+    // (không đóng được); loginGateWasOn nhớ lần trước để chỉ tự đóng modal
+    // khi vừa thoát khỏi cổng (tránh đóng nhầm modal đăng nhập mở tay khác).
+    loginGate: false,
+    loginGateWasOn: false,
     users: [],
     batches: [],
     activeView: 'dashboard-view', // Dashboard là màn hình hiển thị ban đầu

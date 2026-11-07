@@ -253,6 +253,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-forgot-password', 'click', () => toggleAuthPanel('reset'));
     safeOn('btn-back-login', 'click', () => toggleAuthPanel('login'));
     safeOn('btn-close-login', 'click', () => {
+      // BẮT BUỘC ĐĂNG NHẬP (11/2026): cổng khóa — chưa đăng nhập thì KHÔNG đóng
+      if (state.loginGate) { showToast('Cần đăng nhập để sử dụng ứng dụng.', 'info'); return; }
       authReset();
       document.getElementById('modal-login')?.classList.remove('show');
     });

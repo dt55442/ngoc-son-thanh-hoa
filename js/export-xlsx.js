@@ -15,6 +15,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_ME
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
 import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
 import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from './x2-phu-pham.js';
+import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/xlsx-lazy.js
 
   // ─── CUSTOM XLSX EXPORT ───────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════
@@ -258,12 +259,30 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
   // =============================================================
 
   // ─── HELPERS CHUNG ────────────────────────────────────────────
+  // THƯ VIỆN NẠP TRỄ (11/2026): SheetJS giờ nạp NGẦM sau boot (js/xlsx-lazy.js).
+  // Nếu người dùng bấm Xuất NGAY khi boot xong mà XLSX chưa nạp kịp → đừng báo
+  // lỗi chết, mà ĐẨY nạp ngay + nhắc chờ ít giây (các cổng retryWhenXlsxReady
+  // ở exportDataToXlsx / exportMultiSheetToXlsx / openExportPreview sẽ TỰ chạy
+  // lại thao tác khi nạp xong).
   function requireXlsxLib() {
     if (!window.XLSX) {
-      showToast('Thư viện .xlsx chưa sẵn sàng. Kiểm tra kết nối mạng!', 'error');
+      try { ensureXlsx().catch(() => {}); } catch (e) { /* bỏ qua */ }
+      showToast('Thư viện .xlsx đang nạp nền — thử lại sau ít giây!', 'info');
       return false;
     }
     return true;
+  }
+  // Chờ thư viện nạp xong rồi TỰ chạy lại thao tác (dùng ở 3 cổng xuất chính)
+  function retryWhenXlsxReady(fn, label) {
+    showToast('Đang nạp thư viện Excel…', 'info');
+    ensureXlsx()
+      .then(() => {
+        try { fn(); } catch (e) {
+          console.error('[' + label + '] Lỗi sau khi nạp thư viện:', e);
+          showToast('Lỗi ' + label + ': ' + ((e && e.message) || e), 'error');
+        }
+      })
+      .catch(() => showToast('Không tải được thư viện Excel. Kiểm tra kết nối mạng rồi thử lại!', 'error'));
   }
   // NGÀY THEO GIỜ MÁY (VN) — KHÔNG dùng toISOString (UTC) vì buổi sáng sẽ ra HÔM QUA
   function todayStamp() {
@@ -285,6 +304,9 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
   // '0.0'} — SheetJS bản free GHI ĐƯỢC định dạng số nhưng BỎ QUA màu nền (màu
   // chỉ hiện ở màn Xem Trước); khai báo vẫn giữ để dùng khi nâng cấp thư viện.
   function exportDataToXlsx(d) {
+    // THƯ VIỆN NẠP TRỄ: XLSX chưa có (bấm Xuất ngay khi boot) → chờ nạp xong
+    // rồi TỰ chạy lại; khi đã có → chạy SYNC như cũ (stub test không đổi hành vi)
+    if (!window.XLSX) { retryWhenXlsxReady(() => exportDataToXlsx(d), 'Xuất Excel'); return; }
     // LOADING "nông dân chặt tre": xuất chạy sync (có thể giây lát với bảng lớn)
     // → thấy cảnh đang chặt, xong file tải về → tre GÃY; lỗi → tre đứng im.
     showTreLoading('Đang xuất file Excel…');
@@ -492,6 +514,8 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
   // Xuất NHIỀU BÁO CÁO vào 1 file (mỗi báo cáo 1 sheet) — "Xuất cả nhóm"
   function exportMultiSheetToXlsx(items, filename) {
     if (!items || !items.length) { showToast('Không có báo cáo nào để xuất!', 'error'); return; }
+    // THƯ VIỆN NẠP TRỄ: XLSX chưa có → chờ nạp xong rồi TỰ chạy lại
+    if (!window.XLSX) { retryWhenXlsxReady(() => exportMultiSheetToXlsx(items, filename), 'Xuất Excel'); return; }
     showTreLoading('Đang xuất file Excel…');
     let ok = false;
     try {
@@ -2036,7 +2060,8 @@ import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from '
   let exportPreviewState = null; // { data, builder, deletedRows:Set, overrides:{} }
 
   function openExportPreview(sourceModalId, builder) {
-    if (!requireXlsxLib()) return;
+    // THƯ VIỆN NẠP TRỄ: XLSX chưa có → chờ nạp xong rồi TỰ mở lại
+    if (!window.XLSX) { retryWhenXlsxReady(() => openExportPreview(sourceModalId, builder), 'Xuất Excel'); return; }
     const data = builder();
     if (!data) return;
     if (data.warning) showToast(data.warning, 'error');

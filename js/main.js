@@ -5,6 +5,7 @@ import { checkAuthAndRender, deleteUser, loadSession, loadUsers, openUserEditMod
 import { deleteBatch, exitKanbanPickMode, exitKhoStockPickMode, loadX2LotLocations, openBatchFormModal } from './batch-modals.js';
 import { initTheme } from './theme.js';
 import { hideTreLoading, setTreLoadingStatus, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot
+import { kickXlsxBackgroundLoad } from './xlsx-lazy.js'; // SheetJS nạp NGẦM sau boot (boot nhanh — 11/2026)
 import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, uploadLocalDataToCloud } from './cloud.js';
 import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần)
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
@@ -120,6 +121,28 @@ function yieldBootFrame() {
   });
 }
 
+  // ─── BOOT NHANH (11/2026): NỘI DUNG NỀN + HOÃN VẼ TRANG TRÍ LẦN ĐẦU ──────
+  // Chạy 1 việc khi máy RẢNH (requestIdleCallback, timeout 4s; Node test dùng
+  // setTimeout có unref — không giữ process sống). Dùng cho: đăng ký Service
+  // Worker (precache ~80 file) + nạp ngầm SheetJS 864KB.
+  function runWhenIdle(cb) {
+    try {
+      if (typeof requestIdleCallback === 'function') { requestIdleCallback(cb, { timeout: 4000 }); return; }
+    } catch (e) { /* rơi xuống setTimeout */ }
+    const t = setTimeout(cb, 2500);
+    if (t && typeof t.unref === 'function') t.unref();
+  }
+  function scheduleBootBackgroundTasks() {
+    // (a) Service Worker — hoạt động OFFLINE (PWA). registerServiceWorker tự
+    //     nhận biết trang đã tải xong để đăng ký NGAY (không chờ sự kiện load).
+    runWhenIdle(() => { try { registerServiceWorker(); } catch (e) { console.warn('[PWA] Không đăng ký được Service Worker:', e); } });
+    // (b) SheetJS (file lớn nhất 864KB, chỉ cần khi Xuất/Nạp Excel) — nạp ngầm
+    runWhenIdle(() => { try { kickXlsxBackgroundLoad(); } catch (e) { /* bỏ qua */ } });
+  }
+  // Cờ CHỈ bật trong boot: renderAll lần đầu HOÃN vẽ biểu đồ Dashboard + Bảng
+  // Tổng hợp sang frame kế (scheduleViewDecor) — giao diện hiện ngay trên máy yếu.
+  let deferInitialDashDecor = false;
+
   // ─── INIT ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
     showTreLoading('Đang nạp dữ liệu nhà máy…', {
@@ -219,8 +242,13 @@ function yieldBootFrame() {
     // xóa hàng loạt vào log sửa đổi).
     purgeLegacyBaoTinhBatches();
     // Lịch sử sửa đổi: nạp + lập snapshot nền SAU CÙNG (sau khi toàn bộ
-    // load*() đã xong) — để lần sửa đầu tiên là so sánh được chính xác
-    initHistory();
+    // load*() đã xong) — để lần sửa đầu tiên là so sánh được chính xác.
+    // BOOT NHANH (11/2026): snapshot stringify TOÀN BỘ dữ liệu nên HOÃN sang
+    // nhịp kế (setTimeout 0) — vẫn chạy sau mọi load*(), giao diện hiện trước.
+    setTimeout(() => {
+      try { initHistory(); }
+      catch (e) { console.error('[LỊCH SỬ] Không nạp được lịch sử sửa đổi lúc boot:', e); }
+    }, 0);
     // Nhớ lại trạng thái thu gọn của các bảng dữ liệu (định mức, lượt ép, nguyên liệu)
     restoreRateTableCollapse();
     setupEventListeners();
@@ -245,11 +273,18 @@ function yieldBootFrame() {
     }
     updateUndoButton();
     updateFileStorageUI();
+    // BOOT NHANH (11/2026): LẦN VẼ ĐẦU chỉ hiện tab Tổng Quan (dữ liệu + nút),
+    // biểu đồ + Bảng Tổng hợp Công suất (trang trí nặng) HOÃN sang frame kế qua
+    // scheduleViewDecor — máy yếu không đứng hình lúc mở app.
+    deferInitialDashDecor = true;
     checkAuthAndRender();
+    deferInitialDashDecor = false; // các lần renderAll SAU vẫn vẽ ngay như cũ
     // Tự động kết nối lại thư mục dữ liệu đã chọn trước đó
     autoReconnectDataFolder();
-    // Đăng ký Service Worker để hoạt động OFFLINE (PWA)
-    registerServiceWorker();
+    // NỘI DUNG NỀN (11/2026): đăng ký Service Worker (precache ~80 file) +
+    // nạp ngầm SheetJS — HOÃN tới khi máy rảnh để lần đầu mở không cạnh tranh
+    // tài nguyên/băng thông với việc vẽ app (máy yếu hết "treo" lúc boot).
+    scheduleBootBackgroundTasks();
     // Dữ liệu cục bộ đã sẵn sàng; Firebase khởi tạo và đồng bộ trong nền.
     setTreLoadingStatus('Đang kết nối Firebase ở nền…');
     void initFirebase().catch((e) => {
@@ -524,10 +559,17 @@ function yieldBootFrame() {
       filterMobileKanbanColumns();
     }
     if (state.activeView === 'dashboard-view') {
-      renderDashboardCharts();
-      // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)
-      renderCapacityCard();
-      dashboardDirty = false; // vừa vẽ xong tại chỗ → không phải vẽ lại khi quay lại tab
+      if (deferInitialDashDecor) {
+        // BOOT NHANH: lần vẽ ĐẦU chỉ hiện khung — biểu đồ + Bảng Tổng hợp vẽ
+        // ở frame kế qua scheduleViewDecor (tab đã hiện ra trước đó)
+        dashboardDirty = true; // vẫn báo CẦN VẼ để khung hoãn vẽ đủ
+        scheduleViewDecor('dashboard-view', true);
+      } else {
+        renderDashboardCharts();
+        // Bảng TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (thẻ đầu tab Tổng Quan — js/capacity.js)
+        renderCapacityCard();
+        dashboardDirty = false; // vừa vẽ xong tại chỗ → không phải vẽ lại khi quay lại tab
+      }
     }
     if (state.activeView === 'leadership-view') renderLeadershipDashboard();
     if (state.activeView === 'planning-view') renderPlanningView();

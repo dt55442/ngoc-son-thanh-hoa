@@ -19,20 +19,43 @@
   <!-- Local Fonts: Inter & JetBrains Mono (OFFLINE) -->
   <link rel="stylesheet" href="fonts/fonts.css">
   
-  <!-- Local Lucide Icons (OFFLINE) -->
-  <script src="vendor/lucide.min.js"></script>
+  <!-- Local Lucide Icons (OFFLINE) — DEFER: KHÔNG chặn parse HTML nữa.
+       Trước đây các script vendor chặn phân tích ⇒ trong suốt thời gian tải mạng
+       màn hình TRẮNG (overlay chờ nằm trong body chưa được vẽ) ⇒ người dùng
+       tưởng app "treo" khi mở lần đầu. Với defer: HTML vẽ ngay (thấy overlay),
+       script tải SONG SONG và chạy theo đúng thứ tự trước DOMContentLoaded. -->
+  <script defer src="vendor/lucide.min.js"></script>
 
   <!-- Local Chart.js (OFFLINE) -->
-  <script src="vendor/chart.umd.js"></script>
+  <script defer src="vendor/chart.umd.js"></script>
 
-  <!-- Local SheetJS xlsx (OFFLINE) -->
-  <script src="vendor/xlsx.full.min.js"></script>
+  <!-- SheetJS xlsx KHÔNG còn nạp ở đây — file lớn nhất (864KB) mà chỉ cần khi
+       Xuất Excel / Nạp file Excel. Nay NẠP TRỄ qua js/xlsx-lazy.js: boot xong
+       tự nạp NGẦM khi máy rảnh; bấm Xuất trước đó cũng tự chờ nạp xong rồi chạy.
+       (vẫn nằm trong APP_SHELL của sw.js nên dùng OFFLINE được) -->
 
-  <!-- Firebase SDK (ONLINE - khi mất mạng các script này lỗi và app tự chuyển OFFLINE) -->
   <!-- Firebase SDK: nạp bản LOCAL trong vendor/ (nhanh + hoạt động offline) -->
-  <script src="vendor/firebase-app-compat.js"></script>
-  <script src="vendor/firebase-auth-compat.js"></script>
-  <script src="vendor/firebase-firestore-compat.js"></script>
+  <script defer src="vendor/firebase-app-compat.js"></script>
+  <script defer src="vendor/firebase-auth-compat.js"></script>
+  <script defer src="vendor/firebase-firestore-compat.js"></script>
+
+  <!-- CSS NỘI TUYẾN TỐI THIỂU cho MÀN HÌNH CHỜ: hiển thị đúng overlay "nông dân
+       chặt tre" ngay cả khi styles.css (624KB) chưa tải xong — hết màn hình trắng
+       lần đầu mở. Khi styles.css nạp xong sẽ GHI ĐÈ các rule này (bản đầy đủ). -->
+  <style>
+    .tre-loading { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(120% 90% at 50% 10%, rgb(30 58 38 / .87) 0%, rgb(20 35 26 / .9) 55%, rgb(14 26 18 / .93) 100%); }
+    .tre-loading.is-gone { opacity: 0; visibility: hidden; pointer-events: none; }
+    .tre-loading-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 26px 14px; border-radius: 20px; background: linear-gradient(180deg, #fffdf6, #f5f1df); border: 2px solid #0f766e; box-shadow: 0 24px 60px rgba(0, 0, 0, .45); max-width: min(92vw, 430px); font-family: system-ui, sans-serif; }
+    .tre-scene { width: min(86vw, 370px); aspect-ratio: 640 / 360; background: url("icons/loading/tre-sprite.png") 0 0 / 600% 300% no-repeat; animation: treChop 0.83s steps(1) infinite; }
+    .tre-loading-status { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 28px; }
+    .tre-loading-spinner { width: 20px; height: 20px; flex: 0 0 20px; border: 3px solid rgb(15 118 110 / .22); border-top-color: #0f766e; border-radius: 50%; animation: treLoadingSpin .9s linear infinite; }
+    .tre-loading-text { font-weight: 700; font-size: .95rem; color: #14532d; text-align: center; }
+    .tre-progress { position: relative; width: min(78vw, 340px); height: 16px; margin-top: 6px; border: 2px solid #0f766e; border-radius: 999px; background: #e7e2cc; overflow: hidden; }
+    .tre-progress-fill { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; border-radius: 999px; background: linear-gradient(90deg, #16a34a 0%, #d97706 78%, #ea580c 100%); transform: scaleX(0); transform-origin: left center; transition: transform .12s linear; }
+    .tre-progress-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .68rem; font-weight: 800; color: #14532d; }
+    @keyframes treChop { 0% { background-position: 0% 0%; } 7.69% { background-position: 20% 0%; } 15.38% { background-position: 40% 0%; } 23.08% { background-position: 60% 0%; } 30.77% { background-position: 80% 0%; } 38.46% { background-position: 100% 0%; } 46.15% { background-position: 0% 50%; } 53.85% { background-position: 20% 50%; } 61.54% { background-position: 40% 50%; } 69.23% { background-position: 60% 50%; } 76.92% { background-position: 80% 50%; } 84.62% { background-position: 100% 50%; } 92.31% { background-position: 0% 100%; } 100% { background-position: 0% 0%; } }
+    @keyframes treLoadingSpin { to { transform: rotate(360deg); } }
+  </style>
 
   <!-- CSS Style -->
   <link rel="stylesheet" href="styles.css">
@@ -7604,7 +7627,7 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- App Script -->
-  <script src="firebase-config.js"></script>
+  <script defer src="firebase-config.js"></script>
   <script type="module" src="js/main.js"></script>
 
   <!-- BOOT WATCHDOG: phát hiện lỗi nạp (mở trực tiếp file:// hoặc cache/SW cũ chặn module) -->

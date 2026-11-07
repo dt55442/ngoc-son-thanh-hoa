@@ -3087,13 +3087,18 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
 
   // Đăng ký Service Worker - cho phép ứng dụng hoạt động ngoại tuyến hoàn toàn
+  // BOOT NHANH (11/2026): hàm có thể được gọi SAU khi trang đã tải xong (hoãn
+  // tới khi máy rảnh — js/main.js scheduleBootBackgroundTasks) → khi đó đăng ký
+  // NGAY, đừng chờ sự kiện load đã qua (sẽ không bao giờ bắn nữa).
   function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
+      const doReg = () => {
         navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
           .then(reg => console.log('[PWA] Service Worker đã đăng ký:', reg.scope))
           .catch(err => console.warn('[PWA] Lỗi đăng ký Service Worker:', err));
-      });
+      };
+      if (document.readyState === 'complete') doReg();
+      else window.addEventListener('load', doReg);
     }
   }
 

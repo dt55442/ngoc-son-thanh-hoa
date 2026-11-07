@@ -23,6 +23,7 @@ import { canArea, canEditAnything, canPayLock } from './permissions.js';
 import { escapeHTML, showToast } from './utils.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — che lúc đọc file Excel
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB)
+import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc file Excel chờ nạp xong
 
   // ─── HẰNG SỐ NHÂN SỰ ────────────────────────────────────────────
   // Bộ phận cố định theo mô hình nhà máy — thứ tự này cũng dùng để SẮP XẾP
@@ -118,6 +119,22 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     });
     return [...map.values()];
   }
+  // SO SÁNH RẺ 2 MẢNG BẢN GHI (11/2026 — boot nhanh): trước đây dùng
+  // JSON.stringify(merged) !== JSON.stringify(arr) — STRINGIFY KÉP cả miền lớn
+  // (12 tháng Nhân sự ≈ chục MB) ⇒ máy yếu "treo" mỗi lần mở app. Nay: khác số
+  // lượng / khác mốc thời gian → khác ngay; chỉ stringify TỪNG BẢN GHI khi 2 bản
+  // nghi ngờ trùng mốc (rẻ hơn hàng chục lần, vẫn không bỏ sót thay đổi thật).
+  function hrArrDiffers(a, b) {
+    if (!a || !b) return a !== b;
+    if (a.length !== b.length) return true;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] === b[i]) continue; // cùng tham chiếu — chắc chắn giống
+      if (hrRecStampOf(a[i]) !== hrRecStampOf(b[i])) return true;
+      try { if (JSON.stringify(a[i]) !== JSON.stringify(b[i])) return true; }
+      catch (e) { return true; } // không so được → coi như khác (an toàn: sẽ ghi)
+    }
+    return false;
+  }
   function hrWriteLocalCache(dom) {
     const io = HR_DOMAIN_IO.find(x => x.dom === dom);
     if (!io) return;
@@ -135,7 +152,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
           const local = state[dom] || [];
           const merged = arr.length ? hrMergeRecords(arr, local) : local;
           state[dom] = merged;
-          if (JSON.stringify(merged) !== JSON.stringify(arr) && merged.length) {
+          if (hrArrDiffers(merged, arr) && merged.length) {
             writes.push(repo.putDomain(dom, merged, { dropMissing: true }));
           }
         });
@@ -4754,6 +4771,13 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const box = document.getElementById('checkin-import-summary');
     const doBtn = document.getElementById('btn-do-checkin-import');
     if (!file || !box || !doBtn) return;
+    // THƯ VIỆN NẠP TRỄ: XLSX chưa có (nạp Excel ngay sau boot) → chờ nạp xong rồi tự chạy lại
+    if (!window.XLSX) {
+      showToast('Đang nạp thư viện đọc Excel…', 'info');
+      ensureXlsx().then(() => handleCheckinImportFile(e))
+        .catch(() => { showToast('Không tải được thư viện đọc Excel. Kiểm tra kết nối mạng rồi thử lại!', 'error'); box.innerHTML = ''; });
+      return;
+    }
     if (file.size > 30 * 1024 * 1024) {
       checkinImportSheet = null;
       doBtn.disabled = true;
@@ -8140,7 +8164,13 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   function handleEmployeeImportFile(e) {
     const file = e && e.target && e.target.files && e.target.files[0];
     if (!file) return;
-    if (!window.XLSX) { showToast('Thư viện đọc Excel chưa sẵn sàng. Kiểm tra kết nối mạng!', 'error'); return; }
+    // THƯ VIỆN NẠP TRỄ: XLSX chưa có (nạp Excel ngay sau boot) → chờ nạp xong rồi tự chạy lại
+    if (!window.XLSX) {
+      showToast('Đang nạp thư viện đọc Excel…', 'info');
+      ensureXlsx().then(() => handleEmployeeImportFile(e))
+        .catch(() => showToast('Không tải được thư viện đọc Excel. Kiểm tra kết nối mạng rồi thử lại!', 'error'));
+      return;
+    }
     const sizeMb = (file.size || 0) / 1048576;
     if (sizeMb > HR_IMPORT_MAX_MB) {
       showToast(`File "${file.name}" quá lớn (${sizeMb.toFixed(1)} MB > ${HR_IMPORT_MAX_MB} MB). Hãy tách bớt dữ liệu rồi nạp lại!`, 'error');

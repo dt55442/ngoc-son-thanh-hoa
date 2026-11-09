@@ -30,7 +30,7 @@ import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
 import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 // CỜ TÍNH NĂNG (Cài Đặt Hệ Thống): incident-manual = cho phép nhập tay giờ sự cố
 import { applySysAreaDom, flagOn } from './sys-settings.js';
@@ -10932,7 +10932,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     ['x2-bl-gc-picker', 'x2-bl-gc-btn'],
     // Sheet chọn PHIẾU CÂN của Bốc Luồng + Cắt Chọn (18/10/2026) — bottom-sheet trên điện thoại
     ['x2-blg-tickets-sheet', 'x2-blg-tickets-btn'],
-    ['x2-cut-tickets-sheet', 'x2-cut-tickets-btn']
+    ['x2-cut-tickets-sheet', 'x2-cut-tickets-btn'],
+    // Danh sách CHIỀU DÀI của thẻ Bổ Xưởng 1 (11/2026) — bấm ra ngoài / Esc tự ẩn
+    ['x1-bo-lengths-picker', 'x1-bo-lengths-btn'],
+    ['x1-bo-width-picker', 'x1-bo-widths-btn']
   ];
   // Đóng TẤT CẢ dropdown nổi (gọi khi đóng pop-up thẻ / chuyển tab)
   function x2FloatHideAll() {
@@ -16407,17 +16410,24 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     {
       key: 'locThanh', prefix: 'loc-thanh', cardId: 'x1-loc-thanh-card',
       stateKey: 'xuong1LocThanhRecords', storeKey: STORAGE_KEY_XUONG1_LOC_THANH,
-      editKey: 'x1LocThanhEditId', srcField: 'phoiSayId', idPfx: 'x1lt',
+      editKey: 'x1LocThanhEditId', srcField: 'boId', altSrcField: 'phoiSayId', idPfx: 'x1lt',
       rateKind: 'locThanh', incKey: 'x1locthanh',
       title: 'Lọc Thanh / Bó Xô', icon: 'package-check',
-      headName: 'Người lọc', srcName: 'Phơi Sấy',
+      headName: 'Người lọc', srcName: 'Bổ', altSrcName: 'Phơi Sấy (lượt cũ)',
+      sourceLabel: 'Bổ Xưởng 1',
+      altSrcGroupLabel: 'Lượt Phơi Sấy trong dữ liệu cũ',
+      altSrcRoute: 'Phơi Sấy (bản ghi cũ)',
       inLabel: 'KL đem lọc/bó', okLabel: 'KL thành phẩm', loaiLabel: 'KL loại',
       unitWord: 'thanh', statWord: 'Lượt lọc thanh',
-      srcRecords: () => state.xuong1PhoiSayRecords || [],
+      srcRecords: () => state.xuong1BoRecords || [],
+      altSrcRecords: () => state.xuong1PhoiSayRecords || [],
+      altSrcVisible: () => false,
       srcOutputOf: r => Number(r.qtyOk) || 0,
+      sourceRemainingOf: (src, excludeId) => x1LocThanhSourceRemainingOf(src, excludeId),
       posMatch: n => normPosName(n).includes('loc thanh'),
       emptyIcon: 'package-check',
-      srcHint: 'Chỉ hiện lượt Phơi Sấy còn CHƯA lọc/bó hết'
+      srcEmptyNote: '— Chưa có lượt Bổ Xưởng 1 còn chờ Lọc Thanh/Bó Xô —',
+      srcHint: 'Chỉ hiện lượt Bổ còn lại sau Phơi Sấy và Lọc Thanh/Bó Xô'
     }
   ];
   function x1ChainSpec(cardId) { return X1_CHAIN_SPECS.find(s => s.cardId === cardId) || null; }
@@ -16608,6 +16618,21 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       .filter(r => (r[spec.srcField] === srcId || (spec.altSrcField && r[spec.altSrcField] === srcId)) && r.id !== excludeId)
       .reduce((s, r) => s + (Number(r.qtyIn) || 0), 0);
   }
+  function x1LocThanhSourceRemainingOf(src, excludeId) {
+    if ((state.xuong1BoRecords || []).some(r => r.id === src.id)) {
+      const usedByPhoiSay = (state.xuong1PhoiSayRecords || [])
+        .filter(r => r.boId === src.id)
+        .reduce((sum, r) => sum + (Number(r.qtyIn) || 0), 0);
+      const usedByLocThanh = (state.xuong1LocThanhRecords || [])
+        .filter(r => r.boId === src.id && r.id !== excludeId)
+        .reduce((sum, r) => sum + (Number(r.qtyIn) || 0), 0);
+      return Math.max(0, (Number(src.qtyOk) || 0) - usedByPhoiSay - usedByLocThanh);
+    }
+    return Math.max(0, (Number(src.qtyOk) || 0) -
+      (state.xuong1LocThanhRecords || [])
+        .filter(r => r.phoiSayId === src.id && r.id !== excludeId)
+        .reduce((sum, r) => sum + (Number(r.qtyIn) || 0), 0));
+  }
   function x1ChainRemainingOf(spec, src, excludeId) {
     if (!src) return 0;
     if (spec.sourceRemainingOf) return spec.sourceRemainingOf(src, excludeId);
@@ -16634,6 +16659,484 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   // Nạp cả 5 mảng chuỗi X1 lúc boot (gọi từ js/main.js)
   function loadX1ChainAll() { X1_CHAIN_SPECS.forEach(loadX1Chain); }
+
+  // ─── CHIỀU DÀI THANH Ở THẺ BỔ (XƯỞNG 1) — 11/2026 ──────────────────
+  // Mỗi lượt Bổ lưu trường `lengths` (mảng mm) = tập chiều dài THỰC của lô bổ đó;
+  // sang thẻ Lọc Thanh/Bó Xô chỉ hiện đúng các chiều dài này (xem x1BoLengthsOfPhoiSay).
+  // Danh mục gợi ý CHUNG (giá trị người dùng bấm "Thêm") lưu ở state.x1BoLengthOptions.
+  const X1_BO_LENGTH_DEFAULTS = [50, 60, 65, 70, 75, 80, 87, 90, 95, 100, 105];
+  let boLengthPicked = new Set(); // tick hiện tại ở form Bổ — THUẦN PHIÊN (không lưu)
+
+  function x1BoLengthAll() {
+    const set = new Set(X1_BO_LENGTH_DEFAULTS);
+    (state.x1BoLengthOptions || []).forEach(v => {
+      const n = Math.round(Number(v));
+      if (Number.isFinite(n) && n > 0) set.add(n);
+    });
+    return [...set].sort((a, b) => a - b);
+  }
+  function loadX1BoLengthOptions() {
+    const raw = localStorage.getItem(STORAGE_KEY_X1_BO_LENGTHS);
+    if (raw) {
+      try { const a = JSON.parse(raw); state.x1BoLengthOptions = Array.isArray(a) ? a : []; }
+      catch (e) { state.x1BoLengthOptions = []; }
+    } else state.x1BoLengthOptions = [];
+  }
+  function saveX1BoLengthOptions() {
+    try { localStorage.setItem(STORAGE_KEY_X1_BO_LENGTHS, JSON.stringify(state.x1BoLengthOptions || [])); }
+    catch (e) { showToast('Không lưu được danh mục chiều dài (bộ nhớ đầy?).', 'error'); return; }
+    logDataChange(['x1BoLengthOptions']);
+    if (state.fileStorage.connected) storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    firePushSync();
+  }
+  // Tập chiều dài của 1 bản ghi Bổ; bản cũ chưa có → trả toàn bộ danh mục gợi ý
+  function x1BoLengthsOfRec(rec) {
+    const a = rec && Array.isArray(rec.lengths)
+      ? rec.lengths.map(Number).filter(Number.isFinite).map(n => Math.round(n)) : [];
+    return a.length ? [...new Set(a)].sort((x, y) => x - y) : x1BoLengthAll();
+  }
+  function x1BoLengthsOfBoId(boId) {
+    const rec = (state.xuong1BoRecords || []).find(r => r.id === boId);
+    return x1BoLengthsOfRec(rec);
+  }
+  // Truy chuỗi Lọc Thanh ← Phơi Sấy ← Bổ để lấy tập chiều dài của đúng lô nguồn
+  function x1BoLengthsOfPhoiSay(psId) {
+    const ps = (state.xuong1PhoiSayRecords || []).find(r => r.id === psId);
+    return x1BoLengthsOfBoId(ps && ps.boId);
+  }
+  function x1BoWidthsOfPhoiSay(psId) {
+    const ps = (state.xuong1PhoiSayRecords || []).find(r => r.id === psId);
+    const bo = (state.xuong1BoRecords || []).find(r => r.id === (ps && ps.boId));
+    return x1BoWidthsOfRec(bo);
+  }
+  function x1BoLengthsBtnLabel() {
+    const btn = document.getElementById('x1-bo-lengths-btn');
+    if (!btn) return;
+    btn.innerHTML = `<i data-lucide="ruler"></i> ${boLengthPicked.size} loại <i data-lucide="chevron-down"></i>`;
+    initLucide();
+  }
+  function renderX1BoLengthsPicker() {
+    const panel = document.getElementById('x1-bo-lengths-picker');
+    if (!panel) return;
+    panel.innerHTML = x1BoLengthAll().map(v => `
+      <label class="x1-bo-len-opt"><input type="checkbox" data-x1-bo-len="${v}" ${boLengthPicked.has(v) ? 'checked' : ''}><span>${v} mm</span></label>`).join('')
+      + `<div class="x1-bo-len-add">
+           <input type="number" id="x1-bo-len-new" min="10" max="200" step="1" placeholder="mm mới (10–200)">
+           <button type="button" class="btn btn-sm btn-outline" id="x1-bo-len-add-btn" title="Thêm chiều dài mới vào danh mục gợi ý"><i data-lucide="plus"></i> Thêm</button>
+         </div>`;
+    initLucide();
+  }
+  function x1BoLengthToggle(v, on) {
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n) || n <= 0) return;
+    if (on) boLengthPicked.add(n); else boLengthPicked.delete(n);
+    x1BoLengthsBtnLabel();
+  }
+  function x1BoLengthAdd() {
+    const el = document.getElementById('x1-bo-len-new');
+    const n = Math.round(Number(el && el.value));
+    if (!Number.isFinite(n) || n < 10 || n > 200) {
+      showToast('Chiều dài mới phải là số nguyên từ 10 đến 200 mm!', 'error'); return;
+    }
+    boLengthPicked.add(n);
+    if (!x1BoLengthAll().includes(n)) {
+      state.x1BoLengthOptions = [...new Set([...(state.x1BoLengthOptions || []), n])].sort((a, b) => a - b);
+      saveX1BoLengthOptions();
+    }
+    if (el) el.value = '';
+    renderX1BoLengthsPicker();
+    x1BoLengthsBtnLabel();
+    showToast(`Đã thêm chiều dài ${n} mm!`, 'success');
+  }
+  function x1BoLengthsResetDefault() {
+    boLengthPicked = new Set(X1_BO_LENGTH_DEFAULTS);
+    renderX1BoLengthsPicker();
+    x1BoLengthsBtnLabel();
+  }
+  function x1BoLengthsLoadFromRec(rec) {
+    boLengthPicked = new Set(x1BoLengthsOfRec(rec));
+    renderX1BoLengthsPicker();
+    x1BoLengthsBtnLabel();
+  }
+  // Mở/đóng dropdown nổi — đăng ký trong X2_FLOAT_PAIRS nên bấm ra ngoài / Esc tự ẩn
+  function x1BoLengthsTogglePicker() {
+    const panel = document.getElementById('x1-bo-lengths-picker');
+    if (!panel) return false;
+    if (panel.hidden) { renderX1BoLengthsPicker(); return x2FloatShow('x1-bo-lengths-picker', 'x1-bo-lengths-btn'); }
+    return x2FloatHide('x1-bo-lengths-picker', 'x1-bo-lengths-btn');
+  }
+
+  const X1_BO_WIDTH_DEFAULTS = [11, 15];
+  let boWidthPicked = new Set();
+
+  function x1BoWidthValue(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
+  }
+  function x1BoWidthAll() {
+    const set = new Set(X1_BO_WIDTH_DEFAULTS);
+    (state.x1BoWidthOptions || []).forEach(value => {
+      const n = x1BoWidthValue(value);
+      if (n != null) set.add(n);
+    });
+    return [...set].sort((a, b) => a - b);
+  }
+  function loadX1BoWidthOptions() {
+    const raw = localStorage.getItem(STORAGE_KEY_X1_BO_WIDTHS);
+    if (raw) {
+      try {
+        const values = JSON.parse(raw);
+        state.x1BoWidthOptions = Array.isArray(values)
+          ? [...new Set(values.map(x1BoWidthValue).filter(n => n != null))].sort((a, b) => a - b)
+          : [];
+      } catch (e) { state.x1BoWidthOptions = []; }
+    } else state.x1BoWidthOptions = [];
+  }
+  function saveX1BoWidthOptions() {
+    try { localStorage.setItem(STORAGE_KEY_X1_BO_WIDTHS, JSON.stringify(state.x1BoWidthOptions || [])); }
+    catch (e) { showToast('Không lưu được danh mục bản rộng (bộ nhớ đầy?).', 'error'); return; }
+    logDataChange(['x1BoWidthOptions']);
+    if (state.fileStorage.connected) storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    firePushSync();
+  }
+  function x1BoWidthsOfRec(rec) {
+    const values = rec && Array.isArray(rec.widths) ? rec.widths.map(x1BoWidthValue).filter(n => n != null) : [];
+    return [...new Set(values)].sort((a, b) => a - b);
+  }
+  function x1BoWidthsBtnLabel() {
+    const btn = document.getElementById('x1-bo-widths-btn');
+    if (!btn) return;
+    btn.innerHTML = `<i data-lucide="columns-2"></i> ${boWidthPicked.size ? `${boWidthPicked.size} bản rộng` : 'Chọn bản rộng'} <i data-lucide="chevron-down"></i>`;
+    initLucide();
+  }
+  function renderX1BoWidthsPicker() {
+    const panel = document.getElementById('x1-bo-width-picker');
+    if (!panel) return;
+    panel.innerHTML = x1BoWidthAll().map(value => `
+      <label class="x1-bo-width-opt"><input type="checkbox" data-x1-bo-width="${value}" ${boWidthPicked.has(value) ? 'checked' : ''}><span>${value} ly</span></label>`).join('')
+      + `<div class="x1-bo-width-add">
+           <input type="number" id="x1-bo-width-new" min="0" step="any" placeholder="Bản rộng mới (ly)">
+           <button type="button" class="btn btn-sm btn-outline" id="x1-bo-width-add-btn" title="Thêm bản rộng mới vào danh mục dùng lại"><i data-lucide="plus"></i> Thêm</button>
+         </div>`;
+    initLucide();
+  }
+  function x1BoWidthToggle(value, on) {
+    const n = x1BoWidthValue(value);
+    if (n == null) return;
+    if (on) boWidthPicked.add(n); else boWidthPicked.delete(n);
+    x1BoWidthsBtnLabel();
+  }
+  function x1BoWidthAdd() {
+    const el = document.getElementById('x1-bo-width-new');
+    const n = x1BoWidthValue(el && el.value);
+    if (n == null) {
+      showToast('Bản rộng mới phải là số lớn hơn 0 ly!', 'error');
+      return;
+    }
+    boWidthPicked.add(n);
+    if (!x1BoWidthAll().includes(n)) {
+      state.x1BoWidthOptions = [...new Set([...(state.x1BoWidthOptions || []).map(x1BoWidthValue).filter(v => v != null), n])]
+        .sort((a, b) => a - b);
+      saveX1BoWidthOptions();
+    }
+    if (el) el.value = '';
+    renderX1BoWidthsPicker();
+    x1BoWidthsBtnLabel();
+    showToast(`Đã thêm bản rộng ${n} ly!`, 'success');
+  }
+  function x1BoWidthsReset() {
+    boWidthPicked = new Set();
+    renderX1BoWidthsPicker();
+    x1BoWidthsBtnLabel();
+  }
+  function x1BoWidthsLoadFromRec(rec) {
+    boWidthPicked = new Set(x1BoWidthsOfRec(rec));
+    renderX1BoWidthsPicker();
+    x1BoWidthsBtnLabel();
+  }
+  function x1BoWidthsTogglePicker() {
+    const panel = document.getElementById('x1-bo-width-picker');
+    if (!panel) return false;
+    if (panel.hidden) { renderX1BoWidthsPicker(); return x2FloatShow('x1-bo-width-picker', 'x1-bo-widths-btn'); }
+    return x2FloatHide('x1-bo-width-picker', 'x1-bo-widths-btn');
+  }
+  function x1BoNavigateStage(direction) {
+    return x2OpenCard(Number(direction) < 0 ? 'x1-cat-mat-card' : 'x1-phoi-say-card');
+  }
+
+  // ─── THẺ LỌC THANH / BÓ XÔ: 2 hình thức + ma trận theo lô nguồn ──
+  function x1LocThanhModeOf() {
+    const el = document.getElementById('x1-loc-thanh-mode');
+    // Mặc định (kể cả khi thiếu ô) = bó xô — đúng hành vi form cũ chỉ nhập kg
+    return el && el.value === 'loc-thanh' ? 'loc-thanh' : 'bo-xo';
+  }
+  function x1LocThanhSourceDimensions() {
+    const sel = document.getElementById('x1-loc-thanh-src');
+    const spec = x1ChainSpecByKey('locThanh');
+    const source = spec ? x1ChainFindSrc(spec, sel ? sel.value : '') : null;
+    const bo = (state.xuong1BoRecords || []).find(r =>
+      r.id === (source && source.id) || r.id === (source && source.boId)) || null;
+    return {
+      source,
+      bo,
+      widths: x1BoWidthsOfRec(bo),
+      lengths: bo ? x1BoLengthsOfRec(bo) : []
+    };
+  }
+  // Danh sách chiều dài khả dụng theo Bổ; đọc cả nguồn Phơi Sấy của bản ghi cũ.
+  function x1LocThanhLengthChoices() {
+    return x1LocThanhSourceDimensions().lengths;
+  }
+  // ─── MA TRẬN LỌC THANH XƯỞNG 1 — bản rộng × chiều dài × phân loại Vầu ──
+  // Phân loại RIÊNG của Xưởng 1 (theo bảng Excel của xưởng),
+  // KHÁC với NAN_CLASSES của Xưởng 2 (Luồng: A/A1/B/Loại hẳn) — TUYỆT ĐỐI đừng dùng nhầm.
+  // Cột "Loại" tính riêng; các giá trị của ma trận mới đều là kg.
+  const X1_LT_CLASSES = [
+    { id: 'A',     label: 'Vầu A',            short: 'A' },
+    { id: 'A1',    label: 'Vầu A1',           short: 'A1' },
+    { id: 'd6',    label: 'Vầu 6mm',          short: '6mm' },
+    { id: 'd13',   label: 'Vầu 13mm',         short: '13mm' },
+    { id: 'bau',   label: 'Cắt đầu',          short: 'Cắt đầu' },
+    { id: 'nonbt', label: 'Vầu non bánh tẻ',  short: 'Bánh tẻ' },
+    { id: 'bnont', label: 'Vầu B non tơ',     short: 'B non tơ' },
+    { id: 'loai',  label: 'Loại',             short: 'Loại' }
+  ];
+  // Cờ giao diện ma trận mới (kg) / ma trận cũ (số lượng) / dòng kg cũ — THUẦN PHIÊN
+  let ltMatrixUi = false;
+  let ltMatrixLegacyUi = false;
+  // Ma trận cũ chỉ có chiều dài × số lượng; giữ đọc được để xem/sửa dữ liệu đã lưu.
+  function x1LtCountsFromDom() {
+    const box = document.getElementById('x1-loc-thanh-length-rows');
+    if (!box || typeof box.querySelectorAll !== 'function') return [];
+    const inputs = box.querySelectorAll('input[data-x1-lt-c]');
+    if (!inputs || !inputs.length) return [];
+    const map = new Map();
+    Array.prototype.forEach.call(inputs, inp => {
+      const gA = inp.getAttribute ? (k) => inp.getAttribute(k) : null;
+      if (!gA) return;
+      const len = Math.round(Number(gA('data-x1-lt-len')));
+      const cls = gA('data-x1-lt-c');
+      const v = Math.max(0, Number(inp.value) || 0);
+      if (!Number.isFinite(len) || len <= 0 || !X1_LT_CLASSES.some(c => c.id === cls) || v <= 0) return;
+      if (!map.has(len)) map.set(len, {});
+      map.get(len)[cls] = (map.get(len)[cls] || 0) + v;
+    });
+    return [...map.entries()].map(([len, counts]) => ({ len, counts }));
+  }
+  function x1LtWeightsFromDom() {
+    const box = document.getElementById('x1-loc-thanh-length-rows');
+    if (!box || typeof box.querySelectorAll !== 'function') return [];
+    const inputs = box.querySelectorAll('input[data-x1-lt-c]');
+    if (!inputs || !inputs.length) return [];
+    const map = new Map();
+    Array.prototype.forEach.call(inputs, inp => {
+      const get = inp.getAttribute ? key => inp.getAttribute(key) : null;
+      if (!get) return;
+      const width = x1BoWidthValue(get('data-x1-lt-width'));
+      const len = Math.round(Number(get('data-x1-lt-len')));
+      const cls = get('data-x1-lt-c');
+      const value = Math.max(0, Number(inp.value) || 0);
+      if (width == null || !Number.isFinite(len) || len <= 0 ||
+          !X1_LT_CLASSES.some(c => c.id === cls) || value <= 0) return;
+      const key = `${width}|${len}`;
+      if (!map.has(key)) map.set(key, { width, len, weights: {} });
+      map.get(key).weights[cls] = (map.get(key).weights[cls] || 0) + value;
+    });
+    return [...map.values()];
+  }
+  // Gộp ma trận đang nhập; dữ liệu cũ trả về unit=count, ma trận mới trả về unit=kg.
+  function x1LtMatrixRead() {
+    const rows = ltMatrixLegacyUi ? x1LtCountsFromDom() : x1LtWeightsFromDom();
+    if (!rows.length) return null;
+    let ok = 0, loai = 0;
+    rows.forEach(r => {
+      X1_LT_CLASSES.forEach(c => {
+        const values = ltMatrixLegacyUi ? r.counts : r.weights;
+        const v = Number(values[c.id]) || 0;
+        if (c.id === 'loai') loai += v; else ok += v;
+      });
+    });
+    return {
+      unit: ltMatrixLegacyUi ? 'count' : 'kg',
+      rows: rows.map(r => {
+        const values = ltMatrixLegacyUi ? r.counts : r.weights;
+        const total = X1_LT_CLASSES.reduce((sum, c) => sum + (Number(values[c.id]) || 0), 0);
+        return ltMatrixLegacyUi
+          ? { len: r.len, counts: values, total }
+          : { width: r.width, len: r.len, weights: values, total };
+      }),
+      ok, loai, total: ok + loai
+    };
+  }
+  function x1LocThanhRowHtml(idx, len, kg) {
+    const opts = x1LocThanhLengthChoices().map(v =>
+      `<option value="${v}" ${v === Number(len) ? 'selected' : ''}>${v} mm</option>`).join('');
+    return `<div class="x1-lt-row" data-x1-lt-row="${idx}">
+      <select class="x1-lt-len" data-x1-lt-len>${opts}</select>
+      <input type="number" class="x1-lt-kg" data-x1-lt-kg min="0" step="any" placeholder="kg" value="${kg || ''}">
+      <button type="button" class="btn btn-icon btn-danger" data-x1-lt-del title="Xóa dòng"><i data-lucide="x"></i></button>
+    </div>`;
+  }
+  function renderX1LocThanhLengthRows(rows) {
+    const box = document.getElementById('x1-loc-thanh-length-rows');
+    if (!box) return;
+    ltMatrixUi = false;
+    ltMatrixLegacyUi = false;
+    const addBtn = document.getElementById('x1-lt-add-row');
+    if (addBtn) { addBtn.hidden = false; addBtn.style.display = ''; }
+    const list = Array.isArray(rows) && rows.length ? rows : [{ len: '', kg: '' }];
+    box.innerHTML = list.map((r, i) => x1LocThanhRowHtml(i, r.len, r.kg)).join('');
+    initLucide();
+  }
+  function x1LtLegacyMatrixRowHtml(len, counts) {
+    const cells = X1_LT_CLASSES.map(c =>
+      `<td class="x1-lt-cell"><input type="number" inputmode="numeric" min="0" step="1" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-len="${len}" value="${counts && counts[c.id] ? counts[c.id] : ''}" title="${escapeHTML(c.label)} — số lượng"></td>`).join('');
+    const t = X1_LT_CLASSES.reduce((s, c) => s + (Number(counts && counts[c.id]) || 0), 0);
+    return `<tr><th>${len} mm</th>${cells}<td class="x1-lt-total" data-x1-lt-total="legacy|${len}">${t > 0 ? t : ''}</td></tr>`;
+  }
+  function renderX1LtLegacyMatrix(rows) {
+    const box = document.getElementById('x1-loc-thanh-length-rows');
+    if (!box) return;
+    ltMatrixUi = true;
+    ltMatrixLegacyUi = true;
+    const addBtn = document.getElementById('x1-lt-add-row');
+    if (addBtn) { addBtn.hidden = true; addBtn.style.display = 'none'; }
+    const list = (rows || []).slice().sort((a, b) => Number(a.len) - Number(b.len));
+    const head = `<tr><th rowspan="2">Chiều dài</th><th colspan="${X1_LT_CLASSES.length}">Số lượng (dữ liệu cũ)</th><th rowspan="2">Tổng SL</th></tr><tr>${X1_LT_CLASSES.map(c => `<th title="${escapeHTML(c.label)}">${escapeHTML(c.short)}</th>`).join('')}</tr>`;
+    box.innerHTML = list.length
+      ? `<div class="x1-lt-matrix-wrap"><table class="x1-lt-matrix"><thead>${head}</thead><tbody>${list.map(r => x1LtLegacyMatrixRowHtml(r.len, r.counts)).join('')}</tbody></table></div>`
+      : '<div class="x2-row-note">Dữ liệu ma trận cũ không có dòng để sửa.</div>';
+  }
+  function x1LtMatrixRowHtml(width, len, weights) {
+    const cells = X1_LT_CLASSES.map(c =>
+      `<td class="x1-lt-cell"><input type="number" inputmode="decimal" min="0" step="any" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-width="${width}" data-x1-lt-len="${len}" value="${weights && weights[c.id] ? weights[c.id] : ''}" title="${escapeHTML(c.label)} — kg"></td>`).join('');
+    const total = X1_LT_CLASSES.reduce((sum, c) => sum + (Number(weights && weights[c.id]) || 0), 0);
+    return `<tr><th>${width} ly</th><th>${len} mm</th>${cells}<td class="x1-lt-total" data-x1-lt-total="${width}|${len}">${total > 0 ? fmtKg(total) : ''}</td></tr>`;
+  }
+  // Tạo một hàng cho mỗi tổ hợp bản rộng × chiều dài của lô Bổ đã chọn.
+  function renderX1LtMatrix(presetRows) {
+    const box = document.getElementById('x1-loc-thanh-length-rows');
+    if (!box) return;
+    if (Array.isArray(presetRows) && presetRows.length && presetRows.some(r => !r.weights)) {
+      renderX1LtLegacyMatrix(presetRows);
+      return;
+    }
+    ltMatrixUi = true;
+    ltMatrixLegacyUi = false;
+    const addBtn = document.getElementById('x1-lt-add-row');
+    if (addBtn) { addBtn.hidden = true; addBtn.style.display = 'none'; }
+    const preset = Array.isArray(presetRows) && presetRows.length
+      ? presetRows.map(r => ({
+          width: x1BoWidthValue(r.width),
+          len: Math.round(Number(r.len)),
+          weights: Object.assign({}, r.weights)
+        }))
+      : null;
+    const current = preset || (() => {
+      const read = x1LtMatrixRead();
+      return read && read.unit === 'kg' ? read.rows : [];
+    })();
+    const dimensions = x1LocThanhSourceDimensions();
+    const pairs = preset || dimensions.widths.flatMap(width =>
+      dimensions.lengths.map(len => ({ width, len })));
+    if (!pairs.length) {
+      const note = dimensions.source
+        ? 'Lô Bổ nguồn chưa có bản rộng. Hãy cập nhật bản rộng ở thẻ Bổ để tạo ma trận.'
+        : 'Chọn lượt Bổ (nguồn) đã ghi bản rộng và chiều dài để tạo ma trận.';
+      box.innerHTML = `<div class="x2-row-note">${note}</div>`;
+      return;
+    }
+    const byPair = new Map(current.map(r => [`${r.width}|${r.len}`, r.weights]));
+    const head = `<tr><th rowspan="2">Bản rộng</th><th rowspan="2">Kích thước dài</th><th colspan="${X1_LT_CLASSES.length}">Khối lượng (kg)</th><th rowspan="2">Tổng (kg)</th></tr><tr>${X1_LT_CLASSES.map(c => `<th title="${escapeHTML(c.label)}">${escapeHTML(c.short)}</th>`).join('')}</tr>`;
+    box.innerHTML = `<div class="x1-lt-matrix-wrap"><table class="x1-lt-matrix"><thead>${head}</thead><tbody>${pairs.map(pair => x1LtMatrixRowHtml(pair.width, pair.len, byPair.get(`${pair.width}|${pair.len}`))).join('')}</tbody></table></div>`;
+  }
+  // Cập nhật cột TỔNG từng hàng khi đang gõ (gọi từ x1ChainCalc nhánh ma trận)
+  function x1LtRefreshRowTotals() {
+    const box = document.getElementById('x1-loc-thanh-length-rows');
+    if (!box || !ltMatrixUi || typeof box.querySelectorAll !== 'function') return;
+    const m = x1LtMatrixRead();
+    const byKey = new Map((m && m.rows ? m.rows : []).map(r => [
+      m.unit === 'kg' ? `${r.width}|${r.len}` : `legacy|${r.len}`, r.total
+    ]));
+    Array.prototype.forEach.call(box.querySelectorAll('[data-x1-lt-total]') || [], cell => {
+      if (!cell.getAttribute) return;
+      const key = cell.getAttribute('data-x1-lt-total');
+      cell.textContent = byKey.has(key)
+        ? (m.unit === 'kg' ? fmtKg(byKey.get(key)) : String(byKey.get(key)))
+        : '';
+    });
+  }
+  // Đổi nguồn ở chế độ Lọc thanh: ma trận → vẽ lại theo lô mới (giữ số đã nhập); bản cũ kg → vẽ lại dòng
+  function x1LtOnSrcChange() {
+    if (x1LocThanhModeOf() !== 'loc-thanh') return;
+    if (ltMatrixLegacyUi) renderX1LtLegacyMatrix(x1LtCountsFromDom());
+    else if (ltMatrixUi) renderX1LtMatrix();
+    else renderX1LocThanhLengthRows();
+    const sp = x1ChainSpecByKey('locThanh');
+    if (sp) x1ChainCalc(sp);
+  }
+  // Bảng mini trong lịch sử: 1 hàng = 1 chiều dài, cột = phân loại (đúng khuôn bảng Excel của xưởng)
+  function x1LtMiniTableHtml(d) {
+    const rows = d.matrixRows || [];
+    const isKg = rows.length > 0 && rows.every(r => r.weights);
+    const groupHead = isKg
+      ? `<tr><th rowspan="2">Bản rộng</th><th rowspan="2">Dài</th><th colspan="${X1_LT_CLASSES.length}">Khối lượng (kg)</th><th rowspan="2">Tổng (kg)</th></tr>`
+      : `<tr><th rowspan="2">Dài</th><th colspan="${X1_LT_CLASSES.length}">Số lượng (dữ liệu cũ)</th><th rowspan="2">Tổng SL</th></tr>`;
+    const classHead = `<tr>${X1_LT_CLASSES.map(c => `<th title="${escapeHTML(c.label)}">${escapeHTML(c.short)}</th>`).join('')}</tr>`;
+    return `<div class="x1-lt-mini-wrap"><table class="x1-lt-mini"><thead>${groupHead}${classHead}</thead><tbody>`
+      + rows.map(r => {
+        const values = isKg ? r.weights : r.counts;
+        const total = X1_LT_CLASSES.reduce((sum, c) => sum + (Number(values && values[c.id]) || 0), 0);
+        const size = isKg ? `<th>${r.width} ly</th><th>${r.len} mm</th>` : `<th>${r.len} mm</th>`;
+        return `<tr>${size}${X1_LT_CLASSES.map(c => {
+          const value = Number(values && values[c.id]) || 0;
+          return `<td>${value > 0 ? (isKg ? escapeHTML(fmtKg(value)) : escapeHTML(String(value))) : ''}</td>`;
+        }).join('')}<td class="text-right"><strong>${isKg ? escapeHTML(fmtKg(total)) : escapeHTML(String(total))}</strong></td></tr>`;
+      }).join('')
+      + `</tbody></table></div>`;
+  }
+  function x1LocThanhReadLengthRows() {
+    const box = document.getElementById('x1-loc-thanh-length-rows');
+    if (!box) return [];
+    const rows = [];
+    (box.querySelectorAll('.x1-lt-row') || []).forEach(row => {
+      const len = Number(row.querySelector('[data-x1-lt-len]')?.value);
+      const kg = Number(row.querySelector('[data-x1-lt-kg]')?.value) || 0;
+      if (Number.isFinite(len) && len > 0 && kg > 0) rows.push({ len: Math.round(len), kg });
+    });
+    return rows;
+  }
+  function syncX1LocThanhMode() {
+    const locThanh = x1LocThanhModeOf() === 'loc-thanh';
+    const wrap = document.getElementById('x1-loc-thanh-length-wrap');
+    const okRow = document.getElementById('x1-loc-thanh-okrow');
+    if (wrap) { wrap.hidden = !locThanh; wrap.style.display = locThanh ? '' : 'none'; }
+    if (okRow) {
+      okRow.hidden = locThanh; okRow.style.display = locThanh ? 'none' : '';
+      // Nhánh ma trận không dùng KL thành phẩm/loại — xoá số cũ kẹt trong ô ẩn để không sai kiểm tra khi lưu
+      if (locThanh) {
+        const o = document.getElementById('x1-loc-thanh-ok'), l = document.getElementById('x1-loc-thanh-loai');
+        if (o) o.value = ''; if (l) l.value = '';
+      }
+    }
+    if (locThanh) {
+      // Sửa lượt CŨ dạng kg (lengthRows) → giữ giao diện dòng kg; còn lại (lượt mới/lượt ma trận) → MA TRẬN
+      const editId = state.x1LocThanhEditId || null;
+      const rec = editId ? (state.xuong1LocThanhRecords || []).find(r => r.id === editId) : null;
+      if (rec && Array.isArray(rec.lengthRows) && rec.lengthRows.length && !Array.isArray(rec.matrixRows)) {
+        renderX1LocThanhLengthRows(rec.lengthRows);
+      } else {
+        renderX1LtMatrix(rec && Array.isArray(rec.matrixRows) ? rec.matrixRows : undefined);
+      }
+    } else {
+      ltMatrixUi = false;
+      ltMatrixLegacyUi = false;
+      const addBtn = document.getElementById('x1-lt-add-row');
+      if (addBtn) { addBtn.hidden = false; addBtn.style.display = ''; }
+    }
+    const sp = x1ChainSpecByKey('locThanh');
+    if (sp) x1ChainCalc(sp);
+  }
 
   function x1TraceLotCodeOf(record, seen = new Set()) {
     if (!record || seen.has(record)) return '';
@@ -16676,6 +17179,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const field = x1ChainSrcFieldOf(spec, r);
     const sourceGroup = spec.sourceGroupForRecord ? spec.sourceGroupForRecord(r) : null;
     const src = sourceGroup || x1ChainFindSrc(spec, r[field]);
+    const locThanhBo = spec.key === 'locThanh'
+      ? (field === 'phoiSayId'
+        ? (state.xuong1BoRecords || []).find(b => b.id === (src && src.boId))
+        : src)
+      : null;
     const viaAlt = !sourceGroup && spec.altSrcField && field === spec.altSrcField;
     const live = hrX1AssignmentsAt(r.date || '', spec.posMatch);
     const hours = live.length ? sumPosHoursSplitX1(live, r.date || '') : null;
@@ -16686,14 +17194,26 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       srcSupplier: src ? x1SrcSupplierOf(src) : (r.srcSupplier || ''),
       srcDate: src ? (src.date || '') : (r.srcDate || ''),
       lotCode: String(r.lotCode || (src && src.lotCode) || x1TraceLotCodeOf(src) || r.srcLotCode || ''),
+      // Lọc Thanh mới lưu ma trận bản rộng × chiều dài theo kg; dữ liệu cũ giữ nguyên.
+      lengths: spec.key === 'bo' ? x1BoLengthsOfRec(r)
+        : (locThanhBo ? x1BoLengthsOfRec(locThanhBo) : []),
+      widths: spec.key === 'bo' ? x1BoWidthsOfRec(r)
+        : (locThanhBo ? x1BoWidthsOfRec(locThanhBo) : []),
+      mode: r.mode || '',
+      lengthRows: Array.isArray(r.lengthRows) ? r.lengthRows : null,
+      matrixRows: Array.isArray(r.matrixRows) && r.matrixRows.length ? r.matrixRows : null,
+      matrixUnit: Array.isArray(r.matrixRows) && r.matrixRows.length
+        ? (r.matrixRows.every(row => row.weights) ? 'kg' : 'count') : '',
       srcRoute: sourceGroup && spec.sourceRouteOf
         ? spec.sourceRouteOf(r, sourceGroup)
-        : (r.srcRoute || (viaAlt ? `${spec.altSrcName} — bỏ qua ${spec.srcName}` : spec.srcName)),
+        : (r.srcRoute || (viaAlt ? (spec.altSrcRoute || `${spec.altSrcName} — bỏ qua ${spec.srcName}`) : spec.srcName)),
       srcRest: src ? x1ChainRemainingOf(spec, src, null) : 0,
       qtyIn: Number(r.qtyIn) || 0,
       qtyOk: Number(r.qtyOk) || 0,
       qtyLoai: Number(r.qtyLoai) || 0,
-      ratio: (Number(r.qtyIn) || 0) > 0 ? ((Number(r.qtyOk) || 0) / (Number(r.qtyIn) || 0)) * 100 : null,
+      ratio: (Array.isArray(r.matrixRows) && r.matrixRows.some(row => !row.weights)) ||
+        (Number(r.qtyIn) || 0) <= 0 ? null
+        : ((Number(r.qtyOk) || 0) / (Number(r.qtyIn) || 0)) * 100,
       note: r.note || '',
       workerRows: x1WorkerRows(r, live),
       workHours: hours ? hours.hc + hours.tc : (Number(r.workHours) || 0),
@@ -16712,9 +17232,17 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const rest = x1ChainRemainingOf(spec, s, editId);
       const nm = x1SrcTypeOf(s) || 'Vầu/nứa';
       const supplier = x1SrcSupplierOf(s) || '—';
-      const route = s.route || (isAlt ? `${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName);
+      const route = s.route || (isAlt
+        ? (spec.altSrcRoute || `${spec.altSrcName} (bỏ qua ${spec.srcName})`)
+        : spec.srcName);
       const lotCode = s.lotCode || x1TraceLotCodeOf(s);
-      return `<option value="${escapeHTML(s.id)}">${lotCode ? `[${escapeHTML(lotCode)}]` : '—'} · NCC ${escapeHTML(supplier)} · ${escapeHTML(nm)} · ${escapeHTML(route)} ${formatDateDDMMYY(s.date)} · Tồn ${fmtKg(rest)} kg</option>`;
+      const initial = spec.key === 'bo' && Array.isArray(s.sources)
+        ? s.sources.reduce((sum, source) => sum + Math.max(0, Number(source.outputQty) || 0), 0)
+        : null;
+      const stock = spec.key === 'bo'
+        ? `Tồn ${fmtKg(rest)}/${fmtKg(initial)} kg`
+        : `Tồn ${fmtKg(rest)} kg`;
+      return `<option value="${escapeHTML(s.id)}">${lotCode ? `[${escapeHTML(lotCode)}]` : '—'} · NCC ${escapeHTML(supplier)} · ${escapeHTML(nm)} · ${escapeHTML(route)} ${formatDateDDMMYY(s.date)} · ${stock}</option>`;
     };
     const total = g.base.length + g.alt.length;
     let html = '';
@@ -16733,7 +17261,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
             + (spec.altSrcField ? '</optgroup>' : '')
           : '')
         + (g.alt.length
-            ? `<optgroup label="Từ ${escapeHTML(spec.altSrcName)} — bỏ qua ${escapeHTML(spec.srcName)}">` + g.alt.map(s => optOf(s, true)).join('') + '</optgroup>'
+            ? `<optgroup label="${escapeHTML(spec.altSrcGroupLabel || `Từ ${spec.altSrcName} — bỏ qua ${spec.srcName}`)}">` + g.alt.map(s => optOf(s, true)).join('') + '</optgroup>'
             : '');
     }
     setX2SelectOptions(sel, html);   // giữ nguồn đang chọn khi thẻ được vẽ lại
@@ -16761,11 +17289,32 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!box) return;
     const val = id => Number((document.getElementById(id) || {}).value) || 0;
     const qtyIn  = val(x1Id(spec, 'in'));
-    const qtyOk  = val(x1Id(spec, 'ok'));
-    const qtyLoai = val(x1Id(spec, 'loai'));
     const sel = document.getElementById(x1Id(spec, 'src'));
     const src = x1ChainFindSrc(spec, sel ? sel.value : '');
     const rest = src ? x1ChainRemainingOf(spec, src, state[spec.editKey] || null) : 0;
+    // Ma trận mới theo kg; ma trận lưu từ phiên bản cũ vẫn hiển thị theo số lượng.
+    if (spec.key === 'locThanh' && ltMatrixUi) {
+      x1LtRefreshRowTotals();
+      const m = x1LtMatrixRead();
+      const isKg = !m || m.unit === 'kg';
+      const total = m ? m.total : 0;
+      box.innerHTML = `
+        <span>Còn lại của nguồn: <strong>${fmtKg(rest)} kg</strong></span>
+        <span>Đem lọc: <strong style="color:${qtyIn > rest + 1e-9 ? '#dc2626' : 'inherit'};">${fmtKg(qtyIn)} kg</strong></span>
+        <span>${isKg ? 'Tổng khối lượng' : 'Tổng số lượng cũ'}: <strong>${isKg ? `${fmtKg(total)} kg` : total}</strong></span>
+        <span>Đạt: <strong style="color:#16a34a;">${isKg ? `${fmtKg(m ? m.ok : 0)} kg` : (m ? m.ok : 0)}</strong> · Loại: <strong style="color:#dc2626;">${isKg ? `${fmtKg(m ? m.loai : 0)} kg` : (m ? m.loai : 0)}</strong></span>
+        ${isKg && total > qtyIn + 1e-9 ? '<span style="color:#dc2626;">Tổng khối lượng vượt KL đem lọc</span>' : ''}`;
+      return;
+    }
+    if (spec.key === 'bo') {
+      box.innerHTML = `
+        <span>Tồn của lô: <strong>${fmtKg(rest)} kg</strong></span>
+        <span>Đem bổ: <strong style="color:${qtyIn > rest + 1e-9 ? '#dc2626' : 'inherit'};">${fmtKg(qtyIn)} kg</strong></span>
+        <span>Đạt tự tính: <strong style="color:#16a34a;">${fmtKg(qtyIn)} kg</strong> · Loại: <strong>0 kg</strong></span>`;
+      return;
+    }
+    const qtyOk  = val(x1Id(spec, 'ok'));
+    const qtyLoai = val(x1Id(spec, 'loai'));
     const bad = qtyIn > rest + 1e-9 || qtyOk + qtyLoai > qtyIn + 1e-9;
     const ratio = qtyIn > 0 ? (qtyOk / qtyIn) * 100 : null;
     box.innerHTML = `
@@ -16786,10 +17335,27 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const dateVal = (dateEl && dateEl.value) || '';
     if (!dateVal) { showToast(`Ngày ${spec.title.toLowerCase()} không được để trống!`, 'error'); return; }
     const val = id => Number((document.getElementById(id) || {}).value) || 0;
-    const qtyIn = val(x1Id(spec, 'in')), qtyOk = val(x1Id(spec, 'ok')), qtyLoai = val(x1Id(spec, 'loai'));
+    const qtyIn = val(x1Id(spec, 'in'));
+    const qtyOk = spec.key === 'bo' ? qtyIn : val(x1Id(spec, 'ok'));
+    const qtyLoai = spec.key === 'bo' ? 0 : val(x1Id(spec, 'loai'));
     if (qtyIn <= 0) { showToast(`${spec.inLabel} phải lớn hơn 0!`, 'error'); return; }
     if (qtyIn < 0 || qtyOk < 0 || qtyLoai < 0) { showToast('Các khối lượng phải là số không âm!', 'error'); return; }
-    if (qtyOk + qtyLoai > qtyIn + 1e-9) {
+    const ltMatrixMode = spec.key === 'locThanh' && x1LocThanhModeOf() === 'loc-thanh' && ltMatrixUi;
+    let ltMatrixData = null;
+    if (ltMatrixMode) {
+      ltMatrixData = x1LtMatrixRead();
+      if (!ltMatrixData) {
+        showToast(ltMatrixLegacyUi
+          ? 'Ma trận lọc thanh cũ trống — nhập ít nhất một số lượng!'
+          : 'Ma trận lọc thanh trống — nhập ít nhất một khối lượng theo kg!', 'error');
+        return;
+      }
+      if (ltMatrixData.unit === 'kg' && ltMatrixData.total > qtyIn + 1e-9) {
+        showToast(`Tổng khối lượng ma trận (${fmtKg(ltMatrixData.total)} kg) vượt KL đem lọc (${fmtKg(qtyIn)} kg)!`, 'error');
+        return;
+      }
+    }
+    if (!ltMatrixMode && qtyOk + qtyLoai > qtyIn + 1e-9) {
       showToast(`${spec.okLabel} (${fmtKg(qtyOk)}) + ${spec.loaiLabel} (${fmtKg(qtyLoai)}) vượt ${spec.inLabel} (${fmtKg(qtyIn)}) — kiểm tra lại!`, 'error');
       return;
     }
@@ -16805,7 +17371,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       showToast(`${spec.inLabel} vượt tồn theo lô; vui lòng kiểm tra lại nguồn!`, 'error');
       return;
     }
-    const note = ((document.getElementById(x1Id(spec, 'note')) || {}).value || '').trim();
+    const noteEl = document.getElementById(x1Id(spec, 'note'));
+    const existing = (state[spec.stateKey] || []).find(r => r.id === state[spec.editKey]);
+    const note = noteEl ? (noteEl.value || '').trim()
+      : (spec.key === 'bo' && existing ? existing.note || '' : '');
     const snap = x1Snapshot(dateVal, hrX1AssignmentsAt(dateVal, spec.posMatch));
     const payload = {
       date: dateVal, qtyIn, qtyOk, qtyLoai,
@@ -16826,6 +17395,39 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       payload[spec.altSrcField] = viaAlt ? srcId : '';
     } else {
       payload[spec.srcField] = srcId;
+    }
+    // 11/2026 — thẻ Bổ: lưu tập chiều dài (mm) theo từng lô vào bản ghi.
+    // Form luôn tick sẵn mặc định khi reset/mở thẻ; nếu vì lý do gì tick rỗng
+    // (ví dụ code/test gọi submit trực tiếp) thì fallback về mặc định — KHÔNG chặn nhập liệu.
+    if (spec.key === 'bo') {
+      const src = boLengthPicked.size ? [...boLengthPicked] : X1_BO_LENGTH_DEFAULTS;
+      payload.lengths = src.map(n => Math.round(Number(n))).filter(Number.isFinite).sort((a, b) => a - b);
+      payload.widths = [...boWidthPicked].sort((a, b) => a - b);
+    }
+    // Lọc Thanh mới lưu ma trận bản rộng × chiều dài theo kg; dữ liệu cũ giữ nguyên schema.
+    if (spec.key === 'locThanh') {
+      const mode = x1LocThanhModeOf();
+      payload.mode = mode;
+      if (mode === 'loc-thanh' && ltMatrixMode && ltMatrixData) {
+        payload.matrixRows = ltMatrixData.rows;
+        payload.lengthRows = null;
+        payload.qtyOk = ltMatrixData.ok;
+        payload.qtyLoai = ltMatrixData.loai;
+      } else if (mode === 'loc-thanh') {
+        const rows = x1LocThanhReadLengthRows();
+        if (!rows.length) { showToast('Ở chế độ Lọc thanh cần ít nhất 1 dòng (chiều dài + KL > 0)!', 'error'); return; }
+        const sumKg = rows.reduce((s, r) => s + r.kg, 0);
+        if (sumKg > qtyIn + 1e-9) {
+          showToast(`Tổng KL các chiều dài (${fmtKg(sumKg)} kg) vượt KL đem lọc (${fmtKg(qtyIn)} kg)!`, 'error');
+          return;
+        }
+        payload.lengthRows = rows;
+        payload.qtyOk = sumKg; // KL thành phẩm = tổng các dòng chiều dài
+        payload.matrixRows = null;
+      } else {
+        payload.lengthRows = null;
+        payload.matrixRows = null;
+      }
     }
     const list = state[spec.stateKey] || (state[spec.stateKey] = []);
     if (editId) {
@@ -16864,6 +17466,17 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     });
     const note = document.getElementById(x1Id(spec, 'note'));
     if (note) note.value = rec.note || '';
+    if (spec.key === 'bo') {
+      x1BoLengthsLoadFromRec(rec);
+      x1BoWidthsLoadFromRec(rec);
+    }
+    if (spec.key === 'locThanh') {
+      const m = document.getElementById('x1-loc-thanh-mode');
+      if (m) m.value = rec.mode === 'bo-xo' ? 'bo-xo' : 'loc-thanh';
+      // syncX1LocThanhMode tự render: bản có matrixRows → MA TRẬN (điền sẵn số lượng);
+      // bản cũ lengthRows (kg) → giao diện dòng kg như lúc nhập
+      syncX1LocThanhMode();
+    }
     x1ChainSyncLinked(spec, false);
     syncX1EditBanner(spec);
     document.getElementById(spec.cardId)?.scrollIntoView({ block: 'nearest' });
@@ -16896,6 +17509,16 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     state[spec.editKey] = null;
     fillX1ChainOptions(spec);
     syncX1EditBanner(spec);
+    // 11/2026: về mặc định khi làm mới form (render lại do mây KHÔNG reset — xem renderX1ChainCard)
+    if (spec.key === 'bo') {
+      x1BoLengthsResetDefault();
+      x1BoWidthsReset();
+    }
+    if (spec.key === 'locThanh') {
+      const m = document.getElementById('x1-loc-thanh-mode');
+      if (m) m.value = 'bo-xo';
+      syncX1LocThanhMode();
+    }
   }
   function renderX1ChainCard(spec) {
     fillX1ChainOptions(spec);
@@ -16903,6 +17526,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     renderX1ChainStats(spec);
     renderX1ChainTable(spec);
     syncX1EditBanner(spec);
+    // 11/2026: vẽ lại nút/panel chiều dài KHÔNG reset tick đang chọn (tránh mất khi đồng bộ mây vẽ lại)
+    if (spec.key === 'bo') {
+      renderX1BoLengthsPicker();
+      x1BoLengthsBtnLabel();
+      renderX1BoWidthsPicker();
+      x1BoWidthsBtnLabel();
+    }
+    if (spec.key === 'locThanh') syncX1LocThanhMode();
     updateXuong2CardCounts();
   }
   function renderX1ChainStockBar(spec) {
@@ -16924,15 +17555,19 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const totalIn = disp.reduce((s, d) => s + d.qtyIn, 0);
     const totalOk = disp.reduce((s, d) => s + d.qtyOk, 0);
     const pend = x1ChainPending(spec).reduce((s, x) => s + x1ChainRemainingOf(spec, x, null), 0);
-    const ratio = totalIn > 0 ? (totalOk / totalIn) * 100 : null;
+    const hasLegacyMatrix = spec.key === 'locThanh' &&
+      disp.some(d => (d.matrixRows || []).some(row => !row.weights));
+    const ratio = (!hasLegacyMatrix && totalIn > 0) ? (totalOk / totalIn) * 100 : null;
     box.innerHTML = `
       <div class="material-stat"><span class="material-stat-value">${disp.length}</span><span class="material-stat-label">${escapeHTML(spec.statWord)}</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(totalIn)}</span><span class="material-stat-label">Tổng ${escapeHTML(spec.inLabel.toLowerCase())} (kg)</span></div>
-      <div class="material-stat"><span class="material-stat-value">${fmtKg(totalOk)}</span><span class="material-stat-label">Tổng ${escapeHTML(spec.okLabel.toLowerCase())} (kg)</span></div>
+      <div class="material-stat"><span class="material-stat-value">${fmtKg(totalOk)}</span><span class="material-stat-label">${hasLegacyMatrix ? 'Tổng đạt (kg + SL cũ)' : `Tổng ${escapeHTML(spec.okLabel.toLowerCase())} (kg)`}</span></div>
       <div class="material-stat"><span class="material-stat-value">${ratio == null ? '—' : fmtRatio(ratio) + '%'}</span><span class="material-stat-label">Tỷ lệ đạt</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(pend)}</span><span class="material-stat-label">Còn chờ (kg)</span></div>`;
   }
   function renderX1ChainTable(spec) {
+    const hasLegacyMatrix = spec.key === 'locThanh' &&
+      (state[spec.stateKey] || []).some(r => (r.matrixRows || []).some(row => !row.weights));
     x1RenderDayCards({
       boxId: x1Id(spec, 'day-cards'),
       countId: x1Id(spec, 'table-count'),
@@ -16945,20 +17580,25 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       headName: spec.headName,
       emptyIcon: spec.emptyIcon,
       emptyText: `Chưa có lượt ${escapeHTML(spec.title.toLowerCase())} nào.<br>Chọn <strong>${escapeHTML(spec.sourceLabel || (spec.altSrcName ? `${spec.srcName} hoặc ${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName))}</strong> ở form trên rồi bấm <strong>Lưu Lượt ${escapeHTML(spec.title)}</strong>.`,
-      thead: `<th>Mã Lô</th><th>Nguồn (${escapeHTML(spec.sourceLabel || (spec.altSrcName ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName))})</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
-              <th class="text-right">${escapeHTML(spec.inLabel)}</th><th class="text-right">${escapeHTML(spec.okLabel)}</th>
-              <th class="text-right">${escapeHTML(spec.loaiLabel)}</th><th class="text-right">Tỷ lệ đạt</th>
+      thead: `<th>Mã Lô</th><th>${spec.key === 'locThanh'
+        ? 'Loại Nguyên Liệu'
+        : `Nguồn (${escapeHTML(spec.sourceLabel || (spec.altSrcField ? `${spec.srcName} / ${spec.altSrcName}` : spec.srcName))})`}</th><th>Nhà cung cấp</th><th>Ngày nguồn</th>
+              <th class="text-right">${escapeHTML(spec.inLabel)}</th><th class="text-right">${hasLegacyMatrix ? 'Đạt (kg / SL cũ)' : escapeHTML(spec.okLabel)}</th>
+              <th class="text-right">${hasLegacyMatrix ? 'Loại (kg / SL cũ)' : escapeHTML(spec.loaiLabel)}</th><th class="text-right">Tỷ lệ đạt</th>
+              ${spec.key === 'bo' ? '<th>Chiều dài (mm)</th><th>Bản rộng (ly)</th>' : ''}${spec.key === 'locThanh' ? '<th>Hình thức</th>' : ''}
               <th>Ghi chú</th><th class="text-right">Thao tác</th>`,
-      rowHtml: (r, d) => `
-        <tr class="x2-day-row">
-          <td><strong class="x1-ss-code">${escapeHTML(d.lotCode || '—')}</strong></td>
-          <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong>${spec.altSrcField ? `<div class="x2-row-note">${escapeHTML(d.srcRoute || spec.srcName)}</div>` : ''}</td>
+              rowHtml: (r, d) => `
+                <tr class="x2-day-row">
+                  <td><strong class="x1-ss-code">${escapeHTML(d.lotCode || '—')}</strong></td>
+                  <td><strong>${escapeHTML(d.srcType || 'Vầu/nứa')}</strong>${spec.key === 'locThanh' || spec.altSrcField ? `<div class="x2-row-note">Nguồn: ${escapeHTML(d.srcRoute || spec.srcName)}</div>` : ''}</td>
           <td>${escapeHTML(d.srcSupplier || '—')}</td>
           <td>${d.srcDate ? formatDateDDMMYY(d.srcDate) : '—'}</td>
           <td class="text-right"><strong style="color:var(--primary);">${fmtKg(d.qtyIn)}</strong></td>
-          <td class="text-right"><strong style="color:#16a34a;">${fmtKg(d.qtyOk)}</strong></td>
-          <td class="text-right" style="color:#dc2626;">${fmtKg(d.qtyLoai)}</td>
+          <td class="text-right"><strong style="color:#16a34a;">${d.matrixUnit === 'count' ? d.qtyOk : fmtKg(d.qtyOk)}</strong></td>
+          <td class="text-right" style="color:#dc2626;">${d.matrixUnit === 'count' ? d.qtyLoai : fmtKg(d.qtyLoai)}</td>
           <td class="text-right">${d.ratio == null ? '—' : fmtRatio(d.ratio) + '%'}</td>
+          ${spec.key === 'bo' ? `<td><span class="x2-row-note">${(d.lengths || []).join(' · ')} mm</span></td><td><span class="x2-row-note">${(d.widths || []).join(' · ')}${(d.widths || []).length ? ' ly' : '—'}</span></td>` : ''}
+          ${spec.key === 'locThanh' ? `<td>${(d.matrixRows && d.matrixRows.length) ? `<strong>Lọc thanh</strong>${x1LtMiniTableHtml(d)}` : `${d.mode === 'bo-xo' ? '<strong>Bó xô</strong>' : '<strong>Lọc thanh</strong>'}${(d.lengthRows || []).length ? `<div class="x2-row-note">${d.lengthRows.map(r => `${r.len}mm: ${fmtKg(r.kg)}kg`).join(' · ')}</div>` : ''}`}</td>` : ''}
           <td>${d.note ? `<div class="x2-row-note">${escapeHTML(d.note)}</div>` : '<span style="color:var(--text-muted);">—</span>'}</td>
           <td class="text-right">
             <button class="btn btn-icon btn-outline" title="Sửa" data-x1-edit="${escapeHTML(r.id)}" data-x1-card="${escapeHTML(spec.cardId)}" data-perm="x1"><i data-lucide="pencil"></i></button>
@@ -17213,6 +17853,45 @@ export {
   loadXuong1Boc,
   loadX1Rates,
   loadX1ChainAll,
+  X1_BO_LENGTH_DEFAULTS,
+  X1_BO_WIDTH_DEFAULTS,
+  loadX1BoLengthOptions,
+  saveX1BoLengthOptions,
+  loadX1BoWidthOptions,
+  saveX1BoWidthOptions,
+  x1BoLengthAll,
+  x1BoWidthAll,
+  x1BoLengthsOfRec,
+  x1BoWidthsOfRec,
+  x1BoLengthsOfBoId,
+  x1BoLengthsOfPhoiSay,
+  x1BoWidthsOfPhoiSay,
+  x1BoLengthsBtnLabel,
+  renderX1BoLengthsPicker,
+  renderX1BoWidthsPicker,
+  x1BoLengthToggle,
+  x1BoLengthAdd,
+  x1BoLengthsResetDefault,
+  x1BoLengthsLoadFromRec,
+  x1BoWidthsLoadFromRec,
+  x1BoLengthsTogglePicker,
+  x1BoWidthsTogglePicker,
+  x1BoWidthToggle,
+  x1BoWidthAdd,
+  x1BoNavigateStage,
+  x1LocThanhModeOf,
+  x1LocThanhSourceDimensions,
+  x1LocThanhLengthChoices,
+  x1LocThanhRowHtml,
+  renderX1LocThanhLengthRows,
+  x1LocThanhReadLengthRows,
+  syncX1LocThanhMode,
+  X1_LT_CLASSES,
+  renderX1LtMatrix,
+  x1LtMatrixRead,
+  x1LtOnSrcChange,
+  x1LtRefreshRowTotals,
+  x1LtMiniTableHtml,
   handleX1CatOngSubmit,
   handleX1SaySinhSubmit,
   handleX1BocSubmit,

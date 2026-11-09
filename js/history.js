@@ -50,6 +50,8 @@ import { escapeHTML, showToast } from './utils.js';
     xuong1BoRecords:      { tab: 'kanban',  label: 'Bổ Xưởng 1',           get: () => state.xuong1BoRecords },
     xuong1PhoiSayRecords: { tab: 'kanban',  label: 'Phơi Sấy Xưởng 1',     get: () => state.xuong1PhoiSayRecords },
     xuong1LocThanhRecords:{ tab: 'kanban',  label: 'Lọc Thanh/Bó Xô X1',   get: () => state.xuong1LocThanhRecords },
+    x1BoLengthOptions:   { tab: 'kanban',  label: 'Danh mục chiều dài Bổ X1', get: () => state.x1BoLengthOptions },
+    x1BoWidthOptions: { tab: 'kanban', label: 'Danh mục bản rộng Bổ X1', get: () => state.x1BoWidthOptions },
     x1Rates:              { tab: 'kanban',  label: 'Định mức Xưởng 1 (kg/h)', get: () => state.x1Rates },
     xuong2BoluongRecords:{ tab: 'kanban',  label: 'Bốc luồng Xưởng 2',    get: () => state.xuong2BoluongRecords },
     x2BoluongRates:    { tab: 'kanban',    label: 'Định mức bốc luồng (xe/h)', get: () => state.x2BoluongRates },

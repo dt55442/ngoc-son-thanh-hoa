@@ -7,7 +7,7 @@ import { authMarkStep, authNotifySettled } from './auth-ui.js';
 import { HISTORY_LIMIT, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { areaLabel, canArea, canEditAnything, canEditRate, canEditTab, canPayApply, canPayLock, currentAreaId, currentTabId, getEditableTabs, getTabDef, syncPermissionUI } from './permissions.js';
-import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CALENDAR, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HISTORY, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_SYS_SETTINGS, STORAGE_KEY_MATERIAL_PLAN, STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_MATERIALS, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_QC_EXPORTS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { STORAGE_KEY_HR_WORKER_EVALUATIONS } from './state.js';
 import { STORAGE_KEY_MECH_WORK_PLANS } from './state.js';
 import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS } from './state.js';
@@ -1377,6 +1377,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
       xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
       x1Rates: state.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
+      x1BoLengthOptions: state.x1BoLengthOptions || [],   // Danh mục chiều dài gợi ý thẻ Bổ X1 (11/2026)
+      x1BoWidthOptions: state.x1BoWidthOptions || [],
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
@@ -1507,6 +1509,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       xuong1PhoiSayRecords: obj.xuong1PhoiSayRecords || [],
       xuong1LocThanhRecords: obj.xuong1LocThanhRecords || [],
       x1Rates: obj.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
+      x1BoLengthOptions: obj.x1BoLengthOptions || [],
+      x1BoWidthOptions: obj.x1BoWidthOptions || [],
       xuong2BoOngRecords: obj.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: obj.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: obj.xuong2ChonNanThoRecords || [],
@@ -2011,6 +2015,17 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (remote.xuong1BoRecords) state.xuong1BoRecords = m(clean('xuong1BoRecords', state.xuong1BoRecords || []), clean('xuong1BoRecords', remote.xuong1BoRecords));
     if (remote.xuong1PhoiSayRecords) state.xuong1PhoiSayRecords = m(clean('xuong1PhoiSayRecords', state.xuong1PhoiSayRecords || []), clean('xuong1PhoiSayRecords', remote.xuong1PhoiSayRecords));
     if (remote.xuong1LocThanhRecords) state.xuong1LocThanhRecords = m(clean('xuong1LocThanhRecords', state.xuong1LocThanhRecords || []), clean('xuong1LocThanhRecords', remote.xuong1LocThanhRecords));
+    // Danh mục chiều dài gợi ý thẻ Bổ X1 — mảng số: GỘP hợp nhất 2 chiều
+    if (remote.x1BoLengthOptions) {
+      const uni = [...new Set([...(state.x1BoLengthOptions || []), ...(remote.x1BoLengthOptions || [])]
+        .map(Number).filter(Number.isFinite))].sort((a, b) => a - b);
+      state.x1BoLengthOptions = uni;
+    }
+    if (remote.x1BoWidthOptions) {
+      const uni = [...new Set([...(state.x1BoWidthOptions || []), ...(remote.x1BoWidthOptions || [])]
+        .map(Number).filter(n => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+      state.x1BoWidthOptions = uni;
+    }
     // Vị trí công đoạn Xưởng 2 — nhật ký bổ ống (thẻ launcher tab Công Đoạn)
     if (remote.xuong2BoOngRecords) state.xuong2BoOngRecords = m(clean('xuong2BoOngRecords', state.xuong2BoOngRecords || []), clean('xuong2BoOngRecords', remote.xuong2BoOngRecords));
     // Vị trí công đoạn Xưởng 2 — nhật ký chạy máy bào thô
@@ -2218,6 +2233,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_XUONG1_PHOI_SAY, JSON.stringify(state.xuong1PhoiSayRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG1_LOC_THANH, JSON.stringify(state.xuong1LocThanhRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_X1_RATES, JSON.stringify(state.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} })); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X1_BO_LENGTHS, JSON.stringify(state.x1BoLengthOptions || [])); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_X1_BO_WIDTHS, JSON.stringify(state.x1BoWidthOptions || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BO_ONG, JSON.stringify(state.xuong2BoOngRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_THO, JSON.stringify(state.xuong2BaoThoRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || [])); } catch (e) {}
@@ -2318,6 +2335,8 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     materialRates: 'Định Mức Nguyên Vật Liệu',
     planningItems: 'Kế Hoạch Sản Xuất',
     qcExports: 'Xuất Hàng QC',
+    x1BoLengthOptions: 'Danh mục chiều dài Bổ X1',
+    x1BoWidthOptions: 'Danh mục bản rộng Bổ X1',
     mechWorkPlans: 'Kế hoạch công việc Cơ điện',
     qcFinalRecords: 'Kiểm Sau Sản Xuất',
     qcPressLogs: 'Nhật Ký Ép Ván (QC)',
@@ -2667,6 +2686,16 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (data.xuong1BoRecords) state.xuong1BoRecords = clean('xuong1BoRecords', data.xuong1BoRecords);
       if (data.xuong1PhoiSayRecords) state.xuong1PhoiSayRecords = clean('xuong1PhoiSayRecords', data.xuong1PhoiSayRecords);
       if (data.xuong1LocThanhRecords) state.xuong1LocThanhRecords = clean('xuong1LocThanhRecords', data.xuong1LocThanhRecords);
+      if (data.x1BoLengthOptions) {
+        state.x1BoLengthOptions = [...new Set([...(state.x1BoLengthOptions || []),
+          ...(Array.isArray(data.x1BoLengthOptions) ? data.x1BoLengthOptions : [])]
+          .map(Number).filter(Number.isFinite))].sort((a, b) => a - b);
+      }
+      if (data.x1BoWidthOptions) {
+        state.x1BoWidthOptions = [...new Set([...(state.x1BoWidthOptions || []),
+          ...(Array.isArray(data.x1BoWidthOptions) ? data.x1BoWidthOptions : [])]
+          .map(Number).filter(n => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+      }
       if (data.xuong2BoOngRecords) state.xuong2BoOngRecords = clean('xuong2BoOngRecords', data.xuong2BoOngRecords);
       if (data.xuong2BaoThoRecords) state.xuong2BaoThoRecords = clean('xuong2BaoThoRecords', data.xuong2BaoThoRecords);
       if (data.xuong2ChonNanThoRecords) state.xuong2ChonNanThoRecords = clean('xuong2ChonNanThoRecords', data.xuong2ChonNanThoRecords);

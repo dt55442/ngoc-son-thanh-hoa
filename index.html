@@ -1203,6 +1203,11 @@
             <button class="btn btn-outline" id="btn-transfer-kho" data-perm="x2" title="Chuyển lô từ Sấy 1 / Sấy 2 vào Kho — hoặc tạo lô mới vào thẳng Kho">
               <i data-lucide="warehouse"></i> Chuyển Kho
             </button>
+            <!-- CHẾ ĐỘ XEM: THẺ ⇄ BẢNG (11/2026) — cột đông lô chuyển sang bảng dày đặc;
+                 trạng thái nhớ theo máy (bamboo_tracker_kanban_density_v1) -->
+            <button type="button" class="btn btn-outline" id="btn-kanban-density" aria-pressed="false" title="Đang xem dạng THẺ LÔ gọn 2 dòng — bấm để chuyển sang BẢNG dày đặc (hợp cột đông lô)">
+              <i data-lucide="table-2"></i> <span class="kb-density-label">Thẻ</span>
+            </button>
             <button class="btn btn-outline admin-only-btn" id="btn-multi-delete" data-perm="x2" title="Bật chế độ tích chọn NHIỀU lô để xóa cùng lúc (chỉ Quản Trị — Admin)">
               <i data-lucide="trash-2"></i> <span class="hide-mobile">Xóa Nhiều</span>
             </button>
@@ -2877,14 +2882,11 @@
             </div>
             <form id="x1-bo-form">
               <div class="x2-form-row">
-                <div class="form-group" style="flex:1.5;">
-                  <label for="x1-bo-src">Lô đầu vào <span class="required">*</span></label>
-                  <select id="x1-bo-src" required></select>
-                  <small style="color:var(--text-muted);">Gom theo lô: Ống Đạt từ Lọc Ống + phần Ống Sót Mắt đã Cắt Mắt; mặc định lấy tổng còn lại, có thể sửa để Bổ một phần. Lô đã qua Cắt Ống vẫn giữ nhánh bỏ qua Cắt Mắt.</small>
-                </div>
                 <div class="form-group" style="flex:1;">
-                  <label for="x1-bo-note">Ghi Chú</label>
-                  <input type="text" id="x1-bo-note" placeholder="VD: bổ nan 18mm, bỏ phần mắt dày...">
+                  <label for="x1-bo-src">Lô đầu vào <span class="required">*</span>
+                    <span class="x1-bo-source-help" tabindex="0" role="img" aria-label="Thông tin cách gom lô đầu vào" title="Gom theo lô: Ống Đạt từ Lọc Ống + phần Ống Sót Mắt đã Cắt Mắt; mặc định lấy tổng còn lại, có thể sửa để Bổ một phần. Lô đã qua Cắt Ống vẫn giữ nhánh bỏ qua Cắt Mắt."><i data-lucide="info"></i></span>
+                  </label>
+                  <select id="x1-bo-src" title="Gom theo lô: Ống Đạt từ Lọc Ống + phần Ống Sót Mắt đã Cắt Mắt; mặc định lấy tổng còn lại, có thể sửa để Bổ một phần. Lô đã qua Cắt Ống vẫn giữ nhánh bỏ qua Cắt Mắt." required></select>
                 </div>
               </div>
               <div class="x2-form-row">
@@ -2899,20 +2901,24 @@
               </div>
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1;">
-                  <label for="x1-bo-ok">KL Bổ Đạt (kg)</label>
-                  <input type="number" id="x1-bo-ok" step="any" min="0" placeholder="0">
+                  <label for="x1-bo-lengths-btn">Chiều dài thanh sẽ bổ (mm)</label>
+                  <button type="button" class="btn btn-outline x1-bo-lengths-btn" id="x1-bo-lengths-btn" aria-haspopup="true" aria-expanded="false" aria-controls="x1-bo-lengths-picker" title="Chọn chiều dài áp dụng cho lượt Bổ; thẻ Lọc Thanh/Bó Xô sẽ dùng các chiều dài đã lưu theo lô"></button>
                 </div>
                 <div class="form-group" style="flex:1;">
-                  <label for="x1-bo-loai">KL Loại (kg)</label>
-                  <input type="number" id="x1-bo-loai" step="any" min="0" placeholder="0">
+                  <label for="x1-bo-widths-btn">Bản rộng (ly)</label>
+                  <button type="button" class="btn btn-outline x1-bo-widths-btn" id="x1-bo-widths-btn" aria-haspopup="true" aria-expanded="false" aria-controls="x1-bo-width-picker" title="Chọn một hoặc nhiều bản rộng cho lượt Bổ"></button>
                 </div>
               </div>
+              <div class="x1-bo-len-picker" id="x1-bo-lengths-picker" hidden></div>
+              <div class="x1-bo-width-picker" id="x1-bo-width-picker" hidden></div>
               <div class="x2-cut-calc" id="x1-bo-calc"></div>
-              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-bo-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
-                <button type="button" class="btn btn-outline" id="btn-cancel-x1-bo">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Bổ</button>
+              <div class="x1-bo-actions">
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn" id="btn-x1-bo-stage-prev" title="Trở về công đoạn Cắt Mắt"><i data-lucide="chevron-left"></i><strong>Lùi · Cắt Mắt</strong></button>
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-repeat" id="btn-x1-bo-stage-next" title="Sang công đoạn Phơi Sấy"><strong>Tiến · Phơi Sấy</strong><i data-lucide="chevron-right"></i></button>
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-neutral" id="btn-cancel-x1-bo"><i data-lucide="rotate-ccw"></i><strong>Làm Mới Form</strong></button>
+                <button type="submit" class="x1-ss-input-btn x1-bo-action-btn" data-perm="x1"><i data-lucide="check"></i><strong>Lưu Lượt Bổ</strong></button>
               </div>
+              <button type="button" class="btn btn-outline" id="btn-x1-bo-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Bổ theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
             </form>
           </div>
           </div>
@@ -3010,9 +3016,16 @@
             <form id="x1-loc-thanh-form">
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1.5;">
-                  <label for="x1-loc-thanh-src">Lượt Phơi Sấy (nguồn) <span class="required">*</span></label>
+                  <label for="x1-loc-thanh-src">Lượt Bổ (nguồn) <span class="required">*</span></label>
                   <select id="x1-loc-thanh-src" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lượt Phơi Sấy còn CHƯA lọc/bó hết</small>
+                  <small style="color:var(--text-muted);">Chỉ hiện lượt Bổ còn lại sau Phơi Sấy và Lọc Thanh/Bó Xô</small>
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-thanh-mode">Hình thức</label>
+                  <select id="x1-loc-thanh-mode" title="Lọc thanh: ma trận khối lượng theo bản rộng × chiều dài và phân loại Vầu (kg) · Bó xô: đầu ra tính theo kg">
+                    <option value="bo-xo" selected>Bó xô (theo kg)</option>
+                    <option value="loc-thanh">Lọc thanh (theo kg)</option>
+                  </select>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-loc-thanh-note">Ghi Chú</label>
@@ -3025,11 +3038,11 @@
                   <input type="date" id="x1-loc-thanh-date" required>
                 </div>
                                 <div class="form-group" style="flex:1;">
-                  <label for="x1-loc-thanh-in">KL Đem Lọc / Bó (kg)</label>
-                  <input type="number" id="x1-loc-thanh-in" step="any" min="0" placeholder="0">
-                </div>
+                                  <label for="x1-loc-thanh-in">KL Đem Lọc / Bó (kg)</label>
+                                  <input type="number" id="x1-loc-thanh-in" step="any" min="0" placeholder="0">
+                                </div>
               </div>
-              <div class="x2-form-row">
+              <div class="x2-form-row" id="x1-loc-thanh-okrow">
                 <div class="form-group" style="flex:1;">
                   <label for="x1-loc-thanh-ok">KL Thành Phẩm (kg)</label>
                   <input type="number" id="x1-loc-thanh-ok" step="any" min="0" placeholder="0">
@@ -3038,6 +3051,14 @@
                   <label for="x1-loc-thanh-loai">KL Loại (kg)</label>
                   <input type="number" id="x1-loc-thanh-loai" step="any" min="0" placeholder="0">
                 </div>
+              </div>
+              <div class="x1-lt-length-wrap" id="x1-loc-thanh-length-wrap" hidden>
+                <div class="x1-lt-length-head">
+                  <strong>Ma trận khối lượng lọc thanh</strong>
+                  <span class="x2-row-note">Tự sinh theo bản rộng và chiều dài của lô Bổ — nhập kg từng phân loại Vầu</span>
+                  <button type="button" class="btn btn-sm btn-outline" id="x1-lt-add-row" data-perm="x1" title="Chỉ dùng ở giao diện dòng kg (bản cũ) — ma trận tự sinh theo lô nguồn"><i data-lucide="plus"></i> Thêm dòng</button>
+                </div>
+                <div id="x1-loc-thanh-length-rows"></div>
               </div>
               <div class="x2-cut-calc" id="x1-loc-thanh-calc"></div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
@@ -3218,12 +3239,12 @@
           <!-- Thanh công cụ của Kế Hoạch vs Đã Ép -->
           <div class="pv-toolbar" id="pv-toolbar-plan">
             <div class="pv-unit-toggle" role="group" aria-label="Chọn đơn vị hiển thị">
-              <button type="button" class="pv-unit-btn" id="pv-unit-qty" title="Hiển thị số lượng trên cột — chiều cao cột vẫn theo m³">Số lượng</button>
-              <button type="button" class="pv-unit-btn active" id="pv-unit-vol" title="Hiển thị thể tích (m³) trên cột và trục Y">m³</button>
+              <button type="button" class="pv-unit-btn active" id="pv-unit-qty" title="Hiển thị số lượng trên cột — chiều cao cột vẫn theo m³">Số lượng</button>
+              <button type="button" class="pv-unit-btn" id="pv-unit-vol" title="Hiển thị thể tích (m³) trên cột và trục Y">m³</button>
             </div>
             <div class="pv-unit-toggle" role="group" aria-label="Khoảng tuần hiển thị">
-              <button type="button" class="pv-unit-btn" id="pv-span-2" title="Tổng số liệu 2 tuần (tuần đang chọn + tuần kế tiếp)">2 tuần</button>
-              <button type="button" class="pv-unit-btn active" id="pv-span-1" title="Chỉ hiển thị 1 tuần đang chọn">1 tuần</button>
+              <button type="button" class="pv-unit-btn active" id="pv-span-2" title="Tổng số liệu cặp 2 tuần chứa tuần đang chọn">2 tuần</button>
+              <button type="button" class="pv-unit-btn" id="pv-span-1" title="Chỉ hiển thị 1 tuần đang chọn">1 tuần</button>
             </div>
             <div class="pv-unit-toggle" role="group" aria-label="Chế độ tính tổng">
               <button type="button" class="pv-unit-btn" id="pv-total-toggle" title="Tính tổng theo nhóm sản phẩm (Bullig / Ván)">Total</button>

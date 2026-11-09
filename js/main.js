@@ -15,10 +15,10 @@ import { canAccessLeadershipDashboard, renderLeadershipDashboard } from './leade
 import { setupEventListeners, undoLastAction, updateUndoButton } from './events.js';
 import { loadCustomCharts } from './export-xlsx.js';
 import { openReportCenter } from './report-center.js';
-import { clearColumnFilter, clearColumnSearch, closeColumnFilter, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
+import { clearColumnFilter, clearColumnSearch, closeColumnFilter, loadKanbanDensity, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { computeWorkerStageEfficiency, renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
-import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, setupHistoryHScroll, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll } from './xuong2.js';
+import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, setupHistoryHScroll, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll, loadX1BoLengthOptions, loadX1BoWidthOptions } from './xuong2.js';
 import { loadRateApprovals, updateRatePendingBadge } from './rate-center.js';
 import { loadX2PhuPham, loadX2Stocktakes, loadX2YieldRates } from './x2-phu-pham.js'; // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ
 import { loadSuppliers } from './suppliers.js';
@@ -213,12 +213,15 @@ function yieldBootFrame() {
     setTreLoadingStatus('Đang nạp nhật ký các công đoạn…');
     loadXuong2Cuts(); // vị trí công đoạn Xưởng 2 (thẻ launcher tab Công Đoạn)
     loadStageWs(); // công tắc XƯỞNG 1 / XƯỞNG 2 ở tab Công Đoạn SX (nhớ theo máy)
+    loadKanbanDensity(); // chế độ xem Kanban THẺ ⇄ BẢNG (nhớ theo máy — 11/2026)
     // ── XƯỞNG 1: 3 công đoạn đầu (04/10/2026) + định mức kg/h ──
     loadXuong1CatOng();
     loadXuong1SaySinh();
     loadXuong1Boc();
     loadX1Rates();
     loadX1ChainAll(); // 5 công đoạn đuôi Xưởng 1 (Lọc Ống → … → Lọc Thanh/Bó Xô)
+    loadX1BoLengthOptions(); // Danh mục chiều dài gợi ý của thẻ Bổ X1 (11/2026)
+    loadX1BoWidthOptions(); // Danh mục bản rộng gợi ý của thẻ Bổ X1
     loadXuong2Boluong(); // Nhật ký Bốc Luồng Xưởng 2 (link lô "Luồng cây..." ở tab Nguyên Liệu)
     loadXuong2BoOng(); // Nhật ký Bổ Ống Xưởng 2 (link lô ống từ Cắt Chọn)
     loadXuong2BaoTho(); // Nhật ký Chạy Máy Bào Thô Xưởng 2 (link lô đã bổ)
@@ -390,6 +393,7 @@ function yieldBootFrame() {
       (state.batches || []).length,
       (state.kanbanPicked || []).join(','),
       state.khoShowUsed ? 1 : 0,
+      state.kanbanDensity === 'table' ? 'table' : 'cards',
       state.stageWs || '',
       JSON.stringify(cols)
     ].join('|');

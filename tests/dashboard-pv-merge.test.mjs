@@ -96,10 +96,20 @@ state.planningItems = [
   { id: 'pl1', productId: 'p1', year: curYear, week: 'Tuần 40', qty: 100 }
 ];
 
+check('MẶC ĐỊNH: đơn vị Số lượng + khoảng 2 tuần', state.planVsPressUnit === 'qty' && state.planVsPressSpan === 2);
+
 // ─── 1. HÀNH VI: mặc định chỉ vẽ biểu đồ KẾ HOẠCH vs ĐÃ ÉP ───
 check('MẶC ĐỊNH: state.pvChartMode = "plan" (không đọc localStorage khi render)', state.pvChartMode === 'plan');
 press.renderPlanVsPressChart();
 check('MẶC ĐỊNH: vẽ biểu đồ Kế Hoạch vs Đã Ép (planVsPressInstance được tạo)', !!state.planVsPressInstance);
+const now = new Date();
+const isoToday = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+const isoDay = isoToday.getUTCDay() || 7;
+isoToday.setUTCDate(isoToday.getUTCDate() + 4 - isoDay);
+const currentIsoWeek = Math.ceil(((isoToday - new Date(Date.UTC(isoToday.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7);
+const expectedPairStart = currentIsoWeek % 2 === 0 ? currentIsoWeek - 1 : currentIsoWeek;
+check('MẶC ĐỊNH: cặp 2 tuần chứa tuần hiện tại', Number(state.planVsPressWeek) === expectedPairStart);
+check('MẶC ĐỊNH: biểu đồ số lượng ẩn trục Y theo m³', state.planVsPressInstance.config.options.scales.y.display === false);
 check('MẶC ĐỊNH: KHÔNG vẽ biểu đồ Khả Năng Đáp Ứng (planCapacityInstance rỗng)', state.planCapacityInstance == null);
 check('MẶC ĐỊNH: thẻ có data-pv-mode="plan"', document.getElementById('plan-vs-press-card').dataset.pvMode === 'plan');
 check('MẶC ĐỊNH: nút tên hiện đúng TÊN biểu đồ Kế Hoạch vs Đã Ép', document.getElementById('pv-mode-label').textContent === 'Kế Hoạch vs Đã Ép (Theo Sản Phẩm)');
@@ -164,6 +174,11 @@ const jsState = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf
 const jsEvents = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+check('CẤU TRÚC (index.html): Số lượng + 2 tuần là các lựa chọn ban đầu đang active',
+  /class="pv-unit-btn active" id="pv-unit-qty"/.test(idxHtml) &&
+  /class="pv-unit-btn active" id="pv-span-2"/.test(idxHtml) &&
+  /class="pv-unit-btn" id="pv-unit-vol"/.test(idxHtml) &&
+  /class="pv-unit-btn" id="pv-span-1"/.test(idxHtml));
 check('CẤU TRÚC (index.html): 2 biểu đồ nằm trong MỘT thẻ #plan-vs-press-card (có data-pv-mode)',
   idxHtml.includes('id="plan-vs-press-card"') && idxHtml.includes('data-pv-mode="plan"'));
 check('CẤU TRÚC (index.html): thẻ cũ #plan-capacity-card đã XÓA HẲN',
@@ -213,7 +228,7 @@ check('CẤU TRÚC (dashboard.js): nạp chế độ đã nhớ trước khi v�
 check('CẤU TRÚC (press.js): hiệu ứng trượt cửa sổ tuần Khả Năng dùng khung MỚI (#pv-chart-box-cap)',
   jsPress.includes("document.getElementById('pv-chart-box-cap')"));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v372/.test(swJs));
+  /nha-may-ngoc-son-v380/.test(swJs));
 
 // ─── 8. TRỢ GIÚP DASHBOARD: ẩn ghi chú + tooltip + nút "?" + modal ───
 console.log('--- 8. TRỢ GIÚP DASHBOARD ---');

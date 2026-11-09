@@ -431,7 +431,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v372/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v380/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -528,13 +528,15 @@ check('H10: Bổ một phần ưu tiên Đạt từ Cắt Mắt, giữ lại ph�
   x1.x1ChainPending(spBO).reduce((s, g) => s + x1.x1ChainRemainingOf(spBO, g, null), 0) === 750);
 hFill(spPS, bo.id, '2026-09-16', 40, 35, 5);
 const ps = state.xuong1PhoiSayRecords[0];
-check('H11: ghi lượt Phơi Sấy 40kg → tồn Bổ = 0',
-  !!ps && ps.lotCode === 'SS-2026-0910-01' && x1.x1ChainRemainingOf(spPS, bo, null) === 0);
+check('H11: ghi lượt Phơi Sấy 40kg → tồn Bổ = 5kg',
+  !!ps && ps.lotCode === 'SS-2026-0910-01' && x1.x1ChainRemainingOf(spPS, bo, null) === 5);
 hFill(spLT, ps.id, '2026-09-17', 35, 30, 5);
 const lt = state.xuong1LocThanhRecords[0];
-check('H12: ghi lượt Lọc Thanh 35kg → tồn Phơi Sấy = 0',
+check('H12: bản ghi cũ Lọc Thanh vẫn lấy 35kg từ Phơi Sấy; nguồn mới chờ theo Bổ',
   !!lt && lt.lotCode === 'SS-2026-0910-01' &&
-  x1.x1ChainRemainingOf(spLT, ps, null) === 0 && x1.x1ChainPending(spLT).length === 0);
+  x1.x1ChainRemainingOf(spLT, ps, null) === 0 &&
+  x1.x1ChainPending(spLT).some(src => src.id === bo.id) &&
+  x1.x1ChainPending(spLT).reduce((sum, src) => sum + x1.x1ChainRemainingOf(spLT, src, null), 0) === 5);
 const chainForLot = [[spLO, lo], [spCM, cm], [spBO, bo], [spPS, ps], [spLT, lt]];
 chainForLot.forEach(([, record]) => { delete record.lotCode; });
 check('H12a: dữ liệu cũ vẫn truy ngược mã lô qua các liên kết công đoạn',
@@ -546,7 +548,11 @@ check('H13: chip đếm 5 thẻ đuôi trả SỐ LIỆU thật (không còn "S�
   ['catMat', 'bo', 'phoiSay', 'locThanh']
     .every(k => k === 'bo'
       ? x1.x1CardCountText(x1.x1ChainSpecByKey(k).cardId) === 'Tồn 750 kg'
-      : x1.x1CardCountText(x1.x1ChainSpecByKey(k).cardId) === 'Hết tồn') &&
+      : k === 'phoiSay'
+        ? x1.x1CardCountText(x1.x1ChainSpecByKey(k).cardId) === 'Tồn 5 kg'
+        : k === 'locThanh'
+          ? x1.x1CardCountText(x1.x1ChainSpecByKey(k).cardId) === 'Tồn 5 kg'
+          : x1.x1CardCountText(x1.x1ChainSpecByKey(k).cardId) === 'Hết tồn') &&
   /^Tồn /.test(x1.x1CardCountText(spLO.cardId)));
 
 // ── SỬA trả lại phần của lượt đang sửa (excludeId) ──
@@ -657,7 +663,7 @@ check('I5: ô chọn Bổ gom theo lô và tự tính tổng 575kg từ hai nhá
     document.getElementById('x1-bo-src').value = viaGroup.id;
     x1.x1ChainSyncLinked(spBO, true);
     return h.includes('Theo lô: Lọc Ống + Cắt Mắt') &&
-           h.includes('[SS-2026-0920-01]') && h.includes('Tồn 575 kg') &&
+           h.includes('[SS-2026-0920-01]') && h.includes('Tồn 575/575 kg') &&
            document.getElementById('x1-bo-in').value === '575'; })());
 const oldViaOk = loVia.qtyOk, oldCmOk = state.xuong1CatMatRecords.find(r => r.id === 'cm-legacy').qtyOk;
 loVia.qtyOk = 480.5;
@@ -703,12 +709,10 @@ check('I8: bảng lịch sử Bổ hiện rõ nguồn tổng hợp theo lô',
 (() => {
     x1.editX1Chain(spBO, boVia.id);
     document.getElementById('x1-bo-in').value = '500';
-    document.getElementById('x1-bo-ok').value = '350';
-    document.getElementById('x1-bo-loai').value = '150';
     x1.handleX1ChainSubmit(spBO, { preventDefault(){} });
 })();
 check('I8a: sửa lượt Bổ cập nhật cùng bản ghi thành 500kg',
-  boVia.qtyIn === 500 &&
+  boVia.qtyIn === 500 && boVia.qtyOk === 500 && boVia.qtyLoai === 0 &&
   state.xuong1BoRecords.filter(r => r.boSourceGroupId === boVia.boSourceGroupId).length === 1);
 check('I8b: sửa Bổ vẫn lấy 95kg từ Cắt Mắt',
   boVia.sourceAllocations.some(a => a.sourceType === 'catMat' && a.qty === 95));
@@ -736,8 +740,6 @@ check('I8f: lượt Bổ cũ liên kết Lọc Ống vẫn hiển thị đúng n
   x1.x1ChainDisplay(spBO, legacyBoDirect).lotCode === 'SS-2026-0910-01');
 x1.editX1Chain(spBO, legacyBoDirect.id);
 document.getElementById('x1-bo-in').value = '30';
-document.getElementById('x1-bo-ok').value = '25';
-document.getElementById('x1-bo-loai').value = '5';
 x1.handleX1ChainSubmit(spBO, { preventDefault(){} });
 check('I8g: sửa lượt Bổ cũ đổi sang liên kết phân bổ mới mà không tạo lượt trùng',
   !legacyBoDirect.locOngId && !legacyBoDirect.catMatId &&

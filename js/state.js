@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v372';
+  const APP_VERSION = 'v380';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -45,6 +45,11 @@
   const STORAGE_KEY_XUONG1_BO         = 'bamboo_tracker_xuong1_bo_v1';
   const STORAGE_KEY_XUONG1_PHOI_SAY   = 'bamboo_tracker_xuong1_phoi_say_v1';
   const STORAGE_KEY_XUONG1_LOC_THANH  = 'bamboo_tracker_xuong1_loc_thanh_v1';
+  // Danh mục CHIỀU DÀI thanh (mm) gợi ý dùng chung cho thẻ Bổ Xưởng 1 (11/2026) —
+  // các giá trị người dùng "Thêm" được lưu vào đây để gợi ý ở các lô sau;
+  // tập chiều dài THỰC của từng lô nằm trong trường `lengths` của bản ghi xuong1BoRecords.
+  const STORAGE_KEY_X1_BO_LENGTHS = 'bamboo_tracker_x1_bo_lengths_v1';
+  const STORAGE_KEY_X1_BO_WIDTHS = 'bamboo_tracker_x1_bo_widths_v1';
   // Định mức công suất Xưởng 1 theo tháng (kg/h) — { <khối>: { 'YYYY-MM': kg/h } }
   // Khối = 8 công đoạn X1: catOng · saySinh · boc · locOng · catMat · bo · phoiSay · locThanh
   const STORAGE_KEY_X1_RATES = 'bamboo_tracker_x1_rates_v1';
@@ -193,6 +198,10 @@
   // Công tắc "Hiện lô đã xuất hết" của bảng tồn kho + cột Kanban Kho ('1' = hiện) —
   // mặc định ẨN để tránh hiểu nhầm 1 lô ra/vào kho nhiều lần thành nhiều lô.
   const STORAGE_KEY_KHO_SHOW_USED = 'bamboo_tracker_kho_show_used_v1';
+  // CHẾ ĐỘ XEM BẢNG KANBAN LÔ NAN (11/2026): 'cards' = thẻ lô gọn 2 dòng (mặc định) |
+  // 'table' = bảng dày đặc (cột đông lô — VD Kho 97+ lô). Thuần UI theo MÁY
+  // (như STORAGE_KEY_PV_CHART_MODE) — KHÔNG đồng bộ mây/backup/history.
+  const STORAGE_KEY_KANBAN_DENSITY = 'bamboo_tracker_kanban_density_v1';
   // ĐỊNH MỨC CÔNG SUẤT ÉP VÁN (m³/giờ) theo TỪNG THÁNG — { 'YYYY-MM': m³/h }.
   // Thẻ Ép Ván (launcher tab Công Đoạn): KHÔNG đặt định mức → thẻ ngày chỉ hiện
   // công suất m³/ngày; CÓ định mức → hiện thêm m³/h (tổng m³ ÷ giờ phân vị "Ép"
@@ -377,6 +386,7 @@
     // + js/planning.js getNanStockEvents).
     khoNotes: [],
     khoShowUsed: false,        // công tắc "Hiện lô đã xuất hết" (mặc định ẨN)
+    kanbanDensity: 'cards',    // chế độ xem bảng Kanban lô: 'cards' | 'table' (nhớ máy)
     hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, punchTimes[], fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
     hrCiAcks: [],      // [{ id, employeeId, date, note, by, at }] — đánh dấu "đã xác nhận" dòng đối chiếu Bố trí ↔ Máy chấm công
     hrPayRows: [],     // [{ id, employeeId, date, month, action, status, before{}, after{}, reason, otId, by/at }] — dòng công đã xử lý
@@ -532,6 +542,9 @@
     xuong1BoRecords: [],        x1BoEditId: null,         // Bổ ← Cắt Mắt
     xuong1PhoiSayRecords: [],   x1PhoiSayEditId: null,    // Phơi Sấy ← Bổ
     xuong1LocThanhRecords: [],  x1LocThanhEditId: null,   // Lọc Thanh/Bó Xô ← Phơi Sấy
+    // Danh mục chiều dài gợi ý của thẻ Bổ (X1) — mảng số mm, gộp với mặc định khi đọc
+    x1BoLengthOptions: [],
+    x1BoWidthOptions: [],
     // Định mức công suất Xưởng 1 theo tháng — { <8 khối>: { 'YYYY-MM': kg/h } }
     // Khối: catOng · saySinh · boc · locOng · catMat · bo · phoiSay · locThanh
     x1Rates: { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
@@ -567,10 +580,10 @@
     materialPlanChartInstance: null, // instance Chart.js của biểu đồ kế hoạch vs thực tế
     // Biểu đồ tĩnh Kế Hoạch vs Đã Ép (Dashboard)
     pvChartMode: 'plan',        // THẺ GỘP 2 BIỂU ĐỒ: 'plan' = Kế Hoạch vs Đã Ép | 'cap' = Khả Năng Đáp Ứng Kế Hoạch
-    planVsPressUnit: 'vol',     // 'vol' = m³ (mặc định) | 'qty' = Số lượng — chỉ đổi SỐ hiển thị, chiều cao cột luôn theo m³
+    planVsPressUnit: 'qty',     // 'qty' = Số lượng (mặc định) | 'vol' = m³ — chỉ đổi SỐ hiển thị, chiều cao cột luôn theo m³
     planVsPressYear: 'current', // 'current' = năm hiện tại | 'all' | năm cụ thể (VD '2026')
     planVsPressWeek: 'current', // 'current' = tuần hiện tại | 'all' | số tuần (1..53)
-    planVsPressSpan: 1,         // 1 = hiển thị 1 tuần (mặc định) | 2 = gộp 2 tuần (tuần chọn + tuần kế tiếp) — theo tần suất xuất hàng 1 hoặc 2 tuần/lần
+    planVsPressSpan: 2,         // 2 = hiển thị cặp 2 tuần chứa tuần chọn (mặc định) | 1 = hiển thị 1 tuần — theo tần suất xuất hàng 1 hoặc 2 tuần/lần
     planVsPressTotal: false,    // true = nút Total: gộp toàn bộ sản phẩm theo nhóm tên (Bullig / Ván) thay vì từng mã hàng
     planVsPressInstance: null,
     planCapacityInstance: null,
@@ -669,6 +682,8 @@ export {
   STORAGE_KEY_XUONG1_BO,
   STORAGE_KEY_XUONG1_PHOI_SAY,
   STORAGE_KEY_XUONG1_LOC_THANH,
+  STORAGE_KEY_X1_BO_LENGTHS,
+  STORAGE_KEY_X1_BO_WIDTHS,
   STORAGE_KEY_X1_RATES,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_MECH_WORK_PLANS,
@@ -680,6 +695,7 @@ export {
   STORAGE_KEY_X2_SAY_FRAME,
   STORAGE_KEY_KHO_NOTES,
   STORAGE_KEY_KHO_SHOW_USED,
+  STORAGE_KEY_KANBAN_DENSITY,
   STORAGE_KEY_HR_EMPLOYEES,
   STORAGE_KEY_HR_LEAVES,
   STORAGE_KEY_HR_RECRUITMENT,

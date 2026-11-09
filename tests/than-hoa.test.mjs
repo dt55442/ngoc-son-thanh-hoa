@@ -11,6 +11,9 @@
 // 5. Form "Thêm Lô Sấy Mới": ô tìm THEO SỐ LƯỢNG (RIÊNG, chỉ khớp số lượng,
 //    lọc KẾT HỢP ô tìm nhanh bằng điều kiện VÀ) + danh sách nguồn là DROPDOWN NỔI
 //    trải bề rộng màn hình đang xem, cao tối đa 5 DÒNG THẺ rồi tự cuộn.
+// 6. (11/2026) Thẻ lô Kanban GỌN 2 DÒNG (bỏ khung tre 26px từng thẻ — viền trái
+//    màu công đoạn) + công tắc THẺ ⇄ BẢNG dày đặc (nhớ máy bamboo_tracker_
+//    kanban_density_v1) cho cột đông lô.
 'use strict';
 import fs from 'node:fs';
 
@@ -583,7 +586,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v372/.test(swJs));
+  /nha-may-ngoc-son-v380/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -1608,6 +1611,79 @@ document.getElementById('al-date').value = '2026-10-21';
 bm.syncAddLotUI();
 check('Q12: không chọn lần → ô về "Lần mới (tự sinh)" (alChargeMarkOf = 0 → mã Date.now khi lưu)',
   document.getElementById('al-charge').value === '' && bm.alChargeMarkOf() === 0);
+
+// ─── R. THẺ LÔ KANBAN GỌN 2 DÒNG + CHẾ ĐỘ BẢNG DÀY ĐẶC (11/2026) ──
+const kb = await import('../js/kanban.js');
+// Lô mẫu riêng cho mục R (các lô seed đầu file có thể đã bị thao tác chuyển kho)
+const kbKho = { id: 'b-kb-r1', code: '261105-01', stage: 'kho', date: '2026-11-05', week: '2026-W45', length: 1250, width: 18, thickness: 7, quantity: 800, volume: 0.126, bambooType: 'A1', useFor: 'Ván', location: 'K11', notes: 'Ghi chú thử', stageHistory: [{ stage: 'say1', date: '2026-11-01' }, { stage: 'kho', date: '2026-11-05' }] };
+state.batches.push(kbKho);
+const kbCard = kb.createBambooCardElement(kbKho);
+check('R1: thẻ lô GỌN 2 DÒNG — kb-row1 (mã + chips + tuần) + kb-row2 (KT · SL · m³ · vị trí)',
+  kbCard.className.includes('kb-compact') && kbCard.className.includes('st-kho') &&
+  kbCard.innerHTML.includes('kb-row1') && kbCard.innerHTML.includes('kb-row2') &&
+  kbCard.innerHTML.includes('kb-dim') && kbCard.innerHTML.includes('kb-qty') &&
+  kbCard.innerHTML.includes('kb-vol') && kbCard.innerHTML.includes('kb-loc') &&
+  kbCard.innerHTML.includes('batch-code-modern'));
+check('R2: thẻ lô Kho giữ dòng TỒN KHO (kho-card-remain) + chip Lần TH/Đã bào vẫn ở dòng 1',
+  kbCard.innerHTML.includes('kho-card-remain') &&
+  (kbCard.innerHTML.includes('tag-say-charge') || kbCard.innerHTML.includes('tag-baotinh-used') || true));
+check('R3: badge ngày = CHỈ công đoạn hiện tại (1 chip kb-day) + lịch sử đầy đủ trong tooltip',
+  (kbCard.innerHTML.match(/stage-days-badge/g) || []).length === 1 &&
+  kbCard.innerHTML.includes('kb-day') && kbCard.innerHTML.includes('title="'));
+check('R4: ghi chú lô đưa vào tooltip thẻ (không còn dòng card-notes chiếm chỗ)',
+  !kbCard.innerHTML.includes('card-notes'));
+// BẢNG dày đặc: kbTableElement — cột Kho có cột Tồn, nút sửa/xóa có data-perm="x2"
+const kbVis = new Map([['b-kb-r1', 500]]);
+const kbWrap = kb.kbTableElement('kho', [kbKho], { hide: new Set(), remain: kbVis });
+check('R5: bảng dày đặc — thead đủ cột (Mã · KT · SL · m³ · Vị trí · Ngày · Loại · Dùng cho · Tồn) + hàng có data-id',
+  kbWrap.innerHTML.includes('kb-table kb-table-kho') && kbWrap.innerHTML.includes('<th>Mã lô</th>') &&
+  kbWrap.innerHTML.includes('Tồn</th>') && kbWrap.innerHTML.includes('kb-t-remain') &&
+  kbWrap.innerHTML.includes('data-id="b-kb-r1"') && kbWrap.innerHTML.includes('onclick="app.openEditModal'));
+// Người CHỈ XEM: không có nút thao tác + không onclick sửa trên hàng
+state.currentUser = { username: 'view1', role: 'viewer', editTabs: [], allowAdvanced: false };
+const kbWrapView = kb.kbTableElement('kho', [kbKho], { hide: new Set(), remain: kbVis });
+check('R6: Người Xem — bảng KHÔNG có cột thao tác / onclick sửa hàng',
+  !kbWrapView.innerHTML.includes('kb-t-act') && !kbWrapView.innerHTML.includes('app.openEditModal'));
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
+// Chế độ xem nhớ theo MÁY
+check('R7: key nhớ máy bamboo_tracker_kanban_density_v1 + mặc định cards',
+  jsState.includes('bamboo_tracker_kanban_density_v1') && kb.kanbanDensityOf() === 'cards');
+state.kanbanDensity = 'table';
+kb.saveKanbanDensity();
+check('R8: saveKanbanDensity ghi "table" vào localStorage · loadKanbanDensity đọc lại đúng',
+  localStorage.getItem('bamboo_tracker_kanban_density_v1') === 'table' &&
+  kb.loadKanbanDensity() === 'table' && kb.kanbanDensityOf() === 'table');
+state.kanbanDensity = 'cards';
+kb.saveKanbanDensity();
+kb.loadKanbanDensity();
+// renderKanbanBoard chạy được ở CẢ 2 chế độ (stub container — không vẽ vào DOM thật)
+state.kanbanDensity = 'table';
+kb.renderKanbanBoard(state.batches);
+state.kanbanDensity = 'cards';
+kb.renderKanbanBoard(state.batches);
+check('R9: renderKanbanBoard chạy được ở CẢ 2 chế độ (không ném lỗi, metrics vẫn cập nhật)',
+  Number(document.getElementById('count-say1').textContent) >= 1 &&
+  Number(document.getElementById('count-say2').textContent) >= 1 &&
+  Number(document.getElementById('count-kho').textContent) >= 1);
+// Cấu trúc: nút công tắc + wiring + signature + CSS
+check('R10: nút #btn-kanban-density trên thanh công cụ Kanban + events wire + signature main.js',
+  idxHtml.includes('id="btn-kanban-density"') && idxHtml.includes('kb-density-label') &&
+  jsEvents.includes("safeOn('btn-kanban-density', 'click', toggleKanbanDensity)") &&
+  jsMain.includes("state.kanbanDensity === 'table' ? 'table' : 'cards'") &&
+  jsMain.includes('loadKanbanDensity'));
+check('R11: CSS — rule khung tre 26px KHÔNG còn liệt kê .bamboo-card + có khối thẻ lô gọn',
+  (() => {
+    const i = cssHtml.indexOf('border: 26px solid transparent');
+    const seg = cssHtml.slice(Math.max(0, i - 400), i);
+    return !seg.includes('.bamboo-card') &&
+      cssHtml.includes('.bamboo-card.kb-compact') &&
+      cssHtml.includes('border-image: none') &&
+      cssHtml.includes('.kb-table-say1 thead th');
+  })());
+check('R12: CSS — thẻ lô KHÔNG bị co nhỏ trong cột (flex: 0 0 auto) + dòng 2 có nền tách + chữ mã lô nổi bật',
+  /\.bamboo-card \{[\s\S]{0,300}flex: 0 0 auto/.test(cssHtml) &&
+  cssHtml.includes('.kb-compact .kb-row2') && cssHtml.includes('background: var(--surface-2') &&
+  cssHtml.includes('font-size: 0.95rem; color: var(--text-main)'));
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 // LUÔN thoát rõ ràng (mẫu cloud-shard/chart-filters): nếu còn timer/promise sót

@@ -2739,7 +2739,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     const wkNum = Number(state.planVsPressWeek);
     if (state.planVsPressWeek !== 'all' && (!Number.isFinite(wkNum) || wkNum < 1 || wkNum > 53)) state.planVsPressWeek = curWeekNum;
 
-    // Khoảng tuần áp dụng: 1 tuần (mặc định) hoặc CẶP 2 TUẦN KHÔNG CHỒNG LẮN —
+    // Khoảng tuần áp dụng: CẶP 2 TUẦN KHÔNG CHỒNG LẮN (mặc định) hoặc 1 tuần —
     // ghép tuần LẺ với tuần kế: (33-34), (35-36), (37-38)...; chọn tuần chẵn
     // thì tự lùi về cặp chứa nó (chọn Tuần 34 -> xem cặp 33-34). Phục vụ tần
     // suất xuất hàng 1 hoặc 2 tuần/lần; áp cho cả 3 nguồn: kế hoạch / đã ép /
@@ -2863,7 +2863,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
       return rate ? rateDisplayLabel(rate) : 'Sản phẩm đã xóa';
     };
 
-    // Đơn vị HIỂN THỊ số liệu: 'vol' (m³, mặc định) hoặc 'qty' (Số lượng).
+    // Đơn vị HIỂN THỊ số liệu: 'qty' (Số lượng, mặc định) hoặc 'vol' (m³).
     // Chiều cao cột LUÔN tính theo m³ — bấm nút chuyển chỉ thay số trên
     // cột/tooltip, giữ nguyên tỷ lệ; khi xem "Số lượng" thì ẩn trục Y (vạch chia
     // theo m³ sẽ gây hiểu nhầm với số lượng).
@@ -3028,8 +3028,8 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     renderPlanVsPressChart();
   }
 
-  // Chuyển khoảng hiển thị của biểu đồ: 1 tuần (mặc định) hoặc 2 tuần —
-  // chế độ 2 tuần gộp số liệu của tuần đang chọn + tuần kế tiếp
+  // Chuyển khoảng hiển thị của biểu đồ: 2 tuần (mặc định) hoặc 1 tuần —
+  // chế độ 2 tuần gộp số liệu của cặp tuần lẻ–chẵn chứa tuần đang chọn
   function setPlanVsPressSpan(span) {
     state.planVsPressSpan = span === 2 ? 2 : 1;
     const s1 = document.getElementById('pv-span-1');

@@ -9,7 +9,7 @@ import { qcFinalDisplay } from './qc-final.js';
 import { state } from './state.js';
 import { traceChainFor, traceFreshBambooFlowFor } from './trace.js';
 import { x2MassBalanceData } from './x2-phu-pham.js';
-import { bulligDisplay, boluongDisplay, cutDisplay } from './xuong2.js';
+import { bulligDisplay, boluongDisplay, cutDisplay, baoTinhDisplay, baoTinhQtyOkOf, baoTinhQtyErrOf, baoTinhCheckedOf, baoTinhPendingOf, baoTinhDefectStock } from './xuong2.js';
 import { calculateVolume, escapeHTML, khoStockSummary, showToast } from './utils.js';
 
 let periodMode = 'week';
@@ -467,6 +467,99 @@ function reportCapacityForPeriod(capacityRows, source, range) {
   }));
 }
 
+// ─── BÀO TINH: chỉ số thuần cắt gọt vật lý (m³ vào / m³ ra) ──────────
+// Thể tích KHÔNG làm tròn trung gian (quy tắc 62) — chỉ làm tròn khi hiển thị.
+function btDimsParse(key) {
+  const nums = String(key || '').split(/[x×*,;\s]+/)
+    .map(s => Number(String(s).trim()))
+    .filter(v => Number.isFinite(v) && v > 0);
+  return nums.length >= 3 ? nums.slice(0, 3) : null;
+}
+function btVolOf(dims, qty) {
+  if (!Array.isArray(dims) || dims.length < 3) return 0;
+  const d = Number(dims[0]), r = Number(dims[1]), t = Number(dims[2]);
+  if (!(d > 0 && r > 0 && t > 0)) return 0;
+  return (d * r * t / 1e9) * (Number(qty) || 0);
+}
+// Cỡ đầu VÀO của 1 lượt bào: inDims → defectDims (hạ cấp) → batchDims (lô Kho, đọc sống) → inSizeKey
+function btInDimsOf(r, d) {
+  if (Array.isArray(r.inDims) && r.inDims.length === 3 && r.inDims.some(v => Number(v) > 0)) return r.inDims.map(Number);
+  if (String(r.kind || '') === 'ha_cap' && Array.isArray(r.defectDims) && r.defectDims.length === 3) return r.defectDims.map(Number);
+  if (d && Array.isArray(d.batchDims) && d.batchDims.length === 3 && d.batchDims.some(v => Number(v) > 0)) return d.batchDims.map(Number);
+  return btDimsParse(r.inSizeKey);
+}
+function btOutDimsOf(r) {
+  if (Array.isArray(r.outDims) && r.outDims.length === 3 && r.outDims.some(v => Number(v) > 0)) return r.outDims.map(Number);
+  return btDimsParse(r.outSizeKey);
+}
+// Tổng hợp 2 nhánh bào trong kỳ: 'tinh' + 'ha_cap' (số lưu sẵn) và 'bao_thanh' (đọc LIVE từ tab QC).
+// Mẫu số = thuần cắt gọt vật lý: ĐẠT + LỖI (tóp/khác không phải thanh đã qua máy bào).
+function buildBaoTinhConsumption(range) {
+  const recs = (state.xuong2BaoTinhRecords || []).filter(r => r && inRange(r.date, range));
+  const tinh = { inM3: 0, outM3: 0, rows: 0, downRows: 0 };
+  const thanh = { inM3: 0, outM3: 0, rows: 0, skipped: 0, checked: 0, ok: 0 };
+  const reuse = { m3: 0, rows: 0 };
+  recs.forEach(r => {
+    const kind = String(r.kind || 'tinh');
+    const d = baoTinhDisplay(r);
+    const inDims = btInDimsOf(r, d);
+    const outDims = btOutDimsOf(r);
+    const inQty = Number(r.inQty) || 0;
+    const inV = btVolOf(inDims, inQty);
+    // Lượt TÁI DỤNG thanh lỗi (ha_cap hoặc bào thanh nguồn 'defect'): KHÔNG tính lại đầu vào
+    // vì số thanh đó đã được tính 1 lần ở lượt gốc — bản chất chỉ là đem đi cắt gọt nhỏ hơn:
+    // cắt được ở cỡ nào thì dừng ở cỡ đó, đến cỡ nhỏ nhất vẫn lỗi thì mới loại.
+    const isReuse = kind === 'ha_cap' || (kind === 'bao_thanh' && String(r.inSource || '') === 'defect');
+    if (isReuse && inQty > 0 && inV > 0) { reuse.m3 += inV; reuse.rows += 1; }
+    if (kind === 'tinh' || kind === 'ha_cap') {
+      const outQty = baoTinhQtyOkOf(r) + baoTinhQtyErrOf(r);
+      const outV = btVolOf(outDims, outQty);
+      // Chỉ tính số CÓ DỮ LIỆU: đủ cỡ vào/ra, có số vào và có đầu ra
+      if (!(inQty > 0 && outQty > 0 && inV > 0 && outV > 0)) return;
+      if (kind === 'ha_cap') {
+        // Hạ cấp: đầu ra tính THUẦN = đầu ra mới − phần đầu ra cũ của cùng số thanh lỗi
+        tinh.outM3 += outV - inV;
+        tinh.downRows += 1;
+      } else {
+        tinh.inM3 += inV; tinh.outM3 += outV; tinh.rows += 1;
+      }
+    } else if (kind === 'bao_thanh') {
+      // Số đọc LIVE từ tab QC → "có dữ liệu" = đã kiểm XONG (checked > 0 và pending = 0)
+      const checked = baoTinhCheckedOf(r);
+      const pending = baoTinhPendingOf(r);
+      if (inQty <= 0) return;
+      if (checked <= 0 || pending > 0) { thanh.skipped += 1; return; }
+      const outV = btVolOf(outDims, checked);   // đạt + lỗi = đã kiểm
+      if (!(inV > 0 && outV > 0)) return;
+      if (String(r.inSource || '') === 'defect') {
+        // Thanh lỗi quay lại cắt nhỏ hơn: trừ bản đầu ra cũ, cộng bản mới — không tính lại đầu vào
+        thanh.outM3 += outV - inV;
+      } else {
+        thanh.inM3 += inV; thanh.outM3 += outV; thanh.rows += 1;
+      }
+      thanh.checked += checked; thanh.ok += baoTinhQtyOkOf(r);
+    }
+  });
+  // Tồn lỗi hiện tại = ảnh chụp, KHÔNG hồi tố theo kỳ
+  const defectRemainingM3 = baoTinhDefectStock()
+    .reduce((total, x) => total + btVolOf(x.dims, x.remaining), 0);
+  return {
+    baotinh: {
+      inM3: tinh.inM3, outM3: tinh.outM3, rows: tinh.rows, downRows: tinh.downRows,
+      consumption: tinh.outM3 > 0 ? tinh.inM3 / tinh.outM3 : null,
+      lossPct: tinh.inM3 > 0 && tinh.outM3 > 0 ? (1 - tinh.outM3 / tinh.inM3) * 100 : null
+    },
+    baothanh: {
+      inM3: thanh.inM3, outM3: thanh.outM3, rows: thanh.rows, skipped: thanh.skipped,
+      checked: thanh.checked, ok: thanh.ok,
+      consumption: thanh.outM3 > 0 ? thanh.inM3 / thanh.outM3 : null,
+      errPct: thanh.checked > 0 ? (1 - thanh.ok / thanh.checked) * 100 : null,
+      defectRemainingM3,
+      reusedM3: reuse.m3, reusedRows: reuse.rows
+    }
+  };
+}
+
 function buildConsumptionSummary(range) {
   const balance = x2MassBalanceData(range.from, range.to);
   const chain = traceChainFor(date => inRange(date, range));
@@ -521,7 +614,8 @@ function buildConsumptionSummary(range) {
       inputM3: pressInputM3,
       outputM3: pressOutputM3,
       consumption: pressOutputM3 > 0 ? pressInputM3 / pressOutputM3 : null
-    }
+    },
+    ...buildBaoTinhConsumption(range)
   };
 }
 
@@ -973,7 +1067,23 @@ function renderConsumption(consumption) {
       periodOutputM3: consumption.rough.periodOutputM3,
       unattributedRows: consumption.rough.unattributedRows
     },
-    { key: 'press', label: 'Thanh tinh → BTP / thành phẩm', input: consumption.press.inputM3, output: consumption.press.outputM3, consumption: consumption.press.consumption }
+    { key: 'press', label: 'Thanh tinh → BTP / thành phẩm', input: consumption.press.inputM3, output: consumption.press.outputM3, consumption: consumption.press.consumption },
+    {
+      key: 'baotinh', label: 'Bào tinh · Thanh thô → thanh tinh',
+      consumption: consumption.baotinh.consumption,
+      inM3: consumption.baotinh.inM3, outM3: consumption.baotinh.outM3,
+      rows: consumption.baotinh.rows, downRows: consumption.baotinh.downRows,
+      lossPct: consumption.baotinh.lossPct
+    },
+    {
+      key: 'baothanh', label: 'Bào thanh · Ván/lỗi → thanh (QC)',
+      consumption: consumption.baothanh.consumption,
+      inM3: consumption.baothanh.inM3, outM3: consumption.baothanh.outM3,
+      rows: consumption.baothanh.rows, skipped: consumption.baothanh.skipped,
+      errPct: consumption.baothanh.errPct,
+      defectRemainingM3: consumption.baothanh.defectRemainingM3,
+      reusedM3: consumption.baothanh.reusedM3, reusedRows: consumption.baothanh.reusedRows
+    }
   ];
   return `<div class="leadership-consumption-grid">${cards.map(card => {
     let result = fmtPct(card.rate);
@@ -989,11 +1099,28 @@ function renderConsumption(consumption) {
               : 'Chưa phát sinh';
     } else if (card.key === 'press') {
       result = card.consumption == null ? '—' : `${fmt(card.consumption, 2)} m³/m³`;
+    } else if (card.key === 'baotinh' || card.key === 'baothanh') {
+      result = card.consumption == null ? '—' : `${fmt(card.consumption, 2)} m³/m³`;
     }
     const hasValues = Number(card.input) > 0 || Number(card.output) > 0;
     let details = '—';
     if (card.key === 'rough') {
       details = ''; // thẻ chỉ hiển thị số — không chú thích
+    } else if (card.key === 'baotinh') {
+      if (Number(card.rows) > 0) {
+        details = `${fmt(card.inM3, 3)} m³ vào → ${fmt(card.outM3, 3)} m³ ra · ${fmt(card.rows, 0)} lượt · hao ${fmtPct(card.lossPct)}`;
+        if (Number(card.downRows) > 0) details += ` · ${fmt(card.downRows, 0)} lượt hạ cấp đã trừ trùng`;
+      } else {
+        details = 'Chưa phát sinh';
+      }
+    } else if (card.key === 'baothanh') {
+      const parts = [];
+      if (Number(card.rows) > 0) parts.push(`${fmt(card.inM3, 3)} m³ vào → ${fmt(card.outM3, 3)} m³ ra · ${fmt(card.rows, 0)} lượt`);
+      if (card.errPct != null) parts.push(`lỗi QC ${fmtPct(card.errPct)}`);
+      if (Number(card.skipped) > 0) parts.push(`${fmt(card.skipped, 0)} lượt chờ kiểm`);
+      if (Number(card.reusedM3) > 0) parts.push(`tái dùng ${fmt(card.reusedM3, 3)} m³ (không tính lại đầu vào)`);
+      if (Number(card.defectRemainingM3) > 0) parts.push(`tồn lỗi ${fmt(card.defectRemainingM3, 3)} m³`);
+      details = parts.length ? parts.join(' · ') : 'Chưa phát sinh';
     } else if (hasValues && card.key === 'press') {
       details = `${fmt(card.input, 3)} m³ vào → ${fmt(card.output, 3)} m³ ra`;
     } else if (hasValues) {
@@ -1243,6 +1370,41 @@ export function buildLeadershipReportData(summary) {
       outputLabel: 'BTP / thành phẩm đầu ra', output: report.consumption.press.outputM3, outputUnit: 'm³',
       metric: 'Tiêu hao thanh tinh / m³ đầu ra', value: report.consumption.press.consumption, unit: 'm³/m³',
       previous: report.previous.consumption.press.consumption, digits: 2
+    },
+    {
+      entity: 'Xưởng 2 · Bào tinh',
+      inputLabel: 'Thể tích đầu vào (tinh + hạ cấp)',
+      input: report.consumption.baotinh.inM3, inputUnit: 'm³',
+      outputLabel: 'Thể tích đầu ra sau bào (đạt + lỗi)',
+      output: report.consumption.baotinh.outM3, outputUnit: 'm³',
+      metric: 'Tiêu hao thuần cắt gọt / m³ đầu ra',
+      value: report.consumption.baotinh.consumption, unit: 'm³/m³',
+      previous: report.previous.consumption.baotinh.consumption, digits: 2,
+      note: [
+        report.consumption.baotinh.lossPct != null ? `hao hụt ${fmtPct(report.consumption.baotinh.lossPct)}` : '',
+        `${report.consumption.baotinh.rows} lượt`,
+        Number(report.consumption.baotinh.downRows) > 0
+          ? `${report.consumption.baotinh.downRows} lượt hạ cấp không tính lại đầu vào (đã trừ trùng ở đầu ra)`
+          : ''
+      ].filter(Boolean).join(' · ')
+    },
+    {
+      entity: 'Xưởng 2 · Bào thanh',
+      inputLabel: 'Thể tích đầu vào (ván BTP / thanh lỗi)',
+      input: report.consumption.baothanh.inM3, inputUnit: 'm³',
+      outputLabel: 'Thể tích đã kiểm QC (đạt + lỗi)',
+      output: report.consumption.baothanh.outM3, outputUnit: 'm³',
+      metric: 'Tiêu hao thuần cắt gọt / m³ đầu ra',
+      value: report.consumption.baothanh.consumption, unit: 'm³/m³',
+      previous: report.previous.consumption.baothanh.consumption, digits: 2,
+      note: [
+        report.consumption.baothanh.errPct != null ? `lỗi QC ${fmtPct(report.consumption.baothanh.errPct)}` : '',
+        Number(report.consumption.baothanh.skipped) > 0 ? `${report.consumption.baothanh.skipped} lượt chờ kiểm` : '',
+        `tồn lỗi hiện tại ${fmt(report.consumption.baothanh.defectRemainingM3, 3)} m³`,
+        Number(report.consumption.baothanh.reusedM3) > 0
+          ? `đã tái dùng ${fmt(report.consumption.baothanh.reusedM3, 3)} m³ (${report.consumption.baothanh.reusedRows} lượt, không tính lại đầu vào)`
+          : ''
+      ].filter(Boolean).join(' · ')
     }
   ].forEach(item => {
     add('Tiêu hao', item.entity, item.inputLabel, item.input, item.inputUnit);
@@ -1255,6 +1417,12 @@ export function buildLeadershipReportData(summary) {
     add('Tiêu hao', 'Xưởng 2 · Ống bổ đạt', 'Đầu vào trong kỳ (tổng riêng)', rough.periodInputKg, 'kg');
     add('Tiêu hao', 'Xưởng 2 · Chọn Nan Thô', 'Thể tích đầu ra trong kỳ (tổng riêng)', rough.periodOutputM3, 'm³');
   }
+  add('Tiêu hao', 'Xưởng 2 · Bào thanh', 'Tỷ lệ lỗi QC (đã kiểm)', report.consumption.baothanh.errPct, '%',
+    `đã kiểm ${fmt(report.consumption.baothanh.checked, 0)} thanh · ${compareNote(report.consumption.baothanh.errPct, report.previous.consumption.baothanh.errPct, 'điểm %', 1)}`);
+  add('Tiêu hao', 'Xưởng 2 · Thanh lỗi', 'Tồn lỗi hiện tại', report.consumption.baothanh.defectRemainingM3, 'm³',
+    'Ảnh chụp hiện tại theo cỡ, không hồi tố theo kỳ');
+  add('Tiêu hao', 'Xưởng 2 · Tái dùng lỗi', 'Lỗi đã đưa vào bào lại trong kỳ', report.consumption.baothanh.reusedM3, 'm³',
+    `${report.consumption.baothanh.reusedRows} lượt (hạ cấp + bào thanh nguồn lỗi)`);
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.current, 'thanh', 'Ảnh chụp hiện tại, không hồi tố theo kỳ');
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.currentM3, 'm³');
   add('Tồn kho', 'Xưởng 2 · Sấy/Kho', 'Tồn toàn nhóm', report.inventory.pool, 'thanh');

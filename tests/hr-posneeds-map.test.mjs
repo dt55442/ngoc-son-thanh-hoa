@@ -239,7 +239,7 @@ check('CSS: khối .hnm-* ở cấp cao nhất (không lọt vào @media)', (() 
   return d === 0;
 })());
 check('CSS: ngoặc { } cân bằng + có keyframes', (cssSrc.match(/{/g) || []).length === (cssSrc.match(/}/g) || []).length && cssSrc.includes('@keyframes hnmFloat'));
-check('CACHE: sw.js v364 khớp APP_VERSION', /nha-may-ngoc-son-v372/.test(swSrc) && /APP_VERSION = 'v372'/.test(stateSrc));
+check('CACHE: sw.js v364 khớp APP_VERSION', /nha-may-ngoc-son-v380/.test(swSrc) && /APP_VERSION = 'v380'/.test(stateSrc));
 
 // ─── H. MỞ THẺ THẬT — CHỐNG LỖI "THẺ TRỐNG" (map thẻ ↔ phần vẽ) ─
 check('THẺ: map có đúng id thật "hr-posneed-card" -> posneeds', hr.hrCardRenderParts('hr-posneed-card').includes('posneeds'));

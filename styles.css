@@ -1060,6 +1060,7 @@ body[data-fx="low"] .bambu-wordmark {
   box-shadow: var(--kanban-card-shadow);
   transition: var(--transition-fast);
   position: relative;
+  flex: 0 0 auto; /* không bị co nhỏ trong .column-cards-wrapper khi cột có nhiều thẻ */
 }
 
 .bamboo-card:hover {
@@ -7830,11 +7831,14 @@ body[data-theme="night"] .planning-card.press-chart-card .planning-card-header {
 }
 
 /* ── KHUNG TRE ĐAN DÂY — phủ nốt các thẻ/bảng lớn không mang class .card:
-   Tổng Quan (dashboard), Kế Hoạch/Ép Ván/QC (planning), thẻ lô nan Kanban
-   (bamboo), thư mục biểu đồ tùy chỉnh (custom-chart). Cỡ 26px. ── */
+   Tổng Quan (dashboard), Kế Hoạch/Ép Ván/QC (planning), thư mục biểu đồ tùy
+   chỉnh (custom-chart). Cỡ 26px.
+   ⚠ Thẻ LÔ Kanban (.bamboo-card) ĐÃ BỎ khung tre từng thẻ (11/2026): cột đông
+   lô (48–97 thẻ) khung 26px chiếm ~50% chiều cao thẻ, nội dung bị chìm → thẻ
+   lô dùng viền mảnh + viền trái màu công đoạn (khối "THẺ LÔ KANBAN GỌN" cuối
+   file); khung tre chỉ còn ở thẻ CHA "Than Hóa + Sấy" và các thẻ lớn. ── */
 body[data-theme="night"] .dashboard-card,
 body[data-theme="night"] .planning-card,
-body[data-theme="night"] .bamboo-card,
 body[data-theme="night"] .custom-chart-card {
   border: 26px solid transparent;
   border-image: var(--khung-tre-svg) 34 / 26px round;
@@ -7856,8 +7860,7 @@ body[data-theme="night"] .custom-chart-card .custom-card-header {
   background: linear-gradient(180deg, #6aa345, #4e7d2c);
 }
 /* Khung tre 26px đã chiếm mép → trả padding về gốc (padding 20/18px chỉ dành cho khung mảnh theme SÁNG) */
-body[data-theme="night"] .dashboard-card,
-body[data-theme="night"] .bamboo-card {
+body[data-theme="night"] .dashboard-card {
   padding-left: 16px;
   padding-right: 16px;
 }
@@ -15147,7 +15150,7 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 .leadership-shipment-chart .leadership-breakdown-row { grid-template-columns: minmax(0, 1fr) auto; }
 .leadership-consumption-section { margin-top: 3mm; }
 .leadership-consumption-section .leadership-section-header { min-height: 20px; padding-bottom: 3px; }
-.leadership-consumption-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; margin-top: 2mm; }
+.leadership-consumption-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 2mm; margin-top: 2mm; }
 .leadership-consumption-card { min-width: 0; display: grid; gap: 1mm; padding: 1.5mm 2mm; background: #f1f6f1; border: 1px solid #dce8de; border-left: 2px solid #6f9c77; border-radius: 3px; }
 .leadership-consumption-label { overflow: hidden; color: #46594b; font-size: 6.5pt; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .leadership-consumption-result { display: flex; align-items: baseline; justify-content: space-between; gap: 3px; }
@@ -16198,4 +16201,207 @@ body[data-fx="low"] .x1-ss-input-btn:active { transform: none; }
   margin: 8px 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--text-muted);
   background: var(--bg-subtle, #f8fafc); border: 1px dashed var(--border-color, #cbd5e1);
   border-radius: 8px; padding: 7px 10px; text-align: left;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* THẺ LÔ KANBAN GỌN 2 DÒNG + CHẾ ĐỘ BẢNG DÀY ĐẶC (11/2026)        */
+/* Bỏ khung tre 26px trên TỪNG thẻ lô (chiếm ~50% chiều cao, nội dung bị chìm */
+/* khi cột có 48–97 thẻ) → viền mảnh + viền trái 4px màu công đoạn.           */
+/* Khung tre chỉ còn trên thẻ CHA "Than Hóa + Sấy" và các thẻ lớn.            */
+/* ═══════════════════════════════════════════════════════════════ */
+body[data-theme="night"] .bamboo-card.kb-compact {
+  border: 1px solid rgba(46, 125, 50, 0.35);
+  border-image: none;
+  border-left-width: 4px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(80, 70, 30, 0.12);
+  padding: 7px 10px 7px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-main);
+  line-height: 1.4;
+  overflow: visible;
+  flex: 0 0 auto; /* KHÔNG bị co nhỏ trong .column-cards-wrapper (flex column) khi cột đông thẻ */
+}
+body[data-theme="night"] .bamboo-card.kb-compact:hover {
+  transform: none;
+  box-shadow: 0 3px 10px rgba(80, 70, 30, 0.20);
+  border-color: #a5cf95;
+}
+body[data-theme="night"] .bamboo-card.kb-compact.st-say1 { border-left-color: #ea580c; }
+body[data-theme="night"] .bamboo-card.kb-compact.st-say2 { border-left-color: #d97706; }
+body[data-theme="night"] .bamboo-card.kb-compact.st-kho  { border-left-color: #1d4ed8; }
+/* Dòng 1: mã lô NỔI BẬT + chips gọn + badge ngày + tuần */
+.kb-compact .kb-row1 {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0;
+}
+.kb-compact .kb-code {
+  font-weight: 800; font-size: 0.95rem; color: var(--text-main);
+  display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap; letter-spacing: 0.2px;
+}
+.kb-compact .kb-code svg { width: 13px; height: 13px; color: var(--primary); flex: 0 0 auto; }
+.kb-compact .tag-badge, .kb-compact .stage-chip { font-size: 0.7rem; padding: 1px 7px; font-weight: 700; }
+.kb-compact .kb-week {
+  margin-left: auto; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;
+  background: var(--surface-2, #efe9d4); border-radius: 999px; padding: 1px 8px;
+}
+.kb-compact .stage-days-badge.kb-day { margin: 0; padding: 1px 7px; gap: 4px; font-size: 0.7rem; }
+.kb-compact .stage-days-badge.kb-day svg { width: 10px; height: 10px; }
+/* Dòng 2: KT · SL · m³ · vị trí trên NỀN TÁCH NHẸ — đọc nhanh số chính */
+.kb-compact .kb-row2 {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  font-size: 0.82rem; color: var(--text-main); min-width: 0;
+  background: var(--surface-2, #efe9d4);
+  border-radius: 6px;
+  padding: 3px 9px;
+}
+.kb-compact .kb-dim { font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem; color: var(--text-main); white-space: nowrap; }
+.kb-compact .kb-qty { white-space: nowrap; font-size: 0.84rem; }
+.kb-compact .kb-qty .qty-num { color: var(--primary); font-family: var(--font-mono); font-weight: 800; font-size: 0.98rem; }
+.kb-compact .kb-vol { color: var(--text-muted); white-space: nowrap; font-size: 0.78rem; }
+.kb-compact .kb-loc { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; color: var(--text-muted); font-size: 0.78rem; }
+.kb-compact .kb-loc svg { width: 11px; height: 11px; }
+.kb-compact .kho-card-remain { white-space: nowrap; font-size: 0.74rem; font-weight: 600; color: #1d4ed8; background: rgba(29, 78, 216, 0.10); border-radius: 999px; padding: 1px 8px; }
+/* Nút sửa/xóa gọn trong dòng 2: bỏ viền trên/margin của .card-actions-modern cũ */
+.kb-compact .card-actions-modern {
+  margin-top: 0; padding-top: 0; border-top: none;
+  margin-left: auto; display: inline-flex; align-items: center;
+}
+.kb-compact .card-tools { display: inline-flex; gap: 4px; opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .kb-compact .card-tools { opacity: 0; transition: opacity .12s ease; }
+  .kb-compact:hover .card-tools { opacity: 1; }
+}
+.kb-compact .card-tools .btn-icon { width: 26px; height: 26px; min-width: 26px; }
+
+/* ── CHẾ ĐỘ "BẢNG" DÀY ĐẶC MỖI CỘT (cột đông lô: 48–97+) ── */
+.kb-table-wrap { width: 100%; flex: 0 0 auto; }
+.kb-table {
+  width: 100%; border-collapse: collapse; font-size: 0.76rem;
+  background: var(--bg-card, #fdfbf2);
+}
+.kb-table th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--surface-2, #efe9d4); color: var(--text-muted);
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.3px;
+  padding: 5px 6px; text-align: left; white-space: nowrap;
+  border-bottom: 1px solid var(--border-color, #d9d2b6);
+}
+.kb-table td {
+  padding: 4px 6px; border-bottom: 1px solid rgba(217, 210, 182, 0.55);
+  white-space: nowrap;
+}
+.kb-table tbody tr { cursor: default; }
+.kb-table tbody tr:hover td { background: rgba(46, 125, 50, 0.08); }
+.kb-table .ta-r { text-align: right; }
+.kb-table .ta-c { text-align: center; }
+.kb-table .kb-t-code { font-family: var(--font-mono); font-weight: 700; font-size: 0.74rem; }
+.kb-table .kb-t-dim, .kb-table .kb-t-qty, .kb-table .kb-t-vol, .kb-table .kb-t-remain { font-family: var(--font-mono); }
+.kb-table .kb-t-remain { color: #1d4ed8; font-weight: 700; }
+.kb-table .kb-t-loc, .kb-table .kb-t-date, .kb-table .kb-t-type, .kb-table .kb-t-use { color: var(--text-muted); }
+.kb-table .kb-t-chips { font-size: 0.7rem; }
+.kb-table .kb-t-none { color: var(--text-muted); opacity: 0.6; }
+.kb-table .kb-t-act .btn-icon { width: 24px; height: 24px; min-width: 24px; }
+/* Viền trái màu công đoạn cho cả bảng (theo cột đang xem) */
+.kb-table-say1 thead th { border-top: 3px solid #ea580c; }
+.kb-table-say2 thead th { border-top: 3px solid #d97706; }
+.kb-table-kho  thead th { border-top: 3px solid #1d4ed8; }
+
+/* ── ĐIỆN THOẠI: thẻ lô gọn vẫn 1 cột, bảng cuộn ngang trong cột ── */
+@media (max-width: 639.98px) {
+  .kb-compact .kb-week { display: none; } /* tuần/ngày xem bằng badge + tooltip cho gọn */
+  .kb-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .kb-table { min-width: 520px; }
+  .kb-table th, .kb-table td { padding: 4px 5px; font-size: 0.72rem; }
+}
+
+/* ── CHIỀU DÀI THANH Ở THẺ BỔ XƯỞNG 1 + 2 HÌNH THỨC LỌC THANH/BÓ XÔ (11/2026) ──
+   Panel chọn chiều dài là DROPDOWN NỔI: neo bằng INLINE style (x2FloatShow /
+   positionX2FloatPicker trong js/xuong2.js) — CSS ở đây chỉ lo giao diện. */
+.x1-bo-lengths-btn { width: 100%; justify-content: flex-start; gap: 6px; min-height: 40px; }
+.x1-bo-len-picker {
+  background: var(--card-bg, #fffdf6);
+  border: 1px solid var(--border, #d6c9a3);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(60, 45, 10, 0.25);
+  padding: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  min-width: 220px;
+  z-index: 260;
+}
+.x1-bo-len-picker[hidden] { display: none !important; }
+.x1-bo-len-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; cursor: pointer;
+  min-height: 36px; font-size: 0.9rem;
+}
+.x1-bo-len-opt:hover { background: rgba(46, 125, 50, 0.08); }
+.x1-bo-len-opt input { width: 18px; height: 18px; accent-color: var(--primary, #2e7d32); }
+.x1-bo-len-add { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border, #d6c9a3); }
+.x1-bo-len-add input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border, #d6c9a3); border-radius: 6px; font-size: 16px; }
+.x1-bo-source-help { display: inline-flex; vertical-align: middle; margin-left: 4px; color: var(--text-muted, #666); cursor: help; }
+.x1-bo-source-help svg { width: 15px; height: 15px; }
+.x1-bo-widths-btn { width: 100%; justify-content: flex-start; gap: 6px; min-height: 40px; }
+.x1-bo-width-picker {
+  background: var(--card-bg, #fffdf6);
+  border: 1px solid var(--border, #d6c9a3);
+  border-radius: 10px;
+  min-width: 220px;
+  z-index: 260;
+}
+.x1-bo-width-picker[hidden] { display: none !important; }
+.x1-bo-width-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; cursor: pointer;
+  min-height: 40px; font-size: 0.9rem;
+}
+.x1-bo-width-opt:hover { background: rgba(46, 125, 50, 0.08); }
+.x1-bo-width-opt input { width: 18px; height: 18px; accent-color: var(--primary, #2e7d32); }
+.x1-bo-width-add { display: flex; gap: 6px; margin-top: 8px; padding: 8px; border-top: 1px dashed var(--border, #d6c9a3); }
+.x1-bo-width-add input { flex: 1; min-width: 0; min-height: 42px; padding: 6px 8px; border: 1px solid var(--border, #d6c9a3); border-radius: 6px; font-size: 16px; }
+.x1-bo-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.x1-bo-action-btn { min-width: 0; min-height: 46px; flex-direction: row; justify-content: center; gap: 7px; padding: 8px 10px; color: #fff; text-align: center; }
+.x1-bo-action-btn > svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.x1-bo-action-btn strong { font-size: 0.86rem; line-height: 1.2; }
+.x1-bo-action-btn.is-neutral { border-color: #475569; background: linear-gradient(180deg, #64748b 0%, #475569 55%, #334155 100%); box-shadow: 0 3px 0 #1e293b, 0 5px 12px rgba(51, 65, 85, 0.28); }
+.x1-bo-action-btn.is-neutral:hover { box-shadow: 0 6px 0 #1e293b, 0 10px 18px rgba(51, 65, 85, 0.36); }
+.x1-bo-action-btn.is-neutral:active { box-shadow: 0 1px 0 #1e293b, 0 2px 5px rgba(51, 65, 85, 0.26); }
+
+/* Bảng tổng hợp lọc thanh (theo chiều dài của lô nguồn) ở thẻ Lọc Thanh/Bó Xô */
+.x1-lt-length-wrap { margin-top: 4px; border: 1px dashed var(--border, #d6c9a3); border-radius: 10px; padding: 8px; }
+.x1-lt-length-wrap[hidden] { display: none !important; }
+.x1-lt-length-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 0.85rem; }
+.x1-lt-length-head .btn { margin-left: auto; }
+.x1-lt-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.x1-lt-row .x1-lt-len { flex: 0 0 130px; padding: 6px 8px; border: 1px solid var(--border, #d6c9a3); border-radius: 6px; font-size: 16px; background: var(--input-bg, #fff); }
+.x1-lt-row .x1-lt-kg { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border, #d6c9a3); border-radius: 6px; font-size: 16px; text-align: right; }
+@media (max-width: 639.98px) {
+  .x1-bo-len-picker { max-height: 52vh; }
+  .x1-bo-width-picker { max-height: 52vh; }
+  .x1-bo-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .x1-lt-row .x1-lt-len { flex: 1 1 45%; }
+  .x1-lt-row .x1-lt-kg { flex: 1 1 35%; }
+}
+
+/* ─── MA TRẬN LỌC THANH XƯỞNG 1 — bản rộng × chiều dài × phân loại Vầu ───
+   Chọn lô Bổ → tự sinh bảng kg theo từng tổ hợp kích thước và phân loại. */
+.x1-lt-matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.x1-lt-matrix { border-collapse: collapse; width: 100%; min-width: 930px; font-size: 0.85rem; }
+.x1-lt-matrix th,
+.x1-lt-matrix td { border: 1px solid var(--border, #d6c9a3); padding: 4px 6px; text-align: right; }
+.x1-lt-matrix thead th { background: rgba(37, 99, 235, 0.08); font-size: 0.75rem; white-space: nowrap; text-align: center; font-weight: 600; }
+.x1-lt-matrix tbody th { text-align: left; white-space: nowrap; font-weight: 600; }
+.x1-lt-matrix .x1-lt-c { width: 76px; min-width: 64px; text-align: right; padding: 4px 6px; border: 1px solid var(--border, #d6c9a3); border-radius: 6px; font-size: 16px; background: var(--input-bg, #fff); }
+.x1-lt-matrix .x1-lt-total { font-weight: 700; min-width: 56px; color: var(--primary, #166534); }
+.x1-lt-mini-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.x1-lt-mini { border-collapse: collapse; min-width: 850px; margin-top: 6px; font-size: 0.72rem; }
+.x1-lt-mini th,
+.x1-lt-mini td { border: 1px solid var(--border, #d6c9a3); padding: 2px 5px; text-align: right; white-space: nowrap; }
+.x1-lt-mini thead th { background: rgba(37, 99, 235, 0.08); font-weight: 600; }
+.x1-lt-mini tbody th { text-align: left; }
+@media (max-width: 639.98px) {
+  .x1-lt-matrix .x1-lt-c { width: 64px; min-width: 56px; }
 }

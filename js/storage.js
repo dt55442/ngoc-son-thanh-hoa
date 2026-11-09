@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — 3 miền Nhân sự
 import { STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_CALENDAR } from './state.js';
@@ -261,6 +261,30 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
     });
     state.x1Rates = merged;
     try { localStorage.setItem(STORAGE_KEY_X1_RATES, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+  // Khôi phục DANH MỤC CHIỀU DÀI gợi ý của thẻ Bổ X1 (mảng số mm) — GỘP hợp nhất 2 chiều
+  function restoreX1BoLengthOptions(incomingArr) {
+    const incoming = Array.isArray(incomingArr) ? incomingArr.map(Number).filter(Number.isFinite) : [];
+    const before = JSON.stringify(state.x1BoLengthOptions || []);
+    const merged = [...new Set([...(state.x1BoLengthOptions || []).map(Number).filter(Number.isFinite), ...incoming])]
+      .sort((a, b) => a - b);
+    state.x1BoLengthOptions = merged;
+    try { localStorage.setItem(STORAGE_KEY_X1_BO_LENGTHS, JSON.stringify(merged)); } catch (err) {}
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
+  }
+  function restoreX1BoWidthOptions(incomingArr) {
+    const incoming = Array.isArray(incomingArr)
+      ? incomingArr.map(Number).filter(n => Number.isFinite(n) && n > 0) : [];
+    const before = JSON.stringify(state.x1BoWidthOptions || []);
+    const merged = [...new Set([...(state.x1BoWidthOptions || []).map(Number)
+      .filter(n => Number.isFinite(n) && n > 0), ...incoming])].sort((a, b) => a - b);
+    state.x1BoWidthOptions = merged;
+    try { localStorage.setItem(STORAGE_KEY_X1_BO_WIDTHS, JSON.stringify(merged)); } catch (err) {}
     if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
     syncHistorySnapshots();
     return merged;
@@ -1024,6 +1048,8 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
         if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
         if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
+        if (loaded.x1BoLengthOptions) restoreX1BoLengthOptions(loaded.x1BoLengthOptions);
+        if (loaded.x1BoWidthOptions) restoreX1BoWidthOptions(loaded.x1BoWidthOptions);
         if (loaded.x2BoluongRates) {
           restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
         }
@@ -1199,6 +1225,8 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
         if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
         if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
+        if (loaded.x1BoLengthOptions) restoreX1BoLengthOptions(loaded.x1BoLengthOptions);
+        if (loaded.x1BoWidthOptions) restoreX1BoWidthOptions(loaded.x1BoWidthOptions);
         if (loaded.x2BoluongRates) {
           restoreX2BoluongRates(loaded.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
         }
@@ -1356,6 +1384,8 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
         xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
         xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
         x1Rates: state.x1Rates || {},
+        x1BoLengthOptions: state.x1BoLengthOptions || [],   // Danh mục chiều dài gợi ý thẻ Bổ X1 (11/2026)
+        x1BoWidthOptions: state.x1BoWidthOptions || [],
         xuong2BoOngRecords: state.xuong2BoOngRecords || [],
         xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
         xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
@@ -1492,6 +1522,8 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
       xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
       xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
       x1Rates: state.x1Rates || {},
+      x1BoLengthOptions: state.x1BoLengthOptions || [],   // Danh mục chiều dài gợi ý thẻ Bổ X1 (11/2026)
+      x1BoWidthOptions: state.x1BoWidthOptions || [],
       xuong2BoOngRecords: state.xuong2BoOngRecords || [],
       xuong2BaoThoRecords: state.xuong2BaoThoRecords || [],
       xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords || [],
@@ -1676,6 +1708,8 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
         if (imported && Array.isArray(imported.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(imported.xuong1PhoiSayRecords);
         if (imported && Array.isArray(imported.xuong1LocThanhRecords)) restoreXuong1LocThanh(imported.xuong1LocThanhRecords);
         if (imported && imported.x1Rates) restoreX1Rates(imported.x1Rates);
+        if (imported && imported.x1BoLengthOptions) restoreX1BoLengthOptions(imported.x1BoLengthOptions);
+        if (imported && imported.x1BoWidthOptions) restoreX1BoWidthOptions(imported.x1BoWidthOptions);
 
         if (imported && imported.x2BoluongRates) {
           restoreX2BoluongRates(imported.x2BoluongRates); // GỘP theo tháng — không đè số đã đặt
@@ -1983,6 +2017,7 @@ export {
   restoreXuong1PhoiSay,
   restoreXuong1LocThanh,
   restoreX1Rates,
+  restoreX1BoLengthOptions,
   restoreX2BoluongRates,
   restoreXuong2BoOng,
   restoreXuong2ChonNan,

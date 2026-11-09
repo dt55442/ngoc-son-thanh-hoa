@@ -13,7 +13,7 @@ import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, canApproveLeave, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeWorkerEvaluation, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf, hrNeedAllRows, hrNeedDateISO } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
-import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS } from './xuong2.js';
+import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS, X1_LT_CLASSES } from './xuong2.js';
 import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from './x2-phu-pham.js';
 import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/xlsx-lazy.js
 
@@ -1136,22 +1136,66 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
     } else if (X1_CHAIN_KEYS[source]) {
       const spec = X1_CHAIN_SPECS.find(sp => sp.key === X1_CHAIN_KEYS[source]);
       if (spec) {
-        head = ['Stt', 'Ngày', 'Mã Lô', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
-          'KL Vào (kg)', 'KL Đạt (kg)', spec.key === 'locOng' ? 'KL Sót Mắt (kg)' : 'KL Loại (kg)', 'Tỷ Lệ Đạt (%)',
-          'Người Làm', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
         const list = (state[spec.stateKey] || []).map(r => x1ChainDisplay(spec, r))
           .filter(d => x2InRange(d.date, from, to))
           .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        const ltMatrix = spec.key === 'locThanh' && list.some(d => (d.matrixRows || []).length);
+        const ltLegacyMatrix = spec.key === 'locThanh' &&
+          list.some(d => (d.matrixRows || []).some(row => !row.weights));
+        const LT_CLASS_HEADS = X1_LT_CLASSES.map(c => c.label);
+        head = ['Stt', 'Ngày', 'Mã Lô', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
+          'KL Vào (kg)', ltLegacyMatrix ? 'KL Đạt (kg) / SL cũ' : 'KL Đạt (kg)',
+          ltLegacyMatrix ? 'KL Loại (kg) / SL cũ' : (spec.key === 'locOng' ? 'KL Sót Mắt (kg)' : 'KL Loại (kg)'), 'Tỷ Lệ Đạt (%)',
+          ...(spec.key === 'bo' ? ['Chiều Dài (mm)', 'Bản Rộng (ly)'] : []),
+          ...(spec.key === 'locThanh'
+            ? (ltMatrix
+              ? ['Hình Thức', 'Bản Rộng (ly)', 'Kích Thước Dài (mm)', ...LT_CLASS_HEADS, 'Tổng', 'Đơn Vị']
+              : ['Hình Thức', 'Chi Tiết Theo Chiều Dài'])
+            : []),
+          'Người Làm', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
         let inKg = 0, okKg = 0;
         list.forEach((d, i) => {
           inKg += d.qtyIn || 0; okKg += d.qtyOk || 0;
-          body.push([i + 1, formatDateDDMMYY(d.date), d.lotCode || '', d.srcType || '', d.srcSupplier || '',
+          const base = [i + 1, formatDateDDMMYY(d.date), d.lotCode || '', d.srcType || '', d.srcSupplier || '',
             d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '',
             d.qtyIn, d.qtyOk, d.qtyLoai, d.ratio == null ? '—' : Math.round(d.ratio * 10) / 10,
-            x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
-            d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+            ...(spec.key === 'bo'
+              ? [(d.lengths || []).join(' · ') + ((d.lengths || []).length ? ' mm' : ''),
+                (d.widths || []).join(' · ') + ((d.widths || []).length ? ' ly' : '')]
+              : [])];
+          if (spec.key === 'locThanh' && ltMatrix && (d.matrixRows || []).length) {
+            d.matrixRows.forEach((mr, k) => {
+              const isKg = !!mr.weights;
+              const values = isKg ? mr.weights : mr.counts;
+              const t = X1_LT_CLASSES.reduce((s, c) => s + (Number(values && values[c.id]) || 0), 0);
+              body.push([...base,
+                k === 0 ? 'Lọc thanh' : '',
+                isKg && Number(mr.width) > 0 ? mr.width : '',
+                `${mr.len} mm`,
+                ...X1_LT_CLASSES.map(c => (Number(values && values[c.id]) || 0) > 0 ? values[c.id] : ''),
+                t,
+                isKg ? 'kg' : 'SL (cũ)',
+                x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
+                d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+            });
+          } else {
+            body.push([...base,
+              ...(spec.key === 'locThanh'
+                ? (ltMatrix
+                    ? [d.mode === 'bo-xo' ? 'Bó xô' : 'Lọc thanh', '', '',
+                      ...X1_LT_CLASSES.map(() => ''), d.mode === 'bo-xo' ? d.qtyOk || '' : '',
+                      d.mode === 'bo-xo' || (d.lengthRows || []).length ||
+                        (d.matrixRows || []).some(row => row.weights) ? 'kg' : 'SL (cũ)']
+                    : [d.mode === 'bo-xo' ? 'Bó xô' : 'Lọc thanh',
+                       (d.lengthRows || []).map(r => `${r.len}mm: ${r.kg}kg`).join(' · ')])
+                : []),
+              x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
+              d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+          }
         });
-        sumNote = `Tổng KL vào ${x2FmtKg(inKg)} kg · KL đạt ${x2FmtKg(okKg)} kg`;
+        sumNote = ltLegacyMatrix
+          ? `Tổng KL vào ${x2FmtKg(inKg)} kg · KL đạt / SL cũ ${x2FmtKg(okKg)}`
+          : `Tổng KL vào ${x2FmtKg(inKg)} kg · KL đạt ${x2FmtKg(okKg)} kg`;
       }
     }
 

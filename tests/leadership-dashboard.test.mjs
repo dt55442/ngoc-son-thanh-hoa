@@ -44,7 +44,10 @@ try {
   state.qcFinalRecords = [
     { id: 'q2', date: '2026-10-28', workshop: 'x2', qtyOk: 8, qtyExcept: 1, qtyReject: 1 },
     { id: 'q-bullig', date: '2026-10-29', workshop: 'x2', kind: 'thanh', productId: 'rate-bullig', qtyOk: 100, qtyReject: 5 },
-    { id: 'q1', date: '2026-11-01', workshop: 'x1', qtyOk: 3, qtyExcept: 0, qtyReject: 1 }
+    { id: 'q1', date: '2026-11-01', workshop: 'x1', qtyOk: 3, qtyExcept: 0, qtyReject: 1 },
+    // QC "Kiểm thanh" cấp phát cho lượt Bào thanh (productId rate-bullig để không rơi vào bucket chất lượng)
+    { id: 'q-bt1', date: '2026-10-30', workshop: 'x2', kind: 'thanh', productId: 'rate-bullig', sizeKey: '640×12×10', inputQty: 95, qtyOk: 80, qtyExcept: 5, qtyReject: 10 },
+    { id: 'q-bt2', date: '2026-10-31', workshop: 'x2', kind: 'thanh', productId: 'rate-bullig', sizeKey: '640×10×8', inputQty: 10, qtyOk: 8, qtyExcept: 0, qtyReject: 2 }
   ];
   state.hrEmployees = [
     { id: 'e1', department: 'Xưởng 2', status: 'active', joinDate: '2026-10-27' },
@@ -110,7 +113,16 @@ try {
     { id: 'rough-out-unlinked', date: '2026-10-29', cls: 'A', quantity: 100, unitVol: 0.002, volume: 0.2 }
   ];
   state.xuong2BaoTinhRecords = [
-    { id: 'bt-week', date: '2026-10-29', kind: 'tinh', qtyOk: 9, qtyErr: 1, outDims: [1200, 50, 12] },
+    // tinh: vào 1250×24×10 ×10 (đạt 9 + lỗi 1), ra 1250×22×8 — cỡ không đụng nhánh Ép Ván (1200x50x12)
+    { id: 'bt-week', date: '2026-10-29', kind: 'tinh', inQty: 10, qtyOk: 9, qtyErr: 1, inDims: [1250, 24, 10], inSizeKey: '1250×24×10', outDims: [1250, 22, 8], outSizeKey: '1250×22×8' },
+    // ha_cap: lấy thanh lỗi cỡ 1250×22×8 ×4 (đạt 3 + lỗi 1), ra 1250×20×6
+    { id: 'bt-hacap', date: '2026-10-28', kind: 'ha_cap', defectKey: '1250×22×8', defectDims: [1250, 22, 8], inQty: 4, qtyOk: 3, qtyErr: 1, inSizeKey: '1250×22×8', outDims: [1250, 20, 6], outSizeKey: '1250×20×6' },
+    // bao_thanh nguồn press, đã kiểm xong (QC q-bt1: 95 đã kiểm, 85 đạt)
+    { id: 'bt-bt1', date: '2026-10-29', kind: 'bao_thanh', inSource: 'press', inQty: 95, inDims: [640, 14, 12], inSizeKey: '640×14×12', outDims: [640, 12, 10], outSizeKey: '640×12×10' },
+    // bao_thanh nguồn defect (tái dùng lỗi), đã kiểm xong (QC q-bt2: 10 đã kiểm, 8 đạt)
+    { id: 'bt-bt2', date: '2026-10-30', kind: 'bao_thanh', inSource: 'defect', inQty: 10, inDims: [640, 12, 10], inSizeKey: '640×12×10', outDims: [640, 10, 8], outSizeKey: '640×10×8' },
+    // bao_thanh CHƯA kiểm (hết lượt QC) → bị bỏ qua, đếm vào skipped
+    { id: 'bt-bt3', date: '2026-10-29', kind: 'bao_thanh', inSource: 'press', inQty: 50, inDims: [640, 14, 12], inSizeKey: '640×14×12', outDims: [640, 12, 10], outSizeKey: '640×12×10' },
     { id: 'bt-previous', date: '2026-10-20', kind: 'tinh', qtyOk: 8, qtyErr: 2, outDims: [1200, 50, 12] }
   ];
   state.pressRecords = [
@@ -179,6 +191,34 @@ try {
   assert.ok(Math.abs(week.consumption.press.inputM3 - 0.01224) < 1e-9);
   assert.ok(Math.abs(week.consumption.press.outputM3 - 0.00792) < 1e-9);
   assert.ok(Math.abs(week.consumption.press.consumption - (0.01224 / 0.00792)) < 1e-9);
+  // Bào tinh: đầu vào CHỈ tính lượt 'tinh' gốc; ha_cap (hạ cấp thanh lỗi) không tính lại đầu vào,
+  // đầu ra tính thuần = đầu ra mới − phần đầu ra cũ của cùng số thanh lỗi (đã tính 1 lần ở lượt gốc)
+  const btIn = 10 * 1250 * 24 * 10 / 1e9;
+  const btOut = 10 * 1250 * 22 * 8 / 1e9 + (4 * 1250 * 20 * 6 / 1e9 - 4 * 1250 * 22 * 8 / 1e9);
+  assert.ok(Math.abs(week.consumption.baotinh.inM3 - btIn) < 1e-12);
+  assert.ok(Math.abs(week.consumption.baotinh.outM3 - btOut) < 1e-12);
+  assert.equal(week.consumption.baotinh.rows, 1);
+  assert.equal(week.consumption.baotinh.downRows, 1);
+  assert.ok(Math.abs(week.consumption.baotinh.consumption - btIn / btOut) < 1e-12);
+  assert.ok(Math.abs(week.consumption.baotinh.lossPct - (1 - btOut / btIn) * 100) < 1e-9);
+  // Bào thanh: chỉ lượt đã kiểm XONG (bt-bt3 hết lượt QC → skipped); nguồn 'defect' không tính lại đầu vào
+  const bthIn = 95 * 640 * 14 * 12 / 1e9;
+  const bthOut = 95 * 640 * 12 * 10 / 1e9 + (10 * 640 * 10 * 8 / 1e9 - 10 * 640 * 12 * 10 / 1e9);
+  assert.equal(week.consumption.baothanh.rows, 1);
+  assert.equal(week.consumption.baothanh.skipped, 1);
+  assert.ok(Math.abs(week.consumption.baothanh.inM3 - bthIn) < 1e-12);
+  assert.ok(Math.abs(week.consumption.baothanh.outM3 - bthOut) < 1e-12);
+  assert.ok(Math.abs(week.consumption.baothanh.consumption - bthIn / bthOut) < 1e-12);
+  assert.equal(week.consumption.baothanh.checked, 105);
+  assert.ok(Math.abs(week.consumption.baothanh.ok - 93) < 1e-9);
+  assert.ok(Math.abs(week.consumption.baothanh.errPct - (1 - 93 / 105) * 100) < 1e-9);
+  // Tái dùng lỗi: ha_cap 4 thanh cỡ 1250×22×8 + bào thanh nguồn defect 10 thanh cỡ 640×12×10
+  const reuseM3 = 4 * 1250 * 22 * 8 / 1e9 + 10 * 640 * 12 * 10 / 1e9;
+  assert.ok(Math.abs(week.consumption.baothanh.reusedM3 - reuseM3) < 1e-12);
+  assert.equal(week.consumption.baothanh.reusedRows, 2);
+  // Tồn lỗi hiện tại (mọi kỳ): 1200×50×12 còn 2 (lô cũ bt-previous) + 1250×20×6 còn 1 + 640×10×8 còn 2
+  assert.ok(Math.abs(week.consumption.baothanh.defectRemainingM3 -
+    (2 * 1200 * 50 * 12 / 1e9 + 1 * 1250 * 20 * 6 / 1e9 + 2 * 640 * 10 * 8 / 1e9)) < 1e-12);
   assert.equal(week.quality.x2.checked, 18);
   assert.equal(week.quality.x2.passed, 16);
   assert.equal(week.quality.x2.byKind.bullig.checked, 8);
@@ -287,6 +327,10 @@ try {
   assert.match(markup, /Tỷ lệ đầu vào \/ m³ thanh thô/);
   assert.ok(!markup.includes('kg đến'));
   assert.match(markup, /Thanh tinh → BTP \/ thành phẩm/);
+  assert.match(markup, /Bào tinh · Thanh thô → thanh tinh/);
+  assert.match(markup, /Bào thanh · Ván\/lỗi → thanh \(QC\)/);
+  assert.match(markup, /tái dùng/);
+  assert.match(markup, /lượt chờ kiểm/);
   assert.doesNotMatch(markup, /ĐM \d/);
   assert.doesNotMatch(markup, /Phạm vi &amp; lưu ý dữ liệu|leadership-data-notes/);
   const consumptionSection = markup.match(/<section class="leadership-section leadership-consumption-section">[\s\S]*?<\/section>/)?.[0] || '';
@@ -304,6 +348,11 @@ try {
   assert.equal(emptyPeriod.consumption.pipe.rate, null);
   assert.equal(emptyPeriod.consumption.rough.consumption, null);
   assert.equal(emptyPeriod.consumption.press.consumption, null);
+  assert.equal(emptyPeriod.consumption.baotinh.consumption, null);
+  assert.equal(emptyPeriod.consumption.baotinh.rows, 0);
+  assert.equal(emptyPeriod.consumption.baothanh.consumption, null);
+  assert.equal(emptyPeriod.consumption.baothanh.rows, 0);
+  assert.equal(emptyPeriod.consumption.baothanh.skipped, 0);
   assert.match(buildLeadershipReportMarkup(emptyPeriod), /Chưa phát sinh/);
 
   const report = buildLeadershipReportData(week);
@@ -326,6 +375,13 @@ try {
     row[2] === 'Tỷ lệ đầu vào / m³ thanh thô' && Math.abs(row[3] - (1250 / 0.3512)) < 1e-9 &&
     row[4] === 'kg/m³' && !String(row[5] || '').includes('chưa đủ liên kết')));
   assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Ép ván' && row[4] === 'm³/m³'));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Bào tinh' &&
+    row[2] === 'Tiêu hao thuần cắt gọt / m³ đầu ra' && row[4] === 'm³/m³' &&
+    Math.abs(row[3] - week.consumption.baotinh.consumption) < 1e-12));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Bào thanh' && row[4] === 'm³/m³'));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Tái dùng lỗi' && row[4] === 'm³' &&
+    Math.abs(row[3] - week.consumption.baothanh.reusedM3) < 1e-12));
+  assert.ok(report.aoa.some(row => row[0] === 'Tiêu hao' && row[1] === 'Xưởng 2 · Thanh lỗi' && row[2] === 'Tồn lỗi hiện tại'));
   assert.ok(!report.aoa.some(row => /Bullig - gia công|Cắt ván|Bào ván/.test(row[1] || '')));
   assert.ok(report.aoa.some(row => row[0] === 'Nhân sự' && row[1] === 'Xưởng 2' &&
     row[2] === 'Biến động trong kỳ' && row[3] === 1 && row[5] === '+1 vào · −0 nghỉ'));
@@ -394,9 +450,9 @@ try {
   assert.ok(styles.includes('.leadership-section-header'));
   assert.ok(styles.includes('.leadership-consumption-grid'));
   assert.ok(!styles.includes('.leadership-data-notes'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v372'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v380'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v372'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v380'"));
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

@@ -3,8 +3,51 @@
 // ═══════════════════════════════════════════════════════════
 import { deleteBatch } from './batch-modals.js';
 import { batchMatchesColumnFilter, getFilteredBatches, markKanbanPainted } from './main.js';
-import { STAGES, state } from './state.js';
+import { STAGES, STORAGE_KEY_KANBAN_DENSITY, state } from './state.js';
+import { canEditTab } from './permissions.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays, getStageDaysClass, getStageDaysLabel, showToast, khoLotRemainingOf, khoOutRoundCountOf, khoStockSummary, khoVisibilityMap } from './utils.js';
+
+  // ─── CHẾ ĐỘ XEM KANBAN: THẺ GỌN ⇄ BẢNG DÀY ĐẶC (11/2026) ────
+  // Cột đông lô (VD Kho 97 + ẩn 194) xem thẻ lớn rất khó quét mắt → thêm chế
+  // độ "Bảng" mỗi cột 1 bảng dày đặc (Mã · KT · SL · m³ · Vị trí · Ngày).
+  // Trạng thái thuần UI theo MÁY (bamboo_tracker_kanban_density_v1) — KHÔNG
+  // đồng bộ mây/backup, giống STORAGE_KEY_PV_CHART_MODE.
+  function kanbanDensityOf() {
+    return state.kanbanDensity === 'table' ? 'table' : 'cards';
+  }
+  function loadKanbanDensity() {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY_KANBAN_DENSITY);
+      state.kanbanDensity = v === 'table' ? 'table' : 'cards';
+    } catch (e) { /* localStorage có thể bị chặn — giữ mặc định 'cards' */ }
+    syncKanbanDensityBtn();
+    return state.kanbanDensity;
+  }
+  function saveKanbanDensity() {
+    try { localStorage.setItem(STORAGE_KEY_KANBAN_DENSITY, kanbanDensityOf()); } catch (e) { /* bỏ qua */ }
+  }
+  // Cập nhật nhãn/nút công tắc trên thanh công cụ Kanban (id giữ nguyên khi vẽ lại)
+  function syncKanbanDensityBtn() {
+    const btn = document.getElementById('btn-kanban-density');
+    if (!btn) return;
+    const isTable = kanbanDensityOf() === 'table';
+    const lbl = btn.querySelector('.kb-density-label');
+    if (lbl) lbl.textContent = isTable ? 'Bảng' : 'Thẻ';
+    btn.title = isTable
+      ? 'Đang xem dạng BẢNG dày đặc — bấm để chuyển về THẺ LÔ gọn 2 dòng'
+      : 'Đang xem dạng THẺ LÔ gọn 2 dòng — bấm để chuyển sang BẢNG dày đặc (hợp cột đông lô)';
+    btn.classList.toggle('active', isTable);
+    btn.setAttribute('aria-pressed', isTable ? 'true' : 'false');
+  }
+  // Đổi chế độ xem + vẽ lại bảng Kanban (nút #btn-kanban-density trên thanh công cụ)
+  function toggleKanbanDensity() {
+    state.kanbanDensity = kanbanDensityOf() === 'table' ? 'cards' : 'table';
+    saveKanbanDensity();
+    syncKanbanDensityBtn();
+    renderKanbanBoard(getFilteredBatches());
+    showToast(kanbanDensityOf() === 'table' ? 'Đã chuyển sang chế độ BẢNG dày đặc.' : 'Đã chuyển về chế độ THẺ LÔ.', 'info');
+  }
+
 
   // ─── KANBAN BOARD ─────────────────────────────────────────────
   function renderKanbanBoard(batches) {
@@ -26,6 +69,9 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
     // kho nhiều lần là nhiều lô; công tắc "Hiện lô đã xuất hết" ở thẻ Kho Nan.
     const khoVis = khoVisibilityMap();
     const khoSum = khoStockSummary();
+    // Chế độ xem: 'cards' = thẻ lô gọn 2 dòng | 'table' = bảng dày đặc mỗi cột
+    const tableMode = kanbanDensityOf() === 'table';
+    const rowsByStage = { say1: [], say2: [], kho: [] };
 
     batches.forEach(batch => {
       const st = batch.stage;
@@ -44,7 +90,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         metrics[st].vol += (batch.volume || 0);
         metrics[st].qty += (batch.quantity || 0);
       }
-      if (containers[st]) containers[st].appendChild(createBambooCardElement(batch));
+      rowsByStage[st].push(batch);
     });
 
     Object.keys(metrics).forEach(st => {
@@ -70,6 +116,18 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         containers[st].innerHTML = `<div class="empty-state"><i data-lucide="inbox"></i><p>Không có lô nan ở công đoạn này</p></div>`;
       }
     });
+
+    // Vẽ nội dung từng cột: THẺ LÔ gọn 2 dòng (mặc định) hoặc BẢNG dày đặc
+    Object.keys(containers).forEach(st => {
+      const el = containers[st];
+      if (!el || !metrics[st] || metrics[st].count === 0) return;
+      if (tableMode) {
+        el.appendChild(kbTableElement(st, rowsByStage[st], khoVis));
+      } else {
+        rowsByStage[st].forEach(b => el.appendChild(createBambooCardElement(b)));
+      }
+    });
+    if (tableMode) syncKanbanDensityBtn();
 
     // Cập nhật danh sách lựa chọn trong dropdown của từng cột
     renderColumnFilterOptions(batches);
@@ -299,8 +357,12 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
 
   function createBambooCardElement(batch) {
     const card = document.createElement('div');
-    card.className = 'bamboo-card kanban-card-modern';
+    // Viền TRÁI màu công đoạn (cam Sấy 1 / vàng Sấy 2 / xanh Kho) — thay khung
+    // tre 26px từng thẻ lô (chỉ thẻ CHA "Than Hóa + Sấy" giữ khung tre).
+    const stCls = batch.stage === 'say1' ? 'st-say1' : batch.stage === 'say2' ? 'st-say2' : 'st-kho';
+    card.className = 'bamboo-card kanban-card-modern kb-compact ' + stCls;
     card.setAttribute('data-id', batch.id);
+    if (batch.notes) card.title = batch.notes; // ghi chú lô xem nhanh bằng tooltip
 
     // Ô TÍCH CHỌN khi bật chế độ "Xóa Nhiều" (Admin) — ẩn bằng CSS khi chưa bật
     // chế độ; trạng thái checked lấy theo state.kanbanPicked để giữ nguyên sau
@@ -326,60 +388,108 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         const topChip = (batch.stage === 'kho' && batch.topRework)
           ? `<span class="tag-badge tag-top-rework" title="Lô vào Kho dạng TÓP — cần xử lý lại trước khi dùng (chọn ở form Chuyển Kho)"><i data-lucide="alert-triangle" style="width:10px;height:10px;"></i> Tóp xử lý lại</span>` : '';
 
-    // Hiển thị badge ngày cho từng công đoạn đã đi qua (Bào Tinh không đếm ngày)
+    // Badge đếm ngày CÔNG ĐOẠN HIỆN TẠI (gọn 1 chip) — lịch sử đầy đủ các lần
+    // qua công đoạn để trong tooltip khi rê chuột.
     const history = getBatchStageHistory(batch);
-    const daysBadgesHtml = history
+    const histTitle = history
       .map((h, idx) => {
         if (h.stage === 'bao_tinh') return '';
         const days = getHistoryEntryDays(history, idx);
-        const cls  = getStageDaysClass(h.stage, days);
-        const label = getStageDaysLabel(h.date, history[idx + 1]?.date);
-        return `<div class="stage-days-badge ${cls}">
-          <i data-lucide="timer"></i> <span>${label} tại ${escapeHTML(STAGES[h.stage]?.short || h.stage)}</span>
-        </div>`;
+        return `${STAGES[h.stage]?.short || h.stage}: ${days} ngày (từ ${formatDateDDMMYY(h.date)})`;
       })
-      .join('');
+      .filter(Boolean)
+      .join('\n');
+    let daysBadgeHtml = '';
+    const lastIdx = history.length - 1;
+    if (lastIdx >= 0 && history[lastIdx].stage !== 'bao_tinh') {
+      const days = getHistoryEntryDays(history, lastIdx);
+      const cls  = getStageDaysClass(history[lastIdx].stage, days);
+      const label = getStageDaysLabel(history[lastIdx].date, undefined);
+      daysBadgeHtml = `<span class="stage-days-badge kb-day ${cls}" title="${escapeHTML(histTitle || 'Lịch sử công đoạn của lô')}"><i data-lucide="timer"></i> ${label} tại ${escapeHTML(STAGES[history[lastIdx].stage]?.short || history[lastIdx].stage)}</span>`;
+    }
 
+    // Dòng TỒN KHO (chỉ lô ở cột Kho) — tồn THỰC = (số lần nhập kho × số lượng)
+    // − phiếu xuất ĐÃ DUYỆT (js/utils.js); kèm số lần ra/vào kho.
+    const khoRemainHtml = batch.stage === 'kho' ? `<span class="kho-card-remain" title="Tồn kho THỰC = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT (js/utils.js)">Tồn <strong>${khoLotRemainingOf(batch).toLocaleString('vi-VN')}</strong>/${(batch.quantity || 0).toLocaleString('vi-VN')}${khoOutRoundCountOf(batch) ? ` · <span class="kho-round-badge" title="Số lần lô RA khỏi kho (Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào ${khoOutRoundCountOf(batch)} lần</span>` : ''}</span>` : '';
+
+    // THẺ GỌN 2 DÒNG:
+    //   Dòng 1 = Mã lô · chip Loại · chip Dùng cho · chip TH/Đã bào/Tóp · badge ngày · tuần (ngày)
+    //   Dòng 2 = KT mm · SL thanh · m³ · vị trí · (tồn kho) · nút sửa/xóa (hover)
     card.innerHTML = `
       ${pickHtml}
-      <div class="card-header-modern">
-        <div class="batch-code-modern"><i data-lucide="box"></i> ${escapeHTML(batch.code)}</div>
-        <span class="week-pill">${escapeHTML(batch.week)} (${formatDateDDMMYY(batch.date)})</span>
+      <div class="kb-row1">
+        <span class="batch-code-modern kb-code"><i data-lucide="box"></i> ${escapeHTML(batch.code)}</span>
+        <span class="tag-badge tag-type-${batch.bambooType} stage-chip" title="Phân loại nan">Loại ${escapeHTML(batch.bambooType)}</span>
+        <span class="tag-badge tag-use-${batch.useFor} stage-chip" title="Dùng cho">${escapeHTML(batch.useFor)}</span>
+        ${thChip}${btChip}${topChip}
+        ${daysBadgeHtml}
+        <span class="week-pill kb-week" title="Tuần kế hoạch · ngày tạo lô">${escapeHTML(batch.week)} · ${formatDateDDMMYY(batch.date)}</span>
       </div>
-      <div class="stage-days-list">${daysBadgesHtml}</div>
-      <div class="dim-spec-modern">
-        <span class="dim-val">${batch.length} × ${batch.width} × ${batch.thickness} mm</span>
-        <span class="card-volume">${(batch.volume || 0).toFixed(4)} m³</span>
-      </div>
-      ${batch.stage === 'kho' ? `<div class="kho-card-remain" title="Tồn kho THỰC = (số lần nhập kho × số lượng) − phiếu xuất ĐÃ DUYỆT (js/utils.js)">
-        Tồn kho: <strong>${khoLotRemainingOf(batch).toLocaleString('vi-VN')}</strong> / ${(batch.quantity || 0).toLocaleString('vi-VN')} thanh${khoOutRoundCountOf(batch) ? ` · <span class="kho-round-badge" title="Số lần lô RA khỏi kho (Sấy 2) rồi NHẬP lại — không phải nhiều lô">ra/vào kho ${khoOutRoundCountOf(batch)} lần</span>` : ''}
-      </div>` : ''}
-      <div class="card-quantities">
-        <div class="qty-box qty-chip">
-          <span class="label">Số lượng</span>
-          <span class="val qty-num">${(batch.quantity || 0).toLocaleString('vi-VN')} <small>thanh</small></span>
-        </div>
-        <div class="qty-box qty-chip">
-          <span class="label">Vị trí</span>
-          <span class="val" style="font-size:0.82rem; color:#1e293b;">${escapeHTML(batch.location || 'Kho')}</span>
-        </div>
-      </div>
-      <div class="card-tags">
-        <span class="tag-badge tag-type-${batch.bambooType} stage-chip">Loại ${escapeHTML(batch.bambooType)}</span>
-        <span class="tag-badge tag-use-${batch.useFor} stage-chip">${escapeHTML(batch.useFor)}</span>
-        ${thChip}
-        ${btChip}
-        ${topChip}
-        <span class="tag-badge tag-location stage-chip"><i data-lucide="map-pin" style="width:10px;height:10px;"></i> ${escapeHTML(batch.location || 'Chưa xếp')}</span>
-      </div>
-      ${batch.notes ? `<div class="card-notes"><i data-lucide="info" style="width:12px;height:12px;display:inline;"></i> ${escapeHTML(batch.notes)}</div>` : ''}
-      <div class="card-actions card-actions-modern" data-perm="x2">
-        <div class="card-tools">
-          <button class="btn btn-outline btn-icon btn-sm" onclick="app.openEditModal('${batch.id}')" title="Sửa thẻ"><i data-lucide="edit-3"></i></button>
-          <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteBatch('${batch.id}')" title="Xóa thẻ" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
-        </div>
+      <div class="kb-row2">
+        <span class="kb-dim" title="Kích thước nan (Dài × Rộng × Dày mm)">${batch.length}×${batch.width}×${batch.thickness}</span>
+        <span class="kb-qty"><b class="qty-num">${(batch.quantity || 0).toLocaleString('vi-VN')}</b> thanh</span>
+        <span class="kb-vol" title="Thể tích quy đổi">${(batch.volume || 0).toFixed(4)} m³</span>
+        <span class="kb-loc" title="Vị trí xếp trong công đoạn"><i data-lucide="map-pin"></i> ${escapeHTML(batch.location || 'Kho')}</span>
+        ${khoRemainHtml}
+        <span class="card-actions card-actions-modern" data-perm="x2">
+          <span class="card-tools">
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.openEditModal('${batch.id}')" title="Sửa thẻ"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" onclick="app.deleteBatch('${batch.id}')" title="Xóa thẻ" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+          </span>
+        </span>
       </div>`;
     return card;
+  }
+
+  // ─── CHẾ ĐỘ "BẢNG" — bảng dày đặc cho CỘT ĐÔNG LÔ (11/2026) ──
+  // Mỗi cột Kanban 1 bảng: Mã · KT · SL · m³ · Vị trí · Ngày · chips; bấm hàng
+  // = sửa thẻ (như nút bút chì của thẻ lô). Vẫn đi qua đủ bộ lọc cột + ẩn lô
+  // Kho đã xuất hết (khoVisibilityMap) nên số liệu LUÔN khớp chế độ thẻ.
+  function kbTableElement(stage, rows, khoVis) {
+    const wrap = document.createElement('div');
+    wrap.className = 'kb-table-wrap';
+    const canEdit = canEditTab('x2');
+    const showKhoCol = stage === 'kho';
+    const head = `<thead><tr>
+        <th>Mã lô</th>
+        <th class="ta-r">KT (mm)</th>
+        <th class="ta-r">SL</th>
+        <th class="ta-r">m³</th>
+        <th>Vị trí</th>
+        <th>Ngày</th>
+        <th>Loại</th>
+        <th>Dùng cho</th>
+        <th>Ghi chú</th>
+        ${showKhoCol ? '<th class="ta-r">Tồn</th>' : ''}
+        ${canEdit ? '<th class="ta-c">TT</th>' : ''}
+      </tr></thead>`;
+    const body = rows.map(b => {
+      const thLabel = (typeof window !== 'undefined' && window.app && typeof window.app.x2SayChargeLabel === 'function') ? window.app.x2SayChargeLabel(b) : '';
+      const chips = [
+        thLabel ? `🔥 ${thLabel}` : '',
+        b.topRework ? '♻️ Tóp xử lý lại' : ''
+      ].filter(Boolean).join(' · ');
+      const remain = showKhoCol ? (khoVis.remain.get(b.id) || 0) : null;
+      const idAttr = escapeHTML(String(b.id));
+      return `<tr data-id="${idAttr}"${b.notes ? ` title="${escapeHTML(b.notes)}"` : ''}${canEdit ? ` onclick="app.openEditModal('${idAttr}')"` : ''}>
+        <td class="kb-t-code">${escapeHTML(b.code)}</td>
+        <td class="ta-r kb-t-dim">${b.length}×${b.width}×${b.thickness}</td>
+        <td class="ta-r kb-t-qty">${(b.quantity || 0).toLocaleString('vi-VN')}</td>
+        <td class="ta-r kb-t-vol">${(b.volume || 0).toFixed(4)}</td>
+        <td class="kb-t-loc">${escapeHTML(b.location || 'Kho')}</td>
+        <td class="kb-t-date">${formatDateDDMMYY(b.date)}</td>
+        <td class="kb-t-type">${escapeHTML(b.bambooType)}</td>
+        <td class="kb-t-use">${escapeHTML(b.useFor)}</td>
+        <td class="kb-t-chips">${chips ? escapeHTML(chips) : '<span class="kb-t-none">—</span>'}</td>
+        ${showKhoCol ? `<td class="ta-r kb-t-remain">${(remain || 0).toLocaleString('vi-VN')}</td>` : ''}
+        ${canEdit ? `<td class="ta-c kb-t-act" data-perm="x2">
+            <button class="btn btn-outline btn-icon btn-sm" onclick="event.stopPropagation();app.openEditModal('${idAttr}')" title="Sửa thẻ"><i data-lucide="edit-3"></i></button>
+            <button class="btn btn-outline btn-icon btn-sm" onclick="event.stopPropagation();app.deleteBatch('${idAttr}')" title="Xóa thẻ" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+          </td>` : ''}
+      </tr>`;
+    }).join('');
+    wrap.innerHTML = `<table class="kb-table kb-table-${stage}">${head}<tbody>${body}</tbody></table>`;
+    return wrap;
   }
 
 export {
@@ -390,12 +500,18 @@ export {
   createBambooCardElement,
   fillFilterOptions,
   getKanbanVisibleBatches,
+  kanbanDensityOf,
+  kbTableElement,
+  loadKanbanDensity,
   onColumnFilterChange,
   onColumnSearchFocus,
   onColumnSearchInput,
   onColumnSearchKeydown,
   renderColumnFilterOptions,
   renderKanbanBoard,
+  saveKanbanDensity,
+  syncKanbanDensityBtn,
   toggleColumnFilter,
+  toggleKanbanDensity,
   updateColumnFilterCounts
 };

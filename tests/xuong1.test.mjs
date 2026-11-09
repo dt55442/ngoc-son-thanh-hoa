@@ -232,25 +232,25 @@ check('B15: checkbox phân quyền 2 modal đã tách Xưởng 1 / Xưởng 2',
 
 
 // ─── C. 8 THẺ CÔNG ĐOẠN XƯỞNG 1 (GIAI ĐOẠN 2 — TẤT CẢ CÓ CHỨC NĂNG) ──
-console.log('--- C. 8 THẺ XƯỞNG 1 ---');
+console.log('--- C. THẺ XƯỞNG 1 ---');
 const X1_CARDS = ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card', 'x1-loc-ong-card',
-                  'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card'];
+                  'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card', 'x1-kho-card'];
 const X1_PFX = ['x1-cat-ong', 'x1-say-sinh', 'x1-boc', 'x1-loc-ong',
                 'x1-cat-mat', 'x1-bo', 'x1-phoi-say', 'x1-loc-thanh'];
-check('C1: X2_CARD_DEFS đăng ký đủ 8 thẻ Xưởng 1 (mọi thẻ ws:"x1")',
+check('C1: X2_CARD_DEFS đăng ký 8 công đoạn và Kho Nan Xưởng 1',
   X1_CARDS.every(id => x1.X2_CARD_DEFS[id] && x1.X2_CARD_DEFS[id].ws === 'x1'));
-check('C2: CẢ 8 thẻ Xưởng 1 ĐÃ có chức năng — không còn cờ soon nào',
+check('C2: mọi thẻ Xưởng 1 đã có chức năng — không còn cờ soon nào',
   X1_CARDS.every(id => !x1.X2_CARD_DEFS[id].soon));
-check('C3: index.html có đủ 8 thẻ launcher Xưởng 1 trong khối #ws-x1-block',
+check('C3: index.html có đủ thẻ launcher Xưởng 1 trong khối #ws-x1-block',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="ws-x1-block"'), idxHtml.indexOf('/#ws-x1-block'));
     return X1_CARDS.every(id => blk.includes(`data-x2-card="${id}"`)); })());
-check('C4: thứ tự 8 thẻ theo đúng LUỒNG SX (Cắt Ống → … → Lọc Thanh/Bó Xô)',
+check('C4: thứ tự thẻ theo luồng SX, Kho Nan sau Lọc Thanh/Bó Xô',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="ws-x1-block"'), idxHtml.indexOf('/#ws-x1-block'));
     const pos = X1_CARDS.map(id => blk.indexOf(`data-x2-card="${id}"`));
     return pos.every((p, i) => p > 0 && (i === 0 || p > pos[i - 1])); })());
-check('C5: cả 8 thẻ chi tiết Xưởng 1 nằm trong #x2-details-stack (dùng chung pop-up)',
+check('C5: chi tiết 8 công đoạn và Kho Nan nằm trong #x2-details-stack',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x2-details-stack"'), idxHtml.indexOf('/#x2-details-stack'));
-    return X1_PFX.every(p => blk.includes(`id="${p}-card"`)); })());
+    return X1_PFX.every(p => blk.includes(`id="${p}-card"`)) && blk.includes('id="x1-kho-card"'); })());
 check('C6: mọi thẻ chi tiết X1 có form + thanh tồn + khung thẻ ngày (KPI Thống Kê TRỪ Sấy Sinh — đã gỡ 11/2026)',
   X1_PFX.every(p =>
     idxHtml.includes(`id="${p}-form"`) && idxHtml.includes(`id="${p}-stock-bar"`) &&
@@ -431,7 +431,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v380/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v384/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -633,7 +633,7 @@ check('I1b: x1IsCayLot khớp mềm — "Vầu CÂY"/"nua cay" nhận, "Vầu/n�
 // ── Lô Lọc Ống sinh ra từ chuỗi ĐẦU TIÊN là Cắt Ống → BỎ QUA Cắt Mắt ──
 // (dùng lại lượt sấy ss + lượt cắt ống co của mục D — chuỗi link nguyên vẹn)
 state.xuong1BocRecords.push({
-  id: 'boc-via', date: '2026-09-20', qty: 500, saySinhId: ss.id,
+  id: 'boc-via', date: '2026-09-20', qty: 2060, saySinhId: ss.id,
   materialType: 'Vầu cây tươi', supplier: 'Tế', srcType: 'Vầu cây tươi', srcSupplier: 'Tế'
 });
 state.xuong1LocOngRecords.push({
@@ -663,7 +663,7 @@ check('I5: ô chọn Bổ gom theo lô và tự tính tổng 575kg từ hai nhá
     document.getElementById('x1-bo-src').value = viaGroup.id;
     x1.x1ChainSyncLinked(spBO, true);
     return h.includes('Theo lô: Lọc Ống + Cắt Mắt') &&
-           h.includes('[SS-2026-0920-01]') && h.includes('Tồn 575/575 kg') &&
+           h.includes('[SS-2026-0920-01]') && h.includes('Tồn 575/2.060 kg') &&
            document.getElementById('x1-bo-in').value === '575'; })());
 const oldViaOk = loVia.qtyOk, oldCmOk = state.xuong1CatMatRecords.find(r => r.id === 'cm-legacy').qtyOk;
 loVia.qtyOk = 480.5;
@@ -755,9 +755,9 @@ check('I8h: lượt Bổ cũ liên kết Cắt Mắt vẫn truy được lô và
   x1.x1ChainDisplay(spBO, legacyBoCatMat).srcRoute === 'Cắt Mắt' &&
   x1.x1ChainDisplay(spBO, legacyBoCatMat).lotCode === 'SS-2026-0920-01');
 
-// ── CẤU TRÚC: 8 thẻ Xưởng 1 bọc đủ 3 vùng như Xưởng 2 ──
-check('I9: 8 thẻ Xưởng 1 bọc vùng .x2-zone — Sấy Sinh 2 vùng (KPI đã gỡ 11/2026), 7 thẻ còn lại 3 vùng = 23 vùng',
-  (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x1-cat-ong-card"'), idxHtml.indexOf('/#x2-details-stack'));
+// ── CẤU TRÚC: 8 công đoạn Xưởng 1 bọc đủ 3 vùng như Xưởng 2 ──
+check('I9: 8 công đoạn Xưởng 1 bọc vùng .x2-zone — Sấy Sinh 2 vùng, 7 thẻ còn lại 3 vùng = 23 vùng',
+  (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x1-cat-ong-card"'), idxHtml.indexOf('id="x1-kho-card"'));
     return (blk.match(/class="x2-zone"/g) || []).length === 23 &&
       (blk.match(new RegExp('data-zone="1"', 'g')) || []).length === 8 &&
       (blk.match(new RegExp('data-zone="2"', 'g')) || []).length === 7 &&
@@ -916,6 +916,52 @@ check('K13: lượt CŨ thiếu klMat/klNgon → display hiểu bằng 0 (không
     return d.klMat === 0 && d.klNgon === 0 && d.turnKg === 110; })());
 check('K14: capacity.js đọc turnKg (KL cắt được/lượt) — cắt nhiều lần không đếm trùng',
   capSrc.includes('qty: d.turnKg') && capSrc.includes('d.turnKg'));
+
+state.xuong1BocRecords.push({
+  id: 'boc-stock-denominator', date: '2026-11-09', qty: 2060,
+  saySinhId: ss.id, srcType: 'Vầu', srcSupplier: 'Nhà Khanh'
+});
+state.xuong1LocOngRecords.push({
+  id: 'loc-ong-stock-denominator', bocId: 'boc-stock-denominator',
+  lotCode: 'V261019002', date: '2026-11-09', qtyIn: 2060, qtyOk: 2056, qtyLoai: 4,
+  srcType: 'Vầu', srcSupplier: 'Nhà Khanh'
+});
+x1.fillX1ChainOptions(spBO);
+check('K15: tồn chọn nguồn Bổ hiển thị lượng còn / tổng lượng gốc từ Bốc (2056/2060 kg)',
+  document.getElementById('x1-bo-src').innerHTML.includes('Tồn 2.056/2.060 kg'));
+
+state.xuong1LocThanhRecords = [
+  {
+    id: 'warehouse-loc-thanh', date: '2026-11-10', mode: 'loc-thanh',
+    lotCode: 'W01', srcType: 'Vầu thanh không cạo', qtyIn: 50, qtyOk: 40, qtyLoai: 5,
+    matrixRows: [{ width: 11, len: 50, weights: { A: 25, A1: 15, loai: 5 } }]
+  },
+  { id: 'warehouse-bo-xo', date: '2026-11-11', mode: 'bo-xo', lotCode: 'W02', qtyIn: 15, qtyOk: 12, qtyLoai: 3 },
+  {
+    id: 'warehouse-legacy-count', date: '2026-11-12', mode: 'loc-thanh',
+    lotCode: 'W03', qtyIn: 10, qtyOk: 3, qtyLoai: 1,
+    matrixRows: [{ len: 60, counts: { A: 3, loai: 1 } }]
+  }
+];
+const warehouseStock = x1.x1WarehouseStockSummary();
+check('K16: Kho Nan Xưởng 1 tự cộng kg đạt, tách Bó Xô và không tính Loại/SL cũ thành kg',
+  warehouseStock.totalKg === 52 && warehouseStock.locThanhKg === 40 &&
+  warehouseStock.boXoKg === 12 && warehouseStock.legacyCount === 3);
+check('K17: chip Kho Nan hiển thị tổng thành phẩm tự tính',
+  x1.x1CardCountText('x1-kho-card') === 'Tồn 52 kg');
+x1.x2OpenCard('x1-kho-card');
+const warehouseHtml = document.getElementById('x1-kho-inventory').innerHTML;
+check('K18: thẻ Kho Nan hiện phân loại, kích thước và tồn theo nhóm',
+  warehouseHtml.includes('Vầu A') && warehouseHtml.includes('11 ly') &&
+  warehouseHtml.includes('50 mm') && warehouseHtml.includes('25 kg') &&
+  warehouseHtml.includes('Bó xô') && warehouseHtml.includes('12 kg'));
+x1.x2CloseOpenCard();
+check('K19: nút Lùi mở Phơi Sấy và nút Tiến mở Kho Nan Xưởng 1',
+  x1.x1LocThanhNavigateStage(-1) && state.x2OpenCardId === 'x1-phoi-say-card' &&
+  (x1.x2CloseOpenCard(), x1.x1LocThanhNavigateStage(1)) &&
+  state.x2OpenCardId === 'x1-kho-card' &&
+  eventsSrc.includes("safeOn('btn-x1-lt-stage-prev'") &&
+  eventsSrc.includes("safeOn('btn-x1-lt-stage-next'"));
 
 console.log(`\n=== KẾT QUẢ XUONG1: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

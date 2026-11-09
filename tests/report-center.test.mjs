@@ -98,12 +98,13 @@ check('A2. Tổng số báo cáo = 47 (17 X2 + 8 X1 + 3 KH + 2 NL + 3 QC + 14 NS
   specs.REPORT_SPECS.length === 47);
 check('A3. 14 báo cáo Xưởng 2 (gồm Báo Cáo Sự Cố) + 8 báo cáo Xưởng 1',
   specs.reportsOfGroup('x2').length === 17 && specs.reportsOfGroup('x1').length === 8);
-check('A4. MỌI thẻ có nguồn xuất đều có báo cáo (22 thẻ)',
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 22 &&
+check('A4. MỌI thẻ có nguồn xuất đều có báo cáo (23 thẻ)',
+  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 23 &&
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).every(cardId => !!specs.reportIdForCard(cardId)));
 check('A5. Thẻ Xưởng 1 trỏ ĐÚNG báo cáo X1 (không còn rơi về batch)',
   specs.reportIdForCard('x1-cat-ong-card') === 'x1catong' &&
   specs.reportIdForCard('x1-loc-thanh-card') === 'x1locthanh' &&
+  specs.reportIdForCard('x1-kho-card') === 'x1locthanh' &&
   specs.reportById('x1catong').source === 'x1catong');
 
 // ─── B. DỮ LIỆU MẪU + DỰNG BÁO CÁO ──────────────────────────────
@@ -243,7 +244,7 @@ check('F3. events.js nối center: mở theo thẻ/tab + 4 nút + lọc',
   evSrc.includes("openReportCenter('plan-items')") && evSrc.includes("openReportCenter('qc-export')") &&
   evSrc.includes("safeOn('report-center-filters',      'change', onReportFilterChange)"));
 check('F4. sw.js: cache v275 + nạp report-specs.js/report-center.js vào APP_SHELL',
-  swSrc.includes("nha-may-ngoc-son-v380") && swSrc.includes("./js/report-specs.js") &&
+  swSrc.includes("nha-may-ngoc-son-v384") && swSrc.includes("./js/report-specs.js") &&
   swSrc.includes("./js/report-center.js"));
 check('F5. CSS có khối .rc-* + in lặp tiêu đề + JS ghi rõ giới hạn viền/màu',
   cssSrc.includes('.rc-card') && cssSrc.includes('.rc-filter-grid') &&
@@ -295,4 +296,3 @@ check('F7. Báo cáo Định Mức NVL: đủ cột + cỡ sản phẩm KHÔNG c
 
 console.log(`\n=== TRUNG TÂM XUẤT EXCEL: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed ? 1 : 0);
-

@@ -82,7 +82,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x2-ho-tro-card':       { el: 'x2-mini-count-ho-tro' },                    // Hỗ Trợ + Công Đoạn Lẻ (CÓ chức năng — 2 vùng: nhập liệu + lịch sử)
     'x2-phu-pham-card':     { el: 'x2-mini-count-phu-pham' },                  // Phụ Phẩm & Băm + Cân đối + Kiểm kê (Giai đoạn 2/3)
 
-    // ─── XƯỞNG 1 — 8 CÔNG ĐOẠN (04/10/2026) ────────────────────
+    // ─── XƯỞNG 1 — 8 CÔNG ĐOẠN + KHO NAN ───────────────────────
     // Thứ tự theo LUỒNG SX: Cắt Ống → Sấy Sinh → Bốc → Lọc Ống →
     // Cắt Mắt → Bổ → Phơi Sấy → Lọc Thanh/Bó Xô.
     // ws: 'x1' → thẻ thuộc khối Xưởng 1 (ẩn/hiện theo công tắc XƯỞNG 1/2);
@@ -95,7 +95,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x1-cat-mat-card':      { el: 'x2-mini-count-x1-cat-mat',   ws: 'x1' },             // Cắt Mắt
     'x1-bo-card':           { el: 'x2-mini-count-x1-bo',        ws: 'x1' },             // Bổ
     'x1-phoi-say-card':     { el: 'x2-mini-count-x1-phoi-say',  ws: 'x1' },             // Phơi Sấy
-    'x1-loc-thanh-card':    { el: 'x2-mini-count-x1-loc-thanh', ws: 'x1' }              // Lọc Thanh / Bó Xô
+    'x1-loc-thanh-card':    { el: 'x2-mini-count-x1-loc-thanh', ws: 'x1' },             // Lọc Thanh / Bó Xô
+    'x1-kho-card':          { el: 'x2-mini-count-x1-kho', ws: 'x1' }                    // Kho Nan Xưởng 1
   };
 
 
@@ -118,7 +119,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x2-ho-tro-card':  'xuong2HoTroRecords',
     'x2-phu-pham-card': 'x2PhuPhamRecords',
     'x2-ep-van-card': 'pressRecords',
-    // XƯỞNG 1 — 8 công đoạn (05/10/2026)
+    // XƯỞNG 1 — 8 công đoạn + Kho Nan (05/10/2026)
     'x1-cat-ong-card': 'xuong1CatOngRecords',
     'x1-say-sinh-card': 'xuong1SaySinhRecords',
     'x1-boc-card': 'xuong1BocRecords',
@@ -126,7 +127,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x1-cat-mat-card': 'xuong1CatMatRecords',
     'x1-bo-card': 'xuong1BoRecords',
     'x1-phoi-say-card': 'xuong1PhoiSayRecords',
-    'x1-loc-thanh-card': 'xuong1LocThanhRecords'
+    'x1-loc-thanh-card': 'xuong1LocThanhRecords',
+    'x1-kho-card': 'xuong1LocThanhRecords'
   };
   const X2_CARD_EXPORT_SOURCE = {
     'x2-bo-luong-card': 'boluong',
@@ -143,7 +145,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x2-ho-tro-card':  'hotro',
     'x2-phu-pham-card': 'phupham',
     'x2-ep-van-card': 'epvan',
-    // XƯỞNG 1 — 8 công đoạn (17/10/2026): trước đây KHÔNG khai báo nên nút
+    // XƯỞNG 1 — 8 công đoạn + Kho Nan (17/10/2026): trước đây KHÔNG khai báo nên nút
     // "Xuất Dữ Liệu" của thẻ X1 rơi về 'batch' (xuất nhầm Lô nan).
     'x1-cat-ong-card':   'x1catong',
     'x1-say-sinh-card':  'x1saysinh',
@@ -152,7 +154,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x1-cat-mat-card':   'x1catmat',
     'x1-bo-card':        'x1bo',
     'x1-phoi-say-card':  'x1phoisay',
-    'x1-loc-thanh-card': 'x1locthanh'
+    'x1-loc-thanh-card': 'x1locthanh',
+    'x1-kho-card': 'x1locthanh'
   };
   // Thẻ đang mở (null = không thẻ nào) — Lịch Sử/Xuất Excel dùng chung + gợi ý AI
   function x2OpenCardId() { return openX2Card ? openX2Card.id : null; }
@@ -2186,7 +2189,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
 
   // ─── CÔNG TẮC CHUYỂN XƯỞNG (tab Công Đoạn SX) ─────────────────
   // 2 khối thẻ trong tab: #ws-x2-block (13 thẻ Xưởng 2) ↔ #ws-x1-block
-  // (8 thẻ Xưởng 1). Pop-up thẻ chi tiết dùng CHUNG #x2-detail-overlay nên
+  // (8 công đoạn + Kho Nan Xưởng 1). Pop-up thẻ chi tiết dùng CHUNG #x2-detail-overlay nên
   // không cần overlay mới. Trạng thái nhớ theo MÁY (thuần UI — không mây/backup).
   const STAGE_WS_LABELS = { x1: 'Xưởng 1', x2: 'Xưởng 2' };
 
@@ -2286,7 +2289,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (cardId === 'x2-ho-tro-card') renderXuong2HoTroCard();
     if (cardId === 'x2-phu-pham-card') renderX2PhuPhamCard();
     if (cardId === 'x2-ep-van-card') renderX2EpVanCard();
-    // ── XƯỞNG 1 (8 công đoạn — tất cả đã có chức năng) ──
+    // ── XƯỞNG 1 (8 công đoạn + Kho Nan tự tổng hợp) ──
     renderX1CardOf(cardId);
     const h4 = card.querySelector && card.querySelector('.planning-card-header h4');
     const titleText = (h4 && typeof h4.textContent === 'string') ? h4.textContent.trim() : '';
@@ -12251,7 +12254,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (openX2Card && openX2Card.id === 'x2-bao-van-card') renderX2BaoVanCard();
     if (openX2Card && openX2Card.id === 'x2-ho-tro-card') renderXuong2HoTroCard();
     if (openX2Card && openX2Card.id === 'x2-ep-van-card') renderX2EpVanCard();
-    // Xưởng 1 — cả 8 công đoạn đều có chức năng
+    // Xưởng 1 — 8 công đoạn + Kho Nan tự tổng hợp
     if (openX2Card) renderX1CardOf(openX2Card.id);
   }
 
@@ -14396,6 +14399,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const more = rows0.length > 1
         ? `<em class="x2-day-cutters-more" title="Người khác cùng ngày: ${escapeHTML(rows0.slice(1).map(x => `${x.name}${x.time ? ` (${x.time})` : ''}`).join(', '))}">+${rows0.length - 1} người khác</em>` : '';
       const rowsHtml = list.map(r => cfg.rowHtml(r, cfg.disp(r))).join('');
+      const mobileRowsHtml = typeof cfg.mobileRowHtml === 'function'
+        ? `<div class="x1-lt-mobile-history">${list.map(r => cfg.mobileRowHtml(r, cfg.disp(r))).join('')}</div>`
+        : '';
       html += `
         <div class="x2-day-card">
           <div class="x2-day-head">
@@ -14418,6 +14424,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
             <thead><tr>${cfg.thead}</tr></thead>
             <tbody>${rowsHtml}</tbody>
           </table>
+          ${mobileRowsHtml}
         </div>`;
     }
     box.innerHTML = html;
@@ -16432,11 +16439,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   ];
   function x1ChainSpec(cardId) { return X1_CHAIN_SPECS.find(s => s.cardId === cardId) || null; }
   function x1ChainSpecByKey(k) { return X1_CHAIN_SPECS.find(s => s.key === k) || null; }
-  // VẼ LẠI THẺ XƯỞNG 1 theo id (dùng cho cả 8 công đoạn) — trả về true nếu có.
+  // VẼ LẠI THẺ XƯỞNG 1 theo id — trả về true nếu có.
   function renderX1CardOf(cardId) {
     if (cardId === 'x1-cat-ong-card') { renderX1CatOngCard(); return true; }
     if (cardId === 'x1-say-sinh-card') { renderX1SaySinhCard(); return true; }
     if (cardId === 'x1-boc-card') { renderX1BocCard(); return true; }
+    if (cardId === 'x1-kho-card') { renderX1KhoCard(); return true; }
     const spec = x1ChainSpec(cardId);
     if (spec) { renderX1ChainCard(spec); return true; }
     return false;
@@ -16863,6 +16871,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function x1BoNavigateStage(direction) {
     return x2OpenCard(Number(direction) < 0 ? 'x1-cat-mat-card' : 'x1-phoi-say-card');
   }
+  function x1LocThanhNavigateStage(direction) {
+    return x2OpenCard(Number(direction) < 0 ? 'x1-phoi-say-card' : 'x1-kho-card');
+  }
 
   // ─── THẺ LỌC THANH / BÓ XÔ: 2 hình thức + ma trận theo lô nguồn ──
   function x1LocThanhModeOf() {
@@ -16898,7 +16909,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     { id: 'd13',   label: 'Vầu 13mm',         short: '13mm' },
     { id: 'bau',   label: 'Cắt đầu',          short: 'Cắt đầu' },
     { id: 'nonbt', label: 'Vầu non bánh tẻ',  short: 'Bánh tẻ' },
-    { id: 'bnont', label: 'Vầu B non tơ',     short: 'B non tơ' },
+    { id: 'bnont', label: 'Vầu B non tóp',    short: 'B non tóp' },
     { id: 'loai',  label: 'Loại',             short: 'Loại' }
   ];
   // Cờ giao diện ma trận mới (kg) / ma trận cũ (số lượng) / dòng kg cũ — THUẦN PHIÊN
@@ -16990,9 +17001,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   function x1LtLegacyMatrixRowHtml(len, counts) {
     const cells = X1_LT_CLASSES.map(c =>
-      `<td class="x1-lt-cell"><input type="number" inputmode="numeric" min="0" step="1" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-len="${len}" value="${counts && counts[c.id] ? counts[c.id] : ''}" title="${escapeHTML(c.label)} — số lượng"></td>`).join('');
+      `<td class="x1-lt-cell" data-label="${escapeHTML(c.short)}"><input type="number" inputmode="numeric" min="0" step="1" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-len="${len}" value="${counts && counts[c.id] ? counts[c.id] : ''}" title="${escapeHTML(c.label)} — số lượng"></td>`).join('');
     const t = X1_LT_CLASSES.reduce((s, c) => s + (Number(counts && counts[c.id]) || 0), 0);
-    return `<tr><th>${len} mm</th>${cells}<td class="x1-lt-total" data-x1-lt-total="legacy|${len}">${t > 0 ? t : ''}</td></tr>`;
+    return `<tr class="x1-lt-legacy-row"><th>${len} mm</th>${cells}<td class="x1-lt-total" data-x1-lt-total="legacy|${len}">${t > 0 ? t : ''}</td></tr>`;
   }
   function renderX1LtLegacyMatrix(rows) {
     const box = document.getElementById('x1-loc-thanh-length-rows');
@@ -17009,9 +17020,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   function x1LtMatrixRowHtml(width, len, weights) {
     const cells = X1_LT_CLASSES.map(c =>
-      `<td class="x1-lt-cell"><input type="number" inputmode="decimal" min="0" step="any" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-width="${width}" data-x1-lt-len="${len}" value="${weights && weights[c.id] ? weights[c.id] : ''}" title="${escapeHTML(c.label)} — kg"></td>`).join('');
+      `<td class="x1-lt-cell" data-label="${escapeHTML(c.short)}"><input type="number" inputmode="decimal" min="0" step="any" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-width="${width}" data-x1-lt-len="${len}" value="${weights && weights[c.id] ? weights[c.id] : ''}" title="${escapeHTML(c.label)} — kg"></td>`).join('');
     const total = X1_LT_CLASSES.reduce((sum, c) => sum + (Number(weights && weights[c.id]) || 0), 0);
-    return `<tr><th>${width} ly</th><th>${len} mm</th>${cells}<td class="x1-lt-total" data-x1-lt-total="${width}|${len}">${total > 0 ? fmtKg(total) : ''}</td></tr>`;
+    return `<tr class="x1-lt-matrix-row"><th>${width} ly</th><th>${len} mm</th>${cells}<td class="x1-lt-total" data-x1-lt-total="${width}|${len}">${total > 0 ? fmtKg(total) : ''}</td></tr>`;
   }
   // Tạo một hàng cho mỗi tổ hợp bản rộng × chiều dài của lô Bổ đã chọn.
   function renderX1LtMatrix(presetRows) {
@@ -17095,6 +17106,151 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       }).join('')
       + `</tbody></table></div>`;
   }
+  function x1LtMobileBreakdownHtml(d) {
+    if (d.matrixRows && d.matrixRows.length) {
+      const isCount = d.matrixUnit === 'count';
+      const rows = d.matrixRows.map(row => {
+        const values = isCount ? row.counts : row.weights;
+        const details = X1_LT_CLASSES.map(c => {
+          const value = Number(values && values[c.id]) || 0;
+          if (value <= 0) return '';
+          const amount = isCount
+            ? value.toLocaleString('vi-VN', { maximumFractionDigits: 2 })
+            : fmtKg(value);
+          return `<span class="x1-lt-mobile-chip"><strong>${escapeHTML(c.short)}</strong> ${escapeHTML(amount)} ${isCount ? 'SL' : 'kg'}</span>`;
+        }).filter(Boolean).join('');
+        const size = [
+          row.width ? `${row.width} ly` : '',
+          row.len ? `${row.len} mm` : ''
+        ].filter(Boolean).join(' · ');
+        return `<div class="x1-lt-mobile-size"><strong>${escapeHTML(size || 'Chưa rõ kích thước')}</strong><div>${details || '<span class="x2-row-note">Chưa nhập phân loại</span>'}</div></div>`;
+      }).join('');
+      return `<details class="x1-lt-mobile-breakdown"><summary>Chi tiết phân loại · ${d.matrixRows.length} tổ hợp</summary><div class="x1-lt-mobile-sizes">${rows}</div></details>`;
+    }
+    if (d.lengthRows && d.lengthRows.length) {
+      const rows = d.lengthRows.map(row =>
+        `<div class="x1-lt-mobile-size"><strong>${escapeHTML(String(row.len || '—'))} mm</strong><span>${escapeHTML(fmtKg(Number(row.kg) || 0))} kg</span></div>`
+      ).join('');
+      return `<details class="x1-lt-mobile-breakdown"><summary>Chi tiết theo chiều dài · ${d.lengthRows.length} dòng</summary><div class="x1-lt-mobile-sizes">${rows}</div></details>`;
+    }
+    return '';
+  }
+  function x1LocThanhMobileRecordHtml(r, d) {
+    const isCount = d.matrixUnit === 'count';
+    const output = isCount
+      ? `${(Number(d.qtyOk) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} SL`
+      : `${fmtKg(d.qtyOk)} kg`;
+    const rejected = isCount
+      ? `${(Number(d.qtyLoai) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} SL`
+      : `${fmtKg(d.qtyLoai)} kg`;
+    const mode = d.mode === 'bo-xo' ? 'Bó xô' : 'Lọc thanh';
+    return `<article class="x1-lt-mobile-entry">
+      <div class="x1-lt-mobile-entry-head">
+        <strong>${escapeHTML(d.lotCode || 'Chưa có mã lô')}</strong>
+        <span>${escapeHTML(formatDateDDMMYY(d.date))}</span>
+        <span class="x1-lt-mobile-mode">${mode}</span>
+      </div>
+      <div class="x1-lt-mobile-material">${escapeHTML(d.srcType || 'Vầu/nứa')}</div>
+      <div class="x1-lt-mobile-metrics">
+        <span>Đem lọc<strong>${fmtKg(d.qtyIn)} kg</strong></span>
+        <span>Thành phẩm<strong>${output}</strong></span>
+        <span>Loại<strong>${rejected}</strong></span>
+      </div>
+      ${x1LtMobileBreakdownHtml(d)}
+      ${d.note ? `<div class="x1-lt-mobile-note">${escapeHTML(d.note)}</div>` : ''}
+      <div class="x1-lt-mobile-actions">
+        <button class="btn btn-sm btn-outline" title="Sửa" data-x1-edit="${escapeHTML(r.id)}" data-x1-card="x1-loc-thanh-card" data-perm="x1"><i data-lucide="pencil"></i> Sửa</button>
+        <button class="btn btn-sm btn-danger" title="Xóa" data-x1-delete="${escapeHTML(r.id)}" data-x1-card="x1-loc-thanh-card" data-perm="x1"><i data-lucide="trash-2"></i> Xóa</button>
+      </div>
+    </article>`;
+  }
+  function x1WarehouseStockSummary() {
+    const spec = x1ChainSpecByKey('locThanh');
+    const items = [];
+    const add = (record, display, kind, width, len, qty, unit) => {
+      const amount = Number(qty) || 0;
+      if (amount <= 0) return;
+      items.push({
+        recordId: record.id || '',
+        date: display.date || '',
+        lotCode: display.lotCode || '',
+        material: display.srcType || 'Vầu/nứa',
+        kind,
+        width: Number(width) || 0,
+        len: Number(len) || 0,
+        qty: amount,
+        unit
+      });
+    };
+    if (spec) {
+      (state.xuong1LocThanhRecords || []).forEach(record => {
+        const display = x1ChainDisplay(spec, record);
+        if (display.mode === 'bo-xo') {
+          add(record, display, 'Bó xô', 0, 0, display.qtyOk, 'kg');
+          return;
+        }
+        if (display.matrixRows && display.matrixRows.length) {
+          const isKg = display.matrixUnit === 'kg';
+          display.matrixRows.forEach(row => {
+            const values = isKg ? row.weights : row.counts;
+            X1_LT_CLASSES.filter(c => c.id !== 'loai').forEach(c =>
+              add(record, display, c.label, row.width, row.len, values && values[c.id], isKg ? 'kg' : 'SL'));
+          });
+          return;
+        }
+        if (display.lengthRows && display.lengthRows.length) {
+          display.lengthRows.forEach(row =>
+            add(record, display, 'Lọc thanh (dữ liệu cũ)', 0, row.len, row.kg, 'kg'));
+          return;
+        }
+        add(record, display, 'Lọc thanh (chưa phân loại)', 0, 0, display.qtyOk, 'kg');
+      });
+    }
+    const grouped = new Map();
+    items.forEach(item => {
+      const key = [item.kind, item.width, item.len, item.unit].join('|');
+      const current = grouped.get(key) || { ...item, qty: 0 };
+      current.qty += item.qty;
+      grouped.set(key, current);
+    });
+    const groups = [...grouped.values()].sort((a, b) =>
+      a.kind.localeCompare(b.kind, 'vi') || a.width - b.width || a.len - b.len || a.unit.localeCompare(b.unit));
+    const totalKg = items.reduce((sum, item) => sum + (item.unit === 'kg' ? item.qty : 0), 0);
+    const locThanhKg = items.reduce((sum, item) => sum + (item.unit === 'kg' && item.kind !== 'Bó xô' ? item.qty : 0), 0);
+    const boXoKg = items.reduce((sum, item) => sum + (item.unit === 'kg' && item.kind === 'Bó xô' ? item.qty : 0), 0);
+    const legacyCount = items.reduce((sum, item) => sum + (item.unit === 'SL' ? item.qty : 0), 0);
+    return { items, groups, totalKg, locThanhKg, boXoKg, legacyCount };
+  }
+  function renderX1KhoCard() {
+    const summary = x1WarehouseStockSummary();
+    const bar = document.getElementById('x1-kho-stock-bar');
+    if (bar) {
+      bar.innerHTML = `<span class="x2-stock-title"><i data-lucide="boxes"></i> Sản lượng đã ghi nhận: <strong>${fmtKg(summary.totalKg)} kg</strong> · ${summary.items.length.toLocaleString('vi-VN')} dòng phân loại</span>`;
+    }
+    const stats = document.getElementById('x1-kho-stats');
+    if (stats) {
+      stats.innerHTML = `
+        <div class="material-stat"><span class="material-stat-value">${fmtKg(summary.totalKg)}</span><span class="material-stat-label">Tổng thành phẩm (kg)</span></div>
+        <div class="material-stat"><span class="material-stat-value">${fmtKg(summary.locThanhKg)}</span><span class="material-stat-label">Lọc thanh (kg)</span></div>
+        <div class="material-stat"><span class="material-stat-value">${fmtKg(summary.boXoKg)}</span><span class="material-stat-label">Bó xô (kg)</span></div>
+        <div class="material-stat"><span class="material-stat-value">${summary.legacyCount.toLocaleString('vi-VN')}</span><span class="material-stat-label">Ma trận cũ (SL)</span></div>`;
+    }
+    const inventory = document.getElementById('x1-kho-inventory');
+    if (inventory) {
+      inventory.innerHTML = summary.groups.length
+        ? `<div class="x1-kho-table-wrap"><table class="data-table x1-kho-table">
+            <thead><tr><th>Phân loại</th><th class="text-right">Bản rộng</th><th class="text-right">Kích thước dài</th><th class="text-right">Tồn ghi nhận</th></tr></thead>
+            <tbody>${summary.groups.map(item => `<tr>
+              <td data-label="Phân loại"><strong>${escapeHTML(item.kind)}</strong></td>
+              <td class="text-right" data-label="Bản rộng">${item.width ? `${item.width} ly` : '—'}</td>
+              <td class="text-right" data-label="Kích thước dài">${item.len ? `${item.len} mm` : '—'}</td>
+              <td class="text-right" data-label="Tồn ghi nhận"><strong>${escapeHTML(item.unit === 'kg' ? `${fmtKg(item.qty)} kg` : `${item.qty.toLocaleString('vi-VN')} SL`)}</strong></td>
+            </tr>`).join('')}</tbody>
+          </table></div>`
+        : '<div class="x1-kho-empty">Chưa có thành phẩm Lọc Thanh/Bó Xô được ghi nhận.</div>';
+    }
+    initLucide();
+  }
   function x1LocThanhReadLengthRows() {
     const box = document.getElementById('x1-loc-thanh-length-rows');
     if (!box) return [];
@@ -17173,6 +17329,38 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     return '';
   }
+  function x1BoSourceOriginalInputOf(sourceGroup) {
+    const bocs = new Map();
+    const visited = new Set();
+    const visit = record => {
+      if (!record || visited.has(record.id)) return;
+      visited.add(record.id);
+      const boc = (state.xuong1BocRecords || []).find(r => r.id === record.id);
+      if (boc) {
+        bocs.set(boc.id, boc);
+        return;
+      }
+      const links = [
+        ['bocId', state.xuong1BocRecords],
+        ['locOngId', state.xuong1LocOngRecords],
+        ['catMatId', state.xuong1CatMatRecords],
+        ['boId', state.xuong1BoRecords],
+        ['phoiSayId', state.xuong1PhoiSayRecords]
+      ];
+      links.forEach(([field, records]) => {
+        const parent = record[field] && (records || []).find(r => r.id === record[field]);
+        if (parent) visit(parent);
+      });
+    };
+    (sourceGroup && sourceGroup.sources || []).forEach(source => {
+      const record = source.record || (source.sourceType === 'locOng'
+        ? (state.xuong1LocOngRecords || []).find(r => r.id === source.sourceId)
+        : (state.xuong1CatMatRecords || []).find(r => r.id === source.sourceId));
+      visit(record);
+    });
+    if (!bocs.size) return null;
+    return [...bocs.values()].reduce((sum, record) => sum + Math.max(0, Number(record.qty) || 0), 0);
+  }
 
   // ─── SỐ LIỆU HIỂN THỊ (link SỐNG tới nguồn) ────────────────────
   function x1ChainDisplay(spec, r) {
@@ -17236,8 +17424,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         ? (spec.altSrcRoute || `${spec.altSrcName} (bỏ qua ${spec.srcName})`)
         : spec.srcName);
       const lotCode = s.lotCode || x1TraceLotCodeOf(s);
-      const initial = spec.key === 'bo' && Array.isArray(s.sources)
+      const groupedOutput = spec.key === 'bo' && Array.isArray(s.sources)
         ? s.sources.reduce((sum, source) => sum + Math.max(0, Number(source.outputQty) || 0), 0)
+        : null;
+      const initial = spec.key === 'bo' && Array.isArray(s.sources)
+        ? x1BoSourceOriginalInputOf(s) ?? groupedOutput
         : null;
       const stock = spec.key === 'bo'
         ? `Tồn ${fmtKg(rest)}/${fmtKg(initial)} kg`
@@ -17579,6 +17770,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       shiftMatchPos: spec.posMatch,
       headName: spec.headName,
       emptyIcon: spec.emptyIcon,
+      mobileRowHtml: spec.key === 'locThanh' ? x1LocThanhMobileRecordHtml : null,
       emptyText: `Chưa có lượt ${escapeHTML(spec.title.toLowerCase())} nào.<br>Chọn <strong>${escapeHTML(spec.sourceLabel || (spec.altSrcName ? `${spec.srcName} hoặc ${spec.altSrcName} (bỏ qua ${spec.srcName})` : spec.srcName))}</strong> ở form trên rồi bấm <strong>Lưu Lượt ${escapeHTML(spec.title)}</strong>.`,
       thead: `<th>Mã Lô</th><th>${spec.key === 'locThanh'
         ? 'Loại Nguyên Liệu'
@@ -17632,6 +17824,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const pend = x1BocPending();
       if (!pend.length) return 'Hết tồn';
       return `Tồn ${fmtKg(pend.reduce((s, x) => s + x1SaySinhRemainingOf(x, null), 0))} kg`;
+    }
+    if (cardId === 'x1-kho-card') {
+      const stock = x1WarehouseStockSummary();
+      if (stock.totalKg > 0) return `Tồn ${fmtKg(stock.totalKg)} kg`;
+      if (stock.legacyCount > 0) return `Ma trận cũ ${stock.legacyCount.toLocaleString('vi-VN')} SL`;
+      return 'Chưa có thành phẩm';
     }
     // 5 công đoạn đuôi — cùng 1 nhánh (SPEC)
     const spec = x1ChainSpec(cardId);
@@ -17879,6 +18077,7 @@ export {
   x1BoWidthToggle,
   x1BoWidthAdd,
   x1BoNavigateStage,
+  x1LocThanhNavigateStage,
   x1LocThanhModeOf,
   x1LocThanhSourceDimensions,
   x1LocThanhLengthChoices,
@@ -17927,6 +18126,7 @@ export {
   x1CatOngMarkLotDone,
   x1SaySinhRemainingOf,
   x1CardCountText,
+  x1WarehouseStockSummary,
   // ── YÊU CẦU 12/10/2026: lọc lô "cây" + bỏ qua Cắt Mắt ──
   x1IsCayLot,
   x1LocOngViaCutOng,

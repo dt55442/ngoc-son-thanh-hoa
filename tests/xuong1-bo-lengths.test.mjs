@@ -101,11 +101,11 @@ const g = id => document.getElementById(id);
 
 // ─── A. CẤU TRÚC ────────────────────────────────────────────────────
 console.log('--- A. CẤU TRÚC ---');
-check('A1: state.js khai key chiều dài/bản rộng + field + export + version v380',
+check('A1: state.js khai key chiều dài/bản rộng + field + export + version v384',
   stateSrc.includes('bamboo_tracker_x1_bo_lengths_v1') && stateSrc.includes('x1BoLengthOptions: []') &&
   stateSrc.includes('bamboo_tracker_x1_bo_widths_v1') && stateSrc.includes('x1BoWidthOptions: []') &&
   stateSrc.includes('STORAGE_KEY_X1_BO_LENGTHS,') && stateSrc.includes('STORAGE_KEY_X1_BO_WIDTHS,') &&
-  stateSrc.includes("APP_VERSION = 'v380'"));
+  stateSrc.includes("APP_VERSION = 'v384'"));
 check('A2: form Bổ gọn, có tooltip và hai bộ chọn, không còn ô Ghi Chú/Đạt/Loại',
   idxHtml.includes('id="x1-bo-lengths-btn"') && idxHtml.includes('id="x1-bo-lengths-picker"') &&
   idxHtml.includes('id="x1-bo-widths-btn"') && idxHtml.includes('id="x1-bo-width-picker"') &&
@@ -115,24 +115,38 @@ check('A3: index.html form Lọc Thanh có mode + wrap bảng dài + okrow',
   idxHtml.includes('id="x1-loc-thanh-mode"') && idxHtml.includes('id="x1-loc-thanh-length-wrap"') &&
   idxHtml.includes('id="x1-loc-thanh-length-rows"') && idxHtml.includes('id="x1-loc-thanh-okrow"') &&
   idxHtml.includes('id="x1-lt-add-row"') &&
+  idxHtml.includes('id="btn-x1-lt-stage-prev"') && idxHtml.includes('id="btn-x1-lt-stage-next"') &&
+  idxHtml.includes('class="x1-bo-actions x1-lt-actions"') &&
+  idxHtml.includes('class="x1-ss-input-btn x1-bo-action-btn is-neutral" id="btn-cancel-x1-loc-thanh"') &&
+  idxHtml.includes('class="x1-ss-input-btn x1-bo-action-btn" data-perm="x1"><i data-lucide="check"></i><strong>Lưu Lượt Lọc Thanh</strong>') &&
+  idxHtml.includes('id="x1-kho-card"') &&
   idxHtml.indexOf('id="x1-loc-thanh-src"') < idxHtml.indexOf('id="x1-loc-thanh-mode"'));
+check('A3b: Lọc Thanh có 4 nút cùng hàng trên desktop và 2 cột trên mobile',
+  stylesCss.includes('.x1-lt-actions { grid-template-columns: repeat(4, minmax(0, 1fr))') &&
+  stylesCss.includes('@media (max-width: 639.98px)') &&
+  stylesCss.includes('.x1-bo-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }'));
 check('A4: events.js nối đủ (nút · tick · thêm · mode · đổi nguồn · thêm/xóa dòng)',
   eventsSrc.includes("safeOn('x1-bo-lengths-btn'") && eventsSrc.includes("safeOn('x1-loc-thanh-mode'") &&
   eventsSrc.includes("safeOn('x1-bo-widths-btn'") &&
   eventsSrc.includes("safeOn('btn-x1-bo-stage-prev'") && eventsSrc.includes("safeOn('btn-x1-bo-stage-next'") &&
+  eventsSrc.includes("safeOn('btn-x1-lt-stage-prev'") && eventsSrc.includes("safeOn('btn-x1-lt-stage-next'") &&
+  eventsSrc.includes('x1LocThanhNavigateStage') &&
   eventsSrc.includes("safeOn('x1-lt-add-row'") && eventsSrc.includes('data-x1-bo-len') &&
   eventsSrc.includes('data-x1-lt-del') && eventsSrc.includes("safeOn('x1-loc-thanh-src'"));
 check('A5: xuong2.js đăng ký dropdown nổi + danh mục bản rộng + điều hướng',
   x2Src.includes("['x1-bo-width-picker', 'x1-bo-widths-btn']") &&
   x2Src.includes('X1_BO_LENGTH_DEFAULTS = [50, 60, 65, 70, 75, 80, 87, 90, 95, 100, 105]') &&
   x2Src.includes('X1_BO_WIDTH_DEFAULTS = [11, 15]') && x2Src.includes('x1BoWidthsTogglePicker,') &&
-  x2Src.includes('x1BoNavigateStage,') && x2Src.includes('x1BoLengthsOfPhoiSay,'));
+  x2Src.includes('x1BoNavigateStage,') && x2Src.includes('x1LocThanhNavigateStage,') &&
+  x2Src.includes("x1-kho-card") && x2Src.includes('x1BoLengthsOfPhoiSay,'));
 check('A6: CSS khối mới ở depth 0 + ngoặc cân bằng',
   (() => {
     const i = stylesCss.indexOf('.x1-bo-width-picker {');
     let d = 0;
     for (let j = 0; j < i; j++) { if (stylesCss[j] === '{') d++; else if (stylesCss[j] === '}') d--; }
     return d === 0 && stylesCss.includes('.x1-bo-actions') && stylesCss.includes('.x1-lt-row') &&
+      stylesCss.includes('#x1-loc-thanh-length-rows .x1-lt-matrix tbody') &&
+      stylesCss.includes('.x1-lt-mobile-history') &&
       (stylesCss.match(/{/g) || []).length === (stylesCss.match(/}/g) || []).length;
   })());
 check('A7: danh mục bản rộng nối storage · cloud · history · main',
@@ -154,7 +168,7 @@ check('A7: danh mục bản rộng nối storage · cloud · history · main',
   mainSrc.includes('loadX1BoLengthOptions()') && mainSrc.includes('loadX1BoWidthOptions()'));
 check('A8: bản rộng có trong nhật ký và Excel', x2Src.includes('Bản rộng (ly)') &&
   exportSrc.includes('Bản Rộng (ly)') && exportSrc.includes('(d.widths || []).join'));
-check('A9: sw.js cache v380', swSrc.includes('nha-may-ngoc-son-v380'));
+check('A9: sw.js cache v384', swSrc.includes('nha-may-ngoc-son-v384'));
 check('A10: test nằm trong chuỗi npm test', read('../package.json').includes('tests/xuong1-bo-lengths.test.mjs'));
 
 // ─── B. DANH MỤC GỢI Ý + PICKER ─────────────────────────────────────
@@ -386,7 +400,7 @@ const mxHtml = g('x1-loc-thanh-length-rows').innerHTML;
 check('M1: tự sinh 4 tổ hợp bản rộng × chiều dài + 8 cột phân loại khối lượng',
   mxHtml.includes('11 ly') && mxHtml.includes('15 ly') && mxHtml.includes('50 mm') && mxHtml.includes('80 mm') &&
   mxHtml.includes('data-x1-lt-c="loai"') && mxHtml.includes('Cắt đầu') &&
-  mxHtml.includes('Bánh tẻ') && mxHtml.includes('B non tơ') && mxHtml.includes('Khối lượng (kg)'));
+  mxHtml.includes('Bánh tẻ') && mxHtml.includes('B non tóp') && mxHtml.includes('Khối lượng (kg)'));
 check('M1b: mỗi ô kg mang thuộc tính bản rộng + chiều dài + phân loại',
   mxHtml.includes('data-x1-lt-c="A"') && mxHtml.includes('data-x1-lt-width="11"') &&
   mxHtml.includes('data-x1-lt-len="50"') && mxHtml.includes('step="any"'));
@@ -443,6 +457,9 @@ const mxEditHtml = g('x1-loc-thanh-length-rows').innerHTML;
 check('M5: sửa lượt ma trận điền sẵn kg (15/20/2) theo đúng bản rộng × chiều dài',
   mxEditHtml.includes('value="15"') && mxEditHtml.includes('value="20"') && mxEditHtml.includes('value="2"') &&
   mxEditHtml.includes('data-x1-lt-width="11"'));
+check('M5a: ô ma trận có nhãn phân loại cho giao diện thẻ điện thoại',
+  mxEditHtml.includes('data-label="A"') && mxEditHtml.includes('data-label="A1"') &&
+  mxEditHtml.includes('data-label="6mm"'));
 x1.resetX1ChainForm(spLT);
 // M6: lịch sử — mini ma trận + nhãn Lọc thanh
 x1.renderX1ChainCard(spLT);
@@ -450,7 +467,8 @@ const histHtml = g('x1-loc-thanh-day-cards').innerHTML;
 check('M6: lịch sử ghi loại nguyên liệu và bảng kg có bản rộng × chiều dài',
   histHtml.includes('Loại Nguyên Liệu') && histHtml.includes('Vầu thanh không cạo') &&
   histHtml.includes('x1-lt-mini') && histHtml.includes('11 ly') && histHtml.includes('50 mm') &&
-  histHtml.includes('Khối lượng (kg)') && histHtml.includes('B non tơ') && histHtml.includes('Lọc thanh'));
+  histHtml.includes('Khối lượng (kg)') && histHtml.includes('B non tóp') && histHtml.includes('Lọc thanh') &&
+  histHtml.includes('x1-lt-mobile-entry') && histHtml.includes('Chi tiết phân loại'));
 // M7: kg matrix ratio valid and dimensions follow the selected Bổ source.
 check('M7: x1ChainDisplay có tỷ lệ kg + bản rộng/chiều dài từ Bổ',
   x1.x1ChainDisplay(spLT, ltMx).ratio === (49 / 55 * 100) &&

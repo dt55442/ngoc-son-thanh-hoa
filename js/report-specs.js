@@ -36,7 +36,7 @@ const X2_REPORTS = [
   { id: 'epvan',   label: 'Ép Ván',                         cardId: 'x2-ep-van-card' }
 ];
 
-// 8 thẻ Xưởng 1 — trước 17/10/2026 bấm xuất bị rơi về 'batch' (SAI vùng dữ liệu)
+// 8 công đoạn Xưởng 1 + Kho Nan dùng chung báo cáo nguồn Lọc Thanh/Bó Xô.
 const X1_REPORTS = [
   { id: 'x1catong',   label: 'Cắt Ống',           cardId: 'x1-cat-ong-card' },
   { id: 'x1saysinh',  label: 'Sấy Sinh',          cardId: 'x1-say-sinh-card' },
@@ -45,7 +45,7 @@ const X1_REPORTS = [
   { id: 'x1catmat',   label: 'Cắt Mắt',           cardId: 'x1-cat-mat-card' },
   { id: 'x1bo',       label: 'Bổ',                cardId: 'x1-bo-card' },
   { id: 'x1phoisay',  label: 'Phơi Sấy',          cardId: 'x1-phoi-say-card' },
-  { id: 'x1locthanh', label: 'Lọc Thanh / Bó Xô', cardId: 'x1-loc-thanh-card' }
+  { id: 'x1locthanh', label: 'Lọc Thanh / Bó Xô', cardId: 'x1-loc-thanh-card', cardIds: ['x1-kho-card'] }
 ];
 
 export const REPORT_SPECS = [
@@ -112,7 +112,7 @@ export function groupOfReport(id) {
   return r ? REPORT_GROUPS.find(g => g.id === r.group) || null : null;
 }
 export function reportIdForCard(cardId) {
-  const r = REPORT_SPECS.find(x => x.cardId === cardId);
+  const r = REPORT_SPECS.find(x => x.cardId === cardId || (x.cardIds || []).includes(cardId));
   return r ? r.id : '';
 }
 export function defaultReportId() {

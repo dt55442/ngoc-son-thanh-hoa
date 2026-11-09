@@ -346,7 +346,7 @@
       <!-- ══════════════════════════════════════════════════════ -->
       <!-- CÔNG TẮC CHUYỂN XƯỞNG — tab Công Đoạn SX có 2 XƯỞNG     -->
       <!-- RIÊNG BIỆT: Xưởng 2 (nan tre — 13 thẻ) & Xưởng 1 (ống   -->
-      <!-- Vầu/nứa — 8 công đoạn). Bấm 1 trong 2 nút để đổi khối thẻ   -->
+      <!-- Vầu/nứa — 8 công đoạn + Kho Nan). Bấm 1 trong 2 nút để đổi khối thẻ -->
       <!-- đang xem; pop-up thẻ chi tiết dùng CHUNG (1 khung).     -->
       <!-- Trạng thái nhớ theo MÁY: bamboo_tracker_stage_ws_v1      -->
       <!-- (thuần UI — không đồng bộ mây/backup, xem js/xuong2.js)  -->
@@ -561,6 +561,13 @@
             <span class="x2-mini-desc">Phân loại thành phẩm · bó xô</span>
             <span class="x2-mini-count" id="x2-mini-count-x1-loc-thanh">–</span>
             <span class="cap-spark" id="x2-mini-spark-x1-loc-thanh"></span>
+          </button>
+
+          <button type="button" class="x2-mini-card" data-x2-card="x1-kho-card" aria-expanded="false" title="Kho Nan — Xưởng 1: tự tổng hợp thành phẩm đạt từ các lượt Lọc Thanh/Bó Xô, không nhập/xuất thủ công">
+            <span class="x2-mini-ic"><i data-lucide="warehouse"></i></span>
+            <span class="x2-mini-title">Kho Nan · Xưởng 1</span>
+            <span class="x2-mini-desc">Tồn tự tính từ thành phẩm Lọc Thanh/Bó Xô</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-kho">–</span>
           </button>
 
         </div>
@@ -3061,10 +3068,12 @@
                 <div id="x1-loc-thanh-length-rows"></div>
               </div>
               <div class="x2-cut-calc" id="x1-loc-thanh-calc"></div>
-              <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
-                <button type="button" class="btn btn-outline" id="btn-x1-loc-thanh-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Thanh / Bó Xô theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
-                <button type="button" class="btn btn-outline" id="btn-cancel-x1-loc-thanh">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="x1"><i data-lucide="check"></i> Lưu Lượt Lọc Thanh</button>
+              <button type="button" class="btn btn-outline x1-lt-rate-btn" id="btn-x1-loc-thanh-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Thanh / Bó Xô theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
+              <div class="x1-bo-actions x1-lt-actions">
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn" id="btn-x1-lt-stage-prev" title="Trở về công đoạn Phơi Sấy"><i data-lucide="chevron-left"></i><strong>Lùi · Phơi Sấy</strong></button>
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-repeat" id="btn-x1-lt-stage-next" title="Mở Kho Nan Xưởng 1"><strong>Tiến · Kho Nan</strong><i data-lucide="chevron-right"></i></button>
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-neutral" id="btn-cancel-x1-loc-thanh"><i data-lucide="rotate-ccw"></i><strong>Làm Mới Form</strong></button>
+                <button type="submit" class="x1-ss-input-btn x1-bo-action-btn" data-perm="x1"><i data-lucide="check"></i><strong>Lưu Lượt Lọc Thanh</strong></button>
               </div>
             </form>
           </div>
@@ -3082,6 +3091,20 @@
             </div>
             <div class="x2-cut-table-scroll"><div id="x1-loc-thanh-day-cards"></div></div>
           </div>
+          </div>
+        </div>
+
+        <div class="planning-card x2-card-hidden" id="x1-kho-card">
+          <div class="planning-card-header"><h4><i data-lucide="warehouse"></i> Kho Nan — Xưởng 1</h4></div>
+          <div class="x2-stock-bar" id="x1-kho-stock-bar"></div>
+          <div class="x2-zone" data-zone="1">
+            <div class="x2-zone-head"><span class="x2-zone-no">1</span><i data-lucide="bar-chart-3"></i> Tổng Thành Phẩm Ghi Nhận</div>
+            <div class="material-stats" id="x1-kho-stats"></div>
+            <p class="x1-kho-note">Tồn tự tính từ sản lượng đạt ở Lọc Thanh/Bó Xô; thẻ này chưa ghi nhận xuất kho hoặc tiêu thụ.</p>
+          </div>
+          <div class="x2-zone" data-zone="2">
+            <div class="x2-zone-head"><span class="x2-zone-no">2</span><i data-lucide="list"></i> Tồn Theo Phân Loại Và Kích Thước</div>
+            <div id="x1-kho-inventory"></div>
           </div>
         </div>
 

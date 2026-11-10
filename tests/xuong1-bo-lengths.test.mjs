@@ -101,11 +101,11 @@ const g = id => document.getElementById(id);
 
 // ─── A. CẤU TRÚC ────────────────────────────────────────────────────
 console.log('--- A. CẤU TRÚC ---');
-check('A1: state.js khai key chiều dài/bản rộng + field + export + version v384',
+check('A1: state.js khai key chiều dài/bản rộng + field + export + version v385',
   stateSrc.includes('bamboo_tracker_x1_bo_lengths_v1') && stateSrc.includes('x1BoLengthOptions: []') &&
   stateSrc.includes('bamboo_tracker_x1_bo_widths_v1') && stateSrc.includes('x1BoWidthOptions: []') &&
   stateSrc.includes('STORAGE_KEY_X1_BO_LENGTHS,') && stateSrc.includes('STORAGE_KEY_X1_BO_WIDTHS,') &&
-  stateSrc.includes("APP_VERSION = 'v384'"));
+  stateSrc.includes("APP_VERSION = 'v385'"));
 check('A2: form Bổ gọn, có tooltip và hai bộ chọn, không còn ô Ghi Chú/Đạt/Loại',
   idxHtml.includes('id="x1-bo-lengths-btn"') && idxHtml.includes('id="x1-bo-lengths-picker"') &&
   idxHtml.includes('id="x1-bo-widths-btn"') && idxHtml.includes('id="x1-bo-width-picker"') &&
@@ -168,7 +168,7 @@ check('A7: danh mục bản rộng nối storage · cloud · history · main',
   mainSrc.includes('loadX1BoLengthOptions()') && mainSrc.includes('loadX1BoWidthOptions()'));
 check('A8: bản rộng có trong nhật ký và Excel', x2Src.includes('Bản rộng (ly)') &&
   exportSrc.includes('Bản Rộng (ly)') && exportSrc.includes('(d.widths || []).join'));
-check('A9: sw.js cache v384', swSrc.includes('nha-may-ngoc-son-v384'));
+check('A9: sw.js cache v385', swSrc.includes('nha-may-ngoc-son-v385'));
 check('A10: test nằm trong chuỗi npm test', read('../package.json').includes('tests/xuong1-bo-lengths.test.mjs'));
 
 // ─── B. DANH MỤC GỢI Ý + PICKER ─────────────────────────────────────

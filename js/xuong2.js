@@ -31,7 +31,10 @@ import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.
 import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
 import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, state } from './state.js';
-import { trackDeleted } from './tombstone.js';
+import { applyTombstonesToRecordList, trackDeleted } from './tombstone.js';
+import { hydrateMonthlyDomain, persistMonthlyDomain } from './monthly-domain.js';
+import { mergeRecordsByTimestamp } from './record-merge.js';
+import { reportStorageFailure } from './storage-diagnostics.js';
 // CỜ TÍNH NĂNG (Cài Đặt Hệ Thống): incident-manual = cho phép nhập tay giờ sự cố
 import { applySysAreaDom, flagOn } from './sys-settings.js';
 import { calculateStageDays, calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, incidentApprovedHoursOf, incidentReportStatsOf, setupHScrollNav, showToast, shiftBreakdownHtml, shiftCompareMap, shiftGroupRows, shiftOptionsHtml, shiftSuggestOf, stageEffHours, stageIncidentInputHtml, stageIncidentKey, stageIncidentOf, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_PURPOSE_ORDER, KHO_SOURCE_LABELS, khoApprovedScrapNotes, khoApprovedXuatNotes, khoDerivedOutOf, khoFifoAllocation, khoFirstInDateOf, khoInCountOf, khoLastInDateOf, khoLedgerEvents, khoLotRemainingOf, khoNormPurpose, khoOutRoundCountOf, khoOverAllocOf, khoPeriodKeyOf, khoSay2RoundDatesOf, khoStockSummary } from './utils.js';
@@ -5627,7 +5630,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // MIGRATE khi NẠP: gộp dòng trùng của dữ liệu CŨ — TỔNG = cộng các dòng cũ
   // (trước đây hệ thống vẫn CỘNG các dòng này khi hiện số liệu → giữ nguyên đúng
   // số đã hiển thị). Có đổi mới lưu lại.
-  function dedupeChonNanRecords() {
+  function dedupeChonNanRecords(options) {
+    const shouldPersist = !options || options.persist !== false;
     const list = state.xuong2ChonNanThoRecords || [];
     if (list.length < 2) return false;
     const groups = new Map();
@@ -5677,7 +5681,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (touched) batchTouched = true;
     });
     if (batchTouched) storageModule().then(m => m && m.saveData()).catch(() => {});
-    saveXuong2ChonNan();
+    if (shouldPersist) saveXuong2ChonNan();
     return true;
   }
   // ─── ĐỊNH MỨC CÔNG SUẤT CHỌN NAN THÔ (thanh/giờ) THEO TỪNG THÁNG ──
@@ -5757,27 +5761,91 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
 
   // ─── NẠP / LƯU DỮ LIỆU CHỌN NAN THÔ ──────────────────────────
-  function loadXuong2ChonNan() {
+  async function loadXuong2ChonNan() {
     const raw = localStorage.getItem(STORAGE_KEY_XUONG2_CHON_NAN);
+    let local = [];
     if (raw) {
-      try {
-        const arr = JSON.parse(raw);
-        state.xuong2ChonNanThoRecords = Array.isArray(arr) ? arr : [];
-      } catch (e) { state.xuong2ChonNanThoRecords = []; }
-    } else {
-      state.xuong2ChonNanThoRecords = [];
+      try { local = JSON.parse(raw); }
+      catch (e) { console.warn('[XƯỞNG 2] Không đọc được cache Chọn Nan Thô:', e); }
+    }
+    if (!Array.isArray(local)) local = [];
+    let hydrationSucceeded = false;
+    try {
+      const hydrated = await hydrateMonthlyDomain(
+        'xuong2ChonNanThoRecords',
+        local,
+        mergeRecordsByTimestamp
+      );
+      state.xuong2ChonNanThoRecords = applyTombstonesToRecordList(
+        'xuong2ChonNanThoRecords',
+        hydrated.records
+      );
+      hydrationSucceeded = true;
+    } catch (error) {
+      state.xuong2ChonNanThoRecords = applyTombstonesToRecordList('xuong2ChonNanThoRecords', local);
+      console.error('[XƯỞNG 2] Không nạp được kho IndexedDB Chọn Nan Thô:', error);
+      showToast('Không mở được kho dữ liệu Chọn Nan Thô đầy đủ trên thiết bị. Hãy kiểm tra kết nối mây hoặc khôi phục bản sao lưu trước khi tiếp tục nhập.', 'error');
     }
     // Gộp dòng trùng của dữ liệu CŨ — 1 tổ hợp (lô · ngày · kích thước · phân loại)
     // = 1 DÒNG (16/10/2026); nếu TRƯỚC ĐÓ nhiều dòng thì TỔNG = cộng các dòng cũ
-    dedupeChonNanRecords();
+    dedupeChonNanRecords({ persist: hydrationSucceeded });
+    if (hydrationSucceeded) {
+      const persisted = await persistMonthlyDomain(
+        'xuong2ChonNanThoRecords',
+        STORAGE_KEY_XUONG2_CHON_NAN,
+        state.xuong2ChonNanThoRecords || [],
+        { dropMissing: true, cacheMonths: 1 }
+      );
+      reportChonNanPersistence(persisted);
+    } else {
+      try {
+        localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || []));
+      } catch (error) {
+        showToast(reportStorageFailure(
+          'nhật ký Chọn Nan Thô',
+          STORAGE_KEY_XUONG2_CHON_NAN,
+          error
+        ), 'error');
+      }
+    }
   }
 
-  function saveXuong2ChonNan() {
-    try {
-      localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || []));
-    } catch (err) {
-      showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu sẽ thử ghi qua file/mây.', 'error');
+  function reportChonNanPersistence(result) {
+    if (result.indexedError) {
+      console.error('[XƯỞNG 2] Không ghi được kho IndexedDB Chọn Nan Thô:', result.indexedError);
     }
+    if (!result.persisted) {
+      showToast(reportStorageFailure(
+        'nhật ký Chọn Nan Thô',
+        STORAGE_KEY_XUONG2_CHON_NAN,
+        result.localError || result.indexedError
+      ), 'error');
+    } else if (result.indexedError) {
+      showToast('Kho IndexedDB đang lỗi; nhật ký Chọn Nan Thô được giữ tạm trong localStorage trên thiết bị này.', 'error');
+    } else if (result.cacheError) {
+      console.warn('[XƯỞNG 2] Đã lưu Chọn Nan Thô vào IndexedDB nhưng không cập nhật được cache localStorage:', result.cacheError);
+    }
+  }
+
+  function saveXuong2ChonNan(changedMonths) {
+    const requestedMonths = Array.isArray(changedMonths) ? [...new Set(changedMonths.filter(Boolean))] : [];
+    const months = requestedMonths.length ? requestedMonths : null;
+    const saveStartedAt = Date.now();
+    void persistMonthlyDomain(
+      'xuong2ChonNanThoRecords',
+      STORAGE_KEY_XUONG2_CHON_NAN,
+      state.xuong2ChonNanThoRecords || [],
+      { dropMissing: !months, changedMonths: months, cacheMonths: 1 }
+    ).then(result => {
+      reportChonNanPersistence(result);
+      if (typeof process === 'undefined' && console.debug) {
+        console.debug('[STORAGE] Đã ghi nhật ký Chọn Nan Thô', {
+          durationMs: Date.now() - saveStartedAt,
+          backend: result.backend,
+          recordCount: (state.xuong2ChonNanThoRecords || []).length
+        });
+      }
+    });
     logDataChange(['xuong2ChonNanThoRecords']); // ghi lịch sử sửa đổi
     if (state.fileStorage.connected) {
       storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
@@ -6114,6 +6182,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       showToast('Không tìm thấy lượt chọn nan cần sửa!', 'error');
       return;
     }
+    const previousMonth = editing ? String(editing.date || '').slice(0, 7) : '';
 
     // NGƯỜI CHỌN NAN + THỜI GIAN: TỰ ĐỘNG từ Bảng bố trí Nhân Sự (vị trí "Chọn nan")
     // GIAI ĐOẠN 2: nếu lượt ghi CA → snapshot CHỈ lấy người + giờ của ca đó; số thanh
@@ -6164,7 +6233,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         });
       }
     });
-    saveXuong2ChonNan();
+    saveXuong2ChonNan([
+      previousMonth,
+      String(dateVal || '').slice(0, 7)
+    ]);
     if (editing) {
       showToast(`Đã cập nhật ${quantities.length} phân loại · ${fmtThanh(total)} thanh!`, 'success');
       resetXuong2ChonNanForm();
@@ -6216,7 +6288,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     trackDeleted('xuong2ChonNanThoRecords', id); // tombstone: không bị mây/máy khác hồi sinh
     state.xuong2ChonNanThoRecords = (state.xuong2ChonNanThoRecords || []).filter(r => r.id !== id);
     if (state.x2ChonNanEditId === id) resetXuong2ChonNanForm();
-    saveXuong2ChonNan();
+    saveXuong2ChonNan([String(rec.date || '').slice(0, 7)]);
     renderX2ChonNanCard();
     showToast('Đã xóa lượt chọn nan thô!', 'success');
   }
@@ -6317,7 +6389,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       rec.volume = Math.round(q * unitVol * 10000) / 10000;   // thể tích lượt = số thanh × thể tích 1 thanh
     }
     rec.updatedAt = new Date().toISOString();
-    saveXuong2ChonNan();
+    saveXuong2ChonNan([String(rec.date || '').slice(0, 7)]);
     // Vẽ lại dữ liệu — form nhập phía trên KHÔNG bị đụng tới
     renderX2ChonNanStats();
     renderX2ChonNanTable();
@@ -6398,6 +6470,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // Số lượng · Thể tích · Tỷ lệ loại (của chính cỡ nan đó trong ngày).
   //   Công suất thực tế = TỔNG SỐ THANH ÷ tổng giờ chọn nan (thanh/h)
   //   Hiệu suất = Công suất thực tế ÷ Định mức chọn nan của tháng (thanh/h)
+  const X2_CHON_NAN_PAGE_SIZE = 200;
+  let x2ChonNanVisibleLimit = X2_CHON_NAN_PAGE_SIZE;
+
   function renderX2ChonNanTable() {
     const box = document.getElementById('x2-cn-day-cards');
     if (!box) return;
@@ -6418,13 +6493,29 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     // GIAI ĐOẠN 2: gom theo (NGÀY, CA) — mỗi ca 1 THẺ NGÀY riêng + bảng so sánh 2 ca
     const { groups, cmpByDate } = x2DayShiftGroups(list, chonNanDisplay, (r, d) => (r.external ? 0 : d.quantity), { rateOf: chonNanRateOf, incKey: 'chonnan' });
+    const visibleGroups = [];
+    let visibleRows = 0;
+    for (const group of groups) {
+      if (visibleRows >= x2ChonNanVisibleLimit) break;
+      visibleGroups.push(group);
+      visibleRows += (group.rows || []).length;
+    }
     let html = '';
-    for (const g of groups) {
+    for (const g of visibleGroups) {
       const cmp = (g.shiftIdx != null) ? ((cmpByDate.get(g.date) || new Map()).get(g.shiftIdx) || null) : null;
       html += chonNanDayCardHtml(g.date, g.rows, g.shiftIdx, cmp && cmp.cmp);
     }
+    if (visibleRows < list.length) {
+      const remaining = list.length - visibleRows;
+      html += `<div class="x2-cn-more-wrap" style="display:flex;justify-content:center;padding:12px;"><button type="button" class="btn btn-outline btn-sm" data-x2-cn-more>Xem thêm ${Math.min(X2_CHON_NAN_PAGE_SIZE, remaining)} lượt chọn nan</button></div>`;
+    }
     box.innerHTML = html;
     initLucide();
+  }
+
+  function showMoreX2ChonNan() {
+    x2ChonNanVisibleLimit += X2_CHON_NAN_PAGE_SIZE;
+    renderX2ChonNanTable();
   }
 
   // 1 THẺ NGÀY của công đoạn Chọn Nan Thô (đầu thẻ chung + bảng nhánh)
@@ -18575,6 +18666,7 @@ export {
   toggleX2BaoThoTable,
   toggleX2BoOngTable,
   toggleX2ChonNanTable,
+  showMoreX2ChonNan,
   toggleX2BaoTinhTable,
   baoTinhLotRemainingOf,
   baoTinhUsedLabel,

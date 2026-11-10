@@ -11,6 +11,8 @@ import { STORAGE_KEY_CUSTOM_CHARTS, STORAGE_KEY_DATA, STORAGE_KEY_DELETED_IDS, S
 import { STORAGE_KEY_HR_WORKER_EVALUATIONS } from './state.js';
 import { STORAGE_KEY_MECH_WORK_PLANS } from './state.js';
 import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS } from './state.js';
+import { persistMonthlyDomain } from './monthly-domain.js';
+import { reportStorageFailure } from './storage-diagnostics.js';
 import { restoreMaterialRecords } from './storage.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
@@ -2237,7 +2239,25 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_X1_BO_WIDTHS, JSON.stringify(state.x1BoWidthOptions || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BO_ONG, JSON.stringify(state.xuong2BoOngRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_THO, JSON.stringify(state.xuong2BaoThoRecords || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || [])); } catch (e) {}
+    void persistMonthlyDomain(
+      'xuong2ChonNanThoRecords',
+      STORAGE_KEY_XUONG2_CHON_NAN,
+      state.xuong2ChonNanThoRecords || [],
+      { dropMissing: true, cacheMonths: 1 }
+    ).then(result => {
+      if (result.indexedError) console.error('[FB] Không ghi được kho IndexedDB Chọn Nan Thô:', result.indexedError);
+      if (!result.persisted) {
+        showToast(reportStorageFailure(
+          'nhật ký Chọn Nan Thô',
+          STORAGE_KEY_XUONG2_CHON_NAN,
+          result.localError || result.indexedError
+        ), 'error');
+      } else if (result.indexedError) {
+        showToast('Kho IndexedDB lỗi; nhật ký Chọn Nan Thô đang được giữ tạm trong localStorage trên thiết bị này.', 'error');
+      }
+    }).catch(error => {
+      showToast(reportStorageFailure('nhật ký Chọn Nan Thô', STORAGE_KEY_XUONG2_CHON_NAN, error), 'error');
+    });
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BAO_TINH, JSON.stringify(state.xuong2BaoTinhRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_BULLIG, JSON.stringify(state.xuong2BulligRecords || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_XUONG2_CAT_VAN, JSON.stringify(state.xuong2CatVanRecords || [])); } catch (e) {}

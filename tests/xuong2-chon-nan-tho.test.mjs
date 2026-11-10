@@ -558,7 +558,7 @@ state.batches = [
   { id: 'o-b-a', code: '260921-01', stage: 'say1', date: '2026-09-21', location: 'LS1', quantity: 150, sourceChonNanId: 'o-dup-1' },
   { id: 'o-b-b', code: '260922-01', stage: 'say1', date: '2026-09-22', location: 'LS2', quantity: 200, sourceChonNanId: 'o-dup-2' }
 ];
-x2.loadXuong2ChonNan();
+await x2.loadXuong2ChonNan();
 check('MIGRATE (nạp): 2 dòng trùng (cùng lô bt-2 · ngày 20/09 · 1300×90×12 · A) → gộp còn 1 dòng',
   state.xuong2ChonNanThoRecords.filter(r => r.baothoId === 'bt-2' && r.date === '2026-09-20').length === 1);
 const oSurv = state.xuong2ChonNanThoRecords.find(r => r.baothoId === 'bt-2' && r.date === '2026-09-20');
@@ -632,6 +632,41 @@ check('LIÊN KẾT CẶP RỘNG-DÀY: Chọn Nan Thô chỉ liệt kê đúng c�
   !selSize.innerHTML.includes('1250 × 18 × 7'));
 state.xuong2BaoThoRecords.pop();
 x2.fillXuong2ChonNanOptions();
+
+state.xuong2ChonNanThoRecords = Array.from({ length: 201 }, (_, i) => {
+  const date = new Date(2026, 0, i + 1).toISOString().slice(0, 10);
+  return {
+    id: 'page-' + i, date, dims: [1300, 90, 12], sizeKey: '1300×90×12',
+    cls: 'A', quantity: 1, unitVol: 0.001404
+  };
+});
+x2.renderX2ChonNanTable();
+check('PAGINATION: ban đầu chỉ hiển thị tối đa 200 lượt và có nút xem thêm',
+  (document.getElementById('x2-cn-day-cards').innerHTML.match(/class="x2-day-card/g) || []).length === 200 &&
+  document.getElementById('x2-cn-day-cards').innerHTML.includes('data-x2-cn-more'));
+x2.showMoreX2ChonNan();
+check('PAGINATION: xem thêm hiển thị hết nhật ký và ẩn nút khi đã đủ',
+  (document.getElementById('x2-cn-day-cards').innerHTML.match(/class="x2-day-card/g) || []).length === 201 &&
+  !document.getElementById('x2-cn-day-cards').innerHTML.includes('data-x2-cn-more'));
+check('PAGINATION: nút được nối vào click delegation',
+  jsEvSrc.includes("import { showMoreX2ChonNan } from './xuong2.js'") &&
+  jsEvSrc.includes("[data-x2-cn-more]") && jsEvSrc.includes('showMoreX2ChonNan()'));
+const { localStorageSizeSummary } = await import('../js/storage-diagnostics.js');
+const previousLocalStorage = global.localStorage;
+const diagnosticEntries = new Map();
+global.localStorage = {
+  getItem: key => diagnosticEntries.has(key) ? diagnosticEntries.get(key) : null,
+  setItem: (key, value) => diagnosticEntries.set(key, String(value)),
+  key: index => [...diagnosticEntries.keys()][index] || null,
+  get length() { return diagnosticEntries.size; }
+};
+localStorage.setItem('small-key', 'ok');
+localStorage.setItem('storage-diagnostic-test', 'x'.repeat(1000));
+const storageSummary = localStorageSizeSummary();
+check('STORAGE: ước lượng usage theo key và nhận diện key lớn nhất',
+  storageSummary.bytes === ('small-key'.length + 2 + 'storage-diagnostic-test'.length + 1000) * 2 &&
+  storageSummary.largest[0].key === 'storage-diagnostic-test');
+global.localStorage = previousLocalStorage;
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

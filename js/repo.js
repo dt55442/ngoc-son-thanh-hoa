@@ -185,14 +185,37 @@ function loadDomain(domain) {
 // tháng vắng mặt — tránh mất dữ liệu khi app vừa mở, state mới có 2 tháng cache.
 function putDomain(domain, arr, opts) {
   const dropMissing = !!(opts && opts.dropMissing);
-  const groups = groupByMonth(arr);
+  const selectedMonths = Array.isArray(opts && opts.changedMonths)
+    ? new Set(opts.changedMonths.map(String).filter(Boolean))
+    : null;
+  const groups = Object.create(null);
+  if (selectedMonths) {
+    selectedMonths.forEach(month => { groups[month] = []; });
+    (arr || []).forEach(record => {
+      const month = monthOf(record);
+      if (selectedMonths.has(month)) groups[month].push(record);
+    });
+  } else {
+    Object.assign(groups, groupByMonth(arr));
+  }
   const changed = [];
+  const removeKeys = new Set();
 
-  Object.keys(groups).forEach(month => {
-    const list = groups[month];
+  const targetMonths = selectedMonths ? [...selectedMonths] : Object.keys(groups);
+  targetMonths.forEach(month => {
+    const list = groups[month] || [];
+    const k = cacheKey(domain, month);
+    if (!list.length) {
+      if (selectedMonths || dropMissing) {
+        cache.delete(k);
+        pendingDeletes.add(k);
+        pendingWrites.set(k, null);
+        removeKeys.add(k);
+      }
+      return;
+    }
     const count = list.length;
     const stamp = stampOf(list);
-    const k = cacheKey(domain, month);
     if (pendingDeletes.has(k)) {
       pendingDeletes.delete(k);
       pendingWrites.delete(k);
@@ -205,8 +228,7 @@ function putDomain(domain, arr, opts) {
     pendingWrites.set(k, json);
     changed.push(row);
   });
-  const removeKeys = new Set();
-  if (dropMissing) {
+  if (dropMissing && !selectedMonths) {
     [...cache.keys()].forEach(k => {
       if (k.indexOf(domain + '|') !== 0) return;
       const month = k.slice(domain.length + 1);

@@ -17,6 +17,7 @@ import { openLeadershipReportPreview, printLeadershipReport, setLeadershipPeriod
 import { closeRateCenter, onRateCenterClick, openRateCenter } from './rate-center.js';
 import { closeColumnFilters, toggleKanbanDensity } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
+import { showMoreX2ChonNan } from './xuong2.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, planHistOnHideDone, planHistOnMonth, planHistOnQuarter, planHistOnRowClick, planHistOnSearch, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressInventoryAdjustment, filterPressInventoryProducts, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, pressToggleSec, recalcPressQuantities, refreshPressProductSelect, refreshPressSecChecks, refreshPressStickHints, refreshPressWorkersPreview, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded, openEpvHelp, closeEpvHelp } from './press.js';
 import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, deleteMaterial, handleMaterialImageSelect, handleMaterialPlanInput, handleMaterialSubmit, materialPhotoNav, mpTotalsViewOf, openMaterialModal, openMaterialPhotoModal, refreshMaterialTypeSuggestions, removeMaterialPlanWeek, renderMaterialImagePreviews, renderMaterialPlanChart, renderMaterialPlanTable, renderMaterialTotals, renderMaterialView, setMpTotalsMode, setMpTotalsPeriod, shiftMaterialPlanChartWeek, shiftMpTotalsPeriod, toggleMpView, updateMaterialWeight } from './materials.js';
@@ -2745,6 +2746,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         if (selEl && m) { selEl.value = m; renderX2ChonNanRateBar(); }
         return;
       }
+      const cnMore = e.target.closest && e.target.closest('[data-x2-cn-more]');
+      if (cnMore) { showMoreX2ChonNan(); return; }
       const cnEdit = e.target.closest && e.target.closest('[data-x2-cn-edit]');
       if (cnEdit) { editXuong2ChonNan(cnEdit.getAttribute('data-x2-cn-edit')); return; }
       const cnDel = e.target.closest && e.target.closest('[data-x2-cn-delete]');

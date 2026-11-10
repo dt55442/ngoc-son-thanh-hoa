@@ -20,6 +20,9 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
 import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS } from './state.js';
 // CÀI ĐẶT HỆ THỐNG (cờ hiển thị + quyền theo vùng) — chuẩn hoá khi nạp file/backup
 import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
+import { mergeRecordsByTimestamp } from './record-merge.js';
+import { persistMonthlyDomain } from './monthly-domain.js';
+import { reportStorageFailure } from './storage-diagnostics.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
   function loadData() {
@@ -162,27 +165,7 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
 
 
   // ─── GỘP NHẬT KÝ CẮT/CHỌN XƯỞNG 2 (từ file bamboo_data.json / backup) ──
-  // Dấu thời gian so sánh bản ghi (ưu tiên updatedAt); bản chỉ có ở một phía giữ lại.
-  function xuong2RecStamp(r) {
-    return String((r && (r.updatedAt || r.createdAt)) || '');
-  }
-
-  function mergeXuong2Records(localArr, incomingArr) {
-    const local = Array.isArray(localArr) ? localArr : [];
-    const incoming = Array.isArray(incomingArr) ? incomingArr : [];
-    const map = new Map();
-    const noId = [];
-    for (const r of incoming) {
-      if (r && r.id) map.set(r.id, r); // bản từ nguồn ngoài (file/mây/backup) làm nền
-    }
-    for (const r of local) {
-      if (!r) continue;
-      if (!r.id) { noId.push(r); continue; }
-      const cur = map.get(r.id);
-      if (!cur || xuong2RecStamp(r) >= xuong2RecStamp(cur)) map.set(r.id, r);
-    }
-    return [...noId, ...map.values()];
-  }
+  const mergeXuong2Records = mergeRecordsByTimestamp;
 
   // Khôi phục xuong2CutRecords từ nguồn ngoài: luôn GỘP thay vì ghi đè,
   // rồi lưu lại localStorage + file (nếu đang kết nối).
@@ -422,7 +405,11 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
     const before = JSON.stringify(state.xuong2ChonNanThoRecords || []);
     const merged = mergeXuong2Records(state.xuong2ChonNanThoRecords, incomingArr);
     state.xuong2ChonNanThoRecords = merged;
-    try { localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(merged)); } catch (err) {}
+    void persistMonthlyDomain('xuong2ChonNanThoRecords', STORAGE_KEY_XUONG2_CHON_NAN, merged, { dropMissing: true })
+      .then(result => {
+        if (!result.persisted) showToast(reportStorageFailure('nhật ký Chọn Nan Thô', STORAGE_KEY_XUONG2_CHON_NAN, result.localError || result.indexedError), 'error');
+        else if (result.indexedError) showToast('Kho IndexedDB lỗi; nhật ký Chọn Nan Thô đang được giữ tạm trong localStorage trên thiết bị này.', 'error');
+      });
     if (JSON.stringify(merged) !== before && state.fileStorage.connected) {
       writeDataToFile(); // nâng cấp file lên bản gộp mới nhất
     }

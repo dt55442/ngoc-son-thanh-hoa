@@ -225,7 +225,7 @@ function yieldBootFrame() {
     loadXuong2Boluong(); // Nhật ký Bốc Luồng Xưởng 2 (link lô "Luồng cây..." ở tab Nguyên Liệu)
     loadXuong2BoOng(); // Nhật ký Bổ Ống Xưởng 2 (link lô ống từ Cắt Chọn)
     loadXuong2BaoTho(); // Nhật ký Chạy Máy Bào Thô Xưởng 2 (link lô đã bổ)
-    loadXuong2ChonNan(); // Nhật ký Chọn Nan Thô Xưởng 2 (link lô đã bào thô)
+    await loadXuong2ChonNan(); // Nhật ký Chọn Nan Thô Xưởng 2 (IndexedDB + cache gần nhất)
     loadXuong2Bullig(); // Nhật ký Bullig Xưởng 2 (Gia công + Chọn thanh)
     loadXuong2CatVan(); // Nhật ký Cắt Ván Xưởng 2 (Cắt ván + Xẻ thanh — tồn theo kỳ)
     loadX2CatVanSpan(); // Kỳ tồn form Cắt Ván (1 tuần / 2 tuần — thuần UI theo máy)

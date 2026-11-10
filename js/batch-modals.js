@@ -4,11 +4,11 @@
 import { initLucide, requireEditPermission } from './cloud.js';
 import { pushUndo } from './events.js';
 import { renderAll } from './main.js';
-import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_XUONG2_CHON_NAN, state } from './state.js';
+import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoFifoAllocation, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
-import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormUsesBatches, renderX2KhoStockTable, saveKhoNotes, sayBuildCharges, sayShiftMapOf, syncAlShiftField, toggleX2KhoStockTable } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG
+import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormUsesBatches, renderX2KhoStockTable, saveKhoNotes, saveXuong2ChonNan, sayBuildCharges, sayShiftMapOf, syncAlShiftField, toggleX2KhoStockTable } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -137,9 +137,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
       `Cập nhật luôn PHÂN LOẠI trên ${recs.length === 1 ? 'THẺ NGUỒN' : 'CÁC THẺ NGUỒN'} thành "${newCls}" không?\n` +
       'Bấm "Hủy" nếu chỉ muốn đổi Loại ở lô này (thẻ nguồn giữ nguyên).')) return;
     recs.forEach(rec => { rec.cls = newCls; });
-    try {
-      localStorage.setItem(STORAGE_KEY_XUONG2_CHON_NAN, JSON.stringify(state.xuong2ChonNanThoRecords || []));
-    } catch (err) { /* lỗi ghi bộ nhớ máy — không chặn thao tác sửa lô */ }
+    saveXuong2ChonNan([...new Set(recs.map(rec => String(rec.date || '').slice(0, 7)).filter(Boolean))]);
     // Làm mới nhãn snapshot + phân loại trong sources[] (nếu là lô gộp)
     newBatch.sourceChonNanLabel = recs.length === 1
       ? nanCardLabel(recs[0])

@@ -64,6 +64,9 @@ check('DUMP: có chuỗi JSON theo tháng (backup không cần parse lại)',
   Object.keys(repo.dumpStrings()).some(k => k.indexOf('demo|') === 0));
 check('LOAD: loadDomainSync ghép lại đúng mảng',
   repo.loadDomainSync('demo').length === 1 && repo.loadDomainSync('demo')[0].id === 'a');
+await repo.putDomain('demo', [], { changedMonths: ['2026-10'] });
+check('PUT: changedMonths xóa tháng đã rỗng (kể cả tháng cuối cùng)',
+  repo.monthsOf('demo').length === 0 && repo.loadDomainSync('demo').length === 0);
 check('AVAILABLE: Node không có IndexedDB -> false (hệ thống dùng fallback)', repo.available() === false);
 
 // ─── E. NẠP MẢNG LỚN (không phụ thuộc giới hạn đối số của push(...)) ─
@@ -145,6 +148,9 @@ check('NỐI: cloud.js persistAllLocal chỉ giữ cache 2 tháng + ghi repo',
 check('NỐI: file sao lưu JSON có dữ liệu Nhân sự (trước đây THIẾU)',
   storageSrc.includes('hrAssignments: state.hrAssignments || []') && storageSrc.includes('function restoreHrFromBackup'));
 check('NỐI: sw.js có js/repo.js trong APP_SHELL', swSrc.includes("'./js/repo.js'"));
+check('NỐI: sw.js có đủ module lưu Chọn Nan Thô trong APP_SHELL',
+  ['./js/monthly-domain.js', './js/record-merge.js', './js/storage-diagnostics.js']
+    .every(path => swSrc.includes(`'${path}'`)));
 check('CACHE: sw.js và APP_VERSION cùng phiên bản', (() => {
   const c = /nha-may-ngoc-son-(v\d+)/.exec(swSrc); const a = /APP_VERSION = '(v\d+)'/.exec(stateSrc);
   return !!c && !!a && c[1] === a[1];

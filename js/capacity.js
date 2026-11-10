@@ -347,7 +347,6 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       { id: 'x1locong',   spec: 'locOng',    label: 'Lọc Ống',          cardId: 'x1-loc-ong-card' },
       { id: 'x1catmat',   spec: 'catMat',    label: 'Cắt Mắt',          cardId: 'x1-cat-mat-card' },
       { id: 'x1bo',       spec: 'bo',        label: 'Bổ',               cardId: 'x1-bo-card' },
-      { id: 'x1phoisay',  spec: 'phoiSay',   label: 'Phơi Sấy',         cardId: 'x1-phoi-say-card' },
       { id: 'x1locthanh', spec: 'locThanh',  label: 'Lọc Thanh/Bó Xô',  cardId: 'x1-loc-thanh-card' }
     ].map(c => ({
       id: c.id, ws: 'x1', label: c.label, unit: 'kg/h', unitQty: 'kg',
@@ -380,7 +379,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     // mà x1RenderDayCards truyền vào → bảng tổng hợp TRỪ giờ sự cố giống thẻ ngày)
     x1catong: 'x1catong', x1saysinh: 'x1saysinh', x1boc: 'x1boc',
     x1locong: 'x1locong', x1catmat: 'x1catmat', x1bo: 'x1bo',
-    x1phoisay: 'x1phoisay', x1locthanh: 'x1locthanh'
+    x1locthanh: 'x1locthanh'
   };
   function capIncKeyOf(st) { return CAP_INC_KEY[st.id] || null; }
 
@@ -1336,8 +1335,8 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     epvan: 'Cắt Ván · Bào Ván · QC kiểm ván', bullig_gc: 'Bullig — Chọn thanh', bullig_ct: 'xuất Bullig',
     catvan_cat: 'Xẻ thanh', catvan_xe: 'các bước sau', baovan_bao: 'Chà thùng', baovan_cha: 'QC thành phẩm',
     x1catong: 'Sấy Sinh', x1saysinh: 'Bốc', x1boc: 'Lọc Ống',
-    x1locong: 'Cắt Mắt / Bổ', x1catmat: 'Bổ', x1bo: 'Phơi Sấy',
-    x1phoisay: 'Lọc Thanh/Bó Xô', x1locthanh: 'nhập kho thành phẩm Xưởng 1'
+    x1locong: 'Cắt Mắt / Bổ', x1catmat: 'Bổ', x1bo: 'Lọc Thanh/Bó Xô',
+    x1locthanh: 'nhập kho thành phẩm Xưởng 1'
   };
   // Quét TOÀN BỘ công đoạn của CẢ 2 XƯỞNG (không phụ thuộc xưởng đang xem) để
   // cảnh báo nêu đúng "công đoạn nào · xưởng nào".
@@ -1891,14 +1890,13 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     { elId: 'x2-mini-spark-bullig', stageIds: ['bullig_gc', 'bullig_ct'] },
     { elId: 'x2-mini-spark-cat-van', stageIds: ['catvan_cat', 'catvan_xe'] },
     { elId: 'x2-mini-spark-bao-van', stageIds: ['baovan_bao', 'baovan_cha'] },
-    // XƯỞNG 1 — 8 công đoạn (sparkline 8 tuần trên mini card)
+    // XƯỞNG 1 — 7 công đoạn thao tác (Phơi Sấy là tồn trung gian)
     { elId: 'x2-mini-spark-x1-cat-ong', stageIds: ['x1catong'] },
     { elId: 'x2-mini-spark-x1-say-sinh', stageIds: ['x1saysinh'] },
     { elId: 'x2-mini-spark-x1-boc', stageIds: ['x1boc'] },
     { elId: 'x2-mini-spark-x1-loc-ong', stageIds: ['x1locong'] },
     { elId: 'x2-mini-spark-x1-cat-mat', stageIds: ['x1catmat'] },
     { elId: 'x2-mini-spark-x1-bo', stageIds: ['x1bo'] },
-    { elId: 'x2-mini-spark-x1-phoi-say', stageIds: ['x1phoisay'] },
     { elId: 'x2-mini-spark-x1-loc-thanh', stageIds: ['x1locthanh'] }
   ];
   function capSparkGroupWeekEff(stageIds, weekKey) {

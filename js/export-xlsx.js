@@ -1146,22 +1146,31 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
         head = ['Stt', 'Ngày', 'Mã Lô', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
           'KL Vào (kg)', ltLegacyMatrix ? 'KL Đạt (kg) / SL cũ' : 'KL Đạt (kg)',
           ltLegacyMatrix ? 'KL Loại (kg) / SL cũ' : (spec.key === 'locOng' ? 'KL Sót Mắt (kg)' : 'KL Loại (kg)'), 'Tỷ Lệ Đạt (%)',
-          ...(spec.key === 'bo' ? ['Chiều Dài (mm)', 'Bản Rộng (ly)'] : []),
+          ...(spec.key === 'bo' ? ['Bản Rộng (ly)'] : []),
           ...(spec.key === 'locThanh'
             ? (ltMatrix
               ? ['Hình Thức', 'Bản Rộng (ly)', 'Kích Thước Dài (mm)', ...LT_CLASS_HEADS, 'Tổng', 'Đơn Vị']
               : ['Hình Thức', 'Chi Tiết Theo Chiều Dài'])
             : []),
+          ...(spec.key === 'locThanh'
+            ? ['Nguồn theo lô / kg lấy', 'KL Chênh (kg)', 'Phân loại chênh', 'Lý do chênh']
+            : []),
           'Người Làm', 'Giờ HC', 'Giờ TC', 'Ghi Chú'];
         let inKg = 0, okKg = 0;
+        const lossTypeLabels = { 'hao-hut': 'Hao hụt / bụi vụn', loai: 'Loại / phế chưa vào ma trận', 'dieu-chinh': 'Điều chỉnh khác' };
+        const sourceAllocText = d => (d.sourceLots || []).map(lot =>
+          `${lot.lotCode || 'Lô Bổ'}: lấy ${x2FmtKg(lot.qtyIn)} kg` +
+          (lot.qtyDryAvailable == null ? '' : `, cân sau sấy đã ghi ${x2FmtKg(lot.qtyDryAvailable)} kg`) +
+          (lot.dryAdjustment != null && Math.abs(lot.dryAdjustment) > 1e-9
+            ? `, chênh cân ${x2FmtKg(lot.dryAdjustment)} kg (${lot.dryAdjustmentReason || 'chưa ghi lý do'})` : '')
+        ).join(' | ');
         list.forEach((d, i) => {
           inKg += d.qtyIn || 0; okKg += d.qtyOk || 0;
           const base = [i + 1, formatDateDDMMYY(d.date), d.lotCode || '', d.srcType || '', d.srcSupplier || '',
             d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '',
             d.qtyIn, d.qtyOk, d.qtyLoai, d.ratio == null ? '—' : Math.round(d.ratio * 10) / 10,
             ...(spec.key === 'bo'
-              ? [(d.lengths || []).join(' · ') + ((d.lengths || []).length ? ' mm' : ''),
-                (d.widths || []).join(' · ') + ((d.widths || []).length ? ' ly' : '')]
+              ? [(d.widths || []).join(' · ') + ((d.widths || []).length ? ' ly' : '')]
               : [])];
           if (spec.key === 'locThanh' && ltMatrix && (d.matrixRows || []).length) {
             d.matrixRows.forEach((mr, k) => {
@@ -1175,6 +1184,10 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
                 ...X1_LT_CLASSES.map(c => (Number(values && values[c.id]) || 0) > 0 ? values[c.id] : ''),
                 t,
                 isKg ? 'kg' : 'SL (cũ)',
+                k === 0 ? sourceAllocText(d) : '',
+                k === 0 && d.qtyLoss > 0 ? d.qtyLoss : '',
+                k === 0 ? (lossTypeLabels[d.lossType] || '') : '',
+                k === 0 ? (d.lossNote || '') : '',
                 x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
                 d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
             });
@@ -1189,6 +1202,10 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
                     : [d.mode === 'bo-xo' ? 'Bó xô' : 'Lọc thanh',
                        (d.lengthRows || []).map(r => `${r.len}mm: ${r.kg}kg`).join(' · ')])
                 : []),
+              ...(spec.key === 'locThanh'
+                ? [sourceAllocText(d), d.qtyLoss > 0 ? d.qtyLoss : '',
+                  lossTypeLabels[d.lossType] || '', d.lossNote || '']
+                : []),
               x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
               d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
           }
@@ -1196,6 +1213,10 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
         sumNote = ltLegacyMatrix
           ? `Tổng KL vào ${x2FmtKg(inKg)} kg · KL đạt / SL cũ ${x2FmtKg(okKg)}`
           : `Tổng KL vào ${x2FmtKg(inKg)} kg · KL đạt ${x2FmtKg(okKg)} kg`;
+        if (spec.key === 'locThanh') {
+          const lossKg = list.reduce((sum, d) => sum + Math.max(0, Number(d.qtyLoss) || 0), 0);
+          sumNote += ` · Chênh kg ghi nhận ${x2FmtKg(lossKg)} kg`;
+        }
       }
     }
 

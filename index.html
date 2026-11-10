@@ -547,15 +547,7 @@
             <span class="cap-spark" id="x2-mini-spark-x1-bo"></span>
           </button>
 
-          <button type="button" class="x2-mini-card" data-x2-card="x1-phoi-say-card" aria-expanded="false" title="Phơi Sấy — phơi/sấy nan sau khi bổ (tự link lượt Bổ, tự lấy người + giờ vị trí Phơi Sấy từ tab Nhân Sự)">
-            <span class="x2-mini-ic"><i data-lucide="sun"></i></span>
-            <span class="x2-mini-title">Phơi Sấy</span>
-            <span class="x2-mini-desc">Phơi/sấy nan sau bổ</span>
-            <span class="x2-mini-count" id="x2-mini-count-x1-phoi-say">–</span>
-            <span class="cap-spark" id="x2-mini-spark-x1-phoi-say"></span>
-          </button>
-
-          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-thanh-card" aria-expanded="false" title="Lọc Thanh / Bó Xô — phân loại thành phẩm và bó xô (tự link lượt Phơi Sấy, tự lấy người + giờ vị trí Lọc Thanh từ tab Nhân Sự)">
+          <button type="button" class="x2-mini-card" data-x2-card="x1-loc-thanh-card" aria-expanded="false" title="Lọc Thanh / Bó Xô — chọn nhiều lô Bổ đã phơi/sấy và ghi nhận khối lượng theo kích thước">
             <span class="x2-mini-ic"><i data-lucide="package-check"></i></span>
             <span class="x2-mini-title">Lọc Thanh / Bó Xô</span>
             <span class="x2-mini-desc">Phân loại thành phẩm · bó xô</span>
@@ -2908,20 +2900,15 @@
               </div>
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1;">
-                  <label for="x1-bo-lengths-btn">Chiều dài thanh sẽ bổ (mm)</label>
-                  <button type="button" class="btn btn-outline x1-bo-lengths-btn" id="x1-bo-lengths-btn" aria-haspopup="true" aria-expanded="false" aria-controls="x1-bo-lengths-picker" title="Chọn chiều dài áp dụng cho lượt Bổ; thẻ Lọc Thanh/Bó Xô sẽ dùng các chiều dài đã lưu theo lô"></button>
-                </div>
-                <div class="form-group" style="flex:1;">
                   <label for="x1-bo-widths-btn">Bản rộng (ly)</label>
                   <button type="button" class="btn btn-outline x1-bo-widths-btn" id="x1-bo-widths-btn" aria-haspopup="true" aria-expanded="false" aria-controls="x1-bo-width-picker" title="Chọn một hoặc nhiều bản rộng cho lượt Bổ"></button>
                 </div>
               </div>
-              <div class="x1-bo-len-picker" id="x1-bo-lengths-picker" hidden></div>
               <div class="x1-bo-width-picker" id="x1-bo-width-picker" hidden></div>
               <div class="x2-cut-calc" id="x1-bo-calc"></div>
               <div class="x1-bo-actions">
                 <button type="button" class="x1-ss-input-btn x1-bo-action-btn" id="btn-x1-bo-stage-prev" title="Trở về công đoạn Cắt Mắt"><i data-lucide="chevron-left"></i><strong>Lùi · Cắt Mắt</strong></button>
-                <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-repeat" id="btn-x1-bo-stage-next" title="Sang công đoạn Phơi Sấy"><strong>Tiến · Phơi Sấy</strong><i data-lucide="chevron-right"></i></button>
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-repeat" id="btn-x1-bo-stage-next" title="Sang Lọc Thanh sau khi lô đã sẵn sàng"><strong>Tiến · Lọc Thanh</strong><i data-lucide="chevron-right"></i></button>
                 <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-neutral" id="btn-cancel-x1-bo"><i data-lucide="rotate-ccw"></i><strong>Làm Mới Form</strong></button>
                 <button type="submit" class="x1-ss-input-btn x1-bo-action-btn" data-perm="x1"><i data-lucide="check"></i><strong>Lưu Lượt Bổ</strong></button>
               </div>
@@ -2945,7 +2932,7 @@
           </div>
         </div>
 
-        <div class="planning-card x2-card-hidden" id="x1-phoi-say-card">
+        <div class="planning-card x2-card-hidden" id="x1-phoi-say-card" hidden>
           <div class="planning-card-header"><h4><i data-lucide="sun"></i> Phơi Sấy — Xưởng 1</h4></div>
           <div class="x2-stock-bar" id="x1-phoi-say-stock-bar"></div>
           <div class="x2-zone" data-zone="1">
@@ -3023,9 +3010,13 @@
             <form id="x1-loc-thanh-form">
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1.5;">
-                  <label for="x1-loc-thanh-src">Lượt Bổ (nguồn) <span class="required">*</span></label>
-                  <select id="x1-loc-thanh-src" required></select>
-                  <small style="color:var(--text-muted);">Chỉ hiện lượt Bổ còn lại sau Phơi Sấy và Lọc Thanh/Bó Xô</small>
+                  <label>Chọn lô Bổ đã phơi/sấy</label>
+                  <details id="x1-lt-source-dropdown" class="x1-lt-source-dropdown">
+                    <summary class="x1-lt-source-trigger"><span id="x1-lt-source-summary">Chọn một hoặc nhiều lô Bổ</span></summary>
+                    <div id="x1-loc-thanh-source-options" class="x1-lt-source-options" role="group" aria-label="Chọn một hoặc nhiều lô Bổ"></div>
+                  </details>
+                  <select id="x1-loc-thanh-src" hidden aria-hidden="true" tabindex="-1"></select>
+                  <small style="color:var(--text-muted);">Chọn một hoặc nhiều lô. Khối lượng lọc mặc định theo phần còn lại trên phiếu Bổ và có thể sửa.</small>
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-loc-thanh-mode">Hình thức</label>
@@ -3039,15 +3030,16 @@
                   <input type="text" id="x1-loc-thanh-note" placeholder="VD: bó 20 thanh/bó, loại thanh cong...">
                 </div>
               </div>
+              <div id="x1-loc-thanh-source-rows" class="x1-lt-source-rows"></div>
               <div class="x2-form-row">
                 <div class="form-group" style="flex:0 0 155px;">
                   <label for="x1-loc-thanh-date">Ngày Lọc <span class="required">*</span></label>
                   <input type="date" id="x1-loc-thanh-date" required>
                 </div>
-                                <div class="form-group" style="flex:1;">
-                                  <label for="x1-loc-thanh-in">KL Đem Lọc / Bó (kg)</label>
-                                  <input type="number" id="x1-loc-thanh-in" step="any" min="0" placeholder="0">
-                                </div>
+                <div class="form-group" style="flex:1;">
+                  <label for="x1-loc-thanh-in">Tổng KL Đem Lọc / Bó (kg)</label>
+                  <input type="number" id="x1-loc-thanh-in" step="any" min="0" placeholder="Tự tính từ các lô" readonly>
+                </div>
               </div>
               <div class="x2-form-row" id="x1-loc-thanh-okrow">
                 <div class="form-group" style="flex:1;">
@@ -3062,15 +3054,17 @@
               <div class="x1-lt-length-wrap" id="x1-loc-thanh-length-wrap" hidden>
                 <div class="x1-lt-length-head">
                   <strong>Ma trận khối lượng lọc thanh</strong>
-                  <span class="x2-row-note">Tự sinh theo bản rộng và chiều dài của lô Bổ — nhập kg từng phân loại Vầu</span>
+                  <span class="x2-row-note">Bản rộng theo các lô đã chọn; mặc định đủ 11 chiều dài chuẩn. Nhập kg từng phân loại Vầu.</span>
+                  <button type="button" class="btn btn-sm btn-outline" id="btn-x1-lt-length-catalog" aria-haspopup="true" aria-expanded="false" aria-controls="x1-lt-length-catalog" data-perm="x1" title="Xem danh mục chiều dài và thêm kích thước dùng chung"><i data-lucide="ruler"></i> Kích thước</button>
                   <button type="button" class="btn btn-sm btn-outline" id="x1-lt-add-row" data-perm="x1" title="Chỉ dùng ở giao diện dòng kg (bản cũ) — ma trận tự sinh theo lô nguồn"><i data-lucide="plus"></i> Thêm dòng</button>
                 </div>
+                <div class="x1-lt-length-catalog" id="x1-lt-length-catalog" hidden></div>
                 <div id="x1-loc-thanh-length-rows"></div>
               </div>
               <div class="x2-cut-calc" id="x1-loc-thanh-calc"></div>
               <button type="button" class="btn btn-outline x1-lt-rate-btn" id="btn-x1-loc-thanh-rate" hidden data-perm="x1" data-admin-only title="Mở bảng ĐỊNH MỨC công suất Lọc Thanh / Bó Xô theo tháng (kg/h) — CHỈ Quản Trị sửa"><i data-lucide="target"></i> Định mức</button>
               <div class="x1-bo-actions x1-lt-actions">
-                <button type="button" class="x1-ss-input-btn x1-bo-action-btn" id="btn-x1-lt-stage-prev" title="Trở về công đoạn Phơi Sấy"><i data-lucide="chevron-left"></i><strong>Lùi · Phơi Sấy</strong></button>
+                <button type="button" class="x1-ss-input-btn x1-bo-action-btn" id="btn-x1-lt-stage-prev" title="Trở về công đoạn Bổ"><i data-lucide="chevron-left"></i><strong>Lùi · Bổ</strong></button>
                 <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-repeat" id="btn-x1-lt-stage-next" title="Mở Kho Nan Xưởng 1"><strong>Tiến · Kho Nan</strong><i data-lucide="chevron-right"></i></button>
                 <button type="button" class="x1-ss-input-btn x1-bo-action-btn is-neutral" id="btn-cancel-x1-loc-thanh"><i data-lucide="rotate-ccw"></i><strong>Làm Mới Form</strong></button>
                 <button type="submit" class="x1-ss-input-btn x1-bo-action-btn" data-perm="x1"><i data-lucide="check"></i><strong>Lưu Lượt Lọc Thanh</strong></button>
@@ -3103,8 +3097,9 @@
             <p class="x1-kho-note">Tồn tự tính từ sản lượng đạt ở Lọc Thanh/Bó Xô; thẻ này chưa ghi nhận xuất kho hoặc tiêu thụ.</p>
           </div>
           <div class="x2-zone" data-zone="2">
-            <div class="x2-zone-head"><span class="x2-zone-no">2</span><i data-lucide="list"></i> Tồn Theo Phân Loại Và Kích Thước</div>
+            <div class="x2-zone-head"><span class="x2-zone-no">2</span><i data-lucide="list"></i> Ma Trận Tồn Nan: Bản Rộng × Chiều Dài × Phân Loại</div>
             <div id="x1-kho-inventory"></div>
+            <p class="x1-kho-note">Kho tổng hợp đầu ra theo kích thước và phân loại; truy vết lô nguồn xem tại lịch sử Lọc Thanh.</p>
           </div>
         </div>
 
@@ -8039,7 +8034,6 @@
             <option value="locOng">Lọc Ống</option>
             <option value="catMat">Cắt Mắt</option>
             <option value="bo">Bổ</option>
-            <option value="phoiSay">Phơi Sấy</option>
             <option value="locThanh">Lọc Thanh/Bó Xô</option>
           </select>
           <select id="x1-rate-month" title="Chọn tháng"></select>

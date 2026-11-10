@@ -1,7 +1,7 @@
 // tests/xuong1.test.mjs — Kiểm thử TAB "CÔNG ĐOẠN SX" với 2 XƯỞNG RIÊNG BIỆT:
 // ① CÔNG TẮC chuyển Xưởng 1 ⇄ Xưởng 2 (nhớ theo máy)
 // ② TÁCH QUYỀN x1 / x2 (migrate user cũ chỉ có 'kanban')
-// 3 THẺ CÔNG ĐOẠN XƯỞNG 1: Cắt Ống · Sấy Sinh · Bốc — chuỗi liên kết
+// 8 thẻ launcher Xưởng 1; Phơi Sấy là tồn trung gian ẩn, giữ schema lịch sử.
 // (lô NL X1 → Cắt Ống → Sấy Sinh → Bốc), chặn vượt phần còn lại, định mức
 // kg/h, người + giờ HC/TC từ bộ phận "Xưởng 1", nối state/storage/cloud/
 // history/main/capacity.
@@ -235,18 +235,20 @@ check('B15: checkbox phân quyền 2 modal đã tách Xưởng 1 / Xưởng 2',
 console.log('--- C. THẺ XƯỞNG 1 ---');
 const X1_CARDS = ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card', 'x1-loc-ong-card',
                   'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card', 'x1-kho-card'];
+const X1_LAUNCHER_CARDS = X1_CARDS.filter(id => id !== 'x1-phoi-say-card');
 const X1_PFX = ['x1-cat-ong', 'x1-say-sinh', 'x1-boc', 'x1-loc-ong',
                 'x1-cat-mat', 'x1-bo', 'x1-phoi-say', 'x1-loc-thanh'];
-check('C1: X2_CARD_DEFS đăng ký 8 công đoạn và Kho Nan Xưởng 1',
+check('C1: X2_CARD_DEFS đăng ký các thẻ Xưởng 1, gồm thẻ Phơi Sấy lịch sử và Kho Nan',
   X1_CARDS.every(id => x1.X2_CARD_DEFS[id] && x1.X2_CARD_DEFS[id].ws === 'x1'));
 check('C2: mọi thẻ Xưởng 1 đã có chức năng — không còn cờ soon nào',
   X1_CARDS.every(id => !x1.X2_CARD_DEFS[id].soon));
-check('C3: index.html có đủ thẻ launcher Xưởng 1 trong khối #ws-x1-block',
+check('C3: launcher Xưởng 1 ẩn Phơi Sấy trong khối #ws-x1-block',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="ws-x1-block"'), idxHtml.indexOf('/#ws-x1-block'));
-    return X1_CARDS.every(id => blk.includes(`data-x2-card="${id}"`)); })());
+    return X1_LAUNCHER_CARDS.every(id => blk.includes(`data-x2-card="${id}"`)) &&
+      !blk.includes('data-x2-card="x1-phoi-say-card"'); })());
 check('C4: thứ tự thẻ theo luồng SX, Kho Nan sau Lọc Thanh/Bó Xô',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="ws-x1-block"'), idxHtml.indexOf('/#ws-x1-block'));
-    const pos = X1_CARDS.map(id => blk.indexOf(`data-x2-card="${id}"`));
+    const pos = X1_LAUNCHER_CARDS.map(id => blk.indexOf(`data-x2-card="${id}"`));
     return pos.every((p, i) => p > 0 && (i === 0 || p > pos[i - 1])); })());
 check('C5: chi tiết 8 công đoạn và Kho Nan nằm trong #x2-details-stack',
   (() => { const blk = idxHtml.slice(idxHtml.indexOf('id="x2-details-stack"'), idxHtml.indexOf('/#x2-details-stack'));
@@ -258,7 +260,7 @@ check('C6: mọi thẻ chi tiết X1 có form + thanh tồn + khung thẻ ngày 
   X1_PFX.filter(p => p !== 'x1-say-sinh').every(p => idxHtml.includes(`id="${p}-stats"`)) &&
   !idxHtml.includes('id="x1-say-sinh-stats"'));
 check('C7: chip đếm + sparkline trên launcher X1 có ô riêng (#x2-mini-count/spark-x1-*)',
-  X1_PFX.every(p => idxHtml.includes(`id="x2-mini-count-${p}"`) &&
+  X1_PFX.filter(p => p !== 'x1-phoi-say').every(p => idxHtml.includes(`id="x2-mini-count-${p}"`) &&
                     idxHtml.includes(`id="x2-mini-spark-${p}"`)));
 check('C8: x2CardCountText trả TỒN (không còn "Sắp có") cho 5 thẻ đuôi',
   ['x1-loc-ong-card', 'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card']
@@ -431,7 +433,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v385/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v388/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -530,8 +532,11 @@ hFill(spPS, bo.id, '2026-09-16', 40, 35, 5);
 const ps = state.xuong1PhoiSayRecords[0];
 check('H11: ghi lượt Phơi Sấy 40kg → tồn Bổ = 5kg',
   !!ps && ps.lotCode === 'SS-2026-0910-01' && x1.x1ChainRemainingOf(spPS, bo, null) === 5);
-hFill(spLT, ps.id, '2026-09-17', 35, 30, 5);
-const lt = state.xuong1LocThanhRecords[0];
+const lt = {
+  id: 'lt-legacy-h', date: '2026-09-17', phoiSayId: ps.id, boId: bo.id,
+  qtyIn: 35, qtyOk: 30, qtyLoai: 5, lotCode: 'SS-2026-0910-01'
+};
+state.xuong1LocThanhRecords.push(lt);
 check('H12: bản ghi cũ Lọc Thanh vẫn lấy 35kg từ Phơi Sấy; nguồn mới chờ theo Bổ',
   !!lt && lt.lotCode === 'SS-2026-0910-01' &&
   x1.x1ChainRemainingOf(spLT, ps, null) === 0 &&
@@ -603,7 +608,7 @@ check('H19: events.js nối đủ 5 form (submit · cancel · src change · ô t
   eventsSrc.includes("safeOn('btn-' + base + '-rate', 'click'") &&
   eventsSrc.includes("closest('[data-x1-edit]')") &&
   eventsSrc.includes("closest('[data-x1-delete]')"));
-check('H20: storage · cloud · history · main · capacity nối đủ 5 mảng + 8 khóa định mức',
+check('H20: storage · cloud · history · main · capacity giữ dữ liệu cũ nhưng bỏ Phơi Sấy khỏi công suất',
   ['restoreXuong1LocOng', 'restoreXuong1CatMat', 'restoreXuong1Bo', 'restoreXuong1PhoiSay', 'restoreXuong1LocThanh']
     .every(n => storageSrc.includes('function ' + n)) &&
   ['xuong1LocOngRecords', 'xuong1CatMatRecords', 'xuong1BoRecords',
@@ -612,10 +617,12 @@ check('H20: storage · cloud · history · main · capacity nối đủ 5 mảng
   mainSrc.includes('loadX1ChainAll()') &&
   capSrc.includes("id: 'x1locong'") && capSrc.includes("id: 'x1locthanh'") &&
   capSrc.includes("x1locthanh: 'x1locthanh'") &&
-  capSrc.includes("'x2-mini-spark-x1-phoi-say'"));
-check('H21: popup định mức X1 có đủ 8 lựa chọn công đoạn',
-  ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'phoiSay', 'locThanh']
+  !capSrc.includes("id: 'x1phoisay'") &&
+  !capSrc.includes("'x2-mini-spark-x1-phoi-say'"));
+check('H21: popup định mức X1 chỉ có 7 công đoạn thao tác',
+  ['catOng', 'saySinh', 'boc', 'locOng', 'catMat', 'bo', 'locThanh']
     .every(k => new RegExp(`<option value="${k}">`).test(idxHtml)) &&
+  !new RegExp('<option value="phoiSay">').test(idxHtml) &&
   x1.x1RateOf('2026-09-10', 'locOng') === 0);
 
 // ─── I. YÊU CẦU 12/10/2026: LỌC LÔ "CÂY" · BỎ QUA CẮT MẮT · VÙNG XƯỞNG 1 ──
@@ -951,13 +958,15 @@ check('K17: chip Kho Nan hiển thị tổng thành phẩm tự tính',
   x1.x1CardCountText('x1-kho-card') === 'Tồn 52 kg');
 x1.x2OpenCard('x1-kho-card');
 const warehouseHtml = document.getElementById('x1-kho-inventory').innerHTML;
-check('K18: thẻ Kho Nan hiện phân loại, kích thước và tồn theo nhóm',
+check('K18: thẻ Kho Nan ưu tiên tổng theo kích thước, phân loại được thu gọn để tham khảo',
   warehouseHtml.includes('Vầu A') && warehouseHtml.includes('11 ly') &&
-  warehouseHtml.includes('50 mm') && warehouseHtml.includes('25 kg') &&
+  warehouseHtml.includes('50 mm') && warehouseHtml.includes('40 kg') &&
+  warehouseHtml.includes('data-label="Phân loại tham khảo"') &&
+  warehouseHtml.includes('details class="x1-kho-kind-details"') &&
   warehouseHtml.includes('Bó xô') && warehouseHtml.includes('12 kg'));
 x1.x2CloseOpenCard();
-check('K19: nút Lùi mở Phơi Sấy và nút Tiến mở Kho Nan Xưởng 1',
-  x1.x1LocThanhNavigateStage(-1) && state.x2OpenCardId === 'x1-phoi-say-card' &&
+check('K19: nút Lùi mở Bổ và nút Tiến mở Kho Nan Xưởng 1',
+  x1.x1LocThanhNavigateStage(-1) && state.x2OpenCardId === 'x1-bo-card' &&
   (x1.x2CloseOpenCard(), x1.x1LocThanhNavigateStage(1)) &&
   state.x2OpenCardId === 'x1-kho-card' &&
   eventsSrc.includes("safeOn('btn-x1-lt-stage-prev'") &&

@@ -6,7 +6,7 @@ import { deleteBatch, exitKanbanPickMode, exitKhoStockPickMode, loadX2LotLocatio
 import { initTheme } from './theme.js';
 import { hideTreLoading, setTreLoadingStatus, showTreLoading } from './loading.js'; // ICON LOADING "nông dân chặt tre" — che lúc boot
 import { kickXlsxBackgroundLoad } from './xlsx-lazy.js'; // SheetJS nạp NGẦM sau boot (boot nhanh — 11/2026)
-import { flushPendingCloudPush, initFirebase, initLucide, registerServiceWorker, updateSyncFreshBanner, uploadLocalDataToCloud } from './cloud.js';
+import { flushPendingCloudPush, flushPersistAllLocal, initFirebase, initLucide, registerServiceWorker, updateSyncFreshBanner, uploadLocalDataToCloud } from './cloud.js';
 import { loadPhotoQueue, photoSyncKick, updatePhotoSyncUI } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần)
 import { deleteAutoBackup, loadAutoBackups, restoreAutoBackup, restoreCloudBackup } from './autobackup.js';
 import { loadDeletedIds } from './tombstone.js';
@@ -342,7 +342,7 @@ function yieldBootFrame() {
     // Lưới an toàn đồng bộ: đẩy nốt dữ liệu chờ lên mây khi người dùng rời trang,
     // chuyển sang tab khác, hoặc mạng vừa quay lại (tránh mất dữ liệu ép ván mới nhập)
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') { flushPendingCloudPush(); photoSyncKick(); }
+      if (document.visibilityState === 'hidden') { flushPendingCloudPush(); flushPersistAllLocal(); photoSyncKick(); }
     });
     // Xoay màn hình / đổi kích thước: áp dụng lại chế độ xem công đoạn của Kanban
     let kanbanResizeTimer = null;
@@ -350,7 +350,7 @@ function yieldBootFrame() {
       clearTimeout(kanbanResizeTimer);
       kanbanResizeTimer = setTimeout(filterMobileKanbanColumns, 150);
     });
-    window.addEventListener('pagehide', () => { flushPendingCloudPush(); photoSyncKick(); });
+    window.addEventListener('pagehide', () => { flushPendingCloudPush(); flushPersistAllLocal(); photoSyncKick(); });
     window.addEventListener('online', () => { flushPendingCloudPush(); photoSyncKick(); });
     // Trạng thái kênh ảnh (số ảnh chờ) hiện cạnh nút "Đồng Bộ Ảnh Ngay" ở menu ⋮
     updatePhotoSyncUI();
@@ -383,6 +383,13 @@ function yieldBootFrame() {
   // renderAll ĐẶT cờ; renderKanbanBoard (js/kanban.js) gọi markKanbanPainted()
   // NGAY SAU khi vẽ xong.
   let kanbanDirty = true;      // true = dữ liệu đổi mà bảng chưa vẽ lại
+  // ════════════════════════════════════════════════════════════════════════
+  // THROTTLE renderAll: nhiều lần gọi nhanh liên tiếp (vd: nhập liệu liên tục,
+  // đồng bộ mây gọi nhiều lần) chỉ vẽ 1 lần trong mỗi khung ~16ms. Cờ dirty
+  // được set đồng bộ; DOM thực sự vẽ ngay lần đầu, các lần gọi kế tiếp trong
+  // cùng khung bị bỏ qua. flushRenderAll() ép vẽ ngay (test / trước switchView).
+  let renderAllLastFrame = -1;
+  // ════════════════════════════════════════════════════════════════════════
   let kanbanPaintedSig = '';   // chữ ký dữ liệu của lần vẽ gần nhất
   let dashboardDirty = true;   // true = dữ liệu đổi mà trang trí tab Tổng Quan chưa vẽ
   function kanbanBoardSignature() {
@@ -445,6 +452,9 @@ function yieldBootFrame() {
   }
 
   function switchViewCore(targetViewId) {
+    // Đảm bảo mọi render đang chờ hoàn thành trước khi rời tab — tránh hiển thị
+    // số liệu cũ trên tab mới sau 1 frame rAF.
+    flushRenderAll();
     if (targetViewId === 'leadership-view' && !canAccessLeadershipDashboard()) {
       showToast('Chỉ Ban Quản Lý và Admin được xem tổng hợp lãnh đạo.', 'error');
       targetViewId = 'dashboard-view';
@@ -585,17 +595,9 @@ function yieldBootFrame() {
     return [...state.batches];
   }
 
-  function renderAll() {
-    // Mọi đường ghi dữ liệu đều đi qua đây → báo bảng Kanban CẦN VẼ LẠI khi
-    // người dùng mở tab Công Đoạn (xem kanbanNeedsPaint — khỏi phá/dựng lại
-    // hàng trăm thẻ lô mỗi lần qua lại giữa các tab) + báo trang trí tab Tổng
-    // Quan (biểu đồ + Bảng Tổng hợp) cũng cần vẽ lại (xem scheduleViewDecor)
-    kanbanDirty = true;
-    dashboardDirty = true;
-    // Huy hiệu số phiếu sự cố chờ duyệt trên nút thanh tiêu đề tab Công Đoạn SX
-    try { updateIncidentBadge(); } catch (e) { /* không chặn render */ }
-    // Huy hiệu số THÁNG ĐỊNH MỨC đang chờ duyệt / cần duyệt lại (nút "Định Mức")
-    try { updateRatePendingBadge(); } catch (e) { /* không chặn render */ }
+  // Thực hiện các công việc DOM nặng trong renderAll (tách ra để flushRenderAll
+  // có thể gọi lại đồng bộ khi cần — test / trước switchView).
+  function _renderAllDoWork() {
     const filtered = getFilteredBatches();
     // TỐI ƯU: chỉ vẽ lại khu Kanban khi tab Công Đoạn đang mở. Trước đây MỖI
     // lần lưu/đồng bộ mây đều vẽ lại toàn bộ bảng Kanban (mỗi thẻ 1 khối DOM)
@@ -636,6 +638,35 @@ function yieldBootFrame() {
     // Quyền theo vùng: ẩn nút vừa được vẽ lại nếu vai trò không có quyền sửa vùng đó
     try { applySysAreaDom(); } catch (e) { /* không chặn render */ }
     initLucide();
+  }
+
+  // flushRenderAll: ép vẽ NGAY (bỏ qua throttle). Dùng cho test và các đường
+  // dẫn cần DOM đồng bộ ngay (trước khi switchView, trước khi tắt tab).
+  function flushRenderAll() {
+    renderAllLastFrame = -1; // reset throttle để lần gọi sau vẫn vẽ được
+    _renderAllDoWork();
+  }
+
+  function renderAll() {
+    // Mọi đường ghi dữ liệu đều đi qua đây → báo bảng Kanban CẦN VẼ LẠI khi
+    // người dùng mở tab Công Đoạn (xem kanbanNeedsPaint — khỏi phá/dựng lại
+    // hàng trăm thẻ lô mỗi lần qua lại giữa các tab) + báo trang trí tab Tổng
+    // Quan (biểu đồ + Bảng Tổng hợp) cũng cần vẽ lại (xem scheduleViewDecor)
+    kanbanDirty = true;
+    dashboardDirty = true;
+    // Huy hiệu số phiếu sự cố chờ duyệt trên nút thanh tiêu đề tab Công Đoạn SX
+    try { updateIncidentBadge(); } catch (e) { /* không chặn render */ }
+    // Huy hiệu số THÁNG ĐỊNH MỨC đang chờ duyệt / cần duyệt lại (nút "Định Mức")
+    try { updateRatePendingBadge(); } catch (e) { /* không chặn render */ }
+    // Throttle: chỉ vẽ 1 lần mỗi khung ~16ms. Các lần gọi liên tiếp trong cùng
+    // khung chỉ cập nhật cờ, không vẽ lại DOM — tránh giật khi nhập liệu nhanh.
+    const now = (typeof performance === 'function' && typeof performance.now === 'function')
+      ? performance.now()
+      : Date.now();
+    const frame = Math.floor(now / 16);
+    if (frame === renderAllLastFrame) return; // đã vẽ trong khung này
+    renderAllLastFrame = frame;
+    _renderAllDoWork();
   }
 
   // ─── PUBLIC API ───────────────────────────────────────────────
@@ -751,6 +782,7 @@ function yieldBootFrame() {
 export {
   batchMatchesColumnFilter,
   filterMobileKanbanColumns,
+  flushRenderAll,
   getFilteredBatches,
   markKanbanPainted,
   renderAll,

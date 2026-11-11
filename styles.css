@@ -15096,6 +15096,11 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 .leadership-stock-summary > div:first-child > span { color: #7a857c; font-size: 6.5pt; }
 .leadership-stock-detail { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 3px 12px; color: #79847b; font-size: 6pt; }
 .leadership-stock-detail strong { color: #495b4c; }
+.leadership-stock-extra { display: flex; flex-wrap: wrap; gap: 3px 14px; margin: 4px 0 1px; }
+.leadership-stock-extra > div { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.leadership-stock-extra strong { color: #3d6b49; font-size: 8pt; font-variant-numeric: tabular-nums; }
+.leadership-stock-extra > div > span { color: #79837b; font-size: 6pt; }
+.leadership-stock-extra .leadership-delta { font-size: 5.5pt; }
 .leadership-stock-chart { height: 10px; display: flex; overflow: hidden; background: #edf1ec; border-radius: 999px; }
 .leadership-stock-chart i { display: block; min-width: 0; height: 100%; }
 .leadership-stock-chart .is-say1, .leadership-stock-legend .is-say1 { background: #a7c7a6; }
@@ -15315,6 +15320,11 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 .leadership-big-number small { color: var(--text-muted); font-size: .8rem; }
 .leadership-muted { color: var(--text-muted); font-size: .7rem; }
 .leadership-empty { margin: 10px 0 2px; color: var(--text-muted); font-size: .78rem; }
+.leadership-stock-extra { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 6px 0 2px; }
+.leadership-stock-extra > div { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.leadership-stock-extra strong { color: var(--primary); font-size: 1.02rem; font-variant-numeric: tabular-nums; }
+.leadership-stock-extra > div > span { color: var(--text-muted); font-size: .72rem; }
+.leadership-stock-extra .leadership-delta { font-size: .66rem; }
 .leadership-data-note { margin: 0 0 10px; color: var(--text-muted); font-size: .72rem; line-height: 1.5; }
 .leadership-breakdown { display: grid; gap: 9px; }
 .leadership-breakdown-row { display: grid; grid-template-columns: minmax(90px, 1fr) auto; align-items: center; gap: 4px 12px; font-size: .76rem; }
@@ -16511,10 +16521,9 @@ body[data-theme="night"] .bamboo-card.kb-compact.st-kho  { border-left-color: #1
   #x1-kho-inventory .x1-kho-matrix td { display: flex; justify-content: space-between; gap: 6px; min-width: 0; padding: 3px; border: 0; font-size: 0.74rem; }
   #x1-kho-inventory .x1-kho-matrix td::before { content: attr(data-label); color: var(--text-muted); }
   #x1-kho-inventory .x1-kho-matrix td:nth-child(1),
-  #x1-kho-inventory .x1-kho-matrix td:nth-child(2),
-  #x1-kho-inventory .x1-kho-matrix td:nth-child(3),
-  #x1-kho-inventory .x1-kho-matrix td:last-child { grid-column: 1 / -1; }
-  #x1-kho-inventory .x1-kho-matrix td:nth-child(3) { border-top: 1px dashed var(--border-color); }
+  #x1-kho-inventory .x1-kho-matrix td:nth-child(4),
+  #x1-kho-inventory .x1-kho-matrix td:nth-child(5) { grid-column: 1 / -1; }
+  #x1-kho-inventory .x1-kho-matrix td:nth-child(4) { border-top: 1px dashed var(--border-color); }
   .x1-lt-mobile-entry { min-width: 0; padding: 9px; border: 1px solid var(--border-color); border-radius: 9px; background: var(--bg-card); }
   .x1-lt-mobile-entry-head { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 8px; }
   .x1-lt-mobile-entry-head > strong { min-width: 0; margin-right: auto; overflow-wrap: anywhere; }
@@ -16562,3 +16571,26 @@ body[data-theme="night"] .bamboo-card.kb-compact.st-kho  { border-left-color: #1
 .mat-use-chip.is-fresh { background: rgba(22, 163, 74, 0.12); color: #15803d; border-color: rgba(22, 163, 74, 0.35); }
 .mat-use-chip.is-part { background: rgba(217, 119, 6, 0.12); color: #b45309; border-color: rgba(217, 119, 6, 0.35); }
 .mat-use-chip.is-full { background: rgba(100, 116, 139, 0.12); color: #475569; border-color: rgba(100, 116, 139, 0.3); }
+
+/* ─── CHIP LOẠI NGUYÊN LIỆU (Vầu/Nứa) — THẺ LỌC THANH + KHO NAN XƯỞNG 1 ──
+   Tự nhận theo Lô nguồn đã chọn (srcType từng lô Bổ trong lượt).
+   Vầu = xanh lá · Nứa = hổ phách · gom chung nhiều loại = xám. ── */
+.x1-mat-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  width: max-content;
+  max-width: 100%;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.x1-mat-chip.is-vau { background: rgba(22, 163, 74, 0.12); color: #15803d; border-color: rgba(22, 163, 74, 0.35); }
+.x1-mat-chip.is-nua { background: rgba(217, 119, 6, 0.12); color: #b45309; border-color: rgba(217, 119, 6, 0.35); }
+.x1-mat-chip.is-mixed { background: rgba(100, 116, 139, 0.12); color: #475569; border-color: rgba(100, 116, 139, 0.3); }
+.x1-lt-dimension-summary .x1-mat-chip { margin-bottom: 2px; }
+@media (max-width: 639.98px) {
+  .x1-mat-chip { font-size: 0.7rem; padding: 1px 7px; }
+}

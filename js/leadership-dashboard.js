@@ -11,9 +11,12 @@ import { traceChainFor, traceFreshBambooFlowFor } from './trace.js';
 import { x2MassBalanceData } from './x2-phu-pham.js';
 import { bulligDisplay, boluongDisplay, cutDisplay, baoTinhDisplay, baoTinhQtyOkOf, baoTinhQtyErrOf, baoTinhCheckedOf, baoTinhPendingOf, baoTinhDefectStock } from './xuong2.js';
 import { calculateVolume, escapeHTML, khoStockSummary, showToast } from './utils.js';
+import { x2OngChuaBoAsOf, x2YardStockAsOf } from './x2-pool.js';
 
 let periodMode = 'week';
 let periodKey = capWeekKeyOf(todayISO());
+// Chỉ cho phép hiện mũi tên so sánh ▲/▼ từ Tuần 46 trở đi (dữ liệu trước đó chưa đủ).
+const MIN_COMPARE_WEEK = 46;
 
 function todayISO() {
   const d = new Date();
@@ -629,6 +632,14 @@ function buildLeadershipPeriodSummary(mode, key, source, capacity, stock) {
   const bulligSource = source.xuong2BulligRecords || [];
   const quality = buildQuality(qualitySource, bulligSource, range, source.materialRates || []);
   const batches = source.batches || [];
+  // ─── TỒN NGOÀI BÃI + ỐNG CHƯA BỔ — ảnh chụp đến NGÀY CUỐI KỲ (13/11/2026) ──
+  // Kỳ đã kết thúc → chụp đến chủ nhật (ngày cuối tuần) / ngày cuối tháng;
+  // kỳ hiện tại chưa kết thúc → chụp đến hôm nay. Mỗi kỳ có ảnh chụp riêng
+  // nên mục 03 so sánh được ▲▼ với kỳ trước.
+  const todayIso = todayISO();
+  const yardAsOf = range.to && range.to <= todayIso ? range.to : todayIso;
+  const yard = x2YardStockAsOf(yardAsOf);
+  const ongChuaBoKg = x2OngChuaBoAsOf(yardAsOf);
   return {
     mode: period.mode,
     key: period.key,
@@ -649,7 +660,16 @@ function buildLeadershipPeriodSummary(mode, key, source, capacity, stock) {
         .reduce((total, batch) => total + calculateVolume(batch.length, batch.width, batch.thickness, Number(batch.quantity) || 0), 0),
       pendingCount: stock.pendingCount,
       pendingQty: stock.pendingQty,
-      mismatch: stock.mismatchThanh
+      mismatch: stock.mismatchThanh,
+      yard: {
+        asOf: yardAsOf,
+        cayKg: yard.cayKg,
+        ongKg: yard.ongKg,
+        cartCarts: yard.cartCarts,
+        cartKg: yard.cartKg,
+        totalKg: yard.totalKg
+      },
+      ongChuaBoKg
     },
     quality,
     qualityHasHistory: Object.values(quality).some(item => item.rows > 0),
@@ -698,7 +718,18 @@ function fmtCurrency(value) {
   return `${fmt(value, 0)} đ`;
 }
 
-function renderComparison(current, previous, unit, digits = 1, percentagePoints = false, includePercent = true) {
+// Chỉ cho phép so sánh mũi tên từ Tuần 46 trở đi; chế độ Tháng vẫn so sánh bình thường.
+export function weekCompareEligible(mode, key) {
+  if (mode !== 'week') return true;
+  const m = /^(\d{4})-W(\d{1,2})$/.exec(String(key || ''));
+  if (!m) return true;
+  return Number(m[2]) >= MIN_COMPARE_WEEK;
+}
+
+function renderComparison(current, previous, unit, digits = 1, percentagePoints = false, includePercent = true, eligible = true) {
+  if (!eligible) {
+    return '<span class="leadership-delta is-unavailable" title="Chưa đủ dữ liệu để so sánh (trước Tuần 46)">—</span>';
+  }
   if (current == null || previous == null || !Number.isFinite(Number(current)) || !Number.isFinite(Number(previous))) {
     return '<span class="leadership-delta is-unavailable" title="Không đủ dữ liệu để so sánh">—</span>';
   }
@@ -739,7 +770,7 @@ function visibleCapacityStages(workshop) {
   return workshop.stages.filter(stage => !hidden.has(stage.id));
 }
 
-function renderCapacity(summary, previousCapacity) {
+function renderCapacity(summary, previousCapacity, comparable) {
   const mainStageIds = new Set(['epvan', 'bullig_ct']);
   const previousWorkshops = previousCapacity || [];
   return summary.capacity.map(workshop => {
@@ -759,13 +790,13 @@ function renderCapacity(summary, previousCapacity) {
           <span>${escapeHTML(output)}${stage.estimated ? ' ≈' : ''} <i>·</i> ${escapeHTML(capacity)}</span>
         </div>
         <div class="leadership-stage-meta">
-          <span>Giờ làm ${fmt(stage.hours, 1)} h ${renderComparison(stage.hours, before && before.hours, 'h', 1, false, false)}</span>
-          <span>Sự cố ${fmt(stage.incidentHours, 1)} h ${renderComparison(stage.incidentHours, before && before.incidentHours, 'h', 1, false, false)}</span>
-          <span>SL ${renderComparison(stage.quantity, before && before.quantity, stage.quantityUnit, 1, false, false)}</span>
+          <span>Giờ làm ${fmt(stage.hours, 1)} h ${renderComparison(stage.hours, before && before.hours, 'h', 1, false, false, comparable)}</span>
+          <span>Sự cố ${fmt(stage.incidentHours, 1)} h ${renderComparison(stage.incidentHours, before && before.incidentHours, 'h', 1, false, false, comparable)}</span>
+          <span>SL ${renderComparison(stage.quantity, before && before.quantity, stage.quantityUnit, 1, false, false, comparable)}</span>
         </div>
         <div class="leadership-stage-chart">
           ${efficiencyBar(stage.efficiency, `${workshop.label} · ${stage.label}`)}
-          <span class="leadership-stage-efficiency">${renderComparison(stage.efficiency, before && before.efficiency, 'điểm %', 1, true)}</span>
+          <span class="leadership-stage-efficiency">${renderComparison(stage.efficiency, before && before.efficiency, 'điểm %', 1, true, false, comparable)}</span>
         </div>
       </div>`;
     };
@@ -778,7 +809,7 @@ function renderCapacity(summary, previousCapacity) {
     return `<article class="leadership-workshop${count ? '' : ' is-empty'}">
       <header class="leadership-workshop-head">
         <div><h3>${escapeHTML(workshop.label)}</h3><span>${count}/${stages.length} công đoạn có dữ liệu</span></div>
-        <strong>${fmtPct(workshop.efficiency)} ${renderComparison(workshop.efficiency, previous && previous.efficiency, 'điểm %', 1, true)}</strong>
+        <strong>${fmtPct(workshop.efficiency)} ${renderComparison(workshop.efficiency, previous && previous.efficiency, 'điểm %', 1, true, false, comparable)}</strong>
       </header>
       ${count ? componentStages.filter(stage => stage.turns > 0 || stage.quantity > 0).map(renderStage).join('') : '<p class="leadership-empty">Chưa có sản lượng được ghi trong kỳ này.</p>'}
       ${count && mainStages.some(stage => stage.turns > 0 || stage.quantity > 0)
@@ -916,7 +947,7 @@ function renderPurchasePie(purchases) {
   </svg>`;
 }
 
-function renderMoneyChart(purchases, previousPurchases, sales, previousSales) {
+function renderMoneyChart(purchases, previousPurchases, sales, previousSales, comparable) {
   const max = Math.max(1, purchases.amount, sales.amount);
   const entries = [
     { key: 'purchase', label: 'Chi mua nguyên liệu', amount: purchases.amount, previous: previousPurchases.amount },
@@ -925,7 +956,7 @@ function renderMoneyChart(purchases, previousPurchases, sales, previousSales) {
   const rows = entries.map(item => `<div class="leadership-money-item">
     <div class="leadership-money-label"><span>${item.label}</span><strong>${fmtCurrency(item.amount)}</strong></div>
     <div class="leadership-money-track" role="img" aria-label="${escapeHTML(`${item.label}: ${fmtCurrency(item.amount)}`)}"><i class="is-${item.key}" style="height:${Math.max(0, Math.min(100, item.amount / max * 100))}%"></i></div>
-    ${renderComparison(item.amount, item.previous, 'đ', 0)}
+    ${renderComparison(item.amount, item.previous, 'đ', 0, false, false, comparable)}
   </div>`).join('');
   const breakdown = sales.byKind.length
     ? `<div class="leadership-byproduct-revenue">${sales.byKind.slice(0, 3).map(item => `<span>${escapeHTML(item.label)} <strong>${fmtCurrency(item.amount)}</strong></span>`).join('')}</div>`
@@ -935,24 +966,24 @@ function renderMoneyChart(purchases, previousPurchases, sales, previousSales) {
     <p class="leadership-data-note">Tiền bán chỉ gồm phiếu bán phụ phẩm, không gồm tiêu hủy; đây là so sánh chi mua và thu bán, không phải lợi nhuận.</p>`;
 }
 
-function renderPurchases(purchases, previousPurchases, sales, previousSales) {
+function renderPurchases(purchases, previousPurchases, sales, previousSales, comparable) {
   const previousByLocation = new Map(previousPurchases.byLocation.map(item => [item.key, item]));
   const locations = purchases.byLocation.map(item => {
     const previous = previousByLocation.get(item.key);
-    return `<div class="leadership-purchase-location"><span>${escapeHTML(item.label)}</span><strong>${fmt(item.weight / 1000, 2)} t</strong>${renderComparison(item.weight / 1000, previous ? previous.weight / 1000 : null, 't', 2)}</div>`;
+    return `<div class="leadership-purchase-location"><span>${escapeHTML(item.label)}</span><strong>${fmt(item.weight / 1000, 2)} t</strong>${renderComparison(item.weight / 1000, previous ? previous.weight / 1000 : null, 't', 2, false, false, comparable)}</div>`;
   }).join('');
   return `<div class="leadership-purchase-summary">
       <div><strong>${fmt(purchases.weight / 1000, 2)} <small>t</small></strong><span>${purchases.rows} phiếu nhập trong kỳ</span></div>
-      ${renderComparison(purchases.weight / 1000, previousPurchases.weight / 1000, 't', 2)}
+      ${renderComparison(purchases.weight / 1000, previousPurchases.weight / 1000, 't', 2, false, false, comparable)}
     </div>
     <div class="leadership-purchase-visual-row">
       ${renderPurchasePie(purchases)}
       <div class="leadership-purchase-location-totals">${locations}</div>
     </div>
-    ${renderMoneyChart(purchases, previousPurchases, sales, previousSales)}`;
+    ${renderMoneyChart(purchases, previousPurchases, sales, previousSales, comparable)}`;
 }
 
-function renderQualityItem(item, previous, hasHistory) {
+function renderQualityItem(item, previous, hasHistory, comparable) {
   const total = item.checked || 0;
   const standardPass = Math.max(0, item.passed - item.exception);
   const okWidth = total ? standardPass / total * 100 : 0;
@@ -970,22 +1001,27 @@ function renderQualityItem(item, previous, hasHistory) {
     </div>
     <div class="leadership-quality-comparison">
       <span>${fmt(item.checked, 0)} SP kiểm</span>
-      <span>Đạt ${renderComparison(item.passRate, previous && previous.passRate, 'điểm %', 1, true)}</span>
-      <span>Lỗi ${renderComparison(item.rejectRate, previous && previous.rejectRate, 'điểm %', 1, true)}</span>
+      <span>Đạt ${renderComparison(item.passRate, previous && previous.passRate, 'điểm %', 1, true, false, comparable)}</span>
+      <span>Lỗi ${renderComparison(item.rejectRate, previous && previous.rejectRate, 'điểm %', 1, true, false, comparable)}</span>
     </div>
     ${hasHistory && !item.rows ? '<small class="leadership-muted">Không có phiếu kiểm trong kỳ.</small>' : ''}
   </div>`;
 }
 
-function renderQuality(quality, previous, hasHistory) {
-  const x1 = renderQualityItem(quality.x1, previous.x1, hasHistory);
+function renderQuality(quality, previous, hasHistory, comparable) {
+  const x1 = renderQualityItem(quality.x1, previous.x1, hasHistory, comparable);
   const kinds = ['van', 'thanh', 'bullig'];
   const x2Items = kinds.map(kind => {
     const item = quality.x2.byKind[kind];
-    return `<div class="leadership-quality-kind">${renderQualityItem(item, previous.x2.byKind[kind], item.rows > 0)}</div>`;
+    return `<div class="leadership-quality-kind">${renderQualityItem(item, previous.x2.byKind[kind], item.rows > 0, comparable)}</div>`;
   }).join('');
   return `<div class="leadership-quality-workshop">${x1}</div>
     <div class="leadership-quality-workshop leadership-quality-x2"><h3>${escapeHTML(quality.x2.label)}</h3><div class="leadership-quality-x2-grid">${x2Items}</div></div>`;
+}
+
+// Mục 05 Lao động: hiển thị rõ bộ phận gộp cho đúng thực tế (quy tắc 91 — Lò Hơi đã gộp vào Cơ Điện).
+function laborDeptDisplayName(dept) {
+  return dept === 'Cơ Điện' ? 'Cơ điện + Lò Hơi' : dept;
 }
 
 function renderLabor(labor) {
@@ -993,9 +1029,10 @@ function renderLabor(labor) {
   const departments = labor.departments.map(item => {
     const movement = `<span>+${fmt(item.joined, 0)} vào</span><span>−${fmt(item.left, 0)} nghỉ</span>`;
     const movementTitle = `Trong kỳ: +${fmt(item.joined, 0)} vào, −${fmt(item.left, 0)} nghỉ`;
+    const deptLabel = laborDeptDisplayName(item.department);
     return `<div class="leadership-dept-row">
-      <span>${escapeHTML(item.department)}</span>
-      <div class="leadership-dept-track" role="img" aria-label="${escapeHTML(`${item.department}: ${fmt(item.active, 0)} người`)}"><i style="width:${item.active / max * 100}%"></i></div>
+      <span>${escapeHTML(deptLabel)}</span>
+      <div class="leadership-dept-track" role="img" aria-label="${escapeHTML(`${deptLabel}: ${fmt(item.active, 0)} người`)}"><i style="width:${item.active / max * 100}%"></i></div>
       <strong>${fmt(item.active, 0)}<small class="leadership-dept-change" title="${escapeHTML(movementTitle)}">${movement}</small></strong>
     </div>`;
   }).join('');
@@ -1009,7 +1046,7 @@ function renderLabor(labor) {
     <small class="leadership-muted">Biến động phân bổ theo phòng ban ghi trên hồ sơ nhân viên.</small>`;
 }
 
-function renderShipments(shipments, previous, hasHistory) {
+function renderShipments(shipments, previous, hasHistory, comparable) {
   const groups = shipments.byCategory.map(category => {
     const before = previous.byCategory.find(item => item.key === category.key);
     const ratio = category.attainment == null
@@ -1031,7 +1068,7 @@ function renderShipments(shipments, previous, hasHistory) {
       <div class="leadership-shipment-group-meta">
         <span>KH <b>${escapeHTML(plan)}</b></span>
         <strong>Đạt ${escapeHTML(attainment)}</strong>
-        <span>So kỳ trước ${renderComparison(category.quantity, before && before.quantity, category.unit, 0)}</span>
+        <span>So kỳ trước ${renderComparison(category.quantity, before && before.quantity, category.unit, 0, false, false, comparable)}</span>
       </div>
     </article>`;
   }).join('');
@@ -1146,6 +1183,8 @@ function compactPeriodLabel(mode, key) {
 export function buildLeadershipReportMarkup(summary) {
   const currentPeriodLabel = compactPeriodLabel(summary.mode, summary.key);
   const previousPeriodLabel = compactPeriodLabel(summary.previous.mode, summary.previous.key);
+  // Tuần trước 46: không đủ dữ liệu → ẩn mũi tên so sánh toàn báo cáo.
+  const comparable = weekCompareEligible(summary.mode, summary.key);
   const inventoryText = summary.inventory.current == null
     ? 'Chưa có dữ liệu tồn kho'
     : `${fmt(summary.inventory.current, 0)} thanh`;
@@ -1163,6 +1202,33 @@ export function buildLeadershipReportMarkup(summary) {
       <span><i class="is-say2"></i>Sấy 2 · ${fmt(summary.inventory.say2, 0)} thanh · ${fmt(summary.inventory.say2M3, 3)} m³</span>
       <span><i class="is-warehouse"></i>Kho · ${fmt(summary.inventory.current, 0)} thanh · ${fmt(summary.inventory.currentM3, 3)} m³</span>
     </div>`;
+  // ─── TỒN NGOÀI BÃI + ỐNG CHƯA BỔ — hàng chỉ số bổ sung mục 03 (13/11/2026) ──
+  const yardStock = summary.inventory.yard || null;
+  const prevYardKg = summary.previous && summary.previous.inventory && summary.previous.inventory.yard
+    ? summary.previous.inventory.yard.totalKg : null;
+  const prevOngChuaBo = summary.previous && summary.previous.inventory
+    ? summary.previous.inventory.ongChuaBoKg : null;
+  const stockExtra = !yardStock ? '' : (() => {
+    const isPeriodEnd = !!(summary.range && summary.range.to === yardStock.asOf);
+    const mocLabel = isPeriodEnd
+      ? `Chủ nhật ${shortDate(yardStock.asOf) || yardStock.asOf}`
+      : `hôm nay ${shortDate(yardStock.asOf) || yardStock.asOf}`;
+    const yardTitle = `Tồn NGOÀI BÃI Xưởng 2 đến ${mocLabel}: phiếu cân Luồng cây chưa bốc ${fmt(yardStock.cayKg, 0)} kg + xe đã bốc chưa cắt ${fmt(yardStock.cartKg, 0)} kg (${fmt(yardStock.cartCarts, 0)} xe) + phiếu cân Luồng ống chưa cắt ${fmt(yardStock.ongKg, 0)} kg = ${fmt(yardStock.totalKg, 0)} kg`;
+    const ongRaw = Number(summary.inventory.ongChuaBoKg) || 0;
+    const ongTitle = `Tồn ỐNG ĐẠT CHỜ BỔ (công đoạn Bổ Ống) đến ${mocLabel}: Σ ống đạt Cắt Chọn − Σ ống đem bổ = ${fmt(ongRaw, 0)} kg${ongRaw < 0 ? ' — SỔ ÂM: bổ vượt cắt, cần rà soát Lịch Sử Bổ Ống' : ''}`;
+    return `<div class="leadership-stock-extra">
+      <div title="${escapeHTML(yardTitle)}">
+        <strong>${fmt(yardStock.totalKg / 1000, 1)} t</strong>
+        <span>Tồn ngoài bãi (luồng cây + ống) · đến ${escapeHTML(mocLabel)}</span>
+        ${renderComparison(yardStock.totalKg, prevYardKg, 'kg', 0, false, false, comparable)}
+      </div>
+      <div title="${escapeHTML(ongTitle)}">
+        <strong>${fmt(ongRaw, 0)} kg</strong>
+        <span>Tồn ống chưa bổ (Bổ Ống)${ongRaw < 0 ? ' · sổ âm' : ''}</span>
+        ${renderComparison(ongRaw, prevOngChuaBo, 'kg', 0, false, false, comparable)}
+      </div>
+    </div>`;
+  })();
   return `<div class="leadership-paper-stack">
     <article class="leadership-paper" data-report-page="1">
       <header class="leadership-paper-header">
@@ -1172,11 +1238,11 @@ export function buildLeadershipReportMarkup(summary) {
       </header>
       <section class="leadership-section">
         <header class="leadership-section-header"><span>01</span><h2>Nguyên liệu mua vào</h2>${detailLink('materials-view', 'Chi tiết')}</header>
-        ${renderPurchases(summary.purchases, summary.previous.purchases, summary.byproductSales, summary.previous.byproductSales)}
+        ${renderPurchases(summary.purchases, summary.previous.purchases, summary.byproductSales, summary.previous.byproductSales, comparable)}
       </section>
       <section class="leadership-section">
         <header class="leadership-section-header"><span>02</span><h2>Sản xuất &amp; công suất</h2>${detailLink('dashboard-view', 'Dashboard')}</header>
-        <div class="leadership-workshops">${renderCapacity(summary, summary.previous.capacity)}</div>
+        <div class="leadership-workshops">${renderCapacity(summary, summary.previous.capacity, comparable)}</div>
       </section>
       <footer class="leadership-paper-footer"><span>BÁO CÁO NỘI BỘ · THEO DỮ LIỆU ĐÃ GHI NHẬN</span><span>01 / 02</span></footer>
     </article>
@@ -1189,11 +1255,12 @@ export function buildLeadershipReportMarkup(summary) {
           <div class="leadership-stock-detail"><span>Chờ duyệt <strong>${fmt(summary.inventory.pendingCount, 0)} phiếu</strong></span><span>Chênh lệch đối chiếu <strong>${fmt(summary.inventory.mismatch, 0)} thanh</strong></span></div>
         </div>
         ${inventoryChart}
-        <p class="leadership-data-note">Tồn vật lý Kho Nan và tồn trung gian Xưởng 2; số hiện tại, không hồi tố theo kỳ.</p>
+        ${stockExtra}
+        <p class="leadership-data-note">Tồn vật lý Kho Nan và tồn trung gian Xưởng 2; số Kho Nan hiện tại, không hồi tố theo kỳ. Tồn ngoài bãi và tồn ống chưa bổ là ảnh chụp đến ngày cuối kỳ (chủ nhật / cuối tháng); kỳ chưa kết thúc thì chụp đến hôm nay.</p>
       </section>
       <section class="leadership-section">
         <header class="leadership-section-header"><span>04</span><h2>Chất lượng</h2>${detailLink('qc-view', 'QC')}</header>
-        ${renderQuality(summary.quality, summary.previous.quality, summary.qualityHasHistory)}
+        ${renderQuality(summary.quality, summary.previous.quality, summary.qualityHasHistory, comparable)}
       </section>
       <div class="leadership-second-page-grid">
         <section class="leadership-section">
@@ -1202,7 +1269,7 @@ export function buildLeadershipReportMarkup(summary) {
         </section>
         <section class="leadership-section leadership-shipment-section">
           <header class="leadership-section-header"><span>06</span><h2>Xuất hàng</h2>${detailLink('qc-view', 'Xuất hàng QC')}</header>
-          ${renderShipments(summary.shipments, summary.previous.shipments, summary.shipmentHasHistory)}
+          ${renderShipments(summary.shipments, summary.previous.shipments, summary.shipmentHasHistory, comparable)}
         </section>
       </div>
       <section class="leadership-section leadership-consumption-section">
@@ -1431,6 +1498,16 @@ export function buildLeadershipReportData(summary) {
   add('Tồn kho', 'Xưởng 2 · Sấy 1', 'Khối lượng quy đổi', report.inventory.say1M3, 'm³');
   add('Tồn kho', 'Xưởng 2 · Sấy 2', 'Tồn trung gian', report.inventory.say2, 'thanh');
   add('Tồn kho', 'Xưởng 2 · Sấy 2', 'Khối lượng quy đổi', report.inventory.say2M3, 'm³');
+  // TỒN NGOÀI BÃI + ỐNG CHƯA BỔ — ảnh chụp đến ngày cuối kỳ (13/11/2026)
+  const yardInv = report.inventory.yard;
+  if (yardInv) {
+    const mocLabel = shortDate(yardInv.asOf) || yardInv.asOf;
+    add('Tồn kho', 'Xưởng 2 · Bãi nguyên liệu', `Tồn ngoài bãi đến ${mocLabel}`, yardInv.totalKg, 'kg',
+      `Luồng cây ${fmt(yardInv.cayKg, 0)} kg (gồm xe bốc ${fmt(yardInv.cartKg, 0)} kg) + Luồng ống ${fmt(yardInv.ongKg, 0)} kg`);
+    const ongBoRaw = Number(report.inventory.ongChuaBoKg) || 0;
+    add('Tồn kho', 'Xưởng 2 · Bổ Ống', `Tồn ống chưa bổ đến ${mocLabel}`, ongBoRaw, 'kg',
+      'Σ ống đạt Cắt Chọn − Σ ống đem bổ' + (ongBoRaw < 0 ? ' · SỔ ÂM — cần rà soát' : ''));
+  }
   [
     { item: report.quality.x1, previous: report.previous.quality.x1 },
     ...Object.entries(report.quality.x2.byKind).map(([kind, item]) => ({
@@ -1476,7 +1553,7 @@ export function buildLeadershipReportData(summary) {
   }
   add('Giao hàng', 'Xưởng 1', 'Theo dõi riêng', null, '', 'Chưa có sổ giao hàng riêng trong dữ liệu hiện tại');
   const notes = [
-    'Tồn kho là ảnh chụp hiện tại của Kho Nan Xưởng 2; không có tồn kho Xưởng 1 hoặc lịch sử tồn theo kỳ.',
+    'Tồn Kho Nan là ảnh chụp hiện tại, không có tồn kho Xưởng 1. Tồn ngoài bãi (luồng cây + ống) và tồn ống chưa bổ là ảnh chụp đến ngày cuối kỳ (chủ nhật / cuối tháng); kỳ chưa kết thúc thì chụp đến hôm nay.',
     'Số lượng xuất hàng lấy từ bảng xuất hàng QC theo tuần, không có xác nhận giao thực tế; chưa có sổ riêng Xưởng 1.',
     'Biến động nhân sự dựa trên ngày vào/nghỉ được ghi trong hồ sơ nhân viên.'
   ];

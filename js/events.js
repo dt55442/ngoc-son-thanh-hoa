@@ -69,7 +69,32 @@ import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJS
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
 
   // ─── UNDO / HOÀN TÁC ──────────────────────────────────────────
+  let _lastUndoBatchesSig = null; // chữ ký batches của entry undo gần nhất
+  // ═════════════════════════════════════════════════════════════════════════
+  // THROTTLE pushUndo: nếu dữ liệu batches chưa đổi so với entryundo cuối,
+  // bỏ deep-copy (tránh JSON.stringify toàn bộ danh sách lô mỗi thao tác).
+  // Giới hạn thêm tổng kích thướcSerialized của stack để không đánh lỗi bộ nhớ.
+  let _undoStackSerializedSize = 0;
+  const _UNDO_MAX_STEPS = 30;
+  const _UNDO_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+  // ═════════════════════════════════════════════════════════════════════════
+
+  function _batchesSig(batches) {
+    // Chữ ký NHẸ: số lượng + id đầu/cuối + tổng quantity (không cần deep hash)
+    if (!batches || !batches.length) return '0|';
+    const first = batches[0];
+    const last = batches[batches.length - 1];
+    const totalQty = batches.reduce((s, b) => s + (Number(b.quantity) || 0), 0);
+    return `${batches.length}|${first && first.id || ''}|${last && last.id || ''}|${totalQty}`;
+  }
+
   function pushUndo(label, options = {}) {
+    const sig = _batchesSig(state.batches);
+    // Nếu batches chưa đổi so với entry undo gần nhất → không tạo entry mới
+    if (sig === _lastUndoBatchesSig) {
+      updateUndoButton();
+      return;
+    }
     const entry = {
       label,
       batches: JSON.parse(JSON.stringify(state.batches)),
@@ -77,8 +102,18 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     };
     if (options.includeKhoNotes) entry.khoNotes = JSON.parse(JSON.stringify(state.khoNotes || []));
     state.undoStack.push(entry);
+    _lastUndoBatchesSig = sig;
+    _undoStackSerializedSize += JSON.stringify(entry).length || 0;
     // Giới hạn tối đa 30 bước undo
-    if (state.undoStack.length > 30) state.undoStack.shift();
+    while (state.undoStack.length > _UNDO_MAX_STEPS) {
+      const removed = state.undoStack.shift();
+      _undoStackSerializedSize -= JSON.stringify(removed).length || 0;
+    }
+    // Giới hạn tổng kích thước serialized ~2 MB
+    while (_undoStackSerializedSize > _UNDO_MAX_BYTES && state.undoStack.length > 1) {
+      const removed = state.undoStack.shift();
+      _undoStackSerializedSize -= JSON.stringify(removed).length || 0;
+    }
     updateUndoButton();
   }
 
@@ -90,6 +125,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       return;
     }
     state.batches = last.batches;
+    _lastUndoBatchesSig = _batchesSig(state.batches); // reset chữ ký để pushUndo sau này đúng
     // Hoàn tác có thể khôi phục lại lô đã xóa -> gỡ tombstone của các id đang sống lại,
     // nếu không lần đẩy mây sau sẽ mang theo dấu vết xóa che mất lô vừa được phục hồi
     untrackDeleted('batches', (state.batches || []).map(b => b.id));

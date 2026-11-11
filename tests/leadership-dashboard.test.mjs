@@ -8,7 +8,8 @@ const {
   buildLeadershipReportData,
   buildLeadershipSummary,
   canAccessLeadershipDashboard,
-  printLeadershipReport
+  printLeadershipReport,
+  weekCompareEligible
 } = await import('../js/leadership-dashboard.js');
 
 const saved = {
@@ -317,7 +318,7 @@ try {
   assert.match(markup, /Sự cố/);
   assert.match(markup, /m³/);
   assert.match(markup, /Bullig - Chọn thanh/);
-  assert.match(markup, /＝ Không đổi/);
+  assert.match(markup, /leadership-delta is-unavailable/);
   assert.doesNotMatch(markup, /Bullig - gia công|Cắt ván|Bào ván/);
   assert.doesNotMatch(markup, /Bốc luồng\/Cắt chọn quy đổi kg/);
   assert.ok(markup.indexOf('Bốc luồng') < markup.indexOf('leadership-main-stages'));
@@ -386,6 +387,31 @@ try {
   assert.ok(report.aoa.some(row => row[0] === 'Nhân sự' && row[1] === 'Xưởng 2' &&
     row[2] === 'Biến động trong kỳ' && row[3] === 1 && row[5] === '+1 vào · −0 nghỉ'));
 
+  // ─── TỒN NGOÀI BÃI + ỐNG CHƯA BỔ — ảnh chụp đến chủ nhật của kỳ (13/11/2026) ──
+  const stockSummary = buildLeadershipSummary('week', '2026-W44', state, capacity, inventory);
+  const yard = stockSummary.inventory.yard;
+  assert.equal(yard.asOf, '2026-11-01');
+  // Bãi W44: Luồng cây 20 kg (28/10 chưa bốc) + Luồng ống 120 + 40 kg (chưa cắt)
+  //          + 2 xe đã bốc chưa cắt × 600 kg = 1.380 kg
+  assert.equal(yard.cayKg, 20);
+  assert.equal(yard.ongKg, 160);
+  assert.equal(yard.cartCarts, 2);
+  assert.equal(yard.cartKg, 1200);
+  assert.equal(yard.totalKg, 1380);
+  // Ống chưa bổ W44: Σ ống đạt cắt 8.300 − Σ ống đem bổ 4.950 = 3.350 kg
+  assert.equal(stockSummary.inventory.ongChuaBoKg, 3350);
+  // Kỳ trước W43 (chủ nhật 25/10): bãi còn 40 kg (lô ống 20/10) · ống chưa bổ 900 kg
+  assert.equal(stockSummary.previous.inventory.yard.totalKg, 40);
+  assert.equal(stockSummary.previous.inventory.ongChuaBoKg, 900);
+  const stockMarkup = buildLeadershipReportMarkup(stockSummary);
+  assert.ok(stockMarkup.includes('Tồn ngoài bãi (luồng cây + ống)'));
+  assert.ok(stockMarkup.includes('Tồn ống chưa bổ (Bổ Ống)'));
+  assert.ok(stockMarkup.includes('Chủ nhật 01/11'));
+  const stockReport = buildLeadershipReportData(stockSummary);
+  assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 2 · Bãi nguyên liệu'
+    && row[3] === 1380 && row[4] === 'kg'));
+  assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 2 · Bổ Ống'
+    && row[3] === 3350 && row[4] === 'kg'));
   const linkedBoOngRecords = state.xuong2BoOngRecords;
   // Không còn lượt bổ trước mốc đầu ra (chỉ còn lượt bổ 30/10 — sau mốc chọn nan 29/10)
   // → không chốt được mốc đầu vào, hiển thị tổng riêng theo kỳ thay vì tỷ lệ.
@@ -448,11 +474,31 @@ try {
   assert.ok(styles.includes('.leadership-shipment-groups'));
   assert.ok(styles.includes('.leadership-shipment-progress'));
   assert.ok(styles.includes('.leadership-section-header'));
+  assert.ok(styles.includes('.leadership-stock-extra'));
+  assert.ok(moduleSource.includes("from './x2-pool.js'"));
+  assert.ok(moduleSource.includes('x2YardStockAsOf') && moduleSource.includes('x2OngChuaBoAsOf'));
   assert.ok(styles.includes('.leadership-consumption-grid'));
   assert.ok(!styles.includes('.leadership-data-notes'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v391'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v395'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v391'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v395'"));
+
+  // ── Tuần 46 trở đi mới được so sánh ▲/▼ ──
+  assert.equal(weekCompareEligible('week', '2026-W44'), false, 'Tuần 44 không được so sánh');
+  assert.equal(weekCompareEligible('week', '2026-W45'), false, 'Tuần 45 không được so sánh');
+  assert.equal(weekCompareEligible('week', '2026-W46'), true, 'Tuần 46 được so sánh');
+  assert.equal(weekCompareEligible('week', '2026-W52'), true, 'Tuần 52 được so sánh');
+  assert.equal(weekCompareEligible('month', '2026-10'), true, 'Chế độ tháng vẫn so sánh bình thường');
+  assert.equal(weekCompareEligible('week', ''), true, 'Khóa kỳ rỗng không chặn so sánh');
+  assert.equal(weekCompareEligible('week', 'invalid'), true, 'Khóa kỳ không hợp lệ không chặn so sánh');
+
+  // Báo cáo tuần 44: không có class is-up/is-down (mũi tên ▲/▼), chỉ có is-unavailable
+  const wk44Summary = buildLeadershipSummary('week', '2026-W44', state, capacity, inventory);
+  const wk44Markup = buildLeadershipReportMarkup(wk44Summary);
+  assert.ok(!wk44Markup.includes('leadership-delta is-up') && !wk44Markup.includes('leadership-delta is-down'), 'Tuần 44 không hiển thị mũi tên tăng/giảm');
+  assert.ok(wk44Markup.includes('leadership-delta is-unavailable'), 'Tuần 44 hiện "chưa đủ dữ liệu"');
+  assert.ok(wk44Markup.includes('leadership-delta is-unavailable'), 'Tuần 44 hiện "chưa đủ dữ liệu"');
+
   console.log('PASS leadership dashboard: periods, aggregates, role access, report data, app shell');
 } finally {
   Object.assign(state, saved);

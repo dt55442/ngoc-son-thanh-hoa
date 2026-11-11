@@ -17558,6 +17558,29 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const sp = x1ChainSpecByKey('locThanh');
     if (sp) x1ChainCalc(sp);
   }
+  // ─── CHIP LOẠI NGUYÊN LIỆU (Vầu/Nứa) — tự nhận theo Lô nguồn đã chọn ──
+  // Lượt gom NHIỀU lô nguồn KHÁC loại thì ma trận (lưu cấp lượt) không tách được
+  // kg theo từng loại → hiển thị gộp kèm chú thích "gom chung lượt".
+  function x1LtMatLabelOf(srcType) {
+    const parts = String(srcType || '').split(',').map(t => t.trim()).filter(Boolean);
+    if (!parts.length) return 'Vầu/nứa';
+    const uniq = [...new Set(parts)];
+    return uniq.length > 1 ? uniq.join(' + ') : uniq[0];
+  }
+  function x1LtMatIsMixed(srcType) {
+    const label = x1LtMatLabelOf(srcType);
+    return /\s\+\s/.test(label) || /vầu\/nứa/i.test(label);
+  }
+  function x1LtMatChipHtml(srcType) {
+    const label = x1LtMatLabelOf(srcType);
+    const mixed = x1LtMatIsMixed(srcType);
+    const isNua = /nứa/i.test(label) && !/vầu/i.test(label);
+    const cls = mixed ? 'is-mixed' : (isNua ? 'is-nua' : 'is-vau');
+    const title = mixed
+      ? 'Lượt này gom chung nhiều loại nguyên liệu — không tách được khối lượng theo từng loại'
+      : `Loại nguyên liệu theo lô nguồn: ${label}`;
+    return `<span class="x1-mat-chip ${cls}" title="${escapeHTML(title)}">${escapeHTML(label)}</span>`;
+  }
   function x1LtDimensionSummaryHtml(d) {
     const matrixRows = d.matrixRows || [];
     if (matrixRows.length) {
@@ -17578,19 +17601,19 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const items = [...byDimension.values()].sort((a, b) =>
         a.width - b.width || a.len - b.len);
       if (!items.length) return '<div class="x1-lt-dimension-summary">Chưa nhập khối lượng theo kích thước.</div>';
-      return `<div class="x1-lt-dimension-summary">${items.map(item => `
+      return `<div class="x1-lt-dimension-summary">${x1LtMatChipHtml(d.srcType)}${items.map(item => `
         <span><strong>${item.width ? `${item.width} ly · ` : ''}${item.len} mm</strong>: ${escapeHTML(
           isKg ? `${fmtKg(item.total)} kg` : `${item.total.toLocaleString('vi-VN')} SL`)}</span>`).join(' · ')}
         ${isKg ? '' : '<small>Dữ liệu lịch sử cũ theo số lượng.</small>'}
       </div>`;
     }
     if (d.lengthRows && d.lengthRows.length) {
-      return `<div class="x1-lt-dimension-summary">${d.lengthRows.map(row =>
+      return `<div class="x1-lt-dimension-summary">${x1LtMatChipHtml(d.srcType)}${d.lengthRows.map(row =>
         `<span><strong>${Number(row.len) || '—'} mm</strong>: ${escapeHTML(fmtKg(Number(row.kg) || 0))} kg</span>`
       ).join(' · ')}</div>`;
     }
     if (d.mode === 'bo-xo') {
-      return `<div class="x1-lt-dimension-summary"><strong>Bó xô:</strong> ${escapeHTML(fmtKg(Number(d.qtyOk) || 0))} kg</div>`;
+      return `<div class="x1-lt-dimension-summary">${x1LtMatChipHtml(d.srcType)}<strong>Bó xô:</strong> ${escapeHTML(fmtKg(Number(d.qtyOk) || 0))} kg</div>`;
     }
     return '<div class="x1-lt-dimension-summary">Chưa có số liệu kích thước.</div>';
   }
@@ -17682,26 +17705,29 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     const grouped = new Map();
     items.forEach(item => {
-      const key = [item.kind, item.width, item.len, item.unit].join('|');
+      // TÁCH THEO LOẠI NGUYÊN LIỆU (Vầu/Nứa) — trước đây gộp chung nên 2 loại cộng vào nhau
+      const key = [item.material, item.kind, item.width, item.len, item.unit].join('|');
       const current = grouped.get(key) || { ...item, qty: 0 };
       current.qty += item.qty;
       grouped.set(key, current);
     });
     const groups = [...grouped.values()].sort((a, b) =>
-      a.kind.localeCompare(b.kind, 'vi') || a.width - b.width || a.len - b.len || a.unit.localeCompare(b.unit));
+      (a.material || '').localeCompare(b.material || '', 'vi') || a.kind.localeCompare(b.kind, 'vi') ||
+      a.width - b.width || a.len - b.len || a.unit.localeCompare(b.unit));
     const matrixKinds = X1_LT_CLASSES.filter(c => c.id !== 'loai');
     const matrixMap = new Map();
     items.filter(item => item.width > 0 && item.len > 0 &&
       matrixKinds.some(kind => kind.label === item.kind)).forEach(item => {
-      const key = `${item.unit}|${item.width}|${item.len}`;
+      const key = `${item.unit}|${item.material}|${item.width}|${item.len}`;
       const row = matrixMap.get(key) || {
-        unit: item.unit, width: item.width, len: item.len, values: {}
+        unit: item.unit, material: item.material, width: item.width, len: item.len, values: {}
       };
       row.values[item.kind] = (row.values[item.kind] || 0) + item.qty;
       matrixMap.set(key, row);
     });
     const matrixRows = [...matrixMap.values()].sort((a, b) =>
-      a.width - b.width || a.len - b.len || a.unit.localeCompare(b.unit));
+      (a.material || '').localeCompare(b.material || '', 'vi') || a.width - b.width ||
+      a.len - b.len || a.unit.localeCompare(b.unit));
     const otherGroups = groups.filter(item => !item.width || !item.len ||
       !matrixKinds.some(kind => kind.label === item.kind));
     const totalKg = items.reduce((sum, item) => sum + (item.unit === 'kg' ? item.qty : 0), 0);
@@ -17714,7 +17740,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const summary = x1WarehouseStockSummary();
     const bar = document.getElementById('x1-kho-stock-bar');
     if (bar) {
-      bar.innerHTML = `<span class="x2-stock-title"><i data-lucide="boxes"></i> Tổng khối lượng: <strong>${fmtKg(summary.totalKg)} kg</strong> · ${summary.matrixRows.length.toLocaleString('vi-VN')} tổ hợp bản rộng × kích thước</span>`;
+      bar.innerHTML = `<span class="x2-stock-title"><i data-lucide="boxes"></i> Tổng khối lượng: <strong>${fmtKg(summary.totalKg)} kg</strong> · ${summary.matrixRows.length.toLocaleString('vi-VN')} tổ hợp bản rộng × kích thước (tách theo loại nguyên liệu)</span>`;
     }
     const stats = document.getElementById('x1-kho-stats');
     if (stats) {
@@ -17727,7 +17753,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (inventory) {
       const matrix = summary.matrixRows.length
         ? `<div class="x1-kho-table-wrap"><table class="data-table x1-kho-matrix">
-            <thead><tr><th>Bản rộng</th><th>Kích thước dài</th><th class="text-right">Tổng theo kích thước</th><th>Phân loại tham khảo</th></tr></thead>
+            <thead><tr><th>Loại nguyên liệu</th><th>Bản rộng</th><th>Kích thước dài</th><th class="text-right">Tổng theo kích thước</th><th>Phân loại tham khảo</th></tr></thead>
             <tbody>${summary.matrixRows.map(row => {
               const total = Object.values(row.values).reduce((sum, value) => sum + value, 0);
               const details = summary.matrixKinds.map(kind => {
@@ -17737,6 +17763,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
                     ? `${fmtKg(value)} kg` : `${value.toLocaleString('vi-VN')} SL`)}</span>` : '';
               }).filter(Boolean).join(' · ');
               return `<tr>
+                <td data-label="Loại nguyên liệu">${escapeHTML(row.material || 'Vầu/nứa')}</td>
                 <td data-label="Bản rộng">${row.width} ly</td>
                 <td data-label="Kích thước dài">${row.len} mm</td>
                 <td class="text-right x1-kho-primary-total" data-label="Tổng theo kích thước"><strong>${escapeHTML(row.unit === 'kg'
@@ -17750,9 +17777,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         : '';
       const other = summary.otherGroups.length
         ? `<div class="x1-kho-table-wrap"><table class="data-table x1-kho-table">
-            <thead><tr><th>Dạng tồn ngoài ma trận</th><th>Đơn vị</th><th class="text-right">Tồn ghi nhận</th></tr></thead>
+            <thead><tr><th>Dạng tồn ngoài ma trận</th><th>Loại nguyên liệu</th><th>Đơn vị</th><th class="text-right">Tồn ghi nhận</th></tr></thead>
             <tbody>${summary.otherGroups.map(item => `<tr>
               <td data-label="Dạng tồn"><strong>${escapeHTML(item.kind)}${item.width ? ` · ${item.width} ly` : ''}${item.len ? ` · ${item.len} mm` : ''}</strong></td>
+              <td data-label="Loại nguyên liệu">${escapeHTML(item.material || 'Vầu/nứa')}</td>
               <td data-label="Đơn vị">${escapeHTML(item.unit)}</td>
               <td class="text-right" data-label="Tồn ghi nhận"><strong>${escapeHTML(item.unit === 'kg'
                 ? `${fmtKg(item.qty)} kg` : `${item.qty.toLocaleString('vi-VN')} SL`)}</strong></td>

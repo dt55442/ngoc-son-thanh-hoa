@@ -2169,7 +2169,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     return false;
   }
   // Ghi toàn bộ dữ liệu state xuống localStorage (dùng chung cho apply/merge)
-  function persistAllLocal() {
+  let persistAllLocalRunning = false; // ngăn gọi lại lồng nhau (re-entrancy guard)
+
+  // flushPersistAllLocal: ép ghi ngay toàn bộ 45+ key (dùng trước khi tắt tab).
+  function flushPersistAllLocal() {
+    _persistAllLocalDoWork();
+  }
+
+  function _persistAllLocalDoWork() {
     try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(state.batches)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_CUSTOM_CHARTS, JSON.stringify(state.customCharts)); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates)); } catch (e) {}
@@ -2275,6 +2282,16 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(state.history || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_DELETED_IDS, JSON.stringify(state.deletedIds || {})); } catch (e) {}
     syncHistorySnapshots(); // thay đổi đến từ mây/nạp file → đặt lại nền so sánh lịch sử
+  }
+
+  // Ghi toàn bộ dữ liệu state xuống localStorage (dùng chung cho apply/merge).
+  // Ghi đồng bộ (chỉ gọi khi đồng bộ mây/xử lý xung đột — không phải nhập liệu
+  // liên tục). Cờ re-entrancy tránh gọi lồng nhau khi renderAll() gọi lại
+  // persistAllLocal() trong khi đang ghi.
+  function persistAllLocal() {
+    if (persistAllLocalRunning) return;
+    persistAllLocalRunning = true;
+    try { _persistAllLocalDoWork(); } finally { persistAllLocalRunning = false; }
   }
 
   function handleRemoteSnapshot(snap) {
@@ -3320,5 +3337,6 @@ export {
   mergeTombMaps,
   openPendingList,
   closePendingList,
-  renderPendingList
+  renderPendingList,
+  flushPersistAllLocal
 };

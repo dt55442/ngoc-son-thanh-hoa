@@ -283,9 +283,9 @@ check('I6b: tay nắm cuộn dọc bảng QC rõ, tương phản và đủ lớn
   && cssSrc.includes('#qc-detail-content .table-responsive::-webkit-scrollbar-thumb')
   && cssSrc.includes('min-height: 64px')
   && !fs.readFileSync('js/utils.js', 'utf8').includes('setupVScrollControls'));
-check('I7: sw.js có js/sys-settings.js + cache v391', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v391'));
-check('I8: state.js có key riêng + APP_VERSION v391',
-  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v391'"));
+check('I7: sw.js có js/sys-settings.js + cache v395', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v395'));
+check('I8: state.js có key riêng + APP_VERSION v395',
+  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v395'"));
 check('I9: nối đủ cloud / storage / history / main',
   cloudSrc.includes('sysSettings') && cloudSrc.includes("'sysSettings'")
   && storageSrc.includes('restoreSysSettings') && histSrc.includes('sysSettings') && mainSrc.includes('loadSysSettings'));

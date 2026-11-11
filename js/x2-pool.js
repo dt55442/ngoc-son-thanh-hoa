@@ -286,6 +286,103 @@ import { state } from './state.js';
     };
   }
 
+  // ─── TỒN THEO MỐC NGÀY (as-of) — BÁO CÁO LÃNH ĐẠO (13/11/2026) ─
+  // Sổ nhóm ở trên chỉ có số HIỆN TẠI; báo cáo tuần/tháng của tab Lãnh đạo
+  // cần ảnh chụp đến NGÀY CUỐI KỲ (chủ nhật của tuần / ngày cuối tháng).
+  // Các hàm dưới lọc theo date của phiếu cân + lượt bốc/cắt/bổ/kiểm kê —
+  // KHÔNG đổi dữ liệu, KHÔNG state mới. Bản ghi KHÔNG có ngày hợp lệ thì
+  // KHÔNG tính vào ảnh chụp theo mốc (không biết nằm trước hay sau mốc).
+  function x2RecordBefore(rec, asOf) {
+    if (!asOf) return true;
+    const d = String((rec && rec.date) || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= asOf;
+  }
+
+  // KL ĐÃ LẤY từ 1 phiếu cân tính đến mốc asOf — cùng luật với
+  // x2TicketUsedOf nhưng chỉ đếm lượt bốc/cắt có ngày ≤ mốc.
+  function x2TicketUsedOfAsOf(materialId, asOf) {
+    const id = String(materialId || '');
+    if (!id) return 0;
+    const mat = (state.materialRecords || []).find(m => m.id === id) || null;
+    if (!mat) return 0;
+    // ① Lượt CẮT kiểu CŨ (không inputKind) trước mốc ⇒ tiêu thụ toàn bộ lô
+    const legacyCut = (state.xuong2CutRecords || []).some(r =>
+      r && r.materialId === id && !r.inputKind && x2RecordBefore(r, asOf));
+    if (legacyCut) return materialInputWeightOf(mat);
+    let used = 0;
+    // ② Lượt BỐC kiểu CŨ (không tickets) — chỉ trừ phần đã bốc trước mốc
+    (state.xuong2BoluongRecords || []).forEach(r => {
+      if (!r || !x2RecordBefore(r, asOf)) return;
+      const alloc = x2TicketAllocOf(r);
+      if (alloc.length) {
+        alloc.forEach(t => { if (t.materialId === id) used += t.kg; });
+      } else if (r.materialId === id) {
+        used += Number(r.qty) || 0;
+      }
+    });
+    // ③ Lượt CẮT kiểu MỚI (Luồng ống) — trừ phần lấy từ phiếu trước mốc
+    (state.xuong2CutRecords || []).forEach(r => {
+      if (!r || !r.inputKind || !x2RecordBefore(r, asOf)) return;
+      x2TicketAllocOf(r).forEach(t => { if (t.materialId === id) used += t.kg; });
+    });
+    return used;
+  }
+
+  // ĐIỀU CHỈNH KIỂM KÊ của 1 nhóm — chỉ tính phiếu kiểm kê trước mốc
+  function x2StocktakeAdjustmentAsOf(pool, asOf) {
+    return (state.x2Stocktakes || []).reduce((s, r) => {
+      if (!r || r.pool !== pool || !x2RecordBefore(r, asOf)) return s;
+      const v = Number(r.diffKg);
+      return s + (Number.isFinite(v) ? v : 0);
+    }, 0);
+  }
+
+  // TỒN NGOÀI BÃI Xưởng 2 đến mốc asOf (kg):
+  //   luồng cây = phiếu cân chưa bốc + XE ĐÃ BỐC CHƯA CẮT (vẫn nằm ở bãi)
+  //   luồng ống = phiếu cân chưa cắt
+  function x2YardStockAsOf(asOf) {
+    let cayKg = 0, ongKg = 0;
+    (state.materialRecords || []).forEach(m => {
+      if (!m || m.location !== 'xuong-2' || !x2RecordBefore(m, asOf)) return;
+      const kind = x2MaterialKindOf(m.type);
+      if (kind !== 'cay' && kind !== 'ong') return;
+      const rest = Math.max(0, materialInputWeightOf(m) - x2TicketUsedOfAsOf(m.id, asOf));
+      if (kind === 'cay') cayKg += rest; else ongKg += rest;
+    });
+    cayKg += x2StocktakeAdjustmentAsOf('cay', asOf);
+    ongKg += x2StocktakeAdjustmentAsOf('ong', asOf);
+    // Xe luồng cây đã bốc chưa cắt — trừ theo FEFO như x2CartsRemainingKg
+    const bocs = (state.xuong2BoluongRecords || [])
+      .filter(r => r && x2RecordBefore(r, asOf) && (Number(r.carts) || 0) > 0)
+      .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.createdAt || '').localeCompare(b.createdAt || ''));
+    let cutLeft = (state.xuong2CutRecords || []).reduce((s, r) =>
+      r && r.inputKind === 'cart' && x2RecordBefore(r, asOf) ? s + (Number(r.carts) || 0) : s, 0);
+    let cartCarts = 0, cartKg = 0;
+    bocs.forEach(r => {
+      const take = Math.min(Number(r.carts) || 0, cutLeft);
+      cutLeft -= take;
+      const restCarts = (Number(r.carts) || 0) - take;
+      const per = Number(r.kgPerCart) > 0 ? Number(r.kgPerCart) : X2_KG_PER_CART_DEFAULT;
+      cartCarts += restCarts;
+      cartKg += restCarts * per;
+    });
+    return { cayKg, ongKg, cartCarts, cartKg, totalKg: cayKg + ongKg + cartKg };
+  }
+
+  // TỒN ỐNG ĐẠT CHỜ BỔ (công đoạn Bổ Ống) đến mốc asOf (kg) — giá trị THÔ
+  // có thể ÂM khi tổng bổ vượt tổng cắt (giống x2OngDatRawOf).
+  function x2OngChuaBoAsOf(asOf) {
+    const produced = (state.xuong2CutRecords || []).reduce((s, r) =>
+      r && x2RecordBefore(r, asOf) ? s + (Number(r.klOngLuong) || 0) : s, 0);
+    const used = (state.xuong2BoOngRecords || []).reduce((s, r) => {
+      if (!r || !x2RecordBefore(r, asOf)) return s;
+      const v = Number(r.inputOng);
+      const input = Number.isFinite(v) ? v : ((Number(r.klOngBo) || 0) + (Number(r.klOngLoai) || 0));
+      return s + input;
+    }, 0);
+    return produced - used + x2StocktakeAdjustmentAsOf('ong_dat', asOf);
+  }
+
 export {
   X2_KG_PER_CART_DEFAULT,
   x2NormText,
@@ -312,6 +409,8 @@ export {
   x2SampleListOf,
   x2SupplierLabelOf,
   x2TypeLabelOf,
-  x2PoolSnapshot
+  x2PoolSnapshot,
+  x2YardStockAsOf,
+  x2OngChuaBoAsOf
 };
 

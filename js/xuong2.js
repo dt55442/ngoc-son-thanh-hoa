@@ -44,7 +44,7 @@ import { renderKilnBoard } from './kiln.js'; // BẢNG ĐIỀU KHIỂN LÒ SẤY
 import {
   X2_KG_PER_CART_DEFAULT, materialInputWeightOf,
   x2CartsAvailable, x2CartsRemainingKg, x2MaterialKindOf, x2MaterialKindLabel,
-  x2OngDatAvailable, x2OngDatSourceCount,
+  x2OngDatAvailable, x2OngDatRawOf, x2OngDatSourceCount, x2OngDatUsedOf,
   x2PendingTickets, x2PoolSnapshot,
   x2SupplierLabelOf, x2TicketAllocOf, x2TicketRemainingOf,
   x2TicketTotals, x2TypeLabelOf
@@ -2091,9 +2091,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     // Thẻ "Bổ Ống": TỒN ỐNG ĐẠT CHỜ BỔ (nhóm khối lượng — không truy vết lô)
     if (cardId === 'x2-bo-ong-card') {
-      const kg = x2OngDatAvailable();
-      if (kg <= 0) return 'Hết tồn';
-      return `Tồn ${fmtKg(kg)} kg`;
+      const raw = x2OngDatRawOf();
+      if (raw < 0) return `Sổ âm ${fmtKg(-raw)} kg`;   // bổ vượt cắt — cần rà soát
+      if (raw <= 0) return 'Hết tồn';
+      return `Tồn ${fmtKg(raw)} kg`;
     }
     // Thẻ "Chạy Máy Bào Thô": số lượt chạy máy đã ghi (+ tổng thanh khi đã có
     // số liệu tự động theo kích thước từ công đoạn Chọn Nan Thô)
@@ -2603,6 +2604,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (state.x2CutEditId) {
       const rec = (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId);
       if (!rec) { showToast('Không tìm thấy lượt cắt/chọn cần sửa!', 'error'); return false; }
+      // SỔ ÂM: giảm klOngLuong sau khi đã có lượt bổ lấy số → bắt xác nhận (quy tắc 98)
+      if (!confirmCutOngDatAm(rec, payload.klOngLuong)) return false;
       Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
       saveXuong2Cuts();
       showToast('Đã cập nhật lượt cắt/chọn!', 'success');
@@ -2679,6 +2682,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (state.x2CutEditId) {
       const rec = (state.xuong2CutRecords || []).find(r => r.id === state.x2CutEditId);
       if (!rec) { showToast('Không tìm thấy lượt cắt/chọn cần sửa!', 'error'); return; }
+      // SỔ ÂM: giảm klOngLuong sau khi đã có lượt bổ lấy số → bắt xác nhận (quy tắc 98)
+      if (!confirmCutOngDatAm(rec, payload.klOngLuong)) return;
       Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
       saveXuong2Cuts();
       showToast('Đã cập nhật lượt cắt/chọn!', 'success');
@@ -2747,6 +2752,30 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     syncX2CutEditBanner();
   }
 
+  // ─── CẢNH BÁO SỔ ÂM KHI XÓA/GIẢM LƯỢT CẮT (13/11/2026) ────────
+  // Nguyên tắc "sổ cộng dồn": tồn Bổ Ống = Σ ống đạt cắt − Σ ống đem bổ,
+  // luôn phải ≥ 0. Xóa hoặc GIẢM klOngLuong của lượt cắt SAU KHI đã có lượt
+  // bổ lấy số ⇒ sổ ống đạt chờ bổ ÂM (mất tính chính xác). Cổng confirm()
+  // bắt người dùng xác nhận rõ ràng trước khi phá nguyên tắc (quy tắc 98).
+  function confirmCutOngDatAm(rec, newKlOngLuong) {
+    if (!rec) return true;
+    const oldKl = Number(rec.klOngLuong) || 0;
+    const newKl = (newKlOngLuong == null) ? 0 : (Number(newKlOngLuong) || 0);
+    if (newKl >= oldKl) return true;                    // tăng/giữ nguyên — không ảnh hưởng sổ
+    const rawAfter = x2OngDatRawOf() - oldKl + newKl;   // dư sổ SAU khi đổi
+    if (rawAfter >= 0) return true;                     // sổ vẫn không âm — cho qua
+    const linked = (state.xuong2BoOngRecords || []).filter(r => r && r.cutId === rec.id).length;
+    const hanhDong = (newKlOngLuong == null) ? 'xóa lượt này' : `giảm còn ${fmtKg(newKl)} kg`;
+    return confirm(
+      `⚠ Lượt cắt ngày ${formatDateDDMMYY(rec.date)} đang giữ ${fmtKg(oldKl)} kg ống đạt` +
+      (linked ? ` và có ${linked} lượt Bổ Ống link trực tiếp` : '') +
+      `.\n${hanhDong.charAt(0).toUpperCase() + hanhDong.slice(1)} làm TỔNG ống ĐEM BỔ (${fmtKg(x2OngDatUsedOf())} kg) VƯỢT tổng ống đạt — ` +
+      `SỔ ỐNG ĐẠT CHỜ BỔ SẼ ÂM ${fmtKg(-rawAfter)} kg (thẻ Bổ Ống hiện cảnh báo đỏ).\n\n` +
+      `Nguyên tắc: khối lượng tồn công đoạn sau phải ≥ 0 so với công đoạn trước. ` +
+      `Hãy kiểm tra lại Lịch Sử Bổ Ống (có thể có lượt cắt bị xóa trước đó hoặc lượt bổ nhập sai).\n\nTiếp tục dù sổ sẽ âm?`
+    );
+  }
+
   function deleteXuong2Cut(id) {
     if (!requireEditPermission()) return;
     const rec = (state.xuong2CutRecords || []).find(r => r.id === id);
@@ -2756,6 +2785,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     // (vẫn giữ số liệu snapshot, nhưng nên biết trước khi xóa)
     const linked = (state.xuong2BoOngRecords || []).filter(r => r.cutId === id).length;
     const warn = linked ? `\nLưu ý: có ${linked} lượt BỔ ỐNG đang link lô ống này (số liệu bổ ống vẫn giữ, nhưng mất link nguồn).` : '';
+    // SỔ ÂM: xóa làm tổng ống đạt giảm — nếu đã có lượt bổ lấy số thì sổ ống
+    // đạt chờ bổ sẽ âm → cổng confirm riêng nêu rõ mức lệch (quy tắc 98).
+    const okAm = confirmCutOngDatAm(rec, null);
+    if (!okAm) return;
     if (!confirm(`Xóa lượt cắt/chọn ngày ${formatDateDDMMYY(rec.date)} (NCC ${d.supplier || '—'})?${warn}`)) return;
     trackDeleted('xuong2CutRecords', id); // tombstone: không bị mây/máy khác hồi sinh
     state.xuong2CutRecords = (state.xuong2CutRecords || []).filter(r => r.id !== id);
@@ -4099,9 +4132,15 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       initLucide();
       return;
     }
-    const kg = x2OngDatAvailable();
+    // Giá trị THÔ (có thể ÂM): sổ âm = tổng bổ vượt tổng cắt → cảnh báo đỏ
+    // thay vì "Hết tồn" để kịp rà soát (thiếu lượt cắt / lượt cắt bị xóa /
+    // lượt bổ nhập sai). x2OngDatAvailable kẹp 0 nên không thấy được mức lệch.
+    const raw = x2OngDatRawOf();
+    const kg = Math.max(0, raw);
     const src = x2OngDatSourceCount();
-    if (kg <= 0) {
+    if (raw < 0) {
+      bar.innerHTML = `<span class="x2-stock-title x2-stock-warn" title="TỔNG KL ống đem bổ đã VƯỢT tổng ống đạt của các lượt Cắt Chọn (âm ${fmtKg(-raw)} kg). Nguyên nhân thường gặp: còn thiếu lượt Cắt Chọn chưa nhập · lượt cắt bị xóa/sửa giảm sau khi đã bổ · lượt bổ nhập sai số. Hãy rà Lịch Sử 2 thẻ hoặc dùng Kiểm kê bãi — nhóm Ống đạt chờ bổ (thẻ Phụ Phẩm & Băm) để hiệu chỉnh."><i data-lucide="alert-triangle"></i> Tồn ống đạt chờ bổ: <strong>Sổ âm ${fmtKg(-raw)} kg</strong> <em class="x2-stock-sub">— bổ vượt cắt, cần rà soát</em></span>`;
+    } else if (kg <= 0) {
       bar.innerHTML = `<span class="x2-stock-title" title="Toàn bộ ống đạt của các lượt Cắt Chọn đã được bổ hết"><i data-lucide="check-circle-2"></i> Tồn ống đạt chờ bổ: <strong>Hết tồn</strong></span>`;
     } else {
       bar.innerHTML = `<span class="x2-stock-title" title="Tổng ống ĐẠT của mọi lượt Cắt Chọn TRỪ phần đã đem bổ. Nhóm khối lượng — từ đây KHÔNG còn truy vết lô/nhà cung cấp."><i data-lucide="boxes"></i> Tồn ống đạt chờ bổ: <strong>${fmtKg(kg)} kg</strong> <em class="x2-stock-sub">(từ ${src} lượt cắt · chỉ khối lượng)</em></span>`;
@@ -4238,14 +4277,15 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     const editing = x2BoOngEditRec();
     const rest = poolMode
-      ? x2OngDatAvailable(editing ? { domain: 'boong', id: editing.id } : null)
+      ? x2OngDatRawOf(editing ? { domain: 'boong', id: editing.id } : null)   // THÔ — âm = sổ bị bổ vượt
       : boOngRemainingOf(cut, editing ? editing.id : null); // còn lại TRƯỚC lượt này
     const bo = Number((document.getElementById('x2-bo-ong-bo') || {}).value) || 0;
     const loai = Number((document.getElementById('x2-bo-ong-loai') || {}).value) || 0;
     const dat = Math.max(0, bo - loai);      // ống bổ đạt
     const after = rest - bo;                 // còn sau lượt (âm = nhập vượt)
+    const restAm = poolMode && rest < 0;
     box.innerHTML = `
-      <span class="x2-ong-calc-item x2-ong-calc-in" title="${poolMode ? 'Tổng ống ĐẠT của các lượt Cắt Chọn chưa đem bổ (nhóm khối lượng)' : 'Phần ống của lô CHƯA bổ (trước lượt này)'}"><span class="x2-ong-calc-label">${poolMode ? 'Tồn nhóm ống đạt:' : 'Còn lại của lô:'}</span><strong>${fmtKg(rest)} kg</strong></span>
+      <span class="x2-ong-calc-item x2-ong-calc-in" title="${restAm ? 'SỔ ÂM: tổng KL đem bổ đã vượt tổng ống đạt của các lượt Cắt Chọn — rà lại Lịch Sử 2 thẻ hoặc dùng Kiểm kê bãi để hiệu chỉnh' : poolMode ? 'Tổng ống ĐẠT của các lượt Cắt Chọn chưa đem bổ (nhóm khối lượng)' : 'Phần ống của lô CHƯA bổ (trước lượt này)'}"><span class="x2-ong-calc-label">${poolMode ? 'Tồn nhóm ống đạt:' : 'Còn lại của lô:'}</span><strong${restAm ? ' style="color:#dc2626;"' : ''}>${restAm ? `Sổ âm ${fmtKg(-rest)} kg` : `${fmtKg(rest)} kg`}</strong></span>
       <span class="x2-ong-calc-item x2-ong-calc-bo" title="KL ống bổ đạt = KL ống đem bổ − KL ống loại"><span class="x2-ong-calc-label">Ống bổ đạt:</span><strong>${fmtKg(dat)} kg</strong><em class="x2-ong-calc-eq">(= ${fmtKg(bo)} − ${fmtKg(loai)})</em></span>
       <span class="x2-ong-calc-item x2-ong-calc-after" title="Phần ống còn lại sau lượt này"><span class="x2-ong-calc-label">Còn sau lượt:</span><strong${after < 0 ? ' style="color:#dc2626;"' : ''}>${fmtKg(after)} kg</strong></span>`;
   }
@@ -4278,7 +4318,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const editing = x2BoOngEditRec();
     const avail = x2OngDatAvailable(editing ? { domain: 'boong', id: editing.id } : null);
     if (inputOng > avail + 1e-6) {
-      showToast(`KL ống đem bổ (${fmtKg(inputOng)} kg) vượt TỒN NHÓM ống đạt chờ bổ (${fmtKg(avail)} kg) — kiểm tra lại!`, 'error');
+      // Sổ ÂM = tổng bổ đã vượt tổng cắt (thiếu lượt cắt / lượt cắt bị xóa /
+      // nhập sai) — nêu rõ trong thông báo để người nhập kịp rà soát.
+      const rawNow = x2OngDatRawOf(editing ? { domain: 'boong', id: editing.id } : null);
+      showToast(`KL ống đem bổ (${fmtKg(inputOng)} kg) vượt TỒN NHÓM ống đạt chờ bổ (${fmtKg(avail)} kg)${rawNow < 0 ? ` — sổ đang ÂM ${fmtKg(-rawNow)} kg (bổ vượt cắt, cần rà lại lịch sử 2 thẻ)` : ''} — kiểm tra lại!`, 'error');
       return false;
     }
     const shiftIdx = x2ShiftValueOf('x2-bo-ong-shift');

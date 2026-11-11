@@ -205,8 +205,16 @@ import { state } from './state.js';
       return s + input;
     }, 0);
   }
+  // Giá trị THÔ của sổ (CÓ THỂ ÂM) — dùng cho CẢNH BÁO khi tổng KL đem bổ
+  // VƯỢT tổng ống đạt cắt (nguyên nhân thường gặp: thiếu lượt Cắt Chọn chưa
+  // nhập · lượt cắt bị xóa/sửa giảm sau khi đã bổ · lượt bổ nhập sai số).
+  // x2OngDatAvailable kẹp về 0 nên không thấy được mức lệch — UI cảnh báo
+  // dùng hàm này để hiện "Sổ âm X kg" thay vì "Hết tồn".
+  function x2OngDatRawOf(exclude) {
+    return x2OngDatProducedOf(exclude) - x2OngDatUsedOf(exclude) + x2StocktakeAdjustment('ong_dat');
+  }
   function x2OngDatAvailable(exclude) {
-    return Math.max(0, x2OngDatProducedOf(exclude) - x2OngDatUsedOf(exclude) + x2StocktakeAdjustment('ong_dat'));
+    return Math.max(0, x2OngDatRawOf(exclude));
   }
   // Số lượt cắt đã tạo ống đạt (để hiện "từ N lượt cắt")
   function x2OngDatSourceCount() {
@@ -295,6 +303,7 @@ export {
   x2CartsRemainingKg,
   x2OngDatProducedOf,
   x2OngDatUsedOf,
+  x2OngDatRawOf,
   x2OngDatAvailable,
   x2OngDatSourceCount,
   x2StocktakeAdjustment,

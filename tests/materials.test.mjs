@@ -530,5 +530,31 @@ check('TỔNG NHẬP MUA (events): nối nút chuyển + bộ lọc kỳ + ủy 
 check('TỔNG NHẬP MUA: giữ dải tuần dưới trục X (plugin vẫn dùng weekGroups)',
   /weekGroups/.test(fs.readFileSync(new URL('../js/materials.js', import.meta.url), 'utf8')));
 
+// ═══ NHÃN TÌNH TRẠNG SỬ DỤNG CỦA LÔ (tab Nguyên Liệu — 13/11/2026) ═══
+// Mỗi dòng Nhật Ký gắn chip 3 trạng thái: CHƯA DÙNG (xanh) · ĐÃ DÙNG MỘT
+// PHẦN (hổ phách) · ĐÃ DÙNG HẾT (xám). X2 đọc sổ nhóm x2-pool (phiếu cân);
+// X1 = Cắt Ống (4 KL) + Sấy Sinh nhập thẳng; Lò hơi không gắn nhãn.
+console.log('--- NHÃN "ĐÃ DÙNG" TRÊN LÔ NGUYÊN LIỆU ---');
+state.materialRecords = [
+  { id: 'mlh',  type: 'Vầu khô',      location: 'lo-hoi',   weight: 4000,  inputIndex: 4000,  outputIndex: 0, date: '2026-11-01', createdAt: '2026-11-01T00:00:00.000Z' },
+  { id: 'mx1',  type: 'Vầu cây tươi', location: 'xuong-1',  weight: 6000,  inputIndex: 6000,  outputIndex: 0, date: '2026-11-01', createdAt: '2026-11-01T00:00:00.000Z' },
+  { id: 'mx2a', type: 'Luồng cây xô', location: 'xuong-2',  weight: 10000, inputIndex: 10000, outputIndex: 0, date: '2026-11-02', createdAt: '2026-11-02T00:00:00.000Z' },
+  { id: 'mx2b', type: 'Luồng cây khô', location: 'xuong-2', weight: 8000,  inputIndex: 8000,  outputIndex: 0, date: '2026-11-02', createdAt: '2026-11-02T00:00:01.000Z' },
+  { id: 'mx2c', type: 'Luồng ống',    location: 'xuong-2',  weight: 5000,  inputIndex: 5000,  outputIndex: 0, date: '2026-11-03', createdAt: '2026-11-03T00:00:00.000Z' }
+];
+state.xuong1CatOngRecords = [{ id: 'x1co-t', materialId: 'mx1', klDat: 2000, klLoai: 0, klMat: 0, klNgon: 0, date: '2026-11-02' }];
+state.xuong1SaySinhRecords = [{ id: 'x1ss-t', materialId: 'mx1', qty: 1000, date: '2026-11-03' }];
+state.xuong2BoluongRecords = [{ id: 'blg-t', date: '2026-11-03', qty: 3000, tickets: [{ materialId: 'mx2b', kg: 3000 }] }];
+state.xuong2CutRecords = [{ id: 'cut-legacy-t', materialId: 'mx2c', materialType: 'Luồng ống', date: '2026-11-04', inputWeight: 5000, klOngLuong: 4000 }]; // KHÔNG inputKind = lượt cắt kiểu CŨ → cả lô đã dùng
+state.xuong2BoOngRecords = [];
+mat.renderMaterialView();
+const tblChip = String(document.getElementById('material-table-body').innerHTML || '');
+check('Lô X2 chưa dùng → chip xanh "Chưa dùng · 10.000 kg"', tblChip.includes('Chưa dùng · 10.000 kg') && tblChip.includes('is-fresh'));
+check('Lô X2 dùng một phần (Bốc 3.000) → chip hổ phách "Đã dùng 3.000/8.000 kg"', tblChip.includes('Đã dùng 3.000/8.000 kg') && tblChip.includes('is-part'));
+check('Lô X2 có lượt cắt KIỂU CŨ → chip xám "Đã dùng hết 5.000 kg"', tblChip.includes('Đã dùng hết 5.000 kg') && tblChip.includes('is-full'));
+check('Lô X1 (Cắt Ống 2.000 + Sấy thẳng 1.000) → chip "Đã dùng 3.000/6.000 kg"', tblChip.includes('Đã dùng 3.000/6.000 kg'));
+const rowLh = (tblChip.split('data-mat-row="mlh"')[1] || '').split('</tr>')[0] || '';
+check('Lô Lò hơi → KHÔNG gắn nhãn (chưa có sổ dùng)', rowLh.includes('Vầu khô') && !rowLh.includes('mat-use-chip'));
+check('CSS nhãn + sw.js v391', matCssHtml.includes('.mat-use-chip') && /nha-may-ngoc-son-v391/.test(fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8')));
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed ? 1 : 0);

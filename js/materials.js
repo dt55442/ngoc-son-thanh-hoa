@@ -11,6 +11,7 @@
 // (firePushSync), và là nguồn 'materials' cho biểu đồ Dashboard.
 // ═══════════════════════════════════════════════════════════
 import { stemBarsPlugin, stemShapeForLocation } from './chart-stems.js';
+import { x2TicketUsedOf } from './x2-pool.js'; // sổ nhóm X2 — nhãn "đã dùng" của lô (x2-pool CHỈ import state, không vòng)
 import { firePushSync, initLucide, requireEditPermission } from './cloud.js';
 import { canEditTab } from './permissions.js';
 import { trackDeleted } from './tombstone.js';
@@ -1538,6 +1539,48 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
     `;
   }
 
+  // ─── NHÃN TÌNH TRẠNG SỬ DỤNG CỦA LÔ NGUYÊN LIỆU (13/11/2026) ──
+  // Trả lời "lô này đã dùng chưa / còn bao nhiêu" ngay trên dòng Nhật Ký:
+  //   • Xưởng 2: đọc SỔ NHÓM khối lượng (js/x2-pool.js) — Bốc Luồng + Cắt
+  //     Chọn trừ theo PHIẾU CÂN (tickets); lượt cắt kiểu CŨ ⇒ cả lô đã dùng.
+  //   • Xưởng 1: Cắt Ống (Σ 4 KL của mọi lượt trỏ lô) + Sấy Sinh NHẬP THẲNG
+  //     (Σ qty của lượt trỏ materialId) — TÍNH TRỰC TIẾP từ state vì
+  //     xuong2.js import materials.js (KHÔNG được import ngược — vòng).
+  //   • Lò hơi: chưa có công đoạn sau theo dõi khối lượng → KHÔNG gắn nhãn.
+  function matLotUsageOf(rec) {
+    if (!rec || rec.location === 'lo-hoi') return null;
+    const total = (Number(rec.weight) || 0) ||
+      ((Number(rec.inputIndex) || 0) - (Number(rec.outputIndex) || 0));
+    if (!(total > 0)) return null;
+    let used = 0;
+    if (rec.location === 'xuong-2') {
+      used = x2TicketUsedOf(rec.id);
+    } else if (rec.location === 'xuong-1') {
+      const catOng = (state.xuong1CatOngRecords || []).reduce((s, r) =>
+        (!r || r.materialId !== rec.id) ? s : s + (Number(r.klDat) || 0) +
+          (Number(r.klLoai) || 0) + (Number(r.klMat) || 0) + (Number(r.klNgon) || 0), 0);
+      const sayThang = (state.xuong1SaySinhRecords || []).reduce((s, r) =>
+        (!r || r.materialId !== rec.id) ? s : s + (Number(r.qty) || 0), 0);
+      used = catOng + sayThang;
+    } else {
+      return null;                       // vị trí lạ — không có sổ dùng
+    }
+    const remaining = Math.max(0, total - used);
+    return { total, used, remaining, full: remaining <= 1e-6 };
+  }
+  const matFmtKg = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  // Nhãn 3 trạng thái: CHƯA DÙNG (xanh) · ĐÃ DÙNG MỘT PHẦN (hổ phách) · ĐÃ DÙNG HẾT (xám)
+  function matUsageChipHtml(u) {
+    if (!u) return '';
+    if (u.full) {
+      return `<div><span class="mat-use-chip is-full" title="Toàn bộ ${matFmtKg(u.total)} kg của lô đã được công đoạn sau lấy hết."><i data-lucide="check-circle-2"></i> Đã dùng hết ${matFmtKg(u.total)} kg</span></div>`;
+    }
+    if (u.used > 1e-6) {
+      return `<div><span class="mat-use-chip is-part" title="Công đoạn sau đã lấy ${matFmtKg(u.used)} kg — còn ${matFmtKg(u.remaining)} kg chờ dùng (sổ cộng dồn, làm dở dang qua ngày vẫn khớp)."><i data-lucide="rotate-ccw"></i> Đã dùng ${matFmtKg(u.used)}/${matFmtKg(u.total)} kg</span></div>`;
+    }
+    return `<div><span class="mat-use-chip is-fresh" title="Lô chưa được công đoạn nào lấy — còn nguyên ${matFmtKg(u.total)} kg."><i data-lucide="circle-dot"></i> Chưa dùng · ${matFmtKg(u.total)} kg</span></div>`;
+  }
+
   function renderMaterialTable() {
     const tbody = document.getElementById('material-table-body');
     if (!tbody) return;
@@ -1567,7 +1610,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, showToast, uiChartWin
         <tr data-mat-row="${r.id}">
           <td>${thumb}${imgs.length > 1 ? `<span class="material-photo-count" data-mat-photo="${r.id}" data-mat-photo-idx="0">+${imgs.length - 1}</span>` : ''}</td>
           <td>${formatDateDDMMYY(r.date)}<div style="font-size:0.7rem;color:var(--text-muted);">${escapeHTML(friendlyMaterialWeek(r.week))}</div></td>
-          <td><strong>${escapeHTML(r.type || '—')}</strong></td>
+          <td><strong>${escapeHTML(r.type || '—')}</strong>${matUsageChipHtml(matLotUsageOf(r))}</td>
           <td>${escapeHTML(r.supplier || '—')}</td>
           <td><span class="material-loc-chip">${escapeHTML(materialLocationLabel(r.location))}</span></td>
           <td class="text-right">${(Number(r.inputIndex) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}</td>

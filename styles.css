@@ -16534,3 +16534,31 @@ body[data-theme="night"] .bamboo-card.kb-compact.st-kho  { border-left-color: #1
   #x1-kho-inventory .x1-kho-table td:last-child { grid-column: 1 / -1; border-top: 1px dashed var(--border-color); }
   #x1-kho-inventory .x1-kho-table td::before { content: attr(data-label); color: var(--text-muted); }
 }
+
+/* ─── CẢNH BÁO SỔ ÂM — THẺ BỔ ỐNG (sổ nhóm ống đạt chờ bổ) ────────
+   Khi tổng KL ống đem bổ VƯỢT tổng ống đạt của các lượt Cắt Chọn (sổ âm),
+   thanh tồn đổi sang cảnh báo ĐỎ thay vì "Hết tồn" để kịp rà soát lịch sử
+   2 thẻ (thiếu lượt cắt · lượt cắt bị xóa/sửa · lượt bổ nhập sai). ───── */
+.x2-stock-title.x2-stock-warn { color: #b91c1c; }
+.x2-stock-title.x2-stock-warn svg { color: #dc2626; }
+.x2-stock-title.x2-stock-warn strong { color: #dc2626; }
+
+/* ─── NHÃN TÌNH TRẠNG SỬ DỤNG CỦA LÔ NGUYÊN LIỆU (tab Nguyên Liệu) ──
+   3 trạng thái: CHƯA DÙNG (xanh) · ĐÃ DÙNG MỘT PHẦN (hổ phách) ·
+   ĐÃ DÙNG HẾT (xám) — gắn dưới tên Loại Nguyên Liệu trong Nhật Ký. ── */
+.mat-use-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.mat-use-chip svg { width: 12px; height: 12px; }
+.mat-use-chip.is-fresh { background: rgba(22, 163, 74, 0.12); color: #15803d; border-color: rgba(22, 163, 74, 0.35); }
+.mat-use-chip.is-part { background: rgba(217, 119, 6, 0.12); color: #b45309; border-color: rgba(217, 119, 6, 0.35); }
+.mat-use-chip.is-full { background: rgba(100, 116, 139, 0.12); color: #475569; border-color: rgba(100, 116, 139, 0.3); }

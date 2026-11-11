@@ -320,7 +320,7 @@ check('H7: CSS có khối sổ nhóm (công tắc · phiếu cân · dòng tự 
   css.includes('.x2-kind-switch') && css.includes('.x2-ticket-picker') &&
   css.includes('.x2-pool-calc') && css.includes('.x2-pool-note'));
 check('H8: sw.js cache v278 + nạp js/x2-pool.js vào APP_SHELL',
-  /nha-may-ngoc-son-v388/.test(sw) && sw.includes("./js/x2-pool.js"));
+  /nha-may-ngoc-son-v391/.test(sw) && sw.includes("./js/x2-pool.js"));
 
 // ═══ J. UI ĐIỆN THOẠI: SHEET CHỌN PHIẾU + Ô SỐ 6 CHỮ SỐ + KHÔNG CÒN KHOẢNG TRẮNG ═══
 // (1) Sheet chọn phiếu cân: nút "N phiếu · X kg" → mở panel → chọn nhiều phiếu →
@@ -428,6 +428,77 @@ g('x2-pp-kg').value = '1000000';
 x2pp.handleX2PhuPhamSubmit({ preventDefault(){} });
 check('J22: Phụ Phẩm — KL cân thực 1.000.000 bị CHẶN, không ghi lượt',
   (state.x2PhuPhamRecords || []).length === _ppN);
+
+// ═══ K. SỔ ÂM — CẢNH BÁO KHI BỔ VƯỢT CẮT (11/11/2026) ═════════════════
+// Bổ thêm (dư sổ + 500) kg → sổ âm 500 kg:
+//   • x2OngDatRawOf trả số ÂM (không kẹp 0) · x2OngDatAvailable vẫn kẹp 0
+//   • chip mini card + thanh tồn + ô tự tính hiện "Sổ âm …" thay vì "Hết tồn"
+const rawBefore = pool.x2OngDatRawOf();
+state.xuong2BoOngRecords.push({ id: 'bo-am-test', date: '2026-10-19', inputOng: rawBefore + 500, klOngBo: rawBefore + 500, klOngLoai: 0, poolMode: true, createdAt: '2026-10-19T00:00:00.000Z' });
+check('K1: x2OngDatRawOf trả ÂM khi bổ vượt cắt (không kẹp 0)',
+  pool.x2OngDatRawOf() < 0 && Math.abs(pool.x2OngDatRawOf() + 500) < 1e-6);
+check('K2: x2OngDatAvailable vẫn kẹp về 0 khi sổ âm (tương thích mọi chỗ cũ)',
+  pool.x2OngDatAvailable() === 0);
+check('K3: chip mini card Bổ Ống = "Sổ âm 500 kg"',
+  (() => { x2.renderXuong2Cards(); return g('x2-mini-count-bo-ong').textContent === 'Sổ âm 500 kg'; })());
+x2.renderX2BoOngStockBar();
+check('K4: thanh tồn hiện cảnh báo SỔ ÂM (không còn "Hết tồn")',
+  String(g('x2-ong-stock-bar').innerHTML || '').includes('x2-stock-warn') &&
+  String(g('x2-ong-stock-bar').innerHTML || '').includes('Sổ âm 500 kg') &&
+  !String(g('x2-ong-stock-bar').innerHTML || '').includes('Hết tồn'));
+check('K5: ô tự tính form có nhánh "Sổ âm" (nguồn js/xuong2.js)',
+  /restAm \? `Sổ âm \$\{fmtKg\(-rest\)\} kg`/.test(jsX2) &&
+  /restAm \? 'SỔ ÂM: tổng KL đem bổ/.test(jsX2));
+state.xuong2BoOngRecords = state.xuong2BoOngRecords.filter(r => r.id !== 'bo-am-test');
+check('K6: bỏ lượt bổ vượt → sổ về đúng dư cũ', pool.x2OngDatRawOf() === rawBefore);
+check('K7: CSS cảnh báo sổ âm + sw.js v391',
+  css.includes('.x2-stock-title.x2-stock-warn') && /nha-may-ngoc-son-v391/.test(sw));
+
+// ═══ L. CHẶN XÓA/GIẢM LƯỢT CẮT KHI SỔ ỐNG ĐẠT SẼ ÂM (13/11/2026) ═══════
+// Nguyên tắc: tồn công đoạn sau ≥ 0 so với công đoạn trước. Xóa/GIẢM
+// klOngLuong của lượt cắt sau khi đã có lượt bổ lấy số ⇒ sổ âm ⇒ confirm().
+const _confirmTrue = global.confirm;
+const rawL = pool.x2OngDatRawOf();   // dư sổ gốc trước khi thử
+// Ép sổ âm bằng 1 lượt bổ thử (đẩy thẳng state — bỏ qua chặn lúc lưu)
+state.xuong2BoOngRecords.push({ id: 'bo-am-l', date: '2026-10-20', inputOng: rawL + 200, klOngBo: rawL + 200, klOngLoai: 0, poolMode: true, createdAt: '2026-10-20T00:00:00.000Z' });
+check('L0 setup: sổ âm −200', pool.x2OngDatRawOf() === rawL - (rawL + 200) && pool.x2OngDatRawOf() < 0);
+// Thêm 1 lượt cắt 500 kg → dư sổ = 300
+state.xuong2CutRecords.push({ id: 'cut-am-test', date: '2026-10-20', inputKind: 'cart', carts: 5, kgPerCart: 600, inputWeight: 3000, klOngLuong: 500, klOngLoi: 0, klMatLuong: 0, createdAt: '2026-10-20T00:00:00.000Z' });
+global.confirm = () => false;
+x2.deleteXuong2Cut('cut-am-test');
+check('L1: XÓA làm sổ âm (300−500) + xác nhận HỦY → lượt cắt giữ nguyên', !!state.xuong2CutRecords.find(r => r.id === 'cut-am-test'));
+check('L2: Hủy xóa → dư sổ giữ 300', Math.abs(pool.x2OngDatRawOf() - 300) < 1e-6);
+global.confirm = () => true;
+x2.deleteXuong2Cut('cut-am-test');
+check('L3: xác nhận OK → xóa được, dư sổ về −200', !state.xuong2CutRecords.find(r => r.id === 'cut-am-test') && Math.abs(pool.x2OngDatRawOf() + 200) < 1e-6);
+// SỬA GIẢM ống đạt qua form (đường sổ nhóm 'ong'): sổ sẽ âm → chặn khi Hủy
+state.materialRecords.push({ id: 'm9-am-test', type: 'Luồng ống (thử sổ âm)', supplier: 'Nhà Thử', location: 'xuong-2', inputIndex: 2000, outputIndex: 0, weight: 2000, date: '2026-10-21', createdAt: '2026-10-21T00:00:00.000Z' });
+state.xuong2CutRecords.push({ id: 'cut-am-edit', date: '2026-10-21', inputKind: 'ong', tickets: [{ materialId: 'm9-am-test', kg: 2000 }], inputWeight: 2000, klOngLuong: 500, klOngLoi: 0, klMatLuong: 0, createdAt: '2026-10-21T00:00:00.000Z' });
+x2.editXuong2Cut('cut-am-edit');
+g('x2-cut-ongluong').value = '100';           // giảm mạnh → sổ sẽ âm (300−500+100)
+global.confirm = () => false;
+x2.handleXuong2CutSubmit({ preventDefault(){} });
+check('L4: SỬA GIẢM làm sổ âm + xác nhận HỦY → klOngLuong giữ nguyên 500',
+  state.xuong2CutRecords.find(r => r.id === 'cut-am-edit').klOngLuong === 500);
+global.confirm = () => true;
+x2.handleXuong2CutSubmit({ preventDefault(){} });
+check('L5: xác nhận OK → klOngLuong cập nhật 100 kg', state.xuong2CutRecords.find(r => r.id === 'cut-am-edit').klOngLuong === 100);
+// Sửa TĂNG không bao giờ bị chặn (không gọi confirm)
+x2.editXuong2Cut('cut-am-edit');
+g('x2-cut-ongluong').value = '250';           // tăng → không cần confirm
+let _confirmCalled = false;
+global.confirm = () => { _confirmCalled = true; return false; };
+x2.handleXuong2CutSubmit({ preventDefault(){} });
+check('L6: SỬA TĂNG ống đạt → KHÔNG gọi confirm, lưu bình thường',
+  _confirmCalled === false && state.xuong2CutRecords.find(r => r.id === 'cut-am-edit').klOngLuong === 250);
+// Dọn: bỏ lượt cắt thử + lượt bổ thử → dư sổ về gốc
+state.xuong2CutRecords = state.xuong2CutRecords.filter(r => r.id !== 'cut-am-edit');
+state.xuong2BoOngRecords = state.xuong2BoOngRecords.filter(r => r.id !== 'bo-am-l');
+check('L7: dọn lượt thử → dư sổ về đúng giá trị gốc', Math.abs(pool.x2OngDatRawOf() - rawL) < 1e-6);
+check('L8: cổng chặn có ở CẢ nhánh sửa (sổ nhóm + lô cũ) và nhánh xóa',
+  (jsX2.match(/confirmCutOngDatAm\(rec, payload\.klOngLuong\)/g) || []).length === 2 &&
+  /const okAm = confirmCutOngDatAm\(rec, null\)/.test(jsX2));
+global.confirm = _confirmTrue;
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

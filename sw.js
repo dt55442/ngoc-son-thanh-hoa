@@ -4,12 +4,13 @@
  * Chiến lược: Cache First - cập nhật nền (stale-while-revalidate)
  */
 
-const CACHE_NAME = 'nha-may-ngoc-son-v401';
+const CACHE_NAME = 'nha-may-ngoc-son-v402';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './js/main.js',
+  './js/module-loader.js', // Giai đoạn 2: lazy-load module theo tab
   './js/xlsx-lazy.js', // NẠP TRỄ SheetJS (boot nhanh — 11/2026); xlsx.full.min.js vẫn precache để dùng OFFLINE
   './js/loading.js',
   './js/repo.js',

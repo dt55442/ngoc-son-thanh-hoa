@@ -40,6 +40,7 @@ import { initHistory } from './history.js';
 import { APP_VERSION, state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations, initVnDateInputs, showToast } from './utils.js';
+import { loadModulesForView, preloadModulesForView } from './module-loader.js'; // Giai đoạn 2: lazy-load module theo tab
 
 setWorkerEvaluationEfficiencyProvider(computeWorkerStageEfficiency);
 
@@ -269,6 +270,9 @@ function yieldBootFrame() {
       }
       showTreLoading('Đang nạp dữ liệu nhà máy…', { phrases: bootPhrases });
       
+      // Load modules cho tab mặc định (dashboard-view) trước
+      await loadModulesForView(state.activeView || 'dashboard-view');
+      
       await yieldBootFrame(); // yield 1: cho overlay render
 
       // Chạy các nhóm load song song
@@ -444,10 +448,10 @@ function yieldBootFrame() {
   }
 
   function switchView(targetViewId) {
-    switchViewCore(targetViewId);
+    switchViewCore(targetViewId).catch(e => console.error('[switchView] Lỗi chuyển tab:', e));
   }
 
-  function switchViewCore(targetViewId) {
+  async function switchViewCore(targetViewId) {
     // Đảm bảo mọi render đang chờ hoàn thành trước khi rời tab — tránh hiển thị
     // số liệu cũ trên tab mới sau 1 frame rAF.
     flushRenderAll();
@@ -455,6 +459,11 @@ function yieldBootFrame() {
       showToast('Chỉ Ban Quản Lý và Admin được xem tổng hợp lãnh đạo.', 'error');
       targetViewId = 'dashboard-view';
     }
+    
+    // Giai đoạn 2: Lazy-load module cho tab đích (nếu chưa nạp)
+    // Chờ module nạp xong rồi mới render để tránh lỗi "function not found"
+    await loadModulesForView(targetViewId);
+    
     const prevView = state.activeView;
     state.activeView = targetViewId;
     // Chỉ đặt lại vị trí về TUẦN HIỆN TẠI khi CHUYỂN TỪ TAB KHÁC sang tab Kế hoạch

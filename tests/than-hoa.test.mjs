@@ -586,7 +586,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v401/.test(swJs));
+  /nha-may-ngoc-son-v402/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -639,7 +639,7 @@ check('CUỘN: main.js có closeViewScopedModals + gọi khi rời tab (đóng p
   jsMain.includes('closeViewScopedModals(document.getElementById(prevView))') &&
   jsMain.includes('x2CloseOpenCard') && jsMain.includes('qcCloseOpenCard') && jsMain.includes('hrCloseOpenCard'));
 check('CUỘN: rời tab Công Đoạn khi đang mở thẻ Xưởng 2 → pop-up đóng + trạng thái thẻ đang mở được dọn',
-  (function () {
+  (async function () {
     // Mở thẻ Xưởng 2 (pop-up bật) rồi chuyển sang tab khác
     state.activeView = 'kanban-view';
     x2.x2OpenCard('x2-than-hoa-card');
@@ -648,7 +648,7 @@ check('CUỘN: rời tab Công Đoạn khi đang mở thẻ Xưởng 2 → pop-u
     // Stub DOM: cho view Công Đoạn "tìm thấy" overlay đang mở
     const kanbanEl = document.getElementById('kanban-view');
     kanbanEl.querySelectorAll = (sel) => (String(sel).indexOf('.modal-overlay.show') !== -1 ? [overlay] : []);
-    try { mainMod.switchView('materials-view'); } catch (e) { /* view khác có thể cần dữ liệu — chỉ cần phần đóng modal chạy */ }
+    try { await mainMod.switchView('materials-view'); } catch (e) { /* view khác có thể cần dữ liệu — chỉ cần phần đóng modal chạy */ }
     return hadShow && !overlay.classList.contains('show') &&
       x2.x2OpenCardId() === null && state.x2OpenCardId === null;
   })());

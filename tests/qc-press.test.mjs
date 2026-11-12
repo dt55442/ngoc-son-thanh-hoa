@@ -271,8 +271,8 @@ check('cloud.js: snapshot + cloudCore + gộp khi nhận + persistAllLocal + app
 check('history.js: miền qcPressLogs thuộc tab qc',
   hiJs.includes('qcPressLogs:') && hiJs.includes("label: 'Nhật ký ép ván (QC kiểm)'"));
 check('main.js: loadQcPressLogs lúc boot', mnJs.includes('loadQcPressLogs'));
-check('sw.js: CACHE_NAME v401 + js/qc-press.js vào APP_SHELL',
-  /nha-may-ngoc-son-v401/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
+check('sw.js: CACHE_NAME v402 + js/qc-press.js vào APP_SHELL',
+  /nha-may-ngoc-son-v402/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
 check('styles.css: launcher hồng + stamp PASS NGHIÊNG (font-style: italic) + nút ✅/❌',
   cssHtml.includes('qc-press-card') && cssHtml.includes('.qcp-stamp-pass') &&
   cssHtml.includes('font-style: italic') && cssHtml.includes('.qcp-check-pass') &&

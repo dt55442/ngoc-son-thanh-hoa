@@ -1378,6 +1378,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       xuong1BoRecords: state.xuong1BoRecords || [],
       xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
       xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
+      x1KhoExports: state.x1KhoExports || [],   // Xuất kho thành phẩm X1 (xuất hàng / tiêu hủy)
       x1Rates: state.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
       x1BoLengthOptions: state.x1BoLengthOptions || [],   // Danh mục chiều dài gợi ý thẻ Bổ X1 (11/2026)
       x1BoWidthOptions: state.x1BoWidthOptions || [],
@@ -1510,6 +1511,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       xuong1BoRecords: obj.xuong1BoRecords || [],
       xuong1PhoiSayRecords: obj.xuong1PhoiSayRecords || [],
       xuong1LocThanhRecords: obj.xuong1LocThanhRecords || [],
+      x1KhoExports: obj.x1KhoExports || [],   // Xuất kho thành phẩm X1 (xuất hàng / tiêu hủy)
       x1Rates: obj.x1Rates || { catOng: {}, saySinh: {}, boc: {}, locOng: {}, catMat: {}, bo: {}, phoiSay: {}, locThanh: {} },
       x1BoLengthOptions: obj.x1BoLengthOptions || [],
       x1BoWidthOptions: obj.x1BoWidthOptions || [],
@@ -2017,6 +2019,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (remote.xuong1BoRecords) state.xuong1BoRecords = m(clean('xuong1BoRecords', state.xuong1BoRecords || []), clean('xuong1BoRecords', remote.xuong1BoRecords));
     if (remote.xuong1PhoiSayRecords) state.xuong1PhoiSayRecords = m(clean('xuong1PhoiSayRecords', state.xuong1PhoiSayRecords || []), clean('xuong1PhoiSayRecords', remote.xuong1PhoiSayRecords));
     if (remote.xuong1LocThanhRecords) state.xuong1LocThanhRecords = m(clean('xuong1LocThanhRecords', state.xuong1LocThanhRecords || []), clean('xuong1LocThanhRecords', remote.xuong1LocThanhRecords));
+    if (remote.x1KhoExports) state.x1KhoExports = m(clean('x1KhoExports', state.x1KhoExports || []), clean('x1KhoExports', remote.x1KhoExports));
     // Danh mục chiều dài gợi ý thẻ Bổ X1 — mảng số: GỘP hợp nhất 2 chiều
     if (remote.x1BoLengthOptions) {
       const uni = [...new Set([...(state.x1BoLengthOptions || []), ...(remote.x1BoLengthOptions || [])]
@@ -2682,6 +2685,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (data.x2IncidentReports) state.x2IncidentReports = clean('x2IncidentReports', data.x2IncidentReports);
       // PHÊ DUYỆT ĐỊNH MỨC: nhận theo mây khi tải về (gộp theo id)
       if (data.rateApprovals) state.rateApprovals = clean('rateApprovals', data.rateApprovals);
+      if (data.x1KhoExports) state.x1KhoExports = clean('x1KhoExports', data.x1KhoExports);
       if (data.sysSettings) { state.sysSettings = normalizeSysSettings(data.sysSettings); applySysSettings(); }
       // ĐỊNH MỨC KIỂM SAU SẢN XUẤT: nhận theo mây khi tải về (ghi đè từng tháng)
       if (data.qcFinalRates && typeof data.qcFinalRates === 'object' && !Array.isArray(data.qcFinalRates)) {

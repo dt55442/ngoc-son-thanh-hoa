@@ -3094,12 +3094,12 @@
           <div class="x2-zone" data-zone="1">
             <div class="x2-zone-head"><span class="x2-zone-no">1</span><i data-lucide="bar-chart-3"></i> Tổng Thành Phẩm Ghi Nhận</div>
             <div class="material-stats" id="x1-kho-stats"></div>
-            <p class="x1-kho-note">Tồn tự tính từ sản lượng đạt ở Lọc Thanh/Bó Xô; thẻ này chưa ghi nhận xuất kho hoặc tiêu thụ.</p>
+            <p class="x1-kho-note">Tồn tự tính từ sản lượng đạt ở Lọc Thanh/Bó Xô và <strong>trừ đi các lượt xuất hàng / tiêu hủy</strong> ghi bên dưới. Bấm vào thẻ <strong>Vầu</strong>/<strong>Nứa</strong> để xem bảng chi tiết tồn.</p>
           </div>
           <div class="x2-zone" data-zone="2">
-            <div class="x2-zone-head"><span class="x2-zone-no">2</span><i data-lucide="list"></i> Ma Trận Tồn Nan: Bản Rộng × Chiều Dài × Phân Loại</div>
+            <div class="x2-zone-head"><span class="x2-zone-no">2</span><i data-lucide="history"></i> Lịch Sử Xuất Hàng / Tiêu Hủy</div>
             <div id="x1-kho-inventory"></div>
-            <p class="x1-kho-note">Kho tổng hợp đầu ra theo kích thước và phân loại; truy vết lô nguồn xem tại lịch sử Lọc Thanh.</p>
+            <p class="x1-kho-note">Giao dịch xuất kho được trừ vào tồn ngay khi lưu; xóa giao dịch sẽ hoàn trả số lượng về kho.</p>
           </div>
         </div>
 
@@ -8043,6 +8043,25 @@
           <button type="button" class="btn btn-outline btn-sm" id="btn-x1-rate-reset" data-perm="x1" data-admin-only title="Xóa định mức của tháng đã chọn"><i data-lucide="trash-2"></i> Xóa</button>
           <div class="x2-rate-chips" id="x1-rate-chips"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-x1-kho-detail">
+    <div class="modal-card x1-kho-detail-card">
+      <div class="modal-header">
+        <h3 id="x1-kho-detail-title"><i data-lucide="leaf"></i> Chi Tiết Tồn Kho</h3>
+        <button class="modal-close-btn" id="btn-close-x1-kho-detail" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding:14px 18px 18px;">
+        <p style="margin:0 0 10px; font-size:0.78rem; color:var(--text-muted);">
+          Tồn kho <b>đã trừ</b> các lượt xuất hàng / tiêu hủy. Hàng <b>chưa khai bản rộng/dài</b>
+          là Bó xô / lọc thanh chưa phân loại.
+        </p>
+        <div id="x1-kho-detail-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-x1-kho-detail-ok">Đóng</button>
       </div>
     </div>
   </div>

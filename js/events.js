@@ -24,6 +24,7 @@ import { addMaterialPlanWeek, closeMaterialModal, closeMaterialPhotoModal, delet
 import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutSize, baoTinhInputPool, setBaoThanhInput, setBaoThanhOut, toggleBaoThanhInputPicker, toggleBaoThanhOutPicker, renderBaoThanhInputList, renderX2BaoThanhForm, openX2BaoTinhRateModal, closeX2BaoTinhRateModal, renderX2BaoTinhRateModal, handleX2BaoTinhRateAddMonth, handleX2BaoTinhRateRowSave, handleX2BaoTinhRateRowReset, setX2BaoTinhFilterMode, shiftX2BaoTinhFilter, deleteXuong2BaoTho, deleteXuong2BoOng, deleteXuong2ChonNan, deleteXuong2Bullig, deleteXuong2Cut, deleteXuong2Boluong, deleteXuong2BaoTinh, editXuong2BaoTho, editXuong2BoOng, editXuong2ChonNan, onChonNanInlineEdit, nanSay1UseOf, editXuong2Bullig, editXuong2Cut, editXuong2Boluong, editXuong2BaoTinh, handleX2BaoThoRateSave, handleX2BoOngRateSave, handleX2BulligRateSave, handleX2CapRateSave, handleX2BoluongRateSave, handleX2ChonNanRateSave, handleXuong2BaoThoSubmit, handleXuong2BaoTinhSubmit, handleXuong2BoOngSubmit, handleXuong2BulligSubmit, handleXuong2ChonNanSubmit, handleXuong2CutSubmit, handleXuong2BoluongSubmit, onBaoTinhListClick, onBaoTinhGroupInput, onBaoTinhGroupClick, onBulligListClick, onBulligGroupInput, renderX2BulligGroups, renderX2BaoThoCalc, renderX2BaoTinhCalc, renderX2BaoTinhGroups, renderX2BaoThoRateBar, renderX2BoOngRateBar, renderX2BoluongRateBar, renderX2BulligCalc, renderX2BulligRateBar, renderX2BulligLotList, renderX2ChonNanCalc, renderX2ChonNanRateBar, resetXuong2BaoThoForm, resetXuong2BaoTinhForm, resetXuong2BoOngForm, resetXuong2BulligForm, resetXuong2ChonNanForm, resetXuong2CutForm, resetXuong2BoluongForm, syncX2BulligKindRows, syncX2ChonNanExternalFields, toggleX2BaoThoTable, toggleX2BaoTinhTable, toggleX2BoOngTable, toggleX2BulligTable, toggleX2ChonNanTable, toggleX2CutTable, toggleX2BoluongTable, toggleX2HoTroTable, toggleX2KanbanBoard, handleXuong2HoTroSubmit, editXuong2HoTro, deleteXuong2HoTro, resetXuong2HoTroForm, fillXuong2HoTroWorkers, hoTroPickAll, hoTroPickNone, updateXuong2HoTroCalc, onSayTimesChange, onSayIncidentChange, onSayIncidentInput, onStageIncidentChange, onStageIncidentInput, closeX2SayRateModal, handleX2SayRateAddMonth, handleX2SayRateM3Save, handleX2SayRateRowReset, handleX2SayRateRowSave, openX2SayRateModal, renderX2SayRateModal, syncX2SayRateM3Inputs, updateXuong2BaoThoLinked, baoThoLotSelectAll, baoThoLotSelectNone, X2_RATE_POPUPS, openX2RatePopup, closeX2RatePopup, updateXuong2BaoTinhLinked, updateXuong2BoOngLinked, updateXuong2ChonNanLinked, updateXuong2CutLinked, updateXuong2BoluongLinked, x2BaoTinhTogglePicker, x2FloatHideAll, x2FloatMaybeClose, x2FloatRepositionAll, x2CloseOpenCard, x2OpenCard, x2OpenCardExportSource, x2OpenCardHistoryDomain, x2PositionDetailOverlay, switchX2SayFrame, setStageWs, toggleStageWs, handleX1CatOngSubmit, handleX1SaySinhSubmit, handleX1BocSubmit, editX1CatOng, editX1SaySinh, editX1Boc, deleteX1CatOng, deleteX1SaySinh, deleteX1Boc, resetX1CatOngForm, resetX1SaySinhForm, resetX1BocForm, x1CatOngSyncLinked, x1SaySinhSyncLinked, x1BocSyncLinked, x1CatOngCalc, x1SaySinhCalc, x1BocCalc, openX1RatePopup, closeX1RatePopup, renderX1RatePopup, handleX1RateSave, handleX1RateReset,
   x1SsOpenOldPanel, x1SsCloseReadyPanel, x1SsOldStep, x1SsOpenBocFor,
   X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
+  x1KhoToggleDetail, x1KhoOpenExportForm, x1KhoCloseExportForm, x1KhoSaveExport, x1KhoDeleteExport, x1KhoSyncFormFields, x1KhoOpenDetail, x1KhoCloseDetail,
   x1BoLengthsTogglePicker, x1BoLengthToggle, x1BoLengthAdd, x1BoWidthsTogglePicker, x1BoWidthToggle, x1BoWidthAdd, x1BoNavigateStage, x1LocThanhNavigateStage, x1LocThanhModeOf, renderX1LocThanhLengthRows, x1LocThanhReadLengthRows, syncX1LocThanhMode, x1LtOnSrcChange, x1LtAddSource, x1LtRemoveSource, x1LtLengthCatalogToggle, x1LtLengthToggle, x1LtLengthAdd,
   syncX2ShiftField, syncX2BaoThoThicknessInputs, isBoOngPos, isBaoThoPos, isChonNanPos, renderX2BulligCard,
   // ── SỔ NHÓM KHỐI LƯỢNG (18/10/2026): xe bốc ~600 kg + phiếu cân + 2 loại đầu vào Cắt Chọn ──
@@ -2177,6 +2178,46 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         safeOn(base + '-' + part, 'input', () => x1ChainCalc(sp)));
       safeOn('btn-' + base + '-rate', 'click', () => openX1RatePopup(sp.rateKind));
     });
+    // ── KHO NAN XƯỞNG 1 — chi tiết kích thước (KPI card) + xuất hàng / tiêu hủy ──
+    // Các nút dùng data-* attribute (render lại mỗi lần) → dùng event delegation trên document.
+    document.addEventListener('click', e => {
+      const t = e.target && e.target.closest ? e.target.closest('[data-x1-kho-detail-toggle]') : null;
+      if (t) { x1KhoToggleDetail(t.getAttribute('data-x1-kho-detail-toggle')); return; }
+      // Bấm vào THÂN thẻ KPI (nơi trống, không phải chi tiết/nút) cũng mở/đóng chi tiết
+      const card = e.target && e.target.closest ? e.target.closest('[data-x1-kho-detail]') : null;
+      if (card && !e.target.closest('.x1-kho-detail-wrap') &&
+          !e.target.closest('button, input, select, a, table')) {
+        x1KhoToggleDetail(card.getAttribute('data-x1-kho-detail')); return;
+      }
+      const o = e.target && e.target.closest ? e.target.closest('[data-x1-kho-export-open]') : null;
+      if (o) { x1KhoOpenExportForm(o.getAttribute('data-x1-kho-export-open')); return; }
+      const c = e.target && e.target.closest ? e.target.closest('[data-x1-kho-export-close]') : null;
+      if (c) { x1KhoCloseExportForm(); return; }
+      const cancel = e.target && e.target.closest ? e.target.closest('[data-x1-kho-export-cancel]') : null;
+      if (cancel) { x1KhoCloseExportForm(); return; }
+      const save = e.target && e.target.closest ? e.target.closest('[data-x1-kho-export-save]') : null;
+      if (save) { x1KhoSaveExport(); return; }
+      const del = e.target && e.target.closest ? e.target.closest('[data-x1-kho-export-delete]') : null;
+      if (del) { x1KhoDeleteExport(del.getAttribute('data-x1-kho-export-delete')); return; }
+    });
+    // ── POPUP chi tiết tồn Kho Nan X1 (cấp trang — mobile tự thành bottom sheet) ──
+    safeOn('btn-close-x1-kho-detail', 'click', x1KhoCloseDetail);
+    safeOn('btn-x1-kho-detail-ok', 'click', x1KhoCloseDetail);
+    const khoDetailOv = document.getElementById('modal-x1-kho-detail');
+    if (khoDetailOv) khoDetailOv.addEventListener('click', e => {
+      if (e.target === khoDetailOv) x1KhoCloseDetail(); // bấm nền mờ
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const ov = document.getElementById('modal-x1-kho-detail');
+      if (ov && ov.classList.contains('show')) x1KhoCloseDetail();
+    });
+    // ── KHO NAN XƯỞNG 1 — ghi lựa chọn của 4 ô nhập form xuất kho vào STATE ngay khi đổi ──
+    // (form bị renderAll dựng lại bất cứ lúc nào — không ghi state là mất lựa chọn)
+    const x1KhoFieldIds = ['x1-kho-export-material', 'x1-kho-export-size', 'x1-kho-export-qty', 'x1-kho-export-note'];
+    ['change', 'input'].forEach(evt => document.addEventListener(evt, e => {
+      if (e.target && x1KhoFieldIds.includes(e.target.id)) x1KhoSyncFormFields();
+    }));
     // ── 11/2026: CHIỀU DÀI Ở THẺ BỔ X1 (nút nổi — bấm ra ngoài tự ẩn qua X2_FLOAT_PAIRS) ──
     safeOn('x1-bo-lengths-btn', 'click', () => x1BoLengthsTogglePicker());
     safeOn('x1-bo-widths-btn', 'click', () => x1BoWidthsTogglePicker());

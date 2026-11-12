@@ -433,7 +433,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v395/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v401/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -958,12 +958,11 @@ check('K17: chip Kho Nan hiển thị tổng thành phẩm tự tính',
   x1.x1CardCountText('x1-kho-card') === 'Tồn 52 kg');
 x1.x2OpenCard('x1-kho-card');
 const warehouseHtml = document.getElementById('x1-kho-inventory').innerHTML;
-check('K18: thẻ Kho Nan ưu tiên tổng theo kích thước, phân loại được thu gọn để tham khảo',
-  warehouseHtml.includes('Vầu A') && warehouseHtml.includes('11 ly') &&
-  warehouseHtml.includes('50 mm') && warehouseHtml.includes('40 kg') &&
-  warehouseHtml.includes('data-label="Phân loại tham khảo"') &&
-  warehouseHtml.includes('details class="x1-kho-kind-details"') &&
-  warehouseHtml.includes('Bó xô') && warehouseHtml.includes('12 kg'));
+check('K18: vùng 2 = LỊCH SỬ XUẤT KHO (bảng ma trận đã gỡ — chi tiết tồn xem ở popup)',
+  (warehouseHtml.includes('x1-kho-history-block') ||
+   warehouseHtml.includes('Chưa có giao dịch xuất hàng / tiêu hủy nào')) &&
+  !warehouseHtml.includes('x1-kho-matrix') &&
+  !warehouseHtml.includes('Phân loại tham khảo'));
 x1.x2CloseOpenCard();
 check('K19: nút Lùi mở Bổ và nút Tiến mở Kho Nan Xưởng 1',
   x1.x1LocThanhNavigateStage(-1) && state.x2OpenCardId === 'x1-bo-card' &&
@@ -971,6 +970,126 @@ check('K19: nút Lùi mở Bổ và nút Tiến mở Kho Nan Xưởng 1',
   state.x2OpenCardId === 'x1-kho-card' &&
   eventsSrc.includes("safeOn('btn-x1-lt-stage-prev'") &&
   eventsSrc.includes("safeOn('btn-x1-lt-stage-next'"));
+
+// ─── K2. KHO NAN XƯỞNG 1 — SỬA LỖI "BẤM NÚT KHÔNG CÓ TÁC DỤNG" + NÚT ĐỔ MÀU ──
+// Lỗi gốc: `x1KhoExportFormHtml` quyết định mở form bằng
+// `getElementById('x1-kho-export-form')?.classList.contains('show')` — element bị innerHTML
+// dựng lại mỗi lần render nên KHÔNG TỒN TẠI ⇒ isOpen luôn false ⇒ bấm Xuất hàng/Tiêu hủy
+// chỉ đổi state rồi vẽ lại toolbar, không bao giờ hiện form.
+check('K20: trạng thái mở form dựa theo STATE, bỏ hẳn kiểm tra classList.contains(\'show\') trên DOM',
+  !x2Src.includes("getElementById('x1-kho-export-form')?.classList.contains('show')") &&
+  x2Src.includes('const isOpen = !!f.type;'));
+state.x1KhoExportForm = { type: 'xuat', material: '', width: 0, len: 0, qty: 0, note: '' };
+x1.x2CloseOpenCard(); x1.x2OpenCard('x1-kho-card'); // ép vẽ lại (thẻ đang mở từ K19)
+const khoStatsOpen = document.getElementById('x1-kho-stats').innerHTML;
+check('K21: state có type → form giao dịch HIỆN NGAY (có ô nhập + nút Lưu giao dịch)',
+  khoStatsOpen.includes('id="x1-kho-export-form"') &&
+  khoStatsOpen.includes('data-x1-kho-export-save') &&
+  khoStatsOpen.includes('Lưu giao dịch') &&
+  khoStatsOpen.includes('x1-kho-export-material') &&
+  khoStatsOpen.includes('x1-kho-export-size') &&
+  khoStatsOpen.includes('x1-kho-export-qty'));
+state.x1KhoExportForm = { type: '', material: '', width: 0, len: 0, qty: 0, note: '' };
+x1.x2CloseOpenCard(); x1.x2OpenCard('x1-kho-card'); // ép vẽ lại (renderX1KhoCard không export)
+const khoStatsClosed = document.getElementById('x1-kho-stats').innerHTML;
+check('K22: state trống → hiển thị nút Xuất hàng / Tiêu hủy (không còn form)',
+  khoStatsClosed.includes('data-x1-kho-export-open="xuat"') &&
+  khoStatsClosed.includes('data-x1-kho-export-open="tieu-huy"') &&
+  !khoStatsClosed.includes('x1-kho-export-save'));
+check('K23: hàm đồng bộ ô nhập form được export + events nối change/input cho cả 4 ô',
+  typeof x1.x1KhoSyncFormFields === 'function' &&
+  eventsSrc.includes('x1KhoSyncFormFields') &&
+  eventsSrc.includes("'x1-kho-export-material', 'x1-kho-export-size', 'x1-kho-export-qty', 'x1-kho-export-note'") &&
+  eventsSrc.includes("['change', 'input']"));
+// Lưu giao dịch CHẠY THẬT: ô nhập stub trả giá trị người dùng → sync đọc kịp → không bị
+// toast "Vui lòng chọn nguyên liệu" (lỗi cũ do f.material luôn rỗng) và không "Không đủ tồn"
+// (lỗi cũ do options nguyên liệu không khớp material thực của tồn kho)
+const khoMat = (x1.x1WarehouseStockSummary().groups.find(g => g.width === 11 && g.len === 50 && g.unit === 'kg') || {}).material || 'Vầu';
+document.getElementById('x1-kho-export-material').value = khoMat;
+document.getElementById('x1-kho-export-size').value = '11|50';
+document.getElementById('x1-kho-export-qty').value = '10';
+document.getElementById('x1-kho-export-note').value = 'bán thử';
+state.x1KhoExportForm = { type: 'xuat', material: '', width: 0, len: 0, qty: 0, note: '' };
+state.x1KhoExports = [];
+x1.x1KhoSaveExport();
+const savedExp = (state.x1KhoExports || [])[0] || {};
+check('K24: Lưu giao dịch đọc đúng ô nhập (nguyên liệu/kích thước/SL/ghi chú) và trừ tồn',
+  !!savedExp.id && savedExp.type === 'xuat' && savedExp.material === khoMat &&
+  savedExp.width === 11 && savedExp.len === 50 && savedExp.qty === 10 &&
+  savedExp.note === 'bán thử' && savedExp.unit === 'kg' &&
+  x1.x1WarehouseStockSummary().totalKg === 42); // 52 − 10 đã xuất
+check('K25: bấm thẻ/nút Vầu mở POPUP chi tiết (không nở rộng ngay trong thẻ nữa)',
+  eventsSrc.includes('[data-x1-kho-detail]') &&
+  eventsSrc.includes('.x1-kho-detail-wrap') &&
+  eventsSrc.includes('modal-x1-kho-detail') &&
+  eventsSrc.includes('x1KhoCloseDetail') &&
+  !x2Src.includes("${detailOpen.vau ? x1KhoDetailHtml('Vầu') : ''}") &&
+  !x2Src.includes("${detailOpen.nua ? x1KhoDetailHtml('Nứa') : ''}"));
+check('K26: nút đổ màu gradient + hiệu ứng nổi (hover translateY + shadow, tắt khi Giảm Hiệu Ứng)',
+  stylesCss.includes('.x1-kho-export-toolbar .btn-success {') &&
+  stylesCss.includes('linear-gradient(135deg, #16a34a') &&
+  stylesCss.includes('.x1-kho-export-toolbar .btn-danger {') &&
+  stylesCss.includes('.x1-kho-export-actions .btn-primary {') &&
+  stylesCss.includes('.x1-kho-history-table .btn-danger {') &&
+  stylesCss.includes('.x1-kho-kpi-toggle:hover {') &&
+  stylesCss.includes('translateY(-2px)') &&
+  stylesCss.includes('body[data-fx="low"] .x1-kho-export-toolbar .btn') &&
+  stylesCss.includes('.x1-kho-kpi-card { cursor: pointer; }'));
+// ─── K3. SỬA LỖI BỐ CỤC / TRỰC QUAN (ánh ảnh người dùng 11/2026) ──
+check('K27: bảng không còn mở/đóng bằng <details> (phân loại hiện trực tiếp)', !x2Src.includes('x1-kho-kind-details'));
+check('K28: có dòng đối chiếu Vầu/Nứa/Khác = Tổng; vùng 2 lo phần trống (không còn gợi ý mờ trôi nổi)',
+  x2Src.includes('x1-kho-recon') && x2Src.includes('Đối chiếu:') &&
+  x2Src.includes('Chưa có giao dịch xuất hàng / tiêu hủy nào') &&
+  !x2Src.includes('x1-kho-empty-hint'));
+// Sửa lỗi lưới: #x1-kho-stats phải trở về khối dọc (material-stats là grid auto-fit 150px
+// ⇒ nút + chữ "chưa có giao dịch" nằm cùng hàng, thẻ KPI bị bóp — đúng lỗi trong ảnh)
+check('K29: #x1-kho-stats ép display:block (không còn bị grid .material-stats kéo lệch hàng)',
+  stylesCss.includes('#x1-kho-stats { display: block; }') &&
+  !stylesCss.includes('#x1-kho-stats material-stats'));
+// POPUP chi tiết: bấm Vầu → đổ bảng vào #x1-kho-detail-body + hiện overlay .show
+state.x1KhoExports = []; state.x1KhoExportForm = { type: '', material: '', width: 0, len: 0, qty: 0, note: '' };
+state.x1KhoDetailOpen = { vau: false, nua: false };
+x1.x1KhoOpenDetail('Vầu');
+const khoDetailBody = document.getElementById('x1-kho-detail-body').innerHTML;
+const khoOverlay = document.getElementById('modal-x1-kho-detail');
+check('K30: POPUP chi tiết hiện CẢ hàng không kích thước (Bó xô → "—"), không báo "chưa có kích thước"',
+  khoDetailBody.includes('x1-kho-detail-wrap') &&
+  khoDetailBody.includes('data-label="Kích thước dài">—') && // hàng chưa khai ghi "—", không mất dòng
+  khoDetailBody.includes('Bó xô') &&
+  khoOverlay.classList.contains('show') &&
+  khoOverlay.getAttribute('aria-hidden') === 'false' &&
+  !khoDetailBody.includes('Chưa có kích thước nào tồn kho'));
+x1.x1KhoCloseDetail();
+check('K31: đóng popup → overlay bỏ .show, ▲ trên thẻ KPI tắt (không còn nở rộng inline)',
+  !khoOverlay.classList.contains('show') &&
+  !document.getElementById('x1-kho-stats').innerHTML.includes('x1-kho-detail-wrap') &&
+  document.getElementById('x1-kho-stats').innerHTML.includes('data-x1-kho-detail-toggle="vau"'));
+check('K32: chính tả "Nứa" (không còn "Nửa") trên toàn bộ khối thẻ Kho X1',
+  !x2Src.includes('Nửa') &&
+  x2Src.includes("x1-kho-kpi-title\">Nứa<") &&
+  x2Src.includes("x1KhoMatGroupOf(g.material) === 'Nứa'"));
+check('K33: nhãn phân loại X1 TRUNG TÍNH — thẻ Nứa không được hiện "Vầu A/13mm/…"',
+  !x2Src.includes("label: 'Vầu ") &&
+  !x2Src.includes("label: 'Vầu A'") &&
+  ["label: 'A'", "label: 'A1'", "label: '6mm'", "label: '13mm'",
+   "label: 'Non bánh tẻ'", "label: 'B non tóp'"].every(s => x2Src.includes(s)));
+// Gọi bằng KHÓA 'vau'/'nua' đúng như click thật trên thẻ (delegation truyền data-* = khóa)
+x1.x1KhoOpenDetail('vau');
+const khoDetailByKey = document.getElementById('x1-kho-detail-body').innerHTML;
+const khoTitleByKey = document.getElementById('x1-kho-detail-title').innerHTML;
+check('K34: gọi bằng khóa "vau" vẫn mở đúng bảng Vầu (tiêu đề CÓ DẤU + bảng tồn không rỗng)',
+  khoTitleByKey.includes('Vầu — Chi Tiết Tồn Kho') &&
+  khoDetailByKey.includes('x1-kho-detail-wrap') &&
+  khoDetailByKey.includes('Bó xô') &&
+  !khoDetailByKey.includes('Chưa có tồn kho (kg) nào ghi nhận'));
+x1.x1KhoOpenDetail('nua');
+const khoDetailNua = document.getElementById('x1-kho-detail-body').innerHTML;
+const khoTitleNua = document.getElementById('x1-kho-detail-title').innerHTML;
+check('K35: gọi bằng khóa "nua" → tiêu đề "Nứa" CÓ DẤU (không hiện "nua" không dấu nữa)',
+  khoTitleNua.includes('Nứa — Chi Tiết Tồn Kho') &&
+  !khoTitleNua.includes('>nua<') &&
+  khoDetailNua.includes('cho Nứa')); // dữ liệu mẫu chưa có tồn Nứa → báo trung thực, nhưng TÊN có dấu
+x1.x1KhoCloseDetail();
 
 console.log(`\n=== KẾT QUẢ XUONG1: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

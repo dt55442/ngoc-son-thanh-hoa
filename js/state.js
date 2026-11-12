@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v395';
+  const APP_VERSION = 'v401';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -45,6 +45,8 @@
   const STORAGE_KEY_XUONG1_BO         = 'bamboo_tracker_xuong1_bo_v1';
   const STORAGE_KEY_XUONG1_PHOI_SAY   = 'bamboo_tracker_xuong1_phoi_say_v1';
   const STORAGE_KEY_XUONG1_LOC_THANH  = 'bamboo_tracker_xuong1_loc_thanh_v1';
+  // XUẤT KHO THÀNH PHẨM — thẻ \"Kho Nan — Xưởng 1\": [{ id, date, type 'xuat'|'tieu-huy', material, width, len, qty, unit, note, createdBy, createdAt, updatedAt }]
+  const STORAGE_KEY_X1_KHO_EXPORTS = 'bamboo_tracker_x1_kho_exports_v1';
   // Danh mục CHIỀU DÀI thanh (mm) gợi ý dùng chung cho thẻ Bổ Xưởng 1 (11/2026) —
   // các giá trị người dùng "Thêm" được lưu vào đây để gợi ý ở các lô sau;
   // tập chiều dài THỰC của từng lô nằm trong trường `lengths` của bản ghi xuong1BoRecords.
@@ -386,6 +388,11 @@
     // + js/planning.js getNanStockEvents).
     khoNotes: [],
     khoShowUsed: false,        // công tắc "Hiện lô đã xuất hết" (mặc định ẨN)
+    // Xuất kho thành phẩm của thẻ "Kho Nan — Xưởng 1" (xuất hàng / tiêu hủy) — [{ id, date, type, material, width, len, qty, unit, note, createdBy, createdAt, updatedAt }]
+    x1KhoExports: [],
+    // Trạng thái UI (không bền vững): chi tiết kích thước mở của Vầu/Nứa + form xuất kho đang hiển thị
+    x1KhoDetailOpen: { vau: false, nua: false },
+    x1KhoExportForm: { type: '', material: '', width: 0, len: 0, qty: 0, note: '' },
     kanbanDensity: 'cards',    // chế độ xem bảng Kanban lô: 'cards' | 'table' (nhớ máy)
     hrCheckins: [],    // [{ id, employeeId, date, in, out, punches, punchTimes[], fileName, createdAt, updatedAt }] — giờ máy chấm công đã nạp
     hrCiAcks: [],      // [{ id, employeeId, date, note, by, at }] — đánh dấu "đã xác nhận" dòng đối chiếu Bố trí ↔ Máy chấm công
@@ -685,6 +692,7 @@ export {
   STORAGE_KEY_X1_BO_LENGTHS,
   STORAGE_KEY_X1_BO_WIDTHS,
   STORAGE_KEY_X1_RATES,
+  STORAGE_KEY_X1_KHO_EXPORTS,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_MECH_WORK_PLANS,
   STORAGE_KEY_QC_KILN_HUMIDITY,

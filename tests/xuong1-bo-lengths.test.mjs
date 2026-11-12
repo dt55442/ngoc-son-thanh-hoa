@@ -117,7 +117,8 @@ check('Events và CSS nối đủ giao diện nhiều lô, danh mục và ma tr�
   eventsSrc.includes('x1LtLengthAdd') && stylesCss.includes('.x1-lt-source-options') &&
   stylesCss.includes('.x1-lt-source-trigger') &&
   stylesCss.includes('.x1-lt-source-rows') &&
-  stylesCss.includes('.x1-kho-matrix') && idxHtml.includes('Ma Trận Tồn Nan'));
+  stylesCss.includes('.x1-kho-history-block') &&
+  (idxHtml.includes('Ma Trận Tồn Nan') || idxHtml.includes('Tồn Theo Kích Thước') || idxHtml.includes('Lịch Sử Xuất Hàng')));
 check('Cache APP_VERSION đồng bộ giữa state.js và sw.js',
   !!appVersion && read('../sw.js').includes(`nha-may-ngoc-son-${appVersion}`));
 check('Export Excel có các trường phân bổ nguồn và chênh kg',
@@ -298,12 +299,13 @@ console.log('--- KHO NAN VÀ BÁO CÁO ---');
 const warehouse = x1.x1WarehouseStockSummary();
 check('Kho Nan nhóm theo bản rộng × chiều dài, giữ số liệu phân loại để tham khảo',
   warehouse.matrixRows.some(row => row.width === 11 && row.len === 50 &&
-    row.values['Vầu A'] === 40) &&
-  warehouse.matrixKinds.some(kind => kind.label === 'Vầu A'));
+    row.values['A'] === 40) &&
+  warehouse.matrixKinds.some(kind => kind.label === 'A'));
 x1.renderX1CardOf('x1-kho-card');
-check('Giao diện Kho Nan hiển thị ma trận và nhóm Bó Xô ngoài ma trận',
-  g('x1-kho-inventory').innerHTML.includes('x1-kho-matrix') &&
-  g('x1-kho-inventory').innerHTML.includes('Bó xô'));
+check('Giao diện Kho Nan: vùng 2 là lịch sử xuất kho (ma trận đã gỡ)',
+  !g('x1-kho-inventory').innerHTML.includes('x1-kho-matrix') &&
+  (g('x1-kho-inventory').innerHTML.includes('x1-kho-history-block') ||
+   g('x1-kho-inventory').innerHTML.includes('Chưa có giao dịch xuất hàng / tiêu hủy nào')));
 const report = await import('../js/export-xlsx.js');
 const exportData = report.buildX2ExportData('x1locthanh', {});
 const exportText = JSON.stringify(exportData && exportData.aoa || []);

@@ -8,7 +8,7 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, STORAGE_KEY_X1_KHO_EXPORTS, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — 3 miền Nhân sự
 import { STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_CALENDAR } from './state.js';
@@ -230,6 +230,24 @@ import { reportStorageFailure } from './storage-diagnostics.js';
   }
   function restoreXuong1LocThanh(incomingArr) {
     return restoreX1Records(STORAGE_KEY_XUONG1_LOC_THANH, 'xuong1LocThanhRecords', incomingArr);
+  }
+  // ─── GỘP XUẤT KHO XƯỞNG 1 (file / backup / mây) ──
+  function restoreX1KhoExports(incomingArr) {
+    const incoming = Array.isArray(incomingArr) ? incomingArr.filter(r => r && r.id) : [];
+    if (!incoming.length) return state.x1KhoExports || [];
+    const stamp = s => String((s && (s.updatedAt || s.createdAt)) || '');
+    const map = new Map((state.x1KhoExports || []).filter(r => r && r.id).map(r => [r.id, r]));
+    let changed = false;
+    incoming.forEach(r => {
+      const cur = map.get(r.id);
+      if (!cur || stamp(r) >= stamp(cur)) { map.set(r.id, r); changed = true; }
+    });
+    const merged = [...map.values()];
+    if (changed) {
+      state.x1KhoExports = merged;
+      try { localStorage.setItem(STORAGE_KEY_X1_KHO_EXPORTS, JSON.stringify(merged)); } catch (err) {}
+    }
+    return merged;
   }
   // Khôi phục ĐỊNH MỨC XƯỞNG 1 ({ catOng|saySinh|boc: { 'YYYY-MM': kg/h } })
   function restoreX1Rates(incomingObj) {
@@ -1034,6 +1052,7 @@ import { reportStorageFailure } from './storage-diagnostics.js';
         if (loaded.xuong1BoRecords && Array.isArray(loaded.xuong1BoRecords)) restoreXuong1Bo(loaded.xuong1BoRecords);
         if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
         if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
+        if (loaded.x1KhoExports && Array.isArray(loaded.x1KhoExports)) restoreX1KhoExports(loaded.x1KhoExports);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x1BoLengthOptions) restoreX1BoLengthOptions(loaded.x1BoLengthOptions);
         if (loaded.x1BoWidthOptions) restoreX1BoWidthOptions(loaded.x1BoWidthOptions);
@@ -1211,6 +1230,7 @@ import { reportStorageFailure } from './storage-diagnostics.js';
         if (loaded.xuong1BoRecords && Array.isArray(loaded.xuong1BoRecords)) restoreXuong1Bo(loaded.xuong1BoRecords);
         if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
         if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
+        if (loaded.x1KhoExports && Array.isArray(loaded.x1KhoExports)) restoreX1KhoExports(loaded.x1KhoExports);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x1BoLengthOptions) restoreX1BoLengthOptions(loaded.x1BoLengthOptions);
         if (loaded.x1BoWidthOptions) restoreX1BoWidthOptions(loaded.x1BoWidthOptions);
@@ -1694,6 +1714,7 @@ import { reportStorageFailure } from './storage-diagnostics.js';
         if (imported && Array.isArray(imported.xuong1BoRecords)) restoreXuong1Bo(imported.xuong1BoRecords);
         if (imported && Array.isArray(imported.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(imported.xuong1PhoiSayRecords);
         if (imported && Array.isArray(imported.xuong1LocThanhRecords)) restoreXuong1LocThanh(imported.xuong1LocThanhRecords);
+        if (imported && Array.isArray(imported.x1KhoExports)) restoreX1KhoExports(imported.x1KhoExports);
         if (imported && imported.x1Rates) restoreX1Rates(imported.x1Rates);
         if (imported && imported.x1BoLengthOptions) restoreX1BoLengthOptions(imported.x1BoLengthOptions);
         if (imported && imported.x1BoWidthOptions) restoreX1BoWidthOptions(imported.x1BoWidthOptions);
@@ -2003,6 +2024,7 @@ export {
   restoreXuong1Bo,
   restoreXuong1PhoiSay,
   restoreXuong1LocThanh,
+  restoreX1KhoExports,
   restoreX1Rates,
   restoreX1BoLengthOptions,
   restoreX2BoluongRates,

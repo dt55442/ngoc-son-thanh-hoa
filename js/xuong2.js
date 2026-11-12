@@ -30,7 +30,7 @@ import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
 import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, state } from './state.js';
+import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, STORAGE_KEY_X1_KHO_EXPORTS, state } from './state.js';
 import { applyTombstonesToRecordList, trackDeleted } from './tombstone.js';
 import { hydrateMonthlyDomain, persistMonthlyDomain } from './monthly-domain.js';
 import { mergeRecordsByTimestamp } from './record-merge.js';
@@ -14640,6 +14640,13 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return Math.max(0, (Number(rec.klDat) || 0) - used);
   }
 
+  function loadX1KhoExports() {
+    const raw = localStorage.getItem(STORAGE_KEY_X1_KHO_EXPORTS);
+    if (raw) {
+      try { const a = JSON.parse(raw); state.x1KhoExports = Array.isArray(a) ? a : []; }
+      catch (e) { state.x1KhoExports = []; }
+    } else state.x1KhoExports = [];
+  }
   function loadXuong1CatOng() {
     const raw = localStorage.getItem(STORAGE_KEY_XUONG1_CAT_ONG);
     if (raw) {
@@ -17367,14 +17374,15 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // Phân loại RIÊNG của Xưởng 1 (theo bảng Excel của xưởng),
   // KHÁC với NAN_CLASSES của Xưởng 2 (Luồng: A/A1/B/Loại hẳn) — TUYỆT ĐỐI đừng dùng nhầm.
   // Cột "Loại" tính riêng; các giá trị của ma trận mới đều là kg.
+  // Nhãn phân loại TRUNG TÍNH (bỏ tiền tố "Vầu") — cùng bộ dùng cho CẢ Vầu lẫn Nứa; dữ liệu vẫn key theo id nên đổi nhãn không mất số.
   const X1_LT_CLASSES = [
-    { id: 'A',     label: 'Vầu A',            short: 'A' },
-    { id: 'A1',    label: 'Vầu A1',           short: 'A1' },
-    { id: 'd6',    label: 'Vầu 6mm',          short: '6mm' },
-    { id: 'd13',   label: 'Vầu 13mm',         short: '13mm' },
+    { id: 'A',     label: 'A',            short: 'A' },
+    { id: 'A1',    label: 'A1',           short: 'A1' },
+    { id: 'd6',    label: '6mm',          short: '6mm' },
+    { id: 'd13',   label: '13mm',         short: '13mm' },
     { id: 'bau',   label: 'Cắt đầu',          short: 'Cắt đầu' },
-    { id: 'nonbt', label: 'Vầu non bánh tẻ',  short: 'Bánh tẻ' },
-    { id: 'bnont', label: 'Vầu B non tóp',    short: 'B non tóp' },
+    { id: 'nonbt', label: 'Non bánh tẻ',  short: 'Bánh tẻ' },
+    { id: 'bnont', label: 'B non tóp',    short: 'B non tóp' },
     { id: 'loai',  label: 'Loại',             short: 'Loại' }
   ];
   // Cờ giao diện ma trận mới (kg) / ma trận cũ (số lượng) / dòng kg cũ — THUẦN PHIÊN
@@ -17711,12 +17719,42 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       current.qty += item.qty;
       grouped.set(key, current);
     });
-    const groups = [...grouped.values()].sort((a, b) =>
+    // ── TRỪ XUẤT KHO / TIÊU HỦY (xuất hàng thành phẩm) ─────────
+    // SỬA LỖI 2: trước đây so khóa [material, e.type('xuat'), …] với [material, item.kind('A'), …]
+    // ⇒ KHÔNG BAO GIỜ khớp ⇒ xuất kho không bao giờ trừ tồn. Đúng vật lý: xuất theo
+    // (nguyên liệu, kích thước, đơn vị) — trừ từ phân loại CÓ NHIỀU nhất trước.
+    const exportBySize = new Map();
+    (state.x1KhoExports || []).forEach(e => {
+      const key = [e.material, e.width, e.len, e.unit].join('|');
+      exportBySize.set(key, (Number(exportBySize.get(key)) || 0) + (Number(e.qty) || 0));
+    });
+    const bySize = new Map();
+    grouped.forEach(item => {
+      const sizeKey = [item.material, item.width, item.len, item.unit].join('|');
+      if (!bySize.has(sizeKey)) bySize.set(sizeKey, []);
+      bySize.get(sizeKey).push(item);
+    });
+    const groups = [];
+    bySize.forEach(list => {
+      const outLeft = Number(exportBySize.get(
+        [list[0].material, list[0].width, list[0].len, list[0].unit].join('|'))) || 0;
+      list.sort((a, b) => b.qty - a.qty);
+      let out = outLeft;
+      list.forEach(item => {
+        if (out <= 0) { groups.push(item); return; }
+        const take = Math.min(out, item.qty);
+        out -= take;
+        const net = item.qty - take;
+        if (net > 0) groups.push({ ...item, qty: net });
+      });
+    });
+    groups.sort((a, b) =>
       (a.material || '').localeCompare(b.material || '', 'vi') || a.kind.localeCompare(b.kind, 'vi') ||
       a.width - b.width || a.len - b.len || a.unit.localeCompare(b.unit));
     const matrixKinds = X1_LT_CLASSES.filter(c => c.id !== 'loai');
+    // Ma trận tồn hiển thị số CÒN LẠI (sau trừ xuất) — khớp chip "Tồn" + thẻ KPI
     const matrixMap = new Map();
-    items.filter(item => item.width > 0 && item.len > 0 &&
+    groups.filter(item => item.width > 0 && item.len > 0 &&
       matrixKinds.some(kind => kind.label === item.kind)).forEach(item => {
       const key = `${item.unit}|${item.material}|${item.width}|${item.len}`;
       const row = matrixMap.get(key) || {
@@ -17730,68 +17768,296 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       a.len - b.len || a.unit.localeCompare(b.unit));
     const otherGroups = groups.filter(item => !item.width || !item.len ||
       !matrixKinds.some(kind => kind.label === item.kind));
-    const totalKg = items.reduce((sum, item) => sum + (item.unit === 'kg' ? item.qty : 0), 0);
-    const locThanhKg = items.reduce((sum, item) => sum + (item.unit === 'kg' && item.kind !== 'Bó xô' ? item.qty : 0), 0);
-    const boXoKg = items.reduce((sum, item) => sum + (item.unit === 'kg' && item.kind === 'Bó xô' ? item.qty : 0), 0);
-    const legacyCount = items.reduce((sum, item) => sum + (item.unit === 'SL' ? item.qty : 0), 0);
+    // Tổng tính từ NHÓM SAU TRỪ XUẤT (trước đây tính từ items gốc ⇒ chip "Tồn" không giảm)
+    const totalKg = groups.reduce((sum, item) => sum + (item.unit === 'kg' ? item.qty : 0), 0);
+    const locThanhKg = groups.reduce((sum, item) => sum + (item.unit === 'kg' && item.kind !== 'Bó xô' ? item.qty : 0), 0);
+    const boXoKg = groups.reduce((sum, item) => sum + (item.unit === 'kg' && item.kind === 'Bó xô' ? item.qty : 0), 0);
+    const legacyCount = groups.reduce((sum, item) => sum + (item.unit === 'SL' ? item.qty : 0), 0);
     return { items, groups, matrixKinds, matrixRows, otherGroups, totalKg, locThanhKg, boXoKg, legacyCount };
   }
+  // ── PHÂN LOẠI MỀM VẦU/NỬA theo TÊN nguyên liệu thật (srcType) ──
+  // Tồn kho dùng tên thật như "Vầu thanh không cạo" / "Nứa cây" — so khớp cứng 'Vầu'/'Nứa'
+  // làm 2 thẻ KPI toàn 0. Bỏ dấu + chứa 'vau' → Vầu (ưu tiên khi tên gộp "Vầu/nứa"), 'nua' → Nứa.
+  function x1KhoMatGroupOf(material) {
+    const m = String(material || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (m.includes('vau')) return 'Vầu';
+    if (m.includes('nua')) return 'Nứa';
+    return '';
+  }
+  const vauKgOf = s => s.groups.reduce((t, g) => t + (x1KhoMatGroupOf(g.material) === 'Vầu' && g.unit === 'kg' ? g.qty : 0), 0);
+  const nuaKgOf = s => s.groups.reduce((t, g) => t + (x1KhoMatGroupOf(g.material) === 'Nứa' && g.unit === 'kg' ? g.qty : 0), 0);
   function renderX1KhoCard() {
     const summary = x1WarehouseStockSummary();
     const bar = document.getElementById('x1-kho-stock-bar');
     if (bar) {
-      bar.innerHTML = `<span class="x2-stock-title"><i data-lucide="boxes"></i> Tổng khối lượng: <strong>${fmtKg(summary.totalKg)} kg</strong> · ${summary.matrixRows.length.toLocaleString('vi-VN')} tổ hợp bản rộng × kích thước (tách theo loại nguyên liệu)</span>`;
+      bar.innerHTML = `<span class="x2-stock-title"><i data-lucide="boxes"></i> Tồn kho Xưởng 1: <strong>${fmtKg(summary.totalKg)} kg</strong> · Vầu ${fmtKg(vauKgOf(summary))} kg · Nứa ${fmtKg(nuaKgOf(summary))} kg</span>`;
     }
     const stats = document.getElementById('x1-kho-stats');
     if (stats) {
+      const vauKg = vauKgOf(summary);
+      const nuaKg = nuaKgOf(summary);
+      const detailOpen = state.x1KhoDetailOpen || { vau: false, nua: false };
+      // DÒNG ĐỐI CHIẾU: Vầu + Nứa + Khác = Tổng — tránh 2 thẻ KPI không khớp thanh tồn
+      const otherKg = summary.groups.reduce((s, g) => s + (g.unit === 'kg' && !x1KhoMatGroupOf(g.material) ? g.qty : 0), 0);
+      const reconParts = [`Vầu ${fmtKg(vauKg)} kg`, `Nứa ${fmtKg(nuaKg)} kg`];
+      if (otherKg > 0) reconParts.push(`Chưa rõ loại ${fmtKg(otherKg)} kg`);
+      if (summary.legacyCount > 0) reconParts.push(`${summary.legacyCount.toLocaleString('vi-VN')} SL cũ`);
+      const recon = `<div class="x1-kho-recon">Đối chiếu: ${reconParts.join(' + ')} = <strong>Tổng ${fmtKg(summary.totalKg)} kg</strong></div>`;
       stats.innerHTML = `
-        <div class="material-stat"><span class="material-stat-value">${fmtKg(summary.totalKg)}</span><span class="material-stat-label">Tổng thành phẩm (kg)</span></div>
-        <div class="material-stat"><span class="material-stat-value">${fmtKg(summary.locThanhKg)}</span><span class="material-stat-label">Lọc thanh (kg)</span></div>
-        <div class="material-stat"><span class="material-stat-value">${fmtKg(summary.boXoKg)}</span><span class="material-stat-label">Bó xô · tham khảo (kg)</span></div>`;
+        <div class="x1-kho-kpi-row">
+          <div class="x1-kho-kpi-card ${detailOpen.vau ? 'is-open' : ''}" data-x1-kho-detail="vau">
+            <div class="x1-kho-kpi-head">
+              <div class="x1-kho-kpi-icon is-vau"><i data-lucide="leaf"></i></div>
+              <div class="x1-kho-kpi-info">
+                <div class="x1-kho-kpi-title">Vầu</div>
+                <div class="x1-kho-kpi-sub">Tổng ${fmtKg(vauKg)} kg</div>
+              </div>
+              <button class="x1-kho-kpi-toggle" title="${detailOpen.vau ? 'Ẩn chi tiết' : 'Xem bảng chi tiết tồn kho'}" data-x1-kho-detail-toggle="vau">${detailOpen.vau ? '▲' : '▼'}</button>
+            </div>
+          </div>
+          <div class="x1-kho-kpi-card ${detailOpen.nua ? 'is-open' : ''}" data-x1-kho-detail="nua">
+            <div class="x1-kho-kpi-head">
+              <div class="x1-kho-kpi-icon is-nua"><i data-lucide="sprout"></i></div>
+              <div class="x1-kho-kpi-info">
+                <div class="x1-kho-kpi-title">Nứa</div>
+                <div class="x1-kho-kpi-sub">Tổng ${fmtKg(nuaKg)} kg</div>
+              </div>
+              <button class="x1-kho-kpi-toggle" title="${detailOpen.nua ? 'Ẩn chi tiết' : 'Xem bảng chi tiết tồn kho'}" data-x1-kho-detail-toggle="nua">${detailOpen.nua ? '▲' : '▼'}</button>
+            </div>
+          </div>
+        </div>
+        ${recon}
+        ${x1KhoExportFormHtml()}
+      `;
     }
-    const inventory = document.getElementById('x1-kho-inventory');
-    if (inventory) {
-      const matrix = summary.matrixRows.length
-        ? `<div class="x1-kho-table-wrap"><table class="data-table x1-kho-matrix">
-            <thead><tr><th>Loại nguyên liệu</th><th>Bản rộng</th><th>Kích thước dài</th><th class="text-right">Tổng theo kích thước</th><th>Phân loại tham khảo</th></tr></thead>
-            <tbody>${summary.matrixRows.map(row => {
-              const total = Object.values(row.values).reduce((sum, value) => sum + value, 0);
-              const details = summary.matrixKinds.map(kind => {
-                const value = Number(row.values[kind.label]) || 0;
-                return value > 0
-                  ? `<span><strong>${escapeHTML(kind.label)}</strong>: ${escapeHTML(row.unit === 'kg'
-                    ? `${fmtKg(value)} kg` : `${value.toLocaleString('vi-VN')} SL`)}</span>` : '';
-              }).filter(Boolean).join(' · ');
-              return `<tr>
-                <td data-label="Loại nguyên liệu">${escapeHTML(row.material || 'Vầu/nứa')}</td>
-                <td data-label="Bản rộng">${row.width} ly</td>
-                <td data-label="Kích thước dài">${row.len} mm</td>
-                <td class="text-right x1-kho-primary-total" data-label="Tổng theo kích thước"><strong>${escapeHTML(row.unit === 'kg'
-                  ? `${fmtKg(total)} kg` : `${total.toLocaleString('vi-VN')} SL`)}</strong></td>
-                <td data-label="Phân loại tham khảo"><details class="x1-kho-kind-details">
-                  <summary>${details ? 'Xem phân loại' : '—'}</summary><div>${details}</div>
-                </details></td>
-              </tr>`;
-            }).join('')}</tbody>
-          </table></div>`
-        : '';
-      const other = summary.otherGroups.length
-        ? `<div class="x1-kho-table-wrap"><table class="data-table x1-kho-table">
-            <thead><tr><th>Dạng tồn ngoài ma trận</th><th>Loại nguyên liệu</th><th>Đơn vị</th><th class="text-right">Tồn ghi nhận</th></tr></thead>
-            <tbody>${summary.otherGroups.map(item => `<tr>
-              <td data-label="Dạng tồn"><strong>${escapeHTML(item.kind)}${item.width ? ` · ${item.width} ly` : ''}${item.len ? ` · ${item.len} mm` : ''}</strong></td>
-              <td data-label="Loại nguyên liệu">${escapeHTML(item.material || 'Vầu/nứa')}</td>
-              <td data-label="Đơn vị">${escapeHTML(item.unit)}</td>
-              <td class="text-right" data-label="Tồn ghi nhận"><strong>${escapeHTML(item.unit === 'kg'
-                ? `${fmtKg(item.qty)} kg` : `${item.qty.toLocaleString('vi-VN')} SL`)}</strong></td>
-            </tr>`).join('')}</tbody>
-          </table></div>`
-        : '';
-      inventory.innerHTML = matrix || other
-        ? `${matrix}${other}`
-        : '<div class="x1-kho-empty">Chưa có thành phẩm Lọc Thanh/Bó Xô được ghi nhận.</div>';
+    // ── VÙNG 2 = LỊCH SỬ XUẤT HÀNG / TIÊU HỦY ──
+    // (bảng ma trận đã gỡ: chi tiết tồn giờ xem bằng popup bấm vào thẻ Vầu/Nứa)
+    const history = document.getElementById('x1-kho-inventory');
+    if (history) {
+      const html = x1KhoExportHistoryHtml();
+      history.innerHTML = html
+        ? `<div class="x1-kho-history-block">${html}</div>`
+        : '<div class="x1-kho-empty">Chưa có giao dịch xuất hàng / tiêu hủy nào. Bấm “Xuất hàng” hoặc “Tiêu hủy” ở vùng 1 để ghi giao dịch.</div>';
     }
     initLucide();
+  }
+  function x1KhoDetailHtml(material) {
+    const summary = x1WarehouseStockSummary();
+    // Hiển thị MỌI nhóm kg của nguyên liệu — kể cả tồn KHÔNG có bản rộng/dài (bó xô…).
+    // Trước đây chỉ lọc width>0 && len>0 nên thẻ Vầu 8.719 kg báo sai
+    // "Chưa có kích thước nào tồn kho" trong khi vẫn còn hàng.
+    const rows = summary.groups
+      .filter(g => x1KhoMatGroupOf(g.material) === material && g.unit === 'kg')
+      .sort((a, b) => a.width - b.width || a.len - b.len || a.kind.localeCompare(b.kind, 'vi'));
+    if (!rows.length) return `<div class="x1-kho-detail-empty">Chưa có tồn kho (kg) nào ghi nhận cho ${escapeHTML(material)}.</div>`;
+    const total = rows.reduce((s, r) => s + r.qty, 0);
+    const hasSize = rows.some(r => r.width > 0 && r.len > 0);
+    return `<div class="x1-kho-detail-wrap">
+      <div class="x1-kho-detail-head">${escapeHTML(material)} — chi tiết tồn theo kích thước & phân loại · tổng <strong>${fmtKg(total)} kg</strong></div>
+      <table class="data-table x1-kho-detail-table">
+        <thead><tr><th>Phân loại</th><th>Bản rộng</th><th>Kích thước dài</th><th class="text-right">Tồn (kg)</th></tr></thead>
+        <tbody>${rows.map(r => `<tr>
+          <td data-label="Phân loại">${escapeHTML(r.kind)}</td>
+          <td data-label="Bản rộng">${r.width > 0 ? `${r.width} ly` : '—'}</td>
+          <td data-label="Kích thước dài">${r.len > 0 ? `${r.len} mm` : '—'}</td>
+          <td class="text-right" data-label="Tồn">${fmtKg(r.qty)} kg</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      ${hasSize ? '' : '<div class="x1-kho-detail-note">Toàn bộ tồn chưa khai bản rộng/dài (thường là Bó xô / lọc thanh chưa phân loại).</div>'}
+    </div>`;
+  }
+  // ── CHUẨN HÓA ĐẦU VÀO: nhận CẢ khóa ('vau'/'nua' — từ data-* trên thẻ) LẪN tên ('Vầu'/'Nứa') ──
+  // Lỗi cũ: delegation truyền đúng khóa 'vau'/'nua' nhưng hàm so sánh với 'Vầu'/'Nứa'
+  // ⇒ x1KhoMatGroupOf không khớp nhóm nào ⇒ popup rỗng + tiêu đề hiện "vau" KHÔNG DẤU.
+  function x1KhoMatNameOf(material) {
+    return (material === 'Vầu' || material === 'vau') ? 'Vầu' : 'Nứa';
+  }
+  // ── CHI TIẾT TỒN = POPUP (modal) — KHÔNG nở rộng ngay trong thẻ ──
+  // Lỗi cũ: nở inline làm TRÀN trang (kéo dài trang) + vì khu vực bị layout lỗi nên
+  // bấm Vầu lại hiện bảng ở khu vực thẻ Nứa. Nay mỗi loại 1 popup cấp trang.
+  function x1KhoToggleDetail(material) {
+    const mat = x1KhoMatNameOf(material);
+    const open = state.x1KhoDetailOpen || {};
+    const isOpen = mat === 'Vầu' ? open.vau : open.nua;
+    if (isOpen) x1KhoCloseDetail();
+    else x1KhoOpenDetail(mat);
+  }
+  function x1KhoOpenDetail(material) {
+    const mat = x1KhoMatNameOf(material);
+    state.x1KhoDetailOpen = { vau: mat === 'Vầu', nua: mat === 'Nứa' };
+    const body = document.getElementById('x1-kho-detail-body');
+    if (body) body.innerHTML = x1KhoDetailHtml(mat);
+    const title = document.getElementById('x1-kho-detail-title');
+    if (title) title.innerHTML = `<i data-lucide="${mat === 'Vầu' ? 'leaf' : 'sprout'}"></i> ${escapeHTML(mat)} — Chi Tiết Tồn Kho`;
+    const ov = document.getElementById('modal-x1-kho-detail');
+    if (ov) { ov.classList.add('show'); ov.setAttribute('aria-hidden', 'false'); }
+    initLucide();
+    renderX1KhoCard(); // cập nhật ▲/▼ trên thẻ
+  }
+  function x1KhoCloseDetail() {
+    state.x1KhoDetailOpen = { vau: false, nua: false };
+    const ov = document.getElementById('modal-x1-kho-detail');
+    if (ov) { ov.classList.remove('show'); ov.setAttribute('aria-hidden', 'true'); }
+    renderX1KhoCard();
+  }
+  function x1KhoOpenExportForm(type) {
+    state.x1KhoExportForm = { type, material: '', width: 0, len: 0, qty: 0, note: '' };
+    renderX1KhoCard();
+  }
+  function x1KhoCloseExportForm() {
+    state.x1KhoExportForm = { type: '', material: '', width: 0, len: 0, qty: 0, note: '' };
+    renderX1KhoCard();
+  }
+  function x1KhoExportFormHtml() {
+    const f = state.x1KhoExportForm || {};
+    const groups = x1WarehouseStockSummary().groups || [];
+    // SỬA LỖI "BẤM NÚT KHÔNG CÓ TÁC DỤNG": trạng thái mở/đóng phải dựa theo STATE
+    // (trước đây đọc `#x1-kho-export-form.classList.contains('show')` — element bị innerHTML
+    // dựng lại mỗi lần render nên không bao giờ có class 'show' ⇒ form không bao giờ mở).
+    const isOpen = !!f.type;
+    // SỬA LỖI 3: options nguyên liệu phải lấy từ TỒN KHO THỰC (groups — srcType thật như
+    // "Vầu thanh không cạo"), không lấy từ lịch sử xuất/cứng 'Vầu'/'Nứa' — chọn option nào
+    // cũng không khớp material của tồn ⇒ luôn báo "Không đủ tồn".
+    const materials = [...new Set(groups.map(g => g.material).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'vi'));
+    if (!materials.length) materials.push('Vầu', 'Nứa');
+    const sizes = [...new Set(groups.map(g => `${g.width}|${g.len}`).filter(Boolean))];
+    return isOpen ? `<div class="x1-kho-export-form show" id="x1-kho-export-form">
+      <div class="x1-kho-export-head">
+        <span class="x1-kho-export-type ${f.type === 'xuat' ? 'is-xuat' : 'is-tieu-huy'}">${f.type === 'xuat' ? '📤 Xuất hàng' : '🗑️ Tiêu hủy'}</span>
+        <button class="x1-kho-export-close" title="Đóng" data-x1-kho-export-close>×</button>
+      </div>
+      <div class="x1-kho-export-grid">
+        <div class="form-group">
+          <label>Loại nguyên liệu</label>
+          <select id="x1-kho-export-material" class="form-control">${materials.map(m => `<option value="${escapeHTML(m)}" ${f.material === m ? 'selected' : ''}>${escapeHTML(m)}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>Kích thước (bản rộng × dài)</label>
+          <select id="x1-kho-export-size" class="form-control">
+            <option value="">-- Chọn kích thước --</option>
+            ${sizes.map(sz => {
+              const [w, l] = sz.split('|');
+              const sel = String(f.width) === w && String(f.len) === l ? 'selected' : '';
+              const label = (Number(w) > 0 && Number(l) > 0)
+                ? `${w} ly × ${l} mm`
+                : 'Không kích thước (Bó xô / khác)';
+              return `<option value="${w}|${l}" ${sel}>${label}</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Số lượng (kg)</label>
+          <input type="number" inputmode="decimal" min="0" step="any" id="x1-kho-export-qty" class="form-control x2-num6" value="${Number(f.qty) || 0}">
+        </div>
+        <div class="form-group">
+          <label>Ghi chú</label>
+          <input type="text" id="x1-kho-export-note" class="form-control" value="${escapeHTML(f.note || '')}" placeholder="VD: bán cho khách …">
+        </div>
+      </div>
+      <div class="x1-kho-export-actions">
+        <button type="button" class="btn btn-outline" data-x1-kho-export-cancel>Hủy</button>
+        <button type="button" class="btn btn-primary" data-x1-kho-export-save>Lưu giao dịch</button>
+      </div>
+    </div>` : `<div class="x1-kho-export-toolbar">
+      <button type="button" class="btn btn-success" data-x1-kho-export-open="xuat"><i data-lucide="send"></i> Xuất hàng</button>
+      <button type="button" class="btn btn-danger" data-x1-kho-export-open="tieu-huy"><i data-lucide="trash-2"></i> Tiêu hủy</button>
+    </div>`;
+  }
+  function x1KhoExportHistoryHtml() {
+    const list = (state.x1KhoExports || []).slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    if (!list.length) return ''; // trống → không vẽ khối (gợi ý mờ nằm trong thanh nút)
+    return `<div class="x1-kho-history-wrap">
+      <div class="x1-kho-history-head">Lịch sử xuất kho</div>
+      <table class="data-table x1-kho-history-table">
+        <thead><tr><th>Ngày</th><th>Loại giao dịch</th><th>Nguyên liệu</th><th>Kích thước</th><th class="text-right">Khối lượng</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+        <tbody>${list.map(e => {
+          const size = e.width && e.len ? `${e.width} ly × ${e.len} mm` : '—';
+          const cls = e.type === 'xuat' ? 'is-xuat' : 'is-tieu-huy';
+          const label = e.type === 'xuat' ? 'Xuất hàng' : 'Tiêu hủy';
+          return `<tr>
+            <td data-label="Ngày">${formatDateDDMMYY(e.date)}</td>
+            <td data-label="Loại"><span class="x1-kho-history-chip ${cls}">${label}</span></td>
+            <td data-label="Nguyên liệu">${escapeHTML(e.material || '—')}</td>
+            <td data-label="Kích thước">${size}</td>
+            <td class="text-right" data-label="Khối lượng"><strong>${fmtKg(Number(e.qty) || 0)} kg</strong></td>
+            <td data-label="Ghi chú">${escapeHTML(e.note || '—')}</td>
+            <td data-label="Thao tác"><button class="btn btn-sm btn-danger" title="Xóa" data-x1-kho-export-delete="${escapeHTML(e.id || '')}"><i data-lucide="trash-2"></i></button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
+  }
+  function x1KhoSaveExport() {
+    // Đọc KỊP lựa chọn mới nhất từ các ô nhập (phòng khi change chưa kịp bắn)
+    x1KhoSyncFormFields();
+    const f = state.x1KhoExportForm || {};
+    if (!f.type) { showToast('Vui lòng chọn loại giao dịch.', 'error'); return; }
+    if (!f.material) { showToast('Vui lòng chọn nguyên liệu.', 'error'); return; }
+    const sel = document.getElementById('x1-kho-export-size');
+    if (!sel || !sel.value) { showToast('Vui lòng chọn kích thước.', 'error'); return; }
+    const [w, l] = String(sel.value).split('|').map(Number);
+    const qtyEl = document.getElementById('x1-kho-export-qty');
+    const qty = Number(qtyEl && qtyEl.value) || 0;
+    if (qty <= 0) { showToast('Số lượng phải lớn hơn 0.', 'error'); return; }
+    const summary = x1WarehouseStockSummary();
+    const exist = summary.groups.find(g => g.material === f.material && g.width === w && g.len === l && g.unit === 'kg');
+    const existQty = exist ? exist.qty : 0;
+    if (qty > existQty) {
+      showToast(`Không đủ tồn: chỉ còn ${fmtKg(existQty)} kg ${f.material} ${w}×${l} mm.`, 'error');
+      return;
+    }
+    const now = new Date();
+    const rec = {
+      id: 'x1ke-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      date: now.toISOString().slice(0, 10),
+      type: f.type,
+      material: f.material,
+      width: w,
+      len: l,
+      qty,
+      unit: 'kg',
+      note: f.note || '',
+      createdBy: (state.currentUser && state.currentUser.username) || '—',
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
+    };
+    state.x1KhoExports = [...(state.x1KhoExports || []), rec];
+    try { localStorage.setItem(STORAGE_KEY_X1_KHO_EXPORTS, JSON.stringify(state.x1KhoExports)); } catch (err) { showToast('Không lưu được vào bộ nhớ máy.', 'error'); }
+    logDataChange(['x1KhoExports']);
+    if (state.fileStorage.connected) { storageModule().then(m => m && m.writeDataToFile()).catch(() => {}); }
+    firePushSync();
+    x1KhoCloseExportForm();
+    showToast(`Đã ghi giao dịch ${f.type === 'xuat' ? 'xuất hàng' : 'tiêu hủy'} ${fmtKg(qty)} kg.`, 'success');
+  }
+  // ── ĐỒNG BỘ Ô NHẬP FORM XUẤT KHO VÀO STATE ──
+  // Form bị innerHTML dựng lại mỗi lần renderAll (đồng bộ mây 2 phút/lần…) — nếu không ghi
+  // ngay lựa chọn vào state thì chọn xong bị vẽ lại là mất. Uỷ nhiệm change/input từ events.js.
+  function x1KhoSyncFormFields() {
+    const f = state.x1KhoExportForm;
+    if (!f || !f.type) return;
+    const mat = document.getElementById('x1-kho-export-material');
+    if (mat && mat.value) f.material = mat.value;
+    const size = document.getElementById('x1-kho-export-size');
+    if (size && size.value) {
+      const [w, l] = String(size.value).split('|').map(Number);
+      if (Number.isFinite(w)) f.width = w;
+      if (Number.isFinite(l)) f.len = l;
+    }
+    const qty = document.getElementById('x1-kho-export-qty');
+    if (qty) f.qty = Number(qty.value) || 0;
+    const note = document.getElementById('x1-kho-export-note');
+    if (note) f.note = note.value;
+  }
+  function x1KhoDeleteExport(id) {
+    if (!confirm('Bạn chắc chắn muốn xóa giao dịch này? Số lượng sẽ được hoàn trả vào tồn kho.')) return;
+    state.x1KhoExports = (state.x1KhoExports || []).filter(e => e.id !== id);
+    try { localStorage.setItem(STORAGE_KEY_X1_KHO_EXPORTS, JSON.stringify(state.x1KhoExports)); } catch (err) { showToast('Không lưu được vào bộ nhớ máy.', 'error'); }
+    logDataChange(['x1KhoExports']);
+    if (state.fileStorage.connected) { storageModule().then(m => m && m.writeDataToFile()).catch(() => {}); }
+    firePushSync();
+    renderX1KhoCard();
+    showToast('Đã xóa giao dịch xuất kho.', 'success');
   }
   function x1LocThanhReadLengthRows() {
     const box = document.getElementById('x1-loc-thanh-length-rows');
@@ -18815,6 +19081,7 @@ export {
   setStageWs,
   toggleStageWs,
   // ── XƯỞNG 1: 8 THẺ CÔNG ĐOẠN + ĐỊNH MỨC ──
+  loadX1KhoExports,
   loadXuong1CatOng,
   loadXuong1SaySinh,
   loadXuong1Boc,
@@ -18903,6 +19170,14 @@ export {
   x1CatOngLotTurnsOf,
   x1CatOngMarkLotDone,
   x1SaySinhRemainingOf,
+  x1KhoToggleDetail,
+  x1KhoOpenDetail,
+  x1KhoCloseDetail,
+  x1KhoOpenExportForm,
+  x1KhoCloseExportForm,
+  x1KhoSaveExport,
+  x1KhoDeleteExport,
+  x1KhoSyncFormFields,
   x1CardCountText,
   x1WarehouseStockSummary,
   // ── YÊU CẦU 12/10/2026: lọc lô "cây" + bỏ qua Cắt Mắt ──

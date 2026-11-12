@@ -232,8 +232,8 @@ check('C12. events.js nối modal bulk (form/đóng/mở)',
 check('C13. CSS ẩn nút theo data-pay-perms',
   cssSrc.includes('body:not([data-pay-perms~="apply"]) [data-pay="apply"]') &&
   cssSrc.includes('body:not([data-pay-perms~="lock"]) [data-pay="lock"]'));
-check('C14. Cache + APP_VERSION = v395',
-  swSrc.includes("nha-may-ngoc-son-v395") && stateSrc.includes("'v395'"));
+check('C14. Cache + APP_VERSION = v401',
+  swSrc.includes("nha-may-ngoc-son-v401") && stateSrc.includes("'v401'"));
 check('C15. hr.js xuất các hàm bulk/phụ trợ cho test',
   hrSrc.includes('openCiBulkModal,') && hrSrc.includes('closeCiBulkModal,') &&
   hrSrc.includes('ciBulkSubmit,') && hrSrc.includes('ciPayLockOfMonth,'));
@@ -418,7 +418,7 @@ check('E6. Bản chốt lưu đúng số: HC 9h · TC 2h · TC ghi nhận 2h',
   (() => { const r = lock1.rows[0]; const t = lock1.totals[0];
     return r.hc === 540 && r.tc === 120 && r.otAcceptedMin === 120 && t.hcMin === 540 && t.tcMin === 120 && t.otMin === 120; })());
 check('E7. Bản chốt ghi người trình + phiên bản app',
-  lock1.preparedByName === 'Người Nhập Liệu' && lock1.appVersion === 'v395');
+  lock1.preparedByName === 'Người Nhập Liệu' && lock1.appVersion === 'v401');
 check('E8. Băm tất định (cùng dữ liệu → cùng mã)', hr.payHashStr('abc') === hr.payHashStr('abc') && hr.payHashStr('abc') !== hr.payHashStr('abd'));
 
 check('E9. Editor KHÔNG duyệt được chốt công',

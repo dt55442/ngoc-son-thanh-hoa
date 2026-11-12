@@ -9,17 +9,17 @@ files.forEach(file => {
   const filePath = path.join(testDir, file);
   let content = fs.readFileSync(filePath, 'utf8');
   
-  // Replace all occurrences of v401 with v402
+  // Replace all occurrences of v401/v402 with v403
   const newContent = content
-    .replace(/v401/g, 'v402')
-    .replace(/nha-may-ngoc-son-v401/g, 'nha-may-ngoc-son-v402')
-    .replace(/APP_VERSION = 'v401'/g, "APP_VERSION = 'v402'")
-    .replace(/"APP_VERSION = 'v401'"/g, "\"APP_VERSION = 'v402'\"")
-    .replace(/'v401'/g, "'v402'")
-    .replace(/"v401"/g, '"v402"');
+    .replace(/v40[12]/g, 'v403')
+    .replace(/nha-may-ngoc-son-v40[12]/g, 'nha-may-ngoc-son-v403')
+    .replace(/APP_VERSION = 'v40[12]'/g, "APP_VERSION = 'v403'")
+    .replace(/"APP_VERSION = 'v40[12]'"/g, "\"APP_VERSION = 'v403'\"")
+    .replace(/'v40[12]'/g, "'v403'")
+    .replace(/"v40[12]"/g, '"v403"');
   
   if (content !== newContent) {
-    const count = (content.match(/v401/g) || []).length;
+    const count = (content.match(/v40[12]/g) || []).length;
     fs.writeFileSync(filePath, newContent, 'utf8');
     totalReplaced += count;
     console.log(`Updated: ${file} (${count} replacements)`);

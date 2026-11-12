@@ -41,6 +41,8 @@ import { APP_VERSION, state } from './state.js';
 import { autoReconnectDataFolder, loadData, purgeLegacyBaoTinhBatches, updateFileStorageUI } from './storage.js';
 import { setupFormCalculations, initVnDateInputs, showToast } from './utils.js';
 import { loadModulesForView, preloadModulesForView } from './module-loader.js'; // Giai đoạn 2: lazy-load module theo tab
+import { cleanupByPrefix, safeAddEventListener } from './cleanup2.js'; // Giai đoạn 3: resource cleanup
+import { registerChart, getChart } from './cleanup.js'; // Chart.js management
 
 setWorkerEvaluationEfficiencyProvider(computeWorkerStageEfficiency);
 
@@ -455,6 +457,14 @@ function yieldBootFrame() {
     // Đảm bảo mọi render đang chờ hoàn thành trước khi rời tab — tránh hiển thị
     // số liệu cũ trên tab mới sau 1 frame rAF.
     flushRenderAll();
+    
+    // Giai đoạn 3: Cleanup tài nguyên của tab trước khi chuyển tab
+    // Điều này giải phóng Chart.js, event listeners, intervals, observers, etc.
+    // giúp tránh memory leak trên Edge/Chrome khi chuyển tab nhiều lần
+    if (state.activeView && state.activeView !== targetViewId) {
+      cleanupByPrefix(state.activeView.replace('-view', '-'));
+    }
+    
     if (targetViewId === 'leadership-view' && !canAccessLeadershipDashboard()) {
       showToast('Chỉ Ban Quản Lý và Admin được xem tổng hợp lãnh đạo.', 'error');
       targetViewId = 'dashboard-view';

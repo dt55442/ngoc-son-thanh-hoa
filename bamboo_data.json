@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "savedAt": "2026-11-12T09:08:58.740Z",
+  "savedAt": "2026-11-12T10:13:27.812Z",
   "batches": [
     {
       "id": "batch-1794474214189-bulk-uiv3yl",
@@ -23707,7 +23707,16 @@
       "id": "mat-1794294707789-xnxhj"
     },
     {
+      "updatedAt": "2026-11-12T00:18:43.552Z",
+      "outputIndex": 12810,
       "weight": 15480,
+      "note": "",
+      "type": "Mắt luồng",
+      "location": "lo-hoi",
+      "totalAmount": 13777200,
+      "unitPrice": 890,
+      "id": "mat-1794298243604-dkhii",
+      "supplier": "Nhà Linh km39",
       "images": [
         {
           "id": "ph-mwcsuavv-ifilu1"
@@ -23722,18 +23731,9 @@
           "id": "ph-mwcsv1j9-6ya8ph"
         }
       ],
-      "id": "mat-1794298243604-dkhii",
-      "outputIndex": 12810,
-      "type": "Mắt luồng",
-      "totalAmount": 13777200,
-      "supplier": "Nhà Linh km39",
-      "date": "2026-11-10",
       "createdAt": "2026-11-10T08:10:43.604Z",
-      "updatedAt": "2026-11-12T00:18:43.552Z",
-      "unitPrice": 890,
-      "location": "lo-hoi",
+      "date": "2026-11-10",
       "inputIndex": 28290,
-      "note": "",
       "week": "2026-W46"
     },
     {
@@ -23859,20 +23859,20 @@
       "supplier": "Nhà  Doan Toản"
     },
     {
-      "supplier": "Nhà Trung",
-      "createdAt": "2026-11-12T08:11:55.934Z",
-      "date": "2026-11-11",
-      "inputIndex": 4610,
-      "unitPrice": 1750,
-      "outputIndex": 2290,
-      "id": "mat-1794471115934-moes0",
-      "weight": 2320,
-      "note": "",
-      "location": "xuong-2",
       "totalAmount": 4060000,
-      "week": "2026-W46",
+      "unitPrice": 1750,
+      "supplier": "Nhà Trung",
+      "weight": 2320,
+      "date": "2026-11-11",
       "images": [],
-      "type": "Luồng ống"
+      "outputIndex": 2290,
+      "type": "Luồng ống",
+      "note": "",
+      "createdAt": "2026-11-12T08:11:55.934Z",
+      "week": "2026-W46",
+      "id": "mat-1794471115934-moes0",
+      "location": "xuong-2",
+      "inputIndex": 4610
     },
     {
       "week": "2026-W46",
@@ -25499,22 +25499,22 @@
       "qty": 252
     },
     {
-      "week": "Tuần 45",
-      "qty": 500,
-      "productId": "rate-1787125542008",
       "duplicatedFrom": "plan-1792464222606-0",
-      "year": 2026,
+      "qty": 500,
+      "id": "plan-1793584169449-0",
+      "week": "Tuần 45",
       "createdAt": "2026-11-02T01:49:29.449Z",
-      "id": "plan-1793584169449-0"
+      "year": 2026,
+      "productId": "rate-1787125542008"
     },
     {
       "week": "Tuần 45",
-      "productId": "rate-1787619453372",
-      "createdAt": "2026-11-02T01:49:29.450Z",
-      "id": "plan-1793584169450-1",
+      "duplicatedFrom": "plan-1792464222606-1",
+      "qty": 250,
       "year": 2026,
-      "qty": 500,
-      "duplicatedFrom": "plan-1792464222606-1"
+      "createdAt": "2026-11-02T01:49:29.450Z",
+      "productId": "rate-1787619453372",
+      "id": "plan-1793584169450-1"
     },
     {
       "duplicatedFrom": "plan-1792464222606-2",
@@ -25529,7 +25529,7 @@
       "id": "plan-1793584169450-3",
       "year": 2026,
       "week": "Tuần 45",
-      "qty": 500,
+      "qty": 250,
       "productId": "rate-1787125830714",
       "duplicatedFrom": "plan-1792464222606-3",
       "createdAt": "2026-11-02T01:49:29.450Z"
@@ -76697,6 +76697,63 @@
       "date": "2026-11-12",
       "workHoursHC": 27,
       "workHours": 27
+    },
+    {
+      "date": "2026-11-12",
+      "workHoursHC": 16,
+      "week": "2026-W46",
+      "workHoursTC": 0,
+      "desc": "",
+      "workTime": "12:30–17:00, 12:30–17:00, 12:30–17:00, 12:30–17:00",
+      "worker": "Lục Văn Tuấn, Vi Văn Hiêng, Vi Văn Hiệp, Vi Văn Nhêu",
+      "asgIds": [
+        "asg-1794476455082-y743d",
+        "asg-1794476469715-g705e",
+        "asg-1794476518009-gejy0",
+        "asg-1794477146216-ucjnb"
+      ],
+      "createdAt": "2026-11-12T09:53:32.704Z",
+      "workName": "hỗ trợ dọn kho cơ điện",
+      "asgSnap": [
+        {
+          "shiftIdx": 0,
+          "start": "12:30",
+          "positionName": "Hỗ trợ + Công đoạn lẻ",
+          "name": "Lục Văn Tuấn",
+          "asgId": "asg-1794476455082-y743d",
+          "department": "Xưởng 2",
+          "end": "17:00"
+        },
+        {
+          "department": "Xưởng 2",
+          "positionName": "Hỗ trợ + Công đoạn lẻ",
+          "end": "17:00",
+          "shiftIdx": 0,
+          "asgId": "asg-1794476469715-g705e",
+          "name": "Vi Văn Hiêng",
+          "start": "12:30"
+        },
+        {
+          "positionName": "Hỗ trợ + Công đoạn lẻ",
+          "asgId": "asg-1794476518009-gejy0",
+          "shiftIdx": 0,
+          "start": "12:30",
+          "end": "17:00",
+          "department": "Xưởng 2",
+          "name": "Vi Văn Hiệp"
+        },
+        {
+          "asgId": "asg-1794477146216-ucjnb",
+          "start": "12:30",
+          "shiftIdx": 0,
+          "end": "17:00",
+          "department": "Xưởng 2",
+          "positionName": "Hỗ trợ + Công đoạn lẻ",
+          "name": "Vi Văn Nhêu"
+        }
+      ],
+      "id": "x2ht-1794477212704-fsb4x",
+      "workHours": 16
     }
   ],
   "suppliers": [
@@ -82318,40 +82375,40 @@
       "sizeKey": ""
     },
     {
-      "workHours": 11,
-      "workerNames": "Phạm Thị Quyên",
-      "workHoursTC": 2,
-      "pairKey": "2026-45-46",
-      "qtyOk": 308,
-      "createdAt": "2026-11-12T02:58:46.712Z",
-      "workTime": "07:00–19:30",
-      "updatedAt": "2026-11-12T02:59:28.385Z",
-      "qtyReject": 6,
       "workshop": "x2",
-      "workHoursHC": 9,
-      "sizeKey": "",
-      "kind": "van",
-      "qtyExcept": 44,
-      "productName": "Ván 1200x370x22",
-      "inputQty": 358,
-      "sizeDims": [],
+      "pairKey": "2026-45-46",
       "productId": "rate-1787619453372",
       "id": "qcf-1794452326712-xvjmh",
-      "date": "2026-11-11"
+      "date": "2026-11-11",
+      "updatedAt": "2026-11-12T02:59:28.385Z",
+      "qtyReject": 6,
+      "productName": "Ván 1200x370x22",
+      "qtyOk": 308,
+      "qtyExcept": 44,
+      "sizeDims": [],
+      "workHours": 11,
+      "createdAt": "2026-11-12T02:58:46.712Z",
+      "workerNames": "Phạm Thị Quyên",
+      "workHoursTC": 2,
+      "workTime": "07:00–19:30",
+      "inputQty": 358,
+      "sizeKey": "",
+      "kind": "van",
+      "workHoursHC": 9
     }
   ],
   "qcFinalRates": {
     "2026-10": {
+      "van": 31.11,
+      "thanh": 245
+    },
+    "2026-09": {
       "thanh": 245,
       "van": 31.11
     },
-    "2026-09": {
-      "van": 31.11,
-      "thanh": 245
-    },
     "2026-11": {
-      "van": 31.11,
-      "thanh": 245
+      "thanh": 245,
+      "van": 31.11
     }
   },
   "qcPressLogs": [

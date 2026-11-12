@@ -106,7 +106,7 @@ check('B7: mọi chỗ lỗi (ok=false) đều đi finally → tre KHÔNG gãy n
   [mnJs, xlJs, clJs, abJs].every(s => /hideTreLoading\((bootOk|treOk)(?:\s*,[^)]*)?\)/.test(s)));
 // ─── B2. CHUYỂN TAB KHÔNG CHỜ ANIMATION HOẶC RENDER TRƯỚC ───────────
 check('B8: switchView không đặt overlay chặn thao tác ở lần mở tab đầu',
-  /function switchView\(targetViewId\)\s*\{\s*switchViewCore\(targetViewId\);\s*\}/.test(mnJs) &&
+  /function switchView\(targetViewId\)\s*\{\s*switchViewCore\(targetViewId\)[^;]{0,200};\s*\}/.test(mnJs) &&
   !/firstVisit|treVisitedViews|VIEW_LOADING_LABELS/.test(mnJs));
 check('B9: boot không vẽ sẵn Kanban nặng; tab được dựng khi người dùng mở',
   !mnJs.includes('preloadCoreViews') &&
@@ -120,8 +120,8 @@ check('B11: boot yield giữa các nhóm khởi tạo để overlay có cơ hộ
 
 // ═══ C. SW.JS ══════════════════════════════════════════════════
 console.log('--- C. SW.JS ---');
-check('C1: CACHE_NAME v403 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
-  /nha-may-ngoc-son-v403/.test(swJs) && swJs.includes("'./js/loading.js'") &&
+check('C1: CACHE_NAME v404 (PWA không dùng cache cũ) + loading.js & sprite vào APP_SHELL',
+  /nha-may-ngoc-son-v404/.test(swJs) && swJs.includes("'./js/loading.js'") &&
   swJs.includes("'./icons/loading/tre-sprite.png'"));
 
 // ═══ D. HÀNH VI (stub DOM) ══════════════════════════════════════

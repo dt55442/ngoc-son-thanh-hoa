@@ -1994,6 +1994,8 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     e.preventDefault();
     if (!requireRatePermission()) return; // CHỈ admin lưu định mức nguyên vật liệu
     const rateId = document.getElementById('mat-rate-id').value;
+    // Bản gốc đang sửa (để GIỮ createdAt khi ghi updatedAt — xem rateData)
+    const oldRate = rateId ? state.materialRates.find(r => r.id === rateId) : null;
     const product = document.getElementById('mat-rate-product').value.trim();
     const nanUseSel = document.getElementById('mat-rate-nan-use');
     const nanUse = nanUseSel && RATE_NAN_USES.includes(nanUseSel.value) ? nanUseSel.value : 'Ván';
@@ -2018,6 +2020,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     if (glue < 0 || additive < 0) { showToast('Keo và phụ gia không được âm!', 'error'); return; }
     if (efficiency < 1 || efficiency > 100) { showToast('Hiệu suất phải từ 1-100%!', 'error'); return; }
 
+    const nowIso = new Date().toISOString();
     const rateData = {
       id: rateId || `rate-${Date.now()}`,
       product,
@@ -2032,7 +2035,11 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       nan2: nan2 || null, nan2Qty: nan2 ? nan2Qty : 0,
       nan3: nan3 || null, nan3Qty: nan3 ? nan3Qty : 0,
       glue, additive, efficiency,
-      createdAt: new Date().toISOString()
+      // SỬA định mức: GIỮ createdAt gốc + ghi updatedAt mới. Trước đây cả 2
+      // trường đều bị ghi đè = "lúc nay" nên mốc không phân biệt được bản sửa
+      // với bản gốc; giữ createdAt + đổi updatedAt mới là đúng nghĩa "bản sửa".
+      createdAt: rateId ? (oldRate && oldRate.createdAt) || nowIso : nowIso,
+      updatedAt: nowIso
     };
 
     if (rateId) {
@@ -2103,7 +2110,11 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
       year: parseInt(yearVal),
       productId,
       qty,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      // BẮT BUỘC có updatedAt: không có mốc này thì khi đồng bộ recCompare()
+      // hòa createdAt → quyết định bằng BĂM NỘI DUNG → bản trên mây có thể
+      // "thắng" và số vừa nhập bị trả về số cũ (lỗi "kế hoạch tự hồi sinh").
+      updatedAt: new Date().toISOString()
     });
 
     savePlanningItems();
@@ -2247,6 +2258,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
     }
 
     if (mode === 'dup') {
+      const nowIso = new Date().toISOString();
       targetItems.forEach((src, i) => {
         state.planningItems.push({
           id: createPlanningItemId(),
@@ -2254,16 +2266,22 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
           year: yearNum,
           productId: src.productId,
           qty: qtys[i] !== undefined ? qtys[i] : (src.qty || 0),
-          createdAt: new Date().toISOString(),
+          createdAt: nowIso,
+          updatedAt: nowIso,
           duplicatedFrom: src.id
         });
       });
       showToast('Đã nhân bản thẻ kế hoạch!', 'success');
     } else {
+      // SỬA thẻ: BẮT BUỘC ghi updatedAt mới — nếu chỉ đổi qty/giữ nguyên
+      // createdAt thì recCompare() coi bản mây (cùng mốc) là "mới hơn/bằng"
+      // và quyết định bằng băm nội dung ⇒ số vừa sửa bị trả về số cũ.
+      const nowIso = new Date().toISOString();
       targetItems.forEach((item, i) => {
         item.week = weekLabel;
         item.year = yearNum;
         if (qtys[i] !== undefined) item.qty = qtys[i];
+        item.updatedAt = nowIso;
       });
       showToast('Đã cập nhật thẻ kế hoạch!', 'success');
     }

@@ -325,8 +325,84 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   check('H7: đường NHẬN không còn dùng add-only (mọi bản sửa đều được xét)',
     !/mergeRemoteIntoLocal\(partial, true, true\)/.test(cl) &&
     !/mergeRemoteIntoLocal\(remote, true, true\)/.test(cl));
-  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v403/.test(sw));
+  check('H8: sw.js đã tăng cache cho bản đồng bộ mới', /nha-may-ngoc-son-v404/.test(sw));
 }
+
+// ─── I. SỔ XUNG ĐỘT TRUNG THỰC (12/11/2026 — sửa lỗi "99 dòng mỗi lần tải lại") ───
+// Nguyên nhân đã sửa:
+//   I1. recHashOf dùng JSON.stringify THÔ → lệch thứ tự khóa cũng bị coi là khác
+//       nhau → ghi xung đột GIẢ (ảnh chụp của người dùng: 2 bên in giống hệt).
+//   I2. Dòng xung đột đã hội tụ không bao giờ được dọn → sổ tích dòng "chết".
+//   I3. Bản xem trước 4000 ký tự × 100 dòng ≈ 700KB nằm CHUNG key với `base` →
+//       localStorage cận đầy thì saveSyncState() thất bại ÂM THĂM → base không
+//       lưu được → mỗi lần mở trang dirtyDomains() coi MỌI bản ghi là "chưa đẩy"
+//       → ghi lại hàng loạt xung đột; và bấm "Xóa sổ xung đột" không có tác dụng.
+await (async () => {
+  localStorage.removeItem(cloud.SYNC_STATE_KEY);
+  const st0 = cloud.loadSyncState();
+  st0.base = {}; st0.conflicts = []; st0.lastRev = -1;
+
+  check('I1: recSame bỏ qua thứ tự khóa (cùng nội dung = cùng bản ghi)',
+    cloud.recSame({ id: 'a', qty: 1, date: 'x' }, { date: 'x', qty: 1, id: 'a' }) === true);
+  check('I2: recSame phân biệt được hai bản KHÁC số liệu',
+    cloud.recSame({ id: 'a', qty: 1 }, { id: 'a', qty: 2 }) === false);
+  check('I3: recHashOf không đổi khi chỉ đổi thứ tự khóa',
+    cloud.recHashOf({ a: 1, b: { c: 2, d: 3 } }) === cloud.recHashOf({ b: { d: 3, c: 2 }, a: 1 }));
+  check('I4: recHashOf VẪN đổi khi nội dung đổi',
+    cloud.recHashOf({ a: 1 }) !== cloud.recHashOf({ a: 2 }));
+  check('I5: canonicalJson sắp khóa lồng nhau + giữ thứ tự mảng',
+    cloud.canonicalJson({ b: 1, a: [3, 1, 2] }) === '{"a":[3,1,2],"b":1}');
+
+  // Hai bản giống nội dung → KHÔNG được ghi xung đột
+  const before = cloud.syncConflicts().length;
+  cloud.recordSyncConflict('khoNotes', 'k1',
+    { id: 'k1', qty: 10, updatedAt: 'T1' }, { qty: 10, updatedAt: 'T1', id: 'k1' });
+  check('I6: hai bên giống nội dung (lệch thứ tự khóa) → KHÔNG ghi xung đột',
+    cloud.syncConflicts().length === before);
+
+  // Hai bản thực sự khác → có ghi; xử lý xong → dòng bị loại khỏi bộ nhớ
+  cloud.recordSyncConflict('khoNotes', 'k2', { id: 'k2', qty: 10 }, { id: 'k2', qty: 999 });
+  check('I7: hai bên khác thật → ghi đúng 1 dòng', cloud.syncConflicts().length === before + 1);
+  const rowK2 = cloud.syncConflicts().find(c => c.recId === 'k2');
+  await cloud.applySyncConflictChoice(rowK2.id, 'ack');
+  check('I8: chọn "Đã kiểm tra" → dòng biến mất khỏi sổ (và khỏi bộ nhớ)',
+    cloud.syncConflicts().every(c => c.recId !== 'k2') &&
+    (JSON.parse(localStorage.getItem(cloud.SYNC_STATE_KEY) || '{}').conflicts || []).every(c => !c.resolved));
+
+  // Bản xem trước bị giới hạn → sổ không phình
+  const big = { id: 'k3', blob: 'x'.repeat(9000) };
+  cloud.recordSyncConflict('khoNotes', 'k3', big, Object.assign({}, big, { blob: 'y'.repeat(9000) }));
+  const row = cloud.syncConflicts().find(c => c.recId === 'k3');
+  check('I9: bản xem trước bị giới hạn (không chiếm hết bộ nhớ)',
+    !!row && row.localPreview.length <= 1600 && row.remotePreview.length <= 1600);
+
+  // Đẩy thành công → miền khớp mây → dòng xung đột đã hội tụ tự biến mất
+  state.batches = [{ id: 'bk', qty: 1, updatedAt: '2026-11-12T00:00:00.000Z' }];
+  state.khoNotes = [];
+  try { await cloud.writeCloudSnapshot(); } catch (e) { /* bỏ qua — môi trường test */ }
+  cloud.captureSyncBase(null, {});
+  cloud.recordSyncConflict('batches', 'bk', { id: 'bk', qty: 1 }, { id: 'bk', qty: 2 });
+  check('I10: trước khi hội tụ → sổ có dòng batches|bk',
+    cloud.syncConflicts().some(c => c.key === 'batches|bk'));
+  await cloud.syncNow({ force: true });   // đọc lại mục lục mây → làm mới băm mây
+  cloud.pruneConvergedConflicts();
+  check('I11: miền đã khớp mây sau khi đồng bộ → dòng xung đột tự biến mất',
+    !cloud.syncConflicts().some(c => c.key === 'batches|bk'));
+
+  // Kế hoạch SX: bản sửa PHẢI có updatedAt (nếu không, recCompare hòa mốc →
+  // quyết định bằng băm nội dung → số vừa sửa bị trả về số cũ khi đồng bộ)
+  const planSrc = SRC('js/planning.js');
+  check('I12: planning.js ghi updatedAt ở MỌI đường ghi (kế hoạch + định mức)',
+    (planSrc.match(/updatedAt/g) || []).length >= 5 &&
+    /item\.updatedAt = nowIso;/.test(planSrc) && /createdAt: rateId \?/.test(planSrc));
+  check('I13: bản sửa kế hoạch (có updatedAt mới) thắng bản mây cũ',
+    cloud.recCompare(
+      { id: 'p1', qty: 400, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-11-12T09:00:00.000Z' },
+      { id: 'p1', qty: 250, createdAt: '2026-10-01T00:00:00.000Z' }) > 0);
+  cloud.clearAllSyncConflicts();
+})();
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
+
+

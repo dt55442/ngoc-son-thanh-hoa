@@ -63,7 +63,14 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // (giống tiền lệ bamboo_tracker_pv_chart_mode_v1 / bamboo_tracker_capacity_ui_v1).
   const SYNC_STATE_KEY = 'bamboo_tracker_sync_state_v1';
   const SYNC_DEVICE_KEY = 'bamboo_tracker_device_id_v1';
-  const SYNC_CONFLICT_LIMIT = 100;     // giữ tối đa 100 dòng xung đột gần nhất
+  // Giới hạn sổ xung đột: 12/11/2026 giảm 100 → 60 và bản xem trước JSON
+  // 4000 → 1500 ký tự. Trước đây sổ có thể phình tới ~700KB (60 dòng × 2 bản ×
+  // 4000 ký tự) NẰM CHUNG key với dữ liệu tối hảo `base`; khi localStorage cận
+  // đầy thì saveSyncState() thất bại ÂM THĂM → base không lưu được → mỗi lần mở
+  // trang dirtyDomains() coi MỌI bản ghi là "chưa đẩy" → ghi lại hàng loạt xung
+  // đột (đúng lỗi "99 bản mỗi lần tải lại, xóa rồi vẫn về").
+  const SYNC_CONFLICT_LIMIT = 60;
+  const SYNC_PREVIEW_LIMIT = 1500;
   const SYNC_MIN_GAP_MS = 15000;       // không gọi syncNow dày hơn 15 giây/lần
   let fbSyncState = null;   // { lastRev, lastSyncedAt, base: {miền: {id: băm}}, conflicts: [] }
   let fbPendingPull = false; // có snapshot mây đến trong lúc đang ghi → phải pull lại sau
@@ -560,7 +567,10 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       used.add(r.id);
       const baseHash = base[r.id];
       const remoteChanged = baseHash !== undefined && recHashOf(r) !== baseHash;
-      if (remoteChanged) recordSyncConflict(domain, r.id, loc, r);
+      // Chỉ ghi sổ khi hai bản THỰC SỰ lệch nhau (tránh dòng "đã hội tụ" do
+      // base cũ so băm lệch thứ tự khóa — nay recHashOf đã chuẩn hóa nên trường
+      // hợp này không còn, nhưng vẫn giữ thêm lớp lọc an toàn).
+      if (remoteChanged && !recSame(loc, r)) recordSyncConflict(domain, r.id, loc, r);
       // Mây mới hơn (hoặc bằng) → nhường mây; máy mới hơn → giữ máy
       out.push(recCompare(loc, r) > 0 ? loc : r);
     });
@@ -605,6 +615,10 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       : keys.filter(k => !cloudIsDelta || !remoteH || remoteH[k] !== dh[k])).filter(rateFilter);
     const deletedChanged = !remoteH || remoteH.deletedIds !== dh.deletedIds;
     if (!changed.length && !deletedChanged && cloudIsDelta) {
+      // Không có gì phải ghi: đồng nghĩa "cục bộ ĐÃ khớp mây" → cập nhật băm mây
+      // gần nhất để (a) lần sau không tính lại miền đã khớp, (b) pruneConvergedConflicts()
+      // dọn được các dòng xung đột đã hội tụ.
+      try { fbRemoteDomainHashes = Object.assign({}, remoteH || {}); } catch (e) { /* bỏ qua */ }
       return { mode: 'delta-v1', changed: 0, size: 0, rev: Number(loadSyncState().lastRev) || 0 };
     }
     const res = await fbDb.runTransaction(async (tx) => {
@@ -1557,8 +1571,28 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   // Băm NỘI DUNG 1 bản ghi — biết "đã đổi hay chưa" KỂ CẢ khi bản ghi thiếu
   // updatedAt (nhiều module cũ chỉ ghi createdAt → sửa xong mốc thời gian vẫn y
   // nguyên, nếu chỉ so mốc sẽ KHÔNG BAO GIỜ phát hiện được bản sửa).
+  // ⚠ CHUẨN HOÁ THỨ TỰ KHÓA (12/11/2026): trước đây dùng JSON.stringify thô
+  // nên HAI bản ghi CÙNG NỘI DUNG nhưng lệch thứ tự khóa (bản đi vòng qua mây
+  // JSON.parse so với bản dựng tại máy) bị coi là KHÁC NHAU → (a) dirtyDomains()
+  // báo "chưa đẩy" mãi mãi, (b) stripDirtyFromRemote ghi XUNG ĐỘT GIẢ dù hai bên
+  // in giống hệt (đúng lỗi người dùng báo: sổ xung đột nào cũng thấy 2 bản
+  // "Bản trên MÁY" / "Bản trên MÂY" giống nhau). Nay băm theo khóa ĐÃ SẮP nên
+  // thứ tự khóa không còn ảnh hưởng.
+  function canonicalJson(v) {
+    if (v === null || typeof v !== 'object') return JSON.stringify(v) || 'null';
+    if (Array.isArray(v)) return '[' + v.map(canonicalJson).join(',') + ']';
+    const keys = Object.keys(v).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + canonicalJson(v[k])).join(',') + '}';
+  }
   function recHashOf(r) {
-    try { return hashStr(JSON.stringify(r)); } catch (e) { return '!'; }
+    try { return hashStr(canonicalJson(r)); } catch (e) { return '!'; }
+  }
+  // Hai bản ghi có CØNG NỘI DUNG không (không phân biệt thứ tự khóa) — dùng để
+  // KHÔNG ghi xung đột khi thực chất hai bên đã giống nhau.
+  function recSame(a, b) {
+    if (a === b) return true;
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+    return recHashOf(a) === recHashOf(b);
   }
   // So sánh 2 bản ghi: >0 = a MỚI HƠN b.
   // Thứ tự: updatedAt/createdAt → rev (nếu có) → băm nội dung. Băm nội dung cho
@@ -1584,6 +1618,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (!o || typeof o !== 'object') o = {};
     if (!o.base || typeof o.base !== 'object') o.base = {};
     if (!Array.isArray(o.conflicts)) o.conflicts = [];
+    // Dòng ĐÃ XỬ LÝ không cần giữ trong bộ nhớ (chỉ làm phình key). Lọc ngay
+    // khi đọc; lần saveSyncState() kế tiếp sẽ ghi bản thu gọn xuống máy.
+    if (o.conflicts.some(c => !c || c.resolved)) o.conflicts = o.conflicts.filter(c => c && !c.resolved);
     if (typeof o.lastRev !== 'number') o.lastRev = -1;
     if (typeof o.lastSyncedAt !== 'string') o.lastSyncedAt = '';
     if (typeof o.pendingSince !== 'number') o.pendingSince = 0;
@@ -1592,7 +1629,23 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
   function saveSyncState() {
     if (!fbSyncState) return;
-    try { localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(fbSyncState)); } catch (e) { /* bộ nhớ đầy — bỏ qua */ }
+    try { localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(fbSyncState)); return; } catch (e) { /* thử thu gọn rồi ghi lại */ }
+    // Bộ nhớ đầy: LOẠI dòng đã xử lý + bớt dòng cũ nhất rồi thử lại. Trước đây
+    // bắt lỗi xong BỎ QUẠN im lặng → `base` (dữ liệu tối hảo) không bao giờ lưu
+    // được và người dùng bấm "Xóa sổ xung đột" không có tác dụng sau khi tải lại.
+    try {
+      const st = fbSyncState;
+      const live = (st.conflicts || []).filter(c => c && !c.resolved);
+      st.conflicts = live.slice(-Math.max(10, Math.floor(SYNC_CONFLICT_LIMIT / 2)));
+      localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(st));
+      return;
+    } catch (e2) { /* vẫn không đủ chỗ */ }
+    // Cùng cạn: báo 1 lần cho người dùng biết (không im lặng như trước)
+    if (Date.now() - fbSyncWarnAt > 60000) {
+      fbSyncWarnAt = Date.now();
+      try { showToast('Bộ nhớ trình duyệt gần đầy nên sổ đồng bộ chưa lưu được. Hãy sao lưu JSON rồi xóa bớt dữ liệu cũ.', 'error'); } catch (e3) {}
+      console.warn('[FB] Không ghi được sổ đồng bộ cục bộ (bộ nhớ đầy):', e2 || e);
+    }
   }
   // Mã máy (chỉ để chẩn đoán — KHÔNG bắt buộc trên bản ghi)
   function deviceId() {
@@ -1613,10 +1666,13 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   function jsonPreview(v) {
     let s = '';
     try { s = JSON.stringify(v); } catch (e) { s = ''; }
-    return s.length > 4000 ? s.slice(0, 4000) + '…' : s;
+    return s.length > SYNC_PREVIEW_LIMIT ? s.slice(0, SYNC_PREVIEW_LIMIT) + '…' : s;
   }
   // Ghi 1 dòng XUNG ĐỘT (cùng bản ghi/1 miền thì GHI ĐÈ dòng cũ chưa xử lý)
+  // ⚠ Chỉ ghi khi hai bản THỰC SỰ khác nhau (so nội dung chuẩn hóa) — trước đây
+  // so băm JSON.stringify thô nên lệch thứ tự khóa cũng sinh xung đột giả.
   function recordSyncConflict(domain, recId, localRec, remoteRec) {
+    if (localRec && remoteRec && recSame(localRec, remoteRec)) return;   // hai bên đã giống nhau → không phải xung đột
     const st = loadSyncState();
     const key = String(domain) + '|' + String(recId);
     const list = Array.isArray(st.conflicts) ? st.conflicts.slice() : [];
@@ -1624,14 +1680,41 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const row = {
       id: 'sc-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
       key, domain, recId,
+      kind: Array.isArray(state[domain]) ? 'array' : 'dict',
       at: new Date().toISOString(),
       localStamp: recStamp(localRec), remoteStamp: recStamp(remoteRec),
       localPreview: jsonPreview(localRec), remotePreview: jsonPreview(remoteRec),
       resolved: false
     };
     if (idx >= 0) list[idx] = row; else list.push(row);
-    st.conflicts = list.slice(-SYNC_CONFLICT_LIMIT);
+    // Dòng đã xử lý KHÔNG còn giữ lại (chỉ giữ tối đa SYNC_CONFLICT_LIMIT dòng
+    // CHƯA xử lý) → sổ không phình vô hạn và không chiếm bộ nhớ trình duyệt.
+    st.conflicts = list.filter(c => c && !c.resolved).slice(-SYNC_CONFLICT_LIMIT);
     saveSyncState();
+  }
+  // Dọn dòng xung đột ĐÃ HỘI TỤ: bản ghi (domain, recId) giờ đã khớp bản mây
+  // (băm miền cục bộ == băm miền mây gần nhất) thì coi như đã xử lý → bỏ khỏi
+  // sổ. Gọi trong captureSyncBase() (sau mỗi lần đồng bộ/push thành công) nên
+  // sổ luôn phản án đúng các lệch THỰC SỰ còn lại.
+  function pruneConvergedConflicts() {
+    const st = loadSyncState();
+    const list = (st.conflicts || []).filter(c => c && !c.resolved);
+    if (!list.length) return 0;
+    const localH = localHashesNow(true);
+    const remoteH = fbRemoteDomainHashes || null;
+    if (!remoteH) return 0;
+    let dropped = 0;
+    const keep = [];
+    list.forEach((c) => {
+      const inSync = localH[c.domain] !== undefined && localH[c.domain] === remoteH[c.domain];
+      if (inSync) { c.resolved = true; c.resolvedAuto = true; dropped++; }
+      else keep.push(c);
+    });
+    if (dropped) {
+      st.conflicts = keep;
+      saveSyncState();
+    }
+    return dropped;
   }
   function syncConflicts() {
     const st = loadSyncState();
@@ -1642,7 +1725,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
   }
   function clearSyncConflict(id) {
     const st = loadSyncState();
-    st.conflicts = (st.conflicts || []).map(c => (c && c.id === id) ? Object.assign({}, c, { resolved: true }) : c);
+    // LOẠI HẲN dòng khỏi sổ (trước đây chỉ gắn cờ resolved rồi vẫn giữ trong
+    // localStorage → key phình vô hạn và bộ nhớ trình duyệt bị chiếm).
+    st.conflicts = (st.conflicts || []).filter(c => !(c && c.id === id));
     saveSyncState();
     return st.conflicts.filter(c => c && !c.resolved).length;
   }
@@ -1692,6 +1777,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     }
     st.base = base;
     saveSyncState();
+    // Dọn dòng xung đột đã hội tụ (bản ghi giờ khớp mây) — không để sổ tích
+    // những dòng "chết" khiến người dùng tưởng còn lệch.
+    try { pruneConvergedConflicts(); } catch (e) { /* bỏ qua */ }
     return base;
   }
   // Miền/bản ghi máy này ĐÃ ĐỔI nhưng CHƯA lên mây
@@ -1737,7 +1825,10 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
         const localArr = Array.isArray(state[k]) ? state[k] : [];
         kept.forEach((r) => {
           const cur = localArr.find(x => x && x.id === r.id);
-          if (cur && recHashOf(cur) !== recHashOf(r)) recordSyncConflict(k, r.id, cur, r);
+          // Chỉ ghi xung đột khi hai bản THỰC SỰ khác nội dung (recSame đã chuẩn
+          // hóa thứ tự khóa) — trước đây so băm thô nên bản "đi vòng mây" bị coi
+          // là khác bản tại máy dù giống hệt ⇒ sổ xung đột đầy dòng vô nghĩa.
+          if (cur && !recSame(cur, r)) recordSyncConflict(k, r.id, cur, r);
         });
         out[k] = out[k].filter(r => !r || !r.id || !keep.has(r.id));
         touched = true;
@@ -2453,24 +2544,23 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     document.getElementById('modal-sync-conflicts')?.classList.remove('show');
   }
   // Chọn cách xử lý 1 xung đột: máy thắng (đẩy lại) · mây thắng (nhận bản mây) · đã kiểm tra
-  function applySyncConflictChoice(id, choice) {
+  // ⚠ 12/11/2026: "Lấy bản mây" KHÔNG còn dựa bản xem trước JSON (bản xem trước bị
+  // cắt 1500 ký tự nên JSON.parse có thể hỏng → nút bấm không ăn) mà ĐỌC LẠI đúng
+  // miền đó từ mây rồi gộp đúng 1 bản ghi/1 khóa đang lệch.
+  async function applySyncConflictChoice(id, choice) {
     const st = loadSyncState();
     const row = (st.conflicts || []).find(c => c && c.id === id && !c.resolved);
     if (!row) return false;
     const listKey = row.domain;
-    const arr = Array.isArray(state[listKey]) ? state[listKey] : null;
+    const isArr = Array.isArray(state[listKey]);
+    const arr = isArr ? state[listKey] : null;
     let applied = false;
-    if (arr) {
-      const idx = arr.findIndex(r => r && r.id === row.recId);
-      if (choice === 'cloud') {
-        try {
-          const rec = JSON.parse(row.remotePreview || 'null');
-          if (rec && typeof rec === 'object') {
-            if (idx >= 0) arr[idx] = rec; else arr.push(rec);
-            applied = true;
-          }
-        } catch (e) { applied = false; }
-      } else if (choice === 'local') {
+    if (choice === 'cloud') {
+      // Chờ đọc đúng bản mây — nếu trả về Promise thì applied luôn "thành công" giả
+      applied = !!(await adoptCloudRecord(listKey, row.recId));
+    } else if (choice === 'local') {
+      if (arr) {
+        const idx = arr.findIndex(r => r && r.id === row.recId);
         if (idx >= 0) {
           arr[idx] = Object.assign({}, arr[idx], {
             updatedAt: new Date().toISOString(),
@@ -2478,8 +2568,10 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
           });
           applied = true;
         }
-      } else { applied = true; }   // 'ack' = chỉ ghi nhận đã xem
-    }
+      } else {
+        applied = true;   // miền dict: giữ nguyên số máy → push lại lên mây
+      }
+    } else { applied = true; }   // 'ack' = chỉ ghi nhận đã xem
     clearSyncConflict(id);
     if (applied) {
       persistAllLocal();
@@ -2487,6 +2579,40 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
       if (choice !== 'ack') firePushSync();
     }
     renderSyncConflicts();
+    return applied;
+  }
+  // Đọc lại ĐÚNG miền đang lệch từ mây rồi lấy về bản ghi/khóa của dòng xung đột.
+  // Trả về true nếu đã áp được. Dùng cho nút "Lấy bản mây".
+  async function adoptCloudRecord(domain, recId) {
+    let val = null;
+    try { val = await readDomainDoc(domain); } catch (e) { val = null; }
+    if (val === undefined || val === null) {
+      // Mây đang ở định dạng 1-doc cũ → lấy từ bản đầy đủ đã đọc gần nhất
+      try { val = (fbLastRemote && fbLastRemote[domain]) || null; } catch (e) { val = null; }
+    }
+    if (val === null || val === undefined) return false;
+    let applied = false;
+    if (Array.isArray(state[domain])) {
+      const cur = state[domain] || [];
+      const inc = Array.isArray(val) ? val.find(r => r && r.id === recId) : null;
+      if (inc) {
+        const idx = cur.findIndex(r => r && r.id === recId);
+        if (idx >= 0) cur[idx] = inc; else cur.push(inc);
+        applied = true;
+      }
+    } else if (state[domain] && typeof state[domain] === 'object') {
+      if (!Array.isArray(val) && val && typeof val === 'object' && Object.prototype.hasOwnProperty.call(val, recId)) {
+        state[domain][recId] = val[recId];
+        applied = true;
+      } else if (!Array.isArray(val) && val && typeof val === 'object') {
+        state[domain] = Object.assign({}, state[domain], val);   // cả dict
+        applied = true;
+      }
+    }
+    if (applied) {
+      fbLocalHashes = null;
+      try { captureSyncBase(null, {}); } catch (e) { /* lần sau tự đối chiếu */ }
+    }
     return applied;
   }
   const SYNC_RETRY_WAITS = [2000, 5000, 15000];   // đọc lỗi miền → thử lại (tổng 3 lần)
@@ -3288,7 +3414,11 @@ export {
   readFullCloudObject,
   recCompare,
   recHashOf,
+  recSame,
+  canonicalJson,
   recStamp,
+  recordSyncConflict,
+  pruneConvergedConflicts,
   renderSyncConflicts,
   scheduleSyncWatch,
   syncConflictCount,

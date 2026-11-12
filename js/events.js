@@ -634,7 +634,20 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       syncConflictBody.addEventListener('click', (e) => {
         const btn = e.target && e.target.closest ? e.target.closest('[data-sync-conflict]') : null;
         if (!btn) return;
-        applySyncConflictChoice(btn.getAttribute('data-sync-id'), btn.getAttribute('data-sync-conflict'));
+        // "Lấy bản mây" cần đọc lại đúng miền từ mây (bất đồng bộ) → khoá nút
+        // trong lúc chờ để khỏi bấm lặp, và bắt lỗi mạng cho người dùng biết.
+        const id = btn.getAttribute('data-sync-id');
+        const choice = btn.getAttribute('data-sync-conflict');
+        if (btn.dataset.busy === '1') return;
+        btn.dataset.busy = '1';
+        const oldLabel = btn.textContent;
+        btn.textContent = 'Đang xử lý…';
+        Promise.resolve(applySyncConflictChoice(id, choice))
+          .catch((err) => {
+            console.warn('[Đồng bộ] Lỗi xử lý xung đột', err);
+            showToast('Không xử lý được xung đột này: ' + ((err && err.message) || err), 'error');
+          })
+          .finally(() => { btn.dataset.busy = ''; btn.textContent = oldLabel; });
       });
     }
     // Đóng sổ xung đột: bấm nền mờ hoặc Esc (không ảnh hưởng modal khác)

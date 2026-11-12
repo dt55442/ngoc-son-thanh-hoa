@@ -320,7 +320,7 @@ check('H7: CSS có khối sổ nhóm (công tắc · phiếu cân · dòng tự 
   css.includes('.x2-kind-switch') && css.includes('.x2-ticket-picker') &&
   css.includes('.x2-pool-calc') && css.includes('.x2-pool-note'));
 check('H8: sw.js cache v278 + nạp js/x2-pool.js vào APP_SHELL',
-  /nha-may-ngoc-son-v403/.test(sw) && sw.includes("./js/x2-pool.js"));
+  /nha-may-ngoc-son-v404/.test(sw) && sw.includes("./js/x2-pool.js"));
 
 // ═══ J. UI ĐIỆN THOẠI: SHEET CHỌN PHIẾU + Ô SỐ 6 CHỮ SỐ + KHÔNG CÒN KHOẢNG TRẮNG ═══
 // (1) Sheet chọn phiếu cân: nút "N phiếu · X kg" → mở panel → chọn nhiều phiếu →
@@ -451,8 +451,8 @@ check('K5: ô tự tính form có nhánh "Sổ âm" (nguồn js/xuong2.js)',
   /restAm \? 'SỔ ÂM: tổng KL đem bổ/.test(jsX2));
 state.xuong2BoOngRecords = state.xuong2BoOngRecords.filter(r => r.id !== 'bo-am-test');
 check('K6: bỏ lượt bổ vượt → sổ về đúng dư cũ', pool.x2OngDatRawOf() === rawBefore);
-check('K7: CSS cảnh báo sổ âm + sw.js v403',
-  css.includes('.x2-stock-title.x2-stock-warn') && /nha-may-ngoc-son-v403/.test(sw));
+check('K7: CSS cảnh báo sổ âm + sw.js v404',
+  css.includes('.x2-stock-title.x2-stock-warn') && /nha-may-ngoc-son-v404/.test(sw));
 
 // ═══ L. CHẶN XÓA/GIẢM LƯỢT CẮT KHI SỔ ỐNG ĐẠT SẼ ÂM (13/11/2026) ═══════
 // Nguyên tắc: tồn công đoạn sau ≥ 0 so với công đoạn trước. Xóa/GIẢM

@@ -95,6 +95,7 @@ import { escapeHTML, showToast } from './utils.js';
     hrPositions:       { tab: 'hr',        label: 'Vị trí làm việc',      get: () => state.hrPositions },
     hrAttendance:      { tab: 'hr',        label: 'Chấm công & phân vị',  get: () => state.hrAttendance },
     hrCheckins:        { tab: 'hr',        label: 'Giờ máy chấm công',    get: () => state.hrCheckins },
+    hrShifts:          { tab: 'hr',        label: 'Cấu hình ca làm việc',    get: () => state.hrShifts },
     hrCiAcks:          { tab: 'hr',        label: 'Xác nhận đối chiếu chấm công', get: () => state.hrCiAcks },
     hrPayRows:         { tab: 'hr',        label: 'Dòng công đã xử lý (chốt lương)', get: () => state.hrPayRows },
     hrPayLocks:        { tab: 'hr',        label: 'Bản chốt công theo tháng', get: () => state.hrPayLocks },

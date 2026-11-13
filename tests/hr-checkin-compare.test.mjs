@@ -401,7 +401,7 @@ check('L5 hr.js có engine + hàm chia giờ theo phút',
   hrSrc.includes('CI_OT_BLOCK_MIN'));
 check('L6 styles.css có khối .ci-*',
   /\.ci-row-review\s*>\s*td\s*\{/.test(cssSrc) && /\.ci-ack-chip\s*\{/.test(cssSrc));
-check('L7 sw.js cache v404', swSrc.includes('nha-may-ngoc-son-v404'));
+check('L7 sw.js cache v408', swSrc.includes('nha-may-ngoc-son-v408'));
 const specsSrc = fs.readFileSync(new URL('../js/report-specs.js', import.meta.url), 'utf8');
 const rcSrc = fs.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8');
 check('L8 báo cáo "Đối Chiếu Bố Trí ↔ Máy" có trong Trung tâm Xuất Excel',
@@ -528,9 +528,9 @@ check('M21 nạp file: có reader.onerror dọn overlay + finally hideTreLoading
 check('M22 bấm "Nạp Dữ Liệu" cũng có LOADING + chống bấm lặp (ciImporting) + finally dọn',
   /function doCheckinImport\(\)[\s\S]{0,1600}?ciImporting[\s\S]{0,1600}?showTreLoading\(funLabels\[0\]/.test(hrSrc) &&
   /function doCheckinImport\(\)[\s\S]{0,6000}?finally\s*\{[\s\S]{0,400}?hideTreLoading\(treOk, \{ minShow: 800 \}\)/.test(hrSrc));
-check('M23 đổi giờ/nghỉ của ca có dữ liệu → CẢNH BÁO tính lại lịch sử (confirm)',
+check('M23 đổi giờ/nghỉ của ca có dữ liệu → CẢNH BÁO theo MỐC HIỆU LỰC (quá khứ giữ nguyên)',
   /const hasHistory = \(state\.hrAssignments \|\| \[\]\)\.some/.test(hrSrc) &&
-  hrSrc.includes('TÍNH LẠI toàn bộ lịch sử của bộ phận này'));
+  hrSrc.includes('số liệu lịch sử KHÔNG bị thay đổi') && hrSrc.includes('áp dụng TỪ NGÀY'));
 
 // ─── N. 3 LỖI CÔNG THỨC NGƯỜI DÙNG BÁO (20/10/2026) ─────────────
 //  N1 (hình 2): nghỉ của ca đặt GIỮA CA — nửa buổi chiều vẫn đủ 4h30.

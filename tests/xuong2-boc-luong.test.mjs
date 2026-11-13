@@ -337,7 +337,7 @@ check('NỐI (export): nguồn "boluong" + cột + nhánh dựng bảng',
   jsXlsx.includes("id: 'boluong'") && jsXlsx.includes("source === 'boluong'") &&
   jsXlsx.includes('boluongDisplay'));
 const swSrc = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): CACHE_NAME đã tăng v404', /nha-may-ngoc-son-v404/.test(swSrc));
+check('CẤU TRÚC (sw.js): CACHE_NAME đã tăng v408', /nha-may-ngoc-son-v408/.test(swSrc));
 
 // ─── M. BẢNG TỔNG HỢP CÔNG SUẤT ĐỌC ĐÚC DỮ LIỆU THẺ ────────────
 const cap = await import('../js/capacity.js');

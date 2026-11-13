@@ -5842,18 +5842,18 @@
     </div>
   </div>
 
-  <!-- MODAL HR-9b: CÀI ĐẶT CA LÀM VIỆC THEO BỘ PHẬN -->
+  <!-- MODAL HR-9b: CÀI ĐẶT CA LÀM VIỆC THEO BỘ PHẬN — mốc hiệu lực (đổi giờ giữa kỳ KHÔNG tính lại lịch sử) -->
   <div class="modal-overlay" id="modal-shift">
-    <div class="modal-card modal-sm">
+    <div class="modal-card modal-lg shift-card">
       <div class="modal-header">
         <h3><i data-lucide="settings-2"></i> Ca Làm Việc — <span id="shift-dept-label"></span></h3>
         <button class="modal-close-btn" id="btn-close-shift"><i data-lucide="x"></i></button>
       </div>
-      <form id="shift-form" style="padding: 20px;">
+      <form id="shift-form" style="padding: 16px 20px 4px;">
         <input type="hidden" id="shift-dept">
         <div class="form-group">
           <label>Loại Ca</label>
-          <div style="display:flex; gap:18px;">
+          <div style="display:flex; gap:18px; flex-wrap:wrap;">
             <label style="display:flex; gap:6px; align-items:center; font-weight:400;">
               <input type="radio" name="shift-type" value="hanhchinh" checked onchange="app.hrShiftTypePreset('hanhchinh')"> Hành chính (1 cột)
             </label>
@@ -5862,9 +5862,20 @@
             </label>
           </div>
         </div>
+        <div class="shift-effective">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="shift-effective"><i data-lucide="calendar-check-2"></i> Áp dụng từ ngày</label>
+            <input type="date" id="shift-effective">
+          </div>
+          <div class="shift-effective-note" id="shift-effective-note"></div>
+        </div>
         <div class="form-group">
           <label>Thời Gian Ca (tên ca / bắt đầu / kết thúc / giờ nghỉ)</label>
           <div id="shift-rows"></div>
+        </div>
+        <div class="shift-history-box">
+          <div class="shift-history-head"><i data-lucide="history"></i> Lịch sử thay đổi <span id="shift-history-count"></span></div>
+          <div id="shift-history"></div>
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
           <button type="button" class="btn btn-outline" id="btn-cancel-shift">Hủy Bỏ</button>
@@ -5873,7 +5884,6 @@
       </form>
     </div>
   </div>
-
   <!-- MODAL HR-9c: LỊCH LÀM VIỆC THEO THÁNG — ngày nghỉ theo thứ + ngày nghỉ/lễ riêng.
        Đi làm vào ngày nghỉ/lễ thì toàn bộ giờ làm trong ngày được tính vào TĂNG CA
        (hrSplitHoursHCDate) và hiển thị trong Bảng Chấm Công Theo Tháng. -->

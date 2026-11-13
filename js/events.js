@@ -63,6 +63,8 @@ import { openWorkerEvaluationAssignmentDate, openWorkerEvaluationAttendance } fr
 import { applyAllCheckins, closeEmployeeImportModal, closeEmployeeModal, closeCheckinImportModal, closeLeaveModal, closePositionModal, closeRecruitmentModal, closePositionNeedModal, closeOvertimeAmendmentModal, collectEmployeeSkills, deleteCheckin, deleteCheckinsAll, doCheckinImport, doEmployeeImport, handleCheckinImportFile, handleEmployeeImportFile, handleEmployeeSubmit, handleLeaveEmployeeKeydown, handleLeaveSubmit, handleOvertimeAmendmentSubmit, handleOvertimeSubmit, openOvertimeModal, closeOvertimeModal, openHrCalendarModal, closeHrCalendarModal, hrCalSetMonth, hrCalToggleDay, hrCalToggleWeekday, handleHrCalendarSubmit, syncEmployeeQuitDateRow, renderOvertimeEmployeeSuggestions, pickOvertimeEmployee, handleOvertimeEmployeeKeydown, hideOvertimeEmployeeSuggestions, handlePositionSubmit, handleRecruitmentSubmit, handlePositionNeedSubmit, openPositionNeedModal, deletePositionNeed, renderPositionNeedsTable, syncPositionNeedsFromEmployees, renderHrBoard, hrBoardSetDate, hrBoardShiftDay, hrBoardGoToday, hrBoardSetDept, hrBoardOpenAssign, closeBoardAssignModal, handleBoardAssignSubmit, hrBoardRemoveAssign, renderBoardAssignSuggestions, pickBoardAssignEmployee, openShiftModal, closeShiftModal, handleShiftSubmit, setShiftTypePreset, hideLeaveEmployeeSuggestions, hrAttGoToday, hrAttSetDate, hrAttSetMonth, hrAttShiftDay, hrOpenCard, hrCloseOpenCard, hrPositionDetailOverlay, openCheckinImportModal, openEmployeeImportModal, openEmployeeModal, openLeaveModal, openPositionModal, openRecruitmentModal, pickLeaveEmployee, syncLeaveDurationUI, renderEmployeeSkillsBox, renderHrAttendanceCard, renderHrAttendanceStats, renderWorkerEvaluation, renderHrEmployeesTable, renderHrRecruitmentTable, renderLeaveEmployeeSuggestions, renderHrView, setAttendanceNote, setAttendanceStatus, syncHrMiniActive, syncSkillsFromAssignments, toggleAttendancePosition, renderHrCheckinTable, ciShiftMonth, ciSaveUi, openCiEndfillModal, closeCiEndfillModal, renderCiEndfillList, applyCiEndfill, ciAckDay, ciUnackDay, hrDockToggle, hrDockOpenGroup, hrDockBack, hrDockClose, ciBulkSubmit, closeCiBulkModal, openCiBulkModal, ciPaySubmit, closeCiPayModal, openCiPayModal, syncCiPayForm, payApproveRow, payRejectRow, renderHrPayCard, openPayLockModal, closePayLockModal, payLockSubmit, openPayPrintModal, closePayPrintModal, doPayPrint, payMarkPaperSigned, renderPayPrintPreview, ciOnDayInput, ciShiftPeriod, ciGoToday, ciSetPeriodMode, ciOnChipClick, ciGotoDay, ciFilterByEmployee, hrDockState } from './hr.js';
 import { setWorkerEvaluationGrade, setWorkerEvaluationView } from './hr.js';
 import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpenBoard, hnmOpenAssign, hnmAddPosition, hnmHotPerson, hnmSetDate, hnmShiftDay, hnmToday, hnmSetSearch, hnmSetOnlyShort, hnmSetSkillLinks, hnmDrawLinks } from './hr.js'; // SƠ ĐỒ BONG BÓNG NHÂN SỰ 3 CẤP (21/10/2026)
+import { hrRefreshShiftEffectiveNote, hrRefreshShiftPreviews, hrSyncShiftBreakCells } from './hr.js'; // CÀI ĐẶT CA — mốc hiệu lực + giờ nghỉ + xem trước (11/2026)
+import { hrDeleteShiftVersion } from './hr.js'; // Xoá bản lịch sử cấu hình ca (lưu nhầm mốc hiệu lực)
 import { state } from './state.js';
 import { getFxLow, setFxLow, applyThemeForUser } from './theme.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
@@ -1516,6 +1518,21 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-shift', 'click', closeShiftModal);
     safeOn('btn-cancel-shift', 'click', closeShiftModal);
     safeOn('shift-form', 'submit', handleShiftSubmit);
+    // ── Cài Đặt Ca: mốc hiệu lực + ô giờ nghỉ + xem trước giờ HC/TC ──
+    safeOn('shift-effective', 'change', () => { try { hrRefreshShiftEffectiveNote(); } catch (e) {} });
+    // Xoá 1 bản lịch sử trong modal Cài Đặt Ca (lưu nhầm mốc hiệu lực)
+    const shiftHistoryBox = document.getElementById('shift-history');
+    if (shiftHistoryBox) shiftHistoryBox.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-shift-del]');
+      if (btn) { try { hrDeleteShiftVersion(btn.getAttribute('data-shift-del')); } catch (err) {} }
+    });
+    const shiftRowsBox = document.getElementById('shift-rows');
+    if (shiftRowsBox) {
+      shiftRowsBox.addEventListener('input', () => { try { hrRefreshShiftPreviews(); } catch (e) {} });
+      shiftRowsBox.addEventListener('change', () => {
+        try { hrSyncShiftBreakCells(); hrRefreshShiftPreviews(); } catch (e) {}
+      });
+    }
     // Gợi ý nhân viên trong modal bố trí (gõ để tìm, ưu tiên kỹ năng)
     const boardSuggestInput = document.getElementById('board-assign-employee');
     const boardSuggestBox = document.getElementById('board-assign-suggest');

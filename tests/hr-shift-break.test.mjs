@@ -68,7 +68,7 @@ state.hrShifts = [];
 state.hrAssignments = [];
 state.hrEmployees = []; state.hrPositions = [];
 
-const H = (dept, s, e, idx) => hr.hrSplitHoursHC(dept, s, e, idx);
+const H = (dept, s, e, idx, date) => hr.hrSplitHoursHC(dept, s, e, idx, date);
 const eq = (r, hc, tc) => r.hc === hc && r.tc === tc;
 const CA12 = { id: 'Xưởng 2', type: 'lamca', shifts: [
   { name: 'Ca ngày', start: '07:00', end: '19:00', brk: 1.5 },
@@ -178,8 +178,92 @@ check('I3: hrShiftBrkH + hrShiftRange + renderShiftRows đã export',
 check('I4: index.html modal Cài Đặt Ca ghi rõ "giờ nghỉ"', idxSrc.includes('Thời Gian Ca (tên ca / bắt đầu / kết thúc / giờ nghỉ)'));
 check('I5: styles.css có bảng 4 cột ca (.shift-row / -head / -na)',
   cssSrc.includes('.shift-row-head, .shift-row') && cssSrc.includes('.shift-row-na'));
-check('I6: sw.js đã bump cache v404', /nha-may-ngoc-son-v404/.test(swSrc));
+check('I6: sw.js đã bump cache v408', /nha-may-ngoc-son-v408/.test(swSrc));
 
-console.log(`\n=== GIỜ NGHỈ CỦA CA (LÀM CA): ${pass} PASS / ${fail} FAIL ===`);
+// ═══ J. MỐC HIỆU LỰC — đổi ca giữa kỳ KHÔNG tính lại lịch sử (11/2026) ═══
+const D_MOI = '2026-11-05';
+const V1 = { id: 'Xưởng 2', type: 'lamca', shifts: [{ name: 'Ca ngày', start: '07:00', end: '19:00', brk: 1.5 }, { name: 'Ca đêm', start: '19:00', end: '07:00', brk: 1 }], effectiveFrom: '2026-10-01', versions: [] };
+state.hrShifts = [JSON.parse(JSON.stringify(V1))];
+check('J1: không truyền date → cấu hình HIỆN TẠI', hr.hrShiftCfg('Xưởng 2').shifts[0].end === '19:00');
+check('J2: ngày trước mốc → bản cũ nhất (vẫn 19:00)', hr.hrShiftCfg('Xưởng 2', '2026-09-20').shifts[0].end === '19:00');
+hr.hrShiftApplyVersion('Xưởng 2', { type: 'lamca', shifts: [{ name: 'Ca ngày', start: '07:00', end: '17:30', brk: 1.5 }, { name: 'Ca đêm', start: '20:00', end: '06:00', brk: 1 }], effectiveFrom: D_MOI });
+check('J3: lưu bản mới → versions giữ bản cũ (mốc 01/10)', state.hrShifts[0].versions.length === 1 && state.hrShifts[0].versions[0].effectiveFrom === '2026-10-01');
+check('J4: bản hiện tại đổi + mốc hiệu lực mới', state.hrShifts[0].shifts[0].end === '17:30' && state.hrShifts[0].effectiveFrom === D_MOI);
+check('J5: ngày 04/11 (trước mốc mới) → giờ CŨ (19:00)', hr.hrShiftCfg('Xưởng 2', '2026-11-04').shifts[0].end === '19:00');
+check('J6: ngày 05/11 (từ mốc mới) → giờ MỚI (17:30)', hr.hrShiftCfg('Xưởng 2', D_MOI).shifts[0].end === '17:30');
+check('J7: HÀM TÍNH GIỜ theo ngày — quá khứ 10h30, từ mốc mới 9h',
+  eq(H('Xưởng 2', '07:00', '', 0, '2026-11-04'), 630, 0) && eq(H('Xưởng 2', '07:00', '', 0, D_MOI), 540, 0));
+check('J8: di trú dữ liệu CŨ (thiếu effectiveFrom/versions + brk rác) → mốc từ đầu, giờ giữ nguyên', (() => {
+  state.hrShifts = [{ id: 'Xưởng 2', type: 'lamca', shifts: [{ name: 'Ca ngày', start: '07:00', end: '19:00', brk: '05:03' }, { name: 'Ca đêm', start: '19:00', end: '07:00' }] }];
+  const touched = hr.migrateShiftEffectiveDates();
+  const cfg = state.hrShifts[0];
+  return touched === 1 && cfg.effectiveFrom === '2000-01-01' && Array.isArray(cfg.versions)
+    && cfg.shifts[0].brk === undefined && hr.hrShiftBrkH(cfg, 0) === 1.5 && hr.hrShiftBrkH(cfg, 1) === 1
+    && eq(H('Xưởng 2', '07:00', '19:00', 0), 630, 0);
+})());
+check('J9: di trú chạy lại → KHÔNG ghi thêm (idempotent)', hr.migrateShiftEffectiveDates() === 0);
+check('J10: giới hạn versions (tối đa 20 bản)', (() => {
+  for (let i = 1; i <= 25; i++) hr.hrShiftApplyVersion('Xưởng 2', { type: 'lamca', shifts: [{ name: 'C', start: '06:00', end: '16:00', brk: 1 }], effectiveFrom: '2027-01-' + String(i).padStart(2, '0') });
+  return state.hrShifts[0].versions.length === 20;
+})());
+
+// ═══ K. GIỜ NGHỈ CỤ THỂ (brkStart–brkEnd) — mặc định vẫn GIỮA CA ═══
+const EX = { id: 'Xưởng 2', type: 'lamca', shifts: [
+  { name: 'Ca ngày', start: '07:00', end: '17:30', brk: 1.5, brkMode: 'exact', brkStart: '11:30', brkEnd: '13:00' },
+  { name: 'Ca đêm', start: '20:00', end: '06:00', brk: 1, brkMode: 'exact', brkStart: '00:30', brkEnd: '01:30' }
+], effectiveFrom: '2026-11-01', versions: [] };
+state.hrShifts = [EX];
+check('K1: cửa sổ nghỉ cụ thể ca ngày (11:30–13:00 → 690–780 · exact)', (() => {
+  const w = hr.hrShiftBrkWin(EX, 0, hr.hrShiftRange(EX, 0));
+  return w.gs0 === 690 && w.ge0 === 780 && w.minutes === 90 && w.exact === true;
+})());
+check('K2: cửa sổ nghỉ ca đêm vắt nửa đêm (00:30–01:30 → 1470–1530)', (() => {
+  const w = hr.hrShiftBrkWin(EX, 1, hr.hrShiftRange(EX, 1));
+  return w.gs0 === 1470 && w.ge0 === 1530 && w.minutes === 60;
+})());
+check('K3: ca ngày đủ ca = 9h HC (nghỉ đúng 11:30–13:00)', eq(H('Xưởng 2', '07:00', '', 0), 540, 0));
+check('K4: nửa ngày 13:00–17:30 = 4h30 HC', eq(H('Xưởng 2', '13:00', '17:30', 0), 270, 0));
+check('K5: làm ĐÚNG lúc nghỉ 11:30–13:00 = 0 giờ', eq(H('Xưởng 2', '11:30', '13:00', 0), 0, 0));
+check('K6: ca đêm đủ ca = 9h HC (12h − 1h)', eq(H('Xưởng 2', '20:00', '', 1), 540, 0));
+check('K7: hrShiftBrkH suy ra từ giờ cụ thể = 1.5 / 1', hr.hrShiftBrkH(EX, 0) === 1.5 && hr.hrShiftBrkH(EX, 1) === 1);
+check('K8: mốc nghỉ NGOÀI khung ca → rơi về GIỮA CA (không mất nghỉ)', (() => {
+  const bad = { type: 'lamca', shifts: [{ name: 'C', start: '07:00', end: '17:30', brk: 1.5, brkStart: '23:00', brkEnd: '23:30' }] };
+  const w = hr.hrShiftBrkWin(bad, 0, hr.hrShiftRange(bad, 0));
+  return w.exact === false && w.minutes === 30;   // ngoài khung ca → GIỮA CA, số giờ suy từ cửa sổ (30')
+})());
+check('K9: khai thiếu 1 mốc / 2 mốc trùng / không khai → WinFrom null → GIỮA CA',
+  hr.hrShiftBrkWinFrom({ brkStart: '11:30' }) === null && hr.hrShiftBrkWinFrom({ brkStart: '11:30', brkEnd: '11:30' }) === null && hr.hrShiftBrkWinFrom({}) === null);
+
+// ═══ L. CẤU TRÚC MODAL MỚI (index / events / css / js / history) ═══
+const evSrc = fs.readFileSync('js/events.js', 'utf8');
+const histSrc = fs.readFileSync('js/history.js', 'utf8');
+check('L1: modal có ô Áp dụng từ ngày + lịch sử + modal-lg',
+  idxSrc.includes('id="shift-effective"') && idxSrc.includes('id="shift-history"') && idxSrc.includes('id="shift-effective-note"') && idxSrc.includes('shift-card'));
+check('L2: nhãn bảng ca giữ nguyên (test cũ)', idxSrc.includes('Thời Gian Ca (tên ca / bắt đầu / kết thúc / giờ nghỉ)'));
+check('L3: bảng ca có chế độ nghỉ + ô giờ cụ thể + xem trước', (() => {
+  hr.renderShiftRows({ type: 'lamca', shifts: [{ name: 'Ca ngày', start: '07:00', end: '17:30', brk: 1.5, brkMode: 'exact', brkStart: '11:30', brkEnd: '13:00' }] });
+  const h = els.get('shift-rows').innerHTML;
+  return h.includes('data-shift-f="brkMode"') && h.includes('data-shift-f="brkStart"') && h.includes('data-shift-f="brkEnd"') && h.includes('data-shift-prev="0"') && h.includes('is-exact') && h.includes('Giờ cụ thể')
+    && !h.includes('step="1800"');   // picker phút PHẢI chọn được 30 (và mọi phút)
+})());
+check('L4: lịch sử vẽ được', (() => {
+  state.hrShifts = [{ id: 'Xưởng 2', type: 'lamca', shifts: [{ name: 'C', start: '07:00', end: '17:30', brk: 1.5 }], effectiveFrom: '2026-11-05', versions: [{ effectiveFrom: '2026-10-01', type: 'lamca', shifts: [{ name: 'C', start: '07:00', end: '19:00', brk: 1.5 }] }] }];
+  hr.renderShiftHistory(state.hrShifts[0]);
+  const h = els.get('shift-history').innerHTML;
+  return h.includes('Từ 01/10/2026') && h.includes('07:00–19:00');
+})());
+check('L5: events.js nối mốc hiệu lực + ủy quyền bảng ca', evSrc.includes('shift-effective') && evSrc.includes('hrSyncShiftBreakCells') && evSrc.includes('hrRefreshShiftPreviews'));
+check('L6: CSS có khối mới + ở cấp cao nhất (depth = 0)', (() => {
+  const depth = sel => { const i = cssSrc.indexOf(sel); if (i < 0) return -1; let d = 0; for (let k = 0; k < i; k++) { if (cssSrc[k] === '{') d++; else if (cssSrc[k] === '}') d--; } return d; };
+  return cssSrc.includes('.shift-row-brk') && cssSrc.includes('.shift-history-box') && cssSrc.includes('.shift-card')
+    && depth('.shift-card {') === 0 && depth('.shift-history-box {') === 0;
+})());
+check('L7: history.js ghi nhật ký vùng hrShifts', histSrc.includes('hrShifts:') && histSrc.includes('Cấu hình ca làm việc'));
+check('L8: export hàm mới', typeof hr.hrShiftBrkWin === 'function' && typeof hr.hrShiftApplyVersion === 'function' && typeof hr.migrateShiftEffectiveDates === 'function' && typeof hr.renderShiftHistory === 'function' && typeof hr.hrShiftRowsFromDom === 'function');
+check('L9: sw.js đã bump cache v408', /nha-may-ngoc-son-v408/.test(swSrc));
+check('L10: hr.js có hàm điền sẵn giờ nghỉ cụ thể (hrFillExactBreakDefault) + cfgIn xem trước',
+  hrSrc.includes('function hrFillExactBreakDefault') && hrSrc.includes('cfgIn || hrShiftCfg(dept, date)'));
+
+console.log(`
+=== GIỜ NGHỈ CỦA CA (LÀM CA): ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);
-

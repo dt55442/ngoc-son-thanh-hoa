@@ -139,7 +139,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
   function qcShiftMeta(dateVal) {
     const list = hrQcFinalAssignmentsOf(dateVal);
     const dept = (list[0] && list[0].department) || 'QC';
-    const cfg = hrShiftCfg(dept);
+    const cfg = hrShiftCfg(dept, dateVal);
     const meta = {};
     ((cfg && cfg.shifts) || []).forEach((s, i) => {
       meta[i] = {

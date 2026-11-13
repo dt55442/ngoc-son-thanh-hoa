@@ -234,6 +234,10 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     return hrHydrateFromRepo().then(() => {
       try { migrateHrDeptMerge(); }
       catch (e) { console.error('[NHÂN SỰ] Không di trú được bộ phận cũ:', e); }
+      // Di trú cấu hình CA THEO MỐC HIỆU LỰC (11/2026): dán effectiveFrom +
+      // versions cho dữ liệu cũ, dọn giá trị nghỉ rác — KHÔNG đổi giờ đang dùng.
+      try { migrateShiftEffectiveDates(); }
+      catch (e) { console.error('[NHÂN SỰ] Không di trú được cấu hình ca:', e); }
       if (hrReconcileAllAssignmentEnds()) saveHrData(['hrAssignments']);
       return true;
     });
@@ -2682,7 +2686,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   function ciFromMin(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${ciPad2(Math.floor(m / 60))}:${ciPad2(m % 60)}`; }
   // Tách HC/TC theo PHÚT + xét ngày nghỉ/lễ (ngày nghỉ → toàn bộ giờ = TC)
   function ciSplitForDate(dept, date, startMin, endMin, shiftIdx) {
-    const r = hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx);
+    const r = hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx, date);
     if (date && hrIsRestDay(date) && r.hc > 0) return { hc: 0, tc: r.hc + r.tc };
     return r;
   }
@@ -2753,8 +2757,8 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   }
   // Đoán CA khi ngày đó KHÔNG có bố trí (bảng chấm công tháng dùng): chọn ca có
   // giờ bắt đầu gần giờ quẹt nhất (Hành chính luôn ca 0)
-  function ciShiftGuess(dept, inMin) {
-    const cfg = hrShiftCfg(dept);
+  function ciShiftGuess(dept, inMin, date) {
+    const cfg = hrShiftCfg(dept, date);
     if (cfg.type !== 'lamca') return 0;
     let best = 0, bestDiff = Infinity;
     (cfg.shifts || []).forEach((s, i) => {
@@ -2802,8 +2806,8 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     }
     // Ca đêm (không có bố trí) còn thiếu giờ ra → ghép lần quẹt sáng ngày kế
     if (!outMin0 && inMin0) {
-      const cfg0 = hrShiftCfg(dept);
-      const idx0 = plan.hasPlan ? plan.shiftIdx : ciShiftGuess(dept, inMin0 % 1440);
+      const cfg0 = hrShiftCfg(dept, date);
+      const idx0 = plan.hasPlan ? plan.shiftIdx : ciShiftGuess(dept, inMin0 % 1440, date);
       const range0 = hrShiftRange(cfg0, idx0);
       if (cfg0.type === 'lamca' && range0.endMin > 1440) {
         const endD0 = range0.endMin - 1440;
@@ -2826,8 +2830,8 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     //    Áp SAU khi ghép ca đêm (19:46 → 20:00 · 06:02 → 06:00).
     if (inMin0) inMin0 = Math.ceil(inMin0 / CI_OT_BLOCK_MIN) * CI_OT_BLOCK_MIN;
     if (outMin0) outMin0 = Math.max(CI_OT_BLOCK_MIN, Math.floor(outMin0 / CI_OT_BLOCK_MIN) * CI_OT_BLOCK_MIN);
-    const shiftIdx = plan.hasPlan ? plan.shiftIdx : ciShiftGuess(dept, (inMin0 || outMin0) % 1440);
-    const range = hrShiftRange(hrShiftCfg(dept), shiftIdx);
+    const shiftIdx = plan.hasPlan ? plan.shiftIdx : ciShiftGuess(dept, (inMin0 || outMin0) % 1440, date);
+    const range = hrShiftRange(hrShiftCfg(dept, date), shiftIdx);
     const planStart = plan.hasPlan ? plan.startMin : range.startMin;
     const ot = ciOtOf(employeeId, date);
     const flags = [];
@@ -3320,7 +3324,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     if (!r.plan.hasPlan) return '<span class="ci-none">— chưa bố trí —</span>';
     const schedule = hrAssignmentScheduleOf(r.plan.assignments);
     const items = r.plan.assignments.map(a => {
-      const range = hrShiftRange(hrShiftCfg(a.department || r.dept), a.shiftIdx || 0);
+      const range = hrShiftRange(hrShiftCfg(a.department || r.dept, r.date), a.shiftIdx || 0);
       const end = schedule.endById.get(a.id) || '';
       const time = `${fmtHour(a.start)}${end ? '–' + fmtHour(end) : ' → hết ca (' + fmtHour(range.end) + ')'}`;
       return `<span class="ci-plan-item" title="${escapeHTML(hrPosName(a.positionId) + ' · ' + time)}">
@@ -3603,7 +3607,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
       const list = ciAssignmentsOn(a.employeeId, a.date);
       if (!list.length || list[list.length - 1].id !== a.id) return; // chỉ lượt cuối
       const dept = a.department || (em && em.department) || '';
-      const range = hrShiftRange(hrShiftCfg(dept), a.shiftIdx || 0);
+      const range = hrShiftRange(hrShiftCfg(dept, a.date), a.shiftIdx || 0);
       const startM = ciToMin(a.start) || range.startMin;
       // Giờ ra ĐÃ GHÉP cho ca đêm (VD 19:40 → 06:01 hôm sau = 1801)
       let outM = act.outMin;
@@ -4153,7 +4157,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     if (act === 'add_ot') {
       const r = ciCompareDay(emp, date);
       const dept = (r && r.dept) || hrEmpDept(emp);
-      const range = hrShiftRange(hrShiftCfg(dept), (r && r.actual ? r.actual.shiftIdx : 0) || 0);
+      const range = hrShiftRange(hrShiftCfg(dept, date), (r && r.actual ? r.actual.shiftIdx : 0) || 0);
       const planEnd = (r && r.plan && r.plan.hasPlan && r.plan.endMin) ? r.plan.endMin : range.endMin;
       const outMin = (r && r.actual && r.actual.outMin) ? r.actual.outMin : 0;
       const startT = ciFromMin(planEnd % 1440);
@@ -6744,22 +6748,98 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     ] }
   };
 
+  // ─── CẤU HÌNH CA THEO MỐC HIỆU LỰC (11/2026 — xử lý "lãnh đạo đổi giờ
+  //    giữa kỳ"): mỗi bản cấu hình gắn `effectiveFrom`; bản HIỆN TẠI nằm ở
+  //    cấp trên (`type/shifts/effectiveFrom`), các bản CŨ nằm trong `versions`.
+  //    hrShiftCfg(dept, date) chọn bản có hiệu lực tại `date`: quá khứ → bản
+  //    cũ (giờ công/HC-TC/chấm công KHÔNG bị tính lại), hôm nay & tương lai
+  //    → bản hiện hành. Không truyền date = bản hiện hành.
+  const SHIFT_EPOCH = '2000-01-01';   // mốc "từ đầu" — cấu hình chưa rõ ngày
+  const SHIFT_VERSIONS_MAX = 20;      // tối đa bản lịch sử giữ mỗi bộ phận
   // Cấu hình ca của 1 bộ phận (mặc định Hành chính cho mọi bộ phận)
-  function hrShiftCfg(dept) {
-    return (state.hrShifts || []).find(s => s.id === dept) || { id: dept, type: 'hanhchinh', shifts: BOARD_SHIFT_PRESETS.hanhchinh.shifts };
+  function hrShiftCfg(dept, date) {
+    const cur = (state.hrShifts || []).find(s => s.id === dept);
+    if (!cur) return { id: dept, type: 'hanhchinh', shifts: BOARD_SHIFT_PRESETS.hanhchinh.shifts, effectiveFrom: SHIFT_EPOCH };
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(String(date)) && date < hrTodayISO()) {
+      const all = hrShiftVersionsOf(cur);
+      let pick = null;
+      all.forEach(v => { if (String(v.effectiveFrom) <= date && (!pick || String(v.effectiveFrom) >= String(pick.effectiveFrom))) pick = v; });
+      if (!pick) pick = all[0];               // ngày trước cả mốc cũ nhất → bản cũ nhất
+      if (pick && pick !== cur) return { ...pick, id: dept };
+    }
+    return cur;
+  }
+  // Các bản cấu hình đã có của 1 bộ phận (lịch sử + bản hiện tại), xếp tăng theo mốc
+  function hrShiftVersionsOf(cur) {
+    if (!cur) return [];
+    const list = Array.isArray(cur.versions) ? cur.versions.filter(Boolean).slice() : [];
+    list.push({ effectiveFrom: hrShiftEffectiveFromOf(cur), type: cur.type, shifts: cur.shifts, note: cur.note || '', by: cur.updatedByName || '', at: cur.updatedAt || '' });
+    list.sort((a, b) => String(a.effectiveFrom) < String(b.effectiveFrom) ? -1 : 1);
+    return list;
+  }
+  // Mốc hiệu lực của bản cấu hình (mặc định = "từ đầu" cho dữ liệu cũ)
+  function hrShiftEffectiveFromOf(cur) {
+    return (cur && /^\d{4}-\d{2}-\d{2}$/.test(String(cur.effectiveFrom || ''))) ? cur.effectiveFrom : SHIFT_EPOCH;
   }
   // Số GIỜ NGHỈ của 1 ca (chỉ chế độ Làm ca; Hành chính = 0 vì nghỉ trưa nằm
-  // giữa 2 buổi, đã tự loại). Cấu hình CŨ chưa khai `brk` → mặc định ca 1 =
-  // 1h30 (bằng nghỉ trưa hành chính 11:30–13:00), các ca sau = 1h.
+  // giữa 2 buổi, đã tự loại). MẶC ĐỊNH "GIỮA CA": chưa khai → ca 1 = 1h30
+  // (bằng nghỉ trưa hành chính 11:30–13:00), ca sau = 1h. Nếu khai giờ nghỉ
+  // CỤ THỂ (brkStart–brkEnd) → suy ra số giờ từ cửa sổ đó. Giá trị rác của
+  // form CŨ (VD chuỗi "05:03") KHÔNG đọc nhầm thành 5 giờ — rơi về mặc định.
   function hrShiftBrkH(cfg, shiftIdx) {
     if (!cfg || cfg.type !== 'lamca') return 0;
     const idx = Number(shiftIdx) || 0;
     const sh = cfg.shifts[idx] || cfg.shifts[0];
     if (!sh) return 0;
+    const win = hrShiftBrkWinFrom(sh);
+    if (win) return win.minutes / 60;
     const raw = sh.brk;
     if (raw === '' || raw == null) return idx === 0 ? 1.5 : 1;
     const v = Number(raw);
-    return (Number.isFinite(v) && v > 0) ? v : 0;
+    if (!Number.isFinite(v) || v < 0) return idx === 0 ? 1.5 : 1;   // rác → mặc định
+    if (v === 0) return 0;                                        // chủ động KHÔNG trừ nghỉ
+    return Math.min(v, 6);
+  }
+  // Cửa sổ nghỉ CỤ THỂ của 1 ca nếu khai brkStart + brkEnd (số phút;
+  // null = không khai/khai thiếu/lệch mốc/không hợp lệ).
+  function hrShiftBrkWinFrom(sh) {
+    const toM = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+    const a = toM(sh && sh.brkStart), b = toM(sh && sh.brkEnd);
+    if (!a && !b) return null;                          // không khai → GIỮA CA tự tính
+    if (!a || !b || a === b) return null;               // khai thiếu/lệch → bỏ qua
+    let min = b - a; if (min < 0) min += 1440;          // qua nửa đêm
+    if (min <= 0 || min > 180) return null;             // vô lý (>3h) → bỏ qua
+    return { minutes: min };
+  }
+  // Cửa sổ GIỜ NGHỈ của ca theo mốc phút TUYỆT ĐỐI trong [rStart, rEnd):
+  //  • khai giờ cụ thể → đặt ĐÚNG mốc đó vào khung ca (ca đêm vắt nửa đêm vẫn
+  //    đúng — VD nghỉ 00:30–01:30 → 1470–1530); mốc ngoài khung ca → bỏ qua.
+  //  • chưa khai → MẶC ĐỊNH GIỮA CA: [bắt đầu + (dài ca − nghỉ)/2 , + nghỉ].
+  // Trả { gs0, ge0, minutes, exact } | null (không có giờ nghỉ).
+  function hrShiftBrkWin(cfg, shiftIdx, rangeIn) {
+    if (!cfg || cfg.type !== 'lamca') return null;
+    const idx = Number(shiftIdx) || 0;
+    const sh = (cfg.shifts || [])[idx] || (cfg.shifts || [])[0];
+    if (!sh) return null;
+    const range = rangeIn || hrShiftRange(cfg, shiftIdx);
+    const rStart = range.startMin, rEnd = range.endMin;
+    const win = hrShiftBrkWinFrom(sh);
+    if (win) {
+      const toM = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+      const gs = rStart + (((toM(sh.brkStart) - rStart) % 1440) + 1440) % 1440;
+      if (gs < rEnd) {
+        const ge = gs + win.minutes;
+        if (ge <= rEnd) return { gs0: gs, ge0: ge, minutes: win.minutes, exact: true };
+      }
+      // Mốc/cửa sổ nghỉ nằm NGOÀI khung ca → KHÔNG coi là không nghỉ —
+      // rơi về mặc định GIỮA CA (số giờ lấy từ hrShiftBrkH) như bên dưới.
+    }
+    const brk = Math.max(0, Number(hrShiftBrkH(cfg, idx)) || 0) * 60;
+    if (brk <= 0) return null;
+    const len = Math.max(0, rEnd - rStart);
+    const b = Math.min(brk, len);
+    const gs0 = rStart + Math.round((len - b) / 2);
+    return { gs0, ge0: gs0 + b, minutes: b, exact: false };
   }
   // Tên rút gọn "Hà Văn Chiến" → "H.V.Chiến" (chữ cuối nguyên vẹn, các chữ đầu lấy nguyên âm đầu)
   function hrShortName(name) {
@@ -6801,14 +6881,14 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   const HR_ASSIGN_END_BASE = '_hrEndBase';
 
   function hrAssignmentStartMin(a) {
-    const cfg = hrShiftCfg(a.department || hrEmpDept(a.employeeId));
+    const cfg = hrShiftCfg(a.department || hrEmpDept(a.employeeId), a.date);
     const range = hrShiftRange(cfg, a.shiftIdx || 0);
     const start = toMinT(a.start);
     return range.endMin > 1440 && start < range.startMin ? start + 1440 : start;
   }
 
   function hrAssignmentInterval(a, endValue) {
-    const cfg = hrShiftCfg(a.department || hrEmpDept(a.employeeId));
+    const cfg = hrShiftCfg(a.department || hrEmpDept(a.employeeId), a.date);
     const range = hrShiftRange(cfg, a.shiftIdx || 0);
     const startMin = hrAssignmentStartMin(a);
     const rawEnd = endValue !== undefined
@@ -6943,7 +7023,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   function hrSplitAssignmentHoursDate(a, date, schedule) {
     const interval = schedule?.intervals.get(a.id) || hrAssignmentInterval(a, schedule?.endById.get(a.id));
     if (interval.endMin <= interval.startMin) return { hc: 0, tc: 0 };
-    const r = hrSplitHoursHCMin(a.department || hrEmpDept(a.employeeId), interval.startMin, interval.endMin, a.shiftIdx || 0);
+    const r = hrSplitHoursHCMin(a.department || hrEmpDept(a.employeeId), interval.startMin, interval.endMin, a.shiftIdx || 0, date);
     if (date && hrIsRestDay(date) && r.hc > 0) return { hc: 0, tc: r.hc + r.tc };
     return r;
   }
@@ -6981,9 +7061,9 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   //    VD Ca ngày 07:00–17:30 nghỉ 1h30 → nghỉ 11:30–13:00; đủ ca = 9h HC;
   //       nửa ngày 13:00–17:30 = 4h30 HC; Ca đêm 20:00–06:00 nghỉ 1h = 9h HC.
   // Trả về phút: { hc, tc } (giờ nghỉ không nằm trong cả hai).
-  function hrSplitHoursHC(dept, start, end, shiftIdx) {
+  function hrSplitHoursHC(dept, start, end, shiftIdx, date) {
     const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
-    const cfg = hrShiftCfg(dept);
+    const cfg = hrShiftCfg(dept, date);
     const range = hrShiftRange(cfg, shiftIdx);
     let startMin = toMin(start);
     let endMin = toMin(end);
@@ -6991,11 +7071,12 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
       if (startMin < range.startMin) startMin += 1440;
       if (end && endMin < range.startMin) endMin += 1440;
     }
-    return hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx);
+    return hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx, date);
   }
   // Bản dùng PHÚT trực tiếp — engine đối chiếu chấm công cần mốc > 1440 (ca đêm)
-  function hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx) {
-    const cfg = hrShiftCfg(dept);
+  function hrSplitHoursHCMin(dept, startMin, endMin, shiftIdx, date, cfgIn) {
+    // cfgIn = cấu hình dựng TẠM THỜI (form Cài Đặt Ca xem trước) — không tra state
+    const cfg = cfgIn || hrShiftCfg(dept, date);
     const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
     let s = Number(startMin) || 0;
     let e = Number(endMin) || 0;
@@ -7034,12 +7115,10 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     //    Ca ĐỦ NGÀY không đổi (dài ca − nghỉ như cũ).
     let gap = 0;
     if (cfg.type === 'lamca') {
-      const brk = Math.max(0, Number(range.brkH) || 0) * 60;
-      if (brk > 0) {
-        const len = Math.max(0, rEnd - rStart);
-        const b = Math.min(brk, len);
-        const gs0 = rStart + Math.round((len - b) / 2);
-        const ge0 = gs0 + b;
+      // Cửa sổ nghỉ: giờ CỤ THỂ (brkStart–brkEnd) hoặc MẶC ĐỊNH GIỮA CA
+      const win = hrShiftBrkWin(cfg, shiftIdx, range);
+      if (win) {
+        const gs0 = win.gs0, ge0 = win.ge0;
         [0, 1440].forEach(off => {
           const a = Math.max(s, gs0 + off), b2 = Math.min(e, ge0 + off);
           if (b2 > a) gap += b2 - a;
@@ -7097,7 +7176,8 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   // Tách giờ HC/TC CÓ XÉT LỊCH THÁNG: ngày nghỉ/lễ thì phần giờ nằm trong
   // cửa sổ ca chuẩn KHÔNG tính HC nữa mà chuyển hết sang TC (hc=0, tc=hc+tc).
   function hrSplitHoursHCDate(dept, date, start, end, shiftIdx) {
-    const r = hrSplitHoursHC(dept, start, end, shiftIdx);
+    // PHAI truyen date → lay cau hinh co hieu luc NGAY DO (moc hieu luc)
+    const r = hrSplitHoursHC(dept, start, end, shiftIdx, date);
     if (date && hrIsRestDay(date) && r.hc > 0) return { hc: 0, tc: r.hc + r.tc };
     return r;
   }
@@ -7353,7 +7433,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
         `<button type="button" class="hr-board-tab${d === state.hrBoardDept ? ' on' : ''}" data-board-dept="${escapeHTML(d)}">${escapeHTML(d)}</button>`).join('');
     }
     const dept = state.hrBoardDept;
-    const cfg = hrShiftCfg(dept);
+    const cfg = hrShiftCfg(dept, state.hrBoardDate);
     const colCount = cfg.type === 'lamca' ? Math.max(1, cfg.shifts.length) : 1;
     const positions = (state.hrPositions || []).filter(p => hrDeptAliasOf(p.department) === dept);
     const posNeedOf = pid => (state.hrPositionNeeds || []).find(r => r.positionId === pid);
@@ -7533,7 +7613,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     if (!modal || !form) return;
     form.reset();
     const dept = state.hrBoardDept || 'Xưởng 2';
-    const cfg = hrShiftCfg(dept);
+    const cfg = hrShiftCfg(dept, state.hrBoardDate);
     hrBoardSuggestFor = positionId;
     const pos = hrPosById(positionId);
     const mode = String(assignId || '').startsWith('move:') ? 'move' : (assignId ? 'edit' : 'new');
@@ -7589,7 +7669,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     if (!employeeId) { showToast('Chọn nhân viên trước đã!', 'error'); return; }
     if (!date || !positionId) { showToast('Thiếu vị trí / ngày.', 'error'); return; }
     const dept = state.hrBoardDept || 'Xưởng 2';
-    const cfg = hrShiftCfg(dept);
+    const cfg = hrShiftCfg(dept, date);
     const data = {
       // Khóa sinh nhật + suffix ngẫu nhiên: 2 lượt gán trong CÙNG 1 mili-giây
       // (kéo thẻ liên tiếp / máy nhanh) từng bị TRÙNG id → find(id) lấy nhầm bản
@@ -7709,7 +7789,9 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     showToast(`Giờ chọn tại vị trí mới cũng là giờ kết thúc tại "${hrPosName(src.positionId)}" — lịch sử cũ được giữ lại.`, 'info');
   }
 
-  // ── CÀI ĐẶT CA LÀM VIỆC THEO BỘ PHẬN (bảng cấu hình — linh hoạt chỉnh sau) ──
+  // ── CÀI ĐẶT CA LÀM VIỆC THEO BỘ PHẬN (mốc hiệu lực) ──
+  // Mở modal: nạp cấu hình HIỆN TẠI của bộ phận đang xem; ô "Áp dụng từ
+  // ngày" mặc định = hôm nay; kèm lịch sử các bản cấu hình đã lưu.
   function openShiftModal() {
     if (!requireEditPermission()) return;
     const modal = document.getElementById('modal-shift');
@@ -7719,12 +7801,21 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     document.getElementById('shift-dept').value = dept;
     const labelEl = document.getElementById('shift-dept-label');
     if (labelEl) labelEl.textContent = dept;
+    const effEl = document.getElementById('shift-effective');
+    if (effEl && !effEl.value) effEl.value = hrTodayISO();
     renderShiftRows(cfg);
-    document.getElementById('modal-shift').classList.add('show');
+    renderShiftHistory(cfg);
+    hrRefreshShiftEffectiveNote();
+    hrSyncShiftBreakCells();
+    hrRefreshShiftPreviews();
+    modal.classList.add('show');
     hrScheduleIcons();
   }
-  // Vẽ các dòng thời gian ca: hành chính = Sáng/Chiều; làm ca = Ca ngày/Ca đêm
-  // Bảng cấu hình ca: Tên ca · Bắt đầu · Kết thúc · Nghỉ (giờ — chỉ Làm ca)
+  // Vẽ các dòng thời gian ca: hành chính = Sáng/Chiều; làm ca = Ca ngày/Ca đêm.
+  // Mỗi dòng: Tên ca · Bắt đầu · Kết thúc · chế độ NGHỈ (Giữa ca tự tính —
+  // mặc định | Giờ cụ thể) · ô tương ứng · XEM TRƯỚC giờ HC/TC của dòng đó.
+  // Chế độ/giờ nghỉ lưu theo bản ghi (brkMode + brkStart/brkEnd) nên đổi quy
+  // tắc nghỉ sau này KHỎI phải sửa code — chỉ cần cài trong giao diện.
   function renderShiftRows(cfg) {
     const type = cfg.type || 'hanhchinh';
     const preset = BOARD_SHIFT_PRESETS[type];
@@ -7738,18 +7829,33 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
       </div>` +
       shifts.map((s, i) => {
         const brk = hrShiftBrkH({ type, shifts }, i);
+        const win = hrShiftBrkWinFrom(s);
+        const mode = win ? 'exact' : 'auto';
         return `
-      <div class="shift-row">
+      <div class="shift-row${mode === 'exact' ? ' is-exact' : ''}" data-shift-row="${i}">
         <input type="text" data-shift-i="${i}" data-shift-f="name" value="${escapeHTML(s.name || '')}" placeholder="Tên ca">
-        <input type="time" data-shift-i="${i}" data-shift-f="start" value="${escapeHTML(s.start || '')}" step="1800">
-        <input type="time" data-shift-i="${i}" data-shift-f="end" value="${escapeHTML(s.end || '')}" step="1800">
+        <input type="time" data-shift-i="${i}" data-shift-f="start" value="${escapeHTML(s.start || '')}">
+        <input type="time" data-shift-i="${i}" data-shift-f="end" value="${escapeHTML(s.end || '')}">
         ${isCa
-          ? `<input type="number" data-shift-i="${i}" data-shift-f="brk" value="${brk}" min="0" max="6" step="0.5"
-               title="Số giờ NGHỈ của ca — trừ vào GIỮA CA, KHÔNG tính vào HC lẫn TC (VD 1.5 = 1h30)">`
-          : `<span class="shift-row-na" title="Nghỉ trưa nằm giữa 2 buổi — hệ thống tự loại khỏi HC/TC">— nghỉ trưa —</span>`}
+          ? `<div class="shift-row-brk">
+               <select class="shift-brk-mode" data-shift-i="${i}" data-shift-f="brkMode" title="Giữa ca = nhập số giờ, hệ thống tự đặt vào giữa ca · Giờ cụ thể = nhập đúng giờ bắt đầu–kết thúc nghỉ">
+                 <option value="auto"${mode === 'auto' ? ' selected' : ''}>Giữa ca</option>
+                 <option value="exact"${mode === 'exact' ? ' selected' : ''}>Giờ cụ thể</option>
+               </select>
+               <input type="number" class="shift-brk-auto" data-shift-i="${i}" data-shift-f="brk" value="${brk}" min="0" max="6" step="0.5"
+                 title="Số giờ NGHỈ của ca — trừ vào GIỮA CA, KHÔNG tính vào HC lẫn TC (VD 1.5 = 1h30)">
+               <span class="shift-brk-exact">
+                 <input type="time" data-shift-i="${i}" data-shift-f="brkStart" value="${win ? escapeHTML(s.brkStart || '') : ''}" title="Giờ BẮT ĐẦU nghỉ">
+                 <span class="shift-brk-dash">→</span>
+                 <input type="time" data-shift-i="${i}" data-shift-f="brkEnd" value="${win ? escapeHTML(s.brkEnd || '') : ''}" title="Giờ KẾT THÚC nghỉ">
+               </span>
+               <span class="shift-row-prev" data-shift-prev="${i}" title="Giờ HC/TC của ca này nếu làm đến hết ca">—</span>
+             </div>`
+          : `<span class="shift-row-na" title="Nghỉ trưa nằm giữa 2 buổi — hệ thống tự loại khỏi HC/TC">— nghỉ trưa —</span>
+             <span class="shift-row-prev" data-shift-prev="${i}" title="Tổng giờ HC/TC của ca này">—</span>`}
       </div>`;
       }).join('') +
-      `<div style="font-size:0.72rem;color:var(--text-muted);">Hành chính: các ca gộp thành 1 cột/ngày · Làm ca: mỗi ca là 1 cột riêng — ô <b>Nghỉ (giờ)</b> chỉ dùng ở <b>Làm ca</b> và trừ vào <b>GIỮA CA</b> (VD Ca ngày 07:00–17:30 nghỉ 1h30 → nghỉ 11:30–13:00; làm đủ ca = 9h HC; làm nửa ngày 13:00–17:30 vẫn được 4h30 HC. Để trống = mặc định ca 1 nghỉ 1h30, ca sau nghỉ 1h).</div>`;
+      `<div class="shift-note">Hành chính: các ca gộp thành 1 cột/ngày · Làm ca: mỗi ca là 1 cột riêng — giờ nghỉ trừ vào <b>GIỮA CA</b> hoặc đúng <b>Giờ cụ thể</b> đã khai, KHÔNG tính vào HC lẫn TC (VD ca 07:00–17:30 nghỉ 1h30 → 11:30–13:00, làm đủ ca = 9h HC, làm nửa ngày 13:00–17:30 vẫn 4h30 HC). Để trống = mặc định ca 1 nghỉ 1h30, ca sau nghỉ 1h.</div>`;
   }
   // Đổi loại ca trong modal → nạp lại giờ mặc định của loại đó (chưa lưu)
   function setShiftTypePreset(type) {
@@ -7760,6 +7866,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     const cur = { ...cfg, type };
     cur.shifts = (cfg.type === type) ? (cfg.shifts || preset.shifts) : preset.shifts;
     renderShiftRows(cur);
+    hrRefreshShiftPreviews();
   }
   function closeShiftModal() {
     document.getElementById('modal-shift')?.classList.remove('show');
@@ -7770,51 +7877,270 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     const dept = document.getElementById('shift-dept').value;
     const typeEl = document.querySelector('input[name="shift-type"]:checked');
     const type = typeEl ? typeEl.value : 'hanhchinh';
-    const rows = {};
-    document.querySelectorAll('#shift-rows [data-shift-i]').forEach(inp => {
-      const i = inp.getAttribute('data-shift-i');
-      rows[i] = rows[i] || { name: '', start: '', end: '', brk: '' };
-      rows[i][inp.getAttribute('data-shift-f')] = inp.value.trim();
-    });
-    // NGHỈ (giờ) của ca — chỉ Làm ca; để trống = mặc định (ca 1 = 1h30, ca sau = 1h);
-    // Hành chính luôn 0 (nghỉ trưa tự loại giữa 2 buổi)
-    const shifts = Object.keys(rows).sort((a, b) => a - b).map(i => rows[i]).filter(s => s.start && s.end)
-      .map((s, i) => {
-        const raw = String(s.brk == null ? '' : s.brk).replace(',', '.');
-        let brk = Number(raw);
-        if (raw === '' || !Number.isFinite(brk) || brk < 0) brk = (type === 'lamca') ? (i === 0 ? 1.5 : 1) : 0;
-        return { name: s.name, start: s.start, end: s.end, brk: Math.min(brk, 6) };
-      });
+    const parsed = hrShiftRowsFromDom(type);
+    if (parsed.error) { showToast(parsed.error, 'error'); return; }
+    const shifts = parsed.shifts;
     if (!shifts.length) { showToast('Cần ít nhất 1 ca có giờ bắt đầu và giờ kết thúc!', 'error'); return; }
-    const idx = (state.hrShifts || []).findIndex(s => s.id === dept);
-    // ⚠ Engine tính giờ đọc CẤU HÌNH CA SỐNG (không lưu bản chụp) → đổi giờ /
-    // giờ nghỉ sẽ TÍNH LẠI cả dữ liệu cũ (Bảng bố trí, Đối chiếu máy, Bảng
-    // chấm công tháng, Thống kê đi làm). Phải cảnh báo trước khi lưu.
-    if (idx !== -1) {
-      const prevCfg = state.hrShifts[idx] || {};
-      const pick = list => JSON.stringify((list || []).map(s => ({ start: s.start, end: s.end, brk: s.brk })));
-      const hasHistory = (state.hrAssignments || []).some(a => a && a.department === dept);
-      if (hasHistory && pick(prevCfg.shifts) !== pick(shifts)) {
-        const ok = confirm(
-          `Đổi giờ / giờ nghỉ của ca "${dept}" sẽ TÍNH LẠI toàn bộ lịch sử của bộ phận này:\n` +
-          `• Bảng bố trí (giờ công các ngày đã qua)\n` +
-          `• Đối chiếu Bố trí ↔ Máy chấm công (HC / TC / hiệu lực ca đêm)\n` +
-          `• Bảng chấm công tháng + Thống kê đi làm\n\n` +
-          `Các lượt bố trí để trống "giờ kết thúc" (= hết ca) sẽ lấy giờ kết thúc MỚI.\nTiếp tục lưu?`
-        );
-        if (!ok) return;
-      }
+    // ── MỐC HIỆU LỰC: đổi giờ giữa kỳ KHÔNG được tính lại lịch sử ──
+    const effEl = document.getElementById('shift-effective');
+    const effectiveFrom = (effEl && /^\d{4}-\d{2}-\d{2}$/.test(String(effEl.value || '')))
+      ? effEl.value : hrTodayISO();
+    const today = hrTodayISO();
+    if (effectiveFrom > today) {
+      const ok = confirm(`Mốc hiệu lực ${hrFmtVnDate(effectiveFrom)} nằm ở TƯƠNG LAI.\n` +
+        `Từ ngày đó trở đi mọi phép tính giờ (bảng bố trí, chấm công, công suất) dùng giờ mới.\nTiếp tục lưu?`);
+      if (!ok) return;
     }
-    const cfg = { id: dept, type, shifts, updatedAt: new Date().toISOString() };
-    if (idx !== -1) state.hrShifts[idx] = { ...state.hrShifts[idx], ...cfg };
-    else { cfg.createdAt = new Date().toISOString(); state.hrShifts.push(cfg); }
-    saveHrData();
+    const cur = (state.hrShifts || []).find(s => s.id === dept);
+    const pick = list => JSON.stringify((list || []).map(s => ({ start: s.start, end: s.end, brk: s.brk, brkMode: s.brkMode || 'auto', brkStart: s.brkStart || '', brkEnd: s.brkEnd || '' })));
+    const changed = !cur || pick(cur.shifts) !== pick(shifts) || cur.type !== type;
+    const hasHistory = (state.hrAssignments || []).some(a => a && a.department === dept);
+    if (hasHistory && (changed || (cur && hrShiftEffectiveFromOf(cur) !== effectiveFrom))) {
+      const ok = confirm(
+        `Lưu ca làm việc "${dept}" áp dụng TỪ NGÀY ${hrFmtVnDate(effectiveFrom)}:\n` +
+        `• Từ ngày đó trở đi: dùng giờ ca mới (bảng bố trí, đối chiếu máy, bảng chấm công, thống kê đi làm).\n` +
+        `• Các ngày TRƯỚC ngày này: vẫn tính theo cấu hình cũ — số liệu lịch sử KHÔNG bị thay đổi.\n\n` +
+        `Các lượt bố trí để trống "giờ kết thúc" (= hết ca) trước ngày này vẫn lấy giờ kết thúc của cấu hình cũ.\nTiếp tục lưu?`
+      );
+      if (!ok) return;
+    }
+    hrShiftApplyVersion(dept, { type, shifts, effectiveFrom, note: 'Cài đặt ca' });
+    saveHrData(['hrShifts']);
     closeShiftModal();
     renderHrView();
-    showToast(`Đã lưu ca làm việc cho ${dept}: ${type === 'lamca' ? shifts.length + ' ca' : 'Hành chính'}`, 'success');
+    showToast(`Đã lưu ca làm việc cho ${dept} — áp dụng từ ${hrFmtVnDate(effectiveFrom)}: ${type === 'lamca' ? shifts.length + ' ca' : 'Hành chính'}`, 'success');
   }
 
-  // ─── NHẬP NHÂN VIÊN TỪ FILE EXCEL ──────────────────────────────
+  // ─── CA LÀM VIỆC THEO MỐC HIỆU LỰC — HÀM DÙNG CHUNG (11/2026) ───
+  // dd/mm/yyyy cho nhãn/cảnh báo
+  function hrFmtVnDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || '');
+  }
+  // Đọc bảng ca trên form → { shifts, error } (thuần: chỉ cần DOM ô nhập).
+  // Giờ nghỉ: brkMode 'auto' = số giờ (mặc định ca 1 = 1h30, ca sau = 1h) ·
+  // 'exact' = giờ bắt đầu–kết thúc (chặn thiếu mốc/lệch/dài quá 3 giờ).
+  function hrShiftRowsFromDom(type) {
+    const box = document.getElementById('shift-rows');
+    if (!box) return { shifts: [], error: 'Không tìm thấy bảng cấu hình ca.' };
+    const rows = {};
+    box.querySelectorAll('[data-shift-i]').forEach(inp => {
+      const i = inp.getAttribute('data-shift-i');
+      const f = inp.getAttribute('data-shift-f');
+      rows[i] = rows[i] || { name: '', start: '', end: '', brk: '', brkMode: 'auto', brkStart: '', brkEnd: '' };
+      rows[i][f] = String(inp.value == null ? '' : inp.value).trim();
+    });
+    const toM = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+    const isCa = type === 'lamca';
+    const shifts = [];
+    const keys = Object.keys(rows).sort((a, b) => Number(a) - Number(b));
+    for (const k of keys) {
+      const r = rows[k];
+      if (!r.start || !r.end) continue;                                  // dòng trống → bỏ
+      if (!/^\d{1,2}:\d{2}$/.test(r.start) || !/^\d{1,2}:\d{2}$/.test(r.end)) {
+        return { shifts: [], error: `Ca "${r.name || ('ca ' + (Number(k) + 1))}": giờ bắt đầu/kết thúc chưa đúng (định dạng HH:MM).` };
+      }
+      if (r.start === r.end) {
+        return { shifts: [], error: `Ca "${r.name || ('ca ' + (Number(k) + 1))}": giờ kết thúc phải khác giờ bắt đầu (ca đêm ghi giờ ra sang ngày hôm sau, VD 19:00 → 06:00).` };
+      }
+      const sh = { name: r.name, start: r.start, end: r.end, brk: 0 };
+      if (isCa) {
+        const rawBrk = String(r.brk == null ? '' : r.brk).replace(',', '.');
+        let brk = Number(rawBrk);
+        if (rawBrk === '' || !Number.isFinite(brk) || brk < 0) brk = (Number(k) === 0 ? 1.5 : 1);
+        brk = Math.min(brk, 6);
+        if (r.brkMode === 'exact') {
+          const bs = toM(r.brkStart), be = toM(r.brkEnd);
+          if (!bs || !be || bs === be) {
+            return { shifts: [], error: `Ca "${r.name || ('ca ' + (Number(k) + 1))}": chọn "Giờ cụ thể" thì phải nhập giờ bắt đầu VÀ giờ kết thúc nghỉ.` };
+          }
+          let min = be - bs; if (min < 0) min += 1440;
+          if (min > 180) {
+            return { shifts: [], error: `Ca "${r.name || ('ca ' + (Number(k) + 1))}": giờ nghỉ cụ thể dài quá 3 giờ — kiểm tra lại.` };
+          }
+          sh.brkMode = 'exact'; sh.brkStart = r.brkStart; sh.brkEnd = r.brkEnd; sh.brk = Math.round(min) / 60;
+        } else {
+          sh.brkMode = 'auto'; sh.brk = brk;
+        }
+      }
+      shifts.push(sh);
+    }
+    return { shifts, error: '' };
+  }
+  // Ghi cấu hình mới THEO MỐC HIỆU LỰC: bản CŨ (giữ nguyên mốc cũ) được lưu
+  // vào `versions`; bản mới thành hiện hành với `effectiveFrom` = ngày chọn.
+  // Giới hạn SHIFT_VERSIONS_MAX bản lịch sử (giữ bản mới nhất).
+  function hrShiftApplyVersion(dept, entry) {
+    const now = new Date().toISOString();
+    const by = (state.currentUser && (state.currentUser.fullname || state.currentUser.email || state.currentUser.username)) || '';
+    const list = state.hrShifts || (state.hrShifts = []);
+    const idx = list.findIndex(s => s.id === dept);
+    if (idx === -1) {
+      list.push({ id: dept, type: entry.type, shifts: entry.shifts, effectiveFrom: entry.effectiveFrom, versions: [], createdAt: now, updatedAt: now, updatedByName: by });
+      return { archived: 0 };
+    }
+    const cur = list[idx];
+    const versions = Array.isArray(cur.versions) ? cur.versions.filter(Boolean).slice() : [];
+    versions.push({ effectiveFrom: hrShiftEffectiveFromOf(cur), type: cur.type, shifts: cur.shifts, note: cur.note || '', by: cur.updatedByName || '', at: cur.updatedAt || now });
+    // Gộp trùng mốc (bản mới thắng), xếp tăng, giữ tối đa SHIFT_VERSIONS_MAX
+    const byFrom = {};
+    versions.forEach(v => { byFrom[String(v.effectiveFrom)] = v; });
+    const sorted = Object.keys(byFrom).sort().map(k => byFrom[k]).slice(-SHIFT_VERSIONS_MAX);
+    list[idx] = { ...cur, type: entry.type, shifts: entry.shifts, effectiveFrom: entry.effectiveFrom, versions: sorted, note: entry.note || '', updatedAt: now, updatedByName: by };
+    return { archived: sorted.length };
+  }
+  // XOÁ 1 bản lịch sử (khi lưu nhầm mốc hiệu lực — VD để 01/11 thay vì 12/11):
+  // sau khi xoá, các ngày trước mốc kế tiếp quay về dùng bản CŨ HƠN.
+  function hrDeleteShiftVersion(effectiveFrom) {
+    if (!requireEditPermission()) return;
+    const dept = document.getElementById('shift-dept')?.value || state.hrBoardDept || 'Xưởng 2';
+    const cfg = (state.hrShifts || []).find(x => x.id === dept);
+    if (!cfg || !Array.isArray(cfg.versions)) return;
+    const idx = cfg.versions.findIndex(v => String(v.effectiveFrom) === String(effectiveFrom));
+    if (idx === -1) { showToast('Không tìm thấy bản lịch sử cần xoá.', 'error'); return; }
+    const ok = confirm(`Xoá bản cấu hình ca có hiệu lực từ ${hrFmtVnDate(effectiveFrom)} (${hrVnDateLong(effectiveFrom)})? Các ngày trước mốc kế tiếp sẽ quay về dùng bản CŨ HƠN. Tiếp tục?`);
+    if (!ok) return;
+    cfg.versions.splice(idx, 1);
+    cfg.updatedAt = new Date().toISOString();
+    saveHrData(['hrShifts']);
+    renderShiftHistory(cfg);
+    renderHrView();
+    showToast('Đã xoá bản lịch sử cấu hình ca — các ngày trước mốc kế tiếp giờ dùng bản cũ hơn.', 'success');
+  }
+  // Vẽ LỊCH SỬ các bản cấu hình (mới nhất trước) trong modal Cài Đặt Ca
+  function renderShiftHistory(cfg) {
+    const box = document.getElementById('shift-history');
+    const cnt = document.getElementById('shift-history-count');
+    if (!box) return;
+    const all = hrShiftVersionsOf(cfg || {});
+    const old = all.slice(0, -1).reverse();   // bỏ bản hiện tại (đang hiện ở bảng)
+    if (cnt) cnt.textContent = old.length ? `(${old.length} bản cũ)` : '';
+    if (!old.length) {
+      const from = hrShiftEffectiveFromOf(cfg || {});
+      box.innerHTML = `<div class="shift-history-empty">Chưa từng đổi — cấu hình hiện tại áp dụng ${from === SHIFT_EPOCH ? 'từ đầu' : 'từ ' + hrFmtVnDate(from)}.</div>`;
+      return;
+    }
+    box.innerHTML = old.map(v => {
+      const times = (v.shifts || []).map(s => `${s.start}–${s.end}`).join(' · ');
+      const brks = (v.type === 'lamca')
+        ? (v.shifts || []).map((s, i) => { const w = hrShiftBrkWinFrom(s); return w ? `${String(s.brkStart)}–${String(s.brkEnd)}` : `${hrShiftBrkH({ type: 'lamca', shifts: v.shifts }, i)}h`; }).join(' / ')
+        : 'nghỉ trưa';
+      return `<div class="shift-history-row">
+        <span class="shift-history-date">Từ ${hrFmtVnDate(v.effectiveFrom)}</span>
+        <span class="shift-history-body">${v.type === 'lamca' ? `Làm ca · ${(v.shifts || []).length} ca` : 'Hành chính'} — ${escapeHTML(times)}${v.type === 'lamca' ? ` · nghỉ ${escapeHTML(brks)}` : ''}</span>
+        ${v.at ? `<span class="shift-history-at" title="Lưu lúc">${hrFmtVnDate(String(v.at).slice(0, 10))}</span>` : ''}
+        <button type="button" class="shift-history-del" data-shift-del="${v.effectiveFrom}" title="Xoá bản lịch sử này — các ngày trước mốc kế tiếp sẽ quay về dùng bản cũ hơn">×</button>
+      </div>`;
+    }).join('');
+  }
+  // Bật/tắt ô nhập theo chế độ nghỉ của TỪNG dòng (Giữa ca ⇄ Giờ cụ thể)
+  function hrSyncShiftBreakCells() {
+    const box = document.getElementById('shift-rows');
+    if (!box) return;
+    box.querySelectorAll('[data-shift-row]').forEach(row => {
+      const i = row.getAttribute('data-shift-row');
+      const sel = box.querySelector(`[data-shift-i="${i}"][data-shift-f="brkMode"]`);
+      const exact = !!(sel && sel.value === 'exact');
+      row.classList.toggle('is-exact', exact);
+      if (exact) hrFillExactBreakDefault(box, i);
+    });
+  }
+  // Đổi sang chế độ GIỜ CỤ THỂ mà 2 ô đang trống → điền sẵn cửa sổ GIỮA CA
+  // (người dùng chỉ cần chỉnh khác đi nếu muốn — khỏi gõ từ đầu).
+  function hrFillExactBreakDefault(box, i) {
+    const el = f => box.querySelector(`[data-shift-i="${i}"][data-shift-f="${f}"]`);
+    const bs = el('brkStart'), be = el('brkEnd');
+    if (!bs || !be) return;
+    if (bs.value || be.value) return;
+    const start = (el('start') || {}).value || '', end = (el('end') || {}).value || '';
+    const toM = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+    const sm = toM(start), em = toM(end);
+    if (!sm || !em || sm === em) return;
+    const e2 = em <= sm ? em + 1440 : em;
+    const brkMin = Math.max(0, Number((el('brk') || {}).value) || 0) * 60;
+    const b = Math.min(brkMin, e2 - sm);
+    const gs = sm + Math.round(((e2 - sm) - b) / 2);
+    const fmt = m => `${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    bs.value = fmt(gs);
+    be.value = fmt(gs + b);
+  }
+  // Xem trước giờ HC/TC của mỗi dòng (làm đến hết ca) — cập nhật khi gõ form
+  function hrRefreshShiftPreviews() {
+    const box = document.getElementById('shift-rows');
+    if (!box) return;
+    const dept = document.getElementById('shift-dept')?.value || state.hrBoardDept || 'Xưởng 2';
+    box.querySelectorAll('[data-shift-row]').forEach(row => {
+      const i = row.getAttribute('data-shift-row');
+      const prev = box.querySelector(`[data-shift-prev="${i}"]`);
+      if (!prev) return;
+      const val = f => { const el = box.querySelector(`[data-shift-i="${i}"][data-shift-f="${f}"]`); return el ? String(el.value || '').trim() : ''; };
+      const start = val('start'), end = val('end');
+      if (!/^\d{1,2}:\d{2}$/.test(start) || !/^\d{1,2}:\d{2}$/.test(end) || start === end) { prev.textContent = '—'; return; }
+      // Dựng cấu hình TẠM THỜI từ đúng dòng đang nhập (gồm chế độ nghỉ) để xem trước
+      const brk = Number(val('brk')) || 0;
+      const sh = { name: '', start, end, brk };
+      if (val('brkMode') === 'exact' && val('brkStart') && val('brkEnd')) {
+        sh.brkMode = 'exact'; sh.brkStart = val('brkStart'); sh.brkEnd = val('brkEnd');
+      }
+      const typeEl = document.querySelector('input[name="shift-type"]:checked');
+      const cfg = { type: typeEl ? typeEl.value : 'hanhchinh', shifts: [sh] };
+      try {
+        const rng = hrShiftRange(cfg, 0);
+        const r = hrSplitHoursHCMin(dept, rng.startMin, rng.endMin, 0, null, cfg);
+        const total = (r.hc || 0) + (r.tc || 0);
+        const txt = total > 0 ? `= ${fmtHm(r.hc)} HC${r.tc ? ' + ' + fmtHm(r.tc) + ' TC' : ''}` : '= 0 giờ';
+        // Ca dài bất thường (>16h — thường do giờ cũ bị lạ) → cảnh báo ngay trên dòng
+        prev.textContent = total > 16 * 60 ? '⚠ ' + txt : txt;
+      } catch (e) { prev.textContent = '—'; }
+    });
+  }
+  // Ngày dạng chữ đầy đủ: '2026-11-01' → 'ngày 1 tháng 11 năm 2026' (tránh nhầm dd/mm với mm/dd)
+  function hrVnDateLong(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? `ngày ${Number(m[3])} tháng ${Number(m[2])} năm ${Number(m[1])}` : String(iso || '');
+  }
+  // Ghi chú tác động của mốc hiệu lực (dưới ô "Áp dụng từ ngày") — ghi rõ ngày BẰNG CHỮ
+  function hrRefreshShiftEffectiveNote() {
+    const note = document.getElementById('shift-effective-note');
+    if (!note) return;
+    const effEl = document.getElementById('shift-effective');
+    const dept = document.getElementById('shift-dept')?.value || state.hrBoardDept || 'Xưởng 2';
+    const eff = (effEl && /^\d{4}-\d{2}-\d{2}$/.test(String(effEl.value || ''))) ? effEl.value : hrTodayISO();
+    const cur = (state.hrShifts || []).find(s => s.id === dept);
+    const curFrom = cur ? hrShiftEffectiveFromOf(cur) : SHIFT_EPOCH;
+    const past = eff < hrTodayISO();
+    note.classList.toggle('is-past', past);
+    note.innerHTML = past
+      ? `⚠ Mốc hiệu lực <b>${hrFmtVnDate(eff)}</b> (${hrVnDateLong(eff)}) nằm ở QUÁ KHỨ: từ ngày đó đến hôm nay dùng giờ mới; các ngày TRƯỚC đó giữ nguyên theo cấu hình cũ — dùng khi lãnh đạo đổi giờ vào giữa kỳ và cần giữ số liệu đã qua.`
+      : `Thay đổi sẽ áp dụng từ <b>${hrFmtVnDate(eff)}</b> (${hrVnDateLong(eff)}). Các ngày TRƯỚC đó vẫn tính theo cấu hình cũ (giờ công, HC/TC, bảng chấm công, thống kê đi làm KHÔNG bị tính lại).`
+      + (cur && curFrom !== SHIFT_EPOCH ? `<br>Cấu hình hiện tại đang có hiệu lực từ ${hrFmtVnDate(curFrom)}.` : `<br>Bộ phận này chưa từng đổi ca — cấu hình hiện tại áp dụng từ đầu.`);
+  }
+  // DI TRÚ cấu hình ca theo mốc hiệu lực (11/2026): dữ liệu cũ chưa có
+  // `effectiveFrom`/`versions` → mốc = "từ đầu", versions rỗng; dọn giá trị
+  // nghỉ rác (form cũ từng lưu chuỗi "HH:MM"). Idempotent — chỉ ghi khi đổi thật.
+  function migrateShiftEffectiveDates() {
+    let touched = 0;
+    (state.hrShifts || []).forEach(cfg => {
+      if (!cfg || !cfg.id) return;
+      let dirty = false;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(cfg.effectiveFrom || ''))) { cfg.effectiveFrom = SHIFT_EPOCH; dirty = true; }
+      if (!Array.isArray(cfg.versions)) { cfg.versions = []; dirty = true; }
+      (cfg.shifts || []).forEach(sh => {
+        if (!sh) return;
+        // brk rác (không phải số / ngoài 0–6) → xoá để hrShiftBrkH áp mặc định
+        if (sh.brk != null && sh.brk !== '') {
+          const v = Number(sh.brk);
+          if (!Number.isFinite(v) || v < 0 || v > 6) { delete sh.brk; dirty = true; }
+        }
+      });
+      if (dirty) { cfg.updatedAt = new Date().toISOString(); touched++; }
+    });
+    if (touched) {
+      saveHrData(['hrShifts']);
+      try { showToast(`Đã chuẩn hoá cấu hình ca làm việc theo mốc hiệu lực (${touched} bộ phận) — giờ ca đang dùng giữ nguyên.`, 'info'); } catch (e) {}
+    }
+    return touched;
+  }  // ─── NHẬP NHÂN VIÊN TỪ FILE EXCEL ──────────────────────────────
   // Đọc file .xlsx/.xls/.csv → tự nhận cột theo tiêu đề → xem trước &
   // đổi ánh xạ cột → nhập: thêm mới tất cả HOẶC cập nhật theo Mã NV.
   const EMPLOYEE_IMPORT_FIELDS = [
@@ -8938,6 +9264,22 @@ export {
   hrAssignmentInterval,
   hrShiftRange,
   hrShiftBrkH,
+  hrShiftBrkWin,
+  hrShiftBrkWinFrom,
+  hrShiftVersionsOf,
+  hrShiftEffectiveFromOf,
+  hrShiftApplyVersion,
+  hrShiftRowsFromDom,
+  renderShiftHistory,
+  hrDeleteShiftVersion,
+  hrVnDateLong,
+  hrSyncShiftBreakCells,
+  hrRefreshShiftPreviews,
+  hrRefreshShiftEffectiveNote,
+  hrFmtVnDate,
+  migrateShiftEffectiveDates,
+  SHIFT_EPOCH,
+  SHIFT_VERSIONS_MAX,
   renderShiftRows,
   hrAssignTimesOf,
   hrSplitHoursHC,

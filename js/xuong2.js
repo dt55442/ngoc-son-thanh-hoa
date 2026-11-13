@@ -987,7 +987,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (!byShift.has(k)) byShift.set(k, []);
       byShift.get(k).push(c);
     });
-    const meta = shiftMetaOf('Xưởng 2');
+    const meta = shiftMetaOf('Xưởng 2', day && day.date);
     const keys = [...byShift.keys()].sort((a, b) => (a === '' ? 99 : Number(a)) - (b === '' ? 99 : Number(b)));
     const rows = keys.map(k => {
       const list = byShift.get(k);
@@ -1852,8 +1852,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // Sự) → 1 ngày có 2 cột ca. Mọi thẻ ngày (Xưởng 2 / Xưởng 1 / Ép Ván / QC)
   // đọc chung bộ hàm này để số liệu KHÔNG lệch giữa các thẻ.
   // Tên + khung giờ từng ca lấy từ chính Cài Đặt Ca của bộ phận.
-  function shiftMetaOf(dept) {
-    const cfg = hrShiftCfg(dept || 'Xưởng 2');
+  function shiftMetaOf(dept, date) {
+    const cfg = hrShiftCfg(dept || 'Xưởng 2', date);
     const meta = {};
     ((cfg && cfg.shifts) || []).forEach((s, i) => {
       meta[i] = {
@@ -1884,7 +1884,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return shiftBreakdownHtml({
       date: dateVal,
       incHours: incH,
-      shiftMeta: shiftMetaOf(dept),
+      shiftMeta: shiftMetaOf(dept, dateVal),
       sections: [{
         label,
         groups: shiftGroupsFor(dateVal, matchPos, dept),
@@ -1899,7 +1899,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return shiftBreakdownHtml({
       date: dateVal,
       incHours: inc,
-      shiftMeta: shiftMetaOf(dept || 'Xưởng 2'),
+      shiftMeta: shiftMetaOf(dept || 'Xưởng 2', dateVal),
       sections: (sections || []).map(s => ({
         ...s,
         incHours: (s && s.incHours != null) ? s.incHours : inc

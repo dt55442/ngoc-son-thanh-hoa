@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v404';
+  const APP_VERSION = 'v408';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -369,7 +369,7 @@
     hrLeaves: [],      // [{ id, employeeId, type, from, to, days, reason, status pending|approved|rejected, approvedBy, approvedAt, createdAt }]
     hrRecruitment: [], // [{ id, department, position, needQty, hiredQty, needDate, status open|done, notes, createdAt, updatedAt }]
     hrPositionNeeds: [], // BẢNG TRUNG GIAN "Nhân sự cần tại các vị trí": [{ id, department, position, positionId, needQty, haveQty, notes, createdAt, updatedAt }]
-    hrShifts: [],      // Cài đặt ca làm việc theo bộ phận: [{ id: dept, type 'hanhchinh'|'lamca', shifts: [{ name, start, end }] }]
+    hrShifts: [],      // Cài đặt ca làm việc theo bộ phận THEO MỐC HIỆU LỰC: [{ id: dept, type, effectiveFrom 'yyyy-mm-dd', versions: [{ effectiveFrom, type, shifts }], shifts: [{ name, start, end, brk, brkMode, brkStart, brkEnd }] }]
     hrAssignments: [], // Bố trí theo ngày; end là mốc hiệu lực, _hrEndBase giữ giờ gốc khi tự nối công đoạn kế tiếp
     hrBoardDate: '',   // ngày đang xem của bảng bố trí ('yyyy-mm-dd')
     hrBoardDept: '',   // bộ phận đang xem của bảng bố trí (mặc định 'Xưởng 2')

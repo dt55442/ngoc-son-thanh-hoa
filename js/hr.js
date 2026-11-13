@@ -7976,8 +7976,12 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     const list = state.hrShifts || (state.hrShifts = []);
     const idx = list.findIndex(s => s.id === dept);
     if (idx === -1) {
-      list.push({ id: dept, type: entry.type, shifts: entry.shifts, effectiveFrom: entry.effectiveFrom, versions: [], createdAt: now, updatedAt: now, updatedByName: by });
-      return { archived: 0 };
+      // Bộ phận CHƯA TỪNG cài ca: trước mốc hiệu lực vẫn dùng MẶC ĐỊNH hệ thống
+      // (Hành chính 07:00–17:30) → seed 1 bản lịch sử ở mốc "từ đầu", KHÔNG ĐỂ
+      // ngày quá khứ bị tính lại theo giờ mới (đúng lỗi QC / Xưởng 1 đã gặp).
+      const uot = { effectiveFrom: SHIFT_EPOCH, type: 'hanhchinh', shifts: BOARD_SHIFT_PRESETS.hanhchinh.shifts, note: 'Mặc định hệ thống (trước khi cài đặt)', by: '', at: '' };
+      list.push({ id: dept, type: entry.type, shifts: entry.shifts, effectiveFrom: entry.effectiveFrom, versions: [uot], createdAt: now, updatedAt: now, updatedByName: by });
+      return { archived: 1 };
     }
     const cur = list[idx];
     const versions = Array.isArray(cur.versions) ? cur.versions.filter(Boolean).slice() : [];
@@ -8125,6 +8129,12 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
       let dirty = false;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(cfg.effectiveFrom || ''))) { cfg.effectiveFrom = SHIFT_EPOCH; dirty = true; }
       if (!Array.isArray(cfg.versions)) { cfg.versions = []; dirty = true; }
+      // Entry tạo bởi bản trước (versions rỗng nhưng mốc cụ thể): ngày trước mốc
+      // đang bị tính theo giờ MỚI → seed bản MẶC ĐỊNH ở mốc "từ đầu" để lùi về đúng.
+      if (cfg.versions.length === 0 && cfg.effectiveFrom && cfg.effectiveFrom !== SHIFT_EPOCH) {
+        cfg.versions.unshift({ effectiveFrom: SHIFT_EPOCH, type: 'hanhchinh', shifts: BOARD_SHIFT_PRESETS.hanhchinh.shifts, note: 'Mặc định hệ thống (trước khi cài đặt)', by: '', at: '' });
+        dirty = true;
+      }
       (cfg.shifts || []).forEach(sh => {
         if (!sh) return;
         // brk rác (không phải số / ngoài 0–6) → xoá để hrShiftBrkH áp mặc định

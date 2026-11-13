@@ -244,7 +244,7 @@ submit('lamca', [
   [0, 'name', 'Ca ngày'], [0, 'start', '07:00'], [0, 'end', '17:30'], [0, 'brk', '1.5'], [0, 'brkMode', 'auto'], [0, 'brkStart', ''], [0, 'brkEnd', '']
 ], '2026-11-13');
 const cfgNew = state.hrShifts.find(s => s.id === 'Xưởng 2');
-check('E1: tạo mới bản ghi + mốc hiệu lực + versions rỗng', !!cfgNew && cfgNew.effectiveFrom === '2026-11-13' && Array.isArray(cfgNew.versions) && cfgNew.versions.length === 0);
+check('E1: tạo mới bản ghi + mốc hiệu lực + versions SEED bản mặc định (mốc từ đầu)', !!cfgNew && cfgNew.effectiveFrom === '2026-11-13' && Array.isArray(cfgNew.versions) && cfgNew.versions.length === 1 && cfgNew.versions[0].effectiveFrom === '2000-01-01');
 
 // ═══ F. HÀNH CHÍNH QUA FORM ═══
 state.hrShifts = [];
@@ -278,7 +278,7 @@ check('H3: CSS khối mới ở cấp cao nhất (depth = 0)', (() => {
   return depth('.shift-card {') === 0 && depth('.shift-history-box {') === 0;
 })());
 check('H4: history.js có vùng hrShifts (nhật ký đổi ca)', histSrc.includes('hrShifts:') && histSrc.includes('Cấu hình ca làm việc'));
-check('H5: sw.js v408', /nha-may-ngoc-son-v408/.test(swSrc));
+check('H5: sw.js v409', /nha-may-ngoc-son-v409/.test(swSrc));
 check('H6: parse/submit/version/migrate đã export',
   typeof hr.hrShiftRowsFromDom === 'function' && typeof hr.hrShiftApplyVersion === 'function' && typeof hr.migrateShiftEffectiveDates === 'function' && typeof hr.renderShiftHistory === 'function');
 
@@ -308,6 +308,44 @@ check('I4: xoá bản nhầm (01/11) → ngày 05/11 quay về bản CŨ HƠN (2
 })());
 check('I5: events.js có ủy quyền nút xoá trong lịch sử',
   evSrc.includes('data-shift-del') && evSrc.includes('hrDeleteShiftVersion'));
+
+// ═══ J. BỘ PHẬN CHƯA TỪNG CÀI (QC / XưữỜNG 1): ngày trước mốc phải giữ giờ MẶC ĐỊNH ═══
+state.hrShifts = [];
+hr.hrShiftApplyVersion('QC', { type: 'hanhchinh', shifts: [{ name: 'Sáng', start: '07:00', end: '11:30' }, { name: 'Chiều', start: '12:30', end: '17:00' }], effectiveFrom: '2026-11-12' });
+const qc = state.hrShifts.find(x => x.id === 'QC');
+check('J1: tạo mới cho bộ phận chưa cài → versions ĐƯỢC SEED bản mặc định (mốc từ đầu)',
+  qc.versions.length === 1 && qc.versions[0].effectiveFrom === '2000-01-01' && qc.versions[0].shifts.length === 2);
+check('J2: ngày TRƯỚC mốc (05/11) → dùng giờ MẶC ĐỊNH (07:00–17:30), không dùng giờ mới',
+  (() => {
+    const cfg = hr.hrShiftCfg('QC', '2026-11-05');
+    return cfg.type === 'hanhchinh' && cfg.shifts[cfg.shifts.length - 1].end === '17:30';
+  })());
+check('J3: từ mốc 12/11 → dùng giờ mới (Chiều 17:00)',
+  hr.hrShiftCfg('QC', '2026-11-12').shifts[hr.hrShiftCfg('QC', '2026-11-12').shifts.length - 1].end === '17:00');
+check('J4: hrSplitHoursHCDate 05/11 (trước mốc) = 9h HC — KHÔNG bị tính lại theo giờ mới',
+  (() => {
+    const r = hr.hrSplitHoursHCDate('QC', '2026-11-05', '07:00', '17:30', 0);
+    return r.hc === 540 && r.tc === 0;
+  })());
+check('J5: hrSplitHoursHCDate 12/11 (từ mốc) = 9h HC theo khung mới',
+  (() => {
+    const r = hr.hrSplitHoursHCDate('QC', '2026-11-12', '07:00', '17:00', 0);
+    return r.hc === 540 && r.tc === 0;
+  })());
+check('J6: TC sau 17:00 — ngày trước mốc (khung cũ 17:30) còn HC 30p + TC 90p; từ mốc (khung 17:00) TC 120p',
+  (() => {
+    const truoc = hr.hrSplitHoursHCDate('QC', '2026-11-05', '17:00', '19:00', 0);
+    const sau = hr.hrSplitHoursHCDate('QC', '2026-11-12', '17:00', '19:00', 0);
+    return truoc.tc === 90 && sau.tc === 120;   // 17:00–19:00: cũ HC 30 + TC 90 · mới (hết khung 17:00) TC 120
+  })());
+// Di trú entry do bản code trước tạo (versions rỗng + mốc cụ thể)
+state.hrShifts = [{ id: 'Xưởng 1', type: 'hanhchinh', shifts: [{ name: 'Sáng', start: '07:00', end: '11:30' }, { name: 'Chiều', start: '12:30', end: '17:00' }], effectiveFrom: '2026-11-12', versions: [] }];
+const nMig2 = hr.migrateShiftEffectiveDates();
+check('J7: di trú seed bản mặc định cho entry versions rỗng (Xưởng 1)',
+  nMig2 === 1 && state.hrShifts[0].versions.length === 1 && state.hrShifts[0].versions[0].effectiveFrom === '2000-01-01');
+check('J8: sau di trú — ngày 05/11 Xưởng 1 quay về giờ MẶC ĐỊNH (17:30)',
+  hr.hrShiftCfg('Xưởng 1', '2026-11-05').shifts[hr.hrShiftCfg('Xưởng 1', '2026-11-05').shifts.length - 1].end === '17:30');
+check('J9: di trú chạy lại → KHÔNG seed thêm (idempotent)', hr.migrateShiftEffectiveDates() === 0);
 
 console.log('\n=== CÀI ĐẶT CA THEO MỐC HIỆU LỰC: ' + pass + ' PASS / ' + fail + ' FAIL ===');
 process.exit(fail ? 1 : 0);

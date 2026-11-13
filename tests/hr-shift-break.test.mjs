@@ -178,7 +178,7 @@ check('I3: hrShiftBrkH + hrShiftRange + renderShiftRows đã export',
 check('I4: index.html modal Cài Đặt Ca ghi rõ "giờ nghỉ"', idxSrc.includes('Thời Gian Ca (tên ca / bắt đầu / kết thúc / giờ nghỉ)'));
 check('I5: styles.css có bảng 4 cột ca (.shift-row / -head / -na)',
   cssSrc.includes('.shift-row-head, .shift-row') && cssSrc.includes('.shift-row-na'));
-check('I6: sw.js đã bump cache v408', /nha-may-ngoc-son-v408/.test(swSrc));
+check('I6: sw.js đã bump cache v409', /nha-may-ngoc-son-v409/.test(swSrc));
 
 // ═══ J. MỐC HIỆU LỰC — đổi ca giữa kỳ KHÔNG tính lại lịch sử (11/2026) ═══
 const D_MOI = '2026-11-05';
@@ -260,7 +260,7 @@ check('L6: CSS có khối mới + ở cấp cao nhất (depth = 0)', (() => {
 })());
 check('L7: history.js ghi nhật ký vùng hrShifts', histSrc.includes('hrShifts:') && histSrc.includes('Cấu hình ca làm việc'));
 check('L8: export hàm mới', typeof hr.hrShiftBrkWin === 'function' && typeof hr.hrShiftApplyVersion === 'function' && typeof hr.migrateShiftEffectiveDates === 'function' && typeof hr.renderShiftHistory === 'function' && typeof hr.hrShiftRowsFromDom === 'function');
-check('L9: sw.js đã bump cache v408', /nha-may-ngoc-son-v408/.test(swSrc));
+check('L9: sw.js đã bump cache v409', /nha-may-ngoc-son-v409/.test(swSrc));
 check('L10: hr.js có hàm điền sẵn giờ nghỉ cụ thể (hrFillExactBreakDefault) + cfgIn xem trước',
   hrSrc.includes('function hrFillExactBreakDefault') && hrSrc.includes('cfgIn || hrShiftCfg(dept, date)'));
 

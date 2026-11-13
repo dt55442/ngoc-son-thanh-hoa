@@ -171,7 +171,7 @@ function check(name, cond) {
   check('E4: cloud.js so sánh bản ghi đã chuẩn hóa thứ tự khóa (recSame/canonicalJson)',
     /function canonicalJson/.test(SRC('js/cloud.js')) && /function recSame/.test(SRC('js/cloud.js')));
   check('E5: sw.js + APP_VERSION đã tăng cache',
-    /nha-may-ngoc-son-v408/.test(SRC('sw.js')) && /v408/.test(SRC('js/state.js')));
+    /nha-may-ngoc-son-v409/.test(SRC('sw.js')) && /v409/.test(SRC('js/state.js')));
 }
 
 console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');

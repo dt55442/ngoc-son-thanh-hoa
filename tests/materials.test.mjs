@@ -555,6 +555,6 @@ check('Lô X2 có lượt cắt KIỂU CŨ → chip xám "Đã dùng hết 5.000
 check('Lô X1 (Cắt Ống 2.000 + Sấy thẳng 1.000) → chip "Đã dùng 3.000/6.000 kg"', tblChip.includes('Đã dùng 3.000/6.000 kg'));
 const rowLh = (tblChip.split('data-mat-row="mlh"')[1] || '').split('</tr>')[0] || '';
 check('Lô Lò hơi → KHÔNG gắn nhãn (chưa có sổ dùng)', rowLh.includes('Vầu khô') && !rowLh.includes('mat-use-chip'));
-check('CSS nhãn + sw.js v408', matCssHtml.includes('.mat-use-chip') && /nha-may-ngoc-son-v408/.test(fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8')));
+check('CSS nhãn + sw.js v409', matCssHtml.includes('.mat-use-chip') && /nha-may-ngoc-son-v409/.test(fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8')));
 console.log(`\n=== KẾT QUẢ: ${passed} PASS / ${failed} FAIL ===`);
 process.exit(failed ? 1 : 0);

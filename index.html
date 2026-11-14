@@ -1537,7 +1537,7 @@
                   <input type="date" id="x2-kho-date" required>
                 </div>
                 <div class="form-group" id="x2-kho-purpose-group">
-                  <label for="x2-kho-purpose">Mục Đích Xuất <span class="required">*</span></label>
+                  <label for="x2-kho-purpose" title="Bào Tinh / Bullig: chỉ hiện lô ĐÃ SẤY 2 (lô Sấy 1 hoặc chưa sấy bị ẩn để khỏi chọn nhầm). Khác (ghi lý do): hiện mọi lô ở Kho.">Mục Đích Xuất <span class="required">*</span></label>
                   <select id="x2-kho-purpose">
                     <option value="baotinh">Bào Tinh</option>
                     <option value="bullig">Bullig (gia công)</option>
@@ -1581,7 +1581,7 @@
               <div class="form-group col-span-full" id="x2-kho-lots-group">
                 <label>Gắn Lô <span class="required">*</span> — tổng phiếu tự cộng từ các thẻ lô</label>
                 <div class="bulk-lot-entry-head">
-                  <span>Có thể chọn lô đang tồn hoặc nhập các lô mới theo bảng kê.</span>
+                  <span>Chỉ hiện lô ĐÃ SẤY 2 (chip <b>Sấy 2</b>) cho mục đích Bào Tinh / Bullig — lô Sấy 1 / chưa sấy bị ẩn để khỏi chọn nhầm. Có thể chọn lô đang tồn hoặc nhập các lô mới theo bảng kê.</span>
                   <button type="button" class="btn btn-outline btn-sm" id="x2-kho-bulk-toggle" aria-pressed="false"><i data-lucide="table-2"></i> Tạo lô mới theo bảng kê</button>
                 </div>
                 <div class="bulk-lot-entry" id="x2-kho-bulk-entry" hidden>
@@ -1704,6 +1704,7 @@
               <h5><i data-lucide="boxes"></i> Tồn Kho Theo Lô</h5>
               <span class="x2-cut-table-count" id="x2-kho-stock-count"></span>
               <label class="kho-show-used" title="Hiện cả lô đã xuất hết (tồn 0) — mặc định ẨN để tránh hiểu nhầm"><input type="checkbox" id="x2-kho-show-used"> Hiện lô đã xuất hết</label>
+              <button type="button" class="btn btn-primary btn-sm kho-add-multi-btn" id="btn-kho-add-multi" data-perm="x2" title="Thêm nhiều lô vào Kho cùng lúc — nạp file Excel hoặc dán bảng từ Excel (cột: Ngày, Kích thước, Mục đích, Loại sấy, Số lượng)"><i data-lucide="file-plus"></i> Thêm Nhiều</button>
               <div class="kho-stock-bulk-controls admin-only-btn" id="x2-kho-bulk-controls">
                 <button type="button" class="btn btn-outline btn-sm" id="x2-kho-pick-toggle" title="Bật chọn nhiều lô Kho để xóa"><i data-lucide="list-checks"></i> Xóa nhiều</button>
                 <div class="kho-stock-bulk-actions">
@@ -6500,6 +6501,21 @@
             </div>
           </div>
 
+          <!-- TRẠNG THÁI SẤY (chỉ hiện khi công đoạn = Kho): ghi lô ĐÃ qua Sấy 1 /
+               Sấy 2 / chưa sấy — dùng để LỌC NGUỒN của phiếu xuất kho (Bào Tinh /
+               Bullig chỉ nhận lô ĐÃ SẤY 2, phiếu xuất Sấy 2 chỉ nhận lô ĐÃ SẤY 1). -->
+          <div class="form-group" id="form-dry-stage-group" style="display:none;">
+            <label for="form-dry-stage">Trạng Thái Sấy</label>
+            <select id="form-dry-stage">
+              <option value="chua-say">Chưa sấy (chưa khai / chưa rõ)</option>
+              <option value="say1">Sấy 1 (mới qua Sấy 1 — cần sấy tiếp ở Sấy 2)</option>
+              <option value="say2">Sấy 2 (đã xong sấy — ra sản xuất)</option>
+            </select>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+              Chỉ cần với lô nhập THẲNG vào Kho (không qua lò sấy trên hệ thống). Lô đi qua Sấy 1 / Sấy 2 thường sẽ tự có trạng thái đúng.
+            </div>
+          </div>
+
           <!-- Vị trí -->
           <div class="form-group">
             <label for="form-location">Vị Trí (Kệ/Kho/Máy) <span class="required">*</span></label>
@@ -6860,6 +6876,110 @@
        ① Công đoạn · ② Vị trí & Thẻ nan (2 cột check Chuyển Kho / Tóp xử lý lại) ·
        ③ Ngày · ④ Vị trí mới ở Kho (KHÔNG bắt buộc) — không stepper, không dropdown
        nổi; mọi chú thích chỉ hiện qua TOOLTIP. -->
+  <!-- ═══ MODAL THÊM NHIỀU LÔ VÀO KHO (nạp Excel / dán bảng) ═══ -->
+  <div class="modal-overlay" id="modal-kho-add-multi">
+    <div class="modal-card hud-frame modal-wide">
+      <div class="modal-header">
+        <h3><i data-lucide="file-plus"></i> Thêm Nhiều Lô Vào Kho</h3>
+        <button class="modal-close-btn" id="btn-close-kho-add-multi"><i data-lucide="x"></i></button>
+      </div>
+      <form id="kho-add-multi-form">
+        <div class="form-grid">
+          <!-- KHỐI ① — CACH NHẬP DỮ LIỆU -->
+          <div class="ck-sec col-span-full" data-ck-sec="1" id="km-input-block">
+            <div class="ck-sec-head">
+              <span class="ck-sec-num">1</span>
+              <span class="ck-sec-title">Cách Nhập Dữ Liệu</span>
+              <span class="ck-req">Bắt buộc</span>
+            </div>
+            <div class="ck-input-mode">
+              <button type="button" class="ck-mode-btn active" data-km-mode="table" title="Nhập tay từng dòng lô vào bảng bên dưới">📝 Nhập tay bảng</button>
+              <button type="button" class="ck-mode-btn" data-km-mode="paste" title="Dán bảng copia từ Excel vào textarea">📋 Dán từ Excel</button>
+            </div>
+            <!-- VỊ TRÍ KHO CHUNG — áp cho TẤT CẢ lô (Excel không có cột này) -->
+            <div class="km-loc-common-row">
+              <label for="km-loc-common" title="Nhập 1 lần — áp cho MỌI dòng đã nhập/dán (VD: LS3, K02). Bỏ trống thì phải điền Vị Trí từng dòng trong bảng.">Vị Trí Kho chung <span class="ck-opt">áp cho mọi lô</span></label>
+              <input type="text" id="km-loc-common" placeholder="VD: LS3, K02 — để trống nếu mỗi lô một vị trí" autocomplete="off">
+            </div>
+            <!-- BẢNG NHẬP TAY -->
+            <div id="km-table-mode" class="ck-mode-panel">
+              <div class="table-responsive table-scroll" style="max-height:300px;">
+                <table id="km-rows-table">
+                  <thead>
+                    <tr>
+                      <th class="ta-c" style="width:34px;">#</th>
+                      <th>Ngày Vào Kho</th>
+                      <th>Vị Trí (Kệ/Kho)</th>
+                      <th class="ta-r">Dài (mm)</th>
+                      <th class="ta-r">Rộng (mm)</th>
+                      <th class="ta-r">Dày (mm)</th>
+                      <th class="ta-r">Số Lượng (thanh)</th>
+                      <th>Loại Nan</th>
+                      <th>Dùng Cho</th>
+                      <th>Trạng Thái Sấy</th>
+                      <th class="ta-r" style="width:110px;">Thể Tích (m³)</th>
+                      <th class="ta-c" style="width:44px;">Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody id="km-rows-body"></tbody>
+                </table>
+              </div>
+              <div class="km-row-controls" style="margin-top:8px;">
+                <button type="button" class="btn btn-outline btn-sm" id="km-add-row"><i data-lucide="plus"></i> Thêm Dòng</button>
+                <button type="button" class="btn btn-outline btn-sm" id="km-clear-rows"><i data-lucide="trash-2"></i> Xóa Hết</button>
+              </div>
+              <div class="km-summary" style="margin-top:8px; font-weight:700; color:var(--text-main);">
+                Tổng: <span id="km-summary-qty">0</span> lô · <span id="km-summary-thanh">0</span> thanh · <span id="km-summary-m3">0.0000</span> m³
+              </div>
+            </div>
+            <!-- KHU VỰC DÁNTỪ EXCEL -->
+            <div id="km-paste-mode" class="ck-mode-panel" hidden>
+              <textarea id="km-paste-text" rows="8" placeholder="Dán bảng copia từ Excel vào đây (cột cách nhau bởi Tab, dòng cách nhau bởi Enter). Cột cần có: Ngày, Kích thước, Mục đích, Loại sấy, Số lượng A, Số lượng Al, Số lượng B. Ví dụ: 24/10/2026 1250x18x9 Ván Sấy 1  2100  "></textarea>
+              <div class="km-paste-hint" style="margin-top:6px; font-size:0.78rem; color:var(--text-muted);">
+                Mẹo: copie toàn bộ vùng dữ liệu từ Excel (bao gồm dòng tiêu đề nếu có) rồi dán vào đây. Hệ thống sẽ tự động nhận diện cột. Cột "Loại sấy" nhận: "Sấy 1", "Sấy 2" hoặc để trống (= Chưa sấy).
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" id="km-parse-paste"><i data-lucide="clipboard-list"></i> Xem Trước Dữ Liệu Đã Dán</button>
+            </div>
+          </div>
+          <!-- KHỐI ② — XEM TRƯỚC TRƯỚC KHI LƯU -->
+          <div class="ck-sec col-span-full" data-ck-sec="2" id="km-preview-block" hidden>
+            <div class="ck-sec-head">
+              <span class="ck-sec-num">2</span>
+              <span class="ck-sec-title">Xem Trước Trước Khi Lưu</span>
+            </div>
+            <div class="table-responsive table-scroll" style="max-height:260px;">
+              <table id="km-preview-table">
+                <thead>
+                  <tr>
+                    <th>Ngày</th>
+                    <th>Vị Trí</th>
+                    <th class="ta-r">Kích Thước</th>
+                    <th class="ta-r">SL</th>
+                    <th>Loại</th>
+                    <th>Dùng Cho</th>
+                    <th>Trạng Thái Sấy</th>
+                    <th class="ta-r">Thể Tích</th>
+                    <th>Ghi chú / lỗi</th>
+                  </tr>
+                </thead>
+                <tbody id="km-preview-body"></tbody>
+              </table>
+            </div>
+            <div class="km-preview-summary" style="margin-top:8px; font-weight:700; color:var(--text-main);"></div>
+          </div>
+        </div>
+        <div class="ck-note-row col-span-full">
+          <label for="km-notes" class="ck-note-label" title="Không bắt buộc — ghi chú áp dụng cho MỌI lô được nhập trong lượt này.">Ghi chú chung</label>
+          <textarea id="km-notes" rows="1" placeholder="Không bắt buộc..."></textarea>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btn-cancel-kho-add-multi">Hủy Bỏ</button>
+        <button type="button" class="btn btn-primary" id="btn-save-kho-add-multi"><i data-lucide="check"></i> Lưu Toàn Bộ Vào Kho</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modal-transfer-kho">
     <div class="modal-card hud-frame ck-flat">
       <div class="modal-header">
@@ -7011,6 +7131,14 @@
                 <select id="ck-new-use">
                   <option value="Ván">Ván</option>
                   <option value="Bullig">Bullig</option>
+                </select>
+              </div>
+              <div class="form-group" id="ck-new-drystage-group">
+                <label for="ck-new-drystage" title="Lô này đã qua sấy bao nhiêu lần trước khi vào Kho? Sấy 1 = phải sấy tiếp ở Sấy 2; Sấy 2 = đã xong sấy, ra sản xuất; Chưa sấy = lô mới nhập trực tiếp vào Kho.">Trạng Thái Sấy <span class="required">*</span></label>
+                <select id="ck-new-drystage">
+                  <option value="chua-say">Chưa sấy (lô mới vào Kho)</option>
+                  <option value="say1">Sấy 1 (cần sấy tiếp ở Sấy 2)</option>
+                  <option value="say2">Sấy 2 (đã xong sấy, ra sản xuất)</option>
                 </select>
               </div>
               <!-- HÀNG 3 — thể tích chip gọn 1 dòng (tự tính) -->

@@ -207,10 +207,10 @@ check('E19: CSS có spinner + thanh chạy + ẩn panel bằng [hidden] !importa
   css.includes('body[data-fx="low"] .btn-spinner') && css.includes('prefers-reduced-motion: reduce'));
 check('E20: ngoặc CSS cân bằng', (css.match(/\{/g) || []).length === (css.match(/\}/g) || []).length);
 const swJs = rd('sw.js');
-check('E21: sw.js v409 + ./js/auth-ui.js trong APP_SHELL',
-  swJs.includes("'nha-may-ngoc-son-v409'") && swJs.includes("'./js/auth-ui.js'"));
-check('E22: APP_VERSION = v409 (khớp CACHE_NAME — quy tắc 73)',
-  rd('js/state.js').includes("APP_VERSION = 'v409'"));
+check('E21: sw.js v420 + ./js/auth-ui.js trong APP_SHELL',
+  swJs.includes("'nha-may-ngoc-son-v420'") && swJs.includes("'./js/auth-ui.js'"));
+check('E22: APP_VERSION = v420 (khớp CACHE_NAME — quy tắc 73)',
+  rd('js/state.js').includes("APP_VERSION = 'v420'"));
 check('E23: tests/auth-ui.test.mjs đã nằm trong chuỗi npm test',
   rd('package.json').includes('tests/auth-ui.test.mjs'));
 

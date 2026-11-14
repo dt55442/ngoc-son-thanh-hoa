@@ -278,7 +278,7 @@ check('H3: CSS khối mới ở cấp cao nhất (depth = 0)', (() => {
   return depth('.shift-card {') === 0 && depth('.shift-history-box {') === 0;
 })());
 check('H4: history.js có vùng hrShifts (nhật ký đổi ca)', histSrc.includes('hrShifts:') && histSrc.includes('Cấu hình ca làm việc'));
-check('H5: sw.js v409', /nha-may-ngoc-son-v409/.test(swSrc));
+check('H5: sw.js v420', /nha-may-ngoc-son-v420/.test(swSrc));
 check('H6: parse/submit/version/migrate đã export',
   typeof hr.hrShiftRowsFromDom === 'function' && typeof hr.hrShiftApplyVersion === 'function' && typeof hr.migrateShiftEffectiveDates === 'function' && typeof hr.renderShiftHistory === 'function');
 

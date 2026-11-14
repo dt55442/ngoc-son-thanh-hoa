@@ -586,7 +586,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v409/.test(swJs));
+  /nha-may-ngoc-son-v420/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&
@@ -1160,6 +1160,40 @@ check('③ CẢNH BÁO: ĐỒNG Ý → lưu được 9.999 + VẪN giữ liên k
 check('③ CẤU TRÚC (js): helper nhận diện công đoạn sau + đồng bộ Loại + hợp nhất bản cũ',
   jsBM.includes('function batchHasDownstreamUse') && jsBM.includes('khoApprovedXuatNotes') &&
   jsBM.includes('function syncSourceChonNanClass') && jsBM.includes('Object.assign({}, old, batchData)'));
+
+// ─── N2. TRẠNG THÁI SẤY trên form Sửa lô (14/11/2026) ───────────────
+// Ô "Trạng Thái Sấy" chỉ hiện với lô đang ở KHO: cho biết lô ĐÃ SẤY 2 / mới Sấy 1
+// / chưa sấy để thẻ Kho lọc đúng NGUỒN của phiếu xuất (Bào Tinh / Bullig chỉ nhận
+// lô ĐÃ SẤY 2, phiếu Sấy 2 chỉ nhận lô ĐÃ SẤY 1). Lô đi qua lò sấy thường tự có
+// trạng thái đúng — ô này chỉ cần cho lô nhập THẲNG vào Kho (không qua lò).
+check('N2. CẤU TRÚC (index.html): ô "Trạng Thái Sấy" (form-dry-stage) + 3 lựa chọn',
+  idxHtml.includes('id="form-dry-stage-group"') && idxHtml.includes('id="form-dry-stage"') &&
+  idxHtml.includes('value="chua-say"') && idxHtml.includes('value="say1"') && idxHtml.includes('value="say2"'));
+check('N2. CẤU TRÚC (batch-modals.js): dùng CHUNG helper của xuong2.js + lưu batchData.dryStage',
+  jsBM.includes('khoLotDryStatusOf') && jsBM.includes('batchData.dryStage'));
+state.batches.push({ id: 'bx-dry1', code: '260996-01', stage: 'kho', date: '2026-09-16', week: '2026-W38',
+  length: 1250, width: 18, thickness: 7, quantity: 400, volume: 0.063, bambooType: 'A', useFor: 'Ván',
+  location: 'K50', stageHistory: [{ stage: 'kho', date: '2026-09-16' }] });
+check('N2. FORM: lô nhập thẳng Kho mặc định "Chưa sấy" (trước khi người dùng gán)',
+  x2.khoLotDryStatusOf(state.batches.find(b => b.id === 'bx-dry1')).key === 'chua-say');
+fillBatchForm(state.batches.find(b => b.id === 'bx-dry1'));
+document.getElementById('form-dry-stage').value = 'say2';
+bm.handleBatchFormSubmit({ preventDefault() {} });
+check('N2. FORM: gán "Sấy 2" cho lô nhập thẳng Kho → phiếu Bào Tinh / Bullig thấy được lô',
+  (() => { const b = state.batches.find(x => x.id === 'bx-dry1'); return !!b && b.dryStage === 'say2'; })());
+fillBatchForm(state.batches.find(b => b.id === 'bx-dry1'));
+document.getElementById('form-dry-stage').value = 'say1';
+bm.handleBatchFormSubmit({ preventDefault() {} });
+check('N2. FORM: gán "Sấy 1" → lô chỉ là nguồn cho Sấy 2, KHÔNG chọn được cho Bào Tinh / Bullig',
+  (() => { const b = state.batches.find(x => x.id === 'bx-dry1'); return !!b && b.dryStage === 'say1'; })());
+check('N2. FORM: mở form sửa lô kho → ô Trạng Thái Sấy nạp đúng trạng thái SUY RA của lô', (() => {
+  const lot = state.batches.find(b => b.id === 'bx-link1');   // [say1 → say2 → kho]
+  if (!lot) return false;
+  document.getElementById('form-dry-stage').value = 'chua-say';
+  bm.openBatchFormModal(lot.id);
+  return document.getElementById('form-dry-stage').value === 'say2' &&
+    document.getElementById('form-dry-stage-group').style.display !== 'none';
+})());
 
 // ─── N. XÓA NHIỀU LÔ (ADMIN — chế độ tích chọn trên Kanban) ────────
 console.log('--- N. XÓA NHIỀU LÔ (ADMIN) ---');

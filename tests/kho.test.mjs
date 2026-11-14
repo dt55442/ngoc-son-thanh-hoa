@@ -88,6 +88,7 @@ const { state } = await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.activeView = 'kanban-view';
 
+
 // ─── Dữ liệu mẫu: 3 lô ở Kho (k2 ra/vào kho 2 lần) + 1 lô Sấy 1 ──
 state.batches = [
   { id: 'k1', code: '260910-01', stage: 'kho', date: '2026-09-10', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 600, volume: 0.0945, bambooType: 'A', useFor: 'Ván', location: 'K11', stageHistory: [{ stage: 'kho', date: '2026-09-10' }] },
@@ -99,6 +100,82 @@ state.batches = [
 const utils = await import('../js/utils.js');
 const x2 = await import('../js/xuong2.js');
 const batchModals = await import('../js/batch-modals.js');
+
+// ─── A5. TRẠNG THÁI SẤY (14/11/2026) — nhãn chuẩn Kanban + LỌC NGUỒN theo mục đích ───
+// Lô mẫu: k1/k3 chỉ nhập thẳng Kho ("Chưa sấy") · k2 qua Sấy 2 · thêm k5 (khai
+// dryStage 'say2') và k6 (khai dryStage 'say1') để kiểm nhánh lô nhập thẳng Kho.
+state.batches.push(
+  { id: 'k5', code: '260913-01', stage: 'kho', date: '2026-09-13', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 300, volume: 0.047, bambooType: 'A', useFor: 'Ván', location: 'K15', dryStage: 'say2', stageHistory: [{ stage: 'kho', date: '2026-09-13' }] },
+  { id: 'k6', code: '260913-02', stage: 'kho', date: '2026-09-13', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 250, volume: 0.039, bambooType: 'B', useFor: 'Ván', location: 'K16', dryStage: 'say1', stageHistory: [{ stage: 'kho', date: '2026-09-13' }] }
+);
+const lotsWithDry = state.batches.slice();   // ảnh chụp để trả lại sau khối này
+const lotById = id => state.batches.find(b => b.id === id);
+check('TRẠNG THÁI SẤY: k1/k3 (chỉ nhập kho) = "Chưa sấy" · k2/k5 = "Sấy 2" · k6 = "Sấy 1"', (() => {
+  const s = id => x2.khoLotDryStatusOf(lotById(id)).label;
+  return s('k1') === 'Chưa sấy' && s('k3') === 'Chưa sấy' &&
+    s('k2') === 'Sấy 2' && s('k5') === 'Sấy 2' && s('k6') === 'Sấy 1';
+})());
+check('TRẠNG THÁI SẤY: chip dùng ĐÚNG nhãn + màu chuẩn Kanban (dry-say1 / dry-say2 / dry-chua)', (() => {
+  const chip = id => { const m = x2.khoDryChipHtml ? x2.khoDryChipHtml(lotById(id)) : ''; return m; };
+  return chip('k2').includes('dry-say2') && chip('k2').includes('Sấy 2') &&
+    chip('k6').includes('dry-say1') && chip('k6').includes('Sấy 1') &&
+    chip('k1').includes('dry-chua') && chip('k1').includes('Chưa sấy');
+})());
+check('TRẠNG THÁI SẤY: chip hiện ở CẢ 2 nơi — thẻ lô gắn phiếu VÀ bảng Tồn theo từng lô', (() => {
+  document.getElementById('x2-kho-purpose').value = 'khac';
+  x2.renderX2KhoLotsList();
+  x2.renderX2KhoStockTable();
+  const lots = document.getElementById('x2-kho-lots-list').innerHTML;
+  const stock = document.getElementById('x2-kho-stock-rows').innerHTML;
+  return lots.includes('dry-say2') && lots.includes('dry-say1') && lots.includes('dry-chua') &&
+    stock.includes('dry-say2') && stock.includes('dry-say1') && stock.includes('dry-chua');
+})());
+check('LỌC: mục đích Bào Tinh → chỉ còn lô ĐÃ SẤY 2 (k2, k5) — ẩn lô Sấy 1 + Chưa sấy', (() => {
+  document.getElementById('x2-kho-purpose').value = 'baotinh';
+  x2.renderX2KhoLotsList();
+  const h = document.getElementById('x2-kho-lots-list').innerHTML;
+  return h.includes(lotById('k2').code) && h.includes(lotById('k5').code) &&
+    ['k1', 'k3', 'k6'].every(id => h.includes(lotById(id).code) === false);
+})());
+check('LỌC: dòng trống nêu rõ "chỉ nhận lô Sấy 1" + hiện dòng "Đang lọc"', (() => {
+  state.batches = state.batches.filter(b => ['k2', 'k5'].includes(b.id));
+  document.getElementById('x2-kho-purpose').value = 'say2';   // phiếu Sấy 2 → chỉ nhận lô Sấy 1
+  x2.renderX2KhoLotsList();
+  const h = document.getElementById('x2-kho-lots-list').innerHTML;
+  state.batches = lotsWithDry.slice();
+  document.getElementById('x2-kho-purpose').value = 'khac';
+  return h.includes('al-filter-note') && h.includes('Đang lọc') &&
+    h.includes('chỉ nhận lô Sấy 1') && h.includes('Không có lô Sấy 1');
+})());
+check('LỌC: mục đích "Khác" → hiện ĐỦ mọi lô (k1, k3, k6) — đường thoát khi cần xuất lô chưa rõ', (() => {
+  x2.renderX2KhoLotsList();
+  const h = document.getElementById('x2-kho-lots-list').innerHTML;
+  return ['k1', 'k3', 'k6'].every(id => h.includes(lotById(id).code));
+})());
+check('LỌC: khoPurposeDryNeed bám đúng ô Mục Đích Xuất (baotinh/bullig=say2 · say2=say1 · khac=rỗng)', (() => {
+  const purposeEl = document.getElementById('x2-kho-purpose');
+  const val = v => { purposeEl.value = v; return x2.khoPurposeDryNeed(); };
+  return val('baotinh') === 'say2' && val('bullig') === 'say2' &&
+    val('say2') === 'say1' && val('khac') === '';
+})());
+check('ĐỔI MỤC ĐÍCH: chọn lô Chưa sấy ở mục đích "Khác" → đổi sang Bào Tinh thì lô bị bỏ (không chọn nhầm)', (() => {
+  x2.renderX2KhoLotsList();
+  x2.khoPickLot('k1');
+  const countEl = document.getElementById('x2-kho-picked-count');
+  if (!countEl || countEl.textContent !== '1 đã chọn') return false;
+  document.getElementById('x2-kho-purpose').value = 'baotinh';
+  x2.khoOnPurposeChange();
+  return countEl.textContent === 'Chưa chọn';
+})());
+check('ĐỔI MỤC ĐÍCH: helper đọc đúng lô đang Ở công đoạn Sấy 1 / Sấy 2 (không lệch)', (() => {
+  const lot1 = { id: 'x1', stage: 'say1', stageHistory: [{ stage: 'say1', date: '2026-09-01' }] };
+  const lot2 = { id: 'x2', stage: 'say2', stageHistory: [{ stage: 'say1', date: '2026-09-01' }, { stage: 'say2', date: '2026-09-05' }] };
+  return x2.khoLotDryStatusOf(lot1).key === 'say1' && x2.khoLotDryStatusOf(lot2).key === 'say2';
+})());
+// trả lại đúng 4 lô mẫu cho các mục kiểm thử phía dưới
+state.batches = lotsWithDry.filter(b => ['k1', 'k2', 'k3', 'k4'].includes(b.id));
+x2.resetX2KhoNoteForm(true);
+document.getElementById('x2-kho-purpose').value = 'khac';
 
 const quickPaste = x2.parseKhoBulkPaste([
   'Dài (mm)\tRộng\tDày\tA\tA1\tB',
@@ -504,6 +581,37 @@ check('DÙNG CHUNG: 14 thẻ X2 + 9 thẻ X1 đủ vùng dữ liệu + nguồn x
   check('CHẶN THEO LÔ: phiếu gắn lô còn tồn → khoApproveCheckError trả null (duyệt được)',
     x2.khoApproveCheckError(state.khoNotes.find(n => n.type === 'xuat' && n.lots && n.lots.length &&
       n.id !== 'note-shrink' && x2.khoLotsOverflow(n.lots).length === 0)) === null);
+// (b2) Lô tạo từ BẢNG KÊ trong thẻ Kho phải gán TRẠNG THÁI SẤY theo mục đích —
+  //      nếu không, lô mới bị coi là "Chưa sấy" và sẽ biến mất khỏi phiếu Bào
+  //      Tinh / Bullig ở lần chọn sau (14/11/2026).
+  const beforeBatches = state.batches.slice();
+  const beforeNotes = state.khoNotes;
+  x2.resetX2KhoNoteForm(true);
+  document.getElementById('x2-kho-date').value = '2026-09-30';
+  document.getElementById('x2-kho-purpose').value = 'baotinh';
+  const bulkValues = {
+    '[data-x2-kho-bulk-dim="length"]': { value: '1330' },
+    '[data-x2-kho-bulk-dim="width"]': { value: '20' },
+    '[data-x2-kho-bulk-dim="thickness"]': { value: '9' },
+    '[data-x2-kho-bulk-qty="A"]': { value: '100' },
+    '[data-x2-kho-bulk-qty="A1"]': { value: '' },
+    '[data-x2-kho-bulk-qty="B"]': { value: '' }
+  };
+  const bulkRow = { querySelector: (selector) => bulkValues[selector] || null };
+  document.getElementById('x2-kho-bulk-rows').querySelectorAll = (selector) =>
+    selector === '[data-x2-kho-bulk-row]' ? [bulkRow] : [];
+  x2.toggleKhoBulkEntry();   // bật chế độ "Tạo lô mới theo bảng kê"
+  const notesBeforeBulk = state.khoNotes.length;
+  x2.handleKhoNoteSubmit({ preventDefault(){} });
+  const bulkNew = state.batches.find(b => b.code && b.code.startsWith('260930') &&
+    b.location === '' && b.dryStage === 'say2');
+  check('BẢNG KÊ: lô mới của phiếu Bào Tinh được gán dryStage "say2" (không bị mất ở lần chọn sau)',
+    !!bulkNew && bulkNew.dryStage === 'say2' && bulkNew.stage === 'kho');
+  check('BẢNG KÊ: phiếu + lô mới đã được tạo thật', state.khoNotes.length === notesBeforeBulk + 1);
+  // dọn: bỏ lô mới + phiếu vừa tạo để không lệch các mục kiểm thử phía dưới
+  state.batches = bulkNew ? beforeBatches.filter(b => b && b.id !== bulkNew.id) : beforeBatches;
+  state.khoNotes = beforeNotes;
+  x2.resetX2KhoNoteForm(true);   // cũng tự tắt chế độ bảng kê
   // dọn: trả tồn k3 về như cũ
   state.khoNotes = state.khoNotes.filter(n => n && n.id !== 'note-shrink');
   x2.resetX2KhoNoteForm(true);
@@ -625,7 +733,7 @@ check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerE
 check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
   idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
   idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v409', /nha-may-ngoc-son-v409/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v420', /nha-may-ngoc-son-v420/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

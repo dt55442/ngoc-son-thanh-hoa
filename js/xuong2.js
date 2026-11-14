@@ -12553,8 +12553,18 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const editingIds = khoNoteEditId
       ? new Set(((state.khoNotes || []).find(n => n && n.id === khoNoteEditId) || { lots: [] }).lots.map(l => String((l && l.batchId) || '')).filter(Boolean))
       : null;
+    // LỌC NGUỒN theo MỤC ĐÍCH XUẤT: Bào Tinh / Bullig chỉ lô ĐÃ SẤY 2, phiếu
+    // xuất Sấy 2 chỉ lô ĐÃ SẤY 1 → không chọn nhầm lô. Lô đang gắn trong phiếu
+    // ĐANG SỬA và lô ĐÃ CHỌN trong form vẫn hiện (để bỏ chọn / thêm bớt được).
+    const need = khoPurposeDryNeed();
     return (state.batches || [])
-      .filter(b => b && b.stage === 'kho' && (khoLotRemainingOf(b, alloc) > 0 || (editingIds && editingIds.has(String(b.id)))))
+      .filter(b => {
+        if (!b || b.stage !== 'kho') return false;
+        const keep = khoLotRemainingOf(b, alloc) > 0 || (editingIds && editingIds.has(String(b.id)));
+        if (!keep) return false;
+        if (need && khoNotePicked[String(b.id)] == null && khoLotDryStatusOf(b).key !== need) return false;
+        return true;
+      })
       .sort((a, b) => khoFirstInDateOf(b).localeCompare(khoFirstInDateOf(a)));
   }
   function khoPickLot(id) {
@@ -12929,6 +12939,50 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     return { items, error: '' };
   }
+  // ─── TRẠNG THÁI SẤY của lô (nhãn/màu đúng chuẩn Kanban — js/kanban.js) ──
+  // Dùng cho (a) chip trên thẻ lô Kho + bảng tồn và (b) LỌC NGUỒN của phiếu
+  // xuất: Bào Tinh / Bullig chỉ nhận lô ĐÃ SẤY 2 · phiếu xuất Sấy 2 chỉ nhận lô
+  // ĐÃ SẤY 1 → KHÔNG chọn nhầm lô (yêu cầu 14/11/2026).
+  // Thứ tự ưu tiên: công đoạn HIỆN TẠI → mốc stageHistory THẬT → khai báo
+  // dryStage (lô nhập thẳng vào Kho) → Chưa sấy. Lô cũ không có stageHistory
+  // thì suy theo thứ tự Sấy 1 → Sấy 2 → Kho (batchPassedStage).
+  const KHO_DRY_STATUS = {
+    'say2': {
+      key: 'say2', label: 'Sấy 2', cls: 'dry-say2',
+      title: 'Trạng thái sấy: Sấy 2 — đã xong sấy, chọn được cho phiếu xuất kho → Bào Tinh / Bullig.'
+    },
+    'say1': {
+      key: 'say1', label: 'Sấy 1', cls: 'dry-say1',
+      title: 'Trạng thái sấy: Sấy 1 — mới qua Sấy 1 (chưa qua Sấy 2): là nguồn chọn cho Sấy 2 ở thẻ Than Hóa + Sấy, CHƯA chọn được cho phiếu Bào Tinh / Bullig.'
+    },
+    'chua-say': {
+      key: 'chua-say', label: 'Chưa sấy', cls: 'dry-chua',
+      title: 'Trạng thái sấy: Chưa sấy — lô chưa được ghi nhận qua Sấy 1 / Sấy 2 (nhập thẳng vào Kho hoặc dữ liệu cũ chưa khai). Sửa được ở form Sửa lô (ô "Trạng Thái Sấy").'
+    }
+  };
+  function khoLotDryStatusOf(b) {
+    if (!b) return KHO_DRY_STATUS['chua-say'];
+    if (b.stage === 'say1') return KHO_DRY_STATUS.say1;
+    if (b.stage === 'say2') return KHO_DRY_STATUS.say2;
+    if (batchPassedStage(b, 'say2') || b.dryStage === 'say2') return KHO_DRY_STATUS.say2;
+    if (batchPassedStage(b, 'say1') || b.dryStage === 'say1') return KHO_DRY_STATUS.say1;
+    return KHO_DRY_STATUS['chua-say'];
+  }
+  // Chip trạng thái sấy dùng chung (thẻ lô gắn phiếu + bảng Tồn theo từng lô)
+  function khoDryChipHtml(b) {
+    const s = khoLotDryStatusOf(b);
+    return `<span class="tag-badge ${s.cls}" title="${escapeHTML(s.title)}"><i data-lucide="thermometer" style="width:10px;height:10px;"></i> ${s.label}</span>`;
+  }
+  // TRẠNG THÁI SẤY cần có của lô NGUỒN theo MỤC ĐÍCH XUẤT đang chọn trên form:
+  //   Bào Tinh / Bullig → chỉ lô ĐÃ SẤY 2 (ra sản xuất được ngay)
+  //   Xuất Sấy 2 (phiếu do hệ thống sinh) → chỉ lô ĐÃ SẤY 1 (nguồn để sấy tiếp)
+  //   Khác → '' = KHÔNG lọc (mục đích tự do — hiện mọi lô). Trả '' = tất cả.
+  function khoPurposeDryNeed() {
+    const p = khoNormPurpose(((document.getElementById('x2-kho-purpose') || {}).value) || '');
+    if (p === 'baotinh' || p === 'bullig') return 'say2';
+    if (p === 'say2') return 'say1';
+    return '';
+  }
   // Số NGÀY đã ở từng công đoạn của 1 lô Kho (Sấy 1 · Sấy 2 · Kho) — cùng cách
   // tính với thẻ nguồn Than Hóa + Sấy (alStageDaysOf trong js/batch-modals.js).
   // Sao chép logic tại đây để tránh vòng lặp import (batch-modals không được
@@ -12955,10 +13009,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return `<div class="kho-lot-card${picked ? ' picked' : ''}" data-kho-lot="${escapeHTML(b.id)}">
       <div class="kho-lot-line1"><strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${khoLotLenOf(b)}×${khoLotWidOf(b)}×${khoLotThkOf(b)} mm · ${escapeHTML(b.bambooType || '—')} · còn <strong>${fmtThanh(rem)}</strong> thanh</div>
       <div class="kho-lot-line2"><span class="al-use-tag ${useCls}">${escapeHTML(b.useFor || 'Ván')}</span>
+        ${khoDryChipHtml(b)}
         <span class="al-day-badge day-s1" title="Số ngày đã ở Sấy 1">S1-${stageDays.say1} ngày</span>
         <span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${stageDays.say2} ngày</span>
         <span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${stageDays.kho} ngày</span>
-        <span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — mỗi lần đi đều có PHIẾU XUẤT TỰ ĐỘNG nên tồn không bị nhân đôi">ra/vào kho ${outRounds} lần</span>${over > 0 ? `<span class="kho-over-badge" title="Phiếu xuất ĐÃ DUYỆT đang ghi vượt SỐ LƯỢNG CHUẨN của lô (${fmtThanh(over)} thanh) — bấm 'Rà soát sổ kho' hoặc xem Lịch Sử sửa đổi để kiểm tra phiếu bù cũ">⚠ phiếu vượt ${fmtThanh(over)} thanh</span>` : ''}${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
+        ${outRounds > 0 ? `<span class="kho-round-badge" title="Số lần lô này đã RA khỏi kho (sang Sấy 2) rồi NHẬP lại — mỗi lần đi đều có PHIẾU XUẤT TỰ ĐỘNG nên tồn không bị nhân đôi">ra/vào kho ${outRounds} lần</span>` : ''}${over > 0 ? `<span class="kho-over-badge" title="Phiếu xuất ĐÃ DUYỆT đang ghi vượt SỐ LƯỢNG CHUẨN của lô (${fmtThanh(over)} thanh) — bấm 'Rà soát sổ kho' hoặc xem Lịch Sử sửa đổi để kiểm tra phiếu bù cũ">⚠ phiếu vượt ${fmtThanh(over)} thanh</span>` : ''}${btLbl ? `<span class="tag-badge tag-baotinh-used" title="Số thanh lô này đã ghi ở các lượt Bào Tinh — đối chiếu với ô Chọn Thanh của thẻ Bào Tinh"><i data-lucide="sparkles" style="width:10px;height:10px;"></i> ${escapeHTML(btLbl)}</span>` : ''}</div>
       ${picked ? `<div class="kho-lot-qty-row"><label>Số thanh xuất từ lô này:</label><input type="number" min="1" max="${rem}" step="1" value="${khoPickedQtyOf(b.id)}" data-kho-lot-qty="${escapeHTML(b.id)}"></div>` : ''}
     </div>`;
   }
@@ -12969,30 +13024,67 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const q = khoLotsQuery.trim().toLowerCase();
     const qQty = khoLotsQtyQuery.trim();
     let items = khoLotPickerList(alloc);
-    if (q) items = items.filter(b => `${b.code || ''} ${b.location || ''} ${b.length}x${b.width}x${b.thickness} ${b.bambooType || ''} ${b.useFor || ''}`.toLowerCase().includes(q));
+    // Ô ① — TÌM NHANH: CHỈ khớp khi lô KHÔNG bị lọc ở trên (khoLotPickerList) —
+    // nhãn trạng thái sấy cũng nối vào chuỗi tìm (gõ "sấy 2" / "sấy 1" / "chưa sấy")
+    if (q) items = items.filter(b => `${b.code || ''} ${b.location || ''} ${b.length}x${b.width}x${b.thickness} ${b.bambooType || ''} ${b.useFor || ''} ${khoLotDryStatusOf(b).label}`.toLowerCase().includes(q));
     // Ô ② — TÌM THEO SỐ LƯỢNG: chỉ so SỐ (bỏ dấu phân cách nghìn) — điều kiện VÀ với ô chữ
     if (qQty) {
       const digits = qQty.replace(/\D/g, '');
       if (digits) items = items.filter(b => String(Math.round(khoLotRemainingOf(b, alloc))).includes(digits));
     }
+    // Dòng giải thích khi đang LỌC NGUỒN theo mục đích xuất (tránh tưởng "mất lô")
+    const need = khoPurposeDryNeed();
+    const needLabel = need ? ((KHO_DRY_STATUS[need] || {}).label || '') : '';
+    const filterNote = need
+      ? `<div class="al-filter-note" title="Phiếu xuất theo mục đích này chỉ nhận lô ${needLabel} — lô khác trạng thái sấy đã được ẩn để khỏi chọn nhầm. Chọn mục đích "Khác" nếu cần xuất mọi loại lô.">Đang lọc: chỉ hiện lô <strong>${needLabel}</strong> (theo Mục Đích Xuất)</div>`
+      : '';
+    const needTxt = need ? ` ${needLabel}` : '';
     if (!items.length) {
-      list.innerHTML = (q || qQty)
+      list.innerHTML = filterNote + ((q || qQty)
         ? `<div class="al-empty">— Không có lô nào khớp "${escapeHTML([q, qQty].filter(Boolean).join(' · '))}" —</div>`
-        : '<div class="al-empty">— Không có lô nào còn hàng ở Kho —</div>';
+        : `<div class="al-empty">— Không có lô${needTxt} còn hàng ở Kho${need ? ' — mục đích xuất này chỉ nhận lô ' + needLabel : ''} —</div>`);
     }
     else {
-      list.innerHTML = items.map(b => khoLotCardHtml(b, alloc)).join('');
+      list.innerHTML = filterNote + items.map(b => khoLotCardHtml(b, alloc)).join('');
     }
     // chip đếm "N đã chọn" trên nút mở danh sách (mẫu ô đếm của Thêm Lô Sấy Mới)
+    khoSyncPickedCount();
+  }
+  // Cập nhật ô đếm "N đã chọn" — gọi riêng khi danh sách lô ĐANG ĐÓNG (đổi mục
+  // đích xuất có thể vừa bỏ lô không khớp → ô đếm phải đổi theo).
+  function khoSyncPickedCount() {
     const countEl = document.getElementById('x2-kho-picked-count');
-    if (countEl) {
-      const n = Object.keys(khoNotePicked).length;
-      countEl.textContent = n ? `${n} đã chọn` : 'Chưa chọn';
-      countEl.classList.toggle('has-pick', n > 0);
-    }
+    if (!countEl) return;
+    const n = Object.keys(khoNotePicked).length;
+    countEl.textContent = n ? `${n} đã chọn` : 'Chưa chọn';
+    countEl.classList.toggle('has-pick', n > 0);
   }
   function khoSetLotsQuery(v) { khoLotsQuery = String(v || ''); renderX2KhoLotsList(); }
   function khoSetLotsQtyQuery(v) { khoLotsQtyQuery = String(v || ''); renderX2KhoLotsList(); }
+  // ĐỔI "MỤC ĐÍCH XUẤT" → lọc lại danh sách lô nguồn + BỎ các lô đã chọn
+  // không còn là nguồn của mục đích mới (tránh chọn nhầm lô). Khi đang SỬA
+  // phiếu thì GIỮ nguyên lô của phiếu (dữ liệu đã lưu — người dùng tự bỏ tích).
+  function khoOnPurposeChange() {
+    const need = khoPurposeDryNeed();
+    if (need && !khoNoteEditId) {
+      const bad = Object.keys(khoNotePicked).filter(id => {
+        const b = (state.batches || []).find(x => x && x.id === id);
+        return b && khoLotDryStatusOf(b).key !== need;
+      });
+      if (bad.length) {
+        const codes = bad.map(id => {
+          const b = (state.batches || []).find(x => x && x.id === id);
+          return (b && b.code) || id;
+        });
+        bad.forEach(id => { delete khoNotePicked[id]; });
+        const lbl = (KHO_DRY_STATUS[need] || {}).label || '';
+        showToast(`Đã bỏ ${bad.length} lô không phải nguồn "${lbl}" của mục đích xuất mới: ${codes.join(', ')}`, 'error');
+      }
+    }
+    if (khoLotsOpen) renderX2KhoLotsList();
+    else khoSyncPickedCount();   // danh sách đang đóng → vẫn phải cập nhật ô đếm
+    renderX2KhoCalc();
+  }
 
   // Bấm thẻ = CHỌN / BỎ CHỌN (không ô vuông tích — như thẻ nguồn Thêm Lô Sấy Mới)
   function khoOnLotsPanelClick(e) {
@@ -13533,13 +13625,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return `<div class="kho-stock-row${rem <= 0 ? ' used' : ''}">
       <div class="kho-stock-line1">${pick}<strong>${escapeHTML(b.code || '—')}</strong> · ${escapeHTML(b.location || '—')} · ${Number(b.length) || 0}×${Number(b.width) || 0}×${Number(b.thickness) || 0} mm
         <span class="tag-badge tag-type-${escapeHTML(b.bambooType || 'A')}">Loại ${escapeHTML(b.bambooType || '—')}</span>
-        <span class="tag-badge tag-use-${escapeHTML(b.useFor || 'Van')}">${escapeHTML(b.useFor || '—')}</span></div>
+        <span class="tag-badge tag-use-${escapeHTML(b.useFor || 'Van')}">${escapeHTML(b.useFor || '—')}</span>
+        ${khoDryChipHtml(b)}</div>
       <div class="kho-stock-line2">
         <span>SL gốc ${fmtThanh(b.quantity)} × ${inN} lần nhập = ${fmtThanh(cap)}</span>
         <span>Đã xuất: <strong>${fmtThanh(used)}</strong></span>
         <span>Còn lại: <strong>${fmtThanh(rem)}</strong> thanh · ${(calculateVolume(b.length, b.width, b.thickness, rem)).toFixed(3)} m³</span>
         <span>vào kho ${formatDateDDMMYY(khoLastInDateOf(b))}</span>
-        <span class="kho-round-badge" title="Mỗi lần lô ra khỏi kho (sang Sấy 2) đều có PHIẾU XUẤT TỰ ĐỘNG — số lượng lô không đổi">ra/vào ${outR} lần</span>
+        ${outR > 0 ? `<span class="kho-round-badge" title="Mỗi lần lô ra khỏi kho (sang Sấy 2) đều có PHIẾU XUẤT TỰ ĐỘNG — số lượng lô không đổi">ra/vào ${outR} lần</span>` : ''}
         ${over > 0 ? `<span class="kho-over-badge" title="Phiếu xuất ĐÃ DUYỆT ghi vượt sức chứa của lô — bấm 'Rà soát sổ kho' để dọn phiếu bù trùng/quá khứ">⚠ phiếu vượt ${fmtThanh(over)} thanh</span>` : ''}
       </div>
       <div class="card-actions" data-perm="x2">
@@ -13757,6 +13850,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (type === 'xuat' && bulkItems.length) {
       if (!state.batches) state.batches = [];
       const useFor = (document.getElementById('x2-kho-bulk-use') || {}).value || 'Ván';
+      // TRẠNG THÁI SẤY của lô mới: phiếu Bào Tinh / Bullig chỉ nhận lô ĐÃ SẤY 2
+      // nên lô tạo nhanh theo bảng kê được gán luôn 'say2' — nếu không chúng sẽ
+      // bị coi là "Chưa sấy" và biến mất khỏi lần chọn sau. Mục đích "Khác" thì
+      // để trống (chưa rõ — sửa được ở form Sửa lô).
+      const bulkPurpose = khoNormPurpose(((document.getElementById('x2-kho-purpose') || {}).value) || '');
+      const bulkDryStage = (bulkPurpose === 'baotinh' || bulkPurpose === 'bullig') ? 'say2' : null;
       const newLots = bulkItems.map(item => {
         const id = `batch-${Date.now()}-bulk-${Math.random().toString(36).slice(2, 8)}`;
         const batch = {
@@ -13772,6 +13871,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           useFor,
           location: '',
           khoDate: dateVal,
+          dryStage: bulkDryStage,
           notes: note,
           stageHistory: [{ stage: 'kho', date: dateVal }],
           createdAt: now,
@@ -19316,6 +19416,11 @@ export {
   nanRejectStock,
   khoLotPickerList,
   khoStageDaysOf,
+  KHO_DRY_STATUS,
+  khoLotDryStatusOf,
+  khoDryChipHtml,
+  khoPurposeDryNeed,
+  khoOnPurposeChange,
   khoAvailableForApproval,
   khoLotsOverflow,
   khoApproveCheckError,

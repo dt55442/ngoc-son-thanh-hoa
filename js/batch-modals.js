@@ -8,7 +8,7 @@ import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoFifoAllocation, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
-import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormUsesBatches, renderX2KhoStockTable, saveKhoNotes, saveXuong2ChonNan, sayBuildCharges, sayShiftMapOf, syncAlShiftField, toggleX2KhoStockTable } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG
+import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDryStatusOf, khoNoteFormUsesBatches, renderX2KhoStockTable, saveKhoNotes, saveXuong2ChonNan, sayBuildCharges, sayShiftMapOf, syncAlShiftField, toggleX2KhoStockTable } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG + Trạng thái sấy
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -57,6 +57,15 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
       });
       const volDisp = document.getElementById('form-calculated-vol');
       if (volDisp) volDisp.textContent = `${calculateVolume(batch.length, batch.width, batch.thickness, batch.quantity).toFixed(4)} m³`;
+      // TRẠNG THÁI SẤY (chỉ lô ở Kho) — hiện đúng trạng thái SUY RA của lô
+      // (mốc stageHistory thật trước, khai báo dryStage sau) để form khớp thẻ lô.
+      const dryG = document.getElementById('form-dry-stage-group');
+      const dryEl = document.getElementById('form-dry-stage');
+      if (dryG && dryEl) {
+        const showDry = batch.stage === 'kho';
+        dryG.style.display = showDry ? '' : 'none';
+        dryEl.value = showDry ? khoLotDryStatusOf(batch).key : 'chua-say';
+      }
     } else {
       if (titleEl) titleEl.innerHTML = `<i data-lucide="plus-circle"></i> Thêm Lô Nan Tre Mới`;
       document.getElementById('form-batch-id').value = '';
@@ -75,6 +84,12 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
         const i = document.getElementById(id);
         if (i) i.value = '';
       });
+      // Lô MỚI chưa qua công đoạn nào — trạng thái sấy để "Chưa sấy" và chỉ hiện
+      // lại nếu người dùng chọn công đoạn Kho (xử lý ở change của #form-stage).
+      const dryG = document.getElementById('form-dry-stage-group');
+      const dryEl = document.getElementById('form-dry-stage');
+      if (dryG) dryG.style.display = 'none';
+      if (dryEl) dryEl.value = 'chua-say';
     }
 
     modal.classList.add('show');
@@ -207,6 +222,13 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
     if (stageDateVal) {
       if (stageVal === 'say2') batchData.say2Date = stageDateVal;
       else if (stageVal === 'kho') batchData.khoDate = stageDateVal;
+    }
+    // TRẠNG THÁI SẤY (chỉ áp cho lô đang ở Kho) — lưu khai báo dryStage để thẻ
+    // Kho lọc đúng NGUỒN của phiếu xuất; "Chưa sấy" → null.
+    if (stageVal === 'kho') {
+      const dryEl = document.getElementById('form-dry-stage');
+      const dryVal = (dryEl && dryEl.value) || 'chua-say';
+      batchData.dryStage = dryVal === 'chua-say' ? null : dryVal;
     }
 
     if (batchId) {
@@ -3033,7 +3055,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
     setDisp('ck-pos-info-group', !isNew);
     setDisp('ck-new-loc-group', !isNew);
     ['ck-new-group', 'ck-new-qty-group', 'ck-new-dims-group', 'ck-new-type-group',
-     'ck-new-use-group', 'ck-new-vol-group'].forEach(id => setDisp(id, isNew));
+     'ck-new-use-group', 'ck-new-drystage-group', 'ck-new-vol-group'].forEach(id => setDisp(id, isNew));
 
     // Khối ①: đánh dấu nút công đoạn đang chọn · Khối ②: chip vị trí
     renderCkStageSeg();
@@ -3123,6 +3145,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
       const quantity   = parseInt((document.getElementById('ck-new-qty') || {}).value, 10) || 0;
       const bambooType = (document.getElementById('ck-new-type') || {}).value || 'A';
       const useFor     = (document.getElementById('ck-new-use') || {}).value || 'Ván';
+      const dryStageEl = document.getElementById('ck-new-drystage');
+      const dryStage   = dryStageEl ? (dryStageEl.value === 'say1' ? 'say1' : dryStageEl.value === 'say2' ? 'say2' : null) : null;
       if (!location) { showToast('Vui lòng nhập Vị Trí!', 'error'); return; }
       if (!(length > 0 && width > 0 && thickness > 0)) { showToast('Nhập đủ Dài × Rộng × Dày (mm)!', 'error'); return; }
       if (quantity <= 0) { showToast('Số lượng phải lớn hơn 0!', 'error'); return; }
@@ -3136,7 +3160,8 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
         length, width, thickness, quantity,
         volume: calculateVolume(length, width, thickness, quantity),
         bambooType, useFor, location, notes,
-        khoDate: dateVal,                        // ngày vào kho thực tế (badge đếm ngày)
+        khoDate: dateVal,
+        dryStage,
         stageHistory: [{ stage: 'kho', date: dateVal }],
         updatedAt: new Date().toISOString()
       };
@@ -3217,6 +3242,435 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoNoteFormU
     saveData(); renderAll();
     showToast(`Đã chuyển ${lots.length} lô ở vị trí ${pos} vào Kho (ngày ${formatDateDDMMYY(dateVal)})!`, 'success');
     return lots.length;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════════════
+  // THÊM NHIỀU LÔ VÀO KHO (nạp Excel / dán bảng / nhập tay bảng)
+  // ═══════════════════════════════════════════════════════════════════════════════════════
+
+  let kmRows = [];
+
+  function kmTodayISO() { return new Date().toISOString().slice(0, 10); }
+
+  function kmParseDateVN(v) {
+    // Nhận CẢ 2 ĐỊNH DẠNG: dd/mm/yyyy (dán từ Excel) VÀ YYYY-MM-DD (ISO — giá trị
+    // mà <input type="date"> trả về khi đọc lại từ bảng). Trả ISO hoặc '' nếu sai.
+    const s = String(v || '').trim();
+    if (!s) return '';
+    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+      const d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+      if (d < 1 || d > 31 || mo < 1 || mo > 12) return '';
+      return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    }
+    m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) {
+      const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+      if (d < 1 || d > 31 || mo < 1 || mo > 12) return '';
+      return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    }
+    return '';
+  }
+
+  function kmRenderTable() {
+    const body = document.getElementById('km-rows-body');
+    if (!body) return;
+    body.innerHTML = kmRows.map((r, i) => kmRowHtml(i, r)).join('');
+    body.querySelectorAll('tr').forEach((tr, i) => {
+      const r = kmRows[i];
+      if (!r) return;
+      const sels = tr.querySelectorAll('select.km-sel');
+      if (sels[0]) kmSetSelectValue(sels[0], r.bambooType || 'A');
+      if (sels[1]) kmSetSelectValue(sels[1], r.useFor || 'Ván');
+      if (sels[2]) kmSetSelectValue(sels[2], r.dryStage || 'chua-say');
+    });
+    kmUpdateSummary();
+    initLucide();
+  }
+
+  function kmUpdateRowFromInputs(idx) {
+    const tr = document.querySelector(`#km-rows-body tr[data-idx="${idx}"]`);
+    if (!tr) return;
+    const inputs = tr.querySelectorAll('input.km-in, select.km-in');
+    const r = kmRows[idx];
+    let ci = 0;
+    r.date = kmParseDateVN(inputs[ci++] && inputs[ci-1].value) || r.date;
+    r.location = (inputs[ci++] && inputs[ci-1].value || '').trim();
+    r.length = parseFloat(inputs[ci++] && inputs[ci-1].value) || 0;
+    r.width = parseFloat(inputs[ci++] && inputs[ci-1].value) || 0;
+    r.thickness = parseFloat(inputs[ci++] && inputs[ci-1].value) || 0;
+    r.qty = parseInt(inputs[ci++] && inputs[ci-1].value, 10) || 0;
+    ci++; ci++; // skip Loại, Dùng cho selects
+    r.dryStage = (inputs[ci++] && inputs[ci-1].value) || 'chua-say';
+    const volEl = tr.querySelector('.km-vol');
+    if (volEl) volEl.textContent = kmVolumeOf(r.length, r.width, r.thickness, r.qty).toFixed(4);
+    kmUpdateSummary();
+  }
+
+  function kmUpdateSummary() {
+    const totalQty = kmRows.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+    const totalM3 = kmRows.reduce((s, r) => s + kmVolumeOf(r.length, r.width, r.thickness, r.qty), 0);
+    const elQty = document.getElementById('km-summary-qty');
+    const elTh = document.getElementById('km-summary-thanh');
+    const elM3 = document.getElementById('km-summary-m3');
+    if (elQty) elQty.textContent = kmRows.length;
+    if (elTh) elTh.textContent = totalQty.toLocaleString('vi-VN');
+    if (elM3) elM3.textContent = totalM3.toFixed(4);
+  }
+
+  // Áp VỊ TRÍ KHO CHUNG (ô #km-loc-common) cho MỌI dòng đang có — dùng cho luồng
+  // dán Excel (bảng Excel không có cột vị trí). Gõ vào ô là tất cả lô cùng áp.
+  function kmApplyCommonLocation() {
+    const el = document.getElementById('km-loc-common');
+    const val = el ? el.value.trim() : '';
+    if (!val) return;
+    let changed = false;
+    kmRows.forEach(r => { if (r.location !== val) { r.location = val; changed = true; } });
+    if (changed) kmRenderTable();
+  }
+
+  function kmAddRow() {
+    kmRows.push({ date: kmTodayISO(), location: '', length: 0, width: 0, thickness: 0, qty: 0, bambooType: 'A', useFor: 'Ván', dryStage: 'chua-say', notes: '' });
+    kmRenderTable();
+  }
+
+  function kmRemoveRow(btn) {
+    const tr = btn && btn.closest ? btn.closest('tr') : null;
+    if (!tr) return;
+    const idx = parseInt(tr.getAttribute('data-idx'), 10);
+    if (!isNaN(idx)) kmRows.splice(idx, 1);
+    kmRenderTable();
+  }
+
+  function kmMapDryStage(v) {
+    const s = String(v || '').trim().toLowerCase();
+    if (s === 'sấy 1' || s === 'say1') return 'say1';
+    if (s === 'sấy 2' || s === 'say2') return 'say2';
+    return 'chua-say';
+  }
+
+  function kmDryStageLabel(v) {
+    const s = String(v || 'chua-say');
+    if (s === 'say1') return 'Sấy 1';
+    if (s === 'say2') return 'Sấy 2';
+    return 'Chưa sấy';
+  }
+
+  function kmVolumeOf(length, width, thickness, qty) {
+    return calculateVolume(Number(length) || 0, Number(width) || 0, Number(thickness) || 0, Number(qty) || 0);
+  }
+
+  function kmSetSelectValue(sel, val) {
+    for (const o of sel.options) { if (o.value === val) { o.selected = true; break; } }
+  }
+
+  function kmRowHtml(idx, r) {
+    const vol = kmVolumeOf(r.length, r.width, r.thickness, r.qty);
+    const dryLabel = kmDryStageLabel(r.dryStage);
+    return `<tr data-idx="${idx}">
+      <td class="ta-c">${idx + 1}</td>
+      <td><input type="date" class="km-in" value="${escapeHTML(r.date || kmTodayISO())}"></td>
+      <td><input type="text" class="km-in" value="${escapeHTML(r.location || '')}" placeholder="K11, Kệ 2"></td>
+      <td class="ta-r"><input type="number" class="km-in km-dim" step="1" min="1" value="${escapeHTML(r.length || '')}" placeholder="Dài"></td>
+      <td class="ta-r"><input type="number" class="km-in km-dim" step="0.1" min="0.1" value="${escapeHTML(r.width || '')}" placeholder="Rộng"></td>
+      <td class="ta-r"><input type="number" class="km-in km-dim" step="0.1" min="0.1" value="${escapeHTML(r.thickness || '')}" placeholder="Dày"></td>
+      <td class="ta-r"><input type="number" class="km-in km-qty" step="1" min="1" value="${escapeHTML(r.qty || '')}" placeholder="SL"></td>
+      <td><select class="km-in km-sel"><option value="A">A</option><option value="A1">A1</option><option value="B">B</option></select></td>
+      <td><select class="km-in km-sel"><option value="Ván">Ván</option><option value="Bullig">Bullig</option></select></td>
+      <td><select class="km-in km-sel km-dry"><option value="chua-say">Chưa sấy</option><option value="say1">Sấy 1</option><option value="say2">Sấy 2</option></select></td>
+      <td class="ta-r km-vol">${vol.toFixed(4)}</td>
+      <td class="ta-c"><button type="button" class="btn btn-outline btn-icon btn-sm km-rm" title="Xóa dòng này"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></td>
+    </tr>`;
+  }
+
+  function kmSwitchMode(btn) {
+    const mode = btn.getAttribute('data-km-mode');
+    document.querySelectorAll('.ck-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('km-table-mode').hidden = mode !== 'table';
+    document.getElementById('km-paste-mode').hidden = mode !== 'paste';
+  }
+
+  function kmParsePaste() {
+    const ta = document.getElementById('km-paste-text');
+    if (!ta) return;
+    const raw = ta.value;
+    if (!raw.trim()) { showToast('Vui lòng dán dữ liệu từ Excel vào ô trên!', 'error'); return; }
+    const lines = raw.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length === 0) return;
+    const first = lines[0].toLowerCase();
+    const startIdx = (first.includes('ngày') || first.includes('kích') || first.includes('mục')) ? 1 : 0;
+    const parsed = [];
+    let prevDateISO = ''; // dòng ngày trống (Excel hợp ô nhóm) → dùng ngày gần nhất phía trên
+    // Số Việt Nam: "1.540" = 1540 (dấu chấm = phân cách nghìn), "1,5" = 1.5
+    const numVN = (s) => { const m = String(s || '').replace(/\./g, '').replace(/,/g, '.'); const v = parseFloat(m); return isNaN(v) ? 0 : Math.round(v); };
+    // Bỏ dấu tiếng Việt (chữ hoá/thường đều về chữ thường không dấu) để nhận
+    // diện "Sấy"/"Sảy"/"sáy"… bất kể dấu trên chữ 'a' — tất cả thành "say".
+    const plainVn = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase();
+    for (let i = startIdx; i < lines.length; i++) {
+      const line = lines[i];
+      // ── Ngày ──
+      const dateM = line.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+      const parsedDate = dateM ? kmParseDateVN(dateM[1]) : '';
+      // ── Kích thước ──
+      const sizeM = line.match(/(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)/i);
+      if (!sizeM) continue;
+      const length = parseFloat(sizeM[1]);
+      const width = parseFloat(sizeM[2]);
+      const thickness = parseFloat(sizeM[3]);
+      if (!(length > 0 && width > 0 && thickness > 0)) continue;
+      // ── Mục đích ──
+      const purpose = /bullig/i.test(line) ? 'Bullig' : 'Ván';
+      // ── Loại sấy (bỏ dấu → "say"; chịu mọi biến thể Sấy/Sảy/sáy) ──
+      const linePlain = plainVn(line);
+      const dryStage = /say\s*1/.test(linePlain) ? 'say1' : (/say\s*2/.test(linePlain) ? 'say2' : 'chua-say');
+      // ── Số lượng + PHÂN LOẠI NAN: Excel gom cột "Số lượng" thành 3 cột con
+      //    A | A1 | B (ngay sau các cột Ngày·Kích thước·Mục đích·Loại sấy) — mỗi lô
+      //    điền số vào ĐÚNG 1 trong 3 cột, cột còn lại để trống. Tách bằng Tab để
+      //    biết giá trị nằm ở cột nào: cột 4=A, 5=A1, 6=B. Không có Tab thì rơi về
+      //    lấy số cuối dòng và mặc định A (tương thích bảng 1 cột số lượng). ──
+      const cols = line.split('\t').map(c => c.trim());
+      let qty = 0, bambooType = 'A';
+      const nA  = numVN(cols[4]);
+      const nA1 = numVN(cols[5]);
+      const nB  = numVN(cols[6]);
+      if (nA > 0)      { bambooType = 'A';  qty = nA; }
+      else if (nA1 > 0){ bambooType = 'A1'; qty = nA1; }
+      else if (nB > 0) { bambooType = 'B';  qty = nB; }
+      else {
+        // Không có Tab hoặc bảng chỉ 1 cột số lượng → lấy số cuối dòng (bỏ size+ngày)
+        const withoutSizeDate = line.replace(sizeM[0], '').replace(/\d{1,2}\/\d{1,2}\/\d{4}/g, '');
+        const qtyMatch = withoutSizeDate.match(/(\d[\d.,]*)\s*$/);
+        qty = qtyMatch ? numVN(qtyMatch[1]) : 0;
+        if (!(qty > 0)) {
+          const nums = (withoutSizeDate.match(/\d[\d.,]*/g) || []).map(numVN).filter(v => v > 0);
+          if (nums.length) qty = Math.max(...nums);
+        }
+      }
+      if (!(qty > 0)) continue;
+      const dateISO = parsedDate || prevDateISO || kmTodayISO();
+      if (parsedDate) prevDateISO = parsedDate; // nhớ ngày hợp lệ gần nhất cho nhóm dòng sau
+      parsed.push({
+        date: dateISO, location: '', length, width, thickness, qty,
+        bambooType, useFor: purpose, dryStage, notes: ''
+      });
+    }
+    if (parsed.length === 0) { showToast('Không phân tích được dòng nào từ dữ liệu dán!', 'error'); return; }
+    kmRows = parsed;
+    kmRenderTable();
+    kmApplyCommonLocation(); // nếu đã nhập "Vị trí chung" thì áp luôn cho các lô vừa dán
+    // Quay về chế độ "Nhập tay bảng" để người dùng THẤY ngay bảng kết quả
+    // (đang ở "Dán từ Excel" thì #km-table-mode bị ẩn → không thấy gì) và điền
+    // Vị Trí (Kho) cho từng dòng trước khi lưu (dữ liệu Excel không có cột vị trí).
+    const btnTableMode = document.querySelector('.ck-mode-btn[data-km-mode="table"]');
+    if (btnTableMode) kmSwitchMode(btnTableMode);
+    document.getElementById('km-input-block').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showToast(`Đã phân tích ${parsed.length} lô từ dữ liệu dán!`, 'success');
+  }
+
+  function kmBuildPreview() {
+    const body = document.getElementById('km-preview-body');
+    const previewBlock = document.getElementById('km-preview-block');
+    const summary = document.getElementById('km-preview-summary');
+    if (!body || !previewBlock || !summary) return;
+    let ok = 0, err = 0;
+    const rowsHtml = kmRows.map((r, i) => {
+      const errs = [];
+      if (!r.date) errs.push('thiếu ngày');
+      if (!r.location) errs.push('thiếu vị trí');
+      if (!(r.length > 0 && r.width > 0 && r.thickness > 0)) errs.push('thiếu kích thước');
+      if (!(r.qty > 0)) errs.push('số lượng <= 0');
+      if (errs.length) { err++; return `<tr><td colspan="9" style="color:var(--danger);">${i+1}. ${errs.join(', ')}</td></tr>`; }
+      ok++;
+      const vol = kmVolumeOf(r.length, r.width, r.thickness, r.qty);
+      return `<tr>
+        <td>${formatDateDDMMYY(r.date)}</td>
+        <td>${escapeHTML(r.location || '—')}</td>
+        <td class="ta-r">${r.length}×${r.width}×${r.thickness}</td>
+        <td class="ta-r">${r.qty.toLocaleString('vi-VN')}</td>
+        <td>${escapeHTML(r.bambooType)}</td>
+        <td>${escapeHTML(r.useFor)}</td>
+        <td><span class="tag-badge dry-${r.dryStage}">${kmDryStageLabel(r.dryStage)}</span></td>
+        <td class="ta-r">${vol.toFixed(4)} m³</td>
+        <td>OK</td>
+      </tr>`;
+    }).join('');
+    body.innerHTML = rowsHtml;
+    const totalM3 = kmRows.reduce((s, r) => s + kmVolumeOf(r.length, r.width, r.thickness, r.qty), 0);
+    summary.innerHTML = `Tổng: <b>${kmRows.length}</b> lô · <b>${kmRows.reduce((s,r)=>s+(Number(r.qty)||0),0).toLocaleString('vi-VN')}</b> thanh · <b>${totalM3.toFixed(4)}</b> m³ · ${ok} hợp lệ${err > 0 ? ` · ${err} có lỗi` : ''}`;
+    previewBlock.hidden = false;
+  }
+
+  function handleKhoAddMultiSubmit(e) {
+    e.preventDefault();
+    showToast('DEBUG: handleKhoAddMultiSubmit được gọi', 'info'); // DEBUG
+    if (!requireEditPermission()) { showToast('DEBUG: Không có quyền sửa', 'error'); return; }
+    if (kmRows.length === 0) { showToast('Chưa có lô nào để lưu!', 'error'); return; }
+    let invalid = 0, usedDefaultLoc = 0;
+    const nowISO = new Date().toISOString();
+    const notes = ((document.getElementById('km-notes') || {}).value || '').trim();
+    // Vị trí Kho chung (ô trên cùng) — áp cho các dòng chưa có vị trí riêng
+    const locCommon = ((document.getElementById('km-loc-common') || {}).value || '').trim();
+    const batchData = [];
+    // Mã lô YYMMDD-NN: NN tăng dần trong ngày — tính CẢ lô đã có trong state.batches
+    // VÀ các lô vừa tạo trong lượt này (vòng lặp chưa unshift vào state nên hàm
+    // generateBatchCodeYYMMDD cũ sẽ ra cùng "-01"). Lấy max hậu tố đã có +1 để tránh trùng.
+    const codeSeqByPrefix = {}; // "YYMMDD" -> số thứ tự đã dùng (tính cả lô mới trong lượt)
+    function kmNextCode(dateISO) {
+      const dp = String(dateISO || '').split('-');
+      if (dp.length !== 3) return generateBatchCodeYYMMDD(dateISO);
+      const prefix = `${dp[0].slice(-2)}${dp[1]}${dp[2]}`;
+      if (codeSeqByPrefix[prefix] === undefined) {
+        let maxSeq = 0;
+        (state.batches || []).forEach(b => {
+          if (b && b.code && b.code.startsWith(prefix + '-')) {
+            const n = parseInt(b.code.slice(prefix.length + 1), 10);
+            if (!isNaN(n) && n > maxSeq) maxSeq = n;
+          }
+        });
+        codeSeqByPrefix[prefix] = maxSeq;
+      }
+      codeSeqByPrefix[prefix] += 1;
+      return `${prefix}-${String(codeSeqByPrefix[prefix]).padStart(2, '0')}`;
+    }
+    kmRows.forEach((r, i) => {
+      const dateISO = kmParseDateVN(r.date || '');
+      // Vị trí: ưu tiên vị trí riêng của dòng → ô "Vị trí chung" → mặc định "Kho"
+      const rowLoc = (r.location || '').trim();
+      const loc = rowLoc || locCommon || 'Kho';
+      if (!rowLoc && !locCommon) usedDefaultLoc++;
+      // Bỏ chặn cứng thiếu vị trí (dán từ Excel không có cột vị trí) — chỉ còn
+      // chặn thiếu ngày / kích thước / số lượng
+      const hasDate = !!dateISO;
+      const hasSize = !!(r.length > 0 && r.width > 0 && r.thickness > 0);
+      const hasQty = !!(r.qty > 0);
+      if (!hasDate || !hasSize || !hasQty) {
+        invalid++;
+        return;
+      }
+      const dryStageMap = { 'chua-say': null, 'say1': 'say1', 'say2': 'say2' };
+      batchData.push({
+        id: `batch-${Date.now()}-${i}`,
+        code: kmNextCode(dateISO),
+        stage: 'kho',
+        date: dateISO,
+        week: getISOWeekString(dateISO),
+        length: r.length, width: r.width, thickness: r.thickness, quantity: r.qty,
+        volume: kmVolumeOf(r.length, r.width, r.thickness, r.qty),
+        bambooType: r.bambooType, useFor: r.useFor, location: loc, notes: notes || '',
+        khoDate: dateISO,
+        dryStage: dryStageMap[r.dryStage] || null,
+        stageHistory: [{ stage: 'kho', date: dateISO }],
+        updatedAt: nowISO
+      });
+    });
+    if (invalid > 0) { showToast(`${invalid} dòng không hợp lệ (thiếu ngày / kích thước / số lượng), vui lòng kiểm tra lại!`, 'error'); return; }
+    if (batchData.length === 0) { showToast('DEBUG: batchData rỗng - kmRows.length=' + kmRows.length, 'error'); return; }
+    showToast(`DEBUG: Sắp lưu ${batchData.length} lô`, 'info');
+    pushUndo(`Thêm ${batchData.length} lô mới vào Kho`);
+    state.batches.unshift(...batchData);
+    saveData(); closeKhoAddMultiModal(); renderAll();
+    showToast(`Đã thêm ${batchData.length} lô mới vào Kho (${batchData.reduce((s,b)=>s+(b.quantity||0),0).toLocaleString('vi-VN')} thanh)!`
+      + (usedDefaultLoc > 0 ? ` ${usedDefaultLoc} lô lấy vị trí mặc định "Kho" — sửa vị trí sau ở thẻ lô nếu cần.` : ''), 'success');
+  }
+
+  function openKhoAddMultiModal() {
+    if (!requireEditPermission()) return;
+    const modal = document.getElementById('modal-kho-add-multi');
+    if (!modal) return;
+    kmRows = [{ date: kmTodayISO(), location: '', length: 0, width: 0, thickness: 0, qty: 0, bambooType: 'A', useFor: 'Ván', dryStage: 'chua-say', notes: '' }];
+    kmRenderTable();
+    document.getElementById('km-paste-text').value = '';
+    document.getElementById('km-preview-block').hidden = true;
+    document.getElementById('km-notes').value = '';
+    document.getElementById('km-loc-common').value = '';
+    const btnTable = document.querySelector('.ck-mode-btn[data-km-mode="table"]');
+    const btnPaste = document.querySelector('.ck-mode-btn[data-km-mode="paste"]');
+    if (btnTable) btnTable.classList.add('active');
+    if (btnPaste) btnPaste.classList.remove('active');
+    document.getElementById('km-table-mode').hidden = false;
+    document.getElementById('km-paste-mode').hidden = true;
+    modal.classList.add('show');
+    initLucide();
+  }
+
+  function closeKhoAddMultiModal() {
+    const modal = document.getElementById('modal-kho-add-multi');
+    if (modal) modal.classList.remove('show');
+    kmRows = [];
+  }
+
+  function wireKhoAddMultiEvents() {
+    const modal = document.getElementById('modal-kho-add-multi');
+    if (!modal) return;
+    const btnOpen = document.getElementById('btn-kho-add-multi');
+    if (btnOpen && !btnOpen.dataset.kmWired) {
+      btnOpen.dataset.kmWired = '1';
+      btnOpen.addEventListener('click', openKhoAddMultiModal);
+    }
+    const btnClose = document.getElementById('btn-close-kho-add-multi');
+    if (btnClose && !btnClose.dataset.kmWired) {
+      btnClose.dataset.kmWired = '1';
+      btnClose.addEventListener('click', closeKhoAddMultiModal);
+    }
+    const btnCancel = document.getElementById('btn-cancel-kho-add-multi');
+    if (btnCancel && !btnCancel.dataset.kmWired) {
+      btnCancel.dataset.kmWired = '1';
+      btnCancel.addEventListener('click', closeKhoAddMultiModal);
+    }
+    document.querySelectorAll('.ck-mode-btn').forEach(b => {
+      if (!b.dataset.kmWired) {
+        b.dataset.kmWired = '1';
+        b.addEventListener('click', () => kmSwitchMode(b));
+      }
+    });
+    const btnAdd = document.getElementById('km-add-row');
+    if (btnAdd && !btnAdd.dataset.kmWired) {
+      btnAdd.dataset.kmWired = '1';
+      btnAdd.addEventListener('click', kmAddRow);
+    }
+    const btnClear = document.getElementById('km-clear-rows');
+    if (btnClear && !btnClear.dataset.kmWired) {
+      btnClear.dataset.kmWired = '1';
+      btnClear.addEventListener('click', () => { kmRows = []; kmRenderTable(); });
+    }
+    const btnParse = document.getElementById('km-parse-paste');
+    if (btnParse && !btnParse.dataset.kmWired) {
+      btnParse.dataset.kmWired = '1';
+      btnParse.addEventListener('click', kmParsePaste);
+    }
+    // Nút Lưu nằm NGOÀI <form> (modal-footer) nên gắn click trực tiếp (type="button")
+    const btnSave = document.getElementById('btn-save-kho-add-multi');
+    if (btnSave && !btnSave.dataset.kmWired) {
+      btnSave.dataset.kmWired = '1';
+      btnSave.addEventListener('click', handleKhoAddMultiSubmit);
+    }
+    const form = document.getElementById('kho-add-multi-form');
+    if (form && !form.dataset.kmWired) {
+      form.dataset.kmWired = '1';
+      // BỎ handler submit của form (nút Lưu là type="button", click handler đã đủ)
+      // form.addEventListener('submit', handleKhoAddMultiSubmit); // DISABLED - tránh xung đột
+    }
+    const tbody = document.getElementById('km-rows-body');
+    if (tbody && !tbody.dataset.kmWired) {
+      tbody.dataset.kmWired = '1';
+      tbody.addEventListener('input', (e) => {
+        const t = e.target;
+        const tr = t && t.closest ? t.closest('tr') : null;
+        if (!tr) return;
+        const idx = parseInt(tr.getAttribute('data-idx'), 10);
+        if (!isNaN(idx)) kmUpdateRowFromInputs(idx);
+      });
+      tbody.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('.km-rm') : null;
+        if (btn) kmRemoveRow(btn);
+      });
+    }
+    // Ô "Vị trí Kho chung" — gõ một lần áp cho mọi dòng đang có
+    const locCommon = document.getElementById('km-loc-common');
+    if (locCommon && !locCommon.dataset.kmWired) {
+      locCommon.dataset.kmWired = '1';
+      locCommon.addEventListener('input', kmApplyCommonLocation);
+    }
   }
 
 export {
@@ -3338,5 +3792,9 @@ export {
   syncTransferKhoUI,
   updateCkNewVolume,
   updateCkPosInfo,
-  x2LotLocations
+  x2LotLocations,
+  handleKhoAddMultiSubmit,
+  openKhoAddMultiModal,
+  closeKhoAddMultiModal,
+  wireKhoAddMultiEvents
 };

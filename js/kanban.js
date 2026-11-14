@@ -387,6 +387,14 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         // VẪN nằm ở cột Kho nhưng mang cờ batch.topRework chờ xử lý tiếp.
         const topChip = (batch.stage === 'kho' && batch.topRework)
           ? `<span class="tag-badge tag-top-rework" title="Lô vào Kho dạng TÓP — cần xử lý lại trước khi dùng (chọn ở form Chuyển Kho)"><i data-lucide="alert-triangle" style="width:10px;height:10px;"></i> Tóp xử lý lại</span>` : '';
+        // Chip "TRẠNG THÁI SẤY" — lô ở Kho gán khi thêm thủ công / nạp Excel:
+        // S1 = đã qua Sấy 1 (cần sấy tiếp ở Sấy 2), S2 = đã qua Sấy 2 (ra sản xuất),
+        // null/chưa sấy = lô mới nhập trực tiếp vào Kho (chưa biết)
+        const dryStageLabelMap = { say1: 'Sấy 1', say2: 'Sấy 2', 'chua-say': 'Chưa sấy' };
+        const dryStageClsMap = { say1: 'dry-say1', say2: 'dry-say2', 'chua-say': 'dry-chua' };
+        const dryStageVal = batch.dryStage || 'chua-say';
+        const dryChip = batch.stage === 'kho' && batch.dryStage
+          ? `<span class="tag-badge ${dryStageClsMap[dryStageVal]}" title="Trạng thái sấy: ${dryStageLabelMap[dryStageVal]}"><i data-lucide="thermometer" style="width:10px;height:10px;"></i> ${dryStageLabelMap[dryStageVal]}</span>` : '';
 
     // Badge đếm ngày CÔNG ĐOẠN HIỆN TẠI (gọn 1 chip) — lịch sử đầy đủ các lần
     // qua công đoạn để trong tooltip khi rê chuột.
@@ -421,7 +429,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <span class="batch-code-modern kb-code"><i data-lucide="box"></i> ${escapeHTML(batch.code)}</span>
         <span class="tag-badge tag-type-${batch.bambooType} stage-chip" title="Phân loại nan">Loại ${escapeHTML(batch.bambooType)}</span>
         <span class="tag-badge tag-use-${batch.useFor} stage-chip" title="Dùng cho">${escapeHTML(batch.useFor)}</span>
-        ${thChip}${btChip}${topChip}
+        ${thChip}${btChip}${topChip}${dryChip}
         ${daysBadgeHtml}
         <span class="week-pill kb-week" title="Tuần kế hoạch · ngày tạo lô">${escapeHTML(batch.week)} · ${formatDateDDMMYY(batch.date)}</span>
       </div>
@@ -459,6 +467,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <th>Ngày</th>
         <th>Loại</th>
         <th>Dùng cho</th>
+        <th>Trạng thái sấy</th>
         <th>Ghi chú</th>
         ${showKhoCol ? '<th class="ta-r">Tồn</th>' : ''}
         ${canEdit ? '<th class="ta-c">TT</th>' : ''}
@@ -480,6 +489,7 @@ import { escapeHTML, formatDateDDMMYY, getBatchStageHistory, getHistoryEntryDays
         <td class="kb-t-date">${formatDateDDMMYY(b.date)}</td>
         <td class="kb-t-type">${escapeHTML(b.bambooType)}</td>
         <td class="kb-t-use">${escapeHTML(b.useFor)}</td>
+        <td class="kb-t-dry">${b.dryStage ? (b.dryStage === 'say1' ? 'S1' : b.dryStage === 'say2' ? 'S2' : '—') : '—'}</td>
         <td class="kb-t-chips">${chips ? escapeHTML(chips) : '<span class="kb-t-none">—</span>'}</td>
         ${showKhoCol ? `<td class="ta-r kb-t-remain">${(remain || 0).toLocaleString('vi-VN')}</td>` : ''}
         ${canEdit ? `<td class="ta-c kb-t-act" data-perm="x2">

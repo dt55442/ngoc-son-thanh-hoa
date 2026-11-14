@@ -479,9 +479,9 @@ try {
   assert.ok(moduleSource.includes('x2YardStockAsOf') && moduleSource.includes('x2OngChuaBoAsOf'));
   assert.ok(styles.includes('.leadership-consumption-grid'));
   assert.ok(!styles.includes('.leadership-data-notes'));
-  assert.ok(sw.includes("'nha-may-ngoc-son-v409'"));
+  assert.ok(sw.includes("'nha-may-ngoc-son-v420'"));
   assert.ok(sw.includes("'./js/leadership-dashboard.js'"));
-  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v409'"));
+  assert.ok(fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v420'"));
 
   // ── Tuần 46 trở đi mới được so sánh ▲/▼ ──
   assert.equal(weekCompareEligible('week', '2026-W44'), false, 'Tuần 44 không được so sánh');

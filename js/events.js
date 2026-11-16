@@ -25,7 +25,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   x1SsOpenOldPanel, x1SsCloseReadyPanel, x1SsOldStep, x1SsOpenBocFor,
   X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
   x1KhoToggleDetail, x1KhoOpenExportForm, x1KhoCloseExportForm, x1KhoSaveExport, x1KhoDeleteExport, x1KhoSyncFormFields, x1KhoOpenDetail, x1KhoCloseDetail,
-  x1BoLengthsTogglePicker, x1BoLengthToggle, x1BoLengthAdd, x1BoWidthsTogglePicker, x1BoWidthToggle, x1BoWidthAdd, x1BoNavigateStage, x1LocThanhNavigateStage, x1LocThanhModeOf, renderX1LocThanhLengthRows, x1LocThanhReadLengthRows, syncX1LocThanhMode, x1LtOnSrcChange, x1LtAddSource, x1LtRemoveSource, x1LtLengthCatalogToggle, x1LtLengthToggle, x1LtLengthAdd,
+  x1BoLengthsTogglePicker, x1BoLengthToggle, x1BoLengthAdd, x1BoNavigateStage, x1LocThanhNavigateStage, x1LocThanhModeOf, renderX1LocThanhLengthRows, x1LocThanhReadLengthRows, syncX1LocThanhMode, x1LtOnSrcChange, x1LtAddSource, x1LtRemoveSource, x1LtLengthCatalogToggle, x1LtLengthToggle, x1LtLengthAdd, x1LtToggleWidth,
   syncX2ShiftField, syncX2BaoThoThicknessInputs, isBoOngPos, isBaoThoPos, isChonNanPos, renderX2BulligCard,
   // ── SỔ NHÓM KHỐI LƯỢNG (18/10/2026): xe bốc ~600 kg + phiếu cân + 2 loại đầu vào Cắt Chọn ──
   setX2CutInputKind, onX2BoluongTicketToggle, onX2BoluongTicketKg,
@@ -2250,7 +2250,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     }));
     // ── 11/2026: CHIỀU DÀI Ở THẺ BỔ X1 (nút nổi — bấm ra ngoài tự ẩn qua X2_FLOAT_PAIRS) ──
     safeOn('x1-bo-lengths-btn', 'click', () => x1BoLengthsTogglePicker());
-    safeOn('x1-bo-widths-btn', 'click', () => x1BoWidthsTogglePicker());
     safeOn('btn-x1-bo-stage-prev', 'click', () => x1BoNavigateStage(-1));
     safeOn('btn-x1-bo-stage-next', 'click', () => x1BoNavigateStage(1));
     safeOn('btn-x1-lt-stage-prev', 'click', () => x1LocThanhNavigateStage(-1));
@@ -2263,16 +2262,6 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       });
       boLenPanel.addEventListener('click', (e) => {
         if (e.target && e.target.closest && e.target.closest('#x1-bo-len-add-btn')) x1BoLengthAdd();
-      });
-    }
-    const boWidthPanel = document.getElementById('x1-bo-width-picker');
-    if (boWidthPanel) {
-      boWidthPanel.addEventListener('change', (e) => {
-        const t = e.target && e.target.closest ? e.target.closest('[data-x1-bo-width]') : null;
-        if (t) x1BoWidthToggle(t.getAttribute('data-x1-bo-width'), t.checked);
-      });
-      boWidthPanel.addEventListener('click', (e) => {
-        if (e.target && e.target.closest && e.target.closest('#x1-bo-width-add-btn')) x1BoWidthAdd();
       });
     }
     // ── 11/2026: THẺ LỌC THANH / BÓ XÔ — 2 hình thức + MA TRẬN chiều dài × phân loại Vầu (07/11/2026) ──
@@ -2320,6 +2309,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         if (sp) x1ChainCalc(sp);
       });
       ltRows.addEventListener('click', (e) => {
+        // BẬT/TẮT bản rộng của 1 kích thước (chip 6/11/13/15/21) — 1 kích thước được nhiều bản rộng
+        const chip = e.target && e.target.closest ? e.target.closest('[data-x1-lt-chip]') : null;
+        if (chip) {
+          const parts = (chip.getAttribute('data-x1-lt-chip') || '').split('|');
+          x1LtToggleWidth(Math.round(Number(parts[0])), Number(parts[1]));
+          return;
+        }
         const del = e.target && e.target.closest ? e.target.closest('[data-x1-lt-del]') : null;
         if (del && del.closest('.x1-lt-row')) del.closest('.x1-lt-row').remove();
       });

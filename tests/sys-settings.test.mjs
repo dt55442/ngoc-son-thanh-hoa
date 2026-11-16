@@ -97,6 +97,10 @@ check('A5: ánh xạ thẻ → vùng', sys.AREA_BY_CARD['x2-than-hoa-card'] === 
   && sys.AREA_BY_CARD['x2-kho-card'] === 'x2.kho.note'
   && sys.AREA_BY_CARD['x2-phu-pham-card'] === 'x2.phupham');
 
+// ─── N. QUYỀN KHO NAN CẤP THÊM TỪNG NGƯỜI (22/11/2026 — khoXuat / khoApprove) ───
+// Tích = CẤP THÊM quyền riêng (kể cả Người Xem); bỏ tích = trả về mặc định vai trò
+// (KHÔNG thu hẹp ai — Admin/BQL vẫn duyệt, người có tab Công Đoạn vẫn tạo phiếu).
+
 // ═══ B. CỜ HIỂN THỊ ══════════════════════════════════════════
 console.log('--- B. Cờ hiển thị (chủ động, KHÔNG hẹn giờ) ---');
 reset();
@@ -183,7 +187,49 @@ const ds = sys.applySysSettings();
 check('E1: body[data-on] phản ánh cờ theo vai trò', ds && ds.on !== undefined && !ds.on.includes('see.perf.cap'));
 check('E2: body[data-area-edit] chứa vùng được sửa', ds.edit.includes('x2.prod'));
 check('E3: body[data-area-approve] KHÔNG chứa vùng của editor', !ds.approve.includes('ap.kho'));
-asUser('admin');
+check('N8: cấu trúc — modal có 2 ô quyền kho + permissions chuẩn hoá + mây đọc grants + applyKho2AreaDom', (() => {
+  const idx = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const perm = fs.readFileSync(new URL('../js/permissions.js', import.meta.url), 'utf8');
+  const auth = fs.readFileSync(new URL('../js/auth.js', import.meta.url), 'utf8');
+  const cloud = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
+  const syss = fs.readFileSync(new URL('../js/sys-settings.js', import.meta.url), 'utf8');
+  return idx.includes('id="user-perms-kho-xuat"') && idx.includes('id="user-perms-kho-approve"')
+    && perm.includes('u.khoXuat = u.khoXuat === true') && perm.includes('u.khoApprove = u.khoApprove === true')
+    && perm.includes('export function canKhoNoteCreate()') && perm.includes('export function canKhoApproveNote()')
+    && auth.includes('grants.khoXuat') && auth.includes('grants.khoApprove')
+    && auth.includes('khoXuat, khoApprove }')
+    && cloud.includes('grants.khoXuat') && cloud.includes('grants.khoApprove')
+    && syss.includes("area === 'x2.kho.note' && user && user.khoXuat === true")
+    && syss.includes("area === 'ap.kho' && user && user.khoApprove === true")
+    && syss.includes('export function applyKho2AreaDom')
+    && idx.includes('data-perm="kho2"');
+})());
+console.log('--- N. Quyền kho nan cấp thêm từng người (22/11/2026) ---');
+reset(); asUser('viewer', { khoXuat: true, khoApprove: true });
+check('N1: Người Xem được cấp khoXuat → tạo/sửa phiếu kho (vùng x2.kho.note = edit)', sys.levelOf('x2.kho.note') === 'edit');
+check('N2: Người Xem được cấp khoApprove → duyệt phiếu kho (vùng ap.kho = approve)', sys.levelOf('ap.kho') === 'approve');
+check('N3: Người Xem KHÔNG được cấp gì → vẫn chỉ xem cả 2 vùng', (() => {
+  asUser('viewer', {});
+  return sys.levelOf('x2.kho.note') === 'view' && sys.levelOf('ap.kho') === 'none';
+})());
+check('N4: Người Chỉnh Sửa có tab Công Đoạn (kanban+x2) → tạo phiếu mặc định (không cần khoXuat)', (() => {
+  asUser('editor', { editTabs: ['kanban', 'x2'] });
+  return sys.levelOf('x2.kho.note') === 'edit' && sys.levelOf('ap.kho') === 'none';
+})());
+check('N5: Ban Quản Lý không tick khoApprove → VẪN duyệt (không mất quyền hiện hữu)', (() => {
+  asUser('manager', { editTabs: ['kanban', 'x2'] });
+  return sys.levelOf('ap.kho') === 'approve';
+})());
+check('N6: Người Chỉnh Sửa tick khoApprove → duyệt được phiếu kho', (() => {
+  asUser('editor', { editTabs: ['kanban', 'x2'], khoApprove: true });
+  return sys.levelOf('ap.kho') === 'approve';
+})());
+check('N7: Người Chỉnh Sửa bỏ tick khoApprove → mất quyền duyệt (trả về mặc định)', (() => {
+  asUser('editor', { editTabs: ['kanban', 'x2'] });
+  return sys.levelOf('ap.kho') === 'none';
+})());
+
+reset(); asUser('admin');
 const ds2 = sys.applySysSettings();
 check('E4: Admin có mọi vùng trong data-area-approve', ds2.approve.split(' ').length === sys.PERM_AREAS.length);
 check('E5: Admin thấy mọi cờ mặc định', ds2.on.includes('see.perf.cap') && ds2.on.includes('see.perf.eff'));
@@ -283,9 +329,9 @@ check('I6b: tay nắm cuộn dọc bảng QC rõ, tương phản và đủ lớn
   && cssSrc.includes('#qc-detail-content .table-responsive::-webkit-scrollbar-thumb')
   && cssSrc.includes('min-height: 64px')
   && !fs.readFileSync('js/utils.js', 'utf8').includes('setupVScrollControls'));
-check('I7: sw.js có js/sys-settings.js + cache v420', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v420'));
-check('I8: state.js có key riêng + APP_VERSION v420',
-  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v420'"));
+check('I7: sw.js có js/sys-settings.js + cache v423', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v423'));
+check('I8: state.js có key riêng + APP_VERSION v423',
+  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v423'"));
 check('I9: nối đủ cloud / storage / history / main',
   cloudSrc.includes('sysSettings') && cloudSrc.includes("'sysSettings'")
   && storageSrc.includes('restoreSysSettings') && histSrc.includes('sysSettings') && mainSrc.includes('loadSysSettings'));

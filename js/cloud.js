@@ -909,6 +909,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
           // Quyền CHỐT CÔNG (20/10/2026) — chỉ Admin cấp, mặc định KHÔNG có
           if (typeof grants.payApply === 'boolean') state.currentUser.payApply = grants.payApply;
           if (typeof grants.payLock === 'boolean') state.currentUser.payLock = grants.payLock;
+          // Quyền KHO NAN — Xưởng 2 (22/11/2026): tích = CẤP THÊM quyền riêng
+          if (typeof grants.khoXuat === 'boolean') state.currentUser.khoXuat = grants.khoXuat;
+          if (typeof grants.khoApprove === 'boolean') state.currentUser.khoApprove = grants.khoApprove;
         }
       } catch (e) {}
       saveSession();

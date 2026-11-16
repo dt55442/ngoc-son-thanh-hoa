@@ -350,6 +350,14 @@ export function levelOf(area) {
   if (def && def.legacy === 'payApply' && user && user.payApply !== true) {
     if (LEVEL_RANK[lv] > LEVEL_RANK.view) lv = 'view';
   }
+  // QUYỀN KHO NAN CẤP THÊM TỪNG NGƯỜI (22/11/2026 — theo yêu cầu người dùng):
+  // Admin tích trong modal "Cấu Hình Quyền Chi Tiết" → người đó có quyền riêng,
+  // kể cả khi vai trò không có; BỎ TÍCH = trả về quyền mặc định theo vai trò
+  // (KHÔNG thu hẹp ai — Admin/BQL vẫn duyệt, người có tab X2 vẫn tạo phiếu).
+  //   khoXuat    → tạo/sửa phiếu kho nan Xưởng 2 (vùng x2.kho.note)
+  //   khoApprove → duyệt/từ chối/mở lại phiếu kho + chốt lệch tồn (vùng ap.kho)
+  if (area === 'x2.kho.note' && user && user.khoXuat === true && LEVEL_RANK[lv] < LEVEL_RANK.edit) lv = 'edit';
+  if (area === 'ap.kho' && user && user.khoApprove === true && LEVEL_RANK[lv] < LEVEL_RANK.approve) lv = 'approve';
   return lv;
 }
 
@@ -543,6 +551,32 @@ export function applySysAreaDom(root) {
       if (openId && AREA_BY_CARD[openId]) area = AREA_BY_CARD[openId];
     }
     const deny = !!area && !canLevel(area, 'edit');
+    if (el.classList) {
+      if (deny) { el.classList.add('area-denied'); hidden++; }
+      else el.classList.remove('area-denied');
+    }
+  });
+  // Nút phiếu kho data-perm="kho2" — ẩn THEO VÙNG kho (x2.kho.note / ap.kho),
+  // gồm quyền cấp thêm từng người (khoXuat / khoApprove). Chạy SAO bước quét
+  // chung để GỠ nhầm class area-denied cho nút chỉ cần quyền duyệt.
+  hidden += applyKho2AreaDom(scope);
+  return hidden;
+}
+
+// ─── VÙNG RIÊNG CHO NÚT PHIẾU KHO (data-perm="kho2") ─────────────
+// Các nút của PHIẾU KHO NAN Xưởng 2 (gửi phiếu · chọn lô gắn phiếu · duyệt)
+// KHÔNG dùng data-perm="x2" (CSS ẩn theo tab Xưởng 2 sẽ che mất nút với người
+// được cấp quyền riêng khoXuat/khoApprove mà không có tab X2). Nay ẩn theo
+// VÙNG: x2.kho.note với nút tạo phiếu, ap.kho với nút duyệt — `levelOf()` đã
+// gồm quyền cấp thêm từng người nên canLevel tự đúng.
+export function applyKho2AreaDom(root) {
+  if (typeof document === 'undefined' || !document.querySelectorAll) return 0;
+  const scope = root && root.querySelectorAll ? root : document;
+  let hidden = 0;
+  scope.querySelectorAll('[data-perm="kho2"]').forEach(el => {
+    const isApprove = el.id === 'x2-kho-approve-all' || el.id === 'x2-kho-pick-all';
+    const area = isApprove ? 'ap.kho' : 'x2.kho.note';
+    const deny = !canLevel(area, isApprove ? 'approve' : 'edit');
     if (el.classList) {
       if (deny) { el.classList.add('area-denied'); hidden++; }
       else el.classList.remove('area-denied');

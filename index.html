@@ -1612,7 +1612,7 @@
                     <option value="Bullig">Bullig</option>
                   </select>
                 </div>
-                <button type="button" class="btn btn-outline" id="x2-kho-lots-btn" data-perm="x2">
+                <button type="button" class="btn btn-outline" id="x2-kho-lots-btn" data-perm="kho2">
                   <i data-lucide="list"></i> <span id="x2-kho-lots-btn-text">Chọn Lô Gắn Phiếu</span>
                   <span class="al-picked-count" id="x2-kho-picked-count"></span>
                 </button>
@@ -1638,7 +1638,7 @@
               </div>
               <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
                 <button type="button" class="btn btn-outline" id="btn-kho-note-reset">Làm Mới Form</button>
-                <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Gửi Phiếu (chờ duyệt)</button>
+                <button type="submit" class="btn btn-success" data-perm="kho2"><i data-lucide="check"></i> Gửi Phiếu (chờ duyệt)</button>
               </div>
             </form>
           </div>
@@ -1656,8 +1656,8 @@
             <div class="x2-cut-table-head">
               <h5><i data-lucide="clipboard-check"></i> Phiếu Chờ Ban Lãnh Đạo Duyệt</h5>
               <span class="x2-cut-table-count" id="x2-kho-pending-count"></span>
-              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-pick-all" data-perm="x2" title="Chọn tất cả / bỏ chọn phiếu"><i data-lucide="check-square"></i> Chọn tất cả</button>
-              <button type="button" class="btn btn-primary btn-sm" id="x2-kho-approve-all" data-perm="x2" title="Duyệt các phiếu đã tích chọn" style="display:none;"><i data-lucide="check-check"></i> Duyệt Đã Chọn</button>
+              <button type="button" class="btn btn-outline btn-sm" id="x2-kho-pick-all" data-perm="kho2" title="Chọn tất cả / bỏ chọn phiếu"><i data-lucide="check-square"></i> Chọn tất cả</button>
+              <button type="button" class="btn btn-primary btn-sm" id="x2-kho-approve-all" data-perm="kho2" title="Duyệt các phiếu đã tích chọn" style="display:none;"><i data-lucide="check-check"></i> Duyệt Đã Chọn</button>
             </div>
             <div class="kho-pending-rows" id="x2-kho-pending-rows"></div>
           </div>
@@ -2899,13 +2899,6 @@
                   <input type="number" id="x1-bo-in" step="any" min="0" placeholder="0">
                 </div>
               </div>
-              <div class="x2-form-row">
-                <div class="form-group" style="flex:1;">
-                  <label for="x1-bo-widths-btn">Bản rộng (ly)</label>
-                  <button type="button" class="btn btn-outline x1-bo-widths-btn" id="x1-bo-widths-btn" aria-haspopup="true" aria-expanded="false" aria-controls="x1-bo-width-picker" title="Chọn một hoặc nhiều bản rộng cho lượt Bổ"></button>
-                </div>
-              </div>
-              <div class="x1-bo-width-picker" id="x1-bo-width-picker" hidden></div>
               <div class="x2-cut-calc" id="x1-bo-calc"></div>
               <div class="x1-bo-actions">
                 <button type="button" class="x1-ss-input-btn x1-bo-action-btn" id="btn-x1-bo-stage-prev" title="Trở về công đoạn Cắt Mắt"><i data-lucide="chevron-left"></i><strong>Lùi · Cắt Mắt</strong></button>
@@ -3055,7 +3048,7 @@
               <div class="x1-lt-length-wrap" id="x1-loc-thanh-length-wrap" hidden>
                 <div class="x1-lt-length-head">
                   <strong>Ma trận khối lượng lọc thanh</strong>
-                  <span class="x2-row-note">Bản rộng theo các lô đã chọn; mặc định đủ 11 chiều dài chuẩn. Nhập kg từng phân loại Vầu.</span>
+                  <span class="x2-row-note">Mỗi kích thước bật được 0/1/nhiều bản rộng (6/11/13/15/21 ly) — mỗi bản rộng 1 dòng nhập riêng.</span>
                   <button type="button" class="btn btn-sm btn-outline" id="btn-x1-lt-length-catalog" aria-haspopup="true" aria-expanded="false" aria-controls="x1-lt-length-catalog" data-perm="x1" title="Xem danh mục chiều dài và thêm kích thước dùng chung"><i data-lucide="ruler"></i> Kích thước</button>
                   <button type="button" class="btn btn-sm btn-outline" id="x1-lt-add-row" data-perm="x1" title="Chỉ dùng ở giao diện dòng kg (bản cũ) — ma trận tự sinh theo lô nguồn"><i data-lucide="plus"></i> Thêm dòng</button>
                 </div>
@@ -7552,6 +7545,23 @@
           </label>
           <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
             Đây là 2 quyền GHI ĐÈ dữ liệu chấm công và CHỐT giờ để tính lương — quyền tab “Nhân Sự” KHÔNG tự có 2 quyền này.
+          </p>
+        </div>
+        <div class="form-group">
+          <label>Quyền Kho Nan — Xưởng 2 <span style="font-size:0.75rem; color:var(--text-muted);">(tích = CẤP THÊM cho người này)</span></label>
+          <label class="edit-tab-check" style="font-size:0.85rem;">
+            <input type="checkbox" id="user-perms-kho-xuat">
+            <i data-lucide="file-plus-2" style="width:14px;height:14px;color:#0f766e;"></i>
+            Được <strong>tạo / sửa phiếu kho nan</strong> (xuất · tiêu huỷ · tái chế)
+          </label>
+          <label class="edit-tab-check" style="font-size:0.85rem; margin-top:6px;">
+            <input type="checkbox" id="user-perms-kho-approve">
+            <i data-lucide="check-circle-2" style="width:14px;height:14px;color:#b45309;"></i>
+            Được <strong>duyệt / từ chối / mở lại phiếu kho</strong> nan
+          </label>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+            BỎ TÍCH = quyền này theo mặc định vai trò (người có quyền sửa tab Xưởng 2 được tạo phiếu · Quản Trị &amp; Ban Quản Lý được duyệt).
+            TÍCH = cấp thêm quyền riêng cho người cụ thể, kể cả Người Xem — không làm mất quyền của ai.
           </p>
         </div>
         <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">

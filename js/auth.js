@@ -588,7 +588,8 @@ import { escapeHTML, showToast } from './utils.js';
           // Quyền chi tiết cấp riêng cho email này (nếu có)
           const grants = (roles.userGrants || {})[ent.key] || {};
           const userLike = { role: ent.role, editTabs: grants.editTabs, allowAdvanced: grants.allowAdvanced,
-            payApply: grants.payApply === true, payLock: grants.payLock === true };
+            payApply: grants.payApply === true, payLock: grants.payLock === true,
+            khoXuat: grants.khoXuat === true, khoApprove: grants.khoApprove === true };
           tr.innerHTML = `
             <td><strong>${escapeHTML(ent.key)}</strong></td>
             <td><code style="font-family:var(--font-mono);">${escapeHTML(ent.key)}</code></td>
@@ -875,9 +876,11 @@ import { escapeHTML, showToast } from './utils.js';
       roles.userGrants[key] = {
         editTabs: Array.isArray(grants.editTabs) && grants.editTabs.length ? grants.editTabs : [...ALL_EDITABLE_IDS],
         allowAdvanced: role === 'admin' || role === 'manager',
-        // GIỮ 2 quyền CHỐT CÔNG khi Admin chỉ đổi vai trò (tránh xóa quyền oan)
+        // GIỮ 2 quyền CHỐT CÔNG + quyền KHO NAN khi Admin chỉ đổi vai trò (tránh xóa quyền oan)
         payApply: role === 'admin' ? true : grants.payApply === true,
-        payLock: role === 'admin' ? true : grants.payLock === true
+        payLock: role === 'admin' ? true : grants.payLock === true,
+        khoXuat: role === 'admin' ? true : grants.khoXuat === true,
+        khoApprove: role === 'admin' ? true : grants.khoApprove === true
       };
       try {
         await saveRolesDoc(roles);
@@ -982,6 +985,9 @@ import { escapeHTML, showToast } from './utils.js';
     // Quyền CHỐT CÔNG (20/10/2026)
     const payApplyCheck = document.getElementById('user-perms-pay-apply');
     const payLockCheck  = document.getElementById('user-perms-pay-lock');
+    // Quyền KHO NAN — Xưởng 2 (22/11/2026): tích = CẤP THÊM quyền riêng
+    const khoXuatCheck = document.getElementById('user-perms-kho-xuat');
+    const khoApproveCheck = document.getElementById('user-perms-kho-approve');
 
     if (isFirebaseOnline()) {
       const email = (userIdOrEmail || '').trim().toLowerCase();
@@ -998,6 +1004,8 @@ import { escapeHTML, showToast } from './utils.js';
         advCheck.checked = !!grants.allowAdvanced || role === 'admin' || role === 'manager';
         if (payApplyCheck) payApplyCheck.checked = role === 'admin' || grants.payApply === true;
         if (payLockCheck) payLockCheck.checked = role === 'admin' || grants.payLock === true;
+        if (khoXuatCheck) khoXuatCheck.checked = role === 'admin' || grants.khoXuat === true;
+        if (khoApproveCheck) khoApproveCheck.checked = role === 'admin' || grants.khoApprove === true;
         initLucide();
       });
     } else {
@@ -1012,6 +1020,8 @@ import { escapeHTML, showToast } from './utils.js';
       advCheck.checked = !!user.allowAdvanced;
       if (payApplyCheck) payApplyCheck.checked = user.role === 'admin' || user.payApply === true;
       if (payLockCheck) payLockCheck.checked = user.role === 'admin' || user.payLock === true;
+      if (khoXuatCheck) khoXuatCheck.checked = user.role === 'admin' || user.khoXuat === true;
+      if (khoApproveCheck) khoApproveCheck.checked = user.role === 'admin' || user.khoApprove === true;
     }
     document.getElementById('modal-user-perms')?.classList.add('show');
     initLucide();
@@ -1042,12 +1052,15 @@ import { escapeHTML, showToast } from './utils.js';
     const payLockCheck  = document.getElementById('user-perms-pay-lock');
     const payApply = !!(payApplyCheck && payApplyCheck.checked);
     const payLock  = !!(payLockCheck && payLockCheck.checked);
+    // Quyền KHO NAN — Xưởng 2 (22/11/2026): tích = CẤP THÊM, bỏ tích = mặc định vai trò
+    const khoXuat = !!(khoXuatCheck && khoXuatCheck.checked);
+    const khoApprove = !!(khoApproveCheck && khoApproveCheck.checked);
 
     if (kind === 'email') {
       // ONLINE: lưu vào roles.userGrants[email]
       const roles = await fetchRolesDoc();
       roles.userGrants = roles.userGrants || {};
-      roles.userGrants[key] = { editTabs, allowAdvanced, payApply, payLock };
+      roles.userGrants[key] = { editTabs, allowAdvanced, payApply, payLock, khoXuat, khoApprove };
       try {
         await saveRolesDoc(roles);
         renderUsersTable();
@@ -1066,6 +1079,8 @@ import { escapeHTML, showToast } from './utils.js';
     user.allowAdvanced = allowAdvanced;
     user.payApply = payApply;
     user.payLock = payLock;
+    user.khoXuat = khoXuat;
+    user.khoApprove = khoApprove;
     saveUsers(); renderUsersTable(); closeUserPermsModal();
     // Nếu đang sửa chính mình thì cập nhật lại giao diện phân quyền
     if (state.currentUser && state.currentUser.username === user.username) {
@@ -1073,6 +1088,8 @@ import { escapeHTML, showToast } from './utils.js';
       state.currentUser.allowAdvanced = allowAdvanced;
       state.currentUser.payApply = payApply;
       state.currentUser.payLock = payLock;
+      state.currentUser.khoXuat = khoXuat;
+      state.currentUser.khoApprove = khoApprove;
       saveSession(); applyRoleToUI(state.currentUser.role);
       renderAll();
     }

@@ -92,6 +92,10 @@ export function normalizeUser(u) {
   // cho editor/manager chưa có editTabs ⇒ sẽ tự mở quyền nguy hiểm cho user cũ.
   u.payApply = u.payApply === true;
   u.payLock  = u.payLock === true;
+  // QUYỀN KHO NAN — XƯỞNG 2 (22/11/2026): cấp thêm quyền riêng từng người
+  // (mặc định KHÔNG có; bỏ tích = trả về quyền mặc định theo vai trò).
+  u.khoXuat = u.khoXuat === true;
+  u.khoApprove = u.khoApprove === true;
   return u;
 }
 
@@ -169,6 +173,16 @@ export function canApproveRate() { return canLevel('ap.rate', 'approve'); }
 // Người CHỈ có quyền tab 'hr' (nhập liệu) KHÔNG mặc nhiên có 2 quyền này.
 export function canPayApply() { return canLevel('hr.machine', 'edit'); }
 export function canPayLock() { return canLevel('ap.pay', 'approve'); }
+
+// ─── QUYỀN KHO NAN — XƯỞNG 2 (22/11/2026) ────────────────────────
+// CẤP THÊM quyền riêng từng người trong modal "Cấu Hình Quyền Chi Tiết":
+//   khoXuat    → tạo/sửa phiếu kho nan (xuất · tiêu huỷ · tái chế) — vùng x2.kho.note
+//   khoApprove → duyệt / từ chối / mở lại phiếu kho + chốt lệch tồn — vùng ap.kho
+// Mặc định: THEO VAI TRÒ (người có quyền sửa tab Xưởng 2 được tạo phiếu;
+// Admin + Ban Quản Lý được duyệt). Tích = CẤP THÊM cho người cụ thể (kể cả
+// Người Xem); bỏ tích = trả về mặc định, KHÔNG thu hẹp quyền ai.
+export function canKhoNoteCreate() { return canLevel('x2.kho.note', 'edit'); }
+export function canKhoApproveNote() { return canLevel('ap.kho', 'approve'); }
 
 // Sửa được biểu đồ hay không = quyền SỬA TAB NGUỒN của biểu đồ đó.
 // (Khái niệm "vùng nâng cao" của biểu đồ đã bị XÓA — xem js/dashboard.js)

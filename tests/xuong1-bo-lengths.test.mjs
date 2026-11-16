@@ -93,8 +93,9 @@ const matrixBox = g('x1-loc-thanh-length-rows');
 
 console.log('--- CẤU TRÚC VÀ DANH MỤC ---');
 const appVersion = (stateSrc.match(/APP_VERSION\s*=\s*'(v\d+)'/) || [])[1];
-check('Bổ chỉ chọn bản rộng; kích thước dài được nhập tại Lọc Thanh',
-  idxHtml.includes('id="x1-bo-widths-btn"') && !idxHtml.includes('id="x1-bo-lengths-btn"') &&
+check('Bổ KHÔNG còn bản rộng (chọn tại ma trận Lọc Thanh); không có picker chiều dài ở Bổ',
+  !idxHtml.includes('id="x1-bo-widths-btn"') && !idxHtml.includes('x1-bo-width-picker') &&
+  !idxHtml.includes('id="x1-bo-lengths-btn"') &&
   idxHtml.includes('id="btn-x1-lt-length-catalog"') &&
   idxHtml.includes('x1-loc-thanh-length-wrap'));
 check('Lọc Thanh chọn nhiều lô; kg lọc mặc định theo phiếu Bổ, không yêu cầu cân sau sấy',
@@ -138,13 +139,11 @@ check('Kích thước ngoài chuẩn được lưu vào danh mục dùng chung',
 g('x1-lt-length-new').value = '5';
 x1.x1LtLengthAdd();
 check('Từ chối kích thước ngoài giới hạn', !x1.x1BoLengthAll().includes(5));
-state.x1BoWidthOptions = [];
-storeBacking.delete(STORAGE_KEY_X1_BO_WIDTHS);
-x1.loadX1BoWidthOptions();
-x1.x1BoWidthToggle(11, true);
-x1.x1BoWidthToggle(15, true);
-check('Bản rộng mặc định vẫn giữ danh mục 11 ly và 15 ly',
-  x1.x1BoWidthAll().join(',') === '11,15');
+check('Bản rộng mặc định của ma trận là 6/11/13/15/21 ly',
+  JSON.stringify(x1.X1_LT_WIDTH_DEFAULTS) === '[6,11,13,15,21]');
+check('Phân loại mới đủ 6 cột đúng thứ tự; "B non tóp" đổi nhãn thành "B" (giữ id + dữ liệu cũ)',
+  JSON.stringify(x1.X1_LT_CLASSES.map(c => c.id)) === JSON.stringify(['A', 'A1', 'nonbt', 'bau', 'bnont', 'loai']) &&
+  x1.X1_LT_CLASSES.find(c => c.id === 'bnont').label === 'B');
 
 console.log('--- NHIỀU LÔ, PHIẾU BỔ VÀ ĐỐI SOÁT KHỐI LƯỢNG ---');
 state.xuong1SaySinhRecords = [
@@ -162,12 +161,12 @@ state.xuong1LocOngRecords = [
 state.xuong1CatMatRecords = [];
 const bo1 = {
   id: 'bo-lot-1', lotCode: 'B1', date: '2026-11-03', qtyIn: 100, qtyOk: 100,
-  widths: [11, 15], srcType: 'Vầu thanh', srcSupplier: 'NCC Một',
+  srcType: 'Vầu thanh', srcSupplier: 'NCC Một',
   sourceAllocations: [{ sourceType: 'locOng', sourceId: 'loc-ong-lot-1', qty: 100 }]
 };
 const bo2 = {
   id: 'bo-lot-2', lotCode: 'B2', date: '2026-11-04', qtyIn: 70, qtyOk: 70,
-  widths: [15, 20], srcType: 'Vầu thanh', srcSupplier: 'NCC Hai',
+  srcType: 'Vầu thanh', srcSupplier: 'NCC Hai',
   sourceAllocations: [{ sourceType: 'locOng', sourceId: 'loc-ong-lot-2', qty: 70 }]
 };
 state.xuong1BoRecords = [bo1, bo2];
@@ -182,7 +181,7 @@ const sourceOptionsHtml = g('x1-loc-thanh-source-options').innerHTML;
 check('Danh sách chọn lô hiển thị checkbox, thông tin đầy đủ và tồn theo phiếu Bổ',
   (sourceOptionsHtml.match(/type="checkbox" data-x1-lt-select-source/g) || []).length === 2 &&
   sourceOptionsHtml.includes('B1') && sourceOptionsHtml.includes('03/11/26') &&
-  sourceOptionsHtml.includes('NCC Một') && sourceOptionsHtml.includes('11 ly, 15 ly') &&
+  sourceOptionsHtml.includes('NCC Một') && !sourceOptionsHtml.includes('Bản rộng') &&
   sourceOptionsHtml.includes('Còn theo phiếu Bổ 100 kg</strong> | Tổng đầu vào Sấy Sinh cả lô 500 kg') &&
   sourceOptionsHtml.includes('Tổng đầu vào Sấy Sinh cả lô 750 kg'));
 x1.x1LtAddSource(bo1.id);
@@ -194,10 +193,14 @@ check('Mỗi lô tự điền phần còn lại theo phiếu Bổ vào một ô 
   !sourceBox.innerHTML.includes('data-x1-lt-adjustment-reason'));
 g('x1-loc-thanh-mode').value = 'loc-thanh';
 x1.syncX1LocThanhMode();
-check('Ma trận gộp bản rộng từ nhiều lô × 11 chuẩn + kích thước bổ sung',
-  JSON.stringify(x1.x1LocThanhSourceDimensions().widths) === '[11,15,20]' &&
-  x1.x1LocThanhSourceDimensions().lengths.includes(120) &&
-  matrixBox.innerHTML.includes('20 ly') && matrixBox.innerHTML.includes('120 mm'));
+check('Ma trận 2 cấp: đủ 12 kích thước, mỗi kích thước có dải 5 chip bản rộng (không phụ thuộc lô Bổ)',
+  (matrixBox.innerHTML.match(/data-x1-lt-chip=/g) || []).length === 60 &&
+  !matrixBox.innerHTML.includes('<option') &&
+  matrixBox.innerHTML.includes('— chọn bản rộng') &&
+  matrixBox.innerHTML.includes('120 mm') && !matrixBox.innerHTML.includes('20 ly'));
+check('Events + CSS nối chip bản rộng 2 cấp; đã bỏ wiring picker bản rộng Bổ và ô select cũ',
+  eventsSrc.includes('x1LtToggleWidth') && !eventsSrc.includes('x1-bo-widths-btn') &&
+  !eventsSrc.includes('data-x1-lt-row-width') && stylesCss.includes('.x1-lt-wchip'));
 
 function fakeAllocationRow(sourceId, qtyIn) {
   const fields = {
@@ -313,6 +316,49 @@ check('Excel có mã lô, kg lọc và cột chênh kg',
   exportText.includes('B1') && exportText.includes('B2') &&
   exportText.includes('Nguồn theo lô / kg lấy') &&
   exportText.includes('KL Chênh (kg)'));
+
+console.log('--- MIGRATE DỮ LIỆU PHÂN LOẠI CŨ (6mm / 13mm) ---');
+const legacyRec = {
+  id: 'lt-legacy-1', date: '2026-11-08', mode: 'loc-thanh', qtyIn: 100, qtyOk: 100, qtyLoai: 0,
+  lotAllocations: [{ sourceId: 'bo-lot-1', lotCode: 'B1', qtyIn: 100, legacy: true }],
+  matrixRows: [{ len: 50, counts: { d6: 10, d13: 10, bnont: 5, loai: 2 } }]
+};
+state.xuong1LocThanhRecords.push(legacyRec);
+const legacyDisplay = x1.x1ChainDisplay(spLT, legacyRec);
+check('Dữ liệu cũ: 6mm → A; 13mm chia 60% A + 40% A1 (A làm tròn, tổng khớp đúng số cũ)',
+  legacyDisplay && Array.isArray(legacyDisplay.matrixRows) &&
+  legacyDisplay.matrixRows[0].counts.A === 16 &&
+  legacyDisplay.matrixRows[0].counts.A1 === 4 &&
+  legacyDisplay.matrixRows[0].counts.bnont === 5 &&
+  legacyDisplay.matrixRows[0].counts.loai === 2 &&
+  legacyDisplay.matrixRows[0].counts.d6 === undefined &&
+  legacyDisplay.matrixRows[0].counts.d13 === undefined);
+check('Ma trận cũ sau migrate vẫn vào Kho Nan đúng nhóm A/A1/B (tồn không có bản rộng nằm ở nhóm ngoài ma trận)',
+  (() => {
+    const wh = x1.x1WarehouseStockSummary();
+    return wh.groups.some(g => g.kind === 'A' && g.len === 50 && g.qty === 16) &&
+      wh.groups.some(g => g.kind === 'A1' && g.len === 50 && g.qty === 4) &&
+      wh.groups.some(g => g.kind === 'B' && g.len === 50 && g.qty === 5);
+  })());
+
+console.log('--- MA TRẬN 2 CẤP + PIVOT KHO ---');
+x1.renderX1LtMatrix([
+  { width: 6, len: 50, weights: { A: 50 } },
+  { width: 11, len: 60, weights: { A: 10 } },
+  { width: 13, len: 60, weights: { A1: 20 } }
+]);
+check('Ví dụ 2 cấp: 50mm có 6ly (A 50kg); 60mm có 11ly (A 10kg) + 13ly (A1 20kg) cùng lúc',
+  matrixBox.innerHTML.includes('rowspan="2"') &&
+  matrixBox.innerHTML.includes('6 ly') && matrixBox.innerHTML.includes('11 ly') && matrixBox.innerHTML.includes('13 ly') &&
+  (matrixBox.innerHTML.match(/class="x1-lt-wchip is-on"/g) || []).length === 3 &&
+  matrixBox.innerHTML.includes('value="50"') && matrixBox.innerHTML.includes('value="20"'));
+x1.renderX1LtMatrix();
+x1.x1KhoOpenDetail('vau');
+const khoPivot = g('x1-kho-detail-body').innerHTML;
+check('Popup Kho 2 cấp: Bản rộng → Kích thước dài, cột khối lượng từng loại',
+  khoPivot.includes('Bản rộng') && khoPivot.includes('Kích thước dài') &&
+  khoPivot.includes('x1-kho-pivot') && khoPivot.includes('rowspan=') &&
+  khoPivot.includes('Tổng cộng'));
 
 console.log(`\n=== KẾT QUẢ: ${pass} PASS / ${fail} FAIL ===`);
 process.exitCode = fail > 0 ? 1 : 0;

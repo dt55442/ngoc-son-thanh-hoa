@@ -16929,3 +16929,15 @@ body[data-fx="low"] .x1-kho-export-close { transition: none; transform: none; }
   #modal-kho-add-multi .modal-card { width: 95vw; max-width: 95vw; }
   #km-rows-table, #km-preview-table { font-size: 0.75rem; }
 }
+
+/* ─── MA TRẬN LỌC THANH X1 2 CẤP — CHIP BẢN RỘNG THEO KÍCH THƯỚC + PIVOT KHO (13/11/2026) ─── */
+.x1-lt-matrix .x1-lt-len-cell { text-align: center; vertical-align: middle; min-width: 150px; }
+.x1-lt-matrix .x1-lt-len-cell strong { font-size: 0.95rem; }
+.x1-lt-width-chips { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 6px; }
+.x1-lt-wchip { min-width: 36px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border, #d6c9a3); background: var(--input-bg, #fff); font-size: 0.85rem; font-weight: 600; cursor: pointer; color: inherit; }
+.x1-lt-wchip.is-on { background: #16a34a; border-color: #16a34a; color: #fff; }
+.x1-lt-matrix .x1-lt-none { text-align: center; color: #9ca3af; font-style: italic; }
+.x1-kho-pivot th, .x1-kho-pivot td { white-space: nowrap; }
+.x1-kho-pivot .x1-kho-pivot-width { text-align: left; font-weight: 700; }
+.x1-kho-pivot .x1-kho-pivot-total { font-weight: 700; color: var(--primary, #166534); }
+.x1-kho-pivot tfoot td { border-top: 2px solid var(--border, #d6c9a3); }

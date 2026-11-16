@@ -433,7 +433,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v420/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v423/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -1071,8 +1071,8 @@ check('K32: chính tả "Nứa" (không còn "Nửa") trên toàn bộ khối th
 check('K33: nhãn phân loại X1 TRUNG TÍNH — thẻ Nứa không được hiện "Vầu A/13mm/…"',
   !x2Src.includes("label: 'Vầu ") &&
   !x2Src.includes("label: 'Vầu A'") &&
-  ["label: 'A'", "label: 'A1'", "label: '6mm'", "label: '13mm'",
-   "label: 'Non bánh tẻ'", "label: 'B non tóp'"].every(s => x2Src.includes(s)));
+  ["label: 'A'", "label: 'A1'", "label: 'Non bánh tẻ'",
+   "label: 'Cắt đầu'", "label: 'B'", "label: 'Loại'"].every(s => x2Src.includes(s)));
 // Gọi bằng KHÓA 'vau'/'nua' đúng như click thật trên thẻ (delegation truyền data-* = khóa)
 x1.x1KhoOpenDetail('vau');
 const khoDetailByKey = document.getElementById('x1-kho-detail-body').innerHTML;

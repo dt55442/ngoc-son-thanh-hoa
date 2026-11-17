@@ -733,7 +733,7 @@ check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerE
 check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
   idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
   idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v423', /nha-may-ngoc-son-v423/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v430', /nha-may-ngoc-son-v430/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',
@@ -768,6 +768,56 @@ check('MỞ LẠI: duyệt lại phiếu riêng → tồn trừ đúng 200 (ki�
   const n = state.khoNotes.find(x => x && x.id === nid);
   return n && n.status === 'da_duyet' && utils.khoLotRemainingOf(state.batches.find(b => b.id === 'k-reopen')) === 0;
 })());
+
+// ─── E2. NGƯỜI DUYỆT TRÊN PHIẾU KHO (14/11/2026) ──
+check('NGƯỜI DUYỆT: form có ô riêng · phiếu hiện "Người duyệt" · duyệt tự điền · sổ/Excel có cột',
+  idxHtml.includes('id="x2-kho-approver"') &&
+  fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8').includes('if (!n.approverName) n.approverName = n.approvedByName') &&
+  fs.readFileSync(new URL('../js/utils.js', import.meta.url), 'utf8').includes('approverName: n.approverName') &&
+  fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url), 'utf8').includes("'Người Duyệt'"));
+state.batches.push({ id: 'k-ap', code: '261101-55', stage: 'kho', date: '2026-10-10', week: '2026-W41',
+  length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.079, bambooType: 'A', useFor: 'Ván',
+  location: 'K55', dryStage: 'say2', stageHistory: [{ stage: 'kho', date: '2026-10-10' }] });
+// (a) ghi sẵn trên form → duyệt GIỮ nguyên người đã ghi
+x2.resetX2KhoNoteForm(true);
+document.getElementById('x2-kho-date').value = '2026-10-11';
+document.getElementById('x2-kho-purpose').value = 'baotinh';
+document.getElementById('x2-kho-approver').value = 'Nguyễn Văn A';
+x2.khoPickLot('k-ap');
+x2.khoSetLotQty('k-ap', 100);
+x2.handleKhoNoteSubmit({ preventDefault(){} });
+const apNote = state.khoNotes[state.khoNotes.length - 1];
+check('Phiếu kho ghi được Người Duyệt nhập tay trên form', apNote.approverName === 'Nguyễn Văn A');
+x2.khoApproveNote(apNote.id);
+check('Duyệt GIỮ nguyên Người Duyệt đã ghi (không ghi đè người bấm Duyệt)',
+  state.khoNotes.find(nnn => nnn.id === apNote.id).approverName === 'Nguyễn Văn A');
+// (b) phiếu KHÔNG ghi → lưu rỗng · hiện "Người duyệt: —" · duyệt tự điền người bấm
+makeExportNote('2026-10-12', 'baotinh', 'Không ghi người duyệt', [['k-ap', 100]]);
+const ap2 = state.khoNotes[state.khoNotes.length - 1];
+check('Phiếu không ghi Người Duyệt → lưu rỗng (không bịa tên)', ap2.approverName === '');
+x2.renderX2KhoPending();
+check('Phiếu chờ duyệt hiện dòng "Người duyệt"',
+  document.getElementById('x2-kho-pending-rows').innerHTML.includes('Người duyệt'));
+// (c) sửa phiếu nạp sẵn + cập nhật; Làm Mới Form xóa ô
+x2.khoEditNote(ap2.id);
+check('Sửa phiếu nạp sẵn ô Người Duyệt',
+  document.getElementById('x2-kho-approver').value === (ap2.approverName || ''));
+document.getElementById('x2-kho-approver').value = 'Trần Thị B';
+x2.handleKhoNoteSubmit({ preventDefault(){} });
+check('Sửa phiếu cập nhật Người Duyệt',
+  state.khoNotes.find(nnn => nnn.id === ap2.id).approverName === 'Trần Thị B');
+x2.resetX2KhoNoteForm(true);
+check('Làm Mới Form xóa ô Người Duyệt',
+  document.getElementById('x2-kho-approver').value === '');
+x2.khoApproveNote(ap2.id);
+check('Duyệt GIỮ Người Duyệt đã sửa (chỉ tự điền khi còn trống)',
+  state.khoNotes.find(nnn => nnn.id === ap2.id).approverName === 'Trần Thị B');
+// (d) phiếu hoàn toàn không ghi → duyệt TỰ ĐIỀN người bấm
+makeExportNote('2026-10-13', 'baotinh', 'Không ghi người duyệt lần 2', [['k-ap', 100]]);
+const ap3 = state.khoNotes[state.khoNotes.length - 1];
+x2.khoApproveNote(ap3.id);
+check('Duyệt tự điền Người Duyệt = tài khoản đang đăng nhập',
+  state.khoNotes.find(nnn => nnn.id === ap3.id).approverName === 'admin');
 
 // ─── D2. PHIẾU XUẤT SẤY 2 TỰ ĐỘNG + CẢNH BÁO VƯỢT SỐ LƯỢNG (17/10/2026) ──
 state.batches.push({ id: 'k-auto', code: '260930-77', stage: 'kho', date: '2026-09-30', week: '2026-W40',

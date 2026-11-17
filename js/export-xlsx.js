@@ -1053,7 +1053,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
       sumNote = `Nhập ước tính ${x2FmtKg(inKg)} kg · bán/tiêu hủy ${x2FmtKg(outKg)} kg · doanh thu ${x2FmtKg(revenue)} đ`;
     } else if (source === 'kho') {
       // KHO NAN — Sổ nhập/xuất (phiếu ĐÃ DUYỆT = số chính thức) + phiếu xử lý lỗi
-      head = ['Stt', 'Loại Dòng', 'Ngày', 'Lần / Mục Đích', 'Mã Lô', 'K.Thước (mm)', 'Loại', 'Dùng Cho', 'Vị Trí', 'Số Thanh', 'm³', 'Ghi Chú / Nguồn'];
+      head = ['Stt', 'Loại Dòng', 'Ngày', 'Lần / Mục Đích', 'Mã Lô', 'K.Thước (mm)', 'Loại', 'Dùng Cho', 'Vị Trí', 'Số Thanh', 'm³', 'Người Duyệt', 'Ghi Chú / Nguồn'];
       const ledger = khoLedgerEvents();
       const rows = [];
       ledger.inRows.forEach(r => rows.push({ date: r.date, kind: 'NHẬP', r }));
@@ -1067,7 +1067,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
           const r = x.r; inQty += r.qty;
           body.push([i + 1, 'NHẬP', formatDateDDMMYY(r.date), `Lần ${r.round}`, r.code || '',
             `${Number(r.length) || 0}×${Number(r.width) || 0}×${Number(r.thickness) || 0}`, r.bambooType || '', r.useFor || '', r.location || '',
-            x2FmtKg(r.qty), (Number(r.m3) || 0).toFixed(4), '']);
+            x2FmtKg(r.qty), (Number(r.m3) || 0).toFixed(4), '', '']);
         } else if (x.kind === 'XUẤT') {
           const r = x.r; outQty += r.qty;
           const lotsTxt = (Array.isArray(r.lots) && r.lots.length ? r.lots : r.lotIds.map(id => ({ batchId: id, qty: 0, loc: '' })))
@@ -1077,12 +1077,12 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
             return String(l.loc || (b && b.location) || '');
           }).filter((v, i, arr) => v && arr.indexOf(v) === i).join(' · ');
           body.push([i + 1, 'XUẤT', formatDateDDMMYY(r.date), KHO_PURPOSE_LABELS[r.purpose] || r.purpose, lotsTxt, '', '', '', locTxt,
-            x2FmtKg(r.qty), r.m3 ? Number(r.m3).toFixed(3) : '', r.note || '']);
+            x2FmtKg(r.qty), r.m3 ? Number(r.m3).toFixed(3) : '', r.approverName || '', r.note || '']);
         } else {
           const n = x.n; outQty += Number(n.qty) || 0;
           body.push([i + 1, x.kind, formatDateDDMMYY(n.date), KHO_METHOD_LABELS[n.method] || n.type,
             '—', n.sizeKey || '—', KHO_SOURCE_LABELS[n.source] || n.source || '', '', '',
-            x2FmtKg(n.qty), '', n.note || '']);
+            x2FmtKg(n.qty), '', n.approverName || '', n.note || '']);
         }
       });
       const s = khoStockSummary();

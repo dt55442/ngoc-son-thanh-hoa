@@ -269,6 +269,24 @@ check('Lịch sử ưu tiên tổng kg theo bản rộng × kích thước; ph�
   historyHtml.includes('15 ly · 50 mm') && historyHtml.includes('20 kg') &&
   historyHtml.includes('<details class="x1-lt-reference"') &&
   !historyHtml.includes('x1-lt-mini-table'));
+check('P1. Lịch sử dòng chính TỔNG THEO BẢN RỘNG: 11 ly: 40 kg · 15 ly: 20 kg',
+  historyHtml.includes('<strong>11 ly</strong>: 40 kg') &&
+  historyHtml.includes('<strong>15 ly</strong>: 20 kg'));
+check('P2. Chi tiết từng (bản rộng · kích thước) nằm trong details Chi tiết bấm mới xổ',
+  historyHtml.includes('<details class="x1-lt-dim-full"><summary>Chi tiết</summary>') &&
+  historyHtml.includes('x1-lt-dim-full-body') &&
+  historyHtml.includes('11 ly · 50 mm') && historyHtml.includes('15 ly · 50 mm'));
+const ltStart = idxHtml.indexOf('id="x1-loc-thanh-form"');
+const ltFormHtml = idxHtml.slice(ltStart, idxHtml.indexOf('</form>', ltStart) + 7);
+check('P3. Cấu trúc 3 nút Làm Mới > Lưu > CĐ sau (bỏ nút Lùi) + CSS 3 màu + mũi tên',
+  ltFormHtml.indexOf('id="btn-cancel-x1-loc-thanh"') < ltFormHtml.indexOf('x1-stage-save') &&
+  ltFormHtml.indexOf('x1-stage-save') < ltFormHtml.indexOf('id="btn-x1-lt-stage-next"') &&
+  !idxHtml.includes('id="btn-x1-lt-stage-prev"') &&
+  idxHtml.includes('x1-stage-next-arrow') && idxHtml.includes('<strong>CĐ sau</strong>') &&
+  eventsSrc.includes("safeOn('btn-x1-lt-stage-prev'") &&
+  stylesCss.includes('.x1-stage-next-arrow') && stylesCss.includes('#d97706') && stylesCss.includes('#16a34a') &&
+  stylesCss.includes("border-left: 15px solid #7c3aed"));
+
 
 setAllocationRows([]);
 setMatrixCells([]);
@@ -341,6 +359,42 @@ check('Ma trận cũ sau migrate vẫn vào Kho Nan đúng nhóm A/A1/B (tồn k
       wh.groups.some(g => g.kind === 'B' && g.len === 50 && g.qty === 5);
   })());
 
+console.log('--- N. BẬT/TẮT CHIP BẢN RỘNG (14/11/2026 — sửa lỗi bấm chip không ăn) ---');
+x1.renderX1LtMatrix();
+check('N1. Ma trận mới trống: đủ 60 chip, chưa có dòng nhập nào',
+  (matrixBox.innerHTML.match(/data-x1-lt-chip=/g) || []).length === 60 &&
+  !matrixBox.innerHTML.includes('data-x1-lt-width='));
+x1.x1LtToggleWidth(50, 11);
+check('N2. Bấm chip 11 ly của 50 mm → hiện dòng nhập + đúng 1 chip bật',
+  matrixBox.innerHTML.includes('data-x1-lt-width="11"') &&
+  matrixBox.innerHTML.includes('data-x1-lt-len="50"') &&
+  (matrixBox.innerHTML.match(/class="x1-lt-wchip is-on"/g) || []).length === 1);
+x1.renderX1LtMatrix();
+check('N3. Vẽ lại ma trận (đồng bộ mây) giữ dòng vừa bật dù chưa nhập số',
+  matrixBox.innerHTML.includes('data-x1-lt-width="11"') &&
+  matrixBox.innerHTML.includes('data-x1-lt-len="50"'));
+x1.x1LtToggleWidth(50, 6);
+check('N4. Bật thêm 6 ly cùng kích thước → 2 dòng 50 mm (ô kích thước gộp rowspan="2")',
+  (matrixBox.innerHTML.match(/data-x1-lt-width="(?:6|11)"/g) || []).length >= 2 &&
+  matrixBox.innerHTML.includes('rowspan="2"'));
+setMatrixCells([fakeMatrixCell(11, 50, 'A', 30)]);
+x1.renderX1LtMatrix();
+check('N5. Số đã nhập được giữ khi vẽ lại (11 ly · 50 mm → A 30 kg)',
+  matrixBox.innerHTML.includes('value="30"'));
+x1.x1LtToggleWidth(50, 11); // stub confirm trả true → đồng ý xoá số
+check('N6. Tắt chip có số (đã xác nhận) → dòng 11 ly biến mất, còn dòng 6 ly',
+  !matrixBox.innerHTML.includes('data-x1-lt-width="11"') &&
+  matrixBox.innerHTML.includes('data-x1-lt-width="6"'));
+setMatrixCells([]);
+x1.renderX1LtMatrix();
+check('N7. Vẽ lại sau khi tắt — dòng 11 ly KHÔNG hồi sinh',
+  !matrixBox.innerHTML.includes('data-x1-lt-width="11"') &&
+  matrixBox.innerHTML.includes('data-x1-lt-width="6"'));
+x1.x1LtToggleWidth(50, 6);
+check('N8. Tắt chip không có số → không hỏi, dòng biến mất sạch',
+  !matrixBox.innerHTML.includes('data-x1-lt-width="6"') &&
+  !matrixBox.innerHTML.includes('data-x1-lt-width="11"'));
+
 console.log('--- MA TRẬN 2 CẤP + PIVOT KHO ---');
 x1.renderX1LtMatrix([
   { width: 6, len: 50, weights: { A: 50 } },
@@ -359,6 +413,36 @@ check('Popup Kho 2 cấp: Bản rộng → Kích thước dài, cột khối lư
   khoPivot.includes('Bản rộng') && khoPivot.includes('Kích thước dài') &&
   khoPivot.includes('x1-kho-pivot') && khoPivot.includes('rowspan=') &&
   khoPivot.includes('Tổng cộng'));
+
+console.log('--- O. FORM GỌN 3 HÀNG + DÒNG LÔ CHỈ TÊN (14/11/2026 đợt 4) ---');
+const idxForm = idxHtml.slice(idxHtml.indexOf('id="x1-loc-thanh-form"'), idxHtml.indexOf('id="x1-loc-thanh-calc"'));
+check('O1. Đã bỏ ô Ghi Chú khỏi form Lọc Thanh',
+  idxHtml.includes('id="x1-loc-thanh-form"') &&
+  !idxForm.includes('x1-loc-thanh-note') && !idxForm.includes('Ghi Chù'));
+check('O2. Hàng 2 gộp đúng thứ tự Hình thức → Ngày → Tổng KL (nguồn đứng hàng 1)',
+  ltFormHtml.indexOf('id="x1-loc-thanh-src"') < ltFormHtml.indexOf('id="x1-loc-thanh-mode"') &&
+  ltFormHtml.indexOf('id="x1-loc-thanh-mode"') < ltFormHtml.indexOf('id="x1-loc-thanh-date"') &&
+  ltFormHtml.indexOf('id="x1-loc-thanh-date"') < ltFormHtml.indexOf('id="x1-loc-thanh-in"'));
+check('O3. Dropdown nguồn KHÔNG tự đóng sau mỗi lần tích — chỉ đóng khi bấm ra ngoài',
+  eventsSrc.includes('ltSourceDropdown.open = false') &&
+  eventsSrc.includes("e.target.closest('#x1-lt-source-dropdown')") &&
+  !eventsSrc.includes('else if (ltSourceDropdown) ltSourceDropdown.open = false;'));
+state.xuong1LocThanhRecords = [];
+state.x1LocThanhEditId = null;
+x1.x1LtAddSource(bo1.id);
+const srcRow = sourceBox.innerHTML;
+check('O4. Dòng lô GỌN: chỉ tên lô + ô kg (chi tiết lô nằm trong tooltip)',
+  srcRow.includes('class="x1-lt-src-name"') &&
+  srcRow.includes('B1') &&
+  srcRow.includes('data-x1-lt-source-in') &&
+  srcRow.includes('title="Vầu thanh · NCC NCC Một') &&
+  srcRow.includes('Phiếu Bổ 100 kg · Còn 100 kg') &&
+  !srcRow.includes('x1-lt-source-head') && !srcRow.includes('x1-lt-source-fields'));
+x1.x1LtRemoveSource(bo1.id);
+check('O5. CSS: dòng lô gọn + ma trận cân bằng (chip vừa 1 hàng, cột 170px)',
+  stylesCss.includes('.x1-lt-src-name') &&
+  stylesCss.includes('.x1-lt-matrix2 thead tr:first-child th:nth-child(1) { width: 170px; }') &&
+  stylesCss.includes('.x1-lt-matrix2 .x1-lt-width-chips { gap: 3px; }'));
 
 console.log(`\n=== KẾT QUẢ: ${pass} PASS / ${fail} FAIL ===`);
 process.exitCode = fail > 0 ? 1 : 0;

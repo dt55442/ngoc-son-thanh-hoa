@@ -11129,6 +11129,9 @@ body[data-fx="low"] .btn-dash-help:hover { transform: none; }
 }
 /* Ô Nhập số lượng đốt lại — chỉ hiện khi tích (ẩn/bật bằng [hidden]) */
 .al-rework-only { max-width: 320px; }
+/* Công tắc "Hiện cả lô đã Sấy 2" trong danh sách nguồn Thêm Lô Sấy Mới */
+.al-dry-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; margin-left: 10px; }
+.al-dry-toggle input[type="checkbox"] { width: 18px; height: 18px; accent-color: #16a34a; cursor: pointer; }
 /* ── HÀNG ② NGUỒN VÀO: nút chọn + checkbox + ô đốt lại cùng 1 hàng (15/10/2026) ── */
 .al-src-row {
   display: flex;
@@ -16374,13 +16377,96 @@ body[data-theme="night"] .bamboo-card.kb-compact.st-kho  { border-left-color: #1
 .x1-bo-width-add { display: flex; gap: 6px; margin-top: 8px; padding: 8px; border-top: 1px dashed var(--border, #d6c9a3); }
 .x1-bo-width-add input { flex: 1; min-width: 0; min-height: 42px; padding: 6px 8px; border: 1px solid var(--border, #d6c9a3); border-radius: 6px; font-size: 16px; }
 .x1-bo-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
-.x1-bo-action-btn { min-width: 0; min-height: 46px; flex-direction: row; justify-content: center; gap: 7px; padding: 8px 10px; color: #fff; text-align: center; }
-.x1-bo-action-btn > svg { width: 18px; height: 18px; flex: 0 0 auto; }
-.x1-bo-action-btn strong { font-size: 0.86rem; line-height: 1.2; }
-.x1-lt-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 10px 0; }
+.x1-bo-actions.x1-lt-actions { margin: 10px 0; }
+.x1-bo-action-btn { min-width: 0; min-height: 50px; flex-direction: row; justify-content: center; gap: 8px; padding: 10px 12px; color: #fff; text-align: center; border: none; border-radius: 10px; font-weight: 700; font-size: 0.88rem; line-height: 1.2; cursor: pointer; transition: transform 0.14s, box-shadow 0.14s; }
+.x1-bo-action-btn > svg { width: 24px; height: 24px; flex: 0 0 auto; }
+.x1-bo-action-btn strong { font-size: 0.88rem; line-height: 1.2; }
+.x1-bo-action-btn:active { transform: translateY(0); }
+
+/* 🔥 SÁY SINH — Cam lửa / Đỏ tươi */
+.x1-bo-actions.say-sinh .x1-stage-nav { background: linear-gradient(180deg, #f97316 0%, #ea580c 55%, #c2410c 100%); box-shadow: 0 4px 0 #c2410c, 0 6px 14px rgba(194, 65, 12, 0.35); }
+.x1-bo-actions.say-sinh .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #c2410c, 0 10px 20px rgba(194, 65, 12, 0.45); }
+.x1-bo-actions.say-sinh .x1-stage-save { background: linear-gradient(180deg, #fb923c 0%, #f97316 55%, #ea580c 100%); box-shadow: 0 4px 0 #ea580c, 0 6px 14px rgba(234, 88, 12, 0.35); }
+.x1-bo-actions.say-sinh .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #ea580c, 0 10px 20px rgba(234, 88, 12, 0.45); }
+.x1-bo-actions.say-sinh .x1-stage-refresh { background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 55%, #fed7aa 100%); color: #c2410c; border: 1px solid #fdba74; box-shadow: 0 4px 0 #fdba74, 0 6px 14px rgba(254, 186, 116, 0.3); }
+.x1-bo-actions.say-sinh .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #fdba74, 0 10px 20px rgba(254, 186, 116, 0.4); color: #9a3412; }
+
+/* 📦 BÓC — Xanh dương đậm / Xanh biển */
+.x1-bo-actions.boc .x1-stage-nav { background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 55%, #1e3a8a 100%); box-shadow: 0 4px 0 #1e3a8a, 0 6px 14px rgba(30, 58, 138, 0.35); }
+.x1-bo-actions.boc .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1e3a8a, 0 10px 20px rgba(30, 58, 138, 0.45); }
+.x1-bo-actions.boc .x1-stage-save { background: linear-gradient(180deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%); box-shadow: 0 4px 0 #1d4ed8, 0 6px 14px rgba(29, 78, 216, 0.35); }
+.x1-bo-actions.boc .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1d4ed8, 0 10px 20px rgba(29, 78, 216, 0.45); }
+.x1-bo-actions.boc .x1-stage-refresh { background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 55%, #bfdbfe 100%); color: #1e3a8a; border: 1px solid #93c5fd; box-shadow: 0 4px 0 #93c5fd, 0 6px 14px rgba(147, 197, 253, 0.3); }
+.x1-bo-actions.boc .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #93c5fd, 0 10px 20px rgba(147, 197, 253, 0.4); color: #172554; }
+
+/* 🔍 LỌC ỐNG — Tím / Violet */
+.x1-bo-actions.loc-ong .x1-stage-nav { background: linear-gradient(180deg, #a855f7 0%, #9333ea 55%, #7e22ce 100%); box-shadow: 0 4px 0 #7e22ce, 0 6px 14px rgba(126, 34, 206, 0.35); }
+.x1-bo-actions.loc-ong .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #7e22ce, 0 10px 20px rgba(126, 34, 206, 0.45); }
+.x1-bo-actions.loc-ong .x1-stage-save { background: linear-gradient(180deg, #c084fc 0%, #a855f7 55%, #9333ea 100%); box-shadow: 0 4px 0 #9333ea, 0 6px 14px rgba(147, 51, 234, 0.35); }
+.x1-bo-actions.loc-ong .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #9333ea, 0 10px 20px rgba(147, 51, 234, 0.45); }
+.x1-bo-actions.loc-ong .x1-stage-refresh { background: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 55%, #e9d5ff 100%); color: #7e22ce; border: 1px solid #d8b4fe; box-shadow: 0 4px 0 #d8b4fe, 0 6px 14px rgba(216, 180, 254, 0.3); }
+.x1-bo-actions.loc-ong .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #d8b4fe, 0 10px 20px rgba(216, 180, 254, 0.4); color: #581c87; }
+
+/* ✂️ CẮT MẮT — Hồng / Rose */
+.x1-bo-actions.cat-mat .x1-stage-nav { background: linear-gradient(180deg, #ec4899 0%, #db2777 55%, #be185d 100%); box-shadow: 0 4px 0 #be185d, 0 6px 14px rgba(190, 24, 93, 0.35); }
+.x1-bo-actions.cat-mat .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #be185d, 0 10px 20px rgba(190, 24, 93, 0.45); }
+.x1-bo-actions.cat-mat .x1-stage-save { background: linear-gradient(180deg, #f472b6 0%, #ec4899 55%, #db2777 100%); box-shadow: 0 4px 0 #db2777, 0 6px 14px rgba(219, 39, 119, 0.35); }
+.x1-bo-actions.cat-mat .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #db2777, 0 10px 20px rgba(219, 39, 119, 0.45); }
+.x1-bo-actions.cat-mat .x1-stage-refresh { background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 55%, #fbcfe8 100%); color: #be185d; border: 1px solid #f9a8d4; box-shadow: 0 4px 0 #f9a8d4, 0 6px 14px rgba(251, 168, 212, 0.3); }
+.x1-bo-actions.cat-mat .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #f9a8d4, 0 10px 20px rgba(251, 168, 212, 0.4); color: #9d174d; }
+
+/* ⚖️ BỔ — Xanh lá / Emerald */
+.x1-bo-actions.bo .x1-stage-nav { background: linear-gradient(180deg, #10b981 0%, #059669 55%, #047857 100%); box-shadow: 0 4px 0 #047857, 0 6px 14px rgba(4, 120, 87, 0.35); }
+.x1-bo-actions.bo .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #047857, 0 10px 20px rgba(4, 120, 87, 0.45); }
+.x1-bo-actions.bo .x1-stage-save { background: linear-gradient(180deg, #34d399 0%, #10b981 55%, #059669 100%); box-shadow: 0 4px 0 #059669, 0 6px 14px rgba(5, 150, 105, 0.35); }
+.x1-bo-actions.bo .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #059669, 0 10px 20px rgba(5, 150, 105, 0.45); }
+.x1-bo-actions.bo .x1-stage-refresh { background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 55%, #a7f3d0 100%); color: #047857; border: 1px solid #6ee7b7; box-shadow: 0 4px 0 #6ee7b7, 0 6px 14px rgba(110, 231, 183, 0.3); }
+.x1-bo-actions.bo .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #6ee7b7, 0 10px 20px rgba(110, 231, 183, 0.4); color: #065f46; }
+
+/* 🌬️ PHƠI SẤY — Vàng hổ phách / Amber */
+.x1-bo-actions.phoi-say .x1-stage-nav { background: linear-gradient(180deg, #f59e0b 0%, #d97706 55%, #b45309 100%); box-shadow: 0 4px 0 #b45309, 0 6px 14px rgba(180, 83, 9, 0.35); }
+.x1-bo-actions.phoi-say .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #b45309, 0 10px 20px rgba(180, 83, 9, 0.45); }
+.x1-bo-actions.phoi-say .x1-stage-save { background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 55%, #d97706 100%); box-shadow: 0 4px 0 #d97706, 0 6px 14px rgba(217, 119, 6, 0.35); }
+.x1-bo-actions.phoi-say .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #d97706, 0 10px 20px rgba(217, 119, 6, 0.45); }
+.x1-bo-actions.phoi-say .x1-stage-refresh { background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 55%, #fde68a 100%); color: #b45309; border: 1px solid #fcd34d; box-shadow: 0 4px 0 #fcd34d, 0 6px 14px rgba(252, 211, 77, 0.3); }
+.x1-bo-actions.phoi-say .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #fcd34d, 0 10px 20px rgba(252, 211, 77, 0.4); color: #92400e; }
+
+/* 📦 LỌC THANH / BÓ XÔ — Xanh cyan / Teal */
+.x1-bo-actions.loc-thanh .x1-stage-nav { background: linear-gradient(180deg, #14b8a6 0%, #0d9488 55%, #0f766e 100%); box-shadow: 0 4px 0 #0f766e, 0 6px 14px rgba(15, 118, 110, 0.35); }
+.x1-bo-actions.loc-thanh .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #0f766e, 0 10px 20px rgba(15, 118, 110, 0.45); }
+.x1-bo-actions.loc-thanh .x1-stage-save { background: linear-gradient(180deg, #2dd4bf 0%, #14b8a6 55%, #0d9488 100%); box-shadow: 0 4px 0 #0d9488, 0 6px 14px rgba(13, 148, 136, 0.35); }
+.x1-bo-actions.loc-thanh .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #0d9488, 0 10px 20px rgba(13, 148, 136, 0.45); }
+.x1-bo-actions.loc-thanh .x1-stage-refresh { background: linear-gradient(180deg, #f0fdfa 0%, #ccfbf1 55%, #99f6e4 100%); color: #0f766e; border: 1px solid #5eead4; box-shadow: 0 4px 0 #5eead4, 0 6px 14px rgba(94, 234, 212, 0.3); }
+.x1-bo-actions.loc-thanh .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #5eead4, 0 10px 20px rgba(94, 234, 212, 0.4); color: #0d9488; }
+
+/* 🌲 CẮT ỐNG — Xanh tre đậm (mặc định cho thẻ đầu) */
+.x1-bo-actions.cat-ong .x1-stage-nav { background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 55%, #14532d 100%); box-shadow: 0 4px 0 #14532d, 0 6px 14px rgba(20, 83, 45, 0.35); }
+.x1-bo-actions.cat-ong .x1-stage-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #14532d, 0 10px 20px rgba(20, 83, 45, 0.45); }
+.x1-bo-actions.cat-ong .x1-stage-save { background: linear-gradient(180deg, #4ade80 0%, #22c55e 55%, #16a34a 100%); box-shadow: 0 4px 0 #16a34a, 0 6px 14px rgba(22, 197, 74, 0.35); }
+.x1-bo-actions.cat-ong .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #16a34a, 0 10px 20px rgba(22, 197, 74, 0.45); }
+.x1-bo-actions.cat-ong .x1-stage-refresh { background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 55%, #bbf7d0 100%); color: #14532d; border: 1px solid #86efac; box-shadow: 0 4px 0 #86efac, 0 6px 14px rgba(134, 239, 172, 0.3); }
+.x1-bo-actions.cat-ong .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #86efac, 0 10px 20px rgba(134, 239, 172, 0.4); color: #14532d; }
+
+/* Nút Làm Mới cũ (is-neutral) giữ cho tương thích */
 .x1-bo-action-btn.is-neutral { border-color: #475569; background: linear-gradient(180deg, #64748b 0%, #475569 55%, #334155 100%); box-shadow: 0 3px 0 #1e293b, 0 5px 12px rgba(51, 65, 85, 0.28); }
 .x1-bo-action-btn.is-neutral:hover { box-shadow: 0 6px 0 #1e293b, 0 10px 18px rgba(51, 65, 85, 0.36); }
 .x1-bo-action-btn.is-neutral:active { box-shadow: 0 1px 0 #1e293b, 0 2px 5px rgba(51, 65, 85, 0.26); }
+
+@media (max-width: 639.98px) {
+  .x1-bo-len-picker { max-height: 52vh; }
+  .x1-bo-width-picker { max-height: 52vh; }
+  .x1-bo-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .x1-lt-row .x1-lt-len { flex: 1 1 45%; }
+  .x1-lt-row .x1-lt-kg { flex: 1 1 35%; }
+}
+
+@media (max-width: 639.98px) {
+  .x1-bo-len-picker { max-height: 52vh; }
+  .x1-bo-width-picker { max-height: 52vh; }
+  .x1-bo-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .x1-lt-row .x1-lt-len { flex: 1 1 45%; }
+  .x1-lt-row .x1-lt-kg { flex: 1 1 35%; }
+}
 
 /* Bảng tổng hợp lọc thanh (theo chiều dài của lô nguồn) ở thẻ Lọc Thanh/Bó Xô */
 .x1-lt-length-wrap { margin-top: 4px; border: 1px dashed var(--border, #d6c9a3); border-radius: 10px; padding: 8px; }
@@ -16941,3 +17027,86 @@ body[data-fx="low"] .x1-kho-export-close { transition: none; transform: none; }
 .x1-kho-pivot .x1-kho-pivot-width { text-align: left; font-weight: 700; }
 .x1-kho-pivot .x1-kho-pivot-total { font-weight: 700; color: var(--primary, #166534); }
 .x1-kho-pivot tfoot td { border-top: 2px solid var(--border, #d6c9a3); }
+
+/* ─── INLINE EDIT MÃ LÔ SẤY SINH (15/11/2026) ─── */
+.btn-xs { padding: 2px 6px; font-size: 0.8rem; min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.btn-xs i { width: 14px; height: 14px; }
+.x1-ss-code-inline { width: 110px; padding: 3px 6px; font-size: 0.9rem; font-family: inherit; border: 1px solid var(--primary, #166534); border-radius: 4px; background: #fffef6; color: var(--primary, #166534); font-weight: 700; display: none; vertical-align: middle; margin-left: 4px; }
+.x1-ss-code-inline:focus { outline: none; border-color: var(--primary-dark, #0f5132); box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2); }
+
+
+/* ─── MA TRẬN LỌC THANH X1 2 CẤP — GỌN GÀNG (14/11/2026 đợt 3: sửa lỗi bấm chip
+   bản rộng không ăn + siết bề rộng bảng và ô nhập) ─── */
+.x1-lt-matrix2 { min-width: 0; max-width: 880px; table-layout: fixed; }
+.x1-lt-matrix2 thead tr:first-child th:nth-child(1) { width: 170px; }
+.x1-lt-matrix2 thead tr:first-child th:nth-child(2) { width: 64px; }
+.x1-lt-matrix2 thead tr:first-child th:last-child { width: 84px; }
+.x1-lt-matrix2 .x1-lt-len-cell { width: 170px; min-width: 0; padding: 6px 4px; }
+.x1-lt-matrix2 .x1-lt-len-cell strong { font-size: 0.88rem; }
+.x1-lt-matrix2 .x1-lt-width-cell { width: 64px; text-align: center; }
+.x1-lt-matrix2 .x1-lt-cell { padding: 3px 4px; }
+.x1-lt-matrix2 td.x1-lt-cell .x1-lt-c { width: 100%; min-width: 0; max-width: 100%; padding: 4px 5px; }
+.x1-lt-matrix2 .x1-lt-total { width: 84px; min-width: 0; }
+.x1-lt-matrix2 .x1-lt-none { padding: 8px 6px; font-size: 0.78rem; }
+.x1-lt-matrix2 .x1-lt-width-chips { gap: 3px; }
+.x1-lt-matrix2 .x1-lt-wchip { min-width: 26px; padding: 2px 6px; font-size: 0.78rem; }
+/* Ô số của form Lọc Thanh + "Kg lấy lọc / bó" — hẹp lại cho gọn gàng */
+#x1-loc-thanh-form .x2-form-row input[type="number"] { max-width: 240px; }
+.x1-lt-source-fields input[data-x1-lt-source-in] { max-width: 220px; }
+
+/* ─── THẺ LỌC THANH X1 — ĐỢT 4 (14/11/2026): form 3 hàng gọn + dòng lô chỉ tên + ô kg ─── */
+.x1-lt-source-rows { gap: 6px; }
+.x1-lt-source-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; }
+.x1-lt-src-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: 0.9rem; }
+.x1-lt-source-row input[type="number"][data-x1-lt-source-in] {
+  flex: 0 0 140px; width: 140px; min-height: 38px; padding: 6px 8px;
+  border: 1px solid var(--border, #d6c9a3); border-radius: 6px;
+  background: var(--input-bg, #fff); font-size: 16px; text-align: right;
+}
+@media (max-width: 639.98px) {
+  .x1-lt-source-row { flex-wrap: wrap; }
+  .x1-lt-src-name { flex: 1 1 100%; }
+  .x1-lt-source-row input[type="number"][data-x1-lt-source-in] { flex: 1 1 100%; width: 100%; }
+}
+
+/* ─── THẺ LỌC THANH X1 — ĐỢT 5 (14/11/2026): 3 NÚT 3 MÀU + MŨI TÊN "CĐ SAU"
+   + lịch sử TỔNG THEO BẢN RỘNG (chi tiết nằm trong details) ─── */
+.x1-bo-actions.x1-lt-actions { grid-template-columns: 1fr 1fr 1.35fr; }
+/* Làm Mới — vàng hổ phách (hành động phụ) */
+.x1-bo-actions.loc-thanh .x1-stage-refresh { background: linear-gradient(180deg, #fef3c7 0%, #fde68a 55%, #fcd34d 100%); color: #92400e; border: 1px solid #f59e0b; box-shadow: 0 4px 0 #d97706, 0 6px 14px rgba(217, 119, 6, 0.3); }
+.x1-bo-actions.loc-thanh .x1-stage-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #d97706, 0 10px 20px rgba(217, 119, 6, 0.4); color: #78350f; }
+/* Lưu — xanh lá (hành động chính) */
+.x1-bo-actions.loc-thanh .x1-stage-save { background: linear-gradient(180deg, #22c55e 0%, #16a34a 55%, #15803d 100%); box-shadow: 0 4px 0 #15803d, 0 6px 14px rgba(22, 163, 74, 0.35); }
+.x1-bo-actions.loc-thanh .x1-stage-save:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #15803d, 0 10px 20px rgba(22, 163, 74, 0.45); }
+/* CĐ sau — tím + hình MŨI TÊN chỉ sang phải (dùng ::after tam giác, giữ bóng 3D) */
+.x1-bo-actions.loc-thanh .x1-stage-next-arrow {
+  position: relative; margin-right: 14px;
+  background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 55%, #7c3aed 100%);
+  box-shadow: 0 4px 0 #6d28d9, 0 6px 14px rgba(124, 58, 237, 0.35);
+  border-radius: 10px 3px 3px 10px;
+}
+.x1-bo-actions.loc-thanh .x1-stage-next-arrow::after {
+  content: ''; position: absolute; left: 100%; top: 0;
+  border-top: 25px solid transparent; border-bottom: 25px solid transparent;
+  border-left: 15px solid #7c3aed; pointer-events: none;
+}
+.x1-bo-actions.loc-thanh .x1-stage-next-arrow:hover { transform: translateX(3px); box-shadow: 0 6px 0 #6d28d9, 0 10px 20px rgba(124, 58, 237, 0.45); }
+.x1-bo-actions.loc-thanh .x1-stage-next-arrow > svg { margin-left: 2px; }
+/* Chi tiết lịch sử — dòng chính gọn, details bấm mới xổ */
+.x1-lt-dimension-summary .x1-lt-dim-full { display: inline-block; margin-left: 4px; }
+.x1-lt-dimension-summary .x1-lt-dim-full summary {
+  cursor: pointer; color: var(--text-muted, #64748b); font-size: 0.76rem; font-weight: 700;
+  white-space: nowrap; list-style: none;
+}
+.x1-lt-dimension-summary .x1-lt-dim-full summary::-webkit-details-marker { display: none; }
+.x1-lt-dimension-summary .x1-lt-dim-full summary::before { content: '▸ '; }
+.x1-lt-dimension-summary .x1-lt-dim-full[open] summary::before { content: '▴ '; }
+.x1-lt-dimension-summary .x1-lt-dim-full summary:hover { color: var(--primary, #166534); }
+.x1-lt-dim-full-body { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px; }
+@media (max-width: 639.98px) {
+  .x1-bo-actions.x1-lt-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .x1-bo-actions.loc-thanh .x1-stage-next-arrow { margin-right: 9px; }
+  .x1-bo-actions.loc-thanh .x1-stage-next-arrow::after {
+    border-top-width: 18px; border-bottom-width: 18px; border-left-width: 11px;
+  }
+}

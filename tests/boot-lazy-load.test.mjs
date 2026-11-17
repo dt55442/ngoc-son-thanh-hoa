@@ -70,7 +70,7 @@ check('F. ensureXlsx giải NGAY khi window.XLSX có sẵn', resolved === global
 // ─── G. sw.js CACHE_NAME = APP_VERSION ─────────────────────────
 const stateSrc = rd('js/state.js');
 const swVer = (sw.match(/nha-may-ngoc-son-v(\d+)/) || [])[1];
-check('G. sw.js CACHE_NAME = v423', swVer === '423');
+check('G. sw.js CACHE_NAME = v430', swVer === '430');
 check('G. APP_VERSION khớp CACHE_NAME (quy tắc 73)', stateSrc.includes("APP_VERSION = 'v" + swVer + "'"));
 
 console.log('─── KẾT QUẢ: ' + pass + ' PASS / ' + fail + ' FAIL ───');

@@ -4,7 +4,7 @@
 import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsersMgrModal, handleAddUserSubmit, handleResetSubmit, handleUserEditSubmit, handleUserPermsSubmit, onSysExport, onSysFlagPreset, onSysFlagToggle, onSysPermChange, onSysPermReset, onSysReset, openUsersMgrModal, renderSysPerms, saveSession, sendPasswordResetToUser, sysSetTab, toggleAuthPanel } from './auth.js';
 // TRẠNG THÁI CHỜ + BẢNG LỖI XÁC THỰC (module không import gì — tránh vòng import)
 import { authErrorText, authMarkStep, authReset, isAuthBusy, setAuthBusy } from './auth-ui.js';
-import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, alBulkAddRow, alBulkOnClick, alBulkOnInput, toggleAlBulkEntryMode, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, deletePickedKhoStockLots, exitKanbanPickMode, exitKhoStockPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleKhoAddMultiSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, onKhoStockPickChange, openAddLotModal, openBatchFormModal, openKhoAddMultiModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, selectAllKhoStockLots, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, toggleKhoStockPickMode, updateCkNewVolume, updateCkPosInfo, wireKhoAddMultiEvents } from './batch-modals.js';
+import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alSetShowDryAll, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, alBulkAddRow, alBulkOnClick, alBulkOnInput, toggleAlBulkEntryMode, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, deletePickedKhoStockLots, exitKanbanPickMode, exitKhoStockPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleKhoAddMultiSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, onKhoStockPickChange, openAddLotModal, openBatchFormModal, openKhoAddMultiModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, selectAllKhoStockLots, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, toggleKhoStockPickMode, updateCkNewVolume, updateCkPosInfo, wireKhoAddMultiEvents } from './batch-modals.js';
 import { applyRoleToUI, flushPendingCloudPush, initLucide, isFirebaseOnline, pendingRecordCount, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
@@ -25,7 +25,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   x1SsOpenOldPanel, x1SsCloseReadyPanel, x1SsOldStep, x1SsOpenBocFor,
   X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
   x1KhoToggleDetail, x1KhoOpenExportForm, x1KhoCloseExportForm, x1KhoSaveExport, x1KhoDeleteExport, x1KhoSyncFormFields, x1KhoOpenDetail, x1KhoCloseDetail,
-  x1BoLengthsTogglePicker, x1BoLengthToggle, x1BoLengthAdd, x1BoNavigateStage, x1LocThanhNavigateStage, x1LocThanhModeOf, renderX1LocThanhLengthRows, x1LocThanhReadLengthRows, syncX1LocThanhMode, x1LtOnSrcChange, x1LtAddSource, x1LtRemoveSource, x1LtLengthCatalogToggle, x1LtLengthToggle, x1LtLengthAdd, x1LtToggleWidth,
+  x1BoLengthsTogglePicker, x1BoLengthToggle, x1BoLengthAdd, x1BoNavigateStage, x1LocThanhNavigateStage, x1NavigateStage, x1LocThanhModeOf, renderX1LocThanhLengthRows, x1LocThanhReadLengthRows, syncX1LocThanhMode, x1LtOnSrcChange, x1LtAddSource, x1LtRemoveSource, x1LtLengthCatalogToggle, x1LtLengthToggle, x1LtLengthAdd, x1LtToggleWidth,
   syncX2ShiftField, syncX2BaoThoThicknessInputs, isBoOngPos, isBaoThoPos, isChonNanPos, renderX2BulligCard,
   // ── SỔ NHÓM KHỐI LƯỢNG (18/10/2026): xe bốc ~600 kg + phiếu cân + 2 loại đầu vào Cắt Chọn ──
   setX2CutInputKind, onX2BoluongTicketToggle, onX2BoluongTicketKg,
@@ -41,7 +41,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
   setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
 import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, khoBulkOnPaste, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, khoOnPurposeChange, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck, saveKhoNotes } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
-import { setX1SaySinhQcStatus, setX1SsViewMode, x1SsUpdateSulfurHint, x1SsOpenInputModal, x1SsCloseInputModal, x1SsToggleTimeline } from './xuong2.js';
+import { setX1SaySinhQcStatus, setX1SsViewMode, x1SsUpdateSulfurHint, x1SsOpenInputModal, x1SsCloseInputModal, x1SsToggleTimeline, renderX1SsHistory } from './xuong2.js';
 import { x2OngDatAvailable } from './x2-pool.js'; // SỔ NHÓM: tồn ống đạt chờ bổ (nút "Lấy Hết Tồn")
 import {
   handleX2PhuPhamSubmit, editX2PhuPham, deleteX2PhuPham, resetX2PhuPhamForm, onX2PhuPhamCalc,
@@ -437,7 +437,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-add-lot', 'click', closeAddLotModal);
     safeOn('btn-cancel-add-lot', 'click', closeAddLotModal);
     safeOn('add-lot-form', 'submit', handleAddLotSubmit);
-    safeOn('al-stage', 'change', syncAddLotUI);
+    safeOn('al-stage', 'change', () => { alSetShowDryAll(false); syncAddLotUI(); }); // đổi công đoạn → về lọc an toàn
+    safeOn('al-show-dry-all', 'change', (e) => alSetShowDryAll(!!(e && e.target && e.target.checked)));
     safeOn('al-bulk-toggle', 'click', toggleAlBulkEntryMode);
     safeOn('al-bulk-add-row', 'click', alBulkAddRow);
     safeOn('al-bulk-rows', 'click', alBulkOnClick);
@@ -2148,6 +2149,69 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const qc = e.target.closest && e.target.closest('[data-x1-say-sinh-qc]');
       if (qc) setX1SaySinhQcStatus(qc.getAttribute('data-x1-say-sinh-qc'), qc.value);
     });
+    // ── INLINE EDIT MÃ LÔ SẤY SINH (15/11/2026) ──
+    // Click nút sửa mã → hiện ô nhập, ẩn chữ mã
+    safeOn('x1-say-sinh-day-cards', 'click', (e) => {
+      const editBtn = e.target.closest && e.target.closest('[data-x1-ss-edit-code]');
+      if (editBtn) {
+        if (!requireEditPermission()) return;
+        const id = editBtn.getAttribute('data-x1-ss-edit-code');
+        const codeSpan = document.querySelector('[data-x1-ss-code="' + escapeHTML(id) + '"]');
+        const codeInput = document.querySelector('[data-x1-ss-code-input="' + escapeHTML(id) + '"]');
+        if (codeSpan) codeSpan.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'none';
+        if (codeInput) { codeInput.style.display = 'inline-block'; codeInput.focus(); codeInput.select(); }
+        return;
+      }
+      // Click ra ngoài mọi ô input mã đang mở → hủy (ẩn input, hiện lại chữ)
+      if (!e.target.closest('.x1-ss-code-inline')) {
+        document.querySelectorAll('.x1-ss-code-inline').forEach(inp => {
+          const id = inp.getAttribute('data-x1-ss-code-input');
+          const codeSpan = document.querySelector('[data-x1-ss-code="' + escapeHTML(id) + '"]');
+          const editBtn = document.querySelector('[data-x1-ss-edit-code="' + escapeHTML(id) + '"]');
+          if (codeSpan) codeSpan.style.display = '';
+          if (editBtn) editBtn.style.display = '';
+          inp.style.display = 'none';
+          inp.value = inp.getAttribute('data-orig') || inp.value;
+        });
+      }
+    });
+    // Nhập mã rồi Enter → lưu; blur → lưu
+    safeOn('x1-say-sinh-day-cards', 'keydown', (e) => {
+      if (e.target.classList.contains('x1-ss-code-inline') && e.key === 'Enter') {
+        e.preventDefault();
+        const inp = e.target;
+        const id = inp.getAttribute('data-x1-ss-code-input');
+        saveInlineX1SsCode(id, inp.value.trim());
+      }
+    });
+    safeOn('x1-say-sinh-day-cards', 'blur', (e) => {
+      if (e.target.classList.contains('x1-ss-code-inline')) {
+        const inp = e.target;
+        const id = inp.getAttribute('data-x1-ss-code-input');
+        setTimeout(() => saveInlineX1SsCode(id, inp.value.trim()), 120);
+      }
+    }, true);
+
+    // ── HÀM LƯU MÃ LÔ INLINE ───
+    window.saveInlineX1SsCode = function saveInlineX1SsCode(id, newCode) {
+      if (!requireEditPermission()) return;
+      newCode = String(newCode || '').trim();
+      if (!newCode) return; // hủy nếu để trống
+      if (!/^[A-Z]\d{9}$/.test(newCode)) {
+        showToast('Mã lô không đúng quy cách (VD: V261105001)!', 'error');
+        return;
+      }
+      const rec = (state.xuong1SaySinhRecords || []).find(r => r.id === id);
+      if (!rec) return;
+      const trùng = (state.xuong1SaySinhRecords || []).some(r => r.id !== id && String(r.code || '') === newCode);
+      if (trùng) { showToast('Mã lô đã tồn tại trên lô khác!', 'error'); return; }
+      rec.code = newCode;
+      rec.updatedAt = new Date().toISOString();
+      saveData();
+      renderX1SsHistory();
+      showToast('Đã cập nhật mã lô: ' + newCode, 'success');
+    };
     // ── NHẮC SỐ LẦN SẤY + LÔ CŨ NHẤT ──
     safeOn('x1-ss-ready-btn', 'click', () => x1SsOpenOldPanel());
     safeOn('x1-ss-ready-panel', 'click', (e) => {
@@ -2254,6 +2318,17 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-x1-bo-stage-next', 'click', () => x1BoNavigateStage(1));
     safeOn('btn-x1-lt-stage-prev', 'click', () => x1LocThanhNavigateStage(-1));
     safeOn('btn-x1-lt-stage-next', 'click', () => x1LocThanhNavigateStage(1));
+    // ── NÚT TIẾN / LÙI CÁC THẺ X1 KHÁC (11/2026) ──
+    safeOn('btn-x1-cat-ong-stage-prev', 'click', () => x1NavigateStage('x1-cat-ong-card', -1));
+    safeOn('btn-x1-cat-ong-stage-next', 'click', () => x1NavigateStage('x1-cat-ong-card', 1));
+    safeOn('btn-x1-say-sinh-stage-prev', 'click', () => x1NavigateStage('x1-say-sinh-card', -1));
+    safeOn('btn-x1-say-sinh-stage-next', 'click', () => x1NavigateStage('x1-say-sinh-card', 1));
+    safeOn('btn-x1-loc-ong-stage-prev', 'click', () => x1NavigateStage('x1-loc-ong-card', -1));
+    safeOn('btn-x1-loc-ong-stage-next', 'click', () => x1NavigateStage('x1-loc-ong-card', 1));
+    safeOn('btn-x1-cat-mat-stage-prev', 'click', () => x1NavigateStage('x1-cat-mat-card', -1));
+    safeOn('btn-x1-cat-mat-stage-next', 'click', () => x1NavigateStage('x1-cat-mat-card', 1));
+    safeOn('btn-x1-phoi-say-stage-prev', 'click', () => x1NavigateStage('x1-phoi-say-card', -1));
+    safeOn('btn-x1-phoi-say-stage-next', 'click', () => x1NavigateStage('x1-phoi-say-card', 1));
     const boLenPanel = document.getElementById('x1-bo-lengths-picker');
     if (boLenPanel) {
       boLenPanel.addEventListener('change', (e) => {
@@ -2278,7 +2353,12 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
           ? x1LtAddSource(checkbox.value)
           : x1LtRemoveSource(checkbox.value);
         if (!changed) checkbox.checked = !checkbox.checked;
-        else if (ltSourceDropdown) ltSourceDropdown.open = false;
+        // GIỮ dropdown MỞ để tích tiếp nhiều lô — chỉ đóng khi bấm RA NGOÀI (listener dưới)
+      });
+    }
+    if (ltSourceDropdown) {
+      document.addEventListener('click', (e) => {
+        if (ltSourceDropdown.open && !(e.target && e.target.closest && e.target.closest('#x1-lt-source-dropdown'))) ltSourceDropdown.open = false;
       });
     }
     const ltSourceRows = document.getElementById('x1-loc-thanh-source-rows');

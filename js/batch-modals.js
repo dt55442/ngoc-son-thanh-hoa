@@ -8,7 +8,7 @@ import { STAGES, STORAGE_KEY_X2_LOT_LOCATIONS, state } from './state.js';
 import { saveData } from './storage.js';
 import { trackDeleted } from './tombstone.js';
 import { calculateVolume, escapeHTML, formatDateDDMMYY, generateBatchCodeYYMMDD, getBatchStageHistory, getHistoryEntryDays, getISOWeekString, khoApprovedXuatNotes, khoFifoAllocation, khoLotRemainingOf, showToast, validateBatchInput } from './utils.js';
-import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDryStatusOf, khoNoteFormUsesBatches, renderX2KhoStockTable, saveKhoNotes, saveXuong2ChonNan, sayBuildCharges, sayShiftMapOf, syncAlShiftField, toggleX2KhoStockTable } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG + Trạng thái sấy
+import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoDryChipHtml, khoLotDryStatusOf, khoNoteFormUsesBatches, renderX2KhoStockTable, saveKhoNotes, saveXuong2ChonNan, sayBuildCharges, sayShiftMapOf, syncAlShiftField, toggleX2KhoStockTable } from './xuong2.js'; // Ô chọn LẦN THAN HÓA + Ô CA + PHIẾU XUẤT TỰ ĐỘNG + Trạng thái sấy
 
   // ─── BATCH FORM MODAL ─────────────────────────────────────────
   function openBatchFormModal(batchId = null) {
@@ -661,6 +661,10 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDrySta
     if (isLot) {
       const d = alStageDaysOf(it);
       extra.push(
+        // Chip TRẠNG THÁI SẤY (nhãn/màu chuẩn Kanban): Sấy 2 = đã xong sấy ·
+        // Sấy 1 = mới sấy lần 1 (đúng nguồn để đem đi Sấy 2) · Chưa sấy = chưa rõ.
+        // Giúp KHỎI chọn nhầm lô đã Sấy 2 đem đi sấy lần 2.
+        khoDryChipHtml(it),
         `<span class="al-day-badge day-s1" title="Số ngày đã ở Sấy 1">S1-${d.say1} ngày</span>`,
         `<span class="al-day-badge day-s2" title="Số ngày đã ở Sấy 2">S2-${d.say2} ngày</span>`,
         `<span class="al-day-badge day-k" title="Số ngày đã ở Kho">K-${d.kho} ngày</span>`
@@ -784,7 +788,32 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDrySta
   // 1 số tồn không còn lệch 2 so 1.
   function availableKhoLots(allocation) {
     const alloc = allocation || khoFifoAllocation();
-    return (state.batches || []).filter(b => b && b.stage === 'kho' && khoLotRemainingOf(b, alloc) > 0);
+    const lots = (state.batches || []).filter(b => b && b.stage === 'kho' && khoLotRemainingOf(b, alloc) > 0);
+    // ─── TRẠNG THÁI SẤY (14/11/2026) ───
+    // Nguồn của Sấy 2 là lô MỚI SẤY 1 (chưa qua Sấy 2). Lô ĐÃ SẤY 2 bị ẨN để
+    // KHỎI chọn nhầm đem đi sấy lần 2 (trạng thái vẫn phân biệt bằng chip).
+    // Lô đang CHỌN luôn hiện (để bỏ chọn được) + công tắc "Hiện cả lô đã Sấy 2".
+    if (alShowDryAllOn() || alReworkOn()) return lots;
+    // Nguồn của Sấy 2 = lô MỚI SẤY 1 (chưa qua Sấy 2). Chỉ ẩn lô ĐÃ SẤY 2 để
+    // KHỎI chọn nhầm đem đi sấy lần 2; lô CHƯA RÕ (nhập thẳng Kho) vẫn hiện
+    // để người dùng tự quyết định (có thể gán trạng thái ở form Sửa lô).
+    return lots.filter(b => alPicked.includes(String(b.id)) || khoLotDryStatusOf(b).key !== 'say2');
+  }
+  // Công tắc "Hiện cả lô đã Sấy 2" (mặc định TẮT) — thuần phiên, reset mỗi lần
+  // mở form / đổi công đoạn / bật Than Hóa Lại để luôn ở chế độ an toàn.
+  let alShowDryAll = false;
+  function alShowDryAllOn() { return alShowDryAll; }
+  function alSetShowDryAll(v) {
+    alShowDryAll = !!v;
+    renderAlSourceList();
+    if (alEntryModeOf() === 'grid') renderAlGrid();
+  }
+  // Số lô Kho bị ẨN vì ĐÃ SẤY 2 (để in dòng "Đang lọc" cho người dùng biết)
+  function alHiddenDryCount(allocation) {
+    const alloc = allocation || khoFifoAllocation();
+    return (state.batches || []).filter(b => b && b.stage === 'kho' &&
+      khoLotRemainingOf(b, alloc) > 0 && !alPicked.includes(String(b.id)) &&
+      khoLotDryStatusOf(b).key === 'say2').length;
   }
 
   // ─── MODAL "THÊM LÔ SẤY MỚI" — mở/đóng/đổi nguồn/lưu ─────────
@@ -1722,6 +1751,11 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDrySta
   function alSetRework(on) {
     const cb = document.getElementById('al-rework');
     if (cb) cb.checked = !!on;
+    // Than Hóa Lại có bộ lọc riêng (chỉ lô Tóp) → trả công tắc "Hiện cả lô đã
+    // Sấy 2" về mặc định TẮT để lần sau quay lại luôn ở chế độ an toàn.
+    alShowDryAll = false;
+    const dryCb = document.getElementById('al-show-dry-all');
+    if (dryCb) dryCb.checked = false;
     syncAddLotUI();   // reset chọn + vẽ lại danh sách theo chế độ mới
     return !!on;
   }
@@ -1883,10 +1917,21 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDrySta
     listEl.classList.remove('is-top');
     const alloc = stage === 'say2' ? khoFifoAllocation() : null;
     const usedByNan = stage === 'say1' ? nanCardUsageMap() : null;
+    // Dòng giải thích khi đang LỌC trạng thái sấy (Sấy 2 → chỉ lô mới Sấy 1)
+    const dryNote = (stage === 'say2' && !alReworkOn() && !alShowDryAllOn())
+      ? (() => {
+        const hidden = alHiddenDryCount(alloc);
+        return `<div class="al-filter-note" title="Nguồn của Sấy 2 là lô MỚI SẤY 1 (chưa qua Sấy 2) — lô ĐÃ SẤY 2 bị ẩn để khỏi chọn nhầm đem đi sấy lần 2. Chip trên thẻ cho biết trạng thái; tick "Hiện cả lô đã Sấy 2" nếu thật sự cần sấy lại.">Đang lọc: chỉ hiện lô <strong>mới Sấy 1</strong> (chưa qua Sấy 2) — đã ẩn ${hidden} lô đã Sấy 2</div>`;
+      })()
+      : '';
     const items = alCandidatesOf(stage, alloc, usedByNan);
     if (!items.length) {
-      listEl.innerHTML = `<div class="al-empty">${stage === 'say2'
-        ? '— Không có lô nào còn hàng ở Kho (lô đã xuất hết không hiện ở đây — kiểm tra thẻ Kho Nan) —'
+      listEl.innerHTML = dryNote + `<div class="al-empty">${stage === 'say2'
+        ? (alReworkOn()
+          ? '— Không có lô Tóp nào ở Kho —'
+          : (alShowDryAllOn()
+            ? '— Không có lô nào còn hàng ở Kho (lô đã xuất hết không hiện ở đây — kiểm tra thẻ Kho Nan) —'
+            : '— Không có lô MỚI SẤY 1 nào còn hàng ở Kho (lô đã Sấy 2 đã được ẩn — tick "Hiện cả lô đã Sấy 2" để xem) —'))
         : '— Không có thẻ nan nào chờ sấy (ghi lượt ở thẻ Chọn Nan Thô trước) —'}</div>`;
       alPositionSourcePanel();
       return;
@@ -1902,7 +1947,7 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDrySta
       alPositionSourcePanel();
       return;
     }
-    listEl.innerHTML = visible.map(it => {
+    listEl.innerHTML = dryNote + visible.map(it => {
       const id  = String(it.id);
       const on  = alPicked.includes(id);
       const lines = alCardLines(it, stage, alloc, usedByNan);
@@ -2186,6 +2231,12 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDrySta
     alPicked = [];
     alLocation = '';
     alBulkMode = false;
+    // Trạng thái sấy: mỗi lần mở form luôn về chế độ AN TOÀN (chỉ hiện lô mới
+    // Sấy 1 cho công đoạn Sấy 2) — công tắc "Hiện cả lô đã Sấy 2" do người dùng
+    // tự bật khi thật sự cần sấy lại.
+    alShowDryAll = false;
+    const dryCb = document.getElementById('al-show-dry-all');
+    if (dryCb) dryCb.checked = false;
     resetAlBulkRows();
     const today = new Date().toISOString().split('T')[0];
     const dEl = document.getElementById('al-date');
@@ -2215,7 +2266,11 @@ import { addKhoReworkAutoNote, addKhoSay2AutoNote, alShiftIdxValue, khoLotDrySta
     alPicked = [];
     alBulkMode = false;
     alClearSourceQuery();
-    alResetGridFilters();          // bộ lọc riêng của BẢNG NHẬP NHANH (ngày/tìm)
+    alResetGridFilters();
+    // Mỗi lần đồng bộ form → công tắc "Hiện cả lô đã Sấy 2" về TẮT (an toàn)
+    alShowDryAll = false;
+    const dryCb = document.getElementById('al-show-dry-all');
+    if (dryCb) dryCb.checked = false;          // bộ lọc riêng của BẢNG NHẬP NHANH (ngày/tìm)
     alClosePanels();
     // Reset trạng thái THAN HÓA LẠI (ô nhập số lượng theo lại chọn mới)
     Object.keys(alTopQty).forEach(k => { delete alTopQty[k]; });
@@ -3686,6 +3741,8 @@ export {
   alReworkOn,
   alReworkQtyOf,
   alSetRework,
+  alShowDryAllOn,
+  alSetShowDryAll,
   alSyncReworkQtyField,
   alTopLots,
   alTopRemainingOf,

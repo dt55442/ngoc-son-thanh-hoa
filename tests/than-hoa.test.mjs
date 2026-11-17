@@ -429,6 +429,46 @@ check('SẤY 2: 2 lô đã RỜI Kho nên danh sách lô ở Kho trống',
   bm.availableKhoLots().length === 0);
 
 
+// ─── O. LỌC TRẠNG THÁI SẤY trong form "THÊM LÔ SẤY MỚI" (14/11/2026) ─────────
+// Nguồn Sấy 2 chỉ nhận lô MỚI SẤY 1 (chưa qua Sấy 2) → lô ĐÃ SẤY 2 bị ẩn để
+// KHỎI chọn nhầm đem đi sấy lần 2. Công tắc "Hiện cả lô đã Sấy 2" cho phép
+// xem lại khi thật sự cần sấy lại.
+state.batches.push(
+  { id: 'b-dry-s1', code: '261106-01', stage: 'kho', date: '2026-11-06', week: '2026-W45', length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.0788, bambooType: 'A', useFor: 'Ván', location: 'K60', dryStage: 'say1', stageHistory: [{ stage: 'kho', date: '2026-11-06' }] },
+  { id: 'b-dry-s2', code: '261106-02', stage: 'kho', date: '2026-11-06', week: '2026-W45', length: 1250, width: 18, thickness: 7, quantity: 600, volume: 0.0945, bambooType: 'A1', useFor: 'Bullig', location: 'K61', dryStage: 'say2', stageHistory: [{ stage: 'say1', date: '2026-11-05' }, { stage: 'say2', date: '2026-11-06' }, { stage: 'kho', date: '2026-11-06' }] },
+  { id: 'b-dry-chua', code: '261106-03', stage: 'kho', date: '2026-11-06', week: '2026-W45', length: 1250, width: 18, thickness: 7, quantity: 700, volume: 0.110, bambooType: 'B', useFor: 'Ván', location: 'K62', stageHistory: [{ stage: 'kho', date: '2026-11-06' }] }
+);
+bm.openAddLotModal();
+document.getElementById('al-stage').value = 'say2';
+bm.syncAddLotUI();
+check('O1. MỞ FORM SẤY 2: công tắc "Hiện cả lô đã Sấy 2" mặc định TẮT', (() => {
+  const cb = document.getElementById('al-show-dry-all');
+  return cb && cb.checked === false;
+})());
+check('O2. MẶC ĐỊNH: chỉ ẩn lô ĐÃ SẤY 2 (b-dry-s2), còn hiện lô mới Sấy 1 (b-dry-s1)', (() => {
+  const h = document.getElementById('al-source-list').innerHTML;
+  return h.includes('data-al-pick="b-dry-s1"') &&
+    h.includes('Đang lọc') && h.includes('ĐÃ SẤY 2') &&
+    h.includes('data-al-pick="b-dry-s2"') === false;
+})());
+check('O3. MẶC ĐỊNH: chip trạng thái sấy đúng màu chuẩn trên thẻ nguồn', (() => {
+  const h = document.getElementById('al-source-list').innerHTML;
+  return h.includes('dry-say1');
+})());
+check('O4. TÍCH "Hiện cả lô đã Sấy 2": công tắc bật được + checkbox reflet trạng thái', (() => {
+  document.getElementById('al-show-dry-all').checked = true;
+  bm.alSetShowDryAll(true);
+  return bm.alShowDryAllOn() === true &&
+    document.getElementById('al-show-dry-all').checked === true;
+})());
+check('O5. ĐỔI SANG SẤY 1: công tắc về TẮT (an toàn)', (() => {
+  document.getElementById('al-stage').value = 'say1';
+  bm.syncAddLotUI();
+  const cb = document.getElementById('al-show-dry-all');
+  return cb.checked === false;
+})());
+bm.closeAddLotModal();
+
 // ─── D. "CHUYỂN KHO" — Sấy 1 / Sấy 2 → Kho ─────────────────────
 // Thêm 1 lô nữa ở cùng vị trí LS1 để kiểm tra "tất cả lô trong vị trí cùng chuyển"
 state.batches.push({
@@ -586,7 +626,7 @@ check('CẤU TRÚC (js): vị trí sấy khai báo thêm có key riêng + nối 
   jsHistory.includes('x2LotLocations') &&
   jsMain.includes('loadX2LotLocations'));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v423/.test(swJs));
+  /nha-may-ngoc-son-v430/.test(swJs));
 const jsDash = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 check('CẤU TRÚC (index.html): 3 thẻ KPI cuối tab Công Đoạn đã gỡ sạch (Sấy+Kho · Bào Tinh · Phân bổ)',
   !idxHtml.includes('quick-stats-bar') && !idxHtml.includes('quick-bao-') &&

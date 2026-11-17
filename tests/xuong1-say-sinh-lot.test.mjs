@@ -130,9 +130,9 @@ state.xuong1SaySinhRecords = [
   rec('a2', '2026-10-19', { code: 'V261019002' })
 ];
 check('A3: số thứ tự nối tiếp trong THÁNG (V lô 3)', x2.x1SsMakeCode('2026-10-19', 'Vầu') === 'V261019003');
-check('A4: N có dãy RIÊNG (N lô 1) và tháng mới reset về 001',
+check('A4: N có dãy RIÊNG (N lô 1) và năm mới reset về 001',
   x2.x1SsMakeCode('2026-10-19', 'Nứa') === 'N261019001' &&
-  x2.x1SsMakeCode('2026-11-02', 'Vầu') === 'V261102001');
+  x2.x1SsMakeCode('2026-11-02', 'Vầu') === 'V261102003');
 state.xuong1SaySinhRecords = [];
 const sameDayV1 = x2.x1SsMakeCode('2026-11-01', 'Vầu');
 state.xuong1SaySinhRecords.push(rec('same-day-v1', '2026-11-01', { code: sameDayV1 }));
@@ -327,7 +327,7 @@ check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ côn
   expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
   expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
   !expSrc.includes("'Ngày Đạt'"));
-check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v423/.test(swSrc));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v430/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
 check('F7: KPI Vùng ② Thống Kê ĐÃ GỠ khỏi thẻ Sấy Sinh (tổng hợp ở bảng toàn xưởng sau)',
   !idxHtml.includes('id="x1-say-sinh-stats"') && !xuong2Src.includes('renderX1SaySinhStats') &&
@@ -537,6 +537,168 @@ check('H12: form căn đáy hàng ô nhập (nhãn 2 dòng không lệch) + hint
   cssSrc.includes('#x1-say-sinh-form .x2-form-row { align-items: flex-end') &&
   cssSrc.includes('#x1-say-sinh-sulfur-hint {') && cssSrc.includes('#x1-say-sinh-sulfur-hint > svg'));
 
+// ─── I. NHẬP TAY MÃ LÔ (yêu cầu người dùng) ───
+console.log('--- I. NHẬP TAY MÃ LÔ ---');
+
+check('I1: nhập tay mã lô được ghi đúng', (() => {
+  state.materialRecords = [
+    { id: 'mat-m', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-11-05', createdAt: '2026-11-05T02:00:00.000Z' }
+  ];
+  state.xuong1CatOngRecords = [];
+  state.xuong1SaySinhRecords = [];
+  x2.fillX1SaySinhOptions();
+  selectValues('x1-say-sinh-source', ['mat-m']);
+  x2.x1SaySinhRenderAllocations();
+  document.getElementById(`x1-say-sinh-allocation-mat-m`).value = '500';
+  document.getElementById('x1-say-sinh-date').value = '2026-11-05';
+  document.getElementById('x1-say-sinh-code').value = 'V261105099'; // mã nhập tay
+  document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
+  x2.handleX1SaySinhSubmit({ preventDefault(){} });
+  const manualLot = state.xuong1SaySinhRecords[0];
+  return manualLot && manualLot.code === 'V261105099';
+})());
+
+check('I2: chặn mã lô trùng', (() => {
+  selectValues('x1-say-sinh-source', ['mat-m']);
+  x2.x1SaySinhRenderAllocations();
+  document.getElementById(`x1-say-sinh-allocation-mat-m`).value = '300';
+  document.getElementById('x1-say-sinh-date').value = '2026-11-05';
+  document.getElementById('x1-say-sinh-code').value = 'V261105099'; // trùng với I1
+  document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
+  x2.handleX1SaySinhSubmit({ preventDefault(){} });
+  return state.xuong1SaySinhRecords.length === 1;
+})());
+
+check('I3: chặn mã lô sai định dạng', (() => {
+  document.getElementById('x1-say-sinh-code').value = 'V26-11-05'; // sai định dạng
+  x2.handleX1SaySinhSubmit({ preventDefault(){} });
+  return state.xuong1SaySinhRecords.length === 1;
+})());
+
+check('I4: tự sinh mã theo năm (không reset tháng)', (() => {
+  document.getElementById('x1-say-sinh-code').value = '';
+  document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
+  x2.handleX1SaySinhSubmit({ preventDefault(){} });
+  const autoLot = state.xuong1SaySinhRecords[1];
+  return autoLot && autoLot.code === 'V261105100'; // V + 261105 + 100 (vì 099 đã dùng)
+})());
+
+check('I5: sửa mã lô thành công', (() => {
+  const autoLot = state.xuong1SaySinhRecords[1];
+  x2.editX1SaySinh(autoLot.id);
+  document.getElementById('x1-say-sinh-code').value = 'V261105200';
+  x2.handleX1SaySinhSubmit({ preventDefault(){} });
+  const editedLot = state.xuong1SaySinhRecords.find(r => r.id === autoLot.id);
+  return editedLot && editedLot.code === 'V261105200';
+})());
+
+check('I6: năm mới reset số về 001', (() => {
+  state.xuong1SaySinhRecords = [];
+  state.materialRecords = [
+    { id: 'mat-m2', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2027-01-05', createdAt: '2027-01-05T02:00:00.000Z' }
+  ];
+  x2.fillX1SaySinhOptions();
+  selectValues('x1-say-sinh-source', ['mat-m2']);
+  x2.x1SaySinhRenderAllocations();
+  document.getElementById(`x1-say-sinh-allocation-mat-m2`).value = '100';
+  document.getElementById('x1-say-sinh-date').value = '2027-01-05';
+  document.getElementById('x1-say-sinh-code').value = '';
+  document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
+  x2.handleX1SaySinhSubmit({ preventDefault(){} });
+  const newYearLot = state.xuong1SaySinhRecords[0];
+  return newYearLot && newYearLot.code === 'V270105001';
+})());
+
+// ─── J. PHÁT HIỆN LÔ TRÙNG MÃ + KIỂM TRA CÔNG ĐOẠN SAU ───
+console.log('--- J. PHÁT HIỆN LÔ TRÙNG MÃ + CÔNG ĐOẠN SAU ---');
+
+check('J1: x1SsFindDupes() trả mảng rỗng khi không có trùng', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+    { id: 's2', code: 'V261105002', date: '2026-11-05', qty: 200 },
+  ];
+  return x2.x1SsFindDupes().length === 0;
+})());
+
+check('J2: x1SsFindDupes() phát hiện 2 lô cùng mã', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+    { id: 's2', code: 'V261105001', date: '2026-11-06', qty: 200 },
+    { id: 's3', code: 'N261105001', date: '2026-11-05', qty: 300 },
+  ];
+  const dupes = x2.x1SsFindDupes();
+  return dupes.length === 1 && dupes[0].code === 'V261105001' && dupes[0].count === 2;
+})());
+
+check('J3: x1SsFindDupes() entries có đủ id/date/qty', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+    { id: 's2', code: 'V261105001', date: '2026-11-06', qty: 200 },
+  ];
+  const dupes = x2.x1SsFindDupes();
+  return dupes[0].entries.length === 2 &&
+         dupes[0].entries.some(e => e.id === 's1' && e.qty === 100) &&
+         dupes[0].entries.some(e => e.id === 's2' && e.qty === 200);
+})());
+
+check('J4: x1SsHasDownstream(false) khi lô chưa có công đoạn sau', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+  ];
+  state.xuong1BocRecords = [];
+  state.xuong1LocOngRecords = [];
+  state.xuong1CatMatRecords = [];
+  state.xuong1BoRecords = [];
+  state.xuong1PhoiSayRecords = [];
+  state.xuong1LocThanhRecords = [];
+  return x2.x1SsHasDownstream('s1') === false;
+})());
+
+check('J5: x1SsHasDownstream(true) khi Bốc trực tiếp liên kết saySinhId', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+  ];
+  state.xuong1BocRecords = [
+    { id: 'b1', saySinhId: 's1', date: '2026-11-06', qty: 100 },
+  ];
+  return x2.x1SsHasDownstream('s1') === true;
+})());
+
+check('J6: x1SsHasDownstream(true) qua Lọc Ống → Bốc → Sấy Sinh', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+  ];
+  state.xuong1BocRecords = [
+    { id: 'b1', saySinhId: 's1', date: '2026-11-06', qty: 100 },
+  ];
+  state.xuong1LocOngRecords = [
+    { id: 'l1', bocId: 'b1', date: '2026-11-07', qty: 100 },
+  ];
+  return x2.x1SsHasDownstream('s1') === true;
+})());
+
+check('J7: x1SsHasDownstream(true) qua Cắt Mắt → Lọc Ống → Bốc → Sấy Sinh', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+  ];
+  state.xuong1BocRecords = [
+    { id: 'b1', saySinhId: 's1', date: '2026-11-06', qty: 100 },
+  ];
+  state.xuong1LocOngRecords = [
+    { id: 'l1', bocId: 'b1', date: '2026-11-07', qty: 100 },
+  ];
+  state.xuong1CatMatRecords = [
+    { id: 'c1', locOngId: 'l1', date: '2026-11-08', qty: 100 },
+  ];
+  return x2.x1SsHasDownstream('s1') === true;
+})());
+
+check('J8: x1SsHasDownstream(false) khi ssId không tồn tại', (() => {
+  state.xuong1BocRecords = [
+    { id: 'b1', saySinhId: 's9', date: '2026-11-06', qty: 100 },
+  ];
+  return x2.x1SsHasDownstream('nonexistent') === false;
+})());
 
 console.log(`\n=== KẾT QUẢ X1 SẤY SINH LOT: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

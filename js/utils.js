@@ -675,7 +675,8 @@ import { flagOn } from './sys-settings.js';
         date: n.date || '', noteId: n.id, purpose: khoNormPurpose(n.purpose),
         purposeNote: n.purposeNote || '', qty: Number(n.qty) || 0, m3: Number(n.m3) || 0,
         lotIds: lots.map(l => l.batchId).filter(Boolean), lots,
-        note: n.note || '', createdBy: n.createdByName || n.createdBy || ''
+        note: n.note || '', createdBy: n.createdByName || n.createdBy || '',
+        approverName: n.approverName || ''
       });
     });
     (state.xuong2BaoTinhRecords || []).forEach(r => {

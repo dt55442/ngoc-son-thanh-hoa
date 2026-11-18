@@ -19,6 +19,7 @@ import { canEditTab } from './permissions.js';
 import { restoreRateTableCollapse } from './planning.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { STORAGE_KEY_QC_EXPORTS, state } from './state.js';
+import { safeSetItemWithRecovery } from './storage.js'; // GHI AN TOÀN — tự dọn bản cất cũ khi bộ nhớ đầy (17/11/2026)
 import { escapeHTML, getISOWeekString, setupHScrollNav, showToast } from './utils.js';
 import { kilnHumidityCardCount, renderKilnHumidityCard } from './kiln.js'; // Bảng ĐỘ ẨM LÒ SẤY (QC nhập hàng ngày)
 import { qcFinalCardCount, renderQcFinalCard, setQcFinalPickerOpen } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (QC kiểm thành phẩm)
@@ -117,7 +118,10 @@ import { qcPressCardCount, renderQcPressCard } from './qc-press.js'; // THẺ NH
   }
 
   function saveQcExports() {
-    localStorage.setItem(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || []));
+    // GHI AN TOÀN: trước đây ghi thẳng localStorage.setItem — máy đầy bộ nhớ thì
+    // QuotaExceededError ném ra IM LẶNG khỏi handler submit ⇒ bấm "Tạo Các Dòng
+    // Đã Chọn" không có tác dụng (modal không đóng, không toast, mất khi tải lại).
+    safeSetItemWithRecovery(STORAGE_KEY_QC_EXPORTS, JSON.stringify(state.qcExports || []), 'bảng xuất hàng QC');
     logDataChange(['qcExports']);
     firePushSync();
   }

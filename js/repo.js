@@ -80,6 +80,13 @@ function groupByMonth(arr) {
   return out;
 }
 
+// CACHE_MONTHS (17/11/2026): localStorage chỉ giữ CACHE 1 THÁNG gần nhất cho
+// các miền lớn. TRƯỚC ĐÂY giữ 2 tháng — 120 người ≈ 2,6 MB/tháng ⇒ cache đã
+// từng chiếm ~5 MB = ĐẦY HẠN MỨC localStorage một mình (máy báo "bộ nhớ đầy"
+// dù đã dọn bản cất). Toàn bộ dữ liệu VẪN nằm ở IndexedDB + mây, mở app tự
+// nạp bù (hrHydrateFromRepo) — chỉ mất chút thời gian nạp nền.
+export const CACHE_MONTHS = 1;
+
 // Danh sách n tháng gần nhất (YYYY-MM) — dùng cho cache localStorage
 function recentMonths(n) {
   const d = new Date(); const out = [];
@@ -92,7 +99,7 @@ function recentMonths(n) {
 
 // Lọc mảng bản ghi còn n tháng gần nhất (cache mở app nhanh)
 function cacheSlice(arr, n) {
-  const months = new Set(recentMonths(n || 2));
+  const months = new Set(recentMonths(n || CACHE_MONTHS));
   return (arr || []).filter(r => months.has(monthOf(r)));
 }
 

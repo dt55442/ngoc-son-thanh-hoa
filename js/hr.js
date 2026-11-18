@@ -86,9 +86,12 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   // 120 người ≈ 2,6 MB/tháng. localStorage chỉ 5–10 MB nên KHÔNG thể lưu cả
   // nhiều năm (đầy sau 1–3 tháng ⇒ mất dữ liệu lần lưu kế tiếp). Nay:
   //   · IndexedDB lưu TỪNG THÁNG (js/repo.js) — chỉ ghi lại tháng ĐỔI
-  //   · localStorage chỉ giữ CACHE 2 tháng gần nhất để mở app là thấy ngay
+  //   · localStorage chỉ giữ CACHE 1 THÁNG gần nhất (17/11/2026 — cache 2 tháng
+  //     ~5 MB từng ĐẦY HẠN MỨC localStorage một mình; dữ liệu đầy vẫn nằm
+  //     IndexedDB + mây, mở app tự nạp bù nền)
   //   · Phần cũ tự nạp sau (không chặn boot) rồi vẽ lại nếu đang ở tab HR
   const HR_BIG_DOMAINS = ['hrAssignments', 'hrAttendance', 'hrCheckins'];
+  const HR_CACHE_MONTHS = 1; // đồng bộ với repo.CACHE_MONTHS (js/repo.js)
   let hrHydrated = false;
   let hrHydrationPromise = null;
   let hrRepoWarned = false;
@@ -104,7 +107,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
     return out;
   }
   function hrCacheSlice(arr) {
-    const months = new Set(hrMonthListBack(2));
+    const months = new Set(hrMonthListBack(HR_CACHE_MONTHS));
     return (arr || []).filter(r => months.has(hrMonthKeyOf(r)));
   }
   // Gộp 2 nguồn theo id — bản có mốc updatedAt/createdAt MỚI HƠN thắng
@@ -362,7 +365,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
           persistenceWrites.push(Promise.resolve().then(() => reportHrRepoFailure(io, val, error)));
         }
       }
-      // Miền LỚN: localStorage chỉ giữ 2 tháng gần nhất (cache mở app nhanh),
+      // Miền LỚN: localStorage chỉ giữ cache 1 tháng gần nhất (mở app nhanh),
       // toàn bộ dữ liệu nằm ở IndexedDB theo tháng (xem hrHydrateFromRepo).
       const payload = (isBig && repoWasHealthy) ? hrCacheSlice(val) : (val == null ? io.def : val);
       try {

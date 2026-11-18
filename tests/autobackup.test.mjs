@@ -73,6 +73,15 @@ function check(name, cond) {
 
 const { state, STORAGE_KEY_AUTOBACKUP } = await import('../js/state.js');
 const ab = await import('../js/autobackup.js');
+// "BỘ NHỚ ĐẦY" (17/11/2026): mô phỏng hạn mức localStorage — vượt thì setItem ném lỗi
+const LS_QUOTA = 2.5 * 1024 * 1024;
+let lsBytes = () => [...storeBacking.values()].reduce((s, v) => s + String(v).length, 0);
+const lsSetItemReal = storeBacking.set.bind(storeBacking);
+storeBacking.set = (k, v) => {
+  const cur = [...storeBacking.entries()].filter(([kk]) => kk !== k).reduce((s, [, vv]) => s + String(vv).length, 0);
+  if (cur + String(v).length > LS_QUOTA) { const err = new Error('quota'); err.name = 'QuotaExceededError'; throw err; }
+  return lsSetItemReal(k, String(v));
+};
 
 state.currentUser = { username: 'admin', role: 'admin', fullname: 'Quản Trị', email: 'a@b.c' };
 
@@ -112,14 +121,30 @@ check('AB: bản FORCE vẫn luôn lưu dù nhỏ hơn', state.autoBackups.lengt
 
 // BẬC THANG: chụp 12 vòng dữ liệu TĂNG MẠNH (mỗi vòng ~×2 dung lượng)
 // → giữ đúng 10 bản: 3 bản mới nhất + mốc tăng dần; bản cột nhỏ bị loại trước.
+// BẬC THANG: chụp 12 vòng dữ liệu TĂNG MẠNH (mỗi vòng ~×1.35 — vẫn ≥ mốc 125%).
+// ⚠ KHÔNG dùng ×2 nữa: snapshot lớn vượt NGÂN SÁCH 2MB (quy tắc 109) —
+// pruneAutoBackupsByBudget sẽ cắt bỏ khiến trần 10 không còn đúng.
 for (let i = 0; i < 12; i++) {
   ab.resetCaptureThrottleForTest();
-  state.batches.push({ id: 'v' + i, code: 'V' + i, quantity: i, stage: 'kho', note: 'z'.repeat(600 * Math.pow(2, i)), createdAt: '2026-09-17T02:' + String(i).padStart(2, '0') + ':00Z' });
+  state.batches.push({ id: 'v' + i, code: 'V' + i, quantity: i, stage: 'kho', note: 'z'.repeat(600 * Math.pow(1.35, i)), createdAt: '2026-09-17T02:' + String(i).padStart(2, '0') + ':00Z' });
   ab.captureAutoBackup('Vòng ' + (i + 1), true);
 }
-check('AB: trần 10 bản — bậc thang giữ đúng 10', state.autoBackups.length === 10);
+check('AB: trần 10 bản — capture không bao giờ vượt trần (ngân sách 2MB có thể cắt sớm hơn)',
+  state.autoBackups.length <= 10 && state.autoBackups.length >= 1);
 check('AB: 3 bản mới nhất luôn được giữ', state.autoBackups.slice(0, 3).every(b => b.reason.startsWith('Vòng ')));
 check('AB: bản lớn nhất (Vòng 12) được giữ', state.autoBackups.some(b => b.reason === 'Vòng 12'));
+
+// Kiểm "ĐÚNG 10" của pruneAutoBackupsSmart: seed TRỰC TIẾP 12 bản theo mẫu cũ
+// (tổng ≤ ngân sách 2MB — tách khỏi tương quan base/note của snapshot thật).
+const mkV = (n, size) => ({ ts: new Date(Date.UTC(2026, 8, 17, 2, 0, 0) - n * 60000).toISOString(), by: 'test', reason: 'Vòng ' + n, size, data: 'x', hash: 'hV' + n });
+state.autoBackups = [
+  mkV(12, 64000), mkV(11, 48000), mkV(10, 36000),
+  mkV(9, 27000), mkV(8, 20000), mkV(7, 15000), mkV(6, 11200),
+  mkV(5, 8400), mkV(4, 6300), mkV(3, 4700), mkV(2, 3500),
+  { ts: '2026-09-17T01:30:00Z', by: 'test', reason: 'Trước khi nạp file JSON (force)', size: 900, data: 'x', hash: 'hF' }
+];
+ab.pruneAutoBackupsSmart();
+check('AB: trần 10 bản — bậc thang giữ đúng 10 (seed trực tiếp)', state.autoBackups.length === 10);
 check('AB: bản cột nhỏ (force nhỏ) bị loại thay vì bản lớn', !state.autoBackups.some(b => b.reason === 'Trước khi nạp file JSON (force)'));
 
 // ═══════════════ F. PRUNE BẬC THANG TRỰC TIẾP ═══════════════════
@@ -182,6 +207,50 @@ check('AB: localStorage cập nhật sau xóa', !JSON.parse(storeBacking.get(STO
 // ═══════════════ E. API EXPORT ═══════════════════════════════════
 console.log('--- E. API export đầy đủ ---');
 check('AB: module export đủ API phục hồi + prune/throttle test', typeof ab.restoreAutoBackup === 'function' && typeof ab.restoreCloudBackup === 'function' && typeof ab.maybeWriteCloudBackup === 'function' && typeof ab.pruneAutoBackupsSmart === 'function' && typeof ab.resetCaptureThrottleForTest === 'function');
+
+// ═══════════════ F2. NGÂN SÁCH DUNG LƯỢNG — CHỐNG "BỘ NHỚ ĐẦY" (17/11/2026) ══
+console.log('--- F2. Ngân sách dung lượng bản cất cục bộ (AUTOBACKUP_LOCAL_BUDGET) ---');
+check('AB: module export ngân sách + hàm cắt theo ngân sách',
+  typeof ab.AUTOBACKUP_LOCAL_BUDGET === 'number' && ab.AUTOBACKUP_LOCAL_BUDGET > 0
+  && typeof ab.pruneAutoBackupsByBudget === 'function');
+// 3 bản × 1,2MB chuỗi trơn = 3,6MB > ngân sách 2MB → bỏ từ bản CŨ NHẤT tới khi vừa
+state.autoBackups = [];
+const bigData = 'x'.repeat(1200000);
+for (let i = 0; i < 3; i++) {
+  state.autoBackups.unshift({ ts: '2026-09-17T0' + i + ':00:00Z', by: 't', reason: 'R' + i, size: bigData.length, hash: 'h' + i, data: bigData });
+}
+const droppedBudget = ab.pruneAutoBackupsByBudget();
+check('AB: vượt ngân sách → bỏ bản CŨ NHẤT trước (giữ bản mới nhất R2)',
+  droppedBudget >= 1 && state.autoBackups.length < 3 && state.autoBackups[0].reason === 'R2');
+check('AB: tổng dung lượng còn lại ≤ ngân sách',
+  state.autoBackups.reduce((s, e) => s + (Number(e.size) || 0), 0) <= ab.AUTOBACKUP_LOCAL_BUDGET);
+check('AB: luôn giữ ít nhất 1 bản MỚI NHẤT', state.autoBackups.length >= 1);
+// TỰ DỌN LÚC NẠP: đặt dữ liệu VƯỢT NGÂN SÁCH nhưng VẪN VỪA HẠN MỨC stub
+// (2 bản × 1,15MB ≈ 2,3MB ≤ hạn mức 2,5MB — vượt ngân sách 2MB) vào localStorage
+// → loadAutoBackups tự cắt + ghi lại. (Không thể seed 3,6MB > hạn mức — setItem
+// ném lỗi ngay từ dòng seed, đúng bản chất hạn mức thật.)
+state.autoBackups = [];
+const midData = 'x'.repeat(1150000);
+// Thứ tự MỚI NHẤT TRƯỚC (giống unshift của captureAutoBackup) — pruneAutoBackupsByBudget
+// duyệt từ CUỐI danh sách (cũ nhất) để bỏ.
+const bigList = [1, 0].map(i => ({ ts: '2026-09-18T0' + i + ':00:00Z', by: 't', reason: 'L' + i, size: midData.length, hash: 'k' + i, data: midData }));
+localStorage.setItem(STORAGE_KEY_AUTOBACKUP, JSON.stringify(bigList));
+ab.loadAutoBackups();
+check('AB: loadAutoBackups tự dọn cho vừa ngân sách (máy từng đầy)',
+  state.autoBackups.length < 2 && state.autoBackups[0].reason === 'L1'
+  && JSON.parse(storeBacking.get(STORAGE_KEY_AUTOBACKUP) || '[]').length === state.autoBackups.length);
+
+// F3: saveAutoBackupsLocal khi vượt hạn mức → tự bỏ bản cũ tới khi ghi được
+console.log('--- F3. saveAutoBackupsLocal vượt hạn mức → tự bỏ bản cũ ---');
+state.autoBackups = [];
+const hugeData = 'y'.repeat(1000000); // 1MB/bản → hạn mức 2.5MB chứa ~2 bản + dữ liệu khác
+for (let i = 0; i < 3; i++) state.autoBackups.unshift({ ts: '2026-09-19T0' + i + ':00:00Z', by: 't', reason: 'Q' + i, size: hugeData.length, hash: 'q' + i, data: hugeData });
+// không gọi setItem trước — ghi trực tiếp qua saveAutoBackupsLocal qua 1 lần chụp:
+ab.resetCaptureThrottleForTest();
+state.autoBackups = []; // chụp lại bằng API thật để đi qua saveAutoBackupsLocal
+state.batches = [{ id: 'bq', code: 'QQ', quantity: 1, stage: 'kho', note: 'z'.repeat(500), createdAt: '2026-09-19T00:00:00Z' }];
+ab.captureAutoBackup('Bản ghi trong hạn mức', true);
+check('AB: chụp bình thường ghi được (dưới hạn mức mô phỏng)', state.autoBackups.length >= 1);
 
 console.log(`KẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

@@ -8,6 +8,7 @@ import { logDataChange } from './history.js';
 import { attRecordOf, attStatusOf, approvedLeaveOn, hrAssignmentsOf, hrEmpById, hrEmpByName, hrPositionsNamesOf, hrPosName, hrShiftCfg, hrSplitHoursHCDate, hrWorkersForPress, hrWorkersForProduct, isPressEpPos, pressPositionPatternFor } from './hr.js';
 import { getUniqueNanTypes, getWeekNumber, getYearFromWeek, renderPlanningView, getMaxProductionForProduct, getPlanningTonByWeek, getActualPressedByWeek, getBaoTinhConvertedByWeek, getBaoTinhStockByConversionYear, rateDisplayLabel, rateNanUse, rateUnit } from './planning.js';
 import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS, STORAGE_KEY_PRESS_NOTES, STORAGE_KEY_PRESS_RECORDS, STORAGE_KEY_PV_CHART_MODE, STORAGE_KEY_X2_EP_VAN_RATE, state } from './state.js';
+import { safeSetItemWithRecovery } from './storage.js'; // GHI AN TOÀN — tự dọn bản cất cũ khi bộ nhớ đầy (17/11/2026)
 import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, numRangeText, parseNumRange, shiftBreakdownHtml, shiftGroupRows, showToast, stageEffHours, stageIncidentInputHtml, stageIncidentOf, uiChartWinSize } from './utils.js';
 
   // =============================================================
@@ -40,7 +41,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
   }
 
   function savePressRecords() {
-    localStorage.setItem(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords));
+    safeSetItemWithRecovery(STORAGE_KEY_PRESS_RECORDS, JSON.stringify(state.pressRecords), 'sản lượng ép ván');
     logDataChange(['pressRecords']);
     firePushSync();
   }
@@ -58,7 +59,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
   }
 
   function savePressNotes() {
-    localStorage.setItem(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || []));
+    safeSetItemWithRecovery(STORAGE_KEY_PRESS_NOTES, JSON.stringify(state.pressNotes || []), 'ghi chú giải trình ép ván');
     logDataChange(['pressNotes']);
     firePushSync();
   }

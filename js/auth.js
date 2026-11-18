@@ -13,7 +13,7 @@ import {
 } from './sys-settings.js';
 import { renderAll } from './main.js';
 import { DEFAULT_USERS, STORAGE_KEY_SESSION, STORAGE_KEY_USERS, APP_VERSION, state } from './state.js';
-import { writeDataToFile } from './storage.js';
+import { safeSetItemWithRecovery, writeDataToFile } from './storage.js';
 import { escapeHTML, showToast } from './utils.js';
 
   // ─── USERS & SESSION ──────────────────────────────────────────
@@ -34,7 +34,9 @@ import { escapeHTML, showToast } from './utils.js';
   }
 
   function saveUsers() {
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(state.users));
+    // GHI AN TOÀN (17/11/2026): bộ nhớ đầy → tự dọn bản cất cũ rồi thử lại,
+    // KHÔNG ném lỗi làm treo luồng lưu quyền/người dùng.
+    safeSetItemWithRecovery(STORAGE_KEY_USERS, JSON.stringify(state.users), 'danh sách người dùng');
     // Đồng thời ghi vào file nếu đã kết nối thư mục dữ liệu
     if (state.fileStorage.connected) {
       writeDataToFile();
@@ -55,8 +57,10 @@ import { escapeHTML, showToast } from './utils.js';
   }
 
   function saveSession() {
+    // GHI AN TOÀN: phiên đăng nhập nhỏ nhưng máy đầy bộ nhớ thì vẫn ném lỗi —
+    // dùng lớp cứu hộ chung (kèm toast rõ ràng thay vì mất phiên im lặng).
     if (state.currentUser) {
-      localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(state.currentUser));
+      safeSetItemWithRecovery(STORAGE_KEY_SESSION, JSON.stringify(state.currentUser), 'phiên đăng nhập');
     } else {
       localStorage.removeItem(STORAGE_KEY_SESSION);
     }
@@ -1053,6 +1057,12 @@ import { escapeHTML, showToast } from './utils.js';
     const payApply = !!(payApplyCheck && payApplyCheck.checked);
     const payLock  = !!(payLockCheck && payLockCheck.checked);
     // Quyền KHO NAN — Xưởng 2 (22/11/2026): tích = CẤP THÊM, bỏ tích = mặc định vai trò
+    // ⚠ LỖI ĐÃ SỬA (17/11/2026): 2 biến này trước đây CHỈ được khai báo bên trong
+    // openUserPermsModal ⇒ bấm "Lưu Quyền" ném ReferenceError (handler async nên
+    // bị nuốt lặng) → KHÔNG bao giờ lưu được quyền khoXuat/khoApprove. Phải fetch
+    // ô checkbox ngay tại đây (như payApplyCheck/payLockCheck ở trên).
+    const khoXuatCheck = document.getElementById('user-perms-kho-xuat');
+    const khoApproveCheck = document.getElementById('user-perms-kho-approve');
     const khoXuat = !!(khoXuatCheck && khoXuatCheck.checked);
     const khoApprove = !!(khoApproveCheck && khoApproveCheck.checked);
 

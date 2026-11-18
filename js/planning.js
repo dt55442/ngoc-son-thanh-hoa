@@ -6,6 +6,7 @@ import { trackDeleted } from './tombstone.js';
 import { logDataChange } from './history.js';
 import { getDateYear, getPressedQtyForPlan, pressRecordWeek } from './press.js';
 import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_FORECAST, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PLANNING_STOCK, state } from './state.js';
+import { safeSetItemWithRecovery } from './storage.js'; // GHI AN TOÀN — tự dọn bản cất cũ khi bộ nhớ đầy (17/11/2026)
 import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoApprovedXuatNotes, khoFirstInDateOf, khoInCountOf, khoNormPurpose } from './utils.js';
 
   let planningItemIdSequence = 0;
@@ -34,7 +35,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   }
 
   function saveMaterialRates() {
-    localStorage.setItem(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates));
+    safeSetItemWithRecovery(STORAGE_KEY_MATERIAL_RATES, JSON.stringify(state.materialRates), 'định mức nguyên vật liệu');
     logDataChange(['materialRates']);
     firePushSync();
   }
@@ -51,7 +52,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   }
 
   function savePlanningItems() {
-    localStorage.setItem(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems));
+    safeSetItemWithRecovery(STORAGE_KEY_PLANNING_ITEMS, JSON.stringify(state.planningItems), 'kế hoạch sản xuất');
     logDataChange(['planningItems']);
     firePushSync();
   }
@@ -75,7 +76,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   }
 
   function savePlanningForecast() {
-    localStorage.setItem(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast));
+    safeSetItemWithRecovery(STORAGE_KEY_PLANNING_FORECAST, JSON.stringify(state.planningForecast), 'dự báo kế hoạch');
     logDataChange(['planningForecast']);
     firePushSync();
   }
@@ -91,7 +92,7 @@ import { escapeHTML, getBatchStageHistory, getISOWeekString, showToast, khoAppro
   }
 
   function savePlanningStock() {
-    localStorage.setItem(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock));
+    safeSetItemWithRecovery(STORAGE_KEY_PLANNING_STOCK, JSON.stringify(state.planningStock), 'tồn kho kế hoạch');
     logDataChange(['planningStock']);
     firePushSync();
   }

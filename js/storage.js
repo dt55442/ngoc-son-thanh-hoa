@@ -23,6 +23,10 @@ import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
 import { mergeRecordsByTimestamp } from './record-merge.js';
 import { persistMonthlyDomain } from './monthly-domain.js';
 import { reportStorageFailure } from './storage-diagnostics.js';
+import { SYNC_STATE_KEY } from './cloud.js';
+// 2 key phục vụ GHI AN TOÀN (tự giải phóng chỗ khi bộ nhớ đầy) — import riêng
+// cho gọn, không đụng dòng import dài phía trên.
+import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
 
   // ─── DATA ─────────────────────────────────────────────────────
   function loadData() {
@@ -36,8 +40,64 @@ import { reportStorageFailure } from './storage-diagnostics.js';
     }
   }
 
+  // ─── GHI localStorage CÓ TỰ CỨU (17/11/2026 — chống "bộ nhớ trình duyệt đầy") ──
+  // Thủ phạm chiếm hạn mức là BẢN CẤT TỰ ĐỘNG (10 × toàn bộ snapshot, bản mới còn
+  // chuỗi trơn chờ nén nền). Khi một lần ghi QUAN TRỌNG bị từ chối (QuotaExceeded):
+  //   Dọn NHỊP 1 → thử lại 1 lần → vẫn lỗi thì báo rõ cho người dùng (KHÔNG im lặng).
+  function freeLocalStorageSpace() {
+    // 1) Bản cất tự động: chỉ giữ 2 bản MỚI NHẤT (thủ phạm chiếm chỗ nhất)
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_AUTOBACKUP);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list) && list.length > 2) {
+          localStorage.setItem(STORAGE_KEY_AUTOBACKUP, JSON.stringify(list.slice(0, 2)));
+        }
+      }
+    } catch (e) { /* hỏng nhẹ — bỏ qua */ }
+    // 2) Sổ đồng bộ: bỏ sổ xung đột (có thể phình) — giữ base tối hảo
+    try {
+      const raw = localStorage.getItem(SYNC_STATE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && Array.isArray(s.conflicts) && s.conflicts.length) {
+          s.conflicts = [];
+          localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(s));
+        }
+      }
+    } catch (e) { /* bỏ qua */ }
+    // 3) Lịch sử sửa đổi: giữ 120 dòng gần nhất (mặc định 300)
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
+      if (raw) {
+        const h = JSON.parse(raw);
+        if (Array.isArray(h) && h.length > 120) {
+          localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(h.slice(-120)));
+        }
+      }
+    } catch (e) { /* bỏ qua */ }
+  }
+
+  export function safeSetItemWithRecovery(key, value, label) {
+    try { localStorage.setItem(key, value); return true; }
+    catch (err) {
+      console.warn('[STORAGE] Bộ nhớ đầy khi ghi "' + key + '" — tự dọn bản cất cũ rồi thử lại…', err);
+      freeLocalStorageSpace();
+      try { localStorage.setItem(key, value); return true; }
+      catch (err2) {
+        try {
+          showToast('Bộ nhớ máy đầy — không lưu được ' + (label || 'dữ liệu')
+            + '. Đã dọn bớt bản cất cũ nhưng vẫn không đủ: hãy xuất bản sao lưu JSON (menu ⋮) rồi xóa bớt dữ liệu cũ trên máy này.', 'error');
+        } catch (e) { /* không có khung toast */ }
+        return false;
+      }
+    }
+  }
+
   function saveData() {
-    localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(state.batches));
+    // GHI AN TOÀN (17/11/2026): bộ nhớ đầy → tự dọn bản cất tự động/sổ xung đột
+    // rồi thử lại — KHÔNG để QuotaExceededError làm đứt luồng lưu lô nan.
+    safeSetItemWithRecovery(STORAGE_KEY_DATA, JSON.stringify(state.batches), 'dữ liệu lô nan');
     // Ghi lịch sử sửa đổi (tóm tắt ai đã thêm/sửa/xóa lô nan nào)
     logDataChange(['batches']);
     // Đồng thời ghi vào file nếu đã kết nối thư mục dữ liệu
@@ -1473,7 +1533,7 @@ import { reportStorageFailure } from './storage-diagnostics.js';
       const w = await fh.createWritable();
       await w.write(text);
       await w.close();
-      localStorage.setItem(FILE_BACKUP_GAP_KEY, String(Date.now()));
+      try { localStorage.setItem(FILE_BACKUP_GAP_KEY, String(Date.now())); } catch (e) { /* bộ nhớ đầy — bỏ qua, chỉ là mốc thời gian */ }
       // Dọn bản cũ: giữ 10 bản mới nhất (tên có dấu thời gian → sắp tên là đủ)
       const names = [];
       for await (const [name] of dir.entries()) {

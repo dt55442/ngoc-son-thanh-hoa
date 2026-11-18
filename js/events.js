@@ -6,6 +6,7 @@ import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsers
 import { authErrorText, authMarkStep, authReset, isAuthBusy, setAuthBusy } from './auth-ui.js';
 import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alSetShowDryAll, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, alBulkAddRow, alBulkOnClick, alBulkOnInput, toggleAlBulkEntryMode, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, deletePickedKhoStockLots, exitKanbanPickMode, exitKhoStockPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleKhoAddMultiSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, onKhoStockPickChange, openAddLotModal, openBatchFormModal, openKhoAddMultiModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, selectAllKhoStockLots, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, toggleKhoStockPickMode, updateCkNewVolume, updateCkPosInfo, wireKhoAddMultiEvents } from './batch-modals.js';
 import { applyRoleToUI, flushPendingCloudPush, initLucide, isFirebaseOnline, pendingRecordCount, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
+import { openStorageAudit, closeStorageAudit, renderStorageAudit, runStorageAuditAction } from './storage-audit.js'; // CÔNG CỤ "BỘ NHỚ MÁY" (17/11/2026)
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
@@ -598,6 +599,18 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       const ok = pushed && pendingRecordCount() === 0;
       showToast(ok ? 'Đã thử lại và đẩy xong dữ liệu đang chờ.' : 'Vẫn còn việc chưa lên mây — dữ liệu vẫn được giữ trên máy này.', ok ? 'success' : 'info');
     });
+    // ─── BỘ NHỚ MÁY (17/11/2026 — js/storage-audit.js) ───────────────
+    safeOn('btn-storage-audit', 'click', () => openStorageAudit());
+    safeOn('btn-close-storage-audit', 'click', () => closeStorageAudit());
+    safeOn('btn-sa-ok', 'click', () => closeStorageAudit());
+    safeOn('btn-sa-refresh', 'click', () => renderStorageAudit());
+    safeOn('sa-actions', 'click', (e) => {
+      const btn = e.target.closest('[data-sa-act]');
+      if (btn) runStorageAuditAction(btn.getAttribute('data-sa-act'));
+    });
+    const saOverlay = document.getElementById('modal-storage-audit');
+    if (saOverlay) saOverlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStorageAudit(); });
+
     safeOn('btn-hard-reload', 'click', async () => {
       if (!confirm('Xoá cache ứng dụng rồi tải lại bản MỚI NHẤT?\n(Dữ liệu trên máy KHÔNG bị xoá — chỉ xoá mã nguồn cũ đã cache)')) return;
       showToast('Đang xoá cache và tải lại bản mới…', 'info');

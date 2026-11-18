@@ -204,6 +204,16 @@ check('N8: cấu trúc — modal có 2 ô quyền kho + permissions chuẩn hoá
     && syss.includes('export function applyKho2AreaDom')
     && idx.includes('data-perm="kho2"');
 })());
+// ⚠ LỖI ĐÃ SỬA (17/11/2026): handleUserPermsSubmit từng dùng 2 biến khoXuatCheck /
+// khoApproveCheck CHỈ khai báo trong openUserPermsModal ⇒ bấm "Lưu Quyền" ném
+// ReferenceError bị nuốt lặng → KHÔNG lưu được quyền kho. Phải fetch ô ngay trong
+// hàm submit.
+check('N9: handleUserPermsSubmit tự fetch 2 ô quyền kho (không phụ thuộc biến của modal khác)', (() => {
+  const auth = fs.readFileSync(new URL('../js/auth.js', import.meta.url), 'utf8');
+  const fn = auth.slice(auth.indexOf('async function handleUserPermsSubmit'));
+  return fn.includes("getElementById('user-perms-kho-xuat')")
+    && fn.includes("getElementById('user-perms-kho-approve')");
+})());
 console.log('--- N. Quyền kho nan cấp thêm từng người (22/11/2026) ---');
 reset(); asUser('viewer', { khoXuat: true, khoApprove: true });
 check('N1: Người Xem được cấp khoXuat → tạo/sửa phiếu kho (vùng x2.kho.note = edit)', sys.levelOf('x2.kho.note') === 'edit');
@@ -329,9 +339,9 @@ check('I6b: tay nắm cuộn dọc bảng QC rõ, tương phản và đủ lớn
   && cssSrc.includes('#qc-detail-content .table-responsive::-webkit-scrollbar-thumb')
   && cssSrc.includes('min-height: 64px')
   && !fs.readFileSync('js/utils.js', 'utf8').includes('setupVScrollControls'));
-check('I7: sw.js có js/sys-settings.js + cache v430', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v430'));
-check('I8: state.js có key riêng + APP_VERSION v430',
-  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v430'"));
+check('I7: sw.js có js/sys-settings.js + cache v433', swSrc.includes("'./js/sys-settings.js'") && swSrc.includes('nha-may-ngoc-son-v433'));
+check('I8: state.js có key riêng + APP_VERSION v433',
+  stSrc.includes('bamboo_tracker_sys_settings_v1') && stSrc.includes("APP_VERSION = 'v433'"));
 check('I9: nối đủ cloud / storage / history / main',
   cloudSrc.includes('sysSettings') && cloudSrc.includes("'sysSettings'")
   && storageSrc.includes('restoreSysSettings') && histSrc.includes('sysSettings') && mainSrc.includes('loadSysSettings'));

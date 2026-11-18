@@ -17110,3 +17110,40 @@ body[data-fx="low"] .x1-kho-export-close { transition: none; transform: none; }
     border-top-width: 18px; border-bottom-width: 18px; border-left-width: 11px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   CÔNG CỤ "BỘ NHỚ MÁY" (js/storage-audit.js — 17/11/2026)
+   Khối CUỐI file — cấp cao nhất (depth 0, quy tắc 68b)
+   ════════════════════════════════════════════════════════════════════ */
+.sa-card { max-width: 720px; }
+.sa-body { display: flex; flex-direction: column; gap: 10px; }
+.sa-total {
+  padding: 10px 14px; border-radius: 10px; font-size: 1.02rem;
+  background: rgba(22, 163, 74, 0.12); border: 1px solid rgba(22, 163, 74, 0.45);
+}
+.sa-total-warn { background: rgba(217, 119, 6, 0.12); border-color: rgba(217, 119, 6, 0.5); }
+.sa-total-bad { background: rgba(220, 38, 38, 0.12); border-color: rgba(220, 38, 38, 0.55); }
+.sa-tip {
+  padding: 8px 12px; border-radius: 8px; font-size: 0.88rem;
+  background: rgba(15, 118, 110, 0.08); border: 1px dashed rgba(15, 118, 110, 0.45);
+}
+.sa-table-wrap { max-height: 40vh; overflow: auto; border-radius: 10px; }
+.sa-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.sa-table thead th {
+  position: sticky; top: 0; background: var(--surface, #f5f1e6); z-index: 1;
+  text-align: left; padding: 7px 10px; border-bottom: 2px solid var(--border, #ddd);
+}
+.sa-table td { padding: 6px 10px; border-bottom: 1px solid var(--border, #eee); }
+.sa-rank { width: 34px; color: #64748b; }
+.sa-name { font-weight: 600; word-break: break-word; }
+.sa-bytes { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+.sa-share { width: 70px; text-align: right; color: #64748b; font-variant-numeric: tabular-nums; }
+.sa-core td { background: rgba(124, 58, 237, 0.07); }
+.sa-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.sa-act-btn { justify-content: flex-start; text-align: left; }
+.sa-note { font-size: 0.84rem; color: #64748b; margin: 2px 0 0; }
+@media (max-width: 639.98px) {
+  .sa-card { width: 100%; }
+  .sa-table td, .sa-table thead th { font-size: 0.8rem; padding: 5px 7px; }
+  .sa-act-btn { min-height: 44px; }
+}

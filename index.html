@@ -259,6 +259,9 @@
             <button class="dropdown-item" id="btn-open-users-mgr">
               <i data-lucide="users"></i> Quản Lý Người Chỉnh Sửa
             </button>
+            <button class="dropdown-item" id="btn-storage-audit" data-admin-only title="Xem cái gì đang chiếm bộ nhớ máy + dọn nhanh dữ liệu phụ (bản cất, lịch sử, cache Nhân sự…)">
+              <i data-lucide="hard-drive" style="color:#b45309;"></i> Bộ Nhớ Máy
+            </button>
             <button class="dropdown-item" id="btn-fx-low" title="Tắt kính mờ + animation để máy yếu chạy mượt (giữ nguyên màu theme)">
               <i data-lucide="gauge" style="color:#64748b;"></i> Giảm Hiệu Ứng (Máy Yếu)
             </button>
@@ -8489,6 +8492,23 @@
       <div class="modal-footer">
         <button class="btn btn-outline" id="btn-pending-sync"><i data-lucide="refresh-cw"></i> Đồng Bộ Ngay</button>
         <button class="btn btn-primary" id="btn-pending-ok"><i data-lucide="check"></i> Đóng</button>
+      </div>
+    </div>
+  </div>
+  <!-- ═══ MODAL: BỘ NHỚ MÁY (js/storage-audit.js — 17/11/2026, chỉ Admin) ═══
+       Bảng dung lượng từng key localStorage + nút dọn nhanh dữ liệu PHỤ TRỢ. -->
+  <div class="modal-overlay" id="modal-storage-audit">
+    <div class="modal-card sa-card">
+      <div class="modal-header">
+        <h3><i data-lucide="hard-drive"></i> Bộ Nhớ Máy</h3>
+        <button class="modal-close" id="btn-close-storage-audit" title="Đóng"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="sa-body" class="sa-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btn-sa-refresh"><i data-lucide="refresh-cw"></i> Đo Lại</button>
+        <button class="btn btn-primary" id="btn-sa-ok"><i data-lucide="check"></i> Đóng</button>
       </div>
     </div>
   </div>

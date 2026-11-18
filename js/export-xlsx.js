@@ -8,7 +8,7 @@ import { logDataChange } from './history.js';
 import { trackDeleted } from './tombstone.js'; // Dọn biểu đồ vùng Nâng Cao cũ (zone='advanced')
 import { captureAutoBackup } from './autobackup.js'; // Chụp backup TRƯỚC khi dọn số phụ
 import { STAGES, STORAGE_KEY_CUSTOM_CHARTS, state } from './state.js';
-import { writeDataToFile } from './storage.js';
+import { safeSetItemWithRecovery, writeDataToFile } from './storage.js';
 import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, canApproveLeave, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeWorkerEvaluation, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf, hrNeedAllRows, hrNeedDateISO } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
@@ -2374,7 +2374,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
   }
 
   function saveCustomCharts() {
-    localStorage.setItem(STORAGE_KEY_CUSTOM_CHARTS, JSON.stringify(state.customCharts));
+    safeSetItemWithRecovery(STORAGE_KEY_CUSTOM_CHARTS, JSON.stringify(state.customCharts), 'biểu đồ tùy chỉnh');
     logDataChange(['customCharts']); // lịch sử sửa đổi (tab Dashboard)
     // Đồng thời ghi vào file nếu đã kết nối thư mục dữ liệu
     if (state.fileStorage.connected) {

@@ -19,7 +19,7 @@ import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông 
 import { applySysSettings, mergeSysSettings, normalizeSysSettings } from './sys-settings.js';
 import { applyTombstonesToRecordList, getDeletedMap, hasDeletedIds, mergeTombstones, saveDeletedIds, stripTombstonedPlanWeeks, untrackDeleted } from './tombstone.js';
 import { showToast } from './utils.js';
-import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — cache localStorage 2 tháng
+import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — cache localStorage 1 tháng
 
   // Nhãn danh sách tab được sửa (dùng trong thông báo phân quyền)
   function listEditableTabsLabel() {
@@ -1647,7 +1647,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     if (Date.now() - fbSyncWarnAt > 60000) {
       fbSyncWarnAt = Date.now();
       try { showToast('Bộ nhớ trình duyệt gần đầy nên sổ đồng bộ chưa lưu được. Hãy sao lưu JSON rồi xóa bớt dữ liệu cũ.', 'error'); } catch (e3) {}
-      console.warn('[FB] Không ghi được sổ đồng bộ cục bộ (bộ nhớ đầy):', e2 || e);
+      console.warn('[FB] Không ghi được sổ đồng bộ cục bộ (bộ nhớ đầy).');
     }
   }
   // Mã máy (chỉ để chẩn đoán — KHÔNG bắt buộc trên bản ghi)
@@ -2315,12 +2315,12 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // 3 miền LỚN của Nhân Sự: localStorage chỉ giữ cache 2 tháng gần nhất,
     // toàn bộ dữ liệu ghi vào IndexedDB theo tháng (js/repo.js) — tránh đầy
     // localStorage (5–10 MB) và tránh ghi lại cả mảng mỗi lần nhận dữ liệu mây.
-    try { localStorage.setItem(STORAGE_KEY_HR_ASSIGN, JSON.stringify(repo.healthy('hrAssignments') ? repo.cacheSlice(state.hrAssignments || [], 2) : (state.hrAssignments || []))); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_ASSIGN, JSON.stringify(repo.healthy('hrAssignments') ? repo.cacheSlice(state.hrAssignments || [], repo.CACHE_MONTHS) : (state.hrAssignments || []))); } catch (e) {}
     try { repo.putDomain('hrAssignments', state.hrAssignments || [], { dropMissing: true }); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_POSITIONS, JSON.stringify(state.hrPositions || [])); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(repo.healthy('hrAttendance') ? repo.cacheSlice(state.hrAttendance || [], 2) : (state.hrAttendance || []))); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_ATTENDANCE, JSON.stringify(repo.healthy('hrAttendance') ? repo.cacheSlice(state.hrAttendance || [], repo.CACHE_MONTHS) : (state.hrAttendance || []))); } catch (e) {}
     try { repo.putDomain('hrAttendance', state.hrAttendance || [], { dropMissing: true }); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(repo.healthy('hrCheckins') ? repo.cacheSlice(state.hrCheckins || [], 2) : (state.hrCheckins || []))); } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY_HR_CHECKINS, JSON.stringify(repo.healthy('hrCheckins') ? repo.cacheSlice(state.hrCheckins || [], repo.CACHE_MONTHS) : (state.hrCheckins || []))); } catch (e) {}
     try { repo.putDomain('hrCheckins', state.hrCheckins || [], { dropMissing: true }); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_CI_ACKS, JSON.stringify(state.hrCiAcks || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_PAY_ROWS, JSON.stringify(state.hrPayRows || [])); } catch (e) {}

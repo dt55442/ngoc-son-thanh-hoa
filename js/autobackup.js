@@ -2,7 +2,8 @@
 // js/autobackup.js — AUTO BACKUP THÔNG MINH (chống "sai xót/xóa nhầm" mất dữ liệu)
 // ───────────────────────────────────────────────────────────
 // Lớp 1 — CỤC BỘ (localStorage, key bamboo_tracker_autobackup_v1): tối đa 10 bản
-//          theo cơ chế BẬC THANG (giữ theo GIÁ TRỊ PHỤC HỒI, không theo thời gian):
+//          theo cơ chế BẬC THANG (giữ theo GIÁ TRỊ PHỤC HỒI, không theo thời gian) + NGÂN
+//          SÁCH TỔNG ~2MB (vượt → bỏ bản cũ nhất; bản trơn chưa nén tự được nén lại lúc nạp):
 //            · luôn giữ 3 bản MỚI NHẤT + các bản MỐC dung lượng tăng dần (≥125% mốc
 //              trước) + bản LỚN NHẤT — bình thường chỉ chiếm 4-6 slot thay vì 10;
 //            · BỎ TRÙNG (hash FNV-1a): dữ liệu y hệt bản cất gần nhất → không chụp;
@@ -40,23 +41,71 @@ import { escapeHTML, showToast } from './utils.js';
   const CLOUD_BACKUP_KEY = 'bamboo_tracker_cloudbackup_v1'; // { lastDate: 'yyyy-mm-dd' }
   let lastPushCaptureAt = 0;              // mốc throttle chụp (máy cục bộ)
   let shrinkWarned = false;               // cảnh báo giảm đột biến chỉ hiện 1 lần/phiên
+  // NGÂN SÁCH DUNG LƯỢNG BẢN CẤT CỤC BỘ (17/11/2026 — chống "bộ nhớ trình duyệt đầy"):
+  // bản cất giữ TOÀN BỘ snapshot (gồm cả Nhân sự nhiều tháng). Bản mới được lưu
+  // dạng CHUỖI TRƠN chờ nén nền; nếu tab đóng trước khi nén xong / nén lỗi /
+  // trình duyệt không có CompressionStream thì bản trơn (~vài MB) Ở LẠI MÃI MÃI
+  // → 10 × vài MB vượt hạn mức ~5MB của localStorage → MỌI lần lưu đều lỗi.
+  // ⇒ giới hạn TỔNG byte: vượt thì bỏ bản CŨ NHẤT trước.
+  export const AUTOBACKUP_LOCAL_BUDGET = 2 * 1024 * 1024; // ~2MB
 
   // ─── NẠP / LƯU DANH SÁCH BẢN CẤT CỤC BỘ ──────────────────────
   export function loadAutoBackups() {
     try { state.autoBackups = JSON.parse(localStorage.getItem(STORAGE_KEY_AUTOBACKUP) || '[]'); }
     catch (e) { state.autoBackups = []; }
     if (!Array.isArray(state.autoBackups)) state.autoBackups = [];
+    // TỰ DỌN LÚC NẠP (17/11/2026): máy từng đầy bộ nhớ → cắt bản cũ cho vừa
+    // ngân sách NGAY từ khi mở app (nếu đã dọn thì ghi lại danh sách mới).
+    if (pruneAutoBackupsByBudget() > 0) saveAutoBackupsLocal();
+    // Nén lại các bản còn chuỗi trơn — nền, không chặn boot.
+    recompressPendingAsync();
     backfillSizesAsync(); // bản cất định dạng cũ chưa có size/hash → tính bù nền
   }
   function saveAutoBackupsLocal() {
-    try { localStorage.setItem(STORAGE_KEY_AUTOBACKUP, JSON.stringify(state.autoBackups)); }
+    try { localStorage.setItem(STORAGE_KEY_AUTOBACKUP, JSON.stringify(state.autoBackups)); return; }
     catch (e) {
-      // Vượt hạn mức localStorage → bỏ bản cũ nhất rồi thử lại 1 lần
-      try {
+      // Vượt hạn mức localStorage → bỏ dần bản CŨ NHẤT (cuối danh sách) rồi thử
+      // lại cho tới khi vừa hoặc còn đúng 1 bản mới nhất. Trước đây chỉ thử 1 lần:
+      // bộ cất to (dữ liệu nhiều năm) thì 1 lần pop không đủ chỗ → vẫn lỗi.
+      let lastErr = e;
+      while (state.autoBackups.length > 1) {
         state.autoBackups.pop();
-        localStorage.setItem(STORAGE_KEY_AUTOBACKUP, JSON.stringify(state.autoBackups));
-      } catch (e2) { console.warn('[AUTOBACKUP] Không lưu được bản cất cục bộ', e2); }
+        try { localStorage.setItem(STORAGE_KEY_AUTOBACKUP, JSON.stringify(state.autoBackups)); lastErr = null; break; }
+        catch (e2) { lastErr = e2; }
+      }
+      if (lastErr) console.warn('[AUTOBACKUP] Không lưu được bản cất cục bộ', lastErr);
     }
+  }
+
+  // ─── NGÂN SÁCH DUNG LƯỢNG: bỏ bản CŨ NHẤT tới khi tổng ≤ ngân sách ──
+  // Luôn giữ ít nhất 1 bản MỚI NHẤT (điểm phục hồi gần). Trả về số bản đã bỏ.
+  export function pruneAutoBackupsByBudget() {
+    const list = state.autoBackups || [];
+    let total = list.reduce((s, e) => s + sizeOfEntry(e), 0);
+    if (total <= AUTOBACKUP_LOCAL_BUDGET) return 0;
+    let dropped = 0;
+    for (let i = list.length - 1; i >= 1 && total > AUTOBACKUP_LOCAL_BUDGET; i--) {
+      total -= sizeOfEntry(list[i]);
+      list.splice(i, 1);
+      dropped++;
+    }
+    state.autoBackups = list;
+    return dropped;
+  }
+
+  // NÉN LẠI các bản còn ở dạng CHUỖI TRƠN (chụp lúc nén nền chưa kịp chạy —
+  // tab đóng sớm / lần chụp trước lỗi). Gọi lúc NẠP: cứ dần dần tiết kiệm chỗ.
+  async function recompressPendingAsync() {
+    if (typeof CompressionStream !== 'function') return; // môi trường không nén được
+    const pending = (state.autoBackups || []).filter(e => e && typeof e.data === 'string');
+    if (!pending.length) return;
+    for (const e of pending) {
+      try {
+        const gz = await gzipStringToBase64(e.data);
+        if (gz && gz.length < e.data.length) e.data = { gz };
+      } catch (err) { /* giữ bản trơn */ }
+    }
+    saveAutoBackupsLocal();
   }
 
   // ─── HASH NỘI DUNG (FNV-1a 32-bit — nhanh, không cần thư viện) ──
@@ -186,6 +235,7 @@ import { escapeHTML, showToast } from './utils.js';
       };
       state.autoBackups.unshift(entry); // mới nhất lên đầu
       pruneAutoBackupsSmart();
+      pruneAutoBackupsByBudget(); // NGÂN SÁCH byte — chống "bộ nhớ đầy" (17/11/2026)
       saveAutoBackupsLocal();
       recompressEntryAsync(entry); // nén nền để tiết kiệm localStorage
     } catch (e) { console.warn('[AUTOBACKUP] Lỗi chụp bản cất', e); }

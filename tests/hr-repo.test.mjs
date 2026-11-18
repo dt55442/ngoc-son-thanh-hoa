@@ -8,6 +8,7 @@ let pass = 0, fail = 0;
 function check(name, cond) { if (cond) { pass++; console.log('PASS — ' + name); } else { fail++; console.log('FAIL — ' + name); } }
 
 const repo = await import('../js/repo.js');
+const repoSrc = fs.readFileSync(new URL('../js/repo.js', import.meta.url), 'utf8');
 
 // ─── A. CHIA THÁNG ──────────────────────────────────────────────
 check('MONTH: lấy date "2026-10-19" -> 2026-10', repo.monthOf({ date: '2026-10-19' }) === '2026-10');
@@ -30,7 +31,11 @@ const sliced = repo.cacheSlice([
   { id: 'old', date: '2020-01-05' },
   { id: 'now', date: nowM[0] + '-10' }
 ], 2);
-check('CACHE: chỉ giữ bản ghi trong 2 tháng gần nhất', sliced.length === 1 && sliced[0].id === 'now');
+check('CACHE: chỉ giữ bản ghi trong 2 tháng gần nhất (truyền N tường minh)', sliced.length === 1 && sliced[0].id === 'now');
+check('CACHE: mặc định CACHE_MONTHS = 1 — chỉ giữ 1 tháng gần nhất',
+  repo.cacheSlice([{ id: 'old', date: '2020-01-05' }, { id: 'now', date: nowM[0] + '-10' }]).length === 1
+  && repo.cacheSlice([{ id: 'a', date: nowM[0] + '-02' }, { id: 'b', date: nowM[1] + '-02' }]).length === 1
+  && repo.CACHE_MONTHS === 1);
 
 // ─── C. putDomain (fallback RAM khi không có IndexedDB) ─────────
 await repo.putDomain('demo', [
@@ -143,8 +148,8 @@ check('NỐI: hr.js tự nạp bù từ IndexedDB (hrHydrateFromRepo) và gọi 
   hrSrc.includes('function hrHydrateFromRepo') && /function loadHrData[\s\S]{0,3000}hrHydrateFromRepo\(\)/.test(hrSrc));
 check('NỐI: saveHrData ghi IndexedDB theo tháng cho miền lớn',
   /repo\.putDomain\(dom, val \|\| \[\], \{ dropMissing: hrHydrated \}\)/.test(hrSrc));
-check('NỐI: cloud.js persistAllLocal chỉ giữ cache 2 tháng + ghi repo',
-  cloudSrc.includes('repo.cacheSlice(state.hrAssignments || [], 2)') && cloudSrc.includes("repo.putDomain('hrAttendance'"));
+check('NỐI: cloud.js persistAllLocal chỉ giữ cache 1 tháng + ghi repo (CACHE_MONTHS)',
+  cloudSrc.includes('repo.cacheSlice(state.hrAssignments || [], repo.CACHE_MONTHS)') && cloudSrc.includes("repo.putDomain('hrAttendance'"));
 check('NỐI: file sao lưu JSON có dữ liệu Nhân sự (trước đây THIẾU)',
   storageSrc.includes('hrAssignments: state.hrAssignments || []') && storageSrc.includes('function restoreHrFromBackup'));
 check('NỐI: sw.js có js/repo.js trong APP_SHELL', swSrc.includes("'./js/repo.js'"));
@@ -155,6 +160,8 @@ check('CACHE: sw.js và APP_VERSION cùng phiên bản', (() => {
   const c = /nha-may-ngoc-son-(v\d+)/.exec(swSrc); const a = /APP_VERSION = '(v\d+)'/.exec(stateSrc);
   return !!c && !!a && c[1] === a[1];
 })());
+check('CACHE: repo.js xuất CACHE_MONTHS = 1 (cache Nhân sự 1 tháng — 17/11/2026)',
+  /export const CACHE_MONTHS = 1/.test(repoSrc));
 
 console.log('\n───────────────────────────');
 console.log(`HR-REPO: ${pass} PASS, ${fail} FAIL`);

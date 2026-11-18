@@ -433,7 +433,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v433/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v434/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
@@ -664,13 +664,13 @@ const viaGroup = x1.x1ChainPending(spBO).find(g => g.sources.some(s => s.sourceI
 check('I4: lô có 480kg Ống Đạt từ Lọc + 95kg Đạt từ Cắt Mắt, không trừ chéo',
   !!viaGroup && x1.x1ChainRemainingOf(spBO, viaGroup, null) === 575 &&
   x1.x1ChainRemainingOf(spCM, loVia, null) === 0);
-check('I5: ô chọn Bổ gom theo lô và tự tính tổng 575kg từ hai nhánh',
+check('I5: ô chọn Bổ gom theo mã lô sống và tự tính tổng 575kg từ hai nhánh',
   (() => { x1.fillX1ChainOptions(spBO);
     const h = document.getElementById('x1-bo-src').innerHTML;
     document.getElementById('x1-bo-src').value = viaGroup.id;
     x1.x1ChainSyncLinked(spBO, true);
     return h.includes('Theo lô: Lọc Ống + Cắt Mắt') &&
-           h.includes('[SS-2026-0920-01]') && h.includes('Tồn 575/2.060 kg') &&
+           h.includes('[V260910001]') && h.includes('Tồn 575/2.060 kg') &&
            document.getElementById('x1-bo-in').value === '575'; })());
 const oldViaOk = loVia.qtyOk, oldCmOk = state.xuong1CatMatRecords.find(r => r.id === 'cm-legacy').qtyOk;
 loVia.qtyOk = 480.5;
@@ -760,7 +760,7 @@ const legacyBoCatMat = {
 state.xuong1BoRecords.push(legacyBoCatMat);
 check('I8h: lượt Bổ cũ liên kết Cắt Mắt vẫn truy được lô và nguồn',
   x1.x1ChainDisplay(spBO, legacyBoCatMat).srcRoute === 'Cắt Mắt' &&
-  x1.x1ChainDisplay(spBO, legacyBoCatMat).lotCode === 'SS-2026-0920-01');
+  x1.x1ChainDisplay(spBO, legacyBoCatMat).lotCode === 'V260910001');
 
 // ── CẤU TRÚC: 8 công đoạn Xưởng 1 bọc đủ 3 vùng như Xưởng 2 ──
 check('I9: 8 công đoạn Xưởng 1 bọc vùng .x2-zone — Sấy Sinh 2 vùng, 7 thẻ còn lại 3 vùng = 23 vùng',
@@ -934,8 +934,8 @@ state.xuong1LocOngRecords.push({
   srcType: 'Vầu', srcSupplier: 'Nhà Khanh'
 });
 x1.fillX1ChainOptions(spBO);
-check('K15: tồn chọn nguồn Bổ hiển thị lượng còn / tổng lượng gốc từ Bốc (2056/2060 kg)',
-  document.getElementById('x1-bo-src').innerHTML.includes('Tồn 2.056/2.060 kg'));
+check('K15: nguồn Bổ gom mã lô sống hiển thị đúng lượng còn / tổng lượng gốc từ Bốc',
+  document.getElementById('x1-bo-src').innerHTML.includes('Tồn 2.621/4.120 kg'));
 
 state.xuong1LocThanhRecords = [
   {

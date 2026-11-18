@@ -327,7 +327,7 @@ check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ côn
   expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
   expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
   !expSrc.includes("'Ngày Đạt'"));
-check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v433/.test(swSrc));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v434/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
 check('F7: KPI Vùng ② Thống Kê ĐÃ GỠ khỏi thẻ Sấy Sinh (tổng hợp ở bảng toàn xưởng sau)',
   !idxHtml.includes('id="x1-say-sinh-stats"') && !xuong2Src.includes('renderX1SaySinhStats') &&
@@ -699,6 +699,62 @@ check('J8: x1SsHasDownstream(false) khi ssId không tồn tại', (() => {
   ];
   return x2.x1SsHasDownstream('nonexistent') === false;
 })());
+
+check('J9: sửa mã Sấy Sinh lan ra toàn chuỗi công đoạn X1', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
+  ];
+  state.xuong1BocRecords = [
+    { id: 'b1', saySinhId: 's1', lotCode: 'V261105001', date: '2026-11-06', qty: 100 },
+  ];
+  state.xuong1LocOngRecords = [
+    { id: 'l1', bocId: 'b1', lotCode: 'V261105001', date: '2026-11-07', qtyOk: 90 },
+  ];
+  state.xuong1CatMatRecords = [
+    { id: 'c1', locOngId: 'l1', lotCode: 'V261105001', date: '2026-11-08', qtyOk: 80 },
+  ];
+  state.xuong1BoRecords = [
+    { id: 'bo1', lotCode: 'V261105001', date: '2026-11-09', qtyIn: 80, qtyOk: 70,
+      sourceAllocations: [{ sourceType: 'locOng', sourceId: 'l1', qty: 80 }] },
+  ];
+  state.xuong1PhoiSayRecords = [
+    { id: 'ps1', boId: 'bo1', lotCode: 'V261105001', date: '2026-11-10', qtyIn: 70, qtyOk: 60 },
+  ];
+  state.xuong1LocThanhRecords = [
+    { id: 'lt1', boId: 'bo1', lotCode: 'V261105001', date: '2026-11-11', qtyIn: 60, qtyOk: 50,
+      lotAllocations: [{ sourceId: 'bo1', lotCode: 'V261105001', qtyIn: 60 }] },
+  ];
+
+  state.xuong1SaySinhRecords[0].code = 'V261105999';
+  x2.syncX1SaySinhCodeDownstream('s1', 'V261105999', false);
+  const spLT = x2.x1ChainSpecByKey('locThanh');
+  const display = x2.x1ChainDisplay(spLT, state.xuong1LocThanhRecords[0]);
+  return x2.x1TraceLotCodeOf(state.xuong1BocRecords[0]) === 'V261105999' &&
+         x2.x1TraceLotCodeOf(state.xuong1LocOngRecords[0]) === 'V261105999' &&
+         x2.x1TraceLotCodeOf(state.xuong1CatMatRecords[0]) === 'V261105999' &&
+         x2.x1TraceLotCodeOf(state.xuong1BoRecords[0]) === 'V261105999' &&
+         x2.x1TraceLotCodeOf(state.xuong1PhoiSayRecords[0]) === 'V261105999' &&
+         x2.x1TraceLotCodeOf(state.xuong1LocThanhRecords[0]) === 'V261105999' &&
+         state.xuong1LocThanhRecords[0].lotAllocations[0].lotCode === 'V261105999' &&
+         display.lotCode === 'V261105999';
+})());
+
+check('J10: truy vết ưu tiên mã Sấy Sinh sống thay snapshot mã cũ', (() => {
+  state.xuong1SaySinhRecords = [
+    { id: 's-live', code: 'V261105777', date: '2026-11-05', qty: 100 },
+  ];
+  state.xuong1BocRecords = [
+    { id: 'b-live', saySinhId: 's-live', lotCode: 'V261105001', date: '2026-11-06', qty: 100 },
+  ];
+  state.xuong1LocOngRecords = [
+    { id: 'l-live', bocId: 'b-live', lotCode: 'V261105001', date: '2026-11-07', qtyOk: 90 },
+  ];
+  return x2.x1TraceLotCodeOf(state.xuong1LocOngRecords[0]) === 'V261105777';
+})());
+
+check('J11: cả sửa mã trong form lẫn sửa mã inline đều gọi đồng bộ xuống công đoạn sau',
+  evSrc.includes('syncX1SaySinhCodeDownstream(id, newCode, true)') &&
+  xuong2Src.includes('syncX1SaySinhCodeDownstream(rec.id, rec.code'));
 
 console.log(`\n=== KẾT QUẢ X1 SẤY SINH LOT: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

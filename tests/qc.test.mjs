@@ -81,6 +81,14 @@ function setWeeks(weeks) {
 }
 function modalShown(id) { return document.getElementById(id).classList._s.has('show'); }
 const approx = (a, b) => Math.abs(a - b) < 1e-9;
+function isoWeekPeriod(dateISO) {
+  const thursday = new Date(`${dateISO}T00:00:00Z`);
+  thursday.setUTCDate(thursday.getUTCDate() + 3 - ((thursday.getUTCDay() + 6) % 7));
+  const year = thursday.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const week = Math.ceil(((thursday - yearStart) / 86400000 + 1) / 7);
+  return { year, week };
+}
 
 // ─── DỮ LIỆU GIẢ ──────────────────────────────────────────────
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
@@ -274,6 +282,9 @@ state.qcFinalRecords = [
 ];
 state.planVsPressYear = '2026';
 state.planVsPressWeek = 33;
+state.planVsPressSpan = 1;
+state.planVsPressUnit = 'vol';
+state.planVsPressTotal = false;
 press.renderPlanVsPressChart();
 const chart = state.planVsPressInstance;
 const unitVol1 = (1200 * 382 * 9) / 1e9;
@@ -347,6 +358,7 @@ state.qcExports.pop();
 state.planVsPressSpan = 1;
 state.planVsPressWeek = 33;
 const liveToday = press.todayLocalISO();
+const liveWeekParts = isoWeekPeriod(liveToday);
 const liveTomorrowDate = new Date(`${liveToday}T12:00:00`);
 liveTomorrowDate.setDate(liveTomorrowDate.getDate() + 1);
 const liveTomorrow = `${liveTomorrowDate.getFullYear()}-${String(liveTomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(liveTomorrowDate.getDate()).padStart(2, '0')}`;
@@ -355,9 +367,9 @@ state.pressRecords.push(
   { id: 'live-record-future', date: liveTomorrow, productId: 'rate-live', fpDim: '1220x2440x9', finishedQty: 4, vanTho: [], sticks: [] }
 );
 state.qcExports.push(
-  { id: 'live-export-current', productId: 'rate-live', name: 'Sản phẩm live', year: 2026, week: 'Tuần 45', weeks: [45], exportDate: liveToday, qty: 5 },
+  { id: 'live-export-current', productId: 'rate-live', name: 'Sản phẩm live', year: liveWeekParts.year, week: `Tuần ${liveWeekParts.week}`, weeks: [liveWeekParts.week], exportDate: liveToday, qty: 5 },
   { id: 'live-export-before-baseline', productId: 'rate-before', name: 'Sản phẩm cũ', exportDate: '2026-10-04', qty: 999 },
-  { id: 'live-negative-export', productId: 'rate-live-negative', name: 'Tồn âm live', year: 2026, week: 'Tuần 45', weeks: [45], exportDate: liveToday, qty: 5 }
+  { id: 'live-negative-export', productId: 'rate-live-negative', name: 'Tồn âm live', year: liveWeekParts.year, week: `Tuần ${liveWeekParts.week}`, weeks: [liveWeekParts.week], exportDate: liveToday, qty: 5 }
 );
 state.qcFinalRecords.push({ id: 'live-reject-current', date: liveToday, kind: 'van', productId: 'rate-live', productName: 'Sản phẩm live', qtyReject: 2 });
 check('TỒN LIVE: bắt đầu từ tuần 41/2026, cộng ép − xuất − QC đến hôm nay',

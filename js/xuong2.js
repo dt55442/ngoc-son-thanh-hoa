@@ -15313,7 +15313,117 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       r.code = code;
       changed = true;
     });
+    if (changed) {
+      list.forEach(r => {
+        if (r && r.id && r.code) syncX1SaySinhCodeDownstream(r.id, r.code, persist !== false);
+      });
+    }
     if (changed && persist !== false) saveXuong1SaySinh();
+    return changed;
+  }
+
+  function x1RecordDependsOnSaySinh(record, saySinhId, seen = new Set()) {
+    if (!record || seen.has(record)) return false;
+    seen.add(record);
+    if (record.saySinhId === saySinhId) return true;
+    const links = [
+      ['bocId', state.xuong1BocRecords],
+      ['locOngId', state.xuong1LocOngRecords],
+      ['catMatId', state.xuong1CatMatRecords],
+      ['boId', state.xuong1BoRecords],
+      ['phoiSayId', state.xuong1PhoiSayRecords]
+    ];
+    for (const [field, records] of links) {
+      if (!record[field]) continue;
+      const parent = (records || []).find(r => r.id === record[field]);
+      if (x1RecordDependsOnSaySinh(parent, saySinhId, seen)) return true;
+    }
+    if (Array.isArray(record.sourceAllocations)) {
+      const liveCodes = [];
+      for (const allocation of record.sourceAllocations) {
+        const sourceType = String(allocation && allocation.sourceType || '');
+        const records = sourceType === 'locOng'
+          ? state.xuong1LocOngRecords
+          : sourceType === 'catMat'
+            ? state.xuong1CatMatRecords
+            : sourceType === 'bo'
+              ? state.xuong1BoRecords
+              : sourceType === 'phoiSay'
+                ? state.xuong1PhoiSayRecords
+                : null;
+        const parent = records && records.find(r => r.id === (allocation && allocation.sourceId));
+        if (x1RecordDependsOnSaySinh(parent, saySinhId, seen)) return true;
+      }
+    }
+    if (Array.isArray(record.lotAllocations)) {
+      for (const allocation of record.lotAllocations) {
+        const parent = (state.xuong1BoRecords || []).find(r => r.id === (allocation && allocation.sourceId)) ||
+          (state.xuong1PhoiSayRecords || []).find(r => r.id === (allocation && allocation.sourceId));
+        if (x1RecordDependsOnSaySinh(parent, saySinhId, seen)) return true;
+      }
+    }
+    return false;
+  }
+
+  function syncX1SaySinhCodeDownstream(saySinhId, newCode, persist = true) {
+    const code = String(newCode || '').trim();
+    if (!saySinhId || !code) return false;
+    let changed = false;
+
+    const stages = [
+      [STORAGE_KEY_XUONG1_BOC, 'xuong1BocRecords'],
+      [STORAGE_KEY_XUONG1_LOC_ONG, 'xuong1LocOngRecords'],
+      [STORAGE_KEY_XUONG1_CAT_MAT, 'xuong1CatMatRecords'],
+      [STORAGE_KEY_XUONG1_BO, 'xuong1BoRecords'],
+      [STORAGE_KEY_XUONG1_PHOI_SAY, 'xuong1PhoiSayRecords'],
+      [STORAGE_KEY_XUONG1_LOC_THANH, 'xuong1LocThanhRecords']
+    ];
+
+    stages.forEach(([storeKey, stateKey]) => {
+      (state[stateKey] || []).forEach(record => {
+        if (!x1RecordDependsOnSaySinh(record, saySinhId, new Set())) return;
+        const liveCode = x1TraceLotCodeOf(record);
+        if (liveCode) {
+          if (record.lotCode !== liveCode) {
+            record.lotCode = liveCode;
+            changed = true;
+          }
+          if (record.srcLotCode !== liveCode) {
+            record.srcLotCode = liveCode;
+            changed = true;
+          }
+          if (record.srcCode !== liveCode) {
+            record.srcCode = liveCode;
+            changed = true;
+          }
+        }
+        if (stateKey === 'xuong1LocThanhRecords' && Array.isArray(record.lotAllocations)) {
+          record.lotAllocations.forEach(allocation => {
+            const source = (state.xuong1BoRecords || []).find(r => r.id === (allocation && allocation.sourceId)) ||
+              (state.xuong1PhoiSayRecords || []).find(r => r.id === (allocation && allocation.sourceId));
+            const allocationCode = source ? x1TraceLotCodeOf(source) : code;
+            if (allocationCode && allocation.lotCode !== allocationCode) {
+              allocation.lotCode = allocationCode;
+              changed = true;
+            }
+          });
+        }
+        if (persist) {
+          try { localStorage.setItem(storeKey, JSON.stringify(state[stateKey] || [])); }
+          catch (e) { /* lưu tập trung lần sau sẽ thử lại */ }
+        }
+      });
+    });
+
+    if (changed && persist) {
+      const keys = stages.map(([, stateKey]) => stateKey);
+      logDataChange(keys);
+      if (state.fileStorage.connected) storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+      firePushSync();
+      // Vẽ lại các thẻ công đoạn sau để mã lô mới hiện ngay (không cần F5)
+      renderX1BocCard();
+      X1_CHAIN_SPECS.forEach(spec => renderX1ChainCard(spec));
+    }
     return changed;
   }
   // ── TÌM LÔ TRÙNG MÃ SẤY SINH ────────────────────────────────────
@@ -15830,6 +15940,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const oldCycles = x1SsCyclesOf(rec);
       oldCycles[0] = { ...oldCycles[0], date: dateVal, sulfurQty: sulfurQty == null ? oldCycles[0].sulfurQty : sulfurQty };
       Object.assign(rec, payload, { cycles: oldCycles, updatedAt: new Date().toISOString() });
+      syncX1SaySinhCodeDownstream(rec.id, rec.code || payload.code || enteredCode || '', true);
       saveXuong1SaySinh();
       showToast('Đã cập nhật lượt sấy sinh!', 'success');
     } else {
@@ -16510,6 +16621,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const snap = x1Snapshot(dateVal, x1BocAssignmentsOf(dateVal));
     const payload = {
       saySinhId,
+      lotCode: src.code || '',
+      srcLotCode: src.code || '',
       // Ưu tiên lượt Cắt Ống (sống); sấy thẳng → snapshot của lượt Sấy Sinh
       srcType: cd ? cd.materialType : (src.srcType || ''),
       srcSupplier: cd ? cd.supplier : (src.srcSupplier || ''),
@@ -17316,7 +17429,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const srcTitle = `${materialType} · NCC ${supplier} · ${source.date ? formatDateDDMMYY(source.date) : ''} · Phiếu Bổ ${fmtKg(ticketQty)} kg · Còn ${fmtKg(available)} kg`;
       return `<div class="x1-lt-source-row" data-x1-lt-source-row="${escapeHTML(source.id)}"
         data-x1-lt-available="${escapeHTML(String(available))}">
-        <strong class="x1-lt-src-name" title="${escapeHTML(srcTitle)}">${escapeHTML(source.lotCode || x1TraceLotCodeOf(source) || 'Lô Bổ')}</strong>
+        <strong class="x1-lt-src-name" title="${escapeHTML(srcTitle)}">${escapeHTML(x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ')}</strong>
         <input type="number" min="0" step="any" data-x1-lt-source-in aria-label="Kg lấy lọc / bó của lô ${escapeHTML(source.lotCode || '')}"
           title="Kg lấy lọc / bó — còn theo phiếu Bổ ${fmtKg(available)} kg"
           value="${escapeHTML(String(allocation.qtyIn == null ? '' : allocation.qtyIn))}" placeholder="${fmtKg(available)}">
@@ -17336,7 +17449,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       return;
     }
     const names = sources.map(source =>
-      `${source.lotCode || x1TraceLotCodeOf(source) || 'Lô Bổ'} · ${source.date ? formatDateDDMMYY(source.date) : '—'}`);
+      `${x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ'} · ${source.date ? formatDateDDMMYY(source.date) : '—'}`);
     summary.textContent = names.length === 1 ? `Đã chọn: ${names[0]}` : `Đã chọn ${names.length} lô`;
     summary.setAttribute('title', names.join('\n'));
   }
@@ -17351,7 +17464,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     box.innerHTML = sources.map(source => {
       const sourceId = escapeHTML(source.id);
-      const lotCode = source.lotCode || x1TraceLotCodeOf(source) || 'Lô Bổ';
+      const lotCode = x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ';
       const supplier = x1SrcSupplierOf(source) || '—';
       const materialType = x1SrcTypeOf(source) || 'Vầu/nứa';
       const remaining = x1LocThanhPotentialOfBo(source, editId);
@@ -18392,22 +18505,65 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function x1TraceLotCodeOf(record, seen = new Set()) {
     if (!record || seen.has(record)) return '';
     seen.add(record);
-    const savedCode = String(record.lotCode || record.srcLotCode || record.srcCode || '').trim();
-    if (savedCode) return savedCode;
+    // Ưu tiên liên kết sống: mã lô Sấy Sinh có thể được sửa sau, vì vậy
+    // không được lấy mã cũ đã snapshot ở công đoạn phía sau làm kết quả truy vết.
     if (record.saySinhId) {
       const saySinh = (state.xuong1SaySinhRecords || []).find(r => r.id === record.saySinhId);
-      if (saySinh && saySinh.code) return String(saySinh.code);
+      if (saySinh && String(saySinh.code || '').trim()) return String(saySinh.code).trim();
+    }
+    if (Array.isArray(record.lotAllocations) && record.lotAllocations.length) {
+      const liveCodes = [];
+      record.lotAllocations.forEach(allocation => {
+        const source = (state.xuong1BoRecords || []).find(r => r.id === (allocation && allocation.sourceId)) ||
+          (state.xuong1PhoiSayRecords || []).find(r => r.id === (allocation && allocation.sourceId));
+        const code = source ? x1TraceLotCodeOf(source, seen) : String(allocation && allocation.lotCode || '').trim();
+        if (code && !liveCodes.includes(code)) liveCodes.push(code);
+      });
+      if (liveCodes.length) return liveCodes.join(' + ');
     }
     if (Array.isArray(record.sourceAllocations)) {
+      const liveCodes = [];
       for (const allocation of record.sourceAllocations) {
-        const records = allocation && allocation.sourceType === 'locOng'
+        const sourceType = String(allocation && allocation.sourceType || '');
+        const records = sourceType === 'locOng'
           ? state.xuong1LocOngRecords
-          : allocation && allocation.sourceType === 'catMat'
-            ? state.xuong1CatMatRecords : null;
-        const parent = records && records.find(r => r.id === allocation.sourceId);
-        const code = x1TraceLotCodeOf(parent, seen);
-        if (code) return code;
+          : sourceType === 'catMat'
+            ? state.xuong1CatMatRecords
+            : sourceType === 'bo'
+              ? state.xuong1BoRecords
+              : sourceType === 'phoiSay'
+                ? state.xuong1PhoiSayRecords
+                : null;
+        const parent = records && records.find(r => r.id === (allocation && allocation.sourceId));
+        const code = parent ? x1TraceLotCodeOf(parent, seen) : '';
+        if (code && !liveCodes.includes(code)) liveCodes.push(code);
       }
+      if (liveCodes.length) return liveCodes.join(' + ');
+    }
+    if (record.bocId) {
+      const boc = (state.xuong1BocRecords || []).find(r => r.id === record.bocId);
+      const code = boc ? x1TraceLotCodeOf(boc, seen) : '';
+      if (code) return code;
+    }
+    if (record.locOngId) {
+      const locOng = (state.xuong1LocOngRecords || []).find(r => r.id === record.locOngId);
+      const code = locOng ? x1TraceLotCodeOf(locOng, seen) : '';
+      if (code) return code;
+    }
+    if (record.catMatId) {
+      const catMat = (state.xuong1CatMatRecords || []).find(r => r.id === record.catMatId);
+      const code = catMat ? x1TraceLotCodeOf(catMat, seen) : '';
+      if (code) return code;
+    }
+    if (record.boId) {
+      const bo = (state.xuong1BoRecords || []).find(r => r.id === record.boId);
+      const code = bo ? x1TraceLotCodeOf(bo, seen) : '';
+      if (code) return code;
+    }
+    if (record.phoiSayId) {
+      const phoiSay = (state.xuong1PhoiSayRecords || []).find(r => r.id === record.phoiSayId);
+      const code = phoiSay ? x1TraceLotCodeOf(phoiSay, seen) : '';
+      if (code) return code;
     }
     const upstream = [
       ['bocId', state.xuong1BocRecords],
@@ -18422,6 +18578,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const code = x1TraceLotCodeOf(parent, seen);
       if (code) return code;
     }
+    const savedCode = String(record.lotCode || record.srcLotCode || record.srcCode || '').trim();
+    if (savedCode) return savedCode;
     return '';
   }
   function x1BoSourceBocRecordsOf(sourceGroup) {
@@ -18480,8 +18638,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         (state.xuong1PhoiSayRecords || []).find(r => r.id === record.phoiSayId) || null;
       return {
         sourceId: allocation.sourceId,
-        lotCode: allocation.lotCode ||
-          String((source && (source.lotCode || x1TraceLotCodeOf(source))) || record.lotCode || ''),
+        lotCode: String((source && x1TraceLotCodeOf(source)) ||
+          allocation.lotCode || (source && source.lotCode) || record.lotCode || ''),
         sourceDate: allocation.sourceDate || (source && source.date) || record.srcDate || '',
         srcType: allocation.srcType || (source ? x1SrcTypeOf(source) : (record.srcType || '')),
         supplier: allocation.supplier || (source ? x1SrcSupplierOf(source) : (record.srcSupplier || '')),
@@ -18529,7 +18687,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       srcDate: ltSourceSummary && ltSourceSummary.srcDate ||
         (src ? (src.date || '') : (r.srcDate || '')),
       lotCode: String(ltSourceSummary && ltSourceSummary.lotCode ||
-        r.lotCode || (src && src.lotCode) || x1TraceLotCodeOf(src) || r.srcLotCode || ''),
+        x1TraceLotCodeOf(src) || (src && src.lotCode) || r.lotCode || r.srcLotCode || ''),
       // Lọc Thanh mới lưu ma trận bản rộng × chiều dài theo kg; dữ liệu cũ giữ nguyên.
       lengths: spec.key === 'bo' ? []
         : (spec.key === 'locThanh' && Array.isArray(r.lengths)
@@ -18578,7 +18736,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const route = s.route || (isAlt
         ? (spec.altSrcRoute || `${spec.altSrcName} (bỏ qua ${spec.srcName})`)
         : spec.srcName);
-      const lotCode = s.lotCode || x1TraceLotCodeOf(s);
+      const lotCode = x1TraceLotCodeOf(s) || s.lotCode || '';
       const groupedOutput = spec.key === 'bo' && Array.isArray(s.sources)
         ? s.sources.reduce((sum, source) => sum + Math.max(0, Number(source.outputQty) || 0), 0)
         : null;
@@ -18808,7 +18966,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         }
         locThanhAllocations.push({
           sourceId: source.id,
-          lotCode: source.lotCode || x1TraceLotCodeOf(source) || '',
+          lotCode: x1TraceLotCodeOf(source) || source.lotCode || '',
           sourceDate: source.date || '',
           srcType: x1SrcTypeOf(source),
           supplier: x1SrcSupplierOf(source),
@@ -18841,7 +18999,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const payload = {
       date: dateVal, qtyIn, qtyOk, qtyLoai,
       srcType: x1SrcTypeOf(src), srcSupplier: x1SrcSupplierOf(src), srcDate: src.date || '',
-      lotCode: x1TraceLotCodeOf(src),
+      lotCode: x1TraceLotCodeOf(src) || (src && src.lotCode) || '',
       worker: snap.names, workTime: snap.timeStr,
       workHours: snap.hours, workHoursHC: snap.hc, workHoursTC: snap.tc,
       note,
@@ -19463,6 +19621,7 @@ export {
   x1SsYearKeyOf,
   x1SsMakeCode,
   ensureX1SaySinhCodes,
+  syncX1SaySinhCodeDownstream,
   x1SsFindDupes,
   x1SsHasDownstream,
   x1SsDaysOf,
@@ -19495,6 +19654,7 @@ export {
   workerAssignmentsForCapacityMonth,
   x1ChainSpec,
   x1ChainSpecByKey,
+  x1TraceLotCodeOf,
   renderX1CardOf,
   loadX1Chain,
   saveX1Chain,

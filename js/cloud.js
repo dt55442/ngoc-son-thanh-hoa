@@ -2312,7 +2312,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     try { localStorage.setItem(STORAGE_KEY_HR_RECRUITMENT, JSON.stringify(state.hrRecruitment || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_POSNEEDS, JSON.stringify(state.hrPositionNeeds || [])); } catch (e) {}
     try { localStorage.setItem(STORAGE_KEY_HR_SHIFTS, JSON.stringify(state.hrShifts || [])); } catch (e) {}
-    // 3 miền LỚN của Nhân Sự: localStorage chỉ giữ cache 2 tháng gần nhất,
+    // 3 miền LỚN của Nhân Sự: localStorage chỉ giữ cache 1 tháng gần nhất,
     // toàn bộ dữ liệu ghi vào IndexedDB theo tháng (js/repo.js) — tránh đầy
     // localStorage (5–10 MB) và tránh ghi lại cả mảng mỗi lần nhận dữ liệu mây.
     try { localStorage.setItem(STORAGE_KEY_HR_ASSIGN, JSON.stringify(repo.healthy('hrAssignments') ? repo.cacheSlice(state.hrAssignments || [], repo.CACHE_MONTHS) : (state.hrAssignments || []))); } catch (e) {}

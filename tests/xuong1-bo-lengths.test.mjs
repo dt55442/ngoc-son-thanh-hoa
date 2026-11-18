@@ -260,7 +260,7 @@ check('Số cân sau sấy cũ không làm thay đổi tồn tính theo phiếu 
 firstFilter.lotAllocations[0].qtyDryAvailable = null;
 const firstDisplay = x1.x1ChainDisplay(spLT, firstFilter);
 check('Lịch sử truy vết được mã cả hai lô và lưu snapshot kích thước',
-  firstDisplay.lotCode === 'B1 + B2' && firstDisplay.sourceLots.length === 2 &&
+  firstDisplay.lotCode === 'SS-B1 + SS-B2' && firstDisplay.sourceLots.length === 2 &&
   firstFilter.lengths.includes(120));
 x1.renderX1CardOf(spLT.cardId);
 const historyHtml = g('x1-loc-thanh-day-cards').innerHTML;

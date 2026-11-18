@@ -2329,15 +2329,14 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     }));
     // ── 11/2026: CHIỀU DÀI Ở THẺ BỔ X1 (nút nổi — bấm ra ngoài tự ẩn qua X2_FLOAT_PAIRS) ──
     safeOn('x1-bo-lengths-btn', 'click', () => x1BoLengthsTogglePicker());
-    safeOn('btn-x1-bo-stage-prev', 'click', () => x1BoNavigateStage(-1));
     safeOn('btn-x1-bo-stage-next', 'click', () => x1BoNavigateStage(1));
+    safeOn('btn-x1-boc-stage-next', 'click', () => x1NavigateStage('x1-boc-card', 1));
     safeOn('btn-x1-lt-stage-prev', 'click', () => x1LocThanhNavigateStage(-1));
     safeOn('btn-x1-lt-stage-next', 'click', () => x1LocThanhNavigateStage(1));
     // ── NÚT TIẾN / LÙI CÁC THẺ X1 KHÁC (11/2026) ──
     safeOn('btn-x1-cat-ong-stage-prev', 'click', () => x1NavigateStage('x1-cat-ong-card', -1));
     safeOn('btn-x1-cat-ong-stage-next', 'click', () => x1NavigateStage('x1-cat-ong-card', 1));
-    safeOn('btn-x1-say-sinh-stage-prev', 'click', () => x1NavigateStage('x1-say-sinh-card', -1));
-    safeOn('btn-x1-say-sinh-stage-next', 'click', () => x1NavigateStage('x1-say-sinh-card', 1));
+    safeOn('btn-x1-say-sinh-stage-next-card', 'click', () => x1NavigateStage('x1-say-sinh-card', 1));
     safeOn('btn-x1-loc-ong-stage-prev', 'click', () => x1NavigateStage('x1-loc-ong-card', -1));
     safeOn('btn-x1-loc-ong-stage-next', 'click', () => x1NavigateStage('x1-loc-ong-card', 1));
     safeOn('btn-x1-cat-mat-stage-prev', 'click', () => x1NavigateStage('x1-cat-mat-card', -1));

@@ -7,6 +7,7 @@
 // history/main/capacity.
 'use strict';
 import fs from 'node:fs';
+import { mergeX1RecordsByTimestamp } from '../js/record-merge.js';
 
 // ─── Stubs môi trường (giống xuong2-boc-luong.test.mjs) ────────────
 function makeEl(id) {
@@ -426,6 +427,35 @@ check('F6: events.js wire 3 form + công tắc + ủy quyền sửa/xóa X1',
   eventsSrc.includes('data-x1-cat-ong-edit') &&
   eventsSrc.includes('data-x1-boc-delete') &&
   eventsSrc.includes("'btn-x1-rate-save', 'click'"));
+check('F6b: Bổ / Bốc / Lọc Ống / Cắt Mắt dùng 3 nút đồng bộ Làm Mới > Lưu > CĐ sau',
+  idxHtml.includes('id="btn-x1-bo-stage-next"') &&
+  idxHtml.includes('id="btn-x1-boc-stage-next"') &&
+  idxHtml.includes('id="btn-x1-loc-ong-stage-next"') &&
+  idxHtml.includes('id="btn-x1-cat-mat-stage-next"') &&
+  !idxHtml.includes('id="btn-x1-bo-stage-prev"') &&
+  !idxHtml.includes('id="btn-x1-loc-ong-stage-prev"') &&
+  !idxHtml.includes('id="btn-x1-cat-mat-stage-prev"') &&
+  idxHtml.includes('x1-bo-actions-bo') &&
+  idxHtml.includes('x1-boc-actions') &&
+  idxHtml.includes('x1-loc-ong-actions') &&
+  idxHtml.includes('x1-cat-mat-actions') &&
+  stylesCss.includes('repeat(3, minmax(0, 1fr))'));
+check('F6c: gộp bản ghi X1 trùng id không làm mất field schema cũ',
+  (() => {
+    const oldRecord = {
+      id: 'x1-merge-test', updatedAt: '2026-11-18T12:00:00.000Z',
+      qtyIn: 100, legacyLotCode: 'X1-CU', lotAllocations: [{ sourceId: 'lot-cu', qtyIn: 100 }]
+    };
+    const newRecord = {
+      id: 'x1-merge-test', updatedAt: '2026-11-18T13:00:00.000Z',
+      qtyIn: 125, matrixRows: [{ len: 50, width: 11, total: 125 }]
+    };
+    const merged = mergeX1RecordsByTimestamp([newRecord], [oldRecord])[0];
+    return merged.qtyIn === 125 &&
+      merged.legacyLotCode === 'X1-CU' &&
+      merged.lotAllocations[0].sourceId === 'lot-cu' &&
+      merged.matrixRows[0].total === 125;
+  })());
 check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa giờ sự cố',
   capSrc.includes("id: 'x1catong', ws: 'x1'") && capSrc.includes("id: 'x1saysinh', ws: 'x1'") &&
   capSrc.includes("id: 'x1boc', ws: 'x1'") && capSrc.includes("'x2-mini-spark-x1-cat-ong'") &&
@@ -433,7 +463,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v434/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v440/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công Đoạn SX</span>'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',

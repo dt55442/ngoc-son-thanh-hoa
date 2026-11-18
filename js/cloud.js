@@ -14,6 +14,7 @@ import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS } from './state.js';
 import { persistMonthlyDomain } from './monthly-domain.js';
 import { reportStorageFailure } from './storage-diagnostics.js';
 import { restoreMaterialRecords } from './storage.js';
+import { mergeX1RecordsByTimestamp } from './record-merge.js';
 import { captureAutoBackup, maybeWriteCloudBackup } from './autobackup.js';
 import { hideTreLoading, showTreLoading } from './loading.js'; // LOADING nông dân chặt tre — 2 nút mây THỦ CÔNG (auto push nền KHÔNG hiện — badge đã báo)
 import { applySysSettings, mergeSysSettings, normalizeSysSettings } from './sys-settings.js';
@@ -2040,6 +2041,19 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     const changedTomb = { flag: false };
     mergeTombstones(remote.deletedIds, changedTomb);
     const m = (mergeNewer || cloudDictWins) ? mergeById : (onlyAddMissing ? mergeAddMissing : mergeById);
+    const mx = (localArr, incomingArr) => {
+      const merged = mergeById(localArr, incomingArr);
+      return merged.map(record => {
+        if (!record || !record.id) return record;
+        const localRecord = (Array.isArray(localArr) ? localArr : []).find(r => r && r.id === record.id);
+        const incomingRecord = (Array.isArray(incomingArr) ? incomingArr : []).find(r => r && r.id === record.id);
+        if (!localRecord || !incomingRecord) return record;
+        const stampRecord = recCompare(incomingRecord, localRecord) >= 0 ? incomingRecord : localRecord;
+        const olderRecord = stampRecord === incomingRecord ? localRecord : incomingRecord;
+        const baseMerged = mergeX1RecordsByTimestamp([olderRecord], [stampRecord])[0];
+        return baseMerged && baseMerged.id ? baseMerged : record;
+      });
+    };
     // Lọc tombstone cả HAI phía: danh sách mây gửi về & danh sách đang có trên máy
     const clean = (colKey, arr) => applyTombstonesToRecordList(colKey, arr, changedTomb);
     if (remote.batches) state.batches = m(clean('batches', state.batches), clean('batches', remote.batches));
@@ -2107,9 +2121,9 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     // XƯỞNG 1 — 3 công đoạn đầu
     if (remote.xuong1CatOngRecords) state.xuong1CatOngRecords = m(clean('xuong1CatOngRecords', state.xuong1CatOngRecords || []), clean('xuong1CatOngRecords', remote.xuong1CatOngRecords));
     if (remote.xuong1SaySinhRecords) state.xuong1SaySinhRecords = m(clean('xuong1SaySinhRecords', state.xuong1SaySinhRecords || []), clean('xuong1SaySinhRecords', remote.xuong1SaySinhRecords));
-    if (remote.xuong1BocRecords) state.xuong1BocRecords = m(clean('xuong1BocRecords', state.xuong1BocRecords || []), clean('xuong1BocRecords', remote.xuong1BocRecords));
-    if (remote.xuong1LocOngRecords) state.xuong1LocOngRecords = m(clean('xuong1LocOngRecords', state.xuong1LocOngRecords || []), clean('xuong1LocOngRecords', remote.xuong1LocOngRecords));
-    if (remote.xuong1CatMatRecords) state.xuong1CatMatRecords = m(clean('xuong1CatMatRecords', state.xuong1CatMatRecords || []), clean('xuong1CatMatRecords', remote.xuong1CatMatRecords));
+    if (remote.xuong1BocRecords) state.xuong1BocRecords = mx(clean('xuong1BocRecords', state.xuong1BocRecords || []), clean('xuong1BocRecords', remote.xuong1BocRecords));
+    if (remote.xuong1LocOngRecords) state.xuong1LocOngRecords = mx(clean('xuong1LocOngRecords', state.xuong1LocOngRecords || []), clean('xuong1LocOngRecords', remote.xuong1LocOngRecords));
+    if (remote.xuong1CatMatRecords) state.xuong1CatMatRecords = mx(clean('xuong1CatMatRecords', state.xuong1CatMatRecords || []), clean('xuong1CatMatRecords', remote.xuong1CatMatRecords));
     if (remote.xuong1BoRecords) state.xuong1BoRecords = m(clean('xuong1BoRecords', state.xuong1BoRecords || []), clean('xuong1BoRecords', remote.xuong1BoRecords));
     if (remote.xuong1PhoiSayRecords) state.xuong1PhoiSayRecords = m(clean('xuong1PhoiSayRecords', state.xuong1PhoiSayRecords || []), clean('xuong1PhoiSayRecords', remote.xuong1PhoiSayRecords));
     if (remote.xuong1LocThanhRecords) state.xuong1LocThanhRecords = m(clean('xuong1LocThanhRecords', state.xuong1LocThanhRecords || []), clean('xuong1LocThanhRecords', remote.xuong1LocThanhRecords));

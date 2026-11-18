@@ -20,7 +20,7 @@ import { STORAGE_KEY_MATERIAL_RATES, STORAGE_KEY_PLANNING_ITEMS, STORAGE_KEY_PRE
 import { STORAGE_KEY_PRESS_INVENTORY_ADJUSTMENTS } from './state.js';
 // CÀI ĐẶT HỆ THỐNG (cờ hiển thị + quyền theo vùng) — chuẩn hoá khi nạp file/backup
 import { applySysSettings, normalizeSysSettings } from './sys-settings.js';
-import { mergeRecordsByTimestamp } from './record-merge.js';
+import { mergeRecordsByTimestamp, mergeX1RecordsByTimestamp } from './record-merge.js';
 import { persistMonthlyDomain } from './monthly-domain.js';
 import { reportStorageFailure } from './storage-diagnostics.js';
 import { SYNC_STATE_KEY } from './cloud.js';
@@ -258,7 +258,7 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
   // ── XƯỞNG 1: khôi phục nhật ký 3 công đoạn (GỘP, không ghi đè) ──
   function restoreX1Records(key, stateKey, incomingArr) {
     const before = JSON.stringify(state[stateKey] || []);
-    const merged = mergeXuong2Records(state[stateKey], incomingArr);
+    const merged = mergeX1RecordsByTimestamp(incomingArr, state[stateKey] || []);
     state[stateKey] = merged;
     try { localStorage.setItem(key, JSON.stringify(merged)); } catch (err) {}
     if (JSON.stringify(merged) !== before && state.fileStorage.connected) {

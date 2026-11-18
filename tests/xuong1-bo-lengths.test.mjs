@@ -198,6 +198,17 @@ check('Ma trận 2 cấp: đủ 12 kích thước, mỗi kích thước có dả
   !matrixBox.innerHTML.includes('<option') &&
   matrixBox.innerHTML.includes('— chọn bản rộng') &&
   matrixBox.innerHTML.includes('120 mm') && !matrixBox.innerHTML.includes('20 ly'));
+g('x1-loc-thanh-mode').value = 'bo-xo';
+x1.syncX1LocThanhMode();
+x1.x1LtToggleWidth(50, 11);
+check('Bó xô dùng ma trận kích thước/bản rộng nhưng chỉ còn hai cột khối lượng',
+  matrixBox.innerHTML.includes('KL Bó') && matrixBox.innerHTML.includes('KL Loại') &&
+  !matrixBox.innerHTML.includes('>A1<') && !matrixBox.innerHTML.includes('Bánh tẻ') &&
+  matrixBox.innerHTML.includes('data-x1-lt-c="bo"') &&
+  matrixBox.innerHTML.includes('data-x1-lt-c="loai"'));
+x1.x1LtToggleWidth(50, 11);
+g('x1-loc-thanh-mode').value = 'loc-thanh';
+x1.syncX1LocThanhMode();
 check('Events + CSS nối chip bản rộng 2 cấp; đã bỏ wiring picker bản rộng Bổ và ô select cũ',
   eventsSrc.includes('x1LtToggleWidth') && !eventsSrc.includes('x1-bo-widths-btn') &&
   !eventsSrc.includes('data-x1-lt-row-width') && stylesCss.includes('.x1-lt-wchip'));
@@ -278,14 +289,17 @@ check('P2. Chi tiết từng (bản rộng · kích thước) nằm trong detail
   historyHtml.includes('11 ly · 50 mm') && historyHtml.includes('15 ly · 50 mm'));
 const ltStart = idxHtml.indexOf('id="x1-loc-thanh-form"');
 const ltFormHtml = idxHtml.slice(ltStart, idxHtml.indexOf('</form>', ltStart) + 7);
-check('P3. Cấu trúc 3 nút Làm Mới > Lưu > CĐ sau (bỏ nút Lùi) + CSS 3 màu + mũi tên',
+check('P3. Cấu trúc 3 nút Làm Mới > Lưu > CĐ sau (bỏ nút Lùi) + CSS 3 màu + icon điều hướng',
   ltFormHtml.indexOf('id="btn-cancel-x1-loc-thanh"') < ltFormHtml.indexOf('x1-stage-save') &&
   ltFormHtml.indexOf('x1-stage-save') < ltFormHtml.indexOf('id="btn-x1-lt-stage-next"') &&
   !idxHtml.includes('id="btn-x1-lt-stage-prev"') &&
   idxHtml.includes('x1-stage-next-arrow') && idxHtml.includes('<strong>CĐ sau</strong>') &&
-  eventsSrc.includes("safeOn('btn-x1-lt-stage-prev'") &&
-  stylesCss.includes('.x1-stage-next-arrow') && stylesCss.includes('#d97706') && stylesCss.includes('#16a34a') &&
-  stylesCss.includes("border-left: 15px solid #7c3aed"));
+  idxHtml.includes('data-lucide="arrow-right"') &&
+  eventsSrc.includes("safeOn('btn-x1-lt-stage-next'") &&
+  stylesCss.includes('.x1-stage-next-arrow') && stylesCss.includes('#78350f') &&
+  stylesCss.includes('#15803d') && stylesCss.includes('#eff6ff') &&
+  stylesCss.includes('#1e40af') && stylesCss.includes('text-shadow: none') &&
+  stylesCss.includes('repeat(3, minmax(0, 1fr))'));
 
 
 setAllocationRows([]);
@@ -296,11 +310,15 @@ g('x1-loc-thanh-mode').value = 'bo-xo';
 g('x1-loc-thanh-date').value = '2026-11-06';
 g('x1-loc-thanh-ok').value = '10';
 g('x1-loc-thanh-loai').value = '0';
+setMatrixCells([fakeMatrixCell(11, 50, 'bo', 10)]);
 x1.handleX1ChainSubmit(spLT, saveEvent());
 check('Cho lưu kg lọc mà không cần cân sau sấy hoặc giải trình',
   state.xuong1LocThanhRecords.length === 2 &&
   state.xuong1LocThanhRecords[1].lotAllocations[0].qtyIn === 10 &&
-  state.xuong1LocThanhRecords[1].lotAllocations[0].qtyDryAvailable == null);
+  state.xuong1LocThanhRecords[1].lotAllocations[0].qtyDryAvailable == null &&
+  state.xuong1LocThanhRecords[1].matrixRows[0].weights.bo === 10 &&
+  state.xuong1LocThanhRecords[1].matrixRows[0].width === 11 &&
+  state.xuong1LocThanhRecords[1].matrixRows[0].len === 50);
 
 setAllocationRows([]);
 x1.x1LtAddSource(bo1.id);
@@ -309,6 +327,7 @@ g('x1-loc-thanh-mode').value = 'bo-xo';
 g('x1-loc-thanh-date').value = '2026-11-07';
 g('x1-loc-thanh-ok').value = '20';
 g('x1-loc-thanh-loai').value = '0';
+setMatrixCells([fakeMatrixCell(15, 50, 'bo', 15), fakeMatrixCell(15, 50, 'loai', 5)]);
 x1.handleX1ChainSubmit(spLT, saveEvent());
 check('Lưu lượt Bó Xô có chênh kg mà không cần giải trình',
   state.xuong1LocThanhRecords.length === 3 &&
@@ -321,6 +340,8 @@ const warehouse = x1.x1WarehouseStockSummary();
 check('Kho Nan nhóm theo bản rộng × chiều dài, giữ số liệu phân loại để tham khảo',
   warehouse.matrixRows.some(row => row.width === 11 && row.len === 50 &&
     row.values['A'] === 40) &&
+  warehouse.matrixRows.some(row => row.width === 15 && row.len === 50 &&
+    row.values['Bó xô'] === 15) &&
   warehouse.matrixKinds.some(kind => kind.label === 'A'));
 x1.renderX1CardOf('x1-kho-card');
 check('Giao diện Kho Nan: vùng 2 là lịch sử xuất kho (ma trận đã gỡ)',
@@ -333,7 +354,9 @@ const exportText = JSON.stringify(exportData && exportData.aoa || []);
 check('Excel có mã lô, kg lọc và cột chênh kg',
   exportText.includes('B1') && exportText.includes('B2') &&
   exportText.includes('Nguồn theo lô / kg lấy') &&
-  exportText.includes('KL Chênh (kg)'));
+  exportText.includes('KL Chênh (kg)') &&
+  exportText.includes('KL Bó') &&
+  exportText.includes('KL Loại'));
 
 console.log('--- MIGRATE DỮ LIỆU PHÂN LOẠI CŨ (6mm / 13mm) ---');
 const legacyRec = {
@@ -360,6 +383,8 @@ check('Ma trận cũ sau migrate vẫn vào Kho Nan đúng nhóm A/A1/B (tồn k
   })());
 
 console.log('--- N. BẬT/TẮT CHIP BẢN RỘNG (14/11/2026 — sửa lỗi bấm chip không ăn) ---');
+g('x1-loc-thanh-mode').value = 'loc-thanh';
+x1.syncX1LocThanhMode();
 x1.renderX1LtMatrix();
 check('N1. Ma trận mới trống: đủ 60 chip, chưa có dòng nhập nào',
   (matrixBox.innerHTML.match(/data-x1-lt-chip=/g) || []).length === 60 &&

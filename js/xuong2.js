@@ -17646,6 +17646,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     { id: 'bnont', label: 'B',           short: 'B' },
     { id: 'loai',  label: 'Loại',        short: 'Loại' }
   ];
+  const X1_BO_XO_CLASSES = [
+    { id: 'bo',   label: 'KL Bó',   short: 'KL Bó' },
+    { id: 'loai', label: 'KL Loại', short: 'KL Loại' }
+  ];
   // BẢN RỘNG chọn TẠI MA TRẬN (mỗi dòng kích thước 1 ô chọn) — KHÔNG còn ở thẻ Bổ
   const X1_LT_WIDTH_DEFAULTS = [6, 11, 13, 15, 21];
   // Chuyển 1 bộ giá trị phân loại CŨ sang phân loại mới — idempotent (không còn d6/d13 thì nguyên vẹn)
@@ -17705,6 +17709,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!box || typeof box.querySelectorAll !== 'function') return [];
     const inputs = box.querySelectorAll('input[data-x1-lt-c]');
     if (!inputs || !inputs.length) return [];
+    const mode = x1LocThanhModeOf();
+    const classes = mode === 'bo-xo' ? X1_BO_XO_CLASSES : X1_LT_CLASSES;
     const map = new Map();
     Array.prototype.forEach.call(inputs, inp => {
       const get = inp.getAttribute ? key => inp.getAttribute(key) : null;
@@ -17714,7 +17720,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const cls = get('data-x1-lt-c');
       const value = Math.max(0, Number(inp.value) || 0);
       if (width == null || !Number.isFinite(len) || len <= 0 ||
-          !X1_LT_CLASSES.some(c => c.id === cls) || value <= 0) return;
+          !classes.some(c => c.id === cls) || value <= 0) return;
       const key = `${width}|${len}`;
       if (!map.has(key)) map.set(key, { width, len, weights: {} });
       map.get(key).weights[cls] = (map.get(key).weights[cls] || 0) + value;
@@ -17725,12 +17731,16 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function x1LtMatrixRead() {
     const rows = ltMatrixLegacyUi ? x1LtCountsFromDom() : x1LtWeightsFromDom();
     if (!rows.length) return null;
+    const boXo = x1LocThanhModeOf() === 'bo-xo';
+    const classes = boXo ? X1_BO_XO_CLASSES : X1_LT_CLASSES;
     let ok = 0, loai = 0;
     rows.forEach(r => {
-      X1_LT_CLASSES.forEach(c => {
+      classes.forEach(c => {
         const values = ltMatrixLegacyUi ? r.counts : r.weights;
         const v = Number(values[c.id]) || 0;
-        if (c.id === 'loai') loai += v; else ok += v;
+        if (c.id === 'loai') loai += v;
+        else if (boXo && c.id === 'bo') ok += v;
+        else if (!boXo) ok += v;
       });
     });
     return {
@@ -17846,6 +17856,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       // Chỉ giữ dòng thuộc bản rộng ĐANG BẬT — dòng vừa tắt (đã xác nhận) bị bỏ khỏi ma trận
       current = current.filter(r => ltWidthActive.has(`${r.len}|${r.width}`));
     }
+    const boXo = x1LocThanhModeOf() === 'bo-xo';
+    const matrixClasses = boXo ? X1_BO_XO_CLASSES : X1_LT_CLASSES;
     // Gom theo KÍCH THƯỚC → BẢN RỘNG (cộng trùng khóa phòng dữ liệu cũ trùng dòng)
     const byLen = new Map();
     current.forEach(row => {
@@ -17853,7 +17865,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const wMap = byLen.get(row.len);
       if (!wMap.has(row.width)) wMap.set(row.width, {});
       const w = wMap.get(row.width);
-      X1_LT_CLASSES.forEach(c => { w[c.id] = (Number(w[c.id]) || 0) + (Number(row.weights && row.weights[c.id]) || 0); });
+      matrixClasses.forEach(c => { w[c.id] = (Number(w[c.id]) || 0) + (Number(row.weights && row.weights[c.id]) || 0); });
     });
     // Kích thước đang BẬT chip (kể cả chưa nhập số) — phải hiện dòng nhập trống
     const activeByLen = new Map();
@@ -17867,17 +17879,17 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     });
     const lengths = [...new Set([...x1LocThanhLengthsForForm(), ...byLen.keys(), ...activeByLen.keys()])].sort((a, b) => a - b);
     const widths = [...new Set([...X1_LT_WIDTH_DEFAULTS, ...current.map(r => r.width)])].sort((a, b) => a - b);
-    const head = `<tr><th rowspan="2">Kích thước dài</th><th rowspan="2" title="Bản rộng (ly)">Bản rộng</th><th colspan="${X1_LT_CLASSES.length}">Khối lượng (kg)</th><th rowspan="2">Tổng (kg)</th></tr><tr>${X1_LT_CLASSES.map(c => `<th title="${escapeHTML(c.label)}">${escapeHTML(c.short)}</th>`).join('')}</tr>`;
+    const head = `<tr><th rowspan="2">Kích thước dài</th><th rowspan="2" title="Bản rộng (ly)">Bản rộng</th><th colspan="${matrixClasses.length}">Khối lượng (kg)</th><th rowspan="2">Tổng (kg)</th></tr><tr>${matrixClasses.map(c => `<th title="${escapeHTML(c.label)}">${escapeHTML(c.short)}</th>`).join('')}</tr>`;
     const body = lengths.map(len => {
       const wMap = byLen.get(len) || new Map();
       const actives = [...new Set([...wMap.keys(), ...(activeByLen.get(len) || [])])].sort((a, b) => a - b);
       if (!actives.length) {
-        return `<tr class="x1-lt-group-row"><td class="x1-lt-len-cell">${x1LtLenCellHtml(len, actives, widths)}</td><td colspan="${X1_LT_CLASSES.length + 1}" class="x1-lt-none">— chọn bản rộng (bấm chip phía trên) —</td></tr>`;
+        return `<tr class="x1-lt-group-row"><td class="x1-lt-len-cell">${x1LtLenCellHtml(len, actives, widths)}</td><td colspan="${matrixClasses.length + 1}" class="x1-lt-none">— chọn bản rộng (bấm chip phía trên) —</td></tr>`;
       }
       return actives.map((w, i) => {
         const weights = wMap.get(w) || {};
-        const total = X1_LT_CLASSES.reduce((sum, c) => sum + (Number(weights[c.id]) || 0), 0);
-        const cells = X1_LT_CLASSES.map(c =>
+        const total = matrixClasses.reduce((sum, c) => sum + (Number(weights[c.id]) || 0), 0);
+        const cells = matrixClasses.map(c =>
           `<td class="x1-lt-cell" data-label="${escapeHTML(c.short)}"><input type="number" inputmode="decimal" min="0" step="any" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-width="${w}" data-x1-lt-len="${len}" value="${weights[c.id] ? weights[c.id] : ''}" title="${escapeHTML(c.label)} — kg"></td>`).join('');
         return `<tr class="x1-lt-group-row">` +
           (i === 0 ? `<td class="x1-lt-len-cell" rowspan="${actives.length}">${x1LtLenCellHtml(len, actives, widths)}</td>` : '') +
@@ -17939,6 +17951,40 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const matrixRows = d.matrixRows || [];
     if (matrixRows.length) {
       const isKg = matrixRows.every(row => row.weights);
+      if (d.mode === 'bo-xo' && isKg) {
+        const byDimension = new Map();
+        const byWidth = new Map();
+        matrixRows.forEach(row => {
+          const width = Number(row.width) || 0;
+          const len = Number(row.len) || 0;
+          const values = row.weights || {};
+          const bo = Math.max(0, Number(values.bo) || 0);
+          const loai = Math.max(0, Number(values.loai) || 0);
+          if (!len || (bo <= 0 && loai <= 0)) return;
+          const key = `${width}|${len}`;
+          const current = byDimension.get(key) || { width, len, bo: 0, loai: 0 };
+          current.bo += bo;
+          current.loai += loai;
+          byDimension.set(key, current);
+          if (width > 0) {
+            const widthTotal = byWidth.get(width) || { bo: 0, loai: 0 };
+            widthTotal.bo += bo;
+            widthTotal.loai += loai;
+            byWidth.set(width, widthTotal);
+          }
+        });
+        const items = [...byDimension.values()].sort((a, b) => a.width - b.width || a.len - b.len);
+        if (!items.length) return '<div class="x1-lt-dimension-summary">Chưa nhập khối lượng theo kích thước.</div>';
+        const detailHtml = items.map(item =>
+          `<span><strong>${item.width ? `${item.width} ly · ` : ''}${item.len} mm</strong>: ${fmtKg(item.bo)} kg bó${item.loai > 0 ? ` · ${fmtKg(item.loai)} kg loại` : ''}</span>`
+        ).join(' · ');
+        const widthHtml = [...byWidth.entries()].sort((a, b) => a[0] - b[0]).map(([width, total]) =>
+          `<span><strong>${width} ly</strong>: ${fmtKg(total.bo)} kg bó${total.loai > 0 ? ` · ${fmtKg(total.loai)} kg loại` : ''}</span>`
+        ).join(' · ');
+        return `<div class="x1-lt-dimension-summary">${x1LtMatChipHtml(d.srcType)}${widthHtml}
+          <details class="x1-lt-dim-full"><summary>Chi tiết</summary><div class="x1-lt-dim-full-body">${detailHtml}</div></details>
+        </div>`;
+      }
       const byDimension = new Map();
       matrixRows.forEach(row => {
         const width = Number(row.width) || 0;
@@ -18049,6 +18095,13 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       (state.xuong1LocThanhRecords || []).forEach(record => {
         const display = x1ChainDisplay(spec, record);
         if (display.mode === 'bo-xo') {
+          if (display.matrixRows && display.matrixRows.some(row => row.weights)) {
+            display.matrixRows.forEach(row => {
+              const bo = Number(row.weights && row.weights.bo) || 0;
+              if (bo > 0) add(record, display, 'Bó xô', row.width, row.len, bo, 'kg');
+            });
+            return;
+          }
           add(record, display, 'Bó xô', 0, 0, display.qtyOk, 'kg');
           return;
         }
@@ -18114,7 +18167,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     // Ma trận tồn hiển thị số CÒN LẠI (sau trừ xuất) — khớp chip "Tồn" + thẻ KPI
     const matrixMap = new Map();
     groups.filter(item => item.width > 0 && item.len > 0 &&
-      matrixKinds.some(kind => kind.label === item.kind)).forEach(item => {
+      (matrixKinds.some(kind => kind.label === item.kind) || item.kind === 'Bó xô')).forEach(item => {
       const key = `${item.unit}|${item.material}|${item.width}|${item.len}`;
       const row = matrixMap.get(key) || {
         unit: item.unit, material: item.material, width: item.width, len: item.len, values: {}
@@ -18126,7 +18179,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       (a.material || '').localeCompare(b.material || '', 'vi') || a.width - b.width ||
       a.len - b.len || a.unit.localeCompare(b.unit));
     const otherGroups = groups.filter(item => !item.width || !item.len ||
-      !matrixKinds.some(kind => kind.label === item.kind));
+      (!matrixKinds.some(kind => kind.label === item.kind) && item.kind !== 'Bó xô'));
     // Tổng tính từ NHÓM SAU TRỪ XUẤT (trước đây tính từ items gốc ⇒ chip "Tồn" không giảm)
     const totalKg = groups.reduce((sum, item) => sum + (item.unit === 'kg' ? item.qty : 0), 0);
     const locThanhKg = groups.reduce((sum, item) => sum + (item.unit === 'kg' && item.kind !== 'Bó xô' ? item.qty : 0), 0);
@@ -18471,23 +18524,31 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return rows;
   }
   function syncX1LocThanhMode() {
-    const locThanh = x1LocThanhModeOf() === 'loc-thanh';
+    const mode = x1LocThanhModeOf();
+    const locThanh = mode === 'loc-thanh';
+    const boXo = mode === 'bo-xo';
     const wrap = document.getElementById('x1-loc-thanh-length-wrap');
     const okRow = document.getElementById('x1-loc-thanh-okrow');
-    if (wrap) { wrap.hidden = !locThanh; wrap.style.display = locThanh ? '' : 'none'; }
+    const matrixTitle = document.getElementById('x1-loc-thanh-matrix-title');
+    const matrixNote = document.getElementById('x1-loc-thanh-matrix-note');
+    if (wrap) { wrap.hidden = !(locThanh || boXo); wrap.style.display = (locThanh || boXo) ? '' : 'none'; }
+    if (matrixTitle) matrixTitle.textContent = locThanh ? 'Ma trận khối lượng lọc thanh' : 'Ma trận khối lượng bó xô';
+    if (matrixNote) matrixNote.textContent = locThanh
+      ? 'Mỗi kích thước bật được 0/1/nhiều bản rộng (6/11/13/15/21 ly) — nhập khối lượng theo từng phân loại.'
+      : 'Mỗi kích thước bật được 0/1/nhiều bản rộng (6/11/13/15/21 ly) — chỉ nhập KL Bó và KL Loại.';
     if (okRow) {
-      okRow.hidden = locThanh; okRow.style.display = locThanh ? 'none' : '';
-      // Nhánh ma trận không dùng KL thành phẩm/loại — xoá số cũ kẹt trong ô ẩn để không sai kiểm tra khi lưu
+      okRow.hidden = locThanh || boXo; okRow.style.display = (locThanh || boXo) ? 'none' : '';
+      // Nhánh ma trận không nhập KL thành phẩm/loại ở ô tổng — xoá số cũ kẹt khi chuyển sang Lọc thanh
       if (locThanh) {
         const o = document.getElementById('x1-loc-thanh-ok'), l = document.getElementById('x1-loc-thanh-loai');
         if (o) o.value = ''; if (l) l.value = '';
       }
     }
-    if (locThanh) {
-      // Sửa lượt CŨ dạng kg (lengthRows) → giữ giao diện dòng kg; còn lại (lượt mới/lượt ma trận) → MA TRẬN
+    if (locThanh || boXo) {
+      // Sửa lượt Lọc thanh cũ dạng kg (lengthRows) → giữ giao diện dòng kg; các lượt ma trận mới → MA TRẬN
       const editId = state.x1LocThanhEditId || null;
       const rec = editId ? (state.xuong1LocThanhRecords || []).find(r => r.id === editId) : null;
-      if (rec && Array.isArray(rec.lengthRows) && rec.lengthRows.length && !Array.isArray(rec.matrixRows)) {
+      if (locThanh && rec && Array.isArray(rec.lengthRows) && rec.lengthRows.length && !Array.isArray(rec.matrixRows)) {
         renderX1LocThanhLengthRows(rec.lengthRows);
       } else {
         renderX1LtMatrix(rec && Array.isArray(rec.matrixRows) ? rec.matrixRows : undefined);
@@ -18828,19 +18889,20 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         return !!row && allocation.qtyIn <= x1LocThanhPotentialOfBo(row, editId) + 1e-9;
       });
       const inputColor = !allocationsWithinAvailable || qtyIn > available + 1e-9 ? '#dc2626' : 'inherit';
-      if (x1LocThanhModeOf() === 'loc-thanh' && ltMatrixUi) {
+      if ((x1LocThanhModeOf() === 'loc-thanh' || x1LocThanhModeOf() === 'bo-xo') && ltMatrixUi) {
         x1LtRefreshRowTotals();
         const m = x1LtMatrixRead();
         const isKg = !m || m.unit === 'kg';
         const total = m ? m.total : 0;
+        const boXo = x1LocThanhModeOf() === 'bo-xo';
         box.innerHTML = `
-          <strong class="x1-lt-calc-primary">${isKg ? 'Tổng khối lượng theo bản rộng × kích thước' : 'Tổng số lượng dữ liệu cũ'}:
+          <strong class="x1-lt-calc-primary">${isKg ? (boXo ? 'Tổng khối lượng bó xô theo bản rộng × kích thước' : 'Tổng khối lượng theo bản rộng × kích thước') : 'Tổng số lượng dữ liệu cũ'}:
             ${isKg ? `${fmtKg(total)} kg` : total}</strong>
           ${isKg && total > qtyIn + 1e-9 ? '<span class="x1-lt-calc-warning">Tổng khối lượng vượt kg đem lọc.</span>' : ''}
           ${!allocationsWithinAvailable ? '<span class="x1-lt-calc-warning">Kg lấy lọc vượt phần còn lại theo phiếu Bổ.</span>' : ''}
           <details class="x1-lt-reference"><summary>Đối chiếu đầu vào</summary><div class="x1-lt-reference-body">
             <div>${sourceData.allocations.length} lô · Còn theo phiếu Bổ ${fmtKg(available)} kg · Đem lọc <span style="color:${inputColor};">${fmtKg(qtyIn)} kg</span></div>
-            <div>Đạt ${isKg ? `${fmtKg(m ? m.ok : 0)} kg` : `${m ? m.ok : 0} SL`} · Loại ${isKg ? `${fmtKg(m ? m.loai : 0)} kg` : `${m ? m.loai : 0} SL`}</div>
+            <div>${boXo ? 'KL Bó' : 'Đạt'} ${isKg ? `${fmtKg(m ? m.ok : 0)} kg` : `${m ? m.ok : 0} SL`} · ${boXo ? 'KL Loại' : 'Loại'} ${isKg ? `${fmtKg(m ? m.loai : 0)} kg` : `${m ? m.loai : 0} SL`}</div>
           </div></details>`;
         return;
       }
@@ -18871,11 +18933,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const m = x1LtMatrixRead();
       const isKg = !m || m.unit === 'kg';
       const total = m ? m.total : 0;
+      const boXo = x1LocThanhModeOf() === 'bo-xo';
       box.innerHTML = `
         <span>Còn lại của nguồn: <strong>${fmtKg(rest)} kg</strong></span>
         <span>Đem lọc: <strong style="color:${qtyIn > rest + 1e-9 ? '#dc2626' : 'inherit'};">${fmtKg(qtyIn)} kg</strong></span>
         <span>${isKg ? 'Tổng khối lượng' : 'Tổng số lượng cũ'}: <strong>${isKg ? `${fmtKg(total)} kg` : total}</strong></span>
-        <span>Đạt: <strong style="color:#16a34a;">${isKg ? `${fmtKg(m ? m.ok : 0)} kg` : (m ? m.ok : 0)}</strong> · Loại: <strong style="color:#dc2626;">${isKg ? `${fmtKg(m ? m.loai : 0)} kg` : (m ? m.loai : 0)}</strong></span>
+        <span>${boXo ? 'KL Bó' : 'Đạt'}: <strong style="color:#16a34a;">${isKg ? `${fmtKg(m ? m.ok : 0)} kg` : (m ? m.ok : 0)}</strong> · ${boXo ? 'KL Loại' : 'Loại'}: <strong style="color:#dc2626;">${isKg ? `${fmtKg(m ? m.loai : 0)} kg` : (m ? m.loai : 0)}</strong></span>
         ${isKg && total > qtyIn + 1e-9 ? '<span style="color:#dc2626;">Tổng khối lượng vượt KL đem lọc</span>' : ''}`;
       return;
     }
@@ -18917,7 +18980,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const qtyLoai = spec.key === 'bo' ? 0 : val(x1Id(spec, 'loai'));
     if (qtyIn <= 0) { showToast(`${spec.inLabel} phải lớn hơn 0!`, 'error'); return; }
     if (qtyIn < 0 || qtyOk < 0 || qtyLoai < 0) { showToast('Các khối lượng phải là số không âm!', 'error'); return; }
-    const ltMatrixMode = spec.key === 'locThanh' && x1LocThanhModeOf() === 'loc-thanh' && ltMatrixUi;
+    const editId = state[spec.editKey] || null;
+    const existing = (state[spec.stateKey] || []).find(r => r.id === editId);
+    const ltMatrixMode = spec.key === 'locThanh' && ltMatrixUi &&
+      (x1LocThanhModeOf() === 'loc-thanh' || x1LocThanhModeOf() === 'bo-xo');
     let ltMatrixData = null;
     if (ltMatrixMode) {
       ltMatrixData = x1LtMatrixRead();
@@ -18926,7 +18992,19 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           showToast('Ma trận lọc thanh cũ trống — nhập ít nhất một số lượng!', 'error');
           return;
         }
-        ltMatrixData = { unit: 'kg', rows: [], ok: 0, loai: 0, total: 0 };
+        if (x1LocThanhModeOf() === 'bo-xo' && existing && existing.mode === 'bo-xo' &&
+            (!Array.isArray(existing.matrixRows) || !existing.matrixRows.length)) {
+          const legacyOk = Number(existing.qtyOk) || 0;
+          const legacyLoai = Number(existing.qtyLoai) || 0;
+          ltMatrixData = { unit: 'kg', rows: [], ok: legacyOk, loai: legacyLoai, total: legacyOk + legacyLoai };
+        } else {
+          ltMatrixData = { unit: 'kg', rows: [], ok: 0, loai: 0, total: 0 };
+        }
+      }
+      if (x1LocThanhModeOf() === 'bo-xo' && ltMatrixData.rows.length === 0 &&
+          ltMatrixData.total <= 0) {
+        showToast('Bó xô cần nhập ít nhất KL Bó hoặc KL Loại theo kích thước/bản rộng!', 'error');
+        return;
       }
       if (ltMatrixData.unit === 'kg' && ltMatrixData.total > qtyIn + 1e-9) {
         showToast(`Tổng khối lượng ma trận (${fmtKg(ltMatrixData.total)} kg) vượt KL đem lọc (${fmtKg(qtyIn)} kg)!`, 'error');
@@ -18937,7 +19015,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       showToast(`${spec.okLabel} (${fmtKg(qtyOk)}) + ${spec.loaiLabel} (${fmtKg(qtyLoai)}) vượt ${spec.inLabel} (${fmtKg(qtyIn)}) — kiểm tra lại!`, 'error');
       return;
     }
-    const editId = state[spec.editKey] || null;
     const rest = x1ChainRemainingOf(spec, src, editId);
     let locThanhAllocations = null;
     if (spec.key === 'locThanh') {
@@ -18992,7 +19069,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       return;
     }
     const noteEl = document.getElementById(x1Id(spec, 'note'));
-    const existing = (state[spec.stateKey] || []).find(r => r.id === state[spec.editKey]);
     const note = noteEl ? (noteEl.value || '').trim()
       : ((spec.key === 'bo' || spec.key === 'locThanh') && existing ? existing.note || '' : '');
     const snap = x1Snapshot(dateVal, hrX1AssignmentsAt(dateVal, spec.posMatch));
@@ -19042,6 +19118,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         payload.qtyOk = sumKg; // KL thành phẩm = tổng các dòng chiều dài
         payload.matrixRows = null;
         outputTotal = sumKg;
+      } else if (mode === 'bo-xo' && ltMatrixMode && ltMatrixData) {
+        payload.matrixRows = ltMatrixData.rows.length ? ltMatrixData.rows : null;
+        payload.lengthRows = null;
+        payload.qtyOk = ltMatrixData.ok;
+        payload.qtyLoai = ltMatrixData.loai;
+        outputTotal = ltMatrixData.total;
       } else {
         payload.lengthRows = null;
         payload.matrixRows = null;

@@ -186,7 +186,7 @@ check('H5: khối CSS .sa-* đặt CUỐI file + depth 0 (không lọt vào @med
   && css.slice(cssAt).includes('.sa-act-btn'));
 const swVer = /nha-may-ngoc-son-v(\d+)/.exec(sw);
 const appVer = /APP_VERSION = 'v(\d+)'/.exec(stateSrc);
-check('H6: cache sw.js khớp APP_VERSION (v434)', swVer && appVer && swVer[1] === appVer[1] && swVer[1] === '434');
+check('H6: cache sw.js khớp APP_VERSION (v440)', swVer && appVer && swVer[1] === appVer[1] && swVer[1] === '440');
 
 console.log('\n───────────────────────────');
 console.log('STORAGE-AUDIT: ' + pass + ' PASS, ' + fail + ' FAIL');

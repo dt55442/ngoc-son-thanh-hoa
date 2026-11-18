@@ -327,7 +327,7 @@ check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ côn
   expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
   expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
   !expSrc.includes("'Ngày Đạt'"));
-check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v434/.test(swSrc));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v440/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
 check('F7: KPI Vùng ② Thống Kê ĐÃ GỠ khỏi thẻ Sấy Sinh (tổng hợp ở bảng toàn xưởng sau)',
   !idxHtml.includes('id="x1-say-sinh-stats"') && !xuong2Src.includes('renderX1SaySinhStats') &&
@@ -455,11 +455,19 @@ check('G27: chuyển lại THẺ LÔ — ghi máy + render lại thẻ',
   document.getElementById('x1-say-sinh-day-cards').innerHTML.includes('x1-ss-lot-card'));
 
 console.log('--- H. 2 NÚT TO + POPUP NHẬP LIỆU + BANNER CẢNH BÁO + THU GỌN MOBILE ---');
-check('H1: 2 nút to trong VÙNG ① + pop-up cấp trang chứa form (modal trước form)',
+check('H1: 2 nút gọi form + CĐ sau trong VÙNG ① + pop-up cấp trang chứa form (modal trước form)',
   idxHtml.includes('id="btn-x1-ss-new"') && idxHtml.includes('id="btn-x1-ss-repeat"') &&
+  idxHtml.includes('id="btn-x1-say-sinh-stage-next-card"') &&
   idxHtml.includes('x1-ss-input-btns') && idxHtml.includes('id="modal-x1-ss-input"') &&
   idxHtml.indexOf('id="modal-x1-ss-input"') < idxHtml.indexOf('id="x1-say-sinh-form"') &&
   idxHtml.includes('id="x1-ss-src-group"') && idxHtml.includes('id="x1-ss-repeat-group"'));
+const saySinhModalStart = idxHtml.indexOf('id="modal-x1-ss-input"');
+const saySinhModalHtml = idxHtml.slice(saySinhModalStart, idxHtml.indexOf('</body>', saySinhModalStart));
+check('H1b: form Sấy Sinh chỉ giữ Làm Mới + Lưu, bỏ nút Lùi/Tiến',
+  saySinhModalHtml.includes('id="btn-cancel-x1-say-sinh"') &&
+  saySinhModalHtml.includes('x1-stage-save') &&
+  !saySinhModalHtml.includes('btn-x1-say-sinh-stage-prev') &&
+  !saySinhModalHtml.includes('id="btn-x1-say-sinh-stage-next"'));
 check('H2: banner cảnh báo render (quá hạn + đã Đạt chờ Bốc) + đếm', (() => {
   state.xuong1SaySinhRecords = [
     rec('al-over', isoAgo(3), { code: 'VOVER', cycles: [{ date: isoAgo(3), sulfurQty: 1.3, hour: '08:00' }] }),
@@ -501,14 +509,20 @@ check('H5: thu gọn dòng thời gian — nút toggle đổi trạng thái th�
   const after = card.classList.contains('is-closed');
   return !!card.querySelector('.x1-ss-tl-toggle') && after === !before;
 })());
-check('H6: events.js wire đủ (2 nút + banner + toggle + pop-up/Esc)',
+check('H6: events.js wire đủ (2 nút gọi form + CĐ sau + banner + toggle + pop-up/Esc)',
   evSrc.includes("'btn-x1-ss-new'") && evSrc.includes("'btn-x1-ss-repeat'") &&
+  evSrc.includes("'btn-x1-say-sinh-stage-next-card'") &&
   evSrc.includes("'x1-ss-alert-banner'") && evSrc.includes('[data-x1-ss-toggle]') &&
   evSrc.includes("'modal-x1-ss-input'") && evSrc.includes('x1SsOpenInputModal'));
 check('H7: CSS banner (chạy chữ) + nút to + thu gọn + mobile gọn',
   cssSrc.includes('.x1-ss-alert-banner') && cssSrc.includes('x1SsMarquee') &&
   cssSrc.includes('.x1-ss-input-btn') && cssSrc.includes('.x1-ss-lot-card.is-closed .x1-ss-timeline') &&
-  cssSrc.includes('.x1-ss-input-btns { flex-direction: column'));
+  cssSrc.includes('grid-template-columns: repeat(3, minmax(0, 1fr))') &&
+  cssSrc.includes('#btn-x1-say-sinh-stage-next-card') &&
+  cssSrc.includes('Đổ màu đầy cho các thẻ Xưởng 1') &&
+  cssSrc.includes('.x1-bo-actions:not(.cat-ong)') &&
+  cssSrc.includes('repeat(2, minmax(0, 1fr))') &&
+  idxHtml.includes('x1-boc-actions'));
 check('H8: panel nhắc lô có dòng ⏰ Lần kế tiếp + chip lý do',
   xuong2Src.includes('x1-ss-ready-when') && xuong2Src.includes('x1-ss-alert-chip') &&
   typeof x2.x1SsOpenInputModal === 'function' && typeof x2.x1SsToggleTimeline === 'function');

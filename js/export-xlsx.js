@@ -1143,15 +1143,23 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
         const ltLegacyMatrix = spec.key === 'locThanh' &&
           list.some(d => (d.matrixRows || []).some(row => !row.weights));
         const LT_CLASS_HEADS = X1_LT_CLASSES.map(c => c.label);
+        const ltBoXoMatrix = spec.key === 'locThanh' &&
+          list.some(d => d.mode === 'bo-xo' && (d.matrixRows || []).some(row => row.weights));
+        const ltLocThanhMatrix = spec.key === 'locThanh' &&
+          list.some(d => d.mode !== 'bo-xo' && (d.matrixRows || []).some(row => row.weights));
+        const ltMixedLtMatrix = ltBoXoMatrix && ltLocThanhMatrix;
+        const ltMatrixHeads = ltBoXoMatrix && !ltLocThanhMatrix
+          ? ['Hình Thức', 'Bản Rộng (ly)', 'Kích Thước Dài (mm)', 'KL Bó (kg)', 'KL Loại (kg)', 'Tổng', 'Đơn Vị']
+          : ltMixedLtMatrix
+            ? ['Hình Thức', 'Bản Rộng (ly)', 'Kích Thước Dài (mm)', ...LT_CLASS_HEADS, 'KL Bó (kg)', 'KL Loại (kg)', 'Tổng', 'Đơn Vị']
+          : ltMatrix
+            ? ['Hình Thức', 'Bản Rộng (ly)', 'Kích Thước Dài (mm)', ...LT_CLASS_HEADS, 'Tổng', 'Đơn Vị']
+            : ['Hình Thức', 'Chi Tiết Theo Chiều Dài'];
         head = ['Stt', 'Ngày', 'Mã Lô', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
           'KL Vào (kg)', ltLegacyMatrix ? 'KL Đạt (kg) / SL cũ' : 'KL Đạt (kg)',
           ltLegacyMatrix ? 'KL Loại (kg) / SL cũ' : (spec.key === 'locOng' ? 'KL Sót Mắt (kg)' : 'KL Loại (kg)'), 'Tỷ Lệ Đạt (%)',
           ...(spec.key === 'bo' ? ['Bản Rộng (ly)'] : []),
-          ...(spec.key === 'locThanh'
-            ? (ltMatrix
-              ? ['Hình Thức', 'Bản Rộng (ly)', 'Kích Thước Dài (mm)', ...LT_CLASS_HEADS, 'Tổng', 'Đơn Vị']
-              : ['Hình Thức', 'Chi Tiết Theo Chiều Dài'])
-            : []),
+          ...(spec.key === 'locThanh' ? ltMatrixHeads : []),
           ...(spec.key === 'locThanh'
             ? ['Nguồn theo lô / kg lấy', 'KL Chênh (kg)', 'Phân loại chênh', 'Lý do chênh']
             : []),
@@ -1176,12 +1184,33 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
             d.matrixRows.forEach((mr, k) => {
               const isKg = !!mr.weights;
               const values = isKg ? mr.weights : mr.counts;
+              if (d.mode === 'bo-xo' && isKg) {
+                const bo = Number(values && values.bo) || 0;
+                const loai = Number(values && values.loai) || 0;
+                body.push([...base,
+                  k === 0 ? 'Bó xô' : '',
+                  Number(mr.width) > 0 ? mr.width : '',
+                  `${mr.len} mm`,
+                  ...(ltMixedLtMatrix ? LT_CLASS_HEADS.map(() => '') : []),
+                  bo > 0 ? bo : '',
+                  loai > 0 ? loai : '',
+                  bo + loai,
+                  'kg',
+                  k === 0 ? sourceAllocText(d) : '',
+                  k === 0 && d.qtyLoss > 0 ? d.qtyLoss : '',
+                  k === 0 ? (lossTypeLabels[d.lossType] || '') : '',
+                  k === 0 ? (d.lossNote || '') : '',
+                  x2WorkerText(d.workerRows), d.workHoursHC == null ? '—' : d.workHoursHC,
+                  d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
+                return;
+              }
               const t = X1_LT_CLASSES.reduce((s, c) => s + (Number(values && values[c.id]) || 0), 0);
               body.push([...base,
                 k === 0 ? 'Lọc thanh' : '',
                 isKg && Number(mr.width) > 0 ? mr.width : '',
                 `${mr.len} mm`,
                 ...X1_LT_CLASSES.map(c => (Number(values && values[c.id]) || 0) > 0 ? values[c.id] : ''),
+                ...(ltMixedLtMatrix ? ['', ''] : []),
                 t,
                 isKg ? 'kg' : 'SL (cũ)',
                 k === 0 ? sourceAllocText(d) : '',
@@ -1192,16 +1221,28 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
                 d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
             });
           } else {
+            let locThanhMatrixFallback = [];
+            if (spec.key === 'locThanh') {
+              if (ltMatrix) {
+                if (d.mode === 'bo-xo') {
+                  locThanhMatrixFallback = ltMixedLtMatrix
+                    ? ['Bó xô', '', '', ...LT_CLASS_HEADS.map(() => ''), d.qtyOk || '', d.qtyLoai || '', d.qtyOk + d.qtyLoai, 'kg']
+                    : ['Bó xô', '', '', d.qtyOk || '', d.qtyLoai || '', d.qtyOk + d.qtyLoai, 'kg'];
+                } else if (ltMixedLtMatrix) {
+                  locThanhMatrixFallback = ['Lọc thanh', '', '', ...LT_CLASS_HEADS.map(() => ''), '', '', d.qtyOk || '',
+                    d.lengthRows && d.lengthRows.length || (d.matrixRows || []).some(row => row.weights) ? 'kg' : 'SL (cũ)'];
+                } else {
+                  locThanhMatrixFallback = ['Lọc thanh', '', '',
+                    ...X1_LT_CLASSES.map(() => ''), d.qtyOk || '',
+                    d.lengthRows && d.lengthRows.length || (d.matrixRows || []).some(row => row.weights) ? 'kg' : 'SL (cũ)'];
+                }
+              } else {
+                locThanhMatrixFallback = [d.mode === 'bo-xo' ? 'Bó xô' : 'Lọc thanh',
+                  (d.lengthRows || []).map(r => `${r.len}mm: ${r.kg}kg`).join(' · ')];
+              }
+            }
             body.push([...base,
-              ...(spec.key === 'locThanh'
-                ? (ltMatrix
-                    ? [d.mode === 'bo-xo' ? 'Bó xô' : 'Lọc thanh', '', '',
-                      ...X1_LT_CLASSES.map(() => ''), d.mode === 'bo-xo' ? d.qtyOk || '' : '',
-                      d.mode === 'bo-xo' || (d.lengthRows || []).length ||
-                        (d.matrixRows || []).some(row => row.weights) ? 'kg' : 'SL (cũ)']
-                    : [d.mode === 'bo-xo' ? 'Bó xô' : 'Lọc thanh',
-                       (d.lengthRows || []).map(r => `${r.len}mm: ${r.kg}kg`).join(' · ')])
-                : []),
+              ...locThanhMatrixFallback,
               ...(spec.key === 'locThanh'
                 ? [sourceAllocText(d), d.qtyLoss > 0 ? d.qtyLoss : '',
                   lossTypeLabels[d.lossType] || '', d.lossNote || '']

@@ -29,7 +29,13 @@ const saved = {
   xuong2ChonNanThoRecords: state.xuong2ChonNanThoRecords,
   xuong2BaoTinhRecords: state.xuong2BaoTinhRecords,
   pressRecords: state.pressRecords,
-  batches: state.batches
+  batches: state.batches,
+  xuong1SaySinhRecords: state.xuong1SaySinhRecords,
+  xuong1BocRecords: state.xuong1BocRecords,
+  xuong1BoRecords: state.xuong1BoRecords,
+  xuong1PhoiSayRecords: state.xuong1PhoiSayRecords,
+  xuong1LocThanhRecords: state.xuong1LocThanhRecords,
+  x1KhoExports: state.x1KhoExports
 };
 
 try {
@@ -136,6 +142,23 @@ try {
     { stage: 'say1', length: 1200, width: 600, thickness: 12, quantity: 100 },
     { stage: 'say2', length: 1200, width: 600, thickness: 12, quantity: 200 }
   ];
+  state.xuong1SaySinhRecords = [
+    { id: 'ss-yard-1', qty: 1000, date: '2026-10-28' },
+    { id: 'ss-yard-2', qty: 400, date: '2026-10-29' }
+  ];
+  state.xuong1BocRecords = [
+    { id: 'boc-yard-1', saySinhId: 'ss-yard-1', qty: 300, date: '2026-10-30' }
+  ];
+  state.xuong1BoRecords = [
+    { id: 'bo-stock-1', qtyOk: 800, date: '2026-10-28' }
+  ];
+  state.xuong1PhoiSayRecords = [
+    { id: 'dry-stock-1', boId: 'bo-stock-1', qtyIn: 800, qtyOk: 600, date: '2026-10-29' }
+  ];
+  state.xuong1LocThanhRecords = [
+    { id: 'lt-finished-1', boId: 'bo-stock-1', mode: 'bo-xo', qtyIn: 200, qtyOk: 150, date: '2026-10-30' }
+  ];
+  state.x1KhoExports = [];
 
   const stage = (id, label, quantity, options = {}) => ({
     id, label, unit: 'xe/h', quantityUnit: 'xe', turns: 2, quantity,
@@ -400,14 +423,32 @@ try {
   assert.equal(yard.totalKg, 1380);
   // Ống chưa bổ W44: Σ ống đạt cắt 8.300 − Σ ống đem bổ 4.950 = 3.350 kg
   assert.equal(stockSummary.inventory.ongChuaBoKg, 3350);
+  assert.equal(stockSummary.inventory.x1.yardKg, 1100);
+  assert.equal(stockSummary.inventory.x1.unfinishedKg, 400);
+  assert.equal(stockSummary.inventory.x1.finishedKg, 150);
+  assert.equal(stockSummary.inventory.x1.finishedLegacyCount, 0);
+  assert.equal(stockSummary.previous.inventory.x1.yardKg, 1100);
   // Kỳ trước W43 (chủ nhật 25/10): bãi còn 40 kg (lô ống 20/10) · ống chưa bổ 900 kg
   assert.equal(stockSummary.previous.inventory.yard.totalKg, 40);
   assert.equal(stockSummary.previous.inventory.ongChuaBoKg, 900);
   const stockMarkup = buildLeadershipReportMarkup(stockSummary);
-  assert.ok(stockMarkup.includes('Tồn ngoài bãi (luồng cây + ống)'));
-  assert.ok(stockMarkup.includes('Tồn ống chưa bổ (Bổ Ống)'));
+  assert.ok(stockMarkup.includes('Tồn tại bãi'));
+  assert.ok(stockMarkup.includes('Tồn chưa bổ'));
   assert.ok(stockMarkup.includes('Chủ nhật 01/11'));
+  assert.ok(stockMarkup.includes('Tồn tại bãi · chờ Bốc'));
+  assert.ok(stockMarkup.includes('Tồn dở dang · chưa Lọc/Bó'));
+  assert.ok(stockMarkup.includes('Tồn thành phẩm'));
+  assert.ok(stockMarkup.includes('Tồn thanh'));
+  assert.ok(stockMarkup.includes('Ảnh chụp hiện tại'));
   const stockReport = buildLeadershipReportData(stockSummary);
+  assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 1 · Bãi'
+    && row[3] === 1100 && row[4] === 'kg'));
+  assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 1 · Dở dang'
+    && row[3] === 400 && row[4] === 'kg'));
+  assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 1 · Kho Nan'
+    && row[2] === 'Tồn thành phẩm' && row[3] === 150 && row[4] === 'kg'));
+  assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 2 · Lò sấy'
+    && row[2] === 'Tồn trung gian' && row[3] === 30 && row[4] === 'thanh'));
   assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 2 · Bãi nguyên liệu'
     && row[3] === 1380 && row[4] === 'kg'));
   assert.ok(stockReport.aoa.some(row => row[0] === 'Tồn kho' && row[1] === 'Xưởng 2 · Bổ Ống'
@@ -474,7 +515,8 @@ try {
   assert.ok(styles.includes('.leadership-shipment-groups'));
   assert.ok(styles.includes('.leadership-shipment-progress'));
   assert.ok(styles.includes('.leadership-section-header'));
-  assert.ok(styles.includes('.leadership-stock-extra'));
+  assert.ok(styles.includes('.leadership-stock-workshops'));
+  assert.ok(styles.includes('.leadership-stock-kpi'));
   assert.ok(moduleSource.includes("from './x2-pool.js'"));
   assert.ok(moduleSource.includes('x2YardStockAsOf') && moduleSource.includes('x2OngChuaBoAsOf'));
   assert.ok(styles.includes('.leadership-consumption-grid'));

@@ -9,7 +9,11 @@ import { qcFinalDisplay } from './qc-final.js';
 import { state } from './state.js';
 import { traceChainFor, traceFreshBambooFlowFor } from './trace.js';
 import { x2MassBalanceData } from './x2-phu-pham.js';
-import { bulligDisplay, boluongDisplay, cutDisplay, baoTinhDisplay, baoTinhQtyOkOf, baoTinhQtyErrOf, baoTinhCheckedOf, baoTinhPendingOf, baoTinhDefectStock } from './xuong2.js';
+import {
+  bulligDisplay, boluongDisplay, cutDisplay, baoTinhDisplay,
+  baoTinhQtyOkOf, baoTinhQtyErrOf, baoTinhCheckedOf, baoTinhPendingOf, baoTinhDefectStock,
+  x1ChainPending, x1ChainRemainingOf, x1ChainSpecByKey, x1SaySinhRemainingOf, x1WarehouseStockSummary
+} from './xuong2.js';
 import { calculateVolume, escapeHTML, khoStockSummary, showToast } from './utils.js';
 import { x2OngChuaBoAsOf, x2YardStockAsOf } from './x2-pool.js';
 
@@ -622,7 +626,25 @@ function buildConsumptionSummary(range) {
   };
 }
 
-function buildLeadershipPeriodSummary(mode, key, source, capacity, stock) {
+function buildX1InventorySnapshot() {
+  const locThanhSpec = x1ChainSpecByKey('locThanh');
+  const yardKg = (state.xuong1SaySinhRecords || [])
+    .reduce((total, record) => total + x1SaySinhRemainingOf(record, null), 0);
+  const unfinishedKg = locThanhSpec
+    ? x1ChainPending(locThanhSpec)
+      .reduce((total, source) => total + x1ChainRemainingOf(locThanhSpec, source, null), 0)
+    : 0;
+  const warehouse = x1WarehouseStockSummary();
+  return {
+    asOf: todayISO(),
+    yardKg,
+    unfinishedKg,
+    finishedKg: warehouse.totalKg,
+    finishedLegacyCount: warehouse.legacyCount
+  };
+}
+
+function buildLeadershipPeriodSummary(mode, key, source, capacity, stock, x1Inventory) {
   const period = normalizePeriod(mode, key);
   const range = periodRange(period.mode, period.key);
   const rawCapacity = capacity || leadershipCapacitySnapshot(period.key, period.mode);
@@ -661,6 +683,7 @@ function buildLeadershipPeriodSummary(mode, key, source, capacity, stock) {
       pendingCount: stock.pendingCount,
       pendingQty: stock.pendingQty,
       mismatch: stock.mismatchThanh,
+      x1: x1Inventory,
       yard: {
         asOf: yardAsOf,
         cayKg: yard.cayKg,
@@ -691,16 +714,18 @@ export function buildLeadershipSummary(mode = periodMode, key = periodKey, sourc
   const period = normalizePeriod(mode, key);
   const dataSource = source || state;
   const stock = inventory || khoStockSummary();
+  const x1Inventory = buildX1InventorySnapshot();
   const previousKey = period.mode === 'month'
     ? capMonthShift(period.key, -1)
     : capWeekShift(period.key, -1);
-  const summary = buildLeadershipPeriodSummary(period.mode, period.key, dataSource, capacity, stock);
+  const summary = buildLeadershipPeriodSummary(period.mode, period.key, dataSource, capacity, stock, x1Inventory);
   summary.previous = buildLeadershipPeriodSummary(
     period.mode,
     previousKey,
     dataSource,
     previousCapacity,
-    stock
+    stock,
+    x1Inventory
   );
   return summary;
 }
@@ -1185,9 +1210,9 @@ export function buildLeadershipReportMarkup(summary) {
   const previousPeriodLabel = compactPeriodLabel(summary.previous.mode, summary.previous.key);
   // Tuần trước 46: không đủ dữ liệu → ẩn mũi tên so sánh toàn báo cáo.
   const comparable = weekCompareEligible(summary.mode, summary.key);
-  const inventoryText = summary.inventory.current == null
-    ? 'Chưa có dữ liệu tồn kho'
-    : `${fmt(summary.inventory.current, 0)} thanh`;
+  const inventoryCountText = summary.inventory.current == null
+    ? '—'
+    : fmt(summary.inventory.current, 0);
   const inventoryTotal = (Number(summary.inventory.say1) || 0)
     + (Number(summary.inventory.say2) || 0)
     + (Number(summary.inventory.current) || 0);
@@ -1202,32 +1227,40 @@ export function buildLeadershipReportMarkup(summary) {
       <span><i class="is-say2"></i>Sấy 2 · ${fmt(summary.inventory.say2, 0)} thanh · ${fmt(summary.inventory.say2M3, 3)} m³</span>
       <span><i class="is-warehouse"></i>Kho · ${fmt(summary.inventory.current, 0)} thanh · ${fmt(summary.inventory.currentM3, 3)} m³</span>
     </div>`;
-  // ─── TỒN NGOÀI BÃI + ỐNG CHƯA BỔ — hàng chỉ số bổ sung mục 03 (13/11/2026) ──
+  const x1Stock = summary.inventory.x1 || {};
+  const x1AsOfLabel = `Ảnh chụp hiện tại · ${shortDate(x1Stock.asOf) || x1Stock.asOf || 'hôm nay'}`;
+  const x1YardKg = Number(x1Stock.yardKg) || 0;
+  const x1UnfinishedKg = Number(x1Stock.unfinishedKg) || 0;
+  const x1FinishedKg = Number(x1Stock.finishedKg) || 0;
+  const x1LegacyCount = Number(x1Stock.finishedLegacyCount) || 0;
+  const x2KilnThanh = (Number(summary.inventory.say1) || 0) + (Number(summary.inventory.say2) || 0);
+  const currentAsOfLabel = `Hiện tại · ${shortDate(todayISO()) || todayISO()}`;
+  // ─── TỒN NGOÀI BÃI + ỐNG CHƯA BỔ — ảnh chụp theo kỳ của Xưởng 2 ──
   const yardStock = summary.inventory.yard || null;
+  const isPeriodEnd = !!(yardStock && summary.range && summary.range.to === yardStock.asOf);
+  const periodEndLabel = summary.mode === 'month' ? 'Cuối tháng' : 'Chủ nhật';
+  const stockPeriodMoc = !yardStock ? 'theo kỳ' : isPeriodEnd
+    ? `${periodEndLabel} ${shortDate(yardStock.asOf) || yardStock.asOf}`
+    : `hôm nay ${shortDate(yardStock.asOf) || yardStock.asOf}`;
   const prevYardKg = summary.previous && summary.previous.inventory && summary.previous.inventory.yard
     ? summary.previous.inventory.yard.totalKg : null;
   const prevOngChuaBo = summary.previous && summary.previous.inventory
     ? summary.previous.inventory.ongChuaBoKg : null;
   const stockExtra = !yardStock ? '' : (() => {
-    const isPeriodEnd = !!(summary.range && summary.range.to === yardStock.asOf);
-    const mocLabel = isPeriodEnd
-      ? `Chủ nhật ${shortDate(yardStock.asOf) || yardStock.asOf}`
-      : `hôm nay ${shortDate(yardStock.asOf) || yardStock.asOf}`;
-    const yardTitle = `Tồn NGOÀI BÃI Xưởng 2 đến ${mocLabel}: phiếu cân Luồng cây chưa bốc ${fmt(yardStock.cayKg, 0)} kg + xe đã bốc chưa cắt ${fmt(yardStock.cartKg, 0)} kg (${fmt(yardStock.cartCarts, 0)} xe) + phiếu cân Luồng ống chưa cắt ${fmt(yardStock.ongKg, 0)} kg = ${fmt(yardStock.totalKg, 0)} kg`;
+    const yardTitle = `Tồn NGOÀI BÃI Xưởng 2 đến ${stockPeriodMoc}: phiếu cân Luồng cây chưa bốc ${fmt(yardStock.cayKg, 0)} kg + xe đã bốc chưa cắt ${fmt(yardStock.cartKg, 0)} kg (${fmt(yardStock.cartCarts, 0)} xe) + phiếu cân Luồng ống chưa cắt ${fmt(yardStock.ongKg, 0)} kg = ${fmt(yardStock.totalKg, 0)} kg`;
     const ongRaw = Number(summary.inventory.ongChuaBoKg) || 0;
-    const ongTitle = `Tồn ỐNG ĐẠT CHỜ BỔ (công đoạn Bổ Ống) đến ${mocLabel}: Σ ống đạt Cắt Chọn − Σ ống đem bổ = ${fmt(ongRaw, 0)} kg${ongRaw < 0 ? ' — SỔ ÂM: bổ vượt cắt, cần rà soát Lịch Sử Bổ Ống' : ''}`;
-    return `<div class="leadership-stock-extra">
-      <div title="${escapeHTML(yardTitle)}">
+    const ongTitle = `Tồn ỐNG ĐẠT CHỜ BỔ (công đoạn Bổ Ống) đến ${stockPeriodMoc}: Σ ống đạt Cắt Chọn − Σ ống đem bổ = ${fmt(ongRaw, 0)} kg${ongRaw < 0 ? ' — SỔ ÂM: bổ vượt cắt, cần rà soát Lịch Sử Bổ Ống' : ''}`;
+    return `<div class="leadership-stock-kpi" title="${escapeHTML(yardTitle)}">
         <strong>${fmt(yardStock.totalKg / 1000, 1)} t</strong>
-        <span>Tồn ngoài bãi (luồng cây + ống) · đến ${escapeHTML(mocLabel)}</span>
+        <span>Tồn tại bãi</span>
+        <small>${fmt(yardStock.totalKg, 0)} kg</small>
         ${renderComparison(yardStock.totalKg, prevYardKg, 'kg', 0, false, false, comparable)}
       </div>
-      <div title="${escapeHTML(ongTitle)}">
+      <div class="leadership-stock-kpi" title="${escapeHTML(ongTitle)}">
         <strong>${fmt(ongRaw, 0)} kg</strong>
-        <span>Tồn ống chưa bổ (Bổ Ống)${ongRaw < 0 ? ' · sổ âm' : ''}</span>
+        <span>Tồn chưa bổ${ongRaw < 0 ? ' · sổ âm' : ''}</span>
         ${renderComparison(ongRaw, prevOngChuaBo, 'kg', 0, false, false, comparable)}
-      </div>
-    </div>`;
+      </div>`;
   })();
   return `<div class="leadership-paper-stack">
     <article class="leadership-paper" data-report-page="1">
@@ -1250,13 +1283,48 @@ export function buildLeadershipReportMarkup(summary) {
       <header class="leadership-paper-subheader"><span>NHÀ MÁY NGỌC SƠN · BÁO CÁO ĐIỀU HÀNH</span><strong>${escapeHTML(currentPeriodLabel)} vs ${escapeHTML(previousPeriodLabel)}</strong></header>
       <section class="leadership-section">
         <header class="leadership-section-header"><span>03</span><h2>Tồn kho</h2>${detailLink('kanban-view', 'Kho Nan')}</header>
-        <div class="leadership-stock-summary">
-          <div><strong>${escapeHTML(inventoryText)}</strong><span>Kho Nan · hiện tại <i>·</i> ≈ ${fmt(summary.inventory.currentM3, 3)} m³</span></div>
-          <div class="leadership-stock-detail"><span>Chờ duyệt <strong>${fmt(summary.inventory.pendingCount, 0)} phiếu</strong></span><span>Chênh lệch đối chiếu <strong>${fmt(summary.inventory.mismatch, 0)} thanh</strong></span></div>
+        <div class="leadership-stock-workshops">
+          <section class="leadership-stock-workshop" aria-label="Tồn kho Xưởng 1">
+            <header class="leadership-stock-workshop-head"><h3>Xưởng 1</h3><span>${escapeHTML(x1AsOfLabel)}</span></header>
+            <div class="leadership-stock-kpis">
+              <div class="leadership-stock-kpi">
+                <strong>${fmt(x1YardKg, 0)} kg</strong>
+                <span>Tồn tại bãi · chờ Bốc</span>
+              </div>
+              <div class="leadership-stock-kpi">
+                <strong>${fmt(x1UnfinishedKg, 0)} kg</strong>
+                <span>Tồn dở dang · chưa Lọc/Bó</span>
+              </div>
+              <div class="leadership-stock-kpi">
+                <strong>${fmt(x1FinishedKg, 0)} kg</strong>
+                <span>Tồn thành phẩm</span>
+                ${x1LegacyCount > 0 ? `<small>${fmt(x1LegacyCount, 0)} SL cũ · chưa quy đổi kg</small>` : ''}
+              </div>
+            </div>
+          </section>
+          <section class="leadership-stock-workshop" aria-label="Tồn kho Xưởng 2">
+            <header class="leadership-stock-workshop-head">
+              <h3>Xưởng 2</h3>
+              <span>Bãi/ống: ${escapeHTML(stockPeriodMoc)} · Kho/Lò sấy: ${escapeHTML(currentAsOfLabel)}</span>
+            </header>
+            <div class="leadership-stock-kpis is-x2">
+              ${stockExtra}
+              <div class="leadership-stock-kpi is-stock-breakdown">
+                <span>Tồn thanh</span>
+                <div class="leadership-stock-split">
+                  <div><small>Kho Nan</small><strong>${escapeHTML(inventoryCountText)}</strong></div>
+                  <div><small>Lò sấy</small><strong>${fmt(x2KilnThanh, 0)}</strong></div>
+                </div>
+              </div>
+            </div>
+            ${inventoryChart}
+            <div class="leadership-stock-detail">
+              <span>Chờ duyệt <strong>${fmt(summary.inventory.pendingCount, 0)} phiếu</strong></span>
+              <span>Chênh lệch đối chiếu <strong>${fmt(summary.inventory.mismatch, 0)} thanh</strong></span>
+            </div>
+          </section>
         </div>
-        ${inventoryChart}
-        ${stockExtra}
-        <p class="leadership-data-note">Tồn vật lý Kho Nan và tồn trung gian Xưởng 2; số Kho Nan hiện tại, không hồi tố theo kỳ. Tồn ngoài bãi và tồn ống chưa bổ là ảnh chụp đến ngày cuối kỳ (chủ nhật / cuối tháng); kỳ chưa kết thúc thì chụp đến hôm nay.</p>
+        <p class="leadership-data-note">Tồn Xưởng 1 và Kho/Lò sấy Xưởng 2 là ảnh chụp hiện tại; bãi/ống chờ bổ Xưởng 2 chốt đến ${escapeHTML(stockPeriodMoc)}. Không cộng gộp các nhóm khác đơn vị hoặc trạng thái.</p>
       </section>
       <section class="leadership-section">
         <header class="leadership-section-header"><span>04</span><h2>Chất lượng</h2>${detailLink('qc-view', 'QC')}</header>
@@ -1490,6 +1558,18 @@ export function buildLeadershipReportData(summary) {
     'Ảnh chụp hiện tại theo cỡ, không hồi tố theo kỳ');
   add('Tiêu hao', 'Xưởng 2 · Tái dùng lỗi', 'Lỗi đã đưa vào bào lại trong kỳ', report.consumption.baothanh.reusedM3, 'm³',
     `${report.consumption.baothanh.reusedRows} lượt (hạ cấp + bào thanh nguồn lỗi)`);
+  const x1Inventory = report.inventory.x1;
+  if (x1Inventory) {
+    const asOf = shortDate(x1Inventory.asOf) || x1Inventory.asOf || 'hiện tại';
+    const snapshotNote = `Ảnh chụp hiện tại đến ${asOf}, không hồi tố theo kỳ`;
+    add('Tồn kho', 'Xưởng 1 · Bãi', 'Tồn tại bãi (chờ Bốc)', x1Inventory.yardKg, 'kg', snapshotNote);
+    add('Tồn kho', 'Xưởng 1 · Dở dang', 'Tồn chưa Lọc/Bó', x1Inventory.unfinishedKg, 'kg', snapshotNote);
+    add('Tồn kho', 'Xưởng 1 · Kho Nan', 'Tồn thành phẩm', x1Inventory.finishedKg, 'kg', snapshotNote);
+    if (Number(x1Inventory.finishedLegacyCount) > 0) {
+      add('Tồn kho', 'Xưởng 1 · Kho Nan', 'Dữ liệu cũ chưa quy đổi', x1Inventory.finishedLegacyCount, 'SL',
+        'Không quy đổi sang kg');
+    }
+  }
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.current, 'thanh', 'Ảnh chụp hiện tại, không hồi tố theo kỳ');
   add('Tồn kho', 'Xưởng 2 · Kho Nan', 'Tồn hiện tại', report.inventory.currentM3, 'm³');
   add('Tồn kho', 'Xưởng 2 · Sấy/Kho', 'Tồn toàn nhóm', report.inventory.pool, 'thanh');
@@ -1498,6 +1578,10 @@ export function buildLeadershipReportData(summary) {
   add('Tồn kho', 'Xưởng 2 · Sấy 1', 'Khối lượng quy đổi', report.inventory.say1M3, 'm³');
   add('Tồn kho', 'Xưởng 2 · Sấy 2', 'Tồn trung gian', report.inventory.say2, 'thanh');
   add('Tồn kho', 'Xưởng 2 · Sấy 2', 'Khối lượng quy đổi', report.inventory.say2M3, 'm³');
+  add('Tồn kho', 'Xưởng 2 · Lò sấy', 'Tồn trung gian', report.inventory.say1 + report.inventory.say2, 'thanh',
+    'Ảnh chụp hiện tại, gồm Sấy 1 + Sấy 2');
+  add('Tồn kho', 'Xưởng 2 · Lò sấy', 'Khối lượng quy đổi',
+    report.inventory.say1M3 + report.inventory.say2M3, 'm³', 'Ảnh chụp hiện tại');
   // TỒN NGOÀI BÃI + ỐNG CHƯA BỔ — ảnh chụp đến ngày cuối kỳ (13/11/2026)
   const yardInv = report.inventory.yard;
   if (yardInv) {

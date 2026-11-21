@@ -15098,13 +15098,26 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 .leadership-stock-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 5px 0 3px; }
 .leadership-stock-summary > div:first-child { display: grid; gap: 1px; }
 .leadership-stock-summary > div:first-child > span { color: #7a857c; font-size: 6.5pt; }
+.leadership-stock-workshops { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; margin-top: 5px; }
+.leadership-stock-workshop { min-width: 0; padding: 5px; background: #fbfcfb; border: 1px solid #e1e9e2; border-radius: 4px; }
+.leadership-stock-workshop-head { display: flex; align-items: baseline; justify-content: space-between; gap: 5px; margin-bottom: 4px; }
+.leadership-stock-workshop-head h3 { margin: 0; color: #314b38; font-size: 8pt; }
+.leadership-stock-workshop-head > span { color: #77837a; font-size: 5.8pt; text-align: right; }
+.leadership-stock-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.leadership-stock-kpis.is-x2 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.leadership-stock-kpi { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px; background: #fff; border: 1px solid #edf1ed; border-radius: 3px; }
+.leadership-stock-kpi > strong { color: #315b3b; font-size: 8pt; font-variant-numeric: tabular-nums; }
+.leadership-stock-kpi > span { color: #58675b; font-size: 5.8pt; line-height: 1.3; }
+.leadership-stock-kpi > small { color: #79837b; font-size: 5.5pt; }
+.leadership-stock-kpi .leadership-delta { font-size: 5.3pt; }
+.leadership-stock-kpi.is-stock-breakdown { grid-column: 1 / -1; }
+.leadership-stock-kpis.is-x2 .leadership-stock-kpi.is-stock-breakdown { grid-column: auto; }
+.leadership-stock-split { display: grid; grid-template-columns: 1fr; gap: 1px; width: 100%; }
+.leadership-stock-split > div { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 1px 5px; min-width: 0; }
+.leadership-stock-split > div > small { color: #79837b; font-size: 5.5pt; }
+.leadership-stock-split > div > strong { color: #315b3b; font-size: 7pt; font-variant-numeric: tabular-nums; text-align: right; }
 .leadership-stock-detail { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 3px 12px; color: #79847b; font-size: 6pt; }
 .leadership-stock-detail strong { color: #495b4c; }
-.leadership-stock-extra { display: flex; flex-wrap: wrap; gap: 3px 14px; margin: 4px 0 1px; }
-.leadership-stock-extra > div { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
-.leadership-stock-extra strong { color: #3d6b49; font-size: 8pt; font-variant-numeric: tabular-nums; }
-.leadership-stock-extra > div > span { color: #79837b; font-size: 6pt; }
-.leadership-stock-extra .leadership-delta { font-size: 5.5pt; }
 .leadership-stock-chart { height: 10px; display: flex; overflow: hidden; background: #edf1ec; border-radius: 999px; }
 .leadership-stock-chart i { display: block; min-width: 0; height: 100%; }
 .leadership-stock-chart .is-say1, .leadership-stock-legend .is-say1 { background: #a7c7a6; }
@@ -15324,12 +15337,30 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 .leadership-big-number small { color: var(--text-muted); font-size: .8rem; }
 .leadership-muted { color: var(--text-muted); font-size: .7rem; }
 .leadership-empty { margin: 10px 0 2px; color: var(--text-muted); font-size: .78rem; }
-.leadership-stock-extra { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 6px 0 2px; }
-.leadership-stock-extra > div { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
-.leadership-stock-extra strong { color: var(--primary); font-size: 1.02rem; font-variant-numeric: tabular-nums; }
-.leadership-stock-extra > div > span { color: var(--text-muted); font-size: .72rem; }
-.leadership-stock-extra .leadership-delta { font-size: .66rem; }
+.leadership-stock-workshops { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.leadership-stock-workshop { min-width: 0; padding: 10px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
+.leadership-stock-workshop-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.leadership-stock-workshop-head h3 { margin: 0; color: var(--text-main); font-size: .88rem; }
+.leadership-stock-workshop-head > span { color: var(--text-muted); font-size: .68rem; text-align: right; }
+.leadership-stock-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.leadership-stock-kpis.is-x2 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.leadership-stock-kpi { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
+.leadership-stock-kpi > strong { color: var(--primary); font-size: .95rem; font-variant-numeric: tabular-nums; }
+.leadership-stock-kpi > span { color: var(--text-muted); font-size: .7rem; line-height: 1.4; }
+.leadership-stock-kpi > small { color: var(--text-muted); font-size: .64rem; }
+.leadership-stock-kpi .leadership-delta { font-size: .63rem; }
+.leadership-stock-kpi.is-stock-breakdown { grid-column: 1 / -1; }
+.leadership-stock-kpis.is-x2 .leadership-stock-kpi.is-stock-breakdown { grid-column: auto; }
+.leadership-stock-split { display: grid; grid-template-columns: 1fr; gap: 2px; width: 100%; }
+.leadership-stock-split > div { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 6px; min-width: 0; }
+.leadership-stock-split > div > small { color: var(--text-muted); font-size: .65rem; }
+.leadership-stock-split > div > strong { color: var(--text-main); font-size: .84rem; font-variant-numeric: tabular-nums; text-align: right; }
+.leadership-stock-kpi .leadership-stock-chart { width: 100%; }
+.leadership-stock-kpi .leadership-stock-detail { justify-content: flex-start; font-size: .65rem; }
 .leadership-data-note { margin: 0 0 10px; color: var(--text-muted); font-size: .72rem; line-height: 1.5; }
+@media (max-width: 700px) {
+  .leadership-stock-workshops { grid-template-columns: 1fr; }
+}
 .leadership-breakdown { display: grid; gap: 9px; }
 .leadership-breakdown-row { display: grid; grid-template-columns: minmax(90px, 1fr) auto; align-items: center; gap: 4px 12px; font-size: .76rem; }
 .leadership-breakdown-row > span { color: var(--text-muted); }
@@ -15802,6 +15833,24 @@ body[data-theme="night"] .x2-detail-content > .planning-card {
 #leadership-view .leadership-bottleneck { color: #42584a; font-size: 6.6pt; }
 #leadership-view .leadership-stock-legend { color: #344b3a; font-size: 7pt; }
 #leadership-view .leadership-stock-detail { color: #4d5d50; font-size: 6.8pt; }
+#leadership-view .leadership-stock-workshops { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; margin-top: 3px; }
+#leadership-view .leadership-stock-workshop { padding: 4px; }
+#leadership-view .leadership-stock-workshop-head { margin-bottom: 3px; }
+#leadership-view .leadership-stock-workshop-head h3 { font-size: 8pt; }
+#leadership-view .leadership-stock-workshop-head > span { font-size: 5.8pt; }
+#leadership-view .leadership-stock-kpis { gap: 4px; }
+#leadership-view .leadership-stock-kpi { gap: 2px; padding: 4px; }
+#leadership-view .leadership-stock-kpi > strong { font-size: 8pt; }
+#leadership-view .leadership-stock-kpi > span { font-size: 5.8pt; line-height: 1.3; }
+#leadership-view .leadership-stock-kpi > small { font-size: 5.5pt; }
+#leadership-view .leadership-stock-kpi .leadership-delta { font-size: 5.3pt; }
+#leadership-view .leadership-stock-split { gap: 1px; }
+#leadership-view .leadership-stock-split > div { gap: 1px 5px; }
+#leadership-view .leadership-stock-split > div > small { font-size: 5.5pt; }
+#leadership-view .leadership-stock-split > div > strong { font-size: 7pt; }
+#leadership-view .leadership-stock-workshops .leadership-stock-legend { font-size: 6pt; }
+#leadership-view .leadership-stock-workshops .leadership-stock-detail { font-size: 6pt; }
+#leadership-view .leadership-stock-workshops + .leadership-data-note { margin: 1px 0; }
 #leadership-view .leadership-quality-workshop > h3 { color: #284b33; font-size: 8pt; }
 #leadership-view .leadership-quality-x2-grid { gap: 4px; border: 0; }
 #leadership-view .leadership-quality-kind {

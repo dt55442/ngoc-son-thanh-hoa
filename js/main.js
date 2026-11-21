@@ -43,6 +43,7 @@ import { setupFormCalculations, initVnDateInputs, showToast } from './utils.js';
 import { loadModulesForView, preloadModulesForView } from './module-loader.js'; // Giai đoạn 2: lazy-load module theo tab
 import { cleanupByPrefix, safeAddEventListener } from './cleanup2.js'; // Giai đoạn 3: resource cleanup
 import { registerChart, getChart } from './cleanup.js'; // Chart.js management
+import { initializeCoreStorage, restoreCoreStorage } from './storage-adapter.js';
 
 setWorkerEvaluationEfficiencyProvider(computeWorkerStageEfficiency);
 
@@ -271,6 +272,11 @@ function yieldBootFrame() {
         bootPhrases.push('Tài khoản Quản Trị: đang nạp toàn bộ dữ liệu — vui lòng chờ…');
       }
       showTreLoading('Đang nạp dữ liệu nhà máy…', { phrases: bootPhrases });
+
+      const coreMigration = await initializeCoreStorage();
+      if (coreMigration.errors && coreMigration.errors.length) {
+        console.warn('[STORAGE] Không migrate hết dữ liệu core vào IndexedDB:', coreMigration.errors);
+      }
       
       // Load modules cho tab mặc định (dashboard-view) trước
       await loadModulesForView(state.activeView || 'dashboard-view');
@@ -279,6 +285,10 @@ function yieldBootFrame() {
 
       // Chạy các nhóm load song song
       await runLoadGroups();
+      const coreRestore = await restoreCoreStorage();
+      if (coreRestore.errors && coreRestore.errors.length) {
+        console.warn('[STORAGE] Không restore hết dữ liệu core:', coreRestore.errors);
+      }
       
       await yieldBootFrame(); // yield 2: sau load dữ liệu
 

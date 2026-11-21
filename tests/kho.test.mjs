@@ -395,6 +395,50 @@ x2.khoApproveNote(state.khoNotes[state.khoNotes.length - 1].id);
 check('LỖI BÀO TINH: tồn lỗi 20 − tái chế 5 = 15 (baoTinhDefectStock trừ phiếu đã duyệt)',
   x2.baoTinhDefectStock().find(x => x.sizeKey === '1230×14×5').remaining === 15);
 
+// Thanh Tóp: tái chế phải tạo thẻ lô chuẩn ở Kho mang cờ topRework
+const baoTinhRecordsBeforeTopTest = (state.xuong2BaoTinhRecords || []).slice();
+state.xuong2BaoTinhRecords = [
+  ...baoTinhRecordsBeforeTopTest,
+  { id: 'bt-top', kind: 'tinh', date: '2026-09-17', qtyTop: 30, qtyOk: 470, qtyErr: 20,
+    batchDims: [1250, 22, 9], batchSizeKey: '1250×22×9',
+    inDims: [1250, 22, 9], inSizeKey: '1250×22×9',
+    outDims: [1240, 16, 6], outSizeKey: '1240×16×6',
+    createdAt: '2026-09-17T02:00:00.000Z' }
+];
+document.getElementById('x2-kho-source').value = 'top_other';
+document.getElementById('x2-kho-method').value = 'taiche';
+document.getElementById('x2-kho-qty').value = '5';
+document.getElementById('x2-kho-size').value = '1250×22×9';
+if (x2.syncX2KhoTopSizeFields) x2.syncX2KhoTopSizeFields();
+document.getElementById('x2-kho-top-location').value = 'K21';
+document.getElementById('x2-kho-top-type').value = 'A';
+document.getElementById('x2-kho-top-use').value = 'Ván';
+x2.handleKhoNoteSubmit({ preventDefault(){} });
+const topRecycleNote = state.khoNotes[state.khoNotes.length - 1];
+check('THANH TỐP: nguồn lỗi chỉ hiển thị tên "Thanh Tóp" và lưu đúng thông tin lô tái chế',
+  topRecycleNote.source === 'top_other' && topRecycleNote.method === 'taiche' &&
+  topRecycleNote.topLot.location === 'K21' &&
+  topRecycleNote.topLot.sizeKey === '1250×22×9' &&
+  topRecycleNote.topLot.length === 1250 && topRecycleNote.topLot.width === 22 &&
+  topRecycleNote.topLot.thickness === 9 &&
+  utils.KHO_SOURCE_LABELS.top_other === 'Thanh Tóp');
+x2.khoApproveNote(topRecycleNote.id);
+const topRecycleLot = (state.batches || []).find(b => b && b.topScrapNoteId === topRecycleNote.id);
+check('TÁI CHẾ THANH TỐP: duyệt phiếu tạo thẻ lô Kho chuẩn mang cờ Tóp xử lý lại',
+  topRecycleLot && topRecycleLot.stage === 'kho' && topRecycleLot.topRework === true &&
+  topRecycleLot.quantity === 5 && topRecycleLot.location === 'K21' &&
+  topRecycleLot.topSizeKey === '1250×22×9' &&
+  topRecycleLot.length === 1250 && topRecycleLot.width === 22 &&
+  topRecycleLot.thickness === 9);
+check('TÁI CHẾ THANH TỐP: tồn trung gian còn 25 thanh sau duyệt',
+  x2.baoTinhTopOtherStock().remaining === 25);
+check('THANH TỐP THEO CỠ: truy vết tồn riêng 1250×22×9 và trừ đúng 5 thanh',
+  x2.baoTinhTopSizeRows().some(row => row.sizeKey === '1250×22×9' && row.remaining === 25) &&
+  !x2.baoTinhTopSizeRows().some(row => row.sizeKey === '1240×16×6'));
+state.xuong2BaoTinhRecords = baoTinhRecordsBeforeTopTest;
+state.batches = (state.batches || []).filter(b => b && b.topScrapNoteId !== topRecycleNote.id);
+state.khoNotes = (state.khoNotes || []).filter(n => n && n.id !== topRecycleNote.id);
+
 // ─── D. ĐỐI CHIẾU + RÀ SOÁT SỔ KHO (bù dữ liệu cũ) ─────────────
 check('ĐỐI CHIẾU: hệ thống suy ra k3 = 500 (lượt bào tinh) — phiếu gắn k3 chưa có → lệch +500',
   utils.khoDerivedOutOf('k3') === 500 && utils.khoStockSummary().mismatchThanh > 400);
@@ -718,6 +762,11 @@ check('CẤU TRÚC (index.html): mini card + thẻ Kho Nan đủ khối (tồn �
   idxHtml.includes('id="x2-kho-stock-bar"') && idxHtml.includes('id="x2-kho-wip-bar"') &&
   idxHtml.includes('id="x2-kho-note-form"') && idxHtml.includes('id="x2-kho-pending-rows"') &&
   idxHtml.includes('id="x2-kho-day-cards"') && idxHtml.includes('id="x2-kho-stock-rows"') &&
+  idxHtml.includes('<option value="top_other">Thanh Tóp</option>') &&
+  idxHtml.includes('id="x2-kho-top-recycle-group"') &&
+  idxHtml.includes('id="x2-kho-top-picker-group"') &&
+  idxHtml.includes('id="x2-kho-top-picker"') &&
+  idxHtml.includes('id="x2-kho-top-location"') &&
   idxHtml.includes('id="btn-kho-add-manual"'));
 check('CẤU TRÚC (js): key riêng + nối đủ state/storage/cloud/history/main/events',
   jsState.includes('bamboo_tracker_kho_notes_v1') && jsStorage.includes('restoreKhoNotes') &&
@@ -733,7 +782,7 @@ check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerE
 check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
   idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
   idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v440', /nha-may-ngoc-son-v440/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v444', /nha-may-ngoc-son-v444/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

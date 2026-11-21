@@ -14,9 +14,10 @@
 // ═══════════════════════════════════════════════════════════
 
 const REPO_DB_NAME = 'bamboo_tracker_records';
-const REPO_DB_VERSION = 2;
+const REPO_DB_VERSION = 3;
 const REPO_STORE = 'months';
 const REPO_META_STORE = 'meta';
+const REPO_KV_STORE = 'kv';
 const SYNC_PENDING_KEY = 'cloud-pending';
 
 let dbPromise = null;
@@ -44,6 +45,7 @@ function openDb() {
       const db = req.result;
       if (!db.objectStoreNames.contains(REPO_STORE)) db.createObjectStore(REPO_STORE);
       if (!db.objectStoreNames.contains(REPO_META_STORE)) db.createObjectStore(REPO_META_STORE);
+      if (!db.objectStoreNames.contains(REPO_KV_STORE)) db.createObjectStore(REPO_KV_STORE);
     };
     req.onsuccess = () => {
       const db = req.result;
@@ -376,6 +378,57 @@ function clearDomain(domain) {
   })).catch(() => {});
 }
 
+// KHO KEY-VALUE CHO DỮ LIỆU CORE KHÔNG THEO THÁNG.
+// localStorage không còn được dùng làm nơi lưu vĩnh viễn cho các domain này.
+// JSON vẫn giữ nguyên để migration rollback và export snapshot hoạt động.
+function putKv(domain, json) {
+  if (!available()) return Promise.resolve({ persisted: false, error: new Error('IndexedDB không khả dụng') });
+  const value = typeof json === 'string' ? json : JSON.stringify(json);
+  return openDb().then(db => new Promise((resolve) => {
+    const tx = db.transaction(REPO_KV_STORE, 'readwrite');
+    tx.objectStore(REPO_KV_STORE).put({
+      domain,
+      json: value,
+      stamp: new Date().toISOString()
+    }, domain);
+    tx.oncomplete = () => resolve({ persisted: true, domain });
+    tx.onerror = () => {
+      const error = tx.error || new Error('Không ghi được domain core vào IndexedDB.');
+      resolve({ persisted: false, domain, error });
+    };
+    tx.onabort = () => {
+      const error = tx.error || new Error('Giao dịch ghi domain core IndexedDB đã bị hủy.');
+      resolve({ persisted: false, domain, error });
+    };
+  })).catch(error => ({ persisted: false, domain, error }));
+}
+
+function loadKv(domain) {
+  if (!available()) return Promise.resolve({ found: false, json: '' });
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(REPO_KV_STORE, 'readonly');
+    const req = tx.objectStore(REPO_KV_STORE).get(domain);
+    req.onsuccess = () => {
+      const row = req.result;
+      resolve(row && typeof row.json === 'string'
+        ? { found: true, json: row.json, stamp: row.stamp || '' }
+        : { found: false, json: '' });
+    };
+    req.onerror = () => reject(req.error || new Error('Không đọc được domain core từ IndexedDB.'));
+  })).catch(error => ({ found: false, json: '', error }));
+}
+
+function clearKv(domain) {
+  if (!available()) return Promise.resolve(false);
+  return openDb().then(db => new Promise((resolve) => {
+    const tx = db.transaction(REPO_KV_STORE, 'readwrite');
+    tx.objectStore(REPO_KV_STORE).delete(domain);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+    tx.onabort = () => resolve(false);
+  })).catch(() => false);
+}
+
 // Nạp sẵn cache từ IndexedDB (gọi 1 lần lúc boot trước khi hydrate)
 function prime(domains) {
   if (!available()) return Promise.resolve(false);
@@ -401,8 +454,8 @@ function prime(domains) {
 }
 
 export {
-  available, cacheSlice, clearDomain, healthy, dumpStrings, flush, getSyncPending, groupByMonth, jsonOf, loadDomain,
+  available, cacheSlice, clearDomain, clearKv, healthy, dumpStrings, flush, getSyncPending, groupByMonth, jsonOf, loadDomain, loadKv,
   loadDomainSync, monthArrays, monthOf, monthsOf, prime, putDomain, recentMonths, stampOf,
-  setSyncPending, cache as repoCache, lastWriteErrorRef
+  putKv, setSyncPending, cache as repoCache, lastWriteErrorRef
 };
 function lastWriteErrorRef() { return lastWriteError; }

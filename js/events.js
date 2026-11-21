@@ -6,11 +6,11 @@ import { checkAuthAndRender, closeUserEditModal, closeUserPermsModal, closeUsers
 import { authErrorText, authMarkStep, authReset, isAuthBusy, setAuthBusy } from './auth-ui.js';
 import { alOnLocationChipClick, alOnReworkQtyInput, alOnSourceListClick, alOnCardQtyInput, alGridCloseHelp, alGridToggleHelp, alOnEntryModeClick, alOnGridClick, alOnGridDateClick, alOnGridKeydown, alOnGridQtyInput, alSetGridSearch, alSetGridSort, alPickAll, alPositionSourcePanel, alSetSourceQuery, alSetSourceQtyQuery, alSetRework, alSetShowDryAll, alShowNewLocationRow, alToggleLocationPanel, alToggleSourcePanel, alOnSheetClick, alBulkAddRow, alBulkOnClick, alBulkOnInput, toggleAlBulkEntryMode, closeAddLotModal, closeBatchFormModal, closeTransferKhoModal, ckOnLocChipClick, ckOnLotPanelClick, ckOnStageSegPick, ckToggleLotList, deletePickedBatches, deletePickedKhoStockLots, exitKanbanPickMode, exitKhoStockPickMode, handleAddLotSubmit, handleAlAddLocation, handleBatchFormSubmit, handleKhoAddMultiSubmit, handleTransferKhoSubmit, kanbanSelectAll, onKanbanPickChange, onKhoStockPickChange, openAddLotModal, openBatchFormModal, openKhoAddMultiModal, openTransferKhoModal, renderAlChargeOptions, renderAlGrid, selectAllKhoStockLots, syncAddLotUI, syncTransferKhoUI, toggleKanbanPickMode, toggleKhoStockPickMode, updateCkNewVolume, updateCkPosInfo, wireKhoAddMultiEvents } from './batch-modals.js';
 import { applyRoleToUI, flushPendingCloudPush, initLucide, isFirebaseOnline, pendingRecordCount, pullCloudToLocal, requireEditPermission, uploadLocalDataToCloud, syncNow, openSyncConflicts, closeSyncConflicts, applySyncConflictChoice, clearAllSyncConflicts, renderSyncConflicts, openPendingList, closePendingList, renderPendingList } from './cloud.js';
-import { openStorageAudit, closeStorageAudit, renderStorageAudit, runStorageAuditAction } from './storage-audit.js'; // CÔNG CỤ "BỘ NHỚ MÁY" (17/11/2026)
 import { photoSyncKick, photoSyncNow } from './photo-sync.js'; // KÊNH ẢNH THUMB (đẩy dần, js/photo-sync.js)
 import { untrackDeleted } from './tombstone.js';
 import { closeChartBuilderModal, closeDashHelp, handleChartBuilderSubmit, openChartBuilderModal, openDashHelp, populateBuilderOptions, updateChartBuilderPreview } from './dashboard.js';
 import { closeCustomExportModal, closeExportPreviewModal, closeHrXlsxExportModal, closeMaterialsExportModal, closePlanningExportModal, closePressExportModal, closeQcXlsxExportModal, closeX2ExportModal, deleteExportPreviewRow, exportPreviewToXlsx, handleCustomExportSubmit, handleHrXlsxExportSubmit, handleMaterialsExportSubmit, handlePlanningExportSubmit, handlePressExportSubmit, handleQcXlsxExportSubmit, handleX2ExportSubmit, noteExportPreviewEdit, openCustomExportModal, openCustomExportPreview, openHrXlsxExportModal, openHrXlsxExportPreview, openMaterialsExportModal, openMaterialsExportPreview, openPlanningExportModal, openPlanningExportPreview, openPressExportModal, openPressExportPreview, openQcXlsxExportModal, openQcXlsxExportPreview, openX2ExportModal, openX2ExportPreview, printExportPreview, refreshExportPreview, setExportPreviewColWidth, syncHrXlsxCardUI } from './export-xlsx.js';
+import { openStorageAudit, closeStorageAudit, renderStorageAudit, runStorageAuditAction, requestPersistentStorageFromAudit } from './storage-audit.js';
 import { closeHistoryModal, openHistoryModal, setHistoryDomainFilter, setHistoryTabFilter, setHistoryUserFilter, clearHistory } from './history.js';
 import { closeReportCenter, exportReportGroup, handleReportSubmit, onReportCenterClick, onReportFilterChange, openReportCenter, openReportPreview } from './report-center.js';
 import { openLeadershipReportPreview, printLeadershipReport, setLeadershipPeriodKey, setLeadershipPeriodMode, shiftLeadershipPeriod } from './leadership-dashboard.js';
@@ -42,7 +42,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   handleXuong2BaoVanSubmit, editXuong2BaoVan, deleteXuong2BaoVan, resetXuong2BaoVanForm,
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
   setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
-import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, khoBulkOnPaste, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, khoOnPurposeChange, fillX2KhoSizeSuggestions, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck, saveKhoNotes } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
+import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, khoBulkOnPaste, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, khoOnPurposeChange, fillX2KhoSizeSuggestions, syncX2KhoTopSizeFields, khoOnTopPickerClick, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck, saveKhoNotes } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
 import { setX1SaySinhQcStatus, setX1SsViewMode, x1SsUpdateSulfurHint, x1SsOpenInputModal, x1SsCloseInputModal, x1SsToggleTimeline, renderX1SsHistory } from './xuong2.js';
 import { x2OngDatAvailable } from './x2-pool.js'; // SỔ NHÓM: tồn ống đạt chờ bổ (nút "Lấy Hết Tồn")
 import {
@@ -605,6 +605,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-close-storage-audit', 'click', () => closeStorageAudit());
     safeOn('btn-sa-ok', 'click', () => closeStorageAudit());
     safeOn('btn-sa-refresh', 'click', () => renderStorageAudit());
+    safeOn('btn-sa-persistent', 'click', () => requestPersistentStorageFromAudit());
     safeOn('sa-actions', 'click', (e) => {
       const btn = e.target.closest('[data-sa-act]');
       if (btn) runStorageAuditAction(btn.getAttribute('data-sa-act'));
@@ -2723,9 +2724,15 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x2-kho-purpose', 'change', khoOnPurposeChange); // đổi mục đích → lọc lại lô nguồn + bỏ lô không khớp
     safeOn('x2-kho-purpose-note', 'input', renderX2KhoCalc);
     safeOn('x2-kho-source', 'change', () => { fillX2KhoSizeSuggestions(); renderX2KhoCalc(); });
-    safeOn('x2-kho-method', 'change', renderX2KhoCalc);
-    safeOn('x2-kho-size', 'input', renderX2KhoCalc);
+    safeOn('x2-kho-method', 'change', () => { fillX2KhoSizeSuggestions(); renderX2KhoCalc(); });
+    safeOn('x2-kho-size', 'input', () => { syncX2KhoTopSizeFields(); renderX2KhoCalc(); });
     safeOn('x2-kho-qty', 'input', renderX2KhoCalc);
+    safeOn('x2-kho-top-picker', 'click', khoOnTopPickerClick);
+    ['x2-kho-top-location', 'x2-kho-top-length', 'x2-kho-top-width',
+     'x2-kho-top-thickness', 'x2-kho-top-type', 'x2-kho-top-use']
+      .forEach(id => safeOn(id, 'input', renderX2KhoCalc));
+    safeOn('x2-kho-top-type', 'change', renderX2KhoCalc);
+    safeOn('x2-kho-top-use', 'change', renderX2KhoCalc);
     safeOn('x2-kho-lots-btn', 'click', () => khoToggleLotsPanel());
     safeOn('x2-kho-lots-search', 'input', (e) => khoSetLotsQuery(e.target.value));
     safeOn('x2-kho-lots-qty-search', 'input', (e) => khoSetLotsQtyQuery(e.target.value)); // tìm THEO SỐ LƯỢNG (kết hợp VÀ)

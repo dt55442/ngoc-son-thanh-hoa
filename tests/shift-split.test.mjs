@@ -311,7 +311,7 @@ check('I3: 4 thẻ ngày 1 công đoạn + 3 thẻ ĐÃ TÁCH CA (Bổ Ống/Bà
 check('I4: press.js + qc-final.js dùng CHUNG helper (không copy HTML/CSS)',
   pSrc.includes('shiftBreakdownHtml') && pSrc.includes('epVanShiftGroups') &&
   qSrc.includes('shiftBreakdownHtml') && qSrc.includes('qcShiftGroups'));
-check('I5: sw.js đã tăng cache (v440) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v440'));
+check('I5: sw.js đã tăng cache (v444) để PWA không dùng bản cũ', swSrc.includes('nha-may-ngoc-son-v444'));
 
 // ═══ J. GIAI ĐOẠN 2 — NHẬP SẢN LƯỢNG RIÊNG THEO CA ═══════════════════════
 // (Bổ Ống · Chạy Máy Bào Thô · Chọn Nan Thô · Than Hóa + Sấy)

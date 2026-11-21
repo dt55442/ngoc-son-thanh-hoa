@@ -477,7 +477,7 @@ check('HIỆU NĂNG: bộ chọn nguồn và nhập SL dùng bản đồ Đã D�
   sourceListBlock.includes('alCandidatesOf(stage, alloc, usedByNan)') &&
   setLineBlock.includes('const usedByNan = nanCardUsageMap();') &&
   setLineBlock.includes('alGridApplyGroupLines(key, inputEl, usedByNan)'));
-check('CẤU TRÚC (sw.js): cache đã tăng lên v440', swHtml.includes('nha-may-ngoc-son-v440'));
+check('CẤU TRÚC (sw.js): cache đã tăng lên v444', swHtml.includes('nha-may-ngoc-son-v444'));
 check('CẤU TRÚC (package.json): bộ kiểm thử này nằm trong chuỗi npm test',
   pkg.includes('tests/than-hoa-grid.test.mjs'));
 

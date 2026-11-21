@@ -1553,7 +1553,7 @@
                     <option value="baotinh_loi">Thanh lỗi Bào Tinh</option>
                     <option value="bullig_loi">Thanh lỗi Chọn thanh Bullig</option>
                     <option value="nan_loai_han">Nan Loại hẳn (Chọn Nan Thô)</option>
-                    <option value="top_other">Tóp / Khác Bào Tinh</option>
+                    <option value="top_other">Thanh Tóp</option>
                     <option value="khac">Khác (không theo cỡ)</option>
                   </select>
                 </div>
@@ -1576,6 +1576,37 @@
                   <label for="x2-kho-qty">Số Lượng (thanh) <span class="required">*</span></label>
                   <input type="number" id="x2-kho-qty" min="1" step="1" placeholder="0">
                 </div>
+              </div>
+              <!-- Thông tin lô khi TÁI CHẾ THANH TÓP: biến thanh Tóp thành thẻ lô
+                   chuẩn ở Kho, mang cờ Tóp để Than Hóa Lại ở thẻ Than Hóa + Sấy. -->
+              <div class="form-group col-span-full" id="x2-kho-top-recycle-group" style="display:none;">
+                <label>Thông Tin Lô Tái Chế Từ Thanh Tóp <span class="required">*</span></label>
+                <div class="x2-form-row">
+                  <div class="form-group" style="flex:0 0 150px;">
+                    <label for="x2-kho-top-location">Vị Trí <span class="ck-opt">(tham khảo)</span></label>
+                    <input type="text" id="x2-kho-top-location" list="x2-kho-top-location-list" placeholder="VD: K21" autocomplete="off">
+                    <datalist id="x2-kho-top-location-list"></datalist>
+                  </div>
+                  <div class="form-group" style="flex:0 0 100px;">
+                    <label for="x2-kho-top-type">Loại <span class="required">*</span></label>
+                    <select id="x2-kho-top-type">
+                      <option value="A">A</option>
+                      <option value="A1">A1</option>
+                      <option value="B">B</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="flex:0 0 120px;">
+                    <label for="x2-kho-top-use">Dùng Cho <span class="required">*</span></label>
+                    <select id="x2-kho-top-use">
+                      <option value="Ván">Ván</option>
+                      <option value="Bullig">Bullig</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group col-span-full" id="x2-kho-top-picker-group" style="display:none;">
+                <label>Danh Sách Thanh Tóp Theo Kích Thước Trước Bào <span class="required">*</span></label>
+                <div class="al-card-list" id="x2-kho-top-picker"></div>
               </div>
 
               <!-- GẮN LÔ (bắt buộc với phiếu XUẤT): danh sách thẻ lô — CHỌN ĐƯỢC NHIỀU,

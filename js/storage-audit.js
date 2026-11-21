@@ -17,6 +17,7 @@
 // kèm chú thích khớp SYNC_STATE_KEY của js/cloud.js. Chỉ import utils.
 // ═══════════════════════════════════════════════════════════
 import { escapeHTML, showToast } from './utils.js';
+import { estimateBrowserStorage, requestPersistentStorage } from './storage-adapter.js';
 
 const SA_MODAL_ID = 'modal-storage-audit';
 const SA_BODY_ID = 'sa-body';
@@ -195,6 +196,35 @@ export function runStorageAuditAction(act) {
   return freed;
 }
 
+async function updateRealStorageEstimate() {
+  const el = document.getElementById('sa-real-estimate');
+  if (!el) return;
+  const estimate = await estimateBrowserStorage();
+  if (!estimate.supported) {
+    el.innerHTML = 'Trình duyệt không cung cấp số liệu dung lượng tổng; bảng trên vẫn đo riêng localStorage.';
+    return;
+  }
+  const pct = estimate.usagePercent;
+  const used = fmtSaBytes(estimate.usage);
+  const quota = fmtSaBytes(estimate.quota);
+  el.innerHTML =
+    '<strong>Dung lượng origin thực tế:</strong> ' + used + ' / ' + quota + ' (' + pct + '%)' +
+    '<br><span>' + (estimate.persistent
+      ? 'Trang đã được đánh dấu bảo vệ khỏi tự động dọn bớt của trình duyệt.'
+      : 'Trang chưa được đánh dấu persistent storage; có thể nhờ trình duyệt bảo vệ dữ liệu này.') +
+    '</span>';
+}
+
+export async function requestPersistentStorageFromAudit() {
+  const ok = await requestPersistentStorage();
+  showToast(ok
+    ? 'Trình duyệt đã bảo vệ dữ liệu offline; dữ liệu không dễ bị tự xóa khi bộ nhớ thấp.'
+    : 'Trình duyệt chưa cho phép bảo vệ dữ liệu; có thể thử lại sau khi người dùng tương tác với trang.',
+  ok ? 'success' : 'warning');
+  await updateRealStorageEstimate();
+  return ok;
+}
+
 // ─── RENDER + MỞ/ĐÓNG MODAL ─────────────────────────────────
 export function renderStorageAudit() {
   const body = document.getElementById(SA_BODY_ID);
@@ -223,6 +253,8 @@ export function renderStorageAudit() {
     '<div class="sa-total' + (pct >= 90 ? ' sa-total-bad' : pct >= 70 ? ' sa-total-warn' : '') + '">' +
     '<strong>' + fmtSaBytes(total) + '</strong> / ~5 MB hạn mức trình duyệt (' + pct + '%)' +
     '</div>' +
+    '<div class="sa-real-estimate" id="sa-real-estimate">Đang đo dung lượng thực tế của origin…</div>' +
+    '<button type="button" class="btn btn-outline btn-sm" id="btn-sa-persistent">Bảo vệ dữ liệu offline</button>' +
     '<div class="sa-tip">💡 Nên <strong>xuất JSON sao lưu trước</strong> (menu ⋮ → Sao Lưu JSON) rồi mới bấm dọn. ' +
     'Các nút dưới đây chỉ dọn dữ liệu PHỤ TRỢ — <u>không bao giờ</u> đụng dữ liệu chính.</div>' +
     (top.length ? '<div class="table-responsive sa-table-wrap"><table class="sa-table"><thead><tr>' +
@@ -232,6 +264,7 @@ export function renderStorageAudit() {
     '<p class="sa-note">⚠ Hạn mức localStorage của trình duyệt KHÔNG thể nâng cấp (~5 MB/trang web). ' +
     'Dữ liệu lớn đã được app chuyển sang <strong>IndexedDB</strong> (hàng trăm MB) và đồng bộ mây — ' +
     'cache Nhân sự trong bảng chỉ là bản tạm để mở app nhanh.</p>';
+  updateRealStorageEstimate();
 }
 
 export function openStorageAudit() {

@@ -12541,7 +12541,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (source === 'baotinh_loi') return (baoTinhDefectStockOf(k) || {}).remaining || 0;
     if (source === 'bullig_loi') return (bulligDefectStock().find(x => x.sizeKey === k) || {}).remaining || 0;
     if (source === 'nan_loai_han') return (nanRejectStock().find(x => x.sizeKey === k) || {}).remaining || 0;
-    if (source === 'top_other') return baoTinhTopOtherStock().remaining;   // Tóp/Khác Bào Tinh — không theo cỡ
+    if (source === 'top_other') {
+      if (k) return (baoTinhTopSizeRows().find(x => x.sizeKey === k) || {}).remaining || 0;
+      return baoTinhTopOtherStock().remaining;
+    }
     return null;
   }
   // Danh sách LÔ đang ở Kho CÒN HÀNG (chọn gắn lô cho phiếu xuất) — mới nhất lên đầu.
@@ -12590,6 +12593,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function khoLotLenOf(b) { return Number(b && b.length) > 0 ? Number(b.length) : (b && Array.isArray(b.dimensions) ? Number(b.dimensions[0]) || 0 : 0); }
   function khoLotWidOf(b) { return Number(b && b.width) > 0 ? Number(b.width) : (b && Array.isArray(b.dimensions) ? Number(b.dimensions[1]) || 0 : 0); }
   function khoLotThkOf(b) { return Number(b && b.thickness) > 0 ? Number(b.thickness) : (b && Array.isArray(b.dimensions) ? Number(b.dimensions[2]) || 0 : 0); }
+  function khoLocationsInUse() {
+    return [...new Set((state.batches || [])
+      .filter(b => b && b.stage === 'kho' && String(b.location || '').trim())
+      .map(b => String(b.location).trim()))].sort((a, b) => a.localeCompare(b, 'vi'));
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // PHIẾU XUẤT KHO LÀM ĐẦU VÀO CÔNG ĐOẠN (Bào Tinh · Bullig)
@@ -12746,10 +12754,82 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           : ('Xử lý ' + (KHO_SOURCE_LABELS[n.source] || ''))}`
         : '';
     }
+    syncX2KhoTopRecycleRows(
+      (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi',
+      (document.getElementById('x2-kho-method') || {}).value || 'tieu_huy'
+    );
+    renderX2KhoTopPicker(
+      (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi',
+      (document.getElementById('x2-kho-method') || {}).value || 'tieu_huy'
+    );
     const bX = document.getElementById('x2-kho-type-xuat');
     const bS = document.getElementById('x2-kho-type-scr');
     if (bX) bX.classList.toggle('active', type === 'xuat');
     if (bS) bS.classList.toggle('active', type === 'xu_ly');
+  }
+  function syncX2KhoTopRecycleRows(source, method) {
+    const group = document.getElementById('x2-kho-top-recycle-group');
+    if (group) group.style.display =
+      (khoNoteTypeOf() === 'xu_ly' && source === 'top_other' && method === 'taiche') ? '' : 'none';
+  }
+  function renderX2KhoTopPicker(source, method) {
+    const group = document.getElementById('x2-kho-top-picker-group');
+    const box = document.getElementById('x2-kho-top-picker');
+    if (group) group.style.display =
+      (khoNoteTypeOf() === 'xu_ly' && source === 'top_other' && (method || 'tieu_huy') === 'taiche') ? '' : 'none';
+    if (!box) return;
+    if (khoNoteTypeOf() !== 'xu_ly' || source !== 'top_other' || method !== 'taiche') {
+      box.innerHTML = '';
+      return;
+    }
+    const rows = baoTinhTopSizeRows();
+    if (!rows.length) {
+      box.innerHTML = '<div class="al-empty">— Chưa có Thanh Tóp theo kích thước trước bào —</div>';
+      return;
+    }
+    const selected = ((document.getElementById('x2-kho-size') || {}).value || '').trim();
+    box.innerHTML = rows.map(row => {
+      const on = selected === row.sizeKey;
+      return `<button type="button" class="al-card${on ? ' picked' : ''}" data-x2-kho-top-size="${escapeHTML(row.sizeKey)}" aria-pressed="${on ? 'true' : 'false'}">
+        <span class="al-card-body">
+          <span class="al-card-main"><strong>${escapeHTML(row.sizeKey)}</strong> mm</span>
+          <span class="al-card-sub">Tồn Thanh Tóp: <strong>${fmtThanh(row.remaining)}</strong> thanh</span>
+        </span>
+      </button>`;
+    }).join('');
+  }
+  function khoOnTopPickerClick(e) {
+    const t = e && e.target;
+    if (!t || typeof t.closest !== 'function') return false;
+    const card = t.closest('[data-x2-kho-top-size]');
+    if (!card) return false;
+    const sizeKey = card.getAttribute('data-x2-kho-top-size') || '';
+    const sizeEl = document.getElementById('x2-kho-size');
+    if (sizeEl) sizeEl.value = sizeKey;
+    syncX2KhoTopSizeFields();
+    const row = baoTinhTopSizeRows().find(x => x.sizeKey === sizeKey);
+    const qtyEl = document.getElementById('x2-kho-qty');
+    if (qtyEl && row) {
+      qtyEl.max = String(row.remaining);
+      if (!(Number(qtyEl.value) > 0) || Number(qtyEl.value) > row.remaining) qtyEl.value = String(row.remaining);
+    }
+    renderX2KhoTopPicker('top_other', 'taiche');
+    renderX2KhoCalc();
+    return true;
+  }
+  function syncX2KhoTopSizeFields() {
+    const src = (document.getElementById('x2-kho-source') || {}).value || '';
+    if (src !== 'top_other') return false;
+    const raw = ((document.getElementById('x2-kho-size') || {}).value || '').trim();
+    const parsed = raw.split(/[x×*,;\s]+/).map(v => Number(v)).filter(v => v > 0);
+    if (parsed.length < 3) return false;
+    const lengthEl = document.getElementById('x2-kho-top-length');
+    const widthEl = document.getElementById('x2-kho-top-width');
+    const thicknessEl = document.getElementById('x2-kho-top-thickness');
+    if (lengthEl) lengthEl.value = String(parsed[0]);
+    if (widthEl) widthEl.value = String(parsed[1]);
+    if (thicknessEl) thicknessEl.value = String(parsed[2]);
+    return true;
   }
   function setKhoNoteType(t) {
     khoNoteType = (t === 'xu_ly') ? 'xu_ly' : 'xuat';
@@ -13114,14 +13194,22 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function fillX2KhoSizeSuggestions() {
     const dl = document.getElementById('x2-kho-size-list');
     const src = (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi';
-    // Nguồn "Tóp / Khác Bào Tinh" KHÔNG theo cỡ → ẩn ô kích thước
+    const method = (document.getElementById('x2-kho-method') || {}).value || 'tieu_huy';
+    // Thanh Tóp chọn theo danh sách cỡ trước bào; ô nhập cỡ tay được ẩn.
     const grp = document.getElementById('x2-kho-size-group');
     if (grp) grp.style.display = (src === 'top_other' || src === 'khac') ? 'none' : '';
+    syncX2KhoTopRecycleRows(src, method);
+    renderX2KhoTopPicker(src, method);
+    syncX2KhoTopSizeFields();
+    const locList = document.getElementById('x2-kho-top-location-list');
+    if (locList) locList.innerHTML = khoLocationsInUse()
+      .map(l => `<option value="${escapeHTML(l)}"></option>`).join('');
     if (!dl) return;
     let rows = [];
     if (src === 'baotinh_loi') rows = baoTinhDefectStock();
     else if (src === 'bullig_loi') rows = bulligDefectStock();
     else if (src === 'nan_loai_han') rows = nanRejectStock();
+    else if (src === 'top_other') rows = baoTinhTopSizeRows();
     dl.innerHTML = rows.map(x => `<option value="${escapeHTML(x.sizeKey)}"></option>`).join('');
   }
   // Ô tự tính: nguồn · số thanh · m³ · chặn vượt tồn (tô đỏ ô số lượng)
@@ -13172,10 +13260,21 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (qtyEl) qtyEl.classList.remove('kho-qty-bad');
     } else {
       const src = (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi';
+      const method = (document.getElementById('x2-kho-method') || {}).value || 'tieu_huy';
       const sizeKey = ((document.getElementById('x2-kho-size') || {}).value || '').trim();
       const avail = khoScrapRemainingOf(src, sizeKey);
       let text = `Nguồn: <strong>${KHO_SOURCE_LABELS[src] || escapeHTML(src)}</strong>`;
       if (sizeKey) text += ` · cỡ <strong>${escapeHTML(sizeKey)}</strong>`;
+      if (src === 'top_other' && method === 'taiche') {
+        const location = ((document.getElementById('x2-kho-top-location') || {}).value || '').trim();
+        const length = Number((document.getElementById('x2-kho-top-length') || {}).value) || 0;
+        const width = Number((document.getElementById('x2-kho-top-width') || {}).value) || 0;
+        const thickness = Number((document.getElementById('x2-kho-top-thickness') || {}).value) || 0;
+        if (length > 0 && width > 0 && thickness > 0) {
+          text += ` · thẻ lô: <strong>${location ? escapeHTML(location) + ' · ' : ''}${length}×${width}×${thickness} mm</strong>`;
+          text += ` · ${calculateVolume(length, width, thickness, qty).toFixed(3)} m³`;
+        }
+      }
       if (avail != null) {
         text += ` · tồn lỗi: <strong>${fmtThanh(avail)}</strong> thanh`;
         if (qty > avail) text += ` · <span class="kho-warn">VƯỢT tồn lỗi</span>`;
@@ -13185,17 +13284,72 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
   }
 
-  // ─── TỒN TRUNG GIAN MỚI: TÓP / KHÁC của BÀO TINH ────────────────
-  // Số thanh ghi vào cột Tóp / Khác ở các lượt Bào Tinh (nguồn phiếu xuất) —
-  // CHƯA tính phiếu xử lý (tiêu hủy/tái chế gắn cờ topOther) trừ ra.
-  function baoTinhTopOtherStock() {
-    let total = 0, used = 0;
+  // ─── TỒN TRUNG GIAN: THANH TÓP THEO TỪNG KÍCH THƯỚC ────────────
+  // Mỗi lượt Bào Tinh ghi qtyTop cùng kích thước sau bào (outDims/outSizeKey).
+  // Phiếu tái chế/tiêu hủy Thanh Tóp ghi sizeKey để trừ đúng đúng cỡ, không gom mù.
+  function baoTinhTopSizeRows() {
+    const map = new Map();
     (state.xuong2BaoTinhRecords || []).forEach(r => {
       if (!r || (r.kind !== 'tinh' && r.kind !== 'ha_cap')) return;
-      total += (Number(r.qtyTop) || 0) + (Number(r.qtyOther) || 0);
+      const qtyTop = Number(r.qtyTop) || 0;
+      if (!(qtyTop > 0)) return;
+      const batchDims = Array.isArray(r.batchDims) ? r.batchDims.map(Number) : [];
+      const inDims = Array.isArray(r.inDims) ? r.inDims.map(Number) : [];
+      let dims = batchDims.length === 3 ? batchDims : (inDims.length === 3 ? inDims : []);
+      let sizeKey = String(r.inSizeKey || r.batchSizeKey || '').trim();
+      if (!sizeKey && dims.length === 3) sizeKey = dimKeyOf(dims[0], dims[1], dims[2]);
+      if (!sizeKey) {
+        const parsed = String(r.inSizeKey || r.batchSizeKey || '').split(/[x×*,;\s]+/).map(v => Number(v)).filter(v => v > 0);
+        if (parsed.length >= 3) {
+          dims = parsed.slice(0, 3);
+          sizeKey = dimKeyOf(dims[0], dims[1], dims[2]);
+        }
+      }
+      if (!sizeKey) sizeKey = '—';
+      if (!dims.length) dims = [0, 0, 0];
+      const cur = map.get(sizeKey) || { sizeKey, dims, total: 0, used: 0 };
+      cur.total += qtyTop;
+      map.set(sizeKey, cur);
     });
-    khoApprovedScrapNotes('top_other').forEach(n => { used += Number(n.qty) || 0; });
-    return { total, used, remaining: Math.max(0, total - used) };
+
+    let legacyUsed = 0;
+    khoApprovedScrapNotes('top_other').forEach(n => {
+      const key = String(n.sizeKey || '').trim();
+      const qty = Number(n.qty) || 0;
+      if (key) {
+        const row = map.get(key);
+        if (row) row.used += qty;
+        else legacyUsed += 0;
+      } else {
+        legacyUsed += qty;
+      }
+    });
+    const rows = [...map.values()].map(row => {
+      const remaining = Math.max(0, row.total - row.used);
+      return Object.assign({}, row, { remaining });
+    }).sort((a, b) => b.remaining - a.remaining);
+    if (legacyUsed > 0) {
+      let left = legacyUsed;
+      for (const row of rows) {
+        if (left <= 0) break;
+        const take = Math.min(row.remaining, left);
+        row.remaining -= take;
+        row.used += take;
+        left -= take;
+      }
+    }
+    return rows.filter(row => row.remaining > 0);
+  }
+  function baoTinhTopOtherStock() {
+    const rows = baoTinhTopSizeRows();
+    const remaining = rows.reduce((sum, row) => sum + row.remaining, 0);
+    let total = 0;
+    (state.xuong2BaoTinhRecords || []).forEach(r => {
+      if (!r || (r.kind !== 'tinh' && r.kind !== 'ha_cap')) return;
+      total += (Number(r.qtyTop) || 0);
+    });
+    const used = Math.max(0, total - remaining);
+    return { total, used, remaining };
   }
 
   // ─── RENDER CÁC KHỐI CỦA THẺ KHO NAN ─────────────────────────
@@ -13379,16 +13533,20 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const blErr = bulligDefectStock().reduce((s, x) => s + x.remaining, 0);
     const rej = nanRejectStock().reduce((s, x) => s + x.remaining, 0);
     const gcPending = bulligGcPending();
+    const topRows = baoTinhTopSizeRows();
+    const topDetail = topRows.length
+      ? topRows.map(row => `${row.sizeKey}: ${fmtThanh(row.remaining)} thanh`).join(' · ')
+      : '';
     const rows = [
       { label: 'Thanh lỗi Bào Tinh (chờ hạ cấp)', qty: bt, card: 'x2-bao-tinh-card' },
-      { label: 'Tóp / Khác Bào Tinh (chờ xử lý)', qty: baoTinhTopOtherStock().remaining, card: 'x2-kho-card' },
+      { label: 'Thanh Tóp (chờ xử lý)', qty: baoTinhTopOtherStock().remaining, card: 'x2-kho-card', detail: topDetail },
       { label: 'Thành phẩm Bullig (chờ Chọn thanh)', qty: blCt, card: 'x2-bullig-card' },
       { label: 'Thanh lỗi Chọn thanh Bullig (chờ xử lý)', qty: blErr, card: 'x2-bullig-card' },
       { label: 'Nan Loại hẳn — Chọn Nan Thô (chờ xử lý)', qty: rej, card: 'x2-chon-nan-tho-card' },
       { label: 'Thanh thô Bullig chờ Gia công (đang tính trong Tồn Kho)', qty: gcPending, card: 'x2-bullig-card' }
     ];
     bar.innerHTML = `<div class="kho-wip-title"><i data-lucide="layers"></i> Tồn trung gian (nằm ở TỪNG CÔNG ĐOẠN — không phải tồn Kho):</div>` +
-      rows.map(r => `<button type="button" class="kho-wip-row${r.qty > 0 ? '' : ' zero'}" data-kho-open-card="${r.card}" title="Mở thẻ công đoạn để xem chi tiết / xử lý">
+      rows.map(r => `<button type="button" class="kho-wip-row${r.qty > 0 ? '' : ' zero'}" data-kho-open-card="${r.card}" title="${escapeHTML(r.detail ? `${r.detail} — Mở thẻ công đoạn để xem chi tiết / xử lý` : 'Mở thẻ công đoạn để xem chi tiết / xử lý')}">
         <span>${escapeHTML(r.label)}</span><strong>${r.qty > 0 ? fmtThanh(r.qty) + ' thanh' : '—'}</strong></button>`).join('');
   }
   // Thống kê nhanh (material-stats)
@@ -13429,9 +13587,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function khoNoteRowHtml(n) {
     const canApprove = canArea('ap.kho', 'approve');
     const picked = khoPickIds.has(n.id);
+    const topLotText = n.source === 'top_other' && n.method === 'taiche' && n.topLot
+      ? ` · lô: ${escapeHTML(n.topLot.location || '—')} · ${Number(n.topLot.length) || 0}×${Number(n.topLot.width) || 0}×${Number(n.topLot.thickness) || 0} mm · ${escapeHTML(n.topLot.bambooType || '—')} · ${escapeHTML(n.topLot.useFor || '—')}${n.topLot.batchId ? ' · có cờ Tóp' : ''}`
+      : '';
     const kind = n.type === 'xuat'
       ? `Xuất → <strong>${KHO_PURPOSE_LABELS[khoNormPurpose(n.purpose)] || '—'}</strong>${n.purposeNote ? ` (${escapeHTML(n.purposeNote)})` : ''}`
-      : `${KHO_METHOD_LABELS[n.method] || escapeHTML(n.type || '')} · ${KHO_SOURCE_LABELS[n.source] || escapeHTML(n.source || '—')}${n.sizeKey ? ` · cỡ ${escapeHTML(n.sizeKey)}` : ''}`;
+      : `${KHO_METHOD_LABELS[n.method] || escapeHTML(n.type || '')} · ${KHO_SOURCE_LABELS[n.source] || escapeHTML(n.source || '—')}${n.sizeKey ? ` · cỡ ${escapeHTML(n.sizeKey)}` : ''}${topLotText}`;
     const lotsTxt = (Array.isArray(n.lots) && n.lots.length)
       ? n.lots.map(l => {
           const b = (state.batches || []).find(x => x && x.id === l.batchId);
@@ -13724,6 +13885,18 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (qtyEl) { qtyEl.value = ''; qtyEl.classList.remove('kho-qty-bad'); }
     const sizeEl = document.getElementById('x2-kho-size');
     if (sizeEl) sizeEl.value = '';
+    const topFieldIds = [
+      'x2-kho-top-location', 'x2-kho-top-length',
+      'x2-kho-top-width', 'x2-kho-top-thickness'
+    ];
+    topFieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const topTypeEl = document.getElementById('x2-kho-top-type');
+    if (topTypeEl) topTypeEl.value = 'A';
+    const topUseEl = document.getElementById('x2-kho-top-use');
+    if (topUseEl) topUseEl.value = 'Ván';
     const noteEl = document.getElementById('x2-kho-note');
     if (noteEl) noteEl.value = '';
     const pnEl = document.getElementById('x2-kho-purpose-note');
@@ -13766,6 +13939,19 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (sizeEl) sizeEl.value = n.sizeKey || '';
     const qtyEl = document.getElementById('x2-kho-qty');
     if (qtyEl) qtyEl.value = Number(n.qty) || 0;
+    const topTemplate = n.topLot && typeof n.topLot === 'object' ? n.topLot : {};
+    const topLocationEl = document.getElementById('x2-kho-top-location');
+    if (topLocationEl) topLocationEl.value = topTemplate.location || '';
+    const topLengthEl = document.getElementById('x2-kho-top-length');
+    if (topLengthEl) topLengthEl.value = Number(topTemplate.length) || '';
+    const topWidthEl = document.getElementById('x2-kho-top-width');
+    if (topWidthEl) topWidthEl.value = Number(topTemplate.width) || '';
+    const topThicknessEl = document.getElementById('x2-kho-top-thickness');
+    if (topThicknessEl) topThicknessEl.value = Number(topTemplate.thickness) || '';
+    const topTypeEl = document.getElementById('x2-kho-top-type');
+    if (topTypeEl) topTypeEl.value = topTemplate.bambooType || 'A';
+    const topUseEl = document.getElementById('x2-kho-top-use');
+    if (topUseEl) topUseEl.value = topTemplate.useFor || 'Ván';
     const noteEl = document.getElementById('x2-kho-note');
     if (noteEl) noteEl.value = n.note || '';
     const apEl = document.getElementById('x2-kho-approver');
@@ -13837,8 +14023,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const source = (document.getElementById('x2-kho-source') || {}).value || 'baotinh_loi';
       const method = (document.getElementById('x2-kho-method') || {}).value || 'tieu_huy';
       let sizeKey = ((document.getElementById('x2-kho-size') || {}).value || '').trim();
-      if (source !== 'khac' && source !== 'top_other' && !sizeKey) { showToast('Chọn / nhập KÍCH THƯỚC của tồn lỗi cần xử lý!', 'error'); return; }
-      if (source === 'top_other') sizeKey = '';   // Tóp/Khác Bào Tinh — không theo cỡ
+      if (source !== 'khac' && !sizeKey) { showToast('Chọn / nhập KÍCH THƯỚC của tồn lỗi cần xử lý!', 'error'); return; }
       const avail = khoScrapRemainingOf(source, sizeKey);
       if (avail != null) {
         const old = isEdit ? (state.khoNotes || []).find(x => x && x.id === khoNoteEditId) : null;
@@ -13849,6 +14034,33 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         }
       }
       data = { type: method === 'taiche' ? 'taiche' : 'tieuhuy', source, method, sizeKey, qty, m3: 0, lots: [] };
+      if (source === 'top_other' && method === 'taiche') {
+        const topLocation = ((document.getElementById('x2-kho-top-location') || {}).value || '').trim();
+        if (!sizeKey) { showToast('Chọn 1 kích thước trong danh sách Thanh Tóp trước bào!', 'error'); return; }
+        let topLength = Number((document.getElementById('x2-kho-top-length') || {}).value) || 0;
+        let topWidth = Number((document.getElementById('x2-kho-top-width') || {}).value) || 0;
+        let topThickness = Number((document.getElementById('x2-kho-top-thickness') || {}).value) || 0;
+        if (!(topLength > 0 && topWidth > 0 && topThickness > 0) && sizeKey) {
+          const parsed = String(sizeKey).split(/[x×*,;\s]+/).map(v => Number(v)).filter(v => v > 0);
+          if (parsed.length >= 3) {
+            topLength = parsed[0]; topWidth = parsed[1]; topThickness = parsed[2];
+          }
+        }
+        const topBambooType = (document.getElementById('x2-kho-top-type') || {}).value || 'A';
+        const topUseFor = (document.getElementById('x2-kho-top-use') || {}).value || 'Ván';
+        if (!(topLength > 0 && topWidth > 0 && topThickness > 0)) {
+          showToast('Kích thước Thanh Tóp không hợp lệ — chọn lại trong danh sách trước bào!', 'error'); return;
+        }
+        data.topLot = {
+          sizeKey,
+          location: topLocation,
+          length: topLength,
+          width: topWidth,
+          thickness: topThickness,
+          bambooType: topBambooType,
+          useFor: topUseFor
+        };
+      }
     }
     pushUndo(isEdit ? 'Sửa phiếu kho' : 'Thêm phiếu kho');
     if (type === 'xuat' && bulkItems.length) {
@@ -13891,7 +14103,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (isEdit) {
       const n = (state.khoNotes || []).find(x => x && x.id === khoNoteEditId);
       // Lưu xong → NHẢ khoá mềm để máy khác sửa tiếp (khoá chỉ để báo "đang sửa")
-      if (n) { releaseEditLock(n); Object.assign(n, data, { note, approverName: approver, updatedAt: now }); }
+      if (n) {
+        releaseEditLock(n);
+        if (!(data.source === 'top_other' && data.method === 'taiche')) delete n.topLot;
+        Object.assign(n, data, { note, approverName: approver, updatedAt: now });
+      }
     } else {
       state.khoNotes = [...(state.khoNotes || []), Object.assign({
         id: `kho-note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -13955,6 +14171,15 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!confirm(`Xóa ${label}?`)) return;
     pushUndo('Xóa phiếu kho');
     trackDeleted('khoNotes', id); // tombstone: chặn mây/máy khác hồi sinh phiếu đã xóa
+    if (n.topLot && n.topLot.batchId) {
+      const batchId = String(n.topLot.batchId);
+      const batch = (state.batches || []).filter(b => b && String(b.id) === batchId)[0];
+      if (batch && batch.stage === 'kho' && batch.topRework) {
+        trackDeleted('batches', batchId);
+        state.batches = (state.batches || []).filter(b => b && String(b.id) !== batchId);
+        storageModule().then(m => m && m.saveData()).catch(() => {});
+      }
+    }
     state.khoNotes = (state.khoNotes || []).filter(x => x && x.id !== id);
     if (khoNoteEditId === id) khoNoteEditId = null;
     saveKhoNotes();
@@ -14006,6 +14231,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     n.status = 'da_duyet';
     n.approvedBy = khoUserKey(); n.approvedByName = khoUserName(); n.approvedAt = now; n.updatedAt = now;
     if (!n.approverName) n.approverName = n.approvedByName || n.approvedBy || '';   // Người duyệt: tự điền người bấm Duyệt
+    if (n.source === 'top_other' && n.method === 'taiche') khoSyncApprovedTopReworkLot(n);
     saveKhoNotes();
     renderAll();
     showToast('Đã duyệt phiếu kho — số liệu tồn đã cập nhật!', 'success');
@@ -14052,9 +14278,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (!n || n.status !== 'cho_duyet') return;
       // Phiếu xuất: kiểm tồn LÚC DUYỆT (đã duyệt 1 phiếu thì tồn lô đã giảm → phiếu sau kiểm tiếp)
       if (n.type === 'xuat' && khoApproveCheckError(n)) { skipped++; return; }
+      if (n.type !== 'xuat') {
+        const avail = khoScrapRemainingOf(n.source, n.sizeKey);
+        if (avail != null && (Number(n.qty) || 0) > avail) { skipped++; return; }
+      }
       n.status = 'da_duyet';
       n.approvedBy = khoUserKey(); n.approvedByName = khoUserName(); n.approvedAt = now; n.updatedAt = now;
-    if (!n.approverName) n.approverName = n.approvedByName || n.approvedBy || '';   // Người duyệt: tự điền người bấm Duyệt
+      if (!n.approverName) n.approverName = n.approvedByName || n.approvedBy || '';   // Người duyệt: tự điền người bấm Duyệt
+      if (n.source === 'top_other' && n.method === 'taiche') khoSyncApprovedTopReworkLot(n);
       ok++;
     });
     khoPickIds.clear();
@@ -14074,6 +14305,76 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const del = t.closest('[data-kho-ledger-del]');
     if (del) { khoDeleteNote(del.getAttribute('data-kho-ledger-del')); return true; }
     return false;
+  }
+
+  // Tái chế Thanh Tóp: khi phiếu xử lý được duyệt, tạo 1 thẻ lô chuẩn ở Kho
+  // mang cờ topRework để thẻ Than Hóa + Sấy có thể chọn chức năng Than Hóa Lại.
+  function khoSyncApprovedTopReworkLot(n) {
+    if (!n || n.source !== 'top_other' || n.method !== 'taiche') return null;
+    const top = n.topLot && typeof n.topLot === 'object' ? n.topLot : null;
+    if (!top) return null;
+    const length = Number(top.length) || 0;
+    const width = Number(top.width) || 0;
+    const thickness = Number(top.thickness) || 0;
+    const qty = Math.max(0, Math.floor(Number(n.qty) || 0));
+    if (!(length > 0 && width > 0 && thickness > 0 && qty > 0)) return null;
+
+    let batch = top.batchId
+      ? (state.batches || []).find(b => b && String(b.id) === String(top.batchId))
+      : null;
+    if (!batch) {
+      batch = {
+        id: `batch-${Date.now()}-top-${Math.random().toString(36).slice(2, 8)}`,
+        code: generateBatchCodeYYMMDD(n.date || todayISO()),
+        stage: 'kho',
+        date: n.date || todayISO(),
+        week: getISOWeekString(n.date || todayISO()),
+        length, width, thickness,
+        quantity: qty,
+        volume: calculateVolume(length, width, thickness, qty),
+        bambooType: top.bambooType || 'A',
+        useFor: top.useFor || 'Ván',
+        location: top.location || '',
+        khoDate: n.date || todayISO(),
+        notes: n.note || '',
+        topRework: true,
+        recycleFromTop: true,
+        topSizeKey: String(top.sizeKey || dimKeyOf(length, width, thickness)),
+        topScrapNoteId: String(n.id),
+        stageHistory: [{ stage: 'kho', date: n.date || todayISO() }],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      if (!state.batches) state.batches = [];
+      state.batches.unshift(batch);
+    } else {
+      batch.stage = 'kho';
+      batch.date = n.date || batch.date;
+      batch.week = getISOWeekString(n.date || batch.date);
+      batch.length = length;
+      batch.width = width;
+      batch.thickness = thickness;
+      batch.quantity = qty;
+      batch.volume = calculateVolume(length, width, thickness, qty);
+      batch.bambooType = top.bambooType || batch.bambooType || 'A';
+      batch.useFor = top.useFor || batch.useFor || 'Ván';
+      batch.location = top.location || '';
+      batch.khoDate = n.date || batch.khoDate || batch.date;
+      batch.notes = n.note || '';
+      batch.topRework = true;
+      batch.recycleFromTop = true;
+      batch.topSizeKey = String(top.sizeKey || dimKeyOf(length, width, thickness));
+      batch.topScrapNoteId = String(n.id);
+      if (!Array.isArray(batch.stageHistory) || !batch.stageHistory.length) {
+        batch.stageHistory = [{ stage: 'kho', date: batch.date }];
+      } else if (!batch.stageHistory.some(h => h && h.stage === 'kho')) {
+        batch.stageHistory.push({ stage: 'kho', date: batch.date });
+      }
+      batch.updatedAt = new Date().toISOString();
+    }
+    top.batchId = String(batch.id);
+    storageModule().then(m => m && m.saveData()).catch(() => {});
+    return batch;
   }
   // Bấm vào 1 dòng phiếu chờ duyệt (uỷ nhiệm sự kiện — wire trong js/events.js)
   function khoOnPendingClick(e) {
@@ -19807,6 +20108,7 @@ export {
   khoRejectNote,
   khoApprovePicked,
   khoPickAllPending,
+  khoSyncApprovedTopReworkLot,
   toggleX2KhoTable,
   toggleX2KhoStockTable,
   khoBackfillFromLegacy,
@@ -19824,6 +20126,10 @@ export {
   bulligDefectStock,
   nanRejectStock,
   khoLotPickerList,
+  baoTinhTopSizeRows,
+  syncX2KhoTopSizeFields,
+  renderX2KhoTopPicker,
+  khoOnTopPickerClick,
   khoStageDaysOf,
   KHO_DRY_STATUS,
   khoLotDryStatusOf,

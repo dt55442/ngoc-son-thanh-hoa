@@ -17468,6 +17468,11 @@ body[data-fx="low"] .x1-kho-export-close { transition: none; transform: none; }
 .sa-core td { background: rgba(124, 58, 237, 0.07); }
 .sa-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
 .sa-act-btn { justify-content: flex-start; text-align: left; }
+.sa-real-estimate {
+  padding: 8px 12px; border-radius: 8px; font-size: 0.86rem;
+  background: var(--surface-muted, rgba(100, 116, 139, 0.08));
+  border: 1px solid var(--border, #ddd);
+}
 .sa-note { font-size: 0.84rem; color: #64748b; margin: 2px 0 0; }
 @media (max-width: 639.98px) {
   .sa-card { width: 100%; }

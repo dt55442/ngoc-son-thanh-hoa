@@ -3021,6 +3021,7 @@ import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (Indexed
     else if (fbLastSyncOkAt) { label = 'Đã đồng bộ ' + hhmmss(fbLastSyncOkAt); }
     el.className = 'sync-status-badge ' + cls;
     if (txt) txt.textContent = label;
+    el.setAttribute('aria-label', label);
     const conflictN = fbSyncState ? (fbSyncState.conflicts || []).filter(c => c && !c.resolved).length : 0;
     const conflictBtn = document.getElementById('btn-sync-conflicts');
     // Số "việc chưa lên mây" cạnh mục menu ⋮ (cache 20 giây — không quét lại liên tục)

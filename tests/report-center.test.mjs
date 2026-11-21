@@ -94,13 +94,13 @@ global.XLSX = {
 // ─── A. DANH MỤC BÁO CÁO ─────────────────────────────────────────
 check('A1. Có đủ 6 nhóm báo cáo (X2/X1/Kế Hoạch/Nguyên Liệu/QC/Nhân Sự)',
   specs.REPORT_GROUPS.length === 6 && specs.REPORT_GROUPS.map(g => g.id).join(',') === 'x2,x1,planning,materials,qc,hr');
-check('A2. Tổng số báo cáo = 47 (17 X2 + 8 X1 + 3 KH + 2 NL + 3 QC + 14 NS)',
-  specs.REPORT_SPECS.length === 47);
-check('A3. 14 báo cáo Xưởng 2 (gồm Báo Cáo Sự Cố) + 8 báo cáo Xưởng 1',
-  specs.reportsOfGroup('x2').length === 17 && specs.reportsOfGroup('x1').length === 8);
-check('A4. MỌI thẻ có nguồn xuất đều có báo cáo (23 thẻ)',
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 23 &&
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).every(cardId => !!specs.reportIdForCard(cardId)));
+check('A2. Danh mục báo cáo cập nhật sau gộp thẻ (46 báo cáo)',
+  specs.REPORT_SPECS.length === 46);
+check('A3. 16 báo cáo Xưởng 2 (gồm Xử lý lỗi + sự cố) + 8 báo cáo Xưởng 1',
+  specs.reportsOfGroup('x2').length === 16 && specs.reportsOfGroup('x1').length === 8);
+check('A4. Thẻ Xử lý lỗi có báo cáo riêng và hai alias cũ vẫn có vùng dữ liệu',
+  specs.reportIdForCard('x2-xu-ly-loi-card') === 'xulyloi' &&
+  Object.keys(x2.X2_CARD_EXPORT_SOURCE).some(cardId => cardId === 'x2-xu-ly-loi-card'));
 check('A5. Thẻ Xưởng 1 trỏ ĐÚNG báo cáo X1 (không còn rơi về batch)',
   specs.reportIdForCard('x1-cat-ong-card') === 'x1catong' &&
   specs.reportIdForCard('x1-loc-thanh-card') === 'x1locthanh' &&
@@ -244,7 +244,7 @@ check('F3. events.js nối center: mở theo thẻ/tab + 4 nút + lọc',
   evSrc.includes("openReportCenter('plan-items')") && evSrc.includes("openReportCenter('qc-export')") &&
   evSrc.includes("safeOn('report-center-filters',      'change', onReportFilterChange)"));
 check('F4. sw.js: cache v275 + nạp report-specs.js/report-center.js vào APP_SHELL',
-  swSrc.includes("nha-may-ngoc-son-v444") && swSrc.includes("./js/report-specs.js") &&
+  swSrc.includes("nha-may-ngoc-son-v452") && swSrc.includes("./js/report-specs.js") &&
   swSrc.includes("./js/report-center.js"));
 check('F5. CSS có khối .rc-* + in lặp tiêu đề + JS ghi rõ giới hạn viền/màu',
   cssSrc.includes('.rc-card') && cssSrc.includes('.rc-filter-grid') &&

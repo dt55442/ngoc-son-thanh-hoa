@@ -41,7 +41,9 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   // ── THẺ BÀO VÁN (Bào + Chà thùng — tồn theo kỳ 1/2 tuần) ──
   handleXuong2BaoVanSubmit, editXuong2BaoVan, deleteXuong2BaoVan, resetXuong2BaoVanForm,
   renderX2BaoVanSource, renderX2BaoVanCalc, renderX2BaoVanRateBar, handleX2BaoVanRateSave,
-  setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable } from './xuong2.js';
+  setX2BaoVanSpan, syncX2BaoVanSpanDom, toggleX2BaoVanTable,
+  switchX2XuLyLoiTab, handleX2TopBundleSubmit, resetX2TopBundleForm,
+  addX2TopBundleRow, onX2TopBundleStockClick } from './xuong2.js';
 import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, khoBulkOnPaste, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, khoOnPurposeChange, fillX2KhoSizeSuggestions, syncX2KhoTopSizeFields, khoOnTopPickerClick, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck, saveKhoNotes } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
 import { setX1SaySinhQcStatus, setX1SsViewMode, x1SsUpdateSulfurHint, x1SsOpenInputModal, x1SsCloseInputModal, x1SsToggleTimeline, renderX1SsHistory } from './xuong2.js';
 import { x2OngDatAvailable } from './x2-pool.js'; // SỔ NHÓM: tồn ống đạt chờ bổ (nút "Lấy Hết Tồn")
@@ -2631,6 +2633,13 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-x2-bv-rate-save', 'click', handleX2BaoVanRateSave);
     safeOn('x2-bv-rate-month', 'change', renderX2BaoVanRateBar);
     safeOn('x2-bv-rate-kind', 'change', renderX2BaoVanRateBar);
+    // ── THẺ GỘP XỬ LÝ LỖI (5 chức năng) ──
+    safeOn('x2-xl-kind', 'change', (e) => switchX2XuLyLoiTab(e.target.value));
+    safeOn('x2-xl-top-stock', 'click', onX2TopBundleStockClick);
+    safeOn('x2-xl-top-rows', 'click', onX2TopBundleStockClick);
+    safeOn('x2-xl-top-add-row', 'click', () => addX2TopBundleRow());
+    safeOn('x2-xl-top-form', 'submit', handleX2TopBundleSubmit);
+    safeOn('btn-x2-xl-top-reset', 'click', resetX2TopBundleForm);
     // ── Vị trí BÀO TINH (thẻ launcher Xưởng 2 — tab Công Đoạn) ──
     // Form: Ngày bào + Loại bào (Bào tinh / Bào tinh hạ cấp / Bào thanh) + Chọn
     // thanh (đổi theo loại bào) + Kích thước sau bào + SL thanh đạt / lỗi.

@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v444', /nha-may-ngoc-son-v444/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v452', /nha-may-ngoc-son-v452/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -333,8 +333,8 @@ const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
 // + Hỗ Trợ + Công Đoạn Lẻ (10/10/2026).
 // 17/10/2026: NGUỒN XUẤT EXCEL của 8 thẻ X1 ĐÃ KHAI BÁO (trước đây rơi về 'batch'
 // ⇒ bấm "Xuất Dữ Liệu" trên thẻ Xưởng 1 lại xuất Lô nan).
-check('DÙNG CHUNG: bản đồ có thêm Kho Nan Xưởng 1 dùng dữ liệu Lọc Thanh/Bó Xô (23 thẻ)',
-  Object.keys(mapCn).length === 23 && Object.keys(mapEx).length === 23 &&
+check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ, bản đồ giữ đủ vùng dữ liệu',
+  Object.keys(mapCn).length === 24 && Object.keys(mapEx).length === 24 &&
   mapCn['x2-bo-luong-card'] === 'xuong2BoluongRecords' && mapEx['x2-bo-luong-card'] === 'boluong' &&
   mapCn['x2-kho-card'] === 'khoNotes' && mapEx['x2-kho-card'] === 'kho' &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
@@ -806,7 +806,7 @@ check('R14: CSS có khối 3 dòng đầu vào + tổng thể tích + chip cơ s
   cssHtml.includes('.ps-bt-line') && cssHtml.includes('.press-input-vol-total') &&
   cssHtml.includes('.press-vol-basis'));
 check('R15: sw.js đã tăng cache (v265) để PWA không dùng bản cũ',
-  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v444'));
+  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v452'));
 check('R16: ô nhiều cỡ có khung .ps-qty-list + N ô .ps-size-qty (hàm đồng bộ riêng)',
   pressSrc.includes('ps-qty-list') && pressSrc.includes('ps-size-qty') &&
   pressSrc.includes('function syncPressStickQtyInputs') && pressSrc.includes('function readPressSizeQtys'));

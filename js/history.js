@@ -60,6 +60,11 @@ import { escapeHTML, showToast } from './utils.js';
     xuong2BaoThoRecords:{ tab: 'kanban',   label: 'Chạy máy bào thô X2',  get: () => state.xuong2BaoThoRecords },
     xuong2ChonNanThoRecords:{ tab: 'kanban', label: 'Chọn nan thô Xưởng 2', get: () => state.xuong2ChonNanThoRecords },
     xuong2BulligRecords: { tab: 'kanban', label: 'Bullig Xưởng 2',          get: () => state.xuong2BulligRecords },
+    xuong2XuLyLoiRecords: { tab: 'kanban', label: 'Xử lý lỗi Xưởng 2', get: () => [
+      ...(state.xuong2CatVanRecords || []).map(r => ({ ...r, kindLabel: r.kind === 'xe' ? 'Xẻ thanh' : 'Cắt ván' })),
+      ...(state.xuong2BaoVanRecords || []).map(r => ({ ...r, kindLabel: r.kind === 'cha' ? 'Chà thùng' : 'Bào' })),
+      ...(state.batches || []).filter(b => b && b.topBundle === true).map(b => ({ ...b, kindLabel: 'Bó Thanh Tóp' }))
+    ] },
     xuong2CatVanRecords: { tab: 'kanban', label: 'Cắt Ván Xưởng 2',          get: () => state.xuong2CatVanRecords },
     x2CatVanRates:       { tab: 'kanban', label: 'Định mức cắt ván (tấm/h · thanh/h)', get: () => state.x2CatVanRates },
     xuong2BaoVanRecords: { tab: 'kanban', label: 'Bào Ván Xưởng 2',           get: () => state.xuong2BaoVanRecords },

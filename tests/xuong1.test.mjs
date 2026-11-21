@@ -463,9 +463,10 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v444/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v452/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
-  idxHtml.includes('<span>Công Đoạn SX</span>'));
+  idxHtml.includes('<span>Công đoạn</span>') &&
+  idxHtml.includes('title="Công Đoạn SX"'));
 check('G3: tab Công Đoạn SX có ô nhận diện 2 xưởng ở header',
   idxHtml.includes('2 xưởng riêng biệt — chuyển bằng nút XƯỞNG 1 / XƯỞNG 2'));
 check('G4: CSS điện thoại cho công tắc (2 nút chia đều + lưới X1 2 cột)',

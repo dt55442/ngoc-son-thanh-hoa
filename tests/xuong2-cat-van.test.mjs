@@ -295,21 +295,8 @@ check('THẺ NGÀY: nút Sửa/Xóa uỷ nhiệm data-x2-cv-edit / data-x2-cv-de
 // ─── K. BẢNG TỔNG HỢP CÔNG SUẤT — 2 DÒNG RIÊNG ──────────────────────
 const cap = await import('../js/capacity.js');
 const capSrc = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
-const stCat = cap.CAP_STAGES.find(s => s.id === 'catvan_cat');
-const stXe = cap.CAP_STAGES.find(s => s.id === 'catvan_xe');
-check('CAPACITY: 2 dòng Cắt Ván có cardId đúng + xưởng x2',
-  !!stCat && !!stXe && stCat.cardId === 'x2-cat-van-card' && stXe.cardId === 'x2-cat-van-card' &&
-  stCat.ws === 'x2' && stXe.ws === 'x2');
-check('CAPACITY: Cắt ván = tấm/h (sản lượng = số tấm cắt) · Xẻ thanh = thanh/h (sản lượng = thanh ra)',
-  stCat.unit === 'tấm/h' && stCat.unitQty === 'tấm' &&
-  stXe.unit === 'thanh/h' && stXe.unitQty === 'thanh');
-check('CAPACITY: định mức đọc đúng từng dòng (60 tấm/h · 200 thanh/h cho T10/2026)',
-  stCat.rateOf('2026-10') === 60 && stXe.rateOf('2026-10') === 200);
-check('CAPACITY: khóa giờ sự cố 2 dòng trỏ chung "catvan"',
-  capSrc.includes("catvan_cat: 'catvan', catvan_xe: 'catvan'"));
-check('CAPACITY: sparkline mini card có ô gắn 2 dòng Cắt Ván',
-  cap.CAP_SPARKS.some(g => g.elId === 'x2-mini-spark-cat-van' &&
-    g.stageIds.join(',') === 'catvan_cat,catvan_xe'));
+check('CAPACITY: Cắt Ván và Xẻ thanh không còn dòng công suất Dashboard',
+  !cap.CAP_STAGES.some(s => s.id === 'catvan_cat' || s.id === 'catvan_xe'));
 // ─── L. CẤU TRÚC NỐI ĐỦ (index · styles · events · 6 chỗ dữ liệu) ─────
 const rd = (f) => fs.readFileSync(new URL('../js/' + f, import.meta.url), 'utf8');
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -358,8 +345,8 @@ check('NỐI (main): load 3 khoá lúc boot',
   jsMain.includes('loadX2CatVanSpan()'));
 check('NỐI (export-xlsx): nguồn xuất "catvan" + cột 2 công đoạn',
   jsExport.includes("id: 'catvan'") && jsExport.includes('source === \'catvan\''));
-check('CẤU TRÚC (sw.js): CACHE_NAME v444 (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v444/.test(swJs));
+check('CẤU TRÚC (sw.js): CACHE_NAME v452 (PWA không dùng cache cũ)',
+  /nha-may-ngoc-son-v452/.test(swJs));
 
 // ─── M. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
 {

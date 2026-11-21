@@ -118,14 +118,15 @@ const x2StageUnits = rc.RC_WORKSHOPS.x2.fields.filter(f => X2_DOUBLE.includes(f.
   new Set(rc.RC_WORKSHOPS.x2.fields.filter(f => !X2_DOUBLE.includes(f.group)).map(f => f.group)).size;
 check('A1: đăng ký 2 xưởng (x2 · x1), mặc định mở theo xưởng đang xem',
   Object.keys(rc.RC_WORKSHOPS).length === 2 && rc.RC_WORKSHOPS.x1.label === 'Xưởng 1' && rc.RC_WORKSHOPS.x2.label === 'Xưởng 2');
-check('A2: Xưởng 2 = 14 công đoạn · 11 nhóm cột · 19 cột (Than Hóa + Sấy tách 6 cột)',
-  x2StageUnits === 14 && x2Groups.length === 11 && rc.RC_WORKSHOPS.x2.fields.length === 19);
+check('A2: Xưởng 2 = 10 công đoạn còn công suất · Cắt Ván/Bào Ván không còn dòng ĐM',
+  x2StageUnits === 10 && rc.RC_WORKSHOPS.x2.fields.every(f =>
+    f.group !== 'Cắt Ván' && f.group !== 'Bào Ván'));
 check('A3: Than Hóa + Sấy có 6 cột (S1/S2 × Ván/Bullig phút + m³/lần lô cũ)',
   rc.RC_WORKSHOPS.x2.fields.filter(f => f.group === 'Than Hóa + Sấy').length === 6);
 check('A4: Xưởng 1 = 8 công đoạn, CẢ 8 đơn vị kg/h',
   rc.RC_WORKSHOPS.x1.fields.length === 8 && rc.RC_WORKSHOPS.x1.fields.every(f => f.sub === 'kg/h'));
-check('A5: có đủ 4 công đoạn 2 chỉ số (Bullig · Cắt Ván · Bào Ván) + Ép Ván (m³/h)',
-  ['Bullig', 'Cắt Ván', 'Bào Ván'].every(g => rc.RC_WORKSHOPS.x2.fields.filter(f => f.group === g).length === 2) &&
+check('A5: chỉ Bullig còn 2 chỉ số; Ép Ván giữ m³/h',
+  rc.RC_WORKSHOPS.x2.fields.filter(f => f.group === 'Bullig').length === 2 &&
   rc.RC_WORKSHOPS.x2.fields.some(f => f.group === 'Ép Ván' && f.sub === 'm³/h'));
 
 // ─── B. DANH SÁCH THÁNG + GIÁ TRỊ ───────────────────────────────
@@ -320,11 +321,11 @@ check('H3: đã ẩn 19 nút định mức cũ trong các thẻ (giữ id cho t�
 check('H4: events.js nối mở/đóng + uỷ nhiệm click trong #rc-body',
   ev.includes("safeOn('btn-rate-center'") && ev.includes("safeOn('rc-body'") &&
   ev.includes('onRateCenterClick') && ev.includes("safeOn('btn-rc-close'"));
-check('H5: sw.js CACHE_NAME v444 + js/rate-center.js trong APP_SHELL',
-  sw.includes('nha-may-ngoc-son-v444') && sw.includes("'./js/rate-center.js'"));
-check('H6: state.js có key + mảng rateApprovals + APP_VERSION v444',
+check('H5: sw.js CACHE_NAME v452 + js/rate-center.js trong APP_SHELL',
+  sw.includes('nha-may-ngoc-son-v452') && sw.includes("'./js/rate-center.js'"));
+check('H6: state.js có key + mảng rateApprovals + APP_VERSION v452',
   stSrc.includes('bamboo_tracker_rate_approvals_v1') &&
-  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v444'"));
+  stSrc.includes('rateApprovals: []') && stSrc.includes("APP_VERSION = 'v452'"));
 check('H7: storage.js nối restore + ghi vào 2 file snapshot',
   stg.includes('function restoreRateApprovals') &&
   (stg.match(/rateApprovals: state\.rateApprovals \|\| \[\]/g) || []).length >= 2);

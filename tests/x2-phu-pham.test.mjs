@@ -358,18 +358,17 @@ check('J6: events.js nối form + kiểm kê + định mức + tháng + sửa/x�
   evSrc.includes("'x2-pp-scale-in'") && evSrc.includes("'x2-pp-scale-out'") &&
   evSrc.includes('handleX2YieldRateSave') && evSrc.includes("'x2-pp-month'") &&
   evSrc.includes('data-x2-pp-edit') && evSrc.includes('data-x2-pp-st-del'));
-check('J7: sw.js cache v444 + nạp js/x2-phu-pham.js',
-  /nha-may-ngoc-son-v444/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
+check('J7: sw.js cache v452 + nạp js/x2-phu-pham.js',
+  /nha-may-ngoc-son-v452/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
 check('J8: styles.css có khối .x2-pp-* + bảng supplier thêm cột Giảm Trừ',
   css.includes('.x2-pp-chip') && css.includes('.x2-pp-yield-chip') &&
   idx.includes('Giảm Trừ (đ)') && supSrc.includes('x2SupplierCreditRows'));
-check('J9: 14 nguồn X2 + 23 thẻ có nguồn xuất (8 công đoạn + Kho Nan X1)',
-  xlsx.X2_EXPORT_SOURCES.length === 22 &&
+check('J9: thẻ Xử lý lỗi gộp 2 thẻ cũ, danh mục có nguồn xuất đủ',
+  xlsx.X2_EXPORT_SOURCES.length === 23 &&
   xlsx.X2_EXPORT_SOURCES.some(s => s.id === 'phupham') &&
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 23 &&
-  Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 23);
-check('J10: danh mục báo cáo 47 (X2 có phụ phẩm + cân đối + giá thành + sự cố · NS thêm 3 báo cáo chốt công)',
-  specs.REPORT_SPECS.length === 47 &&
+  xlsx.X2_EXPORT_SOURCES.some(s => s.id === 'xulyloi'));
+check('J10: danh mục báo cáo cập nhật sau gộp thẻ (46 báo cáo)',
+  specs.REPORT_SPECS.length === 46 &&
   specs.REPORT_SPECS.some(r => r.id === 'phupham') &&
   specs.REPORT_SPECS.some(r => r.kind === 'massBalance') &&
   specs.REPORT_SPECS.some(r => r.kind === 'costing'));

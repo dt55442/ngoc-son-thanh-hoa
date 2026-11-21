@@ -35,6 +35,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
     { id: 'chonnan', label: 'Chọn Nan Thô' },
     { id: 'baotinh', label: 'Bào Tinh' },
     { id: 'bullig',  label: 'Bullig (Gia công + Chọn thanh)' },
+    { id: 'xulyloi', label: 'Xử lý lỗi (Cắt · Xẻ · Bào · Chà · Bó Tóp)' },
     { id: 'catvan',  label: 'Cắt Ván (Cắt ván + Xẻ thanh)' },
     { id: 'baovan',  label: 'Bào Ván (Bào + Chà thùng)' },
     { id: 'hotro',   label: 'Hỗ Trợ + Công Đoạn Lẻ' },
@@ -81,6 +82,27 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
       chonnan: () => (state.xuong2ChonNanThoRecords || []).map(r => ({ rec: r, d: chonNanDisplay(r), date: r.date || '' })),
       baotinh: () => (state.xuong2BaoTinhRecords || []).map(r => ({ rec: r, d: baoTinhDisplay(r), date: r.date || '' })),
       bullig:  () => (state.xuong2BulligRecords || []).map(r => ({ rec: r, d: bulligDisplay(r), date: r.date || '' })),
+      xulyloi: () => [
+        ...(state.xuong2CatVanRecords || []).map(r => ({ rec: r, d: catVanDisplay(r), date: r.date || '', kind: 'catvan' })),
+        ...(state.xuong2BaoVanRecords || []).map(r => ({ rec: r, d: baoVanDisplay(r), date: r.date || '', kind: 'baovan' })),
+        ...(state.batches || []).filter(b => b && b.topBundle === true).map(b => ({
+          rec: b,
+          d: {
+            date: b.topBundleDate || b.date || '',
+            kindLabel: 'Bó Thanh Tóp',
+            inSizeKey: b.topSizeKey || (b.length > 0 ? `${b.length}×${b.width}×${b.thickness}` : ''),
+            qtyIn: Number(b.quantity) || 0,
+            bambooType: b.bambooType || '',
+            useFor: b.useFor || '',
+            location: b.location || '',
+            workerRows: b.worker ? [{ name: b.worker, time: b.workTime || '' }] : [],
+            workHoursHC: Number(b.workHoursHC) || 0,
+            workHoursTC: Number(b.workHoursTC) || 0
+          },
+          date: b.topBundleDate || b.date || '',
+          kind: 'top'
+        }))
+      ],
       catvan:  () => (state.xuong2CatVanRecords || []).map(r => ({ rec: r, d: catVanDisplay(r), date: r.date || '' })),
       baovan:  () => (state.xuong2BaoVanRecords || []).map(r => ({ rec: r, d: baoVanDisplay(r), date: r.date || '' })),
       hotro:   () => (state.xuong2HoTroRecords || []).map(r => ({ rec: r, d: hoTroDisplay(r), date: r.date || '' })),
@@ -987,6 +1009,27 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
           x2FmtKg(d.volume), x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
       });
       sumNote = `Gia công được ${x2FmtKg(outQty)} thanh (dùng ${x2FmtKg(thoQty)} thanh thô) · Chọn thanh ${x2FmtKg(ctQty)} thanh · ${x2FmtKg(vol)} m³`;
+    } else if (source === 'xulyloi') {
+      head = ['Stt', 'Ngày', 'Chức Năng', 'Kích Thước / Cỡ', 'Số Lượng', 'Phân Loại', 'Dùng Cho', 'Vị Trí', 'Người Làm', 'Giờ HC', 'Giờ TC'];
+      const list = x2ExportRowsOf('xulyloi').filter(x => x2InRange(x.date, from, to))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      list.forEach((x, i) => {
+        const d = x.d;
+        if (x.kind === 'catvan') {
+          body.push([i + 1, formatDateDDMMYY(d.date), d.kindLabel || '',
+            d.outSizeKey || d.inSizeKey || '', d.kind === 'xe' ? x2FmtKg(d.quantity) : x2FmtKg(d.qtyIn),
+            '', d.groupLabel || '', '', x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
+        } else if (x.kind === 'baovan') {
+          body.push([i + 1, formatDateDDMMYY(d.date), d.kindLabel || '',
+            d.inSizeKey || '', x2FmtKg(d.qtyIn), '', d.groupLabel || '', '',
+            x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
+        } else {
+          body.push([i + 1, formatDateDDMMYY(d.date), d.kindLabel || '',
+            d.inSizeKey || '', x2FmtKg(d.qtyIn), d.bambooType || '', d.useFor || '', d.location || '',
+            x2WorkerText(d.workerRows), x2FmtSo(d.workHoursHC), x2FmtSo(d.workHoursTC)]);
+        }
+      });
+      sumNote = `Gộp dữ liệu Cắt ván · Xẻ thanh · Bào · Chà thùng · Bó Thanh Tóp`;
     } else if (source === 'catvan') {
       // CẮT VÁN — 2 công đoạn nhỏ: Cắt ván (tấm) · Xẻ thanh (ván vào tấm → thanh ra)
       head = ['Stt', 'Ngày', 'Công Đoạn', 'Đầu Vào (Nhóm)', 'K.Thước Ván', 'Số Lượng Ván Vào (tấm)', 'Đầu Ra (K.Thước Thanh)', 'Số Lượng (tấm cắt / thanh ra)', 'Kỳ Tồn', 'Thể Tích (m³)', 'Người Làm', 'Giờ HC', 'Giờ TC'];

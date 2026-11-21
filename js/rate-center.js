@@ -221,10 +221,6 @@ const X2_FIELDS = [
   rcSimple('epvan', 'Ép Ván', 'm³/h', STORAGE_KEY_X2_EP_VAN_RATE),
   rcNested('bullig.gc', 'Bullig', 'Gia công (thanh/h)', STORAGE_KEY_X2_BULLIG_RATE, 'gc'),
   rcNested('bullig.ct', 'Bullig', 'Chọn thanh (thanh/h)', STORAGE_KEY_X2_BULLIG_RATE, 'ct'),
-  rcNested('catvan.cat', 'Cắt Ván', 'Cắt ván (tấm/h)', STORAGE_KEY_X2_CAT_VAN_RATE, 'cat'),
-  rcNested('catvan.xe', 'Cắt Ván', 'Xẻ thanh (thanh/h)', STORAGE_KEY_X2_CAT_VAN_RATE, 'xe'),
-  rcNested('baovan.bao', 'Bào Ván', 'Bào (tấm/h)', STORAGE_KEY_X2_BAO_VAN_RATE, 'bao'),
-  rcNested('baovan.cha', 'Bào Ván', 'Chà thùng (tấm/h)', STORAGE_KEY_X2_BAO_VAN_RATE, 'cha')
 ];
 
 const X1_FIELDS = [

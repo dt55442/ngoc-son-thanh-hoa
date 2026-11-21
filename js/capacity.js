@@ -274,42 +274,6 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       }),
       rateOf: m => bulligRateOf(m, 'ct')
     },
-    // ─── THẺ CẮT VÁN — 2 DÒNG CÔNG ĐOẠN NHỎ (09/10/2026) ────────
-    // Cắt ván = tấm/h · Xẻ thanh = thanh/h (sản lượng khác ĐVT → KHÔNG gộp 1 dòng)
-    {
-      id: 'catvan_cat', ws: 'x2', label: 'Cắt Ván — Cắt ván', unit: 'tấm/h', unitQty: 'tấm', cardId: 'x2-cat-van-card', kind: 'cap',
-      rows: () => (state.xuong2CatVanRecords || []).filter(r => (r.kind || 'cat') === 'cat').map(r => {
-        const d = catVanDisplay(r);
-        return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
-      }),
-      rateOf: m => catVanRateOf(m, 'cat')
-    },
-    {
-      id: 'catvan_xe', ws: 'x2', label: 'Cắt Ván — Xẻ thanh', unit: 'thanh/h', unitQty: 'thanh', cardId: 'x2-cat-van-card', kind: 'cap',
-      rows: () => (state.xuong2CatVanRecords || []).filter(r => r.kind === 'xe').map(r => {
-        const d = catVanDisplay(r);
-        return { date: d.date, qty: d.quantity, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
-      }),
-      rateOf: m => catVanRateOf(m, 'xe')
-    },
-    // ─── THẺ BÀO VÁN — 2 DÒNG CÔNG ĐOẠN NHỎ (09/10/2026) ────────────
-    // CẢ 2 = tấm/h (Bào · Chà thùng) — sản lượng = số tấm ván vào
-    {
-      id: 'baovan_bao', ws: 'x2', label: 'Bào Ván — Bào', unit: 'tấm/h', unitQty: 'tấm', cardId: 'x2-bao-van-card', kind: 'cap',
-      rows: () => (state.xuong2BaoVanRecords || []).filter(r => (r.kind || 'bao') === 'bao').map(r => {
-        const d = baoVanDisplay(r);
-        return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
-      }),
-      rateOf: m => baoVanRateOf(m, 'bao')
-    },
-    {
-      id: 'baovan_cha', ws: 'x2', label: 'Bào Ván — Chà thùng', unit: 'tấm/h', unitQty: 'tấm', cardId: 'x2-bao-van-card', kind: 'cap',
-      rows: () => (state.xuong2BaoVanRecords || []).filter(r => r.kind === 'cha').map(r => {
-        const d = baoVanDisplay(r);
-        return { date: d.date, qty: d.qtyIn, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
-      }),
-      rateOf: m => baoVanRateOf(m, 'cha')
-    },
     // ─── XƯỞNG 1 — 3 CÔNG ĐOẠN ĐẦU (04/10/2026) ────────────────
     // ws:'x1' → bảng Tổng hợp + gauge + xếp hạng + báo cáo in
     // tự nhận diện qua capStagesOf('x1'); cardId → nút "Mở thẻ" nhảy đúng.
@@ -371,10 +335,6 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     boluong: 'boluong',
     cut: 'cut', boong: 'boong', baotho: 'baotho', chonnan: 'chonnan',
     baotinh: 'baotinh', epvan: 'epvan', bullig_gc: 'bullig', bullig_ct: 'bullig',
-    // Thẻ CẮT VÁN — 2 công đoạn nhỏ dùng CHUNG 1 ô sự cố (cùng ngày = cùng ô)
-    catvan_cat: 'catvan', catvan_xe: 'catvan',
-    // Thẻ BÀO VÁN — 2 công đoạn nhỏ dùng CHUNG 1 ô sự cố
-    baovan_bao: 'baovan', baovan_cha: 'baovan',
     // XƯỞNG 1 (04–05/10/2026) — khóa giờ sự cố = đúng id công đoạn (khớp incKey
     // mà x1RenderDayCards truyền vào → bảng tổng hợp TRỪ giờ sự cố giống thẻ ngày)
     x1catong: 'x1catong', x1saysinh: 'x1saysinh', x1boc: 'x1boc',
@@ -1149,11 +1109,11 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       : 'Bình quân gia quyền theo giờ của các công đoạn có hiệu suất';
     return `
       <span class="cap-chip cap-chip-info" title="Kỳ đang xem"><i data-lucide="calendar-range"></i> ${escapeHTML(capPeriodLabel(w.weekKey, mode))}</span>
+      <span class="cap-chip cap-chip-primary" title="${escapeHTML(effTip)}"><i data-lucide="gauge"></i> Hiệu suất xưởng: ${capEffBadgeHtml(w.eff, effTip)}</span>
       <span class="cap-chip" title="Số công đoạn đã ghi lượt trong kỳ / tổng số công đoạn của xưởng"><i data-lucide="layers"></i> <strong>${w.dataCount}/${w.stagesCount}</strong> CĐ có dữ liệu</span>
       <span class="cap-chip" title="Tổng giờ HÀNH CHÍNH (HC) của các công đoạn trong kỳ"><i data-lucide="clock"></i> Giờ HC: <strong>${w.hc > 0 ? fmtNum1(w.hc) : '—'}</strong></span>
       <span class="cap-chip" title="Tổng giờ TĂNG CA (TC) của các công đoạn trong kỳ — ngày nghỉ/lễ đi làm tính toàn giờ tăng ca"><i data-lucide="clock-4"></i> Giờ TC: <strong>${w.tc > 0 ? fmtNum1(w.tc) : '—'}</strong></span>
       <span class="cap-chip" title="Tổng giờ làm (HC + TC) — mỗi ca công đoạn chỉ đếm 1 lần; không tách ca thì tính một lần/ngày"><i data-lucide="alarm-clock"></i> Tổng: <strong>${w.hours > 0 ? fmtNum1(w.hours) : '—'}</strong> giờ</span>
-      <span class="cap-chip" title="${escapeHTML(effTip)}">Hiệu suất xưởng: ${capEffBadgeHtml(w.eff, effTip)}</span>
       <span class="cap-chip" title="Số công đoạn đạt ≥100% định mức / số công đoạn tính được hiệu suất"><i data-lucide="circle-check"></i> Đạt: <strong>${w.effCount ? `${w.passCount}/${w.effCount}` : '—'}</strong></span>
       ${w.bottleneck ? `<span class="cap-chip cap-chip-warn" title="Công đoạn có hiệu suất thấp nhất kỳ này — nên kiểm tra trước"><i data-lucide="alert-triangle"></i> Nút thắt: <strong>${escapeHTML(w.bottleneck.st.label)}</strong> ${fmtNum1(w.bottleneck.row.eff)}%</span>` : ''}`;
   }
@@ -1241,11 +1201,11 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
       // Công đoạn QUÁ HẠN cập nhật → chip nhắc ngay trên hàng xếp hạng
       const stale = staleMap.get(st.id);
       const staleChip = (stale && stale.status === 'late')
-        ? ` <em class="cap-rank-stale" title="${escapeHTML(`Số liệu cập nhật cuối ${formatDateDDMMYY(stale.lastDate)} — đã ${stale.workDays} ngày làm việc chưa cập nhật`)}">⚠ cuối ${escapeHTML(formatDateDDMMYY(stale.lastDate))}</em>`
+        ? ` <em class="cap-rank-stale" title="${escapeHTML(`Số liệu cập nhật cuối ${formatDateDDMMYY(stale.lastDate)} — đã ${stale.workDays} ngày làm việc chưa cập nhật`)}"><i data-lucide="triangle-alert" aria-hidden="true"></i> cuối ${escapeHTML(formatDateDDMMYY(stale.lastDate))}</em>`
         : '';
       return `
         <button type="button" class="cap-rank-row ${cls}${state.capUi.chartStage === st.id ? ' cap-rank-active' : ''}" data-cap-rank="${st.id}" title="${escapeHTML(capRankTip(st, r))}">
-          <span class="cap-rank-name">${escapeHTML(st.label)}${isBt ? ' <em class="cap-rank-bt">⚠ nút thắt</em>' : ''}${staleChip}</span>
+          <span class="cap-rank-name">${escapeHTML(st.label)}${isBt ? ' <em class="cap-rank-bt">nút thắt</em>' : ''}${staleChip}</span>
           <span class="cap-rank-track"><span class="cap-rank-bar" style="width:${pctW.toFixed(1)}%;"></span><span class="cap-rank-mark"></span></span>
           <span class="cap-rank-val">${eff != null ? fmtNum1(eff) + '%' : '—'}</span>
         </button>`;
@@ -1466,7 +1426,7 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     if (chip) {
       const show = !suppress && late.length > 0;
       chip.hidden = !show;
-      chip.innerHTML = show ? `⚠ ${late.length} CĐ quá hạn` : '';
+      chip.innerHTML = show ? `<i data-lucide="triangle-alert" aria-hidden="true"></i> ${late.length} CĐ quá hạn` : '';
       // Stub DOM của test cũ có thể thiếu setAttribute/removeAttribute → gọi có kiểm tra
       if (show) {
         if (typeof chip.setAttribute === 'function') chip.setAttribute('title', capStaleSummaryOf(late));
@@ -1586,6 +1546,11 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     }
     const canvas = document.getElementById('cap-stage-chart');
     if (!canvas) return;
+    if (typeof canvas.setAttribute === 'function') {
+      canvas.setAttribute('role', 'img');
+      const ariaMode = capModeOf();
+      canvas.setAttribute('aria-label', `${st.label}: biểu đồ ${ariaMode === 'month' ? '8 tháng gần nhất' : '8 tuần gần nhất'}, sản lượng và hiệu suất`);
+    }
     const mode = capModeOf();
     const weeks8 = capStagePeriodSeries(st, capSelectedPeriod(), mode);
     const labels = weeks8.map(x => capPeriodShortLabel(x.weekKey, mode));
@@ -1888,8 +1853,6 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     { elId: 'x2-mini-spark-bao-tinh', stageIds: ['baotinh'] },
     { elId: 'x2-mini-spark-ep-van', stageIds: ['epvan'] },
     { elId: 'x2-mini-spark-bullig', stageIds: ['bullig_gc', 'bullig_ct'] },
-    { elId: 'x2-mini-spark-cat-van', stageIds: ['catvan_cat', 'catvan_xe'] },
-    { elId: 'x2-mini-spark-bao-van', stageIds: ['baovan_bao', 'baovan_cha'] },
     // XƯỞNG 1 — 7 công đoạn thao tác (Phơi Sấy là tồn trung gian)
     { elId: 'x2-mini-spark-x1-cat-ong', stageIds: ['x1catong'] },
     { elId: 'x2-mini-spark-x1-say-sinh', stageIds: ['x1saysinh'] },

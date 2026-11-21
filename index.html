@@ -127,33 +127,33 @@
 
       <!-- Navigation Tabs (Desktop & Tablet) — Dashboard là màn hình mặc định -->
       <nav class="main-nav">
-        <button class="nav-btn active" data-target="dashboard-view" id="nav-dashboard">
+        <button class="nav-btn active" data-target="dashboard-view" id="nav-dashboard" title="Tổng Quan (Dashboard)" aria-label="Tổng Quan (Dashboard)">
           <i data-lucide="bar-chart-3"></i>
-          <span>Tổng Quan (Dashboard)</span>
+          <span>Tổng quan</span>
         </button>
-        <button class="nav-btn" data-target="leadership-view" id="nav-leadership" style="display:none;">
+        <button class="nav-btn" data-target="leadership-view" id="nav-leadership" style="display:none;" title="Lãnh Đạo" aria-label="Lãnh Đạo">
           <i data-lucide="briefcase-business"></i>
-          <span>Lãnh Đạo</span>
+          <span>Lãnh đạo</span>
         </button>
-        <button class="nav-btn" data-target="kanban-view" id="nav-kanban">
+        <button class="nav-btn" data-target="kanban-view" id="nav-kanban" title="Công Đoạn SX" aria-label="Công Đoạn SX">
           <i data-lucide="layout-grid"></i>
-          <span>Công Đoạn SX</span>
+          <span>Công đoạn</span>
         </button>
-        <button class="nav-btn" data-target="planning-view" id="nav-planning">
+        <button class="nav-btn" data-target="planning-view" id="nav-planning" title="Kế Hoạch Sản Xuất" aria-label="Kế Hoạch Sản Xuất">
           <i data-lucide="clipboard-list"></i>
-          <span>Kế Hoạch Sản Xuất</span>
+          <span>Kế hoạch</span>
         </button>
-        <button class="nav-btn" data-target="materials-view" id="nav-materials">
+        <button class="nav-btn" data-target="materials-view" id="nav-materials" title="Nguyên Liệu" aria-label="Nguyên Liệu">
           <i data-lucide="package-plus"></i>
-          <span>Nguyên Liệu</span>
+          <span>Nguyên liệu</span>
         </button>
-        <button class="nav-btn" data-target="qc-view" id="nav-qc">
+        <button class="nav-btn" data-target="qc-view" id="nav-qc" title="QC + Cơ điện" aria-label="QC + Cơ điện">
           <i data-lucide="clipboard-check"></i>
           <span>QC + Cơ điện</span>
         </button>
-        <button class="nav-btn" data-target="hr-view" id="nav-hr">
+        <button class="nav-btn" data-target="hr-view" id="nav-hr" title="Nhân Sự" aria-label="Nhân Sự">
           <i data-lucide="users"></i>
-          <span>Nhân Sự</span>
+          <span>Nhân sự</span>
         </button>
       </nav>
 
@@ -165,8 +165,9 @@
         </button>
 
         <!-- File Storage Status -->
-        <div class="file-storage-status" id="file-storage-status" title="Trạng thái lưu dữ liệu vào file (cùng thư mục với ứng dụng)">
-          <i data-lucide="hard-drive" style="width:12px;height:12px;"></i> File: Chưa kết nối
+        <div class="file-storage-status" id="file-storage-status" role="status" aria-label="File: Chưa kết nối" title="Trạng thái lưu dữ liệu vào file (cùng thư mục với ứng dụng)">
+          <i data-lucide="hard-drive" aria-hidden="true" style="width:12px;height:12px;"></i>
+          <span class="file-storage-status-text">File: Chưa kết nối</span>
         </div>
 
         <!-- Badge trạng thái đồng bộ mây (tự động 2 chiều — js/cloud.js updateSyncBadge) -->
@@ -275,6 +276,7 @@
             </button>
           </div>
         </div>
+
       </div>
     </div>
   </header>
@@ -283,31 +285,31 @@
   <div class="mobile-bottom-nav">
     <button class="mobile-nav-item active" data-target="dashboard-view">
       <i data-lucide="pie-chart"></i>
-      <span>Tổng Quan</span>
+      <span>Tổng quan</span>
     </button>
     <button class="mobile-nav-item" data-target="leadership-view" id="mobile-nav-leadership" style="display:none;">
       <i data-lucide="briefcase-business"></i>
-      <span>Lãnh Đạo</span>
+      <span>Lãnh đạo</span>
     </button>
     <button class="mobile-nav-item" data-target="kanban-view">
       <i data-lucide="layout-grid"></i>
-      <span>Công Đoạn SX</span>
+      <span>Công đoạn</span>
     </button>
     <button class="mobile-nav-item" data-target="planning-view">
       <i data-lucide="clipboard-list"></i>
-      <span>Kế Hoạch</span>
+      <span>Kế hoạch</span>
     </button>
     <button class="mobile-nav-item" data-target="materials-view">
       <i data-lucide="package-plus"></i>
-      <span>Nguyên Liệu</span>
+      <span>Nguyên liệu</span>
     </button>
     <button class="mobile-nav-item" data-target="qc-view">
       <i data-lucide="clipboard-check"></i>
-      <span>QC</span>
+      <span>QC + Cơ điện</span>
     </button>
     <button class="mobile-nav-item" data-target="hr-view">
       <i data-lucide="users"></i>
-      <span>Nhân Sự</span>
+      <span>Nhân sự</span>
     </button>
   </div>
 
@@ -454,19 +456,12 @@
             <span class="x2-mini-count" id="x2-mini-count-bullig">–</span>
             <span class="cap-spark" id="x2-mini-spark-bullig"></span>
           </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-cat-van-card" aria-expanded="false" title="Cắt Ván — 2 công đoạn nhỏ: Cắt ván (đầu vào = ván ở Ép Ván → số tấm cắt) + Xẻ thanh (đầu vào = ván Ép Ván → kích thước thanh → số thanh) — TỒN ĐẦU VÀO TRỪ THEO KỲ 1 TUẦN / 2 TUẦN (cặp lẻ–chẵn)">
-            <span class="x2-mini-ic"><i data-lucide="crop"></i></span>
-            <span class="x2-mini-title">Cắt Ván</span>
-            <span class="x2-mini-desc">Cắt ván + Xẻ thanh</span>
-            <span class="x2-mini-count" id="x2-mini-count-cat-van">–</span>
-            <span class="cap-spark" id="x2-mini-spark-cat-van"></span>
-          </button>
-          <button type="button" class="x2-mini-card" data-x2-card="x2-bao-van-card" aria-expanded="false" title="Bào Ván — 2 công đoạn nhỏ: Bào (đầu vào = ván ở Ép Ván → số tấm bào) + Chà thùng (đầu vào = ván Ép Ván → số tấm chà) — form CHỈ Đầu vào + Số lượng, TỒN TRỪ THEO KỲ 1 TUẦN / 2 TUẦN (cặp lẻ–chẵn)">
-            <span class="x2-mini-ic"><i data-lucide="wind"></i></span>
-            <span class="x2-mini-title">Bào Ván</span>
-            <span class="x2-mini-desc">Bào + Chà thùng</span>
-            <span class="x2-mini-count" id="x2-mini-count-bao-van">–</span>
-            <span class="cap-spark" id="x2-mini-spark-bao-van"></span>
+          <button type="button" class="x2-mini-card" data-x2-card="x2-xu-ly-loi-card" aria-expanded="false" title="Xử lý lỗi — 5 chức năng: Cắt ván · Xẻ thanh · Bào · Chà thùng · Bó Thanh Tóp">
+            <span class="x2-mini-ic"><i data-lucide="recycle"></i></span>
+            <span class="x2-mini-title">Xử lý lỗi</span>
+            <span class="x2-mini-desc">Cắt · Xẻ · Bào · Chà · Bó Tóp</span>
+            <span class="x2-mini-count" id="x2-mini-count-xu-ly-loi">–</span>
+            <span class="cap-spark" id="x2-mini-spark-xu-ly-loi"></span>
           </button>
           <button type="button" class="x2-mini-card" data-x2-card="x2-ho-tro-card" aria-expanded="false" title="Hỗ Trợ + Công Đoạn Lẻ — công việc hỗ trợ / công đoạn lẻ phát sinh: Nội dung công việc + Người thực hiện (chọn từ Bảng bố trí theo ngày ở tab Nhân Sự) + Mô tả; giờ làm từng công việc tự tính theo khung giờ bố trí (việc phát sinh nên KHÔNG có công suất / hiệu suất)">
             <span class="x2-mini-ic"><i data-lucide="life-buoy"></i></span>
@@ -1577,38 +1572,6 @@
                   <input type="number" id="x2-kho-qty" min="1" step="1" placeholder="0">
                 </div>
               </div>
-              <!-- Thông tin lô khi TÁI CHẾ THANH TÓP: biến thanh Tóp thành thẻ lô
-                   chuẩn ở Kho, mang cờ Tóp để Than Hóa Lại ở thẻ Than Hóa + Sấy. -->
-              <div class="form-group col-span-full" id="x2-kho-top-recycle-group" style="display:none;">
-                <label>Thông Tin Lô Tái Chế Từ Thanh Tóp <span class="required">*</span></label>
-                <div class="x2-form-row">
-                  <div class="form-group" style="flex:0 0 150px;">
-                    <label for="x2-kho-top-location">Vị Trí <span class="ck-opt">(tham khảo)</span></label>
-                    <input type="text" id="x2-kho-top-location" list="x2-kho-top-location-list" placeholder="VD: K21" autocomplete="off">
-                    <datalist id="x2-kho-top-location-list"></datalist>
-                  </div>
-                  <div class="form-group" style="flex:0 0 100px;">
-                    <label for="x2-kho-top-type">Loại <span class="required">*</span></label>
-                    <select id="x2-kho-top-type">
-                      <option value="A">A</option>
-                      <option value="A1">A1</option>
-                      <option value="B">B</option>
-                    </select>
-                  </div>
-                  <div class="form-group" style="flex:0 0 120px;">
-                    <label for="x2-kho-top-use">Dùng Cho <span class="required">*</span></label>
-                    <select id="x2-kho-top-use">
-                      <option value="Ván">Ván</option>
-                      <option value="Bullig">Bullig</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="form-group col-span-full" id="x2-kho-top-picker-group" style="display:none;">
-                <label>Danh Sách Thanh Tóp Theo Kích Thước Trước Bào <span class="required">*</span></label>
-                <div class="al-card-list" id="x2-kho-top-picker"></div>
-              </div>
-
               <!-- GẮN LÔ (bắt buộc với phiếu XUẤT): danh sách thẻ lô — CHỌN ĐƯỢC NHIỀU,
                    mỗi lô tự lấy nguyên phần còn lại (KHÔNG nhập tay số lượng từng lô);
                    2 Ô TÌM KẾT HỢP điều kiện VÀ: ① chữ (mã/vị trí/k.thước) ② SỐ LƯỢNG -->
@@ -2156,13 +2119,26 @@
         </div>
 
 
-        <!-- ═══ THẺ: CẮT VÁN — 2 CÔNG ĐOẠN NHỎ (Cắt ván · Xẻ thanh) + nút Thêm (tương lai) ═══
-             Nguồn ĐẦU VÀO = ván ở Ép Ván (ván thô + thành phẩm) trong KỲ đang chọn;
-             TỒN TRỪ THEO KỲ: nút 1 tuần / 2 tuần (cặp lẻ–chẵn, VD 41–42). -->
-        <div class="planning-card x2-card-hidden" id="x2-cat-van-card">
+        <!-- ═══ THẺ GỘP: XỬ LÝ LỖI — Cắt ván · Xẻ thanh · Bào · Chà thùng · Bó Thanh Tóp ═══ -->
+        <div class="planning-card x2-card-hidden" id="x2-xu-ly-loi-card">
           <div class="planning-card-header">
-            <h4><i data-lucide="crop"></i> Cắt Ván — Xưởng 2</h4>
+            <h4><i data-lucide="recycle"></i> Xử lý lỗi — Xưởng 2</h4>
+            <span id="x2-mini-count-cat-van" hidden></span>
+            <span id="x2-mini-count-bao-van" hidden></span>
           </div>
+          <div class="x2-xl-kind-row">
+            <div class="form-group">
+              <label for="x2-xl-kind">Công Đoạn <span class="required">*</span></label>
+              <select id="x2-xl-kind">
+                <option value="cat">Cắt ván</option>
+                <option value="xe">Xẻ thanh</option>
+                <option value="bao">Bào</option>
+                <option value="cha">Chà thùng</option>
+                <option value="top">Bó Thanh Tóp</option>
+              </select>
+            </div>
+          </div>
+          <div id="x2-cat-van-card" class="x2-error-panel" data-x2-error-panel="cat">
 
           <!-- THANH TỒN: ván thô + thành phẩm theo KỲ (1/2 tuần) -->
           <div class="x2-stock-bar" id="x2-cv-stock-bar"></div>
@@ -2268,15 +2244,9 @@
             </div>
           </div>
           </div>
-        </div>
-
-        <!-- ═══ THẺ: BÀO VÁN — 2 CÔNG ĐOẠN NHỎ (Bào · Chà thùng) + nút Thêm (tương lai) ═══
-             Form CHỈ có ĐẦU VÀO + SỐ LƯỢNG (như Cắt ván — KHÔNG có ô Đầu ra);
-             Nguồn = ván Ép Ván trong KỲ; TỒN TRỪ THEO KỲ (1/2 tuần — sổ RIÊNG). -->
-        <div class="planning-card x2-card-hidden" id="x2-bao-van-card">
-          <div class="planning-card-header">
-            <h4><i data-lucide="wind"></i> Bào Ván — Xưởng 2</h4>
           </div>
+
+          <div id="x2-bao-van-card" class="x2-error-panel" data-x2-error-panel="bao" hidden>
 
           <!-- THANH TỒN: ván thô + thành phẩm theo KỲ (1/2 tuần) — sổ riêng -->
           <div class="x2-stock-bar" id="x2-bv-stock-bar"></div>
@@ -2367,6 +2337,59 @@
               <div id="x2-bv-day-cards"></div>
             </div>
           </div>
+          </div>
+          </div>
+
+          <div id="x2-error-top-panel" class="x2-error-panel" hidden>
+            <div class="x2-zone" data-zone="1">
+              <div class="x2-zone-head" title="Bó các Thanh Tóp theo kích thước trước bào thành từng lô, để đưa sang Than hóa lại."><span class="x2-zone-no">1</span><i data-lucide="boxes"></i> Nhập Liệu Bó Thanh Tóp</div>
+              <div class="x2-cut-form-wrap">
+                <form id="x2-xl-top-form">
+                  <div class="x2-form-row">
+                    <div class="form-group" style="flex:0 0 155px;">
+                      <label for="x2-xl-top-date">Ngày <span class="required">*</span></label>
+                      <input type="date" id="x2-xl-top-date" required>
+                    </div>
+                    <div class="form-group" style="flex:1; min-width:240px;">
+                      <label>Thanh Tóp Theo Kích Thước Trước Bào</label>
+                      <div class="x2-xl-top-stock" id="x2-xl-top-stock"></div>
+                    </div>
+                  </div>
+                  <div class="x2-form-row">
+                    <div class="form-group" style="flex:1;">
+                      <label>Danh Sách Lô Bó Thanh Tóp <span class="required">*</span></label>
+                      <div class="bulk-lot-grid-scroll">
+                        <table class="bulk-lot-grid">
+                          <thead><tr><th>Cỡ trước bào (mm)</th><th>Số lượng</th><th>Loại</th><th>Dùng Cho</th><th>Vị trí (tham khảo)</th><th></th></tr></thead>
+                          <tbody id="x2-xl-top-rows"></tbody>
+                        </table>
+                      </div>
+                      <button type="button" class="btn btn-outline btn-sm" id="x2-xl-top-add-row" style="margin-top:8px;"><i data-lucide="plus"></i> Thêm Lô</button>
+                    </div>
+                  </div>
+                  <div class="x2-form-row">
+                    <div class="form-group" style="flex:1;">
+                      <label for="x2-xl-top-note">Ghi Chú</label>
+                      <textarea id="x2-xl-top-note" rows="2" placeholder="Không bắt buộc"></textarea>
+                    </div>
+                  </div>
+                  <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:14px;">
+                    <button type="button" class="btn btn-outline" id="btn-x2-xl-top-reset">Làm Mới Form</button>
+                    <button type="submit" class="btn btn-success" data-perm="x2"><i data-lucide="check"></i> Tạo Các Lô Thanh Tóp</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <div class="x2-zone" data-zone="2">
+              <div class="x2-zone-head" title="Các lô Thanh Tóp vừa bó và đang chờ Than Hóa Lại."><span class="x2-zone-no">2</span><i data-lucide="history"></i> Lịch Sử Bó Thanh Tóp</div>
+              <div class="x2-cut-table-wrap" id="x2-xl-top-table-wrap">
+                <div class="x2-cut-table-head">
+                  <h5><i data-lucide="boxes"></i> Lô Thanh Tóp Chờ Than Hóa Lại</h5>
+                  <span class="x2-cut-table-count" id="x2-xl-top-table-count"></span>
+                </div>
+                <div class="x2-cut-table-scroll"><div id="x2-xl-top-day-cards"></div></div>
+              </div>
+            </div>
           </div>
         </div>
 

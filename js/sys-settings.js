@@ -161,6 +161,7 @@ export const AREA_BY_CARD = {
   'x2-chon-nan-tho-card': 'x2.prod',
   'x2-bao-tinh-card': 'x2.prod',
   'x2-bullig-card': 'x2.prod',
+  'x2-xu-ly-loi-card': 'x2.prod',
   'x2-cat-van-card': 'x2.prod',
   'x2-bao-van-card': 'x2.prod',
   'x2-ho-tro-card': 'x2.prod',

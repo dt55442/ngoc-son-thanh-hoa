@@ -95,8 +95,18 @@ check('D5. tôn trọng giảm hiệu ứng + ẩn khi in',
 // ─── E. WIRING + PHIÊN BẢN ──────────────────────────────────────
 check('E1. events giữ menu mở khi bấm vùng trống/nhãn nhóm (chỉ item mới đóng)',
   /dropdown\.addEventListener\('click'[\s\S]{0,220}?closest\('\.dropdown-item'\)[\s\S]{0,80}?stopPropagation\(\)/.test(evSrc));
-check('E2. sw.js cache v444', swSrc.includes('nha-may-ngoc-son-v444'));
-check('E3. APP_VERSION v444', stateSrc.includes("APP_VERSION = 'v444'"));
+check('E2. sw.js cache v452', swSrc.includes('nha-may-ngoc-son-v452'));
+check('E3. APP_VERSION v452', stateSrc.includes("APP_VERSION = 'v452'"));
+check('E4. thanh điều khiển: tên tab cho phép xuống dòng, Header dùng grid tách 3 vùng',
+  css.includes('grid-template-columns: auto minmax(0, 1fr) auto') &&
+  css.includes('.nav-btn span') && css.includes('white-space: normal') &&
+  css.includes('.header-actions') && css.includes('flex: 0 0 auto'));
+check('E5. Header gọn: tên tab ngắn, trạng thái file/sync thu gọn ở desktop vừa',
+  idx.includes('<span>Tổng quan</span>') &&
+  idx.includes('<span>QC + Cơ điện</span>') &&
+  css.includes('@media (min-width: 960px) and (max-width: 1700px)') &&
+  css.includes('.file-storage-status-text') &&
+  css.includes('#sync-status-text'));
 
 console.log(`\nUI-MOBILE: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);

@@ -392,7 +392,7 @@ check('ÉP VÁN: hiệu suất = (0,0864÷4) ÷ 0,03 = 72%', approx(epRow.eff, 7
 const w = cap.capWorkshopWeekRow('x2', wk);
 const expectedWsEff = (cutRowRated.eff * cutRowRated.hours + cnRow.eff * cnRow.hours + sayRow2.eff * sayRow2.hours + epRow.eff * epRow.hours)
   / (cutRowRated.hours + cnRow.hours + sayRow2.hours + epRow.hours);
-check('XƯỞNG: 5 công đoạn có dữ liệu / 14 công đoạn', w.dataCount === 5 && w.stagesCount === 14);
+check('XƯỞNG: 5 công đoạn có dữ liệu / 10 công đoạn Xưởng 2 còn công suất', w.dataCount === 5 && w.stagesCount === 10);
 check('XƯỞNG: tổng giờ = 9 + 4 + 3 + 4 + 4 = 24h (mỗi ngày mỗi CĐ đếm 1 lần)', approx(w.hours, 24));
 check('XƯỞNG: 4 công đoạn tính được hiệu suất · 0 công đoạn đạt ≥100%', w.effCount === 4 && w.passCount === 0);
 check('XƯỞNG: hiệu suất xưởng = bình quân gia quyền theo GIỜ', approx(w.eff, expectedWsEff, 1e-6));
@@ -490,9 +490,10 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v444', /nha-may-ngoc-son-v444/.test(swJs));
-check('SỔ ĐĂNG KÝ: 14 dòng công đoạn Xưởng 2 (Than Hóa + Sấy GỘP 1 dòng · Bullig · Cắt Ván · Bào Ván tách 2) · 7 thao tác Xưởng 1',
-  cap.capStagesOf('x2').length === 14 && cap.capStagesOf('x1').length === 7 &&
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v452', /nha-may-ngoc-son-v452/.test(swJs));
+check('SỔ ĐĂNG KÝ: Cắt Ván và Bào Ván không còn dòng công suất; còn 10 dòng Xưởng 2 · 7 thao tác Xưởng 1',
+  cap.capStagesOf('x2').length === 10 && cap.capStagesOf('x1').length === 7 &&
+  !cap.capStagesOf('x2').some(s => String(s.id).startsWith('catvan_') || String(s.id).startsWith('baovan_')) &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===
     'x1catong,x1saysinh,x1boc,x1locong,x1catmat,x1bo,x1locthanh');
 check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId) + xưởng đúng',
@@ -514,7 +515,7 @@ check('GAUGE: có đồng hồ + số % khớp hiệu suất xưởng tính đư
   visualRow.innerHTML.includes(wEffNow.eff.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%'));
 check('GAUGE: chip "Nút thắt" hiện đúng công đoạn Than Hóa + Sấy',
   visualRow.innerHTML.includes('Nút thắt') && visualRow.innerHTML.includes('Than Hóa + Sấy'));
-check('RANK: đủ 14 hàng công đoạn (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 14);
+check('RANK: không còn dòng công suất Cắt Ván/Bào Ván (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 10);
 check('RANK: tag "nút thắt" gắn đúng Than Hóa + Sấy', /Than Hóa \+ Sấy[^<]*<em class="cap-rank-bt"/.test(visualRow.innerHTML));
 check('GỠ BẢN ĐỒ NHIỆT: dải trực quan KHÔNG còn lưới nhiệt (đã bỏ 21/10/2026 để tiết kiệm diện tích)',
   !visualRow.innerHTML.includes('data-cap-heat') && !visualRow.innerHTML.includes('cap-heat'));
@@ -769,8 +770,8 @@ check('QUÁ HẠN: 4 ngày làm việc (Bổ Ống 16/10) → cảnh báo + đ�
 check('QUÁ HẠN: nêu ĐÚNG xưởng + công đoạn (Xưởng 2 · Bổ Ống)', staleBoong.wsLabel === 'Xưởng 2' && staleBoong.stageLabel === 'Bổ Ống');
 check('QUÁ HẠN: công đoạn chưa từng nhập → never (KHÔNG đỏ), vẫn có trong panel',
   staleX1 && staleX1.status === 'never' && staleX1.wsLabel === 'Xưởng 1');
-check('QUÁ HẠN: quét CẢ 2 xưởng dù đang xem Xưởng 2 (14 X2 + 7 X1 = 21 công đoạn)',
-  state.capUi.ws === 'x2' && staleScan.length === 21 &&
+check('QUÁ HẠN: quét CẢ 2 xưởng dù đang xem Xưởng 2 (10 X2 còn công suất + 7 X1 = 17 công đoạn)',
+  state.capUi.ws === 'x2' && staleScan.length === 17 &&
   staleScan.some(r => r.ws === 'x1') && staleScan.some(r => r.ws === 'x2'));
 const lateRows = staleScan.filter(r => r.status === 'late');
 const neverRows = staleScan.filter(r => r.status === 'never');

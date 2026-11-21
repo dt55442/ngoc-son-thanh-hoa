@@ -1043,13 +1043,16 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
     if (statusEl) {
       if (state.fileStorage.connected) {
         statusEl.classList.add('connected');
-        statusEl.innerHTML = `<i data-lucide="hard-drive" style="width:12px;height:12px;"></i> File: ${escapeHTML(state.fileStorage.folderName)}`;
+        statusEl.innerHTML = `<i data-lucide="hard-drive" aria-hidden="true" style="width:12px;height:12px;"></i><span class="file-storage-status-text">File: ${escapeHTML(state.fileStorage.folderName)}</span>`;
+        statusEl.setAttribute('aria-label', `File: ${state.fileStorage.folderName}`);
       } else if (isMobile) {
         statusEl.classList.remove('connected');
-        statusEl.innerHTML = `<i data-lucide="smartphone" style="width:12px;height:12px;"></i> Mobile: Dùng Lưu/Nạp File`;
+        statusEl.innerHTML = `<i data-lucide="smartphone" aria-hidden="true" style="width:12px;height:12px;"></i><span class="file-storage-status-text">Mobile: Dùng Lưu/Nạp File</span>`;
+        statusEl.setAttribute('aria-label', 'Mobile: Dùng Lưu/Nạp File');
       } else {
         statusEl.classList.remove('connected');
-        statusEl.innerHTML = `<i data-lucide="hard-drive" style="width:12px;height:12px;"></i> File: Chưa kết nối`;
+        statusEl.innerHTML = `<i data-lucide="hard-drive" aria-hidden="true" style="width:12px;height:12px;"></i><span class="file-storage-status-text">File: Chưa kết nối</span>`;
+        statusEl.setAttribute('aria-label', 'File: Chưa kết nối');
       }
     }
     if (disconnectBtn) {

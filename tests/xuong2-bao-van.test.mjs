@@ -264,19 +264,8 @@ check('THẺ NGÀY: nút Sửa/Xóa uỷ nhiệm data-x2-bv-edit / data-x2-bv-de
 
 const cap = await import('../js/capacity.js');
 const capSrc = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
-const stBao = cap.CAP_STAGES.find(s => s.id === 'baovan_bao');
-const stCha = cap.CAP_STAGES.find(s => s.id === 'baovan_cha');
-check('CAPACITY: 2 dòng Bào Ván — CẢ 2 tấm/h + cardId đúng + xưởng x2',
-  !!stBao && !!stCha && stBao.unit === 'tấm/h' && stCha.unit === 'tấm/h' &&
-  stBao.unitQty === 'tấm' && stCha.unitQty === 'tấm' &&
-  stBao.cardId === 'x2-bao-van-card' && stCha.cardId === 'x2-bao-van-card' &&
-  stBao.ws === 'x2' && stCha.ws === 'x2');
-check('CAPACITY: định mức đọc đúng từng dòng (120 · 200 tấm/h cho T10/2026)',
-  stBao.rateOf('2026-10') === 120 && stCha.rateOf('2026-10') === 200);
-check('CAPACITY: khóa giờ sự cố 2 dòng trỏ chung "baovan" + sparkline có ô gắn',
-  capSrc.includes("baovan_bao: 'baovan', baovan_cha: 'baovan'") &&
-  cap.CAP_SPARKS.some(g => g.elId === 'x2-mini-spark-bao-van' &&
-    g.stageIds.join(',') === 'baovan_bao,baovan_cha'));
+check('CAPACITY: Bào và Chà thùng không còn dòng công suất Dashboard',
+  !cap.CAP_STAGES.some(s => s.id === 'baovan_bao' || s.id === 'baovan_cha'));
 
 // ─── J. CẤU TRÚC NỐI Đủ ──────────────────────────────────────────────
 const rd = (f) => fs.readFileSync(new URL('../js/' + f, import.meta.url), 'utf8');
@@ -321,8 +310,8 @@ check('NỐI (main): load 3 khoá lúc boot',
   jsMain.includes('loadX2BaoVanSpan()'));
 check('NỐI (export-xlsx): nguồn xuất "baovan" + cột 2 công đoạn',
   jsExport.includes("id: 'baovan'") && jsExport.includes("source === 'baovan'"));
-check('CẤU TRÚC (styles + sw): dùng lại khối nút kỳ + CACHE_NAME v444',
-  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v444/.test(swJs));
+check('CẤU TRÚC (styles + sw): dùng lại khối nút kỳ + CACHE_NAME v452',
+  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v452/.test(swJs));
 
 // ─── K. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
 {

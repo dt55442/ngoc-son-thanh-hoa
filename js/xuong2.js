@@ -80,8 +80,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x2-bao-tinh-card':     { el: 'x2-mini-count-bao-tinh' },                 // Bào Tinh (ĐÃ CÓ chức năng)
     'x2-ep-van-card':       { el: 'x2-mini-count-ep-van' },                    // Ép Ván (ĐÃ CÓ chức năng — 2 khung: Lượt Ép / Biểu Đồ)
     'x2-bullig-card':       { el: 'x2-mini-count-bullig' },                   // Bullig (ĐÃ CÓ chức năng — Gia công + Chọn thanh)
-    'x2-cat-van-card':      { el: 'x2-mini-count-cat-van' },                    // Cắt Ván (ĐÃ CÓ chức năng — Cắt ván + Xẻ thanh)
-    'x2-bao-van-card':      { el: 'x2-mini-count-bao-van' },                    // Bào Ván (ĐÃ CÓ chức năng — Bào + Chà thùng)
+    'x2-xu-ly-loi-card':    { el: 'x2-mini-count-xu-ly-loi' },                // Xử lý lỗi (Cắt · Xẻ · Bào · Chà · Bó Thanh Tóp)
+    // Alias THẺ CŨ — giữ dữ liệu/logic/hàm cũ, không còn launcher riêng.
+    'x2-cat-van-card':      { el: 'x2-mini-count-cat-van' },
+    'x2-bao-van-card':      { el: 'x2-mini-count-bao-van' },
     'x2-ho-tro-card':       { el: 'x2-mini-count-ho-tro' },                    // Hỗ Trợ + Công Đoạn Lẻ (CÓ chức năng — 2 vùng: nhập liệu + lịch sử)
     'x2-phu-pham-card':     { el: 'x2-mini-count-phu-pham' },                  // Phụ Phẩm & Băm + Cân đối + Kiểm kê (Giai đoạn 2/3)
 
@@ -117,6 +119,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x2-kho-card': 'khoNotes',
     'x2-bao-tinh-card': 'xuong2BaoTinhRecords',
     'x2-bullig-card': 'xuong2BulligRecords',
+    'x2-xu-ly-loi-card': 'xuong2XuLyLoiRecords',
     'x2-cat-van-card': 'xuong2CatVanRecords',
     'x2-bao-van-card': 'xuong2BaoVanRecords',
     'x2-ho-tro-card':  'xuong2HoTroRecords',
@@ -143,6 +146,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x2-kho-card': 'kho',
     'x2-bao-tinh-card': 'baotinh',
     'x2-bullig-card': 'bullig',
+    'x2-xu-ly-loi-card': 'xulyloi',
     'x2-cat-van-card': 'catvan',
     'x2-bao-van-card': 'baovan',
     'x2-ho-tro-card':  'hotro',
@@ -292,6 +296,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function isChonNanPos(name) {
     return normPosName(name).includes('chon nan');
   }
+  function isBoThanhTopPos(name) {
+    const n = normPosName(name);
+    return n.includes('bo thanh') || n.includes('bo thanh top') || n.includes('bo thanh top');
+  }
   function hrAssignmentsInDepartmentAt(dateVal, department, matchPos) {
     if (!dateVal) return [];
     return hrAssignmentsOf(dateVal)
@@ -323,6 +331,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function hrBoOngAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isBoOngPos); }
   function hrBaoThoAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isBaoThoPos); }
   function hrChonNanAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isChonNanPos); }
+  function hrBoThanhTopAssignmentsOf(dateVal) { return hrAssignmentsAt(dateVal, isBoThanhTopPos); }
   // Chuỗi giờ 1 lượt bố trí: "07:00–12:00"; giờ ra TRỐNG = làm đến HẾT CA
   // (mặc định theo quy ước Bảng bố trí Nhân Sự) → hiển thị "07:00 → hết ca"
   const posTimeStr = a => (a.end ? `${a.start}–${a.end}` : `${a.start} → hết ca`);
@@ -2127,6 +2136,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const ok = list.filter(r => r.kind === 'ct').reduce((s, r) => s + (Number(r.qtyOk) || 0), 0);
       return `${list.length} lượt · ${fmtThanh(ok)} thanh`;
     }
+    // Thẻ gộp "Xử lý lỗi": 5 chức năng — tổng lượt dữ liệu 4 chức năng cũ + số lô bó Tóp
+    if (cardId === 'x2-xu-ly-loi-card') {
+      const cat = (state.xuong2CatVanRecords || []).length;
+      const bv = (state.xuong2BaoVanRecords || []).length;
+      const top = (state.batches || []).filter(b => b && b.topBundle === true).length;
+      const total = cat + bv + top;
+      return total ? `${cat + bv} lượt · ${top} lô bó Tóp` : 'Chưa xử lý';
+    }
     // Thẻ "Cắt Ván": số lượt + số TẤM VÁN đã cắt/xẻ trong nhật ký
     if (cardId === 'x2-cat-van-card') {
       const list = state.xuong2CatVanRecords || [];
@@ -2264,6 +2281,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
   }
 
+  function renderX2XuLyLoiCard() {
+    switchX2XuLyLoiTab('cat');
+    renderX2CatVanCard();
+    renderX2BaoVanCard();
+    renderX2TopBundleStock();
+    renderX2TopBundleHistory();
+  }
+
   function x2OpenCard(cardId) {
     const card = document.getElementById(cardId);
     if (!card) return false;
@@ -2288,6 +2313,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (cardId === 'x2-kho-card') renderX2KhoCard(); // Kho Nan: tồn · phiếu kho · sổ nhập/xuất
     if (cardId === 'x2-bao-tinh-card') renderX2BaoTinhCard();
     if (cardId === 'x2-bullig-card') renderX2BulligCard();
+    if (cardId === 'x2-xu-ly-loi-card') renderX2XuLyLoiCard();
     if (cardId === 'x2-cat-van-card') renderX2CatVanCard();
     if (cardId === 'x2-bao-van-card') renderX2BaoVanCard();
     if (cardId === 'x2-ho-tro-card') renderXuong2HoTroCard();
@@ -8828,6 +8854,194 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
 
   // ═══════════════════════════════════════════════════════════
+  // CHỨC NĂNG: BÓ THANH TÓP — Xử lý lỗi / tạo nhiều lô 1 lần
+  // ═══════════════════════════════════════════════════════════
+  // Lấy nguồn theo kích thước TRƯỚC BÀO, bó thành nhiều thẻ lô ở Kho.
+  // Người làm + giờ làm LẤY SỐNG từ vị trí "Bó thanh" trong Bảng bố trí Nhân Sự.
+  function hrBoThanhTopSnapshot(dateVal) {
+    const live = hrBoThanhTopAssignmentsOf(dateVal);
+    return workerSnapOf(hrPositionSnapshot(dateVal, live));
+  }
+  function renderX2TopBundleStock() {
+    const box = document.getElementById('x2-xl-top-stock');
+    if (!box) return;
+    const rows = baoTinhTopSizeRows();
+    if (!rows.length) {
+      box.innerHTML = '<div class="al-empty">— Chưa có Thanh Tóp theo kích thước trước bào —</div>';
+      return;
+    }
+    box.innerHTML = rows.map(row =>
+      `<button type="button" class="al-card" data-x2-xl-top-stock-size="${escapeHTML(row.sizeKey)}" title="Chọn cỡ ${escapeHTML(row.sizeKey)} để thêm dòng bó lô">
+        <span class="al-card-body">
+          <span class="al-card-main"><strong>${escapeHTML(row.sizeKey)}</strong> mm</span>
+          <span class="al-card-sub">Tồn: <strong>${fmtThanh(row.remaining)}</strong> thanh</span>
+        </span>
+      </button>`).join('');
+  }
+  function x2TopBundleRowHtml(sizeKey) {
+    const rows = baoTinhTopSizeRows();
+    const options = rows.map(row =>
+      `<option value="${escapeHTML(row.sizeKey)}"${sizeKey && row.sizeKey === sizeKey ? ' selected' : ''}>${escapeHTML(row.sizeKey)} — còn ${fmtThanh(row.remaining)}</option>`).join('');
+    return `<tr data-x2-xl-top-row>
+      <td><select data-x2-xl-top-row-size aria-label="Cỡ Thanh Tóp trước bào"><option value="">Chọn cỡ</option>${options}</select></td>
+      <td><input type="number" min="1" step="1" data-x2-xl-top-row-qty placeholder="0" aria-label="Số lượng thanh"></td>
+      <td><select data-x2-xl-top-row-type aria-label="Phân loại"><option value="A">A</option><option value="A1">A1</option><option value="B">B</option></select></td>
+      <td><select data-x2-xl-top-row-use aria-label="Dùng cho"><option value="Ván">Ván</option><option value="Bullig">Bullig</option></select></td>
+      <td><input type="text" data-x2-xl-top-row-location placeholder="VD: K21 (không bắt buộc)" aria-label="Vị trí tham khảo"></td>
+      <td><button type="button" class="btn btn-outline btn-sm" data-x2-xl-top-row-remove aria-label="Xóa dòng lô">×</button></td>
+    </tr>`;
+  }
+  function resetX2TopBundleForm() {
+    const dateEl = document.getElementById('x2-xl-top-date');
+    if (dateEl) dateEl.value = todayISO();
+    const noteEl = document.getElementById('x2-xl-top-note');
+    if (noteEl) noteEl.value = '';
+    const body = document.getElementById('x2-xl-top-rows');
+    if (body) body.innerHTML = x2TopBundleRowHtml('');
+    renderX2TopBundleStock();
+    renderX2TopBundleHistory();
+  }
+  function addX2TopBundleRow(sizeKey) {
+    const body = document.getElementById('x2-xl-top-rows');
+    if (!body) return;
+    body.insertAdjacentHTML('beforeend', x2TopBundleRowHtml(sizeKey || ''));
+  }
+  function onX2TopBundleStockClick(e) {
+    const t = e && e.target;
+    if (!t || typeof t.closest !== 'function') return false;
+    const stock = t.closest('[data-x2-xl-top-stock-size]');
+    if (stock) {
+      addX2TopBundleRow(stock.getAttribute('data-x2-xl-top-stock-size') || '');
+      return true;
+    }
+    const remove = t.closest('[data-x2-xl-top-row-remove]');
+    if (remove) {
+      const row = remove.closest('[data-x2-xl-top-row]');
+      const body = document.getElementById('x2-xl-top-rows');
+      if (row && body) {
+        if (body.querySelectorAll('[data-x2-xl-top-row]').length <= 1) row.querySelectorAll('input, select').forEach(el => { el.value = el.tagName === 'SELECT' ? (el.getAttribute('data-x2-xl-top-row-size') ? '' : el.options[0].value) : ''; });
+        else row.remove();
+      }
+      return true;
+    }
+    return false;
+  }
+  function renderX2TopBundleHistory() {
+    const box = document.getElementById('x2-xl-top-day-cards');
+    const count = document.getElementById('x2-xl-top-table-count');
+    const lots = (state.batches || []).filter(b => b && b.topBundle === true).sort((a, b) => String(b.topBundleDate || b.date || '').localeCompare(String(a.topBundleDate || a.date || '')));
+    if (count) count.textContent = lots.length ? `${lots.length} lô` : 'Chưa có lô';
+    if (!box) return;
+    if (!lots.length) { box.innerHTML = '<div class="al-empty">Chưa bó Thanh Tóp thành lô.</div>'; return; }
+    box.innerHTML = lots.map(b => {
+      const loc = String(b.location || '').trim();
+      const hours = Number(b.workHours) || 0;
+      return `<div class="kho-day-card" style="margin:6px 0;">
+        <div class="kho-note-line1"><span class="kho-badge kho-badge-xu_ly">Bó Thanh Tóp</span> <strong>${escapeHTML(b.topSizeKey || dimKeyOf(b.length, b.width, b.thickness))}</strong> · ${fmtThanh(Number(b.quantity) || 0)} thanh · Loại ${escapeHTML(b.bambooType || '—')} · ${escapeHTML(b.useFor || '—')}</div>
+        <div class="kho-note-line2">Ngày ${formatDateDDMMYY(b.topBundleDate || b.date)}${loc ? ` · Vị trí ${escapeHTML(loc)}` : ''}${b.worker ? ` · ${escapeHTML(b.worker)}${hours ? ` · ${fmtGio(hours)}h` : ''}` : ''}</div>
+      </div>`;
+    }).join('');
+  }
+  function switchX2XuLyLoiTab(kind) {
+    const tab = kind === 'xe' ? 'xe' : kind === 'bao' ? 'bao' : kind === 'cha' ? 'cha' : kind === 'top' ? 'top' : 'cat';
+    const kindSel = document.getElementById('x2-xl-kind');
+    if (kindSel) kindSel.value = tab;
+    const catPanel = document.getElementById('x2-cat-van-card');
+    const baoPanel = document.getElementById('x2-bao-van-card');
+    const topPanel = document.getElementById('x2-error-top-panel');
+    if (catPanel) catPanel.hidden = !(tab === 'cat' || tab === 'xe');
+    if (baoPanel) baoPanel.hidden = !(tab === 'bao' || tab === 'cha');
+    if (topPanel) topPanel.hidden = tab !== 'top';
+    if (tab === 'cat' || tab === 'xe') {
+      const sel = document.getElementById('x2-cv-kind');
+      if (sel) sel.value = tab === 'xe' ? 'xe' : 'cat';
+      syncX2CatVanKindRows();
+      renderX2CatVanCalc();
+    }
+    if (tab === 'bao' || tab === 'cha') {
+      const sel = document.getElementById('x2-bv-kind');
+      if (sel) sel.value = tab === 'cha' ? 'cha' : 'bao';
+      renderX2BaoVanCalc();
+    }
+    if (tab === 'top') {
+      renderX2TopBundleStock();
+      renderX2TopBundleHistory();
+      const dateEl = document.getElementById('x2-xl-top-date');
+      if (dateEl && !dateEl.value) dateEl.value = todayISO();
+      if (!document.querySelector('[data-x2-xl-top-row]')) resetX2TopBundleForm();
+    }
+  }
+  function handleX2TopBundleSubmit(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!requireEditPermission()) return;
+    const dateVal = String((document.getElementById('x2-xl-top-date') || {}).value || '').trim();
+    if (!dateVal) { showToast('Chọn ngày bó Thanh Tóp!', 'error'); return; }
+    const body = document.getElementById('x2-xl-top-rows');
+    if (!body) return;
+    const rows = [...body.querySelectorAll('[data-x2-xl-top-row]')].map(row => {
+      const sizeKey = String(row.querySelector('[data-x2-xl-top-row-size]').value || '').trim();
+      const qty = Math.floor(Number(row.querySelector('[data-x2-xl-top-row-qty]').value) || 0);
+      const bambooType = String(row.querySelector('[data-x2-xl-top-row-type]').value || 'A');
+      const useFor = String(row.querySelector('[data-x2-xl-top-row-use]').value || 'Ván');
+      const location = String(row.querySelector('[data-x2-xl-top-row-location]').value || '').trim();
+      return { sizeKey, qty, bambooType, useFor, location };
+    }).filter(r => r.sizeKey && r.qty > 0);
+    if (!rows.length) { showToast('Chọn ít nhất 1 cỡ Thanh Tóp và nhập số lượng!', 'error'); return; }
+    const stockMap = new Map(baoTinhTopSizeRows().map(row => [row.sizeKey, row.remaining]));
+    const sumMap = new Map();
+    for (const row of rows) sumMap.set(row.sizeKey, (sumMap.get(row.sizeKey) || 0) + row.qty);
+    for (const [sizeKey, qty] of sumMap) {
+      const avail = stockMap.get(sizeKey) || 0;
+      if (qty > avail) { showToast(`Cỡ ${sizeKey} chỉ còn ${fmtThanh(avail)} thanh Thanh Tóp!`, 'error'); return; }
+    }
+    pushUndo('Bó Thanh Tóp thành nhiều lô');
+    const snap = hrBoThanhTopSnapshot(dateVal);
+    const note = String((document.getElementById('x2-xl-top-note') || {}).value || '').trim();
+    const now = new Date().toISOString();
+    const created = [];
+    rows.forEach(row => {
+      const nums = String(row.sizeKey).split(/[x×*,;\s]+/).map(v => Number(v)).filter(v => v > 0);
+      if (nums.length < 3) return;
+      const batch = {
+        id: `batch-${Date.now()}-top-bundle-${Math.random().toString(36).slice(2, 8)}`,
+        code: generateBatchCodeYYMMDD(dateVal),
+        stage: 'kho',
+        date: dateVal,
+        week: getISOWeekString(dateVal),
+        length: nums[0], width: nums[1], thickness: nums[2],
+        quantity: row.qty,
+        volume: calculateVolume(nums[0], nums[1], nums[2], row.qty),
+        bambooType: row.bambooType,
+        useFor: row.useFor,
+        location: row.location,
+        khoDate: dateVal,
+        dryStage: null,
+        topRework: true,
+        topBundle: true,
+        topSizeKey: row.sizeKey,
+        topBundleDate: dateVal,
+        worker: snap.worker,
+        workTime: snap.workTime,
+        workHours: snap.workHours,
+        workHoursHC: snap.workHoursHC,
+        workHoursTC: snap.workHoursTC,
+        notes: note,
+        stageHistory: [{ stage: 'kho', date: dateVal }],
+        createdAt: now,
+        updatedAt: now
+      };
+      state.batches = state.batches || [];
+      state.batches.unshift(batch);
+      created.push(batch);
+    });
+    if (!created.length) { showToast('Không tạo được lô — kích thước Thanh Tóp không hợp lệ!', 'error'); return; }
+    storageModule().then(m => m && m.saveData()).catch(() => {});
+    resetX2TopBundleForm();
+    renderAll();
+    showToast(`Đã bó Thanh Tóp thành ${created.length} lô — người làm/lịch sử lấy từ vị trí Bó thanh!`, 'success');
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // VỊ TRÍ: BÀO VÁN — Xưởng 2 (thẻ launcher tab Công Đoạn)
   // ═══════════════════════════════════════════════════════════
   // 2 công đoạn nhỏ trong 1 thẻ + nút "Thêm" cho TƯƠNG LAI — form CHỈ CÓ
@@ -12383,6 +12597,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (openX2Card && openX2Card.id === 'x2-kho-card') renderX2KhoCard(); // Kho Nan — tự làm mới theo dữ liệu
     if (openX2Card && openX2Card.id === 'x2-bao-tinh-card') renderX2BaoTinhCard();
     if (openX2Card && openX2Card.id === 'x2-bullig-card') renderX2BulligCard();
+    if (openX2Card && openX2Card.id === 'x2-xu-ly-loi-card') renderX2XuLyLoiCard();
     if (openX2Card && openX2Card.id === 'x2-cat-van-card') renderX2CatVanCard();
     if (openX2Card && openX2Card.id === 'x2-bao-van-card') renderX2BaoVanCard();
     if (openX2Card && openX2Card.id === 'x2-ho-tro-card') renderXuong2HoTroCard();
@@ -13324,6 +13539,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         legacyUsed += qty;
       }
     });
+    (state.batches || []).forEach(b => {
+      if (!b || b.topBundle !== true) return;
+      const key = String(b.topSizeKey || '').trim();
+      const qty = Number(b.quantity) || 0;
+      if (!key || !(qty > 0)) return;
+      const row = map.get(key);
+      if (row) row.used += qty;
+    });
     const rows = [...map.values()].map(row => {
       const remaining = Math.max(0, row.total - row.used);
       return Object.assign({}, row, { remaining });
@@ -14035,31 +14258,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       }
       data = { type: method === 'taiche' ? 'taiche' : 'tieuhuy', source, method, sizeKey, qty, m3: 0, lots: [] };
       if (source === 'top_other' && method === 'taiche') {
-        const topLocation = ((document.getElementById('x2-kho-top-location') || {}).value || '').trim();
-        if (!sizeKey) { showToast('Chọn 1 kích thước trong danh sách Thanh Tóp trước bào!', 'error'); return; }
-        let topLength = Number((document.getElementById('x2-kho-top-length') || {}).value) || 0;
-        let topWidth = Number((document.getElementById('x2-kho-top-width') || {}).value) || 0;
-        let topThickness = Number((document.getElementById('x2-kho-top-thickness') || {}).value) || 0;
-        if (!(topLength > 0 && topWidth > 0 && topThickness > 0) && sizeKey) {
-          const parsed = String(sizeKey).split(/[x×*,;\s]+/).map(v => Number(v)).filter(v => v > 0);
-          if (parsed.length >= 3) {
-            topLength = parsed[0]; topWidth = parsed[1]; topThickness = parsed[2];
-          }
-        }
-        const topBambooType = (document.getElementById('x2-kho-top-type') || {}).value || 'A';
-        const topUseFor = (document.getElementById('x2-kho-top-use') || {}).value || 'Ván';
-        if (!(topLength > 0 && topWidth > 0 && topThickness > 0)) {
-          showToast('Kích thước Thanh Tóp không hợp lệ — chọn lại trong danh sách trước bào!', 'error'); return;
-        }
-        data.topLot = {
-          sizeKey,
-          location: topLocation,
-          length: topLength,
-          width: topWidth,
-          thickness: topThickness,
-          bambooType: topBambooType,
-          useFor: topUseFor
-        };
+        showToast('Chức năng bó Thanh Tóp đã chuyển sang thẻ Xử lý lỗi.', 'error');
+        return;
       }
     }
     pushUndo(isEdit ? 'Sửa phiếu kho' : 'Thêm phiếu kho');
@@ -20326,6 +20526,13 @@ export {
   baoVanRateOf,
   baoVanInputPool,
   baoVanKindLabel,
+  // ── THẺ GỘP XỬ LÝ LỖI + BÓ THANH TÓP ──
+  renderX2XuLyLoiCard,
+  switchX2XuLyLoiTab,
+  handleX2TopBundleSubmit,
+  resetX2TopBundleForm,
+  addX2TopBundleRow,
+  onX2TopBundleStockClick,
   // ── THẺ HỖ TRỢ + CÔNG ĐOẠN LẺ (2 vùng: nhập liệu · lịch sử — việc phát sinh, không công suất/hiệu suất) ──
   handleXuong2HoTroSubmit,
   editXuong2HoTro,

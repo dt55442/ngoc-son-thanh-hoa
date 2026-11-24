@@ -58,6 +58,7 @@ import { STORAGE_KEY_CAPACITY_UI, state } from './state.js';
 import {
   baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, chonNanDisplay, cutDisplay,
   baoThoRateOf, baoTinhRateOf, boOngRateOf, boluongRateOf, bulligRateOf, capRateOf, chonNanRateOf,
+  x2ChonNanLiveRecordsOf,
   catVanDisplay, catVanRateOf,
   baoVanDisplay, baoVanRateOf,
   sayChargeRows, sayShiftPerfOf, sayRateEntryOf,
@@ -227,11 +228,16 @@ import { escapeHTML, formatDateDDMMYY, stageIncidentOf } from './utils.js';
     },
     {
       id: 'chonnan', ws: 'x2', label: 'Chọn Nan Thô', unit: 'thanh/h', unitQty: 'thanh', cardId: 'x2-chon-nan-tho-card', kind: 'cap',
-      rows: () => (state.xuong2ChonNanThoRecords || []).map(r => {
-        const d = chonNanDisplay(r);
-        // Sản lượng CHỈ tính phần CỘNG sang Bào Thô (bỏ lượt nan mua ngoài — external)
-        return { date: d.date, shiftIdx: d.shiftIdx, qty: d.external ? 0 : d.quantity, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
-      }),
+      rows: () => {
+        const liveIds = new Set(x2ChonNanLiveRecordsOf().map(r => r.id));
+        return (state.xuong2ChonNanThoRecords || []).map(r => {
+          const d = chonNanDisplay(r);
+          // Sản lượng CHỈ tính phần CỘNG sang Bào Thô; bỏ nan ngoài công đoạn
+          // và bỏ lượt orphan/mismatch ca để khớp tổng thẻ live.
+          const live = !d.external && liveIds.has(r.id);
+          return { date: d.date, shiftIdx: d.shiftIdx, qty: live ? d.quantity : 0, qtyKnown: true, hours: d.workHours, hc: d.workHoursHC, tc: d.workHoursTC };
+        });
+      },
       rateOf: m => chonNanRateOf(m)
     },
     {

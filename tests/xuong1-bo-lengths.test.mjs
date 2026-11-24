@@ -81,6 +81,7 @@ const eventsSrc = read('../js/events.js');
 const capacitySrc = read('../js/capacity.js');
 const stateSrc = read('../js/state.js');
 const exportSrc = read('../js/export-xlsx.js');
+const xuong2SrcParser = read('../js/xuong2.js');
 const { state, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS } = await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.activeView = 'kanban-view';
@@ -91,7 +92,78 @@ const g = id => document.getElementById(id);
 const sourceBox = g('x1-loc-thanh-source-rows');
 const matrixBox = g('x1-loc-thanh-length-rows');
 
+console.log('--- BIỂU THỨC SỐ AN TOÀN CHO MA TRẬN ---');
+check('Parser biểu thức an toàn được export cho test',
+  typeof x1.parseArithmeticExpression === 'function' &&
+  typeof x1.parseSafeArithmeticExpression === 'function' &&
+  typeof x1.parseX1MatrixValue === 'function' &&
+  typeof x1.applyX1MatrixExpressionInput === 'function');
+check('Parser tính + - * /, ngoặc và thứ tự phép tính',
+  x1.parseArithmeticExpression('123+123') === 246 &&
+  x1.parseArithmeticExpression('10+2*5') === 20 &&
+  x1.parseArithmeticExpression('(100-25)/5') === 15 &&
+  x1.parseArithmeticExpression('-10+25') === 15 &&
+  x1.parseArithmeticExpression('8/2*3') === 12);
+check('Parser hỗ trợ dấu thập phân phẩy/chấm',
+  x1.parseArithmeticExpression('1,5+2.25') === 3.75 &&
+  x1.parseArithmeticExpression('12,5/2') === 6.25 &&
+  x1.parseX1MatrixValue('40,5+9,5') === 50);
+check('Biểu thức chưa đủ/không hợp lệ/chia 0 không bị tính',
+  x1.parseArithmeticExpression('123+') == null &&
+  x1.parseArithmeticExpression('123/0') == null &&
+  x1.parseArithmeticExpression('(123+123') == null &&
+  x1.parseArithmeticExpression('123abc') == null &&
+  x1.parseArithmeticExpression('1,2,3') == null);
+const arithmeticInput = makeEl('expression-input');
+arithmeticInput.value = '123+45';
+check('Ô nhập giữ nguyên expression khi gõ',
+  arithmeticInput.value === '123+45');
+check('Parser biểu thức đang gõ đọc đúng tổng liên tục',
+  x1.parseArithmeticExpression(arithmeticInput.value) === 168 &&
+  x1.parseX1MatrixValue(arithmeticInput.value) === 168);
+const blurInput = makeEl('blur-expression');
+blurInput.value = '123+45';
+x1.applyX1MatrixExpressionInput(blurInput);
+check('Blur/change áp dụng helper và thay expression bằng kết quả',
+  blurInput.value === '168');
+const enterInput = makeEl('enter-expression');
+enterInput.value = '123+45';
+x1.applyX1MatrixExpressionInput(enterInput);
+check('Enter áp dụng helper và thay expression bằng kết quả',
+  enterInput.value === '168');
+arithmeticInput.value = '123+';
+x1.applyX1MatrixExpressionInput(arithmeticInput);
+check('Biểu thức chưa hoàn chỉnh giữ nguyên',
+  arithmeticInput.value === '123+');
+arithmeticInput.value = '123/0';
+x1.applyX1MatrixExpressionInput(arithmeticInput);
+check('Biểu thức chia 0/không hợp lệ giữ nguyên',
+  arithmeticInput.value === '123/0');
+check('Listeners chỉ finalize expression ở change/blur/Enter/submit, không thay text trong input',
+  !eventsSrc.includes("safeOn(base + '-' + part, 'input', e => {\n          if (sp.key === 'locThanh') applyX1MatrixExpressionInput") &&
+  !eventsSrc.includes("ltSourceRows.addEventListener('input', e => {\n        if (e && e.target) applyX1MatrixExpressionInput") &&
+  !eventsSrc.includes("ltRows.addEventListener('input', e => {\n        if (e && e.target) applyX1MatrixExpressionInput") &&
+  eventsSrc.includes("safeOn(base + '-' + part, 'change'") &&
+  eventsSrc.includes("safeOn(base + '-' + part, 'blur'") &&
+  eventsSrc.includes("safeOn(base + '-' + part, 'keydown'") &&
+  eventsSrc.includes("ltSourceRows.addEventListener('blur'") &&
+  eventsSrc.includes("ltRows.addEventListener('blur'") &&
+  eventsSrc.includes("ltSourceRows.addEventListener('keydown'") &&
+  eventsSrc.includes("ltRows.addEventListener('keydown'") &&
+  eventsSrc.includes("finalizeLocThanhExpressions();"));
+check('Implementation parser không dùng eval hoặc Function',
+  !xuong2SrcParser.includes('eval(') &&
+  !/new\s+Function/.test(xuong2SrcParser) &&
+  !/\bFunction\s*\(/.test(xuong2SrcParser));
+
 console.log('--- CẤU TRÚC VÀ DANH MỤC ---');
+check('Lọc Thanh/Bó Xô chỉ đổi ô khối lượng sang text + inputmode decimal/numeric',
+  idxHtml.includes('<input type="text" inputmode="decimal" id="x1-loc-thanh-ok"') &&
+  idxHtml.includes('<input type="text" inputmode="decimal" id="x1-loc-thanh-loai"') &&
+  xuong2SrcParser.includes('<input type="text" inputmode="decimal" data-x1-lt-source-in') &&
+  xuong2SrcParser.includes('<input type="text" inputmode="decimal" class="x1-lt-kg"') &&
+  xuong2SrcParser.includes('<input type="text" inputmode="decimal" class="x1-lt-c"') &&
+  xuong2SrcParser.includes('<input type="text" inputmode="numeric" min="0" step="1" class="x1-lt-c"'));
 const appVersion = (stateSrc.match(/APP_VERSION\s*=\s*'(v\d+)'/) || [])[1];
 check('Bổ KHÔNG còn bản rộng (chọn tại ma trận Lọc Thanh); không có picker chiều dài ở Bổ',
   !idxHtml.includes('id="x1-bo-widths-btn"') && !idxHtml.includes('x1-bo-width-picker') &&
@@ -104,6 +176,8 @@ check('Lọc Thanh chọn nhiều lô; kg lọc mặc định theo phiếu Bổ,
   !idxHtml.includes('id="btn-x1-lt-add-source"') &&
   !idxHtml.includes('>Thêm lô</button>') &&
   idxHtml.includes('id="x1-loc-thanh-source-rows"') &&
+  !idxHtml.includes('Tổng KL Ước Tính') &&
+  !idxHtml.includes('Kg ước tính') &&
   !idxHtml.includes('id="x1-loc-thanh-loss-type"') && !idxHtml.includes('id="x1-loc-thanh-loss-note"') &&
   !idxHtml.includes('x1-lt-drying-note'));
 check('Phơi Sấy ẩn khỏi thao tác và công suất; lưu schema cũ để đọc lịch sử',
@@ -182,8 +256,8 @@ check('Danh sách chọn lô hiển thị checkbox, thông tin đầy đủ và 
   (sourceOptionsHtml.match(/type="checkbox" data-x1-lt-select-source/g) || []).length === 2 &&
   sourceOptionsHtml.includes('B1') && sourceOptionsHtml.includes('03/11/26') &&
   sourceOptionsHtml.includes('NCC Một') && !sourceOptionsHtml.includes('Bản rộng') &&
-  sourceOptionsHtml.includes('Còn theo phiếu Bổ 100 kg</strong> | Tổng đầu vào Sấy Sinh cả lô 500 kg') &&
-  sourceOptionsHtml.includes('Tổng đầu vào Sấy Sinh cả lô 750 kg'));
+  sourceOptionsHtml.includes('Còn theo phiếu Bổ 100 kg</strong> | Danh định Sấy Sinh 500 kg') &&
+  sourceOptionsHtml.includes('Danh định Sấy Sinh 750 kg'));
 x1.x1LtAddSource(bo1.id);
 x1.x1LtAddSource(bo2.id);
 check('Mỗi lô tự điền phần còn lại theo phiếu Bổ vào một ô kg có thể sửa',
@@ -238,6 +312,25 @@ function setMatrixCells(cells) {
   matrixBox.querySelectorAll = selector => selector === 'input[data-x1-lt-c]' ? cells : [];
 }
 function saveEvent() { return { preventDefault() {} }; }
+
+setAllocationRows([
+  fakeAllocationRow(bo1.id, '30+10'),
+  fakeAllocationRow(bo2.id, '100/4')
+]);
+setMatrixCells([
+  fakeMatrixCell(11, 50, 'A', '10*4'),
+  fakeMatrixCell(11, 50, 'A1', '(50-10)/2')
+]);
+g('x1-loc-thanh-mode').value = 'loc-thanh';
+const parsedAllocations = x1.x1LtReadSourceAllocations();
+const parsedMatrix = x1.x1LtMatrixRead();
+check('Đọc ma trận dùng parser: kg lô và ô ma trận biểu thức trả đúng số để tính',
+  parsedAllocations.find(a => a.sourceId === bo1.id)?.qtyIn === 40 &&
+  parsedAllocations.find(a => a.sourceId === bo2.id)?.qtyIn === 25 &&
+  parsedMatrix?.ok === 60 &&
+  parsedMatrix?.total === 60 &&
+  parsedMatrix?.rows?.[0]?.weights?.A === 40 &&
+  parsedMatrix?.rows?.[0]?.weights?.A1 === 20);
 
 setAllocationRows([
   fakeAllocationRow(bo1.id, 40),
@@ -358,6 +451,205 @@ check('Excel có mã lô, kg lọc và cột chênh kg',
   exportText.includes('KL Bó') &&
   exportText.includes('KL Loại'));
 
+console.log('--- THEO DÕI CỘNG DỒN THEO LÔ BỔ/SẤY SINH ---');
+const ssAccept = { id: 'ss-accept-2000', code: 'SS-ACCEPT-2000', qty: 2000 };
+const bocAccept = { id: 'boc-accept-2000', saySinhId: ssAccept.id, qty: 2000 };
+const locOngAccept = { id: 'loc-ong-accept-2000', bocId: bocAccept.id, qtyOk: 2000 };
+const boAccept = {
+  id: 'bo-accept-2000', lotCode: 'SS-ACCEPT-2000', date: '2026-11-08', qtyIn: 2000, qtyOk: 2000,
+  srcType: 'Vầu thanh', srcSupplier: 'NCC Chốt',
+  sourceAllocations: [{ sourceType: 'locOng', sourceId: locOngAccept.id, qty: 2000 }]
+};
+state.xuong1SaySinhRecords.push(ssAccept);
+state.xuong1BocRecords.push(bocAccept);
+state.xuong1LocOngRecords.push(locOngAccept);
+state.xuong1BoRecords.push(boAccept);
+state.xuong1LocThanhRecords.push({
+  id: 'lt-accept-650', date: '2026-11-09', qtyIn: 650, qtyOk: 650, qtyLoai: 0,
+  lotAllocations: [{ sourceId: boAccept.id, lotCode: 'SS-ACCEPT-2000', qtyIn: 650 }]
+});
+state.xuong1LocThanhRecords.push({
+  id: 'lt-accept-850', date: '2026-11-10', qtyIn: 850, qtyOk: 850, qtyLoai: 0,
+  lotAllocations: [{ sourceId: boAccept.id, lotCode: 'SS-ACCEPT-2000', qtyIn: 850 }]
+});
+const openProgress = x1.x1LocThanhLotProgressOf(boAccept);
+check('Lô 2000 kg cộng dồn hai lượt lọc: 650 + 850 = 1500 kg, chưa chốt không có tỷ lệ',
+  openProgress.nominalKg === 2000 && openProgress.finishedKg === 1500 &&
+  openProgress.closed === false && openProgress.ratio == null);
+check('Chốt lô thủ công mới cho tỷ lệ 75% đúng danh định Sấy Sinh',
+  x1.x1LocThanhMarkLotDone(boAccept.id, true) &&
+  x1.x1LocThanhLotProgressOf(boAccept).closed === true &&
+  x1.x1LocThanhLotProgressOf(boAccept).ratio === 75);
+check('Tỷ lệ theo lọc hiện tại không được tạo từ tổng lượt đem lọc',
+  x1.x1ChainDisplay(spLT, state.xuong1LocThanhRecords.find(r => r.id === 'lt-accept-650')).ratio == null);
+const boNoNominal = {
+  id: 'bo-no-nominal', lotCode: 'NO-NOMINAL', date: '2026-11-10', qtyIn: 200, qtyOk: 200,
+  srcType: 'Vầu thanh', srcSupplier: 'NCC Thiếu danh định',
+  sourceAllocations: []
+};
+state.xuong1BoRecords.push(boNoNominal);
+state.xuong1LocThanhRecords.push({
+  id: 'lt-no-nominal', date: '2026-11-10', qtyIn: 200, qtyOk: 200, qtyLoai: 0,
+  lotAllocations: [{ sourceId: boNoNominal.id, lotCode: 'NO-NOMINAL', qtyIn: 200 }]
+});
+x1.x1LocThanhMarkLotDone(boNoNominal.id, true);
+const noNominalProgress = x1.x1LocThanhLotProgressOf(boNoNominal);
+check('Lô đóng có thành phẩm nhưng không có danh định: giữ trạng thái chốt, tỷ lệ lô = không có',
+  noNominalProgress.closed &&
+  noNominalProgress.finishedKg === 200 &&
+  noNominalProgress.nominalKg == null &&
+  noNominalProgress.ratio == null);
+x1.renderX1CardOf(spLT.cardId);
+const noNominalStatsHtml = g('x1-loc-thanh-stats').innerHTML;
+check('Tổng hợp lô đóng không cộng tỷ lệ qua lô khác khi có lô thiếu danh định dương',
+  noNominalStatsHtml.includes('Tỷ lệ lô đã chốt') &&
+  noNominalStatsHtml.includes('—') &&
+  !noNominalStatsHtml.includes('85%'));
+const noNominalExportData = report.buildX2ExportData('x1locthanh', {});
+const noNominalExportText = JSON.stringify(noNominalExportData && noNominalExportData.aoa || []);
+check('Excel phân biệt lô đã chốt chưa có tỷ lệ với lô chưa chốt',
+  noNominalExportText.includes('NO-NOMINAL') &&
+  noNominalExportText.includes('Đã chốt — chưa có tỷ lệ (thiếu khối lượng danh định)') &&
+  exportSrc.includes('p.closed') &&
+  exportSrc.includes('; chưa chốt, chưa tính tỷ lệ'));
+const mixedAccept = { id: 'lt-accept-mixed', date: '2026-11-11', qtyIn: 300, qtyOk: 300, qtyLoai: 0,
+  lotAllocations: [{ sourceId: boAccept.id, lotCode: 'SS-ACCEPT-2000', qtyIn: 150 },
+    { sourceId: bo1.id, lotCode: 'SS-B1', qtyIn: 150 }] };
+state.xuong1LocThanhRecords.push(mixedAccept);
+const mixedProgress = x1.x1LocThanhLotCumulativeFinishedOf(boAccept.id);
+check('Lượt gom hỗn hợp không phân bổ thành phẩm chính xác vào từng lô',
+  mixedProgress.finishedKg === 1500 && mixedProgress.mixedFinishedKg === 300);
+const mixedClosedProgress = x1.x1LocThanhLotProgressOf(boAccept);
+check('Lô đã chốt có thành phẩm gom hỗn hợp không có tỷ lệ đóng thuyết phục',
+  mixedClosedProgress.closed &&
+  mixedClosedProgress.mixedFinishedKg === 300 &&
+  mixedClosedProgress.ratio == null);
+const mixedClosedExportData = report.buildX2ExportData('x1locthanh', {});
+const mixedClosedExportText = JSON.stringify(mixedClosedExportData && mixedClosedExportData.aoa || []);
+check('Excel phân biệt lô gom hỗn hợp đã chốt với lô thiếu danh định',
+  mixedClosedExportText.includes('Đã chốt — chưa có tỷ lệ (gom hỗn hợp/chưa phân bổ)'));
+x1.renderX1CardOf(spLT.cardId);
+const mixedClosedStatsHtml = g('x1-loc-thanh-stats').innerHTML;
+check('Thẻ thống kê đóng lô gom hỗn hợp không hiện số %, mà ghi rõ Chưa phân bổ',
+  mixedClosedStatsHtml.includes('Tỷ lệ lô đã chốt · Chưa phân bổ') &&
+  mixedClosedStatsHtml.includes('<span class="material-stat-value">—</span>') &&
+  !mixedClosedStatsHtml.includes('75%'));
+const mixedRatioSource = read("../js/xuong2.js");
+check("Summary nhiều lô không gắn tỷ lệ tổng của lô đầu vào một tỷ lệ gom chung",
+  !mixedRatioSource.includes("const closedRatio") && mixedRatioSource.includes("Tỷ lệ theo lô:") &&
+  !mixedRatioSource.includes("closedRatio ?"));
+console.log('--- FOCUS: CHỐT/MỞ LẠI VÀ GIỮ KG ĐÃ NHẬP ---');
+const mixedEditStatus = { id: 'lt-mixed-status-edit', date: '2026-11-13', mode: 'bo-xo', qtyIn: 300, qtyOk: 300, qtyLoai: 0,
+  lotAllocations: [{ sourceId: bo1.id, lotCode: 'B1', qtyIn: 150 }, { sourceId: bo2.id, lotCode: 'B2', qtyIn: 150 }],
+  matrixRows: [{ len: 50, width: 11, weights: { bo: 300, loai: 0 } }] };
+x1.x1LocThanhMarkLotDone(bo1.id, true);
+x1.x1LocThanhMarkLotDone(bo2.id, false);
+state.xuong1LocThanhRecords.push(mixedEditStatus);
+x1.editX1Chain(spLT, mixedEditStatus.id);
+setAllocationRows([fakeAllocationRow(bo1.id, 150), fakeAllocationRow(bo2.id, 150)]);
+setMatrixCells([fakeMatrixCell(11, 50, 'bo', 300)]);
+check('Sửa phiên gom hỗn hợp: checkbox phản ánh hỗn hợp tròn/chưa chốt, không mặc định đóng/mở',
+  g('x1-loc-thanh-done').indeterminate === true && g('x1-loc-thanh-done').checked === false &&
+  x1.x1LocThanhLotDoneOf(bo1) === true && x1.x1LocThanhLotDoneOf(bo2) === false);
+x1.handleX1ChainSubmit(spLT, saveEvent());
+check('Sửa gom hỗn hợp không đổi trạng thái lô nếu chưa có ý định checkbox rõ',
+  x1.x1LocThanhLotDoneOf(bo1) === true && x1.x1LocThanhLotDoneOf(bo2) === false);
+
+const recordsBeforeMixedSummary = state.xuong1LocThanhRecords;
+state.xuong1LocThanhRecords = [{ id: 'lt-two-lots-one-session', date: '2026-11-14', qtyIn: 300, qtyOk: 300, qtyLoai: 0,
+  lotAllocations: [{ sourceId: bo1.id, lotCode: 'B1', qtyIn: 150 }, { sourceId: bo2.id, lotCode: 'B2', qtyIn: 150 }] }];
+const twoLotMixedSummary = x1.x1LocThanhSelectedMixedSummaryOf([bo1.id, bo2.id], null);
+check('Hai lô một lượt gom: selected-lot summary đếm lượt gom một lần, không nhân đôi kg',
+  twoLotMixedSummary.qtyKg === 300 && twoLotMixedSummary.sessions === 1);
+state.xuong1LocThanhRecords = recordsBeforeMixedSummary;
+setAllocationRows([]);
+setMatrixCells([]);
+x1.resetX1ChainForm(spLT);
+
+const xuong2Src = read('../js/xuong2.js');
+state.x1LocThanhEditId = 'lt-accept-650';
+const editProgress = x1.x1LocThanhLotProgressOf(boAccept, 'lt-accept-650');
+check('Sửa lượt lọc: loại lượt cũ khỏi cộng dồn, dự phóng không cộng đúp lượt đang sửa',
+  editProgress.finishedKg === 850 &&
+  editProgress.finishedKg + 650 === 1500 &&
+  mixedRatioSource.includes('x1LocThanhLotProgressOf(source, editId)') &&
+  mixedRatioSource.includes('item.progress.finishedKg + addThisSession'));
+state.x1LocThanhEditId = null;
+
+state.xuong1LocThanhRecords = [];
+x1.x1LtRemoveSource(bo1.id);
+x1.x1LtRemoveSource(bo2.id);
+x1.x1LtAddSource(bo1.id);
+x1.x1LtAddSource(bo2.id);
+setAllocationRows([
+  fakeAllocationRow(bo1.id, 37),
+  fakeAllocationRow(bo2.id, 23)
+]);
+x1.x1LtRemoveSource(bo2.id);
+const allocationsAfterRemove = x1.x1LtReadSourceAllocations();
+check('Xóa lô vẫn giữ kg đã gõ của các dòng còn lại trước khi DOM rerender',
+  allocationsAfterRemove.find(a => a.sourceId === bo1.id)?.qtyIn === 37);
+setAllocationRows([
+  fakeAllocationRow(bo1.id, 37),
+  fakeAllocationRow(bo2.id, 23)
+]);
+x1.x1LtAddSource(bo2.id);
+const allocationsAfterAdd = x1.x1LtReadSourceAllocations();
+check('Thêm lô vẫn giữ kg đã gõ của dòng đang có trước khi rerender mảng lô',
+  allocationsAfterAdd.find(a => a.sourceId === bo1.id)?.qtyIn === 37 &&
+  allocationsAfterAdd.find(a => a.sourceId === bo2.id)?.qtyIn === 23);
+
+x1.resetX1ChainForm(spLT);
+const boReopen = {
+  id: 'bo-reopen-no-session', lotCode: 'REOPEN-NO-SESSION', date: '2026-11-12', qtyIn: 120, qtyOk: 120,
+  srcType: 'Vầu thanh', srcSupplier: 'NCC Mở lại',
+  sourceAllocations: [{ sourceType: 'locOng', sourceId: 'loc-ong-reopen-no-session', qty: 120 }]
+};
+state.xuong1BoRecords.push(boReopen);
+state.xuong1LocThanhRecords = [];
+x1.x1LocThanhMarkLotDone(boReopen.id, true);
+x1.fillX1ChainOptions(spLT);
+check('Lô đã chốt không có lượt lọc vẫn còn trong danh sách để mở lại',
+  g('x1-loc-thanh-source-options').innerHTML.includes('REOPEN-NO-SESSION') &&
+  x1.x1LocThanhLotDoneOf(boReopen));
+x1.x1LtAddSource(boReopen.id);
+g('x1-loc-thanh-date').value = '2026-11-12';
+g('x1-loc-thanh-done').checked = false;
+setAllocationRows([fakeAllocationRow(boReopen.id, 0)]);
+x1.handleX1ChainSubmit(spLT, saveEvent());
+check('Mở lại bằng ý định zero kg không tạo lượt lọc giả',
+  state.xuong1LocThanhRecords.length === 0 &&
+  x1.x1LocThanhLotDoneOf(boReopen) === false &&
+  boReopen.locThanhLotStatus === 'open');
+
+boReopen.locThanhLotDone = true;
+boReopen.locThanhLotClosed = true;
+boReopen.finishedClosed = true;
+boReopen.lotClosed = true;
+boReopen.lotDone = true;
+boReopen.locThanhDoneAt = '2026-11-12T00:00:00.000Z';
+boReopen.doneAt = '2026-11-12T00:00:00.000Z';
+x1.x1LocThanhMarkLotDone(boReopen, false);
+check('Mở lô xóa toàn bộ cờ tương thích và timestamp chốt',
+  boReopen.locThanhLotDone === undefined && boReopen.locThanhLotClosed === undefined &&
+  boReopen.finishedClosed === undefined && boReopen.lotClosed === undefined && boReopen.lotDone === undefined &&
+  boReopen.locThanhLotStatus === 'open' && boReopen.locThanhDoneAt === undefined && boReopen.doneAt === undefined);
+
+x1.x1LtAddSource(boReopen.id);
+g('x1-loc-thanh-done').checked = true;
+x1.x1LtSyncDoneUi();
+check('Checkbox bật phản ánh ý định chờ xác nhận đóng',
+  g('x1-loc-thanh-done-hint').textContent.includes('CHỜ XÁC NHẬN ĐÓNG LÔ'));
+g('x1-loc-thanh-done').checked = false;
+x1.x1LtSyncDoneUi();
+check('Checkbox tắt phản ánh ý định lô đang mở',
+  g('x1-loc-thanh-done-hint').textContent.includes('LÔ ĐANG MỞ'));
+x1.x1LocThanhMarkLotDone(boReopen, true);
+g('x1-loc-thanh-done').checked = false;
+x1.x1LtSyncDoneUi();
+check('Checkbox tắt trên lô đã chốt phản ánh ý định chờ mở lại',
+  g('x1-loc-thanh-done-hint').textContent.includes('CHỜ XÁC NHẬN MỞ LẠI'));
+x1.x1LocThanhMarkLotDone(boReopen, false);
 console.log('--- MIGRATE DỮ LIỆU PHÂN LOẠI CŨ (6mm / 13mm) ---');
 const legacyRec = {
   id: 'lt-legacy-1', date: '2026-11-08', mode: 'loc-thanh', qtyIn: 100, qtyOk: 100, qtyLoai: 0,
@@ -381,6 +673,15 @@ check('Ma trận cũ sau migrate vẫn vào Kho Nan đúng nhóm A/A1/B (tồn k
       wh.groups.some(g => g.kind === 'A1' && g.len === 50 && g.qty === 4) &&
       wh.groups.some(g => g.kind === 'B' && g.len === 50 && g.qty === 5);
   })());
+
+x1.x1LocThanhMarkLotDone('bo-lot-1', true);
+const legacyClosedProgress = x1.x1LocThanhLotProgressOf(bo1);
+check('Lô đóng có ma trận cũ theo số lượng và danh định Sấy Sinh hợp lệ: không quy đổi thành 0kg và không tạo tỷ lệ 0%',
+  legacyClosedProgress.closed &&
+  legacyClosedProgress.nominalKg === 500 &&
+  legacyClosedProgress.legacyCountOutputSessions === 1 &&
+  legacyClosedProgress.hasUnquantifiableOutput === true &&
+  legacyClosedProgress.ratio == null);
 
 console.log('--- N. BẬT/TẮT CHIP BẢN RỘNG (14/11/2026 — sửa lỗi bấm chip không ăn) ---');
 g('x1-loc-thanh-mode').value = 'loc-thanh';
@@ -444,10 +745,13 @@ const idxForm = idxHtml.slice(idxHtml.indexOf('id="x1-loc-thanh-form"'), idxHtml
 check('O1. Đã bỏ ô Ghi Chú khỏi form Lọc Thanh',
   idxHtml.includes('id="x1-loc-thanh-form"') &&
   !idxForm.includes('x1-loc-thanh-note') && !idxForm.includes('Ghi Chù'));
-check('O2. Hàng 2 gộp đúng thứ tự Hình thức → Ngày → Tổng KL (nguồn đứng hàng 1)',
+check('O2. Hàng 2 gọn Hình thức → Ngày; tổng kg lấy từ các dòng lô, không có trường ước tính',
   ltFormHtml.indexOf('id="x1-loc-thanh-src"') < ltFormHtml.indexOf('id="x1-loc-thanh-mode"') &&
   ltFormHtml.indexOf('id="x1-loc-thanh-mode"') < ltFormHtml.indexOf('id="x1-loc-thanh-date"') &&
-  ltFormHtml.indexOf('id="x1-loc-thanh-date"') < ltFormHtml.indexOf('id="x1-loc-thanh-in"'));
+  ltFormHtml.indexOf('id="x1-loc-thanh-date"') < ltFormHtml.indexOf('id="x1-loc-thanh-calc"') &&
+  !ltFormHtml.includes('Ước Tính') &&
+  !ltFormHtml.includes('kg tươi') &&
+  idxHtml.includes('type="hidden" id="x1-loc-thanh-in"'));
 check('O3. Dropdown nguồn KHÔNG tự đóng sau mỗi lần tích — chỉ đóng khi bấm ra ngoài',
   eventsSrc.includes('ltSourceDropdown.open = false') &&
   eventsSrc.includes("e.target.closest('#x1-lt-source-dropdown')") &&
@@ -462,12 +766,83 @@ check('O4. Dòng lô GỌN: chỉ tên lô + ô kg (chi tiết lô nằm trong t
   srcRow.includes('data-x1-lt-source-in') &&
   srcRow.includes('title="Vầu thanh · NCC NCC Một') &&
   srcRow.includes('Phiếu Bổ 100 kg · Còn 100 kg') &&
+  srcRow.includes('Danh định Sấy Sinh') &&
+  !srcRow.includes('x1-lt-lot-progress') &&
+  !stylesCss.includes('.x1-lt-lot-progress') &&
   !srcRow.includes('x1-lt-source-head') && !srcRow.includes('x1-lt-source-fields'));
 x1.x1LtRemoveSource(bo1.id);
 check('O5. CSS: dòng lô gọn + ma trận cân bằng (chip vừa 1 hàng, cột 170px)',
   stylesCss.includes('.x1-lt-src-name') &&
   stylesCss.includes('.x1-lt-matrix2 thead tr:first-child th:nth-child(1) { width: 170px; }') &&
   stylesCss.includes('.x1-lt-matrix2 .x1-lt-width-chips { gap: 3px; }'));
+
+console.log("--- FOCUS: LƯỢT MỚI KHÔNG ĐƯỢC GIỮ NGUYÊN LÔ ĐÃ ĐÓNG ---");
+x1.resetX1ChainForm(spLT);
+const boClosedNew = {
+  id: "bo-closed-new-session", lotCode: "CLOSED-NEW-SESSION", date: "2026-11-15",
+  qtyIn: 100, qtyOk: 100,
+  srcType: "Vầu thanh", srcSupplier: "NCC Đóng",
+  sourceAllocations: []
+};
+state.xuong1BoRecords.push(boClosedNew);
+x1.x1LocThanhMarkLotDone(boClosedNew.id, true);
+x1.resetX1ChainForm(spLT);
+x1.x1LtAddSource(boClosedNew.id);
+g("x1-loc-thanh-mode").value = "bo-xo";
+x1.syncX1LocThanhMode();
+g("x1-loc-thanh-date").value = "2026-11-15";
+setAllocationRows([fakeAllocationRow(boClosedNew.id, 40)]);
+setMatrixCells([fakeMatrixCell(11, 50, "bo", 40)]);
+
+const originalConfirm = global.confirm;
+let closedSessionConfirmCount = 0;
+let closedSessionConfirmText = "";
+global.confirm = message => {
+  closedSessionConfirmCount++;
+  closedSessionConfirmText = String(message);
+  return false;
+};
+const recordsBeforeClosedNewSession = state.xuong1LocThanhRecords.length;
+x1.handleX1ChainSubmit(spLT, saveEvent());
+check("Lượt Bó Xô mới có kg nhưng lô đã chốt: xác nhận hủy không lưu và không tự mở",
+  closedSessionConfirmCount === 1 &&
+  closedSessionConfirmText.includes("MỞ LẠI") &&
+  state.xuong1LocThanhRecords.length === recordsBeforeClosedNewSession &&
+  x1.x1LocThanhLotDoneOf(boClosedNew) === true);
+
+global.confirm = message => {
+  closedSessionConfirmCount++;
+  closedSessionConfirmText = String(message);
+  return true;
+};
+x1.handleX1ChainSubmit(spLT, saveEvent());
+check("Xác nhận mở lại cho lượt mới rồi mới lưu: lô mở và tạo đúng lượt dương",
+  closedSessionConfirmCount === 2 &&
+  state.xuong1LocThanhRecords.length === recordsBeforeClosedNewSession + 1 &&
+  state.xuong1LocThanhRecords.some(r => r.qtyIn === 40 && r.lotAllocations && r.lotAllocations[0] && r.lotAllocations[0].sourceId === boClosedNew.id) &&
+  x1.x1LocThanhLotDoneOf(boClosedNew) === false);
+
+const closedEditSession = {
+  id: "lt-edit-linked-closed", date: "2026-11-16", mode: "bo-xo",
+  qtyIn: 30, qtyOk: 30, qtyLoai: 0,
+  lotAllocations: [{ sourceId: boClosedNew.id, lotCode: "CLOSED-NEW-SESSION", qtyIn: 30 }],
+  matrixRows: [{ len: 50, width: 11, weights: { bo: 30, loai: 0 } }]
+};
+x1.x1LocThanhMarkLotDone(boClosedNew.id, true);
+state.xuong1LocThanhRecords.push(closedEditSession);
+let editClosedConfirmCount = 0;
+global.confirm = () => { editClosedConfirmCount++; return false; };
+x1.editX1Chain(spLT, closedEditSession.id);
+setAllocationRows([fakeAllocationRow(boClosedNew.id, 35)]);
+setMatrixCells([fakeMatrixCell(11, 50, "bo", 35)]);
+g("x1-loc-thanh-date").value = "2026-11-16";
+x1.handleX1ChainSubmit(spLT, saveEvent());
+check("Sửa phiên hiện hữu link lô đã chốt: không bị coi là lượt mới và vẫn giữ trạng thái chốt",
+  editClosedConfirmCount === 0 &&
+  closedEditSession.qtyIn === 35 &&
+  closedEditSession.qtyOk === 35 &&
+  x1.x1LocThanhLotDoneOf(boClosedNew) === true);
+global.confirm = originalConfirm;
 
 console.log(`\n=== KẾT QUẢ: ${pass} PASS / ${fail} FAIL ===`);
 process.exitCode = fail > 0 ? 1 : 0;

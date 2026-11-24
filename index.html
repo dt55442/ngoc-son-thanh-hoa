@@ -560,6 +560,13 @@
             <span class="x2-mini-count" id="x2-mini-count-x1-kho">–</span>
           </button>
 
+          <button type="button" class="x2-mini-card" data-x2-card="x1-nan-plan-card" aria-expanded="false" title="Kế hoạch xuất nan — Xưởng 1: kế hoạch theo năm, 52/53 tuần ISO, loại Vầu/Nứa và kích thước bản rộng × chiều dài">
+            <span class="x2-mini-ic"><i data-lucide="calendar-range"></i></span>
+            <span class="x2-mini-title">Kế hoạch xuất nan</span>
+            <span class="x2-mini-desc">Kế hoạch · thực tế · đáp ứng theo tuần ISO</span>
+            <span class="x2-mini-count" id="x2-mini-count-x1-nan-plan">Chưa lập</span>
+          </button>
+
         </div>
       </div>
       </div><!-- /#ws-x1-block -->
@@ -3088,6 +3095,14 @@
               </div>
               <!-- Dòng gọn: MÃ LÔ + ô Kg lấy lọc/bó (chi tiết lô trong tooltip) -->
               <div id="x1-loc-thanh-source-rows" class="x1-lt-source-rows"></div>
+              <!-- CHỐT THEO LÔ BỔ: chốt thủ công, không lấy tổng lượt làm tỷ lệ từng lượt -->
+              <div class="x1-lt-done-row">
+                <label for="x1-loc-thanh-done" title="Chốt thủ công theo từng lô Bổ/Sấy Sinh. Chỉ tính tỷ lệ sau khi xác nhận đóng lô; các lượt gom hỗn hợp không phân bổ thành phẩm theo lô.">
+                  <input type="checkbox" id="x1-loc-thanh-done" data-perm="x1">
+                  Đã lọc/bó xong lô đã chọn — xác nhận đóng lô
+                </label>
+                <span id="x1-loc-thanh-done-hint"></span>
+              </div>
               <!-- HÀNG 2: Hình thức · Ngày · Tổng KL -->
               <div class="x2-form-row">
                 <div class="form-group" style="flex:1;">
@@ -3101,19 +3116,16 @@
                   <label for="x1-loc-thanh-date">Ngày Lọc <span class="required">*</span></label>
                   <input type="date" id="x1-loc-thanh-date" required>
                 </div>
-                <div class="form-group" style="flex:1;">
-                  <label for="x1-loc-thanh-in">Tổng KL Đem Lọc / Bó (kg)</label>
-                  <input type="number" id="x1-loc-thanh-in" step="any" min="0" placeholder="Tự tính từ các lô" readonly>
-                </div>
+                <input type="hidden" id="x1-loc-thanh-in" value="">
               </div>
               <div class="x2-form-row" id="x1-loc-thanh-okrow">
                 <div class="form-group" style="flex:1;">
                   <label for="x1-loc-thanh-ok">KL Thành Phẩm (kg)</label>
-                  <input type="number" id="x1-loc-thanh-ok" step="any" min="0" placeholder="0">
+                  <input type="text" inputmode="decimal" id="x1-loc-thanh-ok" placeholder="0">
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label for="x1-loc-thanh-loai">KL Loại (kg)</label>
-                  <input type="number" id="x1-loc-thanh-loai" step="any" min="0" placeholder="0">
+                  <input type="text" inputmode="decimal" id="x1-loc-thanh-loai" placeholder="0">
                 </div>
               </div>
               <div class="x1-lt-length-wrap" id="x1-loc-thanh-length-wrap" hidden>
@@ -3165,6 +3177,95 @@
             <div class="x2-zone-head"><span class="x2-zone-no">2</span><i data-lucide="history"></i> Lịch Sử Xuất Hàng / Tiêu Hủy</div>
             <div id="x1-kho-inventory"></div>
             <p class="x1-kho-note">Giao dịch xuất kho được trừ vào tồn ngay khi lưu; xóa giao dịch sẽ hoàn trả số lượng về kho.</p>
+          </div>
+        </div>
+
+        <div class="planning-card x2-card-hidden" id="x1-nan-plan-card">
+          <div class="planning-card-header"><h4><i data-lucide="calendar-range"></i> Kế hoạch xuất nan — Xưởng 1</h4></div>
+          <div class="x1-nan-plan-controls">
+            <div class="x1-nan-plan-view-modes" id="x1-nan-plan-view-modes" role="group" aria-label="Chọn chế độ xem kế hoạch xuất nan">
+              <button type="button" class="x1-nan-plan-view-btn is-active" data-x1-nan-plan-view="week" aria-pressed="true">Tuần</button>
+              <button type="button" class="x1-nan-plan-view-btn" data-x1-nan-plan-view="month" aria-pressed="false">Tháng</button>
+              <button type="button" class="x1-nan-plan-view-btn" data-x1-nan-plan-view="year" aria-pressed="false">Năm</button>
+            </div>
+            <div class="x1-nan-plan-period-nav" role="group" aria-label="Điều hướng kỳ kế hoạch">
+              <button type="button" class="x1-nan-plan-period-btn" id="x1-nan-plan-prev" data-x1-nan-plan-period-nav="-1" title="Kỳ trước" aria-label="Kỳ kế hoạch trước"><i data-lucide="chevron-left"></i></button>
+              <span class="x1-nan-plan-period-label" id="x1-nan-plan-period-label">Tuần hiện tại</span>
+              <button type="button" class="x1-nan-plan-period-btn" id="x1-nan-plan-next" data-x1-nan-plan-period-nav="1" title="Kỳ sau" aria-label="Kỳ kế hoạch sau"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <div class="form-group x1-nan-plan-year-group">
+              <label for="x1-nan-plan-year">Năm kế hoạch</label>
+              <select id="x1-nan-plan-year" aria-label="Chọn năm kế hoạch xuất nan"></select>
+            </div>
+            <span class="x1-nan-plan-summary" id="x1-nan-plan-summary">Chưa có kế hoạch</span>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-x1-nan-plan-add" data-perm="x1" aria-label="Thêm sản phẩm kế hoạch xuất nan">
+              <i data-lucide="plus"></i> Thêm sản phẩm
+            </button>
+          </div>
+          <div class="x1-nan-plan-form" id="x1-nan-plan-form" hidden>
+            <div class="x1-nan-plan-form-row">
+              <div class="form-group">
+                <label for="x1-nan-plan-product">Tên sản phẩm</label>
+                <input type="text" id="x1-nan-plan-product" maxlength="160" autocomplete="off" placeholder="Nhập tên sản phẩm">
+              </div>
+            </div>
+            <div class="x1-nan-plan-chip-groups">
+              <fieldset class="x1-nan-plan-chip-group">
+                <legend>Nguyên liệu — Vầu / Nứa</legend>
+                <div class="x1-nan-plan-chips" id="x1-nan-plan-material-chips" role="group" aria-label="Chọn nguyên liệu">
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-material="Vầu" aria-pressed="false">Vầu</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-material="Nứa" aria-pressed="false">Nứa</button>
+                </div>
+              </fieldset>
+              <fieldset class="x1-nan-plan-chip-group">
+                <legend>Bản rộng (ly)</legend>
+                <div class="x1-nan-plan-chips" id="x1-nan-plan-width-chips" role="group" aria-label="Chọn bản rộng">
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-width="6" aria-pressed="false">6 ly</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-width="11" aria-pressed="false">11 ly</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-width="13" aria-pressed="false">13 ly</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-width="15" aria-pressed="false">15 ly</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-width="21" aria-pressed="false">21 ly</button>
+                </div>
+              </fieldset>
+              <fieldset class="x1-nan-plan-chip-group">
+                <legend>Chiều dài (mm)</legend>
+                <div class="x1-nan-plan-chips" id="x1-nan-plan-length-chips" role="group" aria-label="Chọn chiều dài">
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="50" aria-pressed="false">50</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="60" aria-pressed="false">60</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="65" aria-pressed="false">65</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="70" aria-pressed="false">70</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="75" aria-pressed="false">75</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="80" aria-pressed="false">80</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="87" aria-pressed="false">87</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="90" aria-pressed="false">90</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="95" aria-pressed="false">95</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="100" aria-pressed="false">100</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-length="105" aria-pressed="false">105</button>
+                </div>
+              </fieldset>
+              <fieldset class="x1-nan-plan-chip-group">
+                <legend>Phân loại</legend>
+                <div class="x1-nan-plan-chips" id="x1-nan-plan-class-chips" role="group" aria-label="Chọn phân loại">
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-class="A" aria-pressed="false">A</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-class="A1" aria-pressed="false">A1</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-class="Non bánh tẻ" aria-pressed="false">Non bánh tẻ</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-class="B" aria-pressed="false">B</button>
+                  <button type="button" class="x1-nan-plan-chip" data-x1-nan-plan-class="Loại" aria-pressed="false">Loại</button>
+                </div>
+              </fieldset>
+            </div>
+            <div class="x1-nan-plan-form-actions">
+              <button type="button" class="btn btn-outline" id="btn-x1-nan-plan-cancel">Hủy</button>
+              <button type="button" class="btn btn-primary" id="btn-x1-nan-plan-save" data-perm="x1">
+                <i data-lucide="check"></i> Lưu dòng
+              </button>
+            </div>
+          </div>
+          <div class="x1-nan-plan-table-wrap">
+            <table class="data-table x1-nan-plan-table">
+              <thead id="x1-nan-plan-head"></thead>
+              <tbody id="x1-nan-plan-body"></tbody>
+            </table>
           </div>
         </div>
 
@@ -4582,7 +4683,7 @@
                 <input type="date" id="qcf-date" required>
               </div>
               <div class="form-group qcf-g-in" id="qcf-in-group">
-                <label for="qcf-input-qty">Đầu Vào Kiểm (<span id="qcf-unit-in">tấm</span>) <span class="required">*</span></label>
+                <label for="qcf-input-qty">Số đang đưa kiểm (<span id="qcf-unit-in">tấm</span>) <span class="required">*</span></label>
                 <div class="qcf-in-controls">
                   <button type="button" class="btn btn-outline al-picker-btn" id="qcf-picker-btn" aria-controls="qcf-picker" aria-expanded="false" title="Kiểm Ván: tồn chưa kiểm lũy kế đến ngày kiểm — ① VÁN THÔ BTP (lượt ép chỉ điền khối 'Ván Thô Tạo Ra', KHÔNG điền thành phẩm; tự LOẠI thanh BTP theo THỂ TÍCH < 0,0015 m³, VD 1200×18×15) ② THÀNH PHẨM Ép Ván (LOẠI mục ĐVT = Thanh theo định mức như 640x14x12 — ĐVT chỉ phân biệt khi đã là thành phẩm); hàng đã kiểm đạt vẫn còn tồn vật lý nhưng không hiện lại cho QC. Kiểm Thanh: danh sách CỠ thanh ĐẦU RA của công đoạn Bào thanh còn chờ kiểm.">
                     <i data-lucide="list-checks"></i>
@@ -4606,11 +4707,11 @@
                 <input type="number" id="qcf-ok" min="0" step="1" inputmode="numeric" placeholder="0">
               </div>
               <div class="form-group qcf-g-num">
-                <label for="qcf-except">Ngoại Lệ (<span id="qcf-unit-ex">tấm</span>)</label>
+                <label for="qcf-except">Ngoại lệ (vẫn tính đạt) (<span id="qcf-unit-ex">tấm</span>)</label>
                 <input type="number" id="qcf-except" min="0" step="1" inputmode="numeric" placeholder="0" title="Ngoại lệ vẫn tính vào TỔNG ĐẠT (Đạt + Ngoại lệ)">
               </div>
               <div class="form-group qcf-g-num">
-                <label for="qcf-reject">Loại (<span id="qcf-unit-re">tấm</span>)</label>
+                <label for="qcf-reject">Loại / Hỏng (<span id="qcf-unit-re">tấm</span>)</label>
                 <input type="number" id="qcf-reject" min="0" step="1" inputmode="numeric" placeholder="0" title="Loại = số lượng bị LOẠI (lỗi) — dùng tính Tỉ lệ lỗi = Loại ÷ Tổng số lượng kiểm">
               </div>
               <div class="form-group qcf-g-actions">
@@ -4622,11 +4723,12 @@
                     <i data-lucide="save"></i> Lưu
                   </button>
                   <button type="button" class="btn btn-outline btn-sm" id="btn-qcf-reset" title="Làm mới form (thoát chế độ sửa)">
-                    <i data-lucide="rotate-ccw"></i> Làm Mới
+                    <i data-lucide="rotate-ccw"></i> Hủy / Nhập mới
                   </button>
                 </div>
               </div>
             </div>
+            <div class="qcf-preview" id="qcf-preview" aria-live="polite"></div>
           </form>
         </div>
 

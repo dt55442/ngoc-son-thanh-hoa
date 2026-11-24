@@ -91,8 +91,9 @@ const storageSrc = fs.readFileSync(new URL('../js/storage.js', import.meta.url),
 const cloudSrc = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
 const historySrc = fs.readFileSync(new URL('../js/history.js', import.meta.url), 'utf8');
 
-const { state, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG,
-        STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_X1_RATES } =
+const { state, APP_VERSION, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG,
+        STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_X1_RATES,
+        STORAGE_KEY_X1_NAN_PLAN } =
   await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.activeView = 'kanban-view';
@@ -142,6 +143,9 @@ state.hrAssignments = [
 
 const x1 = await import('../js/xuong2.js');
 const perms = await import('../js/permissions.js');
+const sysSettings = await import('../js/sys-settings.js');
+const reportSpecs = await import('../js/report-specs.js');
+const exportXlsx = await import('../js/export-xlsx.js');
 
 
 // ─── A. CÔNG TẮC CHUYỂN XƯỞNG ─────────────────────────────────────
@@ -463,7 +467,7 @@ check('F7: capacity.js có 3 dòng CAP_STAGES ws:"x1" + 3 sparkline + khóa gi�
 
 // ─── G. CẤU TRÚC SW + TIÊU ĐỀ TAB ─────────────────────────────────
 console.log('--- G. CẤU TRÚC SW + TAB ---');
-check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v452/.test(swJs));
+check('G1: sw.js đã tăng CACHE_NAME cho giao diện mới', /nha-may-ngoc-son-v456/.test(swJs));
 check('G2: nav desktop + mobile đổi nhãn "Công Đoạn SX"',
   idxHtml.includes('<span>Công đoạn</span>') &&
   idxHtml.includes('title="Công Đoạn SX"'));
@@ -1121,6 +1125,682 @@ check('K35: gọi bằng khóa "nua" → tiêu đề "Nứa" CÓ DẤU (không h
   !khoTitleNua.includes('>nua<') &&
   khoDetailNua.includes('cho Nứa')); // dữ liệu mẫu chưa có tồn Nứa → báo trung thực, nhưng TÊN có dấu
 x1.x1KhoCloseDetail();
+
+// ─── L. KẾ HOẠCH XUẤT NAN XƯỞNG 1 (52/53 TUẦN ISO) ─────────────
+console.log('--- L. KẾ HOẠCH XUẤT NAN X1 ---');
+check('L1: state.js / storage-adapter khai báo key và state kế hoạch X1',
+  STORAGE_KEY_X1_NAN_PLAN === 'bamboo_tracker_x1_nan_plan_v1' &&
+  fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes('x1NanPlans: []') &&
+  fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("x1NanPlanViewMode: 'week'") &&
+  fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("x1NanPlanPeriod: ''") &&
+  fs.readFileSync(new URL('../js/storage-adapter.js', import.meta.url), 'utf8')
+    .includes('[STORAGE_KEY_X1_NAN_PLAN, \'x1NanPlans\']'));
+check('L2: HTML có launcher + toolbar Tuần/Tháng/Năm, điều hướng kỳ, năm/form/bảng động',
+  idxHtml.includes('data-x2-card="x1-nan-plan-card"') &&
+  idxHtml.includes('id="x1-nan-plan-card"') &&
+  idxHtml.includes('data-x1-nan-plan-view="week"') &&
+  idxHtml.includes('data-x1-nan-plan-view="month"') &&
+  idxHtml.includes('data-x1-nan-plan-view="year"') &&
+  idxHtml.includes('id="x1-nan-plan-prev"') &&
+  idxHtml.includes('id="x1-nan-plan-next"') &&
+  idxHtml.includes('id="x1-nan-plan-period-label"') &&
+  idxHtml.includes('id="x1-nan-plan-year"') &&
+  idxHtml.includes('Thêm sản phẩm') &&
+  idxHtml.includes('id="x1-nan-plan-form"') &&
+  idxHtml.includes('id="x1-nan-plan-head"') &&
+  idxHtml.includes('id="x1-nan-plan-body"') &&
+  !idxHtml.includes('id="x1-nan-plan-roman"') &&
+  !idxHtml.includes('Cả hai') &&
+  idxHtml.includes('Vầu / Nứa') &&
+  idxHtml.includes('data-x1-nan-plan-material="Vầu"') &&
+  idxHtml.includes('data-x1-nan-plan-material="Nứa"') &&
+  idxHtml.includes('id="x1-nan-plan-product"') &&
+  !idxHtml.includes('id="x1-nan-plan-priority"') &&
+  !idxHtml.includes('x1-nan-plan-priority-toggle') &&
+  idxHtml.includes('id="x1-nan-plan-material-chips"') &&
+  idxHtml.includes('data-x1-nan-plan-width="11"') &&
+  idxHtml.includes('data-x1-nan-plan-length="50"') &&
+  idxHtml.includes('data-x1-nan-plan-class="A"') &&
+  idxHtml.includes('data-x1-nan-plan-class="Loại"'));
+check('L3: CSS kế hoạch gọn, có cuộn, form/44px/khối điểm liên tục nhưng KHÔNG còn bảng 13k px',
+  stylesCss.includes('.x1-nan-plan-table-wrap') &&
+  stylesCss.includes('.x1-nan-plan-week input') &&
+  stylesCss.includes('.x1-nan-plan-week-priority') &&
+  stylesCss.includes('.x1-nan-plan-level.level-1') &&
+  stylesCss.includes('.x1-nan-plan-level.level-2') &&
+  stylesCss.includes('.x1-nan-plan-level.level-4') &&
+  stylesCss.includes('.x1-nan-plan-level.level-8') &&
+  stylesCss.includes('.x1-nan-plan-view-modes') &&
+  stylesCss.includes('.x1-nan-plan-period-label') &&
+  stylesCss.includes('.x1-nan-plan-identity') &&
+  !stylesCss.includes('.x1-nan-plan-product-priority') &&
+  !stylesCss.includes('.x1-nan-plan-child-priority') &&
+  !stylesCss.includes('.x1-nan-plan-priority-toggle') &&
+  !stylesCss.includes('min-width: 13000px'));
+check('L4: không tạo dữ liệu kế hoạch mẫu — load key rỗng trả mảng rỗng',
+  (() => {
+    localStorage.removeItem(STORAGE_KEY_X1_NAN_PLAN);
+    state.x1NanPlans = [];
+    x1.loadX1NanPlans();
+    return Array.isArray(state.x1NanPlans) && state.x1NanPlans.length === 0;
+  })());
+check('L5: normalize dòng kế hoạch bắt buộc đủ year/material/width/len và theo số tuần ISO',
+  (() => {
+    const n = x1.x1NanNormalizePlanRecord({
+      id: 'plan-normalize', year: 2026, material: 'nua',
+      romanNo: 'ii', productName: 'Thanh Nứa A', width: 11.26, length: 50.4,
+      classification: 'A1',
+      weeks: { '1': 100, '53': 999, '0': 200, 'x': 300 }
+    });
+    const n2021 = x1.x1NanNormalizePlanRecord({
+      id: 'plan-2021', year: 2021, material: 'vau',
+      romanNo: 'I', productName: 'Thanh Vầu', width: 11, len: 50,
+      classification: 'Non bánh tẻ', weeks: { '53': 999, '52': 200 }
+    });
+    return n && n.romanNo === '' && x1.x1NanNormalizeRomanNo('II') === '' && n.productName === 'Thanh Nứa A' &&
+      n.material === 'Nứa' && n.width === 11.3 && n.len === 50 && n.length === 50 &&
+      n.classification === 'A1' &&
+      n.weeks['1'] === 100 && n.weeks['53'] === 999 &&
+      !Object.prototype.hasOwnProperty.call(n.weeks, '0') &&
+      n2021 && n2021.romanNo === '' && n2021.weeks['52'] === 200 &&
+      !Object.prototype.hasOwnProperty.call(n2021.weeks, '53');
+  })());
+check('L6: helper ISO tuần đọc đúng năm–tuần ISO',
+  (() => {
+    const w1 = x1.x1NanIsoWeekParts('2026-01-01');
+    const w38 = x1.x1NanIsoWeekParts('2026-09-14');
+    const w53 = x1.x1NanIsoWeekParts('2026-12-31');
+    return w1.year === 2026 && w1.week === 1 &&
+      w38.year === 2026 && w38.week === 38 &&
+      w53.year === 2026 && w53.week === 53 &&
+      x1.x1NanWeeksInYear(2026) === 53 &&
+      x1.x1NanWeeksInYear(2021) === 52 &&
+      x1.x1NanIsoWeekParts('invalid').week === 0;
+  })());
+check('L6B: tháng gộp tuần theo NGÀY THỨ HAI của tuần ISO',
+  (() => {
+    const sep = x1.x1NanMonthMondayWeeks('2026-09');
+    const dec = x1.x1NanMonthMondayWeeks('2025-12');
+    const jan = x1.x1NanMonthMondayWeeks('2026-01');
+    return sep.length >= 4 && sep.every(w => w.monday.slice(0, 7) === '2026-09') &&
+      dec.some(w => w.year === 2026 && w.week === 1 && w.monday === '2025-12-29') &&
+      jan.every(w => w.monday.slice(0, 7) === '2026-01') &&
+      x1.x1NanMonthShift('2026-12', 1) === '2027-01' &&
+      x1.x1NanWeekKey(2026, 53) === '2026-W53';
+  })());
+check('L7: thực tế ghép ngày ISO + nguồn Vầu/Nứa + matrix width/len, không cộng KL Loại',
+  (() => {
+    state.xuong1LocThanhRecords = [{
+      id: 'lt-plan-a', date: '2026-09-14',
+      lotAllocations: [{ srcType: 'Vầu', qtyIn: 100 }, { srcType: 'Nứa', qtyIn: 100 }],
+      matrixRows: [{ width: 11, len: 50, weights: { A: 40, A1: 10, loai: 25 } }]
+    }, {
+      id: 'lt-plan-bo', date: '2026-09-15', mode: 'bo-xo',
+      srcType: 'Vầu',
+      matrixRows: [{ width: 12, len: 100, weights: { bo: 80, loai: 20 } }]
+    }, {
+      id: 'lt-plan-old', date: '2026-09-16', srcType: 'Nứa',
+      lengthRows: [{ len: 50, kg: 30 }]
+    }];
+    const map = x1.x1NanActualMap(2026, state.xuong1LocThanhRecords);
+    return map['2026|38|Vầu|11|50'] === 25 &&
+      map['2026|38|Nứa|11|50'] === 25 &&
+      map['2026|38|Vầu|11|50|A'] === 20 &&
+      map['2026|38|Nứa|11|50|A'] === 20 &&
+      map['2026|38|Vầu|11|50|A1'] === 5 &&
+      map['2026|38|Nứa|11|50|A1'] === 5 &&
+      map['2026|38|Vầu|12|100'] === 80 &&
+      !Object.keys(map).some(k => k.includes('|Nứa|0|50'));
+  })());
+check('L7B: A + A1 gom vào một quy cách material-size, không tạo dòng riêng',
+  (() => {
+    const plans = [
+      { id: 'pa', year: 2026, romanNo: '', productName: 'Thanh A', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 40 } },
+      { id: 'pa1', year: 2026, romanNo: '', productName: 'Thanh A', material: 'Vầu', width: 11, length: 50, classification: 'A1', weeks: { '38': 10 } }
+    ];
+    const grouped = x1.x1NanPlanGroupedRecords(plans);
+    const child = grouped[0] && grouped[0].children[0];
+    const actualWeeks = child ? x1.x1NanPlanChildActualWeeks(child, 2026, x1.x1NanActualMap(2026, state.xuong1LocThanhRecords)) : [];
+    return grouped.length === 1 &&
+      grouped[0].children.length === 1 &&
+      child.plans.length === 2 &&
+      x1.x1NanPlanChildClassifications(child).join('/') === 'A/A1' &&
+      (actualWeeks[37] || 0) === 25;
+  })());
+check('L7C: "Vầu / Nứa" là nguyên liệu thay thế duy nhất và gom tồn theo phân loại',
+  (() => {
+    const alt = x1.x1NanNormalizePlanRecord({
+      id: 'plan-alt', year: 2026, material: 'Vầu / Nứa',
+      productName: 'Thanh thay thế', width: 11, length: 50,
+      classification: 'A', priority: true, weeks: { '38': 800 }
+    });
+    const groupedLegacy = x1.x1NanPlanGroupedRecords([
+      { id: 'legacy-vau', year: 2026, productName: 'Thanh thử', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 100 } },
+      { id: 'legacy-nua', year: 2026, productName: 'Thanh thử', material: 'Nứa', width: 11, length: 50, classification: 'A1', weeks: { '38': 200 } }
+    ]);
+    const stock = { groups: [
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A', qty: 500 },
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A1', qty: 300 }
+    ] };
+    const exactBreakdown = x1.x1NanStockBreakdownOf('Vầu', 11, 50, stock);
+    const altBreakdown = x1.x1NanStockBreakdownOf('Vầu / Nứa', 11, 50, stock);
+    const text = x1.x1NanStockBreakdownText('Vầu', 11, 50, stock);
+    return alt &&
+      alt.material === 'Vầu / Nứa' &&
+      alt.priority === false &&
+      groupedLegacy.length === 1 &&
+      groupedLegacy[0].children.length === 1 &&
+      groupedLegacy[0].children[0].material === 'Vầu / Nứa' &&
+      exactBreakdown.A === 500 &&
+      exactBreakdown.A1 === 300 &&
+      exactBreakdown.total === 800 &&
+      altBreakdown.total === 800 &&
+      text === 'Vầu A 500 kg · Vầu A1 300 kg';
+  })());
+check('L7D: tooltip tồn theo nguyên liệu + các phân loại đã chọn, không lặp tổng kho',
+  (() => {
+    const stock = { groups: [
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A', qty: 1472 },
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A1', qty: 600 },
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'B', qty: 900 },
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'Loại', qty: 100 }
+    ] };
+    const textPrimitive = x1.x1NanStockBreakdownText(
+      'Vầu', 11, 50, ['A', 'A1'], stock);
+    const textObject = x1.x1NanStockBreakdownText(
+      { material: 'Vầu', width: 11, length: 50,
+        plans: [
+          { classification: 'A' },
+          { classification: 'A1' }
+        ] },
+      stock);
+    const altStock = { groups: [
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A', qty: 1472 },
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A1', qty: 600 },
+      { unit: 'kg', material: 'Nứa', width: 11, len: 50, kind: 'A', qty: 100 },
+      { unit: 'kg', material: 'Nứa', width: 11, len: 50, kind: 'A1', qty: 50 }
+    ] };
+    const altText = x1.x1NanStockTooltipText(
+      'Vầu / Nứa', 11, 50, altStock, ['A', 'A1']);
+    return textPrimitive === 'Vầu A 1472 kg · Vầu A1 600 kg' &&
+      textObject === textPrimitive &&
+      !textPrimitive.includes('B ') &&
+      !textPrimitive.includes('Loại') &&
+      !textPrimitive.includes('Tổng') &&
+      altText === 'Vầu A 1472 kg · Vầu A1 600 kg · Nứa A 100 kg · Nứa A1 50 kg';
+  })());
+check('L8: helper tỷ lệ đáp ứng và chuỗi liên tục 1/2/4/8 tuần',
+  x1.x1NanResponseRatio(80, 80) === 100 &&
+  x1.x1NanResponseRatio(80, 100) === 125 &&
+  x1.x1NanResponseRatio(0, 100) === null &&
+  x1.x1NanContinuousStreakAt([100,100,100,100,100,100,100,100], [100,100,100,100,100,100,100,100], 0) === 1 &&
+  x1.x1NanContinuousStreakAt([100,100,100,100,100,100,100,100], [100,100,100,100,100,100,100,100], 1) === 2 &&
+  x1.x1NanContinuousStreakAt([100,100,100,100,100,100,100,100], [100,100,100,100,100,100,100,100], 3) >= 4 &&
+  x1.x1NanContinuousStreakAt([100,100,100,100,100,100,100,100], [100,100,100,100,100,100,100,100], 7) === 8 &&
+  x1.x1NanContinuousMaxLevel(
+    [100,100,100,100,100,100,100,100],
+    [100,100,100,100,100,100,100,100]
+  ) === 8);
+check('L8B: ưu tiên đúng tuần phân bổ tồn trước, thay thế dùng cả Vầu/Nứa',
+  (() => {
+    state.x1NanPlans = [
+      { id: 'priority-a', year: 2026, productName: 'Ưu tiên A', material: 'Vầu', width: 11, length: 50, classification: 'A', priority: false, priorityWeeks: { '2026-W38': true }, weeks: { '38': 800 } },
+      { id: 'priority-b', year: 2026, productName: 'Thường B', material: 'Vầu', width: 11, length: 50, classification: 'A', priority: false, priorityWeeks: { '2026-W38': false }, weeks: { '38': 500 } }
+    ];
+    const grouped = x1.x1NanPlanGroupedRecords(state.x1NanPlans);
+    const stock = { groups: [
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A', qty: 800 }
+    ] };
+    const allocation = x1.x1NanAllocateStockForPlans(
+      grouped, 'week', 2026, '2026-W38', [], stock);
+    const high = grouped.find(group => group.productName === 'Ưu tiên A').children[0];
+    const low = grouped.find(group => group.productName === 'Thường B').children[0];
+    const highAllocation = allocation.get(high);
+    const lowAllocation = allocation.get(low);
+    const altPlans = [
+      { id: 'alt-a', year: 2026, productName: 'Thay thế', material: 'Vầu / Nứa', width: 11, length: 50, classification: 'A', priority: false, priorityWeeks: { '2026-W38': true }, weeks: { '38': 800 } }
+    ];
+    const altGrouped = x1.x1NanPlanGroupedRecords(altPlans);
+    const altStock = { groups: [
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A', qty: 500 },
+      { unit: 'kg', material: 'Nứa', width: 11, len: 50, kind: 'A', qty: 300 }
+    ] };
+    const altAllocation = x1.x1NanAllocateStockForPlans(
+      altGrouped, 'week', 2026, '2026-W38', [], altStock);
+    const altChild = altGrouped[0].children[0];
+    const altResult = altAllocation.get(altChild);
+    return highAllocation.allocatedStock === 800 &&
+      lowAllocation.allocatedStock === 0 &&
+      x1.x1NanResponseRatio(highAllocation.planQty, highAllocation.allocatedStock) === 100 &&
+      altResult.allocatedStock === 800 &&
+      altResult.planQty === 800;
+  })());
+check('L9: form thêm/sửa lưu dòng và số ô tuần động trong localStorage',
+  (() => {
+    state.x1NanPlans = [];
+    state.x1NanPlanYear = '2026';
+    const yearEl = document.getElementById('x1-nan-plan-year');
+    if (yearEl) yearEl.value = '2026';
+    x1.x1NanPlanStartForm();
+    document.getElementById('x1-nan-plan-product').value = 'Thanh Vầu';
+    document.getElementById('x1-nan-plan-material').value = 'Vầu';
+    document.getElementById('x1-nan-plan-width').value = '11';
+    document.getElementById('x1-nan-plan-length').value = '50';
+    document.getElementById('x1-nan-plan-class').value = 'A';
+    if (!x1.x1NanPlanSaveForm()) return false;
+    const plan = (state.x1NanPlans || [])[0];
+    if (!plan || plan.year !== 2026 || plan.romanNo !== '' ||
+        plan.productName !== 'Thanh Vầu' || plan.material !== 'Vầu' ||
+        plan.width !== 11 || plan.len !== 50 || plan.length !== 50 ||
+        plan.classification !== 'A') return false;
+    if (!x1.x1NanPlanStartForm(plan.id)) return false;
+    document.getElementById('x1-nan-plan-product').value = 'Thanh Vầu';
+    document.getElementById('x1-nan-plan-material').value = 'Vầu';
+    document.getElementById('x1-nan-plan-width').value = '12';
+    document.getElementById('x1-nan-plan-length').value = '50';
+    document.getElementById('x1-nan-plan-class').value = 'A';
+    if (!x1.x1NanPlanSaveForm()) return false;
+    const savedPlan = (state.x1NanPlans || []).find(p => p && p.width === 12);
+    if (!savedPlan || savedPlan.width !== 12) return false;
+    if (!x1.x1NanPlanSetWeekValue(savedPlan.id, 38, '125.5')) return false;
+    if (!x1.x1NanPlanSetWeekValue(savedPlan.id, 53, '175.5')) return false;
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY_X1_NAN_PLAN) || '[]');
+    const saved = stored.find(p => p && p.id === savedPlan.id);
+    return !!saved && saved.weeks['38'] === 125.5 && saved.weeks['53'] === 175.5;
+  })());
+check('L9B: chọn Vầu + Nứa tạo một tổ hợp thay thế "Vầu / Nứa", không nhân bản exact',
+  (() => {
+    const nodeWith = (attr, value) => {
+      const node = makeEl();
+      node.setAttribute(attr, value);
+      node.setAttribute('aria-pressed', 'true');
+      node.classList.toggle('is-active', true);
+      return node;
+    };
+    const matBox = makeEl('x1-nan-plan-material-chips');
+    matBox.querySelectorAll = () => [
+      nodeWith('data-x1-nan-plan-material', 'Vầu'),
+      nodeWith('data-x1-nan-plan-material', 'Nứa')
+    ];
+    const widthBox = makeEl('x1-nan-plan-width-chips');
+    widthBox.querySelectorAll = () => [
+      nodeWith('data-x1-nan-plan-width', '11'),
+      nodeWith('data-x1-nan-plan-width', '12')
+    ];
+    const lengthBox = makeEl('x1-nan-plan-length-chips');
+    lengthBox.querySelectorAll = () => [
+      nodeWith('data-x1-nan-plan-length', '50'),
+      nodeWith('data-x1-nan-plan-length', '60')
+    ];
+    const classBox = makeEl('x1-nan-plan-class-chips');
+    classBox.querySelectorAll = () => [
+      nodeWith('data-x1-nan-plan-class', 'A'),
+      nodeWith('data-x1-nan-plan-class', 'A1')
+    ];
+    els.set('x1-nan-plan-material-chips', matBox);
+    els.set('x1-nan-plan-width-chips', widthBox);
+    els.set('x1-nan-plan-length-chips', lengthBox);
+    els.set('x1-nan-plan-class-chips', classBox);
+    state.x1NanPlans = [];
+    state.x1NanPlanYear = '2026';
+    if (document.getElementById('x1-nan-plan-year')) document.getElementById('x1-nan-plan-year').value = '2026';
+    x1.x1NanPlanStartForm();
+    document.getElementById('x1-nan-plan-product').value = 'Thanh Vầu/Nứa';
+    if (!x1.x1NanPlanSaveForm()) return false;
+    return state.x1NanPlans.length === 8 &&
+      state.x1NanPlans.every(p => p.romanNo === '' &&
+        p.productName === 'Thanh Vầu/Nứa') &&
+      new Set(state.x1NanPlans.map(p => p.material)).size === 1 &&
+      state.x1NanPlans.every(p => p.material === 'Vầu / Nứa') &&
+      state.x1NanPlans.every(p => p.priority === false) &&
+      state.x1NanPlans.every(p => p.priorityWeeks && Object.keys(p.priorityWeeks).length === 0) &&
+      new Set(state.x1NanPlans.map(p => p.width)).size === 2 &&
+      new Set(state.x1NanPlans.map(p => p.length)).size === 2 &&
+      new Set(state.x1NanPlans.map(p => p.classification)).size === 2 &&
+      eventsSrc.includes("const pressed = target.getAttribute") &&
+      !eventsSrc.includes("sibling === target");
+  })());
+check('L10: mặc định tuần chỉ render 1 kỳ, không render 52/53 cột tuần',
+  (() => {
+    state.x1NanPlanYear = '2026';
+    state.x1NanPlanViewMode = 'week';
+    state.x1NanPlanPeriod = '2026-W38';
+    const yearEl = document.getElementById('x1-nan-plan-year');
+    if (yearEl) yearEl.value = '2026';
+    x1.renderX1NanPlanCard();
+    const head = document.getElementById('x1-nan-plan-head').innerHTML;
+    const body = document.getElementById('x1-nan-plan-body').innerHTML;
+    return !head.includes('colspan="3"') &&
+      !head.includes('Tuần 53') &&
+      !head.includes('TT La Mã') &&
+      !body.includes('data-x1-nan-plan-week="53"') &&
+      (head.match(/Kế hoạch/g) || []).length === 1 &&
+      !head.includes('Thực tế kỳ') &&
+      !body.includes('x1-nan-plan-actual') &&
+      (head.match(/Đáp ứng/g) || []).length === 1 &&
+      head.includes('Sản phẩm') &&
+      head.includes('Quy cách') &&
+      head.includes('Phân loại') &&
+      head.includes('Tồn hiện tại') &&
+      head.includes('Khả năng') &&
+      head.includes('Kế hoạch kỳ (kg)') &&
+      body.includes('x1-nan-plan-product-header') &&
+      !body.includes('data-x1-nan-plan-product-priority') &&
+      !body.includes('data-x1-nan-plan-child-priority') &&
+      !body.includes('TT La Mã') &&
+      body.includes('data-x1-nan-plan-week="38"') &&
+      body.includes('data-x1-nan-plan-week-priority="2026-W38"') &&
+      body.includes('>Ưu tiên</') &&
+      body.includes('x1-nan-plan-input-unit') &&
+      body.includes('Kế hoạch');
+  })());
+check('L10B: tháng/năm là view read-only; chỉ giữ kế hoạch/đáp ứng/tồn/khả năng',
+  (() => {
+    state.x1NanPlanYear = '2026';
+    state.x1NanPlanViewMode = 'month';
+    state.x1NanPlanPeriod = '2026-09';
+    x1.renderX1NanPlanCard();
+    const monthHead = document.getElementById('x1-nan-plan-head').innerHTML;
+    const monthBody = document.getElementById('x1-nan-plan-body').innerHTML;
+    state.x1NanPlanViewMode = 'year';
+    state.x1NanPlanPeriod = '2026';
+    x1.renderX1NanPlanCard();
+    const yearHead = document.getElementById('x1-nan-plan-head').innerHTML;
+    const yearBody = document.getElementById('x1-nan-plan-body').innerHTML;
+    return monthHead.includes('Tháng') &&
+      monthHead.includes('Kế hoạch kỳ') &&
+      !monthBody.includes('data-x1-nan-plan-week=') &&
+      !yearHead.includes('12 tháng') &&
+      yearHead.includes('Kế hoạch kỳ') &&
+      !yearBody.includes('data-x1-nan-plan-week=') &&
+      !monthHead.includes('Thực tế kỳ') &&
+      !yearHead.includes('Thực tế kỳ') &&
+      !monthBody.includes('x1-nan-plan-week-priority') &&
+      !yearBody.includes('x1-nan-plan-week-priority') &&
+      !monthBody.includes('data-x1-nan-plan-child-priority') &&
+      !yearBody.includes('data-x1-nan-plan-child-priority') &&
+      !monthBody.includes('data-x1-nan-plan-product-priority') &&
+      !yearBody.includes('data-x1-nan-plan-product-priority') &&
+      yearHead.includes('Đáp ứng') &&
+      yearHead.includes('Tồn hiện tại') &&
+      yearHead.includes('Khả năng') &&
+      yearHead.includes('Thao tác');
+  })());
+check('L11: events nối chế độ xem, điều hướng kỳ, năm/thêm/hủy/lưu/sửa/xóa/nhập tuần',
+  eventsSrc.includes("safeOn('x1-nan-plan-year', 'change'") &&
+  eventsSrc.includes("safeOn('x1-nan-plan-prev', 'click'") &&
+  eventsSrc.includes("safeOn('x1-nan-plan-next', 'click'") &&
+  eventsSrc.includes("data-x1-nan-plan-view") &&
+  eventsSrc.includes("safeOn('btn-x1-nan-plan-add', 'click'") &&
+  eventsSrc.includes("safeOn('btn-x1-nan-plan-save', 'click'") &&
+  eventsSrc.includes("safeOn('x1-nan-plan-form', 'click'") &&
+  eventsSrc.includes('data-x1-nan-plan-material') &&
+  eventsSrc.includes('data-x1-nan-plan-width') &&
+  eventsSrc.includes('data-x1-nan-plan-length') &&
+  eventsSrc.includes('data-x1-nan-plan-class') &&
+  eventsSrc.includes('data-x1-nan-plan-week-priority') &&
+  eventsSrc.includes('x1NanPlanSetWeekPriority') &&
+  !eventsSrc.includes('data-x1-nan-plan-product-priority') &&
+  !eventsSrc.includes('data-x1-nan-plan-child-priority') &&
+  eventsSrc.includes("[data-x1-nan-plan-week]") &&
+  eventsSrc.includes("[data-x1-nan-plan-edit]") &&
+  eventsSrc.includes("[data-x1-nan-plan-delete]") &&
+  eventsSrc.includes('requestAnimationFrame') &&
+  eventsSrc.includes('saveInlinePlanWeek'));
+check('L12: storage/cloud/history/main nối x1NanPlans',
+  storageSrc.includes('restoreX1NanPlans') &&
+  storageSrc.includes('x1NanPlans: state.x1NanPlans') &&
+  cloudSrc.includes('x1NanPlans: state.x1NanPlans') &&
+  cloudSrc.includes("if (remote.x1NanPlans)") &&
+  cloudSrc.includes("if (data.x1NanPlans)") &&
+  historySrc.includes('x1NanPlans:') &&
+  mainSrc.includes('loadX1NanPlans()'));
+check('L13: PWA/cache + APP_VERSION khớp v456',
+  APP_VERSION === 'v456' &&
+  swJs.includes('nha-may-ngoc-son-v456') &&
+  fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8').includes("APP_VERSION = 'v456'"));
+check('L14: quyền + mapping export + báo cáo kế hoạch X1 đúng',
+  (() => {
+    state.x1NanPlans = [
+      { id: 'p2026', year: 2026, romanNo: 'I', productName: 'Thanh Vầu A', material: 'Vầu', width: 11, length: 50, len: 50, classification: 'A', weeks: { '53': 175.5, '38': 125.5 } },
+      { id: 'p2026-a1', year: 2026, romanNo: 'II', productName: 'Thanh Vầu A', material: 'Vầu', width: 11, length: 50, len: 50, classification: 'A1', weeks: { '53': 24.5, '38': 14.5 } },
+      { id: 'p2021', year: 2021, romanNo: 'II', productName: 'Thanh Nứa B', material: 'Nứa', width: 12, length: 50, len: 50, classification: 'B', weeks: { '52': 200 } }
+    ];
+    const d2026 = exportXlsx.buildX2ExportData('x1nanplan', { year: '2026', from: '', to: '' });
+    const d2021 = exportXlsx.buildX2ExportData('x1nanplan', { year: '2021', from: '', to: '' });
+    const h2026 = d2026 && d2026.aoa ? d2026.aoa[4] : [];
+    const h2021 = d2021 && d2021.aoa ? d2021.aoa[4] : [];
+    return sysSettings.AREA_BY_CARD['x1-nan-plan-card'] === 'x1.prod' &&
+      x1.X2_CARD_EXPORT_SOURCE['x1-nan-plan-card'] === 'x1nanplan' &&
+      exportSrc.includes("{ id: 'x1nanplan'") &&
+      exportSrc.includes("source === 'x1nanplan'") &&
+      reportSpecs.reportIdForCard('x1-nan-plan-card') === 'x1nanplan' &&
+      reportSpecs.reportById('x1nanplan')?.source === 'x1nanplan' &&
+      !h2026.includes('TT La Mã') && h2026.includes('Tên Sản Phẩm') &&
+      h2026.includes('Nguyên Liệu') &&
+      h2026.includes('Bản Rộng (ly)') && h2026.includes('Phân Loại') &&
+      h2026.includes('Tồn Hiện Tại (kg)') && h2026.includes('Khả Năng Đáp Ứng') &&
+      h2026.includes('Tuần 53 (kg)') &&
+      h2021.includes('Tuần 52 (kg)') && !h2021.includes('Tuần 53 (kg)');
+  })());
+check('L15: ô tuần có aria/title kg/danh mục/kích thước/tuần + action/input 44px + identity/action cố định',
+  (() => {
+    state.x1NanPlanYear = '2026';
+    state.x1NanPlanViewMode = 'week';
+    state.x1NanPlanPeriod = '2026-W38';
+    x1.renderX1NanPlanCard();
+    const body = document.getElementById('x1-nan-plan-body').innerHTML;
+    return body.includes('aria-label=') &&
+      body.includes('title=') &&
+      body.includes('kg') &&
+      body.includes('ly') &&
+      body.includes('mm') &&
+      body.includes('Tuần') &&
+      stylesCss.includes('min-height: 44px') &&
+      stylesCss.includes('.x1-nan-plan-actions .btn-icon { width: 44px; height: 44px') &&
+      stylesCss.includes('.x1-nan-plan-table th:first-child') &&
+      stylesCss.includes('.x1-nan-plan-table th:last-child');
+  })());
+check('L16: tồn kho exact và khả năng đáp ứng tuần hiện tại',
+  (() => {
+    state.xuong1LocThanhRecords = [{
+      id: 'lt-stock-a', date: '2026-09-14', srcType: 'Vầu',
+      mode: 'loc-thanh',
+      matrixRows: [{ width: 11, len: 50, weights: { A: 100, A1: 20, loai: 30 } }]
+    }];
+    state.x1KhoExports = [{
+      id: 'export-a', date: '2026-09-15', type: 'xuat',
+      material: 'Vầu', width: 11, len: 50, qty: 40, unit: 'kg'
+    }];
+    const summary = x1.x1WarehouseStockSummary();
+    const stockA = x1.x1NanStockQtyOf({
+      material: 'Vầu', width: 11, length: 50, classification: 'A'
+    }, summary);
+    const stockWrong = x1.x1NanStockQtyOf({
+      material: 'Nứa', width: 11, length: 50, classification: 'A'
+    }, summary);
+    const stockLoai = x1.x1NanStockQtyOf({
+      material: 'Vầu', width: 11, length: 50, classification: 'Loại'
+    }, summary);
+    const plan = {
+      year: 2026, material: 'Vầu', width: 11, length: 50,
+      classification: 'A', weeks: { '38': 80, '39': 80 }
+    };
+    const actual = Array.from({ length: 53 }, () => 0);
+    actual[37] = 80;
+    actual[38] = 80;
+    const cover = x1.x1NanCapacitySummaryOf(plan, actual, 100, 2026, 38);
+    const deficit = x1.x1NanCapacitySummaryOf(plan, actual, 50, 2026, 38);
+    return stockA === 60 && stockWrong === 0 && stockLoai === 0 &&
+      cover.covered === true && cover.deficit === 0 &&
+      deficit.covered === false && deficit.deficit === 30 &&
+      cover.level >= 2;
+  })());
+
+check('L17A: nhập tổng tuần phân bổ theo tỷ lệ kế hoạch con và chia đều nếu chưa có giá trị',
+  (() => {
+    state.x1NanPlanViewMode = 'week';
+    state.x1NanPlanPeriod = '2026-W38';
+    state.x1NanPlans = [
+      { id: 'child-a', year: 2026, productName: 'Chia kế hoạch', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 30, '39': 5 }, priority: false },
+      { id: 'child-b', year: 2026, productName: 'Chia kế hoạch', material: 'Vầu', width: 11, length: 50, classification: 'A1', weeks: { '38': 70, '39': 7 }, priority: false }
+    ];
+    if (!x1.x1NanPlanSetChildWeekValue(['child-a', 'child-b'], 38, '100')) return false;
+    const weightedA = state.x1NanPlans.find(p => p.id === 'child-a');
+    const weightedB = state.x1NanPlans.find(p => p.id === 'child-b');
+    if (!weightedA || !weightedB ||
+      weightedA.weeks['38'] !== 30 || weightedB.weeks['38'] !== 70 ||
+      weightedA.weeks['39'] !== 5 || weightedB.weeks['39'] !== 7) return false;
+
+    state.x1NanPlans = [
+      { id: 'child-c', year: 2026, productName: 'Chia đều', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '39': 3 }, priority: false },
+      { id: 'child-d', year: 2026, productName: 'Chia đều', material: 'Vầu', width: 11, length: 50, classification: 'A1', weeks: { '39': 4 }, priority: false }
+    ];
+    if (!x1.x1NanPlanSetChildWeekValue(['child-c', 'child-d'], 38, '100')) return false;
+    const equalC = state.x1NanPlans.find(p => p.id === 'child-c');
+    const equalD = state.x1NanPlans.find(p => p.id === 'child-d');
+    return !!equalC && !!equalD &&
+      equalC.weeks['38'] === 50 && equalD.weeks['38'] === 50 &&
+      equalC.weeks['39'] === 3 && equalD.weeks['39'] === 4;
+  })());
+
+check('L17B: tồn thay thế cộng đủ Vầu/Nứa cho cùng bản rộng, dài và phân loại',
+  (() => {
+    const stock = { groups: [
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A', qty: 500 },
+      { unit: 'kg', material: 'Nứa', width: 11, len: 50, kind: 'A', qty: 300 },
+      { unit: 'kg', material: 'Vầu', width: 11, len: 50, kind: 'A1', qty: 200 }
+    ] };
+    const altQty = x1.x1NanStockQtyOf(
+      { material: 'Vầu / Nứa', width: 11, length: 50, classification: 'A' },
+      stock);
+    const altBreakdown = x1.x1NanStockBreakdownOf(
+      'Vầu / Nứa', 11, 50, stock);
+    return altQty === 800 &&
+      altBreakdown.A === 800 &&
+      altBreakdown.A1 === 200 &&
+      altBreakdown.total === 1000 &&
+      x1.x1NanStockQtyOf('Vầu', 11, 50, 'A', stock) === 500 &&
+      x1.x1NanStockQtyOf('Nứa', 11, 50, 'A', stock) === 300;
+  })());
+
+check('L17C: merge Vầu/Nứa exact với thay thế, giữ tuần và không để exact trùng',
+  (() => {
+    const nodeWith = (attr, value) => {
+      const node = makeEl();
+      node.setAttribute(attr, value);
+      node.setAttribute('aria-pressed', 'true');
+      node.classList.toggle('is-active', true);
+      return node;
+    };
+    const widthBox = makeEl('x1-nan-plan-width-chips');
+    widthBox.querySelectorAll = () => [nodeWith('data-x1-nan-plan-width', '11')];
+    const lengthBox = makeEl('x1-nan-plan-length-chips');
+    lengthBox.querySelectorAll = () => [nodeWith('data-x1-nan-plan-length', '50')];
+    const classBox = makeEl('x1-nan-plan-class-chips');
+    classBox.querySelectorAll = () => [nodeWith('data-x1-nan-plan-class', 'A')];
+    els.set('x1-nan-plan-width-chips', widthBox);
+    els.set('x1-nan-plan-length-chips', lengthBox);
+    els.set('x1-nan-plan-class-chips', classBox);
+
+    const matAltBox = makeEl('x1-nan-plan-material-chips');
+    matAltBox.querySelectorAll = () => [
+      nodeWith('data-x1-nan-plan-material', 'Vầu'),
+      nodeWith('data-x1-nan-plan-material', 'Nứa')
+    ];
+    els.set('x1-nan-plan-material-chips', matAltBox);
+    state.x1NanPlans = [
+      { id: 'merge-vau', year: 2026, productName: 'Merge thay thế', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 100 }, priority: false },
+      { id: 'merge-nua', year: 2026, productName: 'Merge thay thế', material: 'Nứa', width: 11, length: 50, classification: 'A', weeks: { '38': 200 }, priority: false }
+    ];
+    state.x1NanPlanYear = '2026';
+    document.getElementById('x1-nan-plan-year').value = '2026';
+    x1.x1NanPlanStartForm();
+    document.getElementById('x1-nan-plan-product').value = 'Merge thay thế';
+    if (!x1.x1NanPlanSaveForm()) return false;
+    const altRows = state.x1NanPlans.filter(p =>
+      p && p.productName === 'Merge thay thế' &&
+      p.width === 11 && p.length === 50 && p.classification === 'A');
+    if (altRows.length !== 1 || altRows[0].material !== 'Vầu / Nứa' ||
+      altRows[0].weeks['38'] !== 300) return false;
+
+    const matVauBox = makeEl('x1-nan-plan-material-chips');
+    matVauBox.querySelectorAll = () => [
+      nodeWith('data-x1-nan-plan-material', 'Vầu')
+    ];
+    els.set('x1-nan-plan-material-chips', matVauBox);
+    state.x1NanPlans = [
+      { id: 'merge-alt', year: 2026, productName: 'Đổi sang exact', material: 'Vầu / Nứa', width: 11, length: 50, classification: 'A', weeks: { '39': 250 }, priority: false },
+      { id: 'merge-vau-existing', year: 2026, productName: 'Đổi sang exact', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '39': 50 }, priority: false }
+    ];
+    state.x1NanPlanYear = '2026';
+    document.getElementById('x1-nan-plan-year').value = '2026';
+    x1.x1NanPlanStartForm();
+    document.getElementById('x1-nan-plan-product').value = 'Đổi sang exact';
+    if (!x1.x1NanPlanSaveForm()) return false;
+    const exactRows = state.x1NanPlans.filter(p =>
+      p && p.productName === 'Đổi sang exact' &&
+      p.width === 11 && p.length === 50 && p.classification === 'A');
+    return exactRows.length === 1 &&
+      exactRows[0].material === 'Vầu' &&
+      exactRows[0].weeks['39'] === 300 &&
+      state.x1NanPlans.every(p => p.material !== 'Vầu / Nứa');
+  })());
+
+check('L17D: ưu tiên theo tuần rollback state và DOM khi lưu thất bại',
+  (() => {
+    state.x1NanPlans = [
+      { id: 'priority-fail', year: 2026, productName: 'Ưu tiên rollback', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 20 }, priorityWeeks: {}, priority: false }
+    ];
+    state.x1NanPlanViewMode = 'week';
+    state.x1NanPlanPeriod = '2026-W38';
+    const originalSetItem = localStorage.setItem;
+    let saveFailed = false;
+    try {
+      localStorage.setItem = () => { throw new Error('offline write failure'); };
+      saveFailed = !x1.x1NanPlanSetWeekPriority(['priority-fail'], '2026-W38', true);
+    } finally {
+      localStorage.setItem = originalSetItem;
+    }
+    const plan = state.x1NanPlans.find(p => p.id === 'priority-fail');
+    return saveFailed &&
+      plan && plan.priority === false &&
+      !plan.priorityWeeks['2026-W38'] &&
+      eventsSrc.includes('const previous = !desired') &&
+      eventsSrc.includes('x1NanPlanSetWeekPriority') &&
+      eventsSrc.includes('data-x1-nan-plan-week-priority');
+  })());
+
+check('L17E: ưu tiên theo tuần lưu đúng YYYY-Www chỉ trên dòng kế hoạch exact',
+  (() => {
+    state.x1NanPlans = [
+      { id: 'scope-a-2026', year: 2026, productName: 'Scope sản phẩm', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 20 }, priorityWeeks: {}, priority: false },
+      { id: 'scope-a1-2026', year: 2026, productName: 'Scope sản phẩm', material: 'Vầu', width: 11, length: 50, classification: 'A1', weeks: { '38': 10 }, priorityWeeks: {}, priority: false },
+      { id: 'scope-a-2025', year: 2025, productName: 'Scope sản phẩm', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 30 }, priorityWeeks: {}, priority: false }
+    ];
+    state.x1NanPlanViewMode = 'week';
+    state.x1NanPlanPeriod = '2026-W38';
+    if (!x1.x1NanPlanSetWeekPriority(['scope-a-2026'], '2026-W38', true)) return false;
+    const exactA = state.x1NanPlans.find(p => p.id === 'scope-a-2026');
+    const exactA1 = state.x1NanPlans.find(p => p.id === 'scope-a1-2026');
+    const sameSize2025 = state.x1NanPlans.find(p => p.id === 'scope-a-2025');
+    if (exactA.priorityWeeks['2026-W38'] !== true ||
+      exactA1.priorityWeeks['2026-W38'] ||
+      sameSize2025.priorityWeeks['2026-W38']) return false;
+    if (!x1.x1NanPlanSetWeekPriority(['scope-a-2026', 'scope-a1-2026'], '38', true)) return false;
+    if (exactA.priorityWeeks['2026-W38'] !== true ||
+      exactA1.priorityWeeks['2026-W38'] !== true ||
+      sameSize2025.priorityWeeks['2026-W38']) return false;
+    x1.renderX1NanPlanCard();
+    const body = document.getElementById('x1-nan-plan-body').innerHTML;
+    return exactA.priority === false &&
+      exactA1.priority === false &&
+      sameSize2025.priority === false &&
+      body.includes('data-x1-nan-plan-week-priority="2026-W38"') &&
+      body.includes('>Ưu tiên</') &&
+      !body.includes('data-x1-nan-plan-child-priority') &&
+      !body.includes('data-x1-nan-plan-product-priority');
+  })());
 
 console.log(`\n=== KẾT QUẢ XUONG1: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);

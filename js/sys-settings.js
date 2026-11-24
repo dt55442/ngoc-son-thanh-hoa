@@ -176,7 +176,8 @@ export const AREA_BY_CARD = {
   'x1-cat-mat-card': 'x1.prod',
   'x1-bo-card': 'x1.prod',
   'x1-phoi-say-card': 'x1.phoisay',
-  'x1-loc-thanh-card': 'x1.prod'
+  'x1-loc-thanh-card': 'x1.prod',
+  'x1-nan-plan-card': 'x1.prod'
 };
 // Modal đang MỞ (class .show) → vùng quyền tương ứng. Kiểm tại thời điểm gọi
 // nên KHÔNG cần dọn trạng thái khi đóng modal.

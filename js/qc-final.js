@@ -34,7 +34,7 @@ import { logDataChange } from './history.js';
 import { hrShiftCfg, hrSplitHoursHCDate } from './hr.js';
 import { rateUnit } from './planning.js';
 import { pressExportDateOf, pressRecordDateOf, pressRecordWeek } from './press.js';
-import { STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, state } from './state.js';
+import { STORAGE_KEY_DELETED_IDS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, state } from './state.js';
 import { trackDeleted } from './tombstone.js';
 import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shiftGroupRows, showToast } from './utils.js';
 
@@ -74,6 +74,123 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     return String(name || '').toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, ' ').trim();
+  }
+  // Chuẩn hoá tên/cỡ sản phẩm để xuất hàng và tồn vật lý có thể khớp nhau dù
+  // dữ liệu dùng chữ hoa/thường, dấu, dấu nhân ×/x, hoặc ghi kích thước sát nhau.
+  function qcFinalNormalizeName(name) {
+    return qcFinalNormName(name)
+      .replace(/đ/g, 'd')
+      .replace(/×/g, 'x')
+      .replace(/[^a-z0-9]/g, '');
+  }
+  // Tìm dòng tồn tương ứng của một phiếu xuất/lượt ghi.
+  // Ưu tiên productId; sau đó khớp tên chuẩn hoá; cuối cùng tra qua materialRates
+  // (name/productId của xuất có thể trùng id hoặc tên trong bảng định mức).
+  function qcFinalResolveProduct(ref, rows) {
+    const list = Array.isArray(rows) ? rows.filter(Boolean) : [];
+    if (!list.length) return null;
+    const record = (ref && typeof ref === 'object') ? ref : { name: String(ref || '') };
+    const ids = [record.productId, record.id].map(v => String(v || '').trim()).filter(Boolean);
+    const names = [record.name, record.productName].map(v => String(v || '').trim()).filter(Boolean);
+    const candidates = [...ids, ...names];
+
+    for (const id of ids) {
+      const direct = list.find(row => String(row.productId || '').trim() === id);
+      if (direct) return direct;
+    }
+
+    // Khớp theo tên chuẩn hoá — CHỈ khớp chuỗi bằng nhau, không dùng contains
+    // để tránh nhầm cỡ "640x14x12" với "640x14x120".
+    for (const name of candidates) {
+      const norm = qcFinalNormalizeName(name);
+      if (!norm) continue;
+      const direct = list.find(row =>
+        norm === qcFinalNormalizeName(row && row.name || '')
+      );
+      if (direct) return direct;
+    }
+
+    // Khớp theo productId chuẩn hoá, cũng chỉ bằng nhau tuyệt đối.
+    for (const name of candidates) {
+      const norm = qcFinalNormalizeName(name);
+      if (!norm) continue;
+      const direct = list.find(row =>
+        norm === qcFinalNormalizeName(row && row.productId || '')
+      );
+      if (direct) return direct;
+    }
+
+    // Khớp kích thước chính xác theo đúng thứ tự 3 số. Hỗ trợ cả chuỗi sizeKey
+    // và mảng dims/sizeDims nếu dòng tồn không có tên hoặc productId đầy đủ.
+    const refDimValues = [
+      record.name, record.productName, record.productId, record.id,
+      record.sizeKey,
+      ...(Array.isArray(record.dims) ? record.dims : []),
+      ...(Array.isArray(record.sizeDims) ? record.sizeDims : [])
+    ];
+    let refDims = [];
+    for (const value of refDimValues) {
+      const dims = qcFinalDimsNums(value);
+      if (dims.length === 3) {
+        refDims = dims;
+        break;
+      }
+    }
+    if (refDims.length === 3) {
+      const direct = list.find(row => {
+        const rowDimValues = [
+          row.name, row.productName, row.productId, row.id, row.sizeKey,
+          ...(Array.isArray(row.dims) ? row.dims : []),
+          ...(Array.isArray(row.sizeDims) ? row.sizeDims : [])
+        ];
+        return rowDimValues.some(value => {
+          const dims = qcFinalDimsNums(value);
+          return dims.length === 3 && dims.every((n, i) => n === refDims[i]);
+        });
+      });
+      if (direct) return direct;
+    }
+
+    // Fallback theo bảng định mức: chỉ khớp ID/tên/kích thước chính xác,
+    // không dùng contains hoặc substring ở bước này.
+    for (const candidate of candidates) {
+      const candidateNorm = qcFinalNormalizeName(candidate);
+      if (!candidateNorm) continue;
+      const candidateDims = qcFinalDimsNums(candidate);
+      for (const rate of (state.materialRates || [])) {
+        if (!rate) continue;
+        const rateId = String(rate.id || '').trim();
+        const rateNameNorm = qcFinalNormalizeName(rate.product || '');
+        const matchRate = (rateId && candidate === rateId)
+          || (rateNameNorm && rateNameNorm === candidateNorm)
+          || (candidateDims.length === 3
+            && (() => {
+              const rateDims = qcFinalDimsNums(rate.product || '');
+              return rateDims.length === 3
+                && rateDims.every((n, i) => n === candidateDims[i]);
+            })());
+        if (!matchRate) continue;
+        const resolved = list.find(row => {
+          if (rateId && String(row.productId || '').trim() === rateId) return true;
+          const rowNameNorm = qcFinalNormalizeName(row.name || '');
+          const rowIdNorm = qcFinalNormalizeName(row.productId || '');
+          if (!!rateNameNorm
+            && ((rowNameNorm && rowNameNorm === rateNameNorm)
+              || (rowIdNorm && rowIdNorm === rateNameNorm))) return true;
+          const rateDims = qcFinalDimsNums(rate.product || '');
+          if (rateDims.length !== 3) return false;
+          return [row.name, row.productName, row.productId, row.id, row.sizeKey,
+            ...(Array.isArray(row.dims) ? row.dims : []),
+            ...(Array.isArray(row.sizeDims) ? row.sizeDims : [])]
+            .some(value => {
+              const dims = qcFinalDimsNums(value);
+              return dims.length === 3 && dims.every((n, i) => n === rateDims[i]);
+            });
+        });
+        if (resolved) return resolved;
+      }
+    }
+    return null;
   }
   // Vị trí KIỂM VÁN/THANH của QC: tên (bỏ dấu) chứa "kiểm" VÀ chứa "ván" HOẶC
   // "thanh" — thẻ CHỈ lấy giờ của vị trí "QC Kiểm ván+thanh", LOẠI các vị trí
@@ -250,17 +367,16 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     });
     (state.qcFinalRecords || []).forEach(rec => {
       if (!rec || rec.id === excludeId || qcFinalKindOf(rec.kind) !== 'van' || !rec.date || rec.date > dateISO) return;
-      const key = String(rec.productId || '').trim() || `name:${String(rec.productName || '').trim()}`;
-      const row = map.get(key);
+      const rows = [...map.values()];
+      const row = qcFinalResolveProduct(rec, rows);
       if (row) row.used += Number(rec.inputQty) || 0;
     });
+    const rows = [...map.values()];
     (state.qcExports || []).forEach(record => {
       if (!record) return;
       const exportDate = pressExportDateOf(record);
       if (!exportDate || exportDate > dateISO) return;
-      const key = String(record.productId || '').trim()
-        || `name:${String(record.name || '').trim()}`;
-      const row = map.get(key);
+      const row = qcFinalResolveProduct(record, rows);
       if (row) row.exported += Number(record.qty) || 0;
     });
     return [...map.values()]
@@ -364,12 +480,14 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       localStorage.setItem(STORAGE_KEY_QC_FINAL, JSON.stringify(state.qcFinalRecords || []));
     } catch (err) {
       showToast('Không lưu được vào bộ nhớ máy (bộ nhớ đầy?). Dữ liệu sẽ thử ghi qua file/mây.', 'error');
+      return false;
     }
     logDataChange(['qcFinalRecords']); // ghi lịch sử sửa đổi
-    if (state.fileStorage.connected) {
+    if (state.fileStorage && state.fileStorage.connected) {
       import('./storage.js').then(m => m && m.writeDataToFile()).catch(() => {});
     }
     firePushSync(); // đồng bộ lên mây nếu online
+    return true;
   }
   function saveQcFinalRates() {
     try {
@@ -482,10 +600,26 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
   // TỔNG = Σ số thanh ĐEM BÀO (inQty) của các lượt Bào thanh cùng cỡ đầu ra;
   // ĐÃ KIỂM = Σ Đầu vào kiểm của các lượt QC "Kiểm thanh" cùng cỡ ⇒ CÒN LẠI.
   // `excludeId` = lượt QC đang SỬA (trả lại phần của chính nó).
-  function qcFinalThanhSizeStocks(excludeId) {
+  function qcFinalThanhSizeStocks(excludeId, dateISO) {
+    // Chấp nhận cả hai thứ tự gọi để giữ tương thích.
+    let exclude = String(excludeId || '');
+    let dateVal = String(dateISO || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(exclude) && dateVal && !/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      const oldExclude = exclude;
+      exclude = dateVal;
+      dateVal = oldExclude;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(exclude) && !dateVal) {
+      dateVal = exclude;
+      exclude = '';
+    }
+    const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(dateVal);
     const map = new Map();
     (state.xuong2BaoTinhRecords || []).forEach(r => {
       if (!r || r.kind !== 'bao_thanh') return;
+      if (dateValid) {
+        const lotDate = String(r.date || r.createdAt || '').slice(0, 10);
+        if (!lotDate || lotDate > dateVal) return;
+      }
       const key = String(r.outSizeKey || '').trim();
       if (!key) return;
       const cur = map.get(key) || {
@@ -495,7 +629,11 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       map.set(key, cur);
     });
     (state.qcFinalRecords || []).forEach(r => {
-      if (!r || r.kind !== 'thanh' || r.id === excludeId) return;
+      if (!r || r.kind !== 'thanh' || r.id === exclude) return;
+      if (dateValid) {
+        const qcDate = String(r.date || r.createdAt || '').slice(0, 10);
+        if (!qcDate || qcDate > dateVal) return;
+      }
       const cur = map.get(String(r.sizeKey || '').trim());
       if (cur) cur.used += Number(r.inputQty) || 0;
     });
@@ -522,7 +660,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     if (qcFinalEditId) {
       const r = (state.qcFinalRecords || []).find(x => x.id === qcFinalEditId);
       const ws = r ? (QC_FINAL_WORKSHOPS[r.workshop] || QC_FINAL_WORKSHOPS.x2).label : '';
-      text.textContent = `Đang sửa lượt kiểm ${r ? formatDateDDMMYY(r.date) : ''} — ${ws}. Lưu để ghi đè, "Làm Mới Form" để bỏ.`;
+      text.textContent = `Đang sửa lượt kiểm ${r ? formatDateDDMMYY(r.date) : ''} — ${ws}. Lưu để ghi đè, "Hủy / Nhập mới" để bỏ.`;
       banner.style.display = '';
     } else {
       banner.style.display = 'none';
@@ -558,6 +696,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     } else {
       syncQcFinalPickerText();
     }
+    updateQcFinalPreview();
+    renderQcFinalProductList();
   }
   // Đổi LOẠI KIỂM (Thanh / Ván) → đổi ĐƠN VỊ các ô số lượng + đổi nguồn danh sách
   function syncQcFinalKindFields() {
@@ -568,18 +708,35 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       const el = document.getElementById(id);
       if (el) el.textContent = unit;
     });
-    // Đổi loại kiểm → nguồn khác hẳn → bỏ lựa chọn cũ (giữ nguyên nếu đang SỬA)
-    if (!qcFinalEditId) {
-      if (kind === 'thanh') qcFinalPicked = null;
-      else qcFinalPickedSize = null;
-      const inputQty = document.getElementById('qcf-input-qty');
-      if (inputQty) inputQty.value = '';
+    // Đổi loại kiểm → nguồn khác hẳn → bỏ sạch lựa chọn nguồn cũ.
+    // Trong chế độ sửa chỉ giữ nguồn khi Loại vẫn trùng Loại của lượt đang sửa.
+    const editing = qcFinalEditId
+      ? (state.qcFinalRecords || []).find(r => r && r.id === qcFinalEditId)
+      : null;
+    const preserveEditingSelection = !!editing && qcFinalKindOf(editing.kind) === kind;
+    if (!preserveEditingSelection) {
+      if (editing) {
+        // Đổi sang Loại khác trong khi đang sửa = thoát chế độ sửa.
+        // Không được để lượt cũ tiếp tục ghi đè một lượt có Loại mới.
+        qcFinalEditId = null;
+        ['qcf-input-qty', 'qcf-ok', 'qcf-except', 'qcf-reject'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      } else {
+        const inputQty = document.getElementById('qcf-input-qty');
+        if (inputQty) inputQty.value = '';
+      }
+      qcFinalPicked = null;
+      qcFinalPickedSize = null;
       qcFinalSearchQ = '';
       const s = document.getElementById('qcf-search');
       if (s) s.value = '';
       setQcFinalPickerOpen(false);
+      updateQcFinalBanner();
     }
     syncQcFinalWorkshopFields();
+    updateQcFinalPreview();
   }
   function syncQcFinalPickerText() {
     const kindSel = document.getElementById('qcf-kind');
@@ -748,7 +905,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
   // Tổng (số thanh đem bào của cỡ đó) · Đã kiểm · CÒN LẠI; chọn → tự điền
   // Đầu vào kiểm = CÒN LẠI và LINK kết quả về đúng lượt Bào thanh cùng cỡ.
   function renderQcFinalThanhList(listEl) {
-    const rows = qcFinalThanhSizeStocks(qcFinalEditId || '');
+    const dateVal = (document.getElementById('qcf-date') || {}).value || '';
+    const rows = qcFinalThanhSizeStocks(qcFinalEditId || '', dateVal);
     const q = qcFinalStripQ(qcFinalSearchQ);
     const hits = q ? rows.filter(r => qcFinalStripQ(`${r.sizeKey} ${qcFinalSizeLabel(r.dims)}`).includes(q)) : rows;
     const head = `<div class="qcf-pick-head"><i data-lucide="ruler"></i> Cỡ thanh ĐẦU RA của <strong>Bào thanh</strong> (còn chờ kiểm)</div>`;
@@ -794,6 +952,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       syncQcFinalPickerText();
       setQcFinalPickerOpen(false);
       renderQcFinalProductList();
+      updateQcFinalPreview();
       if (row.remain <= 0) {
         showToast(`Ván thô ${qcFinalSizeLabel(row.dims)} mm đã kiểm đủ đến ngày đã chọn — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
       }
@@ -802,7 +961,8 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     const sizeBtn = e.target && e.target.closest ? e.target.closest('[data-qcf-size]') : null;
     if (sizeBtn) {
       const key = sizeBtn.getAttribute('data-qcf-size') || '';
-      const row = qcFinalThanhSizeStocks(qcFinalEditId || '').find(p => p.sizeKey === key);
+      const dateVal = (document.getElementById('qcf-date') || {}).value || '';
+      const row = qcFinalThanhSizeStocks(qcFinalEditId || '', dateVal).find(p => p.sizeKey === key);
       if (!row) return false;
       qcFinalPickedSize = { sizeKey: row.sizeKey, dims: row.dims, remain: row.remain };
       qcFinalPicked = null;
@@ -811,6 +971,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       syncQcFinalPickerText();
       setQcFinalPickerOpen(false);
       renderQcFinalProductList();
+      updateQcFinalPreview();
       if (row.remain <= 0) {
         showToast(`Cỡ ${qcFinalSizeLabel(row.dims)} đã kiểm đủ — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
       }
@@ -829,6 +990,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     syncQcFinalPickerText();
     setQcFinalPickerOpen(false);
     renderQcFinalProductList();
+    updateQcFinalPreview();
     if (row.remain <= 0) {
       showToast(`"${row.name}" đã kiểm đủ đến ngày đã chọn — nếu còn tồn dư hãy sửa số Đầu vào kiểm.`, 'info');
     }
@@ -978,7 +1140,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       </div>
       <div class="material-stat">
         <span class="material-stat-value" style="color:#b45309;">${qcFinalFmt(totalReject)}</span>
-        <span class="material-stat-label">Loại (lỗi)</span>
+        <span class="material-stat-label">Loại / Hỏng</span>
       </div>
       <div class="material-stat">
         <span class="material-stat-value">${errPct == null ? '—' : `${qcFinalFmt(errPct, 1)}%`}</span>
@@ -1152,8 +1314,24 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
   function qcFinalCardCount() {
     const list = state.qcFinalRecords || [];
     if (!list.length) return 'Chưa kiểm';
-    const pass = list.reduce((s, r) => s + (Number(r.qtyOk) || 0) + (Number(r.qtyExcept) || 0), 0);
-    return `${list.length} lượt · ${qcFinalFmt(pass)} tấm đạt`;
+    let thanh = 0;
+    let van = 0;
+    list.forEach(r => {
+      if (!r) return;
+      const pass = (Number(r.qtyOk) || 0) + (Number(r.qtyExcept) || 0);
+      if (qcFinalKindOf(r.kind) === 'thanh') thanh += pass;
+      else van += pass;
+    });
+    if (thanh > 0 && van > 0) {
+      return `${list.length} lượt · ${qcFinalFmt(van)} tấm đạt · ${qcFinalFmt(thanh)} thanh đạt`;
+    }
+    if (thanh > 0) {
+      return `${list.length} lượt · ${qcFinalFmt(thanh)} thanh đạt`;
+    }
+    if (van > 0) {
+      return `${list.length} lượt · ${qcFinalFmt(van)} tấm đạt`;
+    }
+    return `${list.length} lượt`;
   }
 
   // ─── LƯU / SỬA / XÓA LƯỢT KIỂM ───────────────────────────────
@@ -1162,6 +1340,93 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     const v = Number((el || {}).value);
     return Number.isFinite(v) && v > 0 ? v : 0;
   };
+  function updateQcFinalPreview() {
+    const preview = document.getElementById('qcf-preview');
+    if (!preview) return null;
+    const kind = qcFinalKindOf(((document.getElementById('qcf-kind') || {}).value) || 'van');
+    const dateISO = ((document.getElementById('qcf-date') || {}).value) || '';
+    const inputQty = qcFinalNumOf('qcf-input-qty');
+    const qtyOk = qcFinalNumOf('qcf-ok');
+    const qtyExcept = qcFinalNumOf('qcf-except');
+    const qtyReject = qcFinalNumOf('qcf-reject');
+    const totalChecked = qtyOk + qtyExcept + qtyReject;
+    const totalPass = qtyOk + qtyExcept;
+    const errorPct = totalChecked > 0 ? (qtyReject / totalChecked) * 100 : 0;
+    const unit = qcFinalUnitOf(kind);
+
+    let sourceRemain = null;
+    const editing = qcFinalEditId
+      ? (state.qcFinalRecords || []).find(r => r && r.id === qcFinalEditId)
+      : null;
+    const originalQty = editing ? (Number(editing.inputQty) || 0) : 0;
+    if (kind === 'thanh' && qcFinalPickedSize) {
+      const row = qcFinalThanhSizeStocks(qcFinalEditId || '', dateISO)
+        .find(p => p.sizeKey === qcFinalPickedSize.sizeKey);
+      if (row) {
+        sourceRemain = Number(row.remain) || 0;
+        if (editing && qcFinalKindOf(editing.kind) === 'thanh'
+          && String(editing.sizeKey || '') === String(qcFinalPickedSize.sizeKey || '')) {
+          sourceRemain += originalQty;
+        }
+      }
+    } else if (kind === 'van' && qcFinalPicked) {
+      if (qcFinalPicked.sizeKey) {
+        const row = qcFinalVanBtpStocks(dateISO, qcFinalEditId || '')
+          .find(p => p.sizeKey === qcFinalPicked.sizeKey);
+        if (row) {
+          sourceRemain = Number(row.remain) || 0;
+          if (editing && qcFinalKindOf(editing.kind) === 'van'
+            && String(editing.sizeKey || '') === String(qcFinalPicked.sizeKey || '')) {
+            sourceRemain += originalQty;
+          }
+        }
+      } else if (qcFinalPicked.productId || qcFinalPicked.name) {
+        const row = qcFinalProductStocks(dateISO, qcFinalEditId || '')
+          .find(p => qcFinalPicked.productId
+            ? p.productId === qcFinalPicked.productId
+            : p.name === qcFinalPicked.name);
+        if (row) {
+          sourceRemain = Number(row.remain) || 0;
+          if (editing && qcFinalKindOf(editing.kind) === 'van') {
+            const sameProduct = qcFinalPicked.productId
+              ? String(editing.productId || '') === String(qcFinalPicked.productId || '')
+              : String(editing.productName || '') === String(qcFinalPicked.name || '');
+            if (sameProduct) sourceRemain += originalQty;
+          }
+        }
+      }
+    }
+    const remaining = sourceRemain != null
+      ? Math.max(0, sourceRemain - inputQty)
+      : Math.max(0, inputQty - totalChecked);
+    const overSource = sourceRemain != null && inputQty > sourceRemain;
+    const overChecked = inputQty > 0 && totalChecked > inputQty;
+
+    preview.innerHTML = `
+      <div class="qcf-preview-title">Xem trước kết quả</div>
+      <div class="qcf-preview-grid">
+        <span>Đầu vào <strong>${qcFinalFmt(inputQty)}</strong> ${escapeHTML(unit)}</span>
+        <span>Đạt <strong>${qcFinalFmt(qtyOk)}</strong></span>
+        <span>Ngoại lệ <strong>${qcFinalFmt(qtyExcept)}</strong></span>
+        <span>Loại / Hỏng <strong>${qcFinalFmt(qtyReject)}</strong></span>
+        <span>Tổng kiểm <strong>${qcFinalFmt(totalChecked)}</strong></span>
+        <span>Tổng đạt <strong>${qcFinalFmt(totalPass)}</strong></span>
+        <span>Còn lại nguồn <strong>${qcFinalFmt(remaining)}</strong> ${escapeHTML(unit)}</span>
+        <span>Tỉ lệ lỗi <strong>${qcFinalFmt(errorPct, 1)}%</strong></span>
+      </div>
+      ${(overSource || overChecked)
+        ? `<div class="qcf-preview-warning">${overSource ? 'Đầu vào lớn hơn nguồn còn lại.' : ''}${overSource && overChecked ? ' ' : ''}${overChecked ? 'Tổng kiểm lớn hơn đầu vào.' : ''}</div>`
+        : ''}`;
+    preview.dataset.inputQty = String(inputQty);
+    preview.dataset.qtyOk = String(qtyOk);
+    preview.dataset.qtyExcept = String(qtyExcept);
+    preview.dataset.qtyReject = String(qtyReject);
+    preview.dataset.totalChecked = String(totalChecked);
+    preview.dataset.totalPass = String(totalPass);
+    preview.dataset.remaining = String(remaining);
+    preview.dataset.errorPct = String(errorPct);
+    return { inputQty, qtyOk, qtyExcept, qtyReject, totalChecked, totalPass, sourceRemain, remaining, overSource, errorPct };
+  }
   function resetQcFinalForm() {
     qcFinalEditId = null;
     qcFinalPicked = null;
@@ -1179,10 +1444,18 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     setQcFinalPickerOpen(false);
     updateQcFinalBanner();
     renderQcFinalProductList();
+    updateQcFinalPreview();
   }
   function handleQcFinalSubmit(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!requireEditPermission()) return;
+    if (qcFinalEditId) {
+      const editing = (state.qcFinalRecords || []).find(r => r && r.id === qcFinalEditId);
+      if (!editing) {
+        showToast('Lượt đang sửa không còn tồn tại. Hãy bấm Làm mới...', 'error');
+        return;
+      }
+    }
     const dateEl = document.getElementById('qcf-date');
     const wsEl = document.getElementById('qcf-workshop');
     const kindEl = document.getElementById('qcf-kind');
@@ -1197,6 +1470,63 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     if (inputQty <= 0) { showToast('Vui lòng nhập ĐẦU VÀO KIỂM (số tấm đem kiểm)!', 'error'); return; }
     if (qtyOk + qtyExcept + qtyReject <= 0) {
       showToast('Chưa có kết quả kiểm — hãy nhập ít nhất Số lượng đạt / Ngoại lệ / Loại!', 'error');
+      return;
+    }
+    // Kiểm tra tồn nguồn thực trước tổng kết quả.
+    // Sửa lượt cũ: trả lại đúng lượng của chính lượt đó vào tồn, chỉ khi
+    // Loại và nguồn vẫn khớp; Xưởng 1 nhập tay không có nguồn.
+    let availableSource = null;
+    if (workshop !== 'x1') {
+      const editing = qcFinalEditId
+        ? (state.qcFinalRecords || []).find(r => r && r.id === qcFinalEditId)
+        : null;
+      const originalQty = editing ? (Number(editing.inputQty) || 0) : 0;
+      if (kind === 'thanh' && qcFinalPickedSize) {
+        const row = qcFinalThanhSizeStocks(qcFinalEditId || '', date)
+          .find(p => p.sizeKey === qcFinalPickedSize.sizeKey);
+        if (row) {
+          availableSource = Number(row.remain) || 0;
+          if (editing && qcFinalKindOf(editing.kind) === 'thanh'
+            && String(editing.sizeKey || '') === String(qcFinalPickedSize.sizeKey || '')) {
+            availableSource += originalQty;
+          }
+        }
+      } else if (kind === 'van' && qcFinalPicked) {
+        if (qcFinalPicked.sizeKey) {
+          const row = qcFinalVanBtpStocks(date, qcFinalEditId || '')
+            .find(p => p.sizeKey === qcFinalPicked.sizeKey);
+          if (row) {
+            availableSource = Number(row.remain) || 0;
+            if (editing && qcFinalKindOf(editing.kind) === 'van'
+              && String(editing.sizeKey || '') === String(qcFinalPicked.sizeKey || '')) {
+              availableSource += originalQty;
+            }
+          }
+        } else if (qcFinalPicked.productId || qcFinalPicked.name) {
+          const row = qcFinalProductStocks(date, qcFinalEditId || '')
+            .find(p => qcFinalPicked.productId
+              ? p.productId === qcFinalPicked.productId
+              : p.name === qcFinalPicked.name);
+          if (row) {
+            availableSource = Number(row.remain) || 0;
+            if (editing && qcFinalKindOf(editing.kind) === 'van') {
+              const sameProduct = qcFinalPicked.productId
+                ? String(editing.productId || '') === String(qcFinalPicked.productId || '')
+                : String(editing.productName || '') === String(qcFinalPicked.name || '');
+              if (sameProduct) availableSource += originalQty;
+            }
+          }
+        }
+      }
+      if (availableSource != null && inputQty > availableSource) {
+        showToast(`Đầu vào kiểm (${qcFinalFmt(inputQty)} ${qcFinalUnitOf(kind)}) lớn hơn nguồn còn lại (${qcFinalFmt(availableSource)} ${qcFinalUnitOf(kind)})!`, 'error');
+        return;
+      }
+    }
+    if (workshop === 'x2' && (kind === 'van' || kind === 'thanh')
+      && ((kind === 'thanh' ? !qcFinalPickedSize : !qcFinalPicked)
+        || availableSource === null)) {
+      showToast('Xưởng 2: hãy chọn nguồn tồn cần kiểm...', 'error');
       return;
     }
     if (qtyOk + qtyExcept + qtyReject > inputQty) {
@@ -1214,6 +1544,10 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       const r = (state.qcFinalRecords || []).find(x => x.id === qcFinalEditId);
       if (!r) { qcFinalEditId = null; }
       else {
+        const snapshot = {
+          ...r,
+          sizeDims: Array.isArray(r.sizeDims) ? r.sizeDims.slice() : r.sizeDims
+        };
         Object.assign(r, {
           date, workshop, kind, inputQty, qtyOk, qtyExcept, qtyReject,
           pairKey: qcFinalPairKeyOf(date),
@@ -1224,7 +1558,11 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
           workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC,
           updatedAt: now
         });
-        saveQcFinal();
+        if (!saveQcFinal()) {
+          Object.keys(r).forEach(k => { if (!(k in snapshot)) delete r[k]; });
+          Object.assign(r, snapshot);
+          return;
+        }
         resetQcFinalForm();
         renderQcFinalCard();
         showToast(`Đã cập nhật lượt kiểm ${formatDateDDMMYY(date)}!`, 'success');
@@ -1232,7 +1570,7 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       }
     }
     state.qcFinalRecords = state.qcFinalRecords || [];
-    state.qcFinalRecords.push({
+    const record = {
       id: `qcf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       date, workshop, kind, inputQty, qtyOk, qtyExcept, qtyReject,
       pairKey: qcFinalPairKeyOf(date),
@@ -1242,8 +1580,15 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
       workerNames: snap.workerNames, workTime: snap.workTime,
       workHours: snap.workHours, workHoursHC: snap.workHoursHC, workHoursTC: snap.workHoursTC,
       createdAt: now, updatedAt: now
-    });
-    saveQcFinal();
+    };
+    state.qcFinalRecords.push(record);
+    if (!saveQcFinal()) {
+      const popped = state.qcFinalRecords.pop();
+      if (popped !== record) {
+        state.qcFinalRecords = (state.qcFinalRecords || []).filter(x => x !== record);
+      }
+      return;
+    }
     resetQcFinalForm();
     renderQcFinalCard();
     showToast(`Đã lưu lượt kiểm ${formatDateDDMMYY(date)} — ${QC_FINAL_WORKSHOPS[workshop].label}!`, 'success');
@@ -1291,8 +1636,48 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     set('qcf-reject', r.qtyReject);
     syncQcFinalKindFields();
     syncQcFinalPickerText();
+    // Sau khi nạp đủ dữ liệu form, trả lại lượng của chính lượt sửa vào tồn
+    // nguồn đang sống để picker/preview dùng số còn lại thực tế.
+    if (qcFinalKindOf(r.kind) === 'thanh' && qcFinalPickedSize) {
+      const row = qcFinalThanhSizeStocks(id, r.date || '')
+        .find(p => p.sizeKey === qcFinalPickedSize.sizeKey);
+      if (row) {
+        qcFinalPickedSize.remain = (Number(row.remain) || 0) + (Number(r.inputQty) || 0);
+      } else {
+        qcFinalPickedSize.remain = 0;
+      }
+    } else if (qcFinalKindOf(r.kind) === 'van' && qcFinalPicked) {
+      if (qcFinalPicked.sizeKey) {
+        const row = qcFinalVanBtpStocks(r.date || '', id)
+          .find(p => p.sizeKey === qcFinalPicked.sizeKey);
+        qcFinalPicked.qty = row
+          ? (Number(row.remain) || 0) + (Number(r.inputQty) || 0)
+          : 0;
+      } else if (qcFinalPicked.productId || qcFinalPicked.name) {
+        const row = qcFinalProductStocks(r.date || '', id)
+          .find(p => qcFinalPicked.productId
+            ? p.productId === qcFinalPicked.productId
+            : p.name === qcFinalPicked.name);
+        qcFinalPicked.qty = row
+          ? (Number(row.remain) || 0) + (Number(r.inputQty) || 0)
+          : 0;
+      }
+    }
+    syncQcFinalPickerText();
     updateQcFinalBanner();
     renderQcFinalTable();
+    updateQcFinalPreview();
+    const content = document.getElementById('qc-detail-content');
+    const card = document.getElementById('qc-detail-card');
+    const form = document.getElementById('qcf-form');
+    if (content) content.scrollTop = 0;
+    if (card) card.scrollTop = 0;
+    if (form && typeof form.scrollIntoView === 'function') form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (kindEl && typeof kindEl.focus === 'function') kindEl.focus();
+    else if (form && typeof form.querySelector === 'function') {
+      const first = form.querySelector('input:not([type="hidden"]), select, textarea, button');
+      if (first && typeof first.focus === 'function') first.focus();
+    }
     initLucide();
   }
   // Xóa 1 lượt kiểm (tombstone chặn mây đẩy ngược — giống mọi danh sách khác)
@@ -1301,10 +1686,25 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
     const r = (state.qcFinalRecords || []).find(x => x.id === id);
     if (!r) return;
     if (!confirm(`Xóa lượt kiểm ${formatDateDDMMYY(r.date)} — ${(QC_FINAL_WORKSHOPS[r.workshop] || QC_FINAL_WORKSHOPS.x2).label}?`)) return;
+    const snapshotList = (state.qcFinalRecords || []).slice();
+    const snapshotDeletedIds = JSON.parse(JSON.stringify(state.deletedIds && typeof state.deletedIds === 'object'
+      ? state.deletedIds : {}));
+
+    // 1) Chỉ thay đổi danh sách sau khi đã xác nhận xóa.
+    // 2) Đánh dấu tombstone rồi mới lưu danh sách — tombstone đi kèm cùng snapshot.
+    state.qcFinalRecords = snapshotList.filter(x => x.id !== id);
     trackDeleted('qcFinalRecords', id);
-    state.qcFinalRecords = (state.qcFinalRecords || []).filter(x => x.id !== id);
+    if (!saveQcFinal()) {
+      state.qcFinalRecords = snapshotList;
+      state.deletedIds = snapshotDeletedIds;
+      // Hoàn tác cả lần ghi tombstone trên localStorage nếu nó đã được ghi trước
+      // khi ghi danh sách chính thất bại.
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_IDS, JSON.stringify(snapshotDeletedIds));
+      } catch (err) { /* nếu bộ nhớ cũng chặn ghi, state vẫn được hoàn tác */ }
+      return;
+    }
     if (qcFinalEditId === id) qcFinalEditId = null;
-    saveQcFinal();
     updateQcFinalBanner();
     renderQcFinalCard();
     showToast('Đã xóa lượt kiểm.', 'info');
@@ -1329,17 +1729,126 @@ import { escapeHTML, formatDateDDMMYY, getISOWeekString, shiftBreakdownHtml, shi
   // ĐỔI NGÀY KIỂM: bỏ lựa chọn nguồn cũ để số dư được nạp lại theo ngày mới
   // (trừ khi đang SỬA 1 lượt — giữ nguyên số đang nạp), rồi vẽ lại danh sách.
   function qcFinalOnDateChange() {
-    // Kiểm Ván: số tồn chưa kiểm phụ thuộc ngày → đổi ngày là bỏ chọn.
-    // Kiểm Thanh: cỡ thanh KHÔNG phụ thuộc ngày → giữ nguyên lựa chọn.
+    // Kiểm Ván: đổi ngày thì tra lại nguồn gốc theo cỡ hoặc thành phẩm.
+    // Với lượt đang SỬA, giữ nguồn gốc và số đầu vào gốc khi nguồn vẫn còn.
+    // Kiểm Thanh: cỡ thanh phụ thuộc ngày qua các lượt Bào thanh/QC đến ngày đó.
     const kindSel = document.getElementById('qcf-kind');
     const kind = qcFinalKindOf((kindSel && kindSel.value) || 'van');
-    if (!qcFinalEditId && kind !== 'thanh') {
-      qcFinalPicked = null;
-      const inputQty = document.getElementById('qcf-input-qty');
-      if (inputQty) inputQty.value = '';
-      syncQcFinalPickerText();
+    const dateVal = (document.getElementById('qcf-date') || {}).value || '';
+    const editing = qcFinalEditId
+      ? (state.qcFinalRecords || []).find(r => r && r.id === qcFinalEditId)
+      : null;
+    if (kind !== 'thanh') {
+      if (editing && editing.date === dateVal) {
+        // giữ nguồn khi ngày không đổi trong chế độ sửa
+      } else if (editing && qcFinalKindOf(editing.kind) === 'van'
+        && (String(editing.sizeKey || '').trim()
+          || String(editing.productId || '').trim()
+          || String(editing.productName || '').trim())) {
+        let row = null;
+        const originalSizeKey = String(editing.sizeKey || '').trim();
+        if (originalSizeKey) {
+          row = qcFinalVanBtpStocks(dateVal, qcFinalEditId || '')
+            .find(p => p.sizeKey === originalSizeKey) || null;
+          if (row) {
+            qcFinalPicked = {
+              productId: '',
+              name: row.name,
+              qty: Number(row.remain) || 0,
+              sizeKey: row.sizeKey,
+              dims: Array.isArray(row.dims) ? row.dims : []
+            };
+            qcFinalPickedSize = null;
+          }
+        } else {
+          const originalProductId = String(editing.productId || '').trim();
+          const originalProductName = String(editing.productName || '').trim();
+          const legacyDims = qcFinalDimsNums(originalProductName);
+          const legacySizeKey = legacyDims.length === 3 ? legacyDims.join('×') : '';
+          const vanRows = qcFinalVanBtpStocks(dateVal, qcFinalEditId || '');
+          row = vanRows.find(p => {
+            if (legacySizeKey && p.sizeKey === legacySizeKey) return true;
+            if (legacyDims.length === 3 && Array.isArray(p.dims)
+              && p.dims.length === 3
+              && p.dims.every((n, i) => Number(n) === legacyDims[i])) return true;
+            return !!originalProductName
+              && String(p.name || '').trim() === originalProductName;
+          }) || null;
+          if (row) {
+            qcFinalPicked = {
+              productId: '',
+              name: row.name,
+              qty: Number(row.remain) || 0,
+              sizeKey: row.sizeKey,
+              dims: Array.isArray(row.dims) ? row.dims : []
+            };
+            qcFinalPickedSize = null;
+          } else {
+            row = qcFinalProductStocks(dateVal, qcFinalEditId || '')
+              .find(p => originalProductId
+                ? p.productId === originalProductId
+                : p.name === originalProductName) || null;
+          }
+          if (row) {
+            if (!qcFinalPicked) {
+              qcFinalPicked = {
+                productId: row.productId,
+                name: row.name,
+                qty: Number(row.remain) || 0
+              };
+              qcFinalPickedSize = null;
+            }
+          }
+        }
+        if (!row) {
+          qcFinalPicked = null;
+          qcFinalPickedSize = null;
+          const inputQty = document.getElementById('qcf-input-qty');
+          if (inputQty) inputQty.value = '';
+          syncQcFinalPickerText();
+          showToast('Nguồn Kiểm Ván ban đầu không còn tại ngày đã chọn — hãy chọn lại nguồn tồn.', 'error');
+        } else {
+          const inputQty = document.getElementById('qcf-input-qty');
+          if (inputQty) inputQty.value = String(Number(editing.inputQty) || 0);
+          syncQcFinalPickerText();
+        }
+      } else {
+        qcFinalPicked = null;
+        qcFinalPickedSize = null;
+        const inputQty = document.getElementById('qcf-input-qty');
+        if (inputQty) inputQty.value = '';
+        syncQcFinalPickerText();
+      }
+    } else {
+      if (qcFinalPickedSize) {
+        const row = qcFinalThanhSizeStocks(qcFinalEditId || '', dateVal)
+          .find(p => p.sizeKey === qcFinalPickedSize.sizeKey);
+        if (row) {
+          const liveRemain = Number(row.remain) || 0;
+          if (editing && qcFinalKindOf(editing.kind) === 'thanh'
+            && String(editing.sizeKey || '') === String(qcFinalPickedSize.sizeKey || '')) {
+            qcFinalPickedSize.remain = liveRemain + (Number(editing.inputQty) || 0);
+            // Giữ nguyên ô Đầu vào kiểm khi sửa: không ghi đè bằng tồn live.
+          } else {
+            qcFinalPickedSize.remain = liveRemain;
+            const inputQty = document.getElementById('qcf-input-qty');
+            if (inputQty) inputQty.value = liveRemain ? String(liveRemain) : '';
+          }
+        } else {
+          qcFinalPickedSize = null;
+          const inputQty = document.getElementById('qcf-input-qty');
+          if (inputQty) inputQty.value = '';
+          syncQcFinalPickerText();
+        }
+      } else {
+        qcFinalPickedSize = null;
+        const inputQty = document.getElementById('qcf-input-qty');
+        if (inputQty) inputQty.value = '';
+        syncQcFinalPickerText();
+      }
     }
     renderQcFinalProductList();
+    updateQcFinalPreview();
   }
 
 export {
@@ -1368,6 +1877,8 @@ export {
   qcFinalKindOf,
   qcFinalMaybeClosePicker,
   qcFinalOnDateChange,
+  qcFinalNormalizeName,
+  qcFinalResolveProduct,
   qcFinalPairKeyOf,
   qcFinalPairLabel,
   qcFinalPairWeeks,
@@ -1397,5 +1908,6 @@ export {
   syncQcFinalKindFields,
   syncQcFinalWorkshopFields,
   toggleQcFinalPicker,
-  updateQcFinalBanner
+  updateQcFinalBanner,
+  updateQcFinalPreview
 };

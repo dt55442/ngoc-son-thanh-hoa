@@ -6,7 +6,7 @@
   // PHIÊN BẢN GIAO DIỆN ĐANG CHẠY — PHẢI khớp CACHE_NAME của sw.js (quy tắc 1).
   // Hiện ở menu ⋮ để so giữa các máy: máy nào số cũ = đang chạy bundle cũ
   // (nguyên nhân 18/10/2026: web hiện 15 công đoạn trong khi máy chạy 14).
-  const APP_VERSION = 'v452';
+  const APP_VERSION = 'v456';
 
   // LocalStorage Keys
   const STORAGE_KEY_DATA          = 'bamboo_tracker_data_v3';
@@ -47,6 +47,10 @@
   const STORAGE_KEY_XUONG1_LOC_THANH  = 'bamboo_tracker_xuong1_loc_thanh_v1';
   // XUẤT KHO THÀNH PHẨM — thẻ \"Kho Nan — Xưởng 1\": [{ id, date, type 'xuat'|'tieu-huy', material, width, len, qty, unit, note, createdBy, createdAt, updatedAt }]
   const STORAGE_KEY_X1_KHO_EXPORTS = 'bamboo_tracker_x1_kho_exports_v1';
+  // Kế hoạch xuất nan Xưởng 1 theo NĂM + TUẦN ISO + tên sản phẩm
+  // + nguyên liệu + bản rộng + chiều dài + phân loại:
+  // [{ id, year, romanNo, productName, material, width, length, classification, weeks, priorityWeeks, priority, createdAt, updatedAt }]
+  const STORAGE_KEY_X1_NAN_PLAN = 'bamboo_tracker_x1_nan_plan_v1';
   // Danh mục CHIỀU DÀI thanh (mm) gợi ý dùng chung cho thẻ Bổ Xưởng 1 (11/2026) —
   // các giá trị người dùng "Thêm" được lưu vào đây để gợi ý ở các lô sau;
   // tập chiều dài THỰC của từng lô nằm trong trường `lengths` của bản ghi xuong1BoRecords.
@@ -390,6 +394,13 @@
     khoShowUsed: false,        // công tắc "Hiện lô đã xuất hết" (mặc định ẨN)
     // Xuất kho thành phẩm của thẻ "Kho Nan — Xưởng 1" (xuất hàng / tiêu hủy) — [{ id, date, type, material, width, len, qty, unit, note, createdBy, createdAt, updatedAt }]
     x1KhoExports: [],
+    // Kế hoạch xuất nan Xưởng 1 — mỗi dòng = tổ hợp chính xác năm
+    // + tên sản phẩm + nguyên liệu + bản rộng + chiều dài + phân loại + 52/53 tuần ISO
+    // [{ id, year, romanNo, productName, material, width, length, classification, weeks, createdAt, updatedAt }]
+    x1NanPlans: [],
+    x1NanPlanYear: '', // năm đang xem trong thẻ Kế hoạch xuất nan (thuần UI theo máy)
+    x1NanPlanViewMode: 'week', // tuần/tháng/năm — thuần UI, không lưu local
+    x1NanPlanPeriod: '', // khóa kỳ đang xem: YYYY-Wnn | YYYY-MM | YYYY
     // Trạng thái UI (không bền vững): chi tiết kích thước mở của Vầu/Nứa + form xuất kho đang hiển thị
     x1KhoDetailOpen: { vau: false, nua: false },
     x1KhoExportForm: { type: '', material: '', width: 0, len: 0, qty: 0, note: '' },
@@ -693,6 +704,7 @@ export {
   STORAGE_KEY_X1_BO_WIDTHS,
   STORAGE_KEY_X1_RATES,
   STORAGE_KEY_X1_KHO_EXPORTS,
+  STORAGE_KEY_X1_NAN_PLAN,
   STORAGE_KEY_QC_EXPORTS,
   STORAGE_KEY_MECH_WORK_PLANS,
   STORAGE_KEY_QC_KILN_HUMIDITY,

@@ -536,7 +536,15 @@ function buildReportData() {
       const w = f.periodMode === 'week' ? f.periodKey : 'all';
       return buildPressExportData({ year: y, week: w, product: 'all', worker: 'all', from, to });
     }
-    return buildX2ExportData(spec.source, { from, to });
+    return buildX2ExportData(spec.source, {
+      from,
+      to,
+      year: f.periodMode === 'year'
+        ? f.periodKey
+        : (f.periodMode === 'month' || f.periodMode === 'day' || f.periodMode === 'week'
+          ? String(f.periodKey || '').slice(0, 4)
+          : (state.x1NanPlanYear || ''))
+    });
   }
   if (spec.builder === 'planning') {
     return buildPlanningExportData({ year: f.year, week: f.week, product: f.product });
@@ -740,7 +748,8 @@ const RC_SOURCE_STATE = {
   phupham: 'x2PhuPhamRecords',
   x1catong: 'xuong1CatOngRecords', x1saysinh: 'xuong1SaySinhRecords', x1boc: 'xuong1BocRecords',
   x1locong: 'xuong1LocOngRecords', x1catmat: 'xuong1CatMatRecords', x1bo: 'xuong1BoRecords',
-  x1phoisay: 'xuong1PhoiSayRecords', x1locthanh: 'xuong1LocThanhRecords'
+  x1phoisay: 'xuong1PhoiSayRecords', x1locthanh: 'xuong1LocThanhRecords',
+  x1nanplan: 'x1NanPlans'
 };
 function reportHasData(spec) {
   if (!spec) return false;

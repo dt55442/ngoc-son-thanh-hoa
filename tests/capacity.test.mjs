@@ -235,8 +235,11 @@ check('BỔ ỐNG: công suất tuần = 1.000 ÷ 10 = 100 kg/h', approx(boongRo
 check('BỔ ỐNG: hiệu suất tuần = 100 ÷ 140 ≈ 71,4%', approx(boongRow.eff, (100 / 140) * 100, 1e-4));
 
 // ─── D. CHỌN NAN THÔ: bỏ lượt nan mua ngoài (external) ──────────
+state.xuong2BaoThoRecords = [
+  { id: 'bt-cap-cn', date: '2026-08-01', shiftIdx: null, workHours: 4 }
+];
 state.xuong2ChonNanThoRecords = [
-  { id: 'cn1', date: '2026-09-10', dims: [1250, 80, 7], quantity: 200, workHours: 4 },
+  { id: 'cn1', baothoId: 'bt-cap-cn', date: '2026-09-10', dims: [1250, 80, 7], quantity: 200, shiftIdx: null, workHours: 4 },
   { id: 'cn2', date: '2026-09-10', dims: [1250, 80, 7], quantity: 100, external: true, workHours: 4 }
 ];
 state.x2ChonNanRates = { '2026-09': 60 };
@@ -248,7 +251,8 @@ check('CHỌN NAN: hiệu suất = (200÷4) ÷ 60 ≈ 83,3%', approx(cnRow.eff, 
 
 // ─── E. BÀO THÔ: chờ Chọn Nan Thô → sản lượng "—" (không bịa số) ──
 state.xuong2BaoThoRecords = [
-  { id: 'bt1', date: '2026-09-10', daiText: '1250', rongText: '80', dayText: '12', workHours: 3 }
+  { id: 'bt1', date: '2026-09-10', daiText: '1250', rongText: '80', dayText: '12', workHours: 3 },
+  { id: 'bt-cap-cn', date: '2026-08-01', shiftIdx: null, workHours: 4 }
 ];
 state.x2BaoThoRates = {}; // chưa khai định mức
 const bthSt = cap.CAP_STAGES.find(s => s.id === 'baotho');
@@ -318,8 +322,8 @@ check('BÀO THÔ: tổng sản lượng liên kết theo ca chia cho tổng gi�
   bthShiftRow.qty === 1200 && bthShiftRow.hours === 16 && approx(bthShiftRow.cap, 75));
 
 state.xuong2ChonNanThoRecords = [
-  { id: 'cn-s0', date: shiftDate, quantity: 800, cls: 'A', dims: [1250, 80, 12], shiftIdx: 0, workHoursHC: 10.5, workHoursTC: 0 },
-  { id: 'cn-s1', date: shiftDate, quantity: 400, cls: 'A', dims: [1250, 80, 12], shiftIdx: 1, workHoursHC: 5.5, workHoursTC: 0 }
+  { id: 'cn-s0', baothoId: 'bt-s0', date: shiftDate, quantity: 800, cls: 'A', dims: [1250, 80, 12], shiftIdx: 0, workHoursHC: 10.5, workHoursTC: 0 },
+  { id: 'cn-s1', baothoId: 'bt-s1', date: shiftDate, quantity: 400, cls: 'A', dims: [1250, 80, 12], shiftIdx: 1, workHoursHC: 5.5, workHoursTC: 0 }
 ];
 state.x2ChonNanRates = { '2026-09': 100 };
 const cnShiftRow = cap.capStageWeekRow(cnSt, shiftWeek);
@@ -490,7 +494,7 @@ check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/B
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
 check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v452', /nha-may-ngoc-son-v452/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v456', /nha-may-ngoc-son-v456/.test(swJs));
 check('SỔ ĐĂNG KÝ: Cắt Ván và Bào Ván không còn dòng công suất; còn 10 dòng Xưởng 2 · 7 thao tác Xưởng 1',
   cap.capStagesOf('x2').length === 10 && cap.capStagesOf('x1').length === 7 &&
   !cap.capStagesOf('x2').some(s => String(s.id).startsWith('catvan_') || String(s.id).startsWith('baovan_')) &&

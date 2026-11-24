@@ -540,16 +540,18 @@ const X2_IDS = ['x2-bo-luong-card', 'x2-cut-card', 'x2-bo-ong-card', 'x2-bao-tho
   'x2-chon-nan-tho-card', 'x2-than-hoa-card', 'x2-kho-card', 'x2-bao-tinh-card',
   'x2-bullig-card', 'x2-xu-ly-loi-card', 'x2-ho-tro-card', 'x2-ep-van-card'];
 const X1_IDS = ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card', 'x1-loc-ong-card',
-  'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card', 'x1-kho-card'];
+  'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card', 'x1-kho-card',
+  'x1-nan-plan-card'];
 check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vùng dữ liệu + nguồn xuất',
-  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 24 &&
-  Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 24 &&
+  Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 25 &&
+  Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 25 &&
   [...X2_IDS, ...X1_IDS].every(id => !!x2.X2_CARD_HISTORY_DOMAIN[id] && !!x2.X2_CARD_EXPORT_SOURCE[id]) &&
   x2.X2_CARD_EXPORT_SOURCE['x2-kho-card'] === 'kho' &&
   x2.X2_CARD_HISTORY_DOMAIN['x2-ho-tro-card'] === 'xuong2HoTroRecords' &&
   x2.X2_CARD_EXPORT_SOURCE['x2-ho-tro-card'] === 'hotro' &&
   x2.X2_CARD_EXPORT_SOURCE['x1-cat-ong-card'] === 'x1catong' &&
-  x2.X2_CARD_EXPORT_SOURCE['x1-loc-thanh-card'] === 'x1locthanh');
+  x2.X2_CARD_EXPORT_SOURCE['x1-loc-thanh-card'] === 'x1locthanh' &&
+  x2.X2_CARD_EXPORT_SOURCE['x1-nan-plan-card'] === 'x1nanplan');
 
 // ─── F3. SỬA LỖI 06/10/2026: chặn theo TỪNG LÔ · SỔ LỆCH KHÔNG KHÓA · NÚT THU GỌN ──
 // (a) SỔ LỆCH (honestThanh = 0 do phiếu bù cũ gắn lô ĐÃ RỜI kho) NHƯNG lô ở Kho vẫn
@@ -760,7 +762,7 @@ check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerE
 check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
   idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
   idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v452', /nha-may-ngoc-son-v452/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v456', /nha-may-ngoc-son-v456/.test(swJs));
 check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
 check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',

@@ -2277,16 +2277,21 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
     return hit ? hit.id : '';
   }
   // Danh sách kết quả Kiểm thanh đã khớp sản phẩm kế hoạch:
-  // { productId, qty, date, sizeKey } — qty = Số Lượng Đạt (qtyOk).
+  // { productId, qty, date, sizeKey } — qty = Đạt + Ngoại lệ (Tổng đạt).
   function getQcThanhOutputRows() {
     return (state.qcFinalRecords || [])
-      .filter(r => r && r.kind === 'thanh' && (Number(r.qtyOk) || 0) > 0 && String(r.sizeKey || '').trim())
-      .map(r => ({
-        productId: qcThanhPlanProductId(r.sizeKey),
-        qty: Number(r.qtyOk) || 0,
-        date: String(r.date || ''),
-        sizeKey: String(r.sizeKey || '')
-      }))
+      .map(r => {
+        if (!r || r.kind !== 'thanh') return null;
+        const passQty = (Number(r.qtyOk) || 0) + (Number(r.qtyExcept) || 0);
+        if (passQty <= 0 || !String(r.sizeKey || '').trim()) return null;
+        return {
+          productId: qcThanhPlanProductId(r.sizeKey),
+          qty: passQty,
+          date: String(r.date || ''),
+          sizeKey: String(r.sizeKey || '')
+        };
+      })
+      .filter(Boolean)
       .filter(x => x.productId);
   }
 
@@ -2817,7 +2822,7 @@ import { attachChartPanDrag, escapeHTML, formatDateDDMMYY, getISOWeekString, num
       pressVol[x.productId] = (pressVol[x.productId] || 0) + dimVolume(x.sizeKey || getProductDimsStr(x.productId), x.qty);
     });
     // CỘNG KẾT QUẢ KIỂM THANH của thẻ Kiểm Sau Sản Xuất (tab QC) vào ĐÃ ÉP —
-    // Số Lượng Đạt (qtyOk) của các lượt QC Kiểm thanh, cho sản phẩm ĐVT = THANH
+    // Số lượng Tổng đạt (qtyOk + qtyExcept) của các lượt QC Kiểm thanh, cho sản phẩm ĐVT = THANH
     // (KHÁC Bullig). Số đọc LIVE từ state.qcFinalRecords nên sửa/xóa lượt QC là
     // biểu đồ tự cập nhật.
     getQcThanhOutputRows().forEach(x => {

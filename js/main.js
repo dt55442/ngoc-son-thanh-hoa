@@ -18,7 +18,7 @@ import { openReportCenter } from './report-center.js';
 import { clearColumnFilter, clearColumnSearch, closeColumnFilter, loadKanbanDensity, onColumnFilterChange, onColumnSearchFocus, onColumnSearchInput, onColumnSearchKeydown, renderKanbanBoard, toggleColumnFilter } from './kanban.js';
 import { computeWorkerStageEfficiency, renderCapacityCard, renderX2MiniSparklines } from './capacity.js';
 import { loadMaterialPlan, loadMaterialRecords, removeMaterialPlanWeek, renderMaterialView } from './materials.js';
-import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, setupHistoryHScroll, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll, loadX1BoLengthOptions, loadX1BoWidthOptions, loadX1KhoExports } from './xuong2.js';
+import { loadXuong2Cuts, loadXuong2Boluong, loadKhoNotes, renderXuong2Cards, x2CloseOpenCard, loadStageWs, applyStageWsDom, setupHistoryHScroll, loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll, loadX1BoLengthOptions, loadX1BoWidthOptions, loadX1KhoExports, loadX1NanPlans } from './xuong2.js';
 import { loadRateApprovals, updateRatePendingBadge } from './rate-center.js';
 import { loadX2PhuPham, loadX2Stocktakes, loadX2YieldRates } from './x2-phu-pham.js'; // PHỤ PHẨM & BĂM + KIỂM KÊ BÃI + ĐỊNH MỨC TỶ LỆ
 import { loadSuppliers } from './suppliers.js';
@@ -66,7 +66,7 @@ const LOAD_GROUPS = [
   [loadPressRecords, loadPressNotes, loadPressInventoryAdjustments],
   [loadMaterialRecords, loadMaterialPlan],
   [loadXuong2Cuts, loadStageWs, loadKanbanDensity],
-  [loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll, loadX1KhoExports, loadX1BoLengthOptions, loadX1BoWidthOptions],
+  [loadXuong1CatOng, loadXuong1SaySinh, loadXuong1Boc, loadX1Rates, loadX1ChainAll, loadX1KhoExports, loadX1NanPlans, loadX1BoLengthOptions, loadX1BoWidthOptions],
   [loadXuong2Boluong, loadXuong2BoOng, loadXuong2BaoTho],
   [loadXuong2ChonNan],
   [loadXuong2Bullig, loadXuong2CatVan, loadX2CatVanSpan, loadXuong2BaoVan, loadX2BaoVanSpan, loadXuong2HoTro],
@@ -89,7 +89,7 @@ loadMaterialRates(); loadPlanningItems(); loadPlanningForecast(); loadPlanningSt
 loadPressRecords(); loadPressNotes(); loadPressInventoryAdjustments();
 loadMaterialRecords(); loadMaterialPlan();
 loadXuong2Cuts(); loadStageWs(); loadKanbanDensity();
-loadXuong1CatOng(); loadXuong1SaySinh(); loadXuong1Boc(); loadX1Rates(); loadX1ChainAll(); loadX1KhoExports(); loadX1BoLengthOptions(); loadX1BoWidthOptions();
+loadXuong1CatOng(); loadXuong1SaySinh(); loadXuong1Boc(); loadX1Rates(); loadX1ChainAll(); loadX1KhoExports(); loadX1NanPlans(); loadX1BoLengthOptions(); loadX1BoWidthOptions();
 loadXuong2Boluong(); loadXuong2BoOng(); loadXuong2BaoTho();
 loadXuong2ChonNan();
 loadXuong2Bullig(); loadXuong2CatVan(); loadX2CatVanRates(); loadX2CatVanSpan(); loadXuong2BaoVan(); loadX2BaoVanRates(); loadX2BaoVanSpan(); loadXuong2HoTro();

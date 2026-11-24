@@ -13,7 +13,7 @@ import { computeFpDimFromProduct, dimVolume } from './press.js';
 import { HR_DEPARTMENTS, HR_DOW_SHORT, attStatusOf, canApproveLeave, ciRowsForRange, ciTimesheetHours, computeAttendanceStats, computeWorkerEvaluation, computeLeaveStats, hrDayKindOf, hrIsRestDay, hrSplitHoursHCDate, hrStripForMatch, hrPressWorkersNamesOf, hrNeedAllRows, hrNeedDateISO } from './hr.js';
 import { escapeHTML, formatDateDDMMYY, getBatchStageEntryDate, showToast, KHO_METHOD_LABELS, KHO_PURPOSE_LABELS, KHO_SOURCE_LABELS, khoLedgerEvents, khoStockSummary } from './utils.js';
 import { buildMaterialPlanVsActualData, friendlyMaterialWeek, materialLocationLabel } from './materials.js';
-import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS, X1_LT_CLASSES } from './xuong2.js';
+import { baoThoDisplay, baoTinhDisplay, boOngDisplay, boluongDisplay, bulligDisplay, bulligLotSizeText, chonNanDisplay, cutDisplay, catVanDisplay, baoVanDisplay, hoTroDisplay, x1CatOngDisplay, x1SaySinhDisplay, x1BocDisplay, x1ChainDisplay, X1_CHAIN_SPECS, X1_LT_CLASSES, x1NanWeeksInYear, x1NanPlanWeekArray, x1NanActualKey, x1NanActualMap, x1NanIsoWeekParts, x1NanContinuousMaxLevel, x1NanPlanClassificationOf, x1NanPlanGroupedRecords, x1NanPlanChildPlanWeeks, x1NanPlanChildActualWeeks, x1NanPlanChildClassifications, x1NanStockQtyOf, x1NanStockQtyForClassifications, x1NanStockBreakdownOf, x1NanAllocateStockForPlans, x1NanResponseRatio, x1NanCapacitySummaryOf, x1WarehouseStockSummary } from './xuong2.js';
 import { x2PhuPhamRows, PP_KIND_SHORT, PP_OUT_TYPE_LABEL, PP_FORM_LABEL } from './x2-phu-pham.js';
 import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/xlsx-lazy.js
 
@@ -50,6 +50,7 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
     { id: 'x1bo',       label: 'Xưởng 1 — Bổ' },
     { id: 'x1phoisay',  label: 'Xưởng 1 — Phơi Sấy' },
     { id: 'x1locthanh', label: 'Xưởng 1 — Lọc Thanh / Bó Xô' },
+    { id: 'x1nanplan',  label: 'Xưởng 1 — Kế Hoạch Xuất Nan' },
     { id: 'kho',     label: 'Kho Nan (Tồn · Nhập / Xuất / Phiếu)' },
     { id: 'epvan',   label: 'Ép Ván (mở form xuất Ép Ván)' }
   ];
@@ -1176,6 +1177,109 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
           d.workHoursTC == null ? '—' : d.workHoursTC, d.note || '']);
       });
       sumNote = `Tổng KL bốc ${x2FmtKg(kg)} kg`;
+    } else if (source === 'x1nanplan') {
+      const plansAll = (state.x1NanPlans || []).filter(p =>
+        p && p.id && Number(p.year) >= 2000 && Number(p.year) <= 2100 &&
+        p.material && Number(p.width) > 0 &&
+        (Number(p.length != null ? p.length : p.len) > 0));
+      const preferredYear = Math.round(Number(f.year || state.x1NanPlanYear || 0));
+      const planYears = [...new Set(plansAll.map(p => Number(p.year)))].sort((a, b) => b - a);
+      const year = planYears.includes(preferredYear)
+        ? preferredYear
+        : (planYears[0] || new Date().getFullYear());
+      const weekCount = x1NanWeeksInYear(year);
+      const plans = plansAll.filter(p => Number(p.year) === year)
+        .sort((a, b) =>
+          Number(b.priority === true || b.priority === 1 || b.priority === '1') -
+          Number(a.priority === true || a.priority === 1 || a.priority === '1') ||
+          String(a.productName != null ? a.productName : (a.tenSanPham != null ? a.tenSanPham : '')).localeCompare(
+            String(b.productName != null ? b.productName : (b.tenSanPham != null ? b.tenSanPham : '')), 'vi') ||
+          String(a.material || '').localeCompare(String(b.material || ''), 'vi') ||
+          (Number(a.width) - Number(b.width)) ||
+          (Number(a.length != null ? a.length : a.len) - Number(b.length != null ? b.length : b.len)) ||
+          String(a.classification || '').localeCompare(String(b.classification || ''), 'vi'));
+      head = ['Stt', 'Năm', 'Tên Sản Phẩm', 'Nguyên Liệu',
+        'Bản Rộng (ly)', 'Chiều Dài (mm)', 'Phân Loại',
+        ...Array.from({ length: weekCount }, (_, i) => [
+          `Tuần ${i + 1} (kg)`,
+          `Tuần ${i + 1} - Thực Tế (kg)`,
+          `Tuần ${i + 1} - Đáp Ứng (%)`
+        ]).flat(),
+        'Tổng Kế Hoạch (kg)', 'Tồn Hiện Tại (kg)',
+        'Tồn A (kg)', 'Tồn A1 (kg)', 'Tồn Non Bánh Tẻ (kg)',
+        'Tồn B (kg)', 'Tồn Loại (kg)', 'Khả Năng Đáp Ứng', 'Mức Liên Tục (tuần)'];
+      const actualMap = x1NanActualMap(year, state.xuong1LocThanhRecords || []);
+      const stockSummary = x1WarehouseStockSummary();
+      const positiveNumber = value => {
+        const n = Number(value);
+        return Number.isFinite(n) && n > 0 ? n : 0;
+      };
+      let totalPlan = 0;
+      let rowIndex = 0;
+      const grouped = x1NanPlanGroupedRecords(plans);
+      grouped.forEach(group => {
+        group.children.forEach(child => {
+          const classifications = x1NanPlanChildClassifications(child);
+          const planWeeks = x1NanPlanChildPlanWeeks(child, year);
+          const actualWeeks = x1NanPlanChildActualWeeks(child, year, actualMap);
+          const responseCells = [];
+          planWeeks.forEach((planned, i2) => {
+            const actual = actualWeeks[i2] || 0;
+            const weekAllocation = x1NanAllocateStockForPlans(
+              grouped, 'week', year, `${year}-W${String(i2 + 1).padStart(2, '0')}`, [], stockSummary);
+            const allocated = weekAllocation.get(child)
+              ? positiveNumber(weekAllocation.get(child).allocatedStock)
+              : 0;
+            const responseRatio = x1NanResponseRatio(planned, allocated);
+            responseCells.push([
+              planned > 0 ? planned : '',
+              actual > 0 ? actual : '',
+              responseRatio == null ? '' : Math.round(responseRatio * 10) / 10
+            ]);
+          });
+          const rowTotal = planWeeks.reduce((sum, qty) => sum + (Number(qty) || 0), 0);
+          totalPlan += rowTotal;
+          const stockBreakdown = x1NanStockBreakdownOf(child, stockSummary);
+          const stockQty = positiveNumber(stockBreakdown.total);
+          const today = new Date();
+          const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const todayParts = x1NanIsoWeekParts(todayIso);
+          const capacityWeek = todayParts.year === year ? todayParts.week : 0;
+          const yearAllocation = x1NanAllocateStockForPlans(
+            grouped, 'year', year, String(year), [], stockSummary);
+          const allocatedYear = yearAllocation.get(child)
+            ? positiveNumber(yearAllocation.get(child).allocatedStock)
+            : 0;
+          const capacity = x1NanCapacitySummaryOf(
+            planWeeks, actualWeeks, allocatedYear, year, capacityWeek);
+          const coverageText = capacity.week > 0
+            ? (capacity.planQty > 0
+              ? `${capacity.covered ? 'Đủ' : 'Thiếu'}${capacity.covered ? '' : ` ${x2FmtKg(capacity.deficit)} kg`}`
+              : 'Chưa có kế hoạch')
+            : 'Không có kế hoạch tuần hiện tại';
+          rowIndex++;
+          body.push([
+            rowIndex,
+            year,
+            group.productName || '',
+            child.material,
+            Number(child.width) || 0,
+            Number(child.length) || 0,
+            classifications.join(' / ') || '',
+            ...responseCells.flat(),
+            rowTotal > 0 ? rowTotal : '',
+            stockQty > 0 ? stockQty : 0,
+            stockBreakdown.A > 0 ? stockBreakdown.A : 0,
+            stockBreakdown.A1 > 0 ? stockBreakdown.A1 : 0,
+            stockBreakdown['Non bánh tẻ'] > 0 ? stockBreakdown['Non bánh tẻ'] : 0,
+            stockBreakdown.B > 0 ? stockBreakdown.B : 0,
+            stockBreakdown['Loại'] > 0 ? stockBreakdown['Loại'] : 0,
+            `Tuần ${capacity.week || '—'}: ${coverageText}`,
+            x1NanContinuousMaxLevel(planWeeks, actualWeeks, year) || ''
+          ]);
+        });
+      });
+      sumNote = `Năm ${year} · ${weekCount} tuần ISO · Tổng kế hoạch ${x2FmtKg(totalPlan)} kg`;
     } else if (X1_CHAIN_KEYS[source]) {
       const spec = X1_CHAIN_SPECS.find(sp => sp.key === X1_CHAIN_KEYS[source]);
       if (spec) {
@@ -1199,8 +1303,9 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
             ? ['Hình Thức', 'Bản Rộng (ly)', 'Kích Thước Dài (mm)', ...LT_CLASS_HEADS, 'Tổng', 'Đơn Vị']
             : ['Hình Thức', 'Chi Tiết Theo Chiều Dài'];
         head = ['Stt', 'Ngày', 'Mã Lô', 'Loại Nguyên Liệu', 'Nhà Cung Cấp', 'Ngày Nguồn', 'Nguồn',
-          'KL Vào (kg)', ltLegacyMatrix ? 'KL Đạt (kg) / SL cũ' : 'KL Đạt (kg)',
-          ltLegacyMatrix ? 'KL Loại (kg) / SL cũ' : (spec.key === 'locOng' ? 'KL Sót Mắt (kg)' : 'KL Loại (kg)'), 'Tỷ Lệ Đạt (%)',
+          spec.key === 'locThanh' ? 'KL Đem Lọc / Bó (kg)' : 'KL Vào (kg)', ltLegacyMatrix ? 'KL Đạt (kg) / SL cũ' : 'KL Đạt (kg)',
+          ltLegacyMatrix ? 'KL Loại (kg) / SL cũ' : (spec.key === 'locOng' ? 'KL Sót Mắt (kg)' : 'KL Loại (kg)'),
+          ...(spec.key === 'locThanh' ? ['Theo Dõi Lô / Thành Phẩm Cộng Dồn / Tỷ Lệ Sau Chốt'] : ['Tỷ Lệ Đạt (%)']),
           ...(spec.key === 'bo' ? ['Bản Rộng (ly)'] : []),
           ...(spec.key === 'locThanh' ? ltMatrixHeads : []),
           ...(spec.key === 'locThanh'
@@ -1219,7 +1324,27 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — xem js/x
           inKg += d.qtyIn || 0; okKg += d.qtyOk || 0;
           const base = [i + 1, formatDateDDMMYY(d.date), d.lotCode || '', d.srcType || '', d.srcSupplier || '',
             d.srcDate ? formatDateDDMMYY(d.srcDate) : '', d.srcRoute || '',
-            d.qtyIn, d.qtyOk, d.qtyLoai, d.ratio == null ? '—' : Math.round(d.ratio * 10) / 10,
+            d.qtyIn, d.qtyOk, d.qtyLoai,
+            spec.key === 'locThanh'
+              ? ((d.sourceLots || []).map(lot => {
+                  const p = lot.lotProgress;
+                  if (!p) return `${lot.lotCode || 'Lô Bổ'}: danh định/chưa có dữ liệu`;
+                  const nominal = p.nominalKg == null ? 'danh định —' : `danh định ${x2FmtKg(p.nominalKg)} kg`;
+                  const mixed = p.mixedFinishedKg > 1e-9 ? `; gom hỗn hợp ${x2FmtKg(p.mixedFinishedKg)} kg chưa phân bổ` : '';
+                  const ratio = p.closed
+                    ? (p.ratio != null
+                        ? `; tỷ lệ sau chốt ${Math.round(p.ratio * 10) / 10}%`
+                        : (p.mixedFinishedKg > 1e-9 || p.ratioReason === 'mixed_unallocated'
+                            ? `; Đã chốt — chưa có tỷ lệ (gom hỗn hợp/chưa phân bổ)`
+                            : (p.nominalKg == null || !(Number(p.nominalKg) > 0) || p.ratioReason === 'missing_nominal'
+                                ? `; Đã chốt — chưa có tỷ lệ (thiếu khối lượng danh định)`
+                                : (p.hasUnquantifiableOutput || p.ratioReason === 'legacy_count' || p.ratioReason === 'unquantifiable_output'
+                                    ? `; Đã chốt — chưa có tỷ lệ (dữ liệu cũ theo số lượng/chưa quy đổi kg)`
+                                    : `; Đã chốt — chưa có tỷ lệ (thiếu dữ liệu khối lượng)`))))
+                    : `; chưa chốt, chưa tính tỷ lệ`;
+                  return `${lot.lotCode || 'Lô Bổ'}: ${nominal}; thành phẩm cộng dồn ${x2FmtKg(p.finishedKg)} kg${mixed}${ratio}`;
+                }).join(' | ') || '—')
+              : (d.ratio == null ? '—' : Math.round(d.ratio * 10) / 10),
             ...(spec.key === 'bo'
               ? [(d.widths || []).join(' · ') + ((d.widths || []).length ? ' ly' : '')]
               : [])];

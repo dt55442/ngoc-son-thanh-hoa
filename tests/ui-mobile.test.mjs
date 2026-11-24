@@ -95,8 +95,8 @@ check('D5. tôn trọng giảm hiệu ứng + ẩn khi in',
 // ─── E. WIRING + PHIÊN BẢN ──────────────────────────────────────
 check('E1. events giữ menu mở khi bấm vùng trống/nhãn nhóm (chỉ item mới đóng)',
   /dropdown\.addEventListener\('click'[\s\S]{0,220}?closest\('\.dropdown-item'\)[\s\S]{0,80}?stopPropagation\(\)/.test(evSrc));
-check('E2. sw.js cache v452', swSrc.includes('nha-may-ngoc-son-v452'));
-check('E3. APP_VERSION v452', stateSrc.includes("APP_VERSION = 'v452'"));
+check('E2. sw.js cache v456', swSrc.includes('nha-may-ngoc-son-v456'));
+check('E3. APP_VERSION v456', stateSrc.includes("APP_VERSION = 'v456'"));
 check('E4. thanh điều khiển: tên tab cho phép xuống dòng, Header dùng grid tách 3 vùng',
   css.includes('grid-template-columns: auto minmax(0, 1fr) auto') &&
   css.includes('.nav-btn span') && css.includes('white-space: normal') &&

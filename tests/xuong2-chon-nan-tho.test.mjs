@@ -380,6 +380,30 @@ check('XÓA: tỷ lệ loại của ngày về 0% (tổng thể tích 1,2000 + 0
 check('XÓA: mini card = "2 lượt · 1.000 thanh" (lượt nhập ngoài không cộng số lượng)',
   document.getElementById('x2-mini-count-chon-nan-tho').textContent === '2 lượt · 1.000 thanh');
 
+// ─── K2. LIVE FILTER: orphan/mismatch ca không được cộng vào tổng thẻ ──
+const liveBeforeOrphan = [...(state.xuong2ChonNanThoRecords || [])];
+const orphanRecord = {
+  id: 'cn-orphan', baothoId: 'bt-da-xoa', date: '2026-09-16',
+  dims: [1250, 80, 12], sizeKey: '1250×80×12', cls: 'A',
+  quantity: 777, unitVol: 0.0012, volume: 0.9324, external: false
+};
+const wrongShiftRecord = {
+  id: 'cn-wrong-shift', baothoId: 'bt-1', date: '2026-09-16',
+  dims: [1300, 80, 12], sizeKey: '1300×80×12', cls: 'B',
+  quantity: 888, unitVol: 0.001248, volume: 1.108224, external: false, shiftIdx: 1
+};
+state.xuong2ChonNanThoRecords = [...liveBeforeOrphan, orphanRecord, wrongShiftRecord];
+const liveRecords = x2.x2ChonNanLiveRecordsOf();
+check('LIVE FILTER: chỉ giữ lượt non-external link đúng lô còn tồn tại và đúng ca',
+  liveRecords.length === 1 && liveRecords[0].id === cn1.id);
+x2.renderX2ChonNanCard();
+check('LIVE FILTER: mini card bỏ orphan 777 và mismatch ca 888 khỏi tổng thanh',
+  document.getElementById('x2-mini-count-chon-nan-tho').textContent === '4 lượt · 1.000 thanh');
+check('LIVE FILTER: thống kê chỉ cộng 1.000 thanh vào Bào Thô',
+  document.getElementById('x2-cn-stats').innerHTML.includes('1.000') &&
+  document.getElementById('x2-cn-stats').innerHTML.includes('Thanh nan thô (cộng sang Bào Thô)'));
+state.xuong2ChonNanThoRecords = liveBeforeOrphan;
+
 // ─── L. THU GỌN BẢNG + CẤU TRÚC index.html ──────────────────────
 x2.toggleX2ChonNanTable();
 check('BẢNG: nút thu gọn hoạt động (wrap có class x2-cut-collapsed)',

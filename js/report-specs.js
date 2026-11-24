@@ -35,8 +35,8 @@ const X2_REPORTS = [
   { id: 'epvan',   label: 'Ép Ván',                         cardId: 'x2-ep-van-card' }
 ];
 
-// 8 công đoạn Xưởng 1 + Kho Nan dùng chung báo cáo nguồn Lọc Thanh/Bó Xô.
-const X1_REPORTS = [
+// 8 công đoạn Xưởng 1 + Kho Nan + Kế hoạch xuất nan.
+export const X1_REPORTS = [
   { id: 'x1catong',   label: 'Cắt Ống',           cardId: 'x1-cat-ong-card' },
   { id: 'x1saysinh',  label: 'Sấy Sinh',          cardId: 'x1-say-sinh-card' },
   { id: 'x1boc',      label: 'Bốc',               cardId: 'x1-boc-card' },
@@ -44,7 +44,8 @@ const X1_REPORTS = [
   { id: 'x1catmat',   label: 'Cắt Mắt',           cardId: 'x1-cat-mat-card' },
   { id: 'x1bo',       label: 'Bổ',                cardId: 'x1-bo-card' },
   { id: 'x1phoisay',  label: 'Phơi Sấy',          cardId: 'x1-phoi-say-card' },
-  { id: 'x1locthanh', label: 'Lọc Thanh / Bó Xô', cardId: 'x1-loc-thanh-card', cardIds: ['x1-kho-card'] }
+  { id: 'x1locthanh', label: 'Lọc Thanh / Bó Xô', cardId: 'x1-loc-thanh-card', cardIds: ['x1-kho-card'] },
+  { id: 'x1nanplan',  label: 'Kế Hoạch Xuất Nan', cardId: 'x1-nan-plan-card' }
 ];
 
 export const REPORT_SPECS = [

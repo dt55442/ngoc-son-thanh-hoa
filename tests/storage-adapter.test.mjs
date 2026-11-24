@@ -64,9 +64,9 @@ check('B2: boot initializes and restores core storage',
 check('B3: PWA precaches the storage adapter',
   swSrc.includes("'./js/storage-adapter.js'"));
 check('B4: PWA cache and app version stay synchronized',
-  swSrc.includes('nha-may-ngoc-son-v452')
-  && stateSrc.includes("APP_VERSION = 'v452'")
-  && /nha-may-ngoc-son-v(\d+)/.exec(swSrc)[1] === '451');
+  swSrc.includes('nha-may-ngoc-son-v456')
+  && stateSrc.includes("APP_VERSION = 'v456'")
+  && /nha-may-ngoc-son-v(\d+)/.exec(swSrc)[1] === '456');
 
 console.log(`\nSTORAGE-ADAPTER: ${pass} PASS, ${fail} FAIL`);
 if (fail) process.exit(1);

@@ -30,8 +30,8 @@ import { materialWeekLabel } from './materials.js';
 import { pressRecordWeek, pressVolumeTotalOf, renderX2EpVanCard } from './press.js';
 import { rateNanUse } from './planning.js';
 import { supplierKey } from './suppliers.js';
-import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, STORAGE_KEY_X1_KHO_EXPORTS, state } from './state.js';
-import { applyTombstonesToRecordList, trackDeleted } from './tombstone.js';
+import { STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_KANBAN_COLLAPSED, STORAGE_KEY_X2_SAY_FRAME, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_KHO_SHOW_USED, STORAGE_KEY_STAGE_WS, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, STORAGE_KEY_X1_KHO_EXPORTS, STORAGE_KEY_X1_NAN_PLAN, state } from './state.js';
+import { applyTombstonesToRecordList, trackDeleted, untrackDeleted } from './tombstone.js';
 import { hydrateMonthlyDomain, persistMonthlyDomain } from './monthly-domain.js';
 import { mergeRecordsByTimestamp } from './record-merge.js';
 import { reportStorageFailure } from './storage-diagnostics.js';
@@ -101,7 +101,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x1-bo-card':           { el: 'x2-mini-count-x1-bo',        ws: 'x1' },             // Bổ
     'x1-phoi-say-card':     { el: 'x2-mini-count-x1-phoi-say',  ws: 'x1' },             // Phơi Sấy
     'x1-loc-thanh-card':    { el: 'x2-mini-count-x1-loc-thanh', ws: 'x1' },             // Lọc Thanh / Bó Xô
-    'x1-kho-card':          { el: 'x2-mini-count-x1-kho', ws: 'x1' }                    // Kho Nan Xưởng 1
+    'x1-kho-card':          { el: 'x2-mini-count-x1-kho', ws: 'x1' },                   // Kho Nan Xưởng 1
+    'x1-nan-plan-card':     { el: 'x2-mini-count-x1-nan-plan', ws: 'x1' }               // Kế hoạch xuất nan Xưởng 1
   };
 
 
@@ -134,7 +135,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x1-bo-card': 'xuong1BoRecords',
     'x1-phoi-say-card': 'xuong1PhoiSayRecords',
     'x1-loc-thanh-card': 'xuong1LocThanhRecords',
-    'x1-kho-card': 'xuong1LocThanhRecords'
+    'x1-kho-card': 'xuong1LocThanhRecords',
+    'x1-nan-plan-card': 'x1NanPlans'
   };
   const X2_CARD_EXPORT_SOURCE = {
     'x2-bo-luong-card': 'boluong',
@@ -162,7 +164,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x1-bo-card':        'x1bo',
     'x1-phoi-say-card':  'x1phoisay',
     'x1-loc-thanh-card': 'x1locthanh',
-    'x1-kho-card': 'x1locthanh'
+    'x1-kho-card': 'x1locthanh',
+    'x1-nan-plan-card': 'x1nanplan'
   };
   // Thẻ đang mở (null = không thẻ nào) — Lịch Sử/Xuất Excel dùng chung + gợi ý AI
   function x2OpenCardId() { return openX2Card ? openX2Card.id : null; }
@@ -2119,7 +2122,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (cardId === 'x2-chon-nan-tho-card') {
       const list = state.xuong2ChonNanThoRecords || [];
       if (!list.length) return 'Chưa chọn';
-      const qty = list.filter(x => !x.external).reduce((s, x) => s + (Number(x.quantity) || 0), 0);
+      const qty = x2ChonNanLiveRecordsOf().reduce((s, x) => s + (Number(x.quantity) || 0), 0);
       return `${list.length} lượt · ${fmtThanh(qty)} thanh`;
     }
     // Thẻ "Bào Tinh": số lượt bào + tổng SL thanh ĐẠT (+ tồn thanh lỗi chờ hạ cấp)
@@ -4822,6 +4825,26 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   const dimKeyOf = (d, r, t) => `${Number(d) || 0}×${Number(r) || 0}×${Number(t) || 0}`;
 
   // ─── SỐ LƯỢNG THANH — TỰ ĐỘNG theo kích thước ─────────────────
+  // Bộ lọc DÙNG CHUNG cho mọi tổng live của thẻ Chọn Nan Thô:
+  // - Bỏ nan mua ngoài (external);
+  // - Bỏ lượt có lô bào thô đã bị xóa hoặc không còn link hợp lệ;
+  // - Khi cả hai bên ghi ca, chỉ giữ lượt cùng ca.
+  function x2ChonNanLiveRecordsOf() {
+    const baoThoById = new Map(
+      (state.xuong2BaoThoRecords || [])
+        .filter(r => r && r.id != null)
+        .map(r => [String(r.id), r])
+    );
+    return (state.xuong2ChonNanThoRecords || []).filter(r => {
+      if (!r || r.external) return false;
+      const baoTho = baoThoById.get(String(r.baothoId || ''));
+      if (!baoTho) return false;
+      const baoThoShift = (baoTho.shiftIdx == null || baoTho.shiftIdx === '') ? null : Number(baoTho.shiftIdx);
+      const chonNanShift = (r.shiftIdx == null || r.shiftIdx === '') ? null : Number(r.shiftIdx);
+      return baoThoShift === chonNanShift;
+    });
+  }
+
   // NGUỒN: công đoạn CHỌN NAN THÔ (state.xuong2ChonNanThoRecords) — cộng số thanh
   // của các lượt chọn nan ĐÃ LINK đúng lô bào thô này (baothoId), BỎ QUA các lượt
   // "nhập ở NGOÀI công đoạn" (external = true → không cộng sang Bào Thô).
@@ -6503,10 +6526,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const disp = (state.xuong2ChonNanThoRecords || []).map(chonNanDisplay);
     const main = disp.filter(d => !d.external);   // phần CỘNG sang Bào Thô
     const ext = disp.filter(d => d.external);     // nhập ngoài công đoạn
+    const liveIds = new Set(x2ChonNanLiveRecordsOf().map(r => r.id));
+    const liveMain = main.filter(d => d.id != null && liveIds.has(d.id));
     const sumQty = arr => arr.reduce((s, d) => s + d.quantity, 0);
     const sumVol = arr => arr.reduce((s, d) => s + d.volume, 0);
-    const totalQty = sumQty(main);
-    const rejQty = main.filter(d => d.cls === 'reject').reduce((s, d) => s + d.quantity, 0);
+    const totalQty = sumQty(liveMain);
+    const rejQty = liveMain.filter(d => d.cls === 'reject').reduce((s, d) => s + d.quantity, 0);
     const rejPct = totalQty > 0 ? (rejQty / totalQty) * 100 : null;
     box.innerHTML = `
       <div class="material-stat">
@@ -6514,11 +6539,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         <span class="material-stat-label">Lượt chọn nan</span>
       </div>
       <div class="material-stat">
-        <span class="material-stat-value">${fmtThanh(sumQty(main))}</span>
+        <span class="material-stat-value">${fmtThanh(totalQty)}</span>
         <span class="material-stat-label">Thanh nan thô (cộng sang Bào Thô)</span>
       </div>
       <div class="material-stat">
-        <span class="material-stat-value">${sumVol(main).toFixed(4)}</span>
+        <span class="material-stat-value">${sumVol(liveMain).toFixed(4)}</span>
         <span class="material-stat-label">Thể tích nan thô (m³)</span>
       </div>
       <div class="material-stat">
@@ -6560,8 +6585,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       initLucide();
       return;
     }
+    const liveIds = new Set(x2ChonNanLiveRecordsOf().map(r => r.id));
     // GIAI ĐOẠN 2: gom theo (NGÀY, CA) — mỗi ca 1 THẺ NGÀY riêng + bảng so sánh 2 ca
-    const { groups, cmpByDate } = x2DayShiftGroups(list, chonNanDisplay, (r, d) => (r.external ? 0 : d.quantity), { rateOf: chonNanRateOf, incKey: 'chonnan' });
+    const { groups, cmpByDate } = x2DayShiftGroups(list, chonNanDisplay, (r, d) => (r.external || !liveIds.has(r.id) ? 0 : d.quantity), { rateOf: chonNanRateOf, incKey: 'chonnan' });
     const visibleGroups = [];
     let visibleRows = 0;
     for (const group of groups) {
@@ -13600,7 +13626,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   //                 liệt kê phiếu theo mục đích + các lượt Bullig/Bào Tinh gây vượt.
   //  • 'mismatch' — lô có sổ suy ra > phiếu đã duyệt (thiếu phiếu).
   // "Chốt lệch" lưu batch.khoOverAck = { qty, at, by, name } → cảnh báo không hiện
-  // lại phần đã chốt, KHÔNG sửa dữ liệu gốc, vẫn ghi Lịch sử sửa đổi (batches).
   let khoWarnKind = '';
   function khoWarnOverRows() {
     const alloc = khoFifoAllocation();
@@ -13723,7 +13748,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const over = Math.max(0, used - cap);
     const ack = Math.max(0, Number(b.khoOverAck && b.khoOverAck.qty) || 0);
     if (over <= ack) { showToast('Lô này không còn phần vượt cần chốt.', 'success'); return; }
-    if (!confirm(`Chốt lệch ${fmtThanh(over - ack)} thanh cho lô ${b.code || b.id}?\n\nKhông sửa số lượng lô hay phiếu gốc — chỉ tắt cảnh báo phần đã chốt (vẫn ghi Lịch sử sửa đổi).`)) return;
     pushUndo('Chốt lệch tồn kho');
     b.khoOverAck = { qty: over, at: new Date().toISOString(), by: khoUserKey(), name: khoUserName() };
     b.updatedAt = b.khoOverAck.at;
@@ -15293,7 +15317,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       inputWeight, klDat, klLoai, klMat, klNgon, turnKg,
       remain: inputWeight - klDat - klLoai,   // còn lại của LƯỢT này (giữ ý nghĩa cũ)
       ratio: inputWeight > 0 ? (klDat / inputWeight) * 100 : null,
-      // Cấp lô: phần CHƯA cắt · số lượt · đã chốt? · hao hụt (chỉ có nghĩa khi chốt)
       lotRemaining, lotUsed,
       lotTurns: x1CatOngLotTurnsOf(r.materialId),
       lotDone,
@@ -15436,7 +15459,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       }
     } else if (!wantDone && wasDone) {
       if (!confirm('Lô này ĐÃ CHỐT xong.\n\nBấm OK để MỞ LẠI lô (cho phép cắt tiếp) — hoặc Hủy để giữ nguyên trạng thái.')) {
-        showToast('Đã hủy — giữ nguyên trạng thái đã chốt.', 'info'); return;
       }
     }
     // LƯỢT MỚI mà 4 ô KL đều 0 → không tạo record rỗng:
@@ -15610,7 +15632,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const totalLoai = disp.reduce((s, d) => s + Math.max(0, d.klLoai), 0);
     const totalMat  = disp.reduce((s, d) => s + d.klMat, 0);   // KL Mắt
     const totalNgon = disp.reduce((s, d) => s + d.klNgon, 0);  // KL Ngọn
-    // Số lô đã CHỐT xong + tổng hao hụt đã chốt
     const doneMats = new Set((state.xuong1CatOngRecords || [])
       .filter(r => r.lotDone).map(r => r.materialId));
     const totalLoss = [...doneMats].reduce((s, mid) => {
@@ -15625,7 +15646,6 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       <div class="material-stat"><span class="material-stat-value">${fmtKg(totalLoai)}</span><span class="material-stat-label">Tổng KL loại (kg)</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(totalMat)}</span><span class="material-stat-label">Tổng KL mắt (kg)</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(totalNgon)}</span><span class="material-stat-label">Tổng KL ngọn (kg)</span></div>
-      <div class="material-stat"><span class="material-stat-value">${doneMats.size}</span><span class="material-stat-label">Lô đã chốt xong</span></div>
       <div class="material-stat"><span class="material-stat-value" style="color:#b45309;">${fmtKg(totalLoss)}</span><span class="material-stat-label">Tổng hao hụt (đã chốt)</span></div>`;
   }
 
@@ -15720,6 +15740,46 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // Mỗi lô giữ nhiều chu kỳ sấy; tuổi lô tính từ chu kỳ đầu tiên.
   let x1SsOldIdx = 0;
 
+  // Theo dõi mã lô / lưu huỳnh do người dùng nhập tay.
+  let x1SsCodeManualEdit = false;
+  let x1SsSulfurManualEdit = false;
+  function x1SsMarkCodeManualEdit() {
+    x1SsCodeManualEdit = true;
+    state.x1SsCodeManualEdit = true;
+    const el = document.getElementById('x1-say-sinh-code');
+    if (el) el.setAttribute('data-manual', '1');
+    if (el) el.removeAttribute('data-auto');
+    return true;
+  }
+  function x1SsMarkSulfurManualEdit() {
+    x1SsSulfurManualEdit = true;
+    state.x1SsSulfurManualEdit = true;
+    const el = document.getElementById('x1-say-sinh-sulfur-qty');
+    if (el) el.setAttribute('data-manual', '1');
+    if (el) el.removeAttribute('data-auto');
+    return true;
+  }
+  function x1SsResetCodeManualTracking() {
+    x1SsCodeManualEdit = false;
+    state.x1SsCodeManualEdit = false;
+    state.x1SsCodeAutoValue = '';
+    const el = document.getElementById('x1-say-sinh-code');
+    if (el) el.removeAttribute('data-manual');
+    if (el) el.removeAttribute('data-auto');
+  }
+  function x1SsResetSulfurManualTracking() {
+    x1SsSulfurManualEdit = false;
+    state.x1SsSulfurManualEdit = false;
+    state.x1SsSulfurAutoValue = '';
+    const el = document.getElementById('x1-say-sinh-sulfur-qty');
+    if (el) el.removeAttribute('data-manual');
+    if (el) el.removeAttribute('data-auto');
+    if (el) el.value = '';
+  }
+  function x1SsResetManualTracking() {
+    x1SsResetCodeManualTracking();
+    x1SsResetSulfurManualTracking();
+  }
   function x1SsTodayISO() {
     const d = new Date();
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -16248,12 +16308,28 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const repeatSel = document.getElementById('x1-say-sinh-repeat-lot');
     const repeatId = repeatSel ? repeatSel.value : '';
     if (autoFill && dateEl && !dateEl.value && src && src.date) dateEl.value = src.date;
-    // Gợi ý mã lô khi tạo mới (không repeat, code trống, có nguồn + ngày)
-    if (autoFill && !repeatId && dateEl && src && !codeEl.value) {
-      const typeText = src.kind === 'catOng'
-        ? (x1CatOngDisplay(src.src) || {}).materialType || ''
-        : ((src.src && src.src.type) || '');
-      codeEl.value = x1SsMakeCode(dateEl.value || x1SsTodayISO(), typeText);
+    // Tạo mới: gộp LOẠI nguyên liệu từ tất cả phiếu đã chọn.
+    // Chỉ ghi đè mã còn trống hoặc mã đang là giá trị tự sinh; mã nhập tay được giữ nguyên.
+    if (!repeatId && !state.x1SaySinhEditId && codeEl && dateEl && sources.length) {
+      const typeTexts = [...new Set(sources.map(found => found.kind === 'catOng'
+        ? ((x1CatOngDisplay(found.src) || {}).materialType || '')
+        : ((found.src && found.src.type) || '')).filter(Boolean))];
+      const typeText = typeTexts.join(', ');
+      if (typeText) {
+        const manual = x1SsCodeManualEdit || !!state.x1SsCodeManualEdit ||
+          (codeEl.getAttribute && codeEl.getAttribute('data-manual') === '1');
+        const current = String(codeEl.value || '');
+        const autoValue = String(state.x1SsCodeAutoValue || '');
+        const markedAuto = !!(codeEl.getAttribute && codeEl.getAttribute('data-auto') === '1');
+        const stillAutoGenerated = markedAuto || (!!autoValue && current === autoValue) || (!current && !manual);
+        if (!manual && (!current || stillAutoGenerated)) {
+          const nextCode = x1SsMakeCode(dateEl.value || x1SsTodayISO(), typeText);
+          codeEl.value = nextCode;
+          state.x1SsCodeAutoValue = nextCode;
+          codeEl.setAttribute('data-auto', '1');
+          codeEl.removeAttribute('data-manual');
+        }
+      }
     }
     const sourceSel = document.getElementById('x1-say-sinh-source');
     if (sourceSel) sourceSel.disabled = !!repeatId;
@@ -16272,7 +16348,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         const cycles = x1SsCyclesOf(lot).length;
         const nextCycle = cycles + 1;
         const hint = x1SsSulfurHint(lot.qty, nextCycle);
-        if (sulfurEl && sulfurEl.value === '') {
+        const sulfurManual = x1SsSulfurManualEdit || !!state.x1SsSulfurManualEdit ||
+          (sulfurEl && sulfurEl.getAttribute && sulfurEl.getAttribute('data-manual') === '1');
+        if (sulfurEl && sulfurEl.value === '' && !sulfurManual) {
           sulfurEl.value = String(hint.suggested);
           sulfurEl.title = `${hint.note} · gợi ý: ${fmtKg(hint.suggested)} kg`;
         }
@@ -16356,7 +16434,15 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!dateVal) { showToast('Ngày sấy sinh không được để trống!', 'error'); return; }
     // Đọc mã lô nhập tay (nếu có)
     const codeEl = document.getElementById('x1-say-sinh-code');
-    const enteredCode = codeEl ? String(codeEl.value || '').trim() : '';
+    let enteredCode = codeEl ? String(codeEl.value || '').trim() : '';
+    // Mã đang tự sinh → kiểm tra lại theo Ngày Sấy ngay khi lưu.
+    if (!repeatId && !state.x1SaySinhEditId && codeEl) {
+      const markedManual = x1SsCodeManualEdit || !!state.x1SsCodeManualEdit ||
+        (codeEl.getAttribute && codeEl.getAttribute('data-manual') === '1');
+      const markedAuto = !!(codeEl.getAttribute && codeEl.getAttribute('data-auto') === '1');
+      const autoValue = String(state.x1SsCodeAutoValue || '');
+      if (!markedManual && (markedAuto || (autoValue && enteredCode === autoValue))) enteredCode = '';
+    }
     const sulfurValue = String((document.getElementById('x1-say-sinh-sulfur-qty') || {}).value || '').trim();
     const sulfurQty = sulfurValue === '' ? null : Number(sulfurValue);
     if ((!state.x1SaySinhEditId && (!Number.isFinite(sulfurQty) || sulfurQty <= 0)) ||
@@ -16548,6 +16634,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function resetX1SaySinhForm() {
     const f = document.getElementById('x1-say-sinh-form');
     const selected = x1SaySinhSelectedSourceIds();
+    x1SsResetManualTracking();
     x1ResetKeepingSelect(f, 'x1-say-sinh-source');
     state.x1SaySinhEditId = null;
     const allocations = document.getElementById('x1-say-sinh-allocations');
@@ -16702,19 +16789,47 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function x1SsUpdateSulfurHint() {
     const qtyEl = document.getElementById('x1-say-sinh-qty');
     const hintEl = document.getElementById('x1-say-sinh-sulfur-hint-text');
+    const sulfurEl = document.getElementById('x1-say-sinh-sulfur-qty');
     if (!qtyEl || !hintEl) return;
     const repeatSel = document.getElementById('x1-say-sinh-repeat-lot');
     const repeatId = repeatSel ? String(repeatSel.value || '') : '';
     const lot = repeatId ? (state.xuong1SaySinhRecords || []).find(r => r.id === repeatId) : null;
     const cycles = lot ? x1SsCyclesOf(lot).length : 0;
     const qty = Number(qtyEl.value) || 0;
+    if (!repeatId && state.x1SaySinhEditId) return;
     if (qty <= 0) {
       hintEl.textContent = 'Nhập khối lượng để xem gợi ý lưu huỳnh — lần 1-2: 1,3 kg/tấn · lần 3-4: 0,8 kg/tấn';
+      if (sulfurEl && !repeatId) {
+        const manual = x1SsSulfurManualEdit || !!state.x1SsSulfurManualEdit ||
+          (sulfurEl.getAttribute && sulfurEl.getAttribute('data-manual') === '1');
+        const markedAuto = !!(sulfurEl.getAttribute && sulfurEl.getAttribute('data-auto') === '1');
+        const autoValue = String(state.x1SsSulfurAutoValue || '');
+        if (!manual && (markedAuto || (autoValue && String(sulfurEl.value || '') === autoValue))) {
+          sulfurEl.value = '';
+          sulfurEl.removeAttribute('data-auto');
+          state.x1SsSulfurAutoValue = '';
+        }
+      }
       return;
     }
-    const hint = x1SsSulfurHint(qty, cycles + 1);
-    hintEl.textContent = `${hint.note} → gợi ý ${fmtKg(hint.suggested)} kg`;
+    const hint = repeatId ? x1SsSulfurHint(qty, cycles + 1) : x1SsSulfurHint(qty, 1);
+    hintEl.textContent = hint.note + ' → gợi ý ' + fmtKg(hint.suggested) + ' kg';
+    if (!repeatId && sulfurEl) {
+      const manual = x1SsSulfurManualEdit || !!state.x1SsSulfurManualEdit ||
+        (sulfurEl.getAttribute && sulfurEl.getAttribute('data-manual') === '1');
+      const markedAuto = !!(sulfurEl.getAttribute && sulfurEl.getAttribute('data-auto') === '1');
+      const autoValue = String(state.x1SsSulfurAutoValue || '');
+      const stillAutoGenerated = markedAuto || (!!autoValue && String(sulfurEl.value || '') === autoValue) || !String(sulfurEl.value || '');
+      if (!manual && stillAutoGenerated) {
+        sulfurEl.value = String(hint.suggested);
+        sulfurEl.setAttribute('data-auto', '1');
+        sulfurEl.removeAttribute('data-manual');
+        sulfurEl.title = hint.note + ' · gợi ý: ' + fmtKg(hint.suggested) + ' kg';
+        state.x1SsSulfurAutoValue = String(hint.suggested);
+      }
+    }
   }
+
   // ── CHẾ ĐỘ THẺ LÔ: mỗi lô 1 thẻ trực quan ────────────────────
   function renderX1SsLotCards() {
     const box = document.getElementById('x1-say-sinh-day-cards');
@@ -16958,6 +17073,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const ov = document.getElementById('modal-x1-ss-input');
     if (!ov) return;
     if (mode !== 'edit') resetX1SaySinhForm(); // form sạch trước khi mở (riêng 'edit' giữ dữ liệu prefill)
+    if (mode !== 'edit') x1SsResetManualTracking();
     const title = document.getElementById('x1-ss-input-title');
     if (title) title.textContent = X1_SS_TITLES[mode] || X1_SS_TITLES.new;
     x1SsSetGroupHidden(document.getElementById('x1-ss-src-group'), mode === 'repeat');
@@ -17403,6 +17519,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (cardId === 'x1-say-sinh-card') { renderX1SaySinhCard(); return true; }
     if (cardId === 'x1-boc-card') { renderX1BocCard(); return true; }
     if (cardId === 'x1-kho-card') { renderX1KhoCard(); return true; }
+    if (cardId === 'x1-nan-plan-card') { renderX1NanPlanCard(); return true; }
     const spec = x1ChainSpec(cardId);
     if (spec) { renderX1ChainCard(spec); return true; }
     return false;
@@ -17555,7 +17672,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           .some(a => a.sourceId === s.id))
       )));
     const base = (spec.srcRecords() || []).filter(s =>
-      (spec.srcVisible ? spec.srcVisible(s) : true) && x1ChainRemainingOf(spec, s, editId) > 0 || linked(s));
+      (spec.srcVisible ? spec.srcVisible(s) : true) &&
+      (x1ChainRemainingOf(spec, s, editId) > 0 || linked(s) ||
+        (spec.key === 'locThanh' && x1LocThanhLotDoneOf(s))))
     const alt = spec.altSrcRecords
       ? (spec.altSrcRecords() || []).filter(s =>
           (spec.altSrcVisible ? spec.altSrcVisible(s) : true) && x1ChainRemainingOf(spec, s, editId) > 0 || linked(s))
@@ -17598,13 +17717,13 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         srcType: String(a && a.srcType || ''),
         supplier: String(a && a.supplier || ''),
         widths: Array.isArray(a && a.widths) ? a.widths.map(x1BoWidthValue).filter(n => n != null) : [],
-        qtyIn: Math.max(0, Number(a && a.qtyIn) || 0),
+        qtyIn: parseX1MatrixValue(a && a.qtyIn),
         qtyDryAvailable: a && a.qtyDryAvailable != null && a.qtyDryAvailable !== '' &&
-          Number.isFinite(Number(a.qtyDryAvailable))
-          ? Math.max(0, Number(a.qtyDryAvailable)) : null,
+          parseX1MatrixValue(a.qtyDryAvailable) >= 0
+          ? parseX1MatrixValue(a.qtyDryAvailable) : null,
         dryAdjustment: a && a.dryAdjustment != null && a.dryAdjustment !== '' &&
-          Number.isFinite(Number(a.dryAdjustment))
-          ? Number(a.dryAdjustment) : null,
+          parseArithmeticExpression(a.dryAdjustment) != null
+          ? parseArithmeticExpression(a.dryAdjustment) : null,
         dryAdjustmentReason: String(a && a.dryAdjustmentReason || ''),
         legacy: !!(a && a.legacy),
         sourceKind: a && a.sourceKind ? String(a.sourceKind) : 'bo'
@@ -17673,6 +17792,14 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   function x1LocThanhSourceRemainingOf(src, excludeId) {
     if ((state.xuong1BoRecords || []).some(r => r.id === src.id)) {
+      if (x1LocThanhLotDoneOf(src)) {
+        const editRecord = excludeId
+          ? (state.xuong1LocThanhRecords || []).find(r => r.id === excludeId)
+          : null;
+        const linkedToEdit = editRecord && x1LocThanhAllocationsOfRecord(editRecord)
+          .some(a => a.sourceId === src.id);
+        if (!linkedToEdit) return 0;
+      }
       return x1LocThanhPotentialOfBo(src, excludeId);
     }
     return Math.max(0, (Number(src.qtyOk) || 0) -
@@ -17853,7 +17980,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     'x1-bo-card',
     'x1-phoi-say-card',
     'x1-loc-thanh-card',
-    'x1-kho-card'
+    'x1-kho-card',
+    'x1-nan-plan-card'
   ];
   function x1NavigateStage(cardId, direction) {
     const dir = Number(direction) < 0 ? -1 : 1;
@@ -17864,9 +17992,2094 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     return x2OpenCard(X1_STAGE_CHAIN[nextIdx]);
   }
 
+  // ─── KẾ HOẠCH XUẤT NAN XƯỞNG 1 (52/53 TUẦN THEO NĂM ISO) ──
+  // Dữ liệu KHÔNG tạo mẫu mặc định. Mỗi dòng = đúng 1 tổ hợp
+  // năm · tên sản phẩm · nguyên liệu · bản rộng · chiều dài · phân loại
+  // + số kg từng tuần.
+  let x1NanPlanEditId = null;
+  let x1NanPlanEditIds = [];
+  let x1NanPlanSaving = false;
+
+  function x1NanPlanPositiveNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+  function x1NanPlanWidthOf(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 10) / 10 : 0;
+  }
+  function x1NanPlanLengthOf(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+  }
+  function x1NanPlanMaterialOf(value) {
+    const m = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (m.includes('vau') && m.includes('nua')) return 'Vầu / Nứa';
+    if (m.includes('nua')) return 'Nứa';
+    if (m.includes('vau')) return 'Vầu';
+    return '';
+  }
+  function x1NanNormalizeRomanNo(value) {
+    // Trường TT La Mã chỉ còn đọc để tương thích dữ liệu cũ; UI và dữ liệu mới không dùng.
+    return '';
+  }
+  function x1NanPlanClassificationOf(value) {
+    const raw = String(value == null ? '' : value).trim();
+    const m = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      .replace(/[\s._-]+/g, ' ').trim();
+    if (!m) return '';
+    if (m === 'a' || m === 'a 0') return 'A';
+    if (m === 'a1' || m === 'a 1') return 'A1';
+    if (m === 'nonbt' || m === 'non banh te' || m === 'banh te' ||
+        m.includes('non bánh') || m.includes('non banh')) return 'Non bánh tẻ';
+    if (m === 'b' || m === 'bnont' || m === 'b non tont' ||
+        m === 'b non top' || m === 'b non tóp') return 'B';
+    if (m === 'loai' || m.includes('loại') || m.includes('loai')) return 'Loại';
+    if (m === 'bau' || m.includes('cat dau') || m.includes('cắt đầu')) return 'Cắt đầu';
+    return '';
+  }
+  function x1NanNormalizePlanRecord(record) {
+    if (!record || typeof record !== 'object') return null;
+    const id = String(record.id || '').trim();
+    const year = Math.round(Number(record.year) || 0);
+    const material = x1NanPlanMaterialOf(record.material);
+    const width = x1NanPlanWidthOf(record.width);
+    const len = x1NanPlanLengthOf(record.length != null ? record.length : record.len);
+    const romanNo = ''; // legacy TT La Mã is ignored
+    const productName = String(record.productName != null ? record.productName :
+      (record.tenSanPham != null ? record.tenSanPham : '')).trim();
+    const classification = x1NanPlanClassificationOf(
+      record.classification != null ? record.classification :
+      (record.phanLoai != null ? record.phanLoai : (record.kind != null ? record.kind : '')));
+    const priority = false; // Legacy global priority is not used; only priorityWeeks is ranked.
+    if (!id || year < 2000 || year > 2100 || !material || width <= 0 || len <= 0) return null;
+    const weeks = {};
+    if (record.weeks && typeof record.weeks === 'object' && !Array.isArray(record.weeks)) {
+      Object.keys(record.weeks).forEach(key => {
+        const w = Math.round(Number(key));
+        const qty = x1NanPlanPositiveNumber(record.weeks[key]);
+        if (w >= 1 && w <= x1NanWeeksInYear(year) && qty > 0) weeks[String(w)] = qty;
+      });
+    }
+    const priorityWeeks = {};
+    if (record.priorityWeeks && typeof record.priorityWeeks === 'object' && !Array.isArray(record.priorityWeeks)) {
+      Object.keys(record.priorityWeeks).forEach(key => {
+        const normalized = x1NanPlanPriorityWeekKey(year, key);
+        if (!normalized) return;
+        const raw = record.priorityWeeks[key];
+        if (raw === true || raw === 1 || raw === '1') priorityWeeks[normalized] = true;
+        else if (raw === false || raw === 0 || raw === '0') priorityWeeks[normalized] = false;
+      });
+    }
+    return {
+      id,
+      year,
+      romanNo,
+      productName,
+      material,
+      width,
+      len,
+      length: len,
+      classification,
+      weeks,
+      priorityWeeks,
+      priority,
+      createdAt: record.createdAt || '',
+      updatedAt: record.updatedAt || record.createdAt || ''
+    };
+  }
+  function x1NanPlanPriorityWeekKey(year, value) {
+    const y = Math.round(Number(year) || 0);
+    if (y < 2000 || y > 2100) return '';
+    const text = String(value == null ? '' : value).trim();
+    let w = 0;
+    const match = /^(\d{4})-W(\d{1,2})$/i.exec(text);
+    if (match) {
+      if (Number(match[1]) !== y) return '';
+      w = Math.round(Number(match[2]) || 0);
+    } else {
+      w = Math.round(Number(text) || 0);
+    }
+    return w >= 1 && w <= x1NanWeeksInYear(y) ? x1NanWeekKey(y, w) : '';
+  }
+  function x1NanPlanWeekPriorityOf(plan, weekKey) {
+    if (!plan || !plan.priorityWeeks || typeof plan.priorityWeeks !== 'object' ||
+      Array.isArray(plan.priorityWeeks)) return false;
+    const key = x1NanPlanPriorityWeekKey(plan.year, weekKey);
+    if (!key || !Object.prototype.hasOwnProperty.call(plan.priorityWeeks, key)) return false;
+    const value = plan.priorityWeeks[key];
+    return value === true || value === 1 || value === '1';
+  }
+  function x1NanIsoWeekParts(dateISO) {
+    const s = String(dateISO || '').slice(0, 10);
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return { year: 0, week: 0 };
+    const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+    const dt = new Date(Date.UTC(y, mo, d));
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo || dt.getUTCDate() !== d) {
+      return { year: 0, week: 0 };
+    }
+    dt.setUTCDate(dt.getUTCDate() + 4 - (dt.getUTCDay() || 7));
+    const isoYear = dt.getUTCFullYear();
+    const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+    const week = Math.ceil((((dt - yearStart) / 86400000) + 1) / 7);
+    return { year: isoYear, week: week > 0 && week <= 53 ? week : 0 };
+  }
+  function x1NanWeeksInYear(year) {
+    const y = Math.round(Number(year) || 0);
+    if (y < 2000 || y > 2100) return 52;
+    const dec28 = x1NanIsoWeekParts(`${y}-12-28`);
+    return dec28.year === y && dec28.week === 53 ? 53 : 52;
+  }
+  function x1NanWeekKey(year, week) {
+    const y = Math.round(Number(year) || 0);
+    const w = Math.round(Number(week) || 0);
+    return y > 0 && w >= 1 && w <= x1NanWeeksInYear(y)
+      ? `${y}-W${String(w).padStart(2, '0')}` : '';
+  }
+  function x1NanIsoWeekMonday(year, week) {
+    const y = Math.round(Number(year) || 0);
+    const w = Math.round(Number(week) || 0);
+    if (y < 2000 || y > 2100 || w < 1 || w > x1NanWeeksInYear(y)) return '';
+    const jan4 = new Date(Date.UTC(y, 0, 4));
+    const dow = jan4.getUTCDay() || 7;
+    jan4.setUTCDate(jan4.getUTCDate() - dow + 1 + (w - 1) * 7);
+    return jan4.toISOString().slice(0, 10);
+  }
+  function x1NanIsoWeekSunday(year, week) {
+    const monday = x1NanIsoWeekMonday(year, week);
+    if (!monday) return '';
+    const end = new Date(`${monday}T00:00:00Z`);
+    end.setUTCDate(end.getUTCDate() + 6);
+    return end.toISOString().slice(0, 10);
+  }
+  function x1NanIsoWeekRangeLabel(year, week) {
+    const monday = x1NanIsoWeekMonday(year, week);
+    const sunday = x1NanIsoWeekSunday(year, week);
+    if (!monday || !sunday) return '';
+    const fmt = iso => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+    };
+    return `${fmt(monday)} – ${fmt(sunday)}`;
+  }
+  function x1NanMonthKeyValid(monthKey) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ''));
+    if (!m) return false;
+    const y = Number(m[1]), mo = Number(m[2]);
+    return y >= 2000 && y <= 2100 && mo >= 1 && mo <= 12;
+  }
+  function x1NanMonthShift(monthKey, direction) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ''));
+    if (!m) return '';
+    const step = Number(direction) || 0;
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1 + step, 1));
+    const y = d.getUTCFullYear();
+    if (y < 2000 || y > 2100) return String(monthKey || '');
+    return `${y}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  }
+  function x1NanMonthRangeLabel(monthKey) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ''));
+    if (!m) return '';
+    const y = Number(m[1]), mo = Number(m[2]);
+    const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    return `01/${String(mo).padStart(2, '0')} – ${String(last).padStart(2, '0')}/${String(mo).padStart(2, '0')}/${y}`;
+  }
+  // Tuần thuộc THÁNG theo NGÀY THỨ HAI của tuần ISO.
+  // Đây là quy tắc duy nhất dùng ở bảng/thống kê tháng để tránh cộng trùng tuần vắt tháng.
+  function x1NanMonthMondayWeeks(monthKey) {
+    if (!x1NanMonthKeyValid(monthKey)) return [];
+    const m = /^(\d{4})-(\d{2})$/.exec(String(monthKey));
+    const y = Number(m[1]), mo = Number(m[2]);
+    const first = new Date(Date.UTC(y, mo - 1, 1));
+    const last = new Date(Date.UTC(y, mo, 0));
+    const result = [];
+    for (let d = new Date(first); d <= last; d.setUTCDate(d.getUTCDate() + 1)) {
+      if (d.getUTCDay() !== 1) continue;
+      const iso = x1NanIsoWeekParts(d.toISOString().slice(0, 10));
+      if (iso.year >= 2000 && iso.year <= 2100 && iso.week > 0) {
+        result.push({
+          year: iso.year,
+          week: iso.week,
+          monday: d.toISOString().slice(0, 10),
+          sunday: (() => {
+            const sun = new Date(d);
+            sun.setUTCDate(sun.getUTCDate() + 6);
+            return sun.toISOString().slice(0, 10);
+          })()
+        });
+      }
+    }
+    return result;
+  }
+  function x1NanPlanViewModeOf() {
+    return state.x1NanPlanViewMode === 'month' || state.x1NanPlanViewMode === 'year'
+      ? state.x1NanPlanViewMode
+      : 'week';
+  }
+  function x1NanCurrentIsoWeekKey() {
+    const now = new Date();
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const p = x1NanIsoWeekParts(iso);
+    return p.year && p.week ? x1NanWeekKey(p.year, p.week) : '';
+  }
+  function x1NanPlanPeriodValid(mode, period) {
+    if (mode === 'month') return x1NanMonthKeyValid(period);
+    if (mode === 'year') {
+      const y = Math.round(Number(period) || 0);
+      return y >= 2000 && y <= 2100;
+    }
+    const m = /^(\d{4})-W(\d{1,2})$/.exec(String(period || ''));
+    if (!m) return false;
+    const y = Number(m[1]), w = Number(m[2]);
+    return y >= 2000 && y <= 2100 && w >= 1 && w <= x1NanWeeksInYear(y);
+  }
+  function x1NanPlanPeriodLabel(period, mode) {
+    const m = mode || x1NanPlanViewModeOf();
+    if (m === 'year') {
+      const y = Math.round(Number(period) || 0);
+      return y >= 2000 ? `Năm ${y}` : 'Năm';
+    }
+    if (m === 'month') {
+      const n = /^(\d{4})-(\d{2})$/.exec(String(period || ''));
+      if (!n) return 'Tháng';
+      return `Tháng ${Number(n[2])}/${n[1]} · Theo tuần ISO (thứ Năm)`;
+    }
+    const w = /^(\d{4})-W(\d{1,2})$/.exec(String(period || ''));
+    if (!w) return 'Tuần';
+    const y = Number(w[1]), week = Number(w[2]);
+    const range = x1NanIsoWeekRangeLabel(y, week);
+    return `Tuần ${week}/${y}${range ? ` · ${range}` : ''}`;
+  }
+  function x1NanPlanEnsurePeriod(year) {
+    const y = Math.round(Number(year) || 0);
+    const mode = x1NanPlanViewModeOf();
+    const currentWeek = x1NanCurrentIsoWeekKey();
+    const currentYear = currentWeek ? Number(String(currentWeek).slice(0, 4)) : new Date().getFullYear();
+    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    let period = String(state.x1NanPlanPeriod || '');
+    if (mode === 'week') {
+      const wm = /^(\d{4})-W(\d{1,2})$/.exec(period);
+      if (!wm || Number(wm[1]) !== y || !x1NanPlanPeriodValid('week', period)) {
+        if (y === currentYear && x1NanPlanPeriodValid('week', currentWeek)) period = currentWeek;
+        else period = x1NanWeekKey(y, 1);
+      }
+    } else if (mode === 'month') {
+      if (!x1NanPlanPeriodValid('month', period) || Number(period.slice(0, 4)) !== y) {
+        if (y === currentYear && x1NanPlanPeriodValid('month', currentMonth)) period = currentMonth;
+        else period = `${y}-01`;
+      }
+    } else {
+      period = String(y);
+    }
+    state.x1NanPlanPeriod = period;
+    return period;
+  }
+  function x1NanPlanSetPeriod(period) {
+    const mode = x1NanPlanViewModeOf();
+    if (!x1NanPlanPeriodValid(mode, period)) return false;
+    state.x1NanPlanPeriod = String(period);
+    const y = mode === 'week'
+      ? Number(String(period).slice(0, 4))
+      : (mode === 'month' ? Number(String(period).slice(0, 4)) : Number(period));
+    if (y >= 2000 && y <= 2100) state.x1NanPlanYear = String(y);
+    renderX1NanPlanCard();
+    return true;
+  }
+  function x1NanPlanSetViewMode(mode) {
+    if (mode !== 'week' && mode !== 'month' && mode !== 'year') return false;
+    state.x1NanPlanViewMode = mode;
+    const year = x1NanPlanSelectedYear();
+    if (mode === 'week') {
+      const old = String(state.x1NanPlanPeriod || '');
+      if (/^\d{4}-W\d{1,2}$/.test(old) && x1NanPlanPeriodValid('week', old)) {
+        const m = /^(\d{4})-W(\d{1,2})$/.exec(old);
+        state.x1NanPlanPeriod = Number(m[1]) === year
+          ? old
+          : x1NanWeekKey(year, 1);
+      } else {
+        const current = x1NanCurrentIsoWeekKey();
+        state.x1NanPlanPeriod = current && Number(current.slice(0, 4)) === year
+          ? current
+          : x1NanWeekKey(year, 1);
+      }
+    } else if (mode === 'month') {
+      const old = String(state.x1NanPlanPeriod || '');
+      const current = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      if (x1NanMonthKeyValid(old) && Number(old.slice(0, 4)) === year) {
+        // giữ đúng tháng nếu đang chuyển từ mode tháng sang lại
+      } else if (/^\d{4}-W\d{1,2}$/.test(old)) {
+        const wm = /^(\d{4})-W(\d{1,2})$/.exec(old);
+        if (Number(wm[1]) === year) {
+          const weekMonday = x1NanIsoWeekMonday(Number(wm[1]), Number(wm[2]));
+          state.x1NanPlanPeriod = weekMonday ? weekMonday.slice(0, 7) : `${year}-01`;
+        } else {
+          state.x1NanPlanPeriod = current.slice(0, 4) === String(year) ? current : `${year}-01`;
+        }
+      } else {
+        state.x1NanPlanPeriod = current.slice(0, 4) === String(year) ? current : `${year}-01`;
+      }
+    } else {
+      state.x1NanPlanPeriod = String(year);
+    }
+    state.x1NanPlanYear = String(year);
+    renderX1NanPlanCard();
+    return true;
+  }
+  function x1NanPlanShiftPeriod(direction) {
+    const step = Number(direction) >= 0 ? 1 : -1;
+    const mode = x1NanPlanViewModeOf();
+    const period = String(state.x1NanPlanPeriod || '');
+    if (mode === 'week') {
+      const m = /^(\d{4})-W(\d{1,2})$/.exec(period);
+      if (!m) return false;
+      const monday = x1NanIsoWeekMonday(Number(m[1]), Number(m[2]));
+      if (!monday) return false;
+      const d = new Date(`${monday}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + step * 7);
+      const p = x1NanIsoWeekParts(d.toISOString().slice(0, 10));
+      if (p.year < 2000 || p.year > 2100) return false;
+      state.x1NanPlanPeriod = x1NanWeekKey(p.year, p.week);
+    } else if (mode === 'month') {
+      const shifted = x1NanMonthShift(period, step);
+      if (!shifted || shifted === period) return false;
+      state.x1NanPlanPeriod = shifted;
+    } else {
+      const y = Math.round(Number(period) || Number(state.x1NanPlanYear) || 0) + step;
+      if (y < 2000 || y > 2100) return false;
+      state.x1NanPlanPeriod = String(y);
+    }
+    const periodY = mode === 'week'
+      ? Number(String(state.x1NanPlanPeriod).slice(0, 4))
+      : (mode === 'month' ? Number(String(state.x1NanPlanPeriod).slice(0, 4)) : Number(state.x1NanPlanPeriod));
+    if (periodY >= 2000 && periodY <= 2100) state.x1NanPlanYear = String(periodY);
+    renderX1NanPlanCard();
+    return true;
+  }
+  function x1NanAvailableYears() {
+    const now = new Date();
+    const set = new Set([now.getFullYear()]);
+    (state.x1NanPlans || []).forEach(plan => {
+      const y = Math.round(Number(plan && plan.year) || 0);
+      if (y >= 2000 && y <= 2100) set.add(y);
+    });
+    (state.xuong1LocThanhRecords || []).forEach(record => {
+      const p = x1NanIsoWeekParts(record && record.date);
+      if (p.year >= 2000 && p.year <= 2100) set.add(p.year);
+    });
+    return [...set].sort((a, b) => b - a);
+  }
+  function loadX1NanPlans() {
+    state.x1NanPlans = [];
+    const raw = localStorage.getItem(STORAGE_KEY_X1_NAN_PLAN);
+    if (!raw) return [];
+    try {
+      const arr = JSON.parse(raw);
+      state.x1NanPlans = Array.isArray(arr)
+        ? arr.map(x1NanNormalizePlanRecord).filter(Boolean)
+        : [];
+    } catch (e) {
+      state.x1NanPlans = [];
+    }
+    return state.x1NanPlans;
+  }
+  function saveX1NanPlans() {
+    try {
+      localStorage.setItem(STORAGE_KEY_X1_NAN_PLAN, JSON.stringify(state.x1NanPlans || []));
+    } catch (e) {
+      showToast('Không lưu được kế hoạch xuất nan (bộ nhớ đầy hoặc bị chặn).', 'error');
+      return false;
+    }
+    logDataChange(['x1NanPlans']);
+    if (state.fileStorage.connected) storageModule().then(m => m && m.writeDataToFile()).catch(() => {});
+    firePushSync();
+    return true;
+  }
+  function x1NanPlanId() {
+    return `x1-nan-plan-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  }
+  function x1NanPlanSelectedYear() {
+    const el = document.getElementById('x1-nan-plan-year');
+    const selected = el ? Math.round(Number(el.value) || 0) : Math.round(Number(state.x1NanPlanYear) || 0);
+    if (selected >= 2000 && selected <= 2100) return selected;
+    const stateYear = Math.round(Number(state.x1NanPlanYear) || 0);
+    if (stateYear >= 2000 && stateYear <= 2100) return stateYear;
+    const available = x1NanAvailableYears();
+    return available[0] || new Date().getFullYear();
+  }
+  function x1NanPlanSourceMaterials(record) {
+    const groups = new Map();
+    const add = (srcType, qty) => {
+      const weight = x1NanPlanPositiveNumber(qty);
+      if (weight <= 0) return;
+      const raw = String(srcType || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (raw.includes('vau') && raw.includes('nua')) {
+        const share = weight / 2;
+        groups.set('Vầu', (groups.get('Vầu') || 0) + share);
+        groups.set('Nứa', (groups.get('Nứa') || 0) + share);
+        return;
+      }
+      const material = x1NanPlanMaterialOf(srcType);
+      if (!material) return;
+      groups.set(material, (groups.get(material) || 0) + weight);
+    };
+    if (record && Array.isArray(record.lotAllocations)) {
+      record.lotAllocations.forEach(a => add(a && a.srcType, a && a.qtyIn));
+    }
+    if (!groups.size) {
+      const summary = record ? x1LocThanhSourceSummaryOf(record) : null;
+      if (summary && Array.isArray(summary.sourceLots)) {
+        summary.sourceLots.forEach(lot => add(lot && (lot.srcType || lot.material), lot && lot.qtyIn));
+      }
+    }
+    if (!groups.size) {
+      add(record && (record.srcType || record.material), record && record.qtyIn);
+    }
+    if (!groups.size) {
+      const direct = x1NanPlanMaterialOf(record && (record.srcType || record.material));
+      if (direct) groups.set(direct, x1NanPlanPositiveNumber(record && record.qtyIn) || 1);
+    }
+    return [...groups.entries()].map(([material, weight]) => ({ material, weight }));
+  }
+  function x1NanPlanRecordSizeRows(record) {
+    const rows = [];
+    const mode = record && record.mode === 'bo-xo' ? 'bo-xo' : 'loc-thanh';
+    if (record && Array.isArray(record.matrixRows) && record.matrixRows.length) {
+      record.matrixRows.forEach(row => {
+        if (!row) return;
+        const width = x1NanPlanWidthOf(row.width);
+        const len = x1NanPlanLengthOf(row.len);
+        if (width <= 0 || len <= 0) return;
+        if (row.weights && typeof row.weights === 'object') {
+          if (mode === 'bo-xo') {
+            const qty = x1NanPlanPositiveNumber(row.weights.bo);
+            if (qty > 0) rows.push({ width, len, classification: '', qty, legacyOnly: false });
+          } else {
+            const values = x1LtNormClassValues(row.weights);
+            X1_LT_CLASSES.filter(c => c.id !== 'loai').forEach(c => {
+              const qty = x1NanPlanPositiveNumber(values[c.id]);
+              if (qty > 0) rows.push({
+                width,
+                len,
+                classification: c.label,
+                qty
+              });
+            });
+          }
+        } else if (row.counts && typeof row.counts === 'object') {
+          const values = x1LtNormClassValues(row.counts);
+          X1_LT_CLASSES.filter(c => c.id !== 'loai').forEach(c => {
+            const qty = x1NanPlanPositiveNumber(values[c.id]);
+            if (qty > 0) rows.push({
+              width,
+              len,
+              classification: c.label,
+              qty
+            });
+          });
+        }
+      });
+    }
+    if (!rows.length && record && Array.isArray(record.lengthRows) && record.lengthRows.length) {
+      record.lengthRows.forEach(row => {
+        const len = x1NanPlanLengthOf(row && row.len);
+        const qty = x1NanPlanPositiveNumber(row && row.kg);
+        // Không suy đoán bản rộng/phân loại khi dữ liệu cũ chỉ còn chiều dài.
+        if (len > 0 && qty > 0) rows.push({ width: 0, len, classification: '', qty, legacyOnly: true });
+      });
+    }
+    if (!rows.length) {
+      const width = x1NanPlanWidthOf(record && (record.width || record.banRong));
+      const len = x1NanPlanLengthOf(record && (record.length != null ? record.length : (record.len || record.chieuDai)));
+      const qty = x1NanPlanPositiveNumber(record && record.qtyOk);
+      const classification = x1NanPlanClassificationOf(record && (
+        record.classification != null ? record.classification :
+        (record.phanLoai != null ? record.phanLoai : record.kind)));
+      if (width > 0 && len > 0 && qty > 0) rows.push({
+        width,
+        len,
+        classification,
+        qty,
+        legacyOnly: !classification
+      });
+    }
+    return rows;
+  }
+  function x1NanActualKey(year, week, material, width, len, classification) {
+    const w = Math.round(Number(week) || 0);
+    const y = Math.round(Number(year) || 0);
+    const mw = x1NanPlanWidthOf(width);
+    const ml = x1NanPlanLengthOf(len);
+    const mat = x1NanPlanMaterialOf(material);
+    if (!y || w < 1 || w > x1NanWeeksInYear(y) || !mat || mw <= 0 || ml <= 0) return '';
+    if (arguments.length >= 6 && classification != null && String(classification).trim()) {
+      const cls = x1NanPlanClassificationOf(classification);
+      if (!cls || cls === 'Loại') return '';
+      return `${y}|${w}|${mat}|${mw}|${ml}|${cls}`;
+    }
+    return `${y}|${w}|${mat}|${mw}|${ml}`;
+  }
+  function x1NanActualMap(year, records) {
+    const y = Math.round(Number(year) || 0);
+    const map = {};
+    const list = Array.isArray(records) ? records : (state.xuong1LocThanhRecords || []);
+    list.forEach(record => {
+      if (!record) return;
+      const p = x1NanIsoWeekParts(record.date);
+      if (p.year !== y || p.week < 1 || p.week > x1NanWeeksInYear(y)) return;
+      const sources = x1NanPlanSourceMaterials(record);
+      if (!sources.length) return;
+      const sourceTotal = sources.reduce((sum, s) => sum + s.weight, 0);
+      x1NanPlanRecordSizeRows(record).forEach(sizeRow => {
+        sources.forEach(source => {
+          const proportion = sourceTotal > 0 ? source.weight / sourceTotal : (1 / sources.length);
+          const qty = sizeRow.qty * proportion;
+          if (!(qty > 0)) return;
+          if (sizeRow.width <= 0 || sizeRow.len <= 0) return;
+          const cls = x1NanPlanClassificationOf(sizeRow.classification);
+          if (cls && cls !== 'Loại') {
+            const exactKey = x1NanActualKey(
+              y, p.week, source.material, sizeRow.width, sizeRow.len, cls);
+            if (exactKey) map[exactKey] = (Number(map[exactKey]) || 0) + qty;
+          }
+          // Chỉ giữ khóa 5 cũ để tương thích dữ liệu kế hoạch/lịch sử cũ.
+          // Bảng mới luôn tra khóa 6 exact; khóa cũ không được dùng thay cho
+          // phân loại khác hoặc cộng gộp sai.
+          if (!sizeRow.legacyOnly) {
+            const oldKey = x1NanActualKey(y, p.week, source.material, sizeRow.width, sizeRow.len);
+            if (oldKey) map[oldKey] = (Number(map[oldKey]) || 0) + qty;
+          }
+        });
+      });
+    });
+    return map;
+  }
+  function x1NanActualQtyOf(records, year, week, material, width, len, classification) {
+    const y = Math.round(Number(year) || 0);
+    const w = Math.round(Number(week) || 0);
+    const key = arguments.length >= 7 && classification
+      ? x1NanActualKey(y, w, material, width, len, classification)
+      : x1NanActualKey(y, w, material, width, len);
+    if (!key) return 0;
+    const map = x1NanActualMap(y, records);
+    return Number(map[key]) || 0;
+  }
+  function x1NanResponseRatio(plan, actual) {
+    const p = x1NanPlanPositiveNumber(plan);
+    const a = x1NanPlanPositiveNumber(actual);
+    return p > 0 ? (a / p) * 100 : null;
+  }
+  function x1NanContinuousLevel(streak) {
+    const n = Math.round(Number(streak) || 0);
+    if (n >= 8) return 8;
+    if (n >= 4) return 4;
+    if (n >= 2) return 2;
+    if (n >= 1) return 1;
+    return 0;
+  }
+  function x1NanContinuousStreakAt(plans, actuals, index, year) {
+    const p = Array.isArray(plans) ? plans : [];
+    const a = Array.isArray(actuals) ? actuals : [];
+    const y = Math.round(Number(year) || 0);
+    const weekCount = y >= 2000 && y <= 2100
+      ? x1NanWeeksInYear(y)
+      : Math.max(p.length, a.length, 1);
+    let streak = 0;
+    for (let i = 0; i <= index && i < weekCount; i++) {
+      const plan = x1NanPlanPositiveNumber(p[i]);
+      const actual = x1NanPlanPositiveNumber(a[i]);
+      if (plan > 0 && actual >= plan) streak++;
+      else streak = 0;
+    }
+    return streak;
+  }
+  function x1NanContinuousLevelAt(plans, actuals, index, year) {
+    return x1NanContinuousLevel(x1NanContinuousStreakAt(plans, actuals, index, year));
+  }
+  function x1NanContinuousMaxLevel(plans, actuals, year) {
+    const p = Array.isArray(plans) ? plans : [];
+    const a = Array.isArray(actuals) ? actuals : [];
+    const y = Math.round(Number(year) || 0);
+    const weekCount = y >= 2000 && y <= 2100
+      ? x1NanWeeksInYear(y)
+      : Math.max(p.length, a.length, 1);
+    let max = 0;
+    for (let i = 0; i < weekCount; i++) {
+      max = Math.max(max, x1NanContinuousLevelAt(plans, actuals, i, y));
+    }
+    return max;
+  }
+  function x1NanStockQtyOf(material, width, length, classification, summaryArg) {
+    let mat = material, mw = width, ml = length, cls = classification, summary = summaryArg;
+    if (material && typeof material === 'object' && !Array.isArray(material)) {
+      const plan = material;
+      mat = plan.material;
+      mw = plan.width != null ? plan.width : plan.len;
+      ml = plan.length != null ? plan.length : plan.len;
+      cls = plan.classifications && Array.isArray(plan.classifications)
+        ? plan.classifications
+        : plan.classification;
+      summary = typeof width === 'object' ? width : summaryArg;
+    }
+    if (Array.isArray(cls)) {
+      return x1NanStockQtyForClassifications(mat, mw, ml, cls, summary);
+    }
+    mat = x1NanPlanMaterialOf(mat);
+    mw = x1NanPlanWidthOf(mw);
+    ml = x1NanPlanLengthOf(ml);
+    cls = x1NanPlanClassificationOf(cls);
+    if (!mat || mw <= 0 || ml <= 0 || !cls) return 0;
+    const stock = summary && Array.isArray(summary.groups)
+      ? summary
+      : x1WarehouseStockSummary();
+    let qty = 0;
+    (stock.groups || []).forEach(group => {
+      if (!group || group.unit !== 'kg') return;
+      const gm = typeof x1KhoMatGroupOf === 'function'
+        ? x1KhoMatGroupOf(group.material)
+        : x1NanPlanMaterialOf(group.material);
+      const gw = x1NanPlanWidthOf(group.width);
+      const gl = x1NanPlanLengthOf(group.len);
+      const gc = x1NanPlanClassificationOf(group.kind);
+      const matchesMaterial = mat === 'Vầu / Nứa'
+        ? (gm === 'Vầu / Nứa' || gm === 'Vầu' || gm === 'Nứa')
+        : gm === mat;
+      if (matchesMaterial && gw === mw && gl === ml && gc === cls) {
+        qty += x1NanPlanPositiveNumber(group.qty);
+      }
+    });
+    return qty;
+  }
+  function x1NanCapacitySummaryOf(plan, actuals, stockQty, year, currentWeek) {
+    const planWeeks = Array.isArray(plan)
+      ? plan
+      : x1NanPlanWeekArray(plan);
+    const actualWeeks = Array.isArray(actuals) ? actuals : [];
+    const y = Math.round(Number(year) || (plan && plan.year) || 0);
+    const weekCount = y >= 2000 && y <= 2100 ? x1NanWeeksInYear(y) : planWeeks.length;
+    let week = Math.round(Number(currentWeek) || 0);
+    if (week < 1 || week > weekCount) {
+      const now = new Date();
+      const today = x1NanIsoWeekParts(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
+      if (today.year === y && today.week >= 1) {
+        week = today.week;
+      } else {
+        week = 0;
+        for (let i = weekCount - 1; i >= 0; i--) {
+          if (x1NanPlanPositiveNumber(planWeeks[i]) > 0) { week = i + 1; break; }
+        }
+      }
+    }
+    const planQty = week >= 1 ? x1NanPlanPositiveNumber(planWeeks[week - 1]) : 0;
+    const stock = x1NanPlanPositiveNumber(stockQty);
+    const deficit = Math.max(0, planQty - stock);
+    return {
+      level: x1NanContinuousMaxLevel(planWeeks, actualWeeks, y),
+      week,
+      planQty,
+      stockQty: stock,
+      deficit,
+      covered: planQty > 0 ? stock >= planQty : true
+    };
+  }
+  function x1NanPlanGroupedRecords(plans, mode, period) {
+    const viewMode = mode === 'month' || mode === 'year'
+      ? mode
+      : (mode === 'week' ? 'week' : '');
+    const weekMatch = /^(\d{4})-W(\d{1,2})$/i.exec(String(period || ''));
+    const weekKey = viewMode === 'week' && weekMatch
+      ? x1NanPlanPriorityWeekKey(Number(weekMatch[1]), weekMatch[0])
+      : '';
+    const productMap = new Map();
+    (Array.isArray(plans) ? plans : []).forEach(plan => {
+      if (!plan) return;
+      const productName = String(plan.productName != null ? plan.productName :
+        (plan.tenSanPham != null ? plan.tenSanPham : '')).trim() || 'Chưa đặt tên';
+      const material = x1NanPlanMaterialOf(plan.material);
+      const width = x1NanPlanWidthOf(plan.width);
+      const length = x1NanPlanLengthOf(plan.length != null ? plan.length : plan.len);
+      if (!material || width <= 0 || length <= 0) return;
+      if (!productMap.has(productName)) productMap.set(productName, new Map());
+      const childMap = productMap.get(productName);
+      const key = `${material}|${width}|${length}`;
+      if (!childMap.has(key)) {
+        childMap.set(key, {
+          productName,
+          material,
+          width,
+          length,
+          priority: false,
+          plans: []
+        });
+      }
+      childMap.get(key).plans.push(plan);
+    });
+
+    // Tương thích dữ liệu cũ đã lưu Vầu và Nứa riêng:
+    // gom đúng cùng quy cách thành một dòng thay thế "Vầu / Nứa".
+    productMap.forEach(childMap => {
+      const exactBySize = new Map();
+      [...childMap.values()].forEach(child => {
+        if (child.material !== 'Vầu' && child.material !== 'Nứa') return;
+        const sizeKey = `${child.width}|${child.length}`;
+        if (!exactBySize.has(sizeKey)) exactBySize.set(sizeKey, new Map());
+        exactBySize.get(sizeKey).set(child.material, child);
+      });
+      exactBySize.forEach((byMaterial, sizeKey) => {
+        if (!byMaterial.has('Vầu') || !byMaterial.has('Nứa')) return;
+        const vau = byMaterial.get('Vầu');
+        const nua = byMaterial.get('Nứa');
+        const key = `Vầu / Nứa|${sizeKey}`;
+        let alt = childMap.get(key);
+        if (!alt) {
+          alt = {
+            productName: vau.productName,
+            material: 'Vầu / Nứa',
+            width: vau.width,
+            length: vau.length,
+            priority: false,
+            plans: []
+          };
+          childMap.set(key, alt);
+        }
+        alt.plans.push(...vau.plans, ...nua.plans);
+        childMap.delete(`Vầu|${sizeKey}`);
+        childMap.delete(`Nứa|${sizeKey}`);
+      });
+    });
+
+    return [...productMap.entries()]
+      .map(([productName, childMap]) => {
+        const children = [...childMap.values()].map(child => {
+          const plansOfChild = child.plans || [];
+          const priorityStates = weekKey
+            ? plansOfChild.map(p => p && x1NanPlanWeekPriorityOf(p, weekKey))
+            : [];
+          const priorityCount = priorityStates.filter(Boolean).length;
+          child.priority = weekKey && plansOfChild.length > 0 &&
+            priorityCount === plansOfChild.length;
+          child.indeterminate = weekKey && plansOfChild.length > 0 &&
+            priorityCount > 0 && priorityCount < plansOfChild.length;
+          return child;
+        }).sort((a, b) => {
+          const priorityDiff = weekKey
+            ? Number(b.priority) - Number(a.priority)
+            : 0;
+          return priorityDiff ||
+            a.material.localeCompare(b.material, 'vi') ||
+            a.width - b.width ||
+            a.length - b.length;
+        });
+        const allPlans = children.flatMap(child => child.plans || []);
+        const priorityStates = weekKey
+          ? allPlans.map(p => p && x1NanPlanWeekPriorityOf(p, weekKey))
+          : [];
+        const priorityCount = priorityStates.filter(Boolean).length;
+        return {
+          productName,
+          priority: !!weekKey && allPlans.length > 0 && priorityCount === allPlans.length,
+          indeterminate: !!weekKey && allPlans.length > 0 &&
+            priorityCount > 0 && priorityCount < allPlans.length,
+          children
+        };
+      })
+      .sort((a, b) => {
+        const priorityDiff = weekKey
+          ? Number(b.priority) - Number(a.priority)
+          : 0;
+        return priorityDiff ||
+          a.productName.localeCompare(b.productName, 'vi');
+      });
+  }
+  function x1NanPlanChildWeekPriority(child, weekKey) {
+    const plans = child && Array.isArray(child.plans) ? child.plans : [];
+    if (!plans.length) return { priority: false, indeterminate: false };
+    const states = plans.map(plan => x1NanPlanWeekPriorityOf(plan, weekKey));
+    const priorityCount = states.filter(Boolean).length;
+    return {
+      priority: priorityCount === plans.length,
+      indeterminate: priorityCount > 0 && priorityCount < plans.length
+    };
+  }
+  function x1NanPlanChildClassifications(child) {
+    const set = new Set();
+    (child && Array.isArray(child.plans) ? child.plans : []).forEach(plan => {
+      const classification = x1NanPlanClassificationOf(
+        plan && plan.classification != null ? plan.classification :
+        (plan && plan.phanLoai != null ? plan.phanLoai : (plan && plan.kind)));
+      if (classification) set.add(classification);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'vi'));
+  }
+  function x1NanPlanChildPlanWeeks(child, year) {
+    const y = Math.round(Number(year) || (child && child.plans && child.plans[0]
+      ? child.plans[0].year : 0) || 0);
+    const weekCount = y >= 2000 && y <= 2100 ? x1NanWeeksInYear(y) : 53;
+    const totals = Array.from({ length: weekCount }, () => 0);
+    (child && Array.isArray(child.plans) ? child.plans : []).forEach(plan => {
+      if (plan && Number(plan.year) === y) {
+        for (let w = 1; w <= weekCount; w++) {
+          totals[w - 1] += x1NanPlanPositiveNumber(plan.weeks && plan.weeks[String(w)]);
+        }
+      }
+    });
+    return totals;
+  }
+  function x1NanPlanChildActualWeeks(child, year, actualMapArg) {
+    const y = Math.round(Number(year) || 0);
+    const weekCount = y >= 2000 && y <= 2100 ? x1NanWeeksInYear(y) : 53;
+    const totals = Array.from({ length: weekCount }, () => 0);
+    const actualMap = actualMapArg && typeof actualMapArg === 'object'
+      ? actualMapArg
+      : x1NanActualMap(y, state.xuong1LocThanhRecords || []);
+    const plans = (child && Array.isArray(child.plans) ? child.plans : [])
+      .filter(plan => !plan || Number(plan.year) === y);
+    const exactPlans = plans.filter(plan =>
+      !!x1NanPlanClassificationOf(plan && plan.classification));
+    const selectedPlans = exactPlans.length ? exactPlans : plans;
+    for (let w = 1; w <= weekCount; w++) {
+      selectedPlans.forEach(plan => {
+        const classification = x1NanPlanClassificationOf(plan && plan.classification);
+        let key = '';
+        if (classification) {
+          if (child.material === 'Vầu / Nứa') {
+            totals[w - 1] += Number(actualMap[x1NanActualKey(
+              y, w, 'Vầu', child.width, child.length, classification)]) || 0;
+            totals[w - 1] += Number(actualMap[x1NanActualKey(
+              y, w, 'Nứa', child.width, child.length, classification)]) || 0;
+            return;
+          }
+          key = x1NanActualKey(
+            y, w, child.material, child.width, child.length, classification);
+        } else {
+          if (child.material === 'Vầu / Nứa') {
+            totals[w - 1] += Number(actualMap[x1NanActualKey(
+              y, w, 'Vầu', child.width, child.length)]) || 0;
+            totals[w - 1] += Number(actualMap[x1NanActualKey(
+              y, w, 'Nứa', child.width, child.length)]) || 0;
+            return;
+          }
+          key = x1NanActualKey(y, w, child.material, child.width, child.length);
+        }
+        if (key) totals[w - 1] += Number(actualMap[key]) || 0;
+      });
+    }
+    return totals;
+  }
+  function x1NanStockQtyForClassifications(material, width, length, classifications, summaryArg) {
+    const mat = x1NanPlanMaterialOf(material);
+    const mw = x1NanPlanWidthOf(width);
+    const ml = x1NanPlanLengthOf(length);
+    if (!mat || mw <= 0 || ml <= 0) return 0;
+    const breakdown = x1NanStockBreakdownOf(mat, mw, ml, summaryArg);
+    const normalizedClassifications = (Array.isArray(classifications) ? classifications : [])
+      .map(x1NanPlanClassificationOf)
+      .filter(Boolean);
+    const selected = new Set(normalizedClassifications.filter(c => c !== 'Loại'));
+    if (selected.size === 0 &&
+      normalizedClassifications.length > 0 &&
+      normalizedClassifications.every(c => c === 'Loại')) {
+      return x1NanPlanPositiveNumber(breakdown['Loại']);
+    }
+    if (selected.size === 0) return x1NanPlanPositiveNumber(breakdown.total);
+    let qty = 0;
+    selected.forEach(c => {
+      qty += x1NanPlanPositiveNumber(breakdown[c]);
+    });
+    return qty;
+  }
+  function x1NanStockBreakdownOf(material, width, length, summaryArg) {
+    let mat = x1NanPlanMaterialOf(material);
+    let mw = x1NanPlanWidthOf(width);
+    let ml = x1NanPlanLengthOf(length);
+    if (material && typeof material === 'object' && !Array.isArray(material)) {
+      const child = material;
+      mat = x1NanPlanMaterialOf(child.material);
+      mw = x1NanPlanWidthOf(child.width);
+      ml = x1NanPlanLengthOf(child.length != null ? child.length : child.len);
+      if (width && typeof width === 'object' && Array.isArray(width.groups)) {
+        summaryArg = width;
+      }
+    }
+    const breakdown = {
+      A: 0,
+      A1: 0,
+      'Non bánh tẻ': 0,
+      B: 0,
+      'Loại': 0,
+      total: 0
+    };
+    if (!mat || mw <= 0 || ml <= 0) return breakdown;
+    const stock = summaryArg && Array.isArray(summaryArg.groups)
+      ? summaryArg
+      : x1WarehouseStockSummary();
+    (stock.groups || []).forEach(group => {
+      if (!group || group.unit !== 'kg') return;
+      const gw = x1NanPlanWidthOf(group.width);
+      const gl = x1NanPlanLengthOf(group.len);
+      if (gw !== mw || gl !== ml) return;
+      const gm = typeof x1KhoMatGroupOf === 'function'
+        ? x1KhoMatGroupOf(group.material)
+        : x1NanPlanMaterialOf(group.material);
+      let matches = false;
+      if (mat === 'Vầu / Nứa') {
+        matches = gm === 'Vầu / Nứa' || gm === 'Vầu' || gm === 'Nứa';
+      } else {
+        matches = gm === mat;
+      }
+      if (!matches) return;
+      const qty = x1NanPlanPositiveNumber(group.qty);
+      if (qty <= 0) return;
+      breakdown.total += qty;
+      const gc = x1NanPlanClassificationOf(group.kind);
+      if (Object.prototype.hasOwnProperty.call(breakdown, gc)) {
+        breakdown[gc] += qty;
+      }
+    });
+    return breakdown;
+  }
+  function x1NanStockBreakdownText(material, width, length, summaryArg, classificationsArg) {
+    let mat = '';
+    let mw = 0;
+    let ml = 0;
+    let summary = null;
+    let selectedClassifications = [];
+    const asSummary = value =>
+      value && typeof value === 'object' && !Array.isArray(value) &&
+      Array.isArray(value.groups) ? value : null;
+    const asClassifications = value => {
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string' && value.trim()) return [value];
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        if (Array.isArray(value.groups)) return [];
+        return Object.keys(value).filter(key =>
+          value[key] === true || value[key] === 1 || value[key] === '1');
+      }
+      return [];
+    };
+
+    if (material && typeof material === 'object' && !Array.isArray(material)) {
+      const child = material;
+      mat = x1NanPlanMaterialOf(child.material);
+      mw = x1NanPlanWidthOf(child.width);
+      ml = x1NanPlanLengthOf(child.length != null ? child.length : child.len);
+      summary = asSummary(width) || asSummary(length) ||
+        asSummary(summaryArg) || asSummary(classificationsArg);
+      selectedClassifications =
+        asClassifications(width).length ? asClassifications(width) :
+        (asClassifications(length).length ? asClassifications(length) :
+        (asClassifications(summaryArg).length ? asClassifications(summaryArg) :
+        asClassifications(classificationsArg)));
+      if (selectedClassifications.length === 0 &&
+        typeof x1NanPlanChildClassifications === 'function') {
+        selectedClassifications = x1NanPlanChildClassifications(child);
+      }
+      if (selectedClassifications.length === 0) {
+        const childSelected =
+          Array.isArray(child.classifications) ? child.classifications :
+          (Array.isArray(child.selectedClasses) ? child.selectedClasses :
+          (Array.isArray(child.classes) ? child.classes :
+          (child.classification != null ? [child.classification] :
+          (child.phanLoai != null ? [child.phanLoai] :
+          (child.kind != null ? [child.kind] : [])))));
+        selectedClassifications = asClassifications(childSelected);
+      }
+    } else {
+      mat = x1NanPlanMaterialOf(material);
+      mw = x1NanPlanWidthOf(width);
+      ml = x1NanPlanLengthOf(length);
+      summary = asSummary(length) || asSummary(summaryArg) ||
+        asSummary(classificationsArg);
+      selectedClassifications =
+        asClassifications(length).length ? asClassifications(length) :
+        (asClassifications(summaryArg).length ? asClassifications(summaryArg) :
+        asClassifications(classificationsArg));
+    }
+    if (!mat || mw <= 0 || ml <= 0) return '0 kg';
+
+    const selected = [];
+    const seen = new Set();
+    selectedClassifications.forEach(value => {
+      const classification = x1NanPlanClassificationOf(value);
+      if (classification && !seen.has(classification)) {
+        seen.add(classification);
+        selected.push(classification);
+      }
+    });
+
+    const classOrder = selected.length
+      ? selected
+      : ['A', 'A1', 'Non bánh tẻ', 'B', 'Loại'];
+    const materials = mat === 'Vầu / Nứa' ? ['Vầu', 'Nứa'] : [mat];
+    const parts = [];
+    materials.forEach(materialName => {
+      const breakdown = x1NanStockBreakdownOf(materialName, mw, ml, summary);
+      classOrder.forEach(classification => {
+        const qty = x1NanPlanPositiveNumber(breakdown[classification]);
+        if (qty > 0) {
+          const rounded = Math.round((qty + Number.EPSILON) * 100) / 100;
+          const qtyText = String(Number.isFinite(rounded) ? rounded : 0);
+          parts.push(`${materialName} ${classification} ${qtyText} kg`);
+        }
+      });
+    });
+    return parts.length ? parts.join(' · ') : '0 kg';
+  }
+  function x1NanStockTooltipText(material, width, length, summaryArg, classificationsArg) {
+    return x1NanStockBreakdownText(material, width, length, summaryArg, classificationsArg);
+  }
+  function x1NanPlanChildPeriodPlanQty(child, mode, year, period, monthWeeksArg) {
+    const y = Math.round(Number(year) || 0);
+    const byClassification = {};
+    let total = 0;
+    const plans = child && Array.isArray(child.plans) ? child.plans : [];
+    const addPlan = (plan, week) => {
+      if (!plan || Number(plan.year) !== y && mode !== 'month') return;
+      const qty = x1NanPlanPositiveNumber(plan.weeks && plan.weeks[String(week)]);
+      if (qty <= 0) return;
+      const cls = x1NanPlanClassificationOf(
+        plan.classification != null ? plan.classification :
+        (plan.phanLoai != null ? plan.phanLoai : (plan.kind != null ? plan.kind : '')));
+      const key = cls || '';
+      byClassification[key] = (x1NanPlanPositiveNumber(byClassification[key]) || 0) + qty;
+      total += qty;
+    };
+    if (mode === 'week') {
+      const wm = /^(\d{4})-W(\d{1,2})$/.exec(String(period || ''));
+      const week = wm ? Math.round(Number(wm[2]) || 0) : 0;
+      plans.forEach(plan => addPlan(plan, week));
+    } else if (mode === 'month') {
+      const monthWeeks = Array.isArray(monthWeeksArg) ? monthWeeksArg : [];
+      monthWeeks.forEach(w => {
+        plans.forEach(plan => {
+          if (plan && Number(plan.year) === Number(w.year)) addPlan(plan, w.week);
+        });
+      });
+    } else {
+      plans.forEach(plan => {
+        if (!plan || Number(plan.year) !== y) return;
+        const weekCount = x1NanWeeksInYear(y);
+        for (let w = 1; w <= weekCount; w++) {
+          const qty = x1NanPlanPositiveNumber(plan.weeks && plan.weeks[String(w)]);
+          if (qty <= 0) continue;
+          const cls = x1NanPlanClassificationOf(
+            plan.classification != null ? plan.classification :
+            (plan.phanLoai != null ? plan.phanLoai : (plan.kind != null ? plan.kind : '')));
+          const key = cls || '';
+          byClassification[key] = (x1NanPlanPositiveNumber(byClassification[key]) || 0) + qty;
+          total += qty;
+        }
+      });
+    }
+    return { total, byClassification };
+  }
+  function x1NanAllocateStockForPlans(grouped, mode, year, period, monthWeeksArg, stockSummaryArg) {
+    const stock = stockSummaryArg && Array.isArray(stockSummaryArg.groups)
+      ? stockSummaryArg
+      : x1WarehouseStockSummary();
+    const weekMatch = /^(\d{4})-W(\d{1,2})$/i.exec(String(period || ''));
+    const weekKey = mode === 'week' && weekMatch
+      ? x1NanPlanPriorityWeekKey(Number(weekMatch[1]), weekMatch[0])
+      : '';
+    const pools = new Map();
+    (stock.groups || []).forEach(group => {
+      if (!group || group.unit !== 'kg') return;
+      const qty = x1NanPlanPositiveNumber(group.qty);
+      const width = x1NanPlanWidthOf(group.width);
+      const len = x1NanPlanLengthOf(group.len);
+      const cls = x1NanPlanClassificationOf(group.kind);
+      if (qty <= 0 || width <= 0 || len <= 0 || !cls) return;
+      const gm = typeof x1KhoMatGroupOf === 'function'
+        ? x1KhoMatGroupOf(group.material)
+        : x1NanPlanMaterialOf(group.material);
+      if (!gm) return;
+      const mat = gm === 'Vầu / Nứa' ? gm : gm;
+      const key = `${mat}|${width}|${len}|${cls}`;
+      pools.set(key, (pools.get(key) || 0) + qty);
+    });
+    const allocations = new Map();
+    const groupPriority = group => {
+      if (mode !== 'week') return 0;
+      if (!weekKey) return 0;
+      return (group.children || []).some(child => {
+        const state = x1NanPlanChildWeekPriority(child, weekKey);
+        return state.priority || state.indeterminate;
+      }) ? 1 : 0;
+    };
+    const childPriority = child => {
+      if (mode !== 'week') return 0;
+      if (!weekKey) return 0;
+      const state = x1NanPlanChildWeekPriority(child, weekKey);
+      return state.priority || state.indeterminate ? 1 : 0;
+    };
+    const orderedGroups = (Array.isArray(grouped) ? grouped : [])
+      .slice()
+      .sort((a, b) =>
+        groupPriority(b) - groupPriority(a) ||
+        String(a.productName || '').localeCompare(String(b.productName || ''), 'vi'));
+    const classOrder = ['A', 'A1', 'Non bánh tẻ', 'B', 'Loại'];
+    const consume = (child, cls, planQty) => {
+      let remaining = x1NanPlanPositiveNumber(planQty);
+      if (remaining <= 0) return 0;
+      const width = x1NanPlanWidthOf(child.width);
+      const len = x1NanPlanLengthOf(child.length != null ? child.length : child.len);
+      const mat = x1NanPlanMaterialOf(child.material);
+      const sources = mat === 'Vầu / Nứa'
+        ? ['Vầu / Nứa', 'Vầu', 'Nứa']
+        : [mat];
+      const classifications = cls
+        ? [cls]
+        : classOrder;
+      let allocated = 0;
+      classifications.forEach(classification => {
+        if (remaining <= 0) return;
+        sources.forEach(source => {
+          if (remaining <= 0) return;
+          const key = `${source}|${width}|${len}|${classification}`;
+          const available = x1NanPlanPositiveNumber(pools.get(key));
+          if (available <= 0) return;
+          const take = Math.min(available, remaining);
+          pools.set(key, available - take);
+          remaining -= take;
+          allocated += take;
+        });
+      });
+      return allocated;
+    };
+    orderedGroups.forEach(group => {
+      const orderedChildren = (group.children || []).slice().sort((a, b) =>
+        childPriority(b) - childPriority(a) ||
+        a.material.localeCompare(b.material, 'vi') ||
+        a.width - b.width ||
+        a.length - b.length);
+      orderedChildren.forEach(child => {
+        const periodPlan = x1NanPlanChildPeriodPlanQty(
+          child, mode, year, period, monthWeeksArg);
+        const allocatedByClassification = {};
+        let allocatedStock = 0;
+        const keys = [...classOrder,
+          ...Object.keys(periodPlan.byClassification).filter(c => c && classOrder.indexOf(c) < 0)];
+        keys.forEach(cls => {
+          const qty = x1NanPlanPositiveNumber(periodPlan.byClassification[cls]);
+          if (qty <= 0) return;
+          const take = consume(child, cls, qty);
+          allocatedByClassification[cls] = take;
+          allocatedStock += take;
+        });
+        if (Object.prototype.hasOwnProperty.call(periodPlan.byClassification, '') &&
+          x1NanPlanPositiveNumber(periodPlan.byClassification['']) > 0) {
+          const take = consume(child, '', periodPlan.byClassification['']);
+          allocatedByClassification[''] = take;
+          allocatedStock += take;
+        }
+        const deficit = Math.max(0, periodPlan.total - allocatedStock);
+        const width = x1NanPlanWidthOf(child.width);
+        const len = x1NanPlanLengthOf(child.length != null ? child.length : child.len);
+        const mat = x1NanPlanMaterialOf(child.material);
+        const sources = mat === 'Vầu / Nứa'
+          ? ['Vầu / Nứa', 'Vầu', 'Nứa']
+          : [mat];
+        let remainingStock = 0;
+        sources.forEach(source => {
+          classOrder.forEach(cls => {
+            remainingStock += x1NanPlanPositiveNumber(pools.get(`${source}|${width}|${len}|${cls}`));
+          });
+        });
+        allocations.set(child, {
+          planQty: periodPlan.total,
+          byClassification: allocatedByClassification,
+          allocatedStock,
+          deficit,
+          remainingStock
+        });
+      });
+    });
+    return allocations;
+  }
+
+  function x1NanPlanChipValues(containerId, dataAttr) {
+    const container = document.getElementById(containerId);
+    let nodes = [];
+    if (container && typeof container.querySelectorAll === 'function') {
+      nodes = Array.from(container.querySelectorAll(`[${dataAttr}]`) || []);
+    }
+    if (!nodes.length && typeof document.querySelectorAll === 'function') {
+      nodes = Array.from(document.querySelectorAll(`[${dataAttr}]`) || []);
+    }
+    return nodes.filter(node =>
+      node.checked === true ||
+      node.getAttribute && node.getAttribute('aria-pressed') === 'true' ||
+      node.classList && node.classList.contains && node.classList.contains('is-active'))
+      .map(node => node.getAttribute ? node.getAttribute(dataAttr) : '')
+      .filter(Boolean);
+  }
+  function x1NanPlanSetChipGroup(containerId, dataAttr, values) {
+    const container = document.getElementById(containerId);
+    let nodes = [];
+    if (container && typeof container.querySelectorAll === 'function') {
+      nodes = Array.from(container.querySelectorAll(`[${dataAttr}]`) || []);
+    }
+    if (!nodes.length && typeof document.querySelectorAll === 'function') {
+      nodes = Array.from(document.querySelectorAll(`[${dataAttr}]`) || []);
+    }
+    const selected = new Set((Array.isArray(values) ? values : [values]).map(v => String(v)));
+    nodes.forEach(node => {
+      const value = node.getAttribute ? node.getAttribute(dataAttr) : '';
+      const active = selected.has(String(value));
+      if (node.setAttribute) node.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (node.classList && typeof node.classList.toggle === 'function') {
+        node.classList.toggle('is-active', active);
+      }
+      if ('checked' in node) node.checked = active;
+    });
+  }
+  function x1NanPlanStartForm(planId) {
+    if (!requireEditPermission()) return false;
+    const plan = planId
+      ? (state.x1NanPlans || []).find(r => r && r.id === planId)
+      : null;
+    x1NanPlanEditId = plan ? plan.id : null;
+    x1NanPlanEditIds = [];
+    const form = document.getElementById('x1-nan-plan-form');
+    if (form) form.hidden = false;
+    if (plan) {
+      state.x1NanPlanYear = String(plan.year);
+      const yearEl = document.getElementById('x1-nan-plan-year');
+      if (yearEl) yearEl.value = String(plan.year);
+      const productName = String(plan.productName != null ? plan.productName :
+        (plan.tenSanPham != null ? plan.tenSanPham : '')).trim();
+      const material = x1NanPlanMaterialOf(plan.material);
+      const width = x1NanPlanWidthOf(plan.width);
+      const length = x1NanPlanLengthOf(plan.length != null ? plan.length : plan.len);
+      const sameBase = (state.x1NanPlans || []).filter(p =>
+        p && Number(p.year) === Number(plan.year) &&
+        String(p.productName != null ? p.productName :
+          (p.tenSanPham != null ? p.tenSanPham : '')).trim() === productName &&
+        x1NanPlanWidthOf(p.width) === width &&
+        x1NanPlanLengthOf(p.length != null ? p.length : p.len) === length);
+      const materialsInBase = new Set(sameBase.map(p => x1NanPlanMaterialOf(p.material)).filter(Boolean));
+      const alternativeEdit = material === 'Vầu / Nứa' ||
+        (materialsInBase.has('Vầu') && materialsInBase.has('Nứa'));
+      x1NanPlanEditIds = sameBase.filter(p => {
+        const pm = x1NanPlanMaterialOf(p.material);
+        return alternativeEdit
+          ? (pm === 'Vầu / Nứa' || pm === 'Vầu' || pm === 'Nứa')
+          : pm === material;
+      }).map(p => p.id).filter(Boolean);
+    }
+    const product = document.getElementById('x1-nan-plan-product');
+    if (product) product.value = plan ? String(
+      plan.productName != null ? plan.productName :
+      (plan.tenSanPham != null ? plan.tenSanPham : '')) : '';
+    let editMaterials = [];
+    let editWidths = [];
+    let editLengths = [];
+    let editClasses = [];
+    if (plan) {
+      const editPlans = (state.x1NanPlans || []).filter(p =>
+        p && x1NanPlanEditIds.includes(p.id));
+      editMaterials = [...new Set(editPlans.flatMap(p => {
+        const pm = x1NanPlanMaterialOf(p.material);
+        return pm === 'Vầu / Nứa' ? ['Vầu', 'Nứa'] : [pm];
+      }).filter(Boolean))];
+      editWidths = [...new Set(editPlans.map(p => x1NanPlanWidthOf(p.width)).filter(v => v > 0))];
+      editLengths = [...new Set(editPlans.map(p =>
+        x1NanPlanLengthOf(p.length != null ? p.length : p.len)).filter(v => v > 0))];
+      editClasses = [...new Set(editPlans.map(p => x1NanPlanClassificationOf(p.classification)).filter(Boolean))];
+    }
+    x1NanPlanSetChipGroup('x1-nan-plan-material-chips', 'data-x1-nan-plan-material',
+      plan ? editMaterials : []);
+    x1NanPlanSetChipGroup('x1-nan-plan-width-chips', 'data-x1-nan-plan-width',
+      plan ? editWidths : []);
+    x1NanPlanSetChipGroup('x1-nan-plan-length-chips', 'data-x1-nan-plan-length',
+      plan ? editLengths : []);
+    x1NanPlanSetChipGroup('x1-nan-plan-class-chips', 'data-x1-nan-plan-class',
+      plan ? editClasses : []);
+    if (product) product.focus();
+    initLucide();
+    return true;
+  }
+  function x1NanPlanCloseForm() {
+    x1NanPlanEditId = null;
+    x1NanPlanEditIds = [];
+    const form = document.getElementById('x1-nan-plan-form');
+    if (form) form.hidden = true;
+    const product = document.getElementById('x1-nan-plan-product');
+    if (product) product.value = '';
+    x1NanPlanSetChipGroup('x1-nan-plan-material-chips', 'data-x1-nan-plan-material', []);
+    x1NanPlanSetChipGroup('x1-nan-plan-width-chips', 'data-x1-nan-plan-width', []);
+    x1NanPlanSetChipGroup('x1-nan-plan-length-chips', 'data-x1-nan-plan-length', []);
+    x1NanPlanSetChipGroup('x1-nan-plan-class-chips', 'data-x1-nan-plan-class', []);
+  }
+  function x1NanPlanSaveForm() {
+    if (!requireEditPermission()) return false;
+    if (x1NanPlanSaving) return false;
+    const year = x1NanPlanSelectedYear();
+    if (year < 2000 || year > 2100) {
+      showToast('Vui lòng chọn năm kế hoạch hợp lệ.', 'error');
+      return false;
+    }
+    state.x1NanPlanYear = String(year);
+    x1NanPlanEnsurePeriod(year);
+    const productName = String(document.getElementById('x1-nan-plan-product')?.value || '').trim();
+    if (!productName) { showToast('Vui lòng nhập tên sản phẩm.', 'error'); return false; }
+
+    let materialValues = x1NanPlanChipValues(
+      'x1-nan-plan-material-chips', 'data-x1-nan-plan-material');
+    if (!materialValues.length) {
+      const legacyMaterial = document.getElementById('x1-nan-plan-material')?.value;
+      if (legacyMaterial) materialValues = [legacyMaterial];
+    }
+    const materials = [...new Set(materialValues.map(x1NanPlanMaterialOf).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'vi'));
+    if (!materials.length) { showToast('Vui lòng chọn ít nhất một nguyên liệu Vầu hoặc Nứa.', 'error'); return false; }
+    const selectedHasVau = materials.includes('Vầu') || materials.includes('Vầu / Nứa');
+    const selectedHasNua = materials.includes('Nứa') || materials.includes('Vầu / Nứa');
+    const savedMaterials = selectedHasVau && selectedHasNua
+      ? ['Vầu / Nứa']
+      : materials;
+
+    let widthValues = x1NanPlanChipValues(
+      'x1-nan-plan-width-chips', 'data-x1-nan-plan-width');
+    if (!widthValues.length) {
+      const legacyWidth = document.getElementById('x1-nan-plan-width')?.value;
+      if (legacyWidth) widthValues = [legacyWidth];
+    }
+    let lengthValues = x1NanPlanChipValues(
+      'x1-nan-plan-length-chips', 'data-x1-nan-plan-length');
+    if (!lengthValues.length) {
+      const legacyLength = document.getElementById('x1-nan-plan-length')?.value;
+      if (legacyLength) lengthValues = [legacyLength];
+    }
+    let classValues = x1NanPlanChipValues(
+      'x1-nan-plan-class-chips', 'data-x1-nan-plan-class');
+    if (!classValues.length) {
+      const legacyClass = document.getElementById('x1-nan-plan-classification')?.value ||
+        document.getElementById('x1-nan-plan-class')?.value;
+      if (legacyClass) classValues = [legacyClass];
+    }
+    const widths = [...new Set(widthValues.map(x1NanPlanWidthOf).filter(v => v > 0))]
+      .sort((a, b) => a - b);
+    const lengths = [...new Set(lengthValues.map(x1NanPlanLengthOf).filter(v => v > 0))]
+      .sort((a, b) => a - b);
+    const classifications = [...new Set(classValues.map(x1NanPlanClassificationOf).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'vi'));
+    if (!widths.length) { showToast('Vui lòng chọn ít nhất một bản rộng.', 'error'); return false; }
+    if (!lengths.length) { showToast('Vui lòng chọn ít nhất một chiều dài.', 'error'); return false; }
+    if (!classifications.length) { showToast('Vui lòng chọn ít nhất một phân loại.', 'error'); return false; }
+    if (widths.some(v => v > 999)) { showToast('Bản rộng không vượt quá 999 ly.', 'error'); return false; }
+    if (lengths.some(v => v > 9999)) { showToast('Chiều dài không vượt quá 9999 mm.', 'error'); return false; }
+
+    const editing = !!x1NanPlanEditId;
+    const plans = (state.x1NanPlans || []).map(p =>
+      p && typeof p === 'object' ? JSON.parse(JSON.stringify(p)) : p);
+    const editingPlan = editing
+      ? plans.find(p => p && p.id === x1NanPlanEditId)
+      : null;
+    const editingRows = editing
+      ? plans.filter(p => p && x1NanPlanEditIds.includes(p.id))
+      : [];
+    const originalPlans = (state.x1NanPlans || []).map(p =>
+      p && typeof p === 'object' ? JSON.parse(JSON.stringify(p)) : p);
+    x1NanPlanSaving = true;
+    const now = new Date().toISOString();
+    if (editing && !editingPlan) {
+      x1NanPlanSaving = false;
+      showToast('Không tìm thấy dòng kế hoạch cần sửa.', 'error');
+      return false;
+    }
+    const remaining = editing
+      ? plans.filter(p => p && !x1NanPlanEditIds.includes(p.id))
+      : plans.slice();
+    const convertedIds = [];
+    const created = [];
+    const mergePlanWeeks = sourcePlans => {
+      const combined = {};
+      (Array.isArray(sourcePlans) ? sourcePlans : []).forEach(p => {
+        if (!p || !p.weeks || typeof p.weeks !== 'object' || Array.isArray(p.weeks)) return;
+        Object.keys(p.weeks).forEach(w => {
+          const qty = x1NanPlanPositiveNumber(p.weeks[w]);
+          if (qty <= 0) return;
+          combined[w] = (x1NanPlanPositiveNumber(combined[w]) || 0) + qty;
+        });
+      });
+      return combined;
+    };
+    const mergePlanPriorityWeeks = sourcePlans => {
+      const combined = {};
+      (Array.isArray(sourcePlans) ? sourcePlans : []).forEach(p => {
+        if (!p || !p.priorityWeeks || typeof p.priorityWeeks !== 'object' ||
+          Array.isArray(p.priorityWeeks)) return;
+        Object.keys(p.priorityWeeks).forEach(key => {
+          const normalized = x1NanPlanPriorityWeekKey(p.year, key);
+          if (!normalized) return;
+          const raw = p.priorityWeeks[key];
+          if (raw === true || raw === 1 || raw === '1') combined[normalized] = true;
+        });
+      });
+      return combined;
+    };
+    const removeMergedRows = (sourcePlans, reusedId) => {
+      const seen = new Set();
+      (Array.isArray(sourcePlans) ? sourcePlans : []).forEach(p => {
+        if (!p) return;
+        const id = String(p.id || '').trim();
+        if (!id || seen.has(id)) return;
+        seen.add(id);
+        const index = remaining.findIndex(row => row && row.id === id);
+        if (index >= 0) remaining.splice(index, 1);
+        if (id !== reusedId) {
+          trackDeleted('x1NanPlans', id);
+          if (!convertedIds.includes(id)) convertedIds.push(id);
+        }
+      });
+    };
+    savedMaterials.forEach(material => {
+      widths.forEach(width => {
+        lengths.forEach(len => {
+          classifications.forEach(classification => {
+            const candidates = [...remaining, ...editingRows].filter(p => {
+              if (!p || Number(p.year) !== year ||
+                String(p.productName != null ? p.productName :
+                  (p.tenSanPham != null ? p.tenSanPham : '')).trim() !== productName ||
+                x1NanPlanWidthOf(p.width) !== width ||
+                x1NanPlanLengthOf(p.length != null ? p.length : p.len) !== len ||
+                x1NanPlanClassificationOf(p.classification != null ? p.classification :
+                  (p.phanLoai != null ? p.phanLoai : p.kind)) !== classification) return false;
+              const pm = x1NanPlanMaterialOf(p.material);
+              return pm === 'Vầu / Nứa' || pm === 'Vầu' || pm === 'Nứa';
+            });
+            const seenCandidates = new Set();
+            const uniqueCandidates = candidates.filter(p => {
+              const key = String(p.id || '').trim() || `${p.material}|${p.width}|${p.length}|${p.classification}`;
+              if (seenCandidates.has(key)) return false;
+              seenCandidates.add(key);
+              return true;
+            });
+            const remainingCandidates = uniqueCandidates.filter(p =>
+              remaining.some(row => row && row.id === p.id));
+            const editingCandidates = uniqueCandidates.filter(p =>
+              editingRows.some(row => row && row.id === p.id));
+            let sources = [];
+            let preferred = null;
+            if (material === 'Vầu / Nứa') {
+              const remainingAltAndExact = remainingCandidates.filter(p => {
+                const pm = x1NanPlanMaterialOf(p.material);
+                return pm === 'Vầu / Nứa' || pm === 'Vầu' || pm === 'Nứa';
+              });
+              const editingAltAndExact = editing ? editingCandidates.filter(p => {
+                const pm = x1NanPlanMaterialOf(p.material);
+                return pm === 'Vầu / Nứa' || pm === 'Vầu' || pm === 'Nứa';
+              }) : [];
+              sources = [...remainingAltAndExact, ...editingAltAndExact];
+              preferred = sources.find(p => x1NanPlanMaterialOf(p.material) === 'Vầu / Nứa') ||
+                sources.find(p => x1NanPlanMaterialOf(p.material) === 'Vầu') ||
+                sources.find(p => x1NanPlanMaterialOf(p.material) === 'Nứa') ||
+                null;
+            } else {
+              const remainingExactSelected = remainingCandidates.filter(p =>
+                x1NanPlanMaterialOf(p.material) === material);
+              const remainingAlternative = remainingCandidates.filter(p =>
+                x1NanPlanMaterialOf(p.material) === 'Vầu / Nứa');
+              sources = [...remainingExactSelected, ...remainingAlternative];
+              if (editing) {
+                sources.push(...editingCandidates.filter(p =>
+                  x1NanPlanMaterialOf(p.material) === 'Vầu / Nứa' ||
+                  x1NanPlanMaterialOf(p.material) === 'Vầu' ||
+                  x1NanPlanMaterialOf(p.material) === 'Nứa'));
+              }
+              const exactSource = sources.find(p =>
+                x1NanPlanMaterialOf(p.material) === material);
+              preferred = exactSource ||
+                sources.find(p => x1NanPlanMaterialOf(p.material) === 'Vầu / Nứa') ||
+                sources.find(p => x1NanPlanMaterialOf(p.material) === 'Vầu') ||
+                sources.find(p => x1NanPlanMaterialOf(p.material) === 'Nứa') ||
+                null;
+              sources = [...new Set(sources)];
+            }
+            const sourceSeen = new Set();
+            sources = sources.filter(p => {
+              const key = String(p && p.id || '').trim() ||
+                `${p.material}|${p.width}|${p.length}|${p.classification}`;
+              if (sourceSeen.has(key)) return false;
+              sourceSeen.add(key);
+              return true;
+            });
+            const reusedId = preferred ? String(preferred.id || '').trim() : '';
+            removeMergedRows(sources, reusedId);
+            created.push({
+              id: reusedId || x1NanPlanId(),
+              year,
+              romanNo: '',
+              productName,
+              material,
+              width,
+              len,
+              length: len,
+              classification,
+              priority: false,
+              priorityWeeks: mergePlanPriorityWeeks(sources),
+              weeks: mergePlanWeeks(sources),
+              createdAt: preferred && preferred.createdAt ? preferred.createdAt : now,
+              updatedAt: now
+            });
+          });
+        });
+      });
+    });
+    if (!created.length) {
+      x1NanPlanSaving = false;
+      showToast(editing
+        ? 'Không có tổ hợp mới để lưu — hãy chọn kích thước hoặc phân loại khác.'
+        : 'Các tổ hợp đã chọn đã có dòng kế hoạch. Hãy sửa dòng hiện có.', 'error');
+      return false;
+    }
+    state.x1NanPlans = [...remaining, ...created];
+    if (!saveX1NanPlans()) {
+      state.x1NanPlans = originalPlans;
+      convertedIds.forEach(id => untrackDeleted('x1NanPlans', id));
+      x1NanPlanSaving = false;
+      return false;
+    }
+    x1NanPlanCloseForm();
+    renderX1NanPlanCard();
+    showToast(editing
+      ? `Đã cập nhật ${created.length} dòng kế hoạch.`
+      : `Đã thêm ${created.length} dòng kế hoạch.`, 'success');
+    x1NanPlanSaving = false;
+    return true;
+  }
+  function x1NanPlanSetYear() {
+    const el = document.getElementById('x1-nan-plan-year');
+    const year = el ? Math.round(Number(el.value) || 0) : x1NanPlanSelectedYear();
+    if (year < 2000 || year > 2100) return false;
+    state.x1NanPlanYear = String(year);
+    const mode = x1NanPlanViewModeOf();
+    if (mode === 'week') {
+      const old = String(state.x1NanPlanPeriod || '');
+      const oldMatch = /^(\d{4})-W(\d{1,2})$/.exec(old);
+      const week = oldMatch ? Math.round(Number(oldMatch[2]) || 0) : 1;
+      state.x1NanPlanPeriod = x1NanWeekKey(year, week >= 1 ? week : 1);
+    } else if (mode === 'month') {
+      const old = String(state.x1NanPlanPeriod || '');
+      const oldMatch = /^(\d{4})-(\d{2})$/.exec(old);
+      const month = oldMatch ? Math.round(Number(oldMatch[2]) || 0) : 1;
+      state.x1NanPlanPeriod = `${year}-${String(month >= 1 && month <= 12 ? month : 1).padStart(2, '0')}`;
+    } else {
+      state.x1NanPlanPeriod = String(year);
+    }
+    renderX1NanPlanCard();
+  }
+  function x1NanPlanSetWeekValue(planId, week, rawValue) {
+    if (x1NanPlanViewModeOf() !== 'week') return false;
+    const plan = (state.x1NanPlans || []).find(p => p && p.id === planId);
+    if (!plan) return false;
+    if (!requireEditPermission()) return false;
+    const w = Math.round(Number(week) || 0);
+    if (w < 1 || w > x1NanWeeksInYear(plan.year)) return false;
+    const text = String(rawValue == null ? '' : rawValue).trim();
+    const oldWeeks = plan.weeks && typeof plan.weeks === 'object' && !Array.isArray(plan.weeks)
+      ? JSON.parse(JSON.stringify(plan.weeks)) : {};
+    const oldUpdatedAt = plan.updatedAt || '';
+    plan.weeks = plan.weeks && typeof plan.weeks === 'object' && !Array.isArray(plan.weeks) ? plan.weeks : {};
+    if (!text) delete plan.weeks[String(w)];
+    else {
+      const qty = Number(text);
+      if (!Number.isFinite(qty) || qty < 0) {
+        showToast('Kế hoạch tuần phải là số không âm (kg).', 'error');
+        return false;
+      }
+      if (qty > 999999) {
+        showToast('Kế hoạch tuần không vượt quá 999.999 kg.', 'error');
+        return false;
+      }
+      if (qty > 0) plan.weeks[String(w)] = qty;
+      else delete plan.weeks[String(w)];
+    }
+    plan.updatedAt = new Date().toISOString();
+    if (!saveX1NanPlans()) {
+      plan.weeks = oldWeeks;
+      plan.updatedAt = oldUpdatedAt;
+      return false;
+    }
+    return true;
+  }
+  function x1NanPlanSetChildWeekValue(planIds, week, rawValue) {
+    if (x1NanPlanViewModeOf() !== 'week') return false;
+    if (!requireEditPermission()) return false;
+    const ids = [...new Set((Array.isArray(planIds) ? planIds : String(planIds || '').split(','))
+      .map(id => String(id || '').trim())
+      .filter(Boolean))];
+    if (!ids.length) return false;
+    const plans = (state.x1NanPlans || []).filter(p => p && ids.includes(p.id));
+    if (!plans.length) return false;
+    const w = Math.round(Number(week) || 0);
+    if (plans.some(p => w < 1 || w > x1NanWeeksInYear(p.year))) return false;
+    const text = String(rawValue == null ? '' : rawValue).trim();
+    let qty = 0;
+    if (text) {
+      qty = Number(text);
+      if (!Number.isFinite(qty) || qty < 0) {
+        showToast('Kế hoạch tuần phải là số không âm (kg).', 'error');
+        return false;
+      }
+      if (qty > 999999) {
+        showToast('Kế hoạch tuần không vượt quá 999.999 kg.', 'error');
+        return false;
+      }
+    }
+    const original = plans.map(p => ({
+      id: p.id,
+      weeks: p.weeks && typeof p.weeks === 'object' && !Array.isArray(p.weeks)
+        ? JSON.parse(JSON.stringify(p.weeks))
+        : {},
+      updatedAt: p.updatedAt || ''
+    }));
+    const oldWeights = plans.map(p =>
+      x1NanPlanPositiveNumber(
+        p.weeks && typeof p.weeks === 'object' && !Array.isArray(p.weeks)
+          ? p.weeks[String(w)]
+          : 0));
+    const weightTotal = oldWeights.reduce((sum, value) => sum + value, 0);
+    const roundPlanQty = value => {
+      const rounded = Math.round((Number(value) + Number.EPSILON) * 1000000) / 1000000;
+      return Number.isFinite(rounded) ? rounded : 0;
+    };
+    const now = new Date().toISOString();
+    plans.forEach(p => {
+      p.weeks = p.weeks && typeof p.weeks === 'object' && !Array.isArray(p.weeks) ? p.weeks : {};
+      delete p.weeks[String(w)];
+    });
+    if (qty > 0) {
+      let allocated = 0;
+      plans.forEach((p, index) => {
+        let amount = 0;
+        if (index === plans.length - 1) {
+          amount = roundPlanQty(qty - allocated);
+        } else if (weightTotal > 0) {
+          amount = roundPlanQty(qty * oldWeights[index] / weightTotal);
+          allocated = roundPlanQty(allocated + amount);
+        } else {
+          amount = roundPlanQty(qty / plans.length);
+          allocated = roundPlanQty(allocated + amount);
+        }
+        if (amount > 0) p.weeks[String(w)] = amount;
+      });
+    }
+    plans.forEach(p => { p.updatedAt = now; });
+    if (!saveX1NanPlans()) {
+      plans.forEach(p => {
+        const old = original.find(v => v.id === p.id);
+        if (!old) return;
+        p.weeks = old.weeks;
+        p.updatedAt = old.updatedAt;
+      });
+      return false;
+    }
+    return true;
+  }
+  function x1NanPlanSetWeekPriority(planIds, weekKey, priority) {
+    if (x1NanPlanViewModeOf() !== 'week') return false;
+    if (!requireEditPermission()) return false;
+    const ids = [...new Set((Array.isArray(planIds) ? planIds : String(planIds || '').split(','))
+      .map(id => String(id || '').trim())
+      .filter(Boolean))];
+    if (!ids.length) return false;
+    const plans = (state.x1NanPlans || []).filter(p => p && ids.includes(p.id));
+    if (!plans.length) return false;
+    const value = priority === true || priority === 1 || priority === '1';
+    const original = plans.map(p => ({
+      id: p.id,
+      priorityWeeks: p.priorityWeeks && typeof p.priorityWeeks === 'object' &&
+        !Array.isArray(p.priorityWeeks)
+        ? JSON.parse(JSON.stringify(p.priorityWeeks))
+        : {},
+      updatedAt: p.updatedAt || ''
+    }));
+    const now = new Date().toISOString();
+    let changed = 0;
+    plans.forEach(p => {
+      const key = x1NanPlanPriorityWeekKey(p.year, weekKey);
+      if (!key) return;
+      p.priorityWeeks = p.priorityWeeks && typeof p.priorityWeeks === 'object' &&
+        !Array.isArray(p.priorityWeeks) ? p.priorityWeeks : {};
+      if (value) p.priorityWeeks[key] = true;
+      else delete p.priorityWeeks[key];
+      p.updatedAt = now;
+      changed++;
+    });
+    if (!changed) return false;
+    if (!saveX1NanPlans()) {
+      plans.forEach(p => {
+        const old = original.find(v => v.id === p.id);
+        if (!old) return;
+        p.priorityWeeks = old.priorityWeeks;
+        p.updatedAt = old.updatedAt;
+      });
+      return false;
+    }
+    renderX1NanPlanCard();
+    return true;
+  }
+  function x1NanPlanSetChildWeekPriority(planIds, weekKey, priority) {
+    return x1NanPlanSetWeekPriority(planIds, weekKey, priority);
+  }
+  function x1NanPlanDelete(planId) {
+    if (!requireEditPermission()) return false;
+    const plan = (state.x1NanPlans || []).find(p => p && p.id === planId);
+    if (!plan) return false;
+    const length = plan.length != null ? plan.length : plan.len;
+    const productName = String(plan.productName != null ? plan.productName :
+      (plan.tenSanPham != null ? plan.tenSanPham : '')).trim() || 'Chưa đặt tên';
+    const material = x1NanPlanMaterialOf(plan.material);
+    const width = x1NanPlanWidthOf(plan.width);
+    const sameSizePlans = (state.x1NanPlans || []).filter(p =>
+      p && Number(p.year) === Number(plan.year) &&
+      String(p.productName != null ? p.productName :
+        (p.tenSanPham != null ? p.tenSanPham : '')).trim() === productName &&
+      x1NanPlanWidthOf(p.width) === width &&
+      x1NanPlanLengthOf(p.length != null ? p.length : p.len) === length);
+    const sameSizeMaterials = new Set(sameSizePlans.map(p => x1NanPlanMaterialOf(p.material)).filter(Boolean));
+    const alternativeDelete = material === 'Vầu / Nứa' ||
+      (sameSizeMaterials.has('Vầu') && sameSizeMaterials.has('Nứa'));
+    const deleteIds = sameSizePlans.filter(p => {
+      const pm = x1NanPlanMaterialOf(p.material);
+      return alternativeDelete
+        ? (pm === 'Vầu / Nứa' || pm === 'Vầu' || pm === 'Nứa')
+        : pm === material;
+    })
+      .map(p => p.id)
+      .filter(Boolean);
+    const classifications = [...new Set(deleteIds.map(id => {
+      const row = (state.x1NanPlans || []).find(p => p && p.id === id);
+      return x1NanPlanClassificationOf(row && row.classification);
+    }).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+    const title = `${productName} · ${material} · ${width} ly × ${length} mm${classifications.length ? ` · ${classifications.join(' / ')}` : ''}`;
+    if (!confirm(`Xóa quy cách kế hoạch ${title} năm ${plan.year}?`)) return false;
+    const original = (state.x1NanPlans || []).map(p =>
+      p && typeof p === 'object' ? JSON.parse(JSON.stringify(p)) : p);
+    deleteIds.forEach(id => trackDeleted('x1NanPlans', id));
+    state.x1NanPlans = (state.x1NanPlans || []).filter(p => p && !deleteIds.includes(p.id));
+    if (!saveX1NanPlans()) {
+      state.x1NanPlans = original;
+      deleteIds.forEach(id => untrackDeleted('x1NanPlans', id));
+      return false;
+    }
+    renderX1NanPlanCard();
+    showToast('Đã xóa dòng kế hoạch xuất nan.', 'success');
+    return true;
+  }
+  function x1NanPlanYearOptionsHtml(year) {
+    const years = x1NanAvailableYears();
+    if (!years.includes(year)) years.unshift(year);
+    return [...new Set(years)].sort((a, b) => b - a)
+      .map(y => `<option value="${y}"${y === year ? ' selected' : ''}>Năm ${y}</option>`).join('');
+  }
+  function x1NanPlanWeekArray(plan) {
+    const weeks = [];
+    const weekCount = x1NanWeeksInYear(plan && plan.year);
+    for (let w = 1; w <= weekCount; w++) {
+      weeks.push(x1NanPlanPositiveNumber(plan && plan.weeks && plan.weeks[String(w)]));
+    }
+    return weeks;
+  }
+  function x1NanPlanResponseClass(ratio) {
+    if (ratio == null) return 'is-empty';
+    if (ratio >= 100) return 'is-ok';
+    if (ratio >= 80) return 'is-warn';
+    return 'is-bad';
+  }
+  function renderX1NanPlanCard() {
+    const mode = x1NanPlanViewModeOf();
+    let year = 0;
+    const periodState = String(state.x1NanPlanPeriod || '');
+    if (mode === 'week') {
+      const m = /^(\d{4})-W(\d{1,2})$/.exec(periodState);
+      if (m && x1NanPlanPeriodValid('week', periodState)) year = Number(m[1]);
+    } else if (mode === 'month') {
+      const m = /^(\d{4})-(\d{2})$/.exec(periodState);
+      if (m && x1NanPlanPeriodValid('month', periodState)) year = Number(m[1]);
+    } else if (mode === 'year') {
+      const y = Math.round(Number(periodState) || 0);
+      if (y >= 2000 && y <= 2100) year = y;
+    }
+    if (!year) {
+      const domYear = document.getElementById('x1-nan-plan-year');
+      year = domYear ? Math.round(Number(domYear.value) || 0) : 0;
+    }
+    if (!year) year = Math.round(Number(state.x1NanPlanYear) || 0);
+    if (year < 2000 || year > 2100) year = x1NanAvailableYears()[0] || new Date().getFullYear();
+    const period = x1NanPlanEnsurePeriod(year);
+    state.x1NanPlanYear = String(year);
+
+    const yearEl = document.getElementById('x1-nan-plan-year');
+    if (yearEl) {
+      yearEl.innerHTML = x1NanPlanYearOptionsHtml(year);
+      yearEl.value = String(year);
+    }
+    const periodLabel = document.getElementById('x1-nan-plan-period-label');
+    if (periodLabel) {
+      periodLabel.textContent = x1NanPlanPeriodLabel(period, mode);
+      if (mode === 'month') {
+        periodLabel.setAttribute('title', 'Tháng ISO: tổng các tuần có thứ Năm thuộc tháng đã chọn');
+        periodLabel.setAttribute('aria-label', 'Tháng ISO: tổng các tuần có thứ Năm thuộc tháng đã chọn');
+      } else {
+        periodLabel.removeAttribute('title');
+        periodLabel.removeAttribute('aria-label');
+      }
+    }
+    if (typeof document.querySelectorAll === 'function') {
+      document.querySelectorAll('[data-x1-nan-plan-view]').forEach(btn => {
+        if (!btn) return;
+        const active = btn.getAttribute && btn.getAttribute('data-x1-nan-plan-view') === mode;
+        if (btn.classList && typeof btn.classList.toggle === 'function') btn.classList.toggle('is-active', active);
+        if (btn.setAttribute) btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+    const prev = document.getElementById('x1-nan-plan-prev');
+    const next = document.getElementById('x1-nan-plan-next');
+    if (prev) prev.disabled = mode === 'week'
+      ? /^(\d{4})-W/.test(period) && Number(period.slice(0, 4)) === 2000 && Number(period.slice(6)) === 1
+      : (mode === 'month' ? period === '2000-01' : period === '2000');
+    if (next) next.disabled = mode === 'week'
+      ? /^(\d{4})-W/.test(period) && Number(period.slice(0, 4)) === 2100 && Number(period.slice(6)) === x1NanWeeksInYear(2100)
+      : (mode === 'month' ? period === '2100-12' : period === '2100');
+
+    const actualMapCache = {};
+    const getActualMap = y => {
+      const ay = Math.round(Number(y) || 0);
+      if (!actualMapCache[ay]) actualMapCache[ay] = x1NanActualMap(ay, state.xuong1LocThanhRecords || []);
+      return actualMapCache[ay];
+    };
+    const stockSummary = x1WarehouseStockSummary();
+    const sortPlans = plans => plans.sort((a, b) => {
+      if (mode === 'week') {
+        const aPriority = x1NanPlanWeekPriorityOf(a, period);
+        const bPriority = x1NanPlanWeekPriorityOf(b, period);
+        if (aPriority !== bPriority) return Number(bPriority) - Number(aPriority);
+      }
+      return String(a.productName != null ? a.productName : (a.tenSanPham != null ? a.tenSanPham : '')).localeCompare(
+        String(b.productName != null ? b.productName : (b.tenSanPham != null ? b.tenSanPham : '')), 'vi') ||
+        String(a.material || '').localeCompare(String(b.material || ''), 'vi') ||
+        x1NanPlanWidthOf(a.width) - x1NanPlanWidthOf(b.width) ||
+        x1NanPlanLengthOf(a.length != null ? a.length : a.len) -
+        x1NanPlanLengthOf(b.length != null ? b.length : b.len) ||
+        String(a.classification != null ? a.classification :
+          (a.phanLoai != null ? a.phanLoai : '')).localeCompare(
+          String(b.classification != null ? b.classification :
+            (b.phanLoai != null ? b.phanLoai : '')), 'vi');
+    });
+
+    let weekNumber = 0;
+    let monthWeeks = [];
+    if (mode === 'week') {
+      const wm = /^(\d{4})-W(\d{1,2})$/.exec(period);
+      weekNumber = wm ? Math.round(Number(wm[2]) || 0) : 0;
+    } else if (mode === 'month') {
+      monthWeeks = x1NanMonthMondayWeeks(period);
+    }
+
+    let plans = [];
+    if (mode === 'week' || mode === 'year') {
+      plans = (state.x1NanPlans || []).filter(p =>
+        p && Number(p.year) === year &&
+        p.material && x1NanPlanWidthOf(p.width) > 0 &&
+        x1NanPlanLengthOf(p.length != null ? p.length : p.len) > 0);
+    } else {
+      const yearSet = new Set(monthWeeks.map(w => w.year));
+      plans = (state.x1NanPlans || []).filter(p =>
+        p && yearSet.has(Number(p.year)) &&
+        p.material && x1NanPlanWidthOf(p.width) > 0 &&
+        x1NanPlanLengthOf(p.length != null ? p.length : p.len) > 0);
+    }
+    sortPlans(plans);
+
+    const grouped = x1NanPlanGroupedRecords(plans, mode, period);
+    const allocationMap = x1NanAllocateStockForPlans(
+      grouped, mode, year, period, monthWeeks, stockSummary);
+    let totalPlanPeriod = 0;
+    let childCount = 0;
+
+    grouped.forEach(group => {
+      group.children.forEach(child => {
+        childCount++;
+        const periodPlanInfo = x1NanPlanChildPeriodPlanQty(
+          child, mode, year, period, monthWeeks);
+        const periodPlan = periodPlanInfo.total;
+        totalPlanPeriod += periodPlan;
+      });
+    });
+
+    const summary = document.getElementById('x1-nan-plan-summary');
+    if (summary) {
+      summary.textContent = childCount
+        ? `${grouped.length} sản phẩm · ${childCount} quy cách · KH ${fmtKg(totalPlanPeriod)} kg`
+        : 'Chưa có kế hoạch';
+    }
+
+    const head = document.getElementById('x1-nan-plan-head');
+    if (head) {
+      const periodName = mode === 'week'
+        ? `Tuần ${weekNumber}`
+        : (mode === 'month'
+          ? `Tháng ${period.slice(5, 7)}/${period.slice(0, 4)}`
+          : `Năm ${year}`);
+      head.innerHTML = `<tr>
+        <th>Sản phẩm / Quy cách / Phân loại</th>
+        <th>Kế hoạch kỳ (kg)<br><small>${escapeHTML(periodName)}</small></th>
+        <th>Đáp ứng</th>
+        <th>Tồn hiện tại</th>
+        <th>Khả năng</th>
+        <th>Thao tác</th>
+      </tr>`;
+    }
+
+    const body = document.getElementById('x1-nan-plan-body');
+    if (!body) return;
+    if (!plans.length || !grouped.length) {
+      body.innerHTML = `<tr><td colspan="6" class="x1-nan-plan-empty">Chưa có dòng kế hoạch trong kỳ này. Bấm “Thêm sản phẩm” để lập kế hoạch theo sản phẩm, nguyên liệu, kích thước và phân loại.</td></tr>`;
+      initLucide();
+      return;
+    }
+
+    const rows = [];
+    grouped.forEach(group => {
+      const productMaterials = [...new Set(group.children.map(child => child.material))]
+        .sort((a, b) => a.localeCompare(b, 'vi'))
+        .join(' / ');
+      rows.push(`<tr class="x1-nan-plan-product-header">
+        <th colspan="6">
+          <strong class="x1-nan-plan-product-name">${escapeHTML(group.productName)}</strong>
+          <small>${escapeHTML(productMaterials ? `Nguyên liệu: ${productMaterials}` : '')}</small>
+        </th>
+      </tr>`);
+      group.children.forEach(child => {
+        const classifications = x1NanPlanChildClassifications(child);
+        const planIds = [...new Set(child.plans.map(p => p && p.id).filter(Boolean))];
+        const planWeeks = mode === 'month'
+          ? []
+          : x1NanPlanChildPlanWeeks(child, year);
+        const periodPlanInfo = x1NanPlanChildPeriodPlanQty(
+          child, mode, year, period, monthWeeks);
+        let periodPlan = periodPlanInfo.total;
+        let actualWeeks = [];
+
+        if (mode === 'week') {
+          actualWeeks = x1NanPlanChildActualWeeks(child, year, getActualMap(year));
+        } else if (mode === 'month') {
+          actualWeeks = [];
+        } else {
+          actualWeeks = x1NanPlanChildActualWeeks(child, year, getActualMap(year));
+        }
+
+        const allocation = allocationMap.get(child) || {
+          allocatedStock: 0,
+          deficit: periodPlan,
+          remainingStock: 0
+        };
+        const allocatedStock = x1NanPlanPositiveNumber(allocation.allocatedStock);
+        const ratio = x1NanResponseRatio(periodPlan, allocatedStock);
+        const ratioText = ratio == null ? '—' : `${Math.round(ratio)}%`;
+        let level = 0;
+        if (mode === 'week' || mode === 'year') {
+          level = x1NanContinuousMaxLevel(planWeeks, actualWeeks, year);
+        }
+        const levelHtml = level > 0
+          ? `<span class="x1-nan-plan-level level-${level}">${level} tuần</span>`
+          : `<span class="x1-nan-plan-level level-0">—</span>`;
+        const stockBreakdown = x1NanStockBreakdownOf(
+          child, stockSummary);
+        const stockQty = x1NanPlanPositiveNumber(stockBreakdown.total);
+        const stockText = x1NanStockBreakdownText(child, stockSummary, classifications);
+        let coverageText = '';
+        let deficit = Math.max(0, periodPlan - allocatedStock);
+        if (periodPlan <= 0) {
+          coverageText = 'Chưa có kế hoạch';
+        } else if (deficit <= 0) {
+          coverageText = 'Đủ tồn kỳ';
+        } else {
+          coverageText = `Thiếu ${fmtKg(deficit)} kg`;
+        }
+        const remainingStock = x1NanPlanPositiveNumber(allocation.remainingStock);
+        if (remainingStock > 0) coverageText += ` · Còn ${fmtKg(remainingStock)} kg`;
+        const sizeLabel = `${child.material} · ${fmtKg(child.width)} ly × ${fmtKg(child.length)} mm`;
+        const classLabel = classifications.length ? classifications.join(' / ') : 'Chưa phân loại';
+        const identityTitle = `${group.productName} · ${sizeLabel} · ${classLabel}`;
+        const responseLabel = `${identityTitle} · Kế hoạch ${fmtKg(periodPlan)} kg · Tồn phân bổ ${fmtKg(allocatedStock)} kg · Đáp ứng ${ratioText}`;
+        const firstId = planIds[0] || '';
+
+        let planInputHtml = `<td class="x1-nan-plan-period-plan">${fmtKg(periodPlan)} kg</td>`;
+        if (mode === 'week') {
+          const planLabel = `${identityTitle} · Tuần ${weekNumber}: Kế hoạch ${fmtKg(periodPlan)} kg`;
+          const weekPriorityState = x1NanPlanChildWeekPriority(child, period);
+          planInputHtml = `<td class="x1-nan-plan-week" data-week="${weekNumber}">
+            <div class="x1-nan-plan-week-controls">
+              <div class="x1-nan-plan-kg-input">
+                <input type="number" min="0" max="999999" step="0.1"
+                  data-x1-nan-plan-week="${weekNumber}"
+                  data-x1-nan-plan-id="${escapeHTML(firstId)}"
+                  data-x1-nan-plan-ids="${escapeHTML(planIds.join(','))}"
+                  value="${periodPlan > 0 ? periodPlan : ''}" placeholder="0"
+                  aria-label="${escapeHTML(`${planLabel} (kg)`)}" title="${escapeHTML(`${planLabel} (kg)`)}">
+                <span class="x1-nan-plan-input-unit" aria-hidden="true">kg</span>
+              </div>
+              <label class="x1-nan-plan-week-priority" title="${escapeHTML(`Ưu tiên trừ tồn tuần ${weekNumber}/${year} cho ${identityTitle}`)}">
+                <input type="checkbox"
+                  data-x1-nan-plan-week-priority="${escapeHTML(period)}"
+                  data-x1-nan-plan-ids="${escapeHTML(planIds.join(','))}"
+                  data-x1-nan-plan-week-indeterminate="${weekPriorityState.indeterminate ? 'true' : 'false'}"
+                  ${weekPriorityState.priority ? 'checked' : ''}
+                  aria-checked="${weekPriorityState.indeterminate ? 'mixed' : (weekPriorityState.priority ? 'true' : 'false')}"
+                  aria-label="${escapeHTML(`Ưu tiên trừ tồn tuần ${weekNumber}/${year} cho ${identityTitle}`)}">
+                <span>Ưu tiên</span>
+              </label>
+            </div>
+          </td>`;
+        }
+
+        rows.push(`<tr>
+          <td class="x1-nan-plan-identity" title="${escapeHTML(identityTitle)}">
+            <div class="x1-nan-plan-identity-main">
+              <strong>${escapeHTML(sizeLabel)}</strong>
+            </div>
+            <small>${escapeHTML(`Phân loại: ${classLabel}`)}</small>
+          </td>
+          ${planInputHtml}
+          <td class="x1-nan-plan-response ${x1NanPlanResponseClass(ratio)}" aria-label="${escapeHTML(responseLabel)}" title="${escapeHTML(responseLabel)}">${ratioText}</td>
+          <td class="x1-nan-plan-stock" title="${escapeHTML(stockText)}">
+            <span class="x1-nan-plan-stock-breakdown">${escapeHTML(stockText)}</span>
+          </td>
+          <td class="x1-nan-plan-capacity" title="${escapeHTML(`${coverageText} · mức liên tục ${level > 0 ? level + ' tuần' : '—'}`)}">
+            ${levelHtml}
+            <div class="x1-nan-plan-capacity-note">${escapeHTML(coverageText)}</div>
+          </td>
+          <td class="x1-nan-plan-actions">
+            <button type="button" class="btn btn-icon btn-outline" title="Sửa quy cách" data-x1-nan-plan-edit="${escapeHTML(firstId)}" data-perm="x1"><i data-lucide="pencil"></i></button>
+            <button type="button" class="btn btn-icon btn-danger" title="Xóa quy cách" data-x1-nan-plan-delete="${escapeHTML(firstId)}" data-perm="x1"><i data-lucide="trash-2"></i></button>
+          </td>
+        </tr>`);
+      });
+    });
+    body.innerHTML = rows.join('');
+    if (typeof body.querySelectorAll === 'function') {
+      body.querySelectorAll('[data-x1-nan-plan-week-priority]').forEach(input => {
+        if (!input) return;
+        const mixed = input.getAttribute &&
+          input.getAttribute('data-x1-nan-plan-week-indeterminate') === 'true';
+        if ('indeterminate' in input) input.indeterminate = mixed;
+        if (mixed && 'checked' in input) input.checked = false;
+      });
+    }
+    initLucide();
+  }
+
   // ─── THẺ LỌC THANH / BÓ XÔ: 2 hình thức + ma trận theo lô nguồn ──
   let ltSelectedLots = [];
   let ltLengthSnapshot = null;
+  // checkbox Đóng/Mở: null = chưa có ý định, boolean = ý định rõ của người dùng.
+  let ltDoneIntent = null;
+  let ltDoneBaselineChecked = null;
+  let ltDoneBaselineIndeterminate = false;
   const X1_LT_LENGTH_DEFAULTS = X1_BO_LENGTH_DEFAULTS;
   function x1LocThanhModeOf() {
     const el = document.getElementById('x1-loc-thanh-mode');
@@ -17926,18 +20139,29 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const ticketQty = Math.max(0, Number(source.qtyOk) || 0);
       const supplier = x1SrcSupplierOf(source) || '—';
       const materialType = x1SrcTypeOf(source) || 'Vầu/nứa';
+      const progress = x1LocThanhLotProgressOf(source, editId);
+      const progressText = progress.nominalKg == null
+        ? 'Danh định Sấy Sinh: chưa có dữ liệu'
+        : 'Danh định Sấy Sinh ' + fmtKg(progress.nominalKg) + ' kg';
+      const finishedText = 'Thành phẩm đo cộng dồn ' + fmtKg(progress.finishedKg) + ' kg';
+      const mixedText = progress.mixedFinishedKg > 1e-9
+        ? ' · Lượt gom hỗn hợp ' + fmtKg(progress.mixedFinishedKg) + ' kg (chưa phân bổ)' : '';
+      const closedText = progress.closed
+        ? (progress.ratio != null ? 'Đã chốt · Tỷ lệ sau chốt ' + fmtRatio(progress.ratio) + '%' : x1LocThanhClosedNoRatioLabelOf(progress))
+        : 'Chưa chốt · Tỷ lệ chưa tính';
       // DÒNG GỌN (14/11/2026): chỉ MÃ LÔ + ô Kg lấy lọc/bó — chi tiết lô nằm trong tooltip
-      const srcTitle = `${materialType} · NCC ${supplier} · ${source.date ? formatDateDDMMYY(source.date) : ''} · Phiếu Bổ ${fmtKg(ticketQty)} kg · Còn ${fmtKg(available)} kg`;
+      const srcTitle = materialType + ' · NCC ' + supplier + ' · ' + (source.date ? formatDateDDMMYY(source.date) : '') + ' · Phiếu Bổ ' + fmtKg(ticketQty) + ' kg · Còn ' + fmtKg(available) + ' kg · ' + progressText + ' · ' + finishedText + mixedText + ' · ' + closedText;
       return `<div class="x1-lt-source-row" data-x1-lt-source-row="${escapeHTML(source.id)}"
         data-x1-lt-available="${escapeHTML(String(available))}">
         <strong class="x1-lt-src-name" title="${escapeHTML(srcTitle)}">${escapeHTML(x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ')}</strong>
-        <input type="number" min="0" step="any" data-x1-lt-source-in aria-label="Kg lấy lọc / bó của lô ${escapeHTML(source.lotCode || '')}"
-          title="Kg lấy lọc / bó — còn theo phiếu Bổ ${fmtKg(available)} kg"
+        <input type="text" inputmode="decimal" data-x1-lt-source-in aria-label="Kg đem lọc / bó của lô ${escapeHTML(source.lotCode || '')}"
+          title="Kg đem lọc / bó — còn theo phiếu Bổ ${fmtKg(available)} kg"
           value="${escapeHTML(String(allocation.qtyIn == null ? '' : allocation.qtyIn))}" placeholder="${fmtKg(available)}">
         <input type="hidden" data-x1-lt-source-index value="${index}">
       </div>`;
     }).join('');
     initLucide();
+    x1LtSyncDoneUi();
   }
   function x1LtRenderSourceSummary() {
     const summary = document.getElementById('x1-lt-source-summary');
@@ -17953,6 +20177,96 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       `${x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ'} · ${source.date ? formatDateDDMMYY(source.date) : '—'}`);
     summary.textContent = names.length === 1 ? `Đã chọn: ${names[0]}` : `Đã chọn ${names.length} lô`;
     summary.setAttribute('title', names.join('\n'));
+  }
+  function x1LtSyncDoneUi() {
+    const row = document.querySelector('.x1-lt-done-row');
+    const checkbox = document.getElementById('x1-loc-thanh-done');
+    const hint = document.getElementById('x1-loc-thanh-done-hint');
+    if (!checkbox || !hint) return;
+    if (!ltSelectedLots.length) {
+      checkbox.checked = false;
+      checkbox.indeterminate = false;
+      checkbox.disabled = false;
+      hint.textContent = 'Chọn ít nhất một lô Bổ để theo dõi và chốt.';
+      if (row) row.classList.remove('is-done');
+      ltDoneIntent = null;
+      ltDoneBaselineChecked = null;
+      ltDoneBaselineIndeterminate = false;
+      return;
+    }
+    const progress = ltSelectedLots.map(item => {
+      const source = (state.xuong1BoRecords || []).find(r => r.id === item.sourceId);
+      return source ? { source, progress: x1LocThanhLotProgressOf(source, state.x1LocThanhEditId || null) } : null;
+    }).filter(Boolean);
+    const nominal = progress.reduce((sum, item) => sum + (item.progress.nominalKg != null ? item.progress.nominalKg : 0), 0);
+    const finished = progress.reduce((sum, item) => sum + item.progress.finishedKg, 0);
+    const selectedIds = progress.map(item => item.source.id);
+    const mixedSummary = x1LocThanhSelectedMixedSummaryOf(selectedIds, state.x1LocThanhEditId || null);
+    const allClosed = progress.length > 0 && progress.every(item => item.progress.closed);
+    const anyClosed = progress.length > 0 && progress.some(item => item.progress.closed);
+    const mixedStatus = progress.length > 0 && allClosed !== anyClosed;
+
+    if (ltDoneIntent == null) {
+      const desiredChecked = allClosed;
+      const desiredIndeterminate = mixedStatus;
+      const baselineSet = ltDoneBaselineChecked != null || ltDoneBaselineIndeterminate;
+      const userChanged = baselineSet && (checkbox.checked !== ltDoneBaselineChecked || !!checkbox.indeterminate !== ltDoneBaselineIndeterminate);
+      if (userChanged) {
+        ltDoneIntent = !!checkbox.checked;
+        checkbox.indeterminate = false;
+      } else {
+        checkbox.checked = desiredChecked;
+        checkbox.indeterminate = desiredIndeterminate;
+      }
+    } else {
+      const baselineSet = ltDoneBaselineChecked != null || ltDoneBaselineIndeterminate;
+      const userChanged = baselineSet && (checkbox.checked !== ltDoneBaselineChecked || !!checkbox.indeterminate !== ltDoneBaselineIndeterminate);
+      if (userChanged) ltDoneIntent = !!checkbox.checked;
+      checkbox.checked = ltDoneIntent === true;
+      checkbox.indeterminate = false;
+    }
+    ltDoneBaselineChecked = !!checkbox.checked;
+    ltDoneBaselineIndeterminate = !!checkbox.indeterminate;
+
+    const lotStatusText = progress.map(item => {
+      const code = x1TraceLotCodeOf(item.source) || item.source.lotCode || "Lô Bổ";
+      const p = item.progress;
+      return p.closed
+        ? (p.ratio != null ? `${code} ${fmtRatio(p.ratio)}%` : `${code} ` + x1LocThanhClosedNoRatioLabelOf(p))
+        : `${code} chưa chốt`;
+    }).join(" · ");
+    let intent = '';
+    if (checkbox.checked) {
+      intent = allClosed
+        ? 'GIỮ TRẠNG THÁI ĐÃ CHỐT — bỏ tích để mở lại.'
+        : anyClosed
+          ? 'Ý ĐỊNH CHỐT lô còn mở — bỏ tích để mở lại lô đã chốt.'
+          : 'CHỜ XÁC NHẬN ĐÓNG LÔ khi lưu.';
+    } else if (checkbox.indeterminate) {
+      intent = 'TRẠNG THÁI HỖN HỢP — chưa thay đổi; tích/bỏ tích để có ý định rõ.';
+    } else {
+      intent = allClosed
+        ? 'CHỜ XÁC NHẬN MỞ LẠI — bỏ tích là ý định mở lô đã chốt.'
+        : anyClosed
+          ? 'CHỜ MỞ lại lô đã chốt — lô còn mở giữ nguyên.'
+          : 'LÔ ĐANG MỞ — lưu lượt bình thường.';
+    }
+    const closeStatus = allClosed
+      ? 'Đã chốt'
+      : anyClosed
+        ? 'Có lô đã chốt và lô còn mở'
+        : 'Chưa chốt';
+    hint.textContent = ltSelectedLots.length + ' lô đã chọn · Danh định Sấy Sinh ' + fmtKg(nominal) + ' kg · Thành phẩm cộng dồn ' + fmtKg(finished) + ' kg' +
+      (mixedSummary.qtyKg > 1e-9 ? ' · Gom hỗn hợp ' + fmtKg(mixedSummary.qtyKg) + ' kg (' + mixedSummary.sessions + ' lượt chung, chưa phân bổ)' : '') + ' · ' +
+      closeStatus + ' · Tỷ lệ theo lô: ' + lotStatusText + ' · ' + intent;
+    if (row) row.classList.toggle('is-done', checkbox.checked);
+  }
+  function x1LtMarkDoneIntent() {
+    const checkbox = document.getElementById('x1-loc-thanh-done');
+    if (!checkbox) return;
+    ltDoneIntent = !!checkbox.checked;
+    checkbox.indeterminate = false;
+    x1LtSyncDoneUi();
   }
   function x1LtRenderSourceOptions(sources, editId) {
     const box = document.getElementById('x1-loc-thanh-source-options');
@@ -17971,18 +20285,23 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const remaining = x1LocThanhPotentialOfBo(source, editId);
       const initialInput = x1BoSaySinhInputOf(source);
       const initialInputLabel = initialInput == null ? 'chưa có dữ liệu' : `${fmtKg(initialInput)} kg`;
+      const progress = x1LocThanhLotProgressOf(source, editId);
+      const progressLabel = progress.closed
+        ? (progress.ratio == null ? x1LocThanhClosedNoRatioLabelOf(progress) : `Đã chốt · Tỷ lệ sau chốt ${fmtRatio(progress.ratio)}%`)
+        : 'Chưa chốt — tỷ lệ chưa tính';
       const selected = ltSelectedLots.some(item => item.sourceId === source.id);
       return `<label class="x1-lt-source-option">
         <input type="checkbox" data-x1-lt-select-source value="${sourceId}" data-perm="x1" ${selected ? 'checked' : ''}>
         <span class="x1-lt-source-option-details">
           <span class="x1-lt-source-option-title"><strong>${escapeHTML(lotCode)}</strong> · Ngày Bổ ${escapeHTML(source.date ? formatDateDDMMYY(source.date) : '—')}</span>
           <span class="x1-lt-source-option-meta">${escapeHTML(materialType)} · NCC ${escapeHTML(supplier)}</span>
-          <span class="x1-lt-source-option-stock"><strong>Còn theo phiếu Bổ ${fmtKg(remaining)} kg</strong> | Tổng đầu vào Sấy Sinh cả lô ${initialInputLabel}</span>
+          <span class="x1-lt-source-option-stock"><strong>Còn theo phiếu Bổ ${fmtKg(remaining)} kg</strong> | Danh định Sấy Sinh ${initialInputLabel} | Thành phẩm cộng dồn ${fmtKg(progress.finishedKg)} kg${progress.mixedFinishedKg > 1e-9 ? ` · Gom hỗn hợp ${fmtKg(progress.mixedFinishedKg)} kg chưa phân bổ` : ''} | ${progressLabel}</span>
         </span>
       </label>`;
     }).join('');
   }
   function x1LtAddSource(sourceId) {
+    x1LtPreserveSourceAllocationsFromDom();
     if (!requireEditPermission()) return false;
     const sel = document.getElementById('x1-loc-thanh-src');
     const selectedId = sourceId || (sel ? sel.value : '');
@@ -17996,15 +20315,20 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       sourceId: source.id, qtyDryAvailable: null, dryAdjustment: null,
       qtyIn: available > 0 ? available : '', dryAdjustmentReason: '', legacy: false
     });
+    ltDoneIntent = null;
+    ltDoneBaselineChecked = null;
+    ltDoneBaselineIndeterminate = false;
     if (sel) sel.value = source.id;
     const dateEl = document.getElementById('x1-loc-thanh-date');
     if (dateEl && !dateEl.value && source.date) dateEl.value = source.date;
     x1LtRenderSourceRows();
     x1LtRefreshDimensions();
     x1ChainCalc(x1ChainSpecByKey('locThanh'));
+    x1LtSyncDoneUi();
     return true;
   }
   function x1LtRemoveSource(sourceId) {
+    x1LtPreserveSourceAllocationsFromDom();
     if (!requireEditPermission()) return false;
     const source = (state.xuong1BoRecords || []).find(r => r.id === sourceId);
     if (source && x1LocThanhModeOf() === 'loc-thanh') {
@@ -18023,13 +20347,29 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         return false;
       }
     }
+    ltDoneIntent = null;
+    ltDoneBaselineChecked = null;
+    ltDoneBaselineIndeterminate = false;
     ltSelectedLots = ltSelectedLots.filter(item => item.sourceId !== sourceId);
     const sel = document.getElementById('x1-loc-thanh-src');
     if (sel) sel.value = ltSelectedLots[0] ? ltSelectedLots[0].sourceId : '';
     x1LtRenderSourceRows();
     x1LtRefreshDimensions();
     x1ChainCalc(x1ChainSpecByKey('locThanh'));
+    x1LtSyncDoneUi();
     return true;
+  }
+  function x1LtPreserveSourceAllocationsFromDom() {
+    const allocations = x1LtReadSourceAllocations();
+    allocations.forEach(allocation => {
+      const current = ltSelectedLots.find(item => item.sourceId === allocation.sourceId);
+      if (!current) return;
+      current.qtyIn = allocation.qtyIn;
+      current.qtyDryAvailable = allocation.qtyDryAvailable;
+      current.dryAdjustment = allocation.dryAdjustment;
+      current.dryAdjustmentReason = allocation.dryAdjustmentReason || '';
+      current.legacy = !!allocation.legacy;
+    });
   }
   function x1LtReadSourceAllocations() {
     const box = document.getElementById('x1-loc-thanh-source-rows');
@@ -18047,7 +20387,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         sourceId,
         qtyDryAvailable: current ? current.qtyDryAvailable : null,
         dryAdjustment: current ? current.dryAdjustment : null,
-        qtyIn: inputText === '' ? 0 : Number(inputText),
+        qtyIn: inputText === '' ? 0 : parseX1MatrixValue(inputText),
         dryAdjustmentReason: current ? current.dryAdjustmentReason || '' : '',
         legacy: !!(current && current.legacy)
       };
@@ -18153,18 +20493,207 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   ];
   // BẢN RỘNG chọn TẠI MA TRẬN (mỗi dòng kích thước 1 ô chọn) — KHÔNG còn ở thẻ Bổ
   const X1_LT_WIDTH_DEFAULTS = [6, 11, 13, 15, 21];
+  // ── Bộ đọc biểu thức an toàn cho ô ma trận Lọc Thanh/Bó Xô ──
+  // Không gọi evaluator động: dùng recursive-descent parser
+  // (số → dấu ngoặc → nhân/chia → cộng/trừ), hỗ trợ dấu thập phân . và ,.
+  function parseArithmeticExpression(input) {
+    if (typeof input === 'number') return Number.isFinite(input) ? input : null;
+    if (typeof input !== 'string') return null;
+    const text = input.trim();
+    if (!text) return null;
+    let pos = 0;
+    const length = text.length;
+    const invalid = () => { throw new Error('Invalid arithmetic expression'); };
+    const skipWhitespace = () => {
+      while (pos < length && /\s/.test(text[pos])) pos++;
+    };
+    const isDigit = char => char != null && char >= '0' && char <= '9';
+    const parseNumber = () => {
+      skipWhitespace();
+      if (pos >= length) invalid();
+      const start = pos;
+      let sawDigit = false;
+      if (isDigit(text[pos])) {
+        while (isDigit(text[pos])) { pos++; sawDigit = true; }
+        if (text[pos] === '.' || text[pos] === ',') {
+          pos++;
+          const decimalStart = pos;
+          while (isDigit(text[pos])) { pos++; sawDigit = true; }
+          if (pos === decimalStart) invalid();
+        }
+      } else if (text[pos] === '.' || text[pos] === ',') {
+        pos++;
+        const decimalStart = pos;
+        while (isDigit(text[pos])) { pos++; sawDigit = true; }
+        if (pos === decimalStart) invalid();
+      } else {
+        invalid();
+      }
+      if (!sawDigit) invalid();
+      const raw = text.slice(start, pos).replace(',', '.');
+      const value = Number(raw);
+      if (!Number.isFinite(value)) invalid();
+      return value;
+    };
+    const parsePrimary = () => {
+      skipWhitespace();
+      if (text[pos] === '(') {
+        pos++;
+        const value = parseExpression();
+        skipWhitespace();
+        if (text[pos] !== ')') invalid();
+        pos++;
+        return value;
+      }
+      return parseNumber();
+    };
+    const parseUnary = () => {
+      skipWhitespace();
+      if (text[pos] === '-') {
+        pos++;
+        return -parseUnary();
+      }
+      if (text[pos] === '+') {
+        pos++;
+        return parseUnary();
+      }
+      return parsePrimary();
+    };
+    const parseTerm = () => {
+      let value = parseUnary();
+      while (true) {
+        skipWhitespace();
+        if (text[pos] !== '*' && text[pos] !== '/') break;
+        const operator = text[pos++];
+        const right = parseUnary();
+        if (operator === '/') {
+          if (right === 0) invalid();
+          value /= right;
+        } else {
+          value *= right;
+        }
+        if (!Number.isFinite(value)) invalid();
+      }
+      return value;
+    };
+    function parseExpression() {
+      let value = parseTerm();
+      while (true) {
+        skipWhitespace();
+        if (text[pos] !== '+' && text[pos] !== '-') break;
+        const operator = text[pos++];
+        const right = parseTerm();
+        value = operator === '+' ? value + right : value - right;
+        if (!Number.isFinite(value)) invalid();
+      }
+      return value;
+    }
+    try {
+      const value = parseExpression();
+      skipWhitespace();
+      if (pos !== length) return null;
+      return Number.isFinite(value) ? value : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  function parseSafeArithmeticExpression(input) {
+    return parseArithmeticExpression(input);
+  }
+  function parseX1ArithmeticExpression(input) {
+    return parseArithmeticExpression(input);
+  }
+  function x1MatrixArithmeticValue(input) {
+    const value = parseArithmeticExpression(input);
+    return value == null ? 0 : Math.max(0, value);
+  }
+  function parseX1MatrixValue(input) {
+    return x1MatrixArithmeticValue(input);
+  }
+  function formatArithmeticExpressionResult(value) {
+    if (!Number.isFinite(value)) return null;
+    if (Object.is(value, -0)) value = 0;
+    const rounded = Number(value.toPrecision(15));
+    if (!Number.isFinite(rounded)) return null;
+    if (Object.is(rounded, -0)) return '0';
+    let text = String(rounded);
+    if (/e/i.test(text)) {
+      const [coefficient, exponentText] = text.toLowerCase().split('e');
+      const exponent = Number(exponentText);
+      const sign = coefficient.startsWith('-') ? '-' : '';
+      const unsigned = coefficient.replace(/^\+/, '').replace(/^-/, '');
+      const parts = unsigned.split('.');
+      const digits = (parts[0] || '0') + (parts[1] || '');
+      const decimalIndex = (parts[0] || '0').length + exponent;
+      if (decimalIndex <= 0) {
+        text = sign + '0.' + '0'.repeat(-decimalIndex) + digits;
+      } else if (decimalIndex >= digits.length) {
+        text = sign + digits + '0'.repeat(decimalIndex - digits.length);
+      } else {
+        text = sign + digits.slice(0, decimalIndex) + '.' + digits.slice(decimalIndex);
+      }
+      text = text.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
+    }
+    return text;
+  }
+  // Chỉ gọi ở change/blur/Enter/submit để thay biểu thức hợp lệ thành kết quả.
+  // Chuỗi đơn thuần (số / số thập phân) được giữ nguyên để người dùng nhập tự nhiên.
+  function applyArithmeticExpressionInput(input) {
+    const isElement = input && typeof input === 'object' && 'value' in input;
+    const text = isElement ? String(input.value == null ? '' : input.value) : String(input == null ? '' : input);
+    const hasExpressionSyntax = /[+\-*\/()]/.test(text);
+    if (!hasExpressionSyntax) return isElement ? input.value : text;
+    const value = parseArithmeticExpression(text);
+    if (value == null) return isElement ? input.value : text;
+    const formatted = formatArithmeticExpressionResult(value);
+    if (formatted == null) return isElement ? input.value : text;
+    if (isElement) input.value = formatted;
+    return isElement ? input.value : formatted;
+  }
+  function applyX1MatrixExpressionInput(input) {
+    return applyArithmeticExpressionInput(input);
+  }
+  function finalizeX1LocThanhExpressionInputs() {
+    const form = document.getElementById('x1-loc-thanh-form');
+    if (form && typeof form.querySelectorAll === 'function') {
+      const inputs = form.querySelectorAll('input[type="text"]');
+      Array.prototype.forEach.call(inputs || [], input => applyX1MatrixExpressionInput(input));
+    }
+    ['x1-loc-thanh-ok', 'x1-loc-thanh-loai', 'x1-loc-thanh-in'].forEach(id => {
+      const input = document.getElementById(id);
+      if (input) applyX1MatrixExpressionInput(input);
+    });
+  }
   // Chuyển 1 bộ giá trị phân loại CŨ sang phân loại mới — idempotent (không còn d6/d13 thì nguyên vẹn)
   function x1LtNormClassValues(values) {
     const out = {};
-    const d6 = Number(values && values.d6) || 0;
-    const d13 = Number(values && values.d13) || 0;
-    X1_LT_CLASSES.forEach(c => { out[c.id] = Number(values && values[c.id]) || 0; });
+    X1_LT_CLASSES.forEach(c => { out[c.id] = 0; });
+    Object.keys(values || {}).forEach(key => {
+      const raw = String(key || '').trim();
+      const norm = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        .replace(/[\s._-]+/g, ' ').trim();
+      const qty = x1MatrixArithmeticValue(values[key]);
+      if (norm === 'd6') return;
+      if (norm === 'd13') return;
+      if (norm === 'a') out.A += qty;
+      else if (norm === 'a1') out.A1 += qty;
+      else if (norm === 'nonbt' || norm === 'non banh te' || norm.includes('non bánh') || norm.includes('non banh') || norm.includes('banh te')) out.nonbt += qty;
+      else if (norm === 'b' || norm === 'bnont' || norm === 'bau' || norm.includes('b non') || norm === 'cắt đầu' || norm === 'cat dau') {
+        if (norm === 'bau' || norm.includes('cat dau') || norm === 'cắt đầu') out.bau += qty;
+        else out.bnont += qty;
+      } else if (norm === 'loai' || norm === 'loại' || norm.includes('loai')) out.loai += qty;
+    });
+    const d6 = x1MatrixArithmeticValue(values && values.d6);
+    const d13 = x1MatrixArithmeticValue(values && values.d13);
+    X1_LT_CLASSES.forEach(c => { out[c.id] = x1MatrixArithmeticValue(out[c.id]); });
     if (d6) out.A += d6;
     if (d13 > 0) {
       const a = Math.round(d13 * 0.6);
       out.A += a;
       out.A1 += d13 - a;
     }
+    delete out.d6;
+    delete out.d13;
     return out;
   }
   // Chuẩn hóa MỘT BỘ ma trận đã lưu (cả dạng kg lẫn dạng số lượng cũ)
@@ -18172,7 +20701,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!Array.isArray(rows)) return [];
     return rows.map(row => {
       const values = row && (row.weights || row.counts);
-      if (!values || (values.d6 == null && values.d13 == null)) return row;
+      if (!values) return row;
       const norm = x1LtNormClassValues(values);
       return row.weights
         ? Object.assign({}, row, { weights: norm })
@@ -18198,7 +20727,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (!gA) return;
       const len = Math.round(Number(gA('data-x1-lt-len')));
       const cls = gA('data-x1-lt-c');
-      const v = Math.max(0, Number(inp.value) || 0);
+      const v = parseX1MatrixValue(inp.value);
       if (!Number.isFinite(len) || len <= 0 || !X1_LT_CLASSES.some(c => c.id === cls) || v <= 0) return;
       if (!map.has(len)) map.set(len, {});
       map.get(len)[cls] = (map.get(len)[cls] || 0) + v;
@@ -18219,7 +20748,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const width = x1BoWidthValue(get('data-x1-lt-width'));
       const len = Math.round(Number(get('data-x1-lt-len')));
       const cls = get('data-x1-lt-c');
-      const value = Math.max(0, Number(inp.value) || 0);
+      const value = parseX1MatrixValue(inp.value);
       if (width == null || !Number.isFinite(len) || len <= 0 ||
           !classes.some(c => c.id === cls) || value <= 0) return;
       const key = `${width}|${len}`;
@@ -18238,7 +20767,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     rows.forEach(r => {
       classes.forEach(c => {
         const values = ltMatrixLegacyUi ? r.counts : r.weights;
-        const v = Number(values[c.id]) || 0;
+        const v = parseX1MatrixValue(values[c.id]);
         if (c.id === 'loai') loai += v;
         else if (boXo && c.id === 'bo') ok += v;
         else if (!boXo) ok += v;
@@ -18248,7 +20777,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       unit: ltMatrixLegacyUi ? 'count' : 'kg',
       rows: rows.map(r => {
         const values = ltMatrixLegacyUi ? r.counts : r.weights;
-        const total = X1_LT_CLASSES.reduce((sum, c) => sum + (Number(values[c.id]) || 0), 0);
+        const total = X1_LT_CLASSES.reduce((sum, c) =>
+          sum + parseX1MatrixValue(values[c.id]), 0);
         return ltMatrixLegacyUi
           ? { len: r.len, counts: values, total }
           : { width: r.width, len: r.len, weights: values, total };
@@ -18261,7 +20791,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       `<option value="${v}" ${v === Number(len) ? 'selected' : ''}>${v} mm</option>`).join('');
     return `<div class="x1-lt-row" data-x1-lt-row="${idx}">
       <select class="x1-lt-len" data-x1-lt-len>${opts}</select>
-      <input type="number" class="x1-lt-kg" data-x1-lt-kg min="0" step="any" placeholder="kg" value="${kg || ''}">
+      <input type="text" inputmode="decimal" class="x1-lt-kg" data-x1-lt-kg placeholder="kg" value="${kg || ''}">
       <button type="button" class="btn btn-icon btn-danger" data-x1-lt-del title="Xóa dòng"><i data-lucide="x"></i></button>
     </div>`;
   }
@@ -18278,8 +20808,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   function x1LtLegacyMatrixRowHtml(len, counts) {
     const cells = X1_LT_CLASSES.map(c =>
-      `<td class="x1-lt-cell" data-label="${escapeHTML(c.short)}"><input type="number" inputmode="numeric" min="0" step="1" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-len="${len}" value="${counts && counts[c.id] ? counts[c.id] : ''}" title="${escapeHTML(c.label)} — số lượng"></td>`).join('');
-    const t = X1_LT_CLASSES.reduce((s, c) => s + (Number(counts && counts[c.id]) || 0), 0);
+      `<td class="x1-lt-cell" data-label="${escapeHTML(c.short)}"><input type="text" inputmode="numeric" min="0" step="1" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-len="${len}" value="${counts && counts[c.id] ? counts[c.id] : ''}" title="${escapeHTML(c.label)} — số lượng"></td>`).join('');
+    const t = X1_LT_CLASSES.reduce((s, c) =>
+      s + parseX1MatrixValue(counts && counts[c.id]), 0);
     return `<tr class="x1-lt-legacy-row"><th>${len} mm</th>${cells}<td class="x1-lt-total" data-x1-lt-total="legacy|${len}">${t > 0 ? t : ''}</td></tr>`;
   }
   function renderX1LtLegacyMatrix(rows) {
@@ -18312,7 +20843,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const read = x1LtMatrixRead();
       const rows = read && read.unit === 'kg' ? read.rows : [];
       const row = rows.find(r => r.len === len && r.width === width);
-      const total = row ? X1_LT_CLASSES.reduce((s, c) => s + (Number(row.weights && row.weights[c.id]) || 0), 0) : 0;
+      const total = row ? X1_LT_CLASSES.reduce((s, c) =>
+        s + parseX1MatrixValue(row.weights && row.weights[c.id]), 0) : 0;
       if (total > 0 && !confirm(`Bỏ bản rộng ${width} ly của kích thước ${len} mm sẽ XÓA các số đã nhập (tổng ${fmtKg(total)} kg). Tiếp tục?`)) return;
       ltWidthActive.delete(key);
     } else {
@@ -18366,7 +20898,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       const wMap = byLen.get(row.len);
       if (!wMap.has(row.width)) wMap.set(row.width, {});
       const w = wMap.get(row.width);
-      matrixClasses.forEach(c => { w[c.id] = (Number(w[c.id]) || 0) + (Number(row.weights && row.weights[c.id]) || 0); });
+      matrixClasses.forEach(c => {
+        w[c.id] = (x1MatrixArithmeticValue(w[c.id]) || 0) +
+          x1MatrixArithmeticValue(row.weights && row.weights[c.id]);
+      });
     });
     // Kích thước đang BẬT chip (kể cả chưa nhập số) — phải hiện dòng nhập trống
     const activeByLen = new Map();
@@ -18389,9 +20924,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       }
       return actives.map((w, i) => {
         const weights = wMap.get(w) || {};
-        const total = matrixClasses.reduce((sum, c) => sum + (Number(weights[c.id]) || 0), 0);
+        const total = matrixClasses.reduce((sum, c) => sum + x1MatrixArithmeticValue(weights[c.id]), 0);
         const cells = matrixClasses.map(c =>
-          `<td class="x1-lt-cell" data-label="${escapeHTML(c.short)}"><input type="number" inputmode="decimal" min="0" step="any" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-width="${w}" data-x1-lt-len="${len}" value="${weights[c.id] ? weights[c.id] : ''}" title="${escapeHTML(c.label)} — kg"></td>`).join('');
+          `<td class="x1-lt-cell" data-label="${escapeHTML(c.short)}"><input type="text" inputmode="decimal" class="x1-lt-c" data-x1-lt-c="${c.id}" data-x1-lt-width="${w}" data-x1-lt-len="${len}" value="${weights[c.id] ? weights[c.id] : ''}" title="${escapeHTML(c.label)} — kg"></td>`).join('');
         return `<tr class="x1-lt-group-row">` +
           (i === 0 ? `<td class="x1-lt-len-cell" rowspan="${actives.length}">${x1LtLenCellHtml(len, actives, widths)}</td>` : '') +
           `<th class="x1-lt-width-cell">${w} ly</th>${cells}` +
@@ -18459,8 +20994,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           const width = Number(row.width) || 0;
           const len = Number(row.len) || 0;
           const values = row.weights || {};
-          const bo = Math.max(0, Number(values.bo) || 0);
-          const loai = Math.max(0, Number(values.loai) || 0);
+          const bo = parseX1MatrixValue(values.bo);
+          const loai = parseX1MatrixValue(values.loai);
           if (!len || (bo <= 0 && loai <= 0)) return;
           const key = `${width}|${len}`;
           const current = byDimension.get(key) || { width, len, bo: 0, loai: 0 };
@@ -18492,7 +21027,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         const len = Number(row.len) || 0;
         const values = isKg ? row.weights : row.counts;
         const total = X1_LT_CLASSES.filter(c => c.id !== 'loai').reduce((sum, c) =>
-          sum + Math.max(0, Number(values && values[c.id]) || 0), 0);
+          sum + parseX1MatrixValue(values && values[c.id]), 0);
         if (!len || total <= 0) return;
         const key = `${width}|${len}`;
         const current = byDimension.get(key) || { width, len, total: 0 };
@@ -18522,11 +21057,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     }
     if (d.lengthRows && d.lengthRows.length) {
       return `<div class="x1-lt-dimension-summary">${x1LtMatChipHtml(d.srcType)}${d.lengthRows.map(row =>
-        `<span><strong>${Number(row.len) || '—'} mm</strong>: ${escapeHTML(fmtKg(Number(row.kg) || 0))} kg</span>`
+        `<span><strong>${parseArithmeticExpression(row.len) || '—'} mm</strong>: ${escapeHTML(fmtKg(parseX1MatrixValue(row.kg)))} kg</span>`
       ).join(' · ')}</div>`;
     }
     if (d.mode === 'bo-xo') {
-      return `<div class="x1-lt-dimension-summary">${x1LtMatChipHtml(d.srcType)}<strong>Bó xô:</strong> ${escapeHTML(fmtKg(Number(d.qtyOk) || 0))} kg</div>`;
+      return `<div class="x1-lt-dimension-summary">${x1LtMatChipHtml(d.srcType)}<strong>Bó xô:</strong> ${escapeHTML(fmtKg(parseX1MatrixValue(d.qtyOk)))} kg</div>`;
     }
     return '<div class="x1-lt-dimension-summary">Chưa có số liệu kích thước.</div>';
   }
@@ -18598,7 +21133,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         if (display.mode === 'bo-xo') {
           if (display.matrixRows && display.matrixRows.some(row => row.weights)) {
             display.matrixRows.forEach(row => {
-              const bo = Number(row.weights && row.weights.bo) || 0;
+              const bo = parseX1MatrixValue(row.weights && row.weights.bo);
               if (bo > 0) add(record, display, 'Bó xô', row.width, row.len, bo, 'kg');
             });
             return;
@@ -18612,13 +21147,17 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
             const isRowKg = !!row.weights;
             const values = isRowKg ? row.weights : row.counts;
             X1_LT_CLASSES.filter(c => c.id !== 'loai').forEach(c =>
-              add(record, display, c.label, row.width, row.len, values && values[c.id], isRowKg ? 'kg' : 'SL'));
+              add(record, display, c.label, row.width, row.len,
+                isRowKg ? parseX1MatrixValue(values && values[c.id]) : (Number(values && values[c.id]) || 0),
+                isRowKg ? 'kg' : 'SL'));
           });
           return;
         }
         if (display.lengthRows && display.lengthRows.length) {
           display.lengthRows.forEach(row =>
-            add(record, display, 'Lọc thanh (dữ liệu cũ)', 0, row.len, row.kg, 'kg'));
+            add(record, display, 'Lọc thanh (dữ liệu cũ)', 0,
+              parseArithmeticExpression(row.len) || 0,
+              parseX1MatrixValue(row.kg), 'kg'));
           return;
         }
         add(record, display, 'Lọc thanh (chưa phân loại)', 0, 0, display.qtyOk, 'kg');
@@ -18693,12 +21232,17 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   // làm 2 thẻ KPI toàn 0. Bỏ dấu + chứa 'vau' → Vầu (ưu tiên khi tên gộp "Vầu/nứa"), 'nua' → Nứa.
   function x1KhoMatGroupOf(material) {
     const m = String(material || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (m.includes('vau') && m.includes('nua')) return 'Vầu / Nứa';
     if (m.includes('vau')) return 'Vầu';
     if (m.includes('nua')) return 'Nứa';
     return '';
   }
-  const vauKgOf = s => s.groups.reduce((t, g) => t + (x1KhoMatGroupOf(g.material) === 'Vầu' && g.unit === 'kg' ? g.qty : 0), 0);
-  const nuaKgOf = s => s.groups.reduce((t, g) => t + (x1KhoMatGroupOf(g.material) === 'Nứa' && g.unit === 'kg' ? g.qty : 0), 0);
+  const vauKgOf = s => s.groups.reduce((t, g) => t + (
+    (x1KhoMatGroupOf(g.material) === 'Vầu' || x1KhoMatGroupOf(g.material) === 'Vầu / Nứa') &&
+    g.unit === 'kg' ? g.qty : 0), 0);
+  const nuaKgOf = s => s.groups.reduce((t, g) => t + (
+    (x1KhoMatGroupOf(g.material) === 'Nứa' || x1KhoMatGroupOf(g.material) === 'Vầu / Nứa') &&
+    g.unit === 'kg' ? g.qty : 0), 0);
   function renderX1KhoCard() {
     const summary = x1WarehouseStockSummary();
     const bar = document.getElementById('x1-kho-stock-bar');
@@ -18807,7 +21351,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   }
   function x1KhoDetailHtml(material) {
     const summary = x1WarehouseStockSummary();
-    const mine = summary.groups.filter(g => x1KhoMatGroupOf(g.material) === material);
+    const mine = summary.groups.filter(g => {
+      const gm = x1KhoMatGroupOf(g.material);
+      return gm === material ||
+        (gm === 'Vầu / Nứa' && material === 'Vầu');
+    });
     const kgItems = mine.filter(g => g.unit === 'kg');
     const slItems = mine.filter(g => g.unit === 'SL');
     if (!kgItems.length && !slItems.length) {
@@ -19019,7 +21567,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const rows = [];
     (box.querySelectorAll('.x1-lt-row') || []).forEach(row => {
       const len = Number(row.querySelector('[data-x1-lt-len]')?.value);
-      const kg = Number(row.querySelector('[data-x1-lt-kg]')?.value) || 0;
+      const kg = parseX1MatrixValue(row.querySelector('[data-x1-lt-kg]')?.value);
       if (Number.isFinite(len) && len > 0 && kg > 0) rows.push({ len: Math.round(len), kg });
     });
     return rows;
@@ -19180,16 +21728,197 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!bocs.length) return null;
     return bocs.reduce((sum, record) => sum + Math.max(0, Number(record.qty) || 0), 0);
   }
-  function x1BoSaySinhInputOf(record) {
-    const sourceGroup = x1BoSourceGroupForRecord(record);
-    if (!sourceGroup) return null;
+  function x1LocThanhLotSaySinhRecordsOf(source) {
     const lots = new Map();
-    x1BoSourceBocRecordsOf(sourceGroup).forEach(boc => {
-      const saySinh = (state.xuong1SaySinhRecords || []).find(r => r.id === boc.saySinhId);
-      if (saySinh) lots.set(saySinh.id, saySinh);
+    const visited = new Set();
+    const addSaySinh = saySinh => {
+      if (saySinh && saySinh.id) lots.set(saySinh.id, saySinh);
+    };
+    const visitRecord = record => {
+      if (!record) return;
+      const key = record.id ? `record:${record.id}` : `obj:${String(record.code || record.lotCode || '')}`;
+      if (visited.has(key)) return;
+      visited.add(key);
+      if (record.saySinhId) {
+        const saySinh = (state.xuong1SaySinhRecords || []).find(r => r.id === record.saySinhId);
+        if (saySinh) addSaySinh(saySinh);
+      }
+      if (record.bocId) {
+        const boc = (state.xuong1BocRecords || []).find(r => r.id === record.bocId);
+        if (boc && boc.saySinhId) {
+          const saySinh = (state.xuong1SaySinhRecords || []).find(r => r.id === boc.saySinhId);
+          if (saySinh) addSaySinh(saySinh);
+        }
+      }
+      if (record.locOngId) visitRecord((state.xuong1LocOngRecords || []).find(r => r.id === record.locOngId));
+      if (record.catMatId) visitRecord((state.xuong1CatMatRecords || []).find(r => r.id === record.catMatId));
+      (Array.isArray(record.sourceAllocations) ? record.sourceAllocations : []).forEach(allocation => {
+        const sourceType = String(allocation && allocation.sourceType || '');
+        const parent = sourceType === 'locOng'
+          ? (state.xuong1LocOngRecords || []).find(r => r.id === allocation.sourceId)
+          : sourceType === 'catMat'
+            ? (state.xuong1CatMatRecords || []).find(r => r.id === allocation.sourceId)
+            : null;
+        if (parent) visitRecord(parent);
+      });
+    };
+    if (source) visitRecord(source);
+    if (!lots.size && source) {
+      const code = x1TraceLotCodeOf(source);
+      if (code) (state.xuong1SaySinhRecords || []).forEach(saySinh => {
+        if (String(saySinh.code || '').trim() === code) addSaySinh(saySinh);
+      });
+    }
+    return [...lots.values()];
+  }
+  function x1LocThanhLotNominalInputOf(source) {
+    const lots = x1LocThanhLotSaySinhRecordsOf(source);
+    if (!lots.length) {
+      if (source && source.nominalSaySinhKg != null && String(source.nominalSaySinhKg).trim() !== '') {
+        const nominal = Number(source.nominalSaySinhKg);
+        if (Number.isFinite(nominal) && nominal > 0) return nominal;
+      }
+      return null;
+    }
+    const nominal = lots.reduce((sum, lot) => sum + Math.max(0, Number(lot.qty) || 0), 0);
+    return nominal > 0 ? nominal : null;
+  }
+  function x1BoSaySinhInputOf(record) {
+    return x1LocThanhLotNominalInputOf(record);
+  }
+  function x1LocThanhRecordFinishedKg(record) {
+    if (!record) return null;
+    if (Array.isArray(record.matrixRows) && record.matrixRows.length &&
+        record.matrixRows.some(row => row && !row.weights)) return null;
+    return Math.max(0, parseX1MatrixValue(record.qtyOk));
+  }
+  function x1LocThanhLotDoneOf(sourceOrId) {
+    const id = typeof sourceOrId === 'string' ? sourceOrId : (sourceOrId && sourceOrId.id);
+    const bo = (state.xuong1BoRecords || []).find(r => r.id === id);
+    if (!bo) return false;
+    if (bo.locThanhLotStatus === 'open') return false;
+    if (bo.locThanhLotStatus === 'closed') return true;
+    return bo.locThanhLotDone === true || bo.locThanhLotClosed === true ||
+      bo.finishedClosed === true || bo.lotClosed === true || bo.lotDone === true;
+  }
+  function x1LocThanhMarkLotDone(sourceOrId, done) {
+    const id = typeof sourceOrId === 'string' ? sourceOrId : (sourceOrId && sourceOrId.id);
+    const bo = (state.xuong1BoRecords || []).find(r => r.id === id);
+    if (!bo) return false;
+    if (!requireEditPermission()) return false;
+    const nowIso = new Date().toISOString();
+    if (done) {
+      bo.locThanhLotDone = true;
+      bo.locThanhLotStatus = 'closed';
+      bo.locThanhDoneAt = nowIso;
+      bo.doneAt = bo.doneAt || nowIso;
+    } else {
+      delete bo.locThanhLotDone;
+      delete bo.locThanhLotClosed;
+      delete bo.finishedClosed;
+      delete bo.lotClosed;
+      delete bo.lotDone;
+      bo.locThanhLotStatus = 'open';
+      delete bo.locThanhDoneAt;
+      delete bo.doneAt;
+    }
+    saveX1Chain(x1ChainSpecByKey('bo'));
+    return true;
+  }
+  function x1LocThanhLotCumulativeFinishedOf(sourceOrId, excludeId) {
+    const id = typeof sourceOrId === 'string' ? sourceOrId : (sourceOrId && sourceOrId.id);
+    if (!id) return { finishedKg: 0, mixedFinishedKg: 0, singleSessions: 0, mixedSessions: 0,
+      unquantifiableOutputSessions: 0, legacyCountOutputSessions: 0, hasUnquantifiableOutput: false };
+    let finishedKg = 0;
+    let mixedFinishedKg = 0;
+    let singleSessions = 0;
+    let mixedSessions = 0;
+    let unquantifiableOutputSessions = 0;
+    let legacyCountOutputSessions = 0;
+    (state.xuong1LocThanhRecords || []).forEach(record => {
+      if (!record || record.id === excludeId) return;
+      const allocations = x1LocThanhAllocationsOfRecord(record);
+      if (!allocations.some(a => a.sourceId === id)) return;
+      const qty = x1LocThanhRecordFinishedKg(record);
+      if (qty == null) {
+        unquantifiableOutputSessions++;
+        if (Array.isArray(record.matrixRows) && record.matrixRows.length &&
+            record.matrixRows.some(row => row && !row.weights)) legacyCountOutputSessions++;
+        return;
+      }
+      if (allocations.length === 1 && allocations[0].sourceId === id) {
+        finishedKg += qty;
+        if (qty > 1e-9) singleSessions++;
+      } else {
+        mixedFinishedKg += qty;
+        if (qty > 1e-9) mixedSessions++;
+      }
     });
-    if (!lots.size) return null;
-    return [...lots.values()].reduce((sum, lot) => sum + Math.max(0, Number(lot.qty) || 0), 0);
+    return { finishedKg, mixedFinishedKg, singleSessions, mixedSessions,
+      unquantifiableOutputSessions, legacyCountOutputSessions,
+      hasUnquantifiableOutput: unquantifiableOutputSessions > 0 };
+  }
+  function x1LocThanhSelectedMixedSummaryOf(sourceIds, excludeId) {
+    const selected = new Set((sourceIds || []).map(id => String(id)).filter(Boolean));
+    let qtyKg = 0;
+    let sessions = 0;
+    (state.xuong1LocThanhRecords || []).forEach(record => {
+      if (!record || record.id === excludeId) return;
+      const allocations = x1LocThanhAllocationsOfRecord(record);
+      if (allocations.length < 2) return;
+      if (!allocations.some(a => selected.has(String(a.sourceId)))) return;
+      const qty = x1LocThanhRecordFinishedKg(record);
+      if (qty == null) return;
+      qtyKg += qty;
+      if (qty > 1e-9) sessions++;
+    });
+    return { qtyKg, sessions };
+  }
+  function x1LocThanhLotProgressOf(sourceOrId, excludeId) {
+    const id = typeof sourceOrId === 'string' ? sourceOrId : (sourceOrId && sourceOrId.id);
+    const source = typeof sourceOrId === 'string'
+      ? (state.xuong1BoRecords || []).find(r => r.id === id)
+      : sourceOrId;
+    const nominalKg = x1LocThanhLotNominalInputOf(source);
+    const cumulative = x1LocThanhLotCumulativeFinishedOf(id, excludeId);
+    const closed = x1LocThanhLotDoneOf(source);
+    const finishedKg = cumulative.finishedKg;
+    const hasUnallocatedMixedOutput = cumulative.mixedFinishedKg > 1e-9;
+    const hasUnquantifiableOutput = cumulative.hasUnquantifiableOutput === true;
+    const missingDenominator = nominalKg == null || !(Number(nominalKg) > 0);
+    let ratioReason = null;
+    if (hasUnallocatedMixedOutput) ratioReason = 'mixed_unallocated';
+    else if (missingDenominator) ratioReason = 'missing_nominal';
+    else if (hasUnquantifiableOutput) ratioReason = cumulative.legacyCountOutputSessions > 0
+      ? 'legacy_count' : 'unquantifiable_output';
+    const ratio = closed && !hasUnallocatedMixedOutput && !hasUnquantifiableOutput &&
+      nominalKg != null && nominalKg > 0
+      ? (finishedKg / nominalKg) * 100 : null;
+    return { nominalKg, finishedKg, mixedFinishedKg: cumulative.mixedFinishedKg,
+      singleSessions: cumulative.singleSessions, mixedSessions: cumulative.mixedSessions,
+      unquantifiableOutputSessions: cumulative.unquantifiableOutputSessions,
+      legacyCountOutputSessions: cumulative.legacyCountOutputSessions,
+      hasUnquantifiableOutput, missingDenominator, closed, ratio, ratioReason };
+  }
+  function x1LocThanhNoRatioReasonOf(progress) {
+    if (!progress) return 'thiếu dữ liệu khối lượng';
+    if (progress.mixedFinishedKg > 1e-9 || progress.ratioReason === 'mixed_unallocated') {
+      return 'gom hỗn hợp/chưa phân bổ';
+    }
+    if (progress.nominalKg == null || !(Number(progress.nominalKg) > 0) || progress.ratioReason === 'missing_nominal') {
+      return 'thiếu khối lượng danh định';
+    }
+    if (progress.hasUnquantifiableOutput || progress.ratioReason === 'legacy_count' || progress.ratioReason === 'unquantifiable_output') {
+      return progress.legacyCountOutputSessions > 0
+        ? 'dữ liệu cũ theo số lượng/chưa quy đổi kg'
+        : 'thành phẩm chưa quy đổi được khối lượng kg';
+    }
+    return 'thiếu dữ liệu khối lượng';
+  }
+  function x1LocThanhClosedNoRatioLabelOf(progress) {
+    return progress && progress.closed
+      ? 'Đã chốt — chưa có tỷ lệ (' + x1LocThanhNoRatioReasonOf(progress) + ')'
+      : 'Chưa chốt — chưa tính tỷ lệ';
   }
 
   // ─── SỐ LIỆU HIỂN THỊ (link SỐNG tới nguồn) ────────────────────
@@ -19210,9 +21939,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         qtyIn: allocation.qtyIn,
         qtyDryAvailable: allocation.qtyDryAvailable,
         dryAdjustment: allocation.dryAdjustment,
-        dryAdjustmentReason: allocation.dryAdjustmentReason || ''
+        dryAdjustmentReason: allocation.dryAdjustmentReason || '',
+        lotProgress: source ? x1LocThanhLotProgressOf(source) : null
       };
     });
+
     const unique = values => [...new Set(values.filter(Boolean))];
     return {
       allocations,
@@ -19257,26 +21988,34 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
           : (locThanhBo ? x1BoLengthsOfRec(locThanhBo) : [])),
       widths: spec.key === 'bo' ? x1BoWidthsOfRec(r) : [],
       mode: r.mode || '',
-      lengthRows: Array.isArray(r.lengthRows) ? r.lengthRows : null,
+      lengthRows: Array.isArray(r.lengthRows)
+        ? r.lengthRows.map(row => Object.assign({}, row, {
+            len: Math.round(parseArithmeticExpression(row && row.len) ?? 0),
+            kg: spec.key === 'locThanh'
+              ? parseX1MatrixValue(row && row.kg)
+              : (Number(row && row.kg) || 0)
+          })).filter(row => row.len > 0 && row.kg > 0)
+        : null,
       matrixRows: (() => { const nn = x1LtNormMatrixRows(Array.isArray(r.matrixRows) ? r.matrixRows : []); return nn.length ? nn : null; })(),
       matrixUnit: Array.isArray(r.matrixRows) && r.matrixRows.length
         ? (r.matrixRows.every(row => row.weights) ? 'kg' : 'count') : '',
       sourceLots: ltSourceSummary ? ltSourceSummary.sourceLots : [],
       lotAllocations: ltSourceSummary ? ltSourceSummary.allocations : [],
       qtyLoss: Number.isFinite(Number(r.qtyLoss)) ? Number(r.qtyLoss)
-        : Math.max(0, (Number(r.qtyIn) || 0) - (Number(r.qtyOk) || 0) - (Number(r.qtyLoai) || 0)),
+        : Math.max(0, parseX1MatrixValue(r.qtyIn) - parseX1MatrixValue(r.qtyOk) - parseX1MatrixValue(r.qtyLoai)),
       lossType: r.lossType || '',
       lossNote: r.lossNote || '',
       srcRoute: ltSourceSummary ? ltSourceSummary.srcRoute : (sourceGroup && spec.sourceRouteOf
         ? spec.sourceRouteOf(r, sourceGroup)
         : (r.srcRoute || (viaAlt ? (spec.altSrcRoute || `${spec.altSrcName} — bỏ qua ${spec.srcName}`) : spec.srcName))),
       srcRest: src ? x1ChainRemainingOf(spec, src, null) : 0,
-      qtyIn: Number(r.qtyIn) || 0,
-      qtyOk: Number(r.qtyOk) || 0,
-      qtyLoai: Number(r.qtyLoai) || 0,
-      ratio: (Array.isArray(r.matrixRows) && r.matrixRows.some(row => !row.weights)) ||
-        (Number(r.qtyIn) || 0) <= 0 ? null
-        : ((Number(r.qtyOk) || 0) / (Number(r.qtyIn) || 0)) * 100,
+      qtyIn: spec.key === 'locThanh' ? parseX1MatrixValue(r.qtyIn) : (Number(r.qtyIn) || 0),
+      qtyOk: spec.key === 'locThanh' ? parseX1MatrixValue(r.qtyOk) : (Number(r.qtyOk) || 0),
+      qtyLoai: spec.key === 'locThanh' ? parseX1MatrixValue(r.qtyLoai) : (Number(r.qtyLoai) || 0),
+      ratio: spec.key === 'locThanh' ? null :
+        ((Array.isArray(r.matrixRows) && r.matrixRows.some(row => !row.weights)) ||
+          (Number(r.qtyIn) || 0) <= 0 ? null
+          : ((Number(r.qtyOk) || 0) / (Number(r.qtyIn) || 0)) * 100),
       note: r.note || '',
       workerRows: x1WorkerRows(r, live),
       workHours: hours ? hours.hc + hours.tc : (Number(r.workHours) || 0),
@@ -19372,7 +22111,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function x1ChainCalc(spec) {
     const box = document.getElementById(x1Id(spec, 'calc'));
     if (!box) return;
-    const val = id => Number((document.getElementById(id) || {}).value) || 0;
+    const val = id => spec.key === 'locThanh'
+      ? parseX1MatrixValue((document.getElementById(id) || {}).value)
+      : Number((document.getElementById(id) || {}).value) || 0;
     let qtyIn  = val(x1Id(spec, 'in'));
     const sel = document.getElementById(x1Id(spec, 'src'));
     const src = x1ChainFindSrc(spec, sel ? sel.value : '');
@@ -19463,6 +22204,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
   function handleX1ChainSubmit(spec, e) {
     e.preventDefault();
     if (!requireEditPermission()) return;
+    if (spec.key === 'locThanh') finalizeX1LocThanhExpressionInputs();
     const ltSourceData = spec.key === 'locThanh' ? x1LtUpdateInputTotal() : null;
     const sel = document.getElementById(x1Id(spec, 'src'));
     const srcId = sel ? sel.value : '';
@@ -19475,13 +22217,80 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const dateEl = document.getElementById(x1Id(spec, 'date'));
     const dateVal = (dateEl && dateEl.value) || '';
     if (!dateVal) { showToast(`Ngày ${spec.title.toLowerCase()} không được để trống!`, 'error'); return; }
-    const val = id => Number((document.getElementById(id) || {}).value) || 0;
+    if (spec.key === 'locThanh' && ltDoneIntent == null) {
+      const doneElAtSubmit = document.getElementById('x1-loc-thanh-done');
+      const submitBaselineSet = ltDoneBaselineChecked != null || ltDoneBaselineIndeterminate;
+      if (doneElAtSubmit && submitBaselineSet) {
+        const submitChanged = doneElAtSubmit.checked !== ltDoneBaselineChecked || !!doneElAtSubmit.indeterminate !== ltDoneBaselineIndeterminate;
+        if (submitChanged) ltDoneIntent = !!doneElAtSubmit.checked;
+      }
+    }
+    const explicitLocThanhDoneIntent = spec.key === 'locThanh' ? ltDoneIntent : null;
+    const wantLocThanhLotDone = explicitLocThanhDoneIntent === true;
+    const closeOnlySourceIds = spec.key === 'locThanh'
+      ? [...new Set(ltSelectedLots.map(item => item.sourceId).filter(Boolean))]
+      : [];
+    const val = id => spec.key === 'locThanh'
+      ? parseX1MatrixValue((document.getElementById(id) || {}).value)
+      : Number((document.getElementById(id) || {}).value) || 0;
     const qtyIn = ltSourceData ? ltSourceData.qtyIn : val(x1Id(spec, 'in'));
     const qtyOk = spec.key === 'bo' ? qtyIn : val(x1Id(spec, 'ok'));
     const qtyLoai = spec.key === 'bo' ? 0 : val(x1Id(spec, 'loai'));
+    const editId = state[spec.editKey] || null;
+    if (spec.key === 'locThanh' && explicitLocThanhDoneIntent === true && qtyIn <= 0 && closeOnlySourceIds.length) {
+      const closeOnlyOpenIds = closeOnlySourceIds.filter(sourceId => {
+        const source = (state.xuong1BoRecords || []).find(r => r.id === sourceId);
+        return !!source && !x1LocThanhLotProgressOf(source, editId).closed;
+      });
+      if (!closeOnlyOpenIds.length) {
+        return;
+      }
+      const closeParts = closeOnlyOpenIds.map(sourceId => {
+        const source = (state.xuong1BoRecords || []).find(r => r.id === sourceId);
+        if (!source) return '';
+        const progress = x1LocThanhLotProgressOf(source, editId);
+        const code = x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ';
+        const nominal = progress.nominalKg == null ? 'danh định Sấy Sinh chưa có dữ liệu' : `danh định ${fmtKg(progress.nominalKg)} kg`;
+        return `${code}: ${nominal}; thành phẩm cộng dồn ${fmtKg(progress.finishedKg)} kg${progress.mixedFinishedKg > 1e-9 ? `; gom hỗn hợp ${fmtKg(progress.mixedFinishedKg)} kg chưa phân bổ` : ''}`;
+      }).filter(Boolean);
+      if (!confirm(`XÁC NHẬN ĐÓNG LÔ LỌC THANH/BÓ XÔ?
+
+${closeParts.join('\n')}
+
+Sau xác nhận mới tính tỷ lệ danh định của từng lô.
+Các lượt gom nhiều lô KHÔNG phân bổ thành phẩm chính xác theo từng lô.`)) {
+        showToast('Đã hủy đóng lô — không lưu thay đổi.', 'info');
+        return;
+      }
+      closeOnlyOpenIds.forEach(sourceId => x1LocThanhMarkLotDone(sourceId, true));
+      resetX1ChainForm(spec);
+      renderX1ChainCard(spec);
+      showToast(`Đã đóng ${closeOnlyOpenIds.length} lô Lọc Thanh/Bó Xô.`, 'success');
+      return;
+    }
+    if (spec.key === 'locThanh' && explicitLocThanhDoneIntent === false && qtyIn <= 0 && closeOnlySourceIds.length) {
+      const reopenIds = closeOnlySourceIds.filter(sourceId => {
+        const source = (state.xuong1BoRecords || []).find(r => r.id === sourceId);
+        return !!source && x1LocThanhLotProgressOf(source, editId).closed;
+      });
+      if (reopenIds.length) {
+        const reopenParts = reopenIds.map(sourceId => {
+          const source = (state.xuong1BoRecords || []).find(r => r.id === sourceId);
+          return source ? (x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ') : '';
+        }).filter(Boolean);
+        if (!confirm('MỞ LẠI LÔ LỌC THANH/BÓ XÔ?\n\n' + reopenParts.join('\n') + '\n\nBấm OK để mở lại lô và cho phép tiếp tục lọc/bó. Không tạo lượt sản xuất với khối lượng 0.')) {
+          showToast('Đã hủy mở lại lô — không lưu thay đổi.', 'info');
+          return;
+        }
+        reopenIds.forEach(sourceId => x1LocThanhMarkLotDone(sourceId, false));
+        resetX1ChainForm(spec);
+        renderX1ChainCard(spec);
+        showToast('Đã mở lại ' + reopenIds.length + ' lô Lọc Thanh/Bó Xô.', 'success');
+        return;
+      }
+    }
     if (qtyIn <= 0) { showToast(`${spec.inLabel} phải lớn hơn 0!`, 'error'); return; }
     if (qtyIn < 0 || qtyOk < 0 || qtyLoai < 0) { showToast('Các khối lượng phải là số không âm!', 'error'); return; }
-    const editId = state[spec.editKey] || null;
     const existing = (state[spec.stateKey] || []).find(r => r.id === editId);
     const ltMatrixMode = spec.key === 'locThanh' && ltMatrixUi &&
       (x1LocThanhModeOf() === 'loc-thanh' || x1LocThanhModeOf() === 'bo-xo');
@@ -19495,8 +22304,8 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         }
         if (x1LocThanhModeOf() === 'bo-xo' && existing && existing.mode === 'bo-xo' &&
             (!Array.isArray(existing.matrixRows) || !existing.matrixRows.length)) {
-          const legacyOk = Number(existing.qtyOk) || 0;
-          const legacyLoai = Number(existing.qtyLoai) || 0;
+          const legacyOk = parseX1MatrixValue(existing.qtyOk);
+          const legacyLoai = parseX1MatrixValue(existing.qtyLoai);
           ltMatrixData = { unit: 'kg', rows: [], ok: legacyOk, loai: legacyLoai, total: legacyOk + legacyLoai };
         } else {
           ltMatrixData = { unit: 'kg', rows: [], ok: 0, loai: 0, total: 0 };
@@ -19646,6 +22455,104 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       }
       payload.lengths = mode === 'loc-thanh' ? x1LocThanhLengthsForForm() : [];
     }
+    if (spec.key === 'locThanh') {
+      const closeIds = [...new Set(locThanhAllocations.map(a => a.sourceId).filter(Boolean))];
+      const closeStates = closeIds.map(sourceId => {
+        const source = (state.xuong1BoRecords || []).find(r => r.id === sourceId);
+        return source ? { source, progress: x1LocThanhLotProgressOf(source, editId) } : null;
+      }).filter(Boolean);
+      const reopenForNewSessionIds = new Set();
+      if (!editId && qtyIn > 0) {
+        const closedForNewSession = closeStates.filter(item => item.progress.closed);
+        if (closedForNewSession.length) {
+          const reopenParts = closedForNewSession.map(item => {
+            const source = item.source;
+            return x1TraceLotCodeOf(source) || source.lotCode || 'Lô Bổ';
+          });
+          if (!confirm("LÔ ĐÃ CHỐT — KHÔNG THỂ LƯU LƯỢT LỌC/BÓ XÔ MỚI KHI GIỮ NGUYÊN TRẠNG THÁI ĐÓNG.\n\n" + reopenParts.join("\n") + "\n\nBấm OK để MỞ LẠI lô trước khi lưu lượt mới.\nBấm Hủy để giữ lô đã chốt và không lưu lượt mới.")) {
+            showToast('Không lưu lượt mới — lô đang chốt. Hãy mở lại lô rồi ghi lượt mới.', 'error');
+            return;
+          }
+          for (const item of closedForNewSession) {
+            if (x1LocThanhMarkLotDone(item.source.id, false)) {
+              reopenForNewSessionIds.add(item.source.id);
+            } else {
+              showToast("Không thể mở lại lô " + (x1TraceLotCodeOf(item.source) || item.source.lotCode || item.source.id) + "; lượt mới chưa được lưu.", "error");
+              return;
+            }
+          }
+        }
+      }
+      const closeTargetIds = explicitLocThanhDoneIntent === true
+        ? closeStates.filter(item => !item.progress.closed && !reopenForNewSessionIds.has(item.source.id)).map(item => item.source.id)
+        : [];
+      const reopenTargetIds = explicitLocThanhDoneIntent === false
+        ? closeStates.filter(item => item.progress.closed && !reopenForNewSessionIds.has(item.source.id)).map(item => item.source.id)
+        : [];
+      if (closeTargetIds.length) {
+        const parts = closeStates.filter(item => closeTargetIds.includes(item.source.id)).map(item => {
+          const source = item.source;
+          const code = x1TraceLotCodeOf(source) || source.lotCode || "Lô Bổ";
+          const nominal = item.progress.nominalKg == null ? "danh định Sấy Sinh chưa có dữ liệu" : `danh định ${fmtKg(item.progress.nominalKg)} kg`;
+          const payloadIsLegacyCount = Array.isArray(payload.matrixRows) && payload.matrixRows.length &&
+            payload.matrixRows.some(row => row && !row.weights);
+          const addThisSession = !payloadIsLegacyCount && locThanhAllocations.length === 1 && locThanhAllocations[0].sourceId === source.id
+            ? parseX1MatrixValue(payload.qtyOk) : 0;
+          const projected = item.progress.finishedKg + addThisSession;
+          const hasUnallocatedMixedOutput = item.progress.mixedFinishedKg > 1e-9 || locThanhAllocations.length > 1;
+          const ratio = !payloadIsLegacyCount && !item.progress.hasUnquantifiableOutput && !hasUnallocatedMixedOutput && item.progress.nominalKg != null && item.progress.nominalKg > 0
+            ? (projected / item.progress.nominalKg) * 100 : null;
+          return `${code}: ${nominal}; thành phẩm cộng dồn sau lượt này ${fmtKg(projected)} kg${ratio == null ? "" : `; tỷ lệ sau đóng ${fmtRatio(ratio)}%`}${locThanhAllocations.length > 1 ? "; lượt này gom hỗn hợp, không phân bổ sản lượng theo lô" : ""}`;
+        });
+        if (!confirm(`XÁC NHẬN ĐÓNG LÔ SAU LƯỢT LỌC THANH/BÓ XÔ NÀY?
+
+${parts.join("\n")}
+
+Tỷ lệ danh định chỉ hiện sau xác nhận đóng.
+Không tạo tỷ lệ riêng cho lượt hiện tại và không phân bổ chính xác lượt gom hỗn hợp.`)) {
+          showToast("Đã hủy đóng lô — lượt chưa được lưu.", "info");
+          return;
+        }
+      }
+      if (reopenTargetIds.length) {
+        const reopenParts = reopenTargetIds.map(sourceId => {
+          const source = (state.xuong1BoRecords || []).find(r => r.id === sourceId);
+          return source ? (x1TraceLotCodeOf(source) || source.lotCode || "Lô Bổ") : "";
+        }).filter(Boolean);
+        if (!confirm(`Lô đã chọn ĐANG ĐÓNG.
+
+Bấm OK để MỞ LẠI lô: ${reopenParts.join(" · ")} và cho phép lọc/bó tiếp — hoặc Hủy để giữ trạng thái đã đóng.`)) {
+          showToast("Đã hủy — giữ nguyên trạng thái đã đóng.", "info");
+          return;
+        }
+      }
+      const closeAfterSave = closeTargetIds.length > 0;
+      const reopenAfterSave = reopenTargetIds.length > 0;
+      const list = state[spec.stateKey] || (state[spec.stateKey] = []);
+      if (editId) {
+        const rec = list.find(r => r.id === editId);
+        if (!rec) { showToast("Không tìm thấy lượt cần sửa!", "error"); return; }
+        Object.assign(rec, payload, { updatedAt: new Date().toISOString() });
+        saveX1Chain(spec);
+        closeTargetIds.forEach(sourceId => x1LocThanhMarkLotDone(sourceId, true));
+        reopenTargetIds.forEach(sourceId => x1LocThanhMarkLotDone(sourceId, false));
+        showToast(closeAfterSave ? `Đã cập nhật lượt và đóng lô ${spec.title}!` : reopenAfterSave ? `Đã cập nhật lượt và mở lại lô ${spec.title}!` : `Đã cập nhật lượt ${spec.title}!`, "success");
+      } else {
+        list.push({
+          id: `${spec.idPfx}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          ...payload,
+          createdAt: new Date().toISOString()
+        });
+        saveX1Chain(spec);
+        closeTargetIds.forEach(sourceId => x1LocThanhMarkLotDone(sourceId, true));
+        reopenTargetIds.forEach(sourceId => x1LocThanhMarkLotDone(sourceId, false));
+        showToast(closeAfterSave ? `Đã ghi lượt và đóng lô ${spec.title}!` : reopenAfterSave ? `Đã ghi lượt và mở lại lô ${spec.title}!` : `Đã ghi lượt ${spec.title}!`, "success");
+      }
+      resetX1ChainForm(spec);
+      renderX1ChainCard(spec);
+      return;
+    }
+
     const list = state[spec.stateKey] || (state[spec.stateKey] = []);
     if (editId) {
       const rec = list.find(r => r.id === editId);
@@ -19672,6 +22579,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     if (!rec) return;
     state[spec.editKey] = id;
     if (spec.key === 'locThanh') {
+      ltDoneIntent = null;
+      ltDoneBaselineChecked = null;
+      ltDoneBaselineIndeterminate = false;
       ltSelectedLots = x1LocThanhRecordAllocations(rec);
       const savedLengths = Array.isArray(rec.lengths) && rec.lengths.length
         ? rec.lengths
@@ -19698,7 +22608,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const note = document.getElementById(x1Id(spec, 'note'));
     if (note) note.value = rec.note || '';
     if (spec.key === 'locThanh') {
+      ltDoneIntent = null;
+      ltDoneBaselineChecked = null;
+      ltDoneBaselineIndeterminate = false;
       x1LtRenderSourceRows();
+      x1LtSyncDoneUi();
     }
     if (spec.key === 'locThanh') {
       const m = document.getElementById('x1-loc-thanh-mode');
@@ -19740,6 +22654,9 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     x1ResetKeepingSelect(f, x1Id(spec, 'src'));
     state[spec.editKey] = null;
     if (spec.key === 'locThanh') {
+      ltDoneIntent = null;
+      ltDoneBaselineChecked = null;
+      ltDoneBaselineIndeterminate = false;
       ltSelectedLots = [];
       ltLengthSnapshot = null;
       ltWidthActive.clear();
@@ -19788,12 +22705,28 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
     const pend = x1ChainPending(spec).reduce((s, x) => s + x1ChainRemainingOf(spec, x, null), 0);
     const hasLegacyMatrix = spec.key === 'locThanh' &&
       disp.some(d => (d.matrixRows || []).some(row => !row.weights));
-    const ratio = (!hasLegacyMatrix && totalIn > 0) ? (totalOk / totalIn) * 100 : null;
+    let ratio = (!hasLegacyMatrix && totalIn > 0) ? (totalOk / totalIn) * 100 : null;
+    let closedHasUnallocated = false;
+    let closedHasUnquantifiableOutput = false;
+    let closedHasMissingNominal = false;
+    if (spec.key === 'locThanh') {
+      const closedLots = (state.xuong1BoRecords || []).map(bo => x1LocThanhLotProgressOf(bo)).filter(p => p.closed);
+      const closedNominalComplete = closedLots.length > 0 &&
+        closedLots.every(p => p.nominalKg != null && Number.isFinite(Number(p.nominalKg)) && Number(p.nominalKg) > 0);
+      closedHasUnallocated = closedLots.some(p => p.mixedFinishedKg > 1e-9);
+      closedHasUnquantifiableOutput = closedLots.some(p => p.hasUnquantifiableOutput === true);
+      closedHasMissingNominal = closedLots.some(p => p.nominalKg == null || !(Number(p.nominalKg) > 0));
+      const closedNominal = closedLots.reduce((sum, p) => sum + (p.nominalKg != null ? p.nominalKg : 0), 0);
+      const closedFinished = closedLots.reduce((sum, p) => sum + p.finishedKg, 0);
+      ratio = !closedHasUnallocated && !closedHasUnquantifiableOutput && !closedHasMissingNominal &&
+        closedNominalComplete && closedNominal > 0
+        ? (closedFinished / closedNominal) * 100 : null;
+    }
     box.innerHTML = `
       <div class="material-stat"><span class="material-stat-value">${disp.length}</span><span class="material-stat-label">${escapeHTML(spec.statWord)}</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(totalIn)}</span><span class="material-stat-label">Tổng ${escapeHTML(spec.inLabel.toLowerCase())} (kg)</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(totalOk)}</span><span class="material-stat-label">${hasLegacyMatrix ? 'Tổng đạt (kg + SL cũ)' : `Tổng ${escapeHTML(spec.okLabel.toLowerCase())} (kg)`}</span></div>
-      <div class="material-stat"><span class="material-stat-value">${ratio == null ? '—' : fmtRatio(ratio) + '%'}</span><span class="material-stat-label">Tỷ lệ đạt</span></div>
+      <div class="material-stat"><span class="material-stat-value">${ratio == null ? '—' : fmtRatio(ratio) + '%'}</span><span class="material-stat-label">${spec.key === 'locThanh' ? (closedHasUnallocated ? 'Tỷ lệ lô đã chốt · Chưa phân bổ' : (closedHasUnquantifiableOutput ? 'Tỷ lệ lô đã chốt · Dữ liệu cũ SL' : (closedHasMissingNominal ? 'Tỷ lệ lô đã chốt · Thiếu danh định' : 'Tỷ lệ lô đã chốt'))) : 'Tỷ lệ đạt'}</span></div>
       <div class="material-stat"><span class="material-stat-value">${fmtKg(pend)}</span><span class="material-stat-label">Còn chờ (kg)</span></div>`;
   }
   function renderX1ChainTable(spec) {
@@ -19875,6 +22808,10 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       if (stock.totalKg > 0) return `Tồn ${fmtKg(stock.totalKg)} kg`;
       if (stock.legacyCount > 0) return `Ma trận cũ ${stock.legacyCount.toLocaleString('vi-VN')} SL`;
       return 'Chưa có thành phẩm';
+    }
+    if (cardId === 'x1-nan-plan-card') {
+      const plans = (state.x1NanPlans || []).filter(p => p && p.id);
+      return plans.length ? `${plans.length} dòng` : 'Chưa lập';
     }
     // 5 công đoạn đuôi — cùng 1 nhánh (SPEC)
     const spec = x1ChainSpec(cardId);
@@ -20084,6 +23021,7 @@ setX2PhuPhamStageDataReader(() => ({
 
 export {
   X2_CARD_DEFS,
+  x2ChonNanLiveRecordsOf,
   // ── CÔNG TẮC CHUYỂN XƯỞNG (tab Công Đoạn SX) ──
   loadStageWs,
   saveStageWs,
@@ -20092,6 +23030,61 @@ export {
   toggleStageWs,
   // ── XƯỞNG 1: 8 THẺ CÔNG ĐOẠN + ĐỊNH MỨC ──
   loadX1KhoExports,
+  loadX1NanPlans,
+  renderX1NanPlanCard,
+  x1NanPlanStartForm,
+  x1NanPlanCloseForm,
+  x1NanPlanSaveForm,
+  x1NanPlanSetYear,
+  x1NanPlanSetViewMode,
+  x1NanPlanSetPeriod,
+  x1NanPlanShiftPeriod,
+  x1NanPlanViewModeOf,
+  x1NanPlanPeriodValid,
+  x1NanPlanPeriodLabel,
+  x1NanPlanEnsurePeriod,
+  x1NanPlanSetWeekValue,
+  x1NanPlanSetChildWeekValue,
+  x1NanPlanSetWeekPriority,
+  x1NanPlanSetChildWeekPriority,
+  x1NanPlanWeekPriorityOf,
+  x1NanPlanChildWeekPriority,
+  x1NanPlanDelete,
+  x1NanActualQtyOf,
+  x1NanResponseRatio,
+  x1NanContinuousStreakAt,
+  x1NanContinuousLevelAt,
+  x1NanNormalizePlanRecord,
+  x1NanNormalizeRomanNo,
+  x1NanPlanClassificationOf,
+  x1NanIsoWeekParts,
+  x1NanWeeksInYear,
+  x1NanWeekKey,
+  x1NanIsoWeekMonday,
+  x1NanIsoWeekSunday,
+  x1NanIsoWeekRangeLabel,
+  x1NanMonthKeyValid,
+  x1NanMonthShift,
+  x1NanMonthRangeLabel,
+  x1NanMonthMondayWeeks,
+  x1NanActualKey,
+  x1NanActualMap,
+  x1NanPlanWeekArray,
+  x1NanContinuousMaxLevel,
+  x1NanStockQtyOf,
+  x1NanStockQtyForClassifications,
+  x1NanStockBreakdownOf,
+  x1NanStockBreakdownText,
+  x1NanStockTooltipText,
+  x1NanPlanChildPeriodPlanQty,
+  x1NanAllocateStockForPlans,
+  x1NanPlanGroupedRecords,
+  x1NanPlanChildClassifications,
+  x1NanPlanChildPlanWeeks,
+  x1NanPlanChildActualWeeks,
+  x1NanCapacitySummaryOf,
+  x1NanPlanChipValues,
+  x1NanPlanSetChipGroup,
   loadXuong1CatOng,
   loadXuong1SaySinh,
   loadXuong1Boc,
@@ -20099,6 +23092,12 @@ export {
   loadX1ChainAll,
   X1_BO_LENGTH_DEFAULTS,
   X1_LT_WIDTH_DEFAULTS,
+  parseArithmeticExpression,
+  parseSafeArithmeticExpression,
+  parseX1ArithmeticExpression,
+  parseX1MatrixValue,
+  applyArithmeticExpressionInput,
+  applyX1MatrixExpressionInput,
   loadX1BoLengthOptions,
   saveX1BoLengthOptions,
   loadX1BoWidthOptions,
@@ -20138,6 +23137,14 @@ export {
   x1LtAddSource,
   x1LtRemoveSource,
   x1LtReadSourceAllocations,
+  x1LtSyncDoneUi,
+  x1LtMarkDoneIntent,
+  x1LocThanhLotNominalInputOf,
+  x1LocThanhLotCumulativeFinishedOf,
+  x1LocThanhSelectedMixedSummaryOf,
+  x1LocThanhLotProgressOf,
+  x1LocThanhLotDoneOf,
+  x1LocThanhMarkLotDone,
   x1LtLengthCatalogToggle,
   x1LtLengthToggle,
   x1LtLengthAdd,
@@ -20227,6 +23234,9 @@ export {
   renderX1SsHistory,
   x1SsFmtDateTime,
   x1SsUpdateSulfurHint,
+  x1SsMarkCodeManualEdit,
+  x1SsMarkSulfurManualEdit,
+  x1SsResetManualTracking,
   x1SsOpenInputModal,
   x1SsCloseInputModal,
   x1SsToggleTimeline,

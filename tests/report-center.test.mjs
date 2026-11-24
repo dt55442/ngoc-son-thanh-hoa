@@ -2,7 +2,7 @@
 //   • 1 modal dùng chung thay 6 modal cũ: Tab → Báo cáo → Bộ lọc → Xem Trước/Xuất
 //   • Mọi báo cáo đi qua engine chuẩn hoá: ô SỐ = number, dòng TỔNG CỘNG,
 //     AutoFilter trên vùng dữ liệu, ngày giờ theo GIỜ MÁY VN
-//   • 8 thẻ Xưởng 1 xuất ĐÚNG vùng dữ liệu (trước đây rơi về 'batch' = Lô nan)
+// • 9 báo cáo Xưởng 1 (8 công đoạn + kế hoạch xuất nan) xuất ĐÚNG vùng dữ liệu
 'use strict';
 
 // ─── Stubs môi trường (giống export-stage.test.mjs) ────────────────
@@ -94,10 +94,10 @@ global.XLSX = {
 // ─── A. DANH MỤC BÁO CÁO ─────────────────────────────────────────
 check('A1. Có đủ 6 nhóm báo cáo (X2/X1/Kế Hoạch/Nguyên Liệu/QC/Nhân Sự)',
   specs.REPORT_GROUPS.length === 6 && specs.REPORT_GROUPS.map(g => g.id).join(',') === 'x2,x1,planning,materials,qc,hr');
-check('A2. Danh mục báo cáo cập nhật sau gộp thẻ (46 báo cáo)',
-  specs.REPORT_SPECS.length === 46);
-check('A3. 16 báo cáo Xưởng 2 (gồm Xử lý lỗi + sự cố) + 8 báo cáo Xưởng 1',
-  specs.reportsOfGroup('x2').length === 16 && specs.reportsOfGroup('x1').length === 8);
+check('A2. Danh mục báo cáo cập nhật sau gộp thẻ (47 báo cáo)',
+  specs.REPORT_SPECS.length === 47);
+check('A3. 16 báo cáo Xưởng 2 (gồm Xử lý lỗi + sự cố) + 9 báo cáo Xưởng 1',
+  specs.reportsOfGroup('x2').length === 16 && specs.reportsOfGroup('x1').length === 9);
 check('A4. Thẻ Xử lý lỗi có báo cáo riêng và hai alias cũ vẫn có vùng dữ liệu',
   specs.reportIdForCard('x2-xu-ly-loi-card') === 'xulyloi' &&
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).some(cardId => cardId === 'x2-xu-ly-loi-card'));
@@ -105,7 +105,27 @@ check('A5. Thẻ Xưởng 1 trỏ ĐÚNG báo cáo X1 (không còn rơi về bat
   specs.reportIdForCard('x1-cat-ong-card') === 'x1catong' &&
   specs.reportIdForCard('x1-loc-thanh-card') === 'x1locthanh' &&
   specs.reportIdForCard('x1-kho-card') === 'x1locthanh' &&
+  specs.reportIdForCard('x1-nan-plan-card') === 'x1nanplan' &&
+  specs.reportById('x1nanplan').source === 'x1nanplan' &&
   specs.reportById('x1catong').source === 'x1catong');
+check('A5b. Export kế hoạch nan bỏ TT La Mã và gom A+A1 thành một quy cách',
+  (() => {
+    state.x1NanPlans = [
+      { id: 'rp-a', year: 2026, romanNo: 'I', productName: 'Thanh gom', material: 'Vầu', width: 11, length: 50, classification: 'A', weeks: { '38': 80 } },
+      { id: 'rp-a1', year: 2026, romanNo: 'II', productName: 'Thanh gom', material: 'Vầu', width: 11, length: 50, classification: 'A1', weeks: { '38': 20 } }
+    ];
+    const data = xlsx.buildX2ExportData('x1nanplan', { year: '2026', from: '', to: '' });
+    const aoa = data && Array.isArray(data.aoa) ? data.aoa : [];
+    const header = aoa.find(row => Array.isArray(row) && row.includes('Tên Sản Phẩm')) || [];
+    const productRows = aoa.filter(row => Array.isArray(row) && row.includes('Thanh gom'));
+    const ok = !header.includes('TT La Mã') &&
+      header.includes('Tên Sản Phẩm') &&
+      header.includes('Phân Loại') &&
+      productRows.length === 1 &&
+      productRows[0][6] === 'A / A1';
+    state.x1NanPlans = [];
+    return ok;
+  })());
 
 // ─── B. DỮ LIỆU MẪU + DỰNG BÁO CÁO ──────────────────────────────
 state.materialRecords = [
@@ -244,7 +264,7 @@ check('F3. events.js nối center: mở theo thẻ/tab + 4 nút + lọc',
   evSrc.includes("openReportCenter('plan-items')") && evSrc.includes("openReportCenter('qc-export')") &&
   evSrc.includes("safeOn('report-center-filters',      'change', onReportFilterChange)"));
 check('F4. sw.js: cache v275 + nạp report-specs.js/report-center.js vào APP_SHELL',
-  swSrc.includes("nha-may-ngoc-son-v452") && swSrc.includes("./js/report-specs.js") &&
+  swSrc.includes("nha-may-ngoc-son-v456") && swSrc.includes("./js/report-specs.js") &&
   swSrc.includes("./js/report-center.js"));
 check('F5. CSS có khối .rc-* + in lặp tiêu đề + JS ghi rõ giới hạn viền/màu',
   cssSrc.includes('.rc-card') && cssSrc.includes('.rc-filter-grid') &&

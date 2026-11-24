@@ -8,8 +8,8 @@ import { saveCustomCharts } from './export-xlsx.js';
 import { logDataChange, syncHistorySnapshots } from './history.js';
 import { renderAll } from './main.js';
 import { allPhotoIds, putPhotoBlob } from './photo-store.js';
-import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, STORAGE_KEY_X1_KHO_EXPORTS, state } from './state.js';
-import { trackDeleted } from './tombstone.js';
+import { STORAGE_KEY_DATA, STORAGE_KEY_MATERIALS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE, STORAGE_KEY_QC_PRESS, STORAGE_KEY_QC_KILN_HUMIDITY, STORAGE_KEY_QC_KILN_THRESHOLD, STORAGE_KEY_SUPPLIERS, STORAGE_KEY_RATE_APPROVALS, STORAGE_KEY_X2_BAO_THO_RATE, STORAGE_KEY_X2_BAO_TINH_RATE, STORAGE_KEY_X2_BULLIG_RATE, STORAGE_KEY_X2_SAY_RATE, STORAGE_KEY_X2_SAY_TIMES, STORAGE_KEY_X2_SAY_INCIDENT, STORAGE_KEY_X2_STAGE_INCIDENT, STORAGE_KEY_X2_INCIDENT_REPORTS, STORAGE_KEY_X2_EP_VAN_RATE, STORAGE_KEY_X2_BO_ONG_RATE, STORAGE_KEY_X2_CAP_RATE, STORAGE_KEY_X2_BOLUONG_RATE, STORAGE_KEY_X2_CHON_NAN_RATE, STORAGE_KEY_X2_LOT_LOCATIONS, STORAGE_KEY_X2_BAO_THANH_OUT_SIZES, STORAGE_KEY_KHO_NOTES, STORAGE_KEY_X2_PHU_PHAM, STORAGE_KEY_X2_STOCKTAKE, STORAGE_KEY_X2_YIELD_RATE, STORAGE_KEY_XUONG2_BAO_THO, STORAGE_KEY_XUONG2_BAO_TINH, STORAGE_KEY_XUONG2_BULLIG, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_XUONG2_HO_TRO, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_XUONG2_BO_ONG, STORAGE_KEY_XUONG2_CHON_NAN, STORAGE_KEY_XUONG2_CUTS, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_XUONG1_CAT_ONG, STORAGE_KEY_XUONG1_SAY_SINH, STORAGE_KEY_XUONG1_BOC, STORAGE_KEY_XUONG1_LOC_ONG, STORAGE_KEY_XUONG1_CAT_MAT, STORAGE_KEY_XUONG1_BO, STORAGE_KEY_XUONG1_PHOI_SAY, STORAGE_KEY_XUONG1_LOC_THANH, STORAGE_KEY_X1_BO_LENGTHS, STORAGE_KEY_X1_BO_WIDTHS, STORAGE_KEY_X1_RATES, STORAGE_KEY_X1_KHO_EXPORTS, STORAGE_KEY_X1_NAN_PLAN, state } from './state.js';
+import { applyTombstonesToRecordList, saveDeletedIds, trackDeleted } from './tombstone.js';
 import * as repo from './repo.js'; // KHO DỮ LIỆU LỚN THEO THÁNG (IndexedDB) — 3 miền Nhân sự
 import { STORAGE_KEY_HR_ASSIGN, STORAGE_KEY_HR_ATTENDANCE, STORAGE_KEY_HR_CHECKINS, STORAGE_KEY_HR_CI_ACKS, STORAGE_KEY_HR_PAY_ROWS, STORAGE_KEY_HR_PAY_LOCKS, STORAGE_KEY_HR_EMPLOYEES, STORAGE_KEY_HR_LEAVES, STORAGE_KEY_HR_OVERTIMES, STORAGE_KEY_HR_POSITIONS, STORAGE_KEY_HR_POSNEEDS, STORAGE_KEY_HR_RECRUITMENT, STORAGE_KEY_HR_SHIFTS, STORAGE_KEY_HR_CALENDAR } from './state.js';
 import { bumpIncidentCache, escapeHTML, showToast } from './utils.js';
@@ -290,6 +290,78 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
   }
   function restoreXuong1LocThanh(incomingArr) {
     return restoreX1Records(STORAGE_KEY_XUONG1_LOC_THANH, 'xuong1LocThanhRecords', incomingArr);
+  }
+  function normalizeX1NanPlanRecord(record) {
+    if (!record || typeof record !== 'object') return null;
+    const id = String(record.id || '').trim();
+    const year = Math.round(Number(record.year) || 0);
+    const materialText = String(record.material || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const material = materialText.includes('nua') ? 'Nứa' : (materialText.includes('vau') ? 'Vầu' : '');
+    const widthValue = Number(record.width);
+    const lengthValue = Number(record.length != null ? record.length : record.len);
+    const width = Number.isFinite(widthValue) && widthValue > 0 ? Math.round(widthValue * 10) / 10 : 0;
+    const len = Number.isFinite(lengthValue) && lengthValue > 0 ? Math.round(lengthValue) : 0;
+    // Backward field only: TT La Mã/romanNo from legacy records is intentionally ignored.
+    const romanNo = '';
+    const productName = String(record.productName != null ? record.productName :
+      (record.tenSanPham != null ? record.tenSanPham : '')).trim();
+    const classText = String(record.classification != null ? record.classification :
+      (record.phanLoai != null ? record.phanLoai : (record.kind != null ? record.kind : '')))
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    let classification = '';
+    if (classText === 'a') classification = 'A';
+    else if (classText === 'a1') classification = 'A1';
+    else if (classText === 'nonbt' || classText.includes('non banh te') || classText.includes('banh te')) classification = 'Non bánh tẻ';
+    else if (classText === 'b' || classText === 'bnont') classification = 'B';
+    else if (classText.includes('loai')) classification = 'Loại';
+    else if (classText.includes('cat dau') || classText === 'bau') classification = 'Cắt đầu';
+    if (!id || year < 2000 || year > 2100 || !material || width <= 0 || len <= 0) return null;
+    const weeks = {};
+    if (record.weeks && typeof record.weeks === 'object' && !Array.isArray(record.weeks)) {
+      Object.keys(record.weeks).forEach(key => {
+        const week = Math.round(Number(key));
+        const qty = Number(record.weeks[key]);
+        const weekCount = (() => {
+          const dec28 = new Date(Date.UTC(year, 11, 28));
+          const isoDay = dec28.getUTCDay() || 7;
+          dec28.setUTCDate(dec28.getUTCDate() + 4 - isoDay);
+          const isoYearStart = new Date(Date.UTC(dec28.getUTCFullYear(), 0, 1));
+          const isoWeek = Math.ceil((((dec28 - isoYearStart) / 86400000) + 1) / 7);
+          return isoWeek === 53 ? 53 : 52;
+        })();
+        if (week >= 1 && week <= weekCount && Number.isFinite(qty) && qty > 0 && qty <= 999999) {
+          weeks[String(week)] = qty;
+        }
+      });
+    }
+    return {
+      id, year, romanNo, productName, material, width, len, length: len, classification, weeks,
+      createdAt: record.createdAt || '',
+      updatedAt: record.updatedAt || record.createdAt || ''
+    };
+  }
+  function restoreX1NanPlans(incomingArr) {
+    const incoming = Array.isArray(incomingArr)
+      ? incomingArr.map(normalizeX1NanPlanRecord).filter(Boolean)
+      : [];
+    if (!incoming.length) {
+      const normalizedLocal = (state.x1NanPlans || [])
+        .map(normalizeX1NanPlanRecord).filter(Boolean);
+      state.x1NanPlans = normalizedLocal;
+      try { localStorage.setItem(STORAGE_KEY_X1_NAN_PLAN, JSON.stringify(normalizedLocal)); } catch (err) {}
+      return normalizedLocal;
+    }
+    const before = JSON.stringify(state.x1NanPlans || []);
+    const mergedRaw = mergeRecordsByTimestamp(incoming, state.x1NanPlans || []);
+    const changedTomb = { flag: false };
+    const merged = applyTombstonesToRecordList('x1NanPlans', mergedRaw, changedTomb)
+      .map(normalizeX1NanPlanRecord).filter(Boolean);
+    state.x1NanPlans = merged;
+    try { localStorage.setItem(STORAGE_KEY_X1_NAN_PLAN, JSON.stringify(merged)); } catch (err) {}
+    if (changedTomb.flag) saveDeletedIds();
+    if (JSON.stringify(merged) !== before && state.fileStorage.connected) writeDataToFile();
+    syncHistorySnapshots();
+    return merged;
   }
   // ─── GỘP XUẤT KHO XƯỞNG 1 (file / backup / mây) ──
   function restoreX1KhoExports(incomingArr) {
@@ -1115,6 +1187,7 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
         if (loaded.xuong1BoRecords && Array.isArray(loaded.xuong1BoRecords)) restoreXuong1Bo(loaded.xuong1BoRecords);
         if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
         if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
+        if (loaded.x1NanPlans && Array.isArray(loaded.x1NanPlans)) restoreX1NanPlans(loaded.x1NanPlans);
         if (loaded.x1KhoExports && Array.isArray(loaded.x1KhoExports)) restoreX1KhoExports(loaded.x1KhoExports);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x1BoLengthOptions) restoreX1BoLengthOptions(loaded.x1BoLengthOptions);
@@ -1293,6 +1366,7 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
         if (loaded.xuong1BoRecords && Array.isArray(loaded.xuong1BoRecords)) restoreXuong1Bo(loaded.xuong1BoRecords);
         if (loaded.xuong1PhoiSayRecords && Array.isArray(loaded.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(loaded.xuong1PhoiSayRecords);
         if (loaded.xuong1LocThanhRecords && Array.isArray(loaded.xuong1LocThanhRecords)) restoreXuong1LocThanh(loaded.xuong1LocThanhRecords);
+        if (loaded.x1NanPlans && Array.isArray(loaded.x1NanPlans)) restoreX1NanPlans(loaded.x1NanPlans);
         if (loaded.x1KhoExports && Array.isArray(loaded.x1KhoExports)) restoreX1KhoExports(loaded.x1KhoExports);
         if (loaded.x1Rates) restoreX1Rates(loaded.x1Rates);
         if (loaded.x1BoLengthOptions) restoreX1BoLengthOptions(loaded.x1BoLengthOptions);
@@ -1453,6 +1527,7 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
         xuong1BoRecords: state.xuong1BoRecords || [],
         xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
         xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
+        x1NanPlans: state.x1NanPlans || [],
         x1Rates: state.x1Rates || {},
         x1BoLengthOptions: state.x1BoLengthOptions || [],   // Danh mục chiều dài gợi ý thẻ Bổ X1 (11/2026)
         x1BoWidthOptions: state.x1BoWidthOptions || [],
@@ -1591,6 +1666,7 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
       xuong1BoRecords: state.xuong1BoRecords || [],
       xuong1PhoiSayRecords: state.xuong1PhoiSayRecords || [],
       xuong1LocThanhRecords: state.xuong1LocThanhRecords || [],
+      x1NanPlans: state.x1NanPlans || [],
       x1Rates: state.x1Rates || {},
       x1BoLengthOptions: state.x1BoLengthOptions || [],   // Danh mục chiều dài gợi ý thẻ Bổ X1 (11/2026)
       x1BoWidthOptions: state.x1BoWidthOptions || [],
@@ -1777,6 +1853,7 @@ import { STORAGE_KEY_AUTOBACKUP, STORAGE_KEY_HISTORY } from './state.js';
         if (imported && Array.isArray(imported.xuong1BoRecords)) restoreXuong1Bo(imported.xuong1BoRecords);
         if (imported && Array.isArray(imported.xuong1PhoiSayRecords)) restoreXuong1PhoiSay(imported.xuong1PhoiSayRecords);
         if (imported && Array.isArray(imported.xuong1LocThanhRecords)) restoreXuong1LocThanh(imported.xuong1LocThanhRecords);
+        if (imported && Array.isArray(imported.x1NanPlans)) restoreX1NanPlans(imported.x1NanPlans);
         if (imported && Array.isArray(imported.x1KhoExports)) restoreX1KhoExports(imported.x1KhoExports);
         if (imported && imported.x1Rates) restoreX1Rates(imported.x1Rates);
         if (imported && imported.x1BoLengthOptions) restoreX1BoLengthOptions(imported.x1BoLengthOptions);
@@ -2087,6 +2164,7 @@ export {
   restoreXuong1Bo,
   restoreXuong1PhoiSay,
   restoreXuong1LocThanh,
+  restoreX1NanPlans,
   restoreX1KhoExports,
   restoreX1Rates,
   restoreX1BoLengthOptions,

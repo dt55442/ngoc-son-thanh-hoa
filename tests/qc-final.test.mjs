@@ -19,7 +19,7 @@ function makeEl(id) {
     classList: { _s: new Set(), add(c){ this._s.add(c); }, remove(c){ this._s.delete(c); }, toggle(c, f){ if (f === undefined) f = !this._s.has(c); if (f) this._s.add(c); else this._s.delete(c); return f; }, contains(c){ return this._s.has(c); } },
     addEventListener(t, f) { (el._h[t] = el._h[t] || []).push(f); },
     parentElement: null,
-    appendChild(c) { if (c && typeof c === 'object') c.parentElement = el; return c; },
+    appendChild(c) { if (c && typeof c === 'object') { c.parentElement = el; (el._children || (el._children = [])).push(c); } return c; },
     removeChild(c) { if (c && typeof c === 'object') c.parentElement = null; return c; },
     remove(){}, setAttribute(){}, getAttribute: () => null,
     querySelector: () => makeEl(), querySelectorAll: () => [],
@@ -75,7 +75,7 @@ const approx = (a, b) => Math.abs(a - b) < 1e-6;
 // ═══ PHẦN 2 ═══
 
 // ─── IMPORT MODULES (sau khi stub xong) ────────────────────────────
-const { state, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE } = await import('../js/state.js');
+const { state, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE } = await import('../js/state.js');
 const qcf = await import('../js/qc-final.js');
 const qc = await import('../js/qc.js');
 const fsMod = await import('node:fs');
@@ -179,7 +179,12 @@ check('LOAD: nạp từ localStorage', state.qcFinalRecords.length === 1 && stat
 // ─── D. LƯU LƯỢT KIỂM + CHẶN VALIDATE ─────────────────────────
 state.qcFinalRecords = [];
 setVal('qcf-workshop', 'x2');
+setVal('qcf-kind', 'van');
 setVal('qcf-date', '2026-09-23');
+qcf.syncQcFinalKindFields();
+qcf.onQcFinalListClick({
+  target: { closest: sel => sel === '[data-qcf-product]' ? { getAttribute: () => 'sp1' } : null }
+});
 setVal('qcf-input-qty', '500');
 setVal('qcf-ok', '380');
 setVal('qcf-except', '60');
@@ -278,14 +283,17 @@ check('MINI CARD: renderQcView cập nhật đếm thẻ launcher',
 // ─── G2. TỒN CHỜ QC LŨY KẾ (Tổng · Đã kiểm · Đã xuất · Còn lại) ──
 // Sản lượng tuần 38 (999) chuyển sang tồn; tuần 39–40 ép thêm 500, kiểm 200.
 state.qcExports = [];
-state.qcFinalRecords.push({
-  id: 'qcf-sp1', date: '2026-09-24', workshop: 'x2', kind: 'van',
-  pairKey: qcf.qcFinalPairKeyOf('2026-09-24'),
-  productId: 'sp1', productName: 'Ván 1220×2440×9', inputQty: 200,
-  qtyOk: 190, qtyExcept: 10, qtyReject: 0,
-  workerNames: '', workTime: '', workHours: 0, workHoursHC: 0, workHoursTC: 0,
-  createdAt: '2026-09-24T00:00:00Z', updatedAt: '2026-09-24T00:00:00Z'
-});
+state.qcFinalRecords = [
+  { id: 'qcf-ignore', kind: 'other' },
+  {
+    id: 'qcf-sp1', date: '2026-09-24', workshop: 'x2', kind: 'van',
+    pairKey: qcf.qcFinalPairKeyOf('2026-09-24'),
+    productId: 'sp1', productName: 'Ván 1220×2440×9', inputQty: 200,
+    qtyOk: 190, qtyExcept: 10, qtyReject: 0,
+    workerNames: '', workTime: '', workHours: 0, workHoursHC: 0, workHoursTC: 0,
+    createdAt: '2026-09-24T00:00:00Z', updatedAt: '2026-09-24T00:00:00Z'
+  }
+];
 const stocks = qcf.qcFinalProductStocks('2026-10-01');
 const stSp1 = stocks.find(s => s.productId === 'sp1');
 const stSp2 = stocks.find(s => s.productId === 'sp2');
@@ -432,6 +440,15 @@ state.qcFinalRecords = [];
 // ─── I3. 'KIỂM VÁN' — 2 NHÓM NGUỒN: VÁN THÔ BTP + THÀNH PHẨM ──────────────
 // ĐVT phân loại THÀNH PHẨM (1220x2440x9 = Tấm · 640x14x12 = Thanh);
 // THỂ TÍCH 1 thế < 0,0015 m³ phân loại VÁN THÔ BTP (không cần định mức).
+check('KHỚP SẢN PHẨM: 640x14x12 KHÔNG khớp 640x14x120 — chỉ kích thước chính xác',
+  (() => {
+    const rows = [
+      { productId: 'r-120', name: '640x14x120' },
+      { productId: 'r-12', name: '640x14x12' }
+    ];
+    const hit = qcf.qcFinalResolveProduct({ name: '640x14x12' }, rows);
+    return !!hit && hit.productId === 'r-12';
+  })());
 state.materialRates = [
   { id: 'r-van',   product: '1220x2440x9', unit: 'Tấm',  nanUse: 'Ván' },
   { id: 'r-thanh', product: '640x14x12',   unit: 'Thanh', nanUse: 'Ván' }
@@ -562,8 +579,8 @@ check('CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · histo
   stoJs.includes('restoreQcFinal') && stoJs.includes('qcFinalRecords') &&
   clJs.includes('qcFinalRecords') && clJs.includes('qcFinalRates') &&
   hiJs.includes('qcFinalRecords') && mnJs.includes('loadQcFinal'));
-check('CẤU TRÚC (sw.js): CACHE_NAME v452 + js/qc-final.js vào APP_SHELL',
-  /nha-may-ngoc-son-v452/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
+check('CẤU TRÚC (sw.js): CACHE_NAME v456 + js/qc-final.js vào APP_SHELL',
+  /nha-may-ngoc-son-v456/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
 check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)',
   cssHtml.includes('.qcf-picker') && cssHtml.includes('.qcf-row-main') && cssHtml.includes('.qcf-ws-chip') &&
   cssHtml.includes('.qcf-kind-chip') && cssHtml.includes('.qcf-product-meta') &&
@@ -585,6 +602,398 @@ check('CẤU TRÚC (cloud.js): đăng ký SW với updateViaCache:"none" — sw.
   fsMod.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8').includes("register('./sw.js', { updateViaCache: 'none' })"));
 check('CẤU TRÚC (package.json): tests/qc-final.test.mjs đã vào npm test',
   pkJs.includes('tests/qc-final.test.mjs'));
+
+// ─── J. CẬP NHẬT MỚI: tồn Thanh theo ngày + đổi Loại + xem trước ──
+state.xuong2BaoTinhRecords = [
+  { id: 'bt-date-a', date: '2026-09-20', kind: 'bao_thanh', inQty: 500,
+    outSizeKey: '640×14×12', outDims: [640, 14, 12] },
+  { id: 'bt-date-b', date: '2026-09-25', kind: 'bao_thanh', inQty: 300,
+    outSizeKey: '640×14×12', outDims: [640, 14, 12] }
+];
+state.qcFinalRecords = [
+  { id: 'qc-date-a', date: '2026-09-21', kind: 'thanh', sizeKey: '640×14×12', inputQty: 200 },
+  { id: 'qc-date-b', date: '2026-09-26', kind: 'thanh', sizeKey: '640×14×12', inputQty: 100 },
+  { id: 'qc-edit-ignore', date: '2026-09-22', kind: 'thanh', sizeKey: '640×14×12', inputQty: 50 }
+];
+check('TỒN THANH THEO NGÀY: chỉ lấy lượt Bào/QC có ngày ≤ ngày kiểm',
+  (() => {
+    const rows = qcf.qcFinalThanhSizeStocks('', '2026-09-23');
+    const row = rows.find(x => x.sizeKey === '640×14×12');
+    return row && row.total === 500 && row.used === 250 && row.remain === 250;
+  })());
+check('SỬA LƯỢT THANH: loại lượt đang sửa khỏi tổng Đã kiểm, trả lại tồn ngay theo ngày',
+  (() => {
+    const rows = qcf.qcFinalThanhSizeStocks('qc-edit-ignore', '2026-09-23');
+    const row = rows.find(x => x.sizeKey === '640×14×12');
+    return row && row.used === 200 && row.remain === 300;
+  })());
+check('TỒN THANH THEO NGÀY: ngày 25 gồm cả lượt Bào 25 nhưng chưa gồm QC ngày 26',
+  (() => {
+    const row = qcf.qcFinalThanhSizeStocks('', '2026-09-25')
+      .find(x => x.sizeKey === '640×14×12');
+    return row && row.total === 800 && row.used === 250 && row.remain === 550;
+  })());
+
+qcf.resetQcFinalForm();
+setVal('qcf-date', '2026-09-23');
+setVal('qcf-kind', 'thanh');
+qcf.syncQcFinalKindFields();
+qcf.onQcFinalListClick({
+  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null }
+});
+setVal('qcf-input-qty', '100');
+setVal('qcf-ok', '80');
+setVal('qcf-except', '10');
+setVal('qcf-reject', '10');
+const preview = qcf.updateQcFinalPreview();
+check('XEM TRƯỚC QC: tính Đầu vào, Đạt, Ngoại lệ, Loại, Tổng kiểm/đạt, còn lại nguồn và tỉ lệ lỗi',
+  preview && preview.inputQty === 100 && preview.qtyOk === 80 && preview.qtyExcept === 10 &&
+  preview.qtyReject === 10 && preview.totalChecked === 100 && preview.totalPass === 90 &&
+  preview.remaining === 150 && approx(preview.errorPct, 10));
+check('ĐỔI LOẠI: Thanh → Ván xóa sạch lựa chọn Thanh và ô Đầu vào',
+  (() => {
+    setVal('qcf-kind', 'van');
+    qcf.syncQcFinalKindFields();
+    return document.getElementById('qcf-input-qty').value === '' &&
+      document.getElementById('qcf-picker-text').textContent === 'Ván thô Ép Ván';
+  })());
+check('ĐỔI LOẠI: Ván → Thanh xóa sạch lựa chọn Ván',
+  (() => {
+    setVal('qcf-kind', 'thanh');
+    qcf.syncQcFinalKindFields();
+    return document.getElementById('qcf-input-qty').value === '' &&
+      document.getElementById('qcf-picker-text').textContent === 'Cỡ thanh Bào thanh';
+  })());
+
+check('NHÃN MỚI + PREVIEW: index.html dùng nhãn người dùng yêu cầu và có khối xem trước',
+  idxHtml.includes('Số đang đưa kiểm') && idxHtml.includes('Ngoại lệ (vẫn tính đạt)') &&
+  idxHtml.includes('Loại / Hỏng') && idxHtml.includes('Hủy / Nhập mới') &&
+  idxHtml.includes('id="qcf-preview"'));
+
+state.xuong2BaoTinhRecords = [];
+state.qcFinalRecords = [];
+
+// ─── TEST CẬP NHẬT TỒN / ĐƠN VỊ NGUỒN ─────────────────────
+// Đếm thẻ mini theo đơn vị từng Loại; hỗn hợp phải tách rõ tấm/thanh.
+state.qcFinalRecords = [
+  { id: 'card-v', kind: 'van', qtyOk: 20, qtyExcept: 5, qtyReject: 0 },
+  { id: 'card-t', kind: 'thanh', qtyOk: 12, qtyExcept: 3, qtyReject: 1 }
+];
+check('CARD HỖN HỢP: hiện riêng 25 tấm đạt và 15 thanh đạt',
+  qcf.qcFinalCardCount() === '2 lượt · 25 tấm đạt · 15 thanh đạt');
+state.qcFinalRecords = [{ id: 'card-t-only', kind: 'thanh', qtyOk: 8, qtyExcept: 2, qtyReject: 0 }];
+check('CARD CHỈ THANH: dùng nhãn thanh đạt',
+  qcf.qcFinalCardCount() === '1 lượt · 10 thanh đạt');
+state.qcFinalRecords = [{ id: 'card-v-only', kind: 'van', qtyOk: 7, qtyExcept: 1, qtyReject: 0 }];
+check('CARD CHỈ VÁN: dùng nhãn tấm đạt',
+  qcf.qcFinalCardCount() === '1 lượt · 8 tấm đạt');
+
+// Chặn nhập vượt nguồn Thanh/Ván khi đã chọn nguồn có tồn.
+state.qcFinalRecords = [];
+state.xuong2BaoTinhRecords = [
+  { id: 'bt-submit', date: '2026-09-20', kind: 'bao_thanh',
+    outSizeKey: '640×14×12', outDims: [640, 14, 12], inQty: 100,
+    inSource: 'press' }
+];
+setVal('qcf-workshop', 'x2');
+setVal('qcf-kind', 'thanh');
+setVal('qcf-date', '2026-09-23');
+qcf.syncQcFinalKindFields();
+qcf.onQcFinalListClick({
+  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null }
+});
+setVal('qcf-input-qty', '101');
+setVal('qcf-ok', '101'); setVal('qcf-except', '0'); setVal('qcf-reject', '0');
+const thanhCountBeforeOverstock = state.qcFinalRecords.length;
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('CHẶN SOURCE THANH: đầu vào 101 vượt tồn 100 thì không lưu',
+  state.qcFinalRecords.length === thanhCountBeforeOverstock);
+
+state.pressRecords = [
+  { id: 'p-v-submit', date: '2026-09-20', week: '2026-W38', year: 2026,
+    productId: 'sp-v-submit', productName: 'Ván 1000×2000×10',
+    finishedQty: 50, vanTho: [], sticks: [] }
+];
+setVal('qcf-kind', 'van');
+setVal('qcf-date', '2026-09-23');
+qcf.syncQcFinalKindFields();
+qcf.onQcFinalListClick({
+  target: { closest: sel => sel === '[data-qcf-product]' ? { getAttribute: () => 'sp-v-submit' } : null }
+});
+setVal('qcf-input-qty', '51');
+setVal('qcf-ok', '51'); setVal('qcf-except', '0'); setVal('qcf-reject', '0');
+const vanCountBeforeOverstock = state.qcFinalRecords.length;
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('CHẶN SOURCE VÁN: đầu vào 51 vượt tồn 50 thì không lưu',
+  state.qcFinalRecords.length === vanCountBeforeOverstock);
+
+// Đổi ngày Thanh: lượt mới nạp lại live remain; lượt sửa cộng lại lượng gốc
+// nhưng không ghi đè ô Đầu vào đang sửa.
+state.pressRecords = [];
+state.qcFinalRecords = [];
+state.xuong2BaoTinhRecords = [
+  { id: 'bt-date', date: '2026-09-20', kind: 'bao_thanh',
+    outSizeKey: '640×14×12', outDims: [640, 14, 12], inQty: 100,
+    inSource: 'press' }
+];
+setVal('qcf-workshop', 'x2');
+setVal('qcf-kind', 'thanh');
+setVal('qcf-date', '2026-09-22');
+qcf.resetQcFinalForm();
+setVal('qcf-date', '2026-09-22');
+qcf.syncQcFinalKindFields();
+qcf.onQcFinalListClick({
+  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null }
+});
+check('ĐỔI NGÀY THANH — MỚI: nạp tồn live 100 vào Đầu vào',
+  document.getElementById('qcf-input-qty').value === '100');
+setVal('qcf-date', '2026-09-23');
+qcf.qcFinalOnDateChange();
+check('ĐỔI NGÀY THANH — MỚI: đổi ngày vẫn nạp tồn live 100',
+  document.getElementById('qcf-input-qty').value === '100');
+
+state.qcFinalRecords = [
+  { id: 'edit-thanh-date', date: '2026-09-22', workshop: 'x2', kind: 'thanh',
+    inputQty: 30, qtyOk: 25, qtyExcept: 3, qtyReject: 2,
+    sizeKey: '640×14×12', sizeDims: [640, 14, 12] },
+  { id: 'other-thanh-date', date: '2026-09-22', workshop: 'x2', kind: 'thanh',
+    inputQty: 30, qtyOk: 30, qtyExcept: 0, qtyReject: 0,
+    sizeKey: '640×14×12', sizeDims: [640, 14, 12] }
+];
+qcf.editQcFinalRecord('edit-thanh-date');
+check('ĐỔI NGÀY THANH — SỬA: giữ ô Đầu vào gốc 30',
+  document.getElementById('qcf-input-qty').value === '30');
+setVal('qcf-date', '2026-09-23');
+qcf.qcFinalOnDateChange();
+check('ĐỔI NGÀY THANH — SỬA: tồn live 70 cộng lượng gốc 30, ô gốc không đổi',
+  document.getElementById('qcf-input-qty').value === '30' &&
+  qcf.updateQcFinalPreview().sourceRemain === 100);
+
+state.xuong2BaoTinhRecords = [];
+state.pressRecords = [];
+state.qcFinalRecords = [];
+
+// ─── CHẶN THIẾU NGUỒN X2 + GIỮ NGUỒN KHI SỬA ĐỔI NGÀY VÁN ──
+qcf.resetQcFinalForm();
+setVal('qcf-workshop', 'x2');
+setVal('qcf-kind', 'van');
+setVal('qcf-date', '2026-09-23');
+qcf.syncQcFinalKindFields();
+setVal('qcf-input-qty', '10');
+setVal('qcf-ok', '10');
+setVal('qcf-except', '0');
+setVal('qcf-reject', '0');
+const sourceLessVanCount = state.qcFinalRecords.length;
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('CHẶN SOURCE-LESS X2: Kiểm Ván chưa chọn nguồn tồn → không lưu',
+  state.qcFinalRecords.length === sourceLessVanCount);
+
+qcf.resetQcFinalForm();
+setVal('qcf-workshop', 'x2');
+setVal('qcf-kind', 'thanh');
+setVal('qcf-date', '2026-09-23');
+qcf.syncQcFinalKindFields();
+setVal('qcf-input-qty', '10');
+setVal('qcf-ok', '10');
+setVal('qcf-except', '0');
+setVal('qcf-reject', '0');
+const sourceLessThanhCount = state.qcFinalRecords.length;
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('CHẶN SOURCE-LESS X2: Kiểm Thanh chưa chọn cỡ nguồn → không lưu',
+  state.qcFinalRecords.length === sourceLessThanhCount);
+
+// Sửa Kiểm Ván: đổi ngày phải tra lại theo sizeKey gốc, không xem như thiếu nguồn.
+state.pressRecords = [
+  { id: 'p-edit-v-size', date: '2026-09-20', week: '2026-W38', year: 2026,
+    productId: '', productName: '', finishedQty: 0, vanTho: [
+      { vtDim: '1220×2440×9', vtQty: 50 }
+    ], sticks: [] }
+];
+state.qcFinalRecords = [
+  { id: 'edit-v-size', date: '2026-09-22', workshop: 'x2', kind: 'van',
+    inputQty: 30, qtyOk: 25, qtyExcept: 3, qtyReject: 2,
+    sizeKey: '1220×2440×9', sizeDims: [1220, 2440, 9],
+    productId: '', productName: 'Ván thô 1220 × 2440 × 9' }
+];
+qcf.editQcFinalRecord('edit-v-size');
+setVal('qcf-date', '2026-09-23');
+qcf.qcFinalOnDateChange();
+check('SỬA NGÀY VÁN THEO CỠ: giữ lựa chọn sizeKey gốc + đầu vào gốc 30',
+  document.getElementById('qcf-input-qty').value === '30' &&
+  document.getElementById('qcf-picker-text').textContent.includes('1220'));
+setVal('qcf-ok', '25');
+setVal('qcf-except', '3');
+setVal('qcf-reject', '2');
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('SỬA NGÀY VÁN THEO CỠ: re-resolution tồn tại → lưu không bị coi là source-less',
+  state.qcFinalRecords.length === 1 &&
+  state.qcFinalRecords[0].sizeKey === '1220×2440×9' &&
+  state.qcFinalRecords[0].inputQty === 30);
+
+// Fallback theo thành phẩm khi bản ghi Ván cũ không có sizeKey.
+state.pressRecords = [
+  { id: 'p-edit-v-product', date: '2026-09-20', week: '2026-W38', year: 2026,
+    productId: 'sp-edit-v', productName: 'Ván 1000×2000×10',
+    finishedQty: 40, vanTho: [], sticks: [] }
+];
+state.qcFinalRecords = [
+  { id: 'edit-v-product', date: '2026-09-22', workshop: 'x2', kind: 'van',
+    inputQty: 12, qtyOk: 10, qtyExcept: 1, qtyReject: 1,
+    productId: 'sp-edit-v', productName: 'Ván 1000×2000×10' }
+];
+qcf.editQcFinalRecord('edit-v-product');
+setVal('qcf-date', '2026-09-23');
+qcf.qcFinalOnDateChange();
+check('SỬA NGÀY VÁN THEO SẢN PHẨM: khôi phục lựa chọn + đầu vào gốc',
+  document.getElementById('qcf-input-qty').value === '12' &&
+  document.getElementById('qcf-picker-text').textContent === 'Ván 1000×2000×10');
+setVal('qcf-ok', '10');
+setVal('qcf-except', '1');
+setVal('qcf-reject', '1');
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('SỬA NGÀY VÁN THEO SẢN PHẨM: re-resolution tồn tại → lưu không bị coi là source-less',
+  state.qcFinalRecords.length === 1 &&
+  state.qcFinalRecords[0].productId === 'sp-edit-v' &&
+  state.qcFinalRecords[0].inputQty === 12);
+
+// Lượt sửa bị xóa khỏi dữ liệu trong lúc form vẫn giữ editId: không được lưu thành lượt mới.
+qcf.resetQcFinalForm();
+state.qcFinalRecords = [
+  { id: 'missing-edit', date: '2026-09-22', workshop: 'x2', kind: 'van',
+    inputQty: 8, qtyOk: 7, qtyExcept: 1, qtyReject: 0,
+    productId: 'sp-missing', productName: 'Ván 1220×2440×9' }
+];
+qcf.editQcFinalRecord('missing-edit');
+state.qcFinalRecords = [];
+setVal('qcf-input-qty', '8');
+setVal('qcf-ok', '7');
+setVal('qcf-except', '1');
+setVal('qcf-reject', '0');
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+const toastContainer = document.getElementById('toast-container');
+const missingToast = toastContainer._children && toastContainer._children.at(-1);
+check('SỬA MẤT LƯỢT: không tạo lượt kiểm trùng',
+  state.qcFinalRecords.length === 0);
+check('SỬA MẤT LƯỢT: hiện đúng toast yêu cầu bấm Làm mới',
+  missingToast && String(missingToast.innerHTML || '').includes('Lượt đang sửa không còn tồn tại. Hãy bấm Làm mới...'));
+
+// Legacy Ván: bản ghi cũ không có sizeKey nhưng productName có 3 kích thước.
+// Ưu tiên re-resolution từ tồn Ván-thô trước, rồi mới tra thành phẩm.
+state.pressRecords = [
+  { id: 'p-edit-v-legacy', date: '2026-09-20', week: '2026-W38', year: 2026,
+    productId: '', productName: '', finishedQty: 0, vanTho: [
+      { vtDim: '1220×2440×9', vtQty: 18 }
+    ], sticks: [] }
+];
+state.qcFinalRecords = [
+  { id: 'edit-v-legacy', date: '2026-09-22', workshop: 'x2', kind: 'van',
+    inputQty: 12, qtyOk: 10, qtyExcept: 1, qtyReject: 1,
+    productId: '', productName: 'Ván thô 1220 × 2440 × 9' }
+];
+qcf.editQcFinalRecord('edit-v-legacy');
+setVal('qcf-date', '2026-09-23');
+qcf.qcFinalOnDateChange();
+check('LEGACY VÁN KHÔNG sizeKey: parse tên, tìm Ván-thô live trước thành phẩm',
+  document.getElementById('qcf-input-qty').value === '12' &&
+  document.getElementById('qcf-picker-text').textContent.includes('1220'));
+setVal('qcf-ok', '10');
+setVal('qcf-except', '1');
+setVal('qcf-reject', '1');
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('LEGACY VÁN KHÔNG sizeKey: lưu lại gắn sizeKey Ván-thô và đúng đầu vào gốc',
+  state.qcFinalRecords.length === 1 &&
+  state.qcFinalRecords[0].sizeKey === '1220×2440×9' &&
+  state.qcFinalRecords[0].inputQty === 12);
+
+// ─── XUẤT HÀNG THEO TÊN + LƯU THẤT BẠI PHẢI KHÔI PHỤC TRẠNG THÁI ──
+state.pressRecords = [
+  { id: 'p-export-name', date: '2026-09-20', week: '2026-W38', year: 2026,
+    productId: 'sp-export-name', productName: 'Ván 1220×2440×9',
+    finishedQty: 100, vanTho: [], sticks: [] }
+];
+state.materialRates = [
+  { id: 'sp-export-name', product: '1220x2440x9', unit: 'Tấm' }
+];
+state.qcFinalRecords = [];
+state.qcExports = [
+  { id: 'export-name', name: '1220 x 2440 x 9', qty: 30,
+    exportDate: '2026-09-25', year: 2026, weeks: [39, 40] }
+];
+check('TỒN XUẤT THEO TÊN: phiếu xuất name khớp tên chuẩn hoá và materialRates',
+  (() => {
+    const row = qcf.qcFinalProductStocks('2026-10-01')
+      .find(x => x.productId === 'sp-export-name');
+    return row && row.exported === 30 && row.remain === 70
+      && qcf.qcFinalNormalizeName('Ván 1220×2440×9') === qcf.qcFinalNormalizeName('Ván 1220 x 2440 x 9');
+  })());
+state.qcExports = [];
+state.pressRecords = [];
+state.materialRates = [];
+
+qcf.resetQcFinalForm();
+setVal('qcf-workshop', 'x1');
+setVal('qcf-kind', 'van');
+setVal('qcf-date', '2026-09-23');
+setVal('qcf-input-qty', '25');
+setVal('qcf-ok', '20');
+setVal('qcf-except', '3');
+setVal('qcf-reject', '2');
+const setItemOriginal = global.localStorage.setItem;
+global.localStorage.setItem = (k, v) => {
+  if (k === STORAGE_KEY_QC_FINAL) throw new Error('mock localStorage write failure');
+  return setItemOriginal(k, v);
+};
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('LƯU TẠO THẤT BẠI: không thêm lượt kiểm và không reset form',
+  state.qcFinalRecords.length === 0 &&
+  document.getElementById('qcf-input-qty').value === '25' &&
+  document.getElementById('qcf-ok').value === '20');
+global.localStorage.setItem = setItemOriginal;
+
+const saveFailRecord = {
+  id: 'save-fail-edit', date: '2026-09-23', workshop: 'x1', kind: 'van',
+  inputQty: 25, qtyOk: 20, qtyExcept: 3, qtyReject: 2,
+  productId: '', productName: '', sizeKey: '', sizeDims: [],
+  pairKey: qcf.qcFinalPairKeyOf('2026-09-23'),
+  workerNames: '', workTime: '', workHours: 0, workHoursHC: 0, workHoursTC: 0
+};
+state.qcFinalRecords = [saveFailRecord];
+qcf.editQcFinalRecord(saveFailRecord.id);
+setVal('qcf-ok', '21');
+setVal('qcf-except', '3');
+setVal('qcf-reject', '1');
+global.localStorage.setItem = (k, v) => {
+  if (k === STORAGE_KEY_QC_FINAL) throw new Error('mock localStorage write failure');
+  return setItemOriginal(k, v);
+};
+qcf.handleQcFinalSubmit({ preventDefault(){} });
+check('LƯU SỬA THẤT BẠI: khôi phục snapshot và giữ form đang sửa',
+  state.qcFinalRecords.length === 1 &&
+  state.qcFinalRecords[0].qtyOk === 20 &&
+  state.qcFinalRecords[0].qtyExcept === 3 &&
+  state.qcFinalRecords[0].qtyReject === 2 &&
+  document.getElementById('qcf-ok').value === '21' &&
+  document.getElementById('qcf-edit-banner').style.display === '');
+global.localStorage.setItem = setItemOriginal;
+
+state.deletedIds = { qcFinalRecords: { keep: '2026-09-20T00:00:00Z' } };
+storeBacking.set(STORAGE_KEY_DELETED_IDS || 'bamboo_tracker_deleted_ids_v1',
+  JSON.stringify(state.deletedIds));
+global.localStorage.setItem = (k, v) => {
+  if (k === STORAGE_KEY_QC_FINAL) throw new Error('mock localStorage write failure');
+  return setItemOriginal(k, v);
+};
+qcf.deleteQcFinalRecord(saveFailRecord.id);
+check('XÓA THẤT BẠI: khôi phục danh sách và không để tombstone mới tồn tại',
+  state.qcFinalRecords.length === 1 &&
+  state.qcFinalRecords[0].id === saveFailRecord.id &&
+  !!state.deletedIds.qcFinalRecords.keep &&
+  !state.deletedIds.qcFinalRecords[saveFailRecord.id] &&
+  JSON.parse(storeBacking.get(STORAGE_KEY_DELETED_IDS || 'bamboo_tracker_deleted_ids_v1'))
+    .qcFinalRecords.keep &&
+  !JSON.parse(storeBacking.get(STORAGE_KEY_DELETED_IDS || 'bamboo_tracker_deleted_ids_v1'))
+    .qcFinalRecords[saveFailRecord.id]);
+global.localStorage.setItem = setItemOriginal;
 
 // ─── TỔNG KẾT ────────────────────────────────────────────────
 console.log(`\n=== qc-final.test.mjs: ${passed} PASS · ${failed} FAIL ===`);

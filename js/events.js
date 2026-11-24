@@ -27,7 +27,8 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   x1SsOpenOldPanel, x1SsCloseReadyPanel, x1SsOldStep, x1SsOpenBocFor,
   X1_CHAIN_SPECS, x1ChainSpec, handleX1ChainSubmit, editX1Chain, deleteX1Chain, resetX1ChainForm, x1ChainSyncLinked, x1ChainCalc,
   x1KhoToggleDetail, x1KhoOpenExportForm, x1KhoCloseExportForm, x1KhoSaveExport, x1KhoDeleteExport, x1KhoSyncFormFields, x1KhoOpenDetail, x1KhoCloseDetail,
-  x1BoLengthsTogglePicker, x1BoLengthToggle, x1BoLengthAdd, x1BoNavigateStage, x1LocThanhNavigateStage, x1NavigateStage, x1LocThanhModeOf, renderX1LocThanhLengthRows, x1LocThanhReadLengthRows, syncX1LocThanhMode, x1LtOnSrcChange, x1LtAddSource, x1LtRemoveSource, x1LtLengthCatalogToggle, x1LtLengthToggle, x1LtLengthAdd, x1LtToggleWidth,
+  x1BoLengthsTogglePicker, x1BoLengthToggle, x1BoLengthAdd, x1BoNavigateStage, x1LocThanhNavigateStage, x1NavigateStage, x1LocThanhModeOf, renderX1LocThanhLengthRows, x1LocThanhReadLengthRows, syncX1LocThanhMode, x1LtOnSrcChange, x1LtAddSource, x1LtRemoveSource, x1LtLengthCatalogToggle, x1LtLengthToggle, x1LtLengthAdd, x1LtToggleWidth, applyX1MatrixExpressionInput,
+  loadX1NanPlans, renderX1NanPlanCard, x1NanPlanStartForm, x1NanPlanCloseForm, x1NanPlanSaveForm, x1NanPlanSetYear, x1NanPlanSetViewMode, x1NanPlanSetPeriod, x1NanPlanShiftPeriod, x1NanPlanSetWeekValue, x1NanPlanSetChildWeekValue, x1NanPlanSetWeekPriority, x1NanPlanDelete,
   syncX2ShiftField, syncX2BaoThoThicknessInputs, isBoOngPos, isBaoThoPos, isChonNanPos, renderX2BulligCard,
   // ── SỔ NHÓM KHỐI LƯỢNG (18/10/2026): xe bốc ~600 kg + phiếu cân + 2 loại đầu vào Cắt Chọn ──
   setX2CutInputKind, onX2BoluongTicketToggle, onX2BoluongTicketKg,
@@ -45,7 +46,7 @@ import { baoTinhClearPicks, baoTinhPickAll, renderX2BaoTinhList, addBaoThanhOutS
   switchX2XuLyLoiTab, handleX2TopBundleSubmit, resetX2TopBundleForm,
   addX2TopBundleRow, onX2TopBundleStockClick } from './xuong2.js';
 import { handleKhoNoteSubmit, resetX2KhoNoteForm, setKhoNoteType, setKhoPeriodMode, khoSetShowUsed, khoToggleLotsPanel, khoOnLotsPanelClick, khoOnLotsQtyInput, khoBulkAddRow, khoBulkOnClick, khoBulkOnPaste, toggleKhoBulkEntry, khoSetLotsQuery, khoSetLotsQtyQuery, khoPickLot, khoSetLotQty, khoOnPendingClick, khoOnLedgerClick, khoOnWipClick, khoApprovePicked, khoPickAllPending, toggleX2KhoTable, toggleX2KhoStockTable, renderX2KhoCalc, khoOnPurposeChange, fillX2KhoSizeSuggestions, syncX2KhoTopSizeFields, khoOnTopPickerClick, renderX2KhoLedger, khoBackfillFromLegacy, openKhoWarnModal, closeKhoWarnModal, khoAckOverAlloc, khoClearOverAck, saveKhoNotes } from './xuong2.js'; // THẺ KHO NAN — phiếu kho + sổ nhập/xuất + chi tiết cảnh báo/chốt lệch
-import { setX1SaySinhQcStatus, setX1SsViewMode, x1SsUpdateSulfurHint, x1SsOpenInputModal, x1SsCloseInputModal, x1SsToggleTimeline, renderX1SsHistory } from './xuong2.js';
+import { setX1SaySinhQcStatus, setX1SsViewMode, x1SsUpdateSulfurHint, x1SsMarkCodeManualEdit, x1SsMarkSulfurManualEdit, x1SsOpenInputModal, x1SsCloseInputModal, x1SsToggleTimeline, renderX1SsHistory } from './xuong2.js';
 import { x2OngDatAvailable } from './x2-pool.js'; // SỔ NHÓM: tồn ống đạt chờ bổ (nút "Lấy Hết Tồn")
 import {
   handleX2PhuPhamSubmit, editX2PhuPham, deleteX2PhuPham, resetX2PhuPhamForm, onX2PhuPhamCalc,
@@ -59,7 +60,7 @@ import { printCapacityReport, selectCapacityStage, setCapacityMode, setCapacityM
 // Thẻ TRUY XUẤT ĐẦU VÀO → ĐẦU RA (Vùng Nâng Cao — js/trace.js)
 import { closeTraceSizePanel, positionTraceSizePanel, setTraceMode, setTraceProduct, setTraceSizeQuery, shiftTracePeriod, toggleTraceDetail, toggleTraceSizePanel, traceSizePanelOpen, TRACE_SIZE_BTN_ID, TRACE_SIZE_PANEL_ID } from './trace.js';
 import { closeQcExportModal, deleteQcExport, handleQcExportSubmit, hideQcCustomName, onQcProductChange, openQcExportModal, qcCloseOpenCard, qcImpAddCustom, qcImpFooterInfo, qcImpLoadPlan, qcImpOnWeeksChange, qcImpRemoveRow, qcImpSetChecked, qcImpSetQty, qcOpenCard, qcPositionDetailOverlay, renderQcImpRows, renderQcSearch, renderQcSummary, renderQcTable, showQcCustomName, updateQcCardGrid, updateQcExportRow } from './qc.js';
-import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
+import { closeQcFinalRateModal, handleQcFinalRateAddMonth, handleQcFinalSubmit, onQcFinalListClick, onQcFinalRateRowClick, onQcFinalTableClick, openQcFinalRateModal, positionQcFinalPicker, qcFinalMaybeClosePicker, qcFinalOnDateChange, renderQcFinalProductList, resetQcFinalForm, setQcFinalPickerOpen, setQcFinalSearchQ, syncQcFinalKindFields, syncQcFinalWorkshopFields, toggleQcFinalPicker, updateQcFinalPreview } from './qc-final.js'; // THẺ KIỂM SAU SẢN XUẤT (tab QC — js/qc-final.js)
 import { onQcPressTableClick, setQcPressFilter, setQcPressSearchQ } from './qc-press.js'; // THẺ NHẬT KÝ THEO DÕI ÉP VÁN (tab QC — js/qc-press.js)
 import { closeIncidentReports, handleIncidentSubmit, onIncidentChipClick, onIncidentFiltersChange, onIncidentReportsClick, openIncidentReports, openMechanicalIncidentCenter, resetIncidentForm, showMechanicalIncidentForm, syncIncidentHoursFromTimes } from './x2-incidents.js'; // BÁO CÁO SỰ CỐ (tab Công Đoạn SX)
 import { cancelMechWorkPlanEdit, closeMechWorkPlan, handleMechWorkPlanSubmit, onMechWorkPlanListClick, openMechWorkPlan, renderMechWorkPlanList, setMechWorkPlanDateToday, shiftMechWorkPlanDate, showAllMechWorkPlanDates, startMechWorkPlan } from './mech-work.js';
@@ -163,6 +164,19 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     function safeOn(id, event, handler) {
       const el = document.getElementById(id);
       if (el) el.addEventListener(event, handler);
+    }
+    function finalizeLocThanhExpressions() {
+      const form = document.getElementById('x1-loc-thanh-form');
+      const inputs = form && typeof form.querySelectorAll === 'function'
+        ? form.querySelectorAll('input[type="text"]')
+        : [];
+      Array.prototype.forEach.call(inputs || [], input => applyX1MatrixExpressionInput(input));
+      ['x1-loc-thanh-ok', 'x1-loc-thanh-loai', 'x1-loc-thanh-in'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) applyX1MatrixExpressionInput(input);
+      });
+      const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+      if (sp) x1ChainCalc(sp);
     }
 
     // ── CÀI ĐẶT HỆ THỐNG (panel 4 tab) — UỶ NHIỆM SỰ KIỆN ──
@@ -1318,9 +1332,16 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // đổi Ngày → danh sách thành phẩm của cặp 2 tuần mới.
     safeOn('qcf-form', 'submit', (e) => { handleQcFinalSubmit(e); updateQcCardGrid(); });
     safeOn('btn-qcf-reset', 'click', resetQcFinalForm);
-    safeOn('qcf-kind', 'change', syncQcFinalKindFields); // đổi Loại kiểm → đơn vị ô số lượng + ẩn/hiện picker
-    safeOn('qcf-workshop', 'change', syncQcFinalWorkshopFields);
-    safeOn('qcf-date', 'change', qcFinalOnDateChange); // đổi ngày → danh sách thành phẩm cặp 2 tuần mới
+    safeOn('qcf-kind', 'change', () => { syncQcFinalKindFields(); updateQcFinalPreview(); }); // đổi Loại kiểm → đơn vị ô số lượng + ẩn/hiện picker
+    safeOn('qcf-kind', 'input', () => { syncQcFinalKindFields(); updateQcFinalPreview(); });
+    safeOn('qcf-workshop', 'change', () => { syncQcFinalWorkshopFields(); updateQcFinalPreview(); });
+    safeOn('qcf-workshop', 'input', () => { syncQcFinalWorkshopFields(); updateQcFinalPreview(); });
+    safeOn('qcf-date', 'change', () => { qcFinalOnDateChange(); updateQcFinalPreview(); }); // đổi ngày → danh sách thành phẩm cặp 2 tuần mới
+    safeOn('qcf-date', 'input', () => { qcFinalOnDateChange(); updateQcFinalPreview(); });
+    ['qcf-input-qty', 'qcf-ok', 'qcf-except', 'qcf-reject'].forEach(id => {
+      safeOn(id, 'input', updateQcFinalPreview);
+      safeOn(id, 'change', updateQcFinalPreview);
+    });
     safeOn('qcf-picker-btn', 'click', toggleQcFinalPicker);
     safeOn('qcf-search', 'input', (e) => setQcFinalSearchQ(e.target.value));
     safeOn('qcf-product-list', 'click', (e) => { if (onQcFinalListClick(e)) updateQcCardGrid(); });
@@ -2152,6 +2173,134 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Nút XƯỞNG 1 / XƯỞNG 2 ở đầu tab Công Đoạn SX
     safeOn('stage-ws-x2', 'click', () => setStageWs('x2'));
     safeOn('stage-ws-x1', 'click', () => setStageWs('x1'));
+    // ── KẾ HOẠCH XUẤT NAN XƯỞNG 1: xem 1 tuần/tháng/năm ──
+    safeOn('x1-nan-plan-year', 'change', x1NanPlanSetYear);
+    safeOn('x1-nan-plan-prev', 'click', () => x1NanPlanShiftPeriod(-1));
+    safeOn('x1-nan-plan-next', 'click', () => x1NanPlanShiftPeriod(1));
+    safeOn('x1-nan-plan-view-modes', 'click', e => {
+      const btn = e.target && e.target.closest ? e.target.closest('[data-x1-nan-plan-view]') : null;
+      if (!btn) return;
+      x1NanPlanSetViewMode(btn.getAttribute('data-x1-nan-plan-view'));
+    });
+    safeOn('btn-x1-nan-plan-add', 'click', () => x1NanPlanStartForm());
+    safeOn('btn-x1-nan-plan-cancel', 'click', x1NanPlanCloseForm);
+    safeOn('btn-x1-nan-plan-save', 'click', x1NanPlanSaveForm);
+    safeOn('x1-nan-plan-form', 'click', e => {
+      const target = e.target && e.target.closest ? e.target.closest(
+        '[data-x1-nan-plan-material], [data-x1-nan-plan-width], [data-x1-nan-plan-length], [data-x1-nan-plan-class]'
+      ) : null;
+      if (!target) return;
+      const setPressed = (node, pressed) => {
+        if (node.setAttribute) node.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+        if (node.classList && typeof node.classList.toggle === 'function') {
+          node.classList.toggle('is-active', pressed);
+        }
+        if ('checked' in node) node.checked = pressed;
+      };
+      const attrs = [
+        'data-x1-nan-plan-material',
+        'data-x1-nan-plan-width',
+        'data-x1-nan-plan-length',
+        'data-x1-nan-plan-class'
+      ];
+      const attr = attrs.find(a => target.getAttribute && target.getAttribute(a) != null);
+      if (!attr) return;
+      const pressed = target.getAttribute ? target.getAttribute('aria-pressed') === 'true' : false;
+      setPressed(target, !pressed);
+    });
+    let lastInlinePlanSave = { sig: '', at: 0 };
+    const saveInlinePlanWeek = input => {
+      if (!input) return false;
+      const planId = input.getAttribute('data-x1-nan-plan-id');
+      const planIds = input.getAttribute('data-x1-nan-plan-ids');
+      const week = input.getAttribute('data-x1-nan-plan-week');
+      const value = input.value;
+      const wrap = document.querySelector('.x1-nan-plan-table-wrap');
+      const scrollLeft = wrap ? (wrap.scrollLeft || 0) : 0;
+      const scrollTop = wrap ? (wrap.scrollTop || 0) : 0;
+      const sig = `${planIds || planId}|${week}|${value}`;
+      const now = Date.now();
+      if (lastInlinePlanSave.sig === sig && (now - lastInlinePlanSave.at) < 500) return false;
+      lastInlinePlanSave = { sig, at: now };
+      const windowScrollX = typeof window.scrollX === 'number' ? window.scrollX : 0;
+      const windowScrollY = typeof window.scrollY === 'number' ? window.scrollY : 0;
+      const saved = planIds
+        ? x1NanPlanSetChildWeekValue(planIds.split(',').map(id => id.trim()).filter(Boolean), week, value)
+        : x1NanPlanSetWeekValue(planId, week, value);
+      renderX1NanPlanCard();
+      if (wrap) {
+        wrap.scrollLeft = scrollLeft;
+        wrap.scrollTop = scrollTop;
+      }
+      if (typeof window.scrollTo === 'function') {
+        try { window.scrollTo(windowScrollX, windowScrollY); } catch (_) {}
+      }
+      requestAnimationFrame(() => {
+        const body = document.getElementById('x1-nan-plan-body');
+        let target = null;
+        if (body && typeof body.querySelectorAll === 'function') {
+          const cells = body.querySelectorAll('[data-x1-nan-plan-week]');
+          target = Array.prototype.find.call(cells || [], el =>
+            el.getAttribute('data-x1-nan-plan-id') === planId &&
+            el.getAttribute('data-x1-nan-plan-week') === String(week));
+        }
+        if (target) {
+          if (typeof target.focus === 'function') {
+            try { target.focus({ preventScroll: true }); }
+            catch (_) { target.focus(); }
+          }
+          if (typeof target.setSelectionRange === 'function') {
+            try { target.setSelectionRange(String(target.value).length, String(target.value).length); } catch (_) {}
+          }
+        }
+        if (wrap) {
+          wrap.scrollLeft = scrollLeft;
+          wrap.scrollTop = scrollTop;
+        }
+        if (typeof window.scrollTo === 'function') {
+          try { window.scrollTo(windowScrollX, windowScrollY); } catch (_) {}
+        }
+      });
+      return saved;
+    };
+    safeOn('x1-nan-plan-body', 'change', e => {
+      const weekPriority = e.target && e.target.closest
+        ? e.target.closest('[data-x1-nan-plan-week-priority]')
+        : null;
+      if (weekPriority) {
+        const desired = weekPriority.checked === true;
+        const previous = !desired;
+        weekPriority.checked = previous;
+        if ('indeterminate' in weekPriority) weekPriority.indeterminate = false;
+        const wrap = document.querySelector('.x1-nan-plan-table-wrap');
+        const scrollLeft = wrap ? (wrap.scrollLeft || 0) : 0;
+        const scrollTop = wrap ? (wrap.scrollTop || 0) : 0;
+        const weekKey = weekPriority.getAttribute('data-x1-nan-plan-week-priority') || '';
+        const planIds = (weekPriority.getAttribute('data-x1-nan-plan-ids') || '')
+          .split(',').map(id => id.trim()).filter(Boolean);
+        const saved = x1NanPlanSetWeekPriority(planIds, weekKey, desired);
+        if (saved) weekPriority.checked = desired;
+        else weekPriority.checked = previous;
+        if (wrap) {
+          wrap.scrollLeft = scrollLeft;
+          wrap.scrollTop = scrollTop;
+        }
+        return;
+      }
+      const input = e.target && e.target.closest
+        ? e.target.closest('[data-x1-nan-plan-week]')
+        : null;
+      saveInlinePlanWeek(input);
+    });
+    safeOn('x1-nan-plan-body', 'keydown', e => {
+      if (e.key !== 'Enter') return;
+      const input = e.target && e.target.closest
+        ? e.target.closest('[data-x1-nan-plan-week]')
+        : null;
+      if (!input) return;
+      e.preventDefault && e.preventDefault();
+      saveInlinePlanWeek(input);
+    });
     // ── THẺ 1: CẮT ỐNG ──
     safeOn('x1-cat-ong-form', 'submit', handleX1CatOngSubmit);
     safeOn('btn-cancel-x1-cat-ong', 'click', () => resetX1CatOngForm());
@@ -2162,6 +2311,8 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('x1-say-sinh-source', 'change', () => x1SaySinhSyncLinked(true));
     safeOn('x1-say-sinh-repeat-lot', 'change', () => x1SaySinhSyncLinked(true));
     safeOn('x1-say-sinh-allocations', 'input', () => x1SaySinhSyncLinked(false));
+    safeOn('x1-say-sinh-date', 'change', () => x1SaySinhSyncLinked(true));
+    safeOn('x1-say-sinh-code', 'input', x1SsMarkCodeManualEdit);
     safeOn('x1-say-sinh-day-cards', 'change', (e) => {
       const qc = e.target.closest && e.target.closest('[data-x1-say-sinh-qc]');
       if (qc) setX1SaySinhQcStatus(qc.getAttribute('data-x1-say-sinh-qc'), qc.value);
@@ -2251,7 +2402,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     ['x1-cat-ong-kl-dat', 'x1-cat-ong-kl-loai', 'x1-cat-ong-kl-mat', 'x1-cat-ong-kl-ngon']
       .forEach(id => safeOn(id, 'input', x1CatOngCalc));
     safeOn('x1-cat-ong-done', 'change', x1CatOngCalc);
-    safeOn('x1-say-sinh-sulfur-qty', 'input', x1SaySinhCalc);
+    safeOn('x1-say-sinh-sulfur-qty', 'input', () => {
+      x1SsMarkSulfurManualEdit();
+      x1SaySinhCalc();
+    });
     safeOn('x1-say-sinh-qty', 'input', x1SsUpdateSulfurHint);
     safeOn('x1-boc-qty', 'input', x1BocCalc);
     // ── 2 NÚT TO nhập liệu Sấy Sinh + POPUP dùng chung (Tạo lô lần đầu / Sấy tiếp) ──
@@ -2280,14 +2434,36 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     // Phơi Sấy chỉ giữ dữ liệu cũ; Lọc Thanh nhận nhiều lô Bổ đã phơi/sấy.
     X1_CHAIN_SPECS.forEach(sp => {
       const base = 'x1-' + sp.prefix;
-      safeOn(base + '-form', 'submit', e => handleX1ChainSubmit(sp, e));
+      safeOn(base + '-form', 'submit', e => {
+        if (sp.key === 'locThanh') finalizeLocThanhExpressions();
+        handleX1ChainSubmit(sp, e);
+      });
       safeOn('btn-cancel-' + base, 'click', () => resetX1ChainForm(sp));
       safeOn(base + '-src', 'change', () => {
         if (sp.key === 'locThanh') x1LtOnSrcChange();
         else x1ChainSyncLinked(sp, true);
       });
       ['in', 'ok', 'loai'].forEach(part =>
-        safeOn(base + '-' + part, 'input', () => x1ChainCalc(sp)));
+        safeOn(base + '-' + part, 'input', e => {
+          x1ChainCalc(sp);
+        }));
+      ['in', 'ok', 'loai'].forEach(part => {
+        safeOn(base + '-' + part, 'change', e => {
+          if (sp.key === 'locThanh') applyX1MatrixExpressionInput(e && e.target);
+          x1ChainCalc(sp);
+        });
+        safeOn(base + '-' + part, 'blur', e => {
+          if (sp.key === 'locThanh') applyX1MatrixExpressionInput(e && e.target);
+          x1ChainCalc(sp);
+        });
+        safeOn(base + '-' + part, 'keydown', e => {
+          if (sp.key === 'locThanh' && e && e.key === 'Enter') {
+            e.preventDefault && e.preventDefault();
+            applyX1MatrixExpressionInput(e.target);
+            x1ChainCalc(sp);
+          }
+        });
+      });
       safeOn('btn-' + base + '-rate', 'click', () => openX1RatePopup(sp.rateKind));
     });
     // ── KHO NAN XƯỞNG 1 — chi tiết kích thước (KPI card) + xuất hàng / tiêu hủy ──
@@ -2311,6 +2487,10 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       if (save) { x1KhoSaveExport(); return; }
       const del = e.target && e.target.closest ? e.target.closest('[data-x1-kho-export-delete]') : null;
       if (del) { x1KhoDeleteExport(del.getAttribute('data-x1-kho-export-delete')); return; }
+      const planEdit = e.target && e.target.closest ? e.target.closest('[data-x1-nan-plan-edit]') : null;
+      if (planEdit) { x1NanPlanStartForm(planEdit.getAttribute('data-x1-nan-plan-edit')); return; }
+      const planDelete = e.target && e.target.closest ? e.target.closest('[data-x1-nan-plan-delete]') : null;
+      if (planDelete) { x1NanPlanDelete(planDelete.getAttribute('data-x1-nan-plan-delete')); return; }
     });
     // ── POPUP chi tiết tồn Kho Nan X1 (cấp trang — mobile tự thành bottom sheet) ──
     safeOn('btn-close-x1-kho-detail', 'click', x1KhoCloseDetail);
@@ -2384,6 +2564,29 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
         const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
         if (sp) x1ChainCalc(sp);
       });
+      ltSourceRows.addEventListener('change', e => {
+        if (e && e.target) applyX1MatrixExpressionInput(e.target);
+        const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+        if (sp) x1ChainCalc(sp);
+      });
+      ltSourceRows.addEventListener('blur', e => {
+        if (e && e.target) applyX1MatrixExpressionInput(e.target);
+        const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+        if (sp) x1ChainCalc(sp);
+      }, true);
+      ltSourceRows.addEventListener('focusout', e => {
+        if (e && e.target) applyX1MatrixExpressionInput(e.target);
+        const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+        if (sp) x1ChainCalc(sp);
+      });
+      ltSourceRows.addEventListener('keydown', e => {
+        if (e && e.key === 'Enter' && e.target) {
+          e.preventDefault && e.preventDefault();
+          applyX1MatrixExpressionInput(e.target);
+          const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+          if (sp) x1ChainCalc(sp);
+        }
+      });
     }
     const ltCatalog = document.getElementById('x1-lt-length-catalog');
     if (ltCatalog) {
@@ -2404,6 +2607,29 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       ltRows.addEventListener('input', () => {
         const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
         if (sp) x1ChainCalc(sp);
+      });
+      ltRows.addEventListener('change', e => {
+        if (e && e.target) applyX1MatrixExpressionInput(e.target);
+        const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+        if (sp) x1ChainCalc(sp);
+      });
+      ltRows.addEventListener('blur', e => {
+        if (e && e.target) applyX1MatrixExpressionInput(e.target);
+        const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+        if (sp) x1ChainCalc(sp);
+      }, true);
+      ltRows.addEventListener('focusout', e => {
+        if (e && e.target) applyX1MatrixExpressionInput(e.target);
+        const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+        if (sp) x1ChainCalc(sp);
+      });
+      ltRows.addEventListener('keydown', e => {
+        if (e && e.key === 'Enter' && e.target) {
+          e.preventDefault && e.preventDefault();
+          applyX1MatrixExpressionInput(e.target);
+          const sp = X1_CHAIN_SPECS.find(s => s.key === 'locThanh');
+          if (sp) x1ChainCalc(sp);
+        }
       });
       ltRows.addEventListener('click', (e) => {
         // BẬT/TẮT bản rộng của 1 kích thước (chip 6/11/13/15/21) — 1 kích thước được nhiều bản rộng

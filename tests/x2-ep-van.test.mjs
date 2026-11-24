@@ -281,7 +281,7 @@ check('CẤU TRÚC: định mức ép ván nối storage/cloud/history (x2EpVanR
       hi.includes('x2EpVanRates');
   })());
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v452', /nha-may-ngoc-son-v452/.test(swJs));
+check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v456', /nha-may-ngoc-son-v456/.test(swJs));
 
 // ═══ E2. MŨI TẦN ‹ › CẠNH Ô TUẦN — nhảy nhanh cả tuần (bao vòng) ═══
 state.pressRecords.push({
@@ -334,7 +334,7 @@ const mapCn = x2.X2_CARD_HISTORY_DOMAIN, mapEx = x2.X2_CARD_EXPORT_SOURCE;
 // 17/10/2026: NGUỒN XUẤT EXCEL của 8 thẻ X1 ĐÃ KHAI BÁO (trước đây rơi về 'batch'
 // ⇒ bấm "Xuất Dữ Liệu" trên thẻ Xưởng 1 lại xuất Lô nan).
 check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ, bản đồ giữ đủ vùng dữ liệu',
-  Object.keys(mapCn).length === 24 && Object.keys(mapEx).length === 24 &&
+  Object.keys(mapCn).length === 25 && Object.keys(mapEx).length === 25 &&
   mapCn['x2-bo-luong-card'] === 'xuong2BoluongRecords' && mapEx['x2-bo-luong-card'] === 'boluong' &&
   mapCn['x2-kho-card'] === 'khoNotes' && mapEx['x2-kho-card'] === 'kho' &&
   mapCn['x2-bao-tinh-card'] === 'xuong2BaoTinhRecords' && mapEx['x2-bao-tinh-card'] === 'baotinh' &&
@@ -347,7 +347,8 @@ check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ, bản đồ giữ đ�
   mapEx['x1-cat-ong-card'] === 'x1catong' && mapEx['x1-say-sinh-card'] === 'x1saysinh' &&
   mapEx['x1-boc-card'] === 'x1boc' && mapEx['x1-loc-ong-card'] === 'x1locong' &&
   mapEx['x1-cat-mat-card'] === 'x1catmat' && mapEx['x1-bo-card'] === 'x1bo' &&
-  mapEx['x1-phoi-say-card'] === 'x1phoisay' && mapEx['x1-loc-thanh-card'] === 'x1locthanh');
+  mapEx['x1-phoi-say-card'] === 'x1phoisay' && mapEx['x1-loc-thanh-card'] === 'x1locthanh' &&
+  mapCn['x1-nan-plan-card'] === 'x1NanPlans' && mapEx['x1-nan-plan-card'] === 'x1nanplan');
 check('DÙNG CHUNG: 8 công đoạn Xưởng 1 và Kho Nan có vùng dữ liệu đúng',
   ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card',
    'x1-loc-ong-card', 'x1-cat-mat-card', 'x1-bo-card',
@@ -806,7 +807,7 @@ check('R14: CSS có khối 3 dòng đầu vào + tổng thể tích + chip cơ s
   cssHtml.includes('.ps-bt-line') && cssHtml.includes('.press-input-vol-total') &&
   cssHtml.includes('.press-vol-basis'));
 check('R15: sw.js đã tăng cache (v265) để PWA không dùng bản cũ',
-  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v452'));
+  fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8').includes('nha-may-ngoc-son-v456'));
 check('R16: ô nhiều cỡ có khung .ps-qty-list + N ô .ps-size-qty (hàm đồng bộ riêng)',
   pressSrc.includes('ps-qty-list') && pressSrc.includes('ps-size-qty') &&
   pressSrc.includes('function syncPressStickQtyInputs') && pressSrc.includes('function readPressSizeQtys'));

@@ -531,12 +531,12 @@ check('QC KIỂM THANH: cỡ không có định mức thì bỏ qua',
 const qcThanhRows = press.getQcThanhOutputRows();
 check('QC KIỂM THANH: gom đúng 1 lượt (bỏ lượt Bullig + lượt Kiểm Ván)',
   qcThanhRows.length === 1 && qcThanhRows[0].productId === 'rate-thanh' &&
-  qcThanhRows[0].qty === 470 && qcThanhRows[0].date === '2026-08-11');
+  qcThanhRows[0].qty === 480 && qcThanhRows[0].date === '2026-08-11');
 press.renderPlanVsPressChart();
 const chartQc = state.planVsPressInstance;
 const idxThanh = chartQc.data.labels.indexOf('Thanh 640x14x12');
-check('BIỂU ĐỒ: cột ĐÃ ÉP của sản phẩm ĐVT Thanh = m³ của 470 thanh QC đạt',
-  idxThanh >= 0 && approx(chartQc.data.datasets[1].data[idxThanh], (640 * 14 * 12 / 1e9) * 470));
+check('BIỂU ĐỒ: cột ĐÃ ÉP của sản phẩm ĐVT Thanh = m³ của 480 thanh QC tổng đạt',
+  idxThanh >= 0 && approx(chartQc.data.datasets[1].data[idxThanh], (640 * 14 * 12 / 1e9) * 480));
 check('BIỂU ĐỒ: cột ĐÃ ÉP Ép Ván giữ nguyên (rate-1 = 40 tấm)',
   approx(chartQc.data.datasets[1].data[chartQc.data.labels.indexOf('Ván 1200x382x9')], (1220 * 2440 * 9 / 1e9) * 40));
 check('BIỂU ĐỒ: nhóm Bullig KHÔNG bị cộng từ QC Kiểm thanh',

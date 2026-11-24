@@ -301,6 +301,14 @@ check('E10: ô chọn Bốc hiện mã lô, NCC, ngày sấy, tuổi lô và t�
 x2.x1SsOpenBocFor('r-new');
 check('E11: "Mở thẻ Bốc" chọn sẵn đúng lô được nhắc', bocSel.value === 'r-new');
 
+const bocStatsHtml = document.getElementById('x1-boc-stats').innerHTML;
+check('E12: thống kê Bốc giữ 3 ô nội bộ và không gắn thống kê lô Lọc Thanh',
+  bocStatsHtml.includes('Lượt bốc') &&
+  bocStatsHtml.includes('Tổng KL bốc (kg)') &&
+  bocStatsHtml.includes('Còn chờ bốc (kg)') &&
+  !bocStatsHtml.includes('Tỷ lệ lô đã chốt') &&
+  !bocStatsHtml.includes('ratio') &&
+  !bocStatsHtml.includes('closedHas'));
 console.log('--- F. CẤU TRÚC (index/events/CSS/export/sw) ---');
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const evSrc = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
@@ -327,7 +335,7 @@ check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ côn
   expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
   expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
   !expSrc.includes("'Ngày Đạt'"));
-check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v452/.test(swSrc));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v456/.test(swSrc));
 check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
 check('F7: KPI Vùng ② Thống Kê ĐÃ GỠ khỏi thẻ Sấy Sinh (tổng hợp ở bảng toàn xưởng sau)',
   !idxHtml.includes('id="x1-say-sinh-stats"') && !xuong2Src.includes('renderX1SaySinhStats') &&
@@ -364,7 +372,7 @@ check('G10: chế độ BÁO CÁO THEO NGÀY có người sấy + giờ HC/TC + 
   xuong2Src.includes('renderX1SsDayReport') && xuong2Src.includes('Lần thứ') &&
   idxHtml.includes('Báo cáo theo ngày'));
 check('G11: events.js IMPORT ĐỦ (sửa lỗi ReferenceError) + wire nút day',
-  evSrc.includes("setX1SsViewMode, x1SsUpdateSulfurHint, x1SsOpenInputModal") &&
+  evSrc.includes("setX1SsViewMode, x1SsUpdateSulfurHint, x1SsMarkCodeManualEdit, x1SsMarkSulfurManualEdit, x1SsOpenInputModal") &&
   evSrc.includes("'x1-ss-view-day'") && !evSrc.includes('x1SsSulfurHint'));
 check('G12: export mới + ĐÃ GỠ export cũ (setX1SaySinhViewMode/renderX1SaySinhDetail)',
   typeof x2.setX1SsViewMode === 'function' && typeof x2.renderX1SsHistory === 'function' &&
@@ -403,6 +411,56 @@ check('G18: display có nextCheckHour', typeof disp.nextCheckHour === 'string' &
 check('G19: display có cycleDetails', Array.isArray(disp.cycleDetails) && disp.cycleDetails.length === 1);
 check('G20: cycleDetails có num/date/hour/sulfurQty/rate',
   disp.cycleDetails[0].num === 1 && disp.cycleDetails[0].hour === '09:30' && disp.cycleDetails[0].rate === 1.3);
+
+// G28-G33: tạo lô lần đầu — mã theo loại gộp/ngày và lưu huỳnh tự điền có bảo tồn sửa tay
+console.log('--- G28-G33. TẠO LÔ LẦN ĐẦU — MÃ & LƯU HUỲNH TỰ ĐỘNG ---');
+check('G28: hai nguồn Vầu+Nứa tạo mã theo LOẠI GỘP và Ngày Sấy', (() => {
+  state.xuong1SaySinhRecords = [];
+  state.xuong1CatOngRecords = [];
+  state.materialRecords = [
+    { id: 'combo-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-12-01', createdAt: '2026-12-01T02:00:00.000Z' },
+    { id: 'combo-n', type: 'Nứa khô', supplier: 'Lý', location: 'xuong-1', weight: 1000, date: '2026-12-02', createdAt: '2026-12-02T02:00:00.000Z' }
+  ];
+  x2.resetX1SaySinhForm();
+  x2.fillX1SaySinhOptions();
+  selectValues('x1-say-sinh-source', ['combo-v', 'combo-n']);
+  document.getElementById('x1-say-sinh-date').value = '2026-12-03';
+  x2.x1SaySinhSyncLinked(true);
+  const code = document.getElementById('x1-say-sinh-code').value;
+  return /^[VN]261203\d{3}$/.test(code);
+})());
+check('G29: đổi Ngày Sấy cập nhật mã còn trống/tự sinh', (() => {
+  const before = document.getElementById('x1-say-sinh-code').value;
+  document.getElementById('x1-say-sinh-date').value = '2026-12-05';
+  x2.x1SaySinhSyncLinked(true);
+  const after = document.getElementById('x1-say-sinh-code').value;
+  return after !== before && /^[VN]261205\d{3}$/.test(after);
+})());
+check('G30: mã nhập tay không bị ghi đè khi đổi Ngày Sấy', (() => {
+  x2.x1SsMarkCodeManualEdit();
+  document.getElementById('x1-say-sinh-code').value = 'V261205099';
+  document.getElementById('x1-say-sinh-date').value = '2026-12-06';
+  x2.x1SaySinhSyncLinked(true);
+  return document.getElementById('x1-say-sinh-code').value === 'V261205099';
+})());
+check('G31: lưu huỳnh tự điền công thức 1.3 và làm tròn lên 1 chữ số', (() => {
+  x2.x1SsResetManualTracking();
+  document.getElementById('x1-say-sinh-qty').value = '123';
+  x2.x1SsUpdateSulfurHint();
+  return document.getElementById('x1-say-sinh-sulfur-qty').value === '0.2';
+})());
+check('G32: phân bổ tăng cập nhật lưu huỳnh tự sinh', (() => {
+  document.getElementById('x1-say-sinh-qty').value = '1000';
+  x2.x1SsUpdateSulfurHint();
+  return document.getElementById('x1-say-sinh-sulfur-qty').value === '1.3';
+})());
+check('G33: lưu huỳnh nhập tay không bị ghi đè khi đổi phân bổ', (() => {
+  x2.x1SsMarkSulfurManualEdit();
+  document.getElementById('x1-say-sinh-sulfur-qty').value = '2.75';
+  document.getElementById('x1-say-sinh-qty').value = '2000';
+  x2.x1SsUpdateSulfurHint();
+  return document.getElementById('x1-say-sinh-sulfur-qty').value === '2.75';
+})());
 
 // G21-G23: Yêu cầu mới (ngày sấy tiếp + dòng chữ chọn lô + hiển thị ngày chi tiết)
 check('G21: ô chọn lô sấy tiếp có chữ "sấy tiếp lần"', xuong2Src.includes('sấy tiếp lần'));
